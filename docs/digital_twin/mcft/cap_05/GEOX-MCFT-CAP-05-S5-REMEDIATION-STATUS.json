@@ -1,0 +1,131 @@
+{
+  "schema_version": "geox_mcft_cap_05_s5_remediation_status_v1",
+  "capability_line_id": "MCFT-CAP-05",
+  "remediation_id": "MCFT-CAP-05.S5.RECOVERY-HASH-FIXED-POINT-REMEDIATION-V1",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "baseline_main_commit": "ef1c789b15a3e73f93c7e63907519faecb027563",
+  "branch": "agent/mcft-cap-05-s5-remediation-recovery-hash-fixed-point-v1",
+  "duplicate_audit": {
+    "independent_remediation_pr_found_before_creation": false,
+    "merged_s5_pr": 2451,
+    "closed_duplicate_s5_pr": 2450,
+    "closed_duplicate_probe_prs": [2452, 2453, 2454],
+    "blocked_s6_pr": 2456,
+    "new_remediation_pr": 2457,
+    "replacement_s5_implementation": false
+  },
+  "s5_effectiveness": {
+    "pr_number": 2451,
+    "exact_head": "77a4f66741d0c5dab59a4cb0ac4ff91d7916d17d",
+    "merge_commit": "ef1c789b15a3e73f93c7e63907519faecb027563",
+    "head_to_merge_file_delta_count": 0,
+    "tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2455,
+    "merged_main_gate_workflow": 29313112424,
+    "merged_main_gate": "PASS",
+    "effective": true
+  },
+  "remediation_targets": {
+    "source_record_hash": {
+      "policy_id": "S1_FULL_RECORD_MINUS_HASH_AND_MATERIALIZED_LOCATION_V1",
+      "excluded_fields": [
+        "source_record_hash",
+        "materialized_file_location"
+      ],
+      "forward_append_validation": true,
+      "recovery_validation": true
+    },
+    "fixed_point_amounts": {
+      "policy_id": "WATER_AMOUNT_SCALE_6_HALF_AWAY_FROM_ZERO_V1",
+      "scale": 6,
+      "number_based_computational_authority": false,
+      "forward_validation": true,
+      "projection_formatting": true,
+      "recovery_validation": true
+    },
+    "validated_recovery": {
+      "approval_assertion_revalidated": true,
+      "canonical_decision_revalidated": true,
+      "plan_to_assertion_link_revalidated": true,
+      "assertion_to_decision_link_revalidated": true,
+      "scenario_amount_revalidated": true,
+      "amount_difference_revalidated": true,
+      "availability_revalidated": true,
+      "validity_interval_revalidated": true,
+      "explicit_supersession_revalidated": true,
+      "failed_recovery_rolls_back_projection_deletion": true
+    }
+  },
+  "validation": {
+    "initial_wiring_and_typecheck_workflow": 29315823499,
+    "remediation_postgresql_and_s3_regression_workflow": 29316507189,
+    "repository_typecheck": "PASS",
+    "s5_forward_and_remediation_acceptance": "PASS",
+    "s3_persistence_recovery_regression": "PASS",
+    "negative_recovery_cases": [
+      "stored source_record_hash mismatch",
+      "correctly hashed forged canonical Decision linkage",
+      "correctly hashed scenario amount mismatch",
+      "correctly hashed invalid Plan effective interval",
+      "correctly hashed non-Human Approval Assertion"
+    ]
+  },
+  "changed_semantics": [
+    "Plan projection recovery now requires a complete immutable Assertion-Decision-Plan graph",
+    "Approval Assertion and Plan source_record_hash are verified from the frozen S1 record basis",
+    "S5 amount normalization and arithmetic use the existing scale-6 fixed-point water authority"
+  ],
+  "unchanged_authority": [
+    "public.facts remains the sole append-only fact store",
+    "Approval Assertion and Approved Plan remain Replay Evidence",
+    "twin_approved_plan_binding_projection_v1 remains mutable and rebuildable",
+    "GEOX exercises no approval authority",
+    "GEOX creates no dispatch",
+    "S6 remains unauthorized until remediation merged-main effectiveness"
+  ],
+  "canonical_object_delta": 0,
+  "transaction_family_delta": 0,
+  "migration_delta": 0,
+  "preserved_nonclaims": [
+    "NO_REPLACEMENT_S5_IMPLEMENTATION",
+    "NO_NEW_CANONICAL_TWIN_OBJECT",
+    "NO_NEW_TRANSACTION_FAMILY",
+    "NO_MIGRATION",
+    "NO_GEOX_APPROVAL_AUTHORITY",
+    "NO_GEOX_DISPATCH_CREATION",
+    "NO_PUBLIC_ROUTE",
+    "NO_WEB",
+    "NO_RECOMMENDATION",
+    "NO_TASK_WRITE",
+    "NO_ACTION_FEEDBACK_WRITE",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
+    "NO_FORECAST_EXECUTION",
+    "NO_RESIDUAL_MATCHING_ORCHESTRATION",
+    "NO_AO_ACT_CHANGE",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_MODEL_ACTIVATION",
+    "NO_CAP_06_AUTHORIZATION"
+  ],
+  "successor_pr": 2456,
+  "successor_authorized": false,
+  "effectiveness_condition": "REMEDIATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_REMEDIATION_GATE_PASS",
+  "effectiveness_condition_satisfied": false,
+  "exact_changed_file_boundary": [
+    "apps/server/src/evidence/twin_runtime/approval_plan_evidence_contracts_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_approval_plan_evidence_repository_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_approval_plan_recovery_repository_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts",
+    "apps/server/src/projections/twin_runtime/feedback_persistence_projection_v1.ts",
+    "apps/server/src/runtime/twin_runtime/approval_plan_binding_service_v1.ts",
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S5-REMEDIATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_REMEDIATION.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_REMEDIATION_DB.ts"
+  ]
+}
