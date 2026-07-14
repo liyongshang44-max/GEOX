@@ -4,6 +4,7 @@
 // scripts/dev/assert_local_pnpm_runtime.cjs
 // Purpose: prove merged-main effectiveness of MCFT-CAP-05 S8 Forecast Residual Runtime.
 // Boundary: validation-only probe; this file must never be merged.
+// MCFT_CAP_05_S8_FORECAST_RESIDUAL_C_COMMIT_GATE_V1
 
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
