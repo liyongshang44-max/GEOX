@@ -1,0 +1,71 @@
+{
+  "schema_version": "geox_mcft_cap_05_p_minus_1_adjudication_status_v1",
+  "capability_line_id": "MCFT-CAP-05",
+  "display_alias": "MCFT-5",
+  "delivery_slice_id": "MCFT-CAP-05.P-1.DT02-OBJECT-TRANSACTION-ADJUDICATION-V1",
+  "slice_kind": "ARCHITECTURE_GOVERNANCE_ONLY",
+  "baseline_main_commit": "3eba797307388bd652dc5c65e91d634375e1b8c2",
+  "adjudication_status": "COMPLETE_CANDIDATE",
+  "adjudication_result": "REUSE_WITHOUT_AMENDMENT",
+  "dt02_architecture_amendment_required": false,
+  "dt02_architecture_amendment_status": "NOT_REQUIRED_CANDIDATE_PENDING_MERGED_MAIN_EFFECTIVENESS",
+  "runtime_source_authorized": false,
+  "migration_authorized": false,
+  "canonical_write_authorized": false,
+  "p0_authorized": false,
+  "active_delivery_slice_id": "MCFT-CAP-05.P-1.DT02-OBJECT-TRANSACTION-ADJUDICATION-V1",
+  "objects": {
+    "decision": {
+      "object_type": "twin_decision_record_v1",
+      "transaction_family": "G_HUMAN_DECISION_LINK_COMMIT",
+      "result": "REUSE"
+    },
+    "action_feedback": {
+      "object_type": "twin_action_feedback_v1",
+      "transaction_family": "H_ACTION_FEEDBACK_COMMIT",
+      "result": "REUSE"
+    },
+    "forecast_residual": {
+      "object_type": "twin_forecast_residual_v1",
+      "transaction_family": "C_FORECAST_RESIDUAL_COMMIT",
+      "result": "REUSE"
+    }
+  },
+  "approved_plan_profile": "REPLAY_EVIDENCE_WITH_APPROVAL_ASSERTION_REFERENCE",
+  "outcome_trace_profile": "REBUILDABLE_NON_CANONICAL_PROJECTION",
+  "selected_option_ref_policy_id": "GEOX_SCENARIO_OPTION_SEMANTIC_MEMBER_REF_V1",
+  "forecast_point_ref_policy_id": "GEOX_FORECAST_POINT_SEMANTIC_MEMBER_REF_V1",
+  "forecast_observation_projection_method_id": "FORECAST_STORAGE_TO_ROOT_ZONE_MEAN_VWC_H1_V1",
+  "forecast_residual_assimilation_relation": "DISTINCT_BY_DEFAULT",
+  "action_feedback_adapter": "ActionFeedbackToExecutedIrrigationCandidateAdapterV1",
+  "evidence_cutoff_policy": "AVAILABLE_AT_OR_BEFORE_LOGICAL_TIME_AND_INCLUDED_IN_FROZEN_EVIDENCE_WINDOW_V1",
+  "new_canonical_object_types": [],
+  "new_transaction_families": [],
+  "exact_changed_file_boundary": [
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-P-1-ADJUDICATION.md",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-P-1-STATUS.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_P_MINUS_1_ADJUDICATION.cjs"
+  ],
+  "forbidden_change_classes": [
+    "RUNTIME_SOURCE",
+    "MIGRATION",
+    "ROUTE",
+    "WEB",
+    "CANONICAL_FACT",
+    "CAP_04_SOURCE",
+    "AO_ACT_SOURCE"
+  ],
+  "effectiveness": {
+    "status": "PENDING_MERGE_AND_MERGED_MAIN_GATE",
+    "pr_number": null,
+    "exact_head_commit": null,
+    "exact_head_ci": null,
+    "merge_commit": null,
+    "head_to_merge_tree_equivalence": null,
+    "merged_main_gate": "PENDING"
+  },
+  "next_permitted_slice_after_effectiveness": "MCFT-CAP-05.P0.CAP-04-SETTLEMENT-AND-CAP-05-PROVISIONAL-SSOT-V1",
+  "successor_authorized": false
+}
