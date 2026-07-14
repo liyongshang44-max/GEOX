@@ -2875,6 +2875,53 @@ false
 
 ## S6 — Action Feedback and Adapter
 
+S6 implementation candidate identity：
+
+```text
+baseline_main_commit:
+ef1c789b15a3e73f93c7e63907519faecb027563
+
+S5 exact head:
+77a4f66741d0c5dab59a4cb0ac4ff91d7916d17d
+
+S5 merge commit:
+ef1c789b15a3e73f93c7e63907519faecb027563
+
+S5 merged-main Gate workflow:
+29313112424 SUCCESS
+
+active_delivery_slice_id:
+MCFT-CAP-05.MCFT-15.ACTION-FEEDBACK-H-COMMIT-ADAPTER-V1
+
+S6 status:
+IMPLEMENTATION_CANDIDATE
+
+S6 PostgreSQL acceptance workflow:
+29313657871 SUCCESS
+
+canonical Action Feedback fact delta standard case:
+1
+
+transaction family:
+H_ACTION_FEEDBACK_COMMIT
+
+standard actual amount mm:
+13.600000
+
+standard coverage fraction:
+0.910000
+
+standard target-scope equivalent irrigation mm:
+12.376000
+
+migration delta:
+0
+
+S7 authorized:
+false
+```
+
+
 证明 H transaction、status mapping、validation orthogonality、covered-footprint amount、coverage、adapter field mapping、same-hour、single-event、late no-shift 和 no volume conversion。
 
 ## S7 — Receipt-consuming State Tick

@@ -1149,3 +1149,38 @@ Established candidate scope:
 - maintain exactly one active Plan projection through explicit supersession;
 - rebuild Plan projections and supersession state from immutable facts;
 - create no canonical Twin object, transaction family, migration, route, Recommendation, Task, Action Feedback, State/checkpoint, Forecast, Residual, AO-ACT, calibration, activation or CAP-06 authority.
+
+
+---
+
+## MCFT-CAP-05 S6 Action Feedback H Commit and Adapter Candidate
+
+```text
+capability_line_id: MCFT-CAP-05
+delivery_slice_id: MCFT-CAP-05.MCFT-15.ACTION-FEEDBACK-H-COMMIT-ADAPTER-V1
+baseline_main_commit: ef1c789b15a3e73f93c7e63907519faecb027563
+status: IMPLEMENTATION_CANDIDATE
+postgresql_acceptance_workflow: 29313657871 SUCCESS
+canonical_object_type: twin_action_feedback_v1
+transaction_family: H_ACTION_FEEDBACK_COMMIT
+standard_actual_amount_mm: 13.600000
+standard_spatial_coverage_fraction: 0.910000
+standard_target_scope_equivalent_irrigation_mm: 12.376000
+migration_delta: 0
+S7_authorized: false
+CAP_06_authorized: false
+```
+
+Established candidate scope:
+
+- read one exact controlled irrigation Receipt Evidence ref/hash from `public.facts`;
+- validate source/canonical payload identity, exact Reality scope, depth-mm unit, same-hour execution, role-time order and covered-footprint amount;
+- resolve the active S5 Approved Plan and unique canonical S4 G Decision from PostgreSQL readback;
+- validate optional external Dispatch Evidence without creating dispatch;
+- map execution, validation and quality independently;
+- build and commit canonical `twin_action_feedback_v1` through the existing H transaction and S3 persistence repository;
+- preserve execution logical time for late Evidence and return exact existing H object on response-loss retry;
+- adapt eligible H feedback into the existing executed-irrigation candidate while preserving raw amount and coverage;
+- apply coverage exactly once in the existing irrigation aggregator;
+- reject multiple eligible events, cross-hour execution, forged covered-footprint amount and volume units;
+- create no State/checkpoint, Forecast, Residual, route, Recommendation, AO-ACT, calibration, activation or CAP-06 authority.
