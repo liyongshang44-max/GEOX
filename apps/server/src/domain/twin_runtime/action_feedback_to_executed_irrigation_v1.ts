@@ -6,6 +6,7 @@ import type { ExecutedIrrigationCandidateV1 } from "../soil_water/executed_irrig
 import {
   CAP05_ACTION_FEEDBACK_QUALITY_MAPPING_POLICY_V1,
   type Cap05ActionFeedbackEnvelopeV1,
+  type Cap05SourceQualityV1,
   validateCap05ActionFeedbackV1,
 } from "./feedback_canonical_contracts_v1.js";
 
@@ -30,6 +31,12 @@ export type Cap05ActionFeedbackAdapterResultV1 = {
   trace: Cap05ActionFeedbackAdapterTraceV1;
 };
 
+export function mapCap05ActionFeedbackQualityV1(
+  sourceQuality: Cap05SourceQualityV1,
+): "USABLE" | "UNUSABLE" {
+  return sourceQuality === "FAIL" ? "UNUSABLE" : "USABLE";
+}
+
 export function adaptCap05ActionFeedbackToExecutedIrrigationV1(
   feedback: Cap05ActionFeedbackEnvelopeV1,
 ): Cap05ActionFeedbackAdapterResultV1 {
@@ -42,9 +49,9 @@ export function adaptCap05ActionFeedbackToExecutedIrrigationV1(
   if (payload.validation_status !== "VALIDATED" && payload.validation_status !== "VALIDATED_WITH_LIMITATIONS") {
     throw new Error("CAP05_ACTION_FEEDBACK_VALIDATION_REQUIRED");
   }
-  if (payload.source_quality === "FAIL") throw new Error("CAP05_ACTION_FEEDBACK_QUALITY_UNUSABLE");
 
-  const normalizedQuality: "USABLE" = "USABLE";
+  const normalizedQuality = mapCap05ActionFeedbackQualityV1(payload.source_quality);
+  if (normalizedQuality === "UNUSABLE") throw new Error("CAP05_ACTION_FEEDBACK_QUALITY_UNUSABLE");
   const candidate: ExecutedIrrigationCandidateV1 = {
     binding_id: payload.binding_id,
     origin_source_id: payload.origin_source_id,
