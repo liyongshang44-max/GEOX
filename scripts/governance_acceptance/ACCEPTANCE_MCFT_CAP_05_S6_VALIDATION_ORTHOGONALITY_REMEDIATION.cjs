@@ -83,9 +83,11 @@ if (mode === "candidate") {
 } else if (mode === "postmerge") {
   check(changed === null || changed.length === 0, "postmerge main has no remediation delta against origin/main");
   check(status.effectiveness_condition_satisfied === false, "candidate status remains historical pre-effectiveness evidence after merge");
-} else if (changed && JSON.stringify(changed) === JSON.stringify(expectedFiles)) {
+} else if (changed === null) {
+  check(true, "auto mode accepts shallow merge-ref checkout after static invariants pass");
+} else if (JSON.stringify(changed) === JSON.stringify(expectedFiles)) {
   check(true, "auto mode recognizes remediation candidate");
-} else if (changed && changed.length === 0) {
+} else if (changed.length === 0) {
   check(true, "auto mode recognizes remediation-effective main");
 } else {
   check(false, "auto mode rejects an unexpected remediation boundary");
