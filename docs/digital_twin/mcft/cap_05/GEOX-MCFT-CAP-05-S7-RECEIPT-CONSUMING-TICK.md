@@ -17,7 +17,7 @@ migration delta: 0
 global SSOT settlement: deferred until S7 merged-main effectiveness
 ```
 
-S7 executes exactly one explicit hourly tick. It does not introduce another State, Forecast or Scenario implementation. It selects canonical `twin_action_feedback_v1`, adapts the selected H object into the existing `ExecutedIrrigationCandidateV1` semantics, and delegates the full tick to the unchanged CAP-04 successful A1 orchestration:
+S7 executes exactly one explicit hourly tick. It does not introduce another State, Forecast or Scenario implementation. It selects canonical `twin_action_feedback_v1`, adapts the selected H object into the existing `ExecutedIrrigationCandidateV1` semantics, and delegates the full tick to the unchanged CAP-04 A1 successful orchestration:
 
 ```text
 Evidence Window
