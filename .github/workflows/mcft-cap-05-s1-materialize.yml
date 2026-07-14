@@ -56,10 +56,32 @@ jobs:
         run: python3 .mcft_cap05_s1_materializer.py
 
       - name: Run S1 deterministic dataset Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTROLLED_REPLAY_DATASET.cjs
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTROLLED_REPLAY_DATASET.cjs 2>&1 | tee /tmp/mcft-cap-05-s1-governance.log
+
+      - name: Upload S1 governance failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s1-governance-failure
+          path: /tmp/mcft-cap-05-s1-governance.log
+          if-no-files-found: error
 
       - name: Run S1 PostgreSQL facts-ingress Gate
-        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_EVIDENCE_INGRESS_DB.ts
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_EVIDENCE_INGRESS_DB.ts 2>&1 | tee /tmp/mcft-cap-05-s1-postgres.log
+
+      - name: Upload S1 PostgreSQL failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s1-postgres-failure
+          path: /tmp/mcft-cap-05-s1-postgres.log
+          if-no-files-found: error
 
       - name: Commit exact S1 candidate
         shell: bash
