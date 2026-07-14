@@ -50,7 +50,18 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Materialize PostgreSQL predecessor lock and S0 governance
-        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PREDECESSOR_PREFLIGHT.ts
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PREDECESSOR_PREFLIGHT.ts 2>&1 | tee /tmp/mcft-cap-05-s0-preflight.log
+
+      - name: Upload preflight failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s0-preflight-failure
+          path: /tmp/mcft-cap-05-s0-preflight.log
+          if-no-files-found: error
 
       - name: Commit exact S0 candidate
         shell: bash
