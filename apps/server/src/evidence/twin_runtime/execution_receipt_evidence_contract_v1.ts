@@ -252,7 +252,7 @@ export function validateAndNormalizeCap05ExecutionReceiptEvidenceV1(
   const validationStatus = mapCap05ReceiptValidationStatusV1(payload.validation_status);
   const eligible = payload.eligible_for_state_input
     && (executionStatus === "EXECUTED" || executionStatus === "PARTIALLY_EXECUTED")
-    && (validationStatus === "VALIDATED" || validationStatus === "VALIDATED_WITH_LIMITATIONS")
+    && validationStatus !== "REJECTED"
     && payload.source_quality !== "FAIL";
 
   return {
