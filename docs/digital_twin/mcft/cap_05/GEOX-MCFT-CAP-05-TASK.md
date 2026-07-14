@@ -29,7 +29,7 @@ design_status:
 DESIGN_FROZEN
 
 implementation_status:
-S2_IMPLEMENTATION_CANDIDATE
+S8_AUTHORIZED_NOT_STARTED
 
 authorization_effective:
 true
@@ -38,16 +38,16 @@ runtime_source_authorized:
 true
 
 active_delivery_slice_id:
-MCFT-CAP-05.MCFT-02-06-11-13-15.CONTRACTS-PROJECTION-MATH-CONFIG-V1
+MCFT-CAP-05.MCFT-07-11.FORECAST-OBSERVATION-RESIDUAL-C-COMMIT-V1
 
 dt02_architecture_amendment_status:
 NOT_REQUIRED_MERGED_EFFECTIVE
 
 first_permitted_repository_action:
-MCFT-CAP-05.MCFT-02-06-11-13-15.CONTRACTS-PROJECTION-MATH-CONFIG-V1
+MCFT-CAP-05.MCFT-07-11.FORECAST-OBSERVATION-RESIDUAL-C-COMMIT-V1
 ```
 
-P-1 已 merged-effective，裁决结果为 REUSE_WITHOUT_AMENDMENT。当前文件记录 P0 settlement / provisional SSOT candidate；仍不授权 Runtime source、migration、route、runner、canonical write implementation、S0 或 CAP-06。
+P-1 至 S7 已按各自 lifecycle 形成 merged-effective 事实。当前活动切片为 S8 Forecast Observation Residual；仅授权其受控 Runtime 实现，仍不授权 CAP-06、校准、模型激活、自动建议或因果效果声明。
 
 ## P-1 adjudication merged-effective result
 
@@ -3987,6 +3987,70 @@ S7 status after activation:
 AUTHORIZED_NOT_STARTED
 
 S7 Runtime implementation started:
+false
+
+canonical object delta:
+0
+
+transaction family delta:
+0
+
+migration delta:
+0
+
+CAP-06 authorized:
+false
+```
+
+
+---
+
+## S7 SSOT Settlement — S7 Effective / S8 Authorized
+
+```text
+activation_id:
+MCFT-CAP-05.S7.SSOT-SETTLEMENT-V1
+
+baseline_main_commit:
+a4ea0f0c6af45a5d8daaad94be6b95bc3efefd78
+
+activation PR:
+2469
+
+S7 Runtime PR:
+2467
+
+S7 exact head:
+bda7dc07293fbfb187dd8c5cc0109ac5c577952d
+
+S7 merge commit:
+a4ea0f0c6af45a5d8daaad94be6b95bc3efefd78
+
+S7 exact-head CI:
+29339485877 SUCCESS
+
+S7 merged-main Gate:
+29340134021 SUCCESS
+
+S7 validated path:
+15 PASS / 0 FAIL
+
+S7 trustworthy NOT_YET_VALIDATED path:
+7 PASS / 0 FAIL
+
+S7 PostgreSQL H source path:
+8 PASS / 0 FAIL
+
+S7 status:
+MERGED_EFFECTIVE
+
+S8 delivery slice:
+MCFT-CAP-05.MCFT-07-11.FORECAST-OBSERVATION-RESIDUAL-C-COMMIT-V1
+
+S8 status after activation:
+AUTHORIZED_NOT_STARTED
+
+S8 Runtime implementation started:
 false
 
 canonical object delta:
