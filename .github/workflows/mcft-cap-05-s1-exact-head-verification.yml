@@ -1,0 +1,66 @@
+name: MCFT-CAP-05 S1 exact-head verification
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s1-exact-head-probe-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap05_s1_exact_head_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap05_s1_exact_head_acceptance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s1_exact_head_acceptance
+      MCFT_CAP_05_S1_DESTRUCTIVE_ACCEPTANCE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-05-s1-controlled-feedback-replay-dataset-v1
+          fetch-depth: 0
+
+      - name: Verify exact S1 head
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin agent/mcft-cap-05-s1-controlled-feedback-replay-dataset-v1
+          test "$(git rev-parse HEAD)" = "6e2e3e238c5b7886e4d21d7899406e5642192500"
+          test "$(git rev-parse origin/agent/mcft-cap-05-s1-controlled-feedback-replay-dataset-v1)" = "6e2e3e238c5b7886e4d21d7899406e5642192500"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run S1 governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTROLLED_REPLAY_DATASET.cjs
+
+      - name: Run S1 PostgreSQL facts-ingress Gate
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_EVIDENCE_INGRESS_DB.ts
+
+      - name: Typecheck repository
+        run: pnpm -r typecheck
