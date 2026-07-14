@@ -81,8 +81,22 @@
     "NO_MODEL_ACTIVATION",
     "NO_CAP_06_AUTHORIZATION"
   ],
-  "next_delivery_slice_id": "MCFT-CAP-05.MCFT-04.HUMAN-DECISION-G-TRANSACTION-V1",
+  "next_delivery_slice_id": "MCFT-CAP-05.MCFT-13.HUMAN-DECISION-G-COMMIT-V1",
   "next_delivery_slice_authorized": false,
   "effectiveness_condition": "S3_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S3_GATE_PASS",
-  "effectiveness_condition_satisfied": false
+  "effectiveness_condition_satisfied": false,
+  "exact_changed_file_boundary": [
+    "apps/server/db/migrations/2026_07_14_mcft_cap_05_feedback_persistence.sql",
+    "apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts",
+    "apps/server/src/projections/twin_runtime/feedback_persistence_projection_v1.ts",
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-PERSISTENCE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S3-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S3_PERSISTENCE_RECOVERY.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts"
+  ]
 }
