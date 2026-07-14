@@ -2,6 +2,11 @@
 // Purpose: derive deterministic rebuildable PostgreSQL projection rows from MCFT-CAP-05 canonical Decision, Action Feedback and Forecast Residual objects plus approved-Plan Replay Evidence.
 // Boundary: pure row construction only; no database, canonical append, approval authority, causal inference, clock, filesystem, environment or network.
 
+import {
+  WATER_AMOUNT_SCALE_V1,
+  formatFixedDecimalV1,
+  parseFixedDecimalV1,
+} from "../../domain/soil_water/fixed_point_water_decimal_v1.js";
 import type {
   Cap05ActionFeedbackEnvelopeV1,
   Cap05DecisionEnvelopeV1,
@@ -187,11 +192,8 @@ function canonicalInstantV1(value: unknown, code: string): string {
 }
 
 function decimalTextV1(value: unknown, code: string): string {
-  if (typeof value === "number" && Number.isFinite(value)) return value.toFixed(6);
-  const text = requiredStringV1(value, code);
-  if (!/^-?\d+(?:\.\d+)?$/.test(text)) throw new Error(code);
-  const [whole, fraction = ""] = text.split(".");
-  return `${whole}.${fraction.slice(0, 6).padEnd(6, "0")}`;
+  const text = typeof value === "number" && Number.isFinite(value) ? value.toString() : value;
+  return formatFixedDecimalV1(parseFixedDecimalV1(text, WATER_AMOUNT_SCALE_V1, code), WATER_AMOUNT_SCALE_V1);
 }
 
 export function buildCap05DecisionProjectionRowV1(

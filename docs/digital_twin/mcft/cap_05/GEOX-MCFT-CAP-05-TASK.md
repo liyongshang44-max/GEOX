@@ -3891,3 +3891,55 @@ REUSE_WITHOUT_AMENDMENT
 ```
 
 但只有 P-1 文档、Gate、merge 和 merged-main effectiveness 成立后，该裁决才成为仓库事实。
+
+
+---
+
+## S5 Remediation — Recovery / Evidence Hash / Fixed-Point
+
+```text
+remediation_id:
+MCFT-CAP-05.S5.RECOVERY-HASH-FIXED-POINT-REMEDIATION-V1
+
+baseline_main_commit:
+ef1c789b15a3e73f93c7e63907519faecb027563
+
+merged S5 PR:
+2451
+
+independent prior S5 remediation PR found:
+false
+
+new remediation PR:
+2457
+
+S5 remediation status:
+IMPLEMENTATION_CANDIDATE
+
+initial wiring and typecheck workflow:
+29315823499 SUCCESS
+
+PostgreSQL remediation and S3 recovery regression workflow:
+29316507189 SUCCESS
+
+source_record_hash policy:
+S1_FULL_RECORD_MINUS_HASH_AND_MATERIALIZED_LOCATION_V1
+
+amount policy:
+WATER_AMOUNT_SCALE_6_HALF_AWAY_FROM_ZERO_V1
+
+recovery policy:
+REVALIDATE_ASSERTION_DECISION_PLAN_AMOUNT_AVAILABILITY_VALIDITY_SUPERSESSION_V1
+
+canonical object delta:
+0
+
+transaction family delta:
+0
+
+migration delta:
+0
+
+S6 authorized:
+false
+```

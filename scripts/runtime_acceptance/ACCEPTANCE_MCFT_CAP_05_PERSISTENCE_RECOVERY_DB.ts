@@ -205,11 +205,13 @@ async function main(): Promise<void> {
   const receipt = readOne("execution_receipts.jsonl");
   const observation = readOne("soil_observations.jsonl");
 
+  for (const evidence of [approval, plan]) {
   await pool.query(
     `INSERT INTO facts (fact_id,occurred_at,source,record_json)
      VALUES ($1,$2::timestamptz,'mcft_cap05_replay_evidence_v1',$3::jsonb)`,
-    [`fact_${plan.source_record_id}`, plan.available_to_runtime_at, JSON.stringify({ type: plan.record_type, payload: plan })],
+    [`fact_${evidence.source_record_id}`, evidence.available_to_runtime_at, JSON.stringify({ type: evidence.record_type, payload: evidence })],
   );
+}
 
   const scenarioSet = scenarioSetFixture();
   const decision = buildCap05DecisionV1({

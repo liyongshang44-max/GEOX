@@ -9,9 +9,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
-import type {
-  Cap05ApprovalAssertionEvidenceV1,
-  Cap05ApprovedPlanEvidenceV1,
+import {
+  computeCap05ReplayEvidenceSourceRecordHashV1,
+  type Cap05ApprovalAssertionEvidenceV1,
+  type Cap05ApprovedPlanEvidenceV1,
 } from "../../apps/server/src/evidence/twin_runtime/approval_plan_evidence_contracts_v1.js";
 import { PostgresFeedbackPersistenceRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.js";
 import { Cap05ApprovalPlanBindingServiceV1 } from "../../apps/server/src/runtime/twin_runtime/approval_plan_binding_service_v1.js";
@@ -50,6 +51,11 @@ function readOne<T>(file: string): T {
   return JSON.parse(fs.readFileSync(path.join(FIXTURE_ROOT, file), "utf8").trim()) as T;
 }
 
+function rehashEvidenceV1<T extends Record<string, unknown>>(record: T): T {
+  record.source_record_hash = computeCap05ReplayEvidenceSourceRecordHashV1(record);
+  return record;
+}
+
 function evidenceFactId(evidenceIdentityKey: string): string {
   const digest = crypto.createHash("sha256").update(evidenceIdentityKey, "utf8").digest("hex").slice(0, 32);
   return `fact_mcft05_evidence_${digest}`;
@@ -66,7 +72,7 @@ async function seedReplayEvidence(record: any): Promise<void> {
 function cloneAssertion(suffix: string, source: Cap05ApprovalAssertionEvidenceV1): Cap05ApprovalAssertionEvidenceV1 {
   const record = structuredClone(source);
   record.source_record_id = `${source.source_record_id}_${suffix}`;
-  record.source_record_hash = `sha256:acceptance-assertion-${suffix}`;
+  record.source_record_hash = computeCap05ReplayEvidenceSourceRecordHashV1(record as unknown as Record<string, unknown>);
   record.evidence_identity_key = `${source.evidence_identity_key}_${suffix}`;
   record.idempotency_key = `sha256:acceptance-assertion-idempotency-${suffix}`;
   return record;
@@ -75,7 +81,7 @@ function cloneAssertion(suffix: string, source: Cap05ApprovalAssertionEvidenceV1
 function clonePlan(suffix: string, source: Cap05ApprovedPlanEvidenceV1): Cap05ApprovedPlanEvidenceV1 {
   const record = structuredClone(source);
   record.source_record_id = `${source.source_record_id}_${suffix}`;
-  record.source_record_hash = `sha256:acceptance-plan-${suffix}`;
+  record.source_record_hash = computeCap05ReplayEvidenceSourceRecordHashV1(record as unknown as Record<string, unknown>);
   record.evidence_identity_key = `${source.evidence_identity_key}_${suffix}`;
   record.idempotency_key = `sha256:acceptance-plan-idempotency-${suffix}`;
   record.binding_id = `${source.binding_id}_${suffix}`;
@@ -171,7 +177,7 @@ async function main(): Promise<void> {
     approval_assertion: forgedAssertion,
     approved_plan: plan,
     dispatch: { disposition: "NOT_OBSERVED", evidence_ref: null, evidence_hash: null },
-  }), /CAP05_PLAN_ASSERTION_BINDING_MISMATCH/);
+  }), /CAP05_REPLAY_EVIDENCE_SOURCE_RECORD_HASH_MISMATCH/);
   ok("forged Assertion identity fails before persistence");
 
   const wrongScenarioAmount = clonePlan("wrong_scenario_amount", plan);
@@ -182,7 +188,7 @@ async function main(): Promise<void> {
   await assert.rejects(service.commitApprovalPlanBinding({
     scope: assertion,
     approval_assertion: assertion,
-    approved_plan: wrongScenarioAmount,
+    approved_plan: rehashEvidenceV1(wrongScenarioAmount as unknown as Record<string, unknown>) as unknown as Cap05ApprovedPlanEvidenceV1,
     dispatch: { disposition: "NOT_OBSERVED", evidence_ref: null, evidence_hash: null },
   }), /CAP05_PLAN_SCENARIO_AMOUNT_NOT_FROM_SELECTED_OPTION/);
   ok("Plan scenario amount not sourced from selected canonical option fails closed");
@@ -193,7 +199,7 @@ async function main(): Promise<void> {
   await assert.rejects(service.commitApprovalPlanBinding({
     scope: assertion,
     approval_assertion: assertion,
-    approved_plan: noReason,
+    approved_plan: rehashEvidenceV1(noReason as unknown as Record<string, unknown>) as unknown as Cap05ApprovedPlanEvidenceV1,
     dispatch: { disposition: "NOT_OBSERVED", evidence_ref: null, evidence_hash: null },
   }), /CAP05_PLAN_AMOUNT_DIFFERENCE_REASON_REQUIRED/);
   ok("nonzero amount difference without reason code fails closed");
@@ -222,7 +228,7 @@ async function main(): Promise<void> {
   await assert.rejects(service.commitApprovalPlanBinding({
     scope: assertion,
     approval_assertion: assertion,
-    approved_plan: parallelPlan,
+    approved_plan: rehashEvidenceV1(parallelPlan as unknown as Record<string, unknown>) as unknown as Cap05ApprovedPlanEvidenceV1,
     dispatch: { disposition: "NOT_OBSERVED", evidence_ref: null, evidence_hash: null },
   }), /CAP05_ACTIVE_PLAN_SUPERSESSION_REQUIRED/);
   assert.equal(await countType("approved_irrigation_plan_snapshot_v1"), 1);
@@ -247,7 +253,7 @@ async function main(): Promise<void> {
   const superseded = await service.commitApprovalPlanBinding({
     scope: assertion,
     approval_assertion: assertion,
-    approved_plan: supersedingPlan,
+    approved_plan: rehashEvidenceV1(supersedingPlan as unknown as Record<string, unknown>) as unknown as Cap05ApprovedPlanEvidenceV1,
     dispatch: { disposition: "NOT_OBSERVED", evidence_ref: null, evidence_hash: null },
   });
   assert.equal(superseded.approved_plan_status, "INSERTED");
