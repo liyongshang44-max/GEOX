@@ -1,7 +1,8 @@
 name: MCFT-CAP-05 S6 remediation-aware refresh
 
 on:
-  push:
+  pull_request:
+    types: [opened, reopened, synchronize]
     branches:
       - agent/mcft-cap-05-s6-action-feedback-h-adapter-v1
 
@@ -10,7 +11,7 @@ permissions:
 
 jobs:
   refresh:
-    if: github.ref == 'refs/heads/agent/mcft-cap-05-s6-action-feedback-h-adapter-v1'
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s6-refresh-trigger-v1'
     runs-on: ubuntu-latest
     services:
       postgres:
