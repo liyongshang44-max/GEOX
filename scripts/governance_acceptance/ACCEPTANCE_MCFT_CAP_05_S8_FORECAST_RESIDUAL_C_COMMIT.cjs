@@ -38,10 +38,10 @@ function json(file) { return JSON.parse(read(file)); }
 function changedFilesV1() {
   let emptyResult = null;
   const ranges = [
-    'origin/main...HEAD',
-    'origin/main..HEAD',
     `${BASELINE}..HEAD`,
     'HEAD^1..HEAD',
+    'origin/main...HEAD',
+    'origin/main..HEAD',
   ];
   for (const range of ranges) {
     try {
@@ -52,7 +52,7 @@ function changedFilesV1() {
       if (files.length > 0) return files;
       emptyResult = [];
     } catch {
-      // Continue through branch, baseline and pull-request merge-parent fallbacks.
+      // Continue through frozen-baseline, pull-request merge-parent and remote-main fallbacks.
     }
   }
   return emptyResult;
@@ -89,7 +89,7 @@ check(status.effectiveness_condition_satisfied === false, 'Runtime candidate doe
 
 for (const token of [
   'CAP05_FORECAST_RESIDUAL_MATCHING_POLICY_ID_V1',
-  'CAP05_FORECAST_POINT_MEMBER_REF_POLICY_ID_V1',
+  'buildCap05ForecastPointMemberRefV1',
   'CAP05_FORECAST_RESIDUAL_MATCH_NOT_FOUND',
   'CAP05_FORECAST_RESIDUAL_LATEST_FORECAST_TIE_CONFLICT',
   'source_posterior_action_feedback_refs',
@@ -179,13 +179,14 @@ const mode = process.argv.includes('--candidate') ? 'candidate' : process.argv.i
 if (mode === 'candidate') {
   check(JSON.stringify(changed) === JSON.stringify(expectedFiles), 'exact ten-file S8 Runtime boundary');
 } else if (mode === 'postmerge') {
-  check(changed !== null && changed.length === 0, 'postmerge main has no S8 delta against origin/main');
+  check(changed !== null && changed.length === 0, 'postmerge main has no S8 delta against frozen baseline');
   check(status.effectiveness_condition_satisfied === false, 'historical candidate status remains pre-settlement evidence');
 } else if (changed && JSON.stringify(changed) === JSON.stringify(expectedFiles)) {
   check(true, 'auto mode recognizes exact S8 candidate boundary');
 } else if (changed && changed.length === 0) {
   check(true, 'auto mode recognizes merged-main S8 Runtime');
 } else {
+  console.error(`OBSERVED_CHANGED_FILES ${JSON.stringify(changed)}`);
   check(false, 'auto mode rejects an unexpected S8 boundary');
 }
 
