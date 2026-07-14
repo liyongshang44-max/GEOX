@@ -33,6 +33,19 @@ function check(condition, label) {
 }
 function read(path) { return fs.readFileSync(path, "utf8"); }
 function json(path) { return JSON.parse(read(path)); }
+function changedFilesV1() {
+  for (const range of ["origin/main...HEAD", "origin/main..HEAD"]) {
+    try {
+      return execFileSync("git", ["diff", "--name-only", range], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim().split(/\r?\n/).filter(Boolean).sort();
+    } catch {
+      // Try the two-tree comparison when the CI checkout is shallow and has no merge base.
+    }
+  }
+  return null;
+}
 
 const source = read(expectedFiles[0]);
 const selector = read(expectedFiles[1]);
@@ -133,14 +146,7 @@ check(authority.includes("global SSOT settlement: deferred"), "authority documen
 check(wrapper.includes("MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION_GATE_V1") && wrapper.includes("MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK_GATE_V1"), "standard acceptance composes remediation and S7 validation");
 check(status.preserved_nonclaims.includes("NO_FORECAST_RESIDUAL_COMMIT") && status.preserved_nonclaims.includes("NO_CAP_06_AUTHORIZATION"), "Residual and CAP-06 nonclaims remain explicit");
 
-const changed = (() => {
-  try {
-    return execFileSync("git", ["diff", "--name-only", "origin/main...HEAD"], { encoding: "utf8" })
-      .trim().split(/\r?\n/).filter(Boolean).sort();
-  } catch {
-    return null;
-  }
-})();
+const changed = changedFilesV1();
 const mode = process.argv.includes("--candidate") ? "candidate" : process.argv.includes("--postmerge") ? "postmerge" : "auto";
 if (mode === "candidate") {
   check(JSON.stringify(changed) === JSON.stringify(expectedFiles), "exact ten-file S7 Runtime boundary");
