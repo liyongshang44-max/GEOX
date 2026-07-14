@@ -1,15 +1,15 @@
-name: MCFT-CAP-05 S5 remediation initial validation
+name: MCFT-CAP-05 S5 remediation final materialization
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [synchronize]
     branches: [main]
 
 permissions:
   contents: write
 
 jobs:
-  validate:
+  finalize:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s5-remediation-recovery-hash-fixed-point-v1'
     runs-on: ubuntu-latest
     services:
@@ -36,152 +36,6 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Wire remediation into existing S5 paths
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          projection = Path('apps/server/src/projections/twin_runtime/feedback_persistence_projection_v1.ts')
-          text = projection.read_text(encoding='utf-8')
-          import_anchor = 'import type {\n  Cap05ActionFeedbackEnvelopeV1,'
-          fixed_import = 'import {\n  WATER_AMOUNT_SCALE_V1,\n  formatFixedDecimalV1,\n  parseFixedDecimalV1,\n} from "../../domain/soil_water/fixed_point_water_decimal_v1.js";\n'
-          if fixed_import not in text:
-              if import_anchor not in text:
-                  raise SystemExit('projection import anchor missing')
-              text = text.replace(import_anchor, fixed_import + import_anchor, 1)
-          old_decimal = '''function decimalTextV1(value: unknown, code: string): string {
-            if (typeof value === "number" && Number.isFinite(value)) return value.toFixed(6);
-            const text = requiredStringV1(value, code);
-            if (!/^-?\\d+(?:\\.\\d+)?$/.test(text)) throw new Error(code);
-            const [whole, fraction = ""] = text.split(".");
-            return `${whole}.${fraction.slice(0, 6).padEnd(6, "0")}`;
-          }'''
-          new_decimal = '''function decimalTextV1(value: unknown, code: string): string {
-            const text = typeof value === "number" && Number.isFinite(value) ? value.toString() : value;
-            return formatFixedDecimalV1(parseFixedDecimalV1(text, WATER_AMOUNT_SCALE_V1, code), WATER_AMOUNT_SCALE_V1);
-          }'''
-          if old_decimal in text:
-              text = text.replace(old_decimal, new_decimal, 1)
-          elif new_decimal not in text:
-              raise SystemExit('projection decimal helper anchor missing')
-          projection.write_text(text, encoding='utf-8')
-
-          service = Path('apps/server/src/runtime/twin_runtime/approval_plan_binding_service_v1.ts')
-          text = service.read_text(encoding='utf-8')
-          old_import = '''  validateCap05ApprovalAssertionEvidenceV1,
-            validateCap05ApprovedPlanEvidenceV1,
-            type Cap05ApprovalAssertionEvidenceV1,'''
-          new_import = '''  normalizeCap05WaterAmountV1,
-            validateCap05ApprovalAssertionEvidenceV1,
-            validateCap05ApprovedPlanEvidenceV1,
-            validateCap05ApprovalPlanDecisionBindingV1,
-            type Cap05ApprovalAssertionEvidenceV1,'''
-          if old_import in text:
-              text = text.replace(old_import, new_import, 1)
-          elif 'validateCap05ApprovalPlanDecisionBindingV1' not in text:
-              raise SystemExit('service import anchor missing')
-          old_decimal = '''function decimalSixV1(value: unknown, code: string): string {
-            if (typeof value !== "string" && typeof value !== "number") throw new Error(code);
-            const number = Number(value);
-            if (!Number.isFinite(number)) throw new Error(code);
-            return number.toFixed(6);
-          }'''
-          new_decimal = '''function decimalSixV1(value: unknown, code: string): string {
-            return normalizeCap05WaterAmountV1(value, code);
-          }'''
-          if old_decimal in text:
-              text = text.replace(old_decimal, new_decimal, 1)
-          elif new_decimal not in text:
-              raise SystemExit('service decimal helper anchor missing')
-          old_commit = '''    validateCap05ApprovalAssertionEvidenceV1(input.approval_assertion, input.scope);
-              const amounts = validateCap05ApprovedPlanEvidenceV1(input.approved_plan, input.scope);
-              const decision = await this.resolveDecisionV1(input.scope, input.approval_assertion);
-              this.assertEvidenceDecisionBindingV1(decision, input.approval_assertion, input.approved_plan);'''
-          new_commit = '''    validateCap05ApprovalAssertionEvidenceV1(input.approval_assertion, input.scope);
-              validateCap05ApprovedPlanEvidenceV1(input.approved_plan, input.scope);
-              const decision = await this.resolveDecisionV1(input.scope, input.approval_assertion);
-              const amounts = validateCap05ApprovalPlanDecisionBindingV1({
-                decision,
-                approval_assertion: input.approval_assertion,
-                approved_plan: input.approved_plan,
-                as_of: input.approved_plan.available_to_runtime_at,
-              });'''
-          if old_commit in text:
-              text = text.replace(old_commit, new_commit, 1)
-          elif new_commit not in text:
-              raise SystemExit('service commit anchor missing')
-          service.write_text(text, encoding='utf-8')
-
-          evidence_repository = Path('apps/server/src/persistence/twin_runtime/postgres_approval_plan_evidence_repository_v1.ts')
-          text = evidence_repository.read_text(encoding='utf-8')
-          old_import = '''import type {
-            Cap05ApprovalAssertionEvidenceV1,
-            Cap05ApprovedPlanEvidenceV1,
-            Cap05DispatchDispositionV1,
-          } from "../../evidence/twin_runtime/approval_plan_evidence_contracts_v1.js";'''
-          new_import = '''import {
-            assertCap05ReplayEvidenceSourceRecordHashV1,
-            type Cap05ApprovalAssertionEvidenceV1,
-            type Cap05ApprovedPlanEvidenceV1,
-            type Cap05DispatchDispositionV1,
-          } from "../../evidence/twin_runtime/approval_plan_evidence_contracts_v1.js";'''
-          if old_import in text:
-              text = text.replace(old_import, new_import, 1)
-          elif 'assertCap05ReplayEvidenceSourceRecordHashV1' not in text:
-              raise SystemExit('evidence repository import anchor missing')
-          append_anchor = '''  ): Promise<{ status: Cap05EvidencePersistenceStatusV1; fact_id: string }> {
-              const factId = evidenceFactIdV1(record);'''
-          append_replacement = '''  ): Promise<{ status: Cap05EvidencePersistenceStatusV1; fact_id: string }> {
-              assertCap05ReplayEvidenceSourceRecordHashV1(record as unknown as Record<string, unknown>);
-              const factId = evidenceFactIdV1(record);'''
-          if append_anchor in text:
-              text = text.replace(append_anchor, append_replacement, 1)
-          elif append_replacement not in text:
-              raise SystemExit('evidence repository append anchor missing')
-          evidence_repository.write_text(text, encoding='utf-8')
-
-          generic = Path('apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts')
-          text = generic.read_text(encoding='utf-8')
-          import_anchor = 'import {\n  CAP05_FORECAST_RESIDUAL_OBJECT_TYPE_V1,'
-          recovery_import = 'import { PostgresApprovalPlanRecoveryRepositoryV1 } from "./postgres_approval_plan_recovery_repository_v1.js";\n'
-          if recovery_import not in text:
-              if import_anchor not in text:
-                  raise SystemExit('generic recovery import anchor missing')
-              text = text.replace(import_anchor, recovery_import + import_anchor, 1)
-          start_marker = '      const planFacts = await client.query('
-          end_marker = '      const cycles = await this.rebuildCompleteFeedbackCyclesWithClientV1(client, objects);'
-          if 'const planRecovery = await new PostgresApprovalPlanRecoveryRepositoryV1()' not in text:
-              start = text.index(start_marker)
-              end = text.index(end_marker, start)
-              replacement = '''      const planRecovery = await new PostgresApprovalPlanRecoveryRepositoryV1()
-                .rebuildAllBindingsWithClientV1(client);
-
-          '''
-              text = text[:start] + replacement + text[end:]
-          text = text.replace(
-              'approved_plan_bindings_rebuilt: planFacts.rows.length,',
-              'approved_plan_bindings_rebuilt: planRecovery.approved_plan_bindings_rebuilt,',
-              1,
-          )
-          if 'planFacts.rows.length' in text[text.index('async rebuildAllSupportState'):]:
-              raise SystemExit('stale generic plan recovery count remains')
-          generic.write_text(text, encoding='utf-8')
-          PY
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet; then
-            git add -f \
-              apps/server/src/projections/twin_runtime/feedback_persistence_projection_v1.ts \
-              apps/server/src/runtime/twin_runtime/approval_plan_binding_service_v1.ts \
-              apps/server/src/persistence/twin_runtime/postgres_approval_plan_evidence_repository_v1.ts \
-              apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts
-            git commit -m "fix(mcft-cap-05): wire validated S5 recovery and fixed-point authority"
-            git push origin HEAD:${{ github.head_ref }}
-          fi
-
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
@@ -193,5 +47,83 @@ jobs:
 
       - run: pnpm install --no-frozen-lockfile
 
+      - name: Materialize remediation SSOT
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 .mcft_cap05_s5_remediation_materializer.py 2>&1 | tee /tmp/mcft-cap05-s5-remediation-materializer.log
+
+      - name: Upload materializer failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s5-remediation-materializer-failure
+          path: /tmp/mcft-cap05-s5-remediation-materializer.log
+          if-no-files-found: ignore
+
+      - name: Commit exact remediation candidate and remove temporary files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f \
+            .github/workflows/mcft-cap-05-s5-remediation-initial.yml \
+            .github/workflows/mcft-cap-05-s5-remediation-db.yml \
+            .mcft_cap05_s5_remediation_materializer.py
+          git add -f \
+            apps/server/src/evidence/twin_runtime/approval_plan_evidence_contracts_v1.ts \
+            apps/server/src/persistence/twin_runtime/postgres_approval_plan_evidence_repository_v1.ts \
+            apps/server/src/persistence/twin_runtime/postgres_approval_plan_recovery_repository_v1.ts \
+            apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts \
+            apps/server/src/projections/twin_runtime/feedback_persistence_projection_v1.ts \
+            apps/server/src/runtime/twin_runtime/approval_plan_binding_service_v1.ts \
+            docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md \
+            docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S5-REMEDIATION-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_REMEDIATION.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_REMEDIATION_DB.ts
+          git commit -m "fix(mcft-cap-05): remediate S5 recovery hash and fixed-point authority"
+
+      - name: Run remediation governance Gate
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_REMEDIATION.cjs 2>&1 | tee /tmp/mcft-cap05-s5-remediation-governance.log
+
+      - name: Upload governance failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s5-remediation-governance-failure
+          path: /tmp/mcft-cap05-s5-remediation-governance.log
+          if-no-files-found: ignore
+
+      - name: Run remediation PostgreSQL acceptance
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_REMEDIATION_DB.ts 2>&1 | tee /tmp/mcft-cap05-s5-remediation-db.log
+
+      - name: Create S3 regression database
+        run: PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -c 'CREATE DATABASE mcft_cap05_s3_remediation_regression'
+
+      - name: Run S3 persistence and recovery regression
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s3_remediation_regression
+          MCFT_CAP_05_S3_DESTRUCTIVE_ACCEPTANCE: "1"
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts 2>&1 | tee /tmp/mcft-cap05-s3-remediation-regression.log
+
       - name: Typecheck repository
         run: pnpm -r typecheck
+
+      - name: Push final remediation candidate
+        run: git push origin HEAD:${{ github.head_ref }}
