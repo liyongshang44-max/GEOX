@@ -102,7 +102,7 @@ for (const needle of [
 
 check(authority.includes("Neither record is a canonical Twin object") && authority.includes("GEOX does not create an approval request"), "authority document preserves Evidence/canonical and approval boundaries");
 check(authority.includes("scenario_amount_mm = 15.000000") && authority.includes("approved_amount_mm = 14.000000"), "authority document freezes amount separation example");
-check(authority.includes("supersession") && authority.includes("historical Evidence"), "authority document records projection-only supersession");
+check(authority.includes("preserves the old Plan Evidence fact unchanged") && authority.includes("marks only the old projection row inactive"), "authority document records projection-only supersession");
 
 check(cap05?.active_delivery_slice_id === S5 && cap05?.implementation_status === "S5_IMPLEMENTATION_CANDIDATE", "global Matrix activates only S5 candidate");
 check(cap05?.next_authorized_slice_ids?.length === 0, "global Matrix does not authorize S6");
