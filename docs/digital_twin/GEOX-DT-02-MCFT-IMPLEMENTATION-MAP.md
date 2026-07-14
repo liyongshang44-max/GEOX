@@ -1060,3 +1060,31 @@ Established in this bounded slice: pure G Decision, H Action Feedback and C Fore
 Persistence, migration, canonical append, State/checkpoint writes, route, web, Recommendation, AO-ACT change, calibration and model activation remain outside S2.
 
 <!-- MCFT-CAP-05-S2-CONTRACTS-CONFIG-END -->
+
+
+---
+
+## MCFT-CAP-05 S3 Persistence / Idempotency / Recovery Candidate
+
+```text
+capability_line_id: MCFT-CAP-05
+delivery_slice_id: MCFT-CAP-05.MCFT-03.PERSISTENCE-IDEMPOTENCY-RECOVERY-V1
+baseline_main_commit: 651878f63a704f78503acb8565087d7f980ada5a
+status: IMPLEMENTATION_CANDIDATE
+postgresql_acceptance_workflow: 29309606079 SUCCESS
+canonical_store: public.facts
+migration_count: 1
+new_canonical_object_types: 0
+new_transaction_families: 0
+S4_authorized: false
+CAP_06_authorized: false
+```
+
+Established candidate scope:
+
+- reuse `G_HUMAN_DECISION_LINK_COMMIT`, `H_ACTION_FEEDBACK_COMMIT`, and `C_FORECAST_RESIDUAL_COMMIT`;
+- append canonical objects only to `public.facts`;
+- reuse `twin_object_idempotency_index_v1` with bounded G/H/C identity kinds;
+- maintain mutable Decision, Action Feedback, Evidence-link, Forecast Residual, Approved Plan binding, and complete feedback-cycle projections;
+- delete and rebuild CAP-05 guards/projections from canonical facts and graph refs;
+- create no business-flow service, State Tick, route, Recommendation, AO-ACT change, calibration candidate, activation, or CAP-06 authority.

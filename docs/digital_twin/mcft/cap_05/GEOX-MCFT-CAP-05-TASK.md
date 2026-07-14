@@ -2727,6 +2727,41 @@ coverage weighting exactly once
 
 # 27. S3 — Persistence and Recovery
 
+S3 implementation candidate identity：
+
+```text
+baseline_main_commit:
+651878f63a704f78503acb8565087d7f980ada5a
+
+S2 exact head:
+ce2ec8b627b628977e7a31e0a1bcb630fffb5dfd
+
+S2 merge commit:
+651878f63a704f78503acb8565087d7f980ada5a
+
+S2 merged-main Gate workflow:
+29309185464 SUCCESS
+
+active_delivery_slice_id:
+MCFT-CAP-05.MCFT-03.PERSISTENCE-IDEMPOTENCY-RECOVERY-V1
+
+S3 status:
+IMPLEMENTATION_CANDIDATE
+
+S3 PostgreSQL acceptance workflow:
+29309606079 SUCCESS
+
+migration count:
+1
+
+canonical store:
+public.facts
+
+S4 authorized:
+false
+```
+
+
 预计需要：
 
 ```text

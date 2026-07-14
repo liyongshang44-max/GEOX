@@ -1,0 +1,102 @@
+{
+  "schema_version": "geox_mcft_cap_05_s3_status_v1",
+  "capability_line_id": "MCFT-CAP-05",
+  "delivery_slice_id": "MCFT-CAP-05.MCFT-03.PERSISTENCE-IDEMPOTENCY-RECOVERY-V1",
+  "slice_kind": "POSTGRESQL_PERSISTENCE_IDEMPOTENCY_RECOVERY",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "baseline_main_commit": "651878f63a704f78503acb8565087d7f980ada5a",
+  "branch": "agent/mcft-cap-05-s3-persistence-idempotency-recovery-v1",
+  "s2_effectiveness": {
+    "pr_number": 2441,
+    "exact_head": "ce2ec8b627b628977e7a31e0a1bcb630fffb5dfd",
+    "materialization_workflow": 29309046407,
+    "exact_head_workflow": 29309103415,
+    "merge_commit": "651878f63a704f78503acb8565087d7f980ada5a",
+    "head_to_merge_file_delta_count": 0,
+    "tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2443,
+    "merged_main_gate_workflow": 29309185464,
+    "merged_main_gate": "PASS",
+    "effective": true
+  },
+  "validation": {
+    "initial_typecheck_workflow": 29309424769,
+    "postgresql_acceptance_workflow": 29309606079,
+    "repository_typecheck": "PASS",
+    "postgresql_acceptance": "PASS"
+  },
+  "migration": {
+    "count": 1,
+    "path": "apps/server/db/migrations/2026_07_14_mcft_cap_05_feedback_persistence.sql",
+    "additive": true,
+    "second_canonical_store_created": false
+  },
+  "canonical_persistence": {
+    "store": "public.facts",
+    "object_types": [
+      "twin_decision_record_v1",
+      "twin_action_feedback_v1",
+      "twin_forecast_residual_v1"
+    ],
+    "identity_kinds": [
+      "G_DECISION_RECORD",
+      "H_ACTION_FEEDBACK",
+      "C_FORECAST_RESIDUAL"
+    ],
+    "new_canonical_object_types": [],
+    "new_transaction_families": []
+  },
+  "rebuildable_support_state": [
+    "twin_decision_record_projection_v1",
+    "twin_action_feedback_projection_v1",
+    "twin_action_feedback_evidence_index_v1",
+    "twin_forecast_residual_projection_v1",
+    "twin_approved_plan_binding_projection_v1",
+    "twin_action_feedback_cycle_projection_v1"
+  ],
+  "recovery": {
+    "facts_authoritative": true,
+    "guard_rebuild": true,
+    "projection_rebuild": true,
+    "complete_cycle_rebuild": true,
+    "partial_cycle_inference": false,
+    "duplicate_canonical_fact_creation": false
+  },
+  "canonical_twin_object_fact_delta_in_acceptance": 3,
+  "replay_evidence_fact_delta_in_acceptance": 1,
+  "migration_delta": 1,
+  "production_runtime_flow_created": false,
+  "preserved_nonclaims": [
+    "NO_DECISION_SERVICE",
+    "NO_APPROVAL_AUTHORITY",
+    "NO_ACTION_FEEDBACK_NORMALIZATION_WORKFLOW",
+    "NO_RECEIPT_CONSUMING_STATE_TICK",
+    "NO_FORECAST_EXECUTION",
+    "NO_RESIDUAL_MATCHING_ORCHESTRATION",
+    "NO_ROUTE",
+    "NO_WEB",
+    "NO_RECOMMENDATION",
+    "NO_AO_ACT_CHANGE",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_MODEL_ACTIVATION",
+    "NO_CAP_06_AUTHORIZATION"
+  ],
+  "next_delivery_slice_id": "MCFT-CAP-05.MCFT-13.HUMAN-DECISION-G-COMMIT-V1",
+  "next_delivery_slice_authorized": false,
+  "effectiveness_condition": "S3_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S3_GATE_PASS",
+  "effectiveness_condition_satisfied": false,
+  "exact_changed_file_boundary": [
+    "apps/server/db/migrations/2026_07_14_mcft_cap_05_feedback_persistence.sql",
+    "apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts",
+    "apps/server/src/projections/twin_runtime/feedback_persistence_projection_v1.ts",
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-PERSISTENCE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S3-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S3_PERSISTENCE_RECOVERY.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts"
+  ]
+}
