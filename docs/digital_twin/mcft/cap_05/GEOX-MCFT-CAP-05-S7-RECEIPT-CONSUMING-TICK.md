@@ -6,8 +6,10 @@
 ```text
 capability_line_id: MCFT-CAP-05
 delivery_slice_id: MCFT-CAP-05.MCFT-04-06-07-08-09-10.RECEIPT-CONSUMING-TICK-V1
-baseline merged main: a9bf75333871ac62021679c1dac756be9e30cebe
+baseline merged main: 210622dbbfb96e6999568630e5095f7c6097d8c7
 S6 Runtime status: MERGED_EFFECTIVE
+S6 validation-orthogonality remediation PR: 2465
+S6 validation-orthogonality remediation merge: 210622dbbfb96e6999568630e5095f7c6097d8c7
 S6 SSOT activation PR: 2463
 S7 authorization status: AUTHORIZED_NOT_STARTED at baseline
 runtime mode: REPLAY
@@ -36,8 +38,6 @@ Evidence Window
 
 The selector operates on canonical H objects under exact Reality scope and one explicit hourly target time.
 
-Frozen interval and cutoff:
-
 ```text
 window = (T-1h, T]
 evidence_cutoff_time = T
@@ -45,14 +45,16 @@ Action Feedback logical_time = execution_end
 Action Feedback as_of = available_to_runtime_at
 ```
 
-Eligible feedback must satisfy the existing S6 policy:
+Execution status, validation status, source quality and canonical eligibility remain independent axes. Under the remediation-effective contract, eligible feedback must satisfy:
 
 ```text
 execution_status in {EXECUTED, PARTIALLY_EXECUTED}
-validation_status in {VALIDATED, VALIDATED_WITH_LIMITATIONS}
+validation_status in {NOT_YET_VALIDATED, VALIDATED, VALIDATED_WITH_LIMITATIONS}
 source_quality in {PASS, LIMITED}
 eligible_for_state_input = true
 ```
+
+`NOT_YET_VALIDATED` may remain eligible when execution Evidence is trustworthy. `REJECTED`, `EXECUTION_UNCERTAIN`, `NOT_EXECUTED`, `FAIL` quality or canonical ineligibility remains fail-closed.
 
 Future, late, outside-window, wrong-scope and ineligible feedback remains canonical but is not consumed. Late feedback is not shifted to the availability hour and does not trigger automatic historical rewrite.
 
@@ -109,7 +111,7 @@ source_object_type = twin_action_feedback_v1
 adapter_id = CANONICAL_H_TO_DYNAMICS_EXECUTION_RECORD_V1
 ```
 
-This adapter record is not a new canonical object and is not appended to `public.facts`. It exists only inside the frozen tick Evidence Window so the existing Dynamics path can consume H without reinterpretation of historical CAP-02/CAP-04 Evidence contracts.
+The adapter record is not a new canonical object and is not appended to `public.facts`. It exists only inside the frozen tick Evidence Window so the existing Dynamics path can consume H without reinterpreting historical CAP-02/CAP-04 Evidence contracts.
 
 The adapter preserves:
 
@@ -117,6 +119,10 @@ The adapter preserves:
 actual_amount_mm
 spatial_coverage_fraction
 target_scope_equivalent_irrigation_mm
+execution_status
+validation_status
+source_quality
+eligible_for_state_input
 execution_start
 execution_end
 ingested_at
@@ -125,7 +131,7 @@ source Action Feedback ref/hash
 selection disposition and reason
 ```
 
-It performs no coverage multiplication and no volume-to-depth conversion.
+Validation status is retained without being converted into source quality or canonical eligibility. The adapter performs no coverage multiplication and no volume-to-depth conversion.
 
 ## Dynamics and one-time coverage
 
@@ -150,6 +156,8 @@ excluded Action Feedback refs and reasons
 deduplicated Action Feedback refs
 adapter ID
 raw amount and coverage
+validation_status
+eligible_for_state_input
 ```
 
 The canonical `twin_evidence_window_v1` consumes the selected H object ID as an Evidence ref. The State Transition and posterior State retain the normal CAP-04 chain.
@@ -170,7 +178,7 @@ checkpoint sequence increments by 1
 T+1 handoff references exact posterior/checkpoint/Forecast
 ```
 
-Completed replay returns the same A1/B hashes before Replay Evidence, Action Feedback, Config, lease or canonical write work.
+Both `VALIDATED` and trustworthy `NOT_YET_VALIDATED` acceptance paths must prove the same normal A1, Forecast and Scenario cardinalities. Completed replay returns the same A1/B hashes before Replay Evidence, Action Feedback, Config, lease or canonical write work.
 
 ## PostgreSQL read path
 
@@ -183,6 +191,8 @@ twin_action_feedback_projection_v1.source_fact_id
 ```
 
 Projection fields and canonical H envelope identity/hash/scope/time must match exactly. The source is read-only and creates no fact or projection mutation.
+
+The PostgreSQL acceptance must prove canonical readback of trustworthy `NOT_YET_VALIDATED`, positive selector consumption when it is the exact candidate, fail-closed behavior for multiple eligible events, late exclusion, zero read-path writes and exact Reality scope.
 
 ## Standard timeline
 
