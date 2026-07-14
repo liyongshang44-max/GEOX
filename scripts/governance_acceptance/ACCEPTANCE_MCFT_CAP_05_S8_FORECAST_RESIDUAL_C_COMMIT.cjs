@@ -66,11 +66,15 @@ const residualContract = read('apps/server/src/domain/twin_runtime/forecast_obse
 check(status.delivery_slice_id === S8 && status.status === 'IMPLEMENTATION_CANDIDATE', 'S8 candidate identity is explicit');
 check(status.baseline_main_commit === BASELINE, 'S8 baseline is the remediation-effective main');
 check(status.authorization?.activation_pr_number === 2469 && status.authorization?.runtime_source_authorized === true, 'S8 explicit activation is prerequisite authority');
-check(status.pre_s8_contract_remediation?.merge_commit === BASELINE && status.pre_s8_contract_remediation?.effective === true, 'pre-S8 residual-contract remediation is frozen effective');
+check(status.pre_s8_contract_remediation?.merge_commit === BASELINE && status.pre_s8_contract_remediation?.effective === true, 'S8 status freezes the merged remediation and merged-main probe');
 check(authorization.implementation_status === 'S8_AUTHORIZED_NOT_STARTED' && authorization.active_delivery_slice_id === S8, 'baseline Authorization Status explicitly authorizes S8');
 const deliveryS8 = delivery.slices.find((slice) => slice.delivery_slice_id === S8);
 check(deliveryS8?.status === 'AUTHORIZED_NOT_STARTED' && deliveryS8?.runtime_source_authorized === true, 'Delivery SSOT authorizes S8 Runtime source and no further claim');
-check(remediation.remediation_id === 'MCFT-CAP-05.S8.FORECAST-RESIDUAL-CONTRACT-REMEDIATION-V1' && remediation.effectiveness_condition_satisfied === true, 'contract remediation effectiveness record remains present');
+check(remediation.remediation_id === 'MCFT-CAP-05.S8.RESIDUAL-CONTRACT-CONFORMANCE-REMEDIATION-V1'
+  && remediation.pull_request_number === 2471
+  && remediation.validation?.workflow_conclusion === 'SUCCESS'
+  && remediation.validation?.required_fail_count === 0,
+'validated pre-S8 remediation record remains present as historical candidate evidence');
 check(status.runtime_composition?.new_transaction_family_delta === 0 && status.runtime_composition?.new_canonical_object_type_delta === 0 && status.runtime_composition?.migration_delta === 0, 'S8 creates no object type, transaction family or migration');
 check(status.effectiveness_condition_satisfied === false, 'Runtime candidate does not self-claim effectiveness');
 
@@ -88,7 +92,7 @@ check(selector.includes('issued_at.localeCompare') && selector.includes('object_
 check(!selector.includes('Date.now(') && !selector.includes('new Date()'), 'selector has no wall-clock selection authority');
 
 check(source.includes('twin_forecast_run_projection_v1') && source.includes('twin_forecast_point_projection_v1'), 'PostgreSQL source reads existing Forecast projections');
-check(source.includes("JOIN facts f") && source.includes('forecast_record_json'), 'PostgreSQL source resolves projection pointers through canonical facts');
+check(source.includes('JOIN facts f') && source.includes('forecast_record_json'), 'PostgreSQL source resolves projection pointers through canonical facts');
 check(source.includes('CAP05_RESIDUAL_SOURCE_FORECAST_PROJECTION_MISMATCH') && source.includes('CAP05_RESIDUAL_SOURCE_FORECAST_POINT_PROJECTION_MISMATCH'), 'source checks run and point projection-to-fact identity');
 check(source.includes('source_posterior_ref') && source.includes('evidence_window_ref'), 'source walks Forecast to source posterior and Evidence Window');
 check(source.includes('twin_action_feedback_projection_v1') && source.includes('source_posterior_action_feedback_refs'), 'source proves canonical H consumption through H projection and fact readback');
