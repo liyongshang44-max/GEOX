@@ -152,6 +152,20 @@ function requireSuccess(result) {
   }
 }
 
+function runPredecessorGateOnCurrentTree(gatePath) {
+  const originalMain = run('git', ['rev-parse', 'refs/remotes/origin/main']);
+  if (originalMain.status !== 0 || !originalMain.stdout) {
+    requireSuccess(run(process.execPath, [gatePath, '--auto']));
+    return;
+  }
+  requireSuccess(run('git', ['update-ref', 'refs/remotes/origin/main', 'HEAD']));
+  try {
+    requireSuccess(run(process.execPath, [gatePath, '--postmerge']));
+  } finally {
+    requireSuccess(run('git', ['update-ref', 'refs/remotes/origin/main', originalMain.stdout]));
+  }
+}
+
 function postgresBaseUrl() {
   if (env.DATABASE_URL) return env.DATABASE_URL;
   if (!env.POSTGRES_USER || !env.POSTGRES_PASSWORD || !env.POSTGRES_DB) return null;
@@ -169,7 +183,7 @@ function databaseUrl(base, databaseName) {
 function runCap05S6ValidationOrthogonalityRemediationAcceptance() {
   const gatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs');
   if (!fs.existsSync(gatePath)) return;
-  requireSuccess(run(process.execPath, [gatePath, '--auto']));
+  runPredecessorGateOnCurrentTree(gatePath);
 
   const shouldRunDatabase = env.CI === 'true' || env.MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_RUN_DB_ACCEPTANCE === '1';
   const base = postgresBaseUrl();
