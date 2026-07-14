@@ -32,7 +32,29 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Run S2 pure acceptance
-        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts 2>&1 | tee /tmp/mcft-cap-05-s2-acceptance.log
+
+      - name: Upload S2 acceptance failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s2-acceptance-failure
+          path: /tmp/mcft-cap-05-s2-acceptance.log
+          if-no-files-found: error
 
       - name: Typecheck repository
-        run: pnpm -r typecheck
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm -r typecheck 2>&1 | tee /tmp/mcft-cap-05-s2-typecheck.log
+
+      - name: Upload S2 typecheck failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s2-typecheck-failure
+          path: /tmp/mcft-cap-05-s2-typecheck.log
+          if-no-files-found: error
