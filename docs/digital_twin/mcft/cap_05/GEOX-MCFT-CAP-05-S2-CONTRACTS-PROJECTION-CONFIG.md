@@ -68,7 +68,7 @@ projection_method: FORECAST_STORAGE_TO_ROOT_ZONE_MEAN_VWC_H1_V1
 projection_method_version: 1
 variance_method: STORAGE_VARIANCE_DIVIDED_BY_ROOT_ZONE_DEPTH_SQUARED_V1
 residual_formula: actual_observation - projected_forecast
-normalization_basis: FORECAST_PLUS_EFFECTIVE_OBSERVATION_VARIANCE_V1
+normalization_basis: FORECAST_PLUS_OBSERVATION_VARIANCE_V1
 normalized_residual: residual / sqrt(forecast_vwc_variance + effective_CAP03_observation_variance)
 observation_operator_h: 1.000000
 direct_state_equivalence: false

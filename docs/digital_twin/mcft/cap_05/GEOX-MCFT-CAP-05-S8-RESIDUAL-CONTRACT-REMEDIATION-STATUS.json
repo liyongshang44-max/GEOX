@@ -27,7 +27,7 @@
     "issued_target_relation": "forecast_target_time = forecast_issued_at + forecast_horizon_hour",
     "observation_target_relation": "actual_observation_observed_at = forecast_target_time",
     "projection_method_id": "FORECAST_STORAGE_TO_ROOT_ZONE_MEAN_VWC_H1_V1",
-    "normalization_basis": "FORECAST_PLUS_EFFECTIVE_OBSERVATION_VARIANCE_V1",
+    "normalization_basis": "FORECAST_PLUS_OBSERVATION_VARIANCE_V1",
     "effective_observation_variance_source": "CAP03_EFFECTIVE_OBSERVATION_VARIANCE_INCLUDES_REPRESENTATIVENESS_AND_QUALITY_WEIGHTING",
     "representativeness_added_again": false,
     "zero_or_negative_total_variance": "FAIL_CLOSED",
