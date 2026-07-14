@@ -107,7 +107,7 @@ function evidenceRefsV1(evidence: CanonicalObjectEnvelopeV1): string[] {
     ? evidence.payload.consumed_evidence_refs
     : [];
   return [...new Set([...evidence.evidence_refs, ...payloadRefs]
-    .filter((value): value is string => typeof value === "string" && value.trim()))]
+    .filter((value): value is string => typeof value === "string" && Boolean(value.trim())))]
     .sort((left, right) => left.localeCompare(right));
 }
 
@@ -162,7 +162,7 @@ async function actionFeedbackRefsForSourcePosteriorV1(input: {
       String(row.action_feedback_object_id),
       "CAP05_RESIDUAL_SOURCE_ACTION_FEEDBACK_NOT_FOUND",
     );
-    if (feedback.object_type !== "twin_action_feedback_v1"
+    if ((feedback as unknown as { object_type: string }).object_type !== "twin_action_feedback_v1"
       || feedback.determinism_hash !== row.determinism_hash) {
       throw new Error("CAP05_RESIDUAL_SOURCE_ACTION_FEEDBACK_PROJECTION_MISMATCH");
     }
