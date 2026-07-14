@@ -212,7 +212,7 @@ function runCap05S6ValidationOrthogonalityRemediationAcceptance() {
 function runCap05S7Acceptance() {
   const gatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK.cjs');
   if (!fs.existsSync(gatePath)) return;
-  requireSuccess(run(process.execPath, [gatePath, '--auto']));
+  runPredecessorGateOnCurrentTree(gatePath);
   const pnpmCmd = isWindows ? 'pnpm.cmd' : 'pnpm';
   requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK.ts']));
   requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_NOT_YET_VALIDATED_RECEIPT_CONSUMING_TICK.ts']));
@@ -296,3 +296,10 @@ runCap05S6ValidationOrthogonalityRemediationAcceptance();
 
 // MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK_GATE_V1: verify S7 Governance, both validation-status A1 paths, CAP-04 regression and isolated PostgreSQL H source.
 runCap05S7Acceptance();
+
+
+// MCFT_CAP_05_S7_SSOT_SETTLEMENT_GATE_V1: enforce S7 merged effectiveness and explicit S8 authorization during standard acceptance.
+const s7SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_SETTLEMENT.cjs');
+if (fs.existsSync(s7SettlementGatePath)) {
+  requireSuccess(run(process.execPath, [s7SettlementGatePath, '--auto']));
+}

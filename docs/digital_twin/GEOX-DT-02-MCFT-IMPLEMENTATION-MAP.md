@@ -1213,3 +1213,38 @@ Governance effect:
 - explicitly authorize, but do not implement, the S7 Receipt-consuming tick slice;
 - preserve all State/checkpoint, Forecast, Residual, Recommendation, AO-ACT, calibration, activation and CAP-06 nonclaims;
 - add no Runtime source, migration, route or web change.
+
+
+---
+
+## MCFT-CAP-05 S7 Effective and S8 Explicitly Authorized
+
+```text
+capability_line_id: MCFT-CAP-05
+activation_id: MCFT-CAP-05.S7.SSOT-SETTLEMENT-V1
+baseline_main_commit: a4ea0f0c6af45a5d8daaad94be6b95bc3efefd78
+activation_pr: 2469
+S7_status: MERGED_EFFECTIVE
+S7_exact_head: bda7dc07293fbfb187dd8c5cc0109ac5c577952d
+S7_merge_commit: a4ea0f0c6af45a5d8daaad94be6b95bc3efefd78
+S7_candidate_CI: 29339485877 SUCCESS
+S7_merged_main_gate: 29340134021 SUCCESS
+S7_validated_path: 15 PASS / 0 FAIL
+S7_NOT_YET_VALIDATED_path: 7 PASS / 0 FAIL
+S7_PostgreSQL_source_path: 8 PASS / 0 FAIL
+S8_status: AUTHORIZED_NOT_STARTED
+S8_runtime_source_authorized: true
+S8_implementation_started: false
+canonical_object_delta: 0
+transaction_family_delta: 0
+migration_delta: 0
+CAP_06_authorized: false
+```
+
+Governance effect:
+
+- settle the ten-file S7 Runtime slice as merged-main effective;
+- preserve the S6 validation-orthogonality remediation and trustworthy `NOT_YET_VALIDATED` State-input path;
+- explicitly authorize, but do not implement, the S8 Forecast Observation Residual C-commit slice;
+- preserve Forecast Residual / Assimilation Innovation separation and all causal, calibration, activation and CAP-06 nonclaims;
+- add no Runtime source, canonical object, transaction family, migration, route or web change.
