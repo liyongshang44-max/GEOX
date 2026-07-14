@@ -8,8 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
-import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
-import { buildCap05ScenarioOptionMemberRefV1 } from "../../apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.js";
+import { buildCap05ScenarioOptionMemberRefV1, resolveCap05ScenarioOptionMemberV1 } from "../../apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.js";
 import { PostgresForecastScenarioRecoveryRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.js";
 import { Cap05HumanDecisionServiceV1 } from "../../apps/server/src/runtime/twin_runtime/human_decision_service_v1.js";
 
@@ -205,7 +204,7 @@ async function main(): Promise<void> {
     mutate(record) {
       record.canonical_payload.selected_option_id = "NO_ACTION";
       record.canonical_payload.selected_option_ref = buildCap05ScenarioOptionMemberRefV1(scenario.object_id, "NO_ACTION");
-      record.canonical_payload.selected_option_hash = semanticHashV1(noActionOption);
+      record.canonical_payload.selected_option_hash = resolveCap05ScenarioOptionMemberV1(scenario, record.canonical_payload.selected_option_ref).option_hash;
     },
   });
   await assert.rejects(service.commitHumanDecision({
