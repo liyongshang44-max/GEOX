@@ -36,14 +36,15 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Preserve merged S5 acceptance under strict Evidence hashes
+      - name: Preserve prior acceptances under strict graph validation
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts')
-          text = p.read_text(encoding='utf-8')
+
+          s5 = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts')
+          text = s5.read_text(encoding='utf-8')
           old_import = '''import type {
             Cap05ApprovalAssertionEvidenceV1,
             Cap05ApprovedPlanEvidenceV1,
@@ -90,13 +91,35 @@ jobs:
                   f'approved_plan: rehashEvidenceV1({name} as unknown as Record<string, unknown>) as unknown as Cap05ApprovedPlanEvidenceV1,',
                   1,
               )
-          p.write_text(text, encoding='utf-8')
+          s5.write_text(text, encoding='utf-8')
+
+          s3 = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts')
+          text = s3.read_text(encoding='utf-8')
+          old_seed = '''  await pool.query(
+            `INSERT INTO facts (fact_id,occurred_at,source,record_json)
+             VALUES ($1,$2::timestamptz,'mcft_cap05_replay_evidence_v1',$3::jsonb)`,
+            [`fact_${plan.source_record_id}`, plan.available_to_runtime_at, JSON.stringify({ type: plan.record_type, payload: plan })],
+          );'''
+          new_seed = '''  for (const evidence of [approval, plan]) {
+            await pool.query(
+              `INSERT INTO facts (fact_id,occurred_at,source,record_json)
+               VALUES ($1,$2::timestamptz,'mcft_cap05_replay_evidence_v1',$3::jsonb)`,
+              [`fact_${evidence.source_record_id}`, evidence.available_to_runtime_at, JSON.stringify({ type: evidence.record_type, payload: evidence })],
+            );
+          }'''
+          if old_seed in text:
+              text = text.replace(old_seed, new_seed, 1)
+          elif new_seed not in text:
+              raise SystemExit('S3 complete Plan graph fixture anchor missing')
+          s3.write_text(text, encoding='utf-8')
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if ! git diff --quiet; then
-            git add scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts
-            git commit -m "test(mcft-cap-05): preserve S5 acceptance under strict Evidence hashes"
+            git add \
+              scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts \
+              scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts
+            git commit -m "test(mcft-cap-05): preserve S3 and S5 acceptance under validated Plan recovery"
             git push origin HEAD:${{ github.head_ref }}
           fi
 
