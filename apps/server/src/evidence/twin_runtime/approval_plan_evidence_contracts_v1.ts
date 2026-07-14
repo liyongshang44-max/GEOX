@@ -191,6 +191,7 @@ export function validateCap05ApprovedPlanEvidenceV1(
   if (record.action_lifecycle_class !== "APPROVED_PLAN") throw new Error("CAP05_APPROVED_PLAN_LIFECYCLE_CLASS_MISMATCH");
   const payload = record.canonical_payload;
   if (payload.plan_status !== "APPROVED") throw new Error("CAP05_APPROVED_PLAN_STATUS_MISMATCH");
+  if (payload.active_for_decision !== true) throw new Error("CAP05_APPROVED_PLAN_ACTIVE_REQUIRED");
   requiredStringV1(payload.approval_assertion_ref, "CAP05_PLAN_ASSERTION_REF_REQUIRED");
   requiredStringV1(payload.approval_assertion_hash, "CAP05_PLAN_ASSERTION_HASH_REQUIRED");
   requiredStringV1(payload.decision_request_ref, "CAP05_PLAN_DECISION_REQUEST_REF_REQUIRED");
