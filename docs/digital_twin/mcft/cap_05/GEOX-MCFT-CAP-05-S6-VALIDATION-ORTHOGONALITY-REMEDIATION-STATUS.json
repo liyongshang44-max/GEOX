@@ -57,12 +57,17 @@
     "new_transaction_family": false,
     "migration_required": false
   },
-  "validation_targets": {
-    "s6_governance_gate": "PENDING",
-    "s6_postgresql_acceptance": "PENDING",
-    "repository_typecheck": "PENDING",
-    "repository_build": "PENDING",
-    "standard_acceptance": "PENDING"
+  "candidate_validation": {
+    "workflow": 29333251081,
+    "state": "SUCCESS",
+    "build_test": "PASS",
+    "repository_typecheck": "PASS",
+    "repository_build": "PASS",
+    "server_selfcheck": "PASS",
+    "s6_governance_gate": "PASS",
+    "s6_postgresql_acceptance": "PASS",
+    "standard_acceptance": "PASS",
+    "commercial_mvp0_release_gate": "PASS"
   },
   "s7_effect": {
     "pr_number": 2464,
