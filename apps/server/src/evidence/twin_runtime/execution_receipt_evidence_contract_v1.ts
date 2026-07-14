@@ -130,7 +130,15 @@ function assertScopeV1(expected: ContinuationScopeV1, actual: ContinuationScopeV
 }
 
 function decimalSixV1(value: unknown, code: string): string {
-  return formatFixedDecimalV1(parseFixedDecimalV1(value, WATER_AMOUNT_SCALE_V1, code), WATER_AMOUNT_SCALE_V1);
+  let decimalText: string;
+  if (typeof value === "string") {
+    decimalText = value;
+  } else if (typeof value === "number" && Number.isFinite(value)) {
+    decimalText = value.toString();
+  } else {
+    throw new Error(code);
+  }
+  return formatFixedDecimalV1(parseFixedDecimalV1(decimalText, WATER_AMOUNT_SCALE_V1, code), WATER_AMOUNT_SCALE_V1);
 }
 
 function computeCoveredAmountV1(actualAmount: string, coverage: string): string {
