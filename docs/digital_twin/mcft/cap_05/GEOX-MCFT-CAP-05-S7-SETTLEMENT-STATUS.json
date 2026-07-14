@@ -35,6 +35,7 @@
     "materialization_attempt_state": "FAILED_BOOTSTRAP_INDENTATION",
     "materialization_retry_commit": "5ea73475adb1a1ec722949d94169780bd0a358a9",
     "materialization_retry_state": "SUCCESS",
+    "connector_validation_trigger": "REQUESTED",
     "candidate_validation_state": "PENDING_EXACT_HEAD_CI",
     "governance_gate": "PENDING",
     "repository_typecheck": "PENDING",
