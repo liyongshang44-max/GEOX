@@ -85,7 +85,8 @@ async function main() {
 
   run('git', ['update-ref', 'refs/remotes/origin/main', 'HEAD']);
   try {
-    run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION.cjs', '--postmerge']);
+    // The explicit exact-head-to-merge tree proof above is the postmerge delta authority; auto mode rechecks all static remediation invariants without reusing the historical baseline as a false current delta.
+    run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION.cjs', '--auto']);
     run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_SETTLEMENT.cjs', '--postmerge']);
     run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs', '--postmerge']);
   } finally {
