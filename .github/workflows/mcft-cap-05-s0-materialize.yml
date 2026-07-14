@@ -1,0 +1,64 @@
+name: MCFT-CAP-05 S0 predecessor materialization
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s0-authorization-predecessor-lock-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap05_s0_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap05_s0_acceptance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s0_acceptance
+      MCFT_CAP_05_PREFLIGHT_DESTRUCTIVE_ACCEPTANCE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Materialize PostgreSQL predecessor lock and S0 governance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PREDECESSOR_PREFLIGHT.ts
+
+      - name: Commit exact S0 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf acceptance-output
+          rm .github/workflows/mcft-cap-05-s0-materialize.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs(mcft-cap-05): materialize S0 authorization and predecessor lock"
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_AUTHORIZATION.cjs
+          git push origin HEAD:${{ github.head_ref }}
