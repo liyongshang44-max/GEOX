@@ -85,10 +85,10 @@ async function main() {
 
   run('git', ['update-ref', 'refs/remotes/origin/main', 'HEAD']);
   try {
-    // The explicit exact-head-to-merge tree proof above is the postmerge delta authority; auto mode rechecks all static remediation invariants without reusing the historical baseline as a false current delta.
+    // Exact-head-to-merge tree equivalence above is the postmerge-delta authority. Historical lifecycle gates run as static regressions because their own frozen baseline ranges intentionally remain non-empty on later main commits.
     run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION.cjs', '--auto']);
-    run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_SETTLEMENT.cjs', '--postmerge']);
-    run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs', '--postmerge']);
+    run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_SETTLEMENT.cjs', '--auto']);
+    run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs', '--auto']);
   } finally {
     run('git', ['update-ref', 'refs/remotes/origin/main', MERGED_MAIN]);
   }
