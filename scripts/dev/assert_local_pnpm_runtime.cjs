@@ -8,6 +8,7 @@ const fs = require('node:fs');
 const isWindows = process.platform === 'win32';
 const env = process.env;
 const acceptanceDiagnosticPath = path.join(process.cwd(), 'acceptance-output', 'MCFT_CAP_05_S7_ACCEPTANCE.log');
+const s7SettlementStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S7-SETTLEMENT-STATUS.json');
 
 function run(command, args = [], envOverrides = {}) {
   const result = spawnSync(command, args, {
@@ -212,7 +213,9 @@ function runCap05S6ValidationOrthogonalityRemediationAcceptance() {
 function runCap05S7Acceptance() {
   const gatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK.cjs');
   if (!fs.existsSync(gatePath)) return;
-  runPredecessorGateOnCurrentTree(gatePath);
+  if (!fs.existsSync(s7SettlementStatusPath)) {
+    runPredecessorGateOnCurrentTree(gatePath);
+  }
   const pnpmCmd = isWindows ? 'pnpm.cmd' : 'pnpm';
   requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK.ts']));
   requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_NOT_YET_VALIDATED_RECEIPT_CONSUMING_TICK.ts']));
@@ -285,18 +288,17 @@ function main() {
 
 main();
 
-// MCFT_CAP_05_S6_ACTIVATION_GATE_V1: enforce activated CAP-05 S6/S7 governance during standard acceptance.
+// MCFT_CAP_05_S6_ACTIVATION_GATE_V1: retain the historical activation gate until the S7 settlement record exists.
 const activationGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs');
-if (fs.existsSync(activationGatePath)) {
+if (fs.existsSync(activationGatePath) && !fs.existsSync(s7SettlementStatusPath)) {
   requireSuccess(run(process.execPath, [activationGatePath, '--auto']));
 }
 
 // MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION_GATE_V1: preserve the effective validation/eligibility contract and isolated PostgreSQL S6 regression.
 runCap05S6ValidationOrthogonalityRemediationAcceptance();
 
-// MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK_GATE_V1: verify S7 Governance, both validation-status A1 paths, CAP-04 regression and isolated PostgreSQL H source.
+// MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK_GATE_V1: retain both validation-status A1 paths, CAP-04 regression and isolated PostgreSQL H source after settlement.
 runCap05S7Acceptance();
-
 
 // MCFT_CAP_05_S7_SSOT_SETTLEMENT_GATE_V1: enforce S7 merged effectiveness and explicit S8 authorization during standard acceptance.
 const s7SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_SETTLEMENT.cjs');
