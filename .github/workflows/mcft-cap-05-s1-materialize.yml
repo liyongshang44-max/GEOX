@@ -1,0 +1,75 @@
+name: MCFT-CAP-05 S1 controlled Replay Dataset materialization
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s1-controlled-feedback-replay-dataset-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap05_s1_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap05_s1_acceptance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s1_acceptance
+      MCFT_CAP_05_S1_DESTRUCTIVE_ACCEPTANCE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Generate controlled feedback Replay Dataset
+        run: node scripts/mcft/GENERATE_MCFT_CAP_05_FEEDBACK_DATASET.cjs
+
+      - name: Materialize S1 governance state
+        run: python3 .mcft_cap05_s1_materializer.py
+
+      - name: Run S1 deterministic dataset Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTROLLED_REPLAY_DATASET.cjs
+
+      - name: Run S1 PostgreSQL facts-ingress Gate
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_EVIDENCE_INGRESS_DB.ts
+
+      - name: Commit exact S1 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .mcft_cap05_s1_materializer.py
+          rm .github/workflows/mcft-cap-05-s1-materialize.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat(mcft-cap-05): materialize S1 controlled feedback Replay Dataset"
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTROLLED_REPLAY_DATASET.cjs
+          git push origin HEAD:${{ github.head_ref }}
