@@ -1,0 +1,129 @@
+name: MCFT-CAP-05 S5 remediation PostgreSQL validation
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s5-remediation-recovery-hash-fixed-point-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap05_s5_remediation
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap05_s5_remediation"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s5_remediation
+      MCFT_CAP_05_S5_REMEDIATION_DESTRUCTIVE_ACCEPTANCE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Preserve merged S5 acceptance under strict Evidence hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts')
+          text = p.read_text(encoding='utf-8')
+          old_import = '''import type {
+            Cap05ApprovalAssertionEvidenceV1,
+            Cap05ApprovedPlanEvidenceV1,
+          } from "../../apps/server/src/evidence/twin_runtime/approval_plan_evidence_contracts_v1.js";'''
+          new_import = '''import {
+            computeCap05ReplayEvidenceSourceRecordHashV1,
+            type Cap05ApprovalAssertionEvidenceV1,
+            type Cap05ApprovedPlanEvidenceV1,
+          } from "../../apps/server/src/evidence/twin_runtime/approval_plan_evidence_contracts_v1.js";'''
+          if old_import in text:
+              text = text.replace(old_import, new_import, 1)
+          elif 'computeCap05ReplayEvidenceSourceRecordHashV1' not in text:
+              raise SystemExit('S5 acceptance import anchor missing')
+          helper_anchor = '''function readOne<T>(file: string): T {
+            return JSON.parse(fs.readFileSync(path.join(FIXTURE_ROOT, file), "utf8").trim()) as T;
+          }
+          '''
+          helper_replacement = helper_anchor + '''
+          function rehashEvidenceV1<T extends Record<string, unknown>>(record: T): T {
+            record.source_record_hash = computeCap05ReplayEvidenceSourceRecordHashV1(record);
+            return record;
+          }
+          '''
+          if 'function rehashEvidenceV1' not in text:
+              if helper_anchor not in text:
+                  raise SystemExit('S5 acceptance helper anchor missing')
+              text = text.replace(helper_anchor, helper_replacement, 1)
+          text = text.replace(
+              'record.source_record_hash = `sha256:acceptance-assertion-${suffix}`;',
+              'record.source_record_hash = computeCap05ReplayEvidenceSourceRecordHashV1(record as unknown as Record<string, unknown>);',
+          )
+          text = text.replace(
+              'record.source_record_hash = `sha256:acceptance-plan-${suffix}`;',
+              'record.source_record_hash = computeCap05ReplayEvidenceSourceRecordHashV1(record as unknown as Record<string, unknown>);',
+          )
+          text = text.replace(
+              '}), /CAP05_PLAN_ASSERTION_BINDING_MISMATCH/);',
+              '}), /CAP05_REPLAY_EVIDENCE_SOURCE_RECORD_HASH_MISMATCH/);',
+              1,
+          )
+          for name in ['wrongScenarioAmount', 'noReason', 'parallelPlan', 'supersedingPlan']:
+              text = text.replace(
+                  f'approved_plan: {name},',
+                  f'approved_plan: rehashEvidenceV1({name} as unknown as Record<string, unknown>) as unknown as Cap05ApprovedPlanEvidenceV1,',
+                  1,
+              )
+          p.write_text(text, encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts
+            git commit -m "test(mcft-cap-05): preserve S5 acceptance under strict Evidence hashes"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck repository
+        run: pnpm -r typecheck
+
+      - name: Run S5 remediation PostgreSQL acceptance
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_REMEDIATION_DB.ts 2>&1 | tee /tmp/mcft-cap05-s5-remediation.log
+
+      - name: Upload remediation failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s5-remediation-failure
+          path: /tmp/mcft-cap05-s5-remediation.log
+          if-no-files-found: ignore
