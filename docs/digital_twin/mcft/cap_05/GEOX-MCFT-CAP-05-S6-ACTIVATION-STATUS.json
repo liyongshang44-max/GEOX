@@ -32,7 +32,8 @@
     "materialization_workflow": 29326851325,
     "governance_gate": "PASS",
     "repository_typecheck": "PASS",
-    "standard_ci_state": "REQUESTED"
+    "standard_ci_state": "SUCCESS",
+    "standard_ci_workflow": 29327105106
   },
   "canonical_object_delta": 0,
   "transaction_family_delta": 0,
