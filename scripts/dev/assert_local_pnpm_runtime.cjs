@@ -153,11 +153,9 @@ function requireSuccess(result) {
 }
 
 function runPredecessorGateOnCurrentTree(gatePath) {
+  requireSuccess(run('git', ['fetch', 'origin', 'main']));
   const originalMain = run('git', ['rev-parse', 'refs/remotes/origin/main']);
-  if (originalMain.status !== 0 || !originalMain.stdout) {
-    requireSuccess(run(process.execPath, [gatePath, '--auto']));
-    return;
-  }
+  requireSuccess(originalMain);
   requireSuccess(run('git', ['update-ref', 'refs/remotes/origin/main', 'HEAD']));
   try {
     requireSuccess(run(process.execPath, [gatePath, '--postmerge']));
