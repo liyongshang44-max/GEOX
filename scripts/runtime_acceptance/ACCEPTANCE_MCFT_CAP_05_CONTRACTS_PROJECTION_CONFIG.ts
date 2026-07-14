@@ -28,6 +28,7 @@ import {
 } from "../../apps/server/src/domain/twin_runtime/feedback_runtime_config_v1.js";
 import {
   CAP05_FORECAST_OBSERVATION_PROJECTION_METHOD_ID_V1,
+  buildCap05ForecastPointMemberRefV1,
   buildCap05ForecastResidualV1,
   projectCap05ForecastPointToObservationV1,
 } from "../../apps/server/src/domain/twin_runtime/forecast_observation_residual_v1.js";
@@ -141,7 +142,7 @@ function scenarioSetFixture(): Cap04ScenarioSetEnvelopeV1 {
 
 function forecastPointFixture(): Cap04ForecastPointV1 {
   return {
-    horizon_hour: 2,
+    horizon_hour: 1,
     interval_start: "2026-06-04T02:00:00.000Z",
     interval_end: "2026-06-04T03:00:00.000Z",
     target_time: "2026-06-04T03:00:00.000Z",
@@ -167,7 +168,7 @@ function forecastPointFixture(): Cap04ForecastPointV1 {
     available_water_fraction: "0.500000",
     depletion_from_field_capacity_mm: "0.000000",
     mass_balance_error_mm: "0.000000",
-    determinism_hash: "sha256:forecast-point-h2-controlled",
+    determinism_hash: "sha256:forecast-point-h1-controlled",
   };
 }
 
@@ -218,6 +219,9 @@ function main(): void {
   const dispatch = readOne("external_dispatch.jsonl");
   const receipt = readOne("execution_receipts.jsonl");
   const observation = readOne("soil_observations.jsonl");
+  const sourceForecastRef = "twin_forecast_run_cap05_s2_post_receipt";
+  const sourceForecastHash = "sha256:forecast-cap05-s2-post-receipt";
+  const sourceForecastIssuedAt = "2026-06-04T02:00:00.000Z";
 
   const selectedMemberRef = buildCap05ScenarioOptionMemberRefV1(scenarioSet.object_id, "IRRIGATE_NOW_15MM");
   const selectedMember = resolveCap05ScenarioOptionMemberV1(scenarioSet, selectedMemberRef);
@@ -312,36 +316,49 @@ function main(): void {
 
   const forecastPoint = forecastPointFixture();
   const projection = projectCap05ForecastPointToObservationV1({
-    forecast_run_ref: LOCK.canonical_identity.latest_successful_forecast_ref,
-    forecast_run_hash: LOCK.canonical_identity.latest_successful_forecast_hash,
-    forecast_point_ref: `${LOCK.canonical_identity.latest_successful_forecast_ref}#/points/by-horizon/2`,
+    forecast_run_ref: sourceForecastRef,
+    forecast_run_hash: sourceForecastHash,
+    forecast_issued_at: sourceForecastIssuedAt,
+    forecast_point_ref: buildCap05ForecastPointMemberRefV1(sourceForecastRef, 1),
     forecast_point: forecastPoint,
+    root_zone_geometry_ref: "root_zone_geometry_cap05_s2_fixture",
+    root_zone_geometry_hash: "sha256:root-zone-geometry-cap05-s2-fixture",
     root_zone_depth_mm: "300.000000",
     actual_observation_ref: observation.source_record_id,
     actual_observation_hash: observation.source_record_hash,
+    actual_observation_observed_at: observation.role_time.observed_at,
+    actual_observation_quality: observation.quality.status,
     actual_observation_value: "0.224000",
-    actual_observation_variance: "0.000004000000",
+    actual_observation_variance: "0.000008000000",
     representativeness_variance: "0.000004000000",
   });
   assert.equal(projection.projection_method_id, CAP05_FORECAST_OBSERVATION_PROJECTION_METHOD_ID_V1);
+  assert.equal(projection.forecast_point_ref, `${sourceForecastRef}#/points/1`);
   assert.equal(projection.predicted_observation_value, "0.220000");
   assert.equal(projection.predicted_observation_variance, "0.000001000000");
   assert.equal(projection.residual_value, "0.004000");
   assert.equal(projection.total_residual_variance, "0.000009000000");
   assert.equal(projection.normalized_residual, "1.333333");
+  assert.match(projection.projection_input_hash, /^sha256:/);
+  assert.match(projection.projection_trace_hash, /^sha256:/);
   ok("H=1 root-zone-mean Forecast projection and normalized residual math are exact");
 
   const residual = buildCap05ForecastResidualV1({
     scope,
-    forecast_run_ref: LOCK.canonical_identity.latest_successful_forecast_ref,
-    forecast_run_hash: LOCK.canonical_identity.latest_successful_forecast_hash,
-    forecast_point_ref: `${LOCK.canonical_identity.latest_successful_forecast_ref}#/points/by-horizon/2`,
+    forecast_run_ref: sourceForecastRef,
+    forecast_run_hash: sourceForecastHash,
+    forecast_issued_at: sourceForecastIssuedAt,
+    forecast_point_ref: buildCap05ForecastPointMemberRefV1(sourceForecastRef, 1),
     forecast_point: forecastPoint,
+    root_zone_geometry_ref: "root_zone_geometry_cap05_s2_fixture",
+    root_zone_geometry_hash: "sha256:root-zone-geometry-cap05-s2-fixture",
     root_zone_depth_mm: "300.000000",
     actual_observation_ref: observation.source_record_id,
     actual_observation_hash: observation.source_record_hash,
+    actual_observation_observed_at: observation.role_time.observed_at,
+    actual_observation_quality: observation.quality.status,
     actual_observation_value: "0.224000",
-    actual_observation_variance: "0.000004000000",
+    actual_observation_variance: "0.000008000000",
     representativeness_variance: "0.000004000000",
     runtime_config_ref: chainA[1].object_id,
     runtime_config_hash: chainA[1].determinism_hash,
@@ -355,6 +372,7 @@ function main(): void {
   assert.equal(residual.payload.equivalence_claimed, false);
   assert.equal("assimilation_gain" in residual.payload, false);
   assert.equal("posterior_state_ref" in residual.payload, false);
+  assert.equal(residual.payload.actual_observation_variance, "0.000008000000");
   ok("Forecast Residual remains distinct from Assimilation Innovation and owns no posterior authority");
 
   const cycle = buildCap05FeedbackCycleProjectionV1({

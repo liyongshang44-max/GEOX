@@ -14,6 +14,7 @@ import {
   type Cap05DecisionEnvelopeV1,
 } from "../../apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.js";
 import {
+  buildCap05ForecastPointMemberRefV1,
   buildCap05ForecastResidualV1,
 } from "../../apps/server/src/domain/twin_runtime/forecast_observation_residual_v1.js";
 import { buildCap05FeedbackCycleProjectionV1 } from "../../apps/server/src/domain/twin_runtime/feedback_cycle_projection_v1.js";
@@ -276,17 +277,23 @@ async function main(): Promise<void> {
 
   const forecastRunRef = "twin_forecast_run_cap05_s3_source";
   const forecastRunHash = "sha256:cap05-s3-source-forecast";
+  const forecastIssuedAt = "2026-06-04T02:00:00.000Z";
   const residual = buildCap05ForecastResidualV1({
     scope,
     forecast_run_ref: forecastRunRef,
     forecast_run_hash: forecastRunHash,
-    forecast_point_ref: `${forecastRunRef}#/points/by-horizon/1`,
+    forecast_issued_at: forecastIssuedAt,
+    forecast_point_ref: buildCap05ForecastPointMemberRefV1(forecastRunRef, 1),
     forecast_point: forecastPointFixture(),
+    root_zone_geometry_ref: "root_zone_geometry_cap05_s3_fixture",
+    root_zone_geometry_hash: "sha256:root-zone-geometry-cap05-s3-fixture",
     root_zone_depth_mm: "300.000000",
     actual_observation_ref: observation.source_record_id,
     actual_observation_hash: observation.source_record_hash,
+    actual_observation_observed_at: observation.role_time.observed_at,
+    actual_observation_quality: observation.quality.status,
     actual_observation_value: "0.224000",
-    actual_observation_variance: "0.000004000000",
+    actual_observation_variance: "0.000008000000",
     representativeness_variance: "0.000004000000",
     runtime_config_ref: LOCK.canonical_identity.predecessor_state_runtime_config_ref,
     runtime_config_hash: LOCK.canonical_identity.predecessor_state_runtime_config_hash,
@@ -300,6 +307,8 @@ async function main(): Promise<void> {
   assert.equal((await repository.commitCanonicalObject({ object: residual })).status, "INSERTED");
   assert.equal((await repository.commitCanonicalObject({ object: residual })).status, "EXISTING_IDEMPOTENT_SUCCESS");
   assert.equal(await count("twin_forecast_residual_projection_v1"), 1);
+  assert.equal(residual.payload.total_residual_variance, "0.000009000000");
+  assert.match(residual.payload.projection_trace_hash, /^sha256:/);
   ok("C Forecast Residual commits independently from Assimilation authority");
 
   const faultFeedback = structuredClone(feedback);
