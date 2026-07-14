@@ -1,0 +1,27 @@
+name: MCFT-CAP-05 P0 exact-head verification
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-p0-exact-head-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-05-p0-settlement-provisional-ssot-v1
+          fetch-depth: 0
+      - name: Verify exact P0 head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "75a270fc2fd044fd57858227b7d1d91b1386cf8a"
+          test "$(git rev-parse origin/agent/mcft-cap-05-p0-settlement-provisional-ssot-v1)" = "75a270fc2fd044fd57858227b7d1d91b1386cf8a"
+      - name: Run MCFT-CAP-05 P0 Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_P0_SETTLEMENT_SSOT.cjs
