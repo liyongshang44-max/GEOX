@@ -5,10 +5,11 @@
 import crypto from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import type { Cap05DecisionEnvelopeV1 } from "../../domain/twin_runtime/feedback_canonical_contracts_v1.js";
-import type {
-  Cap05ApprovalAssertionEvidenceV1,
-  Cap05ApprovedPlanEvidenceV1,
-  Cap05DispatchDispositionV1,
+import {
+  assertCap05ReplayEvidenceSourceRecordHashV1,
+  type Cap05ApprovalAssertionEvidenceV1,
+  type Cap05ApprovedPlanEvidenceV1,
+  type Cap05DispatchDispositionV1,
 } from "../../evidence/twin_runtime/approval_plan_evidence_contracts_v1.js";
 import { buildCap05ApprovedPlanBindingProjectionRowV1 } from "../../projections/twin_runtime/feedback_persistence_projection_v1.js";
 
@@ -55,6 +56,7 @@ export class PostgresApprovalPlanEvidenceRepositoryV1 {
     client: PoolClient,
     record: ReplayEvidenceRecordV1,
   ): Promise<{ status: Cap05EvidencePersistenceStatusV1; fact_id: string }> {
+    assertCap05ReplayEvidenceSourceRecordHashV1(record as unknown as Record<string, unknown>);
     const factId = evidenceFactIdV1(record);
     const existing = await client.query(
       `SELECT source,record_json FROM facts WHERE fact_id=$1 FOR UPDATE`,

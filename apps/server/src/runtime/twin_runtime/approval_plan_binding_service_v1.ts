@@ -6,8 +6,10 @@ import type { Pool } from "pg";
 import type { ContinuationScopeV1 } from "../../domain/twin_runtime/continuation_operation_identity_v1.js";
 import { resolveCap05ScenarioOptionMemberV1, type Cap05DecisionEnvelopeV1 } from "../../domain/twin_runtime/feedback_canonical_contracts_v1.js";
 import {
+  normalizeCap05WaterAmountV1,
   validateCap05ApprovalAssertionEvidenceV1,
   validateCap05ApprovedPlanEvidenceV1,
+  validateCap05ApprovalPlanDecisionBindingV1,
   type Cap05ApprovalAssertionEvidenceV1,
   type Cap05ApprovedPlanEvidenceV1,
   type Cap05DispatchDispositionV1,
@@ -72,10 +74,7 @@ function canonicalInstantV1(value: unknown, code: string): string {
 }
 
 function decimalSixV1(value: unknown, code: string): string {
-  if (typeof value !== "string" && typeof value !== "number") throw new Error(code);
-  const number = Number(value);
-  if (!Number.isFinite(number)) throw new Error(code);
-  return number.toFixed(6);
+  return normalizeCap05WaterAmountV1(value, code);
 }
 
 function assertScopeV1(scope: ContinuationScopeV1, candidate: ContinuationScopeV1, code: string): void {
@@ -197,9 +196,14 @@ export class Cap05ApprovalPlanBindingServiceV1 {
     input: CommitCap05ApprovalPlanBindingInputV1,
   ): Promise<CommitCap05ApprovalPlanBindingResultV1> {
     validateCap05ApprovalAssertionEvidenceV1(input.approval_assertion, input.scope);
-    const amounts = validateCap05ApprovedPlanEvidenceV1(input.approved_plan, input.scope);
+    validateCap05ApprovedPlanEvidenceV1(input.approved_plan, input.scope);
     const decision = await this.resolveDecisionV1(input.scope, input.approval_assertion);
-    this.assertEvidenceDecisionBindingV1(decision, input.approval_assertion, input.approved_plan);
+    const amounts = validateCap05ApprovalPlanDecisionBindingV1({
+      decision,
+      approval_assertion: input.approval_assertion,
+      approved_plan: input.approved_plan,
+      as_of: input.approved_plan.available_to_runtime_at,
+    });
 
     const scenarioRecord = await this.scenarioRepository.readScenarioSet(decision.payload.scenario_set_ref);
     if (!scenarioRecord || scenarioRecord.scenario_set.determinism_hash !== decision.payload.scenario_set_hash) {
