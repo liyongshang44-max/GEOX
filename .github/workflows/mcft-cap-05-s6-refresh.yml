@@ -1,16 +1,16 @@
 name: MCFT-CAP-05 S6 remediation-aware refresh
 
 on:
-  pull_request:
-    types: [synchronize]
-    branches: [main]
+  push:
+    branches:
+      - agent/mcft-cap-05-s6-action-feedback-h-adapter-v1
 
 permissions:
   contents: write
 
 jobs:
   refresh:
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s6-action-feedback-h-adapter-v1'
+    if: github.ref == 'refs/heads/agent/mcft-cap-05-s6-action-feedback-h-adapter-v1'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: agent/mcft-cap-05-s6-action-feedback-h-adapter-v1
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -128,4 +128,4 @@ docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md'
         run: pnpm -r typecheck
 
       - name: Push refreshed exact candidate
-        run: git push origin HEAD:${{ github.head_ref }}
+        run: git push origin HEAD:agent/mcft-cap-05-s6-action-feedback-h-adapter-v1
