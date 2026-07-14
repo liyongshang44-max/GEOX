@@ -304,6 +304,7 @@ async function main(): Promise<void> {
   faultFeedback.object_id = `${feedback.object_id}_fault`;
   faultFeedback.idempotency_key = `${feedback.idempotency_key}_fault`;
   faultFeedback.payload.source_record_id = `${feedback.payload.source_record_id}_fault`;
+  faultFeedback.payload.event_id = `${feedback.payload.event_id}_fault`;
   faultFeedback.determinism_hash = computeMemberDeterminismHashV1(faultFeedback as unknown as Record<string, unknown>);
   await assert.rejects(
     repository.commitCanonicalObject({
