@@ -41,7 +41,7 @@
     "standard_acceptance": "PENDING",
     "commercial_mvp0_release_gate": "PENDING",
     "target_in_memory_pass_count": 15,
-    "target_postgresql_pass_count": 7,
+    "target_postgresql_pass_count": 8,
     "required_fail_count": 0
   },
   "runtime_composition": {

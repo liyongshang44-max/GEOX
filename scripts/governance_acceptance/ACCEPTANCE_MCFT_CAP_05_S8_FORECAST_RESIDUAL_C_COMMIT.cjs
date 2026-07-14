@@ -152,7 +152,7 @@ for (const needle of [
   'rebuilds from append-only facts',
   'does not infer Action Feedback consumption',
 ]) check(database.includes(needle), `PostgreSQL acceptance covers ${needle}`);
-check(database.includes('assert.equal(pass, 7)'), 'PostgreSQL acceptance freezes 7 PASS cardinality');
+check(database.includes('assert.equal(pass, 8)'), 'PostgreSQL acceptance freezes 8 PASS cardinality');
 
 check(fixture.includes('NOT_YET_VALIDATED') && fixture.includes('PARTIALLY_EXECUTED'), 'fixture preserves trustworthy not-yet-validated H orthogonality');
 check(fixture.includes('Cap05ReceiptConsumingForecastScenarioTickServiceV1') && fixture.includes('Cap04ForecastScenarioSingleTickServiceV1'), 'fixture executes real post-receipt and outcome tick services');

@@ -216,7 +216,7 @@ async function main(): Promise<void> {
   assert.deepEqual(noFeedbackProof[0].source_posterior_action_feedback_refs, []);
   ok("missing H projection proof does not infer Action Feedback consumption from the Evidence ref alone");
 
-  assert.equal(pass, 7);
+  assert.equal(pass, 8);
   console.log(`MCFT-CAP-05 S8 Forecast Residual PostgreSQL path: ${pass} PASS / 0 FAIL`);
 }
 
