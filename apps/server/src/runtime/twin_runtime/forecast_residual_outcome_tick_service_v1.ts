@@ -283,7 +283,9 @@ export class Cap05ForecastResidualOutcomeTickServiceV1 {
     const tick = await this.tickService.executeOneTick(input);
     if (!tick.b_record) throw new Error("CAP05_RESIDUAL_OUTCOME_SUCCESSFUL_A1_AND_B_REQUIRED");
     const forecast = exactMemberV1(tick, "twin_forecast_run_v1");
-    if (forecast.payload.status !== "COMPLETED" || forecast.payload.points.length !== 72) {
+    if (forecast.payload.status !== "COMPLETED"
+      || !Array.isArray(forecast.payload.points)
+      || forecast.payload.points.length !== 72) {
       throw new Error("CAP05_RESIDUAL_OUTCOME_CURRENT_FORECAST_COMPLETED_REQUIRED");
     }
     const observation = currentObservationV1({ tick, scope: input.scope, logical_time: logicalTime });
