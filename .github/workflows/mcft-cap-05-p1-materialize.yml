@@ -1,0 +1,56 @@
+name: MCFT CAP-05 P-1 materialize docs
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap-05-p-minus-1-adjudication-v1
+    paths:
+      - .github/workflows/mcft-cap-05-p1-materialize.yml
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact P-1 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-05-p-minus-1-adjudication-v1
+          fetch-depth: 0
+
+      - name: Materialize complete task and implementation-map append
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          task="docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md"
+          map="docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md"
+          marker="## MCFT-CAP-05 P-1 DT-02 object / transaction adjudication candidate"
+
+          mkdir -p "$(dirname "$task")"
+          cat .github/mcft-cap-05-p1-staging/task.gz.b64.part.* \
+            | base64 --decode \
+            | gzip --decompress \
+            > "$task"
+
+          echo "709b482c94ffa7481647b85f0e3515ed3667447c0f36f23ff068af659f85d775  $task" | sha256sum --check --strict
+          test "$(wc -l < "$task")" -eq 3630
+
+          if ! grep -Fq "$marker" "$map"; then
+            printf '\n\n' >> "$map"
+            cat .github/mcft-cap-05-p1-staging/map-append.md >> "$map"
+          fi
+
+          rm -rf .github/mcft-cap-05-p1-staging
+          rm -f .github/workflows/mcft-cap-05-p1-materialize.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "docs(mcft-cap-05): add v0.4 task and P-1 map"
+
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_P_MINUS_1_ADJUDICATION.cjs
+          git push origin HEAD:agent/mcft-cap-05-p-minus-1-adjudication-v1
