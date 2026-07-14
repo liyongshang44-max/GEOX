@@ -1,0 +1,46 @@
+name: MCFT-CAP-05 S0 exact-head verification
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s0-exact-head-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-05-s0-authorization-predecessor-lock-v1
+          fetch-depth: 0
+
+      - name: Verify exact S0 head
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin agent/mcft-cap-05-s0-authorization-predecessor-lock-v1
+          test "$(git rev-parse HEAD)" = "0d86de86c1f887a0d1b1a4a1aeb98afab6ed432f"
+          test "$(git rev-parse origin/agent/mcft-cap-05-s0-authorization-predecessor-lock-v1)" = "0d86de86c1f887a0d1b1a4a1aeb98afab6ed432f"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run S0 authorization Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_AUTHORIZATION.cjs
+
+      - name: Typecheck repository
+        run: pnpm -r typecheck
