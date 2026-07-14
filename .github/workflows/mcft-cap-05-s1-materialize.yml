@@ -59,7 +59,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTROLLED_REPLAY_DATASET.cjs 2>&1 | tee /tmp/mcft-cap-05-s1-governance.log
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTROLLED_REPLAY_DATASET.cjs --precommit 2>&1 | tee /tmp/mcft-cap-05-s1-governance.log
 
       - name: Upload S1 governance failure log
         if: failure()
