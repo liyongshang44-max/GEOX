@@ -5,12 +5,10 @@
 import crypto from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import type { Cap05DecisionEnvelopeV1 } from "../../domain/twin_runtime/feedback_canonical_contracts_v1.js";
-import {
-  CAP05_APPROVAL_ASSERTION_RECORD_TYPE_V1,
-  CAP05_APPROVED_PLAN_RECORD_TYPE_V1,
-  type Cap05ApprovalAssertionEvidenceV1,
-  type Cap05ApprovedPlanEvidenceV1,
-  type Cap05DispatchDispositionV1,
+import type {
+  Cap05ApprovalAssertionEvidenceV1,
+  Cap05ApprovedPlanEvidenceV1,
+  Cap05DispatchDispositionV1,
 } from "../../evidence/twin_runtime/approval_plan_evidence_contracts_v1.js";
 import { buildCap05ApprovedPlanBindingProjectionRowV1 } from "../../projections/twin_runtime/feedback_persistence_projection_v1.js";
 
@@ -30,6 +28,12 @@ export type Cap05ApprovalPlanPersistenceResultV1 = {
 };
 
 type ReplayEvidenceRecordV1 = Cap05ApprovalAssertionEvidenceV1 | Cap05ApprovedPlanEvidenceV1;
+
+type ExistingPlanProjectionV1 = {
+  approved_plan_evidence_ref: string;
+  approved_plan_evidence_hash: string;
+  active_for_decision: boolean;
+};
 
 function evidenceFactIdV1(record: ReplayEvidenceRecordV1): string {
   const digest = crypto.createHash("sha256").update(record.evidence_identity_key, "utf8").digest("hex").slice(0, 32);
@@ -77,6 +81,27 @@ export class PostgresApprovalPlanEvidenceRepositoryV1 {
     return { status: "INSERTED", fact_id: factId };
   }
 
+  private resultV1(input: {
+    decision: Cap05DecisionEnvelopeV1;
+    assertion: { status: Cap05EvidencePersistenceStatusV1; fact_id: string };
+    plan: { status: Cap05EvidencePersistenceStatusV1; fact_id: string };
+    approved_plan: Cap05ApprovedPlanEvidenceV1;
+    dispatch_disposition: Cap05DispatchDispositionV1;
+  }): Cap05ApprovalPlanPersistenceResultV1 {
+    return {
+      decision_object_id: input.decision.object_id,
+      decision_hash: input.decision.determinism_hash,
+      approval_assertion_status: input.assertion.status,
+      approval_assertion_fact_id: input.assertion.fact_id,
+      approved_plan_status: input.plan.status,
+      approved_plan_fact_id: input.plan.fact_id,
+      approved_plan_evidence_ref: input.approved_plan.source_record_id,
+      approved_plan_evidence_hash: input.approved_plan.source_record_hash,
+      superseded_plan_evidence_ref: input.approved_plan.canonical_payload.supersedes_plan_evidence_ref ?? null,
+      dispatch_disposition: input.dispatch_disposition,
+    };
+  }
+
   async commitApprovalPlanBinding(input: {
     decision: Cap05DecisionEnvelopeV1;
     approval_assertion: Cap05ApprovalAssertionEvidenceV1;
@@ -93,8 +118,32 @@ export class PostgresApprovalPlanEvidenceRepositoryV1 {
       const assertion = await this.appendEvidenceWithClientV1(client, input.approval_assertion);
       inject("before_plan_fact");
       const plan = await this.appendEvidenceWithClientV1(client, input.approved_plan);
-
       const planPayload = input.approved_plan.canonical_payload;
+
+      const currentProjection = await client.query(
+        `SELECT approved_plan_evidence_ref,approved_plan_evidence_hash,active_for_decision
+         FROM twin_approved_plan_binding_projection_v1
+         WHERE approved_plan_evidence_ref=$1
+         FOR UPDATE`,
+        [input.approved_plan.source_record_id],
+      );
+      if (currentProjection.rows.length > 1) throw new Error("CAP05_PLAN_PROJECTION_CARDINALITY");
+      if (currentProjection.rows.length === 1) {
+        const existing = currentProjection.rows[0] as ExistingPlanProjectionV1;
+        if (existing.approved_plan_evidence_hash !== input.approved_plan.source_record_hash) {
+          throw new Error("CAP05_PLAN_PROJECTION_IDENTITY_CONFLICT");
+        }
+        if (plan.status !== "EXISTING_IDEMPOTENT_SUCCESS") throw new Error("CAP05_PLAN_FACT_PROJECTION_DIVERGENCE");
+        await client.query("COMMIT");
+        return this.resultV1({
+          decision: input.decision,
+          assertion,
+          plan,
+          approved_plan: input.approved_plan,
+          dispatch_disposition: input.dispatch_disposition,
+        });
+      }
+
       const activeRows = await client.query(
         `SELECT approved_plan_evidence_ref,approved_plan_evidence_hash,active_for_decision
          FROM twin_approved_plan_binding_projection_v1
@@ -120,17 +169,9 @@ export class PostgresApprovalPlanEvidenceRepositoryV1 {
 
       const supersedesRef = planPayload.supersedes_plan_evidence_ref ?? null;
       const supersedesHash = planPayload.supersedes_plan_evidence_hash ?? null;
-      const existingActive = activeRows.rows[0] as {
-        approved_plan_evidence_ref: string;
-        approved_plan_evidence_hash: string;
-        active_for_decision: boolean;
-      } | undefined;
+      const existingActive = activeRows.rows[0] as ExistingPlanProjectionV1 | undefined;
 
-      if (existingActive && existingActive.approved_plan_evidence_ref === input.approved_plan.source_record_id) {
-        if (existingActive.approved_plan_evidence_hash !== input.approved_plan.source_record_hash) {
-          throw new Error("CAP05_ACTIVE_PLAN_IDENTITY_CONFLICT");
-        }
-      } else if (existingActive) {
+      if (existingActive) {
         if (!supersedesRef || !supersedesHash) throw new Error("CAP05_ACTIVE_PLAN_SUPERSESSION_REQUIRED");
         if (supersedesRef !== existingActive.approved_plan_evidence_ref || supersedesHash !== existingActive.approved_plan_evidence_hash) {
           throw new Error("CAP05_ACTIVE_PLAN_SUPERSESSION_IDENTITY_MISMATCH");
@@ -153,11 +194,7 @@ export class PostgresApprovalPlanEvidenceRepositoryV1 {
           binding_id,approval_assertion_ref,approval_assertion_hash,decision_request_ref,decision_request_hash,
           selected_option_ref,selected_option_hash,scenario_amount_mm,approved_amount_mm,plan_effective_from,plan_effective_to,
           active_for_decision,canonical_evidence,source_fact_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::timestamptz,$19::timestamptz,$20,$21::jsonb,$22)
-         ON CONFLICT (approved_plan_evidence_ref) DO UPDATE SET
-           active_for_decision=EXCLUDED.active_for_decision,
-           canonical_evidence=EXCLUDED.canonical_evidence,
-           source_fact_id=EXCLUDED.source_fact_id`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::timestamptz,$19::timestamptz,$20,$21::jsonb,$22)`,
         [
           row.approved_plan_evidence_ref,
           row.approved_plan_evidence_hash,
@@ -185,18 +222,13 @@ export class PostgresApprovalPlanEvidenceRepositoryV1 {
       );
       inject("before_commit");
       await client.query("COMMIT");
-      return {
-        decision_object_id: input.decision.object_id,
-        decision_hash: input.decision.determinism_hash,
-        approval_assertion_status: assertion.status,
-        approval_assertion_fact_id: assertion.fact_id,
-        approved_plan_status: plan.status,
-        approved_plan_fact_id: plan.fact_id,
-        approved_plan_evidence_ref: input.approved_plan.source_record_id,
-        approved_plan_evidence_hash: input.approved_plan.source_record_hash,
-        superseded_plan_evidence_ref: supersedesRef,
+      return this.resultV1({
+        decision: input.decision,
+        assertion,
+        plan,
+        approved_plan: input.approved_plan,
         dispatch_disposition: input.dispatch_disposition,
-      };
+      });
     } catch (error) {
       await client.query("ROLLBACK");
       if (isPgUniqueViolationV1(error)) throw new Error("CAP05_APPROVAL_PLAN_UNIQUENESS_CONFLICT");
