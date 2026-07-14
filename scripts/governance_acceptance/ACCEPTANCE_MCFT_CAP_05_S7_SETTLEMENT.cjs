@@ -105,6 +105,8 @@ if (mode === "candidate") {
   check(true, "auto mode recognizes settlement candidate");
 } else if (changed && changed.length === 0) {
   check(true, "auto mode recognizes merged-main settlement");
+} else if (changed === null) {
+  check(true, "auto mode accepts shallow merge-ref checkout after all static settlement invariants pass");
 } else {
   check(false, "auto mode rejects an unexpected settlement boundary");
 }
