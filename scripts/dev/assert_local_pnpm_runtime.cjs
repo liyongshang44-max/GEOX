@@ -7,6 +7,7 @@ const fs = require('node:fs');
 
 const isWindows = process.platform === 'win32';
 const env = process.env;
+const acceptanceDiagnosticPath = path.join(process.cwd(), 'acceptance-output', 'MCFT_CAP_05_S7_ACCEPTANCE.log');
 
 function run(command, args = [], envOverrides = {}) {
   const result = spawnSync(command, args, {
@@ -144,7 +145,17 @@ function fail(report, reasons) {
   process.exit(1);
 }
 
+function appendAcceptanceDiagnostic(result) {
+  fs.mkdirSync(path.dirname(acceptanceDiagnosticPath), { recursive: true });
+  fs.appendFileSync(
+    acceptanceDiagnosticPath,
+    `\n$ ${result.command}\nstatus=${String(result.status)}\n${result.stdout || ''}\n${result.stderr || ''}\n`,
+    'utf8',
+  );
+}
+
 function requireSuccess(result) {
+  appendAcceptanceDiagnostic(result);
   if (result.stdout) console.log(result.stdout);
   if (result.status !== 0) {
     if (result.stderr) console.error(result.stderr);
