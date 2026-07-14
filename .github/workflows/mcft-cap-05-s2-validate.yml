@@ -76,13 +76,25 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts
           git commit -m "feat(mcft-cap-05): establish S2 contracts projection math and config"
 
-      - name: Verify final S2 candidate
+      - name: Run S2 governance Gate
         shell: bash
         run: |
-          set -euo pipefail
-          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S2_CONTRACTS_CONFIG.cjs
-          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts
-          pnpm -r typecheck
+          set -o pipefail
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S2_CONTRACTS_CONFIG.cjs 2>&1 | tee /tmp/s2-governance.log
+
+      - name: Upload governance log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s2-governance-failure
+          path: /tmp/s2-governance.log
+          if-no-files-found: ignore
+
+      - name: Run S2 pure acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts
+
+      - name: Typecheck repository
+        run: pnpm -r typecheck
 
       - name: Push final S2 candidate
         run: git push origin HEAD:${{ github.head_ref }}
