@@ -1001,3 +1001,33 @@ successor MCFT-CAP-06 authorized: false
 The S0 branch contains governance artifacts and isolated PostgreSQL predecessor proof only. Runtime implementation remains forbidden until S0 merges and its merged-main Authorization Gate passes.
 
 <!-- MCFT-CAP-05-S0-AUTHORIZATION-END -->
+
+
+<!-- MCFT-CAP-05-S1-DATASET-START -->
+
+## MCFT-CAP-05 S1 controlled feedback Replay Dataset candidate
+
+```text
+baseline main: 55b61b36a7d408ab68c2786499e14bab886d01e2
+S0 exact head: 0d86de86c1f887a0d1b1a4a1aeb98afab6ed432f
+S0 merge commit: 55b61b36a7d408ab68c2786499e14bab886d01e2
+S0 merged-main Authorization Gate: 29306075015 SUCCESS
+active delivery slice: MCFT-CAP-05.MCFT-01-13-15.CONTROLLED-FEEDBACK-REPLAY-DATASET-V1
+status: IMPLEMENTATION_CANDIDATE
+authorization effective: true
+capability Runtime source authority: true
+S1 Runtime source change: false
+positive Replay Evidence records: 8
+negative fixtures: 12
+canonical Twin object fact delta: 0
+Replay Evidence fact delta: 8
+next delivery slice: MCFT-CAP-05.MCFT-02-06-11-13-15.CONTRACTS-PROJECTION-MATH-CONFIG-V1
+next delivery slice authorized: false
+successor MCFT-CAP-06 authorized: false
+```
+
+Established in this bounded slice: deterministic Human Decision request, Approval Assertion, Approved Plan, optional External Dispatch, Execution Receipt, exact 03:00 soil observation, rainfall and ET0 Replay Evidence; source semantic hashes; logical-time availability; Evidence identity/idempotency; deterministic generation; and isolated PostgreSQL append-only facts ingress proof.
+
+No `twin_decision_record_v1`, `twin_action_feedback_v1`, `twin_forecast_residual_v1`, State, checkpoint, migration, production Runtime source, route, web, Recommendation, AO-ACT, calibration or CAP-06 authorization is introduced.
+
+<!-- MCFT-CAP-05-S1-DATASET-END -->

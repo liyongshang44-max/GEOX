@@ -26,22 +26,25 @@ architecture_direction:
 CONFORMANT
 
 design_status:
-DESIGN_FROZEN_CANDIDATE_V0_4
+DESIGN_FROZEN
 
 implementation_status:
-NOT_AUTHORIZED
+S1_IMPLEMENTATION_CANDIDATE
+
+authorization_effective:
+true
 
 runtime_source_authorized:
-false
+true
 
 active_delivery_slice_id:
-MCFT-CAP-05.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1
+MCFT-CAP-05.MCFT-01-13-15.CONTROLLED-FEEDBACK-REPLAY-DATASET-V1
 
 dt02_architecture_amendment_status:
 NOT_REQUIRED_MERGED_EFFECTIVE
 
 first_permitted_repository_action:
-MCFT-CAP-05.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1
+MCFT-CAP-05.MCFT-01-13-15.CONTROLLED-FEEDBACK-REPLAY-DATASET-V1
 ```
 
 P-1 已 merged-effective，裁决结果为 REUSE_WITHOUT_AMENDMENT。当前文件记录 P0 settlement / provisional SSOT candidate；仍不授权 Runtime source、migration、route、runner、canonical write implementation、S0 或 CAP-06。
@@ -2567,6 +2570,44 @@ S0 merged-main Authorization Gate PASS
 ---
 
 # 25. S1 — Controlled Replay Dataset
+
+S1 implementation candidate identity：
+
+```text
+baseline_main_commit:
+55b61b36a7d408ab68c2786499e14bab886d01e2
+
+S0 exact head:
+0d86de86c1f887a0d1b1a4a1aeb98afab6ed432f
+
+S0 merge commit:
+55b61b36a7d408ab68c2786499e14bab886d01e2
+
+S0 merged-main Authorization Gate workflow:
+29306075015 SUCCESS
+
+S1 status:
+IMPLEMENTATION_CANDIDATE
+
+S1 materialization workflow:
+29306561067
+
+positive Replay Evidence records:
+8
+
+negative fixtures:
+12
+
+canonical Twin object fact delta:
+0
+
+Replay Evidence fact delta:
+8
+
+S2 authorized:
+false
+```
+
 
 必须交付并通过现有 Replay Evidence ingress 持久化：
 

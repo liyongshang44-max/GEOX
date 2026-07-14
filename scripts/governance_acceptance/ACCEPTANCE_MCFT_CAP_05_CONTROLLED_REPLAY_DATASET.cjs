@@ -92,9 +92,10 @@ check(status.replay_evidence_fact_delta === 8, 'S1 Replay Evidence fact delta ei
 let changed = [];
 try {
   const range = POSTMERGE ? `${BASELINE}..HEAD` : `${BASELINE}...HEAD`;
-  const tracked = git(['diff', '--name-only', range]).split(/\r?\n/).filter(Boolean);
+  const committed = git(['diff', '--name-only', range]).split(/\r?\n/).filter(Boolean);
+  const working = PRECOMMIT ? git(['diff', '--name-only']).split(/\r?\n/).filter(Boolean) : [];
   const untracked = PRECOMMIT ? git(['ls-files', '--others', '--exclude-standard']).split(/\r?\n/).filter(Boolean) : [];
-  changed = [...new Set([...tracked, ...untracked])].filter((file) => !PRECOMMIT || !TEMPORARY_PRECOMMIT_FILES.has(file)).sort();
+  changed = [...new Set([...committed, ...working, ...untracked])].filter((file) => !PRECOMMIT || !TEMPORARY_PRECOMMIT_FILES.has(file)).sort();
   check(JSON.stringify(changed) === JSON.stringify([...status.exact_changed_file_boundary].sort()), PRECOMMIT ? 'precommit exact final changed-file boundary' : 'git exact changed-file boundary', JSON.stringify(changed));
 } catch (error) { console.error(error); check(false, PRECOMMIT ? 'precommit exact final changed-file boundary' : 'git exact changed-file boundary'); }
 for (const file of changed) check(!file.startsWith('apps/server/src/') && !file.startsWith('apps/server/db/migrations/') && !file.startsWith('apps/web/'), `no forbidden path ${file}`);
