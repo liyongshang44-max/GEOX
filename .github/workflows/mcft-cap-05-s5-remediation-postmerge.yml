@@ -1,0 +1,30 @@
+name: MCFT-CAP-05 S5 remediation merged-main verification
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s5-remediation-postmerge-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 99221bb464818f8686718fd25df123e1096b2281
+          fetch-depth: 0
+
+      - name: Verify exact merged main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "99221bb464818f8686718fd25df123e1096b2281"
+          test "$(git rev-parse origin/main)" = "99221bb464818f8686718fd25df123e1096b2281"
+
+      - name: Run S5 remediation merged-main Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_REMEDIATION.cjs --postmerge
