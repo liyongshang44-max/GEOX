@@ -1031,3 +1031,32 @@ Established in this bounded slice: deterministic Human Decision request, Approva
 No `twin_decision_record_v1`, `twin_action_feedback_v1`, `twin_forecast_residual_v1`, State, checkpoint, migration, production Runtime source, route, web, Recommendation, AO-ACT, calibration or CAP-06 authorization is introduced.
 
 <!-- MCFT-CAP-05-S1-DATASET-END -->
+
+
+<!-- MCFT-CAP-05-S2-CONTRACTS-CONFIG-START -->
+
+## MCFT-CAP-05 S2 contracts, projection math and Runtime Config candidate
+
+```text
+baseline main: 552d19505f0cd93584c899665b7d7b339f67e9fe
+S1 exact head: 6e2e3e238c5b7886e4d21d7899406e5642192500
+S1 merge commit: 552d19505f0cd93584c899665b7d7b339f67e9fe
+S1 merged-main Gate: 29306783482 SUCCESS
+active delivery slice: MCFT-CAP-05.MCFT-02-06-11-13-15.CONTRACTS-PROJECTION-MATH-CONFIG-V1
+status: IMPLEMENTATION_CANDIDATE
+authorization effective: true
+runtime source authorized: true
+new canonical object types: 0
+new transaction families: 0
+canonical fact delta: 0
+migration delta: 0
+next delivery slice: MCFT-CAP-05.MCFT-03.PERSISTENCE-IDEMPOTENCY-RECOVERY-V1
+next delivery slice authorized: false
+successor MCFT-CAP-06 authorized: false
+```
+
+Established in this bounded slice: pure G Decision, H Action Feedback and C Forecast Residual builders/validators; immutable Decision second-write policy; Action Feedback to existing ExecutedIrrigationCandidateV1 adapter; exact-one-event guard; fixed-point H=1 Forecast-to-observation projection and normalized residual math; eight immutable CAP-05 Runtime Configs chained from the predecessor State-bound config; and rebuildable feedback-cycle projection.
+
+Persistence, migration, canonical append, State/checkpoint writes, route, web, Recommendation, AO-ACT change, calibration and model activation remain outside S2.
+
+<!-- MCFT-CAP-05-S2-CONTRACTS-CONFIG-END -->
