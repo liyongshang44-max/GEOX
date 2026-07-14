@@ -29,9 +29,9 @@
     "allowed_claim": "RECEIPT_CONSUMING_TICK_IMPLEMENTATION_AUTHORIZED"
   },
   "validation": {
-    "materialization_workflow": null,
-    "governance_gate": "PENDING",
-    "repository_typecheck": "PENDING",
+    "materialization_workflow": 29326851325,
+    "governance_gate": "PASS",
+    "repository_typecheck": "PASS",
     "standard_ci_state": "PENDING"
   },
   "canonical_object_delta": 0,

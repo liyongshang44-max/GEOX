@@ -4,8 +4,8 @@
   "status": "COMPLETE",
   "baseline": {
     "branch": "main",
-    "commit": "ef1c789b15a3e73f93c7e63907519faecb027563",
-    "meaning": "MCFT-CAP-05 S5 merged-main effective; bounded S5 recovery/hash/fixed-point remediation candidate; S6 blocked"
+    "commit": "be8b5ecf061ba5e49c1ae33a7a9d4827aa6b0bbe",
+    "meaning": "MCFT-CAP-05 S6 Action Feedback H Runtime merged-main effective; S7 Receipt-consuming tick explicitly authorized but not started"
   },
   "identifier_model": {
     "capability_line_id": "vertical executable capability closure unit",
@@ -2459,10 +2459,10 @@
       "target_completion_level": "Level A",
       "status": "IN_PROGRESS",
       "design_status": "DESIGN_FROZEN",
-      "implementation_status": "S5_REMEDIATION_CANDIDATE",
+      "implementation_status": "S7_AUTHORIZED_NOT_STARTED",
       "authorization_effective": true,
       "runtime_source_authorized": true,
-      "active_delivery_slice_id": "MCFT-CAP-05.MCFT-01-13.APPROVAL-PLAN-EVIDENCE-BINDING-V1",
+      "active_delivery_slice_id": "MCFT-CAP-05.MCFT-04-06-07-08-09-10.RECEIPT-CONSUMING-TICK-V1",
       "predecessor_capability_line_id": "MCFT-CAP-04",
       "successor_capability_line_id": "MCFT-CAP-06",
       "successor_authorized": false,
@@ -2886,10 +2886,10 @@
           "depends_on_delivery_slice_ids": [
             "MCFT-CAP-05.MCFT-01-13.APPROVAL-PLAN-EVIDENCE-BINDING-V1"
           ],
-          "baseline_main_commit": null,
-          "branch": null,
-          "status": "BLOCKED",
-          "runtime_source_authorized": false,
+          "baseline_main_commit": "99221bb464818f8686718fd25df123e1096b2281",
+          "branch": "agent/mcft-cap-05-s6-action-feedback-h-adapter-v1",
+          "status": "MERGED_EFFECTIVE",
+          "runtime_source_authorized": true,
           "allowed_claims": [],
           "preserved_nonclaims": [
             "NO_MCFT_CAP_05_RUNTIME_SOURCE_AUTHORIZATION",
@@ -2916,7 +2916,12 @@
           ],
           "exact_changed_file_boundary": [],
           "effectiveness_condition": "PREDECESSOR_SLICE_MERGED_AND_MERGED_MAIN_GATE_PASS_AND_EXPLICIT_SLICE_ACTIVATION",
-          "effectiveness_condition_satisfied": false
+          "effectiveness_condition_satisfied": true,
+          "exact_head": "1a4f09278ce8b5ee65af8688f0c4d992a5d10035",
+          "merge_commit": "be8b5ecf061ba5e49c1ae33a7a9d4827aa6b0bbe",
+          "merged_main_gate_workflow": 29325686434,
+          "head_to_merge_file_delta_count": 0,
+          "tree_equivalence": "PASS"
         },
         {
           "delivery_slice_id": "MCFT-CAP-05.MCFT-04-06-07-08-09-10.RECEIPT-CONSUMING-TICK-V1",
@@ -2924,10 +2929,10 @@
           "depends_on_delivery_slice_ids": [
             "MCFT-CAP-05.MCFT-15.ACTION-FEEDBACK-H-COMMIT-ADAPTER-V1"
           ],
-          "baseline_main_commit": null,
+          "baseline_main_commit": "be8b5ecf061ba5e49c1ae33a7a9d4827aa6b0bbe",
           "branch": null,
-          "status": "BLOCKED",
-          "runtime_source_authorized": false,
+          "status": "AUTHORIZED_NOT_STARTED",
+          "runtime_source_authorized": true,
           "allowed_claims": [],
           "preserved_nonclaims": [
             "NO_MCFT_CAP_05_RUNTIME_SOURCE_AUTHORIZATION",
@@ -2954,7 +2959,10 @@
           ],
           "exact_changed_file_boundary": [],
           "effectiveness_condition": "PREDECESSOR_SLICE_MERGED_AND_MERGED_MAIN_GATE_PASS_AND_EXPLICIT_SLICE_ACTIVATION",
-          "effectiveness_condition_satisfied": false
+          "effectiveness_condition_satisfied": true,
+          "activation_id": "MCFT-CAP-05.S6.SSOT-ACTIVATION-V1",
+          "activation_pr_number": 2463,
+          "implementation_started": false
         },
         {
           "delivery_slice_id": "MCFT-CAP-05.MCFT-07-11.FORECAST-OBSERVATION-RESIDUAL-C-COMMIT-V1",
@@ -3144,14 +3152,16 @@
       "pending_completion_claims": [],
       "effective_completion_claims": [],
       "completion_claims": [],
-      "next_authorized_slice_ids": [],
+      "next_authorized_slice_ids": [
+        "MCFT-CAP-05.MCFT-04-06-07-08-09-10.RECEIPT-CONSUMING-TICK-V1"
+      ],
       "next_authorized_slice_id_after_merge_and_postmerge_gate": "MCFT-CAP-05.MCFT-01-13-15.CONTROLLED-FEEDBACK-REPLAY-DATASET-V1",
       "current_repository_baseline_commit": "552d19505f0cd93584c899665b7d7b339f67e9fe",
       "latest_effective_slice_id": "MCFT-CAP-05.MCFT-03.PERSISTENCE-IDEMPOTENCY-RECOVERY-V1",
       "latest_effective_main_commit": "7e2de9c00a4ecc305c27b6572a63914f38157dbd",
-      "baseline_main_commit": "ef1c789b15a3e73f93c7e63907519faecb027563",
-      "branch": "agent/mcft-cap-05-s5-remediation-recovery-hash-fixed-point-v1",
-      "active_remediation_id": "MCFT-CAP-05.S5.RECOVERY-HASH-FIXED-POINT-REMEDIATION-V1",
+      "baseline_main_commit": "be8b5ecf061ba5e49c1ae33a7a9d4827aa6b0bbe",
+      "branch": "agent/mcft-cap-05-s6-ssot-activation-v1",
+      "active_remediation_id": null,
       "remediation_pr": 2457,
       "active_remediation": {
         "remediation_id": "MCFT-CAP-05.S5.RECOVERY-HASH-FIXED-POINT-REMEDIATION-V1",
@@ -3159,6 +3169,14 @@
         "pr_number": 2457,
         "baseline_main_commit": "ef1c789b15a3e73f93c7e63907519faecb027563",
         "effectiveness_condition": "REMEDIATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_REMEDIATION_GATE_PASS",
+        "effectiveness_condition_satisfied": false
+      },
+      "remediation_effective": true,
+      "active_activation": {
+        "activation_id": "MCFT-CAP-05.S6.SSOT-ACTIVATION-V1",
+        "status": "IMPLEMENTATION_CANDIDATE",
+        "pr_number": 2463,
+        "target_state": "S7_AUTHORIZED_NOT_STARTED",
         "effectiveness_condition_satisfied": false
       }
     }

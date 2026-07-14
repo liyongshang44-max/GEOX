@@ -3,6 +3,7 @@
 
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const fs = require('node:fs');
 
 const isWindows = process.platform === 'win32';
 const env = process.env;
@@ -194,3 +195,14 @@ function main() {
 }
 
 main();
+
+// MCFT_CAP_05_S6_ACTIVATION_GATE_V1: enforce activated CAP-05 S6/S7 governance during standard acceptance.
+const activationGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs');
+if (fs.existsSync(activationGatePath)) {
+  const gate = run(process.execPath, [activationGatePath, '--auto']);
+  if (gate.stdout) console.log(gate.stdout);
+  if (gate.status !== 0) {
+    if (gate.stderr) console.error(gate.stderr);
+    process.exit(gate.status || 1);
+  }
+}
