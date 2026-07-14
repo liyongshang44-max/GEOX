@@ -6,6 +6,7 @@
   "status": "IMPLEMENTATION_CANDIDATE",
   "baseline_main_commit": "509fe707104a12fbdbbf08823b6d71a70342e0ad",
   "branch": "agent/mcft-cap-05-s8-forecast-residual-c-commit-v1",
+  "acceptance_count_materialized": true,
   "authorization": {
     "activation_pr_number": 2469,
     "activation_id": "MCFT-CAP-05.S7.SSOT-SETTLEMENT-V1",
