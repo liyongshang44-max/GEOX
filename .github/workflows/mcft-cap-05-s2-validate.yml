@@ -1,15 +1,15 @@
-name: MCFT-CAP-05 S2 validation
+name: MCFT-CAP-05 S2 final materialization
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [synchronize]
     branches: [main]
 
 permissions:
   contents: write
 
 jobs:
-  validate:
+  finalize:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s2-contracts-projection-math-config-v1'
     runs-on: ubuntu-latest
     steps:
@@ -18,28 +18,6 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Normalize S2 source
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('apps/server/src/domain/twin_runtime/feedback_runtime_config_v1.ts')
-          text = p.read_text(encoding='utf-8')
-          duplicate = '  CAP04_CONFIG_SELECTION_MODE_V1,\n  CAP04_CONFIG_SELECTION_MODE_V1,\n'
-          if duplicate in text:
-              p.write_text(text.replace(duplicate, '  CAP04_CONFIG_SELECTION_MODE_V1,\n', 1), encoding='utf-8')
-          elif text.count('  CAP04_CONFIG_SELECTION_MODE_V1,\n') != 1:
-              raise SystemExit('CAP04 config selection import cardinality invalid')
-          PY
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet; then
-            git add apps/server/src/domain/twin_runtime/feedback_runtime_config_v1.ts
-            git commit -m "fix(mcft-cap-05): deduplicate inherited config import"
-            git push origin HEAD:${{ github.head_ref }}
-          fi
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -54,30 +32,57 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Run S2 pure acceptance
+      - name: Validate S2 pure contracts before materialization
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts
+
+      - name: Materialize S2 governance and SSOT
         shell: bash
         run: |
-          set -o pipefail
-          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts 2>&1 | tee /tmp/mcft-cap-05-s2-acceptance.log
+          set -euo pipefail
+          python3 .mcft_cap05_s2_materializer.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S2_CONTRACTS_CONFIG.cjs')
+          text = p.read_text(encoding='utf-8')
+          old = 'check(!residual.includes("assimilation_gain") && !residual.includes("posterior_mean"), "Residual owns no gain or posterior mean");'
+          new = 'check(residual.includes("FORBIDDEN_RESIDUAL_AUTHORITY_FIELDS_V1") && residual.includes("assimilation_gain") && residual.includes("posterior_mean"), "Residual explicitly rejects gain and posterior authority fields");'
+          if old not in text:
+              raise SystemExit('expected residual authority Gate line missing')
+          p.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
 
-      - name: Upload S2 acceptance failure log
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap-05-s2-acceptance-failure
-          path: /tmp/mcft-cap-05-s2-acceptance.log
-          if-no-files-found: error
-
-      - name: Typecheck repository
+      - name: Commit exact S2 candidate and remove temporary files
         shell: bash
         run: |
-          set -o pipefail
-          pnpm -r typecheck 2>&1 | tee /tmp/mcft-cap-05-s2-typecheck.log
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/mcft-cap-05-s2-validate.yml .mcft_cap05_s2_materializer.py
+          git add \
+            apps/server/src/domain/twin_runtime/action_feedback_to_executed_irrigation_v1.ts \
+            apps/server/src/domain/twin_runtime/decision_second_write_policy_v1.ts \
+            apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.ts \
+            apps/server/src/domain/twin_runtime/feedback_cycle_projection_v1.ts \
+            apps/server/src/domain/twin_runtime/feedback_runtime_config_v1.ts \
+            apps/server/src/domain/twin_runtime/forecast_observation_residual_v1.ts \
+            docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md \
+            docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S2-CONTRACTS-PROJECTION-CONFIG.md \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S2-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S2_CONTRACTS_CONFIG.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts
+          git commit -m "feat(mcft-cap-05): establish S2 contracts projection math and config"
 
-      - name: Upload S2 typecheck failure log
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap-05-s2-typecheck-failure
-          path: /tmp/mcft-cap-05-s2-typecheck.log
-          if-no-files-found: error
+      - name: Verify final S2 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S2_CONTRACTS_CONFIG.cjs
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts
+          pnpm -r typecheck
+
+      - name: Push final S2 candidate
+        run: git push origin HEAD:${{ github.head_ref }}
