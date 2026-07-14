@@ -1,0 +1,111 @@
+name: MCFT-CAP-05 S5 integration probe
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s5-integration-probe-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap05_s5_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap05_s5_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s5_acceptance
+      MCFT_CAP_05_S5_DESTRUCTIVE_ACCEPTANCE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-05-s5-approval-plan-binding-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Integrate validated Plan recovery into generic CAP-05 rebuild
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          repository = Path('apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts')
+          text = repository.read_text(encoding='utf-8')
+          text = text.replace('  buildCap05ApprovedPlanBindingProjectionRowV1,\n', '')
+          text = text.replace('  type Cap05ApprovedPlanEvidenceV1,\n', '')
+          import_anchor = 'import {\n  buildCap05FeedbackCycleProjectionV1,'
+          if 'PostgresApprovedPlanBindingRepositoryV1' not in text:
+              if import_anchor not in text:
+                  raise SystemExit('feedback repository import anchor missing')
+              text = text.replace(import_anchor, 'import { PostgresApprovedPlanBindingRepositoryV1 } from "./postgres_approved_plan_binding_repository_v1.js";\n' + import_anchor, 1)
+
+          start = text.find('      const planFacts = await client.query(')
+          end_marker = '      const cycles = await this.rebuildCompleteFeedbackCyclesWithClientV1(client, objects);'
+          end = text.find(end_marker, start)
+          if start >= 0 and end >= 0:
+              replacement = '''      const planRecovery = await new PostgresApprovedPlanBindingRepositoryV1(this.pool)\n        .rebuildAllBindingsWithClientV1(client);\n\n'''
+              text = text[:start] + replacement + text[end:]
+          elif 'const planRecovery = await new PostgresApprovedPlanBindingRepositoryV1' not in text:
+              raise SystemExit('feedback repository Plan recovery block missing')
+          text = text.replace('        approved_plan_bindings_rebuilt: planFacts.rows.length,', '        approved_plan_bindings_rebuilt: planRecovery.bindings_rebuilt,')
+          text = text.replace(
+              '      const planEvidence = planResult.rows[0].canonical_evidence as Cap05ApprovedPlanEvidenceV1;\n      for (const residual of residuals) {',
+              '      const planCanonical = planResult.rows[0].canonical_evidence as Record<string, unknown>;\n      const validatedBinding = planCanonical.validated_binding as Record<string, unknown> | undefined;\n      if (!validatedBinding) continue;\n      for (const residual of residuals) {',
+          )
+          text = text.replace(
+              'approval_assertion_ref: requiredStringV1(planEvidence.canonical_payload.approval_assertion_ref, "CAP05_CYCLE_ASSERTION_REF_REQUIRED"),\n          approval_assertion_hash: requiredStringV1(planEvidence.canonical_payload.approval_assertion_hash, "CAP05_CYCLE_ASSERTION_HASH_REQUIRED"),',
+              'approval_assertion_ref: requiredStringV1(validatedBinding.approval_assertion_ref, "CAP05_CYCLE_ASSERTION_REF_REQUIRED"),\n          approval_assertion_hash: requiredStringV1(validatedBinding.approval_assertion_hash, "CAP05_CYCLE_ASSERTION_HASH_REQUIRED"),',
+          )
+          repository.write_text(text, encoding='utf-8')
+
+          regression = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts')
+          text = regression.read_text(encoding='utf-8')
+          old_insert = '''  await pool.query(\n    `INSERT INTO facts (fact_id,occurred_at,source,record_json)\n     VALUES ($1,$2::timestamptz,'mcft_cap05_replay_evidence_v1',$3::jsonb)`,\n    [`fact_${plan.source_record_id}`, plan.available_to_runtime_at, JSON.stringify({ type: plan.record_type, payload: plan })],\n  );'''
+          new_insert = '''  for (const evidence of [approval, plan]) {\n    await pool.query(\n      `INSERT INTO facts (fact_id,occurred_at,source,record_json)\n       VALUES ($1,$2::timestamptz,'mcft_cap05_replay_evidence_v1',$3::jsonb)`,\n      [`fact_${evidence.source_record_id}`, evidence.available_to_runtime_at, JSON.stringify({ type: evidence.record_type, payload: evidence })],\n    );\n  }'''
+          if old_insert in text:
+              text = text.replace(old_insert, new_insert, 1)
+          elif 'for (const evidence of [approval, plan])' not in text:
+              raise SystemExit('S3 regression Evidence insert block missing')
+          regression.write_text(text, encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts
+            git commit -m "fix(mcft-cap-05): validate Plan bindings during generic recovery"
+            git push origin HEAD:agent/mcft-cap-05-s5-approval-plan-binding-v1
+          fi
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Typecheck repository
+        run: pnpm -r typecheck
+      - name: Run S5 PostgreSQL acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts
+      - name: Create S3 regression database
+        run: PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -c 'CREATE DATABASE mcft_cap05_s3_regression'
+      - name: Run S3 recovery regression
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s3_regression
+          MCFT_CAP_05_S3_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts
