@@ -48,10 +48,24 @@
     "twin_action_feedback_cycle_projection_v1"
   ],
   "approved_plan_binding": {
-    "source_record_type": "approved_irrigation_plan_snapshot_v1",
+    "source_record_types": [
+      "approval_assertion_evidence_v1",
+      "approved_irrigation_plan_snapshot_v1"
+    ],
     "source_store": "public.facts",
+    "projection_table": "twin_approved_plan_binding_projection_v1",
+    "validator": "validateCap05ApprovedPlanBindingV1",
+    "repository": "PostgresApprovedPlanBindingRepositoryV1",
+    "service": "Cap05ApprovedPlanBindingServiceV1",
+    "exact_canonical_decision_link_required": true,
+    "assertion_and_plan_distinct_required": true,
     "projection_is_approval_authority": false,
-    "projection_is_canonical_history": false
+    "projection_is_canonical_history": false,
+    "dispatch_disposition": "NOT_OBSERVED",
+    "explicit_supersession_required": true,
+    "implicit_replacement_forbidden": true,
+    "canonical_twin_fact_delta": 0,
+    "migration_delta": 0
   },
   "feedback_cycle": {
     "materialization_rule": "COMPLETE_CANONICAL_GRAPH_ONLY",
@@ -81,7 +95,9 @@
     "determinism_hash_validation_required": true,
     "projection_delete_then_rebuild_supported": true,
     "guard_delete_then_rebuild_supported": true,
-    "duplicate_canonical_fact_creation": false
+    "duplicate_canonical_fact_creation": false,
+    "approved_plan_binding_entrypoint": "PostgresApprovedPlanBindingRepositoryV1.rebuildAllBindingsWithClientV1",
+    "generic_recovery_delegates_to_plan_validator": true
   },
   "postgresql_acceptance": {
     "workflow": 29309606079,
@@ -107,5 +123,21 @@
     "second canonical object store",
     "new DT-02 object type",
     "new DT-02 transaction family"
-  ]
+  ],
+  "latest_validation_slice_id": "MCFT-CAP-05.MCFT-01-13.APPROVAL-PLAN-EVIDENCE-BINDING-V1",
+  "approved_plan_binding_postgresql_acceptance": {
+    "initial_workflow": 29312144925,
+    "integration_workflow": 29312506965,
+    "result": "SUCCESS",
+    "s3_recovery_regression": "PASS",
+    "checks": [
+      "Decision Assertion Plan exact linkage",
+      "Scenario amount and approved amount separation",
+      "validity and availability",
+      "explicit dispatch NOT_OBSERVED disposition",
+      "explicit predecessor ref/hash supersession",
+      "projection deletion and validated rebuild",
+      "no canonical Twin append"
+    ]
+  }
 }

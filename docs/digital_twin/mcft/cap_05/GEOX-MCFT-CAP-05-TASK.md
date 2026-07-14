@@ -2827,6 +2827,44 @@ false
 
 ## S5 — Approval Assertion and Approved Plan Evidence Binding
 
+S5 implementation candidate identity：
+
+```text
+baseline_main_commit:
+7f2f2bec144cee4d90608c3a25c3dc7cac9f9189
+
+S4 exact head:
+e9f3b81e2aa8b68498263049086d79184ead6108
+
+S4 merge commit:
+7f2f2bec144cee4d90608c3a25c3dc7cac9f9189
+
+S4 merged-main Gate workflow:
+29311761419 SUCCESS
+
+active_delivery_slice_id:
+MCFT-CAP-05.MCFT-01-13.APPROVAL-PLAN-EVIDENCE-BINDING-V1
+
+S5 status:
+IMPLEMENTATION_CANDIDATE
+
+S5 initial PostgreSQL workflow:
+29312144925 SUCCESS
+
+S5 recovery integration workflow:
+29312506965 SUCCESS
+
+canonical Twin fact delta:
+0
+
+migration delta:
+0
+
+S6 authorized:
+false
+```
+
+
 证明 Approval Assertion 与 Plan Snapshot 分离、Evidence ingress/idempotency、amount separation、validity、supersession、explicit dispatch disposition 和 rebuildable projection。
 
 ## S6 — Action Feedback and Adapter

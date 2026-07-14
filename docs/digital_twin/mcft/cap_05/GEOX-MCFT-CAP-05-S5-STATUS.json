@@ -108,5 +108,22 @@
   "next_delivery_slice_id": "MCFT-CAP-05.MCFT-15.ACTION-FEEDBACK-H-COMMIT-ADAPTER-V1",
   "next_delivery_slice_authorized": false,
   "effectiveness_condition": "S5_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S5_GATE_PASS",
-  "effectiveness_condition_satisfied": false
+  "effectiveness_condition_satisfied": false,
+  "exact_changed_file_boundary": [
+    "apps/server/src/domain/twin_runtime/approved_plan_binding_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_approved_plan_binding_repository_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts",
+    "apps/server/src/runtime/twin_runtime/approved_plan_binding_service_v1.ts",
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-PERSISTENCE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S5-APPROVAL-PLAN-BINDING.md",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S5-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_APPROVAL_PLAN_BINDING.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts"
+  ]
 }

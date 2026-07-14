@@ -1118,3 +1118,34 @@ Established candidate scope:
 - return the exact existing object on response-loss retry;
 - reject forged Evidence, forged option identity, stale Scenario, late Evidence, non-Human actor, wrong scope, and a different second Decision;
 - create no Approval, Plan, Task, Dispatch, Action Feedback, State, checkpoint, route, Recommendation, AO-ACT, calibration, activation, or CAP-06 authority.
+
+
+---
+
+## MCFT-CAP-05 S5 Approval and Plan Evidence Binding Candidate
+
+```text
+capability_line_id: MCFT-CAP-05
+delivery_slice_id: MCFT-CAP-05.MCFT-01-13.APPROVAL-PLAN-EVIDENCE-BINDING-V1
+baseline_main_commit: 7f2f2bec144cee4d90608c3a25c3dc7cac9f9189
+status: IMPLEMENTATION_CANDIDATE
+initial_postgresql_workflow: 29312144925 SUCCESS
+recovery_integration_workflow: 29312506965 SUCCESS
+projection_table: twin_approved_plan_binding_projection_v1
+canonical_twin_fact_delta: 0
+migration_delta: 0
+S6_authorized: false
+CAP_06_authorized: false
+```
+
+Established candidate scope:
+
+- keep Approval Assertion and Approved Plan Snapshot as separate Replay Evidence records;
+- require exact canonical Decision, Decision request, Scenario option, Approval Assertion, Reality scope and Evidence hash linkage;
+- preserve Scenario amount separately from approved amount and reconcile the exact difference with reason codes;
+- validate availability and effective-time order;
+- record `dispatch_disposition = NOT_OBSERVED` without inferring dispatch;
+- require explicit predecessor Plan ref/hash and projection CAS for supersession;
+- store only rebuildable binding state in `twin_approved_plan_binding_projection_v1`;
+- delegate generic CAP-05 Plan recovery to the same S5 validator;
+- create no approval authority, Evidence record, canonical Twin fact, Action Feedback, State/checkpoint, route, Recommendation, AO-ACT, calibration, activation, or CAP-06 authority.
