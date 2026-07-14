@@ -82,7 +82,18 @@ jobs:
           git commit -m "feat(mcft-cap-05): establish S4 Human Decision through G"
 
       - name: Run S4 governance Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S4_HUMAN_DECISION_G.cjs
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S4_HUMAN_DECISION_G.cjs 2>&1 | tee /tmp/mcft-cap05-s4-governance.log
+
+      - name: Upload governance failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s4-governance-failure
+          path: /tmp/mcft-cap05-s4-governance.log
+          if-no-files-found: ignore
 
       - name: Run S4 PostgreSQL acceptance
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts
