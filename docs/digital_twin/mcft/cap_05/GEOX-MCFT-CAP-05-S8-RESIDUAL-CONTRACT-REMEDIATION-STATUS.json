@@ -38,7 +38,9 @@
   "validation": {
     "state": "CANDIDATE_VALIDATED",
     "validated_semantic_head": "828562f21f83a38c50a00c7f670aaf201e7240fd",
-    "workflow": 29347982067,
+    "semantic_validation_workflow": 29347982067,
+    "final_status_record_head": "d95c2ddfaff40aa34ffb8ccd149937a50ca56db5",
+    "final_status_record_workflow": 29348498008,
     "workflow_conclusion": "SUCCESS",
     "governance_gate": "PASS_58_0",
     "dedicated_runtime_acceptance": "PASS_10_0",
@@ -49,7 +51,6 @@
     "server_selfcheck": "PASS",
     "standard_acceptance": "PASS",
     "commercial_mvp0_release_gate": "PASS",
-    "final_status_record_ci_required": true,
     "required_fail_count": 0
   },
   "canonical_object_type_delta": 0,
