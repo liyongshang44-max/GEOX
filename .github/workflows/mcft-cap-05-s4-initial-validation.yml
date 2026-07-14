@@ -50,7 +50,6 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-
           materializer = Path('.mcft_cap05_s4_materializer.py')
           text = materializer.read_text(encoding='utf-8')
           old = 'marker = "# 28. S4 — Human Decision through G transaction"'
@@ -60,23 +59,6 @@ jobs:
           materializer.write_text(text.replace(old, new, 1), encoding='utf-8')
           PY
           python3 .mcft_cap05_s4_materializer.py
-          python3 - <<'PY'
-          from pathlib import Path
-
-          gate = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S4_HUMAN_DECISION_G.cjs')
-          text = gate.read_text(encoding='utf-8')
-          replacements = [
-              ('  "forged Evidence hash",', '  "CAP05_DECISION_REQUEST_EVIDENCE_IDENTITY_MISMATCH",'),
-              ('  "different second Decision",', '  "CAP05_DECISION_IMMUTABLE_CONFLICT",'),
-              ('check(acceptance.includes("downstream_facts: 0") && acceptance.includes("Approval/Plan/Task/Action Feedback/State/checkpoint"), "acceptance proves no inferred downstream writes");',
-               'check(acceptance.includes("downstream_facts: 0") && acceptance.includes("G commit infers no Approval"), "acceptance proves no inferred downstream writes");'),
-          ]
-          for old, new in replacements:
-              if old not in text:
-                  raise SystemExit(f'S4 governance patch target missing: {old}')
-              text = text.replace(old, new, 1)
-          gate.write_text(text, encoding='utf-8')
-          PY
 
       - name: Commit exact S4 candidate and remove temporary files
         shell: bash
