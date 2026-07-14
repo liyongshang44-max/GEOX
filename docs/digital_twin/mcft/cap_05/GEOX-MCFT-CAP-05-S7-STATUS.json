@@ -33,7 +33,8 @@
     "candidate_workflow": 29333632660,
     "candidate_gate": "PASS",
     "merged_main_probe_pr_number": 2466,
-    "merged_main_probe_workflow": null,
+    "merged_main_probe_workflow": 29336309987,
+    "merged_main_probe_gate": "PASS",
     "effective": true
   },
   "validation": {
@@ -134,7 +135,7 @@
     "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S7-RECEIPT-CONSUMING-TICK.md",
     "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S7-STATUS.json",
     "scripts/dev/assert_local_pnpm_runtime.cjs",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_RECEIPT-CONSUMING-TICK.cjs",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_NOT_YET_VALIDATED_RECEIPT_CONSUMING_TICK.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK_DB.ts"
