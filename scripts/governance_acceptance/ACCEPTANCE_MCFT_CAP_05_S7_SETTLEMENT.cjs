@@ -35,7 +35,7 @@ function check(condition, label) {
 function read(path) { return fs.readFileSync(path, "utf8"); }
 function json(path) { return JSON.parse(read(path)); }
 function changedFiles() {
-  for (const range of ["origin/main...HEAD", "origin/main..HEAD"]) {
+  for (const range of [`${S7_MERGE}...HEAD`, `${S7_MERGE}..HEAD`, "origin/main...HEAD", "origin/main..HEAD"]) {
     try {
       return execFileSync("git", ["diff", "--name-only", range], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })
         .trim().split(/\r?\n/).filter(Boolean).sort();
@@ -99,15 +99,16 @@ const changed = changedFiles();
 if (mode === "candidate") {
   check(JSON.stringify(changed) === JSON.stringify(expectedFiles), "exact eight-file settlement boundary");
 } else if (mode === "postmerge") {
-  check(changed === null || changed.length === 0, "postmerge main has no settlement delta against origin/main");
+  check(changed === null || changed.length === 0, "postmerge main has no settlement delta against frozen S7 main");
   check(status.effectiveness_condition_satisfied === false, "candidate status remains historical pre-effectiveness evidence after merge");
 } else if (changed && JSON.stringify(changed) === JSON.stringify(expectedFiles)) {
-  check(true, "auto mode recognizes settlement candidate");
+  check(true, "auto mode recognizes exact eight-file settlement candidate");
 } else if (changed && changed.length === 0) {
   check(true, "auto mode recognizes merged-main settlement");
 } else if (changed === null) {
   check(true, "auto mode accepts shallow merge-ref checkout after all static settlement invariants pass");
 } else {
+  console.error(`UNEXPECTED_SETTLEMENT_CHANGED_FILES:${JSON.stringify(changed)}`);
   check(false, "auto mode rejects an unexpected settlement boundary");
 }
 
