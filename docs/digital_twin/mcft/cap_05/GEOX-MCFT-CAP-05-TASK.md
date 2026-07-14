@@ -26,7 +26,7 @@ architecture_direction:
 CONFORMANT
 
 design_status:
-P_MINUS_1_MERGED_EFFECTIVE
+DESIGN_FROZEN_CANDIDATE_V0_4
 
 implementation_status:
 NOT_AUTHORIZED
@@ -35,13 +35,13 @@ runtime_source_authorized:
 false
 
 active_delivery_slice_id:
-MCFT-CAP-05.P0.CAP-04-SETTLEMENT-AND-CAP-05-PROVISIONAL-SSOT-V1
+MCFT-CAP-05.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1
 
 dt02_architecture_amendment_status:
 NOT_REQUIRED_MERGED_EFFECTIVE
 
 first_permitted_repository_action:
-MCFT-CAP-05.P0.CAP-04-SETTLEMENT-AND-CAP-05-PROVISIONAL-SSOT-V1
+MCFT-CAP-05.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1
 ```
 
 P-1 已 merged-effective，裁决结果为 REUSE_WITHOUT_AMENDMENT。当前文件记录 P0 settlement / provisional SSOT candidate；仍不授权 Runtime source、migration、route、runner、canonical write implementation、S0 或 CAP-06。
@@ -2489,6 +2489,47 @@ P0 不得授权 S1 或 Runtime source；S0 仍是独立 authorization boundary�
 ---
 
 # 24. S0 — Authorization and Predecessor Lock
+
+S0 candidate identity：
+
+```text
+baseline_main_commit:
+2d4d00aec8cd1e925687ee67e5de429c324cc1b2
+
+P0 exact head:
+75a270fc2fd044fd57858227b7d1d91b1386cf8a
+
+P0 merge commit:
+2d4d00aec8cd1e925687ee67e5de429c324cc1b2
+
+P0 merged-main Gate workflow:
+29305450785 SUCCESS
+
+S0 status:
+READY_FOR_MERGE
+
+authorization effective:
+false
+
+runtime source authorized:
+false
+
+predecessor checkpoint sequence:
+72
+
+predecessor latest logical time:
+2026-06-04T01:00:00.000Z
+
+canonical next logical tick:
+2026-06-04T02:00:00.000Z
+
+predecessor lock:
+docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-PREDECESSOR-LOCK.json
+
+S1 authorized:
+false
+```
+
 
 S0 从 PostgreSQL canonical read path 锁定：
 

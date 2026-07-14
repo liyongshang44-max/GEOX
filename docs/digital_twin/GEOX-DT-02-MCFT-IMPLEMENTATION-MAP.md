@@ -972,3 +972,32 @@ CAP-04 current latest effective slice: MCFT-CAP-04.FINALIZATION-MAIN-VERIFICATIO
 The provisional CAP-05 capability entry remains `NOT_AUTHORIZED`. P0 creates no Runtime authority, predecessor PostgreSQL lock, migration, canonical write, route, web or CAP-06 authorization. S0 remains the next independent authorization boundary.
 
 <!-- MCFT-CAP-05-P0-SETTLEMENT-END -->
+
+
+<!-- MCFT-CAP-05-S0-AUTHORIZATION-START -->
+
+## MCFT-CAP-05 S0 authorization readiness
+
+```text
+capability: MCFT-CAP-05 — Human Decision and Execution-Receipt Feedback
+P0 merge commit: 2d4d00aec8cd1e925687ee67e5de429c324cc1b2
+P0 postmerge Gate: 29305450785 PASS
+S0 authorization: READY_FOR_MERGE
+authorization effective: false
+design status: DESIGN_FROZEN_CANDIDATE_V0_4
+implementation status: NOT_AUTHORIZED
+runtime source authorized: false
+active delivery slice: MCFT-CAP-05.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1
+predecessor checkpoint sequence: 72
+predecessor latest logical time: 2026-06-04T01:00:00.000Z
+canonical next logical tick: 2026-06-04T02:00:00.000Z
+latest successful Forecast: twin_forecast_run_f39699032a45814603caddf5
+latest Scenario Set: twin_scenario_set_f382a595734b3262b5bc6fd9
+predecessor lock: docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-PREDECESSOR-LOCK.json
+next eligible slice after merge and merged-main Gate: MCFT-CAP-05.MCFT-01-13-15.CONTROLLED-FEEDBACK-REPLAY-DATASET-V1
+successor MCFT-CAP-06 authorized: false
+```
+
+The S0 branch contains governance artifacts and isolated PostgreSQL predecessor proof only. Runtime implementation remains forbidden until S0 merges and its merged-main Authorization Gate passes.
+
+<!-- MCFT-CAP-05-S0-AUTHORIZATION-END -->
