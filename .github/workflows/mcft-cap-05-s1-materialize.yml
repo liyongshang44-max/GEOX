@@ -55,6 +55,20 @@ jobs:
       - name: Materialize S1 governance state
         run: python3 .mcft_cap05_s1_materializer.py
 
+      - name: Align precommit boundary with tracked working-tree changes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTROLLED_REPLAY_DATASET.cjs')
+          text = p.read_text(encoding='utf-8')
+          old = """  const tracked = git(['diff', '--name-only', range]).split(/\\r?\\n/).filter(Boolean);\n  const untracked = PRECOMMIT ? git(['ls-files', '--others', '--exclude-standard']).split(/\\r?\\n/).filter(Boolean) : [];\n  changed = [...new Set([...tracked, ...untracked])].filter((file) => !PRECOMMIT || !TEMPORARY_PRECOMMIT_FILES.has(file)).sort();\n"""
+          new = """  const committed = git(['diff', '--name-only', range]).split(/\\r?\\n/).filter(Boolean);\n  const working = PRECOMMIT ? git(['diff', '--name-only']).split(/\\r?\\n/).filter(Boolean) : [];\n  const untracked = PRECOMMIT ? git(['ls-files', '--others', '--exclude-standard']).split(/\\r?\\n/).filter(Boolean) : [];\n  changed = [...new Set([...committed, ...working, ...untracked])].filter((file) => !PRECOMMIT || !TEMPORARY_PRECOMMIT_FILES.has(file)).sort();\n"""
+          if old not in text:
+              raise SystemExit('expected S1 precommit boundary block not found')
+          p.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
       - name: Run S1 deterministic dataset Gate
         shell: bash
         run: |
