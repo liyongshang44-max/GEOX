@@ -1,0 +1,153 @@
+{
+  "schema_version": "geox_mcft_cap_05_s6_status_v1",
+  "capability_line_id": "MCFT-CAP-05",
+  "delivery_slice_id": "MCFT-CAP-05.MCFT-15.ACTION-FEEDBACK-H-COMMIT-ADAPTER-V1",
+  "slice_kind": "ACTION_FEEDBACK_H_COMMIT_AND_EXECUTED_IRRIGATION_ADAPTER",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "baseline_main_commit": "ef1c789b15a3e73f93c7e63907519faecb027563",
+  "branch": "agent/mcft-cap-05-s6-action-feedback-h-adapter-v1",
+  "s5_effectiveness": {
+    "pr_number": 2451,
+    "exact_head": "77a4f66741d0c5dab59a4cb0ac4ff91d7916d17d",
+    "materialization_workflow": 29312814297,
+    "exact_head_workflow": 29312941309,
+    "merge_commit": "ef1c789b15a3e73f93c7e63907519faecb027563",
+    "head_to_merge_file_delta_count": 0,
+    "tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2455,
+    "merged_main_gate_workflow": 29313112424,
+    "merged_main_gate": "PASS",
+    "effective": true
+  },
+  "validation": {
+    "postgresql_acceptance_workflow": 29313657871,
+    "repository_typecheck": "PASS",
+    "postgresql_acceptance": "PASS",
+    "acceptance_pass_count": 14,
+    "acceptance_fail_count": 0
+  },
+  "service": {
+    "service_id": "MCFT_CAP_05_ACTION_FEEDBACK_NORMALIZATION_SERVICE_V1",
+    "source_path": "apps/server/src/runtime/twin_runtime/action_feedback_normalization_service_v1.ts",
+    "public_route_created": false,
+    "caller_authority": [
+      "exact Reality scope",
+      "receipt_evidence_ref",
+      "receipt_evidence_hash"
+    ],
+    "caller_cannot_inject": [
+      "Decision identity",
+      "Approved Plan identity",
+      "Dispatch disposition",
+      "actual amount",
+      "coverage",
+      "eligibility",
+      "Runtime Config",
+      "lineage",
+      "revision"
+    ]
+  },
+  "canonical_action_feedback": {
+    "object_type": "twin_action_feedback_v1",
+    "transaction_family": "H_ACTION_FEEDBACK_COMMIT",
+    "persistence_repository": "PostgresFeedbackPersistenceRepositoryV1",
+    "canonical_fact_delta_standard_case": 1,
+    "idempotent_retry": "EXISTING_IDEMPOTENT_SUCCESS",
+    "projection": "twin_action_feedback_projection_v1",
+    "evidence_index": "twin_action_feedback_evidence_index_v1"
+  },
+  "receipt_evidence": {
+    "record_type": "irrigation_execution_receipt_evidence_v1",
+    "origin_source_kind": "CONTROLLED_REPLAY_DATASET",
+    "epistemic_class": "OBSERVED",
+    "structural_quality_required": "PASS",
+    "unit": "mm",
+    "volume_conversion_performed": false,
+    "same_utc_hour_required": true
+  },
+  "status_mapping": {
+    "execution": {
+      "FULL": "EXECUTED",
+      "PARTIAL": "PARTIALLY_EXECUTED",
+      "UNKNOWN": "EXECUTION_UNCERTAIN",
+      "NONE": "NOT_EXECUTED"
+    },
+    "validation": {
+      "PASSED": "VALIDATED",
+      "PASSED_WITH_LIMITATIONS": "VALIDATED_WITH_LIMITATIONS",
+      "FAILED": "REJECTED",
+      "PENDING": "NOT_YET_VALIDATED"
+    },
+    "quality": {
+      "PASS": "USABLE",
+      "LIMITED": "USABLE",
+      "FAIL": "UNUSABLE"
+    },
+    "execution_validation_orthogonal": true
+  },
+  "amount_and_coverage": {
+    "actual_amount_mm": "13.600000",
+    "spatial_coverage_fraction": "0.910000",
+    "target_scope_equivalent_irrigation_mm": "12.376000",
+    "formula": "actual_amount_mm * spatial_coverage_fraction",
+    "adapter_preserves_raw_amount": true,
+    "adapter_preserves_coverage": true,
+    "adapter_applies_coverage": false,
+    "existing_aggregator_applies_coverage_once": true,
+    "approved_amount_used_as_execution_authority": false
+  },
+  "time_semantics": {
+    "logical_time": "execution_end",
+    "as_of": "available_to_runtime_at",
+    "late_receipt_shifts_logical_time": false,
+    "late_receipt_rewrites_history": false
+  },
+  "event_guard": {
+    "policy_id": "EXACTLY_ONE_ELIGIBLE_EXECUTION_EVENT_PER_TICK_V1",
+    "zero_events": "REJECT",
+    "multiple_events": "REJECT",
+    "spatial_overlap_inference": "NOT_ESTABLISHED"
+  },
+  "dispatch": {
+    "external_evidence_validated": true,
+    "geox_dispatch_created": false,
+    "without_dispatch_evidence": "NOT_OBSERVED",
+    "with_eligible_dispatch_evidence": "EXTERNALLY_RECORDED"
+  },
+  "migration_delta": 0,
+  "preserved_nonclaims": [
+    "NO_PUBLIC_ROUTE",
+    "NO_GEOX_APPROVAL_AUTHORITY",
+    "NO_GEOX_DISPATCH_CREATION",
+    "NO_RECEIPT_CONSUMING_STATE_TICK",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
+    "NO_FORECAST_EXECUTION",
+    "NO_FORECAST_RESIDUAL_COMMIT",
+    "NO_RECOMMENDATION",
+    "NO_AO_ACT_CHANGE",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_MODEL_ACTIVATION",
+    "NO_MIGRATION",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_LIVE_FIELD_CLAIM",
+    "NO_CAP_06_AUTHORIZATION"
+  ],
+  "next_delivery_slice_id": "MCFT-CAP-05.MCFT-04-06-07-08-09-10.RECEIPT-CONSUMING-TICK-V1",
+  "next_delivery_slice_authorized": false,
+  "effectiveness_condition": "S6_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S6_GATE_PASS",
+  "effectiveness_condition_satisfied": false,
+  "exact_changed_file_boundary": [
+    "apps/server/src/domain/twin_runtime/action_feedback_to_executed_irrigation_v1.ts",
+    "apps/server/src/evidence/twin_runtime/execution_receipt_evidence_contract_v1.ts",
+    "apps/server/src/runtime/twin_runtime/action_feedback_normalization_service_v1.ts",
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S6-ACTION-FEEDBACK-H.md",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S6-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTION_FEEDBACK_H.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_ACTION_FEEDBACK_H_DB.ts"
+  ]
+}
