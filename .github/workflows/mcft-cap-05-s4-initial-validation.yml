@@ -63,7 +63,8 @@ jobs:
       - name: Commit exact S4 candidate and remove temporary files
         shell: bash
         run: |
-          set -euo pipefail
+          exec > >(tee /tmp/mcft-cap05-s4-commit.log) 2>&1
+          set -euxo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm -f .github/workflows/mcft-cap-05-s4-initial-validation.yml .mcft_cap05_s4_materializer.py
@@ -79,7 +80,16 @@ jobs:
             docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md \
             scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S4_HUMAN_DECISION_G.cjs \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts
+          git status --short
           git commit -m "feat(mcft-cap-05): establish S4 Human Decision through G"
+
+      - name: Upload commit failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s4-commit-failure
+          path: /tmp/mcft-cap05-s4-commit.log
+          if-no-files-found: ignore
 
       - name: Run S4 governance Gate
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S4_HUMAN_DECISION_G.cjs
