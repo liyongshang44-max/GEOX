@@ -177,7 +177,16 @@ function canonicalInstantV1(value: unknown, code: string): string {
   return text;
 }
 
-function exactScopeV1(scope: ContinuationScopeV1): ContinuationScopeV1 {
+type Cap05ScopeLikeV1 = {
+  tenant_id: unknown;
+  project_id: unknown;
+  group_id: unknown;
+  field_id: unknown;
+  season_id: unknown;
+  zone_id: unknown;
+};
+
+function exactScopeV1(scope: Cap05ScopeLikeV1): ContinuationScopeV1 {
   return {
     tenant_id: requiredStringV1(scope?.tenant_id, "CAP05_SCOPE_TENANT_REQUIRED"),
     project_id: requiredStringV1(scope?.project_id, "CAP05_SCOPE_PROJECT_REQUIRED"),
@@ -188,7 +197,7 @@ function exactScopeV1(scope: ContinuationScopeV1): ContinuationScopeV1 {
   };
 }
 
-function sameScopeV1(left: ContinuationScopeV1, right: ContinuationScopeV1): boolean {
+function sameScopeV1(left: Cap05ScopeLikeV1, right: Cap05ScopeLikeV1): boolean {
   return JSON.stringify(exactScopeV1(left)) === JSON.stringify(exactScopeV1(right));
 }
 

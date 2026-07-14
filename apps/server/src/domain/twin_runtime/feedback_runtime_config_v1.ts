@@ -7,6 +7,7 @@ import { computeMemberDeterminismHashV1, deriveSemanticObjectIdV1 } from "./cano
 import type { ContinuationScopeV1 } from "./continuation_operation_identity_v1.js";
 import {
   CAP04_CONFIG_SELECTION_MODE_V1,
+  CAP04_CONFIG_SELECTION_MODE_V1,
   CAP04_RUNTIME_CONFIG_PURPOSE_V1,
   compileCap04RuntimeConfigV1,
   type Cap04RuntimeConfigPayloadV1,
