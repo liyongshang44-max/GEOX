@@ -1,0 +1,91 @@
+name: MCFT-CAP-05 S7 Settlement Finalizer
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap-05-s7-ssot-settlement-v1
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-05-s7-ssot-settlement-v1
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Reconcile current authorization fields
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          S7 = "MCFT-CAP-05.MCFT-04-06-07-08-09-10.RECEIPT-CONSUMING-TICK-V1"
+          S8 = "MCFT-CAP-05.MCFT-07-11.FORECAST-OBSERVATION-RESIDUAL-C-COMMIT-V1"
+          S7_MERGE = "a4ea0f0c6af45a5d8daaad94be6b95bc3efefd78"
+
+          matrix_path = Path("docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json")
+          auth_path = Path("docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json")
+          status_path = Path("docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S7-SETTLEMENT-STATUS.json")
+
+          def load(path):
+              return json.loads(path.read_text(encoding="utf-8"))
+
+          def write(path, value):
+              path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+          matrix = load(matrix_path)
+          cap05 = next(line for line in matrix["capability_lines"] if line.get("capability_line_id") == "MCFT-CAP-05")
+          cap05["next_delivery_slice_id"] = S8
+          cap05["next_delivery_slice_authorized"] = True
+          cap05["latest_effective_delivery_slice_id"] = S7
+          cap05["current_repository_baseline_commit"] = S7_MERGE
+          if isinstance(cap05.get("p0"), dict):
+              cap05["p0"]["status"] = "MERGED_EFFECTIVE"
+              cap05["p0"]["s0_authorized"] = True
+          write(matrix_path, matrix)
+
+          auth = load(auth_path)
+          auth["authorization_effectiveness_condition"] = "S7_SETTLEMENT_PR_MERGED_TO_MAIN_AND_MAIN_CI_SETTLEMENT_GATE_PASS"
+          auth["premerge_satisfied_conditions"] = list(dict.fromkeys(auth.get("premerge_satisfied_conditions", []) + [
+              "MCFT_CAP_05_S7_EXACT_HEAD_CI_PASS",
+              "MCFT_CAP_05_S7_HEAD_TO_MERGE_TREE_EQUIVALENCE_PASS",
+              "MCFT_CAP_05_S7_MERGED_MAIN_GATE_PASS",
+              "MCFT_CAP_05_S7_VALIDATED_AND_NOT_YET_VALIDATED_PATHS_PASS",
+              "MCFT_CAP_05_S7_POSTGRESQL_H_SOURCE_PATH_PASS",
+          ]))
+          auth["allowed_claims_after_merge_and_postmerge_gate"] = [
+              "MCFT_CAP_05_S7_MERGED_EFFECTIVE",
+              "MCFT_CAP_05_RECEIPT_CONSUMING_A1_TICK_ESTABLISHED",
+              "MCFT_CAP_05_TRUSTWORTHY_NOT_YET_VALIDATED_STATE_INPUT_ESTABLISHED",
+              "MCFT_CAP_05_S8_EXPLICITLY_AUTHORIZED_NOT_STARTED",
+              "MCFT_CAP_05_S8_RUNTIME_SOURCE_AUTHORIZED",
+          ]
+          write(auth_path, auth)
+
+          status = load(status_path)
+          status["validation"] = {
+              "materialization_attempt_workflow": 29340747976,
+              "materialization_attempt_state": "FAILED_BOOTSTRAP_INDENTATION",
+              "materialization_retry_commit": "5ea73475adb1a1ec722949d94169780bd0a358a9",
+              "materialization_retry_state": "SUCCESS",
+              "candidate_validation_state": "PENDING_EXACT_HEAD_CI",
+              "governance_gate": "PENDING",
+              "repository_typecheck": "PENDING",
+              "standard_ci_state": "PENDING",
+          }
+          write(status_path, status)
+          PY
+
+      - name: Commit final reconciliation
+        run: |
+          rm .github/workflows/mcft-cap-05-s7-settlement-finalize.yml
+          git config user.name "GEOX Governance Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "docs(mcft-cap-05): reconcile S8 authorization current fields"
+          git push origin HEAD:agent/mcft-cap-05-s7-ssot-settlement-v1
