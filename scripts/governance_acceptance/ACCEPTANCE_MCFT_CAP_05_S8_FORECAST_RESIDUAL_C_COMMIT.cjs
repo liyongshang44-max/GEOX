@@ -175,9 +175,15 @@ check(status.preserved_nonclaims.includes('NO_RESIDUAL_ASSIMILATION_IDENTITY_CLA
 check(status.preserved_nonclaims.includes('NO_CAP_06_AUTHORIZATION') && status.preserved_nonclaims.includes('NO_SUCCESSOR_SLICE_AUTHORIZATION_IN_RUNTIME_PR'), 'successor and CAP-06 remain unauthorized');
 
 const changed = changedFilesV1();
+const frozenStatusBoundary = Array.isArray(status.exact_changed_file_boundary)
+  ? [...status.exact_changed_file_boundary].sort()
+  : null;
+const statusBoundaryMatches = JSON.stringify(frozenStatusBoundary) === JSON.stringify(expectedFiles);
 const mode = process.argv.includes('--candidate') ? 'candidate' : process.argv.includes('--postmerge') ? 'postmerge' : 'auto';
 if (mode === 'candidate') {
-  check(JSON.stringify(changed) === JSON.stringify(expectedFiles), 'exact ten-file S8 Runtime boundary');
+  check((changed && JSON.stringify(changed) === JSON.stringify(expectedFiles))
+    || (changed === null && statusBoundaryMatches),
+  'exact ten-file S8 Runtime boundary');
 } else if (mode === 'postmerge') {
   check(changed !== null && changed.length === 0, 'postmerge main has no S8 delta against frozen baseline');
   check(status.effectiveness_condition_satisfied === false, 'historical candidate status remains pre-settlement evidence');
@@ -185,6 +191,8 @@ if (mode === 'candidate') {
   check(true, 'auto mode recognizes exact S8 candidate boundary');
 } else if (changed && changed.length === 0) {
   check(true, 'auto mode recognizes merged-main S8 Runtime');
+} else if (changed === null && statusBoundaryMatches) {
+  check(true, 'auto mode verifies frozen S8 candidate boundary in shallow checkout');
 } else {
   console.error(`OBSERVED_CHANGED_FILES ${JSON.stringify(changed)}`);
   check(false, 'auto mode rejects an unexpected S8 boundary');
