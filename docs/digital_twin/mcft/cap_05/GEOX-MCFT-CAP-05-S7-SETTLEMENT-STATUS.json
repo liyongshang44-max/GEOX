@@ -31,7 +31,11 @@
     "allowed_claim": "FORECAST_OBSERVATION_RESIDUAL_C_COMMIT_IMPLEMENTATION_AUTHORIZED"
   },
   "validation": {
-    "materialization_workflow": 29340747976,
+    "materialization_attempt_workflow": 29340747976,
+    "materialization_attempt_state": "FAILED_BOOTSTRAP_INDENTATION",
+    "materialization_retry_commit": "5ea73475adb1a1ec722949d94169780bd0a358a9",
+    "materialization_retry_state": "SUCCESS",
+    "candidate_validation_state": "PENDING_EXACT_HEAD_CI",
     "governance_gate": "PENDING",
     "repository_typecheck": "PENDING",
     "standard_ci_state": "PENDING"
