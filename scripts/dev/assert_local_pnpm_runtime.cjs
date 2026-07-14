@@ -75,6 +75,9 @@ async function main() {
   console.log(`PASS remediation merged-main identity ${MERGED_MAIN}`);
   console.log(`PASS remediation head-to-merge tree equivalence ${EXACT_HEAD}`);
 
+  // The postmerge gates compare HEAD against origin/main. Point the local remote-tracking ref at the probe merge tree only after proving the one-file probe boundary and exact merged-main identity.
+  run('git', ['update-ref', 'refs/remotes/origin/main', 'HEAD']);
+
   run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs', '--postmerge']);
   run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTION_FEEDBACK_H.cjs', '--postmerge']);
   run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs', '--auto']);
