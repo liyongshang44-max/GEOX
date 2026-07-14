@@ -39,6 +39,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('.mcft_cap05_s2_materializer.py')
+          text = p.read_text(encoding='utf-8')
+          old_marker = 'marker = "# 26. S2 — Contracts, Projection Math and Runtime Config"'
+          new_marker = 'marker = "# 26. S2 — Contracts and Projection Math"'
+          old_guard = 'if "S2 implementation candidate identity：" not in task:'
+          new_guard = 'if "S2 pure validation workflow:" not in task:'
+          if old_marker not in text or old_guard not in text:
+              raise SystemExit('S2 task materialization patch target missing')
+          text = text.replace(old_marker, new_marker, 1).replace(old_guard, new_guard, 1)
+          p.write_text(text, encoding='utf-8')
+          PY
           python3 .mcft_cap05_s2_materializer.py
           python3 - <<'PY'
           from pathlib import Path
@@ -83,18 +96,7 @@ jobs:
           git commit -m "feat(mcft-cap-05): establish S2 contracts projection math and config"
 
       - name: Run S2 governance Gate
-        shell: bash
-        run: |
-          set -o pipefail
-          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S2_CONTRACTS_CONFIG.cjs 2>&1 | tee /tmp/s2-governance.log
-
-      - name: Upload governance log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap-05-s2-governance-failure-final
-          path: /tmp/s2-governance.log
-          if-no-files-found: ignore
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S2_CONTRACTS_CONFIG.cjs
 
       - name: Run S2 pure acceptance
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts
