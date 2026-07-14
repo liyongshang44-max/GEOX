@@ -8,7 +8,7 @@ import {
   validateCap05ActionFeedbackV1,
   type Cap05ActionFeedbackEnvelopeV1,
 } from "../../domain/twin_runtime/feedback_canonical_contracts_v1.js";
-import type { ActionFeedbackSourcePortV1, TwinScopeKeyV1 } from "../../runtime/twin_runtime/ports.js";
+import type { TwinScopeKeyV1 } from "../../runtime/twin_runtime/ports.js";
 
 function canonicalHourV1(value: unknown, code: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(code);
@@ -47,7 +47,7 @@ function exactProjectionMatchV1(row: Record<string, unknown>, feedback: Cap05Act
   if (asOf !== feedback.as_of) throw new Error("CAP05_ACTION_FEEDBACK_SOURCE_PROJECTION_MISMATCH:as_of");
 }
 
-export class PostgresActionFeedbackTickSourceV1 implements ActionFeedbackSourcePortV1 {
+export class PostgresActionFeedbackTickSourceV1 {
   constructor(private readonly pool: Pool) {}
 
   async loadActionFeedbackCandidates(input: {
