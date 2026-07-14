@@ -1,0 +1,92 @@
+{
+  "schema_version": "geox_mcft_cap_05_s2_status_v1",
+  "capability_line_id": "MCFT-CAP-05",
+  "delivery_slice_id": "MCFT-CAP-05.MCFT-02-06-11-13-15.CONTRACTS-PROJECTION-MATH-CONFIG-V1",
+  "slice_kind": "PURE_CONTRACTS_PROJECTION_MATH_CONFIG",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "baseline_main_commit": "552d19505f0cd93584c899665b7d7b339f67e9fe",
+  "branch": "agent/mcft-cap-05-s2-contracts-projection-math-config-v1",
+  "s1_effectiveness": {
+    "pr_number": 2438,
+    "exact_head": "6e2e3e238c5b7886e4d21d7899406e5642192500",
+    "materialization_workflow": 29306561067,
+    "exact_head_workflow": 29306684953,
+    "merge_commit": "552d19505f0cd93584c899665b7d7b339f67e9fe",
+    "head_to_merge_file_delta_count": 0,
+    "tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2440,
+    "merged_main_gate_workflow": 29306783482,
+    "merged_main_gate": "PASS",
+    "effective": true
+  },
+  "pure_validation_workflow": 29307407557,
+  "materialization_workflow": 29309046407,
+  "contracts": {
+    "decision_contract_id": "MCFT_CAP_05_HUMAN_DECISION_V1",
+    "decision_transaction_variant": "G_HUMAN_DECISION_LINK_COMMIT",
+    "action_feedback_contract_id": "MCFT_CAP_05_ACTION_FEEDBACK_V1",
+    "action_feedback_transaction_variant": "H_ACTION_FEEDBACK_COMMIT",
+    "forecast_residual_contract_id": "MCFT_CAP_05_FORECAST_OBSERVATION_RESIDUAL_V1",
+    "forecast_residual_transaction_variant": "C_FORECAST_RESIDUAL_COMMIT",
+    "new_canonical_object_types": [],
+    "new_transaction_families": []
+  },
+  "math": {
+    "projection_method_id": "FORECAST_STORAGE_TO_ROOT_ZONE_MEAN_VWC_H1_V1",
+    "variance_projection_method_id": "STORAGE_VARIANCE_DIVIDED_BY_ROOT_ZONE_DEPTH_SQUARED_V1",
+    "residual_formula_id": "ACTUAL_MINUS_PREDICTED_V1",
+    "normalized_residual_formula_id": "RESIDUAL_DIVIDED_BY_SQRT_PREDICTED_PLUS_OBSERVATION_VARIANCE_V1",
+    "forecast_assimilation_relation_policy_id": "DISTINCT_UNLESS_EXPLICIT_EQUIVALENCE_PROOF_V1",
+    "fixed_point_authority": true
+  },
+  "runtime_config": {
+    "config_purpose": "HUMAN_DECISION_EXECUTION_FEEDBACK_RUNTIME_V1",
+    "chain_length": 8,
+    "first_effective_logical_time": "2026-06-04T02:00:00.000Z",
+    "parent_ref_authority": "PREDECESSOR_STATE_BOUND_RUNTIME_CONFIG",
+    "selection_mode": "PERSISTED_PREDECESSOR_CHAIN_ONLY_V1"
+  },
+  "adapter": {
+    "adapter_id": "ACTION_FEEDBACK_TO_EXECUTED_IRRIGATION_CANDIDATE_V1",
+    "target_contract": "ExecutedIrrigationCandidateV1",
+    "single_event_guard_policy_id": "EXACTLY_ONE_ELIGIBLE_EXECUTION_EVENT_PER_TICK_V1"
+  },
+  "canonical_twin_object_fact_delta": 0,
+  "replay_evidence_fact_delta": 0,
+  "projection_row_delta": 0,
+  "migration_delta": 0,
+  "exact_changed_file_boundary": [
+    "apps/server/src/domain/twin_runtime/action_feedback_to_executed_irrigation_v1.ts",
+    "apps/server/src/domain/twin_runtime/decision_second_write_policy_v1.ts",
+    "apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.ts",
+    "apps/server/src/domain/twin_runtime/feedback_cycle_projection_v1.ts",
+    "apps/server/src/domain/twin_runtime/feedback_runtime_config_v1.ts",
+    "apps/server/src/domain/twin_runtime/forecast_observation_residual_v1.ts",
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S2-CONTRACTS-PROJECTION-CONFIG.md",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S2-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S2_CONTRACTS_CONFIG.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts"
+  ],
+  "preserved_nonclaims": [
+    "NO_PERSISTENCE",
+    "NO_MIGRATION",
+    "NO_CANONICAL_APPEND",
+    "NO_STATE_OR_CHECKPOINT_WRITE",
+    "NO_ROUTE",
+    "NO_WEB",
+    "NO_RECOMMENDATION",
+    "NO_AO_ACT_CHANGE",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_MODEL_ACTIVATION",
+    "NO_CAP_06_AUTHORIZATION"
+  ],
+  "next_delivery_slice_id": "MCFT-CAP-05.MCFT-03.PERSISTENCE-IDEMPOTENCY-RECOVERY-V1",
+  "next_delivery_slice_authorized": false,
+  "effectiveness_condition": "S2_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S2_GATE_PASS",
+  "effectiveness_condition_satisfied": false
+}
