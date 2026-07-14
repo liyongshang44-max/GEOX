@@ -366,30 +366,57 @@ export class PostgresFeedbackPersistenceRepositoryV1 {
       }
 
       const planFacts = await client.query(
-        `SELECT fact_id,record_json FROM facts
-         WHERE record_json->>'type'='approved_irrigation_plan_snapshot_v1'
-         ORDER BY fact_id`,
+      `SELECT fact_id,record_json FROM facts
+       WHERE record_json->>'type'='approved_irrigation_plan_snapshot_v1'
+       ORDER BY fact_id`,
+    );
+    const planEvidenceRows: Array<{ evidence: Cap05ApprovedPlanEvidenceV1; fact_id: string }> = [];
+    for (const row of planFacts.rows) {
+      const parsed = parseRecordJsonV1(row.fact_id, row.record_json);
+      const evidence = parsed.payload as Cap05ApprovedPlanEvidenceV1;
+      const projection = buildCap05ApprovedPlanBindingProjectionRowV1(evidence, row.fact_id);
+      await client.query(
+        `INSERT INTO twin_approved_plan_binding_projection_v1
+         (approved_plan_evidence_ref,approved_plan_evidence_hash,tenant_id,project_id,group_id,field_id,season_id,zone_id,
+          binding_id,approval_assertion_ref,approval_assertion_hash,decision_request_ref,decision_request_hash,
+          selected_option_ref,selected_option_hash,scenario_amount_mm,approved_amount_mm,plan_effective_from,plan_effective_to,
+          active_for_decision,canonical_evidence,source_fact_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::timestamptz,$19::timestamptz,$20,$21::jsonb,$22)`,
+        [
+          projection.approved_plan_evidence_ref,projection.approved_plan_evidence_hash,projection.tenant_id,projection.project_id,
+          projection.group_id,projection.field_id,projection.season_id,projection.zone_id,projection.binding_id,
+          projection.approval_assertion_ref,projection.approval_assertion_hash,projection.decision_request_ref,projection.decision_request_hash,
+          projection.selected_option_ref,projection.selected_option_hash,projection.scenario_amount_mm,projection.approved_amount_mm,
+          projection.plan_effective_from,projection.plan_effective_to,projection.active_for_decision,
+          JSON.stringify(projection.canonical_evidence),projection.source_fact_id,
+        ],
       );
-      for (const row of planFacts.rows) {
-        const parsed = parseRecordJsonV1(row.fact_id, row.record_json);
-        const projection = buildCap05ApprovedPlanBindingProjectionRowV1(parsed.payload as Cap05ApprovedPlanEvidenceV1, row.fact_id);
-        await client.query(
-          `INSERT INTO twin_approved_plan_binding_projection_v1
-           (approved_plan_evidence_ref,approved_plan_evidence_hash,tenant_id,project_id,group_id,field_id,season_id,zone_id,
-            binding_id,approval_assertion_ref,approval_assertion_hash,decision_request_ref,decision_request_hash,
-            selected_option_ref,selected_option_hash,scenario_amount_mm,approved_amount_mm,plan_effective_from,plan_effective_to,
-            active_for_decision,canonical_evidence,source_fact_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::timestamptz,$19::timestamptz,$20,$21::jsonb,$22)`,
-          [
-            projection.approved_plan_evidence_ref,projection.approved_plan_evidence_hash,projection.tenant_id,projection.project_id,
-            projection.group_id,projection.field_id,projection.season_id,projection.zone_id,projection.binding_id,
-            projection.approval_assertion_ref,projection.approval_assertion_hash,projection.decision_request_ref,projection.decision_request_hash,
-            projection.selected_option_ref,projection.selected_option_hash,projection.scenario_amount_mm,projection.approved_amount_mm,
-            projection.plan_effective_from,projection.plan_effective_to,projection.active_for_decision,
-            JSON.stringify(projection.canonical_evidence),projection.source_fact_id,
-          ],
-        );
-      }
+      planEvidenceRows.push({ evidence, fact_id: row.fact_id });
+    }
+
+    for (const { evidence } of planEvidenceRows) {
+      const supersedesRef = optionalStringV1(evidence.canonical_payload.supersedes_plan_evidence_ref);
+      const supersedesHash = optionalStringV1(evidence.canonical_payload.supersedes_plan_evidence_hash);
+      if (Boolean(supersedesRef) !== Boolean(supersedesHash)) throw new Error("CAP05_PLAN_RECOVERY_SUPERSESSION_PAIR_REQUIRED");
+      if (!supersedesRef || !supersedesHash) continue;
+      if (supersedesRef === evidence.source_record_id) throw new Error("CAP05_PLAN_RECOVERY_SELF_SUPERSESSION_FORBIDDEN");
+      const deactivated = await client.query(
+        `UPDATE twin_approved_plan_binding_projection_v1
+         SET active_for_decision=false
+         WHERE approved_plan_evidence_ref=$1 AND approved_plan_evidence_hash=$2`,
+        [supersedesRef, supersedesHash],
+      );
+      if (deactivated.rowCount !== 1) throw new Error("CAP05_PLAN_RECOVERY_SUPERSEDED_PLAN_NOT_FOUND");
+    }
+
+    const activePlanConflicts = await client.query(
+      `SELECT decision_request_ref,decision_request_hash,selected_option_ref,selected_option_hash,count(*)::int AS count
+       FROM twin_approved_plan_binding_projection_v1
+       WHERE active_for_decision=true
+       GROUP BY decision_request_ref,decision_request_hash,selected_option_ref,selected_option_hash
+       HAVING count(*) > 1`,
+    );
+    if (activePlanConflicts.rows.length > 0) throw new Error("CAP05_PLAN_RECOVERY_ACTIVE_CARDINALITY_CONFLICT");
 
       const cycles = await this.rebuildCompleteFeedbackCyclesWithClientV1(client, objects);
       await client.query("COMMIT");

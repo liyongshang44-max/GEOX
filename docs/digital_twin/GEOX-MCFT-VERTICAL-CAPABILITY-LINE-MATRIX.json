@@ -4,8 +4,8 @@
   "status": "COMPLETE",
   "baseline": {
     "branch": "main",
-    "commit": "7e2de9c00a4ecc305c27b6572a63914f38157dbd",
-    "meaning": "MCFT-CAP-05 S3 merged-main effective; S4 controlled Human Decision G transaction candidate"
+    "commit": "7f2f2bec144cee4d90608c3a25c3dc7cac9f9189",
+    "meaning": "MCFT-CAP-05 S4 merged-main effective; S5 Approval Assertion and Approved Plan Replay Evidence binding candidate"
   },
   "identifier_model": {
     "capability_line_id": "vertical executable capability closure unit",
@@ -2459,10 +2459,10 @@
       "target_completion_level": "Level A",
       "status": "IN_PROGRESS",
       "design_status": "DESIGN_FROZEN",
-      "implementation_status": "S4_IMPLEMENTATION_CANDIDATE",
+      "implementation_status": "S5_IMPLEMENTATION_CANDIDATE",
       "authorization_effective": true,
       "runtime_source_authorized": true,
-      "active_delivery_slice_id": "MCFT-CAP-05.MCFT-13.HUMAN-DECISION-G-COMMIT-V1",
+      "active_delivery_slice_id": "MCFT-CAP-05.MCFT-01-13.APPROVAL-PLAN-EVIDENCE-BINDING-V1",
       "predecessor_capability_line_id": "MCFT-CAP-04",
       "successor_capability_line_id": "MCFT-CAP-06",
       "successor_authorized": false,
@@ -2794,7 +2794,7 @@
           ],
           "baseline_main_commit": "7e2de9c00a4ecc305c27b6572a63914f38157dbd",
           "branch": "agent/mcft-cap-05-s4-human-decision-g-commit-v1",
-          "status": "IMPLEMENTATION_CANDIDATE",
+          "status": "MERGED_EFFECTIVE",
           "runtime_source_authorized": true,
           "allowed_claims": [],
           "preserved_nonclaims": [
@@ -2834,11 +2834,12 @@
             "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts"
           ],
           "effectiveness_condition": "S4_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S4_GATE_PASS",
-          "effectiveness_condition_satisfied": false,
+          "effectiveness_condition_satisfied": true,
           "postgresql_acceptance_workflow": 29310564723,
           "canonical_decision_fact_delta": 1,
           "downstream_inferred_fact_delta": 0,
-          "migration_count": 0
+          "migration_count": 0,
+          "merge_commit": "7f2f2bec144cee4d90608c3a25c3dc7cac9f9189"
         },
         {
           "delivery_slice_id": "MCFT-CAP-05.MCFT-01-13.APPROVAL-PLAN-EVIDENCE-BINDING-V1",
@@ -2846,10 +2847,10 @@
           "depends_on_delivery_slice_ids": [
             "MCFT-CAP-05.MCFT-13.HUMAN-DECISION-G-COMMIT-V1"
           ],
-          "baseline_main_commit": null,
-          "branch": null,
-          "status": "BLOCKED",
-          "runtime_source_authorized": false,
+          "baseline_main_commit": "7f2f2bec144cee4d90608c3a25c3dc7cac9f9189",
+          "branch": "agent/mcft-cap-05-s5-approval-plan-evidence-binding-v1",
+          "status": "IMPLEMENTATION_CANDIDATE",
+          "runtime_source_authorized": true,
           "allowed_claims": [],
           "preserved_nonclaims": [
             "NO_MCFT_CAP_05_RUNTIME_SOURCE_AUTHORIZATION",
@@ -2875,7 +2876,7 @@
             "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
           ],
           "exact_changed_file_boundary": [],
-          "effectiveness_condition": "PREDECESSOR_SLICE_MERGED_AND_MERGED_MAIN_GATE_PASS_AND_EXPLICIT_SLICE_ACTIVATION",
+          "effectiveness_condition": "S5_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S5_GATE_PASS",
           "effectiveness_condition_satisfied": false
         },
         {
@@ -3146,7 +3147,9 @@
       "next_authorized_slice_id_after_merge_and_postmerge_gate": "MCFT-CAP-05.MCFT-01-13-15.CONTROLLED-FEEDBACK-REPLAY-DATASET-V1",
       "current_repository_baseline_commit": "552d19505f0cd93584c899665b7d7b339f67e9fe",
       "latest_effective_slice_id": "MCFT-CAP-05.MCFT-03.PERSISTENCE-IDEMPOTENCY-RECOVERY-V1",
-      "latest_effective_main_commit": "7e2de9c00a4ecc305c27b6572a63914f38157dbd"
+      "latest_effective_main_commit": "7e2de9c00a4ecc305c27b6572a63914f38157dbd",
+      "baseline_main_commit": "7f2f2bec144cee4d90608c3a25c3dc7cac9f9189",
+      "branch": "agent/mcft-cap-05-s5-approval-plan-evidence-binding-v1"
     }
   ],
   "actual_owner_work_package_statuses": {

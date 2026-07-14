@@ -124,6 +124,8 @@ export type Cap05ApprovedPlanEvidenceV1 = {
     selected_option_hash: string;
     scenario_amount_mm: string | number;
     approved_amount_mm: string | number;
+    supersedes_plan_evidence_ref?: string;
+    supersedes_plan_evidence_hash?: string;
     active_for_decision: boolean;
   };
   role_time: {
