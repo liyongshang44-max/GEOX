@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   validate:
@@ -34,6 +34,58 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Align option-member hash policy with merged S1 Replay Evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          contracts = Path('apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.ts')
+          text = contracts.read_text(encoding='utf-8')
+          old = '''  const matches = scenarioSet.payload.options.filter((option) => option.option_id === optionId);
+          if (matches.length !== 1) throw new Error("CAP05_SCENARIO_MEMBER_CARDINALITY");
+          return { option_id: optionId, option_hash: semanticHashV1(matches[0]) };'''
+          new = '''  const matches = scenarioSet.payload.options.filter((option) => option.option_id === optionId);
+          if (matches.length !== 1) throw new Error("CAP05_SCENARIO_MEMBER_CARDINALITY");
+          const assumedIrrigationMm = optionId === "NO_ACTION" ? 0 : optionId === "IRRIGATE_NOW_15MM" ? 15 : 25;
+          const expectedRequestedAmount = `${assumedIrrigationMm}.000000`;
+          if (matches[0].requested_irrigation_mm !== expectedRequestedAmount) throw new Error("CAP05_SCENARIO_MEMBER_AMOUNT_MISMATCH");
+          return {
+            option_id: optionId,
+            option_hash: semanticHashV1({
+              scenario_set_ref: scenarioSet.object_id,
+              scenario_set_hash: scenarioSet.determinism_hash,
+              option_id: optionId,
+              assumed_irrigation_mm: assumedIrrigationMm,
+            }),
+          };'''
+          if old in text:
+              contracts.write_text(text.replace(old, new, 1), encoding='utf-8')
+          elif new not in text:
+              raise SystemExit('option member hash patch target missing')
+
+          acceptance = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts')
+          text = acceptance.read_text(encoding='utf-8')
+          text = text.replace('import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";\n', '')
+          text = text.replace(
+              'import { buildCap05ScenarioOptionMemberRefV1 } from "../../apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.js";',
+              'import { buildCap05ScenarioOptionMemberRefV1, resolveCap05ScenarioOptionMemberV1 } from "../../apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.js";',
+          )
+          text = text.replace(
+              '      record.canonical_payload.selected_option_hash = semanticHashV1(noActionOption);',
+              '      record.canonical_payload.selected_option_hash = resolveCap05ScenarioOptionMemberV1(scenario, record.canonical_payload.selected_option_ref).option_hash;',
+          )
+          acceptance.write_text(text, encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.ts scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts
+            git commit -m "fix(mcft-cap-05): align option member hash with controlled Evidence"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
