@@ -1,5 +1,5 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK_DB.ts
-// Purpose: prove the production S7 PostgreSQL source reads canonical H objects through projection-to-fact readback, selects the eligible current-window event, and excludes pending/late feedback without writing support or canonical state.
+// Purpose: prove the production S7 PostgreSQL source reads canonical H objects through projection-to-fact readback and that trustworthy NOT_YET_VALIDATED feedback remains selectable under the frozen validation-orthogonality contract.
 // Boundary: destructive isolated-database acceptance only; no production database, State tick commit, Forecast, Scenario, route, scheduler, approval, dispatch, Recommendation, AO-ACT, calibration or activation authority.
 
 import assert from "node:assert/strict";
@@ -60,7 +60,7 @@ async function main(): Promise<void> {
     MCFT_CAP_05_S6_DESTRUCTIVE_ACCEPTANCE: "1",
   });
   assert.ok(predecessor.includes("15 PASS / 0 FAIL"), "S6_CANONICAL_H_PREDECESSOR_REQUIRED");
-  ok("S6 predecessor creates the standard, pending-validation and late canonical H objects");
+  ok("S6 predecessor creates standard, NOT_YET_VALIDATED and late canonical H objects");
 
   const receipt = receiptFixtureV1();
   const scope = {
@@ -78,22 +78,42 @@ async function main(): Promise<void> {
   assert.ok(candidates.every((feedback) => feedback.object_type === "twin_action_feedback_v1"));
   ok("PostgreSQL source reconstructs three exact canonical H objects through projection-to-fact readback");
 
-  const selection = selectCap05ActionFeedbackForTickV1({
+  const pending = candidates.find((feedback) => feedback.payload.validation_status === "NOT_YET_VALIDATED");
+  assert.ok(pending);
+  assert.equal(pending.payload.execution_status, "EXECUTED");
+  assert.equal(pending.payload.source_quality, "PASS");
+  assert.equal(pending.payload.eligible_for_state_input, true);
+  ok("PostgreSQL readback preserves trustworthy NOT_YET_VALIDATED H as State-input eligible");
+
+  const pendingSelection = selectCap05ActionFeedbackForTickV1({
+    scope,
+    logical_time: "2026-06-04T02:00:00.000Z",
+    feedback_objects: [pending],
+  });
+  assert.ok(pendingSelection.candidate);
+  assert.equal(pendingSelection.candidate.executed_amount_mm, "13.600000");
+  assert.equal(pendingSelection.candidate.coverage_fraction, "0.910000");
+  assert.equal(pendingSelection.adapter_trace?.source_validation_status, "NOT_YET_VALIDATED");
+  assert.deepEqual(pendingSelection.trace.selected_action_feedback_refs, [pending.object_id]);
+  ok("S7 selector consumes trustworthy NOT_YET_VALIDATED H and retains validation trace");
+
+  assert.throws(() => selectCap05ActionFeedbackForTickV1({
     scope,
     logical_time: "2026-06-04T02:00:00.000Z",
     feedback_objects: candidates,
-  });
-  assert.ok(selection.candidate);
-  assert.equal(selection.candidate.executed_amount_mm, "13.600000");
-  assert.equal(selection.candidate.coverage_fraction, "0.910000");
-  assert.equal(selection.trace.selected_action_feedback_refs.length, 1);
-  ok("02:00 selector chooses the eligible current-window H and preserves raw amount and coverage");
+  }), /CAP05_MULTIPLE_ACTION_FEEDBACK_EVENTS_FOR_TICK/);
+  ok("synthetic predecessor set with multiple eligible events fails closed rather than selecting implicitly");
 
-  const dispositions = new Set(selection.trace.entries.map((entry) => entry.disposition));
-  assert.ok(dispositions.has("SELECTED"));
-  assert.ok(dispositions.has("EXCLUDED_INELIGIBLE"));
-  assert.ok(dispositions.has("EXCLUDED_LATE"));
-  ok("pending-validation and late H remain canonical and traceable but are excluded from State input");
+  const late = candidates.find((feedback) => feedback.payload.available_to_runtime_at === "2026-06-04T03:05:00.000Z");
+  assert.ok(late);
+  const lateSelection = selectCap05ActionFeedbackForTickV1({
+    scope,
+    logical_time: "2026-06-04T02:00:00.000Z",
+    feedback_objects: [late],
+  });
+  assert.equal(lateSelection.candidate, null);
+  assert.equal(lateSelection.trace.entries[0]?.disposition, "EXCLUDED_LATE");
+  ok("late H remains canonical and traceable but is excluded at the earlier cutoff");
 
   const after = await countsV1();
   assert.deepEqual(after, before);
@@ -106,7 +126,7 @@ async function main(): Promise<void> {
   assert.equal(wrongScope.length, 0);
   ok("PostgreSQL source enforces exact Reality scope");
 
-  assert.equal(pass, 5);
+  assert.equal(pass, 8);
   console.log(`MCFT-CAP-05 receipt-consuming tick PostgreSQL source: ${pass} PASS / 0 FAIL`);
 }
 
