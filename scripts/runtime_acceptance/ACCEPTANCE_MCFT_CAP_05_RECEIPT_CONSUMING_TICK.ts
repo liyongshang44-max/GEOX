@@ -10,6 +10,9 @@ import {
 import type { CanonicalObjectEnvelopeV1 } from "../../apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.js";
 import {
   buildCap05ActionFeedbackV1,
+  CAP05_ACTION_FEEDBACK_ELIGIBILITY_POLICY_V1,
+  CAP05_ACTION_FEEDBACK_QUALITY_MAPPING_POLICY_V1,
+  CAP05_TARGET_EQUIVALENT_IRRIGATION_POLICY_V1,
   type Cap05ActionFeedbackEnvelopeV1,
 } from "../../apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.js";
 import type { Cap04ARecordSetV1 } from "../../apps/server/src/domain/twin_runtime/forecast_scenario_record_set_identity_v1.js";
@@ -29,11 +32,6 @@ import {
   Cap05ReceiptConsumingForecastScenarioTickServiceV1,
   type Cap05ActionFeedbackSourcePortV1,
 } from "../../apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.js";
-import {
-  CAP05_ACTION_FEEDBACK_ELIGIBILITY_POLICY_V1,
-  CAP05_ACTION_FEEDBACK_QUALITY_MAPPING_POLICY_V1,
-  CAP05_TARGET_EQUIVALENT_IRRIGATION_POLICY_V1,
-} from "../../apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.js";
 import {
   CAP04_S6_LOGICAL_TIME_V1,
   buildCap04S6SingleTickFixtureV1,
@@ -310,9 +308,9 @@ async function main(): Promise<void> {
   await assert.rejects(missingService.executeOneTick(missingPolicies.input), /CAP05_RECEIPT_TICK_CONFIG_POLICY_MISMATCH/);
   check(true, "receipt-consuming tick fails closed when CAP-05 Runtime Config policies are not pinned");
 
-  check(fail === 0 && pass === 14, "S7 bounded acceptance reaches the expected pass cardinality");
+  assert.equal(fail, 0);
+  assert.equal(pass, 15);
   console.log(`MCFT-CAP-05 receipt-consuming tick: ${pass} PASS, ${fail} FAIL`);
-  if (fail > 0) process.exit(1);
 }
 
 main().catch((error) => {
