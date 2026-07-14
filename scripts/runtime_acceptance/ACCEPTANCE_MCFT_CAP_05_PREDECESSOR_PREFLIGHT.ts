@@ -715,7 +715,7 @@ async function main(): Promise<void> {
   const task = readText(TASK_PATH);
   assert.ok(task.includes("完整任务线 v0.4"), "TASK_V0_4_REQUIRED");
   assert.ok(task.includes("# 24. S0 — Authorization and Predecessor Lock"), "TASK_S0_AUTHORITY_REQUIRED");
-  assert.ok(task.includes(S0), "TASK_S0_ID_REQUIRED");
+  assert.ok(task.includes("S0 — Authorization and Predecessor Lock"), "TASK_S0_SECTION_AUTHORITY_REQUIRED");
   const p0Status = readJson(P0_STATUS_PATH);
   const cap04Closure = readJson(CAP04_CLOSURE_PATH);
   const cap04Main = readJson(CAP04_MAIN_PATH);
