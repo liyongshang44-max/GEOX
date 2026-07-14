@@ -1,0 +1,130 @@
+name: MCFT-CAP-05 S6 remediation-aware refresh
+
+on:
+  pull_request:
+    types: [synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s6-action-feedback-h-adapter-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap05_s6_refresh
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap05_s6_refresh"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s6_refresh
+      MCFT_CAP_05_S6_DESTRUCTIVE_ACCEPTANCE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge remediation-effective main with bounded conflict policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "99221bb464818f8686718fd25df123e1096b2281"
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_status=$?
+          set -e
+          if [ "$merge_status" -ne 0 ]; then
+            allowed='docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
+docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
+docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json
+docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json
+docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md'
+            conflicts="$(git diff --name-only --diff-filter=U)"
+            while IFS= read -r file; do
+              [ -z "$file" ] && continue
+              if ! printf '%s\n' "$allowed" | grep -Fxq "$file"; then
+                echo "UNEXPECTED_MERGE_CONFLICT:$file" >&2
+                exit 1
+              fi
+              git checkout --theirs -- "$file"
+              git add "$file"
+            done <<< "$conflicts"
+          fi
+          if [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+            echo "UNRESOLVED_CONFLICTS" >&2
+            git diff --name-only --diff-filter=U >&2
+            exit 1
+          fi
+          git commit -m "merge main after S5 remediation into MCFT-CAP-05 S6"
+
+      - name: Materialize remediation-aware S6 candidate
+        run: python3 .mcft_cap05_s6_refresh.py
+
+      - name: Remove temporary refresh machinery and commit exact boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -f \
+            .github/workflows/mcft-cap-05-s6-refresh.yml \
+            .mcft_cap05_s6_refresh.py
+          git add -f \
+            apps/server/src/domain/twin_runtime/action_feedback_to_executed_irrigation_v1.ts \
+            apps/server/src/evidence/twin_runtime/execution_receipt_evidence_contract_v1.ts \
+            apps/server/src/runtime/twin_runtime/action_feedback_normalization_service_v1.ts \
+            docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md \
+            docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S6-ACTION-FEEDBACK-H.md \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S6-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTION_FEEDBACK_H.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_ACTION_FEEDBACK_H_DB.ts
+          git commit -m "feat(mcft-cap-05): refresh S6 Action Feedback over remediated S5"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Run S6 governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTION_FEEDBACK_H.cjs
+
+      - name: Run S6 PostgreSQL acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_ACTION_FEEDBACK_H_DB.ts
+
+      - name: Create S5 remediation regression database
+        run: PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -c 'CREATE DATABASE mcft_cap05_s5_regression'
+
+      - name: Run S5 remediation regression
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s5_regression
+          MCFT_CAP_05_S5_REMEDIATION_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_REMEDIATION_DB.ts
+
+      - name: Typecheck repository
+        run: pnpm -r typecheck
+
+      - name: Push refreshed exact candidate
+        run: git push origin HEAD:${{ github.head_ref }}
