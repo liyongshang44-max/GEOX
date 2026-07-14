@@ -4,8 +4,8 @@
   "status": "COMPLETE",
   "baseline": {
     "branch": "main",
-    "commit": "7f2f2bec144cee4d90608c3a25c3dc7cac9f9189",
-    "meaning": "MCFT-CAP-05 S4 merged-main effective; S5 Approval Assertion and Approved Plan Replay Evidence binding candidate"
+    "commit": "ef1c789b15a3e73f93c7e63907519faecb027563",
+    "meaning": "MCFT-CAP-05 S5 merged-main effective; bounded S5 recovery/hash/fixed-point remediation candidate; S6 blocked"
   },
   "identifier_model": {
     "capability_line_id": "vertical executable capability closure unit",
@@ -2459,7 +2459,7 @@
       "target_completion_level": "Level A",
       "status": "IN_PROGRESS",
       "design_status": "DESIGN_FROZEN",
-      "implementation_status": "S5_IMPLEMENTATION_CANDIDATE",
+      "implementation_status": "S5_REMEDIATION_CANDIDATE",
       "authorization_effective": true,
       "runtime_source_authorized": true,
       "active_delivery_slice_id": "MCFT-CAP-05.MCFT-01-13.APPROVAL-PLAN-EVIDENCE-BINDING-V1",
@@ -2849,7 +2849,7 @@
           ],
           "baseline_main_commit": "7f2f2bec144cee4d90608c3a25c3dc7cac9f9189",
           "branch": "agent/mcft-cap-05-s5-approval-plan-evidence-binding-v1",
-          "status": "IMPLEMENTATION_CANDIDATE",
+          "status": "MERGED_EFFECTIVE",
           "runtime_source_authorized": true,
           "allowed_claims": [],
           "preserved_nonclaims": [
@@ -2877,7 +2877,8 @@
           ],
           "exact_changed_file_boundary": [],
           "effectiveness_condition": "S5_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S5_GATE_PASS",
-          "effectiveness_condition_satisfied": false
+          "effectiveness_condition_satisfied": true,
+          "merge_commit": "ef1c789b15a3e73f93c7e63907519faecb027563"
         },
         {
           "delivery_slice_id": "MCFT-CAP-05.MCFT-15.ACTION-FEEDBACK-H-COMMIT-ADAPTER-V1",
@@ -3148,8 +3149,18 @@
       "current_repository_baseline_commit": "552d19505f0cd93584c899665b7d7b339f67e9fe",
       "latest_effective_slice_id": "MCFT-CAP-05.MCFT-03.PERSISTENCE-IDEMPOTENCY-RECOVERY-V1",
       "latest_effective_main_commit": "7e2de9c00a4ecc305c27b6572a63914f38157dbd",
-      "baseline_main_commit": "7f2f2bec144cee4d90608c3a25c3dc7cac9f9189",
-      "branch": "agent/mcft-cap-05-s5-approval-plan-evidence-binding-v1"
+      "baseline_main_commit": "ef1c789b15a3e73f93c7e63907519faecb027563",
+      "branch": "agent/mcft-cap-05-s5-remediation-recovery-hash-fixed-point-v1",
+      "active_remediation_id": "MCFT-CAP-05.S5.RECOVERY-HASH-FIXED-POINT-REMEDIATION-V1",
+      "remediation_pr": 2457,
+      "active_remediation": {
+        "remediation_id": "MCFT-CAP-05.S5.RECOVERY-HASH-FIXED-POINT-REMEDIATION-V1",
+        "status": "IMPLEMENTATION_CANDIDATE",
+        "pr_number": 2457,
+        "baseline_main_commit": "ef1c789b15a3e73f93c7e63907519faecb027563",
+        "effectiveness_condition": "REMEDIATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_REMEDIATION_GATE_PASS",
+        "effectiveness_condition_satisfied": false
+      }
     }
   ],
   "actual_owner_work_package_statuses": {

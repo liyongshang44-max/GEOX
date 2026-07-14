@@ -1149,3 +1149,34 @@ Established candidate scope:
 - maintain exactly one active Plan projection through explicit supersession;
 - rebuild Plan projections and supersession state from immutable facts;
 - create no canonical Twin object, transaction family, migration, route, Recommendation, Task, Action Feedback, State/checkpoint, Forecast, Residual, AO-ACT, calibration, activation or CAP-06 authority.
+
+
+---
+
+## MCFT-CAP-05 S5 Recovery / Hash / Fixed-Point Remediation Candidate
+
+```text
+capability_line_id: MCFT-CAP-05
+remediation_id: MCFT-CAP-05.S5.RECOVERY-HASH-FIXED-POINT-REMEDIATION-V1
+baseline_main_commit: ef1c789b15a3e73f93c7e63907519faecb027563
+status: IMPLEMENTATION_CANDIDATE
+remediation_pr: 2457
+prior_independent_remediation_pr_found: false
+initial_wiring_and_typecheck_workflow: 29315823499 SUCCESS
+postgresql_and_s3_regression_workflow: 29316507189 SUCCESS
+canonical_object_delta: 0
+transaction_family_delta: 0
+migration_delta: 0
+S6_authorized: false
+CAP_06_authorized: false
+```
+
+Bounded remediation scope:
+
+- retain merged S5 PR #2451 as the effective implementation baseline;
+- recompute Approval Assertion and Approved Plan `source_record_hash` from the frozen S1 full-record basis;
+- use the existing scale-6 fixed-point water authority for S5 validation, comparison and projection formatting;
+- rebuild Plan projections only after revalidating the immutable Assertion, canonical G Decision, Plan links, amount semantics, availability, validity and explicit supersession;
+- roll back projection deletion when any recovery fact graph is invalid;
+- preserve S3 G/H/C persistence and recovery behavior;
+- create no replacement S5 implementation, canonical object, transaction family, migration, route, approval/dispatch authority, State mutation or successor authorization.
