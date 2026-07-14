@@ -36,17 +36,26 @@ function check(condition, label) {
 function read(file) { return fs.readFileSync(file, 'utf8'); }
 function json(file) { return JSON.parse(read(file)); }
 function changedFilesV1() {
-  for (const range of ['origin/main...HEAD', 'origin/main..HEAD']) {
+  let emptyResult = null;
+  const ranges = [
+    'origin/main...HEAD',
+    'origin/main..HEAD',
+    `${BASELINE}..HEAD`,
+    'HEAD^1..HEAD',
+  ];
+  for (const range of ranges) {
     try {
-      return execFileSync('git', ['diff', '--name-only', range], {
+      const files = execFileSync('git', ['diff', '--name-only', range], {
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'ignore'],
       }).trim().split(/\r?\n/).filter(Boolean).sort();
+      if (files.length > 0) return files;
+      emptyResult = [];
     } catch {
-      // Try the two-tree comparison when the CI checkout is shallow and has no merge base.
+      // Continue through branch, baseline and pull-request merge-parent fallbacks.
     }
   }
-  return null;
+  return emptyResult;
 }
 
 const source = read(expectedFiles[0]);
@@ -79,8 +88,8 @@ check(status.runtime_composition?.new_transaction_family_delta === 0 && status.r
 check(status.effectiveness_condition_satisfied === false, 'Runtime candidate does not self-claim effectiveness');
 
 for (const token of [
-  'LATEST_COMPLETED_FORECAST_POINT_TARGETING_OBSERVATION_V1',
-  'GEOX_FORECAST_POINT_SEMANTIC_MEMBER_REF_V1',
+  'CAP05_FORECAST_RESIDUAL_MATCHING_POLICY_ID_V1',
+  'CAP05_FORECAST_POINT_MEMBER_REF_POLICY_ID_V1',
   'CAP05_FORECAST_RESIDUAL_MATCH_NOT_FOUND',
   'CAP05_FORECAST_RESIDUAL_LATEST_FORECAST_TIE_CONFLICT',
   'source_posterior_action_feedback_refs',
@@ -119,7 +128,7 @@ for (const token of [
 
 for (const needle of [
   'existing CAP-04 A1/B tick',
-  'historical post-receipt Forecast horizon-1',
+  'post-receipt Forecast horizon-1 semantic member',
   'source posterior consumed canonical H Action Feedback',
   'Residual and Assimilation share the exact selected observation',
   'Forecast-plus-observation variance normalization',
@@ -153,7 +162,7 @@ check(fixture.includes('source_posterior_action_feedback_refs: [feedback.object_
 for (const token of [
   'C_FORECAST_RESIDUAL_COMMIT',
   'LATEST_COMPLETED_FORECAST_POINT_TARGETING_OBSERVATION_V1',
-  'FORECAST_PLUS_OBSERVATION_VARIANCE_V1',
+  'CAP-03 effective observation variance',
   'equivalence_claimed = false',
   'causal_effect_claimed = false',
   'separate SSOT settlement',
@@ -170,7 +179,7 @@ const mode = process.argv.includes('--candidate') ? 'candidate' : process.argv.i
 if (mode === 'candidate') {
   check(JSON.stringify(changed) === JSON.stringify(expectedFiles), 'exact ten-file S8 Runtime boundary');
 } else if (mode === 'postmerge') {
-  check(changed === null || changed.length === 0, 'postmerge main has no S8 delta against origin/main');
+  check(changed !== null && changed.length === 0, 'postmerge main has no S8 delta against origin/main');
   check(status.effectiveness_condition_satisfied === false, 'historical candidate status remains pre-settlement evidence');
 } else if (changed && JSON.stringify(changed) === JSON.stringify(expectedFiles)) {
   check(true, 'auto mode recognizes exact S8 candidate boundary');
