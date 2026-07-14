@@ -2,230 +2,126 @@
 'use strict';
 
 // scripts/dev/assert_local_pnpm_runtime.cjs
-// Purpose: validate the local pnpm runtime, then execute the effective MCFT-CAP-05 governance and Runtime acceptance chain.
-// Boundary: validation orchestration only; no production authority, public route, scheduler or canonical write path.
+// Purpose: prove merged-main effectiveness of the MCFT-CAP-05 pre-S8 Forecast Residual contract remediation.
+// Boundary: validation-only probe; this file must never be merged.
 
-const fs = require('node:fs');
-const path = require('node:path');
+const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
+const { Client } = require('pg');
 
-const isWindows = process.platform === 'win32';
-const env = process.env;
-const diagnosticPath = path.join(process.cwd(), 'acceptance-output', 'MCFT_CAP_05_S7_ACCEPTANCE.log');
+const REPOSITORY_BRANCH = 'agent/mcft-cap-05-s8-residual-contract-conformance-remediation-v1';
+const EXACT_HEAD = 'bd882181fbbfb34f4c87ee93a3f302271d013cc3';
+const MERGED_MAIN = '509fe707104a12fbdbbf08823b6d71a70342e0ad';
+const PROBE_FILES = ['scripts/dev/assert_local_pnpm_runtime.cjs'];
 
-function run(command, args = [], envOverrides = {}) {
+function run(command, args, env = process.env) {
   const result = spawnSync(command, args, {
     cwd: process.cwd(),
-    env: {
-      ...process.env,
-      CI: process.env.CI || 'true',
-      npm_config_confirmModulesPurge: process.env.npm_config_confirmModulesPurge || 'false',
-      npm_config_confirm_modules_purge: process.env.npm_config_confirm_modules_purge || 'false',
-      ...envOverrides,
-    },
+    env,
     encoding: 'utf8',
     shell: false,
+    stdio: 'pipe',
     maxBuffer: 256 * 1024 * 1024,
   });
-  return {
-    command: [command, ...args].join(' '),
-    status: result.status,
-    error: result.error ? String(result.error.message || result.error) : '',
-    stdout: String(result.stdout || '').trim(),
-    stderr: String(result.stderr || '').trim(),
-  };
-}
-
-function appendDiagnostic(result) {
-  fs.mkdirSync(path.dirname(diagnosticPath), { recursive: true });
-  fs.appendFileSync(
-    diagnosticPath,
-    `\n$ ${result.command}\nstatus=${String(result.status)}\n${result.stdout || ''}\n${result.stderr || ''}\n`,
-    'utf8',
-  );
-}
-
-function requireSuccess(result) {
-  appendDiagnostic(result);
-  if (result.stdout) console.log(result.stdout);
-  if (result.stderr) console.error(result.stderr);
+  if (result.error) throw result.error;
   if (result.status !== 0) {
-    throw new Error(`COMMAND_FAILED:${result.command}:${String(result.status)}:${result.error}`);
+    throw new Error(`COMMAND_FAILED:${command} ${args.join(' ')}\n${result.stdout || ''}\n${result.stderr || ''}`);
   }
-  return result.stdout;
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+  return String(result.stdout || '').trim();
 }
 
-function normalized(value) {
-  return String(value || '').replace(/\\/g, '/').toLowerCase();
+function baseDatabaseUrl() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  const user = process.env.POSTGRES_USER;
+  const password = process.env.POSTGRES_PASSWORD;
+  const database = process.env.POSTGRES_DB;
+  if (!user || !password || !database) {
+    throw new Error('POSTGRES_ACCEPTANCE_ENV_REQUIRED_FOR_S8_REMEDIATION_MERGED_MAIN_PROBE');
+  }
+  const host = process.env.POSTGRES_HOST || '127.0.0.1';
+  const port = process.env.POSTGRES_PORT || '5433';
+  return `postgres://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}`;
 }
 
-function containsForeignPnpm(value) {
-  const text = normalized(value);
-  return text.includes('/home/')
-    || text.includes('/wsl')
-    || text.includes('wsl$')
-    || text.includes('/corepack/v1/pnpm/11.')
-    || text.includes('/.cache/node/corepack/v1/pnpm/11.');
-}
-
-function runRuntimeDoctor() {
-  const pnpmCommand = isWindows ? 'pnpm.cmd' : 'pnpm';
-  const version = run(pnpmCommand, ['--version']);
-  const reasons = [];
-  if (version.status !== 0 || !version.stdout) {
-    reasons.push({ code: 'PNPM_VERSION_UNAVAILABLE', detail: version });
-  }
-
-  const candidates = [{ kind: 'pnpm_version', source: pnpmCommand, ...version }];
-  if (isWindows) {
-    const where = run('where.exe', ['pnpm']);
-    candidates.push({ kind: 'where_pnpm', source: 'where.exe pnpm', ...where });
-    if (!/^[a-zA-Z]:[\\/]/.test(process.execPath)) {
-      reasons.push({ code: 'WINDOWS_PLATFORM_WITH_NON_WINDOWS_NODE_PATH', detail: process.execPath });
-    }
-    if (containsForeignPnpm(`${where.stdout}\n${where.stderr}`)) {
-      reasons.push({ code: 'WINDOWS_POWERSHELL_RESOLVES_NON_WINDOWS_PNPM', detail: where.stdout });
-    }
-  } else {
-    const which = run('which', ['pnpm']);
-    candidates.push({ kind: 'which_pnpm', source: 'which pnpm', ...which });
-  }
-
-  for (const value of [env.npm_execpath, env.PNPM_HOME, env.COREPACK_ROOT]) {
-    if (value && containsForeignPnpm(value) && isWindows) {
-      reasons.push({ code: 'WSL_OR_COREPACK_PNPM_11_DETECTED', detail: value });
-    }
-  }
-
-  if (reasons.length > 0) {
-    console.error(JSON.stringify({
-      ok: false,
-      error: 'LOCAL_PNPM_RUNTIME_MISMATCH',
-      reasons,
-      process_platform: process.platform,
-      process_exec_path: process.execPath,
-      candidates,
-    }, null, 2));
-    process.exit(1);
-  }
-
-  console.log(JSON.stringify({
-    ok: true,
-    message: 'LOCAL_PNPM_RUNTIME_OK',
-    process_platform: process.platform,
-    process_exec_path: process.execPath,
-    pnpm_version: version.stdout,
-    candidates,
-  }, null, 2));
-}
-
-function postgresBaseUrl() {
-  if (env.DATABASE_URL) return env.DATABASE_URL;
-  if (!env.POSTGRES_USER || !env.POSTGRES_PASSWORD || !env.POSTGRES_DB) return null;
-  const host = env.POSTGRES_HOST || '127.0.0.1';
-  const port = env.POSTGRES_PORT || '5433';
-  return `postgres://${encodeURIComponent(env.POSTGRES_USER)}:${encodeURIComponent(env.POSTGRES_PASSWORD)}@${host}:${port}/${encodeURIComponent(env.POSTGRES_DB)}`;
-}
-
-function databaseUrl(base, databaseName) {
-  const url = new URL(base);
+function databaseUrl(databaseName) {
+  const url = new URL(baseDatabaseUrl());
   url.pathname = `/${databaseName}`;
   return url.toString();
 }
 
-function recreateDatabase(base, databaseName) {
-  const admin = databaseUrl(base, 'postgres');
-  requireSuccess(run('psql', [admin, '-v', 'ON_ERROR_STOP=1', '-c', `DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`]));
-  requireSuccess(run('psql', [admin, '-v', 'ON_ERROR_STOP=1', '-c', `CREATE DATABASE ${databaseName}`]));
+async function recreateDatabase(admin, databaseName) {
+  if (!/^[a-z0-9_]+$/.test(databaseName)) throw new Error('PROBE_DATABASE_NAME_INVALID');
+  await admin.query(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`);
+  await admin.query(`CREATE DATABASE ${databaseName}`);
 }
 
-function runGate(gatePath, mode = '--auto') {
-  if (fs.existsSync(gatePath)) {
-    requireSuccess(run(process.execPath, [gatePath, mode]));
+async function main() {
+  run('git', ['fetch', 'origin', 'main', REPOSITORY_BRANCH]);
+  const remoteHead = run('git', ['rev-parse', `origin/${REPOSITORY_BRANCH}`]);
+  const remoteMain = run('git', ['rev-parse', 'origin/main']);
+  assert.equal(remoteHead, EXACT_HEAD, 'remediation candidate branch moved after exact-head lock');
+  assert.equal(remoteMain, MERGED_MAIN, 'main moved after remediation merge lock');
+
+  const treeDelta = run('git', ['diff', '--name-only', `${EXACT_HEAD}..${MERGED_MAIN}`]);
+  assert.equal(treeDelta, '', 'remediation exact head and merge commit must be tree-equivalent');
+
+  const probeDiff = run('git', ['diff', '--name-only', `${MERGED_MAIN}..HEAD`])
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .sort();
+  assert.deepEqual(probeDiff, PROBE_FILES, 'probe must differ from merged main by exactly one validation-only file');
+  console.log(`PASS S8 remediation merged-main identity ${MERGED_MAIN}`);
+  console.log(`PASS S8 remediation head-to-merge tree equivalence ${EXACT_HEAD}`);
+
+  run('git', ['update-ref', 'refs/remotes/origin/main', 'HEAD']);
+  try {
+    run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION.cjs', '--postmerge']);
+    run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_SETTLEMENT.cjs', '--postmerge']);
+    run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs', '--postmerge']);
+  } finally {
+    run('git', ['update-ref', 'refs/remotes/origin/main', MERGED_MAIN]);
   }
-}
 
-function runS6RemediationAcceptance() {
-  const gatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs');
-  runGate(gatePath, '--auto');
+  run('pnpm', ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts']);
+  run('pnpm', ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_RESIDUAL_CONTRACT_CONFORMANCE.ts']);
+  run('pnpm', ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK.ts']);
+  run('pnpm', ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_NOT_YET_VALIDATED_RECEIPT_CONSUMING_TICK.ts']);
+  run('pnpm', ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts']);
 
-  const base = postgresBaseUrl();
-  const shouldRunDatabase = env.CI === 'true' || env.MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_RUN_DB_ACCEPTANCE === '1';
-  if (!base || !shouldRunDatabase) return;
-  const databaseName = 'mcft_cap05_s6_validation_orthogonality_acceptance';
-  recreateDatabase(base, databaseName);
-  requireSuccess(run(isWindows ? 'pnpm.cmd' : 'pnpm', [
-    '-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_ACTION_FEEDBACK_H_DB.ts',
-  ], {
-    DATABASE_URL: databaseUrl(base, databaseName),
-    MCFT_CAP_05_S6_DESTRUCTIVE_ACCEPTANCE: '1',
-  }));
-}
-
-function runS7RuntimeAcceptance({ runHistoricalGovernance }) {
-  if (runHistoricalGovernance) {
-    runGate(path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK.cjs'), '--auto');
+  const admin = new Client({ connectionString: baseDatabaseUrl() });
+  await admin.connect();
+  try {
+    await recreateDatabase(admin, 'mcft_cap05_s8_residual_remediation_probe_s3');
+    await recreateDatabase(admin, 'mcft_cap05_s8_residual_remediation_probe_s6');
+    await recreateDatabase(admin, 'mcft_cap05_s8_residual_remediation_probe_s7');
+  } finally {
+    await admin.end();
   }
 
-  const pnpmCommand = isWindows ? 'pnpm.cmd' : 'pnpm';
-  requireSuccess(run(pnpmCommand, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK.ts']));
-  requireSuccess(run(pnpmCommand, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_NOT_YET_VALIDATED_RECEIPT_CONSUMING_TICK.ts']));
-  requireSuccess(run(pnpmCommand, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts']));
-
-  const base = postgresBaseUrl();
-  const shouldRunDatabase = env.CI === 'true' || env.MCFT_CAP_05_S7_RUN_DB_ACCEPTANCE === '1';
-  if (!base || !shouldRunDatabase) return;
-  const databaseName = 'mcft_cap05_s7_acceptance';
-  recreateDatabase(base, databaseName);
-  requireSuccess(run(pnpmCommand, [
-    '-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK_DB.ts',
-  ], {
-    DATABASE_URL: databaseUrl(base, databaseName),
-    MCFT_CAP_05_S7_DESTRUCTIVE_ACCEPTANCE: '1',
-  }));
-}
-
-runRuntimeDoctor();
-
-const activationGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs');
-const s7SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_SETTLEMENT.cjs');
-const settlementActive = fs.existsSync(s7SettlementGatePath);
-
-// MCFT_CAP_05_S6_ACTIVATION_GATE_V1: run only while S6→S7 activation is the current lifecycle frontier.
-if (!settlementActive) {
-  runGate(activationGatePath, '--auto');
-}
-
-// MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION_GATE_V1: preserve the corrected validation/eligibility contract and permanent PostgreSQL S6 regression.
-runS6RemediationAcceptance();
-
-// MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK_GATE_V1: always rerun S7 Runtime behavior; the historical static gate is superseded once S7 settlement exists.
-runS7RuntimeAcceptance({ runHistoricalGovernance: !settlementActive });
-
-// MCFT_CAP_05_S7_SSOT_SETTLEMENT_GATE_V1: enforce S7 merged effectiveness and explicit S8 authorization at the current lifecycle frontier.
-runGate(s7SettlementGatePath, '--auto');
-
-
-// MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION_GATE_V1: preserve the corrected Forecast-point, variance and projection-trace contract before S8 orchestration.
-function runCap05S8ResidualContractRemediationAcceptance() {
-  const gatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION.cjs');
-  if (!fs.existsSync(gatePath)) return;
-  requireSuccess(run(process.execPath, [gatePath, '--auto']));
-  const pnpmCmd = isWindows ? 'pnpm.cmd' : 'pnpm';
-  requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts']));
-  requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_RESIDUAL_CONTRACT_CONFORMANCE.ts']));
-
-  const shouldRunDatabase = env.CI === 'true' || env.MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION_RUN_DB_ACCEPTANCE === '1';
-  const base = postgresBaseUrl();
-  if (!shouldRunDatabase || !base) return;
-  const admin = databaseUrl(base, 'postgres');
-  const databaseName = 'mcft_cap05_s8_residual_contract_remediation_acceptance';
-  requireSuccess(run('psql', [admin, '-v', 'ON_ERROR_STOP=1', '-c', `DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`]));
-  requireSuccess(run('psql', [admin, '-v', 'ON_ERROR_STOP=1', '-c', `CREATE DATABASE ${databaseName}`]));
-  requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts'], {
-    DATABASE_URL: databaseUrl(base, databaseName),
+  run('pnpm', ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts'], {
+    ...process.env,
+    DATABASE_URL: databaseUrl('mcft_cap05_s8_residual_remediation_probe_s3'),
     MCFT_CAP_05_S3_DESTRUCTIVE_ACCEPTANCE: '1',
-  }));
+  });
+
+  run('pnpm', ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_ACTION_FEEDBACK_H_DB.ts'], {
+    ...process.env,
+    DATABASE_URL: databaseUrl('mcft_cap05_s8_residual_remediation_probe_s6'),
+    MCFT_CAP_05_S6_DESTRUCTIVE_ACCEPTANCE: '1',
+  });
+
+  run('pnpm', ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK_DB.ts'], {
+    ...process.env,
+    DATABASE_URL: databaseUrl('mcft_cap05_s8_residual_remediation_probe_s7'),
+    MCFT_CAP_05_S7_DESTRUCTIVE_ACCEPTANCE: '1',
+  });
+
+  console.log('PASS MCFT-CAP-05 S8 residual contract remediation merged-main effectiveness probe');
 }
 
-runCap05S8ResidualContractRemediationAcceptance();
+main().catch((error) => {
+  console.error(error instanceof Error ? error.stack || error.message : String(error));
+  process.exit(1);
+});
