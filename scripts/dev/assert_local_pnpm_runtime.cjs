@@ -204,3 +204,28 @@ runS7RuntimeAcceptance({ runHistoricalGovernance: !settlementActive });
 
 // MCFT_CAP_05_S7_SSOT_SETTLEMENT_GATE_V1: enforce S7 merged effectiveness and explicit S8 authorization at the current lifecycle frontier.
 runGate(s7SettlementGatePath, '--auto');
+
+
+// MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION_GATE_V1: preserve the corrected Forecast-point, variance and projection-trace contract before S8 orchestration.
+function runCap05S8ResidualContractRemediationAcceptance() {
+  const gatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION.cjs');
+  if (!fs.existsSync(gatePath)) return;
+  requireSuccess(run(process.execPath, [gatePath, '--auto']));
+  const pnpmCmd = isWindows ? 'pnpm.cmd' : 'pnpm';
+  requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts']));
+  requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_RESIDUAL_CONTRACT_CONFORMANCE.ts']));
+
+  const shouldRunDatabase = env.CI === 'true' || env.MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION_RUN_DB_ACCEPTANCE === '1';
+  const base = postgresBaseUrl();
+  if (!shouldRunDatabase || !base) return;
+  const admin = databaseUrl(base, 'postgres');
+  const databaseName = 'mcft_cap05_s8_residual_contract_remediation_acceptance';
+  requireSuccess(run('psql', [admin, '-v', 'ON_ERROR_STOP=1', '-c', `DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`]));
+  requireSuccess(run('psql', [admin, '-v', 'ON_ERROR_STOP=1', '-c', `CREATE DATABASE ${databaseName}`]));
+  requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts'], {
+    DATABASE_URL: databaseUrl(base, databaseName),
+    MCFT_CAP_05_S3_DESTRUCTIVE_ACCEPTANCE: '1',
+  }));
+}
+
+runCap05S8ResidualContractRemediationAcceptance();
