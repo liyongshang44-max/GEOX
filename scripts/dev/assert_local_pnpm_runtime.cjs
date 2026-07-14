@@ -166,12 +166,33 @@ function databaseUrl(base, databaseName) {
   return url.toString();
 }
 
+function runCap05S6ValidationOrthogonalityRemediationAcceptance() {
+  const gatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs');
+  if (!fs.existsSync(gatePath)) return;
+  requireSuccess(run(process.execPath, [gatePath, '--auto']));
+
+  const shouldRunDatabase = env.CI === 'true' || env.MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_RUN_DB_ACCEPTANCE === '1';
+  const base = postgresBaseUrl();
+  if (!shouldRunDatabase || !base) return;
+
+  const pnpmCmd = isWindows ? 'pnpm.cmd' : 'pnpm';
+  const admin = databaseUrl(base, 'postgres');
+  const databaseName = 'mcft_cap05_s6_validation_orthogonality_acceptance';
+  requireSuccess(run('psql', [admin, '-v', 'ON_ERROR_STOP=1', '-c', `DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`]));
+  requireSuccess(run('psql', [admin, '-v', 'ON_ERROR_STOP=1', '-c', `CREATE DATABASE ${databaseName}`]));
+  requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_ACTION_FEEDBACK_H_DB.ts'], {
+    DATABASE_URL: databaseUrl(base, databaseName),
+    MCFT_CAP_05_S6_DESTRUCTIVE_ACCEPTANCE: '1',
+  }));
+}
+
 function runCap05S7Acceptance() {
   const gatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK.cjs');
   if (!fs.existsSync(gatePath)) return;
   requireSuccess(run(process.execPath, [gatePath, '--auto']));
   const pnpmCmd = isWindows ? 'pnpm.cmd' : 'pnpm';
   requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK.ts']));
+  requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_NOT_YET_VALIDATED_RECEIPT_CONSUMING_TICK.ts']));
   requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts']));
 
   const shouldRunDatabase = env.CI === 'true' || env.MCFT_CAP_05_S7_RUN_DB_ACCEPTANCE === '1';
@@ -247,5 +268,8 @@ if (fs.existsSync(activationGatePath)) {
   requireSuccess(run(process.execPath, [activationGatePath, '--auto']));
 }
 
-// MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK_GATE_V1: permanently verify S7 Governance, A1 integration, CAP-04 regression and isolated PostgreSQL H source.
+// MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION_GATE_V1: preserve the effective validation/eligibility contract and isolated PostgreSQL S6 regression.
+runCap05S6ValidationOrthogonalityRemediationAcceptance();
+
+// MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK_GATE_V1: verify S7 Governance, both validation-status A1 paths, CAP-04 regression and isolated PostgreSQL H source.
 runCap05S7Acceptance();
