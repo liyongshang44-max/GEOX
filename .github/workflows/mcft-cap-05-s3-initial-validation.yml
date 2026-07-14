@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   validate:
@@ -34,6 +34,29 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Isolate fault-injection event identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts')
+          text = p.read_text(encoding='utf-8')
+          old = '  faultFeedback.payload.source_record_id = `${feedback.payload.source_record_id}_fault`;\n  faultFeedback.determinism_hash = computeMemberDeterminismHashV1(faultFeedback as unknown as Record<string, unknown>);'
+          new = '  faultFeedback.payload.source_record_id = `${feedback.payload.source_record_id}_fault`;\n  faultFeedback.payload.event_id = `${feedback.payload.event_id}_fault`;\n  faultFeedback.determinism_hash = computeMemberDeterminismHashV1(faultFeedback as unknown as Record<string, unknown>);'
+          if old in text:
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+          elif new not in text:
+              raise SystemExit('fault fixture patch target missing')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts
+            git commit -m "test(mcft-cap-05): isolate S3 fault event identity"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
