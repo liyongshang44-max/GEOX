@@ -120,10 +120,24 @@ jobs:
           set -o pipefail
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_REMEDIATION_DB.ts 2>&1 | tee /tmp/mcft-cap05-s5-remediation.log
 
-      - name: Upload remediation failure log
+      - name: Create S3 regression database
+        run: PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -c 'CREATE DATABASE mcft_cap05_s3_remediation_regression'
+
+      - name: Run S3 persistence and recovery regression
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s3_remediation_regression
+          MCFT_CAP_05_S3_DESTRUCTIVE_ACCEPTANCE: "1"
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts 2>&1 | tee /tmp/mcft-cap05-s3-remediation-regression.log
+
+      - name: Upload remediation failure logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap-05-s5-remediation-failure
-          path: /tmp/mcft-cap05-s5-remediation.log
+          path: |
+            /tmp/mcft-cap05-s5-remediation.log
+            /tmp/mcft-cap05-s3-remediation-regression.log
           if-no-files-found: ignore
