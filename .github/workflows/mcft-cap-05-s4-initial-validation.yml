@@ -45,7 +45,18 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
 
       - name: Materialize S4 SSOT
-        run: python3 .mcft_cap05_s4_materializer.py
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 .mcft_cap05_s4_materializer.py 2>&1 | tee /tmp/mcft-cap05-s4-materializer.log
+
+      - name: Upload materializer failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s4-materializer-failure
+          path: /tmp/mcft-cap05-s4-materializer.log
+          if-no-files-found: ignore
 
       - name: Commit exact S4 candidate and remove temporary files
         shell: bash
