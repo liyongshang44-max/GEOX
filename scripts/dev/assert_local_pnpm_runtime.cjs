@@ -4,8 +4,13 @@
 // scripts/dev/assert_local_pnpm_runtime.cjs
 // Purpose: prove merged-main effectiveness of the MCFT-CAP-05 pre-S8 Forecast Residual contract remediation.
 // Boundary: validation-only probe; this file must never be merged.
+// MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION_GATE_V1
+// MCFT_CAP_05_S7_SSOT_SETTLEMENT_GATE_V1
+// MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION_GATE_V1
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { Client } = require('pg');
 
@@ -13,6 +18,7 @@ const REPOSITORY_BRANCH = 'agent/mcft-cap-05-s8-residual-contract-conformance-re
 const EXACT_HEAD = 'bd882181fbbfb34f4c87ee93a3f302271d013cc3';
 const MERGED_MAIN = '509fe707104a12fbdbbf08823b6d71a70342e0ad';
 const PROBE_FILES = ['scripts/dev/assert_local_pnpm_runtime.cjs'];
+const DIAGNOSTIC = path.join(process.cwd(), 'acceptance-output', 'MCFT_CAP_05_S8_REMEDIATION_MERGED_MAIN_PROBE.log');
 
 function run(command, args, env = process.env) {
   const result = spawnSync(command, args, {
@@ -23,6 +29,8 @@ function run(command, args, env = process.env) {
     stdio: 'pipe',
     maxBuffer: 256 * 1024 * 1024,
   });
+  fs.mkdirSync(path.dirname(DIAGNOSTIC), { recursive: true });
+  fs.appendFileSync(DIAGNOSTIC, `\n$ ${command} ${args.join(' ')}\nstatus=${String(result.status)}\n${result.stdout || ''}\n${result.stderr || ''}\n`, 'utf8');
   if (result.error) throw result.error;
   if (result.status !== 0) {
     throw new Error(`COMMAND_FAILED:${command} ${args.join(' ')}\n${result.stdout || ''}\n${result.stderr || ''}`);
