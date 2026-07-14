@@ -1,0 +1,141 @@
+{
+  "schema_version": "geox_mcft_cap_05_s5_status_v1",
+  "capability_line_id": "MCFT-CAP-05",
+  "delivery_slice_id": "MCFT-CAP-05.MCFT-01-13.APPROVAL-PLAN-EVIDENCE-BINDING-V1",
+  "slice_kind": "APPROVAL_ASSERTION_AND_APPROVED_PLAN_REPLAY_EVIDENCE_BINDING",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "baseline_main_commit": "7f2f2bec144cee4d90608c3a25c3dc7cac9f9189",
+  "branch": "agent/mcft-cap-05-s5-approval-plan-evidence-binding-v1",
+  "s4_effectiveness": {
+    "pr_number": 2447,
+    "exact_head": "e9f3b81e2aa8b68498263049086d79184ead6108",
+    "materialization_workflow": 29311491031,
+    "exact_head_workflow": 29311611506,
+    "merge_commit": "7f2f2bec144cee4d90608c3a25c3dc7cac9f9189",
+    "head_to_merge_file_delta_count": 0,
+    "tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2449,
+    "merged_main_gate_workflow": 29311761419,
+    "merged_main_gate": "PASS",
+    "effective": true
+  },
+  "validation": {
+    "postgresql_acceptance_workflow": 29312412661,
+    "repository_typecheck": "PASS",
+    "postgresql_acceptance": "PASS",
+    "acceptance_pass_count": 13,
+    "acceptance_fail_count": 0
+  },
+  "service": {
+    "service_id": "MCFT_CAP_05_APPROVAL_PLAN_EVIDENCE_BINDING_SERVICE_V1",
+    "source_path": "apps/server/src/runtime/twin_runtime/approval_plan_binding_service_v1.ts",
+    "public_route_created": false,
+    "canonical_object_delta": 0,
+    "transaction_family_delta": 0,
+    "persistence_repository": "PostgresApprovalPlanEvidenceRepositoryV1",
+    "canonical_decision_readback_repository": "PostgresFeedbackPersistenceRepositoryV1",
+    "canonical_scenario_readback_repository": "PostgresForecastScenarioRecoveryRepositoryV1"
+  },
+  "replay_evidence": {
+    "approval_assertion_record_type": "approval_assertion_evidence_v1",
+    "approved_plan_record_type": "approved_irrigation_plan_snapshot_v1",
+    "origin_source_kind": "CONTROLLED_REPLAY_DATASET",
+    "quality_required": "PASS",
+    "append_only_store": "public.facts",
+    "first_write": "INSERTED",
+    "response_loss_retry": "EXISTING_IDEMPOTENT_SUCCESS",
+    "conflicting_duplicate": "REJECT_ATOMIC_NO_APPEND"
+  },
+  "decision_binding": {
+    "canonical_object_type": "twin_decision_record_v1",
+    "transaction_family": "G_HUMAN_DECISION_LINK_COMMIT",
+    "required_identity": [
+      "decision_request_evidence_ref",
+      "decision_request_evidence_hash",
+      "selected_option_ref",
+      "selected_option_hash",
+      "exact Reality scope"
+    ],
+    "cardinality": "EXACTLY_ONE"
+  },
+  "amount_separation": {
+    "scenario_amount_authority": "selected canonical Scenario option",
+    "approved_amount_authority": "approved_irrigation_plan_snapshot_v1",
+    "difference_formula": "approved_amount_mm - scenario_amount_mm",
+    "nonzero_difference_reason_required": true,
+    "standard_scenario_amount_mm": "15.000000",
+    "standard_approved_amount_mm": "14.000000",
+    "standard_amount_difference_mm": "-1.000000"
+  },
+  "dispatch": {
+    "allowed_dispositions": [
+      "NOT_OBSERVED",
+      "NOT_APPLICABLE",
+      "EXTERNALLY_RECORDED"
+    ],
+    "external_evidence_record_type": "external_dispatch_evidence_v1",
+    "geox_dispatch_created": false
+  },
+  "supersession": {
+    "active_plan_cardinality_per_decision": 1,
+    "explicit_ref_hash_required": true,
+    "historical_plan_evidence_mutated": false,
+    "projection_only_deactivation": true,
+    "historical_replay_reactivates_plan": false,
+    "facts_based_rebuild_reapplies_supersession": true
+  },
+  "acceptance_results": {
+    "approval_assertion_fact_delta": 1,
+    "approved_plan_fact_delta_after_supersession": 2,
+    "canonical_twin_object_delta_after_s4": 0,
+    "action_feedback_fact_delta": 0,
+    "active_plan_projection_count": 1,
+    "negative_cases": [
+      "forged Approval Assertion identity",
+      "scenario amount not sourced from canonical selected option",
+      "nonzero amount difference without reason code",
+      "external Dispatch Evidence bound to wrong Plan",
+      "parallel active Plan without supersession"
+    ]
+  },
+  "migration_delta": 0,
+  "preserved_nonclaims": [
+    "NO_GEOX_APPROVAL_REQUEST",
+    "NO_GEOX_APPROVAL_AUTHORITY",
+    "NO_GEOX_DISPATCH_CREATION",
+    "NO_NEW_CANONICAL_TWIN_OBJECT",
+    "NO_NEW_TRANSACTION_FAMILY",
+    "NO_MIGRATION",
+    "NO_PUBLIC_ROUTE",
+    "NO_RECOMMENDATION",
+    "NO_TASK_WRITE",
+    "NO_ACTION_FEEDBACK_WRITE",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
+    "NO_FORECAST_EXECUTION",
+    "NO_RESIDUAL_MATCHING_ORCHESTRATION",
+    "NO_AO_ACT_CHANGE",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_MODEL_ACTIVATION",
+    "NO_CAP_06_AUTHORIZATION"
+  ],
+  "next_delivery_slice_id": "MCFT-CAP-05.MCFT-15.ACTION-FEEDBACK-H-COMMIT-ADAPTER-V1",
+  "next_delivery_slice_authorized": false,
+  "effectiveness_condition": "S5_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S5_GATE_PASS",
+  "effectiveness_condition_satisfied": false,
+  "exact_changed_file_boundary": [
+    "apps/server/src/evidence/twin_runtime/approval_plan_evidence_contracts_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_approval_plan_evidence_repository_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts",
+    "apps/server/src/projections/twin_runtime/feedback_persistence_projection_v1.ts",
+    "apps/server/src/runtime/twin_runtime/approval_plan_binding_service_v1.ts",
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S5-APPROVAL-PLAN-EVIDENCE.md",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S5-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_APPROVAL_PLAN_BINDING.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts"
+  ]
+}
