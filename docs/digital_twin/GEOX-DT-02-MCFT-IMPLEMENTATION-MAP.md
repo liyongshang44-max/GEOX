@@ -1180,3 +1180,36 @@ Bounded remediation scope:
 - roll back projection deletion when any recovery fact graph is invalid;
 - preserve S3 G/H/C persistence and recovery behavior;
 - create no replacement S5 implementation, canonical object, transaction family, migration, route, approval/dispatch authority, State mutation or successor authorization.
+
+
+---
+
+## MCFT-CAP-05 S6 Effective and S7 Explicitly Authorized
+
+```text
+capability_line_id: MCFT-CAP-05
+activation_id: MCFT-CAP-05.S6.SSOT-ACTIVATION-V1
+baseline_main_commit: be8b5ecf061ba5e49c1ae33a7a9d4827aa6b0bbe
+activation_pr: 2463
+S6_status: MERGED_EFFECTIVE
+S6_exact_head: 1a4f09278ce8b5ee65af8688f0c4d992a5d10035
+S6_merge_commit: be8b5ecf061ba5e49c1ae33a7a9d4827aa6b0bbe
+S6_candidate_CI: 29323156789 SUCCESS
+S6_exact_head_CI: 29325080521 SUCCESS
+S6_merged_main_gate: 29325686434 SUCCESS
+S7_status: AUTHORIZED_NOT_STARTED
+S7_runtime_source_authorized: true
+S7_implementation_started: false
+canonical_object_delta: 0
+transaction_family_delta: 0
+migration_delta: 0
+CAP_06_authorized: false
+```
+
+Governance effect:
+
+- settle the seven-file S6 Runtime slice as merged-main effective;
+- preserve S5 remediation effectiveness and Receipt full-record hash integrity;
+- explicitly authorize, but do not implement, the S7 Receipt-consuming tick slice;
+- preserve all State/checkpoint, Forecast, Residual, Recommendation, AO-ACT, calibration, activation and CAP-06 nonclaims;
+- add no Runtime source, migration, route or web change.

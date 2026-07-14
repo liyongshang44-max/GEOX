@@ -3943,3 +3943,61 @@ migration delta:
 S6 authorized:
 false
 ```
+
+
+---
+
+## S6 SSOT Activation — S6 Effective / S7 Authorized
+
+```text
+activation_id:
+MCFT-CAP-05.S6.SSOT-ACTIVATION-V1
+
+baseline_main_commit:
+be8b5ecf061ba5e49c1ae33a7a9d4827aa6b0bbe
+
+activation PR:
+2463
+
+S6 Runtime PR:
+2456
+
+S6 exact head:
+1a4f09278ce8b5ee65af8688f0c4d992a5d10035
+
+S6 merge commit:
+be8b5ecf061ba5e49c1ae33a7a9d4827aa6b0bbe
+
+S6 candidate CI:
+29323156789 SUCCESS
+
+S6 exact-head CI:
+29325080521 SUCCESS
+
+S6 merged-main Gate:
+29325686434 SUCCESS
+
+S6 status:
+MERGED_EFFECTIVE
+
+S7 delivery slice:
+MCFT-CAP-05.MCFT-04-06-07-08-09-10.RECEIPT-CONSUMING-TICK-V1
+
+S7 status after activation:
+AUTHORIZED_NOT_STARTED
+
+S7 Runtime implementation started:
+false
+
+canonical object delta:
+0
+
+transaction family delta:
+0
+
+migration delta:
+0
+
+CAP-06 authorized:
+false
+```

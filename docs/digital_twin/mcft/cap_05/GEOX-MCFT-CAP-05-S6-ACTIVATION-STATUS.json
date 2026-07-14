@@ -1,0 +1,73 @@
+{
+  "schema_version": "geox_mcft_cap_05_s6_activation_status_v1",
+  "capability_line_id": "MCFT-CAP-05",
+  "activation_id": "MCFT-CAP-05.S6.SSOT-ACTIVATION-V1",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "baseline_main_commit": "be8b5ecf061ba5e49c1ae33a7a9d4827aa6b0bbe",
+  "branch": "agent/mcft-cap-05-s6-ssot-activation-v1",
+  "activation_pr_number": 2463,
+  "activation_kind": "S6_EFFECTIVENESS_SETTLEMENT_AND_S7_EXPLICIT_AUTHORIZATION",
+  "s6_effectiveness": {
+    "pr_number": 2456,
+    "exact_head": "1a4f09278ce8b5ee65af8688f0c4d992a5d10035",
+    "candidate_ci_workflow": 29323156789,
+    "exact_head_workflow": 29325080521,
+    "merge_commit": "be8b5ecf061ba5e49c1ae33a7a9d4827aa6b0bbe",
+    "head_to_merge_file_delta_count": 0,
+    "tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2462,
+    "merged_main_gate_workflow": 29325686434,
+    "merged_main_gate": "PASS",
+    "effective": true
+  },
+  "s7_authorization": {
+    "delivery_slice_id": "MCFT-CAP-05.MCFT-04-06-07-08-09-10.RECEIPT-CONSUMING-TICK-V1",
+    "status_after_activation": "AUTHORIZED_NOT_STARTED",
+    "runtime_source_authorized": true,
+    "implementation_started": false,
+    "implementation_claims_authorized": false,
+    "allowed_claim": "RECEIPT_CONSUMING_TICK_IMPLEMENTATION_AUTHORIZED"
+  },
+  "validation": {
+    "materialization_workflow": 29326851325,
+    "governance_gate": "PASS",
+    "repository_typecheck": "PASS",
+    "standard_ci_state": "SUCCESS",
+    "standard_ci_workflow": 29327105106
+  },
+  "canonical_object_delta": 0,
+  "transaction_family_delta": 0,
+  "migration_delta": 0,
+  "runtime_source_delta": 0,
+  "preserved_nonclaims": [
+    "NO_S7_RUNTIME_IMPLEMENTATION",
+    "NO_RECEIPT_CONSUMING_STATE_TICK",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
+    "NO_FORECAST_EXECUTION",
+    "NO_FORECAST_RESIDUAL_COMMIT",
+    "NO_PUBLIC_ROUTE",
+    "NO_WEB",
+    "NO_RECOMMENDATION",
+    "NO_AO_ACT_CHANGE",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_MODEL_ACTIVATION",
+    "NO_MIGRATION",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_LIVE_FIELD_CLAIM",
+    "NO_CAP_06_AUTHORIZATION",
+    "NO_MCFT_GATE_A_CLOSURE",
+    "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+  ],
+  "effectiveness_condition": "ACTIVATION_PR_MERGED_TO_MAIN_AND_MAIN_CI_ACTIVATION_GATE_PASS",
+  "effectiveness_condition_satisfied": false,
+  "exact_changed_file_boundary": [
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S6-ACTIVATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
+    "scripts/dev/assert_local_pnpm_runtime.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs"
+  ]
+}
