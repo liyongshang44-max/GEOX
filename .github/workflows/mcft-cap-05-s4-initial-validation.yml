@@ -47,18 +47,27 @@ jobs:
       - name: Materialize S4 SSOT
         shell: bash
         run: |
-          set -euo pipefail
+          set -o pipefail
           python3 - <<'PY'
           from pathlib import Path
           materializer = Path('.mcft_cap05_s4_materializer.py')
           text = materializer.read_text(encoding='utf-8')
           old = 'marker = "# 28. S4 — Human Decision through G transaction"'
           new = 'marker = "## S4 — Human Decision"'
-          if old not in text:
-              raise SystemExit('S4 materializer marker patch target missing')
-          materializer.write_text(text.replace(old, new, 1), encoding='utf-8')
+          if old in text:
+              materializer.write_text(text.replace(old, new, 1), encoding='utf-8')
+          elif new not in text:
+              raise SystemExit('S4 materializer marker state invalid')
           PY
-          python3 .mcft_cap05_s4_materializer.py
+          python3 .mcft_cap05_s4_materializer.py 2>&1 | tee /tmp/mcft-cap05-s4-materializer.log
+
+      - name: Upload materializer failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s4-materializer-failure-final
+          path: /tmp/mcft-cap05-s4-materializer.log
+          if-no-files-found: ignore
 
       - name: Commit exact S4 candidate and remove temporary files
         shell: bash
@@ -82,7 +91,18 @@ jobs:
           git commit -m "feat(mcft-cap-05): establish S4 Human Decision through G"
 
       - name: Run S4 governance Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S4_HUMAN_DECISION_G.cjs
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S4_HUMAN_DECISION_G.cjs 2>&1 | tee /tmp/mcft-cap05-s4-governance.log
+
+      - name: Upload governance failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s4-governance-failure
+          path: /tmp/mcft-cap05-s4-governance.log
+          if-no-files-found: ignore
 
       - name: Run S4 PostgreSQL acceptance
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts
