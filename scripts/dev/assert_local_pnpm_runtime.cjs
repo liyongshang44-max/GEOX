@@ -10,6 +10,7 @@ const { Client } = require('pg');
 
 const REPOSITORY_BRANCH = 'agent/mcft-cap-05-s6-action-feedback-h-adapter-v1';
 const EXACT_HEAD = '1a4f09278ce8b5ee65af8688f0c4d992a5d10035';
+const MERGED_MAIN = 'be8b5ecf061ba5e49c1ae33a7a9d4827aa6b0bbe';
 const PROBE_FILES = [
   'scripts/dev/assert_local_pnpm_runtime.cjs',
   'scripts/dev/assert_local_pnpm_runtime.original.cjs',
@@ -39,7 +40,7 @@ function baseDatabaseUrl() {
   const password = process.env.POSTGRES_PASSWORD;
   const database = process.env.POSTGRES_DB;
   if (!user || !password || !database) {
-    throw new Error('POSTGRES_ACCEPTANCE_ENV_REQUIRED_FOR_S6_EXACT_HEAD_PROBE');
+    throw new Error('POSTGRES_ACCEPTANCE_ENV_REQUIRED_FOR_S6_MERGED_MAIN_PROBE');
   }
   const host = process.env.POSTGRES_HOST || '127.0.0.1';
   const port = process.env.POSTGRES_PORT || '5433';
@@ -59,23 +60,29 @@ async function recreateDatabase(admin, databaseName) {
 }
 
 async function main() {
-  run('git', ['fetch', 'origin', REPOSITORY_BRANCH]);
+  run('git', ['fetch', 'origin', 'main', REPOSITORY_BRANCH]);
   const remoteHead = run('git', ['rev-parse', `origin/${REPOSITORY_BRANCH}`]);
+  const remoteMain = run('git', ['rev-parse', 'origin/main']);
   assert.equal(remoteHead, EXACT_HEAD, 'S6 candidate branch moved after exact-head lock');
+  assert.equal(remoteMain, MERGED_MAIN, 'main moved after S6 merge lock');
 
-  const probeDiff = run('git', ['diff', '--name-only', `${EXACT_HEAD}..HEAD`])
+  const treeDelta = run('git', ['diff', '--name-only', `${EXACT_HEAD}..${MERGED_MAIN}`]);
+  assert.equal(treeDelta, '', 'S6 exact head and merge commit must be tree-equivalent');
+
+  const probeDiff = run('git', ['diff', '--name-only', `${MERGED_MAIN}..HEAD`])
     .split(/\r?\n/)
     .filter(Boolean)
     .sort();
-  assert.deepEqual(probeDiff, PROBE_FILES, 'probe must differ from exact S6 head by exactly two validation-only files');
-  console.log(`PASS exact S6 candidate identity ${EXACT_HEAD}`);
+  assert.deepEqual(probeDiff, PROBE_FILES, 'probe must differ from merged main by exactly two validation-only files');
+  console.log(`PASS S6 merged-main identity ${MERGED_MAIN}`);
+  console.log(`PASS S6 head-to-merge tree equivalence ${EXACT_HEAD}`);
 
   run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTION_FEEDBACK_H.cjs', '--postmerge']);
 
   const admin = new Client({ connectionString: baseDatabaseUrl() });
   await admin.connect();
   try {
-    await recreateDatabase(admin, 'mcft_cap05_s6_exact_head_probe');
+    await recreateDatabase(admin, 'mcft_cap05_s6_merged_main_probe');
     await recreateDatabase(admin, 'mcft_cap05_s5_remediation_probe');
   } finally {
     await admin.end();
@@ -85,7 +92,7 @@ async function main() {
     '-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_ACTION_FEEDBACK_H_DB.ts',
   ], {
     ...process.env,
-    DATABASE_URL: databaseUrl('mcft_cap05_s6_exact_head_probe'),
+    DATABASE_URL: databaseUrl('mcft_cap05_s6_merged_main_probe'),
     MCFT_CAP_05_S6_DESTRUCTIVE_ACCEPTANCE: '1',
   });
 
@@ -97,7 +104,7 @@ async function main() {
     MCFT_CAP_05_S5_REMEDIATION_DESTRUCTIVE_ACCEPTANCE: '1',
   });
 
-  console.log('PASS MCFT-CAP-05 S6 exact-head Governance, PostgreSQL and S5 remediation regression');
+  console.log('PASS MCFT-CAP-05 S6 merged-main Governance, PostgreSQL and S5 remediation regression');
 }
 
 main().catch((error) => {
