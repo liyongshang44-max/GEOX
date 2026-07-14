@@ -4,6 +4,7 @@
 
 import type { Pool, PoolClient } from "pg";
 import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import { canonicalJsonV1 } from "../../domain/twin_runtime/canonical_json_v1.js";
 import {
   validateCap04CanonicalForecastRunPayloadV1,
   type Cap04CanonicalCompletedForecastRunPayloadV1,
@@ -82,7 +83,7 @@ function exactPointProjectionMatchV1(
   const targetTime = row.target_time instanceof Date ? row.target_time.toISOString() : String(row.target_time);
   if (targetTime !== point.target_time
     || row.point_determinism_hash !== point.determinism_hash
-    || JSON.stringify(row.canonical_point) !== JSON.stringify(point)) {
+    || canonicalJsonV1(row.canonical_point) !== canonicalJsonV1(point)) {
     throw new Error("CAP05_RESIDUAL_SOURCE_FORECAST_POINT_PROJECTION_MISMATCH");
   }
 }
