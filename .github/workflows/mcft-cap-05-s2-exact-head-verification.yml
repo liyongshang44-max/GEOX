@@ -1,0 +1,49 @@
+name: MCFT-CAP-05 S2 exact-head verification
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s2-exact-head-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-05-s2-contracts-projection-math-config-v1
+          fetch-depth: 0
+
+      - name: Verify exact S2 head
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin agent/mcft-cap-05-s2-contracts-projection-math-config-v1
+          test "$(git rev-parse HEAD)" = "b21e9fd8e502a27b24b7f0e4f6ae3107463450ce"
+          test "$(git rev-parse origin/agent/mcft-cap-05-s2-contracts-projection-math-config-v1)" = "b21e9fd8e502a27b24b7f0e4f6ae3107463450ce"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run S2 governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S2_CONTRACTS_CONFIG.cjs
+
+      - name: Run S2 pure acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts
+
+      - name: Typecheck repository
+        run: pnpm -r typecheck
