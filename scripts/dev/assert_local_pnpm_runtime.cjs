@@ -33,10 +33,21 @@ function run(command, args, env = process.env) {
   return String(result.stdout || '').trim();
 }
 
+function baseDatabaseUrl() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  const user = process.env.POSTGRES_USER;
+  const password = process.env.POSTGRES_PASSWORD;
+  const database = process.env.POSTGRES_DB;
+  if (!user || !password || !database) {
+    throw new Error('POSTGRES_ACCEPTANCE_ENV_REQUIRED_FOR_S6_EXACT_HEAD_PROBE');
+  }
+  const host = process.env.POSTGRES_HOST || '127.0.0.1';
+  const port = process.env.POSTGRES_PORT || '5433';
+  return `postgres://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}`;
+}
+
 function databaseUrl(databaseName) {
-  const source = process.env.DATABASE_URL;
-  if (!source) throw new Error('DATABASE_URL_REQUIRED_FOR_S6_EXACT_HEAD_PROBE');
-  const url = new URL(source);
+  const url = new URL(baseDatabaseUrl());
   url.pathname = `/${databaseName}`;
   return url.toString();
 }
@@ -61,7 +72,7 @@ async function main() {
 
   run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTION_FEEDBACK_H.cjs', '--postmerge']);
 
-  const admin = new Client({ connectionString: process.env.DATABASE_URL });
+  const admin = new Client({ connectionString: baseDatabaseUrl() });
   await admin.connect();
   try {
     await recreateDatabase(admin, 'mcft_cap05_s6_exact_head_probe');
