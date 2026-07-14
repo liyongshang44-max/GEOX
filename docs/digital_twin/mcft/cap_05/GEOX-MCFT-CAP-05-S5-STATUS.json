@@ -1,0 +1,112 @@
+{
+  "schema_version": "geox_mcft_cap_05_s5_status_v1",
+  "capability_line_id": "MCFT-CAP-05",
+  "delivery_slice_id": "MCFT-CAP-05.MCFT-01-13.APPROVAL-PLAN-EVIDENCE-BINDING-V1",
+  "slice_kind": "APPROVAL_ASSERTION_APPROVED_PLAN_EVIDENCE_BINDING",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "baseline_main_commit": "7f2f2bec144cee4d90608c3a25c3dc7cac9f9189",
+  "branch": "agent/mcft-cap-05-s5-approval-plan-binding-v1",
+  "s4_effectiveness": {
+    "pr_number": 2447,
+    "exact_head": "e9f3b81e2aa8b68498263049086d79184ead6108",
+    "materialization_workflow": 29311491031,
+    "exact_head_workflow": 29311611506,
+    "merge_commit": "7f2f2bec144cee4d90608c3a25c3dc7cac9f9189",
+    "head_to_merge_file_delta_count": 0,
+    "tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2449,
+    "merged_main_gate_workflow": 29311761419,
+    "merged_main_gate": "PASS",
+    "effective": true
+  },
+  "validation": {
+    "initial_postgresql_workflow": 29312144925,
+    "recovery_integration_workflow": 29312506965,
+    "repository_typecheck": "PASS",
+    "s5_postgresql_acceptance": "PASS",
+    "s3_recovery_regression": "PASS"
+  },
+  "contract": {
+    "contract_path": "apps/server/src/domain/twin_runtime/approved_plan_binding_v1.ts",
+    "approval_assertion_record_type": "approval_assertion_evidence_v1",
+    "approved_plan_record_type": "approved_irrigation_plan_snapshot_v1",
+    "approval_assertion_and_plan_are_distinct": true,
+    "geox_approval_authority_exercised": false,
+    "geox_approval_request_created": false,
+    "dispatch_disposition": "NOT_OBSERVED"
+  },
+  "runtime": {
+    "service_id": "MCFT_CAP_05_DECISION_APPROVAL_PLAN_BINDING_SERVICE_V1",
+    "service_path": "apps/server/src/runtime/twin_runtime/approved_plan_binding_service_v1.ts",
+    "repository_path": "apps/server/src/persistence/twin_runtime/postgres_approved_plan_binding_repository_v1.ts",
+    "public_route_created": false,
+    "canonical_fact_write": false,
+    "projection_table": "twin_approved_plan_binding_projection_v1"
+  },
+  "binding_invariants": [
+    "exact Decision ref/hash",
+    "exact Decision request ref/hash",
+    "exact selected Scenario option ref/hash",
+    "exact Approval Assertion ref/hash",
+    "exact Reality scope",
+    "Assertion and Plan quality PASS",
+    "Assertion APPROVED by HUMAN",
+    "Plan APPROVED and active_for_decision",
+    "approved amount bounded by Scenario amount",
+    "amount difference exactly reconciled",
+    "non-zero difference carries reason code",
+    "validity and availability time order",
+    "explicit predecessor ref/hash for supersession"
+  ],
+  "supersession": {
+    "policy_id": "EXPLICIT_PLAN_REF_HASH_SUPERSESSION_V1",
+    "implicit_replacement_forbidden": true,
+    "projection_cas_required": true,
+    "forged_predecessor_hash_rejected": true
+  },
+  "recovery": {
+    "projection_delete_then_rebuild": true,
+    "generic_cap05_recovery_delegates_to_s5_validator": true,
+    "validated_rebuild_order": "PLAN_EFFECTIVE_TIME_ASCENDING",
+    "canonical_twin_fact_creation": false
+  },
+  "acceptance_results": {
+    "canonical_twin_fact_delta": 0,
+    "standard_binding_projection_delta": 1,
+    "supersession_projection_total": 2,
+    "active_plan_projection_count_after_supersession": 1,
+    "standard_scenario_amount_mm": "15.000000",
+    "standard_approved_amount_mm": "14.000000",
+    "standard_amount_difference_mm": "-1.000000",
+    "negative_cases": [
+      "missing Approval Assertion",
+      "Plan to Assertion hash mismatch",
+      "non-approved Assertion",
+      "wrong Reality scope",
+      "amount difference mismatch",
+      "invalid validity window",
+      "inactive Plan",
+      "forged supersession predecessor hash"
+    ]
+  },
+  "migration_delta": 0,
+  "preserved_nonclaims": [
+    "NO_GEOX_APPROVAL_AUTHORITY",
+    "NO_APPROVAL_ASSERTION_EVIDENCE_CREATION",
+    "NO_APPROVED_PLAN_EVIDENCE_CREATION",
+    "NO_CANONICAL_TWIN_APPEND",
+    "NO_DISPATCH_FACT",
+    "NO_ACTION_FEEDBACK_WRITE",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
+    "NO_PUBLIC_ROUTE",
+    "NO_RECOMMENDATION",
+    "NO_AO_ACT_CHANGE",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_MODEL_ACTIVATION",
+    "NO_CAP_06_AUTHORIZATION"
+  ],
+  "next_delivery_slice_id": "MCFT-CAP-05.MCFT-15.ACTION-FEEDBACK-H-COMMIT-ADAPTER-V1",
+  "next_delivery_slice_authorized": false,
+  "effectiveness_condition": "S5_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S5_GATE_PASS",
+  "effectiveness_condition_satisfied": false
+}
