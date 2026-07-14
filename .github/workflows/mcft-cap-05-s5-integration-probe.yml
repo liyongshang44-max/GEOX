@@ -2,7 +2,7 @@ name: MCFT-CAP-05 S5 integration probe
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, synchronize, ready_for_review]
     branches: [main]
 
 permissions:
