@@ -1,0 +1,57 @@
+name: MCFT-CAP-05 S3 exact-head verification
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s3-exact-head-probe-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap05_s3_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap05_s3_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s3_acceptance
+      MCFT_CAP_05_S3_DESTRUCTIVE_ACCEPTANCE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-05-s3-persistence-idempotency-recovery-v1
+          fetch-depth: 0
+      - name: Verify exact S3 head
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin agent/mcft-cap-05-s3-persistence-idempotency-recovery-v1
+          test "$(git rev-parse HEAD)" = "e63018ee0fef1e8862d73260489c858eccfebf07"
+          test "$(git rev-parse origin/agent/mcft-cap-05-s3-persistence-idempotency-recovery-v1)" = "e63018ee0fef1e8862d73260489c858eccfebf07"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Run S3 governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S3_PERSISTENCE_RECOVERY.cjs
+      - name: Run S3 PostgreSQL acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts
+      - name: Typecheck repository
+        run: pnpm -r typecheck
