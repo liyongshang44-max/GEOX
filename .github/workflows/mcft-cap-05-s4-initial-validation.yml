@@ -44,12 +44,8 @@ jobs:
 
           contracts = Path('apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.ts')
           text = contracts.read_text(encoding='utf-8')
-          old = '''  const matches = scenarioSet.payload.options.filter((option) => option.option_id === optionId);
-          if (matches.length !== 1) throw new Error("CAP05_SCENARIO_MEMBER_CARDINALITY");
-          return { option_id: optionId, option_hash: semanticHashV1(matches[0]) };'''
-          new = '''  const matches = scenarioSet.payload.options.filter((option) => option.option_id === optionId);
-          if (matches.length !== 1) throw new Error("CAP05_SCENARIO_MEMBER_CARDINALITY");
-          const assumedIrrigationMm = optionId === "NO_ACTION" ? 0 : optionId === "IRRIGATE_NOW_15MM" ? 15 : 25;
+          old = '  return { option_id: optionId, option_hash: semanticHashV1(matches[0]) };'
+          new = '''  const assumedIrrigationMm = optionId === "NO_ACTION" ? 0 : optionId === "IRRIGATE_NOW_15MM" ? 15 : 25;
           const expectedRequestedAmount = `${assumedIrrigationMm}.000000`;
           if (matches[0].requested_irrigation_mm !== expectedRequestedAmount) throw new Error("CAP05_SCENARIO_MEMBER_AMOUNT_MISMATCH");
           return {
@@ -63,7 +59,7 @@ jobs:
           };'''
           if old in text:
               contracts.write_text(text.replace(old, new, 1), encoding='utf-8')
-          elif new not in text:
+          elif 'CAP05_SCENARIO_MEMBER_AMOUNT_MISMATCH' not in text:
               raise SystemExit('option member hash patch target missing')
 
           acceptance = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts')
