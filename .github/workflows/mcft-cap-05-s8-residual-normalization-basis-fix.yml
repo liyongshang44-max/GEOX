@@ -1,0 +1,52 @@
+name: MCFT-CAP-05 S8 Residual Normalization Basis Fix
+
+on:
+  pull_request:
+    types: [synchronize]
+    branches: [main]
+    paths:
+      - .github/workflows/mcft-cap-05-s8-residual-normalization-basis-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.head_ref == 'agent/mcft-cap-05-s8-residual-contract-conformance-remediation-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Align frozen normalization basis literal
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          paths = [
+              Path("apps/server/src/domain/twin_runtime/forecast_observation_residual_v1.ts"),
+              Path("docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S2-CONTRACTS-PROJECTION-CONFIG.md"),
+              Path("docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-RESIDUAL-CONTRACT-REMEDIATION-STATUS.json"),
+              Path("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION.cjs"),
+          ]
+          old = "FORECAST_PLUS_EFFECTIVE_OBSERVATION_VARIANCE_V1"
+          new = "FORECAST_PLUS_OBSERVATION_VARIANCE_V1"
+          for path in paths:
+              text = path.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count < 1:
+                  raise RuntimeError(f"NORMALIZATION_BASIS_LITERAL_NOT_FOUND:{path}")
+              path.write_text(text.replace(old, new), encoding="utf-8")
+          PY
+
+      - name: Commit literal alignment
+        run: |
+          rm .github/workflows/mcft-cap-05-s8-residual-normalization-basis-fix.yml
+          git config user.name "GEOX Governance Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(mcft-cap-05): align frozen residual normalization basis"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
