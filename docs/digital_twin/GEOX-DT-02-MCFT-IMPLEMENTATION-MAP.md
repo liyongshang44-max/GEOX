@@ -934,3 +934,41 @@ twin_forecast_residual_v1 -> C_FORECAST_RESIDUAL_COMMIT
 Non-canonical CAP-05 artifacts remain Replay Evidence, adapters or rebuildable projections. Forecast Residual remains distinct from current-tick Assimilation Innovation. The frozen Forecast projection is root-zone storage to root-zone mean VWC under the existing H=1 observation-operator semantics; no 200 mm point Forecast profile is claimed.
 
 This P-1 result becomes effective only after its PR merges and the merged-main P-1 adjudication Gate passes. Until then, P0 and all Runtime source remain unauthorized.
+
+
+<!-- MCFT-CAP-05-P0-SETTLEMENT-START -->
+
+## MCFT-CAP-05 P0 CAP-04 settlement and CAP-05 provisional SSOT candidate
+
+```text
+baseline main: 5391a3a8f811fc166fa187d7da70342ee36ab5fa
+P-1 exact head: ca83b67241b4df0082e78d3bfdf45e9338d82ad4
+P-1 merge commit: 5391a3a8f811fc166fa187d7da70342ee36ab5fa
+P-1 head-to-merge file delta count: 0
+P-1 tree equivalence: PASS
+P-1 merged-main Gate workflow: 29305092038 SUCCESS
+P-1 adjudication result: REUSE_WITHOUT_AMENDMENT
+DT-02 Architecture Amendment 03 required: false
+active delivery slice: MCFT-CAP-05.P0.CAP-04-SETTLEMENT-AND-CAP-05-PROVISIONAL-SSOT-V1
+P0 status: READY_FOR_MERGE
+Runtime source authorized: false
+S0 authorized: false
+```
+
+P0 reconciles only the current CAP-04 lifecycle view to its Closure Record and Main Verification authority. Historical delivery-slice baselines, merge commits, Gates and predecessor identities remain unchanged.
+
+```text
+CAP-04 status: COMPLETE
+CAP-04 implementation status: COMPLETE
+CAP-04 closure effective: true
+CAP-04 capability complete: true
+CAP-04 active delivery slice: null
+CAP-04 pending completion claims: 0
+CAP-04 current next delivery slice: null
+CAP-04 current next delivery authorization: false
+CAP-04 current latest effective slice: MCFT-CAP-04.FINALIZATION-MAIN-VERIFICATION-V1
+```
+
+The provisional CAP-05 capability entry remains `NOT_AUTHORIZED`. P0 creates no Runtime authority, predecessor PostgreSQL lock, migration, canonical write, route, web or CAP-06 authorization. S0 remains the next independent authorization boundary.
+
+<!-- MCFT-CAP-05-P0-SETTLEMENT-END -->
