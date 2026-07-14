@@ -32,16 +32,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/mcft-cap-05-s5-approval-plan-evidence-binding-v1
+          ref: agent/mcft-cap-05-s5-approval-plan-binding-v1
           fetch-depth: 0
 
       - name: Verify exact S5 head
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin agent/mcft-cap-05-s5-approval-plan-evidence-binding-v1
-          test "$(git rev-parse HEAD)" = "77a4f66741d0c5dab59a4cb0ac4ff91d7916d17d"
-          test "$(git rev-parse origin/agent/mcft-cap-05-s5-approval-plan-evidence-binding-v1)" = "77a4f66741d0c5dab59a4cb0ac4ff91d7916d17d"
+          git fetch origin agent/mcft-cap-05-s5-approval-plan-binding-v1
+          test "$(git rev-parse HEAD)" = "6a8ee803392015c54a73ea7cb66a92c36ffacf4f"
+          test "$(git rev-parse origin/agent/mcft-cap-05-s5-approval-plan-binding-v1)" = "6a8ee803392015c54a73ea7cb66a92c36ffacf4f"
 
       - uses: pnpm/action-setup@v4
         with:
@@ -59,6 +59,15 @@ jobs:
 
       - name: Run S5 PostgreSQL acceptance
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts
+
+      - name: Create S3 regression database
+        run: PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -c 'CREATE DATABASE mcft_cap05_s3_regression'
+
+      - name: Run S3 recovery regression
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s3_regression
+          MCFT_CAP_05_S3_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts
 
       - name: Typecheck repository
         run: pnpm -r typecheck
