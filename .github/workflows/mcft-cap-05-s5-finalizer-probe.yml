@@ -1,0 +1,97 @@
+name: MCFT-CAP-05 S5 finalizer probe
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s5-finalizer-probe-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap05_s5_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap05_s5_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s5_acceptance
+      MCFT_CAP_05_S5_DESTRUCTIVE_ACCEPTANCE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-05-s5-approval-plan-binding-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Materialize S5 SSOT
+        run: python3 .mcft_cap05_s5_materializer.py
+
+      - name: Commit exact S5 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/workflows/mcft-cap-05-s5-initial-validation.yml .mcft_cap05_s5_materializer.py
+          git add -f \
+            apps/server/src/domain/twin_runtime/approved_plan_binding_v1.ts \
+            apps/server/src/persistence/twin_runtime/postgres_approved_plan_binding_repository_v1.ts \
+            apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts \
+            apps/server/src/runtime/twin_runtime/approved_plan_binding_service_v1.ts \
+            docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md \
+            docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-PERSISTENCE-MATRIX.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S5-APPROVAL-PLAN-BINDING.md \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S5-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_APPROVAL_PLAN_BINDING.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts
+          git commit -m "feat(mcft-cap-05): establish S5 Approval and Plan binding"
+
+      - name: Run S5 governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_APPROVAL_PLAN_BINDING.cjs
+
+      - name: Run S5 PostgreSQL acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts
+
+      - name: Create S3 regression database
+        run: PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -c 'CREATE DATABASE mcft_cap05_s3_regression'
+
+      - name: Run S3 recovery regression
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s3_regression
+          MCFT_CAP_05_S3_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts
+
+      - name: Typecheck repository
+        run: pnpm -r typecheck
+
+      - name: Push final S5 candidate
+        run: git push origin HEAD:agent/mcft-cap-05-s5-approval-plan-binding-v1
