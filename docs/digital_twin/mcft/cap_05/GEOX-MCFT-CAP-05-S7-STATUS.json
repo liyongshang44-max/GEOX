@@ -31,7 +31,7 @@
     "postgresql_source_acceptance": "PENDING",
     "cap04_single_tick_regression": "PENDING",
     "repository_typecheck": "PENDING",
-    "target_in_memory_pass_count": 14,
+    "target_in_memory_pass_count": 15,
     "target_postgresql_pass_count": 5,
     "required_fail_count": 0
   },
