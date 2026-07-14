@@ -12,6 +12,23 @@ jobs:
   validate:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s3-persistence-idempotency-recovery-v1'
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap05_s3_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap05_s3_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s3_acceptance
+      MCFT_CAP_05_S3_DESTRUCTIVE_ACCEPTANCE: "1"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,3 +44,15 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - name: Typecheck repository
         run: pnpm -r typecheck
+      - name: Run S3 PostgreSQL acceptance
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts 2>&1 | tee /tmp/mcft-cap05-s3-db.log
+      - name: Upload S3 DB failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s3-db-failure
+          path: /tmp/mcft-cap05-s3-db.log
+          if-no-files-found: ignore
