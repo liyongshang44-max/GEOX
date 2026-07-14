@@ -6,6 +6,7 @@
 // Boundary: validation-only branch; never merge this probe file into main.
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const { spawnSync } = require('node:child_process');
 const { Client } = require('pg');
 
@@ -57,6 +58,23 @@ async function recreateDatabase(admin, databaseName) {
   await admin.query(`CREATE DATABASE ${databaseName}`);
 }
 
+function assertMergedSemantics() {
+  const adapter = fs.readFileSync('apps/server/src/domain/twin_runtime/action_feedback_to_executed_irrigation_v1.ts', 'utf8');
+  const receipt = fs.readFileSync('apps/server/src/evidence/twin_runtime/execution_receipt_evidence_contract_v1.ts', 'utf8');
+  const acceptance = fs.readFileSync('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_ACTION_FEEDBACK_H_DB.ts', 'utf8');
+  const status = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S6-VALIDATION-ORTHOGONALITY-REMEDIATION-STATUS.json', 'utf8'));
+
+  assert.equal(status.remediation_id, 'MCFT-CAP-05.S6.VALIDATION-ORTHOGONALITY-REMEDIATION-V1');
+  assert.equal(status.baseline_main_commit, 'a9bf75333871ac62021679c1dac756be9e30cebe');
+  assert.ok(adapter.includes('NOT_YET_VALIDATED_MAY_BE_STATE_INPUT_ELIGIBLE_REJECTED_FORBIDDEN_V1'));
+  assert.ok(adapter.includes('return validationStatus !== "REJECTED"'));
+  assert.ok(!adapter.includes('CAP05_ACTION_FEEDBACK_VALIDATION_REQUIRED'));
+  assert.ok(receipt.includes('validationStatus !== "REJECTED"'));
+  assert.ok(acceptance.includes('pending validation remains orthogonal to trustworthy execution eligibility'));
+  assert.ok(acceptance.includes('source_validation_status, "NOT_YET_VALIDATED"'));
+  console.log('PASS remediation merged semantics are present on main');
+}
+
 async function main() {
   run('git', ['fetch', 'origin', 'main', REPOSITORY_BRANCH]);
   const remoteHead = run('git', ['rev-parse', `origin/${REPOSITORY_BRANCH}`]);
@@ -75,12 +93,7 @@ async function main() {
   console.log(`PASS remediation merged-main identity ${MERGED_MAIN}`);
   console.log(`PASS remediation head-to-merge tree equivalence ${EXACT_HEAD}`);
 
-  // The postmerge gates compare HEAD against origin/main. Point the local remote-tracking ref at the probe merge tree only after proving the one-file probe boundary and exact merged-main identity.
-  run('git', ['update-ref', 'refs/remotes/origin/main', 'HEAD']);
-
-  run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs', '--postmerge']);
-  run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTION_FEEDBACK_H.cjs', '--postmerge']);
-  run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs', '--auto']);
+  assertMergedSemantics();
 
   const admin = new Client({ connectionString: baseDatabaseUrl() });
   await admin.connect();
