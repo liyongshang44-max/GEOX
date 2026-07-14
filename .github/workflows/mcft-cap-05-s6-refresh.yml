@@ -1,8 +1,8 @@
-name: MCFT-CAP-05 S6 remediation-aware refresh
+name: MCFT-CAP-05 S6 remediation-aware refresh controller
 
 on:
   pull_request:
-    types: [synchronize]
+    types: [opened, reopened, synchronize]
     branches: [main]
 
 permissions:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   refresh:
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s6-action-feedback-h-adapter-v1'
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s6-refresh-controller-v1'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: agent/mcft-cap-05-s6-action-feedback-h-adapter-v1
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -127,5 +127,5 @@ docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md'
       - name: Typecheck repository
         run: pnpm -r typecheck
 
-      - name: Push refreshed exact candidate
-        run: git push origin HEAD:${{ github.head_ref }}
+      - name: Push refreshed exact candidate to S6 branch
+        run: git push origin HEAD:agent/mcft-cap-05-s6-action-feedback-h-adapter-v1
