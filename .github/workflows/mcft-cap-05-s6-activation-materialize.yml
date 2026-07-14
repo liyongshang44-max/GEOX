@@ -1,0 +1,70 @@
+name: MCFT-CAP-05 S6 SSOT activation materialization
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap-05-s6-ssot-activation-v1
+    paths:
+      - .mcft_cap05_s6_activation_trigger
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-05-s6-ssot-activation-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Materialize JSON SSOT
+        run: python3 .mcft_cap05_s6_activation_json.py
+
+      - name: Materialize docs and permanent Gate hook
+        run: python3 .mcft_cap05_s6_activation_docs.py
+
+      - name: Remove temporary machinery and commit exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f \
+            .mcft_cap05_s6_activation_bootstrap \
+            .mcft_cap05_s6_activation_trigger \
+            .mcft_cap05_s6_activation_json.py \
+            .mcft_cap05_s6_activation_docs.py \
+            .github/workflows/mcft-cap-05-s6-activation-materialize.yml
+          git add -f \
+            docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md \
+            docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S6-ACTIVATION-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md \
+            scripts/dev/assert_local_pnpm_runtime.cjs \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs
+          git commit -m "docs(mcft-cap-05): settle S6 and authorize S7"
+
+      - name: Run activation Governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs --candidate
+
+      - name: Typecheck repository
+        run: pnpm -r typecheck
+
+      - name: Push exact activation candidate
+        run: git push origin HEAD:agent/mcft-cap-05-s6-ssot-activation-v1
