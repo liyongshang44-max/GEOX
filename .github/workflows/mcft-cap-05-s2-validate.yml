@@ -76,7 +76,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/mcft-cap-05-s2-validate.yml .mcft_cap05_s2_materializer.py
+          git rm -f .github/workflows/mcft-cap-05-s2-validate.yml .mcft_cap05_s2_materializer.py
           git add \
             apps/server/src/domain/twin_runtime/action_feedback_to_executed_irrigation_v1.ts \
             apps/server/src/domain/twin_runtime/decision_second_write_policy_v1.ts \
