@@ -232,9 +232,11 @@ async function main(): Promise<void> {
   });
   assert.equal(pendingResult.action_feedback.payload.execution_status, "EXECUTED");
   assert.equal(pendingResult.action_feedback.payload.validation_status, "NOT_YET_VALIDATED");
-  assert.equal(pendingResult.action_feedback.payload.eligible_for_state_input, false);
-  assert.equal(pendingResult.adapter_result, null);
-  ok("execution status remains EXECUTED while pending validation independently blocks State eligibility");
+  assert.equal(pendingResult.action_feedback.payload.eligible_for_state_input, true);
+  assert.ok(pendingResult.adapter_result);
+  assert.equal(pendingResult.adapter_result.trace.source_validation_status, "NOT_YET_VALIDATED");
+  assert.equal(pendingResult.adapter_result.candidate.eligible_for_state_input, true);
+  ok("pending validation remains orthogonal to trustworthy execution eligibility and adapter consumption");
 
   const late = cloneReceipt("late_no_shift", receipt, (record) => {
     record.role_time.execution_start = "2026-06-04T01:40:00.000Z";

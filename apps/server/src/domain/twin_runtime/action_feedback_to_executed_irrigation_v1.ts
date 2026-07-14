@@ -7,11 +7,13 @@ import {
   CAP05_ACTION_FEEDBACK_QUALITY_MAPPING_POLICY_V1,
   type Cap05ActionFeedbackEnvelopeV1,
   type Cap05SourceQualityV1,
+  type Cap05ValidationStatusV1,
   validateCap05ActionFeedbackV1,
 } from "./feedback_canonical_contracts_v1.js";
 
 export const CAP05_ACTION_FEEDBACK_ADAPTER_ID_V1 = "ACTION_FEEDBACK_TO_EXECUTED_IRRIGATION_CANDIDATE_V1" as const;
 export const CAP05_SINGLE_EVENT_GUARD_POLICY_ID_V1 = "EXACTLY_ONE_ELIGIBLE_EXECUTION_EVENT_PER_TICK_V1" as const;
+export const CAP05_ACTION_FEEDBACK_VALIDATION_ORTHOGONALITY_POLICY_V1 = "NOT_YET_VALIDATED_MAY_BE_STATE_INPUT_ELIGIBLE_REJECTED_FORBIDDEN_V1" as const;
 
 export type Cap05ActionFeedbackAdapterTraceV1 = {
   adapter_id: typeof CAP05_ACTION_FEEDBACK_ADAPTER_ID_V1;
@@ -37,6 +39,12 @@ export function mapCap05ActionFeedbackQualityV1(
   return sourceQuality === "FAIL" ? "UNUSABLE" : "USABLE";
 }
 
+export function cap05ValidationStatusAllowsStateInputV1(
+  validationStatus: Cap05ValidationStatusV1,
+): boolean {
+  return validationStatus !== "REJECTED";
+}
+
 export function adaptCap05ActionFeedbackToExecutedIrrigationV1(
   feedback: Cap05ActionFeedbackEnvelopeV1,
 ): Cap05ActionFeedbackAdapterResultV1 {
@@ -46,8 +54,8 @@ export function adaptCap05ActionFeedbackToExecutedIrrigationV1(
     throw new Error("CAP05_ACTION_FEEDBACK_EXECUTED_OR_PARTIAL_REQUIRED");
   }
   if (!payload.eligible_for_state_input) throw new Error("CAP05_ACTION_FEEDBACK_STATE_INPUT_INELIGIBLE");
-  if (payload.validation_status !== "VALIDATED" && payload.validation_status !== "VALIDATED_WITH_LIMITATIONS") {
-    throw new Error("CAP05_ACTION_FEEDBACK_VALIDATION_REQUIRED");
+  if (!cap05ValidationStatusAllowsStateInputV1(payload.validation_status)) {
+    throw new Error("CAP05_ACTION_FEEDBACK_VALIDATION_REJECTED");
   }
 
   const normalizedQuality = mapCap05ActionFeedbackQualityV1(payload.source_quality);

@@ -1,0 +1,109 @@
+{
+  "schema_version": "geox_mcft_cap_05_s6_validation_orthogonality_remediation_status_v1",
+  "capability_line_id": "MCFT-CAP-05",
+  "remediation_id": "MCFT-CAP-05.S6.VALIDATION-ORTHOGONALITY-REMEDIATION-V1",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "baseline_main_commit": "a9bf75333871ac62021679c1dac756be9e30cebe",
+  "branch": "agent/mcft-cap-05-s6-validation-orthogonality-remediation-v1",
+  "remediation_pr_number": 2465,
+  "effective_predecessor": {
+    "delivery_slice_id": "MCFT-CAP-05.MCFT-15.ACTION-FEEDBACK-H-COMMIT-ADAPTER-V1",
+    "status": "MERGED_EFFECTIVE",
+    "runtime_pr_number": 2456,
+    "exact_head": "1a4f09278ce8b5ee65af8688f0c4d992a5d10035",
+    "merge_commit": "be8b5ecf061ba5e49c1ae33a7a9d4827aa6b0bbe",
+    "merged_main_gate_workflow": 29325686434,
+    "tree_equivalence": "PASS"
+  },
+  "confirmed_contract_deviation": {
+    "task_acceptance_refs": [108, 109, 110],
+    "frozen_semantics": "NOT_YET_VALIDATED_MAY_BE_STATE_INPUT_ELIGIBLE_WHEN_EXECUTION_EVIDENCE_IS_TRUSTWORTHY",
+    "merged_behavior": "NOT_YET_VALIDATED_ALWAYS_BLOCKED_BY_NORMALIZER_AND_ADAPTER",
+    "severity": "MERGE_BLOCKING_FOR_S7",
+    "affected_layers": [
+      "execution Receipt normalization",
+      "Action Feedback adapter",
+      "S6 PostgreSQL acceptance",
+      "S7 selector consumption"
+    ]
+  },
+  "remediation_policy": {
+    "policy_id": "NOT_YET_VALIDATED_MAY_BE_STATE_INPUT_ELIGIBLE_REJECTED_FORBIDDEN_V1",
+    "eligible_execution_statuses": [
+      "EXECUTED",
+      "PARTIALLY_EXECUTED"
+    ],
+    "eligible_validation_statuses": [
+      "NOT_YET_VALIDATED",
+      "VALIDATED",
+      "VALIDATED_WITH_LIMITATIONS"
+    ],
+    "ineligible_validation_statuses": [
+      "REJECTED"
+    ],
+    "eligible_source_qualities": [
+      "PASS",
+      "LIMITED"
+    ],
+    "ineligible_source_qualities": [
+      "FAIL"
+    ],
+    "canonical_eligibility_must_be_true": true
+  },
+  "compatibility": {
+    "existing_action_feedback_eligibility_policy_id_retained": true,
+    "reason": "preserve canonical H and Runtime Config readback identity while correcting the frozen validation-orthogonality behavior",
+    "new_canonical_object_type": false,
+    "new_transaction_family": false,
+    "migration_required": false
+  },
+  "candidate_validation": {
+    "workflow": 29333251081,
+    "state": "SUCCESS",
+    "build_test": "PASS",
+    "repository_typecheck": "PASS",
+    "repository_build": "PASS",
+    "server_selfcheck": "PASS",
+    "s6_governance_gate": "PASS",
+    "s6_postgresql_acceptance": "PASS",
+    "standard_acceptance": "PASS",
+    "commercial_mvp0_release_gate": "PASS"
+  },
+  "s7_effect": {
+    "pr_number": 2464,
+    "status": "BLOCKED_BY_S6_REMEDIATION",
+    "may_merge_before_remediation_effective": false,
+    "required_follow_up": "rebase or rebuild S7 on remediation-effective main and add NOT_YET_VALIDATED receipt-consuming tick regression"
+  },
+  "canonical_object_delta": 0,
+  "transaction_family_delta": 0,
+  "migration_delta": 0,
+  "preserved_nonclaims": [
+    "NO_REPLACEMENT_S6_IMPLEMENTATION",
+    "NO_NEW_CANONICAL_TWIN_OBJECT",
+    "NO_NEW_TRANSACTION_FAMILY",
+    "NO_MIGRATION",
+    "NO_PUBLIC_ROUTE",
+    "NO_WEB",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
+    "NO_FORECAST_EXECUTION",
+    "NO_FORECAST_RESIDUAL_COMMIT",
+    "NO_RECOMMENDATION",
+    "NO_AO_ACT_CHANGE",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_MODEL_ACTIVATION",
+    "NO_CAP_06_AUTHORIZATION",
+    "NO_S7_EFFECTIVENESS_CLAIM"
+  ],
+  "effectiveness_condition": "REMEDIATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_REMEDIATION_GATE_PASS",
+  "effectiveness_condition_satisfied": false,
+  "exact_changed_file_boundary": [
+    "apps/server/src/domain/twin_runtime/action_feedback_to_executed_irrigation_v1.ts",
+    "apps/server/src/evidence/twin_runtime/execution_receipt_evidence_contract_v1.ts",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S6-VALIDATION-ORTHOGONALITY-REMEDIATION-STATUS.json",
+    "scripts/dev/assert_local_pnpm_runtime.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTION_FEEDBACK_H.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_ACTION_FEEDBACK_H_DB.ts"
+  ]
+}

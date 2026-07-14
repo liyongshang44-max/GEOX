@@ -8,7 +8,7 @@ const fs = require('node:fs');
 const isWindows = process.platform === 'win32';
 const env = process.env;
 
-function run(command, args = []) {
+function run(command, args = [], envOverrides = {}) {
   const result = spawnSync(command, args, {
     cwd: process.cwd(),
     env: {
@@ -16,9 +16,11 @@ function run(command, args = []) {
       CI: process.env.CI || 'true',
       npm_config_confirmModulesPurge: process.env.npm_config_confirmModulesPurge || 'false',
       npm_config_confirm_modules_purge: process.env.npm_config_confirm_modules_purge || 'false',
+      ...envOverrides,
     },
     encoding: 'utf8',
     shell: false,
+    maxBuffer: 256 * 1024 * 1024,
   });
   return {
     command: [command, ...args].join(' '),
@@ -142,6 +144,48 @@ function fail(report, reasons) {
   process.exit(1);
 }
 
+function requireSuccess(result) {
+  if (result.stdout) console.log(result.stdout);
+  if (result.status !== 0) {
+    if (result.stderr) console.error(result.stderr);
+    throw new Error(`COMMAND_FAILED:${result.command}:${result.status}:${result.error}`);
+  }
+}
+
+function postgresBaseUrl() {
+  if (env.DATABASE_URL) return env.DATABASE_URL;
+  if (!env.POSTGRES_USER || !env.POSTGRES_PASSWORD || !env.POSTGRES_DB) return null;
+  const host = env.POSTGRES_HOST || '127.0.0.1';
+  const port = env.POSTGRES_PORT || '5433';
+  return `postgres://${encodeURIComponent(env.POSTGRES_USER)}:${encodeURIComponent(env.POSTGRES_PASSWORD)}@${host}:${port}/${encodeURIComponent(env.POSTGRES_DB)}`;
+}
+
+function databaseUrl(base, databaseName) {
+  const url = new URL(base);
+  url.pathname = `/${databaseName}`;
+  return url.toString();
+}
+
+function runCap05S6ValidationOrthogonalityRemediationAcceptance() {
+  const gatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs');
+  if (!fs.existsSync(gatePath)) return;
+  requireSuccess(run(process.execPath, [gatePath, '--auto']));
+
+  const shouldRunDatabase = env.CI === 'true' || env.MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_RUN_DB_ACCEPTANCE === '1';
+  const base = postgresBaseUrl();
+  if (!shouldRunDatabase || !base) return;
+
+  const pnpmCmd = isWindows ? 'pnpm.cmd' : 'pnpm';
+  const admin = databaseUrl(base, 'postgres');
+  const databaseName = 'mcft_cap05_s6_validation_orthogonality_acceptance';
+  requireSuccess(run('psql', [admin, '-v', 'ON_ERROR_STOP=1', '-c', `DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`]));
+  requireSuccess(run('psql', [admin, '-v', 'ON_ERROR_STOP=1', '-c', `CREATE DATABASE ${databaseName}`]));
+  requireSuccess(run(pnpmCmd, ['-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_ACTION_FEEDBACK_H_DB.ts'], {
+    DATABASE_URL: databaseUrl(base, databaseName),
+    MCFT_CAP_05_S6_DESTRUCTIVE_ACCEPTANCE: '1',
+  }));
+}
+
 function main() {
   const candidates = collectCandidates();
   const report = buildRuntimeReport(candidates);
@@ -199,10 +243,8 @@ main();
 // MCFT_CAP_05_S6_ACTIVATION_GATE_V1: enforce activated CAP-05 S6/S7 governance during standard acceptance.
 const activationGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs');
 if (fs.existsSync(activationGatePath)) {
-  const gate = run(process.execPath, [activationGatePath, '--auto']);
-  if (gate.stdout) console.log(gate.stdout);
-  if (gate.status !== 0) {
-    if (gate.stderr) console.error(gate.stderr);
-    process.exit(gate.status || 1);
-  }
+  requireSuccess(run(process.execPath, [activationGatePath, '--auto']));
 }
+
+// MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION_GATE_V1: permanently verify the corrected validation/eligibility contract and isolated PostgreSQL S6 regression.
+runCap05S6ValidationOrthogonalityRemediationAcceptance();
