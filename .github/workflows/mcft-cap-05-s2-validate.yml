@@ -45,22 +45,10 @@ jobs:
           p = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S2_CONTRACTS_CONFIG.cjs')
           text = p.read_text(encoding='utf-8')
           replacements = [
-              (
-                  'check(task.includes(`active_delivery_slice_id:\\n${s2}`) && task.includes("S2 status:\\nIMPLEMENTATION_CANDIDATE"), "task records S2 candidate");',
-                  'check(task.includes(s2) && /S2 status:\\s*IMPLEMENTATION_CANDIDATE/s.test(task), "task records S2 candidate");',
-              ),
-              (
-                  'check(task.includes("S3 authorized:\\nfalse"), "task preserves S3 block");',
-                  'check(/S3 authorized:\\s*false/s.test(task), "task preserves S3 block");',
-              ),
-              (
-                  'check(contract.includes("Forecast Residual remains distinct from `Assimilation Innovation`"), "contract separates residual and innovation");',
-                  'check(contract.includes("Forecast Residual") && contract.includes("remains distinct from") && contract.includes("Assimilation Innovation"), "contract separates residual and innovation");',
-              ),
-              (
-                  'check(!residual.includes("assimilation_gain") && !residual.includes("posterior_mean"), "Residual owns no gain or posterior mean");',
-                  'check(residual.includes("\\\"assimilation_gain\\\" in object.payload") && residual.includes("\\\"posterior_state_ref\\\" in object.payload") && residual.includes("\\\"posterior_mean\\\" in object.payload") && residual.includes("CAP05_RESIDUAL_ASSIMILATION_AUTHORITY_FORBIDDEN"), "Residual explicitly rejects gain and posterior authority fields");',
-              ),
+              ('check(task.includes(`active_delivery_slice_id:\\n${s2}`) && task.includes("S2 status:\\nIMPLEMENTATION_CANDIDATE"), "task records S2 candidate");', 'check(task.includes(s2) && /S2 status:\\s*IMPLEMENTATION_CANDIDATE/s.test(task), "task records S2 candidate");'),
+              ('check(task.includes("S3 authorized:\\nfalse"), "task preserves S3 block");', 'check(/S3 authorized:\\s*false/s.test(task), "task preserves S3 block");'),
+              ('check(contract.includes("Forecast Residual remains distinct from `Assimilation Innovation`"), "contract separates residual and innovation");', 'check(contract.includes("Forecast Residual") && contract.includes("remains distinct from") && contract.includes("Assimilation Innovation"), "contract separates residual and innovation");'),
+              ('check(!residual.includes("assimilation_gain") && !residual.includes("posterior_mean"), "Residual owns no gain or posterior mean");', 'check(residual.includes("\\\"assimilation_gain\\\" in object.payload") && residual.includes("\\\"posterior_state_ref\\\" in object.payload") && residual.includes("\\\"posterior_mean\\\" in object.payload") && residual.includes("CAP05_RESIDUAL_ASSIMILATION_AUTHORITY_FORBIDDEN"), "Residual explicitly rejects gain and posterior authority fields");'),
           ]
           for old, new in replacements:
               if old not in text:
@@ -95,7 +83,18 @@ jobs:
           git commit -m "feat(mcft-cap-05): establish S2 contracts projection math and config"
 
       - name: Run S2 governance Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S2_CONTRACTS_CONFIG.cjs
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S2_CONTRACTS_CONFIG.cjs 2>&1 | tee /tmp/s2-governance.log
+
+      - name: Upload governance log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s2-governance-failure-final
+          path: /tmp/s2-governance.log
+          if-no-files-found: ignore
 
       - name: Run S2 pure acceptance
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts
