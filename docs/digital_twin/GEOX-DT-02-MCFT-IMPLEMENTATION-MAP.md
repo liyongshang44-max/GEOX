@@ -1088,3 +1088,33 @@ Established candidate scope:
 - maintain mutable Decision, Action Feedback, Evidence-link, Forecast Residual, Approved Plan binding, and complete feedback-cycle projections;
 - delete and rebuild CAP-05 guards/projections from canonical facts and graph refs;
 - create no business-flow service, State Tick, route, Recommendation, AO-ACT change, calibration candidate, activation, or CAP-06 authority.
+
+
+---
+
+## MCFT-CAP-05 S4 Human Decision G Commit Candidate
+
+```text
+capability_line_id: MCFT-CAP-05
+delivery_slice_id: MCFT-CAP-05.MCFT-13.HUMAN-DECISION-G-COMMIT-V1
+baseline_main_commit: 7e2de9c00a4ecc305c27b6572a63914f38157dbd
+status: IMPLEMENTATION_CANDIDATE
+postgresql_acceptance_workflow: 29310564723 SUCCESS
+transaction_family: G_HUMAN_DECISION_LINK_COMMIT
+canonical_object_type: twin_decision_record_v1
+canonical_decision_fact_delta: 1
+downstream_inferred_fact_delta: 0
+migration_delta: 0
+S5_authorized: false
+CAP_06_authorized: false
+```
+
+Established candidate scope:
+
+- read an exact controlled Human Decision request Evidence ref/hash from `public.facts`;
+- resolve the current Scenario, latest successful Forecast, active lineage, and revision from PostgreSQL readback;
+- resolve the selected Scenario option by frozen semantic member ref/hash;
+- build and commit one immutable `twin_decision_record_v1` through the existing G transaction and S3 persistence repository;
+- return the exact existing object on response-loss retry;
+- reject forged Evidence, forged option identity, stale Scenario, late Evidence, non-Human actor, wrong scope, and a different second Decision;
+- create no Approval, Plan, Task, Dispatch, Action Feedback, State, checkpoint, route, Recommendation, AO-ACT, calibration, activation, or CAP-06 authority.

@@ -2785,6 +2785,44 @@ canonical facts-based rebuild
 
 ## S4 — Human Decision
 
+S4 implementation candidate identity：
+
+```text
+baseline_main_commit:
+7e2de9c00a4ecc305c27b6572a63914f38157dbd
+
+S3 exact head:
+e63018ee0fef1e8862d73260489c858eccfebf07
+
+S3 merge commit:
+7e2de9c00a4ecc305c27b6572a63914f38157dbd
+
+S3 merged-main Gate workflow:
+29310035502 SUCCESS
+
+active_delivery_slice_id:
+MCFT-CAP-05.MCFT-13.HUMAN-DECISION-G-COMMIT-V1
+
+S4 status:
+IMPLEMENTATION_CANDIDATE
+
+S4 PostgreSQL acceptance workflow:
+29310564723 SUCCESS
+
+canonical Decision fact delta:
+1
+
+downstream inferred fact delta:
+0
+
+migration delta:
+0
+
+S5 authorized:
+false
+```
+
+
 证明 Scenario readback、selected option semantic member ref/hash、human identity、G transaction、Decision second-write conflict、idempotency，以及 no Recommendation/Approval/Plan/Task inference。
 
 ## S5 — Approval Assertion and Approved Plan Evidence Binding

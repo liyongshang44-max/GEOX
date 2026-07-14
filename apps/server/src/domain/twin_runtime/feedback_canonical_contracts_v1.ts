@@ -234,7 +234,18 @@ export function resolveCap05ScenarioOptionMemberV1(
   const optionId = selectedOptionRef.slice(prefix.length) as Cap04ScenarioOptionIdV1;
   const matches = scenarioSet.payload.options.filter((option) => option.option_id === optionId);
   if (matches.length !== 1) throw new Error("CAP05_SCENARIO_MEMBER_CARDINALITY");
-  return { option_id: optionId, option_hash: semanticHashV1(matches[0]) };
+  const assumedIrrigationMm = optionId === "NO_ACTION" ? 0 : optionId === "IRRIGATE_NOW_15MM" ? 15 : 25;
+const expectedRequestedAmount = `${assumedIrrigationMm}.000000`;
+if (matches[0].requested_irrigation_mm !== expectedRequestedAmount) throw new Error("CAP05_SCENARIO_MEMBER_AMOUNT_MISMATCH");
+return {
+  option_id: optionId,
+  option_hash: semanticHashV1({
+    scenario_set_ref: scenarioSet.object_id,
+    scenario_set_hash: scenarioSet.determinism_hash,
+    option_id: optionId,
+    assumed_irrigation_mm: assumedIrrigationMm,
+  }),
+};
 }
 
 export function buildCap05DecisionV1(input: BuildCap05DecisionInputV1): Cap05DecisionEnvelopeV1 {

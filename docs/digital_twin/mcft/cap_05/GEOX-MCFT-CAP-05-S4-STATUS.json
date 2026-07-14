@@ -1,0 +1,112 @@
+{
+  "schema_version": "geox_mcft_cap_05_s4_status_v1",
+  "capability_line_id": "MCFT-CAP-05",
+  "delivery_slice_id": "MCFT-CAP-05.MCFT-13.HUMAN-DECISION-G-COMMIT-V1",
+  "slice_kind": "HUMAN_DECISION_RUNTIME_G_COMMIT",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "baseline_main_commit": "7e2de9c00a4ecc305c27b6572a63914f38157dbd",
+  "branch": "agent/mcft-cap-05-s4-human-decision-g-commit-v1",
+  "s3_effectiveness": {
+    "pr_number": 2444,
+    "exact_head": "e63018ee0fef1e8862d73260489c858eccfebf07",
+    "materialization_workflow": 29309794282,
+    "exact_head_workflow": 29309925820,
+    "merge_commit": "7e2de9c00a4ecc305c27b6572a63914f38157dbd",
+    "head_to_merge_file_delta_count": 0,
+    "tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2446,
+    "merged_main_gate_workflow": 29310035502,
+    "merged_main_gate": "PASS",
+    "effective": true
+  },
+  "validation": {
+    "postgresql_acceptance_workflow": 29310564723,
+    "repository_typecheck": "PASS",
+    "postgresql_acceptance": "PASS"
+  },
+  "service": {
+    "service_id": "MCFT_CAP_05_CONTROLLED_REPLAY_HUMAN_DECISION_SERVICE_V1",
+    "source_path": "apps/server/src/runtime/twin_runtime/human_decision_service_v1.ts",
+    "public_route_created": false,
+    "transaction_family": "G_HUMAN_DECISION_LINK_COMMIT",
+    "canonical_object_type": "twin_decision_record_v1",
+    "persistence_repository": "PostgresFeedbackPersistenceRepositoryV1"
+  },
+  "caller_input_boundary": [
+    "scope",
+    "decision_request_evidence_ref",
+    "decision_request_evidence_hash",
+    "decided_at"
+  ],
+  "derived_authority": [
+    "human actor from controlled Replay Evidence",
+    "current Scenario Set from PostgreSQL latest and canonical readback",
+    "selected option ref and hash from canonical Scenario",
+    "active lineage and revision from current projections",
+    "canonical object identity and determinism hash from domain builder"
+  ],
+  "option_member_identity_remediation": {
+    "reason": "S1 Replay Evidence froze member identity independently from the complete Scenario option representation",
+    "basis": [
+      "scenario_set_ref",
+      "scenario_set_hash",
+      "option_id",
+      "assumed_irrigation_mm"
+    ],
+    "fixed_amounts_mm": {
+      "NO_ACTION": "0.000000",
+      "IRRIGATE_NOW_15MM": "15.000000",
+      "IRRIGATE_NOW_25MM": "25.000000"
+    },
+    "forged_hash_rejection_preserved": true
+  },
+  "acceptance_results": {
+    "canonical_decision_fact_delta": 1,
+    "decision_projection_row_delta": 1,
+    "approval_plan_task_feedback_state_checkpoint_fact_delta": 0,
+    "first_write": "INSERTED",
+    "response_loss_retry": "EXISTING_IDEMPOTENT_SUCCESS",
+    "negative_cases": [
+      "forged Evidence hash",
+      "forged selected-option hash",
+      "non-current Scenario",
+      "Evidence unavailable at decided_at",
+      "non-Human actor",
+      "different second Decision for same Scenario",
+      "wrong Reality scope"
+    ]
+  },
+  "migration_delta": 0,
+  "preserved_nonclaims": [
+    "NO_PUBLIC_ROUTE",
+    "NO_RECOMMENDATION",
+    "NO_APPROVAL_AUTHORITY",
+    "NO_APPROVED_PLAN_WRITE",
+    "NO_TASK_OR_DISPATCH",
+    "NO_ACTION_FEEDBACK_WRITE",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
+    "NO_FORECAST_EXECUTION",
+    "NO_RESIDUAL_MATCHING_ORCHESTRATION",
+    "NO_AO_ACT_CHANGE",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_MODEL_ACTIVATION",
+    "NO_CAP_06_AUTHORIZATION"
+  ],
+  "next_delivery_slice_id": "MCFT-CAP-05.MCFT-01-13.APPROVAL-PLAN-EVIDENCE-BINDING-V1",
+  "next_delivery_slice_authorized": false,
+  "effectiveness_condition": "S4_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S4_GATE_PASS",
+  "effectiveness_condition_satisfied": false,
+  "exact_changed_file_boundary": [
+    "apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.ts",
+    "apps/server/src/runtime/twin_runtime/human_decision_service_v1.ts",
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S4-HUMAN-DECISION-G.md",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S4-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S4_HUMAN_DECISION_G.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts"
+  ]
+}
