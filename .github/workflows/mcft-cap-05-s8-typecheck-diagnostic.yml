@@ -1,0 +1,41 @@
+name: mcft-cap-05-s8-typecheck-diagnostic
+
+on:
+  pull_request:
+
+jobs:
+  typecheck-diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Capture typecheck
+        run: |
+          mkdir -p acceptance-output
+          set +e
+          pnpm -r typecheck > acceptance-output/MCFT_CAP_05_S8_TYPECHECK.log 2>&1
+          status=$?
+          echo "$status" > acceptance-output/MCFT_CAP_05_S8_TYPECHECK.status
+          tail -n 300 acceptance-output/MCFT_CAP_05_S8_TYPECHECK.log
+          exit 0
+
+      - name: Upload typecheck diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-s8-typecheck-diagnostic
+          path: acceptance-output/MCFT_CAP_05_S8_TYPECHECK.*
