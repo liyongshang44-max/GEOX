@@ -56,7 +56,7 @@ async function main(): Promise<void> {
   ok("historical source is exactly the post-receipt Forecast horizon-1 semantic member targeting the observation time");
 
   assert.deepEqual(first.forecast_selection_trace.source_posterior_action_feedback_refs, [fixture.action_feedback.object_id]);
-  assert.equal(first.forecast_selection_trace.selected_forecast_ref, fixture.historical_forecast.object_id);
+  assert.equal(first.forecast_selection_trace.selected_forecast_run_ref, fixture.historical_forecast.object_id);
   assert.equal(first.forecast_selection_trace.observation_target_time, CAP05_S8_OUTCOME_TIME_V1);
   ok("selection trace proves the source posterior consumed canonical H Action Feedback");
 
@@ -120,7 +120,7 @@ async function main(): Promise<void> {
   );
   await assert.rejects(
     emptyService.executeOneTickAndCommitResidual(fixture.input),
-    /CAP05_RESIDUAL_HISTORICAL_FORECAST_MATCH_NOT_FOUND/,
+    /CAP05_FORECAST_RESIDUAL_MATCH_NOT_FOUND/,
   );
   ok("missing historical Forecast match fails closed after idempotent outcome-tick readback");
 
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
   );
   await assert.rejects(
     noFeedbackService.executeOneTickAndCommitResidual(fixture.input),
-    /CAP05_RESIDUAL_HISTORICAL_FORECAST_MATCH_NOT_FOUND/,
+    /CAP05_FORECAST_RESIDUAL_MATCH_NOT_FOUND/,
   );
   ok("Forecast whose source posterior lacks canonical H consumption is ineligible and fails closed");
 
@@ -165,7 +165,7 @@ async function main(): Promise<void> {
     equivalentSelection.forecast.object_id,
     [equivalent.object_id, fixture.historical_forecast.object_id].sort((left, right) => left.localeCompare(right))[0],
   );
-  assert.equal(equivalentSelection.trace.tie_equivalent, true);
+  assert.ok(equivalentSelection.trace.entries.some((entry) => entry.disposition === "EQUIVALENT_TIE_NOT_SELECTED"));
   ok("semantically equivalent latest-issued ties resolve by deterministic object_id order");
 
   const conflicting = structuredClone(fixture.historical_forecast);
@@ -188,7 +188,7 @@ async function main(): Promise<void> {
         source_posterior_action_feedback_refs: [fixture.action_feedback.object_id],
       },
     ],
-  }), /CAP05_RESIDUAL_LATEST_FORECAST_TIE_NOT_SEMANTICALLY_EQUIVALENT/);
+  }), /CAP05_FORECAST_RESIDUAL_LATEST_FORECAST_TIE_CONFLICT/);
   ok("non-equivalent latest-issued Forecast tie fails closed rather than selecting implicitly");
 
   assert.equal(pass, 13);
