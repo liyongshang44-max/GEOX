@@ -17,17 +17,16 @@ import {
   validateCap05ForecastResidualV1,
   type Cap05ForecastResidualEnvelopeV1,
 } from "../../domain/twin_runtime/forecast_observation_residual_v1.js";
+import { PostgresApprovedPlanBindingRepositoryV1 } from "./postgres_approved_plan_binding_repository_v1.js";
 import {
   buildCap05FeedbackCycleProjectionV1,
   type Cap05FeedbackCycleProjectionV1,
 } from "../../domain/twin_runtime/feedback_cycle_projection_v1.js";
 import {
   buildCap05ActionFeedbackProjectionRowsV1,
-  buildCap05ApprovedPlanBindingProjectionRowV1,
   buildCap05DecisionProjectionRowV1,
   buildCap05FeedbackCycleProjectionRowV1,
   buildCap05ForecastResidualProjectionRowV1,
-  type Cap05ApprovedPlanEvidenceV1,
 } from "../../projections/twin_runtime/feedback_persistence_projection_v1.js";
 
 export type Cap05PersistedObjectV1 =
@@ -365,31 +364,8 @@ export class PostgresFeedbackPersistenceRepositoryV1 {
         }
       }
 
-      const planFacts = await client.query(
-        `SELECT fact_id,record_json FROM facts
-         WHERE record_json->>'type'='approved_irrigation_plan_snapshot_v1'
-         ORDER BY fact_id`,
-      );
-      for (const row of planFacts.rows) {
-        const parsed = parseRecordJsonV1(row.fact_id, row.record_json);
-        const projection = buildCap05ApprovedPlanBindingProjectionRowV1(parsed.payload as Cap05ApprovedPlanEvidenceV1, row.fact_id);
-        await client.query(
-          `INSERT INTO twin_approved_plan_binding_projection_v1
-           (approved_plan_evidence_ref,approved_plan_evidence_hash,tenant_id,project_id,group_id,field_id,season_id,zone_id,
-            binding_id,approval_assertion_ref,approval_assertion_hash,decision_request_ref,decision_request_hash,
-            selected_option_ref,selected_option_hash,scenario_amount_mm,approved_amount_mm,plan_effective_from,plan_effective_to,
-            active_for_decision,canonical_evidence,source_fact_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::timestamptz,$19::timestamptz,$20,$21::jsonb,$22)`,
-          [
-            projection.approved_plan_evidence_ref,projection.approved_plan_evidence_hash,projection.tenant_id,projection.project_id,
-            projection.group_id,projection.field_id,projection.season_id,projection.zone_id,projection.binding_id,
-            projection.approval_assertion_ref,projection.approval_assertion_hash,projection.decision_request_ref,projection.decision_request_hash,
-            projection.selected_option_ref,projection.selected_option_hash,projection.scenario_amount_mm,projection.approved_amount_mm,
-            projection.plan_effective_from,projection.plan_effective_to,projection.active_for_decision,
-            JSON.stringify(projection.canonical_evidence),projection.source_fact_id,
-          ],
-        );
-      }
+      const planRecovery = await new PostgresApprovedPlanBindingRepositoryV1(this.pool)
+        .rebuildAllBindingsWithClientV1(client);
 
       const cycles = await this.rebuildCompleteFeedbackCyclesWithClientV1(client, objects);
       await client.query("COMMIT");
@@ -400,7 +376,7 @@ export class PostgresFeedbackPersistenceRepositoryV1 {
         action_feedback_projections_rebuilt: objects.filter((object) => object.object_type === CAP05_ACTION_FEEDBACK_OBJECT_TYPE_V1).length,
         action_feedback_evidence_rows_rebuilt: evidenceRows,
         forecast_residual_projections_rebuilt: objects.filter((object) => object.object_type === CAP05_FORECAST_RESIDUAL_OBJECT_TYPE_V1).length,
-        approved_plan_bindings_rebuilt: planFacts.rows.length,
+        approved_plan_bindings_rebuilt: planRecovery.bindings_rebuilt,
         feedback_cycles_rebuilt: cycles,
       };
     } catch (error) {
@@ -428,7 +404,9 @@ export class PostgresFeedbackPersistenceRepositoryV1 {
         [feedback.payload.approved_plan_evidence_ref, feedback.payload.approved_plan_evidence_hash],
       );
       if (planResult.rows.length !== 1) continue;
-      const planEvidence = planResult.rows[0].canonical_evidence as Cap05ApprovedPlanEvidenceV1;
+      const planCanonical = planResult.rows[0].canonical_evidence as Record<string, unknown>;
+      const validatedBinding = planCanonical.validated_binding as Record<string, unknown> | undefined;
+      if (!validatedBinding) continue;
       for (const residual of residuals) {
         if (!residual.payload.assimilation_update_ref || !residual.payload.assimilation_update_hash) continue;
         const forecast = await this.readAnyCanonicalFactWithClientV1(client, residual.payload.forecast_run_ref);
@@ -449,8 +427,8 @@ export class PostgresFeedbackPersistenceRepositoryV1 {
         if (!updatedState) continue;
         const projection = buildCap05FeedbackCycleProjectionV1({
           decision,
-          approval_assertion_ref: requiredStringV1(planEvidence.canonical_payload.approval_assertion_ref, "CAP05_CYCLE_ASSERTION_REF_REQUIRED"),
-          approval_assertion_hash: requiredStringV1(planEvidence.canonical_payload.approval_assertion_hash, "CAP05_CYCLE_ASSERTION_HASH_REQUIRED"),
+          approval_assertion_ref: requiredStringV1(validatedBinding.approval_assertion_ref, "CAP05_CYCLE_ASSERTION_REF_REQUIRED"),
+          approval_assertion_hash: requiredStringV1(validatedBinding.approval_assertion_hash, "CAP05_CYCLE_ASSERTION_HASH_REQUIRED"),
           approved_plan_ref: feedback.payload.approved_plan_evidence_ref,
           approved_plan_hash: feedback.payload.approved_plan_evidence_hash,
           dispatch_disposition: feedback.payload.dispatch_disposition,
