@@ -36,7 +36,8 @@
     "geometry_ref_hash_required": true
   },
   "validation": {
-    "state": "PENDING_CANDIDATE_CI",
+    "state": "MATERIALIZED_PENDING_CANDIDATE_CI",
+    "materialized_head": "418b103093ce18a66a48b8e6b6bdc6f80c22dc7e",
     "dedicated_runtime_acceptance_target": "9_PASS_0_FAIL",
     "s2_contract_regression": "PENDING",
     "s3_persistence_regression": "PENDING",
