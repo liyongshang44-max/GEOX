@@ -1,6 +1,6 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION.cjs
 // Purpose: verify the bounded pre-S8 Forecast Residual contract-conformance remediation without granting S8 orchestration or C-commit effectiveness.
-// Boundary: static governance and changed-file checks only; no database, Runtime execution, canonical append, route, network or wall-clock authority.
+// Boundary: static governance and changed-file checks only; no database mutation, Runtime execution, canonical append, route, network or wall-clock authority.
 
 const fs = require("node:fs");
 const { execFileSync } = require("node:child_process");
@@ -90,7 +90,12 @@ check(contract.includes("zero or negative") && contract.includes("fail closed"),
 check(contract.includes("projection_input_hash") && contract.includes("projection_trace_hash"), "contract document freezes projection hashes");
 
 check(s2Acceptance.includes("buildCap05ForecastPointMemberRefV1") && s2Acceptance.includes("actual_observation_variance: \"0.000008000000\""), "S2 regression uses canonical point ref and effective observation variance");
-check(s3Acceptance.includes("buildCap05ForecastPointMemberRefV1") && s3Acceptance.includes("forecast_issued_at: \"2026-06-04T02:00:00.000Z\""), "S3 persistence regression uses remediated residual inputs");
+check(
+  s3Acceptance.includes("buildCap05ForecastPointMemberRefV1")
+    && s3Acceptance.includes('const forecastIssuedAt = "2026-06-04T02:00:00.000Z"')
+    && s3Acceptance.includes("forecast_issued_at: forecastIssuedAt"),
+  "S3 persistence regression uses remediated residual inputs",
+);
 for (const needle of [
   "GEOX Forecast-point semantic member ref resolves exact horizon 1",
   "normalization adds Forecast variance to CAP-03 effective observation variance exactly once",
