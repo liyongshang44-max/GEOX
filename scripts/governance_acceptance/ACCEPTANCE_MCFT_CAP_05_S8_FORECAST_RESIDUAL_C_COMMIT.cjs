@@ -140,7 +140,7 @@ for (const needle of [
   'semantically equivalent latest-issued ties',
   'non-equivalent latest-issued Forecast tie fails closed',
 ]) check(inMemory.includes(needle), `in-memory acceptance covers ${needle}`);
-check(inMemory.includes('assert.equal(pass, 13)'), 'in-memory acceptance freezes 13 PASS cardinality');
+check(inMemory.includes('assert.equal(pass, 15)'), 'in-memory acceptance freezes 15 PASS cardinality');
 
 for (const needle of [
   'canonical H plus the exact post-receipt State',

@@ -193,7 +193,7 @@ async function main(): Promise<void> {
   }), /CAP05_FORECAST_RESIDUAL_LATEST_FORECAST_TIE_CONFLICT/);
   ok("non-equivalent latest-issued Forecast tie fails closed rather than selecting implicitly");
 
-  assert.equal(pass, 13);
+  assert.equal(pass, 15);
   console.log(`MCFT-CAP-05 S8 Forecast Residual outcome tick: ${pass} PASS / 0 FAIL`);
 }
 
