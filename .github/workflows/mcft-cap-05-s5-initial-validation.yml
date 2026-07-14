@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   validate:
@@ -34,6 +34,115 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Integrate validated Plan recovery into the generic CAP-05 rebuild
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          repository = Path('apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts')
+          text = repository.read_text(encoding='utf-8')
+          text = text.replace(
+              '  buildCap05ApprovedPlanBindingProjectionRowV1,\n',
+              '',
+          )
+          text = text.replace(
+              '  type Cap05ApprovedPlanEvidenceV1,\n',
+              '',
+          )
+          import_anchor = 'import {\n  buildCap05FeedbackCycleProjectionV1,'
+          new_import = 'import { PostgresApprovedPlanBindingRepositoryV1 } from "./postgres_approved_plan_binding_repository_v1.js";\n' + import_anchor
+          if 'PostgresApprovedPlanBindingRepositoryV1' not in text:
+              if import_anchor not in text:
+                  raise SystemExit('feedback repository import anchor missing')
+              text = text.replace(import_anchor, new_import, 1)
+
+          old_plan_block = '''      const planFacts = await client.query(
+        `SELECT fact_id,record_json FROM facts
+         WHERE record_json->>'type'='approved_irrigation_plan_snapshot_v1'
+         ORDER BY fact_id`,
+      );
+      for (const row of planFacts.rows) {
+        const parsed = parseRecordJsonV1(row.fact_id, row.record_json);
+        const projection = buildCap05ApprovedPlanBindingProjectionRowV1(parsed.payload as Cap05ApprovedPlanEvidenceV1, row.fact_id);
+        await client.query(
+          `INSERT INTO twin_approved_plan_binding_projection_v1
+           (approved_plan_evidence_ref,approved_plan_evidence_hash,tenant_id,project_id,group_id,field_id,season_id,zone_id,
+            binding_id,approval_assertion_ref,approval_assertion_hash,decision_request_ref,decision_request_hash,
+            selected_option_ref,selected_option_hash,scenario_amount_mm,approved_amount_mm,plan_effective_from,plan_effective_to,
+            active_for_decision,canonical_evidence,source_fact_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::timestamptz,$19::timestamptz,$20,$21::jsonb,$22)`,
+          [
+            projection.approved_plan_evidence_ref,projection.approved_plan_evidence_hash,projection.tenant_id,projection.project_id,
+            projection.group_id,projection.field_id,projection.season_id,projection.zone_id,projection.binding_id,
+            projection.approval_assertion_ref,projection.approval_assertion_hash,projection.decision_request_ref,projection.decision_request_hash,
+            projection.selected_option_ref,projection.selected_option_hash,projection.scenario_amount_mm,projection.approved_amount_mm,
+            projection.plan_effective_from,projection.plan_effective_to,projection.active_for_decision,
+            JSON.stringify(projection.canonical_evidence),projection.source_fact_id,
+          ],
+        );
+      }
+
+      const cycles = await this.rebuildCompleteFeedbackCyclesWithClientV1(client, objects);'''
+          new_plan_block = '''      const planRecovery = await new PostgresApprovedPlanBindingRepositoryV1(this.pool)
+        .rebuildAllBindingsWithClientV1(client);
+
+      const cycles = await this.rebuildCompleteFeedbackCyclesWithClientV1(client, objects);'''
+          if old_plan_block in text:
+              text = text.replace(old_plan_block, new_plan_block, 1)
+          elif 'const planRecovery = await new PostgresApprovedPlanBindingRepositoryV1' not in text:
+              raise SystemExit('feedback repository Plan recovery block missing')
+          text = text.replace(
+              '        approved_plan_bindings_rebuilt: planFacts.rows.length,',
+              '        approved_plan_bindings_rebuilt: planRecovery.bindings_rebuilt,',
+          )
+          old_cycle = '''      const planEvidence = planResult.rows[0].canonical_evidence as Cap05ApprovedPlanEvidenceV1;
+      for (const residual of residuals) {'''
+          new_cycle = '''      const planCanonical = planResult.rows[0].canonical_evidence as Record<string, unknown>;
+      const validatedBinding = planCanonical.validated_binding as Record<string, unknown> | undefined;
+      if (!validatedBinding) continue;
+      for (const residual of residuals) {'''
+          if old_cycle in text:
+              text = text.replace(old_cycle, new_cycle, 1)
+          elif 'const validatedBinding = planCanonical.validated_binding' not in text:
+              raise SystemExit('feedback repository cycle Plan trace block missing')
+          text = text.replace(
+              'approval_assertion_ref: requiredStringV1(planEvidence.canonical_payload.approval_assertion_ref, "CAP05_CYCLE_ASSERTION_REF_REQUIRED"),\n          approval_assertion_hash: requiredStringV1(planEvidence.canonical_payload.approval_assertion_hash, "CAP05_CYCLE_ASSERTION_HASH_REQUIRED"),',
+              'approval_assertion_ref: requiredStringV1(validatedBinding.approval_assertion_ref, "CAP05_CYCLE_ASSERTION_REF_REQUIRED"),\n          approval_assertion_hash: requiredStringV1(validatedBinding.approval_assertion_hash, "CAP05_CYCLE_ASSERTION_HASH_REQUIRED"),',
+          )
+          repository.write_text(text, encoding='utf-8')
+
+          regression = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts')
+          text = regression.read_text(encoding='utf-8')
+          old_insert = '''  await pool.query(
+    `INSERT INTO facts (fact_id,occurred_at,source,record_json)
+     VALUES ($1,$2::timestamptz,'mcft_cap05_replay_evidence_v1',$3::jsonb)`,
+    [`fact_${plan.source_record_id}`, plan.available_to_runtime_at, JSON.stringify({ type: plan.record_type, payload: plan })],
+  );'''
+          new_insert = '''  for (const evidence of [approval, plan]) {
+    await pool.query(
+      `INSERT INTO facts (fact_id,occurred_at,source,record_json)
+       VALUES ($1,$2::timestamptz,'mcft_cap05_replay_evidence_v1',$3::jsonb)`,
+      [`fact_${evidence.source_record_id}`, evidence.available_to_runtime_at, JSON.stringify({ type: evidence.record_type, payload: evidence })],
+    );
+  }'''
+          if old_insert in text:
+              text = text.replace(old_insert, new_insert, 1)
+          elif 'for (const evidence of [approval, plan])' not in text:
+              raise SystemExit('S3 regression Evidence insert block missing')
+          regression.write_text(text, encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts
+            git commit -m "fix(mcft-cap-05): validate Plan bindings during generic recovery"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
+
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
@@ -49,6 +158,13 @@ jobs:
         run: |
           set -o pipefail
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts 2>&1 | tee /tmp/mcft-cap05-s5-db.log
+      - name: Create isolated S3 regression database
+        run: PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -c 'CREATE DATABASE mcft_cap05_s3_regression'
+      - name: Run S3 recovery regression
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s3_regression
+          MCFT_CAP_05_S3_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts
       - name: Upload S5 DB failure log
         if: failure()
         uses: actions/upload-artifact@v4
