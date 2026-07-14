@@ -98,11 +98,16 @@ check(
 );
 for (const needle of [
   "GEOX Forecast-point semantic member ref resolves exact horizon 1",
+  "issued_at plus horizon and observation observed_at resolve to the exact 03:00 target",
   "normalization adds Forecast variance to CAP-03 effective observation variance exactly once",
+  "projection input and trace hashes are deterministic and distinct",
+  "Residual preserves NON_LINEAGE_CONTEXT time mapping and no equivalence or causal claim",
   "zero total Forecast-error variance fails closed",
   "legacy or non-resolving Forecast-point refs fail closed",
+  "withdrawn 02:50 observation cannot match the 03:00 Forecast point",
+  "representativeness variance cannot exceed effective CAP-03 observation variance",
   "forged projection trace hash fails closed",
-  "assert.equal(pass, 9)",
+  "assert.equal(pass, 10)",
 ]) check(dedicated.includes(needle), `dedicated acceptance covers ${needle}`);
 check(wrapper.includes("MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION_GATE_V1") && wrapper.includes("ACCEPTANCE_MCFT_CAP_05_S8_RESIDUAL_CONTRACT_CONFORMANCE.ts"), "standard acceptance invokes remediation gate and runtime proof");
 
