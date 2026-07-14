@@ -64,6 +64,18 @@ jobs:
               '  const normalizedQuality: "USABLE" = "USABLE";',
           )
 
+          contracts = 'apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.ts'
+          replace(
+              contracts,
+              'function exactScopeV1(scope: ContinuationScopeV1): ContinuationScopeV1 {',
+              'type Cap05ScopeLikeV1 = {\n  tenant_id: unknown;\n  project_id: unknown;\n  group_id: unknown;\n  field_id: unknown;\n  season_id: unknown;\n  zone_id: unknown;\n};\n\nfunction exactScopeV1(scope: Cap05ScopeLikeV1): ContinuationScopeV1 {',
+          )
+          replace(
+              contracts,
+              'function sameScopeV1(left: ContinuationScopeV1, right: ContinuationScopeV1): boolean {',
+              'function sameScopeV1(left: Cap05ScopeLikeV1, right: Cap05ScopeLikeV1): boolean {',
+          )
+
           acceptance = 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts'
           replace(
               acceptance,
@@ -86,8 +98,9 @@ jobs:
           if ! git diff --quiet; then
             git add apps/server/src/domain/twin_runtime/feedback_runtime_config_v1.ts \
                     apps/server/src/domain/twin_runtime/action_feedback_to_executed_irrigation_v1.ts \
+                    apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.ts \
                     scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_CONTRACTS_PROJECTION_CONFIG.ts
-            git commit -m "fix(mcft-cap-05): preserve inherited config semantics"
+            git commit -m "fix(mcft-cap-05): validate scoped envelope before narrowing"
             git push origin HEAD:${{ github.head_ref }}
           fi
 
