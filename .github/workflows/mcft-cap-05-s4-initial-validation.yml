@@ -1,15 +1,15 @@
-name: MCFT-CAP-05 S4 initial validation
+name: MCFT-CAP-05 S4 final materialization
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [synchronize]
     branches: [main]
 
 permissions:
   contents: write
 
 jobs:
-  validate:
+  finalize:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s4-human-decision-g-commit-v1'
     runs-on: ubuntu-latest
     services:
@@ -35,53 +35,6 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Align option-member hash policy with merged S1 Replay Evidence
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          contracts = Path('apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.ts')
-          text = contracts.read_text(encoding='utf-8')
-          old = '  return { option_id: optionId, option_hash: semanticHashV1(matches[0]) };'
-          new = '''  const assumedIrrigationMm = optionId === "NO_ACTION" ? 0 : optionId === "IRRIGATE_NOW_15MM" ? 15 : 25;
-          const expectedRequestedAmount = `${assumedIrrigationMm}.000000`;
-          if (matches[0].requested_irrigation_mm !== expectedRequestedAmount) throw new Error("CAP05_SCENARIO_MEMBER_AMOUNT_MISMATCH");
-          return {
-            option_id: optionId,
-            option_hash: semanticHashV1({
-              scenario_set_ref: scenarioSet.object_id,
-              scenario_set_hash: scenarioSet.determinism_hash,
-              option_id: optionId,
-              assumed_irrigation_mm: assumedIrrigationMm,
-            }),
-          };'''
-          if old in text:
-              contracts.write_text(text.replace(old, new, 1), encoding='utf-8')
-          elif 'CAP05_SCENARIO_MEMBER_AMOUNT_MISMATCH' not in text:
-              raise SystemExit('option member hash patch target missing')
-
-          acceptance = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts')
-          text = acceptance.read_text(encoding='utf-8')
-          text = text.replace('import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";\n', '')
-          text = text.replace(
-              'import { buildCap05ScenarioOptionMemberRefV1 } from "../../apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.js";',
-              'import { buildCap05ScenarioOptionMemberRefV1, resolveCap05ScenarioOptionMemberV1 } from "../../apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.js";',
-          )
-          text = text.replace(
-              '      record.canonical_payload.selected_option_hash = semanticHashV1(noActionOption);',
-              '      record.canonical_payload.selected_option_hash = resolveCap05ScenarioOptionMemberV1(scenario, record.canonical_payload.selected_option_ref).option_hash;',
-          )
-          acceptance.write_text(text, encoding='utf-8')
-          PY
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet; then
-            git add apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.ts scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts
-            git commit -m "fix(mcft-cap-05): align option member hash with controlled Evidence"
-            git push origin HEAD:${{ github.head_ref }}
-          fi
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
@@ -90,17 +43,39 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --no-frozen-lockfile
-      - name: Typecheck repository
-        run: pnpm -r typecheck
-      - name: Run S4 PostgreSQL acceptance
+
+      - name: Materialize S4 SSOT
+        run: python3 .mcft_cap05_s4_materializer.py
+
+      - name: Commit exact S4 candidate and remove temporary files
         shell: bash
         run: |
-          set -o pipefail
-          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts 2>&1 | tee /tmp/mcft-cap05-s4-db.log
-      - name: Upload S4 DB failure log
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap-05-s4-db-failure
-          path: /tmp/mcft-cap05-s4-db.log
-          if-no-files-found: ignore
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/workflows/mcft-cap-05-s4-initial-validation.yml .mcft_cap05_s4_materializer.py
+          git add \
+            apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.ts \
+            apps/server/src/runtime/twin_runtime/human_decision_service_v1.ts \
+            docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md \
+            docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S4-HUMAN-DECISION-G.md \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S4-STATUS.json \
+            docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S4_HUMAN_DECISION_G.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts
+          git commit -m "feat(mcft-cap-05): establish S4 Human Decision through G"
+
+      - name: Run S4 governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S4_HUMAN_DECISION_G.cjs
+
+      - name: Run S4 PostgreSQL acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts
+
+      - name: Typecheck repository
+        run: pnpm -r typecheck
+
+      - name: Push final S4 candidate
+        run: git push origin HEAD:${{ github.head_ref }}
