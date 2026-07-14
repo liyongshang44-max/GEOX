@@ -81,14 +81,14 @@ check(status.effectiveness_condition_satisfied === false, 'Runtime candidate doe
 for (const token of [
   'LATEST_COMPLETED_FORECAST_POINT_TARGETING_OBSERVATION_V1',
   'GEOX_FORECAST_POINT_SEMANTIC_MEMBER_REF_V1',
-  'CAP05_RESIDUAL_HISTORICAL_FORECAST_MATCH_NOT_FOUND',
-  'CAP05_RESIDUAL_LATEST_FORECAST_TIE_NOT_SEMANTICALLY_EQUIVALENT',
+  'CAP05_FORECAST_RESIDUAL_MATCH_NOT_FOUND',
+  'CAP05_FORECAST_RESIDUAL_LATEST_FORECAST_TIE_CONFLICT',
   'source_posterior_action_feedback_refs',
-  'tie_equivalent',
+  'EQUIVALENT_TIE_NOT_SELECTED',
   'semantic_digest',
 ]) check(selector.includes(token), `historical selector freezes ${token}`);
 check(selector.includes('validateCap04CanonicalForecastRunPayloadV1'), 'selector validates canonical completed Forecast authority');
-check(selector.includes('issued_at.localeCompare') && selector.includes('object_id.localeCompare'), 'selector applies latest-issued then object-id deterministic order');
+check(selector.includes('forecast_issued_at.localeCompare') && selector.includes('forecast_run_ref.localeCompare'), 'selector applies latest-issued then object-id deterministic order');
 check(!selector.includes('Date.now(') && !selector.includes('new Date()'), 'selector has no wall-clock selection authority');
 
 check(source.includes('twin_forecast_run_projection_v1') && source.includes('twin_forecast_point_projection_v1'), 'PostgreSQL source reads existing Forecast projections');
