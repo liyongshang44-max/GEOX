@@ -14,11 +14,13 @@ const { generate, sha256 } = require('../mcft/GENERATE_MCFT_CAP_05_FEEDBACK_DATA
 const ROOT = path.resolve(__dirname, '../..');
 const BASELINE = process.env.MCFT_CAP_05_S1_BASELINE || '55b61b36a7d408ab68c2786499e14bab886d01e2';
 const POSTMERGE = process.argv.includes('--postmerge');
+const PRECOMMIT = process.argv.includes('--precommit');
 const MATERIALIZED = path.join(ROOT, 'fixtures/mcft/water_state/feedback_v1');
 const NEGATIVE = path.join(ROOT, 'fixtures/mcft/water_state/negative/MCFT_CAP_05_NEGATIVE_FIXTURES.json');
 const STATUS = path.join(ROOT, 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S1-STATUS.json');
 const POSITIVE_FILES = ['approval_assertions.jsonl','approved_plans.jsonl','decision_requests.jsonl','et0_context.jsonl','execution_receipts.jsonl','external_dispatch.jsonl','manifest.json','rainfall_context.jsonl','soil_observations.jsonl'];
 const EXPECTED_NEGATIVE_CASES = ['CONFLICTING_DUPLICATE','CROSS_HOUR_EXECUTION','EVIDENCE_IDENTITY_CONFLICT','LATE_AFTER_EVIDENCE_WINDOW_FREEZE','LATE_AFTER_LOGICAL_TIME_CUTOFF','MISSING_APPROVAL_ASSERTION','MULTIPLE_EVENT','PLAN_ASSERTION_MISMATCH','WRONG_BINDING','WRONG_SCOPE','WRONG_STATUS','WRONG_UNIT'];
+const TEMPORARY_PRECOMMIT_FILES = new Set(['.github/workflows/mcft-cap-05-s1-materialize.yml','.mcft_cap05_s1_materializer.py']);
 let pass = 0;
 let fail = 0;
 function check(condition, label, detail = '') { if (condition) { pass += 1; console.log(`PASS ${label}`); } else { fail += 1; console.error(`FAIL ${label}${detail ? `: ${detail}` : ''}`); } }
@@ -89,9 +91,12 @@ check(status.replay_evidence_fact_delta === 8, 'S1 Replay Evidence fact delta ei
 
 let changed = [];
 try {
-  changed = git(['diff', '--name-only', POSTMERGE ? `${BASELINE}..HEAD` : `${BASELINE}...HEAD`]).split(/\r?\n/).filter(Boolean).sort();
-  check(JSON.stringify(changed) === JSON.stringify([...status.exact_changed_file_boundary].sort()), 'git exact changed-file boundary', JSON.stringify(changed));
-} catch (error) { console.error(error); check(false, 'git exact changed-file boundary'); }
+  const range = POSTMERGE ? `${BASELINE}..HEAD` : `${BASELINE}...HEAD`;
+  const tracked = git(['diff', '--name-only', range]).split(/\r?\n/).filter(Boolean);
+  const untracked = PRECOMMIT ? git(['ls-files', '--others', '--exclude-standard']).split(/\r?\n/).filter(Boolean) : [];
+  changed = [...new Set([...tracked, ...untracked])].filter((file) => !PRECOMMIT || !TEMPORARY_PRECOMMIT_FILES.has(file)).sort();
+  check(JSON.stringify(changed) === JSON.stringify([...status.exact_changed_file_boundary].sort()), PRECOMMIT ? 'precommit exact final changed-file boundary' : 'git exact changed-file boundary', JSON.stringify(changed));
+} catch (error) { console.error(error); check(false, PRECOMMIT ? 'precommit exact final changed-file boundary' : 'git exact changed-file boundary'); }
 for (const file of changed) check(!file.startsWith('apps/server/src/') && !file.startsWith('apps/server/db/migrations/') && !file.startsWith('apps/web/'), `no forbidden path ${file}`);
 try { git(['diff', '--check', POSTMERGE ? `${BASELINE}..HEAD` : `${BASELINE}...HEAD`]); check(true, 'git diff --check'); } catch (error) { console.error(error); check(false, 'git diff --check'); }
 fs.rmSync(tmp, { recursive: true, force: true });
