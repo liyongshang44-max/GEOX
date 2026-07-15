@@ -1,0 +1,90 @@
+name: mcft-cap-05-final-acceptance-wiring-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-05-final-acceptance-wiring-proof.yml'
+      - 'scripts/remediation/APPLY_MCFT_CAP_05_FINAL_ACCEPTANCE_WIRING.py'
+      - 'scripts/acceptance/run_acceptance.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION.cjs'
+
+permissions:
+  contents: write
+
+jobs:
+  prove-and-commit:
+    if: github.head_ref == 'agent/mcft-cap-05-post-closure-config-conformance-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: landos
+          POSTGRES_PASSWORD: ci-pilot-postgres-strong-2026
+          POSTGRES_DB: landos
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U landos -d landos"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: landos
+      POSTGRES_PASSWORD: ci-pilot-postgres-strong-2026
+      POSTGRES_DB: landos
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5433"
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Apply final acceptance wiring
+        run: python scripts/remediation/APPLY_MCFT_CAP_05_FINAL_ACCEPTANCE_WIRING.py
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION.cjs
+
+      - name: Formal PostgreSQL runner
+        run: |
+          DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}" \
+            pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts
+
+      - name: Acceptance harness syntax and listing
+        run: |
+          node --check scripts/acceptance/run_acceptance.cjs
+          node scripts/acceptance/run_acceptance.cjs --list | grep MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER
+
+      - name: Commit proven acceptance wiring
+        run: |
+          set -o pipefail
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f -- \
+            scripts/acceptance/run_acceptance.cjs \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION.cjs
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'No acceptance wiring change required'
+            exit 0
+          fi
+          git commit -m 'MCFT-CAP-05: wire formal runner into default acceptance'
+          git push origin HEAD:${{ github.head_ref }}
