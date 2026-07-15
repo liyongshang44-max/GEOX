@@ -39,6 +39,10 @@
     "allowed_claim": "BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN_IMPLEMENTATION_AUTHORIZED"
   },
   "validation": {
+    "materialization_workflow": 29397132594,
+    "materialization_source_head": "3d4fd829fd1050f735b8293a02df14ce80ddf19f",
+    "materialized_candidate_commit": "b0c141d20d6601a97bf1efdd0af4738b38c55614",
+    "materialization_state": "MATERIALIZED_CANDIDATE_COMMITTED",
     "candidate_validation_workflow": null,
     "candidate_validation_state": "PENDING",
     "governance_gate": "PENDING",
@@ -46,10 +50,7 @@
     "repository_build": "PENDING",
     "server_selfcheck": "PENDING",
     "standard_acceptance": "PENDING",
-    "commercial_mvp0_release_gate": "PENDING",
-    "materialization_workflow": 29397132594,
-    "materialization_source_head": "3d4fd829fd1050f735b8293a02df14ce80ddf19f",
-    "materialization_state": "MATERIALIZED_PENDING_CANDIDATE_COMMIT"
+    "commercial_mvp0_release_gate": "PENDING"
   },
   "canonical_object_delta": 0,
   "transaction_family_delta": 0,
