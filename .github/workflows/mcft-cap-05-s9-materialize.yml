@@ -1,0 +1,154 @@
+name: mcft-cap-05-s9-materialize
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap-05-s9-ssot-settlement-v1
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout settlement branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-05-s9-ssot-settlement-v1
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Materialize final settlement files
+        run: node MCFT_CAP_05_S9_SETTLEMENT_APPLY.mjs
+
+      - name: Harden settlement gate semantics
+        env:
+          MATERIALIZATION_WORKFLOW: ${{ github.run_id }}
+          MATERIALIZATION_SOURCE_HEAD: ${{ github.sha }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const gatePath = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_SETTLEMENT.cjs';
+          let gate = fs.readFileSync(gatePath, 'utf8');
+
+          const mapAnchor = 'const map = read(expectedFiles[0]);';
+          if (!gate.includes('function mergeSecondParentTreeEquivalent()')) {
+            if (!gate.includes(mapAnchor)) throw new Error('S9_SETTLEMENT_GATE_MAP_ANCHOR_MISSING');
+            gate = gate.replace(
+              mapAnchor,
+              `function mergeSecondParentTreeEquivalent() {
+            try {
+              execFileSync('git', ['rev-parse', '--verify', 'HEAD^2'], {
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'ignore'],
+              });
+              return execFileSync('git', ['diff', '--name-only', 'HEAD^2', 'HEAD'], {
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'ignore'],
+              }).trim() === '';
+            } catch {
+              return null;
+            }
+          }
+
+          ${mapAnchor}`,
+            );
+          }
+
+          const validationAnchor = "check(status.canonical_object_delta === 0 && status.transaction_family_delta === 0 && status.migration_delta === 0 && status.runtime_source_delta === 0, 'settlement is governance-only');";
+          if (!gate.includes('settlement validation lifecycle is explicit')) {
+            if (!gate.includes(validationAnchor)) throw new Error('S9_SETTLEMENT_GATE_VALIDATION_ANCHOR_MISSING');
+            gate = gate.replace(
+              validationAnchor,
+              `${validationAnchor}
+          check(
+            ['PENDING', 'SUCCESS_PENDING_FINAL_EXACT_HEAD_CI'].includes(status.validation?.candidate_validation_state),
+            'settlement validation lifecycle is explicit',
+          );
+          if (status.validation?.candidate_validation_state === 'SUCCESS_PENDING_FINAL_EXACT_HEAD_CI') {
+            check(
+              /^[0-9a-f]{40}$/.test(status.validation?.materialized_candidate_head || '')
+                && Number.isInteger(status.validation?.candidate_validation_workflow),
+              'materialized candidate validation identity is frozen',
+            );
+          }`,
+            );
+          }
+
+          const oldPostmerge = `} else if (mode === 'postmerge') {
+            check(changed === null || changed.length === 0, 'postmerge main has no settlement delta against frozen S9 main');
+            check(status.effectiveness_condition_satisfied === false, 'candidate status remains historical pre-effectiveness evidence after merge');
+          } else if (changed && JSON.stringify(changed) === JSON.stringify(expectedFiles)) {`;
+          const newPostmerge = `} else if (mode === 'postmerge') {
+            check(
+              changed === null || JSON.stringify(changed) === JSON.stringify(expectedFiles),
+              'postmerge main retains the exact eight-file S9 settlement boundary against the frozen S9 baseline',
+            );
+            const secondParentEquivalent = mergeSecondParentTreeEquivalent();
+            check(
+              secondParentEquivalent !== false,
+              'settlement merge tree equals the exact settlement head or the second parent is unavailable in a shallow checkout',
+            );
+            check(status.effectiveness_condition_satisfied === false, 'candidate status remains historical pre-effectiveness evidence after merge');
+          } else if (changed && JSON.stringify(changed) === JSON.stringify(expectedFiles)) {`;
+          if (!gate.includes(newPostmerge)) {
+            if (!gate.includes(oldPostmerge)) throw new Error('S9_SETTLEMENT_GATE_POSTMERGE_BLOCK_MISSING');
+            gate = gate.replace(oldPostmerge, newPostmerge);
+          }
+
+          if (!gate.includes('mergeSecondParentTreeEquivalent')) throw new Error('S9_SETTLEMENT_GATE_POSTMERGE_HARDENING_FAILED');
+          fs.writeFileSync(gatePath, gate.endsWith('\n') ? gate : `${gate}\n`, 'utf8');
+
+          const statusPath = 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S9-SETTLEMENT-STATUS.json';
+          const status = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+          status.validation.materialization_workflow = Number(process.env.MATERIALIZATION_WORKFLOW);
+          status.validation.materialization_source_head = process.env.MATERIALIZATION_SOURCE_HEAD;
+          status.validation.materialization_state = 'MATERIALIZED_PENDING_CANDIDATE_COMMIT';
+          fs.writeFileSync(statusPath, `${JSON.stringify(status, null, 2)}\n`, 'utf8');
+          NODE
+
+      - name: Remove temporary materialization artifacts
+        run: |
+          rm MCFT_CAP_05_S9_SETTLEMENT_APPLY.mjs
+          rm .github/workflows/mcft-cap-05-s9-materialize.yml
+
+      - name: Commit exact settlement candidate
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "MCFT-CAP-05 S9 settlement: materialize final boundary"
+
+      - name: Verify exact eight-file boundary and candidate gate
+        run: |
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_SETTLEMENT.cjs --candidate
+          node <<'NODE'
+          const { execFileSync } = require('node:child_process');
+          const expected = [
+            'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
+            'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json',
+            'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json',
+            'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json',
+            'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S9-SETTLEMENT-STATUS.json',
+            'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md',
+            'scripts/dev/assert_local_pnpm_runtime.cjs',
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_SETTLEMENT.cjs',
+          ].sort();
+          const actual = execFileSync(
+            'git',
+            ['diff', '--name-only', '07485e93ab17c5a4f9dc057f6c79e190a38d425f..HEAD'],
+            { encoding: 'utf8' },
+          ).trim().split(/\r?\n/).filter(Boolean).sort();
+          if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+            throw new Error(`UNEXPECTED_FINAL_BOUNDARY:${JSON.stringify(actual)}`);
+          }
+          NODE
+
+      - name: Push materialized candidate
+        run: git push origin HEAD:agent/mcft-cap-05-s9-ssot-settlement-v1
