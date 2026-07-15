@@ -42,17 +42,26 @@
   },
   "replay_binding_execution_metadata_acceptance": {
     "script_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_BINDING_EXECUTION_METADATA.ts",
-    "assertion_count": 6,
+    "assertion_count": 8,
     "candidate_result": "PASS",
-    "proof_workflow_run": 29432935520,
+    "proof_workflow_run": 29438990685,
+    "proof_input_head": "dd6932939e086975490918fef27ee9e77b525653",
+    "proof_source_commit": "8b386850b0370f27d1756ab10571eec452933ad6",
+    "execution_metadata_field": "execution_metadata",
+    "execution_metadata_policy_id": "SOURCE_BINDING_CONVERSION_RULE_VERSION_FROM_BINDING_VERSION_V1",
     "source_record_identity_mutation": false,
-    "source_binding_authority_mutation": false
+    "source_binding_authority_mutation": false,
+    "canonical_replay_conversion_rule_mutation": false,
+    "canonical_a0_evidence_projection_mutation": false,
+    "active_lineage_identity_mutation": false,
+    "cap03_inherited_recovery_regression": "PASS"
   },
   "formal_postgresql_runner_regression": {
     "script_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts",
     "status": "PASS_CANDIDATE_BRANCH",
-    "proof_workflow_run": 29432935520,
-    "proof_source_commit": "9af1c4a234dc97229de19854b8496973478f88c6",
+    "proof_workflow_run": 29438990685,
+    "proof_input_head": "dd6932939e086975490918fef27ee9e77b525653",
+    "proof_source_commit": "8b386850b0370f27d1756ab10571eec452933ad6",
     "candidate_pull_request": 2501,
     "checkpoint_72_to_80": "PASS",
     "first_committed_sequence": 73,
@@ -92,5 +101,5 @@
   ],
   "authority_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-POST-CLOSURE-RUNTIME-CONFORMANCE-REMEDIATION.md",
   "historical_closure_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json",
-  "record_revision": "candidate-remediation-proven-awaiting-merged-main-effectiveness-v1"
+  "record_revision": "candidate-remediation-proven-canonical-safe-replay-metadata-v2"
 }
