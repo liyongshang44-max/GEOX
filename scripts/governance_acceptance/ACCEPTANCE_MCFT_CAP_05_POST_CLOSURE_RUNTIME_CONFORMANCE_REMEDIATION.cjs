@@ -1,6 +1,6 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION.cjs
-// Purpose: enforce the append-only CAP-05 post-closure Runtime conformance remediation authority, non-canonical Config and Replay execution metadata separation, proven candidate PostgreSQL regression, temporary-proof cleanup, and successor block pending merged-main effectiveness.
-// Boundary: repository and child-process acceptance only; no database mutation, canonical Twin write, active binding, Model Activation, calibration, route, scheduler, CAP-06 Runtime authority, merge-effectiveness claim, or predecessor-eligibility restoration.
+// Purpose: enforce the append-only CAP-05 post-closure Runtime conformance remediation authority, exact merged-main effectiveness, non-canonical Config and Replay execution metadata separation, temporary-proof cleanup, and narrowly restored CAP-06 predecessor eligibility.
+// Boundary: repository and child-process acceptance only; no database mutation, canonical Twin write, active binding, Model Activation, calibration, route, scheduler, CAP-06 Runtime authority, migration authority, or capability-completion claim.
 
 'use strict';
 
@@ -16,6 +16,7 @@ const exists = (relative) => fs.existsSync(path.join(ROOT, relative));
 
 const CONTRACT = 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-POST-CLOSURE-RUNTIME-CONFORMANCE-REMEDIATION.md';
 const STATUS = 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-POST-CLOSURE-RUNTIME-CONFORMANCE-STATUS.json';
+const EFFECTIVENESS = 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-POST-CLOSURE-RUNTIME-CONFORMANCE-EFFECTIVENESS.json';
 const CLOSURE = 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json';
 const VIEW = 'apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts';
 const RESOLVER = 'apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts';
@@ -41,6 +42,7 @@ const TEMPORARY_PROOF_FILES = [
   '.github/workflows/mcft-cap-05-postgresql-runner-regression-v2.yml',
   '.github/workflows/mcft-cap-05-replay-metadata-separation-proof.yml',
   '.github/workflows/mcft-cap-05-final-acceptance-wiring-proof.yml',
+  '.github/workflows/mcft-cap-05-postmerge-effectiveness-proof.yml',
   'scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py',
   'scripts/remediation/APPLY_MCFT_CAP_05_FORMAL_REPLAY_BINDING_AUTHORITY.py',
   'scripts/remediation/APPLY_MCFT_CAP_05_OUTCOME_OBSERVATION_REPLAY_VIEW.py',
@@ -59,6 +61,7 @@ const ok = (label) => {
 for (const relative of [
   CONTRACT,
   STATUS,
+  EFFECTIVENESS,
   CLOSURE,
   VIEW,
   RESOLVER,
@@ -83,7 +86,7 @@ assert.equal(exists(OBSOLETE_FAKE_ENVELOPE), false, 'FAKE_CANONICAL_ENVELOPE_ADA
 for (const relative of TEMPORARY_PROOF_FILES) {
   assert.equal(exists(relative), false, `TEMPORARY_PROOF_FILE_MUST_BE_ABSENT:${relative}`);
 }
-ok('required permanent authority, implementation and acceptance files exist; obsolete and temporary proof files are absent');
+ok('required permanent authority, effectiveness, implementation and acceptance files exist; obsolete and temporary proof files are absent');
 
 const closure = readJson(CLOSURE);
 assert.equal(closure.capability_line_id, 'MCFT-CAP-05');
@@ -98,12 +101,34 @@ assert.equal(status.defect_id, 'MCFT-CAP-05-CONFORMANCE-DEFECT-01');
 assert.equal(status.defect_owner, 'MCFT-CAP-05');
 assert.equal(status.historical_completion_status, 'COMPLETE');
 assert.equal(status.historical_closure_rewrite, false);
-assert.equal(status.post_closure_conformance_status, 'REMEDIATION_PROVEN_ON_CANDIDATE_BRANCH_AWAITING_MERGED_MAIN_EFFECTIVENESS');
+assert.equal(status.post_closure_conformance_status, 'POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION_EFFECTIVE');
 assert.deepEqual(status.affected_claims, [
   'BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN_ESTABLISHED',
   'FORMAL_POSTGRESQL_RUNNER_TERMINAL_CHAIN_REPRODUCIBLE',
 ]);
-ok('post-closure defect authority is append-only, owned by CAP-05 and candidate-proven');
+ok('post-closure defect authority is append-only, owned by CAP-05 and merged-main effective');
+
+const effectiveness = readJson(EFFECTIVENESS);
+assert.equal(effectiveness.authority_id, 'MCFT-CAP-05.POST-CLOSURE-RUNTIME-CONFORMANCE-EFFECTIVENESS-V1');
+assert.equal(effectiveness.remediation_authority_id, status.authority_id);
+assert.equal(effectiveness.defect_id, status.defect_id);
+assert.equal(effectiveness.historical_completion_status, 'COMPLETE');
+assert.equal(effectiveness.historical_closure_rewrite, false);
+assert.equal(effectiveness.remediation_pull_request, 2501);
+assert.equal(effectiveness.merged_main_sha, '0867439b17545bec5fd84e373e72d17881ab50ae');
+assert.equal(effectiveness.merged_main_effectiveness_status, 'EFFECTIVE');
+assert.equal(effectiveness.exact_source_identity_proof, 'PASS');
+assert.equal(effectiveness.proof_workflow_run, 29441019824);
+for (const result of Object.values(effectiveness.proof_steps)) {
+  assert.equal(result, 'PASS');
+}
+assert.equal(effectiveness.successor_predecessor_eligibility, 'RESTORED');
+assert.equal(effectiveness.cap_06_s0_resume_authorized, true);
+assert.equal(effectiveness.cap_06_s0_resume_scope, 'PREDECESSOR_QUALIFICATION_ONLY');
+assert.equal(effectiveness.cap_06_runtime_authority, false);
+assert.equal(effectiveness.cap_06_migration_authority, false);
+assert.equal(effectiveness.cap_06_model_activation_authority, false);
+ok('append-only effectiveness record locks exact merged-main proof and narrow successor restoration');
 
 assert.equal(status.canonical_cap05_config_mutation, false);
 assert.equal(status.replacement_canonical_cap04_config_created, false);
@@ -120,8 +145,11 @@ assert.equal(status.execution_view_acceptance.assertion_count, 10);
 const replayProof = status.replay_binding_execution_metadata_acceptance;
 assert.equal(replayProof.candidate_result, 'PASS');
 assert.equal(replayProof.assertion_count, 8);
-assert.equal(replayProof.proof_workflow_run, 29438990685);
-assert.equal(replayProof.proof_source_commit, '8b386850b0370f27d1756ab10571eec452933ad6');
+assert.equal(replayProof.candidate_proof_workflow_run, 29438990685);
+assert.equal(replayProof.candidate_proof_source_commit, '8b386850b0370f27d1756ab10571eec452933ad6');
+assert.equal(replayProof.merged_main_result, 'PASS');
+assert.equal(replayProof.merged_main_proof_workflow_run, 29441019824);
+assert.equal(replayProof.merged_main_source_commit, '0867439b17545bec5fd84e373e72d17881ab50ae');
 assert.equal(replayProof.execution_metadata_field, 'execution_metadata');
 assert.equal(replayProof.execution_metadata_policy_id, 'SOURCE_BINDING_CONVERSION_RULE_VERSION_FROM_BINDING_VERSION_V1');
 assert.equal(replayProof.source_record_identity_mutation, false);
@@ -130,13 +158,16 @@ assert.equal(replayProof.canonical_replay_conversion_rule_mutation, false);
 assert.equal(replayProof.canonical_a0_evidence_projection_mutation, false);
 assert.equal(replayProof.active_lineage_identity_mutation, false);
 assert.equal(replayProof.cap03_inherited_recovery_regression, 'PASS');
-ok('execution-view and canonical-safe Replay execution-metadata candidate acceptances are locked');
+ok('execution-view and canonical-safe Replay execution-metadata candidate and merged-main acceptances are locked');
 
 const formal = status.formal_postgresql_runner_regression;
-assert.equal(formal.status, 'PASS_CANDIDATE_BRANCH');
-assert.equal(formal.proof_workflow_run, 29438990685);
-assert.equal(formal.proof_source_commit, '8b386850b0370f27d1756ab10571eec452933ad6');
+assert.equal(formal.status, 'PASS_MERGED_MAIN');
+assert.equal(formal.candidate_proof_workflow_run, 29438990685);
+assert.equal(formal.candidate_proof_source_commit, '8b386850b0370f27d1756ab10571eec452933ad6');
 assert.equal(formal.candidate_pull_request, 2501);
+assert.equal(formal.merged_main_proof_workflow_run, 29441019824);
+assert.equal(formal.merged_main_source_commit, '0867439b17545bec5fd84e373e72d17881ab50ae');
+assert.equal(formal.exact_source_identity_proof, 'PASS');
 for (const field of [
   'checkpoint_72_to_80',
   'eight_runtime_configs',
@@ -160,20 +191,35 @@ assert.equal(formal.scenario_point_count, 1728);
 assert.equal(formal.causal_effect_claimed, false);
 assert.equal(formal.forecast_assimilation_equivalence_claimed, false);
 assert.equal(formal.automatic_history_rewrite, false);
-ok('formal PostgreSQL 72-to-80 candidate proof and nonclaims are locked');
+ok('formal PostgreSQL 72-to-80 merged-main proof and nonclaims are locked');
 
 assert.equal(status.candidate_proof_cleanup.temporary_write_enabled_workflow_retained, false);
 assert.equal(status.candidate_proof_cleanup.temporary_proof_workflows_retained, false);
 assert.equal(status.candidate_proof_cleanup.temporary_patch_generators_retained, false);
 ok('temporary proof infrastructure is not part of the remediation deliverable');
 
+assert.equal(status.merged_main_effectiveness.status, 'EFFECTIVE');
+assert.equal(status.merged_main_effectiveness.merged_pull_request, 2501);
+assert.equal(status.merged_main_effectiveness.merged_main_sha, '0867439b17545bec5fd84e373e72d17881ab50ae');
+assert.equal(status.merged_main_effectiveness.proof_workflow_run, 29441019824);
+assert.equal(status.merged_main_effectiveness.exact_source_identity_proof, 'PASS');
+assert.equal(status.merged_main_effectiveness.terminal_predecessor_lock_reproducible, 'PASS');
+assert.equal(status.merged_main_effectiveness.formal_postgresql_terminal_chain_reproducible, 'PASS');
+ok('current status points to the exact merged-main effectiveness record');
+
 assert.equal(status.successor_capability_line_id, 'MCFT-CAP-06');
-assert.equal(status.successor_predecessor_eligibility, 'BLOCKED');
-assert.equal(status.cap_06_s0_status, 'BLOCKED_AWAITING_REMEDIATION_MERGED_MAIN_EFFECTIVENESS');
-assert.equal(status.cap_06_s0_resume_authorized, false);
+assert.equal(status.successor_predecessor_eligibility, 'RESTORED');
+assert.equal(status.cap_06_s0_status, 'PREDECESSOR_ELIGIBILITY_RESTORED_S0_RESUME_AUTHORIZED');
+assert.equal(status.cap_06_s0_resume_authorized, true);
+assert.equal(status.cap_06_s0_resume_scope, 'PREDECESSOR_QUALIFICATION_ONLY');
 assert.equal(status.cap_06_runtime_authority, false);
 assert.equal(status.cap_06_migration_authority, false);
-ok('CAP-06 S0 remains blocked and receives no Runtime or migration authority before merged-main effectiveness');
+assert.deepEqual(status.resume_conditions_satisfied, [
+  'REMEDIATION_MERGED_MAIN_EFFECTIVE',
+  'FORMAL_CAP05_POSTGRESQL_RUNNER_REGRESSION_PASS_ON_MERGED_MAIN',
+  'TERMINAL_PREDECESSOR_LOCK_REPRODUCIBLE',
+]);
+ok('CAP-06 predecessor eligibility is restored only for S0 qualification; Runtime and migration authority remain false');
 
 const view = readText(VIEW);
 assert.match(view, /export type ResolvedCap04ExecutionConfigV1 = \{/);
@@ -264,5 +310,5 @@ for (const [script, expectedSummary] of [
 }
 ok('permanent non-database remediation acceptances pass');
 
-assert.equal(pass, 14);
+assert.equal(pass, 16);
 process.stdout.write(`SUMMARY ${pass} PASS / 0 FAIL\n`);
