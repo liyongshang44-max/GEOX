@@ -77,6 +77,13 @@ jobs:
             exit "$rc"
           fi
 
+      - name: Upload resumed preflight diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s0-resumed-preflight-diagnostics
+          path: /tmp/s0-preflight.log
+
       - name: Restore exact permanent candidate boundary
         run: |
           rm -f .github/workflows/mcft-cap-06-s0-materialize.yml
