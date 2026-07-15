@@ -38,7 +38,16 @@ jobs:
           fetch-depth: 0
 
       - name: Apply remaining builder seam
-        run: python scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py
+        run: |
+          set -o pipefail
+          python scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py 2>&1 | tee /tmp/builder-seam-generator.log
+
+      - name: Upload builder-seam generator diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-builder-seam-generator-diagnostics
+          path: /tmp/builder-seam-generator.log
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -64,7 +73,16 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION.cjs
 
       - name: Formal PostgreSQL runner regression
-        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts 2>&1 | tee /tmp/cap05-postgresql-regression.log
+
+      - name: Upload PostgreSQL regression diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-postgresql-regression-diagnostics
+          path: /tmp/cap05-postgresql-regression.log
 
       - name: Commit proven source
         run: |
