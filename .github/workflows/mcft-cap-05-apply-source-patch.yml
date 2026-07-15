@@ -1,11 +1,13 @@
-# Proof revision: rerun after governance assertion-count correction.
+# Proof revision: include source-binding conversion-rule execution metadata conformance.
 name: mcft-cap-05-apply-source-patch
 
 on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-05-apply-source-patch.yml'
+      - 'apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts'
       - 'scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_BINDING_EXECUTION_METADATA.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts'
 
 permissions:
@@ -69,6 +71,9 @@ jobs:
 
       - name: Execution-view acceptance
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_EXECUTION_CONFIG_RESOLUTION.ts
+
+      - name: Replay binding execution metadata acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_BINDING_EXECUTION_METADATA.ts
 
       - name: Governance gate
         run: |
