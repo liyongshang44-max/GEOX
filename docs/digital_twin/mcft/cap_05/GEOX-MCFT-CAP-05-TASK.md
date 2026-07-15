@@ -29,25 +29,25 @@ design_status:
 DESIGN_FROZEN
 
 implementation_status:
-S8_AUTHORIZED_NOT_STARTED
+S11_AUTHORIZED_NOT_STARTED
 
 authorization_effective:
 true
 
 runtime_source_authorized:
-true
+false
 
 active_delivery_slice_id:
-MCFT-CAP-05.MCFT-07-11.FORECAST-OBSERVATION-RESIDUAL-C-COMMIT-V1
+MCFT-CAP-05.CLOSURE-AND-FINALIZATION-V1
 
 dt02_architecture_amendment_status:
 NOT_REQUIRED_MERGED_EFFECTIVE
 
 first_permitted_repository_action:
-MCFT-CAP-05.MCFT-07-11.FORECAST-OBSERVATION-RESIDUAL-C-COMMIT-V1
+MCFT-CAP-05.CLOSURE-AND-FINALIZATION-V1
 ```
 
-P-1 至 S7 已按各自 lifecycle 形成 merged-effective 事实。当前活动切片为 S8 Forecast Observation Residual；仅授权其受控 Runtime 实现，仍不授权 CAP-06、校准、模型激活、自动建议或因果效果声明。
+P-1 至 S10 已按各自 lifecycle 形成 merged-effective 事实。当前活动切片为 S11 Closure / Finalization；仅授权治理结算实现，不执行能力关闭、不激活完成声明，仍不授权 CAP-06、校准、模型激活、自动建议或连续 Runtime。
 
 ## P-1 adjudication merged-effective result
 
@@ -4218,3 +4218,88 @@ Governance effect:
 - explicitly authorize, but do not implement, the bounded eight-tick feedback-chain S10 slice;
 - preserve the prohibition on automatic history rewrite, late-Evidence revision Runtime, calibration, model activation and CAP-06 authority;
 - add no Runtime source, canonical object, transaction family, migration, route or web change.
+
+---
+
+<!-- MCFT-CAP-05-S10-SETTLEMENT-START -->
+## S10 SSOT Settlement — S10 Effective / S11 Closure Authorized
+
+```text
+activation_id:
+MCFT-CAP-05.S10.SSOT-SETTLEMENT-V1
+
+baseline_main_commit:
+0c015bad3eb1729000d7f68eb08e00de6ef4afcf
+
+settlement_PR:
+2486
+
+implementation_status:
+S11_AUTHORIZED_NOT_STARTED
+
+active_delivery_slice_id:
+MCFT-CAP-05.CLOSURE-AND-FINALIZATION-V1
+
+S10_status:
+MERGED_EFFECTIVE
+
+S10_implementation_exact_head:
+2b22e209472237f198fc52fc103d5401fac9c28a
+
+S10_implementation_exact_head_workflow:
+29401613098 SUCCESS
+
+S10_implementation_merge_commit:
+9acfab667ea51d812fd9f644c0f6634b0e45a673
+
+S10_implementation_head_to_merge_file_delta_count:
+0
+
+S10_postmerge_Gate_remediation_exact_head:
+a70ee127d14c7939ba2ef756c56c580520379826
+
+S10_postmerge_Gate_remediation_workflow:
+29402130372 SUCCESS
+
+S10_effective_main_commit:
+0c015bad3eb1729000d7f68eb08e00de6ef4afcf
+
+S10_merged_main_probe_PR:
+2485 CLOSED_WITHOUT_MERGE
+
+S10_merged_main_probe_exact_head:
+0fb4998cef86b1c42735b8fde652b1b2cadd1d24
+
+S10_merged_main_probe_workflow:
+29403060957 SUCCESS
+
+S10_bounded_chain_Runtime_acceptance:
+14 PASS / 0 FAIL
+
+S11_status:
+AUTHORIZED_NOT_STARTED
+
+S11_runtime_source_authorized:
+false
+
+S11_implementation_started:
+false
+
+closure_finalization_executed:
+false
+
+CAP_05_completion_claim_effective:
+false
+
+CAP_06_authorized:
+false
+```
+
+Governance effect:
+
+- settle S10 as merged-main effective, including the corrected postmerge boundary Gate and proof-only merged-main probe;
+- explicitly authorize, but do not execute, S11 Closure / Finalization;
+- preserve every completion claim as non-effective until S11 implementation, exact-head validation, merge and merged-main closure verification complete;
+- preserve CAP-06 as unauthorized;
+- add no Runtime source, canonical object, transaction family, migration, route, web, scheduler, calibration or model-activation change.
+<!-- MCFT-CAP-05-S10-SETTLEMENT-END -->
