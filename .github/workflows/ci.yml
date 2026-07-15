@@ -37,13 +37,20 @@ jobs:
           Path('/tmp/materialize_s10_settlement.py').write_text('\n'.join(lines) + '\n', encoding='utf-8')
           PY
           python3 /tmp/materialize_s10_settlement.py
-      - name: Restore canonical CI and validate exact boundary
+      - name: Restore canonical CI and form local candidate commit
+        shell: bash
+        run: |
+          git fetch --no-tags origin main
+          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "MCFT-CAP-05 S10 settlement: materialize final governance boundary"
+      - name: Validate JSON, Gate and exact committed boundary
         shell: bash
         env:
           BASELINE_MAIN: "0c015bad3eb1729000d7f68eb08e00de6ef4afcf"
         run: |
-          git fetch --no-tags origin main
-          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
           python3 -m json.tool docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json >/dev/null
           python3 -m json.tool docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json >/dev/null
           python3 -m json.tool docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json >/dev/null
@@ -61,15 +68,10 @@ jobs:
           scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S10_SETTLEMENT.cjs
           EOF
           )
-          actual=$(git diff --name-only "$BASELINE_MAIN"..HEAD -- . ':!.github/workflows/ci.yml' ':!.github/workflows/mcft-cap-05-s10-settlement-materialize.yml' ':!.mcft-cap-05-s10-settlement-staging' | sort)
+          actual=$(git diff --name-only "$BASELINE_MAIN"..HEAD | sort)
           test "$actual" = "$expected"
-      - name: Commit final settlement boundary
+      - name: Push validated final settlement boundary
         shell: bash
         env:
           BRANCH_NAME: "agent/mcft-cap-05-s10-ssot-settlement-v1"
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "MCFT-CAP-05 S10 settlement: materialize final governance boundary"
-          git push origin HEAD:"$BRANCH_NAME"
+        run: git push origin HEAD:"$BRANCH_NAME"
