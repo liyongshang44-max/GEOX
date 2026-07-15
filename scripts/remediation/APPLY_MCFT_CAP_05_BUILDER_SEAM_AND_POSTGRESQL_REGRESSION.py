@@ -108,10 +108,30 @@ Path(service).write_text(text)
 acceptance_runner = "scripts/acceptance/run_acceptance.cjs"
 replace_once(
     acceptance_runner,
-    '''    ["MCFT-CAP-04 single-tick integration", "pnpm", ["exec", "tsx", "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts"]],
-    ["MCFT-CAP-04 single-tick integration negative", "pnpm", ["exec", "tsx", "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_NEGATIVE.ts"]],''',
-    '''    ["MCFT-CAP-04 single-tick integration", "pnpm", ["exec", "tsx", "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts"]],
-    ["MCFT-CAP-04 single-tick integration negative", "pnpm", ["exec", "tsx", "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_NEGATIVE.ts"]],
-    ["MCFT-CAP-05 post-closure conformance governance", "node", ["scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION.cjs"]],
-    ["MCFT-CAP-05 post-closure PostgreSQL runner", "pnpm", ["exec", "tsx", "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts"]],''',
+    '''    {
+      id: 'RUNTIME_OPENAPI_SALES_CRITICAL',
+      pnpmArgs: ['run', 'ci:governance:runtime-openapi-sales-critical'],
+      logFile: 'RUNTIME_OPENAPI_SALES_CRITICAL.log',
+      notes: 'Fetches runtime /api/v1/openapi.json and validates sales-critical OpenAPI JSON paths, schemas, operations, security, responses, and x-geox-governance.'
+    }
+  ],''',
+    '''    {
+      id: 'RUNTIME_OPENAPI_SALES_CRITICAL',
+      pnpmArgs: ['run', 'ci:governance:runtime-openapi-sales-critical'],
+      logFile: 'RUNTIME_OPENAPI_SALES_CRITICAL.log',
+      notes: 'Fetches runtime /api/v1/openapi.json and validates sales-critical OpenAPI JSON paths, schemas, operations, security, responses, and x-geox-governance.'
+    },
+    {
+      id: 'MCFT_CAP_05_POST_CLOSURE_CONFORMANCE_GOVERNANCE',
+      command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION.cjs',
+      logFile: 'MCFT_CAP_05_POST_CLOSURE_CONFORMANCE_GOVERNANCE.log',
+      notes: 'Verifies append-only CAP-05 defect authority and non-canonical execution-view separation.'
+    },
+    {
+      id: 'MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER',
+      command: 'pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts',
+      logFile: 'MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.log',
+      notes: 'Reproduces checkpoint 72 to 80 in an isolated database and verifies canonical CAP-05 Config pins, restart recovery, and zero-write replay.'
+    }
+  ],''',
 )
