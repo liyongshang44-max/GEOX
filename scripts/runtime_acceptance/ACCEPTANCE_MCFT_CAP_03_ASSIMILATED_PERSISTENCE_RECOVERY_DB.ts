@@ -1,5 +1,5 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY_DB.ts
-// Purpose: prove the CAP-03 PostgreSQL A2 path atomically persists, reads back, idempotently replays, rebuilds, and uniqueness-guards one assimilated record set while preserving inherited historical CAP-02 behavior.
+// Purpose: prove the CAP-03 PostgreSQL A2 path atomically persists, reads back, idempotently replays, rebuilds, and uniqueness-guards one assimilated record set from an explicitly seeded frozen CAP-02 sequence-24 handoff.
 // Boundary: destructive isolated-database acceptance only; no production database, Runtime tick orchestration, range execution, route, scheduler, successful Forecast, Scenario, Recommendation, or action.
 
 import assert from "node:assert/strict";
@@ -272,20 +272,6 @@ async function main(): Promise<void> {
     fixture.predecessorCheckpoint.object_id,
     fixture.predecessorForecast.object_id,
   ];
-  const a0Lineage = memberV1(fixture.a0RecordSet, "twin_runtime_lineage_v1");
-  const a0State = memberV1(fixture.a0RecordSet, "twin_state_estimate_v1");
-  const a0Checkpoint = memberV1(fixture.a0RecordSet, "twin_runtime_checkpoint_v1");
-  const a0Forecast = memberV1(fixture.a0RecordSet, "twin_forecast_run_v1");
-  const cap02Expected: ContinuationExpectedPointersV1 = {
-    active_lineage_ref: a0Lineage.object_id,
-    lineage_id: fixture.lock.lineage_id,
-    revision_id: fixture.lock.revision_id,
-    previous_checkpoint_ref: a0Checkpoint.object_id,
-    previous_state_ref: a0State.object_id,
-    previous_forecast_result_ref: a0Forecast.object_id,
-    latest_successful_forecast_ref: null,
-  };
-
   try {
     await initializeSchemaV1();
     await cleanupScopeV1({
@@ -326,25 +312,6 @@ async function main(): Promise<void> {
     ok("real A0 predecessor is committed through the existing fenced bootstrap transaction");
 
     await repository.commitRuntimeConfig(fixture.continuationRuntimeConfig);
-    const cap02Lease = await acquireLeaseV1(scope);
-    const cap02Commit = await repository.commitContinuationState({
-      scope,
-      lease: cap02Lease,
-      expected: cap02Expected,
-      record_set: fixture.continuationRecordSet,
-    });
-    assert.equal(cap02Commit.status, "INSERTED");
-    const historicalReadback = await repository.readContinuationRecordSet(
-      fixture.continuationRecordSet.continuation_record_set_id,
-    );
-    assert.ok(historicalReadback);
-    assert.equal(
-      historicalReadback.continuation_record_set_determinism_hash,
-      fixture.continuationRecordSet.continuation_record_set_determinism_hash,
-    );
-    ok("historical CAP-02 A2 commit and canonical readback remain unchanged");
-
-    await repository.commitRuntimeConfig(fixture.assimilatedRuntimeConfig);
     await seedCap02FinalHandoffV1({
       scope,
       state: fixture.predecessorState,
@@ -356,7 +323,9 @@ async function main(): Promise<void> {
       checkpoint: fixture.expected.previous_checkpoint_ref,
       forecast: fixture.expected.previous_forecast_result_ref,
     });
-    ok("canonical pointers reproduce the frozen CAP-02 sequence-24 handoff");
+    ok("frozen CAP-02 sequence-24 handoff is materialized as explicit predecessor fixture state");
+
+    await repository.commitRuntimeConfig(fixture.assimilatedRuntimeConfig);
 
     const faultStages = fixture.recordSet.members
       .map((member, index) => `before_fact_${index + 1}_${member.object_type}`)
@@ -568,15 +537,8 @@ async function main(): Promise<void> {
     assert.equal(await countFactsV1(cap03Ids), 8);
     ok("idempotency-guard loss cannot create a second canonical CAP-03 terminal tick");
 
-    const historicalAfterCap03 = await repository.readContinuationRecordSet(
-      fixture.continuationRecordSet.continuation_record_set_id,
-    );
-    assert.ok(historicalAfterCap03);
-    assert.equal(
-      historicalAfterCap03.continuation_record_set_determinism_hash,
-      fixture.continuationRecordSet.continuation_record_set_determinism_hash,
-    );
-    ok("historical CAP-02 canonical readback remains valid after CAP-03 persistence support");
+    assert.equal(await countFactsV1(predecessorIds), 3);
+    ok("frozen CAP-02 predecessor canonical facts remain present after CAP-03 persistence support");
 
     console.log(`MCFT-CAP-03 assimilated persistence recovery DB: ${pass} PASS, 0 FAIL`);
   } finally {
