@@ -29,7 +29,7 @@ design_status:
 DESIGN_FROZEN
 
 implementation_status:
-S11_CLOSURE_CANDIDATE
+COMPLETE
 
 authorization_effective:
 true
@@ -38,7 +38,7 @@ runtime_source_authorized:
 false
 
 active_delivery_slice_id:
-MCFT-CAP-05.CLOSURE-AND-FINALIZATION-V1
+null
 
 dt02_architecture_amendment_status:
 NOT_REQUIRED_MERGED_EFFECTIVE
@@ -47,7 +47,7 @@ first_permitted_repository_action:
 MCFT-CAP-05.CLOSURE-AND-FINALIZATION-V1
 ```
 
-P-1 至 S10 已按各自 lifecycle 形成 merged-effective 事实。S11A Closure Candidate 已开始：关闭记录、Main Verification 与 40 项完成声明集合已物化，但完成声明仍全部 pending；只有 exact-head CI、merge、树等价与 merged-main Finalization Gate 全部成立后，才允许进入最终 effectiveness。
+P-1 至 S10 已按各自 lifecycle 形成 merged-effective 事实。S11A Closure Candidate、exact-head CI、merge、head-to-merge tree equivalence 与 S11B merged-main Finalization Gate 均已成立；S11C 现将冻结的 40 项完成声明激活为正式 effective，CAP-05 达到 Level A COMPLETE。CAP-06 仍未授权。
 
 ## P-1 adjudication merged-effective result
 
@@ -4342,3 +4342,42 @@ false
 ```
 
 S11A 只建立 closure candidate，不激活完成声明。S11B 必须完成 exact-head CI、merge、head-to-merge tree equivalence 与 merged-main Finalization Gate；若 merge/postmerge 证据必须写回仓库，则执行 S11C reconciliation。
+
+
+---
+
+## S11C Complete Activation — Final Effectiveness
+
+```text
+baseline_main_commit:
+fd6c54e84ee4ede7bbb581b4fc55660251c2265f
+
+activation_PR:
+2490
+
+implementation_status:
+COMPLETE
+
+closure_effective:
+true
+
+capability_complete:
+true
+
+active_delivery_slice_id:
+null
+
+pending_completion_claim_count:
+0
+
+effective_completion_claim_count:
+40
+
+runtime_source_authorized:
+false
+
+CAP_06_authorized:
+false
+```
+
+S11C 仅激活已经由 S11A/S11B merged-main evidence 证明的完成声明；不增加 Runtime、迁移、路由、调度器、校准、模型激活或 CAP-06 authority。
