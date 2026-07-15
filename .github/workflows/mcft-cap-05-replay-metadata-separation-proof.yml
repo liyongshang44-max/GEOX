@@ -1,0 +1,119 @@
+name: mcft-cap-05-replay-metadata-separation-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-05-replay-metadata-separation-proof.yml'
+      - 'scripts/remediation/APPLY_MCFT_CAP_05_REPLAY_EXECUTION_METADATA_SEPARATION.py'
+      - 'apps/server/src/runtime/twin_runtime/ports.ts'
+      - 'apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/evidence_window_builder_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v2.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_BINDING_EXECUTION_METADATA.ts'
+
+permissions:
+  contents: write
+
+jobs:
+  prove-and-commit:
+    if: github.head_ref == 'agent/mcft-cap-05-post-closure-config-conformance-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox_acceptance
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5433/geox_acceptance
+      MCFT_CAP_03_S3B_DESTRUCTIVE_ACCEPTANCE: "1"
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Apply Replay metadata separation
+        run: |
+          set -o pipefail
+          python scripts/remediation/APPLY_MCFT_CAP_05_REPLAY_EXECUTION_METADATA_SEPARATION.py 2>&1 | tee /tmp/replay-metadata-generator.log
+
+      - name: Upload generator diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-metadata-generator-diagnostics
+          path: /tmp/replay-metadata-generator.log
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Replay metadata acceptance
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_BINDING_EXECUTION_METADATA.ts 2>&1 | tee /tmp/replay-metadata-acceptance.log
+
+      - name: CAP-03 inherited recovery regression
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY_DB.ts 2>&1 | tee /tmp/cap03-inherited-recovery.log
+
+      - name: CAP-05 formal PostgreSQL regression
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts 2>&1 | tee /tmp/cap05-postgresql-regression.log
+
+      - name: Upload proof diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-metadata-separation-proof-diagnostics
+          path: |
+            /tmp/replay-metadata-acceptance.log
+            /tmp/cap03-inherited-recovery.log
+            /tmp/cap05-postgresql-regression.log
+
+      - name: Commit proven source
+        run: |
+          set -o pipefail
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f -- \
+            apps/server/src/runtime/twin_runtime/ports.ts \
+            apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts \
+            apps/server/src/runtime/twin_runtime/evidence_window_builder_v1.ts \
+            apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v1.ts \
+            apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v2.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_BINDING_EXECUTION_METADATA.ts
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'No source change required'
+            exit 0
+          fi
+          git commit -m 'MCFT-CAP-05: separate Replay execution metadata from canonical Evidence'
+          git push origin HEAD:${{ github.head_ref }}
