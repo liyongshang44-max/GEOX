@@ -1,0 +1,74 @@
+name: mcft-cap-05-postmerge-effectiveness-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-05-postmerge-effectiveness-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  prove-exact-merged-main:
+    if: github.head_ref == 'agent/mcft-cap-05-postmerge-effectiveness-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox_acceptance
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5433/geox_acceptance
+      MCFT_CAP_03_S3B_DESTRUCTIVE_ACCEPTANCE: "1"
+      EXPECTED_MERGED_MAIN_SHA: 0867439b17545bec5fd84e373e72d17881ab50ae
+    steps:
+      - name: Checkout exact merged-main source
+        uses: actions/checkout@v4
+        with:
+          ref: 0867439b17545bec5fd84e373e72d17881ab50ae
+          fetch-depth: 0
+
+      - name: Assert exact source identity
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          test "$ACTUAL_SHA" = "$EXPECTED_MERGED_MAIN_SHA"
+          printf 'EXACT_MERGED_MAIN_SHA=%s\n' "$ACTUAL_SHA"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck exact merged main
+        run: pnpm -r typecheck
+
+      - name: Governance Gate on exact merged main
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION.cjs
+
+      - name: Replay metadata acceptance on exact merged main
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_BINDING_EXECUTION_METADATA.ts
+
+      - name: CAP-03 inherited recovery on exact merged main
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY_DB.ts
+
+      - name: CAP-05 formal PostgreSQL runner on exact merged main
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts
