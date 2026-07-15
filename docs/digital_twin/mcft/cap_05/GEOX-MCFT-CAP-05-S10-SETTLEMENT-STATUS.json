@@ -11,6 +11,17 @@
   "pr_number": 2486,
   "materialization_workflow": 29403970251,
   "materialized_candidate_head": "efe1a699447ba91288d77bd1b427aa3da883ad47",
+  "lifecycle_remediation": {
+    "initial_candidate_head": "3642e135989763fae255786b604b6b1dc903e079",
+    "initial_candidate_workflow": 29404030051,
+    "initial_candidate_state": "FAILURE",
+    "failure_scope": "HISTORICAL_S10_STATIC_GATE_REASSERTED_AFTER_SETTLEMENT",
+    "runtime_or_postgresql_failure": false,
+    "remediation": "RETIRE_HISTORICAL_STATIC_GATE_PRESERVE_PERMANENT_S10_RUNTIME_ACCEPTANCE",
+    "materialized_remediation_head": "0bf525a250aed7bde0ec32533e3da4def58a2946",
+    "materialization_workflow": 29404620597,
+    "materialization_state": "SUCCESS"
+  },
   "s10_effectiveness": {
     "delivery_slice_id": "MCFT-CAP-05.MCFT-04-16.BOUNDED-EIGHT-TICK-FEEDBACK-CHAIN-V1",
     "implementation_pr_number": 2483,
@@ -95,6 +106,7 @@
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S10_SETTLEMENT.cjs"
   ],
   "validation": {
+    "validated_materialized_head": "0bf525a250aed7bde0ec32533e3da4def58a2946",
     "candidate_workflow": null,
     "candidate_state": "PENDING",
     "governance_gate": "PENDING",
