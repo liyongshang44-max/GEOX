@@ -11,7 +11,7 @@ const { spawnSync } = require('node:child_process');
 
 const isWindows = process.platform === 'win32';
 const env = process.env;
-const diagnosticPath = path.join(process.cwd(), 'acceptance-output', 'MCFT_CAP_05_S9_ACCEPTANCE.log');
+const diagnosticPath = path.join(process.cwd(), 'acceptance-output', 'MCFT_CAP_05_S10_ACCEPTANCE.log');
 
 function run(command, args = [], envOverrides = {}) {
   const result = spawnSync(command, args, {
@@ -268,6 +268,17 @@ function runCap05S9RestartRecoveryAcceptance({ runHistoricalGovernance }) {
   }));
 }
 
+// MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN_GATE_V1: execute S10 static governance and bounded orchestration acceptance.
+function runCap05S10BoundedFeedbackChainAcceptance() {
+  runGate(
+    path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN.cjs'),
+    '--auto',
+  );
+  requireSuccess(run(isWindows ? 'pnpm.cmd' : 'pnpm', [
+    '-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN.ts',
+  ]));
+}
+
 runRuntimeDoctor();
 
 const activationGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs');
@@ -278,12 +289,14 @@ const s8RuntimeStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap
 const strictForecastAvailabilityStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-STRICT-FORECAST-AVAILABILITY-STATUS.json');
 const s9StatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S9-STATUS.json');
 const s9SettlementStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S9-SETTLEMENT-STATUS.json');
+const s10StatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S10-STATUS.json');
 const settlementActive = fs.existsSync(s7SettlementGatePath);
 const s8SettlementActive = fs.existsSync(s8SettlementGatePath);
 const s8RuntimeActive = fs.existsSync(s8RuntimeStatusPath);
 const strictForecastAvailabilityActive = fs.existsSync(strictForecastAvailabilityStatusPath);
 const s9Active = fs.existsSync(s9StatusPath);
 const s9SettlementActive = fs.existsSync(s9SettlementStatusPath);
+const s10Active = fs.existsSync(s10StatusPath);
 
 // MCFT_CAP_05_S6_ACTIVATION_GATE_V1: run only while S6→S7 activation is the current lifecycle frontier.
 if (!settlementActive) {
@@ -320,5 +333,10 @@ if (!s9Active) {
 // MCFT_CAP_05_S9_RESTART_LATE_RECEIPT_REBUILD_GATE_V1: preserve S9 Runtime and PostgreSQL recovery behavior permanently, but do not reassert its historical six-file candidate boundary after settlement materializes.
 runCap05S9RestartRecoveryAcceptance({ runHistoricalGovernance: !s9SettlementActive });
 
-// MCFT_CAP_05_S9_SSOT_SETTLEMENT_GATE_V1: settle S9 merged-main effectiveness and explicitly authorize, but do not implement, S10.
-runGate(s9SettlementGatePath, '--auto');
+// MCFT_CAP_05_S9_SSOT_SETTLEMENT_GATE_V1: preserve the S9 settlement only until S10 materializes.
+if (!s10Active) {
+  runGate(s9SettlementGatePath, '--auto');
+}
+
+// MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN_GATE_V1: verify the authorized bounded-chain implementation and permanent orchestration behavior.
+runCap05S10BoundedFeedbackChainAcceptance();
