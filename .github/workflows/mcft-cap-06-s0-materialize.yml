@@ -46,8 +46,11 @@ jobs:
 
       - name: Apply resumed S0 predecessor qualification contract
         run: |
-          python scripts/remediation/APPLY_MCFT_CAP_06_S0_RESUMPTION.py
-          python scripts/remediation/APPLY_MCFT_CAP_06_S0_STATE_COUNT_RECONCILIATION.py
+          set -o pipefail
+          {
+            python scripts/remediation/APPLY_MCFT_CAP_06_S0_RESUMPTION.py
+            python scripts/remediation/APPLY_MCFT_CAP_06_S0_STATE_COUNT_RECONCILIATION.py
+          } 2>&1 | tee /tmp/s0-transform.log
           rm scripts/remediation/APPLY_MCFT_CAP_06_S0_RESUMPTION.py
           rm scripts/remediation/APPLY_MCFT_CAP_06_S0_STATE_COUNT_RECONCILIATION.py
 
@@ -79,12 +82,15 @@ jobs:
             exit "$rc"
           fi
 
-      - name: Upload resumed preflight diagnostics
+      - name: Upload resumed diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap-06-s0-resumed-preflight-diagnostics
-          path: /tmp/s0-preflight.log
+          name: mcft-cap-06-s0-resumed-diagnostics
+          path: |
+            /tmp/s0-transform.log
+            /tmp/s0-preflight.log
+          if-no-files-found: ignore
 
       - name: Restore exact permanent candidate boundary
         run: |
