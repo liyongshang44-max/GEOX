@@ -50,10 +50,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set +e
+          node - <<'NODE' | tee /tmp/p0-info.log
+          const p = require('./docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P0-STATUS.json');
+          console.log('INFO P0_P1_MERGED_EFFECTIVE ' + JSON.stringify(p.p_minus_1_effectiveness));
+          NODE
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs 2>&1 | tee /tmp/p0-gate.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
-            summary="$(grep -E '^(FAIL|TOTAL)' /tmp/p0-gate.log || true)"
+            summary="$(cat /tmp/p0-info.log; grep -E '^(FAIL|TOTAL)' /tmp/p0-gate.log || true)"
             gh pr comment 2498 --body "P0 materialization Gate failed on local candidate commit.\n\n\`\`\`text\n${summary}\n\`\`\`"
             exit "$rc"
           fi
