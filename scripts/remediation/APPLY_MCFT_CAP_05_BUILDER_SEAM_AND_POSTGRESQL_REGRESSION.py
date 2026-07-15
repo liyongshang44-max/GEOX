@@ -165,3 +165,8 @@ replace_once(
     'ORDER BY ingested_at DESC LIMIT 1',
     'ORDER BY occurred_at DESC LIMIT 1',
 )
+replace_once(
+    postgresql_acceptance,
+    "record_json->>'type'='twin_human_decision_v1'",
+    "record_json->>'type'='twin_decision_record_v1'",
+)
