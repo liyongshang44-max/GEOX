@@ -30,7 +30,6 @@ function deriveInheritedCap04PayloadV1(
     approval_plan_binding_policy_id: _approvalPlan,
     evidence_availability_policy_id: _availability,
     action_feedback_eligibility_policy_id: _eligibility,
-    action_feedback_quality_mapping_policy_id: _quality,
     action_feedback_adapter_id: _adapter,
     single_execution_event_guard_policy_id: _singleEvent,
     target_equivalent_irrigation_policy_id: _targetEquivalent,
