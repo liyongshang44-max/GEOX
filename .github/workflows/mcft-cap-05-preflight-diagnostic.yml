@@ -17,22 +17,6 @@ jobs:
   cap05-preflight:
     if: github.head_ref == 'agent/mcft-cap-05-post-closure-config-conformance-v1'
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: landos
-          POSTGRES_PASSWORD: ci-pilot-postgres-strong-2026
-          POSTGRES_DB: landos
-        ports:
-          - 5433:5432
-        options: >-
-          --health-cmd "pg_isready -U landos -d landos"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      DATABASE_URL: postgres://landos:ci-pilot-postgres-strong-2026@127.0.0.1:5433/landos
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,10 +34,15 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - name: Typecheck
         run: pnpm -r typecheck
-      - name: Focused CAP-05 preflight
+      - name: Focused CAP-05 S7-S10 Runtime preflight
         run: |
           set -o pipefail
-          node scripts/dev/assert_local_pnpm_runtime.cjs 2>&1 | tee /tmp/mcft-cap05-preflight.log
+          {
+            pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK.ts
+            pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_NOT_YET_VALIDATED_RECEIPT_CONSUMING_TICK.ts
+            pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FORECAST_RESIDUAL_OUTCOME_TICK.ts
+            pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN.ts
+          } 2>&1 | tee /tmp/mcft-cap05-preflight.log
       - name: Upload focused preflight diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
