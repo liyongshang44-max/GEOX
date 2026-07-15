@@ -169,7 +169,10 @@ const changed = changedFiles();
 if (mode === 'candidate') {
   check(JSON.stringify(changed) === JSON.stringify(expectedFiles), 'exact eight-file S10 candidate boundary');
 } else if (mode === 'postmerge') {
-  check(changed === null || changed.length === 0, 'postmerge main has no S10 delta against the frozen baseline');
+  check(
+    JSON.stringify(changed) === JSON.stringify(expectedFiles),
+    'postmerge main retains the exact eight-file S10 implementation boundary',
+  );
 } else if (changed && JSON.stringify(changed) === JSON.stringify(expectedFiles)) {
   check(true, 'auto mode recognizes exact eight-file S10 candidate');
 } else if (changed && changed.length === 0) {
