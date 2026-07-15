@@ -1400,3 +1400,47 @@ runtime_source_authorized: false
 CAP_06_authorized: false
 finalization_effectiveness_ref: docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-FINALIZATION-EFFECTIVENESS.json
 ```
+
+<!-- MCFT-CAP-06-P0-CURRENT-STATE-BEGIN -->
+## MCFT-CAP-06 P-1 effectiveness and P0 provisional map
+
+```text
+baseline merged main:
+79cd7814eff06ad86f86cdcb379c6f71a77f1ab8
+
+P-1 status:
+MERGED_EFFECTIVE
+
+P-1 outcome:
+REUSE_WITHOUT_AMENDMENT_CONFIG_OBJECT_NOT_REQUIRED
+
+P0 status:
+PROVISIONAL_SSOT_CANDIDATE
+
+authorization effective:
+false
+
+runtime source authorized:
+false
+
+active delivery slice:
+null
+
+S0 status:
+BLOCKED_PENDING_P0_MERGED_MAIN_EFFECTIVENESS
+
+P-1A:
+OMITTED
+
+conditional S4:
+OMITTED
+
+S3 migration adjudication:
+EXACTLY_ONE_ADDITIVE_MIGRATION
+
+successor MCFT-CAP-07 authorized:
+false
+```
+
+P0 reconciles CAP-05 terminal COMPLETE facts and adds the provisional MCFT-CAP-06 capability line. It grants no Runtime, migration, canonical-write, S0, Model Activation, active-binding, or successor authority.
+<!-- MCFT-CAP-06-P0-CURRENT-STATE-END -->

@@ -1,0 +1,93 @@
+{
+  "schema_version": "geox_mcft_cap_06_p0_status_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "delivery_slice_id": "MCFT-CAP-06.P0.CAP-05-TERMINAL-SSOT-RECONCILIATION-AND-PROVISIONAL-SSOT-V1",
+  "status": "PROVISIONAL_SSOT_CANDIDATE",
+  "implementation_status": "P_MINUS_1_MERGED_EFFECTIVE_P0_CANDIDATE",
+  "baseline_main_commit": "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8",
+  "p_minus_1_effectiveness": {
+    "implementation_pr_number": 2496,
+    "implementation_exact_head": "762764074e62f186921e0aabd5251f53b5f7ce02",
+    "implementation_exact_head_ci_run": 29417804608,
+    "implementation_merge_commit": "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8",
+    "head_to_merge_file_delta_count": 0,
+    "head_to_merge_tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2497,
+    "postmerge_probe_exact_head": "83f2c747e138d239492811afbd6bac7ad1c29096",
+    "postmerge_probe_workflow_run": 29418272690,
+    "postmerge_gate": "PASS",
+    "postmerge_probe_closed_without_merge": true,
+    "effective": true
+  },
+  "adjudication_outcome": {
+    "outcome": "REUSE_WITHOUT_AMENDMENT_CONFIG_OBJECT_NOT_REQUIRED",
+    "dt02_architecture_amendment_required": false,
+    "p_minus_1a_required": false,
+    "conditional_s4_required": false,
+    "s3_additive_migration_count": 1,
+    "failed_attempt_persistence_mode": "MODE_A_NO_PERSISTENT_ATTEMPT_OBJECT"
+  },
+  "candidate_materialization": {
+    "workflow_run": 29419140980,
+    "p0_gate": "PASS",
+    "repository_typecheck": "PASS",
+    "repository_build": "PASS",
+    "server_selfcheck": "PASS",
+    "temporary_workflow_removed": true,
+    "temporary_materializer_removed": true,
+    "materialized_candidate_head": "7eccdce158f251d6873aaf17e176de6eec7898d3"
+  },
+  "cap_05_terminal_reconciliation": {
+    "status": "COMPLETE",
+    "implementation_status": "COMPLETE",
+    "closure_effective": true,
+    "capability_complete": true,
+    "active_delivery_slice_id": null,
+    "next_repository_action": null,
+    "successor_capability_line_id": "MCFT-CAP-06",
+    "successor_authorized": false,
+    "reopened": false
+  },
+  "cap_06_provisional_state": {
+    "design_status": "CONDITIONAL_FROZEN_AFTER_P_MINUS_1",
+    "implementation_status": "P_MINUS_1_COMPLETE",
+    "authorization_effective": false,
+    "runtime_source_authorized": false,
+    "active_delivery_slice_id": null,
+    "successor_authorized": false,
+    "s0_status": "BLOCKED_PENDING_P0_MERGED_MAIN_EFFECTIVENESS"
+  },
+  "p0_authority": {
+    "runtime_source_authorized": false,
+    "migration_authorized": false,
+    "canonical_write_authorized": false,
+    "postgresql_runtime_execution_authorized": false,
+    "s0_execution_authorized_before_p0_effectiveness": false
+  },
+  "exact_changed_file_boundary": [
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P0-STATUS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+  ],
+  "effectiveness": {
+    "effective": false,
+    "condition": "P0_PR_MERGED_AND_HEAD_TO_MERGE_TREE_EQUIVALENT_AND_MERGED_MAIN_P0_GATE_PASS",
+    "next_repository_action_after_effectiveness": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1"
+  },
+  "preserved_nonclaims": [
+    "NO_CAP_05_REOPEN",
+    "NO_RUNTIME_SOURCE_AUTHORIZATION",
+    "NO_MIGRATION",
+    "NO_CANONICAL_WRITE",
+    "NO_POSTGRESQL_RUNTIME_EXECUTION",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_SHADOW_EVALUATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_CONFIG_SWITCH",
+    "NO_S0_EFFECTIVENESS",
+    "NO_MCFT_CAP_07_AUTHORIZATION"
+  ]
+}
