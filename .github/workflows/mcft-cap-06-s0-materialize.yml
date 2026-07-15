@@ -45,7 +45,9 @@ jobs:
           git merge --no-edit refs/remotes/origin/main
 
       - name: Apply resumed S0 predecessor qualification contract
-        run: python scripts/remediation/APPLY_MCFT_CAP_06_S0_RESUMPTION.py
+        run: |
+          python scripts/remediation/APPLY_MCFT_CAP_06_S0_RESUMPTION.py
+          rm scripts/remediation/APPLY_MCFT_CAP_06_S0_RESUMPTION.py
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -77,8 +79,8 @@ jobs:
 
       - name: Restore exact permanent candidate boundary
         run: |
-          rm .github/workflows/mcft-cap-06-s0-materialize.yml
-          rm scripts/remediation/APPLY_MCFT_CAP_06_S0_RESUMPTION.py
+          rm -f .github/workflows/mcft-cap-06-s0-materialize.yml
+          rm -f scripts/remediation/APPLY_MCFT_CAP_06_S0_RESUMPTION.py
           git add -A
           git commit -m "MCFT-CAP-06 S0: materialize authorization and predecessor qualification"
 
