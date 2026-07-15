@@ -8,13 +8,13 @@
   "target_completion_level": "Level A — Deterministic Replay Twin",
   "status": "MERGED_EFFECTIVE",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "S9_AUTHORIZED_NOT_STARTED",
+  "implementation_status": "S10_AUTHORIZED_NOT_STARTED",
   "authorization_effective": true,
   "runtime_source_authorized": true,
-  "authorization_effectiveness_condition": "S8_SETTLEMENT_PR_MERGED_TO_MAIN_AND_MAIN_CI_SETTLEMENT_GATE_PASS",
-  "baseline_main_commit": "ca61e86c5a6c1e035b82312b92116a111a76ccc7",
-  "branch": "agent/mcft-cap-05-s8-ssot-settlement-v1",
-  "active_delivery_slice_id": "MCFT-CAP-05.MCFT-03-04.RESTART-LATE-RECEIPT-REBUILD-V1",
+  "authorization_effectiveness_condition": "S9_SETTLEMENT_PR_MERGED_TO_MAIN_AND_MAIN_CI_SETTLEMENT_GATE_PASS",
+  "baseline_main_commit": "07485e93ab17c5a4f9dc057f6c79e190a38d425f",
+  "branch": "agent/mcft-cap-05-s9-ssot-settlement-v1",
+  "active_delivery_slice_id": "MCFT-CAP-05.MCFT-04-16.BOUNDED-EIGHT-TICK-FEEDBACK-CHAIN-V1",
   "task_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
   "task_sha256_before_s0_materialization": "aa197ebcedba99c2f6af9ca2763194d303cad9098ba9e9fc75e3b8d61317d434",
   "authorization_document_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION.md",
@@ -47,7 +47,7 @@
     "effectiveness_condition_satisfied": true
   },
   "current_blockers": [
-    "S9_IMPLEMENTATION_NOT_STARTED"
+    "S10_IMPLEMENTATION_NOT_STARTED"
   ],
   "premerge_satisfied_conditions": [
     "MCFT_CAP_05_P0_MERGED_MAIN_EFFECTIVE",
@@ -68,7 +68,13 @@
     "MCFT_CAP_05_S8_HEAD_TO_MERGE_TREE_EQUIVALENCE_PASS",
     "MCFT_CAP_05_S8_STRICT_AVAILABILITY_HARDENING_PASS",
     "MCFT_CAP_05_S8_CORRECTED_MERGED_MAIN_PROBE_PASS",
-    "MCFT_CAP_05_S8_FORECAST_RESIDUAL_RUNTIME_ESTABLISHED"
+    "MCFT_CAP_05_S8_FORECAST_RESIDUAL_RUNTIME_ESTABLISHED",
+    "MCFT_CAP_05_S9_EXACT_HEAD_CI_PASS",
+    "MCFT_CAP_05_S9_HEAD_TO_MERGE_TREE_EQUIVALENCE_PASS",
+    "MCFT_CAP_05_S9_MERGED_MAIN_PROBE_PASS",
+    "MCFT_CAP_05_S9_G_H_C_RESPONSE_LOSS_RECOVERY_PASS",
+    "MCFT_CAP_05_S9_LATE_RECEIPT_NO_SHIFT_PASS",
+    "MCFT_CAP_05_S9_SUPPORT_REBUILD_AND_DIVERGENCE_GUARD_PASS"
   ],
   "allowed_claims_after_merge_and_postmerge_gate": [
     "MCFT_CAP_05_S7_MERGED_EFFECTIVE",
@@ -80,7 +86,13 @@
     "MCFT_CAP_05_FORECAST_OBSERVATION_RESIDUAL_C_COMMIT_ESTABLISHED",
     "MCFT_CAP_05_STRICT_PRE_OBSERVATION_FORECAST_AVAILABILITY_ESTABLISHED",
     "MCFT_CAP_05_S9_EXPLICITLY_AUTHORIZED_NOT_STARTED",
-    "MCFT_CAP_05_S9_RUNTIME_SOURCE_AUTHORIZED"
+    "MCFT_CAP_05_S9_RUNTIME_SOURCE_AUTHORIZED",
+    "MCFT_CAP_05_S9_MERGED_EFFECTIVE",
+    "MCFT_CAP_05_G_H_C_RESPONSE_LOSS_RECOVERY_ESTABLISHED",
+    "MCFT_CAP_05_CANONICAL_FACTS_SUPPORT_REBUILD_ESTABLISHED",
+    "MCFT_CAP_05_LATE_RECEIPT_NO_SHIFT_ESTABLISHED",
+    "MCFT_CAP_05_S10_EXPLICITLY_AUTHORIZED_NOT_STARTED",
+    "MCFT_CAP_05_S10_RUNTIME_SOURCE_AUTHORIZED"
   ],
   "preserved_nonclaims": [
     "NO_RESIDUAL_ASSIMILATION_IDENTITY_CLAIM",
@@ -96,24 +108,23 @@
     "NO_CAP_06_AUTHORIZATION",
     "NO_MCFT_GATE_A_CLOSURE",
     "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM",
-    "NO_S9_RUNTIME_IMPLEMENTATION",
-    "NO_G_H_C_RESPONSE_LOSS_RECOVERY_CLAIM",
     "NO_LATE_RECEIPT_REVISION_RUNTIME",
     "NO_AUTOMATIC_HISTORY_REWRITE",
-    "NO_S10_BOUNDED_EIGHT_TICK_CHAIN_AUTHORIZATION"
+    "NO_S10_RUNTIME_IMPLEMENTATION",
+    "NO_BOUNDED_EIGHT_TICK_CHAIN_COMPLETION_CLAIM"
   ],
-  "repository_write_scope": "S8_EFFECTIVENESS_SETTLEMENT_AND_S9_EXPLICIT_ACTIVATION_ONLY",
+  "repository_write_scope": "S9_EFFECTIVENESS_SETTLEMENT_AND_S10_EXPLICIT_ACTIVATION_ONLY",
   "exact_changed_file_boundary": [
     "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
     "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
     "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json",
     "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json",
-    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-SETTLEMENT-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S9-SETTLEMENT-STATUS.json",
     "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
     "scripts/dev/assert_local_pnpm_runtime.cjs",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_SETTLEMENT.cjs"
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_SETTLEMENT.cjs"
   ],
-  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-05.MCFT-03-04.RESTART-LATE-RECEIPT-REBUILD-V1",
+  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-05.MCFT-04-16.BOUNDED-EIGHT-TICK-FEEDBACK-CHAIN-V1",
   "successor_capability_line_id": "MCFT-CAP-06",
   "successor_authorized": false,
   "s0_effectiveness": {
@@ -231,7 +242,7 @@
     "migration_delta": 0,
     "effectiveness_condition_satisfied": false
   },
-  "active_authorized_slice_id": "MCFT-CAP-05.MCFT-03-04.RESTART-LATE-RECEIPT-REBUILD-V1",
+  "active_authorized_slice_id": "MCFT-CAP-05.MCFT-04-16.BOUNDED-EIGHT-TICK-FEEDBACK-CHAIN-V1",
   "s6_effectiveness": {
     "pr_number": 2456,
     "exact_head": "1a4f09278ce8b5ee65af8688f0c4d992a5d10035",
@@ -317,6 +328,38 @@
     "activation_id": "MCFT-CAP-05.S8.SSOT-SETTLEMENT-V1",
     "pr_number": 2477,
     "target_state": "S9_AUTHORIZED_NOT_STARTED",
+    "canonical_object_delta": 0,
+    "transaction_family_delta": 0,
+    "migration_delta": 0,
+    "runtime_source_delta": 0,
+    "effectiveness_condition_satisfied": false
+  },
+  "s9_effectiveness": {
+    "delivery_slice_id": "MCFT-CAP-05.MCFT-03-04.RESTART-LATE-RECEIPT-REBUILD-V1",
+    "pr_number": 2479,
+    "exact_head": "cfe0766d474c0e0a37f38fbe2166fcac79ff96de",
+    "exact_head_workflow": 29392113827,
+    "merge_commit": "07485e93ab17c5a4f9dc057f6c79e190a38d425f",
+    "head_to_merge_file_delta_count": 0,
+    "tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2480,
+    "postmerge_probe_exact_head": "15a149750e3a20c93fac7a92c26f6f83e30ea500",
+    "merged_main_gate_workflow": 29392566574,
+    "merged_main_gate": "PASS",
+    "governance_gate": "54_PASS_0_FAIL",
+    "postgresql_restart_late_rebuild_path": "13_PASS_0_FAIL",
+    "inherited_cap03_recovery_path": "15_PASS_0_FAIL",
+    "repository_typecheck": "PASS",
+    "repository_build": "PASS",
+    "server_selfcheck": "PASS",
+    "standard_acceptance": "PASS",
+    "commercial_mvp0_release_gate": "PASS",
+    "effective": true
+  },
+  "s9_settlement_candidate": {
+    "activation_id": "MCFT-CAP-05.S9.SSOT-SETTLEMENT-V1",
+    "pr_number": 2481,
+    "target_state": "S10_AUTHORIZED_NOT_STARTED",
     "canonical_object_delta": 0,
     "transaction_family_delta": 0,
     "migration_delta": 0,

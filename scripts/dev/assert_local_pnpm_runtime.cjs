@@ -236,11 +236,13 @@ function runCap05S8StrictForecastAvailabilityAcceptance() {
 }
 
 // MCFT_CAP_05_S9_RESTART_LATE_RECEIPT_REBUILD_GATE_V1: execute S9 governance, PostgreSQL recovery and inherited fencing/CAS regressions.
-function runCap05S9RestartRecoveryAcceptance() {
-  runGate(
-    path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_RESTART_LATE_RECEIPT_REBUILD.cjs'),
-    '--auto',
-  );
+function runCap05S9RestartRecoveryAcceptance({ runHistoricalGovernance }) {
+  if (runHistoricalGovernance) {
+    runGate(
+      path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_RESTART_LATE_RECEIPT_REBUILD.cjs'),
+      '--auto',
+    );
+  }
 
   const base = postgresBaseUrl();
   const shouldRunDatabase = env.CI === 'true' || env.MCFT_CAP_05_S9_RUN_DB_ACCEPTANCE === '1';
@@ -271,14 +273,17 @@ runRuntimeDoctor();
 const activationGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs');
 const s7SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_SETTLEMENT.cjs');
 const s8SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_SETTLEMENT.cjs');
+const s9SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_SETTLEMENT.cjs');
 const s8RuntimeStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-STATUS.json');
 const strictForecastAvailabilityStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-STRICT-FORECAST-AVAILABILITY-STATUS.json');
 const s9StatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S9-STATUS.json');
+const s9SettlementStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S9-SETTLEMENT-STATUS.json');
 const settlementActive = fs.existsSync(s7SettlementGatePath);
 const s8SettlementActive = fs.existsSync(s8SettlementGatePath);
 const s8RuntimeActive = fs.existsSync(s8RuntimeStatusPath);
 const strictForecastAvailabilityActive = fs.existsSync(strictForecastAvailabilityStatusPath);
 const s9Active = fs.existsSync(s9StatusPath);
+const s9SettlementActive = fs.existsSync(s9SettlementStatusPath);
 
 // MCFT_CAP_05_S6_ACTIVATION_GATE_V1: run only while S6→S7 activation is the current lifecycle frontier.
 if (!settlementActive) {
@@ -312,5 +317,8 @@ if (!s9Active) {
   runGate(s8SettlementGatePath, '--auto');
 }
 
-// MCFT_CAP_05_S9_RESTART_LATE_RECEIPT_REBUILD_GATE_V1: prove the bounded S9 recovery candidate without authorizing S10 or CAP-06.
-runCap05S9RestartRecoveryAcceptance();
+// MCFT_CAP_05_S9_RESTART_LATE_RECEIPT_REBUILD_GATE_V1: preserve S9 Runtime and PostgreSQL recovery behavior permanently, but do not reassert its historical six-file candidate boundary after settlement materializes.
+runCap05S9RestartRecoveryAcceptance({ runHistoricalGovernance: !s9SettlementActive });
+
+// MCFT_CAP_05_S9_SSOT_SETTLEMENT_GATE_V1: settle S9 merged-main effectiveness and explicitly authorize, but do not implement, S10.
+runGate(s9SettlementGatePath, '--auto');

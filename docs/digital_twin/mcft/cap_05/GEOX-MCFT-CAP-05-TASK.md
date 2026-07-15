@@ -4151,3 +4151,70 @@ Governance effect:
 - explicitly authorize, but do not implement, S9 restart, response-loss, late-receipt and projection-rebuild work;
 - preserve S10 and CAP-06 as unauthorized;
 - add no Runtime source, canonical object, transaction family, migration, route or web change.
+
+---
+
+## S9 SSOT Settlement — S9 Effective / S10 Authorized
+
+```text
+activation_id:
+MCFT-CAP-05.S9.SSOT-SETTLEMENT-V1
+
+baseline_main_commit:
+07485e93ab17c5a4f9dc057f6c79e190a38d425f
+
+implementation_status:
+S10_AUTHORIZED_NOT_STARTED
+
+active_delivery_slice_id:
+MCFT-CAP-05.MCFT-04-16.BOUNDED-EIGHT-TICK-FEEDBACK-CHAIN-V1
+
+S9_status:
+MERGED_EFFECTIVE
+
+S9_exact_head:
+cfe0766d474c0e0a37f38fbe2166fcac79ff96de
+
+S9_exact_head_workflow:
+29392113827 SUCCESS
+
+S9_merge_commit:
+07485e93ab17c5a4f9dc057f6c79e190a38d425f
+
+S9_head_to_merge_file_delta_count:
+0
+
+S9_postmerge_probe_PR:
+2480 CLOSED_WITHOUT_MERGE
+
+S9_postmerge_probe_workflow:
+29392566574 SUCCESS
+
+S9_governance:
+54 PASS / 0 FAIL
+
+S9_PostgreSQL_restart_late_rebuild_path:
+13 PASS / 0 FAIL
+
+inherited_CAP03_recovery_path:
+15 PASS / 0 FAIL
+
+S10_status:
+AUTHORIZED_NOT_STARTED
+
+S10_runtime_source_authorized:
+true
+
+S10_implementation_started:
+false
+
+CAP_06_authorized:
+false
+```
+
+Governance effect:
+
+- settle S9 restart, G/H/C response-loss, late-receipt no-shift and support-rebuild Runtime as merged-main effective;
+- explicitly authorize, but do not implement, the bounded eight-tick feedback-chain S10 slice;
+- preserve the prohibition on automatic history rewrite, late-Evidence revision Runtime, calibration, model activation and CAP-06 authority;
+- add no Runtime source, canonical object, transaction family, migration, route or web change.
