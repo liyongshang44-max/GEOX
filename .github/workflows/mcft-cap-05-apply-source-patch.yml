@@ -69,22 +69,34 @@ jobs:
 
       - name: Commit source patch
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add \
-            apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts \
-            apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts \
-            apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts \
-            apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts \
-            apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.ts \
-            apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts \
-            apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts \
-            apps/server/src/runtime/twin_runtime/cap05_feedback_config_execution_view_v1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FEEDBACK_CONFIG_EXECUTION_VIEW.ts \
-            scripts/remediation/APPLY_MCFT_CAP_05_EXECUTION_VIEW_SEPARATION.py
-          if git diff --cached --quiet; then
-            echo 'No source patch required'
-            exit 0
-          fi
-          git commit -m 'MCFT-CAP-05: separate canonical Config from execution view'
-          git push origin HEAD:${{ github.head_ref }}
+          set -o pipefail
+          {
+            git status --short
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -A -- \
+              apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts \
+              apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts \
+              apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts \
+              apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts \
+              apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.ts \
+              apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts \
+              apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts \
+              apps/server/src/runtime/twin_runtime/cap05_feedback_config_execution_view_v1.ts \
+              scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FEEDBACK_CONFIG_EXECUTION_VIEW.ts \
+              scripts/remediation/APPLY_MCFT_CAP_05_EXECUTION_VIEW_SEPARATION.py
+            git status --short
+            if git diff --cached --quiet; then
+              echo 'No source patch required'
+              exit 0
+            fi
+            git commit -m 'MCFT-CAP-05: separate canonical Config from execution view'
+            git push origin HEAD:${{ github.head_ref }}
+          } 2>&1 | tee /tmp/source-commit.log
+
+      - name: Upload commit diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-source-commit-diagnostics
+          path: /tmp/source-commit.log
