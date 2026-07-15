@@ -4065,3 +4065,89 @@ migration delta:
 CAP-06 authorized:
 false
 ```
+
+---
+
+## S8 SSOT Settlement — S8 Effective / S9 Authorized
+
+```text
+capability_line_id:
+MCFT-CAP-05
+
+activation_id:
+MCFT-CAP-05.S8.SSOT-SETTLEMENT-V1
+
+baseline_main_commit:
+ca61e86c5a6c1e035b82312b92116a111a76ccc7
+
+activation_pr_number:
+2477
+
+implementation_status:
+S9_AUTHORIZED_NOT_STARTED
+
+active_delivery_slice_id:
+MCFT-CAP-05.MCFT-03-04.RESTART-LATE-RECEIPT-REBUILD-V1
+
+S8 Runtime exact head:
+172ee2ac2e306b7e04f2db7d05a3163f881b490a
+
+S8 Runtime merge commit:
+0610ed542067e699b7dd9828199661f12e1cdbde
+
+S8 Runtime candidate workflow:
+29360620207 SUCCESS
+
+strict-availability exact head:
+ff2fc0ea9a2b387b01fe86560f85c65428cb0fee
+
+strict-availability merge commit:
+ca61e86c5a6c1e035b82312b92116a111a76ccc7
+
+strict-availability candidate workflow:
+29385358058 SUCCESS
+
+invalid probe:
+PR #2474 CLOSED_WITHOUT_MERGE_OR_EFFECTIVENESS_CLAIM
+
+corrected merged-main probe:
+PR #2476
+workflow 29385741895 SUCCESS
+closed without merge
+
+strict availability governance:
+44 PASS / 0 FAIL
+
+S8 in-memory outcome path:
+16 PASS / 0 FAIL
+
+S8 PostgreSQL source/C/recovery path:
+8 PASS / 0 FAIL
+
+S8 status:
+MERGED_EFFECTIVE
+
+S9 status:
+AUTHORIZED_NOT_STARTED
+
+S9 runtime_source_authorized:
+true
+
+S9 implementation_started:
+false
+
+S10 authorized:
+false
+
+CAP-06 authorized:
+false
+```
+
+Governance effect:
+
+- settle the original S8 Runtime and strict pre-observation Forecast-availability hardening as merged-main effective;
+- preserve PR #2474 as an invalid orchestration proof, not a Runtime failure;
+- freeze PR #2476 workflow 29385741895 as the corrected merged-main effectiveness proof;
+- explicitly authorize, but do not implement, S9 restart, response-loss, late-receipt and projection-rebuild work;
+- preserve S10 and CAP-06 as unauthorized;
+- add no Runtime source, canonical object, transaction family, migration, route or web change.
