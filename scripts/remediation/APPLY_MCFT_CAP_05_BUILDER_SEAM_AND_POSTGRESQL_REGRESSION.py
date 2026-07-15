@@ -135,3 +135,28 @@ replace_once(
     }
   ],''',
 )
+
+postgresql_acceptance = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts"
+replace_once(
+    postgresql_acceptance,
+    '''  const evidence = JSON.parse(
+    fs.readFileSync(
+      path.join(ROOT, "fixtures/mcft/water_state/feedback_v1/decision_and_execution_evidence.jsonl"),
+      "utf8",
+    ).trim(),
+  ) as Array<Record<string, any>>;''',
+    '''  const feedbackRoot = path.join(ROOT, "fixtures/mcft/water_state/feedback_v1");
+  const readSingleEvidenceV1 = (filename: string): Record<string, any> => {
+    const records = fs.readFileSync(path.join(feedbackRoot, filename), "utf8")
+      .split("\\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as Record<string, any>);
+    assert.equal(records.length, 1, `STANDARD_FEEDBACK_FIXTURE_CARDINALITY:${filename}`);
+    return records[0];
+  };
+  const evidence = [
+    readSingleEvidenceV1("approval_assertions.jsonl"),
+    readSingleEvidenceV1("approved_plans.jsonl"),
+    readSingleEvidenceV1("execution_receipts.jsonl"),
+  ];''',
+)
