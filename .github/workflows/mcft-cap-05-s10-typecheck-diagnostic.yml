@@ -26,11 +26,13 @@ jobs:
           cache: pnpm
       - name: Install
         run: pnpm install --no-frozen-lockfile
-      - name: Capture typecheck diagnostics
+      - name: Capture typecheck diagnostics and original CI
         run: |
           set +e
           pnpm -r typecheck > typecheck.log 2>&1
           echo "$?" > typecheck.exit
+          git fetch --no-tags --depth=1 origin main
+          git show FETCH_HEAD:.github/workflows/ci.yml > original-ci.yml
           exit 0
       - name: Upload diagnostics
         uses: actions/upload-artifact@v4
@@ -39,3 +41,4 @@ jobs:
           path: |
             typecheck.log
             typecheck.exit
+            original-ci.yml
