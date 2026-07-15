@@ -42,4 +42,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --no-frozen-lockfile
       - name: Focused CAP-05 preflight
-        run: node scripts/dev/assert_local_pnpm_runtime.cjs
+        run: |
+          set -o pipefail
+          node scripts/dev/assert_local_pnpm_runtime.cjs 2>&1 | tee /tmp/mcft-cap05-preflight.log
+      - name: Upload focused preflight diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap05-preflight-diagnostics
+          path: /tmp/mcft-cap05-preflight.log
