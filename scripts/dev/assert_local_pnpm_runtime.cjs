@@ -268,12 +268,14 @@ function runCap05S9RestartRecoveryAcceptance({ runHistoricalGovernance }) {
   }));
 }
 
-// MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN_GATE_V1: execute S10 static governance and bounded orchestration acceptance.
-function runCap05S10BoundedFeedbackChainAcceptance() {
-  runGate(
-    path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN.cjs'),
-    '--auto',
-  );
+// MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN_GATE_V1: preserve bounded-chain Runtime behavior permanently; retire the historical static implementation Gate after S10 settlement materializes.
+function runCap05S10BoundedFeedbackChainAcceptance({ runHistoricalGovernance }) {
+  if (runHistoricalGovernance) {
+    runGate(
+      path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN.cjs'),
+      '--auto',
+    );
+  }
   requireSuccess(run(isWindows ? 'pnpm.cmd' : 'pnpm', [
     '-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN.ts',
   ]));
@@ -344,7 +346,7 @@ if (!s10Active) {
 }
 
 // MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN_GATE_V1: verify the authorized bounded-chain implementation and permanent orchestration behavior.
-runCap05S10BoundedFeedbackChainAcceptance();
+runCap05S10BoundedFeedbackChainAcceptance({ runHistoricalGovernance: !s10SettlementActive });
 
 // MCFT_CAP_05_S10_SSOT_SETTLEMENT_GATE_V1: settle S10 effectiveness and authorize governance-only S11 closure work until a canonical closure record materializes.
 if (s10SettlementActive && !cap05ClosureActive) {
