@@ -19,7 +19,6 @@ const S10_EFFECTIVE_MAIN = '0c015bad3eb1729000d7f68eb08e00de6ef4afcf';
 const PROBE_BRANCH = 'ci/mcft-cap-05-s10-merged-main-probe';
 const PROBE_FILE = 'scripts/dev/assert_local_pnpm_runtime.cjs';
 const S10_GATE = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN.cjs';
-const S10_RUNTIME_ACCEPTANCE = 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN.ts';
 const EXPECTED_S10_FILES = [
   'apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts',
   'apps/server/src/runtime/twin_runtime/bounded_feedback_chain_service_v1.ts',
@@ -140,17 +139,12 @@ function runPermanentAcceptanceWithoutProbeBoundaryReassertion() {
     ']));',
   ].join('\n');
   const transformed = original.replace(originalCall, replacement);
-  const temporaryPath = path.join(
-    process.cwd(),
-    'acceptance-output',
-    'MCFT_CAP_05_S10_EFFECTIVE_MAIN_ORIGINAL_WRAPPER.cjs',
-  );
-  fs.mkdirSync(path.dirname(temporaryPath), { recursive: true });
-  fs.writeFileSync(temporaryPath, transformed, 'utf8');
+  const probeSource = fs.readFileSync(PROBE_FILE, 'utf8');
+  fs.writeFileSync(PROBE_FILE, transformed, 'utf8');
   try {
-    requireSuccess(run(process.execPath, [temporaryPath]));
+    requireSuccess(run(process.execPath, [PROBE_FILE]));
   } finally {
-    fs.rmSync(temporaryPath, { force: true });
+    fs.writeFileSync(PROBE_FILE, probeSource, 'utf8');
   }
 }
 
