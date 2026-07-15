@@ -1,4 +1,4 @@
-# Proof revision: include source-binding conversion-rule execution metadata conformance.
+# Proof revision: align formal Replay forcing binding authority before PostgreSQL proof.
 name: mcft-cap-05-apply-source-patch
 
 on:
@@ -7,6 +7,7 @@ on:
       - '.github/workflows/mcft-cap-05-apply-source-patch.yml'
       - 'apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts'
       - 'scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py'
+      - 'scripts/remediation/APPLY_MCFT_CAP_05_FORMAL_REPLAY_BINDING_AUTHORITY.py'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_BINDING_EXECUTION_METADATA.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts'
 
@@ -44,6 +45,7 @@ jobs:
         run: |
           set -o pipefail
           python scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py 2>&1 | tee /tmp/builder-seam-generator.log
+          python scripts/remediation/APPLY_MCFT_CAP_05_FORMAL_REPLAY_BINDING_AUTHORITY.py
 
       - name: Upload builder-seam generator diagnostics
         if: failure()
