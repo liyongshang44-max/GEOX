@@ -1,0 +1,44 @@
+{
+  "schema_version": "geox_mcft_cap_06_dataset_qualification_v1",
+  "qualification_id": "mcft_cap06_qualification_6601b096a40fb703175b4979",
+  "source_scope": {
+    "tenant_id": "tenantA",
+    "project_id": "projectA",
+    "group_id": "groupA",
+    "field_id": "field_c8_demo",
+    "season_id": "season_2026_c8_corn",
+    "zone_id": "zone_mcft_c8_water_001"
+  },
+  "qualification_track": "REPOSITORY_HISTORY_QUALIFICATION_TRACK",
+  "extraction_source": "ISOLATED_POSTGRESQL_CANONICAL_READ_PATH",
+  "eligible_forecast_count": 1,
+  "eligible_observation_count": 1,
+  "eligible_matched_pair_count": 1,
+  "eligible_residual_count": 1,
+  "eligible_calibration_count": 0,
+  "eligible_holdout_count": 0,
+  "calibration_window_refs": [],
+  "holdout_window_refs": [],
+  "model_component_hash_count": 1,
+  "effective_parameter_bundle_hash_count": 1,
+  "observation_operator_hash_count": 1,
+  "geometry_hash_count": 1,
+  "runtime_replay_numeric_policy_hash_count": 1,
+  "case_graph_validation_status": "PASS",
+  "dataset_qualification_status": "INSUFFICIENT_MATCHED_PAIRS",
+  "qualification_limitations": [
+    "CURRENT_CANONICAL_HISTORY_CONTAINS_FEWER_THAN_24_ELIGIBLE_MATCHED_RESIDUAL_CASES",
+    "NO_CALIBRATION_GRID_SEARCH_EXECUTED_BY_S0",
+    "NO_CANDIDATE_OR_EVALUATION_CANONICALIZED"
+  ],
+  "eligible_residual_refs": [
+    "twin_forecast_residual_b346b2d105a290463ef61935"
+  ],
+  "eligible_residual_hashes": [
+    "sha256:67d93b4951032e5c8b87f08f4ed92a88ffe645edbdb5092eaeead7ead751c15a"
+  ],
+  "sensitive_case_count": null,
+  "excited_case_count": null,
+  "objective_surface_status": null,
+  "selected_parameter": null
+}

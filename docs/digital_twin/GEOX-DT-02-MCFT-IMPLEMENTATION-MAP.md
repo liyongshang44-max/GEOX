@@ -1444,3 +1444,31 @@ false
 
 P0 reconciles CAP-05 terminal COMPLETE facts and adds the provisional MCFT-CAP-06 capability line. It grants no Runtime, migration, canonical-write, S0, Model Activation, active-binding, or successor authority.
 <!-- MCFT-CAP-06-P0-CURRENT-STATE-END -->
+
+<!-- MCFT-CAP-06-S0-CURRENT-STATE-BEGIN -->
+## MCFT-CAP-06 S0 authorization and predecessor qualification candidate
+
+```text
+baseline merged main: 1e66ea7efc842b8e547bccc40521d520b4370e69
+P0 status: MERGED_EFFECTIVE
+S0 status: READY_FOR_MERGE
+authorization effective: false
+runtime source authorized: false
+active delivery slice: null
+checkpoint sequence: 80
+reproduced State fact count: 33
+historical S10 declared global State count: 81
+historical S10 orchestrator canonical object fact delta: 81
+State-count reconciliation: HISTORICAL_S10_GLOBAL_STATE_COUNT_LABEL_CONFLATED_WITH_ORCHESTRATOR_CANONICAL_OBJECT_FACT_DELTA
+latest logical time: 2026-06-04T09:00:00.000Z
+next logical tick: 2026-06-04T10:00:00.000Z
+config authority mode: EXPLICIT_REPLAY_PIN
+active binding status: NOT_ESTABLISHED
+dataset qualification: INSUFFICIENT_MATCHED_PAIRS
+eligible canonical Residuals: 1
+next eligible after merged-main S0 Gate: MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
+successor MCFT-CAP-07 authorized: false
+```
+
+The S0 candidate contains governance artifacts and isolated PostgreSQL readback/qualification only. Runtime source remains forbidden until S0 merges and its merged-main Authorization Gate passes.
+<!-- MCFT-CAP-06-S0-CURRENT-STATE-END -->

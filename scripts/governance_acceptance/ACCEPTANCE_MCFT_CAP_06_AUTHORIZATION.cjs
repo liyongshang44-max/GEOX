@@ -9,7 +9,8 @@ const { execFileSync } = require("node:child_process");
 const repoRoot = process.env.GEOX_REPO_ROOT
   ? path.resolve(process.env.GEOX_REPO_ROOT)
   : path.resolve(__dirname, "../..");
-const baseline = "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf";
+const baseline = "1e66ea7efc842b8e547bccc40521d520b4370e69";
+const p0MergeCommit = "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf";
 const postmerge = process.argv.includes("--postmerge");
 
 const readText = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
@@ -48,7 +49,7 @@ check("S0_P0_MERGED_EFFECTIVE", p0.status === "MERGED_EFFECTIVE"
   && p0.effectiveness.effective === true
   && p0.effectiveness.implementation_pr_number === 2498
   && p0.effectiveness.exact_head_commit === "13957179a9547995e0a1443ba400d07c830579fc"
-  && p0.effectiveness.merge_commit === baseline
+  && p0.effectiveness.merge_commit === p0MergeCommit
   && p0.effectiveness.postmerge_probe_pr_number === 2499
   && p0.effectiveness.postmerge_workflow_run === 29419841209
   && p0.effectiveness.postmerge_gate === "PASS", p0StatusPath);
@@ -64,11 +65,17 @@ check("S0_CAP05_TERMINAL_GOVERNANCE", cap05
 check("S0_POSTGRESQL_IDENTITY", lock.status === "COMPLETE"
   && lock.identity_extraction_source === "ISOLATED_POSTGRESQL_CANONICAL_READ_PATH"
   && lock.expected_checkpoint.checkpoint_sequence === 80
-  && lock.expected_checkpoint.global_state_count === 81
+  && lock.expected_checkpoint.reproduced_state_fact_count === 33
+  && lock.expected_checkpoint.historical_s10_declared_global_state_count === 81
+  && lock.expected_checkpoint.historical_s10_orchestrator_canonical_object_fact_delta === 81
+  && lock.expected_checkpoint.state_count_reconciliation === "HISTORICAL_S10_GLOBAL_STATE_COUNT_LABEL_CONFLATED_WITH_ORCHESTRATOR_CANONICAL_OBJECT_FACT_DELTA"
   && lock.expected_checkpoint.last_logical_time === "2026-06-04T09:00:00.000Z"
   && lock.expected_checkpoint.next_tick_logical_time === "2026-06-04T10:00:00.000Z"
   && lock.canonical_identity.checkpoint_sequence === 80
-  && lock.canonical_identity.global_state_count === 81
+  && lock.canonical_identity.reproduced_state_fact_count === 33
+  && lock.canonical_identity.historical_s10_declared_global_state_count === 81
+  && lock.canonical_identity.historical_s10_orchestrator_canonical_object_fact_delta === 81
+  && lock.canonical_identity.state_count_reconciliation === "HISTORICAL_S10_GLOBAL_STATE_COUNT_LABEL_CONFLATED_WITH_ORCHESTRATOR_CANONICAL_OBJECT_FACT_DELTA"
   && lock.canonical_identity.latest_logical_time === "2026-06-04T09:00:00.000Z"
   && lock.canonical_identity.next_tick_logical_time === "2026-06-04T10:00:00.000Z", lockPath);
 
@@ -108,7 +115,10 @@ check("S0_AUTHORIZATION_CANDIDATE", authorizationStatus.status === "READY_FOR_ME
 
 check("S0_AUTHORIZATION_DOCUMENT", authorization.includes("S0_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_AUTHORIZATION_GATE_PASS")
   && authorization.includes("checkpoint_sequence: 80")
-  && authorization.includes("global_state_count: 81")
+  && authorization.includes("reproduced_state_fact_count: 33")
+  && authorization.includes("historical_s10_declared_global_state_count: 81")
+  && authorization.includes("historical_s10_orchestrator_canonical_object_fact_delta: 81")
+  && authorization.includes("state_count_reconciliation: HISTORICAL_S10_GLOBAL_STATE_COUNT_LABEL_CONFLATED_WITH_ORCHESTRATOR_CANONICAL_OBJECT_FACT_DELTA")
   && authorization.includes("status: INSUFFICIENT_MATCHED_PAIRS")
   && authorization.includes("runtime_source_authorized:\nfalse"), authorizationPath);
 
@@ -141,7 +151,10 @@ check("S0_TASK_STATE", task.includes("implementation_status:\nS0_CANDIDATE")
 check("S0_IMPLEMENTATION_MAP", implementationMap.includes("MCFT-CAP-06-S0-CURRENT-STATE-BEGIN")
   && implementationMap.includes("S0 status: READY_FOR_MERGE")
   && implementationMap.includes("checkpoint sequence: 80")
-  && implementationMap.includes("global State count: 81")
+  && implementationMap.includes("reproduced State fact count: 33")
+  && implementationMap.includes("historical S10 declared global State count: 81")
+  && implementationMap.includes("historical S10 orchestrator canonical object fact delta: 81")
+  && implementationMap.includes("State-count reconciliation: HISTORICAL_S10_GLOBAL_STATE_COUNT_LABEL_CONFLATED_WITH_ORCHESTRATOR_CANONICAL_OBJECT_FACT_DELTA")
   && implementationMap.includes("dataset qualification: INSUFFICIENT_MATCHED_PAIRS")
   && implementationMap.includes("runtime source authorized: false"), mapPath);
 

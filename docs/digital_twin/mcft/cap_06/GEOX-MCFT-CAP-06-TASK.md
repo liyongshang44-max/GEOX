@@ -31,7 +31,7 @@ design_status:
 CONDITIONAL_FROZEN_AFTER_P_MINUS_1
 
 implementation_status:
-P_MINUS_1_COMPLETE
+S0_CANDIDATE
 
 runtime_implementation_status:
 NOT_AUTHORIZED
@@ -49,7 +49,7 @@ dt02_architecture_amendment_status:
 NOT_REQUIRED
 
 first_permitted_repository_action:
-null
+MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1
 ```
 
 本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1 已 merged-main effective；当前 P0 只建立 provisional SSOT，不授权 S0、Runtime source、migration、runner、canonical write、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 或 Shadow-Online Runtime。
@@ -4170,3 +4170,68 @@ null
 
 P0 不重开 CAP-05 closure，不创建 Runtime、migration、canonical object、Model Activation 或 active binding。P0 只有在合并、head-to-merge tree equivalence 和 merged-main P0 Gate 成功后，才使 S0 成为下一项可执行治理工作。
 <!-- MCFT-CAP-06-P0-CURRENT-STATE-END -->
+
+<!-- MCFT-CAP-06-S0-CURRENT-STATE-BEGIN -->
+# 50. S0 authorization / predecessor lock / structural qualification candidate
+
+```text
+baseline_main_commit:
+1e66ea7efc842b8e547bccc40521d520b4370e69
+
+P0 status:
+MERGED_EFFECTIVE
+
+S0 status:
+READY_FOR_MERGE
+
+authorization_effective:
+false
+
+runtime_source_authorized:
+false
+
+active_delivery_slice_id:
+null
+
+predecessor checkpoint sequence:
+80
+
+predecessor reproduced State fact count:
+33
+
+historical S10 declared global State count:
+81
+
+historical S10 orchestrator canonical object fact delta:
+81
+
+State-count reconciliation:
+HISTORICAL_S10_GLOBAL_STATE_COUNT_LABEL_CONFLATED_WITH_ORCHESTRATOR_CANONICAL_OBJECT_FACT_DELTA
+
+predecessor latest logical time:
+2026-06-04T09:00:00.000Z
+
+predecessor next logical tick:
+2026-06-04T10:00:00.000Z
+
+config authority mode:
+EXPLICIT_REPLAY_PIN
+
+active binding status:
+NOT_ESTABLISHED
+
+dataset qualification status:
+INSUFFICIENT_MATCHED_PAIRS
+
+eligible canonical Residual count:
+1
+
+S1 authorized:
+false
+
+next eligible after S0 effectiveness:
+MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
+```
+
+S0 only reads and structurally qualifies the reconstructed canonical history. It does not create Residual, Candidate, Evaluation, Model Activation, State, checkpoint or active-config authority.
+<!-- MCFT-CAP-06-S0-CURRENT-STATE-END -->

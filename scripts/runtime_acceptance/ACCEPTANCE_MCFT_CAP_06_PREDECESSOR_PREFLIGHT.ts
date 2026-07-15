@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import cp from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
@@ -14,11 +15,12 @@ import {
   type Cap05ApprovedPlanEvidenceV1,
 } from "../../apps/server/src/evidence/twin_runtime/approval_plan_evidence_contracts_v1.js";
 import type { Cap05ExecutionReceiptEvidenceV1 } from "../../apps/server/src/evidence/twin_runtime/execution_receipt_evidence_contract_v1.js";
+import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
 import { Cap05ApprovalPlanBindingServiceV1 } from "../../apps/server/src/runtime/twin_runtime/approval_plan_binding_service_v1.js";
 import { Cap05ActionFeedbackNormalizationServiceV1 } from "../../apps/server/src/runtime/twin_runtime/action_feedback_normalization_service_v1.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const BASELINE_MAIN = "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf";
+const BASELINE_MAIN = "1e66ea7efc842b8e547bccc40521d520b4370e69";
 const BRANCH = "agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1";
 const P0 = "MCFT-CAP-06.P0.CAP-05-TERMINAL-SSOT-RECONCILIATION-AND-PROVISIONAL-SSOT-V1";
 const S0 = "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1";
@@ -26,13 +28,16 @@ const S1 = "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1";
 const P0_PR = 2498;
 const P0_EXACT_HEAD = "13957179a9547995e0a1443ba400d07c830579fc";
 const P0_EXACT_HEAD_WORKFLOW = 29419324004;
-const P0_MERGE_COMMIT = BASELINE_MAIN;
+const P0_MERGE_COMMIT = "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf";
 const P0_POSTMERGE_PROBE_PR = 2499;
 const P0_POSTMERGE_WORKFLOW = 29419841209;
 const EXPECTED_LAST_LOGICAL_TIME = "2026-06-04T09:00:00.000Z";
 const EXPECTED_NEXT_LOGICAL_TIME = "2026-06-04T10:00:00.000Z";
 const EXPECTED_CHECKPOINT_SEQUENCE = 80;
-const EXPECTED_GLOBAL_STATE_COUNT = 81;
+const EXPECTED_REPRODUCED_STATE_FACT_COUNT = 33;
+const HISTORICAL_S10_DECLARED_GLOBAL_STATE_COUNT = 81;
+const HISTORICAL_S10_ORCHESTRATOR_CANONICAL_OBJECT_FACT_DELTA = 81;
+const STATE_COUNT_RECONCILIATION = "HISTORICAL_S10_GLOBAL_STATE_COUNT_LABEL_CONFLATED_WITH_ORCHESTRATOR_CANONICAL_OBJECT_FACT_DELTA";
 
 const EXPECTED_SCOPE = Object.freeze({
   tenant_id: "tenantA",
@@ -245,6 +250,88 @@ async function establishStandardFeedbackPath(pool: Pool): Promise<void> {
   ok("canonical G Decision predecessor is extended with exactly one standard Plan binding and one State-eligible H Action Feedback");
 }
 
+function walkReplayFilesV1(directory: string): string[] {
+  const files: string[] = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const absolutePath = path.join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...walkReplayFilesV1(absolutePath));
+    else files.push(absolutePath);
+  }
+  return files;
+}
+
+function buildS0HAuthoritativeReplayViewV1(): string {
+  const source = absolute("fixtures/mcft/water_state/replay_v1");
+  const target = path.join(os.tmpdir(), "mcft_cap06_s0_h_authoritative_replay_v1");
+  fs.rmSync(target, { recursive: true, force: true });
+  fs.cpSync(source, target, { recursive: true });
+
+  let removedLegacyIrrigation = 0;
+  let normalizedObservation = 0;
+  for (const file of walkReplayFilesV1(target).filter((candidate) => candidate.endsWith(".jsonl"))) {
+    const records = fs.readFileSync(file, "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as Record<string, any>);
+    const output: string[] = [];
+    for (const record of records) {
+      if (record.record_type === "irrigation_execution_evidence_v1") {
+        removedLegacyIrrigation += 1;
+        continue;
+      }
+      if (record.record_type === "soil_moisture_observation_v1") {
+        record.canonical_payload = { ...record.canonical_payload };
+        record.source_payload = { ...record.source_payload };
+        if (record.canonical_payload.quantity_kind === undefined) {
+          assert.equal(typeof record.quantity_kind, "string", "S0_TEMP_REPLAY_QUANTITY_KIND_REQUIRED");
+          record.canonical_payload.quantity_kind = record.quantity_kind;
+          normalizedObservation += 1;
+        }
+        if (record.source_payload.source_version === undefined) {
+          assert.equal(typeof record.source_version, "string", "S0_TEMP_REPLAY_SOURCE_VERSION_REQUIRED");
+          record.source_payload.source_version = record.source_version;
+        }
+        const semantic = structuredClone(record);
+        delete semantic.source_record_hash;
+        delete semantic.materialized_file_location;
+        record.source_record_hash = semanticHashV1(semantic);
+      }
+      output.push(JSON.stringify(record));
+    }
+    fs.writeFileSync(file, `${output.join("\n")}\n`, "utf8");
+  }
+  assert.ok(removedLegacyIrrigation >= 1, "S0_LEGACY_IRRIGATION_EXCLUSION_NOT_PROVEN");
+  assert.ok(normalizedObservation >= 1, "S0_LEGACY_OBSERVATION_NORMALIZATION_NOT_PROVEN");
+
+  const outcomePath = absolute("fixtures/mcft/water_state/feedback_v1/soil_observations.jsonl");
+  const outcomeRecords = fs.readFileSync(outcomePath, "utf8")
+    .split(String.fromCharCode(10))
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as Record<string, any>);
+  assert.equal(outcomeRecords.length, 1, "S0_OUTCOME_OBSERVATION_CARDINALITY");
+  const outcome = structuredClone(outcomeRecords[0]);
+  assert.equal(outcome.record_type, "soil_moisture_observation_v1");
+  assert.equal(outcome.role_time.observed_at, "2026-06-04T03:00:00.000Z");
+  outcome.canonical_payload = {
+    ...outcome.canonical_payload,
+    quantity_kind: "VOLUMETRIC_WATER_CONTENT",
+  };
+  outcome.source_payload = {
+    ...outcome.source_payload,
+    source_version: String(outcome.source_version ?? "1"),
+  };
+  const semantic = structuredClone(outcome);
+  delete semantic.source_record_hash;
+  delete semantic.materialized_file_location;
+  outcome.source_record_hash = semanticHashV1(semantic);
+  fs.appendFileSync(
+    path.join(target, "soil_moisture", "2026-06-04.jsonl"),
+    `${JSON.stringify(outcome)}\n`,
+    "utf8",
+  );
+  return target;
+}
+
 async function executeCap05TerminalChain(databaseUrl: string): Promise<void> {
   const decisionOutput = run(process.platform === "win32" ? "pnpm.cmd" : "pnpm", [
     "-w", "exec", "tsx", "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_HUMAN_DECISION_G_DB.ts",
@@ -259,17 +346,27 @@ async function executeCap05TerminalChain(databaseUrl: string): Promise<void> {
   const pool = new Pool({ connectionString: databaseUrl });
   try {
     await establishStandardFeedbackPath(pool);
+    const expiredPredecessorLease = await pool.query(
+      `UPDATE twin_runtime_lease_v1
+          SET expires_at=transaction_timestamp()-interval '1 second'
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3
+          AND field_id=$4 AND season_id=$5 AND zone_id=$6`,
+      scopeValues(),
+    );
+    assert.equal(expiredPredecessorLease.rowCount, 1, "S0_PREDECESSOR_LEASE_CARDINALITY");
+    ok("expired inherited predecessor lease permits fenced S0 owner takeover without weakening mutual exclusion");
   } finally {
     await pool.end();
   }
 
+  const replayRoot = buildS0HAuthoritativeReplayViewV1();
   fs.mkdirSync(absolute("acceptance-output"), { recursive: true });
   const runnerInput = {
     database_url: databaseUrl,
-    replay_root: "fixtures/mcft/water_state/replay_v1",
+    replay_root: replayRoot,
     source_matrix_path: "docs/digital_twin/mcft/GEOX-MCFT-00-SOURCE-BINDING-MATRIX.json",
     scope: EXPECTED_SCOPE,
-    authorized_future_forcing_binding_ids: ["binding_weather", "binding_et0"],
+    authorized_future_forcing_binding_ids: ["weather_assumption_c8_replay_v1", "et0_future_assumption_c8_v1"],
     crop_stage_context: readJson("fixtures/mcft/water_state/replay_v1/configuration_context.json"),
     lease_owner: "mcft-cap06-s0-predecessor-lock",
     lease_duration_seconds: 300,
@@ -289,6 +386,7 @@ async function executeCap05TerminalChain(databaseUrl: string): Promise<void> {
   assert.equal(runnerResult.result.successful_forecast_run_count, 8, "CAP05_TERMINAL_FORECAST_COUNT_MISMATCH");
   assert.equal(runnerResult.result.scenario_set_count, 8, "CAP05_TERMINAL_SCENARIO_COUNT_MISMATCH");
   fs.rmSync(absolute(TEMP_RUNNER_INPUT_PATH), { force: true });
+  fs.rmSync(replayRoot, { recursive: true, force: true });
   ok("completed MCFT-CAP-05 bounded eight-tick terminal chain is reproduced in isolated PostgreSQL");
 }
 
@@ -334,7 +432,11 @@ async function extractIdentity(pool: Pool): Promise<any> {
   assert.equal(state.runtime_config_hash, runtimeConfig.determinism_hash, "STATE_RUNTIME_CONFIG_HASH_MISMATCH");
 
   const stateCount = await pool.query("SELECT count(*)::int AS count FROM facts WHERE record_json->>'type'='twin_state_estimate_v1'");
-  assert.equal(stateCount.rows[0].count, EXPECTED_GLOBAL_STATE_COUNT, "GLOBAL_STATE_COUNT_MISMATCH");
+  assert.equal(
+    stateCount.rows[0].count,
+    EXPECTED_REPRODUCED_STATE_FACT_COUNT,
+    "REPRODUCED_STATE_FACT_COUNT_MISMATCH",
+  );
   const activeConfigTables = await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name ILIKE '%active%config%'");
   assert.equal(activeConfigTables.rows.length, 0, "ACTIVE_CONFIG_INDEX_MUST_NOT_BE_ESTABLISHED");
 
@@ -362,7 +464,10 @@ async function extractIdentity(pool: Pool): Promise<any> {
     active_binding_ref: null,
     active_binding_hash: null,
     checkpoint_sequence: checkpoint.payload.tick_sequence,
-    global_state_count: stateCount.rows[0].count,
+    reproduced_state_fact_count: stateCount.rows[0].count,
+    historical_s10_declared_global_state_count: HISTORICAL_S10_DECLARED_GLOBAL_STATE_COUNT,
+    historical_s10_orchestrator_canonical_object_fact_delta: HISTORICAL_S10_ORCHESTRATOR_CANONICAL_OBJECT_FACT_DELTA,
+    state_count_reconciliation: STATE_COUNT_RECONCILIATION,
     latest_logical_time: state.logical_time,
     next_tick_logical_time: checkpoint.payload.next_tick_logical_time,
   };
@@ -499,7 +604,10 @@ function materializeGovernance(identity: any, qualification: any): void {
     expected_scope: EXPECTED_SCOPE,
     expected_checkpoint: {
       checkpoint_sequence: EXPECTED_CHECKPOINT_SEQUENCE,
-      global_state_count: EXPECTED_GLOBAL_STATE_COUNT,
+      reproduced_state_fact_count: EXPECTED_REPRODUCED_STATE_FACT_COUNT,
+      historical_s10_declared_global_state_count: HISTORICAL_S10_DECLARED_GLOBAL_STATE_COUNT,
+      historical_s10_orchestrator_canonical_object_fact_delta: HISTORICAL_S10_ORCHESTRATOR_CANONICAL_OBJECT_FACT_DELTA,
+      state_count_reconciliation: STATE_COUNT_RECONCILIATION,
       last_logical_time: EXPECTED_LAST_LOGICAL_TIME,
       next_tick_logical_time: EXPECTED_NEXT_LOGICAL_TIME,
     },
@@ -516,7 +624,10 @@ function materializeGovernance(identity: any, qualification: any): void {
       "config_authority_mode_is_explicit_replay_pin",
       "active_binding_status_is_not_established_with_null_refs",
       "checkpoint_sequence_equals_80",
-      "global_state_count_equals_81",
+      "reproduced_state_fact_count_equals_33",
+      "historical_s10_declared_global_state_count_81_preserved_without_reuse_as_state_count",
+      "historical_s10_orchestrator_canonical_object_fact_delta_equals_81",
+      "state_count_semantic_reconciliation_is_explicit",
       "latest_logical_time_equals_2026_06_04T09_00_00Z",
       "next_tick_logical_time_equals_2026_06_04T10_00_00Z",
     ],
@@ -564,7 +675,10 @@ function materializeGovernance(identity: any, qualification: any): void {
       closure_effective: true,
       capability_complete: true,
       checkpoint_sequence: identity.checkpoint_sequence,
-      global_state_count: identity.global_state_count,
+      reproduced_state_fact_count: identity.reproduced_state_fact_count,
+      historical_s10_declared_global_state_count: identity.historical_s10_declared_global_state_count,
+      historical_s10_orchestrator_canonical_object_fact_delta: identity.historical_s10_orchestrator_canonical_object_fact_delta,
+      state_count_reconciliation: identity.state_count_reconciliation,
       latest_logical_time: identity.latest_logical_time,
       next_tick_logical_time: identity.next_tick_logical_time,
       latest_successful_forecast_ref: identity.latest_successful_forecast_ref,
@@ -678,7 +792,10 @@ state_bound_runtime_config_ref: ${identity.state_bound_runtime_config_ref}
 config_authority_mode: ${identity.config_authority_mode}
 active_binding_status: ${identity.active_binding_status}
 checkpoint_sequence: ${identity.checkpoint_sequence}
-global_state_count: ${identity.global_state_count}
+reproduced_state_fact_count: ${identity.reproduced_state_fact_count}
+historical_s10_declared_global_state_count: ${identity.historical_s10_declared_global_state_count}
+historical_s10_orchestrator_canonical_object_fact_delta: ${identity.historical_s10_orchestrator_canonical_object_fact_delta}
+state_count_reconciliation: ${identity.state_count_reconciliation}
 latest_logical_time: ${identity.latest_logical_time}
 next_tick_logical_time: ${identity.next_tick_logical_time}
 \`\`\`
@@ -797,8 +914,17 @@ null
 predecessor checkpoint sequence:
 ${identity.checkpoint_sequence}
 
-predecessor global State count:
-${identity.global_state_count}
+predecessor reproduced State fact count:
+${identity.reproduced_state_fact_count}
+
+historical S10 declared global State count:
+${identity.historical_s10_declared_global_state_count}
+
+historical S10 orchestrator canonical object fact delta:
+${identity.historical_s10_orchestrator_canonical_object_fact_delta}
+
+State-count reconciliation:
+${identity.state_count_reconciliation}
 
 predecessor latest logical time:
 ${identity.latest_logical_time}
@@ -848,7 +974,10 @@ authorization effective: false
 runtime source authorized: false
 active delivery slice: null
 checkpoint sequence: ${identity.checkpoint_sequence}
-global State count: ${identity.global_state_count}
+reproduced State fact count: ${identity.reproduced_state_fact_count}
+historical S10 declared global State count: ${identity.historical_s10_declared_global_state_count}
+historical S10 orchestrator canonical object fact delta: ${identity.historical_s10_orchestrator_canonical_object_fact_delta}
+State-count reconciliation: ${identity.state_count_reconciliation}
 latest logical time: ${identity.latest_logical_time}
 next logical tick: ${identity.next_tick_logical_time}
 config authority mode: ${identity.config_authority_mode}
