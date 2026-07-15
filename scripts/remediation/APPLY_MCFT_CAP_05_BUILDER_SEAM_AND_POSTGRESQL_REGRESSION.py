@@ -246,3 +246,54 @@ replace_once(
     "    assert.equal(pass, 6);",
     "    assert.equal(pass, 7);",
 )
+replace_once(
+    postgresql_acceptance,
+    '''    const firstOutput = run(
+      pnpm,
+      ["-w", "exec", "tsx", "apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts", "--input", runnerInputPath],
+      { DATABASE_URL: targetUrl },
+    );
+    const first = parseRunnerOutputV1(firstOutput);''',
+    '''    const firstProcess = cp.spawnSync(
+      pnpm,
+      ["-w", "exec", "tsx", "apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts", "--input", runnerInputPath],
+      {
+        cwd: ROOT,
+        env: { ...process.env, DATABASE_URL: targetUrl },
+        encoding: "utf8",
+        stdio: "pipe",
+        shell: false,
+        maxBuffer: 256 * 1024 * 1024,
+      },
+    );
+    const firstOutput = String(firstProcess.stdout ?? "");
+    const firstError = String(firstProcess.stderr ?? "");
+    if (firstOutput) process.stdout.write(firstOutput);
+    if (firstError) process.stderr.write(firstError);
+    if (firstProcess.status !== 0) {
+      const blockedFacts = await targetPool.query(
+        `SELECT record_json->>'type' AS object_type,
+                record_json->'payload'->'payload' AS payload,
+                record_json->'payload'->'evidence_refs' AS evidence_refs,
+                record_json->'payload'->'limitations' AS limitations
+           FROM facts
+          WHERE record_json->>'type' IN (
+                  'twin_evidence_window_v1',
+                  'twin_state_transition_v1',
+                  'twin_assimilation_update_v1',
+                  'twin_state_estimate_v1',
+                  'twin_forecast_run_v1',
+                  'twin_runtime_tick_v1',
+                  'twin_runtime_checkpoint_v1',
+                  'twin_runtime_health_v1'
+                )
+            AND record_json->'payload'->>'logical_time'=$1
+          ORDER BY record_json->>'type'`,
+        [START_LOGICAL_TIME],
+      );
+      throw new Error(
+        `FORMAL_CAP05_RUNNER_FAILED_WITH_CANONICAL_DIAGNOSTICS:${JSON.stringify(blockedFacts.rows)}\n${firstOutput}\n${firstError}`,
+      );
+    }
+    const first = parseRunnerOutputV1(firstOutput);''',
+)
