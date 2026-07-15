@@ -47,6 +47,18 @@ const STEP_DEFINITIONS_BY_SUITE = {
       pnpmArgs: ['run', 'ci:governance:runtime-openapi-sales-critical'],
       logFile: 'RUNTIME_OPENAPI_SALES_CRITICAL.log',
       notes: 'Fetches runtime /api/v1/openapi.json and validates sales-critical OpenAPI JSON paths, schemas, operations, security, responses, and x-geox-governance.'
+    },
+    {
+      id: 'MCFT_CAP_05_POST_CLOSURE_CONFORMANCE_GOVERNANCE',
+      command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION.cjs',
+      logFile: 'MCFT_CAP_05_POST_CLOSURE_CONFORMANCE_GOVERNANCE.log',
+      notes: 'Verifies append-only CAP-05 defect authority and non-canonical execution-view separation.'
+    },
+    {
+      id: 'MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER',
+      command: 'pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts',
+      logFile: 'MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.log',
+      notes: 'Reproduces checkpoint 72 to 80 in an isolated database and verifies canonical CAP-05 Config pins, restart recovery, and zero-write replay.'
     }
   ],
   'p9-twin-kernel': [
@@ -134,6 +146,23 @@ ensureOutputDir(outputDir);
         continue;
       }
       envOverrides.GEOX_OPERATION_PLAN_ID = runtimeContext.operationPlanIdFromP1;
+    }
+
+    if (suiteId === 'legacy' && step.id === 'MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER') {
+      const explicitDatabaseUrl = String(process.env.DATABASE_URL || '').trim();
+      if (explicitDatabaseUrl) {
+        envOverrides.DATABASE_URL = explicitDatabaseUrl;
+      } else {
+        const postgresUser = String(process.env.POSTGRES_USER || '').trim();
+        const postgresPassword = String(process.env.POSTGRES_PASSWORD || '').trim();
+        const postgresDatabase = String(process.env.POSTGRES_DB || '').trim();
+        const postgresHost = String(process.env.POSTGRES_HOST || '127.0.0.1').trim();
+        const postgresPort = String(process.env.POSTGRES_PORT || '5433').trim();
+        if (!postgresUser || !postgresPassword || !postgresDatabase || !postgresHost || !postgresPort) {
+          throw new Error('MCFT_CAP_05_POSTGRESQL_ACCEPTANCE_DATABASE_CONFIG_REQUIRED');
+        }
+        envOverrides.DATABASE_URL = `postgres://${encodeURIComponent(postgresUser)}:${encodeURIComponent(postgresPassword)}@${postgresHost}:${postgresPort}/${encodeURIComponent(postgresDatabase)}`;
+      }
     }
 
     const result = await runStep(step, envOverrides);

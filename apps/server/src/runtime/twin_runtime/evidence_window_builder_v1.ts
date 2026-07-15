@@ -168,6 +168,13 @@ function compareSummaryV1(a: EvidenceWindowRecordSummaryV1, b: EvidenceWindowRec
   return a.role.localeCompare(b.role) || a.event_time.localeCompare(b.event_time) || a.ingested_at.localeCompare(b.ingested_at) || a.source_record_id.localeCompare(b.source_record_id);
 }
 
+function canonicalReplayRecordForPersistenceV1(
+  record: CanonicalReplayEvidenceRecordV1,
+): CanonicalReplayEvidenceRecordV1 {
+  const { execution_metadata: _executionMetadata, ...canonicalRecord } = record;
+  return structuredClone(canonicalRecord) as CanonicalReplayEvidenceRecordV1;
+}
+
 function compareSoilSelectionV1(a: CanonicalReplayEvidenceRecordV1, b: CanonicalReplayEvidenceRecordV1): number {
   return eventTimeV1(b, "SOIL_MOISTURE_OBSERVATION").localeCompare(eventTimeV1(a, "SOIL_MOISTURE_OBSERVATION"))
     || ingestedAtV1(b).localeCompare(ingestedAtV1(a))
@@ -225,7 +232,7 @@ export function buildFrozenEvidenceWindowV1(input: {
   rejectConflictingDuplicateSoilObservationsV1(usableSoil);
   usableSoil.sort(compareSoilSelectionV1);
   if (usableSoil.length === 0) throw new Error("NO_USABLE_SOIL_OBSERVATION_IN_A0_WINDOW");
-  const assimilationObservation = usableSoil[0];
+  const assimilationObservation = canonicalReplayRecordForPersistenceV1(usableSoil[0]);
 
   const selected = included.map((item) => item.record.source_record_id === assimilationObservation.source_record_id
     ? summaryV1(item, logicalTime, "CONSUMED_BY_BOOTSTRAP_ESTIMATOR", "SELECTED_SOIL_OBSERVATION_CONSUMED_BY_A0_ASSIMILATION")

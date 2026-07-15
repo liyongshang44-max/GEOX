@@ -6,7 +6,7 @@ import {
   computeMemberDeterminismHashV1,
   deriveSemanticObjectIdV1,
 } from "../../domain/twin_runtime/canonical_identity_v1.js";
-import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import { validateCanonicalObjectV1, type CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import {
   CAP04_A1_OPERATION_VARIANT_V1,
   CAP04_A2_OPERATION_VARIANT_V1,
@@ -62,6 +62,7 @@ export type Cap04ARecordSetBuilderCommonInputV1 = {
   previous_successful_forecast_ref: string | null;
   previous_tick_sequence: number;
   runtime_config: CanonicalObjectEnvelopeV1;
+  execution_config_payload?: Cap04RuntimeConfigPayloadV1;
   source_members: Cap04ARecordSetBuilderSourceMembersV1;
   forecast_payload: Cap04ForecastRunPayloadV1;
 };
@@ -155,13 +156,15 @@ function validateSourceGraphV1(input: Cap04ARecordSetBuilderCommonInputV1): void
 
 function validateRuntimeConfigV1(input: Cap04ARecordSetBuilderCommonInputV1): Cap04RuntimeConfigPayloadV1 {
   const config = input.runtime_config;
+  validateCanonicalObjectV1(config);
   if (config.object_type !== "twin_runtime_config_v1") throw new Error("CAP04_BUILDER_RUNTIME_CONFIG_OBJECT_TYPE_REQUIRED");
   exactScopeV1(config, input.scope, "CAP04_BUILDER_RUNTIME_CONFIG_SCOPE_MISMATCH");
   if (config.logical_time !== input.logical_time || config.as_of !== input.logical_time) {
     throw new Error("CAP04_BUILDER_RUNTIME_CONFIG_LOGICAL_TIME_MISMATCH");
   }
-  validateCap04RuntimeConfigPayloadV1(config.payload);
-  const payload = config.payload as unknown as Cap04RuntimeConfigPayloadV1;
+  const executionPayload = input.execution_config_payload ?? config.payload;
+  validateCap04RuntimeConfigPayloadV1(executionPayload);
+  const payload = structuredClone(executionPayload) as unknown as Cap04RuntimeConfigPayloadV1;
   if (payload.effective_logical_time !== input.logical_time) throw new Error("CAP04_BUILDER_RUNTIME_CONFIG_EFFECTIVE_TIME_MISMATCH");
   return payload;
 }

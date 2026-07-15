@@ -17,6 +17,7 @@ import {
   Cap05BoundedEightTickFeedbackChainServiceV1,
   type RunCap05BoundedFeedbackChainInputV1,
 } from "../../src/runtime/twin_runtime/bounded_feedback_chain_service_v1.js";
+import { Cap05InheritedCap04ExecutionConfigResolverV1 } from "../../src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.js";
 import { Cap04ForecastScenarioSingleTickServiceV1, type Cap04SingleTickPersistencePortV1 } from "../../src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.js";
 import { Cap05ForecastResidualOutcomeTickServiceV1 } from "../../src/runtime/twin_runtime/forecast_residual_outcome_tick_service_v1.js";
 import { PrepareNextTickInputServiceV1 } from "../../src/runtime/twin_runtime/next_tick_input_service_v1.js";
@@ -151,6 +152,7 @@ async function main(): Promise<void> {
 
   try {
     const runtimeRepository = new PostgresRuntimeRepositoryV1(pool);
+    const executionConfigResolver = new Cap05InheritedCap04ExecutionConfigResolverV1();
     const nextTickRepository = new PostgresNextTickRepositoryV1(pool);
     const recoveryRepository = new PostgresForecastScenarioRecoveryRepositoryV1(pool);
     const feedbackRepository = new PostgresFeedbackPersistenceRepositoryV1(pool);
@@ -162,12 +164,14 @@ async function main(): Promise<void> {
       replayEvidenceSource,
       runtimeRepository,
       persistence,
+      executionConfigResolver,
     );
     const continuationTickService = new Cap04PendingScenarioBarrierSingleTickServiceV1(
       handoffService,
       runtimeRepository,
       persistence,
       baseTickService,
+      executionConfigResolver,
     );
     const receiptTickService = new Cap05ReceiptConsumingForecastScenarioTickServiceV1(
       handoffService,

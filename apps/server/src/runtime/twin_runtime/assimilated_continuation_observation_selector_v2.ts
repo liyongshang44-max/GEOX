@@ -83,6 +83,42 @@ function finiteNumberV2(value: unknown, code: string): number {
   return value;
 }
 
+function conversionRuleV2(
+  record: CanonicalReplayEvidenceRecordV1,
+  conversion: Record<string, unknown>,
+): { id: string; version: string } {
+  const id = requiredStringV2(conversion.id, "CONVERSION_RULE_ID_REQUIRED");
+  const metadata = record.execution_metadata;
+  let version: string;
+  if (conversion.version === undefined) {
+    if (!metadata) {
+      throw new Error("MALFORMED_CANONICAL_OBSERVATION:CONVERSION_RULE_VERSION_REQUIRED");
+    }
+    if (metadata.policy_id !== "SOURCE_BINDING_CONVERSION_RULE_VERSION_FROM_BINDING_VERSION_V1") {
+      throw new Error("MALFORMED_CANONICAL_OBSERVATION:CONVERSION_RULE_EXECUTION_METADATA_POLICY_INVALID");
+    }
+    if (!Number.isInteger(metadata.source_binding_version) || metadata.source_binding_version <= 0) {
+      throw new Error("MALFORMED_CANONICAL_OBSERVATION:SOURCE_BINDING_VERSION_INVALID");
+    }
+    version = requiredStringV2(
+      metadata.conversion_rule_version,
+      "CONVERSION_RULE_EXECUTION_VERSION_REQUIRED",
+    );
+    if (version !== String(metadata.source_binding_version)) {
+      throw new Error("MALFORMED_CANONICAL_OBSERVATION:CONVERSION_RULE_EXECUTION_VERSION_MISMATCH");
+    }
+  } else {
+    version = requiredStringV2(conversion.version, "CONVERSION_RULE_VERSION_REQUIRED");
+    if (metadata && (
+      metadata.conversion_rule_version !== version
+      || String(metadata.source_binding_version) !== version
+    )) {
+      throw new Error("MALFORMED_CANONICAL_OBSERVATION:CONVERSION_RULE_EXECUTION_VERSION_MISMATCH");
+    }
+  }
+  return { id, version };
+}
+
 function sameScopeV2(
   record: CanonicalReplayEvidenceRecordV1,
   scope: TwinScopeKeyV1,
@@ -200,16 +236,7 @@ function classifyCandidateV2(input: {
     record.conversion_rule,
     "CONVERSION_RULE_REQUIRED",
   );
-  const conversionRule = {
-    id: requiredStringV2(
-      conversion.id,
-      "CONVERSION_RULE_ID_REQUIRED",
-    ),
-    version: requiredStringV2(
-      conversion.version,
-      "CONVERSION_RULE_VERSION_REQUIRED",
-    ),
-  };
+  const conversionRule = conversionRuleV2(record, conversion);
   const epistemicClass = requiredStringV2(
     record.epistemic_class,
     "EPISTEMIC_CLASS_REQUIRED",

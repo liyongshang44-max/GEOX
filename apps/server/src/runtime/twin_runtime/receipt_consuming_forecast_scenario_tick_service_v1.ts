@@ -2,11 +2,9 @@
 // Purpose: compose one explicit CAP-05 receipt-consuming hourly tick by adapting canonical H Action Feedback into the existing CAP-04 A1 Dynamics input path, then reusing unchanged State, Assimilation, 72-hour Forecast, Scenario and persistence orchestration.
 // Boundary: one requested tick only; no range loop, restart/backfill, route, scheduler, wall clock, approval, dispatch, Recommendation, AO-ACT, calibration, model activation, migration or CAP-06 authority.
 
-import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import type { Cap05ActionFeedbackEnvelopeV1 } from "../../domain/twin_runtime/feedback_canonical_contracts_v1.js";
 import {
   selectCap05ActionFeedbackForTickV1,
-  validateCap05ReceiptConsumingRuntimePoliciesV1,
   type Cap05ActionFeedbackTickSelectionTraceV1,
 } from "./action_feedback_tick_selector_v1.js";
 import {
@@ -15,6 +13,7 @@ import {
   type ExecuteCap04SingleTickInputV1,
   type ExecuteCap04SingleTickResultV1,
 } from "./forecast_scenario_single_tick_service_v1.js";
+import { Cap05InheritedCap04ExecutionConfigResolverV1 } from "./cap05_inherited_cap04_execution_config_resolver_v1.js";
 import { PrepareNextTickInputServiceV1 } from "./next_tick_input_service_v1.js";
 import type {
   CanonicalReplayEvidenceRecordV1,
@@ -156,24 +155,6 @@ class Cap05ReceiptConsumingEvidenceSourceV1 implements ReplayEvidenceSourcePortV
   }
 }
 
-class Cap05ReceiptConsumingRuntimeConfigRepositoryV1 implements RuntimeConfigRepositoryPortV1 {
-  constructor(private readonly delegate: RuntimeConfigRepositoryPortV1) {}
-
-  commitRuntimeConfig(config: CanonicalObjectEnvelopeV1): Promise<{
-    status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS";
-    object_id: string;
-    fact_id: string;
-  }> {
-    return this.delegate.commitRuntimeConfig(config);
-  }
-
-  async readRuntimeConfig(objectId: string): Promise<CanonicalObjectEnvelopeV1 | null> {
-    const config = await this.delegate.readRuntimeConfig(objectId);
-    if (config) validateCap05ReceiptConsumingRuntimePoliciesV1(config.payload);
-    return config;
-  }
-}
-
 export class Cap05ReceiptConsumingForecastScenarioTickServiceV1 {
   private readonly evidenceSource: Cap05ReceiptConsumingEvidenceSourceV1;
   private readonly inner: Cap04ForecastScenarioSingleTickServiceV1;
@@ -189,8 +170,9 @@ export class Cap05ReceiptConsumingForecastScenarioTickServiceV1 {
     this.inner = new Cap04ForecastScenarioSingleTickServiceV1(
       handoffService,
       this.evidenceSource,
-      new Cap05ReceiptConsumingRuntimeConfigRepositoryV1(runtimeConfigRepository),
+      runtimeConfigRepository,
       persistence,
+      new Cap05InheritedCap04ExecutionConfigResolverV1(),
     );
   }
 

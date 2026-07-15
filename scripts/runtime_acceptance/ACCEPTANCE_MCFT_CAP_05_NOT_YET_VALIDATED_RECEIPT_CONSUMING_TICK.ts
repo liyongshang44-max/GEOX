@@ -1,31 +1,14 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_NOT_YET_VALIDATED_RECEIPT_CONSUMING_TICK.ts
-// Purpose: prove one trustworthy NOT_YET_VALIDATED canonical H object is consumed by the full S7 receipt-consuming A1, Forecast and Scenario path without changing its validation status.
+// Purpose: prove one trustworthy NOT_YET_VALIDATED canonical H object is consumed by the full S7 receipt-consuming A1, Forecast and Scenario path under one canonical CAP-05 effective Runtime Config without changing its validation status.
 // Boundary: in-memory acceptance only; no production database, route, scheduler, range, restart/backfill, approval, dispatch, Recommendation, AO-ACT, calibration, model activation or CAP-06 authority.
 
 import assert from "node:assert/strict";
-import {
-  computeMemberDeterminismHashV1,
-  deriveSemanticObjectIdV1,
-} from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
 import type { CanonicalObjectEnvelopeV1 } from "../../apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.js";
 import {
   buildCap05ActionFeedbackV1,
-  CAP05_ACTION_FEEDBACK_ELIGIBILITY_POLICY_V1,
-  CAP05_ACTION_FEEDBACK_QUALITY_MAPPING_POLICY_V1,
-  CAP05_TARGET_EQUIVALENT_IRRIGATION_POLICY_V1,
   type Cap05ActionFeedbackEnvelopeV1,
 } from "../../apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.js";
 import type { Cap04ARecordSetV1 } from "../../apps/server/src/domain/twin_runtime/forecast_scenario_record_set_identity_v1.js";
-import {
-  CAP05_ACTION_FEEDBACK_ADAPTER_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_AMOUNT_SEMANTICS_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_EVIDENCE_CUTOFF_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_INTERVAL_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_LATE_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_MULTIPLE_EVENT_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_SPATIAL_OVERLAP_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_VOLUME_TO_DEPTH_POLICY_ID_V1,
-} from "../../apps/server/src/runtime/twin_runtime/action_feedback_tick_selector_v1.js";
 import { PrepareNextTickInputServiceV1 } from "../../apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.js";
 import {
   Cap05ReceiptConsumingForecastScenarioTickServiceV1,
@@ -35,6 +18,7 @@ import {
   CAP04_S6_LOGICAL_TIME_V1,
   buildCap04S6SingleTickFixtureV1,
 } from "./mcft_cap_04_single_tick_fixture_v1.js";
+import { buildCap05EffectiveRuntimeConfigFromCap04FixtureV1 } from "./mcft_cap_05_effective_runtime_config_fixture_v1.js";
 
 let pass = 0;
 function ok(label: string): void {
@@ -50,34 +34,6 @@ function memberV1(recordSet: Cap04ARecordSetV1, objectType: string): CanonicalOb
 
 function addMinutesV1(value: string, minutes: number): string {
   return new Date(Date.parse(value) + minutes * 60_000).toISOString();
-}
-
-function runtimeConfigV1(source: CanonicalObjectEnvelopeV1): CanonicalObjectEnvelopeV1 {
-  const config = structuredClone(source);
-  config.object_id = deriveSemanticObjectIdV1("cap05_not_yet_validated_runtime_config", {
-    parent: source.object_id,
-    logical_time: source.logical_time,
-  });
-  config.idempotency_key = deriveSemanticObjectIdV1("cap05_not_yet_validated_runtime_config_key", {
-    object_id: config.object_id,
-  });
-  config.payload = {
-    ...config.payload,
-    action_feedback_state_input_policy_id: CAP05_ACTION_FEEDBACK_ELIGIBILITY_POLICY_V1,
-    action_feedback_quality_mapping_policy_id: CAP05_ACTION_FEEDBACK_QUALITY_MAPPING_POLICY_V1,
-    evidence_cutoff_policy_id: CAP05_ACTION_FEEDBACK_EVIDENCE_CUTOFF_POLICY_ID_V1,
-    late_receipt_policy_id: CAP05_ACTION_FEEDBACK_LATE_POLICY_ID_V1,
-    execution_interval_policy_id: CAP05_ACTION_FEEDBACK_INTERVAL_POLICY_ID_V1,
-    multiple_execution_event_policy_id: CAP05_ACTION_FEEDBACK_MULTIPLE_EVENT_POLICY_ID_V1,
-    spatial_overlap_policy_id: CAP05_ACTION_FEEDBACK_SPATIAL_OVERLAP_POLICY_ID_V1,
-    actual_amount_semantics_policy_id: CAP05_ACTION_FEEDBACK_AMOUNT_SEMANTICS_POLICY_ID_V1,
-    effective_irrigation_policy_id: CAP05_TARGET_EQUIVALENT_IRRIGATION_POLICY_V1,
-    volume_to_depth_policy_id: CAP05_ACTION_FEEDBACK_VOLUME_TO_DEPTH_POLICY_ID_V1,
-    action_feedback_adapter_policy_id: CAP05_ACTION_FEEDBACK_ADAPTER_POLICY_ID_V1,
-  };
-  config.determinism_hash = "";
-  config.determinism_hash = computeMemberDeterminismHashV1(config as unknown as Record<string, unknown>);
-  return config;
 }
 
 function feedbackV1(config: CanonicalObjectEnvelopeV1): Cap05ActionFeedbackEnvelopeV1 {
@@ -131,7 +87,7 @@ class InMemoryActionFeedbackSourceV1 implements Cap05ActionFeedbackSourcePortV1 
 
 async function main(): Promise<void> {
   const fixture = buildCap04S6SingleTickFixtureV1();
-  const config = runtimeConfigV1(fixture.runtime_config);
+  const config = buildCap05EffectiveRuntimeConfigFromCap04FixtureV1(fixture.runtime_config);
   await fixture.runtime.commitRuntimeConfig(config);
   const feedback = feedbackV1(config);
   const service = new Cap05ReceiptConsumingForecastScenarioTickServiceV1(

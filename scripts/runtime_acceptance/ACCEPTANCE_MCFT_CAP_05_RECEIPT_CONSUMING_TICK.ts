@@ -1,32 +1,16 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK.ts
-// Purpose: prove one canonical H Action Feedback object is selected at the explicit cutoff, consumed by the unchanged CAP-04 A1 State Tick, and followed by one successful 72-hour Forecast and three Scenario trajectories.
+// Purpose: prove one canonical H Action Feedback object is selected at the explicit cutoff, consumed by the unchanged CAP-04 A1 State Tick, and followed by one successful 72-hour Forecast and three Scenario trajectories under one canonical CAP-05 effective Runtime Config.
 // Boundary: in-memory acceptance only; no production database, route, scheduler, range, restart/backfill, approval, dispatch, Recommendation, AO-ACT, calibration, model activation or CAP-06 authority.
 
 import assert from "node:assert/strict";
-import {
-  computeMemberDeterminismHashV1,
-  deriveSemanticObjectIdV1,
-} from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
+import { computeMemberDeterminismHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
 import type { CanonicalObjectEnvelopeV1 } from "../../apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.js";
 import {
   buildCap05ActionFeedbackV1,
-  CAP05_ACTION_FEEDBACK_ELIGIBILITY_POLICY_V1,
-  CAP05_ACTION_FEEDBACK_QUALITY_MAPPING_POLICY_V1,
-  CAP05_TARGET_EQUIVALENT_IRRIGATION_POLICY_V1,
   type Cap05ActionFeedbackEnvelopeV1,
 } from "../../apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.js";
 import type { Cap04ARecordSetV1 } from "../../apps/server/src/domain/twin_runtime/forecast_scenario_record_set_identity_v1.js";
-import {
-  CAP05_ACTION_FEEDBACK_ADAPTER_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_AMOUNT_SEMANTICS_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_EVIDENCE_CUTOFF_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_INTERVAL_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_LATE_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_MULTIPLE_EVENT_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_SPATIAL_OVERLAP_POLICY_ID_V1,
-  CAP05_ACTION_FEEDBACK_VOLUME_TO_DEPTH_POLICY_ID_V1,
-  selectCap05ActionFeedbackForTickV1,
-} from "../../apps/server/src/runtime/twin_runtime/action_feedback_tick_selector_v1.js";
+import { selectCap05ActionFeedbackForTickV1 } from "../../apps/server/src/runtime/twin_runtime/action_feedback_tick_selector_v1.js";
 import { PrepareNextTickInputServiceV1 } from "../../apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.js";
 import {
   Cap05ReceiptConsumingForecastScenarioTickServiceV1,
@@ -36,6 +20,7 @@ import {
   CAP04_S6_LOGICAL_TIME_V1,
   buildCap04S6SingleTickFixtureV1,
 } from "./mcft_cap_04_single_tick_fixture_v1.js";
+import { buildCap05EffectiveRuntimeConfigFromCap04FixtureV1 } from "./mcft_cap_05_effective_runtime_config_fixture_v1.js";
 
 let pass = 0;
 let fail = 0;
@@ -57,34 +42,6 @@ function memberV1(recordSet: Cap04ARecordSetV1, objectType: string): CanonicalOb
 
 function addMinutesV1(value: string, minutes: number): string {
   return new Date(Date.parse(value) + minutes * 60_000).toISOString();
-}
-
-function receiptConfigV1(source: CanonicalObjectEnvelopeV1): CanonicalObjectEnvelopeV1 {
-  const config = structuredClone(source);
-  config.object_id = deriveSemanticObjectIdV1("cap05_receipt_consuming_runtime_config", {
-    parent: source.object_id,
-    logical_time: source.logical_time,
-  });
-  config.idempotency_key = deriveSemanticObjectIdV1("cap05_receipt_consuming_runtime_config_key", {
-    object_id: config.object_id,
-  });
-  config.payload = {
-    ...config.payload,
-    action_feedback_state_input_policy_id: CAP05_ACTION_FEEDBACK_ELIGIBILITY_POLICY_V1,
-    action_feedback_quality_mapping_policy_id: CAP05_ACTION_FEEDBACK_QUALITY_MAPPING_POLICY_V1,
-    evidence_cutoff_policy_id: CAP05_ACTION_FEEDBACK_EVIDENCE_CUTOFF_POLICY_ID_V1,
-    late_receipt_policy_id: CAP05_ACTION_FEEDBACK_LATE_POLICY_ID_V1,
-    execution_interval_policy_id: CAP05_ACTION_FEEDBACK_INTERVAL_POLICY_ID_V1,
-    multiple_execution_event_policy_id: CAP05_ACTION_FEEDBACK_MULTIPLE_EVENT_POLICY_ID_V1,
-    spatial_overlap_policy_id: CAP05_ACTION_FEEDBACK_SPATIAL_OVERLAP_POLICY_ID_V1,
-    actual_amount_semantics_policy_id: CAP05_ACTION_FEEDBACK_AMOUNT_SEMANTICS_POLICY_ID_V1,
-    effective_irrigation_policy_id: CAP05_TARGET_EQUIVALENT_IRRIGATION_POLICY_V1,
-    volume_to_depth_policy_id: CAP05_ACTION_FEEDBACK_VOLUME_TO_DEPTH_POLICY_ID_V1,
-    action_feedback_adapter_policy_id: CAP05_ACTION_FEEDBACK_ADAPTER_POLICY_ID_V1,
-  };
-  config.determinism_hash = "";
-  config.determinism_hash = computeMemberDeterminismHashV1(config as unknown as Record<string, unknown>);
-  return config;
 }
 
 function actionFeedbackV1(input: {
@@ -150,7 +107,7 @@ class InMemoryActionFeedbackSourceV1 implements Cap05ActionFeedbackSourcePortV1 
 
 async function main(): Promise<void> {
   const fixture = buildCap04S6SingleTickFixtureV1();
-  const config = receiptConfigV1(fixture.runtime_config);
+  const config = buildCap05EffectiveRuntimeConfigFromCap04FixtureV1(fixture.runtime_config);
   await fixture.runtime.commitRuntimeConfig(config);
   const feedback = actionFeedbackV1({ config });
   const feedbackSource = new InMemoryActionFeedbackSourceV1([feedback]);
@@ -297,7 +254,14 @@ async function main(): Promise<void> {
   check(futureSelection.trace.entries[0]?.disposition === "EXCLUDED_FUTURE", "future Action Feedback is never consumed by the current tick");
 
   const missingPolicies = buildCap04S6SingleTickFixtureV1();
-  const missingSource = new InMemoryActionFeedbackSourceV1([actionFeedbackV1({ config: missingPolicies.runtime_config, suffix: "missing_policy" })]);
+  const incompleteConfig = buildCap05EffectiveRuntimeConfigFromCap04FixtureV1(missingPolicies.runtime_config);
+  delete (incompleteConfig.payload as Record<string, unknown>).action_feedback_state_input_policy_id;
+  incompleteConfig.determinism_hash = "";
+  incompleteConfig.determinism_hash = computeMemberDeterminismHashV1(incompleteConfig as unknown as Record<string, unknown>);
+  await missingPolicies.runtime.commitRuntimeConfig(incompleteConfig);
+  const missingSource = new InMemoryActionFeedbackSourceV1([
+    actionFeedbackV1({ config: incompleteConfig, suffix: "missing_policy" }),
+  ]);
   const missingService = new Cap05ReceiptConsumingForecastScenarioTickServiceV1(
     new PrepareNextTickInputServiceV1(missingPolicies.runtime),
     missingPolicies.runtime,
@@ -305,7 +269,14 @@ async function main(): Promise<void> {
     missingPolicies.runtime,
     missingPolicies.runtime,
   );
-  await assert.rejects(missingService.executeOneTick(missingPolicies.input), /CAP05_RECEIPT_TICK_CONFIG_POLICY_MISMATCH/);
+  await assert.rejects(
+    missingService.executeOneTick({
+      ...missingPolicies.input,
+      runtime_config_ref: incompleteConfig.object_id,
+      runtime_config_hash: incompleteConfig.determinism_hash,
+    }),
+    /CAP05_RECEIPT_TICK_CONFIG_POLICY_MISMATCH/,
+  );
   check(true, "receipt-consuming tick fails closed when CAP-05 Runtime Config policies are not pinned");
 
   assert.equal(fail, 0);

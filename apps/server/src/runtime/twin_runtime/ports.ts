@@ -34,6 +34,12 @@ export type ReplayEvidenceRoleV1 =
   | "APPROVED_IRRIGATION_PLAN"
   | "IRRIGATION_EXECUTION_EVIDENCE";
 
+export type ReplayEvidenceExecutionMetadataV1 = {
+  policy_id: "SOURCE_BINDING_CONVERSION_RULE_VERSION_FROM_BINDING_VERSION_V1";
+  source_binding_version: number;
+  conversion_rule_version: string;
+};
+
 export type CanonicalReplayEvidenceRecordV1 = TwinScopeKeyV1 & {
   dataset_id: string;
   source_record_id: string;
@@ -51,6 +57,7 @@ export type CanonicalReplayEvidenceRecordV1 = TwinScopeKeyV1 & {
   source_unit: string;
   canonical_unit: string;
   conversion_rule: Record<string, unknown>;
+  execution_metadata?: ReplayEvidenceExecutionMetadataV1;
   limitations: string[];
 };
 

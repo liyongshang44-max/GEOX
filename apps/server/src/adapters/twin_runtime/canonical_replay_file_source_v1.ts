@@ -1,17 +1,26 @@
 // apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts
-// Purpose: load deterministic MCFT-CAP-01 Canonical Replay records for one explicit logical tick, verify every source-record semantic hash, and enrich each record with its frozen source-binding unit and conversion metadata.
-// Boundary: filesystem adapter only; no Evidence selection, State mathematics, Runtime orchestration, database access, wall-clock reads, or canonical writes.
+// Purpose: load deterministic MCFT-CAP-01 Canonical Replay records for one explicit logical tick, verify every source-record semantic hash, preserve canonical binding conversion data, and attach separate source-binding execution metadata.
+// Boundary: filesystem adapter only; no Evidence selection, State mathematics, Runtime orchestration, database access, wall-clock reads, canonical writes, source-record mutation, canonical Evidence projection mutation, or source-binding authority mutation.
 
 import fs from "node:fs/promises";
 import path from "node:path";
 import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
-import type { CanonicalReplayEvidenceRecordV1, ReplayEvidenceSourcePortV1, TwinScopeKeyV1 } from "../../runtime/twin_runtime/ports.js";
+import type {
+  CanonicalReplayEvidenceRecordV1,
+  ReplayEvidenceExecutionMetadataV1,
+  ReplayEvidenceSourcePortV1,
+  TwinScopeKeyV1,
+} from "../../runtime/twin_runtime/ports.js";
 
 const DAILY_DIRECTORIES_V1 = ["soil_moisture", "rainfall", "historical_et0", "future_weather", "future_et0"] as const;
 const GLOBAL_FILES_V1 = ["irrigation_plan/plans.jsonl", "irrigation_execution/executions.jsonl"] as const;
 
+export const SOURCE_BINDING_CONVERSION_RULE_EXECUTION_METADATA_POLICY_ID_V1 =
+  "SOURCE_BINDING_CONVERSION_RULE_VERSION_FROM_BINDING_VERSION_V1" as const;
+
 type SourceBindingV1 = {
   binding_id: string;
+  binding_version: number;
   source_unit: string;
   canonical_unit: string;
   conversion_rule: Record<string, unknown>;
@@ -38,6 +47,30 @@ function assertStringV1(value: unknown, code: string): asserts value is string {
 
 function assertObjectV1(value: unknown, code: string): asserts value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(code);
+}
+
+function positiveIntegerV1(value: unknown, code: string): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) throw new Error(code);
+  return value;
+}
+
+function resolveConversionRuleExecutionMetadataV1(
+  binding: SourceBindingV1,
+): ReplayEvidenceExecutionMetadataV1 {
+  const conversionRule = structuredClone(binding.conversion_rule);
+  assertStringV1(conversionRule.id, `CONVERSION_RULE_ID_REQUIRED:${binding.binding_id}`);
+  const authoritativeVersion = String(binding.binding_version);
+  if (conversionRule.version !== undefined) {
+    assertStringV1(conversionRule.version, `CONVERSION_RULE_VERSION_INVALID:${binding.binding_id}`);
+    if (conversionRule.version !== authoritativeVersion) {
+      throw new Error(`CONVERSION_RULE_VERSION_BINDING_VERSION_MISMATCH:${binding.binding_id}`);
+    }
+  }
+  return {
+    policy_id: SOURCE_BINDING_CONVERSION_RULE_EXECUTION_METADATA_POLICY_ID_V1,
+    source_binding_version: binding.binding_version,
+    conversion_rule_version: authoritativeVersion,
+  };
 }
 
 function validateReplayRecordV1(value: unknown): Omit<CanonicalReplayEvidenceRecordV1, "source_unit" | "canonical_unit" | "conversion_rule"> {
@@ -96,6 +129,7 @@ export class CanonicalReplayFileSourceV1 implements ReplayEvidenceSourcePortV1 {
     const bindings = new Map<string, SourceBindingV1>();
     for (const binding of parsed.bindings) {
       assertStringV1(binding.binding_id, "SOURCE_BINDING_ID_REQUIRED");
+      binding.binding_version = positiveIntegerV1(binding.binding_version, `SOURCE_BINDING_VERSION_REQUIRED:${binding.binding_id}`);
       assertStringV1(binding.source_unit, `SOURCE_UNIT_REQUIRED:${binding.binding_id}`);
       assertStringV1(binding.canonical_unit, `CANONICAL_UNIT_REQUIRED:${binding.binding_id}`);
       assertObjectV1(binding.conversion_rule, `CONVERSION_RULE_REQUIRED:${binding.binding_id}`);
@@ -124,6 +158,7 @@ export class CanonicalReplayFileSourceV1 implements ReplayEvidenceSourcePortV1 {
         source_unit: binding.source_unit,
         canonical_unit: binding.canonical_unit,
         conversion_rule: structuredClone(binding.conversion_rule),
+        execution_metadata: resolveConversionRuleExecutionMetadataV1(binding),
       } as CanonicalReplayEvidenceRecordV1;
     }).filter((record) => sameScopeV1(record, input.scope)).sort((a, b) => a.source_record_id.localeCompare(b.source_record_id));
   }
