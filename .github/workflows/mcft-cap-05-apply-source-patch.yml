@@ -1,4 +1,4 @@
-# Proof revision: use continuation-aware validators for terminal chain readback.
+# Proof revision: harden explicit staging and export commit diagnostics.
 name: mcft-cap-05-apply-source-patch
 
 on:
@@ -107,23 +107,31 @@ jobs:
 
       - name: Commit proven source
         run: |
-          git diff --check
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A -- \
-            apps/server/src/runtime/twin_runtime/forecast_scenario_state_source_builder_v1.ts \
-            apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts \
-            apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts \
-            scripts/acceptance/run_acceptance.cjs \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts \
-            scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py
-          git add -f -- \
-            apps/server/src/runtime/twin_runtime/forecast_scenario_state_source_builder_v1.ts \
-            apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts \
-            apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts
-          if git diff --cached --quiet; then
-            echo 'No source patch required'
-            exit 0
-          fi
-          git commit -m 'MCFT-CAP-05: separate builder execution payload from canonical Config'
-          git push origin HEAD:${{ github.head_ref }}
+          set -o pipefail
+          {
+            git diff --check
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -f -- \
+              apps/server/src/runtime/twin_runtime/forecast_scenario_state_source_builder_v1.ts \
+              apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts \
+              apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts \
+              scripts/acceptance/run_acceptance.cjs \
+              scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts \
+              scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py
+            git status --short
+            git diff --cached --check
+            if git diff --cached --quiet; then
+              echo 'No source patch required'
+              exit 0
+            fi
+            git commit -m 'MCFT-CAP-05: separate builder execution payload from canonical Config'
+            git push origin HEAD:${{ github.head_ref }}
+          } 2>&1 | tee /tmp/cap05-proven-source-commit.log
+
+      - name: Upload proven source commit diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-proven-source-commit-diagnostics
+          path: /tmp/cap05-proven-source-commit.log
