@@ -215,8 +215,8 @@ function classifyCandidateV1(input: {
     return { candidate: input.candidate, payload: completed, point, entry: { ...entry, disposition: "EXCLUDED_NOT_HISTORICAL", reason_code: "FORECAST_NOT_ISSUED_BEFORE_OBSERVATION" }, eligible: false };
   }
   const createdAt = canonicalInstantV1(forecast.created_at, "CAP05_FORECAST_SELECTOR_CREATED_AT_INVALID");
-  if (Date.parse(createdAt) > Date.parse(input.observation_available_to_runtime_at)) {
-    return { candidate: input.candidate, payload: completed, point, entry: { ...entry, disposition: "EXCLUDED_NOT_AVAILABLE_BEFORE_OBSERVATION", reason_code: "FORECAST_CREATED_AFTER_OBSERVATION_AVAILABILITY" }, eligible: false };
+  if (Date.parse(createdAt) >= Date.parse(input.observation_available_to_runtime_at)) {
+    return { candidate: input.candidate, payload: completed, point, entry: { ...entry, disposition: "EXCLUDED_NOT_AVAILABLE_BEFORE_OBSERVATION", reason_code: "FORECAST_NOT_AVAILABLE_BEFORE_OBSERVATION" }, eligible: false };
   }
   const actionFeedbackRefs = uniqueSortedV1(input.candidate.source_posterior_action_feedback_refs);
   if (actionFeedbackRefs.length === 0) {
