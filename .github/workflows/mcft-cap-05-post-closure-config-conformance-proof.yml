@@ -49,7 +49,7 @@ jobs:
           from pathlib import Path
 
           source = Path('fixtures/mcft/water_state/replay_v1')
-          target = Path('acceptance-output/mcft_cap05_h_authoritative_replay_v1')
+          target = Path('/tmp/mcft_cap05_h_authoritative_replay_v1')
           if target.exists():
               shutil.rmtree(target)
           shutil.copytree(source, target)
@@ -83,7 +83,7 @@ jobs:
           text = text.replace(old, new)
           text = text.replace(
               'replay_root: "fixtures/mcft/water_state/replay_v1",',
-              'replay_root: "acceptance-output/mcft_cap05_h_authoritative_replay_v1",',
+              'replay_root: "/tmp/mcft_cap05_h_authoritative_replay_v1",',
           )
           path.write_text(text)
           PY
