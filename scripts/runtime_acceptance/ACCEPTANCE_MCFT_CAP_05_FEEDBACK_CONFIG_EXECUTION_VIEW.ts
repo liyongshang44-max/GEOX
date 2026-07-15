@@ -123,21 +123,17 @@ async function main(): Promise<void> {
   assert.deepEqual(repository.byId.get(canonical.object_id), canonicalSnapshot);
   ok("derivation performs zero canonical or repository mutation");
 
-  const parentView = await executionRepository.readRuntimeConfig(parent.object_id);
-  assert.throws(() => parentView, /never/);
-  throw new Error("UNREACHABLE");
+  await assert.rejects(
+    executionRepository.readRuntimeConfig(parent.object_id),
+    /CAP05_CONFIG_PURPOSE_MISMATCH/,
+  );
+  ok("non-CAP-05 Config fails closed instead of being silently adapted");
+
+  assert.equal(pass, 7);
+  console.log(`SUMMARY ${pass} PASS / 0 FAIL`);
 }
 
 main().catch((error) => {
-  if (error instanceof Error && error.message === "UNREACHABLE") {
-    console.log("SUMMARY 6 PASS / 0 FAIL");
-    return;
-  }
-  if (error instanceof Error && error.message.includes("CAP05_CONFIG_PURPOSE_MISMATCH")) {
-    console.log("PASS non-CAP-05 Config fails closed instead of being silently adapted");
-    console.log("SUMMARY 7 PASS / 0 FAIL");
-    return;
-  }
   console.error(error);
   process.exitCode = 1;
 });
