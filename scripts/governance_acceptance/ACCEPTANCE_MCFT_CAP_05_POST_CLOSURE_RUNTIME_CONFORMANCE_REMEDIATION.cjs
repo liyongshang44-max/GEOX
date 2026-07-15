@@ -1,5 +1,5 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION.cjs
-// Purpose: enforce the append-only CAP-05 post-closure Runtime conformance remediation authority, non-canonical execution-view separation, successor block, and candidate acceptance evidence.
+// Purpose: enforce the append-only CAP-05 post-closure Runtime conformance remediation authority, non-canonical execution-view separation, proven candidate PostgreSQL regression, temporary-proof cleanup, and successor block pending merged-main effectiveness.
 // Boundary: repository and child-process acceptance only; no database mutation, canonical Twin write, active binding, Model Activation, calibration, route, scheduler, CAP-06 Runtime authority, merge-effectiveness claim, or predecessor-eligibility restoration.
 
 'use strict';
@@ -20,11 +20,26 @@ const CLOSURE = 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.j
 const VIEW = 'apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts';
 const RESOLVER = 'apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts';
 const TICK = 'apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts';
+const STATE_BUILDER = 'apps/server/src/runtime/twin_runtime/forecast_scenario_state_source_builder_v1.ts';
+const RECORD_BUILDER = 'apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts';
 const PENDING = 'apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.ts';
 const RECEIPT = 'apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts';
+const REPLAY_SOURCE = 'apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts';
 const RUNNER = 'apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts';
-const RUNTIME_ACCEPTANCE = 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_EXECUTION_CONFIG_RESOLUTION.ts';
+const EXECUTION_ACCEPTANCE = 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_EXECUTION_CONFIG_RESOLUTION.ts';
+const REPLAY_ACCEPTANCE = 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_BINDING_EXECUTION_METADATA.ts';
+const POSTGRESQL_ACCEPTANCE = 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts';
 const OBSOLETE_FAKE_ENVELOPE = 'apps/server/src/runtime/twin_runtime/cap05_feedback_config_execution_view_v1.ts';
+const TEMPORARY_PROOF_FILES = [
+  '.github/workflows/mcft-cap-05-apply-source-patch.yml',
+  '.github/workflows/mcft-cap-05-execution-config-resolution.yml',
+  '.github/workflows/mcft-cap-05-postgresql-runner-regression.yml',
+  '.github/workflows/mcft-cap-05-postgresql-runner-regression-v2.yml',
+  'scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py',
+  'scripts/remediation/APPLY_MCFT_CAP_05_FORMAL_REPLAY_BINDING_AUTHORITY.py',
+  'scripts/remediation/APPLY_MCFT_CAP_05_OUTCOME_OBSERVATION_REPLAY_VIEW.py',
+  'scripts/remediation/APPLY_MCFT_CAP_05_TERMINAL_CHAIN_VALIDATORS.py',
+];
 
 let pass = 0;
 const ok = (label) => {
@@ -32,11 +47,30 @@ const ok = (label) => {
   process.stdout.write(`PASS ${label}\n`);
 };
 
-for (const relative of [CONTRACT, STATUS, CLOSURE, VIEW, RESOLVER, TICK, PENDING, RECEIPT, RUNNER, RUNTIME_ACCEPTANCE]) {
+for (const relative of [
+  CONTRACT,
+  STATUS,
+  CLOSURE,
+  VIEW,
+  RESOLVER,
+  TICK,
+  STATE_BUILDER,
+  RECORD_BUILDER,
+  PENDING,
+  RECEIPT,
+  REPLAY_SOURCE,
+  RUNNER,
+  EXECUTION_ACCEPTANCE,
+  REPLAY_ACCEPTANCE,
+  POSTGRESQL_ACCEPTANCE,
+]) {
   assert.equal(exists(relative), true, `REQUIRED_FILE_MISSING:${relative}`);
 }
 assert.equal(exists(OBSOLETE_FAKE_ENVELOPE), false, 'FAKE_CANONICAL_ENVELOPE_ADAPTER_MUST_BE_ABSENT');
-ok('required remediation authority and source files exist; obsolete fake-envelope adapter is absent');
+for (const relative of TEMPORARY_PROOF_FILES) {
+  assert.equal(exists(relative), false, `TEMPORARY_PROOF_FILE_MUST_BE_ABSENT:${relative}`);
+}
+ok('required permanent authority, implementation and acceptance files exist; obsolete and temporary proof files are absent');
 
 const closure = readJson(CLOSURE);
 assert.equal(closure.capability_line_id, 'MCFT-CAP-05');
@@ -51,12 +85,12 @@ assert.equal(status.defect_id, 'MCFT-CAP-05-CONFORMANCE-DEFECT-01');
 assert.equal(status.defect_owner, 'MCFT-CAP-05');
 assert.equal(status.historical_completion_status, 'COMPLETE');
 assert.equal(status.historical_closure_rewrite, false);
-assert.equal(status.post_closure_conformance_status, 'DEFECT_CONFIRMED_REMEDIATION_IMPLEMENTED_AWAITING_FORMAL_POSTGRESQL_REGRESSION');
+assert.equal(status.post_closure_conformance_status, 'REMEDIATION_PROVEN_ON_CANDIDATE_BRANCH_AWAITING_MERGED_MAIN_EFFECTIVENESS');
 assert.deepEqual(status.affected_claims, [
   'BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN_ESTABLISHED',
   'FORMAL_POSTGRESQL_RUNNER_TERMINAL_CHAIN_REPRODUCIBLE',
 ]);
-ok('post-closure defect authority is append-only and owned by CAP-05');
+ok('post-closure defect authority is append-only, owned by CAP-05 and candidate-proven');
 
 assert.equal(status.canonical_cap05_config_mutation, false);
 assert.equal(status.replacement_canonical_cap04_config_created, false);
@@ -68,14 +102,56 @@ assert.equal(status.forecast_math_changed, false);
 assert.equal(status.scenario_math_changed, false);
 ok('canonical Config, validators and mathematical kernels remain frozen');
 
+assert.equal(status.execution_view_acceptance.candidate_result, 'PASS');
+assert.equal(status.execution_view_acceptance.assertion_count, 10);
+assert.equal(status.replay_binding_execution_metadata_acceptance.candidate_result, 'PASS');
+assert.equal(status.replay_binding_execution_metadata_acceptance.assertion_count, 6);
+assert.equal(status.replay_binding_execution_metadata_acceptance.source_record_identity_mutation, false);
+assert.equal(status.replay_binding_execution_metadata_acceptance.source_binding_authority_mutation, false);
+ok('execution-view and Replay binding metadata candidate acceptances are recorded without authority mutation');
+
+const formal = status.formal_postgresql_runner_regression;
+assert.equal(formal.status, 'PASS_CANDIDATE_BRANCH');
+assert.equal(formal.proof_workflow_run, 29432935520);
+assert.equal(formal.proof_source_commit, '9af1c4a234dc97229de19854b8496973478f88c6');
+assert.equal(formal.candidate_pull_request, 2501);
+for (const field of [
+  'checkpoint_72_to_80',
+  'eight_runtime_configs',
+  'eight_posterior_states',
+  'eight_completed_forecasts',
+  'eight_scenario_sets',
+  'one_canonical_residual',
+  'restart_recovery',
+  'failure_before_a_commit',
+  'failure_between_a_and_b',
+  'completed_chain_zero_write_replay',
+  'canonical_config_ref_hash_persistence',
+]) {
+  assert.equal(formal[field], 'PASS', `FORMAL_POSTGRESQL_PROOF_NOT_PASS:${field}`);
+}
+assert.equal(formal.first_committed_sequence, 73);
+assert.equal(formal.final_committed_sequence, 80);
+assert.equal(formal.final_next_logical_tick_time, '2026-06-04T10:00:00.000Z');
+assert.equal(formal.forecast_point_count, 576);
+assert.equal(formal.scenario_point_count, 1728);
+assert.equal(formal.causal_effect_claimed, false);
+assert.equal(formal.forecast_assimilation_equivalence_claimed, false);
+assert.equal(formal.automatic_history_rewrite, false);
+ok('formal PostgreSQL 72-to-80 candidate proof and nonclaims are locked');
+
+assert.equal(status.candidate_proof_cleanup.temporary_write_enabled_workflow_retained, false);
+assert.equal(status.candidate_proof_cleanup.temporary_proof_workflows_retained, false);
+assert.equal(status.candidate_proof_cleanup.temporary_patch_generators_retained, false);
+ok('temporary proof infrastructure is not part of the remediation deliverable');
+
 assert.equal(status.successor_capability_line_id, 'MCFT-CAP-06');
 assert.equal(status.successor_predecessor_eligibility, 'BLOCKED');
-assert.equal(status.cap_06_s0_status, 'BLOCKED_BY_PREDECESSOR_RUNTIME_CONFORMANCE');
+assert.equal(status.cap_06_s0_status, 'BLOCKED_AWAITING_REMEDIATION_MERGED_MAIN_EFFECTIVENESS');
 assert.equal(status.cap_06_s0_resume_authorized, false);
 assert.equal(status.cap_06_runtime_authority, false);
 assert.equal(status.cap_06_migration_authority, false);
-assert.equal(status.formal_postgresql_runner_regression.status, 'PENDING');
-ok('CAP-06 S0 remains blocked and receives no Runtime or migration authority');
+ok('CAP-06 S0 remains blocked and receives no Runtime or migration authority before merged-main effectiveness');
 
 const view = readText(VIEW);
 assert.match(view, /export type ResolvedCap04ExecutionConfigV1 = \{/);
@@ -109,8 +185,13 @@ const tick = readText(TICK);
 assert.match(tick, /assertCanonicalConfigEnvelopeV1/);
 assert.match(tick, /executionConfigResolver\.resolveExecutionConfig\(runtimeConfig\)/);
 assert.match(tick, /runtime_config: runtimeConfig/);
+assert.match(tick, /execution_config_payload: config/);
 assert.match(tick, /runtime_config: \{ ref: runtimeConfig\.object_id, hash: runtimeConfig\.determinism_hash \}/);
-ok('single-tick service separates envelope validation from payload resolution while persisting canonical CAP-05 pins');
+const stateBuilder = readText(STATE_BUILDER);
+const recordBuilder = readText(RECORD_BUILDER);
+assert.match(stateBuilder, /execution_config_payload\?: Cap04RuntimeConfigPayloadV1/);
+assert.match(recordBuilder, /execution_config_payload\?: Cap04RuntimeConfigPayloadV1/);
+ok('single-tick and builder seams separate canonical envelope pins from execution payload');
 
 const pending = readText(PENDING);
 assert.match(pending, /executionConfigResolver\.resolveExecutionConfig\(runtimeConfig\)/);
@@ -123,19 +204,28 @@ assert.match(runner, /new Cap05InheritedCap04ExecutionConfigResolverV1\(\)/);
 assert.match(runner, /runtimeRepository/);
 ok('receipt, pending-B and formal runner wiring use the separated resolver seam');
 
-const command = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
-const runtimeResult = spawnSync(command, [
-  '-w', 'exec', 'tsx', RUNTIME_ACCEPTANCE,
-], {
-  cwd: ROOT,
-  encoding: 'utf8',
-  env: process.env,
-});
-if (runtimeResult.stdout) process.stdout.write(runtimeResult.stdout);
-if (runtimeResult.stderr) process.stderr.write(runtimeResult.stderr);
-assert.equal(runtimeResult.status, 0, 'EXECUTION_CONFIG_RUNTIME_ACCEPTANCE_FAILED');
-assert.match(runtimeResult.stdout, /SUMMARY 10 PASS \/ 0 FAIL/);
-ok('permanent execution-config separation acceptance passes');
+const replaySource = readText(REPLAY_SOURCE);
+assert.match(replaySource, /SOURCE_BINDING_CONVERSION_RULE_VERSION_FROM_BINDING_VERSION_V1/);
+assert.match(replaySource, /CONVERSION_RULE_VERSION_BINDING_VERSION_MISMATCH/);
+assert.match(replaySource, /sourceRecordHashV1\(record\)/);
+ok('Replay adapter derives only non-persisted conversion metadata and preserves fail-closed source identity validation');
 
-assert.equal(pass, 10);
+const command = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+for (const [script, expectedSummary] of [
+  [EXECUTION_ACCEPTANCE, 'SUMMARY 10 PASS / 0 FAIL'],
+  [REPLAY_ACCEPTANCE, 'SUMMARY 6 PASS / 0 FAIL'],
+]) {
+  const result = spawnSync(command, ['-w', 'exec', 'tsx', script], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    env: process.env,
+  });
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+  assert.equal(result.status, 0, `RUNTIME_ACCEPTANCE_FAILED:${script}`);
+  assert.match(result.stdout, new RegExp(expectedSummary.replaceAll('/', '\\/')));
+}
+ok('permanent non-database remediation acceptances pass');
+
+assert.equal(pass, 13);
 process.stdout.write(`SUMMARY ${pass} PASS / 0 FAIL\n`);
