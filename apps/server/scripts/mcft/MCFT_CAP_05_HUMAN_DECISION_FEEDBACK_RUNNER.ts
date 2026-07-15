@@ -17,6 +17,7 @@ import {
   Cap05BoundedEightTickFeedbackChainServiceV1,
   type RunCap05BoundedFeedbackChainInputV1,
 } from "../../src/runtime/twin_runtime/bounded_feedback_chain_service_v1.js";
+import { Cap05FeedbackExecutionRuntimeConfigRepositoryV1 } from "../../src/runtime/twin_runtime/cap05_feedback_config_execution_view_v1.js";
 import { Cap04ForecastScenarioSingleTickServiceV1, type Cap04SingleTickPersistencePortV1 } from "../../src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.js";
 import { Cap05ForecastResidualOutcomeTickServiceV1 } from "../../src/runtime/twin_runtime/forecast_residual_outcome_tick_service_v1.js";
 import { PrepareNextTickInputServiceV1 } from "../../src/runtime/twin_runtime/next_tick_input_service_v1.js";
@@ -151,6 +152,7 @@ async function main(): Promise<void> {
 
   try {
     const runtimeRepository = new PostgresRuntimeRepositoryV1(pool);
+    const executionConfigRepository = new Cap05FeedbackExecutionRuntimeConfigRepositoryV1(runtimeRepository);
     const nextTickRepository = new PostgresNextTickRepositoryV1(pool);
     const recoveryRepository = new PostgresForecastScenarioRecoveryRepositoryV1(pool);
     const feedbackRepository = new PostgresFeedbackPersistenceRepositoryV1(pool);
@@ -160,12 +162,12 @@ async function main(): Promise<void> {
     const baseTickService = new Cap04ForecastScenarioSingleTickServiceV1(
       handoffService,
       replayEvidenceSource,
-      runtimeRepository,
+      executionConfigRepository,
       persistence,
     );
     const continuationTickService = new Cap04PendingScenarioBarrierSingleTickServiceV1(
       handoffService,
-      runtimeRepository,
+      executionConfigRepository,
       persistence,
       baseTickService,
     );
@@ -173,7 +175,7 @@ async function main(): Promise<void> {
       handoffService,
       replayEvidenceSource,
       new PostgresActionFeedbackTickSourceV1(pool),
-      runtimeRepository,
+      executionConfigRepository,
       persistence,
     );
     const outcomeTickService = new Cap05ForecastResidualOutcomeTickServiceV1(
