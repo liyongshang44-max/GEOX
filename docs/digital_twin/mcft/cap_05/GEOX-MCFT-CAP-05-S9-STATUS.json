@@ -39,16 +39,16 @@
     "inherited_state_checkpoint_forecast_cas_regression": true
   },
   "validation": {
-    "candidate_workflow": null,
-    "candidate_state": "PENDING",
-    "governance_gate": "PENDING",
-    "s9_postgresql_recovery_path": "PENDING",
-    "inherited_cap03_persistence_recovery_path": "PENDING",
-    "repository_typecheck": "PENDING",
-    "repository_build": "PENDING",
-    "server_selfcheck": "PENDING",
-    "standard_acceptance": "PENDING",
-    "commercial_mvp0_release_gate": "PENDING"
+    "candidate_workflow": 29391757640,
+    "candidate_state": "SUCCESS",
+    "governance_gate": "54_PASS_0_FAIL",
+    "s9_postgresql_recovery_path": "13_PASS_0_FAIL",
+    "inherited_cap03_persistence_recovery_path": "15_PASS_0_FAIL",
+    "repository_typecheck": "PASS",
+    "repository_build": "PASS",
+    "server_selfcheck": "PASS",
+    "standard_acceptance": "PASS",
+    "commercial_mvp0_release_gate": "PASS"
   },
   "canonical_object_delta": 0,
   "transaction_family_delta": 0,
