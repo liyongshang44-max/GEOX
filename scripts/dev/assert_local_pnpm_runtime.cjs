@@ -361,6 +361,10 @@ const cap05FinalizationEffectivenessGatePath = path.join(process.cwd(), 'scripts
 if (!fs.existsSync(cap05FinalizationEffectivenessPath) && fs.existsSync(cap05S11ClosureGatePath)) {
   runGate(cap05S11ClosureGatePath, '--auto');
 }
-if (fs.existsSync(cap05FinalizationEffectivenessPath) && fs.existsSync(cap05FinalizationEffectivenessGatePath)) {
+const cap05FinalEffectivenessReconciliationPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-FINAL-EFFECTIVENESS-RECONCILIATION.json');
+const cap05FinalEffectivenessReconciliationGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_FINAL_EFFECTIVENESS_RECONCILIATION.cjs');
+if (fs.existsSync(cap05FinalEffectivenessReconciliationPath) && fs.existsSync(cap05FinalEffectivenessReconciliationGatePath)) {
+  runGate(cap05FinalEffectivenessReconciliationGatePath, '--auto');
+} else if (fs.existsSync(cap05FinalizationEffectivenessPath) && fs.existsSync(cap05FinalizationEffectivenessGatePath)) {
   runGate(cap05FinalizationEffectivenessGatePath, '--auto');
 }
