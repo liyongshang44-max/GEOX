@@ -79,22 +79,34 @@ Canonical State, Forecast, Checkpoint and Scenario records continue to persist t
 
 ## 5. Replay execution metadata compatibility
 
-The controlled Replay source binding matrix already freezes a positive integer `binding_version`. Some older conversion-rule records omit a duplicated textual `conversion_rule.version` required by the current observation selector.
+The controlled Replay source-binding matrix freezes a positive integer `binding_version`. Some older binding conversion rules omit the duplicated textual `conversion_rule.version` required by the CAP-03 observation selectors.
 
-The file-source adapter may derive the non-persisted execution metadata field as:
+The file-source adapter must preserve the canonical binding conversion rule exactly as recorded and attach a separate non-canonical execution metadata object:
 
-`conversion_rule.version = String(binding_version)`
+```ts
+execution_metadata: {
+  policy_id: "SOURCE_BINDING_CONVERSION_RULE_VERSION_FROM_BINDING_VERSION_V1";
+  source_binding_version: number;
+  conversion_rule_version: string;
+}
+```
 
-only when the field is absent. An explicit conflicting conversion-rule version fails closed. This compatibility projection:
+The execution version is `String(binding_version)`. If the canonical conversion rule already contains an explicit version, it must equal that value or loading fails closed.
+
+This compatibility projection:
 
 - occurs after source-record semantic-hash verification;
 - does not mutate Replay Evidence bytes or `source_record_hash`;
+- does not rewrite canonical `conversion_rule`;
 - does not modify the source-binding matrix;
+- is stripped before A0 canonical Evidence persistence and semantic hashing;
+- cannot change the A0 Evidence digest, active-lineage object ID, or predecessor lock;
+- is consumed only by observation-selection execution logic;
 - does not create a canonical object or new authority.
 
 ## 6. Allowed source boundary
 
-Allowed Runtime and adapter changes are restricted to:
+Allowed Runtime, adapter and acceptance changes are restricted to:
 
 - `apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts`
 - `apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts`
@@ -103,7 +115,11 @@ Allowed Runtime and adapter changes are restricted to:
 - `apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts`
 - `apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.ts`
 - `apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts`
+- `apps/server/src/runtime/twin_runtime/ports.ts`
 - `apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts`
+- `apps/server/src/runtime/twin_runtime/evidence_window_builder_v1.ts`
+- `apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v1.ts`
+- `apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v2.ts`
 - `apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts`
 - dedicated Runtime and governance acceptance files for this remediation.
 
@@ -121,7 +137,7 @@ This remediation must not:
 - change Dynamics, Assimilation, Forecast or Scenario mathematics;
 - rewrite existing CAP-05 canonical history;
 - modify active Config binding;
-- mutate frozen Replay Evidence identity or source-binding authority;
+- mutate frozen Replay Evidence identity, canonical conversion data, A0 Evidence semantics, active-lineage identity, or source-binding authority;
 - create Calibration Candidate, Shadow Evaluation or Model Activation authority;
 - create a CAP-06 Runtime source, migration, route, Web path or scheduler.
 
@@ -148,17 +164,24 @@ Candidate result: `10 PASS / 0 FAIL`.
 
 The permanent acceptance proves:
 
-- absent conversion-rule version is derived from frozen `binding_version`;
+- the execution-metadata policy identity is frozen;
+- an absent conversion-rule version is attached only as separate execution metadata derived from frozen `binding_version`;
 - Replay Evidence hash and file bytes remain unchanged;
-- a matching explicit version remains valid;
+- canonical A0 Evidence and active-lineage identity inputs are identical with or without execution metadata;
+- the CAP-03 observation selector resolves the executable conversion version from separate metadata;
+- a matching explicit conversion-rule version remains valid and consistent;
 - an explicit version conflict fails closed;
 - a missing binding version fails closed.
 
-Candidate result: `6 PASS / 0 FAIL`.
+Candidate result: `8 PASS / 0 FAIL`.
 
-### 8.3 Formal PostgreSQL runner
+### 8.3 Cross-capability regression
 
-Candidate workflow `29432935520` at proven source commit `9af1c4a234dc97229de19854b8496973478f88c6` proves:
+The same proof workflow executes the complete CAP-03 inherited persistence/recovery regression from the canonical frozen predecessor handoff. It passes without `ACTIVE_LINEAGE_OBJECT_REF_MISMATCH`, proving that Replay execution metadata does not alter the A0 active-lineage identity.
+
+### 8.4 Formal PostgreSQL runner
+
+Candidate workflow `29438990685` at committed source `8b386850b0370f27d1756ab10571eec452933ad6` proves:
 
 - predecessor checkpoint `72` is reproducible;
 - first CAP-05 committed sequence is `73`;
