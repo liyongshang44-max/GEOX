@@ -239,6 +239,7 @@ runRuntimeDoctor();
 
 const activationGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs');
 const s7SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_SETTLEMENT.cjs');
+const s8SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_SETTLEMENT.cjs');
 const s8RuntimeStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-STATUS.json');
 const strictForecastAvailabilityStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-STRICT-FORECAST-AVAILABILITY-STATUS.json');
 const settlementActive = fs.existsSync(s7SettlementGatePath);
@@ -267,3 +268,6 @@ runCap05S8ForecastResidualRuntimeAcceptance({ runHistoricalGovernance: !strictFo
 
 // MCFT_CAP_05_S8_STRICT_FORECAST_AVAILABILITY_GATE_V1: validate the current lifecycle frontier without granting S8 effectiveness, successor-slice or CAP-06 authority.
 runCap05S8StrictForecastAvailabilityAcceptance();
+
+// MCFT_CAP_05_S8_SSOT_SETTLEMENT_GATE_V1: settle S8 merged-main effectiveness and explicitly authorize, but do not implement, S9.
+runGate(s8SettlementGatePath, '--auto');
