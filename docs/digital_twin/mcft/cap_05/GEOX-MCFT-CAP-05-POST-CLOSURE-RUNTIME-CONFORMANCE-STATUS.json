@@ -1,0 +1,71 @@
+{
+  "schema_version": "geox_mcft_cap_05_post_closure_runtime_conformance_status_v1",
+  "authority_id": "MCFT-CAP-05.POST-CLOSURE-RUNTIME-CONFORMANCE-REMEDIATION-V1",
+  "capability_line_id": "MCFT-CAP-05",
+  "historical_completion_status": "COMPLETE",
+  "historical_closure_rewrite": false,
+  "post_closure_conformance_status": "DEFECT_CONFIRMED_REMEDIATION_IMPLEMENTED_AWAITING_FORMAL_POSTGRESQL_REGRESSION",
+  "defect_id": "MCFT-CAP-05-CONFORMANCE-DEFECT-01",
+  "defect_owner": "MCFT-CAP-05",
+  "defect_classification": "CAP05_CANONICAL_CONFIG_TO_REUSED_CAP04_EXECUTION_SEAM_CONFORMANCE",
+  "affected_claims": [
+    "BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN_ESTABLISHED",
+    "FORMAL_POSTGRESQL_RUNNER_TERMINAL_CHAIN_REPRODUCIBLE"
+  ],
+  "confirmed_failure_code": "CAP04_CONFIG_PURPOSE_MISMATCH",
+  "approved_remediation_direction": "APPROVED_WITH_EXECUTION_VIEW_SEPARATION",
+  "canonical_cap05_config_mutation": false,
+  "replacement_canonical_cap04_config_created": false,
+  "derived_execution_view_canonical": false,
+  "derived_execution_view_persisted": false,
+  "cap04_validator_relaxed": false,
+  "dynamics_math_changed": false,
+  "forecast_math_changed": false,
+  "scenario_math_changed": false,
+  "execution_view_contract": {
+    "type": "ResolvedCap04ExecutionConfigV1",
+    "direct_resolution_policy_id": "DIRECT_CAP04_RUNTIME_CONFIG_V1",
+    "cap05_resolution_policy_id": "CAP05_INHERITED_CAP04_EXECUTION_VIEW_V1",
+    "canonical_identity_fields_forbidden": [
+      "object_id",
+      "determinism_hash",
+      "object_type",
+      "idempotency_key"
+    ]
+  },
+  "execution_view_acceptance": {
+    "script_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_EXECUTION_CONFIG_RESOLUTION.ts",
+    "assertion_count": 10,
+    "candidate_result": "PASS",
+    "repository_typecheck": "PASS",
+    "workflow_run": 29425201028
+  },
+  "formal_postgresql_runner_regression": {
+    "status": "PENDING",
+    "checkpoint_72_to_80": "PENDING",
+    "eight_runtime_configs": "PENDING",
+    "eight_posterior_states": "PENDING",
+    "eight_completed_forecasts": "PENDING",
+    "eight_scenario_sets": "PENDING",
+    "one_canonical_residual": "PENDING",
+    "restart_recovery": "PENDING",
+    "failure_before_a_commit": "PENDING",
+    "failure_between_a_and_b": "PENDING",
+    "completed_chain_zero_write_replay": "PENDING",
+    "canonical_config_ref_hash_persistence": "PENDING"
+  },
+  "successor_capability_line_id": "MCFT-CAP-06",
+  "successor_predecessor_eligibility": "BLOCKED",
+  "cap_06_s0_status": "BLOCKED_BY_PREDECESSOR_RUNTIME_CONFORMANCE",
+  "cap_06_s0_resume_authorized": false,
+  "cap_06_runtime_authority": false,
+  "cap_06_migration_authority": false,
+  "resume_condition": [
+    "REMEDIATION_MERGED_MAIN_EFFECTIVE",
+    "FORMAL_CAP05_POSTGRESQL_RUNNER_REGRESSION_PASS",
+    "TERMINAL_PREDECESSOR_LOCK_REPRODUCIBLE"
+  ],
+  "authority_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-POST-CLOSURE-RUNTIME-CONFORMANCE-REMEDIATION.md",
+  "historical_closure_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json",
+  "record_revision": "candidate-remediation-implemented-awaiting-formal-postgresql-regression-v1"
+}
