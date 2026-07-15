@@ -27,6 +27,8 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap06_s0_acceptance
+      EFFECTIVE_MAIN_SHA: 1e66ea7efc842b8e547bccc40521d520b4370e69
+      HISTORICAL_P0_MERGE_SHA: a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf
     steps:
       - name: Checkout S0 branch
         uses: actions/checkout@v4
@@ -34,10 +36,55 @@ jobs:
           ref: agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1
           fetch-depth: 0
 
-      - name: Refresh frozen main ref
+      - name: Merge exact effective main baseline
         run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch --no-tags --quiet origin main:refs/remotes/origin/main
-          test "$(git rev-parse refs/remotes/origin/main)" = "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf"
+          test "$(git rev-parse refs/remotes/origin/main)" = "$EFFECTIVE_MAIN_SHA"
+          git merge --no-edit refs/remotes/origin/main
+
+      - name: Separate current S0 baseline from historical P0 merge identity
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          effective = "1e66ea7efc842b8e547bccc40521d520b4370e69"
+          historical = "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf"
+
+          preflight_path = Path("scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts")
+          preflight = preflight_path.read_text()
+          preflight = preflight.replace(
+              f'const BASELINE_MAIN = "{historical}";',
+              f'const BASELINE_MAIN = "{effective}";',
+          )
+          preflight = preflight.replace(
+              'const P0_MERGE_COMMIT = BASELINE_MAIN;',
+              f'const P0_MERGE_COMMIT = "{historical}";',
+          )
+          if f'const BASELINE_MAIN = "{effective}";' not in preflight:
+              raise SystemExit("S0_EFFECTIVE_BASELINE_PATCH_FAILED")
+          if f'const P0_MERGE_COMMIT = "{historical}";' not in preflight:
+              raise SystemExit("S0_HISTORICAL_P0_PATCH_FAILED")
+          preflight_path.write_text(preflight)
+
+          gate_path = Path("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs")
+          gate = gate_path.read_text()
+          gate = gate.replace(
+              f'const baseline = "{historical}";',
+              f'const baseline = "{effective}";\nconst p0MergeCommit = "{historical}";',
+          )
+          gate = gate.replace(
+              'p0.effectiveness.merge_commit === baseline',
+              'p0.effectiveness.merge_commit === p0MergeCommit',
+          )
+          if f'const baseline = "{effective}";' not in gate:
+              raise SystemExit("S0_GATE_EFFECTIVE_BASELINE_PATCH_FAILED")
+          if f'const p0MergeCommit = "{historical}";' not in gate:
+              raise SystemExit("S0_GATE_P0_HISTORY_PATCH_FAILED")
+          gate_path.write_text(gate)
+          PY
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -70,8 +117,6 @@ jobs:
       - name: Restore exact permanent candidate boundary
         run: |
           rm .github/workflows/mcft-cap-06-s0-materialize.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "MCFT-CAP-06 S0: materialize authorization and predecessor qualification"
 
