@@ -354,8 +354,13 @@ if (s10SettlementActive && !cap05ClosureActive) {
 }
 
 
-// MCFT_CAP_05_S11_CLOSURE_FINALIZATION_GATE_V1: run the S11A closure candidate Gate while final effectiveness is not yet materialized.
+// MCFT_CAP_05_S11_CLOSURE_FINALIZATION_GATE_V1: preserve the historical S11A candidate Gate only before final effectiveness materializes.
 const cap05S11ClosureGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S11_CLOSURE_FINALIZATION.cjs');
-if (fs.existsSync(cap05S11ClosureGatePath)) {
+const cap05FinalizationEffectivenessPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-FINALIZATION-EFFECTIVENESS.json');
+const cap05FinalizationEffectivenessGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_FINALIZATION_EFFECTIVENESS.cjs');
+if (!fs.existsSync(cap05FinalizationEffectivenessPath) && fs.existsSync(cap05S11ClosureGatePath)) {
   runGate(cap05S11ClosureGatePath, '--auto');
+}
+if (fs.existsSync(cap05FinalizationEffectivenessPath) && fs.existsSync(cap05FinalizationEffectivenessGatePath)) {
+  runGate(cap05FinalizationEffectivenessGatePath, '--auto');
 }

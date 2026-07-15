@@ -1382,3 +1382,21 @@ active_delivery_slice_id: MCFT-CAP-05.CLOSURE-AND-FINALIZATION-V1
 runtime_source_authorized: false
 CAP_06_authorized: false
 ```
+
+
+---
+
+## MCFT-CAP-05 S11C Complete Activation
+
+```text
+baseline_main_commit: fd6c54e84ee4ede7bbb581b4fc55660251c2265f
+activation_pr: 2490
+status: COMPLETE
+closure_effective: true
+capability_complete: true
+active_delivery_slice_id: null
+effective_completion_claim_count: 40
+runtime_source_authorized: false
+CAP_06_authorized: false
+finalization_effectiveness_ref: docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-FINALIZATION-EFFECTIVENESS.json
+```

@@ -8,13 +8,13 @@
   "target_completion_level": "Level A — Deterministic Replay Twin",
   "status": "MERGED_EFFECTIVE",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "S11_CLOSURE_CANDIDATE",
+  "implementation_status": "COMPLETE",
   "authorization_effective": true,
   "runtime_source_authorized": false,
-  "authorization_effectiveness_condition": "S11A_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_FINALIZATION_GATE_PASS",
-  "baseline_main_commit": "b1248216462eb31cfcf3c75633cc2e53a15520e4",
-  "branch": "agent/mcft-cap-05-s11a-closure-candidate-v1",
-  "active_delivery_slice_id": "MCFT-CAP-05.CLOSURE-AND-FINALIZATION-V1",
+  "authorization_effectiveness_condition": "SATISFIED_ON_MAIN",
+  "baseline_main_commit": "fd6c54e84ee4ede7bbb581b4fc55660251c2265f",
+  "branch": "agent/mcft-cap-05-s11c-complete-activation-v1",
+  "active_delivery_slice_id": null,
   "task_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
   "task_sha256_before_s0_materialization": "aa197ebcedba99c2f6af9ca2763194d303cad9098ba9e9fc75e3b8d61317d434",
   "authorization_document_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION.md",
@@ -46,9 +46,7 @@
     "tree_equivalence": "PASS",
     "effectiveness_condition_satisfied": true
   },
-  "current_blockers": [
-    "S11_FINALIZATION_EFFECTIVENESS_NOT_ESTABLISHED"
-  ],
+  "current_blockers": [],
   "premerge_satisfied_conditions": [
     "MCFT_CAP_05_P0_MERGED_MAIN_EFFECTIVE",
     "MCFT_CAP_04_COMPLETE_ON_CANONICAL_MAIN",
@@ -167,10 +165,11 @@
     "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json",
     "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json",
     "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-FINALIZATION-EFFECTIVENESS.json",
     "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-MAIN-VERIFICATION.json",
     "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
     "scripts/dev/assert_local_pnpm_runtime.cjs",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S11_CLOSURE_FINALIZATION.cjs"
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_FINALIZATION_EFFECTIVENESS.cjs"
   ],
   "next_authorized_slice_id_after_effectiveness": null,
   "successor_capability_line_id": "MCFT-CAP-06",
@@ -473,7 +472,8 @@
     "server_selfcheck": "PASS",
     "effective": true
   },
-  "pending_completion_claims": [
+  "pending_completion_claims": [],
+  "effective_completion_claims": [
     "MCFT_CAP_05_COMPLETE",
     "DT02_DECISION_OBJECT_REUSE_ESTABLISHED",
     "DT02_ACTION_FEEDBACK_OBJECT_REUSE_ESTABLISHED",
@@ -515,5 +515,7 @@
     "NO_DIRECT_AO_ACT_OR_AUTOMATIC_DISPATCH_BOUNDARY_ESTABLISHED",
     "ACTION_FEEDBACK_END_TO_END_TRACEABILITY_ESTABLISHED"
   ],
-  "effective_completion_claims": []
+  "closure_effective": true,
+  "capability_complete": true,
+  "finalization_effectiveness_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-FINALIZATION-EFFECTIVENESS.json"
 }
