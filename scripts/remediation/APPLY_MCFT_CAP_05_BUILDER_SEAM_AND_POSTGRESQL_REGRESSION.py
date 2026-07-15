@@ -137,90 +137,73 @@ replace_once(
 )
 
 postgresql_acceptance = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts"
-replace_once(
-    postgresql_acceptance,
-    '''  const evidence = JSON.parse(
-    fs.readFileSync(
-      path.join(ROOT, "fixtures/mcft/water_state/feedback_v1/decision_and_execution_evidence.jsonl"),
-      "utf8",
-    ).trim(),
-  ) as Array<Record<string, any>>;''',
-    '''  const feedbackRoot = path.join(ROOT, "fixtures/mcft/water_state/feedback_v1");
-  const readSingleEvidenceV1 = (filename: string): Record<string, any> => {
-    const records = fs.readFileSync(path.join(feedbackRoot, filename), "utf8")
-      .split("\\n")
-      .filter(Boolean)
-      .map((line) => JSON.parse(line) as Record<string, any>);
-    assert.equal(records.length, 1, `STANDARD_FEEDBACK_FIXTURE_CARDINALITY:${filename}`);
-    return records[0];
-  };
-  const evidence = [
-    readSingleEvidenceV1("approval_assertions.jsonl"),
-    readSingleEvidenceV1("approved_plans.jsonl"),
-    readSingleEvidenceV1("execution_receipts.jsonl"),
-  ];''',
-)
-replace_once(
-    postgresql_acceptance,
-    'ORDER BY ingested_at DESC LIMIT 1',
-    'ORDER BY occurred_at DESC LIMIT 1',
-)
-replace_once(
-    postgresql_acceptance,
-    "record_json->>'type'='twin_human_decision_v1'",
-    "record_json->>'type'='twin_decision_record_v1'",
-)
-
 postgresql_text = Path(postgresql_acceptance).read_text()
 standard_feedback_pattern = re.compile(
     r"async function establishStandardFeedbackPathV1\(pool: Pool\): Promise<void> \{.*?\n\}\n\nfunction parseRunnerOutputV1",
     re.DOTALL,
 )
-standard_feedback_replacement = '''function seedEvidenceV1<T extends { source_record_id: string; source_record_hash: string }>(record: T): T {
-  const seeded = structuredClone(record) as unknown as Record<string, unknown>;
-  const hashInput = { ...seeded };
-  delete hashInput.source_record_hash;
-  delete hashInput.materialized_file_location;
-  seeded.source_record_hash = semanticHashV1(hashInput);
-  return seeded as unknown as T;
+standard_feedback_replacement = '''async function seedReplayEvidenceV1(
+  pool: Pool,
+  record: Record<string, unknown>,
+): Promise<void> {
+  const identity = String(record.evidence_identity_key ?? record.source_record_id);
+  const digest = semanticHashV1(identity).replace(/^sha256:/, "").slice(0, 32);
+  await pool.query(
+    `INSERT INTO facts (fact_id,occurred_at,source,record_json)
+     VALUES ($1,$2::timestamptz,'mcft_cap05_post_closure_replay_evidence_v1',$3::jsonb)
+     ON CONFLICT (fact_id) DO NOTHING`,
+    [
+      `fact_mcft_cap05_post_closure_${digest}`,
+      record.available_to_runtime_at,
+      JSON.stringify({ type: record.record_type, payload: record }),
+    ],
+  );
 }
 
 async function establishStandardFeedbackPathV1(pool: Pool): Promise<void> {
   const feedbackRoot = path.join(ROOT, "fixtures/mcft/water_state/feedback_v1");
   const readSingleEvidenceV1 = <T>(filename: string): T => {
     const records = fs.readFileSync(path.join(feedbackRoot, filename), "utf8")
-      .split("\\n")
+      .split(String.fromCharCode(10))
       .filter(Boolean)
       .map((line) => JSON.parse(line) as T);
     assert.equal(records.length, 1, `STANDARD_FEEDBACK_FIXTURE_CARDINALITY:${filename}`);
     return records[0];
   };
 
-  const approval = seedEvidenceV1(
-    readSingleEvidenceV1<Cap05ApprovalAssertionEvidenceV1>("approval_assertions.jsonl"),
-  );
-  const plan = seedEvidenceV1(
-    readSingleEvidenceV1<Cap05ApprovedPlanEvidenceV1>("approved_plans.jsonl"),
-  );
-  const receipt = seedEvidenceV1(
-    readSingleEvidenceV1<Cap05ExecutionReceiptEvidenceV1>("execution_receipts.jsonl"),
-  );
-
-  const bindingService = new Cap05ApprovalPlanBindingServiceV1(pool);
-  const binding = await bindingService.commitApprovalPlanBinding({
-    approval_evidence: approval,
-    approved_plan_evidence: plan,
-  });
-  assert.ok(["INSERTED", "EXISTING_IDEMPOTENT_SUCCESS"].includes(binding.persistence_status));
-
+  const assertion = readSingleEvidenceV1<Cap05ApprovalAssertionEvidenceV1>("approval_assertions.jsonl");
+  const plan = readSingleEvidenceV1<Cap05ApprovedPlanEvidenceV1>("approved_plans.jsonl");
+  const dispatch = readSingleEvidenceV1<Record<string, unknown>>("external_dispatch.jsonl");
+  const receipt = readSingleEvidenceV1<Cap05ExecutionReceiptEvidenceV1>("execution_receipts.jsonl");
+  const planService = new Cap05ApprovalPlanBindingServiceV1(pool);
   const feedbackService = new Cap05ActionFeedbackNormalizationServiceV1(pool);
+
+  await seedReplayEvidenceV1(pool, dispatch);
+  const planBinding = await planService.commitApprovalPlanBinding({
+    scope: EXPECTED_SCOPE,
+    approval_assertion: assertion,
+    approved_plan: plan,
+    dispatch: {
+      disposition: "EXTERNALLY_RECORDED",
+      evidence_ref: String(dispatch.source_record_id),
+      evidence_hash: String(dispatch.source_record_hash),
+    },
+  });
+  assert.ok(
+    ["INSERTED", "EXISTING_IDEMPOTENT_SUCCESS"].includes(planBinding.approved_plan_status),
+    "APPROVED_PLAN_BINDING_REQUIRED",
+  );
+
+  await seedReplayEvidenceV1(pool, receipt as unknown as Record<string, unknown>);
   const feedback = await feedbackService.commitActionFeedback({
-    binding: binding.binding,
-    receipt_evidence: receipt,
-    binding_evidence_hash: binding.binding.determinism_hash,
+    scope: EXPECTED_SCOPE,
+    receipt_evidence_ref: receipt.source_record_id,
     receipt_evidence_hash: receipt.source_record_hash,
   });
-  assert.ok(["INSERTED", "EXISTING_IDEMPOTENT_SUCCESS"].includes(feedback.persistence_status));
+  assert.ok(
+    ["INSERTED", "EXISTING_IDEMPOTENT_SUCCESS"].includes(feedback.persistence_status),
+    "STANDARD_ACTION_FEEDBACK_REQUIRED",
+  );
   assert.equal(feedback.action_feedback.payload.eligible_for_state_input, true);
   assert.equal(feedback.action_feedback.payload.source_quality, "PASS");
 }
