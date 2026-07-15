@@ -27,6 +27,16 @@
     "s3_additive_migration_count": 1,
     "failed_attempt_persistence_mode": "MODE_A_NO_PERSISTENT_ATTEMPT_OBJECT"
   },
+  "candidate_materialization": {
+    "workflow_run": 29419140980,
+    "p0_gate": "PASS",
+    "repository_typecheck": "PASS",
+    "repository_build": "PASS",
+    "server_selfcheck": "PASS",
+    "temporary_workflow_removed": true,
+    "temporary_materializer_removed": true,
+    "materialized_candidate_head": "7eccdce158f251d6873aaf17e176de6eec7898d3"
+  },
   "cap_05_terminal_reconciliation": {
     "status": "COMPLETE",
     "implementation_status": "COMPLETE",
