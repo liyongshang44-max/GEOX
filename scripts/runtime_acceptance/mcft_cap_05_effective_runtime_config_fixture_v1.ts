@@ -1,5 +1,5 @@
 // scripts/runtime_acceptance/mcft_cap_05_effective_runtime_config_fixture_v1.ts
-// Purpose: compile one canonical CAP-05 effective feedback Runtime Config from a canonical CAP-04 acceptance Config while preserving the predecessor Config as the explicit parent authority.
+// Purpose: compile one canonical CAP-05 effective feedback Runtime Config from a canonical CAP-04 acceptance Config while preserving the inherited predecessor-State parent pins.
 // Boundary: acceptance fixture only; no production persistence, active binding, Runtime execution, validator relaxation, calibration, Model Activation, or CAP-06 authority.
 
 import type { CanonicalObjectEnvelopeV1 } from "../../apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.js";
@@ -29,8 +29,14 @@ export function buildCap05EffectiveRuntimeConfigFromCap04FixtureV1(
     },
     effective_logical_time: source.logical_time,
     created_at: source.created_at,
-    parent_runtime_config_ref: source.object_id,
-    parent_runtime_config_hash: source.determinism_hash,
+    parent_runtime_config_ref: requiredStringV1(
+      payload.parent_runtime_config_ref,
+      "CAP05_FIXTURE_PARENT_RUNTIME_CONFIG_REF_REQUIRED",
+    ),
+    parent_runtime_config_hash: requiredStringV1(
+      payload.parent_runtime_config_hash,
+      "CAP05_FIXTURE_PARENT_RUNTIME_CONFIG_HASH_REQUIRED",
+    ),
     reality_binding_ref: requiredStringV1(payload.reality_binding_ref, "CAP05_FIXTURE_REALITY_BINDING_REF_REQUIRED"),
     reality_binding_hash: requiredStringV1(payload.reality_binding_hash, "CAP05_FIXTURE_REALITY_BINDING_HASH_REQUIRED"),
     source_matrix_hash: requiredStringV1(payload.source_matrix_hash, "CAP05_FIXTURE_SOURCE_MATRIX_HASH_REQUIRED"),
