@@ -9,7 +9,7 @@ import {
   deriveSemanticObjectIdV1,
   semanticHashV1,
 } from "../../domain/twin_runtime/canonical_identity_v1.js";
-import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import { validateCanonicalObjectV1, type CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import {
   validateCap04RuntimeConfigPayloadV1,
   type Cap04RuntimeConfigPayloadV1,
@@ -24,6 +24,7 @@ export type BuildCap04StateSourceMembersInputV1 = {
   created_at: string;
   handoff: PreparedNextTickInputV1;
   runtime_config: CanonicalObjectEnvelopeV1;
+  execution_config_payload?: Cap04RuntimeConfigPayloadV1;
   evidence_window: AssimilatedContinuationEvidenceWindowV2;
   dynamics: HourlyWaterBalanceResultV1;
   assimilation: AssimilatedContinuationPosteriorV1;
@@ -82,10 +83,12 @@ export function buildCap04StateSourceMembersV1(
   if (input.handoff.next_logical_tick_time !== logicalTime) throw new Error("CAP04_SOURCE_HANDOFF_TIME_MISMATCH");
   if (input.evidence_window.logical_time !== logicalTime) throw new Error("CAP04_SOURCE_EVIDENCE_TIME_MISMATCH");
   if (input.dynamics.mass_balance_trace.mass_balance_error_mm !== "0.000000") throw new Error("CAP04_SOURCE_MASS_BALANCE_NOT_CLOSED");
+  validateCanonicalObjectV1(input.runtime_config);
   if (input.runtime_config.object_type !== "twin_runtime_config_v1") throw new Error("CAP04_SOURCE_RUNTIME_CONFIG_OBJECT_TYPE_REQUIRED");
   exactScopeV1(input.runtime_config, input.scope, "CAP04_SOURCE_RUNTIME_CONFIG_SCOPE_MISMATCH");
-  validateCap04RuntimeConfigPayloadV1(input.runtime_config.payload);
-  const config = input.runtime_config.payload as unknown as Cap04RuntimeConfigPayloadV1;
+  const executionPayload = input.execution_config_payload ?? input.runtime_config.payload;
+  validateCap04RuntimeConfigPayloadV1(executionPayload);
+  const config = structuredClone(executionPayload) as unknown as Cap04RuntimeConfigPayloadV1;
   if (config.effective_logical_time !== logicalTime) throw new Error("CAP04_SOURCE_RUNTIME_CONFIG_TIME_MISMATCH");
   if (config.reality_binding_ref !== input.handoff.reality_binding_ref
     || config.reality_binding_hash !== input.handoff.reality_binding_hash) {
