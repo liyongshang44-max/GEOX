@@ -1364,3 +1364,21 @@ Governance effect:
 - preserve calibration, model activation, continuous Runtime, Gate A/B/C, Minimum Complete Field Twin and CAP-06 nonclaims;
 - add no Runtime source, canonical object, transaction family, migration, route, web or scheduler change.
 <!-- MCFT-CAP-05-S10-SETTLEMENT-END -->
+
+
+---
+
+## MCFT-CAP-05 S11A Closure Candidate
+
+```text
+baseline_main_commit: b1248216462eb31cfcf3c75633cc2e53a15520e4
+closure_candidate_pr: 2488
+implementation_status: S11_CLOSURE_CANDIDATE
+closure_effective: false
+capability_complete: false
+pending_completion_claims: 40
+effective_completion_claims: 0
+active_delivery_slice_id: MCFT-CAP-05.CLOSURE-AND-FINALIZATION-V1
+runtime_source_authorized: false
+CAP_06_authorized: false
+```

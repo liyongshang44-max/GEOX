@@ -352,3 +352,10 @@ runCap05S10BoundedFeedbackChainAcceptance({ runHistoricalGovernance: !s10Settlem
 if (s10SettlementActive && !cap05ClosureActive) {
   runGate(s10SettlementGatePath, '--auto');
 }
+
+
+// MCFT_CAP_05_S11_CLOSURE_FINALIZATION_GATE_V1: run the S11A closure candidate Gate while final effectiveness is not yet materialized.
+const cap05S11ClosureGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S11_CLOSURE_FINALIZATION.cjs');
+if (fs.existsSync(cap05S11ClosureGatePath)) {
+  runGate(cap05S11ClosureGatePath, '--auto');
+}
