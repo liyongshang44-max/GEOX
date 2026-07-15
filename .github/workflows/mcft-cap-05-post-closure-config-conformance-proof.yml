@@ -64,7 +64,7 @@ jobs:
                       removed += 1
                       continue
                   kept.append(json.dumps(record, separators=(',', ':'), ensure_ascii=False))
-              file.write_text(('\n'.join(kept) + ('\n' if kept else '')), encoding='utf-8')
+              file.write_text('\n'.join(kept) + '\n', encoding='utf-8')
           if removed == 0:
               raise SystemExit('LEGACY_IRRIGATION_RECORD_REQUIRED_FOR_EXCLUSION_PROOF')
 
