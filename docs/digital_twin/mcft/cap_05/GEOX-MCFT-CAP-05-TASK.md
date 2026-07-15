@@ -43,11 +43,11 @@ null
 dt02_architecture_amendment_status:
 NOT_REQUIRED_MERGED_EFFECTIVE
 
-first_permitted_repository_action:
-MCFT-CAP-05.CLOSURE-AND-FINALIZATION-V1
+next_repository_action:
+null
 ```
 
-P-1 至 S10 已按各自 lifecycle 形成 merged-effective 事实。S11A Closure Candidate、exact-head CI、merge、head-to-merge tree equivalence 与 S11B merged-main Finalization Gate 均已成立；S11C 现将冻结的 40 项完成声明激活为正式 effective，CAP-05 达到 Level A COMPLETE。CAP-06 仍未授权。
+P-1 至 S10 已按各自 lifecycle 形成 merged-effective 事实。S11A Closure Candidate、exact-head CI、merge、head-to-merge tree equivalence 与 S11B merged-main Finalization Gate 均已成立；S11C 已将冻结的 40 项完成声明激活为正式 effective，CAP-05 已达到 Level A COMPLETE。MCFT-CAP-05 当前无后续 repository action；CAP-06 仍未授权。
 
 ## P-1 adjudication merged-effective result
 

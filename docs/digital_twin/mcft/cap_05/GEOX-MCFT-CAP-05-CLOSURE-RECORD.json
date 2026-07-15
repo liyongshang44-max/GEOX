@@ -7,15 +7,13 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A — Deterministic Replay Twin",
   "delivery_slice_id": "MCFT-CAP-05.CLOSURE-AND-FINALIZATION-V1",
-  "lifecycle_stage": "S11C_COMPLETE_ACTIVATION",
+  "lifecycle_stage": "S11C_COMPLETE_AND_RECONCILED",
   "status": "COMPLETE",
   "implementation_status": "COMPLETE",
   "closure_effective": true,
   "capability_complete": true,
   "active_delivery_slice_id": null,
   "baseline_main_commit": "b1248216462eb31cfcf3c75633cc2e53a15520e4",
-  "branch": "agent/mcft-cap-05-s11c-complete-activation-v1",
-  "pr_number": 2488,
   "authority_refs": {
     "task_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
     "authorization_status_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json",
@@ -67,7 +65,7 @@
   },
   "hard_acceptance": {
     "total_check_count": 283,
-    "accumulated_evidence_status": "SATISFIED_CANDIDATE_PENDING_FINALIZATION_EFFECTIVENESS",
+    "accumulated_evidence_status": "SATISFIED_EFFECTIVE",
     "exact_head_ci_required": true,
     "head_to_merge_tree_equivalence_required": true,
     "merged_main_finalization_gate_required": true
@@ -171,16 +169,23 @@
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_FINALIZATION_EFFECTIVENESS.cjs"
   ],
   "validation": {
-    "materialization_workflow": null,
-    "candidate_head": null,
-    "candidate_workflow": null,
-    "candidate_state": "PENDING",
-    "governance_gate": "PENDING",
-    "repository_typecheck": "PENDING",
-    "repository_build": "PENDING",
-    "server_selfcheck": "PENDING",
-    "standard_acceptance": "PENDING",
-    "commercial_mvp0_release_gate": "PENDING"
+    "validation_scope": "S11C_COMPLETION_ACTIVATION",
+    "state": "SUCCESS",
+    "candidate_head": "4ca11c7740413b0940949c7aa49579b4c4cd0bc8",
+    "candidate_workflow": 29409622048,
+    "candidate_state": "SUCCESS",
+    "governance_gate": "PASS",
+    "repository_typecheck": "PASS",
+    "repository_build": "PASS",
+    "server_selfcheck": "PASS",
+    "standard_acceptance": "PASS",
+    "commercial_mvp0_release_gate": "PASS",
+    "merge_commit": "9365e74ef7d4b01f7b96a7992e27270f0e42725b",
+    "head_to_merge_file_delta_count": 0,
+    "head_to_merge_tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2491,
+    "postmerge_probe_workflow": 29410067946,
+    "postmerge_gate": "PASS"
   },
   "effectiveness_condition": "S11A_MERGED_AND_TREE_EQUIVALENCE_PASS_AND_S11B_MERGED_MAIN_FINALIZATION_GATE_PASS",
   "effectiveness_condition_satisfied": true,
@@ -194,11 +199,11 @@
   "web_delta": 0,
   "scheduler_delta": 0,
   "completion_claim_effective_delta": 40,
-  "record_revision": "s11c-complete-activation-v1",
-  "current_repository_baseline_commit": "fd6c54e84ee4ede7bbb581b4fc55660251c2265f",
+  "record_revision": "s11c-final-ssot-hygiene-v1",
+  "current_repository_baseline_commit": "49e282cdc91cb8a0aba177dc1099239e5155994b",
   "current_authority": {
-    "authority_kind": "FINALIZATION_EFFECTIVENESS",
-    "authority_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-FINALIZATION-EFFECTIVENESS.json",
+    "authority_kind": "FINAL_EFFECTIVENESS_RECONCILIATION",
+    "authority_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-FINAL-EFFECTIVENESS-RECONCILIATION.json",
     "activation_pr_number": 2490,
     "activation_baseline_main_commit": "fd6c54e84ee4ede7bbb581b4fc55660251c2265f",
     "preconditions": {
@@ -215,6 +220,17 @@
       "s11b_probe_subject_commit": "fd6c54e84ee4ede7bbb581b4fc55660251c2265f",
       "s11b_probe_closed_without_merge": true,
       "effectiveness_preconditions_satisfied": true
-    }
-  }
+    },
+    "completion_activation_pr_number": 2490,
+    "completion_activation_merge_commit": "9365e74ef7d4b01f7b96a7992e27270f0e42725b",
+    "reconciliation_pr_number": 2492,
+    "reconciliation_merge_commit": "49e282cdc91cb8a0aba177dc1099239e5155994b",
+    "reconciliation_postmerge_probe_pr_number": 2493,
+    "reconciliation_postmerge_workflow": 29411318737,
+    "reconciliation_gate": "PASS"
+  },
+  "closure_candidate_branch": "agent/mcft-cap-05-s11a-closure-candidate-v1",
+  "closure_candidate_pr_number": 2488,
+  "completion_activation_branch": "agent/mcft-cap-05-s11c-complete-activation-v1",
+  "completion_activation_pr_number": 2490
 }

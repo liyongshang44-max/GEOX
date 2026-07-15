@@ -11,8 +11,6 @@
   "reconciliation_phase": "EFFECTIVE_RECONCILED",
   "status": "COMPLETE",
   "baseline_main_commit": "9365e74ef7d4b01f7b96a7992e27270f0e42725b",
-  "branch": "agent/mcft-cap-05-final-effectiveness-reconciliation-v1",
-  "pr_number": 2490,
   "s11a_s11b_effectiveness_evidence": {
     "s11a_pr_number": 2488,
     "s11a_exact_head": "26cc455692a6ea9840ae83cde4de28c8c9c01569",
@@ -129,16 +127,23 @@
   "successor_authorized": false,
   "implementation_status": "COMPLETE",
   "validation": {
-    "materialization_workflow": null,
-    "candidate_head": null,
-    "candidate_workflow": null,
-    "candidate_state": "PENDING",
-    "governance_gate": "PENDING",
-    "repository_typecheck": "PENDING",
-    "repository_build": "PENDING",
-    "server_selfcheck": "PENDING",
-    "standard_acceptance": "PENDING",
-    "commercial_mvp0_release_gate": "PENDING"
+    "validation_scope": "S11C_COMPLETION_ACTIVATION",
+    "state": "SUCCESS",
+    "candidate_head": "4ca11c7740413b0940949c7aa49579b4c4cd0bc8",
+    "candidate_workflow": 29409622048,
+    "candidate_state": "SUCCESS",
+    "governance_gate": "PASS",
+    "repository_typecheck": "PASS",
+    "repository_build": "PASS",
+    "server_selfcheck": "PASS",
+    "standard_acceptance": "PASS",
+    "commercial_mvp0_release_gate": "PASS",
+    "merge_commit": "9365e74ef7d4b01f7b96a7992e27270f0e42725b",
+    "head_to_merge_file_delta_count": 0,
+    "head_to_merge_tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2491,
+    "postmerge_probe_workflow": 29410067946,
+    "postmerge_gate": "PASS"
   },
   "canonical_object_type_delta": 0,
   "transaction_family_delta": 0,
@@ -166,5 +171,10 @@
     "repository_build": "PASS",
     "server_selfcheck": "PASS",
     "effectiveness_preconditions_satisfied": true
-  }
+  },
+  "activation_branch": "agent/mcft-cap-05-s11c-complete-activation-v1",
+  "activation_pr_number": 2490,
+  "reconciliation_branch": "agent/mcft-cap-05-final-effectiveness-reconciliation-v1",
+  "reconciliation_pr_number": 2492,
+  "reconciliation_effectiveness_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-FINAL-EFFECTIVENESS-RECONCILIATION.json"
 }
