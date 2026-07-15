@@ -33,10 +33,13 @@ jobs:
           ref: agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1
           fetch-depth: 0
 
-      - name: Overlay remediation candidate
+      - name: Overlay remediation candidate files
         run: |
           git fetch --no-tags origin agent/mcft-cap-05-post-closure-config-conformance-v1
-          git merge --no-commit --no-ff FETCH_HEAD
+          git checkout FETCH_HEAD -- \
+            apps/server/src/runtime/twin_runtime/cap05_feedback_config_execution_view_v1.ts \
+            apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FEEDBACK_CONFIG_EXECUTION_VIEW.ts
 
       - name: Permit remediation files in temporary S0 preflight boundary
         run: |
@@ -51,7 +54,6 @@ jobs:
             "apps/server/src/runtime/twin_runtime/cap05_feedback_config_execution_view_v1.ts",
             "apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts",
             "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FEEDBACK_CONFIG_EXECUTION_VIEW.ts",
-            ".github/workflows/mcft-cap-05-post-closure-config-conformance-proof.yml",
           ].sort());'''
           if old not in text:
               raise SystemExit('PREFLIGHT_ALLOWED_FILES_MARKER_NOT_FOUND')
