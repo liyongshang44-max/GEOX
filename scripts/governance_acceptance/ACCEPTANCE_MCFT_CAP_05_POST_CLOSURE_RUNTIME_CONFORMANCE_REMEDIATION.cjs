@@ -137,5 +137,5 @@ assert.equal(runtimeResult.status, 0, 'EXECUTION_CONFIG_RUNTIME_ACCEPTANCE_FAILE
 assert.match(runtimeResult.stdout, /SUMMARY 10 PASS \/ 0 FAIL/);
 ok('permanent execution-config separation acceptance passes');
 
-assert.equal(pass, 9);
+assert.equal(pass, 10);
 process.stdout.write(`SUMMARY ${pass} PASS / 0 FAIL\n`);
