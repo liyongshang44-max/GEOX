@@ -268,12 +268,14 @@ function runCap05S9RestartRecoveryAcceptance({ runHistoricalGovernance }) {
   }));
 }
 
-// MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN_GATE_V1: execute S10 static governance and bounded orchestration acceptance.
-function runCap05S10BoundedFeedbackChainAcceptance() {
-  runGate(
-    path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN.cjs'),
-    '--auto',
-  );
+// MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN_GATE_V1: preserve bounded-chain Runtime behavior permanently; retire the historical static implementation Gate after S10 settlement materializes.
+function runCap05S10BoundedFeedbackChainAcceptance({ runHistoricalGovernance }) {
+  if (runHistoricalGovernance) {
+    runGate(
+      path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN.cjs'),
+      '--auto',
+    );
+  }
   requireSuccess(run(isWindows ? 'pnpm.cmd' : 'pnpm', [
     '-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN.ts',
   ]));
@@ -285,11 +287,14 @@ const activationGatePath = path.join(process.cwd(), 'scripts/governance_acceptan
 const s7SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_SETTLEMENT.cjs');
 const s8SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_SETTLEMENT.cjs');
 const s9SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_SETTLEMENT.cjs');
+const s10SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S10_SETTLEMENT.cjs');
 const s8RuntimeStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-STATUS.json');
 const strictForecastAvailabilityStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-STRICT-FORECAST-AVAILABILITY-STATUS.json');
 const s9StatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S9-STATUS.json');
 const s9SettlementStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S9-SETTLEMENT-STATUS.json');
 const s10StatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S10-STATUS.json');
+const s10SettlementStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S10-SETTLEMENT-STATUS.json');
+const cap05ClosureRecordPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json');
 const settlementActive = fs.existsSync(s7SettlementGatePath);
 const s8SettlementActive = fs.existsSync(s8SettlementGatePath);
 const s8RuntimeActive = fs.existsSync(s8RuntimeStatusPath);
@@ -297,6 +302,8 @@ const strictForecastAvailabilityActive = fs.existsSync(strictForecastAvailabilit
 const s9Active = fs.existsSync(s9StatusPath);
 const s9SettlementActive = fs.existsSync(s9SettlementStatusPath);
 const s10Active = fs.existsSync(s10StatusPath);
+const s10SettlementActive = fs.existsSync(s10SettlementStatusPath);
+const cap05ClosureActive = fs.existsSync(cap05ClosureRecordPath);
 
 // MCFT_CAP_05_S6_ACTIVATION_GATE_V1: run only while S6→S7 activation is the current lifecycle frontier.
 if (!settlementActive) {
@@ -339,4 +346,9 @@ if (!s10Active) {
 }
 
 // MCFT_CAP_05_S10_BOUNDED_EIGHT_TICK_FEEDBACK_CHAIN_GATE_V1: verify the authorized bounded-chain implementation and permanent orchestration behavior.
-runCap05S10BoundedFeedbackChainAcceptance();
+runCap05S10BoundedFeedbackChainAcceptance({ runHistoricalGovernance: !s10SettlementActive });
+
+// MCFT_CAP_05_S10_SSOT_SETTLEMENT_GATE_V1: settle S10 effectiveness and authorize governance-only S11 closure work until a canonical closure record materializes.
+if (s10SettlementActive && !cap05ClosureActive) {
+  runGate(s10SettlementGatePath, '--auto');
+}

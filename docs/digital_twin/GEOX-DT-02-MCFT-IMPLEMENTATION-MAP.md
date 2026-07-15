@@ -1325,3 +1325,42 @@ Governance effect:
 - explicitly authorize S10 bounded eight-tick implementation without starting it;
 - preserve all completion, closure, calibration, activation, continuous-runtime and CAP-06 nonclaims;
 - add no Runtime source, canonical object, transaction family, migration, route or web change.
+
+---
+
+<!-- MCFT-CAP-05-S10-SETTLEMENT-START -->
+## MCFT-CAP-05 S10 Effective and S11 Explicitly Authorized
+
+```text
+capability_line_id: MCFT-CAP-05
+activation_id: MCFT-CAP-05.S10.SSOT-SETTLEMENT-V1
+baseline_main_commit: 0c015bad3eb1729000d7f68eb08e00de6ef4afcf
+activation_pr: 2486
+S10_status: MERGED_EFFECTIVE
+S10_implementation_exact_head: 2b22e209472237f198fc52fc103d5401fac9c28a
+S10_implementation_exact_head_CI: 29401613098 SUCCESS
+S10_implementation_merge_commit: 9acfab667ea51d812fd9f644c0f6634b0e45a673
+S10_implementation_head_to_merge_file_delta_count: 0
+S10_Gate_remediation_exact_head: a70ee127d14c7939ba2ef756c56c580520379826
+S10_Gate_remediation_CI: 29402130372 SUCCESS
+S10_effective_main_commit: 0c015bad3eb1729000d7f68eb08e00de6ef4afcf
+S10_merged_main_probe_PR: 2485 CLOSED_WITHOUT_MERGE
+S10_merged_main_probe_exact_head: 0fb4998cef86b1c42735b8fde652b1b2cadd1d24
+S10_merged_main_probe_workflow: 29403060957 SUCCESS
+S10_bounded_chain_acceptance: 14 PASS / 0 FAIL
+S11_status: AUTHORIZED_NOT_STARTED
+S11_delivery_slice_id: MCFT-CAP-05.CLOSURE-AND-FINALIZATION-V1
+S11_runtime_source_authorized: false
+S11_implementation_started: false
+CAP_05_completion_claim_effective: false
+CAP_06_authorized: false
+```
+
+Governance effect:
+
+- settle the exact eight-file S10 bounded feedback-chain implementation and its corrected postmerge Gate as merged-main effective;
+- freeze the eight posterior States, eight successful Forecasts, eight Scenario Sets, checkpoint sequence 73–80 and completed-chain zero-write replay evidence;
+- explicitly authorize S11 closure/finalization governance work without executing closure or activating completion claims;
+- preserve calibration, model activation, continuous Runtime, Gate A/B/C, Minimum Complete Field Twin and CAP-06 nonclaims;
+- add no Runtime source, canonical object, transaction family, migration, route, web or scheduler change.
+<!-- MCFT-CAP-05-S10-SETTLEMENT-END -->
