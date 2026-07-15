@@ -75,9 +75,27 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Execution-view acceptance
-        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FEEDBACK_CONFIG_EXECUTION_VIEW.ts
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FEEDBACK_CONFIG_EXECUTION_VIEW.ts 2>&1 | tee /tmp/execution-view.log
+
+      - name: Upload execution-view diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: execution-view-diagnostics
+          path: /tmp/execution-view.log
 
       - name: Full S0 PostgreSQL predecessor preflight
         env:
           MCFT_CAP_06_S0_DESTRUCTIVE_ACCEPTANCE: "1"
-        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts 2>&1 | tee /tmp/s0-preflight.log
+
+      - name: Upload S0 preflight diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s0-preflight-diagnostics
+          path: /tmp/s0-preflight.log
