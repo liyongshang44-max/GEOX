@@ -42,29 +42,13 @@ function deriveInheritedCap04PayloadV1(
     feedback_cycle_projection_policy_id: _cycle,
     dispatch_disposition_policy_id: _dispatch,
     cap05_limitations: _limitations,
-    executable_profile_id: _profile,
-    action_feedback_state_input_policy_id: _stateInput,
-    action_feedback_quality_mapping_policy_id: _qualityAlias,
-    evidence_cutoff_policy_id: _cutoff,
-    late_receipt_policy_id: _late,
-    execution_interval_policy_id: _interval,
-    multiple_execution_event_policy_id: _multiple,
-    spatial_overlap_policy_id: _overlap,
-    actual_amount_semantics_policy_id: _amount,
-    effective_irrigation_policy_id: _effective,
-    volume_to_depth_policy_id: _volume,
-    action_feedback_adapter_policy_id: _adapterPolicy,
-    forecast_residual_matching_policy_id: _matching,
-    forecast_point_member_ref_policy_id: _forecastPoint,
-    forecast_observation_projection_version: _projectionVersion,
-    forecast_residual_normalization_policy_id: _normalizationPolicy,
     config_purpose: _purpose,
     config_selection_mode: _selectionMode,
-    ...inherited
+    ...inheritedAndEffectivePolicies
   } = payload as Cap05RuntimeConfigPayloadV1 & Record<string, unknown>;
 
   const view = {
-    ...structuredClone(inherited),
+    ...structuredClone(inheritedAndEffectivePolicies),
     config_purpose: CAP04_RUNTIME_CONFIG_PURPOSE_V1,
     config_selection_mode: CAP04_CONFIG_SELECTION_MODE_V1,
   } as Cap04RuntimeConfigPayloadV1;
