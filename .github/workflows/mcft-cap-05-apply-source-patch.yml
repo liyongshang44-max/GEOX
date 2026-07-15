@@ -76,15 +76,16 @@ jobs:
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add -A -- \
               apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts \
+              apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts \
+              apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts \
+              scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FEEDBACK_CONFIG_EXECUTION_VIEW.ts \
+              scripts/remediation/APPLY_MCFT_CAP_05_EXECUTION_VIEW_SEPARATION.py
+            git add -f -- \
               apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts \
               apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts \
               apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts \
               apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.ts \
-              apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts \
-              apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts \
-              apps/server/src/runtime/twin_runtime/cap05_feedback_config_execution_view_v1.ts \
-              scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FEEDBACK_CONFIG_EXECUTION_VIEW.ts \
-              scripts/remediation/APPLY_MCFT_CAP_05_EXECUTION_VIEW_SEPARATION.py
+              apps/server/src/runtime/twin_runtime/cap05_feedback_config_execution_view_v1.ts
             git status --short
             if git diff --cached --quiet; then
               echo 'No source patch required'
