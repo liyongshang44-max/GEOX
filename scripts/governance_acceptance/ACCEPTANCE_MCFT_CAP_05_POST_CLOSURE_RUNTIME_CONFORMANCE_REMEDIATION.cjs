@@ -40,12 +40,14 @@ const TEMPORARY_PROOF_FILES = [
   '.github/workflows/mcft-cap-05-postgresql-runner-regression.yml',
   '.github/workflows/mcft-cap-05-postgresql-runner-regression-v2.yml',
   '.github/workflows/mcft-cap-05-replay-metadata-separation-proof.yml',
+  '.github/workflows/mcft-cap-05-final-acceptance-wiring-proof.yml',
   'scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py',
   'scripts/remediation/APPLY_MCFT_CAP_05_FORMAL_REPLAY_BINDING_AUTHORITY.py',
   'scripts/remediation/APPLY_MCFT_CAP_05_OUTCOME_OBSERVATION_REPLAY_VIEW.py',
   'scripts/remediation/APPLY_MCFT_CAP_05_TERMINAL_CHAIN_VALIDATORS.py',
   'scripts/remediation/APPLY_MCFT_CAP_05_REPLAY_EXECUTION_METADATA_SEPARATION.py',
   'scripts/remediation/APPLY_MCFT_CAP_05_REPLAY_METADATA_ACCEPTANCE_AUTHORIZED_BINDING.py',
+  'scripts/remediation/APPLY_MCFT_CAP_05_FINAL_ACCEPTANCE_WIRING.py',
 ];
 
 let pass = 0;
