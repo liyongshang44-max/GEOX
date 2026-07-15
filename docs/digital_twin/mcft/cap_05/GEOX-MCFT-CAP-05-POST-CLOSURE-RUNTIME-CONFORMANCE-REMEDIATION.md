@@ -202,18 +202,35 @@ Candidate workflow `29438990685` at committed source `8b386850b0370f27d1756ab105
 
 The proof makes no causal-effect, Forecast/Assimilation equivalence, automatic-history-rewrite, field-calibration, or continuous-online Runtime claim.
 
-## 9. Successor eligibility
+## 9. Exact merged-main effectiveness
 
-The candidate branch has proven the remediation, but merged-main effectiveness has not yet been established. Therefore:
+PR `#2501` was merged to main as exact source commit:
 
-- `successor_predecessor_eligibility = BLOCKED`
-- `cap_06_s0_resume_authorized = false`
-- `MCFT-CAP-06.S0 = BLOCKED_AWAITING_REMEDIATION_MERGED_MAIN_EFFECTIVENESS`
+`0867439b17545bec5fd84e373e72d17881ab50ae`
 
-After merge and a merged-main PostgreSQL proof, a later append-only status may assert:
+Postmerge workflow `29441019824` checked out that exact SHA rather than the proof branch head and passed:
+
+- exact source identity assertion;
+- workspace typecheck;
+- the permanent CAP-05 governance Gate;
+- Replay execution-metadata acceptance;
+- complete CAP-03 inherited persistence/recovery regression;
+- formal CAP-05 PostgreSQL checkpoint `72 → 80` runner.
+
+The append-only effectiveness record is:
+
+`docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-POST-CLOSURE-RUNTIME-CONFORMANCE-EFFECTIVENESS.json`
+
+The following claims are now established:
 
 - `POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION_EFFECTIVE`
 - `FORMAL_POSTGRESQL_TERMINAL_CHAIN_REPRODUCIBLE`
 - `CAP_06_PREDECESSOR_ELIGIBILITY_RESTORED`
 
-No such effectiveness claim is authorized by this candidate document alone.
+Therefore:
+
+- `successor_predecessor_eligibility = RESTORED`
+- `cap_06_s0_resume_authorized = true`
+- `cap_06_s0_resume_scope = PREDECESSOR_QUALIFICATION_ONLY`
+
+This restoration does not grant CAP-06 Runtime, migration, route, scheduler, Model Activation, Calibration Candidate or automatic materialization authority. Those authorities remain `false` unless established by later CAP-06 task-line evidence and governance.
