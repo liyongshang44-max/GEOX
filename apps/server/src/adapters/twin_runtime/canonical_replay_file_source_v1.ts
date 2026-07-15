@@ -13,8 +13,12 @@ const GLOBAL_FILES_V1 = ["irrigation_plan/plans.jsonl", "irrigation_execution/ex
 export const LEGACY_REPLAY_OBSERVATION_SHAPE_ADAPTER_ID_V1 =
   "MCFT_LEGACY_REPLAY_OBSERVATION_SHAPE_TO_CURRENT_SELECTOR_V1" as const;
 
+export const SOURCE_BINDING_CONVERSION_RULE_VIEW_ADAPTER_ID_V1 =
+  "MCFT_SOURCE_BINDING_CONVERSION_RULE_VERSION_VIEW_V1" as const;
+
 type SourceBindingV1 = {
   binding_id: string;
+  binding_version?: string | number;
   source_unit: string;
   canonical_unit: string;
   conversion_rule: Record<string, unknown>;
@@ -99,6 +103,19 @@ function adaptVerifiedLegacyObservationShapeV1(
   };
 }
 
+function conversionRuleViewV1(binding: SourceBindingV1): Record<string, unknown> {
+  const view = structuredClone(binding.conversion_rule);
+  assertStringV1(view.id, `CONVERSION_RULE_ID_REQUIRED:${binding.binding_id}`);
+  const versionAuthority = view.version ?? binding.binding_version ?? 1;
+  if ((typeof versionAuthority !== "string" && typeof versionAuthority !== "number")
+    || String(versionAuthority).length === 0) {
+    throw new Error(`CONVERSION_RULE_VERSION_INVALID:${binding.binding_id}`);
+  }
+  view.version = String(versionAuthority);
+  view.runtime_view_adapter_id = SOURCE_BINDING_CONVERSION_RULE_VIEW_ADAPTER_ID_V1;
+  return view;
+}
+
 async function readJsonlV1(filePath: string): Promise<Array<Omit<CanonicalReplayEvidenceRecordV1, "source_unit" | "canonical_unit" | "conversion_rule">>> {
   let text: string;
   try {
@@ -167,7 +184,7 @@ export class CanonicalReplayFileSourceV1 implements ReplayEvidenceSourcePortV1 {
         ...record,
         source_unit: binding.source_unit,
         canonical_unit: binding.canonical_unit,
-        conversion_rule: structuredClone(binding.conversion_rule),
+        conversion_rule: conversionRuleViewV1(binding),
       } as CanonicalReplayEvidenceRecordV1;
     }).filter((record) => sameScopeV1(record, input.scope)).sort((a, b) => a.source_record_id.localeCompare(b.source_record_id));
   }
