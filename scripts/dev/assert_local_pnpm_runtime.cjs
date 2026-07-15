@@ -5,17 +5,23 @@
 // Purpose: validate the local pnpm runtime, then execute the effective MCFT-CAP-05 governance and Runtime acceptance chain.
 // Boundary: validation orchestration only; no production authority, public route, scheduler or canonical write path.
 
+const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const isWindows = process.platform === 'win32';
 const env = process.env;
 const diagnosticPath = path.join(process.cwd(), 'acceptance-output', 'MCFT_CAP_05_S9_ACCEPTANCE.log');
+const SETTLEMENT_BRANCH = 'agent/mcft-cap-05-s9-ssot-settlement-v1';
+const SETTLEMENT_EXACT_HEAD = 'f188c2f2c9fd505daefbc31aeab0467242f2fcf8';
+const SETTLEMENT_MERGE = '679a1442cc130c174951eb0330b0c82592e4a6df';
+const PROBE_FILE = 'scripts/dev/assert_local_pnpm_runtime.cjs';
 
-function run(command, args = [], envOverrides = {}) {
+function run(command, args = [], envOverrides = {}, cwd = process.cwd()) {
   const result = spawnSync(command, args, {
-    cwd: process.cwd(),
+    cwd,
     env: {
       ...process.env,
       CI: process.env.CI || 'true',
@@ -53,6 +59,54 @@ function requireSuccess(result) {
     throw new Error(`COMMAND_FAILED:${result.command}:${String(result.status)}:${result.error}`);
   }
   return result.stdout;
+}
+
+function exactChangedFiles(base, head, cwd = process.cwd()) {
+  const output = requireSuccess(run('git', ['diff', '--name-only', base, head], {}, cwd));
+  return output.split(/\r?\n/).filter(Boolean).sort();
+}
+
+function runMergedMainSettlementProbe() {
+  requireSuccess(run('git', [
+    'fetch',
+    '--no-tags',
+    'origin',
+    '+refs/heads/main:refs/remotes/origin/main',
+    `+refs/heads/${SETTLEMENT_BRANCH}:refs/remotes/origin/${SETTLEMENT_BRANCH}`,
+  ]));
+  assert.equal(
+    requireSuccess(run('git', ['rev-parse', `origin/${SETTLEMENT_BRANCH}`])),
+    SETTLEMENT_EXACT_HEAD,
+    'settlement candidate branch moved after exact-head lock',
+  );
+  assert.equal(
+    requireSuccess(run('git', ['rev-parse', 'origin/main'])),
+    SETTLEMENT_MERGE,
+    'main moved after settlement merge lock',
+  );
+  assert.deepEqual(
+    exactChangedFiles(SETTLEMENT_EXACT_HEAD, SETTLEMENT_MERGE),
+    [],
+    'settlement exact head and merge commit must be file-tree equivalent',
+  );
+  assert.deepEqual(
+    exactChangedFiles(SETTLEMENT_MERGE, 'HEAD'),
+    [PROBE_FILE],
+    'probe must differ from merged main by exactly one validation-only wrapper',
+  );
+
+  const worktreePath = fs.mkdtempSync(path.join(os.tmpdir(), 'geox-s9-settlement-effective-'));
+  try {
+    requireSuccess(run('git', ['worktree', 'add', '--detach', worktreePath, SETTLEMENT_MERGE]));
+    requireSuccess(run(
+      process.execPath,
+      ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_SETTLEMENT.cjs', '--postmerge'],
+      {},
+      worktreePath,
+    ));
+  } finally {
+    requireSuccess(run('git', ['worktree', 'remove', '--force', worktreePath]));
+  }
 }
 
 function normalized(value) {
@@ -268,6 +322,8 @@ function runCap05S9RestartRecoveryAcceptance({ runHistoricalGovernance }) {
   }));
 }
 
+runMergedMainSettlementProbe();
+
 runRuntimeDoctor();
 
 const activationGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs');
@@ -320,5 +376,5 @@ if (!s9Active) {
 // MCFT_CAP_05_S9_RESTART_LATE_RECEIPT_REBUILD_GATE_V1: preserve S9 Runtime and PostgreSQL recovery behavior permanently, but do not reassert its historical six-file candidate boundary after settlement materializes.
 runCap05S9RestartRecoveryAcceptance({ runHistoricalGovernance: !s9SettlementActive });
 
-// MCFT_CAP_05_S9_SSOT_SETTLEMENT_GATE_V1: settle S9 merged-main effectiveness and explicitly authorize, but do not implement, S10.
-runGate(s9SettlementGatePath, '--auto');
+// MCFT_CAP_05_S9_SSOT_SETTLEMENT_GATE_V1: the probe preflight runs this Gate against the exact settlement merge commit in a detached worktree.
+// Do not re-run the exact eight-file settlement boundary against the one-file probe checkout.
