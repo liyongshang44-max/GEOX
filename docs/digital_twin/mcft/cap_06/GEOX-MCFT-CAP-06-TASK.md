@@ -28,10 +28,10 @@ architecture_direction:
 CONFORMANT
 
 design_status:
-CONDITIONAL_FROZEN_PENDING_P_MINUS_1
+CONDITIONAL_FROZEN_AFTER_P_MINUS_1
 
 implementation_status:
-P_MINUS_1_READY
+P_MINUS_1_COMPLETE
 
 runtime_implementation_status:
 NOT_AUTHORIZED
@@ -46,13 +46,13 @@ active_delivery_slice_id:
 null
 
 dt02_architecture_amendment_status:
-UNDECIDED_PENDING_P_MINUS_1
+NOT_REQUIRED
 
 first_permitted_repository_action:
-MCFT-CAP-06.P-1.DT02-CALIBRATION-SHADOW-ADJUDICATION-V1
+null
 ```
 
-本文件冻结 MCFT-CAP-06 的能力目标、边界、任务顺序和 P-1 裁决输入。它只授权开始 P-1 架构裁决，不授权 Runtime source、migration、runner、canonical write、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 或 Shadow-Online Runtime。
+本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1 已 merged-main effective；当前 P0 只建立 provisional SSOT，不授权 S0、Runtime source、migration、runner、canonical write、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 或 Shadow-Online Runtime。
 
 ---
 
@@ -3957,13 +3957,13 @@ null
 
 ```text
 DT-02 twin_calibration_candidate_v1:
-REUSE_PENDING_P_MINUS_1_CONFIRMATION
+REUSE_WITHOUT_AMENDMENT
 
 DT-02 twin_shadow_evaluation_v1:
-REUSE_PENDING_P_MINUS_1_CONFIRMATION
+REUSE_WITHOUT_AMENDMENT
 
 DT-02 D_MODEL_GOVERNANCE_STEP_COMMIT:
-REUSE_PENDING_P_MINUS_1_CONFIRMATION
+REUSE_WITHOUT_AMENDMENT
 
 DT-02 twin_model_activation_v1:
 EXPLICITLY_EXCLUDED
@@ -4094,10 +4094,10 @@ architecture_direction:
 CONFORMANT
 
 design_status:
-CONDITIONAL_FROZEN_PENDING_P_MINUS_1
+CONDITIONAL_FROZEN_AFTER_P_MINUS_1
 
 implementation_status:
-P_MINUS_1_READY
+P_MINUS_1_COMPLETE
 
 runtime_implementation_status:
 NOT_AUTHORIZED
@@ -4109,11 +4109,64 @@ runtime_source_authorized:
 false
 
 dt02_architecture_amendment_status:
-UNDECIDED_PENDING_P_MINUS_1
+NOT_REQUIRED
 
 next_repository_action:
-MCFT-CAP-06.P-1.DT02-CALIBRATION-SHADOW-ADJUDICATION-V1
+null
 
 automatic_successor_authorization:
 NONE
 ```
+
+<!-- MCFT-CAP-06-P0-CURRENT-STATE-BEGIN -->
+# 49. P-1 merged-main effectiveness / P0 provisional state
+
+```text
+P-1 outcome:
+REUSE_WITHOUT_AMENDMENT_CONFIG_OBJECT_NOT_REQUIRED
+
+P-1 implementation PR:
+#2496
+
+P-1 implementation exact head:
+762764074e62f186921e0aabd5251f53b5f7ce02
+
+P-1 merge commit:
+79cd7814eff06ad86f86cdcb379c6f71a77f1ab8
+
+P-1 postmerge probe PR:
+#2497 CLOSED_WITHOUT_MERGE
+
+P-1 postmerge workflow:
+29418272690 SUCCESS
+
+P-1 status:
+MERGED_EFFECTIVE
+
+P-1A:
+OMITTED
+
+conditional S4:
+OMITTED
+
+P0 status:
+PROVISIONAL_SSOT_CANDIDATE
+
+authorization_effective:
+false
+
+runtime_source_authorized:
+false
+
+active_delivery_slice_id:
+null
+
+S0 status:
+BLOCKED_PENDING_P0_MERGED_MAIN_EFFECTIVENESS
+
+next_repository_action:
+null
+```
+
+P0 不重开 CAP-05 closure，不创建 Runtime、migration、canonical object、Model Activation 或 active binding。P0 只有在合并、head-to-merge tree equivalence 和 merged-main P0 Gate 成功后，才使 S0 成为下一项可执行治理工作。
+<!-- MCFT-CAP-06-P0-CURRENT-STATE-END -->

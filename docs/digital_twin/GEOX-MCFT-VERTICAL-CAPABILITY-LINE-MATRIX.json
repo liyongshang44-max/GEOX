@@ -4,8 +4,8 @@
   "status": "COMPLETE",
   "baseline": {
     "branch": "main",
-    "commit": "0c015bad3eb1729000d7f68eb08e00de6ef4afcf",
-    "meaning": "MCFT-CAP-05 S10 bounded eight-tick feedback chain is merged-main effective; S11 closure/finalization is explicitly authorized but not started"
+    "commit": "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8",
+    "meaning": "MCFT-CAP-05 COMPLETE; MCFT-CAP-06 P-1 merged-main effective; P0 provisional SSOT candidate; CAP-06 Runtime and S0 remain unauthorized"
   },
   "identifier_model": {
     "capability_line_id": "vertical executable capability closure unit",
@@ -3655,7 +3655,74 @@
       "capability_complete": true,
       "current_lifecycle_authority": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json",
       "current_main_verification_authority": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-MAIN-VERIFICATION.json",
-      "finalization_effectiveness_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-FINALIZATION-EFFECTIVENESS.json"
+      "finalization_effectiveness_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-FINALIZATION-EFFECTIVENESS.json",
+      "next_repository_action": null
+    },
+    {
+      "capability_line_id": "MCFT-CAP-06",
+      "display_alias": "MCFT-6",
+      "name": "Calibration Candidate and Shadow Evaluation",
+      "runtime_mode": "REPLAY",
+      "target_completion_level": "Level A",
+      "status": "NOT_AUTHORIZED",
+      "design_status": "CONDITIONAL_FROZEN_AFTER_P_MINUS_1",
+      "implementation_status": "P_MINUS_1_COMPLETE",
+      "authorization_effective": false,
+      "runtime_source_authorized": false,
+      "active_delivery_slice_id": null,
+      "predecessor_capability_line_id": "MCFT-CAP-05",
+      "successor_capability_line_id": "MCFT-CAP-07",
+      "successor_authorized": false,
+      "primary_owner_work_package_id": "MCFT-12",
+      "contributing_owner_work_package_ids": [
+        "MCFT-01",
+        "MCFT-02",
+        "MCFT-03",
+        "MCFT-04",
+        "MCFT-05",
+        "MCFT-06",
+        "MCFT-07",
+        "MCFT-08",
+        "MCFT-09",
+        "MCFT-11",
+        "MCFT-16"
+      ],
+      "excluded_owner_work_package_ids": [
+        "MCFT-10",
+        "MCFT-13",
+        "MCFT-14",
+        "MCFT-15",
+        "MCFT-17",
+        "MCFT-18"
+      ],
+      "p_minus_1": {
+        "delivery_slice_id": "MCFT-CAP-06.P-1.DT02-CALIBRATION-SHADOW-ADJUDICATION-V1",
+        "status": "MERGED_EFFECTIVE",
+        "outcome": "REUSE_WITHOUT_AMENDMENT_CONFIG_OBJECT_NOT_REQUIRED",
+        "implementation_pr_number": 2496,
+        "implementation_exact_head": "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "merge_commit": "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8",
+        "postmerge_probe_pr_number": 2497,
+        "postmerge_workflow_run": 29418272690
+      },
+      "p0": {
+        "delivery_slice_id": "MCFT-CAP-06.P0.CAP-05-TERMINAL-SSOT-RECONCILIATION-AND-PROVISIONAL-SSOT-V1",
+        "status": "CANDIDATE",
+        "effective": false
+      },
+      "next_repository_action": null,
+      "next_repository_action_after_p0_effectiveness": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
+      "preserved_nonclaims": [
+        "NO_RUNTIME_SOURCE_AUTHORIZATION",
+        "NO_MIGRATION",
+        "NO_CANONICAL_WRITE",
+        "NO_CALIBRATION_CANDIDATE",
+        "NO_SHADOW_EVALUATION",
+        "NO_MODEL_ACTIVATION",
+        "NO_ACTIVE_CONFIG_SWITCH",
+        "NO_S0_EFFECTIVENESS",
+        "NO_MCFT_CAP_07_AUTHORIZATION"
+      ]
     }
   ],
   "actual_owner_work_package_statuses": {
