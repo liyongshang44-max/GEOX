@@ -165,7 +165,7 @@ function main(): void {
   delete missingInheritedField.payload.soil_hydraulic_snapshot;
   assert.throws(
     () => inheritedResolver.resolveExecutionConfig(recomputeHashV1(missingInheritedField)),
-    /CAP04_|CAP05_/,
+    /ASSIMILATED_HYDRAULIC_SNAPSHOT_REQUIRED|CAP04_|CAP05_/,
   );
   ok("missing inherited CAP-04 field is rejected after canonical hash recomputation");
 
