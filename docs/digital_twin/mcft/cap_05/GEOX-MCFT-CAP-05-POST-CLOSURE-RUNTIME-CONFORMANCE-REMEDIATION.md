@@ -62,7 +62,7 @@ The execution view:
 
 ## 4. Validation separation
 
-The CAP-04 single-tick and pending-Scenario paths are split into two layers:
+The CAP-04 single-tick, source-builder, record-set-builder and pending-Scenario paths are split into two layers:
 
 1. Canonical envelope validation
    - canonical hash recomputation;
@@ -77,19 +77,37 @@ Dynamics, Assimilation, Forecast and Scenario mathematics consume only the resol
 
 Canonical State, Forecast, Checkpoint and Scenario records continue to persist the canonical source Config ref/hash, never a derived execution-view identity.
 
-## 5. Allowed source boundary
+## 5. Replay execution metadata compatibility
 
-Allowed Runtime changes are restricted to:
+The controlled Replay source binding matrix already freezes a positive integer `binding_version`. Some older conversion-rule records omit a duplicated textual `conversion_rule.version` required by the current observation selector.
+
+The file-source adapter may derive the non-persisted execution metadata field as:
+
+`conversion_rule.version = String(binding_version)`
+
+only when the field is absent. An explicit conflicting conversion-rule version fails closed. This compatibility projection:
+
+- occurs after source-record semantic-hash verification;
+- does not mutate Replay Evidence bytes or `source_record_hash`;
+- does not modify the source-binding matrix;
+- does not create a canonical object or new authority.
+
+## 6. Allowed source boundary
+
+Allowed Runtime and adapter changes are restricted to:
 
 - `apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts`
 - `apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts`
 - `apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts`
+- `apps/server/src/runtime/twin_runtime/forecast_scenario_state_source_builder_v1.ts`
+- `apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts`
 - `apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.ts`
 - `apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts`
+- `apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts`
 - `apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts`
 - dedicated Runtime and governance acceptance files for this remediation.
 
-## 6. Explicit prohibitions
+## 7. Explicit prohibitions
 
 This remediation must not:
 
@@ -103,14 +121,15 @@ This remediation must not:
 - change Dynamics, Assimilation, Forecast or Scenario mathematics;
 - rewrite existing CAP-05 canonical history;
 - modify active Config binding;
+- mutate frozen Replay Evidence identity or source-binding authority;
 - create Calibration Candidate, Shadow Evaluation or Model Activation authority;
 - create a CAP-06 Runtime source, migration, route, Web path or scheduler.
 
-## 7. Acceptance requirements
+## 8. Acceptance requirements and candidate proof
 
-The remediation is not effective until all of the following are proven:
+### 8.1 Execution-view separation
 
-### 7.1 Execution-view separation
+The permanent acceptance proves:
 
 - canonical CAP-04 and CAP-05 hashes recompute successfully;
 - direct CAP-04 path remains valid;
@@ -123,14 +142,34 @@ The remediation is not effective until all of the following are proven:
 - wrong executable profile is rejected;
 - CAP-05 resolver rejects a direct CAP-04 source.
 
-### 7.2 Formal PostgreSQL runner
+Candidate result: `10 PASS / 0 FAIL`.
+
+### 8.2 Replay binding execution metadata
+
+The permanent acceptance proves:
+
+- absent conversion-rule version is derived from frozen `binding_version`;
+- Replay Evidence hash and file bytes remain unchanged;
+- a matching explicit version remains valid;
+- an explicit version conflict fails closed;
+- a missing binding version fails closed.
+
+Candidate result: `6 PASS / 0 FAIL`.
+
+### 8.3 Formal PostgreSQL runner
+
+Candidate workflow `29432935520` at proven source commit `9af1c4a234dc97229de19854b8496973478f88c6` proves:
 
 - predecessor checkpoint `72` is reproducible;
+- first CAP-05 committed sequence is `73`;
 - CAP-05 final checkpoint is `80`;
+- final next logical tick is `2026-06-04T10:00:00.000Z`;
 - eight canonical CAP-05 Runtime Configs exist;
 - eight posterior States exist;
 - eight completed Forecasts exist;
 - eight Scenario Sets exist;
+- `576` Forecast points exist;
+- `1728` Scenario points exist;
 - one canonical Forecast Residual exists;
 - State, Forecast and Checkpoint Runtime Config refs/hashes point to canonical CAP-05 Configs;
 - restart recovery passes;
@@ -138,15 +177,17 @@ The remediation is not effective until all of the following are proven:
 - failure between A and B preserves pending-Scenario recovery;
 - second completed-chain execution creates zero canonical writes and zero projection divergence.
 
-## 8. Successor eligibility
+The proof makes no causal-effect, Forecast/Assimilation equivalence, automatic-history-rewrite, field-calibration, or continuous-online Runtime claim.
 
-Until formal PostgreSQL runner regression and merged-main effectiveness are proven:
+## 9. Successor eligibility
+
+The candidate branch has proven the remediation, but merged-main effectiveness has not yet been established. Therefore:
 
 - `successor_predecessor_eligibility = BLOCKED`
 - `cap_06_s0_resume_authorized = false`
-- `MCFT-CAP-06.S0 = BLOCKED_BY_PREDECESSOR_RUNTIME_CONFORMANCE`
+- `MCFT-CAP-06.S0 = BLOCKED_AWAITING_REMEDIATION_MERGED_MAIN_EFFECTIVENESS`
 
-After merged-main effectiveness, a later append-only status may assert:
+After merge and a merged-main PostgreSQL proof, a later append-only status may assert:
 
 - `POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION_EFFECTIVE`
 - `FORMAL_POSTGRESQL_TERMINAL_CHAIN_REPRODUCIBLE`
