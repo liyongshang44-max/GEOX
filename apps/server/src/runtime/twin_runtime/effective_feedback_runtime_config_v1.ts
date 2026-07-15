@@ -110,8 +110,8 @@ export function compileCap05EffectiveRuntimeConfigV1(
     object_id: deriveSemanticObjectIdV1("twin_runtime_config", identityBasis),
     idempotency_key: deriveSemanticObjectIdV1("runtime_config_key", identityBasis),
     source_refs: [
-      requiredStringV1(payload.parent_runtime_config_ref, "CAP05_EFFECTIVE_CONFIG_PARENT_REF_REQUIRED"),
-      requiredStringV1(payload.reality_binding_ref, "CAP05_EFFECTIVE_CONFIG_REALITY_BINDING_REF_REQUIRED"),
+      requiredStringV1(input.parent_runtime_config_ref, "CAP05_EFFECTIVE_CONFIG_PARENT_REF_REQUIRED"),
+      requiredStringV1(input.reality_binding_ref, "CAP05_EFFECTIVE_CONFIG_REALITY_BINDING_REF_REQUIRED"),
     ].sort(),
     determinism_hash: "",
     payload,
