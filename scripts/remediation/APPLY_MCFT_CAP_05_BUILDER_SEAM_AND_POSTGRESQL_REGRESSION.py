@@ -170,3 +170,66 @@ replace_once(
     "record_json->>'type'='twin_human_decision_v1'",
     "record_json->>'type'='twin_decision_record_v1'",
 )
+
+postgresql_text = Path(postgresql_acceptance).read_text()
+standard_feedback_pattern = re.compile(
+    r"async function establishStandardFeedbackPathV1\(pool: Pool\): Promise<void> \{.*?\n\}\n\nfunction parseRunnerOutputV1",
+    re.DOTALL,
+)
+standard_feedback_replacement = '''function seedEvidenceV1<T extends { source_record_id: string; source_record_hash: string }>(record: T): T {
+  const seeded = structuredClone(record) as unknown as Record<string, unknown>;
+  const hashInput = { ...seeded };
+  delete hashInput.source_record_hash;
+  delete hashInput.materialized_file_location;
+  seeded.source_record_hash = semanticHashV1(hashInput);
+  return seeded as unknown as T;
+}
+
+async function establishStandardFeedbackPathV1(pool: Pool): Promise<void> {
+  const feedbackRoot = path.join(ROOT, "fixtures/mcft/water_state/feedback_v1");
+  const readSingleEvidenceV1 = <T>(filename: string): T => {
+    const records = fs.readFileSync(path.join(feedbackRoot, filename), "utf8")
+      .split("\\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as T);
+    assert.equal(records.length, 1, `STANDARD_FEEDBACK_FIXTURE_CARDINALITY:${filename}`);
+    return records[0];
+  };
+
+  const approval = seedEvidenceV1(
+    readSingleEvidenceV1<Cap05ApprovalAssertionEvidenceV1>("approval_assertions.jsonl"),
+  );
+  const plan = seedEvidenceV1(
+    readSingleEvidenceV1<Cap05ApprovedPlanEvidenceV1>("approved_plans.jsonl"),
+  );
+  const receipt = seedEvidenceV1(
+    readSingleEvidenceV1<Cap05ExecutionReceiptEvidenceV1>("execution_receipts.jsonl"),
+  );
+
+  const bindingService = new Cap05ApprovalPlanBindingServiceV1(pool);
+  const binding = await bindingService.commitApprovalPlanBinding({
+    approval_evidence: approval,
+    approved_plan_evidence: plan,
+  });
+  assert.ok(["INSERTED", "EXISTING_IDEMPOTENT_SUCCESS"].includes(binding.persistence_status));
+
+  const feedbackService = new Cap05ActionFeedbackNormalizationServiceV1(pool);
+  const feedback = await feedbackService.commitActionFeedback({
+    binding: binding.binding,
+    receipt_evidence: receipt,
+    binding_evidence_hash: binding.binding.determinism_hash,
+    receipt_evidence_hash: receipt.source_record_hash,
+  });
+  assert.ok(["INSERTED", "EXISTING_IDEMPOTENT_SUCCESS"].includes(feedback.persistence_status));
+  assert.equal(feedback.action_feedback.payload.eligible_for_state_input, true);
+  assert.equal(feedback.action_feedback.payload.source_quality, "PASS");
+}
+
+function parseRunnerOutputV1'''
+postgresql_text, standard_feedback_count = standard_feedback_pattern.subn(
+    standard_feedback_replacement,
+    postgresql_text,
+)
+if standard_feedback_count != 1:
+    raise SystemExit(f"STANDARD_FEEDBACK_FUNCTION_REPLACEMENT_COUNT_MISMATCH:{standard_feedback_count}")
+Path(postgresql_acceptance).write_text(postgresql_text)
