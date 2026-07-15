@@ -1289,3 +1289,39 @@ Governance effect:
 - explicitly authorize, but do not implement, S9 restart/recovery;
 - preserve all automatic history rewrite, S10, calibration, activation and CAP-06 nonclaims;
 - add no Runtime source, canonical object, transaction family, migration, route or web change.
+
+---
+
+## MCFT-CAP-05 S9 Effective and S10 Explicitly Authorized
+
+```text
+capability_line_id: MCFT-CAP-05
+activation_id: MCFT-CAP-05.S9.SSOT-SETTLEMENT-V1
+baseline_main_commit: 07485e93ab17c5a4f9dc057f6c79e190a38d425f
+activation_pr: 2481
+S9_status: MERGED_EFFECTIVE
+S9_exact_head: cfe0766d474c0e0a37f38fbe2166fcac79ff96de
+S9_exact_head_CI: 29392113827 SUCCESS
+S9_merge_commit: 07485e93ab17c5a4f9dc057f6c79e190a38d425f
+S9_head_to_merge_file_delta_count: 0
+S9_postmerge_probe_PR: 2480 CLOSED_WITHOUT_MERGE
+S9_postmerge_probe_workflow: 29392566574 SUCCESS
+S9_governance: 54 PASS / 0 FAIL
+S9_PostgreSQL_restart_late_rebuild_path: 13 PASS / 0 FAIL
+inherited_CAP03_recovery_path: 15 PASS / 0 FAIL
+S10_status: AUTHORIZED_NOT_STARTED
+S10_delivery_slice_id: MCFT-CAP-05.MCFT-04-16.BOUNDED-EIGHT-TICK-FEEDBACK-CHAIN-V1
+S10_runtime_source_authorized: true
+S10_implementation_started: false
+canonical_object_delta: 0
+transaction_family_delta: 0
+migration_delta: 0
+CAP_06_authorized: false
+```
+
+Governance effect:
+
+- settle S9 restart/recovery as merged-main effective;
+- explicitly authorize S10 bounded eight-tick implementation without starting it;
+- preserve all completion, closure, calibration, activation, continuous-runtime and CAP-06 nonclaims;
+- add no Runtime source, canonical object, transaction family, migration, route or web change.
