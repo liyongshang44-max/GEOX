@@ -131,7 +131,13 @@ check(design.includes('checkpoint 73') && design.includes('checkpoints 75–80')
 check(design.includes('forecast_point_count = 576') && design.includes('scenario_point_count = 1728'), 'design freezes output counts');
 check(design.includes('81 canonical Twin object facts') && design.includes('83 canonical Twin object facts'), 'design separates orchestrator and full-path fact accounting');
 check(design.includes('NO_S11_AUTHORIZATION') && design.includes('NO_CAP_06_AUTHORIZATION'), 'design preserves successor nonclaims');
-check(task.includes('## S10 — Golden Path / Bounded Multi-Tick'), 'frozen Task contains the S10 delivery definition');
+check(
+  task.includes('## S10 — Bounded 8-Tick Chain')
+    && task.includes('8 posterior States')
+    && task.includes('checkpoint 73..80')
+    && task.includes('next logical tick 2026-06-04T10:00:00.000Z'),
+  'frozen Task contains the S10 delivery definition',
+);
 
 check(status.implementation?.runtime_config_count === 8, 'status freezes eight Runtime Configs');
 check(status.implementation?.posterior_state_count === 8, 'status freezes eight posterior States');
