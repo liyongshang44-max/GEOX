@@ -1,0 +1,44 @@
+name: mcft-cap-05-execution-config-resolution
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-05-execution-config-resolution.yml'
+      - 'apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts'
+      - 'apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_EXECUTION_CONFIG_RESOLUTION.ts'
+
+permissions:
+  contents: read
+
+jobs:
+  execution-config-resolution:
+    if: github.head_ref == 'agent/mcft-cap-05-post-closure-config-conformance-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Execute permanent acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_EXECUTION_CONFIG_RESOLUTION.ts
