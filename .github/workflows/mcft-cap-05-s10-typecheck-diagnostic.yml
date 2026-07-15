@@ -1,6 +1,7 @@
 name: mcft-cap-05-s10-typecheck-diagnostic
 
 on:
+  pull_request:
   push:
     branches:
       - agent/mcft-cap-05-s10-bounded-eight-tick-feedback-chain-v1
