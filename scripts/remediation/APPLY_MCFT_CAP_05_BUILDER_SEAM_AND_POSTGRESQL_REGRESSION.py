@@ -3,6 +3,7 @@
 # Boundary: source transformation only; no repository push, database access, Runtime execution, canonical write, active binding, Model Activation, calibration, CAP-06 Runtime authority, or migration authority.
 
 from pathlib import Path
+import re
 
 
 def replace_once(path_text: str, old: str, new: str) -> None:
@@ -89,12 +90,20 @@ replace_once(
         evidence_window: evidenceWindow,''',
 )
 text = Path(service).read_text()
-old = "          runtime_config: runtimeConfig,\n          source_members: sources,"
-new = "          runtime_config: runtimeConfig,\n          execution_config_payload: config,\n          source_members: sources,"
-count = text.count(old)
+pattern = re.compile(
+    r"(?P<indent>\s+)runtime_config: runtimeConfig,\n(?P=indent)source_members: sources,",
+)
+text, count = pattern.subn(
+    lambda match: (
+        f"{match.group('indent')}runtime_config: runtimeConfig,\n"
+        f"{match.group('indent')}execution_config_payload: config,\n"
+        f"{match.group('indent')}source_members: sources,"
+    ),
+    text,
+)
 if count != 4:
     raise SystemExit(f"CAP04_RECORD_BUILDER_CALL_COUNT_MISMATCH:{count}")
-Path(service).write_text(text.replace(old, new))
+Path(service).write_text(text)
 
 acceptance_runner = "scripts/acceptance/run_acceptance.cjs"
 replace_once(
