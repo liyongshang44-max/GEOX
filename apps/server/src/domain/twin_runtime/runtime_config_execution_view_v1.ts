@@ -1,6 +1,7 @@
 // apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts
 // Purpose: define the non-canonical CAP-04 execution-config view consumed by reused State, Forecast and Scenario mathematics while preserving the source canonical Runtime Config as a separate immutable authority.
 // Boundary: type definition and direct CAP-04 payload resolution only; no persistence, canonical object construction, object-id derivation, determinism-hash derivation, active binding, model activation, calibration, Runtime orchestration, filesystem, environment or network.
+// Identity rule: source_config_ref/source_config_hash identify the untouched canonical source; the resolved view itself has no canonical object identity.
 
 import type { CanonicalObjectEnvelopeV1 } from "./canonical_object_contracts_v1.js";
 import {
