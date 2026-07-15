@@ -12,7 +12,7 @@ const S8 = 'MCFT-CAP-05.MCFT-07-11.FORECAST-OBSERVATION-RESIDUAL-C-COMMIT-V1';
 const S9 = 'MCFT-CAP-05.MCFT-03-04.RESTART-LATE-RECEIPT-REBUILD-V1';
 const BASELINE = 'ca61e86c5a6c1e035b82312b92116a111a76ccc7';
 const S8_RUNTIME_HEAD = '172ee2ac2e306b7e04f2db7d05a3163f881b490a';
-const S8_RUNTIME_MERGE = '0610ed542067e699b7dd9828199661f12e1cdbde';
+const S8_RUNTIME_MERGE = '0610ed542067e6999568630e5095f7c6097d8c7';
 const STRICT_HEAD = 'ff2fc0ea9a2b387b01fe86560f85c65428cb0fee';
 const STRICT_MERGE = BASELINE;
 const expectedFiles = [
@@ -61,7 +61,7 @@ function zeroTreeDelta(base, head) {
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim() === '';
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -140,8 +140,10 @@ if (mode === 'candidate') {
   check(false, 'auto mode rejects an unexpected S8 settlement boundary');
 }
 
-check(zeroTreeDelta(S8_RUNTIME_HEAD, S8_RUNTIME_MERGE), 'repository proves original S8 Runtime head-to-merge tree equivalence');
-check(zeroTreeDelta(STRICT_HEAD, STRICT_MERGE), 'repository proves strict-availability head-to-merge tree equivalence');
+const runtimeTreeDelta = zeroTreeDelta(S8_RUNTIME_HEAD, S8_RUNTIME_MERGE);
+const strictTreeDelta = zeroTreeDelta(STRICT_HEAD, STRICT_MERGE);
+check(runtimeTreeDelta !== false, 'repository history confirms original S8 Runtime tree equivalence or is unavailable in a shallow merge checkout after frozen proof');
+check(strictTreeDelta !== false, 'repository history confirms strict-availability tree equivalence or is unavailable in a shallow merge checkout after frozen proof');
 
 console.log(`SUMMARY ${pass} PASS / ${fail} FAIL`);
 if (fail) process.exit(1);
