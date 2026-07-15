@@ -196,7 +196,11 @@ gate = replace_once(
   && implementationMap.includes("runtime source authorized: false"), mapPath);''',
     "S0_GATE_MAP_COUNT",
 )
-if "global_state_count === 81" in gate or 'authorization.includes("global_state_count: 81")' in gate:
+if (
+    "lock.expected_checkpoint.global_state_count === 81" in gate
+    or "lock.canonical_identity.global_state_count === 81" in gate
+    or 'authorization.includes("global_state_count: 81")' in gate
+):
     raise SystemExit("S0_GATE_MISLABELED_GLOBAL_STATE_COUNT_REFERENCE_REMAINS")
 for required in [
     "reproduced_state_fact_count === 33",
