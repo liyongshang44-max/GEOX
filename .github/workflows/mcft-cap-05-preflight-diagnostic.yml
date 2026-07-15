@@ -1,0 +1,45 @@
+name: mcft-cap-05-preflight-diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-05-preflight-diagnostic.yml'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_NOT_YET_VALIDATED_RECEIPT_CONSUMING_TICK.ts'
+      - 'scripts/runtime_acceptance/mcft_cap_05_effective_runtime_config_fixture_v1.ts'
+
+permissions:
+  contents: read
+
+jobs:
+  cap05-preflight:
+    if: github.head_ref == 'agent/mcft-cap-05-post-closure-config-conformance-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: landos
+          POSTGRES_PASSWORD: ci-pilot-postgres-strong-2026
+          POSTGRES_DB: landos
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U landos -d landos"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://landos:ci-pilot-postgres-strong-2026@127.0.0.1:5433/landos
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Focused CAP-05 preflight
+        run: node scripts/dev/assert_local_pnpm_runtime.cjs
