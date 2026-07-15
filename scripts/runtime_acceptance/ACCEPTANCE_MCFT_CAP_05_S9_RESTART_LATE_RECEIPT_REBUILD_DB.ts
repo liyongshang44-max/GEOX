@@ -246,7 +246,7 @@ async function main(): Promise<void> {
   assert.equal(await countV1("twin_runtime_checkpoint_latest_index_v1"), 0);
   ok("S9 G/H/C recovery does not mutate State or checkpoint authority");
 
-  assert.equal(pass, 11);
+  assert.equal(pass, 13);
   console.log(`MCFT-CAP-05 S9 restart/late/rebuild PostgreSQL path: ${pass} PASS / 0 FAIL`);
 }
 
