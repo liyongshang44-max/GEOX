@@ -5,7 +5,7 @@
   "status": "IMPLEMENTATION_CANDIDATE",
   "baseline_main_commit": "ca61e86c5a6c1e035b82312b92116a111a76ccc7",
   "branch": "agent/mcft-cap-05-s8-ssot-settlement-v1",
-  "activation_pr_number": null,
+  "activation_pr_number": 2477,
   "activation_kind": "S8_EFFECTIVENESS_SETTLEMENT_AND_S9_EXPLICIT_AUTHORIZATION",
   "s8_effectiveness": {
     "delivery_slice_id": "MCFT-CAP-05.MCFT-07-11.FORECAST-OBSERVATION-RESIDUAL-C-COMMIT-V1",
