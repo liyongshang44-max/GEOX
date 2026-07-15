@@ -7,6 +7,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
+import { buildFrozenEvidenceWindowV1 } from "../../apps/server/src/runtime/twin_runtime/evidence_window_builder_v1.js";
+import { selectAssimilatedContinuationObservationV1 } from "../../apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v1.js";
 import {
   CanonicalReplayFileSourceV1,
   SOURCE_BINDING_CONVERSION_RULE_EXECUTION_METADATA_POLICY_ID_V1,
@@ -28,7 +30,7 @@ function replayRecordV1(): Record<string, unknown> {
     dataset_id: "dataset_cap05_binding_metadata",
     source_record_id: "source_record_cap05_binding_metadata",
     record_type: "soil_moisture_observation_v1",
-    binding_id: "soil_obs_cap05_binding_metadata_v1",
+    binding_id: "soil_obs_c8_20cm_v1",
     origin_source_kind: "DEVICE",
     origin_source_id: "device_cap05_binding_metadata",
     epistemic_class: "OBSERVED",
@@ -64,7 +66,7 @@ function sourceMatrixV1(input: {
   };
   if (input.conversion_version !== undefined) conversionRule.version = input.conversion_version;
   const binding: Record<string, unknown> = {
-    binding_id: "soil_obs_cap05_binding_metadata_v1",
+    binding_id: "soil_obs_c8_20cm_v1",
     source_unit: "percent_vwc",
     canonical_unit: "fraction",
     conversion_rule: conversionRule,
@@ -111,13 +113,45 @@ async function main(): Promise<void> {
     assert.deepEqual(loaded[0].conversion_rule, {
       id: "PERCENT_TO_FRACTION_V1",
       expression: "canonical_value = source_value / 100",
-      version: "1",
     });
-    ok("missing conversion-rule version is derived from frozen binding_version");
+    assert.deepEqual(loaded[0].execution_metadata, {
+      policy_id: "SOURCE_BINDING_CONVERSION_RULE_VERSION_FROM_BINDING_VERSION_V1",
+      source_binding_version: 1,
+      conversion_rule_version: "1",
+    });
+    ok("missing conversion-rule version is attached only as separate execution metadata");
 
     assert.equal(loaded[0].source_record_hash, record.source_record_hash);
     assert.equal(await fs.readFile(replayPath, "utf8"), originalReplayText);
     ok("derived execution metadata does not mutate Replay Evidence identity or file bytes");
+
+    const withoutExecutionMetadata = structuredClone(loaded[0]);
+    delete withoutExecutionMetadata.execution_metadata;
+    const windowWithMetadata = buildFrozenEvidenceWindowV1({
+      scope,
+      logical_time: "2026-06-04T07:00:00.000Z",
+      candidate_records: loaded,
+    });
+    const windowWithoutMetadata = buildFrozenEvidenceWindowV1({
+      scope,
+      logical_time: "2026-06-04T07:00:00.000Z",
+      candidate_records: [withoutExecutionMetadata],
+    });
+    assert.deepEqual(windowWithMetadata, windowWithoutMetadata);
+    assert.equal(windowWithMetadata.assimilation_observation.execution_metadata, undefined);
+    ok("execution metadata is excluded from canonical A0 Evidence and active-lineage identity inputs");
+
+    const selected = selectAssimilatedContinuationObservationV1({
+      scope,
+      logical_time: "2026-06-04T07:00:00.000Z",
+      saturation_fraction: 0.45,
+      observation_records: loaded,
+    });
+    assert.deepEqual(selected.selected_observation?.conversion_rule, {
+      id: "PERCENT_TO_FRACTION_V1",
+      version: "1",
+    });
+    ok("observation selector resolves the executable conversion version from separate metadata");
 
     await writeMatrixV1(matrixPath, sourceMatrixV1({
       binding_version: 1,
@@ -128,7 +162,8 @@ async function main(): Promise<void> {
       logical_time: "2026-06-04T07:00:00.000Z",
     });
     assert.equal(explicitMatch[0].conversion_rule.version, "1");
-    ok("matching explicit conversion-rule version remains valid");
+    assert.equal(explicitMatch[0].execution_metadata?.conversion_rule_version, "1");
+    ok("matching explicit conversion-rule version remains valid and consistent with execution metadata");
 
     await writeMatrixV1(matrixPath, sourceMatrixV1({
       binding_version: 1,
@@ -147,7 +182,7 @@ async function main(): Promise<void> {
     );
     ok("missing binding_version fails closed");
 
-    assert.equal(pass, 6);
+    assert.equal(pass, 8);
     process.stdout.write(`SUMMARY ${pass} PASS / 0 FAIL\n`);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
