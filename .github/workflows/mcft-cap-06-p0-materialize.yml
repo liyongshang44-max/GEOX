@@ -51,8 +51,18 @@ jobs:
         run: |
           set +e
           node - <<'NODE' | tee /tmp/p0-info.log
-          const p = require('./docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P0-STATUS.json');
-          console.log('INFO P0_P1_MERGED_EFFECTIVE ' + JSON.stringify(p.p_minus_1_effectiveness));
+          const p = require('./docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P0-STATUS.json').p_minus_1_effectiveness;
+          const baseline = '79cd7814eff06ad86f86cdcb379c6f71a77f1ab8';
+          const checks = {
+            effective: p.effective === true,
+            implementation_pr_number: p.implementation_pr_number === 2496,
+            implementation_merge_commit: p.implementation_merge_commit === baseline,
+            postmerge_probe_pr_number: p.postmerge_probe_pr_number === 2497,
+            postmerge_probe_workflow_run: p.postmerge_probe_workflow_run === 29418272690,
+            postmerge_probe_closed_without_merge: p.postmerge_probe_closed_without_merge === true,
+          };
+          console.log('INFO P0_P1_VALUES ' + JSON.stringify(p));
+          console.log('INFO P0_P1_CHECKS ' + JSON.stringify(checks));
           NODE
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs 2>&1 | tee /tmp/p0-gate.log
           rc=${PIPESTATUS[0]}
