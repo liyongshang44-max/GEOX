@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/mcft-cap-05-replay-metadata-separation-proof.yml'
       - 'scripts/remediation/APPLY_MCFT_CAP_05_REPLAY_EXECUTION_METADATA_SEPARATION.py'
+      - 'scripts/remediation/APPLY_MCFT_CAP_05_REPLAY_METADATA_ACCEPTANCE_AUTHORIZED_BINDING.py'
       - 'apps/server/src/runtime/twin_runtime/ports.ts'
       - 'apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/evidence_window_builder_v1.ts'
@@ -46,7 +47,10 @@ jobs:
       - name: Apply Replay metadata separation
         run: |
           set -o pipefail
-          python scripts/remediation/APPLY_MCFT_CAP_05_REPLAY_EXECUTION_METADATA_SEPARATION.py 2>&1 | tee /tmp/replay-metadata-generator.log
+          {
+            python scripts/remediation/APPLY_MCFT_CAP_05_REPLAY_EXECUTION_METADATA_SEPARATION.py
+            python scripts/remediation/APPLY_MCFT_CAP_05_REPLAY_METADATA_ACCEPTANCE_AUTHORIZED_BINDING.py
+          } 2>&1 | tee /tmp/replay-metadata-generator.log
 
       - name: Upload generator diagnostics
         if: failure()
