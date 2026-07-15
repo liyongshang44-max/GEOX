@@ -143,6 +143,36 @@ async function main(): Promise<void> {
   );
   ok("Forecast whose source posterior lacks canonical H consumption is ineligible and fails closed");
 
+  const equalAvailability = structuredClone(fixture.historical_forecast);
+  equalAvailability.object_id = `${fixture.historical_forecast.object_id}_equal_availability`;
+  equalAvailability.determinism_hash = "sha256:cap05-s8-equal-availability";
+  equalAvailability.created_at = CAP05_S8_OUTCOME_TIME_V1;
+  const strictAvailabilitySelection = selectHistoricalForecastForResidualV1({
+    scope: fixture.scope,
+    lineage_id: String(fixture.historical_forecast.lineage_id),
+    revision_id: String(fixture.historical_forecast.revision_id),
+    observation_target_time: CAP05_S8_OUTCOME_TIME_V1,
+    observation_available_to_runtime_at: CAP05_S8_OUTCOME_TIME_V1,
+    candidates: [
+      {
+        forecast: equalAvailability,
+        source_posterior_action_feedback_refs: [fixture.action_feedback.object_id],
+      },
+      {
+        forecast: fixture.historical_forecast,
+        source_posterior_action_feedback_refs: [fixture.action_feedback.object_id],
+      },
+    ],
+  });
+  assert.equal(strictAvailabilitySelection.forecast.object_id, fixture.historical_forecast.object_id);
+  const equalAvailabilityTrace = strictAvailabilitySelection.trace.entries.find(
+    (entry) => entry.forecast_run_ref === equalAvailability.object_id,
+  );
+  assert.ok(equalAvailabilityTrace);
+  assert.equal(equalAvailabilityTrace.disposition, "EXCLUDED_NOT_AVAILABLE_BEFORE_OBSERVATION");
+  assert.equal(equalAvailabilityTrace.reason_code, "FORECAST_NOT_AVAILABLE_BEFORE_OBSERVATION");
+  ok("Forecast created_at equal to observation availability is ineligible");
+
   const equivalent = structuredClone(fixture.historical_forecast);
   equivalent.object_id = `${fixture.historical_forecast.object_id}_equivalent_tie`;
   equivalent.determinism_hash = "sha256:cap05-s8-equivalent-tie";
@@ -193,7 +223,7 @@ async function main(): Promise<void> {
   }), /CAP05_FORECAST_RESIDUAL_LATEST_FORECAST_TIE_CONFLICT/);
   ok("non-equivalent latest-issued Forecast tie fails closed rather than selecting implicitly");
 
-  assert.equal(pass, 15);
+  assert.equal(pass, 16);
   console.log(`MCFT-CAP-05 S8 Forecast Residual outcome tick: ${pass} PASS / 0 FAIL`);
 }
 
