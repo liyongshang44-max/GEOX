@@ -41,10 +41,33 @@ jobs:
             apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FEEDBACK_CONFIG_EXECUTION_VIEW.ts
 
-      - name: Permit remediation files in temporary S0 preflight boundary
+      - name: Prepare H-authoritative replay view and temporary S0 boundary
         run: |
           python - <<'PY'
+          import json
+          import shutil
           from pathlib import Path
+
+          source = Path('fixtures/mcft/water_state/replay_v1')
+          target = Path('acceptance-output/mcft_cap05_h_authoritative_replay_v1')
+          if target.exists():
+              shutil.rmtree(target)
+          shutil.copytree(source, target)
+          removed = 0
+          for file in target.rglob('*.jsonl'):
+              kept = []
+              for line in file.read_text().splitlines():
+                  if not line.strip():
+                      continue
+                  record = json.loads(line)
+                  if record.get('record_type') == 'irrigation_execution_evidence_v1':
+                      removed += 1
+                      continue
+                  kept.append(json.dumps(record, separators=(',', ':'), ensure_ascii=False))
+              file.write_text(('\n'.join(kept) + ('\n' if kept else '')), encoding='utf-8')
+          if removed == 0:
+              raise SystemExit('LEGACY_IRRIGATION_RECORD_REQUIRED_FOR_EXCLUSION_PROOF')
+
           path = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts')
           text = path.read_text()
           old = 'const PREFLIGHT_ALLOWED_FILES = Object.freeze([...EXACT_CHANGED_FILES, TEMP_WORKFLOW_PATH].sort());'
@@ -57,7 +80,12 @@ jobs:
           ].sort());'''
           if old not in text:
               raise SystemExit('PREFLIGHT_ALLOWED_FILES_MARKER_NOT_FOUND')
-          path.write_text(text.replace(old, new))
+          text = text.replace(old, new)
+          text = text.replace(
+              'replay_root: "fixtures/mcft/water_state/replay_v1",',
+              'replay_root: "acceptance-output/mcft_cap05_h_authoritative_replay_v1",',
+          )
+          path.write_text(text)
           PY
 
       - name: Setup pnpm
