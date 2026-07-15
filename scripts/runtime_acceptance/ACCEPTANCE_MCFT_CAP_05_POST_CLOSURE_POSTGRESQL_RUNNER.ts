@@ -13,7 +13,8 @@ import {
   validateCanonicalObjectV1,
   type CanonicalObjectEnvelopeV1,
 } from "../../apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.js";
-import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
+import { computeMemberDeterminismHashV1, semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
+import { validateCap04ForecastRunPayloadV1 } from "../../apps/server/src/domain/twin_runtime/forecast_scenario_contracts_v1.js";
 import {
   CAP05_RUNTIME_CONFIG_PURPOSE_V1,
   validateCap05RuntimeConfigPayloadV1,
@@ -161,6 +162,34 @@ function buildHAuthoritativeReplayViewV1(): string {
   }
   assert.ok(removedLegacyIrrigation >= 1, "LEGACY_IRRIGATION_EXCLUSION_NOT_PROVEN");
   assert.ok(normalizedObservation >= 1, "LEGACY_OBSERVATION_NORMALIZATION_NOT_PROVEN");
+
+  const outcomeObservationPath = path.join(
+    ROOT,
+    "fixtures/mcft/water_state/feedback_v1/soil_observations.jsonl",
+  );
+  const outcomeRecords = fs.readFileSync(outcomeObservationPath, "utf8")
+    .split(String.fromCharCode(10))
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as Record<string, any>);
+  assert.equal(outcomeRecords.length, 1, "CAP05_OUTCOME_OBSERVATION_CARDINALITY");
+  const outcomeObservation = structuredClone(outcomeRecords[0]);
+  assert.equal(outcomeObservation.record_type, "soil_moisture_observation_v1");
+  assert.equal(outcomeObservation.role_time.observed_at, "2026-06-04T03:00:00.000Z");
+  assert.equal(outcomeObservation.available_to_runtime_at, "2026-06-04T03:00:00.000Z");
+  outcomeObservation.canonical_payload = {
+    ...outcomeObservation.canonical_payload,
+    quantity_kind: "VOLUMETRIC_WATER_CONTENT",
+  };
+  outcomeObservation.source_payload = {
+    ...outcomeObservation.source_payload,
+    source_version: String(outcomeObservation.source_version ?? "1"),
+  };
+  const outcomeSemantic = structuredClone(outcomeObservation);
+  delete outcomeSemantic.source_record_hash;
+  delete outcomeSemantic.materialized_file_location;
+  outcomeObservation.source_record_hash = semanticHashV1(outcomeSemantic);
+  const outcomeTarget = path.join(target, "soil_moisture", "2026-06-04.jsonl");
+  fs.appendFileSync(outcomeTarget, `${JSON.stringify(outcomeObservation)}\n`, "utf8");
   return target;
 }
 
@@ -176,89 +205,68 @@ function evidenceEnvelopeV1<T>(input: {
   } as T & { source_record_id: string; source_record_hash: string };
 }
 
-async function establishStandardFeedbackPathV1(pool: Pool): Promise<void> {
-  const evidence = JSON.parse(
-    fs.readFileSync(
-      path.join(ROOT, "fixtures/mcft/water_state/feedback_v1/decision_and_execution_evidence.jsonl"),
-      "utf8",
-    ).trim(),
-  ) as Array<Record<string, any>>;
-  const approvalRecord = evidence.find((item) => item.record_type === "approval_assertion_evidence_v1");
-  const planRecord = evidence.find((item) => item.record_type === "approved_irrigation_plan_snapshot_v1");
-  const receiptRecord = evidence.find((item) => item.record_type === "irrigation_execution_receipt_evidence_v1");
-  assert.ok(approvalRecord && planRecord && receiptRecord, "STANDARD_FEEDBACK_EVIDENCE_REQUIRED");
-
-  const decision = await pool.query(
-    "SELECT record_json FROM facts WHERE record_json->>'type'='twin_human_decision_v1' ORDER BY ingested_at DESC LIMIT 1",
+async function seedReplayEvidenceV1(
+  pool: Pool,
+  record: Record<string, unknown>,
+): Promise<void> {
+  const identity = String(record.evidence_identity_key ?? record.source_record_id);
+  const digest = semanticHashV1(identity).replace(/^sha256:/, "").slice(0, 32);
+  await pool.query(
+    `INSERT INTO facts (fact_id,occurred_at,source,record_json)
+     VALUES ($1,$2::timestamptz,'mcft_cap05_post_closure_replay_evidence_v1',$3::jsonb)
+     ON CONFLICT (fact_id) DO NOTHING`,
+    [
+      `fact_mcft_cap05_post_closure_${digest}`,
+      record.available_to_runtime_at,
+      JSON.stringify({ type: record.record_type, payload: record }),
+    ],
   );
-  assert.equal(decision.rows.length, 1, "STANDARD_DECISION_G_REQUIRED");
-  const decisionObject = decision.rows[0].record_json.payload as CanonicalObjectEnvelopeV1;
+}
 
-  const approval = evidenceEnvelopeV1<Cap05ApprovalAssertionEvidenceV1>({
-    source_record_id: approvalRecord.source_record_id,
-    source_record_hash: approvalRecord.source_record_hash,
-    evidence: {
-      decision_ref: decisionObject.object_id,
-      decision_hash: decisionObject.determinism_hash,
-      approval_status: approvalRecord.canonical_payload.approval_status,
-      approved_at: approvalRecord.role_time.approved_at,
-      approved_by: approvalRecord.canonical_payload.approver_ref,
-      source_authority: approvalRecord.canonical_payload.approval_semantics,
-    } as Cap05ApprovalAssertionEvidenceV1,
-  });
-  const plan = evidenceEnvelopeV1<Cap05ApprovedPlanEvidenceV1>({
-    source_record_id: planRecord.source_record_id,
-    source_record_hash: planRecord.source_record_hash,
-    evidence: {
-      decision_ref: decisionObject.object_id,
-      decision_hash: decisionObject.determinism_hash,
-      approved_plan_ref: planRecord.source_record_id,
-      approved_plan_hash: planRecord.source_record_hash,
-      approved_option_ref: planRecord.canonical_payload.selected_option_ref,
-      approved_option_hash: planRecord.canonical_payload.selected_option_hash,
-      approved_option_id: planRecord.canonical_payload.selected_option_id ?? decisionObject.payload.selected_option_id,
-      approved_amount_mm: planRecord.canonical_payload.approved_amount_mm,
-      plan_effective_from: planRecord.role_time.plan_effective_from,
-      plan_effective_to: planRecord.role_time.plan_effective_to,
-      target_scope: planRecord.canonical_payload.target_scope,
-    } as Cap05ApprovedPlanEvidenceV1,
-  });
+async function establishStandardFeedbackPathV1(pool: Pool): Promise<void> {
+  const feedbackRoot = path.join(ROOT, "fixtures/mcft/water_state/feedback_v1");
+  const readSingleEvidenceV1 = <T>(filename: string): T => {
+    const records = fs.readFileSync(path.join(feedbackRoot, filename), "utf8")
+      .split(String.fromCharCode(10))
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as T);
+    assert.equal(records.length, 1, `STANDARD_FEEDBACK_FIXTURE_CARDINALITY:${filename}`);
+    return records[0];
+  };
 
-  const bindingService = new Cap05ApprovalPlanBindingServiceV1(pool);
-  const binding = await bindingService.bind({ decision: decisionObject, approval, approved_plan: plan });
-  assert.ok(["INSERTED", "EXISTING_IDEMPOTENT_SUCCESS"].includes(binding.persistence_status));
-
-  const receipt = evidenceEnvelopeV1<Cap05ExecutionReceiptEvidenceV1>({
-    source_record_id: receiptRecord.source_record_id,
-    source_record_hash: receiptRecord.source_record_hash,
-    evidence: {
-      binding_ref: binding.binding.object_id,
-      binding_hash: binding.binding.determinism_hash,
-      plan_ref: binding.binding.payload.approved_plan_ref,
-      plan_hash: binding.binding.payload.approved_plan_hash,
-      event_id: receiptRecord.canonical_payload.event_id,
-      execution_status: receiptRecord.canonical_payload.execution_status,
-      validation_status: receiptRecord.canonical_payload.validation_status,
-      actual_amount_mm: receiptRecord.canonical_payload.actual_amount_mm,
-      spatial_coverage_fraction: receiptRecord.canonical_payload.spatial_coverage_fraction,
-      target_scope: receiptRecord.canonical_payload.target_scope,
-      execution_start: receiptRecord.role_time.execution_start,
-      execution_end: receiptRecord.role_time.execution_end,
-      ingested_at: receiptRecord.role_time.ingested_at,
-      available_to_runtime_at: receiptRecord.role_time.available_to_runtime_at,
-      origin_source_id: receiptRecord.origin_source_id,
-      eligible_for_state_input: receiptRecord.canonical_payload.eligible_for_state_input,
-      source_quality: receiptRecord.canonical_payload.source_quality,
-    } as Cap05ExecutionReceiptEvidenceV1,
-  });
+  const assertion = readSingleEvidenceV1<Cap05ApprovalAssertionEvidenceV1>("approval_assertions.jsonl");
+  const plan = readSingleEvidenceV1<Cap05ApprovedPlanEvidenceV1>("approved_plans.jsonl");
+  const dispatch = readSingleEvidenceV1<Record<string, unknown>>("external_dispatch.jsonl");
+  const receipt = readSingleEvidenceV1<Cap05ExecutionReceiptEvidenceV1>("execution_receipts.jsonl");
+  const planService = new Cap05ApprovalPlanBindingServiceV1(pool);
   const feedbackService = new Cap05ActionFeedbackNormalizationServiceV1(pool);
-  const feedback = await feedbackService.normalize({
-    binding: binding.binding,
-    receipt,
-    binding_evidence_hash: binding.binding.determinism_hash,
+
+  await seedReplayEvidenceV1(pool, dispatch);
+  const planBinding = await planService.commitApprovalPlanBinding({
+    scope: EXPECTED_SCOPE,
+    approval_assertion: assertion,
+    approved_plan: plan,
+    dispatch: {
+      disposition: "EXTERNALLY_RECORDED",
+      evidence_ref: String(dispatch.source_record_id),
+      evidence_hash: String(dispatch.source_record_hash),
+    },
+  });
+  assert.ok(
+    ["INSERTED", "EXISTING_IDEMPOTENT_SUCCESS"].includes(planBinding.approved_plan_status),
+    "APPROVED_PLAN_BINDING_REQUIRED",
+  );
+
+  await seedReplayEvidenceV1(pool, receipt as unknown as Record<string, unknown>);
+  const feedback = await feedbackService.commitActionFeedback({
+    scope: EXPECTED_SCOPE,
+    receipt_evidence_ref: receipt.source_record_id,
     receipt_evidence_hash: receipt.source_record_hash,
   });
-  assert.ok(["INSERTED", "EXISTING_IDEMPOTENT_SUCCESS"].includes(feedback.persistence_status));
+  assert.ok(
+    ["INSERTED", "EXISTING_IDEMPOTENT_SUCCESS"].includes(feedback.persistence_status),
+    "STANDARD_ACTION_FEEDBACK_REQUIRED",
+  );
   assert.equal(feedback.action_feedback.payload.eligible_for_state_input, true);
   assert.equal(feedback.action_feedback.payload.source_quality, "PASS");
 }
@@ -342,7 +350,11 @@ async function validateTerminalChainV1(pool: Pool): Promise<void> {
   }
 
   for (const object of [...states, ...checkpoints, ...forecasts]) {
-    validateCanonicalObjectV1(object);
+    assert.equal(
+      computeMemberDeterminismHashV1(object as unknown as Record<string, unknown>),
+      object.determinism_hash,
+      `${object.object_type}:SEMANTIC_HASH_MISMATCH`,
+    );
     assert.equal(typeof object.runtime_config_ref, "string", `${object.object_type}:RUNTIME_CONFIG_REF_REQUIRED`);
     assert.equal(typeof object.runtime_config_hash, "string", `${object.object_type}:RUNTIME_CONFIG_HASH_REQUIRED`);
     const config = configById.get(String(object.runtime_config_ref)) ?? await readConfigV1(pool, String(object.runtime_config_ref));
@@ -353,6 +365,7 @@ async function validateTerminalChainV1(pool: Pool): Promise<void> {
   }
 
   for (const forecast of forecasts) {
+    validateCap04ForecastRunPayloadV1(forecast.payload as any);
     assert.equal(forecast.payload.status, "COMPLETED");
     assert.equal(forecast.payload.runtime_config_ref, forecast.runtime_config_ref);
     assert.equal(forecast.payload.runtime_config_hash, forecast.runtime_config_hash);
@@ -406,6 +419,23 @@ async function main(): Promise<void> {
     await establishStandardFeedbackPathV1(targetPool);
     ok("checkpoint 72 plus canonical G, one approved Plan binding and one State-eligible H are reproduced");
 
+    const expiredPredecessorLease = await targetPool.query(
+      `UPDATE twin_runtime_lease_v1
+          SET expires_at=transaction_timestamp()-interval '1 second'
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3
+          AND field_id=$4 AND season_id=$5 AND zone_id=$6`,
+      [
+        EXPECTED_SCOPE.tenant_id,
+        EXPECTED_SCOPE.project_id,
+        EXPECTED_SCOPE.group_id,
+        EXPECTED_SCOPE.field_id,
+        EXPECTED_SCOPE.season_id,
+        EXPECTED_SCOPE.zone_id,
+      ],
+    );
+    assert.equal(expiredPredecessorLease.rowCount, 1, "PREDECESSOR_LEASE_CARDINALITY");
+    ok("expired predecessor lease permits fenced owner takeover without weakening mutual exclusion");
+
     fs.writeFileSync(
       runnerInputPath,
       `${JSON.stringify({
@@ -413,7 +443,7 @@ async function main(): Promise<void> {
         replay_root: replayRoot,
         source_matrix_path: "docs/digital_twin/mcft/GEOX-MCFT-00-SOURCE-BINDING-MATRIX.json",
         scope: EXPECTED_SCOPE,
-        authorized_future_forcing_binding_ids: ["binding_weather", "binding_et0"],
+        authorized_future_forcing_binding_ids: ["weather_assumption_c8_replay_v1", "et0_future_assumption_c8_v1"],
         crop_stage_context: JSON.parse(fs.readFileSync(path.join(ROOT, "fixtures/mcft/water_state/replay_v1/configuration_context.json"), "utf8")),
         lease_owner: "mcft-cap05-post-closure-regression",
         lease_duration_seconds: 300,
@@ -421,11 +451,49 @@ async function main(): Promise<void> {
       "utf8",
     );
 
-    const firstOutput = run(
+    const firstProcess = cp.spawnSync(
       pnpm,
       ["-w", "exec", "tsx", "apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts", "--input", runnerInputPath],
-      { DATABASE_URL: targetUrl },
+      {
+        cwd: ROOT,
+        env: { ...process.env, DATABASE_URL: targetUrl },
+        encoding: "utf8",
+        stdio: "pipe",
+        shell: false,
+        maxBuffer: 256 * 1024 * 1024,
+      },
     );
+    const firstOutput = String(firstProcess.stdout ?? "");
+    const firstError = String(firstProcess.stderr ?? "");
+    if (firstOutput) process.stdout.write(firstOutput);
+    if (firstError) process.stderr.write(firstError);
+    if (firstProcess.status !== 0) {
+      const blockedFacts = await targetPool.query(
+        `SELECT record_json->>'type' AS object_type,
+                record_json->'payload'->'payload' AS payload,
+                record_json->'payload'->'evidence_refs' AS evidence_refs,
+                record_json->'payload'->'limitations' AS limitations
+           FROM facts
+          WHERE record_json->>'type' IN (
+                  'twin_evidence_window_v1',
+                  'twin_state_transition_v1',
+                  'twin_assimilation_update_v1',
+                  'twin_state_estimate_v1',
+                  'twin_forecast_run_v1',
+                  'twin_runtime_tick_v1',
+                  'twin_runtime_checkpoint_v1',
+                  'twin_runtime_health_v1'
+                )
+            AND record_json->'payload'->>'logical_time'=$1
+          ORDER BY record_json->>'type'`,
+        [START_LOGICAL_TIME],
+      );
+      throw new Error(
+        `FORMAL_CAP05_RUNNER_FAILED_WITH_CANONICAL_DIAGNOSTICS:${JSON.stringify(blockedFacts.rows)}
+${firstOutput}
+${firstError}`,
+      );
+    }
     const first = parseRunnerOutputV1(firstOutput);
     assert.equal(first.status, "COMPLETED");
     assert.equal(first.initial_completed_tick_count, 0);
@@ -458,7 +526,7 @@ async function main(): Promise<void> {
     assert.deepEqual(afterReplay, beforeReplay);
     ok("second formal runner process recovers terminal state with zero canonical writes or projection divergence");
 
-    assert.equal(pass, 6);
+    assert.equal(pass, 7);
     process.stdout.write(`SUMMARY ${pass} PASS / 0 FAIL\n`);
   } finally {
     await targetPool.end();

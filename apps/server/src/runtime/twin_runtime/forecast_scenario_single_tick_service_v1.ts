@@ -514,6 +514,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
         created_at: input.created_at,
         handoff: initialHandoff,
         runtime_config: runtimeConfig,
+        execution_config_payload: config,
         evidence_window: evidenceWindow,
         dynamics,
         assimilation,
@@ -559,6 +560,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
           previous_successful_forecast_ref: initialHandoff.latest_successful_forecast_ref,
           previous_tick_sequence: initialHandoff.previous_tick_sequence,
           runtime_config: runtimeConfig,
+          execution_config_payload: config,
           source_members: sources,
           forecast_payload: provisionalPayload,
         });
@@ -588,6 +590,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
           previous_successful_forecast_ref: initialHandoff.latest_successful_forecast_ref,
           previous_tick_sequence: initialHandoff.previous_tick_sequence,
           runtime_config: runtimeConfig,
+          execution_config_payload: config,
           source_members: sources,
           forecast_payload: blockedPayload,
         });
@@ -638,6 +641,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
         previous_successful_forecast_ref: initialHandoff.latest_successful_forecast_ref,
         previous_tick_sequence: initialHandoff.previous_tick_sequence,
         runtime_config: runtimeConfig,
+        execution_config_payload: config,
         source_members: sources,
         forecast_payload: provisionalMath.forecast_payload,
       });
@@ -667,6 +671,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
         previous_successful_forecast_ref: initialHandoff.latest_successful_forecast_ref,
         previous_tick_sequence: initialHandoff.previous_tick_sequence,
         runtime_config: runtimeConfig,
+        execution_config_payload: config,
         source_members: sources,
         forecast_payload: forecastMath.forecast_payload,
       });
