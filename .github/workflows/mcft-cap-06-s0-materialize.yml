@@ -56,7 +56,16 @@ jobs:
       - name: Materialize S0 from isolated PostgreSQL
         env:
           MCFT_CAP_06_S0_DESTRUCTIVE_ACCEPTANCE: "1"
-        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts 2>&1 | tee /tmp/s0-preflight.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            tail -n 120 /tmp/s0-preflight.log > /tmp/s0-preflight-tail.log
+            gh pr comment 2500 --body-file /tmp/s0-preflight-tail.log
+            exit "$rc"
+          fi
 
       - name: Restore exact permanent candidate boundary
         run: |
