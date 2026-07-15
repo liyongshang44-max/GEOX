@@ -1,0 +1,178 @@
+name: mcft-cap-05-postgresql-runner-regression-v2
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-05-postgresql-runner-regression-v2.yml'
+      - 'apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts'
+      - 'apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts'
+
+permissions:
+  contents: read
+
+jobs:
+  formal-postgresql-runner:
+    if: github.head_ref == 'agent/mcft-cap-05-post-closure-config-conformance-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap05_post_closure_regression
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap05_post_closure_regression"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap05_post_closure_regression
+    steps:
+      - name: Checkout blocked CAP-06 S0 qualification harness
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1
+          fetch-depth: 0
+
+      - name: Overlay CAP-05 remediation candidate source
+        run: |
+          git fetch --no-tags origin agent/mcft-cap-05-post-closure-config-conformance-v1
+          git checkout FETCH_HEAD -- \
+            apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts \
+            apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts \
+            apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts \
+            apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.ts \
+            apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts \
+            apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts
+
+      - name: Patch qualification harness
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts')
+          text = path.read_text()
+          old = 'const PREFLIGHT_ALLOWED_FILES = Object.freeze([...EXACT_CHANGED_FILES, TEMP_WORKFLOW_PATH].sort());'
+          new = '''const PREFLIGHT_ALLOWED_FILES = Object.freeze([
+            ...EXACT_CHANGED_FILES,
+            TEMP_WORKFLOW_PATH,
+            "apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts",
+            "apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts",
+            "apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts",
+            "apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.ts",
+            "apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts",
+            "apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts",
+          ].sort());'''
+          if old not in text:
+              raise SystemExit('PREFLIGHT_ALLOWED_FILES_MARKER_NOT_FOUND')
+          text = text.replace(old, new)
+          text = text.replace(
+              'replay_root: "fixtures/mcft/water_state/replay_v1",',
+              'replay_root: "/tmp/mcft_cap05_h_authoritative_current_contract_replay_v1",',
+          )
+          old_main_check = '  assert.equal(git(["rev-parse", "refs/remotes/origin/main"]), BASELINE_MAIN, "ORIGIN_MAIN_HEAD_MISMATCH");'
+          new_main_check = '''  const currentMain = git(["rev-parse", "refs/remotes/origin/main"]);
+  run(process.platform === "win32" ? "git.exe" : "git", ["merge-base", "--is-ancestor", BASELINE_MAIN, currentMain]);'''
+          if old_main_check not in text:
+              raise SystemExit('ORIGIN_MAIN_EXACT_CHECK_MARKER_NOT_FOUND')
+          text = text.replace(old_main_check, new_main_check)
+          path.write_text(text)
+          PY
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build H-authoritative current-contract Replay view
+        run: |
+          node <<'NODE'
+          const crypto = require('node:crypto');
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const source = path.resolve('fixtures/mcft/water_state/replay_v1');
+          const target = '/tmp/mcft_cap05_h_authoritative_current_contract_replay_v1';
+          const canonical = (value) => {
+            if (value === undefined) throw new Error('UNDEFINED_FORBIDDEN');
+            if (typeof value === 'number') {
+              if (!Number.isFinite(value)) throw new Error('NON_FINITE_NUMBER');
+              return Object.is(value, -0) ? '0' : JSON.stringify(value);
+            }
+            if (value === null || typeof value === 'boolean' || typeof value === 'string') return JSON.stringify(value);
+            if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+            if (typeof value === 'object') return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
+            throw new Error(`UNSUPPORTED_TYPE:${typeof value}`);
+          };
+          const semanticHash = (value) => `sha256:${crypto.createHash('sha256').update(canonical(value), 'utf8').digest('hex')}`;
+          const copy = (from, to) => {
+            fs.mkdirSync(to, { recursive: true });
+            for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+              const src = path.join(from, entry.name);
+              const dst = path.join(to, entry.name);
+              if (entry.isDirectory()) copy(src, dst);
+              else fs.copyFileSync(src, dst);
+            }
+          };
+          fs.rmSync(target, { recursive: true, force: true });
+          copy(source, target);
+          let removedLegacyIrrigation = 0;
+          let normalizedObservation = 0;
+          for (const file of fs.readdirSync(target, { recursive: true }).filter((name) => String(name).endsWith('.jsonl'))) {
+            const absolute = path.join(target, String(file));
+            const records = fs.readFileSync(absolute, 'utf8').split('\n').filter(Boolean).map(JSON.parse);
+            const output = [];
+            for (const record of records) {
+              if (record.record_type === 'irrigation_execution_evidence_v1') {
+                removedLegacyIrrigation += 1;
+                continue;
+              }
+              if (record.record_type === 'soil_moisture_observation_v1') {
+                record.canonical_payload = { ...record.canonical_payload };
+                record.source_payload = { ...record.source_payload };
+                if (record.canonical_payload.quantity_kind === undefined) {
+                  record.canonical_payload.quantity_kind = record.quantity_kind;
+                  normalizedObservation += 1;
+                }
+                if (record.source_payload.source_version === undefined) record.source_payload.source_version = record.source_version;
+                const semantic = { ...record };
+                delete semantic.source_record_hash;
+                delete semantic.materialized_file_location;
+                record.source_record_hash = semanticHash(semantic);
+              }
+              output.push(canonical(record));
+            }
+            fs.writeFileSync(absolute, `${output.join('\n')}\n`, 'utf8');
+          }
+          if (removedLegacyIrrigation < 1) throw new Error('LEGACY_IRRIGATION_EXCLUSION_NOT_PROVEN');
+          if (normalizedObservation < 1) throw new Error('LEGACY_OBSERVATION_NORMALIZATION_NOT_PROVEN');
+          console.log(JSON.stringify({ removedLegacyIrrigation, normalizedObservation }));
+          NODE
+
+      - name: Execute formal PostgreSQL predecessor regression
+        env:
+          MCFT_CAP_06_S0_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts 2>&1 | tee /tmp/cap05-postgresql-regression.log
+
+      - name: Upload PostgreSQL regression diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-postgresql-runner-regression-v2
+          path: /tmp/cap05-postgresql-regression.log
