@@ -1,0 +1,90 @@
+name: mcft-cap-05-apply-source-patch
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-05-apply-source-patch.yml'
+      - 'scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-prove:
+    if: github.head_ref == 'agent/mcft-cap-05-post-closure-config-conformance-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox_acceptance
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5433/geox_acceptance
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Apply remaining builder seam
+        run: python scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Execution-view acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_EXECUTION_CONFIG_RESOLUTION.ts
+
+      - name: Governance gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION.cjs
+
+      - name: Formal PostgreSQL runner regression
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts
+
+      - name: Commit proven source
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A -- \
+            apps/server/src/runtime/twin_runtime/forecast_scenario_state_source_builder_v1.ts \
+            apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts \
+            apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts \
+            scripts/acceptance/run_acceptance.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts \
+            scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py
+          git add -f -- \
+            apps/server/src/runtime/twin_runtime/forecast_scenario_state_source_builder_v1.ts \
+            apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts \
+            apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts
+          if git diff --cached --quiet; then
+            echo 'No source patch required'
+            exit 0
+          fi
+          git commit -m 'MCFT-CAP-05: separate builder execution payload from canonical Config'
+          git push origin HEAD:${{ github.head_ref }}
