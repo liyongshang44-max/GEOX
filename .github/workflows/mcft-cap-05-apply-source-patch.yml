@@ -70,7 +70,16 @@ jobs:
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_EXECUTION_CONFIG_RESOLUTION.ts
 
       - name: Governance gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION.cjs
+        run: |
+          set -o pipefail
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_RUNTIME_CONFORMANCE_REMEDIATION.cjs 2>&1 | tee /tmp/cap05-governance-gate.log
+
+      - name: Upload governance gate diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-governance-gate-diagnostics
+          path: /tmp/cap05-governance-gate.log
 
       - name: Formal PostgreSQL runner regression
         run: |
