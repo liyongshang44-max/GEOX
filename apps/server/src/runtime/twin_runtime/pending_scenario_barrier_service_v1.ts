@@ -2,7 +2,7 @@
 // Purpose: enforce the CAP-04 pending-Scenario recovery barrier before every genuinely new Replay tick, using the immediately previous checkpoint Forecast as the sole authority and never reselecting Future Forcing Evidence.
 // Boundary: previous-Forecast B recovery plus delegation to one existing single-tick service only; no range loop, route, scheduler, current-tick Evidence selection, recommendation, decision, action, calibration, model activation, or live-field claim.
 
-import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import { validateCanonicalObjectV1, type CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import {
   validateCap04CanonicalForecastRunPayloadV1,
   type Cap04CanonicalCompletedForecastRunPayloadV1,
@@ -15,7 +15,11 @@ import {
   type Cap04Pure72hForecastMathResultV1,
 } from "../../domain/twin_runtime/forecast_math_contracts_v1.js";
 import { executeCap04PureThreeScenarioMathV1 } from "../../domain/twin_runtime/pure_three_scenario_math_v1.js";
-import { validateCap04RuntimeConfigPayloadV1, type Cap04RuntimeConfigPayloadV1 } from "../../domain/twin_runtime/forecast_scenario_runtime_config_v1.js";
+import type { Cap04RuntimeConfigPayloadV1 } from "../../domain/twin_runtime/forecast_scenario_runtime_config_v1.js";
+import {
+  DirectCap04ExecutionConfigResolverV1,
+  type Cap04ExecutionConfigResolverPortV1,
+} from "../../domain/twin_runtime/runtime_config_execution_view_v1.js";
 import { buildCap04ScenarioSetRecordV1 } from "./scenario_set_record_builder_v1.js";
 import {
   Cap04ForecastScenarioSingleTickServiceV1,
@@ -64,6 +68,7 @@ export class Cap04PendingScenarioBarrierSingleTickServiceV1 {
     private readonly runtimeConfigRepository: RuntimeConfigRepositoryPortV1,
     private readonly persistence: Cap04SingleTickPersistencePortV1,
     private readonly inner: Cap04ForecastScenarioSingleTickServiceV1,
+    private readonly executionConfigResolver: Cap04ExecutionConfigResolverPortV1 = new DirectCap04ExecutionConfigResolverV1(),
   ) {}
 
   private async recoverPreviousPendingScenarioV1(input: ExecuteCap04SingleTickInputV1): Promise<boolean> {
@@ -80,11 +85,16 @@ export class Cap04PendingScenarioBarrierSingleTickServiceV1 {
     const runtimeConfigHash = requiredStringV1(canonical.payload.runtime_config_hash, "CAP04_PENDING_B_RUNTIME_CONFIG_HASH_REQUIRED");
     const runtimeConfig = await this.runtimeConfigRepository.readRuntimeConfig(runtimeConfigRef);
     if (!runtimeConfig) throw new Error("CAP04_PENDING_B_RUNTIME_CONFIG_NOT_FOUND");
+    validateCanonicalObjectV1(runtimeConfig);
     if (runtimeConfig.object_id !== runtimeConfigRef || runtimeConfig.determinism_hash !== runtimeConfigHash) {
       throw new Error("CAP04_PENDING_B_RUNTIME_CONFIG_PIN_MISMATCH");
     }
-    validateCap04RuntimeConfigPayloadV1(runtimeConfig.payload);
-    const config = runtimeConfig.payload as unknown as Cap04RuntimeConfigPayloadV1;
+    const resolvedConfig = this.executionConfigResolver.resolveExecutionConfig(runtimeConfig);
+    if (resolvedConfig.source_config_ref !== runtimeConfig.object_id
+      || resolvedConfig.source_config_hash !== runtimeConfig.determinism_hash) {
+      throw new Error("CAP04_PENDING_B_EXECUTION_CONFIG_SOURCE_PIN_MISMATCH");
+    }
+    const config = resolvedConfig.payload as Cap04RuntimeConfigPayloadV1;
     const scenarioMath = executeCap04PureThreeScenarioMathV1({
       source_forecast: {
         ref: pendingForecast.object_id,

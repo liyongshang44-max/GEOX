@@ -16,7 +16,7 @@ import {
   normalizeFixedDecimalV1,
   WATER_AMOUNT_SCALE_V1,
 } from "../../domain/soil_water/fixed_point_water_decimal_v1.js";
-import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import { validateCanonicalObjectV1, type CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import {
   validateCap04CanonicalForecastRunPayloadV1,
   type Cap04CanonicalCompletedForecastRunPayloadV1,
@@ -35,10 +35,12 @@ import {
   validateCap04ARecordSetV1,
   validateCap04ScenarioSetRecordV1,
 } from "../../domain/twin_runtime/forecast_scenario_record_set_validator_v1.js";
+import type { Cap04RuntimeConfigPayloadV1 } from "../../domain/twin_runtime/forecast_scenario_runtime_config_v1.js";
 import {
-  validateCap04RuntimeConfigPayloadV1,
-  type Cap04RuntimeConfigPayloadV1,
-} from "../../domain/twin_runtime/forecast_scenario_runtime_config_v1.js";
+  DirectCap04ExecutionConfigResolverV1,
+  type Cap04ExecutionConfigResolverPortV1,
+  type ResolvedCap04ExecutionConfigV1,
+} from "../../domain/twin_runtime/runtime_config_execution_view_v1.js";
 import {
   executeCap04Pure72hForecastMathV1,
   type Cap04Pure72hForecastMathInputV1,
@@ -219,22 +221,34 @@ function computationBasisV1(state: CanonicalObjectEnvelopeV1): {
   };
 }
 
-function assertConfigV1(input: {
+function assertCanonicalConfigEnvelopeV1(input: {
   config: CanonicalObjectEnvelopeV1;
   expected_ref: string;
   expected_hash: string;
   scope: TwinScopeKeyV1;
+}): void {
+  validateCanonicalObjectV1(input.config);
+  if (input.config.object_id !== input.expected_ref) throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_REF_PIN_MISMATCH");
+  if (input.config.determinism_hash !== input.expected_hash) throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_HASH_PIN_MISMATCH");
+  if (input.config.object_type !== "twin_runtime_config_v1") throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_OBJECT_TYPE_REQUIRED");
+  exactScopeV1(input.config, input.scope, "CAP04_SINGLE_TICK_RUNTIME_CONFIG_SCOPE_MISMATCH");
+}
+
+function assertResolvedConfigV1(input: {
+  canonical_config: CanonicalObjectEnvelopeV1;
+  resolved: ResolvedCap04ExecutionConfigV1;
   logical_time: string;
   handoff: PreparedNextTickInputV1;
   crop_stage_context: ContinuationCropStageConfigurationContextV1;
   require_parent_match: boolean;
 }): Cap04RuntimeConfigPayloadV1 {
-  if (input.config.object_id !== input.expected_ref) throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_REF_PIN_MISMATCH");
-  if (input.config.determinism_hash !== input.expected_hash) throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_HASH_PIN_MISMATCH");
-  if (input.config.object_type !== "twin_runtime_config_v1") throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_OBJECT_TYPE_REQUIRED");
-  exactScopeV1(input.config, input.scope, "CAP04_SINGLE_TICK_RUNTIME_CONFIG_SCOPE_MISMATCH");
-  validateCap04RuntimeConfigPayloadV1(input.config.payload);
-  const payload = input.config.payload as unknown as Cap04RuntimeConfigPayloadV1;
+  if (input.resolved.source_config_ref !== input.canonical_config.object_id) {
+    throw new Error("CAP04_SINGLE_TICK_EXECUTION_CONFIG_SOURCE_REF_MISMATCH");
+  }
+  if (input.resolved.source_config_hash !== input.canonical_config.determinism_hash) {
+    throw new Error("CAP04_SINGLE_TICK_EXECUTION_CONFIG_SOURCE_HASH_MISMATCH");
+  }
+  const payload = input.resolved.payload;
   if (payload.effective_logical_time !== input.logical_time) throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_EFFECTIVE_TIME_MISMATCH");
   if (input.require_parent_match
     && (payload.parent_runtime_config_ref !== input.handoff.previous_state_runtime_config_ref
@@ -316,6 +330,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
     private readonly evidenceSource: ReplayEvidenceSourcePortV1,
     private readonly runtimeConfigRepository: RuntimeConfigRepositoryPortV1,
     private readonly persistence: Cap04SingleTickPersistencePortV1,
+    private readonly executionConfigResolver: Cap04ExecutionConfigResolverPortV1 = new DirectCap04ExecutionConfigResolverV1(),
   ) {}
 
   private async persistAndReadARecordSetV1(
@@ -435,11 +450,16 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
 
     const runtimeConfig = await this.runtimeConfigRepository.readRuntimeConfig(runtimeConfigRef);
     if (!runtimeConfig) throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_NOT_FOUND");
-    const config = assertConfigV1({
+    assertCanonicalConfigEnvelopeV1({
       config: runtimeConfig,
       expected_ref: runtimeConfigRef,
       expected_hash: runtimeConfigHash,
       scope: input.scope,
+    });
+    const resolvedConfig = this.executionConfigResolver.resolveExecutionConfig(runtimeConfig);
+    const config = assertResolvedConfigV1({
+      canonical_config: runtimeConfig,
+      resolved: resolvedConfig,
       logical_time: logicalTime,
       handoff: aRecordSet ? await this.handoffService.prepareNextTickInput(input.scope) : initialHandoff,
       crop_stage_context: input.crop_stage_context,

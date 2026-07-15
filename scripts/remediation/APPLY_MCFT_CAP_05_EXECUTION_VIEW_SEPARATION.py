@@ -9,7 +9,7 @@ import subprocess
 def replace_once(path_text: str, old: str, new: str) -> None:
     path = Path(path_text)
     text = path.read_text()
-    if new in text:
+    if new and new in text:
         return
     if old not in text:
         raise SystemExit(f"PATCH_MARKER_NOT_FOUND:{path_text}")

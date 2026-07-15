@@ -1,6 +1,6 @@
 // apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts
 // Purpose: load deterministic MCFT-CAP-01 Canonical Replay records for one explicit logical tick, verify every source-record semantic hash, and enrich each record with its frozen source-binding unit and conversion metadata.
-// Boundary: filesystem adapter only; no Evidence selection, State mathematics, Runtime orchestration, database access, wall-clock reads, canonical writes, or source-record identity mutation.
+// Boundary: filesystem adapter only; no Evidence selection, State mathematics, Runtime orchestration, database access, wall-clock reads, or canonical writes.
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -10,15 +10,8 @@ import type { CanonicalReplayEvidenceRecordV1, ReplayEvidenceSourcePortV1, TwinS
 const DAILY_DIRECTORIES_V1 = ["soil_moisture", "rainfall", "historical_et0", "future_weather", "future_et0"] as const;
 const GLOBAL_FILES_V1 = ["irrigation_plan/plans.jsonl", "irrigation_execution/executions.jsonl"] as const;
 
-export const LEGACY_REPLAY_OBSERVATION_SHAPE_ADAPTER_ID_V1 =
-  "MCFT_LEGACY_REPLAY_OBSERVATION_SHAPE_TO_CURRENT_SELECTOR_V1" as const;
-
-export const SOURCE_BINDING_CONVERSION_RULE_VIEW_ADAPTER_ID_V1 =
-  "MCFT_SOURCE_BINDING_CONVERSION_RULE_VERSION_VIEW_V1" as const;
-
 type SourceBindingV1 = {
   binding_id: string;
-  binding_version?: string | number;
   source_unit: string;
   canonical_unit: string;
   conversion_rule: Record<string, unknown>;
@@ -63,59 +56,6 @@ function validateReplayRecordV1(value: unknown): Omit<CanonicalReplayEvidenceRec
   return record as unknown as Omit<CanonicalReplayEvidenceRecordV1, "source_unit" | "canonical_unit" | "conversion_rule">;
 }
 
-function adaptVerifiedLegacyObservationShapeV1(
-  verifiedRecord: Omit<CanonicalReplayEvidenceRecordV1, "source_unit" | "canonical_unit" | "conversion_rule">,
-): Omit<CanonicalReplayEvidenceRecordV1, "source_unit" | "canonical_unit" | "conversion_rule"> {
-  if (verifiedRecord.record_type !== "soil_moisture_observation_v1") return verifiedRecord;
-  const raw = verifiedRecord as unknown as Record<string, unknown>;
-  const canonicalPayload = structuredClone(verifiedRecord.canonical_payload) as Record<string, unknown>;
-  const sourcePayload = structuredClone(verifiedRecord.source_payload) as Record<string, unknown>;
-  const topLevelQuantityKind = raw.quantity_kind;
-  const topLevelSourceVersion = raw.source_version;
-
-  if (canonicalPayload.quantity_kind !== undefined
-    && topLevelQuantityKind !== undefined
-    && canonicalPayload.quantity_kind !== topLevelQuantityKind) {
-    throw new Error(`LEGACY_REPLAY_QUANTITY_KIND_CONFLICT:${verifiedRecord.source_record_id}`);
-  }
-  if (sourcePayload.source_version !== undefined
-    && topLevelSourceVersion !== undefined
-    && sourcePayload.source_version !== topLevelSourceVersion) {
-    throw new Error(`LEGACY_REPLAY_SOURCE_VERSION_CONFLICT:${verifiedRecord.source_record_id}`);
-  }
-  if (canonicalPayload.quantity_kind === undefined) {
-    assertStringV1(topLevelQuantityKind, `LEGACY_REPLAY_QUANTITY_KIND_REQUIRED:${verifiedRecord.source_record_id}`);
-    canonicalPayload.quantity_kind = topLevelQuantityKind;
-  }
-  if (sourcePayload.source_version === undefined) {
-    assertStringV1(topLevelSourceVersion, `LEGACY_REPLAY_SOURCE_VERSION_REQUIRED:${verifiedRecord.source_record_id}`);
-    sourcePayload.source_version = topLevelSourceVersion;
-  }
-
-  return {
-    ...verifiedRecord,
-    canonical_payload: canonicalPayload,
-    source_payload: sourcePayload,
-    limitations: [
-      ...verifiedRecord.limitations,
-      LEGACY_REPLAY_OBSERVATION_SHAPE_ADAPTER_ID_V1,
-    ],
-  };
-}
-
-function conversionRuleViewV1(binding: SourceBindingV1): Record<string, unknown> {
-  const view = structuredClone(binding.conversion_rule);
-  assertStringV1(view.id, `CONVERSION_RULE_ID_REQUIRED:${binding.binding_id}`);
-  const versionAuthority = view.version ?? binding.binding_version ?? 1;
-  if ((typeof versionAuthority !== "string" && typeof versionAuthority !== "number")
-    || String(versionAuthority).length === 0) {
-    throw new Error(`CONVERSION_RULE_VERSION_INVALID:${binding.binding_id}`);
-  }
-  view.version = String(versionAuthority);
-  view.runtime_view_adapter_id = SOURCE_BINDING_CONVERSION_RULE_VIEW_ADAPTER_ID_V1;
-  return view;
-}
-
 async function readJsonlV1(filePath: string): Promise<Array<Omit<CanonicalReplayEvidenceRecordV1, "source_unit" | "canonical_unit" | "conversion_rule">>> {
   let text: string;
   try {
@@ -127,8 +67,7 @@ async function readJsonlV1(filePath: string): Promise<Array<Omit<CanonicalReplay
   if (!text.endsWith("\n")) throw new Error(`JSONL_TRAILING_NEWLINE_REQUIRED:${filePath}`);
   return text.split("\n").filter(Boolean).map((line, index) => {
     try {
-      const verified = validateReplayRecordV1(JSON.parse(line));
-      return adaptVerifiedLegacyObservationShapeV1(verified);
+      return validateReplayRecordV1(JSON.parse(line));
     } catch (error) {
       throw new Error(`INVALID_REPLAY_JSONL_RECORD:${filePath}:${index + 1}:${(error as Error).message}`);
     }
@@ -184,7 +123,7 @@ export class CanonicalReplayFileSourceV1 implements ReplayEvidenceSourcePortV1 {
         ...record,
         source_unit: binding.source_unit,
         canonical_unit: binding.canonical_unit,
-        conversion_rule: conversionRuleViewV1(binding),
+        conversion_rule: structuredClone(binding.conversion_rule),
       } as CanonicalReplayEvidenceRecordV1;
     }).filter((record) => sameScopeV1(record, input.scope)).sort((a, b) => a.source_record_id.localeCompare(b.source_record_id));
   }
