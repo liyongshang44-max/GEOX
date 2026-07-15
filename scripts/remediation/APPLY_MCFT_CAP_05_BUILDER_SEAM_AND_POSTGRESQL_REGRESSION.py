@@ -216,3 +216,33 @@ postgresql_text, standard_feedback_count = standard_feedback_pattern.subn(
 if standard_feedback_count != 1:
     raise SystemExit(f"STANDARD_FEEDBACK_FUNCTION_REPLACEMENT_COUNT_MISMATCH:{standard_feedback_count}")
 Path(postgresql_acceptance).write_text(postgresql_text)
+
+replace_once(
+    postgresql_acceptance,
+    '''    await establishStandardFeedbackPathV1(targetPool);
+    ok("checkpoint 72 plus canonical G, one approved Plan binding and one State-eligible H are reproduced");''',
+    '''    await establishStandardFeedbackPathV1(targetPool);
+    ok("checkpoint 72 plus canonical G, one approved Plan binding and one State-eligible H are reproduced");
+
+    const expiredPredecessorLease = await targetPool.query(
+      `UPDATE twin_runtime_lease_v1
+          SET expires_at=transaction_timestamp()-interval '1 second'
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3
+          AND field_id=$4 AND season_id=$5 AND zone_id=$6`,
+      [
+        EXPECTED_SCOPE.tenant_id,
+        EXPECTED_SCOPE.project_id,
+        EXPECTED_SCOPE.group_id,
+        EXPECTED_SCOPE.field_id,
+        EXPECTED_SCOPE.season_id,
+        EXPECTED_SCOPE.zone_id,
+      ],
+    );
+    assert.equal(expiredPredecessorLease.rowCount, 1, "PREDECESSOR_LEASE_CARDINALITY");
+    ok("expired predecessor lease permits fenced owner takeover without weakening mutual exclusion");''',
+)
+replace_once(
+    postgresql_acceptance,
+    "    assert.equal(pass, 6);",
+    "    assert.equal(pass, 7);",
+)
