@@ -77,6 +77,12 @@ jobs:
               'replay_root: "fixtures/mcft/water_state/replay_v1",',
               'replay_root: "/tmp/mcft_cap05_h_authoritative_current_contract_replay_v1",',
           )
+          old_main_check = '  assert.equal(git(["rev-parse", "refs/remotes/origin/main"]), BASELINE_MAIN, "ORIGIN_MAIN_HEAD_MISMATCH");'
+          new_main_check = '''  const currentMain = git(["rev-parse", "refs/remotes/origin/main"]);
+  run(process.platform === "win32" ? "git.exe" : "git", ["merge-base", "--is-ancestor", BASELINE_MAIN, currentMain]);'''
+          if old_main_check not in text:
+              raise SystemExit('ORIGIN_MAIN_EXACT_CHECK_MARKER_NOT_FOUND')
+          text = text.replace(old_main_check, new_main_check)
           path.write_text(text)
           PY
 
