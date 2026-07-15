@@ -29,7 +29,7 @@ design_status:
 DESIGN_FROZEN
 
 implementation_status:
-S11_AUTHORIZED_NOT_STARTED
+S11_CLOSURE_CANDIDATE
 
 authorization_effective:
 true
@@ -47,7 +47,7 @@ first_permitted_repository_action:
 MCFT-CAP-05.CLOSURE-AND-FINALIZATION-V1
 ```
 
-P-1 至 S10 已按各自 lifecycle 形成 merged-effective 事实。当前活动切片为 S11 Closure / Finalization；仅授权治理结算实现，不执行能力关闭、不激活完成声明，仍不授权 CAP-06、校准、模型激活、自动建议或连续 Runtime。
+P-1 至 S10 已按各自 lifecycle 形成 merged-effective 事实。S11A Closure Candidate 已开始：关闭记录、Main Verification 与 40 项完成声明集合已物化，但完成声明仍全部 pending；只有 exact-head CI、merge、树等价与 merged-main Finalization Gate 全部成立后，才允许进入最终 effectiveness。
 
 ## P-1 adjudication merged-effective result
 
@@ -4303,3 +4303,42 @@ Governance effect:
 - preserve CAP-06 as unauthorized;
 - add no Runtime source, canonical object, transaction family, migration, route, web, scheduler, calibration or model-activation change.
 <!-- MCFT-CAP-05-S10-SETTLEMENT-END -->
+
+
+---
+
+## S11A Closure Candidate — Pending Finalization Effectiveness
+
+```text
+baseline_main_commit:
+b1248216462eb31cfcf3c75633cc2e53a15520e4
+
+closure_candidate_PR:
+2488
+
+implementation_status:
+S11_CLOSURE_CANDIDATE
+
+closure_effective:
+false
+
+capability_complete:
+false
+
+pending_completion_claim_count:
+40
+
+effective_completion_claim_count:
+0
+
+active_delivery_slice_id:
+MCFT-CAP-05.CLOSURE-AND-FINALIZATION-V1
+
+runtime_source_authorized:
+false
+
+CAP_06_authorized:
+false
+```
+
+S11A 只建立 closure candidate，不激活完成声明。S11B 必须完成 exact-head CI、merge、head-to-merge tree equivalence 与 merged-main Finalization Gate；若 merge/postmerge 证据必须写回仓库，则执行 S11C reconciliation。
