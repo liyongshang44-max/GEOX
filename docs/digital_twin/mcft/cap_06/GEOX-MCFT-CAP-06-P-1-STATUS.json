@@ -1,0 +1,81 @@
+{
+  "schema_version": "geox_mcft_cap_06_p_minus_1_status_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "delivery_slice_id": "MCFT-CAP-06.P-1.DT02-CALIBRATION-SHADOW-ADJUDICATION-V1",
+  "status": "ADJUDICATION_CANDIDATE",
+  "implementation_status": "GOVERNANCE_CANDIDATE",
+  "verified_main_at_candidate_start": "9c4030e43d3b65857cf40d7936d5dfa8e80c17d1",
+  "outcome": "REUSE_WITHOUT_AMENDMENT_CONFIG_OBJECT_NOT_REQUIRED",
+  "architecture_amendment_required": false,
+  "p_minus_1a_required": false,
+  "runtime_source_authorized": false,
+  "migration_authorized_in_this_slice": false,
+  "canonical_write_authorized": false,
+  "model_activation_authorized": false,
+  "object_adjudication": {
+    "twin_calibration_candidate_v1": "REUSE_WITHOUT_AMENDMENT",
+    "twin_shadow_evaluation_v1": "REUSE_WITHOUT_AMENDMENT",
+    "twin_model_activation_v1": "EXPLICITLY_EXCLUDED"
+  },
+  "transaction_adjudication": {
+    "transaction_id": "D_MODEL_GOVERNANCE_STEP_COMMIT",
+    "status": "REUSE_WITHOUT_AMENDMENT",
+    "exactly_one_object_type_per_transition": true,
+    "active_config_cas_allowed": false
+  },
+  "context_adjudication": {
+    "candidate_context_refs": "DIRECT_REQUIRED_BY_CAP_06_PROFILE",
+    "evaluation_context_refs": "DIRECT_CONTEXT_REFS_ALLOWED",
+    "context_lineage_identity_kind": "SEMANTIC_LINEAGE_ID",
+    "context_revision_identity_kind": "SEMANTIC_REVISION_ID",
+    "active_lineage_object_ref_substitution_forbidden": true
+  },
+  "config_adjudication": {
+    "config_authority_mode": "EXPLICIT_REPLAY_PIN",
+    "base_config_ref_nullable": false,
+    "candidate_envelope_runtime_config": "SELECTED_BASE_CONFIG",
+    "evaluation_envelope_runtime_config": "CANDIDATE_BASE_CONFIG",
+    "calibration_governance_config_object_required": false,
+    "conditional_s4_execution": "OMITTED"
+  },
+  "envelope_mapping": {
+    "candidate_source_refs": "ORDERED_RESIDUAL_REFS_PLUS_BASE_CONFIG_REF",
+    "candidate_evidence_refs": "ORDERED_UNIQUE_ACTUAL_OBSERVATION_EVIDENCE_REFS",
+    "evaluation_source_refs": "CANDIDATE_REF_PLUS_ORDERED_HOLDOUT_RESIDUAL_REFS",
+    "evaluation_evidence_refs": "ORDERED_UNIQUE_HOLDOUT_OBSERVATION_EVIDENCE_REFS",
+    "residual_refs_are_evidence_refs": false
+  },
+  "forecast_evidence_cutoff_graph": {
+    "status": "RESOLVABLE_WITHOUT_AMENDMENT",
+    "path": [
+      "twin_forecast_run_v1.payload.source_posterior_ref",
+      "twin_state_estimate_v1.payload.evidence_window_ref",
+      "twin_evidence_window_v1"
+    ],
+    "created_at_authority": false
+  },
+  "persistence_adjudication": {
+    "s3_migration_count": 1,
+    "migration_kind": "ADDITIVE_REBUILDABLE_PROJECTION_AND_IDEMPOTENCY_SUPPORT_ONLY",
+    "public_facts_remains_sole_canonical_store": true,
+    "active_config_index_creation_forbidden": true
+  },
+  "failed_attempt_persistence": {
+    "mode": "MODE_A_NO_PERSISTENT_ATTEMPT_OBJECT",
+    "failed_d_canonical_append_delta": 0,
+    "operational_f_append_delta": 0
+  },
+  "candidate_to_evaluation_cardinality": {
+    "cardinality": "ONE_TO_ZERO_OR_MANY",
+    "candidate_ref_alone_unique": false
+  },
+  "historical_assets": {
+    "p37_p44": "REFERENCE_ONLY_NO_CANONICAL_AUTHORITY"
+  },
+  "effectiveness": {
+    "effective": false,
+    "condition": "P_MINUS_1_PR_MERGED_AND_MERGED_MAIN_P_MINUS_1_GATE_PASS",
+    "p0_authorized_before_effectiveness": false,
+    "next_repository_action_after_effectiveness": "MCFT-CAP-06.P0.CAP-05-TERMINAL-SSOT-RECONCILIATION-AND-PROVISIONAL-SSOT-V1"
+  }
+}
