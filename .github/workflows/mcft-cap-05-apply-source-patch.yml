@@ -1,3 +1,4 @@
+# Proof revision: rerun after governance assertion-count correction.
 name: mcft-cap-05-apply-source-patch
 
 on:
