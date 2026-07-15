@@ -1,0 +1,39 @@
+name: mcft-cap-05-source-patch-artifact
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-source-artifact:
+    if: github.head_ref == 'agent/mcft-cap-05-post-closure-config-conformance-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout remediation branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Generate exact source files
+        run: python scripts/remediation/APPLY_MCFT_CAP_05_EXECUTION_VIEW_SEPARATION.py
+
+      - name: Verify generated patch
+        run: |
+          git diff --check
+          test -n "$(git status --short)"
+
+      - name: Upload generated source files
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-execution-view-separated-sources
+          path: |
+            apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts
+            apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts
+            apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts
+            apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts
+            apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.ts
+            apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts
+            apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.ts
