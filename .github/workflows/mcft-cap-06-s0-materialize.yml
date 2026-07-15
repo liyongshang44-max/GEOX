@@ -1,0 +1,82 @@
+name: mcft-cap-06-s0-materialize
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  materialize-s0:
+    if: github.head_ref == 'agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap06_s0_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap06_s0_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap06_s0_acceptance
+    steps:
+      - name: Checkout S0 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1
+          fetch-depth: 0
+
+      - name: Refresh frozen main ref
+        run: |
+          git fetch --no-tags --quiet origin main:refs/remotes/origin/main
+          test "$(git rev-parse refs/remotes/origin/main)" = "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Materialize S0 from isolated PostgreSQL
+        env:
+          MCFT_CAP_06_S0_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts
+
+      - name: Restore exact permanent candidate boundary
+        run: |
+          rm .github/workflows/mcft-cap-06-s0-materialize.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "MCFT-CAP-06 S0: materialize authorization and predecessor qualification"
+
+      - name: Verify S0 authorization Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs
+
+      - name: Repository typecheck
+        run: pnpm -r typecheck
+
+      - name: Repository build
+        run: pnpm -r build
+
+      - name: Server selfcheck
+        run: pnpm --filter @geox/server test:p1:selfcheck
+
+      - name: Push materialized candidate
+        run: git push origin HEAD:agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1
