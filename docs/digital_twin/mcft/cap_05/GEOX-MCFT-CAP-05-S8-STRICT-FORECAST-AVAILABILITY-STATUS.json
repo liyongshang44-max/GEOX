@@ -1,0 +1,65 @@
+{
+  "schema_version": "geox_mcft_cap_05_s8_strict_forecast_availability_status_v1",
+  "capability_line_id": "MCFT-CAP-05",
+  "delivery_slice_id": "MCFT-CAP-05.MCFT-07-11.FORECAST-OBSERVATION-RESIDUAL-C-COMMIT-V1",
+  "hardening_id": "MCFT-CAP-05.S8.STRICT-FORECAST-AVAILABILITY-V1",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "baseline_main_commit": "0610ed542067e699b7dd9828199661f12e1cdbde",
+  "baseline_runtime_pr_number": 2473,
+  "baseline_runtime_exact_head": "172ee2ac2e306b7e04f2db7d05a3163f881b490a",
+  "baseline_runtime_workflow": 29360620207,
+  "baseline_runtime_gate": "81_PASS_0_FAIL",
+  "trigger": {
+    "kind": "HINDSIGHT_BOUNDARY_PRECISION",
+    "observed_behavior": "FORECAST_CREATED_AT_EQUAL_TO_OBSERVATION_AVAILABLE_TO_RUNTIME_AT_WAS_ELIGIBLE",
+    "required_behavior": "FORECAST_CREATED_AT_MUST_BE_STRICTLY_BEFORE_OBSERVATION_AVAILABLE_TO_RUNTIME_AT",
+    "runtime_failure": false,
+    "probe_orchestration_failure": true
+  },
+  "selector_contract": {
+    "comparison": "forecast.created_at < observation.available_to_runtime_at",
+    "equal_timestamp_disposition": "EXCLUDED_NOT_AVAILABLE_BEFORE_OBSERVATION",
+    "equal_timestamp_reason_code": "FORECAST_NOT_AVAILABLE_BEFORE_OBSERVATION",
+    "hindsight_or_backfill_acceptance": false
+  },
+  "acceptance": {
+    "equal_timestamp_negative_test_required": true,
+    "target_in_memory_pass_count": 16,
+    "required_fail_count": 0,
+    "historical_remediation_static_gate_is_superseded": true,
+    "historical_s8_runtime_static_gate_is_superseded_after_this_candidate": true,
+    "runtime_and_database_regressions_remain_required": true
+  },
+  "orchestration": {
+    "generic_acceptance_wrapper_remains_generic": true,
+    "historical_static_candidate_boundaries_are_not_reasserted_after_lifecycle_frontier_advances": true,
+    "historical_runtime_behavior_and_database_regressions_remain_active": true
+  },
+  "preserved_nonclaims": [
+    "NO_NEW_CANONICAL_OBJECT_TYPE",
+    "NO_NEW_TRANSACTION_FAMILY",
+    "NO_MIGRATION",
+    "NO_PUBLIC_ROUTE",
+    "NO_WEB",
+    "NO_RANGE_LOOP",
+    "NO_RESTART_OR_BACKFILL_MODE",
+    "NO_AUTOMATIC_LATE_HISTORY_REWRITE",
+    "NO_CAUSAL_EFFECT_ATTRIBUTION",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_MODEL_PARAMETER_UPDATE",
+    "NO_MODEL_ACTIVATION",
+    "NO_RECOMMENDATION",
+    "NO_AO_ACT_CHANGE",
+    "NO_SUCCESSOR_SLICE_AUTHORIZATION",
+    "NO_CAP_06_AUTHORIZATION",
+    "NO_S8_EFFECTIVENESS_CLAIM",
+    "NO_GLOBAL_SSOT_SETTLEMENT"
+  ],
+  "exact_changed_file_boundary": [
+    "apps/server/src/runtime/twin_runtime/historical_forecast_residual_selector_v1.ts",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-STRICT-FORECAST-AVAILABILITY-STATUS.json",
+    "scripts/dev/assert_local_pnpm_runtime.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_STRICT_FORECAST_AVAILABILITY.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FORECAST_RESIDUAL_OUTCOME_TICK.ts"
+  ]
+}
