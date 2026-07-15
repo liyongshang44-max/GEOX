@@ -239,9 +239,11 @@ runRuntimeDoctor();
 
 const activationGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs');
 const s7SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_SETTLEMENT.cjs');
+const s8SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_SETTLEMENT.cjs');
 const s8RuntimeStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-STATUS.json');
 const strictForecastAvailabilityStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-STRICT-FORECAST-AVAILABILITY-STATUS.json');
 const settlementActive = fs.existsSync(s7SettlementGatePath);
+const s8SettlementActive = fs.existsSync(s8SettlementGatePath);
 const s8RuntimeActive = fs.existsSync(s8RuntimeStatusPath);
 const strictForecastAvailabilityActive = fs.existsSync(strictForecastAvailabilityStatusPath);
 
@@ -256,8 +258,10 @@ runS6RemediationAcceptance();
 // MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK_GATE_V1: always rerun S7 Runtime behavior; the historical static gate is superseded once S7 settlement exists.
 runS7RuntimeAcceptance({ runHistoricalGovernance: !settlementActive });
 
-// MCFT_CAP_05_S7_SSOT_SETTLEMENT_GATE_V1: enforce S7 merged effectiveness and explicit S8 authorization at the current lifecycle frontier.
-runGate(s7SettlementGatePath, '--auto');
+// MCFT_CAP_05_S7_SSOT_SETTLEMENT_GATE_V1: preserve the historical S7 settlement only while it remains the lifecycle frontier.
+if (!s8SettlementActive) {
+  runGate(s7SettlementGatePath, '--auto');
+}
 
 // MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION_GATE_V1: preserve the corrected contract behavior permanently, but do not reassert its historical eight-file candidate boundary after S8 Runtime materializes.
 runCap05S8ResidualContractRemediationAcceptance({ runHistoricalGovernance: !s8RuntimeActive });
@@ -265,5 +269,10 @@ runCap05S8ResidualContractRemediationAcceptance({ runHistoricalGovernance: !s8Ru
 // MCFT_CAP_05_S8_FORECAST_RESIDUAL_C_COMMIT_GATE_V1: preserve Runtime and PostgreSQL behavior permanently, but do not reassert its historical ten-file candidate boundary after strict-availability hardening materializes.
 runCap05S8ForecastResidualRuntimeAcceptance({ runHistoricalGovernance: !strictForecastAvailabilityActive });
 
-// MCFT_CAP_05_S8_STRICT_FORECAST_AVAILABILITY_GATE_V1: validate the current lifecycle frontier without granting S8 effectiveness, successor-slice or CAP-06 authority.
-runCap05S8StrictForecastAvailabilityAcceptance();
+// MCFT_CAP_05_S8_STRICT_FORECAST_AVAILABILITY_GATE_V1: preserve its static candidate boundary only while it remains the lifecycle frontier; its Runtime equality rejection remains covered by the permanent S8 behavior regression.
+if (!s8SettlementActive) {
+  runCap05S8StrictForecastAvailabilityAcceptance();
+}
+
+// MCFT_CAP_05_S8_SSOT_SETTLEMENT_GATE_V1: settle S8 merged-main effectiveness and explicitly authorize, but do not implement, S9.
+runGate(s8SettlementGatePath, '--auto');

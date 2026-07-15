@@ -1248,3 +1248,44 @@ Governance effect:
 - explicitly authorize, but do not implement, the S8 Forecast Observation Residual C-commit slice;
 - preserve Forecast Residual / Assimilation Innovation separation and all causal, calibration, activation and CAP-06 nonclaims;
 - add no Runtime source, canonical object, transaction family, migration, route or web change.
+
+---
+
+## MCFT-CAP-05 S8 Effective and S9 Explicitly Authorized
+
+```text
+capability_line_id: MCFT-CAP-05
+activation_id: MCFT-CAP-05.S8.SSOT-SETTLEMENT-V1
+baseline_main_commit: ca61e86c5a6c1e035b82312b92116a111a76ccc7
+activation_pr: 2477
+S8_status: MERGED_EFFECTIVE
+S8_runtime_exact_head: 172ee2ac2e306b7e04f2db7d05a3163f881b490a
+S8_runtime_merge_commit: 0610ed542067e699b7dd9828199661f12e1cdbde
+S8_runtime_candidate_CI: 29360620207 SUCCESS
+strict_availability_exact_head: ff2fc0ea9a2b387b01fe86560f85c65428cb0fee
+strict_availability_merge_commit: ca61e86c5a6c1e035b82312b92116a111a76ccc7
+strict_availability_candidate_CI: 29385358058 SUCCESS
+invalid_probe_PR_2474: CLOSED_WITHOUT_MERGE_OR_EFFECTIVENESS_CLAIM
+corrected_postmerge_probe_PR: 2476
+corrected_postmerge_probe_workflow: 29385741895 SUCCESS
+strict_availability_governance: 44 PASS / 0 FAIL
+S8_in_memory_outcome_path: 16 PASS / 0 FAIL
+S8_PostgreSQL_source_C_recovery_path: 8 PASS / 0 FAIL
+S9_status: AUTHORIZED_NOT_STARTED
+S9_runtime_source_authorized: true
+S9_implementation_started: false
+canonical_object_delta: 0
+transaction_family_delta: 0
+migration_delta: 0
+S10_authorized: false
+CAP_06_authorized: false
+```
+
+Governance effect:
+
+- settle S8 Forecast Observation Residual C-commit Runtime as merged-main effective;
+- settle strict `Forecast.created_at < observation.available_to_runtime_at` enforcement;
+- preserve the invalid historical-boundary probe as non-authoritative evidence;
+- explicitly authorize, but do not implement, S9 restart/recovery;
+- preserve all automatic history rewrite, S10, calibration, activation and CAP-06 nonclaims;
+- add no Runtime source, canonical object, transaction family, migration, route or web change.
