@@ -47,7 +47,9 @@ jobs:
       - name: Apply resumed S0 predecessor qualification contract
         run: |
           python scripts/remediation/APPLY_MCFT_CAP_06_S0_RESUMPTION.py
+          python scripts/remediation/APPLY_MCFT_CAP_06_S0_STATE_COUNT_RECONCILIATION.py
           rm scripts/remediation/APPLY_MCFT_CAP_06_S0_RESUMPTION.py
+          rm scripts/remediation/APPLY_MCFT_CAP_06_S0_STATE_COUNT_RECONCILIATION.py
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -88,6 +90,7 @@ jobs:
         run: |
           rm -f .github/workflows/mcft-cap-06-s0-materialize.yml
           rm -f scripts/remediation/APPLY_MCFT_CAP_06_S0_RESUMPTION.py
+          rm -f scripts/remediation/APPLY_MCFT_CAP_06_S0_STATE_COUNT_RECONCILIATION.py
           git add -A
           git commit -m "MCFT-CAP-06 S0: materialize authorization and predecessor qualification"
 
