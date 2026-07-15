@@ -1,4 +1,4 @@
-# Proof revision: include frozen exact outcome Observation in the temporary formal Replay view.
+# Proof revision: use continuation-aware validators for terminal chain readback.
 name: mcft-cap-05-apply-source-patch
 
 on:
@@ -9,6 +9,7 @@ on:
       - 'scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py'
       - 'scripts/remediation/APPLY_MCFT_CAP_05_FORMAL_REPLAY_BINDING_AUTHORITY.py'
       - 'scripts/remediation/APPLY_MCFT_CAP_05_OUTCOME_OBSERVATION_REPLAY_VIEW.py'
+      - 'scripts/remediation/APPLY_MCFT_CAP_05_TERMINAL_CHAIN_VALIDATORS.py'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_REPLAY_BINDING_EXECUTION_METADATA.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts'
 
@@ -48,6 +49,7 @@ jobs:
           python scripts/remediation/APPLY_MCFT_CAP_05_BUILDER_SEAM_AND_POSTGRESQL_REGRESSION.py 2>&1 | tee /tmp/builder-seam-generator.log
           python scripts/remediation/APPLY_MCFT_CAP_05_FORMAL_REPLAY_BINDING_AUTHORITY.py
           python scripts/remediation/APPLY_MCFT_CAP_05_OUTCOME_OBSERVATION_REPLAY_VIEW.py
+          python scripts/remediation/APPLY_MCFT_CAP_05_TERMINAL_CHAIN_VALIDATORS.py
 
       - name: Upload builder-seam generator diagnostics
         if: failure()
