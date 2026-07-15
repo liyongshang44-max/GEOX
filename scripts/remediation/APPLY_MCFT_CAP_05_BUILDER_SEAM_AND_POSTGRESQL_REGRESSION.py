@@ -160,3 +160,8 @@ replace_once(
     readSingleEvidenceV1("execution_receipts.jsonl"),
   ];''',
 )
+replace_once(
+    postgresql_acceptance,
+    'ORDER BY ingested_at DESC LIMIT 1',
+    'ORDER BY occurred_at DESC LIMIT 1',
+)
