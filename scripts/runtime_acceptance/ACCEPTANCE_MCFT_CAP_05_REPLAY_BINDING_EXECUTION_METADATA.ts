@@ -27,7 +27,6 @@ function replayRecordV1(): Record<string, unknown> {
     ...scope,
     dataset_id: "dataset_cap05_binding_metadata",
     source_record_id: "source_record_cap05_binding_metadata",
-    source_record_hash: "",
     record_type: "soil_moisture_observation_v1",
     binding_id: "soil_obs_cap05_binding_metadata_v1",
     origin_source_kind: "DEVICE",
