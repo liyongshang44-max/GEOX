@@ -79,4 +79,18 @@ text = replace_once(
 
     const faultStages =''',
 )
+text = replace_once(
+    text,
+    '''    const historicalAfterCap03 = await repository.readContinuationRecordSet(
+      fixture.continuationRecordSet.continuation_record_set_id,
+    );
+    assert.ok(historicalAfterCap03);
+    assert.equal(
+      historicalAfterCap03.continuation_record_set_determinism_hash,
+      fixture.continuationRecordSet.continuation_record_set_determinism_hash,
+    );
+    ok("historical CAP-02 canonical readback remains valid after CAP-03 persistence support");''',
+    '''    assert.equal(await countFactsV1(predecessorIds), 3);
+    ok("frozen CAP-02 predecessor canonical facts remain present after CAP-03 persistence support");''',
+)
 PATH.write_text(text)
