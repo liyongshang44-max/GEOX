@@ -22,10 +22,7 @@ import {
   selectCap05SingleReceiptForTargetTickV1,
   type Cap05ReceiptRecoveryCandidateV1,
 } from "../../apps/server/src/runtime/twin_runtime/restart_late_receipt_rebuild_service_v1.js";
-import {
-  buildCap05S8ForecastResidualFixtureV1,
-  memberFromCap05S8TickV1,
-} from "./mcft_cap_05_s8_forecast_residual_fixture_v1.js";
+import { buildCap05S8ForecastResidualFixtureV1 } from "./mcft_cap_05_s8_forecast_residual_fixture_v1.js";
 
 if (process.env.MCFT_CAP_05_S9_DESTRUCTIVE_ACCEPTANCE !== "1") {
   throw new Error("SET_MCFT_CAP_05_S9_DESTRUCTIVE_ACCEPTANCE_1");
@@ -93,7 +90,8 @@ function receiptCandidateV1(overrides: Partial<Cap05ReceiptRecoveryCandidateV1> 
 async function main(): Promise<void> {
   await initializeSchemaV1();
   const fixture = await buildCap05S8ForecastResidualFixtureV1();
-  const scenario = memberFromCap05S8TickV1(fixture.post_receipt_tick, "twin_scenario_set_v1") as Cap04ScenarioSetEnvelopeV1;
+  const scenario = fixture.post_receipt_tick.b_record?.scenario_set as Cap04ScenarioSetEnvelopeV1 | undefined;
+  if (!scenario) throw new Error("CAP05_S9_SCENARIO_SET_REQUIRED");
   const decisionTime = new Date(Date.parse(scenario.logical_time) + 5 * 60 * 1000).toISOString();
   const decision: Cap05DecisionEnvelopeV1 = buildCap05DecisionV1({
     scope: fixture.scope,
