@@ -86,6 +86,143 @@ jobs:
           gate_path.write_text(gate)
           PY
 
+      - name: Align S0 preflight with H-authoritative formal Replay contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts")
+          text = path.read_text()
+          text = text.replace(
+              'import fs from "node:fs";\nimport path from "node:path";',
+              'import fs from "node:fs";\nimport os from "node:os";\nimport path from "node:path";',
+          )
+          text = text.replace(
+              'import { Cap05ApprovalPlanBindingServiceV1 } from "../../apps/server/src/runtime/twin_runtime/approval_plan_binding_service_v1.js";',
+              'import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";\nimport { Cap05ApprovalPlanBindingServiceV1 } from "../../apps/server/src/runtime/twin_runtime/approval_plan_binding_service_v1.js";',
+          )
+
+          helper = r'''
+          function walkReplayFilesV1(directory: string): string[] {
+            const files: string[] = [];
+            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+              const absolutePath = path.join(directory, entry.name);
+              if (entry.isDirectory()) files.push(...walkReplayFilesV1(absolutePath));
+              else files.push(absolutePath);
+            }
+            return files;
+          }
+
+          function buildS0HAuthoritativeReplayViewV1(): string {
+            const source = absolute("fixtures/mcft/water_state/replay_v1");
+            const target = path.join(os.tmpdir(), "mcft_cap06_s0_h_authoritative_replay_v1");
+            fs.rmSync(target, { recursive: true, force: true });
+            fs.cpSync(source, target, { recursive: true });
+
+            let removedLegacyIrrigation = 0;
+            let normalizedObservation = 0;
+            for (const file of walkReplayFilesV1(target).filter((candidate) => candidate.endsWith(".jsonl"))) {
+              const records = fs.readFileSync(file, "utf8")
+                .split("\n")
+                .filter(Boolean)
+                .map((line) => JSON.parse(line) as Record<string, any>);
+              const output: string[] = [];
+              for (const record of records) {
+                if (record.record_type === "irrigation_execution_evidence_v1") {
+                  removedLegacyIrrigation += 1;
+                  continue;
+                }
+                if (record.record_type === "soil_moisture_observation_v1") {
+                  record.canonical_payload = { ...record.canonical_payload };
+                  record.source_payload = { ...record.source_payload };
+                  if (record.canonical_payload.quantity_kind === undefined) {
+                    assert.equal(typeof record.quantity_kind, "string", "S0_TEMP_REPLAY_QUANTITY_KIND_REQUIRED");
+                    record.canonical_payload.quantity_kind = record.quantity_kind;
+                    normalizedObservation += 1;
+                  }
+                  if (record.source_payload.source_version === undefined) {
+                    assert.equal(typeof record.source_version, "string", "S0_TEMP_REPLAY_SOURCE_VERSION_REQUIRED");
+                    record.source_payload.source_version = record.source_version;
+                  }
+                  const semantic = structuredClone(record);
+                  delete semantic.source_record_hash;
+                  delete semantic.materialized_file_location;
+                  record.source_record_hash = semanticHashV1(semantic);
+                }
+                output.push(JSON.stringify(record));
+              }
+              fs.writeFileSync(file, `${output.join("\n")}\n`, "utf8");
+            }
+            assert.ok(removedLegacyIrrigation >= 1, "S0_LEGACY_IRRIGATION_EXCLUSION_NOT_PROVEN");
+            assert.ok(normalizedObservation >= 1, "S0_LEGACY_OBSERVATION_NORMALIZATION_NOT_PROVEN");
+
+            const outcomePath = absolute("fixtures/mcft/water_state/feedback_v1/soil_observations.jsonl");
+            const outcomeRecords = fs.readFileSync(outcomePath, "utf8")
+              .split(String.fromCharCode(10))
+              .filter(Boolean)
+              .map((line) => JSON.parse(line) as Record<string, any>);
+            assert.equal(outcomeRecords.length, 1, "S0_OUTCOME_OBSERVATION_CARDINALITY");
+            const outcome = structuredClone(outcomeRecords[0]);
+            assert.equal(outcome.record_type, "soil_moisture_observation_v1");
+            assert.equal(outcome.role_time.observed_at, "2026-06-04T03:00:00.000Z");
+            outcome.canonical_payload = {
+              ...outcome.canonical_payload,
+              quantity_kind: "VOLUMETRIC_WATER_CONTENT",
+            };
+            outcome.source_payload = {
+              ...outcome.source_payload,
+              source_version: String(outcome.source_version ?? "1"),
+            };
+            const semantic = structuredClone(outcome);
+            delete semantic.source_record_hash;
+            delete semantic.materialized_file_location;
+            outcome.source_record_hash = semanticHashV1(semantic);
+            fs.appendFileSync(
+              path.join(target, "soil_moisture", "2026-06-04.jsonl"),
+              `${JSON.stringify(outcome)}\n`,
+              "utf8",
+            );
+            return target;
+          }
+
+          '''.replace("          ", "")
+
+          marker = "async function executeCap05TerminalChain(databaseUrl: string): Promise<void> {"
+          if "function buildS0HAuthoritativeReplayViewV1" not in text:
+              if marker not in text:
+                  raise SystemExit("S0_REPLAY_HELPER_INSERTION_MARKER_MISSING")
+              text = text.replace(marker, helper + marker, 1)
+
+          text = text.replace(
+              '  fs.mkdirSync(absolute("acceptance-output"), { recursive: true });',
+              '  const replayRoot = buildS0HAuthoritativeReplayViewV1();\n  fs.mkdirSync(absolute("acceptance-output"), { recursive: true });',
+          )
+          text = text.replace(
+              '    replay_root: "fixtures/mcft/water_state/replay_v1",',
+              '    replay_root: replayRoot,',
+          )
+          text = text.replace(
+              '    authorized_future_forcing_binding_ids: ["binding_weather", "binding_et0"],',
+              '    authorized_future_forcing_binding_ids: ["weather_assumption_c8_replay_v1", "et0_future_assumption_c8_v1"],',
+          )
+          text = text.replace(
+              '  fs.rmSync(absolute(TEMP_RUNNER_INPUT_PATH), { force: true });\n  ok("completed MCFT-CAP-05 bounded eight-tick terminal chain is reproduced in isolated PostgreSQL");',
+              '  fs.rmSync(absolute(TEMP_RUNNER_INPUT_PATH), { force: true });\n  fs.rmSync(replayRoot, { recursive: true, force: true });\n  ok("completed MCFT-CAP-05 bounded eight-tick terminal chain is reproduced in isolated PostgreSQL");',
+          )
+
+          required = [
+              'import os from "node:os";',
+              'import { semanticHashV1 }',
+              'function buildS0HAuthoritativeReplayViewV1',
+              'replay_root: replayRoot',
+              '"weather_assumption_c8_replay_v1", "et0_future_assumption_c8_v1"',
+          ]
+          for expected in required:
+              if expected not in text:
+                  raise SystemExit(f"S0_H_AUTHORITATIVE_REPLAY_PATCH_FAILED:{expected}")
+          path.write_text(text)
+          PY
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
