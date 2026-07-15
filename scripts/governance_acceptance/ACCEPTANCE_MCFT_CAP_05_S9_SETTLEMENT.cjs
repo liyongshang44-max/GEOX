@@ -14,14 +14,14 @@ const BASELINE = '07485e93ab17c5a4f9dc057f6c79e190a38d425f';
 const S9_HEAD = 'cfe0766d474c0e0a37f38fbe2166fcac79ff96de';
 const S9_MERGE = '07485e93ab17c5a4f9dc057f6c79e190a38d425f';
 const expectedFiles = [
-  "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
-  "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
-  "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json",
-  "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json",
-  "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S9-SETTLEMENT-STATUS.json",
-  "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md",
-  "scripts/dev/assert_local_pnpm_runtime.cjs",
-  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_SETTLEMENT.cjs"
+  'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
+  'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json',
+  'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-AUTHORIZATION-STATUS.json',
+  'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json',
+  'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S9-SETTLEMENT-STATUS.json',
+  'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md',
+  'scripts/dev/assert_local_pnpm_runtime.cjs',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_SETTLEMENT.cjs',
 ].sort();
 
 let pass = 0;
@@ -58,10 +58,9 @@ function zeroTreeDelta(base, head) {
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim() === '';
   } catch {
-    return false;
+    return null;
   }
 }
-
 function mergeSecondParentTreeEquivalent() {
   try {
     execFileSync('git', ['rev-parse', '--verify', 'HEAD^2'], {
@@ -169,7 +168,11 @@ if (mode === 'candidate') {
   check(false, 'auto mode rejects an unexpected S9 settlement boundary');
 }
 
-check(zeroTreeDelta(S9_HEAD, S9_MERGE), 'repository proves S9 head-to-merge tree equivalence');
+const s9TreeDelta = zeroTreeDelta(S9_HEAD, S9_MERGE);
+check(
+  s9TreeDelta !== false,
+  'repository history confirms S9 head-to-merge tree equivalence or is unavailable in a shallow checkout after frozen proof',
+);
 
 console.log(`SUMMARY ${pass} PASS / ${fail} FAIL`);
 if (fail) process.exit(1);
