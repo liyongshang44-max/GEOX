@@ -33,18 +33,22 @@ const implementationMap = readText(implementationMapPath);
 
 const results = [];
 const check = (acceptanceId, condition, evidence) => {
-  results.push({ acceptance_id: acceptanceId, status: condition ? "PASS" : "FAIL", evidence });
+  results.push({ acceptance_id: acceptanceId, status: condition === true ? "PASS" : "FAIL", evidence });
 };
 
 const cap05 = matrix.capability_lines.find((entry) => entry.capability_line_id === "MCFT-CAP-05");
 const cap06 = matrix.capability_lines.find((entry) => entry.capability_line_id === "MCFT-CAP-06");
+const p1Effectiveness = p0.p_minus_1_effectiveness;
+const p1EffectivenessChecks = {
+  effective: p1Effectiveness.effective === true,
+  implementation_pr_number: p1Effectiveness.implementation_pr_number === 2496,
+  implementation_merge_commit: p1Effectiveness.implementation_merge_commit === baseline,
+  postmerge_probe_pr_number: p1Effectiveness.postmerge_probe_pr_number === 2497,
+  postmerge_probe_workflow_run: p1Effectiveness.postmerge_probe_workflow_run === 29418272690,
+  postmerge_probe_closed_without_merge: p1Effectiveness.postmerge_probe_closed_without_merge === true,
+};
 
-check("P0_P1_MERGED_EFFECTIVE", p0.p_minus_1_effectiveness.effective === true
-  && p0.p_minus_1_effectiveness.implementation_pr_number === 2496
-  && p0.p_minus_1_effectiveness.implementation_merge_commit === baseline
-  && p0.p_minus_1_effectiveness.postmerge_probe_pr_number === 2497
-  && p0.p_minus_1_effectiveness.postmerge_workflow_run === 29418272690
-  && p0.p_minus_1_effectiveness.postmerge_probe_closed_without_merge === true, p0StatusPath);
+check("P0_P1_MERGED_EFFECTIVE", Object.values(p1EffectivenessChecks).every((value) => value === true), p0StatusPath);
 
 check("P0_ADJUDICATION_OUTCOME", p1.outcome === "REUSE_WITHOUT_AMENDMENT_CONFIG_OBJECT_NOT_REQUIRED"
   && p0.adjudication_outcome.outcome === p1.outcome
@@ -71,7 +75,7 @@ check("P0_MATRIX_BASELINE", matrix.baseline.branch === "main"
   && matrix.baseline.meaning.includes("MCFT-CAP-06 P-1 merged-main effective")
   && matrix.baseline.meaning.includes("P0 provisional SSOT candidate"), matrixPath);
 
-check("P0_MATRIX_CAP05", cap05
+check("P0_MATRIX_CAP05", Boolean(cap05)
   && cap05.status === "COMPLETE"
   && cap05.implementation_status === "COMPLETE"
   && cap05.closure_effective === true
@@ -81,7 +85,7 @@ check("P0_MATRIX_CAP05", cap05
   && cap05.successor_capability_line_id === "MCFT-CAP-06"
   && cap05.successor_authorized === false, matrixPath);
 
-check("P0_MATRIX_CAP06", cap06
+check("P0_MATRIX_CAP06", Boolean(cap06)
   && cap06.status === "NOT_AUTHORIZED"
   && cap06.design_status === "CONDITIONAL_FROZEN_AFTER_P_MINUS_1"
   && cap06.implementation_status === "P_MINUS_1_COMPLETE"
