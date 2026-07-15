@@ -10,6 +10,7 @@
   "branch": "agent/mcft-cap-05-s10-ssot-settlement-v1",
   "pr_number": 2486,
   "materialization_workflow": 29403970251,
+  "materialized_candidate_head": "efe1a699447ba91288d77bd1b427aa3da883ad47",
   "s10_effectiveness": {
     "delivery_slice_id": "MCFT-CAP-05.MCFT-04-16.BOUNDED-EIGHT-TICK-FEEDBACK-CHAIN-V1",
     "implementation_pr_number": 2483,
