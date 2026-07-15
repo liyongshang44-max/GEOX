@@ -56,7 +56,7 @@ jobs:
         run: |
           set -o pipefail
           git diff --check 2>&1 | tee /tmp/source-diff-check.log
-          pnpm -w typecheck 2>&1 | tee /tmp/source-typecheck.log
+          pnpm -r typecheck 2>&1 | tee /tmp/source-typecheck.log
 
       - name: Upload source-patch diagnostics
         if: failure()
