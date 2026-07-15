@@ -262,5 +262,5 @@ for (const [script, expectedSummary] of [
 }
 ok('permanent non-database remediation acceptances pass');
 
-assert.equal(pass, 13);
+assert.equal(pass, 14);
 process.stdout.write(`SUMMARY ${pass} PASS / 0 FAIL\n`);
