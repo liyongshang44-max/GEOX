@@ -170,19 +170,11 @@ gate = replace_once(
 )
 gate = replace_once(
     gate,
-    '''check("S0_AUTHORIZATION_DOCUMENT", authorization.includes("S0_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_AUTHORIZATION_GATE_PASS")
-  && authorization.includes("checkpoint_sequence: 80")
-  && authorization.includes("global_state_count: 81")
-  && authorization.includes("status: INSUFFICIENT_MATCHED_PAIRS")
-  && authorization.includes("runtime_source_authorized:\nfalse"), authorizationPath);''',
-    f'''check("S0_AUTHORIZATION_DOCUMENT", authorization.includes("S0_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_AUTHORIZATION_GATE_PASS")
-  && authorization.includes("checkpoint_sequence: 80")
-  && authorization.includes("reproduced_state_fact_count: 33")
+    '  && authorization.includes("global_state_count: 81")',
+    f'''  && authorization.includes("reproduced_state_fact_count: 33")
   && authorization.includes("historical_s10_declared_global_state_count: 81")
   && authorization.includes("historical_s10_orchestrator_canonical_object_fact_delta: 81")
-  && authorization.includes("state_count_reconciliation: {RECONCILIATION}")
-  && authorization.includes("status: INSUFFICIENT_MATCHED_PAIRS")
-  && authorization.includes("runtime_source_authorized:\nfalse"), authorizationPath);''',
+  && authorization.includes("state_count_reconciliation: {RECONCILIATION}")''',
     "S0_GATE_AUTH_DOC_COUNT",
 )
 gate = replace_once(
