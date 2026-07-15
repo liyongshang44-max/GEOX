@@ -107,14 +107,15 @@
   ],
   "validation": {
     "validated_materialized_head": "0bf525a250aed7bde0ec32533e3da4def58a2946",
-    "candidate_workflow": null,
-    "candidate_state": "PENDING",
-    "governance_gate": "PENDING",
-    "repository_typecheck": "PENDING",
-    "repository_build": "PENDING",
-    "server_selfcheck": "PENDING",
-    "standard_acceptance": "PENDING",
-    "commercial_mvp0_release_gate": "PENDING"
+    "validated_candidate_head": "6b7126516e1a641320c5115e8a22feb232490333",
+    "candidate_workflow": 29404680638,
+    "candidate_state": "SUCCESS",
+    "governance_gate": "PASS",
+    "repository_typecheck": "PASS",
+    "repository_build": "PASS",
+    "server_selfcheck": "PASS",
+    "standard_acceptance": "PASS",
+    "commercial_mvp0_release_gate": "PASS"
   },
   "effectiveness_condition": "S10_SETTLEMENT_PR_MERGED_TO_MAIN_AND_MAIN_CI_SETTLEMENT_GATE_PASS",
   "effectiveness_condition_satisfied": false
