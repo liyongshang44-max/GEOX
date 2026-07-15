@@ -11,7 +11,7 @@ const { spawnSync } = require('node:child_process');
 
 const isWindows = process.platform === 'win32';
 const env = process.env;
-const diagnosticPath = path.join(process.cwd(), 'acceptance-output', 'MCFT_CAP_05_S8_ACCEPTANCE.log');
+const diagnosticPath = path.join(process.cwd(), 'acceptance-output', 'MCFT_CAP_05_S9_ACCEPTANCE.log');
 
 function run(command, args = [], envOverrides = {}) {
   const result = spawnSync(command, args, {
@@ -235,6 +235,37 @@ function runCap05S8StrictForecastAvailabilityAcceptance() {
   );
 }
 
+// MCFT_CAP_05_S9_RESTART_LATE_RECEIPT_REBUILD_GATE_V1: execute S9 governance, PostgreSQL recovery and inherited fencing/CAS regressions.
+function runCap05S9RestartRecoveryAcceptance() {
+  runGate(
+    path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_RESTART_LATE_RECEIPT_REBUILD.cjs'),
+    '--auto',
+  );
+
+  const base = postgresBaseUrl();
+  const shouldRunDatabase = env.CI === 'true' || env.MCFT_CAP_05_S9_RUN_DB_ACCEPTANCE === '1';
+  if (!base || !shouldRunDatabase) return;
+  const pnpmCommand = isWindows ? 'pnpm.cmd' : 'pnpm';
+
+  const s9DatabaseName = 'mcft_cap05_s9_restart_recovery_acceptance';
+  recreateDatabase(base, s9DatabaseName);
+  requireSuccess(run(pnpmCommand, [
+    '-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_RESTART_LATE_RECEIPT_REBUILD_DB.ts',
+  ], {
+    DATABASE_URL: databaseUrl(base, s9DatabaseName),
+    MCFT_CAP_05_S9_DESTRUCTIVE_ACCEPTANCE: '1',
+  }));
+
+  const inheritedDatabaseName = 'mcft_cap03_s3b_cap05_s9_inherited_recovery_acceptance';
+  recreateDatabase(base, inheritedDatabaseName);
+  requireSuccess(run(pnpmCommand, [
+    '-w', 'exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY_DB.ts',
+  ], {
+    DATABASE_URL: databaseUrl(base, inheritedDatabaseName),
+    MCFT_CAP_03_S3B_DESTRUCTIVE_ACCEPTANCE: '1',
+  }));
+}
+
 runRuntimeDoctor();
 
 const activationGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs');
@@ -242,10 +273,12 @@ const s7SettlementGatePath = path.join(process.cwd(), 'scripts/governance_accept
 const s8SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_SETTLEMENT.cjs');
 const s8RuntimeStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-STATUS.json');
 const strictForecastAvailabilityStatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S8-STRICT-FORECAST-AVAILABILITY-STATUS.json');
+const s9StatusPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S9-STATUS.json');
 const settlementActive = fs.existsSync(s7SettlementGatePath);
 const s8SettlementActive = fs.existsSync(s8SettlementGatePath);
 const s8RuntimeActive = fs.existsSync(s8RuntimeStatusPath);
 const strictForecastAvailabilityActive = fs.existsSync(strictForecastAvailabilityStatusPath);
+const s9Active = fs.existsSync(s9StatusPath);
 
 // MCFT_CAP_05_S6_ACTIVATION_GATE_V1: run only while S6→S7 activation is the current lifecycle frontier.
 if (!settlementActive) {
@@ -274,5 +307,10 @@ if (!s8SettlementActive) {
   runCap05S8StrictForecastAvailabilityAcceptance();
 }
 
-// MCFT_CAP_05_S8_SSOT_SETTLEMENT_GATE_V1: settle S8 merged-main effectiveness and explicitly authorize, but do not implement, S9.
-runGate(s8SettlementGatePath, '--auto');
+// MCFT_CAP_05_S8_SSOT_SETTLEMENT_GATE_V1: preserve the historical S8 settlement only until S9 materializes.
+if (!s9Active) {
+  runGate(s8SettlementGatePath, '--auto');
+}
+
+// MCFT_CAP_05_S9_RESTART_LATE_RECEIPT_REBUILD_GATE_V1: prove the bounded S9 recovery candidate without authorizing S10 or CAP-06.
+runCap05S9RestartRecoveryAcceptance();
