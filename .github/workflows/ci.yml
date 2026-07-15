@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 jobs:
-  diagnose-s11c:
+  diagnose-s11c-chunks:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout S11C branch
@@ -16,42 +16,20 @@ jobs:
           ref: agent/mcft-cap-05-s11c-complete-activation-v1
           fetch-depth: 0
 
-      - name: Capture reconstruction diagnostics
+      - name: Capture per-chunk integrity
         run: |
-          set +e
-          cat docs/digital_twin/mcft/cap_05/.s11c-materializer-*.b64 > /tmp/materialize_s11c.b64
-          wc -c /tmp/materialize_s11c.b64 | tee /tmp/base64.size
-          sha256sum /tmp/materialize_s11c.b64 | tee /tmp/base64.sha256
-          base64 -d /tmp/materialize_s11c.b64 > /tmp/materialize_s11c.cjs 2> /tmp/decode.stderr
-          echo $? > /tmp/decode.status
-          wc -c /tmp/materialize_s11c.cjs | tee /tmp/js.size
-          sha256sum /tmp/materialize_s11c.cjs | tee /tmp/js.sha256
-          node --check /tmp/materialize_s11c.cjs > /tmp/node-check.stdout 2> /tmp/node-check.stderr
-          echo $? > /tmp/node-check.status
-          node /tmp/materialize_s11c.cjs > /tmp/materialize.stdout 2> /tmp/materialize.stderr
-          echo $? > /tmp/materialize.status
-          exit 0
+          set -euo pipefail
+          : > /tmp/chunks.txt
+          for file in docs/digital_twin/mcft/cap_05/.s11c-materializer-*.b64; do
+            printf '%s ' "$(basename "$file")" >> /tmp/chunks.txt
+            wc -c < "$file" | tr -d '\n' >> /tmp/chunks.txt
+            printf ' ' >> /tmp/chunks.txt
+            sha256sum "$file" | cut -d' ' -f1 >> /tmp/chunks.txt
+          done
+          cat /tmp/chunks.txt
 
-      - name: Upload diagnostics
+      - name: Upload chunk diagnostics
         uses: actions/upload-artifact@v4
         with:
-          name: s11c-reconstruction-diagnostics
-          path: |
-            /tmp/base64.size
-            /tmp/base64.sha256
-            /tmp/decode.status
-            /tmp/decode.stderr
-            /tmp/js.size
-            /tmp/js.sha256
-            /tmp/node-check.status
-            /tmp/node-check.stdout
-            /tmp/node-check.stderr
-            /tmp/materialize.status
-            /tmp/materialize.stdout
-            /tmp/materialize.stderr
-
-      - name: Fail after capture
-        run: |
-          test "$(cat /tmp/decode.status)" = "0"
-          test "$(cat /tmp/node-check.status)" = "0"
-          test "$(cat /tmp/materialize.status)" = "0"
+          name: s11c-chunk-integrity
+          path: /tmp/chunks.txt
