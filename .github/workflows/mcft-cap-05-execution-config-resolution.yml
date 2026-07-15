@@ -41,4 +41,13 @@ jobs:
         run: pnpm -r typecheck
 
       - name: Execute permanent acceptance
-        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_EXECUTION_CONFIG_RESOLUTION.ts
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_EXECUTION_CONFIG_RESOLUTION.ts 2>&1 | tee /tmp/execution-config-resolution.log
+
+      - name: Upload execution-resolution diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-05-execution-config-resolution-diagnostics
+          path: /tmp/execution-config-resolution.log
