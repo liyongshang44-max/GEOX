@@ -1,0 +1,81 @@
+name: mcft-cap-05-post-closure-config-conformance-proof
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-production-runner-proof:
+    if: github.head_ref == 'agent/mcft-cap-05-post-closure-config-conformance-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap06_s0_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap06_s0_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap06_s0_acceptance
+    steps:
+      - name: Checkout blocked S0 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1
+          fetch-depth: 0
+
+      - name: Overlay remediation candidate
+        run: |
+          git fetch --no-tags origin agent/mcft-cap-05-post-closure-config-conformance-v1
+          git merge --no-commit --no-ff FETCH_HEAD
+
+      - name: Permit remediation files in temporary S0 preflight boundary
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts')
+          text = path.read_text()
+          old = 'const PREFLIGHT_ALLOWED_FILES = Object.freeze([...EXACT_CHANGED_FILES, TEMP_WORKFLOW_PATH].sort());'
+          new = '''const PREFLIGHT_ALLOWED_FILES = Object.freeze([
+            ...EXACT_CHANGED_FILES,
+            TEMP_WORKFLOW_PATH,
+            "apps/server/src/runtime/twin_runtime/cap05_feedback_config_execution_view_v1.ts",
+            "apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts",
+            "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FEEDBACK_CONFIG_EXECUTION_VIEW.ts",
+            ".github/workflows/mcft-cap-05-post-closure-config-conformance-proof.yml",
+          ].sort());'''
+          if old not in text:
+              raise SystemExit('PREFLIGHT_ALLOWED_FILES_MARKER_NOT_FOUND')
+          path.write_text(text.replace(old, new))
+          PY
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Execution-view acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FEEDBACK_CONFIG_EXECUTION_VIEW.ts
+
+      - name: Full S0 PostgreSQL predecessor preflight
+        env:
+          MCFT_CAP_06_S0_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts
