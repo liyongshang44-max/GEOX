@@ -52,7 +52,8 @@
   "scheduler_delta": 0,
   "completion_claim_effective_delta": 0,
   "validation": {
-    "materialization_workflow": null,
+    "materialization_workflow": 29410458557,
+    "materialized_candidate_head": "18cc7ebb4e0e156f0415b2a3a7979fd33d5a6277",
     "candidate_head": null,
     "candidate_workflow": null,
     "candidate_state": "PENDING",
