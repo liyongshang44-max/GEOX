@@ -70,14 +70,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/remediation/FINALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.py
-          node --check scripts/acceptance/run_acceptance.cjs
-          node --check scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs
-          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs
-          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs
-          python3 -m json.tool docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json >/dev/null
-          python3 -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json >/dev/null
-          git diff --check
+          {
+            python3 scripts/remediation/FINALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.py
+            node --check scripts/acceptance/run_acceptance.cjs
+            node --check scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs
+            node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs
+            python3 -m json.tool docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json >/dev/null
+            python3 -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json >/dev/null
+            git diff --check
+          } 2>&1 | tee /tmp/mcft-cap-06-s0-v2-validation.log
 
       - name: Commit exact permanent S0 candidate
         shell: bash
@@ -110,6 +112,8 @@ jobs:
         if: always()
         with:
           name: mcft-cap-06-s0-v2-finalization
-          path: /tmp/mcft-cap-06-s0-v2-finalize.log
+          path: |
+            /tmp/mcft-cap-06-s0-v2-finalize.log
+            /tmp/mcft-cap-06-s0-v2-validation.log
           if-no-files-found: warn
           retention-days: 7
