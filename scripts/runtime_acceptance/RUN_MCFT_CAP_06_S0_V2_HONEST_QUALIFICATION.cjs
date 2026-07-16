@@ -116,6 +116,13 @@ function buildTemporaryRunner() {
     'ACCEPTANCE_OUTPUT_CLEANUP',
   );
 
+  source = replaceExactly(
+    source,
+    '  run(process.platform === "win32" ? "git.exe" : "git", ["diff", "--check", BASELINE_MAIN]);',
+    '  run(process.platform === "win32" ? "git.exe" : "git", ["diff", "--check", BASELINE_MAIN, "--", PREFLIGHT_PATH, "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs", "scripts/acceptance/run_acceptance.cjs"]);',
+    'CANDIDATE_DIFF_CHECK',
+  );
+
   const forbiddenMarkers = [
     'CURRENT_REPOSITORY_HISTORY_EXPECTED_INSUFFICIENT',
     'CURRENT_REPOSITORY_HISTORY_GRAPH_MUST_PASS',
