@@ -31,7 +31,10 @@
     "facts_based_rebuild": true,
     "projection_canonicality_triggers": true,
     "advisory_lock_concurrency_serialization": true,
-    "failed_attempt_persistence_mode": "MODE_A_NO_PERSISTENT_ATTEMPT_OBJECT"
+    "failed_attempt_persistence_mode": "MODE_A_NO_PERSISTENT_ATTEMPT_OBJECT",
+    "evaluation_requires_exact_canonical_candidate_ref_hash": true,
+    "evaluation_candidate_lock_serialization": true,
+    "facts_rebuild_candidate_before_evaluation": true
   },
   "candidate_tree_validation": {
     "prevalidated_head": "4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e",
@@ -41,7 +44,7 @@
     "s1_postgresql_reproduction": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
     "s1_regime_reproduction": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
     "s2_contracts_math_reproduction": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
-    "s3_postgresql_acceptance": "PASS_12_CHECKS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
+    "s3_postgresql_acceptance": "PENDING_CORRECTED_EXACT_HEAD",
     "s3_projection_canonicality_acceptance": "PASS_5_CHECKS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
     "s3_governance_acceptance": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
     "focused_validation_run": 29519589969,
@@ -49,7 +52,7 @@
     "focused_evidence_artifact_digest": "sha256:0cc961d416d83a34a8ac50ad0734a9f7ec1e3b5432b790b9d4be4139785bb659",
     "standard_ci": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_RUN_29519589886",
     "standard_ci_run": 29519589886,
-    "exact_final_head_status": "PENDING_AFTER_PREVALIDATION_WRITEBACK"
+    "exact_final_head_status": "PENDING_AFTER_CANDIDATE_INTEGRITY_CORRECTION"
   },
   "runtime_delta_boundary": {
     "candidate_or_evaluation_objects_appended_by_acceptance_only": true,
@@ -79,5 +82,15 @@
     "NO_WEB",
     "NO_SCHEDULER",
     "NO_MCFT_CAP_07_AUTHORIZATION"
-  ]
+  ],
+  "candidate_integrity_correction": {
+    "status": "CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
+    "correction_pr_number": 2533,
+    "baseline_merge_commit": "36efb93963222b2768b8d2bf384f748c86ce525a",
+    "orphan_evaluation_rejected_before_append": true,
+    "wrong_candidate_hash_rejected_before_append": true,
+    "concurrent_same_key_different_hash_covered": true,
+    "exact_head_ci_status": "PENDING",
+    "exact_merged_main_proof_status": "PENDING"
+  }
 }

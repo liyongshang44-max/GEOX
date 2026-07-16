@@ -225,8 +225,12 @@ async function acquireIdentityLocksV1(
   client: PoolClient,
   object: Cap06GovernanceObjectV1,
 ): Promise<void> {
-  const keys = [object.idempotency_key, object.object_id].sort();
-  for (const key of keys) {
+  const keys = [object.idempotency_key, object.object_id];
+  if (object.object_type === EVALUATION_TYPE_V1) {
+    const payload = requiredRecordV1(object.payload, "CAP06_EVALUATION_PAYLOAD_REQUIRED");
+    keys.push(requiredStringV1(payload.candidate_ref, "CAP06_EVALUATION_CANDIDATE_REF_REQUIRED"));
+  }
+  for (const key of [...new Set(keys)].sort()) {
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [key]);
   }
 }
@@ -266,6 +270,7 @@ export class PostgresCalibrationGovernanceRepositoryV1 {
     try {
       await client.query("BEGIN");
       await acquireIdentityLocksV1(client, input.object);
+      await this.verifyEvaluationCandidateWithClientV1(client, input.object);
       const existingGuard = await client.query(
         `SELECT identity_kind,record_set_id,determinism_hash
          FROM twin_object_idempotency_index_v1
@@ -348,7 +353,11 @@ export class PostgresCalibrationGovernanceRepositoryV1 {
         `SELECT fact_id,record_json
          FROM facts
          WHERE record_json->>'type' IN ('twin_calibration_candidate_v1','twin_shadow_evaluation_v1')
-         ORDER BY fact_id ASC`,
+         ORDER BY CASE record_json->>'type'
+          WHEN 'twin_calibration_candidate_v1' THEN 0
+          ELSE 1
+        END,
+        fact_id ASC`,
       );
       const canonical = facts.rows.map((row) =>
         parseCanonicalObjectV1(parseRecordJsonV1(row.fact_id, row.record_json)));
@@ -368,6 +377,7 @@ export class PostgresCalibrationGovernanceRepositoryV1 {
       let caseCount = 0;
       for (const object of canonical) {
         const factId = factIdV1(object.object_id);
+        await this.verifyEvaluationCandidateWithClientV1(client, object);
         await this.ensureProjectionWithClientV1(client, object, factId);
         await this.insertIdempotencyGuardWithClientV1(client, object);
         if (object.object_type === CANDIDATE_TYPE_V1) candidateCount += 1;
@@ -391,6 +401,33 @@ export class PostgresCalibrationGovernanceRepositoryV1 {
       throw error;
     } finally {
       client.release();
+    }
+  }
+
+  private async verifyEvaluationCandidateWithClientV1(
+    client: PoolClient,
+    object: Cap06GovernanceObjectV1,
+  ): Promise<void> {
+    if (object.object_type !== EVALUATION_TYPE_V1) return;
+    const payload = requiredRecordV1(object.payload, "CAP06_EVALUATION_PAYLOAD_REQUIRED");
+    const candidateRef = requiredStringV1(
+      payload.candidate_ref,
+      "CAP06_EVALUATION_CANDIDATE_REF_REQUIRED",
+    );
+    const candidateHash = requiredStringV1(
+      payload.candidate_hash,
+      "CAP06_EVALUATION_CANDIDATE_HASH_REQUIRED",
+    );
+    const candidate = await this.readCanonicalObjectWithClientV1(client, candidateRef);
+    if (!candidate || candidate.object_type !== CANDIDATE_TYPE_V1) {
+      throw new Error("CAP06_EVALUATION_CANDIDATE_NOT_CANONICAL");
+    }
+    if (candidate.determinism_hash !== candidateHash) {
+      throw new Error("CAP06_EVALUATION_CANDIDATE_HASH_MISMATCH");
+    }
+    if (candidate.runtime_config_ref !== object.runtime_config_ref
+      || candidate.runtime_config_hash !== object.runtime_config_hash) {
+      throw new Error("CAP06_EVALUATION_BASE_CONFIG_MISMATCH");
     }
   }
 

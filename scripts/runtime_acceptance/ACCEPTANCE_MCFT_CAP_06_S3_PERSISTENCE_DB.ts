@@ -151,6 +151,36 @@ function secondEvaluationV1(
   return rehashV1(result);
 }
 
+function candidateVariantV1(
+  source: Cap06CalibrationCandidateDraftV1,
+  suffix: string,
+  parameterValue: string,
+): Cap06CalibrationCandidateDraftV1 {
+  const result = structuredClone(source);
+  result.object_id = `${source.object_id}_${suffix}`;
+  result.idempotency_key = `${source.idempotency_key}:${suffix.toUpperCase()}`;
+  result.payload.calibration_run_id = `${String(source.payload.calibration_run_id)}_${suffix}`;
+  result.payload.candidate_parameter_value = parameterValue;
+  result.payload.parameter_delta = parameterValue === "0.034000" ? "0.004000" : "0.005000";
+  return rehashV1(result);
+}
+
+function evaluationCandidateVariantV1(
+  source: Cap06ShadowEvaluationDraftV1,
+  suffix: string,
+  candidateRef: string,
+  candidateHash: string,
+): Cap06ShadowEvaluationDraftV1 {
+  const result = structuredClone(source);
+  result.object_id = `${source.object_id}_${suffix}`;
+  result.idempotency_key = `${source.idempotency_key}:${suffix.toUpperCase()}`;
+  result.payload.shadow_evaluation_id = `${String(source.payload.shadow_evaluation_id)}_${suffix}`;
+  result.payload.candidate_ref = candidateRef;
+  result.payload.candidate_hash = candidateHash;
+  result.source_refs[0] = candidateRef;
+  return rehashV1(result);
+}
+
 async function main(): Promise<void> {
   await initializeSchemaV1();
   const fixture = await buildCap06ControlledComputeFixtureV1();
@@ -199,6 +229,19 @@ async function main(): Promise<void> {
     "facts WHERE record_json->>'type' IN ('twin_calibration_candidate_v1','twin_shadow_evaluation_v1')",
   );
 
+  const orphanEvaluation = evaluationCandidateVariantV1(
+    fixture.evaluation,
+    "orphan_candidate",
+    "twin_calibration_candidate_missing",
+    semanticHashV1({ missing: "candidate" }),
+  );
+  await assert.rejects(
+    repository.commitCanonicalObject({ object: orphanEvaluation }),
+    /CAP06_EVALUATION_CANDIDATE_NOT_CANONICAL/,
+  );
+  assert.equal(await countV1("facts WHERE record_json->>'type'='twin_shadow_evaluation_v1'"), 0);
+  ok("Evaluation D commit rejects an orphan candidate reference before canonical append");
+
   const candidateFirst = await repository.commitCanonicalObject({ object: fixture.candidate });
   assert.equal(candidateFirst.status, "INSERTED");
   assert.equal(
@@ -223,23 +266,68 @@ async function main(): Promise<void> {
   assert.equal(await countV1("twin_calibration_candidate_projection_v1"), 1);
   ok("same Candidate key with a different semantic hash is rejected without partial writes");
 
-  const concurrentCandidate = concurrentCandidateV1(fixture.candidate);
-  const concurrentResults = await Promise.all(
-    Array.from({ length: 8 }, () => repository.commitCanonicalObject({ object: concurrentCandidate })),
+  const wrongHashEvaluation = evaluationCandidateVariantV1(
+    fixture.evaluation,
+    "wrong_candidate_hash",
+    fixture.candidate.object_id,
+    semanticHashV1({ wrong: "candidate-hash" }),
   );
-  assert.equal(concurrentResults.filter((result) => result.status === "INSERTED").length, 1);
+  await assert.rejects(
+    repository.commitCanonicalObject({ object: wrongHashEvaluation }),
+    /CAP06_EVALUATION_CANDIDATE_HASH_MISMATCH/,
+  );
+  assert.equal(await countV1("facts WHERE record_json->>'type'='twin_shadow_evaluation_v1'"), 0);
+  ok("Evaluation D commit rejects a wrong canonical Candidate hash before append");
+
+  const concurrentCandidate = concurrentCandidateV1(fixture.candidate);
+  const concurrentConflictVariant = structuredClone(concurrentCandidate);
+  concurrentConflictVariant.payload.candidate_parameter_value = "0.035000";
+  concurrentConflictVariant.payload.parameter_delta = "0.005000";
+  concurrentConflictVariant.determinism_hash = "";
+  concurrentConflictVariant.determinism_hash = semanticHashV1(concurrentConflictVariant);
+  const concurrentConflictResults = await Promise.allSettled([
+    repository.commitCanonicalObject({ object: concurrentCandidate }),
+    repository.commitCanonicalObject({ object: concurrentConflictVariant }),
+  ]);
+  const concurrentConflictFulfilled = concurrentConflictResults.filter(
+    (result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof repository.commitCanonicalObject>>> =>
+      result.status === "fulfilled",
+  );
+  const concurrentConflictRejected = concurrentConflictResults.filter(
+    (result): result is PromiseRejectedResult => result.status === "rejected",
+  );
+  assert.equal(concurrentConflictFulfilled.length, 1);
+  assert.equal(concurrentConflictRejected.length, 1);
+  assert.match(String(concurrentConflictRejected[0].reason), /CAP06_IDEMPOTENCY_CONFLICT/);
+  const concurrentWinner = concurrentConflictFulfilled[0].value.object;
   assert.equal(
-    concurrentResults.filter((result) => result.status === "EXISTING_IDEMPOTENT_SUCCESS").length,
-    7,
+    await countV1(
+      "facts WHERE record_json->'payload'->>'object_id'=$1",
+      [concurrentWinner.object_id],
+    ),
+    1,
+  );
+  ok("concurrent same-key different-hash Candidate calls produce one winner and one deterministic conflict");
+
+  const concurrentResults = await Promise.all(
+    Array.from({ length: 8 }, () => repository.commitCanonicalObject({ object: concurrentWinner })),
+  );
+  assert.equal(
+    concurrentResults.every((result) => result.status === "EXISTING_IDEMPOTENT_SUCCESS"),
+    true,
+  );
+  assert.equal(
+    concurrentResults.every((result) => result.object.determinism_hash === concurrentWinner.determinism_hash),
+    true,
   );
   assert.equal(
     await countV1(
       "facts WHERE record_json->'payload'->>'object_id'=$1",
-      [concurrentCandidate.object_id],
+      [concurrentWinner.object_id],
     ),
     1,
   );
-  ok("concurrent same-key same-hash Candidate calls serialize to one canonical append");
+  ok("concurrent same-key same-hash Candidate retries converge on one canonical append");
 
   const evaluationFirst = await repository.commitCanonicalObject({ object: fixture.evaluation });
   assert.equal(evaluationFirst.status, "INSERTED");

@@ -103,6 +103,13 @@ function main() {
   ]);
   assert.equal(status.implementation.candidate_ref_alone_unique, false);
   assert.equal(status.implementation.failed_attempt_persistence_mode, 'MODE_A_NO_PERSISTENT_ATTEMPT_OBJECT');
+  assert.equal(status.implementation.evaluation_requires_exact_canonical_candidate_ref_hash, true);
+  assert.equal(status.implementation.evaluation_candidate_lock_serialization, true);
+  assert.equal(status.implementation.facts_rebuild_candidate_before_evaluation, true);
+  assert.equal(status.candidate_integrity_correction.status, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
+  assert.equal(status.candidate_integrity_correction.orphan_evaluation_rejected_before_append, true);
+  assert.equal(status.candidate_integrity_correction.wrong_candidate_hash_rejected_before_append, true);
+  assert.equal(status.candidate_integrity_correction.concurrent_same_key_different_hash_covered, true);
   assert.equal(status.s3_effective, false);
   assert.equal(status.s5_authorized, false);
 
@@ -168,6 +175,10 @@ function main() {
     'CAP06_IDEMPOTENCY_CONFLICT',
     'CAP06_CANDIDATE_PROJECTION_DIVERGENCE',
     'CAP06_EVALUATION_PROJECTION_DIVERGENCE',
+    'verifyEvaluationCandidateWithClientV1',
+    'CAP06_EVALUATION_CANDIDATE_NOT_CANONICAL',
+    'CAP06_EVALUATION_CANDIDATE_HASH_MISMATCH',
+    'CAP06_EVALUATION_BASE_CONFIG_MISMATCH',
     'rebuildFromFacts',
   ]) assert.match(repository, new RegExp(token));
   assertNoPattern(repository, /twin_model_activation_v1/, 'S3_MODEL_ACTIVATION_SOURCE_FORBIDDEN');
@@ -179,6 +190,9 @@ function main() {
     'PostgresExactCalibrationResidualRepositoryV1',
     'PostgresCalibrationGovernanceRepositoryV1',
     'concurrent same-key same-hash Candidate',
+    'concurrent same-key different-hash Candidate',
+    'rejects an orphan candidate reference before canonical append',
+    'rejects a wrong canonical Candidate hash before append',
     'one Candidate indexes zero-to-many Evaluations',
     'guard loss recovers',
     'projection loss is repaired',
