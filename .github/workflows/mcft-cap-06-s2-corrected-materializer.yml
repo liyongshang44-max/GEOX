@@ -63,10 +63,6 @@ jobs:
           restored = text.encode('utf-8')
           actual_crc = zlib.crc32(restored)
           actual_size = len(restored) % (1 << 32)
-          print(f'S2_MATERIALIZER_EXPECTED_CRC32={expected_crc}')
-          print(f'S2_MATERIALIZER_ACTUAL_CRC32={actual_crc}')
-          print(f'S2_MATERIALIZER_EXPECTED_ISIZE={expected_size}')
-          print(f'S2_MATERIALIZER_ACTUAL_ISIZE={actual_size}')
           if actual_crc != expected_crc or actual_size != expected_size:
               raise SystemExit('S2_MATERIALIZER_EXACT_RESTORATION_FAILED')
           compile(text, str(output_path), 'exec')
@@ -88,10 +84,42 @@ jobs:
             git show "$OLD_S2_HEAD:$file" > "$file"
           done
           python .github/mcft_cap06_s2_materializer.py source
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts')
+          text = p.read_text(encoding='utf-8')
+
+          import_anchor = 'import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";\n'
+          import_addition = import_anchor + 'import { validateCap04RuntimeConfigPayloadV1 } from "../../apps/server/src/domain/twin_runtime/forecast_scenario_runtime_config_v1.js";\n'
+          if text.count(import_anchor) != 1:
+              raise SystemExit('S2_CONFIG_VALIDATOR_IMPORT_ANCHOR_MISMATCH')
+          text = text.replace(import_anchor, import_addition, 1)
+
+          old_helper = '''function fixed6V1(value: unknown, code: string): string {
+  return formatFixedDecimalV1(parseFixedDecimalV1(value, 6, code), 6);
+}'''
+          new_helper = '''function fixed6V1(value: unknown, code: string): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(code);
+  return formatFixedDecimalV1(parseFixedDecimalV1(String(value), 6, code), 6);
+}'''
+          if text.count(old_helper) != 1:
+              raise SystemExit('S2_FIXED6_HELPER_ANCHOR_MISMATCH')
+          text = text.replace(old_helper, new_helper, 1)
+
+          old_payload = '  const payload = caseItem.source_runtime_config.payload as Record<string, any>;\n'
+          new_payload = '  const payload = caseItem.source_runtime_config.payload;\n  validateCap04RuntimeConfigPayloadV1(payload);\n'
+          if text.count(old_payload) != 1:
+              raise SystemExit('S2_CONFIG_PAYLOAD_ANCHOR_MISMATCH')
+          text = text.replace(old_payload, new_payload, 1)
+          p.write_text(text, encoding='utf-8', newline='\n')
+          PY
           git diff --check
           grep -F '1_000_000n as const' apps/server/src/domain/calibration/grid_search_v1.ts
           ! grep -F 'Number(value)' scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
-          ! grep -F 'number.toFixed' scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
+          ! grep -F '.toFixed(' scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
+          grep -F 'validateCap04RuntimeConfigPayloadV1(payload)' scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
+          grep -F 'parseFixedDecimalV1(String(value), 6, code)' scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
           grep -F 'ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1' apps/server/src/domain/calibration/contracts_v1.ts
 
       - name: Setup pnpm
