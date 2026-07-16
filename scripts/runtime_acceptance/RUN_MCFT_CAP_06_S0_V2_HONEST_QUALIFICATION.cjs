@@ -13,6 +13,9 @@ const ROOT = path.resolve(__dirname, '../..');
 const SOURCE_PATH = path.join(ROOT, 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts');
 const TEMP_RELATIVE_PATH = 'scripts/runtime_acceptance/.MCFT_CAP_06_S0_V2_CI_PATCHED.ts';
 const TEMP_PATH = path.join(ROOT, TEMP_RELATIVE_PATH);
+const ACCEPTANCE_OUTPUT_DIR = path.join(ROOT, 'acceptance-output');
+const PERMANENT_CANDIDATE_ARTIFACT_PATH = path.join(ACCEPTANCE_OUTPUT_DIR, 'MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION_CANDIDATE.ts');
+const QUALIFICATION_RESULT_ARTIFACT_PATH = path.join(ACCEPTANCE_OUTPUT_DIR, 'MCFT_CAP_06_S0_V2_RESULT.json');
 const BASELINE_MAIN = 'ca819ba51bdf3017dbefa96015f76bd3b66a647c';
 const EXPECTED_HEAD_BRANCH = 'agent/mcft-cap-06-s0-v2-exact-qualification';
 const ISOLATED_DATABASE_NAME = 'mcft_cap06_s0_v2_ci';
@@ -124,7 +127,16 @@ function buildTemporaryRunner() {
     throw new Error(`OUTCOME_PRECONDITION_RETAINED:${retainedMarkers.join(',')}`);
   }
 
+  fs.mkdirSync(ACCEPTANCE_OUTPUT_DIR, { recursive: true });
   fs.writeFileSync(TEMP_PATH, source, 'utf8');
+  fs.writeFileSync(PERMANENT_CANDIDATE_ARTIFACT_PATH, source, 'utf8');
+}
+
+function persistQualificationResult(stdout) {
+  const line = String(stdout || '').split(/\r?\n/).find((candidate) => candidate.startsWith('S0_V2_RESULT_JSON:'));
+  if (!line) throw new Error('S0_V2_RESULT_JSON_REQUIRED');
+  const result = JSON.parse(line.slice('S0_V2_RESULT_JSON:'.length));
+  fs.writeFileSync(QUALIFICATION_RESULT_ARTIFACT_PATH, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
 }
 
 async function main() {
@@ -157,6 +169,7 @@ async function main() {
     process.stdout.write(String(result.stdout || ''));
     process.stderr.write(String(result.stderr || ''));
     requireSuccessful(result, 'MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION');
+    persistQualificationResult(result.stdout);
   } finally {
     fs.rmSync(TEMP_PATH, { force: true });
   }
