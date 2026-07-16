@@ -301,7 +301,7 @@ def wire_governance_gate() -> None:
       notes: 'Reproduces the CAP-05 terminal chain in a separate database and reports the actual frozen S0 qualification status without presupposing the repository-history verdict.'
     }
 """
-    replacement = needle[:-2] + ",\n    {\n      id: 'MCFT_CAP_06_S0_V2_GOVERNANCE',\n      command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs',\n      logFile: 'MCFT_CAP_06_S0_V2_GOVERNANCE.log',\n      notes: 'Validates the formal S0 v2 predecessor lock, dataset qualification, exact changed-file boundary, and preserved non-authority claims.'\n    }\n"
+    replacement = needle.rstrip("\n") + ",\n    {\n      id: 'MCFT_CAP_06_S0_V2_GOVERNANCE',\n      command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs',\n      logFile: 'MCFT_CAP_06_S0_V2_GOVERNANCE.log',\n      notes: 'Validates the formal S0 v2 predecessor lock, dataset qualification, exact changed-file boundary, and preserved non-authority claims.'\n    }\n"
     source = replace_exactly(source, needle, replacement, "S0_GATE_WIRING")
     path.write_text(source, encoding="utf-8")
 
