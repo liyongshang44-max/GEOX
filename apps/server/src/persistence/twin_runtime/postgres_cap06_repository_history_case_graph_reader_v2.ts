@@ -78,6 +78,24 @@ function exactStandardObjectHashV2(object: Record<string, unknown>, code: string
   if (computeMemberDeterminismHashV1(object) !== object.determinism_hash) throw new Error(code);
 }
 
+function evidenceWindowBodyV2(
+  evidenceWindow: CanonicalObjectEnvelopeV1,
+  code: string,
+): Record<string, unknown> {
+  // CAP-02 windows expose the base window directly; CAP-03 V2 preserves it under base_continuation_window.
+  const payload = requiredRecordV2(evidenceWindow.payload, `${code}:PAYLOAD_REQUIRED`);
+  if (typeof payload.window_end_inclusive === "string" && Array.isArray(payload.selected_records)) {
+    return payload;
+  }
+  const base = requiredRecordV2(
+    payload.base_continuation_window,
+    `${code}:BASE_CONTINUATION_WINDOW_REQUIRED`,
+  );
+  requiredStringV2(base.window_end_inclusive, `${code}:WINDOW_END_REQUIRED`);
+  requiredArrayV2(base.selected_records, `${code}:SELECTED_RECORDS_REQUIRED`);
+  return base;
+}
+
 function selectedRecordByRefV2(
   evidenceWindow: CanonicalObjectEnvelopeV1,
   ref: string,
@@ -85,7 +103,8 @@ function selectedRecordByRefV2(
   code: string,
 ): Record<string, unknown> {
   // Forecast snapshot refs must resolve to exactly one selected Evidence summary of the expected role.
-  const selected = requiredArrayV2(evidenceWindow.payload.selected_records, `${code}:SELECTED_RECORDS_REQUIRED`)
+  const window = evidenceWindowBodyV2(evidenceWindow, code);
+  const selected = requiredArrayV2(window.selected_records, `${code}:SELECTED_RECORDS_REQUIRED`)
     .map((value) => requiredRecordV2(value, `${code}:SELECTED_RECORD_INVALID`))
     .filter((value) => value.source_record_id === ref && value.role === role);
   if (selected.length !== 1) throw new Error(`${code}:CARDINALITY:${selected.length}`);
@@ -93,7 +112,7 @@ function selectedRecordByRefV2(
 }
 
 function selectedObservationV2(evidenceWindow: CanonicalObjectEnvelopeV1): Record<string, unknown> {
-  // Outcome Observation authority is frozen in the current canonical Evidence Window.
+  // Outcome Observation authority is frozen in the current CAP-03 canonical Evidence Window.
   const selection = requiredRecordV2(
     evidenceWindow.payload.observation_selection,
     "CAP06_CURRENT_EVIDENCE_OBSERVATION_SELECTION_REQUIRED",
@@ -256,7 +275,14 @@ export class PostgresCap06RepositoryHistoryCaseGraphReaderV2 {
     exactScopeV2(forecastEvidence as unknown as Record<string, unknown>, input.scope, "CAP06_FORECAST_EVIDENCE_SCOPE_MISMATCH");
     exactContextV2(forecastEvidence as unknown as Record<string, unknown>, input.lineage_id, input.revision_id, "CAP06_FORECAST_EVIDENCE_CONTEXT_MISMATCH");
     exactCap04MemberHashV2(forecastEvidence, "CAP06_FORECAST_EVIDENCE_HASH_RECOMPUTATION_MISMATCH");
-    const evidenceCutoff = canonicalInstantV2(forecastEvidence.payload.window_end_inclusive, "CAP06_FORECAST_EVIDENCE_CUTOFF_INVALID");
+    const forecastEvidenceWindow = evidenceWindowBodyV2(
+      forecastEvidence,
+      "CAP06_FORECAST_EVIDENCE_WINDOW",
+    );
+    const evidenceCutoff = canonicalInstantV2(
+      forecastEvidenceWindow.window_end_inclusive,
+      "CAP06_FORECAST_EVIDENCE_CUTOFF_INVALID",
+    );
     if (forecastEvidence.as_of !== evidenceCutoff || forecastEvidence.logical_time !== evidenceCutoff) throw new Error("CAP06_FORECAST_EVIDENCE_CUTOFF_MAPPING_MISMATCH");
 
     const forecastConfigRef = requiredStringV2(forecast.runtime_config_ref, "CAP06_FORECAST_CONFIG_REF_REQUIRED");
