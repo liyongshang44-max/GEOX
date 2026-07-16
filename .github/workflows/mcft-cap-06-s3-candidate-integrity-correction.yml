@@ -1,0 +1,411 @@
+name: mcft-cap-06-s3-candidate-integrity-correction
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize-correction:
+    if: github.head_ref == 'agent/mcft-cap-06-s3-candidate-integrity-correction-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      BASE_MAIN: 36efb93963222b2768b8d2bf384f748c86ce525a
+      S3_BASELINE: ea198cc0cad063c7e70a59727171908f2f8c7e7d
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s3-candidate-integrity-correction-v1
+          fetch-depth: 0
+
+      - name: Verify correction baseline
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin main
+          test "$(git rev-parse origin/main)" = "$BASE_MAIN"
+          test "$(git merge-base HEAD origin/main)" = "$BASE_MAIN"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Materialize bounded S3 correction
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f'{label}_ANCHOR_COUNT:{count}')
+              return text.replace(old, new, 1)
+
+          repository_path = Path('apps/server/src/persistence/calibration/postgres_calibration_governance_repository_v1.ts')
+          repository = repository_path.read_text(encoding='utf-8')
+          repository = replace_once(
+              repository,
+              '''  const keys = [object.idempotency_key, object.object_id].sort();
+  for (const key of keys) {
+''',
+              '''  const keys = [object.idempotency_key, object.object_id];
+  if (object.object_type === EVALUATION_TYPE_V1) {
+    const payload = requiredRecordV1(object.payload, "CAP06_EVALUATION_PAYLOAD_REQUIRED");
+    keys.push(requiredStringV1(payload.candidate_ref, "CAP06_EVALUATION_CANDIDATE_REF_REQUIRED"));
+  }
+  for (const key of [...new Set(keys)].sort()) {
+''',
+              'REPOSITORY_IDENTITY_LOCKS',
+          )
+          repository = replace_once(
+              repository,
+              '''      await acquireIdentityLocksV1(client, input.object);
+      const existingGuard = await client.query(
+''',
+              '''      await acquireIdentityLocksV1(client, input.object);
+      await this.verifyEvaluationCandidateWithClientV1(client, input.object);
+      const existingGuard = await client.query(
+''',
+              'REPOSITORY_COMMIT_CANDIDATE_PRECONDITION',
+          )
+          repository = replace_once(
+              repository,
+              '''         WHERE record_json->>'type' IN ('twin_calibration_candidate_v1','twin_shadow_evaluation_v1')
+         ORDER BY fact_id ASC`,
+''',
+              '''         WHERE record_json->>'type' IN ('twin_calibration_candidate_v1','twin_shadow_evaluation_v1')
+         ORDER BY CASE record_json->>'type'
+                    WHEN 'twin_calibration_candidate_v1' THEN 0
+                    ELSE 1
+                  END,
+                  fact_id ASC`,
+''',
+              'REPOSITORY_REBUILD_ORDER',
+          )
+          repository = replace_once(
+              repository,
+              '''      for (const object of canonical) {
+        const factId = factIdV1(object.object_id);
+        await this.ensureProjectionWithClientV1(client, object, factId);
+''',
+              '''      for (const object of canonical) {
+        const factId = factIdV1(object.object_id);
+        await this.verifyEvaluationCandidateWithClientV1(client, object);
+        await this.ensureProjectionWithClientV1(client, object, factId);
+''',
+              'REPOSITORY_REBUILD_CANDIDATE_PRECONDITION',
+          )
+          method_anchor = '''  private async readCanonicalObjectWithClientV1(
+    client: PoolClient,
+    objectId: string,
+  ): Promise<Cap06GovernanceObjectV1 | null> {
+'''
+          method = '''  private async verifyEvaluationCandidateWithClientV1(
+    client: PoolClient,
+    object: Cap06GovernanceObjectV1,
+  ): Promise<void> {
+    if (object.object_type !== EVALUATION_TYPE_V1) return;
+    const payload = requiredRecordV1(object.payload, "CAP06_EVALUATION_PAYLOAD_REQUIRED");
+    const candidateRef = requiredStringV1(
+      payload.candidate_ref,
+      "CAP06_EVALUATION_CANDIDATE_REF_REQUIRED",
+    );
+    const candidateHash = requiredStringV1(
+      payload.candidate_hash,
+      "CAP06_EVALUATION_CANDIDATE_HASH_REQUIRED",
+    );
+    const candidate = await this.readCanonicalObjectWithClientV1(client, candidateRef);
+    if (!candidate || candidate.object_type !== CANDIDATE_TYPE_V1) {
+      throw new Error("CAP06_EVALUATION_CANDIDATE_NOT_CANONICAL");
+    }
+    if (candidate.determinism_hash !== candidateHash) {
+      throw new Error("CAP06_EVALUATION_CANDIDATE_HASH_MISMATCH");
+    }
+    if (candidate.runtime_config_ref !== object.runtime_config_ref
+      || candidate.runtime_config_hash !== object.runtime_config_hash) {
+      throw new Error("CAP06_EVALUATION_BASE_CONFIG_MISMATCH");
+    }
+  }
+
+'''
+          repository = replace_once(
+              repository,
+              method_anchor,
+              method + method_anchor,
+              'REPOSITORY_VERIFY_METHOD',
+          )
+          repository_path.write_text(repository, encoding='utf-8')
+
+          acceptance_path = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE_DB.ts')
+          acceptance = acceptance_path.read_text(encoding='utf-8')
+          helper_anchor = '''function secondEvaluationV1(
+  source: Cap06ShadowEvaluationDraftV1,
+): Cap06ShadowEvaluationDraftV1 {
+  const result = structuredClone(source);
+  result.object_id = `${source.object_id}_second_policy`;
+  result.idempotency_key = `${source.idempotency_key}:SECOND_POLICY`;
+  result.payload.shadow_evaluation_id = `${String(source.payload.shadow_evaluation_id)}_second_policy`;
+  result.payload.evaluation_policy_hash = semanticHashV1({
+    base_policy_hash: source.payload.evaluation_policy_hash,
+    acceptance_variant: "SECOND_POLICY",
+  });
+  return rehashV1(result);
+}
+'''
+          helper_replacement = helper_anchor + '''
+function candidateVariantV1(
+  source: Cap06CalibrationCandidateDraftV1,
+  suffix: string,
+  parameterValue: string,
+): Cap06CalibrationCandidateDraftV1 {
+  const result = structuredClone(source);
+  result.object_id = `${source.object_id}_${suffix}`;
+  result.idempotency_key = `${source.idempotency_key}:${suffix.toUpperCase()}`;
+  result.payload.calibration_run_id = `${String(source.payload.calibration_run_id)}_${suffix}`;
+  result.payload.candidate_parameter_value = parameterValue;
+  result.payload.parameter_delta = parameterValue === "0.034000" ? "0.004000" : "0.005000";
+  return rehashV1(result);
+}
+
+function evaluationCandidateVariantV1(
+  source: Cap06ShadowEvaluationDraftV1,
+  suffix: string,
+  candidateRef: string,
+  candidateHash: string,
+): Cap06ShadowEvaluationDraftV1 {
+  const result = structuredClone(source);
+  result.object_id = `${source.object_id}_${suffix}`;
+  result.idempotency_key = `${source.idempotency_key}:${suffix.toUpperCase()}`;
+  result.payload.shadow_evaluation_id = `${String(source.payload.shadow_evaluation_id)}_${suffix}`;
+  result.payload.candidate_ref = candidateRef;
+  result.payload.candidate_hash = candidateHash;
+  result.source_refs[0] = candidateRef;
+  return rehashV1(result);
+}
+'''
+          acceptance = replace_once(
+              acceptance,
+              helper_anchor,
+              helper_replacement,
+              'ACCEPTANCE_HELPERS',
+          )
+          pre_candidate_anchor = '''  const candidateFirst = await repository.commitCanonicalObject({ object: fixture.candidate });
+'''
+          pre_candidate_block = '''  const orphanEvaluation = evaluationCandidateVariantV1(
+    fixture.evaluation,
+    "orphan_candidate",
+    "twin_calibration_candidate_missing",
+    semanticHashV1({ missing: "candidate" }),
+  );
+  await assert.rejects(
+    repository.commitCanonicalObject({ object: orphanEvaluation }),
+    /CAP06_EVALUATION_CANDIDATE_NOT_CANONICAL/,
+  );
+  assert.equal(await countV1("facts WHERE record_json->>'type'='twin_shadow_evaluation_v1'"), 0);
+  ok("Evaluation D commit rejects an orphan candidate reference before canonical append");
+
+''' + pre_candidate_anchor
+          acceptance = replace_once(
+              acceptance,
+              pre_candidate_anchor,
+              pre_candidate_block,
+              'ACCEPTANCE_ORPHAN_EVALUATION',
+          )
+          wrong_hash_anchor = '''  ok("same Candidate key with a different semantic hash is rejected without partial writes");
+
+  const concurrentCandidate = concurrentCandidateV1(fixture.candidate);
+'''
+          wrong_hash_block = '''  ok("same Candidate key with a different semantic hash is rejected without partial writes");
+
+  const wrongHashEvaluation = evaluationCandidateVariantV1(
+    fixture.evaluation,
+    "wrong_candidate_hash",
+    fixture.candidate.object_id,
+    semanticHashV1({ wrong: "candidate-hash" }),
+  );
+  await assert.rejects(
+    repository.commitCanonicalObject({ object: wrongHashEvaluation }),
+    /CAP06_EVALUATION_CANDIDATE_HASH_MISMATCH/,
+  );
+  assert.equal(await countV1("facts WHERE record_json->>'type'='twin_shadow_evaluation_v1'"), 0);
+  ok("Evaluation D commit rejects a wrong canonical Candidate hash before append");
+
+  const concurrentConflictCandidate = candidateVariantV1(
+    fixture.candidate,
+    "concurrent_different_hash",
+    "0.034000",
+  );
+  const concurrentConflictVariant = structuredClone(concurrentConflictCandidate);
+  concurrentConflictVariant.payload.candidate_parameter_value = "0.035000";
+  concurrentConflictVariant.payload.parameter_delta = "0.005000";
+  concurrentConflictVariant.determinism_hash = "";
+  concurrentConflictVariant.determinism_hash = semanticHashV1(concurrentConflictVariant);
+  const concurrentConflictResults = await Promise.allSettled([
+    repository.commitCanonicalObject({ object: concurrentConflictCandidate }),
+    repository.commitCanonicalObject({ object: concurrentConflictVariant }),
+  ]);
+  assert.equal(concurrentConflictResults.filter((result) => result.status === "fulfilled").length, 1);
+  assert.equal(concurrentConflictResults.filter((result) => result.status === "rejected").length, 1);
+  const concurrentConflictRejection = concurrentConflictResults.find(
+    (result): result is PromiseRejectedResult => result.status === "rejected",
+  );
+  assert.ok(concurrentConflictRejection);
+  assert.match(String(concurrentConflictRejection.reason), /CAP06_IDEMPOTENCY_CONFLICT/);
+  assert.equal(
+    await countV1(
+      "facts WHERE record_json->'payload'->>'object_id'=$1",
+      [concurrentConflictCandidate.object_id],
+    ),
+    1,
+  );
+  ok("concurrent same-key different-hash Candidate calls produce one winner and one deterministic conflict");
+
+  const concurrentCandidate = concurrentCandidateV1(fixture.candidate);
+'''
+          acceptance = replace_once(
+              acceptance,
+              wrong_hash_anchor,
+              wrong_hash_block,
+              'ACCEPTANCE_WRONG_HASH_AND_CONCURRENT_CONFLICT',
+          )
+          acceptance_path.write_text(acceptance, encoding='utf-8')
+
+          status_path = Path('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json')
+          status = json.loads(status_path.read_text(encoding='utf-8'))
+          status['implementation']['evaluation_requires_exact_canonical_candidate_ref_hash'] = True
+          status['implementation']['evaluation_candidate_lock_serialization'] = True
+          status['implementation']['facts_rebuild_candidate_before_evaluation'] = True
+          status['candidate_integrity_correction'] = {
+              'status': 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE',
+              'correction_pr_number': 2533,
+              'baseline_merge_commit': '36efb93963222b2768b8d2bf384f748c86ce525a',
+              'orphan_evaluation_rejected_before_append': True,
+              'wrong_candidate_hash_rejected_before_append': True,
+              'concurrent_same_key_different_hash_covered': True,
+              'exact_head_ci_status': 'PENDING',
+              'exact_merged_main_proof_status': 'PENDING',
+          }
+          status['candidate_tree_validation']['exact_final_head_status'] = 'PENDING_AFTER_CANDIDATE_INTEGRITY_CORRECTION'
+          status['candidate_tree_validation']['s3_postgresql_acceptance'] = 'PENDING_CORRECTED_EXACT_HEAD'
+          status_path.write_text(json.dumps(status, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+
+          gate_path = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs')
+          gate = gate_path.read_text(encoding='utf-8')
+          gate = replace_once(
+              gate,
+              '''  assert.equal(status.implementation.failed_attempt_persistence_mode, 'MODE_A_NO_PERSISTENT_ATTEMPT_OBJECT');
+  assert.equal(status.s3_effective, false);
+''',
+              '''  assert.equal(status.implementation.failed_attempt_persistence_mode, 'MODE_A_NO_PERSISTENT_ATTEMPT_OBJECT');
+  assert.equal(status.implementation.evaluation_requires_exact_canonical_candidate_ref_hash, true);
+  assert.equal(status.implementation.evaluation_candidate_lock_serialization, true);
+  assert.equal(status.implementation.facts_rebuild_candidate_before_evaluation, true);
+  assert.equal(status.candidate_integrity_correction.status, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
+  assert.equal(status.candidate_integrity_correction.orphan_evaluation_rejected_before_append, true);
+  assert.equal(status.candidate_integrity_correction.wrong_candidate_hash_rejected_before_append, true);
+  assert.equal(status.candidate_integrity_correction.concurrent_same_key_different_hash_covered, true);
+  assert.equal(status.s3_effective, false);
+''',
+              'GATE_STATUS_CORRECTION',
+          )
+          gate = replace_once(
+              gate,
+              '''    'CAP06_EVALUATION_PROJECTION_DIVERGENCE',
+    'rebuildFromFacts',
+''',
+              '''    'CAP06_EVALUATION_PROJECTION_DIVERGENCE',
+    'verifyEvaluationCandidateWithClientV1',
+    'CAP06_EVALUATION_CANDIDATE_NOT_CANONICAL',
+    'CAP06_EVALUATION_CANDIDATE_HASH_MISMATCH',
+    'CAP06_EVALUATION_BASE_CONFIG_MISMATCH',
+    'rebuildFromFacts',
+''',
+              'GATE_REPOSITORY_TOKENS',
+          )
+          gate = replace_once(
+              gate,
+              '''    'concurrent same-key same-hash Candidate',
+    'one Candidate indexes zero-to-many Evaluations',
+''',
+              '''    'concurrent same-key same-hash Candidate',
+    'concurrent same-key different-hash Candidate',
+    'rejects an orphan candidate reference before canonical append',
+    'rejects a wrong canonical Candidate hash before append',
+    'one Candidate indexes zero-to-many Evaluations',
+''',
+              'GATE_ACCEPTANCE_TOKENS',
+          )
+          gate_path.write_text(gate, encoding='utf-8')
+          PY
+
+      - name: Remove temporary correction workflow
+        run: git rm .github/workflows/mcft-cap-06-s3-candidate-integrity-correction.yml
+
+      - name: Run corrected S3 focused acceptance
+        run: |
+          set -euo pipefail
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Verify unchanged original S3 boundary
+        run: |
+          set -euo pipefail
+          rm -rf acceptance-output
+          test ! -e .github/workflows/mcft-cap-06-s3-candidate-integrity-correction.yml
+          mapfile -t actual < <(git diff --name-only "$S3_BASELINE...HEAD" | sort)
+          mapfile -t expected < <(printf '%s\n' \
+            .github/workflows/mcft-cap-06-s3-focused-validation.yml \
+            apps/server/db/migrations/2026_07_17_mcft_cap_06_calibration_governance_persistence.sql \
+            apps/server/src/persistence/calibration/postgres_calibration_governance_repository_v1.ts \
+            apps/server/src/persistence/calibration/postgres_exact_calibration_residual_repository_v1.ts \
+            apps/server/src/projections/calibration/calibration_governance_projection_v1.ts \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-BASELINE-RECONCILIATION-EFFECTIVENESS.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-ENTRY-CONTRACT.md \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE_DB.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PROJECTION_CANONICALITY_DB.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs \
+            scripts/runtime_acceptance/mcft_cap_06_controlled_compute_fixture_v1.ts | sort)
+          diff -u <(printf '%s\n' "${expected[@]}") <(printf '%s\n' "${actual[@]}")
+          test "${#actual[@]}" -eq 14
+
+      - name: Commit corrected S3 candidate
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "fix(mcft-cap-06): enforce Evaluation Candidate integrity"
+          git push origin HEAD:agent/mcft-cap-06-s3-candidate-integrity-correction-v1
