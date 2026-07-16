@@ -115,6 +115,15 @@ jobs:
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S2_CONTRACTS_MATH.log
           test -s acceptance-output/MCFT_CAP_06_S2_CONTRACTS_MATH_RESULT.json
 
+      - name: Upload exact S2 acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s2-contracts-math-diagnostic
+          path: acceptance-output/
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Materialize S2 SSOT and governance Gate from runtime evidence
         run: |
           set -euo pipefail
