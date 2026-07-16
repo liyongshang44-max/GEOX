@@ -357,7 +357,7 @@ export class PostgresCap06RepositoryHistoryCaseGraphReaderV2 {
       "CAP06_RESIDUAL_CONFIG_OBSERVATION_OPERATOR_REQUIRED",
     );
     if (residualOperator.id !== residualPayload.observation_operator_id
-      || String(residualOperator.h) !== residualPayload.observation_operator_h
+      || Number(residualPayload.observation_operator_h) !== residualOperator.h
       || residualOperator.direct_state_equivalence !== residualPayload.direct_state_equivalence) throw new Error("CAP06_RESIDUAL_OPERATOR_CONFIG_MISMATCH");
     if (residualConfig.payload.reality_binding_ref !== residualPayload.root_zone_geometry_ref
       || residualConfig.payload.reality_binding_hash !== residualPayload.root_zone_geometry_hash
