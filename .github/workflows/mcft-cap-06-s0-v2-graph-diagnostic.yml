@@ -62,6 +62,7 @@ jobs:
           s = s.replace('const TEMP_WORKFLOW_PATH = ".github/workflows/mcft-cap-06-s0-materialize.yml";', 'const TEMP_WORKFLOW_PATH = ".github/workflows/mcft-cap-06-s0-v2-graph-diagnostic.yml";')
           s = s.replace('assert.equal(p0Status.status, "PROVISIONAL_SSOT_CANDIDATE", "P0_CANDIDATE_STATUS_REQUIRED_BEFORE_S0_MATERIALIZATION");', 'assert.equal(p0Status.status, "MERGED_EFFECTIVE", "P0_MERGED_EFFECTIVE_REQUIRED_BEFORE_S0_V2_DIAGNOSTIC");')
           p.write_text(s, encoding='utf-8')
+          Path('/tmp/s0-v2-predecessor-source.ts').write_text(s, encoding='utf-8')
           PY
           pnpm -w exec tsx "$DIAG_SCRIPT" 2>&1 | tee /tmp/s0-v2-preflight.log
           node <<'NODE'
@@ -153,5 +154,6 @@ jobs:
           path: |
             /tmp/s0-v2-preflight.log
             /tmp/s0-v2-graph-diagnostic.json
+            /tmp/s0-v2-predecessor-source.ts
           if-no-files-found: warn
           retention-days: 7
