@@ -1,5 +1,5 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs
-// Purpose: fail closed unless the MCFT-CAP-06 S3 candidate preserves the exact D-persistence, exact-ref, projection, recovery, canonicality, nonactivation, and changed-file boundaries.
+// Purpose: fail closed unless the immutable MCFT-CAP-06 S3 implementation preserves the exact D-persistence, exact-ref, projection, recovery, canonicality and nonactivation boundaries, while allowing the mutable delivery frontier to advance after S3 effectiveness.
 // Boundary: static repository and machine-readable governance validation only; no database mutation, calibration compute, canonical append, Runtime authority, State, checkpoint, route, scheduler, or Model Activation.
 
 'use strict';
@@ -12,6 +12,7 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '../..');
 const BASELINE = 'ea198cc0cad063c7e70a59727171908f2f8c7e7d';
 const S3 = 'MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1';
+const S4 = 'MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1';
 const S5 = 'MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1';
 const EXPECTED_PERMANENT_FILES = [
   '.github/workflows/mcft-cap-06-s3-focused-validation.yml',
@@ -46,8 +47,9 @@ function git(args) {
   }).trim();
 }
 
-function changedFiles() {
-  const output = git(['diff', '--name-only', `${BASELINE}...HEAD`]);
+function changedFilesThrough(implementationRef) {
+  git(['cat-file', '-e', `${implementationRef}^{commit}`]);
+  const output = git(['diff', '--name-only', `${BASELINE}...${implementationRef}`]);
   return output ? output.split(/\r?\n/).filter(Boolean).sort() : [];
 }
 
@@ -55,17 +57,59 @@ function assertNoPattern(text, pattern, code) {
   assert.equal(pattern.test(text), false, code);
 }
 
+function assertCandidateFrontier(delivery, status) {
+  assert.equal(delivery.active_delivery_slice_id, S3);
+  assert.deepEqual(delivery.candidate_slices, [S3]);
+  assert.deepEqual(delivery.authorized_not_started_slices, []);
+  assert.equal(delivery.blocked_slices.includes(S5), true);
+  assert.equal(delivery.s3.authorized, true);
+  assert.equal(delivery.s3.implementation_started, true);
+  assert.equal(delivery.s3.candidate_implemented, true);
+  assert.equal(delivery.s3.effective, false);
+  assert.equal(status.status, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
+  assert.equal(status.s3_effective, false);
+  assert.equal(status.s5_authorized, false);
+}
+
+function assertEffectiveFrontier(delivery, status) {
+  assert.equal(delivery.s3.authorized, true);
+  assert.equal(delivery.s3.implementation_started, true);
+  assert.equal(delivery.s3.candidate_implemented, true);
+  assert.equal(delivery.s3.effective, true);
+  assert.equal(status.status, 'MERGED_EFFECTIVE');
+  assert.equal(status.s3_effective, true);
+  assert.equal(status.effectiveness_evidence.merge_commit, '36efb93963222b2768b8d2bf384f748c86ce525a');
+  assert.equal(status.effectiveness_evidence.head_to_merge_file_delta_count, 0);
+  assert.equal(status.effectiveness_evidence.head_to_merge_tree_equivalence, 'PASS');
+  assert.equal(status.effectiveness_evidence.postmerge_workflow_run, 29520979042);
+  assert.equal(status.s4_authorized, true);
+
+  const s4Effective = delivery.s4?.effective === true;
+  if (!s4Effective) {
+    assert.equal(delivery.active_delivery_slice_id, S4);
+    assert.equal(delivery.blocked_slices.includes(S5), true);
+    assert.equal(status.s5_authorized, false);
+  }
+}
+
 function main() {
-  const changed = changedFiles();
+  const baseline = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-BASELINE-RECONCILIATION-EFFECTIVENESS.json');
+  const delivery = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json');
+  const status = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json');
+  const s3Effective = status.s3_effective === true;
+  const implementationRef = s3Effective
+    ? status.effectiveness_evidence?.merge_commit
+    : 'HEAD';
+  assert.equal(typeof implementationRef, 'string');
+  assert.equal(Boolean(implementationRef), true);
+
+  const changed = changedFilesThrough(implementationRef);
   assert.deepEqual(changed, [...EXPECTED_PERMANENT_FILES].sort());
   assert.equal(changed.filter((relative) => relative.startsWith('apps/server/db/migrations/')).length, 1);
   assert.equal(changed.some((relative) => relative.startsWith('apps/web/')), false);
   assert.equal(changed.some((relative) => /route|routes|controller|openapi/i.test(relative)), false);
   assert.equal(changed.some((relative) => relative.startsWith('apps/server/src/domain/calibration/')), false);
 
-  const baseline = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-BASELINE-RECONCILIATION-EFFECTIVENESS.json');
-  const delivery = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json');
-  const status = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json');
   assert.equal(baseline.record_kind, 'IMMUTABLE_PREDECESSOR_EFFECTIVENESS_EVIDENCE');
   assert.equal(baseline.effective, true);
   assert.equal(baseline.effective_slices.s2.status, 'MERGED_EFFECTIVE');
@@ -78,23 +122,14 @@ function main() {
   assert.equal(baseline.immutable_facts.s2_model_activation_count, 0);
 
   assert.equal(delivery.record_kind, 'MUTABLE_DELIVERY_FRONTIER');
-  assert.equal(delivery.active_delivery_slice_id, S3);
-  assert.deepEqual(delivery.candidate_slices, [S3]);
-  assert.deepEqual(delivery.authorized_not_started_slices, []);
-  assert.equal(delivery.blocked_slices.includes(S5), true);
-  assert.equal(delivery.s3.authorized, true);
-  assert.equal(delivery.s3.implementation_started, true);
-  assert.equal(delivery.s3.candidate_implemented, true);
-  assert.equal(delivery.s3.effective, false);
   assert.equal(delivery.s3.migration_count, 1);
   assert.equal(delivery.s3.exact_ref_postgresql_adapter_implemented, true);
   assert.equal(delivery.s3.facts_based_rebuild_implemented, true);
+  assert.equal(delivery.s3.projection_canonicality_triggers_implemented, true);
 
   assert.equal(status.delivery_slice_id, S3);
-  assert.equal(status.status, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
   assert.equal(status.authorization.s2_merged_effective, true);
   assert.equal(status.authorization.s3_authorized, true);
-  assert.equal(status.authorization.s5_authorized, false);
   assert.equal(status.implementation.additive_migration_count, 1);
   assert.equal(status.implementation.canonical_store, 'public.facts');
   assert.deepEqual(status.implementation.d_transaction_object_types, [
@@ -103,8 +138,9 @@ function main() {
   ]);
   assert.equal(status.implementation.candidate_ref_alone_unique, false);
   assert.equal(status.implementation.failed_attempt_persistence_mode, 'MODE_A_NO_PERSISTENT_ATTEMPT_OBJECT');
-  assert.equal(status.s3_effective, false);
-  assert.equal(status.s5_authorized, false);
+
+  if (s3Effective) assertEffectiveFrontier(delivery, status);
+  else assertCandidateFrontier(delivery, status);
 
   const entry = read('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-ENTRY-CONTRACT.md');
   assert.match(entry, /S2 remains the sole mathematical authority/);
@@ -204,7 +240,7 @@ function main() {
   assert.match(runner, /ACCEPTANCE_MCFT_CAP_06_S3_PROJECTION_CANONICALITY_DB\.ts/);
   assert.match(runner, /DROP DATABASE IF EXISTS/);
 
-  console.log(`PASS MCFT-CAP-06 S3 governance gate; changed_files=${changed.length}`);
+  console.log(`PASS MCFT-CAP-06 S3 governance gate; implementation_ref=${implementationRef}; changed_files=${changed.length}; phase=${s3Effective ? 'EFFECTIVE' : 'CANDIDATE'}`);
 }
 
 main();
