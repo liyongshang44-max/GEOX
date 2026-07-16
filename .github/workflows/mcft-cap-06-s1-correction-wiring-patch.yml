@@ -29,32 +29,35 @@ jobs:
 
           runner = Path('scripts/acceptance/run_acceptance.cjs')
           text = runner.read_text(encoding='utf-8')
-          anchor = """    {
-                id: 'MCFT_CAP_06_S1_RESIDUAL_WINDOWS_GOVERNANCE',
-                command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs',
-                logFile: 'MCFT_CAP_06_S1_RESIDUAL_WINDOWS_GOVERNANCE.log',
-                notes: 'Validates exact S1 refs/hashes, controlled/repository track isolation, zero migration and preserved S2/Candidate/Evaluation/Activation boundaries.'
-              }""".replace('        ', '')
-          if text.count(anchor) != 1:
-              raise SystemExit(f'governance anchor count={text.count(anchor)}')
-          inserted = """    {
-                id: 'MCFT_CAP_06_S1_CONTROLLED_REGIMES',
-                command: 'pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts',
-                logFile: 'MCFT_CAP_06_S1_CONTROLLED_REGIMES.log',
-                notes: 'Replays the corrected controlled profile and proves the frozen LOW/MID/HIGH formula covers at least two calibration regimes with exact base Dynamics replay.'
-              },
-          """.replace('        ', '') + anchor
-          runner.write_text(text.replace(anchor, inserted), encoding='utf-8')
+          governance = """    {
+            id: 'MCFT_CAP_06_S1_RESIDUAL_WINDOWS_GOVERNANCE',
+            command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs',
+            logFile: 'MCFT_CAP_06_S1_RESIDUAL_WINDOWS_GOVERNANCE.log',
+            notes: 'Validates exact S1 refs/hashes, controlled/repository track isolation, zero migration and preserved S2/Candidate/Evaluation/Activation boundaries.'
+          }"""
+          regime = """    {
+            id: 'MCFT_CAP_06_S1_CONTROLLED_REGIMES',
+            command: 'pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts',
+            logFile: 'MCFT_CAP_06_S1_CONTROLLED_REGIMES.log',
+            notes: 'Replays the corrected controlled profile and proves the frozen LOW/MID/HIGH formula covers at least two calibration regimes with exact base Dynamics replay.'
+          },
+          """
+          if 'MCFT_CAP_06_S1_CONTROLLED_REGIMES' not in text:
+              if text.count(governance) != 1:
+                  raise SystemExit(f'governance anchor count={text.count(governance)}')
+              text = text.replace(governance, regime + governance)
+              runner.write_text(text, encoding='utf-8')
 
           probe = Path('.github/workflows/mcft-cap-06-s1-correction-probe.yml')
           probe_text = probe.read_text(encoding='utf-8')
           old = 'pnpm -w exec tsx scripts/runtime_acceptance/DIAG_MCFT_CAP_06_S1_CORRECTED_REGIMES.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S1_CORRECTED_REGIMES.log'
           new = 'pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S1_CONTROLLED_REGIMES.log'
-          if probe_text.count(old) != 1:
-              raise SystemExit(f'probe command count={probe_text.count(old)}')
-          probe.write_text(probe_text.replace(old, new), encoding='utf-8')
+          if old in probe_text:
+              probe.write_text(probe_text.replace(old, new), encoding='utf-8')
+          elif new not in probe_text:
+              raise SystemExit('permanent probe command missing')
           PY
-          rm scripts/runtime_acceptance/DIAG_MCFT_CAP_06_S1_CORRECTED_REGIMES.ts
+          rm -f scripts/runtime_acceptance/DIAG_MCFT_CAP_06_S1_CORRECTED_REGIMES.ts
 
       - name: Remove one-shot workflow and push
         shell: bash
