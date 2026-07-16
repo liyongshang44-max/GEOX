@@ -13,8 +13,8 @@ const ROOT = path.resolve(__dirname, '../..');
 const BASELINE = 'ea198cc0cad063c7e70a59727171908f2f8c7e7d';
 const S3 = 'MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1';
 const S5 = 'MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1';
-const OPTIONAL_VALIDATION_WORKFLOW = '.github/workflows/mcft-cap-06-s3-focused-validation.yml';
 const EXPECTED_PERMANENT_FILES = [
+  '.github/workflows/mcft-cap-06-s3-focused-validation.yml',
   'apps/server/db/migrations/2026_07_17_mcft_cap_06_calibration_governance_persistence.sql',
   'apps/server/src/persistence/calibration/postgres_calibration_governance_repository_v1.ts',
   'apps/server/src/persistence/calibration/postgres_exact_calibration_residual_repository_v1.ts',
@@ -56,13 +56,7 @@ function assertNoPattern(text, pattern, code) {
 
 function main() {
   const changed = changedFiles();
-  const permitted = new Set([...EXPECTED_PERMANENT_FILES, OPTIONAL_VALIDATION_WORKFLOW]);
-  for (const relative of changed) {
-    assert.equal(permitted.has(relative), true, `S3_UNAUTHORIZED_CHANGED_FILE:${relative}`);
-  }
-  for (const relative of EXPECTED_PERMANENT_FILES) {
-    assert.equal(changed.includes(relative), true, `S3_EXPECTED_FILE_MISSING_FROM_DIFF:${relative}`);
-  }
+  assert.deepEqual(changed, [...EXPECTED_PERMANENT_FILES].sort());
   assert.equal(changed.filter((relative) => relative.startsWith('apps/server/db/migrations/')).length, 1);
   assert.equal(changed.some((relative) => relative.startsWith('apps/web/')), false);
   assert.equal(changed.some((relative) => /route|routes|controller|openapi/i.test(relative)), false);
@@ -115,8 +109,17 @@ function main() {
   assert.match(entry, /S2 remains the sole mathematical authority/);
   assert.match(entry, /S5 and S6 are forbidden from creating a second calibration or shadow mathematics authority/);
   assert.match(entry, /S3 owns the PostgreSQL implementation and SQL-shape proof/);
+  assert.match(entry, /mcft-cap-06-s3-focused-validation\.yml/);
   assert.match(entry, /NO_MODEL_ACTIVATION/);
   assert.match(entry, /NO_ACTIVE_CONFIG_SWITCH/);
+
+  const workflow = read('.github/workflows/mcft-cap-06-s3-focused-validation.yml');
+  assert.match(workflow, /pull_request:/);
+  assert.match(workflow, /push:/);
+  assert.match(workflow, /branches: \[main\]/);
+  assert.match(workflow, /RUN_MCFT_CAP_06_S3_PERSISTENCE\.cjs/);
+  assert.match(workflow, /ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE\.cjs/);
+  assertNoPattern(workflow, /github\.head_ref\s*==/, 'S3_FOCUSED_REGRESSION_BRANCH_LOCK_FORBIDDEN');
 
   const migration = read('apps/server/db/migrations/2026_07_17_mcft_cap_06_calibration_governance_persistence.sql');
   for (const token of [
