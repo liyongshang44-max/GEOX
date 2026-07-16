@@ -1,0 +1,40 @@
+name: MCFT-CAP-06 reconciliation PR trigger
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  trigger:
+    if: github.head_ref == 'agent/mcft-cap-06-current-state-reconciliation-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-current-state-reconciliation-v1
+          fetch-depth: 0
+
+      - name: Execute temporary materializer
+        env:
+          GITHUB_REF_NAME: agent/mcft-cap-06-current-state-reconciliation-v1
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('.github/workflows/mcft-cap-06-current-state-reconcile.yml')
+          trigger = Path('.github/workflows/mcft-cap-06-current-state-pr-trigger.yml')
+          lines = source.read_text(encoding='utf-8').splitlines()
+          marker = '        run: |'
+          start = lines.index(marker) + 1
+          script_lines = []
+          for line in lines[start:]:
+              script_lines.append(line[10:] if line.startswith('          ') else line)
+          Path('/tmp/mcft_cap06_reconcile.sh').write_text('\n'.join(script_lines) + '\n', encoding='utf-8')
+          trigger.unlink()
+          PY
+          bash /tmp/mcft_cap06_reconcile.sh
