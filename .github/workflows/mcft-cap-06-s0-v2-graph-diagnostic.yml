@@ -49,6 +49,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p acceptance-output
           git fetch origin agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1
           git show origin/agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1:scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts > /tmp/s0_diag.ts
           python3 - <<'PY'
@@ -61,8 +62,13 @@ jobs:
           s = s.replace('assert.equal(p0Status.status, "PROVISIONAL_SSOT_CANDIDATE", "P0_CANDIDATE_STATUS_REQUIRED_BEFORE_S0_MATERIALIZATION");', 'assert.equal(p0Status.status, "MERGED_EFFECTIVE", "P0_MERGED_EFFECTIVE_REQUIRED_BEFORE_S0_V2_DIAGNOSTIC");')
           p.write_text(s, encoding='utf-8')
           PY
-          pnpm -w exec tsx /tmp/s0_diag.ts
-          mkdir -p acceptance-output
+          set +e
+          pnpm -w exec tsx /tmp/s0_diag.ts 2>&1 | tee acceptance-output/s0-v2-preflight.log
+          rc=${PIPESTATUS[0]}
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            exit "$rc"
+          fi
           node <<'NODE'
           const fs = require('node:fs');
           const { Client } = require('pg');
@@ -98,7 +104,8 @@ jobs:
           NODE
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: mcft-cap-06-s0-v2-graph-diagnostic
-          path: acceptance-output/s0-v2-graph-diagnostic.json
+          path: acceptance-output
           retention-days: 7
