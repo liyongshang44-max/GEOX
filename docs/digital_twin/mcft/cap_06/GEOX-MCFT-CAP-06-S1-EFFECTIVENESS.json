@@ -38,6 +38,8 @@
   "successor_capability_line_authorized": false,
   "writeback_candidate_validation": {
     "governance_gate": "PASS",
+    "s0_qualification_successor_monotonicity": "PASS",
+    "active_slice_ssot_consistency": "FAIL_CLOSED",
     "exact_changed_file_count": 9,
     "temporary_workflows_retained": false,
     "temporary_finalizers_retained": false,
