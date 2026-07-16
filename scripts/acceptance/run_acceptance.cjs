@@ -59,6 +59,12 @@ const STEP_DEFINITIONS_BY_SUITE = {
       command: 'pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts',
       logFile: 'MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.log',
       notes: 'Reproduces checkpoint 72 to 80 in an isolated database and verifies canonical CAP-05 Config pins, restart recovery, and zero-write replay.'
+    },
+    {
+      id: 'MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION',
+      command: 'node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs',
+      logFile: 'MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.log',
+      notes: 'Reproduces the CAP-05 terminal chain in a separate database and reports the actual frozen S0 qualification status without presupposing the repository-history verdict.'
     }
   ],
   'p9-twin-kernel': [
