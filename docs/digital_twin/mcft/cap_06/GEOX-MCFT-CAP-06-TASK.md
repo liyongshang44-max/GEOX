@@ -31,10 +31,10 @@ design_status:
 CONDITIONAL_FROZEN_AFTER_P_MINUS_1
 
 implementation_status:
-S1_CORRECTION_MERGED_EFFECTIVE_S2_AUTHORIZED_NOT_STARTED
+S2_CONTRACTS_MATH_CANDIDATE
 
 runtime_implementation_status:
-S1_CORRECTED_SUCCESSOR_READINESS_EFFECTIVE_S2_NOT_STARTED
+S2_CONTRACTS_MATH_IMPLEMENTED_NOT_EFFECTIVE
 
 authorization_effective:
 true
@@ -58,7 +58,7 @@ first_permitted_repository_action:
 MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1
 ```
 
-本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1、P0、S0 与 corrected S1 已 merged-main effective；当前唯一 active slice 为 S2 contracts/math，状态 AUTHORIZED_NOT_STARTED。S3 及其后续、Calibration Candidate、Shadow Evaluation、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 均保持未授权。
+本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1、P0、S0 与 corrected S1 已 merged-main effective；当前唯一 active slice 为 S2 contracts/math，候选实现已完成但尚未 effective。S3 及其后续、Calibration Candidate canonical append、Shadow Evaluation canonical append、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 均保持未授权。
 
 ---
 
@@ -4310,4 +4310,26 @@ S1 status: MERGED_EFFECTIVE_CORRECTED
 S2 status: AUTHORIZED_NOT_STARTED
 S2 implementation started: false
 Candidate / Evaluation / Activation: absent
+```
+
+
+<!-- MCFT-CAP-06-S2-CONTRACTS-MATH-CANDIDATE-V1 -->
+## S2 contracts/math candidate
+
+```text
+status: CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE
+source residual set: sha256:7995da1a8c5221c207087b30bb66a60ac2054e0616338f275ffaf72a01857e60
+source case-input set: sha256:cb3bd4c273134071e931e8f85765b028ce58986752e94da3902f8563ddba4bb3
+window hash semantics: ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1
+holdout purpose: HIGH_EXCESS_STRESS_HOLDOUT_ONLY
+holdout generalization: NOT_ESTABLISHED
+parameter grid: 0.020000..0.040000 step 0.001000 (21)
+selected controlled parameter: 0.034000
+objective range threshold scale18: 1000000
+best-second margin threshold scale18: 1000000
+canonical writes: 0
+NO_CALIBRATION_CANDIDATE_APPEND
+NO_SHADOW_EVALUATION_APPEND
+NO_MODEL_ACTIVATION
+S3 authorization: false
 ```

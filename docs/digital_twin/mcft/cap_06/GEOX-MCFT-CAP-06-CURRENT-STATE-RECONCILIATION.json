@@ -3,8 +3,8 @@
   "reconciliation_id": "MCFT-CAP-06.CURRENT-STATE-RECONCILIATION-V1",
   "capability_line_id": "MCFT-CAP-06",
   "baseline_main_commit": "1e66ea7efc842b8e547bccc40521d520b4370e69",
-  "status": "MERGED_EFFECTIVE",
-  "reconciliation_effective": true,
+  "status": "S2_CONTRACTS_MATH_CANDIDATE",
+  "reconciliation_effective": false,
   "current_state": {
     "p_minus_1": "MERGED_EFFECTIVE",
     "p0": "MERGED_EFFECTIVE",
@@ -20,11 +20,12 @@
     "s1": "MERGED_EFFECTIVE_CORRECTED",
     "controlled_residual_window_candidate_implemented": true,
     "controlled_residual_window_effective": true,
-    "s2": "AUTHORIZED_NOT_STARTED",
+    "s2": "CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
     "calibration_contract_math_implemented": false,
     "s1_successor_readiness_effective": true,
     "s2_authorized": true,
-    "s2_implementation_started": false
+    "s2_implementation_started": true,
+    "calibration_contract_math_candidate_implemented": true
   },
   "proof": {
     "p_minus_1": {
@@ -94,6 +95,15 @@
       "postmerge_workflow_run": 29493733228,
       "postmerge_gate": "PASS",
       "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json"
+    },
+    "s2_candidate": {
+      "status": "CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
+      "status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+      "contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-CONTRACTS-MATH.json",
+      "runtime_acceptance": "PASS",
+      "canonical_write_count": 0,
+      "migration_count": 0,
+      "effective": false
     }
   },
   "superseded_candidates": [
@@ -136,7 +146,7 @@
     "postmerge_gate": "PASS",
     "effective": true
   },
-  "effectiveness_condition": "SATISFIED_BY_PR_2519_AND_PROOF_RUN_29493733228",
+  "effectiveness_condition": "S2_EXACT_HEAD_CI_PASS_AND_MERGE_AND_TREE_EQUIVALENCE_AND_EXACT_MERGED_MAIN_PROOF_AND_SEPARATE_EFFECTIVENESS_WRITEBACK",
   "s0_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json",
   "s1_candidate": {
     "contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.json",

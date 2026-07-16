@@ -3828,20 +3828,20 @@
           "depends_on_delivery_slice_ids": [
             "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1"
           ],
-          "status": "AUTHORIZED_NOT_STARTED",
+          "status": "CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
           "runtime_source_authorized": true,
           "migration_authorized": false,
           "canonical_write_authorized": false,
-          "implementation_started": false,
-          "next_authorized_slice_after_effectiveness": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1"
+          "implementation_started": true,
+          "next_authorized_slice_after_effectiveness": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
+          "effectiveness_condition_satisfied": false,
+          "status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json"
         }
       ],
       "predecessor_lock_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json",
       "dataset_qualification_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
       "s0_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json",
-      "next_authorized_slice_ids": [
-        "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1"
-      ],
+      "next_authorized_slice_ids": [],
       "s1_contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.json",
       "s1_status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
       "controlled_residual_window_candidate_implemented": true,
@@ -3849,7 +3849,8 @@
       "s1_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
       "s1_successor_readiness_effective": true,
       "s1_prior_mechanical_effectiveness_preserved": true,
-      "calibration_contract_math_implemented": false
+      "calibration_contract_math_implemented": false,
+      "calibration_contract_math_candidate_implemented": true
     }
   ],
   "actual_owner_work_package_statuses": {

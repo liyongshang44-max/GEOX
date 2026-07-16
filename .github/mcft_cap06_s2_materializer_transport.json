@@ -1,9 +1,0 @@
-{
-  "recovered_sha256": "7f0ca50abd941c677e7b86f9c01aa2377768fad9fa4e04b708ffdc36daf07539",
-  "recovered_bytes": 50586,
-  "expected_crc32": 806512771,
-  "actual_crc32": 1738098139,
-  "expected_isize": 50586,
-  "actual_isize": 50586,
-  "suspect_token_count": 39
-}
