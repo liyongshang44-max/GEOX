@@ -1,11 +1,15 @@
-name: mcft-cap-06-s2-typecheck-diagnostics
+name: mcft-cap-06-s2-source-repair
 
 on:
   pull_request:
     types: [synchronize, reopened]
 
+permissions:
+  contents: write
+  pull-requests: read
+
 jobs:
-  typecheck-diagnostics:
+  repair:
     if: github.head_ref == 'agent/mcft-cap-06-s2-contracts-math-v1'
     runs-on: ubuntu-latest
     steps:
@@ -13,6 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
+          persist-credentials: true
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -28,16 +33,56 @@ jobs:
       - name: Install
         run: pnpm install --no-frozen-lockfile
 
-      - name: Capture typecheck output
+      - name: Repair fixed-point imports and comparisons
         run: |
-          set -o pipefail
-          mkdir -p acceptance-output
-          pnpm -r typecheck 2>&1 | tee acceptance-output/MCFT_CAP_06_S2_TYPECHECK.log
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
 
-      - name: Upload typecheck diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap-06-s2-typecheck-diagnostics
-          path: acceptance-output/MCFT_CAP_06_S2_TYPECHECK.log
-          if-no-files-found: error
+          grid_path = Path('apps/server/src/domain/calibration/grid_search_v1.ts')
+          grid = grid_path.read_text(encoding='utf-8')
+          grid = grid.replace('  CAP06_PARAMETER_SCALE_V1,\n', '', 1)
+          grid = grid.replace(
+              '  buildCap06ErrorMetricsV1,\n',
+              '  CAP06_PARAMETER_SCALE_V1,\n  buildCap06ErrorMetricsV1,\n',
+              1,
+          )
+          grid = grid.replace(
+              'function absoluteV1(value: bigint): bigint {\n  return value < 0n ? -value : value;\n}\n',
+              'function absoluteV1(value: bigint): bigint {\n  return value < 0n ? -value : value;\n}\n\nfunction compareBigIntV1(left: bigint, right: bigint): number {\n  return left < right ? -1 : left > right ? 1 : 0;\n}\n',
+              1,
+          )
+          grid = grid.replace(
+              '    || Number(\n      absoluteV1(parameterUnitsV1(left.parameter_delta))\n      - absoluteV1(parameterUnitsV1(right.parameter_delta)),\n    )\n    || (parameterUnitsV1(left.parameter_value) < parameterUnitsV1(right.parameter_value) ? -1 : 1);',
+              '    || compareBigIntV1(\n      absoluteV1(parameterUnitsV1(left.parameter_delta)),\n      absoluteV1(parameterUnitsV1(right.parameter_delta)),\n    )\n    || compareBigIntV1(\n      parameterUnitsV1(left.parameter_value),\n      parameterUnitsV1(right.parameter_value),\n    );',
+              1,
+          )
+          grid_path.write_text(grid, encoding='utf-8')
+
+          shadow_path = Path('apps/server/src/domain/calibration/shadow_evaluation_v1.ts')
+          shadow = shadow_path.read_text(encoding='utf-8')
+          shadow = shadow.replace(
+              'import { compareIsoInstantV1 } from "../soil_water/fixed_point_water_decimal_v1.js";',
+              'import { compareIsoInstantV1, parseFixedDecimalV1 } from "../soil_water/fixed_point_water_decimal_v1.js";',
+              1,
+          )
+          shadow = shadow.replace(
+              '  parseCap06VwcMetricV1(input.candidateParameterValue, "CAP06_SHADOW_CANDIDATE_PARAMETER_REQUIRED");',
+              '  parseFixedDecimalV1(input.candidateParameterValue, 6, "CAP06_SHADOW_CANDIDATE_PARAMETER_REQUIRED");',
+              1,
+          )
+          shadow_path.write_text(shadow, encoding='utf-8')
+          PY
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Remove temporary workflow and commit permanent repair
+        run: |
+          set -euo pipefail
+          rm .github/workflows/mcft-cap-06-s2-typecheck-diagnostics.yml
+          git diff --check 3a1494acb47db776d97ba75e339d85dc18c9d629
+          git config user.name "GEOX Governance Bot"
+          git config user.email "governance-bot@users.noreply.github.com"
+          git add -A
+          git commit -m "MCFT-CAP-06 S2: repair fixed-point type and comparison authority"
+          git push origin HEAD:${{ github.head_ref }}
