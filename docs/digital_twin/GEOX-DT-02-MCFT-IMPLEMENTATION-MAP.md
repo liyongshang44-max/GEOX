@@ -1453,3 +1453,38 @@ false
 
 The reconciled frontier records repository facts only: P-1 and P0 are merged-main effective, CAP-05 predecessor eligibility is restored, and S0 qualification is authorized but not started. No CAP-06 Runtime, migration, canonical write, Candidate, Evaluation, Model Activation, active-binding, public route, Web, scheduler or successor authority is granted.
 <!-- MCFT-CAP-06-P0-CURRENT-STATE-END -->
+
+<!-- MCFT-CAP-06-S0-V2-CURRENT-STATE-BEGIN -->
+## MCFT-CAP-06 S0 v2 candidate frontier
+
+```text
+baseline main: ca819ba51bdf3017dbefa96015f76bd3b66a647c
+S0 implementation generation: S0_V2
+S0 status: READY_FOR_MERGE_CANDIDATE
+S0 PR: #2509
+formal proof commit: d3c5341707b35982df84ce63e8aef310ce304b31
+formal proof workflow: 29469336992
+CAP-05 checkpoint reconstruction: 72 -> 80 PASS
+canonical State fact count: 33
+case graph validation: PASS
+eligible canonical Residuals: 1
+dataset qualification: INSUFFICIENT_MATCHED_PAIRS
+Forecast-time and Residual-time Config identities: DISTINCT_AND_EXACTLY_CLOSED
+homogeneity cardinalities: 1/1/1/1/1/1
+public facts mutated by qualification: false
+authorization effective: false
+runtime source authorized: false
+migration authorized: false
+canonical write authorized: false
+active delivery slice: null
+next authorized slices before effectiveness: []
+next eligible after exact merged-main S0 Gate: MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
+Calibration Candidate implemented: false
+Shadow Evaluation implemented: false
+Model Activation implemented: false
+capability complete: false
+successor MCFT-CAP-07 authorized: false
+```
+
+The S0 v2 candidate establishes an exact read-only predecessor and dataset qualification boundary. It does not create Residual history, execute parameter search, canonicalize a Calibration Candidate or Evaluation, mutate State/checkpoint, or authorize Runtime, migration, public routes, Web, scheduler, active Config or CAP-07.
+<!-- MCFT-CAP-06-S0-V2-CURRENT-STATE-END -->

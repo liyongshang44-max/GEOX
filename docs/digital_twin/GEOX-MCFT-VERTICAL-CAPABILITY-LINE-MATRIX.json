@@ -4,8 +4,8 @@
   "status": "COMPLETE",
   "baseline": {
     "branch": "main",
-    "commit": "1e66ea7efc842b8e547bccc40521d520b4370e69",
-    "meaning": "MCFT-CAP-06 P-1 and P0 merged-main effective; CAP-05 predecessor eligibility restored; S0 qualification authorized but not started; CAP-06 Runtime remains unauthorized"
+    "commit": "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+    "meaning": "MCFT-CAP-06 P-1 and P0 merged-main effective; S0 v2 exact predecessor and dataset qualification candidate proven; CAP-06 Runtime remains unauthorized"
   },
   "identifier_model": {
     "capability_line_id": "vertical executable capability closure unit",
@@ -3664,9 +3664,9 @@
       "name": "Calibration Candidate and Shadow Evaluation",
       "runtime_mode": "REPLAY",
       "target_completion_level": "Level A",
-      "status": "GOVERNANCE_AUTHORIZED",
+      "status": "READY_FOR_MERGE_CANDIDATE",
       "design_status": "CONDITIONAL_FROZEN_AFTER_P_MINUS_1",
-      "implementation_status": "P0_MERGED_EFFECTIVE_S0_AUTHORIZED_NOT_STARTED",
+      "implementation_status": "S0_V2_CANDIDATE",
       "authorization_effective": false,
       "runtime_source_authorized": false,
       "active_delivery_slice_id": null,
@@ -3714,27 +3714,46 @@
         "postmerge_probe_pr_number": 2499,
         "postmerge_workflow_run": 29419841209
       },
-      "next_repository_action": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
-      "next_repository_action_after_p0_effectiveness": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
+      "next_repository_action": "MERGE_S0_V2_CANDIDATE_AND_PROVE_EXACT_MERGED_MAIN_EFFECTIVENESS",
+      "next_repository_action_after_p0_effectiveness": "MERGE_S0_V2_CANDIDATE_AND_PROVE_EXACT_MERGED_MAIN_EFFECTIVENESS",
       "preserved_nonclaims": [
-        "NO_RUNTIME_SOURCE_AUTHORIZATION",
+        "NO_RUNTIME_SOURCE_AUTHORIZATION_BEFORE_S0_EFFECTIVENESS",
         "NO_MIGRATION",
         "NO_CANONICAL_WRITE",
+        "NO_RESIDUAL_CREATED_BY_S0",
         "NO_CALIBRATION_CANDIDATE",
         "NO_SHADOW_EVALUATION",
         "NO_MODEL_ACTIVATION",
         "NO_ACTIVE_CONFIG_SWITCH",
-        "NO_S0_EFFECTIVENESS",
-        "NO_MCFT_CAP_07_AUTHORIZATION"
+        "NO_ACTIVE_CONFIG_INDEX",
+        "NO_PUBLIC_ROUTE",
+        "NO_WEB",
+        "NO_SCHEDULER",
+        "NO_MCFT_CAP_07_AUTHORIZATION",
+        "NO_CAPABILITY_COMPLETION"
       ],
       "s0_qualification_authorized": true,
       "predecessor_eligibility": "RESTORED",
       "s0": {
         "delivery_slice_id": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
-        "status": "AUTHORIZED_NOT_STARTED",
+        "status": "READY_FOR_MERGE_CANDIDATE",
+        "implementation_generation": "S0_V2",
         "authorization_scope": "PREDECESSOR_QUALIFICATION_ONLY",
+        "authorization_effective": false,
         "runtime_source_authorized": false,
-        "superseded_pull_request": 2500
+        "pull_request": 2509,
+        "superseded_pull_request": 2500,
+        "proof_commit": "d3c5341707b35982df84ce63e8aef310ce304b31",
+        "proof_workflow_run": 29469336992,
+        "predecessor_lock_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json",
+        "dataset_qualification_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+        "authorization_status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-AUTHORIZATION-STATUS.json",
+        "case_graph_validation_status": "PASS",
+        "dataset_qualification_status": "INSUFFICIENT_MATCHED_PAIRS",
+        "eligible_residual_count": 1,
+        "next_authorized_slice_ids": [],
+        "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1",
+        "effectiveness_condition_satisfied": false
       }
     }
   ],
@@ -3786,5 +3805,5 @@
     "MCFT-08": "PARTIALLY_ESTABLISHED",
     "MCFT-09": "PARTIALLY_ESTABLISHED"
   },
-  "latest_governance_update": "MCFT-CAP-06.CURRENT-STATE-RECONCILIATION-V1"
+  "latest_governance_update": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1"
 }
