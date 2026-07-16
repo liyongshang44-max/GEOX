@@ -68,7 +68,6 @@ jobs:
           pnpm -w exec tsx "$DIAG_SCRIPT" 2>&1 | tee /tmp/s0-v2-preflight.log
           rc=${PIPESTATUS[0]}
           set -e
-          cp /tmp/s0-v2-preflight.log acceptance-output/s0-v2-preflight.log
           if [ "$rc" -ne 0 ]; then
             exit "$rc"
           fi
@@ -102,7 +101,7 @@ jobs:
             const allTypes = await client.query("SELECT record_json->>'type' AS type, count(*)::int AS count FROM facts GROUP BY 1 ORDER BY 1");
             out.type_counts = allTypes.rows;
             await client.end();
-            fs.writeFileSync('acceptance-output/s0-v2-graph-diagnostic.json', JSON.stringify(out, null, 2));
+            fs.writeFileSync('/tmp/s0-v2-graph-diagnostic.json', JSON.stringify(out, null, 2));
           })().catch((error) => { console.error(error); process.exit(1); });
           NODE
 
@@ -110,5 +109,8 @@ jobs:
         if: always()
         with:
           name: mcft-cap-06-s0-v2-graph-diagnostic
-          path: acceptance-output
+          path: |
+            /tmp/s0-v2-preflight.log
+            /tmp/s0-v2-graph-diagnostic.json
+          if-no-files-found: warn
           retention-days: 7
