@@ -1,14 +1,18 @@
 {
-  "schema_version": "geox_mcft_cap_06_s0_v2_status_v1",
+  "schema_version": "geox_mcft_cap_06_s0_v2_status_v2",
   "capability_line_id": "MCFT-CAP-06",
   "delivery_slice_id": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
   "implementation_generation": "S0_V2",
   "baseline_main_commit": "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
-  "status": "IMPLEMENTATION_IN_PROGRESS",
+  "status": "READY_FOR_GOVERNANCE_GATE",
+  "implementation_status": "S0_V2_CANDIDATE",
   "authorization_scope": "PREDECESSOR_QUALIFICATION_ONLY",
   "authorization_effective": false,
   "runtime_source_authorized": false,
+  "migration_authorized": false,
+  "canonical_write_authorized": false,
   "active_delivery_slice_id": null,
+  "pull_request": 2509,
   "supersedes_pull_request": 2500,
   "completed_work": [
     "RECURSIVE_CANONICAL_HASH_AUTHORITY_REUSED",
@@ -19,30 +23,61 @@
     "SIX_DIMENSION_HOMOGENEITY_CARDINALITY_GATE_IMPLEMENTED",
     "DUPLICATE_TARGET_AND_SEMANTIC_DUPLICATE_GATE_IMPLEMENTED",
     "DUAL_TIME_16_8_SPLIT_GATE_IMPLEMENTED",
-    "PURE_IN_MEMORY_NEGATIVE_ACCEPTANCE_ADDED",
-    "EXACT_HEAD_DUAL_CONFIG_QUALIFICATION_PROOF_PASS",
-    "CANONICAL_POSTGRESQL_GRAPH_READER_IMPLEMENTED"
+    "PURE_IN_MEMORY_NEGATIVE_ACCEPTANCE_PASS_11",
+    "CANONICAL_POSTGRESQL_GRAPH_READER_IMPLEMENTED",
+    "FORMAL_CAP_05_CHECKPOINT_72_TO_80_RECONSTRUCTED",
+    "EXACT_REPOSITORY_HISTORY_GRAPH_QUALIFIED",
+    "PREDECESSOR_LOCK_MATERIALIZED",
+    "DATASET_QUALIFICATION_MATERIALIZED",
+    "TEMPORARY_POSTGRESQL_PROOF_WORKFLOW_REMOVED"
   ],
-  "qualification_core_proof": {
-    "proof_commit": "cc51b57c899fb32f6e0e9546e83f574638c7dd83",
-    "workflow_run": 29467901484,
+  "formal_proof": {
+    "proof_commit": "d3c5341707b35982df84ce63e8aef310ce304b31",
+    "workflow_run": 29469336992,
+    "artifact_id": 8364196495,
+    "artifact_digest": "sha256:b10467019c4f77fb2b1e278918e9d613a4f9c56acd34be34687e44c703d59de2",
+    "exact_source_identity": "PASS",
     "server_typecheck": "PASS",
-    "dual_config_case_graph_acceptance": "PASS_11",
-    "temporary_workflow_retained": false
+    "pure_dual_config_case_graph_acceptance": "PASS_11",
+    "formal_cap_05_postgresql_reconstruction": "PASS_7",
+    "repository_history_qualification": "PASS_6",
+    "proof_orchestrator": "PASS_2",
+    "public_facts_mutated": false,
+    "temporary_source_projection_persisted": false,
+    "temporary_workflow_retained": false,
+    "isolated_database_retained": false,
+    "normalized_replay_root_retained": false
   },
-  "remaining_before_s0_candidate": [
-    "RUN_FORMAL_CAP_05_TERMINAL_CHAIN_IN_ISOLATED_POSTGRESQL",
-    "QUALIFY_REPOSITORY_HISTORY_FROM_CANONICAL_READBACK",
-    "MATERIALIZE_PREDECESSOR_LOCK_AND_DATASET_QUALIFICATION",
-    "ADD_PERMANENT_S0_GOVERNANCE_GATE",
-    "PASS_EXACT_HEAD_CI_AND_MERGED_MAIN_EFFECTIVENESS_GATE"
-  ],
-  "expected_repository_history_result": {
+  "repository_history_result": {
+    "case_graph_validation_status": "PASS",
     "eligible_residual_count": 1,
-    "dataset_qualification_status": "INSUFFICIENT_MATCHED_PAIRS"
+    "excluded_case_count": 0,
+    "dataset_qualification_status": "INSUFFICIENT_MATCHED_PAIRS",
+    "required_matched_pair_count": 24,
+    "eligible_calibration_count": 0,
+    "eligible_holdout_count": 0,
+    "all_six_homogeneity_cardinalities_equal_one": true
   },
+  "permanent_authorities": {
+    "predecessor_lock_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json",
+    "dataset_qualification_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+    "authorization_status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-AUTHORIZATION-STATUS.json",
+    "authorization_document_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-AUTHORIZATION.md"
+  },
+  "remaining_before_merge_candidate": [
+    "MATERIALIZE_CURRENT_STATE_FRONTIER_IN_DELIVERY_MAP_AND_MATRIX",
+    "ADD_PERMANENT_S0_V2_GOVERNANCE_GATE",
+    "PASS_EXACT_HEAD_STANDARD_CI"
+  ],
+  "remaining_after_candidate_merge": [
+    "PASS_EXACT_MERGED_MAIN_S0_AUTHORIZATION_GATE",
+    "MERGE_S0_EFFECTIVENESS_RECORD",
+    "AUTHORIZE_ONLY_CONTROLLED_24_CASE_RESIDUAL_WINDOW_SLICE"
+  ],
+  "next_authorized_slice_ids": [],
+  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1",
   "preserved_nonclaims": [
-    "NO_CAP_06_RUNTIME_SOURCE_AUTHORIZATION",
+    "NO_CAP_06_RUNTIME_SOURCE_AUTHORIZATION_BEFORE_EFFECTIVENESS",
     "NO_CAP_06_MIGRATION_AUTHORIZATION",
     "NO_CAP_06_CANONICAL_WRITE_AUTHORIZATION",
     "NO_RESIDUAL_CREATED_BY_S0",
@@ -50,9 +85,11 @@
     "NO_SHADOW_EVALUATION",
     "NO_MODEL_ACTIVATION",
     "NO_ACTIVE_CONFIG_SWITCH",
+    "NO_ACTIVE_CONFIG_INDEX",
     "NO_PUBLIC_ROUTE",
     "NO_WEB",
     "NO_SCHEDULER",
-    "NO_MCFT_CAP_07_AUTHORIZATION"
+    "NO_MCFT_CAP_07_AUTHORIZATION",
+    "NO_CAPABILITY_COMPLETION"
   ]
 }
