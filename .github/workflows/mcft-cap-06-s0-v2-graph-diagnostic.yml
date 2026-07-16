@@ -52,10 +52,11 @@ jobs:
           mkdir -p acceptance-output
           export NODE_PATH="$PWD/apps/server/node_modules:$PWD/node_modules"
           git fetch origin agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1
-          git show origin/agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1:scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts > /tmp/s0_diag.ts
+          DIAG_SCRIPT="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts"
+          git show origin/agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1:"$DIAG_SCRIPT" > "$DIAG_SCRIPT"
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('/tmp/s0_diag.ts')
+          p = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts')
           s = p.read_text(encoding='utf-8')
           s = s.replace('const BASELINE_MAIN = "1e66ea7efc842b8e547bccc40521d520b4370e69";', 'const BASELINE_MAIN = "ca819ba51bdf3017dbefa96015f76bd3b66a647c";')
           s = s.replace('const BRANCH = "agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1";', 'const BRANCH = "agent/mcft-cap-06-s0-v2-exact-qualification";')
@@ -64,7 +65,7 @@ jobs:
           p.write_text(s, encoding='utf-8')
           PY
           set +e
-          pnpm -w exec tsx /tmp/s0_diag.ts 2>&1 | tee acceptance-output/s0-v2-preflight.log
+          pnpm -w exec tsx "$DIAG_SCRIPT" 2>&1 | tee acceptance-output/s0-v2-preflight.log
           rc=${PIPESTATUS[0]}
           set -e
           if [ "$rc" -ne 0 ]; then
