@@ -1,0 +1,106 @@
+name: mcft-cap-06-s0-v2-postgresql-proof
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/server/src/domain/twin_runtime/calibration_case_graph_qualification_v2.ts"
+      - "apps/server/src/persistence/twin_runtime/postgres_cap06_repository_history_case_graph_reader_v2.ts"
+      - "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_QUALIFY_EXISTING_DB.ts"
+      - ".github/workflows/mcft-cap-06-s0-v2-postgresql-proof.yml"
+
+jobs:
+  formal-postgresql-qualification:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      TARGET_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_post_closure_acceptance
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Assert exact source identity
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Run server typecheck
+        run: pnpm run typecheck:server
+
+      - name: Prepare temporary retained-database CAP-05 proof copy
+        shell: bash
+        run: |
+          cp scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts scripts/runtime_acceptance/.ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER_CAP06_TEMP.ts
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("scripts/runtime_acceptance/.ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER_CAP06_TEMP.ts")
+          text = path.read_text(encoding="utf-8")
+          needle = "    await dropIsolatedDatabase(baseUrl);"
+          if text.count(needle) != 1:
+              raise SystemExit("CAP05_DROP_HOOK_CARDINALITY_MISMATCH")
+          path.write_text(text.replace(needle, "    // Database retained temporarily for read-only CAP-06 S0 qualification."), encoding="utf-8")
+          PY
+
+      - name: Reconstruct formal CAP-05 terminal chain
+        shell: bash
+        run: |
+          mkdir -p acceptance-output
+          pnpm -w exec tsx scripts/runtime_acceptance/.ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER_CAP06_TEMP.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S0_V2_CAP05_RECONSTRUCTION.log
+
+      - name: Qualify exact canonical repository history
+        shell: bash
+        run: |
+          DATABASE_URL="$TARGET_DATABASE_URL" pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_QUALIFY_EXISTING_DB.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S0_V2_POSTGRESQL_QUALIFICATION.log
+
+      - name: Upload proof logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s0-v2-postgresql-proof
+          path: acceptance-output/MCFT_CAP_06_S0_V2_*.log
+          if-no-files-found: warn
+
+      - name: Remove temporary proof source and isolated database
+        if: always()
+        shell: bash
+        run: |
+          rm -f scripts/runtime_acceptance/.ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER_CAP06_TEMP.ts
+          DATABASE_URL="$DATABASE_URL" pnpm -w exec tsx -e '
+            import { Pool } from "pg";
+            const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+            await pool.query("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=$1 AND pid<>pg_backend_pid()", ["mcft_cap05_post_closure_acceptance"]);
+            await pool.query("DROP DATABASE IF EXISTS mcft_cap05_post_closure_acceptance");
+            await pool.end();
+          '
