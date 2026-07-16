@@ -117,7 +117,10 @@ function run() {
   assert.equal(qualification.required_matched_pair_count, 24);
   assert.equal(qualification.eligible_calibration_count, 0);
   assert.equal(qualification.eligible_holdout_count, 0);
-  assert.deepEqual(Object.values(qualification.homogeneity_cardinality).filter((value) => typeof value === "number"), [1, 1, 1, 1, 1, 1]);
+  assert.deepEqual(
+    Object.values(qualification.homogeneity_cardinality).filter((value) => typeof value === "number"),
+    [1, 1, 1, 1, 1, 1],
+  );
   assert.equal(qualification.homogeneity_cardinality.status, "PASS");
   ok("dataset qualification records one eligible exact case, no excluded case and six homogeneous authorities");
 
@@ -155,14 +158,22 @@ function run() {
   assert.deepEqual(delivery.authorized_not_started_slices, []);
   assert.deepEqual(delivery.next_authorized_slice_ids, []);
   assert.equal(delivery.next_authorized_slice_id_after_s0_effectiveness, S1);
-  const deliveryCandidate = exactlyOne(delivery.candidate_slices, (entry) => entry.delivery_slice_id === S0, "CAP06_S0_DELIVERY_CANDIDATE_CARDINALITY");
+  const deliveryCandidate = exactlyOne(
+    delivery.candidate_slices,
+    (entry) => entry.delivery_slice_id === S0,
+    "CAP06_S0_DELIVERY_CANDIDATE_CARDINALITY",
+  );
   assert.equal(deliveryCandidate.proof_workflow_run, PROOF_RUN);
   assert.equal(deliveryCandidate.dataset_qualification_status, "INSUFFICIENT_MATCHED_PAIRS");
   ok("delivery frontier contains exactly one non-effective S0 v2 candidate and no active slice");
 
   const matrix = json(PATHS.matrix);
   assert.equal(matrix.baseline.commit, BASELINE);
-  const cap06 = exactlyOne(matrix.capability_lines, (entry) => entry.capability_line_id === "MCFT-CAP-06", "CAP06_MATRIX_ENTRY_CARDINALITY");
+  const cap06 = exactlyOne(
+    matrix.capability_lines,
+    (entry) => entry.capability_line_id === "MCFT-CAP-06",
+    "CAP06_MATRIX_ENTRY_CARDINALITY",
+  );
   assert.equal(cap06.status, "READY_FOR_MERGE_CANDIDATE");
   assert.equal(cap06.implementation_status, "S0_V2_CANDIDATE");
   assert.equal(cap06.authorization_effective, false);
@@ -231,7 +242,7 @@ function run() {
     "INSUFFICIENT_MATCHED_PAIRS",
     "No legal excluded case exists",
     S1,
-    "No Calibration Candidate",
+    "It does not authorize Calibration Candidate, Shadow Evaluation or Model Activation.",
   ]) assert.ok(authorizationDocument.includes(token), `CAP06_AUTHORIZATION_TOKEN_REQUIRED:${token}`);
   ok("human-readable authorization record matches the machine-readable candidate and successor boundary");
 
