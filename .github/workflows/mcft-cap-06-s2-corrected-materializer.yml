@@ -11,28 +11,20 @@ jobs:
     if: github.head_ref == 'agent/mcft-cap-06-s2-contracts-math-corrected-v1' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout corrected S2 branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout required refs quietly
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --quiet origin \
+            agent/mcft-cap-06-s2-contracts-math-corrected-v1:refs/remotes/origin/agent/mcft-cap-06-s2-contracts-math-corrected-v1 \
+            main:refs/remotes/origin/main \
+            f173186f8cd2940bd7082042d0d053e5a874f7c0
+          git checkout -q -B agent/mcft-cap-06-s2-contracts-math-corrected-v1 origin/agent/mcft-cap-06-s2-contracts-math-corrected-v1
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Import reviewed pure-compute S2 reference files
+      - name: Import and patch reviewed S2 source before install
         env:
           OLD_S2_HEAD: f173186f8cd2940bd7082042d0d053e5a874f7c0
         run: |
@@ -55,15 +47,24 @@ jobs:
           python -m py_compile .github/mcft_cap06_s2_materializer.py
           python .github/mcft_cap06_s2_materializer.py source
           git diff --check
-
-      - name: Static source validation before execution
-        run: |
-          set -euo pipefail
-          node --check scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts || true
           grep -F '1_000_000n as const' apps/server/src/domain/calibration/grid_search_v1.ts
           ! grep -F 'Number(value)' scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
           ! grep -F 'number.toFixed' scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
           grep -F 'ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1' apps/server/src/domain/calibration/contracts_v1.ts
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
 
       - name: Run corrected S2 contracts/math acceptance
         run: |
@@ -134,4 +135,4 @@ jobs:
           git add -A
           git diff --cached --check
           git commit -m "feat(mcft-cap-06): implement corrected S2 contracts and math"
-          git push origin HEAD:${{ github.head_ref }}
+          git push origin HEAD:agent/mcft-cap-06-s2-contracts-math-corrected-v1
