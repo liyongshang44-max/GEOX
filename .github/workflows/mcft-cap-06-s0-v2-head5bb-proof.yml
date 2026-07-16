@@ -12,12 +12,12 @@ jobs:
       - name: Checkout exact candidate head
         uses: actions/checkout@v4
         with:
-          ref: 5bb25c2d2c1e4a34386d9aef1909d306826127ef
+          ref: c9848fcb6a11be949c8b556c379eafd26936ed4f
           fetch-depth: 0
 
       - name: Assert exact candidate identity
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "5bb25c2d2c1e4a34386d9aef1909d306826127ef"
+        run: test "$(git rev-parse HEAD)" = "c9848fcb6a11be949c8b556c379eafd26936ed4f"
 
       - name: Run permanent S0 v2 Authorization Gate
         shell: bash
