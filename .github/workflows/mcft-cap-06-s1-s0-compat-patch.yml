@@ -1,5 +1,7 @@
 name: mcft-cap-06-s1-s0-compat-patch
 
+# This workflow is intentionally updated after first creation so GitHub indexes
+# the branch-local workflow before the observable synchronize event.
 on:
   pull_request:
     types: [synchronize, reopened]
