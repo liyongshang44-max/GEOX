@@ -1,5 +1,6 @@
 name: mcft-cap-06-s1-correction-finalizer
 
+# Reuses the already-registered finalizer workflow identity for one exact S0 compatibility patch.
 on:
   pull_request:
     types: [synchronize, reopened]
