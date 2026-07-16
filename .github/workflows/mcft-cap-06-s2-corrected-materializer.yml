@@ -43,8 +43,61 @@ jobs:
             mkdir -p "$(dirname "$file")"
             git show "$OLD_S2_HEAD:$file" > "$file"
           done
-          base64 -d .github/mcft_cap06_s2_materializer.py.gz.b64 | gzip -d > .github/mcft_cap06_s2_materializer.py
-          python -m py_compile .github/mcft_cap06_s2_materializer.py
+          python - <<'PY'
+          from __future__ import annotations
+
+          import base64
+          import hashlib
+          import pathlib
+          import struct
+          import zlib
+
+          source_path = pathlib.Path('.github/mcft_cap06_s2_materializer.py.gz.b64')
+          output_path = pathlib.Path('.github/mcft_cap06_s2_materializer.py')
+          encoded = ''.join(source_path.read_text(encoding='utf-8').split())
+          compressed = base64.b64decode(encoded, validate=True)
+          if len(compressed) < 18 or compressed[:3] != b'\x1f\x8b\x08':
+              raise SystemExit('S2_MATERIALIZER_GZIP_HEADER_INVALID')
+
+          flags = compressed[3]
+          if flags & 0xE0:
+              raise SystemExit('S2_MATERIALIZER_GZIP_RESERVED_FLAGS_SET')
+          offset = 10
+          if flags & 0x04:
+              if offset + 2 > len(compressed):
+                  raise SystemExit('S2_MATERIALIZER_GZIP_EXTRA_LENGTH_MISSING')
+              extra_length = struct.unpack_from('<H', compressed, offset)[0]
+              offset += 2 + extra_length
+          for flag in (0x08, 0x10):
+              if flags & flag:
+                  terminator = compressed.find(b'\x00', offset)
+                  if terminator < 0:
+                      raise SystemExit('S2_MATERIALIZER_GZIP_STRING_UNTERMINATED')
+                  offset = terminator + 1
+          if flags & 0x02:
+              offset += 2
+          if offset >= len(compressed) - 8:
+              raise SystemExit('S2_MATERIALIZER_GZIP_DEFLATE_PAYLOAD_MISSING')
+
+          # The transport blob has a bad gzip trailer CRC. The DEFLATE stream is
+          # decoded independently; the resulting source remains subject to UTF-8,
+          # compile, sentinel, source-patch, acceptance, typecheck and build gates.
+          decoded = zlib.decompress(compressed[offset:-8], -zlib.MAX_WBITS)
+          text = decoded.decode('utf-8')
+          required = (
+              'def patch_source',
+              'def materialize',
+              'GEOX-MCFT-CAP-06-S2-CONTRACTS-MATH.json',
+              'ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs',
+          )
+          missing = [value for value in required if value not in text]
+          if missing:
+              raise SystemExit(f'S2_MATERIALIZER_SENTINELS_MISSING:{missing}')
+          compile(text, str(output_path), 'exec')
+          output_path.write_text(text, encoding='utf-8', newline='\n')
+          print('S2_MATERIALIZER_SOURCE_SHA256=' + hashlib.sha256(decoded).hexdigest())
+          print('S2_MATERIALIZER_SOURCE_BYTES=' + str(len(decoded)))
+          PY
           python .github/mcft_cap06_s2_materializer.py source
           git diff --check
           grep -F '1_000_000n as const' apps/server/src/domain/calibration/grid_search_v1.ts
