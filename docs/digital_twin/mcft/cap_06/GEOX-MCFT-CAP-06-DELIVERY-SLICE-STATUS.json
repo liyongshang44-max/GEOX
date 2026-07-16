@@ -3,7 +3,7 @@
   "capability_line_id": "MCFT-CAP-06",
   "status": "IMPLEMENTATION_IN_PROGRESS",
   "design_status": "CONDITIONAL_FROZEN_AFTER_P_MINUS_1",
-  "implementation_status": "S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED",
+  "implementation_status": "S3_D_PERSISTENCE_CANDIDATE",
   "authorization_effective": true,
   "runtime_source_authorized": true,
   "active_delivery_slice_id": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
@@ -73,7 +73,9 @@
       "migration_count": 0
     }
   ],
-  "candidate_slices": [],
+  "candidate_slices": [
+    "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1"
+  ],
   "blocked_slices": [
     "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
     "MCFT-CAP-06.MCFT-06-09-11-12.PAIRED-HISTORICAL-SHADOW-COMPUTE-V1",
@@ -96,9 +98,7 @@
   "successor_authorized": false,
   "predecessor_eligibility": "RESTORED",
   "s0_qualification_authorized": true,
-  "authorized_not_started_slices": [
-    "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1"
-  ],
+  "authorized_not_started_slices": [],
   "superseded_candidates": [
     {
       "pull_request": 2500,
@@ -137,5 +137,9 @@
   "s2_effective": true,
   "s3_authorized": true,
   "s2_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json",
-  "s3_implementation_started": false
+  "s3_implementation_started": true,
+  "s3_candidate_implemented": true,
+  "s3_effective": false,
+  "s3_contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-D-PERSISTENCE.json",
+  "s3_status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json"
 }

@@ -126,6 +126,7 @@ function main() {
 
   const s2CandidatePhase = delivery.candidate_slices.length === 1 && delivery.candidate_slices[0] === S2;
   const s2EffectivePhase = delivery.s2_effective === true && delivery.active_delivery_slice_id === S3;
+  const s3CandidatePhase = delivery.candidate_slices.length === 1 && delivery.candidate_slices[0] === S3;
 
   assert.equal(delivery.blocked_slices.includes(S2), false);
   assert.equal(delivery.s1_effective, true);
@@ -150,33 +151,38 @@ function main() {
 
   if (s2EffectivePhase) {
     const matrixS3 = line.delivery_slices.find((item) => item.delivery_slice_id === S3);
-    assert.deepEqual(delivery.candidate_slices, []);
-    assert.deepEqual(delivery.authorized_not_started_slices, [S3]);
+    assert.deepEqual(delivery.candidate_slices, s3CandidatePhase ? [S3] : []);
+    assert.deepEqual(delivery.authorized_not_started_slices, s3CandidatePhase ? [] : [S3]);
     assert.equal(delivery.blocked_slices.includes(S3), false);
     assert.equal(delivery.s2_implementation_started, true);
     assert.equal(delivery.s2_candidate_implemented, true);
     assert.equal(delivery.s2_effective, true);
     assert.equal(delivery.s3_authorized, true);
-    assert.equal(delivery.s3_implementation_started, false);
-    assert.equal(current.status, 'MERGED_EFFECTIVE');
-    assert.equal(current.reconciliation_effective, true);
+    assert.equal(delivery.s3_implementation_started, s3CandidatePhase);
+    assert.equal(current.status, s3CandidatePhase ? 'S3_D_PERSISTENCE_CANDIDATE' : 'MERGED_EFFECTIVE');
+    assert.equal(current.reconciliation_effective, !s3CandidatePhase);
     assert.equal(current.current_state.active_delivery_slice_id, S3);
     assert.equal(current.current_state.s2, 'MERGED_EFFECTIVE');
     assert.equal(current.current_state.s2_implementation_started, true);
     assert.equal(current.current_state.calibration_contract_math_candidate_implemented, true);
     assert.equal(current.current_state.calibration_contract_math_implemented, true);
-    assert.equal(current.current_state.s3, 'AUTHORIZED_NOT_STARTED');
+    assert.equal(current.current_state.s3, s3CandidatePhase ? 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE' : 'AUTHORIZED_NOT_STARTED');
     assert.equal(current.current_state.s3_authorized, true);
-    assert.equal(current.current_state.s3_implementation_started, false);
+    assert.equal(current.current_state.s3_implementation_started, s3CandidatePhase);
+    if (s3CandidatePhase) {
+      assert.equal(current.current_state.d_persistence_candidate_implemented, true);
+      assert.equal(current.current_state.d_persistence_implemented, false);
+    }
     assert.equal(line.active_delivery_slice_id, S3);
-    assert.deepEqual(line.next_authorized_slice_ids, [S3]);
+    assert.deepEqual(line.next_authorized_slice_ids, s3CandidatePhase ? [] : [S3]);
     assert.equal(line.calibration_contract_math_candidate_implemented, true);
     assert.equal(line.calibration_contract_math_implemented, true);
     assert.equal(matrixS2.status, 'MERGED_EFFECTIVE');
     assert.equal(matrixS2.implementation_started, true);
     assert.equal(matrixS2.effectiveness_condition_satisfied, true);
-    assert.equal(matrixS3.status, 'AUTHORIZED_NOT_STARTED');
-    assert.equal(matrixS3.implementation_started, false);
+    assert.equal(matrixS3.status, s3CandidatePhase ? 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE' : 'AUTHORIZED_NOT_STARTED');
+    assert.equal(matrixS3.implementation_started, s3CandidatePhase);
+    if (s3CandidatePhase) assert.equal(matrixS3.effectiveness_condition_satisfied, false);
   } else if (s2CandidatePhase) {
     assert.equal(delivery.active_delivery_slice_id, S2);
     assert.deepEqual(delivery.authorized_not_started_slices, []);
@@ -230,8 +236,8 @@ function main() {
   console.log('PASS calibration covers frozen wetness regimes and minimum endpoint sensitivity');
   console.log('PASS holdout is disclosed as HIGH_EXCESS stress-only with no generalization claim');
   console.log('PASS window membership hashes require residual-set and case-input semantic companions');
-  console.log('PASS corrected S1 effectiveness remains exact across bounded S2 authorization, candidate, and merged-effective phases');
-  console.log('PASS Candidate/Evaluation/Activation/CAP-07 remain absent; S3 is blocked or authorized-not-started');
+  console.log('PASS corrected S1 effectiveness remains exact through bounded S2 and S3 candidate lifecycle phases');
+  console.log('PASS Candidate/Evaluation runtime and Activation remain absent; S3 is bounded and S5/CAP-07 remain blocked');
 }
 
 main();

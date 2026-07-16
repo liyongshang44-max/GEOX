@@ -14,9 +14,10 @@
     "p_minus_1_migration_count_binding": "PASS",
     "public_facts_sole_canonical_store": true,
     "active_config_relation_delta": 0,
-    "temporary_workflows_retained": true,
+    "temporary_workflows_retained": false,
     "generated_acceptance_artifacts_retained": false,
-    "candidate_finalization_trigger": "PR_SYNCHRONIZE_WITH_CURRENT_FINALIZER_V1"
+    "candidate_finalization_trigger": "PR_SYNCHRONIZE_WITH_CURRENT_FINALIZER_V1",
+    "exact_changed_file_count": 17
   },
   "result_summary_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-D-PERSISTENCE.json",
   "migration_count": 1,
@@ -38,5 +39,24 @@
     "NO_MODEL_ACTIVATION",
     "NO_PUBLIC_ROUTE_OR_WEB_OR_SCHEDULER",
     "NO_MCFT_CAP_07_AUTHORIZATION"
+  ],
+  "exact_changed_file_boundary": [
+    "apps/server/db/migrations/2026_07_16_mcft_cap_06_calibration_governance_persistence.sql",
+    "apps/server/src/persistence/twin_runtime/postgres_calibration_governance_persistence_repository_v1.ts",
+    "apps/server/src/projections/twin_runtime/calibration_governance_projection_v1.ts",
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-D-PERSISTENCE.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md",
+    "scripts/acceptance/run_acceptance.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_D_PERSISTENCE.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_D_PERSISTENCE_DB.ts",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_D_PERSISTENCE.cjs",
+    "scripts/runtime_acceptance/mcft_cap_06_s3_persistence_fixture_v1.ts"
   ]
 }

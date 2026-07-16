@@ -2,9 +2,9 @@
   "schema_version": "geox_mcft_cap_06_current_state_reconciliation_v1",
   "reconciliation_id": "MCFT-CAP-06.CURRENT-STATE-RECONCILIATION-V1",
   "capability_line_id": "MCFT-CAP-06",
-  "baseline_main_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31",
-  "status": "MERGED_EFFECTIVE",
-  "reconciliation_effective": true,
+  "baseline_main_commit": "ea198cc0cad063c7e70a59727171908f2f8c7e7d",
+  "status": "S3_D_PERSISTENCE_CANDIDATE",
+  "reconciliation_effective": false,
   "current_state": {
     "p_minus_1": "MERGED_EFFECTIVE",
     "p0": "MERGED_EFFECTIVE",
@@ -26,9 +26,11 @@
     "s2_authorized": true,
     "s2_implementation_started": true,
     "calibration_contract_math_candidate_implemented": true,
-    "s3": "AUTHORIZED_NOT_STARTED",
+    "s3": "CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
     "s3_authorized": true,
-    "s3_implementation_started": false
+    "s3_implementation_started": true,
+    "d_persistence_candidate_implemented": true,
+    "d_persistence_implemented": false
   },
   "proof": {
     "p_minus_1": {
@@ -119,6 +121,18 @@
       "postmerge_probe_pr_number": 2524,
       "postmerge_workflow_run": 29506065728,
       "postmerge_gate": "PASS"
+    },
+    "s3_candidate": {
+      "status": "CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
+      "contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-D-PERSISTENCE.json",
+      "status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json",
+      "isolated_postgresql_workflow_run": 29518184366,
+      "isolated_postgresql_acceptance": "PASS",
+      "migration_count": 1,
+      "public_facts_sole_canonical_store": true,
+      "active_config_relation_delta": 0,
+      "candidate_to_evaluation_cardinality": "ONE_TO_ZERO_OR_MANY",
+      "effective": false
     }
   },
   "superseded_candidates": [
@@ -130,17 +144,18 @@
   ],
   "next_repository_action": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
   "preserved_nonclaims": [
-    "NO_S3_IMPLEMENTATION",
-    "NO_CALIBRATION_CANDIDATE_APPEND",
-    "NO_SHADOW_EVALUATION_APPEND",
+    "NO_S5_CALIBRATION_CANDIDATE_COMPUTE_SERVICE",
+    "NO_S6_OPERATIONAL_SHADOW_COMPUTE",
+    "NO_S7_EVALUATION_COMMIT_SERVICE",
+    "NO_ACTIVE_CONFIG_INDEX_CREATION_OR_MUTATION",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
     "NO_MODEL_ACTIVATION",
-    "NO_ACTIVE_CONFIG_SWITCH",
     "NO_PUBLIC_ROUTE",
     "NO_WEB",
     "NO_SCHEDULER",
     "NO_MCFT_CAP_07_AUTHORIZATION"
   ],
-  "effectiveness_condition": "SATISFIED_BY_PR_2523_AND_PROOF_RUN_29506065728",
+  "effectiveness_condition": "S3_EXACT_HEAD_CI_PASS_AND_MERGE_AND_TREE_EQUIVALENCE_AND_EXACT_MERGED_MAIN_PROOF_AND_SEPARATE_EFFECTIVENESS_WRITEBACK",
   "s0_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json",
   "s1_candidate": {
     "contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.json",
@@ -177,5 +192,7 @@
     "merge_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31",
     "postmerge_workflow_run": 29506065728
   },
-  "s2_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+  "s2_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json",
+  "s3_contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-D-PERSISTENCE.json",
+  "s3_status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json"
 }

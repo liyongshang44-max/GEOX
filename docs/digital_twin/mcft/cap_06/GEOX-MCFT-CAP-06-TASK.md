@@ -31,10 +31,10 @@ design_status:
 CONDITIONAL_FROZEN_AFTER_P_MINUS_1
 
 implementation_status:
-S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED
+S3_D_PERSISTENCE_CANDIDATE
 
 runtime_implementation_status:
-S2_CONTRACTS_MATH_MERGED_EFFECTIVE_S3_NOT_STARTED
+S3_D_PERSISTENCE_IMPLEMENTED_NOT_EFFECTIVE
 
 authorization_effective:
 true
@@ -4352,4 +4352,26 @@ S3 status: AUTHORIZED_NOT_STARTED
 S3 implementation started: false
 Candidate/Evaluation canonical append: absent
 Model Activation: absent
+```
+
+
+<!-- MCFT-CAP-06-S3-D-PERSISTENCE-CANDIDATE-V1 -->
+## S3 D persistence candidate
+
+```text
+status: CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE
+baseline main: ea198cc0cad063c7e70a59727171908f2f8c7e7d
+isolated PostgreSQL workflow: 29518184366 PASS
+D transaction: D_MODEL_GOVERNANCE_STEP_COMMIT
+migration count: 1
+canonical store: public.facts only
+support tables: 4 rebuildable projections/indexes
+Candidate-to-Evaluation: ONE_TO_ZERO_OR_MANY
+active-config relation delta: 0
+S5 authorization: false
+NO_S5_CALIBRATION_CANDIDATE_COMPUTE_SERVICE
+Candidate compute service: absent
+Operational Shadow compute: absent
+Model Activation: absent
+MCFT-CAP-07 authorization: false
 ```

@@ -101,6 +101,18 @@ const STEP_DEFINITIONS_BY_SUITE = {
       command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs',
       logFile: 'MCFT_CAP_06_S2_CONTRACTS_MATH_GOVERNANCE.log',
       notes: 'Cross-checks S2 runtime evidence, frozen numeric policies, exact source dataset identity, zero-write boundary, and S3 blocking.'
+    },
+    {
+      id: 'MCFT_CAP_06_S3_D_PERSISTENCE',
+      command: 'node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_D_PERSISTENCE.cjs',
+      logFile: 'MCFT_CAP_06_S3_D_PERSISTENCE.log',
+      notes: 'Creates an isolated database and proves exactly-one-object D commits, Candidate/Evaluation projections, concurrency, response-loss recovery, facts rebuild and zero active-config mutation.'
+    },
+    {
+      id: 'MCFT_CAP_06_S3_D_PERSISTENCE_GOVERNANCE',
+      command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_D_PERSISTENCE.cjs',
+      logFile: 'MCFT_CAP_06_S3_D_PERSISTENCE_GOVERNANCE.log',
+      notes: 'Cross-checks S3 PostgreSQL evidence, P-1 one-migration adjudication, public.facts canonical authority, candidate lifecycle state and S5 blocking.'
     }
   ],
   'p9-twin-kernel': [

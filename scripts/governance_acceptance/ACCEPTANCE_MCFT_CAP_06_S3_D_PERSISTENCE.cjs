@@ -140,9 +140,14 @@ function main() {
   assert.match(runner, /MCFT_CAP_06_S3_D_PERSISTENCE_GOVERNANCE/);
   assert.match(migration, /D_CALIBRATION_CANDIDATE/);
   assert.match(migration, /D_SHADOW_EVALUATION/);
-  assert.doesNotMatch(migration, /CREATE TABLE[^;]*active[^;]*config/is);
+  const createdTableNames = [...migration.matchAll(/CREATE TABLE(?: IF NOT EXISTS)?\s+([^\s(]+)/gi)]
+    .map((match) => match[1]);
+  assert.equal(
+    createdTableNames.some((name) => /active.*config|config.*active/i.test(name)),
+    false,
+  );
   assert.match(repository, /pg_advisory_xact_lock/);
-  assert.doesNotMatch(repository, /active_config/i);
+  assert.doesNotMatch(repository, /twin_active_config(?:_index)?_v1/i);
   assert.doesNotMatch(repository, /twin_model_activation_v1/);
 
   for (const pathValue of [

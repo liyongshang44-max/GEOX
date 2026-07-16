@@ -1606,3 +1606,19 @@ D persistence: not implemented
 Candidate/Evaluation canonical append: absent
 Model Activation: absent
 ```
+
+
+<!-- MCFT-CAP-06-S3-D-PERSISTENCE-CANDIDATE-V1 -->
+## MCFT-CAP-06 S3 D persistence candidate
+
+```text
+active slice: MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1
+status: CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE
+exactly one additive migration: PASS
+public.facts sole canonical store: PASS
+D Candidate/Evaluation repository: implemented
+rebuildable Candidate/Evaluation/link/case support: implemented
+concurrency, response-loss and facts recovery: PASS
+active-config relation delta: 0
+S5+: blocked
+```
