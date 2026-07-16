@@ -27,9 +27,10 @@
     "repository_typecheck": "PASS_MATERIALIZATION_WORKFLOW_29484155724_PENDING_EXACT_HEAD_CI",
     "repository_build": "PASS_MATERIALIZATION_WORKFLOW_29484155724_PENDING_EXACT_HEAD_CI",
     "exact_head_ci_status": "PENDING",
-    "exact_changed_file_count": 14,
+    "exact_changed_file_count": 15,
     "temporary_workflows_retained": false,
-    "generated_acceptance_artifacts_retained": false
+    "generated_acceptance_artifacts_retained": false,
+    "s0_downstream_state_compatibility": "VALIDATE_S0_EFFECTIVENESS_NOT_GLOBAL_RECONCILIATION_STATUS"
   },
   "s1_effective": false,
   "s2_authorized": false,
@@ -46,6 +47,7 @@
     "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md",
     "scripts/acceptance/run_acceptance.cjs",
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts",
     "scripts/runtime_acceptance/mcft_cap_04_twenty_four_tick_range_fixture_v1.ts",
     "scripts/runtime_acceptance/mcft_cap_06_s1_residual_windows_fixture_v1.ts"

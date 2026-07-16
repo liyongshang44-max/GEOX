@@ -81,6 +81,8 @@ function main() {
   assert.equal(status.effectiveness.effective, false);
   assert.equal(status.prior_effectiveness.postmerge_gate, 'PASS');
   assert.equal(status.candidate_tree_validation.runtime_result_ssot_crosscheck, 'PASS');
+  assert.equal(status.candidate_tree_validation.exact_changed_file_count, 15);
+  assert.equal(status.exact_changed_file_boundary.includes('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts'), true);
 
   assert.equal(priorEffectiveness.status, 'MERGED_EFFECTIVE');
   assert.equal(priorEffectiveness.effective, true);
