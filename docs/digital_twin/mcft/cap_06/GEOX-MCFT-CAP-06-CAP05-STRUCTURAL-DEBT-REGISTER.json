@@ -1,0 +1,115 @@
+{
+  "schema_version": "geox_mcft_cap_06_cap05_structural_debt_register_v1",
+  "register_id": "MCFT-CAP-06.CAP05-PREDECESSOR-STRUCTURAL-DEBT-REGISTER-V1",
+  "capability_line_id": "MCFT-CAP-06",
+  "predecessor_capability_line_id": "MCFT-CAP-05",
+  "status": "ACTIVE_BLOCKING_REGISTER",
+  "insertion_point": {
+    "after_slice": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
+    "before_slice": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
+    "authorized_remediation_slice": "MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1",
+    "reason": "THE_DEBT_FIRST_BECOMES_PRODUCTION_CRITICAL_WHEN_S5_MUST_RESOLVE_REAL_CAP05_RESIDUAL_GRAPHS_AND_REUSE_CAP04_EXECUTION_MATH"
+  },
+  "paid_hard_debt": [
+    {
+      "debt_id": "CAP05-HARD-01",
+      "title": "Capability completion declared before formal production composition proof",
+      "classification": "HARD_RUNTIME_CONFORMANCE_DEFECT",
+      "status": "PAID_POST_CLOSURE",
+      "confirmed_failure_code": "CAP04_CONFIG_PURPOSE_MISMATCH",
+      "remediation_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-POST-CLOSURE-RUNTIME-CONFORMANCE-REMEDIATION.md",
+      "effectiveness_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-POST-CLOSURE-RUNTIME-CONFORMANCE-EFFECTIVENESS.json",
+      "effective_runtime_baseline_commit": "0867439b17545bec5fd84e373e72d17881ab50ae",
+      "merged_main_proof_workflow_run": 29441019824,
+      "proofs": [
+        "FORMAL_CAP05_POSTGRESQL_RUNNER",
+        "CHECKPOINT_72_TO_80",
+        "EIGHT_RUNTIME_CONFIGS",
+        "EIGHT_STATES",
+        "EIGHT_FORECASTS",
+        "EIGHT_SCENARIO_SETS",
+        "RESTART_RECOVERY",
+        "ZERO_WRITE_REPLAY"
+      ]
+    }
+  ],
+  "open_structural_debt": [
+    {
+      "debt_id": "CAP05-STRUCT-01",
+      "title": "CAP05-to-CAP04 execution view is recovered by subtracting CAP05-only fields",
+      "classification": "CONFIG_INHERITANCE_MAINTENANCE_DEBT",
+      "status": "OPEN_BLOCKS_S5",
+      "current_risk": [
+        "NEW_CAP05_POLICY_FIELD_REQUIRES_RESOLVER_MAINTENANCE",
+        "OMISSION_CAN_LEAK_CAP05_ONLY_FIELD_TO_CAP04_VALIDATOR",
+        "SUBTRACTIVE_PROJECTION_IS_SCHEMA_DRIFT_SENSITIVE"
+      ],
+      "s4_required_treatment": [
+        "REPLACE_SUBTRACTIVE_PROJECTION_WITH_POSITIVE_CAP04_EXECUTION_FIELD_SELECTION",
+        "KEEP_EXECUTION_VIEW_NON_CANONICAL",
+        "ADD_KEYSET_PARITY_AND_UNKNOWN_POLICY_FIELD_NON_LEAKAGE_ACCEPTANCE"
+      ],
+      "deferred_long_term_refactor": "NEST_CAP04_EXECUTION_PAYLOAD_UNDER_CAP05_EXECUTION_AND_CAP05_POLICY_SUBOBJECTS",
+      "long_term_refactor_authorized_in_s4": false
+    },
+    {
+      "debt_id": "CAP05-STRUCT-02",
+      "title": "No reusable read-only cross-object Forecast-to-Observation graph assembler",
+      "classification": "CROSS_OBJECT_CONSUMPTION_VIEW_DEBT",
+      "status": "OPEN_BLOCKS_S5",
+      "current_risk": [
+        "SUCCESSOR_CAPABILITIES_REPEAT_GRAPH_TRAVERSAL",
+        "HASH_REF_DUAL_TIME_AND_CUTOFF_RULES_CAN_DIVERGE",
+        "CASE_BUILDER_BECOMES_COUPLED_TO_PERSISTENCE_GRAPH_RESOLUTION"
+      ],
+      "s4_required_treatment": [
+        "ESTABLISH_NON_CANONICAL_READ_ONLY_RESOLVED_FORECAST_OBSERVATION_CASE_V1",
+        "IMPLEMENT_EXACT_REF_POSTGRESQL_GRAPH_ASSEMBLER",
+        "VALIDATE_FORECAST_POINT_POSTERIOR_CONFIG_OBSERVATION_EVIDENCE_FORCING_OPERATOR_GEOMETRY_NUMERIC_POLICY_LINEAGE_AND_DUAL_TIME",
+        "REUSE_AS_THE_ONLY_S5_AND_S6_GRAPH_RESOLUTION_AUTHORITY"
+      ],
+      "new_canonical_type_authorized": false,
+      "new_migration_authorized": false
+    },
+    {
+      "debt_id": "CAP05-STRUCT-03",
+      "title": "Historical closure and post-closure runtime conformance are separate machine authorities",
+      "classification": "SSOT_PRECEDENCE_DEBT",
+      "status": "OPEN_BLOCKS_SUCCESSOR_SIMPLICITY",
+      "current_risk": [
+        "DELIVERY_STATUS_ALONE_RETURNS_STALE_CLOSURE_BASELINE",
+        "POST_CLOSURE_STATUS_ALONE_OMITS_FULL_SLICE_HISTORY",
+        "SUCCESSORS_MUST_REIMPLEMENT_AUTHORITY_PRECEDENCE"
+      ],
+      "s4_required_treatment": [
+        "ADD_APPEND_ONLY_CAP05_EFFECTIVE_RUNTIME_BASELINE_AGGREGATE_POINTER",
+        "REFERENCE_HISTORICAL_CLOSURE_AND_LATEST_EFFECTIVE_AMENDMENT",
+        "EXPOSE_EFFECTIVE_RUNTIME_BASELINE_COMMIT_AND_SUCCESSOR_ELIGIBILITY_WITHOUT_REWRITING_HISTORY"
+      ],
+      "historical_closure_rewrite_authorized": false
+    },
+    {
+      "debt_id": "CAP05-PROCESS-01",
+      "title": "Component proofs historically substituted for formal production composition proof",
+      "classification": "ACCEPTANCE_TOPOLOGY_DEBT",
+      "status": "OPEN_BLOCKS_S5_EFFECTIVENESS",
+      "s4_required_treatment": [
+        "FREEZE_FOUR_LAYER_ACCEPTANCE_TOPOLOGY",
+        "REQUIRE_DOMAIN_ACCEPTANCE",
+        "REQUIRE_REPOSITORY_ACCEPTANCE",
+        "REQUIRE_ORCHESTRATION_ACCEPTANCE",
+        "REQUIRE_FORMAL_PRODUCTION_COMPOSITION_ACCEPTANCE_BEFORE_S5_EFFECTIVENESS"
+      ]
+    }
+  ],
+  "explicit_non_debt": [
+    "NO_CONTINUOUS_SCHEDULER_WAS_OWED_BY_CAP05",
+    "NO_LIVE_FIELD_RUNTIME_WAS_OWED_BY_CAP05",
+    "NO_LATE_EVIDENCE_HISTORY_REVISION_WAS_OWED_BY_CAP05",
+    "NO_AUTOMATIC_CAUSAL_ATTRIBUTION_WAS_OWED_BY_CAP05",
+    "NO_AUTOMATIC_RECOMMENDATION_WAS_OWED_BY_CAP05",
+    "NO_MODEL_ACTIVATION_OR_CALIBRATION_WAS_OWED_BY_CAP05"
+  ],
+  "exit_condition": "ALL_OPEN_ITEMS_HAVE_MERGED_MAIN_PROOF_AND_S4_EFFECTIVENESS_BEFORE_S5_AUTHORIZATION",
+  "s5_authorized": false
+}
