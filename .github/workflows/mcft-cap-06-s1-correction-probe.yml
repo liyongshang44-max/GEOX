@@ -51,11 +51,11 @@ jobs:
           pnpm -r typecheck
           pnpm -r build
 
-      - name: Prove corrected frozen wetness-regime coverage
+      - name: Prove permanent corrected wetness-regime coverage
         run: |
           set -euo pipefail
           mkdir -p acceptance-output
-          pnpm -w exec tsx scripts/runtime_acceptance/DIAG_MCFT_CAP_06_S1_CORRECTED_REGIMES.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S1_CORRECTED_REGIMES.log
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S1_CONTROLLED_REGIMES.log
 
       - name: Run permanent isolated S1 PostgreSQL acceptance
         run: |
