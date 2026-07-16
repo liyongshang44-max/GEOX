@@ -35,6 +35,8 @@
   "model_activation_authorized": false,
   "active_config_switch_authorized": false,
   "successor_capability_line_authorized": false,
+  "effectiveness_writeback_candidate_pr_number": 2525,
+  "effectiveness_writeback_exact_head_ci_required": true,
   "effectiveness_writeback_changed_file_boundary": [
     "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
     "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
