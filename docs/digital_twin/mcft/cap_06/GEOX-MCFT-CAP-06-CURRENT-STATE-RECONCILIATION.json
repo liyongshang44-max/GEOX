@@ -170,8 +170,12 @@
     "repository_typecheck": "PASS",
     "repository_build": "PASS",
     "prevalidated_head": "756c160fe8613a8a1ad03c59a12de12afd12002a",
-    "exact_head_ci_status": "PENDING",
-    "exact_permanent_changed_file_count": 18
+    "exact_head_ci_status": "PASS",
+    "exact_permanent_changed_file_count": 18,
+    "exact_head": "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+    "exact_head_ci_run": 29504752806,
+    "merge_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31",
+    "postmerge_workflow_run": 29506065728
   },
   "s2_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
 }

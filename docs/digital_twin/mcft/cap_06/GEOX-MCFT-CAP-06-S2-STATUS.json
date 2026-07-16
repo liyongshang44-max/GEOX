@@ -7,13 +7,16 @@
   "implementation_branch": "agent/mcft-cap-06-s2-contracts-math-corrected-v1",
   "candidate_tree_validation": {
     "s2_runtime_acceptance": "PASS",
-    "repository_typecheck": "PASS_MATERIALIZER_PENDING_EXACT_HEAD_CI",
-    "repository_build": "PASS_MATERIALIZER_PENDING_EXACT_HEAD_CI",
+    "repository_typecheck": "PASS_EXACT_HEAD_CI_29504752806",
+    "repository_build": "PASS_EXACT_HEAD_CI_29504752806",
     "source_s1_identity_binding": "PASS",
     "host_floating_point_authority_absent": true,
     "exact_changed_file_count": 18,
     "temporary_workflows_retained": false,
-    "generated_acceptance_artifacts_retained": false
+    "generated_acceptance_artifacts_retained": false,
+    "exact_head_ci_status": "PASS",
+    "exact_head": "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+    "exact_head_ci_run": 29504752806
   },
   "result_summary": {
     "schema_version": "geox_mcft_cap_06_s2_contracts_math_v1",

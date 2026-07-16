@@ -3738,7 +3738,7 @@
       },
       "authorization_id": "MCFT-CAP-06-AUTHORIZATION-V1",
       "authorization_status": "MERGED_EFFECTIVE",
-      "next_delivery_slice_id": "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1",
+      "next_delivery_slice_id": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
       "next_delivery_slice_authorized": true,
       "dataset_qualification_status": "INSUFFICIENT_MATCHED_PAIRS",
       "case_graph_validation_status": "PASS",
