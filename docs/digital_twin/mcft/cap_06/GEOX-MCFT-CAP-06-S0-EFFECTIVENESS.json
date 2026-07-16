@@ -29,6 +29,15 @@
   "model_activation_authorized": false,
   "active_config_switch_authorized": false,
   "successor_capability_line_authorized": false,
+  "candidate_tree_validation": {
+    "governance_gate": "PASS",
+    "json_validation": "PASS",
+    "git_diff_check": "PASS",
+    "exact_changed_file_count": 12,
+    "temporary_workflows_retained": false,
+    "temporary_materializers_retained": false,
+    "generated_acceptance_artifacts_retained": false
+  },
   "effectiveness_writeback_changed_file_boundary": [
     "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
     "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
