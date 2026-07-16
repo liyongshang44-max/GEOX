@@ -401,7 +401,7 @@ export function validateCap06S1DatasetUniquenessV1(cases: readonly Cap06S1Contro
 }
 
 export async function buildCap06S1ControlledDatasetV1(): Promise<Cap06S1ControlledDatasetV1> {
-  const source = await buildCap04S7RangeFixtureV1();
+  const source = await buildCap04S7RangeFixtureV1({ rainfall_profile_id: "CAP06_MULTI_REGIME_V1" });
   const range = await source.range_service.runContiguousRange(source.range_input);
   assert.equal(range.status, "COMPLETED");
   assert.equal(range.tick_results.length, CAP04_S7_STANDARD_TICK_COUNT_V1);
