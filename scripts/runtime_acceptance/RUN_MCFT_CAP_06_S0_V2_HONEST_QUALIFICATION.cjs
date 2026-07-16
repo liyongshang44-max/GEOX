@@ -43,6 +43,21 @@ function replaceExactly(source, before, after, label) {
   return source.replace(before, after);
 }
 
+function resolveBaseDatabaseUrl() {
+  const explicitDatabaseUrl = String(process.env.DATABASE_URL || '').trim();
+  if (explicitDatabaseUrl) return explicitDatabaseUrl;
+
+  const postgresUser = String(process.env.POSTGRES_USER || '').trim();
+  const postgresPassword = String(process.env.POSTGRES_PASSWORD || '').trim();
+  const postgresDatabase = String(process.env.POSTGRES_DB || '').trim();
+  const postgresHost = String(process.env.POSTGRES_HOST || '127.0.0.1').trim();
+  const postgresPort = String(process.env.POSTGRES_PORT || '5433').trim();
+  if (!postgresUser || !postgresPassword || !postgresDatabase || !postgresHost || !postgresPort) {
+    throw new Error('MCFT_CAP_06_S0_POSTGRESQL_ACCEPTANCE_DATABASE_CONFIG_REQUIRED');
+  }
+  return `postgres://${encodeURIComponent(postgresUser)}:${encodeURIComponent(postgresPassword)}@${postgresHost}:${postgresPort}/${encodeURIComponent(postgresDatabase)}`;
+}
+
 async function recreateIsolatedDatabase(baseDatabaseUrl) {
   const adminUrl = new URL(baseDatabaseUrl);
   adminUrl.pathname = '/postgres';
@@ -113,10 +128,9 @@ function buildTemporaryRunner() {
 }
 
 async function main() {
-  const baseDatabaseUrl = String(process.env.DATABASE_URL || '').trim();
-  if (!baseDatabaseUrl) throw new Error('DATABASE_URL_REQUIRED');
+  const baseDatabaseUrl = resolveBaseDatabaseUrl();
 
-  const fetchResult = run('git', ['fetch', 'origin', `main:refs/remotes/origin/main`]);
+  const fetchResult = run('git', ['fetch', 'origin', 'main:refs/remotes/origin/main']);
   requireSuccessful(fetchResult, 'FETCH_ORIGIN_MAIN');
   const mainResult = run('git', ['rev-parse', 'refs/remotes/origin/main']);
   requireSuccessful(mainResult, 'READ_ORIGIN_MAIN');
