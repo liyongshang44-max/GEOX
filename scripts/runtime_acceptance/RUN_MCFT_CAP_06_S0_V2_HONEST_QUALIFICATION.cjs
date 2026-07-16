@@ -139,11 +139,22 @@ function persistQualificationResult(stdout) {
   fs.writeFileSync(QUALIFICATION_RESULT_ARTIFACT_PATH, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
 }
 
+async function restoreGitAncestry() {
+  const shallowPath = path.join(ROOT, '.git', 'shallow');
+  if (fs.existsSync(shallowPath)) {
+    const unshallow = run('git', ['fetch', '--no-tags', '--prune', '--unshallow', 'origin']);
+    requireSuccessful(unshallow, 'FETCH_UNSHALLOW');
+  }
+  const fetchMain = run('git', ['fetch', 'origin', 'main:refs/remotes/origin/main']);
+  requireSuccessful(fetchMain, 'FETCH_ORIGIN_MAIN');
+  const fetchHead = run('git', ['fetch', 'origin', `${EXPECTED_HEAD_BRANCH}:refs/remotes/origin/${EXPECTED_HEAD_BRANCH}`]);
+  requireSuccessful(fetchHead, 'FETCH_ORIGIN_HEAD');
+}
+
 async function main() {
   const baseDatabaseUrl = resolveBaseDatabaseUrl();
 
-  const fetchResult = run('git', ['fetch', 'origin', 'main:refs/remotes/origin/main']);
-  requireSuccessful(fetchResult, 'FETCH_ORIGIN_MAIN');
+  await restoreGitAncestry();
   const mainResult = run('git', ['rev-parse', 'refs/remotes/origin/main']);
   requireSuccessful(mainResult, 'READ_ORIGIN_MAIN');
   if (String(mainResult.stdout || '').trim() !== BASELINE_MAIN) {
