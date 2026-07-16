@@ -67,6 +67,13 @@
     "NO_SCHEDULER",
     "NO_MCFT_CAP_07_AUTHORIZATION"
   ],
-  "effectiveness_condition": "RECONCILIATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_GATE_PASS",
-  "materialization_workflow_run": 29463547394
+  "candidate_proof": {
+    "materialization_workflow_run": 29463547394,
+    "materialized_candidate_commit": "4d27ffd9a380cb47a26bacc13f803c4f53075152",
+    "current_state_gate": "PASS",
+    "temporary_materializer_retained": false,
+    "temporary_pr_trigger_retained": false,
+    "exact_permanent_changed_file_count": 8
+  },
+  "effectiveness_condition": "RECONCILIATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_GATE_PASS"
 }
