@@ -2,18 +2,18 @@
   "schema_version": "geox_mcft_cap_06_current_state_reconciliation_v1",
   "reconciliation_id": "MCFT-CAP-06.CURRENT-STATE-RECONCILIATION-V1",
   "capability_line_id": "MCFT-CAP-06",
-  "baseline_main_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31",
-  "status": "MERGED_EFFECTIVE",
+  "baseline_main_commit": "36efb93963222b2768b8d2bf384f748c86ce525a",
+  "status": "MERGED_EFFECTIVE_THROUGH_S3_S4_AUTHORIZED_NOT_STARTED",
   "reconciliation_effective": true,
   "current_state": {
     "p_minus_1": "MERGED_EFFECTIVE",
     "p0": "MERGED_EFFECTIVE",
-    "cap_05_predecessor_eligibility": "RESTORED",
+    "cap_05_predecessor_eligibility": "RESTORED_WITH_STRUCTURAL_DEBT_STABILIZATION_PENDING",
     "s0_qualification_authorized": true,
     "s0": "MERGED_EFFECTIVE",
     "capability_line_authorization_effective": true,
     "runtime_source_authorized": true,
-    "active_delivery_slice_id": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
+    "active_delivery_slice_id": "MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1",
     "candidate_runtime_implemented": false,
     "shadow_evaluation_runtime_implemented": false,
     "capability_complete": false,
@@ -26,9 +26,16 @@
     "s2_authorized": true,
     "s2_implementation_started": true,
     "calibration_contract_math_candidate_implemented": true,
-    "s3": "AUTHORIZED_NOT_STARTED",
+    "s3": "MERGED_EFFECTIVE",
     "s3_authorized": true,
-    "s3_implementation_started": false
+    "s3_implementation_started": true,
+    "s3_candidate_implemented": true,
+    "s3_effective": true,
+    "s4": "AUTHORIZED_NOT_STARTED",
+    "s4_inserted_by_task_amendment": true,
+    "s4_authorized": true,
+    "s4_implementation_started": false,
+    "s5_authorized": false
   },
   "proof": {
     "p_minus_1": {
@@ -68,18 +75,6 @@
       "postmerge_gate": "PASS",
       "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json"
     },
-    "s1": {
-      "implementation_pr_number": 2514,
-      "exact_head": "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
-      "exact_head_ci_run": 29475482824,
-      "merge_commit": "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
-      "head_to_merge_file_delta_count": 0,
-      "head_to_merge_tree_equivalence": "PASS",
-      "postmerge_probe_pr_number": 2515,
-      "postmerge_workflow_run": 29476027885,
-      "postmerge_gate": "PASS",
-      "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json"
-    },
     "s1_controlled_data_correction": {
       "correction_pr_number": 2519,
       "candidate_head": "6afba5256ea802bdff7ca6a750553da9a362990b",
@@ -99,15 +94,6 @@
       "postmerge_gate": "PASS",
       "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json"
     },
-    "s2_candidate": {
-      "status": "CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
-      "status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
-      "contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-CONTRACTS-MATH.json",
-      "runtime_acceptance": "PASS",
-      "canonical_write_count": 0,
-      "migration_count": 0,
-      "effective": false
-    },
     "s2_effectiveness": {
       "status": "MERGED_EFFECTIVE",
       "implementation_pr_number": 2523,
@@ -118,7 +104,30 @@
       "head_to_merge_tree_equivalence": "PASS",
       "postmerge_probe_pr_number": 2524,
       "postmerge_workflow_run": 29506065728,
-      "postmerge_gate": "PASS"
+      "postmerge_gate": "PASS",
+      "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+    },
+    "s3_effectiveness": {
+      "status": "MERGED_EFFECTIVE",
+      "implementation_pr_number": 2528,
+      "implementation_exact_head": "0bce4978239094e8eadf6cdd63fbfacf7779bbb6",
+      "implementation_focused_validation_run": 29520242013,
+      "implementation_standard_ci_run": 29520241249,
+      "implementation_merge_commit": "36efb93963222b2768b8d2bf384f748c86ce525a",
+      "head_to_merge_file_delta_count": 0,
+      "head_to_merge_tree_equivalence": "PASS",
+      "postmerge_probe_pr_number": 2532,
+      "postmerge_probe_closed_without_merge": true,
+      "postmerge_workflow_run": 29520979042,
+      "postmerge_gate": "PASS",
+      "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-EFFECTIVENESS.json"
+    },
+    "s4_insertion": {
+      "status": "AUTHORIZED_NOT_STARTED",
+      "task_amendment_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-AMENDMENT-CAP05-STRUCTURAL-DEBT-V1.md",
+      "contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-PREDECESSOR-CONSUMPTION-STABILIZATION.md",
+      "debt_register_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CAP05-STRUCTURAL-DEBT-REGISTER.json",
+      "s5_blocked_until_s4_effectiveness": true
     }
   },
   "superseded_candidates": [
@@ -128,9 +137,11 @@
       "replacement_required": "S0_V2"
     }
   ],
-  "next_repository_action": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
+  "next_repository_action": "MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1",
   "preserved_nonclaims": [
-    "NO_S3_IMPLEMENTATION",
+    "NO_S4_IMPLEMENTATION_BY_S3_EFFECTIVENESS_WRITEBACK",
+    "NO_S5_CANDIDATE_ORCHESTRATION",
+    "NO_S6_SHADOW_ORCHESTRATION",
     "NO_CALIBRATION_CANDIDATE_APPEND",
     "NO_SHADOW_EVALUATION_APPEND",
     "NO_MODEL_ACTIVATION",
@@ -140,42 +151,9 @@
     "NO_SCHEDULER",
     "NO_MCFT_CAP_07_AUTHORIZATION"
   ],
-  "effectiveness_condition": "SATISFIED_BY_PR_2523_AND_PROOF_RUN_29506065728",
+  "effectiveness_condition": "S3_EFFECTIVENESS_SATISFIED_AND_S4_INSERTION_AUTHORIZED_BY_TASK_AMENDMENT",
   "s0_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json",
-  "s1_candidate": {
-    "contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.json",
-    "status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
-    "canonical_residual_count": 24,
-    "residual_set_hash": "sha256:7995da1a8c5221c207087b30bb66a60ac2054e0616338f275ffaf72a01857e60",
-    "calibration_window_hash": "sha256:e5403ae258326909d054e92b53d089494d709785d8c48775a8cd142b0f0d191d",
-    "holdout_window_hash": "sha256:20bc567b9e75027425c981a24d8889f80327b55226dd29d04a97880bc07a428a",
-    "execution_workflow": 29484155724,
-    "status": "MERGED_EFFECTIVE_CORRECTED",
-    "case_input_set_hash": "sha256:cb3bd4c273134071e931e8f85765b028ce58986752e94da3902f8563ddba4bb3",
-    "exact_head_ci_run": 29493034432,
-    "postmerge_workflow_run": 29493733228
-  },
   "s1_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
-  "s2_candidate_validation": {
-    "materialization_workflow_run": 29499601843,
-    "materializer_job_id": 87631836630,
-    "runtime_acceptance": "PASS",
-    "governance_prevalidation": "PASS_PHASE_AWARE_FINALIZER",
-    "governance_finalizer_workflow_run": 29504409350,
-    "governance_finalizer_job_id": 87641317485,
-    "s1_postgresql_reproduction": "PASS",
-    "s1_regime_reproduction": "PASS",
-    "phase_aware_s1_gate": "PASS",
-    "s2_governance_gate": "PASS",
-    "repository_typecheck": "PASS",
-    "repository_build": "PASS",
-    "prevalidated_head": "756c160fe8613a8a1ad03c59a12de12afd12002a",
-    "exact_head_ci_status": "PASS",
-    "exact_permanent_changed_file_count": 18,
-    "exact_head": "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
-    "exact_head_ci_run": 29504752806,
-    "merge_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31",
-    "postmerge_workflow_run": 29506065728
-  },
-  "s2_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+  "s2_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json",
+  "s3_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-EFFECTIVENESS.json"
 }
