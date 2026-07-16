@@ -1556,3 +1556,23 @@ S2 草稿 PR #2518 的专用 probe 证明：原 S1 的 24 个受控案例全部�
 
 在纠偏 exact-head CI、merge、head-to-merge tree equivalence、merged-main Gate 与独立 effectiveness writeback 全部通过前，S2 及其后续 Slice 均保持阻塞。
 <!-- MCFT-CAP-06-S1-CONTROLLED-DATA-CORRECTION:END -->
+
+
+<!-- MCFT-CAP-06-S1-CORRECTED-EFFECTIVENESS-V2 -->
+## MCFT-CAP-06 corrected S1 effectiveness and S2 authorization
+
+```text
+corrected S1 implementation PR: #2519
+exact head: 6ed8956155fba4d7ae040f88ab1870e564945f7c
+exact-head CI: 29493034432 PASS
+merge commit: 4fc1044085c4befad7852089b6ebe2afab46a5ca
+tree equivalence: PASS
+exact merged-main proof: 29493733228 PASS
+corrected S1: MERGED_EFFECTIVE
+active delivery slice: MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1
+S2: AUTHORIZED_NOT_STARTED
+S3+: BLOCKED
+Calibration Candidate: NOT IMPLEMENTED
+Shadow Evaluation: NOT IMPLEMENTED
+Model Activation: NOT AUTHORIZED
+```
