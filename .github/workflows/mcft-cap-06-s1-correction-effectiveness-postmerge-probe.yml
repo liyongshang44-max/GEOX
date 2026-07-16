@@ -1,0 +1,104 @@
+name: mcft-cap-06-s1-correction-effectiveness-postmerge-probe
+
+on:
+  pull_request:
+
+jobs:
+  exact-merged-main-effectiveness-proof:
+    if: github.head_ref == 'agent/mcft-cap-06-s1-correction-effectiveness-postmerge-probe-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      PROVEN_MERGE_COMMIT: 9eff45605dc709a6001e6c1bed29fd1df76197ed
+    steps:
+      - name: Checkout exact effectiveness merge commit
+        uses: actions/checkout@v4
+        with:
+          ref: 9eff45605dc709a6001e6c1bed29fd1df76197ed
+          fetch-depth: 0
+
+      - name: Prove checkout and main identity
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$PROVEN_MERGE_COMMIT"
+          git fetch origin main:refs/remotes/origin/main
+          test "$(git rev-parse refs/remotes/origin/main)" = "$PROVEN_MERGE_COMMIT"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck and build exact merge commit
+        run: |
+          set -euo pipefail
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Reproduce S1 canonical Residuals
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
+
+      - name: Reproduce S1 sensitivity and regime evidence
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts
+
+      - name: Run corrected S1 effectiveness Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
+
+      - name: Verify bounded successor authorization
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const S2 = 'MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1';
+          const effectiveness = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json', 'utf8'));
+          const current = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json', 'utf8'));
+          const delivery = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json', 'utf8'));
+          if (effectiveness.effective !== true || effectiveness.status !== 'MERGED_EFFECTIVE') throw new Error('CORRECTED_S1_EFFECTIVENESS_REQUIRED');
+          if (effectiveness.implementation_merge_commit !== '4fc1044085c4befad7852089b6ebe2afab46a5ca') throw new Error('S1_IMPLEMENTATION_MERGE_MISMATCH');
+          if (effectiveness.postmerge_workflow_run !== 29493733228) throw new Error('S1_IMPLEMENTATION_PROOF_MISMATCH');
+          if (effectiveness.active_delivery_slice_id !== S2) throw new Error('S2_ACTIVE_SLICE_REQUIRED');
+          if (effectiveness.s2_authorized !== true || effectiveness.s2_implementation_started !== false) throw new Error('S2_AUTHORIZATION_BOUNDARY_MISMATCH');
+          if (effectiveness.candidate_runtime_implemented !== false) throw new Error('CANDIDATE_RUNTIME_FORBIDDEN');
+          if (effectiveness.shadow_evaluation_runtime_implemented !== false) throw new Error('SHADOW_RUNTIME_FORBIDDEN');
+          if (effectiveness.calibration_contract_math_implemented !== false) throw new Error('S2_IMPLEMENTATION_MUST_NOT_BE_PRECLAIMED');
+          if (current.current_state.active_delivery_slice_id !== S2) throw new Error('CURRENT_ACTIVE_SLICE_MISMATCH');
+          if (current.current_state.s2 !== 'AUTHORIZED_NOT_STARTED') throw new Error('CURRENT_S2_STATUS_MISMATCH');
+          if (delivery.active_delivery_slice_id !== S2) throw new Error('DELIVERY_ACTIVE_SLICE_MISMATCH');
+          if (delivery.authorized_not_started_slices.length !== 1 || delivery.authorized_not_started_slices[0] !== S2) throw new Error('SOLE_AUTHORIZED_SLICE_REQUIRED');
+          if (delivery.candidate_slices.length !== 0) throw new Error('CANDIDATE_SLICE_FORBIDDEN');
+          NODE
+
+      - name: Final exact-commit proof
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$PROVEN_MERGE_COMMIT"
+          git diff --check
+          echo "MCFT-CAP-06 corrected S1 effectiveness merged-main proof PASS: $PROVEN_MERGE_COMMIT"
