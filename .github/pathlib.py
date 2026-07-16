@@ -67,12 +67,18 @@ def _patched_write_text(self, data, *args, **kwargs):
         '  validateCap04RuntimeConfigPayloadV1(payload);\n',
         "S2_CONFIG_PAYLOAD_ANCHOR_MISMATCH",
     )
+    text = _replace_once(
+        text,
+        '? { ...item.source, observation_available_to_runtime_at: item.source.forecast_as_of }',
+        '? { ...item.source, forecast_as_of: item.source.observation_available_to_runtime_at }',
+        "S2_FORECAST_AS_OF_NEGATIVE_FIXTURE_ANCHOR_MISMATCH",
+    )
 
     result = _ORIGINAL_WRITE_TEXT(self, text, *args, **kwargs)
     proxy = _STDLIB.Path(__file__)
     if proxy.exists():
         proxy.unlink()
-    print("S2_PATHLIB_PROXY_CONFIG_PROJECTION_PATCH=PASS")
+    print("S2_PATHLIB_PROXY_GENERATED_ACCEPTANCE_PATCH=PASS")
     return result
 
 
