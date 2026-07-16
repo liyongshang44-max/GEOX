@@ -30,9 +30,9 @@ jobs:
           git show origin/agent/mcft-cap-06-s1-readiness-hardening-staging-v1:.github/mcft_cap06_s1_readiness_hardening.py.gz.b64 \
             | base64 -d \
             | gzip -d \
-            > /tmp/mcft_cap06_s1_readiness_hardening.py
-          python -m py_compile /tmp/mcft_cap06_s1_readiness_hardening.py
-          python /tmp/mcft_cap06_s1_readiness_hardening.py source
+            > .github/mcft_cap06_s1_readiness_hardening.py
+          python -m py_compile .github/mcft_cap06_s1_readiness_hardening.py
+          python .github/mcft_cap06_s1_readiness_hardening.py source
           git diff --check
           node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
 
@@ -75,7 +75,7 @@ jobs:
       - name: Materialize runtime-derived SSOT
         run: |
           set -euo pipefail
-          python /tmp/mcft_cap06_s1_readiness_hardening.py materialize
+          python .github/mcft_cap06_s1_readiness_hardening.py materialize
           python -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.json >/dev/null
           python -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-CONTROLLED-DATA-ERRATUM.json >/dev/null
           python -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json >/dev/null
@@ -92,7 +92,8 @@ jobs:
         run: |
           set -euo pipefail
           git checkout origin/main -- .github/workflows/ci.yml
-          rm -rf acceptance-output
+          rm -f .github/mcft_cap06_s1_readiness_hardening.py
+          rm -rf .github/__pycache__ acceptance-output
           mapfile -t actual < <(git diff --name-only origin/main | sort)
           cat > /tmp/expected.txt <<'EOF'
           docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
