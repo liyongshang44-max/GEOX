@@ -7,7 +7,9 @@ on:
     paths:
       - "apps/server/src/domain/twin_runtime/calibration_case_graph_qualification_v2.ts"
       - "apps/server/src/persistence/twin_runtime/postgres_cap06_repository_history_case_graph_reader_v2.ts"
+      - "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_CASE_GRAPH_QUALIFICATION_V4.ts"
       - "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_QUALIFY_EXISTING_DB.ts"
+      - "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_POSTGRESQL.ts"
       - ".github/workflows/mcft-cap-06-s0-v2-postgresql-proof.yml"
 
 jobs:
@@ -29,7 +31,6 @@ jobs:
           --health-retries 20
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
-      TARGET_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_post_closure_acceptance
 
     steps:
       - name: Checkout exact PR head
@@ -59,48 +60,19 @@ jobs:
       - name: Run server typecheck
         run: pnpm run typecheck:server
 
-      - name: Prepare temporary retained-database CAP-05 proof copy
-        shell: bash
-        run: |
-          cp scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts scripts/runtime_acceptance/.ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER_CAP06_TEMP.ts
-          python - <<'PY'
-          from pathlib import Path
-          path = Path("scripts/runtime_acceptance/.ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER_CAP06_TEMP.ts")
-          text = path.read_text(encoding="utf-8")
-          needle = "    await dropIsolatedDatabase(baseUrl);"
-          if text.count(needle) != 1:
-              raise SystemExit("CAP05_DROP_HOOK_CARDINALITY_MISMATCH")
-          path.write_text(text.replace(needle, "    // Database retained temporarily for read-only CAP-06 S0 qualification."), encoding="utf-8")
-          PY
+      - name: Run pure dual-Config qualification acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_CASE_GRAPH_QUALIFICATION_V4.ts
 
-      - name: Reconstruct formal CAP-05 terminal chain
+      - name: Run formal CAP-05 reconstruction and S0 v2 PostgreSQL qualification
         shell: bash
         run: |
           mkdir -p acceptance-output
-          pnpm -w exec tsx scripts/runtime_acceptance/.ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER_CAP06_TEMP.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S0_V2_CAP05_RECONSTRUCTION.log
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_POSTGRESQL.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S0_V2_POSTGRESQL_PROOF.log
 
-      - name: Qualify exact canonical repository history
-        shell: bash
-        run: |
-          DATABASE_URL="$TARGET_DATABASE_URL" pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_QUALIFY_EXISTING_DB.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S0_V2_POSTGRESQL_QUALIFICATION.log
-
-      - name: Upload proof logs
+      - name: Upload proof log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap-06-s0-v2-postgresql-proof
-          path: acceptance-output/MCFT_CAP_06_S0_V2_*.log
+          path: acceptance-output/MCFT_CAP_06_S0_V2_POSTGRESQL_PROOF.log
           if-no-files-found: warn
-
-      - name: Remove temporary proof source and isolated database
-        if: always()
-        shell: bash
-        run: |
-          rm -f scripts/runtime_acceptance/.ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER_CAP06_TEMP.ts
-          DATABASE_URL="$DATABASE_URL" pnpm -w exec tsx -e '
-            import { Pool } from "pg";
-            const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-            await pool.query("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=$1 AND pid<>pg_backend_pid()", ["mcft_cap05_post_closure_acceptance"]);
-            await pool.query("DROP DATABASE IF EXISTS mcft_cap05_post_closure_acceptance");
-            await pool.end();
-          '
