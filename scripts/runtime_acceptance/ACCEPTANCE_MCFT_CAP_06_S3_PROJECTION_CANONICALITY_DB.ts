@@ -33,16 +33,21 @@ async function expectCanonicalDivergenceV1(
 
 async function main(): Promise<void> {
   const triggers = await pool.query(
-    `SELECT event_object_table,trigger_name
-       FROM information_schema.triggers
-      WHERE trigger_schema='public'
-        AND trigger_name IN (
+    `SELECT relation.relname AS event_object_table,trigger.tgname AS trigger_name
+       FROM pg_trigger AS trigger
+       JOIN pg_class AS relation
+         ON relation.oid=trigger.tgrelid
+       JOIN pg_namespace AS namespace
+         ON namespace.oid=relation.relnamespace
+      WHERE namespace.nspname='public'
+        AND trigger.tgisinternal=false
+        AND trigger.tgname IN (
           'trg_twin_calibration_candidate_projection_canonicality_v1',
           'trg_twin_shadow_evaluation_projection_canonicality_v1',
           'trg_twin_candidate_evaluation_index_canonicality_v1',
           'trg_twin_shadow_evaluation_case_projection_canonicality_v1'
         )
-      ORDER BY trigger_name ASC`,
+      ORDER BY trigger.tgname ASC`,
   );
   assert.equal(triggers.rows.length, 4);
   assert.deepEqual(
