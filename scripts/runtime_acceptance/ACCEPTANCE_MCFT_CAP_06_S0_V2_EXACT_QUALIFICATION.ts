@@ -374,7 +374,9 @@ async function executeCap05TerminalChain(databaseUrl: string): Promise<void> {
     await establishStandardFeedbackPath(pool);
     const expiredPredecessorLease = await pool.query(
       `UPDATE twin_runtime_lease_v1
-          SET expires_at=transaction_timestamp()-interval '1 second'
+          SET acquired_at=transaction_timestamp()-interval '10 minutes',
+              heartbeat_at=transaction_timestamp()-interval '5 minutes',
+              expires_at=transaction_timestamp()-interval '1 second'
         WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3
           AND field_id=$4 AND season_id=$5 AND zone_id=$6`,
       scopeValues(),

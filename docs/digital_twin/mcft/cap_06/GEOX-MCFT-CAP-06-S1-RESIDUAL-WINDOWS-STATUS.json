@@ -33,7 +33,20 @@
     "exact_changed_file_count": 15,
     "temporary_workflows_retained": false,
     "generated_acceptance_artifacts_retained": false,
-    "s0_downstream_state_compatibility": "VALIDATE_S0_EFFECTIVENESS_NOT_GLOBAL_RECONCILIATION_STATUS"
+    "s0_downstream_state_compatibility": "VALIDATE_S0_EFFECTIVENESS_NOT_GLOBAL_RECONCILIATION_STATUS",
+    "calibration_sensitive_case_count": 16,
+    "minimum_sensitive_case_count": 4,
+    "calibration_represented_sensitive_regime_count": 3,
+    "minimum_required_sensitive_regime_count": 2,
+    "holdout_purpose": "HIGH_EXCESS_STRESS_HOLDOUT_ONLY",
+    "holdout_generalization_claim": "NOT_ESTABLISHED",
+    "window_hash_semantics": "ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1",
+    "required_window_semantic_companion_hashes": {
+      "residual_set_hash": "sha256:7995da1a8c5221c207087b30bb66a60ac2054e0616338f275ffaf72a01857e60",
+      "case_input_set_hash": "sha256:cb3bd4c273134071e931e8f85765b028ce58986752e94da3902f8563ddba4bb3"
+    },
+    "base_replay_exactness": "PASS_24_EXACT_STORAGE_AND_ZERO_MASS_BALANCE_ERROR",
+    "successor_readiness_data_precondition": "PASS"
   },
   "s1_effective": false,
   "s2_authorized": false,

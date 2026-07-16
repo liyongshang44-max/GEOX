@@ -20,6 +20,15 @@ const RESULT_PATH = path.resolve(
   "acceptance-output/MCFT_CAP_06_S1_CONTROLLED_REGIMES_RESULT.json",
 );
 
+const CAP06_SEARCH_MINIMUM_V1 = "0.020000" as const;
+const CAP06_SEARCH_MAXIMUM_V1 = "0.040000" as const;
+const CAP06_SENSITIVITY_EPSILON_VWC_V1 = "0.000001000" as const;
+const CAP06_SENSITIVITY_EPSILON_UNITS_SCALE_9_V1 = 1_000n;
+const CAP06_MINIMUM_SENSITIVE_CASE_COUNT_V1 = 4 as const;
+const CAP06_MINIMUM_REPRESENTED_SENSITIVE_REGIME_COUNT_V1 = 2 as const;
+const CAP06_WINDOW_HASH_SEMANTICS_V1 = "ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1" as const;
+const CAP06_HOLDOUT_PURPOSE_V1 = "HIGH_EXCESS_STRESS_HOLDOUT_ONLY" as const;
+
 type WetnessRegimeV1 = "LOW_EXCESS" | "MID_EXCESS" | "HIGH_EXCESS";
 
 function fixed6V1(value: unknown, code: string): string {
@@ -58,7 +67,7 @@ async function main(): Promise<void> {
     };
     assert.equal(config.drainage_coefficient_per_hour, CAP06_S1_BASE_DRAINAGE_COEFFICIENT_V1);
     const forecastPayload = caseItem.source_forecast.payload as Record<string, any>;
-    const replay = executeHourlyWaterBalanceV1({
+    const runAtCoefficientV1 = (drainageCoefficientPerHour: string) => executeHourlyWaterBalanceV1({
       interval_start_exclusive: caseItem.forecast_point.interval_start,
       interval_end_inclusive: caseItem.forecast_point.interval_end,
       previous_storage_mm_decimal: caseItem.forecast_point.previous_storage_mm,
@@ -72,11 +81,19 @@ async function main(): Promise<void> {
       crop_stage_code: caseItem.forecast_point.crop_stage_code,
       kc_decimal: caseItem.forecast_point.kc,
       executed_irrigation_candidates: [],
-      config,
+      config: {
+        ...config,
+        drainage_coefficient_per_hour: drainageCoefficientPerHour,
+      },
     });
+    const replay = runAtCoefficientV1(CAP06_S1_BASE_DRAINAGE_COEFFICIENT_V1);
+    const minimumReplay = runAtCoefficientV1(CAP06_SEARCH_MINIMUM_V1);
+    const maximumReplay = runAtCoefficientV1(CAP06_SEARCH_MAXIMUM_V1);
     assert.equal(replay.mass_balance_trace.next_storage_mm, caseItem.base_replay_storage_mm);
     assert.equal(replay.mass_balance_trace.next_storage_mm, caseItem.forecast_point.storage_mean_mm);
     assert.equal(replay.mass_balance_trace.mass_balance_error_mm, "0.000000");
+    assert.equal(minimumReplay.mass_balance_trace.mass_balance_error_mm, "0.000000");
+    assert.equal(maximumReplay.mass_balance_trace.mass_balance_error_mm, "0.000000");
 
     const storageBeforeDrainageUnits = parseFixedDecimalV1(replay.mass_balance_trace.storage_before_drainage_mm, 6);
     const fieldCapacityUnits = parseFixedDecimalV1(config.field_capacity_storage_mm, 6);
@@ -86,6 +103,19 @@ async function main(): Promise<void> {
       : 0n;
     const spanUnits = saturationUnits - fieldCapacityUnits;
     const ratioScale9 = (excessUnits * 1_000_000_000n) / spanUnits;
+    const minimumPredictionUnits = parseFixedDecimalV1(
+      minimumReplay.published_state.root_zone_vwc_fraction.mean,
+      9,
+    );
+    const maximumPredictionUnits = parseFixedDecimalV1(
+      maximumReplay.published_state.root_zone_vwc_fraction.mean,
+      9,
+    );
+    const signedPredictionSpanUnits = maximumPredictionUnits - minimumPredictionUnits;
+    const predictionSpanUnits = signedPredictionSpanUnits < 0n
+      ? -signedPredictionSpanUnits
+      : signedPredictionSpanUnits;
+    const sensitiveCase = predictionSpanUnits >= CAP06_SENSITIVITY_EPSILON_UNITS_SCALE_9_V1;
     return {
       case_index: caseItem.case_index,
       residual_ref: caseItem.residual.object_id,
@@ -97,6 +127,11 @@ async function main(): Promise<void> {
       wetness_regime: classifyV1(excessUnits, spanUnits),
       base_replay_storage_mm: caseItem.base_replay_storage_mm,
       hidden_replay_storage_mm: caseItem.hidden_replay_storage_mm,
+      prediction_at_search_minimum_vwc: minimumReplay.published_state.root_zone_vwc_fraction.mean,
+      prediction_at_search_maximum_vwc: maximumReplay.published_state.root_zone_vwc_fraction.mean,
+      prediction_span_vwc: formatFixedDecimalV1(predictionSpanUnits, 9),
+      sensitivity_epsilon_vwc: CAP06_SENSITIVITY_EPSILON_VWC_V1,
+      sensitive_case: sensitiveCase,
     };
   });
 
@@ -109,10 +144,26 @@ async function main(): Promise<void> {
   const calibrationRegimeCounts = countRegimes(calibrationCases);
   const holdoutRegimeCounts = countRegimes(holdoutCases);
   const calibrationRegimeCount = Object.values(calibrationRegimeCounts).filter((count) => count > 0).length;
+  const sensitiveCalibrationCases = calibrationCases.filter((item) => item.sensitive_case);
+  const sensitiveCalibrationRegimeCounts = countRegimes(sensitiveCalibrationCases);
+  const representedSensitiveRegimeCount = Object.values(sensitiveCalibrationRegimeCounts)
+    .filter((count) => count > 0).length;
+  const successorReadinessPreconditionSatisfied =
+    sensitiveCalibrationCases.length >= CAP06_MINIMUM_SENSITIVE_CASE_COUNT_V1
+    && representedSensitiveRegimeCount >= CAP06_MINIMUM_REPRESENTED_SENSITIVE_REGIME_COUNT_V1;
 
   assert.ok(calibrationRegimeCount >= 2, `CAP06_S1_CORRECTION_CALIBRATION_REGIME_COUNT:${calibrationRegimeCount}`);
   assert.deepEqual(calibrationRegimeCounts, { LOW_EXCESS: 8, MID_EXCESS: 2, HIGH_EXCESS: 6 });
   assert.deepEqual(holdoutRegimeCounts, { LOW_EXCESS: 0, MID_EXCESS: 0, HIGH_EXCESS: 8 });
+  assert.ok(
+    sensitiveCalibrationCases.length >= CAP06_MINIMUM_SENSITIVE_CASE_COUNT_V1,
+    `CAP06_S1_CORRECTION_SENSITIVE_CASE_COUNT:${sensitiveCalibrationCases.length}`,
+  );
+  assert.ok(
+    representedSensitiveRegimeCount >= CAP06_MINIMUM_REPRESENTED_SENSITIVE_REGIME_COUNT_V1,
+    `CAP06_S1_CORRECTION_SENSITIVE_REGIME_COUNT:${representedSensitiveRegimeCount}`,
+  );
+  assert.equal(successorReadinessPreconditionSatisfied, true);
 
   const result = {
     schema_version: "geox_mcft_cap_06_s1_controlled_regime_acceptance_v1",
@@ -132,9 +183,22 @@ async function main(): Promise<void> {
     holdout_regime_counts: holdoutRegimeCounts,
     calibration_represented_regime_count: calibrationRegimeCount,
     minimum_required_calibration_regime_count: 2,
+    calibration_sensitive_case_count: sensitiveCalibrationCases.length,
+    minimum_sensitive_case_count: CAP06_MINIMUM_SENSITIVE_CASE_COUNT_V1,
+    calibration_sensitive_regime_counts: sensitiveCalibrationRegimeCounts,
+    calibration_represented_sensitive_regime_count: representedSensitiveRegimeCount,
+    minimum_required_sensitive_regime_count: CAP06_MINIMUM_REPRESENTED_SENSITIVE_REGIME_COUNT_V1,
+    successor_readiness_precondition_status: successorReadinessPreconditionSatisfied ? "PASS" : "FAIL",
+    holdout_purpose: CAP06_HOLDOUT_PURPOSE_V1,
+    holdout_generalization_claim: "NOT_ESTABLISHED",
     residual_set_hash: dataset.residual_set_hash,
     calibration_window_hash: dataset.calibration_window_hash,
     holdout_window_hash: dataset.holdout_window_hash,
+    window_hash_semantics: CAP06_WINDOW_HASH_SEMANTICS_V1,
+    required_window_semantic_companion_hashes: {
+      residual_set_hash: dataset.residual_set_hash,
+      case_input_set_hash: dataset.case_input_set_hash,
+    },
     case_input_set_hash: dataset.case_input_set_hash,
     ordered_residual_refs: dataset.ordered_residual_refs,
     ordered_residual_hashes: dataset.ordered_residual_hashes,

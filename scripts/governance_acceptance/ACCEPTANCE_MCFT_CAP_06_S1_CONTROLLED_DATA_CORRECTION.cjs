@@ -5,6 +5,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const ROOT = path.resolve(__dirname, '../..');
@@ -21,6 +22,10 @@ function readJson(relativePath) {
 
 function readText(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
+}
+
+function orderedRefMembershipHash(refs) {
+  return `sha256:${crypto.createHash('sha256').update(JSON.stringify(refs), 'utf8').digest('hex')}`;
 }
 
 function main() {
@@ -52,6 +57,31 @@ function main() {
   assert.equal(regimes.calibration_represented_regime_count, 3);
   assert.equal(regimes.minimum_required_calibration_regime_count, 2);
   assert.equal(regimes.base_replay_status, 'PASS_24_EXACT_STORAGE_AND_ZERO_MASS_BALANCE_ERROR');
+  assert.ok(regimes.calibration_sensitive_case_count >= regimes.minimum_sensitive_case_count);
+  assert.ok(
+    regimes.calibration_represented_sensitive_regime_count
+      >= regimes.minimum_required_sensitive_regime_count,
+  );
+  assert.equal(regimes.successor_readiness_precondition_status, 'PASS');
+  assert.equal(regimes.holdout_purpose, 'HIGH_EXCESS_STRESS_HOLDOUT_ONLY');
+  assert.equal(regimes.holdout_generalization_claim, 'NOT_ESTABLISHED');
+  assert.equal(regimes.window_hash_semantics, 'ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1');
+  assert.equal(
+    regimes.required_window_semantic_companion_hashes.residual_set_hash,
+    runtime.residual_set_hash,
+  );
+  assert.equal(
+    regimes.required_window_semantic_companion_hashes.case_input_set_hash,
+    runtime.case_input_set_hash,
+  );
+  assert.equal(
+    runtime.calibration_window_hash,
+    orderedRefMembershipHash(runtime.ordered_residual_refs.slice(0, 16)),
+  );
+  assert.equal(
+    runtime.holdout_window_hash,
+    orderedRefMembershipHash(runtime.ordered_residual_refs.slice(16)),
+  );
 
   assert.equal(erratum.status, 'CORRECTION_CANDIDATE');
   assert.equal(erratum.discovery.closed_without_merge_s2_pr_number, 2518);
@@ -65,6 +95,17 @@ function main() {
   assert.equal(erratum.correction.regime_thresholds_changed, false);
   assert.equal(erratum.correction.residual_set_hash, runtime.residual_set_hash);
   assert.deepEqual(erratum.correction.ordered_residual_hashes, runtime.ordered_residual_hashes);
+  assert.ok(
+    erratum.correction.calibration_sensitive_case_count
+      >= erratum.correction.minimum_sensitive_case_count,
+  );
+  assert.ok(
+    erratum.correction.calibration_represented_sensitive_regime_count
+      >= erratum.correction.minimum_required_sensitive_regime_count,
+  );
+  assert.equal(erratum.correction.successor_readiness_data_precondition, 'PASS');
+  assert.equal(erratum.correction.holdout_purpose, 'HIGH_EXCESS_STRESS_HOLDOUT_ONLY');
+  assert.equal(erratum.correction.window_hash_semantics, 'ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1');
   assert.equal(erratum.effectiveness.effective, false);
 
   assert.equal(contract.status, 'CONTROLLED_DATA_CORRECTION_CANDIDATE');
@@ -73,6 +114,23 @@ function main() {
   assert.equal(contract.residual_set_hash, runtime.residual_set_hash);
   assert.equal(contract.case_input_set_hash, runtime.case_input_set_hash);
   assert.deepEqual(contract.validation.calibration_regime_counts, regimes.calibration_regime_counts);
+  assert.equal(contract.validation.calibration_sensitive_case_count, regimes.calibration_sensitive_case_count);
+  assert.deepEqual(
+    contract.validation.calibration_sensitive_regime_counts,
+    regimes.calibration_sensitive_regime_counts,
+  );
+  assert.equal(contract.validation.successor_readiness_data_precondition, 'PASS');
+  assert.equal(contract.validation.holdout_purpose, 'HIGH_EXCESS_STRESS_HOLDOUT_ONLY');
+  assert.equal(contract.calibration_window.window_hash_semantics, 'ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1');
+  assert.equal(contract.holdout_window.window_hash_semantics, 'ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1');
+  assert.equal(
+    contract.calibration_window.required_semantic_companion_hashes.residual_set_hash,
+    runtime.residual_set_hash,
+  );
+  assert.equal(
+    contract.holdout_window.required_semantic_companion_hashes.case_input_set_hash,
+    runtime.case_input_set_hash,
+  );
   assert.equal(contract.validation.runtime_result_ssot_crosscheck, 'PASS');
 
   assert.equal(status.status, 'CONTROLLED_DATA_CORRECTION_CANDIDATE');
@@ -81,6 +139,16 @@ function main() {
   assert.equal(status.effectiveness.effective, false);
   assert.equal(status.prior_effectiveness.postmerge_gate, 'PASS');
   assert.equal(status.candidate_tree_validation.runtime_result_ssot_crosscheck, 'PASS');
+  assert.equal(status.candidate_tree_validation.successor_readiness_data_precondition, 'PASS');
+  assert.ok(
+    status.candidate_tree_validation.calibration_sensitive_case_count
+      >= status.candidate_tree_validation.minimum_sensitive_case_count,
+  );
+  assert.equal(status.candidate_tree_validation.holdout_purpose, 'HIGH_EXCESS_STRESS_HOLDOUT_ONLY');
+  assert.equal(
+    status.candidate_tree_validation.window_hash_semantics,
+    'ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1',
+  );
   assert.equal(status.candidate_tree_validation.exact_changed_file_count, 15);
   assert.equal(status.exact_changed_file_boundary.includes('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts'), true);
 
@@ -127,7 +195,9 @@ function main() {
   assert.equal(s1Fixture.includes('twin_model_activation_v1'), false);
 
   console.log('PASS corrected S1 runtime output equals contract and erratum SSOT');
-  console.log('PASS calibration covers frozen 8 LOW / 2 MID / 6 HIGH regimes');
+  console.log('PASS calibration covers frozen wetness regimes and minimum endpoint sensitivity');
+  console.log('PASS holdout is disclosed as HIGH_EXCESS stress-only with no generalization claim');
+  console.log('PASS window membership hashes require residual-set and case-input semantic companions');
   console.log('PASS prior mechanical proof preserved while S2 authorization is withdrawn');
   console.log('PASS Candidate/Evaluation/Activation/S3/CAP-07 remain absent or blocked');
 }

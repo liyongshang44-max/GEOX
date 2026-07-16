@@ -34,3 +34,11 @@ S2 草稿 PR #2518 的专用 probe 证明：原 S1 的 24 个受控案例全部�
 
 在纠偏 exact-head CI、merge、head-to-merge tree equivalence、merged-main Gate 与独立 effectiveness writeback 全部通过前，S2 及其后续 Slice 均保持阻塞。
 <!-- MCFT-CAP-06-S1-CONTROLLED-DATA-CORRECTION:END -->
+
+## Corrected successor-readiness binding
+
+- calibration endpoint sensitivity: `16` sensitive cases; minimum `4`; represented sensitive regimes `3`; minimum `2`.
+- base replay: `PASS_24_EXACT_STORAGE_AND_ZERO_MASS_BALANCE_ERROR`.
+- holdout purpose: `HIGH_EXCESS_STRESS_HOLDOUT_ONLY`; cross-regime generalization is not established.
+- window hash semantics: `ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1`. A window hash binds ordered Residual refs only; consumers must also pin ordered Residual hashes, `residual_set_hash`, and `case_input_set_hash`.
+- successor-readiness data precondition: `PASS`; S1 effectiveness and S2 authorization remain false until exact-head CI, merge, tree equivalence, merged-main proof, and separate effectiveness writeback.
