@@ -1,0 +1,90 @@
+{
+  "schema_version": "geox_mcft_cap_06_predecessor_lock_v2",
+  "capability_line_id": "MCFT-CAP-06",
+  "delivery_slice_id": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
+  "implementation_generation": "S0_V2",
+  "status": "READY_FOR_MERGE_CANDIDATE",
+  "baseline_main_commit": "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+  "formal_proof": {
+    "proof_commit": "d3c5341707b35982df84ce63e8aef310ce304b31",
+    "workflow_run": 29469336992,
+    "workflow_job": "formal-postgresql-qualification",
+    "result": "PASS",
+    "exact_source_identity": "PASS",
+    "server_typecheck": "PASS",
+    "pure_dual_config_qualification_acceptance": "PASS_11",
+    "formal_cap_05_reconstruction": "PASS_7",
+    "s0_repository_history_qualification": "PASS_6",
+    "orchestrator_cleanup": "PASS",
+    "artifact_id": 8364196495,
+    "artifact_digest": "sha256:b10467019c4f77fb2b1e278918e9d613a4f9c56acd34be34687e44c703d59de2"
+  },
+  "predecessor": {
+    "capability_line_id": "MCFT-CAP-05",
+    "closure_effective": true,
+    "capability_complete": true,
+    "checkpoint_ref": "twin_runtime_checkpoint_94044fb0a8fa953db55fb8e0",
+    "checkpoint_hash": "sha256:828bbc905cde5cc17a2e0493280e758d9833774c648ff3919be64e85e31a1e58",
+    "checkpoint_sequence": 80,
+    "latest_logical_time": "2026-06-04T09:00:00.000Z",
+    "next_tick_logical_time": "2026-06-04T10:00:00.000Z",
+    "reproduced_canonical_state_fact_count": 33,
+    "historical_s10_declared_global_state_count": 81,
+    "historical_s10_orchestrator_canonical_object_fact_delta": 81,
+    "state_count_reconciliation": "HISTORICAL_S10_GLOBAL_STATE_COUNT_LABEL_CONFLATED_WITH_ORCHESTRATOR_CANONICAL_OBJECT_FACT_DELTA"
+  },
+  "semantic_context": {
+    "lineage_id": "lineage_da76d015085f0d37bf2ed478",
+    "revision_id": "revision_e0c62f99ac3db66f60a87e2b"
+  },
+  "eligible_case_graph": {
+    "residual_ref": "twin_forecast_residual_b346b2d105a290463ef61935",
+    "residual_hash": "sha256:67d93b4951032e5c8b87f08f4ed92a88ffe645edbdb5092eaeead7ead751c15a",
+    "forecast_ref": "twin_forecast_run_1279d4ac7d8efbd09ba68ac8",
+    "forecast_hash": "sha256:6c5adca78a541fb3fa0ad395789d15b642cd75e84d7a44ae9b5ede52f0c7d683",
+    "forecast_point_ref": "twin_forecast_run_1279d4ac7d8efbd09ba68ac8#/points/1",
+    "forecast_point_hash": "sha256:b5124cee77d44dd296588fc59fdfa6da9fdb43bc8194072b874b94a123e50e4c",
+    "observation_ref": "mcft05_src_bfb7a65b43a3646987958bfc",
+    "observation_hash": "sha256:a42b77f262e5637f268a77c094a8a59de9057699ab71964776374c0126d0faf2",
+    "source_posterior_ref": "twin_state_estimate_6794c04d3798b0fc7799f679",
+    "source_posterior_hash": "sha256:d28ef88d21da29f75bcc8e8649f9df62b13e1698e9c48955726c557525fc2415",
+    "forecast_evidence_window_ref": "twin_evidence_window_94f4f26c7c7b1d1a914b9009",
+    "forecast_evidence_window_hash": "sha256:8a723bdb05c24ca6b0c44958ed79d53c5569896ecc191d2264b7788fd4ec7629",
+    "forecast_runtime_config_ref": "twin_runtime_config_a1ea866180f51b811ca173f4",
+    "forecast_runtime_config_hash": "sha256:0d45f7902f2ffea6e95549adb8c91156bb625a7346f4c3b0ae2f5b7842407d4b",
+    "residual_runtime_config_ref": "twin_runtime_config_7ec4dbb04ae44edb22023bee",
+    "residual_runtime_config_hash": "sha256:c366095519f5f8a7b74f241f9d59be14bf98ae28327330af17adbee6b01487a1",
+    "forecast_target_time": "2026-06-04T03:00:00.000Z",
+    "observation_available_to_runtime_at": "2026-06-04T03:00:00.000Z"
+  },
+  "config_authority_semantics": {
+    "forecast_runtime_config_role": "FORECAST_TIME_MODEL_PARAMETER_AND_NUMERIC_AUTHORITY",
+    "residual_runtime_config_role": "RESIDUAL_TIME_MATCHING_PROJECTION_AND_NORMALIZATION_AUTHORITY",
+    "config_refs_required_equal": false,
+    "each_ref_hash_graph_required_exact": true,
+    "validator_weakening": false
+  },
+  "source_evidence_resolution": {
+    "canonical_object_store": "POSTGRESQL_FACTS",
+    "forcing_evidence_store": "FORMAL_RUNNER_NORMALIZED_REPLAY_SOURCE",
+    "projection_mode": "SESSION_LOCAL_TEMPORARY_VIEW",
+    "projected_forcing_record_count": 2,
+    "public_fact_count_before_and_after": 339,
+    "public_facts_mutated": false,
+    "temporary_projection_persisted": false
+  },
+  "preserved_nonclaims": [
+    "NO_CAP_06_RUNTIME_SOURCE_AUTHORIZATION",
+    "NO_CAP_06_MIGRATION_AUTHORIZATION",
+    "NO_CAP_06_CANONICAL_WRITE_AUTHORIZATION",
+    "NO_RESIDUAL_CREATED_BY_S0",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_SHADOW_EVALUATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_CONFIG_SWITCH",
+    "NO_PUBLIC_ROUTE",
+    "NO_WEB",
+    "NO_SCHEDULER",
+    "NO_MCFT_CAP_07_AUTHORIZATION"
+  ]
+}
