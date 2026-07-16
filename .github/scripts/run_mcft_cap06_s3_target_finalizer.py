@@ -1,5 +1,5 @@
 # .github/scripts/run_mcft_cap06_s3_target_finalizer.py
-# Purpose: execute the reviewed target materialization block and apply two exact governance-guard corrections before validation.
+# Purpose: execute the reviewed target materialization block and apply exact governance-guard corrections before validation.
 # Boundary: helper-PR tooling only; this file is never pushed into the S3 implementation branch or merged into main.
 
 from __future__ import annotations
@@ -52,16 +52,25 @@ task_path.write_text(task, encoding="utf-8")
 # Check only CREATE TABLE identifiers; legal columns such as active_config_switch_performed must not be mistaken for table names.
 gate_path = Path("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_D_PERSISTENCE.cjs")
 gate = gate_path.read_text(encoding="utf-8")
-old_guard = "  assert.doesNotMatch(migration, /CREATE TABLE[^;]*active[^;]*config/is);\n"
-new_guard = """  const createdTableNames = [...migration.matchAll(/CREATE TABLE(?: IF NOT EXISTS)?\\s+([^\\s(]+)/gi)]
+old_table_guard = "  assert.doesNotMatch(migration, /CREATE TABLE[^;]*active[^;]*config/is);\n"
+new_table_guard = """  const createdTableNames = [...migration.matchAll(/CREATE TABLE(?: IF NOT EXISTS)?\\s+([^\\s(]+)/gi)]
     .map((match) => match[1]);
   assert.equal(
     createdTableNames.some((name) => /active.*config|config.*active/i.test(name)),
     false,
   );
 """
-if old_guard in gate:
-    gate = gate.replace(old_guard, new_guard, 1)
+if old_table_guard in gate:
+    gate = gate.replace(old_table_guard, new_table_guard, 1)
 elif "const createdTableNames =" not in gate:
     raise RuntimeError("S3_GATE_ACTIVE_CONFIG_TABLE_GUARD_ANCHOR_MISSING")
+
+# Allow immutable false-valued payload fields while forbidding any active-config canonical/index store identifier.
+old_repository_guard = "  assert.doesNotMatch(repository, /active_config/i);\n"
+new_repository_guard = "  assert.doesNotMatch(repository, /twin_active_config(?:_index)?_v1/i);\n"
+if old_repository_guard in gate:
+    gate = gate.replace(old_repository_guard, new_repository_guard, 1)
+elif new_repository_guard.strip() not in gate:
+    raise RuntimeError("S3_GATE_ACTIVE_CONFIG_REPOSITORY_GUARD_ANCHOR_MISSING")
+
 gate_path.write_text(gate, encoding="utf-8")
