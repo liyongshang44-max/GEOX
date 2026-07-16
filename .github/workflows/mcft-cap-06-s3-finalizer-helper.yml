@@ -78,6 +78,22 @@ jobs:
         working-directory: target
         run: python ../helper/.github/scripts/run_mcft_cap06_s3_target_finalizer.py
 
+      - name: Materialize exact frozen taskbook nonclaim
+        working-directory: target
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md')
+          text = path.read_text(encoding='utf-8')
+          marker = 'Candidate compute service: absent\n'
+          replacement = 'NO_S5_CALIBRATION_CANDIDATE_COMPUTE_SERVICE\nCandidate compute service: absent\n'
+          if 'NO_S5_CALIBRATION_CANDIDATE_COMPUTE_SERVICE' not in text:
+              if text.count(marker) != 1:
+                  raise RuntimeError(f'S3_TASK_NONCLAIM_ANCHOR_COUNT:{text.count(marker)}')
+              text = text.replace(marker, replacement, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
       - name: Remove target temporary workflow
         working-directory: target
         run: git rm .github/workflows/mcft-cap-06-s3-validation.yml
