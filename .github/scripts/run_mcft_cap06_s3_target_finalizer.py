@@ -1,5 +1,5 @@
 # .github/scripts/run_mcft_cap06_s3_target_finalizer.py
-# Purpose: execute the already-reviewed Python materialization block stored in the target S3 finalizer workflow.
+# Purpose: execute the reviewed target materialization block and apply two exact governance-guard corrections before validation.
 # Boundary: helper-PR tooling only; this file is never pushed into the S3 implementation branch or merged into main.
 
 from __future__ import annotations
@@ -37,3 +37,31 @@ if "EXPECTED_FILES" not in source or "S3_D_PERSISTENCE_CANDIDATE" not in source:
     raise RuntimeError("S3_FINALIZER_EMBEDDED_PYTHON_CONTENT_INVALID")
 
 exec(compile(source, str(WORKFLOW), "exec"), {"__name__": "__main__"})
+
+# Freeze the exact S5 nonclaim required by the S3 governance Gate.
+task_path = Path("docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md")
+task = task_path.read_text(encoding="utf-8")
+task_anchor = "Candidate compute service: absent\n"
+task_replacement = "NO_S5_CALIBRATION_CANDIDATE_COMPUTE_SERVICE\nCandidate compute service: absent\n"
+if "NO_S5_CALIBRATION_CANDIDATE_COMPUTE_SERVICE" not in task:
+    if task.count(task_anchor) != 1:
+        raise RuntimeError(f"S3_TASK_NONCLAIM_ANCHOR_COUNT:{task.count(task_anchor)}")
+    task = task.replace(task_anchor, task_replacement, 1)
+task_path.write_text(task, encoding="utf-8")
+
+# Check only CREATE TABLE identifiers; legal columns such as active_config_switch_performed must not be mistaken for table names.
+gate_path = Path("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_D_PERSISTENCE.cjs")
+gate = gate_path.read_text(encoding="utf-8")
+old_guard = "  assert.doesNotMatch(migration, /CREATE TABLE[^;]*active[^;]*config/is);\n"
+new_guard = """  const createdTableNames = [...migration.matchAll(/CREATE TABLE(?: IF NOT EXISTS)?\\s+([^\\s(]+)/gi)]
+    .map((match) => match[1]);
+  assert.equal(
+    createdTableNames.some((name) => /active.*config|config.*active/i.test(name)),
+    false,
+  );
+"""
+if old_guard in gate:
+    gate = gate.replace(old_guard, new_guard, 1)
+elif "const createdTableNames =" not in gate:
+    raise RuntimeError("S3_GATE_ACTIVE_CONFIG_TABLE_GUARD_ANCHOR_MISSING")
+gate_path.write_text(gate, encoding="utf-8")
