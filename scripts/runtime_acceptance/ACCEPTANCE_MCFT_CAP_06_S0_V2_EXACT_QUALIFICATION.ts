@@ -63,6 +63,8 @@ const CAP05_CLOSURE_PATH = "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSU
 const CAP05_MAIN_PATH = "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-MAIN-VERIFICATION.json";
 const TEMP_WORKFLOW_PATH = ".github/workflows/mcft-cap-06-s0-v2-materialize.yml";
 const TEMP_RUNNER_INPUT_PATH = "acceptance-output/MCFT_CAP_06_S0_RUNNER_INPUT.json";
+const CI_WRAPPER_PATH = "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs";
+const ACCEPTANCE_RUNNER_PATH = "scripts/acceptance/run_acceptance.cjs";
 
 const EXACT_CHANGED_FILES = Object.freeze([
   MAP_PATH,
@@ -75,9 +77,9 @@ const EXACT_CHANGED_FILES = Object.freeze([
   DELIVERY_PATH,
   GATE_PATH,
   PREFLIGHT_PATH,
+  CI_WRAPPER_PATH,
+  ACCEPTANCE_RUNNER_PATH,
 ].sort());
-
-const PREFLIGHT_ALLOWED_FILES = Object.freeze([...EXACT_CHANGED_FILES, TEMP_WORKFLOW_PATH].sort());
 
 const PRESERVED_NONCLAIMS = Object.freeze([
   "NO_CAP_06_RUNTIME_SOURCE_AUTHORIZATION_BEFORE_EFFECTIVENESS",
@@ -159,15 +161,43 @@ function resolveDatabaseName(databaseUrl: string): string {
 }
 
 function assertRepositoryBoundary(): void {
-  assert.equal(git(["branch", "--show-current"]), BRANCH, "S0_BRANCH_REQUIRED");
-  assert.equal(git(["rev-parse", "refs/remotes/origin/main"]), BASELINE_MAIN, "ORIGIN_MAIN_HEAD_MISMATCH");
+  const executionRef = process.env.GITHUB_HEAD_REF
+    || process.env.GITHUB_REF_NAME
+    || git(["branch", "--show-current"]);
+  const candidateMode = executionRef === BRANCH;
+  const mainOrSuccessorMode = executionRef === "main"
+    || executionRef.startsWith("agent/mcft-cap-06-");
+  assert.equal(candidateMode || mainOrSuccessorMode, true, `S0_EXECUTION_REF_FORBIDDEN:${executionRef}`);
+
+  const originMain = git(["rev-parse", "refs/remotes/origin/main"]);
+  if (candidateMode) assert.equal(originMain, BASELINE_MAIN, "ORIGIN_MAIN_HEAD_MISMATCH");
   run(process.platform === "win32" ? "git.exe" : "git", ["merge-base", "--is-ancestor", BASELINE_MAIN, "HEAD"]);
-  const tracked = git(["diff", "--name-only", BASELINE_MAIN]).split(/\r?\n/).filter(Boolean);
-  const untracked = git(["ls-files", "--others", "--exclude-standard"]).split(/\r?\n/).filter(Boolean);
-  const changed = [...new Set([...tracked, ...untracked])].sort();
-  const forbidden = changed.filter((file) => !PREFLIGHT_ALLOWED_FILES.includes(file));
-  assert.deepEqual(forbidden, [], `S0_CHANGED_FILE_BOUNDARY_VIOLATION:${forbidden.join(",")}`);
-  ok("branch, P0 merged-main baseline, ancestry, and governance-only preflight boundary are exact");
+
+  if (candidateMode) {
+    const committed = git(["diff", "--name-only", BASELINE_MAIN, "HEAD"]).split(/\r?\n/).filter(Boolean);
+    const workingTracked = git(["diff", "--name-only", "HEAD"]).split(/\r?\n/).filter(Boolean);
+    const untracked = git(["ls-files", "--others", "--exclude-standard"]).split(/\r?\n/).filter(Boolean);
+    const generatedRuntimeArtifact = (file: string): boolean =>
+      file === ".env.ci"
+      || file === "docs/audit/CONTROLLED_PILOT_READINESS_REPORT.md"
+      || file === "docs/audit/FRONTEND_RUNTIME_PAGE_AUDIT_REPORT.md"
+      || file.startsWith("docs/audit/frontend-runtime-page-audit/")
+      || file.startsWith("acceptance-output/");
+    const changed = [...new Set([
+      ...committed,
+      ...workingTracked.filter((file) => !generatedRuntimeArtifact(file)),
+      ...untracked.filter((file) => !generatedRuntimeArtifact(file)),
+    ])].sort();
+    const forbidden = changed.filter((file) => !EXACT_CHANGED_FILES.includes(file));
+    assert.deepEqual(forbidden, [], `S0_CHANGED_FILE_BOUNDARY_VIOLATION:${forbidden.join(",")}`);
+  } else {
+    for (const relativePath of EXACT_CHANGED_FILES) {
+      assert.equal(fs.existsSync(absolute(relativePath)), true, `S0_PERMANENT_FILE_MISSING:${relativePath}`);
+    }
+  }
+  ok(candidateMode
+    ? "branch, reconciled main baseline, ancestry, and exact S0 candidate boundary are exact"
+    : "post-S0 ancestry and permanent qualification files are present");
 }
 
 function scopeValues(): string[] {
@@ -900,19 +930,19 @@ async function qualifyResidualHistory(pool: Pool, identity: any): Promise<any> {
     ],
   };
 
-  assert.equal(qualification.dataset_qualification_status, "INSUFFICIENT_MATCHED_PAIRS", "CURRENT_REPOSITORY_HISTORY_EXPECTED_INSUFFICIENT");
-  assert.equal(qualification.case_graph_validation_status, "PASS", "CURRENT_REPOSITORY_HISTORY_GRAPH_MUST_PASS");
-  assert.equal(qualification.availability_order_validation_status, "PASS", "CURRENT_REPOSITORY_HISTORY_AVAILABILITY_MUST_PASS");
-  assert.equal(qualification.homogeneity_validation_status, "PASS", "CURRENT_REPOSITORY_HISTORY_HOMOGENEITY_MUST_PASS");
-  assert.equal(qualification.eligible_residual_count, 1, "CAP05_TERMINAL_HISTORY_EXPECTS_ONE_CANONICAL_RESIDUAL");
-  assert.equal(qualification.excluded_case_count, 0, "CURRENT_REPOSITORY_HISTORY_EXPECTS_NO_LEGAL_EXCLUSIONS");
-  assert.equal(qualification.invalid_graph_case_count, 0, "CURRENT_REPOSITORY_HISTORY_EXPECTS_NO_INVALID_GRAPH");
-  assert.equal(modelHashes.size, 1, "MODEL_COMPONENT_CARDINALITY_MUST_BE_ONE");
-  assert.equal(bundleHashes.size, 1, "EFFECTIVE_PARAMETER_BUNDLE_CARDINALITY_MUST_BE_ONE");
-  assert.equal(operatorHashes.size, 1, "OBSERVATION_OPERATOR_CARDINALITY_MUST_BE_ONE");
-  assert.equal(geometryHashes.size, 1, "GEOMETRY_CARDINALITY_MUST_BE_ONE");
-  assert.equal(numericHashes.size, 1, "RUNTIME_REPLAY_NUMERIC_POLICY_CARDINALITY_MUST_BE_ONE");
-  ok("exact canonical case graph reports one eligible Residual and INSUFFICIENT_MATCHED_PAIRS without conflating legal exclusions with graph failure");
+  const allowedQualificationStatuses = new Set([
+    "READY_FOR_CALIBRATION_ASSESSMENT",
+    "INSUFFICIENT_MATCHED_PAIRS",
+    "CONFIG_OR_MODEL_HETEROGENEITY",
+    "AVAILABILITY_ORDER_INVALID",
+    "INVALID_CASE_GRAPH",
+  ]);
+  assert.ok(allowedQualificationStatuses.has(qualification.dataset_qualification_status), `UNFROZEN_DATASET_QUALIFICATION_STATUS:${qualification.dataset_qualification_status}`);
+  assert.equal(qualification.case_graph_validation_status, qualification.invalid_graph_case_count === 0 ? "PASS" : "FAIL", "CASE_GRAPH_STATUS_COUNT_MISMATCH");
+  assert.equal(qualification.availability_order_validation_status, qualification.availability_invalid_case_count === 0 && splitValid ? "PASS" : "FAIL", "AVAILABILITY_STATUS_COUNT_MISMATCH");
+  assert.equal(qualification.homogeneity_validation_status, heterogeneity ? "FAIL" : "PASS", "HOMOGENEITY_STATUS_COUNT_MISMATCH");
+  assert.equal(qualification.canonical_residual_count, qualification.eligible_residual_count + qualification.excluded_case_count + qualification.invalid_graph_case_count + qualification.availability_invalid_case_count, "RESIDUAL_CLASSIFICATION_PARTITION_MISMATCH");
+  ok(`exact canonical case graph qualification completed honestly with status ${qualification.dataset_qualification_status}`);
   return qualification;
 }
 
@@ -950,8 +980,8 @@ async function main(): Promise<void> {
     await pool.end();
   }
 
-  fs.rmSync(absolute("acceptance-output"), { recursive: true, force: true });
-  run(process.platform === "win32" ? "git.exe" : "git", ["diff", "--check", BASELINE_MAIN]);
+  fs.rmSync(absolute(TEMP_RUNNER_INPUT_PATH), { force: true });
+  run(process.platform === "win32" ? "git.exe" : "git", ["diff", "--check", BASELINE_MAIN, "--", ...EXACT_CHANGED_FILES]);
   ok("S0 v2 read-only qualification working-tree diff check PASS");
   console.log(`MCFT-CAP-06 S0 v2 exact qualification: ${pass} PASS, 0 FAIL`);
 }

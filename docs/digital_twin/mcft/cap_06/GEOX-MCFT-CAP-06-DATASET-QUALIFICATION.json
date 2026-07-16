@@ -101,8 +101,8 @@
   "delivery_slice_id": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
   "status": "S0_CANDIDATE_PENDING_MERGED_MAIN_EFFECTIVENESS",
   "baseline_main_commit": "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
-  "candidate_materialization_source_commit": "cd771bb81d716f9d4691ef3979014909810362ae",
-  "candidate_materialization_workflow_run": 29469799077,
+  "candidate_materialization_source_commit": "d059989c7c6bf3747f82653a256514dc75dee5d2",
+  "candidate_materialization_workflow_run": 29471517865,
   "predecessor_lock_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json",
   "qualification_effective": false,
   "effectiveness_condition": "S0_PR_MERGED_AND_MERGED_MAIN_AUTHORIZATION_GATE_PASS"

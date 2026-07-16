@@ -65,6 +65,12 @@ const STEP_DEFINITIONS_BY_SUITE = {
       command: 'node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs',
       logFile: 'MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.log',
       notes: 'Reproduces the CAP-05 terminal chain in a separate database and reports the actual frozen S0 qualification status without presupposing the repository-history verdict.'
+    },
+    {
+      id: 'MCFT_CAP_06_S0_V2_GOVERNANCE',
+      command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs',
+      logFile: 'MCFT_CAP_06_S0_V2_GOVERNANCE.log',
+      notes: 'Validates the formal S0 v2 predecessor lock, dataset qualification, exact changed-file boundary, and preserved non-authority claims.'
     }
   ],
   'p9-twin-kernel': [
