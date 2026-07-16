@@ -10,6 +10,27 @@ jobs:
   capture-traceback:
     if: github.head_ref == 'agent/mcft-cap-06-s3-finalizer-diagnostic-v1'
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
     steps:
       - name: Checkout target S3 branch
         uses: actions/checkout@v4
@@ -25,14 +46,56 @@ jobs:
           path: helper
           fetch-depth: 1
 
-      - name: Execute materializer and capture traceback
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: target/pnpm-lock.yaml
+
+      - name: Install target dependencies
+        working-directory: target
+        run: pnpm install --frozen-lockfile
+
+      - name: Materialize target worktree
+        working-directory: target
+        run: |
+          python ../helper/.github/scripts/run_mcft_cap06_s3_target_finalizer.py
+          git rm .github/workflows/mcft-cap-06-s3-validation.yml
+
+      - name: Execute evidence chain and capture exact failure
         working-directory: target
         run: |
           set +e
-          python ../helper/.github/scripts/run_mcft_cap06_s3_target_finalizer.py > ../materialize.log 2>&1
+          run_step() {
+            label="$1"
+            shift
+            echo "===== START $label ====="
+            "$@"
+            status=$?
+            echo "===== END $label STATUS=$status ====="
+            if [ "$status" -ne 0 ]; then
+              echo "$label" > ../evidence.failed_step
+              return "$status"
+            fi
+          }
+          {
+            run_step S1_POSTGRES node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs &&
+            run_step S1_REGIMES pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts &&
+            run_step S1_GATE node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs &&
+            run_step S2_RUNTIME pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts &&
+            run_step S2_GATE node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs &&
+            run_step S3_POSTGRES node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_D_PERSISTENCE.cjs &&
+            run_step S3_GATE node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_D_PERSISTENCE.cjs
+          } > ../evidence.log 2>&1
           status=$?
-          echo "$status" > ../materialize.status
-          cat ../materialize.log
+          echo "$status" > ../evidence.status
+          cat ../evidence.log
           exit 0
 
       - name: Upload diagnostic artifact
@@ -40,6 +103,7 @@ jobs:
         with:
           name: s3-finalizer-diagnostic
           path: |
-            materialize.log
-            materialize.status
-          if-no-files-found: error
+            evidence.log
+            evidence.status
+            evidence.failed_step
+          if-no-files-found: warn
