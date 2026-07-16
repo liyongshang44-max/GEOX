@@ -31,10 +31,10 @@ design_status:
 CONDITIONAL_FROZEN_AFTER_P_MINUS_1
 
 implementation_status:
-S1_IMPLEMENTATION_CANDIDATE_PENDING_MERGED_MAIN_EFFECTIVENESS
+S1_MERGED_EFFECTIVE_S2_AUTHORIZED_NOT_STARTED
 
 runtime_implementation_status:
-NOT_STARTED
+S1_CANONICAL_RESIDUAL_WINDOWS_MERGED_EFFECTIVE
 
 authorization_effective:
 true
@@ -46,7 +46,7 @@ runtime_source_authorized:
 true
 
 active_delivery_slice_id:
-MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
+MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1
 
 predecessor_eligibility:
 RESTORED
@@ -55,10 +55,10 @@ dt02_architecture_amendment_status:
 NOT_REQUIRED
 
 first_permitted_repository_action:
-MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
+MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1
 ```
 
-本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1、P0 与 S0 均已 merged-main effective；S1 已形成受控 24-case canonical Residual-window implementation candidate，等待 exact-head CI、merge、tree equivalence 与 merged-main S1 Gate。S2 及后续、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 仍未授权。
+本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1、P0、S0 与 S1 均已 merged-main effective；S1 已建立受控 24-case canonical Residual history、16-case calibration window 与 later 8-case holdout window。当前仅 S2 contracts、fixed-point math 与 policy implementation 获授权但尚未开始；S3 及后续、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 仍未授权。
 
 ---
 
@@ -4251,3 +4251,28 @@ S2 authorized: false
 
 S1 reuses CAP-02 fixed-point Dynamics, CAP-04 H1 Forecast traces, CAP-05 Residual contracts and the existing C transaction. It introduces no second Residual type, no migration and no calibration search. The controlled mechanism track is disjoint from repository history.
 <!-- MCFT-CAP-06-S1-CANDIDATE-END -->
+
+<!-- MCFT-CAP-06-S1-EFFECTIVENESS-BEGIN -->
+# 52. S1 merged-main effectiveness and S2 authorization
+
+```text
+S1 status: MERGED_EFFECTIVE
+implementation PR: 2514
+implementation exact head: 57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd
+exact-head CI: 29475482824 SUCCESS
+merge commit: 6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b
+head-to-merge file delta count: 0
+head-to-merge tree equivalence: PASS
+postmerge probe PR: 2515 CLOSED_WITHOUT_MERGE
+postmerge workflow: 29476027885 SUCCESS
+merged-main S1 Gate: PASS
+canonical Residual count: 24
+calibration window count: 16
+holdout window count: 8
+active_delivery_slice_id: MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1
+S2 status: AUTHORIZED_NOT_STARTED
+S3 and later: BLOCKED
+```
+
+S1 effectiveness authorizes only S2 contract, fixed-point math and policy implementation. It does not implement the calibration engine, append Candidate or Evaluation objects, create Model Activation, switch active Config, mutate State/checkpoint, expose a public route/Web path/scheduler, or authorize MCFT-CAP-07.
+<!-- MCFT-CAP-06-S1-EFFECTIVENESS-END -->

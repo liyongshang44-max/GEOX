@@ -1518,3 +1518,31 @@ Model_Activation_authorized: false
 MCFT_CAP_07_authorized: false
 ```
 <!-- MCFT-CAP-06-S1-CANDIDATE-END -->
+
+<!-- MCFT-CAP-06-S1-EFFECTIVENESS-BEGIN -->
+## MCFT-CAP-06 S1 Effective and S2 Explicitly Authorized
+
+```text
+capability_line_id: MCFT-CAP-06
+S1_status: MERGED_EFFECTIVE
+S1_exact_head: 57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd
+S1_exact_head_CI: 29475482824 SUCCESS
+S1_merge_commit: 6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b
+S1_head_to_merge_file_delta_count: 0
+S1_tree_equivalence: PASS
+S1_postmerge_probe_PR: 2515 CLOSED_WITHOUT_MERGE
+S1_postmerge_workflow: 29476027885 SUCCESS
+canonical_residual_count: 24
+calibration_window_count: 16
+holdout_window_count: 8
+S2_status: AUTHORIZED_NOT_STARTED
+S2_runtime_source_authorized: true
+S2_migration_authorized: false
+S2_canonical_write_authorized: false
+S3_status: BLOCKED
+Candidate_runtime_implemented: false
+Shadow_Evaluation_runtime_implemented: false
+Model_Activation_authorized: false
+MCFT_CAP_07_authorized: false
+```
+<!-- MCFT-CAP-06-S1-EFFECTIVENESS-END -->
