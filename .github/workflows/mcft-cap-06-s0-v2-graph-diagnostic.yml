@@ -49,7 +49,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p acceptance-output
           export NODE_PATH="$PWD/apps/server/node_modules:$PWD/node_modules"
           git fetch origin agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1
           DIAG_SCRIPT="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts"
@@ -64,16 +63,15 @@ jobs:
           s = s.replace('assert.equal(p0Status.status, "PROVISIONAL_SSOT_CANDIDATE", "P0_CANDIDATE_STATUS_REQUIRED_BEFORE_S0_MATERIALIZATION");', 'assert.equal(p0Status.status, "MERGED_EFFECTIVE", "P0_MERGED_EFFECTIVE_REQUIRED_BEFORE_S0_V2_DIAGNOSTIC");')
           p.write_text(s, encoding='utf-8')
           PY
-          set +e
           pnpm -w exec tsx "$DIAG_SCRIPT" 2>&1 | tee /tmp/s0-v2-preflight.log
-          rc=${PIPESTATUS[0]}
-          set -e
-          if [ "$rc" -ne 0 ]; then
-            exit "$rc"
-          fi
           node <<'NODE'
           const fs = require('node:fs');
           const { Client } = require('pg');
+
+          function payload(row) {
+            return row?.record_json?.payload ?? null;
+          }
+
           (async () => {
             const client = new Client({ connectionString: process.env.DATABASE_URL });
             await client.connect();
@@ -83,21 +81,64 @@ jobs:
               'twin_state_estimate_v1',
               'twin_runtime_config_v1',
               'twin_evidence_window_v1',
-              'twin_observation_v1',
-              'soil_moisture_observation_v1'
+              'twin_assimilation_update_v1',
+              'twin_state_transition_v1',
+              'twin_runtime_lineage_v1'
             ];
             const out = {};
             for (const type of types) {
               const result = await client.query("SELECT fact_id, occurred_at, source, record_json FROM facts WHERE record_json->>'type'=$1 ORDER BY occurred_at, fact_id", [type]);
               out[type] = result.rows;
             }
-            const residual = out.twin_forecast_residual_v1?.[0]?.record_json?.payload;
+
+            const residual = payload(out.twin_forecast_residual_v1?.[0]);
             if (residual) {
-              out.residual_payload_keys = Object.keys(residual.payload || {}).sort();
+              const rp = residual.payload || {};
+              const forecast = out.twin_forecast_run_v1.map(payload).find((item) => item?.object_id === rp.forecast_run_ref);
+              const posterior = out.twin_state_estimate_v1.map(payload).find((item) => item?.object_id === forecast?.payload?.source_posterior_ref);
+              const evidenceWindow = out.twin_evidence_window_v1.map(payload).find((item) => item?.object_id === posterior?.payload?.evidence_window_ref);
+              const assimilation = out.twin_assimilation_update_v1.map(payload).find((item) => item?.object_id === rp.assimilation_update_ref);
+              const forecastConfig = out.twin_runtime_config_v1.map(payload).find((item) => item?.object_id === forecast?.payload?.runtime_config_ref);
+              const residualConfig = out.twin_runtime_config_v1.map(payload).find((item) => item?.object_id === rp.runtime_config_ref);
+              const exactPoint = forecast?.payload?.points?.filter((point) => point.horizon_hour === 1 && point.target_time === rp.forecast_target_time) ?? [];
+
+              const referenceValues = [
+                rp.actual_observation_ref,
+                rp.root_zone_geometry_ref,
+                rp.forecast_run_ref,
+                rp.assimilation_update_ref,
+                forecast?.payload?.source_posterior_ref,
+                forecast?.payload?.runtime_config_ref,
+                rp.runtime_config_ref,
+                posterior?.payload?.evidence_window_ref,
+                forecast?.payload?.weather_snapshot_ref,
+                forecast?.payload?.et0_snapshot_ref,
+                forecast?.payload?.crop_stage_context_ref
+              ].filter(Boolean);
+              const related = {};
+              for (const ref of referenceValues) {
+                const result = await client.query(
+                  "SELECT fact_id, occurred_at, source, record_json FROM facts WHERE record_json::text LIKE $1 ORDER BY occurred_at, fact_id",
+                  [`%${ref}%`],
+                );
+                related[ref] = result.rows;
+              }
+
+              out.case_graph = {
+                residual,
+                forecast,
+                exact_h1_point_matches: exactPoint,
+                source_posterior: posterior,
+                source_evidence_window: evidenceWindow,
+                assimilation_update: assimilation,
+                forecast_runtime_config: forecastConfig,
+                residual_runtime_config: residualConfig,
+                related_fact_rows_by_ref: related
+              };
+              out.residual_payload_keys = Object.keys(rp).sort();
               out.residual_envelope_keys = Object.keys(residual).sort();
-              const refs = Object.entries(residual.payload || {}).filter(([k]) => /ref|hash|window|cutoff|forcing|operator|geometry|posterior|config|forecast/i.test(k));
-              out.residual_graph_fields = Object.fromEntries(refs);
             }
+
             const allTypes = await client.query("SELECT record_json->>'type' AS type, count(*)::int AS count FROM facts GROUP BY 1 ORDER BY 1");
             out.type_counts = allTypes.rows;
             await client.end();
