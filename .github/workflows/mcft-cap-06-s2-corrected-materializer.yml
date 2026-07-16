@@ -41,6 +41,7 @@ jobs:
           )
           for file in "${files[@]}"; do mkdir -p "$(dirname "$file")"; git show "$OLD_S2_HEAD:$file" > "$file"; done
           python -c "import base64,hashlib,pathlib,zlib; p=pathlib.Path('.github/mcft_cap06_s2_materializer.py.gz.b64'); r=base64.b64decode(''.join(p.read_text(encoding='utf-8').split()),validate=True); assert r[:4]==b'\x1f\x8b\x08\x08','S2_MATERIALIZER_GZIP_HEADER_INVALID'; o=r.index(b'\x00',10)+1; d=zlib.decompress(r[o:-8],-zlib.MAX_WBITS); t=d.decode('utf-8'); compile(t,'.github/mcft_cap06_s2_materializer.py','exec'); pathlib.Path('.github/mcft_cap06_s2_materializer.py').write_text(t,encoding='utf-8',newline='\n'); print('S2_MATERIALIZER_SOURCE_SHA256='+hashlib.sha256(d).hexdigest()); print('S2_MATERIALIZER_SOURCE_BYTES='+str(len(d)))"
+          python -c "import pathlib; p=pathlib.Path('.github/mcft_cap06_s2_materializer.py'); t=p.read_text(); n='        raise RuntimeError(f\"{label}: expected 1 occurrence, found {count}\")'; r='        print(\"S2_REPLACE_ONCE_FAILURE_LABEL=\" + label)\n        print(\"S2_REPLACE_ONCE_OLD_REPR=\" + repr(old))\n        raise RuntimeError(f\"{label}: expected 1 occurrence, found {count}\")'; assert t.count(n)==1; p.write_text(t.replace(n,r),encoding='utf-8',newline='\n')"
           python .github/mcft_cap06_s2_materializer.py source
           git diff --check
           grep -F '1_000_000n as const' apps/server/src/domain/calibration/grid_search_v1.ts
