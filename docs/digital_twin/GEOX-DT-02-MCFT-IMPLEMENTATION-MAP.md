@@ -1402,11 +1402,11 @@ finalization_effectiveness_ref: docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-F
 ```
 
 <!-- MCFT-CAP-06-P0-CURRENT-STATE-BEGIN -->
-## MCFT-CAP-06 P-1 effectiveness and P0 provisional map
+## MCFT-CAP-06 current-state reconciliation
 
 ```text
 baseline merged main:
-79cd7814eff06ad86f86cdcb379c6f71a77f1ab8
+1e66ea7efc842b8e547bccc40521d520b4370e69
 
 P-1 status:
 MERGED_EFFECTIVE
@@ -1415,9 +1415,18 @@ P-1 outcome:
 REUSE_WITHOUT_AMENDMENT_CONFIG_OBJECT_NOT_REQUIRED
 
 P0 status:
-PROVISIONAL_SSOT_CANDIDATE
+MERGED_EFFECTIVE
 
-authorization effective:
+CAP-05 predecessor eligibility:
+RESTORED
+
+S0 qualification authorization:
+EFFECTIVE
+
+S0 status:
+AUTHORIZED_NOT_STARTED
+
+capability-line authorization effective:
 false
 
 runtime source authorized:
@@ -1425,9 +1434,6 @@ false
 
 active delivery slice:
 null
-
-S0 status:
-BLOCKED_PENDING_P0_MERGED_MAIN_EFFECTIVENESS
 
 P-1A:
 OMITTED
@@ -1438,9 +1444,12 @@ OMITTED
 S3 migration adjudication:
 EXACTLY_ONE_ADDITIVE_MIGRATION
 
+superseded S0 PR:
+#2500 CLOSED_NOT_MERGED
+
 successor MCFT-CAP-07 authorized:
 false
 ```
 
-P0 reconciles CAP-05 terminal COMPLETE facts and adds the provisional MCFT-CAP-06 capability line. It grants no Runtime, migration, canonical-write, S0, Model Activation, active-binding, or successor authority.
+The reconciled frontier records repository facts only: P-1 and P0 are merged-main effective, CAP-05 predecessor eligibility is restored, and S0 qualification is authorized but not started. No CAP-06 Runtime, migration, canonical write, Candidate, Evaluation, Model Activation, active-binding, public route, Web, scheduler or successor authority is granted.
 <!-- MCFT-CAP-06-P0-CURRENT-STATE-END -->
