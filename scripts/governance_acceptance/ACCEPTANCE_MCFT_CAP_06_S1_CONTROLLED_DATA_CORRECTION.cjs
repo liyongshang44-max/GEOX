@@ -83,104 +83,81 @@ function main() {
     orderedRefMembershipHash(runtime.ordered_residual_refs.slice(16)),
   );
 
-  assert.equal(erratum.status, 'CORRECTION_CANDIDATE');
-  assert.equal(erratum.discovery.closed_without_merge_s2_pr_number, 2518);
-  assert.equal(erratum.discovery.original_maximum_normalized_excess_ratio_scale_9, '0.093326488');
-  assert.equal(erratum.discovery.frozen_mid_lower_bound, '0.100000000');
-  assert.equal(erratum.scope_of_retraction.prior_s1_mechanical_proof_preserved, true);
-  assert.equal(erratum.scope_of_retraction.prior_s1_successor_readiness_claim_superseded, true);
-  assert.equal(erratum.scope_of_retraction.s2_authorization_withdrawn, true);
-  assert.equal(erratum.correction.dynamics_changed, false);
-  assert.equal(erratum.correction.regime_formula_changed, false);
-  assert.equal(erratum.correction.regime_thresholds_changed, false);
-  assert.equal(erratum.correction.residual_set_hash, runtime.residual_set_hash);
-  assert.deepEqual(erratum.correction.ordered_residual_hashes, runtime.ordered_residual_hashes);
-  assert.ok(
-    erratum.correction.calibration_sensitive_case_count
-      >= erratum.correction.minimum_sensitive_case_count,
-  );
-  assert.ok(
-    erratum.correction.calibration_represented_sensitive_regime_count
-      >= erratum.correction.minimum_required_sensitive_regime_count,
-  );
+  assert.equal(erratum.status, 'CORRECTION_MERGED_EFFECTIVE');
+  assert.equal(erratum.effectiveness.effective, true);
+  assert.equal(erratum.effectiveness.implementation_exact_head, '6ed8956155fba4d7ae040f88ab1870e564945f7c');
+  assert.equal(erratum.effectiveness.implementation_exact_head_ci_run, 29493034432);
+  assert.equal(erratum.effectiveness.merge_commit, '4fc1044085c4befad7852089b6ebe2afab46a5ca');
+  assert.equal(erratum.effectiveness.postmerge_workflow_run, 29493733228);
   assert.equal(erratum.correction.successor_readiness_data_precondition, 'PASS');
-  assert.equal(erratum.correction.holdout_purpose, 'HIGH_EXCESS_STRESS_HOLDOUT_ONLY');
-  assert.equal(erratum.correction.window_hash_semantics, 'ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1');
-  assert.equal(erratum.effectiveness.effective, false);
+  assert.equal(erratum.correction.holdout_generalization_claim, 'NOT_ESTABLISHED');
 
-  assert.equal(contract.status, 'CONTROLLED_DATA_CORRECTION_CANDIDATE');
-  assert.deepEqual(contract.ordered_residual_refs, runtime.ordered_residual_refs);
-  assert.deepEqual(contract.ordered_residual_hashes, runtime.ordered_residual_hashes);
-  assert.equal(contract.residual_set_hash, runtime.residual_set_hash);
-  assert.equal(contract.case_input_set_hash, runtime.case_input_set_hash);
-  assert.deepEqual(contract.validation.calibration_regime_counts, regimes.calibration_regime_counts);
-  assert.equal(contract.validation.calibration_sensitive_case_count, regimes.calibration_sensitive_case_count);
-  assert.deepEqual(
-    contract.validation.calibration_sensitive_regime_counts,
-    regimes.calibration_sensitive_regime_counts,
-  );
-  assert.equal(contract.validation.successor_readiness_data_precondition, 'PASS');
-  assert.equal(contract.validation.holdout_purpose, 'HIGH_EXCESS_STRESS_HOLDOUT_ONLY');
-  assert.equal(contract.calibration_window.window_hash_semantics, 'ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1');
-  assert.equal(contract.holdout_window.window_hash_semantics, 'ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1');
-  assert.equal(
-    contract.calibration_window.required_semantic_companion_hashes.residual_set_hash,
-    runtime.residual_set_hash,
-  );
-  assert.equal(
-    contract.holdout_window.required_semantic_companion_hashes.case_input_set_hash,
-    runtime.case_input_set_hash,
-  );
-  assert.equal(contract.validation.runtime_result_ssot_crosscheck, 'PASS');
+  assert.equal(contract.canonical_deltas.twin_calibration_candidate_v1, 0);
+  assert.equal(contract.canonical_deltas.twin_shadow_evaluation_v1, 0);
+  assert.equal(contract.canonical_deltas.twin_model_activation_v1, 0);
+  assert.equal(contract.residual_set_hash, EXPECTED_RESIDUAL_SET_HASH);
+  assert.equal(contract.case_input_set_hash, EXPECTED_CASE_INPUT_SET_HASH);
 
-  assert.equal(status.status, 'CONTROLLED_DATA_CORRECTION_CANDIDATE');
-  assert.equal(status.s1_effective, false);
-  assert.equal(status.s2_authorized, false);
-  assert.equal(status.effectiveness.effective, false);
-  assert.equal(status.prior_effectiveness.postmerge_gate, 'PASS');
-  assert.equal(status.candidate_tree_validation.runtime_result_ssot_crosscheck, 'PASS');
-  assert.equal(status.candidate_tree_validation.successor_readiness_data_precondition, 'PASS');
-  assert.ok(
-    status.candidate_tree_validation.calibration_sensitive_case_count
-      >= status.candidate_tree_validation.minimum_sensitive_case_count,
-  );
-  assert.equal(status.candidate_tree_validation.holdout_purpose, 'HIGH_EXCESS_STRESS_HOLDOUT_ONLY');
-  assert.equal(
-    status.candidate_tree_validation.window_hash_semantics,
-    'ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1',
-  );
-  assert.equal(status.candidate_tree_validation.exact_changed_file_count, 15);
-  assert.equal(status.exact_changed_file_boundary.includes('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts'), true);
+  assert.equal(status.status, 'MERGED_EFFECTIVE_CORRECTED');
+  assert.equal(status.s1_effective, true);
+  assert.equal(status.s2_authorized, true);
+  assert.equal(status.effectiveness.effective, true);
+  assert.equal(status.effectiveness.implementation_exact_head, '6ed8956155fba4d7ae040f88ab1870e564945f7c');
+  assert.equal(status.effectiveness.implementation_exact_head_ci_run, 29493034432);
+  assert.equal(status.effectiveness.merge_commit, '4fc1044085c4befad7852089b6ebe2afab46a5ca');
+  assert.equal(status.effectiveness.postmerge_workflow_run, 29493733228);
 
   assert.equal(priorEffectiveness.status, 'MERGED_EFFECTIVE');
   assert.equal(priorEffectiveness.effective, true);
-  assert.equal(priorEffectiveness.implementation_merge_commit, '6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b');
+  assert.equal(priorEffectiveness.effectiveness_revision, 'CORRECTED_SUCCESSOR_READINESS_V2');
+  assert.equal(priorEffectiveness.implementation_pr_number, 2519);
+  assert.equal(priorEffectiveness.implementation_exact_head, '6ed8956155fba4d7ae040f88ab1870e564945f7c');
+  assert.equal(priorEffectiveness.implementation_exact_head_ci_run, 29493034432);
+  assert.equal(priorEffectiveness.implementation_merge_commit, '4fc1044085c4befad7852089b6ebe2afab46a5ca');
+  assert.equal(priorEffectiveness.postmerge_workflow_run, 29493733228);
+  assert.equal(priorEffectiveness.active_delivery_slice_id, S2);
+  assert.deepEqual(priorEffectiveness.authorized_not_started_slice_ids, [S2]);
+  assert.equal(priorEffectiveness.s2_implementation_started, false);
+  assert.equal(priorEffectiveness.candidate_runtime_implemented, false);
+  assert.equal(priorEffectiveness.shadow_evaluation_runtime_implemented, false);
+  assert.equal(priorEffectiveness.calibration_contract_math_implemented, false);
+  assert.equal(priorEffectiveness.superseded_prior_effectiveness.implementation_pr_number, 2514);
 
-  assert.equal(delivery.active_delivery_slice_id, S1);
-  assert.deepEqual(delivery.candidate_slices, [S1]);
-  assert.deepEqual(delivery.authorized_not_started_slices, []);
-  assert.equal(delivery.s1_effective, false);
-  assert.equal(delivery.s1_prior_mechanical_effectiveness_preserved, true);
-  assert.equal(delivery.s2_authorized, false);
-  assert.equal(delivery.blocked_slices.includes(S2), true);
+  assert.equal(delivery.active_delivery_slice_id, S2);
+  assert.deepEqual(delivery.candidate_slices, []);
+  assert.deepEqual(delivery.authorized_not_started_slices, [S2]);
+  assert.equal(delivery.blocked_slices.includes(S2), false);
+  assert.equal(delivery.s1_effective, true);
+  assert.equal(delivery.s1_successor_readiness_effective, true);
+  assert.equal(delivery.s2_authorized, true);
+  assert.equal(delivery.s2_implementation_started, false);
 
-  assert.equal(current.current_state.active_delivery_slice_id, S1);
-  assert.equal(current.current_state.s1, 'CONTROLLED_DATA_CORRECTION_CANDIDATE');
-  assert.equal(current.current_state.controlled_residual_window_effective, false);
-  assert.equal(current.current_state.s2, 'BLOCKED_BY_S1_CONTROLLED_DATA_CORRECTION');
+  assert.equal(current.status, 'MERGED_EFFECTIVE');
+  assert.equal(current.reconciliation_effective, true);
+  assert.equal(current.current_state.active_delivery_slice_id, S2);
+  assert.equal(current.current_state.s1, 'MERGED_EFFECTIVE_CORRECTED');
+  assert.equal(current.current_state.controlled_residual_window_effective, true);
+  assert.equal(current.current_state.s1_successor_readiness_effective, true);
+  assert.equal(current.current_state.s2, 'AUTHORIZED_NOT_STARTED');
+  assert.equal(current.current_state.s2_authorized, true);
+  assert.equal(current.current_state.s2_implementation_started, false);
   assert.equal(current.current_state.calibration_contract_math_implemented, false);
 
   const lines = Array.isArray(matrix.capability_lines) ? matrix.capability_lines : matrix.capabilities;
   const line = lines.find((item) => item.capability_line_id === 'MCFT-CAP-06');
   assert.ok(line);
-  assert.equal(line.active_delivery_slice_id, S1);
-  assert.deepEqual(line.next_authorized_slice_ids, []);
-  assert.equal(line.controlled_residual_window_effective, false);
+  assert.equal(line.active_delivery_slice_id, S2);
+  assert.deepEqual(line.next_authorized_slice_ids, [S2]);
+  assert.equal(line.controlled_residual_window_effective, true);
+  assert.equal(line.s1_successor_readiness_effective, true);
+  assert.equal(line.candidate_runtime_implemented, false);
+  assert.equal(line.shadow_evaluation_runtime_implemented, false);
+  assert.equal(line.calibration_contract_math_implemented, false);
   const matrixS1 = line.delivery_slices.find((item) => item.delivery_slice_id === S1);
   const matrixS2 = line.delivery_slices.find((item) => item.delivery_slice_id === S2);
-  assert.equal(matrixS1.status, 'CONTROLLED_DATA_CORRECTION_CANDIDATE');
-  assert.equal(matrixS1.effectiveness_condition_satisfied, false);
-  assert.equal(matrixS2.status, 'BLOCKED_BY_S1_CONTROLLED_DATA_CORRECTION');
+  assert.equal(matrixS1.status, 'MERGED_EFFECTIVE_CORRECTED');
+  assert.equal(matrixS1.effectiveness_condition_satisfied, true);
+  assert.equal(matrixS2.status, 'AUTHORIZED_NOT_STARTED');
   assert.equal(matrixS2.implementation_started, false);
 
   const runner = readText('scripts/acceptance/run_acceptance.cjs');
@@ -198,7 +175,7 @@ function main() {
   console.log('PASS calibration covers frozen wetness regimes and minimum endpoint sensitivity');
   console.log('PASS holdout is disclosed as HIGH_EXCESS stress-only with no generalization claim');
   console.log('PASS window membership hashes require residual-set and case-input semantic companions');
-  console.log('PASS prior mechanical proof preserved while S2 authorization is withdrawn');
+  console.log('PASS corrected S1 effectiveness preserves prior mechanical proof and authorizes S2 only');
   console.log('PASS Candidate/Evaluation/Activation/S3/CAP-07 remain absent or blocked');
 }
 

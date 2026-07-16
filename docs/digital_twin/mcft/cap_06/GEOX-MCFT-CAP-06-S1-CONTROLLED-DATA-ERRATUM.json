@@ -3,7 +3,7 @@
   "erratum_id": "MCFT-CAP-06.S1-CONTROLLED-DATA-SUCCESSOR-READINESS-ERRATUM-V1",
   "capability_line_id": "MCFT-CAP-06",
   "affected_delivery_slice_id": "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1",
-  "status": "CORRECTION_CANDIDATE",
+  "status": "CORRECTION_MERGED_EFFECTIVE",
   "baseline_main_commit": "3a1494acb47db776d97ba75e339d85dc18c9d629",
   "correction_pr_number": 2519,
   "discovery": {
@@ -128,8 +128,15 @@
     "workflow_run": 29484155724
   },
   "effectiveness": {
-    "effective": false,
-    "condition": "CORRECTION_EXACT_HEAD_CI_PASS_AND_MERGED_AND_TREE_EQUIVALENT_AND_MERGED_MAIN_GATE_PASS_AND_SEPARATE_EFFECTIVENESS_WRITEBACK"
+    "effective": true,
+    "implementation_exact_head": "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+    "implementation_exact_head_ci_run": 29493034432,
+    "merge_commit": "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+    "head_to_merge_tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2520,
+    "postmerge_probe_closed_without_merge": true,
+    "postmerge_workflow_run": 29493733228,
+    "postmerge_gate": "PASS"
   },
   "preserved_nonclaims": [
     "NO_S2_IMPLEMENTATION_ON_CORRECTED_BASELINE",
