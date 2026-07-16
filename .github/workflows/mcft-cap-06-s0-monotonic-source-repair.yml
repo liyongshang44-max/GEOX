@@ -44,26 +44,26 @@ jobs:
 
           runner_path = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts')
           runner = runner_path.read_text(encoding='utf-8')
-          old = '''  assert.equal(currentState.current_state?.active_delivery_slice_id, "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1", "S1_ACTIVE_DELIVERY_SLICE_REQUIRED");
-          assert.equal(delivery.s0_qualification_authorized, true, "S0_QUALIFICATION_AUTHORIZATION_REQUIRED");
-          assert.equal(delivery.s0_effective, true, "S0_EFFECTIVENESS_REQUIRED");
-          assert.equal(delivery.runtime_source_authorized, true, "CAP06_RUNTIME_SOURCE_AUTHORIZATION_REQUIRED");
-          assert.equal(delivery.active_delivery_slice_id, "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1", "S1_ACTIVE_DELIVERY_SLICE_REQUIRED");'''
-          new = '''  const currentActiveDeliverySlice = currentState.current_state?.active_delivery_slice_id ?? null;
-          const deliveryActiveDeliverySlice = delivery.active_delivery_slice_id ?? null;
-          assert.equal(currentActiveDeliverySlice, deliveryActiveDeliverySlice, "ACTIVE_DELIVERY_SLICE_SSOT_MISMATCH");
-          assert.equal(
-            currentActiveDeliverySlice === null
-              || (typeof currentActiveDeliverySlice === "string" && currentActiveDeliverySlice.startsWith("MCFT-CAP-06.")),
-            true,
-            `CAP06_ACTIVE_DELIVERY_SLICE_REQUIRED:${currentActiveDeliverySlice}`,
-          );
-          assert.equal(delivery.s0_qualification_authorized, true, "S0_QUALIFICATION_AUTHORIZATION_REQUIRED");
-          assert.equal(delivery.s0_effective, true, "S0_EFFECTIVENESS_REQUIRED");
-          assert.equal(delivery.runtime_source_authorized, true, "CAP06_RUNTIME_SOURCE_AUTHORIZATION_REQUIRED");'''
-          if runner.count(old) != 1:
-              raise SystemExit(f'S0_ACTIVE_SLICE_BLOCK_EXPECTED_ONCE:{runner.count(old)}')
-          runner_path.write_text(runner.replace(old, new, 1), encoding='utf-8')
+          current_assertion = '  assert.equal(currentState.current_state?.active_delivery_slice_id, "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1", "S1_ACTIVE_DELIVERY_SLICE_REQUIRED");'
+          delivery_assertion = '  assert.equal(delivery.active_delivery_slice_id, "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1", "S1_ACTIVE_DELIVERY_SLICE_REQUIRED");'
+          replacement = '\n'.join([
+              '  const currentActiveDeliverySlice = currentState.current_state?.active_delivery_slice_id ?? null;',
+              '  const deliveryActiveDeliverySlice = delivery.active_delivery_slice_id ?? null;',
+              '  assert.equal(currentActiveDeliverySlice, deliveryActiveDeliverySlice, "ACTIVE_DELIVERY_SLICE_SSOT_MISMATCH");',
+              '  assert.equal(',
+              '    currentActiveDeliverySlice === null',
+              '      || (typeof currentActiveDeliverySlice === "string" && currentActiveDeliverySlice.startsWith("MCFT-CAP-06.")),',
+              '    true,',
+              '    `CAP06_ACTIVE_DELIVERY_SLICE_REQUIRED:${currentActiveDeliverySlice}`,',
+              '  );',
+          ])
+          if runner.count(current_assertion) != 1:
+              raise SystemExit(f'CURRENT_ACTIVE_SLICE_ASSERTION_EXPECTED_ONCE:{runner.count(current_assertion)}')
+          if runner.count(delivery_assertion) != 1:
+              raise SystemExit(f'DELIVERY_ACTIVE_SLICE_ASSERTION_EXPECTED_ONCE:{runner.count(delivery_assertion)}')
+          runner = runner.replace(current_assertion, replacement, 1)
+          runner = runner.replace(delivery_assertion + '\n', '', 1)
+          runner_path.write_text(runner, encoding='utf-8')
 
           permanent_path = str(runner_path)
           json_paths = [
@@ -90,8 +90,8 @@ jobs:
           files = json.loads(match.group(1))
           if permanent_path not in files:
               files.append(permanent_path)
-          replacement = 'const EXPECTED_EFFECTIVENESS_FILES = ' + json.dumps(sorted(files), separators=(',', ':')) + ';'
-          gate_path.write_text(gate[:match.start()] + replacement + gate[match.end():], encoding='utf-8')
+          replacement_line = 'const EXPECTED_EFFECTIVENESS_FILES = ' + json.dumps(sorted(files), separators=(',', ':')) + ';'
+          gate_path.write_text(gate[:match.start()] + replacement_line + gate[match.end():], encoding='utf-8')
           PY
           pnpm -r typecheck
 
