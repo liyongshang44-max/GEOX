@@ -1,9 +1,9 @@
 name: mcft-cap-06-s0-v2-head5bb-proof
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/mcft-cap-06-s0-v2-head5bb-proof
+      - main
 
 jobs:
   exact-head-gate:
