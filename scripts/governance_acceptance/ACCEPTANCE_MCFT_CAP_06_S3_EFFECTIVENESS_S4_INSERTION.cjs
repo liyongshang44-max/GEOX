@@ -21,6 +21,18 @@ function json(relative) {
   return JSON.parse(read(relative));
 }
 
+function assertS5BlockedBeforeS4Effectiveness(source, sourceName) {
+  const s4Effective = source.s4_effective === true
+    || source.s4?.effective === true
+    || source.current_state?.s4_effective === true;
+  if (s4Effective) return;
+
+  const s5Authorized = source.s5_authorized === true
+    || source.s4?.s5_authorized === true
+    || source.current_state?.s5_authorized === true;
+  assert.equal(s5Authorized, false, `${sourceName}:S5_PREMATURE_AUTHORIZATION`);
+}
+
 function main() {
   const effectiveness = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-EFFECTIVENESS.json');
   const s3Status = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json');
@@ -58,13 +70,14 @@ function main() {
   assert.equal(effectiveness.s4_implementation_started, false);
   assert.equal(effectiveness.s5_authorized, false);
   assert.equal(effectiveness.active_delivery_slice_id, S4);
+  assert.equal(effectiveness.effectiveness_writeback_scope, 'GOVERNANCE_ONLY');
 
   assert.equal(s3Status.delivery_slice_id, S3);
   assert.equal(s3Status.status, 'MERGED_EFFECTIVE');
   assert.equal(s3Status.s3_effective, true);
   assert.equal(s3Status.s4_authorized, true);
-  assert.equal(s3Status.s5_authorized, false);
   assert.equal(s3Status.effectiveness_evidence.postmerge_workflow_run, 29520979042);
+  assertS5BlockedBeforeS4Effectiveness(s3Status, 'S3_STATUS');
 
   assert.equal(debt.insertion_point.after_slice, S3);
   assert.equal(debt.insertion_point.before_slice, S5);
@@ -76,8 +89,8 @@ function main() {
     debt.open_structural_debt.map((item) => item.debt_id),
     ['CAP05-STRUCT-01', 'CAP05-STRUCT-02', 'CAP05-STRUCT-03', 'CAP05-PROCESS-01'],
   );
-  assert.equal(debt.s5_authorized, false);
   assert.equal(debt.explicit_non_debt.includes('NO_MODEL_ACTIVATION_OR_CALIBRATION_WAS_OWED_BY_CAP05'), true);
+  assertS5BlockedBeforeS4Effectiveness(debt, 'DEBT_REGISTER');
 
   assert.match(amendment, /superseded_order:\nS3 -> S5/);
   assert.match(amendment, /amended_order:\nS3 -> S4 PREDECESSOR CONSUMPTION STABILIZATION -> S5/);
@@ -96,35 +109,23 @@ function main() {
   assert.equal(legacyDelivery.s3_effective, true);
   assert.equal(legacyDelivery.s4_inserted_by_task_amendment, true);
   assert.equal(legacyDelivery.s4_authorized, true);
-  assert.equal(legacyDelivery.s4_effective, false);
-  assert.equal(legacyDelivery.active_delivery_slice_id, S4);
-  assert.deepEqual(legacyDelivery.authorized_not_started_slices, [S4]);
-  assert.equal(legacyDelivery.blocked_slices.includes(S5), true);
+  assert.equal(legacyDelivery.completed_or_effective_slices.some(
+    (slice) => slice.delivery_slice_id === S3 && slice.status === 'MERGED_EFFECTIVE',
+  ), true);
+  assertS5BlockedBeforeS4Effectiveness(legacyDelivery, 'DELIVERY_SLICE_STATUS');
 
   assert.equal(reconciliation.current_state.s3, 'MERGED_EFFECTIVE');
   assert.equal(reconciliation.current_state.s3_effective, true);
-  assert.equal(reconciliation.current_state.s4, 'AUTHORIZED_NOT_STARTED');
   assert.equal(reconciliation.current_state.s4_authorized, true);
-  assert.equal(reconciliation.current_state.s5_authorized, false);
-  assert.equal(reconciliation.current_state.active_delivery_slice_id, S4);
+  assertS5BlockedBeforeS4Effectiveness(reconciliation, 'CURRENT_STATE_RECONCILIATION');
 
-  // Current delivery state is intentionally mutable. The gate remains valid after S4 advances,
-  // provided S5 never becomes authorized before S4 effectiveness.
   assert.equal(delivery.s3.effective, true);
   assert.equal(delivery.s4.authorized, true);
+  assertS5BlockedBeforeS4Effectiveness(delivery, 'CURRENT_DELIVERY_STATE');
+
   if (delivery.s4.effective !== true) {
     assert.equal(delivery.active_delivery_slice_id, S4);
-    assert.deepEqual(delivery.authorized_not_started_slices, [S4]);
     assert.equal(delivery.blocked_slices.includes(S5), true);
-  }
-
-  const forbiddenWritebackFiles = [
-    'apps/server/src/',
-    'apps/server/db/migrations/',
-    'apps/web/',
-  ];
-  for (const prefix of forbiddenWritebackFiles) {
-    assert.equal(effectiveness.effectiveness_writeback_scope === 'GOVERNANCE_ONLY', true, `WRITEBACK_SCOPE_REQUIRED:${prefix}`);
   }
 
   console.log('PASS MCFT-CAP-06 S3 effectiveness and CAP-05 debt-stabilization S4 insertion gate');
