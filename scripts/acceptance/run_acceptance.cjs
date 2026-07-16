@@ -85,10 +85,10 @@ const STEP_DEFINITIONS_BY_SUITE = {
       notes: 'Replays the corrected controlled profile and proves the frozen LOW/MID/HIGH formula covers at least two calibration regimes with exact base Dynamics replay.'
     },
     {
-      id: 'MCFT_CAP_06_S1_RESIDUAL_WINDOWS_GOVERNANCE',
-      command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs',
-      logFile: 'MCFT_CAP_06_S1_RESIDUAL_WINDOWS_GOVERNANCE.log',
-      notes: 'Validates exact S1 refs/hashes, controlled/repository track isolation, zero migration and preserved S2/Candidate/Evaluation/Activation boundaries.'
+      id: 'MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION_GOVERNANCE',
+      command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs',
+      logFile: 'MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION_GOVERNANCE.log',
+      notes: 'Cross-checks regenerated S1 runtime and wetness-regime evidence against the additive erratum and current SSOT while S2 remains blocked.'
     }
   ],
   'p9-twin-kernel': [
