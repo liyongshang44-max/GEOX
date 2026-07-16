@@ -123,3 +123,5 @@ jobs:
           git diff --cached --check
           git commit -m "fix(mcft-cap-06): harden S1 successor readiness evidence"
           git push origin HEAD:agent/mcft-cap-06-s1-readiness-hardening-staging-v1
+
+# trigger-sequence: 2
