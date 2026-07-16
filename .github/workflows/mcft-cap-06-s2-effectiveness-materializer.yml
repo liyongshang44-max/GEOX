@@ -1,0 +1,601 @@
+name: mcft-cap-06-s2-effectiveness-materializer
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.head_ref == 'agent/mcft-cap-06-s2-effectiveness-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      BASE_MAIN: b6d28477d87239ee417c688d43122cb7a20b1a31
+      S2_HEAD: cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f
+      S2_CI_RUN: '29504752806'
+      S2_MERGE: b6d28477d87239ee417c688d43122cb7a20b1a31
+      S2_PROBE_PR: '2524'
+      S2_PROOF_RUN: '29506065728'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s2-effectiveness-v1
+          fetch-depth: 0
+
+      - name: Verify effectiveness baseline
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin main
+          test "$(git rev-parse origin/main)" = "$BASE_MAIN"
+          test "$(git merge-base HEAD origin/main)" = "$BASE_MAIN"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Materialize effectiveness SSOT and phase-aware Gates
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          S2 = 'MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1'
+          S3 = 'MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1'
+          S5 = 'MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1'
+          BASE_MAIN = 'b6d28477d87239ee417c688d43122cb7a20b1a31'
+          S2_HEAD = 'cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f'
+          S2_CI_RUN = 29504752806
+          S2_MERGE = BASE_MAIN
+          S2_PROBE_PR = 2524
+          S2_PROOF_RUN = 29506065728
+          EFFECTIVENESS_REF = 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json'
+          EFFECTIVENESS_FILES = [
+            'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
+            'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json',
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json',
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json',
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json',
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json',
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md',
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs',
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs',
+          ]
+          NONCLAIMS = [
+            'NO_D_TRANSACTION_PERSISTENCE_IMPLEMENTATION',
+            'NO_CALIBRATION_CANDIDATE_APPEND',
+            'NO_SHADOW_EVALUATION_APPEND',
+            'NO_MODEL_ACTIVATION',
+            'NO_ACTIVE_CONFIG_SWITCH',
+            'NO_RUNTIME_AUTHORITY_CHANGE',
+            'NO_STATE_OR_CHECKPOINT_MUTATION_BY_EFFECTIVENESS_WRITEBACK',
+            'NO_PUBLIC_ROUTE_OR_WEB_OR_SCHEDULER',
+            'NO_S3_IMPLEMENTATION',
+            'NO_MCFT_CAP_07_AUTHORIZATION',
+          ]
+
+          def read_json(path):
+            return json.loads(Path(path).read_text(encoding='utf-8'))
+
+          def write_json(path, value):
+            Path(path).write_text(json.dumps(value, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+
+          status_path = 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json'
+          status = read_json(status_path)
+          status['status'] = 'MERGED_EFFECTIVE'
+          status['candidate_tree_validation']['repository_typecheck'] = f'PASS_EXACT_HEAD_CI_{S2_CI_RUN}'
+          status['candidate_tree_validation']['repository_build'] = f'PASS_EXACT_HEAD_CI_{S2_CI_RUN}'
+          status['candidate_tree_validation']['exact_head_ci_status'] = 'PASS'
+          status['candidate_tree_validation']['exact_head'] = S2_HEAD
+          status['candidate_tree_validation']['exact_head_ci_run'] = S2_CI_RUN
+          status['s2_effective'] = True
+          status['s3_authorized'] = True
+          status['effectiveness_condition'] = f'SATISFIED_BY_PR_2523_MERGE_{S2_MERGE}_AND_PROOF_RUN_{S2_PROOF_RUN}'
+          status['effectiveness_ref'] = EFFECTIVENESS_REF
+          status['effectiveness'] = {
+            'effective': True,
+            'implementation_pr_number': 2523,
+            'implementation_exact_head': S2_HEAD,
+            'implementation_exact_head_ci_run': S2_CI_RUN,
+            'merge_commit': S2_MERGE,
+            'head_to_merge_file_delta_count': 0,
+            'head_to_merge_tree_equivalence': 'PASS',
+            'postmerge_probe_pr_number': S2_PROBE_PR,
+            'postmerge_probe_closed_without_merge': True,
+            'postmerge_workflow_run': S2_PROOF_RUN,
+            'postmerge_gate': 'PASS',
+          }
+          status['effectiveness_writeback_changed_file_boundary'] = EFFECTIVENESS_FILES
+          status['preserved_nonclaims'] = NONCLAIMS
+          write_json(status_path, status)
+
+          effectiveness = {
+            'schema_version': 'geox_mcft_cap_06_s2_effectiveness_v1',
+            'effectiveness_id': 'MCFT-CAP-06.S2.MERGED-MAIN-EFFECTIVENESS-V1',
+            'capability_line_id': 'MCFT-CAP-06',
+            'delivery_slice_id': S2,
+            'status': 'MERGED_EFFECTIVE',
+            'effective': True,
+            'implementation_pr_number': 2523,
+            'implementation_exact_head': S2_HEAD,
+            'implementation_exact_head_ci_run': S2_CI_RUN,
+            'implementation_merge_commit': S2_MERGE,
+            'head_to_merge_file_delta_count': 0,
+            'head_to_merge_tree_equivalence': 'PASS',
+            'postmerge_probe_pr_number': S2_PROBE_PR,
+            'postmerge_probe_closed_without_merge': True,
+            'postmerge_workflow_run': S2_PROOF_RUN,
+            'postmerge_gate': 'PASS',
+            'source_residual_count': 24,
+            'calibration_case_count': 16,
+            'holdout_case_count': 8,
+            'source_s1_residual_set_hash': 'sha256:7995da1a8c5221c207087b30bb66a60ac2054e0616338f275ffaf72a01857e60',
+            'source_s1_case_input_set_hash': 'sha256:cb3bd4c273134071e931e8f85765b028ce58986752e94da3902f8563ddba4bb3',
+            'calibration_window_ref_membership_hash': 'sha256:e5403ae258326909d054e92b53d089494d709785d8c48775a8cd142b0f0d191d',
+            'holdout_window_ref_membership_hash': 'sha256:20bc567b9e75027425c981a24d8889f80327b55226dd29d04a97880bc07a428a',
+            'window_hash_semantics': 'ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1',
+            'holdout_purpose': 'HIGH_EXCESS_STRESS_HOLDOUT_ONLY',
+            'holdout_generalization_claim': 'NOT_ESTABLISHED',
+            'parameter_grid': {'minimum': '0.020000', 'maximum': '0.040000', 'step': '0.001000', 'count': 21},
+            'base_parameter_value': '0.030000',
+            'selected_controlled_parameter_value': '0.034000',
+            'sensitive_case_count': 16,
+            'minimum_sensitive_case_count': 4,
+            'represented_sensitive_wetness_regimes': ['HIGH_EXCESS', 'LOW_EXCESS', 'MID_EXCESS'],
+            'minimum_sensitive_wetness_regime_count': 2,
+            'objective_mse_range_sse_scale_18': '8874506000000',
+            'best_vs_second_mse_margin_sse_scale_18': '45097000000',
+            'positive_disposition': 'BOUNDED_PARAMETER_DELTA_CANDIDATE',
+            'positive_shadow_disposition': 'ELIGIBLE_FOR_HUMAN_ACTIVATION_REVIEW',
+            'canonical_write_count': 0,
+            'projection_write_count': 0,
+            'migration_count': 0,
+            'model_activation_count': 0,
+            'runtime_source_authorized': True,
+            'calibration_contract_math_implemented': True,
+            'candidate_runtime_implemented': False,
+            'shadow_evaluation_runtime_implemented': False,
+            'active_delivery_slice_id': S3,
+            'authorized_not_started_slice_ids': [S3],
+            's3_authorized': True,
+            's3_implementation_started': False,
+            'model_activation_authorized': False,
+            'active_config_switch_authorized': False,
+            'successor_capability_line_authorized': False,
+            'writeback_validation': {
+              'implementation_exact_head_ci': 'PASS',
+              'head_to_merge_tree_equivalence': 'PASS',
+              'exact_merged_main_proof': 'PASS',
+              'active_slice_ssot_consistency': 'PASS',
+              'exact_changed_file_count': len(EFFECTIVENESS_FILES),
+              'temporary_workflows_retained': False,
+              'generated_acceptance_artifacts_retained': False,
+            },
+            'effectiveness_writeback_changed_file_boundary': EFFECTIVENESS_FILES,
+            'preserved_nonclaims': NONCLAIMS,
+          }
+          write_json(EFFECTIVENESS_REF, effectiveness)
+
+          delivery_path = 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
+          delivery = read_json(delivery_path)
+          delivery['implementation_status'] = 'S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED'
+          delivery['active_delivery_slice_id'] = S3
+          delivery['candidate_slices'] = []
+          delivery['blocked_slices'] = [item for item in delivery['blocked_slices'] if item != S3]
+          delivery['next_repository_action'] = S3
+          delivery['authorized_not_started_slices'] = [S3]
+          delivery['s2_effective'] = True
+          delivery['s3_authorized'] = True
+          delivery['s3_implementation_started'] = False
+          delivery['s2_effectiveness_ref'] = EFFECTIVENESS_REF
+          if not any(item.get('delivery_slice_id') == S2 for item in delivery['completed_or_effective_slices']):
+            delivery['completed_or_effective_slices'].append({
+              'delivery_slice_id': S2,
+              'status': 'MERGED_EFFECTIVE',
+              'implementation_pr_number': 2523,
+              'exact_head': S2_HEAD,
+              'exact_head_ci_run': S2_CI_RUN,
+              'merge_commit': S2_MERGE,
+              'head_to_merge_file_delta_count': 0,
+              'head_to_merge_tree_equivalence': 'PASS',
+              'postmerge_probe_pr_number': S2_PROBE_PR,
+              'postmerge_workflow_run': S2_PROOF_RUN,
+              'postmerge_gate': 'PASS',
+              'canonical_write_count': 0,
+              'migration_count': 0,
+            })
+          write_json(delivery_path, delivery)
+
+          current_path = 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json'
+          current = read_json(current_path)
+          current['baseline_main_commit'] = BASE_MAIN
+          current['status'] = 'S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED'
+          current['reconciliation_effective'] = True
+          current['current_state']['active_delivery_slice_id'] = S3
+          current['current_state']['s2'] = 'MERGED_EFFECTIVE'
+          current['current_state']['calibration_contract_math_implemented'] = True
+          current['current_state']['calibration_contract_math_candidate_implemented'] = True
+          current['current_state']['s3_authorized'] = True
+          current['current_state']['s3_implementation_started'] = False
+          current['proof']['s2_effectiveness'] = {
+            'status': 'MERGED_EFFECTIVE',
+            'effectiveness_ref': EFFECTIVENESS_REF,
+            'implementation_pr_number': 2523,
+            'exact_head': S2_HEAD,
+            'exact_head_ci_run': S2_CI_RUN,
+            'merge_commit': S2_MERGE,
+            'head_to_merge_file_delta_count': 0,
+            'head_to_merge_tree_equivalence': 'PASS',
+            'postmerge_probe_pr_number': S2_PROBE_PR,
+            'postmerge_probe_closed_without_merge': True,
+            'postmerge_workflow_run': S2_PROOF_RUN,
+            'postmerge_gate': 'PASS',
+            'canonical_write_count': 0,
+            'migration_count': 0,
+          }
+          current['next_repository_action'] = S3
+          current['preserved_nonclaims'] = NONCLAIMS
+          current['effectiveness_condition'] = f'SATISFIED_BY_PR_2523_MERGE_{S2_MERGE}_AND_PROOF_RUN_{S2_PROOF_RUN}'
+          current['s2_effectiveness_ref'] = EFFECTIVENESS_REF
+          current['s2_candidate_validation']['exact_head_ci_status'] = 'PASS'
+          current['s2_candidate_validation']['exact_head'] = S2_HEAD
+          current['s2_candidate_validation']['exact_head_ci_run'] = S2_CI_RUN
+          current['s2_candidate_validation']['merge_commit'] = S2_MERGE
+          current['s2_candidate_validation']['postmerge_workflow_run'] = S2_PROOF_RUN
+          write_json(current_path, current)
+
+          matrix_path = 'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json'
+          matrix = read_json(matrix_path)
+          matrix['baseline']['commit'] = BASE_MAIN
+          matrix['baseline']['meaning'] = 'MCFT-CAP-06 S2 contracts/math merged-main effective; S3 authorized not started; S5+ and MCFT-CAP-07 blocked'
+          lines = matrix.get('capability_lines', matrix.get('capabilities'))
+          line = next(item for item in lines if item['capability_line_id'] == 'MCFT-CAP-06')
+          line['implementation_status'] = 'S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED'
+          line['active_delivery_slice_id'] = S3
+          line['next_repository_action'] = S3
+          line['next_delivery_slice_id'] = S3
+          line['next_delivery_slice_authorized'] = True
+          line['preserved_nonclaims'] = NONCLAIMS
+          line['next_authorized_slice_ids'] = [S3]
+          line['calibration_contract_math_candidate_implemented'] = True
+          line['calibration_contract_math_implemented'] = True
+          line['s2_effectiveness_ref'] = EFFECTIVENESS_REF
+          line['s3_authorized'] = True
+          line['s3_implementation_started'] = False
+          s2 = next(item for item in line['delivery_slices'] if item['delivery_slice_id'] == S2)
+          s2.update({
+            'status': 'MERGED_EFFECTIVE',
+            'effectiveness_condition_satisfied': True,
+            'implementation_pr_number': 2523,
+            'exact_head': S2_HEAD,
+            'exact_head_ci_run': S2_CI_RUN,
+            'merge_commit': S2_MERGE,
+            'head_to_merge_file_delta_count': 0,
+            'head_to_merge_tree_equivalence': 'PASS',
+            'postmerge_probe_pr_number': S2_PROBE_PR,
+            'postmerge_workflow_run': S2_PROOF_RUN,
+            'postmerge_gate': 'PASS',
+            'effectiveness_ref': EFFECTIVENESS_REF,
+          })
+          if not any(item.get('delivery_slice_id') == S3 for item in line['delivery_slices']):
+            line['delivery_slices'].append({
+              'delivery_slice_id': S3,
+              'primary_owner_work_package_id': 'MCFT-12',
+              'contributing_owner_work_package_ids': ['MCFT-03'],
+              'depends_on_delivery_slice_ids': [S2],
+              'status': 'AUTHORIZED_NOT_STARTED',
+              'runtime_source_authorized': True,
+              'migration_authorized': True,
+              'canonical_write_authorized': False,
+              'implementation_started': False,
+              'next_authorized_slice_after_effectiveness': S5,
+            })
+          matrix['latest_governance_update'] = 'MCFT-CAP-06.S2.MERGED-MAIN-EFFECTIVENESS-V1'
+          write_json(matrix_path, matrix)
+
+          task_path = Path('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md')
+          task = task_path.read_text(encoding='utf-8')
+          task = task.replace('S2_CONTRACTS_MATH_CANDIDATE', 'S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED', 1)
+          task = task.replace('S2_CONTRACTS_MATH_IMPLEMENTED_NOT_EFFECTIVE', 'S2_CONTRACTS_MATH_MERGED_EFFECTIVE_S3_NOT_STARTED', 1)
+          task = task.replace('active_delivery_slice_id:\nMCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1', f'active_delivery_slice_id:\n{S3}', 1)
+          task = task.replace('first_permitted_repository_action:\nMCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1', f'first_permitted_repository_action:\n{S3}', 1)
+          marker = '<!-- MCFT-CAP-06-S2-MERGED-MAIN-EFFECTIVENESS-V1 -->'
+          if marker not in task:
+            task += f'''\n\n{marker}\n## S2 merged-main effectiveness\n\n```text\nstatus: MERGED_EFFECTIVE\nimplementation PR: 2523\nexact head: {S2_HEAD}\nexact-head CI: {S2_CI_RUN} PASS\nmerge commit: {S2_MERGE}\nhead-to-merge file delta: 0\ntree equivalence: PASS\npostmerge proof PR: {S2_PROBE_PR} closed without merge\npostmerge proof run: {S2_PROOF_RUN} PASS\nactive slice: {S3}\nS3 status: AUTHORIZED_NOT_STARTED\nD persistence implementation: absent\nCandidate / Evaluation canonical append: absent\nModel Activation: absent\nMCFT-CAP-07 authorization: false\n```\n'''
+          task_path.write_text(task, encoding='utf-8')
+
+          map_path = Path('docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md')
+          implementation_map = map_path.read_text(encoding='utf-8')
+          marker = '<!-- MCFT-CAP-06-S2-MERGED-MAIN-EFFECTIVENESS-V1 -->'
+          if marker not in implementation_map:
+            implementation_map += f'''\n\n{marker}\n## MCFT-CAP-06 S2 merged-main effectiveness\n\n```text\nS2 status: MERGED_EFFECTIVE\nexact head: {S2_HEAD}\nexact-head CI run: {S2_CI_RUN} PASS\nmerge commit: {S2_MERGE}\npostmerge proof run: {S2_PROOF_RUN} PASS\nactive slice: {S3}\nS3: AUTHORIZED_NOT_STARTED\ncanonical Candidate/Evaluation writes: 0\nModel Activation: 0\n```\n'''
+          map_path.write_text(implementation_map, encoding='utf-8')
+
+          s1_gate_path = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs')
+          s1_gate = s1_gate_path.read_text(encoding='utf-8')
+          s1_gate = s1_gate.replace(
+            '// Purpose: fail closed unless corrected S1 evidence remains exact while S2 is either authorized-not-started or candidate-implemented-not-effective, with S3 blocked.',
+            '// Purpose: fail closed unless corrected S1 evidence remains exact across S2 authorized, candidate and merged-effective phases, with only the next legal slice authorized.',
+          )
+          start = s1_gate.index('  const s2CandidatePhase = delivery.candidate_slices.length === 1')
+          end = s1_gate.index("\n  const runner = readText('scripts/acceptance/run_acceptance.cjs');", start)
+          replacement = '''  const s2CandidatePhase = delivery.candidate_slices.length === 1
+    && delivery.candidate_slices[0] === S2;
+  const s2EffectivePhase = delivery.completed_or_effective_slices.some(
+    (item) => item.delivery_slice_id === S2 && item.status === 'MERGED_EFFECTIVE',
+  );
+
+  assert.equal(delivery.blocked_slices.includes(S2), false);
+  assert.equal(delivery.s1_effective, true);
+  assert.equal(delivery.s1_successor_readiness_effective, true);
+  assert.equal(delivery.s2_authorized, true);
+
+  assert.equal(current.current_state.s1, 'MERGED_EFFECTIVE_CORRECTED');
+  assert.equal(current.current_state.controlled_residual_window_effective, true);
+  assert.equal(current.current_state.s1_successor_readiness_effective, true);
+  assert.equal(current.current_state.s2_authorized, true);
+
+  const lines = Array.isArray(matrix.capability_lines) ? matrix.capability_lines : matrix.capabilities;
+  const line = lines.find((item) => item.capability_line_id === 'MCFT-CAP-06');
+  assert.ok(line);
+  assert.equal(line.controlled_residual_window_effective, true);
+  assert.equal(line.s1_successor_readiness_effective, true);
+  assert.equal(line.candidate_runtime_implemented, false);
+  assert.equal(line.shadow_evaluation_runtime_implemented, false);
+  const matrixS1 = line.delivery_slices.find((item) => item.delivery_slice_id === S1);
+  const matrixS2 = line.delivery_slices.find((item) => item.delivery_slice_id === S2);
+  assert.equal(matrixS1.status, 'MERGED_EFFECTIVE_CORRECTED');
+  assert.equal(matrixS1.effectiveness_condition_satisfied, true);
+
+  if (s2EffectivePhase) {
+    assert.deepEqual(delivery.candidate_slices, []);
+    assert.deepEqual(delivery.authorized_not_started_slices, [S3]);
+    assert.equal(delivery.active_delivery_slice_id, S3);
+    assert.equal(delivery.blocked_slices.includes(S3), false);
+    assert.equal(delivery.s2_implementation_started, true);
+    assert.equal(delivery.s2_candidate_implemented, true);
+    assert.equal(delivery.s2_effective, true);
+    assert.equal(delivery.s3_authorized, true);
+    assert.equal(delivery.s3_implementation_started, false);
+
+    assert.equal(current.status, 'S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED');
+    assert.equal(current.reconciliation_effective, true);
+    assert.equal(current.current_state.active_delivery_slice_id, S3);
+    assert.equal(current.current_state.s2, 'MERGED_EFFECTIVE');
+    assert.equal(current.current_state.s2_implementation_started, true);
+    assert.equal(current.current_state.calibration_contract_math_candidate_implemented, true);
+    assert.equal(current.current_state.calibration_contract_math_implemented, true);
+    assert.equal(current.current_state.s3_authorized, true);
+    assert.equal(current.current_state.s3_implementation_started, false);
+
+    assert.equal(line.active_delivery_slice_id, S3);
+    assert.deepEqual(line.next_authorized_slice_ids, [S3]);
+    assert.equal(line.calibration_contract_math_candidate_implemented, true);
+    assert.equal(line.calibration_contract_math_implemented, true);
+    assert.equal(line.s3_authorized, true);
+    assert.equal(line.s3_implementation_started, false);
+    assert.equal(matrixS2.status, 'MERGED_EFFECTIVE');
+    assert.equal(matrixS2.implementation_started, true);
+    assert.equal(matrixS2.effectiveness_condition_satisfied, true);
+  } else if (s2CandidatePhase) {
+    assert.deepEqual(delivery.authorized_not_started_slices, []);
+    assert.equal(delivery.active_delivery_slice_id, S2);
+    assert.equal(delivery.blocked_slices.includes(S3), true);
+    assert.equal(delivery.s2_implementation_started, true);
+    assert.equal(delivery.s2_candidate_implemented, true);
+    assert.equal(delivery.s2_effective, false);
+    assert.equal(delivery.s3_authorized, false);
+
+    assert.equal(current.status, 'S2_CONTRACTS_MATH_CANDIDATE');
+    assert.equal(current.reconciliation_effective, false);
+    assert.equal(current.current_state.active_delivery_slice_id, S2);
+    assert.equal(current.current_state.s2, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
+    assert.equal(current.current_state.s2_implementation_started, true);
+    assert.equal(current.current_state.calibration_contract_math_candidate_implemented, true);
+    assert.equal(current.current_state.calibration_contract_math_implemented, false);
+
+    assert.equal(line.active_delivery_slice_id, S2);
+    assert.deepEqual(line.next_authorized_slice_ids, []);
+    assert.equal(line.calibration_contract_math_candidate_implemented, true);
+    assert.equal(line.calibration_contract_math_implemented, false);
+    assert.equal(matrixS2.status, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
+    assert.equal(matrixS2.implementation_started, true);
+    assert.equal(matrixS2.effectiveness_condition_satisfied, false);
+  } else {
+    assert.deepEqual(delivery.candidate_slices, []);
+    assert.deepEqual(delivery.authorized_not_started_slices, [S2]);
+    assert.equal(delivery.active_delivery_slice_id, S2);
+    assert.equal(delivery.blocked_slices.includes(S3), true);
+    assert.equal(delivery.s2_implementation_started, false);
+
+    assert.equal(current.status, 'MERGED_EFFECTIVE');
+    assert.equal(current.reconciliation_effective, true);
+    assert.equal(current.current_state.active_delivery_slice_id, S2);
+    assert.equal(current.current_state.s2, 'AUTHORIZED_NOT_STARTED');
+    assert.equal(current.current_state.s2_implementation_started, false);
+    assert.equal(current.current_state.calibration_contract_math_implemented, false);
+
+    assert.equal(line.active_delivery_slice_id, S2);
+    assert.deepEqual(line.next_authorized_slice_ids, [S2]);
+    assert.equal(matrixS2.status, 'AUTHORIZED_NOT_STARTED');
+    assert.equal(matrixS2.implementation_started, false);
+  }
+'''
+          s1_gate = s1_gate[:start] + replacement + s1_gate[end:]
+          s1_gate = s1_gate.replace(
+            "  console.log('PASS corrected S1 effectiveness remains exact across bounded S2 authorization and candidate phases');",
+            "  console.log('PASS corrected S1 effectiveness remains exact across bounded S2 authorization, candidate and merged-effective phases');",
+          )
+          s1_gate = s1_gate.replace(
+            "  console.log('PASS Candidate/Evaluation/Activation/S3/CAP-07 remain absent or blocked');",
+            "  console.log('PASS Candidate/Evaluation/Activation remain absent and only the next legal slice is authorized');",
+          )
+          s1_gate_path.write_text(s1_gate, encoding='utf-8')
+
+          s2_gate_path = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs')
+          s2_gate = s2_gate_path.read_text(encoding='utf-8')
+          s2_gate = s2_gate.replace(
+            "  assert.equal(status.delivery_slice_id, S2);\n  assert.equal(status.status, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');\n  assert.equal(status.s2_effective, false);\n  assert.equal(status.s3_authorized, false);\n  assert.deepEqual(status.exact_changed_file_boundary, EXPECTED_FILES);\n  assert.equal(status.candidate_tree_validation.exact_changed_file_count, 18);",
+            "  assert.equal(status.delivery_slice_id, S2);\n  const effectivePhase = status.s2_effective === true;\n  assert.deepEqual(status.exact_changed_file_boundary, EXPECTED_FILES);\n  assert.equal(status.candidate_tree_validation.exact_changed_file_count, 18);",
+          )
+          start = s2_gate.index('  assert.equal(current.current_state.active_delivery_slice_id, S2);')
+          end = s2_gate.index("\n  assert.match(task, /S2_CONTRACTS_MATH_CANDIDATE/);", start)
+          replacement = '''  assert.equal(current.current_state.candidate_runtime_implemented, false);
+  assert.equal(current.current_state.shadow_evaluation_runtime_implemented, false);
+
+  const lines = Array.isArray(matrix.capability_lines) ? matrix.capability_lines : matrix.capabilities;
+  const line = lines.find((item) => item.capability_line_id === 'MCFT-CAP-06');
+  assert.ok(line);
+  assert.equal(line.calibration_contract_math_candidate_implemented, true);
+  const matrixS2 = line.delivery_slices.find((item) => item.delivery_slice_id === S2);
+
+  if (effectivePhase) {
+    const effectiveness = readJson('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json');
+    assert.equal(status.status, 'MERGED_EFFECTIVE');
+    assert.equal(status.s3_authorized, true);
+    assert.equal(status.effectiveness.effective, true);
+    assert.equal(status.effectiveness.implementation_exact_head, 'cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f');
+    assert.equal(status.effectiveness.implementation_exact_head_ci_run, 29504752806);
+    assert.equal(status.effectiveness.merge_commit, 'b6d28477d87239ee417c688d43122cb7a20b1a31');
+    assert.equal(status.effectiveness.postmerge_workflow_run, 29506065728);
+
+    assert.equal(effectiveness.status, 'MERGED_EFFECTIVE');
+    assert.equal(effectiveness.effective, true);
+    assert.equal(effectiveness.canonical_write_count, 0);
+    assert.equal(effectiveness.projection_write_count, 0);
+    assert.equal(effectiveness.migration_count, 0);
+    assert.equal(effectiveness.model_activation_count, 0);
+    assert.equal(effectiveness.active_delivery_slice_id, S3);
+    assert.deepEqual(effectiveness.authorized_not_started_slice_ids, [S3]);
+    assert.equal(effectiveness.s3_authorized, true);
+    assert.equal(effectiveness.s3_implementation_started, false);
+
+    assert.equal(current.status, 'S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED');
+    assert.equal(current.reconciliation_effective, true);
+    assert.equal(current.current_state.active_delivery_slice_id, S3);
+    assert.equal(current.current_state.s2, 'MERGED_EFFECTIVE');
+    assert.equal(current.current_state.calibration_contract_math_implemented, true);
+    assert.equal(current.current_state.s3_authorized, true);
+    assert.equal(current.current_state.s3_implementation_started, false);
+
+    assert.equal(delivery.active_delivery_slice_id, S3);
+    assert.deepEqual(delivery.candidate_slices, []);
+    assert.deepEqual(delivery.authorized_not_started_slices, [S3]);
+    assert.equal(delivery.blocked_slices.includes(S3), false);
+    assert.equal(delivery.s2_effective, true);
+    assert.equal(delivery.s3_authorized, true);
+    assert.equal(delivery.s3_implementation_started, false);
+
+    assert.equal(line.active_delivery_slice_id, S3);
+    assert.equal(line.calibration_contract_math_implemented, true);
+    assert.equal(line.s3_authorized, true);
+    assert.equal(line.s3_implementation_started, false);
+    assert.deepEqual(line.next_authorized_slice_ids, [S3]);
+    assert.equal(matrixS2.status, 'MERGED_EFFECTIVE');
+    assert.equal(matrixS2.effectiveness_condition_satisfied, true);
+    assert.equal(line.implementation_status, 'S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED');
+    assert.equal(matrix.latest_governance_update, 'MCFT-CAP-06.S2.MERGED-MAIN-EFFECTIVENESS-V1');
+    assert.equal(current.baseline_main_commit, 'b6d28477d87239ee417c688d43122cb7a20b1a31');
+    assert.equal(current.preserved_nonclaims.includes('NO_S3_AUTHORIZATION'), false);
+    assert.equal(current.preserved_nonclaims.includes('NO_S3_IMPLEMENTATION'), true);
+    assert.match(task, /S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED/);
+  } else {
+    assert.equal(status.status, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
+    assert.equal(status.s3_authorized, false);
+    assert.equal(current.current_state.active_delivery_slice_id, S2);
+    assert.equal(current.current_state.s2, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
+    assert.equal(current.current_state.calibration_contract_math_implemented, false);
+    assert.equal(delivery.active_delivery_slice_id, S2);
+    assert.deepEqual(delivery.candidate_slices, [S2]);
+    assert.deepEqual(delivery.authorized_not_started_slices, []);
+    assert.equal(delivery.blocked_slices.includes(S3), true);
+    assert.equal(delivery.s2_effective, false);
+    assert.equal(delivery.s3_authorized, false);
+    assert.equal(line.active_delivery_slice_id, S2);
+    assert.equal(line.calibration_contract_math_implemented, false);
+    assert.equal(matrixS2.status, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
+    assert.equal(line.implementation_status, 'S2_CONTRACTS_MATH_CANDIDATE');
+    assert.equal(matrix.latest_governance_update, 'MCFT-CAP-06.S2.CONTRACTS-MATH-CANDIDATE-V1');
+    assert.equal(current.baseline_main_commit, '9eff45605dc709a6001e6c1bed29fd1df76197ed');
+    assert.equal(current.preserved_nonclaims.includes('NO_S3_AUTHORIZATION'), true);
+    assert.match(task, /S2_CONTRACTS_MATH_CANDIDATE/);
+  }
+'''
+          s2_gate = s2_gate[:start] + replacement + s2_gate[end:]
+          s2_gate = s2_gate.replace("  assert.match(task, /S2_CONTRACTS_MATH_CANDIDATE/);\n", '')
+          s2_gate_path.write_text(s2_gate, encoding='utf-8')
+          PY
+
+      - name: Reproduce corrected S1 and S2 evidence
+        run: |
+          set -euo pipefail
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs
+
+      - name: Typecheck and build
+        run: |
+          set -euo pipefail
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Verify exact permanent boundary
+        run: |
+          set -euo pipefail
+          rm -rf acceptance-output
+          git add -A
+          git reset .github/workflows/mcft-cap-06-s2-effectiveness-materializer.yml
+          mapfile -t actual < <(git diff --cached --name-only | sort)
+          mapfile -t expected < <(printf '%s\n' \
+            docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md \
+            docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs | sort)
+          diff -u <(printf '%s\n' "${expected[@]}") <(printf '%s\n' "${actual[@]}")
+          test "${#actual[@]}" -eq 9
+
+      - name: Commit permanent effectiveness tree and remove materializer
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "governance(mcft-cap-06): activate S2 effectiveness and authorize S3"
+          git rm .github/workflows/mcft-cap-06-s2-effectiveness-materializer.yml
+          git commit -m "chore(mcft-cap-06): remove S2 effectiveness materializer"
+          git push origin HEAD:agent/mcft-cap-06-s2-effectiveness-v1
