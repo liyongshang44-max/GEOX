@@ -50,10 +50,10 @@ jobs:
           from pathlib import Path
           path = Path('scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs')
           source = path.read_text(encoding='utf-8')
-          marker = '    "${MATERIALIZER_PATH}",\n'
-          replacement = marker + '    "scripts/remediation/FINALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.py",\n    ".github/workflows/mcft-cap-06-s0-v2-finalize.yml",\n'
+          marker = r'    "${MATERIALIZER_PATH}",\n'
+          replacement = marker + r'    "scripts/remediation/FINALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.py",\n    ".github/workflows/mcft-cap-06-s0-v2-finalize.yml",\n'
           if source.count(marker) != 1:
-              raise SystemExit('S0_WRAPPER_MATERIALIZER_MARKER_COUNT_INVALID')
+              raise SystemExit(f'S0_WRAPPER_MATERIALIZER_MARKER_COUNT_INVALID:{source.count(marker)}')
           path.write_text(source.replace(marker, replacement), encoding='utf-8')
           PY
 
