@@ -1,0 +1,170 @@
+name: mcft-cap-06-s2-governance-finalizer
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize-s2-governance:
+    if: github.head_ref == 'agent/mcft-cap-06-s2-contracts-math-corrected-v1' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+    steps:
+      - name: Checkout S2 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Materialize phase-aware S2 governance
+        run: |
+          set -euo pipefail
+          python -m py_compile .github/scripts/mcft_cap06_s2_governance_finalizer.py
+          python .github/scripts/mcft_cap06_s2_governance_finalizer.py
+          python -m json.tool docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json >/dev/null
+          python -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json >/dev/null
+          python -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json >/dev/null
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs
+          git diff --check
+
+      - name: Reproduce corrected S1 and S2 evidence
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
+
+      - name: Typecheck and build candidate
+        run: |
+          set -euo pipefail
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Remove temporary finalizer files
+        run: |
+          set -euo pipefail
+          rm -f .github/scripts/mcft_cap06_s2_governance_finalizer.py
+          rm -rf .github/scripts/__pycache__
+          rm -f .github/workflows/mcft-cap-06-s2-governance-finalizer.yml
+
+      - name: Restore unrelated tracked worktree mutations
+        run: |
+          set -euo pipefail
+          mapfile -t changed < <(git diff --name-only origin/main)
+          for file in "${changed[@]}"; do
+            case "$file" in
+              apps/server/src/domain/calibration/case_builder_v1.ts|\
+              apps/server/src/domain/calibration/contracts_v1.ts|\
+              apps/server/src/domain/calibration/envelope_profiles_v1.ts|\
+              apps/server/src/domain/calibration/exact_ref_port_v1.ts|\
+              apps/server/src/domain/calibration/fixed_point_metric_v1.ts|\
+              apps/server/src/domain/calibration/grid_search_v1.ts|\
+              apps/server/src/domain/calibration/shadow_evaluation_v1.ts|\
+              docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md|\
+              docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json|\
+              docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json|\
+              docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json|\
+              docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-CONTRACTS-MATH.json|\
+              docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json|\
+              docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md|\
+              scripts/acceptance/run_acceptance.cjs|\
+              scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs|\
+              scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs|\
+              scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts)
+                ;;
+              *)
+                echo "Restoring unrelated tracked mutation: $file"
+                if git cat-file -e "origin/main:$file" 2>/dev/null; then
+                  git checkout origin/main -- "$file"
+                else
+                  rm -rf -- "$file"
+                  git rm -r --cached --ignore-unmatch -- "$file" >/dev/null 2>&1 || true
+                fi
+                ;;
+            esac
+          done
+
+      - name: Run phase-aware governance Gates
+        run: |
+          set -euo pipefail
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs
+
+      - name: Verify exact permanent boundary
+        run: |
+          set -euo pipefail
+          rm -rf acceptance-output
+          mapfile -t actual < <(git diff --name-only origin/main | sort)
+          cat > /tmp/expected.txt <<'EOF'
+          apps/server/src/domain/calibration/case_builder_v1.ts
+          apps/server/src/domain/calibration/contracts_v1.ts
+          apps/server/src/domain/calibration/envelope_profiles_v1.ts
+          apps/server/src/domain/calibration/exact_ref_port_v1.ts
+          apps/server/src/domain/calibration/fixed_point_metric_v1.ts
+          apps/server/src/domain/calibration/grid_search_v1.ts
+          apps/server/src/domain/calibration/shadow_evaluation_v1.ts
+          docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
+          docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-CONTRACTS-MATH.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md
+          scripts/acceptance/run_acceptance.cjs
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
+          EOF
+          sed -i 's/^          //' /tmp/expected.txt
+          diff -u /tmp/expected.txt <(printf '%s\n' "${actual[@]}")
+          test "${#actual[@]}" -eq 18
+          git diff --check
+
+      - name: Commit bounded governance correction
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(mcft-cap-06): align S1 and S2 candidate governance"
+          git push origin HEAD:${{ github.head_ref }}
