@@ -1,0 +1,69 @@
+{
+  "schema_version": "geox_mcft_cap_06_s1_effectiveness_v1",
+  "effectiveness_id": "MCFT-CAP-06.S1.MERGED-MAIN-EFFECTIVENESS-ACTIVATION-V1",
+  "capability_line_id": "MCFT-CAP-06",
+  "delivery_slice_id": "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1",
+  "status": "MERGED_EFFECTIVE",
+  "effective": true,
+  "implementation_pr_number": 2514,
+  "implementation_exact_head": "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+  "implementation_exact_head_ci_run": 29475482824,
+  "implementation_merge_commit": "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+  "head_to_merge_file_delta_count": 0,
+  "head_to_merge_tree_equivalence": "PASS",
+  "postmerge_probe_pr_number": 2515,
+  "postmerge_probe_closed_without_merge": true,
+  "postmerge_workflow_run": 29476027885,
+  "postmerge_gate": "PASS",
+  "canonical_residual_count": 24,
+  "residual_set_hash": "sha256:14a5f07e6f3cc94f6c61c697d39d2093cae35bd491fd3f4dc68e01e79c7c24d7",
+  "calibration_window_hash": "sha256:e5403ae258326909d054e92b53d089494d709785d8c48775a8cd142b0f0d191d",
+  "holdout_window_hash": "sha256:20bc567b9e75027425c981a24d8889f80327b55226dd29d04a97880bc07a428a",
+  "case_input_set_hash": "sha256:fac894cf5a4de2c473523190408933ae25185c6a63b9568cde2d8121add4dc62",
+  "runtime_source_authorized": true,
+  "canonical_write_effective_for_s1": true,
+  "canonical_write_scope": [
+    "twin_forecast_residual_v1"
+  ],
+  "migration_delta": 0,
+  "active_delivery_slice_id": "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1",
+  "authorized_not_started_slice_ids": [
+    "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1"
+  ],
+  "s2_authorized": true,
+  "candidate_runtime_implemented": false,
+  "shadow_evaluation_runtime_implemented": false,
+  "model_activation_authorized": false,
+  "active_config_switch_authorized": false,
+  "successor_capability_line_authorized": false,
+  "writeback_candidate_validation": {
+    "governance_gate": "PASS",
+    "s0_qualification_successor_monotonicity": "PASS",
+    "active_slice_ssot_consistency": "FAIL_CLOSED",
+    "exact_changed_file_count": 9,
+    "temporary_workflows_retained": false,
+    "temporary_finalizers_retained": false,
+    "generated_acceptance_artifacts_retained": false
+  },
+  "effectiveness_writeback_changed_file_boundary": [
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+  ],
+  "preserved_nonclaims": [
+    "NO_S2_IMPLEMENTATION",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_SHADOW_EVALUATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_CONFIG_SWITCH",
+    "NO_STATE_OR_CHECKPOINT_MUTATION_BY_EFFECTIVENESS_WRITEBACK",
+    "NO_PUBLIC_ROUTE_OR_WEB_OR_SCHEDULER",
+    "NO_MCFT_CAP_07_AUTHORIZATION"
+  ]
+}

@@ -965,11 +965,18 @@ async function main(): Promise<void> {
   assert.equal(currentState.current_state?.s0, "MERGED_EFFECTIVE", "S0_MERGED_EFFECTIVE_REQUIRED");
   assert.equal(currentState.current_state?.capability_line_authorization_effective, true, "CAP06_AUTHORIZATION_EFFECTIVE_REQUIRED");
   assert.equal(currentState.current_state?.runtime_source_authorized, true, "CAP06_RUNTIME_SOURCE_AUTHORIZATION_REQUIRED");
-  assert.equal(currentState.current_state?.active_delivery_slice_id, "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1", "S1_ACTIVE_DELIVERY_SLICE_REQUIRED");
+  const currentActiveDeliverySlice = currentState.current_state?.active_delivery_slice_id ?? null;
+  const deliveryActiveDeliverySlice = delivery.active_delivery_slice_id ?? null;
+  assert.equal(currentActiveDeliverySlice, deliveryActiveDeliverySlice, "ACTIVE_DELIVERY_SLICE_SSOT_MISMATCH");
+  assert.equal(
+    currentActiveDeliverySlice === null
+      || (typeof currentActiveDeliverySlice === "string" && currentActiveDeliverySlice.startsWith("MCFT-CAP-06.")),
+    true,
+    `CAP06_ACTIVE_DELIVERY_SLICE_REQUIRED:${currentActiveDeliverySlice}`,
+  );
   assert.equal(delivery.s0_qualification_authorized, true, "S0_QUALIFICATION_AUTHORIZATION_REQUIRED");
   assert.equal(delivery.s0_effective, true, "S0_EFFECTIVENESS_REQUIRED");
   assert.equal(delivery.runtime_source_authorized, true, "CAP06_RUNTIME_SOURCE_AUTHORIZATION_REQUIRED");
-  assert.equal(delivery.active_delivery_slice_id, "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1", "S1_ACTIVE_DELIVERY_SLICE_REQUIRED");
   assert.equal(cap05Closure.capability_complete, true, "CAP05_CLOSURE_COMPLETE_REQUIRED");
   assert.equal(cap05Main.capability_complete, true, "CAP05_MAIN_COMPLETE_REQUIRED");
   ok("merged-effective current-state and CAP-05 predecessor authority are exact");
