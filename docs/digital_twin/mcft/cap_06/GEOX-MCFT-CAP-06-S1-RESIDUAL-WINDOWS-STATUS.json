@@ -15,6 +15,10 @@
   "readiness_hardening_workflow": 29492854307,
   "readiness_hardening_candidate_commit": "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
   "candidate_execution_result": "REGIME_PASS_POSTGRESQL_9_PASS_0_FAIL",
+  "effectiveness_writeback_candidate_commit": "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+  "effectiveness_materializer_workflow": 29495338013,
+  "effectiveness_prevalidation": "POSTGRESQL_PASS_REGIME_PASS_GATE_PASS_TYPECHECK_PASS_BUILD_PASS_9_FILE_BOUNDARY_PASS",
+  "effectiveness_exact_head_ci_status": "PENDING",
   "runtime_source_authorized": true,
   "migration_authorized": false,
   "canonical_write_authorized_for_slice": true,
@@ -86,7 +90,6 @@
     "postmerge_gate": "PASS"
   },
   "preserved_nonclaims": [
-    "S2_AUTHORIZATION_WITHDRAWN_PENDING_CORRECTION_EFFECTIVENESS",
     "NO_S2_IMPLEMENTATION",
     "NO_CALIBRATION_CANDIDATE",
     "NO_SHADOW_EVALUATION",
