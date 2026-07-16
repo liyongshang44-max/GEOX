@@ -1,0 +1,101 @@
+name: mcft-cap-06-s2-postmerge-probe
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-merged-main-s2-proof:
+    if: github.head_ref == 'agent/mcft-cap-06-s2-postmerge-probe-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      PROVED_COMMIT: b6d28477d87239ee417c688d43122cb7a20b1a31
+    steps:
+      - name: Checkout exact S2 merge commit
+        uses: actions/checkout@v4
+        with:
+          ref: b6d28477d87239ee417c688d43122cb7a20b1a31
+          fetch-depth: 0
+
+      - name: Prove checkout and main identity
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$PROVED_COMMIT"
+          git fetch --quiet origin main
+          test "$(git rev-parse origin/main)" = "$PROVED_COMMIT"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and build exact merge commit
+        run: |
+          set -euo pipefail
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Reproduce corrected S1 canonical Residuals
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
+
+      - name: Reproduce corrected S1 regimes
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts
+
+      - name: Run phase-aware corrected S1 Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
+
+      - name: Reproduce S2 contracts and math
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
+
+      - name: Run S2 governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs
+
+      - name: Verify bounded S2 claims
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const status = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json', 'utf8'));
+          const delivery = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json', 'utf8'));
+          if (status.status !== 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE') throw new Error('S2_STATUS_MISMATCH');
+          if (status.s2_effective !== false || status.s3_authorized !== false) throw new Error('S2_PREMATURE_EFFECTIVENESS');
+          if (status.result_summary.canonical_write_count !== 0) throw new Error('S2_CANONICAL_WRITE_FOUND');
+          if (status.result_summary.projection_write_count !== 0) throw new Error('S2_PROJECTION_WRITE_FOUND');
+          if (status.result_summary.migration_count !== 0) throw new Error('S2_MIGRATION_FOUND');
+          if (status.result_summary.model_activation_count !== 0) throw new Error('S2_ACTIVATION_FOUND');
+          if (!delivery.blocked_slices.includes('MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1')) throw new Error('S3_NOT_BLOCKED');
+          NODE
+
+      - name: Final exact-commit proof
+        run: test "$(git rev-parse HEAD)" = "$PROVED_COMMIT"
