@@ -1,22 +1,21 @@
 name: mcft-cap-06-s1-correction-wiring-patch
 
 on:
-  push:
-    branches:
-      - agent/mcft-cap-06-s1-controlled-regime-correction-v1
+  pull_request:
+    types: [synchronize, reopened]
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: github.actor != 'github-actions[bot]'
+    if: github.head_ref == 'agent/mcft-cap-06-s1-controlled-regime-correction-v1' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout correction branch
         uses: actions/checkout@v4
         with:
-          ref: agent/mcft-cap-06-s1-controlled-regime-correction-v1
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -59,7 +58,7 @@ jobs:
           PY
           rm -f scripts/runtime_acceptance/DIAG_MCFT_CAP_06_S1_CORRECTED_REGIMES.ts
 
-      - name: Remove one-shot workflow and push
+      - name: Remove one-shot workflow and push exact patch
         shell: bash
         run: |
           set -euo pipefail
@@ -73,4 +72,4 @@ jobs:
             .github/workflows/mcft-cap-06-s1-correction-wiring-patch.yml
           git diff --cached --check
           git commit -m "test(mcft-cap-06): wire permanent S1 regime acceptance"
-          git push origin HEAD:agent/mcft-cap-06-s1-controlled-regime-correction-v1
+          git push origin HEAD:${{ github.head_ref }}
