@@ -64,7 +64,12 @@ jobs:
           docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md
           scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
           EOF
+          sort -o /tmp/expected-files.txt /tmp/expected-files.txt
           git diff --name-only 6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b | sort > /tmp/actual-files.txt
+          echo '--- expected permanent boundary ---'
+          cat /tmp/expected-files.txt
+          echo '--- actual permanent boundary ---'
+          cat /tmp/actual-files.txt
           diff -u /tmp/expected-files.txt /tmp/actual-files.txt
           git diff --check 6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b
 
