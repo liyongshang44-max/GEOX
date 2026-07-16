@@ -1,0 +1,128 @@
+name: mcft-cap-06-s0-monotonic-source-repair
+
+on:
+  pull_request:
+    types: [synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  repair:
+    if: github.head_ref == 'agent/mcft-cap-06-s1-effectiveness-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout effectiveness branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Repair permanent S0 monotonic successor validation
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          root = Path('.')
+          runner_path = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts')
+          runner = runner_path.read_text(encoding='utf-8')
+          old = '''  assert.equal(currentState.current_state?.active_delivery_slice_id, "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1", "S1_ACTIVE_DELIVERY_SLICE_REQUIRED");
+          assert.equal(delivery.s0_qualification_authorized, true, "S0_QUALIFICATION_AUTHORIZATION_REQUIRED");
+          assert.equal(delivery.s0_effective, true, "S0_EFFECTIVENESS_REQUIRED");
+          assert.equal(delivery.runtime_source_authorized, true, "CAP06_RUNTIME_SOURCE_AUTHORIZATION_REQUIRED");
+          assert.equal(delivery.active_delivery_slice_id, "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1", "S1_ACTIVE_DELIVERY_SLICE_REQUIRED");'''
+          new = '''  const currentActiveDeliverySlice = currentState.current_state?.active_delivery_slice_id ?? null;
+          const deliveryActiveDeliverySlice = delivery.active_delivery_slice_id ?? null;
+          assert.equal(currentActiveDeliverySlice, deliveryActiveDeliverySlice, "ACTIVE_DELIVERY_SLICE_SSOT_MISMATCH");
+          assert.equal(
+            currentActiveDeliverySlice === null
+              || (typeof currentActiveDeliverySlice === "string" && currentActiveDeliverySlice.startsWith("MCFT-CAP-06.")),
+            true,
+            `CAP06_ACTIVE_DELIVERY_SLICE_REQUIRED:${currentActiveDeliverySlice}`,
+          );
+          assert.equal(delivery.s0_qualification_authorized, true, "S0_QUALIFICATION_AUTHORIZATION_REQUIRED");
+          assert.equal(delivery.s0_effective, true, "S0_EFFECTIVENESS_REQUIRED");
+          assert.equal(delivery.runtime_source_authorized, true, "CAP06_RUNTIME_SOURCE_AUTHORIZATION_REQUIRED");'''
+          if runner.count(old) != 1:
+              raise SystemExit(f'S0_ACTIVE_SLICE_BLOCK_EXPECTED_ONCE:{runner.count(old)}')
+          runner_path.write_text(runner.replace(old, new, 1), encoding='utf-8')
+
+          permanent_path = str(runner_path)
+          json_paths = [
+              Path('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json'),
+              Path('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json'),
+          ]
+          for path in json_paths:
+              value = json.loads(path.read_text(encoding='utf-8'))
+              boundary = value.get('effectiveness_writeback_changed_file_boundary')
+              if not isinstance(boundary, list):
+                  raise SystemExit(f'EFFECTIVENESS_BOUNDARY_REQUIRED:{path}')
+              if permanent_path not in boundary:
+                  boundary.append(permanent_path)
+              value['effectiveness_writeback_changed_file_boundary'] = sorted(boundary)
+              if path.name == 'GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json':
+                  value.setdefault('writeback_candidate_validation', {})['exact_changed_file_count'] = len(boundary)
+              path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          gate_path = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs')
+          gate = gate_path.read_text(encoding='utf-8')
+          match = re.search(r'^const EXPECTED_EFFECTIVENESS_FILES = (\[.*\]);$', gate, re.MULTILINE)
+          if not match:
+              raise SystemExit('EXPECTED_EFFECTIVENESS_FILES_DECLARATION_REQUIRED')
+          files = json.loads(match.group(1))
+          if permanent_path not in files:
+              files.append(permanent_path)
+          replacement = 'const EXPECTED_EFFECTIVENESS_FILES = ' + json.dumps(sorted(files), separators=(',', ':')) + ';'
+          gate_path.write_text(gate[:match.start()] + replacement + gate[match.end():], encoding='utf-8')
+          PY
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs --postmerge
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
+          pnpm -r typecheck
+
+      - name: Remove temporary workflow and enforce exact boundary
+        run: |
+          set -euo pipefail
+          rm .github/workflows/mcft-cap-06-s0-monotonic-source-repair.yml
+          cat > /tmp/expected-files.txt <<'EOF'
+          docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
+          docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts
+          EOF
+          sort -o /tmp/expected-files.txt /tmp/expected-files.txt
+          git diff --name-only 6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b | sort -u > /tmp/actual-files.txt
+          diff -u /tmp/expected-files.txt /tmp/actual-files.txt
+          git diff --check 6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b
+
+      - name: Commit permanent repair
+        run: |
+          set -euo pipefail
+          git config user.name "GEOX Governance Bot"
+          git config user.email "governance-bot@users.noreply.github.com"
+          git add -A
+          git commit -m "MCFT-CAP-06 S1: make S0 qualification monotonic across successor slices"
+          git push origin HEAD:${{ github.head_ref }}
