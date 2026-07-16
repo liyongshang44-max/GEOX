@@ -59,4 +59,15 @@ jobs:
           NODE
 
       - name: Run S3 effectiveness and S4 insertion Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_EFFECTIVENESS_S4_INSERTION.cjs
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_EFFECTIVENESS_S4_INSERTION.cjs 2>&1 | tee acceptance-output/MCFT_CAP_06_S3_EFFECTIVENESS_S4_INSERTION.log
+
+      - name: Upload S3 effectiveness insertion evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s3-effectiveness-s4-insertion-evidence
+          path: acceptance-output/
+          if-no-files-found: warn
