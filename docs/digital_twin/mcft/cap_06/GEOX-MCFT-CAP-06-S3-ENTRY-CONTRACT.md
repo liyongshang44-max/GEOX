@@ -191,7 +191,30 @@ failed D canonical append delta = 0
 operational F append delta = 0
 ```
 
-## 6. Governance repair applied from S3 onward
+## 6. Permanent focused regression
+
+The exact workflow authorized by this contract is:
+
+```text
+.github/workflows/mcft-cap-06-s3-focused-validation.yml
+```
+
+It is a permanent path-scoped regression, not a branch materializer or proof-only temporary workflow. It must run on relevant pull requests and on pushes to `main` that change the S3 persistence boundary.
+
+The focused regression must execute:
+
+```text
+repository typecheck and build
+corrected S1 PostgreSQL graph reproduction
+corrected S1 wetness-regime reproduction
+exact S2 contracts/math reproduction
+S3 isolated PostgreSQL persistence acceptance
+S3 governance Gate
+```
+
+The workflow must not be locked to one branch name and must not obtain write permission.
+
+## 7. Governance repair applied from S3 onward
 
 Historical Slice Gates must prove immutable facts of their own Slice. They must not encode every future delivery-frontier phase.
 
@@ -208,7 +231,7 @@ current S3 candidate/effectiveness frontier
 
 Current delivery state and immutable predecessor effectiveness are separate concepts. S3 introduces separate evidence files for those roles while retaining existing aggregate files only as compatibility projections.
 
-## 7. Explicit nonclaims
+## 8. Explicit nonclaims
 
 ```text
 NO_S5_CANDIDATE_ORCHESTRATION
