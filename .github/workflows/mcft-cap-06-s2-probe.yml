@@ -1,0 +1,50 @@
+name: mcft-cap-06-s2-probe
+
+on:
+  pull_request:
+    types: [synchronize, reopened]
+
+jobs:
+  probe:
+    if: github.head_ref == 'agent/mcft-cap-06-s2-contracts-math-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout S2 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck and build
+        run: |
+          set -euo pipefail
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Run S2 Dynamics-backed contracts/math acceptance
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S2_CONTRACTS_MATH.log
+
+      - name: Upload S2 probe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s2-probe
+          path: acceptance-output/MCFT_CAP_06_S2_CONTRACTS_MATH.log
+          if-no-files-found: error
