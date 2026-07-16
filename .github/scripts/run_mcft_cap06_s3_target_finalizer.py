@@ -4,12 +4,12 @@
 
 from __future__ import annotations
 
-import textwrap
 from pathlib import Path
 
 WORKFLOW = Path(".github/workflows/mcft-cap-06-s3-validation.yml")
 START_LINE = "python - <<'PY'"
 END_LINE = "PY"
+YAML_BLOCK_INDENT = "          "
 
 lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
 start_indexes = [index for index, line in enumerate(lines) if line.strip() == START_LINE]
@@ -25,7 +25,12 @@ end_indexes = [
 if len(end_indexes) != 1:
     raise RuntimeError(f"S3_FINALIZER_END_BOUNDARY_INVALID:{len(end_indexes)}")
 
-source = textwrap.dedent("\n".join(lines[start + 1 : end_indexes[0]]) + "\n")
+raw_lines = lines[start + 1 : end_indexes[0]]
+source_lines = [
+    line[len(YAML_BLOCK_INDENT) :] if line.startswith(YAML_BLOCK_INDENT) else line
+    for line in raw_lines
+]
+source = "\n".join(source_lines) + "\n"
 if not source.startswith("import json\n"):
     raise RuntimeError(f"S3_FINALIZER_SOURCE_START_INVALID:{source[:80]!r}")
 if "EXPECTED_FILES" not in source or "S3_D_PERSISTENCE_CANDIDATE" not in source:
