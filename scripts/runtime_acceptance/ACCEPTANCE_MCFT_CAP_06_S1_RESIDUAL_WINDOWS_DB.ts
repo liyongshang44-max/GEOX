@@ -124,11 +124,6 @@ function assertDualTimePartitionV1(cases: readonly Cap06S1ControlledCaseV1[]): v
   }
 }
 
-function expectGraphFailureV1(mutator: (caseItem: Cap06S1ControlledCaseV1) => void, code: RegExp): void {
-  const sourcePromise = buildCap06S1ControlledDatasetV1();
-  throw new Error(`CAP06_S1_ASYNC_NEGATIVE_HELPER_MISUSED:${String(sourcePromise)}:${String(mutator)}:${String(code)}`);
-}
-
 function assertDuplicateTargetRejectedV1(cases: readonly Cap06S1ControlledCaseV1[]): void {
   const targetOwners = new Map<string, string>();
   const duplicate = structuredClone(cases[0]);

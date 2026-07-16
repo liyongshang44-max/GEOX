@@ -71,6 +71,18 @@ const STEP_DEFINITIONS_BY_SUITE = {
       command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs',
       logFile: 'MCFT_CAP_06_S0_V2_GOVERNANCE.log',
       notes: 'Validates the formal S0 v2 predecessor lock, dataset qualification, exact changed-file boundary, and preserved non-authority claims.'
+    },
+    {
+      id: 'MCFT_CAP_06_S1_RESIDUAL_WINDOWS_POSTGRESQL',
+      command: 'node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs',
+      logFile: 'MCFT_CAP_06_S1_RESIDUAL_WINDOWS_POSTGRESQL.log',
+      notes: 'Creates an isolated database and proves the controlled 24-Residual profile, exact 16/8 windows, idempotency, negative guards and facts-only rebuild.'
+    },
+    {
+      id: 'MCFT_CAP_06_S1_RESIDUAL_WINDOWS_GOVERNANCE',
+      command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs',
+      logFile: 'MCFT_CAP_06_S1_RESIDUAL_WINDOWS_GOVERNANCE.log',
+      notes: 'Validates exact S1 refs/hashes, controlled/repository track isolation, zero migration and preserved S2/Candidate/Evaluation/Activation boundaries.'
     }
   ],
   'p9-twin-kernel': [
