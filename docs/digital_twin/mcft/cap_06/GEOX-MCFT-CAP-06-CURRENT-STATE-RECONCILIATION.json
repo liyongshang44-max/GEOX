@@ -3,8 +3,8 @@
   "reconciliation_id": "MCFT-CAP-06.CURRENT-STATE-RECONCILIATION-V1",
   "capability_line_id": "MCFT-CAP-06",
   "baseline_main_commit": "1e66ea7efc842b8e547bccc40521d520b4370e69",
-  "status": "READY_FOR_MERGE",
-  "reconciliation_effective": false,
+  "status": "MERGED_EFFECTIVE",
+  "reconciliation_effective": true,
   "current_state": {
     "p_minus_1": "MERGED_EFFECTIVE",
     "p0": "MERGED_EFFECTIVE",
@@ -70,10 +70,23 @@
   "candidate_proof": {
     "materialization_workflow_run": 29463547394,
     "materialized_candidate_commit": "4d27ffd9a380cb47a26bacc13f803c4f53075152",
+    "final_candidate_head": "ebd3cb8a0d48919bcb73dceadf01e0fc10042d43",
+    "standard_ci_run": 29463615017,
+    "standard_ci_rerun_result": "PASS",
     "current_state_gate": "PASS",
     "temporary_materializer_retained": false,
     "temporary_pr_trigger_retained": false,
     "exact_permanent_changed_file_count": 8
   },
-  "effectiveness_condition": "RECONCILIATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_GATE_PASS"
+  "merged_main_effectiveness": {
+    "implementation_pr_number": 2505,
+    "merge_commit": "1157579a1b2bc3f465aa3a489eab4d44552798fe",
+    "exact_source_identity_proof": "PASS",
+    "postmerge_probe_pr_number": 2506,
+    "postmerge_probe_closed_without_merge": true,
+    "postmerge_workflow_run": 29464226041,
+    "postmerge_gate": "PASS",
+    "effective": true
+  },
+  "effectiveness_condition": "SATISFIED"
 }

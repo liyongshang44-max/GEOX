@@ -1,5 +1,5 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_CURRENT_STATE_RECONCILIATION.cjs
-// Purpose: fail closed unless the MCFT-CAP-06 current-state frontier matches merged repository facts and preserves the no-Runtime boundary.
+// Purpose: fail closed unless the MCFT-CAP-06 current-state frontier is merged-main effective, matches repository facts, and preserves the no-Runtime boundary.
 
 const assert = require("node:assert/strict");
 const cp = require("node:child_process");
@@ -8,6 +8,7 @@ const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "../..");
 const BASELINE = "1e66ea7efc842b8e547bccc40521d520b4370e69";
+const RECONCILIATION_MERGE = "1157579a1b2bc3f465aa3a489eab4d44552798fe";
 const S0 = "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1";
 const FILES = [
   "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
@@ -30,12 +31,14 @@ function text(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 }
 
-cp.execFileSync("git", ["merge-base", "--is-ancestor", BASELINE, "HEAD"], { cwd: ROOT });
+cp.execFileSync("git", ["merge-base", "--is-ancestor", RECONCILIATION_MERGE, "HEAD"], { cwd: ROOT });
 const tracked = run(["diff", "--name-only", BASELINE]).split(/\r?\n/).filter(Boolean);
 const untracked = run(["ls-files", "--others", "--exclude-standard"]).split(/\r?\n/).filter(Boolean);
 const changed = [...new Set([...tracked, ...untracked])].sort();
 assert.deepEqual(changed, FILES, `CURRENT_STATE_FILE_BOUNDARY:${changed.join(",")}`);
 assert.equal(fs.existsSync(path.join(ROOT, ".github/workflows/mcft-cap-06-current-state-reconcile.yml")), false);
+assert.equal(fs.existsSync(path.join(ROOT, ".github/workflows/mcft-cap-06-current-state-pr-trigger.yml")), false);
+assert.equal(fs.existsSync(path.join(ROOT, ".github/workflows/mcft-cap-06-current-state-postmerge-proof.yml")), false);
 
 const p1 = readJson("docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json");
 assert.equal(p1.status, "MERGED_EFFECTIVE");
@@ -72,8 +75,8 @@ assert.equal(delivery.superseded_candidates[0].pull_request, 2500);
 assert.equal(delivery.superseded_candidates[0].status, "CLOSED_NOT_MERGED");
 
 const record = readJson("docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json");
-assert.equal(record.status, "READY_FOR_MERGE");
-assert.equal(record.reconciliation_effective, false);
+assert.equal(record.status, "MERGED_EFFECTIVE");
+assert.equal(record.reconciliation_effective, true);
 assert.equal(record.current_state.p_minus_1, "MERGED_EFFECTIVE");
 assert.equal(record.current_state.p0, "MERGED_EFFECTIVE");
 assert.equal(record.current_state.cap_05_predecessor_eligibility, "RESTORED");
@@ -86,6 +89,15 @@ assert.equal(record.current_state.candidate_runtime_implemented, false);
 assert.equal(record.current_state.shadow_evaluation_runtime_implemented, false);
 assert.equal(record.current_state.capability_complete, false);
 assert.equal(record.next_repository_action, S0);
+assert.equal(record.effectiveness_condition, "SATISFIED");
+assert.equal(record.merged_main_effectiveness.implementation_pr_number, 2505);
+assert.equal(record.merged_main_effectiveness.merge_commit, RECONCILIATION_MERGE);
+assert.equal(record.merged_main_effectiveness.exact_source_identity_proof, "PASS");
+assert.equal(record.merged_main_effectiveness.postmerge_probe_pr_number, 2506);
+assert.equal(record.merged_main_effectiveness.postmerge_probe_closed_without_merge, true);
+assert.equal(record.merged_main_effectiveness.postmerge_workflow_run, 29464226041);
+assert.equal(record.merged_main_effectiveness.postmerge_gate, "PASS");
+assert.equal(record.merged_main_effectiveness.effective, true);
 
 const matrix = readJson("docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json");
 assert.equal(matrix.baseline.commit, BASELINE);
@@ -110,4 +122,4 @@ assert.match(map, /P0 status:\nMERGED_EFFECTIVE/);
 assert.match(map, /S0 status:\nAUTHORIZED_NOT_STARTED/);
 assert.match(map, /runtime source authorized:\nfalse/);
 
-console.log("PASS MCFT-CAP-06 current-state reconciliation Gate");
+console.log("PASS MCFT-CAP-06 current-state reconciliation merged-main effectiveness Gate");
