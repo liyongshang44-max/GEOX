@@ -1,12 +1,12 @@
 {
   "schema_version": "geox_mcft_cap_06_delivery_slice_status_v1",
   "capability_line_id": "MCFT-CAP-06",
-  "status": "GOVERNANCE_AUTHORIZED",
+  "status": "IMPLEMENTATION_AUTHORIZED",
   "design_status": "CONDITIONAL_FROZEN_AFTER_P_MINUS_1",
-  "implementation_status": "S0_CANDIDATE_PENDING_MERGED_MAIN_EFFECTIVENESS",
-  "authorization_effective": false,
-  "runtime_source_authorized": false,
-  "active_delivery_slice_id": null,
+  "implementation_status": "S0_MERGED_EFFECTIVE_S1_AUTHORIZED_NOT_STARTED",
+  "authorization_effective": true,
+  "runtime_source_authorized": true,
+  "active_delivery_slice_id": "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1",
   "completed_or_effective_slices": [
     {
       "delivery_slice_id": "MCFT-CAP-06.P-1.DT02-CALIBRATION-SHADOW-ADJUDICATION-V1",
@@ -21,22 +21,24 @@
       "merge_commit": "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf",
       "postmerge_probe_pr_number": 2499,
       "postmerge_workflow_run": 29419841209
-    }
-  ],
-  "candidate_slices": [
+    },
     {
       "delivery_slice_id": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
-      "status": "CANDIDATE_PENDING_MERGED_MAIN_EFFECTIVENESS",
-      "baseline_main_commit": "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
-      "dataset_qualification_status": "INSUFFICIENT_MATCHED_PAIRS",
-      "case_graph_validation_status": "PASS",
-      "runtime_source_authorized": false,
-      "canonical_write_authorized": false,
-      "next_authorized_slice_after_effectiveness": "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1"
+      "status": "MERGED_EFFECTIVE",
+      "implementation_pr_number": 2508,
+      "exact_head": "375adfa3ba85082c1742b30314951df61b3a1936",
+      "exact_head_ci_run": 29471606766,
+      "merge_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a",
+      "head_to_merge_file_delta_count": 0,
+      "head_to_merge_tree_equivalence": "PASS",
+      "postmerge_probe_pr_number": 2511,
+      "postmerge_workflow_run": 29472057972,
+      "postmerge_gate": "PASS",
+      "dataset_qualification_status": "INSUFFICIENT_MATCHED_PAIRS"
     }
   ],
+  "candidate_slices": [],
   "blocked_slices": [
-    "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1",
     "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1",
     "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
     "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
@@ -54,13 +56,15 @@
     "MCFT-CAP-06.P-1A.DT02-ARCHITECTURE-AMENDMENT-V1",
     "MCFT-CAP-06.MCFT-02-12.CALIBRATION-GOVERNANCE-CONFIG-V1"
   ],
-  "next_repository_action": "MCFT-CAP-06.S0.MERGE-AND-MERGED-MAIN-AUTHORIZATION-GATE-V1",
+  "next_repository_action": "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1",
   "next_repository_action_after_p0_effectiveness": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
   "successor_capability_line_id": "MCFT-CAP-07",
   "successor_authorized": false,
   "predecessor_eligibility": "RESTORED",
   "s0_qualification_authorized": true,
-  "authorized_not_started_slices": [],
+  "authorized_not_started_slices": [
+    "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1"
+  ],
   "superseded_candidates": [
     {
       "pull_request": 2500,
@@ -69,7 +73,7 @@
     }
   ],
   "s0_candidate_materialized": true,
-  "s0_effective": false,
+  "s0_effective": true,
   "exact_s0_candidate_changed_file_boundary": [
     "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
     "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
@@ -83,5 +87,6 @@
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts",
     "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs"
-  ]
+  ],
+  "s0_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json"
 }

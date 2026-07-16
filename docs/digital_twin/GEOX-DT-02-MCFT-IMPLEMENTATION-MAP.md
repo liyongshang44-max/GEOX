@@ -1474,3 +1474,25 @@ next_slice_after_effectiveness: MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WIN
 ```
 
 The exact isolated PostgreSQL replay locks checkpoint 80, 33 reproduced State facts, the terminal State/Forecast/Scenario/Config graph, and an explicit replay pin with no active binding. S0 creates no canonical Runtime objects and grants no downstream Runtime authority before merged-main effectiveness.
+
+<!-- MCFT-CAP-06-S0-EFFECTIVENESS-BEGIN -->
+## MCFT-CAP-06 S0 Effective and S1 Explicitly Authorized
+
+```text
+capability_line_id: MCFT-CAP-06
+S0_status: MERGED_EFFECTIVE
+S0_exact_head: 375adfa3ba85082c1742b30314951df61b3a1936
+S0_exact_head_CI: 29471606766 SUCCESS
+S0_merge_commit: 4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a
+S0_head_to_merge_file_delta_count: 0
+S0_tree_equivalence: PASS
+S0_postmerge_probe_PR: 2511 CLOSED_WITHOUT_MERGE
+S0_postmerge_workflow: 29472057972 SUCCESS
+repository_history_qualification: INSUFFICIENT_MATCHED_PAIRS
+S1_status: AUTHORIZED_NOT_STARTED
+S1_runtime_source_authorized: true
+S1_implementation_started: false
+S2_status: BLOCKED
+MCFT_CAP_07_authorized: false
+```
+<!-- MCFT-CAP-06-S0-EFFECTIVENESS-END -->

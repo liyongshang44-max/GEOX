@@ -80,3 +80,25 @@ only S1 authorized
 ```
 
 No Candidate, Shadow Evaluation, Model Activation, active-config switch, State mutation, checkpoint mutation, public route, Web path, scheduler, or MCFT-CAP-07 authority is granted by S0.
+
+<!-- MCFT-CAP-06-S0-EFFECTIVENESS-BEGIN -->
+## S0 merged-main effectiveness
+
+```text
+status: MERGED_EFFECTIVE
+implementation_exact_head: 375adfa3ba85082c1742b30314951df61b3a1936
+exact_head_ci: 29471606766 SUCCESS
+merge_commit: 4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a
+head_to_merge_file_delta_count: 0
+head_to_merge_tree_equivalence: PASS
+postmerge_probe_pr: 2511 CLOSED_WITHOUT_MERGE
+postmerge_workflow: 29472057972 SUCCESS
+authorization_effective: true
+runtime_source_authorized: true
+active_delivery_slice_id: MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
+S1: AUTHORIZED_NOT_STARTED
+S2_AND_LATER: BLOCKED
+```
+
+This effectiveness activation changes governance authority only. It does not append a Residual, Candidate, Evaluation, Model Activation, State, checkpoint, or active-config binding.
+<!-- MCFT-CAP-06-S0-EFFECTIVENESS-END -->

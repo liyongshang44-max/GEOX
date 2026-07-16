@@ -31,22 +31,22 @@ design_status:
 CONDITIONAL_FROZEN_AFTER_P_MINUS_1
 
 implementation_status:
-S0_CANDIDATE_PENDING_MERGED_MAIN_EFFECTIVENESS
+S0_MERGED_EFFECTIVE_S1_AUTHORIZED_NOT_STARTED
 
 runtime_implementation_status:
 NOT_STARTED
 
 authorization_effective:
-false
+true
 
 s0_qualification_authorized:
 true
 
 runtime_source_authorized:
-false
+true
 
 active_delivery_slice_id:
-null
+MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
 
 predecessor_eligibility:
 RESTORED
@@ -55,10 +55,10 @@ dt02_architecture_amendment_status:
 NOT_REQUIRED
 
 first_permitted_repository_action:
-MCFT-CAP-06.S0.MERGE-AND-MERGED-MAIN-AUTHORIZATION-GATE-V1
+MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
 ```
 
-本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1 与 P0 均已 merged-main effective；CAP-05 predecessor eligibility 已恢复。S0 v2 已从 reconciled main 完成 exact PostgreSQL predecessor reconstruction 与 structural dataset qualification，并形成候选，等待 merge、tree equivalence 与 merged-main Authorization Gate。CAP-06 Runtime source、migration、canonical write、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 仍未授权。
+本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1、P0 与 S0 均已 merged-main effective；repository-history qualification 为 INSUFFICIENT_MATCHED_PAIRS，且 graph、availability 与 homogeneity 均 PASS。当前仅 S1 Runtime source 实现获授权但尚未开始；S2 及后续、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 仍未授权。
 
 ---
 
@@ -4203,3 +4203,28 @@ active_delivery_slice_id: null
 ```
 
 S0 v2 confirms that the repository-history graph is valid and homogeneous but currently contains only one eligible H1 Residual, so the repository-history track is structurally insufficient for calibration assessment. The controlled positive mechanism track remains independently eligible only after S0 merged-main effectiveness activates S1.
+
+<!-- MCFT-CAP-06-S0-EFFECTIVENESS-BEGIN -->
+# 51. S0 merged-main effectiveness and S1 authorization
+
+```text
+S0 status: MERGED_EFFECTIVE
+implementation PR: 2508
+implementation exact head: 375adfa3ba85082c1742b30314951df61b3a1936
+exact-head CI: 29471606766 SUCCESS
+merge commit: 4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a
+head-to-merge file delta count: 0
+head-to-merge tree equivalence: PASS
+postmerge probe PR: 2511 CLOSED_WITHOUT_MERGE
+postmerge workflow: 29472057972 SUCCESS
+merged-main Authorization Gate: PASS
+dataset qualification: INSUFFICIENT_MATCHED_PAIRS
+authorization_effective: true
+runtime_source_authorized: true
+active_delivery_slice_id: MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
+S1 status: AUTHORIZED_NOT_STARTED
+S2 and later: BLOCKED
+```
+
+S0 effectiveness authorizes only S1 implementation. It does not itself create Residuals, Candidate, Evaluation, Model Activation, an active-config binding, a public route, Web behavior, or MCFT-CAP-07 authority.
+<!-- MCFT-CAP-06-S0-EFFECTIVENESS-END -->
