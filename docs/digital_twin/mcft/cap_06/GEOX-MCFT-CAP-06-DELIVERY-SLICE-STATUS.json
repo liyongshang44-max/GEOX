@@ -1,9 +1,9 @@
 {
   "schema_version": "geox_mcft_cap_06_delivery_slice_status_v1",
   "capability_line_id": "MCFT-CAP-06",
-  "status": "NOT_AUTHORIZED",
+  "status": "GOVERNANCE_AUTHORIZED",
   "design_status": "CONDITIONAL_FROZEN_AFTER_P_MINUS_1",
-  "implementation_status": "P_MINUS_1_COMPLETE",
+  "implementation_status": "P0_MERGED_EFFECTIVE_S0_AUTHORIZED_NOT_STARTED",
   "authorization_effective": false,
   "runtime_source_authorized": false,
   "active_delivery_slice_id": null,
@@ -14,16 +14,17 @@
       "merge_commit": "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8",
       "postmerge_probe_pr_number": 2497,
       "postmerge_workflow_run": 29418272690
-    }
-  ],
-  "candidate_slices": [
+    },
     {
       "delivery_slice_id": "MCFT-CAP-06.P0.CAP-05-TERMINAL-SSOT-RECONCILIATION-AND-PROVISIONAL-SSOT-V1",
-      "status": "CANDIDATE"
+      "status": "MERGED_EFFECTIVE",
+      "merge_commit": "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf",
+      "postmerge_probe_pr_number": 2499,
+      "postmerge_workflow_run": 29419841209
     }
   ],
+  "candidate_slices": [],
   "blocked_slices": [
-    "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
     "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1",
     "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1",
     "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
@@ -42,8 +43,24 @@
     "MCFT-CAP-06.P-1A.DT02-ARCHITECTURE-AMENDMENT-V1",
     "MCFT-CAP-06.MCFT-02-12.CALIBRATION-GOVERNANCE-CONFIG-V1"
   ],
-  "next_repository_action": null,
+  "next_repository_action": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
   "next_repository_action_after_p0_effectiveness": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
   "successor_capability_line_id": "MCFT-CAP-07",
-  "successor_authorized": false
+  "successor_authorized": false,
+  "predecessor_eligibility": "RESTORED",
+  "s0_qualification_authorized": true,
+  "authorized_not_started_slices": [
+    {
+      "delivery_slice_id": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
+      "status": "AUTHORIZED_NOT_STARTED",
+      "authorization_scope": "PREDECESSOR_QUALIFICATION_ONLY"
+    }
+  ],
+  "superseded_candidates": [
+    {
+      "pull_request": 2500,
+      "status": "CLOSED_NOT_MERGED",
+      "reason": "S0_REBUILD_REQUIRED_RECURSIVE_CANONICAL_HASH_AND_EXACT_GRAPH_QUALIFICATION"
+    }
+  ]
 }

@@ -1,0 +1,79 @@
+{
+  "schema_version": "geox_mcft_cap_06_current_state_reconciliation_v1",
+  "reconciliation_id": "MCFT-CAP-06.CURRENT-STATE-RECONCILIATION-V1",
+  "capability_line_id": "MCFT-CAP-06",
+  "baseline_main_commit": "1e66ea7efc842b8e547bccc40521d520b4370e69",
+  "status": "READY_FOR_MERGE",
+  "reconciliation_effective": false,
+  "current_state": {
+    "p_minus_1": "MERGED_EFFECTIVE",
+    "p0": "MERGED_EFFECTIVE",
+    "cap_05_predecessor_eligibility": "RESTORED",
+    "s0_qualification_authorized": true,
+    "s0": "AUTHORIZED_NOT_STARTED",
+    "capability_line_authorization_effective": false,
+    "runtime_source_authorized": false,
+    "active_delivery_slice_id": null,
+    "candidate_runtime_implemented": false,
+    "shadow_evaluation_runtime_implemented": false,
+    "capability_complete": false
+  },
+  "proof": {
+    "p_minus_1": {
+      "implementation_pr_number": 2496,
+      "merge_commit": "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8",
+      "postmerge_probe_pr_number": 2497,
+      "postmerge_workflow_run": 29418272690,
+      "postmerge_gate": "PASS"
+    },
+    "p0": {
+      "implementation_pr_number": 2498,
+      "exact_head": "13957179a9547995e0a1443ba400d07c830579fc",
+      "exact_head_ci_run": 29419324004,
+      "merge_commit": "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf",
+      "postmerge_probe_pr_number": 2499,
+      "postmerge_workflow_run": 29419841209,
+      "postmerge_gate": "PASS",
+      "head_to_merge_file_delta_count": 0
+    },
+    "cap_05_predecessor_remediation": {
+      "effectiveness_pr_number": 2504,
+      "effectiveness_merge_commit": "1e66ea7efc842b8e547bccc40521d520b4370e69",
+      "exact_merged_main_proof_workflow_run": 29441019824,
+      "formal_postgresql_runner": "PASS_MERGED_MAIN",
+      "predecessor_eligibility": "RESTORED",
+      "s0_resume_scope": "PREDECESSOR_QUALIFICATION_ONLY"
+    }
+  },
+  "superseded_candidates": [
+    {
+      "pull_request": 2500,
+      "status": "CLOSED_NOT_MERGED",
+      "replacement_required": "S0_V2"
+    }
+  ],
+  "next_repository_action": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
+  "preserved_nonclaims": [
+    "NO_CAP_06_RUNTIME_SOURCE_AUTHORIZATION",
+    "NO_CAP_06_MIGRATION_AUTHORIZATION",
+    "NO_CAP_06_CANONICAL_WRITE_AUTHORIZATION",
+    "NO_RESIDUAL_WINDOW_CREATED",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_SHADOW_EVALUATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_CONFIG_SWITCH",
+    "NO_PUBLIC_ROUTE",
+    "NO_WEB",
+    "NO_SCHEDULER",
+    "NO_MCFT_CAP_07_AUTHORIZATION"
+  ],
+  "candidate_proof": {
+    "materialization_workflow_run": 29463547394,
+    "materialized_candidate_commit": "4d27ffd9a380cb47a26bacc13f803c4f53075152",
+    "current_state_gate": "PASS",
+    "temporary_materializer_retained": false,
+    "temporary_pr_trigger_retained": false,
+    "exact_permanent_changed_file_count": 8
+  },
+  "effectiveness_condition": "RECONCILIATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_GATE_PASS"
+}

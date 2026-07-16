@@ -31,13 +31,16 @@ design_status:
 CONDITIONAL_FROZEN_AFTER_P_MINUS_1
 
 implementation_status:
-P_MINUS_1_COMPLETE
+P0_MERGED_EFFECTIVE_S0_AUTHORIZED_NOT_STARTED
 
 runtime_implementation_status:
-NOT_AUTHORIZED
+NOT_STARTED
 
 authorization_effective:
 false
+
+s0_qualification_authorized:
+true
 
 runtime_source_authorized:
 false
@@ -45,14 +48,17 @@ false
 active_delivery_slice_id:
 null
 
+predecessor_eligibility:
+RESTORED
+
 dt02_architecture_amendment_status:
 NOT_REQUIRED
 
 first_permitted_repository_action:
-null
+MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1
 ```
 
-本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1 已 merged-main effective；当前 P0 只建立 provisional SSOT，不授权 S0、Runtime source、migration、runner、canonical write、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 或 Shadow-Online Runtime。
+本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1 与 P0 均已 merged-main effective；CAP-05 predecessor eligibility 已恢复，S0 qualification 已授权但尚未开始。CAP-06 Runtime source、migration、canonical write、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 仍未授权。
 
 ---
 

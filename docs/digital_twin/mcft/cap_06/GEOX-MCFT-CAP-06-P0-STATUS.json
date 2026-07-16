@@ -2,9 +2,9 @@
   "schema_version": "geox_mcft_cap_06_p0_status_v1",
   "capability_line_id": "MCFT-CAP-06",
   "delivery_slice_id": "MCFT-CAP-06.P0.CAP-05-TERMINAL-SSOT-RECONCILIATION-AND-PROVISIONAL-SSOT-V1",
-  "status": "PROVISIONAL_SSOT_CANDIDATE",
-  "implementation_status": "P_MINUS_1_MERGED_EFFECTIVE_P0_CANDIDATE",
-  "baseline_main_commit": "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8",
+  "status": "MERGED_EFFECTIVE",
+  "implementation_status": "P0_MERGED_EFFECTIVE_S0_AUTHORIZED_NOT_STARTED",
+  "baseline_main_commit": "1e66ea7efc842b8e547bccc40521d520b4370e69",
   "p_minus_1_effectiveness": {
     "implementation_pr_number": 2496,
     "implementation_exact_head": "762764074e62f186921e0aabd5251f53b5f7ce02",
@@ -50,19 +50,22 @@
   },
   "cap_06_provisional_state": {
     "design_status": "CONDITIONAL_FROZEN_AFTER_P_MINUS_1",
-    "implementation_status": "P_MINUS_1_COMPLETE",
+    "implementation_status": "P0_MERGED_EFFECTIVE",
     "authorization_effective": false,
     "runtime_source_authorized": false,
     "active_delivery_slice_id": null,
     "successor_authorized": false,
-    "s0_status": "BLOCKED_PENDING_P0_MERGED_MAIN_EFFECTIVENESS"
+    "s0_status": "AUTHORIZED_NOT_STARTED",
+    "predecessor_eligibility": "RESTORED",
+    "s0_qualification_authorized": true
   },
   "p0_authority": {
     "runtime_source_authorized": false,
     "migration_authorized": false,
     "canonical_write_authorized": false,
     "postgresql_runtime_execution_authorized": false,
-    "s0_execution_authorized_before_p0_effectiveness": false
+    "s0_execution_authorized_before_p0_effectiveness": false,
+    "s0_qualification_authorized_after_p0_effectiveness": true
   },
   "exact_changed_file_boundary": [
     "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
@@ -73,8 +76,18 @@
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
   ],
   "effectiveness": {
-    "effective": false,
+    "effective": true,
     "condition": "P0_PR_MERGED_AND_HEAD_TO_MERGE_TREE_EQUIVALENT_AND_MERGED_MAIN_P0_GATE_PASS",
+    "implementation_pr_number": 2498,
+    "implementation_exact_head": "13957179a9547995e0a1443ba400d07c830579fc",
+    "implementation_exact_head_ci_run": 29419324004,
+    "merge_commit": "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf",
+    "head_to_merge_file_delta_count": 0,
+    "head_to_merge_tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2499,
+    "postmerge_probe_workflow_run": 29419841209,
+    "postmerge_gate": "PASS",
+    "postmerge_probe_closed_without_merge": true,
     "next_repository_action_after_effectiveness": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1"
   },
   "preserved_nonclaims": [
