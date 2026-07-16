@@ -19,7 +19,7 @@ const TEMP_RUNNER = path.join(
   ROOT,
   "scripts/runtime_acceptance/.ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER_CAP06_TEMP.ts",
 );
-const QUALIFIER = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_QUALIFY_EXISTING_DB.ts";
+const QUALIFIER = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_QUALIFY_EXISTING_DB_V2.ts";
 const ISOLATED_DATABASE = "mcft_cap05_post_closure_acceptance";
 const REPLAY_ROOT = path.join(os.tmpdir(), "mcft_cap05_h_authoritative_current_contract_replay_v1");
 const RUNNER_INPUT = path.join(os.tmpdir(), "MCFT_CAP_05_POST_CLOSURE_RUNNER_INPUT.json");
@@ -167,7 +167,7 @@ async function main(): Promise<void> {
     );
     assert.match(qualification, /SUMMARY 6 PASS \/ 0 FAIL/);
     assert.match(qualification, /INSUFFICIENT_MATCHED_PAIRS/);
-    ok("S0 v2 resolves the exact canonical plus source-Evidence graph and proves one eligible Residual case");
+    ok("S0 v2 resolves the exact Residual canonical plus source-Evidence closure and proves one eligible case");
 
     assert.equal(pass, 2);
     process.stdout.write(`SUMMARY ${pass} PASS / 0 FAIL\n`);
