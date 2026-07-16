@@ -1,0 +1,115 @@
+name: MCFT-CAP-06 S0 v2 finalizer
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.head_ref == 'agent/mcft-cap-06-s0-v2-exact-qualification'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: landos
+          POSTGRES_PASSWORD: landos
+          POSTGRES_DB: mcft_cap06_s0_v2_finalize
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U landos -d mcft_cap06_s0_v2_finalize"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s0-v2-exact-qualification
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Permit one-time finalizer inputs in the diagnostic boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs')
+          source = path.read_text(encoding='utf-8')
+          marker = '    "scripts/remediation/MATERIALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.cjs",\n'
+          replacement = marker + '    "scripts/remediation/FINALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.py",\n    ".github/workflows/mcft-cap-06-s0-v2-finalize.yml",\n'
+          if source.count(marker) != 1:
+              raise SystemExit('S0_WRAPPER_MATERIALIZER_MARKER_COUNT_INVALID')
+          path.write_text(source.replace(marker, replacement), encoding='utf-8')
+          PY
+
+      - name: Reproduce exact PostgreSQL qualification and candidate bundle
+        env:
+          DATABASE_URL: postgres://landos:landos@127.0.0.1:5432/mcft_cap06_s0_v2_finalize
+          MCFT_CAP_06_S0_DESTRUCTIVE_ACCEPTANCE: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs 2>&1 | tee /tmp/mcft-cap-06-s0-v2-finalize.log
+
+      - name: Materialize and validate permanent candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/remediation/FINALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.py
+          node --check scripts/acceptance/run_acceptance.cjs
+          node --check scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs
+          python3 -m json.tool docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json >/dev/null
+          python3 -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json >/dev/null
+          git diff --check
+
+      - name: Commit exact permanent S0 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          mapfile -t files < <(git diff --cached --name-only | sort)
+          expected=(
+            docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
+            docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION.md
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md
+            scripts/acceptance/run_acceptance.cjs
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts
+            scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs
+          )
+          mapfile -t expected_sorted < <(printf '%s\n' "${expected[@]}" | sort)
+          diff -u <(printf '%s\n' "${expected_sorted[@]}") <(printf '%s\n' "${files[@]}")
+          git commit -m "MCFT-CAP-06 S0 v2: materialize exact qualification candidate"
+          git push origin HEAD:agent/mcft-cap-06-s0-v2-exact-qualification
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-06-s0-v2-finalization
+          path: /tmp/mcft-cap-06-s0-v2-finalize.log
+          if-no-files-found: warn
+          retention-days: 7
