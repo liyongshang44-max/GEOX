@@ -4,8 +4,8 @@
   "status": "COMPLETE",
   "baseline": {
     "branch": "main",
-    "commit": "4fc1044085c4befad7852089b6ebe2afab46a5ca",
-    "meaning": "MCFT-CAP-06 corrected S1 merged-main effective; S2 authorized not started; S3+ and MCFT-CAP-07 blocked"
+    "commit": "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+    "meaning": "MCFT-CAP-06 corrected S1 merged-main effective; S2 contracts/math candidate implemented but not effective; S3+ and MCFT-CAP-07 blocked"
   },
   "identifier_model": {
     "capability_line_id": "vertical executable capability closure unit",
@@ -3666,7 +3666,7 @@
       "target_completion_level": "Level A",
       "status": "IMPLEMENTATION_IN_PROGRESS",
       "design_status": "CONDITIONAL_FROZEN_AFTER_P_MINUS_1",
-      "implementation_status": "S1_MERGED_EFFECTIVE_S2_AUTHORIZED_NOT_STARTED",
+      "implementation_status": "S2_CONTRACTS_MATH_CANDIDATE",
       "authorization_effective": true,
       "runtime_source_authorized": true,
       "active_delivery_slice_id": "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1",
@@ -3717,14 +3717,15 @@
       "next_repository_action": "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1",
       "next_repository_action_after_p0_effectiveness": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
       "preserved_nonclaims": [
-        "NO_S2_IMPLEMENTATION",
         "NO_MIGRATION",
-        "NO_CALIBRATION_CANDIDATE",
-        "NO_SHADOW_EVALUATION",
+        "NO_CALIBRATION_CANDIDATE_APPEND",
+        "NO_SHADOW_EVALUATION_APPEND",
+        "NO_D_TRANSACTION_PERSISTENCE",
         "NO_MODEL_ACTIVATION",
         "NO_ACTIVE_CONFIG_SWITCH",
         "NO_STATE_OR_CHECKPOINT_MUTATION",
         "NO_PUBLIC_ROUTE_OR_WEB_OR_SCHEDULER",
+        "NO_S3_AUTHORIZATION",
         "NO_MCFT_CAP_07_AUTHORIZATION"
       ],
       "s0_qualification_authorized": true,
@@ -3901,5 +3902,5 @@
     "MCFT-08": "PARTIALLY_ESTABLISHED",
     "MCFT-09": "PARTIALLY_ESTABLISHED"
   },
-  "latest_governance_update": "MCFT-CAP-06.S1.MERGED-MAIN-EFFECTIVENESS-ACTIVATION-V1"
+  "latest_governance_update": "MCFT-CAP-06.S2.CONTRACTS-MATH-CANDIDATE-V1"
 }

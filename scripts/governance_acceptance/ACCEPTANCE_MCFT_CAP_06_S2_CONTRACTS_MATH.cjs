@@ -24,6 +24,7 @@ const EXPECTED_FILES = [
   "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
   "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md",
   "scripts/acceptance/run_acceptance.cjs",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs",
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
   "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts"
 ];
@@ -42,7 +43,9 @@ const FORBIDDEN_TEMPORARY_PATHS = [
   '.github/mcft_cap06_s2_materializer_recovered.py',
   '.github/mcft_cap06_s2_materializer_transport.json',
   '.github/workflows/mcft-cap-06-s2-corrected-materializer.yml',
-  '.github/workflows/mcft-cap-06-s2-corrected-finalizer.yml'
+  '.github/workflows/mcft-cap-06-s2-corrected-finalizer.yml',
+  '.github/scripts/mcft_cap06_s2_governance_finalizer.py',
+  '.github/workflows/mcft-cap-06-s2-governance-finalizer.yml'
 ];
 const readJson = (relative) => JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
 const readText = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
@@ -58,7 +61,10 @@ function main() {
   const runner = readText('scripts/acceptance/run_acceptance.cjs');
   const acceptance = readText('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts');
   const grid = readText('apps/server/src/domain/calibration/grid_search_v1.ts');
-  const candidateTreeText = EXPECTED_FILES.map((relative) => readText(relative)).join('\n');
+  const candidateTreeText = EXPECTED_FILES
+    .filter((relative) => relative !== 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs')
+    .map((relative) => readText(relative))
+    .join('\n');
 
   assert.equal(result.status, 'PASS');
   assert.equal(result.source_residual_count, 24);
@@ -97,7 +103,7 @@ function main() {
   assert.equal(status.s2_effective, false);
   assert.equal(status.s3_authorized, false);
   assert.deepEqual(status.exact_changed_file_boundary, EXPECTED_FILES);
-  assert.equal(status.candidate_tree_validation.exact_changed_file_count, 17);
+  assert.equal(status.candidate_tree_validation.exact_changed_file_count, 18);
 
   assert.equal(current.current_state.active_delivery_slice_id, S2);
   assert.equal(current.current_state.s2, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
@@ -121,6 +127,14 @@ function main() {
   assert.equal(line.calibration_contract_math_implemented, false);
   const matrixS2 = line.delivery_slices.find((item) => item.delivery_slice_id === S2);
   assert.equal(matrixS2.status, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
+  assert.equal(line.implementation_status, 'S2_CONTRACTS_MATH_CANDIDATE');
+  assert.equal(line.preserved_nonclaims.includes('NO_S2_IMPLEMENTATION'), false);
+  assert.equal(matrix.latest_governance_update, 'MCFT-CAP-06.S2.CONTRACTS-MATH-CANDIDATE-V1');
+  assert.equal(current.baseline_main_commit, '9eff45605dc709a6001e6c1bed29fd1df76197ed');
+  assert.equal(current.preserved_nonclaims.includes('NO_S2_IMPLEMENTATION'), false);
+  assert.equal(Object.hasOwn(current, 'candidate_proof'), false);
+  assert.equal(Object.hasOwn(current, 'merged_main_effectiveness'), false);
+  assert.equal(current.s2_candidate_validation.exact_permanent_changed_file_count, 18);
 
   assert.match(task, /S2_CONTRACTS_MATH_CANDIDATE/);
   assert.match(task, /NO_CALIBRATION_CANDIDATE_APPEND/);

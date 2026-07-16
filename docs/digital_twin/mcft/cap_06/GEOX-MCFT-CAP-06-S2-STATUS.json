@@ -11,7 +11,7 @@
     "repository_build": "PASS_MATERIALIZER_PENDING_EXACT_HEAD_CI",
     "source_s1_identity_binding": "PASS",
     "host_floating_point_authority_absent": true,
-    "exact_changed_file_count": 17,
+    "exact_changed_file_count": 18,
     "temporary_workflows_retained": false,
     "generated_acceptance_artifacts_retained": false
   },
@@ -124,6 +124,7 @@
     "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
     "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md",
     "scripts/acceptance/run_acceptance.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs",
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts"
   ],
