@@ -47,20 +47,22 @@ jobs:
           global_effective = '  assert.equal(currentState.reconciliation_effective, true, "CURRENT_STATE_RECONCILIATION_EFFECTIVE_REQUIRED");'
           if text.count(global_status) != 1 or text.count(global_effective) != 1:
               raise SystemExit(f'global assertion counts={text.count(global_status)},{text.count(global_effective)}')
-          replacement = '''  assert.equal(s0Effectiveness.status, "MERGED_EFFECTIVE", "S0_EFFECTIVENESS_STATUS_REQUIRED");
-  assert.equal(s0Effectiveness.effective, true, "S0_EFFECTIVENESS_REQUIRED");
-  assert.equal(s0Effectiveness.implementation_merge_commit, "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a", "S0_IMPLEMENTATION_MERGE_REQUIRED");
-  assert.equal(s0Effectiveness.head_to_merge_tree_equivalence, "PASS", "S0_TREE_EQUIVALENCE_REQUIRED");
-  assert.equal(s0Effectiveness.postmerge_gate, "PASS", "S0_POSTMERGE_GATE_REQUIRED");
-  assert.equal(s0Effectiveness.authorization_effective, true, "S0_AUTHORIZATION_EFFECTIVE_REQUIRED");
-  assert.equal(s0Effectiveness.runtime_source_authorized, true, "S0_RUNTIME_SOURCE_AUTHORIZATION_REQUIRED");
-  if (currentState.reconciliation_effective === true) {
-    assert.equal(currentState.status, "MERGED_EFFECTIVE", "EFFECTIVE_RECONCILIATION_STATUS_REQUIRED");
-  } else {
-    assert.notEqual(currentState.status, "MERGED_EFFECTIVE", "NON_EFFECTIVE_RECONCILIATION_STATUS_REQUIRED");
-    assert.equal(typeof currentState.effectiveness_condition, "string", "ACTIVE_CANDIDATE_EFFECTIVENESS_CONDITION_REQUIRED");
-    assert.ok(currentState.effectiveness_condition.length > 0, "ACTIVE_CANDIDATE_EFFECTIVENESS_CONDITION_REQUIRED");
-  }'''
+          replacement = '\n'.join([
+              '  assert.equal(s0Effectiveness.status, "MERGED_EFFECTIVE", "S0_EFFECTIVENESS_STATUS_REQUIRED");',
+              '  assert.equal(s0Effectiveness.effective, true, "S0_EFFECTIVENESS_REQUIRED");',
+              '  assert.equal(s0Effectiveness.implementation_merge_commit, "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a", "S0_IMPLEMENTATION_MERGE_REQUIRED");',
+              '  assert.equal(s0Effectiveness.head_to_merge_tree_equivalence, "PASS", "S0_TREE_EQUIVALENCE_REQUIRED");',
+              '  assert.equal(s0Effectiveness.postmerge_gate, "PASS", "S0_POSTMERGE_GATE_REQUIRED");',
+              '  assert.equal(s0Effectiveness.authorization_effective, true, "S0_AUTHORIZATION_EFFECTIVE_REQUIRED");',
+              '  assert.equal(s0Effectiveness.runtime_source_authorized, true, "S0_RUNTIME_SOURCE_AUTHORIZATION_REQUIRED");',
+              '  if (currentState.reconciliation_effective === true) {',
+              '    assert.equal(currentState.status, "MERGED_EFFECTIVE", "EFFECTIVE_RECONCILIATION_STATUS_REQUIRED");',
+              '  } else {',
+              '    assert.notEqual(currentState.status, "MERGED_EFFECTIVE", "NON_EFFECTIVE_RECONCILIATION_STATUS_REQUIRED");',
+              '    assert.equal(typeof currentState.effectiveness_condition, "string", "ACTIVE_CANDIDATE_EFFECTIVENESS_CONDITION_REQUIRED");',
+              '    assert.ok(currentState.effectiveness_condition.length > 0, "ACTIVE_CANDIDATE_EFFECTIVENESS_CONDITION_REQUIRED");',
+              '  }',
+          ])
           text = text.replace(global_status + '\n' + global_effective, replacement)
 
           old_message = '  ok("merged-effective current-state and CAP-05 predecessor authority are exact");'
