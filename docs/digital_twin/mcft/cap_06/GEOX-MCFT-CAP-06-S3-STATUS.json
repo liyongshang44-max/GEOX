@@ -29,15 +29,27 @@
     "candidate_ref_alone_unique": false,
     "exact_ref_postgresql_adapter": true,
     "facts_based_rebuild": true,
+    "projection_canonicality_triggers": true,
     "advisory_lock_concurrency_serialization": true,
     "failed_attempt_persistence_mode": "MODE_A_NO_PERSISTENT_ATTEMPT_OBJECT"
   },
   "candidate_tree_validation": {
-    "repository_typecheck": "PENDING_EXACT_HEAD_CI",
-    "repository_build": "PENDING_EXACT_HEAD_CI",
-    "s3_postgresql_acceptance": "PENDING_EXACT_HEAD",
-    "s3_governance_acceptance": "PENDING_EXACT_HEAD",
-    "standard_ci": "PENDING_EXACT_HEAD"
+    "prevalidated_head": "4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e",
+    "repository_typecheck": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_STANDARD_CI_29519589886",
+    "repository_build": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_STANDARD_CI_29519589886",
+    "server_selfcheck": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_STANDARD_CI_29519589886",
+    "s1_postgresql_reproduction": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
+    "s1_regime_reproduction": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
+    "s2_contracts_math_reproduction": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
+    "s3_postgresql_acceptance": "PASS_12_CHECKS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
+    "s3_projection_canonicality_acceptance": "PASS_5_CHECKS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
+    "s3_governance_acceptance": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
+    "focused_validation_run": 29519589969,
+    "focused_evidence_artifact_id": 8384161364,
+    "focused_evidence_artifact_digest": "sha256:0cc961d416d83a34a8ac50ad0734a9f7ec1e3b5432b790b9d4be4139785bb659",
+    "standard_ci": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_RUN_29519589886",
+    "standard_ci_run": 29519589886,
+    "exact_final_head_status": "PENDING_AFTER_PREVALIDATION_WRITEBACK"
   },
   "runtime_delta_boundary": {
     "candidate_or_evaluation_objects_appended_by_acceptance_only": true,
