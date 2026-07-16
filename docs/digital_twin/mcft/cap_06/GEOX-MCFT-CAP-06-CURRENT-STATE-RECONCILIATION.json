@@ -146,9 +146,16 @@
     "materialization_workflow_run": 29499601843,
     "materializer_job_id": 87631836630,
     "runtime_acceptance": "PASS",
-    "governance_prevalidation": "PASS_BEFORE_PHASE_GATE_HARDENING",
+    "governance_prevalidation": "PASS_PHASE_AWARE_FINALIZER",
+    "governance_finalizer_workflow_run": 29504409350,
+    "governance_finalizer_job_id": 87641317485,
+    "s1_postgresql_reproduction": "PASS",
+    "s1_regime_reproduction": "PASS",
+    "phase_aware_s1_gate": "PASS",
+    "s2_governance_gate": "PASS",
     "repository_typecheck": "PASS",
     "repository_build": "PASS",
+    "prevalidated_head": "756c160fe8613a8a1ad03c59a12de12afd12002a",
     "exact_head_ci_status": "PENDING",
     "exact_permanent_changed_file_count": 18
   }
