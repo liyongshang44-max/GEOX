@@ -11,6 +11,20 @@ jobs:
   finalize:
     if: github.head_ref == 'agent/mcft-cap-06-s0-v2-exact-qualification'
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: landos
+          POSTGRES_PASSWORD: landos
+          POSTGRES_DB: mcft_cap06_s0_v2_finalize
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U landos -d mcft_cap06_s0_v2_finalize"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,61 +42,63 @@ jobs:
 
       - run: pnpm install --no-frozen-lockfile
 
-      - name: Rebuild candidate bundle from verified S0 evidence
+      - name: Permit one-time transient finalizer files
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p acceptance-output
           python3 - <<'PY'
-          import json
           from pathlib import Path
-
-          qualification = json.loads(Path('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json').read_text(encoding='utf-8'))
-          lock = json.loads(Path('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json').read_text(encoding='utf-8'))
-          if qualification.get('dataset_qualification_status') != 'INSUFFICIENT_MATCHED_PAIRS':
-              raise SystemExit('S0_VERIFIED_QUALIFICATION_STATUS_REQUIRED')
-          if qualification.get('case_graph_validation_status') != 'PASS':
-              raise SystemExit('S0_VERIFIED_GRAPH_PASS_REQUIRED')
-          identity = lock.get('canonical_identity')
-          if not isinstance(identity, dict) or identity.get('checkpoint_sequence') != 80:
-              raise SystemExit('S0_VERIFIED_PREDECESSOR_IDENTITY_REQUIRED')
-          Path('acceptance-output/MCFT_CAP_06_S0_V2_RESULT.json').write_text(
-              json.dumps({'identity': identity, 'qualification': qualification}, indent=2) + '\n',
-              encoding='utf-8',
-          )
-
-          materializer = Path('scripts/remediation/MATERIALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.cjs')
-          source = materializer.read_text(encoding='utf-8')
-          start = source.index('function buildExactQualificationSource() {')
-          end = source.index('\nfunction main()', start)
-          replacement = '''function buildExactQualificationSource() {
-            return readText(PATHS.exactQualification);
-          }
-          '''
-          materializer.write_text(source[:start] + replacement + source[end:], encoding='utf-8')
+          path = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts')
+          source = path.read_text(encoding='utf-8')
+          before = '  const forbidden = changed.filter((file) => !PREFLIGHT_ALLOWED_FILES.includes(file));'
+          transient = [
+              '.github/workflows/mcft-cap-06-s0-v2-finalize.yml',
+              'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json',
+              'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION.md',
+              'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json',
+              'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json',
+              'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json',
+              'scripts/acceptance/run_acceptance.cjs',
+              'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs',
+              'scripts/remediation/FINALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.py',
+              'scripts/remediation/MATERIALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.cjs',
+              'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs',
+          ]
+          after = '  const transientFinalizerFiles = new Set(' + repr(transient).replace("'", '"') + ');\n' + \
+                  '  const forbidden = changed.filter((file) => !PREFLIGHT_ALLOWED_FILES.includes(file) && !transientFinalizerFiles.has(file));'
+          if source.count(before) != 1:
+              raise SystemExit(f'S0_TRANSIENT_BOUNDARY_MATCH_COUNT:{source.count(before)}')
+          path.write_text(source.replace(before, after), encoding='utf-8')
           PY
+
+      - name: Reproduce exact PostgreSQL qualification
+        env:
+          DATABASE_URL: postgres://landos:landos@127.0.0.1:5432/mcft_cap06_s0_v2_finalize
+          MCFT_CAP_06_S0_DESTRUCTIVE_ACCEPTANCE: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs /tmp/MCFT_CAP_06_S0_PERMANENT_WRAPPER.cjs
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs 2>&1 | tee /tmp/mcft-cap-06-s0-v2-finalize.log
           node scripts/remediation/MATERIALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.cjs
 
       - name: Materialize and validate permanent candidate
         shell: bash
         run: |
           set -euo pipefail
+          python3 scripts/remediation/FINALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.py
+          cp /tmp/MCFT_CAP_06_S0_PERMANENT_WRAPPER.cjs scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs
           {
-            python3 - <<'PY'
-            from pathlib import Path
-            path = Path('scripts/remediation/FINALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.py')
-            source = path.read_text(encoding='utf-8')
-            source = source.replace('    harden_exact_runner()\n', '')
-            source = source.replace('    write_final_wrapper()\n', '')
-            path.write_text(source, encoding='utf-8')
-            PY
-            python3 scripts/remediation/FINALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.py
             node --check scripts/acceptance/run_acceptance.cjs
             node --check scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs
             node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs
             node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs
+            pnpm -w exec tsc --noEmit --module nodenext --moduleResolution nodenext --target es2022 --skipLibCheck scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts
             python3 -m json.tool docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json >/dev/null
             python3 -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json >/dev/null
+            python3 -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json >/dev/null
+            python3 -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json >/dev/null
+            python3 -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json >/dev/null
             git diff --check
           } 2>&1 | tee /tmp/mcft-cap-06-s0-v2-validation.log
 
@@ -90,10 +106,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          mapfile -t files < <(git diff --cached --name-only | sort)
+          baseline=ca819ba51bdf3017dbefa96015f76bd3b66a647c
           expected=(
             docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
             docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
@@ -109,7 +122,11 @@ jobs:
             scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs
           )
           mapfile -t expected_sorted < <(printf '%s\n' "${expected[@]}" | sort)
-          diff -u <(printf '%s\n' "${expected_sorted[@]}") <(printf '%s\n' "${files[@]}")
+          mapfile -t actual < <(git diff --name-only "$baseline" | sort)
+          diff -u <(printf '%s\n' "${expected_sorted[@]}") <(printf '%s\n' "${actual[@]}")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
           git commit -m "MCFT-CAP-06 S0 v2: materialize exact qualification candidate"
           git push origin HEAD:agent/mcft-cap-06-s0-v2-exact-qualification
 
@@ -117,6 +134,8 @@ jobs:
         if: always()
         with:
           name: mcft-cap-06-s0-v2-finalization
-          path: /tmp/mcft-cap-06-s0-v2-validation.log
+          path: |
+            /tmp/mcft-cap-06-s0-v2-finalize.log
+            /tmp/mcft-cap-06-s0-v2-validation.log
           if-no-files-found: warn
           retention-days: 7
