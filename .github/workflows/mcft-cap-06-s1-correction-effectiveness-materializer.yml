@@ -53,10 +53,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Decode and execute locally validated materializer
+      - name: Execute locally validated materializer
         run: |
           set -euo pipefail
-          base64 -d .github/mcft_cap06_s1_effectiveness.py.gz.b64 | gzip -d > .github/mcft_cap06_s1_effectiveness.py
           python -m py_compile .github/mcft_cap06_s1_effectiveness.py
           python .github/mcft_cap06_s1_effectiveness.py
           git diff --check
@@ -90,7 +89,6 @@ jobs:
       - name: Remove temporary materializer and verify exact boundary
         run: |
           set -euo pipefail
-          rm -f .github/mcft_cap06_s1_effectiveness.py.gz.b64
           rm -f .github/mcft_cap06_s1_effectiveness.py
           rm -rf .github/__pycache__ acceptance-output
           rm -f .github/workflows/mcft-cap-06-s1-correction-effectiveness-materializer.yml
