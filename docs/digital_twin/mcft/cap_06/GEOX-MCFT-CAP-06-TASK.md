@@ -31,7 +31,7 @@ design_status:
 CONDITIONAL_FROZEN_AFTER_P_MINUS_1
 
 implementation_status:
-P0_MERGED_EFFECTIVE_S0_AUTHORIZED_NOT_STARTED
+S0_CANDIDATE_PENDING_MERGED_MAIN_EFFECTIVENESS
 
 runtime_implementation_status:
 NOT_STARTED
@@ -55,10 +55,10 @@ dt02_architecture_amendment_status:
 NOT_REQUIRED
 
 first_permitted_repository_action:
-MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1
+MCFT-CAP-06.S0.MERGE-AND-MERGED-MAIN-AUTHORIZATION-GATE-V1
 ```
 
-本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1 与 P0 均已 merged-main effective；CAP-05 predecessor eligibility 已恢复，S0 qualification 已授权但尚未开始。CAP-06 Runtime source、migration、canonical write、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 仍未授权。
+本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1 与 P0 均已 merged-main effective；CAP-05 predecessor eligibility 已恢复。S0 v2 已从 reconciled main 完成 exact PostgreSQL predecessor reconstruction 与 structural dataset qualification，并形成候选，等待 merge、tree equivalence 与 merged-main Authorization Gate。CAP-06 Runtime source、migration、canonical write、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 仍未授权。
 
 ---
 
@@ -2882,8 +2882,11 @@ Design baseline expected from CAP-05 closure：
 checkpoint sequence:
 80
 
-global State count:
+historical S10 label, not authoritative State fact count:
 81
+
+exact S0 v2 reproduced State fact count:
+33
 
 latest logical time:
 2026-06-04T09:00:00.000Z
@@ -4176,3 +4179,27 @@ null
 
 P0 不重开 CAP-05 closure，不创建 Runtime、migration、canonical object、Model Activation 或 active binding。P0 只有在合并、head-to-merge tree equivalence 和 merged-main P0 Gate 成功后，才使 S0 成为下一项可执行治理工作。
 <!-- MCFT-CAP-06-P0-CURRENT-STATE-END -->
+
+---
+
+# 44. S0 v2 Candidate Materialization
+
+```text
+baseline_main_commit: ca819ba51bdf3017dbefa96015f76bd3b66a647c
+status: S0_CANDIDATE_PENDING_MERGED_MAIN_EFFECTIVENESS
+dataset_qualification_status: INSUFFICIENT_MATCHED_PAIRS
+canonical_residual_count: 1
+eligible_residual_count: 1
+case_graph_validation_status: PASS
+availability_order_validation_status: PASS
+homogeneity_validation_status: PASS
+checkpoint_sequence: 80
+reproduced_state_fact_count: 33
+config_authority_mode: EXPLICIT_REPLAY_PIN
+active_binding_status: NOT_ESTABLISHED
+authorization_effective: false
+runtime_source_authorized: false
+active_delivery_slice_id: null
+```
+
+S0 v2 confirms that the repository-history graph is valid and homogeneous but currently contains only one eligible H1 Residual, so the repository-history track is structurally insufficient for calibration assessment. The controlled positive mechanism track remains independently eligible only after S0 merged-main effectiveness activates S1.

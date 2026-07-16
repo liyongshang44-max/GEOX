@@ -1453,3 +1453,24 @@ false
 
 The reconciled frontier records repository facts only: P-1 and P0 are merged-main effective, CAP-05 predecessor eligibility is restored, and S0 qualification is authorized but not started. No CAP-06 Runtime, migration, canonical write, Candidate, Evaluation, Model Activation, active-binding, public route, Web, scheduler or successor authority is granted.
 <!-- MCFT-CAP-06-P0-CURRENT-STATE-END -->
+
+---
+
+## MCFT-CAP-06 S0 v2 Candidate — Exact Predecessor and Dataset Qualification
+
+```text
+baseline_main_commit: ca819ba51bdf3017dbefa96015f76bd3b66a647c
+delivery_slice_id: MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1
+status: S0_CANDIDATE_PENDING_MERGED_MAIN_EFFECTIVENESS
+authorization_effective: false
+runtime_source_authorized: false
+active_delivery_slice_id: null
+predecessor_eligibility: RESTORED
+dataset_qualification_status: INSUFFICIENT_MATCHED_PAIRS
+case_graph_validation_status: PASS
+canonical_residual_count: 1
+eligible_residual_count: 1
+next_slice_after_effectiveness: MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
+```
+
+The exact isolated PostgreSQL replay locks checkpoint 80, 33 reproduced State facts, the terminal State/Forecast/Scenario/Config graph, and an explicit replay pin with no active binding. S0 creates no canonical Runtime objects and grants no downstream Runtime authority before merged-main effectiveness.
