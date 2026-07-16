@@ -20,4 +20,16 @@ jobs:
         run: test "$(git rev-parse HEAD)" = "5bb25c2d2c1e4a34386d9aef1909d306826127ef"
 
       - name: Run permanent S0 v2 Authorization Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_AUTHORIZATION.cjs
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_AUTHORIZATION.cjs 2>&1 | tee acceptance-output/MCFT_CAP_06_S0_V2_EXACT_HEAD_GATE.log
+
+      - name: Upload Gate output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s0-v2-exact-head-gate
+          path: acceptance-output/MCFT_CAP_06_S0_V2_EXACT_HEAD_GATE.log
+          if-no-files-found: error
