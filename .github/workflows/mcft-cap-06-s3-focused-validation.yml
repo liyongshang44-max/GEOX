@@ -92,7 +92,21 @@ jobs:
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
 
       - name: Run S3 isolated PostgreSQL acceptance
-        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs 2>&1 | tee acceptance-output/MCFT_CAP_06_S3_PERSISTENCE.log
 
       - name: Run S3 governance gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs 2>&1 | tee acceptance-output/MCFT_CAP_06_S3_GOVERNANCE.log
+
+      - name: Upload focused S3 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s3-focused-evidence
+          path: acceptance-output/
+          if-no-files-found: warn
