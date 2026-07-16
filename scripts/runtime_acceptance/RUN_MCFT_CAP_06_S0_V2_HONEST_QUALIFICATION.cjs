@@ -16,6 +16,7 @@ const TEMP_PATH = path.join(ROOT, TEMP_RELATIVE_PATH);
 const ACCEPTANCE_OUTPUT_DIR = path.join(ROOT, 'acceptance-output');
 const PERMANENT_CANDIDATE_ARTIFACT_PATH = path.join(ACCEPTANCE_OUTPUT_DIR, 'MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION_CANDIDATE.ts');
 const QUALIFICATION_RESULT_ARTIFACT_PATH = path.join(ACCEPTANCE_OUTPUT_DIR, 'MCFT_CAP_06_S0_V2_RESULT.json');
+const MATERIALIZER_PATH = 'scripts/remediation/MATERIALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.cjs';
 const BASELINE_MAIN = 'ca819ba51bdf3017dbefa96015f76bd3b66a647c';
 const EXPECTED_HEAD_BRANCH = 'agent/mcft-cap-06-s0-v2-exact-qualification';
 const ISOLATED_DATABASE_NAME = 'mcft_cap06_s0_v2_ci';
@@ -96,7 +97,7 @@ function buildTemporaryRunner() {
   source = replaceExactly(
     source,
     `  const tracked = git(["diff", "--name-only", BASELINE_MAIN]).split(/\\r?\\n/).filter(Boolean);\n  const untracked = git(["ls-files", "--others", "--exclude-standard"]).split(/\\r?\\n/).filter(Boolean);\n  const changed = [...new Set([...tracked, ...untracked])].sort();\n  const forbidden = changed.filter((file) => !PREFLIGHT_ALLOWED_FILES.includes(file));\n  assert.deepEqual(forbidden, [], \`S0_CHANGED_FILE_BOUNDARY_VIOLATION:\${forbidden.join(",")}\`);`,
-    `  const committed = git(["diff", "--name-only", BASELINE_MAIN, "HEAD"]).split(/\\r?\\n/).filter(Boolean);\n  const workingTracked = git(["diff", "--name-only", "HEAD"]).split(/\\r?\\n/).filter(Boolean);\n  const untracked = git(["ls-files", "--others", "--exclude-standard"]).split(/\\r?\\n/).filter(Boolean);\n  const generatedRuntimeArtifact = (file: string): boolean =>\n    file === ".env.ci"\n    || file === "docs/audit/CONTROLLED_PILOT_READINESS_REPORT.md"\n    || file === "docs/audit/FRONTEND_RUNTIME_PAGE_AUDIT_REPORT.md"\n    || file.startsWith("docs/audit/frontend-runtime-page-audit/")\n    || file.startsWith("acceptance-output/");\n  const candidateWorkingTracked = workingTracked.filter((file) => !generatedRuntimeArtifact(file));\n  const candidateUntracked = untracked.filter((file) => !generatedRuntimeArtifact(file));\n  const changed = [...new Set([...committed, ...candidateWorkingTracked, ...candidateUntracked])].sort();\n  const ciAllowedFiles = new Set([\n    PREFLIGHT_PATH,\n    "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs",\n    "scripts/acceptance/run_acceptance.cjs",\n    "${TEMP_RELATIVE_PATH}",\n  ]);\n  const forbidden = changed.filter((file) => !ciAllowedFiles.has(file));\n  assert.deepEqual(forbidden, [], \`S0_CHANGED_FILE_BOUNDARY_VIOLATION:\${forbidden.join(",")}\`);`,
+    `  const committed = git(["diff", "--name-only", BASELINE_MAIN, "HEAD"]).split(/\\r?\\n/).filter(Boolean);\n  const workingTracked = git(["diff", "--name-only", "HEAD"]).split(/\\r?\\n/).filter(Boolean);\n  const untracked = git(["ls-files", "--others", "--exclude-standard"]).split(/\\r?\\n/).filter(Boolean);\n  const generatedRuntimeArtifact = (file: string): boolean =>\n    file === ".env.ci"\n    || file === "docs/audit/CONTROLLED_PILOT_READINESS_REPORT.md"\n    || file === "docs/audit/FRONTEND_RUNTIME_PAGE_AUDIT_REPORT.md"\n    || file.startsWith("docs/audit/frontend-runtime-page-audit/")\n    || file.startsWith("acceptance-output/");\n  const candidateWorkingTracked = workingTracked.filter((file) => !generatedRuntimeArtifact(file));\n  const candidateUntracked = untracked.filter((file) => !generatedRuntimeArtifact(file));\n  const changed = [...new Set([...committed, ...candidateWorkingTracked, ...candidateUntracked])].sort();\n  const ciAllowedFiles = new Set([\n    PREFLIGHT_PATH,\n    "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs",\n    "scripts/acceptance/run_acceptance.cjs",\n    "${MATERIALIZER_PATH}",\n    "${TEMP_RELATIVE_PATH}",\n  ]);\n  const forbidden = changed.filter((file) => !ciAllowedFiles.has(file));\n  assert.deepEqual(forbidden, [], \`S0_CHANGED_FILE_BOUNDARY_VIOLATION:\${forbidden.join(",")}\`);`,
     'CI_CHANGED_FILE_BOUNDARY',
   );
 
@@ -119,7 +120,7 @@ function buildTemporaryRunner() {
   source = replaceExactly(
     source,
     '  run(process.platform === "win32" ? "git.exe" : "git", ["diff", "--check", BASELINE_MAIN]);',
-    '  run(process.platform === "win32" ? "git.exe" : "git", ["diff", "--check", BASELINE_MAIN, "--", PREFLIGHT_PATH, "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs", "scripts/acceptance/run_acceptance.cjs"]);',
+    '  run(process.platform === "win32" ? "git.exe" : "git", ["diff", "--check", BASELINE_MAIN, "--", PREFLIGHT_PATH, "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs", "scripts/acceptance/run_acceptance.cjs", "scripts/remediation/MATERIALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.cjs"]);',
     'CANDIDATE_DIFF_CHECK',
   );
 
@@ -188,6 +189,10 @@ async function main() {
     process.stderr.write(String(result.stderr || ''));
     requireSuccessful(result, 'MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION');
     persistQualificationResult(result.stdout);
+    const materializer = run(process.execPath, [MATERIALIZER_PATH]);
+    process.stdout.write(String(materializer.stdout || ''));
+    process.stderr.write(String(materializer.stderr || ''));
+    requireSuccessful(materializer, 'MCFT_CAP_06_S0_V2_CANDIDATE_MATERIALIZATION');
   } finally {
     fs.rmSync(TEMP_PATH, { force: true });
   }
