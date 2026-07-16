@@ -27,6 +27,23 @@ const EXPECTED_FILES = [
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
   "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts"
 ];
+const FORBIDDEN_TRANSPORT_TOKENS = [
+  'id0ut',
+  'out0ut',
+  'idteger',
+  'com0ute',
+  'idtentionally'
+];
+const FORBIDDEN_TEMPORARY_PATHS = [
+  '.github/pathlib.py',
+  '.github/sitecustomize.py',
+  '.github/mcft_cap06_s2_materializer.py.gz.b64',
+  '.github/mcft_cap06_s2_materializer.py',
+  '.github/mcft_cap06_s2_materializer_recovered.py',
+  '.github/mcft_cap06_s2_materializer_transport.json',
+  '.github/workflows/mcft-cap-06-s2-corrected-materializer.yml',
+  '.github/workflows/mcft-cap-06-s2-corrected-finalizer.yml'
+];
 const readJson = (relative) => JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
 const readText = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 
@@ -41,6 +58,7 @@ function main() {
   const runner = readText('scripts/acceptance/run_acceptance.cjs');
   const acceptance = readText('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts');
   const grid = readText('apps/server/src/domain/calibration/grid_search_v1.ts');
+  const candidateTreeText = EXPECTED_FILES.map((relative) => readText(relative)).join('\n');
 
   assert.equal(result.status, 'PASS');
   assert.equal(result.source_residual_count, 24);
@@ -110,9 +128,15 @@ function main() {
   assert.match(runner, /MCFT_CAP_06_S2_CONTRACTS_MATH/);
   assert.match(runner, /MCFT_CAP_06_S2_CONTRACTS_MATH_GOVERNANCE/);
   assert.doesNotMatch(acceptance, /Number\(value\)/);
-  assert.doesNotMatch(acceptance, /number\.toFixed/);
+  assert.doesNotMatch(acceptance, /\.toFixed\(/);
   assert.match(grid, /1_000_000n as const/);
 
+  for (const token of FORBIDDEN_TRANSPORT_TOKENS) {
+    assert.equal(candidateTreeText.toLowerCase().includes(token.toLowerCase()), false, `transport token retained: ${token}`);
+  }
+  for (const relative of FORBIDDEN_TEMPORARY_PATHS) {
+    assert.equal(fs.existsSync(path.join(ROOT, relative)), false, `temporary S2 path retained: ${relative}`);
+  }
   for (const forbidden of ['twin_calibration_candidate_v1', 'twin_shadow_evaluation_v1', 'twin_model_activation_v1']) {
     assert.equal(result[forbidden], undefined);
   }
