@@ -1,0 +1,41 @@
+{
+  "schema_version": "geox_mcft_cap_06_s3_status_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "delivery_slice_id": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
+  "status": "CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
+  "baseline_main_commit": "ea198cc0cad063c7e70a59727171908f2f8c7e7d",
+  "implementation_branch": "agent/mcft-cap-06-s3-d-persistence-recovery-v1",
+  "candidate_validation": {
+    "isolated_postgresql_acceptance": "PASS",
+    "isolated_postgresql_workflow_run": 29518184366,
+    "repository_typecheck": "PASS_PRELIMINARY_HEAD",
+    "repository_build": "PASS_PRELIMINARY_HEAD",
+    "server_selfcheck": "PASS_PRELIMINARY_HEAD",
+    "p_minus_1_migration_count_binding": "PASS",
+    "public_facts_sole_canonical_store": true,
+    "active_config_relation_delta": 0,
+    "temporary_workflows_retained": true,
+    "generated_acceptance_artifacts_retained": false
+  },
+  "result_summary_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-D-PERSISTENCE.json",
+  "migration_count": 1,
+  "canonical_write_authorized_for_s3": true,
+  "controlled_acceptance_canonical_candidate_count": 2,
+  "controlled_acceptance_canonical_evaluation_count": 2,
+  "controlled_acceptance_only": true,
+  "candidate_runtime_implemented": false,
+  "shadow_evaluation_runtime_implemented": false,
+  "s3_effective": false,
+  "s5_authorized": false,
+  "effectiveness_condition": "S3_EXACT_HEAD_CI_PASS_AND_MERGE_AND_TREE_EQUIVALENCE_AND_EXACT_MERGED_MAIN_PROOF_AND_SEPARATE_EFFECTIVENESS_WRITEBACK",
+  "preserved_nonclaims": [
+    "NO_S5_CALIBRATION_CANDIDATE_COMPUTE_SERVICE",
+    "NO_S6_OPERATIONAL_SHADOW_COMPUTE",
+    "NO_S7_EVALUATION_COMMIT_SERVICE",
+    "NO_ACTIVE_CONFIG_INDEX_CREATION_OR_MUTATION",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_PUBLIC_ROUTE_OR_WEB_OR_SCHEDULER",
+    "NO_MCFT_CAP_07_AUTHORIZATION"
+  ]
+}
