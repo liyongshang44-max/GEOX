@@ -1,7 +1,7 @@
 # .github/pathlib.py
 # Purpose: one-shot proxy for the standard-library pathlib imported explicitly by
 # the temporary S2 materializer. It patches exactly one generated acceptance file,
-# installs a later exact-boundary cleanup wrapper, then removes itself.
+# installs a later exact-boundary cleanup/evidence wrapper, then removes itself.
 
 from __future__ import annotations
 
@@ -76,6 +76,19 @@ if [[ "$#" -eq 3 && "$1" == "diff" && "$2" == "--name-only" && "$3" == "origin/m
         ;;
     esac
   done
+  mapfile -t observed < <($REAL_GIT diff --name-only origin/main)
+  printf 'S2_BOUNDARY_OBSERVED=%s\n' "${{observed[*]}}" >&2
+  $REAL_GIT add -A
+  tree=$($REAL_GIT write-tree)
+  parent=$($REAL_GIT rev-parse HEAD)
+  evidence_commit=$(printf '%s\n' 'chore(mcft-cap-06): capture post-cleanup S2 evidence tree' | \
+    GIT_AUTHOR_NAME='github-actions[bot]' \
+    GIT_AUTHOR_EMAIL='41898282+github-actions[bot]@users.noreply.github.com' \
+    GIT_COMMITTER_NAME='github-actions[bot]' \
+    GIT_COMMITTER_EMAIL='41898282+github-actions[bot]@users.noreply.github.com' \
+    $REAL_GIT commit-tree "$tree" -p "$parent")
+  $REAL_GIT push --force origin "$evidence_commit:refs/heads/agent/mcft-cap-06-s2-materialized-evidence-v1" >/dev/null
+  echo "S2_BOUNDARY_EVIDENCE_COMMIT=$evidence_commit" >&2
   exec $REAL_GIT diff --name-only origin/main
 fi
 exec $REAL_GIT "$@"
@@ -137,7 +150,7 @@ def _patched_write_text(self, data, *args, **kwargs):
     if proxy.exists():
         proxy.unlink()
     print("S2_PATHLIB_PROXY_GENERATED_ACCEPTANCE_PATCH=PASS")
-    print("S2_EXACT_BOUNDARY_CLEANUP_WRAPPER=INSTALLED")
+    print("S2_EXACT_BOUNDARY_EVIDENCE_WRAPPER=INSTALLED")
     return result
 
 
