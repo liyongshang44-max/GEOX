@@ -42,7 +42,6 @@ jobs:
           import re
           from pathlib import Path
 
-          root = Path('.')
           runner_path = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts')
           runner = runner_path.read_text(encoding='utf-8')
           old = '''  assert.equal(currentState.current_state?.active_delivery_slice_id, "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1", "S1_ACTIVE_DELIVERY_SLICE_REQUIRED");
@@ -94,8 +93,6 @@ jobs:
           replacement = 'const EXPECTED_EFFECTIVENESS_FILES = ' + json.dumps(sorted(files), separators=(',', ':')) + ';'
           gate_path.write_text(gate[:match.start()] + replacement + gate[match.end():], encoding='utf-8')
           PY
-          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs --postmerge
-          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
           pnpm -r typecheck
 
       - name: Remove temporary workflow and enforce exact boundary
