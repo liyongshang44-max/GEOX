@@ -1,0 +1,57 @@
+name: mcft-cap-06-s3-validation
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  s3-d-persistence:
+    if: github.head_ref == 'agent/mcft-cap-06-s3-d-persistence-recovery-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s3-d-persistence-recovery-v1
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run isolated S3 D persistence acceptance
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_D_PERSISTENCE.cjs
+
+      - name: Typecheck and build after S3 acceptance
+        run: |
+          pnpm -r typecheck
+          pnpm -r build
