@@ -1,0 +1,43 @@
+name: mcft-cap-06-s2-typecheck-diagnostics
+
+on:
+  pull_request:
+    types: [synchronize, reopened]
+
+jobs:
+  typecheck-diagnostics:
+    if: github.head_ref == 'agent/mcft-cap-06-s2-contracts-math-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout S2 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Capture typecheck output
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          pnpm -r typecheck 2>&1 | tee acceptance-output/MCFT_CAP_06_S2_TYPECHECK.log
+
+      - name: Upload typecheck diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s2-typecheck-diagnostics
+          path: acceptance-output/MCFT_CAP_06_S2_TYPECHECK.log
+          if-no-files-found: error
