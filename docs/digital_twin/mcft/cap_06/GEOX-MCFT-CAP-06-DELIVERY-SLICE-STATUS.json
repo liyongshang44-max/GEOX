@@ -3,10 +3,10 @@
   "capability_line_id": "MCFT-CAP-06",
   "status": "IMPLEMENTATION_IN_PROGRESS",
   "design_status": "CONDITIONAL_FROZEN_AFTER_P_MINUS_1",
-  "implementation_status": "S2_CONTRACTS_MATH_CANDIDATE",
+  "implementation_status": "S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED",
   "authorization_effective": true,
   "runtime_source_authorized": true,
-  "active_delivery_slice_id": "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1",
+  "active_delivery_slice_id": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
   "completed_or_effective_slices": [
     {
       "delivery_slice_id": "MCFT-CAP-06.P-1.DT02-CALIBRATION-SHADOW-ADJUDICATION-V1",
@@ -56,13 +56,25 @@
       "correction_pr_number": 2519,
       "case_input_set_hash": "sha256:cb3bd4c273134071e931e8f85765b028ce58986752e94da3902f8563ddba4bb3",
       "successor_readiness_data_precondition": "PASS"
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1",
+      "status": "MERGED_EFFECTIVE",
+      "implementation_pr_number": 2523,
+      "exact_head": "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+      "exact_head_ci_run": 29504752806,
+      "merge_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31",
+      "head_to_merge_file_delta_count": 0,
+      "head_to_merge_tree_equivalence": "PASS",
+      "postmerge_probe_pr_number": 2524,
+      "postmerge_workflow_run": 29506065728,
+      "postmerge_gate": "PASS",
+      "canonical_write_count": 0,
+      "migration_count": 0
     }
   ],
-  "candidate_slices": [
-    "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1"
-  ],
+  "candidate_slices": [],
   "blocked_slices": [
-    "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
     "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
     "MCFT-CAP-06.MCFT-06-09-11-12.PAIRED-HISTORICAL-SHADOW-COMPUTE-V1",
     "MCFT-CAP-06.MCFT-03-12.SHADOW-EVALUATION-COMMIT-V1",
@@ -78,13 +90,15 @@
     "MCFT-CAP-06.P-1A.DT02-ARCHITECTURE-AMENDMENT-V1",
     "MCFT-CAP-06.MCFT-02-12.CALIBRATION-GOVERNANCE-CONFIG-V1"
   ],
-  "next_repository_action": "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1",
+  "next_repository_action": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
   "next_repository_action_after_p0_effectiveness": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
   "successor_capability_line_id": "MCFT-CAP-07",
   "successor_authorized": false,
   "predecessor_eligibility": "RESTORED",
   "s0_qualification_authorized": true,
-  "authorized_not_started_slices": [],
+  "authorized_not_started_slices": [
+    "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1"
+  ],
   "superseded_candidates": [
     {
       "pull_request": 2500,
@@ -120,6 +134,8 @@
   "s1_prior_mechanical_effectiveness_preserved": true,
   "s1_erratum_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-CONTROLLED-DATA-ERRATUM.json",
   "s2_candidate_implemented": true,
-  "s2_effective": false,
-  "s3_authorized": false
+  "s2_effective": true,
+  "s3_authorized": true,
+  "s2_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json",
+  "s3_implementation_started": false
 }

@@ -31,10 +31,10 @@ design_status:
 CONDITIONAL_FROZEN_AFTER_P_MINUS_1
 
 implementation_status:
-S2_CONTRACTS_MATH_CANDIDATE
+S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED
 
 runtime_implementation_status:
-S2_CONTRACTS_MATH_IMPLEMENTED_NOT_EFFECTIVE
+S2_CONTRACTS_MATH_MERGED_EFFECTIVE_S3_NOT_STARTED
 
 authorization_effective:
 true
@@ -46,7 +46,7 @@ runtime_source_authorized:
 true
 
 active_delivery_slice_id:
-MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1
+MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1
 
 predecessor_eligibility:
 RESTORED
@@ -55,10 +55,10 @@ dt02_architecture_amendment_status:
 NOT_REQUIRED
 
 first_permitted_repository_action:
-MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1
+MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1
 ```
 
-本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1、P0、S0 与 corrected S1 已 merged-main effective；当前唯一 active slice 为 S2 contracts/math，候选实现已完成但尚未 effective。S3 及其后续、Calibration Candidate canonical append、Shadow Evaluation canonical append、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 均保持未授权。
+本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1、P0、S0 与 corrected S1 已 merged-main effective；S2 contracts/math 已 merged-main effective；当前唯一 active slice 为 S3 D persistence/recovery，状态 AUTHORIZED_NOT_STARTED。S4 及其后续、Calibration Candidate canonical append、Shadow Evaluation canonical append、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 均保持未授权。
 
 ---
 
@@ -4332,4 +4332,24 @@ NO_CALIBRATION_CANDIDATE_APPEND
 NO_SHADOW_EVALUATION_APPEND
 NO_MODEL_ACTIVATION
 S3 authorization: false
+```
+
+<!-- MCFT-CAP-06-S2-EFFECTIVENESS-V1 -->
+## S2 merged-main effectiveness
+
+```text
+status: MERGED_EFFECTIVE
+implementation PR: #2523
+exact head: cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f
+exact-head CI: 29504752806 PASS
+merge commit: b6d28477d87239ee417c688d43122cb7a20b1a31
+head-to-merge file delta: 0
+head-to-merge tree equivalence: PASS
+proof-only PR: #2524 CLOSED_WITHOUT_MERGE
+exact merged-main proof: 29506065728 PASS
+active slice: MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1
+S3 status: AUTHORIZED_NOT_STARTED
+S3 implementation started: false
+Candidate/Evaluation canonical append: absent
+Model Activation: absent
 ```
