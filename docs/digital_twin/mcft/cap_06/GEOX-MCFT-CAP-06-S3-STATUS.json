@@ -1,0 +1,83 @@
+{
+  "schema_version": "geox_mcft_cap_06_s3_status_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "delivery_slice_id": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
+  "status": "CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
+  "baseline_main_commit": "ea198cc0cad063c7e70a59727171908f2f8c7e7d",
+  "implementation_branch": "agent/mcft-cap-06-s3-governance-persistence-recovery-v1",
+  "authorization": {
+    "s2_merged_effective": true,
+    "s3_authorized": true,
+    "s4_omitted": true,
+    "s5_authorized": false
+  },
+  "implementation": {
+    "additive_migration_count": 1,
+    "canonical_store": "public.facts",
+    "d_transaction_object_types": [
+      "twin_calibration_candidate_v1",
+      "twin_shadow_evaluation_v1"
+    ],
+    "idempotency_identity_kinds": [
+      "D_CALIBRATION_CANDIDATE",
+      "D_SHADOW_EVALUATION"
+    ],
+    "candidate_projection": "twin_calibration_candidate_projection_v1",
+    "evaluation_projection": "twin_shadow_evaluation_projection_v1",
+    "candidate_evaluation_index": "twin_candidate_evaluation_index_v1",
+    "evaluation_case_projection": "twin_shadow_evaluation_case_projection_v1",
+    "candidate_ref_alone_unique": false,
+    "exact_ref_postgresql_adapter": true,
+    "facts_based_rebuild": true,
+    "projection_canonicality_triggers": true,
+    "advisory_lock_concurrency_serialization": true,
+    "failed_attempt_persistence_mode": "MODE_A_NO_PERSISTENT_ATTEMPT_OBJECT"
+  },
+  "candidate_tree_validation": {
+    "prevalidated_head": "4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e",
+    "repository_typecheck": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_STANDARD_CI_29519589886",
+    "repository_build": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_STANDARD_CI_29519589886",
+    "server_selfcheck": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_STANDARD_CI_29519589886",
+    "s1_postgresql_reproduction": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
+    "s1_regime_reproduction": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
+    "s2_contracts_math_reproduction": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
+    "s3_postgresql_acceptance": "PASS_12_CHECKS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
+    "s3_projection_canonicality_acceptance": "PASS_5_CHECKS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
+    "s3_governance_acceptance": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_FOCUSED_RUN_29519589969",
+    "focused_validation_run": 29519589969,
+    "focused_evidence_artifact_id": 8384161364,
+    "focused_evidence_artifact_digest": "sha256:0cc961d416d83a34a8ac50ad0734a9f7ec1e3b5432b790b9d4be4139785bb659",
+    "standard_ci": "PASS_PREVALIDATED_HEAD_4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e_RUN_29519589886",
+    "standard_ci_run": 29519589886,
+    "exact_final_head_status": "PENDING_AFTER_PREVALIDATION_WRITEBACK"
+  },
+  "runtime_delta_boundary": {
+    "candidate_or_evaluation_objects_appended_by_acceptance_only": true,
+    "production_candidate_append": false,
+    "production_evaluation_append": false,
+    "model_activation_count": 0,
+    "active_config_switch_count": 0,
+    "state_mutation_count": 0,
+    "checkpoint_mutation_count": 0,
+    "public_route_count": 0,
+    "web_change_count": 0,
+    "scheduler_count": 0
+  },
+  "s3_effective": false,
+  "s5_authorized": false,
+  "effectiveness_condition": "S3_EXACT_HEAD_CI_PASS_AND_POSTGRESQL_ACCEPTANCE_PASS_AND_GOVERNANCE_GATE_PASS_AND_MERGE_AND_TREE_EQUIVALENCE_AND_EXACT_MERGED_MAIN_PROOF_AND_SEPARATE_EFFECTIVENESS_WRITEBACK",
+  "preserved_nonclaims": [
+    "NO_S5_CANDIDATE_ORCHESTRATION",
+    "NO_S6_SHADOW_ORCHESTRATION",
+    "NO_PRODUCTION_CALIBRATION_RUN",
+    "NO_PRODUCTION_SHADOW_RUN",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_CONFIG_SWITCH",
+    "NO_RUNTIME_PARAMETER_CHANGE",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
+    "NO_PUBLIC_ROUTE",
+    "NO_WEB",
+    "NO_SCHEDULER",
+    "NO_MCFT_CAP_07_AUTHORIZATION"
+  ]
+}

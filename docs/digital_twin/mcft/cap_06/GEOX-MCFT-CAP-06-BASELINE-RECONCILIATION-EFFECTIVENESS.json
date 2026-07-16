@@ -1,0 +1,54 @@
+{
+  "schema_version": "geox_mcft_cap_06_baseline_reconciliation_effectiveness_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "record_kind": "IMMUTABLE_PREDECESSOR_EFFECTIVENESS_EVIDENCE",
+  "effective": true,
+  "baseline_main_commit": "ea198cc0cad063c7e70a59727171908f2f8c7e7d",
+  "effective_slices": {
+    "p_minus_1": {
+      "status": "MERGED_EFFECTIVE",
+      "merge_commit": "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8",
+      "postmerge_workflow_run": 29418272690
+    },
+    "p0": {
+      "status": "MERGED_EFFECTIVE",
+      "merge_commit": "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf",
+      "postmerge_workflow_run": 29419841209
+    },
+    "s0": {
+      "status": "MERGED_EFFECTIVE",
+      "merge_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a",
+      "postmerge_workflow_run": 29472057972
+    },
+    "s1_corrected": {
+      "status": "MERGED_EFFECTIVE_CORRECTED",
+      "merge_commit": "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+      "postmerge_workflow_run": 29493733228,
+      "successor_readiness_data_precondition": "PASS"
+    },
+    "s2": {
+      "status": "MERGED_EFFECTIVE",
+      "implementation_pr_number": 2523,
+      "implementation_exact_head": "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+      "implementation_exact_head_ci_run": 29504752806,
+      "implementation_merge_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31",
+      "implementation_postmerge_workflow_run": 29506065728,
+      "effectiveness_pr_number": 2525,
+      "effectiveness_exact_head": "b59c3237fbf3a752a562357b77fdc773469b01f0",
+      "effectiveness_exact_head_ci_run": 29516387716,
+      "effectiveness_merge_commit": "ea198cc0cad063c7e70a59727171908f2f8c7e7d",
+      "effectiveness_postmerge_probe_pr_number": 2526,
+      "effectiveness_postmerge_workflow_run": 29517085242,
+      "effectiveness_postmerge_gate": "PASS"
+    }
+  },
+  "immutable_facts": {
+    "s2_is_sole_deterministic_domain_engine_authority": true,
+    "s2_canonical_write_count": 0,
+    "s2_projection_write_count": 0,
+    "s2_migration_count": 0,
+    "s2_model_activation_count": 0,
+    "s3_authorized_after_s2_effectiveness": true,
+    "mcft_cap_07_authorized": false
+  }
+}

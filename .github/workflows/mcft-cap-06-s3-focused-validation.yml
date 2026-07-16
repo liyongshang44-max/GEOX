@@ -1,0 +1,112 @@
+name: mcft-cap-06-s3-focused-validation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s3-focused-validation.yml'
+      - 'apps/server/db/migrations/2026_07_17_mcft_cap_06_calibration_governance_persistence.sql'
+      - 'apps/server/src/persistence/calibration/**'
+      - 'apps/server/src/projections/calibration/**'
+      - 'apps/server/src/domain/calibration/**'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-*'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-BASELINE-RECONCILIATION-EFFECTIVENESS.json'
+      - 'scripts/runtime_acceptance/*MCFT_CAP_06_S3*'
+      - 'scripts/runtime_acceptance/mcft_cap_06_controlled_compute_fixture_v1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-06-s3-focused-validation.yml'
+      - 'apps/server/db/migrations/2026_07_17_mcft_cap_06_calibration_governance_persistence.sql'
+      - 'apps/server/src/persistence/calibration/**'
+      - 'apps/server/src/projections/calibration/**'
+      - 'apps/server/src/domain/calibration/**'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-*'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-BASELINE-RECONCILIATION-EFFECTIVENESS.json'
+      - 'scripts/runtime_acceptance/*MCFT_CAP_06_S3*'
+      - 'scripts/runtime_acceptance/mcft_cap_06_controlled_compute_fixture_v1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  s3-focused-validation:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+    steps:
+      - name: Checkout S3 candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and build
+        run: |
+          set -euo pipefail
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Reproduce corrected S1 PostgreSQL graph
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
+
+      - name: Reproduce corrected S1 regimes
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts
+
+      - name: Reproduce S2 contracts and math
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
+
+      - name: Run S3 isolated PostgreSQL acceptance
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs 2>&1 | tee acceptance-output/MCFT_CAP_06_S3_PERSISTENCE.log
+
+      - name: Run S3 governance gate
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs 2>&1 | tee acceptance-output/MCFT_CAP_06_S3_GOVERNANCE.log
+
+      - name: Upload focused S3 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s3-focused-evidence
+          path: acceptance-output/
+          if-no-files-found: warn
