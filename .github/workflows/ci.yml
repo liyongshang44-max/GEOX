@@ -4,116 +4,29 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  materialize-s2-effectiveness:
-    if: github.head_ref == 'agent/mcft-cap-06-s2-effectiveness-v1' && github.actor != 'github-actions[bot]'
+  inspect-s2-effectiveness-boundary:
+    if: github.head_ref == 'agent/mcft-cap-06-s2-effectiveness-v1'
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: geox
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d geox"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: geox
-      POSTGRES_HOST: 127.0.0.1
-      POSTGRES_PORT: 5432
-      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
     steps:
       - name: Checkout effectiveness branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Materialize governance writeback
+      - name: Materialize and print exact boundary
         run: |
           set -euo pipefail
-          python -m py_compile .github/mcft_cap06_s2_effectiveness.py .github/mcft_cap06_s2_effectiveness_gate_fix.py
           python .github/mcft_cap06_s2_effectiveness.py
           python .github/mcft_cap06_s2_effectiveness_gate_fix.py
-          python -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json >/dev/null
-          python -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json >/dev/null
-          python -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json >/dev/null
-          python -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json >/dev/null
-          python -m json.tool docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json >/dev/null
-          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
-          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs
-          git diff --check
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Reproduce corrected S1 Residuals
-        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
-
-      - name: Reproduce corrected S1 regimes
-        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts
-
-      - name: Run lifecycle-monotonic S1 Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
-
-      - name: Reproduce S2 contracts and math
-        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
-
-      - name: Run phase-aware S2 Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs
-
-      - name: Typecheck and build
-        run: |
-          set -euo pipefail
-          pnpm -r typecheck
-          pnpm -r build
-
-      - name: Verify exact permanent boundary and commit
-        run: |
-          set -euo pipefail
           rm -rf acceptance-output .github/__pycache__
           rm -f .github/mcft_cap06_s2_effectiveness.py .github/mcft_cap06_s2_effectiveness_gate_fix.py
           git checkout origin/main -- .github/workflows/ci.yml
-          mapfile -t actual < <(git diff --name-only origin/main | sort)
-          cat > /tmp/expected.txt <<'EOF'
-          docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
-          docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
-          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json
-          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json
-          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json
-          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json
-          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md
-          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
-          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs
-          EOF
-          sed -i 's/^          //' /tmp/expected.txt
-          diff -u /tmp/expected.txt <(printf '%s\n' "${actual[@]}")
-          test "${#actual[@]}" -eq 9
+          echo 'ACTUAL_BOUNDARY_BEGIN'
+          git diff --name-only origin/main | sort
+          echo 'ACTUAL_BOUNDARY_END'
+          echo "ACTUAL_COUNT=$(git diff --name-only origin/main | wc -l)"
           git diff --check
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git diff --cached --check
-          git commit -m "docs(mcft-cap-06): activate S2 effectiveness"
-          git push origin HEAD:${{ github.head_ref }}
