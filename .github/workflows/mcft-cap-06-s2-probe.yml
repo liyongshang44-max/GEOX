@@ -35,10 +35,15 @@ jobs:
           pnpm -r typecheck
           pnpm -r build
 
-      - name: Capture S2 excitation diagnostics
+      - name: Capture all S1 wetness-regime diagnostics
         run: |
           set -euo pipefail
           mkdir -p acceptance-output
+          pnpm -w exec tsx scripts/runtime_acceptance/DIAG_MCFT_CAP_06_S2_ALL_CASE_REGIMES.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S2_ALL_CASE_REGIMES_DIAGNOSTIC.log
+
+      - name: Capture S2 excitation diagnostics
+        run: |
+          set -euo pipefail
           pnpm -w exec tsx scripts/runtime_acceptance/DIAG_MCFT_CAP_06_S2_EXCITATION.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S2_EXCITATION_DIAGNOSTIC.log
 
       - name: Run S2 Dynamics-backed contracts/math acceptance
