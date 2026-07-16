@@ -71,9 +71,9 @@ jobs:
               'semanticHashV1',
               'point.precipitation_snapshot_ref',
               'point.precipitation_snapshot_hash',
-              'nested soil semantic change alters recursive canonical hash',
-              'nested dynamics semantic change alters recursive canonical hash',
-              'semantic key reordering preserves recursive canonical hash',
+              'CANONICAL_HASH_KEY_ORDER_INVARIANCE_REQUIRED',
+              'CANONICAL_HASH_NESTED_SOIL_CHANGE_MUST_DIFFER',
+              'CANONICAL_HASH_NESTED_DYNAMICS_CHANGE_MUST_DIFFER',
           ]
           missing = [item for item in required if item not in source]
           if missing:
