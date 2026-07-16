@@ -11,18 +11,22 @@ jobs:
     if: github.head_ref == 'agent/mcft-cap-06-s1-controlled-regime-correction-v1' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout correction branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 1
-          show-progress: false
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout required branches quietly
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --quiet --depth=1 origin \
+            agent/mcft-cap-06-s1-controlled-regime-correction-v1:refs/remotes/origin/agent/mcft-cap-06-s1-controlled-regime-correction-v1 \
+            agent/mcft-cap-06-s1-readiness-hardening-staging-v1:refs/remotes/origin/agent/mcft-cap-06-s1-readiness-hardening-staging-v1 \
+            main:refs/remotes/origin/main
+          git checkout -q -B agent/mcft-cap-06-s1-controlled-regime-correction-v1 origin/agent/mcft-cap-06-s1-controlled-regime-correction-v1
 
       - name: Fetch and apply reviewed source patch
         run: |
           set -euo pipefail
-          git fetch --quiet --depth=1 origin agent/mcft-cap-06-s1-readiness-hardening-staging-v1:refs/remotes/origin/agent/mcft-cap-06-s1-readiness-hardening-staging-v1
           git show origin/agent/mcft-cap-06-s1-readiness-hardening-staging-v1:.github/mcft_cap06_s1_readiness_hardening.py.gz.b64 \
             | base64 -d \
             | gzip -d \
@@ -87,7 +91,6 @@ jobs:
       - name: Restore standard CI and verify permanent boundary
         run: |
           set -euo pipefail
-          git fetch --quiet --depth=1 origin main:refs/remotes/origin/main
           git checkout origin/main -- .github/workflows/ci.yml
           rm -rf acceptance-output
           mapfile -t actual < <(git diff --name-only origin/main | sort)
@@ -121,4 +124,4 @@ jobs:
           git add -A
           git diff --cached --check
           git commit -m "fix(mcft-cap-06): harden S1 successor readiness evidence"
-          git push origin HEAD:${{ github.head_ref }}
+          git push origin HEAD:agent/mcft-cap-06-s1-controlled-regime-correction-v1
