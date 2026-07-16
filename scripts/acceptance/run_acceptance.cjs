@@ -89,6 +89,18 @@ const STEP_DEFINITIONS_BY_SUITE = {
       command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs',
       logFile: 'MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION_GOVERNANCE.log',
       notes: 'Cross-checks regenerated S1 runtime and wetness-regime evidence against the additive erratum and current SSOT while S2 remains blocked.'
+    },
+    {
+      id: 'MCFT_CAP_06_S2_CONTRACTS_MATH',
+      command: 'pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts',
+      logFile: 'MCFT_CAP_06_S2_CONTRACTS_MATH.log',
+      notes: 'Proves exact-ref-only corrected S1 identity binding, fixed-point 21-point calibration search, paired historical shadow math, deterministic drafts, and zero writes.'
+    },
+    {
+      id: 'MCFT_CAP_06_S2_CONTRACTS_MATH_GOVERNANCE',
+      command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs',
+      logFile: 'MCFT_CAP_06_S2_CONTRACTS_MATH_GOVERNANCE.log',
+      notes: 'Cross-checks S2 runtime evidence, frozen numeric policies, exact source dataset identity, zero-write boundary, and S3 blocking.'
     }
   ],
   'p9-twin-kernel': [
