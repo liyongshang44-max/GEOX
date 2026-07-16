@@ -89,9 +89,10 @@
     "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
     "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json",
     "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
     "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
     "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs"
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
   ]
 }
