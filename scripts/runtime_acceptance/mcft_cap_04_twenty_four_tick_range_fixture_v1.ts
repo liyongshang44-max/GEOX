@@ -38,6 +38,7 @@ const MINUTE_MS = 60 * 1000;
 export type BuildCap04S7RangeFixtureOptionsV1 = {
   blocked_tick_index?: number;
   malformed_tick_index?: number;
+  rainfall_profile_id?: "STANDARD_V1" | "CAP06_MULTI_REGIME_V1";
 };
 
 export type Cap04S7RangeFixtureV1 = {
@@ -55,6 +56,13 @@ function addHoursV1(value: string, hours: number): string {
 
 function addMinutesV1(value: string, minutes: number): string {
   return new Date(Date.parse(value) + minutes * MINUTE_MS).toISOString();
+}
+
+function rainfallValueForTickV1(index: number, options: BuildCap04S7RangeFixtureOptionsV1): number {
+  if (options.rainfall_profile_id === "CAP06_MULTI_REGIME_V1" && index >= 8) {
+    return Number((5.2 + (index % 4) * 0.2).toFixed(6));
+  }
+  return Number((0.2 + (index % 4) * 0.1).toFixed(6));
 }
 
 function sameScopeV1(left: TwinScopeKeyV1, right: TwinScopeKeyV1): boolean {
@@ -125,7 +133,7 @@ function evidenceForTickV1(
       interval_end: logicalTime,
       ingested_at: ingestedAt,
     },
-    canonical_payload: { value: Number((0.2 + (index % 4) * 0.1).toFixed(6)), unit: "mm" },
+    canonical_payload: { value: rainfallValueForTickV1(index, options), unit: "mm" },
     source_unit: "mm",
     canonical_unit: "mm",
   });
@@ -229,6 +237,11 @@ export async function buildCap04S7RangeFixtureV1(
   if (options.malformed_tick_index !== undefined
     && (!Number.isInteger(options.malformed_tick_index) || options.malformed_tick_index < 0 || options.malformed_tick_index >= CAP04_S7_STANDARD_TICK_COUNT_V1)) {
     throw new Error("CAP04_S7_FIXTURE_MALFORMED_INDEX_INVALID");
+  }
+  if (options.rainfall_profile_id !== undefined
+    && options.rainfall_profile_id !== "STANDARD_V1"
+    && options.rainfall_profile_id !== "CAP06_MULTI_REGIME_V1") {
+    throw new Error("CAP04_S7_FIXTURE_RAINFALL_PROFILE_INVALID");
   }
   const base = buildCap04S6SingleTickFixtureV1();
   const chain = buildCap04ConfigChainFixtureV1();

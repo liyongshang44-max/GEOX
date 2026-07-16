@@ -2,11 +2,11 @@
   "schema_version": "geox_mcft_cap_06_s1_residual_windows_v1",
   "capability_line_id": "MCFT-CAP-06",
   "delivery_slice_id": "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1",
-  "status": "IMPLEMENTATION_CANDIDATE",
-  "baseline_main_commit": "b709bfed36ef1efa6d970b349d23a2b0006e4de2",
-  "implementation_pr_number": 2514,
-  "candidate_execution_head": "91edc0e7c0d88b5bec1c60aa0d4b249c3cd81cfe",
-  "candidate_execution_workflow": 29473868540,
+  "status": "CONTROLLED_DATA_CORRECTION_CANDIDATE",
+  "baseline_main_commit": "3a1494acb47db776d97ba75e339d85dc18c9d629",
+  "implementation_pr_number": 2519,
+  "candidate_execution_head": "6afba5256ea802bdff7ca6a750553da9a362990b",
+  "candidate_execution_workflow": 29484155724,
   "profile_id": "PRESEEDED_24_H1_FORECAST_OBSERVATION_PAIRS_NO_RESIDUALS_V1",
   "qualification_track": "CONTROLLED_POSITIVE_MECHANISM_TRACK",
   "repository_history_track": "REPOSITORY_HISTORY_QUALIFICATION_TRACK",
@@ -56,24 +56,24 @@
     "sha256:af4015fc36872e83b2e5808c81cd884151d5dcf3b914d67fbf0763317ec1e61a",
     "sha256:6c0c848a55dd79fc4b43f29f165cbf771d33ef5e2a856e2498566eda38116166",
     "sha256:31c47dcb9c787587fec0dd1dadacee85671343fc710f62e630a256fb7fc816eb",
-    "sha256:0e169a584acfd69bb2ff13ec1404d3962c0a388ce2cbfc70387bf87661f288d2",
-    "sha256:3b80a497cbe40be1d7f0d520dbd3f687c1264dd26d588fc84a9198d3574c8e1e",
-    "sha256:5a9599a5790495bdb831b78392f91d9c1246f31e1beb9e8d9b877cb6b2863f68",
-    "sha256:a29f58a418cdab658e22985bf2776213f2e7893888aa78d4e2a53c648280d171",
-    "sha256:8ed287354d52f9da04ad2accc0df9403145937715007cba6e920d38f3096a3a9",
-    "sha256:0cff7fbbe847cece24bbc571db47bc5a0731772d1a3ee2594a84d18e5b20f138",
-    "sha256:c6da6632179dae8fad37bef4d13b2d2517d54e4b0128d3edd70b50d57030a672",
-    "sha256:c25ec6614f1e0aa3074c20b450c5ba5e45b8af874ceece0075f0241f9daf5ad0",
-    "sha256:47ce9094dc8bc29b87beacc42ac8339cec29495fccd5c2a3926a66b477f6289e",
-    "sha256:4a24ef4a16589f3cf6a7ace8276584951ebcd0ab687518ec3bb736f5a3b57762",
-    "sha256:113aa825e7a611cbb646a090a1493aa85f53ab2af6fef0f43d8593ca437a8504",
-    "sha256:9cfc521bea9dc1448e2cfb87732caeb44c15a93bf5b0a3140ae0a26184d0acd1",
-    "sha256:0f4ff85fabd6fdcd95a3a77d65e08ef96339167c0f9d08c1a0f171045f7498c6",
-    "sha256:a7d7d654e8b03b2eda9d380f373f5d88a118edc75405a13e2f5807e2b4e126aa",
-    "sha256:61cc2a09cfbf4f261714687c0042b7b181c6e9e0dd99e75f6f7e3d75ca2ef5a7",
-    "sha256:8b1feaae71a654168ae50022c03501c60010425b5b59411b4eff9d25988505db"
+    "sha256:3ebb917f7467d89b608dc475a2f3707e2063e7602c28a64357af5aeb87e62e79",
+    "sha256:59a31b14c814e61ee705f459d54b2b179b3f624874335b9525cb2d73f8a9ba03",
+    "sha256:c7c0cd7fc9e5a293755caee773e5ffc8e9e44010797b18ecf9295ad5b869877b",
+    "sha256:78be740f8f78ebce77d88d901292bf1f028a77a1fbfb99e230766aef31da0d00",
+    "sha256:8ff39fa23ec18441b287b247d41e0f8d64a34325c1e4cb9453e6c26b9adb01d5",
+    "sha256:9c832e5f6b3063c843ca2c7e1297a716cc2fc2402395f13e66be6810718487c3",
+    "sha256:1f22f4d23fdec94df022ecc4b089ebea2d650192dd7890e5f8974c5607d4d0dd",
+    "sha256:819641b21443c0347f8aa297c5bbb70d4a42a931bd876bc5a886907da7235f41",
+    "sha256:f144d4a7b7ba779db61eabb1f490b8c6065f9d46ac48ccade299a87067b4afac",
+    "sha256:462c8ad92cc5562db1df8fb702832d74e5ee02a41ea4841cef16808399cb4926",
+    "sha256:2fe1a8753e68487f853965b8d31b8d8f4a8411815a58ce99e4cfb7d706622eb6",
+    "sha256:b40acd5326f303122af43520a768f32c310cc97add2f277bb0a7fd5f149e414d",
+    "sha256:f3b7353124fd082bcf449e75e49438685a3c7af8967b04cb1e7e20d30270bcbe",
+    "sha256:8a2560cf867bd87261821e7f6d838091d882b572be08d3f53e95b8a1c80c7110",
+    "sha256:b6a399000df403afd10258f5b8fa8c644c89ba4ca85b1768bf227fc2ba431f79",
+    "sha256:420d55b40abae6d0cfdf2fe8f57920ede35280645f6eda9148bcc26d9c74dc1a"
   ],
-  "residual_set_hash": "sha256:14a5f07e6f3cc94f6c61c697d39d2093cae35bd491fd3f4dc68e01e79c7c24d7",
+  "residual_set_hash": "sha256:7995da1a8c5221c207087b30bb66a60ac2054e0616338f275ffaf72a01857e60",
   "calibration_window": {
     "case_count": 16,
     "ordered_residual_refs": [
@@ -94,7 +94,30 @@
       "twin_forecast_residual_1561f21073c4a305e939e156",
       "twin_forecast_residual_cb4c4702aaa1bff2027dc7eb"
     ],
-    "window_hash": "sha256:e5403ae258326909d054e92b53d089494d709785d8c48775a8cd142b0f0d191d"
+    "window_hash": "sha256:e5403ae258326909d054e92b53d089494d709785d8c48775a8cd142b0f0d191d",
+    "ordered_residual_hashes": [
+      "sha256:bf52e954d113d5f0cb8ddb8fd9d5f980fc78024c9484afd24f1b228411d74698",
+      "sha256:51ed607ae2ee80f610eb915d2b2f164585a841afe0db4ab1a4e658dd6b2ee6c7",
+      "sha256:c9acfce97e1e77bc8648fcc5a68aa9b51514b7b15d415b805cef21239c92d00f",
+      "sha256:e4004da4ffde893cc0f041403c53146352032a4dc9cef2b8b5cc73d439b81afb",
+      "sha256:b3cdf2e81beac508f4b509677907d4ce5df3a9d970c6425624400d57358e4b78",
+      "sha256:af4015fc36872e83b2e5808c81cd884151d5dcf3b914d67fbf0763317ec1e61a",
+      "sha256:6c0c848a55dd79fc4b43f29f165cbf771d33ef5e2a856e2498566eda38116166",
+      "sha256:31c47dcb9c787587fec0dd1dadacee85671343fc710f62e630a256fb7fc816eb",
+      "sha256:3ebb917f7467d89b608dc475a2f3707e2063e7602c28a64357af5aeb87e62e79",
+      "sha256:59a31b14c814e61ee705f459d54b2b179b3f624874335b9525cb2d73f8a9ba03",
+      "sha256:c7c0cd7fc9e5a293755caee773e5ffc8e9e44010797b18ecf9295ad5b869877b",
+      "sha256:78be740f8f78ebce77d88d901292bf1f028a77a1fbfb99e230766aef31da0d00",
+      "sha256:8ff39fa23ec18441b287b247d41e0f8d64a34325c1e4cb9453e6c26b9adb01d5",
+      "sha256:9c832e5f6b3063c843ca2c7e1297a716cc2fc2402395f13e66be6810718487c3",
+      "sha256:1f22f4d23fdec94df022ecc4b089ebea2d650192dd7890e5f8974c5607d4d0dd",
+      "sha256:819641b21443c0347f8aa297c5bbb70d4a42a931bd876bc5a886907da7235f41"
+    ],
+    "window_hash_semantics": "ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1",
+    "required_semantic_companion_hashes": {
+      "residual_set_hash": "sha256:7995da1a8c5221c207087b30bb66a60ac2054e0616338f275ffaf72a01857e60",
+      "case_input_set_hash": "sha256:cb3bd4c273134071e931e8f85765b028ce58986752e94da3902f8563ddba4bb3"
+    }
   },
   "holdout_window": {
     "case_count": 8,
@@ -108,9 +131,24 @@
       "twin_forecast_residual_2a34b15f913f3ad58ee3fb37",
       "twin_forecast_residual_09e61f26baff44fd6679824b"
     ],
-    "window_hash": "sha256:20bc567b9e75027425c981a24d8889f80327b55226dd29d04a97880bc07a428a"
+    "window_hash": "sha256:20bc567b9e75027425c981a24d8889f80327b55226dd29d04a97880bc07a428a",
+    "ordered_residual_hashes": [
+      "sha256:f144d4a7b7ba779db61eabb1f490b8c6065f9d46ac48ccade299a87067b4afac",
+      "sha256:462c8ad92cc5562db1df8fb702832d74e5ee02a41ea4841cef16808399cb4926",
+      "sha256:2fe1a8753e68487f853965b8d31b8d8f4a8411815a58ce99e4cfb7d706622eb6",
+      "sha256:b40acd5326f303122af43520a768f32c310cc97add2f277bb0a7fd5f149e414d",
+      "sha256:f3b7353124fd082bcf449e75e49438685a3c7af8967b04cb1e7e20d30270bcbe",
+      "sha256:8a2560cf867bd87261821e7f6d838091d882b572be08d3f53e95b8a1c80c7110",
+      "sha256:b6a399000df403afd10258f5b8fa8c644c89ba4ca85b1768bf227fc2ba431f79",
+      "sha256:420d55b40abae6d0cfdf2fe8f57920ede35280645f6eda9148bcc26d9c74dc1a"
+    ],
+    "window_hash_semantics": "ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1",
+    "required_semantic_companion_hashes": {
+      "residual_set_hash": "sha256:7995da1a8c5221c207087b30bb66a60ac2054e0616338f275ffaf72a01857e60",
+      "case_input_set_hash": "sha256:cb3bd4c273134071e931e8f85765b028ce58986752e94da3902f8563ddba4bb3"
+    }
   },
-  "case_input_set_hash": "sha256:fac894cf5a4de2c473523190408933ae25185c6a63b9568cde2d8121add4dc62",
+  "case_input_set_hash": "sha256:cb3bd4c273134071e931e8f85765b028ce58986752e94da3902f8563ddba4bb3",
   "context_hashes": {
     "model_component_hash": "sha256:3daa9adb75b975d5e956579a4f18afb6dab3aafb5418d85a37dd09cf1c0afe29",
     "effective_parameter_bundle_hash": "sha256:a3b3bbe9dbf78f246ff1dd187868a2427f6f977ede04dce0fbcfbfda427c7772",
@@ -134,7 +172,34 @@
     "duplicate_target_rejection": "PASS",
     "semantic_duplicate_rejection": "PASS",
     "conflicting_same_identity_rejection": "PASS",
-    "facts_only_projection_rebuild": "PASS_24"
+    "facts_only_projection_rebuild": "PASS_24",
+    "controlled_regime_acceptance": "PASS",
+    "calibration_regime_counts": {
+      "LOW_EXCESS": 8,
+      "MID_EXCESS": 2,
+      "HIGH_EXCESS": 6
+    },
+    "holdout_regime_counts": {
+      "LOW_EXCESS": 0,
+      "MID_EXCESS": 0,
+      "HIGH_EXCESS": 8
+    },
+    "calibration_represented_regime_count": 3,
+    "minimum_required_calibration_regime_count": 2,
+    "runtime_result_ssot_crosscheck": "PASS",
+    "calibration_sensitive_case_count": 16,
+    "minimum_sensitive_case_count": 4,
+    "calibration_sensitive_regime_counts": {
+      "LOW_EXCESS": 8,
+      "MID_EXCESS": 2,
+      "HIGH_EXCESS": 6
+    },
+    "calibration_represented_sensitive_regime_count": 3,
+    "minimum_required_sensitive_regime_count": 2,
+    "holdout_purpose": "HIGH_EXCESS_STRESS_HOLDOUT_ONLY",
+    "holdout_generalization_claim": "NOT_ESTABLISHED",
+    "window_hash_semantics": "ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1",
+    "successor_readiness_data_precondition": "PASS"
   },
   "canonical_deltas": {
     "twin_forecast_residual_v1": 24,
@@ -150,6 +215,10 @@
     "NOT_FIELD_CALIBRATION",
     "NO_CALIBRATION_SEARCH_EXECUTED_BY_S1",
     "NO_CANDIDATE_OR_EVALUATION_CANONICALIZED",
-    "NO_MODEL_ACTIVATION"
-  ]
+    "NO_MODEL_ACTIVATION",
+    "HOLDOUT_HIGH_EXCESS_STRESS_ONLY",
+    "NO_CROSS_REGIME_HOLDOUT_GENERALIZATION_CLAIM",
+    "WINDOW_HASH_IS_REF_MEMBERSHIP_ONLY_SEMANTIC_COMPANION_HASHES_REQUIRED"
+  ],
+  "erratum_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-CONTROLLED-DATA-ERRATUM.json"
 }

@@ -1,0 +1,146 @@
+{
+  "schema_version": "geox_mcft_cap_06_s1_controlled_data_erratum_v1",
+  "erratum_id": "MCFT-CAP-06.S1-CONTROLLED-DATA-SUCCESSOR-READINESS-ERRATUM-V1",
+  "capability_line_id": "MCFT-CAP-06",
+  "affected_delivery_slice_id": "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1",
+  "status": "CORRECTION_CANDIDATE",
+  "baseline_main_commit": "3a1494acb47db776d97ba75e339d85dc18c9d629",
+  "correction_pr_number": 2519,
+  "discovery": {
+    "closed_without_merge_s2_pr_number": 2518,
+    "s2_probe_run_16_case": 29481414125,
+    "s2_probe_run_24_case": 29481690201,
+    "original_case_count": 24,
+    "original_regime_counts": {
+      "LOW_EXCESS": 24,
+      "MID_EXCESS": 0,
+      "HIGH_EXCESS": 0
+    },
+    "original_maximum_normalized_excess_ratio_scale_9": "0.093326488",
+    "frozen_mid_lower_bound": "0.100000000",
+    "finding": "NO_16_8_RESELECTION_CAN_MEET_TWO_SENSITIVE_WETNESS_REGIMES"
+  },
+  "scope_of_retraction": {
+    "prior_s1_mechanical_proof_preserved": true,
+    "prior_s1_successor_readiness_claim_superseded": true,
+    "s2_authorization_withdrawn": true,
+    "prior_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+    "prior_residual_set_hash": "sha256:14a5f07e6f3cc94f6c61c697d39d2093cae35bd491fd3f4dc68e01e79c7c24d7",
+    "prior_case_input_set_hash": "sha256:fac894cf5a4de2c473523190408933ae25185c6a63b9568cde2d8121add4dc62"
+  },
+  "correction": {
+    "forcing_profile_id": "CAP06_MULTI_REGIME_V1",
+    "dynamics_changed": false,
+    "regime_formula_changed": false,
+    "regime_thresholds_changed": false,
+    "base_parameter": "0.030000",
+    "hidden_parameter": "0.034000",
+    "canonical_residual_count": 24,
+    "ordered_residual_refs": [
+      "twin_forecast_residual_82a3a33ec85e745b3da94926",
+      "twin_forecast_residual_3f304b582b7ccd88ff595e58",
+      "twin_forecast_residual_b1927fa85ec7907003536743",
+      "twin_forecast_residual_70cb140deddbd82431b930a8",
+      "twin_forecast_residual_5f1002f427dfc7a3898004c6",
+      "twin_forecast_residual_2e70b5e205e97d59ac5463ea",
+      "twin_forecast_residual_3dff46adeb68ddd13eb6cc23",
+      "twin_forecast_residual_5460ebde9cb3b3874330fbb0",
+      "twin_forecast_residual_b88ec039ea40554565fe48c6",
+      "twin_forecast_residual_eb356def2ef9987d04928088",
+      "twin_forecast_residual_a2cb5086fadd37dc50e223d0",
+      "twin_forecast_residual_911de330aea53e3fee88e0d3",
+      "twin_forecast_residual_9e4081b160e65b9bebd10c33",
+      "twin_forecast_residual_c6cb6464fb3a19634e5593d6",
+      "twin_forecast_residual_1561f21073c4a305e939e156",
+      "twin_forecast_residual_cb4c4702aaa1bff2027dc7eb",
+      "twin_forecast_residual_5e56e928f343f3311534101f",
+      "twin_forecast_residual_cc73ee4d8445074800a80e5f",
+      "twin_forecast_residual_8460f596160f7a25c002d137",
+      "twin_forecast_residual_c08214c843f869a28aa89751",
+      "twin_forecast_residual_0a5d78b827e5a53addbf030b",
+      "twin_forecast_residual_40dcac4516a48226c9fa2651",
+      "twin_forecast_residual_2a34b15f913f3ad58ee3fb37",
+      "twin_forecast_residual_09e61f26baff44fd6679824b"
+    ],
+    "ordered_residual_hashes": [
+      "sha256:bf52e954d113d5f0cb8ddb8fd9d5f980fc78024c9484afd24f1b228411d74698",
+      "sha256:51ed607ae2ee80f610eb915d2b2f164585a841afe0db4ab1a4e658dd6b2ee6c7",
+      "sha256:c9acfce97e1e77bc8648fcc5a68aa9b51514b7b15d415b805cef21239c92d00f",
+      "sha256:e4004da4ffde893cc0f041403c53146352032a4dc9cef2b8b5cc73d439b81afb",
+      "sha256:b3cdf2e81beac508f4b509677907d4ce5df3a9d970c6425624400d57358e4b78",
+      "sha256:af4015fc36872e83b2e5808c81cd884151d5dcf3b914d67fbf0763317ec1e61a",
+      "sha256:6c0c848a55dd79fc4b43f29f165cbf771d33ef5e2a856e2498566eda38116166",
+      "sha256:31c47dcb9c787587fec0dd1dadacee85671343fc710f62e630a256fb7fc816eb",
+      "sha256:3ebb917f7467d89b608dc475a2f3707e2063e7602c28a64357af5aeb87e62e79",
+      "sha256:59a31b14c814e61ee705f459d54b2b179b3f624874335b9525cb2d73f8a9ba03",
+      "sha256:c7c0cd7fc9e5a293755caee773e5ffc8e9e44010797b18ecf9295ad5b869877b",
+      "sha256:78be740f8f78ebce77d88d901292bf1f028a77a1fbfb99e230766aef31da0d00",
+      "sha256:8ff39fa23ec18441b287b247d41e0f8d64a34325c1e4cb9453e6c26b9adb01d5",
+      "sha256:9c832e5f6b3063c843ca2c7e1297a716cc2fc2402395f13e66be6810718487c3",
+      "sha256:1f22f4d23fdec94df022ecc4b089ebea2d650192dd7890e5f8974c5607d4d0dd",
+      "sha256:819641b21443c0347f8aa297c5bbb70d4a42a931bd876bc5a886907da7235f41",
+      "sha256:f144d4a7b7ba779db61eabb1f490b8c6065f9d46ac48ccade299a87067b4afac",
+      "sha256:462c8ad92cc5562db1df8fb702832d74e5ee02a41ea4841cef16808399cb4926",
+      "sha256:2fe1a8753e68487f853965b8d31b8d8f4a8411815a58ce99e4cfb7d706622eb6",
+      "sha256:b40acd5326f303122af43520a768f32c310cc97add2f277bb0a7fd5f149e414d",
+      "sha256:f3b7353124fd082bcf449e75e49438685a3c7af8967b04cb1e7e20d30270bcbe",
+      "sha256:8a2560cf867bd87261821e7f6d838091d882b572be08d3f53e95b8a1c80c7110",
+      "sha256:b6a399000df403afd10258f5b8fa8c644c89ba4ca85b1768bf227fc2ba431f79",
+      "sha256:420d55b40abae6d0cfdf2fe8f57920ede35280645f6eda9148bcc26d9c74dc1a"
+    ],
+    "residual_set_hash": "sha256:7995da1a8c5221c207087b30bb66a60ac2054e0616338f275ffaf72a01857e60",
+    "case_input_set_hash": "sha256:cb3bd4c273134071e931e8f85765b028ce58986752e94da3902f8563ddba4bb3",
+    "calibration_window_hash": "sha256:e5403ae258326909d054e92b53d089494d709785d8c48775a8cd142b0f0d191d",
+    "holdout_window_hash": "sha256:20bc567b9e75027425c981a24d8889f80327b55226dd29d04a97880bc07a428a",
+    "calibration_regime_counts": {
+      "LOW_EXCESS": 8,
+      "MID_EXCESS": 2,
+      "HIGH_EXCESS": 6
+    },
+    "holdout_regime_counts": {
+      "LOW_EXCESS": 0,
+      "MID_EXCESS": 0,
+      "HIGH_EXCESS": 8
+    },
+    "calibration_represented_regime_count": 3,
+    "base_replay_status": "PASS_24_EXACT_STORAGE_AND_ZERO_MASS_BALANCE_ERROR",
+    "postgresql_acceptance": "9_PASS_0_FAIL",
+    "calibration_sensitive_case_count": 16,
+    "minimum_sensitive_case_count": 4,
+    "calibration_sensitive_regime_counts": {
+      "LOW_EXCESS": 8,
+      "MID_EXCESS": 2,
+      "HIGH_EXCESS": 6
+    },
+    "calibration_represented_sensitive_regime_count": 3,
+    "minimum_required_sensitive_regime_count": 2,
+    "holdout_purpose": "HIGH_EXCESS_STRESS_HOLDOUT_ONLY",
+    "holdout_generalization_claim": "NOT_ESTABLISHED",
+    "window_hash_semantics": "ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1",
+    "required_window_semantic_companion_hashes": {
+      "residual_set_hash": "sha256:7995da1a8c5221c207087b30bb66a60ac2054e0616338f275ffaf72a01857e60",
+      "case_input_set_hash": "sha256:cb3bd4c273134071e931e8f85765b028ce58986752e94da3902f8563ddba4bb3"
+    },
+    "successor_readiness_data_precondition": "PASS"
+  },
+  "candidate_execution": {
+    "head": "6afba5256ea802bdff7ca6a750553da9a362990b",
+    "workflow_run": 29484155724
+  },
+  "effectiveness": {
+    "effective": false,
+    "condition": "CORRECTION_EXACT_HEAD_CI_PASS_AND_MERGED_AND_TREE_EQUIVALENT_AND_MERGED_MAIN_GATE_PASS_AND_SEPARATE_EFFECTIVENESS_WRITEBACK"
+  },
+  "preserved_nonclaims": [
+    "NO_S2_IMPLEMENTATION_ON_CORRECTED_BASELINE",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_SHADOW_EVALUATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_CONFIG_SWITCH",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
+    "NO_PUBLIC_ROUTE",
+    "NO_WEB",
+    "NO_SCHEDULER",
+    "NO_MCFT_CAP_07_AUTHORIZATION"
+  ]
+}

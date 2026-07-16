@@ -31,10 +31,10 @@ design_status:
 CONDITIONAL_FROZEN_AFTER_P_MINUS_1
 
 implementation_status:
-S1_MERGED_EFFECTIVE_S2_AUTHORIZED_NOT_STARTED
+S1_CONTROLLED_DATA_CORRECTION_CANDIDATE
 
 runtime_implementation_status:
-S1_CANONICAL_RESIDUAL_WINDOWS_MERGED_EFFECTIVE
+S1_MECHANICAL_IMPLEMENTATION_PRESERVED_SUCCESSOR_READINESS_SUPERSEDED
 
 authorization_effective:
 true
@@ -46,7 +46,7 @@ runtime_source_authorized:
 true
 
 active_delivery_slice_id:
-MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1
+MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
 
 predecessor_eligibility:
 RESTORED
@@ -55,10 +55,10 @@ dt02_architecture_amendment_status:
 NOT_REQUIRED
 
 first_permitted_repository_action:
-MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1
+MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
 ```
 
-本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1、P0、S0 与 S1 均已 merged-main effective；S1 已建立受控 24-case canonical Residual history、16-case calibration window 与 later 8-case holdout window。当前仅 S2 contracts、fixed-point math 与 policy implementation 获授权但尚未开始；S3 及后续、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 仍未授权。
+本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1、P0 与 S0 已 merged-main effective；原 S1 的机械持久化、幂等和重建证明保留，但后继就绪性已由 additive erratum 撤销，当前为 S1 controlled-data correction candidate。S2 及其后续、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 均保持未授权。
 
 ---
 
@@ -4276,3 +4276,20 @@ S3 and later: BLOCKED
 
 S1 effectiveness authorizes only S2 contract, fixed-point math and policy implementation. It does not implement the calibration engine, append Candidate or Evaluation objects, create Model Activation, switch active Config, mutate State/checkpoint, expose a public route/Web path/scheduler, or authorize MCFT-CAP-07.
 <!-- MCFT-CAP-06-S1-EFFECTIVENESS-END -->
+
+<!-- MCFT-CAP-06-S1-CONTROLLED-DATA-CORRECTION:BEGIN -->
+## MCFT-CAP-06 S1 受控数据后继就绪性纠偏
+
+S2 草稿 PR #2518 的专用 probe 证明：原 S1 的 24 个受控案例全部属于 `LOW_EXCESS`，最大归一化超田间持水量比率仅为 `0.093326488`，低于冻结的 `MID_EXCESS` 下界 `0.10`。因此，原 S1 的机械持久化、幂等和重建证明保留，但其对 S2 的后继就绪性授权被撤销。
+
+当前唯一 active slice 回到 `MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1` 的受控数据纠偏。纠偏仅增加 CAP-06 专用 `CAP06_MULTI_REGIME_V1` forcing profile；不修改 Dynamics、固定点策略、湿度分区公式或阈值。修正后的校准窗口为 8 LOW / 2 MID / 6 HIGH，holdout 为 8 HIGH；24 条 Residual refs 保持稳定，Residual hashes、residual-set hash 与 case-input-set hash按新证据重新生成。
+
+在纠偏 exact-head CI、merge、head-to-merge tree equivalence、merged-main Gate 与独立 effectiveness writeback 全部通过前，S2 及其后续 Slice 均保持阻塞。
+
+
+### S1 后继就绪性永久前置条件
+
+纠偏后的 16 个 calibration case 必须在 `0.020000` 与 `0.040000` endpoint replay 下满足至少 4 个 sensitive cases、至少 2 个 represented sensitive wetness regimes，并保持 24-case base replay exactness。later 8-case holdout 明确限定为 `HIGH_EXCESS_STRESS_HOLDOUT_ONLY`，不建立跨 regime 一般化声明。
+
+`calibration_window_hash` 与 `holdout_window_hash` 的冻结语义为 `ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1`：它们只绑定有序 Residual refs。任何 S2 Candidate 或后续 Evaluation 消费者必须同时 pin 对应 ordered Residual hashes、`residual_set_hash` 与 `case_input_set_hash`；只 pin window hash 不构成数据语义身份。
+<!-- MCFT-CAP-06-S1-CONTROLLED-DATA-CORRECTION:END -->

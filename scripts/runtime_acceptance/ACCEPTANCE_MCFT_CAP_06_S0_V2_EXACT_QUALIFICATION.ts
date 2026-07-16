@@ -52,6 +52,7 @@ const MAP_PATH = "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md";
 const MATRIX_PATH = "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json";
 const TASK_PATH = "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md";
 const P0_STATUS_PATH = "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P0-STATUS.json";
+const S0_EFFECTIVENESS_PATH = "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json";
 const AUTHORIZATION_PATH = "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION.md";
 const AUTHORIZATION_STATUS_PATH = "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json";
 const LOCK_PATH = "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json";
@@ -373,7 +374,9 @@ async function executeCap05TerminalChain(databaseUrl: string): Promise<void> {
     await establishStandardFeedbackPath(pool);
     const expiredPredecessorLease = await pool.query(
       `UPDATE twin_runtime_lease_v1
-          SET expires_at=transaction_timestamp()-interval '1 second'
+          SET acquired_at=transaction_timestamp()-interval '10 minutes',
+              heartbeat_at=transaction_timestamp()-interval '5 minutes',
+              expires_at=transaction_timestamp()-interval '1 second'
         WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3
           AND field_id=$4 AND season_id=$5 AND zone_id=$6`,
       scopeValues(),
@@ -954,14 +957,27 @@ async function main(): Promise<void> {
   assertRepositoryBoundary();
 
   const p0Status = readJson(P0_STATUS_PATH);
+  const s0Effectiveness = readJson(S0_EFFECTIVENESS_PATH);
   const currentState = readJson("docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json");
   const delivery = readJson(DELIVERY_PATH);
   const cap05Closure = readJson(CAP05_CLOSURE_PATH);
   const cap05Main = readJson(CAP05_MAIN_PATH);
   assert.equal(p0Status.status, "MERGED_EFFECTIVE", "P0_MERGED_EFFECTIVE_REQUIRED");
   assert.equal(p0Status.effectiveness?.effective, true, "P0_EFFECTIVENESS_REQUIRED");
-  assert.equal(currentState.status, "MERGED_EFFECTIVE", "CURRENT_STATE_RECONCILIATION_EFFECTIVE_REQUIRED");
-  assert.equal(currentState.reconciliation_effective, true, "CURRENT_STATE_RECONCILIATION_EFFECTIVE_REQUIRED");
+  assert.equal(s0Effectiveness.status, "MERGED_EFFECTIVE", "S0_EFFECTIVENESS_STATUS_REQUIRED");
+  assert.equal(s0Effectiveness.effective, true, "S0_EFFECTIVENESS_REQUIRED");
+  assert.equal(s0Effectiveness.implementation_merge_commit, "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a", "S0_IMPLEMENTATION_MERGE_REQUIRED");
+  assert.equal(s0Effectiveness.head_to_merge_tree_equivalence, "PASS", "S0_TREE_EQUIVALENCE_REQUIRED");
+  assert.equal(s0Effectiveness.postmerge_gate, "PASS", "S0_POSTMERGE_GATE_REQUIRED");
+  assert.equal(s0Effectiveness.authorization_effective, true, "S0_AUTHORIZATION_EFFECTIVE_REQUIRED");
+  assert.equal(s0Effectiveness.runtime_source_authorized, true, "S0_RUNTIME_SOURCE_AUTHORIZATION_REQUIRED");
+  if (currentState.reconciliation_effective === true) {
+    assert.equal(currentState.status, "MERGED_EFFECTIVE", "EFFECTIVE_RECONCILIATION_STATUS_REQUIRED");
+  } else {
+    assert.notEqual(currentState.status, "MERGED_EFFECTIVE", "NON_EFFECTIVE_RECONCILIATION_STATUS_REQUIRED");
+    assert.equal(typeof currentState.effectiveness_condition, "string", "ACTIVE_CANDIDATE_EFFECTIVENESS_CONDITION_REQUIRED");
+    assert.ok(currentState.effectiveness_condition.length > 0, "ACTIVE_CANDIDATE_EFFECTIVENESS_CONDITION_REQUIRED");
+  }
   assert.equal(currentState.current_state?.s0, "MERGED_EFFECTIVE", "S0_MERGED_EFFECTIVE_REQUIRED");
   assert.equal(currentState.current_state?.capability_line_authorization_effective, true, "CAP06_AUTHORIZATION_EFFECTIVE_REQUIRED");
   assert.equal(currentState.current_state?.runtime_source_authorized, true, "CAP06_RUNTIME_SOURCE_AUTHORIZATION_REQUIRED");
@@ -979,7 +995,7 @@ async function main(): Promise<void> {
   assert.equal(delivery.runtime_source_authorized, true, "CAP06_RUNTIME_SOURCE_AUTHORIZATION_REQUIRED");
   assert.equal(cap05Closure.capability_complete, true, "CAP05_CLOSURE_COMPLETE_REQUIRED");
   assert.equal(cap05Main.capability_complete, true, "CAP05_MAIN_COMPLETE_REQUIRED");
-  ok("merged-effective current-state and CAP-05 predecessor authority are exact");
+  ok("merged-effective S0 authority, active-slice SSOT and CAP-05 predecessor authority are exact");
 
   await executeCap05TerminalChain(databaseUrl);
   const pool = new Pool({ connectionString: databaseUrl });

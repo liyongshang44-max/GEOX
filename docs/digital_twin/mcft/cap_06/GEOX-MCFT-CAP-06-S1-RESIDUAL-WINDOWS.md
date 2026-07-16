@@ -24,3 +24,21 @@ S1 reuses the existing CAP-04 H1 Forecast trace, CAP-02 fixed-point Dynamics, CA
 The first 16 ordered Residuals form the calibration window and the later 8 form the holdout window. Event time and observation-availability time are both strictly separated. The controlled refs have zero intersection with the repository-history qualification track.
 
 This candidate creates no calibration search, Candidate, Shadow Evaluation, Model Activation, active-config binding, State/checkpoint mutation, public route, Web behavior, scheduler or MCFT-CAP-07 authority. S2 remains blocked until S1 merges and its merged-main Gate passes.
+
+<!-- MCFT-CAP-06-S1-CONTROLLED-DATA-CORRECTION:BEGIN -->
+## MCFT-CAP-06 S1 受控数据后继就绪性纠偏
+
+S2 草稿 PR #2518 的专用 probe 证明：原 S1 的 24 个受控案例全部属于 `LOW_EXCESS`，最大归一化超田间持水量比率仅为 `0.093326488`，低于冻结的 `MID_EXCESS` 下界 `0.10`。因此，原 S1 的机械持久化、幂等和重建证明保留，但其对 S2 的后继就绪性授权被撤销。
+
+当前唯一 active slice 回到 `MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1` 的受控数据纠偏。纠偏仅增加 CAP-06 专用 `CAP06_MULTI_REGIME_V1` forcing profile；不修改 Dynamics、固定点策略、湿度分区公式或阈值。修正后的校准窗口为 8 LOW / 2 MID / 6 HIGH，holdout 为 8 HIGH；24 条 Residual refs 保持稳定，Residual hashes、residual-set hash 与 case-input-set hash按新证据重新生成。
+
+在纠偏 exact-head CI、merge、head-to-merge tree equivalence、merged-main Gate 与独立 effectiveness writeback 全部通过前，S2 及其后续 Slice 均保持阻塞。
+<!-- MCFT-CAP-06-S1-CONTROLLED-DATA-CORRECTION:END -->
+
+## Corrected successor-readiness binding
+
+- calibration endpoint sensitivity: `16` sensitive cases; minimum `4`; represented sensitive regimes `3`; minimum `2`.
+- base replay: `PASS_24_EXACT_STORAGE_AND_ZERO_MASS_BALANCE_ERROR`.
+- holdout purpose: `HIGH_EXCESS_STRESS_HOLDOUT_ONLY`; cross-regime generalization is not established.
+- window hash semantics: `ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1`. A window hash binds ordered Residual refs only; consumers must also pin ordered Residual hashes, `residual_set_hash`, and `case_input_set_hash`.
+- successor-readiness data precondition: `PASS`; S1 effectiveness and S2 authorization remain false until exact-head CI, merge, tree equivalence, merged-main proof, and separate effectiveness writeback.
