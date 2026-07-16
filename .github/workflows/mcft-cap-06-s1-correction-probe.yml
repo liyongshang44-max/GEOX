@@ -1,0 +1,71 @@
+name: mcft-cap-06-s1-correction-probe
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  correction-probe:
+    if: github.head_ref == 'agent/mcft-cap-06-s1-controlled-regime-correction-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - name: Checkout S1 correction branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck and build
+        run: |
+          set -euo pipefail
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Prove corrected frozen wetness-regime coverage
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          pnpm -w exec tsx scripts/runtime_acceptance/DIAG_MCFT_CAP_06_S1_CORRECTED_REGIMES.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S1_CORRECTED_REGIMES.log
+
+      - name: Run permanent isolated S1 PostgreSQL acceptance
+        run: |
+          set -euo pipefail
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs 2>&1 | tee acceptance-output/MCFT_CAP_06_S1_CORRECTION_POSTGRESQL.log
+
+      - name: Upload S1 correction evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s1-correction-probe
+          path: acceptance-output/
+          if-no-files-found: error
