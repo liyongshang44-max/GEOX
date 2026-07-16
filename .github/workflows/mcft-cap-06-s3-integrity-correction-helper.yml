@@ -1,0 +1,137 @@
+name: mcft-cap-06-s3-integrity-correction-helper
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize-target-correction:
+    if: github.head_ref == 'agent/mcft-cap-06-s3-integrity-correction-helper-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      TARGET_BRANCH: agent/mcft-cap-06-s3-candidate-integrity-correction-v1
+      EXPECTED_TARGET_HEAD: e5443b64a54318655b26aa6f4ada5646fdae51b4
+      BASE_MAIN: 36efb93963222b2768b8d2bf384f748c86ce525a
+      S3_BASELINE: ea198cc0cad063c7e70a59727171908f2f8c7e7d
+    steps:
+      - name: Checkout target correction branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s3-candidate-integrity-correction-v1
+          path: target
+          fetch-depth: 0
+
+      - name: Checkout helper branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s3-integrity-correction-helper-v1
+          path: helper
+          fetch-depth: 1
+
+      - name: Verify target and main identities
+        working-directory: target
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TARGET_HEAD"
+          git fetch --quiet origin main
+          test "$(git rev-parse origin/main)" = "$BASE_MAIN"
+          test "$(git merge-base HEAD origin/main)" = "$BASE_MAIN"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: target/pnpm-lock.yaml
+
+      - name: Install target dependencies
+        working-directory: target
+        run: pnpm install --frozen-lockfile
+
+      - name: Materialize target correction
+        working-directory: target
+        run: python ../helper/.github/scripts/run_mcft_cap06_s3_integrity_correction.py
+
+      - name: Remove target temporary workflow
+        working-directory: target
+        run: git rm .github/workflows/mcft-cap-06-s3-candidate-integrity-correction.yml
+
+      - name: Run corrected S3 acceptance and build
+        working-directory: target
+        run: |
+          set -euo pipefail
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Verify correction and frozen S3 boundaries
+        working-directory: target
+        run: |
+          set -euo pipefail
+          rm -rf acceptance-output
+          test ! -e .github/workflows/mcft-cap-06-s3-candidate-integrity-correction.yml
+          mapfile -t correction < <(git diff --name-only origin/main | sort)
+          mapfile -t expected_correction < <(printf '%s\n' \
+            apps/server/src/persistence/calibration/postgres_calibration_governance_repository_v1.ts \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE_DB.ts | sort)
+          diff -u <(printf '%s\n' "${expected_correction[@]}") <(printf '%s\n' "${correction[@]}")
+          test "${#correction[@]}" -eq 4
+
+          mapfile -t total < <(git diff --name-only "$S3_BASELINE...HEAD" | sort)
+          mapfile -t expected_total < <(printf '%s\n' \
+            .github/workflows/mcft-cap-06-s3-focused-validation.yml \
+            apps/server/db/migrations/2026_07_17_mcft_cap_06_calibration_governance_persistence.sql \
+            apps/server/src/persistence/calibration/postgres_calibration_governance_repository_v1.ts \
+            apps/server/src/persistence/calibration/postgres_exact_calibration_residual_repository_v1.ts \
+            apps/server/src/projections/calibration/calibration_governance_projection_v1.ts \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-BASELINE-RECONCILIATION-EFFECTIVENESS.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-ENTRY-CONTRACT.md \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE_DB.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PROJECTION_CANONICALITY_DB.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs \
+            scripts/runtime_acceptance/mcft_cap_06_controlled_compute_fixture_v1.ts | sort)
+          diff -u <(printf '%s\n' "${expected_total[@]}") <(printf '%s\n' "${total[@]}")
+          test "${#total[@]}" -eq 14
+
+      - name: Commit and push target correction
+        working-directory: target
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "fix(mcft-cap-06): enforce Evaluation Candidate integrity"
+          git push origin HEAD:$TARGET_BRANCH
