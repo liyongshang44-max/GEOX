@@ -1,0 +1,78 @@
+name: mcft-cap-06-s1-effectiveness-materialize
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  materialize:
+    if: github.head_ref == 'agent/mcft-cap-06-s1-effectiveness-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout effectiveness branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Materialize permanent S1 effectiveness files
+        run: |
+          set -euo pipefail
+          test "$(git merge-base HEAD origin/main)" = "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b"
+          python -m py_compile scripts/remediation/FINALIZE_MCFT_CAP_06_S1_EFFECTIVENESS.py
+          python scripts/remediation/FINALIZE_MCFT_CAP_06_S1_EFFECTIVENESS.py
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs --postmerge
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
+
+      - name: Remove temporary materializer and enforce exact boundary
+        run: |
+          set -euo pipefail
+          rm .github/workflows/mcft-cap-06-s1-effectiveness-materialize.yml
+          rm scripts/remediation/FINALIZE_MCFT_CAP_06_S1_EFFECTIVENESS.py
+          rm -rf scripts/remediation/__pycache__
+          cat > /tmp/expected-files.txt <<'EOF'
+          docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
+          docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
+          EOF
+          git diff --name-only 6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b | sort > /tmp/actual-files.txt
+          diff -u /tmp/expected-files.txt /tmp/actual-files.txt
+          git diff --check 6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b
+
+      - name: Commit permanent writeback
+        run: |
+          set -euo pipefail
+          git config user.name "GEOX Governance Bot"
+          git config user.email "governance-bot@users.noreply.github.com"
+          git add -A
+          git commit -m "MCFT-CAP-06 S1: activate effectiveness and authorize S2"
+          git push origin HEAD:${{ github.head_ref }}
