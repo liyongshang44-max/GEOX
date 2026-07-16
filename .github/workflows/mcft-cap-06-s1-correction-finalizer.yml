@@ -49,476 +49,68 @@ jobs:
       - name: Install
         run: pnpm install --no-frozen-lockfile
 
-      - name: Regenerate exact correction evidence
-        shell: bash
+      - name: Regenerate exact S1 correction evidence
         run: |
           set -euo pipefail
           mkdir -p acceptance-output
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts
           node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
 
-      - name: Materialize additive erratum and corrected candidate SSOT
-        shell: bash
+      - name: Materialize additive erratum and candidate SSOT
         env:
           CANDIDATE_HEAD: ${{ github.sha }}
           CANDIDATE_WORKFLOW_RUN: ${{ github.run_id }}
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
+          python scripts/governance_acceptance/materialize_mcft_cap06_s1_correction.py
 
-          ROOT = Path('.')
-          CAP = ROOT / 'docs/digital_twin/mcft/cap_06'
-          S1 = 'MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1'
-          S2 = 'MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1'
-          BASE_MAIN = '3a1494acb47db776d97ba75e339d85dc18c9d629'
-          OLD_RESIDUAL_SET = 'sha256:14a5f07e6f3cc94f6c61c697d39d2093cae35bd491fd3f4dc68e01e79c7c24d7'
-          OLD_CASE_INPUT_SET = 'sha256:fac894cf5a4de2c473523190408933ae25185c6a63b9568cde2d8121add4dc62'
-          EXPECTED_FILES = [
-            'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
-            'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json',
-            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json',
-            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json',
-            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-CONTROLLED-DATA-ERRATUM.json',
-            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json',
-            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.json',
-            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.md',
-            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md',
-            'scripts/acceptance/run_acceptance.cjs',
-            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs',
-            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts',
-            'scripts/runtime_acceptance/mcft_cap_04_twenty_four_tick_range_fixture_v1.ts',
-            'scripts/runtime_acceptance/mcft_cap_06_s1_residual_windows_fixture_v1.ts',
-          ]
-
-          def read_json(path):
-              return json.loads(Path(path).read_text(encoding='utf-8'))
-
-          def write_json(path, value):
-              Path(path).write_text(json.dumps(value, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
-
-          runtime = read_json('acceptance-output/MCFT_CAP_06_S1_RESULT.json')
-          regimes = read_json('acceptance-output/MCFT_CAP_06_S1_CONTROLLED_REGIMES_RESULT.json')
-          assert runtime['ordered_residual_refs'] == regimes['ordered_residual_refs']
-          assert runtime['ordered_residual_hashes'] == regimes['ordered_residual_hashes']
-          assert runtime['residual_set_hash'] == regimes['residual_set_hash']
-          assert runtime['case_input_set_hash'] == regimes['case_input_set_hash']
-          assert regimes['calibration_regime_counts'] == {'LOW_EXCESS': 8, 'MID_EXCESS': 2, 'HIGH_EXCESS': 6}
-          assert regimes['calibration_represented_regime_count'] == 3
-
-          erratum = {
-            'schema_version': 'geox_mcft_cap_06_s1_controlled_data_erratum_v1',
-            'erratum_id': 'MCFT-CAP-06.S1-CONTROLLED-DATA-SUCCESSOR-READINESS-ERRATUM-V1',
-            'capability_line_id': 'MCFT-CAP-06',
-            'affected_delivery_slice_id': S1,
-            'status': 'CORRECTION_CANDIDATE',
-            'baseline_main_commit': BASE_MAIN,
-            'correction_pr_number': 2519,
-            'discovery': {
-              'closed_without_merge_s2_pr_number': 2518,
-              's2_probe_run_16_case': 29481414125,
-              's2_probe_run_24_case': 29481690201,
-              'original_case_count': 24,
-              'original_regime_counts': {'LOW_EXCESS': 24, 'MID_EXCESS': 0, 'HIGH_EXCESS': 0},
-              'original_maximum_normalized_excess_ratio_scale_9': '0.093326488',
-              'frozen_mid_lower_bound': '0.100000000',
-              'finding': 'NO_16_8_RESELECTION_CAN_MEET_TWO_SENSITIVE_WETNESS_REGIMES',
-            },
-            'scope_of_retraction': {
-              'prior_s1_mechanical_proof_preserved': True,
-              'prior_s1_successor_readiness_claim_superseded': True,
-              's2_authorization_withdrawn': True,
-              'prior_effectiveness_ref': 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json',
-              'prior_residual_set_hash': OLD_RESIDUAL_SET,
-              'prior_case_input_set_hash': OLD_CASE_INPUT_SET,
-            },
-            'correction': {
-              'forcing_profile_id': 'CAP06_MULTI_REGIME_V1',
-              'dynamics_changed': False,
-              'regime_formula_changed': False,
-              'regime_thresholds_changed': False,
-              'base_parameter': '0.030000',
-              'hidden_parameter': '0.034000',
-              'canonical_residual_count': 24,
-              'ordered_residual_refs': runtime['ordered_residual_refs'],
-              'ordered_residual_hashes': runtime['ordered_residual_hashes'],
-              'residual_set_hash': runtime['residual_set_hash'],
-              'case_input_set_hash': runtime['case_input_set_hash'],
-              'calibration_window_hash': runtime['calibration_window_hash'],
-              'holdout_window_hash': runtime['holdout_window_hash'],
-              'calibration_regime_counts': regimes['calibration_regime_counts'],
-              'holdout_regime_counts': regimes['holdout_regime_counts'],
-              'calibration_represented_regime_count': regimes['calibration_represented_regime_count'],
-              'base_replay_status': regimes['base_replay_status'],
-              'postgresql_acceptance': '9_PASS_0_FAIL',
-            },
-            'candidate_execution': {
-              'head': os.environ['CANDIDATE_HEAD'],
-              'workflow_run': int(os.environ['CANDIDATE_WORKFLOW_RUN']),
-            },
-            'effectiveness': {
-              'effective': False,
-              'condition': 'CORRECTION_EXACT_HEAD_CI_PASS_AND_MERGED_AND_TREE_EQUIVALENT_AND_MERGED_MAIN_GATE_PASS_AND_SEPARATE_EFFECTIVENESS_WRITEBACK',
-            },
-            'preserved_nonclaims': [
-              'NO_S2_IMPLEMENTATION_ON_CORRECTED_BASELINE',
-              'NO_CALIBRATION_CANDIDATE',
-              'NO_SHADOW_EVALUATION',
-              'NO_MODEL_ACTIVATION',
-              'NO_ACTIVE_CONFIG_SWITCH',
-              'NO_STATE_OR_CHECKPOINT_MUTATION',
-              'NO_PUBLIC_ROUTE',
-              'NO_WEB',
-              'NO_SCHEDULER',
-              'NO_MCFT_CAP_07_AUTHORIZATION',
-            ],
-          }
-          write_json(CAP / 'GEOX-MCFT-CAP-06-S1-CONTROLLED-DATA-ERRATUM.json', erratum)
-
-          contract_path = CAP / 'GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.json'
-          contract = read_json(contract_path)
-          contract.update({
-            'status': 'CONTROLLED_DATA_CORRECTION_CANDIDATE',
-            'baseline_main_commit': BASE_MAIN,
-            'implementation_pr_number': 2519,
-            'candidate_execution_head': os.environ['CANDIDATE_HEAD'],
-            'candidate_execution_workflow': int(os.environ['CANDIDATE_WORKFLOW_RUN']),
-            'ordered_residual_refs': runtime['ordered_residual_refs'],
-            'ordered_residual_hashes': runtime['ordered_residual_hashes'],
-            'residual_set_hash': runtime['residual_set_hash'],
-            'case_input_set_hash': runtime['case_input_set_hash'],
-          })
-          contract['calibration_window']['ordered_residual_refs'] = runtime['calibration_window_refs']
-          contract['calibration_window']['window_hash'] = runtime['calibration_window_hash']
-          contract['holdout_window']['ordered_residual_refs'] = runtime['holdout_window_refs']
-          contract['holdout_window']['window_hash'] = runtime['holdout_window_hash']
-          contract['validation'].update({
-            'controlled_regime_acceptance': 'PASS',
-            'calibration_regime_counts': regimes['calibration_regime_counts'],
-            'holdout_regime_counts': regimes['holdout_regime_counts'],
-            'calibration_represented_regime_count': regimes['calibration_represented_regime_count'],
-            'minimum_required_calibration_regime_count': 2,
-            'runtime_result_ssot_crosscheck': 'PASS',
-          })
-          contract['erratum_ref'] = 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-CONTROLLED-DATA-ERRATUM.json'
-          write_json(contract_path, contract)
-
-          status_path = CAP / 'GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json'
-          status = read_json(status_path)
-          status.update({
-            'status': 'CONTROLLED_DATA_CORRECTION_CANDIDATE',
-            'baseline_main_commit': BASE_MAIN,
-            'implementation_pr_number': 2519,
-            'candidate_execution_head': os.environ['CANDIDATE_HEAD'],
-            'candidate_execution_workflow': int(os.environ['CANDIDATE_WORKFLOW_RUN']),
-            'candidate_execution_result': 'REGIME_PASS_POSTGRESQL_9_PASS_0_FAIL',
-            'residual_set_hash': runtime['residual_set_hash'],
-            'calibration_window_hash': runtime['calibration_window_hash'],
-            'holdout_window_hash': runtime['holdout_window_hash'],
-            'case_input_set_hash': runtime['case_input_set_hash'],
-            's1_effective': False,
-            's2_authorized': False,
-            'next_authorized_slice_after_effectiveness': S2,
-            'erratum_ref': 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-CONTROLLED-DATA-ERRATUM.json',
-            'exact_changed_file_boundary': EXPECTED_FILES,
-          })
-          status['candidate_tree_validation'] = {
-            'controlled_regime_acceptance': 'PASS_8_LOW_2_MID_6_HIGH_CALIBRATION',
-            'isolated_postgresql_acceptance': '9_PASS_0_FAIL',
-            'runtime_result_ssot_crosscheck': 'PASS',
-            'repository_typecheck': 'PENDING_EXACT_HEAD_CI',
-            'repository_build': 'PENDING_EXACT_HEAD_CI',
-            'exact_changed_file_count': len(EXPECTED_FILES),
-            'temporary_workflows_retained': False,
-            'generated_acceptance_artifacts_retained': False,
-          }
-          status['prior_effectiveness'] = status.get('effectiveness', {})
-          status['effectiveness'] = {
-            'effective': False,
-            'condition': erratum['effectiveness']['condition'],
-          }
-          write_json(status_path, status)
-
-          delivery_path = CAP / 'GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
-          delivery = read_json(delivery_path)
-          delivery.update({
-            'implementation_status': 'S1_CONTROLLED_DATA_CORRECTION_CANDIDATE_S2_AUTHORIZATION_WITHDRAWN',
-            'active_delivery_slice_id': S1,
-            'candidate_slices': [S1],
-            'next_repository_action': S1,
-            'authorized_not_started_slices': [],
-            's1_candidate_materialized': True,
-            's1_effective': False,
-            's1_successor_readiness_effective': False,
-            's1_prior_mechanical_effectiveness_preserved': True,
-            's2_authorized': False,
-            's2_implementation_started': False,
-            's1_erratum_ref': 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-CONTROLLED-DATA-ERRATUM.json',
-          })
-          if S2 not in delivery['blocked_slices']:
-              delivery['blocked_slices'].insert(0, S2)
-          for item in delivery['completed_or_effective_slices']:
-              if item.get('delivery_slice_id') == S1:
-                  item['status'] = 'PRIOR_MERGED_EFFECTIVE_MECHANICAL_PROOF_PRESERVED_SUCCESSOR_READINESS_SUPERSEDED'
-                  item['superseded_by_erratum'] = 'MCFT-CAP-06.S1-CONTROLLED-DATA-SUCCESSOR-READINESS-ERRATUM-V1'
-          write_json(delivery_path, delivery)
-
-          current_path = CAP / 'GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json'
-          current = read_json(current_path)
-          current.update({
-            'status': 'S1_CONTROLLED_DATA_CORRECTION_CANDIDATE',
-            'reconciliation_effective': False,
-            'next_repository_action': S1,
-            'effectiveness_condition': erratum['effectiveness']['condition'],
-          })
-          current['current_state'].update({
-            'active_delivery_slice_id': S1,
-            's1': 'CONTROLLED_DATA_CORRECTION_CANDIDATE',
-            'controlled_residual_window_candidate_implemented': True,
-            'controlled_residual_window_effective': False,
-            's2': 'BLOCKED_BY_S1_CONTROLLED_DATA_CORRECTION',
-            'calibration_contract_math_implemented': False,
-          })
-          current['proof']['s1_controlled_data_correction'] = {
-            'correction_pr_number': 2519,
-            'candidate_head': os.environ['CANDIDATE_HEAD'],
-            'candidate_workflow_run': int(os.environ['CANDIDATE_WORKFLOW_RUN']),
-            'erratum_ref': 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-CONTROLLED-DATA-ERRATUM.json',
-            'regime_acceptance': 'PASS',
-            'postgresql_acceptance': '9_PASS_0_FAIL',
-            'effective': False,
-          }
-          current['s1_candidate'].update({
-            'residual_set_hash': runtime['residual_set_hash'],
-            'calibration_window_hash': runtime['calibration_window_hash'],
-            'holdout_window_hash': runtime['holdout_window_hash'],
-            'execution_workflow': int(os.environ['CANDIDATE_WORKFLOW_RUN']),
-          })
-          write_json(current_path, current)
-
-          matrix_path = ROOT / 'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json'
-          matrix = read_json(matrix_path)
-          lines = matrix.get('capability_lines', matrix.get('capabilities'))
-          line = next(item for item in lines if item.get('capability_line_id') == 'MCFT-CAP-06')
-          line.update({
-            'active_delivery_slice_id': S1,
-            'next_authorized_slice_ids': [],
-            'controlled_residual_window_candidate_implemented': True,
-            'controlled_residual_window_effective': False,
-            's1_successor_readiness_effective': False,
-            's1_prior_mechanical_effectiveness_preserved': True,
-          })
-          for item in line['delivery_slices']:
-              if item.get('delivery_slice_id') == S1:
-                  item.update({'status': 'CONTROLLED_DATA_CORRECTION_CANDIDATE', 'effectiveness_condition_satisfied': False})
-              if item.get('delivery_slice_id') == S2:
-                  item.update({'status': 'BLOCKED_BY_S1_CONTROLLED_DATA_CORRECTION', 'implementation_started': False, 'migration_authorized': False, 'canonical_write_authorized': False})
-          write_json(matrix_path, matrix)
-
-          def upsert_marked_section(path, marker, body):
-              p = Path(path)
-              text = p.read_text(encoding='utf-8')
-              begin = f'<!-- {marker}:BEGIN -->'
-              end = f'<!-- {marker}:END -->'
-              section = f'\n\n{begin}\n{body.rstrip()}\n{end}\n'
-              if begin in text:
-                  start = text.index(begin)
-                  finish = text.index(end, start) + len(end)
-                  text = text[:start] + section.strip('\n') + text[finish:]
-              else:
-                  text = text.rstrip() + section
-              p.write_text(text, encoding='utf-8')
-
-          correction_text = f'''## MCFT-CAP-06 S1 受控数据后继就绪性纠偏
-
-S2 草稿 PR #2518 的专用 probe 证明：原 S1 的 24 个受控案例全部属于 `LOW_EXCESS`，最大归一化超田间持水量比率仅为 `0.093326488`，低于冻结的 `MID_EXCESS` 下界 `0.10`。因此，原 S1 的机械持久化、幂等和重建证明保留，但其对 S2 的后继就绪性授权被撤销。
-
-当前唯一 active slice 回到 `{S1}` 的受控数据纠偏。纠偏仅增加 CAP-06 专用 `CAP06_MULTI_REGIME_V1` forcing profile；不修改 Dynamics、固定点策略、湿度分区公式或阈值。修正后的校准窗口为 8 LOW / 2 MID / 6 HIGH，holdout 为 8 HIGH；24 条 Residual refs 保持稳定，Residual hashes、residual-set hash 与 case-input-set hash按新证据重新生成。
-
-在纠偏 exact-head CI、merge、head-to-merge tree equivalence、merged-main Gate 与独立 effectiveness writeback 全部通过前，S2 及其后续 Slice 均保持阻塞。'''
-          upsert_marked_section(CAP / 'GEOX-MCFT-CAP-06-TASK.md', 'MCFT-CAP-06-S1-CONTROLLED-DATA-CORRECTION', correction_text)
-          upsert_marked_section(CAP / 'GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.md', 'MCFT-CAP-06-S1-CONTROLLED-DATA-CORRECTION', correction_text)
-          upsert_marked_section(ROOT / 'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md', 'MCFT-CAP-06-S1-CONTROLLED-DATA-CORRECTION', correction_text)
-
-          gate = r'''// scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
-// Purpose: fail closed unless the additive S1 controlled-data erratum, runtime outputs and current SSOT agree exactly while S2 remains unauthorized.
-// Boundary: governance read-only validation; no database write, calibration search, Candidate, Evaluation, Model Activation, Runtime authority, route, Web, scheduler, or CAP-07 authority.
-
-'use strict';
-
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const ROOT = path.resolve(__dirname, '../..');
-const S1 = 'MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1';
-const S2 = 'MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1';
-const EXPECTED_RESIDUAL_SET_HASH = 'sha256:7995da1a8c5221c207087b30bb66a60ac2054e0616338f275ffaf72a01857e60';
-const EXPECTED_CASE_INPUT_SET_HASH = 'sha256:cb3bd4c273134071e931e8f85765b028ce58986752e94da3902f8563ddba4bb3';
-const EXPECTED_CALIBRATION_WINDOW_HASH = 'sha256:e5403ae258326909d054e92b53d089494d709785d8c48775a8cd142b0f0d191d';
-const EXPECTED_HOLDOUT_WINDOW_HASH = 'sha256:20bc567b9e75027425c981a24d8889f80327b55226dd29d04a97880bc07a428a';
-
-function readJson(relativePath) {
-  return JSON.parse(fs.readFileSync(path.join(ROOT, relativePath), 'utf8'));
-}
-
-function readText(relativePath) {
-  return fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
-}
-
-function main() {
-  const runtime = readJson('acceptance-output/MCFT_CAP_06_S1_RESULT.json');
-  const regimes = readJson('acceptance-output/MCFT_CAP_06_S1_CONTROLLED_REGIMES_RESULT.json');
-  const erratum = readJson('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-CONTROLLED-DATA-ERRATUM.json');
-  const contract = readJson('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.json');
-  const status = readJson('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json');
-  const priorEffectiveness = readJson('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json');
-  const delivery = readJson('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json');
-  const current = readJson('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json');
-  const matrix = readJson('docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json');
-
-  assert.equal(runtime.canonical_residual_count, 24);
-  assert.equal(runtime.residual_set_hash, EXPECTED_RESIDUAL_SET_HASH);
-  assert.equal(runtime.case_input_set_hash, EXPECTED_CASE_INPUT_SET_HASH);
-  assert.equal(runtime.calibration_window_hash, EXPECTED_CALIBRATION_WINDOW_HASH);
-  assert.equal(runtime.holdout_window_hash, EXPECTED_HOLDOUT_WINDOW_HASH);
-  assert.equal(runtime.candidate_fact_delta, 0);
-  assert.equal(runtime.evaluation_fact_delta, 0);
-  assert.equal(runtime.model_activation_fact_delta, 0);
-
-  assert.deepEqual(regimes.ordered_residual_refs, runtime.ordered_residual_refs);
-  assert.deepEqual(regimes.ordered_residual_hashes, runtime.ordered_residual_hashes);
-  assert.equal(regimes.residual_set_hash, runtime.residual_set_hash);
-  assert.equal(regimes.case_input_set_hash, runtime.case_input_set_hash);
-  assert.deepEqual(regimes.calibration_regime_counts, { LOW_EXCESS: 8, MID_EXCESS: 2, HIGH_EXCESS: 6 });
-  assert.deepEqual(regimes.holdout_regime_counts, { LOW_EXCESS: 0, MID_EXCESS: 0, HIGH_EXCESS: 8 });
-  assert.equal(regimes.calibration_represented_regime_count, 3);
-  assert.equal(regimes.minimum_required_calibration_regime_count, 2);
-  assert.equal(regimes.base_replay_status, 'PASS_24_EXACT_STORAGE_AND_ZERO_MASS_BALANCE_ERROR');
-
-  assert.equal(erratum.status, 'CORRECTION_CANDIDATE');
-  assert.equal(erratum.discovery.closed_without_merge_s2_pr_number, 2518);
-  assert.equal(erratum.discovery.original_maximum_normalized_excess_ratio_scale_9, '0.093326488');
-  assert.equal(erratum.discovery.frozen_mid_lower_bound, '0.100000000');
-  assert.equal(erratum.scope_of_retraction.prior_s1_mechanical_proof_preserved, true);
-  assert.equal(erratum.scope_of_retraction.prior_s1_successor_readiness_claim_superseded, true);
-  assert.equal(erratum.scope_of_retraction.s2_authorization_withdrawn, true);
-  assert.equal(erratum.correction.dynamics_changed, false);
-  assert.equal(erratum.correction.regime_formula_changed, false);
-  assert.equal(erratum.correction.regime_thresholds_changed, false);
-  assert.equal(erratum.correction.residual_set_hash, runtime.residual_set_hash);
-  assert.deepEqual(erratum.correction.ordered_residual_hashes, runtime.ordered_residual_hashes);
-  assert.equal(erratum.effectiveness.effective, false);
-
-  assert.equal(contract.status, 'CONTROLLED_DATA_CORRECTION_CANDIDATE');
-  assert.deepEqual(contract.ordered_residual_refs, runtime.ordered_residual_refs);
-  assert.deepEqual(contract.ordered_residual_hashes, runtime.ordered_residual_hashes);
-  assert.equal(contract.residual_set_hash, runtime.residual_set_hash);
-  assert.equal(contract.case_input_set_hash, runtime.case_input_set_hash);
-  assert.deepEqual(contract.validation.calibration_regime_counts, regimes.calibration_regime_counts);
-  assert.equal(contract.validation.runtime_result_ssot_crosscheck, 'PASS');
-
-  assert.equal(status.status, 'CONTROLLED_DATA_CORRECTION_CANDIDATE');
-  assert.equal(status.s1_effective, false);
-  assert.equal(status.s2_authorized, false);
-  assert.equal(status.effectiveness.effective, false);
-  assert.equal(status.prior_effectiveness.postmerge_gate, 'PASS');
-  assert.equal(status.candidate_tree_validation.runtime_result_ssot_crosscheck, 'PASS');
-
-  assert.equal(priorEffectiveness.status, 'MERGED_EFFECTIVE');
-  assert.equal(priorEffectiveness.effective, true);
-  assert.equal(priorEffectiveness.implementation_merge_commit, '6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b');
-
-  assert.equal(delivery.active_delivery_slice_id, S1);
-  assert.deepEqual(delivery.candidate_slices, [S1]);
-  assert.deepEqual(delivery.authorized_not_started_slices, []);
-  assert.equal(delivery.s1_effective, false);
-  assert.equal(delivery.s1_prior_mechanical_effectiveness_preserved, true);
-  assert.equal(delivery.s2_authorized, false);
-  assert.equal(delivery.blocked_slices.includes(S2), true);
-
-  assert.equal(current.current_state.active_delivery_slice_id, S1);
-  assert.equal(current.current_state.s1, 'CONTROLLED_DATA_CORRECTION_CANDIDATE');
-  assert.equal(current.current_state.controlled_residual_window_effective, false);
-  assert.equal(current.current_state.s2, 'BLOCKED_BY_S1_CONTROLLED_DATA_CORRECTION');
-  assert.equal(current.current_state.calibration_contract_math_implemented, false);
-
-  const lines = Array.isArray(matrix.capability_lines) ? matrix.capability_lines : matrix.capabilities;
-  const line = lines.find((item) => item.capability_line_id === 'MCFT-CAP-06');
-  assert.ok(line);
-  assert.equal(line.active_delivery_slice_id, S1);
-  assert.deepEqual(line.next_authorized_slice_ids, []);
-  assert.equal(line.controlled_residual_window_effective, false);
-  const matrixS1 = line.delivery_slices.find((item) => item.delivery_slice_id === S1);
-  const matrixS2 = line.delivery_slices.find((item) => item.delivery_slice_id === S2);
-  assert.equal(matrixS1.status, 'CONTROLLED_DATA_CORRECTION_CANDIDATE');
-  assert.equal(matrixS1.effectiveness_condition_satisfied, false);
-  assert.equal(matrixS2.status, 'BLOCKED_BY_S1_CONTROLLED_DATA_CORRECTION');
-  assert.equal(matrixS2.implementation_started, false);
-
-  const runner = readText('scripts/acceptance/run_acceptance.cjs');
-  assert.ok(runner.includes('MCFT_CAP_06_S1_CONTROLLED_REGIMES'));
-  assert.ok(runner.includes('ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs'));
-  const cap04Fixture = readText('scripts/runtime_acceptance/mcft_cap_04_twenty_four_tick_range_fixture_v1.ts');
-  const s1Fixture = readText('scripts/runtime_acceptance/mcft_cap_06_s1_residual_windows_fixture_v1.ts');
-  assert.ok(cap04Fixture.includes('CAP06_MULTI_REGIME_V1'));
-  assert.ok(s1Fixture.includes('rainfall_profile_id: "CAP06_MULTI_REGIME_V1"'));
-  assert.equal(s1Fixture.includes('twin_calibration_candidate_v1'), false);
-  assert.equal(s1Fixture.includes('twin_shadow_evaluation_v1'), false);
-  assert.equal(s1Fixture.includes('twin_model_activation_v1'), false);
-
-  console.log('PASS corrected S1 runtime output equals contract and erratum SSOT');
-  console.log('PASS calibration covers frozen 8 LOW / 2 MID / 6 HIGH regimes');
-  console.log('PASS prior mechanical proof preserved while S2 authorization is withdrawn');
-  console.log('PASS Candidate/Evaluation/Activation/S3/CAP-07 remain absent or blocked');
-}
-
-main();
-'''
-          (ROOT / 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs').write_text(gate, encoding='utf-8')
-
-          runner_path = ROOT / 'scripts/acceptance/run_acceptance.cjs'
-          runner = runner_path.read_text(encoding='utf-8')
-          old_id = "id: 'MCFT_CAP_06_S1_RESIDUAL_WINDOWS_GOVERNANCE'"
-          start = runner.rfind('    {', 0, runner.index(old_id))
-          end = runner.index('\n    }', runner.index(old_id)) + len('\n    }')
-          replacement = """    {
-            id: 'MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION_GOVERNANCE',
-            command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs',
-            logFile: 'MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION_GOVERNANCE.log',
-            notes: 'Cross-checks regenerated S1 runtime and wetness-regime evidence against the additive erratum and current SSOT while S2 remains blocked.'
-          }"""
-          runner_path.write_text(runner[:start] + replacement + runner[end:], encoding='utf-8')
-          PY
-
-      - name: Remove temporary workflows and generated outputs
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -f .github/workflows/mcft-cap-06-s1-correction-probe.yml
-          rm -f .github/workflows/mcft-cap-06-s1-correction-finalizer.yml
-          rm -rf acceptance-output
-
-      - name: Validate candidate tree
-        shell: bash
+      - name: Validate corrected candidate
         run: |
           set -euo pipefail
           pnpm -r typecheck
           pnpm -r build
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
           git diff --check
-          node scripts/acceptance/run_acceptance.cjs --list | grep MCFT_CAP_06_S1_CONTROLLED_REGIMES
-          node scripts/acceptance/run_acceptance.cjs --list | grep MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION_GOVERNANCE
-          mapfile -t files < <(git diff --name-only origin/main...HEAD | sort)
-          printf '%s\n' "${files[@]}"
 
-      - name: Commit exact permanent correction candidate
-        shell: bash
+      - name: Remove temporary orchestration
+        run: |
+          set -euo pipefail
+          rm -f .github/mcft-cap-06-s1-correction-finalizer.trigger
+          rm -f .github/workflows/mcft-cap-06-s1-correction-probe.yml
+          rm -f .github/workflows/mcft-cap-06-s1-correction-finalizer.yml
+          rm -f scripts/governance_acceptance/materialize_mcft_cap06_s1_correction.py
+          rm -rf acceptance-output
+
+      - name: Verify exact permanent file boundary
+        run: |
+          set -euo pipefail
+          git add -A
+          mapfile -t actual < <(git diff --cached --name-only origin/main | sort)
+          mapfile -t expected < <(cat <<'EOF' | sort
+          docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
+          docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-CONTROLLED-DATA-ERRATUM.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.json
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.md
+          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md
+          scripts/acceptance/run_acceptance.cjs
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts
+          scripts/runtime_acceptance/mcft_cap_04_twenty_four_tick_range_fixture_v1.ts
+          scripts/runtime_acceptance/mcft_cap_06_s1_residual_windows_fixture_v1.ts
+          EOF
+          )
+          printf 'ACTUAL FILES\n%s\n' "${actual[*]}"
+          diff <(printf '%s\n' "${expected[@]}") <(printf '%s\n' "${actual[@]}")
+          git diff --cached --check
+
+      - name: Commit permanent correction candidate
         run: |
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git diff --cached --check
           git commit -m "MCFT-CAP-06 S1: materialize controlled-data correction candidate"
           git push origin HEAD:${{ github.head_ref }}
