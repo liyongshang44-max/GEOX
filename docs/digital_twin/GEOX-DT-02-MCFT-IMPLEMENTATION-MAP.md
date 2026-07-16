@@ -1591,3 +1591,18 @@ Candidate/Evaluation drafts: pure, non-lineage, zero-write
 D transaction persistence: not implemented
 S3+: blocked
 ```
+
+<!-- MCFT-CAP-06-S2-EFFECTIVENESS-V1 -->
+## MCFT-CAP-06 S2 merged-main effectiveness
+
+```text
+S2 status: MERGED_EFFECTIVE
+exact-head CI: 29504752806 PASS
+merge commit: b6d28477d87239ee417c688d43122cb7a20b1a31
+merged-main proof: 29506065728 PASS
+active slice: MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1
+S3: AUTHORIZED_NOT_STARTED
+D persistence: not implemented
+Candidate/Evaluation canonical append: absent
+Model Activation: absent
+```

@@ -4,8 +4,8 @@
   "status": "COMPLETE",
   "baseline": {
     "branch": "main",
-    "commit": "9eff45605dc709a6001e6c1bed29fd1df76197ed",
-    "meaning": "MCFT-CAP-06 corrected S1 merged-main effective; S2 contracts/math candidate implemented but not effective; S3+ and MCFT-CAP-07 blocked"
+    "commit": "b6d28477d87239ee417c688d43122cb7a20b1a31",
+    "meaning": "MCFT-CAP-06 S2 contracts/math merged-main effective; S3 authorized not started; S4+ and MCFT-CAP-07 blocked"
   },
   "identifier_model": {
     "capability_line_id": "vertical executable capability closure unit",
@@ -3666,10 +3666,10 @@
       "target_completion_level": "Level A",
       "status": "IMPLEMENTATION_IN_PROGRESS",
       "design_status": "CONDITIONAL_FROZEN_AFTER_P_MINUS_1",
-      "implementation_status": "S2_CONTRACTS_MATH_CANDIDATE",
+      "implementation_status": "S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED",
       "authorization_effective": true,
       "runtime_source_authorized": true,
-      "active_delivery_slice_id": "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1",
+      "active_delivery_slice_id": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
       "predecessor_capability_line_id": "MCFT-CAP-05",
       "successor_capability_line_id": "MCFT-CAP-07",
       "successor_authorized": false,
@@ -3714,18 +3714,16 @@
         "postmerge_probe_pr_number": 2499,
         "postmerge_workflow_run": 29419841209
       },
-      "next_repository_action": "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1",
+      "next_repository_action": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
       "next_repository_action_after_p0_effectiveness": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
       "preserved_nonclaims": [
-        "NO_MIGRATION",
+        "NO_S3_IMPLEMENTATION",
         "NO_CALIBRATION_CANDIDATE_APPEND",
         "NO_SHADOW_EVALUATION_APPEND",
-        "NO_D_TRANSACTION_PERSISTENCE",
         "NO_MODEL_ACTIVATION",
         "NO_ACTIVE_CONFIG_SWITCH",
-        "NO_STATE_OR_CHECKPOINT_MUTATION",
+        "NO_STATE_OR_CHECKPOINT_MUTATION_BY_EFFECTIVENESS_WRITEBACK",
         "NO_PUBLIC_ROUTE_OR_WEB_OR_SCHEDULER",
-        "NO_S3_AUTHORIZATION",
         "NO_MCFT_CAP_07_AUTHORIZATION"
       ],
       "s0_qualification_authorized": true,
@@ -3740,7 +3738,7 @@
       },
       "authorization_id": "MCFT-CAP-06-AUTHORIZATION-V1",
       "authorization_status": "MERGED_EFFECTIVE",
-      "next_delivery_slice_id": "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1",
+      "next_delivery_slice_id": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
       "next_delivery_slice_authorized": true,
       "dataset_qualification_status": "INSUFFICIENT_MATCHED_PAIRS",
       "case_graph_validation_status": "PASS",
@@ -3829,20 +3827,48 @@
           "depends_on_delivery_slice_ids": [
             "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1"
           ],
-          "status": "CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
+          "status": "MERGED_EFFECTIVE",
           "runtime_source_authorized": true,
           "migration_authorized": false,
           "canonical_write_authorized": false,
           "implementation_started": true,
           "next_authorized_slice_after_effectiveness": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
-          "effectiveness_condition_satisfied": false,
-          "status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json"
+          "effectiveness_condition_satisfied": true,
+          "status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+          "implementation_pr_number": 2523,
+          "exact_head": "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+          "exact_head_ci_run": 29504752806,
+          "merge_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31",
+          "head_to_merge_file_delta_count": 0,
+          "head_to_merge_tree_equivalence": "PASS",
+          "postmerge_probe_pr_number": 2524,
+          "postmerge_workflow_run": 29506065728,
+          "postmerge_gate": "PASS",
+          "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+        },
+        {
+          "delivery_slice_id": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
+          "primary_owner_work_package_id": "MCFT-03",
+          "contributing_owner_work_package_ids": [
+            "MCFT-12"
+          ],
+          "depends_on_delivery_slice_ids": [
+            "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1"
+          ],
+          "status": "AUTHORIZED_NOT_STARTED",
+          "runtime_source_authorized": true,
+          "migration_authorized": true,
+          "canonical_write_authorized": true,
+          "implementation_started": false,
+          "next_authorized_slice_after_effectiveness": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1"
         }
       ],
       "predecessor_lock_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json",
       "dataset_qualification_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
       "s0_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json",
-      "next_authorized_slice_ids": [],
+      "next_authorized_slice_ids": [
+        "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1"
+      ],
       "s1_contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.json",
       "s1_status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
       "controlled_residual_window_candidate_implemented": true,
@@ -3850,8 +3876,11 @@
       "s1_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
       "s1_successor_readiness_effective": true,
       "s1_prior_mechanical_effectiveness_preserved": true,
-      "calibration_contract_math_implemented": false,
-      "calibration_contract_math_candidate_implemented": true
+      "calibration_contract_math_implemented": true,
+      "calibration_contract_math_candidate_implemented": true,
+      "s2_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json",
+      "s3_authorized": true,
+      "s3_implementation_started": false
     }
   ],
   "actual_owner_work_package_statuses": {
@@ -3902,5 +3931,5 @@
     "MCFT-08": "PARTIALLY_ESTABLISHED",
     "MCFT-09": "PARTIALLY_ESTABLISHED"
   },
-  "latest_governance_update": "MCFT-CAP-06.S2.CONTRACTS-MATH-CANDIDATE-V1"
+  "latest_governance_update": "MCFT-CAP-06.S2.MERGED-MAIN-EFFECTIVENESS-ACTIVATION-V1"
 }
