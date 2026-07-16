@@ -83,6 +83,15 @@ jobs:
         working-directory: target
         run: git rm .github/workflows/mcft-cap-06-s3-candidate-integrity-correction.yml
 
+      - name: Create local correction commit before governance validation
+        working-directory: target
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "fix(mcft-cap-06): enforce Evaluation Candidate integrity"
+
       - name: Run corrected S3 acceptance and build
         working-directory: target
         run: |
@@ -127,7 +136,7 @@ jobs:
           set -euo pipefail
           rm -rf acceptance-output
           test ! -e .github/workflows/mcft-cap-06-s3-candidate-integrity-correction.yml
-          mapfile -t correction < <(git diff --name-only origin/main | sort)
+          mapfile -t correction < <(git diff --name-only origin/main...HEAD | sort)
           mapfile -t expected_correction < <(printf '%s\n' \
             apps/server/src/persistence/calibration/postgres_calibration_governance_repository_v1.ts \
             docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json \
@@ -154,13 +163,10 @@ jobs:
             scripts/runtime_acceptance/mcft_cap_06_controlled_compute_fixture_v1.ts | sort)
           diff -u <(printf '%s\n' "${expected_total[@]}") <(printf '%s\n' "${total[@]}")
           test "${#total[@]}" -eq 14
+          test -z "$(git status --porcelain)"
 
-      - name: Commit and push target correction
+      - name: Push validated target correction
         working-directory: target
         run: |
           set -euo pipefail
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git commit -m "fix(mcft-cap-06): enforce Evaluation Candidate integrity"
           git push origin HEAD:$TARGET_BRANCH
