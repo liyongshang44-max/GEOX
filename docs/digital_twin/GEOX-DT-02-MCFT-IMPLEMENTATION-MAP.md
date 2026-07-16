@@ -1576,3 +1576,18 @@ Calibration Candidate: NOT IMPLEMENTED
 Shadow Evaluation: NOT IMPLEMENTED
 Model Activation: NOT AUTHORIZED
 ```
+
+
+<!-- MCFT-CAP-06-S2-CONTRACTS-MATH-CANDIDATE-V1 -->
+## MCFT-CAP-06 S2 contracts/math candidate
+
+```text
+active slice: MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1
+status: CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE
+corrected S1 identity binding: PASS
+fixed-point 21-point search: PASS
+paired historical shadow compute: PASS
+Candidate/Evaluation drafts: pure, non-lineage, zero-write
+D transaction persistence: not implemented
+S3+: blocked
+```
