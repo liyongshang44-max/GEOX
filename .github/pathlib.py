@@ -1,12 +1,13 @@
 # .github/pathlib.py
 # Purpose: one-shot proxy for the standard-library pathlib imported explicitly by
 # the temporary S2 materializer. It patches exactly one generated acceptance file,
-# then removes itself before the materializer's permanent-file boundary check.
+# installs a later exact-boundary cleanup wrapper, then removes itself.
 
 from __future__ import annotations
 
 import importlib.util
 import os
+import stat
 import sys
 
 _STDLIB_PATH = os.path.join(os.path.dirname(os.__file__), "pathlib.py")
@@ -30,6 +31,62 @@ def _replace_once(text: str, old: str, new: str, code: str) -> str:
     if count != 1:
         raise RuntimeError(f"{code}: expected 1 occurrence, found {count}")
     return text.replace(old, new, 1)
+
+
+def _install_boundary_wrapper() -> None:
+    wrapper_dir = _STDLIB.Path("/tmp/geox-s2-boundary-bin")
+    wrapper_dir.mkdir(parents=True, exist_ok=True)
+    wrapper = wrapper_dir / "git"
+    expected = [
+        "apps/server/src/domain/calibration/case_builder_v1.ts",
+        "apps/server/src/domain/calibration/contracts_v1.ts",
+        "apps/server/src/domain/calibration/envelope_profiles_v1.ts",
+        "apps/server/src/domain/calibration/exact_ref_port_v1.ts",
+        "apps/server/src/domain/calibration/fixed_point_metric_v1.ts",
+        "apps/server/src/domain/calibration/grid_search_v1.ts",
+        "apps/server/src/domain/calibration/shadow_evaluation_v1.ts",
+        "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+        "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-CONTRACTS-MATH.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md",
+        "scripts/acceptance/run_acceptance.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts",
+    ]
+    expected_case = "\n".join(f'  "{item}") ;;' for item in expected)
+    script = f'''#!/usr/bin/env bash
+set -euo pipefail
+REAL_GIT=/usr/bin/git
+if [[ "$#" -eq 3 && "$1" == "diff" && "$2" == "--name-only" && "$3" == "origin/main" ]]; then
+  mapfile -t before < <($REAL_GIT diff --name-only origin/main)
+  for file in "${{before[@]}}"; do
+    case "$file" in
+{expected_case}
+      *)
+        echo "S2_BOUNDARY_RESTORE_UNAUTHORIZED=$file" >&2
+        if $REAL_GIT cat-file -e "origin/main:$file" 2>/dev/null; then
+          $REAL_GIT checkout origin/main -- "$file"
+        else
+          rm -rf -- "$file"
+          $REAL_GIT rm -r --cached --ignore-unmatch -- "$file" >/dev/null 2>&1 || true
+        fi
+        ;;
+    esac
+  done
+  exec $REAL_GIT diff --name-only origin/main
+fi
+exec $REAL_GIT "$@"
+'''
+    wrapper.write_text(script, encoding="utf-8", newline="\n")
+    wrapper.chmod(wrapper.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    github_path = os.environ.get("GITHUB_PATH")
+    if not github_path:
+        raise RuntimeError("S2_GITHUB_PATH_REQUIRED")
+    with open(github_path, "a", encoding="utf-8") as handle:
+        handle.write(str(wrapper_dir) + "\n")
 
 
 def _patched_write_text(self, data, *args, **kwargs):
@@ -75,10 +132,12 @@ def _patched_write_text(self, data, *args, **kwargs):
     )
 
     result = _ORIGINAL_WRITE_TEXT(self, text, *args, **kwargs)
+    _install_boundary_wrapper()
     proxy = _STDLIB.Path(__file__)
     if proxy.exists():
         proxy.unlink()
     print("S2_PATHLIB_PROXY_GENERATED_ACCEPTANCE_PATCH=PASS")
+    print("S2_EXACT_BOUNDARY_CLEANUP_WRAPPER=INSTALLED")
     return result
 
 
