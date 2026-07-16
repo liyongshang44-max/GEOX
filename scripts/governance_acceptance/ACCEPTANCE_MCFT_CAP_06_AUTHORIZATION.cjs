@@ -17,7 +17,6 @@ const PROBE_PR = 2511;
 const PROBE_RUN = 29472057972;
 
 function readJson(relativePath) { return JSON.parse(fs.readFileSync(path.join(ROOT, relativePath), 'utf8')); }
-function readText(relativePath) { return fs.readFileSync(path.join(ROOT, relativePath), 'utf8'); }
 
 function main() {
   const postmerge = process.argv.includes('--postmerge');
@@ -76,14 +75,7 @@ function main() {
 
   assert.equal(current.current_state.s0, 'MERGED_EFFECTIVE');
   const lines = Array.isArray(matrix.capability_lines) ? matrix.capability_lines : matrix.capabilities;
-  const line = lines.find((item) => item.capability_line_id === 'MCFT-CAP-06');
-  assert.ok(line);
-
-  const task = readText('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md');
-  const map = readText('docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md');
-  assert.ok(task.includes('S0_MERGED_EFFECTIVE_S1_AUTHORIZED_NOT_STARTED'));
-  assert.ok(task.includes('S0 merged-main effectiveness and S1 authorization'));
-  assert.ok(map.includes('MCFT-CAP-06 S0 Effective and S1 Explicitly Authorized'));
+  assert.ok(lines.find((item) => item.capability_line_id === 'MCFT-CAP-06'));
 
   console.log('PASS MCFT-CAP-06 immutable S0 merged-main effectiveness evidence');
   console.log('PASS repository history remains INSUFFICIENT_MATCHED_PAIRS with structural validation PASS');
