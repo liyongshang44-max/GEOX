@@ -86,11 +86,40 @@ jobs:
       - name: Run corrected S3 acceptance and build
         working-directory: target
         run: |
-          set -euo pipefail
-          node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs
-          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs
-          pnpm -r typecheck
-          pnpm -r build
+          set +e
+          run_step() {
+            label="$1"
+            shift
+            echo "===== START $label ====="
+            "$@"
+            status=$?
+            echo "===== END $label STATUS=$status ====="
+            if [ "$status" -ne 0 ]; then
+              echo "$label" > ../correction.failed_step
+              return "$status"
+            fi
+          }
+          {
+            run_step S3_POSTGRES node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs &&
+            run_step S3_GATE node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs &&
+            run_step TYPECHECK pnpm -r typecheck &&
+            run_step BUILD pnpm -r build
+          } > ../correction.log 2>&1
+          status=$?
+          echo "$status" > ../correction.status
+          cat ../correction.log
+          exit "$status"
+
+      - name: Upload correction diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s3-integrity-correction-diagnostic
+          path: |
+            correction.log
+            correction.status
+            correction.failed_step
+          if-no-files-found: warn
 
       - name: Verify correction and frozen S3 boundaries
         working-directory: target
