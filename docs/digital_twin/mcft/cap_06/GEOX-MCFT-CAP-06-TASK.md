@@ -31,7 +31,7 @@ design_status:
 CONDITIONAL_FROZEN_AFTER_P_MINUS_1
 
 implementation_status:
-S0_MERGED_EFFECTIVE_S1_AUTHORIZED_NOT_STARTED
+S1_IMPLEMENTATION_CANDIDATE_PENDING_MERGED_MAIN_EFFECTIVENESS
 
 runtime_implementation_status:
 NOT_STARTED
@@ -58,7 +58,7 @@ first_permitted_repository_action:
 MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
 ```
 
-本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1、P0 与 S0 均已 merged-main effective；repository-history qualification 为 INSUFFICIENT_MATCHED_PAIRS，且 graph、availability 与 homogeneity 均 PASS。当前仅 S1 Runtime source 实现获授权但尚未开始；S2 及后续、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 仍未授权。
+本文件冻结 MCFT-CAP-06 的能力目标、边界和任务顺序。P-1、P0 与 S0 均已 merged-main effective；S1 已形成受控 24-case canonical Residual-window implementation candidate，等待 exact-head CI、merge、tree equivalence 与 merged-main S1 Gate。S2 及后续、Model Activation、active-config switch、public route、Web、MCFT-CAP-07 与 Shadow-Online Runtime 仍未授权。
 
 ---
 
@@ -4228,3 +4228,26 @@ S2 and later: BLOCKED
 
 S0 effectiveness authorizes only S1 implementation. It does not itself create Residuals, Candidate, Evaluation, Model Activation, an active-config binding, a public route, Web behavior, or MCFT-CAP-07 authority.
 <!-- MCFT-CAP-06-S0-EFFECTIVENESS-END -->
+
+<!-- MCFT-CAP-06-S1-CANDIDATE-BEGIN -->
+# 52. S1 controlled canonical Residual-window candidate
+
+```text
+status: IMPLEMENTATION_CANDIDATE_PENDING_MERGED_MAIN_EFFECTIVENESS
+baseline main: b709bfed36ef1efa6d970b349d23a2b0006e4de2
+implementation PR: 2514
+candidate execution head: 91edc0e7c0d88b5bec1c60aa0d4b249c3cd81cfe
+candidate PostgreSQL workflow: 29473868540 SUCCESS
+profile: PRESEEDED_24_H1_FORECAST_OBSERVATION_PAIRS_NO_RESIDUALS_V1
+canonical Residuals: 24
+calibration window: 16
+holdout window: 8
+residual set hash: sha256:14a5f07e6f3cc94f6c61c697d39d2093cae35bd491fd3f4dc68e01e79c7c24d7
+calibration window hash: sha256:e5403ae258326909d054e92b53d089494d709785d8c48775a8cd142b0f0d191d
+holdout window hash: sha256:20bc567b9e75027425c981a24d8889f80327b55226dd29d04a97880bc07a428a
+case input set hash: sha256:fac894cf5a4de2c473523190408933ae25185c6a63b9568cde2d8121add4dc62
+S2 authorized: false
+```
+
+S1 reuses CAP-02 fixed-point Dynamics, CAP-04 H1 Forecast traces, CAP-05 Residual contracts and the existing C transaction. It introduces no second Residual type, no migration and no calibration search. The controlled mechanism track is disjoint from repository history.
+<!-- MCFT-CAP-06-S1-CANDIDATE-END -->

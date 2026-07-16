@@ -1496,3 +1496,25 @@ S2_status: BLOCKED
 MCFT_CAP_07_authorized: false
 ```
 <!-- MCFT-CAP-06-S0-EFFECTIVENESS-END -->
+
+<!-- MCFT-CAP-06-S1-CANDIDATE-BEGIN -->
+## MCFT-CAP-06 S1 controlled Residual-window candidate
+
+```text
+capability_line_id: MCFT-CAP-06
+delivery_slice_id: MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1
+baseline_main_commit: b709bfed36ef1efa6d970b349d23a2b0006e4de2
+status: IMPLEMENTATION_CANDIDATE_PENDING_MERGED_MAIN_EFFECTIVENESS
+candidate_execution_workflow: 29473868540 SUCCESS
+controlled_profile: PRESEEDED_24_H1_FORECAST_OBSERVATION_PAIRS_NO_RESIDUALS_V1
+canonical_residual_count: 24
+calibration_window_count: 16
+holdout_window_count: 8
+residual_set_hash: sha256:14a5f07e6f3cc94f6c61c697d39d2093cae35bd491fd3f4dc68e01e79c7c24d7
+S2_status: BLOCKED
+Candidate_runtime_implemented: false
+Shadow_Evaluation_runtime_implemented: false
+Model_Activation_authorized: false
+MCFT_CAP_07_authorized: false
+```
+<!-- MCFT-CAP-06-S1-CANDIDATE-END -->
