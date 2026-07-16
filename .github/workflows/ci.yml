@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fetch reviewed staging payload
+      - name: Fetch and apply reviewed source patch
         run: |
           set -euo pipefail
           git fetch origin agent/mcft-cap-06-s1-readiness-hardening-staging-v1
@@ -27,6 +27,9 @@ jobs:
             | gzip -d \
             > /tmp/mcft_cap06_s1_readiness_hardening.py
           python -m py_compile /tmp/mcft_cap06_s1_readiness_hardening.py
+          python /tmp/mcft_cap06_s1_readiness_hardening.py source
+          git diff --check
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -41,13 +44,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
-
-      - name: Apply reviewed source patch
-        run: |
-          set -euo pipefail
-          python /tmp/mcft_cap06_s1_readiness_hardening.py source
-          git diff --check
-          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
 
       - name: Run S1 successor-readiness preflight
         run: |
