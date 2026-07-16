@@ -7,7 +7,7 @@ on:
     paths:
       - "apps/server/src/domain/twin_runtime/calibration_case_graph_qualification_v2.ts"
       - "apps/server/src/persistence/twin_runtime/postgres_cap06_repository_history_case_graph_reader_v2.ts"
-      - "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_CASE_GRAPH_QUALIFICATION_V3.ts"
+      - "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_CASE_GRAPH_QUALIFICATION_V4.ts"
       - ".github/workflows/mcft-cap-06-s0-v2-dual-config-proof.yml"
   workflow_dispatch:
 
@@ -35,5 +35,5 @@ jobs:
       - name: Run server typecheck
         run: pnpm run typecheck:server
 
-      - name: Run S0 v2 dual-config qualification acceptance
-        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_CASE_GRAPH_QUALIFICATION_V3.ts
+      - name: Run corrected S0 v2 dual-config qualification acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_CASE_GRAPH_QUALIFICATION_V4.ts
