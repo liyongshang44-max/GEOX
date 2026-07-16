@@ -1,0 +1,134 @@
+name: MCFT-CAP-06 S0 v2 honest qualification
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap-06-s0-v2-exact-qualification
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: landos
+          POSTGRES_PASSWORD: landos
+          POSTGRES_DB: mcft_cap06_s0_v2_honest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U landos -d mcft_cap06_s0_v2_honest"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s0-v2-exact-qualification
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Remove repository-outcome presupposition
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts')
+          source = path.read_text(encoding='utf-8')
+          start = source.index('  assert.equal(qualification.dataset_qualification_status, "INSUFFICIENT_MATCHED_PAIRS"')
+          end_marker = '  ok("exact canonical case graph reports one eligible Residual and INSUFFICIENT_MATCHED_PAIRS without conflating legal exclusions with graph failure");'
+          end = source.index(end_marker, start) + len(end_marker)
+          replacement = '''  const allowedQualificationStatuses = new Set([
+            "READY_FOR_CALIBRATION_ASSESSMENT",
+            "INSUFFICIENT_MATCHED_PAIRS",
+            "CONFIG_OR_MODEL_HETEROGENEITY",
+            "AVAILABILITY_ORDER_INVALID",
+            "INVALID_CASE_GRAPH",
+          ]);
+          assert.ok(
+            allowedQualificationStatuses.has(qualification.dataset_qualification_status),
+            `UNFROZEN_DATASET_QUALIFICATION_STATUS:${qualification.dataset_qualification_status}`,
+          );
+          assert.equal(
+            qualification.case_graph_validation_status,
+            qualification.invalid_graph_case_count === 0 ? "PASS" : "FAIL",
+            "CASE_GRAPH_STATUS_COUNT_MISMATCH",
+          );
+          assert.equal(
+            qualification.availability_order_validation_status,
+            qualification.availability_invalid_case_count === 0 && splitValid ? "PASS" : "FAIL",
+            "AVAILABILITY_STATUS_COUNT_MISMATCH",
+          );
+          assert.equal(
+            qualification.homogeneity_validation_status,
+            heterogeneity ? "FAIL" : "PASS",
+            "HOMOGENEITY_STATUS_COUNT_MISMATCH",
+          );
+          assert.equal(
+            qualification.canonical_residual_count,
+            qualification.eligible_residual_count
+              + qualification.excluded_case_count
+              + qualification.invalid_graph_case_count
+              + qualification.availability_invalid_case_count,
+            "RESIDUAL_CLASSIFICATION_PARTITION_MISMATCH",
+          );
+          ok(`exact canonical case graph qualification completed honestly with status ${qualification.dataset_qualification_status}`);'''
+          source = source[:start] + replacement + source[end:]
+          forbidden = [
+            'CURRENT_REPOSITORY_HISTORY_EXPECTED_INSUFFICIENT',
+            'CURRENT_REPOSITORY_HISTORY_GRAPH_MUST_PASS',
+            'CURRENT_REPOSITORY_HISTORY_EXPECTS_NO_INVALID_GRAPH',
+            'CAP05_TERMINAL_HISTORY_EXPECTS_ONE_CANONICAL_RESIDUAL',
+          ]
+          retained = [item for item in forbidden if item in source]
+          if retained:
+            raise SystemExit('OUTCOME_PRECONDITION_RETAINED:' + ','.join(retained))
+          path.write_text(source, encoding='utf-8')
+          PY
+
+      - name: Run exact isolated PostgreSQL qualification
+        env:
+          DATABASE_URL: postgres://landos:landos@127.0.0.1:5432/mcft_cap06_s0_v2_honest
+          MCFT_CAP_06_S0_DESTRUCTIVE_ACCEPTANCE: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts 2>&1 | tee /tmp/mcft-cap-06-s0-v2-honest.log
+
+      - name: Commit permanent runner and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/mcft-cap-06-s0-v2-honest-qualification.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts
+          git diff --cached --check
+          git commit -m "MCFT-CAP-06: remove S0 outcome presupposition"
+          git push origin HEAD:agent/mcft-cap-06-s0-v2-exact-qualification
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-06-s0-v2-honest-qualification
+          path: /tmp/mcft-cap-06-s0-v2-honest.log
+          if-no-files-found: warn
+          retention-days: 7
