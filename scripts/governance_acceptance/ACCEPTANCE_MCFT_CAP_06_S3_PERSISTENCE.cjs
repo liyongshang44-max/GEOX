@@ -1,5 +1,5 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs
-// Purpose: fail closed unless the MCFT-CAP-06 S3 candidate preserves the exact D-persistence, exact-ref, projection, recovery, nonactivation, and changed-file boundaries.
+// Purpose: fail closed unless the MCFT-CAP-06 S3 candidate preserves the exact D-persistence, exact-ref, projection, recovery, canonicality, nonactivation, and changed-file boundaries.
 // Boundary: static repository and machine-readable governance validation only; no database mutation, calibration compute, canonical append, Runtime authority, State, checkpoint, route, scheduler, or Model Activation.
 
 'use strict';
@@ -25,6 +25,7 @@ const EXPECTED_PERMANENT_FILES = [
   'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json',
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs',
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE_DB.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PROJECTION_CANONICALITY_DB.ts',
   'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs',
   'scripts/runtime_acceptance/mcft_cap_06_controlled_compute_fixture_v1.ts',
 ];
@@ -129,6 +130,11 @@ function main() {
     'twin_shadow_evaluation_projection_v1',
     'twin_candidate_evaluation_index_v1',
     'twin_shadow_evaluation_case_projection_v1',
+    'enforce_mcft_cap06_projection_canonicality_v1',
+    'trg_twin_calibration_candidate_projection_canonicality_v1',
+    'trg_twin_shadow_evaluation_projection_canonicality_v1',
+    'trg_twin_candidate_evaluation_index_canonicality_v1',
+    'trg_twin_shadow_evaluation_case_projection_canonicality_v1',
     'public.facts remains the sole canonical store',
   ]) assert.match(migration, new RegExp(token));
   assert.match(migration, /PRIMARY KEY \(candidate_ref, evaluation_object_id\)/);
@@ -181,9 +187,21 @@ function main() {
     'canonical object-id divergence fails closed',
   ]) assert.match(runtimeAcceptance, new RegExp(token));
 
+  const canonicalityAcceptance = read('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PROJECTION_CANONICALITY_DB.ts');
+  for (const token of [
+    'all four CAP-06 canonicality triggers are installed',
+    'direct Candidate semantic projection mutation is rejected',
+    'direct Evaluation semantic projection mutation is rejected',
+    'direct Candidate-to-Evaluation index mutation is rejected',
+    'direct embedded-case projection mutation is rejected',
+    'MCFT_CAP_06_S3_PROJECTION_CANONICALITY_DB:PASS',
+  ]) assert.match(canonicalityAcceptance, new RegExp(token));
+
   const runner = read('scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs');
   assert.match(runner, /mcft_cap06_s3_persistence_ci/);
   assert.match(runner, /MCFT_CAP_06_S3_DESTRUCTIVE_ACCEPTANCE/);
+  assert.match(runner, /ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE_DB\.ts/);
+  assert.match(runner, /ACCEPTANCE_MCFT_CAP_06_S3_PROJECTION_CANONICALITY_DB\.ts/);
   assert.match(runner, /DROP DATABASE IF EXISTS/);
 
   console.log(`PASS MCFT-CAP-06 S3 governance gate; changed_files=${changed.length}`);
