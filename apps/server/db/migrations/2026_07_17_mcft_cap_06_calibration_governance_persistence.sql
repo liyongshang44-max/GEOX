@@ -159,6 +159,158 @@ CREATE TABLE IF NOT EXISTS public.twin_shadow_evaluation_case_projection_v1 (
 CREATE INDEX IF NOT EXISTS idx_twin_shadow_evaluation_case_projection_v1_residual
   ON public.twin_shadow_evaluation_case_projection_v1 (residual_ref, evaluation_object_id);
 
+CREATE OR REPLACE FUNCTION public.enforce_mcft_cap06_projection_canonicality_v1()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  fact_record jsonb;
+  canonical_object jsonb;
+  canonical_payload jsonb;
+  canonical_scope jsonb;
+  canonical_case jsonb;
+BEGIN
+  SELECT record_json
+    INTO fact_record
+    FROM public.facts
+   WHERE fact_id = NEW.source_fact_id;
+
+  IF fact_record IS NULL THEN
+    RAISE EXCEPTION 'CAP06_PROJECTION_SOURCE_FACT_REQUIRED:%', NEW.source_fact_id;
+  END IF;
+
+  canonical_object := fact_record->'payload';
+  canonical_payload := canonical_object->'payload';
+  canonical_scope := canonical_object->'scope';
+
+  IF TG_TABLE_NAME = 'twin_calibration_candidate_projection_v1' THEN
+    IF fact_record->>'type' <> 'twin_calibration_candidate_v1'
+      OR NEW.candidate_object_id <> canonical_object->>'object_id'
+      OR NEW.tenant_id <> canonical_scope->>'tenant_id'
+      OR NEW.project_id <> canonical_scope->>'project_id'
+      OR NEW.group_id <> canonical_scope->>'group_id'
+      OR NEW.field_id <> canonical_scope->>'field_id'
+      OR NEW.season_id <> canonical_scope->>'season_id'
+      OR NEW.zone_id <> canonical_scope->>'zone_id'
+      OR NEW.logical_time <> (canonical_object->>'logical_time')::timestamptz
+      OR NEW.as_of <> (canonical_object->>'as_of')::timestamptz
+      OR NEW.candidate_status <> canonical_payload->>'candidate_status'
+      OR NEW.base_config_ref <> canonical_payload->>'base_config_ref'
+      OR NEW.base_config_hash <> canonical_payload->>'base_config_hash'
+      OR NEW.context_lineage_ref <> canonical_object->>'context_lineage_ref'
+      OR NEW.context_revision_ref <> canonical_object->>'context_revision_ref'
+      OR NEW.parameter_key <> canonical_payload->>'parameter_key'
+      OR NEW.base_parameter_value <> canonical_payload->>'base_parameter_value'
+      OR NEW.candidate_parameter_value <> canonical_payload->>'candidate_parameter_value'
+      OR NEW.parameter_delta <> canonical_payload->>'parameter_delta'
+      OR NEW.activation_status <> canonical_payload->>'activation_status'
+      OR NEW.eligible_for_state_input <> (canonical_payload->>'eligible_for_state_input')::boolean
+      OR NEW.eligible_for_runtime_config_use <> (canonical_payload->>'eligible_for_runtime_config_use')::boolean
+      OR NEW.eligible_for_human_activation_review <> (canonical_payload->>'eligible_for_human_activation_review')::boolean
+      OR NEW.canonical_payload <> canonical_payload THEN
+      RAISE EXCEPTION 'CAP06_CANDIDATE_PROJECTION_CANONICAL_DIVERGENCE:%', NEW.candidate_object_id;
+    END IF;
+  ELSIF TG_TABLE_NAME = 'twin_shadow_evaluation_projection_v1' THEN
+    IF fact_record->>'type' <> 'twin_shadow_evaluation_v1'
+      OR NEW.evaluation_object_id <> canonical_object->>'object_id'
+      OR NEW.tenant_id <> canonical_scope->>'tenant_id'
+      OR NEW.project_id <> canonical_scope->>'project_id'
+      OR NEW.group_id <> canonical_scope->>'group_id'
+      OR NEW.field_id <> canonical_scope->>'field_id'
+      OR NEW.season_id <> canonical_scope->>'season_id'
+      OR NEW.zone_id <> canonical_scope->>'zone_id'
+      OR NEW.logical_time <> (canonical_object->>'logical_time')::timestamptz
+      OR NEW.as_of <> (canonical_object->>'as_of')::timestamptz
+      OR NEW.candidate_ref <> canonical_payload->>'candidate_ref'
+      OR NEW.candidate_hash <> canonical_payload->>'candidate_hash'
+      OR NEW.evaluation_dataset_hash <> canonical_payload->>'evaluation_dataset_hash'
+      OR NEW.evaluation_policy_hash <> canonical_payload->>'evaluation_policy_hash'
+      OR NEW.shadow_replay_engine_id <> canonical_payload->>'shadow_replay_engine_id'
+      OR NEW.calibration_metric_numeric_policy_hash <> canonical_payload->>'calibration_metric_numeric_policy_hash'
+      OR NEW.evaluation_disposition <> canonical_payload->>'evaluation_disposition'
+      OR NEW.eligible_for_human_activation_review <> (canonical_payload->>'eligible_for_human_activation_review')::boolean
+      OR NEW.canonical_payload <> canonical_payload THEN
+      RAISE EXCEPTION 'CAP06_EVALUATION_PROJECTION_CANONICAL_DIVERGENCE:%', NEW.evaluation_object_id;
+    END IF;
+  ELSIF TG_TABLE_NAME = 'twin_candidate_evaluation_index_v1' THEN
+    IF fact_record->>'type' <> 'twin_shadow_evaluation_v1'
+      OR NEW.evaluation_object_id <> canonical_object->>'object_id'
+      OR NEW.candidate_ref <> canonical_payload->>'candidate_ref'
+      OR NEW.evaluation_dataset_hash <> canonical_payload->>'evaluation_dataset_hash'
+      OR NEW.evaluation_policy_hash <> canonical_payload->>'evaluation_policy_hash'
+      OR NEW.shadow_replay_engine_id <> canonical_payload->>'shadow_replay_engine_id'
+      OR NEW.calibration_metric_numeric_policy_hash <> canonical_payload->>'calibration_metric_numeric_policy_hash'
+      OR NEW.evaluation_disposition <> canonical_payload->>'evaluation_disposition' THEN
+      RAISE EXCEPTION 'CAP06_CANDIDATE_EVALUATION_INDEX_CANONICAL_DIVERGENCE:%', NEW.evaluation_object_id;
+    END IF;
+  ELSIF TG_TABLE_NAME = 'twin_shadow_evaluation_case_projection_v1' THEN
+    IF fact_record->>'type' <> 'twin_shadow_evaluation_v1'
+      OR NEW.evaluation_object_id <> canonical_object->>'object_id' THEN
+      RAISE EXCEPTION 'CAP06_EVALUATION_CASE_SOURCE_DIVERGENCE:%', NEW.evaluation_object_id;
+    END IF;
+
+    SELECT value
+      INTO canonical_case
+      FROM jsonb_array_elements(canonical_payload->'case_results') AS value
+     WHERE (value->>'case_index')::integer = NEW.case_index;
+
+    IF canonical_case IS NULL
+      OR NEW.residual_ref <> canonical_case->>'residual_ref'
+      OR NEW.residual_hash <> canonical_case->>'residual_hash'
+      OR NEW.source_forecast_ref <> canonical_case->>'source_forecast_ref'
+      OR NEW.source_forecast_hash <> canonical_case->>'source_forecast_hash'
+      OR NEW.source_forecast_point_ref <> canonical_case->>'source_forecast_point_ref'
+      OR NEW.source_posterior_ref <> canonical_case->>'source_posterior_ref'
+      OR NEW.source_runtime_config_ref <> canonical_case->>'source_runtime_config_ref'
+      OR NEW.forecast_target_time <> (canonical_case->>'forecast_target_time')::timestamptz
+      OR NEW.observation_ref <> canonical_case->>'observation_ref'
+      OR NEW.observation_available_to_runtime_at <> (canonical_case->>'observation_available_to_runtime_at')::timestamptz
+      OR NEW.base_parameter_value <> canonical_case->>'base_parameter_value'
+      OR NEW.candidate_parameter_value <> canonical_case->>'candidate_parameter_value'
+      OR NEW.base_prediction_vwc <> canonical_case->>'base_prediction_vwc'
+      OR NEW.candidate_prediction_vwc <> canonical_case->>'candidate_prediction_vwc'
+      OR NEW.actual_observation_vwc <> canonical_case->>'actual_observation_vwc'
+      OR NEW.base_residual_vwc <> canonical_case->>'base_residual_vwc'
+      OR NEW.candidate_residual_vwc <> canonical_case->>'candidate_residual_vwc'
+      OR NEW.base_mass_balance_hash <> canonical_case->>'base_mass_balance_hash'
+      OR NEW.candidate_mass_balance_hash <> canonical_case->>'candidate_mass_balance_hash'
+      OR NEW.base_invariant_status <> canonical_case->>'base_invariant_status'
+      OR NEW.candidate_invariant_status <> canonical_case->>'candidate_invariant_status'
+      OR NEW.canonical_case_result <> canonical_case THEN
+      RAISE EXCEPTION 'CAP06_EVALUATION_CASE_PROJECTION_CANONICAL_DIVERGENCE:%:%', NEW.evaluation_object_id, NEW.case_index;
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'CAP06_PROJECTION_TRIGGER_TABLE_UNSUPPORTED:%', TG_TABLE_NAME;
+  END IF;
+
+  RETURN NEW;
+END
+$$;
+
+DROP TRIGGER IF EXISTS trg_twin_calibration_candidate_projection_canonicality_v1
+  ON public.twin_calibration_candidate_projection_v1;
+CREATE TRIGGER trg_twin_calibration_candidate_projection_canonicality_v1
+BEFORE INSERT OR UPDATE ON public.twin_calibration_candidate_projection_v1
+FOR EACH ROW EXECUTE FUNCTION public.enforce_mcft_cap06_projection_canonicality_v1();
+
+DROP TRIGGER IF EXISTS trg_twin_shadow_evaluation_projection_canonicality_v1
+  ON public.twin_shadow_evaluation_projection_v1;
+CREATE TRIGGER trg_twin_shadow_evaluation_projection_canonicality_v1
+BEFORE INSERT OR UPDATE ON public.twin_shadow_evaluation_projection_v1
+FOR EACH ROW EXECUTE FUNCTION public.enforce_mcft_cap06_projection_canonicality_v1();
+
+DROP TRIGGER IF EXISTS trg_twin_candidate_evaluation_index_canonicality_v1
+  ON public.twin_candidate_evaluation_index_v1;
+CREATE TRIGGER trg_twin_candidate_evaluation_index_canonicality_v1
+BEFORE INSERT OR UPDATE ON public.twin_candidate_evaluation_index_v1
+FOR EACH ROW EXECUTE FUNCTION public.enforce_mcft_cap06_projection_canonicality_v1();
+
+DROP TRIGGER IF EXISTS trg_twin_shadow_evaluation_case_projection_canonicality_v1
+  ON public.twin_shadow_evaluation_case_projection_v1;
+CREATE TRIGGER trg_twin_shadow_evaluation_case_projection_canonicality_v1
+BEFORE INSERT OR UPDATE ON public.twin_shadow_evaluation_case_projection_v1
+FOR EACH ROW EXECUTE FUNCTION public.enforce_mcft_cap06_projection_canonicality_v1();
+
 COMMENT ON TABLE public.twin_calibration_candidate_projection_v1 IS
   'Rebuildable model-governance projection only; canonical Calibration Candidate history remains in public.facts and is never Runtime authority.';
 COMMENT ON TABLE public.twin_shadow_evaluation_projection_v1 IS
