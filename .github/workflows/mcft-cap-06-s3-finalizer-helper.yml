@@ -1,0 +1,141 @@
+name: mcft-cap-06-s3-finalizer-helper
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize-target-s3-branch:
+    if: github.head_ref == 'agent/mcft-cap-06-s3-finalizer-helper-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      TARGET_BRANCH: agent/mcft-cap-06-s3-d-persistence-recovery-v1
+      EXPECTED_TARGET_HEAD: db3488b801b8788b0d22abec31ba6c0fc4cb152c
+      BASE_MAIN: ea198cc0cad063c7e70a59727171908f2f8c7e7d
+    steps:
+      - name: Checkout target S3 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s3-d-persistence-recovery-v1
+          path: target
+          fetch-depth: 0
+
+      - name: Checkout helper branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s3-finalizer-helper-v1
+          path: helper
+          fetch-depth: 1
+
+      - name: Verify target and main identities
+        working-directory: target
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TARGET_HEAD"
+          git fetch --quiet origin main
+          test "$(git rev-parse origin/main)" = "$BASE_MAIN"
+          test "$(git merge-base HEAD origin/main)" = "$BASE_MAIN"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: target/pnpm-lock.yaml
+
+      - name: Install target dependencies
+        working-directory: target
+        run: pnpm install --frozen-lockfile
+
+      - name: Materialize target S3 candidate
+        working-directory: target
+        run: python ../helper/.github/scripts/run_mcft_cap06_s3_target_finalizer.py
+
+      - name: Remove target temporary workflow
+        working-directory: target
+        run: git rm .github/workflows/mcft-cap-06-s3-validation.yml
+
+      - name: Reproduce S1, S2 and S3 evidence chain
+        working-directory: target
+        run: |
+          set -euo pipefail
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_D_PERSISTENCE.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_D_PERSISTENCE.cjs
+
+      - name: Typecheck and build target candidate
+        working-directory: target
+        run: |
+          set -euo pipefail
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Verify exact target boundary
+        working-directory: target
+        run: |
+          set -euo pipefail
+          rm -rf acceptance-output
+          mapfile -t actual < <(git diff --name-only origin/main | sort)
+          mapfile -t expected < <(printf '%s\n' \
+            apps/server/db/migrations/2026_07_16_mcft_cap_06_calibration_governance_persistence.sql \
+            apps/server/src/persistence/twin_runtime/postgres_calibration_governance_persistence_repository_v1.ts \
+            apps/server/src/projections/twin_runtime/calibration_governance_projection_v1.ts \
+            docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md \
+            docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-D-PERSISTENCE.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md \
+            scripts/acceptance/run_acceptance.cjs \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_D_PERSISTENCE.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_D_PERSISTENCE_DB.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_D_PERSISTENCE.cjs \
+            scripts/runtime_acceptance/mcft_cap_06_s3_persistence_fixture_v1.ts | sort)
+          diff -u <(printf '%s\n' "${expected[@]}") <(printf '%s\n' "${actual[@]}")
+          test "${#actual[@]}" -eq 17
+          test ! -e .github/workflows/mcft-cap-06-s3-validation.yml
+          test ! -d acceptance-output
+
+      - name: Commit and push target S3 final tree
+        working-directory: target
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "feat(mcft-cap-06): finalize S3 D persistence candidate"
+          git push origin HEAD:$TARGET_BRANCH
