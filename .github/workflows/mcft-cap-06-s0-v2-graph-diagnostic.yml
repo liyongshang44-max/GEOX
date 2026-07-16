@@ -1,0 +1,104 @@
+name: MCFT-CAP-06 S0 v2 graph diagnostic
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.head_ref == 'agent/mcft-cap-06-s0-v2-exact-qualification'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: landos
+          POSTGRES_PASSWORD: landos
+          POSTGRES_DB: mcft_cap06_s0_v2_diag
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U landos -d mcft_cap06_s0_v2_diag"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s0-v2-exact-qualification
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Reproduce predecessor and export canonical graph
+        env:
+          DATABASE_URL: postgres://landos:landos@127.0.0.1:5432/mcft_cap06_s0_v2_diag
+          MCFT_CAP_06_S0_DESTRUCTIVE_ACCEPTANCE: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1
+          git show origin/agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1:scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts > /tmp/s0_diag.ts
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/s0_diag.ts')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('const BASELINE_MAIN = "1e66ea7efc842b8e547bccc40521d520b4370e69";', 'const BASELINE_MAIN = "ca819ba51bdf3017dbefa96015f76bd3b66a647c";')
+          s = s.replace('const BRANCH = "agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1";', 'const BRANCH = "agent/mcft-cap-06-s0-v2-exact-qualification";')
+          s = s.replace('const TEMP_WORKFLOW_PATH = ".github/workflows/mcft-cap-06-s0-materialize.yml";', 'const TEMP_WORKFLOW_PATH = ".github/workflows/mcft-cap-06-s0-v2-graph-diagnostic.yml";')
+          s = s.replace('assert.equal(p0Status.status, "PROVISIONAL_SSOT_CANDIDATE", "P0_CANDIDATE_STATUS_REQUIRED_BEFORE_S0_MATERIALIZATION");', 'assert.equal(p0Status.status, "MERGED_EFFECTIVE", "P0_MERGED_EFFECTIVE_REQUIRED_BEFORE_S0_V2_DIAGNOSTIC");')
+          p.write_text(s, encoding='utf-8')
+          PY
+          pnpm -w exec tsx /tmp/s0_diag.ts
+          mkdir -p acceptance-output
+          node <<'NODE'
+          const fs = require('node:fs');
+          const { Client } = require('pg');
+          (async () => {
+            const client = new Client({ connectionString: process.env.DATABASE_URL });
+            await client.connect();
+            const types = [
+              'twin_forecast_residual_v1',
+              'twin_forecast_run_v1',
+              'twin_state_estimate_v1',
+              'twin_runtime_config_v1',
+              'twin_evidence_window_v1',
+              'twin_observation_v1',
+              'soil_moisture_observation_v1'
+            ];
+            const out = {};
+            for (const type of types) {
+              const result = await client.query("SELECT fact_id, occurred_at, source, record_json FROM facts WHERE record_json->>'type'=$1 ORDER BY occurred_at, fact_id", [type]);
+              out[type] = result.rows;
+            }
+            const residual = out.twin_forecast_residual_v1?.[0]?.record_json?.payload;
+            if (residual) {
+              out.residual_payload_keys = Object.keys(residual.payload || {}).sort();
+              out.residual_envelope_keys = Object.keys(residual).sort();
+              const refs = Object.entries(residual.payload || {}).filter(([k]) => /ref|hash|window|cutoff|forcing|operator|geometry|posterior|config|forecast/i.test(k));
+              out.residual_graph_fields = Object.fromEntries(refs);
+            }
+            const allTypes = await client.query("SELECT record_json->>'type' AS type, count(*)::int AS count FROM facts GROUP BY 1 ORDER BY 1");
+            out.type_counts = allTypes.rows;
+            await client.end();
+            fs.writeFileSync('acceptance-output/s0-v2-graph-diagnostic.json', JSON.stringify(out, null, 2));
+          })().catch((error) => { console.error(error); process.exit(1); });
+          NODE
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s0-v2-graph-diagnostic
+          path: acceptance-output/s0-v2-graph-diagnostic.json
+          retention-days: 7
