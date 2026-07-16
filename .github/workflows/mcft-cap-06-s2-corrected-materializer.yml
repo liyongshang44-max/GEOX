@@ -7,129 +7,26 @@ permissions:
   contents: write
 
 jobs:
-  materialize-and-validate:
+  expose-recovered-source:
     if: github.head_ref == 'agent/mcft-cap-06-s2-contracts-math-corrected-v1' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout required refs quietly
+      - name: Checkout branch quietly
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           git init -q .
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch --quiet origin \
-            agent/mcft-cap-06-s2-contracts-math-corrected-v1:refs/remotes/origin/agent/mcft-cap-06-s2-contracts-math-corrected-v1 \
-            main:refs/remotes/origin/main \
-            f173186f8cd2940bd7082042d0d053e5a874f7c0
+          git fetch --quiet origin agent/mcft-cap-06-s2-contracts-math-corrected-v1:refs/remotes/origin/agent/mcft-cap-06-s2-contracts-math-corrected-v1
           git checkout -q -B agent/mcft-cap-06-s2-contracts-math-corrected-v1 origin/agent/mcft-cap-06-s2-contracts-math-corrected-v1
 
-      - name: Import and patch reviewed S2 source before install
-        env:
-          OLD_S2_HEAD: f173186f8cd2940bd7082042d0d053e5a874f7c0
+      - name: Recover and publish inspectable materializer source
         run: |
           set -euo pipefail
-          files=(
-            apps/server/src/domain/calibration/contracts_v1.ts
-            apps/server/src/domain/calibration/fixed_point_metric_v1.ts
-            apps/server/src/domain/calibration/exact_ref_port_v1.ts
-            apps/server/src/domain/calibration/case_builder_v1.ts
-            apps/server/src/domain/calibration/grid_search_v1.ts
-            apps/server/src/domain/calibration/shadow_evaluation_v1.ts
-            apps/server/src/domain/calibration/envelope_profiles_v1.ts
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
-          )
-          for file in "${files[@]}"; do mkdir -p "$(dirname "$file")"; git show "$OLD_S2_HEAD:$file" > "$file"; done
-          python -c "import base64,hashlib,pathlib,struct,zlib; p=pathlib.Path('.github/mcft_cap06_s2_materializer.py.gz.b64'); r=base64.b64decode(''.join(p.read_text(encoding='utf-8').split()),validate=True); assert r[:4]==b'\x1f\x8b\x08\x08','S2_MATERIALIZER_GZIP_HEADER_INVALID'; o=r.index(b'\x00',10)+1; d=zlib.decompress(r[o:-8],-zlib.MAX_WBITS); t=d.decode('utf-8'); count=t.count('case_id0ut_set_hash'); assert count>0,'S2_MATERIALIZER_KNOWN_CORRUPTION_MISSING'; t=t.replace('case_id0ut_set_hash','case_input_set_hash'); c=t.encode('utf-8'); expected_crc,expected_size=struct.unpack('<II',r[-8:]); assert len(c)%(1<<32)==expected_size,'S2_MATERIALIZER_ISIZE_MISMATCH'; assert zlib.crc32(c)==expected_crc,'S2_MATERIALIZER_CRC_RECONSTRUCTION_MISMATCH'; compile(t,'.github/mcft_cap06_s2_materializer.py','exec'); pathlib.Path('.github/mcft_cap06_s2_materializer.py').write_text(t,encoding='utf-8',newline='\n'); print('S2_MATERIALIZER_REPAIRED_TOKEN_COUNT='+str(count)); print('S2_MATERIALIZER_RECONSTRUCTED_SHA256='+hashlib.sha256(c).hexdigest()); print('S2_MATERIALIZER_SOURCE_BYTES='+str(len(c)))"
-          python -c "import pathlib; p=pathlib.Path('.github/mcft_cap06_s2_materializer.py'); t=p.read_text(); n='        raise RuntimeError(f\"{label}: expected 1 occurrence, found {count}\")'; r='        print(\"S2_REPLACE_ONCE_FAILURE_LABEL=\" + label)\n        print(\"S2_REPLACE_ONCE_OLD_REPR=\" + repr(old))\n        raise RuntimeError(f\"{label}: expected 1 occurrence, found {count}\")'; assert t.count(n)==1; p.write_text(t.replace(n,r),encoding='utf-8',newline='\n')"
-          python .github/mcft_cap06_s2_materializer.py source
-          git diff --check
-          grep -F '1_000_000n as const' apps/server/src/domain/calibration/grid_search_v1.ts
-          ! grep -F 'Number(value)' scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
-          ! grep -F 'number.toFixed' scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
-          grep -F 'ORDERED_RESIDUAL_REF_MEMBERSHIP_ONLY_V1' apps/server/src/domain/calibration/contracts_v1.ts
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Run corrected S2 contracts/math acceptance
-        run: |
-          set -euo pipefail
-          mkdir -p acceptance-output
-          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S2_CONTRACTS_MATH.log
-          test -s acceptance-output/MCFT_CAP_06_S2_CONTRACTS_MATH_RESULT.json
-
-      - name: Materialize S2 SSOT and governance Gate from runtime evidence
-        run: |
-          set -euo pipefail
-          python .github/mcft_cap06_s2_materializer.py materialize
-          python -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-CONTRACTS-MATH.json >/dev/null
-          python -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json >/dev/null
-          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs
-          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs
-          git diff --check
-
-      - name: Typecheck and build corrected S2 candidate
-        run: |
-          set -euo pipefail
-          pnpm -r typecheck
-          pnpm -r build
-
-      - name: Re-run S2 acceptance and Gate after full build
-        run: |
-          set -euo pipefail
-          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
-          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs
-
-      - name: Remove temporary materializer and verify exact permanent boundary
-        run: |
-          set -euo pipefail
-          rm -f .github/mcft_cap06_s2_materializer.py.gz.b64
-          rm -f .github/mcft_cap06_s2_materializer.py
-          rm -rf .github/__pycache__ acceptance-output
-          rm -f .github/workflows/mcft-cap-06-s2-corrected-materializer.yml
-          mapfile -t actual < <(git diff --name-only origin/main | sort)
-          cat > /tmp/expected.txt <<'EOF'
-          apps/server/src/domain/calibration/case_builder_v1.ts
-          apps/server/src/domain/calibration/contracts_v1.ts
-          apps/server/src/domain/calibration/envelope_profiles_v1.ts
-          apps/server/src/domain/calibration/exact_ref_port_v1.ts
-          apps/server/src/domain/calibration/fixed_point_metric_v1.ts
-          apps/server/src/domain/calibration/grid_search_v1.ts
-          apps/server/src/domain/calibration/shadow_evaluation_v1.ts
-          docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
-          docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
-          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json
-          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json
-          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-CONTRACTS-MATH.json
-          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json
-          docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md
-          scripts/acceptance/run_acceptance.cjs
-          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs
-          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
-          EOF
-          sed -i 's/^          //' /tmp/expected.txt
-          diff -u /tmp/expected.txt <(printf '%s\n' "${actual[@]}")
-          test "${#actual[@]}" -eq 17
-          git diff --check
-
-      - name: Commit bounded corrected S2 candidate
-        run: |
-          set -euo pipefail
+          python -c "import base64,hashlib,json,pathlib,struct,zlib; p=pathlib.Path('.github/mcft_cap06_s2_materializer.py.gz.b64'); r=base64.b64decode(''.join(p.read_text(encoding='utf-8').split()),validate=True); assert r[:4]==b'\x1f\x8b\x08\x08'; o=r.index(b'\x00',10)+1; d=zlib.decompress(r[o:-8],-zlib.MAX_WBITS); t=d.decode('utf-8'); compile(t,'.github/mcft_cap06_s2_materializer_recovered.py','exec'); pathlib.Path('.github/mcft_cap06_s2_materializer_recovered.py').write_text(t,encoding='utf-8',newline='\n'); expected_crc,expected_size=struct.unpack('<II',r[-8:]); meta={'recovered_sha256':hashlib.sha256(d).hexdigest(),'recovered_bytes':len(d),'expected_crc32':expected_crc,'actual_crc32':zlib.crc32(d),'expected_isize':expected_size,'actual_isize':len(d)%(1<<32),'suspect_token_count':t.count('case_id0ut_set_hash')}; pathlib.Path('.github/mcft_cap06_s2_materializer_transport.json').write_text(json.dumps(meta,indent=2)+'\n',encoding='utf-8'); print(json.dumps(meta,sort_keys=True))"
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git diff --cached --check
-          git commit -m "feat(mcft-cap-06): implement corrected S2 contracts and math"
+          git add .github/mcft_cap06_s2_materializer_recovered.py .github/mcft_cap06_s2_materializer_transport.json
+          git commit -m "chore(mcft-cap-06): expose recovered S2 materializer source"
           git push origin HEAD:agent/mcft-cap-06-s2-contracts-math-corrected-v1
