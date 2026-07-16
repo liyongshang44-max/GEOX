@@ -1,0 +1,71 @@
+{
+  "schema_version": "geox_mcft_cap_06_s3_status_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "delivery_slice_id": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
+  "status": "CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
+  "baseline_main_commit": "ea198cc0cad063c7e70a59727171908f2f8c7e7d",
+  "implementation_branch": "agent/mcft-cap-06-s3-governance-persistence-recovery-v1",
+  "authorization": {
+    "s2_merged_effective": true,
+    "s3_authorized": true,
+    "s4_omitted": true,
+    "s5_authorized": false
+  },
+  "implementation": {
+    "additive_migration_count": 1,
+    "canonical_store": "public.facts",
+    "d_transaction_object_types": [
+      "twin_calibration_candidate_v1",
+      "twin_shadow_evaluation_v1"
+    ],
+    "idempotency_identity_kinds": [
+      "D_CALIBRATION_CANDIDATE",
+      "D_SHADOW_EVALUATION"
+    ],
+    "candidate_projection": "twin_calibration_candidate_projection_v1",
+    "evaluation_projection": "twin_shadow_evaluation_projection_v1",
+    "candidate_evaluation_index": "twin_candidate_evaluation_index_v1",
+    "evaluation_case_projection": "twin_shadow_evaluation_case_projection_v1",
+    "candidate_ref_alone_unique": false,
+    "exact_ref_postgresql_adapter": true,
+    "facts_based_rebuild": true,
+    "advisory_lock_concurrency_serialization": true,
+    "failed_attempt_persistence_mode": "MODE_A_NO_PERSISTENT_ATTEMPT_OBJECT"
+  },
+  "candidate_tree_validation": {
+    "repository_typecheck": "PENDING_EXACT_HEAD_CI",
+    "repository_build": "PENDING_EXACT_HEAD_CI",
+    "s3_postgresql_acceptance": "PENDING_EXACT_HEAD",
+    "s3_governance_acceptance": "PENDING_EXACT_HEAD",
+    "standard_ci": "PENDING_EXACT_HEAD"
+  },
+  "runtime_delta_boundary": {
+    "candidate_or_evaluation_objects_appended_by_acceptance_only": true,
+    "production_candidate_append": false,
+    "production_evaluation_append": false,
+    "model_activation_count": 0,
+    "active_config_switch_count": 0,
+    "state_mutation_count": 0,
+    "checkpoint_mutation_count": 0,
+    "public_route_count": 0,
+    "web_change_count": 0,
+    "scheduler_count": 0
+  },
+  "s3_effective": false,
+  "s5_authorized": false,
+  "effectiveness_condition": "S3_EXACT_HEAD_CI_PASS_AND_POSTGRESQL_ACCEPTANCE_PASS_AND_GOVERNANCE_GATE_PASS_AND_MERGE_AND_TREE_EQUIVALENCE_AND_EXACT_MERGED_MAIN_PROOF_AND_SEPARATE_EFFECTIVENESS_WRITEBACK",
+  "preserved_nonclaims": [
+    "NO_S5_CANDIDATE_ORCHESTRATION",
+    "NO_S6_SHADOW_ORCHESTRATION",
+    "NO_PRODUCTION_CALIBRATION_RUN",
+    "NO_PRODUCTION_SHADOW_RUN",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_CONFIG_SWITCH",
+    "NO_RUNTIME_PARAMETER_CHANGE",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
+    "NO_PUBLIC_ROUTE",
+    "NO_WEB",
+    "NO_SCHEDULER",
+    "NO_MCFT_CAP_07_AUTHORIZATION"
+  ]
+}
