@@ -1,0 +1,28 @@
+name: MCFT-CAP-06 current-state exact merged-main proof
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    if: github.head_ref == 'agent/mcft-cap-06-current-state-postmerge-proof-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 1157579a1b2bc3f465aa3a489eab4d44552798fe
+          fetch-depth: 0
+
+      - name: Assert exact merged-main source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "1157579a1b2bc3f465aa3a489eab4d44552798fe"
+          test "$(git rev-parse origin/main)" = "1157579a1b2bc3f465aa3a489eab4d44552798fe"
+
+      - name: Run permanent current-state reconciliation Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_CURRENT_STATE_RECONCILIATION.cjs
