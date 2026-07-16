@@ -1,6 +1,6 @@
 // scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs
-// Purpose: execute the permanent S0 v2 qualification runner in existing CI without presupposing a repository-history verdict.
-// Boundary: creates one isolated PostgreSQL database, patches only CI execution guards in a temporary source copy, and performs no canonical CAP-06 write.
+// Purpose: run the permanent MCFT-CAP-06 S0 v2 exact qualification against an isolated PostgreSQL database in CI.
+// Boundary: acceptance orchestration only; no source patching, repository materialization, canonical CAP-06 write, Runtime authority, or downstream Slice activation.
 
 'use strict';
 
@@ -10,13 +10,8 @@ const path = require('node:path');
 const { Pool } = require('pg');
 
 const ROOT = path.resolve(__dirname, '../..');
-const SOURCE_PATH = path.join(ROOT, 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts');
-const TEMP_RELATIVE_PATH = 'scripts/runtime_acceptance/.MCFT_CAP_06_S0_V2_CI_PATCHED.ts';
-const TEMP_PATH = path.join(ROOT, TEMP_RELATIVE_PATH);
-const ACCEPTANCE_OUTPUT_DIR = path.join(ROOT, 'acceptance-output');
-const PERMANENT_CANDIDATE_ARTIFACT_PATH = path.join(ACCEPTANCE_OUTPUT_DIR, 'MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION_CANDIDATE.ts');
-const QUALIFICATION_RESULT_ARTIFACT_PATH = path.join(ACCEPTANCE_OUTPUT_DIR, 'MCFT_CAP_06_S0_V2_RESULT.json');
-const MATERIALIZER_PATH = 'scripts/remediation/MATERIALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.cjs';
+const EXACT_RUNNER_PATH = 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts';
+const RESULT_ARTIFACT_PATH = path.join(ROOT, 'acceptance-output', 'MCFT_CAP_06_S0_V2_RESULT.json');
 const BASELINE_MAIN = 'ca819ba51bdf3017dbefa96015f76bd3b66a647c';
 const EXPECTED_HEAD_BRANCH = 'agent/mcft-cap-06-s0-v2-exact-qualification';
 const ISOLATED_DATABASE_NAME = 'mcft_cap06_s0_v2_ci';
@@ -36,15 +31,7 @@ function run(executable, args, options = {}) {
 
 function requireSuccessful(result, label) {
   if (result.status === 0) return;
-  const stdout = String(result.stdout || '');
-  const stderr = String(result.stderr || '');
-  throw new Error(`${label}_FAILED\n${stdout}\n${stderr}`);
-}
-
-function replaceExactly(source, before, after, label) {
-  const count = source.split(before).length - 1;
-  if (count !== 1) throw new Error(`${label}_MATCH_COUNT:${count}`);
-  return source.replace(before, after);
+  throw new Error(`${label}_FAILED\n${String(result.stdout || '')}\n${String(result.stderr || '')}`);
 }
 
 function resolveBaseDatabaseUrl() {
@@ -59,14 +46,23 @@ function resolveBaseDatabaseUrl() {
   if (!postgresUser || !postgresPassword || !postgresDatabase || !postgresHost || !postgresPort) {
     throw new Error('MCFT_CAP_06_S0_POSTGRESQL_ACCEPTANCE_DATABASE_CONFIG_REQUIRED');
   }
+
   return `postgres://${encodeURIComponent(postgresUser)}:${encodeURIComponent(postgresPassword)}@${postgresHost}:${postgresPort}/${encodeURIComponent(postgresDatabase)}`;
 }
 
-async function recreateIsolatedDatabase(baseDatabaseUrl) {
+async function withAdminPool(baseDatabaseUrl, callback) {
   const adminUrl = new URL(baseDatabaseUrl);
   adminUrl.pathname = '/postgres';
   const admin = new Pool({ connectionString: adminUrl.toString() });
   try {
+    return await callback(admin);
+  } finally {
+    await admin.end();
+  }
+}
+
+async function recreateIsolatedDatabase(baseDatabaseUrl) {
+  await withAdminPool(baseDatabaseUrl, async (admin) => {
     await admin.query(
       `SELECT pg_terminate_backend(pid)
          FROM pg_stat_activity
@@ -76,125 +72,91 @@ async function recreateIsolatedDatabase(baseDatabaseUrl) {
     );
     await admin.query(`DROP DATABASE IF EXISTS ${ISOLATED_DATABASE_NAME}`);
     await admin.query(`CREATE DATABASE ${ISOLATED_DATABASE_NAME}`);
-  } finally {
-    await admin.end();
-  }
+  });
+
   const isolatedUrl = new URL(baseDatabaseUrl);
   isolatedUrl.pathname = `/${ISOLATED_DATABASE_NAME}`;
   return isolatedUrl.toString();
 }
 
-function buildTemporaryRunner() {
-  let source = fs.readFileSync(SOURCE_PATH, 'utf8');
+async function dropIsolatedDatabase(baseDatabaseUrl) {
+  await withAdminPool(baseDatabaseUrl, async (admin) => {
+    await admin.query(
+      `SELECT pg_terminate_backend(pid)
+         FROM pg_stat_activity
+        WHERE datname=$1
+          AND pid<>pg_backend_pid()`,
+      [ISOLATED_DATABASE_NAME],
+    );
+    await admin.query(`DROP DATABASE IF EXISTS ${ISOLATED_DATABASE_NAME}`);
+  });
+}
 
-  source = replaceExactly(
-    source,
-    '  assert.equal(git(["branch", "--show-current"]), BRANCH, "S0_BRANCH_REQUIRED");',
-    '  assert.equal(process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME, BRANCH, "S0_BRANCH_REQUIRED");',
-    'BRANCH_ASSERTION',
-  );
-
-  source = replaceExactly(
-    source,
-    `  const tracked = git(["diff", "--name-only", BASELINE_MAIN]).split(/\\r?\\n/).filter(Boolean);\n  const untracked = git(["ls-files", "--others", "--exclude-standard"]).split(/\\r?\\n/).filter(Boolean);\n  const changed = [...new Set([...tracked, ...untracked])].sort();\n  const forbidden = changed.filter((file) => !PREFLIGHT_ALLOWED_FILES.includes(file));\n  assert.deepEqual(forbidden, [], \`S0_CHANGED_FILE_BOUNDARY_VIOLATION:\${forbidden.join(",")}\`);`,
-    `  const committed = git(["diff", "--name-only", BASELINE_MAIN, "HEAD"]).split(/\\r?\\n/).filter(Boolean);\n  const workingTracked = git(["diff", "--name-only", "HEAD"]).split(/\\r?\\n/).filter(Boolean);\n  const untracked = git(["ls-files", "--others", "--exclude-standard"]).split(/\\r?\\n/).filter(Boolean);\n  const generatedRuntimeArtifact = (file: string): boolean =>\n    file === ".env.ci"\n    || file === "docs/audit/CONTROLLED_PILOT_READINESS_REPORT.md"\n    || file === "docs/audit/FRONTEND_RUNTIME_PAGE_AUDIT_REPORT.md"\n    || file.startsWith("docs/audit/frontend-runtime-page-audit/")\n    || file.startsWith("acceptance-output/");\n  const candidateWorkingTracked = workingTracked.filter((file) => !generatedRuntimeArtifact(file));\n  const candidateUntracked = untracked.filter((file) => !generatedRuntimeArtifact(file));\n  const changed = [...new Set([...committed, ...candidateWorkingTracked, ...candidateUntracked])].sort();\n  const ciAllowedFiles = new Set([\n    PREFLIGHT_PATH,\n    "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs",\n    "scripts/acceptance/run_acceptance.cjs",\n    "${MATERIALIZER_PATH}",\n    "${TEMP_RELATIVE_PATH}",\n  ]);\n  const forbidden = changed.filter((file) => !ciAllowedFiles.has(file));\n  assert.deepEqual(forbidden, [], \`S0_CHANGED_FILE_BOUNDARY_VIOLATION:\${forbidden.join(",")}\`);`,
-    'CI_CHANGED_FILE_BOUNDARY',
-  );
-
-  const outcomeStart = source.indexOf('  assert.equal(qualification.dataset_qualification_status, "INSUFFICIENT_MATCHED_PAIRS"');
-  const outcomeEndMarker = '  ok("exact canonical case graph reports one eligible Residual and INSUFFICIENT_MATCHED_PAIRS without conflating legal exclusions with graph failure");';
-  if (outcomeStart < 0) throw new Error('OUTCOME_PRECONDITION_START_NOT_FOUND');
-  const outcomeEndStart = source.indexOf(outcomeEndMarker, outcomeStart);
-  if (outcomeEndStart < 0) throw new Error('OUTCOME_PRECONDITION_END_NOT_FOUND');
-  const outcomeEnd = outcomeEndStart + outcomeEndMarker.length;
-  const honestOutcomeChecks = `  const allowedQualificationStatuses = new Set([\n    "READY_FOR_CALIBRATION_ASSESSMENT",\n    "INSUFFICIENT_MATCHED_PAIRS",\n    "CONFIG_OR_MODEL_HETEROGENEITY",\n    "AVAILABILITY_ORDER_INVALID",\n    "INVALID_CASE_GRAPH",\n  ]);\n  assert.ok(\n    allowedQualificationStatuses.has(qualification.dataset_qualification_status),\n    \`UNFROZEN_DATASET_QUALIFICATION_STATUS:\${qualification.dataset_qualification_status}\`,\n  );\n  assert.equal(\n    qualification.case_graph_validation_status,\n    qualification.invalid_graph_case_count === 0 ? "PASS" : "FAIL",\n    "CASE_GRAPH_STATUS_COUNT_MISMATCH",\n  );\n  assert.equal(\n    qualification.availability_order_validation_status,\n    qualification.availability_invalid_case_count === 0 && splitValid ? "PASS" : "FAIL",\n    "AVAILABILITY_STATUS_COUNT_MISMATCH",\n  );\n  assert.equal(\n    qualification.homogeneity_validation_status,\n    heterogeneity ? "FAIL" : "PASS",\n    "HOMOGENEITY_STATUS_COUNT_MISMATCH",\n  );\n  assert.equal(\n    qualification.canonical_residual_count,\n    qualification.eligible_residual_count\n      + qualification.excluded_case_count\n      + qualification.invalid_graph_case_count\n      + qualification.availability_invalid_case_count,\n    "RESIDUAL_CLASSIFICATION_PARTITION_MISMATCH",\n  );\n  ok(\`exact canonical case graph qualification completed honestly with status \${qualification.dataset_qualification_status}\`);`;
-  source = source.slice(0, outcomeStart) + honestOutcomeChecks + source.slice(outcomeEnd);
-
-  source = replaceExactly(
-    source,
-    '  fs.rmSync(absolute("acceptance-output"), { recursive: true, force: true });',
-    '  fs.rmSync(absolute(TEMP_RUNNER_INPUT_PATH), { force: true });',
-    'ACCEPTANCE_OUTPUT_CLEANUP',
-  );
-
-  source = replaceExactly(
-    source,
-    '  run(process.platform === "win32" ? "git.exe" : "git", ["diff", "--check", BASELINE_MAIN]);',
-    '  run(process.platform === "win32" ? "git.exe" : "git", ["diff", "--check", BASELINE_MAIN, "--", PREFLIGHT_PATH, "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs", "scripts/acceptance/run_acceptance.cjs", "scripts/remediation/MATERIALIZE_MCFT_CAP_06_S0_V2_CANDIDATE.cjs"]);',
-    'CANDIDATE_DIFF_CHECK',
-  );
-
-  const forbiddenMarkers = [
-    'CURRENT_REPOSITORY_HISTORY_EXPECTED_INSUFFICIENT',
-    'CURRENT_REPOSITORY_HISTORY_GRAPH_MUST_PASS',
-    'CURRENT_REPOSITORY_HISTORY_EXPECTS_NO_INVALID_GRAPH',
-    'CAP05_TERMINAL_HISTORY_EXPECTS_ONE_CANONICAL_RESIDUAL',
-  ];
-  const retainedMarkers = forbiddenMarkers.filter((marker) => source.includes(marker));
-  if (retainedMarkers.length > 0) {
-    throw new Error(`OUTCOME_PRECONDITION_RETAINED:${retainedMarkers.join(',')}`);
+function restoreGitAncestry() {
+  const shallowPath = path.join(ROOT, '.git', 'shallow');
+  if (fs.existsSync(shallowPath)) {
+    requireSuccessful(
+      run('git', ['fetch', '--no-tags', '--prune', '--unshallow', 'origin']),
+      'FETCH_UNSHALLOW',
+    );
   }
 
-  fs.mkdirSync(ACCEPTANCE_OUTPUT_DIR, { recursive: true });
-  fs.writeFileSync(TEMP_PATH, source, 'utf8');
-  fs.writeFileSync(PERMANENT_CANDIDATE_ARTIFACT_PATH, source, 'utf8');
+  requireSuccessful(
+    run('git', ['fetch', 'origin', 'main:refs/remotes/origin/main']),
+    'FETCH_ORIGIN_MAIN',
+  );
+
+  const resolvedHeadBranch = String(process.env.GITHUB_HEAD_REF || '').trim();
+  if (resolvedHeadBranch === EXPECTED_HEAD_BRANCH) {
+    requireSuccessful(
+      run('git', ['fetch', 'origin', `${EXPECTED_HEAD_BRANCH}:refs/remotes/origin/${EXPECTED_HEAD_BRANCH}`]),
+      'FETCH_ORIGIN_HEAD',
+    );
+  }
+
+  requireSuccessful(
+    run('git', ['merge-base', '--is-ancestor', BASELINE_MAIN, 'HEAD']),
+    'S0_BASELINE_ANCESTRY',
+  );
 }
 
 function persistQualificationResult(stdout) {
-  const line = String(stdout || '').split(/\r?\n/).find((candidate) => candidate.startsWith('S0_V2_RESULT_JSON:'));
+  const line = String(stdout || '')
+    .split(/\r?\n/)
+    .find((candidate) => candidate.startsWith('S0_V2_RESULT_JSON:'));
   if (!line) throw new Error('S0_V2_RESULT_JSON_REQUIRED');
-  const result = JSON.parse(line.slice('S0_V2_RESULT_JSON:'.length));
-  fs.writeFileSync(QUALIFICATION_RESULT_ARTIFACT_PATH, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
-}
 
-async function restoreGitAncestry() {
-  const shallowPath = path.join(ROOT, '.git', 'shallow');
-  if (fs.existsSync(shallowPath)) {
-    const unshallow = run('git', ['fetch', '--no-tags', '--prune', '--unshallow', 'origin']);
-    requireSuccessful(unshallow, 'FETCH_UNSHALLOW');
-  }
-  const fetchMain = run('git', ['fetch', 'origin', 'main:refs/remotes/origin/main']);
-  requireSuccessful(fetchMain, 'FETCH_ORIGIN_MAIN');
-  const fetchHead = run('git', ['fetch', 'origin', `${EXPECTED_HEAD_BRANCH}:refs/remotes/origin/${EXPECTED_HEAD_BRANCH}`]);
-  requireSuccessful(fetchHead, 'FETCH_ORIGIN_HEAD');
+  const result = JSON.parse(line.slice('S0_V2_RESULT_JSON:'.length));
+  fs.mkdirSync(path.dirname(RESULT_ARTIFACT_PATH), { recursive: true });
+  fs.writeFileSync(RESULT_ARTIFACT_PATH, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
 }
 
 async function main() {
   const baseDatabaseUrl = resolveBaseDatabaseUrl();
-
-  await restoreGitAncestry();
-  const mainResult = run('git', ['rev-parse', 'refs/remotes/origin/main']);
-  requireSuccessful(mainResult, 'READ_ORIGIN_MAIN');
-  if (String(mainResult.stdout || '').trim() !== BASELINE_MAIN) {
-    throw new Error(`ORIGIN_MAIN_HEAD_MISMATCH:${String(mainResult.stdout || '').trim()}`);
-  }
-
+  restoreGitAncestry();
   const isolatedDatabaseUrl = await recreateIsolatedDatabase(baseDatabaseUrl);
-  buildTemporaryRunner();
 
   try {
     const result = run(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', [
       '-w',
       'exec',
       'tsx',
-      TEMP_RELATIVE_PATH,
+      EXACT_RUNNER_PATH,
     ], {
       env: {
         DATABASE_URL: isolatedDatabaseUrl,
         MCFT_CAP_06_S0_DESTRUCTIVE_ACCEPTANCE: '1',
-        GITHUB_HEAD_REF: process.env.GITHUB_HEAD_REF || EXPECTED_HEAD_BRANCH,
+        GITHUB_HEAD_REF: process.env.GITHUB_HEAD_REF || '',
+        GITHUB_REF_NAME: process.env.GITHUB_REF_NAME || '',
       },
     });
+
     process.stdout.write(String(result.stdout || ''));
     process.stderr.write(String(result.stderr || ''));
     requireSuccessful(result, 'MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION');
     persistQualificationResult(result.stdout);
-    const materializer = run(process.execPath, [MATERIALIZER_PATH]);
-    process.stdout.write(String(materializer.stdout || ''));
-    process.stderr.write(String(materializer.stderr || ''));
-    requireSuccessful(materializer, 'MCFT_CAP_06_S0_V2_CANDIDATE_MATERIALIZATION');
   } finally {
-    fs.rmSync(TEMP_PATH, { force: true });
+    await dropIsolatedDatabase(baseDatabaseUrl);
   }
 }
 
