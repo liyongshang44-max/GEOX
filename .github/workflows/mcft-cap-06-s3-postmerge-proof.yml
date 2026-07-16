@@ -1,0 +1,107 @@
+name: mcft-cap-06-s3-postmerge-proof
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-merged-main-s3-proof:
+    if: github.head_ref == 'agent/mcft-cap-06-s3-postmerge-proof-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      PROVED_COMMIT: 36efb93963222b2768b8d2bf384f748c86ce525a
+    steps:
+      - name: Checkout exact S3 merge commit
+        uses: actions/checkout@v4
+        with:
+          ref: 36efb93963222b2768b8d2bf384f748c86ce525a
+          fetch-depth: 0
+
+      - name: Prove checkout and current main identity
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$PROVED_COMMIT"
+          git fetch --quiet origin main
+          test "$(git rev-parse origin/main)" = "$PROVED_COMMIT"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and build exact merge commit
+        run: |
+          set -euo pipefail
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Reproduce corrected S1 PostgreSQL graph
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
+
+      - name: Reproduce corrected S1 regimes
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts
+
+      - name: Reproduce exact S2 contracts and math
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts
+
+      - name: Run S3 isolated PostgreSQL acceptance
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs
+
+      - name: Run S3 governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE.cjs
+
+      - name: Verify S3 remains candidate-effective pending writeback
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const status = JSON.parse(fs.readFileSync(
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json',
+            'utf8',
+          ));
+          const delivery = JSON.parse(fs.readFileSync(
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json',
+            'utf8',
+          ));
+          const s3 = 'MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1';
+          if (status.status !== 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE') throw new Error('S3_STATUS_MISMATCH');
+          if (status.s3_effective !== false || status.s5_authorized !== false) throw new Error('S3_PREMATURE_EFFECTIVENESS');
+          if (delivery.active_delivery_slice_id !== s3) throw new Error('S3_NOT_ACTIVE');
+          if (delivery.s3.effective !== false) throw new Error('S3_DELIVERY_PREMATURE_EFFECTIVENESS');
+          if (!delivery.preserved_nonclaims.includes('NO_MODEL_ACTIVATION')) throw new Error('S3_ACTIVATION_NONCLAIM_MISSING');
+          if (!delivery.preserved_nonclaims.includes('NO_MCFT_CAP_07_AUTHORIZATION')) throw new Error('CAP07_NONCLAIM_MISSING');
+          NODE
+
+      - name: Final exact-commit proof
+        run: test "$(git rev-parse HEAD)" = "$PROVED_COMMIT"
