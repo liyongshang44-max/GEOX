@@ -4,7 +4,7 @@
   "record_kind": "MUTABLE_DELIVERY_FRONTIER",
   "baseline_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-BASELINE-RECONCILIATION-EFFECTIVENESS.json",
   "baseline_main_commit": "ea198cc0cad063c7e70a59727171908f2f8c7e7d",
-  "status": "S3_CANDIDATE_IMPLEMENTATION_IN_PROGRESS",
+  "status": "S3_CANDIDATE_PREVALIDATED_PENDING_EXACT_HEAD",
   "implementation_status": "S3_CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
   "authorization_effective": true,
   "runtime_source_authorized": true,
@@ -35,10 +35,14 @@
     "evaluation_persistence_implemented": true,
     "exact_ref_postgresql_adapter_implemented": true,
     "facts_based_rebuild_implemented": true,
-    "runtime_acceptance_status": "PENDING_EXACT_HEAD",
-    "governance_acceptance_status": "PENDING_EXACT_HEAD"
+    "projection_canonicality_triggers_implemented": true,
+    "prevalidated_head": "4e827f0a5f28fcc9b4ae81863f4c754c5e69eb1e",
+    "runtime_acceptance_status": "PASS_PREVALIDATED_FOCUSED_RUN_29519589969",
+    "governance_acceptance_status": "PASS_PREVALIDATED_FOCUSED_RUN_29519589969",
+    "standard_ci_status": "PASS_PREVALIDATED_RUN_29519589886",
+    "exact_final_head_status": "PENDING"
   },
-  "next_repository_action": "COMPLETE_S3_EXACT_HEAD_VALIDATION",
+  "next_repository_action": "RUN_S3_FINAL_EXACT_HEAD_VALIDATION",
   "next_authorized_slice_after_s3_effectiveness": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
   "preserved_nonclaims": [
     "NO_S5_CANDIDATE_ORCHESTRATION",
