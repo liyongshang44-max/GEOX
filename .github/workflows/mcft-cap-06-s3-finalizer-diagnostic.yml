@@ -1,0 +1,45 @@
+name: mcft-cap-06-s3-finalizer-diagnostic
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  capture-traceback:
+    if: github.head_ref == 'agent/mcft-cap-06-s3-finalizer-diagnostic-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target S3 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s3-d-persistence-recovery-v1
+          path: target
+          fetch-depth: 1
+
+      - name: Checkout diagnostic helper
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s3-finalizer-diagnostic-v1
+          path: helper
+          fetch-depth: 1
+
+      - name: Execute materializer and capture traceback
+        working-directory: target
+        run: |
+          set +e
+          python ../helper/.github/scripts/run_mcft_cap06_s3_target_finalizer.py > ../materialize.log 2>&1
+          status=$?
+          echo "$status" > ../materialize.status
+          cat ../materialize.log
+          exit 0
+
+      - name: Upload diagnostic artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: s3-finalizer-diagnostic
+          path: |
+            materialize.log
+            materialize.status
+          if-no-files-found: error
