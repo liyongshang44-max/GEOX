@@ -1,0 +1,60 @@
+name: MCFT-CAP-06 S1 materialization
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  s1-postgresql:
+    if: github.head_ref == 'agent/mcft-cap-06-s1-residual-windows-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: landos
+          POSTGRES_PASSWORD: landos
+          POSTGRES_DB: mcft_cap06_s1_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U landos -d mcft_cap06_s1_acceptance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Run exact S1 PostgreSQL acceptance
+        env:
+          DATABASE_URL: postgres://landos:landos@127.0.0.1:5432/mcft_cap06_s1_acceptance
+          MCFT_CAP_06_S1_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: |
+          set -euo pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS_DB.ts 2>&1 | tee /tmp/mcft-cap-06-s1.log
+
+      - name: Repository typecheck and build
+        run: |
+          pnpm -r typecheck
+          pnpm -r build
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-06-s1-execution
+          path: /tmp/mcft-cap-06-s1.log
+          if-no-files-found: warn
+          retention-days: 7
