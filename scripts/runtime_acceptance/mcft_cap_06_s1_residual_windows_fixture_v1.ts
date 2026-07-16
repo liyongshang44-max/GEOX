@@ -3,10 +3,7 @@
 // Boundary: deterministic acceptance fixture only; no production database, Runtime authority, calibration search, Candidate, Evaluation, Model Activation, route, Web, scheduler, or CAP-07 authority.
 
 import assert from "node:assert/strict";
-import {
-  buildHourlyWaterBalanceConfigFromContinuationRuntimeConfigV1,
-  executeHourlyWaterBalanceV1,
-} from "../../apps/server/src/domain/soil_water/hourly_water_balance_v1.js";
+import { executeHourlyWaterBalanceV1 } from "../../apps/server/src/domain/soil_water/hourly_water_balance_v1.js";
 import {
   buildCap05ForecastPointMemberRefV1,
   buildCap05ForecastResidualV1,
@@ -422,7 +419,25 @@ export async function buildCap06S1ControlledDatasetV1(): Promise<Cap06S1Controll
     const forecastPoint = structuredClone(points[0]);
     assert.equal(forecastPoint.horizon_hour, 1);
 
-    const baseConfig = buildHourlyWaterBalanceConfigFromContinuationRuntimeConfigV1(sourceRuntimeConfig.payload);
+    const configPayload = sourceRuntimeConfig.payload as Record<string, any>;
+    const fixed6 = (value: unknown, code: string): string => {
+      const number = Number(value);
+      if (!Number.isFinite(number)) throw new Error(code);
+      return number.toFixed(6);
+    };
+    const baseConfig = {
+      root_zone_depth_mm: fixed6(configPayload.soil_hydraulic_snapshot?.root_zone_depth_mm, "CAP06_S1_ROOT_DEPTH_REQUIRED"),
+      wilting_point_storage_mm: fixed6(configPayload.soil_hydraulic_snapshot?.wilting_point_storage_mm, "CAP06_S1_WILTING_STORAGE_REQUIRED"),
+      field_capacity_storage_mm: fixed6(configPayload.soil_hydraulic_snapshot?.field_capacity_storage_mm, "CAP06_S1_FIELD_CAPACITY_REQUIRED"),
+      saturation_storage_mm: fixed6(configPayload.soil_hydraulic_snapshot?.saturation_storage_mm, "CAP06_S1_SATURATION_STORAGE_REQUIRED"),
+      saturation_fraction: fixed6(configPayload.soil_hydraulic_snapshot?.saturation_fraction, "CAP06_S1_SATURATION_FRACTION_REQUIRED"),
+      runoff_fraction: fixed6(configPayload.dynamics_parameters?.runoff_fraction, "CAP06_S1_RUNOFF_REQUIRED"),
+      drainage_coefficient_per_hour: fixed6(configPayload.dynamics_parameters?.drainage_coefficient_per_hour, "CAP06_S1_DRAINAGE_REQUIRED"),
+      structural_process_stddev_mm_per_hour: fixed6(configPayload.process_uncertainty?.structural_process_stddev_mm_per_hour, "CAP06_S1_STRUCTURAL_STDDEV_REQUIRED"),
+      rainfall_relative_stddev: fixed6(configPayload.process_uncertainty?.rainfall_relative_stddev, "CAP06_S1_RAINFALL_STDDEV_REQUIRED"),
+      crop_et_relative_stddev: fixed6(configPayload.process_uncertainty?.crop_et_relative_stddev, "CAP06_S1_ET_STDDEV_REQUIRED"),
+      executed_irrigation_relative_stddev: fixed6(configPayload.process_uncertainty?.executed_irrigation_relative_stddev, "CAP06_S1_IRRIGATION_STDDEV_REQUIRED"),
+    };
     assert.equal(baseConfig.drainage_coefficient_per_hour, CAP06_S1_BASE_DRAINAGE_COEFFICIENT_V1);
     const replayInput = {
       interval_start_exclusive: forecastPoint.interval_start,
