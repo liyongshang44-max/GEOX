@@ -25,7 +25,7 @@
     "repository_typecheck": "PASS",
     "repository_build": "PASS",
     "git_diff_check": "PASS",
-    "exact_changed_file_count": 13,
+    "exact_changed_file_count": 14,
     "temporary_workflows_retained": false,
     "temporary_finalizers_retained": false,
     "generated_acceptance_artifacts_retained": false
@@ -43,6 +43,7 @@
     "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.md",
     "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md",
     "scripts/acceptance/run_acceptance.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs",
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS_DB.ts",
     "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
