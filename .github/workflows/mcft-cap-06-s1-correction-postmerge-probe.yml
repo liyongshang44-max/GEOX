@@ -1,0 +1,97 @@
+name: mcft-cap-06-s1-correction-postmerge-probe
+
+on:
+  pull_request:
+
+jobs:
+  exact-merged-main-proof:
+    if: github.head_ref == 'agent/mcft-cap-06-s1-correction-postmerge-probe-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      PROVEN_MERGE_COMMIT: 4fc1044085c4befad7852089b6ebe2afab46a5ca
+    steps:
+      - name: Checkout exact merge commit
+        uses: actions/checkout@v4
+        with:
+          ref: 4fc1044085c4befad7852089b6ebe2afab46a5ca
+          fetch-depth: 0
+
+      - name: Prove checkout identity
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$PROVEN_MERGE_COMMIT"
+          git fetch origin main:refs/remotes/origin/main
+          test "$(git rev-parse refs/remotes/origin/main)" = "$PROVEN_MERGE_COMMIT"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck and build exact merge commit
+        run: |
+          set -euo pipefail
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Run S0 honest qualification against isolated PostgreSQL
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs
+
+      - name: Run S1 canonical Residual PostgreSQL acceptance
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs
+
+      - name: Run S1 successor-readiness regime and sensitivity acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts
+
+      - name: Run S1 correction governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs
+
+      - name: Verify no prohibited capability appeared
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const contract = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.json', 'utf8'));
+          const status = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json', 'utf8'));
+          if (contract.canonical_deltas.twin_calibration_candidate_v1 !== 0) throw new Error('CANDIDATE_DELTA_FORBIDDEN');
+          if (contract.canonical_deltas.twin_shadow_evaluation_v1 !== 0) throw new Error('EVALUATION_DELTA_FORBIDDEN');
+          if (contract.canonical_deltas.twin_model_activation_v1 !== 0) throw new Error('ACTIVATION_DELTA_FORBIDDEN');
+          if (status.s1_effective !== false) throw new Error('EFFECTIVENESS_WRITEBACK_MUST_BE_SEPARATE');
+          if (status.s2_authorized !== false) throw new Error('S2_MUST_REMAIN_BLOCKED_BEFORE_EFFECTIVENESS');
+          NODE
+
+      - name: Final exact-commit proof
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$PROVEN_MERGE_COMMIT"
+          git diff --check
+          echo "MCFT-CAP-06 S1 correction exact merged-main proof PASS: $PROVEN_MERGE_COMMIT"
