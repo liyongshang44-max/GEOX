@@ -1,5 +1,5 @@
 // scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs
-// Purpose: execute permanent MCFT-CAP-06 S3 persistence acceptance in a disposable PostgreSQL database.
+// Purpose: execute permanent MCFT-CAP-06 S3 persistence and projection-canonicality acceptance in a disposable PostgreSQL database.
 // Boundary: acceptance orchestration only; no production database, S5/S6 orchestration, Runtime authority, State, checkpoint, Model Activation, route, Web, scheduler, or CAP-07 authority.
 
 'use strict';
@@ -9,7 +9,10 @@ const path = require('node:path');
 const { Pool } = require('pg');
 
 const ROOT = path.resolve(__dirname, '../..');
-const ACCEPTANCE_PATH = 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE_DB.ts';
+const ACCEPTANCE_PATHS = [
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE_DB.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PROJECTION_CANONICALITY_DB.ts',
+];
 const ISOLATED_DATABASE_NAME = 'mcft_cap06_s3_persistence_ci';
 
 function run(executable, args, options = {}) {
@@ -86,24 +89,33 @@ async function dropDatabase(baseDatabaseUrl) {
   });
 }
 
+function runAcceptance(acceptancePath, isolatedDatabaseUrl) {
+  const result = run(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', [
+    '-w',
+    'exec',
+    'tsx',
+    acceptancePath,
+  ], {
+    env: {
+      DATABASE_URL: isolatedDatabaseUrl,
+      MCFT_CAP_06_S3_DESTRUCTIVE_ACCEPTANCE: '1',
+    },
+  });
+  process.stdout.write(String(result.stdout || ''));
+  process.stderr.write(String(result.stderr || ''));
+  requireSuccessful(
+    result,
+    `MCFT_CAP_06_S3_${path.basename(acceptancePath, '.ts')}`,
+  );
+}
+
 async function main() {
   const baseDatabaseUrl = resolveBaseDatabaseUrl();
   const isolatedDatabaseUrl = await recreateDatabase(baseDatabaseUrl);
   try {
-    const result = run(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', [
-      '-w',
-      'exec',
-      'tsx',
-      ACCEPTANCE_PATH,
-    ], {
-      env: {
-        DATABASE_URL: isolatedDatabaseUrl,
-        MCFT_CAP_06_S3_DESTRUCTIVE_ACCEPTANCE: '1',
-      },
-    });
-    process.stdout.write(String(result.stdout || ''));
-    process.stderr.write(String(result.stderr || ''));
-    requireSuccessful(result, 'MCFT_CAP_06_S3_PERSISTENCE');
+    for (const acceptancePath of ACCEPTANCE_PATHS) {
+      runAcceptance(acceptancePath, isolatedDatabaseUrl);
+    }
   } finally {
     await dropDatabase(baseDatabaseUrl);
   }
