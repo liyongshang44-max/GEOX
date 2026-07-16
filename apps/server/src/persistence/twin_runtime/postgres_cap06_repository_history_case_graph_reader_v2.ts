@@ -10,6 +10,7 @@ import {
   type Cap04CanonicalCompletedForecastRunPayloadV1,
 } from "../../domain/twin_runtime/forecast_canonical_authority_v1.js";
 import { computeCap04AMemberDeterminismHashV1 } from "../../domain/twin_runtime/forecast_scenario_member_hash_v1.js";
+import { deriveCap04ForcingCycleKeyV1 } from "../../domain/twin_runtime/future_forcing_contracts_v1.js";
 import {
   buildCap05ForecastPointMemberRefV1,
   validateCap05ForecastResidualV1,
@@ -94,21 +95,6 @@ function evidenceWindowBodyV2(
   requiredStringV2(base.window_end_inclusive, `${code}:WINDOW_END_REQUIRED`);
   requiredArrayV2(base.selected_records, `${code}:SELECTED_RECORDS_REQUIRED`);
   return base;
-}
-
-function selectedRecordByRefV2(
-  evidenceWindow: CanonicalObjectEnvelopeV1,
-  ref: string,
-  role: string,
-  code: string,
-): Record<string, unknown> {
-  // Forecast snapshot refs must resolve to exactly one selected Evidence summary of the expected role.
-  const window = evidenceWindowBodyV2(evidenceWindow, code);
-  const selected = requiredArrayV2(window.selected_records, `${code}:SELECTED_RECORDS_REQUIRED`)
-    .map((value) => requiredRecordV2(value, `${code}:SELECTED_RECORD_INVALID`))
-    .filter((value) => value.source_record_id === ref && value.role === role);
-  if (selected.length !== 1) throw new Error(`${code}:CARDINALITY:${selected.length}`);
-  return selected[0];
 }
 
 function selectedObservationV2(evidenceWindow: CanonicalObjectEnvelopeV1): Record<string, unknown> {
@@ -218,6 +204,57 @@ export class PostgresCap06RepositoryHistoryCaseGraphReaderV2 {
     return { object, payload };
   }
 
+  private async readForcingEvidenceV2(input: {
+    client: PoolClient;
+    ref: string;
+    hash: string;
+    record_type: "future_weather_assumption_v1" | "future_et0_assumption_v1";
+    scope: Cap06ScopeV2;
+    forecast_as_of: string;
+    forcing_cycle_key: string;
+    code: string;
+  }): Promise<Record<string, unknown>> {
+    // Future forcing authority is selected directly from canonical Replay Evidence and is not required to appear in the A0 one-hour window.
+    const result = await input.client.query(
+      `SELECT record_json FROM facts
+       WHERE record_json->'payload'->>'source_record_id'=$1
+       LIMIT 2`,
+      [input.ref],
+    );
+    if (result.rows.length !== 1) throw new Error(`${input.code}:CARDINALITY:${result.rows.length}`);
+    const record = parseFactPayloadV2(result.rows[0].record_json, input.code);
+    if (record.source_record_id !== input.ref
+      || record.source_record_hash !== input.hash
+      || record.record_type !== input.record_type) throw new Error(`${input.code}:IDENTITY_MISMATCH`);
+    exactScopeV2(record, input.scope, `${input.code}:SCOPE_MISMATCH`);
+    const roleTime = requiredRecordV2(record.role_time, `${input.code}:ROLE_TIME_REQUIRED`);
+    const issuedAt = canonicalInstantV2(roleTime.issued_at, `${input.code}:ISSUED_AT_INVALID`);
+    const roleAvailableAt = canonicalInstantV2(
+      roleTime.available_to_runtime_at,
+      `${input.code}:ROLE_AVAILABLE_AT_INVALID`,
+    );
+    const availableAt = canonicalInstantV2(
+      record.available_to_runtime_at,
+      `${input.code}:AVAILABLE_AT_INVALID`,
+    );
+    const validFrom = canonicalInstantV2(roleTime.valid_from, `${input.code}:VALID_FROM_INVALID`);
+    const validTo = canonicalInstantV2(roleTime.valid_to, `${input.code}:VALID_TO_INVALID`);
+    if (roleAvailableAt !== availableAt) throw new Error(`${input.code}:AVAILABILITY_MISMATCH`);
+    if (issuedAt > input.forecast_as_of || availableAt > input.forecast_as_of) {
+      throw new Error(`${input.code}:FUTURE_LEAKAGE`);
+    }
+    const derivedCycle = deriveCap04ForcingCycleKeyV1({
+      scope: structuredClone(input.scope),
+      issued_at: issuedAt,
+      available_to_runtime_at: availableAt,
+      valid_from: validFrom,
+      valid_to: validTo,
+    });
+    if (derivedCycle !== input.forcing_cycle_key) throw new Error(`${input.code}:FORCING_CYCLE_MISMATCH`);
+    requiredRecordV2(record.canonical_payload, `${input.code}:CANONICAL_PAYLOAD_REQUIRED`);
+    return record;
+  }
+
   private async resolveOneV2(input: {
     client: PoolClient;
     scope: Cap06ScopeV2;
@@ -246,6 +283,7 @@ export class PostgresCap06RepositoryHistoryCaseGraphReaderV2 {
     const forecastPayload = forecast.payload as unknown as Cap04CanonicalCompletedForecastRunPayloadV1;
     validateCap04CanonicalForecastRunPayloadV1(forecastPayload);
     if (forecastPayload.status !== "COMPLETED") throw new Error("CAP06_COMPLETED_FORECAST_REQUIRED");
+    const forecastAsOf = canonicalInstantV2(forecast.as_of, "CAP06_FORECAST_AS_OF_INVALID");
 
     const h1Points = forecastPayload.points.filter((point) => point.horizon_hour === 1
       && point.target_time === residualPayload.forecast_target_time);
@@ -312,20 +350,26 @@ export class PostgresCap06RepositoryHistoryCaseGraphReaderV2 {
     if (forecastPayload.crop_stage_context_ref !== configCropStage.context_ref
       || forecastPayload.crop_stage_context_hash !== configCropStage.context_hash) throw new Error("CAP06_FORECAST_CROP_STAGE_CONFIG_MISMATCH");
 
-    const weatherRecord = selectedRecordByRefV2(
-      forecastEvidence,
-      requiredStringV2(forecastPayload.weather_snapshot_ref, "CAP06_WEATHER_REF_REQUIRED"),
-      "FUTURE_WEATHER_ASSUMPTION",
-      "CAP06_WEATHER_EVIDENCE_NOT_SELECTED",
-    );
-    if (weatherRecord.source_record_hash !== forecastPayload.weather_snapshot_hash) throw new Error("CAP06_WEATHER_EVIDENCE_HASH_MISMATCH");
-    const et0Record = selectedRecordByRefV2(
-      forecastEvidence,
-      requiredStringV2(forecastPayload.et0_snapshot_ref, "CAP06_ET0_REF_REQUIRED"),
-      "FUTURE_ET0_ASSUMPTION",
-      "CAP06_ET0_EVIDENCE_NOT_SELECTED",
-    );
-    if (et0Record.source_record_hash !== forecastPayload.et0_snapshot_hash) throw new Error("CAP06_ET0_EVIDENCE_HASH_MISMATCH");
+    const weatherRecord = await this.readForcingEvidenceV2({
+      client: input.client,
+      ref: requiredStringV2(forecastPayload.weather_snapshot_ref, "CAP06_WEATHER_REF_REQUIRED"),
+      hash: requiredStringV2(forecastPayload.weather_snapshot_hash, "CAP06_WEATHER_HASH_REQUIRED"),
+      record_type: "future_weather_assumption_v1",
+      scope: input.scope,
+      forecast_as_of: forecastAsOf,
+      forcing_cycle_key: requiredStringV2(forecastPayload.forcing_cycle_key, "CAP06_FORCING_CYCLE_KEY_REQUIRED"),
+      code: "CAP06_WEATHER_EVIDENCE",
+    });
+    const et0Record = await this.readForcingEvidenceV2({
+      client: input.client,
+      ref: requiredStringV2(forecastPayload.et0_snapshot_ref, "CAP06_ET0_REF_REQUIRED"),
+      hash: requiredStringV2(forecastPayload.et0_snapshot_hash, "CAP06_ET0_HASH_REQUIRED"),
+      record_type: "future_et0_assumption_v1",
+      scope: input.scope,
+      forecast_as_of: forecastAsOf,
+      forcing_cycle_key: requiredStringV2(forecastPayload.forcing_cycle_key, "CAP06_FORCING_CYCLE_KEY_REQUIRED"),
+      code: "CAP06_ET0_EVIDENCE",
+    });
 
     const assimilation = await this.readExactObjectV2(
       input.client,
@@ -430,7 +474,7 @@ export class PostgresCap06RepositoryHistoryCaseGraphReaderV2 {
         context_revision_ref: requiredStringV2(forecast.revision_id, "CAP06_FORECAST_REVISION_REQUIRED"),
         status: forecastPayload.status,
         issued_at: forecastPayload.issued_at,
-        as_of: canonicalInstantV2(forecast.as_of, "CAP06_FORECAST_AS_OF_INVALID"),
+        as_of: forecastAsOf,
         source_posterior: { ref: sourcePosterior.object_id, hash: sourcePosterior.determinism_hash },
         forecast_runtime_config: { ref: forecastConfig.object.object_id, hash: forecastConfig.object.determinism_hash },
         evidence_window: { ref: forecastEvidence.object_id, hash: forecastEvidence.determinism_hash },
