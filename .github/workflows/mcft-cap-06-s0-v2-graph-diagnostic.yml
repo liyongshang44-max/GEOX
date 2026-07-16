@@ -65,9 +65,10 @@ jobs:
           p.write_text(s, encoding='utf-8')
           PY
           set +e
-          pnpm -w exec tsx "$DIAG_SCRIPT" 2>&1 | tee acceptance-output/s0-v2-preflight.log
+          pnpm -w exec tsx "$DIAG_SCRIPT" 2>&1 | tee /tmp/s0-v2-preflight.log
           rc=${PIPESTATUS[0]}
           set -e
+          cp /tmp/s0-v2-preflight.log acceptance-output/s0-v2-preflight.log
           if [ "$rc" -ne 0 ]; then
             exit "$rc"
           fi
