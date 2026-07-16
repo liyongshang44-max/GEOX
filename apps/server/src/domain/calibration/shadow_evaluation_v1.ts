@@ -2,7 +2,7 @@
 // Purpose: compute the deterministic eight-case MCFT-CAP-06 paired historical replay metrics and review-eligibility disposition.
 // Boundary: zero-write pure compute over an injected prediction port; no persistence, projection, Candidate/Evaluation append, approval, active Config, State, checkpoint, route, scheduler, or Model Activation authority.
 
-import { compareIsoInstantV1 } from "../soil_water/fixed_point_water_decimal_v1.js";
+import { compareIsoInstantV1, parseFixedDecimalV1 } from "../soil_water/fixed_point_water_decimal_v1.js";
 import { semanticHashV1 } from "../twin_runtime/canonical_identity_v1.js";
 import {
   CAP06_BASE_PARAMETER_VALUE_V1,
@@ -71,7 +71,7 @@ export async function runCap06PairedHistoricalShadowV1(input: {
   if (input.holdoutWindow.cases.length !== CAP06_HOLDOUT_CASE_COUNT_V1) {
     throw new Error(`CAP06_SHADOW_HOLDOUT_CASE_COUNT_REQUIRED:${input.holdoutWindow.cases.length}`);
   }
-  parseCap06VwcMetricV1(input.candidateParameterValue, "CAP06_SHADOW_CANDIDATE_PARAMETER_REQUIRED");
+  parseFixedDecimalV1(input.candidateParameterValue, 6, "CAP06_SHADOW_CANDIDATE_PARAMETER_REQUIRED");
 
   const basePredictions: Cap06PredictionResultV1[] = [];
   const candidatePredictions: Cap06PredictionResultV1[] = [];

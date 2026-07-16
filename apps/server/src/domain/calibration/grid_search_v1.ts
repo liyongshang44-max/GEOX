@@ -16,7 +16,6 @@ import {
   CAP06_METRIC_POLICY_ID_V1,
   CAP06_MINIMUM_SENSITIVE_CASE_COUNT_V1,
   CAP06_MINIMUM_WETNESS_REGIME_COUNT_V1,
-  CAP06_PARAMETER_SCALE_V1,
   CAP06_RUNTIME_REPLAY_NUMERIC_POLICY_ID_V1,
   CAP06_SEARCH_GRID_COUNT_V1,
   CAP06_SEARCH_MAXIMUM_V1,
@@ -35,6 +34,7 @@ import {
   type Cap06WetnessRegimeV1,
 } from "./contracts_v1.js";
 import {
+  CAP06_PARAMETER_SCALE_V1,
   buildCap06ErrorMetricsV1,
   compareCap06AbsoluteMeanBiasV1,
   compareCap06MaximumAbsoluteResidualV1,
@@ -66,6 +66,10 @@ type EvaluatedParameterV1 = {
 
 function absoluteV1(value: bigint): bigint {
   return value < 0n ? -value : value;
+}
+
+function compareBigIntV1(left: bigint, right: bigint): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function formatParameterV1(unitsScale6: bigint): string {
@@ -106,11 +110,14 @@ function compareParameterSurfaceV1(
   return compareCap06MseV1(left.metrics, right.metrics)
     || compareCap06AbsoluteMeanBiasV1(left.metrics, right.metrics)
     || compareCap06MaximumAbsoluteResidualV1(left.metrics, right.metrics)
-    || Number(
-      absoluteV1(parameterUnitsV1(left.parameter_delta))
-      - absoluteV1(parameterUnitsV1(right.parameter_delta)),
+    || compareBigIntV1(
+      absoluteV1(parameterUnitsV1(left.parameter_delta)),
+      absoluteV1(parameterUnitsV1(right.parameter_delta)),
     )
-    || (parameterUnitsV1(left.parameter_value) < parameterUnitsV1(right.parameter_value) ? -1 : 1);
+    || compareBigIntV1(
+      parameterUnitsV1(left.parameter_value),
+      parameterUnitsV1(right.parameter_value),
+    );
 }
 
 function residualBiasPatternV1(metrics: Cap06ErrorMetricsV1): "POSITIVE" | "NEGATIVE" | "BALANCED" {
