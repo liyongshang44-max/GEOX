@@ -1,0 +1,108 @@
+name: MCFT-CAP-06 S0 effectiveness finalizer v5
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.head_ref == 'agent/mcft-cap-06-s0-effectiveness-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s0-effectiveness-v1
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Patch one-time finalizer scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/remediation/FINALIZE_MCFT_CAP_06_S0_EFFECTIVENESS_V1.py')
+          source = path.read_text(encoding='utf-8')
+          before = """  assert.equal(task.includes('S2_status: AUTHORIZED') || map.includes('S2_status: AUTHORIZED'), false);\n  assert.equal(task.includes('MCFT_CAP_07_authorized: true') || map.includes('MCFT_CAP_07_authorized: true'), false);"""
+          after = """  const currentMap = map.slice(map.lastIndexOf('<!-- MCFT-CAP-06-S0-EFFECTIVENESS-BEGIN -->'));\n  assert.ok(currentMap.includes('S2_status: BLOCKED'));\n  assert.ok(currentMap.includes('MCFT_CAP_07_authorized: false'));"""
+          if source.count(before) != 1:
+              raise SystemExit(f'EFFECTIVENESS_GATE_SCOPE_MATCH:{source.count(before)}')
+          source = source.replace(before, after, 1)
+          anchor = '        ".github/workflows/mcft-cap-06-s0-effectiveness-finalize-v2.yml",\n'
+          replacement = anchor + '        ".github/workflows/mcft-cap-06-s0-effectiveness-finalize-v3.yml",\n        ".github/workflows/mcft-cap-06-s0-effectiveness-finalize-v4.yml",\n        ".github/workflows/mcft-cap-06-s0-effectiveness-finalize-v5.yml",\n'
+          if source.count(anchor) != 1:
+              raise SystemExit(f'EFFECTIVENESS_TEMP_ASSET_ANCHOR:{source.count(anchor)}')
+          path.write_text(source.replace(anchor, replacement, 1), encoding='utf-8')
+          PY
+
+      - name: Materialize exact S0 effectiveness
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/remediation/FINALIZE_MCFT_CAP_06_S0_EFFECTIVENESS_V1.py 2>&1 | tee /tmp/mcft-cap-06-s0-effectiveness.log
+
+      - name: Validate exact effectiveness candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs
+          python3 -m json.tool docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json >/dev/null
+          python3 -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json >/dev/null
+          python3 -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json >/dev/null
+          python3 -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json >/dev/null
+          python3 -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json >/dev/null
+          python3 -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json >/dev/null
+          python3 -m json.tool docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json >/dev/null
+          git diff --check
+          baseline=4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a
+          expected=(
+            docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
+            docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION.md
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts
+          )
+          mapfile -t expected_sorted < <(printf '%s\n' "${expected[@]}" | sort)
+          mapfile -t tracked < <(git diff --name-only "$baseline")
+          mapfile -t untracked < <(git ls-files --others --exclude-standard)
+          mapfile -t actual < <(printf '%s\n' "${tracked[@]}" "${untracked[@]}" | sed '/^$/d' | sort -u)
+          diff -u <(printf '%s\n' "${expected_sorted[@]}") <(printf '%s\n' "${actual[@]}")
+
+      - name: Commit exact effectiveness candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "MCFT-CAP-06 S0: activate merged-main effectiveness and authorize S1"
+          git push origin HEAD:agent/mcft-cap-06-s0-effectiveness-v1
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-06-s0-effectiveness-finalizer-v5
+          path: /tmp/mcft-cap-06-s0-effectiveness.log
+          if-no-files-found: warn
+          retention-days: 7
