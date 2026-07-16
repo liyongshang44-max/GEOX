@@ -1,0 +1,73 @@
+name: mcft-cap-06-s1-correction-wiring-patch
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap-06-s1-controlled-regime-correction-v1
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout correction branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-06-s1-controlled-regime-correction-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wire permanent regime acceptance and remove temporary diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          runner = Path('scripts/acceptance/run_acceptance.cjs')
+          text = runner.read_text(encoding='utf-8')
+          anchor = """    {
+                id: 'MCFT_CAP_06_S1_RESIDUAL_WINDOWS_GOVERNANCE',
+                command: 'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs',
+                logFile: 'MCFT_CAP_06_S1_RESIDUAL_WINDOWS_GOVERNANCE.log',
+                notes: 'Validates exact S1 refs/hashes, controlled/repository track isolation, zero migration and preserved S2/Candidate/Evaluation/Activation boundaries.'
+              }""".replace('        ', '')
+          if text.count(anchor) != 1:
+              raise SystemExit(f'governance anchor count={text.count(anchor)}')
+          inserted = """    {
+                id: 'MCFT_CAP_06_S1_CONTROLLED_REGIMES',
+                command: 'pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts',
+                logFile: 'MCFT_CAP_06_S1_CONTROLLED_REGIMES.log',
+                notes: 'Replays the corrected controlled profile and proves the frozen LOW/MID/HIGH formula covers at least two calibration regimes with exact base Dynamics replay.'
+              },
+          """.replace('        ', '') + anchor
+          runner.write_text(text.replace(anchor, inserted), encoding='utf-8')
+
+          probe = Path('.github/workflows/mcft-cap-06-s1-correction-probe.yml')
+          probe_text = probe.read_text(encoding='utf-8')
+          old = 'pnpm -w exec tsx scripts/runtime_acceptance/DIAG_MCFT_CAP_06_S1_CORRECTED_REGIMES.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S1_CORRECTED_REGIMES.log'
+          new = 'pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts 2>&1 | tee acceptance-output/MCFT_CAP_06_S1_CONTROLLED_REGIMES.log'
+          if probe_text.count(old) != 1:
+              raise SystemExit(f'probe command count={probe_text.count(old)}')
+          probe.write_text(probe_text.replace(old, new), encoding='utf-8')
+          PY
+          rm scripts/runtime_acceptance/DIAG_MCFT_CAP_06_S1_CORRECTED_REGIMES.ts
+
+      - name: Remove one-shot workflow and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/mcft-cap-06-s1-correction-wiring-patch.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add scripts/acceptance/run_acceptance.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_REGIMES.ts \
+            scripts/runtime_acceptance/DIAG_MCFT_CAP_06_S1_CORRECTED_REGIMES.ts \
+            .github/workflows/mcft-cap-06-s1-correction-probe.yml \
+            .github/workflows/mcft-cap-06-s1-correction-wiring-patch.yml
+          git diff --cached --check
+          git commit -m "test(mcft-cap-06): wire permanent S1 regime acceptance"
+          git push origin HEAD:agent/mcft-cap-06-s1-controlled-regime-correction-v1
