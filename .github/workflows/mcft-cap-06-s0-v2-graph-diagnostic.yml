@@ -50,6 +50,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p acceptance-output
+          export NODE_PATH="$PWD/apps/server/node_modules:$PWD/node_modules"
           git fetch origin agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1
           git show origin/agent/mcft-cap-06-s0-authorization-predecessor-qualification-v1:scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts > /tmp/s0_diag.ts
           python3 - <<'PY'
