@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/mcft-cap-06-s5-predecessor-graph-import.yml'
       - 'tmp/mcft-cap-06-s5-predecessor-graph-import/chunks/**'
+      - 'tmp/mcft-cap-06-s5-predecessor-graph-import/expected-changed-tree.manifest'
 
 permissions:
   contents: write
@@ -14,12 +15,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BASE_COMMIT: 437a6ccae5903494638d17c997a7017c6da057cf
-      EXPECTED_TREE: a8ee969b8ffe311d32837e13b4f6c38ea8ff0c96
+      LOCAL_SYNTHETIC_TREE: a8ee969b8ffe311d32837e13b4f6c38ea8ff0c96
+      EXPECTED_MANIFEST_SHA256: a6b5c2ae6357bc398602e7439a41029d5959eacd513c5b2da5b078458ecf3b60
       EXPECTED_B64_SHA256: c69bd80c00eaac1d9b57eae937c48d181d978fd0ecfff0c9b2fb140d36e196ae
       EXPECTED_TARBALL_SHA256: 5d7eac6484b3dda945dc87113b8d445235ba6ec70c96e2a6f826ad6c6052ecc3
       TARGET_BRANCH: agent/mcft-cap-06-s5-predecessor-graph-conformance-v1
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout import carrier
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
@@ -32,11 +35,15 @@ jobs:
           test "$(git merge-base HEAD origin/main)" = "$BASE_COMMIT"
           test "$(git rev-parse origin/$TARGET_BRANCH)" = "$BASE_COMMIT"
 
-      - name: Reconstruct authoritative patch bundle
+      - name: Reconstruct authoritative patch bundle and manifest
         run: |
           set -euo pipefail
-          CHUNKS='tmp/mcft-cap-06-s5-predecessor-graph-import/chunks'
+          ROOT='tmp/mcft-cap-06-s5-predecessor-graph-import'
+          CHUNKS="$ROOT/chunks"
           mkdir -p /tmp/mcft-cap-06-s5-import acceptance-output
+          cp "$ROOT/expected-changed-tree.manifest" /tmp/mcft-cap-06-s5-import/expected-changed-tree.manifest
+          test "$(sha256sum /tmp/mcft-cap-06-s5-import/expected-changed-tree.manifest | cut -d' ' -f1)" = "$EXPECTED_MANIFEST_SHA256"
+          test "$(wc -l < /tmp/mcft-cap-06-s5-import/expected-changed-tree.manifest | tr -d ' ')" = '19'
           cat > /tmp/chunk-manifest <<'EOF'
           part-00 4096 f74364b62e60a1991b9d2a3a5391f34e230788963a7ad36d73720340d4d7c3e9
           part-01 4096 4478ede18a326a1e7645dcc9528c596aa40500a43597bb269909c219d15a64f7
@@ -52,6 +59,7 @@ jobs:
           : > /tmp/mcft-cap-06-s5-import/patches.tar.gz.b64
           while read -r name bytes sha; do
             file="$CHUNKS/$name"
+            test -f "$file"
             test "$(wc -c < "$file" | tr -d ' ')" = "$bytes"
             test "$(sha256sum "$file" | cut -d' ' -f1)" = "$sha"
             cat "$file" >> /tmp/mcft-cap-06-s5-import/patches.tar.gz.b64
@@ -60,7 +68,11 @@ jobs:
           base64 -d /tmp/mcft-cap-06-s5-import/patches.tar.gz.b64 > /tmp/mcft-cap-06-s5-import/patches.tar.gz
           test "$(sha256sum /tmp/mcft-cap-06-s5-import/patches.tar.gz | cut -d' ' -f1)" = "$EXPECTED_TARBALL_SHA256"
           tar -xzf /tmp/mcft-cap-06-s5-import/patches.tar.gz -C /tmp/mcft-cap-06-s5-import
-          printf '%s\n' "base64_sha256=$EXPECTED_B64_SHA256" "tarball_sha256=$EXPECTED_TARBALL_SHA256" "chunk_count=10" > acceptance-output/PATCH_BUNDLE_INTEGRITY.txt
+          printf '%s\n' \
+            "manifest_sha256=$EXPECTED_MANIFEST_SHA256" \
+            "base64_sha256=$EXPECTED_B64_SHA256" \
+            "tarball_sha256=$EXPECTED_TARBALL_SHA256" \
+            "chunk_count=10" > acceptance-output/PATCH_BUNDLE_INTEGRITY.txt
 
       - name: Recreate three logical commits
         run: |
@@ -73,28 +85,43 @@ jobs:
           git am --committer-date-is-author-date /tmp/mcft-cap-06-s5-import/02-preflight.patch
           git am --committer-date-is-author-date /tmp/mcft-cap-06-s5-import/03-frontier.patch
 
-      - name: Verify exact imported tree and history
+      - name: Verify exact changed-file blobs and history
         run: |
           set -euo pipefail
           ACTUAL_TREE="$(git rev-parse HEAD^{tree})"
           ACTUAL_COUNT="$(git rev-list --count "$BASE_COMMIT"..HEAD)"
           mapfile -t SUBJECTS < <(git log --reverse --format=%s "$BASE_COMMIT"..HEAD)
-          CHANGED_COUNT="$(git diff --name-only "$BASE_COMMIT"..HEAD | wc -l | tr -d ' ')"
-          PROTECTED_DELTA="$(git diff --name-only "$BASE_COMMIT"..HEAD | grep -E 'canonical_object_contracts_v1\.ts|canonical_identity_v1\.ts|forecast_canonical_authority_v1\.ts|a0_record_set_builder_v1\.ts' || true)"
-          TRACKED_STATUS="$(git status --porcelain --untracked-files=no)"
-          node - "$ACTUAL_TREE" "$ACTUAL_COUNT" "$CHANGED_COUNT" "${SUBJECTS[0]:-}" "${SUBJECTS[1]:-}" "${SUBJECTS[2]:-}" <<'NODE'
-          const fs = require('node:fs');
-          const [tree,count,files,...subjects] = process.argv.slice(2);
-          fs.writeFileSync('acceptance-output/IMPORTED_TREE_DIAGNOSTICS.json', JSON.stringify({tree,count:Number(count),files:Number(files),subjects}, null, 2) + '\n');
-          NODE
-          test "$ACTUAL_TREE" = "$EXPECTED_TREE"
+          git diff --name-only "$BASE_COMMIT"..HEAD | sort > /tmp/mcft-cap-06-s5-import/changed-files.txt
+          while IFS= read -r file; do
+            git ls-tree HEAD -- "$file"
+          done < /tmp/mcft-cap-06-s5-import/changed-files.txt > /tmp/mcft-cap-06-s5-import/actual-changed-tree.manifest
+          ACTUAL_MANIFEST_SHA256="$(sha256sum /tmp/mcft-cap-06-s5-import/actual-changed-tree.manifest | cut -d' ' -f1)"
+          cp /tmp/mcft-cap-06-s5-import/actual-changed-tree.manifest acceptance-output/ACTUAL_CHANGED_TREE.manifest
+          diff -u /tmp/mcft-cap-06-s5-import/expected-changed-tree.manifest /tmp/mcft-cap-06-s5-import/actual-changed-tree.manifest > acceptance-output/CHANGED_TREE_DIFF.txt || {
+            cat acceptance-output/CHANGED_TREE_DIFF.txt
+            exit 51
+          }
+          test "$ACTUAL_MANIFEST_SHA256" = "$EXPECTED_MANIFEST_SHA256"
           test "$ACTUAL_COUNT" = '3'
           test "${SUBJECTS[0]}" = 'MCFT-CAP-06: correct predecessor graph authority'
           test "${SUBJECTS[1]}" = 'MCFT-CAP-06: add graph conformance preflight'
           test "${SUBJECTS[2]}" = 'MCFT-CAP-06: block S5 on graph conformance'
-          test "$CHANGED_COUNT" = '19'
-          test -z "$PROTECTED_DELTA"
-          test -z "$TRACKED_STATUS"
+          test "$(wc -l < /tmp/mcft-cap-06-s5-import/changed-files.txt | tr -d ' ')" = '19'
+          test -z "$(grep -E 'canonical_object_contracts_v1\.ts|canonical_identity_v1\.ts|forecast_canonical_authority_v1\.ts|a0_record_set_builder_v1\.ts' /tmp/mcft-cap-06-s5-import/changed-files.txt || true)"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          node - "$ACTUAL_TREE" "$ACTUAL_MANIFEST_SHA256" "${SUBJECTS[0]}" "${SUBJECTS[1]}" "${SUBJECTS[2]}" <<'NODE'
+          const fs = require('node:fs');
+          const [tree,manifestSha,...subjects] = process.argv.slice(2);
+          fs.writeFileSync('acceptance-output/IMPORTED_TREE_DIAGNOSTICS.json', JSON.stringify({
+            real_main_imported_tree: tree,
+            local_synthetic_tree: process.env.LOCAL_SYNTHETIC_TREE,
+            changed_tree_manifest_sha256: manifestSha,
+            changed_file_count: 19,
+            logical_commit_count: 3,
+            subjects,
+            exact_changed_file_equivalence: 'PASS'
+          }, null, 2) + '\n');
+          NODE
 
       - name: Push validated prerequisite branch
         run: |
@@ -111,6 +138,8 @@ jobs:
             target_branch: process.env.TARGET_BRANCH,
             imported_head: cp.execFileSync('git', ['rev-parse', 'HEAD'], {encoding:'utf8'}).trim(),
             imported_tree: cp.execFileSync('git', ['rev-parse', 'HEAD^{tree}'], {encoding:'utf8'}).trim(),
+            changed_tree_manifest_sha256: process.env.EXPECTED_MANIFEST_SHA256,
+            exact_changed_file_equivalence: 'PASS',
             logical_commit_count: 3,
             changed_file_count: 19,
             protected_predecessor_path_delta_count: 0,
@@ -122,7 +151,8 @@ jobs:
           fs.writeFileSync('acceptance-output/MCFT_CAP_06_S5_PREDECESSOR_GRAPH_IMPORT_RESULT.json', JSON.stringify(result, null, 2) + '\n');
           NODE
 
-      - if: always()
+      - name: Upload import evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap-06-s5-predecessor-graph-import-evidence
