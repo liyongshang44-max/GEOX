@@ -15,6 +15,7 @@ import type {
 export type Cap06ExactResidualGraphResolverV1 = Readonly<{
   resolveExactResidualGraph(
     residual: Cap05ForecastResidualEnvelopeV1,
+    caseIndex: number,
   ): Promise<Cap06CalibrationCaseSourceV1> | Cap06CalibrationCaseSourceV1;
 }>;
 
@@ -106,13 +107,15 @@ implements Cap06ExactCalibrationResidualPortV1 {
       throw new Error(`CAP06_POSTGRES_EXACT_RESIDUAL_MISSING:${missing.join(",")}`);
     }
     const resolved: Cap06CalibrationCaseSourceV1[] = [];
-    for (const ref of refs) {
+    for (let caseIndex = 0; caseIndex < refs.length; caseIndex += 1) {
+      const ref = refs[caseIndex];
       const owner = owners.get(ref);
       if (!owner) throw new Error(`CAP06_POSTGRES_EXACT_RESIDUAL_MISSING:${ref}`);
       const caseSource = await this.graphResolver.resolveExactResidualGraph(
         structuredClone(owner.residual),
+        caseIndex,
       );
-      if (!caseSource || caseSource.residual_ref !== ref) {
+      if (!caseSource || caseSource.residual_ref !== ref || caseSource.case_index !== caseIndex) {
         throw new Error(`CAP06_POSTGRES_EXACT_RESIDUAL_GRAPH_IDENTITY_MISMATCH:${ref}`);
       }
       resolved.push(structuredClone(caseSource));
