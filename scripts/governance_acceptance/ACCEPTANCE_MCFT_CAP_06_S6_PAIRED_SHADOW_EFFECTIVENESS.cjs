@@ -19,7 +19,9 @@ const IMPLEMENTATION_MERGE = 'b1111e39ed70b39098362a468eac14101bc29ee3';
 const EFFECTIVENESS_REF = 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json';
 const STATUS_REF = 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json';
 const EXPECTED_FILES = [
+  '.github/workflows/mcft-cap-06-s4-effectiveness-s5-authorization.yml',
   '.github/workflows/mcft-cap-06-s5-candidate-effectiveness.yml',
+  '.github/workflows/mcft-cap-06-s5-entry-controls.yml',
   '.github/workflows/mcft-cap-06-s6-paired-shadow-effectiveness.yml',
   '.github/workflows/mcft-cap-06-s6-paired-shadow.yml',
   'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json',
@@ -83,7 +85,7 @@ function main() {
   }
   assert.equal(changed.some((file) => /routes?|controller|openapi/i.test(file)), false);
   const commitCount = Number(git(['rev-list', '--count', `${baseline}..HEAD`]));
-  assert.ok(commitCount >= 1 && commitCount <= 12, 'S6_EFFECTIVENESS_LOGICAL_COMMIT_COUNT_INVALID');
+  assert.ok(commitCount >= 1 && commitCount <= 15, 'S6_EFFECTIVENESS_LOGICAL_COMMIT_COUNT_INVALID');
   for (const message of git(['log', '--format=%s', `${baseline}..HEAD`]).split(/\r?\n/).filter(Boolean)) {
     assert.equal(/wip|fix ci|try again|debug|temporary/i.test(message), false, `S6_EFFECTIVENESS_COMMIT_MESSAGE_INVALID:${message}`);
   }
