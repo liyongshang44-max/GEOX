@@ -92,9 +92,10 @@ jobs:
           node - <<'NODE'
           const fs = require('node:fs');
           const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S5_CANDIDATE_PREFLIGHT_RESULT.json', 'utf8'));
+          const governance = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S5_CANDIDATE_GOVERNANCE_RESULT.json', 'utf8'));
           if (result.schema_version !== 'geox_mcft_cap_06_s5_candidate_preflight_result_v1') throw new Error('S5_CANDIDATE_SCHEMA_MISMATCH');
-          if (result.status !== 'PASS') throw new Error('S5_CANDIDATE_NOT_PASS');
-          if (result.changed_file_count !== 12 || result.logical_commit_count !== 5) throw new Error('S5_CANDIDATE_HISTORY_MISMATCH');
+          if (result.status !== 'PASS' || governance.status !== 'PASS') throw new Error('S5_CANDIDATE_NOT_PASS');
+          if (governance.changed_file_count !== 12 || governance.logical_commit_count !== 5) throw new Error('S5_CANDIDATE_HISTORY_MISMATCH');
           if (result.calibration_case_count !== 16 || result.grid_point_count !== 21) throw new Error('S5_CANDIDATE_CARDINALITY_MISMATCH');
           if (result.selected_parameter_value !== '0.034000') throw new Error('S5_CANDIDATE_PARAMETER_MISMATCH');
           if (result.controlled_candidate_append_count !== 1 || result.completed_chain_rerun_candidate_append_count !== 0) throw new Error('S5_CANDIDATE_APPEND_MISMATCH');
