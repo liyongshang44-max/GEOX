@@ -151,8 +151,14 @@ jobs:
           const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S5_PREDECESSOR_EFFECTIVENESS_RESULT.json', 'utf8'));
           if (result.schema_version !== 'geox_mcft_cap_06_s5_predecessor_effectiveness_result_v1') throw new Error('S5_PREDECESSOR_EFFECTIVENESS_SCHEMA_MISMATCH');
           if (result.status !== 'PASS') throw new Error('S5_PREDECESSOR_EFFECTIVENESS_NOT_PASS');
-          if (result.canonical_write_count !== 0 || result.candidate_append_count !== 0 || result.evaluation_append_count !== 0) throw new Error('S5_PREDECESSOR_EFFECTIVENESS_WRITE_BOUNDARY_VIOLATION');
-          if (result.s5_authorized !== true || result.s5_implementation_started !== false) throw new Error('S5_PREDECESSOR_EFFECTIVENESS_FRONTIER_MISMATCH');
+          if (result.canonical_write_count !== 0 || result.candidate_append_count !== 0 || result.evaluation_append_count !== 0 || result.model_activation_count !== 0) throw new Error('S5_PREDECESSOR_EFFECTIVENESS_WRITE_BOUNDARY_VIOLATION');
+          if (result.s5_authorized !== true) throw new Error('S5_PREDECESSOR_EFFECTIVENESS_S5_AUTHORIZATION_MISMATCH');
+          if (result.s5_effective === true) {
+            if (result.s5_implementation_started !== true) throw new Error('S5_PREDECESSOR_EFFECTIVENESS_S5_IMPLEMENTATION_STATE_MISMATCH');
+            if (result.s6_authorized !== true || result.s6_implementation_started !== false) throw new Error('S5_PREDECESSOR_EFFECTIVENESS_S6_FRONTIER_MISMATCH');
+          } else {
+            if (result.s5_implementation_started !== false || result.s6_authorized !== false || result.s6_implementation_started !== false) throw new Error('S5_PREDECESSOR_EFFECTIVENESS_PRE_S5_FRONTIER_MISMATCH');
+          }
           NODE
 
       - name: Upload effectiveness evidence
