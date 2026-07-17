@@ -18,6 +18,12 @@ function requiredStringV1(value: unknown, code: string): string {
   return value;
 }
 
+function requiredScalarV1(value: unknown, code: string): string | number {
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  throw new Error(code);
+}
+
 function recordV1(value: unknown, code: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(code);
   return value as Record<string, unknown>;
@@ -83,10 +89,19 @@ function parseObservationFactV1(value: unknown): ResolvedObservationEvidenceV1 {
       "CAP06_GRAPH_OBSERVATION_AVAILABLE_AT_REQUIRED",
     ),
     quality_status: qualityStatus,
-    canonical_value: raw.canonical_value ?? canonicalPayload.value,
+    canonical_value: requiredScalarV1(
+      raw.canonical_value ?? canonicalPayload.value,
+      "CAP06_GRAPH_OBSERVATION_CANONICAL_VALUE_REQUIRED",
+    ),
     canonical_unit: canonicalUnit,
-    observation_variance: raw.observation_variance ?? "0.000000000000",
-    representativeness_variance: raw.representativeness_variance ?? "0.000000000000",
+    observation_variance: requiredScalarV1(
+      raw.observation_variance ?? "0.000000000000",
+      "CAP06_GRAPH_OBSERVATION_VARIANCE_REQUIRED",
+    ),
+    representativeness_variance: requiredScalarV1(
+      raw.representativeness_variance ?? "0.000000000000",
+      "CAP06_GRAPH_REPRESENTATIVENESS_VARIANCE_REQUIRED",
+    ),
   };
 }
 
@@ -231,8 +246,14 @@ implements Cap06ExactResidualGraphResolverV1 {
     );
     const actualObservation: ResolvedObservationEvidenceV1 = {
       ...rawObservation,
-      observation_variance: residualPayload.actual_observation_variance as string,
-      representativeness_variance: residualPayload.representativeness_variance as string,
+      observation_variance: requiredScalarV1(
+        residualPayload.actual_observation_variance,
+        "CAP06_GRAPH_RESIDUAL_OBSERVATION_VARIANCE_REQUIRED",
+      ),
+      representativeness_variance: requiredScalarV1(
+        residualPayload.representativeness_variance,
+        "CAP06_GRAPH_RESIDUAL_REPRESENTATIVENESS_VARIANCE_REQUIRED",
+      ),
     };
     const assimilationUpdate = await readExactCanonicalObjectV1(
       client,
