@@ -144,21 +144,38 @@ async function main(): Promise<void> {
   );
   ok("missing and duplicate exact Residual roots fail closed without fallback search");
 
-  const duplicateObservation = await pool.query(
-    `INSERT INTO facts (fact_id,occurred_at,source,record_json)
-     SELECT fact_id||'_s4_duplicate',occurred_at,'mcft_cap06_s4_duplicate_observation',record_json
-       FROM facts
-      WHERE record_json->'payload'->>'source_record_id'=$1
-     RETURNING fact_id`,
-    [caseSource.actual_observation_ref],
+  const observationWindowOwner = await pool.query(
+    `SELECT ew.fact_id
+       FROM facts residual
+       JOIN facts assimilation
+         ON assimilation.record_json->'payload'->>'object_id'=
+            residual.record_json->'payload'->'payload'->>'assimilation_update_ref'
+       JOIN facts posterior
+         ON posterior.record_json->'payload'->>'object_id'=
+            assimilation.record_json->'payload'->'payload'->>'posterior_state_ref'
+       JOIN facts ew
+         ON ew.record_json->'payload'->>'object_id'=
+            posterior.record_json->'payload'->'payload'->>'evidence_window_ref'
+      WHERE residual.record_json->>'type'='twin_forecast_residual_v1'
+        AND residual.record_json->'payload'->>'object_id'=$1`,
+    [caseSource.residual_ref],
   );
-  assert.equal(duplicateObservation.rows.length, 1);
+  assert.equal(observationWindowOwner.rows.length, 1);
+  const duplicateEvidenceWindow = await pool.query(
+    `INSERT INTO facts (fact_id,occurred_at,source,record_json)
+     SELECT fact_id||'_s4_duplicate',occurred_at,'mcft_cap06_s4_duplicate_evidence_window',record_json
+       FROM facts
+      WHERE fact_id=$1
+     RETURNING fact_id`,
+    [observationWindowOwner.rows[0].fact_id],
+  );
+  assert.equal(duplicateEvidenceWindow.rows.length, 1);
   await assert.rejects(
     repository.loadExactCalibrationResiduals(handoff.residual_refs),
-    /CAP06_GRAPH_OBSERVATION_CARDINALITY:2/,
+    /CAP06_GRAPH_OBSERVATION_EVIDENCE_WINDOW_CARDINALITY:2/,
   );
-  await pool.query("DELETE FROM facts WHERE fact_id=$1", [duplicateObservation.rows[0].fact_id]);
-  ok("canonical observation identity divergence fails closed under exact graph assembly");
+  await pool.query("DELETE FROM facts WHERE fact_id=$1", [duplicateEvidenceWindow.rows[0].fact_id]);
+  ok("canonical observation Evidence Window identity divergence fails closed under exact graph assembly");
 
   const after = await snapshotV1();
   assert.deepEqual(after, before);
