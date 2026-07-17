@@ -1,4 +1,4 @@
-// Purpose: run the complete MCFT-CAP-06 S5 Candidate compute/commit preflight on one clean exact head and emit structured evidence.
+// Purpose: run the complete MCFT-CAP-06 S5 Candidate compute/commit preflight on one clean exact head and emit structured evidence across candidate and post-effectiveness governance states.
 // Boundary: isolated acceptance databases only; no production database, Shadow Evaluation, Model Activation, active-config switch, Runtime parameter mutation, State/checkpoint mutation, route, Web, scheduler or CAP-07 authority.
 
 'use strict';
@@ -13,6 +13,7 @@ const ROOT = path.resolve(__dirname, '../..');
 const OUTPUT_DIR = path.join(ROOT, 'acceptance-output');
 const INPUT_PATH = path.join(OUTPUT_DIR, 'MCFT_CAP_06_S5_CANDIDATE_PREFLIGHT_INPUT.json');
 const RESULT_PATH = path.join(OUTPUT_DIR, 'MCFT_CAP_06_S5_CANDIDATE_PREFLIGHT_RESULT.json');
+const GOVERNANCE_RESULT_PATH = path.join(OUTPUT_DIR, 'MCFT_CAP_06_S5_CANDIDATE_GOVERNANCE_RESULT.json');
 const GRAPH_DB = 'mcft_cap06_s5_candidate_graph_ci';
 const CANDIDATE_DB = 'mcft_cap06_s5_candidate_commit_ci';
 
@@ -114,6 +115,21 @@ async function dropDatabase(baseUrl, databaseName) {
     await admin.end();
   }
 }
+function governanceFrontier() {
+  if (!fs.existsSync(GOVERNANCE_RESULT_PATH)) {
+    return {
+      s5_effective: false,
+      s6_authorized: false,
+      s6_implementation_started: false,
+    };
+  }
+  const governance = readJson('acceptance-output/MCFT_CAP_06_S5_CANDIDATE_GOVERNANCE_RESULT.json');
+  return {
+    s5_effective: governance.s5_effective === true,
+    s6_authorized: governance.s6_authorized === true,
+    s6_implementation_started: governance.s6_implementation_started === true,
+  };
+}
 function finalResult(status, stages, error) {
   const domain = fs.existsSync(path.join(OUTPUT_DIR, 'MCFT_CAP_06_S5_CANDIDATE_DOMAIN_RESULT.json'))
     ? readJson('acceptance-output/MCFT_CAP_06_S5_CANDIDATE_DOMAIN_RESULT.json')
@@ -121,6 +137,7 @@ function finalResult(status, stages, error) {
   const database = fs.existsSync(path.join(OUTPUT_DIR, 'MCFT_CAP_06_S5_CANDIDATE_DB_RESULT.json'))
     ? readJson('acceptance-output/MCFT_CAP_06_S5_CANDIDATE_DB_RESULT.json')
     : null;
+  const frontier = governanceFrontier();
   return {
     schema_version: 'geox_mcft_cap_06_s5_candidate_preflight_result_v1',
     status,
@@ -141,8 +158,9 @@ function finalResult(status, stages, error) {
     migration_count: 0,
     production_database_used: false,
     s5_candidate_implemented: true,
-    s5_effective: false,
-    s6_authorized: false,
+    s5_effective: frontier.s5_effective,
+    s6_authorized: frontier.s6_authorized,
+    s6_implementation_started: frontier.s6_implementation_started,
     ...(error ? { error } : {}),
   };
 }
@@ -229,14 +247,26 @@ async function main() {
       s5_candidate_implemented: true,
       s5_effective: false,
       s6_authorized: false,
+      s6_implementation_started: false,
     });
 
     stage = runStage('STRUCTURED_GOVERNANCE_GATE', 'node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE.cjs'], 'MCFT_CAP_06_S5_CANDIDATE_GOVERNANCE.log');
     requirePass(stage);
     const governance = readJson('acceptance-output/MCFT_CAP_06_S5_CANDIDATE_GOVERNANCE_RESULT.json');
-    if (governance.status !== 'PASS' || governance.selected_parameter_value !== '0.034000'
-      || governance.production_candidate_append_count !== 0
-      || governance.evaluation_append_count !== 0 || governance.s6_authorized !== false) {
+    const baseGovernanceValid = governance.status === 'PASS'
+      && governance.selected_parameter_value === '0.034000'
+      && governance.production_candidate_append_count === 0
+      && governance.evaluation_append_count === 0
+      && governance.model_activation_count === 0
+      && governance.active_config_switch_count === 0
+      && governance.runtime_parameter_change_count === 0
+      && governance.state_mutation_count === 0
+      && governance.checkpoint_mutation_count === 0
+      && governance.s5_candidate_implemented === true;
+    const frontierValid = governance.s5_effective === true
+      ? governance.s6_authorized === true && governance.s6_implementation_started === false
+      : governance.s6_authorized === false && governance.s6_implementation_started === false;
+    if (!baseGovernanceValid || !frontierValid) {
       throw new Error('S5_CANDIDATE_GOVERNANCE_STRUCTURED_RESULT_INVALID');
     }
     stages.push(stage);
