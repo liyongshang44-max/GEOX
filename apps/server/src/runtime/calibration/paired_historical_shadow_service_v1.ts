@@ -185,8 +185,14 @@ function verifyCandidateHoldoutBindingV1(input: {
   for (const [actual, expected, label] of bindings) {
     if (actual !== expected) throw new Error(`CAP06_S6_CANDIDATE_HOLDOUT_BINDING_MISMATCH:${label}`);
   }
-  if (compareIsoInstantV1(candidate.as_of, holdout.as_of) >= 0) {
-    throw new Error("CAP06_S6_CANDIDATE_AS_OF_NOT_BEFORE_HOLDOUT_AVAILABILITY");
+  const minimumHoldoutAvailability = holdout.cases.reduce(
+    (earliest, item) => compareIsoInstantV1(item.observation_available_to_runtime_at, earliest) < 0
+      ? item.observation_available_to_runtime_at
+      : earliest,
+    holdout.cases[0].observation_available_to_runtime_at,
+  );
+  if (compareIsoInstantV1(candidate.as_of, minimumHoldoutAvailability) >= 0) {
+    throw new Error("CAP06_S6_CANDIDATE_AS_OF_NOT_BEFORE_MINIMUM_HOLDOUT_AVAILABILITY");
   }
 }
 
