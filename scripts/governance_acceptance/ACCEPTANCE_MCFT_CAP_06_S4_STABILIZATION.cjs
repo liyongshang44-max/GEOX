@@ -178,7 +178,7 @@ function main() {
   const composition = read('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_FORMAL_COMPOSITION_DB.ts');
   assert.match(composition, /PostgresResolvedForecastObservationCaseAssemblerV1/);
   assert.match(composition, /formal CAP-05 Residual resolves/);
-  assert.match(composition, /canonical observation identity divergence fails closed/);
+  assert.match(composition, /canonical observation Evidence Window identity divergence fails closed/);
   assert.match(composition, /leave canonical history unchanged/);
   assert.match(composition, /MCFT_CAP_06_S4_FORMAL_COMPOSITION_DB:PASS/);
 
