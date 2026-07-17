@@ -6,6 +6,7 @@ on:
       - '.github/workflows/mcft-cap-06-s5-candidate-effectiveness.yml'
       - '.github/workflows/mcft-cap-06-s5-candidate.yml'
       - '.github/workflows/mcft-cap-06-s5-entry-controls.yml'
+      - '.github/workflows/mcft-cap-06-s5-predecessor-graph-conformance.yml'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
@@ -16,6 +17,7 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_ENTRY_EFFECTIVENESS.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_PREDECESSOR_EFFECTIVENESS.cjs'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S5_CANDIDATE.cjs'
   push:
     branches: [main]
@@ -23,6 +25,7 @@ on:
       - '.github/workflows/mcft-cap-06-s5-candidate-effectiveness.yml'
       - '.github/workflows/mcft-cap-06-s5-candidate.yml'
       - '.github/workflows/mcft-cap-06-s5-entry-controls.yml'
+      - '.github/workflows/mcft-cap-06-s5-predecessor-graph-conformance.yml'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
@@ -33,6 +36,7 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_ENTRY_EFFECTIVENESS.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_PREDECESSOR_EFFECTIVENESS.cjs'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S5_CANDIDATE.cjs'
 
 permissions:
@@ -121,7 +125,7 @@ jobs:
           const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS_RESULT.json', 'utf8'));
           if (result.schema_version !== 'geox_mcft_cap_06_s5_candidate_effectiveness_result_v1') throw new Error('S5_EFFECTIVENESS_RESULT_SCHEMA_MISMATCH');
           if (result.status !== 'PASS') throw new Error('S5_EFFECTIVENESS_RESULT_NOT_PASS');
-          if (result.changed_file_count !== 14 || result.logical_commit_count < 1 || result.logical_commit_count > 20) throw new Error('S5_EFFECTIVENESS_GOVERNED_DELTA_MISMATCH');
+          if (result.changed_file_count !== 16 || result.logical_commit_count < 1 || result.logical_commit_count > 24) throw new Error('S5_EFFECTIVENESS_GOVERNED_DELTA_MISMATCH');
           if (result.s5_status !== 'MERGED_EFFECTIVE' || result.s5_effective !== true) throw new Error('S5_EFFECTIVENESS_STATUS_MISMATCH');
           if (result.active_delivery_slice_id !== 'MCFT-CAP-06.MCFT-06-09-11-12.PAIRED-HISTORICAL-SHADOW-COMPUTE-V1') throw new Error('S5_EFFECTIVENESS_FRONTIER_MISMATCH');
           if (result.s6_authorized !== true || result.s6_implementation_started !== false) throw new Error('S5_EFFECTIVENESS_S6_AUTHORIZATION_MISMATCH');
