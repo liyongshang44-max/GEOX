@@ -45,62 +45,110 @@ function parseCanonicalFactV1(
 ): CanonicalObjectEnvelopeV1 {
   const record = parseFactRecordV1(value, code);
   if (record.type !== expectedType) throw new Error(`${code}_TYPE_MISMATCH`);
-  const object = recordV1(record.payload, `${code}_PAYLOAD_REQUIRED`) as unknown as CanonicalObjectEnvelopeV1;
+  const object = recordV1(
+    record.payload,
+    `${code}_PAYLOAD_REQUIRED`,
+  ) as unknown as CanonicalObjectEnvelopeV1;
   if (object.object_type !== expectedType) throw new Error(`${code}_OBJECT_TYPE_MISMATCH`);
   return object;
 }
 
-function parseObservationFactV1(value: unknown): ResolvedObservationEvidenceV1 {
-  const fact = parseFactRecordV1(value, "CAP06_GRAPH_OBSERVATION_FACT_INVALID");
-  const raw = recordV1(fact.payload, "CAP06_GRAPH_OBSERVATION_PAYLOAD_REQUIRED");
-  const roleTime = raw.role_time && typeof raw.role_time === "object" && !Array.isArray(raw.role_time)
-    ? raw.role_time as Record<string, unknown>
+function selectedObservationFromEvidenceWindowV1(
+  evidenceWindow: CanonicalObjectEnvelopeV1,
+  expectedObservationRef: string,
+  observationVariance: unknown,
+  representativenessVariance: unknown,
+): ResolvedObservationEvidenceV1 {
+  const payload = recordV1(
+    evidenceWindow.payload,
+    "CAP06_GRAPH_OBSERVATION_EVIDENCE_PAYLOAD_REQUIRED",
+  );
+  const selection = recordV1(
+    payload.observation_selection,
+    "CAP06_GRAPH_OBSERVATION_SELECTION_REQUIRED",
+  );
+  const selectedRef = requiredStringV1(
+    selection.selected_observation_ref,
+    "CAP06_GRAPH_SELECTED_OBSERVATION_REF_REQUIRED",
+  );
+  if (selectedRef !== expectedObservationRef) {
+    throw new Error("CAP06_GRAPH_SELECTED_OBSERVATION_REF_MISMATCH");
+  }
+
+  let selected: Record<string, unknown>;
+  if (selection.selected_observation
+    && typeof selection.selected_observation === "object"
+    && !Array.isArray(selection.selected_observation)) {
+    selected = selection.selected_observation as Record<string, unknown>;
+  } else {
+    const candidates = Array.isArray(selection.candidates)
+      ? selection.candidates.filter((candidate) => {
+        if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return false;
+        const record = candidate as Record<string, unknown>;
+        return record.observation_ref === expectedObservationRef
+          || record.source_record_id === expectedObservationRef;
+      })
+      : [];
+    if (candidates.length !== 1) {
+      throw new Error(`CAP06_GRAPH_SELECTED_OBSERVATION_CARDINALITY:${candidates.length}`);
+    }
+    selected = candidates[0] as Record<string, unknown>;
+  }
+
+  const quality = selected.quality
+    && typeof selected.quality === "object"
+    && !Array.isArray(selected.quality)
+    ? selected.quality as Record<string, unknown>
     : {};
-  const quality = raw.quality && typeof raw.quality === "object" && !Array.isArray(raw.quality)
-    ? raw.quality as Record<string, unknown>
+  const canonicalPayload = selected.canonical_payload
+    && typeof selected.canonical_payload === "object"
+    && !Array.isArray(selected.canonical_payload)
+    ? selected.canonical_payload as Record<string, unknown>
     : {};
-  const canonicalPayload = raw.canonical_payload
-    && typeof raw.canonical_payload === "object"
-    && !Array.isArray(raw.canonical_payload)
-    ? raw.canonical_payload as Record<string, unknown>
-    : {};
-  const qualityStatus = raw.quality_status ?? quality.status;
+  const qualityStatus = selected.quality_status ?? quality.status;
   if (qualityStatus !== "PASS" && qualityStatus !== "LIMITED") {
     throw new Error("CAP06_GRAPH_OBSERVATION_QUALITY_INVALID");
   }
-  const canonicalUnit = raw.canonical_unit ?? canonicalPayload.unit;
-  if (canonicalUnit !== "fraction") throw new Error("CAP06_GRAPH_OBSERVATION_UNIT_INVALID");
+  const canonicalUnit = selected.canonical_unit ?? canonicalPayload.unit;
+  if (canonicalUnit !== "fraction") {
+    throw new Error("CAP06_GRAPH_OBSERVATION_UNIT_INVALID");
+  }
+  const sourceRecordId = requiredStringV1(
+    selected.source_record_id ?? selected.observation_ref,
+    "CAP06_GRAPH_OBSERVATION_SOURCE_RECORD_ID_REQUIRED",
+  );
+  if (sourceRecordId !== expectedObservationRef) {
+    throw new Error("CAP06_GRAPH_OBSERVATION_SOURCE_RECORD_ID_MISMATCH");
+  }
+
   return {
-    ...structuredClone(raw),
-    source_record_id: requiredStringV1(
-      raw.source_record_id,
-      "CAP06_GRAPH_OBSERVATION_SOURCE_RECORD_ID_REQUIRED",
-    ),
+    ...structuredClone(selected),
+    source_record_id: sourceRecordId,
     source_record_hash: requiredStringV1(
-      raw.source_record_hash,
+      selected.source_record_hash,
       "CAP06_GRAPH_OBSERVATION_SOURCE_RECORD_HASH_REQUIRED",
     ),
     observed_at: requiredStringV1(
-      raw.observed_at ?? roleTime.observed_at,
+      selected.observed_at,
       "CAP06_GRAPH_OBSERVATION_OBSERVED_AT_REQUIRED",
     ),
     available_to_runtime_at: requiredStringV1(
-      raw.available_to_runtime_at ?? roleTime.available_to_runtime_at,
+      selected.available_to_runtime_at,
       "CAP06_GRAPH_OBSERVATION_AVAILABLE_AT_REQUIRED",
     ),
     quality_status: qualityStatus,
     canonical_value: requiredScalarV1(
-      raw.canonical_value ?? canonicalPayload.value,
+      selected.canonical_value ?? canonicalPayload.value,
       "CAP06_GRAPH_OBSERVATION_CANONICAL_VALUE_REQUIRED",
     ),
     canonical_unit: canonicalUnit,
     observation_variance: requiredScalarV1(
-      raw.observation_variance ?? "0.000000000000",
-      "CAP06_GRAPH_OBSERVATION_VARIANCE_REQUIRED",
+      observationVariance,
+      "CAP06_GRAPH_RESIDUAL_OBSERVATION_VARIANCE_REQUIRED",
     ),
     representativeness_variance: requiredScalarV1(
-      raw.representativeness_variance ?? "0.000000000000",
-      "CAP06_GRAPH_REPRESENTATIVENESS_VARIANCE_REQUIRED",
+      representativenessVariance,
+      "CAP06_GRAPH_RESIDUAL_REPRESENTATIVENESS_VARIANCE_REQUIRED",
     ),
   };
 }
@@ -123,27 +171,6 @@ async function readExactCanonicalObjectV1(
   const object = parseCanonicalFactV1(result.rows[0].record_json, objectType, code);
   if (object.object_id !== objectId) throw new Error(`${code}_OBJECT_ID_MISMATCH`);
   return object;
-}
-
-async function readExactObservationV1(
-  client: PoolClient,
-  sourceRecordId: string,
-): Promise<ResolvedObservationEvidenceV1> {
-  const result = await client.query(
-    `SELECT record_json
-       FROM facts
-      WHERE record_json->'payload'->>'source_record_id'=$1
-      LIMIT 2`,
-    [requiredStringV1(sourceRecordId, "CAP06_GRAPH_OBSERVATION_REF_REQUIRED")],
-  );
-  if (result.rows.length !== 1) {
-    throw new Error(`CAP06_GRAPH_OBSERVATION_CARDINALITY:${result.rows.length}`);
-  }
-  const observation = parseObservationFactV1(result.rows[0].record_json);
-  if (observation.source_record_id !== sourceRecordId) {
-    throw new Error("CAP06_GRAPH_OBSERVATION_REF_MISMATCH");
-  }
-  return observation;
 }
 
 export class PostgresResolvedForecastObservationCaseAssemblerV1
@@ -187,7 +214,11 @@ implements Cap06ExactResidualGraphResolverV1 {
       await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
       const resolved: Cap06CalibrationCaseSourceV1[] = [];
       for (let caseIndex = 0; caseIndex < orderedResiduals.length; caseIndex += 1) {
-        resolved.push(await this.resolveWithClientV1(client, orderedResiduals[caseIndex], caseIndex));
+        resolved.push(await this.resolveWithClientV1(
+          client,
+          orderedResiduals[caseIndex],
+          caseIndex,
+        ));
       }
       await client.query("COMMIT");
       return resolved;
@@ -204,14 +235,20 @@ implements Cap06ExactResidualGraphResolverV1 {
     residual: Cap05ForecastResidualEnvelopeV1,
     caseIndex: number,
   ): Promise<Cap06CalibrationCaseSourceV1> {
-    const residualPayload = recordV1(residual.payload, "CAP06_GRAPH_RESIDUAL_PAYLOAD_REQUIRED");
+    const residualPayload = recordV1(
+      residual.payload,
+      "CAP06_GRAPH_RESIDUAL_PAYLOAD_REQUIRED",
+    );
     const sourceForecast = await readExactCanonicalObjectV1(
       client,
       requiredStringV1(residualPayload.forecast_run_ref, "CAP06_GRAPH_FORECAST_REF_REQUIRED"),
       "twin_forecast_run_v1",
       "CAP06_GRAPH_FORECAST",
     );
-    const forecastPayload = recordV1(sourceForecast.payload, "CAP06_GRAPH_FORECAST_PAYLOAD_REQUIRED");
+    const forecastPayload = recordV1(
+      sourceForecast.payload,
+      "CAP06_GRAPH_FORECAST_PAYLOAD_REQUIRED",
+    );
     const sourcePosterior = await readExactCanonicalObjectV1(
       client,
       requiredStringV1(forecastPayload.source_posterior_ref, "CAP06_GRAPH_POSTERIOR_REF_REQUIRED"),
@@ -237,24 +274,6 @@ implements Cap06ExactResidualGraphResolverV1 {
       "twin_runtime_config_v1",
       "CAP06_GRAPH_RUNTIME_CONFIG",
     );
-    const rawObservation = await readExactObservationV1(
-      client,
-      requiredStringV1(
-        residualPayload.actual_observation_ref,
-        "CAP06_GRAPH_OBSERVATION_REF_REQUIRED",
-      ),
-    );
-    const actualObservation: ResolvedObservationEvidenceV1 = {
-      ...rawObservation,
-      observation_variance: requiredScalarV1(
-        residualPayload.actual_observation_variance,
-        "CAP06_GRAPH_RESIDUAL_OBSERVATION_VARIANCE_REQUIRED",
-      ),
-      representativeness_variance: requiredScalarV1(
-        residualPayload.representativeness_variance,
-        "CAP06_GRAPH_RESIDUAL_REPRESENTATIVENESS_VARIANCE_REQUIRED",
-      ),
-    };
     const assimilationUpdate = await readExactCanonicalObjectV1(
       client,
       requiredStringV1(
@@ -289,6 +308,15 @@ implements Cap06ExactResidualGraphResolverV1 {
       ),
       "twin_evidence_window_v1",
       "CAP06_GRAPH_OBSERVATION_EVIDENCE_WINDOW",
+    );
+    const actualObservation = selectedObservationFromEvidenceWindowV1(
+      observationEvidenceWindow,
+      requiredStringV1(
+        residualPayload.actual_observation_ref,
+        "CAP06_GRAPH_OBSERVATION_REF_REQUIRED",
+      ),
+      residualPayload.actual_observation_variance,
+      residualPayload.representativeness_variance,
     );
     const resolvedExecutionConfig = this.executionConfigResolver.resolveExecutionConfig(
       sourceRuntimeConfig,
