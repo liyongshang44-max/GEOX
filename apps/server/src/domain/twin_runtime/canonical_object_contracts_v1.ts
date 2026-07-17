@@ -295,10 +295,10 @@ export function validateA0RecordSetV1(recordSet: A0RecordSetV1): void {
   for (const member of recordSet.members) validateCanonicalObjectV1(member);
   for (const objectType of A0_MEMBER_OBJECT_TYPES_V1) memberByTypeV1(recordSet, objectType);
   validateA0CrossReferenceGraphV1(recordSet);
-  const expectedHash = computeA0RecordSetDeterminismHashV1(
-    recordSet.a0_record_set_id,
-    recordSet.members,
-  );
+  const expectedHash = computeA0RecordSetDeterminismHashV1({
+    a0_record_set_id: recordSet.a0_record_set_id,
+    members: recordSet.members,
+  });
   if (recordSet.a0_record_set_determinism_hash !== expectedHash) {
     throw new Error("A0_RECORD_SET_HASH_MISMATCH");
   }
