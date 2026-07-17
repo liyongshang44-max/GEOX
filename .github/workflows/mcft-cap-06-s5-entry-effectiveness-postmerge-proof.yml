@@ -1,0 +1,72 @@
+name: mcft-cap-06-s5-entry-effectiveness-postmerge-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s5-entry-effectiveness-postmerge-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-merged-main-effectiveness-proof:
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_MERGE_COMMIT: 437a6ccae5903494638d17c997a7017c6da057cf
+      EXPECTED_CANDIDATE_HEAD: b046e10e343d1d5b9549eaea9d66050dc4fe62ea
+    steps:
+      - name: Checkout proof carrier
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify proof carrier ancestry and current main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_MERGE_COMMIT"
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MERGE_COMMIT"
+          test -z "$(git diff --name-only "$EXPECTED_MERGE_COMMIT"...HEAD | grep -v '^.github/workflows/mcft-cap-06-s5-entry-effectiveness-postmerge-proof.yml$' || true)"
+          test -z "$(git diff --name-only "$EXPECTED_CANDIDATE_HEAD" "$EXPECTED_MERGE_COMMIT")"
+
+      - name: Checkout exact merged-main effectiveness commit
+        uses: actions/checkout@v4
+        with:
+          ref: 437a6ccae5903494638d17c997a7017c6da057cf
+          fetch-depth: 0
+
+      - name: Assert exact checkout and main identity
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$EXPECTED_MERGE_COMMIT"
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MERGE_COMMIT"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate exact merged-main S5 entry effectiveness
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_ENTRY_EFFECTIVENESS.cjs
+
+      - name: Verify structured merged-main effectiveness evidence
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S5_ENTRY_EFFECTIVENESS_RESULT.json', 'utf8'));
+          if (result.schema_version !== 'geox_mcft_cap_06_s5_entry_effectiveness_result_v1') throw new Error('S5_ENTRY_EFFECTIVENESS_POSTMERGE_SCHEMA_MISMATCH');
+          if (result.status !== 'PASS') throw new Error('S5_ENTRY_EFFECTIVENESS_POSTMERGE_NOT_PASS');
+          if (result.exact_head !== process.env.EXPECTED_MERGE_COMMIT) throw new Error('S5_ENTRY_EFFECTIVENESS_POSTMERGE_HEAD_MISMATCH');
+          if (result.s5_entry_effective !== true) throw new Error('S5_ENTRY_NOT_EFFECTIVE');
+          if (result.s5_authorized !== true || result.s5_implementation_started !== false) throw new Error('S5_FRONTIER_MISMATCH');
+          if (result.canonical_write_count !== 0 || result.production_candidate_append_count !== 0) throw new Error('S5_ENTRY_EFFECTIVENESS_WRITE_BOUNDARY_VIOLATION');
+          NODE
+
+      - name: Upload exact merged-main effectiveness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s5-entry-effectiveness-postmerge-proof
+          path: acceptance-output/
+          if-no-files-found: error
