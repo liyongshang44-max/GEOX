@@ -17,6 +17,9 @@ export type Cap06ExactResidualGraphResolverV1 = Readonly<{
     residual: Cap05ForecastResidualEnvelopeV1,
     caseIndex: number,
   ): Promise<Cap06CalibrationCaseSourceV1> | Cap06CalibrationCaseSourceV1;
+  resolveExactResidualGraphs?(
+    orderedResiduals: readonly Cap05ForecastResidualEnvelopeV1[],
+  ): Promise<readonly Cap06CalibrationCaseSourceV1[]> | readonly Cap06CalibrationCaseSourceV1[];
 }>;
 
 type ParsedResidualFactV1 = {
@@ -63,6 +66,24 @@ function parseResidualFactV1(factId: unknown, recordJson: unknown): ParsedResidu
   };
 }
 
+function validateResolvedV1(
+  refs: readonly string[],
+  resolved: readonly Cap06CalibrationCaseSourceV1[],
+): Cap06CalibrationCaseSourceV1[] {
+  if (!Array.isArray(resolved) || resolved.length !== refs.length) {
+    throw new Error("CAP06_POSTGRES_EXACT_RESIDUAL_GRAPH_COUNT_MISMATCH");
+  }
+  return resolved.map((caseSource, caseIndex) => {
+    const ref = refs[caseIndex];
+    if (!caseSource
+      || caseSource.residual_ref !== ref
+      || caseSource.case_index !== caseIndex) {
+      throw new Error(`CAP06_POSTGRES_EXACT_RESIDUAL_GRAPH_IDENTITY_MISMATCH:${ref}`);
+    }
+    return structuredClone(caseSource);
+  });
+}
+
 export class PostgresExactCalibrationResidualRepositoryV1
 implements Cap06ExactCalibrationResidualPortV1 {
   constructor(
@@ -106,20 +127,24 @@ implements Cap06ExactCalibrationResidualPortV1 {
       const missing = refs.filter((ref) => !owners.has(ref));
       throw new Error(`CAP06_POSTGRES_EXACT_RESIDUAL_MISSING:${missing.join(",")}`);
     }
-    const resolved: Cap06CalibrationCaseSourceV1[] = [];
-    for (let caseIndex = 0; caseIndex < refs.length; caseIndex += 1) {
-      const ref = refs[caseIndex];
+    const orderedResiduals = refs.map((ref) => {
       const owner = owners.get(ref);
       if (!owner) throw new Error(`CAP06_POSTGRES_EXACT_RESIDUAL_MISSING:${ref}`);
-      const caseSource = await this.graphResolver.resolveExactResidualGraph(
-        structuredClone(owner.residual),
-        caseIndex,
-      );
-      if (!caseSource || caseSource.residual_ref !== ref || caseSource.case_index !== caseIndex) {
-        throw new Error(`CAP06_POSTGRES_EXACT_RESIDUAL_GRAPH_IDENTITY_MISMATCH:${ref}`);
-      }
-      resolved.push(structuredClone(caseSource));
+      return structuredClone(owner.residual);
+    });
+
+    if (typeof this.graphResolver.resolveExactResidualGraphs === "function") {
+      const resolved = await this.graphResolver.resolveExactResidualGraphs(orderedResiduals);
+      return validateResolvedV1(refs, resolved);
     }
-    return resolved;
+
+    const resolved: Cap06CalibrationCaseSourceV1[] = [];
+    for (let caseIndex = 0; caseIndex < orderedResiduals.length; caseIndex += 1) {
+      resolved.push(await this.graphResolver.resolveExactResidualGraph(
+        orderedResiduals[caseIndex],
+        caseIndex,
+      ));
+    }
+    return validateResolvedV1(refs, resolved);
   }
 }
