@@ -2,9 +2,9 @@
   "schema_version": "geox_mcft_cap_06_current_state_reconciliation_v1",
   "reconciliation_id": "MCFT-CAP-06.CURRENT-STATE-RECONCILIATION-V1",
   "capability_line_id": "MCFT-CAP-06",
-  "baseline_main_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260",
+  "baseline_main_commit": "b1111e39ed70b39098362a468eac14101bc29ee3",
   "status": "MERGED_EFFECTIVE",
-  "delivery_frontier_status": "S5_CANDIDATE_MERGED_EFFECTIVE_S6_AUTHORIZED_NOT_STARTED",
+  "delivery_frontier_status": "S6_PAIRED_SHADOW_MERGED_EFFECTIVE_S7_AUTHORIZED_NOT_STARTED",
   "reconciliation_effective": true,
   "current_state": {
     "p_minus_1": "MERGED_EFFECTIVE",
@@ -14,8 +14,9 @@
     "s0": "MERGED_EFFECTIVE",
     "capability_line_authorization_effective": true,
     "runtime_source_authorized": true,
-    "active_delivery_slice_id": "MCFT-CAP-06.MCFT-06-09-11-12.PAIRED-HISTORICAL-SHADOW-COMPUTE-V1",
+    "active_delivery_slice_id": "MCFT-CAP-06.MCFT-03-12.SHADOW-EVALUATION-COMMIT-V1",
     "candidate_runtime_implemented": true,
+    "paired_historical_shadow_runtime_implemented": true,
     "shadow_evaluation_runtime_implemented": false,
     "capability_complete": false,
     "s1": "MERGED_EFFECTIVE_CORRECTED",
@@ -51,10 +52,15 @@
     "s5_implementation_started": true,
     "s5_candidate_implemented": true,
     "s5_effective": true,
+    "s6": "MERGED_EFFECTIVE",
     "s6_authorized": true,
-    "s6_implementation_started": false,
-    "s6_candidate_implemented": false,
-    "s6_effective": false
+    "s6_implementation_started": true,
+    "s6_candidate_implemented": true,
+    "s6_effective": true,
+    "s7_authorized": true,
+    "s7_implementation_started": false,
+    "s7_candidate_implemented": false,
+    "s7_effective": false
   },
   "proof": {
     "p_minus_1": {
@@ -215,6 +221,37 @@
       "s5_effective": true,
       "s6_authorized": true,
       "s6_implementation_started": false
+    },
+    "s6_paired_shadow_effectiveness": {
+      "status": "MERGED_EFFECTIVE",
+      "delivery_slice_id": "MCFT-CAP-06.MCFT-06-09-11-12.PAIRED-HISTORICAL-SHADOW-COMPUTE-V1",
+      "implementation_pr_number": 2560,
+      "implementation_exact_head": "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+      "implementation_focused_validation_run": 29606770957,
+      "implementation_standard_ci_run": 29606770968,
+      "implementation_merge_commit": "b1111e39ed70b39098362a468eac14101bc29ee3",
+      "head_to_merge_file_delta_count": 0,
+      "head_to_merge_tree_equivalence": "PASS",
+      "postmerge_probe_pr_number": 2561,
+      "postmerge_probe_closed_without_merge": true,
+      "postmerge_workflow_run": 29607442809,
+      "postmerge_gate": "PASS",
+      "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json",
+      "candidate_ref": "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+      "candidate_hash": "sha256:a2018a61bf6699b3cc3b8992058eb2c37b4d38d7f70771f9186495144c229a65",
+      "candidate_parameter_value": "0.034000",
+      "holdout_case_count": 8,
+      "evaluation_disposition": "ELIGIBLE_FOR_HUMAN_ACTIVATION_REVIEW",
+      "reason_codes": [
+        "ALL_THRESHOLDS_PASS"
+      ],
+      "case_results_hash": "sha256:e1b33fb79059856c030cab58970c543f384fb30a385bc3aa49c96b315efe4daa",
+      "compute_determinism_hash": "sha256:8017c2ba6006e1f2a593312300937841b5c2dd3a700c949bb8309338994ef63e",
+      "deterministic_rerun_verified": true,
+      "future_leakage_count": 0,
+      "s6_effective": true,
+      "s7_authorized": true,
+      "s7_implementation_started": false
     }
   },
   "superseded_candidates": [
@@ -224,11 +261,12 @@
       "replacement_required": "S0_V2"
     }
   ],
-  "next_repository_action": "MCFT-CAP-06.MCFT-06-09-11-12.PAIRED-HISTORICAL-SHADOW-COMPUTE-V1",
+  "next_repository_action": "MCFT-CAP-06.MCFT-03-12.SHADOW-EVALUATION-COMMIT-V1",
   "preserved_nonclaims": [
-    "NO_S6_IMPLEMENTATION_BY_S5_EFFECTIVENESS_WRITEBACK",
-    "NO_SHADOW_COMPUTE_BY_S5_EFFECTIVENESS_WRITEBACK",
-    "NO_SHADOW_EVALUATION_APPEND",
+    "NO_S7_IMPLEMENTATION_BY_S6_EFFECTIVENESS_WRITEBACK",
+    "NO_SHADOW_EVALUATION_APPEND_BY_S6_EFFECTIVENESS_WRITEBACK",
+    "NO_PROJECTION_WRITE_BY_S6_EFFECTIVENESS_WRITEBACK",
+    "NO_CANDIDATE_APPEND",
     "NO_MODEL_ACTIVATION",
     "NO_ACTIVE_CONFIG_SWITCH",
     "NO_RUNTIME_PARAMETER_CHANGE",
@@ -238,7 +276,7 @@
     "NO_SCHEDULER",
     "NO_MCFT_CAP_07_AUTHORIZATION"
   ],
-  "effectiveness_condition": "S5_CANDIDATE_MERGED_MAIN_EFFECTIVE; S6_AUTHORIZED_NOT_STARTED",
+  "effectiveness_condition": "S6_PAIRED_SHADOW_MERGED_MAIN_EFFECTIVE; S7_AUTHORIZED_NOT_STARTED",
   "s0_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json",
   "s1_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
   "s2_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json",
@@ -246,5 +284,6 @@
   "s4_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-EFFECTIVENESS.json",
   "s5_entry_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-EFFECTIVENESS.json",
   "s5_predecessor_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-PREDECESSOR-EFFECTIVENESS.json",
-  "s5_candidate_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+  "s5_candidate_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json",
+  "s6_paired_shadow_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json"
 }
