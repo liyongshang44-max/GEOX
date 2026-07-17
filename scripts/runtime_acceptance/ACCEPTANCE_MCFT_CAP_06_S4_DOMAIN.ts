@@ -10,9 +10,14 @@ import {
   Cap05InheritedCap04ExecutionConfigResolverV1,
   projectCap05PayloadToCap04ExecutionPayloadV1,
 } from "../../apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.js";
-import type {
-  Cap05RuntimeConfigPayloadV1,
+import {
+  CAP05_RUNTIME_CONFIG_PURPOSE_V1,
+  type Cap05RuntimeConfigPayloadV1,
 } from "../../apps/server/src/domain/twin_runtime/feedback_runtime_config_v1.js";
+import {
+  CAP04_CONFIG_SELECTION_MODE_V1,
+  CAP04_RUNTIME_CONFIG_PURPOSE_V1,
+} from "../../apps/server/src/domain/twin_runtime/forecast_scenario_runtime_config_v1.js";
 
 const EXPECTED_CAP04_KEYS = [
   "active_model_parameter_change",
@@ -87,9 +92,9 @@ function main(): void {
   assert.deepEqual(Object.keys(resolved.payload).sort(), [...EXPECTED_CAP04_KEYS].sort());
   assert.equal(resolved.source_config_ref, config.object_id);
   assert.equal(resolved.source_config_hash, config.determinism_hash);
-  assert.equal(resolved.source_config_purpose, "HUMAN_DECISION_ACTION_FEEDBACK_RUNTIME");
-  assert.equal(resolved.payload.config_purpose, "FORECAST_SCENARIO_RUNTIME");
-  assert.equal(resolved.payload.config_selection_mode, "PINNED_BY_TICK_LOGICAL_TIME");
+  assert.equal(resolved.source_config_purpose, CAP05_RUNTIME_CONFIG_PURPOSE_V1);
+  assert.equal(resolved.payload.config_purpose, CAP04_RUNTIME_CONFIG_PURPOSE_V1);
+  assert.equal(resolved.payload.config_selection_mode, CAP04_CONFIG_SELECTION_MODE_V1);
   assert.equal("object_id" in resolved, false);
   assert.equal("idempotency_key" in resolved, false);
   assert.equal("determinism_hash" in resolved, false);
