@@ -1,0 +1,110 @@
+name: mcft-cap-06-s5-entry-controls
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s4-effectiveness-s5-authorization.yml'
+      - '.github/workflows/mcft-cap-06-s5-entry-controls.yml'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CAP05-STRUCTURAL-DEBT-REGISTER.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-EFFECTIVENESS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-AUTHORITY-GRAPH.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-PREREQUISITE.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-AMENDMENT-S5-ENTRY-CONTROLS-V1.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_EFFECTIVENESS_S5_AUTHORIZATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_STABILIZATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_ENTRY.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S5_ENTRY_PREFLIGHT.cjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-06-s4-effectiveness-s5-authorization.yml'
+      - '.github/workflows/mcft-cap-06-s5-entry-controls.yml'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CAP05-STRUCTURAL-DEBT-REGISTER.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-EFFECTIVENESS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-AUTHORITY-GRAPH.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-PREREQUISITE.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-AMENDMENT-S5-ENTRY-CONTROLS-V1.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_EFFECTIVENESS_S5_AUTHORIZATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_STABILIZATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_ENTRY.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S5_ENTRY_PREFLIGHT.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  s5-entry-controls:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      MCFT_CAP_06_S5_BASELINE_REF: 6d1a22d68fde93b440b52ce632785e5986ad47a8
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run single-command S5 entry preflight
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S5_ENTRY_PREFLIGHT.cjs
+
+      - name: Verify structured final evidence
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S5_ENTRY_PREFLIGHT_RESULT.json', 'utf8'));
+          if (result.schema_version !== 'geox_mcft_cap_06_s5_entry_preflight_result_v1') throw new Error('S5_ENTRY_RESULT_SCHEMA_MISMATCH');
+          if (result.status !== 'PASS') throw new Error('S5_ENTRY_RESULT_NOT_PASS');
+          if (result.canonical_write_count !== 0) throw new Error('S5_ENTRY_CANONICAL_WRITE_FORBIDDEN');
+          if (result.model_activation_count !== 0 || result.active_config_switch_count !== 0) throw new Error('S5_ENTRY_ACTIVATION_FORBIDDEN');
+          if (result.s5_authorized !== false) throw new Error('S5_PREMATURE_AUTHORIZATION');
+          NODE
+
+      - name: Upload structured evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s5-entry-evidence
+          path: acceptance-output/
+          if-no-files-found: error
