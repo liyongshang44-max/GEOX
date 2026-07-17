@@ -13,6 +13,7 @@ const ROOT = path.resolve(__dirname, '../..');
 const RETAINED_DATABASE_NAME = 'mcft_cap05_post_closure_acceptance';
 const OUTPUT_DIR = path.join(ROOT, 'acceptance-output');
 const HANDOFF_PATH = path.join(OUTPUT_DIR, 'MCFT_CAP_06_S4_CAP05_HANDOFF.json');
+const S2_RESULT_PREFIX = 'S2_RESULT_JSON:';
 
 function run(executable, args, options = {}) {
   const result = cp.spawnSync(executable, args, {
@@ -78,6 +79,26 @@ function requireOutput(output, pattern, code) {
   if (!pattern.test(output)) throw new Error(code);
 }
 
+function requireS2PassResult(output) {
+  const line = output
+    .split(/\r?\n/)
+    .find((candidate) => candidate.startsWith(S2_RESULT_PREFIX));
+  if (!line) throw new Error('S2_COMPATIBILITY_RESULT_REQUIRED');
+  let result;
+  try {
+    result = JSON.parse(line.slice(S2_RESULT_PREFIX.length));
+  } catch {
+    throw new Error('S2_COMPATIBILITY_RESULT_INVALID');
+  }
+  if (result.schema_version !== 'geox_mcft_cap_06_s2_acceptance_result_v1'
+    || result.status !== 'PASS'
+    || result.canonical_write_count !== 0
+    || result.projection_write_count !== 0
+    || result.model_activation_count !== 0) {
+    throw new Error('S2_COMPATIBILITY_PASS_REQUIRED');
+  }
+}
+
 async function main() {
   const baseDatabaseUrl = resolveBaseDatabaseUrl();
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -125,7 +146,7 @@ async function main() {
       '-w', 'exec', 'tsx',
       'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts',
     ], { label: 'MCFT_CAP_06_S2_COMPATIBILITY' });
-    requireOutput(s2, /MCFT_CAP_06_S2_CONTRACTS_MATH:PASS/, 'S2_COMPATIBILITY_PASS_REQUIRED');
+    requireS2PassResult(s2);
 
     console.log('MCFT_CAP_06_S4_STABILIZATION:PASS');
   } finally {
