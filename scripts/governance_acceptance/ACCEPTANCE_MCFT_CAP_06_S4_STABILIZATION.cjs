@@ -15,6 +15,7 @@ const S4 = 'MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZA
 const S5 = 'MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1';
 const EXPECTED_FILES = [
   '.github/workflows/mcft-cap-06-s4-focused-validation.yml',
+  'apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.ts',
   'apps/server/src/domain/twin_runtime/resolved_forecast_observation_case_v1.ts',
   'apps/server/src/persistence/calibration/postgres_exact_calibration_residual_repository_v1.ts',
   'apps/server/src/persistence/calibration/postgres_resolved_forecast_observation_case_assembler_v1.ts',
@@ -107,6 +108,16 @@ function main() {
   assert.equal(cap05Baseline.historical_closure_rewrite, false);
   assert.equal(cap05Baseline.runtime_behavior_change, false);
 
+  const canonicalContracts = read('apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.ts');
+  assert.match(canonicalContracts, /object\.payload\.status === "BLOCKED"/);
+  assert.match(canonicalContracts, /object\.payload\.status === "COMPLETED"/);
+  assert.match(canonicalContracts, /BLOCKED_FORECAST_ZERO_POINTS_REQUIRED/);
+  assert.match(canonicalContracts, /COMPLETED_FORECAST_POINTS_REQUIRED/);
+  assert.match(canonicalContracts, /COMPLETED_FORECAST_SCENARIO_ELIGIBLE_REQUIRED/);
+  assert.match(canonicalContracts, /A0_REF_STATE_TRANSITION_MISMATCH/);
+  assert.match(canonicalContracts, /A0_REF_TICK_FORECAST_MISMATCH/);
+  assert.match(canonicalContracts, /A0_AGGREGATE_HASH_MISMATCH/);
+
   const resolver = read('apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts');
   assert.match(resolver, /projectCap05PayloadToCap04ExecutionPayloadV1/);
   assert.match(resolver, /satisfies Cap04RuntimeConfigPayloadV1/);
@@ -122,13 +133,22 @@ function main() {
   assert.match(graph, /source_forecast_evidence_window/);
   assert.match(graph, /observation_posterior/);
   assert.match(graph, /observation_evidence_window/);
+  assert.match(graph, /residual_runtime_config/);
+  assert.match(graph, /resolved_residual_execution_config/);
+  assert.match(graph, /source_execution/);
+  assert.match(graph, /residual_execution/);
   assertNoPattern(graph, /deriveSemanticObjectIdV1|computeMemberDeterminismHashV1/, 'S4_GRAPH_CANONICAL_IDENTITY_FORBIDDEN');
 
   const postgres = read('apps/server/src/persistence/calibration/postgres_resolved_forecast_observation_case_assembler_v1.ts');
   assert.match(postgres, /REPEATABLE READ READ ONLY/);
   assert.match(postgres, /resolveExactResidualGraphs/);
   assert.match(postgres, /record_json->'payload'->>'object_id'=\$1/);
-  assert.match(postgres, /record_json->'payload'->>'source_record_id'=\$1/);
+  assert.match(postgres, /selectedObservationFromEvidenceWindowV1/);
+  assert.match(postgres, /sourceRuntimeConfig/);
+  assert.match(postgres, /residualRuntimeConfig/);
+  assert.match(postgres, /resolvedExecutionConfig/);
+  assert.match(postgres, /resolvedResidualExecutionConfig/);
+  assertNoPattern(postgres, /record_json->'payload'->>'source_record_id'=\$1/, 'S4_RAW_OBSERVATION_SIDE_LOOKUP_FORBIDDEN');
   for (const token of [
     'listResiduals',
     'searchResiduals',
@@ -167,6 +187,7 @@ function main() {
   assert.match(runner, /ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER\.ts/);
   assert.match(runner, /ACCEPTANCE_MCFT_CAP_06_S4_FORMAL_COMPOSITION_DB\.ts/);
   assert.match(runner, /ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH\.ts/);
+  assert.match(runner, /S2_RESULT_JSON:/);
   assert.match(runner, /MCFT_CAP_06_S4_STABILIZATION:PASS/);
 
   const allSource = EXPECTED_FILES
