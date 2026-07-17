@@ -28,6 +28,7 @@ const REQUIRED_STAGES = [
   'S5_ENTRY_EFFECTIVENESS_REGRESSION'
 ];
 const EXPECTED_FILES = [
+  '.github/workflows/mcft-cap-06-s5-entry-controls.yml',
   '.github/workflows/mcft-cap-06-s5-predecessor-graph-conformance.yml',
   'apps/server/src/domain/twin_runtime/resolved_forecast_observation_case_v1.ts',
   'apps/server/src/persistence/calibration/postgres_resolved_forecast_observation_case_assembler_v1.ts',
