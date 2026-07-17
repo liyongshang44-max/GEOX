@@ -12,6 +12,7 @@ on:
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_EFFECTIVENESS_S5_AUTHORIZATION.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_STABILIZATION.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE.cjs'
@@ -31,6 +32,7 @@ on:
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_EFFECTIVENESS_S5_AUTHORIZATION.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_STABILIZATION.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE.cjs'
@@ -69,6 +71,22 @@ jobs:
       MCFT_CAP_06_S5_CANDIDATE_BASELINE_REF: dc7913d070c4a0c2cac0a7c35ccfa4292e633876
       MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS_BASELINE_REF: 8edbc27ea0dfabd41faede9fb0f8bed11058c260
     steps:
+      - name: Checkout trigger head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Detect downstream S6 effectiveness
+        id: mode
+        shell: bash
+        run: |
+          if [[ -f docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json ]]; then
+            echo "s6_effectiveness=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "s6_effectiveness=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout exact S5 implementation merge
         uses: actions/checkout@v4
         with:
@@ -108,7 +126,16 @@ jobs:
           if (result.s5_candidate_implemented !== true || result.s5_effective !== false || result.s6_authorized !== false || (result.s6_implementation_started ?? false) !== false) throw new Error('S5_EFFECTIVENESS_PREWRITEBACK_FRONTIER_MISMATCH');
           NODE
 
-      - name: Checkout exact effectiveness candidate head
+      - name: Checkout exact historical S5 effectiveness merge
+        if: steps.mode.outputs.s6_effectiveness == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: 5f73ed68cad479276ca55fb70391ae4543cb3dcc
+          fetch-depth: 0
+          clean: false
+
+      - name: Checkout current S5 effectiveness candidate
+        if: steps.mode.outputs.s6_effectiveness != 'true'
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
@@ -118,7 +145,7 @@ jobs:
       - name: Run structured S5 Candidate effectiveness Gate
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs
 
-      - name: Verify structured effectiveness evidence
+      - name: Verify structured S5 effectiveness evidence
         run: |
           node - <<'NODE'
           const fs = require('node:fs');

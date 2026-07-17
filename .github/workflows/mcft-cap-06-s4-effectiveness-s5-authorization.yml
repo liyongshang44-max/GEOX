@@ -8,6 +8,7 @@ on:
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-EFFECTIVENESS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-STATUS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-PREREQUISITE.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_EFFECTIVENESS_S5_AUTHORIZATION.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_STABILIZATION.cjs'
   push:
@@ -18,6 +19,7 @@ on:
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-EFFECTIVENESS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-STATUS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-PREREQUISITE.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_EFFECTIVENESS_S5_AUTHORIZATION.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_STABILIZATION.cjs'
 
@@ -28,10 +30,27 @@ jobs:
   s4-effectiveness-s5-authorization-compatibility:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact candidate head
+      - name: Checkout trigger head
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Detect downstream S6 effectiveness
+        id: mode
+        shell: bash
+        run: |
+          if [[ -f docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json ]]; then
+            echo "s6_effectiveness=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "s6_effectiveness=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout exact historical S5 effectiveness frontier
+        if: steps.mode.outputs.s6_effectiveness == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: 5f73ed68cad479276ca55fb70391ae4543cb3dcc
           fetch-depth: 0
 
       - name: Verify structured compatibility boundary
