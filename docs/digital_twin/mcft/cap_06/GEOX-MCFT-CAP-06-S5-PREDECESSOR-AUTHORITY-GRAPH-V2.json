@@ -1,0 +1,237 @@
+{
+  "schema_version": "geox_mcft_cap_06_s5_entry_authority_graph_v2",
+  "graph_id": "MCFT-CAP-06.S5-EXACT-FORECAST-OBSERVATION-AUTHORITY-GRAPH-V2",
+  "capability_line_id": "MCFT-CAP-06",
+  "status": "FROZEN_CORRECTED_NONZERO_AVAILABILITY_LATENCY",
+  "root_node_id": "residual",
+  "repository_authority": {
+    "read_model": "ResolvedForecastObservationCaseV1",
+    "graph_assembler": "PostgresResolvedForecastObservationCaseAssemblerV1",
+    "s2_case_builder": "buildCap06CaseWindowV1",
+    "alternative_s5_or_s6_graph_authority_allowed": false,
+    "execution_config_resolver": "Cap04OrCap05ExecutionConfigResolverV1",
+    "full_case_method": "resolveExactResidualRefs",
+    "exact_residual_root_and_graph_authority": "PostgresResolvedForecastObservationCaseAssemblerV1.resolveExactResidualRefs",
+    "legacy_residual_repository": "PostgresExactCalibrationResidualRepositoryV1",
+    "legacy_residual_repository_role": "EXACT_RESIDUAL_AND_CASE_SOURCE_COMPATIBILITY_ONLY"
+  },
+  "resolution_policy": {
+    "mode": "EXACT_REF_HASH_ONLY",
+    "transaction": "ONE_REPEATABLE_READ_READ_ONLY_TRANSACTION",
+    "canonical_identity_assignment": false,
+    "canonical_write_count": 0,
+    "forbidden_surfaces": [
+      "LATEST_LOOKUP",
+      "TIME_RANGE_SEARCH",
+      "SCOPE_RANGE_SEARCH",
+      "RAW_OBSERVATION_SIDE_LOOKUP",
+      "ALTERNATIVE_GRAPH_TRAVERSAL"
+    ]
+  },
+  "nodes": [
+    {
+      "node_id": "residual",
+      "object_type": "twin_forecast_residual_v1",
+      "identity_authority": [
+        "object_id",
+        "determinism_hash"
+      ]
+    },
+    {
+      "node_id": "forecast",
+      "object_type": "twin_forecast_run_v1",
+      "identity_authority": [
+        "object_id",
+        "determinism_hash"
+      ]
+    },
+    {
+      "node_id": "forecast_config",
+      "object_type": "twin_runtime_config_v1",
+      "identity_authority": [
+        "object_id",
+        "determinism_hash"
+      ],
+      "role": "FORECAST_EXECUTION_CONFIG"
+    },
+    {
+      "node_id": "source_posterior",
+      "object_type": "twin_state_estimate_v1",
+      "identity_authority": [
+        "object_id",
+        "determinism_hash"
+      ]
+    },
+    {
+      "node_id": "forecast_evidence_window",
+      "object_type": "twin_evidence_window_v1",
+      "identity_authority": [
+        "object_id",
+        "canonical_envelope_hash"
+      ]
+    },
+    {
+      "node_id": "residual_config",
+      "object_type": "twin_runtime_config_v1",
+      "identity_authority": [
+        "object_id",
+        "determinism_hash"
+      ],
+      "role": "RESIDUAL_AND_ASSIMILATION_CONFIG"
+    },
+    {
+      "node_id": "assimilation",
+      "object_type": "twin_assimilation_update_v1",
+      "identity_authority": [
+        "object_id",
+        "determinism_hash"
+      ]
+    },
+    {
+      "node_id": "observation_posterior",
+      "object_type": "twin_state_estimate_v1",
+      "identity_authority": [
+        "object_id",
+        "determinism_hash"
+      ]
+    },
+    {
+      "node_id": "observation_evidence_window",
+      "object_type": "twin_evidence_window_v1",
+      "identity_authority": [
+        "object_id",
+        "canonical_envelope_hash"
+      ]
+    },
+    {
+      "node_id": "selected_observation",
+      "object_type": "EMBEDDED_CANONICAL_OBSERVATION_SNAPSHOT",
+      "identity_authority": [
+        "source_record_id",
+        "source_record_hash"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "residual",
+      "to": "forecast",
+      "source_fields": [
+        "payload.forecast_run_ref",
+        "payload.forecast_run_hash"
+      ],
+      "cardinality": "EXACTLY_ONE"
+    },
+    {
+      "from": "forecast",
+      "to": "forecast_config",
+      "source_fields": [
+        "payload.runtime_config_ref",
+        "payload.runtime_config_hash"
+      ],
+      "cardinality": "EXACTLY_ONE"
+    },
+    {
+      "from": "forecast",
+      "to": "source_posterior",
+      "source_fields": [
+        "payload.source_posterior_ref",
+        "payload.source_posterior_hash"
+      ],
+      "cardinality": "EXACTLY_ONE"
+    },
+    {
+      "from": "source_posterior",
+      "to": "forecast_evidence_window",
+      "source_fields": [
+        "payload.evidence_window_ref"
+      ],
+      "cardinality": "EXACTLY_ONE",
+      "hash_rule": "RESOLVED_CANONICAL_ENVELOPE_HASH_AND_FINAL_ASSEMBLY_HASH"
+    },
+    {
+      "from": "residual",
+      "to": "residual_config",
+      "source_fields": [
+        "payload.runtime_config_ref",
+        "payload.runtime_config_hash"
+      ],
+      "cardinality": "EXACTLY_ONE"
+    },
+    {
+      "from": "residual",
+      "to": "assimilation",
+      "source_fields": [
+        "payload.assimilation_update_ref",
+        "payload.assimilation_update_hash"
+      ],
+      "cardinality": "EXACTLY_ONE"
+    },
+    {
+      "from": "assimilation",
+      "to": "observation_posterior",
+      "source_fields": [
+        "payload.posterior_state_ref"
+      ],
+      "cardinality": "EXACTLY_ONE"
+    },
+    {
+      "from": "observation_posterior",
+      "to": "observation_evidence_window",
+      "source_fields": [
+        "payload.evidence_window_ref"
+      ],
+      "cardinality": "EXACTLY_ONE"
+    },
+    {
+      "from": "observation_evidence_window",
+      "to": "selected_observation",
+      "source_fields": [
+        "payload.observation_selection.selected_observation_ref",
+        "payload.observation_selection.selected_observation|candidates"
+      ],
+      "cross_pins": [
+        "residual.payload.actual_observation_ref",
+        "residual.payload.actual_observation_hash"
+      ],
+      "cardinality": "EXACTLY_ONE"
+    }
+  ],
+  "frozen_display_paths": [
+    [
+      "residual",
+      "forecast",
+      "forecast_config",
+      "source_posterior",
+      "forecast_evidence_window"
+    ],
+    [
+      "residual",
+      "residual_config",
+      "assimilation",
+      "observation_posterior",
+      "observation_evidence_window",
+      "selected_observation"
+    ]
+  ],
+  "structural_note": "Forecast Config and source posterior are both exact authorities referenced by Forecast; the display path fixes the required S5 resolution order and does not assert a canonical Config-to-posterior reference edge.",
+  "cross_authority_invariants": [
+    "FORECAST_CONFIG_AND_RESIDUAL_CONFIG_ARE_DISTINCT_AUTHORITIES",
+    "SOURCE_AND_RESIDUAL_EXECUTION_VIEWS_SHARE_REALITY_BINDING_AND_GEOMETRY",
+    "FORECAST_METHOD_AND_FORCING_POLICY_MATCH_FORECAST_CONFIG",
+    "OBSERVATION_OPERATOR_AND_NUMERIC_POLICY_MATCH_RESIDUAL_CONFIG_AND_ASSIMILATION",
+    "LINEAGE_REVISION_AND_SCOPE_MATCH_ACROSS_CANONICAL_NODES",
+    "SELECTED_OBSERVATION_IDENTITY_MATCHES_RESIDUAL_ACTUAL_OBSERVATION_PINS"
+  ],
+  "dual_time_invariants": [
+    "forecast_evidence_window.as_of <= forecast.as_of",
+    "forecast.as_of < selected_observation.available_to_runtime_at",
+    "forecast.payload.issued_at < selected_observation.available_to_runtime_at",
+    "selected_observation.observed_at <= selected_observation.available_to_runtime_at",
+    "observation_evidence_window.as_of == selected_observation.available_to_runtime_at",
+    "assimilation.logical_time == selected_observation.available_to_runtime_at",
+    "observation_posterior.logical_time == selected_observation.available_to_runtime_at"
+  ],
+  "supersedes_graph_id": "MCFT-CAP-06.S5-EXACT-FORECAST-OBSERVATION-AUTHORITY-GRAPH-V1",
+  "correction_reason": "V1 incorrectly equated observation event time with runtime availability time and therefore rejected valid non-zero acquisition latency; V2 preserves event time for the Forecast target and uses availability time for the Observation Evidence/Assimilation/posterior chain."
+}

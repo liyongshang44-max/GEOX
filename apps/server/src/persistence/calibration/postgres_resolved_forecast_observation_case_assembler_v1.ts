@@ -9,13 +9,29 @@ import type { Cap04ExecutionConfigResolverPortV1 } from "../../domain/twin_runti
 import {
   assembleResolvedForecastObservationCaseV1,
   type ResolvedObservationEvidenceV1,
+  type ResolvedForecastObservationCaseV1,
 } from "../../domain/twin_runtime/resolved_forecast_observation_case_v1.js";
+import { validateCap05ForecastResidualV1 } from "../../domain/twin_runtime/forecast_observation_residual_v1.js";
 import type { Cap06CalibrationCaseSourceV1 } from "../../domain/calibration/contracts_v1.js";
 import type { Cap06ExactResidualGraphResolverV1 } from "./postgres_exact_calibration_residual_repository_v1.js";
 
 function requiredStringV1(value: unknown, code: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(code);
   return value;
+}
+
+function exactOrderedRefsV1(value: readonly string[]): string[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error("CAP06_GRAPH_EXACT_RESIDUAL_REFS_REQUIRED");
+  }
+  const refs = value.map((ref) => requiredStringV1(
+    ref,
+    "CAP06_GRAPH_EXACT_RESIDUAL_REF_REQUIRED",
+  ));
+  if (new Set(refs).size !== refs.length) {
+    throw new Error("CAP06_GRAPH_EXACT_RESIDUAL_REFS_DUPLICATE");
+  }
+  return refs;
 }
 
 function requiredScalarV1(value: unknown, code: string): string | number {
@@ -230,11 +246,115 @@ implements Cap06ExactResidualGraphResolverV1 {
     }
   }
 
+  async resolveExactResidualCase(
+    residual: Cap05ForecastResidualEnvelopeV1,
+    caseIndex: number,
+  ): Promise<ResolvedForecastObservationCaseV1> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      const result = await this.resolveCaseWithClientV1(client, residual, caseIndex);
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async resolveExactResidualCases(
+    orderedResiduals: readonly Cap05ForecastResidualEnvelopeV1[],
+  ): Promise<readonly ResolvedForecastObservationCaseV1[]> {
+    if (!Array.isArray(orderedResiduals) || orderedResiduals.length === 0) {
+      throw new Error("CAP06_GRAPH_ORDERED_RESIDUALS_REQUIRED");
+    }
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      const resolved: ResolvedForecastObservationCaseV1[] = [];
+      for (let caseIndex = 0; caseIndex < orderedResiduals.length; caseIndex += 1) {
+        resolved.push(await this.resolveCaseWithClientV1(
+          client,
+          orderedResiduals[caseIndex],
+          caseIndex,
+        ));
+      }
+      await client.query("COMMIT");
+      return resolved;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async resolveExactResidualRefs(
+    orderedResidualRefs: readonly string[],
+  ): Promise<readonly ResolvedForecastObservationCaseV1[]> {
+    const refs = exactOrderedRefsV1(orderedResidualRefs);
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      const result = await client.query(
+        `SELECT record_json
+           FROM facts
+          WHERE record_json->>'type'='twin_forecast_residual_v1'
+            AND record_json->'payload'->>'object_id'=ANY($1::text[])
+          ORDER BY record_json->'payload'->>'object_id' ASC`,
+        [refs],
+      );
+      const owners = new Map<string, Cap05ForecastResidualEnvelopeV1>();
+      for (const row of result.rows) {
+        const object = parseCanonicalFactV1(
+          row.record_json,
+          "twin_forecast_residual_v1",
+          "CAP06_GRAPH_RESIDUAL_ROOT",
+        ) as unknown as Cap05ForecastResidualEnvelopeV1;
+        validateCap05ForecastResidualV1(object);
+        if (!refs.includes(object.object_id)) {
+          throw new Error(`CAP06_GRAPH_RESIDUAL_ROOT_UNEXPECTED:${object.object_id}`);
+        }
+        if (owners.has(object.object_id)) {
+          throw new Error(`CAP06_GRAPH_RESIDUAL_ROOT_DUPLICATE:${object.object_id}`);
+        }
+        owners.set(object.object_id, object);
+      }
+      if (owners.size !== refs.length) {
+        const missing = refs.filter((ref) => !owners.has(ref));
+        throw new Error(`CAP06_GRAPH_RESIDUAL_ROOT_MISSING:${missing.join(",")}`);
+      }
+      const resolved: ResolvedForecastObservationCaseV1[] = [];
+      for (let caseIndex = 0; caseIndex < refs.length; caseIndex += 1) {
+        const residual = owners.get(refs[caseIndex]);
+        if (!residual) throw new Error(`CAP06_GRAPH_RESIDUAL_ROOT_MISSING:${refs[caseIndex]}`);
+        resolved.push(await this.resolveCaseWithClientV1(client, residual, caseIndex));
+      }
+      await client.query("COMMIT");
+      return resolved;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   private async resolveWithClientV1(
     client: PoolClient,
     residual: Cap05ForecastResidualEnvelopeV1,
     caseIndex: number,
   ): Promise<Cap06CalibrationCaseSourceV1> {
+    return (await this.resolveCaseWithClientV1(client, residual, caseIndex)).case_source;
+  }
+
+  private async resolveCaseWithClientV1(
+    client: PoolClient,
+    residual: Cap05ForecastResidualEnvelopeV1,
+    caseIndex: number,
+  ): Promise<ResolvedForecastObservationCaseV1> {
     const residualPayload = recordV1(
       residual.payload,
       "CAP06_GRAPH_RESIDUAL_PAYLOAD_REQUIRED",
@@ -351,6 +471,6 @@ implements Cap06ExactResidualGraphResolverV1 {
       assimilation_update: assimilationUpdate,
       observation_posterior: observationPosterior,
       observation_evidence_window: observationEvidenceWindow,
-    }).case_source;
+    });
   }
 }

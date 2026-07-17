@@ -482,10 +482,10 @@ export function assembleResolvedForecastObservationCaseV1(
   if (Date.parse(forecastEvidenceCutoff) > Date.parse(forecastAsOf)
     || Date.parse(forecastAsOf) >= Date.parse(availableAt)
     || Date.parse(residual.forecast_issued_at) >= Date.parse(availableAt)
-    || Date.parse(availableAt) > Date.parse(observationEvidenceCutoff)
-    || observationEvidenceCutoff !== observedAt
-    || input.assimilation_update.logical_time !== observedAt
-    || input.observation_posterior.logical_time !== observedAt) {
+    || Date.parse(observedAt) > Date.parse(availableAt)
+    || observationEvidenceCutoff !== availableAt
+    || input.assimilation_update.logical_time !== availableAt
+    || input.observation_posterior.logical_time !== availableAt) {
     throw new Error("CAP06_GRAPH_FUTURE_LEAKAGE_DETECTED");
   }
 
