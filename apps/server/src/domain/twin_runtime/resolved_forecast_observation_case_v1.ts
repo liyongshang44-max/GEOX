@@ -150,6 +150,76 @@ function validateExactCanonicalV1(input: {
   }
 }
 
+function selectedObservationSnapshotV1(
+  selection: Record<string, unknown>,
+  expectedRef: string,
+): Record<string, unknown> {
+  if (selection.selected_observation_ref !== expectedRef) {
+    throw new Error("CAP06_GRAPH_OBSERVATION_SELECTION_REF_MISMATCH");
+  }
+  if (selection.selected_observation
+    && typeof selection.selected_observation === "object"
+    && !Array.isArray(selection.selected_observation)) {
+    return selection.selected_observation as Record<string, unknown>;
+  }
+  const candidates = Array.isArray(selection.candidates)
+    ? selection.candidates.filter((candidate) => {
+      if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return false;
+      const value = candidate as Record<string, unknown>;
+      return value.observation_ref === expectedRef || value.source_record_id === expectedRef;
+    })
+    : [];
+  if (candidates.length !== 1) {
+    throw new Error(`CAP06_GRAPH_OBSERVATION_SELECTION_CARDINALITY:${candidates.length}`);
+  }
+  return candidates[0] as Record<string, unknown>;
+}
+
+function validateExecutionAuthorityV1(input: {
+  residual: Cap05ForecastResidualEnvelopeV1["payload"];
+  forecast: Cap04CanonicalCompletedForecastRunPayloadV1;
+  execution: ResolvedCap04ExecutionConfigV1["payload"];
+  assimilation: Record<string, unknown>;
+}): void {
+  const { residual, forecast, execution, assimilation } = input;
+  if (residual.root_zone_geometry_ref !== execution.reality_binding_ref
+    || residual.root_zone_geometry_hash !== execution.reality_binding_hash
+    || fixed6V1(residual.root_zone_depth_mm, "CAP06_GRAPH_RESIDUAL_ROOT_DEPTH_INVALID")
+      !== fixed6V1(
+        execution.soil_hydraulic_snapshot.root_zone_depth_mm,
+        "CAP06_GRAPH_EXECUTION_ROOT_DEPTH_INVALID",
+      )) {
+    throw new Error("CAP06_GRAPH_GEOMETRY_AUTHORITY_MISMATCH");
+  }
+  if (forecast.forecast_method_id !== execution.forecast_method_id
+    || forecast.forecast_method_version !== execution.forecast_method_version
+    || forecast.future_forcing_pair_policy_id !== execution.future_forcing_pair_policy_id
+    || forecast.future_forcing_policy_id !== execution.future_forcing_policy_id
+    || forecast.future_forcing_fallback_policy_id !== execution.future_forcing_fallback_policy_id
+    || forecast.uncertainty_propagation_method_id !== execution.uncertainty_propagation_method_id
+    || forecast.forecast_interval_method_id !== execution.forecast_interval_method_id) {
+    throw new Error("CAP06_GRAPH_FORECAST_EXECUTION_AUTHORITY_MISMATCH");
+  }
+  const executionOperator = execution.observation_assimilation.observation_operator;
+  const assimilationOperator = recordV1(
+    assimilation.observation_operator,
+    "CAP06_GRAPH_ASSIMILATION_OPERATOR_REQUIRED",
+  );
+  if (residual.observation_operator_id !== executionOperator.id
+    || residual.observation_operator_h !== fixed6V1(
+      executionOperator.h,
+      "CAP06_GRAPH_EXECUTION_OPERATOR_H_INVALID",
+    )
+    || assimilationOperator.id !== executionOperator.id
+    || assimilationOperator.h !== executionOperator.h
+    || assimilationOperator.direct_state_equivalence !== executionOperator.direct_state_equivalence) {
+    throw new Error("CAP06_GRAPH_OBSERVATION_OPERATOR_AUTHORITY_MISMATCH");
+  }
+  if (residual.rounding_rule_id !== execution.rounding_policy_id) {
+    throw new Error("CAP06_GRAPH_NUMERIC_POLICY_AUTHORITY_MISMATCH");
+  }
+}
+
 function buildCaseInputHashV1(input: ResolvedForecastObservationCaseInputV1 & {
   source_forecast_point_hash: string;
 }): string {
@@ -295,6 +365,8 @@ export function assembleResolvedForecastObservationCaseV1(
     ref: requiredStringV1(residual.assimilation_update_ref, "CAP06_GRAPH_ASSIMILATION_REF_REQUIRED"),
     hash: requiredStringV1(residual.assimilation_update_hash, "CAP06_GRAPH_ASSIMILATION_HASH_REQUIRED"),
     residual: input.residual,
+    lineage,
+    revision,
     code: "CAP06_GRAPH_ASSIMILATION_MISMATCH",
   });
   const assimilationPayload = recordV1(
@@ -314,6 +386,8 @@ export function assembleResolvedForecastObservationCaseV1(
       "CAP06_GRAPH_OBSERVATION_POSTERIOR_REF_REQUIRED",
     ),
     residual: input.residual,
+    lineage,
+    revision,
     code: "CAP06_GRAPH_OBSERVATION_POSTERIOR_MISMATCH",
   });
   const observationPosteriorPayload = recordV1(
@@ -331,6 +405,8 @@ export function assembleResolvedForecastObservationCaseV1(
       "CAP06_GRAPH_OBSERVATION_EVIDENCE_REF_REQUIRED",
     ),
     residual: input.residual,
+    lineage,
+    revision,
     code: "CAP06_GRAPH_OBSERVATION_EVIDENCE_WINDOW_MISMATCH",
   });
   const observationWindowPayload = recordV1(
@@ -341,22 +417,40 @@ export function assembleResolvedForecastObservationCaseV1(
     observationWindowPayload.observation_selection,
     "CAP06_GRAPH_OBSERVATION_SELECTION_REQUIRED",
   );
-  if (selection.selected_observation_ref !== observation.source_record_id
-    || selection.selected_observation_hash !== observation.source_record_hash) {
-    throw new Error("CAP06_GRAPH_OBSERVATION_SELECTION_MISMATCH");
+  const selectedObservation = selectedObservationSnapshotV1(
+    selection,
+    observation.source_record_id,
+  );
+  if (selectedObservation.source_record_hash !== observation.source_record_hash) {
+    throw new Error("CAP06_GRAPH_OBSERVATION_SELECTION_HASH_MISMATCH");
   }
 
-  const forecastAsOf = exactInstantV1(input.source_forecast.as_of, "CAP06_GRAPH_FORECAST_AS_OF_INVALID");
+  validateExecutionAuthorityV1({
+    residual,
+    forecast: forecastPayload,
+    execution: input.resolved_execution_config.payload,
+    assimilation: assimilationPayload,
+  });
+
+  const forecastAsOf = exactInstantV1(
+    input.source_forecast.as_of,
+    "CAP06_GRAPH_FORECAST_AS_OF_INVALID",
+  );
   const forecastEvidenceCutoff = exactInstantV1(
     input.source_forecast_evidence_window.as_of,
     "CAP06_GRAPH_FORECAST_EVIDENCE_CUTOFF_INVALID",
   );
+  const observationEvidenceCutoff = exactInstantV1(
+    input.observation_evidence_window.as_of,
+    "CAP06_GRAPH_OBSERVATION_EVIDENCE_CUTOFF_INVALID",
+  );
   if (Date.parse(forecastEvidenceCutoff) > Date.parse(forecastAsOf)
     || Date.parse(forecastAsOf) >= Date.parse(availableAt)
     || Date.parse(residual.forecast_issued_at) >= Date.parse(availableAt)
-    || Date.parse(input.observation_evidence_window.as_of) > Date.parse(availableAt)
-    || Date.parse(input.assimilation_update.as_of) > Date.parse(availableAt)
-    || Date.parse(input.observation_posterior.as_of) > Date.parse(availableAt)) {
+    || Date.parse(availableAt) > Date.parse(observationEvidenceCutoff)
+    || observationEvidenceCutoff !== observedAt
+    || input.assimilation_update.logical_time !== observedAt
+    || input.observation_posterior.logical_time !== observedAt) {
     throw new Error("CAP06_GRAPH_FUTURE_LEAKAGE_DETECTED");
   }
 
