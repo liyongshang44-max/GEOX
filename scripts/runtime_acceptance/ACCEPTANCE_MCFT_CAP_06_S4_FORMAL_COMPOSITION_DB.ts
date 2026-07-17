@@ -9,6 +9,9 @@ import {
   validateCap05RuntimeConfigPayloadV1,
 } from "../../apps/server/src/domain/twin_runtime/feedback_runtime_config_v1.js";
 import {
+  CAP04_RUNTIME_CONFIG_PURPOSE_V1,
+} from "../../apps/server/src/domain/twin_runtime/forecast_scenario_runtime_config_v1.js";
+import {
   Cap05InheritedCap04ExecutionConfigResolverV1,
 } from "../../apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.js";
 import {
@@ -123,7 +126,7 @@ async function main(): Promise<void> {
   const resolvedConfig = executionResolver.resolveExecutionConfig(canonicalConfig);
   assert.equal(resolvedConfig.source_config_ref, canonicalConfig.object_id);
   assert.equal(resolvedConfig.source_config_hash, canonicalConfig.determinism_hash);
-  assert.equal(resolvedConfig.payload.config_purpose, "FORECAST_SCENARIO_RUNTIME");
+  assert.equal(resolvedConfig.payload.config_purpose, CAP04_RUNTIME_CONFIG_PURPOSE_V1);
   assert.equal("object_id" in resolvedConfig, false);
   assert.equal("determinism_hash" in resolvedConfig, false);
   ok("formal canonical CAP-05 Config is consumed through one non-canonical positive CAP-04 execution view");
