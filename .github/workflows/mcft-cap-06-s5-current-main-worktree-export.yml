@@ -1,0 +1,41 @@
+name: mcft-cap-06-s5-current-main-worktree-export
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s5-current-main-worktree-export.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export-exact-main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact current main
+        uses: actions/checkout@v4
+        with:
+          ref: dc7913d070c4a0c2cac0a7c35ccfa4292e633876
+          fetch-depth: 0
+
+      - name: Verify exact main
+        shell: bash
+        run: |
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "dc7913d070c4a0c2cac0a7c35ccfa4292e633876"
+          test "$(git rev-parse origin/main)" = "dc7913d070c4a0c2cac0a7c35ccfa4292e633876"
+
+      - name: Build exact source archive
+        shell: bash
+        run: |
+          mkdir -p export
+          git archive --format=tar.gz --prefix=GEOX/ dc7913d070c4a0c2cac0a7c35ccfa4292e633876 > export/geox-s5-main-dc7913d.tar.gz
+          printf '%s\n' dc7913d070c4a0c2cac0a7c35ccfa4292e633876 > export/EXACT_HEAD.txt
+          (cd export && sha256sum geox-s5-main-dc7913d.tar.gz EXACT_HEAD.txt > SHA256SUMS)
+
+      - name: Upload exact source worktree
+        uses: actions/upload-artifact@v4
+        with:
+          name: geox-s5-main-worktree-dc7913d
+          path: export/
+          if-no-files-found: error
