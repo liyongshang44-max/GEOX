@@ -2,6 +2,9 @@
 // Boundary: in-memory acceptance only; no PostgreSQL, production write, Evaluation, Model Activation, active-config switch, State/checkpoint mutation, route, Web or scheduler.
 
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
 import type {
   Cap06GovernanceObjectV1,
@@ -49,6 +52,8 @@ class InMemoryCandidatePersistenceV1 implements Cap06CandidatePersistencePortV1 
     return structuredClone(this.byObjectId.get(objectId) ?? null);
   }
 }
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
 async function main(): Promise<void> {
   const fixture = await buildCap06S5CandidateFixtureV1();
@@ -177,6 +182,12 @@ async function main(): Promise<void> {
     state_mutation_count: 0,
     checkpoint_mutation_count: 0,
   };
+  fs.mkdirSync(path.join(ROOT, "acceptance-output"), { recursive: true });
+  fs.writeFileSync(
+    path.join(ROOT, "acceptance-output/MCFT_CAP_06_S5_CANDIDATE_DOMAIN_RESULT.json"),
+    `${JSON.stringify(result, null, 2)}\n`,
+    "utf8",
+  );
   console.log(`S5_CANDIDATE_DOMAIN_RESULT_JSON:${JSON.stringify(result)}`);
   console.log("MCFT_CAP_06_S5_CANDIDATE_DOMAIN:PASS");
 }
