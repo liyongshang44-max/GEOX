@@ -1,0 +1,73 @@
+{
+  "schema_version": "geox_mcft_cap_06_s4_status_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "delivery_slice_id": "MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1",
+  "status": "CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
+  "baseline_main_commit": "e9fa7fcf382ff64c3a60d30ef83ca6dd216585a4",
+  "implementation_branch": "agent/mcft-cap-06-s4-predecessor-consumption-stabilization-v1",
+  "authorization": {
+    "s3_merged_effective": true,
+    "s4_authorized": true,
+    "s5_authorized": false
+  },
+  "implementation": {
+    "positive_cap04_execution_projection": true,
+    "subtractive_cap05_field_removal_replaced": true,
+    "resolved_forecast_observation_case_read_model": true,
+    "exact_ref_postgresql_graph_assembler": true,
+    "single_repeatable_read_snapshot_batch_resolution": true,
+    "cap05_effective_runtime_baseline_aggregate": true,
+    "formal_cap05_runner_reusable_handoff": true,
+    "four_layer_acceptance_runner": true,
+    "new_canonical_type_count": 0,
+    "migration_count": 0,
+    "public_route_count": 0,
+    "web_change_count": 0,
+    "scheduler_count": 0
+  },
+  "acceptance_topology": {
+    "domain_acceptance": "IMPLEMENTED_PENDING_EXACT_HEAD",
+    "repository_acceptance": "IMPLEMENTED_PENDING_EXACT_HEAD",
+    "graph_assembler_acceptance": "IMPLEMENTED_PENDING_EXACT_HEAD",
+    "formal_production_composition_acceptance": "IMPLEMENTED_PENDING_EXACT_HEAD",
+    "exact_s2_engine_compatibility": "IMPLEMENTED_PENDING_EXACT_HEAD",
+    "standard_ci": "PENDING_EXACT_HEAD"
+  },
+  "debt_treatment": {
+    "cap05_struct_01": "CANDIDATE_TREATED_NOT_EFFECTIVE",
+    "cap05_struct_02": "CANDIDATE_TREATED_NOT_EFFECTIVE",
+    "cap05_struct_03": "CANDIDATE_TREATED_NOT_EFFECTIVE",
+    "cap05_process_01": "CANDIDATE_TREATED_NOT_EFFECTIVE",
+    "long_term_nested_config_refactor": "DEFERRED_NOT_AUTHORIZED"
+  },
+  "runtime_delta_boundary": {
+    "production_candidate_append_count": 0,
+    "production_evaluation_append_count": 0,
+    "model_activation_count": 0,
+    "active_config_switch_count": 0,
+    "runtime_parameter_change_count": 0,
+    "state_mutation_count": 0,
+    "checkpoint_mutation_count": 0
+  },
+  "s4_effective": false,
+  "s5_authorized": false,
+  "effectiveness_condition": "S4_EXACT_HEAD_FOUR_LAYER_ACCEPTANCE_PASS_AND_STANDARD_CI_PASS_AND_MERGE_AND_TREE_EQUIVALENCE_AND_EXACT_MERGED_MAIN_PROOF_AND_SEPARATE_EFFECTIVENESS_WRITEBACK",
+  "preserved_nonclaims": [
+    "NO_S5_CANDIDATE_ORCHESTRATION",
+    "NO_S6_SHADOW_ORCHESTRATION",
+    "NO_PRODUCTION_CALIBRATION_RUN",
+    "NO_PRODUCTION_SHADOW_RUN",
+    "NO_CALIBRATION_MATH_CHANGE",
+    "NO_SHADOW_MATH_CHANGE",
+    "NO_CANONICAL_WRITE",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_CONFIG_SWITCH",
+    "NO_RUNTIME_PARAMETER_CHANGE",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
+    "NO_MIGRATION",
+    "NO_PUBLIC_ROUTE",
+    "NO_WEB",
+    "NO_SCHEDULER",
+    "NO_MCFT_CAP_07_AUTHORIZATION"
+  ]
+}
