@@ -1,0 +1,83 @@
+name: mcft-cap-06-s5-local-toolchain-export
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s5-local-toolchain-export.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export-frozen-toolchain:
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_MAIN_COMMIT: 437a6ccae5903494638d17c997a7017c6da057cf
+    steps:
+      - name: Checkout proof carrier
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify current main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_MAIN_COMMIT"
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN_COMMIT"
+
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: 437a6ccae5903494638d17c997a7017c6da057cf
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Archive toolchain and workspace dependencies
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_MAIN_COMMIT"
+          mkdir -p toolchain-export
+
+          NODE_BIN="$(readlink -f "$(command -v node)")"
+          NODE_ROOT="$(dirname "$(dirname "$NODE_BIN")")"
+          PNPM_BIN="$(readlink -f "$(command -v pnpm)")"
+          PNPM_PACKAGE_ROOT="$(dirname "$(dirname "$PNPM_BIN")")"
+
+          tar -C "$(dirname "$NODE_ROOT")" -czf toolchain-export/node-20.11.1-linux-x64.tar.gz "$(basename "$NODE_ROOT")"
+          tar -C "$(dirname "$PNPM_PACKAGE_ROOT")" -czf toolchain-export/pnpm-9.15.4-package.tar.gz "$(basename "$PNPM_PACKAGE_ROOT")"
+
+          find . -type d -name node_modules -prune -print0 > toolchain-export/node_modules.list0
+          tar --null -czf toolchain-export/geox-node-modules-437a6cca.tar.gz --files-from=toolchain-export/node_modules.list0
+          rm toolchain-export/node_modules.list0
+
+          cat > toolchain-export/MANIFEST.txt <<EOF
+          exact_head=$EXPECTED_MAIN_COMMIT
+          node_version=$(node -v)
+          pnpm_version=$(pnpm -v)
+          node_root_basename=$(basename "$NODE_ROOT")
+          pnpm_package_basename=$(basename "$PNPM_PACKAGE_ROOT")
+          EOF
+          sha256sum toolchain-export/*.tar.gz > toolchain-export/SHA256SUMS
+          du -h toolchain-export/*.tar.gz
+
+      - name: Upload frozen local toolchain
+        uses: actions/upload-artifact@v4
+        with:
+          name: geox-s5-local-toolchain-437a6cca
+          path: toolchain-export/
+          compression-level: 0
+          if-no-files-found: error
