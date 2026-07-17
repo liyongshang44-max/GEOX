@@ -8,7 +8,8 @@
   "authorization": {
     "s3_merged_effective": true,
     "s4_authorized": true,
-    "s5_authorized": true
+    "s5_entry_authorized": true,
+    "s5_authorized": false
   },
   "implementation": {
     "positive_cap04_execution_projection": true,
@@ -49,8 +50,7 @@
     "graph_assembler_acceptance": "PASS_EXACT_HEAD_AND_MERGED_MAIN",
     "formal_production_composition_acceptance": "PASS_EXACT_HEAD_AND_MERGED_MAIN",
     "exact_s2_engine_compatibility": "PASS_EXACT_HEAD_AND_MERGED_MAIN",
-    "standard_ci": "PASS_EXACT_HEAD",
-    "commercial_mvp0_release_gate": "PASS_EXACT_HEAD"
+    "standard_ci": "PASS_EXACT_HEAD"
   },
   "debt_treatment": {
     "cap05_struct_01": "EFFECTIVE_TREATED",
@@ -69,11 +69,14 @@
     "checkpoint_mutation_count": 0
   },
   "s4_effective": true,
-  "s5_authorized": true,
+  "s5_entry_authorized": true,
+  "s5_entry_implementation_started": false,
+  "s5_authorized": false,
   "s5_implementation_started": false,
-  "effectiveness_condition": "SATISFIED_BY_EXACT_HEAD_FOUR_LAYER_ACCEPTANCE_AND_STANDARD_CI_AND_MERGE_AND_TREE_EQUIVALENCE_AND_EXACT_MERGED_MAIN_PROOF; EFFECTIVENESS_WRITEBACK_GOVERNANCE_ONLY",
+  "next_delivery_slice_id": "MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1",
+  "effectiveness_condition": "SATISFIED_BY_EXACT_HEAD_AND_MERGED_MAIN_PROOF; S5_REMAINS_BLOCKED_PENDING_ENTRY_PREREQUISITE_EFFECTIVENESS",
   "preserved_nonclaims": [
-    "NO_S5_IMPLEMENTATION_BY_EFFECTIVENESS_WRITEBACK",
+    "NO_S5_IMPLEMENTATION",
     "NO_S6_SHADOW_ORCHESTRATION",
     "NO_PRODUCTION_CALIBRATION_RUN",
     "NO_PRODUCTION_SHADOW_RUN",
@@ -83,7 +86,7 @@
     "NO_MODEL_ACTIVATION",
     "NO_ACTIVE_CONFIG_SWITCH",
     "NO_RUNTIME_PARAMETER_CHANGE",
-    "NO_STATE_OR_CHECKPOINT_MUTATION_BY_EFFECTIVENESS_WRITEBACK",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
     "NO_MIGRATION",
     "NO_PUBLIC_ROUTE",
     "NO_WEB",
