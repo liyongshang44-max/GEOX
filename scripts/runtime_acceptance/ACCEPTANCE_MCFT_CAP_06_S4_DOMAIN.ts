@@ -115,7 +115,7 @@ function main(): void {
   delete missing.model_component_refs;
   assert.throws(
     () => projectCap05PayloadToCap04ExecutionPayloadV1(missing as Cap05RuntimeConfigPayloadV1),
-    /CAP04_CONFIG_(MODEL_COMPONENT_REFS_REQUIRED|POLICY_COMPONENT_REFS_REQUIRED)|DataCloneError|could not be cloned/i,
+    /ASSIMILATED_MODEL_COMPONENT_REFS_MISMATCH|CAP04_CONFIG_(MODEL_COMPONENT_REFS_REQUIRED|POLICY_COMPONENT_REFS_REQUIRED)|DataCloneError|could not be cloned/i,
   );
   console.log("PASS missing frozen CAP-04 execution fields fail closed");
 
