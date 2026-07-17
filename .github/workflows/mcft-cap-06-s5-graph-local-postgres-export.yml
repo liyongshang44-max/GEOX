@@ -1,0 +1,48 @@
+name: mcft-cap-06-s5-graph-local-postgres-export
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s5-graph-local-postgres-export.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export-postgres-rootfs:
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_MAIN_COMMIT: 437a6ccae5903494638d17c997a7017c6da057cf
+    steps:
+      - name: Checkout proof carrier
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact current main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_MAIN_COMMIT"
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN_COMMIT"
+
+      - name: Export postgres 16 root filesystem
+        run: |
+          set -euo pipefail
+          mkdir -p postgres-export
+          docker pull postgres:16
+          cid="$(docker create postgres:16)"
+          trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
+          docker export "$cid" | gzip -1 > postgres-export/postgres-16-rootfs.tar.gz
+          printf '%s\n' 'postgres:16' > postgres-export/IMAGE.txt
+          docker image inspect postgres:16 --format '{{index .RepoDigests 0}}' > postgres-export/IMAGE_DIGEST.txt
+          sha256sum postgres-export/postgres-16-rootfs.tar.gz > postgres-export/SHA256SUMS
+          du -h postgres-export/postgres-16-rootfs.tar.gz
+
+      - name: Upload postgres root filesystem
+        uses: actions/upload-artifact@v4
+        with:
+          name: geox-s5-postgres16-rootfs
+          path: postgres-export/
+          compression-level: 0
+          if-no-files-found: error
