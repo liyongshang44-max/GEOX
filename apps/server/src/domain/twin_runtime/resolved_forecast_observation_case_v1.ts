@@ -49,6 +49,8 @@ export type ResolvedForecastObservationCaseInputV1 = {
   source_forecast_evidence_window: CanonicalObjectEnvelopeV1;
   source_runtime_config: CanonicalObjectEnvelopeV1;
   resolved_execution_config: ResolvedCap04ExecutionConfigV1;
+  residual_runtime_config: CanonicalObjectEnvelopeV1;
+  resolved_residual_execution_config: ResolvedCap04ExecutionConfigV1;
   actual_observation: ResolvedObservationEvidenceV1;
   assimilation_update: CanonicalObjectEnvelopeV1;
   observation_posterior: CanonicalObjectEnvelopeV1;
@@ -67,6 +69,8 @@ export type ResolvedForecastObservationCaseV1 = {
   source_forecast_evidence_window: CanonicalObjectEnvelopeV1;
   source_runtime_config: CanonicalObjectEnvelopeV1;
   resolved_execution_config: ResolvedCap04ExecutionConfigV1;
+  residual_runtime_config: CanonicalObjectEnvelopeV1;
+  resolved_residual_execution_config: ResolvedCap04ExecutionConfigV1;
   actual_observation: ResolvedObservationEvidenceV1;
   assimilation_update: CanonicalObjectEnvelopeV1;
   observation_posterior: CanonicalObjectEnvelopeV1;
@@ -178,44 +182,60 @@ function selectedObservationSnapshotV1(
 function validateExecutionAuthorityV1(input: {
   residual: Cap05ForecastResidualEnvelopeV1["payload"];
   forecast: Cap04CanonicalCompletedForecastRunPayloadV1;
-  execution: ResolvedCap04ExecutionConfigV1["payload"];
+  source_execution: ResolvedCap04ExecutionConfigV1["payload"];
+  residual_execution: ResolvedCap04ExecutionConfigV1["payload"];
   assimilation: Record<string, unknown>;
 }): void {
-  const { residual, forecast, execution, assimilation } = input;
-  if (residual.root_zone_geometry_ref !== execution.reality_binding_ref
-    || residual.root_zone_geometry_hash !== execution.reality_binding_hash
+  const {
+    residual,
+    forecast,
+    source_execution: sourceExecution,
+    residual_execution: residualExecution,
+    assimilation,
+  } = input;
+  if (sourceExecution.reality_binding_ref !== residualExecution.reality_binding_ref
+    || sourceExecution.reality_binding_hash !== residualExecution.reality_binding_hash
+    || residual.root_zone_geometry_ref !== residualExecution.reality_binding_ref
+    || residual.root_zone_geometry_hash !== residualExecution.reality_binding_hash
     || fixed6V1(residual.root_zone_depth_mm, "CAP06_GRAPH_RESIDUAL_ROOT_DEPTH_INVALID")
       !== fixed6V1(
-        execution.soil_hydraulic_snapshot.root_zone_depth_mm,
-        "CAP06_GRAPH_EXECUTION_ROOT_DEPTH_INVALID",
-      )) {
+        residualExecution.soil_hydraulic_snapshot.root_zone_depth_mm,
+        "CAP06_GRAPH_RESIDUAL_EXECUTION_ROOT_DEPTH_INVALID",
+      )
+    || fixed6V1(
+      sourceExecution.soil_hydraulic_snapshot.root_zone_depth_mm,
+      "CAP06_GRAPH_SOURCE_EXECUTION_ROOT_DEPTH_INVALID",
+    ) !== fixed6V1(
+      residualExecution.soil_hydraulic_snapshot.root_zone_depth_mm,
+      "CAP06_GRAPH_RESIDUAL_EXECUTION_ROOT_DEPTH_INVALID",
+    )) {
     throw new Error("CAP06_GRAPH_GEOMETRY_AUTHORITY_MISMATCH");
   }
-  if (forecast.forecast_method_id !== execution.forecast_method_id
-    || forecast.forecast_method_version !== execution.forecast_method_version
-    || forecast.future_forcing_pair_policy_id !== execution.future_forcing_pair_policy_id
-    || forecast.future_forcing_policy_id !== execution.future_forcing_policy_id
-    || forecast.future_forcing_fallback_policy_id !== execution.future_forcing_fallback_policy_id
-    || forecast.uncertainty_propagation_method_id !== execution.uncertainty_propagation_method_id
-    || forecast.forecast_interval_method_id !== execution.forecast_interval_method_id) {
+  if (forecast.forecast_method_id !== sourceExecution.forecast_method_id
+    || forecast.forecast_method_version !== sourceExecution.forecast_method_version
+    || forecast.future_forcing_pair_policy_id !== sourceExecution.future_forcing_pair_policy_id
+    || forecast.future_forcing_policy_id !== sourceExecution.future_forcing_policy_id
+    || forecast.future_forcing_fallback_policy_id !== sourceExecution.future_forcing_fallback_policy_id
+    || forecast.uncertainty_propagation_method_id !== sourceExecution.uncertainty_propagation_method_id
+    || forecast.forecast_interval_method_id !== sourceExecution.forecast_interval_method_id) {
     throw new Error("CAP06_GRAPH_FORECAST_EXECUTION_AUTHORITY_MISMATCH");
   }
-  const executionOperator = execution.observation_assimilation.observation_operator;
+  const residualOperator = residualExecution.observation_assimilation.observation_operator;
   const assimilationOperator = recordV1(
     assimilation.observation_operator,
     "CAP06_GRAPH_ASSIMILATION_OPERATOR_REQUIRED",
   );
-  if (residual.observation_operator_id !== executionOperator.id
+  if (residual.observation_operator_id !== residualOperator.id
     || residual.observation_operator_h !== fixed6V1(
-      executionOperator.h,
-      "CAP06_GRAPH_EXECUTION_OPERATOR_H_INVALID",
+      residualOperator.h,
+      "CAP06_GRAPH_RESIDUAL_EXECUTION_OPERATOR_H_INVALID",
     )
-    || assimilationOperator.id !== executionOperator.id
-    || assimilationOperator.h !== executionOperator.h
-    || assimilationOperator.direct_state_equivalence !== executionOperator.direct_state_equivalence) {
+    || assimilationOperator.id !== residualOperator.id
+    || assimilationOperator.h !== residualOperator.h
+    || assimilationOperator.direct_state_equivalence !== residualOperator.direct_state_equivalence) {
     throw new Error("CAP06_GRAPH_OBSERVATION_OPERATOR_AUTHORITY_MISMATCH");
   }
-  if (residual.rounding_rule_id !== execution.rounding_policy_id) {
+  if (residual.rounding_rule_id !== residualExecution.rounding_policy_id) {
     throw new Error("CAP06_GRAPH_NUMERIC_POLICY_AUTHORITY_MISMATCH");
   }
 }
@@ -235,7 +255,10 @@ function buildCaseInputHashV1(input: ResolvedForecastObservationCaseInputV1 & {
     source_forecast_evidence_window_hash: input.source_forecast_evidence_window.determinism_hash,
     source_runtime_config_ref: input.source_runtime_config.object_id,
     source_runtime_config_hash: input.source_runtime_config.determinism_hash,
-    execution_payload: input.resolved_execution_config.payload,
+    source_execution_payload: input.resolved_execution_config.payload,
+    residual_runtime_config_ref: input.residual_runtime_config.object_id,
+    residual_runtime_config_hash: input.residual_runtime_config.determinism_hash,
+    residual_execution_payload: input.resolved_residual_execution_config.payload,
     actual_observation_ref: input.actual_observation.source_record_id,
     actual_observation_hash: input.actual_observation.source_record_hash,
     assimilation_update_ref: input.assimilation_update.object_id,
@@ -321,16 +344,27 @@ export function assembleResolvedForecastObservationCaseV1(
   validateExactCanonicalV1({
     object: input.source_runtime_config,
     type: "twin_runtime_config_v1",
+    ref: forecastPayload.runtime_config_ref,
+    hash: forecastPayload.runtime_config_hash,
+    residual: input.residual,
+    code: "CAP06_GRAPH_SOURCE_RUNTIME_CONFIG_MISMATCH",
+  });
+  if (input.resolved_execution_config.source_config_ref !== input.source_runtime_config.object_id
+    || input.resolved_execution_config.source_config_hash !== input.source_runtime_config.determinism_hash) {
+    throw new Error("CAP06_GRAPH_SOURCE_EXECUTION_CONFIG_MISMATCH");
+  }
+
+  validateExactCanonicalV1({
+    object: input.residual_runtime_config,
+    type: "twin_runtime_config_v1",
     ref: residual.runtime_config_ref,
     hash: residual.runtime_config_hash,
     residual: input.residual,
-    code: "CAP06_GRAPH_RUNTIME_CONFIG_MISMATCH",
+    code: "CAP06_GRAPH_RESIDUAL_RUNTIME_CONFIG_MISMATCH",
   });
-  if (forecastPayload.runtime_config_ref !== input.source_runtime_config.object_id
-    || forecastPayload.runtime_config_hash !== input.source_runtime_config.determinism_hash
-    || input.resolved_execution_config.source_config_ref !== input.source_runtime_config.object_id
-    || input.resolved_execution_config.source_config_hash !== input.source_runtime_config.determinism_hash) {
-    throw new Error("CAP06_GRAPH_EXECUTION_CONFIG_SOURCE_MISMATCH");
+  if (input.resolved_residual_execution_config.source_config_ref !== input.residual_runtime_config.object_id
+    || input.resolved_residual_execution_config.source_config_hash !== input.residual_runtime_config.determinism_hash) {
+    throw new Error("CAP06_GRAPH_RESIDUAL_EXECUTION_CONFIG_MISMATCH");
   }
 
   const observation = input.actual_observation;
@@ -428,7 +462,8 @@ export function assembleResolvedForecastObservationCaseV1(
   validateExecutionAuthorityV1({
     residual,
     forecast: forecastPayload,
-    execution: input.resolved_execution_config.payload,
+    source_execution: input.resolved_execution_config.payload,
+    residual_execution: input.resolved_residual_execution_config.payload,
     assimilation: assimilationPayload,
   });
 
@@ -454,13 +489,14 @@ export function assembleResolvedForecastObservationCaseV1(
     throw new Error("CAP06_GRAPH_FUTURE_LEAKAGE_DETECTED");
   }
 
-  const execution = input.resolved_execution_config.payload;
+  const sourceExecution = input.resolved_execution_config.payload;
+  const residualExecution = input.resolved_residual_execution_config.payload;
   const fieldCapacity = fixed6V1(
-    execution.soil_hydraulic_snapshot.field_capacity_storage_mm,
+    sourceExecution.soil_hydraulic_snapshot.field_capacity_storage_mm,
     "CAP06_GRAPH_FIELD_CAPACITY_REQUIRED",
   );
   const saturation = fixed6V1(
-    execution.soil_hydraulic_snapshot.saturation_storage_mm,
+    sourceExecution.soil_hydraulic_snapshot.saturation_storage_mm,
     "CAP06_GRAPH_SATURATION_REQUIRED",
   );
   const storageBeforeDrainage = add6V1(
@@ -503,18 +539,20 @@ export function assembleResolvedForecastObservationCaseV1(
     saturation_minus_field_capacity_mm: subtract6V1(saturation, fieldCapacity),
     context_lineage_ref: lineage,
     context_revision_ref: revision,
-    model_component_hash: semanticHashV1({ model_component_refs: execution.model_component_refs }),
+    model_component_hash: semanticHashV1({
+      model_component_refs: sourceExecution.model_component_refs,
+    }),
     effective_parameter_bundle_hash: semanticHashV1({
-      soil_hydraulic_snapshot: execution.soil_hydraulic_snapshot,
-      dynamics_parameters: execution.dynamics_parameters,
+      soil_hydraulic_snapshot: sourceExecution.soil_hydraulic_snapshot,
+      dynamics_parameters: sourceExecution.dynamics_parameters,
     }),
     observation_operator_hash: semanticHashV1(
-      execution.observation_assimilation.observation_operator,
+      residualExecution.observation_assimilation.observation_operator,
     ),
-    geometry_hash: execution.reality_binding_hash,
+    geometry_hash: residualExecution.reality_binding_hash,
     runtime_replay_numeric_policy_hash: semanticHashV1({
-      decimal_scale_policy_id: execution.decimal_scale_policy_id,
-      rounding_policy_id: execution.rounding_policy_id,
+      decimal_scale_policy_id: sourceExecution.decimal_scale_policy_id,
+      rounding_policy_id: sourceExecution.rounding_policy_id,
       water_amount_scale: 6,
       water_variance_scale: 12,
     }),
@@ -538,6 +576,8 @@ export function assembleResolvedForecastObservationCaseV1(
     source_forecast_evidence_window: structuredClone(input.source_forecast_evidence_window),
     source_runtime_config: structuredClone(input.source_runtime_config),
     resolved_execution_config: structuredClone(input.resolved_execution_config),
+    residual_runtime_config: structuredClone(input.residual_runtime_config),
+    resolved_residual_execution_config: structuredClone(input.resolved_residual_execution_config),
     actual_observation: structuredClone(observation),
     assimilation_update: structuredClone(input.assimilation_update),
     observation_posterior: structuredClone(input.observation_posterior),
