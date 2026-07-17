@@ -1,6 +1,6 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_STABILIZATION.cjs
-// Purpose: validate immutable S4 implementation evidence and the structured successor frontier.
-// Boundary: structured JSON and immutable git/file boundaries only; no source-sentence matching, runtime execution, database access, canonical write, or S5 implementation authority.
+// Purpose: validate immutable S4 implementation evidence and a monotonic structured successor frontier.
+// Boundary: structured JSON and immutable git/file boundaries only; no Runtime execution, database access, canonical write, or downstream implementation authority.
 
 'use strict';
 
@@ -18,6 +18,7 @@ const S4 = 'MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZA
 const S5_ENTRY = 'MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1';
 const S5_GRAPH = 'MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1';
 const S5 = 'MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1';
+const S6 = 'MCFT-CAP-06.MCFT-06-09-11-12.PAIRED-HISTORICAL-SHADOW-COMPUTE-V1';
 const EXPECTED_IMPLEMENTATION_FILES = [
   '.github/workflows/mcft-cap-06-s4-focused-validation.yml',
   'apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.ts',
@@ -151,6 +152,18 @@ function main() {
         assert.equal(delivery.blocked_slices.includes(S5), true);
         assert.equal(delivery.s5.authorized, false);
         assert.equal(delivery.s5.implementation_started, false);
+      } else if (delivery.s5.effective === true) {
+        assert.equal(delivery.active_delivery_slice_id, S6);
+        assert.deepEqual(delivery.authorized_not_started_slices, [S6]);
+        assert.equal(delivery.blocked_slices.includes(S6), false);
+        assert.equal(delivery.s5.authorized, true);
+        assert.equal(delivery.s5.implementation_started, true);
+        assert.equal(delivery.s5.candidate_implemented, true);
+        assert.equal(delivery.s6.authorized, true);
+        assert.equal(delivery.s6.implementation_started, false);
+        assert.equal(delivery.s6.canonical_write_authorized, false);
+        assert.equal(delivery.s6.projection_write_authorized, false);
+        assert.equal(delivery.s6.shadow_evaluation_append_authorized, false);
       } else {
         assert.equal(delivery.active_delivery_slice_id, S5);
         assert.deepEqual(delivery.authorized_not_started_slices, [S5]);
@@ -179,6 +192,9 @@ function main() {
     s5_entry_effective: delivery.s5_entry?.effective === true,
     s5_graph_prerequisite_active: Boolean(delivery.s5_predecessor_graph_conformance && delivery.s5_predecessor_graph_conformance.effective !== true),
     s5_authorized: delivery.s5?.authorized === true,
+    s5_effective: delivery.s5?.effective === true,
+    s6_authorized: delivery.s6?.authorized === true,
+    s6_implementation_started: delivery.s6?.implementation_started === true,
     canonical_write_count: 0
   };
   writeResult(result);
