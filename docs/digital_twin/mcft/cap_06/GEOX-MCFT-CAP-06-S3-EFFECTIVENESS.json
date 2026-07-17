@@ -17,7 +17,7 @@
   "postmerge_workflow_run": 29520979042,
   "postmerge_gate": "PASS",
   "effectiveness_writeback_pr_number": 2535,
-  "effectiveness_writeback_validation_policy": "EXACT_PR_HEAD_CHECKS_MUST_PASS_BEFORE_MERGE; RUN_IDS_RECORDED_IN_PR_METADATA_TO_AVOID_SELF_REFERENTIAL_HEAD_CHURN",
+  "effectiveness_writeback_validation_policy": "EXACT_PR_HEAD_CHECKS_MUST_PASS_BEFORE_MERGE_AND_PUSH_TO_MAIN_CHECKS_MUST_PASS_AFTER_MERGE; RUN_IDS_REMAIN_IN_PR_AND_WORKFLOW_METADATA_TO_AVOID_SELF_REFERENTIAL_FILE_CHURN",
   "additive_migration_count": 1,
   "candidate_persistence_implemented": true,
   "evaluation_persistence_implemented": true,
