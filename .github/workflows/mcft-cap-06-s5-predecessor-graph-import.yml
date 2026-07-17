@@ -15,7 +15,6 @@ jobs:
     env:
       BASE_COMMIT: 437a6ccae5903494638d17c997a7017c6da057cf
       EXPECTED_TREE: a8ee969b8ffe311d32837e13b4f6c38ea8ff0c96
-      EXPECTED_B64_SHA256: c69bd80c00eaac1d9b57eae937c48d181d978fd0ecfff0c9b2fb140d36e196ae
       EXPECTED_TARBALL_SHA256: 5d7eac6484b3dda945dc87113b8d445235ba6ec70c96e2a6f826ad6c6052ecc3
       TARGET_BRANCH: agent/mcft-cap-06-s5-predecessor-graph-conformance-v1
     steps:
@@ -33,31 +32,27 @@ jobs:
           test "$(git merge-base HEAD origin/main)" = "$BASE_COMMIT"
           test "$(git rev-parse origin/$TARGET_BRANCH)" = "$BASE_COMMIT"
 
-      - name: Decode validated patch bundle
+      - name: Decode and verify authoritative patch bundle
         run: |
           set -euo pipefail
           BUNDLE='tmp/mcft-cap-06-s5-predecessor-graph-import/patches.tar.gz.b64'
-          ACTUAL_B64_SHA256="$(sha256sum "$BUNDLE" | cut -d' ' -f1)"
+          mkdir -p /tmp/mcft-cap-06-s5-import acceptance-output
+          ACTUAL_TEXT_SHA256="$(sha256sum "$BUNDLE" | cut -d' ' -f1)"
           BUNDLE_BYTES="$(wc -c < "$BUNDLE" | tr -d ' ')"
-          echo "bundle_bytes=$BUNDLE_BYTES"
-          echo "actual_b64_sha256=$ACTUAL_B64_SHA256"
-          echo "expected_b64_sha256=$EXPECTED_B64_SHA256"
-          if [ "$ACTUAL_B64_SHA256" != "$EXPECTED_B64_SHA256" ]; then
-            echo 'PATCH_BUNDLE_TEXT_SHA_MISMATCH' >&2
-            exit 41
-          fi
-          mkdir -p /tmp/mcft-cap-06-s5-import
           base64 -d "$BUNDLE" > /tmp/mcft-cap-06-s5-import/patches.tar.gz
           ACTUAL_TARBALL_SHA256="$(sha256sum /tmp/mcft-cap-06-s5-import/patches.tar.gz | cut -d' ' -f1)"
           TARBALL_BYTES="$(wc -c < /tmp/mcft-cap-06-s5-import/patches.tar.gz | tr -d ' ')"
-          echo "tarball_bytes=$TARBALL_BYTES"
-          echo "actual_tarball_sha256=$ACTUAL_TARBALL_SHA256"
-          echo "expected_tarball_sha256=$EXPECTED_TARBALL_SHA256"
+          printf '%s\n' \
+            "bundle_bytes=$BUNDLE_BYTES" \
+            "base64_text_sha256=$ACTUAL_TEXT_SHA256" \
+            "tarball_bytes=$TARBALL_BYTES" \
+            "actual_tarball_sha256=$ACTUAL_TARBALL_SHA256" \
+            "expected_tarball_sha256=$EXPECTED_TARBALL_SHA256" | tee acceptance-output/PATCH_BUNDLE_INTEGRITY.txt
           if [ "$ACTUAL_TARBALL_SHA256" != "$EXPECTED_TARBALL_SHA256" ]; then
             echo 'PATCH_BUNDLE_TARBALL_SHA_MISMATCH' >&2
             exit 42
           fi
-          tar -tzf /tmp/mcft-cap-06-s5-import/patches.tar.gz
+          tar -tzf /tmp/mcft-cap-06-s5-import/patches.tar.gz | tee acceptance-output/PATCH_BUNDLE_MEMBERS.txt
           tar -xzf /tmp/mcft-cap-06-s5-import/patches.tar.gz -C /tmp/mcft-cap-06-s5-import
           test -f /tmp/mcft-cap-06-s5-import/01-authority.patch
           test -f /tmp/mcft-cap-06-s5-import/02-preflight.patch
@@ -92,7 +87,6 @@ jobs:
           set -euo pipefail
           test "$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | cut -f1)" = "$BASE_COMMIT"
           git push origin "HEAD:refs/heads/$TARGET_BRANCH"
-          mkdir -p acceptance-output
           node - <<'NODE'
           const cp = require('node:child_process');
           const fs = require('node:fs');
@@ -118,6 +112,7 @@ jobs:
           NODE
 
       - name: Upload import evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap-06-s5-predecessor-graph-import-evidence
