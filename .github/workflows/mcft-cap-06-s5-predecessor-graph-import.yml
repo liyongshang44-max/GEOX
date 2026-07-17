@@ -95,6 +95,7 @@ jobs:
           test "${SUBJECTS[2]}" = 'MCFT-CAP-06: block S5 on graph conformance'
           test "$(git diff --name-only "$BASE_COMMIT"..HEAD | wc -l | tr -d ' ')" = '19'
           test -z "$(git diff --name-only "$BASE_COMMIT"..HEAD | grep -E 'canonical_object_contracts_v1\.ts|canonical_identity_v1\.ts|forecast_canonical_authority_v1\.ts|a0_record_set_builder_v1\.ts' || true)"
+          rm -rf acceptance-output
           test -z "$(git status --porcelain)"
 
       - name: Push validated prerequisite branch
@@ -102,6 +103,7 @@ jobs:
           set -euo pipefail
           test "$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | cut -f1)" = "$BASE_COMMIT"
           git push origin "HEAD:refs/heads/$TARGET_BRANCH"
+          mkdir -p acceptance-output
           node - <<'NODE'
           const cp = require('node:child_process');
           const fs = require('node:fs');
