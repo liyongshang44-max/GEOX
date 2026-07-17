@@ -1,0 +1,102 @@
+name: mcft-cap-06-s4-postmerge-proof
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-merged-main-s4-proof:
+    if: github.head_ref == 'agent/mcft-cap-06-s4-postmerge-proof-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      PROVED_COMMIT: d2a71aaa5a80a708476d1abaceeef266fe955659
+    steps:
+      - name: Checkout exact S4 merge commit
+        uses: actions/checkout@v4
+        with:
+          ref: d2a71aaa5a80a708476d1abaceeef266fe955659
+          fetch-depth: 0
+
+      - name: Prove checkout and current main identity
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$PROVED_COMMIT"
+          git fetch --quiet origin main
+          test "$(git rev-parse origin/main)" = "$PROVED_COMMIT"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and build exact merge commit
+        run: |
+          set -euo pipefail
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: Run exact merged-main S4 four-layer composition
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S4_STABILIZATION.cjs
+
+      - name: Reproduce S3 persistence boundary
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S3_PERSISTENCE.cjs
+
+      - name: Run S4 governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_STABILIZATION.cjs
+
+      - name: Verify pre-effectiveness frontier remains bounded
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const status = JSON.parse(fs.readFileSync(
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-STATUS.json',
+            'utf8',
+          ));
+          const delivery = JSON.parse(fs.readFileSync(
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json',
+            'utf8',
+          ));
+          const s4 = 'MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1';
+          const s5 = 'MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1';
+          if (status.status !== 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE') throw new Error('S4_STATUS_MISMATCH');
+          if (status.s4_effective !== false || status.s5_authorized !== false) throw new Error('S4_PREMATURE_EFFECTIVENESS');
+          if (delivery.active_delivery_slice_id !== s4) throw new Error('S4_NOT_ACTIVE');
+          if (!delivery.blocked_slices.includes(s5)) throw new Error('S5_NOT_BLOCKED');
+          if (!delivery.preserved_nonclaims.includes('NO_MODEL_ACTIVATION')) throw new Error('S4_ACTIVATION_NONCLAIM_MISSING');
+          if (!delivery.preserved_nonclaims.includes('NO_MCFT_CAP_07_AUTHORIZATION')) throw new Error('CAP07_NONCLAIM_MISSING');
+          NODE
+
+      - name: Final exact-commit proof
+        run: test "$(git rev-parse HEAD)" = "$PROVED_COMMIT"
