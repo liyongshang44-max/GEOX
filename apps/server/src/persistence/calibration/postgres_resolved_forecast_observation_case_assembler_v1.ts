@@ -45,8 +45,8 @@ function parseCanonicalFactV1(
 }
 
 function parseObservationFactV1(value: unknown): ResolvedObservationEvidenceV1 {
-  const record = parseFactRecordV1(value, "CAP06_GRAPH_OBSERVATION_FACT_INVALID");
-  const raw = recordV1(record.payload, "CAP06_GRAPH_OBSERVATION_PAYLOAD_REQUIRED");
+  const fact = parseFactRecordV1(value, "CAP06_GRAPH_OBSERVATION_FACT_INVALID");
+  const raw = recordV1(fact.payload, "CAP06_GRAPH_OBSERVATION_PAYLOAD_REQUIRED");
   const roleTime = raw.role_time && typeof raw.role_time === "object" && !Array.isArray(raw.role_time)
     ? raw.role_time as Record<string, unknown>
     : {};
@@ -203,11 +203,14 @@ implements Cap06ExactResidualGraphResolverV1 {
       "twin_state_estimate_v1",
       "CAP06_GRAPH_SOURCE_POSTERIOR",
     );
-    const posteriorPayload = recordV1(sourcePosterior.payload, "CAP06_GRAPH_POSTERIOR_PAYLOAD_REQUIRED");
+    const sourcePosteriorPayload = recordV1(
+      sourcePosterior.payload,
+      "CAP06_GRAPH_POSTERIOR_PAYLOAD_REQUIRED",
+    );
     const sourceForecastEvidenceWindow = await readExactCanonicalObjectV1(
       client,
       requiredStringV1(
-        posteriorPayload.evidence_window_ref,
+        sourcePosteriorPayload.evidence_window_ref,
         "CAP06_GRAPH_FORECAST_EVIDENCE_REF_REQUIRED",
       ),
       "twin_evidence_window_v1",
@@ -244,10 +247,23 @@ implements Cap06ExactResidualGraphResolverV1 {
       assimilationUpdate.payload,
       "CAP06_GRAPH_ASSIMILATION_PAYLOAD_REQUIRED",
     );
+    const observationPosterior = await readExactCanonicalObjectV1(
+      client,
+      requiredStringV1(
+        assimilationPayload.posterior_state_ref,
+        "CAP06_GRAPH_OBSERVATION_POSTERIOR_REF_REQUIRED",
+      ),
+      "twin_state_estimate_v1",
+      "CAP06_GRAPH_OBSERVATION_POSTERIOR",
+    );
+    const observationPosteriorPayload = recordV1(
+      observationPosterior.payload,
+      "CAP06_GRAPH_OBSERVATION_POSTERIOR_PAYLOAD_REQUIRED",
+    );
     const observationEvidenceWindow = await readExactCanonicalObjectV1(
       client,
       requiredStringV1(
-        assimilationPayload.evidence_window_ref,
+        observationPosteriorPayload.evidence_window_ref,
         "CAP06_GRAPH_OBSERVATION_EVIDENCE_REF_REQUIRED",
       ),
       "twin_evidence_window_v1",
@@ -267,6 +283,7 @@ implements Cap06ExactResidualGraphResolverV1 {
       resolved_execution_config: resolvedExecutionConfig,
       actual_observation: actualObservation,
       assimilation_update: assimilationUpdate,
+      observation_posterior: observationPosterior,
       observation_evidence_window: observationEvidenceWindow,
     }).case_source;
   }
