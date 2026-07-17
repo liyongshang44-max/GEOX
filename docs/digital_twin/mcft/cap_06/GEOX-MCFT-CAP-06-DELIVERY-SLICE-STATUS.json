@@ -3,10 +3,10 @@
   "capability_line_id": "MCFT-CAP-06",
   "status": "IMPLEMENTATION_IN_PROGRESS",
   "design_status": "CONDITIONAL_FROZEN_AFTER_P_MINUS_1_WITH_S4_TASK_AMENDMENT",
-  "implementation_status": "S3_MERGED_EFFECTIVE_S4_AUTHORIZED_NOT_STARTED",
+  "implementation_status": "S4_MERGED_EFFECTIVE_S5_AUTHORIZED_NOT_STARTED",
   "authorization_effective": true,
   "runtime_source_authorized": true,
-  "active_delivery_slice_id": "MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1",
+  "active_delivery_slice_id": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
   "completed_or_effective_slices": [
     {
       "delivery_slice_id": "MCFT-CAP-06.P-1.DT02-CALIBRATION-SHADOW-ADJUDICATION-V1",
@@ -89,11 +89,33 @@
       "production_evaluation_append_count": 0,
       "model_activation_count": 0,
       "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-EFFECTIVENESS.json"
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1",
+      "status": "MERGED_EFFECTIVE",
+      "implementation_pr_number": 2536,
+      "exact_head": "3df36f40b94993941ba8845adcf66b7e189d4bc9",
+      "focused_validation_run": 29557910269,
+      "s3_regression_run": 29557910311,
+      "s3_s4_compatibility_run": 29557910272,
+      "standard_ci_run": 29557910267,
+      "merge_commit": "d2a71aaa5a80a708476d1abaceeef266fe955659",
+      "head_to_merge_file_delta_count": 0,
+      "head_to_merge_tree_equivalence": "PASS",
+      "postmerge_probe_pr_number": 2537,
+      "postmerge_workflow_run": 29558471514,
+      "postmerge_gate": "PASS",
+      "positive_cap04_execution_projection_implemented": true,
+      "exact_ref_graph_assembler_implemented": true,
+      "four_layer_acceptance_status": "PASS_EXACT_HEAD_AND_MERGED_MAIN",
+      "production_candidate_append_count": 0,
+      "production_evaluation_append_count": 0,
+      "model_activation_count": 0,
+      "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-EFFECTIVENESS.json"
     }
   ],
   "candidate_slices": [],
   "blocked_slices": [
-    "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
     "MCFT-CAP-06.MCFT-06-09-11-12.PAIRED-HISTORICAL-SHADOW-COMPUTE-V1",
     "MCFT-CAP-06.MCFT-03-12.SHADOW-EVALUATION-COMMIT-V1",
     "MCFT-CAP-06.MCFT-03-04-12.RESTART-READBACK-REBUILD-V1",
@@ -115,13 +137,13 @@
     }
   ],
   "authorized_not_started_slices": [
-    "MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1"
+    "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1"
   ],
-  "next_repository_action": "MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1",
+  "next_repository_action": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
   "next_repository_action_after_s4_effectiveness": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
   "successor_capability_line_id": "MCFT-CAP-07",
   "successor_authorized": false,
-  "predecessor_eligibility": "RESTORED_WITH_STRUCTURAL_DEBT_STABILIZATION_PENDING",
+  "predecessor_eligibility": "RESTORED_STRUCTURAL_DEBT_STABILIZED",
   "s0_qualification_authorized": true,
   "s0_candidate_materialized": true,
   "s0_effective": true,
@@ -146,9 +168,12 @@
   "s3_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-EFFECTIVENESS.json",
   "s4_inserted_by_task_amendment": true,
   "s4_authorized": true,
-  "s4_implementation_started": false,
-  "s4_effective": false,
+  "s4_implementation_started": true,
+  "s4_effective": true,
+  "s4_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-EFFECTIVENESS.json",
   "s4_task_amendment_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-AMENDMENT-CAP05-STRUCTURAL-DEBT-V1.md",
   "s4_contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-PREDECESSOR-CONSUMPTION-STABILIZATION.md",
+  "s5_authorized": true,
+  "s5_implementation_started": false,
   "cap05_structural_debt_register_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CAP05-STRUCTURAL-DEBT-REGISTER.json"
 }

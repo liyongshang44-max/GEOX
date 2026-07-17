@@ -1,47 +1,41 @@
 {
-  "schema_version": "geox_mcft_cap_06_s4_status_v1",
+  "schema_version": "geox_mcft_cap_06_s4_effectiveness_v1",
+  "effectiveness_id": "MCFT-CAP-06.S4.MERGED-MAIN-EFFECTIVENESS-ACTIVATION-V1",
   "capability_line_id": "MCFT-CAP-06",
   "delivery_slice_id": "MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1",
   "status": "MERGED_EFFECTIVE",
-  "baseline_main_commit": "d2a71aaa5a80a708476d1abaceeef266fe955659",
-  "implementation_branch": "agent/mcft-cap-06-s4-predecessor-consumption-stabilization-v1",
-  "authorization": {
-    "s3_merged_effective": true,
-    "s4_authorized": true,
-    "s5_authorized": true
-  },
+  "effective": true,
+  "implementation_pr_number": 2536,
+  "implementation_exact_head": "3df36f40b94993941ba8845adcf66b7e189d4bc9",
+  "implementation_focused_validation_run": 29557910269,
+  "implementation_s3_regression_run": 29557910311,
+  "implementation_s3_s4_compatibility_run": 29557910272,
+  "implementation_standard_ci_run": 29557910267,
+  "implementation_merge_commit": "d2a71aaa5a80a708476d1abaceeef266fe955659",
+  "head_to_merge_file_delta_count": 0,
+  "head_to_merge_tree_equivalence": "PASS",
+  "postmerge_probe_pr_number": 2537,
+  "postmerge_probe_closed_without_merge": true,
+  "postmerge_workflow_run": 29558471514,
+  "postmerge_gate": "PASS",
+  "effectiveness_writeback_validation_policy": "EXACT_PR_HEAD_CHECKS_MUST_PASS_BEFORE_MERGE_AND_PUSH_TO_MAIN_CHECKS_MUST_PASS_AFTER_MERGE; WRITEBACK_RUN_IDS_REMAIN_IN_PR_AND_WORKFLOW_METADATA_TO_AVOID_SELF_REFERENTIAL_FILE_CHURN",
   "implementation": {
     "positive_cap04_execution_projection": true,
     "subtractive_cap05_field_removal_replaced": true,
     "resolved_forecast_observation_case_read_model": true,
     "exact_ref_postgresql_graph_assembler": true,
-    "source_forecast_and_residual_runtime_configs_resolved_separately": true,
+    "source_forecast_and_residual_runtime_config_authorities_resolved_separately": true,
     "observation_reconstructed_from_canonical_evidence_window": true,
     "single_repeatable_read_snapshot_batch_resolution": true,
+    "caller_order_and_case_index_preserved": true,
     "cap05_effective_runtime_baseline_aggregate": true,
-    "formal_cap05_runner_reusable_handoff": true,
-    "four_layer_acceptance_runner": true,
+    "four_layer_acceptance_topology": true,
+    "exact_s2_nonwriting_compatibility": true,
     "new_canonical_type_count": 0,
     "migration_count": 0,
     "public_route_count": 0,
     "web_change_count": 0,
     "scheduler_count": 0
-  },
-  "effectiveness_evidence": {
-    "implementation_pr_number": 2536,
-    "exact_head": "3df36f40b94993941ba8845adcf66b7e189d4bc9",
-    "focused_validation_run": 29557910269,
-    "s3_regression_run": 29557910311,
-    "s3_s4_compatibility_run": 29557910272,
-    "standard_ci_run": 29557910267,
-    "merge_commit": "d2a71aaa5a80a708476d1abaceeef266fe955659",
-    "head_to_merge_file_delta_count": 0,
-    "head_to_merge_tree_equivalence": "PASS",
-    "postmerge_probe_pr_number": 2537,
-    "postmerge_probe_closed_without_merge": true,
-    "postmerge_workflow_run": 29558471514,
-    "postmerge_gate": "PASS",
-    "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-EFFECTIVENESS.json"
   },
   "acceptance_topology": {
     "domain_acceptance": "PASS_EXACT_HEAD_AND_MERGED_MAIN",
@@ -49,14 +43,14 @@
     "graph_assembler_acceptance": "PASS_EXACT_HEAD_AND_MERGED_MAIN",
     "formal_production_composition_acceptance": "PASS_EXACT_HEAD_AND_MERGED_MAIN",
     "exact_s2_engine_compatibility": "PASS_EXACT_HEAD_AND_MERGED_MAIN",
-    "standard_ci": "PASS_EXACT_HEAD",
+    "standard_repository_ci": "PASS_EXACT_HEAD",
     "commercial_mvp0_release_gate": "PASS_EXACT_HEAD"
   },
   "debt_treatment": {
-    "cap05_struct_01": "EFFECTIVE_TREATED",
-    "cap05_struct_02": "EFFECTIVE_TREATED",
-    "cap05_struct_03": "EFFECTIVE_TREATED",
-    "cap05_process_01": "EFFECTIVE_TREATED",
+    "CAP05-STRUCT-01": "EFFECTIVE_TREATED",
+    "CAP05-STRUCT-02": "EFFECTIVE_TREATED",
+    "CAP05-STRUCT-03": "EFFECTIVE_TREATED",
+    "CAP05-PROCESS-01": "EFFECTIVE_TREATED",
     "long_term_nested_config_refactor": "DEFERRED_NOT_AUTHORIZED"
   },
   "runtime_delta_boundary": {
@@ -68,10 +62,14 @@
     "state_mutation_count": 0,
     "checkpoint_mutation_count": 0
   },
-  "s4_effective": true,
+  "active_delivery_slice_id": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
+  "authorized_not_started_slice_ids": [
+    "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1"
+  ],
   "s5_authorized": true,
   "s5_implementation_started": false,
-  "effectiveness_condition": "SATISFIED_BY_EXACT_HEAD_FOUR_LAYER_ACCEPTANCE_AND_STANDARD_CI_AND_MERGE_AND_TREE_EQUIVALENCE_AND_EXACT_MERGED_MAIN_PROOF; EFFECTIVENESS_WRITEBACK_GOVERNANCE_ONLY",
+  "successor_capability_line_authorized": false,
+  "effectiveness_writeback_scope": "GOVERNANCE_ONLY",
   "preserved_nonclaims": [
     "NO_S5_IMPLEMENTATION_BY_EFFECTIVENESS_WRITEBACK",
     "NO_S6_SHADOW_ORCHESTRATION",
@@ -85,9 +83,7 @@
     "NO_RUNTIME_PARAMETER_CHANGE",
     "NO_STATE_OR_CHECKPOINT_MUTATION_BY_EFFECTIVENESS_WRITEBACK",
     "NO_MIGRATION",
-    "NO_PUBLIC_ROUTE",
-    "NO_WEB",
-    "NO_SCHEDULER",
+    "NO_PUBLIC_ROUTE_OR_WEB_OR_SCHEDULER",
     "NO_MCFT_CAP_07_AUTHORIZATION"
   ]
 }
