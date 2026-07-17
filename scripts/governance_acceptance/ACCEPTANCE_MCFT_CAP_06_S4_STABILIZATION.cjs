@@ -1,6 +1,6 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_STABILIZATION.cjs
-// Purpose: validate immutable S4 implementation evidence and the structured delivery frontier.
-// Boundary: structured JSON and immutable git/file boundaries only; no source-sentence matching, runtime execution, database access, canonical write, or S5 authority.
+// Purpose: validate immutable S4 implementation evidence and the structured successor frontier.
+// Boundary: structured JSON and immutable git/file boundaries only; no source-sentence matching, runtime execution, database access, canonical write, or S5 implementation authority.
 
 'use strict';
 
@@ -85,7 +85,6 @@ function main() {
 
   if (status.s4_effective !== true) {
     assert.equal(status.status, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
-    assert.equal(status.s5_authorized, false);
     assert.equal(delivery.active_delivery_slice_id, S4);
     assert.deepEqual(delivery.candidate_slices, [S4]);
     assert.equal(delivery.blocked_slices.includes(S5), true);
@@ -100,18 +99,29 @@ function main() {
     assert.equal(status.effectiveness_evidence.head_to_merge_file_delta_count, 0);
     assert.equal(status.effectiveness_evidence.head_to_merge_tree_equivalence, 'PASS');
     assert.equal(status.effectiveness_evidence.postmerge_workflow_run, 29558471514);
-    assert.equal(status.s5_entry_authorized, true);
-    assert.equal(status.s5_authorized, false);
-    assert.equal(delivery.active_delivery_slice_id, S5_ENTRY);
-    assert.deepEqual(delivery.authorized_not_started_slices, [S5_ENTRY]);
-    assert.equal(delivery.blocked_slices.includes(S5), true);
     assert.equal(delivery.s4.effective, true);
-    assert.equal(delivery.s5_entry.authorized, true);
-    assert.equal(delivery.s5_entry.effective, false);
-    assert.equal(delivery.s5.authorized, false);
-    assert.equal(debt.status, 'S4_EFFECTIVE_TREATMENTS_S5_ENTRY_REQUIRED');
     assert.deepEqual(debt.open_structural_debt.map((item) => item.status), Array(4).fill('EFFECTIVE_TREATED'));
-    assert.equal(debt.s5_authorized, false);
+
+    if (delivery.s5_entry.effective === true) {
+      assert.equal(delivery.active_delivery_slice_id, S5);
+      assert.deepEqual(delivery.authorized_not_started_slices, [S5]);
+      assert.equal(delivery.blocked_slices.includes(S5), false);
+      assert.equal(delivery.s5_entry.authorized, true);
+      assert.equal(delivery.s5_entry.implementation_started, true);
+      assert.equal(delivery.s5.authorized, true);
+      assert.equal(delivery.s5.implementation_started, false);
+      assert.equal(debt.status, 'S4_EFFECTIVE_TREATMENTS_S5_ENTRY_EFFECTIVE_S5_AUTHORIZED');
+      assert.equal(debt.s5_entry_effective, true);
+      assert.equal(debt.s5_authorized, true);
+    } else {
+      assert.equal(delivery.active_delivery_slice_id, S5_ENTRY);
+      assert.deepEqual(delivery.authorized_not_started_slices, [S5_ENTRY]);
+      assert.equal(delivery.blocked_slices.includes(S5), true);
+      assert.equal(delivery.s5_entry.authorized, true);
+      assert.equal(delivery.s5.authorized, false);
+      assert.equal(debt.status, 'S4_EFFECTIVE_TREATMENTS_S5_ENTRY_REQUIRED');
+      assert.equal(debt.s5_authorized, false);
+    }
   }
 
   const result = {
@@ -120,8 +130,8 @@ function main() {
     implementation_ref: implementationRef,
     implementation_file_count: changed.length,
     s4_effective: status.s4_effective === true,
-    s5_entry_authorized: status.s5_entry_authorized === true,
-    s5_authorized: false,
+    s5_entry_effective: delivery.s5_entry?.effective === true,
+    s5_authorized: delivery.s5?.authorized === true,
     canonical_write_count: 0
   };
   writeResult(result);
@@ -135,7 +145,6 @@ try {
     schema_version: 'geox_mcft_cap_06_s4_governance_result_v1',
     status: 'FAIL',
     error: error instanceof Error ? error.message : String(error),
-    s5_authorized: false,
     canonical_write_count: 0
   };
   writeResult(result);
