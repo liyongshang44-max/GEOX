@@ -3,10 +3,10 @@
   "capability_line_id": "MCFT-CAP-06",
   "status": "IMPLEMENTATION_IN_PROGRESS",
   "design_status": "CONDITIONAL_FROZEN_WITH_S4_S5_ENTRY_AND_S5_GRAPH_CONFORMANCE_AMENDMENTS",
-  "implementation_status": "S5_PREDECESSOR_GRAPH_CONFORMANCE_CANDIDATE_IMPLEMENTED_S5_BLOCKED",
+  "implementation_status": "S5_AUTHORIZED_NOT_STARTED",
   "authorization_effective": true,
   "runtime_source_authorized": true,
-  "active_delivery_slice_id": "MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1",
+  "active_delivery_slice_id": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
   "completed_or_effective_slices": [
     {
       "delivery_slice_id": "MCFT-CAP-06.P-1.DT02-CALIBRATION-SHADOW-ADJUDICATION-V1",
@@ -135,13 +135,36 @@
       "logical_commit_count": 3,
       "canonical_write_count": 0,
       "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-EFFECTIVENESS.json"
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1",
+      "status": "MERGED_EFFECTIVE",
+      "implementation_pr_number": 2547,
+      "exact_head": "001effed492514a5ea866d5b976af8f4a9e3357c",
+      "focused_validation_run": 29575208769,
+      "s5_entry_compatibility_run": 29575208720,
+      "s3_focused_regression_run": 29575208763,
+      "s4_focused_regression_run": 29575208709,
+      "s3_s4_compatibility_run": 29575208716,
+      "s4_effectiveness_compatibility_run": 29575208743,
+      "standard_ci_run": 29575208701,
+      "merge_commit": "17a01ec25be2bbd7ee92b9e9e6115afed9665435",
+      "head_to_merge_file_delta_count": 0,
+      "head_to_merge_tree_equivalence": "PASS",
+      "postmerge_probe_pr_number": 2549,
+      "postmerge_probe_closed_without_merge": true,
+      "postmerge_workflow_run": 29575857015,
+      "postmerge_gate": "PASS",
+      "authority_graph_status": "FROZEN_CORRECTED_NONZERO_AVAILABILITY_LATENCY",
+      "structured_preflight_status": "PASS_EXACT_HEAD_AND_MERGED_MAIN",
+      "protected_predecessor_path_delta_count": 0,
+      "logical_commit_count": 3,
+      "canonical_write_count": 0,
+      "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-PREDECESSOR-EFFECTIVENESS.json"
     }
   ],
-  "candidate_slices": [
-    "MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1"
-  ],
+  "candidate_slices": [],
   "blocked_slices": [
-    "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
     "MCFT-CAP-06.MCFT-06-09-11-12.PAIRED-HISTORICAL-SHADOW-COMPUTE-V1",
     "MCFT-CAP-06.MCFT-03-12.SHADOW-EVALUATION-COMMIT-V1",
     "MCFT-CAP-06.MCFT-03-04-12.RESTART-READBACK-REBUILD-V1",
@@ -162,10 +185,13 @@
       "reason": "CAP05_STRUCTURAL_DEBT_REQUIRES_BROADER_SUCCESSOR_CONSUMPTION_STABILIZATION_BEFORE_S5"
     }
   ],
-  "authorized_not_started_slices": [],
-  "next_repository_action": "MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1",
+  "authorized_not_started_slices": [
+    "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1"
+  ],
+  "next_repository_action": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
   "next_repository_action_after_s4_effectiveness": "MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1",
-  "next_repository_action_after_s5_entry_effectiveness": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
+  "next_repository_action_after_s5_entry_effectiveness": "MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1",
+  "next_repository_action_after_s5_graph_conformance_effectiveness": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
   "successor_capability_line_id": "MCFT-CAP-07",
   "successor_authorized": false,
   "predecessor_eligibility": "RESTORED_STRUCTURAL_DEBT_STABILIZED",
@@ -203,13 +229,13 @@
   "s5_entry_effective": true,
   "s5_entry_contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-PREREQUISITE.json",
   "s5_entry_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-EFFECTIVENESS.json",
-  "s5_authorized": false,
+  "s5_authorized": true,
   "s5_implementation_started": false,
   "cap05_structural_debt_register_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CAP05-STRUCTURAL-DEBT-REGISTER.json",
-  "next_repository_action_after_s5_graph_conformance_effectiveness": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
   "s5_predecessor_graph_conformance_authorized": true,
   "s5_predecessor_graph_conformance_implementation_started": true,
   "s5_predecessor_graph_conformance_candidate_implemented": true,
-  "s5_predecessor_graph_conformance_effective": false,
-  "s5_predecessor_graph_conformance_contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-PREDECESSOR-GRAPH-CONFORMANCE.json"
+  "s5_predecessor_graph_conformance_effective": true,
+  "s5_predecessor_graph_conformance_contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-PREDECESSOR-GRAPH-CONFORMANCE.json",
+  "s5_predecessor_graph_conformance_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-PREDECESSOR-EFFECTIVENESS.json"
 }
