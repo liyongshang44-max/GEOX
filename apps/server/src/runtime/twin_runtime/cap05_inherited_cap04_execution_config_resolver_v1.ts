@@ -26,6 +26,12 @@ import {
 } from "./effective_feedback_runtime_config_v1.js";
 import { validateCap05ForecastResidualRuntimePoliciesV1 } from "./forecast_residual_outcome_tick_service_v1.js";
 
+type Cap05ExecutableRuntimeConfigPayloadV1 = Cap05RuntimeConfigPayloadV1
+  & Record<string, unknown>
+  & {
+    executable_profile_id: typeof CAP05_EFFECTIVE_RUNTIME_CONFIG_PROFILE_ID_V1;
+  };
+
 function cloneV1<T>(value: T): T {
   return structuredClone(value);
 }
@@ -96,7 +102,7 @@ implements Cap04ExecutionConfigResolverPortV1 {
       throw new Error("CAP05_EXECUTION_CONFIG_RUNTIME_CONFIG_OBJECT_TYPE_REQUIRED");
     }
 
-    const payload = canonicalConfig.payload as unknown as Cap05RuntimeConfigPayloadV1;
+    const payload = canonicalConfig.payload as unknown as Cap05ExecutableRuntimeConfigPayloadV1;
     validateCap05RuntimeConfigPayloadV1(payload);
     if (payload.config_purpose !== CAP05_RUNTIME_CONFIG_PURPOSE_V1) {
       throw new Error("CAP05_EXECUTION_CONFIG_PURPOSE_MISMATCH");
