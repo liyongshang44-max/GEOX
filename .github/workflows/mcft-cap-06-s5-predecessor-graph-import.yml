@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-06-s5-predecessor-graph-import.yml'
-      - 'tmp/mcft-cap-06-s5-predecessor-graph-import/patches.tar.gz.b64'
+      - 'tmp/mcft-cap-06-s5-predecessor-graph-import/chunks/**'
 
 permissions:
   contents: write
@@ -15,6 +15,7 @@ jobs:
     env:
       BASE_COMMIT: 437a6ccae5903494638d17c997a7017c6da057cf
       EXPECTED_TREE: a8ee969b8ffe311d32837e13b4f6c38ea8ff0c96
+      EXPECTED_B64_SHA256: c69bd80c00eaac1d9b57eae937c48d181d978fd0ecfff0c9b2fb140d36e196ae
       EXPECTED_TARBALL_SHA256: 5d7eac6484b3dda945dc87113b8d445235ba6ec70c96e2a6f826ad6c6052ecc3
       TARGET_BRANCH: agent/mcft-cap-06-s5-predecessor-graph-conformance-v1
     steps:
@@ -32,26 +33,40 @@ jobs:
           test "$(git merge-base HEAD origin/main)" = "$BASE_COMMIT"
           test "$(git rev-parse origin/$TARGET_BRANCH)" = "$BASE_COMMIT"
 
-      - name: Decode and verify authoritative patch bundle
+      - name: Verify chunks and reconstruct authoritative bundle
         run: |
           set -euo pipefail
-          BUNDLE='tmp/mcft-cap-06-s5-predecessor-graph-import/patches.tar.gz.b64'
+          CHUNKS='tmp/mcft-cap-06-s5-predecessor-graph-import/chunks'
           mkdir -p /tmp/mcft-cap-06-s5-import acceptance-output
-          ACTUAL_TEXT_SHA256="$(sha256sum "$BUNDLE" | cut -d' ' -f1)"
-          BUNDLE_BYTES="$(wc -c < "$BUNDLE" | tr -d ' ')"
-          base64 -d "$BUNDLE" > /tmp/mcft-cap-06-s5-import/patches.tar.gz
+          cat > /tmp/chunk-manifest <<'EOF'
+          part-00 4096 f74364b62e60a1991b9d2a3a5391f34e230788963a7ad36d73720340d4d7c3e9
+          part-01 4096 4478ede18a326a1e7645dcc9528c596aa40500a43597bb269909c219d15a64f7
+          part-02 4096 8407cbd7ea1ea97daef69d756025a17d06d2788f1d8aed21054dc81625d2a8bd
+          part-03 4096 3a98bb0e5b417e3bf868776957e401615fbda1f2a7a437e6a136d0dd25254d69
+          part-04 4096 46560a778f8b6bcf1d3794348fb465113624015eef48c240b5445785edf88ecb
+          part-05 4096 bde933d7ffa2cbb0a2d85203ad1ec858df40609d82f3f606c55bccdfd4901c6c
+          part-06 4096 50440fef1e43cfbc48c4333708d84bf0b19174d31619b836d55cf3a430d231e1
+          part-07 4096 9cb00aae5a6fefc0bc6c64d2edddfd11d60de6f45a17bc2c24c5cb4799cbadad
+          part-08 4096 c3b47d289e04fd4a5227a953ac2175b06344b38f25aa998d0eb160d719bea5a3
+          part-09 1388 c5f0091713a8c83f2dc06e643ac87998a5e6f017b11dbd7a78ca53f3ea2b1761
+          EOF
+          : > /tmp/mcft-cap-06-s5-import/patches.tar.gz.b64
+          while read -r name bytes sha; do
+            file="$CHUNKS/$name"
+            test -f "$file"
+            test "$(wc -c < "$file" | tr -d ' ')" = "$bytes"
+            test "$(sha256sum "$file" | cut -d' ' -f1)" = "$sha"
+            cat "$file" >> /tmp/mcft-cap-06-s5-import/patches.tar.gz.b64
+          done < /tmp/chunk-manifest
+          ACTUAL_B64_SHA256="$(sha256sum /tmp/mcft-cap-06-s5-import/patches.tar.gz.b64 | cut -d' ' -f1)"
+          test "$ACTUAL_B64_SHA256" = "$EXPECTED_B64_SHA256"
+          base64 -d /tmp/mcft-cap-06-s5-import/patches.tar.gz.b64 > /tmp/mcft-cap-06-s5-import/patches.tar.gz
           ACTUAL_TARBALL_SHA256="$(sha256sum /tmp/mcft-cap-06-s5-import/patches.tar.gz | cut -d' ' -f1)"
-          TARBALL_BYTES="$(wc -c < /tmp/mcft-cap-06-s5-import/patches.tar.gz | tr -d ' ')"
+          test "$ACTUAL_TARBALL_SHA256" = "$EXPECTED_TARBALL_SHA256"
           printf '%s\n' \
-            "bundle_bytes=$BUNDLE_BYTES" \
-            "base64_text_sha256=$ACTUAL_TEXT_SHA256" \
-            "tarball_bytes=$TARBALL_BYTES" \
-            "actual_tarball_sha256=$ACTUAL_TARBALL_SHA256" \
-            "expected_tarball_sha256=$EXPECTED_TARBALL_SHA256" | tee acceptance-output/PATCH_BUNDLE_INTEGRITY.txt
-          if [ "$ACTUAL_TARBALL_SHA256" != "$EXPECTED_TARBALL_SHA256" ]; then
-            echo 'PATCH_BUNDLE_TARBALL_SHA_MISMATCH' >&2
-            exit 42
-          fi
+            "base64_sha256=$ACTUAL_B64_SHA256" \
+            "tarball_sha256=$ACTUAL_TARBALL_SHA256" \
+            "chunk_count=10" > acceptance-output/PATCH_BUNDLE_INTEGRITY.txt
           tar -tzf /tmp/mcft-cap-06-s5-import/patches.tar.gz | tee acceptance-output/PATCH_BUNDLE_MEMBERS.txt
           tar -xzf /tmp/mcft-cap-06-s5-import/patches.tar.gz -C /tmp/mcft-cap-06-s5-import
           test -f /tmp/mcft-cap-06-s5-import/01-authority.patch
