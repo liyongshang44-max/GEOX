@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// Purpose: prove immutable MCFT-CAP-06 S2 contracts/math evidence without owning later S3/S4/S5 delivery-frontier state.
+// Boundary: governance read-only validation; no persistence, canonical append, projection write, Runtime authority, State, checkpoint, route, Web, scheduler, Model Activation, or CAP-07 authority.
+
 'use strict';
 
 const assert = require('node:assert/strict');
@@ -7,33 +10,32 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const S2 = 'MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1';
-const S3 = 'MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1';
 const EXPECTED_FILES = [
-  "apps/server/src/domain/calibration/case_builder_v1.ts",
-  "apps/server/src/domain/calibration/contracts_v1.ts",
-  "apps/server/src/domain/calibration/envelope_profiles_v1.ts",
-  "apps/server/src/domain/calibration/exact_ref_port_v1.ts",
-  "apps/server/src/domain/calibration/fixed_point_metric_v1.ts",
-  "apps/server/src/domain/calibration/grid_search_v1.ts",
-  "apps/server/src/domain/calibration/shadow_evaluation_v1.ts",
-  "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
-  "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
-  "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json",
-  "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json",
-  "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-CONTRACTS-MATH.json",
-  "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
-  "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md",
-  "scripts/acceptance/run_acceptance.cjs",
-  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs",
-  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
-  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts"
+  'apps/server/src/domain/calibration/case_builder_v1.ts',
+  'apps/server/src/domain/calibration/contracts_v1.ts',
+  'apps/server/src/domain/calibration/envelope_profiles_v1.ts',
+  'apps/server/src/domain/calibration/exact_ref_port_v1.ts',
+  'apps/server/src/domain/calibration/fixed_point_metric_v1.ts',
+  'apps/server/src/domain/calibration/grid_search_v1.ts',
+  'apps/server/src/domain/calibration/shadow_evaluation_v1.ts',
+  'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
+  'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json',
+  'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json',
+  'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json',
+  'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-CONTRACTS-MATH.json',
+  'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json',
+  'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md',
+  'scripts/acceptance/run_acceptance.cjs',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_CONTROLLED_DATA_CORRECTION.cjs',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts',
 ];
 const FORBIDDEN_TRANSPORT_TOKENS = [
   'id0ut',
   'out0ut',
   'idteger',
   'com0ute',
-  'idtentionally'
+  'idtentionally',
 ];
 const FORBIDDEN_TEMPORARY_PATHS = [
   '.github/pathlib.py',
@@ -45,7 +47,7 @@ const FORBIDDEN_TEMPORARY_PATHS = [
   '.github/workflows/mcft-cap-06-s2-corrected-materializer.yml',
   '.github/workflows/mcft-cap-06-s2-corrected-finalizer.yml',
   '.github/scripts/mcft_cap06_s2_governance_finalizer.py',
-  '.github/workflows/mcft-cap-06-s2-governance-finalizer.yml'
+  '.github/workflows/mcft-cap-06-s2-governance-finalizer.yml',
 ];
 const readJson = (relative) => JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
 const readText = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
@@ -62,7 +64,9 @@ function main() {
   const acceptance = readText('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts');
   const grid = readText('apps/server/src/domain/calibration/grid_search_v1.ts');
   const s2EffectivePhase = status.s2_effective === true;
-  const effectiveness = s2EffectivePhase ? readJson('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json') : null;
+  const effectiveness = s2EffectivePhase
+    ? readJson('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json')
+    : null;
   const candidateTreeText = EXPECTED_FILES
     .filter((relative) => relative !== 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs')
     .map((relative) => readText(relative))
@@ -103,18 +107,47 @@ function main() {
   assert.equal(status.delivery_slice_id, S2);
   assert.deepEqual(status.exact_changed_file_boundary, EXPECTED_FILES);
   assert.equal(status.candidate_tree_validation.exact_changed_file_count, 18);
-  if (s2EffectivePhase) {
-    assert.equal(status.status,'MERGED_EFFECTIVE'); assert.equal(status.s3_authorized,true); assert.ok(effectiveness); assert.equal(effectiveness.implementation_exact_head,'cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f'); assert.equal(effectiveness.implementation_exact_head_ci_run,29504752806); assert.equal(effectiveness.implementation_merge_commit,'b6d28477d87239ee417c688d43122cb7a20b1a31'); assert.equal(effectiveness.postmerge_workflow_run,29506065728); assert.equal(effectiveness.canonical_write_count,0);
-    assert.equal(current.current_state.active_delivery_slice_id,S3); assert.equal(current.current_state.s2,'MERGED_EFFECTIVE'); assert.equal(current.current_state.calibration_contract_math_implemented,true); assert.equal(current.current_state.s3,'AUTHORIZED_NOT_STARTED');
-    assert.equal(delivery.active_delivery_slice_id,S3); assert.deepEqual(delivery.candidate_slices,[]); assert.deepEqual(delivery.authorized_not_started_slices,[S3]); assert.equal(delivery.s2_effective,true); assert.equal(delivery.s3_authorized,true);
-  } else {
-    assert.equal(status.status,'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE'); assert.equal(status.s2_effective,false); assert.equal(status.s3_authorized,false); assert.equal(current.current_state.active_delivery_slice_id,S2); assert.equal(delivery.active_delivery_slice_id,S2); assert.deepEqual(delivery.candidate_slices,[S2]);
-  }
-  const lines=Array.isArray(matrix.capability_lines)?matrix.capability_lines:matrix.capabilities; const line=lines.find(x=>x.capability_line_id==='MCFT-CAP-06'); const matrixS2=line.delivery_slices.find(x=>x.delivery_slice_id===S2);
-  assert.equal(line.preserved_nonclaims.includes('NO_S2_IMPLEMENTATION'),false); assert.equal(current.preserved_nonclaims.includes('NO_S2_IMPLEMENTATION'),false); assert.equal(current.s2_candidate_validation.exact_permanent_changed_file_count,18);
-  if(s2EffectivePhase){const matrixS3=line.delivery_slices.find(x=>x.delivery_slice_id===S3); assert.equal(line.active_delivery_slice_id,S3); assert.equal(line.calibration_contract_math_implemented,true); assert.equal(matrixS2.status,'MERGED_EFFECTIVE'); assert.equal(matrixS3.status,'AUTHORIZED_NOT_STARTED'); assert.deepEqual(line.next_authorized_slice_ids,[S3]); assert.equal(matrix.latest_governance_update,'MCFT-CAP-06.S2.MERGED-MAIN-EFFECTIVENESS-ACTIVATION-V1'); assert.equal(current.baseline_main_commit,'b6d28477d87239ee417c688d43122cb7a20b1a31');} else {assert.equal(line.active_delivery_slice_id,S2); assert.equal(line.calibration_contract_math_implemented,false); assert.equal(matrixS2.status,'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');}
 
-  assert.match(task, s2EffectivePhase ? /S2_MERGED_EFFECTIVE_S3_AUTHORIZED_NOT_STARTED/ : /S2_CONTRACTS_MATH_CANDIDATE/);
+  if (s2EffectivePhase) {
+    assert.equal(status.status, 'MERGED_EFFECTIVE');
+    assert.equal(status.s3_authorized, true);
+    assert.ok(effectiveness);
+    assert.equal(effectiveness.implementation_exact_head, 'cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f');
+    assert.equal(effectiveness.implementation_exact_head_ci_run, 29504752806);
+    assert.equal(effectiveness.implementation_merge_commit, 'b6d28477d87239ee417c688d43122cb7a20b1a31');
+    assert.equal(effectiveness.postmerge_workflow_run, 29506065728);
+    assert.equal(effectiveness.canonical_write_count, 0);
+    assert.equal(current.current_state.s2, 'MERGED_EFFECTIVE');
+    assert.equal(current.current_state.calibration_contract_math_implemented, true);
+    assert.equal(delivery.s2_effective, true);
+    assert.equal(delivery.s3_authorized, true);
+    assert.equal(current.current_state.active_delivery_slice_id, delivery.active_delivery_slice_id);
+  } else {
+    assert.equal(status.status, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
+    assert.equal(status.s2_effective, false);
+    assert.equal(status.s3_authorized, false);
+    assert.equal(current.current_state.active_delivery_slice_id, S2);
+    assert.equal(delivery.active_delivery_slice_id, S2);
+    assert.deepEqual(delivery.candidate_slices, [S2]);
+  }
+
+  const lines = Array.isArray(matrix.capability_lines) ? matrix.capability_lines : matrix.capabilities;
+  const line = lines.find((item) => item.capability_line_id === 'MCFT-CAP-06');
+  const matrixS2 = line.delivery_slices.find((item) => item.delivery_slice_id === S2);
+  assert.equal(line.preserved_nonclaims.includes('NO_S2_IMPLEMENTATION'), false);
+  assert.equal(current.preserved_nonclaims.includes('NO_S2_IMPLEMENTATION'), false);
+  if (s2EffectivePhase) {
+    assert.equal(line.calibration_contract_math_implemented, true);
+    assert.equal(matrixS2.status, 'MERGED_EFFECTIVE');
+    assert.equal(matrixS2.effectiveness_condition_satisfied, true);
+    assert.equal(matrix.latest_governance_update, 'MCFT-CAP-06.S2.MERGED-MAIN-EFFECTIVENESS-ACTIVATION-V1');
+  } else {
+    assert.equal(line.active_delivery_slice_id, S2);
+    assert.equal(line.calibration_contract_math_implemented, false);
+    assert.equal(matrixS2.status, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
+  }
+
+  assert.match(task, new RegExp(S2.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   assert.match(task, /NO_CALIBRATION_CANDIDATE_APPEND/);
   assert.match(task, /NO_SHADOW_EVALUATION_APPEND/);
   assert.match(runner, /MCFT_CAP_06_S2_CONTRACTS_MATH/);
@@ -132,6 +165,7 @@ function main() {
   for (const forbidden of ['twin_calibration_candidate_v1', 'twin_shadow_evaluation_v1', 'twin_model_activation_v1']) {
     assert.equal(result[forbidden], undefined);
   }
+
   console.log('MCFT-CAP-06 S2 contracts/math governance: PASS');
 }
 

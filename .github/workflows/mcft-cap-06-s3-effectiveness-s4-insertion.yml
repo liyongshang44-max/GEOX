@@ -1,0 +1,73 @@
+name: mcft-cap-06-s3-effectiveness-s4-insertion
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s3-effectiveness-s4-insertion.yml'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-EFFECTIVENESS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CAP05-STRUCTURAL-DEBT-REGISTER.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-AMENDMENT-CAP05-STRUCTURAL-DEBT-V1.md'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-PREDECESSOR-CONSUMPTION-STABILIZATION.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_EFFECTIVENESS_S4_INSERTION.cjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-06-s3-effectiveness-s4-insertion.yml'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-EFFECTIVENESS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CAP05-STRUCTURAL-DEBT-REGISTER.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-AMENDMENT-CAP05-STRUCTURAL-DEBT-V1.md'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-PREDECESSOR-CONSUMPTION-STABILIZATION.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_EFFECTIVENESS_S4_INSERTION.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  s3-effectiveness-s4-insertion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate governance JSON syntax
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const files = [
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-EFFECTIVENESS.json',
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-STATUS.json',
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json',
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json',
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json',
+            'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CAP05-STRUCTURAL-DEBT-REGISTER.json',
+          ];
+          for (const file of files) JSON.parse(fs.readFileSync(file, 'utf8'));
+          NODE
+
+      - name: Run S3 effectiveness and S4 insertion Gate
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_EFFECTIVENESS_S4_INSERTION.cjs 2>&1 | tee acceptance-output/MCFT_CAP_06_S3_EFFECTIVENESS_S4_INSERTION.log
+
+      - name: Upload S3 effectiveness insertion evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s3-effectiveness-s4-insertion-evidence
+          path: acceptance-output/
+          if-no-files-found: warn
