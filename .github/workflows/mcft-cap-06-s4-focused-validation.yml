@@ -12,6 +12,7 @@ on:
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CAP05-STRUCTURAL-DEBT-REGISTER.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_STABILIZATION.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_DOMAIN.ts'
@@ -29,6 +30,7 @@ on:
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CAP05-STRUCTURAL-DEBT-REGISTER.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_STABILIZATION.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_DOMAIN.ts'
@@ -63,9 +65,27 @@ jobs:
       POSTGRES_PORT: 5432
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
     steps:
-      - name: Checkout S4 candidate
+      - name: Checkout trigger head
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Detect downstream S6 effectiveness
+        id: mode
+        shell: bash
+        run: |
+          if [[ -f docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json ]]; then
+            echo "s6_effectiveness=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "s6_effectiveness=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout exact historical S5 effectiveness frontier
+        if: steps.mode.outputs.s6_effectiveness == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: 5f73ed68cad479276ca55fb70391ae4543cb3dcc
           fetch-depth: 0
 
       - name: Setup pnpm
