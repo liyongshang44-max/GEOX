@@ -25,6 +25,9 @@ const EXPECTED_WRITEBACK_FILES = [
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_EFFECTIVENESS_S5_AUTHORIZATION.cjs',
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_STABILIZATION.cjs',
 ];
+const GOVERNANCE_PAYLOAD_FILES = EXPECTED_WRITEBACK_FILES.filter(
+  (file) => file.startsWith('docs/digital_twin/'),
+);
 
 function read(relative) {
   return fs.readFileSync(path.join(ROOT, relative), 'utf8');
@@ -180,11 +183,11 @@ function main() {
   ]) assert.equal(combined.includes(token), true, `WRITEBACK_NONCLAIM_MISSING:${token}`);
   assert.equal(combined.some((token) => token.includes('NO_S5_IMPLEMENTATION')), true);
 
-  const allWritebackSource = EXPECTED_WRITEBACK_FILES.map(read).join('\n');
-  assert.equal(/INSERT\s+INTO\s+facts/i.test(allWritebackSource), false);
-  assert.equal(/twin_model_activation_v1/.test(allWritebackSource), false);
-  assert.equal(/active_config_switch_performed\s*:\s*true/.test(allWritebackSource), false);
-  assert.equal(/model_parameter_change_applied\s*:\s*true/.test(allWritebackSource), false);
+  const governancePayloadSource = GOVERNANCE_PAYLOAD_FILES.map(read).join('\n');
+  assert.equal(/INSERT\s+INTO\s+facts/i.test(governancePayloadSource), false);
+  assert.equal(/twin_model_activation_v1/.test(governancePayloadSource), false);
+  assert.equal(/active_config_switch_performed\s*:\s*true/.test(governancePayloadSource), false);
+  assert.equal(/model_parameter_change_applied\s*:\s*true/.test(governancePayloadSource), false);
 
   console.log(`PASS MCFT-CAP-06 S4 effectiveness and S5 authorization gate; changed_files=${changed.length}`);
 }
