@@ -78,7 +78,16 @@ async function main(): Promise<void> {
   );
   assert.deepEqual(
     Object.getOwnPropertyNames(Object.getPrototypeOf(graphAssembler)).sort(),
-    ["constructor", "resolveExactResidualGraph", "resolveExactResidualGraphs", "resolveWithClientV1"],
+    [
+      "constructor",
+      "resolveCaseWithClientV1",
+      "resolveExactResidualCase",
+      "resolveExactResidualCases",
+      "resolveExactResidualGraph",
+      "resolveExactResidualGraphs",
+      "resolveExactResidualRefs",
+      "resolveWithClientV1",
+    ],
   );
   for (const forbidden of [
     "listResiduals",
