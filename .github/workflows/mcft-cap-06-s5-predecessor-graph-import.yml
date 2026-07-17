@@ -37,10 +37,27 @@ jobs:
         run: |
           set -euo pipefail
           BUNDLE='tmp/mcft-cap-06-s5-predecessor-graph-import/patches.tar.gz.b64'
-          test "$(sha256sum "$BUNDLE" | cut -d' ' -f1)" = "$EXPECTED_B64_SHA256"
+          ACTUAL_B64_SHA256="$(sha256sum "$BUNDLE" | cut -d' ' -f1)"
+          BUNDLE_BYTES="$(wc -c < "$BUNDLE" | tr -d ' ')"
+          echo "bundle_bytes=$BUNDLE_BYTES"
+          echo "actual_b64_sha256=$ACTUAL_B64_SHA256"
+          echo "expected_b64_sha256=$EXPECTED_B64_SHA256"
+          if [ "$ACTUAL_B64_SHA256" != "$EXPECTED_B64_SHA256" ]; then
+            echo 'PATCH_BUNDLE_TEXT_SHA_MISMATCH' >&2
+            exit 41
+          fi
           mkdir -p /tmp/mcft-cap-06-s5-import
           base64 -d "$BUNDLE" > /tmp/mcft-cap-06-s5-import/patches.tar.gz
-          test "$(sha256sum /tmp/mcft-cap-06-s5-import/patches.tar.gz | cut -d' ' -f1)" = "$EXPECTED_TARBALL_SHA256"
+          ACTUAL_TARBALL_SHA256="$(sha256sum /tmp/mcft-cap-06-s5-import/patches.tar.gz | cut -d' ' -f1)"
+          TARBALL_BYTES="$(wc -c < /tmp/mcft-cap-06-s5-import/patches.tar.gz | tr -d ' ')"
+          echo "tarball_bytes=$TARBALL_BYTES"
+          echo "actual_tarball_sha256=$ACTUAL_TARBALL_SHA256"
+          echo "expected_tarball_sha256=$EXPECTED_TARBALL_SHA256"
+          if [ "$ACTUAL_TARBALL_SHA256" != "$EXPECTED_TARBALL_SHA256" ]; then
+            echo 'PATCH_BUNDLE_TARBALL_SHA_MISMATCH' >&2
+            exit 42
+          fi
+          tar -tzf /tmp/mcft-cap-06-s5-import/patches.tar.gz
           tar -xzf /tmp/mcft-cap-06-s5-import/patches.tar.gz -C /tmp/mcft-cap-06-s5-import
           test -f /tmp/mcft-cap-06-s5-import/01-authority.patch
           test -f /tmp/mcft-cap-06-s5-import/02-preflight.patch
