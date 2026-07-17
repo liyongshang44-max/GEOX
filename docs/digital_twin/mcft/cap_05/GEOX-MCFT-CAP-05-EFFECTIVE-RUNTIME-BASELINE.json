@@ -1,0 +1,39 @@
+{
+  "schema_version": "geox_mcft_cap_05_effective_runtime_baseline_v1",
+  "authority_id": "MCFT-CAP-05.EFFECTIVE-RUNTIME-BASELINE-AGGREGATE-V1",
+  "capability_line_id": "MCFT-CAP-05",
+  "record_kind": "APPEND_ONLY_GOVERNANCE_READ_MODEL",
+  "status": "EFFECTIVE",
+  "historical_closure_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json",
+  "historical_delivery_status_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-DELIVERY-SLICE-STATUS.json",
+  "historical_closure_commit": "fd6c54e84ee4ede7bbb581b4fc55660251c2265f",
+  "historical_completion_status": "COMPLETE",
+  "latest_effective_amendment_ref": "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-POST-CLOSURE-RUNTIME-CONFORMANCE-EFFECTIVENESS.json",
+  "latest_effective_amendment_commit": "0867439b17545bec5fd84e373e72d17881ab50ae",
+  "effective_runtime_baseline_commit": "0867439b17545bec5fd84e373e72d17881ab50ae",
+  "current_successor_eligibility": "RESTORED",
+  "successor_capability_line_id": "MCFT-CAP-06",
+  "formal_runner_proof_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts",
+  "formal_runner_proof_workflow_name": "mcft-cap-05-postmerge-effectiveness-proof",
+  "formal_runner_proof_workflow_run": 29441019824,
+  "formal_runner_proof_status": "PASS",
+  "checkpoint_transition": "72_TO_80",
+  "restart_recovery": "PASS",
+  "completed_chain_zero_write_replay": "PASS",
+  "authority_precedence": [
+    "HISTORICAL_CLOSURE_ESTABLISHES_COMPLETION_HISTORY",
+    "LATEST_EFFECTIVE_AMENDMENT_ESTABLISHES_CURRENT_RUNTIME_CONFORMANCE",
+    "THIS_AGGREGATE_ESTABLISHES_MACHINE_READABLE_SUCCESSOR_BASELINE_PRECEDENCE"
+  ],
+  "historical_closure_rewrite": false,
+  "canonical_runtime_config_mutation": false,
+  "runtime_behavior_change": false,
+  "preserved_nonclaims": [
+    "NO_CONTINUOUS_SCHEDULER_CLAIM",
+    "NO_LIVE_FIELD_RUNTIME_CLAIM",
+    "NO_LATE_EVIDENCE_HISTORY_REVISION_CLAIM",
+    "NO_AUTOMATIC_CAUSAL_ATTRIBUTION_CLAIM",
+    "NO_AUTOMATIC_RECOMMENDATION_CLAIM",
+    "NO_MODEL_ACTIVATION_OR_CALIBRATION_CLAIM"
+  ]
+}
