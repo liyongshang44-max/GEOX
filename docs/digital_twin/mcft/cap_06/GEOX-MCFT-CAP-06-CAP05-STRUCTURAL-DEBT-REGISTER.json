@@ -3,7 +3,7 @@
   "register_id": "MCFT-CAP-06.CAP05-PREDECESSOR-STRUCTURAL-DEBT-REGISTER-V1",
   "capability_line_id": "MCFT-CAP-06",
   "predecessor_capability_line_id": "MCFT-CAP-05",
-  "status": "S4_CANDIDATE_TREATMENTS_NOT_EFFECTIVE",
+  "status": "S4_EFFECTIVE_TREATMENTS_S5_AUTHORIZED",
   "insertion_point": {
     "after_slice": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
     "before_slice": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
@@ -38,18 +38,19 @@
       "debt_id": "CAP05-STRUCT-01",
       "title": "CAP05-to-CAP04 execution view is recovered by subtracting CAP05-only fields",
       "classification": "CONFIG_INHERITANCE_MAINTENANCE_DEBT",
-      "status": "CANDIDATE_TREATED_NOT_EFFECTIVE",
-      "current_risk": [
+      "status": "EFFECTIVE_TREATED",
+      "prior_risk": [
         "NEW_CAP05_POLICY_FIELD_REQUIRES_RESOLVER_MAINTENANCE",
         "OMISSION_CAN_LEAK_CAP05_ONLY_FIELD_TO_CAP04_VALIDATOR",
         "SUBTRACTIVE_PROJECTION_IS_SCHEMA_DRIFT_SENSITIVE"
       ],
-      "s4_required_treatment": [
-        "REPLACE_SUBTRACTIVE_PROJECTION_WITH_POSITIVE_CAP04_EXECUTION_FIELD_SELECTION",
-        "KEEP_EXECUTION_VIEW_NON_CANONICAL",
-        "ADD_KEYSET_PARITY_AND_UNKNOWN_POLICY_FIELD_NON_LEAKAGE_ACCEPTANCE"
+      "effective_treatment": [
+        "POSITIVE_CAP04_EXECUTION_FIELD_SELECTION",
+        "NON_CANONICAL_EXECUTION_VIEW",
+        "KEYSET_PARITY_AND_UNKNOWN_POLICY_FIELD_NON_LEAKAGE_ACCEPTANCE",
+        "FINAL_CAP04_VALIDATION_AT_PROJECTION_AND_RESOLVER_BOUNDARIES"
       ],
-      "candidate_treatment_refs": [
+      "effective_treatment_refs": [
         "apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_DOMAIN.ts"
       ],
@@ -60,19 +61,21 @@
       "debt_id": "CAP05-STRUCT-02",
       "title": "No reusable read-only cross-object Forecast-to-Observation graph assembler",
       "classification": "CROSS_OBJECT_CONSUMPTION_VIEW_DEBT",
-      "status": "CANDIDATE_TREATED_NOT_EFFECTIVE",
-      "current_risk": [
+      "status": "EFFECTIVE_TREATED",
+      "prior_risk": [
         "SUCCESSOR_CAPABILITIES_REPEAT_GRAPH_TRAVERSAL",
         "HASH_REF_DUAL_TIME_AND_CUTOFF_RULES_CAN_DIVERGE",
         "CASE_BUILDER_BECOMES_COUPLED_TO_PERSISTENCE_GRAPH_RESOLUTION"
       ],
-      "s4_required_treatment": [
-        "ESTABLISH_NON_CANONICAL_READ_ONLY_RESOLVED_FORECAST_OBSERVATION_CASE_V1",
-        "IMPLEMENT_EXACT_REF_POSTGRESQL_GRAPH_ASSEMBLER",
-        "VALIDATE_FORECAST_POINT_POSTERIOR_CONFIG_OBSERVATION_EVIDENCE_FORCING_OPERATOR_GEOMETRY_NUMERIC_POLICY_LINEAGE_AND_DUAL_TIME",
-        "REUSE_AS_THE_ONLY_S5_AND_S6_GRAPH_RESOLUTION_AUTHORITY"
+      "effective_treatment": [
+        "NON_CANONICAL_READ_ONLY_RESOLVED_FORECAST_OBSERVATION_CASE_V1",
+        "EXACT_REF_POSTGRESQL_GRAPH_ASSEMBLER",
+        "SOURCE_FORECAST_AND_RESIDUAL_RUNTIME_CONFIG_AUTHORITIES_RESOLVED_SEPARATELY",
+        "OBSERVATION_RECONSTRUCTED_FROM_CANONICAL_EVIDENCE_WINDOW",
+        "FORECAST_POINT_POSTERIOR_CONFIG_OBSERVATION_EVIDENCE_FORCING_OPERATOR_GEOMETRY_NUMERIC_POLICY_LINEAGE_AND_DUAL_TIME_VALIDATION",
+        "SOLE_S5_AND_S6_GRAPH_RESOLUTION_AUTHORITY"
       ],
-      "candidate_treatment_refs": [
+      "effective_treatment_refs": [
         "apps/server/src/domain/twin_runtime/resolved_forecast_observation_case_v1.ts",
         "apps/server/src/persistence/calibration/postgres_resolved_forecast_observation_case_assembler_v1.ts",
         "apps/server/src/persistence/calibration/postgres_exact_calibration_residual_repository_v1.ts",
@@ -85,18 +88,18 @@
       "debt_id": "CAP05-STRUCT-03",
       "title": "Historical closure and post-closure runtime conformance are separate machine authorities",
       "classification": "SSOT_PRECEDENCE_DEBT",
-      "status": "CANDIDATE_TREATED_NOT_EFFECTIVE",
-      "current_risk": [
+      "status": "EFFECTIVE_TREATED",
+      "prior_risk": [
         "DELIVERY_STATUS_ALONE_RETURNS_STALE_CLOSURE_BASELINE",
         "POST_CLOSURE_STATUS_ALONE_OMITS_FULL_SLICE_HISTORY",
         "SUCCESSORS_MUST_REIMPLEMENT_AUTHORITY_PRECEDENCE"
       ],
-      "s4_required_treatment": [
-        "ADD_APPEND_ONLY_CAP05_EFFECTIVE_RUNTIME_BASELINE_AGGREGATE_POINTER",
-        "REFERENCE_HISTORICAL_CLOSURE_AND_LATEST_EFFECTIVE_AMENDMENT",
-        "EXPOSE_EFFECTIVE_RUNTIME_BASELINE_COMMIT_AND_SUCCESSOR_ELIGIBILITY_WITHOUT_REWRITING_HISTORY"
+      "effective_treatment": [
+        "APPEND_ONLY_CAP05_EFFECTIVE_RUNTIME_BASELINE_AGGREGATE_POINTER",
+        "HISTORICAL_CLOSURE_AND_LATEST_EFFECTIVE_AMENDMENT_REFERENCED",
+        "EFFECTIVE_RUNTIME_BASELINE_COMMIT_AND_SUCCESSOR_ELIGIBILITY_EXPOSED_WITHOUT_HISTORY_REWRITE"
       ],
-      "candidate_treatment_refs": [
+      "effective_treatment_refs": [
         "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-EFFECTIVE-RUNTIME-BASELINE.json"
       ],
       "historical_closure_rewrite_authorized": false
@@ -105,21 +108,35 @@
       "debt_id": "CAP05-PROCESS-01",
       "title": "Component proofs historically substituted for formal production composition proof",
       "classification": "ACCEPTANCE_TOPOLOGY_DEBT",
-      "status": "CANDIDATE_TREATED_NOT_EFFECTIVE",
-      "s4_required_treatment": [
-        "FREEZE_FOUR_LAYER_ACCEPTANCE_TOPOLOGY",
-        "REQUIRE_DOMAIN_ACCEPTANCE",
-        "REQUIRE_REPOSITORY_ACCEPTANCE",
-        "REQUIRE_ORCHESTRATION_ACCEPTANCE",
-        "REQUIRE_FORMAL_PRODUCTION_COMPOSITION_ACCEPTANCE_BEFORE_S5_EFFECTIVENESS"
+      "status": "EFFECTIVE_TREATED",
+      "effective_treatment": [
+        "FOUR_LAYER_ACCEPTANCE_TOPOLOGY_FROZEN",
+        "DOMAIN_ACCEPTANCE_PASS",
+        "REPOSITORY_ACCEPTANCE_PASS",
+        "ORCHESTRATION_ACCEPTANCE_PASS",
+        "FORMAL_PRODUCTION_COMPOSITION_ACCEPTANCE_PASS_EXACT_HEAD_AND_MERGED_MAIN"
       ],
-      "candidate_treatment_refs": [
+      "effective_treatment_refs": [
         "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S4_STABILIZATION.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_DOMAIN.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_FORMAL_COMPOSITION_DB.ts"
       ]
     }
   ],
+  "effectiveness_evidence": {
+    "implementation_pr_number": 2536,
+    "implementation_exact_head": "3df36f40b94993941ba8845adcf66b7e189d4bc9",
+    "implementation_focused_validation_run": 29557910269,
+    "implementation_standard_ci_run": 29557910267,
+    "implementation_merge_commit": "d2a71aaa5a80a708476d1abaceeef266fe955659",
+    "head_to_merge_file_delta_count": 0,
+    "head_to_merge_tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2537,
+    "postmerge_probe_closed_without_merge": true,
+    "postmerge_workflow_run": 29558471514,
+    "postmerge_gate": "PASS",
+    "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-EFFECTIVENESS.json"
+  },
   "explicit_non_debt": [
     "NO_CONTINUOUS_SCHEDULER_WAS_OWED_BY_CAP05",
     "NO_LIVE_FIELD_RUNTIME_WAS_OWED_BY_CAP05",
@@ -128,7 +145,7 @@
     "NO_AUTOMATIC_RECOMMENDATION_WAS_OWED_BY_CAP05",
     "NO_MODEL_ACTIVATION_OR_CALIBRATION_WAS_OWED_BY_CAP05"
   ],
-  "exit_condition": "ALL_OPEN_ITEMS_HAVE_MERGED_MAIN_PROOF_AND_S4_EFFECTIVENESS_BEFORE_S5_AUTHORIZATION",
-  "s4_effective": false,
-  "s5_authorized": false
+  "exit_condition": "SATISFIED_BY_S4_MERGED_MAIN_PROOF_AND_EFFECTIVENESS_WRITEBACK",
+  "s4_effective": true,
+  "s5_authorized": true
 }
