@@ -1,0 +1,108 @@
+name: mcft-cap-06-s5-predecessor-effectiveness-bootstrap
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s5-predecessor-effectiveness-bootstrap.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-effective-candidate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      MCFT_CAP_06_S5_GRAPH_BASELINE_REF: 437a6ccae5903494638d17c997a7017c6da057cf
+      MCFT_CAP_06_S5_PREDECESSOR_EFFECTIVENESS_BASELINE_REF: 17a01ec25be2bbd7ee92b9e9e6115afed9665435
+    steps:
+      - name: Checkout exact predecessor merge
+        uses: actions/checkout@v4
+        with:
+          ref: 17a01ec25be2bbd7ee92b9e9e6115afed9665435
+          fetch-depth: 0
+
+      - name: Verify exact main baseline
+        shell: bash
+        run: |
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "17a01ec25be2bbd7ee92b9e9e6115afed9665435"
+          test "$(git rev-parse origin/main)" = "17a01ec25be2bbd7ee92b9e9e6115afed9665435"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run exact predecessor preflight before candidate creation
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S5_PREDECESSOR_GRAPH_CONFORMANCE.cjs
+
+      - name: Verify structured predecessor evidence
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S5_PREDECESSOR_GRAPH_PREFLIGHT_RESULT.json', 'utf8'));
+          if (result.schema_version !== 'geox_mcft_cap_06_s5_predecessor_graph_preflight_result_v1') throw new Error('BOOTSTRAP_GRAPH_SCHEMA_MISMATCH');
+          if (result.status !== 'PASS') throw new Error('BOOTSTRAP_GRAPH_NOT_PASS');
+          if (result.canonical_write_count !== 0 || result.candidate_append_count !== 0 || result.evaluation_append_count !== 0) throw new Error('BOOTSTRAP_GRAPH_WRITE_BOUNDARY_VIOLATION');
+          if (result.s5_authorized !== false || result.s5_implementation_started !== false) throw new Error('BOOTSTRAP_GRAPH_FRONTIER_MISMATCH');
+          NODE
+
+      - name: Materialize one-commit effectiveness candidate
+        shell: bash
+        env:
+          PAYLOAD_B64: "H4sIAAAAAAAAA+w9+3OjRtL78/4VfK6r86bqkHk/nEvqZAnbutiST4/d20ulpgYYLLKSUADtZi/J//71gEADAoHXWu9exUplLUNPT09Pv6fBnXs/nm/ssw9B+M5bBB+is6XjxbyD17yg8ZHKr0PiEodEURDy9yFez3knWHlBuMQrh3Q+LhcvGj8CfDRFSX7Cp/RTElRVfSGqkqQpsqpK+gtBUgRNfsEJzagf/9lEMQ457kUYBPEhuKb7/6OfFV6Sc+4he/7yZbA6f8lx681igULyy4ZEMf0druB4HqVfOY7nTjuPlq3THTK8XkdnEQnfk/AsCp0zN1hif3UWf/BXKNysYn9JzkISBYv3xEWAgzg4ilFg0yE49oMVggsEvRc7cXQA7ZqEkR/FBAg4c/DCt8Nk8Nk6iOJ7wI9azIGjiCztBQkbZ8sIL6wC+CMoKAgR/aIi8itxNilyYI5/n1Gwj90NnOjM9YHreIEoyoTfFB8StLMra/Rv/rZ3OeV73Tu6AROVvxtbfatnTSajMd+dTa9H48H0LX817t5d86+lzs9RsDoa/hRrbzS8HI1vu8OedVz01uWl1ZsOXltD+P2RqKfdyQ9899Ya9uH/aeNC+NdiZ+ky00VO6K/j6Ow+gG1aUWFG2HHIOqZfz7q9nnU3pQMRnRTBpEAFmiiosAY0UdF2T/7TnQ5Gw47zc3SESSbT7sXg5pg4VQRcGr8tkn8kzAzjUcJ4xErQ8edos4atorZjd0LrDVB9ezeaDCjPUf+iqLefgLeJMZ8Z/0OWMJ4Nj7GpFZipDqNUh1GkosSDoNyDxMjzf403Idh8aUvsehPNU/8EZn3lzEl0zv1I3chPz/7r2X89+69n//Xsv57919fqv16CbV/6UQSmNPFSAAl2PgYfFhLsvnz5Mxhyer3JMaUeDuiJeMjkuI0NlG34BY4hkUtuUQPvw+jMFWa+I/ud4/wlvoe0Mb8havktsnq/g+M4EJrp1diaoNnEGu9GVEHcdSeTN6Nx/zBU/+KcuyfBr/m9dRDGETslz6mKLJ3Tf/KrwTpO2MZ9z7OQ/JzgRQzcWbrcyfoe+RFl5UeOn+U0cLybzHdSNc6HHQDXueBEIaq6T3c82MScWnk3JHHowwyi8LLEucNca+ZYHbfy69fw5ZwTJb0jwH/iHuLRGG4zHOx3wep2JxaajW+YfT/L44rz7Ms/cqTJDpwxs5e0KNUcivVmMLTQ2Lo85xRZx5rjYKKagqyYiiYbrqg7pqljXYAvmosFVXe8aoy1hrA0i6hjQSSOpNpEsm1XJ8SUbJOYRBNFFXvENTUNiFdTbYjJmokK04JJb06cd3Rnya/YiTkHr1zfBQ3i5lQVs53eRDTCBAAqe2fOdsw/3is5xAeIMFnZDYl3zv3lt9+4NPTskPeg4YjOyX33HXfK1lxOub/+tQDWYe92KCGdaI6533/PoOhvf/zBzOaR2JnzLtij+TknvCytsU9iAmsjngc/fJgB7An3IfRjYmPn3c4WuOfcMnBJfiGak8XinLNxNM+vgbU5535npvY97scfOd7jjh01cT/99C0Xz8mKmQx0y5kH3ElhKd/F4YaccN9/z5385WowvZ5doNFsejebsppOFhFpRORhgGrC5Pll/pZkaEnCe+JyjOkGM7tekCVsbRKc7zgOMpJIZYfyvQMo1ps46hQ3iooLXeHpY6XxQcrSRq4mJN6sufVqvSyRRi+dpfTxEQU6RNt7muhQ/2V2RLWjVE8yZOWyuP5kAn4FAIdmoff5fCoJrJqYW0v6cTDwMaW8TMFgFYFILzgvDP5LVhxwg6xcyMt8xq8lakEHc/4WmudTeH4ROO88f0HKaMebFRf5q/sFAZ++BIdeFJnE29Mr3sK/n8fFmehquCOHOmX6XpPQ9z6CfIYbh0Yv7pYk8t6nqyf1JiGhjuf+/vfT4ahvnbJchg2LOQ+EmqPmzQ/Jq1MKfe5Fp998uwcIXmiziAH4nxPIENY4jMgrL+pQ134JHJ18XDmvTnfL5lMFOmtcOVy5vBlcXU/Bi0xmN9M0S/sbd7qJPeP0mwIlYN9epXR0IhCRJUZbKeL+j2om9YqoFP8x27iNBfNtRCkqyJhPvwHjFgYfuBX5wFlhGISvTnNfmpKFJr1r67aLbgeT2+60d31aSxjYlU2UEkRDiTa4h6MpSmFrkIIrDFa+A8Y8cRUQz4KcJXMI1BXtoFKHifCa6kUNGIHYapNWJvbhDlH7ZjyYWuhiNBv2u5DZvR6MbpJ8sZ4XKsKbeB6E/n9BZCn+xKoztABE0R4jenIUs9CHKALhgd2YjS0qW5DDjqdFWqjMl3Vptl4EuFaBqBvAiw/4Y/Tqmxojt0kQ8ECm78G1g5au3UHQHhVp2YxOWdanAqPB0vLUnEW8BzsIIQOh/NkzbhC5BCHZesSiQ6uJsZ7WGX4loVniBHYWtrjYK+DRY9mz7y6OWpRodhpFAitl/1OX9T/ic4oJzGf3OAXWNfqbekKP7HzqJ/rqPVE96UfwTlSuj+Gc6om8HI+G04E1rtnKA/6qhe5mfosaykdb72N6ucLMx/Z2X7rZo+LzwPS7NxuP6ZFC37oBORm/5SGSmaYnIfVzHO7/EVVd0PL+H1lWXwiSrMjP/T9P8vkN5Pak6C9OzrmTPW/hbMKQxjsuWYByhB+pfYnpceTJ3ygGgMK2v/Djj2jhrwjyXYqFkZwULCROELronb9K78+m3YsbC2XSlNucFNrGEUmwlX2TRwcfu3BUmpOeziKaYfsxna1tFSTFkjo3Oq7xJOLWGl9Z/Z3tZY/N4Dr1ckm2YPVT1PtmfjfToXGZ/0iH5RyFkdS0pruzrQhEwSakYV7ucVggnAxj5GDhOxX73Um+A98FkxdFXpQ6ve7N4GKc+DmAGfYHfbAcPD1XmqU/bwdT/nUuT5lXTvDTBf74U2EdxEWrIM7cHAOWGOLjkAKo0kltWo156Cx33QHsPH89mExhU2BOfnLd7Y/e5BNtF1uJR6YYtvDW6+7NbEttgU01IwWFDoaIke4/P7a6/Ytu7wf4cjEb3PQPDlaSFRjJImAFo8mUnX2YUDCczG7vkt+nA0B7GJ0o8aLWSUId4AXL+IwZN6MJZMU1aLK7u106DJdqE3/bHQz5y8Gwm50T81cHxnbvkhPl6dtkZ26sZEDBQPBd+jXFVI0kmaw0aGwBs3qAOR+YC1QkgxD9lqKp1LNKTaeSXoTZ6UkOXQapUnW4vPTvw23PBw1k4aa4h5NpJjmAfxcZt4OnuT014ig7MvplgbCL1zEJ60fRwC5C1Dq7MNbe+Au3HngdBj8TZ9vQsk0CqGuKQ//+HmhsIo4m6NSeCbZDFFM3JNkUTIUYcNnTHNfVZM8Ggjxd103btrVMILzA2VACgSOUgXR+sKmASTJVSZAUSRDlLSjs5srF4AsdvwgjSoqZbRE9EWB8kKwRzzZlU5MlSbIlXTNsw5VsTzYUT1cMx9Acokoqzsih/E1xZB1M7FSmbgqKVBaSx3hYucqrAv4/UpFXdiLvryKSmG0bNgVH7xCE5SuXbkhxO76MapQTxwIVSS61p0O1ILAHfuIw066oXTMUI6MtVCWtB+8as2qHbH133twFTKDJvO9uYDmZg08bsZhesIisMayELD4WsbGtYTR2W6UVGto9FgbLnXKhLFFCICVu8KGku0ATWuCPQPcub6pfwv7BBBPl0IwfWf8Ge4yuwbEh8AtZCEWNfib6ldWqh6Mpydk6RKvN0iYh1SFV1iqNhux6suYpgm0qJiirItrYMBQVu46nabZORMN0Fdsx2xgNVTdFQdLMQ0ZjC6PXGA1XwrqIMVaxIWBdMBRdc0VsY4cQ4kma5hFAoak5OXQZKA5QiocmsTTWi3HuJoRKwDgkEKf/svFhGVQQMibv2yIQfJuUWam3MFkq0C6qorIHeg+SW57vKAZNOWzQVASSEX7cmbXGoBiSkKTVrFNuVsyPlniQRPiNv357NYBJmWjjMbawxtAdCvhZI9baIG5vgKtNDdYnp2oJl8otnbs0jS6Jsp5asjjcGsnHzAT8H1v/mg0mg201I5um6J0+cZr9fsx0VggPp+PRzSRtwDyq6GZT1OS5jbbNrLRtxMYusV3PNTwB7BgWaAikyaImGTrWXd3FrmCLKsm1fneAmWmxRss8Zq7wlSYtgTFUrcakqZKpqbYmEsm1XcnUFUUxXHpRNB0VIiEVQjNTFsQvatIUoYVJ02RdEWRl3/oVTBpjcR6RNZQUujI2YmFYm1FtDPZK53U00douxPgUW0O4tK0ubDvFow9+7MzroSMJLPA9rdaEBHwo2h7UlEMiZS98OgSe5frUNi5QZuRRHTuK4Ptn+Ezj5T6OfGdX5FdqXJJoMYDZ0tL2cWsqQFvSuk8LJytngf0lU8kYjmjhaUDTX2qjEpTo4m3TIQYtLGT6QFFoKE3r0Wjcu7Ym05Q2BuJuPOrPegl2hng0ntUAbdEV77Mjb7vTa9S77g6vLJaQdFj1TeDUaEgLMtlBzEOXeTvqWzdoVxNgbnXTIh6t8A2u0OTNYNq7Zm7DOqaDWwvddcfgD6bWuIJ0WlEH/sEdq/fD3WgwnCJaKC1NdDu42mfu7OJm0EPjEew+c/mNdcHiB7z92c22yLpFlh9D6sWefaZiUdWgwgj3w6Ight+dNAKicU9/1r3hKX9KTyccIwT6OtLBowVILZ58ybj2+Bip+TGYzxwutXh8ZbfaEDJVmqKCV058fSqAgGJiAZY+khR0LdLnGqxedzJFo4uJNU71GNGCpzUeZIX6CXotZXiPkZUeDLnyKKBUgxJEKpeuYkqQ+2CVYEPTXNU2dQ17hqdgk8iyqjtt0kldlQRDP5xOpjBCVgwsx14POgf5YrGXWQPmLALKG3oqHGzidK5S6fBAtKarhgqcUZ8uAW08s6IBxMs/HnGw/Innv4mTKhW4a0+BG97/AGItls5/FVlQns9/n+Lz0PPf9Ng3qQU6/sJPDUx2Cly6vO/5D4kPc/bX6iz52Ce15YPY9H4ezHghuFEfcofPeLZb4l/lIW1hI3ZB1xot/dUmQmLtUiiQcOhustOlpjBI3v10L+hIeqQIbrMPVI8hPp+NIYTuWxfT/JnM7UIoXwX0ywZckAeB035IxGZnTTQVZKH5FLuhrMUeLjzFSXYh8swIq0+6ozl2weUwZ2rNYxgegRYAVFzOUaNKqQBRBW3sTXeblkSKwWJBmDODtKCPWoTPB0bXbFQkHd77/PH1XZ1vieP5gdMPEUUbZyu8tPfST7xv7fT1UinV9NOVU4M6ElvwKzkDrl19JNcTJ7ciDsBaUVHLHuUgfQpqe4oHoLVLUdotRWm1FKV2KbtSff2CskpPLa0ZQCuKq+pGxfsH5mlVxAO4NnU8SklN7apFTn+IXYeLXQeWd3hgS/a2L7XRcXmlDRKBwKv2m+mlhjxNMbdl6YrkSDcdVzdEBSYXNOwammdojuvYMtzQPF3Euu6J2DZOcgwH8xjF1CsA9/ISRTQkXdJMoQK4XEfeciGLBVqu2MgxF3NTUYakSNRNbEL2apoqEbCoKLKNFUFwBd0xZEHVTc85qRjPJp2KaMoSjFFqOYt12zZceqKqaoItEA9yBAWLWHMxwYSIhNiKYNhea86a7ThrGoooCVXAFTlfq3S3sAkVIVcI2+CmASC7QcV0spjuMnwrgu0l70TTCNaJ5xiKZBsEds12HEcRVEl0Ie+3FVkXiGaW9yt9NDUNtBP9qWCVIgrALWlHSqKKC7bJB2BXCclpvWS/QJIWqZuizx0wBJm0/52Gek6wJtsyTx6Q/2sGgdrloJfWdkbDm7dFFYhaq4Aq1KmArKvY9TDIvAFAkiPqwFlZkEXFVEXX00RbxiDdWqMK6KImaLpWb1wUx5SJo5pYw45gqzJslmoojk3ApOhEkEzV1WzVwA8RxhrQhupLY/1FFFtply5R86BLrbXrKDUVoaaOwsiFiJhYFtwr5VhSVSwp5e5qmQE7i7Fz0ZnIaNizsSqpoIqGINmu5+kObKquCqoqu9jEsiaZpmCfVODYZyIYKFXVGb0jIQSkm+WnskfMTqVvrD5PX/vAW2PIdWa3bJ03yVXvi+XQXK9FDU2sIX1XDOQYMhpbV4NbqyQ7WdtfYbSZPM+DBHTZHdxU7HohBNjTRI24BngH4AawV3F1TARF8AwD26IBVk3VFFNRPb3ZGZmgvuDFpHpN9BxRUMDfqI4C6ofB59OiqWlrxCYS9rCtaFh1vgZNlKqCgpa10AbtNWVdliXJeFrtFZu1Vyo+L8AqbEO1p9kPSHIdXFEYHUd0wBt6susaRAKNl0UseYpE3SsYbgck1May4NVOWy2b4Op1VTIErW5YWVRtzZUMRdddQ5dkkxCFvkPFMFxFFiXJsXUMTl/Esvg1iKrSRuxUAdwk2LsnFjupWezkzyl2Rjuxe2DD8j669h3M+2NbtDQ3C+wDe5y/pMDKVYHLUWxrqTv7qYS8rn+bEXLlMwq5XGvVHtVg+zAhL3bcVgi5DNyl0Uu0P0xm4t79YbSGFSzX8Pu2WFuak4mD2yhWse23WbEe2Af8RRWrquxxHMUq9hA/lWLV9REzirVXLvwU9fqc/ceN2lurMo9qIa2atqGntKUCFZtMmxXogV2nX1KBlM8W9Zc6Vlso0NO1hHNP1RR+LLPQ2KNdc05QthwtK+Gfy6J8Ui9fkzlRapX5Ue1RrcxJsU2qpTkp9k01m5MHNlJ9UXNSVf8+jjkptlQ9pTlp30DJPWkL5fGMS4vXHdSaGPbm4cPI1Bi9zB9R2NCHgMEeubvDyV2beW572PdhpQX2nfDu7BJ9qnvbJ5OaKLb8uF5A7LrtMs37+E8mAu3ZzIlKe5f/NN31bGN8TjHq3t1Zw/4nzJdOtnsBwBbTV9YJ/zm73ouqCGbA9TPRadv9Rc+3dsz+lmvoAYuE47zupPKYI51BPM4MlaXYdAbpODNUVt3SGeTjzFBZ8khnUI4zQ2Xul85QmfN9pmCyHCc+UXvyY1qTnz9P8Hnglu/e+wUm10r6eGeThtd/NfR/y4LA/P2/7fu/ZEF97v9+ik/b/u9SIpjGaA99/dcusiuFQuAh78Yj+qcHJlnbdeTfs2+3AsfaT/76SPeGviXsP9YQQURxnfxBmOzvt9CnbvL37bKeOH+WaIv9T/IOrW0zsItYe19+h1UekjdSc8eLnf5UkKre4tTt/3PW33baFJL8NkWGr6yNji2vPIA7Qif5pvIQy94mb4MCrzgtP+SQlldHrweTRJZTmMcy7At3x30aw65Gr/lC1F1MyYdp98nEmvKFPq4HM+u5r+ur7+uiLVYRiUtPjDDeYjiZXYIADCyaAdJ30cJW09frFXta28tealjF5DV7Yid/HhyUdTJICpdvBkMwa5OWwrb3JEWT2DEHUH/WJqQjNBTtHszOnzfJlsI0k+T3qITNcTSniKI5llTtnDYtu2AoDQfCT9GRBF0wdFBz29Y0rAn4/9s71ua2cdz3/ApOZ29tz9jy+xH3cjtu6m5z0006drp3t92cK1tyqq1fI9ltM23++wEkJVIPWpTteGf2rA+pa4MARRIgCIAAfNNs2JVWtVWvd6a1dnM6Naftmlmpdpptu1WR+yJugvBLLxFadrNRqZt2rdmp4y5zbiHq8xpwvAXT1jhvWO3KOUyi1Zk0Om0QP52JVQWhU5lWrOp51ZImcjmz0NqaTKdWGU+arfb43G43KzUQW83Jeadq1hpWp9M5n3Yq9Vp73ER127Jq0IuGCVQ70KjSNhs1Wc7QYpDOYgWkEsYO9uOx1ZjU2vVqvVFpV+3zetXuTGFgWs1xpdaZ2M3OeafVbtZseDezfl6pwY+tumVh8NO4LjFWwpUdGnW5ohfihMklFsWeleNrVJtqJytUQXZOUCZ7l7fDEmaPOOx2I4WP7RsvphsgdooI2yI3pMTwofeIJ8fcUSuUkrm+LIHG0x9cUz/Y2/5geDW87eNn1BDpmfqwS02l2WSPEcsUFKYXBfZXC/s6QAiXaVksU6QyMytR5WaVclLQSia4bqoSZUU61KRmTbmVtQlaJdRICI2xBK0olRBmsGhGqDjIcULadthBaIJlOOfRTcSQDy1ybuRQmdrDsrYUKLdvZFymUDjd2LdswW560W1/tXC2A4Sm7ZNaNlg6WZLLElUq16yJcP4q0iU1rk9fuuwXmbe/SDlXiJTs4Xo68Xl6AXkgR3z5lCR3GHxHUj0aGvCNulKmnCL8DhLhJxYjM9TLy9Sv7yWFXe0mPNZ+ji/h0sTKPMrhny3vWc5KOtsBgFgM6YeCp3bT7iw4dg3A21tqSItk36g8/bRlRPKcK3QM1kAyO6VIEk5AW5LwWL+QZqTWeBh0tSVjj8aVbGnYSDlbxQIPT5GGTxJpGBVrwug7ur65/q0/uBn1fu1dveG1REZveni8/89J+mXMZycH7qnLAJ0q8pwq8hy0Is8SGAN5KjA4o8dgy+J6W6r2mDu8N7h8fXXbx3xofSltaajcj4iK1aCT3SYRsWRLhkYWfhne9kVnxg9PZuVwbdNjVnvAXGnGUsbRmxXAEaMXg5vey/5gNHx3yUMpJQKjEIHRiz6mbR0Nm1FB8adUBTtGWHEyjZE5xWpJCdcxD3OoTCGruqx2AMU0lXL6BZcDjr7wTKVFOLWjDZJTQOvkt0nLrqiZWxHBxP45hz+uA43iQIlxTEcJQ9boXlXRveret7yqMW9/uHM8xO1g2OVgyaMFYuvnQ0TYlesA3NyefDR5WadI1il+xSE6Q0+ecUaZqlErUSMCpaUPDMWsq75/slh2xbtp5HnUyfKoyvF4nCh6rSyRyhyRWhkiVZkfjxHE3xg9Rc57qjOVxEZQwo1ASnRPM2LuKQAbJS2tTpDcmiAzQ3rM7ckxZevOU97jPf79C+W4paf7xAhrUKJ9EwJ0ybLHODD36AN2d+x08irDhF1YBkF9eUQz2ecBUn2mo0gXfllThWrSPdaV0Iw3vE93eU5PhufQyySJxvb7P5VWqxq9/9OoNeqn+z/HeHTv/2y9PuhfAwp/m+qrkk2DYTtdxlIQT+QkSy0OkbhzaHjMDpjSIiGdRWSnCBxZSe602FWoDJ61hBxXuk62WFN9f1umzFqy6y2BZmYvXOZMIAfNAqLpl8vik9Pyx2X1xWn74bb54KL+t2dByvZj1Ezbz9n3jBbWZsFYGIuEeJhnb9B/NXrdG75m2ag5NOiRC08Yj2+u+wD3tt+DU9gb/Nh7yf5gm9HtoHc97F3KORDM2RqLXbPbfU287ee1/KCuYBDNGUxDKG0HS9ghZTrmBdPESB+2ghqTclx9xasF0csa4XIaMoTvPA+uPoR+5ZHOuA2YD/Ae5mfTmQUlURIpefaMu1BNF47ueITCuDJ7tFlY8Jl11avRWh5UJhuVegN0FVGLNXDhiuFCtgZ5gPALmHXiTVxntfbK8dJx5cG7ayn9RGuUlkzCmPzhxdemZtk5yfEc1GlfLqK13rO6lVOcys/m5ldnvpmPwmDY71YwiP7IMAJjwADSVCqoneKWzhJFmCmGMDWCMLlQbRTIfz2xyNCyeh9/D1ZVa75ZJxOj0dmrpbNYq2ESriz4L74Zg1o0coFv4pS/2GNlp4CstcGAUPkSBJu449xg3ubVA2JP5tjb01bDCrNkKpL8DCS2wmOk9kGpXUxPnYno/ya30BGr7P459hV/j7pffkYdInybpNy7vOy/vWXZjNS7VdgKADtVhEZa/cdmU9R/bFXrcP5vtmun/B9Hecpl8nbjgh5udwmPvbQJq/dSwnovJHRGInQbHpuTT2S6dMn6o02GTSLpC4Sqd2W8b1vCrQ9/o+nZPGhnnAG1F3yT7xKhlhCx+ggqJs/JYkkGbPMkwb2GIsFLoVj2kZhUJBZJIGZZx4rYm7CALhKxiRcJdHCIW21Z7KgkUJGNs7McHEGxX85knXt+dga7uwcAHjqwyAXheebyOdTuuuzrMocuPOfQk1UMcvLRmVHtGjstIKdeDHIq/YyaVwwAv0QQDjO4ubkFGPzWoGeOz3Z+NLIcGMs5jEbOMMqGIVCCxIItb/TyauA3+gOGII9YAFjwfQlUhdVGeinQ/N+9uQV5evs61FIghPa6EmLEsNHzliAB4IA6t5fVJucjg2UQwbWrUiBQtlJRaoQXBugiOzDV2pGArkEgQBQd2leI5dBWXUHt32/ZKfjV1Zv+EEihWpEzgNDHzbjsn/Y9Sq4E5BC71yxJEqJEJURJ8l8YD/NZDnfJrN32q8mKpFS4qbMO74NPWdx4J6zqlFkUXWz+KI0n2ZaB3p1gt5tbNpPI1MFMgo7qlan26JY9d1K2lrgJlPEt/UqkZaHbLsd4zyxwhaEh2Fh7bJSyYcJT6RoV24wYYA3ZcMJfSwq3MHlsweW3DyEzK7SwsWvRdAfjDUhttAtwLDB0Z9PNgp4gCU5f3rVn1OhSoMdV14a9bEH+OYTFAgc+z85PPQNjbl45M3v4sJjkoxI3aA/Cc7OednIFkIaPggjd0/JY4Wy2ZjQA4/wTiHeKTha+3wDZZON6gI0dKsgj4KINKJagD5IkL5IPP3yj3cU9bHHvTB84sSJZbGazIqkVHn9ffAh6F+ocLP+86d57oZefrAzcrgNqOYDKwRYMcNjHyRerS9i724vJ0gKiXY68CNuu5SzhnJJz7hcwq/BNbuWsxL938EoGdHSeD3fErwM9sKd51hm2wu2vKzgnOrhxD+n75fkObNiLz4b2ZvWiNwQGpia5V+T7d5LLiV74pPwuAKmAKoAmyXhshEP3Pjcx1yW0ruELlvAvzIaP6PG/35i55PHDHaXDx9f/PTQATBH5zXaXvm6V9y0pfNWA2pNnPf1kP5DllB8Gc4nmlRw7sORSbSsJgArDig+ZbFXxf1WbVHyI7fYUHyrJmOL/prSkBF0Mm1GCd4zZUPxfogaUoBdh6wn9+q7AJ8uwMYAzmKb3MC13RVKBNbB1Lf7wDQCN9fIdjK17CWshX3j07dEfKFeIVYGyMsQP0iINsYxYxuw1rIH5BWDYIrWc6ZQu0BJqlCVUziMr1TAMtD3ydRpCBFgklD9J/zE84JJ1vvy7+9Pvi3LBAD6A2cy/WC5ntrkoGKAnrKHzeNsDsfJBs2x71acDxzEVyXsgH9ZJ7njjwraGPsE8MmCBXPwjuh8azmIy21i2xyBAQr+/kzHaIWzecm5LuPCDQQ1D3r9AMcqrdrIc4qV2m8Oh9veyp8AtpZw4OH5rXA5YzzscduDOKDK+RKl4vUTWhGV6TV1eebbmXftzaQbvydY9597ImudLXu7d8lNeRvqPC1IlP/4YIvT3C1IDpFt5/M3Nz3h0GLETCPzz7vp2dHX9KxxXXuakF5jDTmbe257MrbPlPes0Va3XF3/zVB1/Ht4WODLcGiS8KVxa4Fb60OyUvzir71PnK5k439fuAzHvYaV/t+zx5v772p6vli7Iu7JjrG1vnee0/OlJE398SH6Bz72f+/6gdH/4xvE8fqDvBVIw0AGo8QLGh+prMVVbGk7fku3DHvIsIpGhCa0mzowV+N2XmPqgIpFkd2B2JbXl9BLiJnYC2JWKVjScTJAeIg9ETeEKpmaWyOpm68kIx8sAx2UNl8nFxRpHHfOoFNEyogRnvkA0vkQCVNQUgr4U6UFBCaeKYynSMBbdZiK0BTqpG9mi7nyWaJeiHOyiizES0VGUAzp0cchBHsXEU4AS0/YID1ARNVtGgz5g8NFZrB5YZRwInW718OmEhqQstORokaIcLKLRFgNIUt8yElMi2CdTlIc+fimyA4hoB3aoCcSjNYzksAoYvkYWLCmxE1nRZYmvQMHAwyvkFw8daDml5HgB9XQovNToJ0g+H4TnUel4huPAsJlwIPClsuw/Tln9SpeyUgEWDbW8zGn0WyHYFJoavmiBI6a5cy1BsJ3wIwdSkudd37aRCTxNnb7L4BmH+sBSgqGTgsNWS1hRDwbaRQB9QohYBiR7yJooCZ9hDP/gEL9iUIwbruNdjePBc2/GnTFAkp2bg6bRPBLR43xCk603ylX8L144lJ5CWBOgp8rFlt64VVAxc9DWaxrprC9DZ+QIuele4kdGFLMLanB16I2TLIcZcfiDjjvMTPfCjQ7m7bjS1fEdUO3GpMk37zl3RVuFD7J7MXgE1WTjuniPkppxtZleA5XWrpyGISO7pKHbOqF6x7q9SIxSl18EPSh4y2kGtLgUd9PwI4TT6ldprfUIzkwr3pfGSbVjmFEvuXRMwpRxVNk3NN5QfzvzKe2ymfG2u2xlaU3VGxkH1eJVAZuRK0XDPZkjM6K01RoYp1nlHnJB/CnfVszHmDoLK5931vac2sLxQ9ySRC4uLqLGJGa0Zpi3WKZH1Po3+uVqOLy6/jlRJedIMlmkRCs9CSGZUdFNDaPDLNBhe1w3qz2OYUOzHPPdsVfocmMC+07YsbpEuAmonx9N7mhWz90VGGywGcJEd4P/sd+494KZdujRuut/Z8zsxT0chylcUnB9V3YmMDD5pYJux0aewarETRfEDX9xmevkywFKFpPijimUlkoYwtwK/SBhS3ROB9HpyS7p4GeFIzr4PdkTHfysdkUHIEleZtE7lZuZQzwiK4TCO3zmX85sA+Y+nxiXweJDztCv8o07eJ+TRxgL6B7J2667dGWP75G45BWcfX0uwS502T/EWXg0XGk5JX36xU/sB8P3NnX9wAzW8yNMu8463j43tKvq2UGO5EEmX5FRLXS3V5+f7s6fntNzek7P6Tk9p+f0nJ7Tc3pOz+n5c5//AXoXNW4A8AAA"
+        run: |
+          printf '%s' "$PAYLOAD_B64" | base64 -d > /tmp/mcft-effectiveness.tgz
+          tar -xzf /tmp/mcft-effectiveness.tgz -C .
+          git config user.name "GEOX governance automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add             .github/workflows/mcft-cap-06-s5-predecessor-graph-conformance.yml             docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json             docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json             docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json             docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-PREDECESSOR-EFFECTIVENESS.json             scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_PREDECESSOR_EFFECTIVENESS.cjs
+          test "$(git diff --cached --name-only | wc -l | tr -d ' ')" = "6"
+          git commit -m "MCFT-CAP-06: activate S5 predecessor effectiveness"
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_PREDECESSOR_EFFECTIVENESS.cjs
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S5_PREDECESSOR_EFFECTIVENESS_RESULT.json', 'utf8'));
+          if (result.status !== 'PASS') throw new Error('BOOTSTRAP_EFFECTIVENESS_NOT_PASS');
+          if (result.changed_file_count !== 6 || result.logical_commit_count !== 1) throw new Error('BOOTSTRAP_EFFECTIVENESS_HISTORY_INVALID');
+          if (result.s5_authorized !== true || result.s5_implementation_started !== false) throw new Error('BOOTSTRAP_EFFECTIVENESS_FRONTIER_INVALID');
+          if (result.canonical_write_count !== 0 || result.candidate_append_count !== 0 || result.evaluation_append_count !== 0) throw new Error('BOOTSTRAP_EFFECTIVENESS_WRITE_BOUNDARY_VIOLATION');
+          NODE
+          git push --force origin HEAD:refs/heads/agent/mcft-cap-06-s5-predecessor-effectiveness-v1
+
+      - name: Upload bootstrap evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s5-predecessor-effectiveness-bootstrap-evidence
+          path: acceptance-output/
+          if-no-files-found: error
