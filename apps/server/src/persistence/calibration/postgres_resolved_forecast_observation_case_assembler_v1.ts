@@ -3,25 +3,15 @@
 // Boundary: exact-ref read-only graph assembly only; no list, search, latest, time-range, scope-range, persistence, projection mutation, calibration/shadow mathematics, Runtime authority, State/checkpoint mutation, active-config mutation, Model Activation, route, scheduler, filesystem, environment, or network beyond the supplied Pool.
 
 import type { Pool, PoolClient } from "pg";
-import type {
-  CanonicalObjectEnvelopeV1,
-} from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
-import type {
-  Cap05ForecastResidualEnvelopeV1,
-} from "../../domain/twin_runtime/forecast_observation_residual_v1.js";
-import type {
-  Cap04ExecutionConfigResolverPortV1,
-} from "../../domain/twin_runtime/runtime_config_execution_view_v1.js";
+import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import type { Cap05ForecastResidualEnvelopeV1 } from "../../domain/twin_runtime/forecast_observation_residual_v1.js";
+import type { Cap04ExecutionConfigResolverPortV1 } from "../../domain/twin_runtime/runtime_config_execution_view_v1.js";
 import {
   assembleResolvedForecastObservationCaseV1,
   type ResolvedObservationEvidenceV1,
 } from "../../domain/twin_runtime/resolved_forecast_observation_case_v1.js";
-import type {
-  Cap06CalibrationCaseSourceV1,
-} from "../../domain/calibration/contracts_v1.js";
-import type {
-  Cap06ExactResidualGraphResolverV1,
-} from "./postgres_exact_calibration_residual_repository_v1.js";
+import type { Cap06CalibrationCaseSourceV1 } from "../../domain/calibration/contracts_v1.js";
+import type { Cap06ExactResidualGraphResolverV1 } from "./postgres_exact_calibration_residual_repository_v1.js";
 
 function requiredStringV1(value: unknown, code: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(code);
@@ -33,10 +23,7 @@ function recordV1(value: unknown, code: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function parseFactRecordV1(value: unknown, code: string): {
-  type: string;
-  payload: unknown;
-} {
+function parseFactRecordV1(value: unknown, code: string): { type: string; payload: unknown } {
   const parsed = typeof value === "string" ? JSON.parse(value) : value;
   const record = recordV1(parsed, code);
   return {
@@ -59,13 +46,48 @@ function parseCanonicalFactV1(
 
 function parseObservationFactV1(value: unknown): ResolvedObservationEvidenceV1 {
   const record = parseFactRecordV1(value, "CAP06_GRAPH_OBSERVATION_FACT_INVALID");
-  const observation = recordV1(
-    record.payload,
-    "CAP06_GRAPH_OBSERVATION_PAYLOAD_REQUIRED",
-  ) as unknown as ResolvedObservationEvidenceV1;
-  requiredStringV1(observation.source_record_id, "CAP06_GRAPH_OBSERVATION_SOURCE_RECORD_ID_REQUIRED");
-  requiredStringV1(observation.source_record_hash, "CAP06_GRAPH_OBSERVATION_SOURCE_RECORD_HASH_REQUIRED");
-  return observation;
+  const raw = recordV1(record.payload, "CAP06_GRAPH_OBSERVATION_PAYLOAD_REQUIRED");
+  const roleTime = raw.role_time && typeof raw.role_time === "object" && !Array.isArray(raw.role_time)
+    ? raw.role_time as Record<string, unknown>
+    : {};
+  const quality = raw.quality && typeof raw.quality === "object" && !Array.isArray(raw.quality)
+    ? raw.quality as Record<string, unknown>
+    : {};
+  const canonicalPayload = raw.canonical_payload
+    && typeof raw.canonical_payload === "object"
+    && !Array.isArray(raw.canonical_payload)
+    ? raw.canonical_payload as Record<string, unknown>
+    : {};
+  const qualityStatus = raw.quality_status ?? quality.status;
+  if (qualityStatus !== "PASS" && qualityStatus !== "LIMITED") {
+    throw new Error("CAP06_GRAPH_OBSERVATION_QUALITY_INVALID");
+  }
+  const canonicalUnit = raw.canonical_unit ?? canonicalPayload.unit;
+  if (canonicalUnit !== "fraction") throw new Error("CAP06_GRAPH_OBSERVATION_UNIT_INVALID");
+  return {
+    ...structuredClone(raw),
+    source_record_id: requiredStringV1(
+      raw.source_record_id,
+      "CAP06_GRAPH_OBSERVATION_SOURCE_RECORD_ID_REQUIRED",
+    ),
+    source_record_hash: requiredStringV1(
+      raw.source_record_hash,
+      "CAP06_GRAPH_OBSERVATION_SOURCE_RECORD_HASH_REQUIRED",
+    ),
+    observed_at: requiredStringV1(
+      raw.observed_at ?? roleTime.observed_at,
+      "CAP06_GRAPH_OBSERVATION_OBSERVED_AT_REQUIRED",
+    ),
+    available_to_runtime_at: requiredStringV1(
+      raw.available_to_runtime_at ?? roleTime.available_to_runtime_at,
+      "CAP06_GRAPH_OBSERVATION_AVAILABLE_AT_REQUIRED",
+    ),
+    quality_status: qualityStatus,
+    canonical_value: raw.canonical_value ?? canonicalPayload.value,
+    canonical_unit: canonicalUnit,
+    observation_variance: raw.observation_variance ?? "0.000000000000",
+    representativeness_variance: raw.representativeness_variance ?? "0.000000000000",
+  };
 }
 
 async function readExactCanonicalObjectV1(
@@ -150,11 +172,7 @@ implements Cap06ExactResidualGraphResolverV1 {
       await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
       const resolved: Cap06CalibrationCaseSourceV1[] = [];
       for (let caseIndex = 0; caseIndex < orderedResiduals.length; caseIndex += 1) {
-        resolved.push(await this.resolveWithClientV1(
-          client,
-          orderedResiduals[caseIndex],
-          caseIndex,
-        ));
+        resolved.push(await this.resolveWithClientV1(client, orderedResiduals[caseIndex], caseIndex));
       }
       await client.query("COMMIT");
       return resolved;
@@ -171,30 +189,21 @@ implements Cap06ExactResidualGraphResolverV1 {
     residual: Cap05ForecastResidualEnvelopeV1,
     caseIndex: number,
   ): Promise<Cap06CalibrationCaseSourceV1> {
-    const residualPayload = recordV1(
-      residual.payload,
-      "CAP06_GRAPH_RESIDUAL_PAYLOAD_REQUIRED",
-    );
+    const residualPayload = recordV1(residual.payload, "CAP06_GRAPH_RESIDUAL_PAYLOAD_REQUIRED");
     const sourceForecast = await readExactCanonicalObjectV1(
       client,
       requiredStringV1(residualPayload.forecast_run_ref, "CAP06_GRAPH_FORECAST_REF_REQUIRED"),
       "twin_forecast_run_v1",
       "CAP06_GRAPH_FORECAST",
     );
-    const forecastPayload = recordV1(
-      sourceForecast.payload,
-      "CAP06_GRAPH_FORECAST_PAYLOAD_REQUIRED",
-    );
+    const forecastPayload = recordV1(sourceForecast.payload, "CAP06_GRAPH_FORECAST_PAYLOAD_REQUIRED");
     const sourcePosterior = await readExactCanonicalObjectV1(
       client,
       requiredStringV1(forecastPayload.source_posterior_ref, "CAP06_GRAPH_POSTERIOR_REF_REQUIRED"),
       "twin_state_estimate_v1",
       "CAP06_GRAPH_SOURCE_POSTERIOR",
     );
-    const posteriorPayload = recordV1(
-      sourcePosterior.payload,
-      "CAP06_GRAPH_POSTERIOR_PAYLOAD_REQUIRED",
-    );
+    const posteriorPayload = recordV1(sourcePosterior.payload, "CAP06_GRAPH_POSTERIOR_PAYLOAD_REQUIRED");
     const sourceForecastEvidenceWindow = await readExactCanonicalObjectV1(
       client,
       requiredStringV1(
@@ -210,13 +219,18 @@ implements Cap06ExactResidualGraphResolverV1 {
       "twin_runtime_config_v1",
       "CAP06_GRAPH_RUNTIME_CONFIG",
     );
-    const actualObservation = await readExactObservationV1(
+    const rawObservation = await readExactObservationV1(
       client,
       requiredStringV1(
         residualPayload.actual_observation_ref,
         "CAP06_GRAPH_OBSERVATION_REF_REQUIRED",
       ),
     );
+    const actualObservation: ResolvedObservationEvidenceV1 = {
+      ...rawObservation,
+      observation_variance: residualPayload.actual_observation_variance as string,
+      representativeness_variance: residualPayload.representativeness_variance as string,
+    };
     const assimilationUpdate = await readExactCanonicalObjectV1(
       client,
       requiredStringV1(
