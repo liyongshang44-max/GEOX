@@ -84,9 +84,10 @@ jobs:
 
       - name: Typecheck and build
         run: |
-          set -euo pipefail
-          pnpm -r typecheck
-          pnpm -r build
+          set -o pipefail
+          mkdir -p acceptance-output
+          pnpm -r typecheck 2>&1 | tee acceptance-output/MCFT_CAP_06_S4_TYPECHECK.log
+          pnpm -r build 2>&1 | tee acceptance-output/MCFT_CAP_06_S4_BUILD.log
 
       - name: Run four-layer S4 stabilization acceptance
         run: |
