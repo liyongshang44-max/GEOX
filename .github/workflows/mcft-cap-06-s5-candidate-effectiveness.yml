@@ -16,6 +16,7 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_ENTRY_EFFECTIVENESS.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S5_CANDIDATE.cjs'
   push:
     branches: [main]
     paths:
@@ -32,6 +33,7 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_ENTRY_EFFECTIVENESS.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S5_CANDIDATE.cjs'
 
 permissions:
   contents: read
@@ -99,7 +101,7 @@ jobs:
           if (result.production_candidate_append_count !== 0 || result.evaluation_append_count !== 0 || result.model_activation_count !== 0) throw new Error('S5_EFFECTIVENESS_PRODUCTION_WRITE_BOUNDARY_VIOLATION');
           if (result.active_config_switch_count !== 0 || result.runtime_parameter_change_count !== 0 || result.state_mutation_count !== 0 || result.checkpoint_mutation_count !== 0 || result.migration_count !== 0) throw new Error('S5_EFFECTIVENESS_RUNTIME_BOUNDARY_VIOLATION');
           if (result.production_database_used !== false) throw new Error('S5_EFFECTIVENESS_PRODUCTION_DATABASE_VIOLATION');
-          if (result.s5_candidate_implemented !== true || result.s5_effective !== false || result.s6_authorized !== false) throw new Error('S5_EFFECTIVENESS_PREWRITEBACK_FRONTIER_MISMATCH');
+          if (result.s5_candidate_implemented !== true || result.s5_effective !== false || result.s6_authorized !== false || result.s6_implementation_started !== false) throw new Error('S5_EFFECTIVENESS_PREWRITEBACK_FRONTIER_MISMATCH');
           NODE
 
       - name: Checkout exact effectiveness candidate head
@@ -119,7 +121,7 @@ jobs:
           const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS_RESULT.json', 'utf8'));
           if (result.schema_version !== 'geox_mcft_cap_06_s5_candidate_effectiveness_result_v1') throw new Error('S5_EFFECTIVENESS_RESULT_SCHEMA_MISMATCH');
           if (result.status !== 'PASS') throw new Error('S5_EFFECTIVENESS_RESULT_NOT_PASS');
-          if (result.changed_file_count !== 13 || result.logical_commit_count < 1 || result.logical_commit_count > 16) throw new Error('S5_EFFECTIVENESS_GOVERNED_DELTA_MISMATCH');
+          if (result.changed_file_count !== 14 || result.logical_commit_count < 1 || result.logical_commit_count > 20) throw new Error('S5_EFFECTIVENESS_GOVERNED_DELTA_MISMATCH');
           if (result.s5_status !== 'MERGED_EFFECTIVE' || result.s5_effective !== true) throw new Error('S5_EFFECTIVENESS_STATUS_MISMATCH');
           if (result.active_delivery_slice_id !== 'MCFT-CAP-06.MCFT-06-09-11-12.PAIRED-HISTORICAL-SHADOW-COMPUTE-V1') throw new Error('S5_EFFECTIVENESS_FRONTIER_MISMATCH');
           if (result.s6_authorized !== true || result.s6_implementation_started !== false) throw new Error('S5_EFFECTIVENESS_S6_AUTHORIZATION_MISMATCH');
