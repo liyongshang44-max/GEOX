@@ -1,6 +1,6 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_ENTRY_EFFECTIVENESS.cjs
-// Purpose: validate merged-main S5-entry effectiveness and the authorization-only transition to S5.
-// Boundary: structured evidence and governance state only; no S5 implementation, database access, canonical append, activation, or runtime mutation.
+// Purpose: validate immutable merged-main S5-entry effectiveness and monotonic downstream delivery authority.
+// Boundary: structured evidence and governance state only; no S5/S6 implementation, database access, canonical append, activation, or Runtime mutation.
 
 'use strict';
 
@@ -16,6 +16,8 @@ const EFFECTIVENESS_MERGE = '437a6ccae5903494638d17c997a7017c6da057cf';
 const ENTRY = 'MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1';
 const S5_GRAPH = 'MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1';
 const S5 = 'MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1';
+const S6 = 'MCFT-CAP-06.MCFT-06-09-11-12.PAIRED-HISTORICAL-SHADOW-COMPUTE-V1';
+const S7 = 'MCFT-CAP-06.MCFT-03-12.SHADOW-EVALUATION-COMMIT-V1';
 
 function json(relative) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
@@ -97,7 +99,6 @@ function main() {
   assert.equal(delivery.s5_entry.delivery_slice_id, ENTRY);
   assert.equal(delivery.s5_entry.effective, true);
   assert.equal(delivery.s5_entry.merge_commit, IMPLEMENTATION_MERGE);
-  assert.equal(delivery.s5.candidate_implemented, false);
   assert.equal(delivery.s5.model_activation_authorized, false);
   assert.equal(delivery.s5.active_config_switch_authorized, false);
   assert.equal(slices.s5_entry_effective, true);
@@ -112,16 +113,40 @@ function main() {
     assert.equal(delivery.blocked_slices.includes(S5), true);
     assert.equal(delivery.s5.authorized, false);
     assert.equal(delivery.s5.implementation_started, false);
+    assert.equal(delivery.s5.candidate_implemented, false);
     assert.equal(slices.active_delivery_slice_id, S5_GRAPH);
     assert.equal(slices.s5_authorized, false);
     assert.equal(reconciliation.current_state.active_delivery_slice_id, S5_GRAPH);
     assert.equal(reconciliation.current_state.s5_authorized, false);
+  } else if (delivery.s5.effective === true) {
+    assert.equal(delivery.active_delivery_slice_id, S6);
+    assert.deepEqual(delivery.authorized_not_started_slices, [S6]);
+    assert.equal(delivery.blocked_slices.includes(S6), false);
+    assert.equal(delivery.blocked_slices.includes(S7), true);
+    assert.equal(delivery.s5.authorized, true);
+    assert.equal(delivery.s5.implementation_started, true);
+    assert.equal(delivery.s5.candidate_implemented, true);
+    assert.equal(delivery.s6.authorized, true);
+    assert.equal(delivery.s6.implementation_started, false);
+    assert.equal(delivery.s6.candidate_implemented, false);
+    assert.equal(delivery.s6.canonical_write_authorized, false);
+    assert.equal(delivery.s6.projection_write_authorized, false);
+    assert.equal(delivery.s6.shadow_evaluation_append_authorized, false);
+    assert.equal(slices.active_delivery_slice_id, S6);
+    assert.equal(slices.s5_effective, true);
+    assert.equal(slices.s6_authorized, true);
+    assert.equal(slices.s6_implementation_started, false);
+    assert.equal(reconciliation.current_state.active_delivery_slice_id, S6);
+    assert.equal(reconciliation.current_state.s5_effective, true);
+    assert.equal(reconciliation.current_state.s6_authorized, true);
+    assert.equal(reconciliation.current_state.s6_implementation_started, false);
   } else {
     assert.equal(delivery.active_delivery_slice_id, S5);
     assert.deepEqual(delivery.authorized_not_started_slices, [S5]);
     assert.equal(delivery.blocked_slices.includes(S5), false);
     assert.equal(delivery.s5.authorized, true);
     assert.equal(delivery.s5.implementation_started, false);
+    assert.equal(delivery.s5.candidate_implemented, false);
     assert.equal(slices.active_delivery_slice_id, S5);
     assert.equal(slices.s5_authorized, true);
     assert.equal(reconciliation.current_state.active_delivery_slice_id, S5);
@@ -142,7 +167,10 @@ function main() {
     s5_entry_effective: true,
     s5_graph_prerequisite_active: Boolean(graphPrerequisite && graphPrerequisite.effective !== true),
     s5_authorized: delivery.s5.authorized,
-    s5_implementation_started: false,
+    s5_implementation_started: delivery.s5.implementation_started,
+    s5_effective: delivery.s5.effective === true,
+    s6_authorized: delivery.s6?.authorized === true,
+    s6_implementation_started: delivery.s6?.implementation_started === true,
     canonical_write_count: 0,
     production_candidate_append_count: 0,
     production_evaluation_append_count: 0,
@@ -163,7 +191,9 @@ try {
     status: 'FAIL',
     error: error instanceof Error ? error.message : String(error),
     canonical_write_count: 0,
-    s5_implementation_started: false
+    s5_implementation_started: false,
+    s5_effective: false,
+    s6_authorized: false
   };
   write(result);
   console.error(JSON.stringify(result));
