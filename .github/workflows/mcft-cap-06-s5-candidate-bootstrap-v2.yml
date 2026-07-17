@@ -1,0 +1,119 @@
+name: mcft-cap-06-s5-candidate-bootstrap-v2
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s5-candidate-bootstrap-v2.yml'
+      - '.github/s5-candidate-bootstrap/**'
+
+permissions:
+  contents: write
+
+jobs:
+  publish-validated-candidate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      BASE_COMMIT: dc7913d070c4a0c2cac0a7c35ccfa4292e633876
+      PATCH_SHA256: 5ac10f74d8b4d687c45947819007b849310449276786531ac0d85660ba1cbeaa
+      TARGET_BRANCH: agent/mcft-cap-06-s5-candidate-compute-commit-v1
+    steps:
+      - name: Checkout bootstrap carrier
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Capture and verify patch carrier
+        shell: bash
+        run: |
+          cat .github/s5-candidate-bootstrap/part-*.b64 > /tmp/s5-candidate.patch.gz.b64
+          base64 -d /tmp/s5-candidate.patch.gz.b64 > /tmp/s5-candidate.patch.gz
+          echo "$PATCH_SHA256  /tmp/s5-candidate.patch.gz" | sha256sum -c -
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$BASE_COMMIT"
+
+      - name: Reconstruct five logical commits on exact main
+        shell: bash
+        run: |
+          git checkout --detach "$BASE_COMMIT"
+          git config user.name "GEOX MCFT Delivery"
+          git config user.email "mcft-delivery@users.noreply.github.com"
+          gzip -dc /tmp/s5-candidate.patch.gz | git am --committer-date-is-author-date
+          test "$(git rev-list --count "$BASE_COMMIT"..HEAD)" = "5"
+          test "$(git diff --name-only "$BASE_COMMIT"..HEAD | wc -l)" = "12"
+          test -z "$(git diff --name-only "$BASE_COMMIT"..HEAD -- \
+            apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.ts \
+            apps/server/src/domain/twin_runtime/canonical_identity_v1.ts \
+            apps/server/src/domain/twin_runtime/forecast_canonical_authority_v1.ts \
+            apps/server/src/runtime/twin_runtime/a0_record_set_builder_v1.ts \
+            apps/server/src/domain/twin_runtime/forecast_scenario_runtime_config_v1.ts)"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run single-command S5 Candidate preflight
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S5_CANDIDATE.cjs
+
+      - name: Verify structured final evidence
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S5_CANDIDATE_PREFLIGHT_RESULT.json', 'utf8'));
+          if (result.schema_version !== 'geox_mcft_cap_06_s5_candidate_preflight_result_v1') throw new Error('S5_CANDIDATE_SCHEMA_MISMATCH');
+          if (result.status !== 'PASS') throw new Error('S5_CANDIDATE_NOT_PASS');
+          if (result.calibration_case_count !== 16 || result.grid_point_count !== 21) throw new Error('S5_CANDIDATE_CASE_OR_GRID_MISMATCH');
+          if (result.selected_parameter_value !== '0.034000') throw new Error('S5_CANDIDATE_PARAMETER_MISMATCH');
+          if (result.controlled_candidate_append_count !== 1 || result.completed_chain_rerun_candidate_append_count !== 0) throw new Error('S5_CANDIDATE_APPEND_BOUNDARY_MISMATCH');
+          for (const key of ['production_candidate_append_count','evaluation_append_count','model_activation_count','active_config_switch_count','runtime_parameter_change_count','state_mutation_count','checkpoint_mutation_count','migration_count']) {
+            if (result[key] !== 0) throw new Error(`S5_CANDIDATE_FORBIDDEN_COUNT:${key}`);
+          }
+          if (result.s5_candidate_implemented !== true || result.s5_effective !== false || result.s6_authorized !== false) throw new Error('S5_CANDIDATE_FRONTIER_MISMATCH');
+          NODE
+
+      - name: Publish exact validated candidate branch
+        shell: bash
+        run: |
+          git push origin HEAD:"refs/heads/$TARGET_BRANCH" --force
+          git rev-parse HEAD | tee acceptance-output/EXACT_CANDIDATE_HEAD.txt
+          git log --oneline --reverse "$BASE_COMMIT"..HEAD | tee acceptance-output/LOGICAL_COMMITS.txt
+          git diff --name-only "$BASE_COMMIT"..HEAD | sort | tee acceptance-output/CHANGED_FILES.txt
+
+      - name: Upload candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s5-candidate-bootstrap-evidence
+          path: acceptance-output/
+          if-no-files-found: error
