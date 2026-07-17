@@ -1,5 +1,5 @@
 // apps/server/src/persistence/calibration/postgres_resolved_forecast_observation_case_assembler_v1.ts
-// Purpose: resolve one or more exact CAP-05 Residual roots through canonical Forecast, State, Evidence, Runtime Config, Observation, and Assimilation authorities under one repeatable-read snapshot.
+// Purpose: resolve one or more exact CAP-05 Residual roots through canonical Forecast, State, Evidence, forecast Runtime Config, residual Runtime Config, Observation, and Assimilation authorities under one repeatable-read snapshot.
 // Boundary: exact-ref read-only graph assembly only; no list, search, latest, time-range, scope-range, persistence, projection mutation, calibration/shadow mathematics, Runtime authority, State/checkpoint mutation, active-config mutation, Model Activation, route, scheduler, filesystem, environment, or network beyond the supplied Pool.
 
 import type { Pool, PoolClient } from "pg";
@@ -270,9 +270,21 @@ implements Cap06ExactResidualGraphResolverV1 {
     );
     const sourceRuntimeConfig = await readExactCanonicalObjectV1(
       client,
-      requiredStringV1(residualPayload.runtime_config_ref, "CAP06_GRAPH_RUNTIME_CONFIG_REF_REQUIRED"),
+      requiredStringV1(
+        forecastPayload.runtime_config_ref,
+        "CAP06_GRAPH_SOURCE_RUNTIME_CONFIG_REF_REQUIRED",
+      ),
       "twin_runtime_config_v1",
-      "CAP06_GRAPH_RUNTIME_CONFIG",
+      "CAP06_GRAPH_SOURCE_RUNTIME_CONFIG",
+    );
+    const residualRuntimeConfig = await readExactCanonicalObjectV1(
+      client,
+      requiredStringV1(
+        residualPayload.runtime_config_ref,
+        "CAP06_GRAPH_RESIDUAL_RUNTIME_CONFIG_REF_REQUIRED",
+      ),
+      "twin_runtime_config_v1",
+      "CAP06_GRAPH_RESIDUAL_RUNTIME_CONFIG",
     );
     const assimilationUpdate = await readExactCanonicalObjectV1(
       client,
@@ -321,6 +333,9 @@ implements Cap06ExactResidualGraphResolverV1 {
     const resolvedExecutionConfig = this.executionConfigResolver.resolveExecutionConfig(
       sourceRuntimeConfig,
     );
+    const resolvedResidualExecutionConfig = this.executionConfigResolver.resolveExecutionConfig(
+      residualRuntimeConfig,
+    );
 
     return assembleResolvedForecastObservationCaseV1({
       case_index: caseIndex,
@@ -330,6 +345,8 @@ implements Cap06ExactResidualGraphResolverV1 {
       source_forecast_evidence_window: sourceForecastEvidenceWindow,
       source_runtime_config: sourceRuntimeConfig,
       resolved_execution_config: resolvedExecutionConfig,
+      residual_runtime_config: residualRuntimeConfig,
+      resolved_residual_execution_config: resolvedResidualExecutionConfig,
       actual_observation: actualObservation,
       assimilation_update: assimilationUpdate,
       observation_posterior: observationPosterior,
