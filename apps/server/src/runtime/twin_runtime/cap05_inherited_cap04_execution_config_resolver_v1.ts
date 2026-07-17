@@ -117,6 +117,7 @@ implements Cap04ExecutionConfigResolverPortV1 {
     validateCap05ForecastResidualRuntimePoliciesV1(payload);
 
     const executionPayload = projectCap05PayloadToCap04ExecutionPayloadV1(payload);
+    validateCap04RuntimeConfigPayloadV1(executionPayload);
 
     return {
       source_config_ref: canonicalConfig.object_id,
