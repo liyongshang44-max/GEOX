@@ -1,0 +1,108 @@
+name: mcft-cap-06-s5-predecessor-graph-import
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s5-predecessor-graph-import.yml'
+      - 'tmp/mcft-cap-06-s5-predecessor-graph-import/patches.tar.gz.b64'
+
+permissions:
+  contents: write
+
+jobs:
+  import-validated-logical-commits:
+    runs-on: ubuntu-latest
+    env:
+      BASE_COMMIT: 437a6ccae5903494638d17c997a7017c6da057cf
+      EXPECTED_TREE: a8ee969b8ffe311d32837e13b4f6c38ea8ff0c96
+      EXPECTED_B64_SHA256: c69bd80c00eaac1d9b57eae937c48d181d978fd0ecfff0c9b2fb140d36e196ae
+      EXPECTED_TARBALL_SHA256: 5d7eac6484b3dda945dc87113b8d445235ba6ec70c96e2a6f826ad6c6052ecc3
+      TARGET_BRANCH: agent/mcft-cap-06-s5-predecessor-graph-conformance-v1
+    steps:
+      - name: Checkout import carrier
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify carrier base and current main
+        run: |
+          set -euo pipefail
+          git fetch origin main "$TARGET_BRANCH"
+          test "$(git rev-parse origin/main)" = "$BASE_COMMIT"
+          test "$(git merge-base HEAD origin/main)" = "$BASE_COMMIT"
+          test "$(git rev-parse origin/$TARGET_BRANCH)" = "$BASE_COMMIT"
+
+      - name: Decode validated patch bundle
+        run: |
+          set -euo pipefail
+          BUNDLE='tmp/mcft-cap-06-s5-predecessor-graph-import/patches.tar.gz.b64'
+          test "$(sha256sum "$BUNDLE" | cut -d' ' -f1)" = "$EXPECTED_B64_SHA256"
+          mkdir -p /tmp/mcft-cap-06-s5-import
+          base64 -d "$BUNDLE" > /tmp/mcft-cap-06-s5-import/patches.tar.gz
+          test "$(sha256sum /tmp/mcft-cap-06-s5-import/patches.tar.gz | cut -d' ' -f1)" = "$EXPECTED_TARBALL_SHA256"
+          tar -xzf /tmp/mcft-cap-06-s5-import/patches.tar.gz -C /tmp/mcft-cap-06-s5-import
+          test -f /tmp/mcft-cap-06-s5-import/01-authority.patch
+          test -f /tmp/mcft-cap-06-s5-import/02-preflight.patch
+          test -f /tmp/mcft-cap-06-s5-import/03-frontier.patch
+
+      - name: Recreate three logical commits
+        run: |
+          set -euo pipefail
+          git checkout --detach "$BASE_COMMIT"
+          git switch -c mcft-cap-06-s5-import-work
+          git config user.name 'OpenAI Agent'
+          git config user.email 'agent@openai.local'
+          git am --committer-date-is-author-date /tmp/mcft-cap-06-s5-import/01-authority.patch
+          git am --committer-date-is-author-date /tmp/mcft-cap-06-s5-import/02-preflight.patch
+          git am --committer-date-is-author-date /tmp/mcft-cap-06-s5-import/03-frontier.patch
+
+      - name: Verify exact imported tree and history
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^{tree})" = "$EXPECTED_TREE"
+          test "$(git rev-list --count "$BASE_COMMIT"..HEAD)" = '3'
+          mapfile -t SUBJECTS < <(git log --reverse --format=%s "$BASE_COMMIT"..HEAD)
+          test "${SUBJECTS[0]}" = 'MCFT-CAP-06: correct predecessor graph authority'
+          test "${SUBJECTS[1]}" = 'MCFT-CAP-06: add graph conformance preflight'
+          test "${SUBJECTS[2]}" = 'MCFT-CAP-06: block S5 on graph conformance'
+          test "$(git diff --name-only "$BASE_COMMIT"..HEAD | wc -l | tr -d ' ')" = '19'
+          test -z "$(git diff --name-only "$BASE_COMMIT"..HEAD | grep -E 'canonical_object_contracts_v1\.ts|canonical_identity_v1\.ts|forecast_canonical_authority_v1\.ts|a0_record_set_builder_v1\.ts' || true)"
+          test -z "$(git status --porcelain)"
+
+      - name: Push validated prerequisite branch
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | cut -f1)" = "$BASE_COMMIT"
+          git push origin "HEAD:refs/heads/$TARGET_BRANCH"
+          mkdir -p acceptance-output
+          node - <<'NODE'
+          const cp = require('node:child_process');
+          const fs = require('node:fs');
+          const head = cp.execFileSync('git', ['rev-parse', 'HEAD'], {encoding:'utf8'}).trim();
+          const tree = cp.execFileSync('git', ['rev-parse', 'HEAD^{tree}'], {encoding:'utf8'}).trim();
+          const result = {
+            schema_version: 'geox_mcft_cap_06_s5_predecessor_graph_import_result_v1',
+            status: 'PASS',
+            base_commit: process.env.BASE_COMMIT,
+            target_branch: process.env.TARGET_BRANCH,
+            imported_head: head,
+            imported_tree: tree,
+            logical_commit_count: 3,
+            changed_file_count: 19,
+            protected_predecessor_path_delta_count: 0,
+            local_preflight_head: '6140743cd80455345c08d67dd14400e5827f7b89',
+            local_preflight_status: 'PASS',
+            canonical_write_count: 0,
+            s5_implementation_started: false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_06_S5_PREDECESSOR_GRAPH_IMPORT_RESULT.json', JSON.stringify(result, null, 2) + '\n');
+          console.log(JSON.stringify(result));
+          NODE
+
+      - name: Upload import evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s5-predecessor-graph-import-evidence
+          path: acceptance-output/
+          if-no-files-found: error
