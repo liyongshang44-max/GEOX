@@ -1,0 +1,80 @@
+name: mcft-cap-06-s5-predecessor-gate-blob-export
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s5-predecessor-gate-blob-export.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  export-exact-gate-blob:
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_HEAD: 78eb4b662a548d89037fcc9e8652c3bd0eb49913
+      TARGET_BRANCH: agent/mcft-cap-06-s5-predecessor-gate-blob-v1
+      EXPECTED_BLOB: 7f396e57e5c9b52f51f84468cbd2564c315f27d7
+      GATE_PATH: scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_PREDECESSOR_GRAPH_CONFORMANCE.cjs
+    steps:
+      - name: Checkout carrier
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Checkout exact source branch
+        run: |
+          set -euo pipefail
+          git fetch origin "$TARGET_BRANCH"
+          test "$(git rev-parse origin/$TARGET_BRANCH)" = "$SOURCE_HEAD"
+          git checkout -B gate-blob-work "$SOURCE_HEAD"
+          git config user.name 'OpenAI Agent'
+          git config user.email 'agent@openai.local'
+
+      - name: Apply exact one-line gate amendment
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_PREDECESSOR_GRAPH_CONFORMANCE.cjs')
+          s = p.read_text()
+          needle = "const EXPECTED_FILES = [\n  '.github/workflows/mcft-cap-06-s5-predecessor-graph-conformance.yml',"
+          replacement = "const EXPECTED_FILES = [\n  '.github/workflows/mcft-cap-06-s5-entry-controls.yml',\n  '.github/workflows/mcft-cap-06-s5-predecessor-graph-conformance.yml',"
+          if needle not in s:
+              raise SystemExit('GATE_EXPECTED_FILE_ANCHOR_NOT_FOUND')
+          p.write_text(s.replace(needle, replacement))
+          PY
+          test "$(git hash-object "$GATE_PATH")" = "$EXPECTED_BLOB"
+          test "$(git diff --name-only)" = "$GATE_PATH"
+
+      - name: Commit and push non-workflow blob branch
+        run: |
+          set -euo pipefail
+          git add "$GATE_PATH"
+          git commit -m 'MCFT-CAP-06: stage exact predecessor gate blob'
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" = "$GATE_PATH"
+          git push origin "HEAD:refs/heads/$TARGET_BRANCH"
+          mkdir -p acceptance-output
+          node - <<'NODE'
+          const cp = require('node:child_process');
+          const fs = require('node:fs');
+          const result = {
+            schema_version: 'geox_mcft_cap_06_s5_predecessor_gate_blob_export_v1',
+            status: 'PASS',
+            target_branch: process.env.TARGET_BRANCH,
+            commit: cp.execFileSync('git', ['rev-parse', 'HEAD'], {encoding:'utf8'}).trim(),
+            blob: cp.execFileSync('git', ['hash-object', process.env.GATE_PATH], {encoding:'utf8'}).trim(),
+            changed_file_count: 1,
+            workflow_file_changed: false
+          };
+          fs.writeFileSync('acceptance-output/GATE_BLOB_EXPORT_RESULT.json', JSON.stringify(result, null, 2) + '\n');
+          NODE
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s5-predecessor-gate-blob-evidence
+          path: acceptance-output/
+          if-no-files-found: error
