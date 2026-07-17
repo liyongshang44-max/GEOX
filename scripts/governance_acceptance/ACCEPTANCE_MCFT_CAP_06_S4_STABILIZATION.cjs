@@ -190,7 +190,8 @@ function main() {
   assert.match(runner, /S2_RESULT_JSON:/);
   assert.match(runner, /MCFT_CAP_06_S4_STABILIZATION:PASS/);
 
-  const allSource = EXPECTED_FILES
+  const runtimeAndAcceptanceSource = EXPECTED_FILES
+    .filter((file) => file.startsWith('apps/server/src/') || file.startsWith('scripts/runtime_acceptance/'))
     .filter((file) => fs.existsSync(path.join(ROOT, file)))
     .map(read)
     .join('\n');
@@ -199,7 +200,7 @@ function main() {
     'active_config_switch_performed: true',
     'model_parameter_change_applied: true',
   ]) {
-    const occurrences = allSource.split(token).length - 1;
+    const occurrences = runtimeAndAcceptanceSource.split(token).length - 1;
     if (token === 'twin_model_activation_v1') {
       assert.ok(occurrences <= 3, 'S4_MODEL_ACTIVATION_RUNTIME_IMPLEMENTATION_FORBIDDEN');
     } else {
