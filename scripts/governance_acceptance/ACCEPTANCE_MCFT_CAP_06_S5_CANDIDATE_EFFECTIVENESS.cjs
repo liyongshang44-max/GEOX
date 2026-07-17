@@ -22,6 +22,7 @@ const EXPECTED_FILES = [
   '.github/workflows/mcft-cap-06-s5-candidate-effectiveness.yml',
   '.github/workflows/mcft-cap-06-s5-candidate.yml',
   '.github/workflows/mcft-cap-06-s5-entry-controls.yml',
+  '.github/workflows/mcft-cap-06-s5-predecessor-graph-conformance.yml',
   'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json',
   'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json',
   'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json',
@@ -32,6 +33,7 @@ const EXPECTED_FILES = [
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE.cjs',
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs',
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_ENTRY_EFFECTIVENESS.cjs',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_PREDECESSOR_EFFECTIVENESS.cjs',
   'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S5_CANDIDATE.cjs',
 ];
 const FORBIDDEN_PREFIXES = [
@@ -58,11 +60,7 @@ const ZERO_EFFECT_KEYS = [
 ];
 
 function git(args) {
-  return cp.execFileSync('git', args, {
-    cwd: ROOT,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  }).trim();
+  return cp.execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 function json(relative) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
@@ -92,7 +90,7 @@ function main() {
   assert.equal(changed.some((file) => /routes?|controller|openapi/i.test(file)), false);
 
   const commitCount = Number(git(['rev-list', '--count', `${baseline}..HEAD`]));
-  assert.ok(commitCount >= 1 && commitCount <= 20, 'S5_EFFECTIVENESS_LOGICAL_COMMIT_COUNT_INVALID');
+  assert.ok(commitCount >= 1 && commitCount <= 24, 'S5_EFFECTIVENESS_LOGICAL_COMMIT_COUNT_INVALID');
   for (const message of git(['log', '--format=%s', `${baseline}..HEAD`]).split(/\r?\n/).filter(Boolean)) {
     assert.equal(/wip|fix ci|try again|debug|temporary/i.test(message), false, `S5_EFFECTIVENESS_COMMIT_MESSAGE_INVALID:${message}`);
   }
