@@ -2,9 +2,9 @@
   "schema_version": "geox_mcft_cap_06_current_state_reconciliation_v1",
   "reconciliation_id": "MCFT-CAP-06.CURRENT-STATE-RECONCILIATION-V1",
   "capability_line_id": "MCFT-CAP-06",
-  "baseline_main_commit": "6d1a22d68fde93b440b52ce632785e5986ad47a8",
+  "baseline_main_commit": "52965b61e2dbd2974448d529619c5f745acf9301",
   "status": "MERGED_EFFECTIVE",
-  "delivery_frontier_status": "S4_MERGED_EFFECTIVE_S5_ENTRY_AUTHORIZED_NOT_STARTED_S5_BLOCKED",
+  "delivery_frontier_status": "S5_ENTRY_MERGED_EFFECTIVE_S5_AUTHORIZED_NOT_STARTED",
   "reconciliation_effective": true,
   "current_state": {
     "p_minus_1": "MERGED_EFFECTIVE",
@@ -14,7 +14,7 @@
     "s0": "MERGED_EFFECTIVE",
     "capability_line_authorization_effective": true,
     "runtime_source_authorized": true,
-    "active_delivery_slice_id": "MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1",
+    "active_delivery_slice_id": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
     "candidate_runtime_implemented": false,
     "shadow_evaluation_runtime_implemented": false,
     "capability_complete": false,
@@ -38,11 +38,11 @@
     "s4_implementation_started": true,
     "s4_candidate_implemented": true,
     "s4_effective": true,
-    "s5_entry": "AUTHORIZED_NOT_STARTED",
+    "s5_entry": "MERGED_EFFECTIVE",
     "s5_entry_authorized": true,
-    "s5_entry_implementation_started": false,
-    "s5_entry_effective": false,
-    "s5_authorized": false,
+    "s5_entry_implementation_started": true,
+    "s5_entry_effective": true,
+    "s5_authorized": true,
     "s5_implementation_started": false,
     "s5_candidate_implemented": false,
     "s5_effective": false
@@ -149,13 +149,24 @@
       "postmerge_gate": "PASS",
       "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-EFFECTIVENESS.json"
     },
-    "s5_entry_insertion": {
-      "status": "AUTHORIZED_NOT_STARTED",
+    "s5_entry_effectiveness": {
+      "status": "MERGED_EFFECTIVE",
       "delivery_slice_id": "MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1",
+      "implementation_pr_number": 2539,
+      "implementation_exact_head": "ebadebdfd8f0189a0f7776316287a7d7dad0b15e",
+      "implementation_preflight_run": 29562643937,
+      "implementation_standard_ci_run": 29562643856,
+      "implementation_merge_commit": "52965b61e2dbd2974448d529619c5f745acf9301",
+      "head_to_merge_file_delta_count": 0,
+      "head_to_merge_tree_equivalence": "PASS",
+      "postmerge_probe_pr_number": 2540,
+      "postmerge_probe_closed_without_merge": true,
+      "postmerge_workflow_run": 29563740347,
+      "postmerge_gate": "PASS",
       "authority_graph_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-AUTHORITY-GRAPH.json",
       "entry_contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-PREREQUISITE.json",
-      "task_amendment_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-AMENDMENT-S5-ENTRY-CONTROLS-V1.md",
-      "s5_blocked_until_entry_effectiveness": true
+      "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-EFFECTIVENESS.json",
+      "s5_authorized": true
     }
   },
   "superseded_candidates": [
@@ -165,11 +176,11 @@
       "replacement_required": "S0_V2"
     }
   ],
-  "next_repository_action": "MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1",
+  "next_repository_action": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
   "preserved_nonclaims": [
-    "NO_S5_IMPLEMENTATION",
+    "NO_S5_IMPLEMENTATION_BY_ENTRY_EFFECTIVENESS_WRITEBACK",
     "NO_S6_SHADOW_ORCHESTRATION",
-    "NO_CALIBRATION_CANDIDATE_APPEND",
+    "NO_CALIBRATION_CANDIDATE_APPEND_BY_ENTRY_EFFECTIVENESS_WRITEBACK",
     "NO_SHADOW_EVALUATION_APPEND",
     "NO_MODEL_ACTIVATION",
     "NO_ACTIVE_CONFIG_SWITCH",
@@ -180,10 +191,11 @@
     "NO_SCHEDULER",
     "NO_MCFT_CAP_07_AUTHORIZATION"
   ],
-  "effectiveness_condition": "S4_EFFECTIVE_AND_S5_ENTRY_CONTROLS_INSERTED; S5_NOT_AUTHORIZED",
+  "effectiveness_condition": "S5_ENTRY_MERGED_MAIN_EFFECTIVE_AND_S5_AUTHORIZED_NOT_STARTED",
   "s0_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json",
   "s1_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
   "s2_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json",
   "s3_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-EFFECTIVENESS.json",
-  "s4_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-EFFECTIVENESS.json"
+  "s4_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-EFFECTIVENESS.json",
+  "s5_entry_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-ENTRY-EFFECTIVENESS.json"
 }
