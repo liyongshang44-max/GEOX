@@ -3,7 +3,8 @@
   "reconciliation_id": "MCFT-CAP-06.CURRENT-STATE-RECONCILIATION-V1",
   "capability_line_id": "MCFT-CAP-06",
   "baseline_main_commit": "36efb93963222b2768b8d2bf384f748c86ce525a",
-  "status": "MERGED_EFFECTIVE_THROUGH_S3_S4_AUTHORIZED_NOT_STARTED",
+  "status": "MERGED_EFFECTIVE",
+  "delivery_frontier_status": "S3_MERGED_EFFECTIVE_S4_AUTHORIZED_NOT_STARTED",
   "reconciliation_effective": true,
   "current_state": {
     "p_minus_1": "MERGED_EFFECTIVE",
