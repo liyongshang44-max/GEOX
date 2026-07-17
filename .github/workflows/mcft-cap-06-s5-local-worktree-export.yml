@@ -1,0 +1,49 @@
+name: mcft-cap-06-s5-local-worktree-export
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s5-local-worktree-export.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export-exact-main-worktree:
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_MAIN_COMMIT: 437a6ccae5903494638d17c997a7017c6da057cf
+    steps:
+      - name: Checkout proof carrier
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify carrier and current main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_MAIN_COMMIT"
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN_COMMIT"
+
+      - name: Checkout exact main source
+        uses: actions/checkout@v4
+        with:
+          ref: 437a6ccae5903494638d17c997a7017c6da057cf
+          fetch-depth: 0
+
+      - name: Verify exact source and archive
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_MAIN_COMMIT"
+          mkdir -p worktree-export
+          git archive --format=tar.gz --output=worktree-export/geox-s5-main-437a6cca.tar.gz "$EXPECTED_MAIN_COMMIT"
+          printf '%s\n' "$EXPECTED_MAIN_COMMIT" > worktree-export/EXACT_HEAD.txt
+          sha256sum worktree-export/geox-s5-main-437a6cca.tar.gz > worktree-export/SHA256SUMS
+
+      - name: Upload exact main worktree
+        uses: actions/upload-artifact@v4
+        with:
+          name: geox-s5-main-worktree-437a6cca
+          path: worktree-export/
+          if-no-files-found: error
