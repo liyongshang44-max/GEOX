@@ -3,7 +3,7 @@
   "register_id": "MCFT-CAP-06.CAP05-PREDECESSOR-STRUCTURAL-DEBT-REGISTER-V1",
   "capability_line_id": "MCFT-CAP-06",
   "predecessor_capability_line_id": "MCFT-CAP-05",
-  "status": "ACTIVE_BLOCKING_REGISTER",
+  "status": "S4_CANDIDATE_TREATMENTS_NOT_EFFECTIVE",
   "insertion_point": {
     "after_slice": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
     "before_slice": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
@@ -38,7 +38,7 @@
       "debt_id": "CAP05-STRUCT-01",
       "title": "CAP05-to-CAP04 execution view is recovered by subtracting CAP05-only fields",
       "classification": "CONFIG_INHERITANCE_MAINTENANCE_DEBT",
-      "status": "OPEN_BLOCKS_S5",
+      "status": "CANDIDATE_TREATED_NOT_EFFECTIVE",
       "current_risk": [
         "NEW_CAP05_POLICY_FIELD_REQUIRES_RESOLVER_MAINTENANCE",
         "OMISSION_CAN_LEAK_CAP05_ONLY_FIELD_TO_CAP04_VALIDATOR",
@@ -49,6 +49,10 @@
         "KEEP_EXECUTION_VIEW_NON_CANONICAL",
         "ADD_KEYSET_PARITY_AND_UNKNOWN_POLICY_FIELD_NON_LEAKAGE_ACCEPTANCE"
       ],
+      "candidate_treatment_refs": [
+        "apps/server/src/runtime/twin_runtime/cap05_inherited_cap04_execution_config_resolver_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_DOMAIN.ts"
+      ],
       "deferred_long_term_refactor": "NEST_CAP04_EXECUTION_PAYLOAD_UNDER_CAP05_EXECUTION_AND_CAP05_POLICY_SUBOBJECTS",
       "long_term_refactor_authorized_in_s4": false
     },
@@ -56,7 +60,7 @@
       "debt_id": "CAP05-STRUCT-02",
       "title": "No reusable read-only cross-object Forecast-to-Observation graph assembler",
       "classification": "CROSS_OBJECT_CONSUMPTION_VIEW_DEBT",
-      "status": "OPEN_BLOCKS_S5",
+      "status": "CANDIDATE_TREATED_NOT_EFFECTIVE",
       "current_risk": [
         "SUCCESSOR_CAPABILITIES_REPEAT_GRAPH_TRAVERSAL",
         "HASH_REF_DUAL_TIME_AND_CUTOFF_RULES_CAN_DIVERGE",
@@ -68,6 +72,12 @@
         "VALIDATE_FORECAST_POINT_POSTERIOR_CONFIG_OBSERVATION_EVIDENCE_FORCING_OPERATOR_GEOMETRY_NUMERIC_POLICY_LINEAGE_AND_DUAL_TIME",
         "REUSE_AS_THE_ONLY_S5_AND_S6_GRAPH_RESOLUTION_AUTHORITY"
       ],
+      "candidate_treatment_refs": [
+        "apps/server/src/domain/twin_runtime/resolved_forecast_observation_case_v1.ts",
+        "apps/server/src/persistence/calibration/postgres_resolved_forecast_observation_case_assembler_v1.ts",
+        "apps/server/src/persistence/calibration/postgres_exact_calibration_residual_repository_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_FORMAL_COMPOSITION_DB.ts"
+      ],
       "new_canonical_type_authorized": false,
       "new_migration_authorized": false
     },
@@ -75,7 +85,7 @@
       "debt_id": "CAP05-STRUCT-03",
       "title": "Historical closure and post-closure runtime conformance are separate machine authorities",
       "classification": "SSOT_PRECEDENCE_DEBT",
-      "status": "OPEN_BLOCKS_SUCCESSOR_SIMPLICITY",
+      "status": "CANDIDATE_TREATED_NOT_EFFECTIVE",
       "current_risk": [
         "DELIVERY_STATUS_ALONE_RETURNS_STALE_CLOSURE_BASELINE",
         "POST_CLOSURE_STATUS_ALONE_OMITS_FULL_SLICE_HISTORY",
@@ -86,19 +96,27 @@
         "REFERENCE_HISTORICAL_CLOSURE_AND_LATEST_EFFECTIVE_AMENDMENT",
         "EXPOSE_EFFECTIVE_RUNTIME_BASELINE_COMMIT_AND_SUCCESSOR_ELIGIBILITY_WITHOUT_REWRITING_HISTORY"
       ],
+      "candidate_treatment_refs": [
+        "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-EFFECTIVE-RUNTIME-BASELINE.json"
+      ],
       "historical_closure_rewrite_authorized": false
     },
     {
       "debt_id": "CAP05-PROCESS-01",
       "title": "Component proofs historically substituted for formal production composition proof",
       "classification": "ACCEPTANCE_TOPOLOGY_DEBT",
-      "status": "OPEN_BLOCKS_S5_EFFECTIVENESS",
+      "status": "CANDIDATE_TREATED_NOT_EFFECTIVE",
       "s4_required_treatment": [
         "FREEZE_FOUR_LAYER_ACCEPTANCE_TOPOLOGY",
         "REQUIRE_DOMAIN_ACCEPTANCE",
         "REQUIRE_REPOSITORY_ACCEPTANCE",
         "REQUIRE_ORCHESTRATION_ACCEPTANCE",
         "REQUIRE_FORMAL_PRODUCTION_COMPOSITION_ACCEPTANCE_BEFORE_S5_EFFECTIVENESS"
+      ],
+      "candidate_treatment_refs": [
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S4_STABILIZATION.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_DOMAIN.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S4_FORMAL_COMPOSITION_DB.ts"
       ]
     }
   ],
@@ -111,5 +129,6 @@
     "NO_MODEL_ACTIVATION_OR_CALIBRATION_WAS_OWED_BY_CAP05"
   ],
   "exit_condition": "ALL_OPEN_ITEMS_HAVE_MERGED_MAIN_PROOF_AND_S4_EFFECTIVENESS_BEFORE_S5_AUTHORIZATION",
+  "s4_effective": false,
   "s5_authorized": false
 }

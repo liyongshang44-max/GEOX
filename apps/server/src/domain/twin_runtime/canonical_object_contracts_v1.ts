@@ -55,9 +55,17 @@ export function validateCanonicalObjectV1(object: CanonicalObjectEnvelopeV1): vo
     if (object.payload.checkpoint_kind !== "INITIAL" || object.payload.previous_checkpoint_ref !== null) throw new Error("INITIAL_CHECKPOINT_CONTRACT_VIOLATION");
   }
   if (object.object_type === "twin_forecast_run_v1") {
-    if (object.payload.status !== "BLOCKED" || !Array.isArray(object.payload.points) || object.payload.points.length !== 0) throw new Error("BLOCKED_FORECAST_ZERO_POINTS_REQUIRED");
-    if (!Array.isArray(object.payload.reason_codes) || object.payload.reason_codes.length === 0) throw new Error("BLOCKED_FORECAST_REASONS_REQUIRED");
-    if (object.payload.scenario_eligible !== false) throw new Error("BLOCKED_FORECAST_SCENARIO_INELIGIBLE");
+    if (object.payload.status === "BLOCKED") {
+      if (!Array.isArray(object.payload.points) || object.payload.points.length !== 0) throw new Error("BLOCKED_FORECAST_ZERO_POINTS_REQUIRED");
+      if (!Array.isArray(object.payload.reason_codes) || object.payload.reason_codes.length === 0) throw new Error("BLOCKED_FORECAST_REASONS_REQUIRED");
+      if (object.payload.scenario_eligible !== false) throw new Error("BLOCKED_FORECAST_SCENARIO_INELIGIBLE");
+    } else if (object.payload.status === "COMPLETED") {
+      if (!Array.isArray(object.payload.points) || object.payload.points.length === 0) throw new Error("COMPLETED_FORECAST_POINTS_REQUIRED");
+      if (!Array.isArray(object.payload.reason_codes) || object.payload.reason_codes.length !== 0) throw new Error("COMPLETED_FORECAST_REASONS_FORBIDDEN");
+      if (object.payload.scenario_eligible !== true) throw new Error("COMPLETED_FORECAST_SCENARIO_ELIGIBLE_REQUIRED");
+    } else {
+      throw new Error("FORECAST_STATUS_INVALID");
+    }
   }
   if (object.object_type === "twin_state_estimate_v1") {
     const confidence = object.payload.confidence as Record<string, unknown> | undefined;

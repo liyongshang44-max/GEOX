@@ -1,6 +1,6 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_POST_CLOSURE_POSTGRESQL_RUNNER.ts
 // Purpose: prove the CAP-05 post-closure execution-view remediation through the formal PostgreSQL runner from predecessor checkpoint 72 to terminal checkpoint 80, canonical CAP-05 Config pin persistence, restart recovery, zero-write replay, and inherited CAP-04 A/B failure semantics.
-// Boundary: destructive isolated-database acceptance only; creates and drops one dedicated acceptance database, writes no production database, changes no repository fixture, creates no active Config binding, performs no Model Activation or calibration, grants no CAP-06 Runtime/migration authority, and makes no merged-main effectiveness claim.
+// Boundary: destructive isolated-database acceptance only; creates and normally drops one dedicated acceptance database, writes no production database, changes no repository fixture, creates no active Config binding, performs no Model Activation or calibration, grants no CAP-06 Runtime/migration authority, and makes no merged-main effectiveness claim. A dedicated successor-composition acceptance may explicitly retain the isolated database and consume a machine-readable exact-ref handoff.
 
 import assert from "node:assert/strict";
 import cp from "node:child_process";
@@ -380,9 +380,42 @@ async function validateTerminalChainV1(pool: Pool): Promise<void> {
   assert.equal(activeConfigTables.rows.length, 0, "ACTIVE_CONFIG_INDEX_MUST_NOT_EXIST");
 }
 
+async function writeSuccessorHandoffV1(
+  pool: Pool,
+  targetUrl: string,
+  resultPath: string,
+): Promise<void> {
+  const residuals = await pool.query(
+    `SELECT record_json->'payload'->>'object_id' AS residual_ref,
+            record_json->'payload'->>'determinism_hash' AS residual_hash
+       FROM facts
+      WHERE record_json->>'type'='twin_forecast_residual_v1'
+      ORDER BY record_json->'payload'->>'object_id'`,
+  );
+  assert.equal(residuals.rows.length, 1, "CAP05_SUCCESSOR_HANDOFF_RESIDUAL_CARDINALITY");
+  const handoff = {
+    schema_version: "mcft_cap_05_post_closure_successor_handoff_v1",
+    database_url: targetUrl,
+    database_name: ISOLATED_DATABASE,
+    scope: EXPECTED_SCOPE,
+    residual_refs: residuals.rows.map((row) => String(row.residual_ref)),
+    residual_hashes: residuals.rows.map((row) => String(row.residual_hash)),
+    checkpoint_transition: "72_TO_80",
+    formal_runner_status: "PASS",
+    zero_write_replay_status: "PASS",
+  };
+  fs.mkdirSync(path.dirname(resultPath), { recursive: true });
+  fs.writeFileSync(resultPath, `${JSON.stringify(handoff, null, 2)}\n`, "utf8");
+}
+
 async function main(): Promise<void> {
   const baseUrl = process.env.DATABASE_URL;
   if (!baseUrl) throw new Error("DATABASE_URL_REQUIRED");
+  const retainDatabase = process.env.MCFT_CAP_05_POST_CLOSURE_RETAIN_DATABASE === "1";
+  const resultPath = process.env.MCFT_CAP_05_POST_CLOSURE_RESULT_PATH;
+  if (retainDatabase && (!resultPath || !resultPath.trim())) {
+    throw new Error("MCFT_CAP_05_POST_CLOSURE_RESULT_PATH_REQUIRED_WHEN_RETAINING_DATABASE");
+  }
   const targetUrl = await recreateIsolatedDatabase(baseUrl);
   const pnpm = pnpmExecutable();
   const targetPool = new Pool({ connectionString: targetUrl });
@@ -421,7 +454,7 @@ async function main(): Promise<void> {
 
     const expiredPredecessorLease = await targetPool.query(
       `UPDATE twin_runtime_lease_v1
-          SET expires_at=transaction_timestamp()-interval '1 second'
+          SET expires_at=acquired_at+interval '1 microsecond'
         WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3
           AND field_id=$4 AND season_id=$5 AND zone_id=$6`,
       [
@@ -489,9 +522,7 @@ async function main(): Promise<void> {
         [START_LOGICAL_TIME],
       );
       throw new Error(
-        `FORMAL_CAP05_RUNNER_FAILED_WITH_CANONICAL_DIAGNOSTICS:${JSON.stringify(blockedFacts.rows)}
-${firstOutput}
-${firstError}`,
+        `FORMAL_CAP05_RUNNER_FAILED_WITH_CANONICAL_DIAGNOSTICS:${JSON.stringify(blockedFacts.rows)}\n${firstOutput}\n${firstError}`,
       );
     }
     const first = parseRunnerOutputV1(firstOutput);
@@ -526,13 +557,18 @@ ${firstError}`,
     assert.deepEqual(afterReplay, beforeReplay);
     ok("second formal runner process recovers terminal state with zero canonical writes or projection divergence");
 
-    assert.equal(pass, 7);
+    if (retainDatabase && resultPath) {
+      await writeSuccessorHandoffV1(targetPool, targetUrl, resultPath);
+      ok("retained isolated database exposes exact successor-composition Residual handoff");
+    }
+
+    assert.equal(pass, retainDatabase ? 8 : 7);
     process.stdout.write(`SUMMARY ${pass} PASS / 0 FAIL\n`);
   } finally {
     await targetPool.end();
     fs.rmSync(replayRoot, { recursive: true, force: true });
     fs.rmSync(runnerInputPath, { force: true });
-    await dropIsolatedDatabase(baseUrl);
+    if (!retainDatabase) await dropIsolatedDatabase(baseUrl);
   }
 }
 
