@@ -30,8 +30,13 @@ assert.equal(entry.s5_authorized, false);
 assert.equal(delivery.s5_entry.authorized, true);
 assert.equal(delivery.s5_entry.effective, s4.s5_entry_effective);
 assert.equal(delivery.s5.authorized, s4.s5_authorized);
+if (delivery.s5_predecessor_graph_conformance?.effective !== true) {
+  assert.equal(delivery.s5.authorized, false);
+  assert.equal(delivery.s5.implementation_started, false);
+}
 if (delivery.s5.authorized === true) {
   assert.equal(delivery.s5_entry.effective, true);
+  assert.equal(delivery.s5_predecessor_graph_conformance?.effective ?? true, true);
   assert.equal(delivery.s5.implementation_started, false);
 }
 
@@ -40,6 +45,7 @@ console.log(JSON.stringify({
   status: 'PASS',
   direct_s5_authorization_superseded: true,
   s5_entry_effective: delivery.s5_entry.effective,
+  s5_graph_prerequisite_effective: delivery.s5_predecessor_graph_conformance?.effective ?? null,
   s5_authorized: delivery.s5.authorized,
   canonical_write_count: 0
 }));

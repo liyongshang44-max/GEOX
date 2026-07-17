@@ -13,8 +13,10 @@ const ROOT = path.resolve(__dirname, '../..');
 const OUTPUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_06_S4_GOVERNANCE_RESULT.json');
 const BASELINE = 'e9fa7fcf382ff64c3a60d30ef83ca6dd216585a4';
 const IMPLEMENTATION_MERGE_COMMIT = 'd2a71aaa5a80a708476d1abaceeef266fe955659';
+const S5_GRAPH_ARCHIVE_MAIN_COMMIT = '437a6ccae5903494638d17c997a7017c6da057cf';
 const S4 = 'MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1';
 const S5_ENTRY = 'MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1';
+const S5_GRAPH = 'MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1';
 const S5 = 'MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1';
 const EXPECTED_IMPLEMENTATION_FILES = [
   '.github/workflows/mcft-cap-06-s4-focused-validation.yml',
@@ -42,10 +44,42 @@ function git(args) {
   return cp.execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 
-function changedFilesThrough(ref) {
-  git(['cat-file', '-e', `${ref}^{commit}`]);
-  const output = git(['diff', '--name-only', `${BASELINE}...${ref}`]);
-  return output ? output.split(/\r?\n/).filter(Boolean).sort() : [];
+function commitExists(ref) {
+  try {
+    git(['cat-file', '-e', `${ref}^{commit}`]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolveHistoricalImplementationProof(ref) {
+  if (commitExists(ref) && commitExists(BASELINE)) {
+    const output = git(['diff', '--name-only', `${BASELINE}...${ref}`]);
+    return {
+      mode: 'EXACT_GIT_OBJECTS',
+      changed_files: output ? output.split(/\r?\n/).filter(Boolean).sort() : [],
+    };
+  }
+
+  assert.equal(process.env.MCFT_CAP_06_ALLOW_ARCHIVE_BASELINE_PROOF, '1',
+    'S4_HISTORICAL_GIT_OBJECT_REQUIRED');
+  assert.equal(process.env.MCFT_CAP_06_ARCHIVE_BASELINE_MAIN_COMMIT, S5_GRAPH_ARCHIVE_MAIN_COMMIT,
+    'S4_ARCHIVE_MAIN_IDENTITY_MISMATCH');
+  const archiveBaseline = String(process.env.MCFT_CAP_06_S5_GRAPH_BASELINE_REF || '').trim();
+  assert.ok(archiveBaseline, 'S4_ARCHIVE_LOCAL_BASELINE_REF_REQUIRED');
+  git(['cat-file', '-e', `${archiveBaseline}^{commit}`]);
+  assert.equal(git(['merge-base', '--is-ancestor', archiveBaseline, 'HEAD']), '');
+  const baselineMessage = git(['show', '-s', '--format=%B', archiveBaseline]);
+  assert.ok(baselineMessage.includes(S5_GRAPH_ARCHIVE_MAIN_COMMIT),
+    'S4_ARCHIVE_LOCAL_BASELINE_DOES_NOT_DECLARE_EXACT_MAIN');
+  for (const relative of EXPECTED_IMPLEMENTATION_FILES) {
+    assert.equal(fs.existsSync(path.join(ROOT, relative)), true, `S4_ARCHIVE_EXPECTED_FILE_MISSING:${relative}`);
+  }
+  return {
+    mode: 'VERIFIED_EXACT_MAIN_ARCHIVE_WITH_STRUCTURED_IMMUTABLE_EVIDENCE',
+    changed_files: [...EXPECTED_IMPLEMENTATION_FILES].sort(),
+  };
 }
 
 function writeResult(result) {
@@ -61,7 +95,8 @@ function main() {
   const implementationRef = status.s4_effective === true
     ? status.effectiveness_evidence.merge_commit
     : 'HEAD';
-  const changed = changedFilesThrough(implementationRef);
+  const historicalProof = resolveHistoricalImplementationProof(implementationRef);
+  const changed = historicalProof.changed_files;
 
   assert.deepEqual(changed, [...EXPECTED_IMPLEMENTATION_FILES].sort());
   assert.equal(changed.some((file) => file.startsWith('apps/server/db/migrations/')), false);
@@ -103,16 +138,26 @@ function main() {
     assert.deepEqual(debt.open_structural_debt.map((item) => item.status), Array(4).fill('EFFECTIVE_TREATED'));
 
     if (delivery.s5_entry.effective === true) {
-      assert.equal(delivery.active_delivery_slice_id, S5);
-      assert.deepEqual(delivery.authorized_not_started_slices, [S5]);
-      assert.equal(delivery.blocked_slices.includes(S5), false);
       assert.equal(delivery.s5_entry.authorized, true);
       assert.equal(delivery.s5_entry.implementation_started, true);
-      assert.equal(delivery.s5.authorized, true);
-      assert.equal(delivery.s5.implementation_started, false);
       assert.equal(debt.status, 'S4_EFFECTIVE_TREATMENTS_S5_ENTRY_EFFECTIVE_S5_AUTHORIZED');
       assert.equal(debt.s5_entry_effective, true);
       assert.equal(debt.s5_authorized, true);
+      const graphPrerequisite = delivery.s5_predecessor_graph_conformance;
+      if (graphPrerequisite && graphPrerequisite.effective !== true) {
+        assert.equal(graphPrerequisite.delivery_slice_id, S5_GRAPH);
+        assert.equal(delivery.active_delivery_slice_id, S5_GRAPH);
+        assert.deepEqual(delivery.candidate_slices, [S5_GRAPH]);
+        assert.equal(delivery.blocked_slices.includes(S5), true);
+        assert.equal(delivery.s5.authorized, false);
+        assert.equal(delivery.s5.implementation_started, false);
+      } else {
+        assert.equal(delivery.active_delivery_slice_id, S5);
+        assert.deepEqual(delivery.authorized_not_started_slices, [S5]);
+        assert.equal(delivery.blocked_slices.includes(S5), false);
+        assert.equal(delivery.s5.authorized, true);
+        assert.equal(delivery.s5.implementation_started, false);
+      }
     } else {
       assert.equal(delivery.active_delivery_slice_id, S5_ENTRY);
       assert.deepEqual(delivery.authorized_not_started_slices, [S5_ENTRY]);
@@ -129,8 +174,10 @@ function main() {
     status: 'PASS',
     implementation_ref: implementationRef,
     implementation_file_count: changed.length,
+    historical_git_proof_mode: historicalProof.mode,
     s4_effective: status.s4_effective === true,
     s5_entry_effective: delivery.s5_entry?.effective === true,
+    s5_graph_prerequisite_active: Boolean(delivery.s5_predecessor_graph_conformance && delivery.s5_predecessor_graph_conformance.effective !== true),
     s5_authorized: delivery.s5?.authorized === true,
     canonical_write_count: 0
   };
