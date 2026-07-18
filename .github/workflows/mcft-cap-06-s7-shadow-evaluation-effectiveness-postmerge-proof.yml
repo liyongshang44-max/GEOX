@@ -1,0 +1,79 @@
+name: mcft-cap-06-s7-shadow-evaluation-effectiveness-postmerge-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s7-shadow-evaluation-effectiveness-postmerge-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-merged-main-s7-effectiveness-proof:
+    runs-on: ubuntu-latest
+    env:
+      IMPLEMENTATION_MERGE: c52ddd97ddf190db78ded6571263d7a0cc64ece6
+      EFFECTIVENESS_HEAD: c33c31cf042e737621d6f878e95ef74aa0d29d87
+      EFFECTIVENESS_MERGE: 7bd493b54abf93fa40cb7f17af88b2a063a38e1d
+    steps:
+      - name: Checkout proof carrier
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify exact proof topology
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "$EFFECTIVENESS_MERGE"
+          test "$(git rev-parse "$EFFECTIVENESS_MERGE^1")" = "$IMPLEMENTATION_MERGE"
+          test "$(git rev-parse "$EFFECTIVENESS_MERGE^2")" = "$EFFECTIVENESS_HEAD"
+          test -z "$(git diff --name-only "$EFFECTIVENESS_HEAD" "$EFFECTIVENESS_MERGE")"
+          test "$(git rev-list --count "$IMPLEMENTATION_MERGE..$EFFECTIVENESS_HEAD")" = "11"
+          test "$(git rev-list --count "$IMPLEMENTATION_MERGE..$EFFECTIVENESS_MERGE")" = "12"
+          test "$(git diff --name-only "$IMPLEMENTATION_MERGE...$EFFECTIVENESS_MERGE" | wc -l | tr -d ' ')" = "9"
+          test "$(git diff --name-only "$EFFECTIVENESS_MERGE...HEAD")" = ".github/workflows/mcft-cap-06-s7-shadow-evaluation-effectiveness-postmerge-proof.yml"
+
+      - name: Checkout exact S7 effectiveness merge
+        uses: actions/checkout@v4
+        with:
+          ref: 7bd493b54abf93fa40cb7f17af88b2a063a38e1d
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Run exact merged-main S7 effectiveness Gate
+        env:
+          MCFT_CAP_06_S7_SHADOW_EVALUATION_EFFECTIVENESS_BASELINE_REF: c52ddd97ddf190db78ded6571263d7a0cc64ece6
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION_EFFECTIVENESS.cjs
+
+      - name: Verify exact merged-main structured effectiveness
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S7_SHADOW_EVALUATION_EFFECTIVENESS_RESULT.json', 'utf8'));
+          if (r.status !== 'PASS') throw new Error('S7_EFFECTIVENESS_POSTMERGE_NOT_PASS');
+          if (r.exact_head !== '7bd493b54abf93fa40cb7f17af88b2a063a38e1d') throw new Error('S7_EFFECTIVENESS_POSTMERGE_HEAD_MISMATCH');
+          if (r.changed_file_count !== 9 || r.logical_commit_count !== 12) throw new Error('S7_EFFECTIVENESS_POSTMERGE_DELTA_MISMATCH');
+          if (r.implementation_exact_head !== '0bf743a838a68102b1dd391636cc70f31f80e789') throw new Error('S7_EFFECTIVENESS_POSTMERGE_IMPLEMENTATION_HEAD_MISMATCH');
+          if (r.implementation_merge_commit !== 'c52ddd97ddf190db78ded6571263d7a0cc64ece6') throw new Error('S7_EFFECTIVENESS_POSTMERGE_IMPLEMENTATION_MERGE_MISMATCH');
+          if (r.head_to_merge_file_delta_count !== 0 || r.head_to_merge_tree_equivalence !== 'PASS') throw new Error('S7_EFFECTIVENESS_POSTMERGE_TREE_MISMATCH');
+          if (r.evaluation_ref !== 'twin_shadow_evaluation_8cae1f6732420a4999deffc0') throw new Error('S7_EFFECTIVENESS_POSTMERGE_EVALUATION_REF_MISMATCH');
+          if (r.evaluation_hash !== 'sha256:32c43020f45351994120515e5c633531bb594d85659456c65bd46305737d85e0') throw new Error('S7_EFFECTIVENESS_POSTMERGE_EVALUATION_HASH_MISMATCH');
+          if (r.s7_status !== 'MERGED_EFFECTIVE' || r.s7_effective !== true) throw new Error('S7_EFFECTIVENESS_POSTMERGE_STATUS_MISMATCH');
+          if (r.active_delivery_slice_id !== 'MCFT-CAP-06.MCFT-03-04-12.RESTART-READBACK-REBUILD-V1') throw new Error('S7_EFFECTIVENESS_POSTMERGE_FRONTIER_MISMATCH');
+          if (r.s8_authorized !== true || r.s8_implementation_started !== false || r.s8_candidate_implemented !== false || r.s8_effective !== false) throw new Error('S7_EFFECTIVENESS_POSTMERGE_S8_STATE_MISMATCH');
+          if (r.governance_writeback_canonical_write_count !== 0 || r.production_candidate_append_count !== 0 || r.production_evaluation_append_count !== 0 || r.projection_write_count !== 0 || r.model_activation_count !== 0) throw new Error('S7_EFFECTIVENESS_POSTMERGE_WRITE_BOUNDARY_VIOLATION');
+          if (r.active_config_switch_count !== 0 || r.runtime_parameter_change_count !== 0 || r.state_mutation_count !== 0 || r.checkpoint_mutation_count !== 0 || r.migration_count !== 0) throw new Error('S7_EFFECTIVENESS_POSTMERGE_RUNTIME_BOUNDARY_VIOLATION');
+          NODE
+
+      - name: Upload proof evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s7-shadow-evaluation-effectiveness-postmerge-proof
+          path: acceptance-output/
+          if-no-files-found: error
