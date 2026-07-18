@@ -4,6 +4,21 @@
   "delivery_slice_id": "MCFT-CAP-06.MCFT-04-06-08-09-12.POST-EVALUATION-NON-CONSUMPTION-TICK-V1",
   "taskbook_version": "v0.4.0",
   "classification": "CAPABILITY_SLICE_IMPLEMENTATION",
+  "implementation_evidence_integrity": {
+    "defect_classification": "IMPLEMENTATION_DEFECT",
+    "superseded_implementation_pr_number": 2576,
+    "superseded_exact_head": "b69547bee6ddbf05c8289d66a63873fece4038a6",
+    "superseded_merge_commit": "9ed601140776c79d54fd650364295b1287deb721",
+    "superseded_head_to_merge_file_delta_count": 4,
+    "superseded_head_to_merge_tree_equivalence": "FAIL",
+    "delta_files_are_delivery_policy_only": true,
+    "corrected_implementation_base": "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+    "corrected_candidate_head_to_merge_file_delta_required": 0,
+    "corrected_candidate_tree_equivalence_required": "PASS",
+    "predecessor_effectiveness_merge_unchanged": "cc95f9ebced0c7f8dc92d2a0b5d9716e06c3ec2c",
+    "new_prerequisite_inserted": false,
+    "task_order_changed": false
+  },
   "predecessor": {
     "slice_id": "MCFT-CAP-06.MCFT-03-04-12.RESTART-READBACK-REBUILD-V1",
     "status": "MERGED_EFFECTIVE",

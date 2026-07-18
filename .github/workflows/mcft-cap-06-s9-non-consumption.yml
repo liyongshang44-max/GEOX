@@ -53,7 +53,7 @@ jobs:
       POSTGRES_HOST: 127.0.0.1
       POSTGRES_PORT: 5432
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
-      MCFT_CAP_06_S9_NON_CONSUMPTION_BASE_REF: cc95f9ebced0c7f8dc92d2a0b5d9716e06c3ec2c
+      MCFT_CAP_06_S9_NON_CONSUMPTION_BASE_REF: 95ac26926ae19754bc62a744c59b1d8901e6e7b5
     steps:
       - name: Checkout exact S9 candidate head
         uses: actions/checkout@v4
