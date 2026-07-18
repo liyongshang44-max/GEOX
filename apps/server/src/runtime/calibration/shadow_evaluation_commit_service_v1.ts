@@ -88,12 +88,12 @@ function validateCaseWindowHashV1(
 function validateShadowHashV1(
   shadow: Cap06PairedHistoricalShadowServiceResultV1["paired_shadow_compute_result"],
 ): void {
+  if (semanticHashV1(shadow.case_results) !== shadow.case_results_hash) {
+    throw new Error("CAP06_S7_S6_CASE_RESULTS_HASH_INVALID");
+  }
   const { determinism_hash: declaredHash, ...semantic } = shadow;
   if (semanticHashV1(semantic) !== declaredHash) {
     throw new Error("CAP06_S7_S6_COMPUTE_DETERMINISM_HASH_INVALID");
-  }
-  if (semanticHashV1(shadow.case_results) !== shadow.case_results_hash) {
-    throw new Error("CAP06_S7_S6_CASE_RESULTS_HASH_INVALID");
   }
 }
 
