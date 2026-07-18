@@ -1,0 +1,103 @@
+name: mcft-cap-06-s9-effectiveness-postmerge-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s9-effectiveness-postmerge-proof.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-merged-main-s9-effectiveness-proof:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      MCFT_CAP_06_S9_NON_CONSUMPTION_BASE_REF: 95ac26926ae19754bc62a744c59b1d8901e6e7b5
+    steps:
+      - name: Checkout proof carrier
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact corrected S9 merge topology
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='95ac26926ae19754bc62a744c59b1d8901e6e7b5'
+          CANDIDATE='0e3f1b0d7f1b28830e906b55e46463f5ec733275'
+          MERGE='b61b7433c36c8bc352513b20d365dacf5d92f951'
+          test "$(git rev-parse HEAD^)" = "$MERGE"
+          test "$(git rev-list --count "$BASE..$CANDIDATE")" = '10'
+          test "$(git rev-list --count "$BASE..$MERGE")" = '11'
+          test "$(git diff --name-only "$BASE...$CANDIDATE" | sed '/^$/d' | wc -l | tr -d ' ')" = '9'
+          test "$(git diff --name-only "$CANDIDATE" "$MERGE" | sed '/^$/d' | wc -l | tr -d ' ')" = '0'
+          test "$(git rev-parse "$CANDIDATE^{tree}")" = "$(git rev-parse "$MERGE^{tree}")"
+
+      - name: Checkout exact corrected S9 merge
+        uses: actions/checkout@v4
+        with:
+          ref: b61b7433c36c8bc352513b20d365dacf5d92f951
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run exact merged-main S9 preflight
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S9_NON_CONSUMPTION.cjs
+
+      - name: Verify exact merged-main structured proof
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p = 'acceptance-output/MCFT_CAP_06_S9_NON_CONSUMPTION_PREFLIGHT_RESULT.json';
+          const r = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (r.status !== 'PASS' || r.stage_count !== 6) throw new Error(`S9_POSTMERGE_NOT_PASS:${r.error || 'UNKNOWN'}`);
+          if (r.exact_head !== 'b61b7433c36c8bc352513b20d365dacf5d92f951') throw new Error('S9_POSTMERGE_EXACT_HEAD_INVALID');
+          if (r.candidate_parameter_value !== '0.034000' || r.effective_tick_parameter_value !== '0.030000') throw new Error('S9_POSTMERGE_PARAMETER_NON_CONSUMPTION_INVALID');
+          if (r.candidate_consumed !== false || r.evaluation_consumed !== false) throw new Error('S9_POSTMERGE_GOVERNANCE_OBJECT_CONSUMED');
+          if (r.active_config_snapshot_changed !== false || r.model_activation_count !== 0) throw new Error('S9_POSTMERGE_RUNTIME_AUTHORITY_CHANGED');
+          if (r.forecast_point_count !== 72 || r.scenario_option_count !== 3 || r.scenario_points_per_option !== 72) throw new Error('S9_POSTMERGE_FORECAST_SCENARIO_SHAPE_INVALID');
+          if (r.completed_rerun_additional_fact_count !== 0 || r.completed_rerun_evidence_load_count !== 0) throw new Error('S9_POSTMERGE_RERUN_NOT_ZERO_WRITE');
+          if (r.s9_candidate_implemented !== true || r.s9_effective !== false || r.s10_authorized !== false) throw new Error('S9_POSTMERGE_FRONTIER_INVALID');
+          if (r.new_prerequisite_inserted !== false) throw new Error('S9_POSTMERGE_AD_HOC_PREREQUISITE_VIOLATION');
+          NODE
+
+      - name: Upload proof evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s9-effectiveness-postmerge-proof
+          path: acceptance-output/
+          if-no-files-found: error
