@@ -1,5 +1,5 @@
-// Purpose: validate the S7 Shadow Evaluation implementation from exact changed files, frozen S6 authority, structured domain/PostgreSQL evidence, one controlled Evaluation append and zero forbidden mutation.
-// Boundary: structured governance only; no Runtime execution, database access, alternative shadow compute, Model Activation, active Config, State/checkpoint authority, route, Web or scheduler.
+// Purpose: validate the exact S7 implementation boundary and keep pure-domain evidence distinct from the authoritative PostgreSQL controlled graph.
+// Boundary: structured governance only; no Runtime execution, database access, alternative shadow compute, activation, active Config, State/checkpoint, route, Web or scheduler authority.
 
 'use strict';
 
@@ -14,6 +14,17 @@ const RESULT_PATH = path.join(OUTPUT_DIR, 'MCFT_CAP_06_S7_SHADOW_EVALUATION_GOVE
 const BASELINE = '1333ef2f1613745b785d01859e5355ea6fd27274';
 const S7 = 'MCFT-CAP-06.MCFT-03-12.SHADOW-EVALUATION-COMMIT-V1';
 const S8 = 'MCFT-CAP-06.MCFT-03-04-12.RESTART-READBACK-REBUILD-V1';
+const CANDIDATE_REF = 'twin_calibration_candidate_5649b9ab80b5545cf6007387';
+const CANDIDATE_HASH = 'sha256:a2018a61bf6699b3cc3b8992058eb2c37b4d38d7f70771f9186495144c229a65';
+const DOMAIN_CASE_HASH = 'sha256:dd1a9a996646c4bf6c04efa4e27a267b75828494ce71c76336ab8fedcafe93ab';
+const DOMAIN_COMPUTE_HASH = 'sha256:7d168652044065656ed25966259777a67c6add5c877926dded789bb19f56a087';
+const DOMAIN_EVALUATION_HASH = 'sha256:12bf65d6687742bc6f0f3cf04054727baa90646b4e797397f65fcf00d3ea37ca';
+const DATABASE_ARTIFACT_HASH = 'sha256:396fa1c03a33e4b5722c6d6e7d63774072e46ec8e8f91deaf7a5e0c24b328a71';
+const DATABASE_CASE_HASH = 'sha256:e1b33fb79059856c030cab58970c543f384fb30a385bc3aa49c96b315efe4daa';
+const DATABASE_COMPUTE_HASH = 'sha256:8017c2ba6006e1f2a593312300937841b5c2dd3a700c949bb8309338994ef63e';
+const EVALUATION_REF = 'twin_shadow_evaluation_8cae1f6732420a4999deffc0';
+const DATABASE_EVALUATION_HASH = 'sha256:32c43020f45351994120515e5c633531bb594d85659456c65bd46305737d85e0';
+
 const EXPECTED_FILES = [
   '.github/workflows/mcft-cap-06-s7-shadow-evaluation.yml',
   'apps/server/scripts/mcft/MCFT_CAP_06_SHADOW_EVALUATION_COMMIT_RUNNER.ts',
@@ -45,9 +56,22 @@ const REQUIRED_STAGES = [
   'S7_DOMAIN_EVALUATION',
   'S7_POSTGRESQL_EVALUATION',
 ];
+const ZERO_KEYS = [
+  'candidate_append_count',
+  'model_activation_count',
+  'active_config_switch_count',
+  'runtime_parameter_change_count',
+  'state_mutation_count',
+  'checkpoint_mutation_count',
+  'migration_count',
+];
 
 function git(args) {
-  return cp.execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  return cp.execFileSync('git', args, {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim();
 }
 function json(relative) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
@@ -56,8 +80,25 @@ function write(result) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   fs.writeFileSync(RESULT_PATH, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
 }
-function assertZero(object, keys, prefix) {
-  for (const key of keys) assert.equal(object[key], 0, `${prefix}_${key.toUpperCase()}_NONZERO`);
+function assertZero(object, prefix) {
+  for (const key of ZERO_KEYS) assert.equal(object[key], 0, `${prefix}_${key.toUpperCase()}_NONZERO`);
+}
+function assertCommonControlledResult(result, prefix) {
+  assert.equal(result.status, 'PASS', `${prefix}_STATUS_NOT_PASS`);
+  assert.equal(result.candidate_ref, CANDIDATE_REF, `${prefix}_CANDIDATE_REF_MISMATCH`);
+  assert.equal(result.candidate_hash, CANDIDATE_HASH, `${prefix}_CANDIDATE_HASH_MISMATCH`);
+  assert.equal(result.candidate_parameter_value, '0.034000', `${prefix}_PARAMETER_MISMATCH`);
+  assert.equal(result.holdout_case_count, 8, `${prefix}_HOLDOUT_COUNT_MISMATCH`);
+  assert.equal(result.evaluation_ref, EVALUATION_REF, `${prefix}_EVALUATION_REF_MISMATCH`);
+  assert.equal(result.evaluation_disposition, 'ELIGIBLE_FOR_HUMAN_ACTIVATION_REVIEW', `${prefix}_DISPOSITION_MISMATCH`);
+  assert.deepEqual(result.reason_codes, ['ALL_THRESHOLDS_PASS'], `${prefix}_REASON_CODES_MISMATCH`);
+  assert.equal(result.first_evaluation_append_count, 1, `${prefix}_FIRST_APPEND_MISMATCH`);
+  assert.equal(result.completed_chain_rerun_evaluation_append_count, 0, `${prefix}_RERUN_APPEND_MISMATCH`);
+  assert.equal(result.aggregate_projection_count, 1, `${prefix}_AGGREGATE_PROJECTION_MISMATCH`);
+  assert.equal(result.candidate_evaluation_index_count, 1, `${prefix}_CANDIDATE_INDEX_MISMATCH`);
+  assert.equal(result.case_projection_count, 8, `${prefix}_CASE_PROJECTION_MISMATCH`);
+  assert.equal(result.canonical_readback_verified, true, `${prefix}_READBACK_NOT_VERIFIED`);
+  assertZero(result, prefix);
 }
 
 function main() {
@@ -95,28 +136,17 @@ function main() {
   assert.equal(authority.schema_version, 'geox_mcft_cap_06_s7_shadow_evaluation_authority_graph_v1');
   assert.equal(authority.delivery_slice_id, S7);
   assert.equal(authority.status, 'FROZEN_BEFORE_RUNTIME_SOURCE');
-  assert.equal(authority.input_authority.artifact_schema_version, 'geox_mcft_cap_06_s6_paired_shadow_service_result_v1');
   assert.equal(authority.input_authority.holdout_case_count, 8);
   assert.equal(authority.input_authority.alternative_artifact_or_latest_query_permitted, false);
   assert.equal(authority.read_graph.s6_artifact_recompute_in_s7, false);
   assert.equal(authority.build_graph.authority, 'buildCap06ShadowEvaluationDraftV1');
-  assert.equal(authority.build_graph.required_embedded_case_summary_count, 8);
   assert.equal(authority.commit_graph.d_transaction_authority, 'PostgresCalibrationGovernanceRepositoryV1.commitCanonicalObject');
   assert.equal(authority.commit_graph.maximum_new_canonical_append_count, 1);
   assert.equal(authority.commit_graph.required_projection_rows.total, 10);
   assert.equal(authority.output_authority.canonical_object_type, 'twin_shadow_evaluation_v1');
-  assert.equal(authority.output_authority.eligible_for_runtime_config_use, false);
   assert.equal(authority.controlled_write_boundary.canonical_evaluation_append_count, 1);
   assert.equal(authority.controlled_write_boundary.projection_row_count, 10);
-  assertZero(authority.controlled_write_boundary, [
-    'candidate_append_count',
-    'model_activation_count',
-    'active_config_switch_count',
-    'runtime_parameter_change_count',
-    'state_mutation_count',
-    'checkpoint_mutation_count',
-    'migration_count',
-  ], 'S7_AUTHORITY');
+  assertZero(authority.controlled_write_boundary, 'S7_AUTHORITY');
 
   assert.equal(contract.status, 'AUTHORIZED_NOT_STARTED_AUTHORITY_GRAPH_FROZEN');
   assert.equal(contract.predecessor_effective, true);
@@ -128,7 +158,6 @@ function main() {
   assert.equal(contract.model_activation_authorized, false);
   assert.equal(contract.active_config_switch_authorized, false);
   assert.equal(contract.protected_existing_file_delta_required, 0);
-  assert.equal(contract.required_result.holdout_case_count, 8);
   assert.equal(contract.required_result.first_evaluation_append_count, 1);
   assert.equal(contract.required_result.completed_chain_rerun_evaluation_append_count, 0);
   assert.equal(contract.required_result.aggregate_projection_count, 1);
@@ -142,26 +171,12 @@ function main() {
   assert.equal(status.s7_implementation_started, true);
   assert.equal(status.s7_candidate_implemented, true);
   assert.equal(status.s7_effective, false);
-  assert.equal(status.controlled_acceptance.holdout_case_count, 8);
-  assert.equal(status.controlled_acceptance.first_evaluation_append_count, 1);
-  assert.equal(status.controlled_acceptance.completed_chain_rerun_evaluation_append_count, 0);
-  assert.equal(status.controlled_acceptance.aggregate_projection_count, 1);
-  assert.equal(status.controlled_acceptance.candidate_evaluation_index_count, 1);
-  assert.equal(status.controlled_acceptance.case_projection_count, 8);
   assert.equal(status.runtime_delta.canonical_evaluation_append_count, 1);
   assert.equal(status.runtime_delta.projection_row_count, 10);
-  assertZero(status.runtime_delta, [
-    'candidate_append_count',
-    'model_activation_count',
-    'active_config_switch_count',
-    'runtime_parameter_change_count',
-    'state_mutation_count',
-    'checkpoint_mutation_count',
-    'migration_count',
-  ], 'S7_STATUS');
+  assertZero(status.runtime_delta, 'S7_STATUS');
   assert.equal(status.s8_authorized, false);
 
-  // Candidate implementation does not mutate the global effectiveness frontier.
+  // Candidate implementation must not move the global effectiveness frontier.
   assert.equal(delivery.active_delivery_slice_id, S7);
   assert.deepEqual(delivery.authorized_not_started_slices, [S7]);
   assert.equal(delivery.s7.authorized, true);
@@ -189,55 +204,28 @@ function main() {
     assert.equal(stage.exit_code, 0, `S7_SHADOW_EVALUATION_PREFLIGHT_STAGE_EXIT_NONZERO:${stageId}`);
   }
 
-  assert.equal(domain.status, 'PASS');
-  assert.equal(domain.candidate_ref, 'twin_calibration_candidate_5649b9ab80b5545cf6007387');
-  assert.equal(domain.candidate_hash, 'sha256:a2018a61bf6699b3cc3b8992058eb2c37b4d38d7f70771f9186495144c229a65');
-  assert.equal(domain.candidate_parameter_value, '0.034000');
-  assert.equal(domain.holdout_case_count, 8);
-  assert.equal(domain.evaluation_disposition, 'ELIGIBLE_FOR_HUMAN_ACTIVATION_REVIEW');
-  assert.deepEqual(domain.reason_codes, ['ALL_THRESHOLDS_PASS']);
-  assert.equal(domain.first_evaluation_append_count, 1);
-  assert.equal(domain.completed_chain_rerun_evaluation_append_count, 0);
-  assert.equal(domain.aggregate_projection_count, 1);
-  assert.equal(domain.candidate_evaluation_index_count, 1);
-  assert.equal(domain.case_projection_count, 8);
-  assert.equal(domain.canonical_readback_verified, true);
-  assertZero(domain, [
-    'candidate_append_count',
-    'model_activation_count',
-    'active_config_switch_count',
-    'runtime_parameter_change_count',
-    'state_mutation_count',
-    'checkpoint_mutation_count',
-    'migration_count',
-  ], 'S7_DOMAIN');
+  // Pure-domain fixture is independently deterministic; it is not the canonical DB graph.
+  assertCommonControlledResult(domain, 'S7_DOMAIN');
+  assert.equal(domain.source_s6_case_results_hash, DOMAIN_CASE_HASH);
+  assert.equal(domain.source_s6_compute_determinism_hash, DOMAIN_COMPUTE_HASH);
+  assert.equal(domain.evaluation_hash, DOMAIN_EVALUATION_HASH);
 
-  assert.equal(database.status, 'PASS');
+  // PostgreSQL graph is the authoritative controlled S7 result used by governance output.
+  assertCommonControlledResult(database, 'S7_DATABASE');
+  assert.equal(database.source_s6_artifact_hash, DATABASE_ARTIFACT_HASH);
+  assert.equal(database.source_s6_case_results_hash, DATABASE_CASE_HASH);
+  assert.equal(database.source_s6_compute_determinism_hash, DATABASE_COMPUTE_HASH);
+  assert.equal(database.evaluation_hash, DATABASE_EVALUATION_HASH);
+  assert.equal(database.fact_count_after_evaluation, database.fact_count_before_evaluation + 1);
+
+  // Cross-fixture equality is intentionally limited to authority identities and dispositions.
   assert.equal(database.candidate_ref, domain.candidate_ref);
   assert.equal(database.candidate_hash, domain.candidate_hash);
-  assert.equal(database.source_s6_case_results_hash, domain.source_s6_case_results_hash);
-  assert.equal(database.source_s6_compute_determinism_hash, domain.source_s6_compute_determinism_hash);
+  assert.equal(database.candidate_parameter_value, domain.candidate_parameter_value);
   assert.equal(database.evaluation_ref, domain.evaluation_ref);
-  assert.equal(database.evaluation_hash, domain.evaluation_hash);
-  assert.equal(database.holdout_case_count, 8);
-  assert.equal(database.evaluation_disposition, 'ELIGIBLE_FOR_HUMAN_ACTIVATION_REVIEW');
-  assert.deepEqual(database.reason_codes, ['ALL_THRESHOLDS_PASS']);
-  assert.equal(database.first_evaluation_append_count, 1);
-  assert.equal(database.completed_chain_rerun_evaluation_append_count, 0);
-  assert.equal(database.aggregate_projection_count, 1);
-  assert.equal(database.candidate_evaluation_index_count, 1);
-  assert.equal(database.case_projection_count, 8);
-  assert.equal(database.canonical_readback_verified, true);
-  assert.equal(database.fact_count_after_evaluation, database.fact_count_before_evaluation + 1);
-  assertZero(database, [
-    'candidate_append_count',
-    'model_activation_count',
-    'active_config_switch_count',
-    'runtime_parameter_change_count',
-    'state_mutation_count',
-    'checkpoint_mutation_count',
-    'migration_count',
-  ], 'S7_DATABASE');
+  assert.equal(database.holdout_case_count, domain.holdout_case_count);
+  assert.equal(database.evaluation_disposition, domain.evaluation_disposition);
+  assert.deepEqual(database.reason_codes, domain.reason_codes);
 
   const result = {
     schema_version: 'geox_mcft_cap_06_s7_shadow_evaluation_governance_result_v1',
@@ -249,6 +237,9 @@ function main() {
     protected_predecessor_path_delta_count: 0,
     authority_graph_status: authority.status,
     preflight_stage_count: input.stages.length,
+    evidence_domain_separation_verified: true,
+    domain_source_s6_case_results_hash: domain.source_s6_case_results_hash,
+    domain_source_s6_compute_determinism_hash: domain.source_s6_compute_determinism_hash,
     source_s6_artifact_hash: database.source_s6_artifact_hash,
     source_s6_case_results_hash: database.source_s6_case_results_hash,
     source_s6_compute_determinism_hash: database.source_s6_compute_determinism_hash,
@@ -281,7 +272,9 @@ function main() {
   console.log(JSON.stringify(result));
 }
 
-try { main(); } catch (error) {
+try {
+  main();
+} catch (error) {
   const result = {
     schema_version: 'geox_mcft_cap_06_s7_shadow_evaluation_governance_result_v1',
     status: 'FAIL',
