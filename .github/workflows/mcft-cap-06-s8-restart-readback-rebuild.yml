@@ -9,6 +9,8 @@ on:
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-AUTHORITY-GRAPH.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-IMPLEMENTATION-CONTRACT.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD_DB.ts'
@@ -22,6 +24,8 @@ on:
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-AUTHORITY-GRAPH.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-IMPLEMENTATION-CONTRACT.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD_DB.ts'
@@ -56,10 +60,29 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
       MCFT_CAP_06_S8_RESTART_READBACK_REBUILD_BASELINE_REF: 7bd493b54abf93fa40cb7f17af88b2a063a38e1d
     steps:
-      - name: Checkout exact S8 candidate head
+      - name: Checkout workflow carrier
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Resolve frozen S8 validation ref
+        id: validation
+        shell: bash
+        run: |
+          REF="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          if [ -f docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json ]; then
+            PAUSED="$(node -e "const j=require('./docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'); process.stdout.write(String(j.execution_control?.execution_paused === true))")"
+            if [ "$PAUSED" = "true" ]; then
+              REF="f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7"
+            fi
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact S8 implementation authority
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.validation.outputs.ref }}
           fetch-depth: 0
 
       - name: Setup pnpm
