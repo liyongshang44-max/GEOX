@@ -76,6 +76,15 @@ function validateSelfHashV1(value: { determinism_hash: string }, code: string): 
   if (semanticHashV1(semantic) !== value.determinism_hash) throw new Error(code);
 }
 
+function validateCaseWindowHashV1(
+  window: Cap06PairedHistoricalShadowServiceResultV1["holdout_window"],
+): void {
+  const { determinism_hash: declaredHash, ...semantic } = window;
+  if (semanticHashV1(semantic) !== declaredHash) {
+    throw new Error("CAP06_S7_S6_HOLDOUT_WINDOW_DETERMINISM_HASH_INVALID");
+  }
+}
+
 function validateShadowHashV1(
   shadow: Cap06PairedHistoricalShadowServiceResultV1["paired_shadow_compute_result"],
 ): void {
@@ -107,14 +116,23 @@ function validateS6ArtifactV1(
     "CAP06_S7_S6_ARTIFACT_AUTHORITY_MISMATCH",
   );
   assertEqualV1(artifact.deterministic_rerun_verified, true, "CAP06_S7_S6_RERUN_PROOF_REQUIRED");
-  assertEqualV1(artifact.resolved_holdout_case_count, CAP06_HOLDOUT_CASE_COUNT_V1, "CAP06_S7_S6_HOLDOUT_CASE_COUNT_MISMATCH");
+  assertEqualV1(
+    artifact.resolved_holdout_case_count,
+    CAP06_HOLDOUT_CASE_COUNT_V1,
+    "CAP06_S7_S6_HOLDOUT_CASE_COUNT_MISMATCH",
+  );
   const refs = assertStringArrayV1(
     artifact.ordered_holdout_residual_refs,
     CAP06_HOLDOUT_CASE_COUNT_V1,
     "CAP06_S7_S6_HOLDOUT_REFS_INVALID",
   );
   assertEqualV1(artifact.holdout_window.role, "HOLDOUT", "CAP06_S7_S6_HOLDOUT_WINDOW_REQUIRED");
-  assertEqualV1(artifact.holdout_window.cases.length, CAP06_HOLDOUT_CASE_COUNT_V1, "CAP06_S7_S6_HOLDOUT_WINDOW_CASE_COUNT_MISMATCH");
+  assertEqualV1(
+    artifact.holdout_window.cases.length,
+    CAP06_HOLDOUT_CASE_COUNT_V1,
+    "CAP06_S7_S6_HOLDOUT_WINDOW_CASE_COUNT_MISMATCH",
+  );
+  validateCaseWindowHashV1(artifact.holdout_window);
   if (semanticHashV1(artifact.holdout_window.ordered_residual_refs) !== semanticHashV1(refs)) {
     throw new Error("CAP06_S7_S6_HOLDOUT_REF_ORDER_MISMATCH");
   }
@@ -189,14 +207,19 @@ function validateCandidateAgainstArtifactV1(input: {
     "CAP06_S7_CANDIDATE_HOLDOUT_REVISION_MISMATCH",
   );
   assertEqualV1(
-    candidate.runtime_config_ref,
-    input.artifact.holdout_window.base_config_ref,
-    "CAP06_S7_CANDIDATE_HOLDOUT_CONFIG_REF_MISMATCH",
+    candidate.payload.model_component_set_hash,
+    input.artifact.holdout_window.model_component_hash,
+    "CAP06_S7_CANDIDATE_HOLDOUT_MODEL_COMPONENT_HASH_MISMATCH",
   );
   assertEqualV1(
-    candidate.runtime_config_hash,
-    input.artifact.holdout_window.base_config_hash,
-    "CAP06_S7_CANDIDATE_HOLDOUT_CONFIG_HASH_MISMATCH",
+    candidate.payload.effective_base_parameter_bundle_hash,
+    input.artifact.holdout_window.effective_parameter_bundle_hash,
+    "CAP06_S7_CANDIDATE_HOLDOUT_PARAMETER_BUNDLE_HASH_MISMATCH",
+  );
+  assertEqualV1(
+    candidate.payload.runtime_replay_numeric_policy_hash,
+    input.artifact.holdout_window.runtime_replay_numeric_policy_hash,
+    "CAP06_S7_CANDIDATE_HOLDOUT_NUMERIC_POLICY_HASH_MISMATCH",
   );
   assertEqualV1(
     candidate.payload.source_s1_residual_set_hash,
@@ -209,9 +232,19 @@ function validateCandidateAgainstArtifactV1(input: {
     "CAP06_S7_CANDIDATE_SOURCE_CASE_INPUT_SET_HASH_MISMATCH",
   );
   assertEqualV1(
+    candidate.payload.source_s1_calibration_window_hash,
+    input.artifact.holdout_window.source_s1_calibration_window_hash,
+    "CAP06_S7_CANDIDATE_SOURCE_CALIBRATION_WINDOW_HASH_MISMATCH",
+  );
+  assertEqualV1(
     candidate.payload.source_s1_holdout_window_hash,
     input.artifact.holdout_window.window_ref_membership_hash,
     "CAP06_S7_CANDIDATE_HOLDOUT_MEMBERSHIP_HASH_MISMATCH",
+  );
+  assertEqualV1(
+    candidate.payload.window_hash_semantics,
+    input.artifact.holdout_window.window_hash_semantics,
+    "CAP06_S7_CANDIDATE_WINDOW_HASH_SEMANTICS_MISMATCH",
   );
   return candidate;
 }
@@ -238,7 +271,8 @@ function validateEvaluationDraftV1(input: {
     input.artifact.paired_shadow_compute_result.evaluation_disposition,
     "CAP06_S7_EVALUATION_DISPOSITION_MISMATCH",
   );
-  if (semanticHashV1(input.draft.payload.reason_codes) !== semanticHashV1(input.artifact.paired_shadow_compute_result.reason_codes)) {
+  if (semanticHashV1(input.draft.payload.reason_codes)
+    !== semanticHashV1(input.artifact.paired_shadow_compute_result.reason_codes)) {
     throw new Error("CAP06_S7_EVALUATION_REASON_CODES_MISMATCH");
   }
   assertEqualV1(input.draft.payload.model_activation_created, false, "CAP06_S7_MODEL_ACTIVATION_FORBIDDEN");
