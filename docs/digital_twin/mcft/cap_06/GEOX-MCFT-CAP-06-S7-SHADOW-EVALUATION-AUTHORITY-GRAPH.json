@@ -1,0 +1,113 @@
+{
+  "schema_version": "geox_mcft_cap_06_s7_shadow_evaluation_authority_graph_v1",
+  "graph_id": "MCFT-CAP-06.S7.SHADOW-EVALUATION-COMMIT.AUTHORITY-GRAPH-V1",
+  "capability_line_id": "MCFT-CAP-06",
+  "delivery_slice_id": "MCFT-CAP-06.MCFT-03-12.SHADOW-EVALUATION-COMMIT-V1",
+  "status": "FROZEN_BEFORE_RUNTIME_SOURCE",
+  "predecessor_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json",
+  "predecessor_effectiveness_merge_commit": "1333ef2f1613745b785d01859e5355ea6fd27274",
+  "input_authority": {
+    "artifact_schema_version": "geox_mcft_cap_06_s6_paired_shadow_service_result_v1",
+    "artifact_authority": "NON_CANONICAL_IN_MEMORY_OR_ACCEPTANCE_ARTIFACT",
+    "artifact_must_be_complete": true,
+    "artifact_must_be_self_hash_valid": true,
+    "artifact_must_be_deterministic_rerun_verified": true,
+    "candidate_ref": "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+    "candidate_hash": "sha256:a2018a61bf6699b3cc3b8992058eb2c37b4d38d7f70771f9186495144c229a65",
+    "candidate_parameter_value": "0.034000",
+    "holdout_case_count": 8,
+    "evaluation_disposition": "ELIGIBLE_FOR_HUMAN_ACTIVATION_REVIEW",
+    "reason_codes": [
+      "ALL_THRESHOLDS_PASS"
+    ],
+    "case_results_hash": "sha256:e1b33fb79059856c030cab58970c543f384fb30a385bc3aa49c96b315efe4daa",
+    "compute_determinism_hash": "sha256:8017c2ba6006e1f2a593312300937841b5c2dd3a700c949bb8309338994ef63e",
+    "candidate_lookup_mode": "EXACT_OBJECT_ID_ONLY",
+    "alternative_artifact_or_latest_query_permitted": false
+  },
+  "read_graph": {
+    "candidate_authority": "PostgresCalibrationGovernanceRepositoryV1.readCanonicalObject",
+    "candidate_type_required": "twin_calibration_candidate_v1",
+    "candidate_hash_required": true,
+    "candidate_source_and_holdout_binding_required": true,
+    "s6_artifact_recompute_in_s7": false,
+    "external_forcing_retrieval": false
+  },
+  "build_graph": {
+    "authority": "buildCap06ShadowEvaluationDraftV1",
+    "input": [
+      "exact holdout window embedded in S6 artifact",
+      "exact canonical Candidate readback",
+      "exact paired shadow result embedded in S6 artifact"
+    ],
+    "required_embedded_case_summary_count": 8,
+    "required_payload_hashes": [
+      "case_results_hash",
+      "compute_determinism_hash",
+      "evaluation_dataset_hash",
+      "holdout_window_ref_membership_hash"
+    ],
+    "model_activation_created": false,
+    "active_config_switch_performed": false,
+    "approval_created": false,
+    "activation_authorized": false
+  },
+  "commit_graph": {
+    "d_transaction_authority": "PostgresCalibrationGovernanceRepositoryV1.commitCanonicalObject",
+    "allowed_canonical_object_type": "twin_shadow_evaluation_v1",
+    "maximum_new_canonical_append_count": 1,
+    "required_first_status": "INSERTED",
+    "required_completed_chain_rerun_status": "EXISTING_IDEMPOTENT_SUCCESS",
+    "required_canonical_readback": true,
+    "required_projection_rows": {
+      "twin_shadow_evaluation_projection_v1": 1,
+      "twin_candidate_evaluation_index_v1": 1,
+      "twin_shadow_evaluation_case_projection_v1": 8,
+      "total": 10
+    },
+    "transaction_order": [
+      "canonical fact append",
+      "aggregate and case projection writes",
+      "idempotency guard write",
+      "commit"
+    ],
+    "rollback_on_any_failure": true
+  },
+  "output_authority": {
+    "canonical_object_type": "twin_shadow_evaluation_v1",
+    "canonical_history_only": true,
+    "eligible_for_human_activation_review_may_be_true": true,
+    "eligible_for_runtime_config_use": false,
+    "eligible_for_state_input": false,
+    "future_exact_consumer": "S8 RESTART-READBACK-REBUILD only after S7 merged-effective"
+  },
+  "forbidden_authorities": [
+    "S6 paired shadow recomputation as an alternative input",
+    "Candidate latest, range, scope or search query",
+    "Evaluation latest, range, scope or search query",
+    "second Evaluation policy variant in controlled S7",
+    "Candidate append",
+    "Model Activation append",
+    "active Config index create or mutation",
+    "Runtime parameter mutation",
+    "State mutation",
+    "checkpoint mutation",
+    "uncertainty model mutation",
+    "approval creation",
+    "public route",
+    "Web",
+    "scheduler or daemon",
+    "MCFT-CAP-07 authorization"
+  ],
+  "controlled_write_boundary": {
+    "canonical_evaluation_append_count": 1,
+    "projection_row_count": 10,
+    "candidate_append_count": 0,
+    "model_activation_count": 0,
+    "active_config_switch_count": 0,
+    "runtime_parameter_change_count": 0,
+    "state_mutation_count": 0,
+    "checkpoint_mutation_count": 0,
+    "migration_count": 0
+  }
+}
