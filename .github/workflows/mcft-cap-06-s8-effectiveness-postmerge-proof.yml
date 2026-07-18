@@ -1,0 +1,74 @@
+name: mcft-cap-06-s8-effectiveness-postmerge-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s8-effectiveness-postmerge-proof.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-merged-main-s8-effectiveness-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout proof carrier
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact proof topology
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='a573e741ea0d2b84bfc3727af3412eaa4552fdd0'
+          CANDIDATE='03d0ed97bae8cf7bc4aa46e5fb3d091a9840c619'
+          MERGE='cc95f9ebced0c7f8dc92d2a0b5d9716e06c3ec2c'
+          test "$(git rev-parse HEAD^)" = "$MERGE"
+          test "$(git rev-list --count "$BASE..$CANDIDATE")" = '7'
+          test "$(git rev-list --count "$BASE..$MERGE")" = '8'
+          test "$(git diff --name-only "$BASE...$CANDIDATE" | sed '/^$/d' | wc -l | tr -d ' ')" = '7'
+          test "$(git diff --name-only "$CANDIDATE" "$MERGE" | sed '/^$/d' | wc -l | tr -d ' ')" = '0'
+          test "$(git rev-parse "$CANDIDATE^{tree}")" = "$(git rev-parse "$MERGE^{tree}")"
+
+      - name: Checkout exact S8 effectiveness merge
+        uses: actions/checkout@v4
+        with:
+          ref: cc95f9ebced0c7f8dc92d2a0b5d9716e06c3ec2c
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+
+      - name: Run exact merged-main S8 effectiveness Gate
+        env:
+          MCFT_CAP_06_S8_EFFECTIVENESS_BASE_REF: a573e741ea0d2b84bfc3727af3412eaa4552fdd0
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD_EFFECTIVENESS.cjs
+
+      - name: Verify exact merged-main structured effectiveness
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p = 'acceptance-output/MCFT_CAP_06_S8_RESTART_READBACK_REBUILD_EFFECTIVENESS_RESULT.json';
+          const r = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (r.status !== 'PASS') throw new Error(`S8_EFFECTIVENESS_POSTMERGE_NOT_PASS:${r.error || 'UNKNOWN'}`);
+          if (r.changed_file_count !== 7 || r.commit_count !== 8) throw new Error('S8_EFFECTIVENESS_POSTMERGE_TOPOLOGY_INVALID');
+          if (r.taskbook_version !== 'v0.4.0') throw new Error('S8_EFFECTIVENESS_TASKBOOK_VERSION_INVALID');
+          if (r.s8_status !== 'MERGED_EFFECTIVE' || r.s8_effective !== true) throw new Error('S8_EFFECTIVENESS_STATE_INVALID');
+          if (r.s9_authorized !== true || r.s9_implementation_started !== false) throw new Error('S9_FRONTIER_INVALID');
+          if (r.active_delivery_slice_id !== 'MCFT-CAP-06.MCFT-04-06-08-09-12.POST-EVALUATION-NON-CONSUMPTION-TICK-V1') throw new Error('S9_ACTIVE_SLICE_INVALID');
+          if (r.next_repository_action !== 'IMPLEMENT_S9_POST_EVALUATION_NON_CONSUMPTION_TICK') throw new Error('S9_NEXT_ACTION_INVALID');
+          if (r.new_prerequisite_inserted !== false || r.new_slice_inserted !== false) throw new Error('AD_HOC_PREREQUISITE_OR_SLICE_VIOLATION');
+          for (const value of Object.values(r.runtime_delta || {})) if (value !== 0) throw new Error('S8_EFFECTIVENESS_RUNTIME_DELTA_NONZERO');
+          NODE
+
+      - name: Upload proof evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s8-effectiveness-postmerge-proof
+          path: acceptance-output/MCFT_CAP_06_S8_RESTART_READBACK_REBUILD_EFFECTIVENESS_RESULT.json
+          if-no-files-found: error
