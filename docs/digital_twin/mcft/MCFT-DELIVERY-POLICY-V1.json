@@ -1,0 +1,103 @@
+{
+  "schema_version": "geox_mcft_delivery_policy_v1",
+  "policy_id": "MCFT-DELIVERY-POLICY-V1",
+  "scope": "ALL_MCFT_CAPABILITY_LINES",
+  "policy_kind": "REPOSITORY_WIDE_DELIVERY_PROCESS_POLICY",
+  "capability_slice": false,
+  "runtime_authority": false,
+  "canonical_object_authority": false,
+  "frozen_taskbook_gap_classification": {
+    "allowed_classes": [
+      "IMPLEMENTATION_DEFECT",
+      "TASKBOOK_DESIGN_DEFECT"
+    ],
+    "implementation_defect": {
+      "correct_current_slice": true,
+      "task_order_change_allowed": false,
+      "taskbook_version_change_required": false,
+      "new_prerequisite_allowed": false
+    },
+    "taskbook_design_defect": {
+      "pause_execution_required": true,
+      "taskbook_version_increment_required": true,
+      "full_chain_impact_analysis_required": true,
+      "refreeze_required": true,
+      "merged_main_activation_required": true,
+      "new_prerequisite_under_old_frozen_version_allowed": false
+    },
+    "forbidden_mode": "FROZEN_TASKBOOK_PLUS_AD_HOC_PREREQUISITE_AND_CONTINUED_EXECUTION"
+  },
+  "taskbook_design_defect_protocol": [
+    "PAUSE_EXECUTION",
+    "INCREMENT_TASKBOOK_VERSION",
+    "CREATE_MACHINE_READABLE_TASKBOOK_MANIFEST",
+    "RECORD_ROOT_CAUSE",
+    "ANALYZE_FULL_SLICE_CHAIN",
+    "CLASSIFY_EXISTING_EVIDENCE",
+    "PRESERVE_AND_RECLASSIFY_HISTORICAL_ARTIFACTS",
+    "REFREEZE_CORRECTED_TASKBOOK",
+    "MERGED_MAIN_PROOF",
+    "RESUME_PREVIOUSLY_PAUSED_FRONTIER"
+  ],
+  "technical_authority_examples": [
+    "AUTHORITY_GRAPH",
+    "DUAL_TIME_SEMANTICS",
+    "EXACT_REF_HASH_BINDING",
+    "RUNTIME_CONFIG_DISPATCH",
+    "REPOSITORY_QUERY_SHAPE",
+    "CANONICAL_OBJECT_ENVELOPE",
+    "IDEMPOTENCY_RECOVERY_SEMANTICS",
+    "PROJECTION_DERIVATION_AUTHORITY",
+    "NUMERIC_POLICY"
+  ],
+  "delivery_process_controls": [
+    "PR_COMMIT_COUNT_LIMIT",
+    "WIP_DEBUG_RETRY_COMMIT_CLEANUP",
+    "DRAFT_HISTORY_CLEANUP",
+    "BRANCH_TRANSPORT_RULE",
+    "TEMPORARY_BRANCH_NAMING",
+    "READY_FOR_REVIEW_HYGIENE",
+    "MERGE_METHOD_SELECTION",
+    "LOCAL_PATCH_TRANSPORT",
+    "CI_RETRY_PRESENTATION"
+  ],
+  "delivery_process_controls_may": [
+    "BLOCK_READY_FOR_REVIEW",
+    "BLOCK_MERGE"
+  ],
+  "delivery_process_controls_may_not": [
+    "CREATE_CAPABILITY_PREDECESSOR",
+    "CHANGE_CAPABILITY_GRAPH",
+    "COUNT_AS_TECHNICAL_SLICE",
+    "AUTHORIZE_RUNTIME_SOURCE",
+    "AUTHORIZE_CANONICAL_WRITE",
+    "PROVE_RUNTIME_CAPABILITY"
+  ],
+  "historical_reclassifications": [
+    {
+      "artifact_id": "MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1",
+      "historical_status": "MERGED_EFFECTIVE_HISTORICAL_RECORD",
+      "capability_slice_status": "MISCLASSIFIED_NOT_A_CAPABILITY_SLICE",
+      "root_cause": "TASKBOOK_DESIGN_DEFECT",
+      "technical_content_destination": "MCFT_CAP_06_TASKBOOK_V0_4_0_S5_ENTRY_CRITERIA",
+      "delivery_process_content_destination": "MCFT-DELIVERY-POLICY-V1",
+      "historical_rewrite_allowed": false
+    },
+    {
+      "artifact_id": "MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1",
+      "historical_status": "MERGED_EFFECTIVE_HISTORICAL_RECORD",
+      "capability_slice_status": "MISCLASSIFIED_NOT_A_CAPABILITY_SLICE",
+      "root_cause": "TASKBOOK_DESIGN_DEFECT",
+      "technical_content_destination": "MCFT_CAP_06_TASKBOOK_V0_4_0_S5_ENTRY_CRITERIA",
+      "delivery_process_content_destination": null,
+      "historical_rewrite_allowed": false
+    }
+  ],
+  "enforcement": {
+    "reject_same_version_prerequisite_insertion": true,
+    "reject_delivery_process_slice": true,
+    "reject_order_change_without_design_defect_analysis": true,
+    "reject_resume_before_revised_taskbook_effective": true,
+    "reject_delivery_process_as_runtime_authority": true
+  }
+}

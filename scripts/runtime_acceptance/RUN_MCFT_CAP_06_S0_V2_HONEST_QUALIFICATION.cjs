@@ -1,6 +1,6 @@
 // scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs
 // Purpose: run the permanent MCFT-CAP-06 S0 v2 exact qualification against an isolated PostgreSQL database in CI.
-// Boundary: acceptance orchestration only; no source patching, repository materialization, canonical CAP-06 write, Runtime authority, or downstream Slice activation.
+// Boundary: acceptance orchestration only; branch transport is delivery policy, not S0 technical authority; no source patching, repository materialization, canonical CAP-06 write, Runtime authority, or downstream Slice activation.
 
 'use strict';
 
@@ -13,7 +13,8 @@ const ROOT = path.resolve(__dirname, '../..');
 const EXACT_RUNNER_PATH = 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts';
 const RESULT_ARTIFACT_PATH = path.join(ROOT, 'acceptance-output', 'MCFT_CAP_06_S0_V2_RESULT.json');
 const BASELINE_MAIN = 'ca819ba51bdf3017dbefa96015f76bd3b66a647c';
-const EXPECTED_HEAD_BRANCH = 'agent/mcft-cap-06-s0-v2-exact-qualification';
+const HISTORICAL_S0_CANDIDATE_BRANCH = 'agent/mcft-cap-06-s0-v2-exact-qualification';
+const POST_S0_NEUTRAL_EXECUTION_REF = 'main';
 const ISOLATED_DATABASE_NAME = 'mcft_cap06_s0_v2_ci';
 
 function run(executable, args, options = {}) {
@@ -92,6 +93,20 @@ async function dropIsolatedDatabase(baseDatabaseUrl) {
   });
 }
 
+function currentHeadBranch() {
+  return String(process.env.GITHUB_HEAD_REF || '').trim();
+}
+
+function reproduceHistoricalS0Candidate() {
+  return currentHeadBranch() === HISTORICAL_S0_CANDIDATE_BRANCH;
+}
+
+function qualificationExecutionRef() {
+  return reproduceHistoricalS0Candidate()
+    ? HISTORICAL_S0_CANDIDATE_BRANCH
+    : POST_S0_NEUTRAL_EXECUTION_REF;
+}
+
 function restoreGitAncestry() {
   const shallowPath = path.join(ROOT, '.git', 'shallow');
   if (fs.existsSync(shallowPath)) {
@@ -106,11 +121,10 @@ function restoreGitAncestry() {
     'FETCH_ORIGIN_MAIN',
   );
 
-  const resolvedHeadBranch = String(process.env.GITHUB_HEAD_REF || '').trim();
-  if (resolvedHeadBranch === EXPECTED_HEAD_BRANCH) {
+  if (reproduceHistoricalS0Candidate()) {
     requireSuccessful(
-      run('git', ['fetch', 'origin', `${EXPECTED_HEAD_BRANCH}:refs/remotes/origin/${EXPECTED_HEAD_BRANCH}`]),
-      'FETCH_ORIGIN_HEAD',
+      run('git', ['fetch', 'origin', `${HISTORICAL_S0_CANDIDATE_BRANCH}:refs/remotes/origin/${HISTORICAL_S0_CANDIDATE_BRANCH}`]),
+      'FETCH_ORIGIN_HISTORICAL_S0_CANDIDATE',
     );
   }
 
@@ -135,6 +149,7 @@ async function main() {
   const baseDatabaseUrl = resolveBaseDatabaseUrl();
   restoreGitAncestry();
   const isolatedDatabaseUrl = await recreateIsolatedDatabase(baseDatabaseUrl);
+  const executionRef = qualificationExecutionRef();
 
   try {
     const result = run(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', [
@@ -146,8 +161,8 @@ async function main() {
       env: {
         DATABASE_URL: isolatedDatabaseUrl,
         MCFT_CAP_06_S0_DESTRUCTIVE_ACCEPTANCE: '1',
-        GITHUB_HEAD_REF: process.env.GITHUB_HEAD_REF || '',
-        GITHUB_REF_NAME: process.env.GITHUB_REF_NAME || '',
+        GITHUB_HEAD_REF: executionRef,
+        GITHUB_REF_NAME: executionRef,
       },
     });
 

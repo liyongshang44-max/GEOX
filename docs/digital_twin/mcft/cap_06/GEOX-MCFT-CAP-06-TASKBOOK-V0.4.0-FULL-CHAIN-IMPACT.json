@@ -1,0 +1,177 @@
+{
+  "schema_version": "geox_mcft_cap_06_taskbook_v0_4_0_full_chain_impact_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "analysis_id": "MCFT-CAP-06-TASKBOOK-V0.4.0-FULL-CHAIN-IMPACT-V1",
+  "change_classification": "TASKBOOK_DESIGN_DEFECT",
+  "root_causes": [
+    "POST_FREEZE_AD_HOC_PREREQUISITE_INSERTION",
+    "DELIVERY_PROCESS_POLICY_MIXED_WITH_TECHNICAL_SLICE",
+    "DESIGN_AUTHORITY_AND_EXECUTION_AUTHORITY_DIVERGED"
+  ],
+  "execution_paused": true,
+  "paused_frontier": "S8_EFFECTIVENESS_WRITEBACK",
+  "runtime_code_rollback_required": false,
+  "canonical_data_rollback_required": false,
+  "migration_rollback_required": false,
+  "slice_order_after_correction": [
+    "P-1",
+    "P0",
+    "S0",
+    "S1",
+    "S2",
+    "S3",
+    "S4",
+    "S5",
+    "S6",
+    "S7",
+    "S8",
+    "S9",
+    "S10",
+    "S11A",
+    "S11B",
+    "S11C",
+    "S11D"
+  ],
+  "historical_nodes_removed_from_normative_graph": [
+    "MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1",
+    "MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1"
+  ],
+  "slice_impacts": {
+    "P_MINUS_1": {
+      "evidence_status": "VALID_UNCHANGED",
+      "rerun_required": false,
+      "reason": "NO_OBJECT_TRANSACTION_OR_ENVELOPE_CHANGE"
+    },
+    "P0": {
+      "evidence_status": "VALID_UNCHANGED",
+      "rerun_required": false,
+      "reason": "NO_CAP05_TERMINAL_OR_PROVISIONAL_SSOT_SEMANTIC_CHANGE"
+    },
+    "S0": {
+      "evidence_status": "VALID_UNCHANGED",
+      "rerun_required": false,
+      "reason": "PREDECESSOR_LOCK_AND_DATASET_QUALIFICATION_UNCHANGED"
+    },
+    "S1": {
+      "evidence_status": "VALID_WITH_HISTORICAL_CORRECTION_PRESERVED",
+      "rerun_required": false,
+      "reason": "V1_NUMERICAL_PROFILE_REMAINS_HISTORICAL; V2_GRAPH_CONFORMANT_PROFILE_REMAINS_VALID_S5_EVIDENCE"
+    },
+    "S2": {
+      "evidence_status": "VALID_UNCHANGED",
+      "rerun_required": false,
+      "reason": "CALIBRATION_MATH_AND_NUMERIC_POLICIES_UNCHANGED"
+    },
+    "S3": {
+      "evidence_status": "VALID_UNCHANGED",
+      "rerun_required": false,
+      "reason": "D_PERSISTENCE_IDEMPOTENCY_PROJECTION_RECOVERY_UNCHANGED"
+    },
+    "S4": {
+      "evidence_status": "VALID_UNCHANGED",
+      "rerun_required": false,
+      "reason": "PREDECESSOR_CONSUMPTION_STABILIZATION_REMAINS_A_REAL_TECHNICAL_SLICE"
+    },
+    "S5_ENTRY_HISTORICAL": {
+      "evidence_status": "VALID_HISTORICAL_RECORD_RECLASSIFIED",
+      "normative_capability_slice": false,
+      "technical_content_reused_by": "S5_ENTRY_CRITERIA_V0_4_0",
+      "delivery_process_content_reused_by": "MCFT-DELIVERY-POLICY-V1",
+      "rerun_required": false
+    },
+    "S5_PREDECESSOR_HISTORICAL": {
+      "evidence_status": "VALID_HISTORICAL_RECORD_RECLASSIFIED",
+      "normative_capability_slice": false,
+      "technical_content_reused_by": "S5_ENTRY_CRITERIA_V0_4_0",
+      "rerun_required": false
+    },
+    "S5": {
+      "evidence_status": "VALID_UNCHANGED",
+      "rerun_required": false,
+      "reason": "CANDIDATE_COMPUTE_COMMIT_CONSUMED_THE_CORRECTED_TECHNICAL_GRAPH_AND_FIXED_MATH"
+    },
+    "S6": {
+      "evidence_status": "VALID_UNCHANGED",
+      "rerun_required": false,
+      "reason": "PAIRED_HISTORICAL_SHADOW_ARTIFACT_DEPENDS_ON_VALID_S5_CANDIDATE_AND_HOLDOUT_GRAPH"
+    },
+    "S7": {
+      "evidence_status": "VALID_UNCHANGED",
+      "rerun_required": false,
+      "reason": "SHADOW_EVALUATION_COMMIT_AND_CANONICAL_READBACK_UNCHANGED"
+    },
+    "S8": {
+      "implementation_evidence_status": "VALID_MERGED_MAIN_PROVEN",
+      "effectiveness_status": "PAUSED_NOT_WRITTEN",
+      "rerun_required": false,
+      "resume_action": "WRITE_S8_EFFECTIVENESS_AFTER_TASKBOOK_V0_4_0_EFFECTIVE",
+      "resume_action_is_new_prerequisite": false
+    },
+    "S9": {
+      "status": "BLOCKED_UNAUTHORIZED",
+      "order_change": false,
+      "reason": "S8_EFFECTIVENESS_NOT_YET_ACTIVE"
+    },
+    "S10": {
+      "status": "BLOCKED_UNAUTHORIZED",
+      "order_change": false
+    },
+    "S11A": {
+      "status": "BLOCKED_UNAUTHORIZED",
+      "order_change": false
+    },
+    "S11B": {
+      "status": "BLOCKED_UNAUTHORIZED",
+      "order_change": false
+    },
+    "S11C": {
+      "status": "BLOCKED_UNAUTHORIZED",
+      "order_change": false
+    },
+    "S11D": {
+      "status": "BLOCKED_UNAUTHORIZED",
+      "order_change": false
+    },
+    "MCFT_CAP_07": {
+      "status": "BLOCKED_UNAUTHORIZED",
+      "reason": "CAP06_NOT_COMPLETE"
+    }
+  },
+  "technical_constraints_absorbed_into_s5": [
+    "AUTHORITY_GRAPH",
+    "DUAL_TIME_SEPARATION",
+    "EXACT_REF_HASH_TRAVERSAL",
+    "CONFIG_PURPOSE_DISPATCH",
+    "POSTGRESQL_QUERY_SHAPE",
+    "NO_LATEST_RANGE_SCOPE_OR_SIDE_LOOKUP",
+    "STRUCTURED_PREFLIGHT",
+    "PROTECTED_PREDECESSOR_PATH_BOUNDARY"
+  ],
+  "delivery_process_controls_moved_to_global_policy": [
+    "MAXIMUM_LOGICAL_COMMIT_GUIDANCE",
+    "WIP_DEBUG_RETRY_COMMIT_CLEANUP",
+    "DRAFT_HISTORY_CLEANUP",
+    "BRANCH_TRANSPORT_RULES",
+    "READY_FOR_REVIEW_HYGIENE"
+  ],
+  "required_activation_evidence": [
+    "TASKBOOK_REVISION_EXACT_HEAD_GATE_PASS",
+    "TASKBOOK_REVISION_MERGE",
+    "HEAD_TO_MERGE_FILE_DELTA_ZERO",
+    "HEAD_TO_MERGE_TREE_EQUIVALENCE_PASS",
+    "MERGED_MAIN_TASKBOOK_POLICY_GATE_PASS"
+  ],
+  "runtime_delta": {
+    "canonical_fact_append_count": 0,
+    "canonical_fact_update_count": 0,
+    "canonical_fact_delete_count": 0,
+    "candidate_append_count": 0,
+    "evaluation_append_count": 0,
+    "model_activation_count": 0,
+    "active_config_switch_count": 0,
+    "runtime_parameter_change_count": 0,
+    "state_mutation_count": 0,
+    "checkpoint_mutation_count": 0,
+    "migration_count": 0
+  }
+}

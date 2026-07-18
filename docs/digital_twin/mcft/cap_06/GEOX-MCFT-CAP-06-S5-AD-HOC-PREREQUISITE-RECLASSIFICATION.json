@@ -1,0 +1,66 @@
+{
+  "schema_version": "geox_mcft_cap_06_s5_ad_hoc_prerequisite_reclassification_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "reclassification_id": "MCFT-CAP-06-S5-AD-HOC-PREREQUISITE-RECLASSIFICATION-V1",
+  "change_classification": "TASKBOOK_DESIGN_DEFECT",
+  "historical_rewrite_allowed": false,
+  "normative_taskbook_version": "v0.4.0",
+  "records": [
+    {
+      "historical_node_id": "MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1",
+      "historical_status": "MERGED_EFFECTIVE_HISTORICAL_RECORD",
+      "normative_capability_slice": false,
+      "capability_completion_counted": false,
+      "technical_content": [
+        "AUTHORITY_GRAPH",
+        "EXACT_REF_TRAVERSAL",
+        "CONFIG_AUTHORITY_SEPARATION",
+        "REPOSITORY_QUERY_SHAPE",
+        "STRUCTURED_PREFLIGHT",
+        "PROTECTED_PREDECESSOR_PATH_BOUNDARY"
+      ],
+      "technical_content_disposition": "ABSORBED_INTO_S5_ENTRY_CRITERIA_V0_4_0",
+      "delivery_process_content": [
+        "MAXIMUM_LOGICAL_COMMIT_LIMIT",
+        "WIP_DEBUG_RETRY_COMMIT_CLEANUP",
+        "DRAFT_HISTORY_CLEANUP",
+        "BRANCH_TRANSPORT_RULES"
+      ],
+      "delivery_process_content_disposition": "SUPERSEDED_BY_MCFT_DELIVERY_POLICY_V1",
+      "runtime_evidence_status": "NO_RUNTIME_AUTHORITY_CREATED"
+    },
+    {
+      "historical_node_id": "MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1",
+      "historical_status": "MERGED_EFFECTIVE_HISTORICAL_RECORD",
+      "normative_capability_slice": false,
+      "capability_completion_counted": false,
+      "technical_content": [
+        "GRAPH_CONFORMANT_V2_CONTROLLED_PROFILE",
+        "DUAL_TIME_SEPARATION",
+        "CONFIG_PURPOSE_DISPATCH",
+        "EXACT_FORWARD_GRAPH",
+        "POSTGRESQL_REPEATABLE_READ_QUERY_SHAPE",
+        "NO_LATEST_RANGE_SCOPE_OR_SIDE_LOOKUP"
+      ],
+      "technical_content_disposition": "ABSORBED_INTO_S5_ENTRY_CRITERIA_V0_4_0",
+      "delivery_process_content": [],
+      "runtime_evidence_status": "VALID_TECHNICAL_EVIDENCE_REUSED_BY_S5"
+    }
+  ],
+  "corrected_normative_transition": {
+    "from": "MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1",
+    "to": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
+    "intermediate_capability_nodes": [],
+    "technical_entry_criteria_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-v0.4.0-REVISION.md",
+    "delivery_policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json"
+  },
+  "preserved_evidence": {
+    "s5_candidate": "VALID",
+    "s6_paired_shadow": "VALID",
+    "s7_shadow_evaluation": "VALID",
+    "s8_restart_readback_rebuild": "VALID",
+    "rollback_required": false,
+    "rerun_required": false
+  },
+  "forbidden_future_pattern": "FROZEN_TASKBOOK_PLUS_AD_HOC_PREREQUISITE"
+}

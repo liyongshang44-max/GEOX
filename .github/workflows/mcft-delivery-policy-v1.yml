@@ -1,0 +1,64 @@
+name: mcft-delivery-policy-v1
+
+on:
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/**'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V1.cjs'
+      - '.github/workflows/mcft-delivery-policy-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  delivery-policy-and-taskbook-v0-4:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+
+      - name: Resolve governance baseline
+        id: baseline
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "ref=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run MCFT delivery policy and taskbook v0.4 Gate
+        env:
+          MCFT_DELIVERY_POLICY_BASE_REF: ${{ steps.baseline.outputs.ref }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V1.cjs
+
+      - name: Verify structured result
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p = 'acceptance-output/MCFT_DELIVERY_POLICY_V1_RESULT.json';
+          const result = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (result.status !== 'PASS') throw new Error(`DELIVERY_POLICY_GATE_NOT_PASS:${result.error || 'UNKNOWN'}`);
+          if (result.taskbook_version !== 'v0.4.0-candidate') throw new Error('TASKBOOK_VERSION_INVALID');
+          if (result.execution_paused !== true) throw new Error('EXECUTION_NOT_PAUSED');
+          if (result.active_delivery_slice_id !== null) throw new Error('ACTIVE_SLICE_MUST_BE_NULL');
+          if (result.s8_implementation_evidence_valid !== true) throw new Error('S8_EVIDENCE_INVALID');
+          if (result.s8_effective !== false) throw new Error('S8_MUST_NOT_BE_EFFECTIVE');
+          if (result.s9_authorized !== false) throw new Error('S9_MUST_REMAIN_BLOCKED');
+          NODE
+
+      - name: Upload governance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-delivery-policy-v1-evidence
+          path: acceptance-output/MCFT_DELIVERY_POLICY_V1_RESULT.json
+          if-no-files-found: error
