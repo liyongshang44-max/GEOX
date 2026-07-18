@@ -22,7 +22,7 @@ on:
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-AUTHORITY-GRAPH.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-IMPLEMENTATION-CONTRACT.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW-EVALUATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION_DB.ts'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs'
