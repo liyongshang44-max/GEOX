@@ -59,11 +59,13 @@
     "READY_FOR_REVIEW_HYGIENE",
     "MERGE_METHOD_SELECTION",
     "LOCAL_PATCH_TRANSPORT",
-    "CI_RETRY_PRESENTATION"
+    "CI_RETRY_PRESENTATION",
+    "CANDIDATE_DECLARATION_INTEGRITY"
   ],
   "delivery_process_controls_may": [
     "BLOCK_READY_FOR_REVIEW",
-    "BLOCK_MERGE"
+    "BLOCK_MERGE",
+    "INVALIDATE_CANDIDATE_DECLARATION"
   ],
   "delivery_process_controls_may_not": [
     "CREATE_CAPABILITY_PREDECESSOR",
@@ -72,6 +74,38 @@
     "AUTHORIZE_RUNTIME_SOURCE",
     "AUTHORIZE_CANONICAL_WRITE",
     "PROVE_RUNTIME_CAPABILITY"
+  ],
+  "candidate_declaration_integrity_rules": [
+    {
+      "rule_id": "MCFT_CAP_06_S9_CANDIDATE_DECLARATION_INTEGRITY_V1",
+      "applies_when": {
+        "status_file": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "field": "s9_candidate_implemented",
+        "equals": true
+      },
+      "candidate_declaration_detected_by": [
+        "HEAD_STATUS_FIELD_TRUE_AND_BASE_STATUS_FIELD_NOT_TRUE",
+        "DECLARATION_MARKER_PRESENT"
+      ],
+      "focused_workflow_name": "mcft-cap-06-s9-non-consumption",
+      "standard_ci_workflow_name": "ci",
+      "semantic_snapshot_files": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-AUTHORITY-GRAPH.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-IMPLEMENTATION-CONTRACT.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json"
+      ],
+      "required_simultaneous_conditions": [
+        "FOCUSED_RESULT_STATUS_PASS",
+        "FOCUSED_RESULT_GIT_HEAD_EQUALS_CURRENT_PR_HEAD",
+        "STANDARD_CI_STATUS_PASS",
+        "PR_DECLARED_CANDIDATE_HEAD_EQUALS_CURRENT_PR_HEAD",
+        "DECLARED_AUTHORITY_CONTRACT_STATUS_BLOBS_EQUAL_CURRENT_HEAD"
+      ],
+      "declaration_marker": "MCFT_CANDIDATE_DECLARATION_V1",
+      "failure_effect": "CANDIDATE_INVALIDATED",
+      "capability_slice": false,
+      "runtime_authority": false
+    }
   ],
   "historical_reclassifications": [
     {
@@ -98,6 +132,10 @@
     "reject_delivery_process_slice": true,
     "reject_order_change_without_design_defect_analysis": true,
     "reject_resume_before_revised_taskbook_effective": true,
-    "reject_delivery_process_as_runtime_authority": true
+    "reject_delivery_process_as_runtime_authority": true,
+    "reject_candidate_declaration_without_exact_head_focused_pass": true,
+    "reject_candidate_declaration_without_exact_head_standard_ci_pass": true,
+    "reject_candidate_declaration_head_mismatch": true,
+    "reject_candidate_declaration_semantic_snapshot_drift": true
   }
 }
