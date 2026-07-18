@@ -3,6 +3,7 @@ name: mcft-cap-06-s7-shadow-evaluation-effectiveness
 on:
   pull_request:
     paths:
+      - '.github/workflows/mcft-cap-06-s6-paired-shadow-effectiveness.yml'
       - '.github/workflows/mcft-cap-06-s7-shadow-evaluation-effectiveness.yml'
       - '.github/workflows/mcft-cap-06-s7-shadow-evaluation.yml'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
@@ -14,6 +15,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/mcft-cap-06-s6-paired-shadow-effectiveness.yml'
       - '.github/workflows/mcft-cap-06-s7-shadow-evaluation-effectiveness.yml'
       - '.github/workflows/mcft-cap-06-s7-shadow-evaluation.yml'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
@@ -113,7 +115,7 @@ jobs:
           const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S7_SHADOW_EVALUATION_EFFECTIVENESS_RESULT.json', 'utf8'));
           if (r.schema_version !== 'geox_mcft_cap_06_s7_shadow_evaluation_effectiveness_result_v1') throw new Error('S7_EFFECTIVENESS_RESULT_SCHEMA_MISMATCH');
           if (r.status !== 'PASS') throw new Error('S7_EFFECTIVENESS_RESULT_NOT_PASS');
-          if (r.changed_file_count !== 8 || r.logical_commit_count < 1 || r.logical_commit_count > 10) throw new Error('S7_EFFECTIVENESS_GOVERNED_DELTA_MISMATCH');
+          if (r.changed_file_count !== 9 || r.logical_commit_count < 1 || r.logical_commit_count > 12) throw new Error('S7_EFFECTIVENESS_GOVERNED_DELTA_MISMATCH');
           if (r.s7_status !== 'MERGED_EFFECTIVE' || r.s7_effective !== true) throw new Error('S7_EFFECTIVENESS_STATUS_MISMATCH');
           if (r.active_delivery_slice_id !== 'MCFT-CAP-06.MCFT-03-04-12.RESTART-READBACK-REBUILD-V1') throw new Error('S7_EFFECTIVENESS_FRONTIER_MISMATCH');
           if (r.s8_authorized !== true || r.s8_implementation_started !== false || r.s8_candidate_implemented !== false || r.s8_effective !== false) throw new Error('S7_EFFECTIVENESS_S8_AUTHORIZATION_MISMATCH');
