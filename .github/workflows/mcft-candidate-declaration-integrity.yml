@@ -1,0 +1,97 @@
+name: mcft-candidate-declaration-integrity-v1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-candidate-declaration-integrity.yml'
+      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json'
+      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY.cjs'
+  pull_request_target:
+    types: [opened, synchronize, edited, reopened, ready_for_review]
+  workflow_run:
+    workflows:
+      - ci
+      - mcft-cap-06-s9-non-consumption
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: >-
+    mcft-candidate-declaration-integrity-${{
+      github.event.pull_request.head.sha ||
+      github.event.workflow_run.head_sha ||
+      github.sha
+    }}
+  cancel-in-progress: true
+
+jobs:
+  policy-contract-selftest:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact policy candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+
+      - name: Run candidate declaration integrity policy selftest
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY.cjs --selftest
+
+      - name: Verify structured policy result
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p = 'acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_RESULT.json';
+          const result = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (result.status !== 'PASS' || result.mode !== 'SELFTEST') throw new Error(`CANDIDATE_DECLARATION_POLICY_SELFTEST_FAILED:${result.error || 'UNKNOWN'}`);
+          if (result.rule_id !== 'MCFT_CAP_06_S9_CANDIDATE_DECLARATION_INTEGRITY_V1') throw new Error('CANDIDATE_DECLARATION_POLICY_RULE_ID_INVALID');
+          if (result.capability_slice !== false || result.runtime_authority !== false) throw new Error('CANDIDATE_DECLARATION_POLICY_BOUNDARY_INVALID');
+          NODE
+
+      - name: Upload policy selftest evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-candidate-declaration-integrity-policy-selftest
+          path: acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_RESULT.json
+          if-no-files-found: error
+
+  enforce-candidate-declaration:
+    if: github.event_name == 'pull_request_target' || github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout merged Delivery Policy authority
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+
+      - name: Enforce exact-head candidate declaration integrity
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY.cjs --enforce
+
+      - name: Upload candidate declaration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-candidate-declaration-integrity-${{ github.run_id }}
+          path: acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_RESULT.json
+          if-no-files-found: error
