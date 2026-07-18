@@ -1,0 +1,48 @@
+{
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
+  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_A",
+  "category": "ARCHITECTURE_AND_PREDECESSOR",
+  "status": "PASS",
+  "evidence_refs": [
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P0-STATUS.json",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json"
+  ],
+  "workflow_refs": [
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+  ],
+  "canonical_refs": [],
+  "notes": [
+    "Architecture and predecessor evidence is governance/readback authority; S11A adds no canonical write."
+  ],
+  "assertion_count": 25,
+  "assertions": [
+    "P-1 is the first permitted repository action",
+    "P-1 changes no Runtime source",
+    "P-1 changes no migration",
+    "P-1 appends no canonical fact",
+    "P-1 adjudicates Candidate object reuse",
+    "P-1 adjudicates Evaluation object reuse",
+    "P-1 adjudicates D transaction reuse",
+    "P-1 adjudicates Evaluation context refs",
+    "P-1 adjudicates lineage/revision identity kinds",
+    "P-1 adjudicates base_config_ref authority",
+    "P-1 adjudicates envelope source/evidence/config mapping",
+    "P-1 adjudicates Config-object requirement",
+    "P-1 adjudicates migration count",
+    "P-1 adjudicates failed-attempt persistence",
+    "P-1 adjudicates Candidate-to-Evaluation cardinality",
+    "P-1 outputs one of the three frozen outcomes",
+    "P-1A is mandatory when amendment is required",
+    "CAP-05 status is COMPLETE",
+    "CAP-05 closure_effective is true",
+    "CAP-05 capability_complete is true",
+    "CAP-05 active slice is null",
+    "CAP-05 next repository action is null",
+    "CAP-06 remains unauthorized before S0 effectiveness",
+    "design baseline records main 9c4030e43d3b65857cf40d7936d5dfa8e80c17d1",
+    "execution baseline is re-resolved at Slice runtime"
+  ]
+}

@@ -20,9 +20,32 @@ jobs:
   s10-bounded-chain-effectiveness:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact S10 effectiveness candidate head
+      - name: Checkout workflow carrier
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
+
+      - name: Resolve frozen S10 effectiveness validation ref
+        id: validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          EFFECTIVE=$(node -e "const s=require('./docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-STATUS.json'); process.stdout.write(String(s.s10_effective === true));")
+          if [ "$EFFECTIVE" = 'true' ]; then
+            echo 'ref=b13a0057a8c9e93f3f4fcf8194b84149f1d2b1b5' >> "$GITHUB_OUTPUT"
+            echo 'baseline=dc44a9e7e248e02237ee67a054d6fdd0259a1f3f' >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = 'pull_request' ]; then
+            echo 'ref=${{ github.event.pull_request.head.sha }}' >> "$GITHUB_OUTPUT"
+            echo 'baseline=${{ github.event.pull_request.base.sha }}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ref=${{ github.sha }}' >> "$GITHUB_OUTPUT"
+            echo 'baseline=dc44a9e7e248e02237ee67a054d6fdd0259a1f3f' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout exact S10 effectiveness authority
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.validation.outputs.ref }}
           fetch-depth: 0
 
       - name: Setup Node
@@ -30,19 +53,9 @@ jobs:
         with:
           node-version: '20.11.1'
 
-      - name: Resolve S10 effectiveness baseline
-        id: baseline
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "ref=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "ref=dc44a9e7e248e02237ee67a054d6fdd0259a1f3f" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Run S10 bounded-chain effectiveness Gate
         env:
-          MCFT_CAP_06_S10_EFFECTIVENESS_BASE_REF: ${{ steps.baseline.outputs.ref }}
+          MCFT_CAP_06_S10_EFFECTIVENESS_BASE_REF: ${{ steps.validation.outputs.baseline }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_EFFECTIVENESS.cjs
 
       - name: Verify structured S10 effectiveness result

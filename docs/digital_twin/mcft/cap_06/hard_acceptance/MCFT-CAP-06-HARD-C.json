@@ -1,0 +1,47 @@
+{
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
+  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_C",
+  "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+  "status": "PASS",
+  "evidence_refs": [
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+  ],
+  "workflow_refs": [
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+  ],
+  "canonical_refs": [],
+  "notes": [
+    "Repository-history assessment remains distinct from controlled-track qualification."
+  ],
+  "assertion_count": 25,
+  "assertions": [
+    "predecessor lock comes from PostgreSQL canonical readback",
+    "active lineage object ref is recorded",
+    "semantic lineage ID is recorded separately",
+    "active revision context is recorded",
+    "latest posterior State ref/hash is exact",
+    "latest checkpoint ref/hash is exact",
+    "latest successful Forecast ref/hash is exact",
+    "latest Scenario ref/hash is exact",
+    "latest State-bound Config ref/hash is exact",
+    "config authority mode is recorded",
+    "active-binding status is explicit and nullable",
+    "expected checkpoint sequence 80 is revalidated",
+    "expected global State count 81 is revalidated",
+    "expected next logical time 2026-06-04T10:00:00.000Z is revalidated",
+    "qualification reports eligible Forecast count",
+    "qualification reports eligible Observation count",
+    "qualification reports eligible matched-pair count",
+    "qualification reports eligible Residual count",
+    "qualification reports calibration count",
+    "qualification reports holdout count",
+    "qualification reports model/config hash cardinalities",
+    "S0 does not compute sensitivity or objective surface",
+    "dataset qualification status uses only the S0 enum",
+    "repository calibration assessment uses a separate S10 enum",
+    "24 Forecasts alone never imply 24 eligible pairs"
+  ]
+}
