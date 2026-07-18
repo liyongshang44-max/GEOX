@@ -1,0 +1,131 @@
+name: mcft-cap-06-s11c-postmerge-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s11c-postmerge-proof.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-s11c-merged-main-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      MCFT_CAP_06_S11C_BASE_REF: 00476d1ca9ec33f01ad58555f54daa5d582580f9
+    steps:
+      - name: Checkout proof carrier
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact S11C merge topology
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='00476d1ca9ec33f01ad58555f54daa5d582580f9'
+          CANDIDATE='db3dd2a86cd791c028f064f360165da2bb583497'
+          MERGE='2e1b14e31a5420dccfd70c4955726427fc29eb7e'
+          test "$(git rev-parse HEAD^)" = "$MERGE"
+          test "$(git rev-list --count "$BASE..$CANDIDATE")" = '1'
+          test "$(git rev-list --count "$BASE..$MERGE")" = '2'
+          test "$(git diff --name-only "$BASE...$CANDIDATE" | sed '/^$/d' | wc -l | tr -d ' ')" = '9'
+          test "$(git diff --name-only "$CANDIDATE" "$MERGE" | sed '/^$/d' | wc -l | tr -d ' ')" = '0'
+          test "$(git rev-parse "$CANDIDATE^{tree}")" = "$(git rev-parse "$MERGE^{tree}")"
+
+      - name: Checkout exact S11C merge
+        uses: actions/checkout@v4
+        with:
+          ref: 2e1b14e31a5420dccfd70c4955726427fc29eb7e
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run exact merged-main S11C Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11C_CAPABILITY_COMPLETION_EFFECTIVENESS_ACTIVATION.cjs
+
+      - name: Typecheck build and selfcheck
+        run: |
+          pnpm -r typecheck
+          pnpm -r build
+          pnpm --filter @geox/server run test:p1:selfcheck
+
+      - name: Create isolated controlled regression database
+        shell: bash
+        run: |
+          set -euo pipefail
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          SELECT pg_terminate_backend(pid)
+            FROM pg_stat_activity
+           WHERE datname='mcft_cap06_s11c_postmerge_regression'
+             AND pid<>pg_backend_pid();
+          DROP DATABASE IF EXISTS mcft_cap06_s11c_postmerge_regression;
+          CREATE DATABASE mcft_cap06_s11c_postmerge_regression;
+          SQL
+
+      - name: Run controlled bounded-chain PostgreSQL regression
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap06_s11c_postmerge_regression
+          MCFT_CAP_06_S10_BOUNDED_CHAIN_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_DB.ts
+
+      - name: Run repository-history qualification regression
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs
+
+      - name: Verify structured postmerge proof
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const s11c=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S11C_ACTIVATION_RESULT.json','utf8'));
+          const controlled=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S10_BOUNDED_CHAIN_DB_RESULT.json','utf8'));
+          const repository=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S0_V2_RESULT.json','utf8'));
+          if(s11c.status!=='PASS'||s11c.exact_head!=='2e1b14e31a5420dccfd70c4955726427fc29eb7e') throw new Error('S11C_POSTMERGE_GATE_INVALID');
+          if(s11c.changed_file_count!==9||s11c.hard_acceptance_total_check_count!==255) throw new Error('S11C_POSTMERGE_BOUNDARY_INVALID');
+          if(s11c.pending_completion_claim_count!==48||s11c.effective_completion_claim_count!==0) throw new Error('S11C_POSTMERGE_CLAIMS_INVALID');
+          if(s11c.closure_effective!==false||s11c.capability_complete!==false||s11c.s11d_authorized!==false) throw new Error('S11C_POSTMERGE_PREMATURE_EFFECTIVENESS');
+          if(s11c.runtime_source_authorized!==false||s11c.successor_capability_line_authorized!==false) throw new Error('S11C_POSTMERGE_AUTHORITY_VIOLATION');
+          if(controlled.status!=='PASS'||controlled.actual_r!==24||controlled.actual_c!==0||controlled.actual_cap06_canonical_delta!==36) throw new Error('S11C_POSTMERGE_CONTROLLED_INVALID');
+          if(controlled.completed_replay_additional_fact_count!==0||controlled.completed_replay_projection_divergence_count!==0||controlled.completed_replay_evidence_load_count!==0) throw new Error('S11C_POSTMERGE_REPLAY_INVALID');
+          if(controlled.candidate_consumed!==false||controlled.evaluation_consumed!==false||controlled.model_activation_count!==0||controlled.active_config_snapshot_changed!==false) throw new Error('S11C_POSTMERGE_RUNTIME_AUTHORITY_CHANGED');
+          if(!repository.qualification||repository.qualification.dataset_qualification_status!=='INSUFFICIENT_MATCHED_PAIRS') throw new Error('S11C_POSTMERGE_REPOSITORY_STATUS_INVALID');
+          if(repository.qualification.canonical_residual_count!==1||repository.qualification.eligible_matched_pair_count!==1) throw new Error('S11C_POSTMERGE_REPOSITORY_COUNTS_INVALID');
+          NODE
+
+      - name: Upload proof evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s11c-postmerge-proof
+          path: acceptance-output/
+          if-no-files-found: error
