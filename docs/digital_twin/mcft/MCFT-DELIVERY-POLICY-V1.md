@@ -111,9 +111,10 @@ ready-for-review hygiene
 merge-method selection
 local patch or bundle transport
 CI retry presentation
+candidate declaration integrity
 ```
 
-Delivery-process controls may block a PR from becoming ready or merging. They may not:
+Delivery-process controls may block a PR from becoming ready or merging, and may invalidate a candidate declaration. They may not:
 
 ```text
 create a capability predecessor;
@@ -138,6 +139,35 @@ exact-head CI, head-to-merge equivalence and merged-main proof remain required w
 ```
 
 A capability may tighten technical acceptance evidence, but it may not create a capability Slice solely to enforce these delivery controls.
+
+## 5.1 Candidate declaration integrity
+
+A machine-readable candidate declaration is a delivery claim about one immutable Git head. It is valid only while all required evidence and declared semantic snapshots refer to that same head.
+
+For `MCFT-CAP-06` S9, a candidate declaration is detected when the PR changes `s9_candidate_implemented` from absent/not-true in the base to `true` in the head, or when the PR explicitly carries the declaration marker. An inherited `true` value that is unchanged from the base does not make every later PR an S9 candidate. A detected candidate declaration must contain exactly one declaration block:
+
+```text
+<!-- MCFT_CANDIDATE_DECLARATION_V1
+candidate_head=<40-hex Git commit SHA>
+authority_graph_blob=<40-hex Git blob SHA>
+implementation_contract_blob=<40-hex Git blob SHA>
+status_blob=<40-hex Git blob SHA>
+-->
+```
+
+The declaration is valid only when all conditions hold simultaneously:
+
+```text
+focused_result.status = PASS;
+focused_result.git_head = current PR head;
+standard_ci.status = PASS;
+PR declared candidate head = current PR head;
+declared authority/contract/status blob SHAs = the current-head blob SHAs.
+```
+
+Any new commit, force-push, contract change, authority change, status change, focused failure or standard-CI failure invalidates the candidate declaration until the same exact head is proven again and the declaration is refreshed. A failed check may be retried without changing source; only a successful exact-head result restores the evidence condition.
+
+This guard is repository delivery governance. It does not activate a model, authorize a Runtime source, create a canonical object, prove a technical capability, or add a capability Slice.
 
 ## 6. Historical MCFT-CAP-06 S5-ENTRY disposition
 
@@ -176,7 +206,11 @@ inserts a new prerequisite while retaining the same frozen taskbook version;
 uses delivery-process vocabulary as a capability Slice;
 changes task order without a TASKBOOK_DESIGN_DEFECT record and impact analysis;
 resumes a paused capability before the revised taskbook is merged-main effective;
-relabels historical delivery-process controls as Runtime authority.
+relabels historical delivery-process controls as Runtime authority;
+declares an S9 candidate without focused PASS on the current PR head;
+declares an S9 candidate without standard CI PASS on the current PR head;
+declares a candidate head different from the current PR head;
+changes the declared authority, implementation contract or status blob after candidate declaration.
 ```
 
 This policy applies to every current and future MCFT capability line.
