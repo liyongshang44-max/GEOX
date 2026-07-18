@@ -1,0 +1,110 @@
+name: mcft-cap-06-s8-restart-readback-rebuild-postmerge-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s8-restart-readback-rebuild-postmerge-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-merged-main-s8-proof:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      S7_EFFECTIVE_BASE: 7bd493b54abf93fa40cb7f17af88b2a063a38e1d
+      IMPLEMENTATION_HEAD: 2715140adbd6cb951a424a7594446c9f989dd942
+      IMPLEMENTATION_MERGE: f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7
+    steps:
+      - name: Checkout proof carrier
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify exact proof topology
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "$IMPLEMENTATION_MERGE"
+          test "$(git rev-parse "$IMPLEMENTATION_MERGE^1")" = "$S7_EFFECTIVE_BASE"
+          test "$(git rev-parse "$IMPLEMENTATION_MERGE^2")" = "$IMPLEMENTATION_HEAD"
+          test -z "$(git diff --name-only "$IMPLEMENTATION_HEAD" "$IMPLEMENTATION_MERGE")"
+          test "$(git rev-list --count "$S7_EFFECTIVE_BASE..$IMPLEMENTATION_HEAD")" = "12"
+          test "$(git rev-list --count "$S7_EFFECTIVE_BASE..$IMPLEMENTATION_MERGE")" = "13"
+          test "$(git diff --name-only "$S7_EFFECTIVE_BASE...$IMPLEMENTATION_MERGE" | wc -l | tr -d ' ')" = "10"
+          test "$(git diff --name-only "$IMPLEMENTATION_MERGE...HEAD")" = ".github/workflows/mcft-cap-06-s8-restart-readback-rebuild-postmerge-proof.yml"
+
+      - name: Checkout exact S8 implementation merge
+        uses: actions/checkout@v4
+        with:
+          ref: f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run exact merged-main S8 preflight
+        env:
+          MCFT_CAP_06_S8_RESTART_READBACK_REBUILD_BASELINE_REF: 7bd493b54abf93fa40cb7f17af88b2a063a38e1d
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs
+
+      - name: Verify exact merged-main structured evidence
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S8_RESTART_READBACK_REBUILD_PREFLIGHT_RESULT.json', 'utf8'));
+          if (r.status !== 'PASS') throw new Error('S8_POSTMERGE_PREFLIGHT_NOT_PASS');
+          if (r.exact_head !== 'f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7') throw new Error('S8_POSTMERGE_HEAD_MISMATCH');
+          if (r.evaluation_ref !== 'twin_shadow_evaluation_8cae1f6732420a4999deffc0') throw new Error('S8_POSTMERGE_EVALUATION_REF_MISMATCH');
+          if (r.evaluation_hash !== 'sha256:32c43020f45351994120515e5c633531bb594d85659456c65bd46305737d85e0') throw new Error('S8_POSTMERGE_EVALUATION_HASH_MISMATCH');
+          if (r.candidate_ref !== 'twin_calibration_candidate_5649b9ab80b5545cf6007387') throw new Error('S8_POSTMERGE_CANDIDATE_REF_MISMATCH');
+          if (r.candidate_hash !== 'sha256:a2018a61bf6699b3cc3b8992058eb2c37b4d38d7f70771f9186495144c229a65') throw new Error('S8_POSTMERGE_CANDIDATE_HASH_MISMATCH');
+          if (r.canonical_fact_count !== 218 || r.governance_fact_count !== 2) throw new Error('S8_POSTMERGE_FACT_COUNT_MISMATCH');
+          if (r.canonical_facts_hash_before !== 'sha256:64eab5a2c5c7a79edb35a6eaefb4aeb7e760c630b44f45021cc1c7c31226a7e7' || r.canonical_facts_hash_before !== r.canonical_facts_hash_after) throw new Error('S8_POSTMERGE_FACT_HASH_MISMATCH');
+          if (r.first_projection_snapshot_hash !== 'sha256:c562d7107099df8be110f5cc4bf7a39f11defe22f655283c53b05205c7794962' || r.first_projection_snapshot_hash !== r.second_projection_snapshot_hash) throw new Error('S8_POSTMERGE_PROJECTION_HASH_MISMATCH');
+          if (r.fresh_process_count !== 2 || r.exact_readback_verified !== true || r.deterministic_second_rebuild_verified !== true) throw new Error('S8_POSTMERGE_RESTART_PROOF_MISMATCH');
+          if (r.first_rebuild_summary.canonical_objects_scanned !== 2 || r.first_rebuild_summary.evaluation_case_rows_rebuilt !== 8 || JSON.stringify(r.first_rebuild_summary) !== JSON.stringify(r.second_rebuild_summary)) throw new Error('S8_POSTMERGE_SUMMARY_MISMATCH');
+          if (r.canonical_fact_append_count !== 0 || r.canonical_fact_update_count !== 0 || r.canonical_fact_delete_count !== 0) throw new Error('S8_POSTMERGE_CANONICAL_WRITE_VIOLATION');
+          if (r.candidate_append_count !== 0 || r.evaluation_append_count !== 0 || r.model_activation_count !== 0 || r.active_config_switch_count !== 0) throw new Error('S8_POSTMERGE_AUTHORITY_BOUNDARY_VIOLATION');
+          if (r.runtime_parameter_change_count !== 0 || r.state_mutation_count !== 0 || r.checkpoint_mutation_count !== 0 || r.migration_count !== 0) throw new Error('S8_POSTMERGE_RUNTIME_BOUNDARY_VIOLATION');
+          if (r.s8_candidate_implemented !== true || r.s8_effective !== false || r.s9_authorized !== false) throw new Error('S8_POSTMERGE_FRONTIER_MISMATCH');
+          NODE
+
+      - name: Upload proof evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s8-restart-readback-rebuild-postmerge-proof
+          path: acceptance-output/
+          if-no-files-found: error
