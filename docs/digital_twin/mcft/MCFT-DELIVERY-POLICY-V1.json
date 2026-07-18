@@ -82,6 +82,15 @@
       "technical_content_destination": "MCFT_CAP_06_TASKBOOK_V0_4_0_S5_ENTRY_CRITERIA",
       "delivery_process_content_destination": "MCFT-DELIVERY-POLICY-V1",
       "historical_rewrite_allowed": false
+    },
+    {
+      "artifact_id": "MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1",
+      "historical_status": "MERGED_EFFECTIVE_HISTORICAL_RECORD",
+      "capability_slice_status": "MISCLASSIFIED_NOT_A_CAPABILITY_SLICE",
+      "root_cause": "TASKBOOK_DESIGN_DEFECT",
+      "technical_content_destination": "MCFT_CAP_06_TASKBOOK_V0_4_0_S5_ENTRY_CRITERIA",
+      "delivery_process_content_destination": null,
+      "historical_rewrite_allowed": false
     }
   ],
   "enforcement": {
