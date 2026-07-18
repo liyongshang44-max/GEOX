@@ -10,14 +10,14 @@
   ],
   "superseded_files_remain_historical": true,
   "taskbook_manifest_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json",
+  "taskbook_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-V0.4.0-EFFECTIVENESS.json",
   "delivery_policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json",
-  "status": "TASKBOOK_DESIGN_DEFECT_EXECUTION_PAUSED",
-  "execution_paused": true,
-  "pause_reason": "TASKBOOK_DESIGN_DEFECT",
-  "active_delivery_slice_id": null,
-  "paused_frontier": "S8_EFFECTIVENESS_WRITEBACK",
-  "next_repository_action": "ACTIVATE_MCFT_CAP_06_TASKBOOK_V0_4_0_ON_MERGED_MAIN",
-  "next_repository_action_kind": "TASKBOOK_GOVERNANCE_CORRECTION",
+  "status": "TASKBOOK_V0_4_0_EFFECTIVE_S8_EFFECTIVENESS_RESUMED",
+  "execution_paused": false,
+  "previous_pause_reason": "TASKBOOK_DESIGN_DEFECT",
+  "active_delivery_slice_id": "MCFT-CAP-06.MCFT-03-04-12.RESTART-READBACK-REBUILD-V1",
+  "next_repository_action": "S8_EFFECTIVENESS_WRITEBACK",
+  "next_repository_action_kind": "EXISTING_SLICE_EFFECTIVENESS_WRITEBACK",
   "next_repository_action_is_capability_slice": false,
   "new_prerequisite_inserted": false,
   "implementation_state": {
@@ -34,8 +34,22 @@
     "s8_candidate_implemented": true,
     "s8_implementation_merged": true,
     "s8_merged_main_proven": true,
+    "s8_effectiveness_writeback_authorized": true,
     "s8_effective": false,
     "s9_authorized": false
+  },
+  "taskbook_activation_evidence": {
+    "taskbook_version": "v0.4.0",
+    "revision_pull_request_number": 2570,
+    "revision_exact_head": "4f5ddad78759beec8c81f58fb018ffa63a629fe2",
+    "revision_merge_commit": "56fd50500a14cc8b5d3743306da85f9d0055abe0",
+    "head_to_merge_file_delta_count": 0,
+    "head_to_merge_tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2571,
+    "postmerge_probe_closed_without_merge": true,
+    "postmerge_workflow_run": 29633193658,
+    "postmerge_gate": "PASS",
+    "activation_requirements_satisfied": true
   },
   "s8_evidence": {
     "implementation_pr_number": 2568,
@@ -50,15 +64,9 @@
     "postmerge_workflow_run": 29631551159,
     "postmerge_gate": "PASS"
   },
-  "resume_conditions": [
-    "TASKBOOK_V0_4_0_EXACT_HEAD_GATE_PASS",
-    "TASKBOOK_V0_4_0_MERGED",
-    "TASKBOOK_V0_4_0_HEAD_TO_MERGE_DELTA_ZERO",
-    "TASKBOOK_V0_4_0_TREE_EQUIVALENCE_PASS",
-    "TASKBOOK_V0_4_0_MERGED_MAIN_GATE_PASS"
-  ],
-  "resume_action": "S8_EFFECTIVENESS_WRITEBACK",
-  "resume_action_is_new_prerequisite": false,
+  "resumed_action": "S8_EFFECTIVENESS_WRITEBACK",
+  "resumed_action_is_new_prerequisite": false,
+  "resumed_action_is_new_slice": false,
   "historical_nodes_not_counted_as_capability_slices": [
     "MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1",
     "MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1"
@@ -69,6 +77,7 @@
     "canonical_fact_delete_count": 0,
     "candidate_append_count": 0,
     "evaluation_append_count": 0,
+    "projection_write_count": 0,
     "model_activation_count": 0,
     "active_config_switch_count": 0,
     "runtime_parameter_change_count": 0,
