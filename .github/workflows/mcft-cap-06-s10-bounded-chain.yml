@@ -1,0 +1,110 @@
+name: mcft-cap-06-s10-bounded-chain
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s10-bounded-chain.yml'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-AUTHORITY-GRAPH.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-IMPLEMENTATION-CONTRACT.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-STATUS.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_DB.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-06-s10-bounded-chain.yml'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-AUTHORITY-GRAPH.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-IMPLEMENTATION-CONTRACT.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-STATUS.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_DB.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  s10-bounded-chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      MCFT_CAP_06_S10_BOUNDED_CHAIN_BASE_REF: d77eb3ac05e56b82aa1f65e8859a0ebe3d9bbcae
+    steps:
+      - name: Checkout exact S10 candidate head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run single-command S10 bounded-chain preflight
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs
+
+      - name: Verify structured final evidence
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S10_BOUNDED_CHAIN_PREFLIGHT_RESULT.json', 'utf8'));
+          if (r.schema_version !== 'geox_mcft_cap_06_s10_bounded_chain_preflight_result_v1') throw new Error('S10_RESULT_SCHEMA_MISMATCH');
+          if (r.status !== 'PASS' || r.stage_count !== 5) throw new Error(`S10_PREFLIGHT_NOT_PASS:${r.error || 'UNKNOWN'}`);
+          if (r.controlled_stage_database_count !== 2 || r.controlled_storage_mode !== 'TWO_NAMESPACED_ISOLATED_POSTGRESQL_STAGES') throw new Error('S10_CONTROLLED_STORAGE_MODE_INVALID');
+          if (r.controlled_stage_scope_match !== true || r.candidate_evaluation_identity_continuity !== true) throw new Error('S10_CONTROLLED_STAGE_CONTINUITY_INVALID');
+          if (r.actual_r !== 24 || r.actual_c !== 0) throw new Error('S10_R_OR_C_INVALID');
+          if (r.canonical_delta_formula !== 'R_PLUS_C_PLUS_12' || r.expected_cap06_canonical_delta !== 36 || r.actual_cap06_canonical_delta !== 36) throw new Error('S10_CANONICAL_DELTA_INVALID');
+          if (r.candidate_ref !== 'twin_calibration_candidate_5649b9ab80b5545cf6007387') throw new Error('S10_CANDIDATE_REF_INVALID');
+          if (r.evaluation_ref !== 'twin_shadow_evaluation_8cae1f6732420a4999deffc0') throw new Error('S10_EVALUATION_REF_INVALID');
+          if (r.candidate_parameter_value !== '0.034000' || r.effective_runtime_parameter_value !== '0.030000') throw new Error('S10_PARAMETER_BOUNDARY_INVALID');
+          if (r.completed_replay_additional_fact_count !== 0 || r.completed_replay_projection_divergence_count !== 0 || r.completed_replay_evidence_load_count !== 0) throw new Error('S10_COMPLETED_REPLAY_NOT_ZERO_WRITE');
+          if (r.s8_completed_replay_additional_fact_count !== 0 || r.s8_completed_replay_projection_divergence_count !== 0) throw new Error('S10_S8_NAMESPACE_REPLAY_INVALID');
+          if (r.s9_completed_replay_additional_fact_count !== 0 || r.s9_completed_replay_projection_divergence_count !== 0) throw new Error('S10_S9_NAMESPACE_REPLAY_INVALID');
+          if (r.candidate_consumed !== false || r.evaluation_consumed !== false || r.model_activation_count !== 0 || r.active_config_snapshot_changed !== false) throw new Error('S10_RUNTIME_AUTHORITY_VIOLATION');
+          if (r.repository_source_qualification_status !== 'INSUFFICIENT_MATCHED_PAIRS') throw new Error('S10_REPOSITORY_SOURCE_STATUS_INVALID');
+          if (r.repository_assessment_status !== 'INSUFFICIENT_REPOSITORY_HISTORY_FOR_CALIBRATION_ASSESSMENT') throw new Error('S10_REPOSITORY_ASSESSMENT_INVALID');
+          if (r.repository_canonical_residual_count !== 1 || r.repository_eligible_matched_pair_count !== 1) throw new Error('S10_REPOSITORY_COUNTS_INVALID');
+          if (r.residual_ref_intersection_count !== 0 || r.both_track_scopes_distinct !== true || r.both_track_databases_distinct !== true) throw new Error('S10_TRACK_SEPARATION_INVALID');
+          if (r.production_database_used !== false) throw new Error('S10_PRODUCTION_DATABASE_VIOLATION');
+          if (r.s10_candidate_implemented !== true || r.s10_effective !== false || r.s11a_authorized !== false) throw new Error('S10_FRONTIER_INVALID');
+          if (r.new_prerequisite_inserted !== false || r.new_slice_inserted !== false) throw new Error('S10_AD_HOC_NODE_VIOLATION');
+          NODE
+
+      - name: Upload structured evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s10-bounded-chain-evidence
+          path: acceptance-output/
+          if-no-files-found: error
