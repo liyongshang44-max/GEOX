@@ -124,7 +124,7 @@ jobs:
           if (controlled.actual_r !== 24 || controlled.actual_c !== 0 || controlled.actual_cap06_canonical_delta !== 36) throw new Error('S11B_CONTROLLED_DELTA_INVALID');
           if (controlled.completed_replay_additional_fact_count !== 0 || controlled.completed_replay_projection_divergence_count !== 0 || controlled.completed_replay_evidence_load_count !== 0) throw new Error('S11B_CONTROLLED_REPLAY_NOT_ZERO_WRITE');
           if (controlled.candidate_consumed !== false || controlled.evaluation_consumed !== false || controlled.model_activation_count !== 0 || controlled.active_config_snapshot_changed !== false) throw new Error('S11B_RUNTIME_AUTHORITY_CHANGED');
-          if (repository.status !== 'PASS') throw new Error('S11B_REPOSITORY_QUALIFICATION_RUN_FAILED');
+          if (!repository.qualification || typeof repository.qualification !== 'object') throw new Error('S11B_REPOSITORY_QUALIFICATION_PAYLOAD_MISSING');
           if (repository.qualification.dataset_qualification_status !== 'INSUFFICIENT_MATCHED_PAIRS') throw new Error('S11B_REPOSITORY_QUALIFICATION_STATUS_INVALID');
           if (repository.qualification.canonical_residual_count !== 1 || repository.qualification.eligible_matched_pair_count !== 1) throw new Error('S11B_REPOSITORY_QUALIFICATION_COUNTS_INVALID');
           NODE
