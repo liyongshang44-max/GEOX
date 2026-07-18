@@ -1,0 +1,72 @@
+name: mcft-taskbook-v0-4-postmerge-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-taskbook-v0-4-postmerge-proof.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-merged-main-taskbook-v0-4-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout proof carrier
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact proof topology
+        shell: bash
+        run: |
+          BASE=f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7
+          CANDIDATE=4f5ddad78759beec8c81f58fb018ffa63a629fe2
+          MERGE=56fd50500a14cc8b5d3743306da85f9d0055abe0
+          test "$(git rev-parse "${MERGE}^2")" = "$CANDIDATE"
+          test "$(git rev-list --count "${BASE}..${CANDIDATE}")" = "16"
+          test "$(git rev-list --count "${BASE}..${MERGE}")" = "17"
+          test "$(git diff --name-only "$CANDIDATE" "$MERGE" | wc -l | tr -d ' ')" = "0"
+          test "$(git diff --name-only "${BASE}...${CANDIDATE}" | wc -l | tr -d ' ')" = "12"
+
+      - name: Checkout exact taskbook v0.4 merge
+        uses: actions/checkout@v4
+        with:
+          ref: 56fd50500a14cc8b5d3743306da85f9d0055abe0
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+
+      - name: Run exact merged-main delivery-policy Gate
+        env:
+          MCFT_DELIVERY_POLICY_BASE_REF: f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V1.cjs
+
+      - name: Verify exact merged-main structured taskbook state
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_DELIVERY_POLICY_V1_RESULT.json', 'utf8'));
+          if (r.status !== 'PASS') throw new Error(`TASKBOOK_POLICY_NOT_PASS:${r.error || 'UNKNOWN'}`);
+          if (r.changed_file_count !== 12) throw new Error('TASKBOOK_CHANGED_FILE_COUNT_INVALID');
+          if (r.commit_count !== 17) throw new Error(`TASKBOOK_MERGED_TOPOLOGY_COUNT_INVALID:${r.commit_count}`);
+          if (r.taskbook_version !== 'v0.4.0-candidate') throw new Error('TASKBOOK_VERSION_INVALID');
+          if (r.taskbook_revision_status !== 'CANDIDATE_NOT_EFFECTIVE') throw new Error('TASKBOOK_REVISION_STATUS_INVALID');
+          if (r.execution_paused !== true) throw new Error('TASKBOOK_EXECUTION_MUST_REMAIN_PAUSED');
+          if (r.active_delivery_slice_id !== null) throw new Error('TASKBOOK_ACTIVE_SLICE_MUST_BE_NULL');
+          if (r.normative_transition !== 'MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1->MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1') throw new Error('TASKBOOK_NORMATIVE_TRANSITION_INVALID');
+          if (r.s0_branch_transport_neutralized !== true) throw new Error('S0_BRANCH_TRANSPORT_NOT_NEUTRALIZED');
+          if (r.s8_implementation_evidence_valid !== true || r.s8_effective !== false || r.s9_authorized !== false) throw new Error('TASKBOOK_FRONTIER_INVALID');
+          NODE
+
+      - name: Upload proof evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-taskbook-v0-4-postmerge-proof-evidence
+          path: acceptance-output/MCFT_DELIVERY_POLICY_V1_RESULT.json
+          if-no-files-found: error
