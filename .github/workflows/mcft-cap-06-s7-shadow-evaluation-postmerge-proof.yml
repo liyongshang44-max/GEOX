@@ -1,0 +1,108 @@
+name: mcft-cap-06-s7-shadow-evaluation-postmerge-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s7-shadow-evaluation-postmerge-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-merged-main-s7-proof:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      S6_EFFECTIVE_BASE: 1333ef2f1613745b785d01859e5355ea6fd27274
+      IMPLEMENTATION_HEAD: 0bf743a838a68102b1dd391636cc70f31f80e789
+      IMPLEMENTATION_MERGE: c52ddd97ddf190db78ded6571263d7a0cc64ece6
+    steps:
+      - name: Checkout proof carrier
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify exact proof topology
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "$IMPLEMENTATION_MERGE"
+          test "$(git rev-parse "$IMPLEMENTATION_MERGE^1")" = "$S6_EFFECTIVE_BASE"
+          test "$(git rev-parse "$IMPLEMENTATION_MERGE^2")" = "$IMPLEMENTATION_HEAD"
+          test -z "$(git diff --name-only "$IMPLEMENTATION_HEAD" "$IMPLEMENTATION_MERGE")"
+          test "$(git rev-list --count "$S6_EFFECTIVE_BASE..$IMPLEMENTATION_HEAD")" = "14"
+          test "$(git rev-list --count "$S6_EFFECTIVE_BASE..$IMPLEMENTATION_MERGE")" = "15"
+          test "$(git diff --name-only "$S6_EFFECTIVE_BASE...$IMPLEMENTATION_MERGE" | wc -l | tr -d ' ')" = "10"
+          test "$(git diff --name-only "$IMPLEMENTATION_MERGE...HEAD")" = ".github/workflows/mcft-cap-06-s7-shadow-evaluation-postmerge-proof.yml"
+
+      - name: Checkout exact S7 implementation merge
+        uses: actions/checkout@v4
+        with:
+          ref: c52ddd97ddf190db78ded6571263d7a0cc64ece6
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run exact merged-main S7 preflight
+        env:
+          MCFT_CAP_06_S7_SHADOW_EVALUATION_BASELINE_REF: 1333ef2f1613745b785d01859e5355ea6fd27274
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs
+
+      - name: Verify exact merged-main structured evidence
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S7_SHADOW_EVALUATION_PREFLIGHT_RESULT.json', 'utf8'));
+          if (r.status !== 'PASS') throw new Error('S7_POSTMERGE_PREFLIGHT_NOT_PASS');
+          if (r.exact_head !== 'c52ddd97ddf190db78ded6571263d7a0cc64ece6') throw new Error('S7_POSTMERGE_HEAD_MISMATCH');
+          if (r.candidate_ref !== 'twin_calibration_candidate_5649b9ab80b5545cf6007387') throw new Error('S7_POSTMERGE_CANDIDATE_MISMATCH');
+          if (r.candidate_hash !== 'sha256:a2018a61bf6699b3cc3b8992058eb2c37b4d38d7f70771f9186495144c229a65') throw new Error('S7_POSTMERGE_CANDIDATE_HASH_MISMATCH');
+          if (r.source_s6_case_results_hash !== 'sha256:e1b33fb79059856c030cab58970c543f384fb30a385bc3aa49c96b315efe4daa') throw new Error('S7_POSTMERGE_CASE_HASH_MISMATCH');
+          if (r.source_s6_compute_determinism_hash !== 'sha256:8017c2ba6006e1f2a593312300937841b5c2dd3a700c949bb8309338994ef63e') throw new Error('S7_POSTMERGE_COMPUTE_HASH_MISMATCH');
+          if (r.evaluation_ref !== 'twin_shadow_evaluation_8cae1f6732420a4999deffc0') throw new Error('S7_POSTMERGE_EVALUATION_REF_MISMATCH');
+          if (r.evaluation_hash !== 'sha256:32c43020f45351994120515e5c633531bb594d85659456c65bd46305737d85e0') throw new Error('S7_POSTMERGE_EVALUATION_HASH_MISMATCH');
+          if (r.first_evaluation_append_count !== 1 || r.completed_chain_rerun_evaluation_append_count !== 0) throw new Error('S7_POSTMERGE_APPEND_MISMATCH');
+          if (r.aggregate_projection_count !== 1 || r.candidate_evaluation_index_count !== 1 || r.case_projection_count !== 8) throw new Error('S7_POSTMERGE_PROJECTION_MISMATCH');
+          if (r.candidate_append_count !== 0 || r.model_activation_count !== 0 || r.active_config_switch_count !== 0) throw new Error('S7_POSTMERGE_AUTHORITY_BOUNDARY_VIOLATION');
+          if (r.runtime_parameter_change_count !== 0 || r.state_mutation_count !== 0 || r.checkpoint_mutation_count !== 0 || r.migration_count !== 0) throw new Error('S7_POSTMERGE_RUNTIME_BOUNDARY_VIOLATION');
+          if (r.s7_candidate_implemented !== true || r.s7_effective !== false || r.s8_authorized !== false) throw new Error('S7_POSTMERGE_FRONTIER_MISMATCH');
+          NODE
+
+      - name: Upload proof evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s7-shadow-evaluation-postmerge-proof
+          path: acceptance-output/
+          if-no-files-found: error
