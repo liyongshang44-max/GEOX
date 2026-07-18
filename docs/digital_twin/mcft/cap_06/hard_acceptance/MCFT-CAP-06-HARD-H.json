@@ -1,0 +1,60 @@
+{
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
+  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_H",
+  "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+  "status": "PASS",
+  "evidence_refs": [
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-EFFECTIVENESS.json"
+  ],
+  "workflow_refs": [
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION_EFFECTIVENESS.cjs"
+  ],
+  "canonical_refs": [
+    "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+    "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+  ],
+  "notes": [
+    "Shadow compute remains zero-write; Evaluation remains non-activating D-governance history."
+  ],
+  "assertion_count": 33,
+  "assertions": [
+    "Shadow kind is paired historical replay",
+    "exactly 8 holdout cases are used",
+    "base and candidate share all inputs except drainage coefficient",
+    "S6 canonical fact delta is zero",
+    "S6 projection delta is zero",
+    "S6 Runtime authority delta is zero",
+    "S6 State delta is zero",
+    "S6 checkpoint delta is zero",
+    "Shadow compute rerun is deterministic",
+    "future leakage count is zero",
+    "Evaluation requires 8 valid cases",
+    "5% RMSE improvement comparison uses squared quantities",
+    "bias tolerance is exact",
+    "max-error tolerance is exact",
+    "baseline RMSE zero handling is frozen",
+    "no-op Candidate yields BASE_PARAMETER_RETAINED",
+    "normalized residual is diagnostic only",
+    "Evaluation uses twin_shadow_evaluation_v1",
+    "Evaluation uses D transaction",
+    "Evaluation context rule matches P-1",
+    "Evaluation has exactly 8 deterministically ordered residual refs",
+    "Evaluation source_refs contain Candidate and Residual refs",
+    "Evaluation evidence_refs contain Observation Evidence, not Residual objects",
+    "Evaluation embeds exactly 8 case summaries",
+    "Evaluation stores both numeric policy identities",
+    "Evaluation records no uncertainty-model change",
+    "Evaluation records no activation or approval",
+    "one Candidate may have zero or many Evaluations",
+    "Candidate-to-Evaluation index is not unique on candidate_ref alone",
+    "same-key and concurrency behavior is deterministic",
+    "response loss recovers canonical Evaluation",
+    "Evaluation projections rebuild from facts and embedded summaries",
+    "corrupt surviving projection and canonical divergence fail closed"
+  ]
+}

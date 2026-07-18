@@ -1,0 +1,60 @@
+{
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
+  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_G",
+  "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+  "status": "PASS",
+  "evidence_refs": [
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-EFFECTIVENESS.json"
+  ],
+  "workflow_refs": [
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+  ],
+  "canonical_refs": [
+    "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+  ],
+  "notes": [
+    "Candidate remains non-active and recoverable canonical governance history."
+  ],
+  "assertion_count": 36,
+  "assertions": [
+    "insufficient excitation produces no Candidate append",
+    "flat surface produces no Candidate append",
+    "insufficient margin produces no Candidate append",
+    "boundary hit produces no Candidate append",
+    "physical invariant failure produces no Candidate append",
+    "mass-balance failure produces no Candidate append",
+    "determinism failure produces no Candidate append",
+    "invalid case set produces no Candidate append",
+    "non-zero interior optimum appends Candidate",
+    "base optimum appends canonical no-op Candidate",
+    "no-op is recoverable governance history",
+    "error classification summary is present",
+    "uncertainty_change is NONE",
+    "Candidate uses twin_calibration_candidate_v1",
+    "Candidate uses D transaction",
+    "Candidate is NON_LINEAGE_CONTEXT",
+    "Candidate context identity matches P-1",
+    "Candidate has exactly 16 deterministically ordered residual refs",
+    "Candidate source_refs include residual refs",
+    "Candidate evidence_refs contain Observation Evidence, not Residual objects",
+    "Candidate stores residual set hash",
+    "Candidate stores base_config_ref/hash under P-1 rule",
+    "Candidate stores source Runtime Config refs/set hash",
+    "Candidate stores effective base bundle hash",
+    "Candidate stores both numeric policy identities",
+    "Candidate stores case-input-set hash",
+    "Candidate activation status is NOT_ACTIVE",
+    "Candidate is not eligible for State input",
+    "Candidate is not eligible for Runtime Config use",
+    "Candidate is not eligible for human activation review before Evaluation",
+    "Candidate D commit appends exactly one canonical object",
+    "Candidate D commit does not modify Runtime authority",
+    "same-key and concurrency behavior is deterministic",
+    "response loss recovers canonical Candidate",
+    "Candidate projections rebuild from facts",
+    "corrupt surviving projection fails closed"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
+  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_I",
+  "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+  "status": "PASS",
+  "evidence_refs": [
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+  ],
+  "workflow_refs": [
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+  ],
+  "canonical_refs": [
+    "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+    "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+  ],
+  "notes": [
+    "Candidate and Evaluation are not Runtime authority; effective coefficient remains 0.030000."
+  ],
+  "assertion_count": 17,
+  "assertions": [
+    "config authority mode is explicit",
+    "active-binding absence is represented as NOT_ESTABLISHED with null refs",
+    "no active-binding implementation claim is made when absent",
+    "no twin_model_activation_v1 is appended",
+    "no active-config index is created or modified",
+    "when active binding exists, before equals after",
+    "post-evaluation Tick uses coefficient 0.030000",
+    "Candidate coefficient is not consumed",
+    "Candidate ref is not Runtime authority",
+    "Evaluation ref is not Runtime authority",
+    "a new immutable per-tick Config may exist",
+    "same effective parameter does not require same Config object ID",
+    "existing A1 State Tick implementation is reused",
+    "existing B Scenario implementation is reused",
+    "standard Forecast has 72 points",
+    "standard Scenario Set has three options",
+    "Candidate and Evaluation do not mutate State directly"
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
+  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_E",
+  "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+  "status": "PASS",
+  "evidence_refs": [
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json"
+  ],
+  "workflow_refs": [
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+  ],
+  "canonical_refs": [
+    "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+  ],
+  "notes": [
+    "Exact-ref case authority and numeric-policy separation are frozen predecessor evidence."
+  ],
+  "assertion_count": 28,
+  "assertions": [
+    "case authority is canonical H1 Forecast point trace",
+    "Forecast run ref/hash resolves",
+    "Forecast point ref/hash resolves",
+    "source posterior ref/hash resolves",
+    "source Runtime Config ref/hash resolves",
+    "forcing_cycle_key resolves",
+    "forcing_window_hash resolves",
+    "weather ref/hash resolves",
+    "ET0 ref/hash resolves",
+    "crop-stage/Kc authority resolves",
+    "geometry ref/hash resolves",
+    "observation operator authority resolves",
+    "Runtime replay numeric policy resolves",
+    "calibration metric numeric policy resolves",
+    "Forecast as_of resolves",
+    "Evidence Window cutoff resolves",
+    "base replay reproduces canonical scale-6 storage and trace exactly",
+    "base replay mismatch prevents Candidate append",
+    "metric scale-9 conversion is deterministic",
+    "all cases share effective drainage coefficient",
+    "all cases share effective parameter bundle hash",
+    "all cases share model component set hash",
+    "all cases share observation operator hash",
+    "all cases share geometry hash",
+    "all cases share Runtime replay numeric policy hash",
+    "Config/model heterogeneity prevents Candidate append",
+    "fresh external forcing retrieval is not used",
+    "case input set hash is deterministic"
+  ]
+}
