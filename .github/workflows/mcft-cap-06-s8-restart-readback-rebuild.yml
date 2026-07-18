@@ -66,14 +66,15 @@ jobs:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
-      - name: Resolve frozen S8 validation ref
+      - name: Resolve frozen S8 implementation validation ref
         id: validation
         shell: bash
         run: |
           REF="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
-          if [ -f docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json ]; then
-            PAUSED="$(node -e "const j=require('./docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'); process.stdout.write(String(j.execution_control?.execution_paused === true))")"
-            if [ "$PAUSED" = "true" ]; then
+          STATUS_FILE="docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-STATUS.json"
+          if [ -f "$STATUS_FILE" ]; then
+            IMPLEMENTATION_MERGED="$(node -e "const j=require('./$STATUS_FILE'); process.stdout.write(String(j.s8_implementation_merged === true))")"
+            if [ "$IMPLEMENTATION_MERGED" = "true" ]; then
               REF="f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7"
             fi
           fi

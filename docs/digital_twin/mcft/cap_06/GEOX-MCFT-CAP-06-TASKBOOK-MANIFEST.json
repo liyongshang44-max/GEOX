@@ -2,8 +2,8 @@
   "schema_version": "geox_mcft_cap_06_taskbook_manifest_v1",
   "capability_line_id": "MCFT-CAP-06",
   "manifest_id": "MCFT-CAP-06-TASKBOOK-MANIFEST-V1",
-  "effective_taskbook_version": "v0.4.0-candidate",
-  "revision_status": "CANDIDATE_NOT_EFFECTIVE",
+  "effective_taskbook_version": "v0.4.0",
+  "revision_status": "MERGED_MAIN_EFFECTIVE_FROZEN",
   "change_classification": "TASKBOOK_DESIGN_DEFECT",
   "canonical_entrypoint": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json",
   "canonical_bundle": {
@@ -22,21 +22,24 @@
   "global_delivery_policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json",
   "full_chain_impact_analysis_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-V0.4.0-FULL-CHAIN-IMPACT.json",
   "historical_reclassification_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-AD-HOC-PREREQUISITE-RECLASSIFICATION.json",
+  "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-V0.4.0-EFFECTIVENESS.json",
   "current_delivery_authority_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json",
   "legacy_frontier_files_are_historical": true,
   "execution_control": {
-    "execution_paused": true,
-    "pause_reason": "TASKBOOK_DESIGN_DEFECT",
-    "paused_frontier": "S8_EFFECTIVENESS_WRITEBACK",
-    "active_delivery_slice_id": null,
+    "execution_paused": false,
+    "previous_pause_reason": "TASKBOOK_DESIGN_DEFECT",
+    "previous_paused_frontier": "S8_EFFECTIVENESS_WRITEBACK",
+    "active_delivery_slice_id": "MCFT-CAP-06.MCFT-03-04-12.RESTART-READBACK-REBUILD-V1",
     "new_prerequisite_inserted": false,
-    "resume_requires": [
-      "TASKBOOK_V0_4_0_MERGE",
-      "HEAD_TO_MERGE_TREE_EQUIVALENCE_PASS",
-      "MERGED_MAIN_TASKBOOK_POLICY_GATE_PASS"
-    ],
-    "resume_action": "S8_EFFECTIVENESS_WRITEBACK",
-    "resume_action_is_capability_prerequisite": false
+    "activation_requirements": {
+      "taskbook_v0_4_0_merged": true,
+      "head_to_merge_tree_equivalence": "PASS",
+      "merged_main_taskbook_policy_gate": "PASS",
+      "proof_workflow_run": 29633193658
+    },
+    "resumed_action": "S8_EFFECTIVENESS_WRITEBACK",
+    "resumed_action_is_capability_prerequisite": false,
+    "resumed_action_is_new_slice": false
   },
   "normative_slice_graph": [
     "MCFT-CAP-06.P-1.DT02-CALIBRATION-SHADOW-ADJUDICATION-V1",
@@ -77,6 +80,7 @@
     "evidence_valid": true,
     "effectiveness_written": false
   },
+  "s8_effectiveness_writeback_authorized": true,
   "s9_authorized": false,
   "successor_capability_line_authorized": false
 }

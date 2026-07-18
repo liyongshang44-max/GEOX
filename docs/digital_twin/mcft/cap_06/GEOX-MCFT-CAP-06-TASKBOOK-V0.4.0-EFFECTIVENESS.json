@@ -1,0 +1,90 @@
+{
+  "schema_version": "geox_mcft_cap_06_taskbook_v0_4_0_effectiveness_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "effectiveness_id": "MCFT-CAP-06-TASKBOOK-V0.4.0-EFFECTIVENESS-V1",
+  "governance_action_kind": "TASKBOOK_DESIGN_DEFECT_CORRECTION_EFFECTIVENESS",
+  "capability_slice": false,
+  "taskbook_version": "v0.4.0",
+  "status": "MERGED_MAIN_EFFECTIVE_FROZEN",
+  "design_defect_classification": "TASKBOOK_DESIGN_DEFECT",
+  "delivery_policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json",
+  "taskbook_manifest_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json",
+  "taskbook_revision_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-v0.4.0-REVISION.md",
+  "full_chain_impact_analysis_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-V0.4.0-FULL-CHAIN-IMPACT.json",
+  "historical_reclassification_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-AD-HOC-PREREQUISITE-RECLASSIFICATION.json",
+  "revision_evidence": {
+    "pull_request_number": 2570,
+    "exact_head": "4f5ddad78759beec8c81f58fb018ffa63a629fe2",
+    "delivery_policy_workflow_run": 29632884432,
+    "historical_s8_workflow_run": 29632884446,
+    "standard_ci_run": 29632884430,
+    "merge_commit": "56fd50500a14cc8b5d3743306da85f9d0055abe0",
+    "head_to_merge_file_delta_count": 0,
+    "head_to_merge_tree_equivalence": "PASS",
+    "candidate_commit_count": 16,
+    "merge_topology_commit_count": 17,
+    "changed_file_count": 12,
+    "postmerge_probe_pr_number": 2571,
+    "postmerge_probe_closed_without_merge": true,
+    "postmerge_workflow_run": 29633193658,
+    "postmerge_gate": "PASS"
+  },
+  "corrected_authority": {
+    "allowed_post_freeze_gap_classes": [
+      "IMPLEMENTATION_DEFECT",
+      "TASKBOOK_DESIGN_DEFECT"
+    ],
+    "same_version_ad_hoc_prerequisite_forbidden": true,
+    "delivery_process_policy_is_capability_slice": false,
+    "normative_transition": "MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1->MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
+    "excluded_historical_nodes": [
+      "MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1",
+      "MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1"
+    ],
+    "historical_evidence_preserved": true,
+    "s0_branch_transport_neutralized": true
+  },
+  "execution_transition": {
+    "previous_status": "TASKBOOK_DESIGN_DEFECT_EXECUTION_PAUSED",
+    "new_status": "TASKBOOK_V0_4_0_EFFECTIVE_S8_EFFECTIVENESS_RESUMED",
+    "execution_paused": false,
+    "active_delivery_slice_id": "MCFT-CAP-06.MCFT-03-04-12.RESTART-READBACK-REBUILD-V1",
+    "resumed_action": "S8_EFFECTIVENESS_WRITEBACK",
+    "resumed_action_is_new_prerequisite": false,
+    "new_prerequisite_inserted": false
+  },
+  "frontier": {
+    "s8_implementation_merged_main_proven": true,
+    "s8_effective": false,
+    "s8_effectiveness_writeback_authorized": true,
+    "s9_authorized": false,
+    "successor_capability_line_authorized": false
+  },
+  "runtime_delta": {
+    "canonical_fact_append_count": 0,
+    "canonical_fact_update_count": 0,
+    "canonical_fact_delete_count": 0,
+    "candidate_append_count": 0,
+    "evaluation_append_count": 0,
+    "projection_write_count": 0,
+    "model_activation_count": 0,
+    "active_config_switch_count": 0,
+    "runtime_parameter_change_count": 0,
+    "state_mutation_count": 0,
+    "checkpoint_mutation_count": 0,
+    "migration_count": 0
+  },
+  "preserved_nonclaims": [
+    "NO_NEW_CAPABILITY_SLICE",
+    "NO_NEW_PREREQUISITE",
+    "NO_S8_EFFECTIVENESS_BY_TASKBOOK_ACTIVATION",
+    "NO_S9_AUTHORIZATION",
+    "NO_RUNTIME_SOURCE_CHANGE",
+    "NO_CANONICAL_WRITE",
+    "NO_PROJECTION_WRITE",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_CONFIG_SWITCH",
+    "NO_STATE_OR_CHECKPOINT_MUTATION",
+    "NO_MCFT_CAP_07_AUTHORIZATION"
+  ]
+}
