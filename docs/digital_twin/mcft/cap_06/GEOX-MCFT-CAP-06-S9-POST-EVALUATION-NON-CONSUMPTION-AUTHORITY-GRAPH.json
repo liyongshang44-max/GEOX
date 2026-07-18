@@ -1,0 +1,83 @@
+{
+  "schema_version": "geox_mcft_cap_06_s9_non_consumption_authority_graph_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "delivery_slice_id": "MCFT-CAP-06.MCFT-04-06-08-09-12.POST-EVALUATION-NON-CONSUMPTION-TICK-V1",
+  "taskbook_version": "v0.4.0",
+  "classification": "CAPABILITY_SLICE_IMPLEMENTATION",
+  "predecessor": {
+    "slice_id": "MCFT-CAP-06.MCFT-03-04-12.RESTART-READBACK-REBUILD-V1",
+    "status": "MERGED_EFFECTIVE",
+    "effectiveness_merge": "cc95f9ebced0c7f8dc92d2a0b5d9716e06c3ec2c",
+    "postmerge_proof_workflow": 29636807545
+  },
+  "canonical_governance_inputs": {
+    "scope": {
+      "tenant_id": "tenant_mcft_cap04_acceptance",
+      "project_id": "project_mcft_cap04_acceptance",
+      "group_id": "group_mcft_cap04_acceptance",
+      "field_id": "field_mcft_cap04_acceptance",
+      "season_id": "season_mcft_cap04_acceptance",
+      "zone_id": "zone_mcft_cap04_acceptance"
+    },
+    "candidate_ref": "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+    "candidate_hash": "sha256:a2018a61bf6699b3cc3b8992058eb2c37b4d38d7f70771f9186495144c229a65",
+    "candidate_parameter_value": "0.034000",
+    "evaluation_ref": "twin_shadow_evaluation_8cae1f6732420a4999deffc0",
+    "evaluation_hash": "sha256:32c43020f45351994120515e5c633531bb594d85659456c65bd46305737d85e0"
+  },
+  "runtime_authority": {
+    "normal_tick_path": "CAP04_A1_B_SINGLE_TICK_V1",
+    "same_scope_precondition_path": "CAP04_EXISTING_SINGLE_TICK_PLUS_23_TICK_RANGE_V1",
+    "same_scope_precondition_tick_count": 24,
+    "same_scope_precondition_final_sequence": 72,
+    "cross_scope_proof_composition_forbidden": true,
+    "base_effective_drainage_coefficient": "0.030000",
+    "candidate_ref_is_runtime_authority": false,
+    "evaluation_ref_is_runtime_authority": false,
+    "model_activation_required": false,
+    "active_config_switch_required": false,
+    "new_immutable_per_tick_config_allowed": true,
+    "same_effective_parameter_requires_same_config_id": false
+  },
+  "ordered_execution": [
+    "EXACT_CANDIDATE_EVALUATION_READBACK",
+    "VALIDATE_CANDIDATE_EVALUATION_RUNTIME_SCOPE_EQUALITY",
+    "ESTABLISH_SAME_SCOPE_CAP04_SEQUENCE_72_HANDOFF_WITH_EXISTING_SERVICES",
+    "CAPTURE_PRE_TICK_RUNTIME_AUTHORITY",
+    "VALIDATE_BASE_EQUIVALENT_CONFIG_AND_NON_CONSUMPTION",
+    "EXECUTE_EXISTING_NORMAL_A1_B_TICK",
+    "CAPTURE_POST_TICK_RUNTIME_AUTHORITY",
+    "VALIDATE_CANDIDATE_EVALUATION_FACTS_UNCHANGED",
+    "VALIDATE_NO_MODEL_ACTIVATION_OR_ACTIVE_CONFIG_CHANGE",
+    "VALIDATE_72_POINT_FORECAST_AND_THREE_72_POINT_SCENARIOS",
+    "VALIDATE_IDEMPOTENT_COMPLETED_TICK_RERUN"
+  ],
+  "allowed_writes": [
+    "ACCEPTANCE_ONLY_SAME_SCOPE_CAP04_PRECONDITION_FACTS_AND_PROJECTIONS",
+    "ONE_NORMAL_A1_RECORD_SET",
+    "ONE_NORMAL_B_SCENARIO_SET",
+    "OPTIONAL_ONE_IMMUTABLE_BASE_EQUIVALENT_RUNTIME_CONFIG",
+    "EXISTING_A1_B_PROJECTIONS_AND_IDEMPOTENCY_GUARDS"
+  ],
+  "forbidden_writes": [
+    "TWIN_CALIBRATION_CANDIDATE_APPEND",
+    "TWIN_SHADOW_EVALUATION_APPEND",
+    "TWIN_MODEL_ACTIVATION_APPEND",
+    "ACTIVE_CONFIG_INDEX_CREATE_OR_UPDATE",
+    "CANDIDATE_OR_EVALUATION_RUNTIME_AUTHORITY_BINDING",
+    "CANDIDATE_PARAMETER_CONSUMPTION",
+    "CROSS_SCOPE_RUNTIME_PROOF_COMPOSITION",
+    "STATE_PARAMETER_MUTATION",
+    "CHECKPOINT_PARAMETER_MUTATION",
+    "MIGRATION",
+    "PUBLIC_ROUTE",
+    "WEB",
+    "SCHEDULER"
+  ],
+  "successor": {
+    "slice_id": "MCFT-CAP-06.MCFT-04-12-16.BOUNDED-CALIBRATION-SHADOW-CLOSURE-V1",
+    "authorized": false,
+    "implementation_started": false
+  },
+  "new_prerequisite_inserted": false
+}
