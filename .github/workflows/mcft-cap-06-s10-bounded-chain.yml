@@ -52,9 +52,29 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
       MCFT_CAP_06_S10_BOUNDED_CHAIN_BASE_REF: d77eb3ac05e56b82aa1f65e8859a0ebe3d9bbcae
     steps:
-      - name: Checkout exact S10 candidate head
+      - name: Checkout workflow carrier
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
+
+      - name: Resolve frozen S10 validation ref
+        id: validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          EFFECTIVE=$(node -e "const s=require('./docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-STATUS.json'); process.stdout.write(String(s.s10_effective === true));")
+          if [ "$EFFECTIVE" = 'true' ]; then
+            echo 'ref=dc44a9e7e248e02237ee67a054d6fdd0259a1f3f' >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = 'pull_request' ]; then
+            echo 'ref=${{ github.event.pull_request.head.sha }}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ref=${{ github.sha }}' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout exact S10 validation authority
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.validation.outputs.ref }}
           fetch-depth: 0
 
       - name: Setup pnpm
@@ -97,7 +117,7 @@ jobs:
           if (r.repository_canonical_residual_count !== 1 || r.repository_eligible_matched_pair_count !== 1) throw new Error('S10_REPOSITORY_COUNTS_INVALID');
           if (r.residual_ref_intersection_count !== 0 || r.both_track_scopes_distinct !== true || r.both_track_databases_distinct !== true) throw new Error('S10_TRACK_SEPARATION_INVALID');
           if (r.production_database_used !== false) throw new Error('S10_PRODUCTION_DATABASE_VIOLATION');
-          if (r.s10_candidate_implemented !== true || r.s10_effective !== false || r.s11a_authorized !== false) throw new Error('S10_FRONTIER_INVALID');
+          if (r.s10_candidate_implemented !== true || r.s10_effective !== false || r.s11a_authorized !== false) throw new Error('S10_FROZEN_IMPLEMENTATION_FRONTIER_INVALID');
           if (r.new_prerequisite_inserted !== false || r.new_slice_inserted !== false) throw new Error('S10_AD_HOC_NODE_VIOLATION');
           NODE
 
