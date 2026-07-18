@@ -22,6 +22,8 @@
   "global_delivery_policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json",
   "full_chain_impact_analysis_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-V0.4.0-FULL-CHAIN-IMPACT.json",
   "historical_reclassification_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-AD-HOC-PREREQUISITE-RECLASSIFICATION.json",
+  "current_delivery_authority_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json",
+  "legacy_frontier_files_are_historical": true,
   "execution_control": {
     "execution_paused": true,
     "pause_reason": "TASKBOOK_DESIGN_DEFECT",
