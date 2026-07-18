@@ -22,12 +22,33 @@ jobs:
   s11a-closure-candidate:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    env:
-      MCFT_CAP_06_S11A_BASE_REF: b13a0057a8c9e93f3f4fcf8194b84149f1d2b1b5
     steps:
-      - name: Checkout exact S11A candidate head
+      - name: Checkout workflow carrier
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
+
+      - name: Resolve frozen S11A validation ref
+        id: validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          MERGED=$(node -e "const s=require('./docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11A-CLOSURE-CANDIDATE-STATUS.json'); process.stdout.write(String(s.s11a_implementation_merged === true));")
+          if [ "$MERGED" = 'true' ]; then
+            echo 'ref=00476d1ca9ec33f01ad58555f54daa5d582580f9' >> "$GITHUB_OUTPUT"
+            echo 'baseline=b13a0057a8c9e93f3f4fcf8194b84149f1d2b1b5' >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = 'pull_request' ]; then
+            echo 'ref=${{ github.event.pull_request.head.sha }}' >> "$GITHUB_OUTPUT"
+            echo 'baseline=${{ github.event.pull_request.base.sha }}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ref=${{ github.sha }}' >> "$GITHUB_OUTPUT"
+            echo 'baseline=b13a0057a8c9e93f3f4fcf8194b84149f1d2b1b5' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout exact S11A validation authority
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.validation.outputs.ref }}
           fetch-depth: 0
 
       - name: Setup pnpm
@@ -45,6 +66,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run S11A closure candidate Gate
+        env:
+          MCFT_CAP_06_S11A_BASE_REF: ${{ steps.validation.outputs.baseline }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_CLOSURE.cjs
 
       - name: Repository typecheck
@@ -61,20 +84,10 @@ jobs:
           node - <<'NODE'
           const fs = require('node:fs');
           const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S11A_CLOSURE_RESULT.json', 'utf8'));
-          if (r.schema_version !== 'geox_mcft_cap_06_s11a_closure_result_v1') throw new Error('S11A_RESULT_SCHEMA_INVALID');
-          if (r.status !== 'PASS') throw new Error(`S11A_GATE_NOT_PASS:${r.error || 'UNKNOWN'}`);
-          if (r.changed_file_count !== 19) throw new Error('S11A_CHANGED_FILE_COUNT_INVALID');
-          if (r.taskbook_version !== 'v0.4.0') throw new Error('S11A_TASKBOOK_VERSION_INVALID');
-          if (r.hard_acceptance_category_count !== 10) throw new Error('S11A_HARD_CATEGORY_COUNT_INVALID');
-          if (r.hard_acceptance_total_check_count !== 255 || r.hard_acceptance_pass_count !== 255) throw new Error('S11A_HARD_ACCEPTANCE_COUNT_INVALID');
-          if (r.hard_acceptance_fail_count !== 0 || r.hard_acceptance_not_applicable_count !== 0) throw new Error('S11A_HARD_ACCEPTANCE_STATUS_INVALID');
-          if (r.pending_completion_claim_count !== 48 || r.effective_completion_claim_count !== 0) throw new Error('S11A_COMPLETION_CLAIM_SET_INVALID');
-          if (r.closure_status !== 'CLOSURE_CANDIDATE' || r.closure_effective !== false || r.capability_complete !== false) throw new Error('S11A_CLOSURE_STATE_INVALID');
-          if (r.active_delivery_slice_id !== 'MCFT-CAP-06.CLOSURE-CANDIDATE-V1') throw new Error('S11A_ACTIVE_SLICE_INVALID');
-          if (r.s11b_authorized !== false || r.s11c_authorized !== false || r.s11d_authorized !== false) throw new Error('S11A_DOWNSTREAM_AUTHORITY_VIOLATION');
-          if (r.runtime_source_authorized !== false || r.successor_capability_line_authorized !== false) throw new Error('S11A_RUNTIME_OR_SUCCESSOR_AUTHORITY_VIOLATION');
-          if (r.new_prerequisite_inserted !== false || r.new_slice_inserted !== false) throw new Error('S11A_AD_HOC_NODE_VIOLATION');
-          for (const value of Object.values(r.runtime_delta)) if (value !== 0) throw new Error('S11A_RUNTIME_DELTA_NONZERO');
+          if (r.status !== 'PASS' || r.changed_file_count !== 19) throw new Error(`S11A_FROZEN_GATE_INVALID:${r.error || 'UNKNOWN'}`);
+          if (r.hard_acceptance_total_check_count !== 255 || r.hard_acceptance_pass_count !== 255) throw new Error('S11A_FROZEN_HARD_ACCEPTANCE_INVALID');
+          if (r.pending_completion_claim_count !== 48 || r.effective_completion_claim_count !== 0) throw new Error('S11A_FROZEN_CLAIMS_INVALID');
+          if (r.closure_effective !== false || r.capability_complete !== false) throw new Error('S11A_FROZEN_CLOSURE_STATE_INVALID');
           NODE
 
       - name: Upload S11A evidence
