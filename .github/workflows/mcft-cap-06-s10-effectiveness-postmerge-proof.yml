@@ -1,0 +1,110 @@
+name: mcft-cap-06-s10-effectiveness-postmerge-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s10-effectiveness-postmerge-proof.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-merged-main-s10-effectiveness-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      MCFT_CAP_06_S10_BOUNDED_CHAIN_BASE_REF: d77eb3ac05e56b82aa1f65e8859a0ebe3d9bbcae
+    steps:
+      - name: Checkout proof carrier
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact S10 merge topology
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='d77eb3ac05e56b82aa1f65e8859a0ebe3d9bbcae'
+          CANDIDATE='3072227904dbc753a1fe5d24a6dd714ee65c1ef2'
+          MERGE='dc44a9e7e248e02237ee67a054d6fdd0259a1f3f'
+          test "$(git rev-parse HEAD^)" = "$MERGE"
+          test "$(git rev-list --count "$BASE..$CANDIDATE")" = '4'
+          test "$(git rev-list --count "$BASE..$MERGE")" = '5'
+          test "$(git diff --name-only "$BASE...$CANDIDATE" | sed '/^$/d' | wc -l | tr -d ' ')" = '7'
+          test "$(git diff --name-only "$CANDIDATE" "$MERGE" | sed '/^$/d' | wc -l | tr -d ' ')" = '0'
+          test "$(git rev-parse "$CANDIDATE^{tree}")" = "$(git rev-parse "$MERGE^{tree}")"
+
+      - name: Checkout exact S10 merge
+        uses: actions/checkout@v4
+        with:
+          ref: dc44a9e7e248e02237ee67a054d6fdd0259a1f3f
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run exact merged-main S10 preflight
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs
+
+      - name: Verify exact merged-main structured proof
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p = 'acceptance-output/MCFT_CAP_06_S10_BOUNDED_CHAIN_PREFLIGHT_RESULT.json';
+          const r = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (r.status !== 'PASS' || r.stage_count !== 5) throw new Error(`S10_POSTMERGE_NOT_PASS:${r.error || 'UNKNOWN'}`);
+          if (r.exact_head !== 'dc44a9e7e248e02237ee67a054d6fdd0259a1f3f') throw new Error('S10_POSTMERGE_EXACT_HEAD_INVALID');
+          if (r.controlled_stage_database_count !== 2 || r.controlled_storage_mode !== 'TWO_NAMESPACED_ISOLATED_POSTGRESQL_STAGES') throw new Error('S10_POSTMERGE_STORAGE_MODE_INVALID');
+          if (r.controlled_stage_scope_match !== true || r.candidate_evaluation_identity_continuity !== true) throw new Error('S10_POSTMERGE_CONTINUITY_INVALID');
+          if (r.actual_r !== 24 || r.actual_c !== 0 || r.actual_cap06_canonical_delta !== 36) throw new Error('S10_POSTMERGE_CANONICAL_DELTA_INVALID');
+          if (r.candidate_parameter_value !== '0.034000' || r.effective_runtime_parameter_value !== '0.030000') throw new Error('S10_POSTMERGE_PARAMETER_BOUNDARY_INVALID');
+          if (r.completed_replay_additional_fact_count !== 0 || r.completed_replay_projection_divergence_count !== 0 || r.completed_replay_evidence_load_count !== 0) throw new Error('S10_POSTMERGE_REPLAY_NOT_ZERO_WRITE');
+          if (r.s8_completed_replay_additional_fact_count !== 0 || r.s8_completed_replay_projection_divergence_count !== 0) throw new Error('S10_POSTMERGE_S8_REPLAY_INVALID');
+          if (r.s9_completed_replay_additional_fact_count !== 0 || r.s9_completed_replay_projection_divergence_count !== 0) throw new Error('S10_POSTMERGE_S9_REPLAY_INVALID');
+          if (r.candidate_consumed !== false || r.evaluation_consumed !== false || r.model_activation_count !== 0 || r.active_config_snapshot_changed !== false) throw new Error('S10_POSTMERGE_RUNTIME_AUTHORITY_CHANGED');
+          if (r.repository_source_qualification_status !== 'INSUFFICIENT_MATCHED_PAIRS') throw new Error('S10_POSTMERGE_REPOSITORY_SOURCE_INVALID');
+          if (r.repository_assessment_status !== 'INSUFFICIENT_REPOSITORY_HISTORY_FOR_CALIBRATION_ASSESSMENT') throw new Error('S10_POSTMERGE_REPOSITORY_ASSESSMENT_INVALID');
+          if (r.residual_ref_intersection_count !== 0 || r.both_track_scopes_distinct !== true || r.both_track_databases_distinct !== true) throw new Error('S10_POSTMERGE_TRACK_SEPARATION_INVALID');
+          if (r.s10_candidate_implemented !== true || r.s10_effective !== false || r.s11a_authorized !== false) throw new Error('S10_POSTMERGE_FRONTIER_INVALID');
+          if (r.new_prerequisite_inserted !== false || r.new_slice_inserted !== false) throw new Error('S10_POSTMERGE_AD_HOC_NODE_VIOLATION');
+          NODE
+
+      - name: Upload proof evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s10-effectiveness-postmerge-proof
+          path: acceptance-output/
+          if-no-files-found: error
