@@ -1,0 +1,70 @@
+name: mcft-cap-06-s10-bounded-chain-effectiveness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s9-non-consumption-effectiveness.yml'
+      - '.github/workflows/mcft-cap-06-s10-bounded-chain-effectiveness.yml'
+      - '.github/workflows/mcft-cap-06-s10-bounded-chain.yml'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_EFFECTIVENESS.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  s10-bounded-chain-effectiveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact S10 effectiveness candidate head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+
+      - name: Resolve S10 effectiveness baseline
+        id: baseline
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "ref=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=dc44a9e7e248e02237ee67a054d6fdd0259a1f3f" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run S10 bounded-chain effectiveness Gate
+        env:
+          MCFT_CAP_06_S10_EFFECTIVENESS_BASE_REF: ${{ steps.baseline.outputs.ref }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_EFFECTIVENESS.cjs
+
+      - name: Verify structured S10 effectiveness result
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p = 'acceptance-output/MCFT_CAP_06_S10_BOUNDED_CHAIN_EFFECTIVENESS_RESULT.json';
+          const result = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (result.status !== 'PASS') throw new Error(`S10_EFFECTIVENESS_NOT_PASS:${result.error || 'UNKNOWN'}`);
+          if (result.changed_file_count !== 8) throw new Error('S10_EFFECTIVENESS_FILE_COUNT_INVALID');
+          if (result.taskbook_version !== 'v0.4.0') throw new Error('S10_EFFECTIVENESS_TASKBOOK_VERSION_INVALID');
+          if (result.s10_status !== 'MERGED_EFFECTIVE' || result.s10_effective !== true) throw new Error('S10_EFFECTIVENESS_STATUS_INVALID');
+          if (result.s11a_authorized !== true || result.s11a_implementation_started !== false) throw new Error('S10_EFFECTIVENESS_S11A_FRONTIER_INVALID');
+          if (result.active_delivery_slice_id !== 'MCFT-CAP-06.CLOSURE-CANDIDATE-V1') throw new Error('S10_EFFECTIVENESS_ACTIVE_SLICE_INVALID');
+          if (result.next_repository_action !== 'IMPLEMENT_S11A_CLOSURE_CANDIDATE') throw new Error('S10_EFFECTIVENESS_NEXT_ACTION_INVALID');
+          if (result.new_prerequisite_inserted !== false || result.new_slice_inserted !== false) throw new Error('S10_EFFECTIVENESS_AD_HOC_NODE_VIOLATION');
+          NODE
+
+      - name: Upload S10 effectiveness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s10-bounded-chain-effectiveness-evidence
+          path: acceptance-output/MCFT_CAP_06_S10_BOUNDED_CHAIN_EFFECTIVENESS_RESULT.json
+          if-no-files-found: error
