@@ -1,0 +1,70 @@
+name: mcft-cap-06-s9-non-consumption-effectiveness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s8-restart-readback-rebuild-effectiveness.yml'
+      - '.github/workflows/mcft-cap-06-s9-non-consumption-effectiveness.yml'
+      - '.github/workflows/mcft-cap-06-s9-non-consumption.yml'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  s9-non-consumption-effectiveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact S9 effectiveness candidate head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+
+      - name: Resolve S9 effectiveness baseline
+        id: baseline
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "ref=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=b61b7433c36c8bc352513b20d365dacf5d92f951" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run S9 non-consumption effectiveness Gate
+        env:
+          MCFT_CAP_06_S9_EFFECTIVENESS_BASE_REF: ${{ steps.baseline.outputs.ref }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs
+
+      - name: Verify structured S9 effectiveness result
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p = 'acceptance-output/MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS_RESULT.json';
+          const result = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (result.status !== 'PASS') throw new Error(`S9_EFFECTIVENESS_NOT_PASS:${result.error || 'UNKNOWN'}`);
+          if (result.changed_file_count !== 8) throw new Error('S9_EFFECTIVENESS_FILE_COUNT_INVALID');
+          if (result.taskbook_version !== 'v0.4.0') throw new Error('S9_EFFECTIVENESS_TASKBOOK_VERSION_INVALID');
+          if (result.s9_status !== 'MERGED_EFFECTIVE' || result.s9_effective !== true) throw new Error('S9_EFFECTIVENESS_STATUS_INVALID');
+          if (result.s10_authorized !== true || result.s10_implementation_started !== false) throw new Error('S9_EFFECTIVENESS_S10_FRONTIER_INVALID');
+          if (result.active_delivery_slice_id !== 'MCFT-CAP-06.MCFT-04-12-16.BOUNDED-CALIBRATION-SHADOW-CLOSURE-V1') throw new Error('S9_EFFECTIVENESS_ACTIVE_SLICE_INVALID');
+          if (result.next_repository_action !== 'IMPLEMENT_S10_BOUNDED_CALIBRATION_SHADOW_CLOSURE') throw new Error('S9_EFFECTIVENESS_NEXT_ACTION_INVALID');
+          if (result.new_prerequisite_inserted !== false || result.new_slice_inserted !== false) throw new Error('S9_EFFECTIVENESS_AD_HOC_NODE_VIOLATION');
+          NODE
+
+      - name: Upload S9 effectiveness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s9-non-consumption-effectiveness-evidence
+          path: acceptance-output/MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS_RESULT.json
+          if-no-files-found: error

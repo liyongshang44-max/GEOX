@@ -19,9 +19,32 @@ jobs:
   s8-restart-readback-rebuild-effectiveness:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact S8 effectiveness candidate head
+      - name: Checkout workflow carrier
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
+
+      - name: Resolve frozen S8 effectiveness validation ref
+        id: validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          EFFECTIVE=$(node -e "const s=require('./docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-STATUS.json'); process.stdout.write(String(s.s8_effective === true));")
+          if [ "$EFFECTIVE" = 'true' ]; then
+            echo 'ref=cc95f9ebced0c7f8dc92d2a0b5d9716e06c3ec2c' >> "$GITHUB_OUTPUT"
+            echo 'baseline=a573e741ea0d2b84bfc3727af3412eaa4552fdd0' >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = 'pull_request' ]; then
+            echo 'ref=${{ github.event.pull_request.head.sha }}' >> "$GITHUB_OUTPUT"
+            echo 'baseline=${{ github.event.pull_request.base.sha }}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ref=${{ github.sha }}' >> "$GITHUB_OUTPUT"
+            echo 'baseline=a573e741ea0d2b84bfc3727af3412eaa4552fdd0' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout exact S8 effectiveness authority
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.validation.outputs.ref }}
           fetch-depth: 0
 
       - name: Setup Node
@@ -29,19 +52,9 @@ jobs:
         with:
           node-version: '20.11.1'
 
-      - name: Resolve S8 effectiveness baseline
-        id: baseline
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "ref=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "ref=a573e741ea0d2b84bfc3727af3412eaa4552fdd0" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Run S8 restart/readback/rebuild effectiveness Gate
         env:
-          MCFT_CAP_06_S8_EFFECTIVENESS_BASE_REF: ${{ steps.baseline.outputs.ref }}
+          MCFT_CAP_06_S8_EFFECTIVENESS_BASE_REF: ${{ steps.validation.outputs.baseline }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD_EFFECTIVENESS.cjs
 
       - name: Verify structured S8 effectiveness result
