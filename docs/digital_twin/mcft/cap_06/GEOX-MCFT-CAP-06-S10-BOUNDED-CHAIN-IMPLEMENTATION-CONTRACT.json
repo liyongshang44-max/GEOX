@@ -1,0 +1,113 @@
+{
+  "schema_version": "geox_mcft_cap_06_s10_bounded_chain_implementation_contract_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "delivery_slice_id": "MCFT-CAP-06.MCFT-04-12-16.BOUNDED-CALIBRATION-SHADOW-CLOSURE-V1",
+  "taskbook_version": "v0.4.0",
+  "purpose": "Compose the existing controlled calibration-shadow governance/data chain and post-evaluation Runtime chain in namespaced isolated acceptance stages, freeze the actual CAP-06 canonical delta, prove zero-write replay in each stage, and retain a separate read-only repository-history assessment.",
+  "implementation_class": "ACCEPTANCE_COMPOSITION_ONLY",
+  "new_runtime_semantics": false,
+  "new_calibration_math": false,
+  "new_shadow_math": false,
+  "new_scenario_math": false,
+  "new_persistence_transaction": false,
+  "new_migration": false,
+  "new_route": false,
+  "new_openapi": false,
+  "new_web": false,
+  "new_scheduler": false,
+  "controlled_track_contract": {
+    "storage_mode": "TWO_NAMESPACED_ISOLATED_POSTGRESQL_STAGES",
+    "stage_count": 2,
+    "taskbook_storage_authority": "ISOLATED_OR_NAMESPACED_ACCEPTANCE_STORAGE",
+    "stage_1_role": "S1_TO_S8_GOVERNANCE_DATA_CHAIN",
+    "stage_2_role": "S9_RUNTIME_NON_CONSUMPTION_CHAIN",
+    "stage_1_and_stage_2_six_dimensional_scope_equal": true,
+    "stage_1_and_stage_2_candidate_ref_hash_equal": true,
+    "stage_1_and_stage_2_evaluation_ref_hash_equal": true,
+    "divergent_source_graph_identity_coalescing_forbidden": true,
+    "actual_r": 24,
+    "actual_c": 0,
+    "formula": "R_PLUS_C_PLUS_12",
+    "expected_delta": 36,
+    "counted_objects": {
+      "stage_1_twin_forecast_residual_v1": 24,
+      "conditional_calibration_governance_config": 0,
+      "stage_1_twin_calibration_candidate_v1": 1,
+      "stage_1_twin_shadow_evaluation_v1": 1,
+      "stage_2_post_evaluation_runtime_config_v1": 1,
+      "stage_2_post_evaluation_a1_record_set_members": 8,
+      "stage_2_post_evaluation_scenario_set_v1": 1
+    },
+    "excluded_from_cap06_delta": [
+      "PRESEED_SOURCE_FACTS",
+      "CAP04_SAME_SCOPE_SEQUENCE_72_PRECONDITION_FACTS",
+      "PROJECTION_ROWS",
+      "IDEMPOTENCY_GUARDS",
+      "LEASE_ROWS",
+      "OPERATIONAL_ATTEMPT_RESULTS"
+    ],
+    "completed_chain_rerun": {
+      "stage_1_candidate_append_delta": 0,
+      "stage_1_shadow_compute_canonical_delta": 0,
+      "stage_1_evaluation_append_delta": 0,
+      "stage_1_semantic_projection_divergence_count": 0,
+      "stage_2_post_evaluation_tick_canonical_delta": 0,
+      "stage_2_evidence_load_delta": 0,
+      "stage_2_semantic_projection_divergence_count": 0,
+      "combined_canonical_delta": 0,
+      "combined_semantic_projection_divergence_count": 0,
+      "facts_hash_changed": false
+    }
+  },
+  "repository_history_contract": {
+    "database": "SEPARATE_FRESH_ISOLATED_POSTGRESQL",
+    "source_runner": "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs",
+    "source_status_enum": "S0_DATASET_QUALIFICATION_STATUS",
+    "s10_assessment_enum": "S10_REPOSITORY_CALIBRATION_ASSESSMENT_STATUS",
+    "expected_source_status": "INSUFFICIENT_MATCHED_PAIRS",
+    "expected_assessment_status": "INSUFFICIENT_REPOSITORY_HISTORY_FOR_CALIBRATION_ASSESSMENT",
+    "expected_canonical_residual_count": 1,
+    "expected_eligible_matched_pair_count": 1,
+    "canonical_write_delta": 0,
+    "projection_write_delta": 0
+  },
+  "track_separation_contract": {
+    "controlled_internal_namespace_count": 2,
+    "repository_history_database_distinct": true,
+    "controlled_and_repository_six_dimensional_scopes_distinct": true,
+    "controlled_and_repository_residual_ref_intersection_count": 0,
+    "controlled_limitations_required": [
+      "CONTROLLED_SYNTHETIC",
+      "NOT_FIELD_CALIBRATED"
+    ],
+    "field_calibration_claim_allowed": false,
+    "statistical_significance_claim_allowed": false,
+    "generalization_claim_allowed": false,
+    "uncertainty_calibration_claim_allowed": false
+  },
+  "required_negative_proof": [
+    "CONTROLLED_INTERNAL_SCOPE_OR_CANDIDATE_EVALUATION_IDENTITY_DISCONTINUITY_REJECTED",
+    "DIVERGENT_SOURCE_GRAPH_IDENTITY_COALESCING_REJECTED",
+    "CONTROLLED_AND_REPOSITORY_SCOPE_OVERLAP_REJECTED",
+    "CONTROLLED_AND_REPOSITORY_RESIDUAL_REF_OVERLAP_REJECTED",
+    "CANONICAL_DELTA_NOT_EQUAL_R_PLUS_C_PLUS_12_REJECTED",
+    "STAGE_1_COMPLETED_CHAIN_RERUN_CANONICAL_WRITE_REJECTED",
+    "STAGE_1_COMPLETED_CHAIN_RERUN_PROJECTION_DIVERGENCE_REJECTED",
+    "STAGE_2_COMPLETED_TICK_RERUN_CANONICAL_WRITE_REJECTED",
+    "STAGE_2_COMPLETED_TICK_RERUN_PROJECTION_DIVERGENCE_REJECTED",
+    "CANDIDATE_OR_EVALUATION_RUNTIME_CONSUMPTION_REJECTED",
+    "REPOSITORY_HISTORY_STATUS_MASQUERADING_AS_CONTROLLED_RESULT_REJECTED"
+  ],
+  "exact_changed_file_boundary": [
+    ".github/workflows/mcft-cap-06-s10-bounded-chain.yml",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-AUTHORITY-GRAPH.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-IMPLEMENTATION-CONTRACT.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-STATUS.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_DB.ts",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+  ],
+  "successor_authorized": false,
+  "new_prerequisite_inserted": false,
+  "new_slice_inserted": false
+}

@@ -1,0 +1,119 @@
+{
+  "schema_version": "geox_mcft_cap_06_s10_bounded_chain_authority_graph_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "delivery_slice_id": "MCFT-CAP-06.MCFT-04-12-16.BOUNDED-CALIBRATION-SHADOW-CLOSURE-V1",
+  "taskbook_version": "v0.4.0",
+  "classification": "CAPABILITY_SLICE_IMPLEMENTATION",
+  "predecessor": {
+    "slice_id": "MCFT-CAP-06.MCFT-04-06-08-09-12.POST-EVALUATION-NON-CONSUMPTION-TICK-V1",
+    "status": "MERGED_EFFECTIVE",
+    "effectiveness_writeback_merge": "d77eb3ac05e56b82aa1f65e8859a0ebe3d9bbcae"
+  },
+  "controlled_track": {
+    "storage_mode": "TWO_NAMESPACED_ISOLATED_POSTGRESQL_STAGES",
+    "stage_count": 2,
+    "taskbook_storage_authority": "ISOLATED_OR_NAMESPACED_ACCEPTANCE_STORAGE",
+    "stage_1": {
+      "role": "S1_TO_S8_GOVERNANCE_DATA_CHAIN",
+      "source_authority": "S1_GRAPH_CONFORMANT_CONTROLLED_DATASET_V2",
+      "required_zero_write_replay": [
+        "CANDIDATE_COMPUTE_COMMIT",
+        "PAIRED_HISTORICAL_SHADOW_COMPUTE",
+        "SHADOW_EVALUATION_COMMIT",
+        "FACTS_BASED_PROJECTION_REBUILD"
+      ]
+    },
+    "stage_2": {
+      "role": "S9_RUNTIME_NON_CONSUMPTION_CHAIN",
+      "source_authority": "S9_SAME_SCOPE_CAP04_SEQUENCE_72_HANDOFF",
+      "required_zero_write_replay": [
+        "POST_EVALUATION_BASE_PARAMETER_TICK"
+      ]
+    },
+    "cross_stage_continuity": {
+      "six_dimensional_scope_must_match": true,
+      "candidate_ref_hash_must_match": true,
+      "evaluation_ref_hash_must_match": true,
+      "source_graph_object_ids_may_not_be_coalesced_across_hash_divergence": true,
+      "single_canonical_store_coalescing_forbidden": true
+    },
+    "actual_residual_count_r": 24,
+    "conditional_governance_config_count_c": 0,
+    "canonical_delta_formula": "R_PLUS_C_PLUS_12",
+    "expected_cap06_canonical_delta": 36,
+    "ordered_execution": [
+      "RUN_S8_GOVERNANCE_DATA_NAMESPACE",
+      "VERIFY_S8_COMPLETED_CHAIN_ZERO_WRITE_REPLAY",
+      "RESET_ISOLATED_ACCEPTANCE_SCHEMA",
+      "RUN_S9_RUNTIME_NAMESPACE",
+      "VERIFY_EXACT_CANDIDATE_EVALUATION_IDENTITY_AND_SCOPE_CONTINUITY",
+      "FREEZE_ACTUAL_CANONICAL_DELTA_LEDGER",
+      "VERIFY_S9_COMPLETED_TICK_ZERO_WRITE_REPLAY",
+      "VERIFY_COMBINED_ZERO_CANONICAL_DELTA_AND_ZERO_SEMANTIC_PROJECTION_DIVERGENCE"
+    ],
+    "candidate_ref": "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+    "candidate_hash": "sha256:a2018a61bf6699b3cc3b8992058eb2c37b4d38d7f70771f9186495144c229a65",
+    "evaluation_ref": "twin_shadow_evaluation_8cae1f6732420a4999deffc0",
+    "evaluation_hash": "sha256:32c43020f45351994120515e5c633531bb594d85659456c65bd46305737d85e0",
+    "candidate_parameter_value": "0.034000",
+    "effective_runtime_parameter_value": "0.030000"
+  },
+  "repository_history_track": {
+    "storage_mode": "SEPARATE_ISOLATED_POSTGRESQL",
+    "authority": "S0_V2_EXACT_CANONICAL_QUALIFICATION",
+    "qualification_status": "INSUFFICIENT_MATCHED_PAIRS",
+    "s10_assessment_status": "INSUFFICIENT_REPOSITORY_HISTORY_FOR_CALIBRATION_ASSESSMENT",
+    "canonical_residual_count": 1,
+    "eligible_matched_pair_count": 1,
+    "write_authority": "NONE"
+  },
+  "track_separation": {
+    "controlled_internal_namespace_count": 2,
+    "repository_history_database_distinct": true,
+    "controlled_and_repository_scope_overlap_allowed": false,
+    "controlled_and_repository_canonical_ref_overlap_allowed": false,
+    "controlled_track_may_claim_field_calibration": false,
+    "repository_track_may_reuse_controlled_result": false
+  },
+  "reuse_only": [
+    "S0_V2_EXACT_QUALIFICATION_RUNNER",
+    "S1_GRAPH_CONFORMANT_CONTROLLED_DATASET_V2",
+    "S5_CALIBRATION_CANDIDATE_SERVICE_V1",
+    "S6_PAIRED_HISTORICAL_SHADOW_SERVICE_V1",
+    "S7_SHADOW_EVALUATION_COMMIT_SERVICE_V1",
+    "S8_FACTS_BASED_REBUILD_RUNNER_V1",
+    "S9_POST_EVALUATION_NON_CONSUMPTION_SERVICE_V1",
+    "CAP04_EXISTING_A1_B_SERVICES",
+    "POSTGRES_CALIBRATION_GOVERNANCE_REPOSITORY_V1"
+  ],
+  "allowed_writes": [
+    "CONTROLLED_ACCEPTANCE_NAMESPACES_ONLY",
+    "EXISTING_S1_RESIDUAL_FACTS",
+    "EXISTING_S5_CANDIDATE_D_TRANSACTION",
+    "EXISTING_S7_EVALUATION_D_TRANSACTION",
+    "EXISTING_S9_BASE_EQUIVALENT_RUNTIME_CONFIG_AND_A1_B_FACTS"
+  ],
+  "forbidden_writes": [
+    "PRODUCTION_DATABASE",
+    "DIVERGENT_SOURCE_GRAPH_IDENTITY_COALESCING",
+    "NEW_RUNTIME_SERVICE",
+    "NEW_CALIBRATION_MATH",
+    "NEW_SCENARIO_MATH",
+    "NEW_MIGRATION",
+    "MODEL_ACTIVATION",
+    "ACTIVE_CONFIG_SWITCH",
+    "STATE_OR_CHECKPOINT_PARAMETER_MUTATION",
+    "PUBLIC_ROUTE",
+    "OPENAPI",
+    "WEB",
+    "SCHEDULER"
+  ],
+  "successor": {
+    "slice_id": "MCFT-CAP-06.CLOSURE-CANDIDATE-V1",
+    "authorized": false,
+    "implementation_started": false
+  },
+  "new_prerequisite_inserted": false,
+  "new_slice_inserted": false,
+  "successor_capability_line_authorized": false
+}
