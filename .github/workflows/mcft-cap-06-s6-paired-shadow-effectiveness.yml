@@ -14,6 +14,7 @@ on:
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW_EFFECTIVENESS.cjs'
   push:
     branches: [main]
@@ -29,6 +30,7 @@ on:
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW_EFFECTIVENESS.cjs'
 
 permissions:
@@ -60,6 +62,7 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
       MCFT_CAP_06_S6_PAIRED_SHADOW_BASELINE_REF: 5f73ed68cad479276ca55fb70391ae4543cb3dcc
       MCFT_CAP_06_S6_PAIRED_SHADOW_EFFECTIVENESS_BASELINE_REF: b1111e39ed70b39098362a468eac14101bc29ee3
+      S6_EFFECTIVENESS_MERGE: 1333ef2f1613745b785d01859e5355ea6fd27274
     steps:
       - name: Checkout exact S6 implementation merge
         uses: actions/checkout@v4
@@ -103,10 +106,31 @@ jobs:
           if (result.s6_candidate_implemented !== true || result.s6_effective !== false || result.s7_authorized !== false) throw new Error('S6_EFFECTIVENESS_PREWRITEBACK_FRONTIER_MISMATCH');
           NODE
 
-      - name: Checkout exact effectiveness candidate head
+      - name: Checkout trigger head
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          clean: false
+
+      - name: Detect downstream S7 effectiveness
+        id: detect
+        run: |
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require('node:fs');
+          let value = false;
+          try {
+            const effect = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json', 'utf8'));
+            value = effect.status === 'MERGED_EFFECTIVE' && effect.s7_effective === true;
+          } catch {}
+          console.log(`downstream=${value}`);
+          NODE
+
+      - name: Checkout exact historical S6 effectiveness merge
+        if: steps.detect.outputs.downstream == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: 1333ef2f1613745b785d01859e5355ea6fd27274
           fetch-depth: 0
           clean: false
 
