@@ -1,0 +1,77 @@
+{
+  "schema_version": "geox_mcft_cap_06_s9_non_consumption_implementation_contract_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "delivery_slice_id": "MCFT-CAP-06.MCFT-04-06-08-09-12.POST-EVALUATION-NON-CONSUMPTION-TICK-V1",
+  "taskbook_version": "v0.4.0",
+  "purpose": "Execute one existing normal CAP-04 A1/B tick after exact same-scope Candidate and Evaluation persistence and prove that neither governance object is consumed as Runtime authority.",
+  "reuse_only": [
+    "CAP04_FORECAST_SCENARIO_SINGLE_TICK_SERVICE_V1",
+    "CAP04_FORECAST_SCENARIO_RANGE_SERVICE_V1",
+    "CAP04_PENDING_SCENARIO_BARRIER_SINGLE_TICK_SERVICE_V1",
+    "POSTGRES_RUNTIME_REPOSITORY_V1",
+    "POSTGRES_NEXT_TICK_REPOSITORY_V1",
+    "POSTGRES_FORECAST_SCENARIO_RECOVERY_REPOSITORY_V1",
+    "CAP06_S5_CANDIDATE_SERVICE_V1",
+    "CAP06_S6_PAIRED_HISTORICAL_SHADOW_SERVICE_V1",
+    "CAP06_S7_SHADOW_EVALUATION_COMMIT_SERVICE_V1"
+  ],
+  "new_runtime_semantics": false,
+  "new_calibration_math": false,
+  "new_scenario_math": false,
+  "new_persistence_transaction": false,
+  "new_migration": false,
+  "new_route": false,
+  "new_scheduler": false,
+  "postgresql_precondition": {
+    "candidate_evaluation_runtime_scope_must_match": true,
+    "scope_dimensions": [
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "field_id",
+      "season_id",
+      "zone_id"
+    ],
+    "same_scope_precondition_tick_count": 24,
+    "same_scope_precondition_final_sequence": 72,
+    "construction_authority": "EXISTING_CAP04_SINGLE_TICK_RANGE_AND_POSTGRESQL_REPOSITORIES_ONLY",
+    "cross_scope_proof_composition_forbidden": true
+  },
+  "required_positive_proof": {
+    "candidate_exact_readback": true,
+    "evaluation_exact_readback": true,
+    "governance_runtime_scope_match": true,
+    "candidate_parameter_value": "0.034000",
+    "effective_tick_parameter_value": "0.030000",
+    "forecast_point_count": 72,
+    "scenario_option_count": 3,
+    "scenario_points_per_option": 72,
+    "candidate_fact_count_before_equals_after": true,
+    "evaluation_fact_count_before_equals_after": true,
+    "model_activation_count_before_equals_after_zero": true,
+    "active_config_index_before_equals_after": true,
+    "candidate_ref_absent_from_runtime_config_authority": true,
+    "evaluation_ref_absent_from_runtime_config_authority": true,
+    "completed_tick_rerun_additional_fact_count": 0
+  },
+  "required_negative_proof": [
+    "CANDIDATE_SCOPE_MISMATCH_REJECTED_BEFORE_RUNTIME_AUTHORITY_READ",
+    "EVALUATION_SCOPE_MISMATCH_REJECTED_BEFORE_RUNTIME_AUTHORITY_READ",
+    "CANDIDATE_PARAMETER_CONFIG_REJECTED_BEFORE_TICK",
+    "RUNTIME_CONFIG_CONTAINING_CANDIDATE_REF_REJECTED_BEFORE_TICK",
+    "RUNTIME_CONFIG_CONTAINING_EVALUATION_REF_REJECTED_BEFORE_TICK",
+    "PREEXISTING_MODEL_ACTIVATION_REJECTED_BEFORE_TICK",
+    "ACTIVE_CONFIG_BINDING_CHANGE_REJECTED_AFTER_TICK"
+  ],
+  "implementation_boundary": {
+    "product_runtime_change": "ONE_NARROW_NON_CONSUMPTION_VERIFICATION_ORCHESTRATOR_ONLY",
+    "normal_tick_write_authority": "EXISTING_CAP04_A1_B_SERVICE_ONLY",
+    "postgresql_precondition_authority": "ACCEPTANCE_ADAPTER_COMPOSES_EXISTING_CAP04_SERVICES_WITHOUT_NEW_RUNTIME_PATH",
+    "calibration_governance_write_authority": "NONE",
+    "activation_write_authority": "NONE",
+    "active_config_write_authority": "NONE"
+  },
+  "delivery_policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json",
+  "new_prerequisite_inserted": false,
+  "successor_authorized": false
+}
