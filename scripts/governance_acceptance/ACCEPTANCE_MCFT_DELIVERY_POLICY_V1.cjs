@@ -20,6 +20,8 @@ const HISTORICAL_NODES = [
   'MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1',
 ];
 const EXPECTED_FILES = [
+  '.github/workflows/mcft-cap-06-s8-restart-readback-rebuild.yml',
+  '.github/workflows/mcft-delivery-policy-v1.yml',
   'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json',
   'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.md',
   'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json',
@@ -29,7 +31,6 @@ const EXPECTED_FILES = [
   'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json',
   'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-V0.4.0-FULL-CHAIN-IMPACT.json',
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V1.cjs',
-  '.github/workflows/mcft-delivery-policy-v1.yml',
 ];
 const FORBIDDEN_RUNTIME_PREFIXES = [
   'apps/server/src/',
