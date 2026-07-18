@@ -1,0 +1,111 @@
+name: mcft-cap-06-s9-non-consumption
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s9-non-consumption.yml'
+      - 'apps/server/src/runtime/calibration/post_evaluation_non_consumption_tick_service_v1.ts'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-AUTHORITY-GRAPH.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-IMPLEMENTATION-CONTRACT.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DOMAIN.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S9_NON_CONSUMPTION.cjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-06-s9-non-consumption.yml'
+      - 'apps/server/src/runtime/calibration/post_evaluation_non_consumption_tick_service_v1.ts'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-AUTHORITY-GRAPH.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-IMPLEMENTATION-CONTRACT.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DOMAIN.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S9_NON_CONSUMPTION.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  s9-non-consumption:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      MCFT_CAP_06_S9_NON_CONSUMPTION_BASE_REF: cc95f9ebced0c7f8dc92d2a0b5d9716e06c3ec2c
+    steps:
+      - name: Checkout exact S9 candidate head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run single-command S9 non-consumption preflight
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S9_NON_CONSUMPTION.cjs
+
+      - name: Verify structured final evidence
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S9_NON_CONSUMPTION_PREFLIGHT_RESULT.json', 'utf8'));
+          if (r.schema_version !== 'geox_mcft_cap_06_s9_non_consumption_preflight_result_v1') throw new Error('S9_RESULT_SCHEMA_MISMATCH');
+          if (r.status !== 'PASS' || r.stage_count !== 6) throw new Error('S9_PREFLIGHT_NOT_PASS');
+          if (r.candidate_ref !== 'twin_calibration_candidate_5649b9ab80b5545cf6007387') throw new Error('S9_CANDIDATE_REF_MISMATCH');
+          if (r.candidate_hash !== 'sha256:a2018a61bf6699b3cc3b8992058eb2c37b4d38d7f70771f9186495144c229a65') throw new Error('S9_CANDIDATE_HASH_MISMATCH');
+          if (r.evaluation_ref !== 'twin_shadow_evaluation_8cae1f6732420a4999deffc0') throw new Error('S9_EVALUATION_REF_MISMATCH');
+          if (r.evaluation_hash !== 'sha256:32c43020f45351994120515e5c633531bb594d85659456c65bd46305737d85e0') throw new Error('S9_EVALUATION_HASH_MISMATCH');
+          if (r.candidate_parameter_value !== '0.034000' || r.effective_tick_parameter_value !== '0.030000') throw new Error('S9_PARAMETER_NON_CONSUMPTION_MISMATCH');
+          if (r.immutable_runtime_config_append_count !== 1) throw new Error('S9_IMMUTABLE_CONFIG_COUNT_MISMATCH');
+          if (r.normal_tick_canonical_fact_append_count !== 9 || r.a1_canonical_fact_append_count !== 8 || r.scenario_set_canonical_fact_append_count !== 1) throw new Error('S9_NORMAL_TICK_FACT_DELTA_MISMATCH');
+          if (r.forecast_point_count !== 72 || r.scenario_option_count !== 3 || r.scenario_points_per_option !== 72) throw new Error('S9_FORECAST_SCENARIO_SHAPE_MISMATCH');
+          if (r.candidate_consumed !== false || r.evaluation_consumed !== false) throw new Error('S9_GOVERNANCE_OBJECT_CONSUMED');
+          if (r.candidate_fact_delta !== 0 || r.evaluation_fact_delta !== 0 || r.model_activation_count !== 0) throw new Error('S9_GOVERNANCE_WRITE_VIOLATION');
+          if (r.active_config_snapshot_changed !== false) throw new Error('S9_ACTIVE_CONFIG_CHANGED');
+          if (r.completed_rerun_additional_fact_count !== 0 || r.completed_rerun_evidence_load_count !== 0) throw new Error('S9_RERUN_NOT_ZERO_WRITE');
+          if (r.state_parameter_mutation_count !== 0 || r.checkpoint_parameter_mutation_count !== 0 || r.migration_count !== 0) throw new Error('S9_RUNTIME_PARAMETER_BOUNDARY_VIOLATION');
+          if (r.production_database_used !== false) throw new Error('S9_PRODUCTION_DATABASE_VIOLATION');
+          if (r.s9_candidate_implemented !== true || r.s9_effective !== false || r.s10_authorized !== false) throw new Error('S9_FRONTIER_MISMATCH');
+          if (r.new_prerequisite_inserted !== false) throw new Error('S9_AD_HOC_PREREQUISITE_VIOLATION');
+          NODE
+
+      - name: Upload structured evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s9-non-consumption-evidence
+          path: acceptance-output/
+          if-no-files-found: error
