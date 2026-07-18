@@ -15,6 +15,7 @@ const DEFAULT_BASELINE = 'b61b7433c36c8bc352513b20d365dacf5d92f951';
 const S9 = 'MCFT-CAP-06.MCFT-04-06-08-09-12.POST-EVALUATION-NON-CONSUMPTION-TICK-V1';
 const S10 = 'MCFT-CAP-06.MCFT-04-12-16.BOUNDED-CALIBRATION-SHADOW-CLOSURE-V1';
 const EXPECTED_FILES = [
+  '.github/workflows/mcft-cap-06-s8-restart-readback-rebuild-effectiveness.yml',
   '.github/workflows/mcft-cap-06-s9-non-consumption-effectiveness.yml',
   '.github/workflows/mcft-cap-06-s9-non-consumption.yml',
   'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json',
@@ -87,7 +88,8 @@ function main() {
   const manifest = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json');
   const frontier = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json');
   const status = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json');
-  const frozenWorkflow = text('.github/workflows/mcft-cap-06-s9-non-consumption.yml');
+  const frozenS8EffectivenessWorkflow = text('.github/workflows/mcft-cap-06-s8-restart-readback-rebuild-effectiveness.yml');
+  const frozenS9Workflow = text('.github/workflows/mcft-cap-06-s9-non-consumption.yml');
 
   assert.deepEqual(policy.frozen_taskbook_gap_classification.allowed_classes, ['IMPLEMENTATION_DEFECT', 'TASKBOOK_DESIGN_DEFECT']);
   assert.equal(policy.frozen_taskbook_gap_classification.implementation_defect.new_prerequisite_allowed, false);
@@ -184,8 +186,10 @@ function main() {
   assert.equal(status.new_prerequisite_inserted, false);
   assert.equal(status.new_slice_inserted, false);
 
-  assert.equal(frozenWorkflow.includes('b61b7433c36c8bc352513b20d365dacf5d92f951'), true, 'S9_FROZEN_MERGE_REF_REQUIRED');
-  assert.equal(frozenWorkflow.includes('s9_effective'), true, 'S9_EFFECTIVENESS_FREEZE_CONDITION_REQUIRED');
+  assert.equal(frozenS8EffectivenessWorkflow.includes('cc95f9ebced0c7f8dc92d2a0b5d9716e06c3ec2c'), true, 'S8_EFFECTIVENESS_FROZEN_MERGE_REF_REQUIRED');
+  assert.equal(frozenS8EffectivenessWorkflow.includes('s8_effective'), true, 'S8_EFFECTIVENESS_FREEZE_CONDITION_REQUIRED');
+  assert.equal(frozenS9Workflow.includes('b61b7433c36c8bc352513b20d365dacf5d92f951'), true, 'S9_FROZEN_MERGE_REF_REQUIRED');
+  assert.equal(frozenS9Workflow.includes('s9_effective'), true, 'S9_EFFECTIVENESS_FREEZE_CONDITION_REQUIRED');
 
   const result = {
     schema_version: 'geox_mcft_cap_06_s9_non_consumption_effectiveness_result_v1',
