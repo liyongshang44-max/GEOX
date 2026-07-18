@@ -15,6 +15,7 @@ const DEFAULT_BASELINE = 'f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7';
 const S4 = 'MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1';
 const S5 = 'MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1';
 const S8 = 'MCFT-CAP-06.MCFT-03-04-12.RESTART-READBACK-REBUILD-V1';
+const S0_WRAPPER = 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S0_V2_HONEST_QUALIFICATION.cjs';
 const HISTORICAL_NODES = [
   'MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1',
   'MCFT-CAP-06.S5-PREDECESSOR.GRAPH-AND-DUAL-TIME-CONFORMANCE-V1',
@@ -31,6 +32,7 @@ const EXPECTED_FILES = [
   'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json',
   'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-V0.4.0-FULL-CHAIN-IMPACT.json',
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V1.cjs',
+  S0_WRAPPER,
 ];
 const FORBIDDEN_RUNTIME_PREFIXES = [
   'apps/server/src/',
@@ -62,8 +64,12 @@ function git(args) {
   }).trim();
 }
 
+function text(relativePath) {
+  return fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
+}
+
 function json(relativePath) {
-  return JSON.parse(fs.readFileSync(path.join(ROOT, relativePath), 'utf8'));
+  return JSON.parse(text(relativePath));
 }
 
 function write(result) {
@@ -109,6 +115,7 @@ function main() {
   const reclassification = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-AD-HOC-PREREQUISITE-RECLASSIFICATION.json');
   const frontier = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json');
   const s8 = json('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-STATUS.json');
+  const s0Wrapper = text(S0_WRAPPER);
 
   assert.equal(policy.policy_id, 'MCFT-DELIVERY-POLICY-V1');
   assert.equal(policy.scope, 'ALL_MCFT_CAPABILITY_LINES');
@@ -128,6 +135,13 @@ function main() {
   assert.equal(policy.delivery_process_controls_may_not.includes('CREATE_CAPABILITY_PREDECESSOR'), true);
   assert.equal(policy.delivery_process_controls_may_not.includes('COUNT_AS_TECHNICAL_SLICE'), true);
   assert.deepEqual(policy.historical_reclassifications.map((item) => item.artifact_id).sort(), [...HISTORICAL_NODES].sort());
+
+  assert.equal(s0Wrapper.includes('branch transport is delivery policy, not S0 technical authority'), true, 'S0_DELIVERY_POLICY_BOUNDARY_COMMENT_REQUIRED');
+  assert.equal(s0Wrapper.includes("const POST_S0_NEUTRAL_EXECUTION_REF = 'main';"), true, 'S0_NEUTRAL_EXECUTION_REF_REQUIRED');
+  assert.equal(s0Wrapper.includes('function qualificationExecutionRef()'), true, 'S0_QUALIFICATION_REF_RESOLVER_REQUIRED');
+  assert.equal(s0Wrapper.includes("GITHUB_HEAD_REF: process.env.GITHUB_HEAD_REF || ''"), false, 'S0_RAW_HEAD_REF_PROPAGATION_FORBIDDEN');
+  assert.equal(s0Wrapper.includes('GITHUB_HEAD_REF: executionRef'), true, 'S0_NEUTRAL_HEAD_REF_INJECTION_REQUIRED');
+  assert.equal(s0Wrapper.includes('GITHUB_REF_NAME: executionRef'), true, 'S0_NEUTRAL_REF_NAME_INJECTION_REQUIRED');
 
   assert.equal(manifest.effective_taskbook_version, 'v0.4.0-candidate');
   assert.equal(manifest.revision_status, 'CANDIDATE_NOT_EFFECTIVE');
@@ -208,6 +222,7 @@ function main() {
     active_delivery_slice_id: frontier.active_delivery_slice_id,
     normative_transition: `${S4}->${S5}`,
     excluded_historical_nodes: HISTORICAL_NODES,
+    s0_branch_transport_neutralized: true,
     s8_implementation_evidence_valid: true,
     s8_effective: false,
     s9_authorized: false,
