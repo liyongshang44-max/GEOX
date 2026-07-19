@@ -1,53 +1,1979 @@
 {
-  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
-  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_D",
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_category_v3",
+  "capability_line_id": "MCFT-CAP-06",
+  "acceptance_category_id": "MCFT_CAP_06_HARD_CATEGORY_D",
   "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+  "lifecycle_stage": "S11D_RESOLVED_TASKBOOK_V2_REPAIR_CANDIDATE",
   "status": "PASS",
-  "evidence_refs": [
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
-  ],
-  "workflow_refs": [
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
-  ],
-  "canonical_refs": [
-    "twin_calibration_candidate_5649b9ab80b5545cf6007387",
-    "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
-  ],
-  "notes": [
-    "Controlled and repository-history tracks remain disjoint."
-  ],
-  "assertion_count": 28,
-  "assertions": [
-    "controlled track runs in isolated or namespaced acceptance storage",
-    "controlled refs and repository-history refs are disjoint",
-    "preseed DB profile is verified",
-    "preseed source objects are not counted as CAP-06 Runtime delta",
-    "standard controlled track has exactly 24 matched cases",
-    "Calibration window has exactly 16 cases",
-    "Holdout window has exactly 8 cases",
-    "Calibration and holdout refs are disjoint",
-    "Calibration target times precede holdout target times",
-    "Calibration availability times precede holdout availability times",
-    "Candidate as_of equals maximum calibration availability",
-    "Candidate as_of precedes minimum holdout availability",
-    "Forecast target time equals observation observed_at",
-    "Forecast issued_at precedes observation availability",
-    "Forecast as_of precedes observation availability",
-    "Forecast Evidence cutoff does not exceed Forecast as_of",
-    "created_at is not anti-leakage authority",
-    "Candidate compute receives no holdout refs",
-    "Candidate exact-ref port cannot query holdout or range indexes",
-    "Holdout observations are unavailable at Candidate as_of",
-    "duplicate target time is rejected",
-    "conflicting semantic duplicate is rejected",
-    "observation quality PASS is required",
-    "LIMITED quality is excluded from standard windows",
-    "wrong scope is rejected",
-    "wrong lineage context is rejected",
-    "wrong revision context is rejected",
-    "wrong unit is rejected"
+  "item_shape_inheritance": "FORBIDDEN",
+  "each_item_self_contained": true,
+  "item_count": 28,
+  "status_counts": {
+    "PASS": 28,
+    "FAIL": 0,
+    "PENDING": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "items": [
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_001",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "controlled track runs in isolated or namespaced acceptance storage",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_001_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "controlled track runs in isolated or namespaced acceptance storage",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_002",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "controlled refs and repository-history refs are disjoint",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_002_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "controlled refs and repository-history refs are disjoint",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_003",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "preseed DB profile is verified",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_003_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "preseed DB profile is verified",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_004",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "preseed source objects are not counted as CAP-06 Runtime delta",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_004_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "preseed source objects are not counted as CAP-06 Runtime delta",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_005",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "standard controlled track has exactly 24 matched cases",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_005_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "standard controlled track has exactly 24 matched cases",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_006",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Calibration window has exactly 16 cases",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_006_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Calibration window has exactly 16 cases",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_007",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Holdout window has exactly 8 cases",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_007_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Holdout window has exactly 8 cases",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_008",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Calibration and holdout refs are disjoint",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_008_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Calibration and holdout refs are disjoint",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_009",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Calibration target times precede holdout target times",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_009_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Calibration target times precede holdout target times",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_010",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Calibration availability times precede holdout availability times",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_010_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Calibration availability times precede holdout availability times",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_011",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Candidate as_of equals maximum calibration availability",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_011_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate as_of equals maximum calibration availability",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_012",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Candidate as_of precedes minimum holdout availability",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_012_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate as_of precedes minimum holdout availability",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_013",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Forecast target time equals observation observed_at",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_013_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Forecast target time equals observation observed_at",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_014",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Forecast issued_at precedes observation availability",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_014_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Forecast issued_at precedes observation availability",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_015",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Forecast as_of precedes observation availability",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_015_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Forecast as_of precedes observation availability",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_016",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Forecast Evidence cutoff does not exceed Forecast as_of",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_016_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Forecast Evidence cutoff does not exceed Forecast as_of",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_017",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "created_at is not anti-leakage authority",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_017_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "created_at is not anti-leakage authority",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_018",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Candidate compute receives no holdout refs",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_018_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate compute receives no holdout refs",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_019",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Candidate exact-ref port cannot query holdout or range indexes",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_019_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate exact-ref port cannot query holdout or range indexes",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_020",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "Holdout observations are unavailable at Candidate as_of",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_020_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Holdout observations are unavailable at Candidate as_of",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_021",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "duplicate target time is rejected",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_021_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "duplicate target time is rejected",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_022",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "conflicting semantic duplicate is rejected",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_022_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "conflicting semantic duplicate is rejected",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_023",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "observation quality PASS is required",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_023_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "observation quality PASS is required",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_024",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "LIMITED quality is excluded from standard windows",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_024_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "LIMITED quality is excluded from standard windows",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_025",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "wrong scope is rejected",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_025_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "wrong scope is rejected",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_026",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "wrong lineage context is rejected",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_026_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "wrong lineage context is rejected",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_027",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "wrong revision context is rejected",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_027_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "wrong revision context is rejected",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_D_028",
+      "category": "CONTROLLED_TRACK_ISOLATION_AND_RESIDUAL_WINDOWS",
+      "assertion": "wrong unit is rejected",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3a1494acb47db776d97ba75e339d85dc18c9d629",
+        "0d96d7f5479b5b26efb78e9ee9280f9929b0b2c4",
+        "6c934ca7fed9518f71285b0c3f05e62617102c09",
+        "335b1e47db453e3bf09703298107191ab9d4f31e",
+        "810f0ed661279c1c12f2e42c18678a1e4d971f18",
+        "1221471ceecf1c7ca726486b100b51ef2c3c4c1f",
+        "25757b560e5a365c3f6cbf08b4f3837662a24ba5",
+        "7649000305f8878fe4a0ced7728bf6cfe43e9cf7",
+        "6ed8956155fba4d7ae040f88ab1870e564945f7c",
+        "4fc1044085c4befad7852089b6ebe2afab46a5ca",
+        "57d9844528665a5ae3ecbd0ccf0406bf3c5e91cd",
+        "6db3f8d0c2b2ba7bcc48993b4b4783332e2ae62b",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29484155724,
+        29486457435,
+        29492854307,
+        29495338013,
+        29493034432,
+        29493733228,
+        29475482824,
+        29476027885,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S1_RESIDUAL_WINDOWS",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_D_028_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "wrong unit is rejected",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+    }
   ]
 }

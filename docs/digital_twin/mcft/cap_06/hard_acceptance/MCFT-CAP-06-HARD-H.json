@@ -1,60 +1,1545 @@
 {
-  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
-  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_H",
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_category_v3",
+  "capability_line_id": "MCFT-CAP-06",
+  "acceptance_category_id": "MCFT_CAP_06_HARD_CATEGORY_H",
   "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+  "lifecycle_stage": "S11D_RESOLVED_TASKBOOK_V2_REPAIR_CANDIDATE",
   "status": "PASS",
-  "evidence_refs": [
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-EFFECTIVENESS.json"
-  ],
-  "workflow_refs": [
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION_EFFECTIVENESS.cjs"
-  ],
-  "canonical_refs": [
-    "twin_calibration_candidate_5649b9ab80b5545cf6007387",
-    "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
-  ],
-  "notes": [
-    "Shadow compute remains zero-write; Evaluation remains non-activating D-governance history."
-  ],
-  "assertion_count": 33,
-  "assertions": [
-    "Shadow kind is paired historical replay",
-    "exactly 8 holdout cases are used",
-    "base and candidate share all inputs except drainage coefficient",
-    "S6 canonical fact delta is zero",
-    "S6 projection delta is zero",
-    "S6 Runtime authority delta is zero",
-    "S6 State delta is zero",
-    "S6 checkpoint delta is zero",
-    "Shadow compute rerun is deterministic",
-    "future leakage count is zero",
-    "Evaluation requires 8 valid cases",
-    "5% RMSE improvement comparison uses squared quantities",
-    "bias tolerance is exact",
-    "max-error tolerance is exact",
-    "baseline RMSE zero handling is frozen",
-    "no-op Candidate yields BASE_PARAMETER_RETAINED",
-    "normalized residual is diagnostic only",
-    "Evaluation uses twin_shadow_evaluation_v1",
-    "Evaluation uses D transaction",
-    "Evaluation context rule matches P-1",
-    "Evaluation has exactly 8 deterministically ordered residual refs",
-    "Evaluation source_refs contain Candidate and Residual refs",
-    "Evaluation evidence_refs contain Observation Evidence, not Residual objects",
-    "Evaluation embeds exactly 8 case summaries",
-    "Evaluation stores both numeric policy identities",
-    "Evaluation records no uncertainty-model change",
-    "Evaluation records no activation or approval",
-    "one Candidate may have zero or many Evaluations",
-    "Candidate-to-Evaluation index is not unique on candidate_ref alone",
-    "same-key and concurrency behavior is deterministic",
-    "response loss recovers canonical Evaluation",
-    "Evaluation projections rebuild from facts and embedded summaries",
-    "corrupt surviving projection and canonical divergence fail closed"
+  "item_shape_inheritance": "FORBIDDEN",
+  "each_item_self_contained": true,
+  "item_count": 33,
+  "status_counts": {
+    "PASS": 33,
+    "FAIL": 0,
+    "PENDING": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "items": [
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_001",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Shadow kind is paired historical replay",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_001_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Shadow kind is paired historical replay",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_002",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "exactly 8 holdout cases are used",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_002_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "exactly 8 holdout cases are used",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_003",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "base and candidate share all inputs except drainage coefficient",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_003_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "base and candidate share all inputs except drainage coefficient",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_004",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "S6 canonical fact delta is zero",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_004_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "S6 canonical fact delta is zero",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_005",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "S6 projection delta is zero",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "2715140adbd6cb951a424a7594446c9f989dd942",
+        "f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7",
+        "2548e98eacc32eb53d67d8c192bb810c56589b03",
+        "a573e741ea0d2b84bfc3727af3412eaa4552fdd0"
+      ],
+      "workflow_run_refs": [
+        29631231275,
+        29631231264,
+        29631551159,
+        29633542882,
+        29633542846,
+        29633542856,
+        29633542821,
+        29633855684
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_005_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "S6 projection delta is zero",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "a573e741ea0d2b84bfc3727af3412eaa4552fdd0"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_006",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "S6 Runtime authority delta is zero",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_006_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "S6 Runtime authority delta is zero",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_007",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "S6 State delta is zero",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_007_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "S6 State delta is zero",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_008",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "S6 checkpoint delta is zero",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_008_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "S6 checkpoint delta is zero",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_009",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Shadow compute rerun is deterministic",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_009_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Shadow compute rerun is deterministic",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_010",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "future leakage count is zero",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_010_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "future leakage count is zero",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_011",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Evaluation requires 8 valid cases",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "0bf743a838a68102b1dd391636cc70f31f80e789",
+        "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+      ],
+      "workflow_run_refs": [
+        29629379499,
+        29629379481,
+        29629714133
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_011_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evaluation requires 8 valid cases",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_012",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "5% RMSE improvement comparison uses squared quantities",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_012_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "5% RMSE improvement comparison uses squared quantities",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_013",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "bias tolerance is exact",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_013_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "bias tolerance is exact",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_014",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "max-error tolerance is exact",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_014_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "max-error tolerance is exact",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_015",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "baseline RMSE zero handling is frozen",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_015_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "baseline RMSE zero handling is frozen",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_016",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "no-op Candidate yields BASE_PARAMETER_RETAINED",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_016_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "no-op Candidate yields BASE_PARAMETER_RETAINED",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_017",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "normalized residual is diagnostic only",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_017_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "normalized residual is diagnostic only",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_018",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Evaluation uses twin_shadow_evaluation_v1",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "0bf743a838a68102b1dd391636cc70f31f80e789",
+        "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+      ],
+      "workflow_run_refs": [
+        29629379499,
+        29629379481,
+        29629714133
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_018_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evaluation uses twin_shadow_evaluation_v1",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_019",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Evaluation uses D transaction",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "0bf743a838a68102b1dd391636cc70f31f80e789",
+        "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+      ],
+      "workflow_run_refs": [
+        29629379499,
+        29629379481,
+        29629714133
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_019_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evaluation uses D transaction",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_020",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Evaluation context rule matches P-1",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "0bf743a838a68102b1dd391636cc70f31f80e789",
+        "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+      ],
+      "workflow_run_refs": [
+        29629379499,
+        29629379481,
+        29629714133
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_020_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evaluation context rule matches P-1",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_021",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Evaluation has exactly 8 deterministically ordered residual refs",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "0bf743a838a68102b1dd391636cc70f31f80e789",
+        "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+      ],
+      "workflow_run_refs": [
+        29629379499,
+        29629379481,
+        29629714133
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_021_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evaluation has exactly 8 deterministically ordered residual refs",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_022",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Evaluation source_refs contain Candidate and Residual refs",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "0bf743a838a68102b1dd391636cc70f31f80e789",
+        "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+      ],
+      "workflow_run_refs": [
+        29629379499,
+        29629379481,
+        29629714133
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_022_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evaluation source_refs contain Candidate and Residual refs",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_023",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Evaluation evidence_refs contain Observation Evidence, not Residual objects",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "0bf743a838a68102b1dd391636cc70f31f80e789",
+        "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+      ],
+      "workflow_run_refs": [
+        29629379499,
+        29629379481,
+        29629714133
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_023_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evaluation evidence_refs contain Observation Evidence, not Residual objects",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_024",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Evaluation embeds exactly 8 case summaries",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "0bf743a838a68102b1dd391636cc70f31f80e789",
+        "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+      ],
+      "workflow_run_refs": [
+        29629379499,
+        29629379481,
+        29629714133
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_024_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evaluation embeds exactly 8 case summaries",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_025",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Evaluation stores both numeric policy identities",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "0bf743a838a68102b1dd391636cc70f31f80e789",
+        "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+      ],
+      "workflow_run_refs": [
+        29629379499,
+        29629379481,
+        29629714133
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_025_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evaluation stores both numeric policy identities",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_026",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Evaluation records no uncertainty-model change",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "0bf743a838a68102b1dd391636cc70f31f80e789",
+        "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+      ],
+      "workflow_run_refs": [
+        29629379499,
+        29629379481,
+        29629714133
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_026_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evaluation records no uncertainty-model change",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_027",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Evaluation records no activation or approval",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "0bf743a838a68102b1dd391636cc70f31f80e789",
+        "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+      ],
+      "workflow_run_refs": [
+        29629379499,
+        29629379481,
+        29629714133
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_027_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evaluation records no activation or approval",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_028",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "one Candidate may have zero or many Evaluations",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "0bf743a838a68102b1dd391636cc70f31f80e789",
+        "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+      ],
+      "workflow_run_refs": [
+        29629379499,
+        29629379481,
+        29629714133
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_028_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "one Candidate may have zero or many Evaluations",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_029",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Candidate-to-Evaluation index is not unique on candidate_ref alone",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "0bf743a838a68102b1dd391636cc70f31f80e789",
+        "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+      ],
+      "workflow_run_refs": [
+        29629379499,
+        29629379481,
+        29629714133
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_029_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate-to-Evaluation index is not unique on candidate_ref alone",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_030",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "same-key and concurrency behavior is deterministic",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "a7303ca4c5261d1ae61ecb295d4aa305134db6b4",
+        "b1111e39ed70b39098362a468eac14101bc29ee3"
+      ],
+      "workflow_run_refs": [
+        29606770957,
+        29606770968,
+        29607442809
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_030_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "same-key and concurrency behavior is deterministic",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "b1111e39ed70b39098362a468eac14101bc29ee3"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_031",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "response loss recovers canonical Evaluation",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "2715140adbd6cb951a424a7594446c9f989dd942",
+        "f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7",
+        "2548e98eacc32eb53d67d8c192bb810c56589b03",
+        "a573e741ea0d2b84bfc3727af3412eaa4552fdd0"
+      ],
+      "workflow_run_refs": [
+        29631231275,
+        29631231264,
+        29631551159,
+        29633542882,
+        29633542846,
+        29633542856,
+        29633542821,
+        29633855684
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_031_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "response loss recovers canonical Evaluation",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "a573e741ea0d2b84bfc3727af3412eaa4552fdd0"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_032",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "Evaluation projections rebuild from facts and embedded summaries",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "2715140adbd6cb951a424a7594446c9f989dd942",
+        "f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7",
+        "2548e98eacc32eb53d67d8c192bb810c56589b03",
+        "a573e741ea0d2b84bfc3727af3412eaa4552fdd0"
+      ],
+      "workflow_run_refs": [
+        29631231275,
+        29631231264,
+        29631551159,
+        29633542882,
+        29633542846,
+        29633542856,
+        29633542821,
+        29633855684
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_032_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evaluation projections rebuild from facts and embedded summaries",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "a573e741ea0d2b84bfc3727af3412eaa4552fdd0"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_H_033",
+      "category": "SHADOW_COMPUTE_EVALUATION_AND_RECOVERY",
+      "assertion": "corrupt surviving projection and canonical divergence fail closed",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "2715140adbd6cb951a424a7594446c9f989dd942",
+        "f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7",
+        "2548e98eacc32eb53d67d8c192bb810c56589b03",
+        "a573e741ea0d2b84bfc3727af3412eaa4552fdd0"
+      ],
+      "workflow_run_refs": [
+        29631231275,
+        29631231264,
+        29631551159,
+        29633542882,
+        29633542846,
+        29633542856,
+        29633542821,
+        29633855684
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S6_S8_SHADOW_EVALUATION_AND_RECOVERY",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_H_033_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "corrupt surviving projection and canonical divergence fail closed",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION.cjs"
+        ]
+      },
+      "subject_commit": "a573e741ea0d2b84bfc3727af3412eaa4552fdd0"
+    }
   ]
 }

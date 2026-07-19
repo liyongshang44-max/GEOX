@@ -1,52 +1,1276 @@
 {
-  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
-  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_E",
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_category_v3",
+  "capability_line_id": "MCFT-CAP-06",
+  "acceptance_category_id": "MCFT_CAP_06_HARD_CATEGORY_E",
   "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+  "lifecycle_stage": "S11D_RESOLVED_TASKBOOK_V2_REPAIR_CANDIDATE",
   "status": "PASS",
-  "evidence_refs": [
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json"
-  ],
-  "workflow_refs": [
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
-  ],
-  "canonical_refs": [
-    "twin_calibration_candidate_5649b9ab80b5545cf6007387"
-  ],
-  "notes": [
-    "Exact-ref case authority and numeric-policy separation are frozen predecessor evidence."
-  ],
-  "assertion_count": 28,
-  "assertions": [
-    "case authority is canonical H1 Forecast point trace",
-    "Forecast run ref/hash resolves",
-    "Forecast point ref/hash resolves",
-    "source posterior ref/hash resolves",
-    "source Runtime Config ref/hash resolves",
-    "forcing_cycle_key resolves",
-    "forcing_window_hash resolves",
-    "weather ref/hash resolves",
-    "ET0 ref/hash resolves",
-    "crop-stage/Kc authority resolves",
-    "geometry ref/hash resolves",
-    "observation operator authority resolves",
-    "Runtime replay numeric policy resolves",
-    "calibration metric numeric policy resolves",
-    "Forecast as_of resolves",
-    "Evidence Window cutoff resolves",
-    "base replay reproduces canonical scale-6 storage and trace exactly",
-    "base replay mismatch prevents Candidate append",
-    "metric scale-9 conversion is deterministic",
-    "all cases share effective drainage coefficient",
-    "all cases share effective parameter bundle hash",
-    "all cases share model component set hash",
-    "all cases share observation operator hash",
-    "all cases share geometry hash",
-    "all cases share Runtime replay numeric policy hash",
-    "Config/model heterogeneity prevents Candidate append",
-    "fresh external forcing retrieval is not used",
-    "case input set hash is deterministic"
+  "item_shape_inheritance": "FORBIDDEN",
+  "each_item_self_contained": true,
+  "item_count": 28,
+  "status_counts": {
+    "PASS": 28,
+    "FAIL": 0,
+    "PENDING": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "items": [
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_001",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "case authority is canonical H1 Forecast point trace",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_001_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "case authority is canonical H1 Forecast point trace",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_002",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "Forecast run ref/hash resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_002_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Forecast run ref/hash resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_003",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "Forecast point ref/hash resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_003_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Forecast point ref/hash resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_004",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "source posterior ref/hash resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_004_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "source posterior ref/hash resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_005",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "source Runtime Config ref/hash resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_005_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "source Runtime Config ref/hash resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_006",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "forcing_cycle_key resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_006_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "forcing_cycle_key resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_007",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "forcing_window_hash resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_007_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "forcing_window_hash resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_008",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "weather ref/hash resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_008_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "weather ref/hash resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_009",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "ET0 ref/hash resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_009_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "ET0 ref/hash resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_010",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "crop-stage/Kc authority resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_010_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "crop-stage/Kc authority resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_011",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "geometry ref/hash resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_011_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "geometry ref/hash resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_012",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "observation operator authority resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_012_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "observation operator authority resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_013",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "Runtime replay numeric policy resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_013_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Runtime replay numeric policy resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_014",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "calibration metric numeric policy resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_014_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "calibration metric numeric policy resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_015",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "Forecast as_of resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_015_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Forecast as_of resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_016",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "Evidence Window cutoff resolves",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_016_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evidence Window cutoff resolves",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_017",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "base replay reproduces canonical scale-6 storage and trace exactly",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_017_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "base replay reproduces canonical scale-6 storage and trace exactly",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_018",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "base replay mismatch prevents Candidate append",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_018_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "base replay mismatch prevents Candidate append",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_019",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "metric scale-9 conversion is deterministic",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_019_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "metric scale-9 conversion is deterministic",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_020",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "all cases share effective drainage coefficient",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_020_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "all cases share effective drainage coefficient",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_021",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "all cases share effective parameter bundle hash",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_021_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "all cases share effective parameter bundle hash",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_022",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "all cases share model component set hash",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_022_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "all cases share model component set hash",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_023",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "all cases share observation operator hash",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_023_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "all cases share observation operator hash",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_024",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "all cases share geometry hash",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_024_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "all cases share geometry hash",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_025",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "all cases share Runtime replay numeric policy hash",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_025_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "all cases share Runtime replay numeric policy hash",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_026",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "Config/model heterogeneity prevents Candidate append",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_026_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Config/model heterogeneity prevents Candidate append",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_027",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "fresh external forcing retrieval is not used",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_027_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "fresh external forcing retrieval is not used",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_E_028",
+      "category": "CASE_AUTHORITY_AND_NUMERIC_POLICY_SEPARATION",
+      "assertion": "case input set hash is deterministic",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "9eff45605dc709a6001e6c1bed29fd1df76197ed",
+        "cc1c982f3dd8e26af31a2f4270e6b43cba4ba30f",
+        "b6d28477d87239ee417c688d43122cb7a20b1a31"
+      ],
+      "workflow_run_refs": [
+        29504752806,
+        29506065728
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_E_028_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "case input set hash is deterministic",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
+    }
   ]
 }

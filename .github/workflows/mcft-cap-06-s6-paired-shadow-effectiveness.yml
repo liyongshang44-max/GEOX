@@ -1,37 +1,8 @@
 name: mcft-cap-06-s6-paired-shadow-effectiveness
+# Historical MCFT-CAP-06 workflow: automatic triggers frozen after final repair.
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/mcft-cap-06-s4-effectiveness-s5-authorization.yml'
-      - '.github/workflows/mcft-cap-06-s4-focused-validation.yml'
-      - '.github/workflows/mcft-cap-06-s5-candidate-effectiveness.yml'
-      - '.github/workflows/mcft-cap-06-s5-entry-controls.yml'
-      - '.github/workflows/mcft-cap-06-s6-paired-shadow-effectiveness.yml'
-      - '.github/workflows/mcft-cap-06-s6-paired-shadow.yml'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW_EFFECTIVENESS.cjs'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/mcft-cap-06-s4-effectiveness-s5-authorization.yml'
-      - '.github/workflows/mcft-cap-06-s4-focused-validation.yml'
-      - '.github/workflows/mcft-cap-06-s5-candidate-effectiveness.yml'
-      - '.github/workflows/mcft-cap-06-s5-entry-controls.yml'
-      - '.github/workflows/mcft-cap-06-s6-paired-shadow-effectiveness.yml'
-      - '.github/workflows/mcft-cap-06-s6-paired-shadow.yml'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-STATUS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW_EFFECTIVENESS.cjs'
+  workflow_dispatch:
 
 permissions:
   contents: read
