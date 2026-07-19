@@ -1,60 +1,1651 @@
 {
-  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
-  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_G",
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_category_v3",
+  "capability_line_id": "MCFT-CAP-06",
+  "acceptance_category_id": "MCFT_CAP_06_HARD_CATEGORY_G",
   "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+  "lifecycle_stage": "S11D_RESOLVED_TASKBOOK_V2_REPAIR_CANDIDATE",
   "status": "PASS",
-  "evidence_refs": [
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-EFFECTIVENESS.json"
-  ],
-  "workflow_refs": [
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
-  ],
-  "canonical_refs": [
-    "twin_calibration_candidate_5649b9ab80b5545cf6007387"
-  ],
-  "notes": [
-    "Candidate remains non-active and recoverable canonical governance history."
-  ],
-  "assertion_count": 36,
-  "assertions": [
-    "insufficient excitation produces no Candidate append",
-    "flat surface produces no Candidate append",
-    "insufficient margin produces no Candidate append",
-    "boundary hit produces no Candidate append",
-    "physical invariant failure produces no Candidate append",
-    "mass-balance failure produces no Candidate append",
-    "determinism failure produces no Candidate append",
-    "invalid case set produces no Candidate append",
-    "non-zero interior optimum appends Candidate",
-    "base optimum appends canonical no-op Candidate",
-    "no-op is recoverable governance history",
-    "error classification summary is present",
-    "uncertainty_change is NONE",
-    "Candidate uses twin_calibration_candidate_v1",
-    "Candidate uses D transaction",
-    "Candidate is NON_LINEAGE_CONTEXT",
-    "Candidate context identity matches P-1",
-    "Candidate has exactly 16 deterministically ordered residual refs",
-    "Candidate source_refs include residual refs",
-    "Candidate evidence_refs contain Observation Evidence, not Residual objects",
-    "Candidate stores residual set hash",
-    "Candidate stores base_config_ref/hash under P-1 rule",
-    "Candidate stores source Runtime Config refs/set hash",
-    "Candidate stores effective base bundle hash",
-    "Candidate stores both numeric policy identities",
-    "Candidate stores case-input-set hash",
-    "Candidate activation status is NOT_ACTIVE",
-    "Candidate is not eligible for State input",
-    "Candidate is not eligible for Runtime Config use",
-    "Candidate is not eligible for human activation review before Evaluation",
-    "Candidate D commit appends exactly one canonical object",
-    "Candidate D commit does not modify Runtime authority",
-    "same-key and concurrency behavior is deterministic",
-    "response loss recovers canonical Candidate",
-    "Candidate projections rebuild from facts",
-    "corrupt surviving projection fails closed"
+  "item_shape_inheritance": "FORBIDDEN",
+  "each_item_self_contained": true,
+  "item_count": 36,
+  "status_counts": {
+    "PASS": 36,
+    "FAIL": 0,
+    "PENDING": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "items": [
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_001",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "insufficient excitation produces no Candidate append",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_001_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "insufficient excitation produces no Candidate append",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_002",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "flat surface produces no Candidate append",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_002_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "flat surface produces no Candidate append",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_003",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "insufficient margin produces no Candidate append",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_003_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "insufficient margin produces no Candidate append",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_004",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "boundary hit produces no Candidate append",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_004_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "boundary hit produces no Candidate append",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_005",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "physical invariant failure produces no Candidate append",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_005_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "physical invariant failure produces no Candidate append",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_006",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "mass-balance failure produces no Candidate append",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_006_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "mass-balance failure produces no Candidate append",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_007",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "determinism failure produces no Candidate append",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_007_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "determinism failure produces no Candidate append",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_008",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "invalid case set produces no Candidate append",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_008_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "invalid case set produces no Candidate append",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_009",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "non-zero interior optimum appends Candidate",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_009_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "non-zero interior optimum appends Candidate",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_010",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "base optimum appends canonical no-op Candidate",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_010_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "base optimum appends canonical no-op Candidate",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_011",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "no-op is recoverable governance history",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_011_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "no-op is recoverable governance history",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_012",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "error classification summary is present",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_012_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "error classification summary is present",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_013",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "uncertainty_change is NONE",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_013_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "uncertainty_change is NONE",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_014",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate uses twin_calibration_candidate_v1",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_014_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate uses twin_calibration_candidate_v1",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_015",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate uses D transaction",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_015_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate uses D transaction",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_016",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate is NON_LINEAGE_CONTEXT",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_016_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate is NON_LINEAGE_CONTEXT",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_017",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate context identity matches P-1",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_017_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate context identity matches P-1",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_018",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate has exactly 16 deterministically ordered residual refs",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_018_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate has exactly 16 deterministically ordered residual refs",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_019",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate source_refs include residual refs",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_019_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate source_refs include residual refs",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_020",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate evidence_refs contain Observation Evidence, not Residual objects",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_020_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate evidence_refs contain Observation Evidence, not Residual objects",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_021",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate stores residual set hash",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_021_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate stores residual set hash",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_022",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate stores base_config_ref/hash under P-1 rule",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_022_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate stores base_config_ref/hash under P-1 rule",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_023",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate stores source Runtime Config refs/set hash",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_023_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate stores source Runtime Config refs/set hash",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_024",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate stores effective base bundle hash",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_024_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate stores effective base bundle hash",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_025",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate stores both numeric policy identities",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_025_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate stores both numeric policy identities",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_026",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate stores case-input-set hash",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_026_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate stores case-input-set hash",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_027",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate activation status is NOT_ACTIVE",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_027_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate activation status is NOT_ACTIVE",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_028",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate is not eligible for State input",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_028_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate is not eligible for State input",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_029",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate is not eligible for Runtime Config use",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_029_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate is not eligible for Runtime Config use",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_030",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate is not eligible for human activation review before Evaluation",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_030_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate is not eligible for human activation review before Evaluation",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_031",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate D commit appends exactly one canonical object",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_031_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate D commit appends exactly one canonical object",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_032",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate D commit does not modify Runtime authority",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_032_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate D commit does not modify Runtime authority",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_033",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "same-key and concurrency behavior is deterministic",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_033_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "same-key and concurrency behavior is deterministic",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_034",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "response loss recovers canonical Candidate",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "d6085d0721b519f6a57971600f32b4fa89d15f97",
+        "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+      ],
+      "workflow_run_refs": [
+        29601667644,
+        29601667658,
+        29602381716
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_034_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "response loss recovers canonical Candidate",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "8edbc27ea0dfabd41faede9fb0f8bed11058c260"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_035",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "Candidate projections rebuild from facts",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "2715140adbd6cb951a424a7594446c9f989dd942",
+        "f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7",
+        "2548e98eacc32eb53d67d8c192bb810c56589b03",
+        "a573e741ea0d2b84bfc3727af3412eaa4552fdd0"
+      ],
+      "workflow_run_refs": [
+        29631231275,
+        29631231264,
+        29631551159,
+        29633542882,
+        29633542846,
+        29633542856,
+        29633542821,
+        29633855684
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_035_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate projections rebuild from facts",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "a573e741ea0d2b84bfc3727af3412eaa4552fdd0"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_G_036",
+      "category": "CANDIDATE_CONTRACT_AND_RECOVERY",
+      "assertion": "corrupt surviving projection fails closed",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387"
+      ],
+      "subject_commit_refs": [
+        "2715140adbd6cb951a424a7594446c9f989dd942",
+        "f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7",
+        "2548e98eacc32eb53d67d8c192bb810c56589b03",
+        "a573e741ea0d2b84bfc3727af3412eaa4552fdd0"
+      ],
+      "workflow_run_refs": [
+        29631231275,
+        29631231264,
+        29631551159,
+        29633542882,
+        29633542846,
+        29633542856,
+        29633542821,
+        29633855684
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S3_S5_CANDIDATE_PERSISTENCE_AND_COMPUTE",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_G_036_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "corrupt surviving projection fails closed",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_EFFECTIVENESS.cjs",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD.cjs"
+        ]
+      },
+      "subject_commit": "a573e741ea0d2b84bfc3727af3412eaa4552fdd0"
+    }
   ]
 }

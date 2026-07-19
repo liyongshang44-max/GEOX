@@ -1,0 +1,152 @@
+name: mcft-cap-06-s11d-repaired-final-candidate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-s11d-repaired-final-candidate.yml'
+      - '.github/workflows/mcft-cap-06-s11d-repair-merged-main-attestation.yml'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CLOSURE-RECORD.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINAL-EFFECTIVENESS-RECONCILIATION.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINALIZATION-EFFECTIVENESS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-MAIN-VERIFICATION.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-QUALITY-BOUNDARY.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-REQUIRED-DELIVERABLES-MANIFEST.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11A-CLOSURE-CANDIDATE-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11C-CAPABILITY-COMPLETION-EFFECTIVENESS-ACTIVATION-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11D-CLOSURE-REPAIR-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11D-FINAL-EFFECTIVENESS-RECONCILIATION-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-v0.3.1.md'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
+      - 'docs/digital_twin/mcft/cap_06/hard_acceptance/**'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_REPAIRED_FINAL_CANDIDATE_V2.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_DATASET_QUALIFICATION.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_RESIDUAL_WINDOWS_DB.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_CONTRACTS_MATH.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_EXACT_REF_PORT.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PERSISTENCE_DB.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_CANDIDATE_DB.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_SHADOW_COMPUTE.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_EVALUATION_DB.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_RESTART_RECOVERY.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_NON_CONSUMPTION_TICK.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_BOUNDED_CHAIN.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap-06-s11d-repaired-final-candidate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  final-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geox
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
+      MCFT_CAP_06_S11D_FINAL_CANDIDATE_BASE_REF: f889db7d336661f85198f4b377bc07cc00da4dc0
+      RUNTIME_ACCEPTANCE_DATABASE: mcft_cap06_s11d_final_candidate_ci
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run repaired final candidate Gate V2
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_REPAIRED_FINAL_CANDIDATE_V2.cjs
+      - name: Verify structured final candidate result
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S11D_REPAIRED_FINAL_CANDIDATE_V2_RESULT.json','utf8'));
+          if (r.status !== 'PASS') throw new Error(`FINAL_CANDIDATE_NOT_PASS:${r.error || 'UNKNOWN'}`);
+          if (r.resolved_slice_count !== 17 || r.required_deliverable_count !== 13) throw new Error('FINAL_CANDIDATE_AUTHORITY_COUNT_INVALID');
+          if (JSON.stringify(r.committed_hard_acceptance_status_counts) !== JSON.stringify({PASS:253,FAIL:0,PENDING:2,NOT_APPLICABLE:0})) throw new Error('FINAL_CANDIDATE_COMMITTED_LEDGER_INVALID');
+          if (JSON.stringify(r.effective_hard_acceptance_status_counts_on_attestation) !== JSON.stringify({PASS:255,FAIL:0,PENDING:0,NOT_APPLICABLE:0})) throw new Error('FINAL_CANDIDATE_EFFECTIVE_LEDGER_INVALID');
+          if (JSON.stringify(r.pending_acceptance_ids) !== JSON.stringify(['MCFT_CAP_06_HARD_J_016','MCFT_CAP_06_HARD_J_017'])) throw new Error('FINAL_CANDIDATE_PENDING_SET_INVALID');
+          if (r.pending_completion_claim_count !== 0 || r.effective_completion_claim_count !== 48) throw new Error('FINAL_CANDIDATE_CLAIMS_INVALID');
+          if (r.closure_effective !== true || r.capability_complete !== true) throw new Error('FINAL_CANDIDATE_EFFECTIVENESS_INVALID');
+          if (r.closure_effectiveness_condition !== 'EXACT_MERGE_SHA_ATTESTATION_PASS') throw new Error('FINAL_CANDIDATE_EFFECTIVENESS_CONDITION_INVALID');
+          if (r.active_delivery_slice_id !== null || r.next_repository_action !== null) throw new Error('FINAL_CANDIDATE_FRONTIER_NOT_CLOSED');
+          if (r.proof_only_pr_required !== false || r.exact_merge_sha_attestation_required !== true) throw new Error('FINAL_CANDIDATE_PROOF_MODEL_INVALID');
+          if (r.historical_workflow_count !== 22 || r.historical_workflows_manual_only !== true) throw new Error('FINAL_CANDIDATE_HISTORICAL_WORKFLOW_STATE_INVALID');
+          if (r.runtime_source_authorized !== false || r.successor_capability_line_authorized !== false) throw new Error('FINAL_CANDIDATE_AUTHORITY_VIOLATION');
+          NODE
+      - name: Recreate isolated Runtime regression database
+        run: |
+          PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 <<SQL
+          SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${RUNTIME_ACCEPTANCE_DATABASE}' AND pid<>pg_backend_pid();
+          DROP DATABASE IF EXISTS ${RUNTIME_ACCEPTANCE_DATABASE};
+          CREATE DATABASE ${RUNTIME_ACCEPTANCE_DATABASE};
+          SQL
+      - name: Run controlled bounded-chain PostgreSQL Runtime regression
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap06_s11d_final_candidate_ci
+          MCFT_CAP_06_S10_BOUNDED_CHAIN_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_DB.ts
+      - name: Verify Runtime regression
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S10_BOUNDED_CHAIN_DB_RESULT.json','utf8'));
+          if (r.status !== 'PASS') throw new Error(`S10_RUNTIME_REGRESSION_NOT_PASS:${r.error || 'UNKNOWN'}`);
+          if (r.controlled_stage_database_count !== 2 || r.controlled_storage_mode !== 'TWO_NAMESPACED_ISOLATED_POSTGRESQL_STAGES') throw new Error('S10_RUNTIME_STORAGE_MODE_INVALID');
+          if (r.actual_r !== 24 || r.actual_c !== 0 || r.actual_cap06_canonical_delta !== 36) throw new Error('S10_RUNTIME_CANONICAL_DELTA_INVALID');
+          if (r.candidate_parameter_value !== '0.034000' || r.effective_runtime_parameter_value !== '0.030000') throw new Error('S10_RUNTIME_PARAMETER_BOUNDARY_INVALID');
+          if (r.completed_replay_additional_fact_count !== 0 || r.completed_replay_projection_divergence_count !== 0 || r.completed_replay_evidence_load_count !== 0) throw new Error('S10_RUNTIME_REPLAY_NOT_ZERO_WRITE');
+          if (r.candidate_consumed !== false || r.evaluation_consumed !== false || r.model_activation_count !== 0 || r.active_config_snapshot_changed !== false) throw new Error('S10_RUNTIME_AUTHORITY_VIOLATION');
+          if (r.production_database_used !== false) throw new Error('S10_RUNTIME_PRODUCTION_DATABASE_VIOLATION');
+          NODE
+      - name: Typecheck build and server selfcheck
+        run: |
+          pnpm -r typecheck
+          pnpm -r build
+          pnpm --filter @geox/server run test:p1:selfcheck
+      - name: Drop isolated Runtime regression database
+        if: always()
+        run: |
+          PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 <<SQL
+          SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${RUNTIME_ACCEPTANCE_DATABASE}' AND pid<>pg_backend_pid();
+          DROP DATABASE IF EXISTS ${RUNTIME_ACCEPTANCE_DATABASE};
+          SQL
+      - name: Upload final candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s11d-repaired-final-candidate-evidence
+          path: acceptance-output/
+          if-no-files-found: error

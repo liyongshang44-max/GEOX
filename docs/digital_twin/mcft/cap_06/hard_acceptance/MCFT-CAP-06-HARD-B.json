@@ -1,40 +1,812 @@
 {
-  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
-  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_B",
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_category_v3",
+  "capability_line_id": "MCFT-CAP-06",
+  "acceptance_category_id": "MCFT_CAP_06_HARD_CATEGORY_B",
   "category": "AUTHORIZATION_LIFECYCLE",
+  "lifecycle_stage": "S11D_RESOLVED_TASKBOOK_V2_REPAIR_CANDIDATE",
   "status": "PASS",
-  "evidence_refs": [
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json"
-  ],
-  "workflow_refs": [
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
-  ],
-  "canonical_refs": [],
-  "notes": [
-    "Authorization lifecycle evidence is historical and effective before S11A."
-  ],
-  "assertion_count": 19,
-  "assertions": [
-    "P0 keeps authorization_effective false",
-    "P0 keeps runtime_source_authorized false",
-    "P0 active slice is null",
-    "P0 reconciles stale CAP-05 cross-file projections without reopening CAP-05",
-    "S0 candidate remains governance-only",
-    "S0 candidate authorization_effective is false",
-    "S0 candidate Runtime authority is false",
-    "S0 exact-head CI passes",
-    "S0 head-to-merge file delta is zero",
-    "S0 tree equivalence passes",
-    "S0 merged-main Authorization Gate passes",
-    "only after S0 effectiveness authorization_effective becomes true",
-    "only after S0 effectiveness runtime_source_authorized becomes true",
-    "only S1 becomes active after S0",
-    "S2 through closure slices remain blocked after S0",
-    "one active implementation Slice is enforced",
-    "no downstream PR runs in parallel",
-    "each Slice merges before the next",
-    "each Slice has a postmerge Gate before the next"
+  "item_shape_inheritance": "FORBIDDEN",
+  "each_item_self_contained": true,
+  "item_count": 19,
+  "status_counts": {
+    "PASS": 19,
+    "FAIL": 0,
+    "PENDING": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "items": [
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_001",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "P0 keeps authorization_effective false",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_001_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "P0 keeps authorization_effective false",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_002",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "P0 keeps runtime_source_authorized false",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_002_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "P0 keeps runtime_source_authorized false",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_003",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "P0 active slice is null",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_003_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "P0 active slice is null",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_004",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "P0 reconciles stale CAP-05 cross-file projections without reopening CAP-05",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-AUTHORIZATION-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_004_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "P0 reconciles stale CAP-05 cross-file projections without reopening CAP-05",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_005",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "S0 candidate remains governance-only",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_005_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "S0 candidate remains governance-only",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_006",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "S0 candidate authorization_effective is false",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_006_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "S0 candidate authorization_effective is false",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_007",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "S0 candidate Runtime authority is false",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_007_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "S0 candidate Runtime authority is false",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_008",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "S0 exact-head CI passes",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_008_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "S0 exact-head CI passes",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_009",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "S0 head-to-merge file delta is zero",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_009_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "S0 head-to-merge file delta is zero",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_010",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "S0 tree equivalence passes",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_010_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "S0 tree equivalence passes",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_011",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "S0 merged-main Authorization Gate passes",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_011_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "S0 merged-main Authorization Gate passes",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_012",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "only after S0 effectiveness authorization_effective becomes true",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_012_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "only after S0 effectiveness authorization_effective becomes true",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_013",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "only after S0 effectiveness runtime_source_authorized becomes true",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_013_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "only after S0 effectiveness runtime_source_authorized becomes true",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_014",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "only S1 becomes active after S0",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_014_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "only S1 becomes active after S0",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_015",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "S2 through closure slices remain blocked after S0",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_015_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "S2 through closure slices remain blocked after S0",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_016",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "one active implementation Slice is enforced",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_016_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "one active implementation Slice is enforced",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "3c3617804209c701814e19b93d9a9a54895e98d5"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_017",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "no downstream PR runs in parallel",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_017_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "no downstream PR runs in parallel",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "3c3617804209c701814e19b93d9a9a54895e98d5"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_018",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "each Slice merges before the next",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_018_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "each Slice merges before the next",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "3c3617804209c701814e19b93d9a9a54895e98d5"
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_B_019",
+      "category": "AUTHORIZATION_LIFECYCLE",
+      "assertion": "each Slice has a postmerge Gate before the next",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "EVIDENCE_VERIFIED",
+      "notes": [
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S0_AUTHORIZATION_AND_QUALIFICATION",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_B_019_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "each Slice has a postmerge Gate before the next",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_AUTHORIZATION.cjs"
+        ]
+      },
+      "subject_commit": "3c3617804209c701814e19b93d9a9a54895e98d5"
+    }
   ]
 }

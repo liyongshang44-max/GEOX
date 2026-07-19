@@ -10,6 +10,8 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const S2 = 'MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1';
+const RESOLVED_TASKBOOK = 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2.json';
+const TASK_ENTRYPOINT = 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md';
 const EXPECTED_FILES = [
   'apps/server/src/domain/calibration/case_builder_v1.ts',
   'apps/server/src/domain/calibration/contracts_v1.ts',
@@ -59,7 +61,8 @@ function main() {
   const current = readJson('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json');
   const delivery = readJson('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json');
   const matrix = readJson('docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json');
-  const task = readText('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md');
+  const resolvedTaskbook = readJson(RESOLVED_TASKBOOK);
+  const taskEntrypoint = readText(TASK_ENTRYPOINT);
   const runner = readText('scripts/acceptance/run_acceptance.cjs');
   const acceptance = readText('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts');
   const grid = readText('apps/server/src/domain/calibration/grid_search_v1.ts');
@@ -147,9 +150,16 @@ function main() {
     assert.equal(matrixS2.status, 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE');
   }
 
-  assert.match(task, new RegExp(S2.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  assert.match(task, /NO_CALIBRATION_CANDIDATE_APPEND/);
-  assert.match(task, /NO_SHADOW_EVALUATION_APPEND/);
+  assert.equal(resolvedTaskbook.schema_version, 'geox_mcft_cap_06_resolved_task_manifest_v2');
+  assert.equal(resolvedTaskbook.record_status, 'EFFECTIVE_RESOLVED_AUTHORITY');
+  assert.equal(resolvedTaskbook.resolution_policy.direct_historical_task_parsing_forbidden, true);
+  const resolvedS2 = resolvedTaskbook.resolved_slice_graph.find((slice) => slice.short_id === 'S2');
+  assert.ok(resolvedS2, 'RESOLVED_S2_SLICE_MISSING');
+  assert.equal(resolvedS2.slice_id, S2);
+  assert.deepEqual(resolvedS2.canonical_writes, []);
+  assert.equal(resolvedS2.nonclaims.includes('NO_CANONICAL_WRITE'), true);
+  assert.match(taskEntrypoint, new RegExp(`resolved_manifest_ref: ${RESOLVED_TASKBOOK.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  assert.match(taskEntrypoint, /legacy_direct_clause_parsing: FORBIDDEN/);
   assert.match(runner, /MCFT_CAP_06_S2_CONTRACTS_MATH/);
   assert.match(runner, /MCFT_CAP_06_S2_CONTRACTS_MATH_GOVERNANCE/);
   assert.doesNotMatch(acceptance, /Number\(value\)/);

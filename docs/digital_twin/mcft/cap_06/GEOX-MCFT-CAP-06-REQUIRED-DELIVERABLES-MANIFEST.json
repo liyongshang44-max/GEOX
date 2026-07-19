@@ -1,0 +1,133 @@
+{
+  "schema_version": "geox_mcft_cap_06_required_deliverables_manifest_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "taskbook_version": "v0.4.0",
+  "taskbook_section": "41_REQUIRED_DELIVERABLES",
+  "lifecycle_stage": "S11D_IMPLEMENTATION_DEFECT_REPAIR_CANDIDATE",
+  "status": "REPAIR_CANDIDATE",
+  "required_deliverable_count": 13,
+  "runtime_acceptance_count": 12,
+  "governance_acceptance_count": 1,
+  "equivalence_policy": "FROZEN_PATH_COMPATIBILITY_WRAPPER_DELEGATES_TO_SINGLE_EXISTING_AUTHORITY",
+  "wrapper_discovery_execution_required": true,
+  "underlying_authority_regression_required": true,
+  "deliverables": [
+    {
+      "required_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts",
+      "implementation_authority": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts",
+      "surface": "RUNTIME_ACCEPTANCE",
+      "mode": "COMPATIBILITY_WRAPPER",
+      "discovery_env": "MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY",
+      "exit_code_propagation": true,
+      "independent_pass_logic": false
+    },
+    {
+      "required_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_DATASET_QUALIFICATION.ts",
+      "implementation_authority": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts",
+      "surface": "RUNTIME_ACCEPTANCE",
+      "mode": "COMPATIBILITY_WRAPPER",
+      "discovery_env": "MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY",
+      "exit_code_propagation": true,
+      "independent_pass_logic": false
+    },
+    {
+      "required_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_RESIDUAL_WINDOWS_DB.ts",
+      "implementation_authority": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S1_RESIDUAL_WINDOWS_DB.ts",
+      "surface": "RUNTIME_ACCEPTANCE",
+      "mode": "COMPATIBILITY_WRAPPER",
+      "discovery_env": "MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY",
+      "exit_code_propagation": true,
+      "independent_pass_logic": false
+    },
+    {
+      "required_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_CONTRACTS_MATH.ts",
+      "implementation_authority": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts",
+      "surface": "RUNTIME_ACCEPTANCE",
+      "mode": "COMPATIBILITY_WRAPPER",
+      "discovery_env": "MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY",
+      "exit_code_propagation": true,
+      "independent_pass_logic": false
+    },
+    {
+      "required_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_EXACT_REF_PORT.ts",
+      "implementation_authority": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.ts",
+      "surface": "RUNTIME_ACCEPTANCE",
+      "mode": "COMPATIBILITY_WRAPPER",
+      "discovery_env": "MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY",
+      "exit_code_propagation": true,
+      "independent_pass_logic": false
+    },
+    {
+      "required_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PERSISTENCE_DB.ts",
+      "implementation_authority": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S3_PERSISTENCE_DB.ts",
+      "surface": "RUNTIME_ACCEPTANCE",
+      "mode": "COMPATIBILITY_WRAPPER",
+      "discovery_env": "MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY",
+      "exit_code_propagation": true,
+      "independent_pass_logic": false
+    },
+    {
+      "required_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_CANDIDATE_DB.ts",
+      "implementation_authority": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S5_CANDIDATE_DB.ts",
+      "surface": "RUNTIME_ACCEPTANCE",
+      "mode": "COMPATIBILITY_WRAPPER",
+      "discovery_env": "MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY",
+      "exit_code_propagation": true,
+      "independent_pass_logic": false
+    },
+    {
+      "required_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_SHADOW_COMPUTE.ts",
+      "implementation_authority": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S6_PAIRED_SHADOW_DB.ts",
+      "surface": "RUNTIME_ACCEPTANCE",
+      "mode": "COMPATIBILITY_WRAPPER",
+      "discovery_env": "MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY",
+      "exit_code_propagation": true,
+      "independent_pass_logic": false
+    },
+    {
+      "required_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_EVALUATION_DB.ts",
+      "implementation_authority": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S7_SHADOW_EVALUATION_DB.ts",
+      "surface": "RUNTIME_ACCEPTANCE",
+      "mode": "COMPATIBILITY_WRAPPER",
+      "discovery_env": "MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY",
+      "exit_code_propagation": true,
+      "independent_pass_logic": false
+    },
+    {
+      "required_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_RESTART_RECOVERY.ts",
+      "implementation_authority": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S8_RESTART_READBACK_REBUILD_DB.ts",
+      "surface": "RUNTIME_ACCEPTANCE",
+      "mode": "COMPATIBILITY_WRAPPER",
+      "discovery_env": "MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY",
+      "exit_code_propagation": true,
+      "independent_pass_logic": false
+    },
+    {
+      "required_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_NON_CONSUMPTION_TICK.ts",
+      "implementation_authority": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+      "surface": "RUNTIME_ACCEPTANCE",
+      "mode": "COMPATIBILITY_WRAPPER",
+      "discovery_env": "MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY",
+      "exit_code_propagation": true,
+      "independent_pass_logic": false
+    },
+    {
+      "required_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_BOUNDED_CHAIN.ts",
+      "implementation_authority": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_DB.ts",
+      "surface": "RUNTIME_ACCEPTANCE",
+      "mode": "COMPATIBILITY_WRAPPER",
+      "discovery_env": "MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY",
+      "exit_code_propagation": true,
+      "independent_pass_logic": false
+    },
+    {
+      "required_path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINALIZATION_EFFECTIVENESS.cjs",
+      "implementation_authority": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11C_CAPABILITY_COMPLETION_EFFECTIVENESS_ACTIVATION.cjs",
+      "surface": "GOVERNANCE_ACCEPTANCE",
+      "mode": "COMPATIBILITY_WRAPPER",
+      "discovery_env": "MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY",
+      "exit_code_propagation": true,
+      "independent_pass_logic": false
+    }
+  ]
+}

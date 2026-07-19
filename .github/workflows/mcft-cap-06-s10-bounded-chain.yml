@@ -1,25 +1,7 @@
 name: mcft-cap-06-s10-bounded-chain
+# Historical MCFT-CAP-06 workflow: automatic triggers frozen after final repair.
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/mcft-cap-06-s10-bounded-chain.yml'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-AUTHORITY-GRAPH.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-IMPLEMENTATION-CONTRACT.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-STATUS.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs'
-      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_DB.ts'
-      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/mcft-cap-06-s10-bounded-chain.yml'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-AUTHORITY-GRAPH.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-IMPLEMENTATION-CONTRACT.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-STATUS.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs'
-      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_DB.ts'
-      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs'
   workflow_dispatch:
 
 permissions:

@@ -205,7 +205,9 @@
       "candidate_parameter_value": "0.034000",
       "holdout_case_count": 8,
       "evaluation_disposition": "ELIGIBLE_FOR_HUMAN_ACTIVATION_REVIEW",
-      "reason_codes": ["ALL_THRESHOLDS_PASS"],
+      "reason_codes": [
+        "ALL_THRESHOLDS_PASS"
+      ],
       "case_results_hash": "sha256:e1b33fb79059856c030cab58970c543f384fb30a385bc3aa49c96b315efe4daa",
       "compute_determinism_hash": "sha256:8017c2ba6006e1f2a593312300937841b5c2dd3a700c949bb8309338994ef63e",
       "deterministic_rerun_verified": true,
@@ -336,5 +338,11 @@
   "s5_predecessor_graph_conformance_candidate_implemented": true,
   "s5_predecessor_graph_conformance_effective": true,
   "s5_predecessor_graph_conformance_contract_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-PREDECESSOR-GRAPH-CONFORMANCE.json",
-  "s5_predecessor_graph_conformance_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-PREDECESSOR-EFFECTIVENESS.json"
+  "s5_predecessor_graph_conformance_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-PREDECESSOR-EFFECTIVENESS.json",
+  "record_status": "HISTORICAL_SUPERSEDED_FOR_CURRENT_FRONTIER",
+  "historical_snapshot": true,
+  "current_frontier_authority": false,
+  "superseded_by": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json",
+  "supersession_reason": "CURRENT_DELIVERY_AUTHORITY_V2_IS_THE_SOLE_MUTABLE_DELIVERY_FRONTIER",
+  "historical_record_kind": "geox_mcft_cap_06_delivery_slice_status_v1"
 }

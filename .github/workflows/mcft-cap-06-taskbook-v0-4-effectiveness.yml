@@ -1,16 +1,7 @@
 name: mcft-cap-06-taskbook-v0-4-effectiveness
+# Historical MCFT-CAP-06 workflow: automatic triggers frozen after final repair.
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/mcft-cap-06-s8-restart-readback-rebuild.yml'
-      - '.github/workflows/mcft-cap-06-taskbook-v0-4-effectiveness.yml'
-      - '.github/workflows/mcft-delivery-policy-v1.yml'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-STATUS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-V0.4.0-EFFECTIVENESS.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_TASKBOOK_V0_4_EFFECTIVENESS.cjs'
   workflow_dispatch:
 
 permissions:

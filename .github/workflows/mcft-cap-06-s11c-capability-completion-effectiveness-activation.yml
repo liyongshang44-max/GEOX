@@ -1,20 +1,7 @@
 name: mcft-cap-06-s11c-capability-completion-effectiveness-activation
+# Historical MCFT-CAP-06 workflow: automatic triggers frozen after final repair.
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/mcft-cap-06-s11c-capability-completion-effectiveness-activation.yml'
-      - '.github/workflows/mcft-cap-06-s11d-final-effectiveness-reconciliation.yml'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CLOSURE-RECORD.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINALIZATION-EFFECTIVENESS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINAL-EFFECTIVENESS-RECONCILIATION.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-MAIN-VERIFICATION.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11A-CLOSURE-CANDIDATE-STATUS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11C-CAPABILITY-COMPLETION-EFFECTIVENESS-ACTIVATION-STATUS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11D-FINAL-EFFECTIVENESS-RECONCILIATION-STATUS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINAL_EFFECTIVENESS_RECONCILIATION.cjs'
   workflow_dispatch:
 
 permissions:
