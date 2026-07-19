@@ -45,15 +45,15 @@
     "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json"
   ],
   "category_record_digests": {
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json": "sha256:e6023b2f2faae40443a07c2b4b741c673910da46803097ab627c12ac911e8f3a",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json": "sha256:d49201afaa8268082d319d9b64510534572338d0df741f7ae0e78eb134887f02",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json": "sha256:27859d1ae4d2499464138fe2050d74dd472e9b4e4237574426ea8ffcb865b132",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json": "sha256:a2767cdbd327755d30f0e48fbed08677397d4256b5b94bb9e88922b9eba19017",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json": "sha256:f6d2b91d267b7109e32507bafa0c20e9a0acdbe828d90fbc54833f620c9af5d1",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json": "sha256:e7947c902885859052ef787a76d9aa62c9286717e2dd75da5d646ce0547ce6c9",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json": "sha256:7349df43fbbdea5018b70dae658f1fc681f9bbe18fb0746c3e61bfa759c0a7e9",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json": "sha256:62d7ada622e3aa76af5a67607a69f100fe3205abdfa2d30258741308f0a621eb",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json": "sha256:297984a7bd028f818bac7ce0690fa9caff70bfdbb01486dace45cd5b14f5d6d6",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json": "sha256:550740040c42bd0e1a2833e9ee1a63f48be0b2d60c0cc6068ba7ac0dc6ce6df4"
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json": "sha256:63792b9f6cf651e4c5115bf2b20cfa991bec51ee29eaa3eaf15b82f83b0f0fa9",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json": "sha256:4c4e7bd3eee4c490b35e0992d376a16bb35f7be4d93af8d5fe0550364c9b7518",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json": "sha256:ef2e99e856c86f8051db491212b7c3fe77b45112eb62cc3baf8a7604cec1e195",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json": "sha256:e1edb7fe3c39b3b5c649b18bfa29d17bfabf42f2e2d0e45799722673eea9b6fc",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json": "sha256:c2bcabeb3db005e4e9fee68de1162a45724e6de5cc2bbb2b0a201859d361ddc4",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json": "sha256:31f83c02200082733e08fcc8a444f61ffdd0f038acabe5c95935b5db3078482a",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json": "sha256:d769308659f645fc5b39eb21abf1555cea34c891190923654387cca2719d3c44",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json": "sha256:127f7354ac696d6e65b8d78133ee6302cf84c50f01b9f24e46bb4413eb5f2c96",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json": "sha256:9dcedf1f8c8ce4a73cf746aa499e9d8134aced2fa73404e804fab270d1508adc",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json": "sha256:20aacdc29c9ccabf5c5c74b774cf43d39dc39e15e0c805757e722b3b6a3e23b8"
   }
 }
