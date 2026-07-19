@@ -7,8 +7,8 @@
   "repository_history_calibration_capability": "NOT_ESTABLISHED",
   "production_runtime_capability": "NOT_ESTABLISHED",
   "runtime_implementation_quality": "HIGH",
-  "governance_record_quality": "REPAIR_IN_PROGRESS",
-  "delivery_process_quality": "REPOSITORY_FOUNDATION_REPAIR_REQUIRED",
+  "governance_record_quality": "REPAIRED_FINAL_CANDIDATE_AWAITING_ATTESTATION",
+  "delivery_process_quality": "PROOF_ONLY_PR_REMOVED_FOR_THIS_CLOSURE_REPOSITORY_FOUNDATION_REPAIR_STILL_REQUIRED",
   "s10_interpretation": "TWO_STAGE_CONTROLLED_END_TO_END_COMPOSITION_PROOF",
   "forbidden_overclaims": [
     "255 independent items are final PASS before merge-SHA attestation",
@@ -16,5 +16,7 @@
     "S10 is a single continuously persisted database chain",
     "MCFT-CAP-06 establishes production closed-loop operation"
   ],
-  "successor_capability_line_authorized": false
+  "successor_capability_line_authorized": false,
+  "exact_merge_sha_attestation_required": true,
+  "proof_only_pr_required": false
 }

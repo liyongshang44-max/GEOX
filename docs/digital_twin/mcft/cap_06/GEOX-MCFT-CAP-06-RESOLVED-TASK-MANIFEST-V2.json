@@ -597,9 +597,9 @@
       "FINAL_EFFECTIVENESS_RECONCILIATION_ESTABLISHED",
       "MCFT_CAP_07_REMAINS_UNAUTHORIZED"
     ],
-    "effective_count": 0,
-    "pending_count": 48,
-    "activation_condition": "ALL_255_ITEM_PREDICATES_PASS_ON_EXACT_MERGE_SHA_ATTESTATION"
+    "effective_count": 48,
+    "pending_count": 0,
+    "activation_condition": "EXACT_MERGE_SHA_ATTESTATION_PASS"
   },
   "hard_acceptance": {
     "item_count": 255,
@@ -626,7 +626,20 @@
       "subject_commit",
       "canonical_refs",
       "notes"
-    ]
+    ],
+    "committed_status_counts": {
+      "PASS": 253,
+      "FAIL": 0,
+      "PENDING": 2,
+      "NOT_APPLICABLE": 0
+    },
+    "effective_status_counts_on_attestation": {
+      "PASS": 255,
+      "FAIL": 0,
+      "PENDING": 0,
+      "NOT_APPLICABLE": 0
+    },
+    "effective_condition": "EXACT_MERGE_SHA_ATTESTATION_PASS"
   },
   "closure_delivery_policy": {
     "proof_only_pr_required": false,

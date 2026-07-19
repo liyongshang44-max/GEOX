@@ -11,11 +11,11 @@
   "superseded_files_remain_historical": true,
   "taskbook_manifest_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json",
   "delivery_policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json",
-  "status": "IMPLEMENTATION_COMPLETE_CLOSURE_REPAIR_REQUIRED",
+  "status": "MCFT_CAP_06_COMPLETE",
   "execution_paused": false,
-  "active_delivery_slice_id": "MCFT-CAP-06.FINAL-EFFECTIVENESS-RECONCILIATION-V1",
-  "next_repository_action": "S11D_REPAIR_MERGE_SHA_ATTESTATION",
-  "next_repository_action_kind": "MERGE_SHA_ATTESTATION",
+  "active_delivery_slice_id": null,
+  "next_repository_action": null,
+  "next_repository_action_kind": null,
   "next_repository_action_is_capability_slice": false,
   "new_prerequisite_inserted": false,
   "implementation_state": {
@@ -82,17 +82,18 @@
     "effectiveness_preconditions_satisfied": true
   },
   "terminal_state": {
-    "status": "IMPLEMENTATION_COMPLETE_CLOSURE_REPAIR_REQUIRED",
+    "status": "COMPLETE",
     "implementation_status": "COMPLETE",
-    "closure_effective": false,
-    "capability_complete": false,
-    "pending_completion_claim_count": 48,
-    "effective_completion_claim_count": 0,
+    "closure_effective": true,
+    "capability_complete": true,
+    "pending_completion_claim_count": 0,
+    "effective_completion_claim_count": 48,
     "runtime_source_authorized": false,
     "successor_capability_line_id": "MCFT-CAP-07",
-    "successor_authorized": false
+    "successor_authorized": false,
+    "effectiveness_condition": "EXACT_MERGE_SHA_ATTESTATION_PASS"
   },
-  "completed_action": "S11D_IMPLEMENTATION_DEFECT_REPAIR_CANDIDATE_MATERIALIZATION",
+  "completed_action": "S11D_REPAIRED_FINAL_CANDIDATE_MATERIALIZATION",
   "completed_action_is_new_prerequisite": false,
   "completed_action_is_new_slice": false,
   "runtime_delta": {
@@ -116,9 +117,10 @@
   "hard_acceptance_fail_count": 0,
   "hard_acceptance_pending_count": 2,
   "hard_acceptance_not_applicable_count": 0,
-  "pending_completion_claim_count": 48,
-  "effective_completion_claim_count": 0,
-  "pending_completion_claims": [
+  "pending_completion_claim_count": 0,
+  "effective_completion_claim_count": 48,
+  "pending_completion_claims": [],
+  "effective_completion_claims": [
     "MCFT_CAP_06_COMPLETE",
     "DT02_CALIBRATION_CANDIDATE_REUSE_ESTABLISHED",
     "DT02_SHADOW_EVALUATION_REUSE_ESTABLISHED",
@@ -168,15 +170,11 @@
     "FINAL_EFFECTIVENESS_RECONCILIATION_ESTABLISHED",
     "MCFT_CAP_07_REMAINS_UNAUTHORIZED"
   ],
-  "effective_completion_claims": {
-    "count": 0,
-    "values": []
-  },
-  "closure_effective": false,
-  "capability_complete": false,
+  "closure_effective": true,
+  "capability_complete": true,
   "runtime_source_authorized": false,
   "successor_authorized": false,
-  "completion_claim_activation_authorized": false,
+  "completion_claim_activation_authorized": true,
   "repair_classification": "IMPLEMENTATION_DEFECT",
   "repair_scope": "S11D_FINAL_EFFECTIVENESS_RECONCILIATION_REPAIR",
   "new_capability_slice": false,
@@ -192,5 +190,45 @@
     "controlled_stage_database_count": 2,
     "interpretation": "TWO_STAGE_CONTROLLED_END_TO_END_COMPOSITION_PROOF",
     "excluded_interpretation": "ONE_CONTINUOUSLY_PERSISTED_SINGLE_DATABASE_CALIBRATION_RUNTIME_CHAIN"
+  },
+  "lifecycle_stage": "S11D_REPAIRED_FINAL_CANDIDATE",
+  "implementation_status": "COMPLETE",
+  "hard_acceptance_effective_pass_count_on_attestation": 255,
+  "completion_claim_effective_delta": 48,
+  "completion_claim_suspension_delta": 0,
+  "closure_effectiveness_condition": "EXACT_MERGE_SHA_ATTESTATION_PASS",
+  "attestation_contract": {
+    "effectiveness_condition": "EXACT_MERGE_SHA_ATTESTATION_PASS",
+    "exact_merge_sha_attestation_required": true,
+    "attestation_workflow_ref": ".github/workflows/mcft-cap-06-s11d-repair-merged-main-attestation.yml",
+    "attestation_gate_ref": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.cjs",
+    "attestation_triggers": [
+      "merge_group",
+      "push:main"
+    ],
+    "proof_only_pr_required": false,
+    "immutable_artifact_required": true,
+    "repository_write_permission": false,
+    "postmerge_ssot_writeback_allowed": false
+  },
+  "hard_acceptance_effective_projection": {
+    "ledger_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json",
+    "committed_status_counts": {
+      "PASS": 253,
+      "FAIL": 0,
+      "PENDING": 2,
+      "NOT_APPLICABLE": 0
+    },
+    "pending_acceptance_ids": [
+      "MCFT_CAP_06_HARD_J_016",
+      "MCFT_CAP_06_HARD_J_017"
+    ],
+    "effective_status_counts_on_attestation": {
+      "PASS": 255,
+      "FAIL": 0,
+      "PENDING": 0,
+      "NOT_APPLICABLE": 0
+    },
+    "effective_condition": "EXACT_MERGE_SHA_ATTESTATION_PASS"
   }
 }
