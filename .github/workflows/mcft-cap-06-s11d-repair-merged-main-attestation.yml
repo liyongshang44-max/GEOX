@@ -1,0 +1,59 @@
+name: mcft-cap-06-s11d-repair-merged-main-attestation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-06-s11d-repair-merged-main-attestation.yml'
+      - 'docs/digital_twin/mcft/cap_06/**'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_CLOSURE_REPAIR.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_*.ts'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap-06-s11d-repair-attestation-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  exact-merge-sha-attestation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact attestation subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Attest exact merge SHA without repository writeback
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.cjs
+      - name: Verify immutable attestation result
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.json','utf8'));
+          if (r.status !== 'PASS') throw new Error(`MERGE_SHA_ATTESTATION_NOT_PASS:${r.error || 'UNKNOWN'}`);
+          if (r.subject_commit !== process.env.GITHUB_SHA) throw new Error('MERGE_SHA_ATTESTATION_SUBJECT_MISMATCH');
+          if (r.effective_hard_acceptance_status_counts.PASS !== 255 || r.effective_hard_acceptance_status_counts.FAIL !== 0 || r.effective_hard_acceptance_status_counts.PENDING !== 0) throw new Error('MERGE_SHA_ATTESTATION_LEDGER_INVALID');
+          if (r.effective_completion_claim_count !== 48 || r.pending_completion_claim_count !== 0) throw new Error('MERGE_SHA_ATTESTATION_CLAIMS_INVALID');
+          if (r.closure_effective !== true || r.capability_complete !== true || r.active_delivery_slice_id !== null || r.next_repository_action !== null) throw new Error('MERGE_SHA_ATTESTATION_TERMINAL_STATE_INVALID');
+          if (r.proof_only_pr_created !== false || r.repository_write_performed !== false || r.postmerge_ssot_writeback_performed !== false) throw new Error('MERGE_SHA_ATTESTATION_WRITEBACK_POLICY_INVALID');
+          if (r.runtime_source_authorized !== false || r.successor_capability_line_authorized !== false) throw new Error('MERGE_SHA_ATTESTATION_AUTHORITY_INVALID');
+          NODE
+      - name: Upload immutable exact-SHA attestation
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-s11d-repair-attestation-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.json
+          if-no-files-found: error
+          retention-days: 90
