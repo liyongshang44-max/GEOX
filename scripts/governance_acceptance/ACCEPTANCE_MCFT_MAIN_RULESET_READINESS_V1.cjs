@@ -17,6 +17,12 @@ const WORKFLOWS = {
   ci: path.join(ROOT, '.github/workflows/ci.yml'),
 };
 
+const ENFORCEMENT_STATES = new Map([
+  ['ADMIN_CONFIGURATION_PENDING', { configured: false, verified: false }],
+  ['ACTIVE_OPERATIONAL_VERIFICATION_IN_PROGRESS', { configured: true, verified: false }],
+  ['ACTIVE_OPERATIONALLY_VERIFIED', { configured: true, verified: true }],
+]);
+
 function read(filePath) {
   return fs.readFileSync(filePath, 'utf8');
 }
@@ -44,6 +50,23 @@ function jobIds(source) {
   return [...match[1].matchAll(/^  ([a-zA-Z0-9_-]+):\s*$/gm)].map((m) => m[1]);
 }
 
+function assertConfiguredProfile(profile) {
+  assert.equal(profile.ruleset_name, 'main-strict-delivery-v1');
+  assert.deepEqual(profile.allowed_merge_methods, ['merge']);
+  assert.ok(profile.configuration_observation && typeof profile.configuration_observation === 'object');
+  for (const field of [
+    'ruleset_ui_created',
+    'ruleset_active',
+    'target_resolves_to_main',
+    'required_checks_bound',
+    'strict_up_to_date_selected',
+    'bypass_list_empty',
+    'merge_only_selected',
+  ]) {
+    assert.equal(profile.configuration_observation[field], true, `CONFIGURATION_OBSERVATION_NOT_TRUE:${field}`);
+  }
+}
+
 function main() {
   const profile = loadJson(PROFILE_PATH);
   assert.equal(profile.profile_id, 'MCFT-MAIN-RULESET-PROFILE-V1');
@@ -56,8 +79,15 @@ function main() {
   assert.equal(profile.block_force_pushes, true);
   assert.equal(profile.block_deletions, true);
   assert.deepEqual(profile.allow_bypass_actors, []);
-  assert.equal(profile.configuration_nonclaims.ruleset_currently_configured, false);
   assert.equal(profile.configuration_nonclaims.mcft_cap_07_authorized, false);
+
+  const expectedState = ENFORCEMENT_STATES.get(profile.enforcement_status);
+  assert.ok(expectedState, `RULESET_ENFORCEMENT_STATUS_INVALID:${profile.enforcement_status}`);
+  const configured = profile.configuration_nonclaims.ruleset_currently_configured;
+  const verified = profile.configuration_nonclaims.branch_protection_currently_verified;
+  assert.equal(configured, expectedState.configured, 'RULESET_CONFIGURED_STATE_MISMATCH');
+  assert.equal(verified, expectedState.verified, 'RULESET_VERIFIED_STATE_MISMATCH');
+  if (configured) assertConfiguredProfile(profile);
 
   const immediate = profile.required_status_checks_immediate;
   const conditional = profile.required_status_checks_after_ui_subject_verification;
@@ -107,18 +137,20 @@ function main() {
   assert.doesNotMatch(sources.release, /permissions:\s*[\s\S]*contents:\s*write/);
 
   const result = {
-    schema_version: 'geox_mcft_main_ruleset_readiness_v1_result_v1',
+    schema_version: 'geox_mcft_main_ruleset_readiness_v1_result_v2',
     status: 'PASS',
     profile_id: profile.profile_id,
     target_branch: profile.target_branch,
     enforcement_phase: profile.enforcement_phase,
+    enforcement_status: profile.enforcement_status,
     immediate_required_checks: immediate,
     conditional_required_checks: conditional,
     selected_required_check_name_collision_count: 0,
     pull_request_path_filter_count_on_required_workflows: 0,
     strict_up_to_date_required: true,
     merge_queue_required: false,
-    ruleset_configuration_performed: false,
+    ruleset_configuration_recorded_in_profile: configured,
+    branch_protection_operationally_verified_in_profile: verified,
     repository_write_performed: false,
     runtime_authority: false,
     mcft_cap_07_authorized: false,
@@ -131,10 +163,9 @@ try {
   main();
 } catch (error) {
   const result = {
-    schema_version: 'geox_mcft_main_ruleset_readiness_v1_result_v1',
+    schema_version: 'geox_mcft_main_ruleset_readiness_v1_result_v2',
     status: 'FAIL',
     error: error instanceof Error ? error.message : String(error),
-    ruleset_configuration_performed: false,
     repository_write_performed: false,
     runtime_authority: false,
     mcft_cap_07_authorized: false,
