@@ -189,5 +189,19 @@
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINAL_EFFECTIVENESS_RECONCILIATION.cjs"
   ],
   "repair_postmerge_proof_required": true,
-  "unknown_repair_merge_or_postmerge_evidence_recorded": false
+  "unknown_repair_merge_or_postmerge_evidence_recorded": false,
+  "runtime_delta": {
+    "canonical_fact_append_count": 0,
+    "canonical_fact_update_count": 0,
+    "canonical_fact_delete_count": 0,
+    "candidate_append_count": 0,
+    "evaluation_append_count": 0,
+    "projection_write_count": 0,
+    "model_activation_count": 0,
+    "active_config_switch_count": 0,
+    "runtime_parameter_change_count": 0,
+    "state_mutation_count": 0,
+    "checkpoint_mutation_count": 0,
+    "migration_count": 0
+  }
 }
