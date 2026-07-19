@@ -43,12 +43,19 @@ function parseDeclaration(body, policy) {
 function validatePolicy(policy) {
   assert.equal(policy.schema_version, 'geox_mcft_delivery_policy_v2');
   assert.equal(policy.policy_id, 'MCFT-DELIVERY-POLICY-V2');
+  assert.equal(policy.policy_revision, '2.2');
   assert.equal(policy.release_lane.lane_id, 'MCFT-RELEASE-LANE-V1');
   assert.equal(policy.release_lane.mode, 'MERGE_REF_EXACT_TREE_GATE');
-  assert.equal(policy.release_lane.global_concurrency_group, 'mcft-release-lane-main');
+  assert.equal(policy.release_lane.concurrency_scope, 'EVENT_AND_EXACT_HEAD');
+  assert.equal(policy.release_lane.global_concurrency_group, null);
+  assert.equal(policy.release_lane.cross_event_cancellation_forbidden, true);
   assert.equal(policy.release_lane.branch_transport_allowed, false);
   assert.equal(policy.release_lane.validation_carrier_pr_allowed, false);
   assert.equal(policy.release_lane.proof_only_pr_allowed, false);
+  assert.equal(policy.repository_setting_boundary.branch_ruleset_verified, true);
+  assert.equal(policy.repository_setting_boundary.strict_up_to_date_verified, true);
+  assert.equal(policy.repository_setting_boundary.trusted_enforcement_required_checks_bound, true);
+  assert.equal(policy.repository_setting_boundary.operational_release_authority_established, true);
   return policy;
 }
 async function apiJson(apiPath, token) {
@@ -89,9 +96,13 @@ function selftest() {
   assert.equal('tree-a' === 'tree-a', true);
   assert.equal('tree-a' === 'tree-b', false);
   const result = {
-    schema_version: 'geox_mcft_release_lane_v1_result_v1',
+    schema_version: 'geox_mcft_release_lane_v1_result_v2',
     status: 'PASS', mode: 'SELFTEST', lane_id: policy.release_lane.lane_id,
     exact_tree_gate: true, current_main_base_gate: true,
+    event_and_exact_head_scoped_concurrency: true,
+    branch_ruleset_verified: true, strict_up_to_date_verified: true,
+    trusted_enforcement_required_checks_bound: true,
+    operational_release_authority_established_on_effective_merge: true,
     branch_transport_allowed: false, proof_only_pr_allowed: false,
     repository_write_permission: false, capability_slice: false, runtime_authority: false,
   };
@@ -110,16 +121,16 @@ async function enforce() {
   if (!event.pull_request?.number) throw new Error('PULL_REQUEST_TARGET_EVENT_REQUIRED');
   let pr = await apiJson(`/repos/${repository}/pulls/${event.pull_request.number}`, token);
   if (pr.state !== 'open') {
-    const result = { schema_version: 'geox_mcft_release_lane_v1_result_v1', status: 'PASS', mode: 'ENFORCE', disposition: 'CLOSED_PR_NO_RELEASE_LANE', pr_number: pr.number };
+    const result = { schema_version: 'geox_mcft_release_lane_v1_result_v2', status: 'PASS', mode: 'ENFORCE', disposition: 'CLOSED_PR_NO_RELEASE_LANE', pr_number: pr.number };
     writeResult(result); process.stdout.write(`${JSON.stringify(result)}\n`); return;
   }
   const matches = declarationMatches(pr.body || '', policy.candidate_declaration.marker);
   if (matches.length === 0) {
-    const result = { schema_version: 'geox_mcft_release_lane_v1_result_v1', status: 'PASS', mode: 'ENFORCE', disposition: 'NO_DECLARED_MCFT_CANDIDATE', pr_number: pr.number, head_sha: pr.head.sha };
+    const result = { schema_version: 'geox_mcft_release_lane_v1_result_v2', status: 'PASS', mode: 'ENFORCE', disposition: 'NO_DECLARED_MCFT_CANDIDATE', pr_number: pr.number, head_sha: pr.head.sha };
     writeResult(result); process.stdout.write(`${JSON.stringify(result)}\n`); return;
   }
   if (pr.draft === true) {
-    const result = { schema_version: 'geox_mcft_release_lane_v1_result_v1', status: 'PASS', mode: 'ENFORCE', disposition: 'DRAFT_CANDIDATE_NOT_IN_RELEASE_LANE', pr_number: pr.number, head_sha: pr.head.sha };
+    const result = { schema_version: 'geox_mcft_release_lane_v1_result_v2', status: 'PASS', mode: 'ENFORCE', disposition: 'DRAFT_CANDIDATE_NOT_IN_RELEASE_LANE', pr_number: pr.number, head_sha: pr.head.sha };
     writeResult(result); process.stdout.write(`${JSON.stringify(result)}\n`); return;
   }
   const declaration = parseDeclaration(pr.body || '', policy);
@@ -160,7 +171,7 @@ async function enforce() {
   if (currentBaseRef.object?.sha !== pr.base.sha) throw new Error('RELEASE_LANE_MAIN_MOVED_AFTER_TREE_CHECK');
 
   const result = {
-    schema_version: 'geox_mcft_release_lane_v1_result_v1',
+    schema_version: 'geox_mcft_release_lane_v1_result_v2',
     status: 'PASS', mode: 'ENFORCE', disposition: 'EXACT_MERGE_REF_TREE_EQUIVALENT',
     policy_id: policy.policy_id, lane_id: policy.release_lane.lane_id,
     pr_number: pr.number, capability_line: declaration.capability_line, slice_id: declaration.slice_id,
@@ -183,7 +194,7 @@ async function enforce() {
   throw new Error(`UNKNOWN_MODE:${MODE}`);
 })().catch((error) => {
   const result = {
-    schema_version: 'geox_mcft_release_lane_v1_result_v1',
+    schema_version: 'geox_mcft_release_lane_v1_result_v2',
     status: 'FAIL', mode: MODE, error: error instanceof Error ? error.message : String(error),
     candidate_invalidated: true, failure_effect: 'CANDIDATE_INVALIDATED',
     repository_write_performed: false, capability_slice: false, runtime_authority: false,

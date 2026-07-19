@@ -1,8 +1,9 @@
 {
   "schema_version": "geox_mcft_delivery_policy_v2",
   "policy_id": "MCFT-DELIVERY-POLICY-V2",
-  "record_status": "MERGED_MAIN_EFFECTIVE_WITH_EXTERNAL_RULESET_DEPENDENCY",
+  "record_status": "MERGED_MAIN_OPERATIONALLY_EFFECTIVE",
   "committed_state": "MERGED_MAIN",
+  "effective_condition": "PRESENT_ON_MAIN_VIA_THE_PROTECTED_PR_2599_MERGE",
   "scope": "ALL_MCFT_CAPABILITY_LINES",
   "policy_kind": "REPOSITORY_WIDE_DELIVERY_PROCESS_POLICY",
   "supersedes": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json",
@@ -60,7 +61,9 @@
     "lane_id": "MCFT-RELEASE-LANE-V1",
     "pull_request_mode": "CURRENT_MAIN_BASE_PLUS_TEST_MERGE_EXACT_TREE_GATE",
     "merge_group_mode": "EXACT_QUEUE_HEAD_SHA_AND_MAIN_TARGET_GATE",
-    "global_concurrency_group": "mcft-release-lane-main",
+    "concurrency_scope": "EVENT_AND_EXACT_HEAD",
+    "global_concurrency_group": null,
+    "cross_event_cancellation_forbidden": true,
     "required_triggers": [
       "pull_request_target",
       "merge_group",
@@ -97,11 +100,16 @@
   "repository_setting_boundary": {
     "workflow_implementation_committed": true,
     "merge_group_triggers_committed": true,
-    "required_check_binding_committed_artifact": false,
+    "required_check_binding_committed_artifact": true,
     "branch_ruleset_configuration_external": true,
-    "branch_ruleset_verified": false,
-    "operational_release_authority_established": false,
-    "required_admin_action": "BIND_REQUIRED_CHECKS_AND_ENABLE_STRICT_UP_TO_DATE_OR_MERGE_QUEUE"
+    "branch_ruleset_verified": true,
+    "strict_up_to_date_verified": true,
+    "trusted_enforcement_required_checks_bound": true,
+    "trusted_enforcement_fail_closed_verified": true,
+    "operational_release_authority_established": true,
+    "ruleset_profile_ref": "docs/digital_twin/mcft/MCFT-MAIN-RULESET-PROFILE-V1.json",
+    "trusted_enforcement_verification_ref": "docs/digital_twin/mcft/MCFT-TRUSTED-ENFORCEMENT-OPERATIONAL-VERIFICATION-V1.json",
+    "required_admin_action": null
   },
   "historical_policy": {
     "v1_status": "HISTORICAL_SUPERSEDED",
@@ -122,8 +130,8 @@
     "NOT_A_RUNTIME_CAPABILITY",
     "NOT_A_CAPABILITY_PREREQUISITE_SLICE",
     "DOES_NOT_AUTHORIZE_MCFT_CAP_07",
-    "DOES_NOT_ENABLE_OR_VERIFY_GITHUB_REPOSITORY_RULESET_BY_ITSELF",
-    "DOES_NOT_CLAIM_OPERATIONAL_RELEASE_AUTHORITY_BEFORE_RULESET_BINDING"
+    "POLICY_FILE_DID_NOT_CONFIGURE_THE_EXTERNAL_GITHUB_RULESET",
+    "DOES_NOT_ENABLE_MERGE_QUEUE"
   ],
-  "policy_revision": "2.1"
+  "policy_revision": "2.2"
 }

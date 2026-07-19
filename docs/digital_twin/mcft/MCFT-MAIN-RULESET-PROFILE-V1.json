@@ -9,6 +9,7 @@
   "enforcement_status": "ACTIVE_OPERATIONALLY_VERIFIED",
   "ruleset_name": "main-strict-delivery-v1",
   "operational_verification_ref": "docs/digital_twin/mcft/MCFT-MAIN-RULESET-OPERATIONAL-VERIFICATION-V1.json",
+  "trusted_enforcement_verification_ref": "docs/digital_twin/mcft/MCFT-TRUSTED-ENFORCEMENT-OPERATIONAL-VERIFICATION-V1.json",
   "require_pull_request_before_merging": true,
   "required_approving_review_count": 0,
   "dismiss_stale_pull_request_approvals": false,
@@ -56,10 +57,18 @@
     "verification_pull_requests": [2597, 2598],
     "configuration_and_hardening_merge_commit": "a712899a9892e0c2a3cf48e279392689e5937281"
   },
+  "trusted_enforcement_operational_verification": {
+    "verification_pull_request": 2599,
+    "negative_fail_closed_verified": true,
+    "negative_merge_block_verified": true,
+    "positive_all_eight_required_checks_verified": true,
+    "positive_validation_head": "40728de443f60329c90e380431f2de55c265697d"
+  },
   "remaining_authority_boundary": {
-    "trusted_enforcement_required_checks_bound": false,
-    "operational_release_authority_established": false,
-    "next_admin_action": "ADD_MCFT_CANDIDATE_INTEGRITY_ENFORCE_CURRENT_PR_AND_MCFT_RELEASE_LANE_ENFORCE_CURRENT_PR_AS_REQUIRED_GITHUB_ACTIONS_CHECKS"
+    "trusted_enforcement_required_checks_bound": true,
+    "operational_release_authority_established": true,
+    "next_admin_action": null,
+    "effective_condition": "THIS_PROFILE_IS_PRESENT_ON_MAIN_VIA_THE_PROTECTED_PR_2599_MERGE"
   },
   "configuration_nonclaims": {
     "ruleset_currently_configured": true,

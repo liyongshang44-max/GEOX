@@ -1,0 +1,54 @@
+{
+  "schema_version": "geox_mcft_trusted_enforcement_operational_verification_v1",
+  "verification_id": "MCFT-TRUSTED-ENFORCEMENT-OPERATIONAL-VERIFICATION-V1",
+  "record_status": "FINAL_CANDIDATE_EFFECTIVE_WHEN_PRESENT_ON_MAIN",
+  "effective_condition": "PRESENT_ON_MAIN_VIA_PR_2599_AFTER_ALL_EIGHT_REQUIRED_CHECKS_PASS",
+  "repository": "liyongshang44-max/GEOX",
+  "ruleset_name": "main-strict-delivery-v1",
+  "target_branch": "main",
+  "verification_state": "TRUSTED_ENFORCEMENT_OPERATIONALLY_VERIFIED",
+  "base_commit": "2be5fb94728c04261122890f8674dc227da55db8",
+  "verification_pull_request": 2599,
+  "required_checks_under_test": [
+    "mcft-candidate-integrity-enforce-current-pr",
+    "mcft-release-lane-enforce-current-pr"
+  ],
+  "negative_phase": {
+    "candidate_head": "4b49af9d94de6a4dcdf24008755b2ade94aec866",
+    "probe_path": "docs/digital_twin/mcft/cap_06/MCFT-TRUSTED-ENFORCEMENT-NEGATIVE-PROBE.json",
+    "ordinary_required_check_count": 6,
+    "ordinary_required_checks": "ALL_SUCCESS",
+    "trusted_required_check_count": 2,
+    "trusted_required_checks": "BOTH_FAILING",
+    "merge_attempt_http_status": 405,
+    "merge_attempt_summary": "Repository rule violations found; 2 of 8 required status checks are failing",
+    "probe_removed_before_merge": true
+  },
+  "positive_phase": {
+    "validated_head": "40728de443f60329c90e380431f2de55c265697d",
+    "required_check_count": 8,
+    "required_checks": "ALL_SUCCESS",
+    "intermediate_merge_attempt_http_status": 405,
+    "intermediate_merge_attempt_summary": "Required status check acceptance is in progress",
+    "interpretation": "THE_OTHER_SEVEN_REQUIRED_CHECKS_INCLUDING_BOTH_TRUSTED_CHECKS_HAD_SUCCEEDED",
+    "acceptance_final_status": "SUCCESS"
+  },
+  "observations": {
+    "trusted_candidate_enforcement_failed_closed": true,
+    "trusted_release_lane_failed_closed": true,
+    "ruleset_blocked_merge_on_trusted_failure": true,
+    "corrected_head_passed_all_eight_required_checks": true,
+    "negative_probe_absent_from_final_tree": true
+  },
+  "effective_projection_when_present_on_main": {
+    "corrected_head_merged_through_active_ruleset": true,
+    "trusted_enforcement_required_checks_bound": true,
+    "operational_release_authority_established": true
+  },
+  "authority_boundary": {
+    "merge_queue_enabled": false,
+    "runtime_authority": false,
+    "mcft_cap_07_authorized": false
+  },
+  "recorded_on": "2026-07-19"
+}

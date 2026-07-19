@@ -1,10 +1,13 @@
 {
-  "schema_version": "geox_mcft_delivery_foundation_v2_status_v2",
+  "schema_version": "geox_mcft_delivery_foundation_v2_status_v3",
   "status_id": "MCFT-DELIVERY-FOUNDATION-V2",
-  "record_status": "MERGED_MAIN_EFFECTIVE_WITH_EXTERNAL_RULESET_DEPENDENCY",
+  "record_status": "MERGED_MAIN_OPERATIONALLY_EFFECTIVE",
   "committed_state": "MERGED_MAIN",
+  "effective_condition": "PRESENT_ON_MAIN_VIA_THE_PROTECTED_PR_2599_MERGE",
   "policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json",
   "candidate_authority_registry_ref": "docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json",
+  "ruleset_profile_ref": "docs/digital_twin/mcft/MCFT-MAIN-RULESET-PROFILE-V1.json",
+  "trusted_enforcement_verification_ref": "docs/digital_twin/mcft/MCFT-TRUSTED-ENFORCEMENT-OPERATIONAL-VERIFICATION-V1.json",
   "baseline_main_commit": "ea8caa10e6369ec5018d7c7b6630e2330d1ca085",
   "implementation_merge_commit": "b66a130db165f536a1d6b346caabb7af0f3918af",
   "classification": "REPOSITORY_WIDE_DELIVERY_INFRASTRUCTURE_REPAIR",
@@ -16,14 +19,15 @@
   "workstreams": {
     "P4_STABLE_RELEASE_PATH": {
       "implementation": "MCFT-RELEASE-LANE-V1",
-      "pull_request_validation": "IMPLEMENTED",
-      "merge_group_validation": "IMPLEMENTED",
-      "global_concurrency": true,
+      "pull_request_validation": "IMPLEMENTED_AND_REQUIRED",
+      "merge_group_validation": "IMPLEMENTED_NOT_ENABLED",
+      "global_concurrency": false,
+      "event_and_exact_head_scoped_concurrency": true,
       "repository_write_permission": false,
-      "operational_merge_authority": "NOT_ESTABLISHED_UNTIL_RULESET_BINDING"
+      "operational_merge_authority": "ESTABLISHED_STRICT_UP_TO_DATE_PHASE_1"
     },
     "P5_GENERIC_DELIVERY_POLICY": {
-      "implementation": "MCFT-DELIVERY-POLICY-V2_1_AND_REGISTRY_DRIVEN_CANDIDATE_DECLARATION",
+      "implementation": "MCFT-DELIVERY-POLICY-V2_2_AND_REGISTRY_DRIVEN_CANDIDATE_DECLARATION",
       "capability_specific_rule": false,
       "registry_driven": true,
       "array_traversal": true,
@@ -31,19 +35,21 @@
     }
   },
   "repository_setting_boundary": {
-    "required_check_binding_committed_artifact": false,
+    "required_check_binding_committed_artifact": true,
     "branch_ruleset_configuration_external": true,
-    "branch_ruleset_verified": false,
-    "strict_up_to_date_verified": false,
+    "branch_ruleset_verified": true,
+    "strict_up_to_date_verified": true,
+    "trusted_enforcement_required_checks_bound": true,
+    "trusted_enforcement_fail_closed_verified": true,
     "merge_queue_verified": false,
-    "operational_release_authority_established": false,
-    "required_admin_action": "Protect main; require candidate integrity, release lane, ci/build-test, and ci/acceptance; require strict up-to-date or enable merge queue."
+    "operational_release_authority_established": true,
+    "required_admin_action": null
   },
   "nonclaims": [
     "NO_MCFT_CAP_07_AUTHORIZATION",
     "NO_RUNTIME_DELTA",
     "NO_TASKBOOK_GRAPH_DELTA",
     "NO_PRODUCTION_CAPABILITY_CLAIM",
-    "NO_RULESET_CONFIGURATION_CLAIM"
+    "NO_MERGE_QUEUE_ENABLEMENT"
   ]
 }
