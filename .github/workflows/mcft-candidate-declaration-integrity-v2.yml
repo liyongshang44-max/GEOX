@@ -1,0 +1,74 @@
+name: mcft-candidate-declaration-integrity-v2
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
+      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs'
+  pull_request_target:
+    types: [opened, synchronize, edited, reopened, ready_for_review]
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
+      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-candidate-integrity-v2-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  selftest:
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Run generic candidate declaration selftest
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs --selftest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-candidate-integrity-v2-selftest-${{ github.sha }}
+          path: acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2_RESULT.json
+          if-no-files-found: error
+
+  enforce-current-pr:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Checkout trusted default-branch policy
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Enforce generic exact-head candidate declaration
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs --enforce
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-candidate-integrity-v2-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2_RESULT.json
+          if-no-files-found: error

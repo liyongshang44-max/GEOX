@@ -1,83 +1,35 @@
-name: mcft-delivery-policy-v1
+name: mcft-delivery-policy-v1-historical
+# Historical MCFT Delivery Policy V1. Superseded for realtime enforcement by V2.
 
 on:
-  pull_request:
-    paths:
-      - 'docs/digital_twin/mcft/**'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V1.cjs'
-      - '.github/workflows/mcft-delivery-policy-v1.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  delivery-policy-and-taskbook-v0-4:
+  historical-taskbook-v0-4-proof:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HISTORICAL_POLICY_REF: 56fd50500a14cc8b5d3743306da85f9d0055abe0
+      HISTORICAL_POLICY_BASE: f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7
     steps:
-      - name: Checkout workflow carrier
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ env.HISTORICAL_POLICY_REF }}
           fetch-depth: 0
-
-      - name: Resolve frozen revision validation ref
-        id: validation
-        shell: bash
-        run: |
-          REF="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE="f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7"
-          fi
-          EFFECTIVENESS="docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-V0.4.0-EFFECTIVENESS.json"
-          if [ -f "$EFFECTIVENESS" ]; then
-            STATUS="$(node -e "const j=require('./$EFFECTIVENESS'); process.stdout.write(String(j.status || ''))")"
-            if [ "$STATUS" = "MERGED_MAIN_EFFECTIVE_FROZEN" ]; then
-              REF="56fd50500a14cc8b5d3743306da85f9d0055abe0"
-              BASE="f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7"
-            fi
-          fi
-          echo "ref=$REF" >> "$GITHUB_OUTPUT"
-          echo "base=$BASE" >> "$GITHUB_OUTPUT"
-
-      - name: Checkout exact taskbook revision authority
-        uses: actions/checkout@v4
+          persist-credentials: false
+      - uses: actions/setup-node@v4
         with:
-          ref: ${{ steps.validation.outputs.ref }}
-          fetch-depth: 0
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.11.1'
-
-      - name: Run MCFT delivery policy and frozen taskbook revision Gate
+          node-version: 20.11.1
+      - name: Reproduce historical V1 taskbook-revision proof
         env:
-          MCFT_DELIVERY_POLICY_BASE_REF: ${{ steps.validation.outputs.base }}
+          MCFT_DELIVERY_POLICY_BASE_REF: ${{ env.HISTORICAL_POLICY_BASE }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V1.cjs
-
-      - name: Verify frozen revision result
-        run: |
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const p = 'acceptance-output/MCFT_DELIVERY_POLICY_V1_RESULT.json';
-          const result = JSON.parse(fs.readFileSync(p, 'utf8'));
-          if (result.status !== 'PASS') throw new Error(`DELIVERY_POLICY_GATE_NOT_PASS:${result.error || 'UNKNOWN'}`);
-          if (result.taskbook_version !== 'v0.4.0-candidate') throw new Error('FROZEN_TASKBOOK_REVISION_VERSION_INVALID');
-          if (result.execution_paused !== true) throw new Error('FROZEN_TASKBOOK_REVISION_MUST_BE_PAUSED');
-          if (result.active_delivery_slice_id !== null) throw new Error('FROZEN_TASKBOOK_REVISION_ACTIVE_SLICE_MUST_BE_NULL');
-          if (result.s0_branch_transport_neutralized !== true) throw new Error('S0_BRANCH_TRANSPORT_NOT_NEUTRALIZED');
-          if (result.s8_implementation_evidence_valid !== true) throw new Error('S8_EVIDENCE_INVALID');
-          if (result.s8_effective !== false) throw new Error('S8_MUST_NOT_BE_EFFECTIVE_IN_REVISION_PROOF');
-          if (result.s9_authorized !== false) throw new Error('S9_MUST_REMAIN_BLOCKED_IN_REVISION_PROOF');
-          NODE
-
-      - name: Upload governance evidence
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: mcft-delivery-policy-v1-evidence
+          name: mcft-delivery-policy-v1-historical-evidence
           path: acceptance-output/MCFT_DELIVERY_POLICY_V1_RESULT.json
           if-no-files-found: error

@@ -1,0 +1,62 @@
+{
+  "schema_version": "geox_mcft_delivery_foundation_v2_status_v1",
+  "status_id": "MCFT-DELIVERY-FOUNDATION-V2",
+  "record_status": "CONDITIONAL_EFFECTIVE_AUTHORITY",
+  "committed_state": "FINAL_CANDIDATE",
+  "effective_condition": "PRESENT_ON_DEFAULT_BRANCH_AND_PUSH_MAIN_POLICY_SELFTEST_PASS",
+  "postmerge_ssot_writeback_allowed": false,
+  "policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json",
+  "baseline_main_commit": "ea8caa10e6369ec5018d7c7b6630e2330d1ca085",
+  "classification": "REPOSITORY_WIDE_DELIVERY_INFRASTRUCTURE_REPAIR",
+  "capability_slice": false,
+  "capability_prerequisite_slice": false,
+  "runtime_authority": false,
+  "canonical_write_authority": false,
+  "successor_capability_line_authorized": false,
+  "workstreams": {
+    "P4_STABLE_RELEASE_PATH": {
+      "implementation": "MCFT-RELEASE-LANE-V1",
+      "mode": "CURRENT_MAIN_BASE_PLUS_TEST_MERGE_EXACT_TREE_GATE",
+      "global_concurrency": true,
+      "branch_transport_forbidden": true,
+      "proof_only_pr_forbidden": true,
+      "repository_write_permission": false,
+      "committed_state": "FINAL_CANDIDATE",
+      "effective_condition": "PRESENT_ON_DEFAULT_BRANCH_AND_PUSH_MAIN_POLICY_SELFTEST_PASS"
+    },
+    "P5_GENERIC_DELIVERY_POLICY": {
+      "implementation": "MCFT-DELIVERY-POLICY-V2_AND_GENERIC_CANDIDATE_DECLARATION_V2",
+      "capability_specific_rule": false,
+      "status_file_and_field_declared_per_candidate": true,
+      "focused_workflow_declared_per_candidate": true,
+      "semantic_snapshot_files_declared_per_candidate": true,
+      "committed_state": "FINAL_CANDIDATE",
+      "effective_condition": "PRESENT_ON_DEFAULT_BRANCH_AND_PUSH_MAIN_POLICY_SELFTEST_PASS"
+    }
+  },
+  "historical_v1_disposition": {
+    "policy_workflow": "MANUAL_ONLY_HISTORICAL",
+    "candidate_integrity_workflow": "MANUAL_ONLY_HISTORICAL",
+    "s9_specific_rule_current_enforcement": false
+  },
+  "effectiveness_conditions": [
+    "POLICY_V2_SELFTEST_PASS",
+    "GENERIC_CANDIDATE_DECLARATION_SELFTEST_PASS",
+    "RELEASE_LANE_SELFTEST_PASS",
+    "STANDARD_CI_PASS",
+    "PRESENT_ON_DEFAULT_BRANCH",
+    "PUSH_MAIN_POLICY_SELFTEST_PASS"
+  ],
+  "repository_setting_boundary": {
+    "required_check_binding_committed_artifact": false,
+    "branch_ruleset_configuration_external": true,
+    "branch_ruleset_verified": false,
+    "note": "The repository connector used for this repair does not expose branch-ruleset mutation or inspection. Workflow enforcement is committed; required-check binding must be verified in repository settings."
+  },
+  "nonclaims": [
+    "NO_MCFT_CAP_07_AUTHORIZATION",
+    "NO_RUNTIME_DELTA",
+    "NO_TASKBOOK_GRAPH_DELTA",
+    "NO_PRODUCTION_CAPABILITY_CLAIM"
+  ]
+}
