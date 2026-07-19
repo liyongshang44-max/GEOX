@@ -1,0 +1,81 @@
+name: mcft-release-lane-v1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-release-lane-v1.yml'
+      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_RELEASE_LANE_V1.cjs'
+  pull_request_target:
+    types: [opened, synchronize, edited, reopened, ready_for_review]
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-release-lane-v1.yml'
+      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_RELEASE_LANE_V1.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-release-lane-main
+  cancel-in-progress: false
+
+jobs:
+  selftest:
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Run release-lane selftest
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_RELEASE_LANE_V1.cjs --selftest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-release-lane-v1-selftest-${{ github.sha }}
+          path: acceptance-output/MCFT_RELEASE_LANE_V1_RESULT.json
+          if-no-files-found: error
+
+  validate-current-candidate:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Checkout trusted default-branch policy
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Revalidate generic candidate declaration on exact head
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs --enforce
+      - name: Validate current-main base and test-merge tree equivalence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_RELEASE_LANE_V1.cjs --enforce
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-release-lane-v1-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2_RESULT.json
+            acceptance-output/MCFT_RELEASE_LANE_V1_RESULT.json
+          if-no-files-found: error
