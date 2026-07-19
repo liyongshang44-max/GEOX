@@ -1,8 +1,10 @@
 {
   "schema_version": "geox_mcft_candidate_authority_registry_v1",
   "registry_id": "MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1",
+  "registry_revision": "1.1",
   "record_status": "EFFECTIVE_REPOSITORY_AUTHORITY",
   "policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json",
+  "delivery_candidate_signal_contract_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1.json",
   "default_behavior": "FAIL_CLOSED",
   "array_traversal_required": true,
   "unregistered_capability_effect": "CANDIDATE_INVALIDATED",
@@ -14,6 +16,7 @@
       "resolved_manifest_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2.json",
       "taskbook_manifest_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json",
       "current_candidate_authority": false,
+      "candidate_declaration_enabled": false,
       "authoritative_candidate_status_paths": [
         "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
         "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11D-CLOSURE-REPAIR-STATUS.json"
@@ -37,6 +40,30 @@
       ],
       "terminal_state": "COMPLETE_WITH_EXTERNAL_ATTESTATION_EVIDENCE_UNVERIFIED",
       "successor_capability_authorized": false
+    },
+    {
+      "capability_line": "MCFT-CAP-07",
+      "registry_bootstrap_kind": "PRE_S0_MINIMAL_DELIVERY_AUTHORITY",
+      "resolved_manifest_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-RESOLVED-MANIFEST-V1.json",
+      "taskbook_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-TASK.md",
+      "current_candidate_authority": false,
+      "candidate_declaration_enabled": true,
+      "candidate_authority_scope": "S0_AUTHORIZATION_PR_ONLY",
+      "authoritative_candidate_status_paths": [
+        "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CURRENT-AUTHORITY-V1.json"
+      ],
+      "candidate_transition_fields": [
+        {
+          "status_file": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CURRENT-AUTHORITY-V1.json",
+          "field_path": "status",
+          "allowed_candidate_values": ["AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE"]
+        }
+      ],
+      "terminal_state": "NOT_STARTED_REGISTRY_BOOTSTRAPPED",
+      "successor_capability_authorized": false,
+      "implementation_authorized": false,
+      "runtime_source_authorized": false,
+      "canonical_write_authorized": false
     }
   ]
 }
