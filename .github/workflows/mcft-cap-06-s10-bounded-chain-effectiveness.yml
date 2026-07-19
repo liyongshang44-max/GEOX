@@ -1,16 +1,7 @@
 name: mcft-cap-06-s10-bounded-chain-effectiveness
+# Historical MCFT-CAP-06 workflow: automatic triggers frozen after final repair.
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/mcft-cap-06-s9-non-consumption-effectiveness.yml'
-      - '.github/workflows/mcft-cap-06-s10-bounded-chain-effectiveness.yml'
-      - '.github/workflows/mcft-cap-06-s10-bounded-chain.yml'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-STATUS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_EFFECTIVENESS.cjs'
   workflow_dispatch:
 
 permissions:

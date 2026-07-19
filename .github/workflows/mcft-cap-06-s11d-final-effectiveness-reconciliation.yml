@@ -1,16 +1,7 @@
 name: mcft-cap-06-s11d-final-effectiveness-reconciliation
+# Historical MCFT-CAP-06 workflow: automatic triggers frozen after final repair.
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/mcft-cap-06-s11d-final-effectiveness-reconciliation.yml'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CLOSURE-RECORD.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINALIZATION-EFFECTIVENESS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINAL-EFFECTIVENESS-RECONCILIATION.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-MAIN-VERIFICATION.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11D-FINAL-EFFECTIVENESS-RECONCILIATION-STATUS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
   workflow_dispatch:
 
 permissions:
