@@ -1,0 +1,41 @@
+name: mcft-main-ruleset-readiness-v1
+
+on:
+  pull_request:
+  merge_group:
+    types: [checks_requested]
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-main-ruleset-readiness-v1.yml'
+      - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
+      - '.github/workflows/mcft-release-lane-v1.yml'
+      - '.github/workflows/mcft-delivery-policy-v2.yml'
+      - 'docs/digital_twin/mcft/MCFT-MAIN-RULESET-PROFILE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_MAIN_RULESET_READINESS_V1.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mcft-main-ruleset-readiness-v1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate exact ruleset readiness profile
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_MAIN_RULESET_READINESS_V1.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-main-ruleset-readiness-v1-${{ github.sha }}
+          path: acceptance-output/MCFT_MAIN_RULESET_READINESS_V1_RESULT.json
+          if-no-files-found: error

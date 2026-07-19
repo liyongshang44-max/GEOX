@@ -2,13 +2,6 @@ name: mcft-release-lane-v1
 
 on:
   pull_request:
-    paths:
-      - '.github/workflows/mcft-release-lane-v1.yml'
-      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
-      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_RELEASE_LANE_V1.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_MERGE_GROUP_RELEASE_LANE_V1.cjs'
   pull_request_target:
     types: [opened, synchronize, edited, reopened, ready_for_review]
   merge_group:
@@ -33,7 +26,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  selftest:
+  mcft-release-lane-pr-selftest:
     if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -55,7 +48,7 @@ jobs:
           path: acceptance-output/MCFT_RELEASE_LANE_V1_RESULT.json
           if-no-files-found: error
 
-  validate-current-candidate:
+  mcft-release-lane-enforce-current-pr:
     if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -86,7 +79,7 @@ jobs:
             acceptance-output/MCFT_RELEASE_LANE_V1_RESULT.json
           if-no-files-found: error
 
-  validate-merge-group:
+  mcft-release-lane-merge-group:
     if: github.event_name == 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 15
