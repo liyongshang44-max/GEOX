@@ -1,0 +1,22 @@
+{
+  "schema_version": "geox_mcft_cap_07_workflow_declaration_v1",
+  "declaration_id": "GEOX-MCFT-CAP-07-WORKFLOW-DECLARATION-V1",
+  "taskbook_version": "v0.2.5",
+  "record_status": "S0_COMMITTED_WORKFLOW_AUTHORITY",
+  "focused_workflow": {
+    "name": "mcft-cap-07-s0-authorization",
+    "path": ".github/workflows/mcft-cap-07-s0-authorization.yml",
+    "candidate_event": "pull_request",
+    "exact_head_required": true,
+    "negative_intermediate_head_allowed_only_for_live_exercise": true
+  },
+  "exact_sha_attestation_workflow": {
+    "name": "mcft-cap-07-slice-exact-sha-attestation",
+    "path": ".github/workflows/mcft-cap-07-slice-exact-sha-attestation.yml",
+    "event": "push:main",
+    "repository_write_permission": false,
+    "postmerge_ssot_writeback_allowed": false,
+    "retention_store_contract_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-ATTESTATION-RETENTION-STORE-CONTRACT-V1.json"
+  },
+  "standard_workflow": "ci"
+}

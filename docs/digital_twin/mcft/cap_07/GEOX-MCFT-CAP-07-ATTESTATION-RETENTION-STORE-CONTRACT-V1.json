@@ -1,0 +1,73 @@
+{
+  "schema_version": "geox_mcft_attestation_s3_compat_object_lock_v1",
+  "store_contract_id": "MCFT_ATTESTATION_S3_COMPAT_OBJECT_LOCK_V1",
+  "record_status": "FROZEN_S0_DELIVERY_SUPPORT_CONTRACT",
+  "authority_boundary": "SEPARATE_FROM_PRODUCT_EVIDENCE_EXPORT",
+  "physical_backend_family": "S3_COMPAT_OBJECT_STORAGE",
+  "namespace_prefix": "mcft-attestations-v1",
+  "product_namespace_forbidden": "evidence-exports-v1",
+  "configuration_variables": [
+    "GEOX_MCFT_ATTESTATION_S3_ENDPOINT",
+    "GEOX_MCFT_ATTESTATION_S3_BUCKET",
+    "GEOX_MCFT_ATTESTATION_S3_REGION",
+    "GEOX_MCFT_ATTESTATION_S3_FORCE_PATH_STYLE"
+  ],
+  "workflow_secret_names": [
+    "GEOX_MCFT_ATTESTATION_S3_ACCESS_KEY_ID",
+    "GEOX_MCFT_ATTESTATION_S3_SECRET_ACCESS_KEY"
+  ],
+  "writer_identity_class": "geox_mcft_attestation_retention_writer_v1",
+  "reader_identity_class": "geox_mcft_attestation_retention_reader_v1",
+  "runtime_credential_forbidden": true,
+  "product_evidence_export_credential_forbidden": true,
+  "required_writer_permissions": [
+    "PutObject",
+    "PutObjectRetention",
+    "GetObject",
+    "HeadObject",
+    "ListBucketExactPrefixWhenRequired"
+  ],
+  "forbidden_writer_permissions": [
+    "DeleteObject",
+    "BypassGovernanceRetention"
+  ],
+  "required_bucket_controls": {
+    "versioning": "Enabled",
+    "object_lock": "Enabled",
+    "worm_mode": "COMPLIANCE",
+    "overwrite_existing_key": "HELPER_FAIL_CLOSED"
+  },
+  "safe_segment_regex": "^[A-Za-z0-9._-]+$",
+  "object_key_template": "mcft-attestations-v1/<owner>/<repo>/<capability>/<slice>/<subject_commit>/<workflow_run_id>/<artifact_name>/<object_name>",
+  "required_objects": [
+    "canonical-artifact.json",
+    "artifact-archive.bin",
+    "transport-metadata.json",
+    "retention-manifest.json"
+  ],
+  "retention_levels": {
+    "R1": {
+      "minimum_days": 180,
+      "extension_rule": "successor_exact_sha_pass_plus_30_days"
+    },
+    "R2": {
+      "minimum_days": 730,
+      "extension_rule": "cap08_consumption_plus_365_days"
+    },
+    "R3": {
+      "minimum_days": 365,
+      "extension_rule": "none_shorter_than_365_days"
+    }
+  },
+  "github_actions_artifact_role": "TRANSIENT_CONVENIENCE_COPY_MAX_90_DAYS_NOT_AUTHORITY",
+  "readback_steps": [
+    "Head exact versioned keys",
+    "verify ObjectLockMode COMPLIANCE and retain-until",
+    "Get exact versions",
+    "recompute semantic digest",
+    "recompute transport SHA-256",
+    "compare subject/workflow/version IDs",
+    "fail closed on any divergence"
+  ],
+  "failure_code": "MCFT_ATTESTATION_RETENTION_AUTHORITY_UNAVAILABLE"
+}

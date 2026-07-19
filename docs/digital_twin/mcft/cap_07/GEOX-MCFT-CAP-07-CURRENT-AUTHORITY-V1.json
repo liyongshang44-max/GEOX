@@ -1,0 +1,43 @@
+{
+  "schema_version": "geox_mcft_cap_07_current_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-07-CURRENT-AUTHORITY-V1",
+  "capability_line_id": "MCFT-CAP-07",
+  "taskbook_version": "v0.2.5",
+  "record_status": "COMMITTED_CONDITIONAL_AUTHORITY",
+  "status": "AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE",
+  "baseline_main_commit": "dadb3dc7bca1f484d49a727fa0754bbaf4bee086",
+  "active_delivery_slice_id": null,
+  "implementation_authorized": false,
+  "read_runtime_implementation_authorized": false,
+  "runtime_source_authorized": false,
+  "canonical_write_authorized": false,
+  "mcft_cap_08_authorized": false,
+  "effectiveness_condition": "PRESENT_ON_MAIN_AND_EXACT_SHA_ATTESTATION_PASS",
+  "effective_status_when_attested": "IN_PROGRESS",
+  "effective_next_slice_when_attested": "S1",
+  "predecessor_effective_evidence_requirement": {
+    "capability_line_id": "MCFT-CAP-06",
+    "subject_commit": "ea8caa10e6369ec5018d7c7b6630e2330d1ca085",
+    "workflow_run_id": 29679453784,
+    "artifact_id": 8440066081,
+    "transport_archive_digest": "sha256:41d7b375b13b1c43c3cba74c87a46ee8fec4f0a48526c618dfdc976cdc76499a",
+    "status": "PASS"
+  },
+  "successor_registry_bootstrap": {
+    "slice_id": "MCFT-CAP-07.S1",
+    "status_file": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-DELIVERY-STATUS-V1.json",
+    "candidate_field": "s1_candidate_implemented",
+    "candidate_value": true,
+    "effective_only_for_future_pr_after_s0_merge": true
+  },
+  "runtime_authority_delta": "ZERO",
+  "canonical_write_authority_delta": "ZERO",
+  "postmerge_ssot_writeback_allowed": false,
+  "future_merge_metadata": {
+    "merge_commit": null,
+    "workflow_run_id": null,
+    "job_id": null,
+    "artifact_id": null,
+    "verified_at": null
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "schema_version": "geox_mcft_cap_07_s0_unregistered_probe_v1",
+  "purpose": "SAME_PR_TRUSTED_NEGATIVE_EXERCISE_ONLY",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "must_be_absent_from_final_tree": true,
+  "runtime_authority": false,
+  "canonical_write_authority": false
+}

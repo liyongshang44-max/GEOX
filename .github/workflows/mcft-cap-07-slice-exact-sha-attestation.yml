@@ -1,0 +1,73 @@
+name: mcft-cap-07-slice-exact-sha-attestation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/digital_twin/mcft/cap_07/**'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_*.cjs'
+      - 'scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs'
+      - '.github/workflows/mcft-cap-07-*.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap-07-exact-sha-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  exact-sha-attestation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact main subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Derive read-only exact-SHA delivery frontier artifact
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs
+      - name: Build deterministic transport archive
+        run: |
+          mkdir -p acceptance-output/archive-input
+          cp acceptance-output/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.json acceptance-output/archive-input/canonical-artifact.json
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -cf acceptance-output/mcft-cap-07-attestation.tar -C acceptance-output/archive-input canonical-artifact.json
+          gzip -n -f acceptance-output/mcft-cap-07-attestation.tar
+      - name: Upload and read back long-term immutable authority
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_ATTESTATION_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_ATTESTATION_S3_SECRET_ACCESS_KEY }}
+          GEOX_MCFT_ATTESTATION_S3_ENDPOINT: ${{ vars.GEOX_MCFT_ATTESTATION_S3_ENDPOINT }}
+          GEOX_MCFT_ATTESTATION_S3_BUCKET: ${{ vars.GEOX_MCFT_ATTESTATION_S3_BUCKET }}
+          GEOX_MCFT_ATTESTATION_S3_REGION: ${{ vars.GEOX_MCFT_ATTESTATION_S3_REGION }}
+          GEOX_MCFT_ATTESTATION_S3_FORCE_PATH_STYLE: ${{ vars.GEOX_MCFT_ATTESTATION_S3_FORCE_PATH_STYLE }}
+          MCFT_CANONICAL_ARTIFACT_PATH: acceptance-output/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.json
+          MCFT_ARTIFACT_ARCHIVE_PATH: acceptance-output/mcft-cap-07-attestation.tar.gz
+          MCFT_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          MCFT_REPOSITORY_NAME: GEOX
+          MCFT_ARTIFACT_NAME: mcft-cap-07-exact-sha-${{ github.sha }}
+          MCFT_RETENTION_LEVEL: R1
+          MCFT_RETENTION_DAYS: '180'
+        run: node scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs --upload-readback
+      - name: Upload transient GitHub convenience copy
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-07-exact-sha-${{ github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.json
+            acceptance-output/MCFT_CAP_07_ATTESTATION_RETENTION_LOCATOR.json
+            acceptance-output/mcft-cap-07-attestation.tar.gz
+          if-no-files-found: error
+          retention-days: 90
