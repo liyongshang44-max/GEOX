@@ -10,12 +10,6 @@ const POLICY_PATH = path.join(ROOT, 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY
 const REGISTRY_PATH = path.join(ROOT, 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json');
 const RESULT_PATH = path.join(ROOT, 'acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2_RESULT.json');
 const MODE = process.argv[2] || '--selftest';
-const CANDIDATE_STATUS_FALLBACK = new Set([
-  'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE',
-  'IMPLEMENTATION_CANDIDATE',
-  'REPAIR_CANDIDATE',
-  'FINAL_CANDIDATE_AWAITING_EXACT_MERGE_SHA_ATTESTATION',
-]);
 
 function loadJson(filePath) { return JSON.parse(fs.readFileSync(filePath, 'utf8')); }
 function writeResult(value) {
@@ -59,8 +53,8 @@ function parseDeclaration(body, policy) {
     if (!/^[A-Za-z0-9_.-]+$/.test(declaration[key])) throw new Error(`CANDIDATE_DECLARATION_FIELD_INVALID:${key}`);
   }
   if (!isSha(declaration.candidate_head) || !isSha(declaration.base_head)) throw new Error('CANDIDATE_SHA_INVALID');
-  const semanticFiles = declaration.semantic_snapshot_files.split(',').map((v) => v.trim()).filter(Boolean);
-  const semanticBlobs = declaration.semantic_snapshot_blobs.split(',').map((v) => v.trim()).filter(Boolean);
+  const semanticFiles = declaration.semantic_snapshot_files.split(',').map((value) => value.trim()).filter(Boolean);
+  const semanticBlobs = declaration.semantic_snapshot_blobs.split(',').map((value) => value.trim()).filter(Boolean);
   if (semanticFiles.length < 1 || semanticFiles.length > 20 || semanticFiles.length !== semanticBlobs.length) throw new Error('CANDIDATE_SEMANTIC_SNAPSHOT_CARDINALITY_INVALID');
   if (new Set(semanticFiles).size !== semanticFiles.length) throw new Error('CANDIDATE_SEMANTIC_PATH_DUPLICATE');
   for (const file of semanticFiles) if (!/^(docs|scripts|apps)\//.test(file) || file.includes('..')) throw new Error(`CANDIDATE_SEMANTIC_PATH_INVALID:${file}`);
@@ -73,15 +67,38 @@ function parseDeclaration(body, policy) {
     semantic_blobs: semanticBlobs,
   };
 }
-function validatePolicyAndRegistry(policy, registry) {
+function signalContractPath(registry) {
+  const relative = String(registry.delivery_candidate_signal_contract_ref || '').trim();
+  if (!relative || relative.includes('..') || !relative.startsWith('docs/digital_twin/mcft/')) throw new Error('DELIVERY_CANDIDATE_SIGNAL_CONTRACT_REF_INVALID');
+  return path.join(ROOT, relative);
+}
+function loadAuthorities() {
+  const policy = loadJson(POLICY_PATH);
+  const registry = loadJson(REGISTRY_PATH);
+  const signalContract = loadJson(signalContractPath(registry));
+  return validatePolicyRegistryAndSignalContract(policy, registry, signalContract);
+}
+function validatePolicyRegistryAndSignalContract(policy, registry, signalContract) {
   assert.equal(policy.policy_id, 'MCFT-DELIVERY-POLICY-V2');
   assert.equal(policy.candidate_declaration.authority_registry_ref, 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json');
   assert.equal(policy.candidate_declaration.discovery_mode, 'AUTHORITY_REGISTRY_WITH_FAIL_CLOSED_UNREGISTERED_CANDIDATE_DETECTION');
   assert.equal(policy.candidate_declaration.array_traversal_required, true);
+  assert.equal(policy.workflow_security.pull_request_target_executes_default_branch_policy_only, true);
   assert.equal(registry.registry_id, 'MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1');
+  assert.equal(registry.registry_revision, '1.1');
   assert.equal(registry.default_behavior, 'FAIL_CLOSED');
   assert.equal(registry.array_traversal_required, true);
-  return { policy, registry };
+  assert.equal(signalContract.contract_id, 'MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1');
+  assert.equal(signalContract.string_matching_mode, 'EXACT_ENUM_ONLY');
+  assert.equal(signalContract.boolean_matching_mode, 'EXACT_FIELD_NAME_OR_EXPLICIT_SLICE_PATTERN_AND_TRUE_ONLY');
+  assert.equal(signalContract.nested_array_traversal_required, true);
+  assert.equal(signalContract.pr_modified_registry_trusted_for_same_pr, false);
+  assert.ok(Array.isArray(signalContract.explicit_candidate_status_values) && signalContract.explicit_candidate_status_values.length >= 5);
+  assert.ok(Array.isArray(signalContract.explicit_candidate_boolean_field_names));
+  assert.ok(Array.isArray(signalContract.explicit_candidate_boolean_field_patterns));
+  assert.ok(Array.isArray(signalContract.domain_term_non_signals) && signalContract.domain_term_non_signals.length >= 4);
+  for (const pattern of signalContract.explicit_candidate_boolean_field_patterns) new RegExp(pattern);
+  return { policy, registry, signalContract };
 }
 function capabilityEntry(registry, capabilityLine) {
   return registry.capabilities.find((entry) => entry.capability_line === capabilityLine) || null;
@@ -89,23 +106,33 @@ function capabilityEntry(registry, capabilityLine) {
 function validateDeclarationRegistration(declaration, registry) {
   const entry = capabilityEntry(registry, declaration.capability_line);
   if (!entry) throw new Error(`UNREGISTERED_CAPABILITY_LINE:${declaration.capability_line}`);
+  if (entry.candidate_declaration_enabled !== true) throw new Error(`CANDIDATE_DECLARATION_DISABLED:${declaration.capability_line}`);
   if (!entry.authoritative_candidate_status_paths.includes(declaration.status_file)) throw new Error(`UNREGISTERED_CANDIDATE_STATUS_PATH:${declaration.status_file}`);
   const rule = entry.candidate_transition_fields.find((item) => item.status_file === declaration.status_file && item.field_path === declaration.candidate_field);
   if (!rule) throw new Error(`UNREGISTERED_CANDIDATE_FIELD:${declaration.status_file}:${declaration.candidate_field}`);
   if (!rule.allowed_candidate_values.some((value) => same(value, declaration.candidate_value_parsed))) throw new Error(`UNREGISTERED_CANDIDATE_VALUE:${declaration.candidate_field}`);
   return { entry, rule };
 }
-function collectHeuristicCandidateSignals(value, keyPath = [], output = []) {
+function booleanFieldMatches(key, signalContract) {
+  if (signalContract.explicit_candidate_boolean_field_names.includes(key)) return true;
+  return signalContract.explicit_candidate_boolean_field_patterns.some((pattern) => new RegExp(pattern).test(key));
+}
+function collectExplicitDeliveryCandidateSignals(value, signalContract, keyPath = [], output = []) {
   if (Array.isArray(value)) {
-    value.forEach((item, index) => collectHeuristicCandidateSignals(item, [...keyPath, String(index)], output));
+    value.forEach((item, index) => collectExplicitDeliveryCandidateSignals(item, signalContract, [...keyPath, String(index)], output));
     return output;
   }
   if (!value || typeof value !== 'object') return output;
+  const statuses = new Set(signalContract.explicit_candidate_status_values);
   for (const [key, current] of Object.entries(value)) {
     const next = [...keyPath, key];
-    if (/candidate/i.test(key) && current === true) output.push({ field: next.join('.'), value: current, kind: 'BOOLEAN_CANDIDATE_SIGNAL' });
-    if (typeof current === 'string' && (CANDIDATE_STATUS_FALLBACK.has(current) || /candidate/i.test(current))) output.push({ field: next.join('.'), value: current, kind: 'STATUS_CANDIDATE_SIGNAL' });
-    if (current && typeof current === 'object') collectHeuristicCandidateSignals(current, next, output);
+    if (current === true && booleanFieldMatches(key, signalContract)) {
+      output.push({ field: next.join('.'), value: current, kind: 'EXPLICIT_BOOLEAN_DELIVERY_CANDIDATE_SIGNAL' });
+    }
+    if (typeof current === 'string' && statuses.has(current)) {
+      output.push({ field: next.join('.'), value: current, kind: 'EXACT_STATUS_DELIVERY_CANDIDATE_SIGNAL' });
+    }
+    if (current && typeof current === 'object') collectExplicitDeliveryCandidateSignals(current, signalContract, next, output);
   }
   return output;
 }
@@ -122,7 +149,7 @@ function collectRegisteredTransitions(base, head, entry, filePath) {
 }
 async function apiJson(apiPath, token) {
   const response = await fetch(`https://api.github.com${apiPath}`, {
-    headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'geox-mcft-candidate-integrity-v2-1' },
+    headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'geox-mcft-candidate-integrity-v2-2' },
   });
   if (!response.ok) {
     const body = await response.text();
@@ -159,7 +186,7 @@ async function listPullFiles(repository, prNumber, token) {
   }
   return output;
 }
-async function detectTransitions(repository, pr, token, registry) {
+async function detectTransitions(repository, pr, token, registry, signalContract) {
   const files = (await listPullFiles(repository, pr.number, token)).filter((file) => /^docs\/digital_twin\/mcft\/cap_[0-9]+\/.+\.json$/i.test(file.filename));
   const transitions = [];
   const unregisteredSignals = [];
@@ -173,8 +200,8 @@ async function detectTransitions(repository, pr, token, registry) {
     const capabilityLine = `MCFT-CAP-${String(Number(match[1])).padStart(2, '0')}`;
     const entry = capabilityEntry(registry, capabilityLine);
     const registered = entry?.authoritative_candidate_status_paths.includes(file.filename) || false;
-    const beforeSignals = collectHeuristicCandidateSignals(base?.json || {});
-    const afterSignals = collectHeuristicCandidateSignals(head.json);
+    const beforeSignals = collectExplicitDeliveryCandidateSignals(base?.json || {}, signalContract);
+    const afterSignals = collectExplicitDeliveryCandidateSignals(head.json, signalContract);
     const newSignals = afterSignals.filter((signal) => !beforeSignals.some((item) => item.field === signal.field && same(item.value, signal.value)));
     if (registered) {
       const registeredTransitions = collectRegisteredTransitions(base?.json || {}, head.json, entry, file.filename);
@@ -193,7 +220,7 @@ async function detectTransitions(repository, pr, token, registry) {
 }
 function latestRun(runs, workflowName, pr) {
   return runs.filter((run) => run.name === workflowName && run.event === 'pull_request' && run.head_sha === pr.head.sha && run.head_branch === pr.head.ref)
-    .sort((a, b) => Number(b.run_number) - Number(a.run_number))[0] || null;
+    .sort((left, right) => Number(right.run_number) - Number(left.run_number))[0] || null;
 }
 async function waitForRequiredRuns(repository, pr, declaration, token) {
   const maxAttempts = Number(process.env.MCFT_CANDIDATE_V2_MAX_ATTEMPTS || 240);
@@ -210,25 +237,65 @@ async function waitForRequiredRuns(repository, pr, declaration, token) {
   throw new Error('REQUIRED_WORKFLOWS_NOT_COMPLETED');
 }
 function selftest() {
-  const { policy, registry } = validatePolicyAndRegistry(loadJson(POLICY_PATH), loadJson(REGISTRY_PATH));
-  const body = `<!-- ${policy.candidate_declaration.marker}\ncapability_line=MCFT-CAP-06\nslice_id=MCFT-CAP-06.EXAMPLE-V1\nstatus_file=docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json\ncandidate_field=s9_candidate_implemented\ncandidate_value=true\nfocused_workflow=mcft-cap-06-s9-non-consumption\nstandard_workflow=ci\nsemantic_snapshot_files=docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json\nsemantic_snapshot_blobs=${'1'.repeat(40)}\ncandidate_head=${'2'.repeat(40)}\nbase_head=${'3'.repeat(40)}\n-->`;
+  const { policy, registry, signalContract } = loadAuthorities();
+  const cap07Status = 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CURRENT-AUTHORITY-V1.json';
+  const body = `<!-- ${policy.candidate_declaration.marker}\ncapability_line=MCFT-CAP-07\nslice_id=MCFT-CAP-07.S0\nstatus_file=${cap07Status}\ncandidate_field=status\ncandidate_value=AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE\nfocused_workflow=mcft-cap-07-s0-authorization\nstandard_workflow=ci\nsemantic_snapshot_files=${cap07Status}\nsemantic_snapshot_blobs=${'1'.repeat(40)}\ncandidate_head=${'2'.repeat(40)}\nbase_head=${'3'.repeat(40)}\n-->`;
   const declaration = parseDeclaration(body, policy);
   validateDeclarationRegistration(declaration, registry);
-  const entry = capabilityEntry(registry, 'MCFT-CAP-06');
+  const cap07 = capabilityEntry(registry, 'MCFT-CAP-07');
   const transitions = collectRegisteredTransitions(
-    { s9_candidate_implemented: false, status: 'AUTHORIZED_NOT_STARTED' },
-    { s9_candidate_implemented: true, status: 'CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE' },
-    entry,
+    { status: 'BLOCKED_REPOSITORY_FOUNDATION_P1B' },
+    { status: 'AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE' },
+    cap07,
     declaration.status_file,
   );
-  assert.equal(transitions.length, 2);
-  const arraySignals = collectHeuristicCandidateSignals({ values: [{ status: 'REPAIR_CANDIDATE' }] });
+  assert.equal(transitions.length, 1);
+
+  const domainSignals = collectExplicitDeliveryCandidateSignals({
+    label: 'Calibration Candidate',
+    projection: 'twin_calibration_candidate_projection_v1',
+    description: 'candidate evaluation',
+    attachment: 'candidate attachment',
+    calibration_candidate: true,
+  }, signalContract);
+  assert.equal(domainSignals.length, 0, 'DOMAIN_CANDIDATE_TERMS_MUST_NOT_BE_DELIVERY_SIGNALS');
+
+  const arraySignals = collectExplicitDeliveryCandidateSignals({ values: [{ status: 'REPAIR_CANDIDATE' }] }, signalContract);
   assert.equal(arraySignals.length, 1);
-  assert.throws(() => validateDeclarationRegistration({ ...declaration, status_file: 'docs/digital_twin/mcft/cap_06/UNREGISTERED.json' }, registry), /UNREGISTERED_CANDIDATE_STATUS_PATH/);
-  writeResult({ schema_version: 'geox_mcft_candidate_declaration_integrity_v2_1_result_v1', status: 'PASS', mode: 'SELFTEST', registry_driven: true, array_traversal_verified: true, registered_transition_count: transitions.length, capability_slice: false, runtime_authority: false });
+  assert.equal(arraySignals[0].field, 'values.0.status');
+
+  const booleanSignals = collectExplicitDeliveryCandidateSignals({
+    implementation_candidate: true,
+    calibration_candidate: true,
+    nested: { s10_candidate_implemented: true },
+  }, signalContract);
+  assert.equal(booleanSignals.length, 2);
+  assert.equal(booleanSignals.some((item) => item.field === 'implementation_candidate'), true);
+  assert.equal(booleanSignals.some((item) => item.field === 'nested.s10_candidate_implemented'), true);
+
+  const cap06Body = `<!-- ${policy.candidate_declaration.marker}\ncapability_line=MCFT-CAP-06\nslice_id=MCFT-CAP-06.S9\nstatus_file=docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json\ncandidate_field=s9_candidate_implemented\ncandidate_value=true\nfocused_workflow=mcft-cap-06-s9-non-consumption\nstandard_workflow=ci\nsemantic_snapshot_files=docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json\nsemantic_snapshot_blobs=${'1'.repeat(40)}\ncandidate_head=${'2'.repeat(40)}\nbase_head=${'3'.repeat(40)}\n-->`;
+  assert.throws(() => validateDeclarationRegistration(parseDeclaration(cap06Body, policy), registry), /CANDIDATE_DECLARATION_DISABLED:MCFT-CAP-06/);
+  assert.throws(() => validateDeclarationRegistration({ ...declaration, status_file: 'docs/digital_twin/mcft/cap_07/UNREGISTERED.json' }, registry), /UNREGISTERED_CANDIDATE_STATUS_PATH/);
+
+  writeResult({
+    schema_version: 'geox_mcft_candidate_declaration_integrity_v2_2_result_v1',
+    status: 'PASS',
+    mode: 'SELFTEST',
+    registry_driven: true,
+    explicit_delivery_signal_only: true,
+    domain_candidate_term_separation_verified: true,
+    array_traversal_verified: true,
+    cap07_minimal_registry_bootstrap_verified: true,
+    cap06_candidate_declaration_disabled: true,
+    trusted_default_branch_registry_required: true,
+    pr_modified_registry_trusted_for_same_pr: false,
+    registered_transition_count: transitions.length,
+    capability_slice: false,
+    runtime_authority: false,
+  });
 }
 async function enforce() {
-  const { policy, registry } = validatePolicyAndRegistry(loadJson(POLICY_PATH), loadJson(REGISTRY_PATH));
+  const { policy, registry, signalContract } = loadAuthorities();
   const token = String(process.env.GITHUB_TOKEN || '').trim();
   const repository = String(process.env.GITHUB_REPOSITORY || '').trim();
   const eventPath = String(process.env.GITHUB_EVENT_PATH || '').trim();
@@ -237,10 +304,10 @@ async function enforce() {
   if (!event.pull_request?.number) throw new Error('PULL_REQUEST_TARGET_EVENT_REQUIRED');
   const pr = await apiJson(`/repos/${repository}/pulls/${event.pull_request.number}`, token);
   const declaration = parseDeclaration(pr.body || '', policy);
-  const { transitions, unregisteredSignals } = await detectTransitions(repository, pr, token, registry);
+  const { transitions, unregisteredSignals } = await detectTransitions(repository, pr, token, registry, signalContract);
   if (unregisteredSignals.length) throw new Error(`UNREGISTERED_CANDIDATE_AUTHORITY:${JSON.stringify(unregisteredSignals.slice(0, 10))}`);
   if (!declaration && transitions.length === 0) {
-    writeResult({ schema_version: 'geox_mcft_candidate_declaration_integrity_v2_1_result_v1', status: 'PASS', mode: 'ENFORCE', disposition: 'NO_CANDIDATE_TRANSITION', pr_number: pr.number, head_sha: pr.head.sha, base_sha: pr.base.sha });
+    writeResult({ schema_version: 'geox_mcft_candidate_declaration_integrity_v2_2_result_v1', status: 'PASS', mode: 'ENFORCE', disposition: 'NO_CANDIDATE_TRANSITION', pr_number: pr.number, head_sha: pr.head.sha, base_sha: pr.base.sha });
     return;
   }
   if (!declaration) throw new Error(`CANDIDATE_TRANSITION_REQUIRES_DECLARATION:${JSON.stringify(transitions)}`);
@@ -259,8 +326,8 @@ async function enforce() {
   const finalPr = await apiJson(`/repos/${repository}/pulls/${pr.number}`, token);
   if (finalPr.head.sha !== pr.head.sha || finalPr.base.sha !== pr.base.sha) throw new Error('PR_HEAD_OR_BASE_MOVED_DURING_PROOF');
   writeResult({
-    schema_version: 'geox_mcft_candidate_declaration_integrity_v2_1_result_v1',
-    status: 'PASS', mode: 'ENFORCE', disposition: 'GENERIC_CANDIDATE_DECLARATION_VALID', validation_mode: 'REGISTRY_DRIVEN',
+    schema_version: 'geox_mcft_candidate_declaration_integrity_v2_2_result_v1',
+    status: 'PASS', mode: 'ENFORCE', disposition: 'GENERIC_CANDIDATE_DECLARATION_VALID', validation_mode: 'REGISTRY_DRIVEN_EXPLICIT_SIGNAL_CONTRACT',
     pr_number: pr.number, head_sha: pr.head.sha, base_sha: pr.base.sha,
     capability_line: declaration.capability_line, slice_id: declaration.slice_id,
     registered_transition_count: transitions.length,
@@ -269,14 +336,14 @@ async function enforce() {
   });
 }
 function mergeGroup() {
-  validatePolicyAndRegistry(loadJson(POLICY_PATH), loadJson(REGISTRY_PATH));
+  loadAuthorities();
   const eventName = String(process.env.GITHUB_EVENT_NAME || 'merge_group');
   const ref = String(process.env.GITHUB_REF || 'refs/heads/gh-readonly-queue/main/test');
   const sha = String(process.env.GITHUB_SHA || '0'.repeat(40));
   assert.equal(eventName, 'merge_group', 'MERGE_GROUP_EVENT_REQUIRED');
   assert.equal(ref.includes('gh-readonly-queue/main/'), true, 'MERGE_GROUP_MAIN_REF_REQUIRED');
   assert.equal(isSha(sha), true, 'MERGE_GROUP_SHA_INVALID');
-  writeResult({ schema_version: 'geox_mcft_candidate_declaration_integrity_v2_1_result_v1', status: 'PASS', mode: 'MERGE_GROUP', subject_commit: sha, subject_ref: ref, registry_integrity: 'PASS', repository_write_performed: false });
+  writeResult({ schema_version: 'geox_mcft_candidate_declaration_integrity_v2_2_result_v1', status: 'PASS', mode: 'MERGE_GROUP', subject_commit: sha, subject_ref: ref, registry_integrity: 'PASS', explicit_signal_contract_integrity: 'PASS', repository_write_performed: false });
 }
 
 (async () => {
@@ -286,7 +353,9 @@ function mergeGroup() {
     else if (MODE === '--merge-group') mergeGroup();
     else throw new Error(`UNKNOWN_MODE:${MODE}`);
   } catch (error) {
-    const result = { schema_version: 'geox_mcft_candidate_declaration_integrity_v2_1_result_v1', status: 'FAIL', mode: MODE, error: error instanceof Error ? error.message : String(error) };
-    writeResult(result); console.error(JSON.stringify(result, null, 2)); process.exitCode = 1;
+    const result = { schema_version: 'geox_mcft_candidate_declaration_integrity_v2_2_result_v1', status: 'FAIL', mode: MODE, error: error instanceof Error ? error.message : String(error) };
+    writeResult(result);
+    console.error(JSON.stringify(result, null, 2));
+    process.exitCode = 1;
   }
 })();
