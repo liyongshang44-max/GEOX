@@ -19,7 +19,7 @@ function sha256(value) {
 function main() {
   const generated = cp.spawnSync(
     process.execPath,
-    ['scripts/governance_acceptance/GENERATE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_LEDGER.cjs'],
+    ['scripts/governance_acceptance/NORMALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_LEDGER.cjs'],
     {
       cwd: ROOT,
       env: { ...process.env, MCFT_CAP_06_LEDGER_MODE: MODE },
@@ -30,7 +30,7 @@ function main() {
   if (generated.status !== 0) {
     process.stderr.write(generated.stdout || '');
     process.stderr.write(generated.stderr || '');
-    throw new Error(`ITEM_LEDGER_GENERATOR_FAILED:${generated.status}`);
+    throw new Error(`ITEM_LEDGER_NORMALIZER_FAILED:${generated.status}`);
   }
 
   const source = JSON.parse(fs.readFileSync(SOURCE, 'utf8'));
