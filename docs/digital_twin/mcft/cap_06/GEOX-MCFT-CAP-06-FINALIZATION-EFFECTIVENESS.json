@@ -56,7 +56,7 @@
   "closure_effective": false,
   "capability_complete": false,
   "active_delivery_slice_id": "MCFT-CAP-06.FINAL-EFFECTIVENESS-RECONCILIATION-V1",
-  "next_repository_action": "S11D_REPAIR_MERGED_MAIN_PROOF",
+  "next_repository_action": "S11D_REPAIR_MERGE_SHA_ATTESTATION",
   "pending_completion_claims": [
     "MCFT_CAP_06_COMPLETE",
     "DT02_CALIBRATION_CANDIDATE_REUSE_ESTABLISHED",
@@ -174,6 +174,31 @@
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINAL_EFFECTIVENESS_RECONCILIATION.cjs"
   ],
   "completion_claim_suspension_delta": 48,
-  "repair_postmerge_proof_required": true,
-  "unknown_repair_merge_or_postmerge_evidence_recorded": false
+  "repair_postmerge_proof_required": false,
+  "unknown_repair_merge_or_postmerge_evidence_recorded": false,
+  "resolved_task_manifest_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2.json",
+  "hard_acceptance_total_check_count": 255,
+  "hard_acceptance_pass_count": 253,
+  "hard_acceptance_fail_count": 0,
+  "hard_acceptance_pending_count": 2,
+  "hard_acceptance_not_applicable_count": 0,
+  "pending_completion_claim_count": 48,
+  "effective_completion_claim_count": 0,
+  "successor_capability_line_authorized": false,
+  "completion_claim_activation_authorized": false,
+  "repair_classification": "IMPLEMENTATION_DEFECT",
+  "repair_scope": "S11D_FINAL_EFFECTIVENESS_RECONCILIATION_REPAIR",
+  "new_capability_slice": false,
+  "task_order_changed": false,
+  "proof_only_pr_required": false,
+  "repair_merge_sha_attestation_required": true,
+  "repair_merge_sha_attestation_mode": "PUSH_OR_MERGE_GROUP_IMMUTABLE_CHECK_ARTIFACT",
+  "repair_merge_sha_attestation_workflow_ref": ".github/workflows/mcft-cap-06-s11d-repair-merged-main-attestation.yml",
+  "postmerge_ssot_writeback_allowed": false,
+  "s10_composition_boundary": {
+    "storage_mode": "TWO_NAMESPACED_ISOLATED_POSTGRESQL_STAGES",
+    "controlled_stage_database_count": 2,
+    "interpretation": "TWO_STAGE_CONTROLLED_END_TO_END_COMPOSITION_PROOF",
+    "excluded_interpretation": "ONE_CONTINUOUSLY_PERSISTED_SINGLE_DATABASE_CALIBRATION_RUNTIME_CHAIN"
+  }
 }

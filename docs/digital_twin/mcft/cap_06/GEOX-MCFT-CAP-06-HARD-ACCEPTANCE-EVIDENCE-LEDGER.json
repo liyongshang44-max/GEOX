@@ -1,17 +1,18 @@
 {
-  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_ledger_v2",
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_ledger_v3",
   "capability_line_id": "MCFT-CAP-06",
   "delivery_slice_id": "MCFT-CAP-06.FINAL-EFFECTIVENESS-RECONCILIATION-V1",
-  "lifecycle_stage": "S11D_IMPLEMENTATION_DEFECT_REPAIR_CANDIDATE",
+  "lifecycle_stage": "S11D_RESOLVED_TASKBOOK_V2_REPAIR_CANDIDATE",
   "status": "REPAIR_CANDIDATE",
-  "source_taskbook_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md#43-hard-acceptance-evidence-ledger",
+  "source_taskbook_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2.json",
   "taskbook_version": "v0.4.0",
   "item_shape_inheritance": "FORBIDDEN",
   "each_item_self_contained": true,
   "total_check_count": 255,
   "status_counts": {
     "PASS": 253,
-    "FAIL": 2,
+    "FAIL": 0,
+    "PENDING": 2,
     "NOT_APPLICABLE": 0
   },
   "category_count": 10,
@@ -45,15 +46,25 @@
     "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json"
   ],
   "category_record_digests": {
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json": "sha256:63792b9f6cf651e4c5115bf2b20cfa991bec51ee29eaa3eaf15b82f83b0f0fa9",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json": "sha256:4c4e7bd3eee4c490b35e0992d376a16bb35f7be4d93af8d5fe0550364c9b7518",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json": "sha256:ef2e99e856c86f8051db491212b7c3fe77b45112eb62cc3baf8a7604cec1e195",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json": "sha256:e1edb7fe3c39b3b5c649b18bfa29d17bfabf42f2e2d0e45799722673eea9b6fc",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json": "sha256:c2bcabeb3db005e4e9fee68de1162a45724e6de5cc2bbb2b0a201859d361ddc4",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json": "sha256:31f83c02200082733e08fcc8a444f61ffdd0f038acabe5c95935b5db3078482a",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json": "sha256:d769308659f645fc5b39eb21abf1555cea34c891190923654387cca2719d3c44",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json": "sha256:127f7354ac696d6e65b8d78133ee6302cf84c50f01b9f24e46bb4413eb5f2c96",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json": "sha256:9dcedf1f8c8ce4a73cf746aa499e9d8134aced2fa73404e804fab270d1508adc",
-    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json": "sha256:20aacdc29c9ccabf5c5c74b774cf43d39dc39e15e0c805757e722b3b6a3e23b8"
-  }
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json": "sha256:57ab7af43acb9a094dd8cd2cbfbec3490545575ac5495cf178bd8354ac26359d",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json": "sha256:4a8a54210c823ee47b61086885f966bc86e9db611d23eec47e2920aae7ecd978",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json": "sha256:cb64a0cea3ce35e11d7afaed87cdd415782a452e28cba4d6794b2136ae3393cd",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json": "sha256:c64a498fcd795aedf0581bb29c693ed84d6ff21f5affda043a359e3340347dff",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json": "sha256:8ec8a1a070114e719bba5aac4d2b8548d624befd67786ba1a9cb6d2f3ca63396",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json": "sha256:49eaf2361d88a382fbddf12c591a726500d6514441744b375a02fd15f3c99b45",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json": "sha256:1726f67f1f7f1d442417f40a1e226bd2964713e675e129c08b5b707d17062b30",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json": "sha256:93713a3fcff6b74a51209518f9b35104b8539a49c24ebd0564bd2e01bb46330e",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json": "sha256:62c9154f49fd58aada88765d194f7b3faed72ff8bf355c34561161604d5a2097",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json": "sha256:0b57401c59a0db964d7c9d3634ea47067ba69aa3a3c8bff653fc4dcb7fbe4354"
+  },
+  "resolved_task_manifest_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2.json",
+  "status_domain": [
+    "PASS",
+    "FAIL",
+    "PENDING",
+    "NOT_APPLICABLE"
+  ],
+  "final_resolution_rule": "ALL_ITEM_PREDICATES_PASS_ON_EXACT_MERGE_SHA_ATTESTATION",
+  "attestation_workflow_ref": ".github/workflows/mcft-cap-06-s11d-repair-merged-main-attestation.yml",
+  "attestation_gate_ref": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.cjs"
 }

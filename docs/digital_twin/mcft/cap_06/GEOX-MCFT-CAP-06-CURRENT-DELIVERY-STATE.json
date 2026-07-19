@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap_06_current_delivery_state_v1",
   "capability_line_id": "MCFT-CAP-06",
-  "record_kind": "MUTABLE_DELIVERY_FRONTIER",
+  "record_kind": "HISTORICAL_DELIVERY_FRONTIER_SNAPSHOT",
   "baseline_effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json",
   "baseline_main_commit": "c52ddd97ddf190db78ded6571263d7a0cc64ece6",
   "status": "S7_SHADOW_EVALUATION_MERGED_EFFECTIVE_S8_AUTHORIZED_NOT_STARTED",
@@ -221,5 +221,11 @@
     "postmerge_workflow_run": 29575857015,
     "postmerge_gate": "PASS",
     "effectiveness_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-PREDECESSOR-EFFECTIVENESS.json"
-  }
+  },
+  "record_status": "HISTORICAL_SUPERSEDED_FOR_CURRENT_FRONTIER",
+  "historical_snapshot": true,
+  "current_frontier_authority": false,
+  "superseded_by": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json",
+  "supersession_reason": "CURRENT_DELIVERY_AUTHORITY_V2_IS_THE_SOLE_MUTABLE_DELIVERY_FRONTIER",
+  "historical_record_kind": "MUTABLE_DELIVERY_FRONTIER"
 }

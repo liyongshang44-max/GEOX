@@ -1,9 +1,9 @@
 {
-  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_category_v2",
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_category_v3",
   "capability_line_id": "MCFT-CAP-06",
   "acceptance_category_id": "MCFT_CAP_06_HARD_CATEGORY_F",
   "category": "NUMERIC_SENSITIVITY_AND_SEARCH_MATH",
-  "lifecycle_stage": "S11D_IMPLEMENTATION_DEFECT_REPAIR_CANDIDATE",
+  "lifecycle_stage": "S11D_RESOLVED_TASKBOOK_V2_REPAIR_CANDIDATE",
   "status": "PASS",
   "item_shape_inheritance": "FORBIDDEN",
   "each_item_self_contained": true,
@@ -11,6 +11,7 @@
   "status_counts": {
     "PASS": 25,
     "FAIL": 0,
+    "PENDING": 0,
     "NOT_APPLICABLE": 0
   },
   "items": [
@@ -36,11 +37,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_001",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_001_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Runtime storage/water scale remains 6",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_002",
@@ -64,11 +78,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_002",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_002_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Runtime variance scale remains 12",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_003",
@@ -92,11 +119,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_003",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_003_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "calibration VWC metric scale is 9",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_004",
@@ -120,11 +160,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_004",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_004_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "squared-error accumulator scale is 18",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_005",
@@ -148,11 +201,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_005",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_005_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "half-away-from-zero policy is frozen",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_006",
@@ -176,11 +242,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_006",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_006_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "host floating-point epsilon is not authority",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_007",
@@ -204,11 +283,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_007",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_007_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "display-rounded metrics are not Gate authority",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_008",
@@ -232,11 +324,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_008",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_008_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "candidate ranking primary authority is exact MSE",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_009",
@@ -260,11 +365,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_009",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_009_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "integer sqrt algorithm is frozen for RMSE display",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_010",
@@ -288,11 +406,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_010",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_010_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "grid starts at 0.020000",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_011",
@@ -316,11 +447,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_011",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_011_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "grid ends at 0.040000",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_012",
@@ -344,11 +488,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_012",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_012_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "grid step is 0.001000",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_013",
@@ -372,11 +529,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_013",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_013_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "grid has exactly 21 points",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_014",
@@ -400,11 +570,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_014",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_014_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "each grid point replays identical 16 cases",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_015",
@@ -428,11 +611,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_015",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_015_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "only drainage coefficient differs",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_016",
@@ -456,11 +652,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_016",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_016_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "prediction span is computed for every case",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_017",
@@ -484,11 +693,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_017",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_017_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "sensitivity epsilon is 0.000001000 VWC",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_018",
@@ -512,11 +734,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_018",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_018_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "at least 4 cases are sensitive",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_019",
@@ -540,11 +775,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_019",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_019_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "wetness regime formula has no undefined epsilon",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_020",
@@ -568,11 +816,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_020",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_020_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "at least 2 sensitive wetness regimes are represented",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_021",
@@ -596,11 +857,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_021",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_021_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "objective MSE range threshold is frozen",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_022",
@@ -624,11 +898,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_022",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_022_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "best-vs-second MSE margin threshold is frozen",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_023",
@@ -652,11 +939,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_023",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_023_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "secondary metric is absolute mean bias",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_024",
@@ -680,11 +980,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_024",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_024_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "tertiary metric is maximum absolute residual",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_F_025",
@@ -708,11 +1021,24 @@
         29504752806,
         29506065728
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_F_025",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S2_CONTRACTS_AND_MATH",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_F_025_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "tie-break minimizes delta from base then lower value",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S2_CONTRACTS_MATH.cjs"
+        ]
+      },
+      "subject_commit": "b6d28477d87239ee417c688d43122cb7a20b1a31"
     }
   ]
 }

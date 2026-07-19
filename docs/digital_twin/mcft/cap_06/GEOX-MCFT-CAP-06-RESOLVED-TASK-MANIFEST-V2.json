@@ -1,0 +1,658 @@
+{
+  "schema_version": "geox_mcft_cap_06_resolved_task_manifest_v2",
+  "capability_line_id": "MCFT-CAP-06",
+  "manifest_id": "MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2",
+  "record_status": "EFFECTIVE_RESOLVED_AUTHORITY",
+  "effective_taskbook_version": "v0.4.0",
+  "canonical_entrypoint": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md",
+  "historical_base_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-v0.3.1.md",
+  "normative_revision_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-v0.4.0-REVISION.md",
+  "current_delivery_authority_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json",
+  "hard_acceptance_ledger_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json",
+  "required_deliverables_manifest_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-REQUIRED-DELIVERABLES-MANIFEST.json",
+  "resolution_policy": {
+    "precedence": [
+      "RESOLVED_TASK_MANIFEST_V2",
+      "NORMATIVE_REVISION_V0_4_0",
+      "HISTORICAL_BASE_V0_3_1"
+    ],
+    "direct_historical_task_parsing_forbidden": true,
+    "closure_gates_must_consume_resolved_manifest": true,
+    "legacy_frontier_files_are_historical": true
+  },
+  "applied_amendments": [
+    {
+      "ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-v0.4.0-REVISION.md",
+      "classification": "TASKBOOK_DESIGN_DEFECT",
+      "effect": "removes ad hoc prerequisite nodes and separates delivery policy from capability graph"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-AMENDMENT-S4-PREDECESSOR-CONSUMPTION-V1.md",
+      "classification": "HISTORICAL_APPLIED_AMENDMENT",
+      "effect": "exact-ref predecessor consumption stabilization"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-AMENDMENT-S5-ENTRY-CONTROLS-V1.md",
+      "classification": "HISTORICAL_ABSORBED_INTO_ENTRY_CRITERIA",
+      "effect": "authority graph and PR hygiene no longer form a normative capability node"
+    }
+  ],
+  "capability_result_boundary": {
+    "target_level": "LEVEL_A_DETERMINISTIC_REPLAY_TWIN",
+    "technical_capability": "COMPLETE",
+    "capability_nature": "CONTROLLED_DETERMINISTIC_CALIBRATION_MECHANISM",
+    "repository_history_calibration_capability": "NOT_ESTABLISHED",
+    "production_runtime_capability": "NOT_ESTABLISHED",
+    "field_calibration_claim": false,
+    "statistical_generalization_claim": false,
+    "shadow_online_claim": false,
+    "model_activation_claim": false
+  },
+  "resolved_slice_graph": [
+    {
+      "sequence": 1,
+      "short_id": "P-1",
+      "slice_id": "MCFT-CAP-06.P-1.DT02-CALIBRATION-SHADOW-ADJUDICATION-V1",
+      "inputs": [
+        "DT-02 frozen object set",
+        "DT-02 D_MODEL_GOVERNANCE_STEP_COMMIT"
+      ],
+      "outputs": [
+        "Candidate/Evaluation object reuse adjudication",
+        "Model Activation exclusion"
+      ],
+      "canonical_writes": [],
+      "consumer": "P0 and S0",
+      "successor_probe": "P-1 status and object adjudication Gate",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "entry_conditions": [
+        "DT-02 architecture frozen"
+      ],
+      "exit_conditions": [
+        "reuse without amendment established"
+      ],
+      "nonclaims": [
+        "NO_MODEL_ACTIVATION"
+      ]
+    },
+    {
+      "sequence": 2,
+      "short_id": "P0",
+      "slice_id": "MCFT-CAP-06.P0.CAP-05-TERMINAL-SSOT-RECONCILIATION-AND-PROVISIONAL-SSOT-V1",
+      "inputs": [
+        "MCFT-CAP-05 terminal closure evidence"
+      ],
+      "outputs": [
+        "predecessor terminal reconciliation",
+        "CAP-06 provisional authority"
+      ],
+      "canonical_writes": [],
+      "consumer": "S0",
+      "successor_probe": "CAP-05 COMPLETE and successor boundary probe",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P0-STATUS.json"
+      ],
+      "entry_conditions": [
+        "CAP-05 closure effective"
+      ],
+      "exit_conditions": [
+        "predecessor eligibility restored"
+      ],
+      "nonclaims": [
+        "NO_CAP_05_REOPEN"
+      ]
+    },
+    {
+      "sequence": 3,
+      "short_id": "S0",
+      "slice_id": "MCFT-CAP-06.GOV-AUTHORIZATION-PREDECESSOR-AND-DATASET-QUALIFICATION-V1",
+      "inputs": [
+        "repository Forecast Residual history",
+        "predecessor lock"
+      ],
+      "outputs": [
+        "honest repository-history qualification"
+      ],
+      "canonical_writes": [],
+      "consumer": "S1",
+      "successor_probe": "qualification result and homogeneity probe",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "entry_conditions": [
+        "predecessor lock PASS"
+      ],
+      "exit_conditions": [
+        "INSUFFICIENT_MATCHED_PAIRS is accepted honest result"
+      ],
+      "nonclaims": [
+        "NO_FIELD_CALIBRATION_CLAIM"
+      ]
+    },
+    {
+      "sequence": 4,
+      "short_id": "S1",
+      "slice_id": "MCFT-CAP-06.MCFT-01-03-11.CANONICAL-RESIDUAL-WINDOWS-V1",
+      "inputs": [
+        "controlled deterministic fixture regime"
+      ],
+      "outputs": [
+        "24 Residuals",
+        "16 calibration cases",
+        "8 holdout cases"
+      ],
+      "canonical_writes": [
+        "24 controlled twin_forecast_residual_v1 facts"
+      ],
+      "consumer": "S2, S5 and S6",
+      "successor_probe": "successor consumability and window separation probe",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S1-RESIDUAL-WINDOWS.json"
+      ],
+      "entry_conditions": [
+        "controlled track isolated"
+      ],
+      "exit_conditions": [
+        "successor readiness PASS"
+      ],
+      "nonclaims": [
+        "CONTROLLED_FIXTURE_NOT_FIELD_HISTORY"
+      ]
+    },
+    {
+      "sequence": 5,
+      "short_id": "S2",
+      "slice_id": "MCFT-CAP-06.MCFT-02-06-07-09-11-12.CALIBRATION-SHADOW-CONTRACTS-MATH-V1",
+      "inputs": [
+        "S1 case set",
+        "fixed Runtime and metric numeric policies"
+      ],
+      "outputs": [
+        "21-point grid search contract",
+        "fixed-point metrics",
+        "sensitivity and threshold policy"
+      ],
+      "canonical_writes": [],
+      "consumer": "S3 and S5",
+      "successor_probe": "math determinism and negative disposition probe",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S2-EFFECTIVENESS.json"
+      ],
+      "entry_conditions": [
+        "S1 successor readiness PASS"
+      ],
+      "exit_conditions": [
+        "contract/math acceptance PASS"
+      ],
+      "nonclaims": [
+        "NO_CANONICAL_WRITE"
+      ]
+    },
+    {
+      "sequence": 6,
+      "short_id": "S3",
+      "slice_id": "MCFT-CAP-06.MCFT-03-12.D-GOVERNANCE-PERSISTENCE-RECOVERY-V1",
+      "inputs": [
+        "DT-02 Candidate/Evaluation contracts"
+      ],
+      "outputs": [
+        "D transaction persistence",
+        "idempotency",
+        "concurrency",
+        "recovery",
+        "rebuildable projections"
+      ],
+      "canonical_writes": [
+        "schema migration only; no production Candidate/Evaluation append"
+      ],
+      "consumer": "S5, S7 and S8",
+      "successor_probe": "persistence/recovery acceptance",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S3-EFFECTIVENESS.json"
+      ],
+      "entry_conditions": [
+        "S2 contracts effective"
+      ],
+      "exit_conditions": [
+        "D persistence and recovery PASS"
+      ],
+      "nonclaims": [
+        "NO_MODEL_ACTIVATION"
+      ]
+    },
+    {
+      "sequence": 7,
+      "short_id": "S4",
+      "slice_id": "MCFT-CAP-06.MCFT-02-03-04-05-09-11.PREDECESSOR-CONSUMPTION-STABILIZATION-V1",
+      "inputs": [
+        "exact Residual refs",
+        "Forecast/Observation evidence graph",
+        "config purpose"
+      ],
+      "outputs": [
+        "exact-ref graph assembler",
+        "dual-time and config-purpose deterministic dispatch"
+      ],
+      "canonical_writes": [],
+      "consumer": "S5 and S6",
+      "successor_probe": "exact-ref and no-side-lookup probe",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S4-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-PREDECESSOR-AUTHORITY-GRAPH-V2.json"
+      ],
+      "entry_conditions": [
+        "S3 persistence effective"
+      ],
+      "exit_conditions": [
+        "exact graph assembly PASS"
+      ],
+      "nonclaims": [
+        "NO_LATEST_RANGE_SCOPE_LOOKUP"
+      ]
+    },
+    {
+      "sequence": 8,
+      "short_id": "S5",
+      "slice_id": "MCFT-CAP-06.MCFT-06-09-11-12.CALIBRATION-CANDIDATE-COMPUTE-COMMIT-V1",
+      "inputs": [
+        "16 calibration cases",
+        "S2 math",
+        "S3 persistence",
+        "S4 exact-ref assembler"
+      ],
+      "outputs": [
+        "Candidate 0.034000"
+      ],
+      "canonical_writes": [
+        "1 controlled twin_calibration_candidate_v1"
+      ],
+      "consumer": "S6, S9 and S10",
+      "successor_probe": "Candidate canonicality and non-activation probe",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S5-CANDIDATE-EFFECTIVENESS.json"
+      ],
+      "entry_conditions": [
+        "S1-S4 effective"
+      ],
+      "exit_conditions": [
+        "Candidate append and replay idempotency PASS"
+      ],
+      "nonclaims": [
+        "NO_ACTIVE_CONFIG_SWITCH"
+      ]
+    },
+    {
+      "sequence": 9,
+      "short_id": "S6",
+      "slice_id": "MCFT-CAP-06.MCFT-06-09-11-12.PAIRED-HISTORICAL-SHADOW-COMPUTE-V1",
+      "inputs": [
+        "Candidate exact ref/hash",
+        "8 holdout cases"
+      ],
+      "outputs": [
+        "paired base/candidate historical replay summaries"
+      ],
+      "canonical_writes": [],
+      "consumer": "S7",
+      "successor_probe": "zero-write shadow compute and threshold probe",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S6-PAIRED-SHADOW-EFFECTIVENESS.json"
+      ],
+      "entry_conditions": [
+        "S5 Candidate effective"
+      ],
+      "exit_conditions": [
+        "8 holdout cases evaluated"
+      ],
+      "nonclaims": [
+        "NO_SHADOW_ONLINE_RUNTIME"
+      ]
+    },
+    {
+      "sequence": 10,
+      "short_id": "S7",
+      "slice_id": "MCFT-CAP-06.MCFT-03-12.SHADOW-EVALUATION-COMMIT-V1",
+      "inputs": [
+        "S6 case summaries",
+        "Candidate exact ref/hash"
+      ],
+      "outputs": [
+        "Shadow Evaluation canonical aggregate"
+      ],
+      "canonical_writes": [
+        "1 controlled twin_shadow_evaluation_v1"
+      ],
+      "consumer": "S8, S9 and S10",
+      "successor_probe": "Evaluation canonicality and non-activation probe",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S7-SHADOW-EVALUATION-EFFECTIVENESS.json"
+      ],
+      "entry_conditions": [
+        "S6 compute PASS"
+      ],
+      "exit_conditions": [
+        "Evaluation append/recovery PASS"
+      ],
+      "nonclaims": [
+        "NO_APPROVAL",
+        "NO_MODEL_ACTIVATION"
+      ]
+    },
+    {
+      "sequence": 11,
+      "short_id": "S8",
+      "slice_id": "MCFT-CAP-06.MCFT-03-04-12.RESTART-READBACK-REBUILD-V1",
+      "inputs": [
+        "Candidate/Evaluation canonical facts and projections"
+      ],
+      "outputs": [
+        "fresh-process readback",
+        "projection rebuild",
+        "wrong-hash fail closed"
+      ],
+      "canonical_writes": [],
+      "consumer": "S9 and S10",
+      "successor_probe": "restart/rebuild deterministic probe",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S8-RESTART-READBACK-REBUILD-EFFECTIVENESS.json"
+      ],
+      "entry_conditions": [
+        "S7 Evaluation effective"
+      ],
+      "exit_conditions": [
+        "restart and rebuild PASS"
+      ],
+      "nonclaims": [
+        "NO_HISTORY_REWRITE"
+      ]
+    },
+    {
+      "sequence": 12,
+      "short_id": "S9",
+      "slice_id": "MCFT-CAP-06.MCFT-04-06-08-09-12.POST-EVALUATION-NON-CONSUMPTION-TICK-V1",
+      "inputs": [
+        "active Runtime Config 0.030000",
+        "Candidate 0.034000",
+        "Evaluation exact ref/hash"
+      ],
+      "outputs": [
+        "normal 72-point Forecast and 3x72 Scenario",
+        "non-consumption evidence"
+      ],
+      "canonical_writes": [
+        "normal Tick outputs only; no Candidate/Evaluation/Activation writes"
+      ],
+      "consumer": "S10",
+      "successor_probe": "before/after Runtime authority snapshot probe",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-NON-CONSUMPTION-EFFECTIVENESS.json"
+      ],
+      "entry_conditions": [
+        "S8 recovery effective"
+      ],
+      "exit_conditions": [
+        "Tick remains on 0.030000 and activation count 0"
+      ],
+      "nonclaims": [
+        "NO_CANDIDATE_CONSUMPTION"
+      ]
+    },
+    {
+      "sequence": 13,
+      "short_id": "S10",
+      "slice_id": "MCFT-CAP-06.MCFT-04-12-16.BOUNDED-CALIBRATION-SHADOW-CLOSURE-V1",
+      "inputs": [
+        "S1-S9 controlled evidence"
+      ],
+      "outputs": [
+        "two-stage controlled end-to-end composition proof",
+        "completed replay zero-write"
+      ],
+      "canonical_writes": [
+        "R + C + 12 = 36 controlled canonical facts across two isolated PostgreSQL stages"
+      ],
+      "consumer": "S11A",
+      "successor_probe": "identity continuity, scope continuity and zero-write replay probe",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "entry_conditions": [
+        "S9 effective"
+      ],
+      "exit_conditions": [
+        "R=24, C=0, delta=36, zero divergence"
+      ],
+      "nonclaims": [
+        "NOT_A_SINGLE_CONTINUOUS_DATABASE_CHAIN",
+        "NO_FIELD_RUNTIME_CLAIM"
+      ]
+    },
+    {
+      "sequence": 14,
+      "short_id": "S11A",
+      "slice_id": "MCFT-CAP-06.CLOSURE-CANDIDATE-V1",
+      "inputs": [
+        "S0-S10 evidence",
+        "Hard Acceptance ledger"
+      ],
+      "outputs": [
+        "closure candidate with completion claims pending"
+      ],
+      "canonical_writes": [],
+      "consumer": "S11B/S11C",
+      "successor_probe": "closure candidate Gate",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11A-CLOSURE-CANDIDATE-STATUS.json"
+      ],
+      "entry_conditions": [
+        "S10 effective"
+      ],
+      "exit_conditions": [
+        "candidate closure evidence materialized"
+      ],
+      "nonclaims": [
+        "NO_EFFECTIVE_COMPLETION_CLAIMS"
+      ]
+    },
+    {
+      "sequence": 15,
+      "short_id": "S11B",
+      "slice_id": "MCFT-CAP-06.CLOSURE-MERGED-MAIN-FINALIZATION-GATE-V1",
+      "inputs": [
+        "S11A merge evidence"
+      ],
+      "outputs": [
+        "historical merged-main finalization evidence"
+      ],
+      "canonical_writes": [],
+      "consumer": "S11C",
+      "successor_probe": "historical S11B finalization evidence",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINALIZATION-EFFECTIVENESS.json"
+      ],
+      "entry_conditions": [
+        "S11A merged"
+      ],
+      "exit_conditions": [
+        "historical finalization Gate PASS"
+      ],
+      "nonclaims": [
+        "NO_RUNTIME_WRITE"
+      ]
+    },
+    {
+      "sequence": 16,
+      "short_id": "S11C",
+      "slice_id": "MCFT-CAP-06.CAPABILITY-COMPLETION-EFFECTIVENESS-ACTIVATION-V1",
+      "inputs": [
+        "S11A/S11B evidence"
+      ],
+      "outputs": [
+        "capability completion effectiveness history"
+      ],
+      "canonical_writes": [],
+      "consumer": "S11D",
+      "successor_probe": "S11C exact-head and merged-main evidence",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11C-CAPABILITY-COMPLETION-EFFECTIVENESS-ACTIVATION-STATUS.json"
+      ],
+      "entry_conditions": [
+        "S11B PASS"
+      ],
+      "exit_conditions": [
+        "historical S11C merged-main proof retained"
+      ],
+      "nonclaims": [
+        "NOT_MODEL_ACTIVATION"
+      ]
+    },
+    {
+      "sequence": 17,
+      "short_id": "S11D",
+      "slice_id": "MCFT-CAP-06.FINAL-EFFECTIVENESS-RECONCILIATION-V1",
+      "inputs": [
+        "resolved task manifest V2",
+        "item-level ledger V2",
+        "required deliverables manifest",
+        "merge-SHA attestation policy"
+      ],
+      "outputs": [
+        "final reconciliation repair candidate"
+      ],
+      "canonical_writes": [],
+      "consumer": null,
+      "successor_probe": "push/merge_group exact merge SHA immutable attestation",
+      "authority_graph_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11D-CLOSURE-REPAIR-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2.json",
+        ".github/workflows/mcft-cap-06-s11d-repair-merged-main-attestation.yml",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.cjs"
+      ],
+      "entry_conditions": [
+        "P0-P2 closure repair complete"
+      ],
+      "exit_conditions": [
+        "255 item predicates resolvable; no proof-only PR required"
+      ],
+      "nonclaims": [
+        "NO_MCFT_CAP_07_AUTHORIZATION",
+        "NO_POSTMERGE_SSOT_WRITEBACK"
+      ]
+    }
+  ],
+  "completion_claims": {
+    "count": 48,
+    "claim_ids": [
+      "MCFT_CAP_06_COMPLETE",
+      "DT02_CALIBRATION_CANDIDATE_REUSE_ESTABLISHED",
+      "DT02_SHADOW_EVALUATION_REUSE_ESTABLISHED",
+      "DT02_D_MODEL_GOVERNANCE_REUSE_ESTABLISHED",
+      "CONTROLLED_REPLAY_SINGLE_PARAMETER_DRAINAGE_CALIBRATION_ESTABLISHED",
+      "CALIBRATION_HOLDOUT_DUAL_TIME_SEPARATION_ESTABLISHED",
+      "ZERO_FUTURE_LEAKAGE_ESTABLISHED",
+      "PASS_ONLY_STANDARD_CALIBRATION_DATASET_ESTABLISHED",
+      "CANONICAL_FORECAST_POINT_TRACE_REPLAY_AUTHORITY_ESTABLISHED",
+      "EXACT_REF_ONLY_CALIBRATION_DATA_PORT_ESTABLISHED",
+      "BASE_FORECAST_REPLAY_REPRODUCTION_ESTABLISHED",
+      "RUNTIME_AND_METRIC_NUMERIC_POLICY_SEPARATION_ESTABLISHED",
+      "MODEL_CONFIG_HOMOGENEITY_GATE_ESTABLISHED",
+      "FIXED_POINT_CALIBRATION_METRICS_ESTABLISHED",
+      "EXACT_MSE_CANDIDATE_SELECTION_ESTABLISHED",
+      "PARAMETER_SENSITIVITY_GATE_ESTABLISHED",
+      "WETNESS_REGIME_EXCITATION_GATE_ESTABLISHED",
+      "OBJECTIVE_SURFACE_FLATNESS_GATE_ESTABLISHED",
+      "BEST_SECOND_MARGIN_GATE_ESTABLISHED",
+      "SEARCH_BOUNDARY_HIT_INCONCLUSIVE_ESTABLISHED",
+      "ERROR_CLASSIFICATION_SUMMARY_ESTABLISHED",
+      "UNCERTAINTY_UNCHANGED_BOUNDARY_ESTABLISHED",
+      "CONTROLLED_REPLAY_BOUNDED_NONZERO_CANDIDATE_ESTABLISHED",
+      "CANONICAL_NOOP_CANDIDATE_ESTABLISHED",
+      "CANDIDATE_NON_ACTIVATION_BOUNDARY_ESTABLISHED",
+      "CANDIDATE_D_TRANSACTION_IDEMPOTENCY_ESTABLISHED",
+      "CANDIDATE_CONCURRENT_IDEMPOTENCY_ESTABLISHED",
+      "CANDIDATE_CANONICAL_RECOVERY_ESTABLISHED",
+      "PAIRED_HISTORICAL_REPLAY_SHADOW_ESTABLISHED",
+      "ZERO_WRITE_SHADOW_COMPUTE_ESTABLISHED",
+      "EMBEDDED_SHADOW_CASE_RESULTS_ESTABLISHED",
+      "EXACT_SHADOW_THRESHOLD_EVALUATION_ESTABLISHED",
+      "BASELINE_ZERO_METRIC_POLICY_ESTABLISHED",
+      "SHADOW_REVIEW_ELIGIBILITY_ESTABLISHED",
+      "SHADOW_EVALUATION_NON_ACTIVATION_BOUNDARY_ESTABLISHED",
+      "EVALUATION_D_TRANSACTION_IDEMPOTENCY_ESTABLISHED",
+      "EVALUATION_CONCURRENT_IDEMPOTENCY_ESTABLISHED",
+      "EVALUATION_CANONICAL_RECOVERY_ESTABLISHED",
+      "EXPLICIT_REPLAY_CONFIG_AUTHORITY_PRESERVED",
+      "ACTIVE_BINDING_NULLABLE_SEMANTICS_ESTABLISHED",
+      "POST_EVALUATION_BASE_PARAMETER_TICK_ESTABLISHED",
+      "CANDIDATE_NON_CONSUMPTION_ESTABLISHED",
+      "CONTROLLED_FIXTURE_REPOSITORY_HISTORY_SEPARATION_ESTABLISHED",
+      "REPOSITORY_HISTORY_QUALIFICATION_EXECUTED",
+      "CONTROLLED_REPLAY_CALIBRATION_SHADOW_CHAIN_PERSISTED",
+      "COMPLETED_CHAIN_ZERO_WRITE_REPLAY_ESTABLISHED",
+      "FINAL_EFFECTIVENESS_RECONCILIATION_ESTABLISHED",
+      "MCFT_CAP_07_REMAINS_UNAUTHORIZED"
+    ],
+    "effective_count": 0,
+    "pending_count": 48,
+    "activation_condition": "ALL_255_ITEM_PREDICATES_PASS_ON_EXACT_MERGE_SHA_ATTESTATION"
+  },
+  "hard_acceptance": {
+    "item_count": 255,
+    "status_domain": [
+      "PASS",
+      "FAIL",
+      "PENDING",
+      "NOT_APPLICABLE"
+    ],
+    "status_counts": {
+      "PASS": 253,
+      "FAIL": 0,
+      "PENDING": 2,
+      "NOT_APPLICABLE": 0
+    },
+    "item_shape_inheritance": "FORBIDDEN",
+    "each_item_requires": [
+      "acceptance_id",
+      "lifecycle_phase",
+      "status",
+      "predicate",
+      "evidence_refs",
+      "workflow_refs",
+      "subject_commit",
+      "canonical_refs",
+      "notes"
+    ]
+  },
+  "closure_delivery_policy": {
+    "proof_only_pr_required": false,
+    "exact_merge_sha_attestation_required": true,
+    "attestation_triggers": [
+      "merge_group",
+      "push:main"
+    ],
+    "attestation_workflow_ref": ".github/workflows/mcft-cap-06-s11d-repair-merged-main-attestation.yml",
+    "attestation_gate_ref": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.cjs",
+    "immutable_artifact_required": true,
+    "postmerge_ssot_writeback_allowed": false
+  },
+  "s10_composition_boundary": {
+    "storage_mode": "TWO_NAMESPACED_ISOLATED_POSTGRESQL_STAGES",
+    "controlled_stage_database_count": 2,
+    "interpretation": "TWO_STAGE_CONTROLLED_END_TO_END_COMPOSITION_PROOF",
+    "excluded_interpretation": "ONE_CONTINUOUSLY_PERSISTED_SINGLE_DATABASE_CALIBRATION_RUNTIME_CHAIN"
+  },
+  "pre_mcft_cap_07_repository_foundation_repairs": {
+    "capability_prerequisite_slice": false,
+    "successor_authorized": false,
+    "required_workstreams": [
+      "AUTOMATIC_MERGE_SHA_ATTESTATION",
+      "STABLE_RELEASE_LANE",
+      "GENERIC_DELIVERY_POLICY"
+    ]
+  }
+}

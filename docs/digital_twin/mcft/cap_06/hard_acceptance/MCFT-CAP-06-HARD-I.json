@@ -1,9 +1,9 @@
 {
-  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_category_v2",
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_category_v3",
   "capability_line_id": "MCFT-CAP-06",
   "acceptance_category_id": "MCFT_CAP_06_HARD_CATEGORY_I",
   "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
-  "lifecycle_stage": "S11D_IMPLEMENTATION_DEFECT_REPAIR_CANDIDATE",
+  "lifecycle_stage": "S11D_RESOLVED_TASKBOOK_V2_REPAIR_CANDIDATE",
   "status": "PASS",
   "item_shape_inheritance": "FORBIDDEN",
   "each_item_self_contained": true,
@@ -11,6 +11,7 @@
   "status_counts": {
     "PASS": 17,
     "FAIL": 0,
+    "PENDING": 0,
     "NOT_APPLICABLE": 0
   },
   "items": [
@@ -54,11 +55,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_001",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_001_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "config authority mode is explicit",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_002",
@@ -100,11 +115,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_002",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_002_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "active-binding absence is represented as NOT_ESTABLISHED with null refs",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_003",
@@ -146,11 +175,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_003",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_003_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "no active-binding implementation claim is made when absent",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_004",
@@ -192,11 +235,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_004",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_004_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "no twin_model_activation_v1 is appended",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_005",
@@ -238,11 +295,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_005",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_005_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "no active-config index is created or modified",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_006",
@@ -284,11 +355,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_006",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_006_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "when active binding exists, before equals after",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_007",
@@ -330,11 +415,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_007",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_007_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "post-evaluation Tick uses coefficient 0.030000",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_008",
@@ -376,11 +475,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_008",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_008_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate coefficient is not consumed",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_009",
@@ -422,11 +535,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_009",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_009_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate ref is not Runtime authority",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_010",
@@ -468,11 +595,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_010",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_010_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Evaluation ref is not Runtime authority",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_011",
@@ -514,11 +655,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_011",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_011_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "a new immutable per-tick Config may exist",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_012",
@@ -560,11 +715,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_012",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_012_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "same effective parameter does not require same Config object ID",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_013",
@@ -606,11 +775,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_013",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_013_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "existing A1 State Tick implementation is reused",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_014",
@@ -652,11 +835,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_014",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_014_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "existing B Scenario implementation is reused",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_015",
@@ -698,11 +895,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_015",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_015_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "standard Forecast has 72 points",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_016",
@@ -744,11 +955,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_016",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_016_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "standard Scenario Set has three options",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     },
     {
       "acceptance_id": "MCFT_CAP_06_HARD_I_017",
@@ -790,11 +1015,25 @@
         88092093049,
         29649040085
       ],
-      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "verification_stage": "EVIDENCE_VERIFIED",
       "notes": [
-        "Normalized from MCFT_CAP_06_HARD_I_017",
-        "S11D implementation-defect repair candidate; completion claims remain suspended."
-      ]
+        "Item-level authority retained from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "Predicate is independently evidence-bound; category status is not inherited."
+      ],
+      "lifecycle_phase": "S9_NON_CONSUMPTION_TICK",
+      "predicate": {
+        "predicate_id": "MCFT_CAP_06_HARD_I_017_PREDICATE_V1",
+        "type": "EVIDENCE_BOUND_ASSERTION",
+        "statement": "Candidate and Evaluation do not mutate State directly",
+        "expected_result": "PASS",
+        "evidence_refs_required": true,
+        "workflow_refs_required": true,
+        "resolution_authority": [
+          "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+        ]
+      },
+      "subject_commit": "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
     }
   ]
 }

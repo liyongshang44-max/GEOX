@@ -1,23 +1,28 @@
 {
-  "schema_version": "geox_mcft_cap_06_taskbook_manifest_v1",
+  "schema_version": "geox_mcft_cap_06_taskbook_manifest_v2",
   "capability_line_id": "MCFT-CAP-06",
-  "manifest_id": "MCFT-CAP-06-TASKBOOK-MANIFEST-V1",
+  "manifest_id": "MCFT-CAP-06-TASKBOOK-MANIFEST-V2",
   "effective_taskbook_version": "v0.4.0",
   "revision_status": "MERGED_MAIN_EFFECTIVE_FROZEN",
   "change_classification": "TASKBOOK_DESIGN_DEFECT",
-  "canonical_entrypoint": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json",
+  "canonical_entrypoint": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md",
   "canonical_bundle": {
-    "base_document": {
-      "path": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md",
+    "historical_base_document": {
+      "path": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-v0.3.1.md",
       "version": "v0.3.1",
-      "role": "BASE_TEXT"
+      "role": "HISTORICAL_BASE_TEXT"
     },
     "normative_revision": {
       "path": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK-v0.4.0-REVISION.md",
       "version": "v0.4.0",
       "role": "NORMATIVE_OVERRIDE"
     },
-    "precedence_rule": "NORMATIVE_REVISION_OVERRIDES_BASE_AND_HISTORICAL_AMENDMENTS_ON_CONFLICT"
+    "resolved_manifest": {
+      "path": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2.json",
+      "version": "v2",
+      "role": "SOLE_MACHINE_RESOLVED_TASK_AUTHORITY"
+    },
+    "precedence_rule": "RESOLVED_MANIFEST_OVERRIDES_REVISION_WHICH_OVERRIDES_HISTORICAL_BASE"
   },
   "global_delivery_policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json",
   "current_delivery_authority_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json",
@@ -122,5 +127,8 @@
     "runtime_source_authorized": false,
     "successor_capability_line_authorized": false
   },
-  "successor_capability_line_authorized": false
+  "successor_capability_line_authorized": false,
+  "resolved_manifest_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2.json",
+  "direct_legacy_task_parsing_forbidden": true,
+  "closure_gates_must_consume_resolved_manifest": true
 }

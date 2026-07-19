@@ -1,0 +1,20 @@
+{
+  "schema_version": "geox_mcft_cap_06_quality_boundary_v1",
+  "capability_line_id": "MCFT-CAP-06",
+  "technical_capability": "COMPLETE",
+  "target_level": "LEVEL_A_DETERMINISTIC_REPLAY_TWIN",
+  "capability_nature": "CONTROLLED_DETERMINISTIC_CALIBRATION_MECHANISM",
+  "repository_history_calibration_capability": "NOT_ESTABLISHED",
+  "production_runtime_capability": "NOT_ESTABLISHED",
+  "runtime_implementation_quality": "HIGH",
+  "governance_record_quality": "REPAIR_IN_PROGRESS",
+  "delivery_process_quality": "REPOSITORY_FOUNDATION_REPAIR_REQUIRED",
+  "s10_interpretation": "TWO_STAGE_CONTROLLED_END_TO_END_COMPOSITION_PROOF",
+  "forbidden_overclaims": [
+    "255 independent items are final PASS before merge-SHA attestation",
+    "repository history establishes real calibration capability",
+    "S10 is a single continuously persisted database chain",
+    "MCFT-CAP-06 establishes production closed-loop operation"
+  ],
+  "successor_capability_line_authorized": false
+}
