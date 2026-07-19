@@ -5,8 +5,10 @@ on:
     paths:
       - '.github/workflows/mcft-cap-06-hard-ledger-generator.yml'
       - 'scripts/governance_acceptance/GENERATE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_LEDGER.cjs'
+      - 'scripts/governance_acceptance/NORMALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_LEDGER.cjs'
       - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_RECORDS.cjs'
       - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_REQUIRED_DELIVERABLES.cjs'
+      - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_S11D_CLOSURE_REPAIR_STATE.cjs'
   workflow_dispatch:
 
 permissions:
@@ -30,30 +32,39 @@ jobs:
         run: node scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_RECORDS.cjs
       - name: Materialize frozen-path compatibility wrappers
         run: node scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_REQUIRED_DELIVERABLES.cjs
-      - name: Verify generated records and deliverables
+      - name: Stage generated item records for repair-state materialization
+        run: |
+          DIR='acceptance-output/mcft-cap-06-ledger-repair'
+          cp "$DIR/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.manifest.generated.json" \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json
+          for LETTER in A B C D E F G H I J; do
+            cp "$DIR/MCFT-CAP-06-HARD-${LETTER}.generated.json" \
+              "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-${LETTER}.json"
+          done
+      - name: Materialize suspended S11D closure state
+        run: node scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_S11D_CLOSURE_REPAIR_STATE.cjs
+      - name: Verify generated records deliverables and suspended state
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
-          const path = require('node:path');
-          const dir = 'acceptance-output/mcft-cap-06-ledger-repair';
-          const p = path.join(dir, 'GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.manifest.generated.json');
-          const j = JSON.parse(fs.readFileSync(p, 'utf8'));
-          if (j.total_check_count !== 255) throw new Error('LEDGER_ITEM_COUNT_INVALID');
-          if (j.item_shape_inheritance !== 'FORBIDDEN' || j.each_item_self_contained !== true) throw new Error('LEDGER_ITEM_SHAPE_INVALID');
-          if (j.status_counts.PASS !== 253 || j.status_counts.FAIL !== 2 || j.status_counts.NOT_APPLICABLE !== 0) throw new Error('LEDGER_REPAIR_COUNTS_INVALID');
-          if (!Array.isArray(j.category_records) || j.category_records.length !== 10) throw new Error('LEDGER_CATEGORY_RECORDS_INVALID');
+          const crypto = require('node:crypto');
+          const ledger = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json', 'utf8'));
+          if (ledger.total_check_count !== 255 || ledger.status_counts.PASS !== 253 || ledger.status_counts.FAIL !== 2) throw new Error('LEDGER_REPAIR_COUNTS_INVALID');
+          if (ledger.item_shape_inheritance !== 'FORBIDDEN' || ledger.each_item_self_contained !== true) throw new Error('LEDGER_ITEM_SHAPE_INVALID');
           let count = 0;
           const ids = new Set();
           for (const letter of 'ABCDEFGHIJ') {
-            const record = JSON.parse(fs.readFileSync(path.join(dir, `MCFT-CAP-06-HARD-${letter}.generated.json`), 'utf8'));
+            const file = `docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-${letter}.json`;
+            const raw = fs.readFileSync(file, 'utf8');
+            const record = JSON.parse(raw);
+            const digest = `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`;
+            if (ledger.category_record_digests[file] !== digest) throw new Error(`CATEGORY_DIGEST_MISMATCH:${letter}`);
             if (record.item_shape_inheritance !== 'FORBIDDEN' || record.each_item_self_contained !== true) throw new Error(`CATEGORY_ITEM_SHAPE_INVALID:${letter}`);
             count += record.item_count;
             for (const item of record.items) {
               if (ids.has(item.acceptance_id)) throw new Error(`LEDGER_ITEM_ID_DUPLICATE:${item.acceptance_id}`);
               ids.add(item.acceptance_id);
-              for (const key of ['acceptance_id','category','assertion','status','evidence_refs','workflow_refs','canonical_refs','notes']) {
-                if (!(key in item)) throw new Error(`LEDGER_ITEM_FIELD_MISSING:${item.acceptance_id}:${key}`);
-              }
+              for (const key of ['acceptance_id','category','assertion','status','evidence_refs','workflow_refs','canonical_refs','notes']) if (!(key in item)) throw new Error(`LEDGER_ITEM_FIELD_MISSING:${item.acceptance_id}:${key}`);
             }
           }
           if (count !== 255 || ids.size !== 255) throw new Error('LEDGER_ITEM_ACCUMULATION_INVALID');
@@ -63,25 +74,20 @@ jobs:
             if (!fs.existsSync(d.required_path)) throw new Error(`REQUIRED_DELIVERABLE_MISSING:${d.required_path}`);
             if (!fs.existsSync(d.implementation_authority)) throw new Error(`DELIVERABLE_AUTHORITY_MISSING:${d.implementation_authority}`);
           }
+          const closure = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CLOSURE-RECORD.json','utf8'));
+          if (closure.status !== 'IMPLEMENTATION_COMPLETE_CLOSURE_REPAIR_REQUIRED' || closure.closure_effective !== false || closure.capability_complete !== false) throw new Error('CLOSURE_REPAIR_STATE_INVALID');
+          if (closure.pending_completion_claims.length !== 48 || closure.effective_completion_claims.length !== 0) throw new Error('CLOSURE_REPAIR_CLAIMS_INVALID');
+          if (closure.runtime_source_authorized !== false || closure.successor_authorized !== false) throw new Error('CLOSURE_REPAIR_AUTHORITY_INVALID');
           NODE
-      - name: Materialize generated records and wrappers on the repair work branch
+      - name: Commit generated repair state on the work branch
         if: github.event_name == 'pull_request'
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           set -euo pipefail
-          DIR='acceptance-output/mcft-cap-06-ledger-repair'
-          cp "$DIR/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.manifest.generated.json" \
-            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json
-          for LETTER in A B C D E F G H I J; do
-            cp "$DIR/MCFT-CAP-06-HARD-${LETTER}.generated.json" \
-              "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-${LETTER}.json"
-          done
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json \
-            docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-*.json \
-            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-REQUIRED-DELIVERABLES-MANIFEST.json \
+          git add docs/digital_twin/mcft/cap_06 \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_DATASET_QUALIFICATION.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_RESIDUAL_WINDOWS_DB.ts \
@@ -96,9 +102,9 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_BOUNDED_CHAIN.ts \
             scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINALIZATION_EFFECTIVENESS.cjs
           if git diff --cached --quiet; then
-            echo 'Generated repair records and wrappers already materialized.'
+            echo 'Generated S11D repair state already materialized.'
           else
-            git commit -m 'MCFT-CAP-06 S11D repair: materialize required deliverables'
+            git commit -m 'MCFT-CAP-06 S11D repair: suspend closure effectiveness'
             git push origin "HEAD:${HEAD_BRANCH}"
           fi
       - uses: actions/upload-artifact@v4
