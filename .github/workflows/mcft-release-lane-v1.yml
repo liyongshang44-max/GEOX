@@ -22,8 +22,8 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: mcft-release-lane-main
-  cancel-in-progress: false
+  group: mcft-release-lane-v1-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
 
 jobs:
   mcft-release-lane-pr-selftest:

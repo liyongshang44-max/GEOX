@@ -6,7 +6,8 @@
   "owner_type": "User",
   "target_branch": "main",
   "enforcement_phase": "STRICT_UP_TO_DATE_PHASE_1",
-  "enforcement_status": "ADMIN_CONFIGURATION_PENDING",
+  "enforcement_status": "ACTIVE_OPERATIONAL_VERIFICATION_IN_PROGRESS",
+  "ruleset_name": "main-strict-delivery-v1",
   "require_pull_request_before_merging": true,
   "required_approving_review_count": 0,
   "dismiss_stale_pull_request_approvals": false,
@@ -14,6 +15,9 @@
   "require_status_checks_to_pass": true,
   "require_branches_to_be_up_to_date_before_merging": true,
   "require_merge_queue": false,
+  "allowed_merge_methods": [
+    "merge"
+  ],
   "block_force_pushes": true,
   "block_deletions": true,
   "allow_bypass_actors": [],
@@ -34,8 +38,18 @@
     "mcft-release-lane-merge-group"
   ],
   "expected_check_source": "GitHub Actions",
+  "configuration_observation": {
+    "ruleset_ui_created": true,
+    "ruleset_active": true,
+    "target_resolves_to_main": true,
+    "required_checks_bound": true,
+    "strict_up_to_date_selected": true,
+    "bypass_list_empty": true,
+    "merge_only_selected": true,
+    "recorded_on": "2026-07-19"
+  },
   "configuration_nonclaims": {
-    "ruleset_currently_configured": false,
+    "ruleset_currently_configured": true,
     "branch_protection_currently_verified": false,
     "merge_queue_currently_enabled": false,
     "mcft_cap_07_authorized": false

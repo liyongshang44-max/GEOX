@@ -80,7 +80,6 @@ try {
   assert.equal(taskbook.terminal_state.operational_capability_effective, false);
   assert.equal(taskbook.successor_capability_line_authorized, false);
 
-
   const currentAuthority = json(currentAuthorityPath);
   assert.equal(currentAuthority.record_status, 'CURRENT_AUTHORITY');
   assert.equal(currentAuthority.authority_version, 3);
@@ -120,8 +119,10 @@ try {
     assert.equal(/contents:\s*write/.test(workflow), false, `WRITE_PERMISSION_FORBIDDEN:${workflowPath}`);
     assert.equal(workflow.includes('persist-credentials: false'), true, `PERSISTED_CREDENTIALS_FORBIDDEN:${workflowPath}`);
   }
+  const candidateWorkflow = read(candidateWorkflowPath);
   const releaseWorkflow = read(releaseWorkflowPath);
-  assert.equal(releaseWorkflow.includes('group: mcft-release-lane-main'), true);
+  assert.equal(candidateWorkflow.includes('group: mcft-candidate-integrity-v2-${{ github.event_name }}-'), true, 'CANDIDATE_CROSS_EVENT_CONCURRENCY_ISOLATION_MISSING');
+  assert.equal(releaseWorkflow.includes('group: mcft-release-lane-v1-${{ github.event_name }}-'), true, 'RELEASE_CROSS_EVENT_CONCURRENCY_ISOLATION_MISSING');
   assert.equal(releaseWorkflow.includes('ACCEPTANCE_MCFT_MERGE_GROUP_RELEASE_LANE_V1.cjs'), true);
 
   const retrospectiveWorkflow = read(retrospectiveWorkflowPath);
@@ -138,13 +139,14 @@ try {
   assert.equal(candidateGate.includes('UNREGISTERED_CANDIDATE_AUTHORITY'), true);
 
   const result = {
-    schema_version: 'geox_mcft_delivery_policy_v2_1_result_v1',
+    schema_version: 'geox_mcft_delivery_policy_v2_1_result_v2',
     status: 'PASS',
     historical_v1_self_supersession: 'PASS',
     cap06_policy_ref_v2: 'PASS',
     candidate_authority_registry: 'PASS',
     array_candidate_detection: 'PASS',
     merge_group_workflow_support: 'PASS',
+    cross_event_concurrency_isolation: 'PASS',
     cap06_effectiveness_semantics_split: 'PASS',
     j016_scope_correction: 'PASS',
     retrospective_exact_sha_verification_contract: 'PASS',
@@ -157,6 +159,6 @@ try {
   write(result);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 } catch (error) {
-  const result = { schema_version: 'geox_mcft_delivery_policy_v2_1_result_v1', status: 'FAIL', error: error instanceof Error ? error.message : String(error) };
+  const result = { schema_version: 'geox_mcft_delivery_policy_v2_1_result_v2', status: 'FAIL', error: error instanceof Error ? error.message : String(error) };
   write(result); console.error(JSON.stringify(result, null, 2)); process.exitCode = 1;
 }
