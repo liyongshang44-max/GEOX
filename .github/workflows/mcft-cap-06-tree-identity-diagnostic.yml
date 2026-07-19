@@ -1,0 +1,26 @@
+name: mcft-cap-06-tree-identity-diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-tree-identity-diagnostic.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  tree-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Emit exact candidate tree identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "MCFT_CAP_06_CANDIDATE_COMMIT=$(git rev-parse HEAD)"
+          echo "MCFT_CAP_06_CANDIDATE_TREE=$(git rev-parse 'HEAD^{tree}')"
