@@ -1,0 +1,66 @@
+name: mcft-cap-06-retrospective-exact-sha-verification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-06-retrospective-exact-sha-verification.yml'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-GOVERNANCE-EFFECTIVENESS-STATUS-V3.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-06-retrospective-exact-sha-verification.yml'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-GOVERNANCE-EFFECTIVENESS-STATUS-V3.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap-06-retrospective-exact-sha-ea8caa10
+  cancel-in-progress: false
+
+jobs:
+  verify-exact-cap-06-repair-merge-sha:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact CAP-06 repair merge SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ea8caa10e6369ec5018d7c7b6630e2330d1ca085
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Run exact-SHA attestation gate retrospectively
+        id: retrospective-gate
+        continue-on-error: true
+        run: |
+          # MCFT_CAP_06_ATTESTATION_MODE: RETROSPECTIVE_EXACT_SHA_VERIFICATION
+          MCFT_CAP_06_ATTESTATION_MODE=RETROSPECTIVE_EXACT_SHA_VERIFICATION \
+          GITHUB_SHA=ea8caa10e6369ec5018d7c7b6630e2330d1ca085 \
+          GITHUB_REF=refs/heads/main \
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.cjs
+      - name: Verify retrospective exact-SHA result
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.json', 'utf8'));
+          if (result.status !== 'PASS') throw new Error(`RETROSPECTIVE_EXACT_SHA_NOT_PASS:${result.error || 'UNKNOWN'}`);
+          if (result.mode !== 'RETROSPECTIVE_EXACT_SHA_VERIFICATION') throw new Error('RETROSPECTIVE_MODE_INVALID');
+          if (result.subject_commit !== 'ea8caa10e6369ec5018d7c7b6630e2330d1ca085') throw new Error('RETROSPECTIVE_SUBJECT_INVALID');
+          if (result.effective_hard_acceptance_status_counts.PASS !== 255 || result.effective_hard_acceptance_status_counts.PENDING !== 0) throw new Error('RETROSPECTIVE_LEDGER_INVALID');
+          if (result.repository_write_performed !== false || result.postmerge_ssot_writeback_performed !== false) throw new Error('RETROSPECTIVE_WRITEBACK_FORBIDDEN');
+          if (result.successor_capability_line_authorized !== false) throw new Error('RETROSPECTIVE_SUCCESSOR_AUTHORITY_INVALID');
+          NODE
+      - name: Upload immutable retrospective exact-SHA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-retrospective-exact-sha-ea8caa10-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.json
+          if-no-files-found: error
+          retention-days: 90

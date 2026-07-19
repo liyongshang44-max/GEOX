@@ -1,0 +1,16 @@
+{
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_statement_corrections_v1",
+  "record_status": "EFFECTIVE_SEMANTIC_CORRECTION_AUTHORITY",
+  "historical_category_records_rewritten": false,
+  "corrections": [
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_016",
+      "historical_statement": "no SSOT writeback follows final proof success",
+      "effective_statement": "exact-SHA attestation performs no repository or SSOT writeback",
+      "reason": "The attestation can prove its own read-only execution and artifact-only output; it cannot prove an unbounded future negative.",
+      "status": "PENDING",
+      "resolution_authority": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.cjs"
+    }
+  ],
+  "precedence_rule": "EFFECTIVE_STATEMENT_OVERRIDES_HISTORICAL_STATEMENT_FOR_CURRENT_GOVERNANCE_INTERPRETATION"
+}

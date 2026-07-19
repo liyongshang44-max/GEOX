@@ -1,0 +1,52 @@
+{
+  "schema_version": "geox_mcft_cap_06_governance_effectiveness_status_v3",
+  "capability_line_id": "MCFT-CAP-06",
+  "record_status": "CURRENT_EFFECTIVENESS_AUTHORITY",
+  "technical_capability": "COMPLETE",
+  "implementation_terminal_state": "COMPLETE",
+  "declared_terminal_state": "COMPLETE_CONDITIONAL_ON_EXACT_MERGE_SHA_ATTESTATION",
+  "exact_merge_sha_attestation": {
+    "required": true,
+    "subject_commit": "ea8caa10e6369ec5018d7c7b6630e2330d1ca085",
+    "workflow_ref": ".github/workflows/mcft-cap-06-s11d-repair-merged-main-attestation.yml",
+    "run_id": null,
+    "job_id": null,
+    "artifact_id": null,
+    "verification_status": "UNVERIFIED_BY_REPOSITORY_RECORD_AND_AVAILABLE_CONNECTOR",
+    "absence_of_record_is_not_failure": true,
+    "retrospective_verification_workflow_ref": ".github/workflows/mcft-cap-06-retrospective-exact-sha-verification.yml",
+    "resolution_condition": "ORIGINAL_PUSH_MAIN_ATTESTATION_PASS_OR_RETROSPECTIVE_EXACT_SHA_VERIFICATION_PASS",
+    "retrospective_verification_status": "PENDING_WORKFLOW_EXECUTION"
+  },
+  "operational_effective_terminal_state": false,
+  "operational_closure_effective": false,
+  "capability_implementation_complete": true,
+  "hard_acceptance_committed_counts": {
+    "PASS": 253,
+    "FAIL": 0,
+    "PENDING": 2,
+    "NOT_APPLICABLE": 0
+  },
+  "hard_acceptance_effective_counts_if_attestation_passes": {
+    "PASS": 255,
+    "FAIL": 0,
+    "PENDING": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "completion_claims_declared_count": 48,
+  "completion_claims_operationally_verified_count": 0,
+  "active_delivery_slice_id": null,
+  "next_repository_action": null,
+  "runtime_source_authorized": false,
+  "successor_capability_line_authorized": false,
+  "repository_history_calibration_capability": "NOT_ESTABLISHED",
+  "production_runtime_capability": "NOT_ESTABLISHED",
+  "legacy_projection_semantics": {
+    "closure_effective_true": "DECLARED_CONDITIONAL_PROJECTION_ONLY",
+    "capability_complete_true": "IMPLEMENTATION_COMPLETION_ONLY",
+    "must_not_be_interpreted_as": "EXACT_SHA_ATTESTATION_RUN_VERIFIED"
+  },
+  "attestation_resolution_policy": "VERIFY_EXISTING_PUSH_MAIN_RUN_AND_IMMUTABLE_ARTIFACT_WITHOUT_SSOT_WRITEBACK",
+  "proof_only_pr_required": false,
+  "postmerge_ssot_writeback_allowed": false
+}

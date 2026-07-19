@@ -1,0 +1,76 @@
+{
+  "schema_version": "geox_mcft_cap_06_current_delivery_authority_v3",
+  "capability_line_id": "MCFT-CAP-06",
+  "record_kind": "SOLE_CURRENT_DELIVERY_FRONTIER_AUTHORITY",
+  "record_status": "CURRENT_AUTHORITY",
+  "authority_version": 3,
+  "supersedes_for_current_frontier": [
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-STATE.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-STATE-RECONCILIATION.json",
+    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DELIVERY-SLICE-STATUS.json"
+  ],
+  "superseded_files_remain_historical": true,
+  "taskbook_manifest_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json",
+  "resolved_task_manifest_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2.json",
+  "delivery_policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json",
+  "historical_delivery_policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json",
+  "candidate_authority_registry_ref": "docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json",
+  "governance_effectiveness_status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-GOVERNANCE-EFFECTIVENESS-STATUS-V3.json",
+  "status": "MCFT_CAP_06_IMPLEMENTATION_COMPLETE_ATTESTATION_UNVERIFIED",
+  "implementation_complete": true,
+  "operational_closure_effective": false,
+  "attestation_status": "UNVERIFIED",
+  "active_delivery_slice_id": null,
+  "next_repository_action": null,
+  "next_repository_action_is_capability_slice": false,
+  "runtime_source_authorized": false,
+  "successor_capability_line_id": "MCFT-CAP-07",
+  "successor_capability_line_authorized": false,
+  "hard_acceptance_committed_counts": {
+    "PASS": 253,
+    "FAIL": 0,
+    "PENDING": 2,
+    "NOT_APPLICABLE": 0
+  },
+  "hard_acceptance_effective_counts_if_attestation_passes": {
+    "PASS": 255,
+    "FAIL": 0,
+    "PENDING": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "completion_claims_declared_count": 48,
+  "completion_claims_operationally_verified_count": 0,
+  "exact_merge_sha_attestation": {
+    "required": true,
+    "subject_commit": "ea8caa10e6369ec5018d7c7b6630e2330d1ca085",
+    "verification_status": "UNVERIFIED_BY_REPOSITORY_RECORD_AND_AVAILABLE_CONNECTOR",
+    "workflow_ref": ".github/workflows/mcft-cap-06-s11d-repair-merged-main-attestation.yml",
+    "proof_only_pr_required": false,
+    "postmerge_ssot_writeback_allowed": false,
+    "retrospective_verification_workflow_ref": ".github/workflows/mcft-cap-06-retrospective-exact-sha-verification.yml",
+    "resolution_condition": "ORIGINAL_PUSH_MAIN_ATTESTATION_PASS_OR_RETROSPECTIVE_EXACT_SHA_VERIFICATION_PASS",
+    "retrospective_verification_status": "PENDING_WORKFLOW_EXECUTION"
+  },
+  "runtime_delta": {
+    "canonical_fact_append_count": 0,
+    "canonical_fact_update_count": 0,
+    "canonical_fact_delete_count": 0,
+    "candidate_append_count": 0,
+    "evaluation_append_count": 0,
+    "projection_write_count": 0,
+    "model_activation_count": 0,
+    "active_config_switch_count": 0,
+    "runtime_parameter_change_count": 0,
+    "state_mutation_count": 0,
+    "checkpoint_mutation_count": 0,
+    "migration_count": 0
+  },
+  "nonclaims": [
+    "NO_REAL_WORLD_CALIBRATION_CAPABILITY",
+    "NO_PRODUCTION_RUNTIME_CAPABILITY",
+    "NO_RUNTIME_SOURCE_AUTHORIZATION",
+    "NO_MCFT_CAP_07_AUTHORIZATION",
+    "NO_ATTESTATION_RUN_VERIFICATION_CLAIM"
+  ]
+}

@@ -8,65 +8,57 @@ on:
       - '.github/workflows/mcft-delivery-policy-v2.yml'
       - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
       - '.github/workflows/mcft-release-lane-v1.yml'
+      - '.github/workflows/mcft-cap-06-retrospective-exact-sha-verification.yml'
       - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json'
       - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
-      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.md'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
       - 'docs/digital_twin/mcft/MCFT-DELIVERY-FOUNDATION-V2-STATUS.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V3.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-GOVERNANCE-EFFECTIVENESS-STATUS-V3.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json'
+      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-STATEMENT-CORRECTIONS-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V2.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_RELEASE_LANE_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_MERGE_GROUP_RELEASE_LANE_V1.cjs'
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
     paths:
       - '.github/workflows/mcft-delivery-policy-v2.yml'
       - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
       - '.github/workflows/mcft-release-lane-v1.yml'
+      - '.github/workflows/mcft-cap-06-retrospective-exact-sha-verification.yml'
+      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json'
       - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
       - 'docs/digital_twin/mcft/MCFT-DELIVERY-FOUNDATION-V2-STATUS.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V2.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_RELEASE_LANE_V1.cjs'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  policy-contract-selftest:
+  policy-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 1
+          fetch-depth: 2
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Record exact policy candidate identity
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p acceptance-output
-          COMMIT=$(git rev-parse HEAD)
-          TREE=$(git rev-parse 'HEAD^{tree}')
-          printf '{\n  "schema_version": "geox_mcft_delivery_policy_v2_candidate_identity_v1",\n  "candidate_commit": "%s",\n  "candidate_tree": "%s"\n}\n' "$COMMIT" "$TREE" > acceptance-output/MCFT_DELIVERY_POLICY_V2_CANDIDATE_IDENTITY.json
-          cat acceptance-output/MCFT_DELIVERY_POLICY_V2_CANDIDATE_IDENTITY.json
-      - name: Validate Delivery Policy V2 contract
+      - name: Validate Delivery Foundation V2.1 contract
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V2.cjs
-      - name: Validate generic candidate declaration selftest
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs --selftest
-      - name: Validate release lane selftest
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_RELEASE_LANE_V1.cjs --selftest
-      - name: Upload policy evidence
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: mcft-delivery-policy-v2-evidence-${{ github.sha }}
-          path: |
-            acceptance-output/MCFT_DELIVERY_POLICY_V2_CANDIDATE_IDENTITY.json
-            acceptance-output/MCFT_DELIVERY_POLICY_V2_RESULT.json
-            acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2_RESULT.json
-            acceptance-output/MCFT_RELEASE_LANE_V1_RESULT.json
+          name: mcft-delivery-policy-v2-${{ github.sha }}
+          path: acceptance-output/MCFT_DELIVERY_POLICY_V2_RESULT.json
           if-no-files-found: error
