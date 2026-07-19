@@ -6,6 +6,7 @@ on:
       - '.github/workflows/mcft-cap-06-hard-ledger-generator.yml'
       - 'scripts/governance_acceptance/GENERATE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_LEDGER.cjs'
       - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_RECORDS.cjs'
+      - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_REQUIRED_DELIVERABLES.cjs'
   workflow_dispatch:
 
 permissions:
@@ -27,7 +28,9 @@ jobs:
         env:
           MCFT_CAP_06_LEDGER_MODE: REPAIR_CANDIDATE
         run: node scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_RECORDS.cjs
-      - name: Verify generated item records
+      - name: Materialize frozen-path compatibility wrappers
+        run: node scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_REQUIRED_DELIVERABLES.cjs
+      - name: Verify generated records and deliverables
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
@@ -54,8 +57,14 @@ jobs:
             }
           }
           if (count !== 255 || ids.size !== 255) throw new Error('LEDGER_ITEM_ACCUMULATION_INVALID');
+          const m = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-REQUIRED-DELIVERABLES-MANIFEST.json', 'utf8'));
+          if (m.required_deliverable_count !== 13 || m.runtime_acceptance_count !== 12 || m.governance_acceptance_count !== 1) throw new Error('REQUIRED_DELIVERABLE_COUNT_INVALID');
+          for (const d of m.deliverables) {
+            if (!fs.existsSync(d.required_path)) throw new Error(`REQUIRED_DELIVERABLE_MISSING:${d.required_path}`);
+            if (!fs.existsSync(d.implementation_authority)) throw new Error(`DELIVERABLE_AUTHORITY_MISSING:${d.implementation_authority}`);
+          }
           NODE
-      - name: Materialize generated records on the repair work branch
+      - name: Materialize generated records and wrappers on the repair work branch
         if: github.event_name == 'pull_request'
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
@@ -71,11 +80,25 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json \
-            docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-*.json
+            docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-*.json \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-REQUIRED-DELIVERABLES-MANIFEST.json \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PREDECESSOR_PREFLIGHT.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_DATASET_QUALIFICATION.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_RESIDUAL_WINDOWS_DB.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_CONTRACTS_MATH.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_EXACT_REF_PORT.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_PERSISTENCE_DB.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_CANDIDATE_DB.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_SHADOW_COMPUTE.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_EVALUATION_DB.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_RESTART_RECOVERY.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_NON_CONSUMPTION_TICK.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_BOUNDED_CHAIN.ts \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINALIZATION_EFFECTIVENESS.cjs
           if git diff --cached --quiet; then
-            echo 'Generated item records already materialized.'
+            echo 'Generated repair records and wrappers already materialized.'
           else
-            git commit -m 'MCFT-CAP-06 S11D repair: materialize item-level ledger'
+            git commit -m 'MCFT-CAP-06 S11D repair: materialize required deliverables'
             git push origin "HEAD:${HEAD_BRANCH}"
           fi
       - uses: actions/upload-artifact@v4
