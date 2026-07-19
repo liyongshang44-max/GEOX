@@ -37,6 +37,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: mcft-cap-06-s11d-closure-repair-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   s11d-closure-repair:
     runs-on: ubuntu-latest
