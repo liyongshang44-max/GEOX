@@ -38,7 +38,7 @@ function write(relativePath, content) {
 
 function runtimeWrapper(requiredPath, authorityPath) {
   const importPath = `./${path.basename(authorityPath)}`;
-  return `// Compatibility wrapper for the frozen MCFT-CAP-06 taskbook deliverable identity.\n// Semantic authority remains ${authorityPath}; this file adds no independent PASS logic.\n\nconst requiredPath = ${JSON.stringify(requiredPath)};\nconst implementationAuthority = ${JSON.stringify(authorityPath)};\n\nif (process.env.${DISCOVERY_ENV} === "1") {\n  process.stdout.write(JSON.stringify({ status: "PASS", required_path: requiredPath, implementation_authority: implementationAuthority, mode: "COMPATIBILITY_WRAPPER" }) + "\\n");\n} else {\n  await import(${JSON.stringify(importPath)});\n}\n`;
+  return `// Compatibility wrapper for the frozen MCFT-CAP-06 taskbook deliverable identity.\n// Semantic authority remains ${authorityPath}; this file adds no independent PASS logic.\n\nconst requiredPath = ${JSON.stringify(requiredPath)};\nconst implementationAuthority = ${JSON.stringify(authorityPath)};\n\nif (process.env.${DISCOVERY_ENV} === "1") {\n  process.stdout.write(JSON.stringify({ status: "PASS", required_path: requiredPath, implementation_authority: implementationAuthority, mode: "COMPATIBILITY_WRAPPER" }) + "\\n");\n} else {\n  import(${JSON.stringify(importPath)}).catch((error) => {\n    console.error(error instanceof Error ? error.stack : String(error));\n    process.exitCode = 1;\n  });\n}\n`;
 }
 
 function governanceWrapper(requiredPath, authorityPath) {
