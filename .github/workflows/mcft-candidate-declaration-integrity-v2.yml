@@ -2,13 +2,6 @@ name: mcft-candidate-declaration-integrity-v2
 
 on:
   pull_request:
-    paths:
-      - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
-      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
-      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
-      - 'docs/digital_twin/mcft/cap_*/*.json'
-      - 'docs/digital_twin/mcft/cap_*/**/*.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs'
   pull_request_target:
     types: [opened, synchronize, edited, reopened, ready_for_review]
   merge_group:
@@ -32,7 +25,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  selftest:
+  mcft-candidate-integrity-pr-selftest:
     if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -54,7 +47,7 @@ jobs:
           path: acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2_RESULT.json
           if-no-files-found: error
 
-  enforce-current-pr:
+  mcft-candidate-integrity-enforce-current-pr:
     if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 70
@@ -79,7 +72,7 @@ jobs:
           path: acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2_RESULT.json
           if-no-files-found: error
 
-  validate-merge-group:
+  mcft-candidate-integrity-merge-group:
     if: github.event_name == 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 10

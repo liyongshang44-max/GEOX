@@ -2,26 +2,6 @@ name: mcft-delivery-policy-v2
 
 on:
   pull_request:
-    paths:
-      - '.github/workflows/mcft-delivery-policy-v1.yml'
-      - '.github/workflows/mcft-candidate-declaration-integrity.yml'
-      - '.github/workflows/mcft-delivery-policy-v2.yml'
-      - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
-      - '.github/workflows/mcft-release-lane-v1.yml'
-      - '.github/workflows/mcft-cap-06-retrospective-exact-sha-verification.yml'
-      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json'
-      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
-      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
-      - 'docs/digital_twin/mcft/MCFT-DELIVERY-FOUNDATION-V2-STATUS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V3.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-GOVERNANCE-EFFECTIVENESS-STATUS-V3.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-STATEMENT-CORRECTIONS-V1.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V2.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_MERGE_GROUP_RELEASE_LANE_V1.cjs'
   merge_group:
     types: [checks_requested]
   push:
@@ -42,7 +22,7 @@ permissions:
   contents: read
 
 jobs:
-  policy-contract:
+  mcft-delivery-policy-v2-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
