@@ -1,0 +1,84 @@
+{
+  "schema_version": "geox_mcft_cap_07_resolved_manifest_v1",
+  "manifest_id": "GEOX-MCFT-CAP-07-RESOLVED-MANIFEST-V1",
+  "document_status": "FROZEN",
+  "taskbook_version": "v0.2.5",
+  "capability_line_id": "MCFT-CAP-07",
+  "capability_name": "Minimal Field Twin Read Model and Timeline",
+  "baseline_main_commit": "dadb3dc7bca1f484d49a727fa0754bbaf4bee086",
+  "runtime_mode": "READ_ONLY_DETERMINISTIC_REPLAY",
+  "target_completion_level": "LEVEL_A_DETERMINISTIC_FIELD_TWIN_READ_SURFACE",
+  "predecessor": "MCFT-CAP-06",
+  "successor": "MCFT-CAP-08",
+  "s0_candidate_pr_authorized": true,
+  "implementation_authorized": false,
+  "runtime_source_authorized": false,
+  "canonical_write_authorized": false,
+  "mcft_cap_08_authorized": false,
+  "predecessor_evidence": {
+    "capability_line_id": "MCFT-CAP-06",
+    "subject_commit": "ea8caa10e6369ec5018d7c7b6630e2330d1ca085",
+    "workflow_run_id": 29679453784,
+    "artifact_id": 8440066081,
+    "transport_archive_digest": "sha256:41d7b375b13b1c43c3cba74c87a46ee8fec4f0a48526c618dfdc976cdc76499a",
+    "status": "PASS"
+  },
+  "p_minus_1b": {
+    "pr_number": 2600,
+    "candidate_head": "b01f8b0df51fcd82992a32a487b1884340e5c914",
+    "merge_commit": "dadb3dc7bca1f484d49a727fa0754bbaf4bee086",
+    "exact_tree_delta": 0,
+    "status": "MERGED_EFFECTIVE"
+  },
+  "authority_files": [
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-TASK.md",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-RESOLVED-MANIFEST-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CURRENT-AUTHORITY-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-SOURCE-VALIDATION-MATRIX-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-ROUTE-OWNERSHIP-LOCK-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-HARD-ACCEPTANCE-LEDGER-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-ATTESTATION-RETENTION-STORE-CONTRACT-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-WORKFLOW-DECLARATION-V1.json"
+  ],
+  "source_validation": {
+    "profile_family_count": 8,
+    "required_row_count": 40,
+    "matrix_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-SOURCE-VALIDATION-MATRIX-V1.json"
+  },
+  "route_ownership": {
+    "route_count": 20,
+    "lock_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-ROUTE-OWNERSHIP-LOCK-V1.json"
+  },
+  "hard_acceptance": {
+    "item_count": 282,
+    "ledger_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-HARD-ACCEPTANCE-LEDGER-V1.json"
+  },
+  "slice_graph": [
+    "S0",
+    "S1",
+    "S2",
+    "S3",
+    "S4",
+    "S5",
+    "S6"
+  ],
+  "current_slice": "S0",
+  "effective_next_slice_when_attested": "S1",
+  "s0_changed_file_boundary": "AUTHORITY_DOCS_GOVERNANCE_ACCEPTANCE_WORKFLOWS_RETENTION_HELPER_ONLY",
+  "forbidden_in_s0": [
+    "Runtime code",
+    "migration",
+    "route implementation",
+    "frontend",
+    "projection",
+    "canonical writer"
+  ],
+  "completion_claims_effective": false,
+  "preserved_nonclaims": [
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_LIVE_FIELD_VALIDATION",
+    "NO_CANONICAL_WRITE_AUTHORITY",
+    "NO_MCFT_CAP_08_AUTHORITY"
+  ]
+}

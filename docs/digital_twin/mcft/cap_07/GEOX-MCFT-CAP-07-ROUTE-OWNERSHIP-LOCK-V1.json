@@ -1,0 +1,227 @@
+{
+  "schema_version": "geox_mcft_cap_07_route_ownership_lock_v1",
+  "lock_id": "GEOX-MCFT-CAP-07-ROUTE-OWNERSHIP-LOCK-V1",
+  "record_status": "S0_COMMITTED_MACHINE_AUTHORITY",
+  "taskbook_version": "v0.2.5",
+  "baseline_main_commit": "dadb3dc7bca1f484d49a727fa0754bbaf4bee086",
+  "route_row_schema": [
+    "method",
+    "exact_path",
+    "current_owner",
+    "future_owner",
+    "response_contract",
+    "replacement_policy",
+    "compatibility_policy",
+    "duplicate_registration_forbidden"
+  ],
+  "physical_split_target": {
+    "canonical_read": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+    "legacy_read": "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts",
+    "legacy_write": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts"
+  },
+  "rows": [
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin",
+      "current_owner": "apps/server/src/routes/v1/operator_twin.ts#registerOperatorTwinReadRoutes",
+      "future_owner": "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts#registerOperatorTwinReadLegacyRoutesV1",
+      "response_contract": "LEGACY_OPERATOR_TWIN_OVERVIEW_V1",
+      "replacement_policy": "PHYSICAL_RELOCATION_ONLY_NO_SEMANTIC_CHANGE",
+      "compatibility_policy": "PRESERVE_EXISTING_ROUTE_AND_RESPONSE",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/source-indexes",
+      "current_owner": "apps/server/src/routes/v1/operator_twin.ts#registerOperatorTwinReadRoutes",
+      "future_owner": "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts#registerOperatorTwinReadLegacyRoutesV1",
+      "response_contract": "LEGACY_OPERATOR_TWIN_SOURCE_INDEX_INVENTORY_V1",
+      "replacement_policy": "PHYSICAL_RELOCATION_ONLY_NO_SEMANTIC_CHANGE",
+      "compatibility_policy": "PRESERVE_EXISTING_ROUTE_AND_RESPONSE",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id",
+      "current_owner": "apps/server/src/routes/v1/operator_twin.ts#registerOperatorTwinReadRoutes",
+      "future_owner": "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts#registerOperatorTwinReadLegacyRoutesV1",
+      "response_contract": "LEGACY_OPERATOR_FIELD_TWIN_WORKSPACE_V1",
+      "replacement_policy": "PHYSICAL_RELOCATION_ONLY_NO_SEMANTIC_CHANGE",
+      "compatibility_policy": "PRESERVE_EXISTING_ROUTE_AND_RESPONSE",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/post-irrigation",
+      "current_owner": "apps/server/src/routes/v1/operator_twin.ts#registerOperatorTwinReadRoutes",
+      "future_owner": "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts#registerOperatorTwinReadLegacyRoutesV1",
+      "response_contract": "LEGACY_OPERATOR_FIELD_POST_IRRIGATION_V1",
+      "replacement_policy": "PHYSICAL_RELOCATION_ONLY_NO_SEMANTIC_CHANGE",
+      "compatibility_policy": "PRESERVE_EXISTING_ROUTE_AND_RESPONSE",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/calibration",
+      "current_owner": "apps/server/src/routes/v1/operator_twin.ts#registerOperatorTwinReadRoutes",
+      "future_owner": "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts#registerOperatorTwinReadLegacyRoutesV1",
+      "response_contract": "LEGACY_OPERATOR_FIELD_CALIBRATION_REPLAY_V1",
+      "replacement_policy": "PHYSICAL_RELOCATION_ONLY_NO_SEMANTIC_CHANGE",
+      "compatibility_policy": "PRESERVE_EXISTING_ROUTE_AND_RESPONSE",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/evidence",
+      "current_owner": "apps/server/src/routes/v1/operator_twin.ts#registerOperatorTwinReadRoutes",
+      "future_owner": "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts#registerOperatorTwinReadLegacyRoutesV1",
+      "response_contract": "LEGACY_OPERATOR_FIELD_EVIDENCE_QUALITY_V1",
+      "replacement_policy": "PHYSICAL_RELOCATION_ONLY_NO_SEMANTIC_CHANGE",
+      "compatibility_policy": "PRESERVE_EXISTING_ROUTE_AND_RESPONSE",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/forecast",
+      "current_owner": "apps/server/src/routes/v1/operator_twin.ts#registerOperatorTwinReadRoutes",
+      "future_owner": "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts#registerOperatorTwinReadLegacyRoutesV1",
+      "response_contract": "LEGACY_OPERATOR_FIELD_FORECAST_PANEL_V1",
+      "replacement_policy": "PHYSICAL_RELOCATION_ONLY_NO_SEMANTIC_CHANGE",
+      "compatibility_policy": "PRESERVE_EXISTING_ROUTE_AND_RESPONSE",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/scenarios",
+      "current_owner": "apps/server/src/routes/v1/operator_twin.ts#registerOperatorTwinReadRoutes",
+      "future_owner": "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts#registerOperatorTwinReadLegacyRoutesV1",
+      "response_contract": "LEGACY_OPERATOR_FIELD_SCENARIO_COMPARE_V1",
+      "replacement_policy": "PHYSICAL_RELOCATION_ONLY_NO_SEMANTIC_CHANGE",
+      "compatibility_policy": "PRESERVE_EXISTING_ROUTE_AND_RESPONSE",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "POST",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/root-zone-scenarios/:scenario_set_id/options/:option_id/submit-recommendation",
+      "current_owner": "apps/server/src/routes/v1/operator_twin.ts#registerOperatorTwinReadRoutes",
+      "future_owner": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts#registerOperatorTwinWriteLegacyRoutesV1",
+      "response_contract": "LEGACY_ROOT_ZONE_RECOMMENDATION_SUBMISSION_V1",
+      "replacement_policy": "PHYSICAL_RELOCATION_ONLY_NO_SEMANTIC_CHANGE",
+      "compatibility_policy": "PRESERVE_EXISTING_ROUTE_AND_RESPONSE",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "POST",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/scenarios/:scenario_set_id/options/:option_id/submit-recommendation",
+      "current_owner": "apps/server/src/routes/v1/operator_twin.ts#registerOperatorTwinReadRoutes",
+      "future_owner": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts#registerOperatorTwinWriteLegacyRoutesV1",
+      "response_contract": "LEGACY_SCENARIO_RECOMMENDATION_SUBMISSION_V1",
+      "replacement_policy": "PHYSICAL_RELOCATION_ONLY_NO_SEMANTIC_CHANGE",
+      "compatibility_policy": "PRESERVE_EXISTING_ROUTE_AND_RESPONSE",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/runtime",
+      "current_owner": null,
+      "future_owner": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts#registerMcftFieldTwinReadRoutesV1",
+      "response_contract": "MinimalFieldTwinRuntimeReadModelV1",
+      "replacement_policy": "NEW_CANONICAL_RUNTIME_SUBNAMESPACE",
+      "compatibility_policy": "NO_LEGACY_TRUTH_FALLBACK",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/runtime/timeline",
+      "current_owner": null,
+      "future_owner": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts#registerMcftFieldTwinReadRoutesV1",
+      "response_contract": "FieldTwinTimelinePageV1",
+      "replacement_policy": "NEW_CANONICAL_RUNTIME_SUBNAMESPACE",
+      "compatibility_policy": "NO_LEGACY_TRUTH_FALLBACK",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/runtime/trace",
+      "current_owner": null,
+      "future_owner": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts#registerMcftFieldTwinReadRoutesV1",
+      "response_contract": "FieldTwinTraceGraphV1",
+      "replacement_policy": "NEW_CANONICAL_RUNTIME_SUBNAMESPACE",
+      "compatibility_policy": "NO_LEGACY_TRUTH_FALLBACK",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/runtime/states",
+      "current_owner": null,
+      "future_owner": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts#registerMcftFieldTwinReadRoutesV1",
+      "response_contract": "FieldTwinStatesReadModelV1",
+      "replacement_policy": "NEW_CANONICAL_RUNTIME_SUBNAMESPACE",
+      "compatibility_policy": "NO_LEGACY_TRUTH_FALLBACK",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/runtime/forecasts",
+      "current_owner": null,
+      "future_owner": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts#registerMcftFieldTwinReadRoutesV1",
+      "response_contract": "FieldTwinForecastsReadModelV1",
+      "replacement_policy": "NEW_CANONICAL_RUNTIME_SUBNAMESPACE",
+      "compatibility_policy": "NO_LEGACY_TRUTH_FALLBACK",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/runtime/scenarios",
+      "current_owner": null,
+      "future_owner": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts#registerMcftFieldTwinReadRoutesV1",
+      "response_contract": "FieldTwinScenariosReadModelV1",
+      "replacement_policy": "NEW_CANONICAL_RUNTIME_SUBNAMESPACE",
+      "compatibility_policy": "NO_LEGACY_TRUTH_FALLBACK",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/runtime/residuals",
+      "current_owner": null,
+      "future_owner": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts#registerMcftFieldTwinReadRoutesV1",
+      "response_contract": "FieldTwinResidualCollectionV1",
+      "replacement_policy": "NEW_CANONICAL_RUNTIME_SUBNAMESPACE",
+      "compatibility_policy": "NO_LEGACY_TRUTH_FALLBACK",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/runtime/action-lifecycle",
+      "current_owner": null,
+      "future_owner": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts#registerMcftFieldTwinReadRoutesV1",
+      "response_contract": "FieldTwinActionLifecycleReadModelV1",
+      "replacement_policy": "NEW_CANONICAL_RUNTIME_SUBNAMESPACE",
+      "compatibility_policy": "NO_LEGACY_TRUTH_FALLBACK",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/runtime/model-governance",
+      "current_owner": null,
+      "future_owner": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts#registerMcftFieldTwinReadRoutesV1",
+      "response_contract": "FieldTwinModelGovernanceReadModelV1",
+      "replacement_policy": "NEW_CANONICAL_RUNTIME_SUBNAMESPACE",
+      "compatibility_policy": "NO_LEGACY_TRUTH_FALLBACK",
+      "duplicate_registration_forbidden": true
+    },
+    {
+      "method": "GET",
+      "exact_path": "/api/v1/operator/twin/fields/:field_id/runtime/health",
+      "current_owner": null,
+      "future_owner": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts#registerMcftFieldTwinReadRoutesV1",
+      "response_contract": "FieldTwinHealthReadModelV1",
+      "replacement_policy": "NEW_CANONICAL_RUNTIME_SUBNAMESPACE",
+      "compatibility_policy": "NO_LEGACY_TRUTH_FALLBACK",
+      "duplicate_registration_forbidden": true
+    }
+  ],
+  "route_count": 20,
+  "duplicate_method_path_count": 0,
+  "s0_exit_status": "MATERIALIZED_COMPLETE_PENDING_FOCUSED_GATE"
+}

@@ -1,0 +1,58 @@
+name: mcft-cap-07-s0-authorization
+
+on:
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_07/**'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_*.cjs'
+      - 'scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs'
+      - '.github/workflows/mcft-cap-07-*.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap-07-s0-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  mcft-cap-07-s0-authorization:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate frozen S0 authority materialization
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_S0_AUTHORIZATION.cjs
+      - name: Validate retention authority static contract
+        run: node scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs --static-contract
+      - name: Validate same-PR trusted negative-to-corrected exercise
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_S0_LIVE_TRUSTED_EXERCISE.cjs
+      - name: Upload focused acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-07-s0-authorization-${{ github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_07_S0_AUTHORIZATION_RESULT.json
+            acceptance-output/MCFT_CAP_07_S0_LIVE_TRUSTED_EXERCISE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

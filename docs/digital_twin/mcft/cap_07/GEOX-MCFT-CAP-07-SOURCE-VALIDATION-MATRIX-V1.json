@@ -1,0 +1,3998 @@
+{
+  "schema_version": "geox_mcft_cap_07_source_validation_matrix_v1",
+  "matrix_id": "GEOX-MCFT-CAP-07-SOURCE-VALIDATION-MATRIX-V1",
+  "record_status": "S0_COMMITTED_MACHINE_AUTHORITY",
+  "taskbook_version": "v0.2.5",
+  "baseline_main_commit": "dadb3dc7bca1f484d49a727fa0754bbaf4bee086",
+  "source_profile_version": "mcft_cap_07_source_profiles_v1",
+  "row_uniqueness_key": [
+    "source_name",
+    "profile_family"
+  ],
+  "profile_families": [
+    "CANONICAL_AGGREGATE_PROJECTION",
+    "EMBEDDED_CHILD_PROJECTION",
+    "OPERATIONAL_POINTER_INDEX",
+    "RECORD_SET_IDENTITY_INDEX",
+    "EVIDENCE_BINDING_PROJECTION",
+    "DERIVED_COMPOSITE_PROJECTION",
+    "CANONICAL_TWIN_FACT_DIRECT",
+    "REPLAY_EVIDENCE_FACT_DIRECT"
+  ],
+  "required_source_inventory": {
+    "canonical_aggregate_projection": [
+      "twin_state_history_projection_v1",
+      "twin_forecast_run_projection_v1",
+      "twin_scenario_set_projection_v1",
+      "twin_decision_record_projection_v1",
+      "twin_action_feedback_projection_v1",
+      "twin_forecast_residual_projection_v1",
+      "twin_calibration_candidate_projection_v1",
+      "twin_shadow_evaluation_projection_v1"
+    ],
+    "embedded_child_projection": [
+      "twin_forecast_point_projection_v1",
+      "twin_scenario_point_projection_v1",
+      "twin_shadow_evaluation_case_projection_v1"
+    ],
+    "operational_pointer_index": [
+      "twin_active_lineage_index_v1",
+      "twin_state_latest_index_v1",
+      "twin_forecast_result_latest_index_v1",
+      "twin_forecast_success_latest_index_v1",
+      "twin_scenario_latest_index_v1",
+      "twin_runtime_checkpoint_latest_index_v1",
+      "twin_runtime_health_latest_index_v1"
+    ],
+    "record_set_identity_index": [
+      "twin_object_idempotency_index_v1"
+    ],
+    "evidence_binding_projection": [
+      "twin_approved_plan_binding_projection_v1",
+      "twin_action_feedback_evidence_index_v1",
+      "twin_candidate_evaluation_index_v1"
+    ],
+    "derived_composite_projection": [
+      "twin_action_feedback_cycle_projection_v1"
+    ],
+    "canonical_twin_fact_direct": [
+      "twin_runtime_lineage_v1",
+      "twin_revision_run_v1",
+      "twin_lineage_promotion_v1",
+      "twin_runtime_tick_v1",
+      "twin_evidence_window_v1",
+      "twin_state_transition_v1",
+      "twin_assimilation_update_v1",
+      "twin_runtime_attempt_v1",
+      "twin_forecast_failure_v1",
+      "twin_runtime_checkpoint_v1",
+      "twin_runtime_health_v1",
+      "twin_runtime_config_v1",
+      "twin_model_activation_v1"
+    ],
+    "replay_evidence_fact_direct": [
+      "approval_assertion_evidence_v1",
+      "approved_irrigation_plan_snapshot_v1",
+      "external_dispatch_evidence_v1",
+      "irrigation_execution_receipt_evidence_v1"
+    ],
+    "optional_evidence_reference_kinds": [
+      "AS_EXECUTED",
+      "ACCEPTANCE",
+      "TASK"
+    ]
+  },
+  "row_schema_fields": [
+    "source_name",
+    "profile_family",
+    "envelope_family",
+    "identity_field",
+    "scope_path",
+    "payload_path",
+    "logical_time_path",
+    "as_of_path",
+    "available_to_runtime_at_path",
+    "available_projection_columns",
+    "required_column_comparisons",
+    "source_fact_envelope_profile",
+    "parent_lookup_path",
+    "child_lookup_path",
+    "cardinality",
+    "canonical_hash_function",
+    "fact_visibility_metadata_source",
+    "visibility_anchor_xid8_path",
+    "visibility_anchor_kind_path",
+    "visibility_epoch_source",
+    "snapshot_visibility_predicate",
+    "visibility_snapshot_eligible",
+    "health_attempt_ref_path",
+    "health_operation_discriminator_path",
+    "forecast_failure_ref_path",
+    "health_transaction_family_resolution_rule",
+    "health_role_resolution_rule",
+    "failure_code"
+  ],
+  "required_obligation_kinds": [
+    "IDENTITY",
+    "SCOPE",
+    "ENVELOPE",
+    "TIME",
+    "REF_HASH",
+    "CANONICAL_HASH",
+    "VISIBILITY",
+    "CARDINALITY",
+    "HEALTH_ROLE_WHEN_APPLICABLE"
+  ],
+  "profile_to_failure_code": {
+    "CANONICAL_AGGREGATE_PROJECTION": "MCFT_AGGREGATE_PROJECTION_CANONICAL_DIVERGENCE",
+    "EMBEDDED_CHILD_PROJECTION": "MCFT_EMBEDDED_CHILD_CANONICAL_DIVERGENCE",
+    "OPERATIONAL_POINTER_INDEX": "MCFT_OPERATIONAL_POINTER_INVALID",
+    "RECORD_SET_IDENTITY_INDEX": "MCFT_RECORD_SET_IDENTITY_INVALID",
+    "EVIDENCE_BINDING_PROJECTION": "MCFT_EVIDENCE_BINDING_INVALID",
+    "DERIVED_COMPOSITE_PROJECTION": "MCFT_DERIVED_COMPOSITE_REBUILD_MISMATCH",
+    "CANONICAL_TWIN_FACT_DIRECT": "MCFT_DIRECT_CANONICAL_TWIN_FACT_INVALID",
+    "REPLAY_EVIDENCE_FACT_DIRECT": "MCFT_DIRECT_REPLAY_EVIDENCE_INVALID"
+  },
+  "rows": [
+    {
+      "source_name": "public.twin_state_history_projection_v1",
+      "profile_family": "CANONICAL_AGGREGATE_PROJECTION",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "state_object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "state_object_id",
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "lineage_id",
+        "revision_id",
+        "logical_time",
+        "determinism_hash",
+        "canonical_payload",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "projection_column": "state_object_id",
+          "canonical_path": "record_json.payload.object_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "tenant_id",
+          "canonical_path": "record_json.payload.tenant_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "project_id",
+          "canonical_path": "record_json.payload.project_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "group_id",
+          "canonical_path": "record_json.payload.group_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "field_id",
+          "canonical_path": "record_json.payload.field_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "season_id",
+          "canonical_path": "record_json.payload.season_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "zone_id",
+          "canonical_path": "record_json.payload.zone_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "lineage_id",
+          "canonical_path": "record_json.payload.lineage_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "revision_id",
+          "canonical_path": "record_json.payload.revision_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "logical_time",
+          "canonical_path": "record_json.payload.logical_time",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "determinism_hash",
+          "canonical_path": "record_json.payload.determinism_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "canonical_payload",
+          "canonical_path": "record_json.payload.payload",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_fact_id",
+          "canonical_path": "facts.fact_id",
+          "comparison": "EXACT"
+        }
+      ],
+      "source_fact_envelope_profile": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_AGGREGATE_PROJECTION_CANONICAL_DIVERGENCE"
+    },
+    {
+      "source_name": "public.twin_forecast_run_projection_v1",
+      "profile_family": "CANONICAL_AGGREGATE_PROJECTION",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "forecast_object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "forecast_object_id",
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "lineage_id",
+        "revision_id",
+        "logical_time",
+        "forecast_status",
+        "source_posterior_ref",
+        "source_posterior_hash",
+        "runtime_config_ref",
+        "runtime_config_hash",
+        "forcing_window_hash",
+        "point_count",
+        "determinism_hash",
+        "canonical_payload",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "projection_column": "forecast_object_id",
+          "canonical_path": "record_json.payload.object_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "tenant_id",
+          "canonical_path": "record_json.payload.tenant_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "project_id",
+          "canonical_path": "record_json.payload.project_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "group_id",
+          "canonical_path": "record_json.payload.group_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "field_id",
+          "canonical_path": "record_json.payload.field_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "season_id",
+          "canonical_path": "record_json.payload.season_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "zone_id",
+          "canonical_path": "record_json.payload.zone_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "lineage_id",
+          "canonical_path": "record_json.payload.lineage_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "revision_id",
+          "canonical_path": "record_json.payload.revision_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "logical_time",
+          "canonical_path": "record_json.payload.logical_time",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "forecast_status",
+          "canonical_path": "record_json.payload.payload.forecast_status",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_posterior_ref",
+          "canonical_path": "record_json.payload.payload.source_posterior_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_posterior_hash",
+          "canonical_path": "record_json.payload.payload.source_posterior_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "runtime_config_ref",
+          "canonical_path": "record_json.payload.runtime_config_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "runtime_config_hash",
+          "canonical_path": "record_json.payload.runtime_config_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "forcing_window_hash",
+          "canonical_path": "record_json.payload.payload.forcing_window_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "point_count",
+          "canonical_path": "record_json.payload.payload.point_count",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "determinism_hash",
+          "canonical_path": "record_json.payload.determinism_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "canonical_payload",
+          "canonical_path": "record_json.payload.payload",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_fact_id",
+          "canonical_path": "facts.fact_id",
+          "comparison": "EXACT"
+        }
+      ],
+      "source_fact_envelope_profile": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_AGGREGATE_PROJECTION_CANONICAL_DIVERGENCE"
+    },
+    {
+      "source_name": "public.twin_scenario_set_projection_v1",
+      "profile_family": "CANONICAL_AGGREGATE_PROJECTION",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "scenario_set_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "scenario_set_id",
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "lineage_id",
+        "revision_id",
+        "logical_time",
+        "source_forecast_ref",
+        "source_forecast_hash",
+        "source_posterior_ref",
+        "source_posterior_hash",
+        "runtime_config_ref",
+        "runtime_config_hash",
+        "scenario_policy_id",
+        "option_count",
+        "determinism_hash",
+        "canonical_payload",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "projection_column": "scenario_set_id",
+          "canonical_path": "record_json.payload.object_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "tenant_id",
+          "canonical_path": "record_json.payload.tenant_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "project_id",
+          "canonical_path": "record_json.payload.project_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "group_id",
+          "canonical_path": "record_json.payload.group_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "field_id",
+          "canonical_path": "record_json.payload.field_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "season_id",
+          "canonical_path": "record_json.payload.season_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "zone_id",
+          "canonical_path": "record_json.payload.zone_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "lineage_id",
+          "canonical_path": "record_json.payload.lineage_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "revision_id",
+          "canonical_path": "record_json.payload.revision_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "logical_time",
+          "canonical_path": "record_json.payload.logical_time",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_forecast_ref",
+          "canonical_path": "record_json.payload.payload.source_forecast_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_forecast_hash",
+          "canonical_path": "record_json.payload.payload.source_forecast_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_posterior_ref",
+          "canonical_path": "record_json.payload.payload.source_posterior_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_posterior_hash",
+          "canonical_path": "record_json.payload.payload.source_posterior_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "runtime_config_ref",
+          "canonical_path": "record_json.payload.runtime_config_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "runtime_config_hash",
+          "canonical_path": "record_json.payload.runtime_config_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "scenario_policy_id",
+          "canonical_path": "record_json.payload.payload.scenario_policy_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "option_count",
+          "canonical_path": "record_json.payload.payload.option_count",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "determinism_hash",
+          "canonical_path": "record_json.payload.determinism_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "canonical_payload",
+          "canonical_path": "record_json.payload.payload",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_fact_id",
+          "canonical_path": "facts.fact_id",
+          "comparison": "EXACT"
+        }
+      ],
+      "source_fact_envelope_profile": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_AGGREGATE_PROJECTION_CANONICAL_DIVERGENCE"
+    },
+    {
+      "source_name": "public.twin_decision_record_projection_v1",
+      "profile_family": "CANONICAL_AGGREGATE_PROJECTION",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "decision_object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "decision_object_id",
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "logical_time",
+        "as_of",
+        "scenario_set_ref",
+        "scenario_set_hash",
+        "selected_option_ref",
+        "selected_option_hash",
+        "selected_option_id",
+        "decision_request_evidence_ref",
+        "decision_request_evidence_hash",
+        "actor_ref",
+        "determinism_hash",
+        "canonical_payload",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "projection_column": "decision_object_id",
+          "canonical_path": "record_json.payload.object_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "tenant_id",
+          "canonical_path": "record_json.payload.tenant_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "project_id",
+          "canonical_path": "record_json.payload.project_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "group_id",
+          "canonical_path": "record_json.payload.group_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "field_id",
+          "canonical_path": "record_json.payload.field_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "season_id",
+          "canonical_path": "record_json.payload.season_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "zone_id",
+          "canonical_path": "record_json.payload.zone_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "logical_time",
+          "canonical_path": "record_json.payload.logical_time",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "as_of",
+          "canonical_path": "record_json.payload.as_of",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "scenario_set_ref",
+          "canonical_path": "record_json.payload.payload.scenario_set_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "scenario_set_hash",
+          "canonical_path": "record_json.payload.payload.scenario_set_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "selected_option_ref",
+          "canonical_path": "record_json.payload.payload.selected_option_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "selected_option_hash",
+          "canonical_path": "record_json.payload.payload.selected_option_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "selected_option_id",
+          "canonical_path": "record_json.payload.payload.selected_option_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "decision_request_evidence_ref",
+          "canonical_path": "record_json.payload.payload.decision_request_evidence_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "decision_request_evidence_hash",
+          "canonical_path": "record_json.payload.payload.decision_request_evidence_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "actor_ref",
+          "canonical_path": "record_json.payload.payload.actor_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "determinism_hash",
+          "canonical_path": "record_json.payload.determinism_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "canonical_payload",
+          "canonical_path": "record_json.payload.payload",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_fact_id",
+          "canonical_path": "facts.fact_id",
+          "comparison": "EXACT"
+        }
+      ],
+      "source_fact_envelope_profile": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_AGGREGATE_PROJECTION_CANONICAL_DIVERGENCE"
+    },
+    {
+      "source_name": "public.twin_action_feedback_projection_v1",
+      "profile_family": "CANONICAL_AGGREGATE_PROJECTION",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "action_feedback_object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": "record_json.payload.payload.available_to_runtime_at",
+      "available_projection_columns": [
+        "action_feedback_object_id",
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "logical_time",
+        "as_of",
+        "decision_ref",
+        "decision_hash",
+        "approved_plan_evidence_ref",
+        "approved_plan_evidence_hash",
+        "dispatch_disposition",
+        "event_id",
+        "source_record_id",
+        "binding_id",
+        "origin_source_id",
+        "execution_status",
+        "validation_status",
+        "source_quality",
+        "eligible_for_state_input",
+        "actual_amount_mm",
+        "spatial_coverage_fraction",
+        "target_scope_equivalent_irrigation_mm",
+        "execution_start",
+        "execution_end",
+        "available_to_runtime_at",
+        "determinism_hash",
+        "canonical_payload",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "projection_column": "action_feedback_object_id",
+          "canonical_path": "record_json.payload.object_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "tenant_id",
+          "canonical_path": "record_json.payload.tenant_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "project_id",
+          "canonical_path": "record_json.payload.project_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "group_id",
+          "canonical_path": "record_json.payload.group_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "field_id",
+          "canonical_path": "record_json.payload.field_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "season_id",
+          "canonical_path": "record_json.payload.season_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "zone_id",
+          "canonical_path": "record_json.payload.zone_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "logical_time",
+          "canonical_path": "record_json.payload.logical_time",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "as_of",
+          "canonical_path": "record_json.payload.as_of",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "decision_ref",
+          "canonical_path": "record_json.payload.payload.decision_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "decision_hash",
+          "canonical_path": "record_json.payload.payload.decision_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "approved_plan_evidence_ref",
+          "canonical_path": "record_json.payload.payload.approved_plan_evidence_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "approved_plan_evidence_hash",
+          "canonical_path": "record_json.payload.payload.approved_plan_evidence_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "dispatch_disposition",
+          "canonical_path": "record_json.payload.payload.dispatch_disposition",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "event_id",
+          "canonical_path": "record_json.payload.payload.event_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_record_id",
+          "canonical_path": "record_json.payload.payload.source_record_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "binding_id",
+          "canonical_path": "record_json.payload.payload.binding_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "origin_source_id",
+          "canonical_path": "record_json.payload.payload.origin_source_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "execution_status",
+          "canonical_path": "record_json.payload.payload.execution_status",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "validation_status",
+          "canonical_path": "record_json.payload.payload.validation_status",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_quality",
+          "canonical_path": "record_json.payload.payload.source_quality",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "eligible_for_state_input",
+          "canonical_path": "record_json.payload.payload.eligible_for_state_input",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "actual_amount_mm",
+          "canonical_path": "record_json.payload.payload.actual_amount_mm",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "spatial_coverage_fraction",
+          "canonical_path": "record_json.payload.payload.spatial_coverage_fraction",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "target_scope_equivalent_irrigation_mm",
+          "canonical_path": "record_json.payload.payload.target_scope_equivalent_irrigation_mm",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "execution_start",
+          "canonical_path": "record_json.payload.payload.execution_start",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "execution_end",
+          "canonical_path": "record_json.payload.payload.execution_end",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "available_to_runtime_at",
+          "canonical_path": "record_json.payload.payload.available_to_runtime_at",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "determinism_hash",
+          "canonical_path": "record_json.payload.determinism_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "canonical_payload",
+          "canonical_path": "record_json.payload.payload",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_fact_id",
+          "canonical_path": "facts.fact_id",
+          "comparison": "EXACT"
+        }
+      ],
+      "source_fact_envelope_profile": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_AGGREGATE_PROJECTION_CANONICAL_DIVERGENCE"
+    },
+    {
+      "source_name": "public.twin_forecast_residual_projection_v1",
+      "profile_family": "CANONICAL_AGGREGATE_PROJECTION",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "residual_object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "residual_object_id",
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "logical_time",
+        "as_of",
+        "forecast_run_ref",
+        "forecast_run_hash",
+        "forecast_point_ref",
+        "forecast_point_hash",
+        "actual_observation_ref",
+        "actual_observation_hash",
+        "predicted_observation_value",
+        "predicted_observation_variance",
+        "actual_observation_value",
+        "actual_observation_variance",
+        "representativeness_variance",
+        "residual_value",
+        "normalized_residual",
+        "assimilation_update_ref",
+        "assimilation_update_hash",
+        "determinism_hash",
+        "canonical_payload",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "projection_column": "residual_object_id",
+          "canonical_path": "record_json.payload.object_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "tenant_id",
+          "canonical_path": "record_json.payload.tenant_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "project_id",
+          "canonical_path": "record_json.payload.project_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "group_id",
+          "canonical_path": "record_json.payload.group_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "field_id",
+          "canonical_path": "record_json.payload.field_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "season_id",
+          "canonical_path": "record_json.payload.season_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "zone_id",
+          "canonical_path": "record_json.payload.zone_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "logical_time",
+          "canonical_path": "record_json.payload.logical_time",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "as_of",
+          "canonical_path": "record_json.payload.as_of",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "forecast_run_ref",
+          "canonical_path": "record_json.payload.payload.forecast_run_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "forecast_run_hash",
+          "canonical_path": "record_json.payload.payload.forecast_run_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "forecast_point_ref",
+          "canonical_path": "record_json.payload.payload.forecast_point_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "forecast_point_hash",
+          "canonical_path": "record_json.payload.payload.forecast_point_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "actual_observation_ref",
+          "canonical_path": "record_json.payload.payload.actual_observation_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "actual_observation_hash",
+          "canonical_path": "record_json.payload.payload.actual_observation_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "predicted_observation_value",
+          "canonical_path": "record_json.payload.payload.predicted_observation_value",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "predicted_observation_variance",
+          "canonical_path": "record_json.payload.payload.predicted_observation_variance",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "actual_observation_value",
+          "canonical_path": "record_json.payload.payload.actual_observation_value",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "actual_observation_variance",
+          "canonical_path": "record_json.payload.payload.actual_observation_variance",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "representativeness_variance",
+          "canonical_path": "record_json.payload.payload.representativeness_variance",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "residual_value",
+          "canonical_path": "record_json.payload.payload.residual_value",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "normalized_residual",
+          "canonical_path": "record_json.payload.payload.normalized_residual",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "assimilation_update_ref",
+          "canonical_path": "record_json.payload.payload.assimilation_update_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "assimilation_update_hash",
+          "canonical_path": "record_json.payload.payload.assimilation_update_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "determinism_hash",
+          "canonical_path": "record_json.payload.determinism_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "canonical_payload",
+          "canonical_path": "record_json.payload.payload",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_fact_id",
+          "canonical_path": "facts.fact_id",
+          "comparison": "EXACT"
+        }
+      ],
+      "source_fact_envelope_profile": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_AGGREGATE_PROJECTION_CANONICAL_DIVERGENCE"
+    },
+    {
+      "source_name": "public.twin_calibration_candidate_projection_v1",
+      "profile_family": "CANONICAL_AGGREGATE_PROJECTION",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "candidate_object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "candidate_object_id",
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "logical_time",
+        "as_of",
+        "candidate_status",
+        "base_config_ref",
+        "base_config_hash",
+        "context_lineage_ref",
+        "context_revision_ref",
+        "parameter_key",
+        "base_parameter_value",
+        "candidate_parameter_value",
+        "parameter_delta",
+        "activation_status",
+        "eligible_for_state_input",
+        "eligible_for_runtime_config_use",
+        "eligible_for_human_activation_review",
+        "determinism_hash",
+        "canonical_payload",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "projection_column": "candidate_object_id",
+          "canonical_path": "record_json.payload.object_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "tenant_id",
+          "canonical_path": "record_json.payload.tenant_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "project_id",
+          "canonical_path": "record_json.payload.project_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "group_id",
+          "canonical_path": "record_json.payload.group_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "field_id",
+          "canonical_path": "record_json.payload.field_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "season_id",
+          "canonical_path": "record_json.payload.season_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "zone_id",
+          "canonical_path": "record_json.payload.zone_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "logical_time",
+          "canonical_path": "record_json.payload.logical_time",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "as_of",
+          "canonical_path": "record_json.payload.as_of",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "candidate_status",
+          "canonical_path": "record_json.payload.payload.candidate_status",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "base_config_ref",
+          "canonical_path": "record_json.payload.payload.base_config_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "base_config_hash",
+          "canonical_path": "record_json.payload.payload.base_config_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "context_lineage_ref",
+          "canonical_path": "record_json.payload.context_lineage_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "context_revision_ref",
+          "canonical_path": "record_json.payload.context_revision_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "parameter_key",
+          "canonical_path": "record_json.payload.payload.parameter_key",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "base_parameter_value",
+          "canonical_path": "record_json.payload.payload.base_parameter_value",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "candidate_parameter_value",
+          "canonical_path": "record_json.payload.payload.candidate_parameter_value",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "parameter_delta",
+          "canonical_path": "record_json.payload.payload.parameter_delta",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "activation_status",
+          "canonical_path": "record_json.payload.payload.activation_status",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "eligible_for_state_input",
+          "canonical_path": "record_json.payload.payload.eligible_for_state_input",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "eligible_for_runtime_config_use",
+          "canonical_path": "record_json.payload.payload.eligible_for_runtime_config_use",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "eligible_for_human_activation_review",
+          "canonical_path": "record_json.payload.payload.eligible_for_human_activation_review",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "determinism_hash",
+          "canonical_path": "record_json.payload.determinism_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "canonical_payload",
+          "canonical_path": "record_json.payload.payload",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_fact_id",
+          "canonical_path": "facts.fact_id",
+          "comparison": "EXACT"
+        }
+      ],
+      "source_fact_envelope_profile": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_AGGREGATE_PROJECTION_CANONICAL_DIVERGENCE"
+    },
+    {
+      "source_name": "public.twin_shadow_evaluation_projection_v1",
+      "profile_family": "CANONICAL_AGGREGATE_PROJECTION",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "evaluation_object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "evaluation_object_id",
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "logical_time",
+        "as_of",
+        "candidate_ref",
+        "candidate_hash",
+        "evaluation_dataset_hash",
+        "evaluation_policy_hash",
+        "shadow_replay_engine_id",
+        "calibration_metric_numeric_policy_hash",
+        "evaluation_disposition",
+        "eligible_for_human_activation_review",
+        "determinism_hash",
+        "canonical_payload",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "projection_column": "evaluation_object_id",
+          "canonical_path": "record_json.payload.object_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "tenant_id",
+          "canonical_path": "record_json.payload.tenant_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "project_id",
+          "canonical_path": "record_json.payload.project_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "group_id",
+          "canonical_path": "record_json.payload.group_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "field_id",
+          "canonical_path": "record_json.payload.field_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "season_id",
+          "canonical_path": "record_json.payload.season_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "zone_id",
+          "canonical_path": "record_json.payload.zone_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "logical_time",
+          "canonical_path": "record_json.payload.logical_time",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "as_of",
+          "canonical_path": "record_json.payload.as_of",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "candidate_ref",
+          "canonical_path": "record_json.payload.payload.candidate_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "candidate_hash",
+          "canonical_path": "record_json.payload.payload.candidate_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "evaluation_dataset_hash",
+          "canonical_path": "record_json.payload.payload.evaluation_dataset_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "evaluation_policy_hash",
+          "canonical_path": "record_json.payload.payload.evaluation_policy_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "shadow_replay_engine_id",
+          "canonical_path": "record_json.payload.payload.shadow_replay_engine_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "calibration_metric_numeric_policy_hash",
+          "canonical_path": "record_json.payload.payload.calibration_metric_numeric_policy_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "evaluation_disposition",
+          "canonical_path": "record_json.payload.payload.evaluation_disposition",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "eligible_for_human_activation_review",
+          "canonical_path": "record_json.payload.payload.eligible_for_human_activation_review",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "determinism_hash",
+          "canonical_path": "record_json.payload.determinism_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "canonical_payload",
+          "canonical_path": "record_json.payload.payload",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_fact_id",
+          "canonical_path": "facts.fact_id",
+          "comparison": "EXACT"
+        }
+      ],
+      "source_fact_envelope_profile": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_AGGREGATE_PROJECTION_CANONICAL_DIVERGENCE"
+    },
+    {
+      "source_name": "public.twin_forecast_point_projection_v1",
+      "profile_family": "EMBEDDED_CHILD_PROJECTION",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "forecast_object_id+horizon_hour",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "forecast_object_id",
+        "horizon_hour",
+        "target_time",
+        "storage_mean_mm",
+        "storage_variance_mm2",
+        "available_water_fraction",
+        "determinism_hash",
+        "canonical_point"
+      ],
+      "required_column_comparisons": [
+        {
+          "projection_column": "forecast_object_id",
+          "canonical_path": "record_json.payload.object_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "horizon_hour",
+          "canonical_path": "record_json.payload.payload.points[horizon_hour].horizon_hour",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "target_time",
+          "canonical_path": "record_json.payload.payload.points[horizon_hour].target_time",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "storage_mean_mm",
+          "canonical_path": "record_json.payload.payload.points[horizon_hour].storage_mean_mm",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "storage_variance_mm2",
+          "canonical_path": "record_json.payload.payload.points[horizon_hour].storage_variance_mm2",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "available_water_fraction",
+          "canonical_path": "record_json.payload.payload.points[horizon_hour].available_water_fraction",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "determinism_hash",
+          "canonical_path": "record_json.payload.payload.points[horizon_hour].determinism_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "canonical_point",
+          "canonical_path": "record_json.payload.payload.points[horizon_hour]",
+          "comparison": "EXACT"
+        }
+      ],
+      "source_fact_envelope_profile": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "parent_lookup_path": "public.twin_forecast_run_projection_v1.forecast_object_id",
+      "child_lookup_path": "record_json.payload.payload.points[horizon_hour]",
+      "cardinality": "MANY_CHILD_ROWS_PER_ONE_PARENT_CANONICAL_FACT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_EMBEDDED_CHILD_CANONICAL_DIVERGENCE"
+    },
+    {
+      "source_name": "public.twin_scenario_point_projection_v1",
+      "profile_family": "EMBEDDED_CHILD_PROJECTION",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "scenario_set_id+option_id+horizon_hour",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "scenario_set_id",
+        "option_id",
+        "horizon_hour",
+        "target_time",
+        "storage_mean_mm",
+        "storage_variance_mm2",
+        "available_water_fraction",
+        "determinism_hash",
+        "canonical_point"
+      ],
+      "required_column_comparisons": [
+        {
+          "projection_column": "scenario_set_id",
+          "canonical_path": "record_json.payload.object_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "option_id",
+          "canonical_path": "record_json.payload.payload.options[option_id].points[horizon_hour].option_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "horizon_hour",
+          "canonical_path": "record_json.payload.payload.options[option_id].points[horizon_hour].horizon_hour",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "target_time",
+          "canonical_path": "record_json.payload.payload.options[option_id].points[horizon_hour].target_time",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "storage_mean_mm",
+          "canonical_path": "record_json.payload.payload.options[option_id].points[horizon_hour].storage_mean_mm",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "storage_variance_mm2",
+          "canonical_path": "record_json.payload.payload.options[option_id].points[horizon_hour].storage_variance_mm2",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "available_water_fraction",
+          "canonical_path": "record_json.payload.payload.options[option_id].points[horizon_hour].available_water_fraction",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "determinism_hash",
+          "canonical_path": "record_json.payload.payload.options[option_id].points[horizon_hour].determinism_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "canonical_point",
+          "canonical_path": "record_json.payload.payload.options[option_id].points[horizon_hour]",
+          "comparison": "EXACT"
+        }
+      ],
+      "source_fact_envelope_profile": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "parent_lookup_path": "public.twin_scenario_set_projection_v1.scenario_set_id",
+      "child_lookup_path": "record_json.payload.payload.options[option_id].points[horizon_hour]",
+      "cardinality": "MANY_CHILD_ROWS_PER_ONE_PARENT_CANONICAL_FACT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_EMBEDDED_CHILD_CANONICAL_DIVERGENCE"
+    },
+    {
+      "source_name": "public.twin_shadow_evaluation_case_projection_v1",
+      "profile_family": "EMBEDDED_CHILD_PROJECTION",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "evaluation_object_id+case_index",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "evaluation_object_id",
+        "case_index",
+        "residual_ref",
+        "residual_hash",
+        "source_forecast_ref",
+        "source_forecast_hash",
+        "source_forecast_point_ref",
+        "source_posterior_ref",
+        "source_runtime_config_ref",
+        "forecast_target_time",
+        "observation_ref",
+        "observation_available_to_runtime_at",
+        "base_parameter_value",
+        "candidate_parameter_value",
+        "base_prediction_vwc",
+        "candidate_prediction_vwc",
+        "actual_observation_vwc",
+        "base_residual_vwc",
+        "candidate_residual_vwc",
+        "base_mass_balance_hash",
+        "candidate_mass_balance_hash",
+        "base_invariant_status",
+        "candidate_invariant_status",
+        "canonical_case_result",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "projection_column": "evaluation_object_id",
+          "canonical_path": "record_json.payload.object_id",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "case_index",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].case_index",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "residual_ref",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].residual_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "residual_hash",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].residual_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_forecast_ref",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].source_forecast_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_forecast_hash",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].source_forecast_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_forecast_point_ref",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].source_forecast_point_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_posterior_ref",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].source_posterior_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_runtime_config_ref",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].source_runtime_config_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "forecast_target_time",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].forecast_target_time",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "observation_ref",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].observation_ref",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "observation_available_to_runtime_at",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].observation_available_to_runtime_at",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "base_parameter_value",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].base_parameter_value",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "candidate_parameter_value",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].candidate_parameter_value",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "base_prediction_vwc",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].base_prediction_vwc",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "candidate_prediction_vwc",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].candidate_prediction_vwc",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "actual_observation_vwc",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].actual_observation_vwc",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "base_residual_vwc",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].base_residual_vwc",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "candidate_residual_vwc",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].candidate_residual_vwc",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "base_mass_balance_hash",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].base_mass_balance_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "candidate_mass_balance_hash",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].candidate_mass_balance_hash",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "base_invariant_status",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].base_invariant_status",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "candidate_invariant_status",
+          "canonical_path": "record_json.payload.payload.case_results[case_index].candidate_invariant_status",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "canonical_case_result",
+          "canonical_path": "record_json.payload.payload.case_results[case_index]",
+          "comparison": "EXACT"
+        },
+        {
+          "projection_column": "source_fact_id",
+          "canonical_path": "facts.fact_id",
+          "comparison": "EXACT"
+        }
+      ],
+      "source_fact_envelope_profile": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "parent_lookup_path": "public.twin_shadow_evaluation_projection_v1.evaluation_object_id",
+      "child_lookup_path": "record_json.payload.payload.case_results[case_index]",
+      "cardinality": "MANY_CHILD_ROWS_PER_ONE_PARENT_CANONICAL_FACT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_EMBEDDED_CHILD_CANONICAL_DIVERGENCE"
+    },
+    {
+      "source_name": "public.twin_active_lineage_index_v1",
+      "profile_family": "OPERATIONAL_POINTER_INDEX",
+      "envelope_family": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "identity_field": "active_lineage_ref + activation_authority_ref",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "EXACT_CANONICAL_TARGET_RESOLVED_BY_POINTER",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "active_lineage_ref",
+        "activation_authority_kind",
+        "activation_authority_ref",
+        "expected_previous_active_lineage",
+        "updated_at"
+      ],
+      "required_column_comparisons": [
+        {
+          "pointer_column": "tenant_id",
+          "target_rule": "exact target tenant_id"
+        },
+        {
+          "pointer_column": "project_id",
+          "target_rule": "exact target project_id"
+        },
+        {
+          "pointer_column": "group_id",
+          "target_rule": "exact target group_id"
+        },
+        {
+          "pointer_column": "field_id",
+          "target_rule": "exact target field_id"
+        },
+        {
+          "pointer_column": "season_id",
+          "target_rule": "exact target season_id"
+        },
+        {
+          "pointer_column": "zone_id",
+          "target_rule": "exact target zone_id"
+        },
+        {
+          "pointer_column": "active_lineage_ref",
+          "target_rule": "resolved active lineage object_id"
+        },
+        {
+          "pointer_column": "activation_authority_kind",
+          "target_rule": "INITIAL or REVISION branch discriminator exact"
+        },
+        {
+          "pointer_column": "activation_authority_ref",
+          "target_rule": "INITIAL lineage object_id or REVISION promotion object_id exact"
+        },
+        {
+          "pointer_column": "expected_previous_active_lineage",
+          "target_rule": "authority payload expected_previous_active_lineage exact, including null"
+        },
+        {
+          "pointer_column": "updated_at",
+          "target_rule": "NON_SEMANTIC_TRANSACTION_METADATA; forbidden as selection or equality authority"
+        }
+      ],
+      "source_fact_envelope_profile": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "parent_lookup_path": "activation_authority_kind INITIAL|REVISION -> activation_authority_ref",
+      "child_lookup_path": "INITIAL lineage fact or REVISION promotion->candidate lineage->revision run terminal COMPLETED",
+      "cardinality": "EXACTLY_ONE_ROW_PER_SIX_DIMENSIONAL_SCOPE",
+      "canonical_hash_function": "pointer has no canonical hash; recompute exact target determinism_hash",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_OPERATIONAL_POINTER_INVALID"
+    },
+    {
+      "source_name": "public.twin_state_latest_index_v1",
+      "profile_family": "OPERATIONAL_POINTER_INDEX",
+      "envelope_family": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "identity_field": "state_object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "EXACT_CANONICAL_TARGET_RESOLVED_BY_POINTER",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "state_object_id",
+        "lineage_id",
+        "revision_id",
+        "logical_time",
+        "determinism_hash",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "pointer_column": "tenant_id",
+          "target_rule": "exact target tenant_id"
+        },
+        {
+          "pointer_column": "project_id",
+          "target_rule": "exact target project_id"
+        },
+        {
+          "pointer_column": "group_id",
+          "target_rule": "exact target group_id"
+        },
+        {
+          "pointer_column": "field_id",
+          "target_rule": "exact target field_id"
+        },
+        {
+          "pointer_column": "season_id",
+          "target_rule": "exact target season_id"
+        },
+        {
+          "pointer_column": "zone_id",
+          "target_rule": "exact target zone_id"
+        },
+        {
+          "pointer_column": "state_object_id",
+          "target_rule": "target object_id"
+        },
+        {
+          "pointer_column": "lineage_id",
+          "target_rule": "target lineage_id"
+        },
+        {
+          "pointer_column": "revision_id",
+          "target_rule": "target revision_id"
+        },
+        {
+          "pointer_column": "logical_time",
+          "target_rule": "target logical_time"
+        },
+        {
+          "pointer_column": "determinism_hash",
+          "target_rule": "target determinism_hash"
+        },
+        {
+          "pointer_column": "source_fact_id",
+          "target_rule": "exact target facts.fact_id"
+        }
+      ],
+      "source_fact_envelope_profile": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "EXACTLY_ONE_ROW_PER_SIX_DIMENSIONAL_SCOPE",
+      "canonical_hash_function": "pointer has no canonical hash; recompute exact target determinism_hash",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_OPERATIONAL_POINTER_INVALID"
+    },
+    {
+      "source_name": "public.twin_forecast_result_latest_index_v1",
+      "profile_family": "OPERATIONAL_POINTER_INDEX",
+      "envelope_family": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "identity_field": "forecast_object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "EXACT_CANONICAL_TARGET_RESOLVED_BY_POINTER",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "forecast_object_id",
+        "forecast_status",
+        "logical_time",
+        "determinism_hash",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "pointer_column": "tenant_id",
+          "target_rule": "exact target tenant_id"
+        },
+        {
+          "pointer_column": "project_id",
+          "target_rule": "exact target project_id"
+        },
+        {
+          "pointer_column": "group_id",
+          "target_rule": "exact target group_id"
+        },
+        {
+          "pointer_column": "field_id",
+          "target_rule": "exact target field_id"
+        },
+        {
+          "pointer_column": "season_id",
+          "target_rule": "exact target season_id"
+        },
+        {
+          "pointer_column": "zone_id",
+          "target_rule": "exact target zone_id"
+        },
+        {
+          "pointer_column": "forecast_object_id",
+          "target_rule": "target object_id"
+        },
+        {
+          "pointer_column": "forecast_status",
+          "target_rule": "target payload.status"
+        },
+        {
+          "pointer_column": "logical_time",
+          "target_rule": "target logical_time"
+        },
+        {
+          "pointer_column": "determinism_hash",
+          "target_rule": "target determinism_hash"
+        },
+        {
+          "pointer_column": "source_fact_id",
+          "target_rule": "exact target facts.fact_id"
+        }
+      ],
+      "source_fact_envelope_profile": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "EXACTLY_ONE_ROW_PER_SIX_DIMENSIONAL_SCOPE",
+      "canonical_hash_function": "pointer has no canonical hash; recompute exact target determinism_hash",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_OPERATIONAL_POINTER_INVALID"
+    },
+    {
+      "source_name": "public.twin_forecast_success_latest_index_v1",
+      "profile_family": "OPERATIONAL_POINTER_INDEX",
+      "envelope_family": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "identity_field": "forecast_object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "EXACT_CANONICAL_TARGET_RESOLVED_BY_POINTER",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "forecast_object_id",
+        "logical_time",
+        "determinism_hash",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "pointer_column": "tenant_id",
+          "target_rule": "exact target tenant_id"
+        },
+        {
+          "pointer_column": "project_id",
+          "target_rule": "exact target project_id"
+        },
+        {
+          "pointer_column": "group_id",
+          "target_rule": "exact target group_id"
+        },
+        {
+          "pointer_column": "field_id",
+          "target_rule": "exact target field_id"
+        },
+        {
+          "pointer_column": "season_id",
+          "target_rule": "exact target season_id"
+        },
+        {
+          "pointer_column": "zone_id",
+          "target_rule": "exact target zone_id"
+        },
+        {
+          "pointer_column": "forecast_object_id",
+          "target_rule": "target object_id; target payload.status must be COMPLETED with 72 points"
+        },
+        {
+          "pointer_column": "logical_time",
+          "target_rule": "target logical_time"
+        },
+        {
+          "pointer_column": "determinism_hash",
+          "target_rule": "target determinism_hash"
+        },
+        {
+          "pointer_column": "source_fact_id",
+          "target_rule": "exact target facts.fact_id"
+        }
+      ],
+      "source_fact_envelope_profile": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "EXACTLY_ONE_ROW_PER_SIX_DIMENSIONAL_SCOPE",
+      "canonical_hash_function": "pointer has no canonical hash; recompute exact target determinism_hash",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_OPERATIONAL_POINTER_INVALID"
+    },
+    {
+      "source_name": "public.twin_scenario_latest_index_v1",
+      "profile_family": "OPERATIONAL_POINTER_INDEX",
+      "envelope_family": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "identity_field": "scenario_set_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "EXACT_CANONICAL_TARGET_RESOLVED_BY_POINTER",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "scenario_set_id",
+        "source_forecast_ref",
+        "source_forecast_hash",
+        "logical_time",
+        "determinism_hash",
+        "source_fact_id",
+        "updated_at"
+      ],
+      "required_column_comparisons": [
+        {
+          "pointer_column": "tenant_id",
+          "target_rule": "exact target tenant_id"
+        },
+        {
+          "pointer_column": "project_id",
+          "target_rule": "exact target project_id"
+        },
+        {
+          "pointer_column": "group_id",
+          "target_rule": "exact target group_id"
+        },
+        {
+          "pointer_column": "field_id",
+          "target_rule": "exact target field_id"
+        },
+        {
+          "pointer_column": "season_id",
+          "target_rule": "exact target season_id"
+        },
+        {
+          "pointer_column": "zone_id",
+          "target_rule": "exact target zone_id"
+        },
+        {
+          "pointer_column": "scenario_set_id",
+          "target_rule": "target object_id"
+        },
+        {
+          "pointer_column": "source_forecast_ref",
+          "target_rule": "target payload.source_forecast_ref"
+        },
+        {
+          "pointer_column": "source_forecast_hash",
+          "target_rule": "target payload.source_forecast_hash"
+        },
+        {
+          "pointer_column": "logical_time",
+          "target_rule": "target logical_time"
+        },
+        {
+          "pointer_column": "determinism_hash",
+          "target_rule": "target determinism_hash"
+        },
+        {
+          "pointer_column": "source_fact_id",
+          "target_rule": "exact target facts.fact_id"
+        },
+        {
+          "pointer_column": "updated_at",
+          "target_rule": "NON_SEMANTIC_TRANSACTION_METADATA; forbidden as selection or equality authority"
+        }
+      ],
+      "source_fact_envelope_profile": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "EXACTLY_ONE_ROW_PER_SIX_DIMENSIONAL_SCOPE",
+      "canonical_hash_function": "pointer has no canonical hash; recompute exact target determinism_hash",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_OPERATIONAL_POINTER_INVALID"
+    },
+    {
+      "source_name": "public.twin_runtime_checkpoint_latest_index_v1",
+      "profile_family": "OPERATIONAL_POINTER_INDEX",
+      "envelope_family": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "identity_field": "checkpoint_object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "EXACT_CANONICAL_TARGET_RESOLVED_BY_POINTER",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "checkpoint_object_id",
+        "lineage_id",
+        "revision_id",
+        "logical_time",
+        "determinism_hash",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "pointer_column": "tenant_id",
+          "target_rule": "exact target tenant_id"
+        },
+        {
+          "pointer_column": "project_id",
+          "target_rule": "exact target project_id"
+        },
+        {
+          "pointer_column": "group_id",
+          "target_rule": "exact target group_id"
+        },
+        {
+          "pointer_column": "field_id",
+          "target_rule": "exact target field_id"
+        },
+        {
+          "pointer_column": "season_id",
+          "target_rule": "exact target season_id"
+        },
+        {
+          "pointer_column": "zone_id",
+          "target_rule": "exact target zone_id"
+        },
+        {
+          "pointer_column": "checkpoint_object_id",
+          "target_rule": "target object_id"
+        },
+        {
+          "pointer_column": "lineage_id",
+          "target_rule": "target lineage_id"
+        },
+        {
+          "pointer_column": "revision_id",
+          "target_rule": "target revision_id"
+        },
+        {
+          "pointer_column": "logical_time",
+          "target_rule": "target logical_time"
+        },
+        {
+          "pointer_column": "determinism_hash",
+          "target_rule": "target determinism_hash"
+        },
+        {
+          "pointer_column": "source_fact_id",
+          "target_rule": "exact target facts.fact_id"
+        }
+      ],
+      "source_fact_envelope_profile": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "EXACTLY_ONE_ROW_PER_SIX_DIMENSIONAL_SCOPE",
+      "canonical_hash_function": "pointer has no canonical hash; recompute exact target determinism_hash",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_OPERATIONAL_POINTER_INVALID"
+    },
+    {
+      "source_name": "public.twin_runtime_health_latest_index_v1",
+      "profile_family": "OPERATIONAL_POINTER_INDEX",
+      "envelope_family": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "identity_field": "health_object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "EXACT_CANONICAL_TARGET_RESOLVED_BY_POINTER",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "health_object_id",
+        "operation_status",
+        "logical_time",
+        "determinism_hash",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "pointer_column": "tenant_id",
+          "target_rule": "exact target tenant_id"
+        },
+        {
+          "pointer_column": "project_id",
+          "target_rule": "exact target project_id"
+        },
+        {
+          "pointer_column": "group_id",
+          "target_rule": "exact target group_id"
+        },
+        {
+          "pointer_column": "field_id",
+          "target_rule": "exact target field_id"
+        },
+        {
+          "pointer_column": "season_id",
+          "target_rule": "exact target season_id"
+        },
+        {
+          "pointer_column": "zone_id",
+          "target_rule": "exact target zone_id"
+        },
+        {
+          "pointer_column": "health_object_id",
+          "target_rule": "target object_id"
+        },
+        {
+          "pointer_column": "operation_status",
+          "target_rule": "target payload.operation_status"
+        },
+        {
+          "pointer_column": "logical_time",
+          "target_rule": "target logical_time"
+        },
+        {
+          "pointer_column": "determinism_hash",
+          "target_rule": "target determinism_hash"
+        },
+        {
+          "pointer_column": "source_fact_id",
+          "target_rule": "exact target facts.fact_id"
+        }
+      ],
+      "source_fact_envelope_profile": "NON_CANONICAL_OPERATIONAL_POINTER",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "EXACTLY_ONE_ROW_PER_SIX_DIMENSIONAL_SCOPE",
+      "canonical_hash_function": "pointer has no canonical hash; recompute exact target determinism_hash",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_OPERATIONAL_POINTER_INVALID"
+    },
+    {
+      "source_name": "public.twin_object_idempotency_index_v1",
+      "profile_family": "RECORD_SET_IDENTITY_INDEX",
+      "envelope_family": "NON_CANONICAL_RECORD_SET_IDENTITY",
+      "identity_field": "record_set_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "identity_basis + exact member ids/hashes",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "identity_kind",
+        "idempotency_key",
+        "semantic_object_id",
+        "record_set_id",
+        "determinism_hash",
+        "identity_basis",
+        "member_object_ids",
+        "member_determinism_hashes",
+        "created_at"
+      ],
+      "required_column_comparisons": [
+        {
+          "index_column": "member_object_ids",
+          "canonical_path": "exact canonical member object IDs"
+        },
+        {
+          "index_column": "member_determinism_hashes",
+          "canonical_path": "exact canonical member determinism hashes"
+        },
+        {
+          "index_column": "determinism_hash",
+          "canonical_path": "recomputed aggregate hash"
+        },
+        {
+          "index_column": "identity_basis",
+          "canonical_path": "operation identity basis exact"
+        }
+      ],
+      "source_fact_envelope_profile": "NON_CANONICAL_RECORD_SET_IDENTITY",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_RECORD_SET_ID",
+      "canonical_hash_function": "semanticHashV1(sorted tuples [object_type,object_id,member_hash])",
+      "fact_visibility_metadata_source": "each exact member fact joined independently by resolved fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_RECORD_SET_IDENTITY_INVALID"
+    },
+    {
+      "source_name": "public.twin_approved_plan_binding_projection_v1",
+      "profile_family": "EVIDENCE_BINDING_PROJECTION",
+      "envelope_family": "REPLAY_EVIDENCE_RECORD_V1",
+      "identity_field": "approved_plan_evidence_ref",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "exact refs and hashes resolved to canonical Twin or Replay Evidence records",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "approved_plan_evidence_ref",
+        "approved_plan_evidence_hash",
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "binding_id",
+        "approval_assertion_ref",
+        "approval_assertion_hash",
+        "decision_request_ref",
+        "decision_request_hash",
+        "selected_option_ref",
+        "selected_option_hash",
+        "scenario_amount_mm",
+        "approved_amount_mm",
+        "plan_effective_from",
+        "plan_effective_to",
+        "active_for_decision",
+        "canonical_evidence",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "binding_column": "approved_plan_evidence_ref",
+          "canonical_rule": "exact Replay Evidence source_record_id of approved_irrigation_plan_snapshot_v1"
+        },
+        {
+          "binding_column": "approved_plan_evidence_hash",
+          "canonical_rule": "exact Replay Evidence source_record_hash"
+        },
+        {
+          "binding_column": "tenant_id..zone_id",
+          "canonical_rule": "exact six-dimensional Replay Evidence scope"
+        },
+        {
+          "binding_column": "binding_id",
+          "canonical_rule": "exact approved Plan evidence binding_id"
+        },
+        {
+          "binding_column": "approval_assertion_ref/hash",
+          "canonical_rule": "exact approved Plan payload approval_assertion_ref/hash and exact approval_assertion_evidence_v1 resolution"
+        },
+        {
+          "binding_column": "decision_request_ref/hash",
+          "canonical_rule": "exact approved Plan payload decision_request_ref/hash"
+        },
+        {
+          "binding_column": "selected_option_ref/hash",
+          "canonical_rule": "exact approved Plan payload selected_option_ref/hash and Decision selected option"
+        },
+        {
+          "binding_column": "scenario_amount_mm",
+          "canonical_rule": "exact canonical payload scenario_amount_mm; distinct from approved and executed amounts"
+        },
+        {
+          "binding_column": "approved_amount_mm",
+          "canonical_rule": "exact canonical payload approved_amount_mm; distinct from scenario and executed amounts"
+        },
+        {
+          "binding_column": "plan_effective_from/to",
+          "canonical_rule": "exact Replay Evidence role_time plan_effective_from/to"
+        },
+        {
+          "binding_column": "active_for_decision",
+          "canonical_rule": "exact canonical payload active_for_decision"
+        },
+        {
+          "binding_column": "canonical_evidence",
+          "canonical_rule": "exact full Replay Evidence record or frozen canonical evidence projection contract"
+        },
+        {
+          "binding_column": "source_fact_id",
+          "canonical_rule": "exact facts.fact_id containing approved_irrigation_plan_snapshot_v1"
+        }
+      ],
+      "source_fact_envelope_profile": "REPLAY_EVIDENCE_RECORD_V1",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_OR_MANY_EXACT_BINDINGS_PER_OWNER_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_EVIDENCE_BINDING_INVALID"
+    },
+    {
+      "source_name": "public.twin_action_feedback_evidence_index_v1",
+      "profile_family": "EVIDENCE_BINDING_PROJECTION",
+      "envelope_family": "CANONICAL_OR_REPLAY_EXACT_REFERENCE_SET",
+      "identity_field": "action_feedback_object_id+evidence_kind+evidence_ref",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "exact refs and hashes resolved to canonical Twin or Replay Evidence records",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "action_feedback_object_id",
+        "evidence_kind",
+        "evidence_ref",
+        "evidence_hash",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "binding_column": "action_feedback_object_id",
+          "canonical_rule": "exact owning twin_action_feedback_v1 object_id"
+        },
+        {
+          "binding_column": "evidence_kind",
+          "canonical_rule": "exact frozen owner payload/reference classification; AS_EXECUTED/ACCEPTANCE/TASK remain reference kinds only"
+        },
+        {
+          "binding_column": "evidence_ref/hash",
+          "canonical_rule": "exact owner canonical payload/evidence refs; resolve hash where non-null"
+        },
+        {
+          "binding_column": "source_fact_id",
+          "canonical_rule": "exact owner Action Feedback facts.fact_id"
+        }
+      ],
+      "source_fact_envelope_profile": "CANONICAL_OR_REPLAY_EXACT_REFERENCE_SET",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_OR_MANY_EXACT_BINDINGS_PER_OWNER_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_EVIDENCE_BINDING_INVALID"
+    },
+    {
+      "source_name": "public.twin_candidate_evaluation_index_v1",
+      "profile_family": "EVIDENCE_BINDING_PROJECTION",
+      "envelope_family": "CANONICAL_OR_REPLAY_EXACT_REFERENCE_SET",
+      "identity_field": "candidate_ref+evaluation_object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "exact refs and hashes resolved to canonical Twin or Replay Evidence records",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "candidate_ref",
+        "evaluation_object_id",
+        "evaluation_dataset_hash",
+        "evaluation_policy_hash",
+        "shadow_replay_engine_id",
+        "calibration_metric_numeric_policy_hash",
+        "evaluation_disposition",
+        "source_fact_id"
+      ],
+      "required_column_comparisons": [
+        {
+          "binding_column": "evaluation_object_id",
+          "canonical_rule": "exact twin_shadow_evaluation_v1 object_id"
+        },
+        {
+          "binding_column": "candidate_ref",
+          "canonical_rule": "exact Evaluation canonical payload candidate_ref"
+        },
+        {
+          "binding_column": "evaluation_dataset_hash",
+          "canonical_rule": "exact Evaluation canonical payload evaluation_dataset_hash"
+        },
+        {
+          "binding_column": "evaluation_policy_hash",
+          "canonical_rule": "exact Evaluation canonical payload evaluation_policy_hash"
+        },
+        {
+          "binding_column": "shadow_replay_engine_id",
+          "canonical_rule": "exact Evaluation canonical payload shadow_replay_engine_id"
+        },
+        {
+          "binding_column": "calibration_metric_numeric_policy_hash",
+          "canonical_rule": "exact Evaluation canonical payload calibration_metric_numeric_policy_hash"
+        },
+        {
+          "binding_column": "evaluation_disposition",
+          "canonical_rule": "exact Evaluation canonical payload evaluation_disposition"
+        },
+        {
+          "binding_column": "source_fact_id",
+          "canonical_rule": "exact Evaluation facts.fact_id"
+        }
+      ],
+      "source_fact_envelope_profile": "CANONICAL_OR_REPLAY_EXACT_REFERENCE_SET",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_OR_MANY_EXACT_BINDINGS_PER_OWNER_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_EVIDENCE_BINDING_INVALID"
+    },
+    {
+      "source_name": "public.twin_action_feedback_cycle_projection_v1",
+      "profile_family": "DERIVED_COMPOSITE_PROJECTION",
+      "envelope_family": "NON_CANONICAL_DERIVED_COMPOSITE",
+      "identity_field": "projection_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "canonical_projection rebuilt from exact refs",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "projection_id",
+        "projection_hash",
+        "decision_ref",
+        "action_feedback_ref",
+        "approved_plan_ref",
+        "dispatch_disposition",
+        "outcome_observation_ref",
+        "forecast_residual_ref",
+        "assimilation_update_ref",
+        "updated_state_ref",
+        "canonical_projection",
+        "source_fact_refs",
+        "rebuilt_at"
+      ],
+      "required_column_comparisons": [
+        {
+          "projection_column": "projection_id",
+          "rebuild_rule": "derive from exact refs; no latest/same-scope fallback"
+        },
+        {
+          "projection_column": "projection_hash",
+          "rebuild_rule": "derive from exact refs; no latest/same-scope fallback"
+        },
+        {
+          "projection_column": "decision_ref",
+          "rebuild_rule": "derive from exact refs; no latest/same-scope fallback"
+        },
+        {
+          "projection_column": "action_feedback_ref",
+          "rebuild_rule": "derive from exact refs; no latest/same-scope fallback"
+        },
+        {
+          "projection_column": "approved_plan_ref",
+          "rebuild_rule": "derive from exact refs; no latest/same-scope fallback"
+        },
+        {
+          "projection_column": "dispatch_disposition",
+          "rebuild_rule": "derive from exact refs; no latest/same-scope fallback"
+        },
+        {
+          "projection_column": "outcome_observation_ref",
+          "rebuild_rule": "derive from exact refs; no latest/same-scope fallback"
+        },
+        {
+          "projection_column": "forecast_residual_ref",
+          "rebuild_rule": "derive from exact refs; no latest/same-scope fallback"
+        },
+        {
+          "projection_column": "assimilation_update_ref",
+          "rebuild_rule": "derive from exact refs; no latest/same-scope fallback"
+        },
+        {
+          "projection_column": "updated_state_ref",
+          "rebuild_rule": "derive from exact refs; no latest/same-scope fallback"
+        },
+        {
+          "projection_column": "canonical_projection",
+          "rebuild_rule": "derive from exact refs; no latest/same-scope fallback"
+        },
+        {
+          "projection_column": "source_fact_refs",
+          "rebuild_rule": "derive from exact refs; no latest/same-scope fallback"
+        },
+        {
+          "projection_column": "rebuilt_at",
+          "rebuild_rule": "derive from exact refs; no latest/same-scope fallback"
+        }
+      ],
+      "source_fact_envelope_profile": "NON_CANONICAL_DERIVED_COMPOSITE",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_COMPOSITE_PER_DECISION_FEEDBACK_RESIDUAL_TUPLE",
+      "canonical_hash_function": "semanticHashV1(rebuilt exact composite excluding projection_hash and rebuilt_at)",
+      "fact_visibility_metadata_source": "each source_fact_refs member joined independently by fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DERIVED_COMPOSITE_REBUILD_MISMATCH"
+    },
+    {
+      "source_name": "public.facts#record_json.type=twin_runtime_lineage_v1",
+      "profile_family": "CANONICAL_TWIN_FACT_DIRECT",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "record_json.payload.object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.type",
+          "canonical_rule": "exact twin_runtime_lineage_v1"
+        },
+        {
+          "fact_field": "record_json.payload.object_type",
+          "canonical_rule": "exact twin_runtime_lineage_v1"
+        },
+        {
+          "fact_field": "record_json.payload.determinism_hash",
+          "canonical_rule": "recompute exact semanticHashV1"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact where contract requires nullable values"
+        }
+      ],
+      "source_fact_envelope_profile": "record_json.type equals object_type; record_json.payload is semantic object envelope",
+      "parent_lookup_path": "active lineage pointer activation_authority_ref",
+      "child_lookup_path": "INITIAL: self authority and expected_previous null; REVISION: promotion exact chain",
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_ACTIVE_LINEAGE_AUTHORITY_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.type=twin_revision_run_v1",
+      "profile_family": "CANONICAL_TWIN_FACT_DIRECT",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "record_json.payload.object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.type",
+          "canonical_rule": "exact twin_revision_run_v1"
+        },
+        {
+          "fact_field": "record_json.payload.object_type",
+          "canonical_rule": "exact twin_revision_run_v1"
+        },
+        {
+          "fact_field": "record_json.payload.determinism_hash",
+          "canonical_rule": "recompute exact semanticHashV1"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact where contract requires nullable values"
+        }
+      ],
+      "source_fact_envelope_profile": "record_json.type equals object_type; record_json.payload is semantic object envelope",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_REVISION_PROMOTION_CHAIN_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.type=twin_lineage_promotion_v1",
+      "profile_family": "CANONICAL_TWIN_FACT_DIRECT",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "record_json.payload.object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.type",
+          "canonical_rule": "exact twin_lineage_promotion_v1"
+        },
+        {
+          "fact_field": "record_json.payload.object_type",
+          "canonical_rule": "exact twin_lineage_promotion_v1"
+        },
+        {
+          "fact_field": "record_json.payload.determinism_hash",
+          "canonical_rule": "recompute exact semanticHashV1"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact where contract requires nullable values"
+        }
+      ],
+      "source_fact_envelope_profile": "record_json.type equals object_type; record_json.payload is semantic object envelope",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_REVISION_PROMOTION_CHAIN_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.type=twin_runtime_tick_v1",
+      "profile_family": "CANONICAL_TWIN_FACT_DIRECT",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "record_json.payload.object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.type",
+          "canonical_rule": "exact twin_runtime_tick_v1"
+        },
+        {
+          "fact_field": "record_json.payload.object_type",
+          "canonical_rule": "exact twin_runtime_tick_v1"
+        },
+        {
+          "fact_field": "record_json.payload.determinism_hash",
+          "canonical_rule": "recompute exact semanticHashV1"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact where contract requires nullable values"
+        }
+      ],
+      "source_fact_envelope_profile": "record_json.type equals object_type; record_json.payload is semantic object envelope",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DIRECT_CANONICAL_TWIN_FACT_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.type=twin_evidence_window_v1",
+      "profile_family": "CANONICAL_TWIN_FACT_DIRECT",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "record_json.payload.object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.type",
+          "canonical_rule": "exact twin_evidence_window_v1"
+        },
+        {
+          "fact_field": "record_json.payload.object_type",
+          "canonical_rule": "exact twin_evidence_window_v1"
+        },
+        {
+          "fact_field": "record_json.payload.determinism_hash",
+          "canonical_rule": "recompute exact semanticHashV1"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact where contract requires nullable values"
+        }
+      ],
+      "source_fact_envelope_profile": "record_json.type equals object_type; record_json.payload is semantic object envelope",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DIRECT_CANONICAL_TWIN_FACT_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.type=twin_state_transition_v1",
+      "profile_family": "CANONICAL_TWIN_FACT_DIRECT",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "record_json.payload.object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.type",
+          "canonical_rule": "exact twin_state_transition_v1"
+        },
+        {
+          "fact_field": "record_json.payload.object_type",
+          "canonical_rule": "exact twin_state_transition_v1"
+        },
+        {
+          "fact_field": "record_json.payload.determinism_hash",
+          "canonical_rule": "recompute exact semanticHashV1"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact where contract requires nullable values"
+        }
+      ],
+      "source_fact_envelope_profile": "record_json.type equals object_type; record_json.payload is semantic object envelope",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DIRECT_CANONICAL_TWIN_FACT_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.type=twin_assimilation_update_v1",
+      "profile_family": "CANONICAL_TWIN_FACT_DIRECT",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "record_json.payload.object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.type",
+          "canonical_rule": "exact twin_assimilation_update_v1"
+        },
+        {
+          "fact_field": "record_json.payload.object_type",
+          "canonical_rule": "exact twin_assimilation_update_v1"
+        },
+        {
+          "fact_field": "record_json.payload.determinism_hash",
+          "canonical_rule": "recompute exact semanticHashV1"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact where contract requires nullable values"
+        }
+      ],
+      "source_fact_envelope_profile": "record_json.type equals object_type; record_json.payload is semantic object envelope",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DIRECT_CANONICAL_TWIN_FACT_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.type=twin_runtime_attempt_v1",
+      "profile_family": "CANONICAL_TWIN_FACT_DIRECT",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "record_json.payload.object_id + record_json.payload.payload.attempt_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.type",
+          "canonical_rule": "exact twin_runtime_attempt_v1"
+        },
+        {
+          "fact_field": "record_json.payload.object_type",
+          "canonical_rule": "exact twin_runtime_attempt_v1"
+        },
+        {
+          "fact_field": "record_json.payload.determinism_hash",
+          "canonical_rule": "recompute exact semanticHashV1"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact where contract requires nullable values"
+        }
+      ],
+      "source_fact_envelope_profile": "record_json.type equals object_type; record_json.payload is semantic object envelope",
+      "parent_lookup_path": null,
+      "child_lookup_path": "health.payload.attempt_ref exact equals attempt object_id",
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DIRECT_CANONICAL_TWIN_FACT_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.type=twin_forecast_failure_v1",
+      "profile_family": "CANONICAL_TWIN_FACT_DIRECT",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "record_json.payload.object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.type",
+          "canonical_rule": "exact twin_forecast_failure_v1"
+        },
+        {
+          "fact_field": "record_json.payload.object_type",
+          "canonical_rule": "exact twin_forecast_failure_v1"
+        },
+        {
+          "fact_field": "record_json.payload.determinism_hash",
+          "canonical_rule": "recompute exact semanticHashV1"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact where contract requires nullable values"
+        }
+      ],
+      "source_fact_envelope_profile": "record_json.type equals object_type; record_json.payload is semantic object envelope",
+      "parent_lookup_path": "record_json.payload.payload.attempt_ref -> exact twin_runtime_attempt_v1",
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DIRECT_CANONICAL_TWIN_FACT_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.type=twin_runtime_checkpoint_v1",
+      "profile_family": "CANONICAL_TWIN_FACT_DIRECT",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "record_json.payload.object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.type",
+          "canonical_rule": "exact twin_runtime_checkpoint_v1"
+        },
+        {
+          "fact_field": "record_json.payload.object_type",
+          "canonical_rule": "exact twin_runtime_checkpoint_v1"
+        },
+        {
+          "fact_field": "record_json.payload.determinism_hash",
+          "canonical_rule": "recompute exact semanticHashV1"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact where contract requires nullable values"
+        }
+      ],
+      "source_fact_envelope_profile": "record_json.type equals object_type; record_json.payload is semantic object envelope",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DIRECT_CANONICAL_TWIN_FACT_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.type=twin_runtime_health_v1",
+      "profile_family": "CANONICAL_TWIN_FACT_DIRECT",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "record_json.payload.object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.type",
+          "canonical_rule": "exact twin_runtime_health_v1"
+        },
+        {
+          "fact_field": "record_json.payload.object_type",
+          "canonical_rule": "exact twin_runtime_health_v1"
+        },
+        {
+          "fact_field": "record_json.payload.determinism_hash",
+          "canonical_rule": "recompute exact semanticHashV1"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact where contract requires nullable values"
+        }
+      ],
+      "source_fact_envelope_profile": "record_json.type equals object_type; record_json.payload is semantic object envelope",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": "record_json.payload.payload.attempt_ref",
+      "health_operation_discriminator_path": "record_json.payload.payload.operation_variant",
+      "forecast_failure_ref_path": "record_json.payload.payload.forecast_failure_ref",
+      "health_transaction_family_resolution_rule": "A only by exact validated A0/A1/A2 record-set membership; F only when not a member and exact attempt_ref resolves to twin_runtime_attempt_v1 with optional exact forecast failure",
+      "health_role_resolution_rule": "A->TERMINAL_RECORD_SET_MEMBER; F->OPERATIONAL_ATTEMPT_AUDIT; otherwise MCFT_RUNTIME_HEALTH_ROLE_UNRESOLVED",
+      "failure_code": "MCFT_DIRECT_CANONICAL_TWIN_FACT_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.type=twin_runtime_config_v1",
+      "profile_family": "CANONICAL_TWIN_FACT_DIRECT",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "record_json.payload.object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.type",
+          "canonical_rule": "exact twin_runtime_config_v1"
+        },
+        {
+          "fact_field": "record_json.payload.object_type",
+          "canonical_rule": "exact twin_runtime_config_v1"
+        },
+        {
+          "fact_field": "record_json.payload.determinism_hash",
+          "canonical_rule": "recompute exact semanticHashV1"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact where contract requires nullable values"
+        }
+      ],
+      "source_fact_envelope_profile": "record_json.type equals object_type; record_json.payload is semantic object envelope",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DIRECT_CANONICAL_TWIN_FACT_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.type=twin_model_activation_v1",
+      "profile_family": "CANONICAL_TWIN_FACT_DIRECT",
+      "envelope_family": "CANONICAL_TWIN_OBJECT_FACT_ENVELOPE_V1",
+      "identity_field": "record_json.payload.object_id",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.payload",
+      "logical_time_path": "record_json.payload.logical_time",
+      "as_of_path": "record_json.payload.as_of",
+      "available_to_runtime_at_path": null,
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.type",
+          "canonical_rule": "exact twin_model_activation_v1"
+        },
+        {
+          "fact_field": "record_json.payload.object_type",
+          "canonical_rule": "exact twin_model_activation_v1"
+        },
+        {
+          "fact_field": "record_json.payload.determinism_hash",
+          "canonical_rule": "recompute exact semanticHashV1"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact where contract requires nullable values"
+        }
+      ],
+      "source_fact_envelope_profile": "record_json.type equals object_type; record_json.payload is semantic object envelope",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DIRECT_CANONICAL_TWIN_FACT_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.payload.record_type=approval_assertion_evidence_v1",
+      "profile_family": "REPLAY_EVIDENCE_FACT_DIRECT",
+      "envelope_family": "REPLAY_EVIDENCE_RECORD_V1",
+      "identity_field": "record_json.payload.source_record_id + record_json.payload.evidence_identity_key",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.canonical_payload",
+      "logical_time_path": null,
+      "as_of_path": null,
+      "available_to_runtime_at_path": "record_json.payload.available_to_runtime_at",
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.payload.record_type",
+          "canonical_rule": "exact approval_assertion_evidence_v1"
+        },
+        {
+          "fact_field": "record_json.payload.source_record_hash",
+          "canonical_rule": "recompute exact evidence-specific source hash"
+        },
+        {
+          "fact_field": "record_json.payload.source_payload",
+          "canonical_rule": "semanticHash equals canonical_payload where contract requires"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact"
+        },
+        {
+          "fact_field": "record_json.payload.available_to_runtime_at",
+          "canonical_rule": "canonical UTC instant exact"
+        }
+      ],
+      "source_fact_envelope_profile": "REPLAY_EVIDENCE_RECORD_V1: record_type/source_record_id/source_record_hash/evidence_identity_key/available_to_runtime_at/canonical_payload",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(full evidence record excluding source_record_hash and materialized_file_location)",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DIRECT_REPLAY_EVIDENCE_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.payload.record_type=approved_irrigation_plan_snapshot_v1",
+      "profile_family": "REPLAY_EVIDENCE_FACT_DIRECT",
+      "envelope_family": "REPLAY_EVIDENCE_RECORD_V1",
+      "identity_field": "record_json.payload.source_record_id + record_json.payload.evidence_identity_key",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.canonical_payload",
+      "logical_time_path": null,
+      "as_of_path": null,
+      "available_to_runtime_at_path": "record_json.payload.available_to_runtime_at",
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.payload.record_type",
+          "canonical_rule": "exact approved_irrigation_plan_snapshot_v1"
+        },
+        {
+          "fact_field": "record_json.payload.source_record_hash",
+          "canonical_rule": "recompute exact evidence-specific source hash"
+        },
+        {
+          "fact_field": "record_json.payload.source_payload",
+          "canonical_rule": "semanticHash equals canonical_payload where contract requires"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact"
+        },
+        {
+          "fact_field": "record_json.payload.available_to_runtime_at",
+          "canonical_rule": "canonical UTC instant exact"
+        }
+      ],
+      "source_fact_envelope_profile": "REPLAY_EVIDENCE_RECORD_V1: record_type/source_record_id/source_record_hash/evidence_identity_key/available_to_runtime_at/canonical_payload",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(full evidence record excluding source_record_hash and materialized_file_location)",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DIRECT_REPLAY_EVIDENCE_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.payload.record_type=external_dispatch_evidence_v1",
+      "profile_family": "REPLAY_EVIDENCE_FACT_DIRECT",
+      "envelope_family": "REPLAY_EVIDENCE_RECORD_V1",
+      "identity_field": "record_json.payload.source_record_id + record_json.payload.evidence_identity_key",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.canonical_payload",
+      "logical_time_path": null,
+      "as_of_path": null,
+      "available_to_runtime_at_path": "record_json.payload.available_to_runtime_at",
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.payload.record_type",
+          "canonical_rule": "exact external_dispatch_evidence_v1"
+        },
+        {
+          "fact_field": "record_json.payload.source_record_hash",
+          "canonical_rule": "recompute exact evidence-specific source hash"
+        },
+        {
+          "fact_field": "record_json.payload.source_payload",
+          "canonical_rule": "semanticHash equals canonical_payload where contract requires"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact"
+        },
+        {
+          "fact_field": "record_json.payload.available_to_runtime_at",
+          "canonical_rule": "canonical UTC instant exact"
+        }
+      ],
+      "source_fact_envelope_profile": "REPLAY_EVIDENCE_RECORD_V1: record_type/source_record_id/source_record_hash/evidence_identity_key/available_to_runtime_at/canonical_payload",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(full evidence record excluding source_record_hash and materialized_file_location)",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DIRECT_REPLAY_EVIDENCE_INVALID"
+    },
+    {
+      "source_name": "public.facts#record_json.payload.record_type=irrigation_execution_receipt_evidence_v1",
+      "profile_family": "REPLAY_EVIDENCE_FACT_DIRECT",
+      "envelope_family": "REPLAY_EVIDENCE_RECORD_V1",
+      "identity_field": "record_json.payload.source_record_id + record_json.payload.evidence_identity_key",
+      "scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "payload_path": "record_json.payload.canonical_payload",
+      "logical_time_path": null,
+      "as_of_path": null,
+      "available_to_runtime_at_path": "record_json.payload.available_to_runtime_at",
+      "available_projection_columns": [
+        "fact_id",
+        "occurred_at",
+        "source",
+        "record_json"
+      ],
+      "required_column_comparisons": [
+        {
+          "fact_field": "record_json.payload.record_type",
+          "canonical_rule": "exact irrigation_execution_receipt_evidence_v1"
+        },
+        {
+          "fact_field": "record_json.payload.source_record_hash",
+          "canonical_rule": "recompute exact evidence-specific source hash"
+        },
+        {
+          "fact_field": "record_json.payload.source_payload",
+          "canonical_rule": "semanticHash equals canonical_payload where contract requires"
+        },
+        {
+          "fact_field": "record_json.payload scope",
+          "canonical_rule": "six-dimensional scope exact"
+        },
+        {
+          "fact_field": "record_json.payload.available_to_runtime_at",
+          "canonical_rule": "canonical UTC instant exact"
+        }
+      ],
+      "source_fact_envelope_profile": "REPLAY_EVIDENCE_RECORD_V1: record_type/source_record_id/source_record_hash/evidence_identity_key/available_to_runtime_at/canonical_payload",
+      "parent_lookup_path": null,
+      "child_lookup_path": null,
+      "cardinality": "ONE_ROW_PER_CANONICAL_OBJECT",
+      "canonical_hash_function": "semanticHashV1(full evidence record excluding source_record_hash and materialized_file_location)",
+      "fact_visibility_metadata_source": "public.twin_fact_visibility_index_v1 joined by canonical fact_id",
+      "visibility_anchor_xid8_path": "public.twin_fact_visibility_index_v1.visibility_anchor_xid8",
+      "visibility_anchor_kind_path": "public.twin_fact_visibility_index_v1.visibility_anchor_kind",
+      "visibility_epoch_source": "public.twin_fact_visibility_epoch_v1 exactly one ACTIVE epoch",
+      "snapshot_visibility_predicate": "fv.visibility_epoch_id = :epoch_id AND pg_visible_in_snapshot(fv.visibility_anchor_xid8,:pg_snapshot)",
+      "visibility_snapshot_eligible": true,
+      "health_attempt_ref_path": null,
+      "health_operation_discriminator_path": null,
+      "forecast_failure_ref_path": null,
+      "health_transaction_family_resolution_rule": null,
+      "health_role_resolution_rule": null,
+      "failure_code": "MCFT_DIRECT_REPLAY_EVIDENCE_INVALID"
+    }
+  ],
+  "inventory_counts": {
+    "row_count": 40,
+    "profile_family_count": 8
+  },
+  "s0_exit_status": "MATERIALIZED_COMPLETE_PENDING_FOCUSED_GATE"
+}
