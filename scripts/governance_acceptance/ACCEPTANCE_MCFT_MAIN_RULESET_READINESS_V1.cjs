@@ -135,6 +135,8 @@ function main() {
   assert.match(sources.release, /pull_request_target:/);
   assert.doesNotMatch(sources.candidate, /permissions:\s*[\s\S]*contents:\s*write/);
   assert.doesNotMatch(sources.release, /permissions:\s*[\s\S]*contents:\s*write/);
+  assert.match(sources.candidate, /group:\s*mcft-candidate-integrity-v2-\$\{\{ github\.event_name \}\}-/);
+  assert.match(sources.release, /group:\s*mcft-release-lane-v1-\$\{\{ github\.event_name \}\}-/);
 
   const result = {
     schema_version: 'geox_mcft_main_ruleset_readiness_v1_result_v2',
@@ -147,6 +149,7 @@ function main() {
     conditional_required_checks: conditional,
     selected_required_check_name_collision_count: 0,
     pull_request_path_filter_count_on_required_workflows: 0,
+    cross_event_concurrency_collision_count: 0,
     strict_up_to_date_required: true,
     merge_queue_required: false,
     ruleset_configuration_recorded_in_profile: configured,
