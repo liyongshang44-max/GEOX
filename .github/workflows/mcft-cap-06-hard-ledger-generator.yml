@@ -6,11 +6,10 @@ on:
       - '.github/workflows/mcft-cap-06-hard-ledger-generator.yml'
       - 'scripts/governance_acceptance/GENERATE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_LEDGER.cjs'
       - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_RECORDS.cjs'
-      - 'docs/digital_twin/mcft/cap_06/hard_acceptance/**'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate-item-ledger:
@@ -18,6 +17,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
@@ -53,6 +55,29 @@ jobs:
           }
           if (count !== 255 || ids.size !== 255) throw new Error('LEDGER_ITEM_ACCUMULATION_INVALID');
           NODE
+      - name: Materialize generated records on the repair work branch
+        if: github.event_name == 'pull_request'
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          DIR='acceptance-output/mcft-cap-06-ledger-repair'
+          cp "$DIR/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.manifest.generated.json" \
+            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json
+          for LETTER in A B C D E F G H I J; do
+            cp "$DIR/MCFT-CAP-06-HARD-${LETTER}.generated.json" \
+              "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-${LETTER}.json"
+          done
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json \
+            docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-*.json
+          if git diff --cached --quiet; then
+            echo 'Generated item records already materialized.'
+          else
+            git commit -m 'MCFT-CAP-06 S11D repair: materialize item-level ledger'
+            git push origin "HEAD:${HEAD_BRANCH}"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: mcft-cap-06-hard-ledger-generated
