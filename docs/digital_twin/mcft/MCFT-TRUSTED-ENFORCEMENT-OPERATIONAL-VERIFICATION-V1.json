@@ -4,21 +4,28 @@
   "repository": "liyongshang44-max/GEOX",
   "ruleset_name": "main-strict-delivery-v1",
   "target_branch": "main",
-  "verification_state": "NEGATIVE_TEST_IN_PROGRESS",
+  "verification_state": "CORRECTED_HEAD_VALIDATION_IN_PROGRESS",
   "base_commit": "2be5fb94728c04261122890f8674dc227da55db8",
+  "verification_pull_request": 2599,
   "required_checks_under_test": [
     "mcft-candidate-integrity-enforce-current-pr",
     "mcft-release-lane-enforce-current-pr"
   ],
-  "negative_probe": {
-    "path": "docs/digital_twin/mcft/cap_06/MCFT-TRUSTED-ENFORCEMENT-NEGATIVE-PROBE.json",
-    "expected_candidate_integrity_disposition": "UNREGISTERED_CANDIDATE_AUTHORITY_FAIL_CLOSED",
-    "expected_release_lane_disposition": "FAIL_BECAUSE_CANDIDATE_INTEGRITY_REVALIDATION_FAILS"
+  "negative_phase": {
+    "candidate_head": "4b49af9d94de6a4dcdf24008755b2ade94aec866",
+    "probe_path": "docs/digital_twin/mcft/cap_06/MCFT-TRUSTED-ENFORCEMENT-NEGATIVE-PROBE.json",
+    "ordinary_required_check_count": 6,
+    "ordinary_required_checks": "ALL_SUCCESS",
+    "trusted_required_check_count": 2,
+    "trusted_required_checks": "BOTH_FAILING",
+    "merge_attempt_http_status": 405,
+    "merge_attempt_summary": "Repository rule violations found; 2 of 8 required status checks are failing",
+    "probe_removed_before_merge": true
   },
   "observations": {
-    "trusted_candidate_enforcement_failed_closed": false,
-    "trusted_release_lane_failed_closed": false,
-    "ruleset_blocked_merge_on_trusted_failure": false,
+    "trusted_candidate_enforcement_failed_closed": true,
+    "trusted_release_lane_failed_closed": true,
+    "ruleset_blocked_merge_on_trusted_failure": true,
     "corrected_head_passed_all_eight_required_checks": false,
     "corrected_head_merged_through_active_ruleset": false
   },
