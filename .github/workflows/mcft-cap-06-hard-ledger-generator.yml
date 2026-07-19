@@ -8,8 +8,6 @@ on:
       - 'scripts/governance_acceptance/NORMALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_LEDGER.cjs'
       - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_RECORDS.cjs'
       - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_REQUIRED_DELIVERABLES.cjs'
-      - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_S11D_CLOSURE_REPAIR_STATE.cjs'
-      - 'scripts/governance_acceptance/PATCH_MCFT_CAP_06_S11D_REPAIR_RUNTIME_DELTA.cjs'
       - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_RESOLVED_TASKBOOK_V2.cjs'
       - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_HISTORICAL_WORKFLOW_FREEZE.cjs'
   workflow_dispatch:
@@ -48,10 +46,6 @@ jobs:
             cp "$DIR/MCFT-CAP-06-HARD-${LETTER}.generated.json" \
               "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-${LETTER}.json"
           done
-      - name: Materialize suspended closure repair state
-        run: node scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_S11D_CLOSURE_REPAIR_STATE.cjs
-      - name: Normalize Runtime delta projection
-        run: node scripts/governance_acceptance/PATCH_MCFT_CAP_06_S11D_REPAIR_RUNTIME_DELTA.cjs
       - name: Materialize Resolved Task Manifest V2 and ledger V3
         run: node scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_RESOLVED_TASKBOOK_V2.cjs
       - name: Freeze historical Slice workflows to manual replay
