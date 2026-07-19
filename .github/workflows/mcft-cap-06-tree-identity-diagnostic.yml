@@ -18,9 +18,16 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
           persist-credentials: false
-      - name: Emit exact candidate tree identity
+      - name: Record exact candidate tree identity
         shell: bash
         run: |
           set -euo pipefail
-          echo "MCFT_CAP_06_CANDIDATE_COMMIT=$(git rev-parse HEAD)"
-          echo "MCFT_CAP_06_CANDIDATE_TREE=$(git rev-parse 'HEAD^{tree}')"
+          mkdir -p acceptance-output/tree-identity
+          printf '%s\n' "commit=$(git rev-parse HEAD)" "tree=$(git rev-parse 'HEAD^{tree}')" > acceptance-output/tree-identity/identity.txt
+      - name: Upload tree identity
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-06-tree-identity-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/tree-identity/identity.txt
+          if-no-files-found: error
+          retention-days: 1
