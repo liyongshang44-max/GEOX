@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/mcft-cap-06-hard-ledger-generator.yml'
       - 'scripts/governance_acceptance/GENERATE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_LEDGER.cjs'
+      - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_RECORDS.cjs'
       - 'docs/digital_twin/mcft/cap_06/hard_acceptance/**'
   workflow_dispatch:
 
@@ -20,30 +21,40 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Generate repair-candidate item ledger
+      - name: Generate repair-candidate item records
         env:
           MCFT_CAP_06_LEDGER_MODE: REPAIR_CANDIDATE
-        run: node scripts/governance_acceptance/GENERATE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_LEDGER.cjs
-      - name: Verify generated ledger
+        run: node scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_RECORDS.cjs
+      - name: Verify generated item records
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
-          const p = 'acceptance-output/mcft-cap-06-ledger-repair/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.generated.json';
+          const path = require('node:path');
+          const dir = 'acceptance-output/mcft-cap-06-ledger-repair';
+          const p = path.join(dir, 'GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.manifest.generated.json');
           const j = JSON.parse(fs.readFileSync(p, 'utf8'));
           if (j.total_check_count !== 255) throw new Error('LEDGER_ITEM_COUNT_INVALID');
           if (j.item_shape_inheritance !== 'FORBIDDEN' || j.each_item_self_contained !== true) throw new Error('LEDGER_ITEM_SHAPE_INVALID');
           if (j.status_counts.PASS !== 253 || j.status_counts.FAIL !== 2 || j.status_counts.NOT_APPLICABLE !== 0) throw new Error('LEDGER_REPAIR_COUNTS_INVALID');
-          if (!Array.isArray(j.items) || j.items.length !== 255) throw new Error('LEDGER_ITEMS_MISSING');
-          const ids = new Set(j.items.map((item) => item.acceptance_id));
-          if (ids.size !== 255) throw new Error('LEDGER_ITEM_IDS_NOT_UNIQUE');
-          for (const item of j.items) {
-            for (const key of ['acceptance_id','category','assertion','status','evidence_refs','workflow_refs','canonical_refs','notes']) {
-              if (!(key in item)) throw new Error(`LEDGER_ITEM_FIELD_MISSING:${item.acceptance_id}:${key}`);
+          if (!Array.isArray(j.category_records) || j.category_records.length !== 10) throw new Error('LEDGER_CATEGORY_RECORDS_INVALID');
+          let count = 0;
+          const ids = new Set();
+          for (const letter of 'ABCDEFGHIJ') {
+            const record = JSON.parse(fs.readFileSync(path.join(dir, `MCFT-CAP-06-HARD-${letter}.generated.json`), 'utf8'));
+            if (record.item_shape_inheritance !== 'FORBIDDEN' || record.each_item_self_contained !== true) throw new Error(`CATEGORY_ITEM_SHAPE_INVALID:${letter}`);
+            count += record.item_count;
+            for (const item of record.items) {
+              if (ids.has(item.acceptance_id)) throw new Error(`LEDGER_ITEM_ID_DUPLICATE:${item.acceptance_id}`);
+              ids.add(item.acceptance_id);
+              for (const key of ['acceptance_id','category','assertion','status','evidence_refs','workflow_refs','canonical_refs','notes']) {
+                if (!(key in item)) throw new Error(`LEDGER_ITEM_FIELD_MISSING:${item.acceptance_id}:${key}`);
+              }
             }
           }
+          if (count !== 255 || ids.size !== 255) throw new Error('LEDGER_ITEM_ACCUMULATION_INVALID');
           NODE
       - uses: actions/upload-artifact@v4
         with:
           name: mcft-cap-06-hard-ledger-generated
-          path: acceptance-output/mcft-cap-06-ledger-repair/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.generated.json
+          path: acceptance-output/mcft-cap-06-ledger-repair/*.json
           if-no-files-found: error
