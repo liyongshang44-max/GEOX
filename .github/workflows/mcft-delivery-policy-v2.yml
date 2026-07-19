@@ -14,8 +14,10 @@ on:
       - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json'
       - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+      - 'docs/digital_twin/mcft/MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1.json'
       - 'docs/digital_twin/mcft/MCFT-DELIVERY-FOUNDATION-V2-STATUS.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V2.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_P_MINUS_1B_BOOTSTRAP.cjs'
   workflow_dispatch:
 
 permissions:
@@ -34,11 +36,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Validate Delivery Foundation V2.1 contract
+      - name: Validate Delivery Foundation V2.2 contract
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V2.cjs
+      - name: Validate MCFT-CAP-07 P-1B detector and registry bootstrap
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_P_MINUS_1B_BOOTSTRAP.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mcft-delivery-policy-v2-${{ github.sha }}
-          path: acceptance-output/MCFT_DELIVERY_POLICY_V2_RESULT.json
+          path: |
+            acceptance-output/MCFT_DELIVERY_POLICY_V2_RESULT.json
+            acceptance-output/MCFT_CAP_07_P_MINUS_1B_BOOTSTRAP_RESULT.json
+            acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2_RESULT.json
           if-no-files-found: error

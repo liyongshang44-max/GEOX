@@ -12,6 +12,7 @@ on:
       - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
       - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+      - 'docs/digital_twin/mcft/MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs'
   workflow_dispatch:
 
@@ -38,7 +39,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Run registry-driven candidate declaration selftest
+      - name: Run registry-driven explicit-signal candidate declaration selftest
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs --selftest
       - uses: actions/upload-artifact@v4
         if: always()
@@ -86,7 +87,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Validate registry and exact merge-group context
+      - name: Validate registry, signal contract and exact merge-group context
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs --merge-group
       - uses: actions/upload-artifact@v4
         if: always()
