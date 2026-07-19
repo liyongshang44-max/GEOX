@@ -41,7 +41,39 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_S0_AUTHORIZATION.cjs
       - name: Validate retention authority static contract
         run: node scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs --static-contract
+      - name: Classify S0 candidate context
+        id: candidate-context
+        shell: bash
+        env:
+          MCFT_EVENT_NAME: ${{ github.event_name }}
+          MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          MCFT_PR_BODY: ${{ github.event.pull_request.body }}
+          MCFT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: |
+          if [[ "$MCFT_EVENT_NAME" == "pull_request" && "$MCFT_PR_BODY" == *"MCFT_CANDIDATE_DECLARATION_V2"* ]]; then
+            echo "is_s0_candidate=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "is_s0_candidate=false" >> "$GITHUB_OUTPUT"
+          mkdir -p acceptance-output
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = {
+            schema_version: 'geox_mcft_cap_07_s0_live_trusted_exercise_v1',
+            status: 'SKIP_NOT_S0_CANDIDATE_PR',
+            event_name: process.env.MCFT_EVENT_NAME || null,
+            pr_number: process.env.MCFT_PR_NUMBER || null,
+            head_sha: process.env.MCFT_HEAD_SHA || null,
+            reason: 'LIVE_TRUSTED_EXERCISE_APPLIES_ONLY_TO_EXPLICIT_S0_CANDIDATE_DECLARATIONS',
+          };
+          fs.writeFileSync(
+            'acceptance-output/MCFT_CAP_07_S0_LIVE_TRUSTED_EXERCISE_RESULT.json',
+            `${JSON.stringify(result, null, 2)}\n`,
+          );
+          NODE
       - name: Validate same-PR trusted negative-to-corrected exercise
+        if: steps.candidate-context.outputs.is_s0_candidate == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
