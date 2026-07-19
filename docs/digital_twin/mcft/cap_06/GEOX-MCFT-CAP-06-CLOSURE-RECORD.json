@@ -7,14 +7,14 @@
   "runtime_mode": "CONTROLLED_REPLAY",
   "target_completion_level": "Level A — Deterministic Replay Twin",
   "delivery_slice_id": "MCFT-CAP-06.FINAL-EFFECTIVENESS-RECONCILIATION-V1",
-  "lifecycle_stage": "S11D_FINAL_EFFECTIVENESS_RECONCILIATION",
-  "status": "COMPLETE",
+  "lifecycle_stage": "S11D_IMPLEMENTATION_DEFECT_REPAIR_CANDIDATE",
+  "status": "IMPLEMENTATION_COMPLETE_CLOSURE_REPAIR_REQUIRED",
   "implementation_status": "COMPLETE",
-  "closure_effective": true,
-  "capability_complete": true,
-  "active_delivery_slice_id": null,
-  "next_repository_action": null,
-  "baseline_main_commit": "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+  "closure_effective": false,
+  "capability_complete": false,
+  "active_delivery_slice_id": "MCFT-CAP-06.FINAL-EFFECTIVENESS-RECONCILIATION-V1",
+  "next_repository_action": "S11D_REPAIR_MERGED_MAIN_PROOF",
+  "baseline_main_commit": "f889db7d336661f85198f4b377bc07cc00da4dc0",
   "reconciliation_branch": "agent/mcft-cap-06-s11d-final-effectiveness-reconciliation",
   "reconciliation_pr_number": null,
   "authority_refs": {
@@ -69,13 +69,16 @@
   "hard_acceptance": {
     "ledger_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json",
     "total_check_count": 255,
-    "pass_count": 255,
-    "fail_count": 0,
+    "pass_count": 253,
+    "fail_count": 2,
     "not_applicable_count": 0,
-    "accumulated_evidence_status": "SATISFIED_EFFECTIVE"
+    "accumulated_evidence_status": "REPAIR_CANDIDATE_POSTMERGE_PROOF_PENDING",
+    "failed_acceptance_ids": [
+      "MCFT_CAP_06_HARD_J_016",
+      "MCFT_CAP_06_HARD_J_017"
+    ]
   },
-  "pending_completion_claims": [],
-  "effective_completion_claims": [
+  "pending_completion_claims": [
     "MCFT_CAP_06_COMPLETE",
     "DT02_CALIBRATION_CANDIDATE_REUSE_ESTABLISHED",
     "DT02_SHADOW_EVALUATION_REUSE_ESTABLISHED",
@@ -125,8 +128,9 @@
     "FINAL_EFFECTIVENESS_RECONCILIATION_ESTABLISHED",
     "MCFT_CAP_07_REMAINS_UNAUTHORIZED"
   ],
-  "completion_claim_activation_condition": "S11C_MERGED_MAIN_PROOF_PASS_AND_S11D_RECONCILIATION_MERGED",
-  "completion_claim_effective_delta": 48,
+  "effective_completion_claims": [],
+  "completion_claim_activation_condition": "REPAIRED_ITEM_LEDGER_ALL_PASS_AND_S11D_REPAIR_MERGED_MAIN_PROOF_PASS",
+  "completion_claim_effective_delta": 0,
   "runtime_source_authorized": false,
   "successor_capability_line_id": "MCFT-CAP-07",
   "successor_authorized": false,
@@ -168,7 +172,7 @@
     "production_closed_loop_claim": false,
     "minimum_complete_field_twin_claim": false
   },
-  "reconciliation_record_state": "CANDIDATE_EFFECTIVE_ON_MERGE",
+  "reconciliation_record_state": "REPAIR_CANDIDATE_REQUIRES_MERGED_MAIN_PROOF",
   "final_postmerge_proof_required": true,
   "final_postmerge_proof_writeback_forbidden": true,
   "unknown_s11d_merge_or_postmerge_evidence_recorded": false,
@@ -186,5 +190,14 @@
     "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json",
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINAL_EFFECTIVENESS_RECONCILIATION.cjs"
   ],
-  "verified_preconditions": true
+  "verified_preconditions": true,
+  "repair_branch": "agent/mcft-cap-06-s11d-closure-repair-candidate",
+  "repair_pr_number": null,
+  "repair_classification": "IMPLEMENTATION_DEFECT",
+  "repair_scope": "S11D_FINAL_EFFECTIVENESS_RECONCILIATION_REPAIR",
+  "new_capability_slice": false,
+  "task_order_changed": false,
+  "completion_claim_suspension_delta": 48,
+  "repair_postmerge_proof_required": true,
+  "unknown_repair_merge_or_postmerge_evidence_recorded": false
 }
