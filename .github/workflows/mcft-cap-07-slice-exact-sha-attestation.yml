@@ -6,10 +6,12 @@ on:
     paths:
       - 'docs/digital_twin/mcft/cap_07/**'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_*.cjs'
-      - 'scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs'
-      - '.github/workflows/mcft-cap-07-*.yml'
   workflow_dispatch:
+    inputs:
+      subject_sha:
+        description: Exact historical or current main merge SHA to attest
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -17,18 +19,20 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: mcft-cap-07-exact-sha-${{ github.sha }}
+  group: mcft-cap-07-exact-sha-${{ inputs.subject_sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
   exact-sha-attestation:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      MCFT_SUBJECT_SHA: ${{ inputs.subject_sha || github.sha }}
     steps:
-      - name: Checkout exact main subject
+      - name: Checkout trusted current main attestation implementation
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: main
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -56,7 +60,7 @@ jobs:
           MCFT_ARTIFACT_ARCHIVE_PATH: acceptance-output/mcft-cap-07-attestation.tar.gz
           MCFT_REPOSITORY_OWNER: ${{ github.repository_owner }}
           MCFT_REPOSITORY_NAME: GEOX
-          MCFT_ARTIFACT_NAME: mcft-cap-07-exact-sha-${{ github.sha }}
+          MCFT_ARTIFACT_NAME: mcft-cap-07-exact-sha-${{ inputs.subject_sha || github.sha }}
           MCFT_RETENTION_LEVEL: R1
           MCFT_RETENTION_DAYS: '180'
         run: node scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs --upload-readback
@@ -64,7 +68,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap-07-exact-sha-${{ github.sha }}
+          name: mcft-cap-07-exact-sha-${{ inputs.subject_sha || github.sha }}
           path: |
             acceptance-output/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.json
             acceptance-output/MCFT_CAP_07_ATTESTATION_RETENTION_LOCATOR.json
