@@ -67,6 +67,8 @@ jobs:
       POSTGRES_PORT: 5432
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox
       MCFT_CAP_06_S11D_REPAIR_BASE_REF: f889db7d336661f85198f4b377bc07cc00da4dc0
+      MCFT_CAP_06_REPAIR_RUNTIME_DB: mcft_cap06_s11d_repair_runtime_ci
+      MCFT_CAP_06_REPAIR_RUNTIME_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap06_s11d_repair_runtime_ci
     steps:
       - uses: actions/checkout@v4
         with:
@@ -95,8 +97,26 @@ jobs:
           if (r.closure_effective !== false || r.capability_complete !== false) throw new Error('S11D_REPAIR_EFFECTIVENESS_INVALID');
           if (r.runtime_source_authorized !== false || r.successor_capability_line_authorized !== false) throw new Error('S11D_REPAIR_AUTHORITY_INVALID');
           NODE
+      - name: Recreate isolated Runtime regression database
+        run: |
+          node - <<'NODE'
+          const { Pool } = require('pg');
+          const name = process.env.MCFT_CAP_06_REPAIR_RUNTIME_DB;
+          if (!/^[a-z0-9_]+$/.test(name)) throw new Error('REPAIR_RUNTIME_DATABASE_NAME_INVALID');
+          const pool = new Pool({ connectionString: 'postgres://postgres:postgres@127.0.0.1:5432/postgres' });
+          (async () => {
+            try {
+              await pool.query('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=$1 AND pid<>pg_backend_pid()', [name]);
+              await pool.query(`DROP DATABASE IF EXISTS ${name}`);
+              await pool.query(`CREATE DATABASE ${name}`);
+            } finally {
+              await pool.end();
+            }
+          })().catch((error) => { console.error(error); process.exitCode = 1; });
+          NODE
       - name: Run controlled bounded-chain PostgreSQL Runtime regression
         env:
+          DATABASE_URL: ${{ env.MCFT_CAP_06_REPAIR_RUNTIME_DATABASE_URL }}
           MCFT_CAP_06_S10_BOUNDED_CHAIN_DESTRUCTIVE_ACCEPTANCE: '1'
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_DB.ts
       - name: Verify permanent Runtime regression
@@ -117,6 +137,23 @@ jobs:
           pnpm -r typecheck
           pnpm -r build
           pnpm --filter @geox/server run test:p1:selfcheck
+      - name: Drop isolated Runtime regression database
+        if: always()
+        run: |
+          node - <<'NODE'
+          const { Pool } = require('pg');
+          const name = process.env.MCFT_CAP_06_REPAIR_RUNTIME_DB;
+          if (!/^[a-z0-9_]+$/.test(name)) throw new Error('REPAIR_RUNTIME_DATABASE_NAME_INVALID');
+          const pool = new Pool({ connectionString: 'postgres://postgres:postgres@127.0.0.1:5432/postgres' });
+          (async () => {
+            try {
+              await pool.query('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=$1 AND pid<>pg_backend_pid()', [name]);
+              await pool.query(`DROP DATABASE IF EXISTS ${name}`);
+            } finally {
+              await pool.end();
+            }
+          })().catch((error) => { console.error(error); process.exitCode = 1; });
+          NODE
       - name: Upload repair evidence
         if: always()
         uses: actions/upload-artifact@v4
