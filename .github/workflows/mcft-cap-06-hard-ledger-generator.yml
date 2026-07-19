@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: mcft-cap-06-repair-staging-materializer-${{ github.event.pull_request.number || github.ref }}
@@ -28,6 +28,7 @@ jobs:
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
@@ -64,23 +65,37 @@ jobs:
           const frozen = fs.readFileSync('.github/workflows/mcft-cap-06-s11d-final-effectiveness-reconciliation.yml','utf8');
           if (!frozen.includes('Historical MCFT-CAP-06 workflow') || !/^on:\n  workflow_dispatch:/m.test(frozen)) throw new Error('HISTORICAL_WORKFLOW_NOT_FROZEN');
           NODE
-      - name: Commit one-time staging migration output
-        if: github.event_name == 'pull_request'
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
+      - name: Package atomic workflow-freeze tree input
         run: |
           set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          if git diff --cached --quiet; then
-            echo 'Staging migration output already materialized.'
-          else
-            git commit -m 'MCFT-CAP-06 S11D repair: freeze historical workflow triggers'
-            git push origin "HEAD:${HEAD_BRANCH}"
-          fi
+          OUT='acceptance-output/mcft-cap-06-workflow-freeze'
+          mkdir -p "$OUT/root"
+          git diff --name-only -- .github/workflows > "$OUT/changed-workflows.txt"
+          while IFS= read -r FILE; do
+            [ -z "$FILE" ] && continue
+            mkdir -p "$OUT/root/$(dirname "$FILE")"
+            cp "$FILE" "$OUT/root/$FILE"
+          done < "$OUT/changed-workflows.txt"
+          node - <<'NODE'
+          const cp = require('node:child_process');
+          const fs = require('node:fs');
+          const out = 'acceptance-output/mcft-cap-06-workflow-freeze';
+          const changed = fs.readFileSync(`${out}/changed-workflows.txt`, 'utf8').split(/\r?\n/).filter(Boolean);
+          const manifest = {
+            schema_version: 'geox_mcft_cap_06_workflow_freeze_tree_input_v1',
+            base_commit: cp.execFileSync('git', ['rev-parse','HEAD'], { encoding: 'utf8' }).trim(),
+            base_tree: cp.execFileSync('git', ['rev-parse','HEAD^{tree}'], { encoding: 'utf8' }).trim(),
+            changed_workflow_count: changed.length,
+            changed_workflows: changed,
+          };
+          fs.writeFileSync(`${out}/manifest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
+          if (changed.length !== 22) throw new Error(`WORKFLOW_FREEZE_COUNT_INVALID:${changed.length}`);
+          NODE
+          tar -czf "$OUT/workflows.tar.gz" -C "$OUT/root" .
       - uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap-06-repair-staging-materialization
-          path: acceptance-output/mcft-cap-06-ledger-repair/*.json
+          name: mcft-cap-06-workflow-freeze-tree-input
+          path: |
+            acceptance-output/mcft-cap-06-workflow-freeze/manifest.json
+            acceptance-output/mcft-cap-06-workflow-freeze/workflows.tar.gz
           if-no-files-found: error
