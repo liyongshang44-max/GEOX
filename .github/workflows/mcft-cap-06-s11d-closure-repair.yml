@@ -95,18 +95,22 @@ jobs:
           if (r.closure_effective !== false || r.capability_complete !== false) throw new Error('S11D_REPAIR_EFFECTIVENESS_INVALID');
           if (r.runtime_source_authorized !== false || r.successor_capability_line_authorized !== false) throw new Error('S11D_REPAIR_AUTHORITY_INVALID');
           NODE
-      - name: Run permanent bounded-chain PostgreSQL regression
-        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs
+      - name: Run controlled bounded-chain PostgreSQL Runtime regression
+        env:
+          MCFT_CAP_06_S10_BOUNDED_CHAIN_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_DB.ts
       - name: Verify permanent Runtime regression
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
-          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S10_BOUNDED_CHAIN_PREFLIGHT_RESULT.json','utf8'));
-          if (r.status !== 'PASS' || r.stage_count !== 5) throw new Error(`S10_REGRESSION_NOT_PASS:${r.error || 'UNKNOWN'}`);
-          if (r.actual_r !== 24 || r.actual_c !== 0 || r.actual_cap06_canonical_delta !== 36) throw new Error('S10_REGRESSION_CANONICAL_DELTA_INVALID');
-          if (r.candidate_parameter_value !== '0.034000' || r.effective_runtime_parameter_value !== '0.030000') throw new Error('S10_REGRESSION_PARAMETER_BOUNDARY_INVALID');
-          if (r.completed_replay_additional_fact_count !== 0 || r.completed_replay_projection_divergence_count !== 0 || r.completed_replay_evidence_load_count !== 0) throw new Error('S10_REGRESSION_REPLAY_NOT_ZERO_WRITE');
-          if (r.candidate_consumed !== false || r.evaluation_consumed !== false || r.model_activation_count !== 0 || r.active_config_snapshot_changed !== false) throw new Error('S10_REGRESSION_RUNTIME_AUTHORITY_VIOLATION');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S10_BOUNDED_CHAIN_DB_RESULT.json','utf8'));
+          if (r.status !== 'PASS') throw new Error(`S10_RUNTIME_REGRESSION_NOT_PASS:${r.error || 'UNKNOWN'}`);
+          if (r.controlled_stage_database_count !== 2 || r.controlled_storage_mode !== 'TWO_NAMESPACED_ISOLATED_POSTGRESQL_STAGES') throw new Error('S10_RUNTIME_STORAGE_MODE_INVALID');
+          if (r.actual_r !== 24 || r.actual_c !== 0 || r.actual_cap06_canonical_delta !== 36) throw new Error('S10_RUNTIME_CANONICAL_DELTA_INVALID');
+          if (r.candidate_parameter_value !== '0.034000' || r.effective_runtime_parameter_value !== '0.030000') throw new Error('S10_RUNTIME_PARAMETER_BOUNDARY_INVALID');
+          if (r.completed_replay_additional_fact_count !== 0 || r.completed_replay_projection_divergence_count !== 0 || r.completed_replay_evidence_load_count !== 0) throw new Error('S10_RUNTIME_REPLAY_NOT_ZERO_WRITE');
+          if (r.candidate_consumed !== false || r.evaluation_consumed !== false || r.model_activation_count !== 0 || r.active_config_snapshot_changed !== false) throw new Error('S10_RUNTIME_AUTHORITY_VIOLATION');
+          if (r.production_database_used !== false) throw new Error('S10_RUNTIME_PRODUCTION_DATABASE_VIOLATION');
           NODE
       - name: Typecheck build and server selfcheck
         run: |
