@@ -11,6 +11,8 @@
     "MCFT_CAP_06_DEFECT_HARD_ACCEPTANCE_ITEMIZATION"
   ],
   "baseline_main_commit": "f889db7d336661f85198f4b377bc07cc00da4dc0",
+  "transport_materialization_complete": true,
+  "transport_branch_is_merge_authority": false,
   "new_capability_slice": false,
   "task_order_changed": false,
   "new_prerequisite_inserted": false,
