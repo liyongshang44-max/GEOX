@@ -7,5 +7,8 @@ const implementationAuthority = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_
 if (process.env.MCFT_CAP_06_COMPATIBILITY_DISCOVERY_ONLY === "1") {
   process.stdout.write(JSON.stringify({ status: "PASS", required_path: requiredPath, implementation_authority: implementationAuthority, mode: "COMPATIBILITY_WRAPPER" }) + "\n");
 } else {
-  await import("./ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_DB.ts");
+  import("./ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_DB.ts").catch((error) => {
+    console.error(error instanceof Error ? error.stack : String(error));
+    process.exitCode = 1;
+  });
 }
