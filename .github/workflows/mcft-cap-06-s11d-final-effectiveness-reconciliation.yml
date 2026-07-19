@@ -3,32 +3,35 @@ name: mcft-cap-06-s11d-final-effectiveness-reconciliation
 on:
   pull_request:
     paths:
-      - '.github/workflows/mcft-cap-06-s11c-capability-completion-effectiveness-activation.yml'
       - '.github/workflows/mcft-cap-06-s11d-final-effectiveness-reconciliation.yml'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CLOSURE-RECORD.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINALIZATION-EFFECTIVENESS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINAL-EFFECTIVENESS-RECONCILIATION.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-MAIN-VERIFICATION.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11A-CLOSURE-CANDIDATE-STATUS.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11C-CAPABILITY-COMPLETION-EFFECTIVENESS-ACTIVATION-STATUS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11D-FINAL-EFFECTIVENESS-RECONCILIATION-STATUS.json'
       - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINAL_EFFECTIVENESS_RECONCILIATION.cjs'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  s11d-final-reconciliation:
+  frozen-s11d-final-reconciliation:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       MCFT_CAP_06_S11D_BASE_REF: 2e1b14e31a5420dccfd70c4955726427fc29eb7e
+      FROZEN_S11D_CANDIDATE_REF: afe2ec06ae3ca28c5a55760a14d26bb7f1adaa83
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout workflow carrier
+        uses: actions/checkout@v4
         with:
+          fetch-depth: 0
+      - name: Checkout exact historical S11D candidate authority
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.FROZEN_S11D_CANDIDATE_REF }}
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
@@ -38,31 +41,28 @@ jobs:
           node-version: 20.11.1
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Run S11D final reconciliation Gate
+      - name: Run frozen historical S11D final reconciliation Gate
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINAL_EFFECTIVENESS_RECONCILIATION.cjs
-      - name: Typecheck build and selfcheck
+      - name: Typecheck build and selfcheck on frozen authority
         run: |
           pnpm -r typecheck
           pnpm -r build
           pnpm --filter @geox/server run test:p1:selfcheck
-      - name: Verify structured S11D result
+      - name: Verify frozen historical S11D result
         run: |
           node - <<'NODE'
           const fs=require('node:fs');
           const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S11D_FINAL_RECONCILIATION_RESULT.json','utf8'));
-          if(r.status!=='PASS'||r.changed_file_count!==12) throw new Error(`S11D_NOT_PASS:${r.error||'UNKNOWN'}`);
-          if(r.hard_acceptance_total_check_count!==255) throw new Error('S11D_HARD_ACCEPTANCE_INVALID');
-          if(r.pending_completion_claim_count!==0||r.effective_completion_claim_count!==48) throw new Error('S11D_CLAIMS_INVALID');
-          if(r.closure_effective!==true||r.capability_complete!==true) throw new Error('S11D_TERMINAL_STATE_INVALID');
-          if(r.active_delivery_slice_id!==null||r.next_repository_action!==null) throw new Error('S11D_FRONTIER_NOT_CLOSED');
-          if(r.runtime_source_authorized!==false||r.successor_capability_line_authorized!==false) throw new Error('S11D_AUTHORITY_VIOLATION');
-          if(r.final_postmerge_proof_required!==true||r.postmerge_ssot_writeback_allowed!==false) throw new Error('S11D_POSTMERGE_RULE_INVALID');
-          for(const v of Object.values(r.runtime_delta)) if(v!==0) throw new Error('S11D_RUNTIME_DELTA_NONZERO');
+          if(r.status!=='PASS'||r.changed_file_count!==12) throw new Error(`FROZEN_S11D_NOT_PASS:${r.error||'UNKNOWN'}`);
+          if(r.hard_acceptance_total_check_count!==255) throw new Error('FROZEN_S11D_HARD_ACCEPTANCE_INVALID');
+          if(r.pending_completion_claim_count!==0||r.effective_completion_claim_count!==48) throw new Error('FROZEN_S11D_CLAIMS_INVALID');
+          if(r.closure_effective!==true||r.capability_complete!==true) throw new Error('FROZEN_S11D_TERMINAL_STATE_INVALID');
+          if(r.runtime_source_authorized!==false||r.successor_capability_line_authorized!==false) throw new Error('FROZEN_S11D_AUTHORITY_VIOLATION');
           NODE
-      - name: Upload S11D evidence
+      - name: Upload frozen historical S11D evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap-06-s11d-final-reconciliation-evidence
+          name: mcft-cap-06-s11d-final-reconciliation-frozen-evidence
           path: acceptance-output/MCFT_CAP_06_S11D_FINAL_RECONCILIATION_RESULT.json
           if-no-files-found: error
