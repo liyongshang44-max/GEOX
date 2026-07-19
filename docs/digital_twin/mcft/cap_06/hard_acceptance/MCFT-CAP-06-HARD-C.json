@@ -1,47 +1,842 @@
 {
-  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
-  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_C",
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_category_v2",
+  "capability_line_id": "MCFT-CAP-06",
+  "acceptance_category_id": "MCFT_CAP_06_HARD_CATEGORY_C",
   "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+  "lifecycle_stage": "S11D_IMPLEMENTATION_DEFECT_REPAIR_CANDIDATE",
   "status": "PASS",
-  "evidence_refs": [
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S0-EFFECTIVENESS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
-  ],
-  "workflow_refs": [
-    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
-  ],
-  "canonical_refs": [],
-  "notes": [
-    "Repository-history assessment remains distinct from controlled-track qualification."
-  ],
-  "assertion_count": 25,
-  "assertions": [
-    "predecessor lock comes from PostgreSQL canonical readback",
-    "active lineage object ref is recorded",
-    "semantic lineage ID is recorded separately",
-    "active revision context is recorded",
-    "latest posterior State ref/hash is exact",
-    "latest checkpoint ref/hash is exact",
-    "latest successful Forecast ref/hash is exact",
-    "latest Scenario ref/hash is exact",
-    "latest State-bound Config ref/hash is exact",
-    "config authority mode is recorded",
-    "active-binding status is explicit and nullable",
-    "expected checkpoint sequence 80 is revalidated",
-    "expected global State count 81 is revalidated",
-    "expected next logical time 2026-06-04T10:00:00.000Z is revalidated",
-    "qualification reports eligible Forecast count",
-    "qualification reports eligible Observation count",
-    "qualification reports eligible matched-pair count",
-    "qualification reports eligible Residual count",
-    "qualification reports calibration count",
-    "qualification reports holdout count",
-    "qualification reports model/config hash cardinalities",
-    "S0 does not compute sensitivity or objective surface",
-    "dataset qualification status uses only the S0 enum",
-    "repository calibration assessment uses a separate S10 enum",
-    "24 Forecasts alone never imply 24 eligible pairs"
+  "item_shape_inheritance": "FORBIDDEN",
+  "each_item_self_contained": true,
+  "item_count": 25,
+  "status_counts": {
+    "PASS": 25,
+    "FAIL": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "items": [
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_001",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "predecessor lock comes from PostgreSQL canonical readback",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_002",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "active lineage object ref is recorded",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_003",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "semantic lineage ID is recorded separately",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_004",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "active revision context is recorded",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_005",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "latest posterior State ref/hash is exact",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_006",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "latest checkpoint ref/hash is exact",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_007",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "latest successful Forecast ref/hash is exact",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_008",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "latest Scenario ref/hash is exact",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_009",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "latest State-bound Config ref/hash is exact",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_010",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "config authority mode is recorded",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_011",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "active-binding status is explicit and nullable",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_012",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "expected checkpoint sequence 80 is revalidated",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_013",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "expected global State count 81 is revalidated",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_014",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "expected next logical time 2026-06-04T10:00:00.000Z is revalidated",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_015",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "qualification reports eligible Forecast count",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_016",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "qualification reports eligible Observation count",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_017",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "qualification reports eligible matched-pair count",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_018",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "qualification reports eligible Residual count",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_019",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "qualification reports calibration count",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_020",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "qualification reports holdout count",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_021",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "qualification reports model/config hash cardinalities",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_022",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "S0 does not compute sensitivity or objective surface",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-PREDECESSOR-LOCK.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_023",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "dataset qualification status uses only the S0 enum",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_024",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "repository calibration assessment uses a separate S10 enum",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_C_025",
+      "category": "PREDECESSOR_LOCK_AND_STRUCTURAL_QUALIFICATION",
+      "assertion": "24 Forecasts alone never imply 24 eligible pairs",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-DATASET-QUALIFICATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S0_V2_EXACT_QUALIFICATION.ts"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "ca819ba51bdf3017dbefa96015f76bd3b66a647c",
+        "d059989c7c6bf3747f82653a256514dc75dee5d2",
+        "375adfa3ba85082c1742b30314951df61b3a1936",
+        "4c93ec59a6ac0b53b43584cbef1a7e0295d6b58a",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29471517865,
+        29471606766,
+        29472057972,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    }
   ]
 }

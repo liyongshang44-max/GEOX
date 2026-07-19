@@ -1,17 +1,17 @@
 {
-  "schema_version": "geox_mcft_cap_06_hard_acceptance_evidence_ledger_v1",
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_ledger_v2",
   "capability_line_id": "MCFT-CAP-06",
-  "delivery_slice_id": "MCFT-CAP-06.CLOSURE-CANDIDATE-V1",
-  "lifecycle_stage": "S11A_CLOSURE_CANDIDATE",
-  "status": "CANDIDATE",
+  "delivery_slice_id": "MCFT-CAP-06.FINAL-EFFECTIVENESS-RECONCILIATION-V1",
+  "lifecycle_stage": "S11D_IMPLEMENTATION_DEFECT_REPAIR_CANDIDATE",
+  "status": "REPAIR_CANDIDATE",
   "source_taskbook_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASK.md#43-hard-acceptance-evidence-ledger",
   "taskbook_version": "v0.4.0",
-  "count_authority": "THIS_MANIFEST_PLUS_REFERENCED_CATEGORY_RECORDS",
-  "item_shape_inheritance": "EACH_ASSERTION_INHERITS_STATUS_EVIDENCE_REFS_WORKFLOW_REFS_CANONICAL_REFS_AND_NOTES_FROM_ITS_CATEGORY_RECORD",
+  "item_shape_inheritance": "FORBIDDEN",
+  "each_item_self_contained": true,
   "total_check_count": 255,
   "status_counts": {
-    "PASS": 255,
-    "FAIL": 0,
+    "PASS": 253,
+    "FAIL": 2,
     "NOT_APPLICABLE": 0
   },
   "category_count": 10,
@@ -27,6 +27,11 @@
     "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK": 17,
     "BOUNDED_CHAIN_AND_CLOSURE": 19
   },
+  "completion_claims_effective": false,
+  "verified": false,
+  "final_postmerge_proof_required": true,
+  "postmerge_ssot_writeback_allowed": false,
+  "count_authority": "THIS_MANIFEST_PLUS_REFERENCED_SELF_CONTAINED_ITEM_CATEGORY_RECORDS",
   "category_records": [
     "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
     "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json",
@@ -39,7 +44,16 @@
     "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
     "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json"
   ],
-  "closure_candidate_only": true,
-  "completion_claims_effective": false,
-  "verified": false
+  "category_record_digests": {
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json": "sha256:e6023b2f2faae40443a07c2b4b741c673910da46803097ab627c12ac911e8f3a",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-B.json": "sha256:d49201afaa8268082d319d9b64510534572338d0df741f7ae0e78eb134887f02",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-C.json": "sha256:27859d1ae4d2499464138fe2050d74dd472e9b4e4237574426ea8ffcb865b132",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-D.json": "sha256:a2767cdbd327755d30f0e48fbed08677397d4256b5b94bb9e88922b9eba19017",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-E.json": "sha256:f6d2b91d267b7109e32507bafa0c20e9a0acdbe828d90fbc54833f620c9af5d1",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-F.json": "sha256:e7947c902885859052ef787a76d9aa62c9286717e2dd75da5d646ce0547ce6c9",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-G.json": "sha256:7349df43fbbdea5018b70dae658f1fc681f9bbe18fb0746c3e61bfa759c0a7e9",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-H.json": "sha256:62d7ada622e3aa76af5a67607a69f100fe3205abdfa2d30258741308f0a621eb",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json": "sha256:297984a7bd028f818bac7ce0690fa9caff70bfdbb01486dace45cd5b14f5d6d6",
+    "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json": "sha256:550740040c42bd0e1a2833e9ee1a63f48be0b2d60c0cc6068ba7ac0dc6ce6df4"
+  }
 }

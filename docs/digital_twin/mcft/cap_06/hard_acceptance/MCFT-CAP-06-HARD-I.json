@@ -1,42 +1,800 @@
 {
-  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
-  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_I",
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_category_v2",
+  "capability_line_id": "MCFT-CAP-06",
+  "acceptance_category_id": "MCFT_CAP_06_HARD_CATEGORY_I",
   "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+  "lifecycle_stage": "S11D_IMPLEMENTATION_DEFECT_REPAIR_CANDIDATE",
   "status": "PASS",
-  "evidence_refs": [
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
-  ],
-  "workflow_refs": [
-    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
-  ],
-  "canonical_refs": [
-    "twin_calibration_candidate_5649b9ab80b5545cf6007387",
-    "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
-  ],
-  "notes": [
-    "Candidate and Evaluation are not Runtime authority; effective coefficient remains 0.030000."
-  ],
-  "assertion_count": 17,
-  "assertions": [
-    "config authority mode is explicit",
-    "active-binding absence is represented as NOT_ESTABLISHED with null refs",
-    "no active-binding implementation claim is made when absent",
-    "no twin_model_activation_v1 is appended",
-    "no active-config index is created or modified",
-    "when active binding exists, before equals after",
-    "post-evaluation Tick uses coefficient 0.030000",
-    "Candidate coefficient is not consumed",
-    "Candidate ref is not Runtime authority",
-    "Evaluation ref is not Runtime authority",
-    "a new immutable per-tick Config may exist",
-    "same effective parameter does not require same Config object ID",
-    "existing A1 State Tick implementation is reused",
-    "existing B Scenario implementation is reused",
-    "standard Forecast has 72 points",
-    "standard Scenario Set has three options",
-    "Candidate and Evaluation do not mutate State directly"
+  "item_shape_inheritance": "FORBIDDEN",
+  "each_item_self_contained": true,
+  "item_count": 17,
+  "status_counts": {
+    "PASS": 17,
+    "FAIL": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "items": [
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_001",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "config authority mode is explicit",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_002",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "active-binding absence is represented as NOT_ESTABLISHED with null refs",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_003",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "no active-binding implementation claim is made when absent",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_004",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "no twin_model_activation_v1 is appended",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_005",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "no active-config index is created or modified",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_006",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "when active binding exists, before equals after",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_007",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "post-evaluation Tick uses coefficient 0.030000",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_008",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "Candidate coefficient is not consumed",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_009",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "Candidate ref is not Runtime authority",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_010",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "Evaluation ref is not Runtime authority",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_011",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "a new immutable per-tick Config may exist",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_012",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "same effective parameter does not require same Config object ID",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_013",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "existing A1 State Tick implementation is reused",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_014",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "existing B Scenario implementation is reused",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_015",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "standard Forecast has 72 points",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_016",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "standard Scenario Set has three options",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_I_017",
+      "category": "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK",
+      "assertion": "Candidate and Evaluation do not mutate State directly",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_DB.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S9_NON_CONSUMPTION_EFFECTIVENESS.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "95ac26926ae19754bc62a744c59b1d8901e6e7b5",
+        "0e3f1b0d7f1b28830e906b55e46463f5ec733275",
+        "b61b7433c36c8bc352513b20d365dacf5d92f951",
+        "b69547bee6ddbf05c8289d66a63873fece4038a6",
+        "9ed601140776c79d54fd650364295b1287deb721",
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29645245818,
+        29645245800,
+        29645624586,
+        29645624536,
+        29645245798,
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-I.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    }
   ]
 }

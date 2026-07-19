@@ -1,45 +1,726 @@
 {
-  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
-  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_J",
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_category_v2",
+  "capability_line_id": "MCFT-CAP-06",
+  "acceptance_category_id": "MCFT_CAP_06_HARD_CATEGORY_J",
   "category": "BOUNDED_CHAIN_AND_CLOSURE",
-  "status": "PASS",
-  "evidence_refs": [
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-STATUS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json"
-  ],
-  "workflow_refs": [
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN_EFFECTIVENESS.cjs"
-  ],
-  "canonical_refs": [
-    "twin_calibration_candidate_5649b9ab80b5545cf6007387",
-    "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
-  ],
-  "notes": [
-    "S11A keeps all completion claims pending; S11B/S11C/S11D remain unimplemented."
-  ],
-  "assertion_count": 19,
-  "assertions": [
-    "canonical delta uses R + C + 12 formula",
-    "actual R is frozen from S1",
-    "actual C is frozen from P-1",
-    "projection rows are counted separately",
-    "completed-chain rerun adds zero canonical facts",
-    "completed-chain rerun adds zero projection divergence",
-    "repository-history assessment is retained separately",
-    "controlled fixture does not masquerade as field calibration",
-    "S11A Closure Candidate keeps claims pending",
-    "S11B verifies exact S11A merge commit",
-    "S11B proof PR closes without merge",
-    "S11C is Capability Completion Effectiveness Activation, not Model Activation",
-    "S11C does not claim its own unknown postmerge evidence",
-    "S11D records S11C exact-head, merge and postmerge proof",
-    "final reconciliation proof PR closes without merge",
-    "no SSOT writeback follows final proof success",
-    "final active Slice is null",
-    "runtime source authority is false after closure",
-    "MCFT-CAP-07 remains unauthorized"
+  "lifecycle_stage": "S11D_IMPLEMENTATION_DEFECT_REPAIR_CANDIDATE",
+  "status": "FAIL",
+  "item_shape_inheritance": "FORBIDDEN",
+  "each_item_self_contained": true,
+  "item_count": 19,
+  "status_counts": {
+    "PASS": 17,
+    "FAIL": 2,
+    "NOT_APPLICABLE": 0
+  },
+  "items": [
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_001",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "canonical delta uses R + C + 12 formula",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_002",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "actual R is frozen from S1",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_003",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "actual C is frozen from P-1",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_004",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "projection rows are counted separately",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_005",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "completed-chain rerun adds zero canonical facts",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_006",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "completed-chain rerun adds zero projection divergence",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_007",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "repository-history assessment is retained separately",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_008",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "controlled fixture does not masquerade as field calibration",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S10-BOUNDED-CHAIN-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S10_BOUNDED_CHAIN.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "3072227904dbc753a1fe5d24a6dd714ee65c1ef2",
+        "dc44a9e7e248e02237ee67a054d6fdd0259a1f3f"
+      ],
+      "workflow_run_refs": [
+        29648654760,
+        29648654734,
+        29648654708,
+        29649040109,
+        88092093049,
+        29649040085
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_009",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "S11A Closure Candidate keeps claims pending",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11A-CLOSURE-CANDIDATE-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CLOSURE-RECORD.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_CLOSURE.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_010",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "S11B verifies exact S11A merge commit",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINALIZATION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-MAIN-VERIFICATION.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_CLOSURE.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11C_CAPABILITY_COMPLETION_EFFECTIVENESS_ACTIVATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_011",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "S11B proof PR closes without merge",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINALIZATION-EFFECTIVENESS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-MAIN-VERIFICATION.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_CLOSURE.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11C_CAPABILITY_COMPLETION_EFFECTIVENESS_ACTIVATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_012",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "S11C is Capability Completion Effectiveness Activation, not Model Activation",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11C-CAPABILITY-COMPLETION-EFFECTIVENESS-ACTIVATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINALIZATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11C_CAPABILITY_COMPLETION_EFFECTIVENESS_ACTIVATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_013",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "S11C does not claim its own unknown postmerge evidence",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11C-CAPABILITY-COMPLETION-EFFECTIVENESS-ACTIVATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINALIZATION-EFFECTIVENESS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11C_CAPABILITY_COMPLETION_EFFECTIVENESS_ACTIVATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_014",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "S11D records S11C exact-head, merge and postmerge proof",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11D-FINAL-EFFECTIVENESS-RECONCILIATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINAL-EFFECTIVENESS-RECONCILIATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-MAIN-VERIFICATION.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINAL_EFFECTIVENESS_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "3c3617804209c701814e19b93d9a9a54895e98d5",
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a"
+      ],
+      "workflow_run_refs": [
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789,
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_015",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "final reconciliation proof PR closes without merge",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S11D-FINAL-EFFECTIVENESS-RECONCILIATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINAL-EFFECTIVENESS-RECONCILIATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-MAIN-VERIFICATION.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINAL_EFFECTIVENESS_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "3c3617804209c701814e19b93d9a9a54895e98d5",
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a"
+      ],
+      "workflow_run_refs": [
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789,
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206
+      ],
+      "verification_stage": "POSTMERGE_PROOF_REQUIRED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_016",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "no SSOT writeback follows final proof success",
+      "status": "FAIL",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-FINAL-EFFECTIVENESS-RECONCILIATION.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINAL_EFFECTIVENESS_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "3c3617804209c701814e19b93d9a9a54895e98d5",
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a"
+      ],
+      "workflow_run_refs": [
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789,
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206
+      ],
+      "verification_stage": "POSTMERGE_PROOF_REQUIRED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_017",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "final active Slice is null",
+      "status": "FAIL",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CLOSURE-RECORD.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINAL_EFFECTIVENESS_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_018",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "runtime source authority is false after closure",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CLOSURE-RECORD.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINAL_EFFECTIVENESS_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_J_019",
+      "category": "BOUNDED_CHAIN_AND_CLOSURE",
+      "assertion": "MCFT-CAP-07 remains unauthorized",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_FINAL_EFFECTIVENESS_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [
+        "twin_calibration_candidate_5649b9ab80b5545cf6007387",
+        "twin_shadow_evaluation_8cae1f6732420a4999deffc0"
+      ],
+      "subject_commit_refs": [
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    }
   ]
 }

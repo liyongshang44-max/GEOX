@@ -1,48 +1,822 @@
 {
-  "schema_version": "geox_mcft_cap_06_hard_acceptance_category_v1",
-  "acceptance_id": "MCFT_CAP_06_HARD_CATEGORY_A",
+  "schema_version": "geox_mcft_cap_06_hard_acceptance_item_category_v2",
+  "capability_line_id": "MCFT-CAP-06",
+  "acceptance_category_id": "MCFT_CAP_06_HARD_CATEGORY_A",
   "category": "ARCHITECTURE_AND_PREDECESSOR",
+  "lifecycle_stage": "S11D_IMPLEMENTATION_DEFECT_REPAIR_CANDIDATE",
   "status": "PASS",
-  "evidence_refs": [
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P0-STATUS.json",
-    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json",
-    "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json"
-  ],
-  "workflow_refs": [
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
-  ],
-  "canonical_refs": [],
-  "notes": [
-    "Architecture and predecessor evidence is governance/readback authority; S11A adds no canonical write."
-  ],
-  "assertion_count": 25,
-  "assertions": [
-    "P-1 is the first permitted repository action",
-    "P-1 changes no Runtime source",
-    "P-1 changes no migration",
-    "P-1 appends no canonical fact",
-    "P-1 adjudicates Candidate object reuse",
-    "P-1 adjudicates Evaluation object reuse",
-    "P-1 adjudicates D transaction reuse",
-    "P-1 adjudicates Evaluation context refs",
-    "P-1 adjudicates lineage/revision identity kinds",
-    "P-1 adjudicates base_config_ref authority",
-    "P-1 adjudicates envelope source/evidence/config mapping",
-    "P-1 adjudicates Config-object requirement",
-    "P-1 adjudicates migration count",
-    "P-1 adjudicates failed-attempt persistence",
-    "P-1 adjudicates Candidate-to-Evaluation cardinality",
-    "P-1 outputs one of the three frozen outcomes",
-    "P-1A is mandatory when amendment is required",
-    "CAP-05 status is COMPLETE",
-    "CAP-05 closure_effective is true",
-    "CAP-05 capability_complete is true",
-    "CAP-05 active slice is null",
-    "CAP-05 next repository action is null",
-    "CAP-06 remains unauthorized before S0 effectiveness",
-    "design baseline records main 9c4030e43d3b65857cf40d7936d5dfa8e80c17d1",
-    "execution baseline is re-resolved at Slice runtime"
+  "item_shape_inheritance": "FORBIDDEN",
+  "each_item_self_contained": true,
+  "item_count": 25,
+  "status_counts": {
+    "PASS": 25,
+    "FAIL": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "items": [
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_001",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 is the first permitted repository action",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_002",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 changes no Runtime source",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_003",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 changes no migration",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_004",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 appends no canonical fact",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_005",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 adjudicates Candidate object reuse",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_006",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 adjudicates Evaluation object reuse",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_007",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 adjudicates D transaction reuse",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_008",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 adjudicates Evaluation context refs",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_009",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 adjudicates lineage/revision identity kinds",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_010",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 adjudicates base_config_ref authority",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_011",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 adjudicates envelope source/evidence/config mapping",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_012",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 adjudicates Config-object requirement",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_013",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 adjudicates migration count",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_014",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 adjudicates failed-attempt persistence",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_015",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 adjudicates Candidate-to-Evaluation cardinality",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_016",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1 outputs one of the three frozen outcomes",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_017",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "P-1A is mandatory when amendment is required",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P-1-STATUS.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_018",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "CAP-05 status is COMPLETE",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "b1248216462eb31cfcf3c75633cc2e53a15520e4",
+        "873b25b030e22e912a26c31d9e9978cd4c5b3d35",
+        "f3d6f9c95b2eb94e2306f979866f3c162bd8c3b8",
+        "4ca11c7740413b0940949c7aa49579b4c4cd0bc8",
+        "9365e74ef7d4b01f7b96a7992e27270f0e42725b",
+        "49e282cdc91cb8a0aba177dc1099239e5155994b",
+        "fd6c54e84ee4ede7bbb581b4fc55660251c2265f",
+        "26cc455692a6ea9840ae83cde4de28c8c9c01569",
+        "9dd6c362425854aae67b8582d2e2756f3e404789"
+      ],
+      "workflow_run_refs": [
+        29405136572,
+        29405727623,
+        29409622048,
+        29410067946,
+        29407551807,
+        29407976303,
+        29411318737
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_019",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "CAP-05 closure_effective is true",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "b1248216462eb31cfcf3c75633cc2e53a15520e4",
+        "873b25b030e22e912a26c31d9e9978cd4c5b3d35",
+        "f3d6f9c95b2eb94e2306f979866f3c162bd8c3b8",
+        "4ca11c7740413b0940949c7aa49579b4c4cd0bc8",
+        "9365e74ef7d4b01f7b96a7992e27270f0e42725b",
+        "49e282cdc91cb8a0aba177dc1099239e5155994b",
+        "fd6c54e84ee4ede7bbb581b4fc55660251c2265f",
+        "26cc455692a6ea9840ae83cde4de28c8c9c01569",
+        "9dd6c362425854aae67b8582d2e2756f3e404789"
+      ],
+      "workflow_run_refs": [
+        29405136572,
+        29405727623,
+        29409622048,
+        29410067946,
+        29407551807,
+        29407976303,
+        29411318737
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_020",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "CAP-05 capability_complete is true",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "b1248216462eb31cfcf3c75633cc2e53a15520e4",
+        "873b25b030e22e912a26c31d9e9978cd4c5b3d35",
+        "f3d6f9c95b2eb94e2306f979866f3c162bd8c3b8",
+        "4ca11c7740413b0940949c7aa49579b4c4cd0bc8",
+        "9365e74ef7d4b01f7b96a7992e27270f0e42725b",
+        "49e282cdc91cb8a0aba177dc1099239e5155994b",
+        "fd6c54e84ee4ede7bbb581b4fc55660251c2265f",
+        "26cc455692a6ea9840ae83cde4de28c8c9c01569",
+        "9dd6c362425854aae67b8582d2e2756f3e404789"
+      ],
+      "workflow_run_refs": [
+        29405136572,
+        29405727623,
+        29409622048,
+        29410067946,
+        29407551807,
+        29407976303,
+        29411318737
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_021",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "CAP-05 active slice is null",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "b1248216462eb31cfcf3c75633cc2e53a15520e4",
+        "873b25b030e22e912a26c31d9e9978cd4c5b3d35",
+        "f3d6f9c95b2eb94e2306f979866f3c162bd8c3b8",
+        "4ca11c7740413b0940949c7aa49579b4c4cd0bc8",
+        "9365e74ef7d4b01f7b96a7992e27270f0e42725b",
+        "49e282cdc91cb8a0aba177dc1099239e5155994b",
+        "fd6c54e84ee4ede7bbb581b4fc55660251c2265f",
+        "26cc455692a6ea9840ae83cde4de28c8c9c01569",
+        "9dd6c362425854aae67b8582d2e2756f3e404789"
+      ],
+      "workflow_run_refs": [
+        29405136572,
+        29405727623,
+        29409622048,
+        29410067946,
+        29407551807,
+        29407976303,
+        29411318737
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_022",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "CAP-05 next repository action is null",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "b1248216462eb31cfcf3c75633cc2e53a15520e4",
+        "873b25b030e22e912a26c31d9e9978cd4c5b3d35",
+        "f3d6f9c95b2eb94e2306f979866f3c162bd8c3b8",
+        "4ca11c7740413b0940949c7aa49579b4c4cd0bc8",
+        "9365e74ef7d4b01f7b96a7992e27270f0e42725b",
+        "49e282cdc91cb8a0aba177dc1099239e5155994b",
+        "fd6c54e84ee4ede7bbb581b4fc55660251c2265f",
+        "26cc455692a6ea9840ae83cde4de28c8c9c01569",
+        "9dd6c362425854aae67b8582d2e2756f3e404789"
+      ],
+      "workflow_run_refs": [
+        29405136572,
+        29405727623,
+        29409622048,
+        29410067946,
+        29407551807,
+        29407976303,
+        29411318737
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_023",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "CAP-06 remains unauthorized before S0 effectiveness",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P0-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "1e66ea7efc842b8e547bccc40521d520b4370e69",
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8",
+        "83f2c747e138d239492811afbd6bac7ad1c29096",
+        "7eccdce158f251d6873aaf17e176de6eec7898d3",
+        "13957179a9547995e0a1443ba400d07c830579fc",
+        "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf",
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690,
+        29419140980,
+        29419324004,
+        29419841209,
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_024",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "design baseline records main 9c4030e43d3b65857cf40d7936d5dfa8e80c17d1",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P0-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "1e66ea7efc842b8e547bccc40521d520b4370e69",
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8",
+        "83f2c747e138d239492811afbd6bac7ad1c29096",
+        "7eccdce158f251d6873aaf17e176de6eec7898d3",
+        "13957179a9547995e0a1443ba400d07c830579fc",
+        "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf",
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690,
+        29419140980,
+        29419324004,
+        29419841209,
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    },
+    {
+      "acceptance_id": "MCFT_CAP_06_HARD_A_025",
+      "category": "ARCHITECTURE_AND_PREDECESSOR",
+      "assertion": "execution baseline is re-resolved at Slice runtime",
+      "status": "PASS",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-P0-STATUS.json",
+        "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json"
+      ],
+      "workflow_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P_MINUS_1_ADJUDICATION.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_P0_RECONCILIATION.cjs"
+      ],
+      "canonical_refs": [],
+      "subject_commit_refs": [
+        "1e66ea7efc842b8e547bccc40521d520b4370e69",
+        "762764074e62f186921e0aabd5251f53b5f7ce02",
+        "79cd7814eff06ad86f86cdcb379c6f71a77f1ab8",
+        "83f2c747e138d239492811afbd6bac7ad1c29096",
+        "7eccdce158f251d6873aaf17e176de6eec7898d3",
+        "13957179a9547995e0a1443ba400d07c830579fc",
+        "a7bb8d9499560b0ef0244a1a6daeaee1eeb408bf",
+        "be2c79b4c68a5ae9ec1d0fc05ec27850decf0b5e",
+        "00476d1ca9ec33f01ad58555f54daa5d582580f9",
+        "ffc3e568676e7e5de2f26e94838b2ec8d12ce51a",
+        "db3dd2a86cd791c028f064f360165da2bb583497",
+        "2e1b14e31a5420dccfd70c4955726427fc29eb7e",
+        "3c3617804209c701814e19b93d9a9a54895e98d5"
+      ],
+      "workflow_run_refs": [
+        29417804608,
+        29418272690,
+        29419140980,
+        29419324004,
+        29419841209,
+        29651483550,
+        29651483528,
+        29652049224,
+        29652049206,
+        29653041897,
+        29653041889,
+        29653411871,
+        29653411789
+      ],
+      "verification_stage": "PREMERGE_EVIDENCE_VERIFIED",
+      "notes": [
+        "Generated from docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-A.json",
+        "S11D implementation-defect repair candidate; completion claims remain suspended."
+      ]
+    }
   ]
 }
