@@ -1,0 +1,49 @@
+{
+  "schema_version": "geox_mcft_delivery_infrastructure_status_v1",
+  "record_kind": "REPOSITORY_DELIVERY_INFRASTRUCTURE_STATUS",
+  "capability_slice": false,
+  "runtime_authority": false,
+  "canonical_write_authority": false,
+  "mcft_cap_07_authorized": false,
+  "baseline_main_commit": "ea8caa10e6369ec5018d7c7b6630e2330d1ca085",
+  "p3_postmerge_proof_replacement": {
+    "repository_implementation_status": "MERGED_MAIN",
+    "proof_only_pr_required": false,
+    "exact_merge_sha_attestation_workflow": ".github/workflows/mcft-cap-06-s11d-repair-merged-main-attestation.yml",
+    "exact_merge_sha_subject": "ea8caa10e6369ec5018d7c7b6630e2330d1ca085",
+    "verification_gate": "scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_INFRASTRUCTURE_V1.cjs",
+    "verification_status": "REQUIRED_IN_INFRASTRUCTURE_CANDIDATE_CI"
+  },
+  "p4_stable_release_path": {
+    "repository_implementation_status": "IMPLEMENTED_CANDIDATE",
+    "release_lane_ref": "docs/digital_twin/mcft/MCFT-RELEASE-LANE-V1.json",
+    "merge_group_workflow_ref": ".github/workflows/mcft-release-lane-v1.yml",
+    "platform_enforcement_status": "PENDING_REPOSITORY_ADMIN_CONFIGURATION",
+    "fully_enforced_claim": false
+  },
+  "p5_generic_delivery_policy": {
+    "repository_implementation_status": "IMPLEMENTED_CANDIDATE",
+    "policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json",
+    "policy_revision": "1.1.0",
+    "current_candidate_gate": true,
+    "fixed_historical_checkout_in_live_gate": false,
+    "generic_candidate_rule_shape": true,
+    "new_slice_script_change_required": false,
+    "new_slice_workflow_subscription_change_required": false
+  },
+  "runtime_delta": {
+    "canonical_fact_append_count": 0,
+    "canonical_fact_update_count": 0,
+    "canonical_fact_delete_count": 0,
+    "projection_write_count": 0,
+    "migration_count": 0,
+    "model_activation_count": 0,
+    "active_config_switch_count": 0,
+    "runtime_parameter_change_count": 0
+  },
+  "remaining_external_action": {
+    "owner": "REPOSITORY_ADMINISTRATOR",
+    "action": "ENABLE_MAIN_BRANCH_PROTECTION_AND_MERGE_QUEUE_WITH_REQUIRED_CHECKS",
+    "blocking_reason": "CONNECTED_GITHUB_TOOL_DOES_NOT_EXPOSE_BRANCH_PROTECTION_OR_MERGE_QUEUE_CONFIGURATION"
+  }
+}

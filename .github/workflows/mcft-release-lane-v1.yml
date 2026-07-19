@@ -1,0 +1,72 @@
+name: mcft-release-lane-v1
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+    paths:
+      - 'docs/digital_twin/mcft/**'
+      - '.github/workflows/mcft-*.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_*.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_*.ts'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-release-lane-main
+  cancel-in-progress: false
+
+jobs:
+  release-lane:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact release subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate pull-request candidate against current main
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MCFT_RELEASE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MCFT_RELEASE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MCFT_RELEASE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          MCFT_RELEASE_PR_DRAFT: ${{ github.event.pull_request.draft }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_RELEASE_LANE_V1.cjs --pull-request
+      - name: Validate exact merge-group subject
+        if: github.event_name == 'merge_group'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MCFT_RELEASE_HEAD_SHA: ${{ github.sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_RELEASE_LANE_V1.cjs --merge-group
+      - name: Run release-lane selftest
+        if: github.event_name == 'workflow_dispatch'
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_RELEASE_LANE_V1.cjs --selftest
+      - name: Verify release-lane result
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_RELEASE_LANE_V1_RESULT.json','utf8'));
+          if (r.status !== 'PASS') throw new Error(`MCFT_RELEASE_LANE_NOT_PASS:${r.error || 'UNKNOWN'}`);
+          if (r.proof_only_pr_required !== false || r.branch_transport_allowed !== false) throw new Error('MCFT_RELEASE_LANE_TRANSPORT_POLICY_INVALID');
+          if (r.capability_slice !== false || r.runtime_authority !== false) throw new Error('MCFT_RELEASE_LANE_BOUNDARY_INVALID');
+          NODE
+      - name: Upload release-lane evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-release-lane-${{ github.run_id }}
+          path: acceptance-output/MCFT_RELEASE_LANE_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

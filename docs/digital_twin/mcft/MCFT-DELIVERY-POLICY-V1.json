@@ -1,11 +1,19 @@
 {
-  "schema_version": "geox_mcft_delivery_policy_v1",
+  "schema_version": "geox_mcft_delivery_policy_v1_1",
   "policy_id": "MCFT-DELIVERY-POLICY-V1",
+  "policy_revision": "1.1.0",
+  "record_status": "ACTIVE_REPOSITORY_WIDE_POLICY",
   "scope": "ALL_MCFT_CAPABILITY_LINES",
   "policy_kind": "REPOSITORY_WIDE_DELIVERY_PROCESS_POLICY",
+  "enforcement_mode": "CURRENT_CANDIDATE_HEAD",
   "capability_slice": false,
   "runtime_authority": false,
   "canonical_object_authority": false,
+  "historical_revision_validation": {
+    "status": "PRESERVED_AS_HISTORICAL_EVIDENCE_ONLY",
+    "fixed_historical_checkout_in_live_gate_allowed": false,
+    "historical_workflow_dispatch_allowed": true
+  },
   "frozen_taskbook_gap_classification": {
     "allowed_classes": [
       "IMPLEMENTATION_DEFECT",
@@ -39,28 +47,17 @@
     "MERGED_MAIN_PROOF",
     "RESUME_PREVIOUSLY_PAUSED_FRONTIER"
   ],
-  "technical_authority_examples": [
-    "AUTHORITY_GRAPH",
-    "DUAL_TIME_SEMANTICS",
-    "EXACT_REF_HASH_BINDING",
-    "RUNTIME_CONFIG_DISPATCH",
-    "REPOSITORY_QUERY_SHAPE",
-    "CANONICAL_OBJECT_ENVELOPE",
-    "IDEMPOTENCY_RECOVERY_SEMANTICS",
-    "PROJECTION_DERIVATION_AUTHORITY",
-    "NUMERIC_POLICY"
-  ],
   "delivery_process_controls": [
     "PR_COMMIT_COUNT_LIMIT",
     "WIP_DEBUG_RETRY_COMMIT_CLEANUP",
     "DRAFT_HISTORY_CLEANUP",
-    "BRANCH_TRANSPORT_RULE",
-    "TEMPORARY_BRANCH_NAMING",
+    "BRANCH_TRANSPORT_PROHIBITION",
     "READY_FOR_REVIEW_HYGIENE",
     "MERGE_METHOD_SELECTION",
-    "LOCAL_PATCH_TRANSPORT",
-    "CI_RETRY_PRESENTATION",
-    "CANDIDATE_DECLARATION_INTEGRITY"
+    "CURRENT_CANDIDATE_VALIDATION",
+    "CANDIDATE_DECLARATION_INTEGRITY",
+    "MERGE_GROUP_RELEASE_LANE",
+    "EXACT_MERGE_SHA_ATTESTATION"
   ],
   "delivery_process_controls_may": [
     "BLOCK_READY_FOR_REVIEW",
@@ -75,20 +72,55 @@
     "AUTHORIZE_CANONICAL_WRITE",
     "PROVE_RUNTIME_CAPABILITY"
   ],
+  "ready_pr_commit_limit": 5,
+  "draft_pr_commit_limit": 20,
+  "forbidden_transport_path_tokens": [
+    "materializer",
+    "branch-transport",
+    "export-branch",
+    "publish-branch",
+    "validation-carrier",
+    "proof-only-pr"
+  ],
+  "forbidden_ready_commit_message_patterns": [
+    "\\bwip\\b",
+    "fix ci",
+    "try again",
+    "\\bdebug\\b",
+    "\\btemporary\\b"
+  ],
+  "candidate_declaration_contract": {
+    "declaration_marker": "MCFT_CANDIDATE_DECLARATION_V2",
+    "declaration_format": "JSON_OBJECT_IN_HTML_COMMENT",
+    "required_fields": [
+      "rule_id",
+      "capability_line",
+      "slice_id",
+      "candidate_head",
+      "semantic_snapshot_blobs"
+    ],
+    "required_rule_fields": [
+      "rule_id",
+      "capability_line",
+      "slice_id",
+      "status_file",
+      "candidate_field",
+      "candidate_equals",
+      "focused_workflow",
+      "standard_workflow",
+      "semantic_snapshot_files"
+    ]
+  },
   "candidate_declaration_integrity_rules": [
     {
       "rule_id": "MCFT_CAP_06_S9_CANDIDATE_DECLARATION_INTEGRITY_V1",
-      "applies_when": {
-        "status_file": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
-        "field": "s9_candidate_implemented",
-        "equals": true
-      },
-      "candidate_declaration_detected_by": [
-        "HEAD_STATUS_FIELD_TRUE_AND_BASE_STATUS_FIELD_NOT_TRUE",
-        "DECLARATION_MARKER_PRESENT"
-      ],
-      "focused_workflow_name": "mcft-cap-06-s9-non-consumption",
-      "standard_ci_workflow_name": "ci",
+      "capability_line": "MCFT-CAP-06",
+      "slice_id": "MCFT-CAP-06.MCFT-04-05-09-11.POST-EVALUATION-NON-CONSUMPTION-TICK-V1",
+      "status_file": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-STATUS.json",
+      "candidate_field": "s9_candidate_implemented",
+      "candidate_equals": true,
+      "focused_workflow": "mcft-cap-06-s9-non-consumption",
+      "standard_workflow": "ci",
       "semantic_snapshot_files": [
         "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-AUTHORITY-GRAPH.json",
         "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-S9-POST-EVALUATION-NON-CONSUMPTION-IMPLEMENTATION-CONTRACT.json",
@@ -99,14 +131,26 @@
         "FOCUSED_RESULT_GIT_HEAD_EQUALS_CURRENT_PR_HEAD",
         "STANDARD_CI_STATUS_PASS",
         "PR_DECLARED_CANDIDATE_HEAD_EQUALS_CURRENT_PR_HEAD",
-        "DECLARED_AUTHORITY_CONTRACT_STATUS_BLOBS_EQUAL_CURRENT_HEAD"
+        "DECLARED_SEMANTIC_SNAPSHOT_BLOBS_EQUAL_CURRENT_HEAD"
       ],
-      "declaration_marker": "MCFT_CANDIDATE_DECLARATION_V1",
       "failure_effect": "CANDIDATE_INVALIDATED",
       "capability_slice": false,
       "runtime_authority": false
     }
   ],
+  "candidate_rule_extension": {
+    "future_slice_support": "ADD_DECLARATIVE_RULE_ONLY",
+    "script_change_required_for_new_slice": false,
+    "workflow_subscription_change_required_for_new_focused_workflow": false
+  },
+  "release_lane": {
+    "policy_ref": "docs/digital_twin/mcft/MCFT-RELEASE-LANE-V1.json",
+    "workflow_ref": ".github/workflows/mcft-release-lane-v1.yml",
+    "required_check_name": "mcft-release-lane-v1 / release-lane",
+    "merge_group_supported": true,
+    "proof_only_pr_required": false,
+    "branch_transport_pr_allowed": false
+  },
   "historical_reclassifications": [
     {
       "artifact_id": "MCFT-CAP-06.S5-ENTRY.AUTHORITY-GRAPH-PREFLIGHT-AND-PR-HYGIENE-V1",
@@ -133,6 +177,9 @@
     "reject_order_change_without_design_defect_analysis": true,
     "reject_resume_before_revised_taskbook_effective": true,
     "reject_delivery_process_as_runtime_authority": true,
+    "reject_live_gate_fixed_historical_checkout": true,
+    "reject_branch_transport_workflow": true,
+    "reject_proof_only_pr_workflow": true,
     "reject_candidate_declaration_without_exact_head_focused_pass": true,
     "reject_candidate_declaration_without_exact_head_standard_ci_pass": true,
     "reject_candidate_declaration_head_mismatch": true,

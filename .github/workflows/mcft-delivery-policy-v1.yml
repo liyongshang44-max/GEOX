@@ -2,82 +2,66 @@ name: mcft-delivery-policy-v1
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
     paths:
       - 'docs/digital_twin/mcft/**'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V1.cjs'
-      - '.github/workflows/mcft-delivery-policy-v1.yml'
+      - '.github/workflows/mcft-*.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_*.cjs'
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
+
+concurrency:
+  group: mcft-delivery-policy-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
 
 jobs:
-  delivery-policy-and-taskbook-v0-4:
+  current-candidate-policy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Checkout workflow carrier
+      - name: Checkout exact current candidate head
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-
-      - name: Resolve frozen revision validation ref
-        id: validation
-        shell: bash
-        run: |
-          REF="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE="f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7"
-          fi
-          EFFECTIVENESS="docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-V0.4.0-EFFECTIVENESS.json"
-          if [ -f "$EFFECTIVENESS" ]; then
-            STATUS="$(node -e "const j=require('./$EFFECTIVENESS'); process.stdout.write(String(j.status || ''))")"
-            if [ "$STATUS" = "MERGED_MAIN_EFFECTIVE_FROZEN" ]; then
-              REF="56fd50500a14cc8b5d3743306da85f9d0055abe0"
-              BASE="f14dc4c6aaf1cc8b56530c3f9088a1247f5d4db7"
-            fi
-          fi
-          echo "ref=$REF" >> "$GITHUB_OUTPUT"
-          echo "base=$BASE" >> "$GITHUB_OUTPUT"
-
-      - name: Checkout exact taskbook revision authority
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.validation.outputs.ref }}
-          fetch-depth: 0
-
+          persist-credentials: false
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20.11.1'
-
-      - name: Run MCFT delivery policy and frozen taskbook revision Gate
+          node-version: 20.11.1
+      - name: Validate live repository policy against current candidate
         env:
-          MCFT_DELIVERY_POLICY_BASE_REF: ${{ steps.validation.outputs.base }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V1.cjs
-
-      - name: Verify frozen revision result
+          MCFT_DELIVERY_POLICY_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || 'HEAD^' }}
+          MCFT_DELIVERY_POLICY_PR_DRAFT: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft || false }}
+          MCFT_DELIVERY_POLICY_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_POLICY_V1.cjs --validate-current-candidate
+      - name: Verify live policy result
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
           const p = 'acceptance-output/MCFT_DELIVERY_POLICY_V1_RESULT.json';
-          const result = JSON.parse(fs.readFileSync(p, 'utf8'));
-          if (result.status !== 'PASS') throw new Error(`DELIVERY_POLICY_GATE_NOT_PASS:${result.error || 'UNKNOWN'}`);
-          if (result.taskbook_version !== 'v0.4.0-candidate') throw new Error('FROZEN_TASKBOOK_REVISION_VERSION_INVALID');
-          if (result.execution_paused !== true) throw new Error('FROZEN_TASKBOOK_REVISION_MUST_BE_PAUSED');
-          if (result.active_delivery_slice_id !== null) throw new Error('FROZEN_TASKBOOK_REVISION_ACTIVE_SLICE_MUST_BE_NULL');
-          if (result.s0_branch_transport_neutralized !== true) throw new Error('S0_BRANCH_TRANSPORT_NOT_NEUTRALIZED');
-          if (result.s8_implementation_evidence_valid !== true) throw new Error('S8_EVIDENCE_INVALID');
-          if (result.s8_effective !== false) throw new Error('S8_MUST_NOT_BE_EFFECTIVE_IN_REVISION_PROOF');
-          if (result.s9_authorized !== false) throw new Error('S9_MUST_REMAIN_BLOCKED_IN_REVISION_PROOF');
+          const r = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (r.status !== 'PASS') throw new Error(`MCFT_DELIVERY_POLICY_NOT_PASS:${r.error || 'UNKNOWN'}`);
+          if (r.enforcement_mode !== 'CURRENT_CANDIDATE_HEAD') throw new Error('MCFT_DELIVERY_POLICY_NOT_CURRENT_CANDIDATE');
+          if (r.fixed_historical_checkout_used !== false) throw new Error('MCFT_DELIVERY_POLICY_HISTORICAL_CHECKOUT_USED');
+          if (r.capability_slice !== false || r.runtime_authority !== false) throw new Error('MCFT_DELIVERY_POLICY_BOUNDARY_INVALID');
           NODE
-
-      - name: Upload governance evidence
+      - name: Verify MCFT-CAP-06 exact merge-SHA attestation migration
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MCFT_CAP_06_ATTESTATION_SUBJECT: ea8caa10e6369ec5018d7c7b6630e2330d1ca085
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_DELIVERY_INFRASTRUCTURE_V1.cjs --verify-cap06-attestation
+      - name: Upload delivery infrastructure evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-delivery-policy-v1-evidence
-          path: acceptance-output/MCFT_DELIVERY_POLICY_V1_RESULT.json
-          if-no-files-found: error
+          name: mcft-delivery-policy-${{ github.run_id }}
+          path: |
+            acceptance-output/MCFT_DELIVERY_POLICY_V1_RESULT.json
+            acceptance-output/MCFT_DELIVERY_INFRASTRUCTURE_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90

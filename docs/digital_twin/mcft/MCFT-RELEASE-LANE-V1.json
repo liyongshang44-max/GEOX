@@ -1,0 +1,60 @@
+{
+  "schema_version": "geox_mcft_release_lane_v1",
+  "release_lane_id": "MCFT-RELEASE-LANE-V1",
+  "record_status": "REPOSITORY_IMPLEMENTED_PLATFORM_ENFORCEMENT_PENDING",
+  "scope": "ALL_MCFT_DELIVERY_PULL_REQUESTS",
+  "capability_slice": false,
+  "runtime_authority": false,
+  "workflow_ref": ".github/workflows/mcft-release-lane-v1.yml",
+  "gate_ref": "scripts/governance_acceptance/ACCEPTANCE_MCFT_RELEASE_LANE_V1.cjs",
+  "serialization": {
+    "concurrency_group": "mcft-release-lane-main",
+    "cancel_in_progress": false,
+    "candidate_base_must_equal_current_main": true,
+    "candidate_history_must_be_linear": true,
+    "ready_candidate_commit_limit": 5,
+    "merge_group_check_required": true
+  },
+  "merge_group_contract": {
+    "trigger": "merge_group:checks_requested",
+    "subject": "EXACT_MERGE_GROUP_HEAD_SHA",
+    "latest_main_composition_required": true,
+    "proof_only_pr_required": false,
+    "repository_writeback_allowed": false
+  },
+  "postmerge_contract": {
+    "trigger": "push:main",
+    "subject": "EXACT_MERGE_SHA",
+    "immutable_check_or_artifact": true,
+    "proof_only_pr_required": false,
+    "ssot_writeback_required": false
+  },
+  "forbidden_normal_transport_modes": [
+    "EXPORT_PR",
+    "BOOTSTRAP_PR",
+    "PUBLISH_PR",
+    "VALIDATION_CARRIER_PR",
+    "PROOF_ONLY_PR"
+  ],
+  "required_platform_settings": [
+    "PROTECT_MAIN_BRANCH",
+    "REQUIRE_PULL_REQUEST_BEFORE_MERGING",
+    "ENABLE_MERGE_QUEUE",
+    "REQUIRE_MCFT_RELEASE_LANE_CHECK",
+    "REQUIRE_STANDARD_CI_CHECK",
+    "DISALLOW_BYPASS_FOR_NORMAL_DELIVERY",
+    "DISALLOW_DIRECT_PUSH_TO_MAIN"
+  ],
+  "platform_observation_2026_07_19": {
+    "allow_auto_merge": false,
+    "allow_update_branch": false,
+    "branch_protection_visibility_through_connector": "UNAVAILABLE",
+    "merge_queue_configuration_through_connector": "UNAVAILABLE"
+  },
+  "effectiveness_boundary": {
+    "repository_side_implementation": "ESTABLISHED",
+    "platform_required_check_enforcement": "NOT_ESTABLISHED",
+    "reason": "GITHUB_ADMIN_SETTING_NOT_EXPOSED_BY_CONNECTED_TOOL",
+    "claim_forbidden": "STABLE_RELEASE_PATH_FULLY_ENFORCED"
+  }
+}
