@@ -5,14 +5,20 @@ on:
     paths:
       - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
       - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+      - 'docs/digital_twin/mcft/cap_*/*.json'
+      - 'docs/digital_twin/mcft/cap_*/**/*.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs'
   pull_request_target:
     types: [opened, synchronize, edited, reopened, ready_for_review]
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
     paths:
       - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
       - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs'
   workflow_dispatch:
 
@@ -22,7 +28,7 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: mcft-candidate-integrity-v2-${{ github.event.pull_request.head.sha || github.sha }}
+  group: mcft-candidate-integrity-v2-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -39,7 +45,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Run generic candidate declaration selftest
+      - name: Run registry-driven candidate declaration selftest
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs --selftest
       - uses: actions/upload-artifact@v4
         if: always()
@@ -62,7 +68,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Enforce generic exact-head candidate declaration
+      - name: Enforce registered exact-head candidate declaration
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs --enforce
@@ -70,5 +76,28 @@ jobs:
         if: always()
         with:
           name: mcft-candidate-integrity-v2-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2_RESULT.json
+          if-no-files-found: error
+
+  validate-merge-group:
+    if: github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact merge-group head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate registry and exact merge-group context
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs --merge-group
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-candidate-integrity-v2-merge-group-${{ github.sha }}
           path: acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2_RESULT.json
           if-no-files-found: error

@@ -8,6 +8,11 @@
   "taskbook_version": "v0.4.0",
   "item_shape_inheritance": "FORBIDDEN",
   "each_item_self_contained": true,
+  "predicate_execution_model": "ITEM_LEVEL_ASSERTIONS_BOUND_TO_SHARED_RESOLUTION_AUTHORITIES",
+  "independent_predicate_program_per_item_claim": false,
+  "evidence_reference_presence_is_not_semantic_satisfaction_by_itself": true,
+  "statement_corrections_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-STATEMENT-CORRECTIONS-V1.json",
+  "statement_correction_precedence": true,
   "total_check_count": 255,
   "status_counts": {
     "PASS": 253,
@@ -28,8 +33,11 @@
     "RUNTIME_AUTHORITY_AND_POST_EVALUATION_TICK": 17,
     "BOUNDED_CHAIN_AND_CLOSURE": 19
   },
-  "completion_claims_effective": true,
+  "completion_claims_declared": true,
+  "completion_claims_declared_condition": "EXACT_MERGE_SHA_ATTESTATION_PASS",
+  "completion_claims_operationally_verified_effective": false,
   "verified": false,
+  "attestation_status": "UNVERIFIED",
   "final_postmerge_proof_required": false,
   "final_merge_sha_attestation_required": true,
   "postmerge_ssot_writeback_allowed": false,
@@ -59,6 +67,7 @@
     "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-J.json": "sha256:0b57401c59a0db964d7c9d3634ea47067ba69aa3a3c8bff653fc4dcb7fbe4354"
   },
   "resolved_task_manifest_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2.json",
+  "governance_effectiveness_status_ref": "docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-GOVERNANCE-EFFECTIVENESS-STATUS-V3.json",
   "status_domain": [
     "PASS",
     "FAIL",
@@ -68,7 +77,6 @@
   "final_resolution_rule": "ALL_ITEM_PREDICATES_PASS_ON_EXACT_MERGE_SHA_ATTESTATION",
   "attestation_workflow_ref": ".github/workflows/mcft-cap-06-s11d-repair-merged-main-attestation.yml",
   "attestation_gate_ref": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.cjs",
-  "completion_claims_effective_condition": "EXACT_MERGE_SHA_ATTESTATION_PASS",
   "effective_status_counts_on_attestation": {
     "PASS": 255,
     "FAIL": 0,
@@ -88,5 +96,9 @@
     "immutable_artifact_required": true,
     "repository_write_permission": false,
     "postmerge_ssot_writeback_allowed": false
-  }
+  },
+  "ledger_revision": "3.1",
+  "completion_claims_effective": true,
+  "completion_claims_effective_semantics": "DECLARED_CONDITIONAL_PROJECTION_ONLY",
+  "completion_claims_effective_condition": "EXACT_MERGE_SHA_ATTESTATION_PASS"
 }
