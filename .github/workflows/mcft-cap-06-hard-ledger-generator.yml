@@ -1,26 +1,21 @@
-name: mcft-cap-06-repair-staging-materializer
+name: mcft-cap-06-final-candidate-materializer
 
 on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-06-hard-ledger-generator.yml'
-      - 'scripts/governance_acceptance/GENERATE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_LEDGER.cjs'
-      - 'scripts/governance_acceptance/NORMALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_LEDGER.cjs'
-      - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_RECORDS.cjs'
-      - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_REQUIRED_DELIVERABLES.cjs'
-      - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_RESOLVED_TASKBOOK_V2.cjs'
-      - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_HISTORICAL_WORKFLOW_FREEZE.cjs'
+      - 'scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_S11D_REPAIRED_FINAL_CANDIDATE.cjs'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: mcft-cap-06-repair-staging-materializer-${{ github.event.pull_request.number || github.ref }}
+  group: mcft-cap-06-final-candidate-materializer-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  materialize-repair:
+  materialize-final-candidate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -32,70 +27,59 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Generate item-level repair records
-        env:
-          MCFT_CAP_06_LEDGER_MODE: REPAIR_CANDIDATE
-        run: node scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_HARD_ACCEPTANCE_ITEM_RECORDS.cjs
-      - name: Materialize frozen deliverable paths
-        run: node scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_REQUIRED_DELIVERABLES.cjs
-      - name: Stage generated ledger records
-        run: |
-          DIR='acceptance-output/mcft-cap-06-ledger-repair'
-          cp "$DIR/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.manifest.generated.json" \
-            docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json
-          for LETTER in A B C D E F G H I J; do
-            cp "$DIR/MCFT-CAP-06-HARD-${LETTER}.generated.json" \
-              "docs/digital_twin/mcft/cap_06/hard_acceptance/MCFT-CAP-06-HARD-${LETTER}.json"
-          done
-      - name: Materialize Resolved Task Manifest V2 and ledger V3
-        run: node scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_RESOLVED_TASKBOOK_V2.cjs
-      - name: Freeze historical Slice workflows to manual replay
-        run: node scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_HISTORICAL_WORKFLOW_FREEZE.cjs
-      - name: Verify staging state
+      - name: Materialize repaired final candidate in isolated workspace
+        run: node scripts/governance_acceptance/MATERIALIZE_MCFT_CAP_06_S11D_REPAIRED_FINAL_CANDIDATE.cjs
+      - name: Verify final candidate projection
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
           const root = 'docs/digital_twin/mcft/cap_06';
-          const ledger = JSON.parse(fs.readFileSync(`${root}/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json`, 'utf8'));
-          if (JSON.stringify(ledger.status_counts) !== JSON.stringify({PASS:253,FAIL:0,PENDING:2,NOT_APPLICABLE:0})) throw new Error('LEDGER_REPAIR_COUNTS_INVALID');
-          const resolved = JSON.parse(fs.readFileSync(`${root}/GEOX-MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2.json`, 'utf8'));
-          if (resolved.resolved_slice_graph.length !== 17 || resolved.resolution_policy.closure_gates_must_consume_resolved_manifest !== true) throw new Error('RESOLVED_TASKBOOK_INVALID');
           const closure = JSON.parse(fs.readFileSync(`${root}/GEOX-MCFT-CAP-06-CLOSURE-RECORD.json`, 'utf8'));
-          if (closure.closure_effective !== false || closure.pending_completion_claims.length !== 48) throw new Error('CLOSURE_REPAIR_STATE_INVALID');
-          const frozen = fs.readFileSync('.github/workflows/mcft-cap-06-s11d-final-effectiveness-reconciliation.yml','utf8');
-          if (!frozen.includes('Historical MCFT-CAP-06 workflow') || !/^on:\n  workflow_dispatch:/m.test(frozen)) throw new Error('HISTORICAL_WORKFLOW_NOT_FROZEN');
+          const frontier = JSON.parse(fs.readFileSync(`${root}/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json`, 'utf8'));
+          const ledger = JSON.parse(fs.readFileSync(`${root}/GEOX-MCFT-CAP-06-HARD-ACCEPTANCE-EVIDENCE-LEDGER.json`, 'utf8'));
+          const resolved = JSON.parse(fs.readFileSync(`${root}/GEOX-MCFT-CAP-06-RESOLVED-TASK-MANIFEST-V2.json`, 'utf8'));
+          if (closure.status !== 'COMPLETE' || closure.closure_effective !== true || closure.capability_complete !== true) throw new Error('FINAL_CANDIDATE_CLOSURE_INVALID');
+          if (closure.active_delivery_slice_id !== null || closure.next_repository_action !== null) throw new Error('FINAL_CANDIDATE_FRONTIER_NOT_CLOSED');
+          if (closure.closure_effectiveness_condition !== 'EXACT_MERGE_SHA_ATTESTATION_PASS') throw new Error('FINAL_CANDIDATE_CONDITION_INVALID');
+          if (closure.pending_completion_claims.length !== 0 || closure.effective_completion_claims.length !== 48) throw new Error('FINAL_CANDIDATE_CLAIMS_INVALID');
+          if (frontier.status !== 'MCFT_CAP_06_COMPLETE' || frontier.successor_capability_line_authorized !== false) throw new Error('FINAL_CANDIDATE_AUTHORITY_INVALID');
+          if (JSON.stringify(ledger.status_counts) !== JSON.stringify({PASS:253,FAIL:0,PENDING:2,NOT_APPLICABLE:0})) throw new Error('FINAL_CANDIDATE_COMMITTED_LEDGER_INVALID');
+          if (JSON.stringify(ledger.effective_status_counts_on_attestation) !== JSON.stringify({PASS:255,FAIL:0,PENDING:0,NOT_APPLICABLE:0})) throw new Error('FINAL_CANDIDATE_EFFECTIVE_LEDGER_INVALID');
+          if (resolved.completion_claims.effective_count !== 48 || resolved.closure_delivery_policy.proof_only_pr_required !== false) throw new Error('FINAL_CANDIDATE_RESOLVED_MANIFEST_INVALID');
+          if (closure.runtime_source_authorized !== false || closure.successor_authorized !== false) throw new Error('FINAL_CANDIDATE_RUNTIME_OR_SUCCESSOR_AUTHORITY_INVALID');
           NODE
-      - name: Package atomic workflow-freeze tree input
+      - name: Package atomic final candidate tree input
         run: |
           set -euo pipefail
-          OUT='acceptance-output/mcft-cap-06-workflow-freeze'
+          OUT='acceptance-output/mcft-cap-06-final-candidate'
           mkdir -p "$OUT/root"
-          git diff --name-only -- .github/workflows > "$OUT/changed-workflows.txt"
+          git diff --name-only -- docs/digital_twin/mcft/cap_06 > "$OUT/changed-files.txt"
           while IFS= read -r FILE; do
             [ -z "$FILE" ] && continue
             mkdir -p "$OUT/root/$(dirname "$FILE")"
             cp "$FILE" "$OUT/root/$FILE"
-          done < "$OUT/changed-workflows.txt"
+          done < "$OUT/changed-files.txt"
           node - <<'NODE'
           const cp = require('node:child_process');
           const fs = require('node:fs');
-          const out = 'acceptance-output/mcft-cap-06-workflow-freeze';
-          const changed = fs.readFileSync(`${out}/changed-workflows.txt`, 'utf8').split(/\r?\n/).filter(Boolean);
+          const out = 'acceptance-output/mcft-cap-06-final-candidate';
+          const changed = fs.readFileSync(`${out}/changed-files.txt`, 'utf8').split(/\r?\n/).filter(Boolean);
+          if (changed.length < 10) throw new Error(`FINAL_CANDIDATE_CHANGED_FILE_COUNT_TOO_LOW:${changed.length}`);
+          if (changed.some((file) => !file.startsWith('docs/digital_twin/mcft/cap_06/'))) throw new Error('FINAL_CANDIDATE_NON_GOVERNANCE_FILE_CHANGED');
           const manifest = {
-            schema_version: 'geox_mcft_cap_06_workflow_freeze_tree_input_v1',
+            schema_version: 'geox_mcft_cap_06_final_candidate_tree_input_v1',
             base_commit: cp.execFileSync('git', ['rev-parse','HEAD'], { encoding: 'utf8' }).trim(),
             base_tree: cp.execFileSync('git', ['rev-parse','HEAD^{tree}'], { encoding: 'utf8' }).trim(),
-            changed_workflow_count: changed.length,
-            changed_workflows: changed,
+            changed_file_count: changed.length,
+            changed_files: changed,
           };
           fs.writeFileSync(`${out}/manifest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
-          if (changed.length !== 22) throw new Error(`WORKFLOW_FREEZE_COUNT_INVALID:${changed.length}`);
           NODE
-          tar -czf "$OUT/workflows.tar.gz" -C "$OUT/root" .
+          tar -czf "$OUT/files.tar.gz" -C "$OUT/root" .
       - uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap-06-workflow-freeze-tree-input
+          name: mcft-cap-06-final-candidate-tree-input
           path: |
-            acceptance-output/mcft-cap-06-workflow-freeze/manifest.json
-            acceptance-output/mcft-cap-06-workflow-freeze/workflows.tar.gz
+            acceptance-output/mcft-cap-06-final-candidate/manifest.json
+            acceptance-output/mcft-cap-06-final-candidate/files.tar.gz
           if-no-files-found: error
