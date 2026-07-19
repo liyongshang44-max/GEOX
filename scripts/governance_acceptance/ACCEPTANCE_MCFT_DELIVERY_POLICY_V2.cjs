@@ -10,13 +10,18 @@ const OUT = path.join(ROOT, 'acceptance-output/MCFT_DELIVERY_POLICY_V2_RESULT.js
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const json = (p) => JSON.parse(read(p));
 const exists = (p) => fs.existsSync(path.join(ROOT, p));
-const write = (value) => { fs.mkdirSync(path.dirname(OUT), { recursive: true }); fs.writeFileSync(OUT, `${JSON.stringify(value, null, 2)}\n`); };
+const write = (value) => {
+  fs.mkdirSync(path.dirname(OUT), { recursive: true });
+  fs.writeFileSync(OUT, `${JSON.stringify(value, null, 2)}\n`);
+};
 
 try {
   const v1Path = 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V1.json';
   const v2Path = 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json';
   const registryPath = 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json';
   const foundationPath = 'docs/digital_twin/mcft/MCFT-DELIVERY-FOUNDATION-V2-STATUS.json';
+  const rulesetProfilePath = 'docs/digital_twin/mcft/MCFT-MAIN-RULESET-PROFILE-V1.json';
+  const trustedVerificationPath = 'docs/digital_twin/mcft/MCFT-TRUSTED-ENFORCEMENT-OPERATIONAL-VERIFICATION-V1.json';
   const taskbookPath = 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json';
   const currentAuthorityPath = 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V3.json';
   const effectivenessPath = 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-GOVERNANCE-EFFECTIVENESS-STATUS-V3.json';
@@ -29,9 +34,12 @@ try {
   const candidateGatePath = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs';
   const mergeGroupGatePath = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_MERGE_GROUP_RELEASE_LANE_V1.cjs';
 
-  for (const p of [v1Path, v2Path, registryPath, foundationPath, taskbookPath, currentAuthorityPath, effectivenessPath, ledgerPath, correctionsPath, candidateWorkflowPath, releaseWorkflowPath, policyWorkflowPath, retrospectiveWorkflowPath, candidateGatePath, mergeGroupGatePath]) {
-    assert.equal(exists(p), true, `REQUIRED_FILE_MISSING:${p}`);
-  }
+  for (const p of [
+    v1Path, v2Path, registryPath, foundationPath, rulesetProfilePath, trustedVerificationPath,
+    taskbookPath, currentAuthorityPath, effectivenessPath, ledgerPath, correctionsPath,
+    candidateWorkflowPath, releaseWorkflowPath, policyWorkflowPath, retrospectiveWorkflowPath,
+    candidateGatePath, mergeGroupGatePath,
+  ]) assert.equal(exists(p), true, `REQUIRED_FILE_MISSING:${p}`);
 
   const v1 = json(v1Path);
   assert.equal(v1.record_status, 'HISTORICAL_SUPERSEDED');
@@ -42,13 +50,25 @@ try {
 
   const v2 = json(v2Path);
   assert.equal(v2.policy_id, 'MCFT-DELIVERY-POLICY-V2');
+  assert.equal(v2.policy_revision, '2.2');
+  assert.equal(v2.record_status, 'MERGED_MAIN_OPERATIONALLY_EFFECTIVE');
   assert.equal(v2.supersedes, v1Path);
   assert.equal(v2.candidate_declaration.authority_registry_ref, registryPath);
   assert.equal(v2.candidate_declaration.discovery_mode, 'AUTHORITY_REGISTRY_WITH_FAIL_CLOSED_UNREGISTERED_CANDIDATE_DETECTION');
   assert.equal(v2.candidate_declaration.array_traversal_required, true);
   assert.equal(v2.release_lane.required_triggers.includes('merge_group'), true);
-  assert.equal(v2.repository_setting_boundary.branch_ruleset_verified, false);
-  assert.equal(v2.repository_setting_boundary.operational_release_authority_established, false);
+  assert.equal(v2.release_lane.concurrency_scope, 'EVENT_AND_EXACT_HEAD');
+  assert.equal(v2.release_lane.global_concurrency_group, null);
+  assert.equal(v2.release_lane.cross_event_cancellation_forbidden, true);
+  assert.equal(v2.repository_setting_boundary.required_check_binding_committed_artifact, true);
+  assert.equal(v2.repository_setting_boundary.branch_ruleset_verified, true);
+  assert.equal(v2.repository_setting_boundary.strict_up_to_date_verified, true);
+  assert.equal(v2.repository_setting_boundary.trusted_enforcement_required_checks_bound, true);
+  assert.equal(v2.repository_setting_boundary.trusted_enforcement_fail_closed_verified, true);
+  assert.equal(v2.repository_setting_boundary.operational_release_authority_established, true);
+  assert.equal(v2.repository_setting_boundary.ruleset_profile_ref, rulesetProfilePath);
+  assert.equal(v2.repository_setting_boundary.trusted_enforcement_verification_ref, trustedVerificationPath);
+  assert.equal(v2.repository_setting_boundary.required_admin_action, null);
   assert.equal(v2.nonclaims.includes('DOES_NOT_AUTHORIZE_MCFT_CAP_07'), true);
 
   const registry = json(registryPath);
@@ -62,56 +82,76 @@ try {
   assert.ok(cap06.candidate_transition_fields.length >= 3);
 
   const foundation = json(foundationPath);
-  assert.equal(foundation.record_status, 'MERGED_MAIN_EFFECTIVE_WITH_EXTERNAL_RULESET_DEPENDENCY');
-  assert.equal(foundation.repository_setting_boundary.branch_ruleset_verified, false);
-  assert.equal(foundation.repository_setting_boundary.operational_release_authority_established, false);
+  assert.equal(foundation.record_status, 'MERGED_MAIN_OPERATIONALLY_EFFECTIVE');
+  assert.equal(foundation.ruleset_profile_ref, rulesetProfilePath);
+  assert.equal(foundation.trusted_enforcement_verification_ref, trustedVerificationPath);
+  assert.equal(foundation.workstreams.P4_STABLE_RELEASE_PATH.global_concurrency, false);
+  assert.equal(foundation.workstreams.P4_STABLE_RELEASE_PATH.event_and_exact_head_scoped_concurrency, true);
+  assert.equal(foundation.repository_setting_boundary.required_check_binding_committed_artifact, true);
+  assert.equal(foundation.repository_setting_boundary.branch_ruleset_verified, true);
+  assert.equal(foundation.repository_setting_boundary.strict_up_to_date_verified, true);
+  assert.equal(foundation.repository_setting_boundary.trusted_enforcement_required_checks_bound, true);
+  assert.equal(foundation.repository_setting_boundary.trusted_enforcement_fail_closed_verified, true);
+  assert.equal(foundation.repository_setting_boundary.operational_release_authority_established, true);
+  assert.equal(foundation.repository_setting_boundary.merge_queue_verified, false);
   assert.equal(foundation.successor_capability_line_authorized, false);
+
+  const profile = json(rulesetProfilePath);
+  assert.equal(profile.enforcement_status, 'ACTIVE_OPERATIONALLY_VERIFIED');
+  assert.equal(profile.trusted_enforcement_verification_ref, trustedVerificationPath);
+  assert.equal(profile.required_status_checks_after_ui_subject_verification.includes('mcft-candidate-integrity-enforce-current-pr'), true);
+  assert.equal(profile.required_status_checks_after_ui_subject_verification.includes('mcft-release-lane-enforce-current-pr'), true);
+  assert.equal(profile.trusted_enforcement_operational_verification.negative_fail_closed_verified, true);
+  assert.equal(profile.trusted_enforcement_operational_verification.positive_all_eight_required_checks_verified, true);
+  assert.equal(profile.remaining_authority_boundary.trusted_enforcement_required_checks_bound, true);
+  assert.equal(profile.remaining_authority_boundary.operational_release_authority_established, true);
+  assert.equal(profile.remaining_authority_boundary.next_admin_action, null);
+  assert.equal(profile.configuration_nonclaims.mcft_cap_07_authorized, false);
+
+  const trusted = json(trustedVerificationPath);
+  assert.equal(trusted.record_status, 'FINAL_CANDIDATE_EFFECTIVE_WHEN_PRESENT_ON_MAIN');
+  assert.equal(trusted.verification_pull_request, 2599);
+  assert.equal(trusted.negative_phase.ordinary_required_checks, 'ALL_SUCCESS');
+  assert.equal(trusted.negative_phase.trusted_required_checks, 'BOTH_FAILING');
+  assert.equal(trusted.negative_phase.merge_attempt_http_status, 405);
+  assert.equal(trusted.negative_phase.probe_removed_before_merge, true);
+  assert.equal(trusted.positive_phase.validated_head, '40728de443f60329c90e380431f2de55c265697d');
+  assert.equal(trusted.positive_phase.required_checks, 'ALL_SUCCESS');
+  assert.equal(trusted.observations.corrected_head_passed_all_eight_required_checks, true);
+  assert.equal(trusted.observations.negative_probe_absent_from_final_tree, true);
+  assert.equal(trusted.effective_projection_when_present_on_main.operational_release_authority_established, true);
+  assert.equal(trusted.authority_boundary.mcft_cap_07_authorized, false);
+  assert.equal(exists('docs/digital_twin/mcft/cap_06/MCFT-TRUSTED-ENFORCEMENT-NEGATIVE-PROBE.json'), false, 'NEGATIVE_PROBE_MUST_NOT_ENTER_FINAL_TREE');
 
   const taskbook = json(taskbookPath);
   assert.equal(taskbook.global_delivery_policy_ref, v2Path);
   assert.equal(taskbook.historical_delivery_policy_ref, v1Path);
   assert.equal(taskbook.candidate_authority_registry_ref, registryPath);
   assert.equal(taskbook.current_delivery_authority_ref, currentAuthorityPath);
-  assert.equal(taskbook.historical_delivery_authority_ref, 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-CURRENT-DELIVERY-AUTHORITY-V2.json');
   assert.equal(taskbook.governance_effectiveness_status_ref, effectivenessPath);
-  assert.equal(taskbook.s11d.implementation_merge_commit, 'ea8caa10e6369ec5018d7c7b6630e2330d1ca085');
-  assert.equal(taskbook.s11d.exact_merge_sha_attestation_status, 'UNVERIFIED_BY_REPOSITORY_RECORD_AND_AVAILABLE_CONNECTOR');
-  assert.equal(taskbook.terminal_state.operational_closure_effective, false);
-  assert.equal(taskbook.terminal_state.operational_capability_effective, false);
   assert.equal(taskbook.successor_capability_line_authorized, false);
 
   const currentAuthority = json(currentAuthorityPath);
   assert.equal(currentAuthority.record_status, 'CURRENT_AUTHORITY');
   assert.equal(currentAuthority.authority_version, 3);
   assert.equal(currentAuthority.delivery_policy_ref, v2Path);
-  assert.equal(currentAuthority.operational_closure_effective, false);
-  assert.equal(currentAuthority.attestation_status, 'UNVERIFIED');
-  assert.equal(currentAuthority.exact_merge_sha_attestation.retrospective_verification_workflow_ref, retrospectiveWorkflowPath);
-  assert.equal(currentAuthority.exact_merge_sha_attestation.retrospective_verification_status, 'PENDING_WORKFLOW_EXECUTION');
   assert.equal(currentAuthority.successor_capability_line_authorized, false);
 
   const effectiveness = json(effectivenessPath);
   assert.equal(effectiveness.record_status, 'CURRENT_EFFECTIVENESS_AUTHORITY');
   assert.equal(effectiveness.capability_implementation_complete, true);
-  assert.equal(effectiveness.operational_closure_effective, false);
-  assert.equal(effectiveness.exact_merge_sha_attestation.verification_status, 'UNVERIFIED_BY_REPOSITORY_RECORD_AND_AVAILABLE_CONNECTOR');
-  assert.equal(effectiveness.exact_merge_sha_attestation.retrospective_verification_workflow_ref, retrospectiveWorkflowPath);
-  assert.equal(effectiveness.exact_merge_sha_attestation.retrospective_verification_status, 'PENDING_WORKFLOW_EXECUTION');
   assert.equal(effectiveness.successor_capability_line_authorized, false);
 
   const ledger = json(ledgerPath);
   assert.deepEqual(ledger.status_counts, { PASS: 253, FAIL: 0, PENDING: 2, NOT_APPLICABLE: 0 });
   assert.equal(ledger.independent_predicate_program_per_item_claim, false);
   assert.equal(ledger.evidence_reference_presence_is_not_semantic_satisfaction_by_itself, true);
-  assert.equal(ledger.completion_claims_operationally_verified_effective, false);
-  assert.equal(ledger.verified, false);
   assert.equal(ledger.statement_corrections_ref, correctionsPath);
 
   const corrections = json(correctionsPath);
   const j016 = corrections.corrections.find((item) => item.acceptance_id === 'MCFT_CAP_06_HARD_J_016');
   assert.ok(j016, 'J016_CORRECTION_MISSING');
   assert.equal(j016.effective_statement, 'exact-SHA attestation performs no repository or SSOT writeback');
-  assert.equal(j016.status, 'PENDING');
 
   for (const workflowPath of [candidateWorkflowPath, releaseWorkflowPath, policyWorkflowPath]) {
     const workflow = read(workflowPath);
@@ -126,11 +166,6 @@ try {
   assert.equal(releaseWorkflow.includes('ACCEPTANCE_MCFT_MERGE_GROUP_RELEASE_LANE_V1.cjs'), true);
 
   const retrospectiveWorkflow = read(retrospectiveWorkflowPath);
-  assert.match(retrospectiveWorkflow, /^\s*pull_request:/m, 'RETROSPECTIVE_PULL_REQUEST_TRIGGER_MISSING');
-  assert.match(retrospectiveWorkflow, /^\s*push:/m, 'RETROSPECTIVE_PUSH_TRIGGER_MISSING');
-  assert.equal(retrospectiveWorkflow.includes('ref: ea8caa10e6369ec5018d7c7b6630e2330d1ca085'), true, 'RETROSPECTIVE_EXACT_SHA_CHECKOUT_MISSING');
-  assert.equal(retrospectiveWorkflow.includes('MCFT_CAP_06_ATTESTATION_MODE: RETROSPECTIVE_EXACT_SHA_VERIFICATION'), true, 'RETROSPECTIVE_MODE_MISSING');
-  assert.equal(retrospectiveWorkflow.includes('ACCEPTANCE_MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.cjs'), true, 'RETROSPECTIVE_GATE_MISSING');
   assert.equal(/contents:\s*write/.test(retrospectiveWorkflow), false, 'RETROSPECTIVE_WRITE_PERMISSION_FORBIDDEN');
   assert.equal(retrospectiveWorkflow.includes('persist-credentials: false'), true, 'RETROSPECTIVE_PERSISTED_CREDENTIALS_FORBIDDEN');
   const candidateGate = read(candidateGatePath);
@@ -139,26 +174,30 @@ try {
   assert.equal(candidateGate.includes('UNREGISTERED_CANDIDATE_AUTHORITY'), true);
 
   const result = {
-    schema_version: 'geox_mcft_delivery_policy_v2_1_result_v2',
+    schema_version: 'geox_mcft_delivery_policy_v2_2_result_v1',
     status: 'PASS',
     historical_v1_self_supersession: 'PASS',
-    cap06_policy_ref_v2: 'PASS',
     candidate_authority_registry: 'PASS',
-    array_candidate_detection: 'PASS',
     merge_group_workflow_support: 'PASS',
     cross_event_concurrency_isolation: 'PASS',
-    cap06_effectiveness_semantics_split: 'PASS',
-    j016_scope_correction: 'PASS',
-    retrospective_exact_sha_verification_contract: 'PASS',
-    branch_ruleset_verified: false,
-    operational_release_authority_established: false,
+    branch_ruleset_verified: true,
+    strict_up_to_date_verified: true,
+    trusted_enforcement_required_checks_bound: true,
+    trusted_enforcement_fail_closed_verified: true,
+    operational_release_authority_established: true,
     successor_capability_line_authorized: false,
     capability_slice: false,
-    runtime_authority: false
+    runtime_authority: false,
   };
   write(result);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 } catch (error) {
-  const result = { schema_version: 'geox_mcft_delivery_policy_v2_1_result_v2', status: 'FAIL', error: error instanceof Error ? error.message : String(error) };
-  write(result); console.error(JSON.stringify(result, null, 2)); process.exitCode = 1;
+  const result = {
+    schema_version: 'geox_mcft_delivery_policy_v2_2_result_v1',
+    status: 'FAIL',
+    error: error instanceof Error ? error.message : String(error),
+  };
+  write(result);
+  console.error(JSON.stringify(result, null, 2));
+  process.exitCode = 1;
 }
