@@ -1,0 +1,41 @@
+{
+  "schema_version": "geox_mcft_delivery_candidate_signal_contract_v1",
+  "contract_id": "MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1",
+  "record_status": "EFFECTIVE_REPOSITORY_AUTHORITY_WHEN_PRESENT_ON_MAIN",
+  "purpose": "Distinguish delivery candidate authority transitions from canonical domain language such as Calibration Candidate.",
+  "string_matching_mode": "EXACT_ENUM_ONLY",
+  "boolean_matching_mode": "EXACT_FIELD_NAME_OR_EXPLICIT_SLICE_PATTERN_AND_TRUE_ONLY",
+  "explicit_candidate_status_values": [
+    "CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
+    "IMPLEMENTATION_CANDIDATE",
+    "REPAIR_CANDIDATE",
+    "AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE",
+    "FINAL_CANDIDATE_AWAITING_EXACT_MERGE_SHA_ATTESTATION",
+    "FINAL_CANDIDATE_EFFECTIVE_WHEN_PRESENT_ON_MAIN_AND_EXACT_SHA_ATTESTATION_PASS"
+  ],
+  "explicit_candidate_boolean_field_names": [
+    "implementation_candidate",
+    "slice_candidate_effective",
+    "candidate_implemented",
+    "final_candidate"
+  ],
+  "explicit_candidate_boolean_field_patterns": [
+    "^s[0-9]+[a-z]*_candidate_implemented$"
+  ],
+  "domain_term_non_signals": [
+    "Calibration Candidate",
+    "twin_calibration_candidate_projection_v1",
+    "candidate evaluation",
+    "candidate attachment"
+  ],
+  "nested_object_traversal_required": true,
+  "nested_array_traversal_required": true,
+  "unregistered_explicit_delivery_signal_effect": "CANDIDATE_INVALIDATED",
+  "registered_transition_detection_source": "MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1",
+  "trusted_registry_source": "DEFAULT_BRANCH_CHECKOUT_ON_PULL_REQUEST_TARGET",
+  "pr_modified_registry_trusted_for_same_pr": false,
+  "capability_slice": false,
+  "runtime_authority": false,
+  "canonical_write_authority": false,
+  "successor_capability_authority": false
+}
