@@ -1,0 +1,10 @@
+{
+  "schema_version": "geox_mcft_trusted_enforcement_negative_probe_v1",
+  "probe_id": "MCFT-TRUSTED-ENFORCEMENT-NEGATIVE-PROBE",
+  "status": "REPAIR_CANDIDATE",
+  "candidate_probe": true,
+  "purpose": "CONTROLLED_FAIL_CLOSED_TEST_ONLY",
+  "must_not_merge": true,
+  "runtime_authority": false,
+  "mcft_cap_07_authorized": false
+}
