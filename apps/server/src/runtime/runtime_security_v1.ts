@@ -39,6 +39,18 @@ function envValue(...keys: string[]): string {
   return "";
 }
 
+function databasePasswordV1(): string {
+  const explicit = envValue("GEOX_RUNTIME_DATABASE_PASSWORD", "POSTGRES_PASSWORD", "PGPASSWORD");
+  if (explicit) return explicit;
+  const databaseUrl = envValue("GEOX_RUNTIME_DATABASE_URL", "DATABASE_URL");
+  if (!databaseUrl) return "";
+  try {
+    return decodeURIComponent(new URL(databaseUrl).password || "");
+  } catch {
+    return "";
+  }
+}
+
 function isWeak(v: string): boolean {
   const value = String(v ?? "").trim();
   if (!value) return true;
@@ -98,7 +110,7 @@ export function getRuntimeSecurityStatusV1() {
   checks.cors_wildcard_forbidden = origins !== "*";
   if (productionLike && origins === "*") errors.push("RUNTIME_CORS_WILDCARD_FORBIDDEN");
 
-  checks.postgres_password_strong = !isWeak(envValue("POSTGRES_PASSWORD", "PGPASSWORD"));
+  checks.postgres_password_strong = !isWeak(databasePasswordV1());
   if (productionLike && !checks.postgres_password_strong) errors.push("RUNTIME_POSTGRES_PASSWORD_WEAK");
 
   checks.minio_password_strong = !isWeak(envValue("MINIO_ROOT_PASSWORD", "GEOX_EVIDENCE_S3_SECRET_ACCESS_KEY"));

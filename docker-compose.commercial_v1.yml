@@ -1,5 +1,5 @@
 # GEOX Commercial v1 compose baseline.
-# Includes: postgres + server + web + mqtt + worker + minio.
+# Includes independent database platform bootstrap, one-shot MCFT-CAP-07 migration, Runtime, web, mqtt, worker, executor, telemetry ingest, and minio.
 
 services:
   postgres:
@@ -19,6 +19,45 @@ services:
       interval: 3s
       timeout: 2s
       retries: 20
+
+  database-platform-bootstrap:
+    build:
+      context: .
+      dockerfile: docker/runtime.Dockerfile
+      args:
+        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
+    image: geox/server-runtime:local
+    working_dir: /app
+    init: true
+    restart: "no"
+    command: ["node", "apps/server/dist/database/platform_bootstrap.js"]
+    environment:
+      GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      GEOX_MIGRATION_DATABASE_URL: postgres://geox_mcft_migrator_v1:${GEOX_MCFT_MIGRATOR_PASSWORD:?GEOX_MCFT_MIGRATOR_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:${GEOX_RUNTIME_DATABASE_PASSWORD:?GEOX_RUNTIME_DATABASE_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      GEOX_MCFT_MIGRATOR_PASSWORD: ${GEOX_MCFT_MIGRATOR_PASSWORD:?GEOX_MCFT_MIGRATOR_PASSWORD is required}
+      GEOX_RUNTIME_DATABASE_PASSWORD: ${GEOX_RUNTIME_DATABASE_PASSWORD:?GEOX_RUNTIME_DATABASE_PASSWORD is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mcft-cap07-migration:
+    build:
+      context: .
+      dockerfile: docker/runtime.Dockerfile
+      args:
+        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
+    image: geox/server-runtime:local
+    working_dir: /app
+    init: true
+    restart: "no"
+    command: ["node", "apps/server/dist/database/mcft_cap07_migration.js"]
+    environment:
+      GEOX_MIGRATION_DATABASE_URL: postgres://geox_mcft_migrator_v1:${GEOX_MCFT_MIGRATOR_PASSWORD:?GEOX_MCFT_MIGRATOR_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+    depends_on:
+      database-platform-bootstrap:
+        condition: service_completed_successfully
 
   mqtt:
     image: eclipse-mosquitto:2
@@ -83,11 +122,6 @@ services:
         echo "[minio-init] done"
 
   server:
-    # Server container listens on 3000 internally.
-    # Host entrypoint is http://127.0.0.1:3001 via 3001:3000 port mapping.
-    # Inter-container calls must use http://server:3000.
-    # Healthcheck must probe container-internal port 3000.
-    # NOTE: This is in-container liveness/readiness only, not host-side external口径.
     build:
       context: .
       dockerfile: docker/runtime.Dockerfile
@@ -101,8 +135,10 @@ services:
     command: ["node", "apps/server/dist/server.js"]
     environment:
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      DATABASE_URL: postgres://geox_runtime_v1:${GEOX_RUNTIME_DATABASE_PASSWORD:?GEOX_RUNTIME_DATABASE_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:${GEOX_RUNTIME_DATABASE_PASSWORD:?GEOX_RUNTIME_DATABASE_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      GEOX_RUNTIME_DATABASE_ROLE: geox_runtime_v1
+      GEOX_MCFT_CAP_07_STARTUP_PREFLIGHT_REQUIRED: "1"
       DB_STRICT: "1"
       NODE_ENV: production
       GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}
@@ -149,6 +185,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mcft-cap07-migration:
+        condition: service_completed_successfully
       mqtt:
         condition: service_started
       minio:
@@ -180,7 +218,7 @@ services:
     command: ["node", "apps/telemetry-ingest/dist/main.js"]
     environment:
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      DATABASE_URL: postgres://geox_runtime_v1:${GEOX_RUNTIME_DATABASE_PASSWORD:?GEOX_RUNTIME_DATABASE_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
       NODE_ENV: production
       GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}
@@ -213,7 +251,7 @@ services:
     command: ["node", "apps/server/dist/jobs/runtime.js"]
     environment:
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      DATABASE_URL: postgres://geox_runtime_v1:${GEOX_RUNTIME_DATABASE_PASSWORD:?GEOX_RUNTIME_DATABASE_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
       NODE_ENV: production
       GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}
@@ -246,7 +284,7 @@ services:
     command: ["node", "apps/executor/dist/runtime_loop.js"]
     environment:
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      DATABASE_URL: postgres://geox_runtime_v1:${GEOX_RUNTIME_DATABASE_PASSWORD:?GEOX_RUNTIME_DATABASE_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
       NODE_ENV: production
       GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}

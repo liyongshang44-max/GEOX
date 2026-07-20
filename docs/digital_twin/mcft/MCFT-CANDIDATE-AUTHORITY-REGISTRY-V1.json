@@ -43,16 +43,17 @@
     },
     {
       "capability_line": "MCFT-CAP-07",
-      "registry_bootstrap_kind": "S0_AUTHORITY_WITH_PRE_REGISTERED_SUCCESSOR_CHAIN_THROUGH_S2",
+      "registry_bootstrap_kind": "S0_AUTHORITY_WITH_PRE_REGISTERED_SUCCESSOR_CHAIN_THROUGH_S3",
       "resolved_manifest_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-RESOLVED-MANIFEST-V1.json",
       "taskbook_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-TASK.md",
       "current_candidate_authority": false,
       "candidate_declaration_enabled": true,
-      "candidate_authority_scope": "S1_CONTRACTS_PR_AND_FUTURE_S2_AFTER_S1_EFFECTIVENESS",
+      "candidate_authority_scope": "S1_AND_S2_COMMITTED_CANDIDATES_WITH_FUTURE_S3_AFTER_S2_EFFECTIVENESS",
       "authoritative_candidate_status_paths": [
         "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CURRENT-AUTHORITY-V1.json",
         "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-DELIVERY-STATUS-V1.json",
-        "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S2-DELIVERY-STATUS-V1.json"
+        "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S2-DELIVERY-STATUS-V1.json",
+        "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-DELIVERY-STATUS-V1.json"
       ],
       "candidate_transition_fields": [
         {
@@ -77,9 +78,17 @@
           "focused_workflow": "mcft-cap-07-s2-repository",
           "standard_workflow": "ci",
           "predecessor_effective_evidence_required": true
+        },
+        {
+          "status_file": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-DELIVERY-STATUS-V1.json",
+          "field_path": "s3_candidate_implemented",
+          "allowed_candidate_values": [true],
+          "focused_workflow": "mcft-cap-07-s3-composers",
+          "standard_workflow": "ci",
+          "predecessor_effective_evidence_required": true
         }
       ],
-      "terminal_state": "S1_CONDITIONAL_CANDIDATE_AUTHORITY_COMMITTED_WHEN_MERGED_AND_ATTESTED",
+      "terminal_state": "S2_CONDITIONAL_CANDIDATE_AUTHORITY_COMMITTED_WHEN_MERGED_AND_ATTESTED",
       "successor_capability_authorized": false,
       "implementation_authorized": false,
       "runtime_source_authorized": false,

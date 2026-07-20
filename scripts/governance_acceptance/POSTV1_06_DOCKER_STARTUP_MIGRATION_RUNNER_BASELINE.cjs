@@ -1,5 +1,5 @@
 // scripts/governance_acceptance/POSTV1_06_DOCKER_STARTUP_MIGRATION_RUNNER_BASELINE.cjs
-// Purpose: verify Docker startup and SQL migration-runner baseline diagnostics for POSTV1-06.
+// Purpose: verify the current Docker startup and independent one-shot SQL migration baseline diagnostics.
 // Boundary: preflight/readback only; this script does not create domain rows, dispatch tasks, write receipts, create ROI, create Field Memory, or update models.
 
 'use strict';
@@ -20,22 +20,18 @@ const FILES = {
   dockerfile: 'docker/runtime.Dockerfile',
   serverBootstrap: 'apps/server/src/bootstrap/server.ts',
   migrationsRunner: 'apps/server/src/infra/migrations.ts',
+  platformBootstrap: 'apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts',
+  cap07MigrationRunner: 'apps/server/src/infra/mcft_cap07_startup_migration_runner_v1.ts',
+  runtimePreflight: 'apps/server/src/infra/mcft_cap07_runtime_startup_preflight_v1.ts',
+  cap07Migration: 'apps/server/db/migrations/2026_07_20_mcft_cap_07_fact_visibility_support.sql',
 };
 
 const CRITICAL_TABLES = [
-  'field_state_snapshot_v1',
-  'forecast_run_v1',
-  'scenario_set_v1',
-  'calibration_replay_v1',
-  'forecast_error_v1',
-  'field_learning_candidate_v1',
-  'decision_cycle_v1',
-  'production_ingestion_event_v0',
-  'operator_session_v0',
-  'operator_decision_review_v0',
-  'operator_formalization_action_v0',
-  'roi_entry_v1',
-  'field_memory_v1',
+  'field_state_snapshot_v1', 'forecast_run_v1', 'scenario_set_v1', 'calibration_replay_v1',
+  'forecast_error_v1', 'field_learning_candidate_v1', 'decision_cycle_v1',
+  'production_ingestion_event_v0', 'operator_session_v0', 'operator_decision_review_v0',
+  'operator_formalization_action_v0', 'roi_entry_v1', 'field_memory_v1',
+  'geox_schema_migration_ledger_v1', 'twin_fact_visibility_epoch_v1', 'twin_fact_visibility_index_v1',
 ];
 
 const CRITICAL_INDEXES = [
@@ -44,19 +40,15 @@ const CRITICAL_INDEXES = [
   'operator_session_v0_decision_cycle_idx',
   'operator_decision_review_v0_decision_cycle_idx',
   'operator_formalization_action_v0_decision_cycle_idx',
+  'twin_fact_visibility_epoch_v1_one_active_idx',
+  'twin_fact_visibility_index_v1_pkey',
 ];
 
 const assertions = [];
+const abs = (file) => path.resolve(ROOT, file);
+const read = (file) => fs.readFileSync(abs(file), 'utf8');
 
-function abs(file) {
-  return path.resolve(ROOT, file);
-}
-
-function read(file) {
-  return fs.readFileSync(abs(file), 'utf8');
-}
-
-function assert(name, condition, details = {}) {
+function assertCheck(name, condition, details = {}) {
   const passed = condition === true;
   assertions.push({ name, passed, details });
   if (!passed) {
@@ -66,35 +58,39 @@ function assert(name, condition, details = {}) {
   }
 }
 
-function containsAll(text, tokens) {
-  return tokens.every((token) => text.includes(token));
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const containsAll = (text, tokens) => tokens.every((token) => text.includes(token));
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function listSqlMigrations() {
   const dir = abs('apps/server/db/migrations');
-  assert('migration_directory_exists', fs.existsSync(dir), { dir });
+  assertCheck('migration_directory_exists', fs.existsSync(dir), { dir });
   return fs.readdirSync(dir).filter((name) => name.endsWith('.sql')).sort();
 }
 
 function staticAudit() {
-  for (const [name, file] of Object.entries(FILES)) assert(`${name}_exists`, fs.existsSync(abs(file)), { file });
+  for (const [name, file] of Object.entries(FILES)) assertCheck(`${name}_exists`, fs.existsSync(abs(file)), { file });
   const taskLine = read(FILES.taskLine);
   const taskDoc = read(FILES.taskDoc);
   const compose = read(FILES.compose);
   const dockerfile = read(FILES.dockerfile);
   const bootstrap = read(FILES.serverBootstrap);
-  const runner = read(FILES.migrationsRunner);
-  assert('task_line_records_postv106', containsAll(taskLine, ['POSTV1-06 — Docker Startup / Migration Runner Baseline', 'server startup check', 'Postgres health dependency', 'migration application check', 'missing migration diagnostic', 'port mapping diagnostic', 'acceptance preflight output']), { file: FILES.taskLine });
-  assert('task_doc_records_boundary', containsAll(taskDoc, ['No infrastructure migration to another platform.', 'No cloud deployment work.', 'No new runtime semantics.', 'p1_completed = true']), { file: FILES.taskDoc });
-  assert('compose_records_service_names', containsAll(compose, ['postgres:', 'server:', 'executor:', 'container_name: geox-postgres', 'container_name: geox-server']), { file: FILES.compose });
-  assert('compose_records_port_mappings_and_health_dependency', containsAll(compose, ['"5433:5432"', '"3001:3000"', 'condition: service_healthy']), { file: FILES.compose });
-  assert('dockerfile_packages_runtime_sources', containsAll(dockerfile, ['COPY apps ./apps', 'COPY scripts ./scripts', 'COPY docs ./docs', 'FROM node:20-slim AS runtime']), { file: FILES.dockerfile });
-  assert('server_startup_runs_and_logs_migrations', containsAll(bootstrap, ['runSqlMigrations(pool)', 'migrationSummary', 'sql_migrations_completed', 'startBackgroundWorkers(pool)', 'app.listen']), { file: FILES.serverBootstrap });
-  assert('migration_runner_has_diagnostics', containsAll(runner, ['SqlMigrationRunSummary', 'checked_dirs', 'sql_file_count', 'applied_file_count', 'skipped_empty_file_count', 'migration_files', 'SQL_MIGRATIONS_DIRECTORY_NOT_FOUND']), { file: FILES.migrationsRunner });
+  const legacyRunner = read(FILES.migrationsRunner);
+  const platformBootstrap = read(FILES.platformBootstrap);
+  const cap07Runner = read(FILES.cap07MigrationRunner);
+  const runtimePreflight = read(FILES.runtimePreflight);
+  const migration = read(FILES.cap07Migration);
+
+  assertCheck('task_line_records_postv106', containsAll(taskLine, ['POSTV1-06 — Docker Startup / Migration Runner Baseline', 'server startup check', 'Postgres health dependency', 'migration application check', 'missing migration diagnostic', 'port mapping diagnostic', 'acceptance preflight output']), { file: FILES.taskLine });
+  assertCheck('task_doc_records_boundary', containsAll(taskDoc, ['No infrastructure migration to another platform.', 'No cloud deployment work.', 'No new runtime semantics.', 'p1_completed = true']), { file: FILES.taskDoc });
+  assertCheck('compose_records_service_names', containsAll(compose, ['postgres:', 'database-platform-bootstrap:', 'mcft-cap07-migration:', 'server:', 'executor:', 'container_name: geox-postgres', 'container_name: geox-server']), { file: FILES.compose });
+  assertCheck('compose_records_one_shot_dependency', containsAll(compose, ['condition: service_healthy', 'condition: service_completed_successfully', 'geox_mcft_migrator_v1', 'geox_runtime_v1']), { file: FILES.compose });
+  assertCheck('dockerfile_packages_runtime_sources', containsAll(dockerfile, ['COPY apps ./apps', 'COPY scripts ./scripts', 'COPY docs ./docs', 'FROM node:20-slim AS runtime']), { file: FILES.dockerfile });
+  assertCheck('server_startup_is_preflight_only', containsAll(bootstrap, ['runMcftCap07RuntimeStartupPreflightV1(pool)', 'mcft_cap07_runtime_startup_preflight_completed', 'startBackgroundWorkers(pool)', 'app.listen']) && !bootstrap.includes('runSqlMigrations(pool)'), { file: FILES.serverBootstrap });
+  assertCheck('legacy_runner_is_explicit_one_shot_helper', containsAll(legacyRunner, ['SqlMigrationRunOptions', 'include_files', 'exclude_files', 'SQL_MIGRATIONS_DIRECTORY_NOT_FOUND']), { file: FILES.migrationsRunner });
+  assertCheck('platform_bootstrap_has_exact_roles', containsAll(platformBootstrap, ['geox_mcft_migration_owner_v1', 'geox_mcft_migrator_v1', 'geox_runtime_v1', 'NOINHERIT']), { file: FILES.platformBootstrap });
+  assertCheck('cap07_runner_has_ledger_and_lock', containsAll(cap07Runner, ['McftCap07MigrationLedgerRepositoryV1', 'pg_advisory_lock', 'MCFT_MIGRATION_LEDGER_CHECKSUM_MISMATCH', 'SET LOCAL ROLE']), { file: FILES.cap07MigrationRunner });
+  assertCheck('runtime_preflight_read_only', containsAll(runtimePreflight, ['REPEATABLE READ READ ONLY', 'MCFT_REQUIRED_MIGRATION_PENDING', 'MCFT_STARTUP_VISIBILITY_PREFLIGHT_FAILED']) && !runtimePreflight.includes('SET LOCAL ROLE'), { file: FILES.runtimePreflight });
+  assertCheck('visibility_migration_contract', containsAll(migration, ['twin_fact_visibility_epoch_v1', 'twin_fact_visibility_index_v1', 'visibility_anchor_xid8 xid8', 'INITIAL_BASELINE_TRANSACTION', 'FACT_INSERT_TRANSACTION', 'SECURITY DEFINER', 'SET search_path = pg_catalog']), { file: FILES.cap07Migration });
 }
 
 async function serverHealthAudit() {
@@ -104,7 +100,7 @@ async function serverHealthAudit() {
       const response = await fetch(`${BASE_URL}/api/v1/fields`, { headers: { authorization: 'Bearer x' } });
       attempts.push({ attempt, status: response.status });
       if (response.status >= 200 && response.status < 500) {
-        assert('server_health_reachable', true, { base_url: BASE_URL, status: response.status, attempts });
+        assertCheck('server_health_reachable', true, { base_url: BASE_URL, status: response.status, attempts });
         return { status: response.status, attempts };
       }
     } catch (error) {
@@ -127,10 +123,10 @@ async function dbAudit() {
   await client.connect();
   try {
     await client.query('SELECT 1');
-    for (const table of CRITICAL_TABLES) assert(`${table}_exists`, await tableExists(client, table), { table });
+    for (const table of CRITICAL_TABLES) assertCheck(`${table}_exists`, await tableExists(client, table), { table });
     const indexes = await client.query("SELECT indexname FROM pg_indexes WHERE schemaname='public'");
     const indexNames = new Set(indexes.rows.map((row) => row.indexname));
-    for (const index of CRITICAL_INDEXES) assert(`${index}_exists`, indexNames.has(index), { index });
+    for (const index of CRITICAL_INDEXES) assertCheck(`${index}_exists`, indexNames.has(index), { index });
     return { critical_table_count: CRITICAL_TABLES.length, critical_index_count: CRITICAL_INDEXES.length, observed_index_count: indexNames.size };
   } finally {
     await client.end().catch(() => {});
@@ -145,8 +141,8 @@ function assertionSummary() {
 async function main() {
   staticAudit();
   const migrationFiles = listSqlMigrations();
-  assert('migration_sql_file_count_positive', migrationFiles.length > 0, { migration_sql_file_count: migrationFiles.length });
-  assert('postv105_migration_present', migrationFiles.includes('2026_06_29_postv1_05_query_cost_audit_indexes.sql'), { migrationFiles });
+  assertCheck('migration_sql_file_count_positive', migrationFiles.length > 0, { migration_sql_file_count: migrationFiles.length });
+  assertCheck('cap07_visibility_migration_present', migrationFiles.includes('2026_07_20_mcft_cap_07_fact_visibility_support.sql'), { migrationFiles });
   const server = await serverHealthAudit();
   const db = await dbAudit();
   console.log(JSON.stringify({
@@ -154,7 +150,7 @@ async function main() {
     acceptance: ACCEPTANCE,
     base_url: BASE_URL,
     database_url_source: process.env.DATABASE_URL ? 'DATABASE_URL' : process.env.POSTGRES_URL ? 'POSTGRES_URL' : 'default_local_compose_5433',
-    compose_services_verified: ['postgres', 'server', 'executor'],
+    compose_services_verified: ['postgres', 'database-platform-bootstrap', 'mcft-cap07-migration', 'server', 'executor'],
     server_health_reachable: true,
     server_health_status: server.status,
     server_health_attempts: server.attempts,
@@ -162,10 +158,11 @@ async function main() {
     migration_sql_file_count: migrationFiles.length,
     critical_db_objects_verified: true,
     startup_migration_summary_observable: true,
+    runtime_startup_preflight_observable: true,
     ...db,
     ...assertionSummary(),
     p1_completed: true,
-    next_step: 'P1_COMPLETION_REVIEW_BEFORE_P2',
+    next_step: 'MCFT_CAP_07_S2_REPOSITORY',
   }, null, 2));
 }
 
@@ -178,7 +175,7 @@ main().catch((error) => {
     error: error.message,
     details: error.details || null,
     assertions,
-    hint: 'Ensure geox-postgres/geox-server are started from docker compose and DATABASE_URL points to the active local Postgres.',
+    hint: 'Ensure platform bootstrap and mcft-cap07-migration completed before geox-server readiness, and DATABASE_URL points to the active local Postgres.',
   }, null, 2));
   process.exit(1);
 });

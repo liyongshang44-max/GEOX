@@ -1,0 +1,205 @@
+name: mcft-cap-07-s2-repository
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/db/migrations/2026_07_20_mcft_cap_07_fact_visibility_support.sql'
+      - 'apps/server/src/bootstrap/server.ts'
+      - 'apps/server/src/infra/migrations.ts'
+      - 'apps/server/src/infra/mcft_cap07_**'
+      - 'apps/server/src/infra/runtime_schema_compatibility_bootstrap_v1.ts'
+      - 'apps/server/src/infra/runtime_dispatch_queue_bootstrap_v1.ts'
+      - 'apps/server/src/infra/runtime_device_status_compatibility_bootstrap_v1.ts'
+      - 'apps/server/src/infra/runtime_skill_registry_compatibility_bootstrap_v1.ts'
+      - 'apps/server/src/infra/runtime_field_fertility_compatibility_bootstrap_v1.ts'
+      - 'apps/server/src/infra/database.ts'
+      - 'apps/server/src/runtime/runtime_security_v1.ts'
+      - 'apps/server/src/runtime/worker_runtime_heartbeat_v1.ts'
+      - 'apps/executor/src/lib/worker_runtime_heartbeat.ts'
+      - 'apps/server/src/jobs/runtime.ts'
+      - 'apps/server/src/repositories/field_twin_read_model/**'
+      - 'apps/server/src/domain/field_twin_read_model/exact_resolvers_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_REPOSITORY.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_DISPATCH_QUEUE_PREPROVISION.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_DEVICE_STATUS_COMPATIBILITY.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_WEATHER_FORECAST_PREPROVISION.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_SKILL_REGISTRY_PREPROVISION.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_FIELD_FERTILITY_PREPROVISION.ts'
+      - 'scripts/governance_acceptance/POSTV1_06_DOCKER_STARTUP_MIGRATION_RUNNER_BASELINE.cjs'
+      - 'apps/server/scripts/write_dist_entries.cjs'
+      - 'docker-compose.yml'
+      - 'docker-compose.commercial_v1.yml'
+      - '.env.example'
+      - '.env.ci.example'
+      - '.env.production.example'
+      - 'docs/digital_twin/mcft/cap_07/**'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+      - '.github/workflows/mcft-cap-07-s2-repository.yml'
+      - '.github/workflows/ci.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap-07-s2-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  mcft-cap-07-s2-repository:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck server repository surface
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Validate compose orchestration
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+          GEOX_MCFT_MIGRATOR_PASSWORD: focused-migrator-password
+          GEOX_RUNTIME_DATABASE_PASSWORD: focused-runtime-password
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          GEOX_AO_ACT_TOKEN: focused-token
+          GEOX_EXECUTOR_TOKEN: focused-token
+          MINIO_ROOT_USER: focused-minio
+          MINIO_ROOT_PASSWORD: focused-minio-password
+          MQTT_USERNAME: focused-mqtt
+          MQTT_PASSWORD: focused-mqtt-password
+          CORS_ORIGINS: https://focused.invalid
+          APP_SECRET: focused-app-secret-at-least-32-characters
+          PUBLIC_BASE_URL: https://focused.invalid
+        run: |
+          docker compose -f docker-compose.commercial_v1.yml config > /tmp/mcft-cap07-commercial-compose.yml
+          grep -q 'condition: service_completed_successfully' /tmp/mcft-cap07-commercial-compose.yml
+          grep -q 'geox_mcft_migrator_v1' /tmp/mcft-cap07-commercial-compose.yml
+          grep -q 'geox_runtime_v1' /tmp/mcft-cap07-commercial-compose.yml
+
+      - name: Run S2 PostgreSQL acceptance
+        env:
+          GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          GEOX_MIGRATION_DATABASE_URL: postgres://geox_mcft_migrator_v1:focused-migrator-password@127.0.0.1:5432/postgres
+          GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:focused-runtime-password@127.0.0.1:5432/postgres
+          GEOX_MCFT_MIGRATOR_PASSWORD: focused-migrator-password
+          GEOX_RUNTIME_DATABASE_PASSWORD: focused-runtime-password
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_REPOSITORY.ts
+
+      - name: Run dispatch queue preprovision acceptance
+        env:
+          GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:focused-runtime-password@127.0.0.1:5432/postgres
+          GEOX_RUNTIME_DATABASE_PASSWORD: focused-runtime-password
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_DISPATCH_QUEUE_PREPROVISION.ts
+
+      - name: Run device status compatibility acceptance
+        env:
+          GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:focused-runtime-password@127.0.0.1:5432/postgres
+          GEOX_RUNTIME_DATABASE_PASSWORD: focused-runtime-password
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_DEVICE_STATUS_COMPATIBILITY.ts
+
+      - name: Run weather forecast preprovision acceptance
+        env:
+          GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:focused-runtime-password@127.0.0.1:5432/postgres
+          GEOX_RUNTIME_DATABASE_PASSWORD: focused-runtime-password
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_WEATHER_FORECAST_PREPROVISION.ts
+
+      - name: Run Skill Registry preprovision acceptance
+        env:
+          GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:focused-runtime-password@127.0.0.1:5432/postgres
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_SKILL_REGISTRY_PREPROVISION.ts
+
+      - name: Run field fertility preprovision acceptance
+        env:
+          GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:focused-runtime-password@127.0.0.1:5432/postgres
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_FIELD_FERTILITY_PREPROVISION.ts
+
+      - name: Verify structured S2 result
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S2_REPOSITORY_RESULT.json', 'utf8'));
+          if (result.status !== 'PASS') throw new Error(`S2_REPOSITORY_NOT_PASS:${result.error || 'UNKNOWN'}`);
+          if (result.canonical_fact_type_count !== 13) throw new Error('S2_CANONICAL_FACT_INVENTORY_INVALID');
+          if (result.replay_evidence_fact_type_count !== 4) throw new Error('S2_REPLAY_EVIDENCE_INVENTORY_INVALID');
+          if (result.runtime_schema_compatibility_relation_count !== 9) throw new Error('S2_RUNTIME_SCHEMA_COMPATIBILITY_INVENTORY_INVALID');
+          if (result.runtime_schema_create_authority !== 'FORBIDDEN') throw new Error('S2_RUNTIME_SCHEMA_CREATE_AUTHORITY_INVALID');
+          if (result.runtime_authority_delta !== 'READ_ONLY_REPOSITORY_AND_EXACT_RESOLVERS_ONLY') throw new Error('S2_RUNTIME_AUTHORITY_INVALID');
+          if (result.canonical_write_authority_delta !== 'ZERO') throw new Error('S2_CANONICAL_WRITE_AUTHORITY_INVALID');
+          if (result.route_implementation_performed || result.frontend_implementation_performed || result.cap_08_authorized) throw new Error('S2_BOUNDARY_VIOLATION');
+          const dispatch = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S2_DISPATCH_QUEUE_PREPROVISION_RESULT.json', 'utf8'));
+          if (dispatch.status !== 'PASS') throw new Error(`S2_DISPATCH_PREPROVISION_NOT_PASS:${dispatch.error || 'UNKNOWN'}`);
+          if (dispatch.runtime_ddl_performed || dispatch.runtime_migration_dml_performed) throw new Error('S2_RUNTIME_DISPATCH_MIGRATION_BOUNDARY_VIOLATION');
+          if (dispatch.runtime_schema_create_authority !== 'FORBIDDEN' || dispatch.canonical_write_authority_delta !== 'ZERO') throw new Error('S2_DISPATCH_AUTHORITY_INVALID');
+          const devices = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S2_DEVICE_STATUS_COMPATIBILITY_RESULT.json', 'utf8'));
+          if (devices.status !== 'PASS') throw new Error(`S2_DEVICE_STATUS_COMPATIBILITY_NOT_PASS:${devices.error || 'UNKNOWN'}`);
+          if (devices.report_device_count !== 2 || devices.status_value_synthesized || devices.runtime_ddl_performed) throw new Error('S2_DEVICE_STATUS_COMPATIBILITY_BOUNDARY_INVALID');
+          if (devices.canonical_write_authority_delta !== 'ZERO') throw new Error('S2_DEVICE_STATUS_AUTHORITY_INVALID');
+          const weather = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S2_WEATHER_FORECAST_PREPROVISION_RESULT.json', 'utf8'));
+          if (weather.status !== 'PASS') throw new Error(`S2_WEATHER_PREPROVISION_NOT_PASS:${weather.error || 'UNKNOWN'}`);
+          if (!weather.weather_forecast_id || weather.runtime_ddl_performed || weather.runtime_migration_dml_performed) throw new Error('S2_WEATHER_PREPROVISION_BOUNDARY_INVALID');
+          if (weather.canonical_write_authority_delta !== 'ZERO') throw new Error('S2_WEATHER_AUTHORITY_INVALID');
+          const skills = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S2_SKILL_REGISTRY_PREPROVISION_RESULT.json', 'utf8'));
+          if (skills.status !== 'PASS') throw new Error(`S2_SKILL_REGISTRY_PREPROVISION_NOT_PASS:${skills.error || 'UNKNOWN'}`);
+          if (skills.required_column_count !== 27 || skills.runtime_ddl_performed || skills.bootstrap_projection_row_synthesized) throw new Error('S2_SKILL_REGISTRY_PREPROVISION_BOUNDARY_INVALID');
+          if (skills.canonical_write_authority_delta !== 'ZERO') throw new Error('S2_SKILL_REGISTRY_AUTHORITY_INVALID');
+          const fertility = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S2_FIELD_FERTILITY_PREPROVISION_RESULT.json', 'utf8'));
+          if (fertility.status !== 'PASS') throw new Error(`S2_FIELD_FERTILITY_PREPROVISION_NOT_PASS:${fertility.error || 'UNKNOWN'}`);
+          if (fertility.required_column_count !== 14 || fertility.runtime_ddl_performed || fertility.bootstrap_projection_row_synthesized) throw new Error('S2_FIELD_FERTILITY_PREPROVISION_BOUNDARY_INVALID');
+          if (fertility.canonical_write_authority_delta !== 'ZERO') throw new Error('S2_FIELD_FERTILITY_AUTHORITY_INVALID');
+          NODE
+
+      - name: Upload focused acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-07-s2-repository-${{ github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_07_S2_REPOSITORY_RESULT.json
+            acceptance-output/MCFT_CAP_07_S2_DISPATCH_QUEUE_PREPROVISION_RESULT.json
+            acceptance-output/MCFT_CAP_07_S2_DEVICE_STATUS_COMPATIBILITY_RESULT.json
+            acceptance-output/MCFT_CAP_07_S2_WEATHER_FORECAST_PREPROVISION_RESULT.json
+            acceptance-output/MCFT_CAP_07_S2_SKILL_REGISTRY_PREPROVISION_RESULT.json
+            acceptance-output/MCFT_CAP_07_S2_FIELD_FERTILITY_PREPROVISION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
