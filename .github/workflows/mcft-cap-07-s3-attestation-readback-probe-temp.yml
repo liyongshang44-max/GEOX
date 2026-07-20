@@ -1,0 +1,76 @@
+name: mcft-cap-07-s3-attestation-readback-probe-temp
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-07-s3-attestation-readback-probe-temp.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MCFT_SUBJECT_SHA: bf1de5b1ac8930fbc9de4589f727916c44f25ca2
+      MCFT_WORKFLOW_FILE: mcft-cap-07-slice-exact-sha-attestation.yml
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Read exact-SHA run and artifact
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p probe-output/artifact
+          node <<'NODE'
+          const fs = require('node:fs');
+          const { execFileSync } = require('node:child_process');
+          const repository = process.env.GITHUB_REPOSITORY;
+          const token = process.env.GITHUB_TOKEN;
+          const subject = process.env.MCFT_SUBJECT_SHA;
+          const workflow = process.env.MCFT_WORKFLOW_FILE;
+          async function api(path) {
+            const response = await fetch(`https://api.github.com${path}`, { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'geox-mcft-cap07-s3-attestation-readback' } });
+            if (!response.ok) throw new Error(`API_FAILED:${response.status}:${path}:${(await response.text()).slice(0, 500)}`);
+            return response.json();
+          }
+          (async () => {
+            const runsPayload = await api(`/repos/${repository}/actions/workflows/${workflow}/runs?event=push&branch=main&per_page=100`);
+            const runs = (runsPayload.workflow_runs || []).filter((run) => run.head_sha === subject).sort((a, b) => Number(b.run_number) - Number(a.run_number));
+            if (runs.length !== 1) throw new Error(`EXACT_SUBJECT_RUN_CARDINALITY:${runs.length}`);
+            const run = runs[0];
+            if (run.status !== 'completed' || run.conclusion !== 'success') throw new Error(`EXACT_SUBJECT_RUN_NOT_PASS:${run.id}:${run.status}:${run.conclusion}`);
+            const jobsPayload = await api(`/repos/${repository}/actions/runs/${run.id}/jobs?per_page=100`);
+            const jobs = (jobsPayload.jobs || []).filter((job) => job.name === 'exact-sha-attestation');
+            if (jobs.length !== 1) throw new Error(`EXACT_JOB_CARDINALITY:${jobs.length}`);
+            const job = jobs[0];
+            if (job.status !== 'completed' || job.conclusion !== 'success') throw new Error(`EXACT_JOB_NOT_PASS:${job.id}:${job.status}:${job.conclusion}`);
+            const artifactsPayload = await api(`/repos/${repository}/actions/runs/${run.id}/artifacts?per_page=100`);
+            const expectedName = `mcft-cap-07-exact-sha-${subject}`;
+            const artifacts = (artifactsPayload.artifacts || []).filter((artifact) => artifact.name === expectedName && artifact.expired !== true);
+            if (artifacts.length !== 1) throw new Error(`EXACT_ARTIFACT_CARDINALITY:${artifacts.length}`);
+            const artifact = artifacts[0];
+            const archiveResponse = await fetch(artifact.archive_download_url, { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'geox-mcft-cap07-s3-attestation-readback' }, redirect: 'follow' });
+            if (!archiveResponse.ok) throw new Error(`ARTIFACT_DOWNLOAD_FAILED:${archiveResponse.status}`);
+            fs.writeFileSync('probe-output/artifact.zip', Buffer.from(await archiveResponse.arrayBuffer()));
+            execFileSync('unzip', ['-q', 'probe-output/artifact.zip', '-d', 'probe-output/artifact']);
+            const canonicalPath = 'probe-output/artifact/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.json';
+            const locatorPath = 'probe-output/artifact/MCFT_CAP_07_ATTESTATION_RETENTION_LOCATOR.json';
+            const canonical = JSON.parse(fs.readFileSync(canonicalPath, 'utf8'));
+            const retention = JSON.parse(fs.readFileSync(locatorPath, 'utf8'));
+            if (canonical.subject_commit !== subject || canonical.status !== 'PASS') throw new Error('CANONICAL_ATTESTATION_INVALID');
+            const result = { schema_version: 'geox_mcft_cap_07_s3_attestation_readback_probe_v1', status: 'PASS', repository, subject_commit: subject, workflow_run_id: run.id, workflow_run_number: run.run_number, workflow_event: run.event, workflow_created_at: run.created_at, workflow_updated_at: run.updated_at, job_id: job.id, artifact_id: artifact.id, artifact_name: artifact.name, artifact_digest: artifact.digest || null, canonical_attestation: canonical, retention_locator: retention, repository_write_performed: false };
+            fs.writeFileSync('probe-output/readback.json', `${JSON.stringify(result, null, 2)}\n`);
+            console.log(JSON.stringify(result, null, 2));
+          })().catch((error) => { console.error(error); process.exitCode = 1; });
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-07-s3-attestation-readback-probe-${{ github.event.pull_request.head.sha }}
+          path: probe-output
+          if-no-files-found: error
+          retention-days: 1
