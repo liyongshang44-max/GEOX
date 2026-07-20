@@ -1,3 +1,5 @@
+# GEOX local Compose baseline with independent MCFT-CAP-07 database bootstrap, migration, and Runtime identities.
+
 services:
   postgres:
     image: postgres:16
@@ -17,11 +19,46 @@ services:
       timeout: 2s
       retries: 20
 
+  database-platform-bootstrap:
+    build:
+      context: .
+      dockerfile: docker/runtime.Dockerfile
+      args:
+        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
+    image: geox/server-runtime:local
+    working_dir: /app
+    init: true
+    restart: "no"
+    command: ["node", "apps/server/dist/database/platform_bootstrap.js"]
+    environment:
+      GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
+      GEOX_MIGRATION_DATABASE_URL: postgres://geox_mcft_migrator_v1:${GEOX_MCFT_MIGRATOR_PASSWORD:-local-mcft-migrator-password}@postgres:5432/landos
+      GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:${GEOX_RUNTIME_DATABASE_PASSWORD:-local-runtime-database-password}@postgres:5432/landos
+      GEOX_MCFT_MIGRATOR_PASSWORD: ${GEOX_MCFT_MIGRATOR_PASSWORD:-local-mcft-migrator-password}
+      GEOX_RUNTIME_DATABASE_PASSWORD: ${GEOX_RUNTIME_DATABASE_PASSWORD:-local-runtime-database-password}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mcft-cap07-migration:
+    build:
+      context: .
+      dockerfile: docker/runtime.Dockerfile
+      args:
+        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
+    image: geox/server-runtime:local
+    working_dir: /app
+    init: true
+    restart: "no"
+    command: ["node", "apps/server/dist/database/mcft_cap07_migration.js"]
+    environment:
+      GEOX_MIGRATION_DATABASE_URL: postgres://geox_mcft_migrator_v1:${GEOX_MCFT_MIGRATOR_PASSWORD:-local-mcft-migrator-password}@postgres:5432/landos
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:-0000000000000000000000000000000000000000}
+    depends_on:
+      database-platform-bootstrap:
+        condition: service_completed_successfully
+
   server:
-    # Server container listens on 3000 internally.
-    # Host entrypoint is http://127.0.0.1:3001 via 3001:3000 port mapping.
-    # Inter-container calls must use http://server:3000.
-    # Healthcheck must probe container-internal port 3000.
     build:
       context: .
       dockerfile: docker/runtime.Dockerfile
@@ -33,26 +70,27 @@ services:
     init: true
     restart: unless-stopped
     command: ["node", "apps/server/dist/server.js"]
-
     environment:
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
+      DATABASE_URL: postgres://geox_runtime_v1:${GEOX_RUNTIME_DATABASE_PASSWORD:-local-runtime-database-password}@postgres:5432/landos
+      GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:${GEOX_RUNTIME_DATABASE_PASSWORD:-local-runtime-database-password}@postgres:5432/landos
+      GEOX_RUNTIME_DATABASE_ROLE: geox_runtime_v1
+      GEOX_MCFT_CAP_07_STARTUP_PREFLIGHT_REQUIRED: "1"
       DB_STRICT: "1"
       NODE_ENV: development
       CI: "1"
       PNPM_STORE_DIR: /pnpm-store
       GEOX_INTERNAL_BASE_URL: http://server:3000
-      GEOX_TOKENS_FILE: /app/config/auth/example_tokens.json  # Container-internal calls use server:3000; host entrypoint is http://127.0.0.1:3001
-      GEOX_EVIDENCE_STORAGE_MODE: LOCAL_MIRROR  # local/dev baseline only; commercial baseline must use S3_COMPAT.
+      GEOX_TOKENS_FILE: /app/config/auth/example_tokens.json
+      GEOX_EVIDENCE_STORAGE_MODE: LOCAL_MIRROR
       GEOX_EVIDENCE_OBJECT_ROOT: runtime/evidence_object_store_v1
-
     ports:
       - "3001:3000"
-
     depends_on:
       postgres:
         condition: service_healthy
-
+      mcft-cap07-migration:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [

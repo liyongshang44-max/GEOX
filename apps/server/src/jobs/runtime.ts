@@ -3,7 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
-import { Pool } from "pg";
+import type { Pool } from "pg";
+import { createDatabasePool } from "../infra/database.js";
 import { fetchPendingJobs, markJobFailed, runQueuedEvidenceExportJob } from "../routes/delivery_evidence_export_v1.js";
 import { fetchPendingEvidenceReportJobs, markEvidenceReportJobFailed, runQueuedEvidenceReportJob } from "../routes/evidence_report_v1.js";
 import {
@@ -29,7 +30,7 @@ function createPool(): Pool {
   if (!databaseUrl) {
     throw new Error("Missing DATABASE_URL for jobs runtime");
   }
-  return new Pool({ connectionString: databaseUrl });
+  return createDatabasePool(databaseUrl);
 }
 
 type JobsRuntimeHeartbeatContext = {

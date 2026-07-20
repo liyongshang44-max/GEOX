@@ -12,7 +12,7 @@
   "successor": "MCFT-CAP-08",
   "s0_candidate_pr_authorized": false,
   "implementation_authorized": true,
-  "implementation_authority_scope": "MCFT_CAP_07_S1_PURE_DOMAIN_CONTRACTS_ONLY",
+  "implementation_authority_scope": "MCFT_CAP_07_S2_READ_ONLY_REPOSITORY_VISIBILITY_SUPPORT_AND_EXACT_RESOLVERS_ONLY",
   "runtime_source_authorized": false,
   "canonical_write_authorized": false,
   "mcft_cap_08_authorized": false,
@@ -44,6 +44,19 @@
     "effective_frontier": "S1",
     "consumption_record_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json"
   },
+  "s1_external_effectiveness": {
+    "status": "PASS",
+    "source_pr_number": 2603,
+    "candidate_head": "b562817aa26ae9baaf6f0e5623e8c49eea2f3f01",
+    "merge_commit": "c818063770ba1682cee7b03377bf222e3ce74f6e",
+    "attestation_workflow_run_id": 29719684069,
+    "attestation_job_id": 88279898619,
+    "artifact_id": 8451881388,
+    "semantic_artifact_digest": "sha256:5af72915cc61f702c64fa4e51f43655ec03c2d51a278e5723cd04c4d3e62dc7e",
+    "transport_archive_sha256": "sha256:1adfac25953ef333a4119053c8d377cc86d53a3dd2a3e7565c9df12aacbbd384",
+    "effective_frontier": "S2",
+    "consumption_record_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S2-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json"
+  },
   "authority_files": [
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-TASK.md",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-RESOLVED-MANIFEST-V1.json",
@@ -54,7 +67,10 @@
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-HARD-ACCEPTANCE-EVIDENCE-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S2-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S2-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S2-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-DELIVERY-STATUS-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-ATTESTATION-RETENTION-STORE-CONTRACT-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-WORKFLOW-DECLARATION-V1.json"
   ],
@@ -71,20 +87,21 @@
   "hard_acceptance": {
     "item_count": 282,
     "ledger_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-HARD-ACCEPTANCE-LEDGER-V1.json",
-    "s1_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-HARD-ACCEPTANCE-EVIDENCE-V1.json"
+    "s1_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+    "s2_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S2-HARD-ACCEPTANCE-EVIDENCE-V1.json"
   },
   "slice_graph": ["S0", "S1", "S2", "S3", "S4", "S5", "S6"],
-  "current_slice": "S1",
-  "effective_next_slice_when_attested": "S2",
-  "s1_changed_file_boundary": "PURE_CONTRACTS_VALIDATION_HASH_CURSOR_ORDER_TESTS_AND_S2_AUTHORITY_BOOTSTRAP_ONLY",
-  "forbidden_in_s1": [
-    "PostgreSQL repository",
-    "database migration",
+  "current_slice": "S2",
+  "effective_next_slice_when_attested": "S3",
+  "s2_changed_file_boundary": "READ_ONLY_REPOSITORIES_EXACT_RESOLVERS_ONE_VISIBILITY_MIGRATION_DATABASE_ROLE_BOOTSTRAP_ONE_SHOT_MIGRATION_RUNTIME_PREFLIGHT_ACCEPTANCE_AND_S3_AUTHORITY_BOOTSTRAP_ONLY",
+  "forbidden_in_s2": [
     "route implementation",
     "frontend",
-    "projection implementation",
+    "read-model composers",
     "canonical writer",
-    "Runtime source implementation"
+    "canonical semantic envelope changes",
+    "Runtime source implementation",
+    "raw facts.xmin visibility authority"
   ],
   "completion_claims_effective": false,
   "preserved_nonclaims": [
