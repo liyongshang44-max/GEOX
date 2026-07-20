@@ -2,7 +2,7 @@
   "schema_version": "geox_mcft_cap_07_workflow_declaration_v1",
   "declaration_id": "GEOX-MCFT-CAP-07-WORKFLOW-DECLARATION-V1",
   "taskbook_version": "v0.2.5",
-  "record_status": "S0_COMMITTED_WORKFLOW_AUTHORITY",
+  "record_status": "S1_COMMITTED_WORKFLOW_AUTHORITY",
   "focused_workflow": {
     "name": "mcft-cap-07-s0-authorization",
     "path": ".github/workflows/mcft-cap-07-s0-authorization.yml",
@@ -10,10 +10,22 @@
     "exact_head_required": true,
     "negative_intermediate_head_allowed_only_for_live_exercise": true
   },
+  "slice_focused_workflows": [
+    {
+      "slice_id": "MCFT-CAP-07.S0",
+      "name": "mcft-cap-07-s0-authorization",
+      "path": ".github/workflows/mcft-cap-07-s0-authorization.yml"
+    },
+    {
+      "slice_id": "MCFT-CAP-07.S1",
+      "name": "mcft-cap-07-s1-contracts",
+      "path": ".github/workflows/mcft-cap-07-s1-contracts.yml"
+    }
+  ],
   "exact_sha_attestation_workflow": {
     "name": "mcft-cap-07-slice-exact-sha-attestation",
     "path": ".github/workflows/mcft-cap-07-slice-exact-sha-attestation.yml",
-    "event": "push:main",
+    "event": "push:main_or_workflow_dispatch_exact_subject_sha",
     "repository_write_permission": false,
     "postmerge_ssot_writeback_allowed": false,
     "retention_store_contract_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-ATTESTATION-RETENTION-STORE-CONTRACT-V1.json"

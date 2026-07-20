@@ -1,0 +1,26 @@
+{
+  "schema_version": "geox_mcft_cap_07_s1_hard_acceptance_evidence_v1",
+  "record_id": "GEOX-MCFT-CAP-07-S1-HARD-ACCEPTANCE-EVIDENCE-V1",
+  "capability_line_id": "MCFT-CAP-07",
+  "slice_id": "MCFT-CAP-07.S1",
+  "taskbook_version": "v0.2.5",
+  "record_status": "COMMITTED_CANDIDATE_EVIDENCE",
+  "evidence_layer": "COMMITTED_CANDIDATE",
+  "focused_acceptance": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S1_CONTRACTS.ts",
+  "covered_item_ids": [
+    "A017", "A018",
+    "H001", "H002", "H003", "H004", "H005", "H006", "H007", "H008", "H009", "H010", "H011", "H012", "H013", "H014", "H015", "H016", "H017", "H018", "H019", "H020", "H025", "H026", "H027", "H028", "H029", "H030", "H031", "H032", "H033", "H034"
+  ],
+  "candidate_result": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES_ON_EXACT_CANDIDATE_HEAD",
+  "external_effectiveness_items": "PENDING_EXTERNAL_ATTESTATION",
+  "runtime_authority_delta": "PURE_DOMAIN_CONTRACTS_ONLY",
+  "canonical_write_authority_delta": "ZERO",
+  "limitations": [
+    "NO_POSTGRESQL_REPOSITORY_IN_S1",
+    "NO_ROUTE_IN_S1",
+    "NO_MIGRATION_IN_S1",
+    "NO_FRONTEND_IN_S1",
+    "NO_RUNTIME_SOURCE_AUTHORITY",
+    "NO_CANONICAL_WRITE_AUTHORITY"
+  ]
+}
