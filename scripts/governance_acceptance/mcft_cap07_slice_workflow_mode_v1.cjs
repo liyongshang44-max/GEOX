@@ -8,17 +8,26 @@ const fs = require('node:fs');
 
 const EXACT_CANDIDATE_MODE = 'EXACT_CANDIDATE_MODE';
 const SUCCESSOR_REGRESSION_MODE = 'SUCCESSOR_REGRESSION_MODE';
-const DECLARATION_PATTERN = /<!--\s*MCFT_CANDIDATE_DECLARATION_V2\s*([\s\S]*?)-->/g;
+const HTML_DECLARATION_PATTERN = /<!--\s*MCFT_CANDIDATE_DECLARATION_V2\s*([\s\S]*?)-->/g;
+const FENCED_DECLARATION_PATTERN = /```(?:text)?\s*\r?\nMCFT_CANDIDATE_DECLARATION_V2\s*\r?\n([\s\S]*?)```/g;
+
+function declarationBlocks(body) {
+  const text = String(body || '');
+  return [
+    ...[...text.matchAll(HTML_DECLARATION_PATTERN)].map((match) => match[1]),
+    ...[...text.matchAll(FENCED_DECLARATION_PATTERN)].map((match) => match[1]),
+  ];
+}
 
 function parseDeclaration(body) {
   const text = String(body || '');
   const markerPresent = text.includes('MCFT_CANDIDATE_DECLARATION_V2');
-  const matches = [...text.matchAll(DECLARATION_PATTERN)];
-  if (!markerPresent && matches.length === 0) return null;
-  if (matches.length !== 1) throw new Error('MCFT_CAP07_DECLARATION_COUNT_INVALID');
+  const blocks = declarationBlocks(text);
+  if (!markerPresent && blocks.length === 0) return null;
+  if (blocks.length !== 1) throw new Error('MCFT_CAP07_DECLARATION_COUNT_INVALID');
 
   const fields = Object.create(null);
-  for (const rawLine of matches[0][1].split(/\r?\n/)) {
+  for (const rawLine of blocks[0].split(/\r?\n/)) {
     const line = rawLine.trim();
     if (!line) continue;
     const separator = line.indexOf('=');
@@ -35,7 +44,7 @@ function parseDeclaration(body) {
 }
 
 function classify({ eventName, body, targetSlice }) {
-  if (!/^MCFT-CAP-07\.S[01]$/.test(String(targetSlice || ''))) {
+  if (!/^MCFT-CAP-07\.S[0-6]$/.test(String(targetSlice || ''))) {
     throw new Error(`MCFT_CAP07_TARGET_SLICE_INVALID:${targetSlice || 'EMPTY'}`);
   }
   if (String(eventName || '') !== 'pull_request') {
@@ -52,14 +61,18 @@ function classify({ eventName, body, targetSlice }) {
 }
 
 function selfTest() {
-  const block = (slice) => `<!-- MCFT_CANDIDATE_DECLARATION_V2\ncapability_line=MCFT-CAP-07\nslice_id=${slice}\n-->`;
-  assert.equal(classify({ eventName: 'pull_request', body: block('MCFT-CAP-07.S0'), targetSlice: 'MCFT-CAP-07.S0' }).mode, EXACT_CANDIDATE_MODE);
-  assert.equal(classify({ eventName: 'pull_request', body: block('MCFT-CAP-07.S1'), targetSlice: 'MCFT-CAP-07.S1' }).mode, EXACT_CANDIDATE_MODE);
-  assert.equal(classify({ eventName: 'pull_request', body: block('MCFT-CAP-07.S2'), targetSlice: 'MCFT-CAP-07.S0' }).mode, SUCCESSOR_REGRESSION_MODE);
-  assert.equal(classify({ eventName: 'pull_request', body: '', targetSlice: 'MCFT-CAP-07.S1' }).mode, SUCCESSOR_REGRESSION_MODE);
-  assert.equal(classify({ eventName: 'merge_group', body: block('MCFT-CAP-07.S0'), targetSlice: 'MCFT-CAP-07.S0' }).mode, SUCCESSOR_REGRESSION_MODE);
+  const html = (slice) => `<!-- MCFT_CANDIDATE_DECLARATION_V2\ncapability_line=MCFT-CAP-07\nslice_id=${slice}\n-->`;
+  const fenced = (slice) => `\`\`\`text\nMCFT_CANDIDATE_DECLARATION_V2\ncapability_line=MCFT-CAP-07\nslice_id=${slice}\n\`\`\``;
+  assert.equal(classify({ eventName: 'pull_request', body: html('MCFT-CAP-07.S0'), targetSlice: 'MCFT-CAP-07.S0' }).mode, EXACT_CANDIDATE_MODE);
+  assert.equal(classify({ eventName: 'pull_request', body: html('MCFT-CAP-07.S1'), targetSlice: 'MCFT-CAP-07.S1' }).mode, EXACT_CANDIDATE_MODE);
+  assert.equal(classify({ eventName: 'pull_request', body: fenced('MCFT-CAP-07.S3'), targetSlice: 'MCFT-CAP-07.S3' }).mode, EXACT_CANDIDATE_MODE);
+  assert.equal(classify({ eventName: 'pull_request', body: fenced('MCFT-CAP-07.S4'), targetSlice: 'MCFT-CAP-07.S3' }).mode, SUCCESSOR_REGRESSION_MODE);
+  assert.equal(classify({ eventName: 'pull_request', body: html('MCFT-CAP-07.S6'), targetSlice: 'MCFT-CAP-07.S0' }).mode, SUCCESSOR_REGRESSION_MODE);
+  assert.equal(classify({ eventName: 'pull_request', body: '', targetSlice: 'MCFT-CAP-07.S3' }).mode, SUCCESSOR_REGRESSION_MODE);
+  assert.equal(classify({ eventName: 'merge_group', body: html('MCFT-CAP-07.S3'), targetSlice: 'MCFT-CAP-07.S3' }).mode, SUCCESSOR_REGRESSION_MODE);
   assert.throws(() => parseDeclaration('MCFT_CANDIDATE_DECLARATION_V2'), /DECLARATION_COUNT_INVALID/);
   assert.throws(() => parseDeclaration('<!-- MCFT_CANDIDATE_DECLARATION_V2\ncapability_line=MCFT-CAP-07\nslice_id=MCFT-CAP-07.S0\nslice_id=MCFT-CAP-07.S1\n-->'), /FIELD_DUPLICATE:slice_id/);
+  assert.throws(() => parseDeclaration(`${html('MCFT-CAP-07.S0')}\n${fenced('MCFT-CAP-07.S1')}`), /DECLARATION_COUNT_INVALID/);
   console.log('MCFT-CAP-07 slice workflow classifier: PASS');
 }
 

@@ -5,6 +5,8 @@ on:
     paths:
       - 'apps/server/src/domain/field_twin_read_model/**'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S3_COMPOSERS.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S3_SUCCESSOR_REGRESSION.ts'
+      - 'scripts/governance_acceptance/mcft_cap07_slice_workflow_mode_v1.cjs'
       - 'docs/digital_twin/mcft/cap_07/**'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
       - '.github/workflows/mcft-cap-07-s3-composers.yml'
@@ -31,6 +33,20 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Validate slice workflow classifier static contract
+        run: node scripts/governance_acceptance/mcft_cap07_slice_workflow_mode_v1.cjs --self-test
+
+      - name: Classify S3 workflow execution mode
+        id: slice-mode
+        env:
+          MCFT_EVENT_NAME: ${{ github.event_name }}
+          MCFT_PR_BODY: ${{ github.event.pull_request.body }}
+        run: node scripts/governance_acceptance/mcft_cap07_slice_workflow_mode_v1.cjs --target MCFT-CAP-07.S3
+
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
@@ -46,17 +62,25 @@ jobs:
       - name: Typecheck server composer surface
         run: pnpm --filter @geox/server typecheck
 
-      - name: Run S3 composer acceptance
+      - name: Run S3 exact candidate composer acceptance
+        if: steps.slice-mode.outputs.mode == 'EXACT_CANDIDATE_MODE'
         env:
-          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || '27fcba8cf39cd62b7c9e71ee20577feced182ab0' }}
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S3_COMPOSERS.ts
 
+      - name: Run S3 successor regression acceptance
+        if: steps.slice-mode.outputs.mode == 'SUCCESSOR_REGRESSION_MODE'
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S3_SUCCESSOR_REGRESSION.ts
+
       - name: Verify structured S3 result
+        env:
+          MCFT_EXPECTED_MODE: ${{ steps.slice-mode.outputs.mode }}
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
           const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S3_COMPOSERS_RESULT.json', 'utf8'));
           if (result.status !== 'PASS') throw new Error(`S3_COMPOSERS_NOT_PASS:${result.error || 'UNKNOWN'}`);
+          if (process.env.MCFT_EXPECTED_MODE === 'SUCCESSOR_REGRESSION_MODE' && result.execution_mode !== 'SUCCESSOR_REGRESSION_MODE') throw new Error('S3_SUCCESSOR_MODE_RESULT_INVALID');
           if (result.composer_count !== 7) throw new Error('S3_COMPOSER_INVENTORY_INVALID');
           if (result.default_page_limit !== 50 || result.maximum_page_limit !== 200) throw new Error('S3_BOUNDED_PAGE_LIMIT_INVALID');
           if (result.runtime_authority_delta !== 'READ_ONLY_COMPOSERS_ONLY') throw new Error('S3_RUNTIME_AUTHORITY_INVALID');
