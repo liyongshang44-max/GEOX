@@ -1,0 +1,52 @@
+{
+  "schema_version": "geox_mcft_cap_07_s1_predecessor_attestation_consumption_v1",
+  "record_id": "GEOX-MCFT-CAP-07-S1-PREDECESSOR-ATTESTATION-CONSUMPTION-V1",
+  "capability_line_id": "MCFT-CAP-07",
+  "slice_id": "MCFT-CAP-07.S1",
+  "predecessor_slice_id": "MCFT-CAP-07.S0",
+  "taskbook_version": "v0.2.5",
+  "record_status": "COMMITTED_PREDECESSOR_CONSUMPTION_AUTHORITY",
+  "status": "PASS",
+  "source_pr_number": 2601,
+  "candidate_head": "5c831ba1353d81de1666d8dbff01a222a5eacea7",
+  "merge_commit": "0790da7708971a690601051c521bb2678c38fb7f",
+  "subject_commit": "0790da7708971a690601051c521bb2678c38fb7f",
+  "candidate_to_merge_tree_delta": 0,
+  "attestation_workflow_run_id": 29704289356,
+  "attestation_job_id": 88238542539,
+  "github_artifact_id": 8447405415,
+  "github_artifact_digest": "sha256:c03b6829756f8fc7c641d8ce4895e96f8c954fb2a3a4b32259dda28861b9fd5a",
+  "semantic_artifact_digest": "sha256:e442288dfa25fa5b1356124c67a6c3d64f9412d7acb5161a192c749ab7648dcd",
+  "transport_archive_sha256": "sha256:32ce9615416134c0cc7ab062589b2e17f351832dd784fbf2689022771cdba911",
+  "effective_delivery_frontier_projection": {
+    "effective_status": "IN_PROGRESS",
+    "effective_next_slice": "S1",
+    "effective_active_delivery_slice_id": "S1"
+  },
+  "retention_authority": {
+    "store_contract_id": "MCFT_ATTESTATION_S3_COMPAT_OBJECT_LOCK_V1",
+    "bucket": "geox-mcft-attestations-932fba27ac31",
+    "object_prefix": "mcft-attestations-v1/liyongshang44-max/GEOX/MCFT-CAP-07/MCFT-CAP-07.S0/0790da7708971a690601051c521bb2678c38fb7f/29704289356/mcft-cap-07-exact-sha-0790da7708971a690601051c521bb2678c38fb7f",
+    "retention_level": "R1",
+    "retain_until": "2027-01-15T21:24:20.144Z",
+    "readback_verified": true,
+    "locked_version_delete_denied": true,
+    "canonical_artifact_version_id": "4_zccce90522eb474c89afa0f14_f1125c2d861001704_d20260719_m212421_c005_v0501030_t0000_u01784496261550",
+    "archive_version_id": "4_zccce90522eb474c89afa0f14_f101368a68b6678b8_d20260719_m212424_c005_v0501031_t0028_u01784496264001",
+    "transport_metadata_version_id": "4_zccce90522eb474c89afa0f14_f10807adc04ff5df8_d20260719_m212426_c005_v0501046_t0058_u01784496266595",
+    "retention_manifest_version_id": "4_zccce90522eb474c89afa0f14_f100a403c486ed3ab_d20260719_m212428_c005_v0501033_t0055_u01784496268988"
+  },
+  "consumption_result": {
+    "subject_exact": true,
+    "candidate_exact": true,
+    "required_checks_pass": true,
+    "semantic_digest_exact": true,
+    "transport_digest_exact": true,
+    "versioned_locator_present": true,
+    "worm_retention_verified": true,
+    "effective_frontier_is_s1": true
+  },
+  "runtime_authority_delta": "ZERO_FROM_PREDECESSOR_CONSUMPTION",
+  "canonical_write_authority_delta": "ZERO",
+  "repository_writeback_to_s0_status": false
+}

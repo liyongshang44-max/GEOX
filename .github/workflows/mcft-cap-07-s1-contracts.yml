@@ -1,0 +1,66 @@
+name: mcft-cap-07-s1-contracts
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/domain/field_twin_read_model/**'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S1_CONTRACTS.ts'
+      - 'docs/digital_twin/mcft/cap_07/**'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+      - '.github/workflows/mcft-cap-07-s1-contracts.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap-07-s1-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  mcft-cap-07-s1-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Run S1 pure-contract acceptance
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S1_CONTRACTS.ts
+      - name: Typecheck server contract surface
+        run: pnpm --filter @geox/server typecheck
+      - name: Verify structured S1 result
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S1_CONTRACTS_RESULT.json', 'utf8'));
+          if (result.status !== 'PASS') throw new Error(`S1_CONTRACTS_NOT_PASS:${result.error || 'UNKNOWN'}`);
+          if (result.source_profile_count !== 8 || result.source_obligation_row_count !== 40) throw new Error('S1_SOURCE_PROFILE_AUTHORITY_INVALID');
+          if (result.collection_kind_count !== 8 || result.timeline_event_kind_count !== 17) throw new Error('S1_CONTRACT_INVENTORY_INVALID');
+          if (result.runtime_authority_delta !== 'PURE_DOMAIN_CONTRACTS_ONLY' || result.canonical_write_authority_delta !== 'ZERO') throw new Error('S1_AUTHORITY_BOUNDARY_INVALID');
+          if (result.database_access_performed || result.route_access_performed || result.persistence_performed) throw new Error('S1_PURE_DOMAIN_BOUNDARY_VIOLATION');
+          NODE
+      - name: Upload focused acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-07-s1-contracts-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_07_S1_CONTRACTS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
