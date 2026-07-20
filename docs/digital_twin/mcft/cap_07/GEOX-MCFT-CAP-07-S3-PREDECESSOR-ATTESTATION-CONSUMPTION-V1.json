@@ -1,0 +1,39 @@
+{
+  "schema_version": "geox_mcft_cap_07_s3_predecessor_attestation_consumption_v1",
+  "capability_line_id": "MCFT-CAP-07",
+  "consumer_slice_id": "MCFT-CAP-07.S3",
+  "predecessor_slice_id": "MCFT-CAP-07.S2",
+  "status": "PASS",
+  "source_pr_number": 2604,
+  "candidate_head": "d059b1183a12ee3e996147004517feaddeb1a473",
+  "merge_commit": "27fcba8cf39cd62b7c9e71ee20577feced182ab0",
+  "candidate_to_merge_tree_delta": 0,
+  "attestation_workflow_run_id": 29765257247,
+  "attestation_workflow_run_number": 6,
+  "attestation_job_id": 88429831071,
+  "artifact_id": 8470534831,
+  "artifact_name": "mcft-cap-07-exact-sha-27fcba8cf39cd62b7c9e71ee20577feced182ab0",
+  "semantic_artifact_digest": "sha256:ea7909244df9c09b063389e84405fd1e4f8623ecb8b73828799d86d2a209c34f",
+  "transport_archive_sha256": "sha256:51f30ba545d5c5122d680cdc2f156a3732c05c79a36bfb930ee192e92bf064b8",
+  "effective_status": "IN_PROGRESS",
+  "effective_frontier": "S3",
+  "effective_active_delivery_slice_id": "S3",
+  "required_checks": {
+    "mcft-cap-07-s2-repository": "PASS",
+    "mcft-candidate-integrity-enforce-current-pr": "PASS",
+    "mcft-release-lane-enforce-current-pr": "PASS",
+    "ci": "PASS"
+  },
+  "retention_authority": {
+    "store_contract_id": "MCFT_ATTESTATION_S3_COMPAT_OBJECT_LOCK_V1",
+    "retention_level": "R1",
+    "retain_until": "2027-01-16T17:51:45.773Z",
+    "readback_verified": true,
+    "locked_version_delete_denied": true
+  },
+  "runtime_authority_delta": "READ_ONLY_REPOSITORY_AND_EXACT_RESOLVERS_ONLY",
+  "canonical_write_authority_delta": "ZERO",
+  "repository_write_performed_by_attestation": false,
+  "postmerge_ssot_writeback_performed": false,
+  "consumed_for_authority": "MCFT_CAP_07_S3_READ_ONLY_COMPOSERS_ONLY"
+}

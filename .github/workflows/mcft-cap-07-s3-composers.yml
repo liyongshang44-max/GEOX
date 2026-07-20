@@ -1,0 +1,74 @@
+name: mcft-cap-07-s3-composers
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/domain/field_twin_read_model/**'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S3_COMPOSERS.ts'
+      - 'docs/digital_twin/mcft/cap_07/**'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+      - '.github/workflows/mcft-cap-07-s3-composers.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap-07-s3-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  mcft-cap-07-s3-composers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck server composer surface
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Run S3 composer acceptance
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || '27fcba8cf39cd62b7c9e71ee20577feced182ab0' }}
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S3_COMPOSERS.ts
+
+      - name: Verify structured S3 result
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S3_COMPOSERS_RESULT.json', 'utf8'));
+          if (result.status !== 'PASS') throw new Error(`S3_COMPOSERS_NOT_PASS:${result.error || 'UNKNOWN'}`);
+          if (result.composer_count !== 7) throw new Error('S3_COMPOSER_INVENTORY_INVALID');
+          if (result.default_page_limit !== 50 || result.maximum_page_limit !== 200) throw new Error('S3_BOUNDED_PAGE_LIMIT_INVALID');
+          if (result.runtime_authority_delta !== 'READ_ONLY_COMPOSERS_ONLY') throw new Error('S3_RUNTIME_AUTHORITY_INVALID');
+          if (result.canonical_write_authority_delta !== 'ZERO') throw new Error('S3_CANONICAL_WRITE_AUTHORITY_INVALID');
+          if (result.direct_database_access_performed || result.route_implementation_performed || result.frontend_implementation_performed || result.migration_performed || result.persistence_performed || result.cap_08_authorized) throw new Error('S3_BOUNDARY_VIOLATION');
+          NODE
+
+      - name: Upload focused acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-07-s3-composers-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_07_S3_COMPOSERS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
