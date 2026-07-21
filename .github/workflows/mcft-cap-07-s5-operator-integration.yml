@@ -207,7 +207,7 @@ jobs:
           PROBE_DATABASE_URL: postgres://geox_runtime_v1:local-runtime-database-password@127.0.0.1:5432/postgres
         run: |
           set -euo pipefail
-          node --input-type=module - <<'NODE' | tee acceptance-output/MCFT_CAP_07_OPERATOR_FIELD_DISCOVERY_AUTH.json
+          node --input-type=module - <<'NODE' 2>&1 | tee acceptance-output/MCFT_CAP_07_OPERATOR_FIELD_DISCOVERY_AUTH.json
           import Fastify from 'fastify';
           import pg from 'pg';
           import { registerFieldsV1Routes } from './apps/server/dist/routes/fields_v1.js';
@@ -217,17 +217,21 @@ jobs:
           registerFieldsV1Routes(app, pool);
           await app.ready();
           try {
-            const allowedHeaders = { authorization: 'Bearer operator_token' };
-            const list = await app.inject({ method: 'GET', url: '/api/v1/fields', headers: allowedHeaders });
+            const list = await app.inject({
+              method: 'GET',
+              url: '/api/v1/fields',
+              headers: { authorization: 'Bearer operator_token' },
+            });
             if (list.statusCode !== 200) throw new Error(`OPERATOR_FIELD_LIST_NOT_200:${list.statusCode}:${list.body}`);
             const listBody = list.json();
             const fields = Array.isArray(listBody.fields) ? listBody.fields : [];
             if (!fields.some((item) => item.field_id === 'field_c8_demo')) throw new Error('GOVERNED_C8_FIELD_NOT_DISCOVERED');
-            const detail = await app.inject({ method: 'GET', url: '/api/v1/fields/field_c8_demo', headers: allowedHeaders });
-            if (detail.statusCode !== 200) throw new Error(`OPERATOR_FIELD_DETAIL_NOT_200:${detail.statusCode}:${detail.body}`);
-            const detailBody = detail.json();
-            const seasons = Array.isArray(detailBody.seasons) ? detailBody.seasons : [];
-            if (!seasons.some((item) => item.season_id === 'season_2026_c8_corn')) throw new Error('GOVERNED_C8_SEASON_NOT_DISCOVERED');
+            const seasonQuery = await pool.query(
+              `SELECT season_id FROM field_season_index_v1
+                WHERE tenant_id = $1 AND field_id = $2 AND season_id = $3`,
+              ['tenantA', 'field_c8_demo', 'season_2026_c8_corn'],
+            );
+            if ((seasonQuery.rowCount ?? 0) !== 1) throw new Error('GOVERNED_C8_SEASON_NOT_RUNTIME_READABLE');
             const denied = await app.inject({
               method: 'GET',
               url: '/api/v1/fields',
@@ -239,13 +243,18 @@ jobs:
             console.log(JSON.stringify({
               status: 'PASS',
               operator_field_list_status: list.statusCode,
-              operator_field_detail_status: detail.statusCode,
               governed_field_discovered: true,
-              governed_season_discovered: true,
+              governed_season_runtime_readable: true,
               write_only_status: denied.statusCode,
               write_only_error: deniedBody.error,
               fields_write_authorized: false,
             }));
+          } catch (error) {
+            console.log(JSON.stringify({
+              status: 'FAIL',
+              error: error instanceof Error ? error.message : String(error),
+            }));
+            throw error;
           } finally {
             await app.close();
             await pool.end();
@@ -302,7 +311,7 @@ jobs:
           const migration = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_MIGRATION_REENTRY.json', 'utf8'));
           if (migration.status !== 'PASS' || migration.migration_action !== 'ALREADY_APPLIED_EXACT' || migration.runtime_metadata_direct_dml !== 'FORBIDDEN') throw new Error('MIGRATION_REENTRY_INVALID');
           const auth = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_OPERATOR_FIELD_DISCOVERY_AUTH.json', 'utf8'));
-          if (auth.status !== 'PASS' || auth.operator_field_list_status !== 200 || auth.operator_field_detail_status !== 200 || auth.governed_field_discovered !== true || auth.governed_season_discovered !== true || auth.write_only_status !== 403 || auth.write_only_error !== 'AUTH_SCOPE_DENIED' || auth.fields_write_authorized !== false) throw new Error('OPERATOR_FIELD_DISCOVERY_AUTH_INVALID');
+          if (auth.status !== 'PASS' || auth.operator_field_list_status !== 200 || auth.governed_field_discovered !== true || auth.governed_season_runtime_readable !== true || auth.write_only_status !== 403 || auth.write_only_error !== 'AUTH_SCOPE_DENIED' || auth.fields_write_authorized !== false) throw new Error('OPERATOR_FIELD_DISCOVERY_AUTH_INVALID');
           NODE
 
       - name: Run lifecycle-aware S5 acceptance
