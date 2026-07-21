@@ -131,7 +131,7 @@ jobs:
 
       - name: Build server entries for local-demo PostgreSQL proof
         if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
-        run: pnpm --filter @geox/server build
+        run: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
 
       - name: Apply commercial PostgreSQL init baseline
         if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
