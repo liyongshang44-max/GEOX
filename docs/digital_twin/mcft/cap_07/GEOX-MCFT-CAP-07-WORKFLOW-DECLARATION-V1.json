@@ -2,7 +2,7 @@
   "schema_version": "geox_mcft_cap_07_workflow_declaration_v1",
   "declaration_id": "GEOX-MCFT-CAP-07-WORKFLOW-DECLARATION-V1",
   "taskbook_version": "v0.2.5",
-  "record_status": "S3_COMMITTED_WORKFLOW_AUTHORITY",
+  "record_status": "S4_COMMITTED_WORKFLOW_AUTHORITY",
   "focused_workflow": {
     "name": "mcft-cap-07-s0-authorization",
     "path": ".github/workflows/mcft-cap-07-s0-authorization.yml",
@@ -30,6 +30,11 @@
       "slice_id": "MCFT-CAP-07.S3",
       "name": "mcft-cap-07-s3-composers",
       "path": ".github/workflows/mcft-cap-07-s3-composers.yml"
+    },
+    {
+      "slice_id": "MCFT-CAP-07.S4",
+      "name": "mcft-cap-07-s4-api",
+      "path": ".github/workflows/mcft-cap-07-s4-api.yml"
     }
   ],
   "exact_sha_attestation_workflow": {
