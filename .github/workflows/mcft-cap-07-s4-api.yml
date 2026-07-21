@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-DELIVERY-STATUS-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs'
       - '.github/workflows/mcft-cap-07-s4-api.yml'
   merge_group:
     types: [checks_requested]
@@ -72,6 +73,9 @@ jobs:
       - name: Typecheck server read surface
         run: pnpm --filter @geox/server typecheck
 
+      - name: Run exact-SHA governance remediation selftest
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs --selftest-governance-remediation
+
       - name: Run S4 transport and contract acceptance
         env:
           MCFT_BASE_SHA: ${{ steps.comparison-base.outputs.sha }}
@@ -100,6 +104,7 @@ jobs:
           node - <<'NODE'
           const fs = require('node:fs');
           for (const [file, minimum] of [
+            ['acceptance-output/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION_SELFTEST.json', 4],
             ['acceptance-output/MCFT_CAP_07_S4_API_RESULT.json', 9],
             ['acceptance-output/MCFT_CAP_07_S4_POSTGRES_ADAPTER_RESULT.json', 12],
             ['acceptance-output/MCFT_CAP_07_S4_HEALTH_POSTGRES_RESULT.json', 6],
@@ -141,6 +146,10 @@ jobs:
           exact(s5.s5_candidate_implemented, false, 'S5_IMPLEMENTED_PRECONDITION');
           exact(s5.implementation_authorized, false, 'S5_AUTHORIZED_PRECONDITION');
 
+          const attestationSource = fs.readFileSync('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs', 'utf8');
+          if (!attestationSource.includes('MCFT_GOVERNANCE_REMEDIATION_V1')) throw new Error('GOVERNANCE_REMEDIATION_MARKER_NOT_SUPPORTED');
+          if (!attestationSource.includes('candidate_transition_created_by_remediation: false')) throw new Error('REMEDIATION_NONTRANSITION_ASSERTION_MISSING');
+
           const actual = cp.execFileSync(
             'git',
             ['diff', '--name-only', `${process.env.MCFT_BASE_SHA}...HEAD`],
@@ -149,6 +158,7 @@ jobs:
           const allowed = [
             '.github/workflows/mcft-cap-07-s4-api.yml',
             statusPath,
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs',
           ].sort();
           if (JSON.stringify(actual) !== JSON.stringify(allowed)) {
             throw new Error(`S4_FRONTIER_REMEDIATION_BOUNDARY_INVALID:${JSON.stringify(actual)}`);
@@ -161,6 +171,7 @@ jobs:
         with:
           name: mcft-cap-07-s4-api-${{ github.sha }}
           path: |
+            acceptance-output/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION_SELFTEST.json
             acceptance-output/MCFT_CAP_07_S4_API_RESULT.json
             acceptance-output/MCFT_CAP_07_S4_POSTGRES_ADAPTER_RESULT.json
             acceptance-output/MCFT_CAP_07_S4_HEALTH_POSTGRES_RESULT.json
