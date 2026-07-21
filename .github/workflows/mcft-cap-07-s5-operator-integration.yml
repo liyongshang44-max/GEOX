@@ -130,6 +130,7 @@ jobs:
       - name: Initialize product schema and CAP-07 visibility contract
         if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
         env:
+          GEOX_RUNTIME_ENV: development
           GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
           GEOX_MIGRATION_DATABASE_URL: postgres://geox_mcft_migrator_v1:local-mcft-migrator-password@127.0.0.1:5432/postgres
           GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:local-runtime-database-password@127.0.0.1:5432/postgres
@@ -138,8 +139,9 @@ jobs:
           GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${{ steps.delivery.outputs.exact_sha }}
         run: |
           set -euo pipefail
-          node apps/server/dist/database/platform_bootstrap.js
-          node apps/server/dist/database/mcft_cap07_migration.js
+          mkdir -p acceptance-output
+          node apps/server/dist/database/platform_bootstrap.js 2>&1 | tee acceptance-output/MCFT_CAP_07_PLATFORM_BOOTSTRAP_INITIAL.log
+          node apps/server/dist/database/mcft_cap07_migration.js 2>&1 | tee acceptance-output/MCFT_CAP_07_MIGRATION_INITIAL.log
 
       - name: Apply local demo twice and verify through dedicated Runtime credential
         if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
@@ -172,7 +174,7 @@ jobs:
           GEOX_RUNTIME_ENV: development
         run: |
           set -euo pipefail
-          node apps/server/dist/database/platform_bootstrap.js
+          node apps/server/dist/database/platform_bootstrap.js 2>&1 | tee acceptance-output/MCFT_CAP_07_PLATFORM_BOOTSTRAP_REENTRY.log
           node apps/server/dist/database/mcft_cap07_migration.js | tee acceptance-output/MCFT_CAP_07_MIGRATION_REENTRY.json
           pnpm -w exec tsx scripts/dev_seed/seed_three_surface_local_demo_v1.ts \
             --verify \
