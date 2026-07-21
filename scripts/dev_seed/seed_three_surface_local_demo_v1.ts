@@ -2,6 +2,7 @@
 // Boundary: apply requires an explicit local host and confirmation; no production authority, Runtime source activation, model activation, or CAP-08 authorization.
 
 import { Pool } from "pg";
+import { computeMemberDeterminismHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
 import { PostgresMcftFieldTwinReadApiV1 } from "../../apps/server/src/services/mcft_field_twin_read_api_v1.js";
 import { buildDemoBundle, type DemoBundle, type JsonRecord } from "./three_surface_local_demo_contract_v1.js";
 import { assertRequiredRelations, persistRootAndForecasts, seedFieldNavigator } from "./three_surface_local_demo_persistence_v1.js";
@@ -29,6 +30,30 @@ function assertLocalApplyAllowed(urlText: string): void {
   if (!["127.0.0.1", "localhost", "::1"].includes(host)) throw new Error(`LOCAL_DEMO_DATABASE_HOST_FORBIDDEN:${host}`);
   const runtime = String(process.env.GEOX_RUNTIME_ENV || "development").trim().toLowerCase();
   if (!["development", "dev", "local", "test"].includes(runtime)) throw new Error(`LOCAL_DEMO_RUNTIME_ENV_FORBIDDEN:${runtime}`);
+}
+
+function recomputeObjectHash(object: JsonRecord): string {
+  return computeMemberDeterminismHashV1(object);
+}
+
+function normalizeFrozenForecastProjectionCompatibility(bundle: DemoBundle): void {
+  const forecast = bundle.successful_forecast;
+  const status = String(forecast.payload.status || "").trim();
+  if (!status) throw new Error("LOCAL_DEMO_FORECAST_STATUS_REQUIRED");
+  forecast.payload = { ...forecast.payload, forecast_status: status };
+  forecast.determinism_hash = recomputeObjectHash(forecast);
+
+  bundle.scenario.payload = {
+    ...bundle.scenario.payload,
+    source_forecast_hash: forecast.determinism_hash,
+  };
+  bundle.scenario.determinism_hash = recomputeObjectHash(bundle.scenario);
+
+  bundle.residual.payload = {
+    ...bundle.residual.payload,
+    forecast_run_hash: forecast.determinism_hash,
+  };
+  bundle.residual.determinism_hash = recomputeObjectHash(bundle.residual);
 }
 
 async function verifyBundle(pool: Pool, bundle: DemoBundle): Promise<JsonRecord> {
@@ -70,6 +95,7 @@ async function verifyBundle(pool: Pool, bundle: DemoBundle): Promise<JsonRecord>
 async function main(): Promise<void> {
   const mode = flag("--apply") ? "apply" : flag("--verify") ? "verify" : "dry-run";
   const bundle = await buildDemoBundle();
+  normalizeFrozenForecastProjectionCompatibility(bundle);
   const route = `/operator/fields/${encodeURIComponent(bundle.scope.field_id)}?season_id=${encodeURIComponent(bundle.scope.season_id)}&zone_id=${encodeURIComponent(bundle.scope.zone_id)}`;
   if (mode === "dry-run") {
     console.log(JSON.stringify({
