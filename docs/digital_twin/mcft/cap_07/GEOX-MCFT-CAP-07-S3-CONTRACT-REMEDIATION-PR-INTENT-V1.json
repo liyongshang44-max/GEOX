@@ -1,6 +1,0 @@
-{
-  "schema_version": "geox_mcft_cap_07_s3_contract_remediation_pr_intent_v1",
-  "intent": "OPEN_DRAFT_NON_CANDIDATE_REMEDIATION_PR",
-  "head_branch": "agent/mcft-cap-07-s3-contract-remediation",
-  "base_branch": "main"
-}
