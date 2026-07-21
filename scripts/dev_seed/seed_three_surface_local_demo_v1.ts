@@ -141,6 +141,20 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.stack || error.message : error);
+  const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack || error.message : String(error);
+  console.log(JSON.stringify({
+    ok: false,
+    seed: "THREE_SURFACE_LOCAL_DEMO_V1",
+    error_code: message.split(":", 1)[0] || "LOCAL_DEMO_FAILED",
+    error: message,
+    diagnostics: [stack],
+    boundaries: {
+      runtime_source_authorized: false,
+      canonical_production_write_authorized: false,
+      model_activation_created: false,
+      mcft_cap_08_authorized: false,
+    },
+  }, null, 2));
   process.exitCode = 1;
 });
