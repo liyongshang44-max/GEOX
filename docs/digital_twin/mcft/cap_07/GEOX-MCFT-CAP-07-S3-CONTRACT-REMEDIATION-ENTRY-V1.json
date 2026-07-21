@@ -1,0 +1,10 @@
+{
+  "schema_version": "geox_mcft_cap_07_s3_contract_remediation_entry_v1",
+  "record_status": "REMEDIATION_ENTRY_ONLY",
+  "base_commit": "6c0a7d40d656f5ce5fc85a9fce0a705a465a6dd0",
+  "triggering_s4_pr": 2609,
+  "triggering_s4_head_before_remediation": "b23006403ca26848dc09de2fd4fa80a26333b1ec",
+  "entry_condition": "S4 production adapter acceptance exposed divergence in previously delivered pure composer semantics.",
+  "delivery_candidate_transition": false,
+  "effective_frontier_change": false
+}
