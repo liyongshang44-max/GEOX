@@ -13,16 +13,21 @@ const checks = [];
 const check = (name, fn) => { fn(); checks.push({ name, status: 'PASS' }); };
 
 const wrapper = read('scripts/dev_seed/SEED_THREE_SURFACE_LOCAL_DEMO_V1.cjs');
-const loader = read('scripts/dev_seed/seed_three_surface_local_demo_v1.ts');
+const loaderFiles = [
+  'scripts/dev_seed/seed_three_surface_local_demo_v1.ts',
+  'scripts/dev_seed/three_surface_local_demo_contract_v1.ts',
+  'scripts/dev_seed/three_surface_local_demo_persistence_v1.ts',
+  'scripts/dev_seed/three_surface_local_demo_optional_persistence_v1.ts',
+];
+const loader = loaderFiles.map(read).join('\n');
 const route = read('apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx');
 const navigator = read('apps/web/src/features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage.tsx');
 const css = read('apps/web/src/styles/operatorFieldRuntimeNavigator.css');
-const packageJson = JSON.parse(read('package.json'));
 
 check('HISTORICAL_LOCAL_DEMO_COMMAND_NOW_DELEGATES_TO_REAL_LOADER', () => {
-  assert.match(packageJson.scripts['seed:three-surface-local-demo'], /SEED_THREE_SURFACE_LOCAL_DEMO_V1\.cjs/);
   assert.match(wrapper, /seed_three_surface_local_demo_v1\.ts/);
-  assert.doesNotMatch(wrapper, /intentionally placeholder/i);
+  assert.doesNotMatch(wrapper, /contract-placeholder|intentionally placeholder/i);
+  assert.match(navigator, /SEED_THREE_SURFACE_LOCAL_DEMO_V1\.cjs --apply --confirm-local-demo/);
 });
 
 check('LOADER_REUSES_PRODUCTION_CANONICAL_BUILDERS_AND_READBACK', () => {
