@@ -12,7 +12,7 @@
   "successor": "MCFT-CAP-08",
   "s0_candidate_pr_authorized": false,
   "implementation_authorized": true,
-  "implementation_authority_scope": "MCFT_CAP_07_S3_READ_ONLY_COMPOSERS_ONLY",
+  "implementation_authority_scope": "MCFT_CAP_07_S4_CANONICAL_GET_ONLY_RUNTIME_API_PHYSICAL_ROUTE_SPLIT_OPENAPI_AND_EXACT_READ_BOUNDARIES_ONLY",
   "runtime_source_authorized": false,
   "canonical_write_authorized": false,
   "mcft_cap_08_authorized": false,
@@ -70,6 +70,19 @@
     "effective_frontier": "S3",
     "consumption_record_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json"
   },
+  "s3_external_effectiveness": {
+    "status": "PASS",
+    "source_pr_number": 2607,
+    "candidate_head": "726f0adb9051492989c03aa3d7e6addc838c8175",
+    "merge_commit": "bf1de5b1ac8930fbc9de4589f727916c44f25ca2",
+    "attestation_workflow_run_id": 29768849886,
+    "attestation_job_id": 88441658494,
+    "artifact_id": 8471906935,
+    "semantic_artifact_digest": "sha256:ea7b20f5dafc61d3de6343b615b9cbf39f0eb221d9623667d041c40e2cc0e515",
+    "transport_archive_sha256": "sha256:fa7d352faec2d6ae82d8a9ea957c958750fa34eab53e15cd1a5ccd125b2829c1",
+    "effective_frontier": "S4",
+    "consumption_record_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json"
+  },
   "authority_files": [
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-TASK.md",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-RESOLVED-MANIFEST-V1.json",
@@ -86,7 +99,10 @@
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-HARD-ACCEPTANCE-EVIDENCE-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-DELIVERY-STATUS-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-ATTESTATION-RETENTION-STORE-CONTRACT-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-WORKFLOW-DECLARATION-V1.json"
   ],
@@ -105,24 +121,26 @@
     "ledger_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-HARD-ACCEPTANCE-LEDGER-V1.json",
     "s1_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-HARD-ACCEPTANCE-EVIDENCE-V1.json",
     "s2_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S2-HARD-ACCEPTANCE-EVIDENCE-V1.json",
-    "s3_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-HARD-ACCEPTANCE-EVIDENCE-V1.json"
+    "s3_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+    "s4_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-HARD-ACCEPTANCE-EVIDENCE-V1.json"
   },
   "slice_graph": ["S0", "S1", "S2", "S3", "S4", "S5", "S6"],
-  "current_slice": "S3",
-  "effective_next_slice_when_attested": "S4",
-  "s3_changed_file_boundary": "PURE_READ_ONLY_COMPOSERS_TIMELINE_TRACE_ACTION_HEALTH_GOVERNANCE_BUILDERS_TESTS_AND_S4_AUTHORITY_BOOTSTRAP_ONLY",
-  "forbidden_in_s3": [
-    "direct table query",
-    "database migration",
-    "route implementation",
+  "current_slice": "S4",
+  "effective_next_slice_when_attested": "S5",
+  "s4_changed_file_boundary": "CANONICAL_GET_ONLY_RUNTIME_API_VALIDATED_READ_REPOSITORY_OPENAPI_PHYSICAL_LEGACY_SPLIT_AUTH_TESTS_AND_S5_AUTHORITY_BOOTSTRAP_ONLY",
+  "forbidden_in_s4": [
+    "non-GET canonical route",
+    "database migration or DDL",
+    "SQL write",
+    "facts or projection writer",
+    "recommendation approval AO-ACT dispatch or activation dependency",
     "frontend",
-    "OpenAPI",
-    "projection writer",
-    "canonical writer",
-    "recommendation or approval mutation",
-    "dispatch or activation mutation",
-    "cross-database stitching",
-    "Runtime source implementation"
+    "legacy truth fallback",
+    "timestamp latest guess",
+    "synthetic Runtime object",
+    "projection as canonical authority",
+    "Runtime source implementation",
+    "canonical write authority"
   ],
   "completion_claims_effective": false,
   "preserved_nonclaims": [
