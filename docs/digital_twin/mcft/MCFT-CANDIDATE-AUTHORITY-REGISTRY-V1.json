@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_candidate_authority_registry_v1",
   "registry_id": "MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1",
-  "registry_revision": "1.1",
+  "registry_revision": "1.2",
   "record_status": "EFFECTIVE_REPOSITORY_AUTHORITY",
   "policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json",
   "delivery_candidate_signal_contract_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1.json",
@@ -43,19 +43,20 @@
     },
     {
       "capability_line": "MCFT-CAP-07",
-      "registry_bootstrap_kind": "S0_AUTHORITY_WITH_PRE_REGISTERED_SUCCESSOR_CHAIN_THROUGH_S5",
+      "registry_bootstrap_kind": "S0_AUTHORITY_WITH_PRE_REGISTERED_SUCCESSOR_CHAIN_THROUGH_S6",
       "resolved_manifest_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-RESOLVED-MANIFEST-V1.json",
       "taskbook_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-TASK.md",
       "current_candidate_authority": false,
       "candidate_declaration_enabled": true,
-      "candidate_authority_scope": "S1_THROUGH_S4_COMMITTED_CANDIDATES_WITH_FUTURE_S5_AFTER_S4_EFFECTIVENESS",
+      "candidate_authority_scope": "S1_THROUGH_S5_COMMITTED_CANDIDATES_WITH_FUTURE_S6_AFTER_S5_EFFECTIVENESS",
       "authoritative_candidate_status_paths": [
         "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CURRENT-AUTHORITY-V1.json",
         "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-DELIVERY-STATUS-V1.json",
         "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S2-DELIVERY-STATUS-V1.json",
         "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-DELIVERY-STATUS-V1.json",
         "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-DELIVERY-STATUS-V1.json",
-        "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-DELIVERY-STATUS-V1.json"
+        "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-DELIVERY-STATUS-V1.json",
+        "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-DELIVERY-STATUS-V1.json"
       ],
       "candidate_transition_fields": [
         {
@@ -104,9 +105,17 @@
           "focused_workflow": "mcft-cap-07-s5-operator-integration",
           "standard_workflow": "ci",
           "predecessor_effective_evidence_required": true
+        },
+        {
+          "status_file": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-DELIVERY-STATUS-V1.json",
+          "field_path": "s6_candidate_implemented",
+          "allowed_candidate_values": [true],
+          "focused_workflow": "mcft-cap-07-s6-closure",
+          "standard_workflow": "ci",
+          "predecessor_effective_evidence_required": true
         }
       ],
-      "terminal_state": "S4_CONDITIONAL_CANDIDATE_AUTHORITY_COMMITTED_WHEN_MERGED_AND_ATTESTED",
+      "terminal_state": "S5_CONDITIONAL_CANDIDATE_AUTHORITY_COMMITTED_WHEN_MERGED_AND_ATTESTED",
       "successor_capability_authorized": false,
       "implementation_authorized": false,
       "runtime_source_authorized": false,
