@@ -8,12 +8,16 @@ import { registerOperatorAcceptanceActionRoutes } from "../../routes/v1/operator
 import { registerOperatorDispatchActionRoutes } from "../../routes/v1/operator_dispatch_actions.js";
 import { registerOperatorLearningValidationRoutes } from "../../routes/v1/operator_learning_validation.js";
 import { registerOperatorDeviceOfflineActionRoutes } from "../../routes/v1/operator_device_offline_actions.js";
-import { registerOperatorTwinReadRoutes } from "../../routes/v1/operator_twin.js";
+import { registerOperatorTwinReadLegacyRoutesV1 } from "../../routes/v1/operator_twin_read_legacy_v1.js";
+import { registerOperatorTwinWriteLegacyRoutesV1 } from "../../routes/v1/operator_twin_write_legacy_v1.js";
+import { registerMcftFieldTwinReadRoutesV1 } from "../../routes/v1/mcft_field_twin_read_v1.js";
+import { installMcftFieldTwinReadOpenApiV1 } from "../../routes/openapi_mcft_field_twin_read_v1.js";
 import { registerOperatorEvidenceTwinReadRoutes } from "../../routes/v1/operator_evidence_twin.js";
 import { registerOperatorTwinH31H45ClosureRoutes } from "../../routes/v1/operator_twin_h31_h45_closure.js";
 import { registerOperationPlanV1Routes } from "../../routes/control_operation_plan_v1.js";
 
 export function registerOperatorModule(app: FastifyInstance, pool: Pool): void {
+  installMcftFieldTwinReadOpenApiV1();
   registerOperatorV1FacadeRoutes(app, pool);
   registerOperatorApprovalReadRoutes(app, pool);
   registerOperatorApprovalActionRoutes(app, pool);
@@ -21,7 +25,9 @@ export function registerOperatorModule(app: FastifyInstance, pool: Pool): void {
   registerOperatorDispatchActionRoutes(app, pool);
   registerOperatorLearningValidationRoutes(app, pool);
   registerOperatorDeviceOfflineActionRoutes(app, pool);
-  registerOperatorTwinReadRoutes(app, pool);
+  registerOperatorTwinReadLegacyRoutesV1(app, pool);
+  registerOperatorTwinWriteLegacyRoutesV1(app, pool);
+  registerMcftFieldTwinReadRoutesV1(app, pool);
   registerOperatorEvidenceTwinReadRoutes(app, pool);
   registerOperatorTwinH31H45ClosureRoutes(app, pool);
   registerOperationPlanV1Routes(app, pool);
