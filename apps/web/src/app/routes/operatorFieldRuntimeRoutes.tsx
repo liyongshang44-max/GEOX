@@ -4,11 +4,12 @@
 import React from "react";
 import { Route, Routes } from "react-router-dom";
 import FieldRuntimeRoutePage from "../../features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage";
+import FieldRuntimeScopeNavigatorPage from "../../features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage";
 
 export default function OperatorFieldRuntimeRoutes(): React.ReactElement {
   return (
     <Routes>
-      <Route index element={<FieldRuntimeRoutePage tab="fields" />} />
+      <Route index element={<FieldRuntimeScopeNavigatorPage />} />
       <Route path=":fieldId" element={<FieldRuntimeRoutePage tab="overview" />} />
       <Route path=":fieldId/state" element={<FieldRuntimeRoutePage tab="state" />} />
       <Route path=":fieldId/forecast" element={<FieldRuntimeRoutePage tab="forecast" />} />
@@ -20,7 +21,7 @@ export default function OperatorFieldRuntimeRoutes(): React.ReactElement {
       <Route path=":fieldId/health" element={<FieldRuntimeRoutePage tab="health" />} />
       <Route path=":fieldId/evidence" element={<FieldRuntimeRoutePage tab="evidence" />} />
       <Route path=":fieldId/audit" element={<FieldRuntimeRoutePage tab="audit" />} />
-      <Route path="*" element={<FieldRuntimeRoutePage tab="fields" />} />
+      <Route path="*" element={<FieldRuntimeScopeNavigatorPage />} />
     </Routes>
   );
 }
