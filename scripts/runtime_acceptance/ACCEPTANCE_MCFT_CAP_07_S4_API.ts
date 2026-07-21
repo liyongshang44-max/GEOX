@@ -76,6 +76,12 @@ function composerObject(ref: string, logicalTime: string): FieldTwinComposerObje
   return Object.freeze({ object_ref: ref, object_type: "twin_runtime_health_v1", object_hash: hash({ ref }), source_fact_ref: `fact-${ref}`, scope, lineage_id: "lineage-a", revision_id: "revision-a", logical_time: canonicalUtcInstantV1(logicalTime), source_refs: [], evidence_refs: [], validation_profile: "CANONICAL_TWIN_FACT_DIRECT", validation_status: "PASS", attachment_status: "ATTACHED_EXACT" });
 }
 
+function collectionCursorWire(kind: "STATE" | "MODEL_ACTIVATION"): string {
+  const visibility = buildCanonicalVisibilitySnapshotV1({ database_visibility_epoch_id: "epoch-s4", pg_snapshot_token: "10:100:", snapshot_xmin: "10", snapshot_xmax: "100", snapshot_xip_values_for_hash: [] });
+  const payload = createCursorPayloadV1({ cursor_kind: "OPTIONAL_COLLECTION", collection_kind: kind, sort_contract_id: "LOGICAL_TIME_DESC_OBJECT_REF_ASC_V1", scope_hash: buildScopeHashV1(scope), filter_hash: buildEmptyCollectionFilterHashV1(), canonical_visibility_snapshot: visibility, fixed_root_ref: `collection-${kind}`, fixed_root_graph_content_hash: hash({ kind }), sort_direction: "DESC", last_sort_tuple: { cursor_kind: "OPTIONAL_COLLECTION", logical_time: canonicalUtcInstantV1("2026-07-20T00:00:00.000Z"), object_ref: `${kind.toLowerCase()}-a` }, page_limit: 50, issued_at: canonicalUtcInstantV1("2026-07-20T00:00:00.000Z"), expires_at: canonicalUtcInstantV1("2026-07-20T00:15:00.000Z") });
+  return signFieldTwinCursorV1(payload, "key-v1", "0123456789abcdef0123456789abcdef").wire;
+}
+
 async function main(): Promise<void> {
 try {
   const routeSource = read("apps/server/src/routes/v1/mcft_field_twin_read_v1.ts");
@@ -162,6 +168,17 @@ try {
     const trace = await app.inject({ method: "GET", url: `${base}/trace?${query}&root_object_ref=checkpoint-historical-a` });
     assert.equal(trace.statusCode, 200);
     assert.equal(api.calls.at(-1)?.request.root_object_ref, "checkpoint-historical-a");
+
+    const missingKind = await app.inject({ method: "GET", url: `${base}/model-governance?${query}` });
+    assert.equal(missingKind.statusCode, 400);
+    assert.equal(JSON.parse(missingKind.body).error_code, "MCFT_COLLECTION_KIND_INVALID");
+    const invalidKind = await app.inject({ method: "GET", url: `${base}/model-governance?${query}&collection_kind=STATE` });
+    assert.equal(invalidKind.statusCode, 400);
+    assert.equal(JSON.parse(invalidKind.body).error_code, "MCFT_COLLECTION_KIND_INVALID");
+    const continuationWire = collectionCursorWire("MODEL_ACTIVATION");
+    const continuation = await app.inject({ method: "GET", url: `${base}/model-governance?${query}&cursor=${encodeURIComponent(continuationWire)}` });
+    assert.equal(continuation.statusCode, 200, continuation.body);
+    assert.equal(api.calls.at(-1)?.request.collection_kind, "MODEL_ACTIVATION");
     await app.close();
 
     const forbiddenApp = Fastify();
@@ -177,26 +194,30 @@ try {
   });
 
   await check("CURSOR_HMAC_FILTER_SCOPE_ROOT_AND_OBJECT_WIRE_REJECTION", () => {
+    const signedWire = collectionCursorWire("STATE");
+    assert.match(decodeUntrustedFieldTwinCursorEnvelopeV1(signedWire).payload.fixed_root_ref, /^collection-STATE$/);
     const visibility = buildCanonicalVisibilitySnapshotV1({ database_visibility_epoch_id: "epoch-s4", pg_snapshot_token: "10:100:", snapshot_xmin: "10", snapshot_xmax: "100", snapshot_xip_values_for_hash: [] });
-    const key = "0123456789abcdef0123456789abcdef";
     const payload = createCursorPayloadV1({ cursor_kind: "OPTIONAL_COLLECTION", collection_kind: "STATE", sort_contract_id: "LOGICAL_TIME_DESC_OBJECT_REF_ASC_V1", scope_hash: buildScopeHashV1(scope), filter_hash: buildEmptyCollectionFilterHashV1(), canonical_visibility_snapshot: visibility, fixed_root_ref: "checkpoint-a", fixed_root_graph_content_hash: hash("root-a"), sort_direction: "DESC", last_sort_tuple: { cursor_kind: "OPTIONAL_COLLECTION", logical_time: canonicalUtcInstantV1("2026-07-20T00:00:00.000Z"), object_ref: "state-a" }, page_limit: 50, issued_at: canonicalUtcInstantV1("2026-07-20T00:00:00.000Z"), expires_at: canonicalUtcInstantV1("2026-07-20T00:15:00.000Z") });
-    const signed = signFieldTwinCursorV1(payload, "key-v1", key);
-    assert.equal(decodeUntrustedFieldTwinCursorEnvelopeV1(signed.wire).payload.fixed_root_ref, "checkpoint-a");
     assert.throws(() => decodeUntrustedFieldTwinCursorEnvelopeV1(Buffer.from(JSON.stringify({ cursor: payload })).toString("base64url")), /MCFT_CURSOR_(?:INVALID|WIRE_INVALID)/);
   });
 
-  await check("S4_DUAL_HEALTH_SAME_DISTINCT_AND_NULL", () => {
+  await check("S4_DUAL_HEALTH_FROZEN_FIVE_STATE_RELATIONSHIP", () => {
     const terminal = composerObject("health-terminal", "2026-07-20T00:00:00.000Z");
     const operational = composerObject("health-operational", "2026-07-20T01:00:00.000Z");
     const terminalResolution: FieldTwinRuntimeHealthRoleResolutionV1 = { health_object_ref: terminal.object_ref, transaction_family: "A_STATE_TICK_COMMIT", health_role: "TERMINAL_RECORD_SET_MEMBER", health_resolution_basis: "EXACT_RECORD_SET_MEMBERSHIP", health_resolution_evidence_refs: [{ ref_type: "RECORD_SET", ref_value: "record-set-a" }], atomic_group_ref: "record-set-a" };
     const operationalResolution: FieldTwinRuntimeHealthRoleResolutionV1 = { health_object_ref: operational.object_ref, transaction_family: "F_OPERATIONAL_ATTEMPT_HEALTH", health_role: "OPERATIONAL_ATTEMPT_AUDIT", health_resolution_basis: "EXACT_OPERATIONAL_ATTEMPT_RELATION", health_resolution_evidence_refs: [{ ref_type: "RUNTIME_ATTEMPT", ref_value: "attempt-a" }], atomic_group_ref: null };
     const composer = new S4RuntimeHealthComposerV1();
-    const same = composer.compose({ request_scope: scope, response_started_at: canonicalUtcInstantV1("2026-07-20T02:00:00.000Z"), terminal_record_set_health: terminal, terminal_role_resolution: terminalResolution, latest_operational_runtime_health: terminal, operational_role_resolution: terminalResolution, health_pointer_validation_summary: [] });
+    const responseStartedAt = canonicalUtcInstantV1("2026-07-20T02:00:00.000Z");
+    const same = composer.compose({ request_scope: scope, response_started_at: responseStartedAt, terminal_record_set_health: terminal, terminal_role_resolution: terminalResolution, latest_operational_runtime_health: terminal, operational_role_resolution: terminalResolution, health_pointer_validation_summary: [] });
     assert.equal(same.health_relationship, "SAME_OBJECT");
-    const distinct = composer.compose({ request_scope: scope, response_started_at: canonicalUtcInstantV1("2026-07-20T02:00:00.000Z"), terminal_record_set_health: terminal, terminal_role_resolution: terminalResolution, latest_operational_runtime_health: operational, operational_role_resolution: operationalResolution, health_pointer_validation_summary: [] });
-    assert.equal(distinct.health_relationship, "DISTINCT_OBJECTS");
-    const absent = composer.compose({ request_scope: scope, response_started_at: canonicalUtcInstantV1("2026-07-20T02:00:00.000Z"), terminal_record_set_health: terminal, terminal_role_resolution: terminalResolution, latest_operational_runtime_health: null, operational_role_resolution: null, health_pointer_validation_summary: [] });
-    assert.equal(absent.latest_operational_runtime_health, null);
+    const later = composer.compose({ request_scope: scope, response_started_at: responseStartedAt, terminal_record_set_health: terminal, terminal_role_resolution: terminalResolution, latest_operational_runtime_health: operational, operational_role_resolution: operationalResolution, health_pointer_validation_summary: [] });
+    assert.equal(later.health_relationship, "LATEST_OPERATIONAL_IS_LATER");
+    const terminalOnly = composer.compose({ request_scope: scope, response_started_at: responseStartedAt, terminal_record_set_health: terminal, terminal_role_resolution: terminalResolution, latest_operational_runtime_health: null, operational_role_resolution: null, health_pointer_validation_summary: [] });
+    assert.equal(terminalOnly.health_relationship, "TERMINAL_ONLY");
+    const operationalOnly = composer.compose({ request_scope: scope, response_started_at: responseStartedAt, terminal_record_set_health: null, terminal_role_resolution: null, latest_operational_runtime_health: operational, operational_role_resolution: operationalResolution, health_pointer_validation_summary: [] });
+    assert.equal(operationalOnly.health_relationship, "OPERATIONAL_ONLY");
+    const bothAbsent = composer.compose({ request_scope: scope, response_started_at: responseStartedAt, terminal_record_set_health: null, terminal_role_resolution: null, latest_operational_runtime_health: null, operational_role_resolution: null, health_pointer_validation_summary: [] });
+    assert.equal(bothAbsent.health_relationship, "BOTH_ABSENT");
   });
 
   await check("SOURCE_PROFILE_AND_COLLECTION_INVENTORY_EXACT", () => {
@@ -218,6 +239,12 @@ try {
     const limit = collectionPath.parameters.find((parameter: Record<string, unknown>) => parameter.name === "limit");
     assert.equal(limit.schema.default, 50);
     assert.equal(limit.schema.maximum, 200);
+    const governancePath = MCFT_FIELD_TWIN_OPENAPI_PATHS_V1["/api/v1/operator/twin/fields/{field_id}/runtime/model-governance"].get as Record<string, any>;
+    const collectionKind = governancePath.parameters.find((parameter: Record<string, unknown>) => parameter.name === "collection_kind");
+    assert.equal(collectionKind.required, false);
+    const health = MCFT_FIELD_TWIN_OPENAPI_SCHEMAS_V1.McftFieldTwinHealthResponseV1 as Record<string, any>;
+    assert.deepEqual(health.properties.health_relationship.enum, ["SAME_OBJECT", "LATEST_OPERATIONAL_IS_LATER", "TERMINAL_ONLY", "OPERATIONAL_ONLY", "BOTH_ABSENT"]);
+    assert.ok(Array.isArray(health.properties.terminal_record_set_health.anyOf));
   });
 
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
