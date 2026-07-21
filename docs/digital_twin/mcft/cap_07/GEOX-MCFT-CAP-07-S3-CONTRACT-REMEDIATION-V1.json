@@ -1,0 +1,32 @@
+{
+  "schema_version": "geox_mcft_cap_07_s3_contract_remediation_v1",
+  "record_status": "PREDECESSOR_CONTRACT_REMEDIATION_NOT_CANDIDATE_TRANSITION",
+  "capability_line_id": "MCFT-CAP-07",
+  "affected_slice": "MCFT-CAP-07.S3",
+  "taskbook_version": "v0.2.5",
+  "reason": "S4 production adapter integration exposed frozen S3 composer contract divergence for NOT_COMPUTED collection summaries and Runtime Health relationship semantics.",
+  "remediation_scope": [
+    "accept NOT_COMPUTED with null total_count for summary-only Runtime surfaces",
+    "preserve exact-count assertions only when count_status is EXACT_VALIDATED_PROJECTION",
+    "enforce current Scenario source equality with current Tick Forecast",
+    "implement SAME_OBJECT LATEST_OPERATIONAL_IS_LATER TERMINAL_ONLY OPERATIONAL_ONLY BOTH_ABSENT Runtime Health relationships"
+  ],
+  "authority_delta": {
+    "runtime_authority": "ZERO_BEYOND_EXISTING_READ_ONLY_COMPOSERS",
+    "canonical_write_authority": "ZERO",
+    "postgresql_authority": "ZERO",
+    "route_authority": "ZERO",
+    "frontend_authority": "ZERO",
+    "migration_authority": "ZERO",
+    "mcft_cap_08_authority": "ZERO"
+  },
+  "candidate_transition_performed": false,
+  "external_effectiveness_claimed": false,
+  "s4_effectiveness_claimed": false,
+  "s5_authorized": false,
+  "validation": {
+    "workflow": "mcft-cap-07-s3-composers",
+    "execution_mode": "SUCCESSOR_REGRESSION_MODE",
+    "acceptance_script": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S3_SUCCESSOR_REGRESSION.ts"
+  }
+}
