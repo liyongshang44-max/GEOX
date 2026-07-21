@@ -11,10 +11,13 @@ const checks: Array<{ name: string; status: "PASS" }> = [];
 const check = (name: string, action: () => void) => { action(); checks.push({ name, status: "PASS" }); };
 
 try {
+  const base = read("apps/server/src/repositories/field_twin_read_model/postgres_field_twin_read_repository_v1.ts");
   const timeline = read("apps/server/src/repositories/field_twin_read_model/postgres_field_twin_s4_timeline_repository_v1.ts");
   const replay = read("apps/server/src/repositories/field_twin_read_model/postgres_field_twin_s4_replay_repository_v1.ts");
   const facade = read("apps/server/src/repositories/field_twin_read_model/postgres_field_twin_s4_repository_v1.ts");
+  const health = read("apps/server/src/repositories/field_twin_read_model/postgres_field_twin_s4_health_repository_v1.ts");
   const service = read("apps/server/src/services/mcft_field_twin_read_api_v1.ts");
+  const healthService = read("apps/server/src/services/mcft_field_twin_s4_read_api_v1.ts");
   const auth = read("apps/server/src/auth/mcft_field_twin_read_authz_v1.ts");
 
   check("FROZEN_RECORD_SET_INDEX_ONLY", () => {
@@ -22,8 +25,10 @@ try {
     assert.match(timeline, /identity_kind IN \('A0_RECORD_SET','A2_RECORD_SET'\)/);
     assert.doesNotMatch(timeline + replay + facade + service, /twin_runtime_record_set_identity_index_v1/);
   });
-  check("NO_UNBOUNDED_COUNT_IN_S4_PRODUCT_PATH", () => {
-    assert.doesNotMatch(timeline + replay + facade + service, /count\s*\(\s*\*\s*\)/i);
+  check("NO_UNBOUNDED_COUNT_IN_ANY_S4_PRODUCTION_READ_ADAPTER", () => {
+    const allS4ReadAdapters = base + timeline + replay + facade + health + service + healthService;
+    assert.doesNotMatch(allS4ReadAdapters, /count\s*\(\s*\*\s*\)/i);
+    assert.doesNotMatch(base, /readCollectionSummary\s*\(/);
     assert.match(service, /count_status:\s*"NOT_COMPUTED"/);
     assert.match(service, /total_count:\s*null/);
   });
@@ -41,9 +46,11 @@ try {
   });
   check("REPLAY_AND_DUAL_HEALTH_RESOLVERS_ARE_PRODUCTION_DEPENDENCIES", () => {
     assert.match(replay + timeline, /ReplayEvidenceFactResolverV1/);
-    assert.match(timeline, /RuntimeHealthRoleResolverV1/);
+    assert.match(timeline + health, /RuntimeHealthRoleResolverV1/);
     assert.match(timeline, /A0_RECORD_SET/);
-    assert.match(timeline, /operational_attempt_relation/);
+    assert.match(timeline + health, /operational_attempt_relation/);
+    assert.match(healthService, /readOptionalTerminalHealthContext/);
+    assert.match(healthService, /readLatestOperationalHealth/);
   });
   check("STRICT_RUNTIME_AUTH_PROFILES_INCLUDE_PILOT_AND_COMMERCIAL", () => {
     for (const profile of ["pilot", "commercial", "staging", "production"]) assert.match(auth, new RegExp(`"${profile}"`));
