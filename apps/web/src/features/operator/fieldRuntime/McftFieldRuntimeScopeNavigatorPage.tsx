@@ -159,7 +159,7 @@ export default function McftFieldRuntimeScopeNavigatorPage(): React.ReactElement
           <div className="operatorFieldRuntimeNavigator__notice" data-mcft-empty-field-state="true">
             <strong>{english ? "No fields are available" : "当前没有可用地块"}</strong>
             <span>{english ? "Run the local CAP-07 demo loader or establish a real Runtime scope before opening this page." : "请先运行本地 CAP-07 演示装载器，或建立真实 Runtime 范围。"}</span>
-            <code>pnpm run seed:three-surface-local-demo -- --apply --confirm-local-demo</code>
+            <code>node scripts/dev_seed/SEED_THREE_SURFACE_LOCAL_DEMO_V1.cjs --apply --confirm-local-demo</code>
           </div>
         ) : null}
 
