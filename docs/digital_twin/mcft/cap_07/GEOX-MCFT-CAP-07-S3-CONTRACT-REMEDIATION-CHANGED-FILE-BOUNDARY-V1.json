@@ -9,7 +9,8 @@
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S3_SUCCESSOR_REGRESSION.ts",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-CONTRACT-REMEDIATION-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-CONTRACT-REMEDIATION-NONCLAIMS-V1.md",
-    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-CONTRACT-REMEDIATION-CHANGED-FILE-BOUNDARY-V1.json"
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-CONTRACT-REMEDIATION-CHANGED-FILE-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-CONTRACT-REMEDIATION-VALIDATION-V1.json"
   ],
   "forbidden": [
     "candidate authority registry modification",
