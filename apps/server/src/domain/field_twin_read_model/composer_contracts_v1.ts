@@ -66,7 +66,7 @@ export type FieldTwinRuntimeHealthReadModelV1 = {
   request_scope: FieldTwinScopeV1;
   terminal_record_set_health: FieldTwinCanonicalObjectRefV1 | null;
   latest_operational_runtime_health: FieldTwinCanonicalObjectRefV1 | null;
-  health_relationship: "SAME_OBJECT" | "DISTINCT_OBJECTS" | "ONE_OR_BOTH_ABSENT";
+  health_relationship: "SAME_OBJECT" | "LATEST_OPERATIONAL_IS_LATER" | "TERMINAL_ONLY" | "OPERATIONAL_ONLY" | "BOTH_ABSENT";
   health_role_resolutions: readonly import("./contracts_v1.js").FieldTwinRuntimeHealthRoleResolutionV1[];
   health_pointer_validation_summary: readonly FieldTwinSourceValidationResultV1[];
   health_content_hash: SemanticHashTextV1;
