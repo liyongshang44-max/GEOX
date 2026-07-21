@@ -1,4 +1,4 @@
-// Purpose: expose the exact frozen MCFT-CAP-07 S4 source-validation obligations from the committed S0 authority matrix.
+// Purpose: expose exact frozen MCFT-CAP-07 S4 source-validation obligations from the committed S0 authority matrix.
 // Boundary: pure read-only contract materialization from a versioned repository JSON asset; no database, route, network, filesystem-at-runtime, or write authority.
 
 import sourceMatrixJson from "../../../../../docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-SOURCE-VALIDATION-MATRIX-V1.json" with { type: "json" };
@@ -9,6 +9,8 @@ export const MCFT_CAP_07_S4_SOURCE_NAMES_V1 = Object.freeze([
   "public.twin_state_history_projection_v1",
   "public.twin_forecast_run_projection_v1",
   "public.twin_scenario_set_projection_v1",
+  "public.twin_decision_record_projection_v1",
+  "public.twin_approved_plan_binding_projection_v1",
   "public.twin_forecast_residual_projection_v1",
   "public.twin_action_feedback_projection_v1",
   "public.twin_calibration_candidate_projection_v1",
