@@ -1,0 +1,21 @@
+{
+  "schema_version": "geox_mcft_cap_07_s3_contract_remediation_validation_v1",
+  "record_status": "AWAITING_CI",
+  "expected_checks": [
+    "server typecheck",
+    "mcft-cap-07-s3-composers successor regression",
+    "standard ci",
+    "delivery policy",
+    "candidate integrity negative absence",
+    "release lane and ruleset readiness"
+  ],
+  "required_semantic_assertions": [
+    "NOT_COMPUTED summary with null total_count accepted",
+    "five Runtime Health relationships exact",
+    "distinct latest operational Health must be later than terminal Health",
+    "no database route migration frontend or write authority introduced"
+  ],
+  "workflow_run_id": null,
+  "subject_commit": null,
+  "status": "PENDING"
+}
