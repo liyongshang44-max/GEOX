@@ -34,10 +34,12 @@ const S5_PROTECTED_PRODUCT_FILES = [FILES.route, FILES.client, FILES.page, FILES
 const POST_CLOSURE_LOCAL_DEMO_FILES = [
   FILES.workflow,
   FILES.acceptance,
+  'apps/server/src/domain/auth/roles.ts',
   'apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts',
   FILES.route,
   'apps/web/src/features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage.tsx',
   'apps/web/src/styles/operatorFieldRuntimeNavigator.css',
+  'config/auth/security_acceptance_tokens.json',
   'scripts/dev_seed/SEED_THREE_SURFACE_LOCAL_DEMO_V1.cjs',
   'scripts/dev_seed/seed_three_surface_local_demo_v1.ts',
   'scripts/dev_seed/three_surface_local_demo_action_lifecycle_v1.ts',
@@ -200,6 +202,8 @@ function main() {
       const navigator = read('apps/web/src/features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage.tsx');
       const localAcceptance = read('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_LOCAL_DEMO_AND_SCOPE_NAVIGATOR_V1.cjs');
       const bootstrap = read('apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts');
+      const roles = read('apps/server/src/domain/auth/roles.ts');
+      const tokenContract = json('config/auth/security_acceptance_tokens.json');
       check('POST_CLOSURE_LOCAL_DEMO_BOUNDARY_IS_EXACT', () => assert.deepEqual(actual, POST_CLOSURE_LOCAL_DEMO_FILES));
       check('POST_CLOSURE_NAVIGATOR_IS_GET_ONLY_AND_EXACT_SCOPE', () => {
         assert.match(route, /FieldRuntimeScopeNavigatorPage/);
@@ -207,6 +211,14 @@ function main() {
         assert.match(navigator, /fetchFieldDetail/);
         for (const key of ['field_id', 'season_id', 'zone_id']) assert.ok(navigator.includes(`data-mcft-scope-key="${key}"`), key);
         assert.doesNotMatch(navigator, /createField|updateField|method:\s*["'](?:POST|PUT|PATCH|DELETE)/);
+      });
+      check('POST_CLOSURE_OPERATOR_FIELD_DISCOVERY_SCOPE_IS_ALIGNED', () => {
+        const operator = tokenContract.tokens.find((item) => item.token === 'operator_token');
+        const writeOnly = tokenContract.tokens.find((item) => item.token === 'set-via-env-or-external-secret-file-pdi-writeonly');
+        assert.ok(operator?.scopes?.includes('fields.read'));
+        assert.equal(writeOnly?.scopes?.includes('fields.read'), false);
+        assert.match(roles, /operator:\s*\[[^\]]*"fields\.read"/s);
+        assert.match(workflow, /Probe operator field-read authorization/);
       });
       check('POST_CLOSURE_LOADER_AND_BOOTSTRAP_REENTRY_REMAIN_FAIL_CLOSED', () => {
         assert.match(localAcceptance, /runtime_source_authorized:\s*false/);
