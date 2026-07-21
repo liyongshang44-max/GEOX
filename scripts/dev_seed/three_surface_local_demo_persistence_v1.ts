@@ -191,7 +191,7 @@ export async function persistRootAndForecasts(client: PoolClient, bundle: DemoBu
     ],
   );
 
-  const forecasts = [bundle.successful_forecast, currentForecast as unknown as DemoObject];
+  const forecasts = [bundle.successful_forecast];
   for (const forecast of forecasts) {
     const payload = forecast.payload;
     await client.query(
