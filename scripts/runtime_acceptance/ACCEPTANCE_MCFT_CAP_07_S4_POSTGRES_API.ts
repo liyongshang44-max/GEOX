@@ -1,135 +1,146 @@
-// Purpose: prove S4 production PostgreSQL read semantics: root-independent collections, exact roots, SQL keyset Timeline, Replay Evidence, Health roles, optional attachments, and strict auth.
-// Boundary: isolated PostgreSQL fixture only; application code under test remains SELECT-only and all fixture writes occur outside Runtime read transactions.
+// Purpose: prove S4 production PostgreSQL read semantics against isolated PostgreSQL 16 fixtures.
+// Boundary: application code under test remains SELECT-only; fixture writes are delegated to test-only modules.
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { Pool, type PoolClient } from "pg";
-import {
-  computeA0RecordSetDeterminismHashV1,
-  computeMemberDeterminismHashV1,
-} from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
-import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_json_v1.js";
-import type { FieldTwinScopeV1 } from "../../apps/server/src/domain/field_twin_read_model/index.js";
 import { authorizeMcftFieldTwinReadV1 } from "../../apps/server/src/auth/mcft_field_twin_read_authz_v1.js";
 import { PostgresMcftFieldTwinReadApiV1 } from "../../apps/server/src/services/mcft_field_twin_read_api_v1.js";
 import { PostgresFieldTwinProjectionReadRepositoryV1 } from "../../apps/server/src/repositories/field_twin_read_model/postgres_field_twin_projection_read_repository_v1.js";
 import { PostgresFieldTwinSnapshotRepositoryV1 } from "../../apps/server/src/repositories/field_twin_read_model/postgres_field_twin_snapshot_repository_v1.js";
+import { ROOT, now, pool, resetSchema, scope, seedStateHistory } from "./mcft_cap_07_s4_postgres_fixture_core_v1.js";
+import { seedCurrentScenarioDecisionPlanFeedback, seedRuntimeRoot } from "./mcft_cap_07_s4_postgres_runtime_fixture_v1.js";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_07_S4_POSTGRES_API_RESULT.json");
-const databaseUrl = String(process.env.MCFT_S4_TEST_DATABASE_URL ?? "postgres://postgres:postgres@127.0.0.1:5432/postgres");
-const pool = new Pool({ connectionString: databaseUrl, max: 4 });
-const scope: FieldTwinScopeV1 = Object.freeze({ tenant_id: "tenant-s4", project_id: "project-s4", group_id: "group-s4", field_id: "field-s4", season_id: "season-s4", zone_id: "zone-s4" });
 const checks: Array<{ name: string; status: "PASS" }> = [];
 const check = async (name: string, action: () => Promise<void> | void) => { await action(); checks.push({ name, status: "PASS" }); };
-const matrix = JSON.parse(fs.readFileSync(path.join(ROOT, "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-SOURCE-VALIDATION-MATRIX-V1.json"), "utf8"));
-const now = (minute: number) => new Date(Date.UTC(2026, 6, 20, 0, minute, 0, 0)).toISOString();
 
-type JsonRecord = Record<string, unknown>;
-type CanonicalObject = JsonRecord & { object_id: string; object_type: string; determinism_hash: string; payload: JsonRecord };
-type Fact = { fact_id: string; record_json: JsonRecord; occurred_at: string };
+async function main(): Promise<void> {
+  process.env.MCFT_CURSOR_SIGNING_KEYS_JSON = JSON.stringify({ "s4-key": "0123456789abcdef0123456789abcdef" });
+  process.env.MCFT_CURSOR_PRIMARY_KEY_ID = "s4-key";
+  try {
+    await resetSchema();
+    const states = await seedStateHistory(360);
+    const api = new PostgresMcftFieldTwinReadApiV1(pool);
 
-function readPath(root: unknown, dotted: string): unknown {
-  let value: unknown = root;
-  for (const key of dotted.split(".").filter(Boolean)) {
-    if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
-    value = (value as JsonRecord)[key];
+    await check("COLLECTIONS_DO_NOT_REQUIRE_CURRENT_RUNTIME_ROOT", async () => {
+      const page = await api.readStates({ scope, limit: 50 }) as any;
+      assert.equal(page.items.length, 50);
+      assert.equal(page.has_more, true);
+      assert.equal(typeof page.next_cursor, "string");
+      const second = await api.readStates({ scope, limit: 50, cursor: page.next_cursor }) as any;
+      assert.equal(second.items.length, 50);
+      const empty = await api.readForecasts({ scope, limit: 50 }) as any;
+      assert.deepEqual(empty.items, []);
+      assert.equal(empty.has_more, false);
+    });
+
+    await check("RUNTIME_ROOT_404_AND_BROKEN_POINTER_FAIL_CLOSED", async () => {
+      await assert.rejects(() => api.readRuntime({ scope }), /MCFT_RUNTIME_NOT_ESTABLISHED/);
+      const client = await pool.connect();
+      try { await client.query(`INSERT INTO public.twin_active_lineage_index_v1 VALUES($1,$2,$3,$4,$5,$6,'missing-lineage','missing-lineage')`, Object.values(scope)); }
+      finally { client.release(); }
+      await assert.rejects(() => api.readRuntime({ scope }), /MCFT_OPERATIONAL_POINTER_TARGET_MISSING/);
+      await pool.query(`DELETE FROM public.twin_active_lineage_index_v1`);
+    });
+
+    const root = await seedRuntimeRoot();
+
+    await check("VALID_ROOT_AND_CURRENT_VS_LATEST_SCENARIO_SEPARATION", async () => {
+      const runtime = await api.readRuntime({ scope }) as any;
+      assert.equal(runtime.root_graph_status, "COMPLETE_EXACT_GRAPH");
+      assert.equal(runtime.current_tick_forecast_result.object_ref, root.currentForecast.object_id);
+      assert.equal(runtime.current_scenario_attachment.attachment_status, "NOT_ATTACHED_TO_CURRENT_RUNTIME_GRAPH");
+      assert.equal(runtime.latest_scenario_in_scope.item.object_ref, root.oldScenario.object_id);
+      assert.equal(runtime.scenario_source_forecast.item.object_ref, root.oldForecast.object_id);
+      for (const summary of [runtime.action_feedback_summary, runtime.forecast_residual_summary, runtime.calibration_candidate_summary, runtime.shadow_evaluation_summary, runtime.model_activation_summary]) {
+        assert.equal(summary.count_status, "NOT_COMPUTED");
+        assert.equal(summary.total_count, null);
+      }
+    });
+
+    await check("TIMELINE_SQL_KEYSET_BEYOND_201_AND_HEALTH_ROLES", async () => {
+      const snapshots = new PostgresFieldTwinSnapshotRepositoryV1(pool);
+      const repository = new PostgresFieldTwinProjectionReadRepositoryV1();
+      await snapshots.withReadOnlyRequestSnapshot(scope, async (context) => {
+        const from = states[300].logical_time as string;
+        const page = await repository.readTimelineEvents(context, 11, { from_logical_time: from, until_logical_time: null }, null);
+        assert.equal(page.length, 11);
+        assert.ok(page.every((event) => event.logical_time >= from));
+        const after = await repository.readTimelineEvents(context, 11, { from_logical_time: null, until_logical_time: null }, { logical_time: states[300].logical_time as string, event_rank: 40, object_ref: states[300].object_id });
+        assert.equal(after.length, 11);
+        assert.ok(after[0].object_ref > states[300].object_id || after[0].logical_time > states[300].logical_time);
+        const health = await repository.readTimelineEvents(context, 201, { from_logical_time: now(400), until_logical_time: null }, null);
+        const terminal = health.find((event) => event.object_ref === root.terminalHealth.object_id)!;
+        const operational = health.find((event) => event.object_ref === root.operationalHealth.object_id)!;
+        assert.equal(terminal.transaction_family, "A_STATE_TICK_COMMIT");
+        assert.equal(terminal.health_role, "TERMINAL_RECORD_SET_MEMBER");
+        assert.equal(operational.transaction_family, "F_OPERATIONAL_ATTEMPT_HEALTH");
+        assert.equal(operational.health_role, "OPERATIONAL_ATTEMPT_AUDIT");
+      });
+    });
+
+    await check("REPLAY_PLAN_TIMELINE_AND_EXACT_OPTIONAL_ATTACHMENTS", async () => {
+      await seedCurrentScenarioDecisionPlanFeedback(root.currentForecast, root.posterior);
+      const runtime = await api.readRuntime({ scope }) as any;
+      assert.equal(runtime.current_scenario_attachment.item.object_ref, "scenario-current");
+      assert.equal(runtime.current_human_decision.item.object_ref, "decision-current");
+      assert.equal(runtime.current_approved_plan.item.object_ref, "plan-current");
+      const actions = await api.readActionLifecycle({ scope, limit: 20 }) as any;
+      assert.equal(actions.items[0].object_ref, "feedback-current");
+      const snapshots = new PostgresFieldTwinSnapshotRepositoryV1(pool);
+      const repository = new PostgresFieldTwinProjectionReadRepositoryV1();
+      await snapshots.withReadOnlyRequestSnapshot(scope, async (context) => {
+        const timeline = await repository.readTimelineEvents(context, 201, { from_logical_time: now(420), until_logical_time: null }, null);
+        const plan = timeline.find((event) => event.event_kind === "APPROVED_PLAN_EVIDENCE");
+        assert.equal(plan?.object_ref, "plan-current");
+        assert.equal(plan?.object_type, "approved_irrigation_plan_snapshot_v1");
+      });
+    });
+
+    await check("MODEL_GOVERNANCE_COMPOSER_RUNS_IN_PAGE_SNAPSHOT", async () => {
+      const page = await api.readModelGovernance({ scope, collection_kind: "CALIBRATION_CANDIDATE", limit: 20 }) as any;
+      assert.deepEqual(page.items, []);
+    });
+
+    await check("STRICT_PILOT_AND_COMMERCIAL_AUTH_FAIL_CLOSED", () => {
+      const old = { env: process.env.GEOX_RUNTIME_ENV, json: process.env.GEOX_TOKENS_JSON, file: process.env.GEOX_TOKENS_FILE, token: process.env.GEOX_TOKEN };
+      process.env.GEOX_RUNTIME_ENV = "pilot";
+      delete process.env.GEOX_TOKENS_JSON;
+      delete process.env.GEOX_TOKENS_FILE;
+      process.env.GEOX_TOKEN = "development-token-must-not-work";
+      const request = { headers: { authorization: "Bearer development-token-must-not-work" } } as any;
+      assert.equal(authorizeMcftFieldTwinReadV1(request), null);
+      process.env.GEOX_TOKENS_JSON = JSON.stringify({ version: "ao_act_tokens_v0", tokens: [{ token: "strict-token", token_id: "strict-id", actor_id: "actor", ...scope, scopes: ["fields.read"], revoked: false, role: "viewer", allowed_field_ids: [scope.field_id] }] });
+      const strictRequest = { headers: { authorization: "Bearer strict-token" } } as any;
+      assert.equal(authorizeMcftFieldTwinReadV1(strictRequest)?.tenant_id, scope.tenant_id);
+      if (old.env === undefined) delete process.env.GEOX_RUNTIME_ENV; else process.env.GEOX_RUNTIME_ENV = old.env;
+      if (old.json === undefined) delete process.env.GEOX_TOKENS_JSON; else process.env.GEOX_TOKENS_JSON = old.json;
+      if (old.file === undefined) delete process.env.GEOX_TOKENS_FILE; else process.env.GEOX_TOKENS_FILE = old.file;
+      if (old.token === undefined) delete process.env.GEOX_TOKEN; else process.env.GEOX_TOKEN = old.token;
+    });
+
+    await check("READ_ADAPTER_DOES_NOT_MUTATE_FIXTURE", async () => {
+      const before = Number((await pool.query<{ count: string }>("SELECT count(*)::text AS count FROM public.facts")).rows[0].count);
+      await api.readStates({ scope, limit: 10 });
+      await api.readRuntime({ scope });
+      const after = Number((await pool.query<{ count: string }>("SELECT count(*)::text AS count FROM public.facts")).rows[0].count);
+      assert.equal(after, before);
+      const source = fs.readFileSync(path.join(ROOT, "apps/server/src/repositories/field_twin_read_model/postgres_field_twin_projection_read_repository_v1.ts"), "utf8");
+      assert.doesNotMatch(source, /SELECT\s+pg_catalog\.count\(\*\)/i);
+    });
+
+    fs.mkdirSync(path.dirname(OUT), { recursive: true });
+    fs.writeFileSync(OUT, JSON.stringify({ schema_version: "mcft_cap_07_s4_postgres_api_result_v1", status: "PASS", check_count: checks.length, checks }, null, 2) + "\n");
+    console.log(JSON.stringify({ status: "PASS", check_count: checks.length }));
+  } catch (error) {
+    fs.mkdirSync(path.dirname(OUT), { recursive: true });
+    fs.writeFileSync(OUT, JSON.stringify({ schema_version: "mcft_cap_07_s4_postgres_api_result_v1", status: "FAIL", check_count: checks.length, checks, error: String((error as Error)?.stack ?? error) }, null, 2) + "\n");
+    console.error(error);
+    process.exitCode = 1;
+  } finally {
+    await pool.end();
   }
-  return value;
 }
 
-function canonicalObject(input: {
-  object_id: string;
-  object_type: string;
-  logical_time: string;
-  payload?: JsonRecord;
-  lineage_id?: string | null;
-  revision_id?: string | null;
-  runtime_config_ref?: string;
-  runtime_config_hash?: string;
-  context?: boolean;
-}): CanonicalObject {
-  const base: JsonRecord = {
-    object_id: input.object_id,
-    object_type: input.object_type,
-    schema_version: "v1",
-    ...scope,
-    logical_time: input.logical_time,
-    as_of: input.logical_time,
-    source_refs: [],
-    evidence_refs: [],
-    ...(input.runtime_config_ref ? { runtime_config_ref: input.runtime_config_ref } : {}),
-    ...(input.runtime_config_hash ? { runtime_config_hash: input.runtime_config_hash } : {}),
-    idempotency_key: `idem:${input.object_id}`,
-    limitations: [],
-    created_at: input.logical_time,
-    ...(input.context
-      ? { context_lineage_ref: input.lineage_id ?? "lineage-s4", context_revision_ref: input.revision_id ?? "revision-s4" }
-      : { lineage_id: input.lineage_id ?? "lineage-s4", revision_id: input.revision_id ?? "revision-s4" }),
-    payload: input.payload ?? {},
-  };
-  return { ...base, determinism_hash: computeMemberDeterminismHashV1(base) } as CanonicalObject;
-}
-
-function canonicalFact(object: CanonicalObject): Fact {
-  return { fact_id: `fact:${object.object_id}`, occurred_at: String(object.logical_time), record_json: { type: object.object_type, payload: object } };
-}
-
-function replayPlanFact(planId: string, availableAt: string): Fact {
-  const canonicalPayload = { plan_id: planId, target: scope, amount_mm: "15.000000" };
-  const semantic: JsonRecord = {
-    source_record_id: planId,
-    available_to_runtime_at: availableAt,
-    evidence_identity_key: `plan:${planId}`,
-    source_payload: canonicalPayload,
-    canonical_payload: canonicalPayload,
-    ...scope,
-  };
-  const payload = { ...semantic, source_record_hash: semanticHashV1(semantic) };
-  return { fact_id: `fact:${planId}`, occurred_at: availableAt, record_json: { type: "approved_irrigation_plan_snapshot_v1", payload } };
-}
-
-function projectionMatrixRow(sourceName: string): JsonRecord {
-  const rows = matrix.rows.filter((row: JsonRecord) => row.source_name === sourceName);
-  assert.equal(rows.length, 1, sourceName);
-  return rows[0] as JsonRecord;
-}
-
-function projectionRow(sourceName: string, fact: Fact, object: CanonicalObject): JsonRecord {
-  const obligation = projectionMatrixRow(sourceName);
-  const context = { record_json: fact.record_json, facts: { fact_id: fact.fact_id } };
-  const row: JsonRecord = {};
-  for (const comparison of obligation.required_column_comparisons as JsonRecord[]) {
-    row[String(comparison.projection_column)] = readPath(context, String(comparison.canonical_path));
-  }
-  for (const column of obligation.available_projection_columns as string[]) {
-    if (column in row) continue;
-    if (column in object) row[column] = object[column];
-    else if (column in object.payload) row[column] = object.payload[column];
-    else row[column] = null;
-  }
-  return row;
-}
-
-function sqlType(column: string): string {
-  if (["logical_time", "as_of", "execution_start", "execution_end", "available_to_runtime_at", "decided_at"].includes(column)) return "timestamptz";
-  if (["canonical_payload", "target_scope", "member_object_ids", "member_determinism_hashes", "identity_basis"].includes(column)) return "jsonb";
-  if (column === "active_for_decision" || column.startsWith("eligible_") || column === "revoked") return "boolean";
-  if (column.endsWith("_count") || column === "event_rank") return "integer";
-  return "text";
-}
-
-async function createProjectionTable(client: PoolClient, sourceName: string): Promise<void> {
-  const obligation = projectionMatrixRow(sourceName);
-  const table = sourceName.replace(/^public\./, "");
-  const columns = [...new Set(obligation.available_projection_columns as string[])];
-  await client.query(`CREATE TABLE public.${table} (${columns.map((column) => `${column} ${sqlType(column)}`).join(",")})`);
-}
-
-async function insertProjection(client: PoolClient, sourceName: string, row: JsonRecord): Promise<void> {
-  const table = sourceName.replace(/^public\./, "");
-  const columns = Object.keys(row);
-  const values = columns.map((column) => sqlType(column) === "jsonb" && row[column] !== null ? JSON.stringify(row[column]) : row[column]);
-  await client.query(`INSERT INTO public.${table} (${columns.join(",")}) VALUES (${columns.map((_, index) => `$${index + 1}${sqlType(columns[index]) === "jsonb" ? "::jso²È="25±¥Œ¹Ñİ¥¹}…Ñ¥Ù•}±¥¹•…•}¥¹‘•á}ØÄY1UL Ä°È°Ì°Ğ°Ô°Ø°µ¥ÍÍ¥¹œµ±¥¹•…”œ°µ¥ÍÍ¥¹œµ±¥¹•…”œ¥€°=‰©•Ğ¹Ù…±Õ•Ì¡Í½Á”¤¤ìô(€€€€€™¥¹…±±äì±¥•¹Ğ¹É•±•…Í” ¤ìô(€€€€€…İ…¥Ğ…ÍÍ•ÉĞ¹É•©•ÑÌ  ¤€ôø…Á¤¹É•…‘IÕ¹Ñ¥µ”¡ìÍ½Á”ô¤°€½5Q}=AIQ%=91}A=%9QI}QIQ}5%MM%9¼¤ì(€€€€€…İ…¥ĞÁ½½°¹ÅÕ•Éä¡1QI=4ÁÕ‰±¥Œ¹Ñİ¥¹}…Ñ¥Ù•}±¥¹•…•}¥¹‘•á}ØÅ€¤ì(€€€ô¤ì((€€€½¹ÍĞÉ½½Ğ€ô…İ…¥ĞÍ••‘IÕ¹Ñ¥µ•I½½Ğ ¤ì((€€€…İ…¥Ğ¡•¬ ‰Y1%}I==Q}9}UII9Q}YM}1QMQ}M9I%=}MAIQ%=8ˆ°…Íå¹Œ€ ¤€ôøì(€€€€€½¹ÍĞÉÕ¹Ñ¥µ”€ô…İ…¥Ğ…Á¤¹É•…‘IÕ¹Ñ¥µ”¡ìÍ½Á”ô¤…Ì…¹äì(€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡ÉÕ¹Ñ¥µ”¹É½½Ñ}É…Á¡}ÍÑ…ÑÕÌ°€‰=5A1Q}aQ}IA ˆ¤ì(€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡ÉÕ¹Ñ¥µ”¹ÕÉÉ•¹Ñ}Ñ¥­}™½É•…ÍÑ}É•ÍÕ±Ğ¹½‰©•Ñ}É•˜°É½½Ğ¹ÕÉÉ•¹Ñ½É•…ÍĞ¹½‰©•Ñ}¥¤ì(€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡ÉÕ¹Ñ¥µ”¹ÕÉÉ•¹Ñ}Í•¹…É¥½}…ÑÑ…¡µ•¹Ğ¹…ÑÑ…¡µ•¹Ñ}ÍÑ…ÑÕÌ°€‰9=Q}QQ!}Q=}UII9Q}IU9Q%5}IA ˆ¤ì(€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡ÉÕ¹Ñ¥µ”¹±…Ñ•ÍÑ}Í•¹…É¥½}¥¹}Í½Á”¹¥Ñ•´¹½‰©•Ñ}É•˜°É½½Ğ¹½±‘M•¹…É¥¼¹½‰©•Ñ}¥¤ì(€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡ÉÕ¹Ñ¥µ”¹Í•¹…É¥½}Í½ÕÉ•}™½É•…ÍĞ¹¥Ñ•´¹½‰©•Ñ}É•˜°É½½Ğ¹½±‘½É•…ÍĞ¹½‰©•Ñ}¥¤ì(€€€€€™½È€¡½¹ÍĞÍÕµµ…Éä½˜mÉÕ¹Ñ¥µ”¹…Ñ¥½¹}™••‘‰…­}ÍÕµµ…Éä°ÉÕ¹Ñ¥µ”¹™½É•…ÍÑ}É•Í¥‘Õ…±}ÍÕµµ…Éä°ÉÕ¹Ñ¥µ”¹…±¥‰É…Ñ¥½¹}…¹‘¥‘…Ñ•}ÍÕµµ…Éä°ÉÕ¹Ñ¥µ”¹Í¡…‘½İ}•Ù…±Õ…Ñ¥½¹}ÍÕµµ…Éä°ÉÕ¹Ñ¥µ”¹µ½‘•±}…Ñ¥Ù…Ñ¥½¹}ÍÕµµ…Éåt¤ì(€€€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡ÍÕµµ…Éä¹½Õ¹Ñ}ÍÑ…ÑÕÌ°€‰9=Q}=5AUQˆ¤ì(€€€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡ÍÕµµ…Éä¹Ñ½Ñ…±}½Õ¹Ğ°¹Õ±°¤ì(€€€€€ô(€€€ô¤ì((€€€…İ…¥Ğ¡•¬ ‰Q%51%9}ME1}-eMQ}	e=9|ÈÀÅ}9}!1Q!}I=1Lˆ°…Íå¹Œ€ ¤€ôøì(€€€€€½¹ÍĞÍ¹…ÁÍ¡½ÑÌ€ô¹•ÜA½ÍÑÉ•Í¥•±‘Qİ¥¹M¹…ÁÍ¡½ÑI•Á½Í¥Ñ½ÉåXÄ¡Á½½°¤ì(€€€€€½¹ÍĞÉ•Á½Í¥Ñ½Éä€ô¹•ÜA½ÍÑÉ•Í¥•±‘Qİ¥¹AÉ½©•Ñ¥½¹I•…‘I•Á½Í¥Ñ½ÉåXÄ ¤ì(€€€€€…İ…¥ĞÍ¹…ÁÍ¡½ÑÌ¹İ¥Ñ¡I•…‘=¹±åI•ÅÕ•ÍÑM¹…ÁÍ¡½Ğ¡Í½Á”°…Íå¹Œ€¡½¹Ñ•áĞ¤€ôøì(€€€€€€€½¹ÍĞ™É½´€ôÍÑ…Ñ•ÍlÌÀÁt¹±½¥…±}Ñ¥µ”…ÌÍÑÉ¥¹œì(€€€€€€€½¹ÍĞÁ…”€ô…İ…¥ĞÉ•Á½Í¥Ñ½Éä¹É•…‘Q¥µ•±¥¹•Ù•¹ÑÌ¡½¹Ñ•áĞ°€ÄÄ°ì™É½µ}±½¥…±}Ñ¥µ”è™É½´°Õ¹Ñ¥±}±½¥…±}Ñ¥µ”è¹Õ±°ô°¹Õ±°¤ì(€€€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡Á…”¹±•¹Ñ °€ÄÄ¤ì(€€€€€€€…ÍÍ•ÉĞ¹½¬¡Á…”¹•Ù•Éä ¡•Ù•¹Ğ¤€ôø•Ù•¹Ğ¹±½¥…±}Ñ¥µ”€øô™É½´¤¤ì(€€€€€€€½¹ÍĞ…™Ñ•È€ô…İ…¥ĞÉ•Á½Í¥Ñ½Éä¹É•…‘Q¥µ•±¥¹•Ù•¹ÑÌ¡½¹Ñ•áĞ°€ÄÄ°ì™É½µ}±½¥…±}Ñ¥µ”è¹Õ±°°Õ¹Ñ¥±}±½¥…±}Ñ¥µ”è¹Õ±°ô°ì±½¥…±}Ñ¥µ”èÍÑ…Ñ•ÍlÌÀÁt¹±½¥…±}Ñ¥µ”…ÌÍÑÉ¥¹œ°•Ù•¹Ñ}É…¹¬è€ĞÀ°½‰©•Ñ}É•˜èÍÑ…Ñ•ÍlÌÀÁt¹½‰©•Ñ}¥ô¤ì(€€€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡…™Ñ•È¹±•¹Ñ °€ÄÄ¤ì(€€€€€€€…ÍÍ•ÉĞ¹½¬¡…™Ñ•ÉlÁt¹½‰©•Ñ}É•˜€øÍÑ…Ñ•ÍlÌÀÁt¹½‰©•Ñ}¥ñğ…™Ñ•ÉlÁt¹±½¥…±}Ñ¥µ”€øÍÑ…Ñ•ÍlÌÀÁt¹±½¥…±}Ñ¥µ”¤ì(€€€€€€€½¹ÍĞ¡•…±Ñ €ô…İ…¥ĞÉ•Á½Í¥Ñ½Éä¹É•…‘Q¥µ•±¥¹•Ù•¹ÑÌ¡½¹Ñ•áĞ°€ÈÀÄ°ì™É½µ}±½¥…±}Ñ¥µ”è¹½Ü ĞÀÀ¤°Õ¹Ñ¥±}±½¥…±}Ñ¥µ”è¹Õ±°ô°¹Õ±°¤ì(€€€€€€€½¹ÍĞÑ•Éµ¥¹…°€ô¡•…±Ñ ¹™¥¹ ¡•Ù•¹Ğ¤€ôø•Ù•¹Ğ¹½‰©•Ñ}É•˜€ôôôÉ½½Ğ¹Ñ•Éµ¥¹…±!•…±Ñ ¹½‰©•Ñ}¥¤„ì(€€€€€€€½¹ÍĞ½Á•É…Ñ¥½¹…°€ô¡•…±Ñ ¹™¥¹ ¡•Ù•¹Ğ¤€ôø•Ù•¹Ğ¹½‰©•Ñ}É•˜€ôôôÉ½½Ğ¹½Á•É…Ñ¥½¹…±!•…±Ñ ¹½‰©•Ñ}¥¤„ì(€€€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡Ñ•Éµ¥¹…°¹ÑÉ…¹Í…Ñ¥½¹}™…µ¥±ä°€‰}MQQ}Q%-}=55%Pˆ¤ì(€€€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡Ñ•Éµ¥¹…°¹¡•…±Ñ¡}É½±”°€‰QI5%91}I=I}MQ}55	Hˆ¤ì(€€€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡½Á•É…Ñ¥½¹…°¹ÑÉ…¹Í…Ñ¥½¹}™…µ¥±ä°€‰}=AIQ%=91}QQ5AQ}!1Q ˆ¤ì(€€€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡½Á•É…Ñ¥½¹…°¹¡•…±Ñ¡}É½±”°€‰=AIQ%=91}QQ5AQ}U%Pˆ¤ì(€€€€€ô¤ì(€€€ô¤ì((€€€…İ…¥Ğ¡•¬ ‰IA1e}A19}Q%51%9}9}aQ}=AQ%=91}QQ!59QLˆ°…Íå¹Œ€ ¤€ôøì(€€€€€…İ…¥ĞÍ••‘ÕÉÉ•¹ÑM•¹…É¥½•¥Í¥½¹A±…¹••‘‰…¬¡É½½Ğ¹ÕÉÉ•¹Ñ½É•…ÍĞ°É½½Ğ¹Á½ÍÑ•É¥½È¤ì(€€€€€½¹ÍĞÉÕ¹Ñ¥µ”€ô…İ…¥Ğ…Á¤¹É•…‘IÕ¹Ñ¥µ”¡ìÍ½Á”ô¤…Ì…¹äì(€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡ÉÕ¹Ñ¥µ”¹ÕÉÉ•¹Ñ}Í•¹…É¥½}…ÑÑ…¡µ•¹Ğ¹¥Ñ•´¹½‰©•Ñ}É•˜°€‰Í•¹…É¥¼µÕÉÉ•¹Ğˆ¤ì(€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡ÉÕ¹Ñ¥µ”¹ÕÉÉ•¹Ñ}¡Õµ…¹}‘•¥Í¥½¸¹¥Ñ•´¹½‰©•Ñ}É•˜°€‰‘•¥Í¥½¸µÕÉÉ•¹Ğˆ¤ì(€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡ÉÕ¹Ñ¥µ”¹ÕÉÉ•¹Ñ}…ÁÁÉ½Ù•‘}Á±…¸¹¥Ñ•´¹½‰©•Ñ}É•˜°€‰Á±…¸µÕÉÉ•¹Ğˆ¤ì(€€€€€½¹ÍĞ…Ñ¥½¹Ì€ô…İ…¥Ğ…Á¤¹É•…‘Ñ¥½¹1¥™•å±”¡ìÍ½Á”°±¥µ¥Ğè€ÈÀô¤…Ì…¹äì(€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡…Ñ¥½¹Ì¹¥Ñ•µÍlÁt¹½‰©•Ñ}É•˜°€‰™••‘‰…¬µÕÉÉ•¹Ğˆ¤ì(€€€€€½¹ÍĞÍ¹…ÁÍ¡½ÑÌ€ô¹•ÜA½ÍÑÉ•Í¥•±‘Qİ¥¹M¹…ÁÍ¡½ÑI•Á½Í¥Ñ½ÉåXÄ¡Á½½°¤ì(€€€€€½¹ÍĞÉ•Á½Í¥Ñ½Éä€ô¹•ÜA½ÍÑÉ•Í¥•±‘Qİ¥¹AÉ½©•Ñ¥½¹I•…‘I•Á½Í¥Ñ½ÉåXÄ ¤ì(€€€€€…İ…¥ĞÍ¹…ÁÍ¡½ÑÌ¹İ¥Ñ¡I•…‘=¹±åI•ÅÕ•ÍÑM¹…ÁÍ¡½Ğ¡Í½Á”°…Íå¹Œ€¡½¹Ñ•áĞ¤€ôøì(€€€€€€€½¹ÍĞÑ¥µ•±¥¹”€ô…İ…¥ĞÉ•Á½Í¥Ñ½Éä¹É•…‘Q¥µ•±¥¹•Ù•¹ÑÌ¡½¹Ñ•áĞ°€ÈÀÄ°ì™É½µ}±½¥…±}Ñ¥µ”è¹½Ü ĞÈÀ¤°Õ¹Ñ¥±}±½¥…±}Ñ¥µ”è¹Õ±°ô°¹Õ±°¤ì(€€€€€€€½¹ÍĞÁ±…¸€ôÑ¥µ•±¥¹”¹™¥¹ ¡•Ù•¹Ğ¤€ôø•Ù•¹Ğ¹•Ù•¹Ñ}­¥¹€ôôô€‰AAI=Y}A19}Y%9ˆ¤ì(€€€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡Á±…¸ü¹½‰©•Ñ}É•˜°€‰Á±…¸µÕÉÉ•¹Ğˆ¤ì(€€€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡Á±…¸ü¹½‰©•Ñ}ÑåÁ”°€‰…ÁÁÉ½Ù•‘}¥ÉÉ¥…Ñ¥½¹}Á±…¹}Í¹…ÁÍ¡½Ñ}ØÄˆ¤ì(€€€€€ô¤ì(€€€ô¤ì((€€€…İ…¥Ğ¡•¬ ‰5=1}=YI99}=5A=MI}IU9M}%9}A}M9AM!=Pˆ°…Íå¹Œ€ ¤€ôøì(€€€€€½¹ÍĞÁ…”€ô…İ…¥Ğ…Á¤¹É•…‘5½‘•±½Ù•É¹…¹”¡ìÍ½Á”°½±±•Ñ¥½¹}­¥¹è€‰1%	IQ%=9}9%Qˆ°±¥µ¥Ğè€ÈÀô¤…Ì…¹äì(€€€€€…ÍÍ•ÉĞ¹‘••ÁÅÕ…°¡Á…”¹¥Ñ•µÌ°mt¤ì(€€€ô¤ì((€€€…İ…¥Ğ¡•¬ ‰MQI%Q}A%1=Q}9}=55I%1}UQ!}%1}1=Mˆ°€ ¤€ôøì(€€€€€½¹ÍĞ½±€ôì•¹ØèÁÉ½•ÍÌ¹•¹Ø¹=a}IU9Q%5}9X°©Í½¸èÁÉ½•ÍÌ¹•¹Ø¹=a}Q=-9M})M=8°™¥±”èÁÉ½•ÍÌ¹•¹Ø¹=a}Q=-9M}%1°Ñ½­•¸èÁÉ½•ÍÌ¹•¹Ø¹=a}Q=-8ôì(€€€€€ÁÉ½•ÍÌ¹•¹Ø¹=a}IU9Q%5}9X€ô€‰Á¥±½Ğˆì(€€€€€‘•±•Ñ”ÁÉ½•ÍÌ¹•¹Ø¹=a}Q=-9M})M=8ì(€€€€€‘•±•Ñ”ÁÉ½•ÍÌ¹•¹Ø¹=a}Q=-9M}%1ì(€€€€€ÁÉ½•ÍÌ¹•¹Ø¹=a}Q=-8€ô€‰‘•Ù•±½Áµ•¹ĞµÑ½­•¸µµÕÍĞµ¹½Ğµİ½É¬ˆì(€€€€€½¹ÍĞÉ•ÅÕ•ÍĞ€ôì¡•…‘•ÉÌèì…ÕÑ¡½É¥é…Ñ¥½¸è€‰	•…É•È‘•Ù•±½Áµ•¹ĞµÑ½­•¸µµÕÍĞµ¹½Ğµİ½É¬ˆôô…Ì…¹äì(€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡…ÕÑ¡½É¥é•5™Ñ¥•±‘Qİ¥¹I•…‘XÄ¡É•ÅÕ•ÍĞ¤°¹Õ±°¤ì(€€€€€ÁÉ½•ÍÌ¹•¹Ø¹=a}Q=-9M})M=8€ô)M=8¹ÍÑÉ¥¹¥™ä¡ìÙ•ÉÍ¥½¸è€‰…½}…Ñ}Ñ½­•¹Í}ØÀˆ°Ñ½­•¹ÌèmìÑ½­•¸è€‰ÍÑÉ¥ĞµÑ½­•¸ˆ°Ñ½­•¹}¥è€‰ÍÑÉ¥Ğµ¥ˆ°…Ñ½É}¥è€‰…Ñ½Èˆ°€¸¸¹Í½Á”°Í½Á•Ìèl‰™¥•±‘Ì¹É•…‰t°É•Ù½­•è™…±Í”°É½±”è€‰Ù¥•İ•Èˆ°…±±½İ•‘}™¥•±‘}¥‘ÌèmÍ½Á”¹™¥•±‘}¥‘tõtô¤ì(€€€€€½¹ÍĞÍÑÉ¥ÑI•ÅÕ•ÍĞ€ôì¡•…‘•ÉÌèì…ÕÑ¡½É¥é…Ñ¥½¸è€‰	•…É•ÈÍÑÉ¥ĞµÑ½­•¸ˆôô…Ì…¹äì(€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡…ÕÑ¡½É¥é•5™Ñ¥•±‘Qİ¥¹I•…‘XÄ¡ÍÑÉ¥ÑI•ÅÕ•ÍĞ¤ü¹Ñ•¹…¹Ñ}¥°Í½Á”¹Ñ•¹…¹Ñ}¥¤ì(€€€€€¥˜€¡½±¹•¹Ø€ôôôÕ¹‘•™¥¹•¤‘•±•Ñ”ÁÉ½•ÍÌ¹•¹Ø¹=a}IU9Q%5}9Xì•±Í”ÁÉ½•ÍÌ¹•¹Ø¹=a}IU9Q%5}9X€ô½±¹•¹Øì(€€€€€¥˜€¡½±¹©Í½¸€ôôôÕ¹‘•™¥¹•¤‘•±•Ñ”ÁÉ½•ÍÌ¹•¹Ø¹=a}Q=-9M})M=8ì•±Í”ÁÉ½•ÍÌ¹•¹Ø¹=a}Q=-9M})M=8€ô½±¹©Í½¸ì(€€€€€¥˜€¡½±¹™¥±”€ôôôÕ¹‘•™¥¹•¤‘•±•Ñ”ÁÉ½•ÍÌ¹•¹Ø¹=a}Q=-9M}%1ì•±Í”ÁÉ½•ÍÌ¹•¹Ø¹=a}Q=-9M}%1€ô½±¹™¥±”ì(€€€€€¥˜€¡½±¹Ñ½­•¸€ôôôÕ¹‘•™¥¹•¤‘•±•Ñ”ÁÉ½•ÍÌ¹•¹Ø¹=a}Q=-8ì•±Í”ÁÉ½•ÍÌ¹•¹Ø¹=a}Q=-8€ô½±¹Ñ½­•¸ì(€€€ô¤ì((€€€…İ…¥Ğ¡•¬ ‰I}AQI}=M}9=Q}5UQQ}%aQUIˆ°…Íå¹Œ€ ¤€ôøì(€€€€€½¹ÍĞ‰•™½É”€ô9Õµ‰•È ¡…İ…¥ĞÁ½½°¹ÅÕ•Éäñì½Õ¹ĞèÍÑÉ¥¹œôø ‰M1P½Õ¹Ğ ¨¤èéÑ•áĞL½Õ¹ĞI=4ÁÕ‰±¥Œ¹™…ÑÌˆ¤¤¹É½İÍlÁt¹½Õ¹Ğ¤ì(€€€€€…İ…¥Ğ…Á¤¹É•…‘MÑ…Ñ•Ì¡ìÍ½Á”°±¥µ¥Ğè€ÄÀô¤ì(€€€€€…İ…¥Ğ…Á¤¹É•…‘IÕ¹Ñ¥µ”¡ìÍ½Á”ô¤ì(€€€€€½¹ÍĞ…™Ñ•È€ô9Õµ‰•È ¡…İ…¥ĞÁ½½°¹ÅÕ•Éäñì½Õ¹ĞèÍÑÉ¥¹œôø ‰M1P½Õ¹Ğ ¨¤èéÑ•áĞL½Õ¹ĞI=4ÁÕ‰±¥Œ¹™…ÑÌˆ¤¤¹É½İÍlÁt¹½Õ¹Ğ¤ì(€€€€€…ÍÍ•ÉĞ¹•ÅÕ…°¡…™Ñ•È°‰•™½É”¤ì(€€€€€½¹ÍĞÍ½ÕÉ”€ô™Ì¹É•…‘¥±•Må¹Œ¡Á…Ñ ¹©½¥¸¡I==P°€‰…ÁÁÌ½Í•ÉÙ•È½ÍÉŒ½É•Á½Í¥Ñ½É¥•Ì½™¥•±‘}Ñİ¥¹}É•…‘}µ½‘•°½Á½ÍÑÉ•Í}™¥•±‘}Ñİ¥¹}ÁÉ½©•Ñ¥½¹}É•…‘}É•Á½Í¥Ñ½Éå}ØÄ¹ÑÌˆ¤°€‰ÕÑ˜àˆ¤ì(€€€€€…ÍÍ•ÉĞ¹‘½•Í9½Ñ5…Ñ ¡Í½ÕÉ”°€½M1QqÌ­Á}…Ñ…±½p¹½Õ¹Ñp¡p©p¤½¤¤ì(€€€ô¤ì((€€€™Ì¹µ­‘¥ÉMå¹Œ¡Á…Ñ ¹‘¥É¹…µ”¡=UP¤°ìÉ•ÕÉÍ¥Ù”èÑÉÕ”ô¤ì(€€€™Ì¹İÉ¥Ñ•¥±•Må¹Œ¡=UP°)M=8¹ÍÑÉ¥¹¥™ä¡ìÍ¡•µ…}Ù•ÉÍ¥½¸è€‰µ™Ñ}…Á|Àİ}ÌÑ}Á½ÍÑÉ•Í}…Á¥}É•ÍÕ±Ñ}ØÄˆ°ÍÑ…ÑÕÌè€‰AMLˆ°¡•­}½Õ¹Ğè¡•­Ì¹±•¹Ñ °¡•­Ìô°¹Õ±°°€È¤€¬€‰q¸ˆ¤ì(€€€½¹Í½±”¹±½œ¡)M=8¹ÍÑÉ¥¹¥™ä¡ìÍÑ…ÑÕÌè€‰AMLˆ°¡•­}½Õ¹Ğè¡•­Ì¹±•¹Ñ ô¤¤ì(€ô…Ñ €¡•ÉÉ½È¤ì(€€€™Ì¹µ­‘¥ÉMå¹Œ¡Á…Ñ ¹‘¥É¹…µ”¡=UP¤°ìÉ•ÕÉÍ¥Ù”èÑÉÕ”ô¤ì(€€€™Ì¹İÉ¥Ñ•¥±•Må¹Œ¡=UP°)M=8¹ÍÑÉ¥¹¥™ä¡ìÍ¡•µ…}Ù•ÉÍ¥½¸è€‰µ™Ñ}…Á|Àİ}ÌÑ}Á½ÍÑÉ•Í}…Á¥}É•ÍÕ±Ñ}ØÄˆ°ÍÑ…ÑÕÌè€‰%0ˆ°¡•­}½Õ¹Ğè¡•­Ì¹±•¹Ñ °¡•­Ì°•ÉÉ½ÈèMÑÉ¥¹œ ¡•ÉÉ½È…ÌÉÉ½È¤ü¹ÍÑ…¬€üü•ÉÉ½È¤ô°¹Õ±°°€È¤€¬€‰q¸ˆ¤ì(€€€½¹Í½±”¹•ÉÉ½È¡•ÉÉ½È¤ì(€€€ÁÉ½•ÍÌ¹•á¥Ñ½‘”€ô€Äì(€ô™¥¹…±±äì(€€€…İ…¥ĞÁ½½°¹•¹ ¤ì(€ô)ô()Ù½¥µ…¥¸ ¤ì(
+void main();
