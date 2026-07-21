@@ -1,0 +1,19 @@
+name: mcft-cap-07-s4-file-snapshot-temp
+on:
+  pull_request:
+    paths: ['.github/workflows/mcft-cap-07-s4-file-snapshot-temp.yml']
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s4-projection-repository-source-${{ github.event.pull_request.head.sha }}
+          path: apps/server/src/repositories/field_twin_read_model/postgres_field_twin_projection_read_repository_v1.ts
+          retention-days: 1
