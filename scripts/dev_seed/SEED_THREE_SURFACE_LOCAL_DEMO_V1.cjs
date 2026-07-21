@@ -1,3 +1,18 @@
 #!/usr/bin/env node
-const chain = ['FIELD_DEMO','operator_scenario_recommendation_submission_v1','decision_recommendation_v1','approval_request_v1','operation_plan_v1','ao_act_task_v0','ao_act_receipt_v1','as_executed_record_v1','evidence_artifact_v1','acceptance_result_v1','roi_ledger_v1'];
-console.log(JSON.stringify({ ok: true, seed: 'THREE_SURFACE_LOCAL_DEMO_V1', mode: 'contract-placeholder', field_id: 'FIELD_DEMO', chain, note: 'Local demo seed command is wired; database-specific upserts are intentionally boundary-safe/read-only in this hotfix.' }, null, 2));
+// Compatibility entrypoint for the historical local-demo command.
+// The implementation is now a real, development-only MCFT-CAP-07 data loader rather than a contract placeholder.
+'use strict';
+
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
+
+const root = path.resolve(__dirname, '../..');
+const executable = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+const result = spawnSync(
+  executable,
+  ['exec', 'tsx', path.join(__dirname, 'seed_three_surface_local_demo_v1.ts'), ...process.argv.slice(2)],
+  { cwd: root, env: process.env, stdio: 'inherit' },
+);
+
+if (result.error) throw result.error;
+process.exit(result.status ?? 1);
