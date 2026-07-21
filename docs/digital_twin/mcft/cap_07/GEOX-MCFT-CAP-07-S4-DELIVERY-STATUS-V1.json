@@ -8,6 +8,7 @@
   "s4_candidate_implemented": true,
   "implementation_authorized": true,
   "implementation_authority_scope": "MCFT_CAP_07_S4_CANONICAL_GET_ONLY_RUNTIME_API_PHYSICAL_ROUTE_SPLIT_OPENAPI_AND_EXACT_READ_BOUNDARIES_ONLY",
+  "production_read_adapter_ownership_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-PRODUCTION-READ-ADAPTER-OWNERSHIP-V1.json",
   "effectiveness_condition": "PRESENT_ON_MAIN_AND_EXACT_SHA_ATTESTATION_PASS",
   "externally_effective": false,
   "predecessor_effective_evidence_requirement": {
@@ -37,7 +38,9 @@
     "current Scenario attachment separated from latest Scenario and validated against current Tick Forecast",
     "Timeline SQL pushes from inclusive, until exclusive, event-rank ordering and keyset boundary before LIMIT plus one",
     "Timeline Approved Plan events use Replay Evidence resolution and Runtime Health exposes exact A/F roles",
-    "terminal record-set and latest operational Runtime Health separation",
+    "terminal record-set and latest operational Runtime Health are independently readable inside one snapshot",
+    "Runtime Health exposes SAME_OBJECT LATEST_OPERATIONAL_IS_LATER TERMINAL_ONLY OPERATIONAL_ONLY and BOTH_ABSENT",
+    "S4 production root collection replay timeline and Health adapters have machine-verifiable ownership",
     "HMAC cursor validation before signed visibility continuation transaction",
     "strict pilot commercial staging and production token SSOT fail-closed behavior",
     "real PostgreSQL adapter acceptance over more than 201 Timeline events",
