@@ -1,0 +1,42 @@
+/* Purpose: style the GET-only MCFT-CAP-07 exact-scope navigator. */
+
+.operatorFieldRuntimeNavigator { display: grid; gap: 18px; padding: 20px; }
+.operatorFieldRuntimeNavigator__header,
+.operatorFieldRuntimeNavigator__panel { border: 1px solid #d8e4d1; border-radius: 18px; background: #fff; box-shadow: 0 14px 32px rgba(34,56,30,.08); }
+.operatorFieldRuntimeNavigator__header { display: grid; grid-template-columns: minmax(0,1fr) minmax(280px,420px); gap: 18px; padding: 22px; }
+.operatorFieldRuntimeNavigator__header h1,
+.operatorFieldRuntimeNavigator__panel h2 { margin: 0; color: #172016; }
+.operatorFieldRuntimeNavigator__header h1 { font-size: clamp(28px,4vw,42px); line-height: 1.05; }
+.operatorFieldRuntimeNavigator__header p,
+.operatorFieldRuntimeNavigator__panel p,
+.operatorFieldRuntimeNavigator__notice span,
+.operatorFieldRuntimeNavigator__target span,
+.operatorFieldRuntimeNavigator__boundary small { color: #526151; font-weight: 700; }
+.operatorFieldRuntimeNavigator__eyebrow,
+.operatorFieldRuntimeNavigator__form label > span,
+.operatorFieldRuntimeNavigator__badge { color: #526151; font-size: 12px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.operatorFieldRuntimeNavigator__boundary,
+.operatorFieldRuntimeNavigator__notice,
+.operatorFieldRuntimeNavigator__error,
+.operatorFieldRuntimeNavigator__target { display: grid; gap: 8px; padding: 14px; border: 1px solid #e4ebdd; border-radius: 14px; background: #f8faf5; }
+.operatorFieldRuntimeNavigator__boundary span,
+.operatorFieldRuntimeNavigator__target code,
+.operatorFieldRuntimeNavigator__notice code { overflow-wrap: anywhere; }
+.operatorFieldRuntimeNavigator__panel { display: grid; gap: 16px; padding: 18px; }
+.operatorFieldRuntimeNavigator__panelHeader,
+.operatorFieldRuntimeNavigator__target { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
+.operatorFieldRuntimeNavigator__panelHeader p { margin-bottom: 0; }
+.operatorFieldRuntimeNavigator__badge { display: inline-flex; align-items: center; min-height: 28px; padding: 4px 10px; border: 1px solid #b8c9ad; border-radius: 999px; background: #eef4e8; }
+.operatorFieldRuntimeNavigator__form { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+.operatorFieldRuntimeNavigator__form label { display: grid; gap: 7px; }
+.operatorFieldRuntimeNavigator__form select,
+.operatorFieldRuntimeNavigator__form input { min-width: 0; min-height: 44px; padding: 9px 11px; border: 1px solid #cfdac8; border-radius: 12px; background: #fff; color: #172016; font: inherit; }
+.operatorFieldRuntimeNavigator__form select:focus,
+.operatorFieldRuntimeNavigator__form input:focus { outline: 2px solid #9ec68b; outline-offset: 2px; }
+.operatorFieldRuntimeNavigator__target > div { display: grid; gap: 6px; min-width: 0; flex: 1 1 520px; }
+.operatorFieldRuntimeNavigator__target button { min-height: 42px; padding: 8px 14px; border: 1px solid #1d5d37; border-radius: 12px; background: #1d5d37; color: #fff; font-weight: 850; cursor: pointer; }
+.operatorFieldRuntimeNavigator__target button:disabled { border-color: #c8d1c4; background: #e8ece6; color: #7b8678; cursor: not-allowed; }
+.operatorFieldRuntimeNavigator__error { border-color: #e6b7b7; background: #fff7f7; color: #7b2525; }
+.operatorFieldRuntimeNavigator__nonclaims { background: #fbfcf8; }
+@media (max-width: 900px) { .operatorFieldRuntimeNavigator__header, .operatorFieldRuntimeNavigator__form { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .operatorFieldRuntimeNavigator { padding: 14px; } }
