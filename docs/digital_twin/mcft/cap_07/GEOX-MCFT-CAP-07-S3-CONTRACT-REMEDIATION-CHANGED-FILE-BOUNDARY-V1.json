@@ -1,0 +1,25 @@
+{
+  "schema_version": "geox_mcft_cap_07_s3_contract_remediation_changed_file_boundary_v1",
+  "record_status": "FROZEN_REMEDIATION_BOUNDARY",
+  "allowed_files": [
+    "apps/server/src/domain/field_twin_read_model/composer_contracts_v1.ts",
+    "apps/server/src/domain/field_twin_read_model/current_runtime_composer_v1.ts",
+    "apps/server/src/domain/field_twin_read_model/runtime_health_composer_v1.ts",
+    "apps/server/src/domain/field_twin_read_model/action_and_governance_composers_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S3_SUCCESSOR_REGRESSION.ts",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-CONTRACT-REMEDIATION-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-CONTRACT-REMEDIATION-NONCLAIMS-V1.md",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-CONTRACT-REMEDIATION-CHANGED-FILE-BOUNDARY-V1.json"
+  ],
+  "forbidden": [
+    "candidate authority registry modification",
+    "delivery status transition",
+    "resolved manifest current-slice modification",
+    "database repository or SQL",
+    "route or OpenAPI",
+    "migration",
+    "frontend",
+    "canonical or projection writer",
+    "S4 effectiveness or S5 authorization"
+  ]
+}
