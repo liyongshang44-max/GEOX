@@ -72,7 +72,7 @@ async function main(): Promise<void> {
       assert.equal(operationalOnly.health_relationship, "OPERATIONAL_ONLY");
       assert.equal(operationalOnly.terminal_record_set_health, null);
       assert.equal(operationalOnly.latest_operational_runtime_health.object_ref, "health-f");
-      assert.equal(operationalOnly.operational_role_resolution.transaction_family, "F_OPERATIONAL_ATTEMPT_HEALTH");
+      assert.ok(operationalOnly.health_role_resolutions.some((resolution: any) => resolution.transaction_family === "F_OPERATIONAL_ATTEMPT_HEALTH" && resolution.health_role === "OPERATIONAL_ATTEMPT_AUDIT"));
     });
 
     await pool.query(
