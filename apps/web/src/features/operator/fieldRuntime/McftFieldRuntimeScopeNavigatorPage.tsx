@@ -1,9 +1,9 @@
-// Purpose: discover an exact local/operator Field Runtime scope through existing GET-only field read APIs.
+// Purpose: discover an exact local/operator Field Runtime scope through authenticated GET-only field scope APIs.
 // Boundary: navigation only; no field creation, canonical write, recommendation, approval, dispatch, activation, or persistence.
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchFieldDetail, fetchFields } from "../../../api/fields";
+import { fetchFieldRuntimeScopeOptions, fetchFields } from "../../../api/fields";
 import { useLocale } from "../../../lib/locale";
 import "../../../styles/operatorFieldRuntimeNavigator.css";
 
@@ -63,6 +63,7 @@ export default function McftFieldRuntimeScopeNavigatorPage(): React.ReactElement
   React.useEffect(() => {
     let active = true;
     setFieldStatus("loading");
+    setErrorText("");
     void fetchFields().then((rows) => {
       if (!active) return;
       const next = normalizedFields(rows);
@@ -82,15 +83,16 @@ export default function McftFieldRuntimeScopeNavigatorPage(): React.ReactElement
     let active = true;
     setSeasons([]);
     setSelectedSeasonId("");
+    setErrorText("");
     if (!selectedFieldId) {
       setSeasonStatus("idle");
       return () => { active = false; };
     }
     if (selectedFieldId === GOVERNED_C8_SCOPE.field_id) setZoneId(GOVERNED_C8_SCOPE.zone_id);
     setSeasonStatus("loading");
-    void fetchFieldDetail(selectedFieldId).then((detail) => {
+    void fetchFieldRuntimeScopeOptions(selectedFieldId).then((options) => {
       if (!active) return;
-      const next = normalizedSeasons(detail && typeof detail === "object" ? (detail as Record<string, unknown>).seasons : []);
+      const next = normalizedSeasons(options.seasons);
       setSeasons(next);
       const governed = next.find((item) => item.season_id === GOVERNED_C8_SCOPE.season_id);
       setSelectedSeasonId(governed?.season_id || next[0]?.season_id || "");
@@ -127,7 +129,7 @@ export default function McftFieldRuntimeScopeNavigatorPage(): React.ReactElement
         <div className="operatorFieldRuntimeNavigator__panelHeader">
           <div>
             <h2>{english ? "Exact scope navigator" : "精确范围导航"}</h2>
-            <p>{english ? "Fields and seasons come from existing authenticated GET APIs. Zone remains explicit because no authoritative zone-list API exists." : "地块和季节来自现有认证 GET API；由于当前没有权威分区列表 API，zone_id 必须显式确认。"}</p>
+            <p>{english ? "Fields and seasons come from authenticated lightweight GET APIs. Zone remains explicit because no authoritative zone-list API exists." : "地块和季节来自认证的轻量 GET API；由于当前没有权威分区列表 API，zone_id 必须显式确认。"}</p>
           </div>
           <span className="operatorFieldRuntimeNavigator__badge">GET ONLY</span>
         </div>
