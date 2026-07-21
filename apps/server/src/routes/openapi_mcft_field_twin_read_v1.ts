@@ -101,7 +101,16 @@ export const MCFT_FIELD_TWIN_OPENAPI_SCHEMAS_V1 = {
   McftFieldTwinHealthResponseV1: {
     type: "object", additionalProperties: true,
     required: ["schema_version", "request_scope", "response_started_at", "terminal_record_set_health", "latest_operational_runtime_health", "health_relationship", "health_content_hash", "response_instance_hash"],
-    properties: { schema_version: { const: "field_twin_runtime_health_read_model_v1" }, request_scope: scopeSchema, response_started_at: instantSchema, terminal_record_set_health: canonicalRefSchema, latest_operational_runtime_health: { anyOf: [canonicalRefSchema, { type: "null" }] }, health_relationship: { enum: ["SAME_OBJECT", "DISTINCT_OBJECTS", "ONE_OR_BOTH_ABSENT"] }, health_content_hash: hashSchema, response_instance_hash: hashSchema },
+    properties: {
+      schema_version: { const: "field_twin_runtime_health_read_model_v1" },
+      request_scope: scopeSchema,
+      response_started_at: instantSchema,
+      terminal_record_set_health: { anyOf: [canonicalRefSchema, { type: "null" }] },
+      latest_operational_runtime_health: { anyOf: [canonicalRefSchema, { type: "null" }] },
+      health_relationship: { enum: ["SAME_OBJECT", "LATEST_OPERATIONAL_IS_LATER", "TERMINAL_ONLY", "OPERATIONAL_ONLY", "BOTH_ABSENT"] },
+      health_content_hash: hashSchema,
+      response_instance_hash: hashSchema,
+    },
   },
 } as const;
 
@@ -114,7 +123,7 @@ export const MCFT_FIELD_TWIN_OPENAPI_PATHS_V1 = {
   "/api/v1/operator/twin/fields/{field_id}/runtime/scenarios": { get: operation("getMcftFieldTwinScenariosV1", "Read bounded validated Field Twin scenario collection", "McftFieldTwinCollectionPageV1", cursorParameters) },
   "/api/v1/operator/twin/fields/{field_id}/runtime/residuals": { get: operation("getMcftFieldTwinResidualsV1", "Read bounded validated Field Twin residual collection", "McftFieldTwinCollectionPageV1", cursorParameters) },
   "/api/v1/operator/twin/fields/{field_id}/runtime/action-lifecycle": { get: operation("getMcftFieldTwinActionLifecycleV1", "Read bounded validated Field Twin action-feedback collection", "McftFieldTwinCollectionPageV1", cursorParameters) },
-  "/api/v1/operator/twin/fields/{field_id}/runtime/model-governance": { get: operation("getMcftFieldTwinModelGovernanceV1", "Read one bounded validated model-governance collection", "McftFieldTwinCollectionPageV1", [...cursorParameters, { name: "collection_kind", in: "query", required: true, schema: { enum: ["CALIBRATION_CANDIDATE", "SHADOW_EVALUATION", "MODEL_ACTIVATION"] } }]) },
+  "/api/v1/operator/twin/fields/{field_id}/runtime/model-governance": { get: operation("getMcftFieldTwinModelGovernanceV1", "Read one bounded validated model-governance collection", "McftFieldTwinCollectionPageV1", [...cursorParameters, { name: "collection_kind", in: "query", required: false, description: "Required on the first page; optional when an authenticated cursor carries the exact collection kind.", schema: { enum: ["CALIBRATION_CANDIDATE", "SHADOW_EVALUATION", "MODEL_ACTIVATION"] } }]) },
   "/api/v1/operator/twin/fields/{field_id}/runtime/health": { get: operation("getMcftFieldTwinHealthV1", "Read terminal record-set and latest operational Runtime Health", "McftFieldTwinHealthResponseV1") },
 } as const;
 
