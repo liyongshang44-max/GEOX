@@ -413,20 +413,29 @@ export class PostgresFieldTwinReadRepositoryV1 {
   private async readValidatedProjectionItems(context: PostgresFieldTwinSnapshotContextV1, spec: McftCollectionSourceSpecV1, limitPlusOne: number, boundary: { logical_time: string; object_ref: string } | null): Promise<readonly FieldTwinCollectionItemV1[]> {
     if (!spec.relation_name || !spec.object_id_column) fail("MCFT_COLLECTION_KIND_INVALID", spec.collection_kind);
     await assertRelation(context.client, spec.relation_name);
-    const params: unknown[] = [...scopeValues(context.scope)];
+    const params: unknown[] = [
+      context.canonical_visibility_snapshot.database_visibility_epoch_id,
+      context.canonical_visibility_snapshot.pg_snapshot_token,
+      ...scopeValues(context.scope),
+    ];
     let boundarySql = "";
     if (boundary) {
       params.push(boundary.logical_time, boundary.object_ref);
-      boundarySql = ` AND (logical_time < $7::timestamptz OR (logical_time = $7::timestamptz AND ${spec.object_id_column} > $8))`;
+      boundarySql = ` AND (source_row.logical_time < $9::timestamptz OR (source_row.logical_time = $9::timestamptz AND source_row.${spec.object_id_column} > $10))`;
     }
     params.push(limitPlusOne);
     const limitIndex = params.length;
-    const result = await context.client.query<{ row_json: JsonRecord }>(
-      `SELECT to_jsonb(source_row) AS row_json
+    const result = await context.client.query<{ row_json: JsonRecord; fact_id: string; record_json: unknown }>(
+      `SELECT to_jsonb(source_row) AS row_json, f.fact_id, f.record_json
          FROM ${spec.relation_name} AS source_row
-        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
+         JOIN public.facts AS f ON f.fact_id = source_row.source_fact_id
+         JOIN public.twin_fact_visibility_index_v1 AS visibility ON visibility.fact_id = f.fact_id
+        WHERE visibility.visibility_epoch_id = $1
+          AND pg_catalog.pg_visible_in_snapshot(visibility.visibility_anchor_xid8, $2::pg_snapshot)
+          AND source_row.tenant_id=$3 AND source_row.project_id=$4 AND source_row.group_id=$5
+          AND source_row.field_id=$6 AND source_row.season_id=$7 AND source_row.zone_id=$8
           ${boundarySql}
-        ORDER BY logical_time DESC, ${spec.object_id_column} ASC
+        ORDER BY source_row.logical_time DESC, source_row.${spec.object_id_column} ASC
         LIMIT $${limitIndex}`,
       params,
     );
@@ -436,7 +445,9 @@ export class PostgresFieldTwinReadRepositoryV1 {
       const row = normalizeProjectionValue(rawRow.row_json) as JsonRecord;
       const objectRef = exactText(row[spec.object_id_column], `${obligation.failure_code}:IDENTITY`);
       const sourceFactId = exactText(row.source_fact_id, `${obligation.failure_code}:SOURCE_FACT`);
-      const fact = await this.requireVisibleObject(context, objectRef, spec.expected_object_type);
+      const fact = parseVisibleFactRow(rawRow, context.scope);
+      if (fact.object.object_id !== objectRef) fail(obligation.failure_code, "OBJECT_REF");
+      if (fact.object.object_type !== spec.expected_object_type) fail("MCFT_CANONICAL_OBJECT_TYPE_MISMATCH", `${objectRef}:${spec.expected_object_type}:${fact.object.object_type}`);
       if (fact.fact_id !== sourceFactId) fail(obligation.failure_code, "SOURCE_FACT_ID");
       this.projectionValidator.validate({ obligation, projection_row: row, canonical_context: { record_json: fact.record_json, facts: { fact_id: fact.fact_id } } });
       items.push({ object_ref: fact.object.object_id, object_type: fact.object.object_type, object_hash: fact.object.determinism_hash as SemanticHashTextV1, logical_time: normalizeInstant(fact.object.logical_time, "MCFT_COLLECTION_LOGICAL_TIME_INVALID"), attachment_status: "ATTACHED_EXACT" });
