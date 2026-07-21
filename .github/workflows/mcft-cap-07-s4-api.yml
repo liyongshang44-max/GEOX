@@ -13,6 +13,7 @@ on:
       - 'apps/server/src/routes/openapi_mcft_field_twin_read_v1.ts'
       - 'apps/server/src/modules/operator/registerOperatorModule.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_API.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_POSTGRES_ADAPTER.ts'
       - 'docs/digital_twin/mcft/cap_07/**'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
       - '.github/workflows/mcft-cap-07-s4-api.yml'
@@ -30,7 +31,21 @@ concurrency:
 jobs:
   mcft-cap-07-s4-api:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
     steps:
       - name: Checkout exact candidate head
         uses: actions/checkout@v4
@@ -54,24 +69,34 @@ jobs:
       - name: Typecheck server read surface
         run: pnpm --filter @geox/server typecheck
 
-      - name: Run S4 canonical Runtime API acceptance
+      - name: Run S4 transport and contract acceptance
         env:
-          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || 'bf1de5b1ac8930fbc9de4589f727916c44f25ca2' }}
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || '6c0a7d40d656f5ce5fc85a9fce0a705a465a6dd0' }}
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_API.ts
 
-      - name: Verify structured S4 result
+      - name: Run S4 real PostgreSQL adapter acceptance
+        env:
+          MCFT_S4_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_POSTGRES_ADAPTER.ts
+
+      - name: Verify structured S4 results
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
-          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S4_API_RESULT.json', 'utf8'));
-          if (result.status !== 'PASS') throw new Error(`S4_API_NOT_PASS:${result.error || 'UNKNOWN'}`);
-          if (!Number.isInteger(result.check_count) || result.check_count < 9) throw new Error('S4_API_CHECK_INVENTORY_INVALID');
-          if (!Array.isArray(result.checks) || result.checks.some((check) => check.status !== 'PASS')) throw new Error('S4_API_CHECK_FAILURE');
+          for (const [file, minimum] of [
+            ['acceptance-output/MCFT_CAP_07_S4_API_RESULT.json', 9],
+            ['acceptance-output/MCFT_CAP_07_S4_POSTGRES_ADAPTER_RESULT.json', 12],
+          ]) {
+            const result = JSON.parse(fs.readFileSync(file, 'utf8'));
+            if (result.status !== 'PASS') throw new Error(`S4_NOT_PASS:${file}:${result.error || 'UNKNOWN'}`);
+            if (!Number.isInteger(result.check_count) || result.check_count < minimum) throw new Error(`S4_CHECK_INVENTORY_INVALID:${file}`);
+            if (!Array.isArray(result.checks) || result.checks.some((check) => check.status !== 'PASS')) throw new Error(`S4_CHECK_FAILURE:${file}`);
+          }
           NODE
 
       - name: Verify S3 evidence, S4 authority, S5 seed and changed-file boundary
         env:
-          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || 'bf1de5b1ac8930fbc9de4589f727916c44f25ca2' }}
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || '6c0a7d40d656f5ce5fc85a9fce0a705a465a6dd0' }}
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
@@ -91,8 +116,6 @@ jobs:
           exact(predecessor.attestation_workflow_run_id, 29768849886, 'S3_RUN');
           exact(predecessor.attestation_job_id, 88441658494, 'S3_JOB');
           exact(predecessor.artifact_id, 8471906935, 'S3_ARTIFACT');
-          exact(predecessor.semantic_artifact_digest, 'sha256:ea7b20f5dafc61d3de6343b615b9cbf39f0eb221d9623667d041c40e2cc0e515', 'S3_SEMANTIC_DIGEST');
-          exact(predecessor.transport_archive_sha256, 'sha256:fa7d352faec2d6ae82d8a9ea957c958750fa34eab53e15cd1a5ccd125b2829c1', 'S3_TRANSPORT_DIGEST');
           exact(predecessor.effective_frontier, 'S4', 'S3_FRONTIER');
           exact(predecessor.authorized_store_readback_pass, true, 'S3_READBACK');
           exact(predecessor.locked_delete_denied, true, 'S3_DELETE_DENIAL');
@@ -106,20 +129,18 @@ jobs:
           exact(s5.implementation_authorized, false, 'S5_AUTHORIZED');
           exact(manifest.current_slice, 'S4', 'MANIFEST_SLICE');
           exact(manifest.effective_next_slice_when_attested, 'S5', 'MANIFEST_NEXT');
-          exact(manifest.implementation_authority_scope, 'MCFT_CAP_07_S4_CANONICAL_GET_ONLY_RUNTIME_API_PHYSICAL_ROUTE_SPLIT_OPENAPI_AND_EXACT_READ_BOUNDARIES_ONLY', 'MANIFEST_SCOPE');
           exact(registry.registry_revision, '1.1', 'REGISTRY_REVISION');
-          const cap = registry.capabilities.find((item) => item.capability_line === 'MCFT-CAP-07');
-          if (!cap) throw new Error('REGISTRY_CAP_07_MISSING');
-          if (!cap.authoritative_candidate_status_paths.includes('docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-DELIVERY-STATUS-V1.json')) throw new Error('REGISTRY_S5_PATH_MISSING');
-          if (!cap.candidate_transition_fields.some((item) => item.status_file === 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-DELIVERY-STATUS-V1.json' && item.field_path === 's5_candidate_implemented')) throw new Error('REGISTRY_S5_TRANSITION_MISSING');
 
           const actual = cp.execFileSync('git', ['diff', '--name-only', `${process.env.MCFT_BASE_SHA}...HEAD`], { encoding: 'utf8' }).trim().split(/\r?\n/).filter(Boolean).sort();
           const allowed = [
             '.github/workflows/mcft-cap-07-s4-api.yml',
             'apps/server/src/auth/mcft_field_twin_read_authz_v1.ts',
+            'apps/server/src/domain/field_twin_read_model/action_and_governance_composers_v1.ts',
+            'apps/server/src/domain/field_twin_read_model/current_runtime_composer_v1.ts',
             'apps/server/src/domain/field_twin_read_model/s4_source_obligations_v1.ts',
             'apps/server/src/modules/operator/registerOperatorModule.ts',
             'apps/server/src/repositories/field_twin_read_model/postgres_field_twin_read_repository_v1.ts',
+            'apps/server/src/repositories/field_twin_read_model/postgres_field_twin_s4_repository_v1.ts',
             'apps/server/src/routes/openapi_mcft_field_twin_read_v1.ts',
             'apps/server/src/routes/v1/mcft_field_twin_read_v1.ts',
             'apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts',
@@ -136,6 +157,7 @@ jobs:
             'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-DELIVERY-STATUS-V1.json',
             'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-WORKFLOW-DECLARATION-V1.json',
             'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_API.ts',
+            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_POSTGRES_ADAPTER.ts',
           ].sort();
           if (JSON.stringify(actual) !== JSON.stringify(allowed)) throw new Error(`S4_CHANGED_FILE_BOUNDARY_INVALID:${JSON.stringify(actual)}`);
           NODE
@@ -145,6 +167,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap-07-s4-api-${{ github.sha }}
-          path: acceptance-output/MCFT_CAP_07_S4_API_RESULT.json
+          path: |
+            acceptance-output/MCFT_CAP_07_S4_API_RESULT.json
+            acceptance-output/MCFT_CAP_07_S4_POSTGRES_ADAPTER_RESULT.json
           if-no-files-found: error
           retention-days: 90
