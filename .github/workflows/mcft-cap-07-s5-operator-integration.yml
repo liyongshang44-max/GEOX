@@ -127,6 +127,36 @@ jobs:
         if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
         run: pnpm --filter @geox/server build
 
+      - name: Apply commercial PostgreSQL init baseline
+        if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
+        env:
+          INIT_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          node --input-type=module - <<'NODE' 2>&1 | tee acceptance-output/MCFT_CAP_07_COMMERCIAL_INIT_BASELINE.log
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import pg from 'pg';
+          const { Client } = pg;
+          const directory = path.resolve('docker/postgres/init');
+          const files = fs.readdirSync(directory).filter((name) => name.endsWith('.sql')).sort();
+          if (files.length === 0) throw new Error('COMMERCIAL_INIT_SQL_MISSING');
+          const client = new Client({ connectionString: process.env.INIT_DATABASE_URL });
+          await client.connect();
+          try {
+            for (const name of files) {
+              const sql = fs.readFileSync(path.join(directory, name), 'utf8').replace(/^\uFEFF/, '');
+              if (!sql.trim()) continue;
+              await client.query(sql);
+              console.log(JSON.stringify({ applied: name }));
+            }
+          } finally {
+            await client.end();
+          }
+          console.log(JSON.stringify({ status: 'PASS', sql_file_count: files.length }));
+          NODE
+
       - name: Initialize product schema and CAP-07 visibility contract
         if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
         env:
