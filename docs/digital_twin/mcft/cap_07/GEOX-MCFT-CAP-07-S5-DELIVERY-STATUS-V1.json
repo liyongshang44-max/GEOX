@@ -1,0 +1,42 @@
+{
+  "schema_version": "geox_mcft_cap_07_s5_delivery_status_v1",
+  "capability_line_id": "MCFT-CAP-07",
+  "slice_id": "MCFT-CAP-07.S5",
+  "taskbook_version": "v0.2.5",
+  "record_status": "PRE_REGISTERED_SUCCESSOR_SEED",
+  "delivery_state": "SEEDED_NOT_AUTHORIZED",
+  "s5_candidate_implemented": false,
+  "implementation_authorized": false,
+  "effectiveness_condition": null,
+  "predecessor_effective_evidence_requirement": "S4 exact merge-SHA artifact PASS with effective_next_slice S5",
+  "candidate_field": "s5_candidate_implemented",
+  "candidate_value": true,
+  "focused_workflow": "mcft-cap-07-s5-operator-integration",
+  "standard_workflow": "ci",
+  "implementation_authority_scope_when_effective": "MCFT_CAP_07_S5_OPERATOR_CANONICAL_READ_INTEGRATION_ONLY",
+  "allowed_deliverable_categories": [
+    "operator canonical Runtime API client",
+    "Overview State Forecast Scenario Action Lifecycle Residual Calibration Evidence Trace Health tabs",
+    "root attachment status and reason-code presentation",
+    "current tick latest successful and scenario-source forecast distinction",
+    "terminal and latest operational health distinction",
+    "operator integration acceptance and governance evidence"
+  ],
+  "forbidden_until_effective": [
+    "legacy truth fallback",
+    "numeric confidence fabrication",
+    "field-only scope degradation",
+    "route or database writes",
+    "recommendation approval AO-ACT dispatch or activation mutation",
+    "canonical write authority",
+    "MCFT-CAP-08 authorization"
+  ],
+  "runtime_authority_delta": "OPERATOR_READ_CONSUMPTION_ONLY_WHEN_AUTHORIZED",
+  "canonical_write_authority_delta": "ZERO",
+  "successor_registry_bootstrap": "S6 by S5 PR only",
+  "merge_commit": null,
+  "workflow_run_id": null,
+  "job_id": null,
+  "artifact_id": null,
+  "verified_at": null
+}
