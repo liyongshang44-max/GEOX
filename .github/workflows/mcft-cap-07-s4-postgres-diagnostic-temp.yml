@@ -1,0 +1,60 @@
+name: mcft-cap-07-s4-postgres-diagnostic-temp
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-07-s4-postgres-diagnostic-temp.yml'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_POSTGRES_API.ts'
+      - 'apps/server/src/**'
+permissions:
+  contents: read
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Capture PostgreSQL acceptance
+        shell: bash
+        env:
+          MCFT_S4_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+        run: |
+          set +e
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_POSTGRES_API.ts > s4-postgres.log 2>&1
+          rc=$?
+          echo "$rc" > s4-postgres.exit
+          cat s4-postgres.log
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s4-postgres-diagnostic-${{ github.event.pull_request.head.sha }}
+          path: |
+            s4-postgres.log
+            s4-postgres.exit
+            acceptance-output/MCFT_CAP_07_S4_POSTGRES_API_RESULT.json
+          if-no-files-found: warn
+          retention-days: 1
