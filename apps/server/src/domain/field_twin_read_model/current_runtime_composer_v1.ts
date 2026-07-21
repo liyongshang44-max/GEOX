@@ -16,7 +16,6 @@ import { FIELD_TWIN_READ_MODEL_VERSION_V1, FIELD_TWIN_SOURCE_PROFILE_VERSION_V1 
 import { buildAttachmentContentHashV1, buildResponseInstanceHashV1, buildRootGraphContentHashV1 } from "./hash_contracts_v1.js";
 import {
   assertComposerObjectV1,
-  assertScopeExactForComposerV1,
   canonicalObjectRefV1,
   composerFailV1,
   normalizeComposerLimitationsV1,
@@ -76,14 +75,19 @@ function assertAttachmentContractV1(attachment: FieldTwinCollectionAttachmentV1<
 
 function assertSummaryOnlyV1(summary: FieldTwinOptionalCollectionSummaryV1, expectedEndpoint: string): void {
   if (summary.collection_endpoint !== expectedEndpoint) composerFailV1("MCFT_RUNTIME_COLLECTION_SUMMARY_INVALID", expectedEndpoint);
-  if (summary.count_status !== "EXACT_VALIDATED_PROJECTION" || summary.total_count === null || summary.total_count < 0) {
+  if (summary.count_status === "NOT_COMPUTED") {
+    if (summary.total_count !== null) composerFailV1("MCFT_RUNTIME_COLLECTION_CARDINALITY_INVALID", summary.collection_kind);
+  } else if (summary.count_status === "EXACT_VALIDATED_PROJECTION") {
+    if (summary.total_count === null || summary.total_count < 0 || summary.has_items !== (summary.total_count > 0)) {
+      composerFailV1("MCFT_RUNTIME_COLLECTION_CARDINALITY_INVALID", summary.collection_kind);
+    }
+  } else {
     composerFailV1("MCFT_RUNTIME_COLLECTION_CARDINALITY_INVALID", summary.collection_kind);
   }
-  if (summary.has_items !== (summary.total_count > 0)) composerFailV1("MCFT_RUNTIME_COLLECTION_CARDINALITY_INVALID", summary.collection_kind);
-  if (summary.has_items && (!summary.latest_item_ref || !summary.latest_item_hash || summary.attachment_status !== "ATTACHED_EXACT")) {
+  if (summary.has_items && (!summary.latest_item_ref || !summary.latest_item_hash || summary.attachment_status !== "ATTACHED_EXACT" || summary.reason_code !== null)) {
     composerFailV1("MCFT_RUNTIME_COLLECTION_SUMMARY_INVALID", summary.collection_kind);
   }
-  if (!summary.has_items && (summary.latest_item_ref !== null || summary.latest_item_hash !== null || !summary.reason_code)) {
+  if (!summary.has_items && (summary.latest_item_ref !== null || summary.latest_item_hash !== null || !summary.reason_code || summary.attachment_status !== "ABSENT_OPTIONAL_DOMAIN")) {
     composerFailV1("MCFT_RUNTIME_COLLECTION_SUMMARY_INVALID", summary.collection_kind);
   }
 }
@@ -120,8 +124,11 @@ export class CurrentRuntimeComposerV1 {
         input.current_tick_forecast_result.object_hash !== input.latest_successful_forecast.item.object_hash) {
       composerFailV1("MCFT_FORECAST_POINTER_HASH_DIVERGENCE", "CURRENT_VS_LATEST_SUCCESS");
     }
-    if (input.scenario_source_forecast.item && input.current_scenario_attachment.item === null) {
-      composerFailV1("MCFT_SCENARIO_FORECAST_POINTER_INVALID", "SOURCE_WITHOUT_SCENARIO");
+    if (input.scenario_source_forecast.item && input.latest_scenario_in_scope.item === null) {
+      composerFailV1("MCFT_SCENARIO_FORECAST_POINTER_INVALID", "SOURCE_WITHOUT_LATEST_SCENARIO");
+    }
+    if (input.current_scenario_attachment.item && (!input.scenario_source_forecast.item || !input.current_tick_forecast_result || input.scenario_source_forecast.item.object_ref !== input.current_tick_forecast_result.object_ref || input.scenario_source_forecast.item.object_hash !== input.current_tick_forecast_result.object_hash)) {
+      composerFailV1("MCFT_SCENARIO_FORECAST_POINTER_INVALID", "CURRENT_SCENARIO_SOURCE_NOT_CURRENT_TICK_FORECAST");
     }
 
     assertSummaryOnlyV1(input.action_feedback_summary, "/action-lifecycle");
