@@ -11,9 +11,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
           persist-credentials: false
+      - run: git rev-parse HEAD^{tree} > current-tree-sha.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: s4-projection-repository-source-${{ github.event.pull_request.head.sha }}
-          path: apps/server/src/repositories/field_twin_read_model/postgres_field_twin_projection_read_repository_v1.ts
+          name: s4-current-tree-${{ github.event.pull_request.head.sha }}
+          path: current-tree-sha.txt
           retention-days: 1
