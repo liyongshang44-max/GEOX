@@ -26,6 +26,7 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_REPOSITORY.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S3_COMPOSERS.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_API.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_POSTGRES_ADAPTER.ts \
             docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-TASK.md \
             docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-SOURCE-VALIDATION-MATRIX-V1.json \
             docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-HARD-ACCEPTANCE-LEDGER-V1.json
