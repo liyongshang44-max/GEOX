@@ -479,21 +479,6 @@ export class PostgresFieldTwinReadRepositoryV1 {
     return spec.source_kind === "CANONICAL_AGGREGATE_PROJECTION" ? this.readValidatedProjectionItems(context, spec, limitPlusOne, boundary) : this.readDirectCanonicalItems(context, spec, limitPlusOne, boundary);
   }
 
-  async readCollectionSummary(context: PostgresFieldTwinSnapshotContextV1, spec: McftCollectionSourceSpecV1): Promise<{ total_count: number; latest_item: FieldTwinCollectionItemV1 | null }> {
-    const items = await this.readCollectionItems(context, spec, 2, null);
-    let totalCount = 0;
-    if (spec.source_kind === "CANONICAL_AGGREGATE_PROJECTION") {
-      if (!spec.relation_name) fail("MCFT_COLLECTION_KIND_INVALID");
-      const result = await context.client.query<{ count: string }>(`SELECT pg_catalog.count(*)::text AS count FROM ${spec.relation_name} WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6`, scopeValues(context.scope));
-      totalCount = Number(result.rows[0]?.count ?? 0);
-    } else {
-      const result = await context.client.query<{ count: string }>(`SELECT pg_catalog.count(*)::text AS count FROM public.facts AS f JOIN public.twin_fact_visibility_index_v1 AS visibility ON visibility.fact_id=f.fact_id WHERE visibility.visibility_epoch_id=$1 AND pg_catalog.pg_visible_in_snapshot(visibility.visibility_anchor_xid8,$2::pg_snapshot) AND f.record_json->>'type'=$3 AND f.record_json->'payload'->>'tenant_id'=$4 AND f.record_json->'payload'->>'project_id'=$5 AND f.record_json->'payload'->>'group_id'=$6 AND f.record_json->'payload'->>'field_id'=$7 AND f.record_json->'payload'->>'season_id'=$8 AND f.record_json->'payload'->>'zone_id'=$9`, [context.canonical_visibility_snapshot.database_visibility_epoch_id, context.canonical_visibility_snapshot.pg_snapshot_token, spec.expected_object_type, ...scopeValues(context.scope)]);
-      totalCount = Number(result.rows[0]?.count ?? 0);
-    }
-    if (!Number.isSafeInteger(totalCount) || totalCount < 0) fail("MCFT_RUNTIME_COLLECTION_CARDINALITY_INVALID", spec.collection_kind);
-    return { total_count: totalCount, latest_item: items[0] ?? null };
-  }
-
   async readExactObjectByRef(context: PostgresFieldTwinSnapshotContextV1, objectRef: string, expectedType?: string): Promise<{ object: FieldTwinComposerObjectV1; payload: CanonicalObjectEnvelopeV1; validation: FieldTwinSourceValidationResultV1 }> {
     const fact = await this.requireVisibleObject(context, objectRef, expectedType, "MCFT_RUNTIME_GRAPH_INCOMPLETE");
     const validation = this.validateDirectCanonicalFact(fact);
