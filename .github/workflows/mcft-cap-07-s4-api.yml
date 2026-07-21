@@ -5,6 +5,7 @@ on:
     paths:
       - 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-DELIVERY-STATUS-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs'
+      - '.github/workflows/mcft-cap-07-slice-exact-sha-attestation.yml'
       - '.github/workflows/mcft-cap-07-s4-api.yml'
   merge_group:
     types: [checks_requested]
@@ -104,7 +105,7 @@ jobs:
           node - <<'NODE'
           const fs = require('node:fs');
           for (const [file, minimum] of [
-            ['acceptance-output/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION_SELFTEST.json', 4],
+            ['acceptance-output/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION_SELFTEST.json', 5],
             ['acceptance-output/MCFT_CAP_07_S4_API_RESULT.json', 9],
             ['acceptance-output/MCFT_CAP_07_S4_POSTGRES_ADAPTER_RESULT.json', 12],
             ['acceptance-output/MCFT_CAP_07_S4_HEALTH_POSTGRES_RESULT.json', 6],
@@ -126,6 +127,9 @@ jobs:
           const fs = require('node:fs');
           const cp = require('node:child_process');
           const statusPath = 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-DELIVERY-STATUS-V1.json';
+          const scriptPath = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs';
+          const attestationWorkflowPath = '.github/workflows/mcft-cap-07-slice-exact-sha-attestation.yml';
+          const focusedWorkflowPath = '.github/workflows/mcft-cap-07-s4-api.yml';
           const s4 = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
           const s5 = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-DELIVERY-STATUS-V1.json', 'utf8'));
           const exact = (actual, expected, code) => {
@@ -146,22 +150,40 @@ jobs:
           exact(s5.s5_candidate_implemented, false, 'S5_IMPLEMENTED_PRECONDITION');
           exact(s5.implementation_authorized, false, 'S5_AUTHORIZED_PRECONDITION');
 
-          const attestationSource = fs.readFileSync('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs', 'utf8');
-          if (!attestationSource.includes('MCFT_GOVERNANCE_REMEDIATION_V1')) throw new Error('GOVERNANCE_REMEDIATION_MARKER_NOT_SUPPORTED');
-          if (!attestationSource.includes('candidate_transition_created_by_remediation: false')) throw new Error('REMEDIATION_NONTRANSITION_ASSERTION_MISSING');
+          const attestationSource = fs.readFileSync(scriptPath, 'utf8');
+          for (const token of [
+            'MCFT_GOVERNANCE_REMEDIATION_V1',
+            'S4_ATTESTATION_OBSERVABILITY_CONTRACT',
+            'predecessorRemediation',
+            'candidate_transition_created_by_remediation: false',
+          ]) {
+            if (!attestationSource.includes(token)) throw new Error(`ATTESTATION_CHAIN_TOKEN_MISSING:${token}`);
+          }
+
+          const attestationWorkflow = fs.readFileSync(attestationWorkflowPath, 'utf8');
+          for (const token of [
+            'statuses: write',
+            'id: transient-artifact',
+            'Publish exact-SHA attestation commit status',
+            'actions/github-script@v7',
+            'createCommitStatus',
+            "context: 'mcft-cap-07/exact-sha-attestation'",
+            "- '.github/workflows/mcft-cap-07-slice-exact-sha-attestation.yml'",
+            "- 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs'",
+          ]) {
+            if (!attestationWorkflow.includes(token)) throw new Error(`ATTESTATION_OBSERVABILITY_TOKEN_MISSING:${token}`);
+          }
 
           const actual = cp.execFileSync(
             'git',
             ['diff', '--name-only', `${process.env.MCFT_BASE_SHA}...HEAD`],
             { encoding: 'utf8' },
           ).trim().split(/\r?\n/).filter(Boolean).sort();
-          const allowed = [
-            '.github/workflows/mcft-cap-07-s4-api.yml',
-            statusPath,
-            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs',
-          ].sort();
-          if (JSON.stringify(actual) !== JSON.stringify(allowed)) {
-            throw new Error(`S4_FRONTIER_REMEDIATION_BOUNDARY_INVALID:${JSON.stringify(actual)}`);
+          const allowedFrontier = [focusedWorkflowPath, statusPath, scriptPath].sort();
+          const allowedObservability = [focusedWorkflowPath, attestationWorkflowPath, scriptPath].sort();
+          const serialized = JSON.stringify(actual);
+          if (serialized !== JSON.stringify(allowedFrontier) && serialized !== JSON.stringify(allowedObservability)) {
+            throw new Error(`S4_GOVERNANCE_REMEDIATION_BOUNDARY_INVALID:${serialized}`);
           }
           NODE
 

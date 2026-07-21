@@ -15,6 +15,8 @@ const SELFTEST_OUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_07_SLICE_EXACT_
 const MODE = process.argv[2] || '--attest';
 const CANDIDATE_MARKER = 'MCFT_CANDIDATE_DECLARATION_V2';
 const REMEDIATION_MARKER = 'MCFT_GOVERNANCE_REMEDIATION_V1';
+const FRONTIER_REMEDIATION_KIND = 'S4_FRONTIER_PROJECTION_CONTRACT';
+const OBSERVABILITY_REMEDIATION_KIND = 'S4_ATTESTATION_OBSERVABILITY_CONTRACT';
 
 function git(...args) {
   return cp.execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
@@ -148,15 +150,11 @@ function validateCandidateAuthority(record, candidateHead, baseHead) {
     focusedWorkflow: String(record.focused_workflow || ''),
     standardWorkflow: String(record.standard_workflow || ''),
     originalCandidate: null,
+    predecessorRemediation: null,
   };
 }
 
-async function validateRemediationAuthority(record, repository, candidateHead, baseHead) {
-  exactText(record, 'capability_line', 'MCFT-CAP-07', 'REMEDIATION_CAPABILITY_MISMATCH');
-  exactText(record, 'slice_id', 'MCFT-CAP-07.S4', 'REMEDIATION_SLICE_MISMATCH');
-  exactText(record, 'remediation_kind', 'S4_FRONTIER_PROJECTION_CONTRACT', 'REMEDIATION_KIND_INVALID');
-  exactSha(record, 'remediation_head', candidateHead, 'REMEDIATION_HEAD_MISMATCH');
-  exactSha(record, 'remediation_base', baseHead, 'REMEDIATION_BASE_MISMATCH');
+async function readOriginalCandidateAuthority(record, repository) {
   const originalPrNumber = exactPositiveInteger(record, 'original_candidate_pr', 'ORIGINAL_CANDIDATE_PR_INVALID');
   const originalPr = await api(`/repos/${repository}/pulls/${originalPrNumber}`);
   if (!originalPr.merged_at || !originalPr.merge_commit_sha) throw new Error('ORIGINAL_CANDIDATE_PR_NOT_MERGED');
@@ -168,17 +166,12 @@ async function validateRemediationAuthority(record, repository, candidateHead, b
   exactSha(record, 'original_merge_commit', originalPr.merge_commit_sha, 'ORIGINAL_MERGE_RECORD_MISMATCH');
   exactSha(originalDeclaration, 'candidate_head', originalPr.head.sha, 'ORIGINAL_DECLARATION_HEAD_MISMATCH');
   exactSha(originalDeclaration, 'base_head', originalPr.base.sha, 'ORIGINAL_DECLARATION_BASE_MISMATCH');
-  if (baseHead !== originalPr.merge_commit_sha) throw new Error('REMEDIATION_BASE_MUST_BE_ORIGINAL_S4_MERGE');
   exactText(record, 'status_file', originalDeclaration.status_file, 'REMEDIATION_STATUS_FILE_MISMATCH');
   exactText(record, 'candidate_field', originalDeclaration.candidate_field, 'REMEDIATION_CANDIDATE_FIELD_MISMATCH');
   exactText(record, 'candidate_value', originalDeclaration.candidate_value, 'REMEDIATION_CANDIDATE_VALUE_MISMATCH');
   return {
-    sliceId: String(record.slice_id || ''),
-    statusFile: String(record.status_file || ''),
-    candidateField: String(record.candidate_field || ''),
-    candidateValue: parseJsonValue(record.candidate_value, 'REMEDIATION_CANDIDATE_VALUE_INVALID'),
-    focusedWorkflow: String(record.focused_workflow || ''),
-    standardWorkflow: String(record.standard_workflow || ''),
+    originalPr,
+    originalDeclaration,
     originalCandidate: {
       pr_number: originalPrNumber,
       candidate_head: originalPr.head.sha,
@@ -190,20 +183,76 @@ async function validateRemediationAuthority(record, repository, candidateHead, b
   };
 }
 
+async function readPredecessorRemediationAuthority(record, repository, expectedBaseHead) {
+  const predecessorPrNumber = exactPositiveInteger(record, 'predecessor_remediation_pr', 'PREDECESSOR_REMEDIATION_PR_INVALID');
+  const predecessorPr = await api(`/repos/${repository}/pulls/${predecessorPrNumber}`);
+  if (!predecessorPr.merged_at || !predecessorPr.merge_commit_sha) throw new Error('PREDECESSOR_REMEDIATION_PR_NOT_MERGED');
+  const predecessorAuthority = parseMarker(predecessorPr.body, REMEDIATION_MARKER, true);
+  exactText(predecessorAuthority, 'capability_line', 'MCFT-CAP-07', 'PREDECESSOR_REMEDIATION_CAPABILITY_MISMATCH');
+  exactText(predecessorAuthority, 'slice_id', 'MCFT-CAP-07.S4', 'PREDECESSOR_REMEDIATION_SLICE_MISMATCH');
+  exactText(predecessorAuthority, 'remediation_kind', FRONTIER_REMEDIATION_KIND, 'PREDECESSOR_REMEDIATION_KIND_INVALID');
+  exactSha(record, 'predecessor_remediation_head', predecessorPr.head.sha, 'PREDECESSOR_REMEDIATION_HEAD_RECORD_MISMATCH');
+  exactSha(record, 'predecessor_remediation_base', predecessorPr.base.sha, 'PREDECESSOR_REMEDIATION_BASE_RECORD_MISMATCH');
+  exactSha(record, 'predecessor_remediation_merge_commit', predecessorPr.merge_commit_sha, 'PREDECESSOR_REMEDIATION_MERGE_RECORD_MISMATCH');
+  exactSha(predecessorAuthority, 'remediation_head', predecessorPr.head.sha, 'PREDECESSOR_REMEDIATION_DECLARATION_HEAD_MISMATCH');
+  exactSha(predecessorAuthority, 'remediation_base', predecessorPr.base.sha, 'PREDECESSOR_REMEDIATION_DECLARATION_BASE_MISMATCH');
+  if (expectedBaseHead !== predecessorPr.merge_commit_sha) throw new Error('REMEDIATION_BASE_MUST_BE_PREDECESSOR_REMEDIATION_MERGE');
+  return {
+    pr_number: predecessorPrNumber,
+    remediation_kind: predecessorAuthority.remediation_kind,
+    head: predecessorPr.head.sha,
+    base: predecessorPr.base.sha,
+    merge_commit: predecessorPr.merge_commit_sha,
+  };
+}
+
+async function validateRemediationAuthority(record, repository, candidateHead, baseHead) {
+  exactText(record, 'capability_line', 'MCFT-CAP-07', 'REMEDIATION_CAPABILITY_MISMATCH');
+  exactText(record, 'slice_id', 'MCFT-CAP-07.S4', 'REMEDIATION_SLICE_MISMATCH');
+  exactSha(record, 'remediation_head', candidateHead, 'REMEDIATION_HEAD_MISMATCH');
+  exactSha(record, 'remediation_base', baseHead, 'REMEDIATION_BASE_MISMATCH');
+  const kind = String(record.remediation_kind || '');
+  if (![FRONTIER_REMEDIATION_KIND, OBSERVABILITY_REMEDIATION_KIND].includes(kind)) {
+    throw new Error(`REMEDIATION_KIND_INVALID:${kind}`);
+  }
+
+  const original = await readOriginalCandidateAuthority(record, repository);
+  let predecessorRemediation = null;
+  if (kind === FRONTIER_REMEDIATION_KIND) {
+    if (baseHead !== original.originalPr.merge_commit_sha) throw new Error('REMEDIATION_BASE_MUST_BE_ORIGINAL_S4_MERGE');
+  } else {
+    predecessorRemediation = await readPredecessorRemediationAuthority(record, repository, baseHead);
+  }
+
+  return {
+    sliceId: String(record.slice_id || ''),
+    statusFile: String(record.status_file || ''),
+    candidateField: String(record.candidate_field || ''),
+    candidateValue: parseJsonValue(record.candidate_value, 'REMEDIATION_CANDIDATE_VALUE_INVALID'),
+    focusedWorkflow: String(record.focused_workflow || ''),
+    standardWorkflow: String(record.standard_workflow || ''),
+    originalCandidate: original.originalCandidate,
+    predecessorRemediation,
+  };
+}
+
 function selftest() {
   const candidateBody = `<!-- ${CANDIDATE_MARKER}\ncapability_line=MCFT-CAP-07\nslice_id=MCFT-CAP-07.S4\n-->`;
-  const remediationBody = `<!-- ${REMEDIATION_MARKER}\ncapability_line=MCFT-CAP-07\nslice_id=MCFT-CAP-07.S4\nremediation_kind=S4_FRONTIER_PROJECTION_CONTRACT\n-->`;
+  const frontierBody = `<!-- ${REMEDIATION_MARKER}\ncapability_line=MCFT-CAP-07\nslice_id=MCFT-CAP-07.S4\nremediation_kind=${FRONTIER_REMEDIATION_KIND}\n-->`;
+  const observabilityBody = `<!-- ${REMEDIATION_MARKER}\ncapability_line=MCFT-CAP-07\nslice_id=MCFT-CAP-07.S4\nremediation_kind=${OBSERVABILITY_REMEDIATION_KIND}\n-->`;
   assert.equal(parseAuthority(candidateBody).kind, 'CANDIDATE');
-  assert.equal(parseAuthority(remediationBody).kind, 'GOVERNANCE_REMEDIATION');
-  assert.throws(() => parseAuthority(`${candidateBody}\n${remediationBody}`), /MULTIPLE_DELIVERY_AUTHORITY_MARKERS/);
+  assert.equal(parseAuthority(frontierBody).record.remediation_kind, FRONTIER_REMEDIATION_KIND);
+  assert.equal(parseAuthority(observabilityBody).record.remediation_kind, OBSERVABILITY_REMEDIATION_KIND);
+  assert.throws(() => parseAuthority(`${candidateBody}\n${frontierBody}`), /MULTIPLE_DELIVERY_AUTHORITY_MARKERS/);
   assert.throws(() => parseAuthority(''), /DELIVERY_AUTHORITY_MARKER_MISSING/);
   const result = {
     schema_version: 'geox_mcft_cap_07_slice_exact_sha_attestation_selftest_v1',
     status: 'PASS',
-    check_count: 4,
+    check_count: 5,
     checks: [
       { name: 'CANDIDATE_MARKER_SUPPORTED', status: 'PASS' },
-      { name: 'GOVERNANCE_REMEDIATION_MARKER_SUPPORTED', status: 'PASS' },
+      { name: 'FRONTIER_REMEDIATION_KIND_SUPPORTED', status: 'PASS' },
+      { name: 'OBSERVABILITY_REMEDIATION_KIND_SUPPORTED', status: 'PASS' },
       { name: 'MULTIPLE_MARKERS_FAIL_CLOSED', status: 'PASS' },
       { name: 'MISSING_MARKER_FAILS_CLOSED', status: 'PASS' },
     ],
@@ -251,7 +300,14 @@ async function attest() {
   }
   const standardMatches = resolveSuccessfulWorkflowRuns(workflowRunResponse.workflow_runs || [], resolved.standardWorkflow, candidateHead);
   if (!standardMatches.length) throw new Error(`REQUIRED_WORKFLOW_NOT_PASS:${resolved.standardWorkflow}`);
-  requiredChecks[resolved.standardWorkflow] = standardMatches.map((run) => ({ authority_type: 'workflow_run', id: run.id, name: run.name, event: run.event, head_sha: run.head_sha, conclusion: run.conclusion }));
+  requiredChecks[resolved.standardWorkflow] = standardMatches.map((run) => ({
+    authority_type: 'workflow_run',
+    id: run.id,
+    name: run.name,
+    event: run.event,
+    head_sha: run.head_sha,
+    conclusion: run.conclusion,
+  }));
 
   const probePath = 'docs/digital_twin/mcft/cap_07/testing/GEOX-MCFT-CAP-07-S0-UNREGISTERED-PROBE.json';
   if (pathExistsAtCommit(subject, probePath)) throw new Error('NEGATIVE_PROBE_PRESENT_ON_MERGED_MAIN');
@@ -267,6 +323,7 @@ async function attest() {
     candidate_to_merge_tree_delta: 0,
     source_pr_number: sourcePullRequest.number,
     original_candidate: resolved.originalCandidate,
+    predecessor_remediation: resolved.predecessorRemediation,
     required_checks: requiredChecks,
     focused_acceptance_result: 'PASS',
     predecessor_artifact_validation: status.predecessor_effective_evidence_requirement || null,
