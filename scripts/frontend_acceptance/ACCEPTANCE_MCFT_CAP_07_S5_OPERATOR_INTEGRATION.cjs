@@ -36,7 +36,10 @@ const POST_CLOSURE_LOCAL_DEMO_FILES = [
   FILES.acceptance,
   'apps/server/src/domain/auth/roles.ts',
   'apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts',
+  'apps/server/src/modules/field/registerFieldModule.ts',
+  'apps/server/src/routes/field_runtime_scope_options_v1.ts',
   FILES.route,
+  'apps/web/src/api/fields.ts',
   'apps/web/src/features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage.tsx',
   'apps/web/src/styles/operatorFieldRuntimeNavigator.css',
   'config/auth/security_acceptance_tokens.json',
@@ -200,6 +203,9 @@ function main() {
       });
     } else if (mode === 'S5_POST_CLOSURE_LOCAL_DEMO_MODE') {
       const navigator = read('apps/web/src/features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage.tsx');
+      const fieldApi = read('apps/web/src/api/fields.ts');
+      const scopeOptionsRoute = read('apps/server/src/routes/field_runtime_scope_options_v1.ts');
+      const fieldModule = read('apps/server/src/modules/field/registerFieldModule.ts');
       const localAcceptance = read('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_LOCAL_DEMO_AND_SCOPE_NAVIGATOR_V1.cjs');
       const bootstrap = read('apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts');
       const roles = read('apps/server/src/domain/auth/roles.ts');
@@ -208,9 +214,14 @@ function main() {
       check('POST_CLOSURE_NAVIGATOR_IS_GET_ONLY_AND_EXACT_SCOPE', () => {
         assert.match(route, /FieldRuntimeScopeNavigatorPage/);
         assert.match(navigator, /fetchFields/);
-        assert.match(navigator, /fetchFieldDetail/);
+        assert.match(navigator, /fetchFieldRuntimeScopeOptions/);
+        assert.doesNotMatch(navigator, /fetchFieldDetail/);
+        assert.match(fieldApi, /\/runtime-scope-options/);
+        assert.match(scopeOptionsRoute, /requireAoActScopeV0\(req, reply, "fields\.read"\)/);
+        assert.match(fieldModule, /registerFieldRuntimeScopeOptionsV1Routes/);
         for (const key of ['field_id', 'season_id', 'zone_id']) assert.ok(navigator.includes(`data-mcft-scope-key="${key}"`), key);
         assert.doesNotMatch(navigator, /createField|updateField|method:\s*["'](?:POST|PUT|PATCH|DELETE)/);
+        assert.doesNotMatch(scopeOptionsRoute, /INSERT\s+INTO|UPDATE\s+public\.|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE/i);
       });
       check('POST_CLOSURE_OPERATOR_FIELD_DISCOVERY_SCOPE_IS_ALIGNED', () => {
         const operator = tokenContract.tokens.find((item) => item.token === 'operator_token');
@@ -219,6 +230,7 @@ function main() {
         assert.equal(writeOnly?.scopes?.includes('fields.read'), false);
         assert.match(roles, /operator:\s*\[[^\]]*"fields\.read"/s);
         assert.match(workflow, /Probe operator field-read authorization/);
+        assert.match(workflow, /runtime-scope-options/);
       });
       check('POST_CLOSURE_LOADER_AND_BOOTSTRAP_REENTRY_REMAIN_FAIL_CLOSED', () => {
         assert.match(localAcceptance, /runtime_source_authorized:\s*false/);
