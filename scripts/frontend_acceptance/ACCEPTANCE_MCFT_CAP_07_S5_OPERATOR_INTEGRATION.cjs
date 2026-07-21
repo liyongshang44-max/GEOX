@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Purpose: prove the frozen S5 Operator product contract across its exact candidate, formal workflow remediation, and S6 successor-regression lifecycle modes.
+// Purpose: prove the frozen S5 Operator product contract across exact-candidate, workflow-remediation, S6 successor-regression, and post-closure local-demo lifecycle modes.
 // Boundary: repository reads and git diff inspection only; no browser, network, product API, database, or write action.
 'use strict';
 
@@ -31,6 +31,20 @@ const FILES = {
 const EXACT_CANDIDATE_FILES = Object.values(FILES).sort();
 const WORKFLOW_REMEDIATION_FILES = [FILES.workflow, FILES.acceptance].sort();
 const S5_PROTECTED_PRODUCT_FILES = [FILES.route, FILES.client, FILES.page, FILES.s5, FILES.workflow, FILES.acceptance].sort();
+const POST_CLOSURE_LOCAL_DEMO_FILES = [
+  FILES.workflow,
+  FILES.acceptance,
+  'apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts',
+  FILES.route,
+  'apps/web/src/features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage.tsx',
+  'apps/web/src/styles/operatorFieldRuntimeNavigator.css',
+  'scripts/dev_seed/SEED_THREE_SURFACE_LOCAL_DEMO_V1.cjs',
+  'scripts/dev_seed/seed_three_surface_local_demo_v1.ts',
+  'scripts/dev_seed/three_surface_local_demo_contract_v1.ts',
+  'scripts/dev_seed/three_surface_local_demo_optional_persistence_v1.ts',
+  'scripts/dev_seed/three_surface_local_demo_persistence_v1.ts',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_LOCAL_DEMO_AND_SCOPE_NAVIGATOR_V1.cjs',
+].sort();
 
 function changedFiles() {
   const base = String(process.env.MCFT_BASE_SHA || '').trim();
@@ -45,11 +59,12 @@ function changedFiles() {
 }
 
 function resolveMode(actual, s6) {
-  const allowed = ['S5_EXACT_CANDIDATE_MODE', 'S6_SUCCESSOR_REGRESSION_MODE', 'S5_WORKFLOW_REMEDIATION_MODE'];
+  const allowed = ['S5_EXACT_CANDIDATE_MODE', 'S6_SUCCESSOR_REGRESSION_MODE', 'S5_WORKFLOW_REMEDIATION_MODE', 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'];
   if (REQUESTED_MODE !== 'AUTO') {
     assert.ok(allowed.includes(REQUESTED_MODE), `S5_ACCEPTANCE_MODE_INVALID:${REQUESTED_MODE}`);
     return REQUESTED_MODE;
   }
+  if (JSON.stringify(actual) === JSON.stringify(POST_CLOSURE_LOCAL_DEMO_FILES)) return 'S5_POST_CLOSURE_LOCAL_DEMO_MODE';
   if (JSON.stringify(actual) === JSON.stringify(WORKFLOW_REMEDIATION_FILES)) return 'S5_WORKFLOW_REMEDIATION_MODE';
   if (s6.record_status === 'S6_COMMITTED_CLOSURE_CANDIDATE_AUTHORITY' && s6.s6_candidate_implemented === true) return 'S6_SUCCESSOR_REGRESSION_MODE';
   return 'S5_EXACT_CANDIDATE_MODE';
@@ -180,10 +195,36 @@ function main() {
         assert.ok(actual.includes(FILES.s6), 'S6_STATUS_NOT_CHANGED');
         for (const protectedFile of S5_PROTECTED_PRODUCT_FILES) assert.equal(actual.includes(protectedFile), false, `S5_PROTECTED_FILE_CHANGED:${protectedFile}`);
       });
+    } else if (mode === 'S5_POST_CLOSURE_LOCAL_DEMO_MODE') {
+      const navigator = read('apps/web/src/features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage.tsx');
+      const localAcceptance = read('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_LOCAL_DEMO_AND_SCOPE_NAVIGATOR_V1.cjs');
+      const bootstrap = read('apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts');
+      check('POST_CLOSURE_LOCAL_DEMO_BOUNDARY_IS_EXACT', () => assert.deepEqual(actual, POST_CLOSURE_LOCAL_DEMO_FILES));
+      check('POST_CLOSURE_NAVIGATOR_IS_GET_ONLY_AND_EXACT_SCOPE', () => {
+        assert.match(route, /FieldRuntimeScopeNavigatorPage/);
+        assert.match(navigator, /fetchFields/);
+        assert.match(navigator, /fetchFieldDetail/);
+        for (const key of ['field_id', 'season_id', 'zone_id']) assert.ok(navigator.includes(`data-mcft-scope-key="${key}"`), key);
+        assert.doesNotMatch(navigator, /createField|updateField|method:\s*["'](?:POST|PUT|PATCH|DELETE)/);
+      });
+      check('POST_CLOSURE_LOADER_AND_BOOTSTRAP_REENTRY_REMAIN_FAIL_CLOSED', () => {
+        assert.match(localAcceptance, /runtime_source_authorized:\s*false/);
+        assert.match(localAcceptance, /mcft_cap_08_authorized:\s*false/);
+        assert.match(bootstrap, /reassertMcftCap07RuntimeVisibilityBoundaryV1/);
+        assert.match(bootstrap, /REVOKE ALL ON TABLE public\.twin_fact_visibility_epoch_v1/);
+        assert.match(bootstrap, /GRANT SELECT ON TABLE public\.twin_fact_visibility_epoch_v1/);
+      });
+      check('POST_CLOSURE_DOES_NOT_CHANGE_CANONICAL_CLIENT_OR_DETAIL_PAGE', () => {
+        assert.equal(actual.includes(FILES.client), false);
+        assert.equal(actual.includes(FILES.page), false);
+        assert.equal(s6.runtime_source_authorized, false);
+        assert.equal(s6.canonical_write_authorized, false);
+        assert.equal(s6.mcft_cap_08_authorized, false);
+      });
     } else {
       check('S5_WORKFLOW_REMEDIATION_BOUNDARY_IS_EXACT', () => assert.deepEqual(actual, WORKFLOW_REMEDIATION_FILES));
       check('S5_WORKFLOW_REMEDIATION_SELFTESTS_ALL_LIFECYCLE_MODES', () => {
-        for (const token of ['S5_EXACT_CANDIDATE_MODE', 'S6_SUCCESSOR_REGRESSION_MODE', 'S5_WORKFLOW_REMEDIATION_MODE']) {
+        for (const token of ['S5_EXACT_CANDIDATE_MODE', 'S6_SUCCESSOR_REGRESSION_MODE', 'S5_WORKFLOW_REMEDIATION_MODE', 'S5_POST_CLOSURE_LOCAL_DEMO_MODE']) {
           assert.ok(self.includes(token), `SCRIPT_MODE_MISSING:${token}`);
           assert.ok(workflow.includes(token), `WORKFLOW_MODE_MISSING:${token}`);
         }
