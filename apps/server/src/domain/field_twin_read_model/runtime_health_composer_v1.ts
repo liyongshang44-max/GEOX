@@ -1,5 +1,5 @@
 // Purpose: compose terminal record-set health and latest operational Runtime Health as independent exact views.
-// Boundary: pure composition over S2 exact role resolutions; no latest-row query, role inference from time, database access, or write authority.
+// Boundary: pure composition over S2 exact role resolutions; no latest-row query, database access, or write authority.
 
 import type {
   FieldTwinCanonicalObjectRefV1,
@@ -7,7 +7,6 @@ import type {
   FieldTwinScopeV1,
   FieldTwinSourceValidationResultV1,
 } from "./contracts_v1.js";
-import { RuntimeHealthDualResolverV1 } from "./exact_resolvers_v1.js";
 import { buildHealthContentHashV1, buildResponseInstanceHashV1 } from "./hash_contracts_v1.js";
 import {
   assertComposerObjectV1,
@@ -27,48 +26,80 @@ export type RuntimeHealthComposerInputV1 = {
   health_pointer_validation_summary: readonly FieldTwinSourceValidationResultV1[];
 };
 
-function assertObjectResolutionPairV1(
+function assertPairV1(
   object: FieldTwinComposerObjectV1 | null,
   resolution: FieldTwinRuntimeHealthRoleResolutionV1 | null,
-  expectedRole: "TERMINAL_RECORD_SET_MEMBER" | "OPERATIONAL_ATTEMPT_AUDIT",
   scope: FieldTwinScopeV1,
+  label: string,
 ): void {
-  if ((object === null) !== (resolution === null)) composerFailV1("MCFT_RUNTIME_HEALTH_OBJECT_ROLE_PAIR_INVALID", expectedRole);
+  if ((object === null) !== (resolution === null)) composerFailV1("MCFT_RUNTIME_HEALTH_OBJECT_ROLE_PAIR_INVALID", label);
   if (!object || !resolution) return;
   assertComposerObjectV1(object, scope, "MCFT_RUNTIME_HEALTH_OBJECT_INVALID");
-  if (resolution.health_object_ref !== object.object_ref || resolution.health_role !== expectedRole) {
-    composerFailV1("MCFT_RUNTIME_HEALTH_ROLE_UNRESOLVED", expectedRole);
-  }
-  if (expectedRole === "TERMINAL_RECORD_SET_MEMBER" && resolution.transaction_family !== "A_STATE_TICK_COMMIT") {
-    composerFailV1("MCFT_RUNTIME_HEALTH_TRANSACTION_FAMILY_INVALID", expectedRole);
-  }
-  if (expectedRole === "OPERATIONAL_ATTEMPT_AUDIT" && resolution.transaction_family !== "F_OPERATIONAL_ATTEMPT_HEALTH") {
-    composerFailV1("MCFT_RUNTIME_HEALTH_TRANSACTION_FAMILY_INVALID", expectedRole);
+  if (resolution.health_object_ref !== object.object_ref) composerFailV1("MCFT_RUNTIME_HEALTH_ROLE_UNRESOLVED", label);
+}
+
+function assertTerminalResolutionV1(resolution: FieldTwinRuntimeHealthRoleResolutionV1): void {
+  if (resolution.health_role !== "TERMINAL_RECORD_SET_MEMBER" || resolution.transaction_family !== "A_STATE_TICK_COMMIT") {
+    composerFailV1("MCFT_RUNTIME_HEALTH_ROLE_UNRESOLVED", "TERMINAL");
   }
 }
 
-export class RuntimeHealthComposerV1 {
-  private readonly dualResolver = new RuntimeHealthDualResolverV1();
+function assertOperationalResolutionV1(resolution: FieldTwinRuntimeHealthRoleResolutionV1): void {
+  if (resolution.health_role !== "OPERATIONAL_ATTEMPT_AUDIT" || resolution.transaction_family !== "F_OPERATIONAL_ATTEMPT_HEALTH") {
+    composerFailV1("MCFT_RUNTIME_HEALTH_ROLE_UNRESOLVED", "LATEST_OPERATIONAL");
+  }
+}
 
+function relationshipV1(input: RuntimeHealthComposerInputV1): FieldTwinRuntimeHealthReadModelV1["health_relationship"] {
+  const terminal = input.terminal_record_set_health;
+  const operational = input.latest_operational_runtime_health;
+  const terminalResolution = input.terminal_role_resolution;
+  const operationalResolution = input.operational_role_resolution;
+
+  if (!terminal && !operational) return "BOTH_ABSENT";
+  if (terminal && !operational) {
+    assertTerminalResolutionV1(terminalResolution!);
+    return "TERMINAL_ONLY";
+  }
+  if (!terminal && operational) {
+    assertOperationalResolutionV1(operationalResolution!);
+    return "OPERATIONAL_ONLY";
+  }
+
+  assertTerminalResolutionV1(terminalResolution!);
+  if (terminal!.object_ref === operational!.object_ref) {
+    if (operationalResolution!.health_role !== "TERMINAL_RECORD_SET_MEMBER" || operationalResolution!.transaction_family !== "A_STATE_TICK_COMMIT") {
+      composerFailV1("MCFT_RUNTIME_HEALTH_ROLE_UNRESOLVED", "SAME_OBJECT");
+    }
+    return "SAME_OBJECT";
+  }
+
+  assertOperationalResolutionV1(operationalResolution!);
+  if (!terminal!.logical_time || !operational!.logical_time || operational!.logical_time <= terminal!.logical_time) {
+    composerFailV1("MCFT_RUNTIME_HEALTH_RELATIONSHIP_INVALID", "LATEST_OPERATIONAL_NOT_LATER");
+  }
+  return "LATEST_OPERATIONAL_IS_LATER";
+}
+
+export class RuntimeHealthComposerV1 {
   compose(input: RuntimeHealthComposerInputV1): FieldTwinRuntimeHealthReadModelV1 {
-    assertObjectResolutionPairV1(input.terminal_record_set_health, input.terminal_role_resolution, "TERMINAL_RECORD_SET_MEMBER", input.request_scope);
-    assertObjectResolutionPairV1(input.latest_operational_runtime_health, input.operational_role_resolution, "OPERATIONAL_ATTEMPT_AUDIT", input.request_scope);
+    assertPairV1(input.terminal_record_set_health, input.terminal_role_resolution, input.request_scope, "TERMINAL");
+    assertPairV1(input.latest_operational_runtime_health, input.operational_role_resolution, input.request_scope, "LATEST_OPERATIONAL");
     for (const validation of input.health_pointer_validation_summary) {
       if (validation.validation_status !== "PASS") composerFailV1("MCFT_RUNTIME_HEALTH_POINTER_INVALID", validation.source_name);
     }
-    const dual = this.dualResolver.resolve({
-      terminal_record_set_health: input.terminal_role_resolution,
-      latest_operational_runtime_health: input.operational_role_resolution,
-    });
+
     const terminalRef: FieldTwinCanonicalObjectRefV1 | null = input.terminal_record_set_health ? canonicalObjectRefV1(input.terminal_record_set_health) : null;
     const operationalRef: FieldTwinCanonicalObjectRefV1 | null = input.latest_operational_runtime_health ? canonicalObjectRefV1(input.latest_operational_runtime_health) : null;
+    const relationship = relationshipV1(input);
     const resolutions = [input.terminal_role_resolution, input.operational_role_resolution]
       .filter((value): value is FieldTwinRuntimeHealthRoleResolutionV1 => value !== null)
+      .filter((value, index, values) => values.findIndex((item) => item.health_object_ref === value.health_object_ref) === index)
       .sort((left, right) => left.health_object_ref.localeCompare(right.health_object_ref));
     const healthHash = buildHealthContentHashV1({
       terminal_record_set_health: terminalRef,
       latest_operational_runtime_health: operationalRef,
-      health_relationship: dual.relationship,
+      health_relationship: relationship,
       health_role_resolutions: resolutions,
       health_pointer_validation_summary: input.health_pointer_validation_summary,
     });
@@ -88,7 +119,7 @@ export class RuntimeHealthComposerV1 {
       request_scope: Object.freeze({ ...input.request_scope }),
       terminal_record_set_health: terminalRef,
       latest_operational_runtime_health: operationalRef,
-      health_relationship: dual.relationship,
+      health_relationship: relationship,
       health_role_resolutions: Object.freeze(resolutions),
       health_pointer_validation_summary: Object.freeze([...input.health_pointer_validation_summary]),
       health_content_hash: healthHash,
