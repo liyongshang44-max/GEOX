@@ -210,7 +210,7 @@ jobs:
           node --input-type=module - <<'NODE' 2>&1 | tee acceptance-output/MCFT_CAP_07_OPERATOR_FIELD_DISCOVERY_AUTH.json
           import Fastify from 'fastify';
           import pg from 'pg';
-          import { registerFieldsV1Routes } from './apps/server/dist/routes/fields_v1.js';
+          import { registerFieldsV1Routes } from './apps/server/dist/apps/server/src/routes/fields_v1.js';
           const { Pool } = pg;
           const pool = new Pool({ connectionString: process.env.PROBE_DATABASE_URL, max: 2 });
           const app = Fastify({ logger: false });
