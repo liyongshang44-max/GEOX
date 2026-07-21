@@ -24,6 +24,9 @@ const loader = loaderFiles.map(read).join('\n');
 const route = read('apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx');
 const navigator = read('apps/web/src/features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage.tsx');
 const css = read('apps/web/src/styles/operatorFieldRuntimeNavigator.css');
+const roleContract = read('apps/server/src/domain/auth/roles.ts');
+const fieldRoute = read('apps/server/src/routes/fields_v1.ts');
+const tokenContract = JSON.parse(read('config/auth/security_acceptance_tokens.json'));
 
 check('HISTORICAL_LOCAL_DEMO_COMMAND_NOW_DELEGATES_TO_REAL_LOADER', () => {
   assert.match(wrapper, /seed_three_surface_local_demo_v1\.ts/);
@@ -81,6 +84,19 @@ check('SCOPE_NAVIGATOR_USES_EXISTING_GET_ONLY_FIELD_READS', () => {
   assert.match(navigator, /navigate\(target\)/);
 });
 
+check('OPERATOR_FIELD_DISCOVERY_AUTHORITY_IS_EXPLICIT_AND_MINIMAL', () => {
+  const operator = tokenContract.tokens.find((item) => item.token === 'operator_token');
+  const writeOnly = tokenContract.tokens.find((item) => item.token === 'set-via-env-or-external-secret-file-pdi-writeonly');
+  assert.ok(operator, 'OPERATOR_TOKEN_MISSING');
+  assert.equal(operator.role, 'operator');
+  assert.ok(operator.scopes.includes('fields.read'), 'OPERATOR_FIELDS_READ_SCOPE_MISSING');
+  assert.ok(writeOnly, 'WRITE_ONLY_TOKEN_MISSING');
+  assert.equal(writeOnly.scopes.includes('fields.read'), false, 'WRITE_ONLY_TOKEN_SCOPE_ESCALATED');
+  assert.match(roleContract, /operator:\s*\[[^\]]*"fields\.read"/s);
+  assert.match(fieldRoute, /app\.get\("\/api\/v1\/fields"[\s\S]*?requireAoActScopeV0\(req, reply, "fields\.read"\)/);
+  assert.doesNotMatch(roleContract, /operator:\s*\[[^\]]*"fields\.write"/s);
+});
+
 check('INDEX_AND_WILDCARD_ROUTES_USE_SCOPE_NAVIGATOR', () => {
   assert.match(route, /Route index element={<FieldRuntimeScopeNavigatorPage/);
   assert.match(route, /Route path="\*" element={<FieldRuntimeScopeNavigatorPage/);
@@ -97,6 +113,8 @@ console.log(JSON.stringify({
   status: 'PASS',
   check_count: checks.length,
   checks,
+  operator_fields_read_authorized: true,
+  operator_fields_write_authorized: false,
   runtime_source_authorized: false,
   canonical_production_write_authorized: false,
   mcft_cap_08_authorized: false,
