@@ -11,10 +11,12 @@ import {
   type McftFieldTwinReadApiV1,
   type McftFieldTwinReadRequestV1,
 } from "../../services/mcft_field_twin_read_api_v1.js";
+import { decodeUntrustedFieldTwinCursorEnvelopeV1 } from "../../services/mcft_field_twin_cursor_transport_v1.js";
 
 export const MCFT_FIELD_TWIN_CANONICAL_BASE_V1 = "/api/v1/operator/twin/fields/:field_id/runtime" as const;
 const SCOPE_QUERY_KEYS_V1 = ["tenant_id", "project_id", "group_id", "season_id", "zone_id"] as const;
 const MODEL_GOVERNANCE_KINDS_V1 = ["CALIBRATION_CANDIDATE", "SHADOW_EVALUATION", "MODEL_ACTIVATION"] as const;
+type ModelGovernanceKindV1 = (typeof MODEL_GOVERNANCE_KINDS_V1)[number];
 
 type QueryV1 = Record<string, unknown>;
 type ParamsV1 = { field_id?: unknown };
@@ -111,26 +113,37 @@ function assertQuerySurfaceV1(query: QueryV1, endpoint: EndpointV1): void {
   }
 }
 
-function parseModelGovernanceKindV1(query: QueryV1): FieldTwinCollectionKindV1 {
-  const value = strictSingleTextV1(query.collection_kind, "collection_kind");
-  if (!value || !MODEL_GOVERNANCE_KINDS_V1.includes(value as (typeof MODEL_GOVERNANCE_KINDS_V1)[number])) {
-    throw new McftFieldTwinReadApiErrorV1("MCFT_CURSOR_COLLECTION_KIND_MISMATCH", 400, "MODEL_GOVERNANCE_KIND_REQUIRED");
+function parseModelGovernanceKindV1(query: QueryV1, cursor: string | null): FieldTwinCollectionKindV1 {
+  const queryValue = strictSingleTextV1(query.collection_kind, "collection_kind");
+  if (queryValue) {
+    if (!MODEL_GOVERNANCE_KINDS_V1.includes(queryValue as ModelGovernanceKindV1)) {
+      throw new McftFieldTwinReadApiErrorV1("MCFT_COLLECTION_KIND_INVALID", 400, queryValue);
+    }
+    return queryValue as FieldTwinCollectionKindV1;
   }
-  return value as FieldTwinCollectionKindV1;
+  if (!cursor) throw new McftFieldTwinReadApiErrorV1("MCFT_COLLECTION_KIND_INVALID", 400, "MODEL_GOVERNANCE_KIND_REQUIRED_ON_FIRST_PAGE");
+  const payload = decodeUntrustedFieldTwinCursorEnvelopeV1(cursor).payload;
+  if (payload.cursor_kind !== "OPTIONAL_COLLECTION"
+    || !payload.collection_kind
+    || !MODEL_GOVERNANCE_KINDS_V1.includes(payload.collection_kind as ModelGovernanceKindV1)) {
+    throw new McftFieldTwinReadApiErrorV1("MCFT_CURSOR_COLLECTION_KIND_MISMATCH", 400, "MODEL_GOVERNANCE_CURSOR_KIND");
+  }
+  return payload.collection_kind;
 }
 
 function buildReadRequestV1(request: FastifyRequest, endpoint: EndpointV1): McftFieldTwinReadRequestV1 {
   const query = (request.query && typeof request.query === "object" ? request.query : {}) as QueryV1;
   assertQuerySurfaceV1(query, endpoint);
+  const cursor = query.cursor === undefined ? null : strictSingleTextV1(query.cursor, "cursor");
   const from = endpoint === "timeline" ? parseInstantV1(query.from, "from") : undefined;
   const until = endpoint === "timeline" ? parseInstantV1(query.until, "until") : undefined;
   if (from && until && from >= until) throw new McftFieldTwinReadApiErrorV1("MCFT_TIMELINE_FILTER_INVALID", 400, "RANGE");
   return {
     scope: parseScopeV1(request),
-    cursor: query.cursor === undefined ? undefined : strictSingleTextV1(query.cursor, "cursor"),
+    cursor,
     limit: parseLimitV1(query.limit),
     ...(endpoint === "timeline" ? { from_logical_time: from, until_logical_time: until } : {}),
-    ...(endpoint === "model-governance" ? { collection_kind: parseModelGovernanceKindV1(query) } : {}),
+    ...(endpoint === "model-governance" ? { collection_kind: parseModelGovernanceKindV1(query, cursor) } : {}),
     ...(endpoint === "trace" ? { root_object_ref: query.root_object_ref === undefined ? null : strictSingleTextV1(query.root_object_ref, "root_object_ref") } : {}),
   };
 }
