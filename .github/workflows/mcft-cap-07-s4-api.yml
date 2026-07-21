@@ -14,6 +14,7 @@ on:
       - 'apps/server/src/modules/operator/registerOperatorModule.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_API.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_POSTGRES_ADAPTER.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_HEALTH_POSTGRES.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_DOMAIN_COMPOSERS_POSTGRES.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_FROZEN_SCHEMA.ts'
       - 'docs/digital_twin/mcft/cap_07/**'
@@ -96,6 +97,11 @@ jobs:
           MCFT_S4_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_POSTGRES_ADAPTER.ts
 
+      - name: Run S4 root-independent Health PostgreSQL acceptance
+        env:
+          MCFT_S4_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_HEALTH_POSTGRES.ts
+
       - name: Run S4 PostgreSQL domain composer acceptance
         env:
           MCFT_S4_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
@@ -111,6 +117,7 @@ jobs:
           for (const [file, minimum] of [
             ['acceptance-output/MCFT_CAP_07_S4_API_RESULT.json', 9],
             ['acceptance-output/MCFT_CAP_07_S4_POSTGRES_ADAPTER_RESULT.json', 12],
+            ['acceptance-output/MCFT_CAP_07_S4_HEALTH_POSTGRES_RESULT.json', 6],
             ['acceptance-output/MCFT_CAP_07_S4_DOMAIN_COMPOSERS_POSTGRES_RESULT.json', 4],
             ['acceptance-output/MCFT_CAP_07_S4_FROZEN_SCHEMA_RESULT.json', 6],
           ]) {
@@ -216,6 +223,7 @@ jobs:
             'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-WORKFLOW-DECLARATION-V1.json',
             'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_API.ts',
             'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_POSTGRES_ADAPTER.ts',
+            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_HEALTH_POSTGRES.ts',
             'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_DOMAIN_COMPOSERS_POSTGRES.ts',
             'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_FROZEN_SCHEMA.ts',
           ].sort();
@@ -230,6 +238,7 @@ jobs:
           path: |
             acceptance-output/MCFT_CAP_07_S4_API_RESULT.json
             acceptance-output/MCFT_CAP_07_S4_POSTGRES_ADAPTER_RESULT.json
+            acceptance-output/MCFT_CAP_07_S4_HEALTH_POSTGRES_RESULT.json
             acceptance-output/MCFT_CAP_07_S4_DOMAIN_COMPOSERS_POSTGRES_RESULT.json
             acceptance-output/MCFT_CAP_07_S4_FROZEN_SCHEMA_RESULT.json
           if-no-files-found: error
