@@ -32,14 +32,16 @@ function assertAttachmentV1(attachment: FieldTwinCollectionAttachmentV1<FieldTwi
   }
 }
 
-function assertExactSummaryV1(summary: FieldTwinOptionalCollectionSummaryV1, kind: string): void {
-  if (summary.count_status !== "EXACT_VALIDATED_PROJECTION" || summary.total_count === null || summary.total_count < 0) {
+function assertSummaryV1(summary: FieldTwinOptionalCollectionSummaryV1, kind: string): void {
+  if (summary.count_status === "NOT_COMPUTED") {
+    if (summary.total_count !== null) composerFailV1("MCFT_COLLECTION_CARDINALITY_INVALID", kind);
+  } else if (summary.count_status === "EXACT_VALIDATED_PROJECTION") {
+    if (summary.total_count === null || summary.total_count < 0 || summary.has_items !== (summary.total_count > 0)) composerFailV1("MCFT_COLLECTION_CARDINALITY_INVALID", kind);
+  } else {
     composerFailV1("MCFT_COLLECTION_CARDINALITY_INVALID", kind);
   }
-  if (summary.has_items !== (summary.total_count > 0)) composerFailV1("MCFT_COLLECTION_CARDINALITY_INVALID", kind);
-  if (summary.has_items && (!summary.latest_item_ref || !summary.latest_item_hash || summary.attachment_status !== "ATTACHED_EXACT")) {
-    composerFailV1("MCFT_COLLECTION_SUMMARY_INVALID", kind);
-  }
+  if (summary.has_items && (!summary.latest_item_ref || !summary.latest_item_hash || summary.attachment_status !== "ATTACHED_EXACT" || summary.reason_code !== null)) composerFailV1("MCFT_COLLECTION_SUMMARY_INVALID", kind);
+  if (!summary.has_items && (summary.latest_item_ref !== null || summary.latest_item_hash !== null || summary.attachment_status !== "ABSENT_OPTIONAL_DOMAIN" || !summary.reason_code)) composerFailV1("MCFT_COLLECTION_SUMMARY_INVALID", kind);
 }
 
 export type ActionLifecycleComposerInputV1 = {
@@ -56,7 +58,7 @@ export class ActionLifecycleComposerV1 {
   compose(input: ActionLifecycleComposerInputV1): FieldTwinActionLifecycleReadModelV1 {
     assertAttachmentV1(input.current_human_decision, "current_human_decision");
     assertAttachmentV1(input.current_approved_plan, "current_approved_plan");
-    assertExactSummaryV1(input.action_feedback_summary, "ACTION_FEEDBACK");
+    assertSummaryV1(input.action_feedback_summary, "ACTION_FEEDBACK");
     if (input.action_feedback_summary.collection_endpoint !== "/action-lifecycle") composerFailV1("MCFT_ACTION_COLLECTION_ENDPOINT_INVALID");
     if (input.current_approved_plan.item && !input.current_human_decision.item) composerFailV1("MCFT_ACTION_PLAN_WITHOUT_DECISION");
     if (input.action_feedback_summary.has_items && !input.current_approved_plan.item) composerFailV1("MCFT_ACTION_FEEDBACK_WITHOUT_PLAN");
@@ -145,16 +147,18 @@ export class ModelGovernanceComposerV1 {
         composerFailV1("MCFT_CALIBRATION_CANDIDATE_SAFETY_CONTRACT_INVALID", candidate.object_ref);
       }
     }
-    assertExactSummaryV1(input.calibration_candidate_summary, "CALIBRATION_CANDIDATE");
-    assertExactSummaryV1(input.shadow_evaluation_summary, "SHADOW_EVALUATION");
-    assertExactSummaryV1(input.model_activation_summary, "MODEL_ACTIVATION");
+    assertSummaryV1(input.calibration_candidate_summary, "CALIBRATION_CANDIDATE");
+    assertSummaryV1(input.shadow_evaluation_summary, "SHADOW_EVALUATION");
+    assertSummaryV1(input.model_activation_summary, "MODEL_ACTIVATION");
     for (const summary of [input.calibration_candidate_summary, input.shadow_evaluation_summary, input.model_activation_summary]) {
       if (summary.collection_endpoint !== "/model-governance") composerFailV1("MCFT_MODEL_GOVERNANCE_ENDPOINT_INVALID", summary.collection_kind);
     }
-    if (input.calibration_candidate_summary.total_count !== input.calibration_candidates.length ||
-        input.shadow_evaluation_summary.total_count !== input.shadow_evaluations.length ||
-        input.model_activation_summary.total_count !== input.model_activations.length) {
-      composerFailV1("MCFT_MODEL_GOVERNANCE_CARDINALITY_MISMATCH");
+    for (const [summary, items] of [
+      [input.calibration_candidate_summary, input.calibration_candidates],
+      [input.shadow_evaluation_summary, input.shadow_evaluations],
+      [input.model_activation_summary, input.model_activations],
+    ] as const) {
+      if (summary.count_status === "EXACT_VALIDATED_PROJECTION" && summary.total_count !== items.length) composerFailV1("MCFT_MODEL_GOVERNANCE_CARDINALITY_MISMATCH");
     }
 
     const relation = input.attached_activation_relation;
