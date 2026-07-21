@@ -15,6 +15,7 @@ const check = (name, fn) => { fn(); checks.push({ name, status: 'PASS' }); };
 const wrapper = read('scripts/dev_seed/SEED_THREE_SURFACE_LOCAL_DEMO_V1.cjs');
 const loaderFiles = [
   'scripts/dev_seed/seed_three_surface_local_demo_v1.ts',
+  'scripts/dev_seed/three_surface_local_demo_action_lifecycle_v1.ts',
   'scripts/dev_seed/three_surface_local_demo_contract_v1.ts',
   'scripts/dev_seed/three_surface_local_demo_persistence_v1.ts',
   'scripts/dev_seed/three_surface_local_demo_optional_persistence_v1.ts',
@@ -31,11 +32,24 @@ check('HISTORICAL_LOCAL_DEMO_COMMAND_NOW_DELEGATES_TO_REAL_LOADER', () => {
 });
 
 check('LOADER_REUSES_PRODUCTION_CANONICAL_BUILDERS_AND_READBACK', () => {
-  for (const token of ['buildA0RecordSetV1','validateA0RecordSetV1','computeMemberDeterminismHashV1','PostgresMcftFieldTwinReadApiV1','readRuntime','readTrace','readHealth']) assert.ok(loader.includes(token), token);
+  for (const token of [
+    'buildA0RecordSetV1','validateA0RecordSetV1','computeMemberDeterminismHashV1',
+    'buildCap05DecisionV1','buildCap05ActionFeedbackV1','computeCap05ReplayEvidenceSourceRecordHashV1',
+    'PostgresMcftFieldTwinReadApiV1','readRuntime','readTimeline','readActionLifecycle','readTrace','readHealth',
+  ]) assert.ok(loader.includes(token), token);
+});
+
+check('LOADER_PROVES_NONEMPTY_ACTION_LIFECYCLE_AND_TIMELINE', () => {
+  assert.match(loader, /runtime_action_feedback_has_items/);
+  assert.match(loader, /action_feedback_count\s*<\s*1/);
+  assert.match(loader, /LOCAL_DEMO_READBACK_ACTION_LIFECYCLE_INCOMPLETE/);
+  assert.match(loader, /REQUIRED_TIMELINE_KINDS/);
+  assert.match(loader, /LOCAL_DEMO_READBACK_TIMELINE_INCOMPLETE/);
+  for (const token of ['HUMAN_DECISION','APPROVED_PLAN_EVIDENCE','ACTION_FEEDBACK']) assert.ok(loader.includes(token), token);
 });
 
 check('LOADER_IS_EXPLICITLY_LOCAL_AND_FAILS_CLOSED', () => {
-  for (const token of ['--confirm-local-demo','LOCAL_DEMO_DATABASE_HOST_FORBIDDEN','LOCAL_DEMO_RUNTIME_ENV_FORBIDDEN']) assert.ok(loader.includes(token), token);
+  for (const token of ['--confirm-local-demo','LOCAL_DEMO_DATABASE_HOST_FORBIDDEN','LOCAL_DEMO_RUNTIME_ENV_FORBIDDEN','LOCAL_DEMO_RUNTIME_READBACK_CREDENTIAL_REQUIRED']) assert.ok(loader.includes(token), token);
   assert.match(loader, /127\.0\.0\.1|localhost/);
   assert.doesNotMatch(loader, /DROP\s+SCHEMA|TRUNCATE\s+TABLE/i);
 });
@@ -43,6 +57,12 @@ check('LOADER_IS_EXPLICITLY_LOCAL_AND_FAILS_CLOSED', () => {
 check('VISIBILITY_AUTHORITY_REMAINS_DATABASE_TRIGGER_OWNED', () => {
   assert.doesNotMatch(loader, /INSERT\s+INTO\s+public\.twin_fact_visibility_index_v1/i);
   assert.match(loader, /mcft_cap07_fact_visibility_after_insert_v1/);
+});
+
+check('CANONICAL_FACT_CLEANUP_IS_NOT_FABRICATED', () => {
+  assert.match(loader, /DISPOSABLE_LOCAL_DATABASE_OR_VOLUME_ONLY/);
+  assert.match(loader, /append-only\/immutable/);
+  assert.doesNotMatch(loader, /DELETE\s+FROM\s+public\.facts/i);
 });
 
 check('NO_MODEL_ACTIVATION_OR_SUCCESSOR_AUTHORITY_IS_CREATED', () => {
