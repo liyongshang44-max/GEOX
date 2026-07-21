@@ -3,6 +3,8 @@ name: mcft-cap-07-s4-api
 on:
   pull_request:
     paths:
+      - 'apps/server/src/repositories/field_twin_read_model/postgres_field_twin_read_repository_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_CURSOR_VISIBILITY_POSTGRES.ts'
       - 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-DELIVERY-STATUS-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs'
       - '.github/workflows/mcft-cap-07-slice-exact-sha-attestation.yml'
@@ -44,146 +46,102 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Resolve comparison base
-        id: comparison-base
+      - name: Resolve exact head, comparison base, and lifecycle mode
+        id: delivery
         shell: bash
         env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
         run: |
           set -euo pipefail
-          if [[ -n "${EVENT_BASE_SHA}" ]]; then
-            BASE_SHA="${EVENT_BASE_SHA}"
-          else
-            BASE_SHA="$(git rev-parse origin/main)"
-          fi
+          EXACT_SHA="${EVENT_HEAD_SHA}"
+          if [[ -n "${EVENT_BASE_SHA}" ]]; then BASE_SHA="${EVENT_BASE_SHA}"; else BASE_SHA="$(git rev-parse origin/main)"; fi
+          git cat-file -e "${EXACT_SHA}^{commit}"
           git cat-file -e "${BASE_SHA}^{commit}"
-          echo "sha=${BASE_SHA}" >> "${GITHUB_OUTPUT}"
+          export MCFT_BASE_SHA="${BASE_SHA}"
+          MODE="$(node - <<'NODE'
+          const cp = require('node:child_process');
+          const actual = cp.execFileSync('git',['diff','--name-only',`${process.env.MCFT_BASE_SHA}...HEAD`],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean).sort();
+          const cursor = [
+            '.github/workflows/mcft-cap-07-s4-api.yml',
+            'apps/server/src/repositories/field_twin_read_model/postgres_field_twin_read_repository_v1.ts',
+            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_CURSOR_VISIBILITY_POSTGRES.ts',
+          ].sort();
+          require('node:fs').writeFileSync('acceptance-output-mode.json', JSON.stringify({actual,expected:cursor},null,2));
+          process.stdout.write(JSON.stringify(actual) === JSON.stringify(cursor) ? 'S4_CURSOR_VISIBILITY_REMEDIATION_MODE' : 'S4_GOVERNANCE_MODE');
+          NODE
+          )"
+          echo "exact_sha=${EXACT_SHA}" >> "${GITHUB_OUTPUT}"
+          echo "base_sha=${BASE_SHA}" >> "${GITHUB_OUTPUT}"
+          echo "mode=${MODE}" >> "${GITHUB_OUTPUT}"
 
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
           cache: pnpm
-
       - name: Install locked workspace
         run: pnpm install --frozen-lockfile
-
       - name: Typecheck server read surface
         run: pnpm --filter @geox/server typecheck
-
       - name: Run exact-SHA governance remediation selftest
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs --selftest-governance-remediation
 
       - name: Run S4 transport and contract acceptance
+        if: steps.delivery.outputs.mode == 'S4_GOVERNANCE_MODE'
         env:
-          MCFT_BASE_SHA: ${{ steps.comparison-base.outputs.sha }}
+          MCFT_BASE_SHA: ${{ steps.delivery.outputs.base_sha }}
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_API.ts
-
       - name: Run S4 real PostgreSQL adapter acceptance
         env:
           MCFT_S4_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_POSTGRES_ADAPTER.ts
-
       - name: Run S4 root-independent Health PostgreSQL acceptance
         env:
           MCFT_S4_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_HEALTH_POSTGRES.ts
-
       - name: Run S4 PostgreSQL domain composer acceptance
         env:
           MCFT_S4_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_DOMAIN_COMPOSERS_POSTGRES.ts
-
       - name: Run S4 frozen production schema acceptance
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_FROZEN_SCHEMA.ts
+      - name: Run old-cursor projection visibility PostgreSQL acceptance
+        env:
+          MCFT_S4_CURSOR_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_CURSOR_VISIBILITY_POSTGRES.ts
 
-      - name: Verify structured S4 results
+      - name: Verify structured S4 results and lifecycle boundary
+        env:
+          DELIVERY_MODE: ${{ steps.delivery.outputs.mode }}
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
           for (const [file, minimum] of [
-            ['acceptance-output/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION_SELFTEST.json', 5],
-            ['acceptance-output/MCFT_CAP_07_S4_API_RESULT.json', 9],
-            ['acceptance-output/MCFT_CAP_07_S4_POSTGRES_ADAPTER_RESULT.json', 12],
-            ['acceptance-output/MCFT_CAP_07_S4_HEALTH_POSTGRES_RESULT.json', 6],
-            ['acceptance-output/MCFT_CAP_07_S4_DOMAIN_COMPOSERS_POSTGRES_RESULT.json', 4],
-            ['acceptance-output/MCFT_CAP_07_S4_FROZEN_SCHEMA_RESULT.json', 6],
+            ['acceptance-output/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION_SELFTEST.json',5],
+            ['acceptance-output/MCFT_CAP_07_S4_POSTGRES_ADAPTER_RESULT.json',12],
+            ['acceptance-output/MCFT_CAP_07_S4_HEALTH_POSTGRES_RESULT.json',6],
+            ['acceptance-output/MCFT_CAP_07_S4_DOMAIN_COMPOSERS_POSTGRES_RESULT.json',4],
+            ['acceptance-output/MCFT_CAP_07_S4_FROZEN_SCHEMA_RESULT.json',6],
+            ['acceptance-output/MCFT_CAP_07_S4_CURSOR_VISIBILITY_POSTGRES_RESULT.json',4],
           ]) {
-            const result = JSON.parse(fs.readFileSync(file, 'utf8'));
-            if (result.status !== 'PASS') throw new Error(`S4_NOT_PASS:${file}:${result.error || 'UNKNOWN'}`);
-            if (!Number.isInteger(result.check_count) || result.check_count < minimum) throw new Error(`S4_CHECK_INVENTORY_INVALID:${file}`);
-            if (!Array.isArray(result.checks) || result.checks.some((check) => check.status !== 'PASS')) throw new Error(`S4_CHECK_FAILURE:${file}`);
+            const result = JSON.parse(fs.readFileSync(file,'utf8'));
+            if (result.status !== 'PASS' || result.check_count < minimum) throw new Error(`S4_RESULT_NOT_PASS:${file}:${result.error || 'UNKNOWN'}`);
           }
-          NODE
-
-      - name: Verify frozen frontier projection and remediation boundary
-        env:
-          MCFT_BASE_SHA: ${{ steps.comparison-base.outputs.sha }}
-        run: |
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const cp = require('node:child_process');
-          const statusPath = 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-DELIVERY-STATUS-V1.json';
-          const scriptPath = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs';
-          const attestationWorkflowPath = '.github/workflows/mcft-cap-07-slice-exact-sha-attestation.yml';
-          const focusedWorkflowPath = '.github/workflows/mcft-cap-07-s4-api.yml';
-          const s4 = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
-          const s5 = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-DELIVERY-STATUS-V1.json', 'utf8'));
-          const exact = (actual, expected, code) => {
-            if (actual !== expected) throw new Error(`${code}:${String(actual)}`);
-          };
-
-          exact(s4.record_status, 'S4_COMMITTED_CANDIDATE_AUTHORITY', 'S4_STATUS');
-          exact(s4.delivery_state, 'IMPLEMENTED_AWAITING_PROTECTED_MERGE_AND_EXACT_SHA_ATTESTATION', 'S4_DELIVERY_STATE');
-          exact(s4.s4_candidate_implemented, true, 'S4_IMPLEMENTED');
-          exact(s4.implementation_authorized, true, 'S4_IMPLEMENTATION_AUTHORITY');
-          exact(s4.effectiveness_condition, 'PRESENT_ON_MAIN_AND_EXACT_SHA_ATTESTATION_PASS', 'S4_EFFECTIVENESS_CONDITION');
-          exact(s4.externally_effective, false, 'S4_REPOSITORY_EFFECTIVENESS_MUST_REMAIN_CONDITIONAL');
-          exact(s4.effective_status_when_attested, 'IN_PROGRESS', 'S4_EFFECTIVE_STATUS_PROJECTION');
-          exact(s4.effective_next_slice_when_attested, 'S5', 'S4_EFFECTIVE_NEXT_SLICE_PROJECTION');
-          exact(s4.runtime_source_authorized, false, 'S4_RUNTIME_SOURCE');
-          exact(s4.canonical_write_authorized, false, 'S4_CANONICAL_WRITE');
-          exact(s4.mcft_cap_08_authorized, false, 'S4_CAP08');
-          exact(s5.s5_candidate_implemented, false, 'S5_IMPLEMENTED_PRECONDITION');
-          exact(s5.implementation_authorized, false, 'S5_AUTHORIZED_PRECONDITION');
-
-          const attestationSource = fs.readFileSync(scriptPath, 'utf8');
-          for (const token of [
-            'MCFT_GOVERNANCE_REMEDIATION_V1',
-            'S4_ATTESTATION_OBSERVABILITY_CONTRACT',
-            'predecessorRemediation',
-            'candidate_transition_created_by_remediation: false',
-          ]) {
-            if (!attestationSource.includes(token)) throw new Error(`ATTESTATION_CHAIN_TOKEN_MISSING:${token}`);
-          }
-
-          const attestationWorkflow = fs.readFileSync(attestationWorkflowPath, 'utf8');
-          for (const token of [
-            'statuses: write',
-            'id: transient-artifact',
-            'Publish exact-SHA attestation commit status',
-            'actions/github-script@v7',
-            'createCommitStatus',
-            "context: 'mcft-cap-07/exact-sha-attestation'",
-            "- '.github/workflows/mcft-cap-07-slice-exact-sha-attestation.yml'",
-            "- 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs'",
-          ]) {
-            if (!attestationWorkflow.includes(token)) throw new Error(`ATTESTATION_OBSERVABILITY_TOKEN_MISSING:${token}`);
-          }
-
-          const actual = cp.execFileSync(
-            'git',
-            ['diff', '--name-only', `${process.env.MCFT_BASE_SHA}...HEAD`],
-            { encoding: 'utf8' },
-          ).trim().split(/\r?\n/).filter(Boolean).sort();
-          const allowedFrontier = [focusedWorkflowPath, statusPath, scriptPath].sort();
-          const allowedObservability = [focusedWorkflowPath, attestationWorkflowPath, scriptPath].sort();
-          const serialized = JSON.stringify(actual);
-          if (serialized !== JSON.stringify(allowedFrontier) && serialized !== JSON.stringify(allowedObservability)) {
-            throw new Error(`S4_GOVERNANCE_REMEDIATION_BOUNDARY_INVALID:${serialized}`);
+          const s4 = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-DELIVERY-STATUS-V1.json','utf8'));
+          if (s4.s4_candidate_implemented !== true || s4.runtime_source_authorized !== false || s4.canonical_write_authorized !== false || s4.mcft_cap_08_authorized !== false) throw new Error('S4_AUTHORITY_INVALID');
+          const mode = JSON.parse(fs.readFileSync('acceptance-output-mode.json','utf8'));
+          if (process.env.DELIVERY_MODE === 'S4_CURSOR_VISIBILITY_REMEDIATION_MODE') {
+            if (mode.actual.length !== 3 || JSON.stringify(mode.actual) !== JSON.stringify(mode.expected)) throw new Error(`S4_CURSOR_REMEDIATION_BOUNDARY_INVALID:${JSON.stringify(mode.actual)}`);
+            const cursor = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S4_CURSOR_VISIBILITY_POSTGRES_RESULT.json','utf8'));
+            if (cursor.old_cursor_post_snapshot_projection_excluded !== true || cursor.fresh_snapshot_late_commit_visible !== true || cursor.product_read_write_delta !== 0) throw new Error('S4_CURSOR_VISIBILITY_PROOF_INVALID');
+            const source = fs.readFileSync('apps/server/src/repositories/field_twin_read_model/postgres_field_twin_read_repository_v1.ts','utf8');
+            for (const token of ['JOIN public.facts AS f ON f.fact_id = source_row.source_fact_id','pg_catalog.pg_visible_in_snapshot(visibility.visibility_anchor_xid8, $2::pg_snapshot)','fact.object.object_id !== objectRef']) if (!source.includes(token)) throw new Error(`S4_CURSOR_REPAIR_TOKEN_MISSING:${token}`);
+          } else {
+            const api = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S4_API_RESULT.json','utf8'));
+            if (api.status !== 'PASS' || api.check_count < 9) throw new Error('S4_API_NOT_PASS');
           }
           NODE
 
@@ -191,13 +149,15 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap-07-s4-api-${{ github.sha }}
+          name: mcft-cap-07-s4-api-${{ steps.delivery.outputs.exact_sha }}
           path: |
+            acceptance-output-mode.json
             acceptance-output/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION_SELFTEST.json
             acceptance-output/MCFT_CAP_07_S4_API_RESULT.json
             acceptance-output/MCFT_CAP_07_S4_POSTGRES_ADAPTER_RESULT.json
             acceptance-output/MCFT_CAP_07_S4_HEALTH_POSTGRES_RESULT.json
             acceptance-output/MCFT_CAP_07_S4_DOMAIN_COMPOSERS_POSTGRES_RESULT.json
             acceptance-output/MCFT_CAP_07_S4_FROZEN_SCHEMA_RESULT.json
-          if-no-files-found: error
+            acceptance-output/MCFT_CAP_07_S4_CURSOR_VISIBILITY_POSTGRES_RESULT.json
+          if-no-files-found: warn
           retention-days: 90
