@@ -3,12 +3,14 @@ name: mcft-cap-07-s5-operator-integration
 on:
   pull_request:
     paths:
+      - 'apps/server/src/domain/auth/roles.ts'
       - 'apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts'
       - 'apps/web/src/api/mcftFieldTwinRuntime.ts'
       - 'apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx'
       - 'apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx'
       - 'apps/web/src/features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage.tsx'
       - 'apps/web/src/styles/operatorFieldRuntimeNavigator.css'
+      - 'config/auth/security_acceptance_tokens.json'
       - 'scripts/dev_seed/SEED_THREE_SURFACE_LOCAL_DEMO_V1.cjs'
       - 'scripts/dev_seed/seed_three_surface_local_demo_v1.ts'
       - 'scripts/dev_seed/three_surface_local_demo_action_lifecycle_v1.ts'
@@ -83,10 +85,12 @@ jobs:
           ].sort();
           const postClosureLocalDemo = [
             '.github/workflows/mcft-cap-07-s5-operator-integration.yml',
+            'apps/server/src/domain/auth/roles.ts',
             'apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts',
             'apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx',
             'apps/web/src/features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage.tsx',
             'apps/web/src/styles/operatorFieldRuntimeNavigator.css',
+            'config/auth/security_acceptance_tokens.json',
             'scripts/dev_seed/SEED_THREE_SURFACE_LOCAL_DEMO_V1.cjs',
             'scripts/dev_seed/seed_three_surface_local_demo_v1.ts',
             'scripts/dev_seed/three_surface_local_demo_action_lifecycle_v1.ts',
@@ -195,6 +199,59 @@ jobs:
             --runtime-database-url postgres://geox_runtime_v1:local-runtime-database-password@127.0.0.1:5432/postgres \
             | tee acceptance-output/MCFT_CAP_07_LOCAL_DEMO_IDEMPOTENT_APPLY.json
 
+      - name: Probe operator field-read authorization
+        if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
+        env:
+          GEOX_RUNTIME_ENV: development
+          GEOX_TOKENS_FILE: ${{ github.workspace }}/config/auth/security_acceptance_tokens.json
+          PROBE_DATABASE_URL: postgres://geox_runtime_v1:local-runtime-database-password@127.0.0.1:5432/postgres
+        run: |
+          set -euo pipefail
+          node --input-type=module - <<'NODE' | tee acceptance-output/MCFT_CAP_07_OPERATOR_FIELD_DISCOVERY_AUTH.json
+          import Fastify from 'fastify';
+          import pg from 'pg';
+          import { registerFieldsV1Routes } from './apps/server/dist/routes/fields_v1.js';
+          const { Pool } = pg;
+          const pool = new Pool({ connectionString: process.env.PROBE_DATABASE_URL, max: 2 });
+          const app = Fastify({ logger: false });
+          registerFieldsV1Routes(app, pool);
+          await app.ready();
+          try {
+            const allowedHeaders = { authorization: 'Bearer operator_token' };
+            const list = await app.inject({ method: 'GET', url: '/api/v1/fields', headers: allowedHeaders });
+            if (list.statusCode !== 200) throw new Error(`OPERATOR_FIELD_LIST_NOT_200:${list.statusCode}:${list.body}`);
+            const listBody = list.json();
+            const fields = Array.isArray(listBody.fields) ? listBody.fields : [];
+            if (!fields.some((item) => item.field_id === 'field_c8_demo')) throw new Error('GOVERNED_C8_FIELD_NOT_DISCOVERED');
+            const detail = await app.inject({ method: 'GET', url: '/api/v1/fields/field_c8_demo', headers: allowedHeaders });
+            if (detail.statusCode !== 200) throw new Error(`OPERATOR_FIELD_DETAIL_NOT_200:${detail.statusCode}:${detail.body}`);
+            const detailBody = detail.json();
+            const seasons = Array.isArray(detailBody.seasons) ? detailBody.seasons : [];
+            if (!seasons.some((item) => item.season_id === 'season_2026_c8_corn')) throw new Error('GOVERNED_C8_SEASON_NOT_DISCOVERED');
+            const denied = await app.inject({
+              method: 'GET',
+              url: '/api/v1/fields',
+              headers: { authorization: 'Bearer set-via-env-or-external-secret-file-pdi-writeonly' },
+            });
+            if (denied.statusCode !== 403) throw new Error(`WRITE_ONLY_FIELD_LIST_NOT_DENIED:${denied.statusCode}:${denied.body}`);
+            const deniedBody = denied.json();
+            if (deniedBody.error !== 'AUTH_SCOPE_DENIED') throw new Error(`WRITE_ONLY_DENIAL_CODE_INVALID:${denied.body}`);
+            console.log(JSON.stringify({
+              status: 'PASS',
+              operator_field_list_status: list.statusCode,
+              operator_field_detail_status: detail.statusCode,
+              governed_field_discovered: true,
+              governed_season_discovered: true,
+              write_only_status: denied.statusCode,
+              write_only_error: deniedBody.error,
+              fields_write_authorized: false,
+            }));
+          } finally {
+            await app.close();
+            await pool.end();
+          }
+          NODE
+
       - name: Prove bootstrap and migration reentry preserve CAP-07 permissions
         if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
         env:
@@ -244,6 +301,8 @@ jobs:
           }
           const migration = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_MIGRATION_REENTRY.json', 'utf8'));
           if (migration.status !== 'PASS' || migration.migration_action !== 'ALREADY_APPLIED_EXACT' || migration.runtime_metadata_direct_dml !== 'FORBIDDEN') throw new Error('MIGRATION_REENTRY_INVALID');
+          const auth = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_OPERATOR_FIELD_DISCOVERY_AUTH.json', 'utf8'));
+          if (auth.status !== 'PASS' || auth.operator_field_list_status !== 200 || auth.operator_field_detail_status !== 200 || auth.governed_field_discovered !== true || auth.governed_season_discovered !== true || auth.write_only_status !== 403 || auth.write_only_error !== 'AUTH_SCOPE_DENIED' || auth.fields_write_authorized !== false) throw new Error('OPERATOR_FIELD_DISCOVERY_AUTH_INVALID');
           NODE
 
       - name: Run lifecycle-aware S5 acceptance
