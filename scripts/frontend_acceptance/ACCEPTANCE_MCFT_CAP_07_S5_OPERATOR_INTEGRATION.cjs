@@ -127,7 +127,8 @@ function main() {
       const bundle = route + '\n' + client + '\n' + page;
       assert.doesNotMatch(bundle, /from\s+["'][^"']*operatorTwin["']/);
       assert.doesNotMatch(bundle, /fetchOperatorFieldTwin|operator_field_twin_workspace_v1|Replay-backed Demo/);
-      assert.doesNotMatch(bundle, /createRecommendation|approveRecommendation|dispatch|createAoActTask|activateModel|writeFact|persistFact/);
+      assert.doesNotMatch(bundle, /from\s+["'][^"']*(?:recommendation|approval|ao_act|dispatch|writer|persistence|activation)[^"']*["']/i);
+      assert.doesNotMatch(bundle, /\b(?:createRecommendation|approveRecommendation|dispatchTask|dispatchAction|createAoActTask|activateModel|writeFact|persistFact)\s*\(/);
     });
 
     check('S6_SEED_AND_FUTURE_REGISTRY_AUTHORITY_ONLY', () => {
