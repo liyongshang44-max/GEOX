@@ -19,6 +19,9 @@ function databaseUrl(): string {
   const database = encodeURIComponent(String(process.env.POSTGRES_DB || "landos"));
   return `postgres://${user}:${password}@127.0.0.1:5433/${database}`;
 }
+function readbackDatabaseUrl(writeUrl: string): string {
+  return argument("--runtime-database-url") || String(process.env.GEOX_RUNTIME_DATABASE_URL || "").trim() || writeUrl;
+}
 function assertLocalApplyAllowed(urlText: string): void {
   if (!flag("--confirm-local-demo")) throw new Error("LOCAL_DEMO_CONFIRMATION_REQUIRED: pass --confirm-local-demo");
   const parsed = new URL(urlText);
@@ -46,7 +49,7 @@ async function verifyBundle(pool: Pool, bundle: DemoBundle): Promise<JsonRecord>
     api.readHealth(request),
   ]);
   const count = (value: JsonRecord): number => Array.isArray(value.items) ? value.items.length : 0;
-  return {
+  const readback = {
     runtime_root_graph_status: runtime.root_graph_status,
     state_count: count(states),
     forecast_count: count(forecasts),
@@ -58,6 +61,10 @@ async function verifyBundle(pool: Pool, bundle: DemoBundle): Promise<JsonRecord>
     trace_node_count: Array.isArray(trace.nodes) ? trace.nodes.length : 0,
     health_relationship: health.health_relationship,
   };
+  if (readback.runtime_root_graph_status !== "COMPLETE_EXACT_GRAPH") throw new Error(`LOCAL_DEMO_READBACK_ROOT_INVALID:${readback.runtime_root_graph_status}`);
+  if (readback.state_count < 2 || readback.forecast_count < 1 || readback.scenario_count < 1 || readback.residual_count < 1) throw new Error(`LOCAL_DEMO_READBACK_COLLECTION_INCOMPLETE:${JSON.stringify(readback)}`);
+  if (readback.calibration_candidate_count < 1 || readback.shadow_evaluation_count < 1 || readback.trace_node_count < 9) throw new Error(`LOCAL_DEMO_READBACK_GOVERNANCE_OR_TRACE_INCOMPLETE:${JSON.stringify(readback)}`);
+  return readback;
 }
 
 async function main(): Promise<void> {
@@ -84,12 +91,13 @@ async function main(): Promise<void> {
     return;
   }
 
-  const url = databaseUrl();
-  if (mode === "apply") assertLocalApplyAllowed(url);
-  const pool = new Pool({ connectionString: url, max: 2 });
+  const writeUrl = databaseUrl();
+  const runtimeUrl = readbackDatabaseUrl(writeUrl);
+  if (mode === "apply") assertLocalApplyAllowed(writeUrl);
+  const writePool = new Pool({ connectionString: writeUrl, max: 1 });
   try {
     if (mode === "apply") {
-      const client = await pool.connect();
+      const client = await writePool.connect();
       try {
         await client.query("BEGIN");
         await assertRequiredRelations(client);
@@ -104,13 +112,20 @@ async function main(): Promise<void> {
         client.release();
       }
     }
-    const readback = await verifyBundle(pool, bundle);
+  } finally {
+    await writePool.end();
+  }
+
+  const readPool = new Pool({ connectionString: runtimeUrl, max: 2 });
+  try {
+    const readback = await verifyBundle(readPool, bundle);
     console.log(JSON.stringify({
       ok: true,
       seed: "THREE_SURFACE_LOCAL_DEMO_V1",
       mode,
       scope: bundle.scope,
       route,
+      readback_identity: runtimeUrl === writeUrl ? "WRITE_CREDENTIAL_FALLBACK" : "DEDICATED_RUNTIME_CREDENTIAL",
       readback,
       boundaries: {
         local_only: true,
@@ -121,7 +136,7 @@ async function main(): Promise<void> {
       },
     }, null, 2));
   } finally {
-    await pool.end();
+    await readPool.end();
   }
 }
 
