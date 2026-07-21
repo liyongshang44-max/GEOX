@@ -23,6 +23,9 @@ const loaderFiles = [
 const loader = loaderFiles.map(read).join('\n');
 const route = read('apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx');
 const navigator = read('apps/web/src/features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage.tsx');
+const fieldApi = read('apps/web/src/api/fields.ts');
+const scopeOptionsRoute = read('apps/server/src/routes/field_runtime_scope_options_v1.ts');
+const fieldModule = read('apps/server/src/modules/field/registerFieldModule.ts');
 const css = read('apps/web/src/styles/operatorFieldRuntimeNavigator.css');
 const roleContract = read('apps/server/src/domain/auth/roles.ts');
 const fieldRoute = read('apps/server/src/routes/fields_v1.ts');
@@ -76,12 +79,24 @@ check('NO_MODEL_ACTIVATION_OR_SUCCESSOR_AUTHORITY_IS_CREATED', () => {
   assert.match(loader, /canonical_production_write_authorized:\s*false/);
 });
 
-check('SCOPE_NAVIGATOR_USES_EXISTING_GET_ONLY_FIELD_READS', () => {
+check('SCOPE_NAVIGATOR_USES_LIGHTWEIGHT_GET_ONLY_FIELD_READS', () => {
   assert.match(navigator, /fetchFields/);
-  assert.match(navigator, /fetchFieldDetail/);
+  assert.match(navigator, /fetchFieldRuntimeScopeOptions/);
+  assert.doesNotMatch(navigator, /fetchFieldDetail/);
+  assert.match(fieldApi, /\/runtime-scope-options/);
   assert.doesNotMatch(navigator, /createField|updateField|method:\s*["'](?:POST|PUT|PATCH|DELETE)/);
   for (const key of ['field_id','season_id','zone_id']) assert.ok(navigator.includes(`data-mcft-scope-key="${key}"`), key);
   assert.match(navigator, /navigate\(target\)/);
+});
+
+check('RUNTIME_SCOPE_OPTIONS_ROUTE_IS_MINIMAL_AND_REGISTERED', () => {
+  assert.match(scopeOptionsRoute, /app\.get\("\/api\/v1\/fields\/:field_id\/runtime-scope-options"/);
+  assert.match(scopeOptionsRoute, /requireAoActScopeV0\(req, reply, "fields\.read"\)/);
+  assert.match(scopeOptionsRoute, /FROM public\.field_index_v1/);
+  assert.match(scopeOptionsRoute, /FROM public\.field_season_index_v1/);
+  assert.match(scopeOptionsRoute, /field_detail_aggregate_consumed:\s*false/);
+  assert.doesNotMatch(scopeOptionsRoute, /INSERT\s+INTO|UPDATE\s+public\.|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE/i);
+  assert.match(fieldModule, /registerFieldRuntimeScopeOptionsV1Routes/);
 });
 
 check('OPERATOR_FIELD_DISCOVERY_AUTHORITY_IS_EXPLICIT_AND_MINIMAL', () => {
@@ -115,6 +130,7 @@ console.log(JSON.stringify({
   checks,
   operator_fields_read_authorized: true,
   operator_fields_write_authorized: false,
+  field_detail_aggregate_consumed: false,
   runtime_source_authorized: false,
   canonical_production_write_authorized: false,
   mcft_cap_08_authorized: false,
