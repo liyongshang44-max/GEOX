@@ -12,26 +12,26 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - run: |
-          tar -czf mcft-cap-07-s4-source-context.tar.gz \
-            apps/server/src/auth \
-            apps/server/src/domain/field_twin_read_model \
-            apps/server/src/repositories/field_twin_read_model \
-            apps/server/src/services/mcft_field_twin_cursor_transport_v1.ts \
-            apps/server/src/services/mcft_field_twin_read_api_v1.ts \
-            apps/server/src/services/mcft_field_twin_s4_health_composer_v1.ts \
-            apps/server/src/routes/v1/mcft_field_twin_read_v1.ts \
-            apps/server/src/routes/openapi_mcft_field_twin_read_v1.ts \
-            apps/server/src/modules/operator/registerOperatorModule.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_REPOSITORY.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S3_COMPOSERS.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_API.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_POSTGRES_ADAPTER.ts \
-            docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-TASK.md \
-            docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-SOURCE-VALIDATION-MATRIX-V1.json \
-            docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-HARD-ACCEPTANCE-LEDGER-V1.json
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Capture server typecheck
+        shell: bash
+        run: |
+          set +e
+          pnpm --filter @geox/server typecheck > s4-typecheck.log 2>&1
+          code=$?
+          echo "$code" > s4-typecheck-exit.txt
+          exit 0
       - uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap-07-s4-source-context
-          path: mcft-cap-07-s4-source-context.tar.gz
+          name: mcft-cap-07-s4-typecheck-diagnostic
+          path: |
+            s4-typecheck.log
+            s4-typecheck-exit.txt
           retention-days: 1
