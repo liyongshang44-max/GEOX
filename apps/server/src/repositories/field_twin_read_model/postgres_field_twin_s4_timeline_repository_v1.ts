@@ -18,7 +18,9 @@ import type { PostgresFieldTwinSnapshotContextV1 } from "./postgres_field_twin_s
 
 type JsonRecord = Record<string, unknown>;
 type MembershipV1 = { record_set_id: string; member_refs: readonly string[] };
-const fail = (code: string, detail?: string): never => { throw new PostgresFieldTwinReadRepositoryErrorV1(code, detail); };
+function fail(code: string, detail?: string): never {
+  throw new PostgresFieldTwinReadRepositoryErrorV1(code, detail);
+}
 const record = (value: unknown, code: string): JsonRecord => {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail(code);
   return value as JsonRecord;
