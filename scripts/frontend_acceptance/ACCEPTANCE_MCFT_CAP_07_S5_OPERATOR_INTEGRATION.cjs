@@ -40,6 +40,7 @@ const POST_CLOSURE_LOCAL_DEMO_FILES = [
   'apps/web/src/styles/operatorFieldRuntimeNavigator.css',
   'scripts/dev_seed/SEED_THREE_SURFACE_LOCAL_DEMO_V1.cjs',
   'scripts/dev_seed/seed_three_surface_local_demo_v1.ts',
+  'scripts/dev_seed/three_surface_local_demo_action_lifecycle_v1.ts',
   'scripts/dev_seed/three_surface_local_demo_contract_v1.ts',
   'scripts/dev_seed/three_surface_local_demo_optional_persistence_v1.ts',
   'scripts/dev_seed/three_surface_local_demo_persistence_v1.ts',
@@ -210,6 +211,8 @@ function main() {
       check('POST_CLOSURE_LOADER_AND_BOOTSTRAP_REENTRY_REMAIN_FAIL_CLOSED', () => {
         assert.match(localAcceptance, /runtime_source_authorized:\s*false/);
         assert.match(localAcceptance, /mcft_cap_08_authorized:\s*false/);
+        assert.match(localAcceptance, /LOCAL_DEMO_READBACK_ACTION_LIFECYCLE_INCOMPLETE/);
+        assert.match(localAcceptance, /LOCAL_DEMO_READBACK_TIMELINE_INCOMPLETE/);
         assert.match(bootstrap, /reassertMcftCap07RuntimeVisibilityBoundaryV1/);
         assert.match(bootstrap, /REVOKE ALL ON TABLE public\.twin_fact_visibility_epoch_v1/);
         assert.match(bootstrap, /GRANT SELECT ON TABLE public\.twin_fact_visibility_epoch_v1/);
