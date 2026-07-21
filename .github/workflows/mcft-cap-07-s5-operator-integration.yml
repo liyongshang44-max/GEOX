@@ -171,7 +171,8 @@ jobs:
           set -euo pipefail
           mkdir -p acceptance-output
           node apps/server/dist/database/platform_bootstrap.js 2>&1 | tee acceptance-output/MCFT_CAP_07_PLATFORM_BOOTSTRAP_INITIAL.log
-          node apps/server/dist/database/mcft_cap07_migration.js 2>&1 | tee acceptance-output/MCFT_CAP_07_MIGRATION_INITIAL.log
+          env -u GEOX_DB_PLATFORM_ADMIN_DATABASE_URL -u GEOX_RUNTIME_DATABASE_URL \
+            node apps/server/dist/database/mcft_cap07_migration.js 2>&1 | tee acceptance-output/MCFT_CAP_07_MIGRATION_INITIAL.log
 
       - name: Apply local demo twice and verify through dedicated Runtime credential
         if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
@@ -205,7 +206,8 @@ jobs:
         run: |
           set -euo pipefail
           node apps/server/dist/database/platform_bootstrap.js 2>&1 | tee acceptance-output/MCFT_CAP_07_PLATFORM_BOOTSTRAP_REENTRY.log
-          node apps/server/dist/database/mcft_cap07_migration.js | tee acceptance-output/MCFT_CAP_07_MIGRATION_REENTRY.json
+          env -u GEOX_DB_PLATFORM_ADMIN_DATABASE_URL -u GEOX_RUNTIME_DATABASE_URL \
+            node apps/server/dist/database/mcft_cap07_migration.js | tee acceptance-output/MCFT_CAP_07_MIGRATION_REENTRY.json
           pnpm -w exec tsx scripts/dev_seed/seed_three_surface_local_demo_v1.ts \
             --verify \
             --database-url postgres://postgres:postgres@127.0.0.1:5432/postgres \
