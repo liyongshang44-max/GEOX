@@ -1,0 +1,58 @@
+{
+  "schema_version": "geox_mcft_cap_07_s4_production_read_adapter_ownership_v1",
+  "record_status": "FROZEN_S4_OWNERSHIP",
+  "capability_line_id": "MCFT-CAP-07",
+  "slice_id": "MCFT-CAP-07.S4",
+  "taskbook_version": "v0.2.5",
+  "transaction_authority": {
+    "owner_slice": "MCFT-CAP-07.S2",
+    "implementation_path": "apps/server/src/repositories/field_twin_read_model/postgres_field_twin_snapshot_repository_v1.ts",
+    "contract": "ONE_CALLER_OWNED_REPEATABLE_READ_READ_ONLY_SNAPSHOT"
+  },
+  "s4_owned_paths": [
+    {
+      "path": "apps/server/src/repositories/field_twin_read_model/postgres_field_twin_read_repository_v1.ts",
+      "role": "S4_PRODUCTION_ROOT_AND_COLLECTION_READ_ADAPTER_BASE"
+    },
+    {
+      "path": "apps/server/src/repositories/field_twin_read_model/postgres_field_twin_s4_repository_v1.ts",
+      "role": "S4_ENDPOINT_FACING_COLLECTION_AND_ATTACHMENT_ADAPTER"
+    },
+    {
+      "path": "apps/server/src/repositories/field_twin_read_model/postgres_field_twin_s4_replay_repository_v1.ts",
+      "role": "S4_REPLAY_EVIDENCE_AND_DECISION_PLAN_ADAPTER"
+    },
+    {
+      "path": "apps/server/src/repositories/field_twin_read_model/postgres_field_twin_s4_timeline_repository_v1.ts",
+      "role": "S4_TIMELINE_SQL_KEYSET_ADAPTER"
+    },
+    {
+      "path": "apps/server/src/repositories/field_twin_read_model/postgres_field_twin_s4_health_repository_v1.ts",
+      "role": "S4_INDEPENDENT_TERMINAL_AND_OPERATIONAL_HEALTH_ADAPTER"
+    },
+    {
+      "path": "apps/server/src/services/mcft_field_twin_read_api_v1.ts",
+      "role": "S4_CANONICAL_READ_ORCHESTRATION_BASE"
+    },
+    {
+      "path": "apps/server/src/services/mcft_field_twin_s4_read_api_v1.ts",
+      "role": "S4_ROOT_INDEPENDENT_HEALTH_API_ADAPTER"
+    }
+  ],
+  "invariants": {
+    "transaction_ownership_delta": "ZERO",
+    "canonical_write_authority_delta": "ZERO",
+    "projection_write_authority_delta": "ZERO",
+    "migration_authority_delta": "ZERO",
+    "runtime_source_authority_delta": "ZERO",
+    "all_queries_execute_inside_caller_owned_s2_snapshot": true,
+    "unbounded_collection_count_authorized": false,
+    "synthetic_runtime_object_authorized": false,
+    "projection_as_canonical_authority_authorized": false
+  },
+  "nonclaims": [
+    "This record does not reclassify S2 snapshot transaction ownership as S4.",
+    "This record does not authorize SQL writes, migrations, Runtime source behavior, S5, or MCFT-CAP-08.",
+    "This record does not make S4 externally effective."
+  ]
+}
