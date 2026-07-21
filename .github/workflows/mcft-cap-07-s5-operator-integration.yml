@@ -1,0 +1,102 @@
+name: mcft-cap-07-s5-operator-integration
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/src/api/mcftFieldTwinRuntime.ts'
+      - 'apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx'
+      - 'apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx'
+      - 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+      - 'scripts/frontend_acceptance/ACCEPTANCE_MCFT_CAP_07_S5_OPERATOR_INTEGRATION.cjs'
+      - '.github/workflows/mcft-cap-07-s5-operator-integration.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap-07-s5-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  mcft-cap-07-s5-operator-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve comparison base
+        id: comparison-base
+        shell: bash
+        env:
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${EVENT_BASE_SHA}" ]]; then
+            BASE_SHA="${EVENT_BASE_SHA}"
+          else
+            BASE_SHA="$(git rev-parse origin/main)"
+          fi
+          git cat-file -e "${BASE_SHA}^{commit}"
+          echo "sha=${BASE_SHA}" >> "${GITHUB_OUTPUT}"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck canonical Operator surface
+        run: pnpm --filter @geox/web typecheck
+
+      - name: Build canonical Operator surface
+        run: pnpm --filter @geox/web build
+
+      - name: Run S5 focused acceptance
+        env:
+          MCFT_BASE_SHA: ${{ steps.comparison-base.outputs.sha }}
+        run: node scripts/frontend_acceptance/ACCEPTANCE_MCFT_CAP_07_S5_OPERATOR_INTEGRATION.cjs
+
+      - name: Verify structured S5 result and authority
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S5_OPERATOR_INTEGRATION_RESULT.json', 'utf8'));
+          if (result.status !== 'PASS') throw new Error(`S5_NOT_PASS:${result.error || 'UNKNOWN'}`);
+          if (!Number.isInteger(result.check_count) || result.check_count < 12) throw new Error('S5_CHECK_INVENTORY_INVALID');
+          if (!Array.isArray(result.checks) || result.checks.some((check) => check.status !== 'PASS')) throw new Error('S5_CHECK_FAILURE');
+          if (result.canonical_tab_count !== 9 || result.canonical_endpoint_count !== 10 || result.exact_scope_key_count !== 6) throw new Error('S5_FROZEN_INVENTORY_INVALID');
+          if (result.legacy_truth_fallback !== false || result.numeric_confidence_fabricated !== false || result.write_authority_delta !== 'ZERO') throw new Error('S5_BOUNDARY_INVALID');
+
+          const s5 = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-DELIVERY-STATUS-V1.json', 'utf8'));
+          const s6 = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-DELIVERY-STATUS-V1.json', 'utf8'));
+          if (s5.record_status !== 'S5_COMMITTED_CANDIDATE_AUTHORITY' || s5.delivery_state !== 'IMPLEMENTED_AWAITING_PROTECTED_MERGE_AND_EXACT_SHA_ATTESTATION') throw new Error('S5_STATUS_INVALID');
+          if (s5.s5_candidate_implemented !== true || s5.implementation_authorized !== true || s5.externally_effective !== false) throw new Error('S5_CANDIDATE_STATE_INVALID');
+          if (s5.effective_next_slice_when_attested !== 'S6') throw new Error('S5_SUCCESSOR_PROJECTION_INVALID');
+          if (s5.canonical_write_authority_delta !== 'ZERO' || s5.runtime_source_authorized !== false || s5.mcft_cap_08_authorized !== false) throw new Error('S5_AUTHORITY_DELTA_INVALID');
+          if (s6.record_status !== 'PRE_REGISTERED_SUCCESSOR_SEED' || s6.s6_candidate_implemented !== false || s6.implementation_authorized !== false) throw new Error('S6_SEED_INVALID');
+          NODE
+
+      - name: Upload focused acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-07-s5-operator-integration-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_07_S5_OPERATOR_INTEGRATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
