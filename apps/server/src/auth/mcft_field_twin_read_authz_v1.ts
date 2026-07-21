@@ -28,8 +28,10 @@ function repoRootV1(): string {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../");
 }
 
-function productionLikeV1(): boolean {
-  return ["staging", "production"].includes(String(process.env.GEOX_RUNTIME_ENV ?? "development").trim().toLowerCase());
+const STRICT_RUNTIME_PROFILES_V1 = Object.freeze(["pilot", "commercial", "staging", "production"] as const);
+
+function strictRuntimeProfileV1(): boolean {
+  return STRICT_RUNTIME_PROFILES_V1.includes(String(process.env.GEOX_RUNTIME_ENV ?? "development").trim().toLowerCase() as (typeof STRICT_RUNTIME_PROFILES_V1)[number]);
 }
 
 function normalizeRecordV1(value: unknown): TokenRecordV1 | null {
@@ -71,7 +73,7 @@ function tokenFileV1(): TokenFileV1 {
     try { return parseTokenFileV1(fs.readFileSync(externalFile, "utf8")); } catch { return { tokens: [] }; }
   }
   const singleToken = String(process.env.GEOX_TOKEN ?? process.env.GEOX_AO_ACT_TOKEN ?? process.env.AO_ACT_TOKEN ?? "").trim();
-  if (singleToken && !productionLikeV1()) {
+  if (singleToken && !strictRuntimeProfileV1()) {
     return { tokens: [{
       token: singleToken,
       revoked: false,
@@ -85,7 +87,7 @@ function tokenFileV1(): TokenFileV1 {
       allowed_field_ids: [],
     }] };
   }
-  if (productionLikeV1()) return { tokens: [] };
+  if (strictRuntimeProfileV1()) return { tokens: [] };
   try { return parseTokenFileV1(fs.readFileSync(path.join(repoRootV1(), "config", "auth", "example_tokens.json"), "utf8")); } catch { return { tokens: [] }; }
 }
 
