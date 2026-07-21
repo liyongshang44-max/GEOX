@@ -1,0 +1,91 @@
+{
+  "schema_version": "geox_mcft_cap_07_s6_hard_acceptance_resolution_v1",
+  "resolution_id": "GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-RESOLUTION-V1",
+  "record_status": "CLOSURE_CANDIDATE_PENDING_EXTERNAL_ATTESTATION",
+  "taskbook_version": "v0.2.5",
+  "capability_line_id": "MCFT-CAP-07",
+  "ledger_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-HARD-ACCEPTANCE-LEDGER-V1.json",
+  "ledger_item_count": 282,
+  "candidate_resolved_item_count": 277,
+  "external_pending_item_count": 5,
+  "duplicate_item_id_count": 0,
+  "external_pending_item_ids": ["L011", "L012", "L013", "L014", "L015"],
+  "candidate_resolution_rule": "EVERY_NON_EXTERNAL_ITEM_ID_MUST_HAVE_EXACT_CATEGORY_EVIDENCE_AND_FOCUSED_ACCEPTANCE_PASS",
+  "external_resolution_rule": "ONLY_EXACT_S6_MERGE_SHA_R2_ARTIFACT_MAY_RESOLVE_L011_THROUGH_L015",
+  "category_evidence": {
+    "A": [
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CURRENT-AUTHORITY-V1.json",
+      "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json",
+      "workflow:mcft-candidate-declaration-integrity-v2",
+      "workflow:mcft-release-lane-v1",
+      "workflow:mcft-main-ruleset-readiness-v1"
+    ],
+    "B": [
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-SOURCE-VALIDATION-MATRIX-V1.json",
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S2-HARD-ACCEPTANCE-EVIDENCE-V1.json"
+    ],
+    "C": [
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S2-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "acceptance-output/MCFT_CAP_07_S2_REPOSITORY_RESULT.json",
+      "acceptance-output/MCFT_CAP_07_S6_CLOSURE_RESULT.json"
+    ],
+    "D": [
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "acceptance-output/MCFT_CAP_07_S6_CLOSURE_RESULT.json"
+    ],
+    "E": [
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "acceptance-output/MCFT_CAP_07_S6_CLOSURE_RESULT.json"
+    ],
+    "F": [
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "acceptance-output/MCFT_CAP_07_S6_CLOSURE_RESULT.json"
+    ],
+    "G": [
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "acceptance-output/MCFT_CAP_07_S6_CLOSURE_RESULT.json"
+    ],
+    "H": [
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "acceptance-output/MCFT_CAP_07_S6_CLOSURE_RESULT.json"
+    ],
+    "I": [
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "workflow:mcft-cap-07-s4-api"
+    ],
+    "J": [
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "workflow_run:29820422077",
+      "exact_merge_attestation_run:29821065162"
+    ],
+    "K": [
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "acceptance-output/MCFT_CAP_07_S6_CLOSURE_RESULT.json"
+    ],
+    "L": [
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-DELIVERY-STATUS-V1.json",
+      "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+      "exact_s6_merge_sha_r2_artifact:REQUIRED_FOR_L011_L015"
+    ]
+  },
+  "required_candidate_workflows": [
+    "mcft-cap-07-s1-contracts",
+    "mcft-cap-07-s2-repository",
+    "mcft-cap-07-s3-composers",
+    "mcft-cap-07-s4-api",
+    "mcft-cap-07-s5-operator-integration",
+    "mcft-cap-07-s6-closure",
+    "ci",
+    "mcft-candidate-declaration-integrity-v2",
+    "mcft-release-lane-v1"
+  ],
+  "candidate_completion_state": "CLOSURE_CANDIDATE_NOT_EFFECTIVE",
+  "effective_completion_state_when_external_items_resolve": "MCFT_CAP_07_COMPLETE",
+  "runtime_source_authorized": false,
+  "canonical_write_authority_delta": "ZERO",
+  "mcft_cap_08_authorized": false
+}

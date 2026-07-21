@@ -43,12 +43,12 @@
     },
     {
       "capability_line": "MCFT-CAP-07",
-      "registry_bootstrap_kind": "S0_AUTHORITY_WITH_PRE_REGISTERED_SUCCESSOR_CHAIN_THROUGH_S6",
+      "registry_bootstrap_kind": "S0_AUTHORITY_WITH_FINAL_S6_CLOSURE_CANDIDATE",
       "resolved_manifest_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-RESOLVED-MANIFEST-V1.json",
       "taskbook_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-TASK.md",
       "current_candidate_authority": false,
       "candidate_declaration_enabled": true,
-      "candidate_authority_scope": "S1_THROUGH_S5_COMMITTED_CANDIDATES_WITH_FUTURE_S6_AFTER_S5_EFFECTIVENESS",
+      "candidate_authority_scope": "S1_THROUGH_S6_WITH_S6_AS_FINAL_CLOSURE_CANDIDATE",
       "authoritative_candidate_status_paths": [
         "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CURRENT-AUTHORITY-V1.json",
         "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-DELIVERY-STATUS-V1.json",
@@ -115,11 +115,14 @@
           "predecessor_effective_evidence_required": true
         }
       ],
-      "terminal_state": "S5_CONDITIONAL_CANDIDATE_AUTHORITY_COMMITTED_WHEN_MERGED_AND_ATTESTED",
+      "terminal_state": "S6_CLOSURE_CANDIDATE_PENDING_EXACT_MERGE_SHA_R2_ATTESTATION",
+      "effective_completion_state_when_attested": "MCFT_CAP_07_COMPLETE",
+      "post_completion_candidate_declaration_enabled": false,
       "successor_capability_authorized": false,
       "implementation_authorized": false,
       "runtime_source_authorized": false,
-      "canonical_write_authorized": false
+      "canonical_write_authorized": false,
+      "mcft_cap_08_authorized": false
     }
   ]
 }

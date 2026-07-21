@@ -2,7 +2,7 @@
   "schema_version": "geox_mcft_cap_07_workflow_declaration_v1",
   "declaration_id": "GEOX-MCFT-CAP-07-WORKFLOW-DECLARATION-V1",
   "taskbook_version": "v0.2.5",
-  "record_status": "S4_COMMITTED_WORKFLOW_AUTHORITY",
+  "record_status": "S6_COMMITTED_CLOSURE_WORKFLOW_AUTHORITY",
   "focused_workflow": {
     "name": "mcft-cap-07-s0-authorization",
     "path": ".github/workflows/mcft-cap-07-s0-authorization.yml",
@@ -11,39 +11,51 @@
     "negative_intermediate_head_allowed_only_for_live_exercise": true
   },
   "slice_focused_workflows": [
-    {
-      "slice_id": "MCFT-CAP-07.S0",
-      "name": "mcft-cap-07-s0-authorization",
-      "path": ".github/workflows/mcft-cap-07-s0-authorization.yml"
-    },
-    {
-      "slice_id": "MCFT-CAP-07.S1",
-      "name": "mcft-cap-07-s1-contracts",
-      "path": ".github/workflows/mcft-cap-07-s1-contracts.yml"
-    },
-    {
-      "slice_id": "MCFT-CAP-07.S2",
-      "name": "mcft-cap-07-s2-repository",
-      "path": ".github/workflows/mcft-cap-07-s2-repository.yml"
-    },
-    {
-      "slice_id": "MCFT-CAP-07.S3",
-      "name": "mcft-cap-07-s3-composers",
-      "path": ".github/workflows/mcft-cap-07-s3-composers.yml"
-    },
-    {
-      "slice_id": "MCFT-CAP-07.S4",
-      "name": "mcft-cap-07-s4-api",
-      "path": ".github/workflows/mcft-cap-07-s4-api.yml"
-    }
+    { "slice_id": "MCFT-CAP-07.S0", "name": "mcft-cap-07-s0-authorization", "path": ".github/workflows/mcft-cap-07-s0-authorization.yml" },
+    { "slice_id": "MCFT-CAP-07.S1", "name": "mcft-cap-07-s1-contracts", "path": ".github/workflows/mcft-cap-07-s1-contracts.yml" },
+    { "slice_id": "MCFT-CAP-07.S2", "name": "mcft-cap-07-s2-repository", "path": ".github/workflows/mcft-cap-07-s2-repository.yml" },
+    { "slice_id": "MCFT-CAP-07.S3", "name": "mcft-cap-07-s3-composers", "path": ".github/workflows/mcft-cap-07-s3-composers.yml" },
+    { "slice_id": "MCFT-CAP-07.S4", "name": "mcft-cap-07-s4-api", "path": ".github/workflows/mcft-cap-07-s4-api.yml" },
+    { "slice_id": "MCFT-CAP-07.S5", "name": "mcft-cap-07-s5-operator-integration", "path": ".github/workflows/mcft-cap-07-s5-operator-integration.yml" },
+    { "slice_id": "MCFT-CAP-07.S6", "name": "mcft-cap-07-s6-closure", "path": ".github/workflows/mcft-cap-07-s6-closure.yml" }
   ],
+  "s5_lifecycle_modes": [
+    "S5_EXACT_CANDIDATE_MODE",
+    "S6_SUCCESSOR_REGRESSION_MODE",
+    "S5_WORKFLOW_REMEDIATION_MODE"
+  ],
+  "s6_closure_workflow": {
+    "name": "mcft-cap-07-s6-closure",
+    "path": ".github/workflows/mcft-cap-07-s6-closure.yml",
+    "candidate_event": "pull_request",
+    "exact_head_required": true,
+    "focused_artifact_identity": "RESOLVED_EXACT_HEAD_SHA",
+    "runs_s2_repository_regression": true,
+    "runs_s4_production_adapter_regression": true,
+    "runs_s5_successor_regression": true,
+    "runs_domain_composition_profiles": ["A1", "A2", "A3", "B", "C"],
+    "runs_postgres_production_repository_api_readback": true,
+    "runs_connection_pool_restart_and_adapter_reinstantiation_stability": true,
+    "runs_projection_rebuild_cursor_and_zero_write_acceptance": true,
+    "postgresql_service_restart_claimed": false,
+    "product_code_delta": "ZERO"
+  },
   "exact_sha_attestation_workflow": {
     "name": "mcft-cap-07-slice-exact-sha-attestation",
     "path": ".github/workflows/mcft-cap-07-slice-exact-sha-attestation.yml",
     "event": "push:main_or_workflow_dispatch_exact_subject_sha",
     "repository_write_permission": false,
     "postmerge_ssot_writeback_allowed": false,
-    "retention_store_contract_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-ATTESTATION-RETENTION-STORE-CONTRACT-V1.json"
+    "retention_store_contract_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-ATTESTATION-RETENTION-STORE-CONTRACT-V1.json",
+    "default_retention": { "level": "R1", "days": 180 },
+    "s6_closure_retention": { "level": "R2", "days": 730 },
+    "s6_closure_finalizer": "scripts/governance_acceptance/mcft_cap07_s6_closure_artifact_finalize.cjs",
+    "commit_status_context": "mcft-cap-07/exact-sha-attestation"
   },
-  "standard_workflow": "ci"
+  "candidate_integrity_workflow": "mcft-candidate-declaration-integrity-v2",
+  "release_lane_workflow": "mcft-release-lane-v1",
+  "standard_workflow": "ci",
+  "runtime_source_authorized": false,
+  "canonical_write_authorized": false,
+  "mcft_cap_08_authorized": false
 }

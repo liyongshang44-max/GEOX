@@ -8,6 +8,7 @@ on:
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
       - '.github/workflows/mcft-cap-07-slice-exact-sha-attestation.yml'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs'
+      - 'scripts/governance_acceptance/mcft_cap07_s6_closure_artifact_finalize.cjs'
   workflow_dispatch:
     inputs:
       subject_sha:
@@ -45,6 +46,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs
+      - name: Finalize S6 closure artifact when applicable
+        env:
+          MCFT_CANONICAL_ARTIFACT_PATH: acceptance-output/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.json
+        run: node scripts/governance_acceptance/mcft_cap07_s6_closure_artifact_finalize.cjs
+      - name: Resolve immutable retention policy
+        id: retention
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const artifact = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.json', 'utf8'));
+          const closure = artifact.slice_id === 'MCFT-CAP-07.S6';
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `level=${closure ? 'R2' : 'R1'}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `days=${closure ? '730' : '180'}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `completion=${artifact.effective_delivery_frontier_projection?.effective_status || 'UNKNOWN'}\n`);
+          if (closure) {
+            if (artifact.capability_complete !== true) throw new Error('S6_CAPABILITY_COMPLETE_PROJECTION_MISSING');
+            if (artifact.hard_acceptance_resolution?.effective_resolved_item_count !== 282) throw new Error('S6_HARD_ACCEPTANCE_NOT_FULLY_RESOLVED');
+            if (artifact.zero_write_acceptance_result?.product_observation_write_delta !== 0) throw new Error('S6_ZERO_WRITE_RESULT_INVALID');
+          }
+          NODE
       - name: Build deterministic transport archive
         run: |
           mkdir -p acceptance-output/archive-input
@@ -64,8 +85,8 @@ jobs:
           MCFT_REPOSITORY_OWNER: ${{ github.repository_owner }}
           MCFT_REPOSITORY_NAME: GEOX
           MCFT_ARTIFACT_NAME: mcft-cap-07-exact-sha-${{ inputs.subject_sha || github.sha }}
-          MCFT_RETENTION_LEVEL: R1
-          MCFT_RETENTION_DAYS: '180'
+          MCFT_RETENTION_LEVEL: ${{ steps.retention.outputs.level }}
+          MCFT_RETENTION_DAYS: ${{ steps.retention.outputs.days }}
         run: node scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs --upload-readback
       - name: Upload transient GitHub convenience copy
         id: transient-artifact
@@ -85,6 +106,7 @@ jobs:
         env:
           MCFT_JOB_STATUS: ${{ job.status }}
           MCFT_ARTIFACT_ID: ${{ steps.transient-artifact.outputs.artifact-id }}
+          MCFT_COMPLETION: ${{ steps.retention.outputs.completion }}
         with:
           github-token: ${{ github.token }}
           script: |
@@ -98,9 +120,10 @@ jobs:
             const succeeded = process.env.MCFT_JOB_STATUS === 'success' && artifact?.status === 'PASS' && artifactId.length > 0;
             const nextSlice = artifact?.effective_delivery_frontier_projection?.effective_next_slice || 'NONE';
             const sliceId = artifact?.slice_id || 'UNKNOWN';
+            const completion = artifact?.effective_delivery_frontier_projection?.effective_status || process.env.MCFT_COMPLETION || 'UNKNOWN';
             const state = succeeded ? 'success' : 'failure';
             const description = succeeded
-              ? `PASS ${sliceId} next=${nextSlice} artifact=${artifactId}`.slice(0, 140)
+              ? `PASS ${sliceId} state=${completion} next=${nextSlice} artifact=${artifactId}`.slice(0, 140)
               : `FAIL ${sliceId} run=${process.env.GITHUB_RUN_ID}`.slice(0, 140);
             const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
             await github.rest.repos.createCommitStatus({
