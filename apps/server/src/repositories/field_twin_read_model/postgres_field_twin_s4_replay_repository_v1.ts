@@ -28,7 +28,9 @@ export type ResolvedReplayEvidenceObjectV1 = {
   validation: FieldTwinSourceValidationResultV1;
 };
 
-const fail = (code: string, detail?: string): never => { throw new PostgresFieldTwinReadRepositoryErrorV1(code, detail); };
+function fail(code: string, detail?: string): never {
+  throw new PostgresFieldTwinReadRepositoryErrorV1(code, detail);
+}
 const record = (value: unknown, code: string): JsonRecord => {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail(code);
   return value as JsonRecord;
