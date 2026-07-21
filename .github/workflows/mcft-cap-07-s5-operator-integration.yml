@@ -34,7 +34,21 @@ concurrency:
 jobs:
   mcft-cap-07-s5-operator-integration:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
     steps:
       - name: Checkout exact candidate head
         uses: actions/checkout@v4
@@ -109,6 +123,85 @@ jobs:
       - name: Build canonical Operator surface
         run: pnpm --filter @geox/web build
 
+      - name: Build server entries for local-demo PostgreSQL proof
+        if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
+        run: pnpm --filter @geox/server build
+
+      - name: Initialize product schema and CAP-07 visibility contract
+        if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
+        env:
+          GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          GEOX_MIGRATION_DATABASE_URL: postgres://geox_mcft_migrator_v1:local-mcft-migrator-password@127.0.0.1:5432/postgres
+          GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:local-runtime-database-password@127.0.0.1:5432/postgres
+          GEOX_MCFT_MIGRATOR_PASSWORD: local-mcft-migrator-password
+          GEOX_RUNTIME_DATABASE_PASSWORD: local-runtime-database-password
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${{ steps.delivery.outputs.exact_sha }}
+        run: |
+          set -euo pipefail
+          node apps/server/dist/database/platform_bootstrap.js
+          node apps/server/dist/database/mcft_cap07_migration.js
+
+      - name: Apply local demo twice and verify through dedicated Runtime credential
+        if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
+        env:
+          GEOX_RUNTIME_ENV: development
+          GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:local-runtime-database-password@127.0.0.1:5432/postgres
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          pnpm -w exec tsx scripts/dev_seed/seed_three_surface_local_demo_v1.ts \
+            --apply --confirm-local-demo \
+            --database-url postgres://postgres:postgres@127.0.0.1:5432/postgres \
+            --runtime-database-url postgres://geox_runtime_v1:local-runtime-database-password@127.0.0.1:5432/postgres \
+            | tee acceptance-output/MCFT_CAP_07_LOCAL_DEMO_FIRST_APPLY.json
+          pnpm -w exec tsx scripts/dev_seed/seed_three_surface_local_demo_v1.ts \
+            --apply --confirm-local-demo \
+            --database-url postgres://postgres:postgres@127.0.0.1:5432/postgres \
+            --runtime-database-url postgres://geox_runtime_v1:local-runtime-database-password@127.0.0.1:5432/postgres \
+            | tee acceptance-output/MCFT_CAP_07_LOCAL_DEMO_IDEMPOTENT_APPLY.json
+
+      - name: Prove bootstrap and migration reentry preserve CAP-07 permissions
+        if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
+        env:
+          GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          GEOX_MIGRATION_DATABASE_URL: postgres://geox_mcft_migrator_v1:local-mcft-migrator-password@127.0.0.1:5432/postgres
+          GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:local-runtime-database-password@127.0.0.1:5432/postgres
+          GEOX_MCFT_MIGRATOR_PASSWORD: local-mcft-migrator-password
+          GEOX_RUNTIME_DATABASE_PASSWORD: local-runtime-database-password
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${{ steps.delivery.outputs.exact_sha }}
+          GEOX_RUNTIME_ENV: development
+        run: |
+          set -euo pipefail
+          node apps/server/dist/database/platform_bootstrap.js
+          node apps/server/dist/database/mcft_cap07_migration.js | tee acceptance-output/MCFT_CAP_07_MIGRATION_REENTRY.json
+          pnpm -w exec tsx scripts/dev_seed/seed_three_surface_local_demo_v1.ts \
+            --verify \
+            --database-url postgres://postgres:postgres@127.0.0.1:5432/postgres \
+            --runtime-database-url postgres://geox_runtime_v1:local-runtime-database-password@127.0.0.1:5432/postgres \
+            | tee acceptance-output/MCFT_CAP_07_LOCAL_DEMO_POST_REENTRY_READBACK.json
+
+      - name: Verify local-demo PostgreSQL evidence
+        if: steps.delivery.outputs.mode == 'S5_POST_CLOSURE_LOCAL_DEMO_MODE'
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          for (const file of [
+            'acceptance-output/MCFT_CAP_07_LOCAL_DEMO_FIRST_APPLY.json',
+            'acceptance-output/MCFT_CAP_07_LOCAL_DEMO_IDEMPOTENT_APPLY.json',
+            'acceptance-output/MCFT_CAP_07_LOCAL_DEMO_POST_REENTRY_READBACK.json',
+          ]) {
+            const result = JSON.parse(fs.readFileSync(file, 'utf8'));
+            if (result.ok !== true) throw new Error(`LOCAL_DEMO_NOT_OK:${file}`);
+            if (result.readback_identity !== 'DEDICATED_RUNTIME_CREDENTIAL') throw new Error(`RUNTIME_IDENTITY_NOT_DEDICATED:${file}`);
+            if (result.readback.runtime_root_graph_status !== 'COMPLETE_EXACT_GRAPH') throw new Error(`ROOT_NOT_COMPLETE:${file}`);
+            if (result.readback.state_count < 2 || result.readback.forecast_count < 1 || result.readback.scenario_count < 1 || result.readback.residual_count < 1) throw new Error(`COLLECTIONS_INCOMPLETE:${file}`);
+            if (result.readback.calibration_candidate_count < 1 || result.readback.shadow_evaluation_count < 1 || result.readback.trace_node_count < 9) throw new Error(`GOVERNANCE_OR_TRACE_INCOMPLETE:${file}`);
+            if (result.boundaries.runtime_source_authorized !== false || result.boundaries.canonical_production_write_authorized !== false || result.boundaries.model_activation_created !== false || result.boundaries.mcft_cap_08_authorized !== false) throw new Error(`BOUNDARY_INVALID:${file}`);
+          }
+          const migration = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_MIGRATION_REENTRY.json', 'utf8'));
+          if (migration.status !== 'PASS' || migration.migration_action !== 'ALREADY_APPLIED_EXACT' || migration.runtime_metadata_direct_dml !== 'FORBIDDEN') throw new Error('MIGRATION_REENTRY_INVALID');
+          NODE
+
       - name: Run lifecycle-aware S5 acceptance
         env:
           MCFT_BASE_SHA: ${{ steps.delivery.outputs.base_sha }}
@@ -139,6 +232,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap-07-s5-operator-integration-${{ steps.delivery.outputs.exact_sha }}
-          path: acceptance-output/MCFT_CAP_07_S5_OPERATOR_INTEGRATION_RESULT.json
+          path: acceptance-output/
           if-no-files-found: error
           retention-days: 90
