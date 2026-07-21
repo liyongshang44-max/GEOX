@@ -103,6 +103,10 @@
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-DELIVERY-STATUS-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+    "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-RESOLUTION-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-ATTESTATION-RETENTION-STORE-CONTRACT-V1.json",
     "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-WORKFLOW-DECLARATION-V1.json"
   ],
@@ -122,7 +126,14 @@
     "s1_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S1-HARD-ACCEPTANCE-EVIDENCE-V1.json",
     "s2_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S2-HARD-ACCEPTANCE-EVIDENCE-V1.json",
     "s3_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S3-HARD-ACCEPTANCE-EVIDENCE-V1.json",
-    "s4_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-HARD-ACCEPTANCE-EVIDENCE-V1.json"
+    "s4_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S4-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+    "s5_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+    "s6_evidence_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+    "duplicate_item_id_count": 0,
+    "candidate_resolved_item_count": 277,
+    "external_pending_item_count": 5,
+    "external_pending_item_ids": ["L011", "L012", "L013", "L014", "L015"],
+    "final_resolution_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-RESOLUTION-V1.json"
   },
   "slice_graph": ["S0", "S1", "S2", "S3", "S4", "S5", "S6"],
   "current_slice": "S4",
@@ -149,5 +160,40 @@
     "NO_RUNTIME_SOURCE_AUTHORITY",
     "NO_CANONICAL_WRITE_AUTHORITY",
     "NO_MCFT_CAP_08_AUTHORITY"
-  ]
+  ],
+  "delivery_status": "S6_CLOSURE_CANDIDATE_NOT_EFFECTIVE",
+  "delivery_current_slice": "S6",
+  "delivery_effective_main_commit": "fd7b639e36d1706de26feb3fbc0f1c640636ebdb",
+  "s5_external_effectiveness": {
+    "status": "PASS",
+    "source_pr_number": 2615,
+    "candidate_head": "68694563ea5b6762912597e46cd9e42ee933f157",
+    "merge_commit": "fd7b639e36d1706de26feb3fbc0f1c640636ebdb",
+    "attestation_workflow_run_id": 29821065162,
+    "attestation_job_id": 88603552051,
+    "artifact_id": 8491370771,
+    "semantic_artifact_digest": "sha256:489363285227c4408b82849afbf5618070798195debe1427e958e71fe7f142dd",
+    "transport_archive_sha256": "sha256:af6547a8d5c0d217a81c7c0b7b997a22d73271110f0f2efc8ef8b81aa01447c5",
+    "effective_frontier": "S6",
+    "readback_verified": true,
+    "locked_version_delete_denied": true
+  },
+  "s6_closure_candidate": {
+    "status_file": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-DELIVERY-STATUS-V1.json",
+    "candidate_field": "s6_candidate_implemented",
+    "candidate_value": true,
+    "focused_workflow": "mcft-cap-07-s6-closure",
+    "standard_workflow": "ci",
+    "hard_acceptance_resolution_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-RESOLUTION-V1.json",
+    "required_retention_level": "R2",
+    "required_retention_days": 730,
+    "external_item_ids": ["L011", "L012", "L013", "L014", "L015"],
+    "effective_completion_state": "MCFT_CAP_07_COMPLETE",
+    "effective_next_slice": null,
+    "status": "COMMITTED_CLOSURE_CANDIDATE_AUTHORITY"
+  },
+  "s6_changed_file_boundary": "CLOSURE_ACCEPTANCE_GOVERNANCE_R2_ATTESTATION_AND_ZERO_PRODUCT_CODE_DELTA_ONLY",
+  "retention_level_s6_closure": "R2",
+  "retention_days_s6_closure": 730,
+  "postmerge_ssot_writeback_allowed": false
 }

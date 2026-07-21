@@ -1,0 +1,59 @@
+{
+  "schema_version": "geox_mcft_cap_07_s6_hard_acceptance_evidence_v1",
+  "record_id": "GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-EVIDENCE-V1",
+  "record_status": "CLOSURE_CANDIDATE_EVIDENCE",
+  "taskbook_version": "v0.2.5",
+  "capability_line_id": "MCFT-CAP-07",
+  "slice_id": "MCFT-CAP-07.S6",
+  "evidence_layer": "COMMITTED_CANDIDATE_PENDING_EXACT_MERGE_SHA_ATTESTATION",
+  "focused_workflow": "mcft-cap-07-s6-closure",
+  "acceptance_scripts": [
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S2_REPOSITORY.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_POSTGRES_ADAPTER.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_HEALTH_POSTGRES.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_DOMAIN_COMPOSERS_POSTGRES.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_FROZEN_SCHEMA.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_CURSOR_VISIBILITY_POSTGRES.ts",
+    "scripts/frontend_acceptance/ACCEPTANCE_MCFT_CAP_07_S5_OPERATOR_INTEGRATION.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S6_CLOSURE.ts"
+  ],
+  "structured_results": [
+    "acceptance-output/MCFT_CAP_07_S2_REPOSITORY_RESULT.json",
+    "acceptance-output/MCFT_CAP_07_S4_POSTGRES_ADAPTER_RESULT.json",
+    "acceptance-output/MCFT_CAP_07_S4_HEALTH_POSTGRES_RESULT.json",
+    "acceptance-output/MCFT_CAP_07_S4_DOMAIN_COMPOSERS_POSTGRES_RESULT.json",
+    "acceptance-output/MCFT_CAP_07_S4_FROZEN_SCHEMA_RESULT.json",
+    "acceptance-output/MCFT_CAP_07_S4_CURSOR_VISIBILITY_POSTGRES_RESULT.json",
+    "acceptance-output/MCFT_CAP_07_S5_OPERATOR_INTEGRATION_RESULT.json",
+    "acceptance-output/MCFT_CAP_07_S6_CLOSURE_RESULT.json"
+  ],
+  "covered_item_ids": [
+    "K001", "K002", "K003", "K004", "K005", "K006", "K007", "K008", "K009", "K010",
+    "L001", "L002", "L003", "L004", "L005", "L006", "L007", "L008", "L009", "L010", "L016"
+  ],
+  "external_effectiveness_item_ids": ["L011", "L012", "L013", "L014", "L015"],
+  "external_effectiveness_status": "PENDING_EXACT_MERGE_SHA_ATTESTATION",
+  "required_external_retention_level": "R2",
+  "required_external_retention_days": 730,
+  "candidate_assertions": {
+    "profile_a1_domain_composition": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES",
+    "profile_a2_domain_composition": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES",
+    "profile_a3_domain_composition": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES",
+    "profile_b_non_activation_domain_composition": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES",
+    "profile_c_fail_closed_domain_composition": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES",
+    "postgres_production_repository_api_readback": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES",
+    "old_cursor_projection_visibility_repair": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES",
+    "connection_pool_restart_and_adapter_reinstantiation_stability": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES",
+    "projection_rebuild_hash_stability": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES",
+    "early_start_late_commit_exclusion": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES",
+    "old_cursor_post_snapshot_fact_exclusion": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES",
+    "old_cursor_pointer_advancement_exclusion": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES",
+    "s5_successor_regression_mode": "PASS_WHEN_FOCUSED_WORKFLOW_PASSES",
+    "product_observation_write_delta": 0,
+    "runtime_source_authorized": false,
+    "canonical_write_authority_delta": "ZERO",
+    "mcft_cap_08_authorized": false
+  },
+  "completion_state_before_external_attestation": "CLOSURE_CANDIDATE_NOT_EFFECTIVE",
+  "completion_state_when_external_attestation_passes": "MCFT_CAP_07_COMPLETE"
+}
