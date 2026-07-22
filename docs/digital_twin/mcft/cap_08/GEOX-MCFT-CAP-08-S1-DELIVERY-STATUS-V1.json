@@ -1,0 +1,21 @@
+{
+  "schema_version": "geox_mcft_cap08_s1_delivery_status_v1",
+  "record_status": "PRE_REGISTERED_SUCCESSOR_SEED",
+  "slice_id": "MCFT-CAP-08.S1",
+  "candidate_field": "s1_candidate_implemented",
+  "candidate_value": true,
+  "s1_candidate_implemented": false,
+  "delivery_state": "SEEDED_NOT_AUTHORIZED",
+  "implementation_authorized": false,
+  "runtime_source_authorized": false,
+  "bounded_canonical_transaction_authorized": false,
+  "effectiveness_condition": "PRESENT_ON_MAIN_AND_EXACT_SHA_ATTESTATION_PASS",
+  "effective_status_when_attested": "S1_BASE_RUNTIME_IMPLEMENTED_EFFECTIVE",
+  "effective_next_slice_when_attested": "S2",
+  "predecessor_effective_evidence_requirement": "REQUIRED",
+  "predecessor_semantic_artifact_digest": null,
+  "runtime_authority_delta": "BOUNDED_BASE_RANGE_RUNNER_ONLY",
+  "canonical_write_authority_delta": "BOUNDED_A_B_WRITES",
+  "production_runtime_source_authorized": false,
+  "postmerge_ssot_writeback_allowed": false
+}

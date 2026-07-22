@@ -1,0 +1,50 @@
+{
+  "schema_version": "geox_mcft_cap08_late_correction_math_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-LATE-CORRECTION-MATH-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "profile": "LATE_OBSERVATION_APPEND_FORWARD_CORRECTION_V1",
+  "transport_method": "DETERMINISTIC_PAIRED_FULL_POSTERIOR_TRANSITION_SENSITIVITY_V1",
+  "historical_rewrite": false,
+  "historical_revision_created": false,
+  "update_tick": "T16",
+  "source_observation": "FVO-01",
+  "ordinary_observation_at_t16": false,
+  "parameters": {
+    "epsilon": "0.001000",
+    "a_max": "1.250000",
+    "lambda_per_hour": "0.050000",
+    "max_lag_hours": 15,
+    "minimum_variance": "0.000100"
+  },
+  "equations": {
+    "innovation": "nu_tau = y_tau - H_tau*x_base_tau",
+    "gain": "K_tau = q*P_base_tau*H_tau/(H_tau^2*P_base_tau+R_tau)",
+    "historical_delta": "delta_x_tau = K_tau*nu_tau",
+    "full_transition_operator": "g_k(x)=Assimilation_k(Dynamics_k(x),frozen_Evidence_k,frozen_Runtime_Config_k)",
+    "paired_sensitivity": "a_k=(g_k(x+epsilon)-g_k(x-epsilon))/(2*epsilon)",
+    "transport": "Phi_t_tau=product(clip(a_k,-a_max,a_max))",
+    "decay": "d=exp(-lambda*delta_h)",
+    "current_delta": "delta_x_t=d*Phi_t_tau*delta_x_tau",
+    "posterior": "x_corrected_t=clip(x_base_t+delta_x_t,x_min,x_max)"
+  },
+  "frozen_intermediate_inputs": [
+    "evidence_selection",
+    "quality",
+    "runtime_config",
+    "physical_clipping",
+    "ordinary_assimilation_disposition"
+  ],
+  "non_finite_behavior": "REJECT_FAIL_CLOSED",
+  "lag_exceeded_behavior": "REJECT_FAIL_CLOSED",
+  "contract_revision": 2,
+  "variance_policy": "CURRENT_BASE_VARIANCE_WITH_MINIMUM_FLOOR_V1",
+  "required_transition_recomputation_outputs": [
+    "dynamics_mean",
+    "predicted_variance",
+    "observation_prediction",
+    "ordinary_assimilation_disposition",
+    "posterior_mean",
+    "posterior_variance"
+  ],
+  "reference_acceptance": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_LATE_CORRECTION_MATH.ts"
+}

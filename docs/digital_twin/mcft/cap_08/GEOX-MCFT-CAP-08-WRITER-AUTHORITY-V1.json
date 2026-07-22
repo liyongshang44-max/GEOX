@@ -1,0 +1,285 @@
+{
+  "schema_version": "geox_mcft_cap08_writer_authority_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-WRITER-AUTHORITY-V1",
+  "contract_revision": 2,
+  "record_status": "FROZEN_S0_CONTRACT_CANDIDATE",
+  "supersedes_non_authoritative_candidate": "PR_2621_HEAD_71d607cd887833ff0062a54983c4b43895d47966",
+  "database_class": "DEDICATED_FRESH_CAP08_DATABASE",
+  "shared_commercial_database_bootstrap": "FORBIDDEN",
+  "expected_database_name_pattern": "^geox_mcft_cap08_[a-z0-9_]+$",
+  "role_name": "geox_mcft_cap08_runner_v1",
+  "role_flags": {
+    "login": true,
+    "inherit": false,
+    "superuser": false,
+    "createdb": false,
+    "createrole": false,
+    "replication": false,
+    "bypassrls": false
+  },
+  "role_memberships": [],
+  "roles_allowed_to_assume_runner": [],
+  "owned_database_objects": [],
+  "database_effective_privileges": {
+    "CONNECT": true,
+    "CREATE": false,
+    "TEMP": false
+  },
+  "public_database_effective_privileges": {
+    "CONNECT": false,
+    "CREATE": false,
+    "TEMP": false
+  },
+  "schema_effective_privileges": {
+    "public": {
+      "USAGE": true,
+      "CREATE": false
+    }
+  },
+  "public_schema_effective_privileges": {
+    "public": {
+      "USAGE": true,
+      "CREATE": false
+    }
+  },
+  "relation_privileges": {
+    "facts": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_fact_visibility_epoch_v1": [
+      "SELECT"
+    ],
+    "twin_fact_visibility_index_v1": [
+      "SELECT"
+    ],
+    "twin_object_idempotency_index_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_runtime_lease_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_runtime_authority_snapshot_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_active_lineage_index_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_state_history_projection_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_state_latest_index_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_forecast_result_latest_index_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_forecast_success_latest_index_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_runtime_checkpoint_latest_index_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_runtime_health_latest_index_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_terminal_tick_uniqueness_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_scenario_set_uniqueness_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_forecast_run_projection_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_forecast_point_projection_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_scenario_set_projection_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_scenario_point_projection_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_scenario_latest_index_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_decision_record_projection_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_action_feedback_projection_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_action_feedback_evidence_index_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_forecast_residual_projection_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_approved_plan_binding_projection_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_action_feedback_cycle_projection_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_calibration_candidate_projection_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_shadow_evaluation_projection_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_candidate_evaluation_index_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_shadow_evaluation_case_projection_v1": [
+      "SELECT",
+      "INSERT"
+    ]
+  },
+  "sequence_privileges": {},
+  "function_privileges": {},
+  "public_function_execute": "FORBIDDEN_IN_TARGET_DATABASE_PUBLIC_SCHEMA",
+  "default_acl_requirements": {
+    "runner_grants": [],
+    "public_table_sequence_function_grants": [],
+    "unexpected_default_acl": "FAIL_CLOSED",
+    "normalization_scope": "ALL_EXISTING_GLOBAL_OR_PUBLIC_SCHEMA_DEFAULT_ACL_ROWS_FOR_TABLES_SEQUENCES_FUNCTIONS",
+    "normalization_authority": "EXTERNAL_SUPERUSER_ON_DEDICATED_DATABASE_ONLY",
+    "future_object_creator_roles": [
+      "CURRENT_EXTERNAL_ADMIN",
+      "geox_mcft_migration_owner_v1",
+      "geox_mcft_migrator_v1",
+      "geox_runtime_v1",
+      "geox_mcft_cap08_runner_v1"
+    ],
+    "future_public_function_execute": "EXPLICITLY_REVOKED_IN_PUBLIC_SCHEMA",
+    "forbidden_grantee_roles": [
+      "PUBLIC",
+      "geox_mcft_cap08_runner_v1",
+      "geox_mcft_migrator_v1",
+      "geox_runtime_v1"
+    ]
+  },
+  "explicit_forbidden_effective_privileges": [
+    "DATABASE_CREATE",
+    "DATABASE_TEMP",
+    "SCHEMA_CREATE",
+    "TABLE_DELETE",
+    "TABLE_TRUNCATE",
+    "TABLE_REFERENCES",
+    "TABLE_TRIGGER",
+    "SEQUENCE_USAGE",
+    "SEQUENCE_UPDATE",
+    "FUNCTION_EXECUTE",
+    "GRANT_OPTION",
+    "SET_ROLE",
+    "OBJECT_OWNERSHIP"
+  ],
+  "bootstrap_preconditions": [
+    "EXPECTED_DATABASE_NAME_EXACT",
+    "DEDICATED_DATABASE_NAME_PATTERN_MATCH",
+    "REAL_FROZEN_PRODUCTION_SCHEMA_PRESENT",
+    "ALL_REQUIRED_RELATIONS_PRESENT",
+    "NO_RUNNER_OWNED_OBJECTS",
+    "CAP07_ACTIVE_VISIBILITY_EPOCH_EXACTLY_ONE",
+    "NO_RUNNER_ROLE_MEMBERSHIPS_OR_OWNERSHIP"
+  ],
+  "bootstrap_mutations": [
+    "NORMALIZE_RUNNER_ROLE_FLAGS_AND_PASSWORD",
+    "NORMALIZE_EXISTING_PUBLIC_AND_RUNNER_DEFAULT_ACL_FOR_TABLES_SEQUENCES_FUNCTIONS",
+    "REVOKE_CONNECT_TEMP_FROM_PUBLIC_ON_TARGET_DATABASE",
+    "REVOKE_CREATE_FROM_PUBLIC_ON_PUBLIC_SCHEMA",
+    "REVOKE_EXECUTE_FROM_PUBLIC_ON_ALL_PUBLIC_FUNCTIONS",
+    "REVOKE_ALL_RUNNER_OBJECT_PRIVILEGES",
+    "GRANT_CONNECT_AND_PUBLIC_SCHEMA_USAGE_TO_RUNNER",
+    "GRANT_EXACT_RELATION_PRIVILEGES_TO_RUNNER",
+    "REVOKE_TARGET_DATABASE_CONNECT_FROM_LEGACY_MIGRATOR_AND_RUNTIME",
+    "REVOKE_TARGET_DATABASE_SCHEMA_TABLE_SEQUENCE_FUNCTION_PRIVILEGES_FROM_LEGACY_MIGRATOR_AND_RUNTIME"
+  ],
+  "effective_privilege_verification_functions": [
+    "has_database_privilege",
+    "has_schema_privilege",
+    "has_table_privilege",
+    "has_sequence_privilege",
+    "has_function_privilege"
+  ],
+  "catalog_verification_sources": [
+    "pg_roles",
+    "pg_auth_members",
+    "pg_database",
+    "pg_namespace",
+    "pg_class",
+    "pg_proc",
+    "pg_default_acl",
+    "aclexplode"
+  ],
+  "relation_level_authority_boundary": "LEAST_PRIVILEGE_EXISTING_RELATIONS_ONLY",
+  "application_scope_enforcement_contract": "EXACT_SIX_KEY_FORMAL_RUN_ID_AND_ACTIVE_VISIBILITY_EPOCH_VALIDATION_BEFORE_REPOSITORY_CALL",
+  "repository_cas_enforcement_contract": "ACTIVE_LINEAGE_REVISION_CHECKPOINT_AND_FENCING_EXACT_OR_FAIL",
+  "direct_sql_row_level_scope_isolation": "NOT_ESTABLISHED",
+  "bootstrap_source": "apps/server/src/infra/mcft_cap08_database_platform_bootstrap_v1.ts",
+  "runtime_credential_fallback": false,
+  "production_runtime_source_authorized": false,
+  "relation_count": 30,
+  "allowed_post_bootstrap_connect_identities": [
+    "geox_mcft_cap08_runner_v1",
+    "EXTERNAL_SUPERUSER_ADMIN"
+  ],
+  "revoked_post_bootstrap_connect_identities": [
+    "geox_mcft_migrator_v1",
+    "geox_runtime_v1",
+    "PUBLIC"
+  ],
+  "legacy_login_role_target_database_privileges": {
+    "geox_mcft_migrator_v1": {
+      "CONNECT": false,
+      "SCHEMA_USAGE": false,
+      "RELATION_DML": false,
+      "SEQUENCE": false,
+      "FUNCTION_EXECUTE": false
+    },
+    "geox_runtime_v1": {
+      "CONNECT": false,
+      "SCHEMA_USAGE": false,
+      "RELATION_DML": false,
+      "SEQUENCE": false,
+      "FUNCTION_EXECUTE": false
+    }
+  }
+}

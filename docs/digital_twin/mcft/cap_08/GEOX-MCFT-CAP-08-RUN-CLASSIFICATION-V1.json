@@ -1,0 +1,33 @@
+{
+  "schema_version": "geox_mcft_cap08_run_classification_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "classes": {
+    "S0_PLATFORM_SECURITY_ACCEPTANCE_RUN": {
+      "owner": "PR-1",
+      "canonical_runtime_chain": false
+    },
+    "SLICE_ACCEPTANCE_RUN": {
+      "owners": [
+        "PR-2",
+        "PR-3",
+        "PR-4",
+        "PR-5",
+        "PR-6"
+      ],
+      "fresh_disposable_database_required": true,
+      "eligible_for_closure": false
+    },
+    "FINAL_FORMAL_CLOSURE_RUN": {
+      "owner": "PR-7",
+      "instances": [
+        "RUN_A",
+        "RUN_B"
+      ],
+      "fresh_database_per_instance": true,
+      "eligible_for_closure": true
+    }
+  },
+  "isolated_schema_mode": "FORBIDDEN_NOT_ESTABLISHED",
+  "cross_run_stitching": false
+}

@@ -1,0 +1,129 @@
+{
+  "schema_version": "geox_mcft_cap08_hard_acceptance_ledger_v1",
+  "ledger_id": "GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "item_count": 24,
+  "items": [
+    {
+      "item_id": "HA-01",
+      "requirement": "RUN_A_RUN_B_DIGEST_EQUALITY",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-02",
+      "requirement": "B00_PLUS_24_CONTIGUOUS_TICKS",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-03",
+      "requirement": "IMMUTABLE_STATE_CHAIN_EXACT_REFS",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-04",
+      "requirement": "NO_OBSERVATION_DYNAMICS_ONLY",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-05",
+      "requirement": "ORDINARY_ASSIMILATION_TRACE",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-06",
+      "requirement": "POSTERIOR_NOT_DIRECT_OBSERVATION",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-07",
+      "requirement": "QUALITY_DOWNWEIGHT_REJECTION",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-08",
+      "requirement": "24_SUCCESSFUL_FORECASTS_72_POINTS",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-09",
+      "requirement": "THREE_SCENARIOS_PER_TICK",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-10",
+      "requirement": "DECISION_AFTER_B_T05",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-11",
+      "requirement": "APPROVAL_PLAN_EVIDENCE_SEPARATE",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-12",
+      "requirement": "NO_PREMATURE_EXECUTION_CONSUMPTION",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-13",
+      "requirement": "H_BEFORE_A_T08",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-14",
+      "requirement": "OUTCOME_EQUALS_FVO10",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-15",
+      "requirement": "T11_PRECOMMIT_ROLLBACK",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-16",
+      "requirement": "T12_RESPONSE_LOSS_RECOVERY",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-17",
+      "requirement": "T16_APPEND_FORWARD_NO_HISTORY_REWRITE",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-18",
+      "requirement": "R01_AND_R16_SAME_C_PHASE",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-19",
+      "requirement": "EXACT_24_RESIDUALS",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-20",
+      "requirement": "CALIBRATION_16_HOLDOUT_8",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-21",
+      "requirement": "ONE_CANDIDATE_NOT_ACTIVE",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-22",
+      "requirement": "ONE_SHADOW_NON_CONSUMING_ZERO_ACTIVATION",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-23",
+      "requirement": "READ_MODEL_TIMELINE_ZERO_WRITE",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    },
+    {
+      "item_id": "HA-24",
+      "requirement": "TREE_EQUIVALENT_MERGE_R2_ATTESTATION",
+      "status": "PENDING_PR7_FINAL_FORMAL_CLOSURE"
+    }
+  ],
+  "effective_completion_claim_count": 0
+}

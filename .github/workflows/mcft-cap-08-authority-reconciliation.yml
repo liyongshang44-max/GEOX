@@ -1,0 +1,85 @@
+name: mcft-cap-08-authority-reconciliation
+on:
+  pull_request:
+    paths:
+      - 'docs/digital_twin/**'
+      - 'apps/server/src/infra/mcft_cap08_database_platform_bootstrap_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_*'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_*'
+      - 'scripts/governance_acceptance/mcft_cap08_pr1_artifact_finalize.cjs'
+      - '.github/workflows/mcft-cap-08-authority-reconciliation.yml'
+      - '.github/workflows/mcft-cap-08-exact-sha-attestation.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mcft-cap-08-pr1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+jobs:
+  authority-reconciliation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: postgres }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres" --health-interval 3s --health-timeout 2s --health-retries 30
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.11.1, cache: pnpm }
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck server and S0 scripts
+        run: pnpm --filter @geox/server typecheck
+      - name: Authority, successor boundary and exact file boundary
+        env:
+          MCFT_BASE_SHA: "dfda2dd55e140313598dbc2fcbc9176c8891f465"
+        run: |
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_AUTHORITY_RECONCILIATION.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CHANGED_FILE_BOUNDARY.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CANDIDATE_MERGE_TREE_EQUIVALENCE.cjs
+          MCFT_BASE_SHA="dfda2dd55e140313598dbc2fcbc9176c8891f465" node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_POST_CLOSURE_SUCCESSOR_BOUNDARY.cjs --accept-mode POST_CLOSURE_SUCCESSOR_AUTHORITY_MODE
+      - name: Dedicated database effective privilege and S0 qualification
+        env:
+
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_pr1_candidate
+          MCFT_CAP08_RUNNER_PASSWORD: cap08-acceptance-runner-password
+          MCFT_CAP08_MIGRATOR_PASSWORD: cap08-acceptance-migrator-password
+          MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: cap08-acceptance-legacy-runtime-password
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+
+        run: |
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_WRITER_PRIVILEGE_NEGATIVE_DB.ts
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PROGRESS_PREDICATES_DB.ts
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_LATE_CORRECTION_MATH.ts
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_ZERO_RUNTIME_DATA_DELTA_DB.ts
+      - name: Finalize candidate authority artifact
+        run: node scripts/governance_acceptance/mcft_cap08_pr1_artifact_finalize.cjs
+      - name: Cleanup dedicated database
+        if: always()
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='geox_mcft_cap08_pr1_candidate' AND pid<>pg_backend_pid();"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS geox_mcft_cap08_pr1_candidate;"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-08-pr1-authority-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/
+          if-no-files-found: error
+          retention-days: 90

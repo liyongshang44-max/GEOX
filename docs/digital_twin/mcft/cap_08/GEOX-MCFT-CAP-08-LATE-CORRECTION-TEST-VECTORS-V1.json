@@ -1,0 +1,347 @@
+{
+  "schema_version": "geox_mcft_cap08_late_correction_test_vectors_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-LATE-CORRECTION-TEST-VECTORS-V1",
+  "contract_revision": 2,
+  "record_status": "FROZEN_SHARED_TEST_VECTORS_CANDIDATE",
+  "oracle_implementation": "INDEPENDENT_PYTHON_REFERENCE_V1",
+  "production_reuse_required_in_pr4": true,
+  "numeric_tolerance": 1e-09,
+  "vector_count": 12,
+  "vectors": [
+    {
+      "id": "POSITIVE_RESIDUAL",
+      "input": {
+        "source_mean": 70.0,
+        "source_variance": 4.0,
+        "observation_value": 75.0,
+        "observation_variance": 1.0,
+        "quality": 1.0,
+        "current_mean": 72.0,
+        "current_variance": 3.0,
+        "lag_hours": 15,
+        "max_lag_hours": 15,
+        "lambda_per_hour": 0.05,
+        "epsilon": 0.001,
+        "a_max": 1.25,
+        "lower_bound": 36.0,
+        "upper_bound": 135.0,
+        "minimum_variance": 0.0001,
+        "transitions": []
+      },
+      "expected": {
+        "disposition": "APPLIED",
+        "innovation": 5.0,
+        "gain": 0.8,
+        "current_delta": 1.889466210964,
+        "mean": 73.889466210964,
+        "variance": 3.0
+      }
+    },
+    {
+      "id": "NEGATIVE_RESIDUAL",
+      "input": {
+        "source_mean": 70.0,
+        "source_variance": 4.0,
+        "observation_value": 65.0,
+        "observation_variance": 1.0,
+        "quality": 1.0,
+        "current_mean": 72.0,
+        "current_variance": 3.0,
+        "lag_hours": 15,
+        "max_lag_hours": 15,
+        "lambda_per_hour": 0.05,
+        "epsilon": 0.001,
+        "a_max": 1.25,
+        "lower_bound": 36.0,
+        "upper_bound": 135.0,
+        "minimum_variance": 0.0001,
+        "transitions": []
+      },
+      "expected": {
+        "disposition": "APPLIED",
+        "innovation": -5.0,
+        "current_delta": -1.889466210964,
+        "mean": 70.110533789036
+      }
+    },
+    {
+      "id": "LIMITED_QUALITY",
+      "input": {
+        "source_mean": 70.0,
+        "source_variance": 4.0,
+        "observation_value": 75.0,
+        "observation_variance": 1.0,
+        "quality": 0.5,
+        "current_mean": 72.0,
+        "current_variance": 3.0,
+        "lag_hours": 15,
+        "max_lag_hours": 15,
+        "lambda_per_hour": 0.05,
+        "epsilon": 0.001,
+        "a_max": 1.25,
+        "lower_bound": 36.0,
+        "upper_bound": 135.0,
+        "minimum_variance": 0.0001,
+        "transitions": []
+      },
+      "expected": {
+        "disposition": "APPLIED",
+        "gain": 0.4,
+        "current_delta": 0.944733105482,
+        "mean": 72.944733105482
+      }
+    },
+    {
+      "id": "MAX_ALLOWED_LAG",
+      "input": {
+        "source_mean": 70.0,
+        "source_variance": 4.0,
+        "observation_value": 75.0,
+        "observation_variance": 1.0,
+        "quality": 1.0,
+        "current_mean": 72.0,
+        "current_variance": 3.0,
+        "lag_hours": 15,
+        "max_lag_hours": 15,
+        "lambda_per_hour": 0.05,
+        "epsilon": 0.001,
+        "a_max": 1.25,
+        "lower_bound": 36.0,
+        "upper_bound": 135.0,
+        "minimum_variance": 0.0001,
+        "transitions": []
+      },
+      "expected": {
+        "disposition": "APPLIED",
+        "decay": 0.472366552741
+      }
+    },
+    {
+      "id": "LAG_REJECTION",
+      "input": {
+        "source_mean": 70.0,
+        "source_variance": 4.0,
+        "observation_value": 75.0,
+        "observation_variance": 1.0,
+        "quality": 1.0,
+        "current_mean": 72.0,
+        "current_variance": 3.0,
+        "lag_hours": 16,
+        "max_lag_hours": 15,
+        "lambda_per_hour": 0.05,
+        "epsilon": 0.001,
+        "a_max": 1.25,
+        "lower_bound": 36.0,
+        "upper_bound": 135.0,
+        "minimum_variance": 0.0001,
+        "transitions": []
+      },
+      "expected": {
+        "disposition": "REJECTED_LAG_EXCEEDED"
+      }
+    },
+    {
+      "id": "UPPER_CLIPPING",
+      "input": {
+        "source_mean": 130.0,
+        "source_variance": 4.0,
+        "observation_value": 160.0,
+        "observation_variance": 1.0,
+        "quality": 1.0,
+        "current_mean": 134.0,
+        "current_variance": 3.0,
+        "lag_hours": 0,
+        "max_lag_hours": 15,
+        "lambda_per_hour": 0.05,
+        "epsilon": 0.001,
+        "a_max": 1.25,
+        "lower_bound": 36.0,
+        "upper_bound": 135.0,
+        "minimum_variance": 0.0001,
+        "transitions": []
+      },
+      "expected": {
+        "disposition": "APPLIED",
+        "mean": 135.0
+      }
+    },
+    {
+      "id": "LOWER_CLIPPING",
+      "input": {
+        "source_mean": 40.0,
+        "source_variance": 4.0,
+        "observation_value": 0.0,
+        "observation_variance": 1.0,
+        "quality": 1.0,
+        "current_mean": 37.0,
+        "current_variance": 3.0,
+        "lag_hours": 0,
+        "max_lag_hours": 15,
+        "lambda_per_hour": 0.05,
+        "epsilon": 0.001,
+        "a_max": 1.25,
+        "lower_bound": 36.0,
+        "upper_bound": 135.0,
+        "minimum_variance": 0.0001,
+        "transitions": []
+      },
+      "expected": {
+        "disposition": "APPLIED",
+        "mean": 36.0
+      }
+    },
+    {
+      "id": "NON_FINITE_REJECTION",
+      "input": {
+        "source_mean": 70.0,
+        "source_variance": 4.0,
+        "observation_value": 75.0,
+        "observation_variance": 1.0,
+        "quality": 1.0,
+        "current_mean": "NaN",
+        "current_variance": 3.0,
+        "lag_hours": 15,
+        "max_lag_hours": 15,
+        "lambda_per_hour": 0.05,
+        "epsilon": 0.001,
+        "a_max": 1.25,
+        "lower_bound": 36.0,
+        "upper_bound": 135.0,
+        "minimum_variance": 0.0001,
+        "transitions": []
+      },
+      "expected": {
+        "disposition": "REJECTED_NON_FINITE"
+      }
+    },
+    {
+      "id": "INTERMEDIATE_ORDINARY_ASSIMILATION",
+      "input": {
+        "source_mean": 70.0,
+        "source_variance": 4.0,
+        "observation_value": 75.0,
+        "observation_variance": 1.0,
+        "quality": 1.0,
+        "current_mean": 72.0,
+        "current_variance": 3.0,
+        "lag_hours": 15,
+        "max_lag_hours": 15,
+        "lambda_per_hour": 0.05,
+        "epsilon": 0.001,
+        "a_max": 1.25,
+        "lower_bound": 36.0,
+        "upper_bound": 135.0,
+        "minimum_variance": 0.0001,
+        "transitions": [
+          {
+            "dynamics_delta": -1.0,
+            "process_variance": 0.5,
+            "ordinary_observation": {
+              "value": 68.0,
+              "variance": 2.0,
+              "quality": 1.0
+            }
+          },
+          {
+            "dynamics_delta": 0.5,
+            "process_variance": 0.2
+          }
+        ]
+      },
+      "expected": {
+        "disposition": "APPLIED",
+        "transport_sensitivity": 0.307692307695,
+        "step_sensitivities": [
+          0.307692307693,
+          1.000000000005
+        ],
+        "current_delta": 0.581374218763,
+        "mean": 72.581374218763
+      }
+    },
+    {
+      "id": "ZERO_TRANSITION_SENSITIVITY",
+      "input": {
+        "source_mean": 70.0,
+        "source_variance": 4.0,
+        "observation_value": 75.0,
+        "observation_variance": 1.0,
+        "quality": 1.0,
+        "current_mean": 72.0,
+        "current_variance": 3.0,
+        "lag_hours": 15,
+        "max_lag_hours": 15,
+        "lambda_per_hour": 0.05,
+        "epsilon": 0.001,
+        "a_max": 1.25,
+        "lower_bound": 36.0,
+        "upper_bound": 135.0,
+        "minimum_variance": 0.0001,
+        "transitions": [
+          {
+            "dynamics_delta": 100.0,
+            "process_variance": 0.0
+          }
+        ]
+      },
+      "expected": {
+        "disposition": "APPLIED",
+        "transport_sensitivity": 0.0,
+        "current_delta": 0.0,
+        "mean": 72.0
+      }
+    },
+    {
+      "id": "VARIANCE_FLOOR",
+      "input": {
+        "source_mean": 70.0,
+        "source_variance": 4.0,
+        "observation_value": 75.0,
+        "observation_variance": 1.0,
+        "quality": 1.0,
+        "current_mean": 72.0,
+        "current_variance": 1e-05,
+        "lag_hours": 15,
+        "max_lag_hours": 15,
+        "lambda_per_hour": 0.05,
+        "epsilon": 0.001,
+        "a_max": 1.25,
+        "lower_bound": 36.0,
+        "upper_bound": 135.0,
+        "minimum_variance": 0.0001,
+        "transitions": []
+      },
+      "expected": {
+        "disposition": "APPLIED",
+        "variance": 0.0001
+      }
+    },
+    {
+      "id": "DETERMINISTIC_RERUN",
+      "input": {
+        "source_mean": 70.0,
+        "source_variance": 4.0,
+        "observation_value": 75.0,
+        "observation_variance": 1.0,
+        "quality": 1.0,
+        "current_mean": 72.0,
+        "current_variance": 3.0,
+        "lag_hours": 15,
+        "max_lag_hours": 15,
+        "lambda_per_hour": 0.05,
+        "epsilon": 0.001,
+        "a_max": 1.25,
+        "lower_bound": 36.0,
+        "upper_bound": 135.0,
+        "minimum_variance": 0.0001,
+        "transitions": []
+      },
+      "expected": {
+        "disposition": "APPLIED",
+        "mean": 73.889466210964,
+        "variance": 3.0,
+        "current_delta": 1.889466210964
+      }
+    }
+  ]
+}
