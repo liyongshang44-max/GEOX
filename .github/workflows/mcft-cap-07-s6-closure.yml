@@ -8,13 +8,14 @@ on:
       - '.github/workflows/mcft-cap-07-s4-api.yml'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S6_CLOSURE.ts'
       - 'scripts/governance_acceptance/mcft_cap07_s6_closure_artifact_finalize.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_POST_CLOSURE_SUCCESSOR_BOUNDARY.cjs'
+      - 'scripts/frontend_acceptance/ACCEPTANCE_MCFT_CAP_07_S5_OPERATOR_INTEGRATION.cjs'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
-      - 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-RESOLVED-MANIFEST-V1.json'
-      - 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-WORKFLOW-DECLARATION-V1.json'
-      - 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-HARD-ACCEPTANCE-EVIDENCE-V1.json'
-      - 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-DELIVERY-STATUS-V1.json'
-      - 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-EVIDENCE-V1.json'
-      - 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-RESOLUTION-V1.json'
+      - 'docs/digital_twin/mcft/cap_07/**'
+      - 'docs/digital_twin/mcft/cap_08/**'
+      - 'docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md'
+      - 'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md'
+      - 'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json'
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
@@ -52,7 +53,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Resolve exact head and comparison base
+      - name: Resolve exact head, comparison base, and lifecycle mode
         id: delivery
         shell: bash
         env:
@@ -64,22 +65,29 @@ jobs:
           if [[ -n "${EVENT_BASE_SHA}" ]]; then BASE_SHA="${EVENT_BASE_SHA}"; else BASE_SHA="$(git rev-parse origin/main)"; fi
           git cat-file -e "${EXACT_SHA}^{commit}"
           git cat-file -e "${BASE_SHA}^{commit}"
+          export MCFT_BASE_SHA="${BASE_SHA}"
+          MODE="$(node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_POST_CLOSURE_SUCCESSOR_BOUNDARY.cjs --resolve-s6-mode)"
           echo "exact_sha=${EXACT_SHA}" >> "${GITHUB_OUTPUT}"
           echo "base_sha=${BASE_SHA}" >> "${GITHUB_OUTPUT}"
+          echo "mode=${MODE}" >> "${GITHUB_OUTPUT}"
 
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
           cache: pnpm
+
       - name: Install locked workspace
         run: pnpm install --frozen-lockfile
+
       - name: Typecheck server and web read surfaces
         run: |
           pnpm --filter @geox/server typecheck
           pnpm --filter @geox/web typecheck
+
       - name: Build Operator read surface
         run: pnpm --filter @geox/web build
 
@@ -109,20 +117,26 @@ jobs:
           MCFT_S6_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S6_CLOSURE.ts
 
-      - name: Run S5 successor-regression acceptance
+      - name: Run lifecycle-aware S5 regression acceptance
         env:
           MCFT_BASE_SHA: ${{ steps.delivery.outputs.base_sha }}
           MCFT_S5_ACCEPTANCE_MODE: S6_SUCCESSOR_REGRESSION_MODE
         run: node scripts/frontend_acceptance/ACCEPTANCE_MCFT_CAP_07_S5_OPERATOR_INTEGRATION.cjs
 
-      - name: Verify structured results, exact identity, ledger, and closure/bootstrap boundary
+      - name: Run post-closure successor boundary acceptance
         env:
           MCFT_BASE_SHA: ${{ steps.delivery.outputs.base_sha }}
-          MCFT_EXACT_SHA: ${{ steps.delivery.outputs.exact_sha }}
+          MCFT_SUCCESSOR_BOUNDARY_MODE: ${{ steps.delivery.outputs.mode }}
+        run: |
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_POST_CLOSURE_SUCCESSOR_BOUNDARY.cjs \
+            --accept-mode "${MCFT_SUCCESSOR_BOUNDARY_MODE}"
+
+      - name: Verify structured closure and successor-boundary results
+        env:
+          EXPECTED_MODE: ${{ steps.delivery.outputs.mode }}
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
-          const cp = require('node:child_process');
           const specs = [
             { file:'acceptance-output/MCFT_CAP_07_S2_REPOSITORY_RESULT.json', count:'assertion_count', minimum:12, failed:'failed_assertion_count' },
             { file:'acceptance-output/MCFT_CAP_07_S4_POSTGRES_ADAPTER_RESULT.json', count:'check_count', minimum:12 },
@@ -132,63 +146,66 @@ jobs:
             { file:'acceptance-output/MCFT_CAP_07_S4_CURSOR_VISIBILITY_POSTGRES_RESULT.json', count:'check_count', minimum:4 },
             { file:'acceptance-output/MCFT_CAP_07_S6_CLOSURE_RESULT.json', count:'check_count', minimum:13 },
             { file:'acceptance-output/MCFT_CAP_07_S5_OPERATOR_INTEGRATION_RESULT.json', count:'check_count', minimum:10 },
+            { file:'acceptance-output/MCFT_CAP_07_POST_CLOSURE_SUCCESSOR_BOUNDARY_RESULT.json', count:'check_count', minimum:8 },
           ];
           for (const spec of specs) {
-            const result = JSON.parse(fs.readFileSync(spec.file,'utf8'));
+            const result = JSON.parse(fs.readFileSync(spec.file, 'utf8'));
             if (result.status !== 'PASS') throw new Error(`S6_DEPENDENCY_NOT_PASS:${spec.file}:${result.error || 'UNKNOWN'}`);
-            if (!Number.isInteger(result[spec.count]) || result[spec.count] < spec.minimum) throw new Error(`S6_RESULT_COUNT_INVALID:${spec.file}:${spec.count}`);
-            if (spec.failed && result[spec.failed] !== 0) throw new Error(`S6_RESULT_FAILURE_COUNT_INVALID:${spec.file}:${result[spec.failed]}`);
+            if (!Number.isInteger(result[spec.count]) || result[spec.count] < spec.minimum) {
+              throw new Error(`S6_RESULT_COUNT_INVALID:${spec.file}:${spec.count}`);
+            }
+            if (spec.failed && result[spec.failed] !== 0) {
+              throw new Error(`S6_RESULT_FAILURE_COUNT_INVALID:${spec.file}:${result[spec.failed]}`);
+            }
           }
-          const s5 = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S5_OPERATOR_INTEGRATION_RESULT.json','utf8'));
+          const s5 = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S5_OPERATOR_INTEGRATION_RESULT.json', 'utf8'));
           if (s5.acceptance_mode !== 'S6_SUCCESSOR_REGRESSION_MODE') throw new Error(`S5_SUCCESSOR_MODE_INVALID:${s5.acceptance_mode}`);
-          const cursor = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S4_CURSOR_VISIBILITY_POSTGRES_RESULT.json','utf8'));
-          if (cursor.old_cursor_post_snapshot_projection_excluded !== true || cursor.fresh_snapshot_late_commit_visible !== true || cursor.product_read_write_delta !== 0) throw new Error('S4_CURSOR_VISIBILITY_PROOF_INVALID');
-          const closure = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S6_CLOSURE_RESULT.json','utf8'));
-          if (closure.product_read_observation_write_delta !== 0 || closure.runtime_source_authorized !== false || closure.canonical_write_authority_delta !== 'ZERO' || closure.mcft_cap_08_authorized !== false) throw new Error('S6_CLOSURE_BOUNDARY_INVALID');
-          if (closure.connection_pool_restart_and_adapter_reinstantiation_stable !== true || closure.postgres_production_repository_api_readback !== true) throw new Error('S6_POSTGRES_PROOF_INVALID');
-          if (!Array.isArray(closure.domain_composition_profiles) || closure.domain_composition_profiles.length !== 5) throw new Error('S6_DOMAIN_PROFILE_INVENTORY_INVALID');
-
-          const ledger = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-HARD-ACCEPTANCE-LEDGER-V1.json','utf8'));
+          const boundary = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_POST_CLOSURE_SUCCESSOR_BOUNDARY_RESULT.json', 'utf8'));
+          if (boundary.acceptance_mode !== process.env.EXPECTED_MODE) {
+            throw new Error(`SUCCESSOR_BOUNDARY_MODE_INVALID:${boundary.acceptance_mode}:${process.env.EXPECTED_MODE}`);
+          }
+          if (boundary.cap07_runtime_source_authorized !== false || boundary.cap07_canonical_write_authorized !== false) {
+            throw new Error('SUCCESSOR_BOUNDARY_AUTHORITY_INVALID');
+          }
+          const cursor = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S4_CURSOR_VISIBILITY_POSTGRES_RESULT.json', 'utf8'));
+          if (cursor.old_cursor_post_snapshot_projection_excluded !== true || cursor.fresh_snapshot_late_commit_visible !== true || cursor.product_read_write_delta !== 0) {
+            throw new Error('S4_CURSOR_VISIBILITY_PROOF_INVALID');
+          }
+          const closure = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_07_S6_CLOSURE_RESULT.json', 'utf8'));
+          if (closure.product_read_observation_write_delta !== 0 || closure.runtime_source_authorized !== false || closure.canonical_write_authority_delta !== 'ZERO' || closure.mcft_cap_08_authorized !== false) {
+            throw new Error('S6_CLOSURE_BOUNDARY_INVALID');
+          }
+          if (closure.connection_pool_restart_and_adapter_reinstantiation_stable !== true || closure.postgres_production_repository_api_readback !== true) {
+            throw new Error('S6_POSTGRES_PROOF_INVALID');
+          }
+          if (!Array.isArray(closure.domain_composition_profiles) || closure.domain_composition_profiles.length !== 5) {
+            throw new Error('S6_DOMAIN_PROFILE_INVENTORY_INVALID');
+          }
+          const ledger = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-HARD-ACCEPTANCE-LEDGER-V1.json', 'utf8'));
           const ids = ledger.items.map((item) => item.item_id);
-          if (ledger.item_count !== 282 || ids.some((id) => typeof id !== 'string' || !id) || new Set(ids).size !== 282) throw new Error('S6_LEDGER_INVENTORY_INVALID');
-          const resolution = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-RESOLUTION-V1.json','utf8'));
-          if (resolution.candidate_resolved_item_count !== 277 || resolution.external_pending_item_count !== 5 || resolution.ledger_item_count !== 282) throw new Error('S6_RESOLUTION_ARITHMETIC_INVALID');
-          if (JSON.stringify(resolution.external_pending_item_ids) !== JSON.stringify(['L011','L012','L013','L014','L015'])) throw new Error('S6_EXTERNAL_ITEMS_INVALID');
-          const s6 = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-DELIVERY-STATUS-V1.json','utf8'));
-          if (s6.s6_candidate_implemented !== true || s6.implementation_authorized !== true || s6.externally_effective !== false || s6.effective_completion_state !== 'MCFT_CAP_07_COMPLETE') throw new Error('S6_CANDIDATE_AUTHORITY_INVALID');
-          if (s6.required_closure_retention_level !== 'R2' || s6.required_closure_retention_days !== 730) throw new Error('S6_RETENTION_CONTRACT_INVALID');
-          if (s6.runtime_source_authorized !== false || s6.canonical_write_authorized !== false || s6.mcft_cap_08_authorized !== false) throw new Error('S6_FORBIDDEN_AUTHORITY_INVALID');
-
-          const actual = cp.execFileSync('git',['diff','--name-only',`${process.env.MCFT_BASE_SHA}...HEAD`],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean).sort();
-          const closureAllowed = [
-            '.github/workflows/mcft-cap-07-s4-api.yml',
-            '.github/workflows/mcft-cap-07-s6-closure.yml',
-            '.github/workflows/mcft-cap-07-slice-exact-sha-attestation.yml',
-            'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
-            'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-RESOLVED-MANIFEST-V1.json',
-            'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-HARD-ACCEPTANCE-EVIDENCE-V1.json',
-            'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-DELIVERY-STATUS-V1.json',
-            'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-EVIDENCE-V1.json',
-            'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-RESOLUTION-V1.json',
-            'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-WORKFLOW-DECLARATION-V1.json',
-            'scripts/governance_acceptance/mcft_cap07_s6_closure_artifact_finalize.cjs',
-            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S6_CLOSURE.ts',
-          ].sort();
-          const cap08BootstrapAllowed = [
-            '.github/workflows/mcft-cap-07-s6-closure.yml',
-            'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
-            'scripts/frontend_acceptance/ACCEPTANCE_MCFT_CAP_07_S5_OPERATOR_INTEGRATION.cjs',
-          ].sort();
-          const exactClosure = actual.length === 12 && JSON.stringify(actual) === JSON.stringify(closureAllowed);
-          const exactCap08Bootstrap = actual.length === 3 && JSON.stringify(actual) === JSON.stringify(cap08BootstrapAllowed);
-          if (!exactClosure && !exactCap08Bootstrap) throw new Error(`S6_CHANGED_FILE_BOUNDARY_INVALID:${JSON.stringify(actual)}`);
-          if (exactCap08Bootstrap) {
-            const names = new Set(s5.checks.map((item) => item.name));
-            if (!names.has('CAP08_REGISTRY_BOOTSTRAP_BOUNDARY_IS_EXACT') || !names.has('CAP08_REGISTRY_BOOTSTRAP_IS_PRE_REGISTERED_AND_NON_AUTHORIZING')) throw new Error('CAP08_REGISTRY_BOOTSTRAP_S5_PROOF_MISSING');
+          if (ledger.item_count !== 282 || ids.some((id) => typeof id !== 'string' || !id) || new Set(ids).size !== 282) {
+            throw new Error('S6_LEDGER_INVENTORY_INVALID');
+          }
+          const resolution = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-HARD-ACCEPTANCE-RESOLUTION-V1.json', 'utf8'));
+          if (resolution.candidate_resolved_item_count !== 277 || resolution.external_pending_item_count !== 5 || resolution.ledger_item_count !== 282) {
+            throw new Error('S6_RESOLUTION_ARITHMETIC_INVALID');
+          }
+          if (JSON.stringify(resolution.external_pending_item_ids) !== JSON.stringify(['L011','L012','L013','L014','L015'])) {
+            throw new Error('S6_EXTERNAL_ITEMS_INVALID');
+          }
+          const s6 = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-DELIVERY-STATUS-V1.json', 'utf8'));
+          if (s6.s6_candidate_implemented !== true || s6.implementation_authorized !== true || s6.externally_effective !== false || s6.effective_completion_state !== 'MCFT_CAP_07_COMPLETE') {
+            throw new Error('S6_CANDIDATE_AUTHORITY_INVALID');
+          }
+          if (s6.required_closure_retention_level !== 'R2' || s6.required_closure_retention_days !== 730) {
+            throw new Error('S6_RETENTION_CONTRACT_INVALID');
+          }
+          if (s6.runtime_source_authorized !== false || s6.canonical_write_authorized !== false || s6.mcft_cap_08_authorized !== false) {
+            throw new Error('S6_FORBIDDEN_AUTHORITY_INVALID');
           }
           NODE
 
-      - name: Upload S6 closure evidence
+      - name: Upload S6 closure and successor-boundary evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -202,5 +219,6 @@ jobs:
             acceptance-output/MCFT_CAP_07_S4_CURSOR_VISIBILITY_POSTGRES_RESULT.json
             acceptance-output/MCFT_CAP_07_S5_OPERATOR_INTEGRATION_RESULT.json
             acceptance-output/MCFT_CAP_07_S6_CLOSURE_RESULT.json
+            acceptance-output/MCFT_CAP_07_POST_CLOSURE_SUCCESSOR_BOUNDARY_RESULT.json
           if-no-files-found: error
           retention-days: 90
