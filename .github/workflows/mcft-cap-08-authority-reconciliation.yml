@@ -35,6 +35,29 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      # Frozen lifecycle vocabulary consumed from the helper output:
+      # S0_EXACT_AUTHORITY_MODE
+      # POST_S0_WORKFLOW_REMEDIATION_MODE
+      # POST_S0_SSOT_SETTLEMENT_MODE
+      # POST_S0_STEADY_STATE_MODE
+      # POST_S0_SUCCESSOR_REGRESSION_MODE
+      - name: Resolve S0 or post-S0 lifecycle mode
+        id: lifecycle
+        shell: bash
+        env:
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${EVENT_BASE_SHA}" ]]; then
+            BASE_SHA="${EVENT_BASE_SHA}"
+          else
+            git fetch --no-tags origin main
+            BASE_SHA="$(git rev-parse origin/main)"
+          fi
+          export MCFT_BASE_SHA="${BASE_SHA}"
+          MODE="$(node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_POST_S0_SUCCESSOR_BOUNDARY.cjs --resolve-mode)"
+          echo "base_sha=${BASE_SHA}" >> "${GITHUB_OUTPUT}"
+          echo "mode=${MODE}" >> "${GITHUB_OUTPUT}"
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.4 }
       - uses: actions/setup-node@v4
@@ -43,7 +66,15 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Typecheck server and S0 scripts
         run: pnpm --filter @geox/server typecheck
-      - name: Authority, successor boundary and exact file boundary
+      - name: Validate resolved lifecycle boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.lifecycle.outputs.base_sha }}
+          MCFT_CAP08_LIFECYCLE_MODE: ${{ steps.lifecycle.outputs.mode }}
+        run: |
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_POST_S0_SUCCESSOR_BOUNDARY.cjs \
+            --accept-mode "${MCFT_CAP08_LIFECYCLE_MODE}"
+      - name: Original S0 authority, successor and exact file boundary
+        if: steps.lifecycle.outputs.mode == 'S0_EXACT_AUTHORITY_MODE'
         env:
           MCFT_BASE_SHA: "dfda2dd55e140313598dbc2fcbc9176c8891f465"
         run: |
@@ -51,23 +82,26 @@ jobs:
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CHANGED_FILE_BOUNDARY.cjs
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CANDIDATE_MERGE_TREE_EQUIVALENCE.cjs
           MCFT_BASE_SHA="dfda2dd55e140313598dbc2fcbc9176c8891f465" node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_POST_CLOSURE_SUCCESSOR_BOUNDARY.cjs --accept-mode POST_CLOSURE_SUCCESSOR_AUTHORITY_MODE
+      - name: Post-S0 frozen authority regression
+        if: steps.lifecycle.outputs.mode != 'S0_EXACT_AUTHORITY_MODE'
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_AUTHORITY_RECONCILIATION.cjs
       - name: Dedicated database effective privilege and S0 qualification
+        if: steps.lifecycle.outputs.mode == 'S0_EXACT_AUTHORITY_MODE'
         env:
-
           MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
           MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_pr1_candidate
           MCFT_CAP08_RUNNER_PASSWORD: cap08-acceptance-runner-password
           MCFT_CAP08_MIGRATOR_PASSWORD: cap08-acceptance-migrator-password
           MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: cap08-acceptance-legacy-runtime-password
           MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-
         run: |
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_WRITER_PRIVILEGE_NEGATIVE_DB.ts
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PROGRESS_PREDICATES_DB.ts
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_LATE_CORRECTION_MATH.ts
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_ZERO_RUNTIME_DATA_DELTA_DB.ts
-      - name: Finalize candidate authority artifact
+      - name: Finalize original S0 candidate authority artifact
+        if: steps.lifecycle.outputs.mode == 'S0_EXACT_AUTHORITY_MODE'
         run: node scripts/governance_acceptance/mcft_cap08_pr1_artifact_finalize.cjs
       - name: Cleanup dedicated database
         if: always()
@@ -79,7 +113,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mcft-cap-08-pr1-authority-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          name: mcft-cap-08-authority-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: acceptance-output/
           if-no-files-found: error
           retention-days: 90
