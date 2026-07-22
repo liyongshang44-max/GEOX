@@ -115,7 +115,7 @@ jobs:
           MCFT_S5_ACCEPTANCE_MODE: S6_SUCCESSOR_REGRESSION_MODE
         run: node scripts/frontend_acceptance/ACCEPTANCE_MCFT_CAP_07_S5_OPERATOR_INTEGRATION.cjs
 
-      - name: Verify structured results, exact identity, ledger, and 12-file boundary
+      - name: Verify structured results, exact identity, ledger, and closure/bootstrap boundary
         env:
           MCFT_BASE_SHA: ${{ steps.delivery.outputs.base_sha }}
           MCFT_EXACT_SHA: ${{ steps.delivery.outputs.exact_sha }}
@@ -160,7 +160,7 @@ jobs:
           if (s6.runtime_source_authorized !== false || s6.canonical_write_authorized !== false || s6.mcft_cap_08_authorized !== false) throw new Error('S6_FORBIDDEN_AUTHORITY_INVALID');
 
           const actual = cp.execFileSync('git',['diff','--name-only',`${process.env.MCFT_BASE_SHA}...HEAD`],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean).sort();
-          const allowed = [
+          const closureAllowed = [
             '.github/workflows/mcft-cap-07-s4-api.yml',
             '.github/workflows/mcft-cap-07-s6-closure.yml',
             '.github/workflows/mcft-cap-07-slice-exact-sha-attestation.yml',
@@ -174,7 +174,18 @@ jobs:
             'scripts/governance_acceptance/mcft_cap07_s6_closure_artifact_finalize.cjs',
             'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S6_CLOSURE.ts',
           ].sort();
-          if (actual.length !== 12 || JSON.stringify(actual) !== JSON.stringify(allowed)) throw new Error(`S6_CHANGED_FILE_BOUNDARY_INVALID:${JSON.stringify(actual)}`);
+          const cap08BootstrapAllowed = [
+            '.github/workflows/mcft-cap-07-s6-closure.yml',
+            'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
+            'scripts/frontend_acceptance/ACCEPTANCE_MCFT_CAP_07_S5_OPERATOR_INTEGRATION.cjs',
+          ].sort();
+          const exactClosure = actual.length === 12 && JSON.stringify(actual) === JSON.stringify(closureAllowed);
+          const exactCap08Bootstrap = actual.length === 3 && JSON.stringify(actual) === JSON.stringify(cap08BootstrapAllowed);
+          if (!exactClosure && !exactCap08Bootstrap) throw new Error(`S6_CHANGED_FILE_BOUNDARY_INVALID:${JSON.stringify(actual)}`);
+          if (exactCap08Bootstrap) {
+            const names = new Set(s5.checks.map((item) => item.name));
+            if (!names.has('CAP08_REGISTRY_BOOTSTRAP_BOUNDARY_IS_EXACT') || !names.has('CAP08_REGISTRY_BOOTSTRAP_IS_PRE_REGISTERED_AND_NON_AUTHORIZING')) throw new Error('CAP08_REGISTRY_BOOTSTRAP_S5_PROOF_MISSING');
+          }
           NODE
 
       - name: Upload S6 closure evidence

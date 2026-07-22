@@ -123,6 +123,32 @@
       "runtime_source_authorized": false,
       "canonical_write_authorized": false,
       "mcft_cap_08_authorized": false
+    },
+    {
+      "capability_line": "MCFT-CAP-08",
+      "registry_bootstrap_kind": "P_1B_PRE_REGISTER_PR1_CURRENT_AUTHORITY_CANDIDATE",
+      "current_candidate_authority": false,
+      "candidate_declaration_enabled": true,
+      "candidate_authority_scope": "PR1_CURRENT_AUTHORITY_ONLY_UNTIL_SUCCESSOR_RULES_MERGE",
+      "authoritative_candidate_status_paths": [
+        "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-AUTHORITY-V1.json"
+      ],
+      "candidate_transition_fields": [
+        {
+          "status_file": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-AUTHORITY-V1.json",
+          "field_path": "status",
+          "allowed_candidate_values": ["AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE"],
+          "focused_workflow": "mcft-cap-08-authority-reconciliation",
+          "standard_workflow": "ci",
+          "predecessor_effective_evidence_required": true
+        }
+      ],
+      "terminal_state": "S6_FINAL_CLOSURE_CANDIDATE_PENDING_EXACT_MERGE_SHA_ATTESTATION",
+      "successor_capability_authorized": false,
+      "implementation_authorized": false,
+      "runtime_source_authorized": false,
+      "canonical_write_authorized": false,
+      "mcft_cap_09_authorized": false
     }
   ]
 }
