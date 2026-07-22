@@ -1,0 +1,50 @@
+import fs from "node:fs";
+import path from "node:path";
+import pg, { type Pool as PgPool } from "pg";
+const { Pool } = pg;
+const contractPath = "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-PROGRESS-RECOVERY-ADJUDICATION-V1.json";
+const queryCatalogPath = "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-PROGRESS-QUERY-CATALOG-V1.json";
+const witnessCatalogPath = "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-PROGRESS-WITNESS-CATALOG-V1.json";
+const outputPath = "acceptance-output/MCFT_CAP_08_PROGRESS_PREDICATES_DB_RESULT.json";
+const rootUrl = String(process.env.MCFT_CAP08_ADMIN_DATABASE_URL || "postgres://postgres:postgres@127.0.0.1:5432/postgres");
+const databaseName = String(process.env.MCFT_CAP08_TARGET_DATABASE_NAME || "geox_mcft_cap08_s0_acceptance");
+const targetUrl = new URL(rootUrl); targetUrl.pathname=`/${databaseName}`;
+const scope = ["cap08-progress-run","tenantA","projectA","groupA","field_c8_demo","season_2026_c8_corn","zone_mcft_c8_water_001"];
+function out(value:unknown){fs.mkdirSync(path.dirname(outputPath),{recursive:true});fs.writeFileSync(outputPath,`${JSON.stringify(value,null,2)}\n`);}
+function expandedStates(contract:any){return contract.states.map((item:any)=>({...contract.state_defaults,...item}));}
+function state(contract:any,id:string){const value=expandedStates(contract).find((item:any)=>item.state_id===id);if(!value)throw new Error(`PROGRESS_STATE_MISSING:${id}`);return value;}
+function evaluate(expression:string,snapshot:Record<string,unknown>):boolean{
+ const strings:string[]=[];
+ let source=expression.replace(/'([^']*)'/g,(_,value)=>{strings.push(value);return `__STR_${strings.length-1}__`;});
+ source=source.replace(/<>/g,"!==").replace(/\bAND\b/g,"&&").replace(/\bOR\b/g,"||").replace(/ = /g," === ");
+ source=source.replace(/\b(true|false)\b/g,(value)=>value).replace(/\b([A-Za-z_][A-Za-z0-9_]*)\b/g,(name)=>{
+   if(name==="true"||name==="false")return name;
+   const m=name.match(/^__STR_(\d+)__$/);if(m)return JSON.stringify(strings[Number(m[1])]);
+   return `s[${JSON.stringify(name)}]`;
+ });
+ return Boolean(Function("s",`return (${source});`)(snapshot));
+}
+function resolve(contract:any,snapshot:Record<string,unknown>):string{
+ const matches=expandedStates(contract).filter((item:any)=>evaluate(item.completion_predicate,snapshot)).sort((a:any,b:any)=>a.priority-b.priority);
+ if(!matches.length)throw new Error("PROGRESS_NO_STATE_MATCH");
+ if(matches[0].state_id!=="FAILED_CLOSED_CONFLICT" && matches.filter((x:any)=>x.priority===matches[0].priority).length!==1)throw new Error("PROGRESS_PRIORITY_AMBIGUITY");
+ return matches[0].state_id;
+}
+function baseSnapshot():Record<string,unknown>{return {
+ invocation_context:"RESUME",last_committed_transaction_family:"NONE",current_phase:"NONE",current_phase_is_tick:false,
+ conflict:false,run_complete:false,tick_complete_count:0,residual_count:0,candidate_count:0,shadow_count:0,activation_count:0,g00_residual_complete:false,g00_observation_complete:false,r24_count:0,fvo24_available_count:0,current_tick_checkpoint_count:0,current_tick_due_obligations_complete:false,current_tick_a_complete:false,current_tick_b_complete:false,current_tick_due_residual_count:0,current_tick_expected_residual_count:0,current_tick_g_complete:false,current_tick_g_required:false,current_tick_h_complete:false,current_tick_h_required:false,current_tick_evidence_complete:false,bootstrap_complete:false,bootstrap_checkpoint_count:0,active_lineage_count:0,bootstrap_state_count:0,runtime_config_count:0,lineage_count:0,late_assimilation_count:0,r01_count:0,r16_count:0,ordinary_assimilation_count:0,r10_count:0
+};}
+async function prepareQueries(pool:PgPool,contract:any){const prepared:string[]=[];let index=0;for(const [id,spec] of Object.entries<any>(contract.query_catalog)){index++;const name=`cap08_progress_${index}`;const types=spec.parameters.map(()=>"text").join(",");await pool.query(`PREPARE ${name}(${types}) AS ${spec.sql}`);const args=spec.parameters.map((_:unknown,i:number)=>i<scope.length?scope[i]:i===7?"twin_runtime_config_v1":"B00");const literals=args.map((v:string)=>`'${v.replaceAll("'","''")}'`).join(",");await pool.query(`EXPLAIN EXECUTE ${name}(${literals})`);await pool.query(`DEALLOCATE ${name}`);prepared.push(id);}return prepared;}
+function fact(id:string,type:string,phase:string,extra:Record<string,unknown>={}){return {type,payload:{object_id:id,tenant_id:scope[1],project_id:scope[2],group_id:scope[3],field_id:scope[4],season_id:scope[5],zone_id:scope[6],lineage_id:"lineage-progress",revision_id:"revision-progress",logical_time:"2026-06-01T00:00:00.000Z",payload:{formal_run_id:scope[0],phase_id:phase,transaction_family:"S0_QUERY_QUALIFICATION",obligation_id:id,...extra}}};}
+async function insertFact(pool:PgPool,id:string,type:string,phase:string,extra:Record<string,unknown>={}){await pool.query("INSERT INTO public.facts(fact_id,occurred_at,source,record_json) VALUES($1,'2026-06-01T00:00:00Z','acceptance',$2::jsonb)",[id,JSON.stringify(fact(id,type,phase,extra))]);}
+async function typeCount(pool:PgPool,contract:any,type:string){const sql=contract.query_catalog.Q_TOTAL_TYPE_COUNT.sql;return Number((await pool.query(sql,[...scope,type])).rows[0].object_count);}
+async function main(){const contractBase=JSON.parse(fs.readFileSync(contractPath,"utf8"));const queryDoc=JSON.parse(fs.readFileSync(queryCatalogPath,"utf8"));const witnessDoc=JSON.parse(fs.readFileSync(witnessCatalogPath,"utf8"));const contract={...contractBase,query_catalog:queryDoc.query_catalog,states:contractBase.states.map((item:any)=>({...item,witness_overrides:witnessDoc.witnesses[item.state_id]}))};if(contractBase.query_count!==queryDoc.query_count||contractBase.state_count!==witnessDoc.state_count)throw new Error("PROGRESS_SPLIT_CATALOG_CARDINALITY_MISMATCH");const states=expandedStates(contract);if(contract.state_count!==25||states.length!==25)throw new Error("PROGRESS_STATE_COUNT_INVALID");if(new Set(states.map((x:any)=>x.state_id)).size!==25)throw new Error("PROGRESS_STATE_DUPLICATE");if(new Set(states.map((x:any)=>x.priority)).size!==25)throw new Error("PROGRESS_PRIORITY_DUPLICATE");for(const item of states){for(const key of ["state_id","priority","predicate_version","required_relations","completion_query_ids","completion_predicate","next_operation","idempotency_template","retry_behavior","response_loss_behavior","concurrency_behavior","conflict_behavior","zero_write_assertion"]){if(item[key]===undefined)throw new Error(`PROGRESS_STATE_FIELD_MISSING:${item.state_id}:${key}`);}if(item.zero_write_assertion!==true)throw new Error(`PROGRESS_STATE_NOT_ZERO_WRITE:${item.state_id}`);}
+ const witnessResults=[];for(const item of states){if(!item.witness_overrides||typeof item.witness_overrides!=="object")throw new Error(`PROGRESS_WITNESS_MISSING:${item.state_id}`);const snapshot={...baseSnapshot(),...item.witness_overrides};if(!evaluate(item.completion_predicate,snapshot))throw new Error(`PROGRESS_WITNESS_PREDICATE_FALSE:${item.state_id}`);const resolved=resolve(contract,snapshot);if(resolved!==item.state_id)throw new Error(`PROGRESS_WITNESS_RESOLUTION_MISMATCH:${item.state_id}:${resolved}`);witnessResults.push(item.state_id);}
+ const pool=new Pool({connectionString:targetUrl.toString(),max:1});try{const prepared=await prepareQueries(pool,contract);const before=Number((await pool.query("SELECT count(*)::int n FROM public.facts")).rows[0].n);await pool.query("BEGIN");
+ let snapshot=baseSnapshot();if(resolve(contract,snapshot)!=="RUN_NOT_ESTABLISHED")throw new Error("RUN_NOT_ESTABLISHED_RESOLUTION_FAILED");
+ await insertFact(pool,"cfg-progress","twin_runtime_config_v1","CONFIG");snapshot={...snapshot,invocation_context:"RESUME",current_phase:"B00",runtime_config_count:await typeCount(pool,contract,"twin_runtime_config_v1")};if(!evaluate(state(contract,"BOOTSTRAP_PENDING").completion_predicate,snapshot))throw new Error("BOOTSTRAP_PENDING_PREDICATE_FAILED");
+ await insertFact(pool,"lineage-progress","twin_runtime_lineage_v1","B00");await insertFact(pool,"checkpoint-progress","twin_runtime_checkpoint_v1","B00");await insertFact(pool,"state-progress","twin_state_estimate_v1","B00");snapshot={...snapshot,invocation_context:"AFTER_COMMIT",last_committed_transaction_family:"B00",current_phase:"B00",lineage_count:1,bootstrap_checkpoint_count:1,active_lineage_count:1,bootstrap_state_count:1,bootstrap_complete:true};if(!evaluate(state(contract,"BOOTSTRAP_COMPLETE").completion_predicate,snapshot))throw new Error("BOOTSTRAP_COMPLETE_PREDICATE_FAILED");snapshot={...snapshot,invocation_context:"RESUME",last_committed_transaction_family:"NONE",current_phase:"T00",current_phase_is_tick:true};if(!evaluate(state(contract,"TICK_EVIDENCE_PENDING").completion_predicate,snapshot))throw new Error("TICK_EVIDENCE_PENDING_PREDICATE_FAILED");
+ snapshot={...baseSnapshot(),invocation_context:"AFTER_COMMIT",last_committed_transaction_family:"G00_C",current_phase:"G00",g00_residual_complete:true,residual_count:23};if(!evaluate(state(contract,"RESIDUAL_SET_INCOMPLETE").completion_predicate,snapshot))throw new Error("RESIDUAL_SET_INCOMPLETE_PREDICATE_FAILED");
+ snapshot={...baseSnapshot(),conflict:true};if(resolve(contract,snapshot)!=="FAILED_CLOSED_CONFLICT")throw new Error("CONFLICT_PRIORITY_FAILED");
+ await pool.query("ROLLBACK");const after=Number((await pool.query("SELECT count(*)::int n FROM public.facts")).rows[0].n);if(before!==after)throw new Error("PROGRESS_ACCEPTANCE_PERSISTED_WRITE");out({status:"PASS",state_count:25,witness_state_count:witnessResults.length,witness_states:witnessResults,query_count:prepared.length,prepared_queries:prepared,validated_states:["RUN_NOT_ESTABLISHED","BOOTSTRAP_PENDING","BOOTSTRAP_COMPLETE","TICK_EVIDENCE_PENDING","RESIDUAL_SET_INCOMPLETE","FAILED_CLOSED_CONFLICT"],real_schema_query_qualified:true,transaction_rolled_back:true,repository_write_performed:false});}catch(error){await pool.query("ROLLBACK").catch(()=>undefined);throw error;}finally{await pool.end();}}
+main().catch(e=>{out({status:"FAIL",error:e instanceof Error?e.message:String(e)});throw e;});

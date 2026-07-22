@@ -1,0 +1,49 @@
+{
+  "schema_version": "geox_mcft_cap08_schema_privilege_digest_policy_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-SCHEMA-PRIVILEGE-DIGEST-POLICY-V1",
+  "contract_revision": 2,
+  "record_status": "FROZEN_S0_CONTRACT_CANDIDATE",
+  "business_schema_structure_digest": {
+    "include": [
+      "relations",
+      "columns",
+      "types",
+      "nullability",
+      "defaults",
+      "constraints",
+      "indexes",
+      "function_definitions",
+      "trigger_definitions"
+    ],
+    "exclude": [
+      "acl",
+      "owner",
+      "comments",
+      "role_membership",
+      "database_name",
+      "physical_oid"
+    ],
+    "canonical_order": "SCHEMA_OBJECT_TYPE_NAME_POSITION"
+  },
+  "effective_privilege_graph_digest": {
+    "include": [
+      "role_flags",
+      "role_memberships",
+      "database_privileges_runner_and_public",
+      "schema_privileges_runner_and_public",
+      "relation_privileges_runner",
+      "sequence_privileges_runner",
+      "function_privileges_runner_and_public",
+      "object_ownership_runner",
+      "default_acl_public_and_runner"
+    ],
+    "direct_grant_inventory_only": false,
+    "canonical_order": "GRANTEE_OBJECT_TYPE_SCHEMA_OBJECT_PRIVILEGE"
+  },
+  "required_equalities": [
+    "BUSINESS_SCHEMA_STRUCTURE_BEFORE_EQUALS_AFTER",
+    "ACTUAL_EFFECTIVE_GRAPH_EQUALS_WRITER_AUTHORITY",
+    "CANONICAL_RELATION_COUNTS_BEFORE_EQUALS_AFTER"
+  ],
+  "unexpected_privilege_behavior": "FAIL_CLOSED"
+}

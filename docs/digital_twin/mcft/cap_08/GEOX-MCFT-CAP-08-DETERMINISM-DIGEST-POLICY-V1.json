@@ -1,0 +1,40 @@
+{
+  "schema_version": "geox_mcft_cap08_determinism_digest_policy_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-DETERMINISM-DIGEST-POLICY-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "algorithm": "SHA-256",
+  "canonical_json": "GEOX_CANONICAL_JSON_V1",
+  "semantic_chain_digest_includes": [
+    "scope",
+    "formal_run_id",
+    "lineage_semantics",
+    "revision_semantics",
+    "canonical_object_ids",
+    "canonical_determinism_hashes",
+    "ordered_cross_refs"
+  ],
+  "semantic_chain_digest_excludes": [
+    "database_oid",
+    "transaction_id",
+    "workflow_run_id",
+    "artifact_id",
+    "run_instance_id",
+    "created_wall_clock"
+  ],
+  "operational_invariant_digest_includes": [
+    "tick_count",
+    "forecast_count",
+    "scenario_count",
+    "residual_count",
+    "candidate_count",
+    "shadow_count",
+    "activation_count",
+    "barrier_results"
+  ],
+  "closure_digest": "hash(semantic_chain_digest,operational_invariant_digest,hard_acceptance_ledger_digest)",
+  "run_a_run_b_required_equal": [
+    "semantic_chain_digest",
+    "operational_invariant_digest",
+    "closure_digest"
+  ]
+}

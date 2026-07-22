@@ -1,0 +1,26 @@
+{
+  "schema_version": "geox_mcft_cap08_pr1_effectiveness_contract_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-PR1-EFFECTIVENESS-CONTRACT-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "slice_id": "MCFT-CAP-08.S0",
+  "effectiveness_condition": "PRESENT_ON_MAIN_AND_EXACT_SHA_ATTESTATION_PASS",
+  "repository_candidate_state": "CONDITIONAL_NOT_EFFECTIVE",
+  "effective_projection": {
+    "effective_status": "IN_PROGRESS",
+    "effective_next_slice": "S1",
+    "taskbook_status": "FROZEN_TASKBOOK",
+    "bounded_replay_runner_authorized": true,
+    "bounded_canonical_transaction_authorized": true,
+    "bounded_writer_identity": "geox_mcft_cap08_runner_v1",
+    "production_runtime_source_authorized": false
+  },
+  "postmerge_ssot_writeback_allowed": false,
+  "candidate_merge_tree_equivalence_required": true,
+  "immutable_retention_level": "R2",
+  "retention_days": 730,
+  "contract_revision": 2,
+  "pr_1_base_sha": "dfda2dd55e140313598dbc2fcbc9176c8891f465",
+  "database_class": "DEDICATED_FRESH_CAP08_DATABASE",
+  "effective_privilege_graph_required": true,
+  "invalidated_candidate_sha": "71d607cd887833ff0062a54983c4b43895d47966"
+}

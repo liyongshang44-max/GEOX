@@ -1,0 +1,20 @@
+{
+  "schema_version": "geox_mcft_cap08_predecessor_consumption_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-PREDECESSOR-CONSUMPTION-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "capability_line": "MCFT-CAP-07",
+  "closure_subject_sha": "81579b7f67a3dcd3cf557abbf29c9462d8b7736b",
+  "exact_sha_workflow_run_id": 29836198341,
+  "artifact_id": 8497395139,
+  "retention_level": "R2",
+  "required_readback": "PASS_BEFORE_PR1_EFFECTIVENESS",
+  "consumed_capabilities": [
+    "READ_MODEL",
+    "TIMELINE",
+    "TRACE",
+    "HEALTH",
+    "PAGINATION",
+    "ZERO_WRITE_OPERATOR_SURFACE"
+  ],
+  "does_not_authorize_runtime_source": true
+}

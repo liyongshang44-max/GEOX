@@ -1,0 +1,70 @@
+{
+  "schema_version": "geox_mcft_cap08_residual_window_oracle_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-RESIDUAL-WINDOW-ORACLE-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "ordering": "forecast_target_time_ascending",
+  "residual_ids": [
+    "R-01",
+    "R-02",
+    "R-03",
+    "R-04",
+    "R-05",
+    "R-06",
+    "R-07",
+    "R-08",
+    "R-09",
+    "R-10",
+    "R-11",
+    "R-12",
+    "R-13",
+    "R-14",
+    "R-15",
+    "R-16",
+    "R-17",
+    "R-18",
+    "R-19",
+    "R-20",
+    "R-21",
+    "R-22",
+    "R-23",
+    "R-24"
+  ],
+  "calibration_ids": [
+    "R-01",
+    "R-02",
+    "R-03",
+    "R-04",
+    "R-05",
+    "R-06",
+    "R-07",
+    "R-08",
+    "R-09",
+    "R-10",
+    "R-11",
+    "R-12",
+    "R-13",
+    "R-14",
+    "R-15",
+    "R-16"
+  ],
+  "holdout_ids": [
+    "R-17",
+    "R-18",
+    "R-19",
+    "R-20",
+    "R-21",
+    "R-22",
+    "R-23",
+    "R-24"
+  ],
+  "late_commit_order_exception": {
+    "residual_id": "R-01",
+    "commit_phase": "T16",
+    "ordered_position": 1
+  },
+  "cardinality": {
+    "all": 24,
+    "calibration": 16,
+    "holdout": 8
+  }
+}
