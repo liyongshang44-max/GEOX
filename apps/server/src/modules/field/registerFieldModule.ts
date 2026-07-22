@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 
 import { registerFieldsV1Routes } from "../../routes/fields_v1.js";
+import { registerFieldRuntimeScopeOptionsV1Routes } from "../../routes/field_runtime_scope_options_v1.js";
 import { registerFieldTagsV1Routes } from "../../routes/field_tags_v1.js";
 import { registerFieldTimelineV1Routes } from "../../routes/field_timeline_v1.js";
 import { registerFieldProgramStateV1Routes } from "../../routes/field_program_state_v1.js";
@@ -11,6 +12,7 @@ import { registerManagementZonesV1Routes } from "../../routes/management_zones_v
 
 export function registerFieldModule(app: FastifyInstance, pool: Pool): void {
   registerFieldsV1Routes(app, pool);
+  registerFieldRuntimeScopeOptionsV1Routes(app, pool);
   registerFieldTagsV1Routes(app, pool);
   registerFieldTimelineV1Routes(app, pool);
   registerFieldProgramStateV1Routes(app, pool);

@@ -105,6 +105,7 @@
       "revoked": false,
       "allowed_field_ids": [],
       "scopes": [
+        "fields.read",
         "action.task.create",
         "action.task.dispatch",
         "action.receipt.submit",

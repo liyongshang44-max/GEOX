@@ -4,6 +4,36 @@ import type { ControlPlaneStatus } from "./programs";
 export type FieldListItem = any;
 export type FieldDetail = any;
 
+export type FieldRuntimeScopeSeasonOption = {
+  season_id?: string;
+  name?: string;
+  crop?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  status?: string;
+  updated_ts_ms?: number | string;
+};
+
+export type FieldRuntimeScopeOptions = {
+  ok?: boolean;
+  exact_scope_prefix?: {
+    tenant_id?: string;
+    project_id?: string;
+    group_id?: string;
+    field_id?: string;
+  };
+  field?: {
+    field_id?: string;
+    name?: string | null;
+    status?: string | null;
+  };
+  seasons?: FieldRuntimeScopeSeasonOption[];
+  zone_discovery?: {
+    status?: string;
+    zone_id_required?: boolean;
+  };
+};
+
 export type FieldControlPlaneItem = {
   field?: {
     field_id?: string;
@@ -67,6 +97,12 @@ export async function fetchFields(): Promise<FieldListItem[]> {
   const res = await apiRequest<{ ok?: boolean; items?: FieldListItem[]; fields?: FieldListItem[] }>("/api/v1/fields");
   if (Array.isArray(res.items)) return res.items;
   return Array.isArray(res.fields) ? res.fields : [];
+}
+
+export async function fetchFieldRuntimeScopeOptions(fieldId: string): Promise<FieldRuntimeScopeOptions> {
+  return apiRequest<FieldRuntimeScopeOptions>(
+    `/api/v1/fields/${encodeURIComponent(fieldId)}/runtime-scope-options`,
+  );
 }
 
 export async function fetchFieldDetail(fieldId: string): Promise<FieldDetail | null> {

@@ -11,6 +11,28 @@ export const MCFT_CAP07_RUNTIME_ROLE_V1 = "geox_runtime_v1" as const;
 export const MCFT_CAP07_VISIBILITY_MIGRATION_FILE_V1 =
   "2026_07_20_mcft_cap_07_fact_visibility_support.sql" as const;
 
+const MCFT_FINAL_LEGACY_RELATIONS_V1 = Object.freeze([
+  "public.twin_decision_record_projection_v1",
+  "public.twin_action_feedback_projection_v1",
+  "public.twin_approved_plan_binding_projection_v1",
+  "public.twin_calibration_candidate_projection_v1",
+  "public.twin_shadow_evaluation_projection_v1",
+]);
+
+const MCFT_FINAL_IDEMPOTENCY_KINDS_V1 = Object.freeze([
+  "OBJECT",
+  "A0_RECORD_SET",
+  "A1_RECORD_SET",
+  "A2_RECORD_SET",
+  "B_SCENARIO_SET",
+  "RUNTIME_CONFIG",
+  "G_DECISION_RECORD",
+  "H_ACTION_FEEDBACK",
+  "C_FORECAST_RESIDUAL",
+  "D_CALIBRATION_CANDIDATE",
+  "D_SHADOW_EVALUATION",
+]);
+
 export type McftCap07DatabasePlatformBootstrapConfigV1 = {
   admin_database_url: string;
   migrator_password: string;
@@ -148,6 +170,83 @@ async function grantFrozenRuntimeBaselineV1(pool: Pool): Promise<void> {
   `);
 }
 
+async function finalLegacySchemaEstablishedV1(pool: Pool): Promise<boolean> {
+  const relationResult = await pool.query<{ relation_name: string; exists: boolean }>(
+    `SELECT relation_name, pg_catalog.to_regclass(relation_name) IS NOT NULL AS exists
+       FROM unnest($1::text[]) AS relation_name`,
+    [MCFT_FINAL_LEGACY_RELATIONS_V1],
+  );
+  const existingCount = relationResult.rows.filter((row) => row.exists).length;
+  if (existingCount === 0) return false;
+  if (existingCount !== MCFT_FINAL_LEGACY_RELATIONS_V1.length) {
+    const missing = relationResult.rows.filter((row) => !row.exists).map((row) => row.relation_name).sort();
+    throw new Error(`MCFT_DATABASE_ROLE_BOOTSTRAP_INVALID:LEGACY_SCHEMA_PARTIAL:${missing.join(",")}`);
+  }
+
+  const constraintResult = await pool.query<{ definition: string | null }>(`
+    SELECT pg_catalog.pg_get_constraintdef(constraint_row.oid) AS definition
+      FROM pg_catalog.pg_constraint AS constraint_row
+     WHERE constraint_row.conrelid = pg_catalog.to_regclass('public.twin_object_idempotency_index_v1')
+       AND constraint_row.conname = 'twin_object_idempotency_index_v1_identity_kind_check'
+     LIMIT 2
+  `);
+  if (constraintResult.rowCount !== 1 || !constraintResult.rows[0]?.definition) {
+    throw new Error("MCFT_DATABASE_ROLE_BOOTSTRAP_INVALID:FINAL_IDEMPOTENCY_CONSTRAINT_CARDINALITY");
+  }
+  const definition = constraintResult.rows[0].definition;
+  const missingKinds = MCFT_FINAL_IDEMPOTENCY_KINDS_V1.filter((kind) => !definition.includes(`'${kind}'`));
+  if (missingKinds.length) {
+    throw new Error(`MCFT_DATABASE_ROLE_BOOTSTRAP_INVALID:FINAL_IDEMPOTENCY_KIND_SET:${missingKinds.join(",")}`);
+  }
+  return true;
+}
+
+export async function reassertMcftCap07RuntimeVisibilityBoundaryV1(pool: Pool): Promise<boolean> {
+  const relationState = await pool.query<{
+    ledger_exists: boolean;
+    epoch_exists: boolean;
+    index_exists: boolean;
+    fact_function_exists: boolean;
+    epoch_function_exists: boolean;
+    index_function_exists: boolean;
+  }>(`
+    SELECT
+      pg_catalog.to_regclass('public.geox_schema_migration_ledger_v1') IS NOT NULL AS ledger_exists,
+      pg_catalog.to_regclass('public.twin_fact_visibility_epoch_v1') IS NOT NULL AS epoch_exists,
+      pg_catalog.to_regclass('public.twin_fact_visibility_index_v1') IS NOT NULL AS index_exists,
+      pg_catalog.to_regprocedure('public.enforce_mcft_cap07_fact_visibility_v1()') IS NOT NULL AS fact_function_exists,
+      pg_catalog.to_regprocedure('public.enforce_mcft_cap07_visibility_epoch_authority_v1()') IS NOT NULL AS epoch_function_exists,
+      pg_catalog.to_regprocedure('public.enforce_mcft_cap07_visibility_index_immutability_v1()') IS NOT NULL AS index_function_exists
+  `);
+  const row = relationState.rows[0];
+  if (!row) throw new Error("MCFT_DATABASE_ROLE_BOOTSTRAP_INVALID:CAP07_VISIBILITY_DISCOVERY");
+  const values = [
+    row.ledger_exists,
+    row.epoch_exists,
+    row.index_exists,
+    row.fact_function_exists,
+    row.epoch_function_exists,
+    row.index_function_exists,
+  ];
+  const existingCount = values.filter(Boolean).length;
+  if (existingCount === 0) return false;
+  if (existingCount !== values.length) {
+    throw new Error(`MCFT_DATABASE_ROLE_BOOTSTRAP_INVALID:CAP07_VISIBILITY_CONTRACT_PARTIAL:${existingCount}`);
+  }
+  await pool.query(`
+    REVOKE ALL ON TABLE public.geox_schema_migration_ledger_v1 FROM ${MCFT_CAP07_RUNTIME_ROLE_V1};
+    REVOKE ALL ON TABLE public.twin_fact_visibility_epoch_v1 FROM ${MCFT_CAP07_RUNTIME_ROLE_V1};
+    REVOKE ALL ON TABLE public.twin_fact_visibility_index_v1 FROM ${MCFT_CAP07_RUNTIME_ROLE_V1};
+    REVOKE ALL ON FUNCTION public.enforce_mcft_cap07_fact_visibility_v1() FROM ${MCFT_CAP07_RUNTIME_ROLE_V1};
+    REVOKE ALL ON FUNCTION public.enforce_mcft_cap07_visibility_epoch_authority_v1() FROM ${MCFT_CAP07_RUNTIME_ROLE_V1};
+    REVOKE ALL ON FUNCTION public.enforce_mcft_cap07_visibility_index_immutability_v1() FROM ${MCFT_CAP07_RUNTIME_ROLE_V1};
+    GRANT SELECT ON TABLE public.twin_fact_visibility_epoch_v1 TO ${MCFT_CAP07_RUNTIME_ROLE_V1};
+    GRANT SELECT ON TABLE public.twin_fact_visibility_index_v1 TO ${MCFT_CAP07_RUNTIME_ROLE_V1};
+    GRANT SELECT ON TABLE public.geox_schema_migration_ledger_v1 TO ${MCFT_CAP07_RUNTIME_ROLE_V1};
+  `);
+  return true;
+}
+
 async function assertRoleGraphV1(pool: Pool): Promise<void> {
   const result = await pool.query<{
     owner_login: boolean;
@@ -213,7 +312,10 @@ export async function runMcftCap07DatabasePlatformBootstrapV1(
       GRANT USAGE ON SCHEMA public TO ${MCFT_CAP07_MIGRATION_OWNER_ROLE_V1};
       GRANT EXECUTE ON FUNCTION public.digest(bytea, text) TO ${MCFT_CAP07_MIGRATION_OWNER_ROLE_V1};
     `);
-    const legacyMigrationSummary = config.apply_legacy_migrations === false
+    const legacySchemaEstablished = config.apply_legacy_migrations === false
+      ? false
+      : await finalLegacySchemaEstablishedV1(pool);
+    const legacyMigrationSummary = config.apply_legacy_migrations === false || legacySchemaEstablished
       ? null
       : await runSqlMigrations(pool, {
           exclude_files: [MCFT_CAP07_VISIBILITY_MIGRATION_FILE_V1],
@@ -222,6 +324,7 @@ export async function runMcftCap07DatabasePlatformBootstrapV1(
       throw new Error("MCFT_DATABASE_ROLE_BOOTSTRAP_INVALID:CAP07_MIGRATION_NOT_EXCLUDED");
     }
     await grantFrozenRuntimeBaselineV1(pool);
+    await reassertMcftCap07RuntimeVisibilityBoundaryV1(pool);
     await assertRoleGraphV1(pool);
     return {
       status: "PASS",

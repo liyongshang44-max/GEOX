@@ -1,0 +1,247 @@
+// Purpose: CLI for the deterministic, development-only MCFT-CAP-07 local product demo.
+// Boundary: apply requires an explicit local host and confirmation; no production authority, Runtime source activation, model activation, or CAP-08 authorization.
+
+import { Pool } from "pg";
+import { computeMemberDeterminismHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
+import { PostgresMcftFieldTwinReadApiV1 } from "../../apps/server/src/services/mcft_field_twin_read_api_v1.js";
+import { buildDemoBundle, type DemoBundle, type JsonRecord } from "./three_surface_local_demo_contract_v1.js";
+import { assertRequiredRelations, persistRootAndForecasts, seedFieldNavigator } from "./three_surface_local_demo_persistence_v1.js";
+import { persistOptionalDomain } from "./three_surface_local_demo_optional_persistence_v1.js";
+import {
+  buildLocalDemoActionLifecycleV1,
+  localDemoActionLifecycleManifestV1,
+  normalizeLocalDemoScenarioForActionLifecycleV1,
+  persistLocalDemoActionLifecycleV1,
+} from "./three_surface_local_demo_action_lifecycle_v1.js";
+
+const LOCAL_CURSOR_KEY = "mcft-cap07-local-demo-cursor-signing-key-2026";
+const REQUIRED_TIMELINE_KINDS = Object.freeze([
+  "EVIDENCE_WINDOW",
+  "STATE_TRANSITION",
+  "ASSIMILATION_UPDATE",
+  "POSTERIOR_STATE",
+  "FORECAST_RESULT",
+  "RUNTIME_TICK",
+  "CHECKPOINT",
+  "RUNTIME_HEALTH",
+  "SCENARIO_SET",
+  "HUMAN_DECISION",
+  "APPROVED_PLAN_EVIDENCE",
+  "ACTION_FEEDBACK",
+  "FORECAST_RESIDUAL",
+  "CALIBRATION_CANDIDATE",
+  "SHADOW_EVALUATION",
+]);
+
+function flag(name: string): boolean { return process.argv.includes(name); }
+function argument(name: string): string | null { const index = process.argv.indexOf(name); return index >= 0 && process.argv[index + 1] ? String(process.argv[index + 1]).trim() : null; }
+function databaseUrl(): string {
+  const explicit = argument("--database-url") || String(process.env.DATABASE_URL || "").trim();
+  if (explicit) return explicit;
+  const user = encodeURIComponent(String(process.env.POSTGRES_USER || "landos"));
+  const password = encodeURIComponent(String(process.env.POSTGRES_PASSWORD || "landos_pwd"));
+  const database = encodeURIComponent(String(process.env.POSTGRES_DB || "landos"));
+  return `postgres://${user}:${password}@127.0.0.1:5433/${database}`;
+}
+function readbackDatabaseUrl(): string {
+  const explicit = argument("--runtime-database-url") || String(process.env.GEOX_RUNTIME_DATABASE_URL || "").trim();
+  if (!explicit) throw new Error("LOCAL_DEMO_RUNTIME_READBACK_CREDENTIAL_REQUIRED");
+  return explicit;
+}
+function assertLocalUrlV1(urlText: string): void {
+  const parsed = new URL(urlText);
+  const host = parsed.hostname.toLowerCase();
+  if (!["127.0.0.1", "localhost", "::1"].includes(host)) throw new Error(`LOCAL_DEMO_DATABASE_HOST_FORBIDDEN:${host}`);
+}
+function assertLocalApplyAllowed(writeUrl: string, runtimeUrl: string): void {
+  if (!flag("--confirm-local-demo")) throw new Error("LOCAL_DEMO_CONFIRMATION_REQUIRED: pass --confirm-local-demo");
+  assertLocalUrlV1(writeUrl);
+  assertLocalUrlV1(runtimeUrl);
+  if (writeUrl === runtimeUrl) throw new Error("LOCAL_DEMO_DEDICATED_RUNTIME_READBACK_REQUIRED");
+  const runtime = String(process.env.GEOX_RUNTIME_ENV || "development").trim().toLowerCase();
+  if (!["development", "dev", "local", "test"].includes(runtime)) throw new Error(`LOCAL_DEMO_RUNTIME_ENV_FORBIDDEN:${runtime}`);
+}
+
+function recomputeObjectHash(object: JsonRecord): string {
+  return computeMemberDeterminismHashV1(object);
+}
+
+function normalizeFrozenForecastProjectionCompatibility(bundle: DemoBundle): void {
+  const forecast = bundle.successful_forecast;
+  const status = String(forecast.payload.status || "").trim();
+  if (!status) throw new Error("LOCAL_DEMO_FORECAST_STATUS_REQUIRED");
+  forecast.payload = { ...forecast.payload, forecast_status: status };
+  forecast.determinism_hash = recomputeObjectHash(forecast);
+
+  bundle.scenario.payload = {
+    ...bundle.scenario.payload,
+    source_forecast_hash: forecast.determinism_hash,
+  };
+  bundle.scenario.determinism_hash = recomputeObjectHash(bundle.scenario);
+
+  bundle.residual.payload = {
+    ...bundle.residual.payload,
+    forecast_run_hash: forecast.determinism_hash,
+  };
+  bundle.residual.determinism_hash = recomputeObjectHash(bundle.residual);
+}
+
+function timelineKindsV1(value: JsonRecord): string[] {
+  if (!Array.isArray(value.items)) return [];
+  return [...new Set(value.items.map((item) => item && typeof item === "object" ? String((item as JsonRecord).event_kind || "") : "").filter(Boolean))].sort();
+}
+
+async function verifyBundle(pool: Pool, bundle: DemoBundle): Promise<JsonRecord> {
+  process.env.MCFT_CURSOR_SIGNING_KEYS_JSON ||= JSON.stringify({ local_demo_v1: LOCAL_CURSOR_KEY });
+  process.env.MCFT_CURSOR_PRIMARY_KEY_ID ||= "local_demo_v1";
+  const api = new PostgresMcftFieldTwinReadApiV1(pool);
+  const request = { scope: bundle.scope };
+  const [runtime, timeline, states, forecasts, scenarios, residuals, actionLifecycle, candidate, evaluation, trace, health] = await Promise.all([
+    api.readRuntime(request),
+    api.readTimeline({ ...request, limit: 50 }),
+    api.readStates({ ...request, limit: 50 }),
+    api.readForecasts({ ...request, limit: 50 }),
+    api.readScenarios({ ...request, limit: 50 }),
+    api.readResiduals({ ...request, limit: 50 }),
+    api.readActionLifecycle({ ...request, limit: 50 }),
+    api.readModelGovernance({ ...request, collection_kind: "CALIBRATION_CANDIDATE", limit: 50 }),
+    api.readModelGovernance({ ...request, collection_kind: "SHADOW_EVALUATION", limit: 50 }),
+    api.readTrace(request),
+    api.readHealth(request),
+  ]);
+  const count = (value: JsonRecord): number => Array.isArray(value.items) ? value.items.length : 0;
+  const timelineKinds = timelineKindsV1(timeline);
+  const actionSummary = runtime.action_feedback_summary && typeof runtime.action_feedback_summary === "object"
+    ? runtime.action_feedback_summary as JsonRecord
+    : {};
+  const readback = {
+    runtime_root_graph_status: runtime.root_graph_status,
+    runtime_action_feedback_has_items: actionSummary.has_items === true,
+    timeline_event_count: count(timeline),
+    timeline_event_kinds: timelineKinds,
+    state_count: count(states),
+    forecast_count: count(forecasts),
+    scenario_count: count(scenarios),
+    residual_count: count(residuals),
+    action_feedback_count: count(actionLifecycle),
+    calibration_candidate_count: count(candidate),
+    shadow_evaluation_count: count(evaluation),
+    trace_node_count: Array.isArray(trace.nodes) ? trace.nodes.length : 0,
+    health_relationship: health.health_relationship,
+  };
+  if (readback.runtime_root_graph_status !== "COMPLETE_EXACT_GRAPH") throw new Error(`LOCAL_DEMO_READBACK_ROOT_INVALID:${readback.runtime_root_graph_status}`);
+  if (readback.state_count < 2 || readback.forecast_count < 1 || readback.scenario_count < 1 || readback.residual_count < 1) throw new Error(`LOCAL_DEMO_READBACK_COLLECTION_INCOMPLETE:${JSON.stringify(readback)}`);
+  if (!readback.runtime_action_feedback_has_items || readback.action_feedback_count < 1) throw new Error(`LOCAL_DEMO_READBACK_ACTION_LIFECYCLE_INCOMPLETE:${JSON.stringify(readback)}`);
+  const missingTimelineKinds = REQUIRED_TIMELINE_KINDS.filter((kind) => !timelineKinds.includes(kind));
+  if (readback.timeline_event_count < REQUIRED_TIMELINE_KINDS.length || missingTimelineKinds.length) throw new Error(`LOCAL_DEMO_READBACK_TIMELINE_INCOMPLETE:${missingTimelineKinds.join(",")}`);
+  if (readback.calibration_candidate_count < 1 || readback.shadow_evaluation_count < 1 || readback.trace_node_count < 9) throw new Error(`LOCAL_DEMO_READBACK_GOVERNANCE_OR_TRACE_INCOMPLETE:${JSON.stringify(readback)}`);
+  return readback;
+}
+
+async function main(): Promise<void> {
+  const mode = flag("--apply") ? "apply" : flag("--verify") ? "verify" : "dry-run";
+  const bundle = await buildDemoBundle();
+  normalizeFrozenForecastProjectionCompatibility(bundle);
+  normalizeLocalDemoScenarioForActionLifecycleV1(bundle);
+  const actionLifecycle = buildLocalDemoActionLifecycleV1(bundle);
+  const route = `/operator/fields/${encodeURIComponent(bundle.scope.field_id)}?season_id=${encodeURIComponent(bundle.scope.season_id)}&zone_id=${encodeURIComponent(bundle.scope.zone_id)}`;
+  const manifest = {
+    schema_version: "geox_mcft_cap07_local_demo_manifest_v1",
+    scope: bundle.scope,
+    route,
+    root_record_set_id: bundle.root.a0_record_set_id,
+    action_lifecycle: localDemoActionLifecycleManifestV1(actionLifecycle),
+    cleanup_policy: "DISPOSABLE_LOCAL_DATABASE_OR_VOLUME_ONLY",
+    cleanup_reason: "Canonical facts and visibility metadata are append-only/immutable; in-place fact deletion is not an authorized cleanup path.",
+  };
+  if (mode === "dry-run") {
+    console.log(JSON.stringify({
+      ok: true,
+      seed: "THREE_SURFACE_LOCAL_DEMO_V1",
+      mode,
+      scope: bundle.scope,
+      canonical_and_replay_fact_count: 21,
+      root_member_count: bundle.root.members.length,
+      route,
+      manifest,
+      boundaries: {
+        local_only: true,
+        runtime_source_authorized: false,
+        canonical_production_write_authorized: false,
+        model_activation_created: false,
+        mcft_cap_08_authorized: false,
+      },
+    }, null, 2));
+    return;
+  }
+
+  const writeUrl = databaseUrl();
+  const runtimeUrl = readbackDatabaseUrl();
+  assertLocalUrlV1(runtimeUrl);
+  if (mode === "apply") assertLocalApplyAllowed(writeUrl, runtimeUrl);
+  const writePool = new Pool({ connectionString: writeUrl, max: 1 });
+  try {
+    if (mode === "apply") {
+      const client = await writePool.connect();
+      try {
+        await client.query("BEGIN");
+        await assertRequiredRelations(client);
+        await seedFieldNavigator(client, bundle.scope);
+        await persistRootAndForecasts(client, bundle);
+        await persistOptionalDomain(client, bundle);
+        await persistLocalDemoActionLifecycleV1(client, actionLifecycle);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+  } finally {
+    await writePool.end();
+  }
+
+  const readPool = new Pool({ connectionString: runtimeUrl, max: 2 });
+  try {
+    const readback = await verifyBundle(readPool, bundle);
+    console.log(JSON.stringify({
+      ok: true,
+      seed: "THREE_SURFACE_LOCAL_DEMO_V1",
+      mode,
+      scope: bundle.scope,
+      route,
+      manifest,
+      readback_identity: "DEDICATED_RUNTIME_CREDENTIAL",
+      readback,
+      boundaries: {
+        local_only: true,
+        runtime_source_authorized: false,
+        canonical_production_write_authorized: false,
+        model_activation_created: false,
+        mcft_cap_08_authorized: false,
+      },
+    }, null, 2));
+  } finally {
+    await readPool.end();
+  }
+}
+
+main().catch((error) => {
+  const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack || error.message : String(error);
+  console.log(JSON.stringify({
+    ok: false,
+    seed: "THREE_SURFACE_LOCAL_DEMO_V1",
+    error_code: message.split(":", 1)[0] || "LOCAL_DEMO_FAILED",
+    error: message,
+    diagnostics: [stack],
+    boundaries: {
+      runtime_source_authorized: false,
+      canonical_production_write_authorized: false,
+      model_activation_created: false,
+      mcft_cap_08_authorized: false,
+    },
+  }, null, 2));
+  process.exitCode = 1;
+});
