@@ -31,6 +31,14 @@ function sha256(relativePath) {
   return `sha256:${crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT, relativePath))).digest('hex')}`;
 }
 
+function canonical(value) {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
 try {
   const results = Object.fromEntries(RESULT_FILES.map((name) => [name, readResult(name)]));
   const tree = results['MCFT_CAP_08_CANDIDATE_MERGE_TREE_EQUIVALENCE_RESULT.json'];
@@ -89,6 +97,7 @@ try {
     slice_id: 'MCFT-CAP-08.S0',
     stage: mergeStage ? 'EXACT_MERGE_SHA' : 'CANDIDATE_HEAD',
     subject_sha: subjectSha,
+    subject_commit: subjectSha,
     candidate_head_sha: tree.candidate_head_sha,
     candidate_tree_sha: tree.candidate_tree_sha,
     merge_commit_sha: tree.merge_commit_sha ?? null,
@@ -119,6 +128,7 @@ try {
     },
     results,
   };
+  artifact.semantic_artifact_digest = `sha256:${crypto.createHash('sha256').update(Buffer.from(canonical(artifact))).digest('hex')}`;
   fs.writeFileSync(ARTIFACT_PATH, `${JSON.stringify(artifact, null, 2)}\n`);
   process.stdout.write(`${JSON.stringify(artifact)}\n`);
 } catch (error) {

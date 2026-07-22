@@ -7,6 +7,7 @@ on:
       - 'docs/digital_twin/mcft/GEOX-MCFT-STAGE-1-CLOSURE-AUTHORITY-V2.*'
       - '.github/workflows/mcft-cap-08-exact-sha-attestation.yml'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_EXACT_SHA_ATTESTATION.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_pr1_artifact_finalize.cjs'
   workflow_dispatch:
     inputs:
       subject_sha:
