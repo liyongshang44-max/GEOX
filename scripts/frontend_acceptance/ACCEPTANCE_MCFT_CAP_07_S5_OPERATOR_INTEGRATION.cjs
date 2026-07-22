@@ -30,7 +30,7 @@ const FILES = {
 
 const EXACT_CANDIDATE_FILES = Object.values(FILES).sort();
 const WORKFLOW_REMEDIATION_FILES = [FILES.workflow, FILES.acceptance].sort();
-const CAP08_REGISTRY_BOOTSTRAP_FILES = [FILES.registry, FILES.acceptance].sort();
+const CAP08_REGISTRY_BOOTSTRAP_FILES = [FILES.registry, FILES.acceptance, '.github/workflows/mcft-cap-07-s6-closure.yml'].sort();
 const S5_PROTECTED_PRODUCT_FILES = [FILES.route, FILES.client, FILES.page, FILES.s5, FILES.workflow, FILES.acceptance].sort();
 const POST_CLOSURE_LOCAL_DEMO_FILES = [
   FILES.workflow,
