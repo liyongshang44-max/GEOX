@@ -80,6 +80,7 @@ jobs:
           MCFT_BASE_SHA: "dfda2dd55e140313598dbc2fcbc9176c8891f465"
         run: |
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_AUTHORITY_RECONCILIATION.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CHANGED_FILE_BOUNDARY.cjs
           cp acceptance-output/MCFT_CAP_08_EXACT_SHA_ATTESTATION_RESULT.json acceptance-output/MCFT_CAP_08_CANDIDATE_MERGE_TREE_EQUIVALENCE_RESULT.json
           node scripts/governance_acceptance/mcft_cap08_pr1_artifact_finalize.cjs
       - name: Build deterministic archive
