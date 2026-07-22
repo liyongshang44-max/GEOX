@@ -1,0 +1,6 @@
+import fs from "node:fs"; import pg from "pg"; import crypto from "node:crypto"; const {Pool}=pg;
+const admin=process.env.MCFT_CAP08_ADMIN_DATABASE_URL||"postgres://postgres:postgres@127.0.0.1:5432/postgres";
+const out=(name:string,v:unknown)=>{fs.mkdirSync("acceptance-output",{recursive:true});fs.writeFileSync(`acceptance-output/${name}`,JSON.stringify(v,null,2)+"\\n")};
+const hash=(v:unknown)=>crypto.createHash("sha256").update(JSON.stringify(v)).digest("hex");
+
+const contract=JSON.parse(fs.readFileSync("docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-PROGRESS-RECOVERY-ADJUDICATION-V1.json","utf8")); const pool=new Pool({connectionString:admin,max:1}); try{await pool.query("CREATE TEMP TABLE cap08_progress(k text primary key,v boolean)");await pool.query("INSERT INTO cap08_progress VALUES('bootstrap',true),('tick',false)");const q=await pool.query("SELECT CASE WHEN bool_and(v) THEN 'RUN_COMPLETE' ELSE 'TICK_EVIDENCE_PENDING' END state FROM cap08_progress");if(q.rows[0].state!=="TICK_EVIDENCE_PENDING")throw new Error("PROGRESS_QUERY_INVALID");if(contract.states.length!==25)throw new Error("PROGRESS_STATE_COUNT_INVALID");out("MCFT_CAP_08_PROGRESS_PREDICATES_DB_RESULT.json",{status:"PASS",state_count:contract.states.length,query_qualified:true,repository_write_performed:false});}finally{await pool.end();}

@@ -1,0 +1,147 @@
+{
+  "schema_version": "geox_mcft_cap08_late_correction_test_vectors_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-LATE-CORRECTION-TEST-VECTORS-V1",
+  "record_status": "FROZEN_SHARED_TEST_VECTORS",
+  "production_reuse_required_in_pr4": true,
+  "vector_count": 12,
+  "vectors": [
+    {
+      "id": "POSITIVE_RESIDUAL",
+      "input": {
+        "x": 70,
+        "delta": 5,
+        "phi": 0.8,
+        "decay": 0.5,
+        "variance": 1
+      },
+      "expected": {
+        "mean": 72,
+        "variance": 1
+      }
+    },
+    {
+      "id": "NEGATIVE_RESIDUAL",
+      "input": {
+        "x": 70,
+        "delta": -5,
+        "phi": 0.8,
+        "decay": 0.5,
+        "variance": 1
+      },
+      "expected": {
+        "mean": 68,
+        "variance": 1
+      }
+    },
+    {
+      "id": "LIMITED_QUALITY",
+      "input": {
+        "x": 70,
+        "delta": 5,
+        "phi": 0.8,
+        "decay": 0.5,
+        "quality": 0.5,
+        "variance": 1
+      },
+      "expected": {
+        "mean": 71,
+        "variance": 1
+      }
+    },
+    {
+      "id": "MAX_ALLOWED_LAG",
+      "input": {
+        "lag": 15
+      },
+      "expected": {
+        "disposition": "APPLIED"
+      }
+    },
+    {
+      "id": "LAG_REJECTION",
+      "input": {
+        "lag": 16
+      },
+      "expected": {
+        "disposition": "REJECTED_LAG_EXCEEDED"
+      }
+    },
+    {
+      "id": "UPPER_CLIPPING",
+      "input": {
+        "x": 134,
+        "delta": 10,
+        "phi": 1,
+        "decay": 1
+      },
+      "expected": {
+        "mean": 135
+      }
+    },
+    {
+      "id": "LOWER_CLIPPING",
+      "input": {
+        "x": 37,
+        "delta": -10,
+        "phi": 1,
+        "decay": 1
+      },
+      "expected": {
+        "mean": 36
+      }
+    },
+    {
+      "id": "NON_FINITE_REJECTION",
+      "input": {
+        "x": "NaN"
+      },
+      "expected": {
+        "disposition": "REJECTED_NON_FINITE"
+      }
+    },
+    {
+      "id": "INTERMEDIATE_ORDINARY_ASSIMILATION",
+      "input": {
+        "paired_plus": 80.4,
+        "paired_minus": 79.6,
+        "epsilon": 0.5
+      },
+      "expected": {
+        "sensitivity": 0.8
+      }
+    },
+    {
+      "id": "ZERO_TRANSITION_SENSITIVITY",
+      "input": {
+        "x": 70,
+        "delta": 10,
+        "phi": 0,
+        "decay": 1
+      },
+      "expected": {
+        "mean": 70
+      }
+    },
+    {
+      "id": "VARIANCE_FLOOR",
+      "input": {
+        "variance": 1e-05
+      },
+      "expected": {
+        "variance": 0.0001
+      }
+    },
+    {
+      "id": "DETERMINISTIC_RERUN",
+      "input": {
+        "x": 70,
+        "delta": 5,
+        "phi": 0.8,
+        "decay": 0.5
+      },
+      "expected": {
+        "repeat_equal": true
+      }
+    }
+  ]
+}

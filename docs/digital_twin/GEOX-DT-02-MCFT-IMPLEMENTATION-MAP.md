@@ -1606,3 +1606,22 @@ D persistence: not implemented
 Candidate/Evaluation canonical append: absent
 Model Activation: absent
 ```
+
+
+## MCFT-CAP-08 Stage-1A authority reconciliation (V2)
+
+```text
+pr_1_base_sha: ade35875ff6f5ef92ec76f04ab9fc302c57f700e
+capability_line: MCFT-CAP-08
+slice: MCFT-CAP-08.S0
+status: AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE
+implementation_authorized: false
+runtime_source_authorized: false
+closure_authority: docs/digital_twin/mcft/GEOX-MCFT-STAGE-1-CLOSURE-AUTHORITY-V2.json
+taskbook: docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md
+resolved_manifest: docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RESOLVED-MANIFEST-V1.json
+first_runtime_slice_after_attestation: MCFT-CAP-08.S1
+production_runtime_source_authorized: false
+```
+
+This block supersedes earlier MCFT-CAP-08 planning rows for successor Stage-1A closure. It does not rewrite the completion record of any predecessor capability line.

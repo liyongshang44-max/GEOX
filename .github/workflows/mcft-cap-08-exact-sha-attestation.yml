@@ -1,0 +1,92 @@
+name: mcft-cap-08-exact-sha-attestation
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/digital_twin/mcft/cap_08/**'
+      - 'docs/digital_twin/mcft/GEOX-MCFT-STAGE-1-CLOSURE-AUTHORITY-V2.*'
+      - '.github/workflows/mcft-cap-08-exact-sha-attestation.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_EXACT_SHA_ATTESTATION.cjs'
+  workflow_dispatch:
+    inputs:
+      subject_sha: { description: Exact main merge SHA, required: true, type: string }
+permissions: { contents: read, actions: read, pull-requests: read, statuses: write }
+concurrency:
+  group: mcft-cap-08-pr1-exact-${{ inputs.subject_sha || github.sha }}
+  cancel-in-progress: false
+jobs:
+  exact-sha-attestation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env: { MCFT_SUBJECT_SHA: "${{ inputs.subject_sha || github.sha }}" }
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: postgres }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres" --health-interval 3s --health-timeout 2s --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0, persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.11.1, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Exact candidate-to-merge tree proof
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_EXACT_SHA_ATTESTATION.cjs
+      - name: Revalidate platform security on disposable PostgreSQL
+        env: { MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres }
+        run: |
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_WRITER_PRIVILEGE_NEGATIVE_DB.ts
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_LATE_CORRECTION_MATH.ts
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PROGRESS_PREDICATES_DB.ts
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_ZERO_RUNTIME_DATA_DELTA_DB.ts
+      - name: Revalidate authority
+        env: { MCFT_BASE_SHA: "ade35875ff6f5ef92ec76f04ab9fc302c57f700e" }
+        run: |
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_AUTHORITY_RECONCILIATION.cjs
+          cp acceptance-output/MCFT_CAP_08_EXACT_SHA_ATTESTATION_RESULT.json acceptance-output/MCFT_CAP_08_CANDIDATE_MERGE_TREE_EQUIVALENCE_RESULT.json
+          node scripts/governance_acceptance/mcft_cap08_pr1_artifact_finalize.cjs
+      - name: Build deterministic archive
+        run: |
+          mkdir -p acceptance-output/archive-input
+          cp acceptance-output/MCFT_CAP_08_PR1_AUTHORITY_ARTIFACT.json acceptance-output/archive-input/canonical-artifact.json
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -cf acceptance-output/mcft-cap-08-pr1-attestation.tar -C acceptance-output/archive-input canonical-artifact.json
+          gzip -n -f acceptance-output/mcft-cap-08-pr1-attestation.tar
+      - name: Upload and read back immutable R2 authority
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_ATTESTATION_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_ATTESTATION_S3_SECRET_ACCESS_KEY }}
+          GEOX_MCFT_ATTESTATION_S3_ENDPOINT: ${{ vars.GEOX_MCFT_ATTESTATION_S3_ENDPOINT }}
+          GEOX_MCFT_ATTESTATION_S3_BUCKET: ${{ vars.GEOX_MCFT_ATTESTATION_S3_BUCKET }}
+          GEOX_MCFT_ATTESTATION_S3_REGION: ${{ vars.GEOX_MCFT_ATTESTATION_S3_REGION }}
+          GEOX_MCFT_ATTESTATION_S3_FORCE_PATH_STYLE: ${{ vars.GEOX_MCFT_ATTESTATION_S3_FORCE_PATH_STYLE }}
+          MCFT_CANONICAL_ARTIFACT_PATH: acceptance-output/MCFT_CAP_08_PR1_AUTHORITY_ARTIFACT.json
+          MCFT_ARTIFACT_ARCHIVE_PATH: acceptance-output/mcft-cap-08-pr1-attestation.tar.gz
+          MCFT_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          MCFT_REPOSITORY_NAME: GEOX
+          MCFT_ARTIFACT_NAME: mcft-cap-08-pr1-exact-sha-${{ inputs.subject_sha || github.sha }}
+          MCFT_RETENTION_LEVEL: R2
+          MCFT_RETENTION_DAYS: 730
+        run: node scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs --upload-readback
+      - id: artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-pr1-exact-sha-${{ inputs.subject_sha || github.sha }}
+          path: acceptance-output/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish exact-SHA status
+        if: always()
+        uses: actions/github-script@v7
+        env: { JOB_STATUS: "${{ job.status }}", ARTIFACT_ID: "${{ steps.artifact.outputs.artifact-id }}" }
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const fs=require('fs');let a=null;try{a=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_08_EXACT_SHA_ATTESTATION_RESULT.json','utf8'))}catch{}
+            const ok=process.env.JOB_STATUS==='success'&&a?.status==='PASS'&&String(process.env.ARTIFACT_ID||'').length>0;
+            const [owner,repo]=process.env.GITHUB_REPOSITORY.split('/');await github.rest.repos.createCommitStatus({owner,repo,sha:process.env.MCFT_SUBJECT_SHA,state:ok?'success':'failure',context:'mcft-cap-08/pr1-exact-sha-attestation',description:(ok?'PASS S0 next=S1':'FAIL S0 exact-SHA').slice(0,140),target_url:`${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`});

@@ -1,0 +1,85 @@
+{
+  "schema_version": "geox_mcft_cap08_transaction_micro_sequence_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-TRANSACTION-MICRO-SEQUENCE-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "phase_order": [
+    "resolve",
+    "E",
+    "H",
+    "A",
+    "B",
+    "G",
+    "C",
+    "barrier"
+  ],
+  "rules": [
+    {
+      "phase": "T05",
+      "sequence": [
+        "E",
+        "A",
+        "B",
+        "G",
+        "C",
+        "barrier"
+      ],
+      "proof": "decision_after_scenario_before_next_tick"
+    },
+    {
+      "phase": "T08",
+      "sequence": [
+        "E",
+        "H",
+        "A",
+        "B",
+        "C",
+        "barrier"
+      ],
+      "proof": "action_feedback_visible_before_state_snapshot"
+    },
+    {
+      "phase": "T10",
+      "sequence": [
+        "E_FVO10_OUTCOME",
+        "A_ORDINARY_ASSIMILATION",
+        "B",
+        "C_R10",
+        "barrier"
+      ]
+    },
+    {
+      "phase": "T16",
+      "sequence": [
+        "E_FVO01_LATE_AND_FVO16",
+        "A_DYNAMICS_NO_ORDINARY_THEN_LATE_CORRECTION",
+        "B",
+        "C_R01_R16",
+        "barrier"
+      ]
+    },
+    {
+      "phase": "G00",
+      "sequence": [
+        "E_FVO24",
+        "C_R24",
+        "barrier"
+      ]
+    },
+    {
+      "phase": "G01",
+      "sequence": [
+        "D_CANDIDATE",
+        "barrier"
+      ]
+    },
+    {
+      "phase": "G02",
+      "sequence": [
+        "D_SHADOW",
+        "barrier"
+      ]
+    }
+  ],
+  "partial_commit_behavior": "ROLLBACK_OR_DB_RECOVERY_ONLY",
+  "barrier_mismatch_behavior": "FAIL_CLOSED"
+}

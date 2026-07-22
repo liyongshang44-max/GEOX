@@ -1,0 +1,38 @@
+{
+  "schema_version": "geox_mcft_cap08_phase_orchestration_contract_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-PHASE-ORCHESTRATION-CONTRACT-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "phase_order": [
+    "resolve",
+    "E",
+    "H",
+    "A",
+    "B",
+    "G",
+    "C",
+    "barrier"
+  ],
+  "interfaces": [
+    "Cap08TickPhasePlanV1",
+    "Cap08DueObligationSetV1",
+    "Cap08TickBarrierV1"
+  ],
+  "provider_slots": {
+    "E": "evidence_provider",
+    "H": "action_feedback_provider",
+    "A": "state_update_provider",
+    "B": "scenario_provider",
+    "G": "decision_provider",
+    "C": "residual_provider"
+  },
+  "s1_empty_providers": [
+    "H",
+    "G",
+    "C"
+  ],
+  "progress_resolver_integration_point": "BEFORE_EACH_PHASE_AND_AFTER_COMMIT",
+  "idempotency_semantics": "IDENTITY_LOOKUP_THEN_EXACT_HASH_OR_FAIL",
+  "barrier_contract": "ALL_DUE_OBLIGATIONS_EXACTLY_SATISFIED",
+  "phase_engine_contract_digest": "sha256:41428596e893112483a8695ccd7bc28dc19dee35c2c3bf29e78395a86133d466",
+  "phase_engine_source_digest": "AUDIT_ONLY_UNSET_UNTIL_PR2"
+}

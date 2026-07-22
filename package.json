@@ -247,7 +247,9 @@
     "ci:acceptance-result-from-evidence-artifacts": "pnpm run ci:governance:acceptance-result-from-evidence-artifacts-boundary && pnpm run ci:runtime:acceptance-result-from-evidence-artifacts",
     "ci:governance:water-response-verification-from-acceptance-boundary": "node scripts/governance_acceptance/ACCEPTANCE_WATER_RESPONSE_VERIFICATION_FROM_ACCEPTANCE_V1_BOUNDARY.cjs",
     "ci:runtime:water-response-verification-from-acceptance": "node scripts/runtime_acceptance/ACCEPTANCE_WATER_RESPONSE_VERIFICATION_FROM_ACCEPTANCE_V1_RUNTIME.cjs",
-    "ci:water-response-verification-from-acceptance": "pnpm run ci:governance:water-response-verification-from-acceptance-boundary && pnpm run ci:runtime:water-response-verification-from-acceptance"
+    "ci:water-response-verification-from-acceptance": "pnpm run ci:governance:water-response-verification-from-acceptance-boundary && pnpm run ci:runtime:water-response-verification-from-acceptance",
+    "mcft:cap08:preflight:s0": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_AUTHORITY_RECONCILIATION.cjs && node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CHANGED_FILE_BOUNDARY.cjs && node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CANDIDATE_MERGE_TREE_EQUIVALENCE.cjs && pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_LATE_CORRECTION_MATH.ts",
+    "mcft:cap08:preflight": "pnpm mcft:cap08:preflight:s0"
   },
   "volta": {
     "node": "20.11.1"

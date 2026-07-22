@@ -1,0 +1,6 @@
+import fs from "node:fs"; import pg from "pg"; import crypto from "node:crypto"; const {Pool}=pg;
+const admin=process.env.MCFT_CAP08_ADMIN_DATABASE_URL||"postgres://postgres:postgres@127.0.0.1:5432/postgres";
+const out=(name:string,v:unknown)=>{fs.mkdirSync("acceptance-output",{recursive:true});fs.writeFileSync(`acceptance-output/${name}`,JSON.stringify(v,null,2)+"\\n")};
+const hash=(v:unknown)=>crypto.createHash("sha256").update(JSON.stringify(v)).digest("hex");
+
+const pool=new Pool({connectionString:admin,max:1});try{const names=["facts","twin_active_lineage_index_v1","twin_runtime_checkpoint_latest_index_v1","twin_state_history_projection_v1","twin_forecast_run_projection_v1","twin_scenario_set_projection_v1","twin_forecast_residual_projection_v1","twin_calibration_candidate_projection_v1","twin_shadow_evaluation_projection_v1"];const counts:any={};for(const n of names)counts[n]=(await pool.query(`SELECT count(*)::int n FROM public.${n}`)).rows[0].n;if(Object.values(counts).some(Number))throw new Error(`RUNTIME_DATA_DELTA:${JSON.stringify(counts)}`);out("MCFT_CAP_08_ZERO_RUNTIME_DATA_DELTA_DB_RESULT.json",{status:"PASS",counts,zero_canonical_runtime_data_delta:true});}finally{await pool.end();}

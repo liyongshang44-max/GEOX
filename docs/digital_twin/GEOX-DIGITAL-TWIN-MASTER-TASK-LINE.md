@@ -14,6 +14,13 @@ ultimate goal: Complete Agricultural Digital Twin
 
 This document is the authoritative post-PFA-2 implementation order. PFA remains a retained product-quality line, but PFA-3 through PFA-7 do not globally block DT or MCFT.
 
+
+## 0.1 MCFT-CAP-08 Stage-1A authority reconciliation
+
+For MCFT-CAP-08 and successor Stage-1A closure only, `docs/digital_twin/mcft/GEOX-MCFT-STAGE-1-CLOSURE-AUTHORITY-V2.json` is the controlling closure authority. It supersedes the historical 720-tick, mandatory 30-day Gate-A, five-scenario, and historical-revision requirements without changing the historical completion of MCFT-CAP-01 through MCFT-CAP-07. The bounded contract is B00 plus T00–T23, exactly 24 successful Forecasts, three scenarios (`NO_ACTION`, `IRRIGATE_NOW_15MM`, `IRRIGATE_NOW_25MM`), 24 FVO/Residual pairs, one replay Decision/Action episode, append-forward late correction, one Candidate, one Shadow Evaluation, and zero Model Activation.
+
+PR-1 base: `ade35875ff6f5ef92ec76f04ab9fc302c57f700e`. Repository authority remains conditional until protected merge and exact-SHA attestation.
+
 ## 1. Completion levels
 
 ### Level A — Minimum Complete Field Twin
@@ -100,7 +107,7 @@ historical State, Forecast, Scenario, Residual, Decision, and Action records are
 latest/read indexes may move to a later revision
 ```
 
-Late evidence must not mutate an old record. Reprocessing the same logical tick creates a new revision with:
+Late evidence must not mutate an old record. The general revision mechanism remains available; however, MCFT-CAP-08 Stage-1A uses the separately frozen append-forward current-State correction and creates no historical State/Forecast revision. Historical reprocessing outside that bounded closure creates a new revision with:
 
 ```text
 revision_id
@@ -304,7 +311,7 @@ An anomalous reading must not directly replace root-zone state. Uncertainty must
 
 Persist each tick's transition and canonical posterior with storage, available-water fraction, uncertainty, observation residual, evidence refs, previous-state ref, and model/config refs.
 
-Hard acceptance includes 720 continuous hourly ticks, deterministic rerun, immutable history, restart continuity, and governed late-evidence revision.
+Historical target wording is superseded for MCFT-CAP-08 successor closure by Stage-1 Closure Authority V2: B00 plus exactly 24 successful hourly ticks, deterministic two-run equivalence, immutable history, restart continuity, and governed append-forward late-evidence correction.
 
 ## MCFT-09 — 72-hour Forecast Runtime
 
@@ -314,15 +321,15 @@ Each point records target time, predicted storage, predicted available-water fra
 
 ## MCFT-10 — Irrigation Scenario Runtime
 
-Gate A requires these fixed scenarios:
+For MCFT-CAP-08 Stage-1A, Stage-1 Closure Authority V2 freezes exactly:
 
 ```text
 NO_ACTION
-IRRIGATE_NOW_10MM
-IRRIGATE_NOW_20MM
-IRRIGATE_NOW_30MM
-DELAY_24H_20MM
+IRRIGATE_NOW_15MM
+IRRIGATE_NOW_25MM
 ```
+
+The historical five-option list is retained only as superseded planning history and is not a successor closure Gate.
 
 `CUSTOM_OPERATOR_OPTION` is an enhancement and is not a Gate A requirement.
 
@@ -403,7 +410,7 @@ The UI must show prior/posterior semantics, uncertainty, 72-hour trajectory, sce
 
 ## MCFT-GATE-A — Replay-backed Closure
 
-Requires at least 30 days of hourly replay, continuous State progression, exactly 72 forecast points per run, fixed scenario branching, later-evidence residual, deterministic rerun, restart recovery, late-evidence revision, and no future leakage.
+For MCFT-CAP-08 successor closure, requires B00 plus T00–T23, continuous State progression, exactly 72 forecast points per run, the three frozen scenario branches, 24 later-evidence residuals, deterministic two-run equivalence, restart recovery, append-forward late correction without historical rewrite, and no future leakage. The historical 30-day requirement is superseded by Stage-1 Closure Authority V2 for this closure only.
 
 Allowed claim:
 

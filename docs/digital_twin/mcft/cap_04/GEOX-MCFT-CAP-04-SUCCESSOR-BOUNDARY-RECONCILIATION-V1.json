@@ -1,0 +1,21 @@
+{
+  "schema_version": "geox_mcft_cap04_successor_boundary_reconciliation_v1",
+  "reconciliation_id": "GEOX-MCFT-CAP-04-SUCCESSOR-BOUNDARY-RECONCILIATION-V1",
+  "record_status": "EFFECTIVE_WHEN_PRESENT_ON_MAIN",
+  "historical_taskbook_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md",
+  "historical_taskbook_mutated": false,
+  "historical_completion_changed": false,
+  "cap04_established": [
+    "72_HOUR_FORECAST",
+    "THREE_OPTION_SCENARIO_RUNTIME"
+  ],
+  "cap04_did_not_establish": [
+    "END_TO_END_REPLAY_CLOSURE",
+    "RESIDUAL_CALIBRATION_CHAIN",
+    "DECISION_EXECUTION_OUTCOME_CHAIN",
+    "24_TICK_FINAL_CLOSURE"
+  ],
+  "successor_closure_authority_ref": "docs/digital_twin/mcft/GEOX-MCFT-STAGE-1-CLOSURE-AUTHORITY-V2.json",
+  "old_five_scenario_gate_effect": "SUPERSEDED_FOR_SUCCESSOR_CLOSURE_ONLY",
+  "cap04_closes_stage_1a": false
+}

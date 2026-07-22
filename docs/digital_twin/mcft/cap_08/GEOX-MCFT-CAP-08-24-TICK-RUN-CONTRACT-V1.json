@@ -1,0 +1,511 @@
+{
+  "schema_version": "geox_mcft_cap08_24_tick_run_contract_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-24-TICK-RUN-CONTRACT-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "scope": {
+    "tenant_id": "tenantA",
+    "project_id": "projectA",
+    "group_id": "groupA",
+    "field_id": "field_c8_demo",
+    "season_id": "season_2026_c8_corn",
+    "zone_id": "zone_mcft_c8_water_001"
+  },
+  "formal_run_identity_basis": "SHA256_SCOPE_DATASET_CONFIG",
+  "runtime_start": "2026-06-01T00:00:00.000Z",
+  "bootstrap": {
+    "phase_id": "B00",
+    "counted_as_successful_tick": false,
+    "same_formal_lineage": true,
+    "same_frozen_revision": true
+  },
+  "tick_ids": [
+    "T00",
+    "T01",
+    "T02",
+    "T03",
+    "T04",
+    "T05",
+    "T06",
+    "T07",
+    "T08",
+    "T09",
+    "T10",
+    "T11",
+    "T12",
+    "T13",
+    "T14",
+    "T15",
+    "T16",
+    "T17",
+    "T18",
+    "T19",
+    "T20",
+    "T21",
+    "T22",
+    "T23"
+  ],
+  "post_run_phases": [
+    "G00",
+    "G01",
+    "G02"
+  ],
+  "t24_is_runtime_tick": false,
+  "phase_order": [
+    "resolve",
+    "E",
+    "H",
+    "A",
+    "B",
+    "G",
+    "C",
+    "barrier"
+  ],
+  "scenario_options": [
+    "NO_ACTION",
+    "IRRIGATE_NOW_15MM",
+    "IRRIGATE_NOW_25MM"
+  ],
+  "action_episode": {
+    "decision_after_phase": "B(T05)",
+    "approval_plan_visible": "T06",
+    "physical_execution": "T07",
+    "action_feedback_before": "A(T08)",
+    "approved_amount_mm": "15.000000",
+    "executed_amount_mm": "13.600000",
+    "spatial_coverage_fraction": "0.910000",
+    "scope_equivalent_irrigation_mm": "12.376000",
+    "outcome_observation": "FVO-10"
+  },
+  "due_obligations": [
+    {
+      "phase_id": "T00",
+      "due_fvo_ids": [],
+      "due_residual_ids": [],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [],
+      "observed_but_not_available_ids": []
+    },
+    {
+      "phase_id": "T01",
+      "due_fvo_ids": [],
+      "due_residual_ids": [],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T02",
+      "due_fvo_ids": [
+        "FVO-02"
+      ],
+      "due_residual_ids": [
+        "R-02"
+      ],
+      "selected_state_observation_ids": [
+        "FVO-02"
+      ],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T03",
+      "due_fvo_ids": [
+        "FVO-03"
+      ],
+      "due_residual_ids": [
+        "R-03"
+      ],
+      "selected_state_observation_ids": [
+        "FVO-03"
+      ],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T04",
+      "due_fvo_ids": [
+        "FVO-04"
+      ],
+      "due_residual_ids": [
+        "R-04"
+      ],
+      "selected_state_observation_ids": [
+        "FVO-04"
+      ],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T05",
+      "due_fvo_ids": [
+        "FVO-05"
+      ],
+      "due_residual_ids": [
+        "R-05"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-05"
+      ],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T06",
+      "due_fvo_ids": [
+        "FVO-06"
+      ],
+      "due_residual_ids": [
+        "R-06"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-06"
+      ],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T07",
+      "due_fvo_ids": [
+        "FVO-07"
+      ],
+      "due_residual_ids": [
+        "R-07"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-07"
+      ],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T08",
+      "due_fvo_ids": [
+        "FVO-08"
+      ],
+      "due_residual_ids": [
+        "R-08"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-08"
+      ],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T09",
+      "due_fvo_ids": [
+        "FVO-09"
+      ],
+      "due_residual_ids": [
+        "R-09"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-09"
+      ],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T10",
+      "due_fvo_ids": [
+        "FVO-10"
+      ],
+      "due_residual_ids": [
+        "R-10"
+      ],
+      "selected_state_observation_ids": [
+        "FVO-10"
+      ],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T11",
+      "due_fvo_ids": [
+        "FVO-11"
+      ],
+      "due_residual_ids": [
+        "R-11"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-11"
+      ],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T12",
+      "due_fvo_ids": [
+        "FVO-12"
+      ],
+      "due_residual_ids": [
+        "R-12"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-12"
+      ],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T13",
+      "due_fvo_ids": [
+        "FVO-13"
+      ],
+      "due_residual_ids": [
+        "R-13"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-13"
+      ],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T14",
+      "due_fvo_ids": [
+        "FVO-14"
+      ],
+      "due_residual_ids": [
+        "R-14"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-14"
+      ],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T15",
+      "due_fvo_ids": [
+        "FVO-15"
+      ],
+      "due_residual_ids": [
+        "R-15"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-15"
+      ],
+      "observed_but_not_available_ids": [
+        "FVO-01"
+      ]
+    },
+    {
+      "phase_id": "T16",
+      "due_fvo_ids": [
+        "FVO-01",
+        "FVO-16"
+      ],
+      "due_residual_ids": [
+        "R-01",
+        "R-16"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [
+        "FVO-01"
+      ],
+      "residual_only_observation_ids": [
+        "FVO-16"
+      ],
+      "observed_but_not_available_ids": []
+    },
+    {
+      "phase_id": "T17",
+      "due_fvo_ids": [
+        "FVO-17"
+      ],
+      "due_residual_ids": [
+        "R-17"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-17"
+      ],
+      "observed_but_not_available_ids": []
+    },
+    {
+      "phase_id": "T18",
+      "due_fvo_ids": [
+        "FVO-18"
+      ],
+      "due_residual_ids": [
+        "R-18"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-18"
+      ],
+      "observed_but_not_available_ids": []
+    },
+    {
+      "phase_id": "T19",
+      "due_fvo_ids": [
+        "FVO-19"
+      ],
+      "due_residual_ids": [
+        "R-19"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-19"
+      ],
+      "observed_but_not_available_ids": []
+    },
+    {
+      "phase_id": "T20",
+      "due_fvo_ids": [
+        "FVO-20"
+      ],
+      "due_residual_ids": [
+        "R-20"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-20"
+      ],
+      "observed_but_not_available_ids": []
+    },
+    {
+      "phase_id": "T21",
+      "due_fvo_ids": [
+        "FVO-21"
+      ],
+      "due_residual_ids": [
+        "R-21"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-21"
+      ],
+      "observed_but_not_available_ids": []
+    },
+    {
+      "phase_id": "T22",
+      "due_fvo_ids": [
+        "FVO-22"
+      ],
+      "due_residual_ids": [
+        "R-22"
+      ],
+      "selected_state_observation_ids": [
+        "FVO-22"
+      ],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [],
+      "observed_but_not_available_ids": []
+    },
+    {
+      "phase_id": "T23",
+      "due_fvo_ids": [
+        "FVO-23"
+      ],
+      "due_residual_ids": [
+        "R-23"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-23"
+      ],
+      "observed_but_not_available_ids": []
+    },
+    {
+      "phase_id": "G00",
+      "due_fvo_ids": [
+        "FVO-24"
+      ],
+      "due_residual_ids": [
+        "R-24"
+      ],
+      "selected_state_observation_ids": [],
+      "late_state_correction_observation_ids": [],
+      "residual_only_observation_ids": [
+        "FVO-24"
+      ],
+      "observed_but_not_available_ids": []
+    }
+  ],
+  "residual_cardinality": 24,
+  "calibration_window": [
+    "R-01",
+    "R-02",
+    "R-03",
+    "R-04",
+    "R-05",
+    "R-06",
+    "R-07",
+    "R-08",
+    "R-09",
+    "R-10",
+    "R-11",
+    "R-12",
+    "R-13",
+    "R-14",
+    "R-15",
+    "R-16"
+  ],
+  "holdout_window": [
+    "R-17",
+    "R-18",
+    "R-19",
+    "R-20",
+    "R-21",
+    "R-22",
+    "R-23",
+    "R-24"
+  ],
+  "candidate_count": 1,
+  "shadow_count": 1,
+  "activation_count": 0,
+  "final_formal_run_owner": "PR-7_S6_ONLY"
+}

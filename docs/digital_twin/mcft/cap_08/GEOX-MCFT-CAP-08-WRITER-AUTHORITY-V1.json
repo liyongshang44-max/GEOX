@@ -1,0 +1,142 @@
+{
+  "schema_version": "geox_mcft_cap08_writer_authority_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-WRITER-AUTHORITY-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "role_name": "geox_mcft_cap08_runner_v1",
+  "role_flags": {
+    "login": true,
+    "inherit": false,
+    "superuser": false,
+    "createdb": false,
+    "createrole": false,
+    "replication": false,
+    "bypassrls": false
+  },
+  "database_privileges": [
+    "CONNECT"
+  ],
+  "schema_privileges": {
+    "public": [
+      "USAGE"
+    ]
+  },
+  "table_privileges": {
+    "facts": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_object_idempotency_index_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_runtime_lease_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_active_lineage_index_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_runtime_checkpoint_latest_index_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_state_history_projection_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_state_latest_index_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_forecast_run_projection_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_forecast_result_latest_index_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_forecast_success_latest_index_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_scenario_set_projection_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_scenario_latest_index_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_decision_record_projection_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_approved_plan_binding_projection_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_action_feedback_projection_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_action_feedback_evidence_index_v1": [
+      "SELECT",
+      "INSERT"
+    ],
+    "twin_forecast_residual_projection_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_calibration_candidate_projection_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "twin_shadow_evaluation_projection_v1": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ]
+  },
+  "sequence_privileges": {},
+  "function_privileges": {},
+  "explicit_forbidden_privileges": [
+    "CREATE_SCHEMA",
+    "CREATE_TABLE",
+    "ALTER",
+    "DROP",
+    "TRUNCATE",
+    "DELETE",
+    "REFERENCES",
+    "TRIGGER",
+    "GRANT_OPTION",
+    "TEMP",
+    "CREATE_ROLE",
+    "CREATE_DATABASE",
+    "SET_ROLE"
+  ],
+  "blanket_grants_forbidden": true,
+  "default_privilege_grants_forbidden": true,
+  "relation_level_authority_boundary": "LEAST_PRIVILEGE_EXISTING_RELATIONS_ONLY",
+  "application_scope_enforcement_contract": "EXACT_SIX_KEY_AND_FORMAL_RUN_ID_VALIDATION_BEFORE_REPOSITORY_CALL",
+  "repository_cas_enforcement_contract": "ACTIVE_LINEAGE_REVISION_CHECKPOINT_AND_FENCING_EXACT_OR_FAIL",
+  "direct_sql_row_level_scope_isolation": "NOT_ESTABLISHED",
+  "bootstrap_source": "apps/server/src/infra/mcft_cap08_database_platform_bootstrap_v1.ts",
+  "runtime_credential_fallback": false
+}

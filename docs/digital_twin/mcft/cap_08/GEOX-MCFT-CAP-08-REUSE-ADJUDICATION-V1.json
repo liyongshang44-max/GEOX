@@ -1,0 +1,20 @@
+{
+  "schema_version": "geox_mcft_cap08_reuse_adjudication_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-REUSE-ADJUDICATION-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "reuse_as_is": [
+    "canonical_object_envelope",
+    "runtime_config",
+    "A_B_C_D_G_H_transaction_families",
+    "CAP07_read_surfaces"
+  ],
+  "reuse_with_adapter": [
+    "manual_runtime_entry",
+    "progress_resolver",
+    "exact_sha_transport"
+  ],
+  "replace": [],
+  "new_canonical_object_types": [],
+  "new_transaction_families": [],
+  "runtime_domain_code_delta_in_pr1": 0
+}

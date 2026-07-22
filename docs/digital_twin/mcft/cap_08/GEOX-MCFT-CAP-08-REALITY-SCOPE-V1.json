@@ -1,0 +1,32 @@
+{
+  "schema_version": "geox_mcft_cap08_reality_scope_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-REALITY-SCOPE-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "scope": {
+    "tenant_id": "tenantA",
+    "project_id": "projectA",
+    "group_id": "groupA",
+    "field_id": "field_c8_demo",
+    "season_id": "season_2026_c8_corn",
+    "zone_id": "zone_mcft_c8_water_001"
+  },
+  "runtime_mode": "REPLAY",
+  "reality_scope_class": "CONTROLLED_SYNTHETIC_REPLAY_PROXY",
+  "root_zone_definition": {
+    "id": "rz_c8_0_300mm_v1",
+    "top_depth_mm": 0,
+    "bottom_depth_mm": 300,
+    "total_depth_mm": 300
+  },
+  "physical_bounds": {
+    "wilting_point_storage_mm": "36.000000",
+    "field_capacity_storage_mm": "90.000000",
+    "saturation_storage_mm": "135.000000"
+  },
+  "sensor": {
+    "origin_source_id": "dev_soil_c8_001",
+    "nominal_depth_mm": 200,
+    "direct_state_equivalence": false
+  },
+  "wrong_scope_behavior": "FAIL_BEFORE_WRITE"
+}

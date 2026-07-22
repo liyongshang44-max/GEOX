@@ -1,0 +1,41 @@
+{
+  "schema_version": "geox_mcft_cap08_schema_privilege_digest_policy_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-SCHEMA-PRIVILEGE-DIGEST-POLICY-V1",
+  "record_status": "FROZEN_S0_CONTRACT",
+  "business_schema_structure_digest": {
+    "includes": [
+      "relations",
+      "columns",
+      "types",
+      "defaults",
+      "nullability",
+      "constraints",
+      "indexes",
+      "function_definitions",
+      "trigger_definitions"
+    ],
+    "excludes": [
+      "ACL",
+      "ownership",
+      "role_membership",
+      "comments"
+    ]
+  },
+  "privilege_graph_digest": {
+    "includes": [
+      "role_attributes",
+      "role_membership",
+      "database_acl",
+      "schema_acl",
+      "relation_acl",
+      "sequence_acl",
+      "function_acl",
+      "default_privileges"
+    ]
+  },
+  "required_assertions": [
+    "business_schema_structure_digest_before_equals_after",
+    "actual_privilege_delta_digest_equals_expected_privilege_delta_digest",
+    "zero_unlisted_privilege_delta"
+  ]
+}

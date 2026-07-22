@@ -1,0 +1,22 @@
+{
+  "schema_version": "geox_mcft_cap08_resolved_manifest_v1",
+  "manifest_id": "GEOX-MCFT-CAP-08-RESOLVED-MANIFEST-V1",
+  "record_status": "COMMITTED_CONDITIONAL_MANIFEST",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S0",
+  "pr_1_base_sha": "ade35875ff6f5ef92ec76f04ab9fc302c57f700e",
+  "taskbook_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+  "taskbook_digest": "sha256:937a443f7958d946cdfc2c6f3d998c3c4942a1b5ad11cc235dddecd7e22e5910",
+  "closure_authority_ref": "docs/digital_twin/mcft/GEOX-MCFT-STAGE-1-CLOSURE-AUTHORITY-V2.json",
+  "reality_scope_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-REALITY-SCOPE-V1.json",
+  "dataset_manifest_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-REPLAY-DATASET-MANIFEST-V1.json",
+  "run_contract_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-24-TICK-RUN-CONTRACT-V1.json",
+  "late_math_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-LATE-CORRECTION-MATH-V1.json",
+  "phase_contract_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-PHASE-ORCHESTRATION-CONTRACT-V1.json",
+  "writer_authority_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-WRITER-AUTHORITY-V1.json",
+  "changed_file_boundary_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CHANGED-FILE-BOUNDARY-V1.json",
+  "hard_acceptance_ledger_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+  "implementation_authorized": false,
+  "runtime_source_authorized": false,
+  "next_effective_slice_when_attested": "S1"
+}
