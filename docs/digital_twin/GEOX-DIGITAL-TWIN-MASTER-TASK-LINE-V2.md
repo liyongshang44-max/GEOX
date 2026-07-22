@@ -5,17 +5,17 @@
 
 ```text
 repository: liyongshang44-max/GEOX
-authority_version: V2
+authority_version: V2.1
 authority_status: CURRENT
 settlement_subject_main: 0012144aa3d69698b6bc94a113ff00c7652dd043
 primary_mainline: Minimum Complete Field Twin
 ultimate_goal: Complete Agricultural Digital Twin
 ```
 
-This file is the current forward-looking Master authority. The historical
+This is the current forward-looking Master authority. The historical
 `GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md` remains immutable for legacy acceptance
-and historical audit, but its former 30-day/720-tick, five-scenario and
-historical-revision requirements no longer define Stage 1A successor closure.
+and audit, but its former 30-day/720-tick, five-scenario and historical-revision
+requirements no longer define Stage 1A successor closure.
 
 Current authority chain:
 
@@ -67,26 +67,16 @@ Stage 1A does not establish Minimum Complete Field Twin completion.
 Stage 1B requires continuous online evidence ingress and scheduled execution of
 the same canonical Runtime semantics, without affecting real-world action.
 
-Allowed claim:
-
-```text
-SHADOW_ONLINE_CLOSURE_COMPLETE
-```
-
 ### Stage 1C — Controlled-action feedback closure
 
 Stage 1C requires a governed real sequence through human approval, execution
-receipt and outcome evidence.
-
-Only Stage 1C permits:
+receipt and outcome evidence. Only Stage 1C permits:
 
 ```text
 MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE
 ```
 
 ## 2. Stage 1A semantic authority
-
-The authoritative Replay closure contract is:
 
 ```text
 successful_tick_count: 24
@@ -101,7 +91,7 @@ final_formal_run_owner:
   MCFT-CAP-08.S6_ONLY
 ```
 
-The following former requirements are reclassified and remain not established:
+Former requirements are reclassified and remain not established:
 
 ```text
 720 continuous hourly ticks
@@ -114,32 +104,12 @@ historical late-evidence revision/reprocessing
 → HISTORICAL_REVISION_REPROCESSING_QUALIFICATION
 ```
 
-## 3. Canonical history and late evidence
+Canonical objects remain append-only and immutable. For Stage 1A, late Evidence
+may correct only the current State at first Runtime visibility; it must not
+rewrite an old State, Forecast, Scenario or Checkpoint and does not create a new
+historical revision.
 
-Canonical objects remain append-only and immutable.
-
-For Stage 1A:
-
-```text
-late observation event at τ
-first Runtime visibility at t
-τ < t
-
-historical State / Forecast / Scenario / Checkpoint rewrite:
-forbidden
-
-new historical revision:
-not created
-
-current State correction:
-append-forward at t
-```
-
-This policy does not prohibit a future separately authorized historical
-reprocessing capability. It only prevents that capability from being silently
-claimed by MCFT-CAP-08.
-
-## 4. Non-negotiable boundaries
+## 3. Non-negotiable boundaries
 
 ```text
 Reality is not Evidence.
@@ -157,7 +127,7 @@ Candidate is not Active Model.
 Replay Twin is not Production Twin.
 ```
 
-## 5. Runtime family rule
+## 4. Runtime family rule
 
 Replay, Shadow-online, Controlled Field and Production runtimes must share:
 
@@ -170,63 +140,42 @@ persistence semantics
 trace and audit chain
 ```
 
-They may vary only through governed adapters and operational controls:
+They may vary only through governed clock, ingress, scheduler, execution,
+availability and recovery adapters.
+
+## 5. Current repository frontier
+
+At S0 settlement subject `0012144aa3d69698b6bc94a113ff00c7652dd043`:
 
 ```text
-clock
-evidence ingress
-scheduler
-execution
-availability / recovery
-```
+MCFT-CAP-01 through MCFT-CAP-06: COMPLETE
+MCFT-CAP-07: COMPLETE
 
-## 6. Current repository frontier
-
-At settlement subject `0012144aa3d69698b6bc94a113ff00c7652dd043`:
-
-```text
-MCFT-CAP-01 through MCFT-CAP-06:
-COMPLETE
-
-MCFT-CAP-07:
-COMPLETE
-closure_subject_sha: 81579b7f67a3dcd3cf557abbf29c9462d8b7736b
-exact_sha_workflow_run: 29836198341
-artifact_id: 8497395139
-
-MCFT-CAP-08.S0:
-EXTERNALLY_EFFECTIVE
-merge_subject_sha: 0012144aa3d69698b6bc94a113ff00c7652dd043
+MCFT-CAP-08.S0: EXTERNALLY_EFFECTIVE
 exact_sha_workflow_run: 29935730353
 artifact_id: 8536034800
 semantic_artifact_digest:
 sha256:7b97d1414fe9de946fba606b6ae0a674a17cb9ffbbd1ca253acf7e309798ac0a
 
-effective_next_slice:
-MCFT-CAP-08.S1
+effective_next_slice: MCFT-CAP-08.S1
+bounded_replay_runner_authorized: true
+bounded_canonical_transaction_authorized: true
+production_runtime_source_authorized: false
 
-bounded_replay_runner_authorized:
-true
-
-bounded_canonical_transaction_authorized:
-true
-
-production_runtime_source_authorized:
-false
-
-MCFT-CAP-09:
-NOT AUTHORIZED
+MCFT-CAP-09: NOT AUTHORIZED
 ```
 
-## 7. MCFT-CAP-08 delivery order
+## 6. MCFT-CAP-08 delivery order
+
+This order is aligned exactly with `GEOX-MCFT-CAP-08-TASK.md` v0.3.8:
 
 ```text
-S1 Base Runtime and stable phase engine
-S2 Replay Decision / Execution / Outcome
-S3 Recovery and late evidence
-S4 Residual / Calibration / Shadow
-S5 Read Model and Operator integration
-S6 two-fresh-database final closure
+S1 Base Runtime + 24-Tick stable phase-engine skeleton
+S2 Forcing / Evidence / State / Forecast provider completion
+S3 Decision + Action Feedback
+S4 Late Evidence append-forward correction
+S5 Residual + Calibration + Shadow
+S6 two-fresh-database final closure, recovery and CAP-07 readback
 ```
 
 The stable Tick order is:
@@ -238,21 +187,24 @@ resolve → E → H → A → B → G → C → barrier
 Slice acceptance is not final closure evidence. Only S6 may execute the formal
 two-run closure.
 
-## 8. Current S1 boundary
+## 7. Current S1 boundary
 
 S1 may implement:
 
 ```text
 B00 bootstrap root
-T00–T23 base range
-State / Forecast / Scenario persistence
+T00–T23 bounded base range
+State / Forecast / Scenario persistence through existing qualified providers
 stable phase engine
+base E/A/B providers
 empty G / H / C providers
 fresh disposable PostgreSQL slice acceptance
-S2 successor seed and Registry rule
+S2 non-candidate successor seed
+S2 Registry candidate rule
 ```
 
-S1 may not implement or claim:
+S1 may not claim that the full formal Forcing/Evidence/State/Forecast provider
+qualification owned by S2 is complete. It also may not implement or claim:
 
 ```text
 production Runtime source
@@ -267,7 +219,7 @@ final formal closure
 MCFT-CAP-09 authority
 ```
 
-## 9. Delivery discipline
+## 8. Delivery discipline
 
 ```text
 one active Slice
@@ -281,7 +233,7 @@ no CI source transport
 no slice evidence promoted into final closure evidence
 ```
 
-The current implementation map and capability matrix are:
+Current navigation SSOT:
 
 ```text
 docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md
