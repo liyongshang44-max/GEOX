@@ -1,0 +1,40 @@
+{
+  "schema_version": "geox_mcft_cap08_s0_ssot_settlement_v1",
+  "settlement_id": "GEOX-MCFT-CAP-08-S0-SSOT-SETTLEMENT-V1",
+  "record_status": "GOVERNANCE_SETTLEMENT_CANDIDATE",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S0",
+  "base_main_sha": "0012144aa3d69698b6bc94a113ff00c7652dd043",
+  "external_effectiveness_evidence": {
+    "status_context": "mcft-cap-08/pr1-exact-sha-attestation",
+    "workflow_run_id": 29935730353,
+    "artifact_id": 8536034800,
+    "semantic_artifact_digest": "sha256:7b97d1414fe9de946fba606b6ae0a674a17cb9ffbbd1ca253acf7e309798ac0a",
+    "transport_archive_sha256": "sha256:b9f901f56fd4f3458dbecf3c5a10ab9912cbcaee2144cc9202b1d9b99a18666a",
+    "retention_level": "R2",
+    "retain_until": "2028-07-21T15:57:26.236Z",
+    "readback_verified": true,
+    "locked_version_delete_denied": true
+  },
+  "settled_frontier": {
+    "effective_status": "IN_PROGRESS",
+    "effective_next_slice": "S1",
+    "bounded_replay_runner_authorized": true,
+    "bounded_canonical_transaction_authorized": true,
+    "production_runtime_source_authorized": false
+  },
+  "changed_files": [
+    "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md",
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json",
+    "docs/digital_twin/mcft/GEOX-MCFT-SSOT-CURRENT-V1.json",
+    "docs/digital_twin/mcft/GEOX-MCFT-CAP-08-S0-SSOT-SETTLEMENT-V1.json"
+  ],
+  "historical_authority_mutated": false,
+  "candidate_declaration_required": false,
+  "candidate_transition": false,
+  "runtime_source_delta": 0,
+  "canonical_runtime_data_delta": 0,
+  "database_acl_delta": 0,
+  "next_legal_implementation": "MCFT-CAP-08.S1"
+}

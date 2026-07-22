@@ -1,0 +1,48 @@
+{
+  "schema_version": "geox_mcft_ssot_current_v1",
+  "authority_id": "GEOX-MCFT-SSOT-CURRENT-V1",
+  "record_status": "EFFECTIVE_REPOSITORY_POINTER_WHEN_PRESENT_ON_MAIN",
+  "settlement_kind": "POST_CAP08_S0_EXTERNAL_EFFECTIVENESS_GLOBAL_SSOT_SUPERSESSION",
+  "settlement_subject_main": "0012144aa3d69698b6bc94a113ff00c7652dd043",
+  "current_authority": {
+    "master": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md",
+    "implementation_map": "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md",
+    "vertical_matrix": "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json",
+    "stage_1a_closure": "docs/digital_twin/mcft/GEOX-MCFT-STAGE-1-CLOSURE-AUTHORITY-V2.json",
+    "cap_08_taskbook": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+    "candidate_registry": "docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json"
+  },
+  "historical_files_retained_not_current": [
+    "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md",
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json"
+  ],
+  "historical_retention_reason": "LEGACY_ACCEPTANCE_AND_AUDIT_BYTES_MUST_NOT_BE_REWRITTEN",
+  "stage_1a_supersession": [
+    "30_DAY_720_TICK_GATE_A_REQUIREMENT",
+    "FIVE_SCENARIO_GATE_A_REQUIREMENT",
+    "LATE_EVIDENCE_NEW_HISTORICAL_REVISION_REQUIREMENT"
+  ],
+  "cap_08_s0_external_effectiveness": {
+    "status": "PASS",
+    "merge_subject_sha": "0012144aa3d69698b6bc94a113ff00c7652dd043",
+    "exact_sha_workflow_run": 29935730353,
+    "artifact_id": 8536034800,
+    "semantic_artifact_digest": "sha256:7b97d1414fe9de946fba606b6ae0a674a17cb9ffbbd1ca253acf7e309798ac0a",
+    "effective_next_slice": "S1",
+    "bounded_replay_runner_authorized": true,
+    "bounded_canonical_transaction_authorized": true,
+    "production_runtime_source_authorized": false
+  },
+  "runtime_delta": {
+    "runtime_source_files": 0,
+    "business_migrations": 0,
+    "canonical_runtime_data": 0,
+    "routes": 0,
+    "web": 0,
+    "database_acl": 0
+  },
+  "candidate_transition": false,
+  "postmerge_proof_carrier": false,
+  "mcft_cap_09_authorized": false
+}
