@@ -8,17 +8,11 @@ details remain in capability-specific records and the legacy implementation
 map. This document does not rewrite historical capability evidence.
 
 ```text
-settlement_subject_main:
-0012144aa3d69698b6bc94a113ff00c7652dd043
-
-current_capability_line:
-MCFT-CAP-08
-
-current_effective_slice:
-MCFT-CAP-08.S0
-
-next_authorized_slice:
-MCFT-CAP-08.S1
+map_version: V2.1
+settlement_subject_main: 0012144aa3d69698b6bc94a113ff00c7652dd043
+current_capability_line: MCFT-CAP-08
+current_effective_slice: MCFT-CAP-08.S0
+next_authorized_slice: MCFT-CAP-08.S1
 ```
 
 ## 1. Capability frontier
@@ -61,41 +55,19 @@ docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json
 ## 3. S0 external effectiveness
 
 ```text
-candidate_head_sha:
-f5c04245ffd15301b6f188ff5ed05e87d725b9fc
-
-candidate_tree_sha:
-749e9aa1463a97a8fecd69b19525e450123be8be
-
-merge_commit_sha:
-0012144aa3d69698b6bc94a113ff00c7652dd043
-
-merge_tree_sha:
-749e9aa1463a97a8fecd69b19525e450123be8be
-
-candidate_to_merge_tree_delta:
-0
-
-exact_sha_workflow_run:
-29935730353
-
-github_artifact_id:
-8536034800
-
+candidate_head_sha: f5c04245ffd15301b6f188ff5ed05e87d725b9fc
+candidate_tree_sha: 749e9aa1463a97a8fecd69b19525e450123be8be
+merge_commit_sha: 0012144aa3d69698b6bc94a113ff00c7652dd043
+merge_tree_sha: 749e9aa1463a97a8fecd69b19525e450123be8be
+candidate_to_merge_tree_delta: 0
+exact_sha_workflow_run: 29935730353
+github_artifact_id: 8536034800
 semantic_artifact_digest:
 sha256:7b97d1414fe9de946fba606b6ae0a674a17cb9ffbbd1ca253acf7e309798ac0a
-
-R2_readback_verified:
-true
-
-locked_version_delete_denied:
-true
-
-effective_status:
-IN_PROGRESS
-
-effective_next_slice:
-S1
+R2_readback_verified: true
+locked_version_delete_denied: true
+effective_status: IN_PROGRESS
+effective_next_slice: S1
 ```
 
 Repository status files intentionally remain conditional. The external
@@ -111,10 +83,10 @@ Cap08DueObligationSetV1
 Cap08TickBarrierV1
 stable resolve/E/H/A/B/G/C/barrier range engine
 B00 bootstrap support
-T00–T23 base Replay range
-24 State results
-24 successful 72-point Forecasts
-24 three-option Scenario Sets
+T00–T23 bounded base Replay range
+24 State results using qualified predecessor providers
+24 successful 72-point Forecasts using qualified predecessor providers
+24 three-option Scenario Sets using qualified predecessor providers
 phase_engine_contract_digest
 phase_engine_source_digest
 fresh-database SLICE_ACCEPTANCE_RUN
@@ -125,18 +97,23 @@ S2 Registry candidate rule
 S1 providers:
 
 ```text
-E: base Replay dataset
+E: base controlled Replay dataset adapter
 H: empty
-A: base State / Forecast Tick
-B: Scenario
+A: base State / Forecast Tick provider
+B: base Scenario provider
 G: empty
 C: empty
 ```
+
+S1 proves orchestration, bounded canonical A/B writes, handoff and cardinality.
+It does not claim that S2's complete formal Forcing/Evidence/State/Forecast
+provider qualification has already been established.
 
 S1 nonclaims:
 
 ```text
 FINAL_FORMAL_CLOSURE_NOT_EXECUTED
+NO_FULL_S2_PROVIDER_QUALIFICATION
 NO_REPLAY_DECISION_EPISODE
 NO_ACTION_FEEDBACK
 NO_LATE_APPEND_FORWARD_PERSISTENCE
@@ -150,25 +127,33 @@ NO_MCFT_CAP_09_AUTHORITY
 
 ## 5. Later Slice map
 
+This order is aligned exactly with the current compact v0.3.8 taskbook:
+
 ```text
 S2:
-G/H providers and Outcome Observation identity
+complete and qualify formal Forcing, Evidence, State and Forecast providers
+against the frozen run contract and due-obligation map;
+preserve the phase-engine contract digest
 
 S3:
-fresh-process recovery, Progress Resolver, failure/response-loss/concurrency,
-late A update profile and full posterior transport
+add G/H Decision and Action Feedback providers;
+preserve the phase-engine contract digest
 
 S4:
-C Residual obligations and post-run D Candidate/Shadow
+add Progress/Recovery and the late A append-forward update provider;
+prove full posterior transport and preserve the phase-engine contract digest
 
 S5:
-CAP-07 read surfaces, Timeline and Operator integration
+add C Residual obligations and post-run D Calibration Candidate / Shadow;
+prove zero Model Activation and preserve the phase-engine contract digest
 
 S6:
-two independent fresh PostgreSQL complete runs,
-HA-01 through HA-24,
-candidate-tree / merge-tree equivalence,
-immutable exact-SHA R2 closure
+execute two independent fresh PostgreSQL complete runs,
+prove restart/failure/response-loss/concurrency,
+read back through CAP-07 surfaces,
+pass HA-01 through HA-24,
+prove candidate-tree / merge-tree equivalence,
+and publish immutable exact-SHA R2 closure
 ```
 
 ## 6. Owner work-package projection
@@ -176,13 +161,12 @@ immutable exact-SHA R2 closure
 Capability completion does not imply horizontal package completion.
 
 ```text
-MCFT-00 through MCFT-18:
-PARTIALLY_ESTABLISHED
+MCFT-00 through MCFT-18: PARTIALLY_ESTABLISHED
 
 MCFT-16 closed-loop orchestration:
-current next implementation focus through CAP-08 S1–S6
+current implementation focus through CAP-08 S1–S6
 
 MCFT-17 / MCFT-18:
 read path established by CAP-07;
-24-Tick full-chain qualification remains CAP-08 S5/S6 work
+full formal-chain qualification remains CAP-08 S6 work
 ```
