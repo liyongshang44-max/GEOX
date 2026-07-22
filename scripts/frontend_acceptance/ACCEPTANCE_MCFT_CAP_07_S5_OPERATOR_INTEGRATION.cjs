@@ -30,6 +30,7 @@ const FILES = {
 
 const EXACT_CANDIDATE_FILES = Object.values(FILES).sort();
 const WORKFLOW_REMEDIATION_FILES = [FILES.workflow, FILES.acceptance].sort();
+const CAP08_REGISTRY_BOOTSTRAP_FILES = [FILES.registry, FILES.acceptance].sort();
 const S5_PROTECTED_PRODUCT_FILES = [FILES.route, FILES.client, FILES.page, FILES.s5, FILES.workflow, FILES.acceptance].sort();
 const POST_CLOSURE_LOCAL_DEMO_FILES = [
   FILES.workflow,
@@ -197,10 +198,42 @@ function main() {
         assert.equal(s6.canonical_write_authorized, false);
         assert.equal(s6.mcft_cap_08_authorized, false);
       });
-      check('S6_SUCCESSOR_DOES_NOT_MUTATE_S5_PRODUCT_OR_GATE', () => {
-        assert.ok(actual.includes(FILES.s6), 'S6_STATUS_NOT_CHANGED');
-        for (const protectedFile of S5_PROTECTED_PRODUCT_FILES) assert.equal(actual.includes(protectedFile), false, `S5_PROTECTED_FILE_CHANGED:${protectedFile}`);
-      });
+      const cap08RegistryBootstrap = JSON.stringify(actual) === JSON.stringify(CAP08_REGISTRY_BOOTSTRAP_FILES);
+      if (cap08RegistryBootstrap) {
+        check('CAP08_REGISTRY_BOOTSTRAP_BOUNDARY_IS_EXACT', () => {
+          assert.deepEqual(actual, CAP08_REGISTRY_BOOTSTRAP_FILES);
+        });
+        check('CAP08_REGISTRY_BOOTSTRAP_IS_PRE_REGISTERED_AND_NON_AUTHORIZING', () => {
+          const statusFile = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-AUTHORITY-V1.json';
+          const cap08 = registry.capabilities.find((entry) => entry.capability_line === 'MCFT-CAP-08');
+          assert.ok(cap08, 'CAP08_REGISTRY_ENTRY_MISSING');
+          assert.equal(cap08.registry_bootstrap_kind, 'P_1B_PRE_REGISTER_PR1_CURRENT_AUTHORITY_CANDIDATE');
+          assert.equal(cap08.current_candidate_authority, false);
+          assert.equal(cap08.candidate_declaration_enabled, true);
+          assert.equal(cap08.candidate_authority_scope, 'PR1_CURRENT_AUTHORITY_ONLY_UNTIL_SUCCESSOR_RULES_MERGE');
+          assert.deepEqual(cap08.authoritative_candidate_status_paths, [statusFile]);
+          assert.equal(cap08.candidate_transition_fields.length, 1);
+          const rule = cap08.candidate_transition_fields[0];
+          assert.equal(rule.status_file, statusFile);
+          assert.equal(rule.field_path, 'status');
+          assert.deepEqual(rule.allowed_candidate_values, ['AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE']);
+          assert.equal(rule.focused_workflow, 'mcft-cap-08-authority-reconciliation');
+          assert.equal(rule.standard_workflow, 'ci');
+          assert.equal(rule.predecessor_effective_evidence_required, true);
+          assert.equal(cap08.terminal_state, 'S6_FINAL_CLOSURE_CANDIDATE_PENDING_EXACT_MERGE_SHA_ATTESTATION');
+          assert.equal(cap08.successor_capability_authorized, false);
+          assert.equal(cap08.implementation_authorized, false);
+          assert.equal(cap08.runtime_source_authorized, false);
+          assert.equal(cap08.canonical_write_authorized, false);
+          assert.equal(cap08.mcft_cap_09_authorized, false);
+          assert.equal(fs.existsSync(path.join(ROOT, statusFile)), false, 'CAP08_CURRENT_AUTHORITY_MUST_NOT_EXIST_IN_PR0');
+        });
+      } else {
+        check('S6_SUCCESSOR_DOES_NOT_MUTATE_S5_PRODUCT_OR_GATE', () => {
+          assert.ok(actual.includes(FILES.s6), 'S6_STATUS_NOT_CHANGED');
+          for (const protectedFile of S5_PROTECTED_PRODUCT_FILES) assert.equal(actual.includes(protectedFile), false, `S5_PROTECTED_FILE_CHANGED:${protectedFile}`);
+        });
+      }
     } else if (mode === 'S5_POST_CLOSURE_LOCAL_DEMO_MODE') {
       const navigator = read('apps/web/src/features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage.tsx');
       const fieldApi = read('apps/web/src/api/fields.ts');
