@@ -6,19 +6,58 @@ on:
       - 'apps/server/src/infra/mcft_cap08_database_platform_bootstrap_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_*'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_*'
+      - 'scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs'
       - 'scripts/governance_acceptance/mcft_cap08_pr1_artifact_finalize.cjs'
       - '.github/workflows/mcft-cap-08-authority-reconciliation.yml'
       - '.github/workflows/mcft-cap-08-exact-sha-attestation.yml'
   merge_group:
     types: [checks_requested]
-  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
   group: mcft-cap-08-pr1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
   cancel-in-progress: true
 jobs:
+  resolve-applicability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      disposition: ${{ steps.resolve.outputs.disposition }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.11.1 }
+      - id: resolve
+        name: Resolve Registry-owned candidate transition
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          MCFT_EXPECTED_FOCUSED_WORKFLOW: mcft-cap-08-authority-reconciliation
+        run: |
+          DISPOSITION="$(node scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs --resolve)"
+          echo "disposition=${DISPOSITION}" >> "${GITHUB_OUTPUT}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-08-authority-applicability-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 30
+
+  not-applicable:
+    needs: resolve-applicability
+    if: needs.resolve-applicability.outputs.disposition == 'NOT_APPLICABLE'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "mcft-cap-08-authority-reconciliation NOT_APPLICABLE for this registered transition"
+
   authority-reconciliation:
+    needs: resolve-applicability
+    if: needs.resolve-applicability.outputs.disposition == 'APPLICABLE'
     runs-on: ubuntu-latest
     timeout-minutes: 50
     services:
@@ -35,27 +74,21 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      # Frozen lifecycle vocabulary consumed from the helper output:
-      # S0_EXACT_AUTHORITY_MODE
-      # POST_S0_WORKFLOW_REMEDIATION_MODE
-      # POST_S0_SSOT_SETTLEMENT_MODE
-      # POST_S0_STEADY_STATE_MODE
-      # POST_S0_SUCCESSOR_REGRESSION_MODE
-      - name: Resolve S0 or post-S0 lifecycle mode
+      - name: Resolve original S0 candidate base
         id: lifecycle
         shell: bash
         env:
-          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: |
           set -euo pipefail
-          if [[ -n "${EVENT_BASE_SHA}" ]]; then
-            BASE_SHA="${EVENT_BASE_SHA}"
-          else
-            git fetch --no-tags origin main
-            BASE_SHA="$(git rev-parse origin/main)"
-          fi
+          git cat-file -e "${EVENT_HEAD_SHA}^{commit}"
+          git cat-file -e "${EVENT_BASE_SHA}^{commit}"
+          git merge-base --is-ancestor "${EVENT_BASE_SHA}" "${EVENT_HEAD_SHA}"
+          BASE_SHA="${EVENT_BASE_SHA}"
           export MCFT_BASE_SHA="${BASE_SHA}"
           MODE="$(node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_POST_S0_SUCCESSOR_BOUNDARY.cjs --resolve-mode)"
+          test "${MODE}" = "S0_EXACT_AUTHORITY_MODE"
           echo "base_sha=${BASE_SHA}" >> "${GITHUB_OUTPUT}"
           echo "mode=${MODE}" >> "${GITHUB_OUTPUT}"
       - uses: pnpm/action-setup@v4
@@ -66,7 +99,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Typecheck server and S0 scripts
         run: pnpm --filter @geox/server typecheck
-      - name: Validate resolved lifecycle boundary
+      - name: Validate original S0 lifecycle boundary
         env:
           MCFT_BASE_SHA: ${{ steps.lifecycle.outputs.base_sha }}
           MCFT_CAP08_LIFECYCLE_MODE: ${{ steps.lifecycle.outputs.mode }}
@@ -74,7 +107,6 @@ jobs:
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_POST_S0_SUCCESSOR_BOUNDARY.cjs \
             --accept-mode "${MCFT_CAP08_LIFECYCLE_MODE}"
       - name: Original S0 authority, successor and exact file boundary
-        if: steps.lifecycle.outputs.mode == 'S0_EXACT_AUTHORITY_MODE'
         env:
           MCFT_BASE_SHA: "dfda2dd55e140313598dbc2fcbc9176c8891f465"
         run: |
@@ -82,18 +114,14 @@ jobs:
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CHANGED_FILE_BOUNDARY.cjs
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CANDIDATE_MERGE_TREE_EQUIVALENCE.cjs
           MCFT_BASE_SHA="dfda2dd55e140313598dbc2fcbc9176c8891f465" node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_POST_CLOSURE_SUCCESSOR_BOUNDARY.cjs --accept-mode POST_CLOSURE_SUCCESSOR_AUTHORITY_MODE
-      - name: Post-S0 frozen authority regression
-        if: steps.lifecycle.outputs.mode != 'S0_EXACT_AUTHORITY_MODE'
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_AUTHORITY_RECONCILIATION.cjs
       - name: Dedicated database effective privilege and S0 qualification
-        if: steps.lifecycle.outputs.mode == 'S0_EXACT_AUTHORITY_MODE'
         env:
           MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
           MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_pr1_candidate
           MCFT_CAP08_RUNNER_PASSWORD: cap08-acceptance-runner-password
           MCFT_CAP08_MIGRATOR_PASSWORD: cap08-acceptance-migrator-password
           MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: cap08-acceptance-legacy-runtime-password
-          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
         run: |
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_WRITER_PRIVILEGE_NEGATIVE_DB.ts
@@ -101,7 +129,6 @@ jobs:
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_LATE_CORRECTION_MATH.ts
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_ZERO_RUNTIME_DATA_DELTA_DB.ts
       - name: Finalize original S0 candidate authority artifact
-        if: steps.lifecycle.outputs.mode == 'S0_EXACT_AUTHORITY_MODE'
         run: node scripts/governance_acceptance/mcft_cap08_pr1_artifact_finalize.cjs
       - name: Cleanup dedicated database
         if: always()

@@ -8,6 +8,7 @@ on:
       - 'docs/digital_twin/mcft/cap_07/**'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_SLICE_EXACT_SHA_ATTESTATION.cjs'
+      - 'scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs'
       - 'scripts/governance_acceptance/mcft_cap07_s6_closure_artifact_finalize.cjs'
       - '.github/workflows/mcft-cap-07-slice-exact-sha-attestation.yml'
       - '.github/workflows/mcft-cap-07-s4-api.yml'
@@ -15,7 +16,6 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S6_CLOSURE.ts'
   merge_group:
     types: [checks_requested]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -25,7 +25,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  resolve-applicability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      disposition: ${{ steps.resolve.outputs.disposition }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.11.1 }
+      - id: resolve
+        name: Resolve Registry-owned candidate transition
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          MCFT_EXPECTED_FOCUSED_WORKFLOW: mcft-cap-07-s4-api
+        run: |
+          DISPOSITION="$(node scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs --resolve)"
+          echo "disposition=${DISPOSITION}" >> "${GITHUB_OUTPUT}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-07-s4-applicability-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 30
+
+  not-applicable:
+    needs: resolve-applicability
+    if: needs.resolve-applicability.outputs.disposition == 'NOT_APPLICABLE'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "mcft-cap-07-s4-api NOT_APPLICABLE for this registered transition"
+
   mcft-cap-07-s4-api:
+    needs: resolve-applicability
+    if: needs.resolve-applicability.outputs.disposition == 'APPLICABLE'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     services:
@@ -54,14 +93,15 @@ jobs:
         id: delivery
         shell: bash
         env:
-          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: |
           set -euo pipefail
           EXACT_SHA="${EVENT_HEAD_SHA}"
-          if [[ -n "${EVENT_BASE_SHA}" ]]; then BASE_SHA="${EVENT_BASE_SHA}"; else BASE_SHA="$(git rev-parse origin/main)"; fi
+          BASE_SHA="${EVENT_BASE_SHA}"
           git cat-file -e "${EXACT_SHA}^{commit}"
           git cat-file -e "${BASE_SHA}^{commit}"
+          git merge-base --is-ancestor "${BASE_SHA}" "${EXACT_SHA}"
           export MCFT_BASE_SHA="${BASE_SHA}"
           MODE="$(node - <<'NODE'
           const cp = require('node:child_process');
