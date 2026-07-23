@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mcft-cap-08-s2-g3-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  group: mcft-cap08-s2-g3-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -59,11 +59,20 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Typecheck server and G3 scripts
         run: pnpm --filter @geox/server typecheck
-      - name: Validate exact G3 boundary and machine state
+      - name: Classify exact G3 candidate or successor regression
+        id: classify
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_G3_BOUNDARY.cjs
+        run: |
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_G3_BOUNDARY.cjs
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json', 'utf8'));
+          console.log(`classification=${result.classification}`);
+          console.log(`run_destructive_db=${String(result.run_destructive_db)}`);
+          NODE
       - name: Bootstrap fresh bounded-writer database
+        if: steps.classify.outputs.run_destructive_db == 'true'
         env:
           MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
           MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_s2_g3_candidate
@@ -73,6 +82,7 @@ jobs:
           MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
       - name: Execute completion authority positive proof and PostgreSQL N1-N14
+        if: steps.classify.outputs.run_destructive_db == 'true'
         env:
           DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap08-s2-g3-runner-password@127.0.0.1:5432/geox_mcft_cap08_s2_g3_candidate
           MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap08_s2_g3_candidate
@@ -83,7 +93,7 @@ jobs:
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_COMPLETION_AUTHORITY_NEGATIVE_DB.ts 2>&1 \
             | tee acceptance-output/MCFT_CAP_08_S2_G3_RUNTIME_EXECUTION.log
       - name: Cleanup fresh database
-        if: always()
+        if: always() && steps.classify.outputs.run_destructive_db == 'true'
         env: { PGPASSWORD: postgres }
         run: |
           psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='geox_mcft_cap08_s2_g3_candidate' AND pid<>pg_backend_pid();"

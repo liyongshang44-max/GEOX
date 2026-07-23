@@ -1,0 +1,30 @@
+{
+  "schema_version": "geox_mcft_cap08_s2_owner_review_waiver_v1",
+  "record_status": "OWNER_DIRECTIVE_RECORDED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S2",
+  "waiver_id": "MCFT-CAP-08.S2-OWNER-REVIEW-WAIVER-V1",
+  "waiver_scope": "FORMAL_S2_CANDIDATE_TRANSITION_ONLY",
+  "waiver_authority": "REPOSITORY_OWNER_DIRECTIVE",
+  "repository_owner_login": "liyongshang44-max",
+  "review_issue_ref": "https://github.com/liyongshang44-max/GEOX/issues/2634",
+  "review_issue_comment_id": 5060314122,
+  "independent_review_satisfied": false,
+  "independent_review_performed": false,
+  "independent_review_waived": true,
+  "waiver_effect": {
+    "formal_candidate_creation_may_proceed": true,
+    "candidate_transition_may_proceed_after_all_technical_gates_pass": true,
+    "technical_gate_relaxation": false,
+    "focused_postgresql_acceptance_required": true,
+    "protected_merge_required": true,
+    "exact_merge_sha_attestation_required": true
+  },
+  "nonclaims": {
+    "s2_candidate_implemented": false,
+    "s2_effectiveness_established": false,
+    "s3_authorized": false,
+    "production_runtime_source_authorized": false,
+    "mcft_cap_09_authorized": false
+  }
+}

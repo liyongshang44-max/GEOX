@@ -11,6 +11,7 @@ on:
       - '.github/workflows/mcft-cap-08-s2-pre-candidate-foundation.yml'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-DELIVERY-STATUS-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-PRE-CANDIDATE-ENTRY-GATES-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-OWNER-REVIEW-WAIVER-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs'
       - 'scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs'
       - 'scripts/governance_acceptance/MCFT_SYNTHETIC_MERGE_ATTESTATION_HARNESS_V1.cjs'
@@ -26,7 +27,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FOUNDATION_LIFECYCLE_MODE: DEDICATED_FAIL_CLOSED
+  FOUNDATION_LIFECYCLE_MODE: DEDICATED_FAIL_CLOSED_WITH_OWNER_WAIVER
 
 jobs:
   pre-candidate-foundation-lifecycle:
@@ -47,13 +48,13 @@ jobs:
       - name: Validate dedicated lifecycle classifier syntax
         run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs
 
-      - name: Classify exact foundation, remediation, or successor regression
+      - name: Classify foundation, lifecycle remediation, owner waiver, or successor regression
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
         run: |
-          # WORKFLOW_LIFECYCLE_REMEDIATION_MODE and SUCCESSOR_REGRESSION_MODE are
-          # resolved fail-closed inside the checked-in acceptance program.
+          # OWNER_REVIEW_WAIVER_MODE records a repository-owner waiver without
+          # claiming independent review satisfaction or relaxing technical gates.
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs
 
       - uses: actions/upload-artifact@v4
