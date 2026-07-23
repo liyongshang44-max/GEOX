@@ -1,0 +1,40 @@
+name: tmp-g3-blob-reconstruct
+
+on:
+  push:
+    branches:
+      - agent/tmp-mcft-cap08-g3-blob-carrier
+    paths:
+      - '.tmp-g3/**'
+      - '.github/workflows/tmp-g3-blob-reconstruct.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  reconstruct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Reconstruct exact G3 acceptance blob
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET='scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_COMPLETION_AUTHORITY_NEGATIVE_DB.ts'
+          mkdir -p "$(dirname "${TARGET}")"
+          cat .tmp-g3/chunk-* | base64 --decode > "${TARGET}"
+          ACTUAL="$(git hash-object "${TARGET}")"
+          EXPECTED='2058e0ae056a23471fe4299ed71380bd25c9c1d4'
+          test "${ACTUAL}" = "${EXPECTED}"
+          rm -rf .tmp-g3
+          rm .github/workflows/tmp-g3-blob-reconstruct.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Reconstruct exact G3 acceptance blob'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
