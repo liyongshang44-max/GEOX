@@ -1,0 +1,34 @@
+{
+  "schema_version": "geox_mcft_cap08_s2_changed_file_boundary_v1",
+  "record_status": "FORMAL_CANDIDATE_BOUNDARY_FROZEN",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S2",
+  "base_sha": "e68e7d1f12025726aad2c1d9edccf82a82058ee9",
+  "changed_file_count": 12,
+  "changed_files": [
+    ".github/workflows/mcft-cap-08-s2-exact-sha-attestation.yml",
+    ".github/workflows/mcft-cap-08-s2-forcing-state-forecast.yml",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-CHANGED-FILE-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-IMPLEMENTATION-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-PREDECESSOR-CONSUMPTION-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-WORKFLOW-DECLARATION-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_BOUNDARY.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_EXACT_SHA_ATTESTATION.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs",
+    "scripts/governance_acceptance/mcft_cap08_s2_artifact_finalize.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_FORCING_STATE_FORECAST_DB.ts"
+  ],
+  "runtime_source_file_count": 0,
+  "governance_and_acceptance_file_count": 12,
+  "provider_source_authority": "ALREADY_PRESENT_ON_MAIN_AT_DA8D5456",
+  "completion_authority": "ALREADY_PRESENT_ON_MAIN_AT_65B0D8FC",
+  "forbidden_surfaces": [
+    "apps/web/",
+    "apps/server/src/routes/",
+    "apps/server/db/migrations/",
+    "docker/postgres/init/",
+    "scheduler",
+    "model_activation"
+  ]
+}

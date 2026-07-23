@@ -1,0 +1,18 @@
+{
+  "schema_version": "geox_mcft_cap08_s2_predecessor_consumption_v1",
+  "record_status": "PREDECESSOR_EFFECTIVENESS_CONSUMED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S2",
+  "predecessor_slice_id": "MCFT-CAP-08.S1",
+  "predecessor_candidate_sha": "e51d9e0aaf15b4da9f92fce06c23e33ed09586d5",
+  "predecessor_merge_subject": "f39b7df37571156f23cfb9153bad024fdb723261",
+  "predecessor_tree_sha": "6e8ce477cddb94af0b7b0ac5db09675715679cc7",
+  "predecessor_exact_sha_workflow_run": 29980589779,
+  "predecessor_exact_sha_artifact_id": 8553043184,
+  "predecessor_exact_sha_status_context": "mcft-cap-08/slice-exact-sha-attestation",
+  "predecessor_exact_sha_status": "SUCCESS",
+  "predecessor_semantic_artifact_digest": "sha256:7f8e6d61f038ddfd6a6b86430c230fc7e36509011d4131bae1670034ff2b74bc",
+  "predecessor_effective_status": "S1_BASE_RUNTIME_IMPLEMENTED_EFFECTIVE",
+  "effective_next_slice": "S2",
+  "readback_verified": true
+}
