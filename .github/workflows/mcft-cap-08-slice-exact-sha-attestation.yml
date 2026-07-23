@@ -1,0 +1,152 @@
+name: mcft-cap-08-slice-exact-sha-attestation
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/server/src/domain/twin_runtime/cap08_*'
+      - 'apps/server/src/runtime/twin_runtime/cap08_*'
+      - 'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S1_*'
+      - 'scripts/runtime_acceptance/mcft_cap_08_s1_fixture_v1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S1_*'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_SLICE_EXACT_SHA_ATTESTATION.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s1_artifact_finalize.cjs'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S1-*'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+      - '.github/workflows/mcft-cap-08-s1-base-runtime.yml'
+      - '.github/workflows/mcft-cap-08-slice-exact-sha-attestation.yml'
+  workflow_dispatch:
+    inputs:
+      subject_sha:
+        description: Exact current main merge SHA
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  statuses: write
+concurrency:
+  group: mcft-cap-08-slice-exact-${{ inputs.subject_sha || github.sha }}
+  cancel-in-progress: false
+jobs:
+  exact-sha-attestation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MCFT_SUBJECT_SHA: ${{ inputs.subject_sha || github.sha }}
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: postgres }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres" --health-interval 3s --health-timeout 2s --health-retries 30
+    steps:
+      - name: Checkout exact subject SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.subject_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate automatic or current-main manual subject
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${MCFT_SUBJECT_SHA}"
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = "${MCFT_SUBJECT_SHA}"
+          fi
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.11.1, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Prove exact candidate-to-merge tree and required checks
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_SLICE_EXACT_SHA_ATTESTATION.cjs
+      - name: Resolve candidate base for boundary proof
+        id: tree
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const a=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_08_SLICE_EXACT_SHA_ATTESTATION_RESULT.json','utf8'));
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`base=${a.base_head_sha}\n`);
+          NODE
+      - name: Revalidate exact changed-file boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.tree.outputs.base }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S1_BOUNDARY.cjs
+      - name: Bootstrap fresh exact-SHA bounded-writer database
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_s1_exact
+          MCFT_CAP08_RUNNER_PASSWORD: cap08-s1-exact-runner-password
+          MCFT_CAP08_MIGRATOR_PASSWORD: cap08-s1-exact-migrator-password
+          MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: cap08-s1-exact-legacy-runtime-password
+          MCFT_CANDIDATE_SHA: ${{ inputs.subject_sha || github.sha }}
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+      - name: Reexecute fresh PostgreSQL B00 plus 24-Tick S1 proof
+        env:
+          DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap08-s1-exact-runner-password@127.0.0.1:5432/geox_mcft_cap08_s1_exact
+          MCFT_CAP08_S1_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S1_BASE_RUNTIME_DB.ts
+      - name: Finalize exact merge-SHA artifact
+        env:
+          MCFT_ARTIFACT_STAGE: EXACT_MERGE_SHA
+        run: node scripts/governance_acceptance/mcft_cap08_s1_artifact_finalize.cjs
+      - name: Build deterministic archive
+        run: |
+          mkdir -p acceptance-output/archive-input
+          cp acceptance-output/MCFT_CAP_08_S1_AUTHORITY_ARTIFACT.json acceptance-output/archive-input/canonical-artifact.json
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -cf acceptance-output/mcft-cap-08-s1-attestation.tar -C acceptance-output/archive-input canonical-artifact.json
+          gzip -n -f acceptance-output/mcft-cap-08-s1-attestation.tar
+      - name: Upload and read back immutable R1 authority
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_ATTESTATION_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_ATTESTATION_S3_SECRET_ACCESS_KEY }}
+          GEOX_MCFT_ATTESTATION_S3_ENDPOINT: ${{ vars.GEOX_MCFT_ATTESTATION_S3_ENDPOINT }}
+          GEOX_MCFT_ATTESTATION_S3_BUCKET: ${{ vars.GEOX_MCFT_ATTESTATION_S3_BUCKET }}
+          GEOX_MCFT_ATTESTATION_S3_REGION: ${{ vars.GEOX_MCFT_ATTESTATION_S3_REGION }}
+          GEOX_MCFT_ATTESTATION_S3_FORCE_PATH_STYLE: ${{ vars.GEOX_MCFT_ATTESTATION_S3_FORCE_PATH_STYLE }}
+          MCFT_CANONICAL_ARTIFACT_PATH: acceptance-output/MCFT_CAP_08_S1_AUTHORITY_ARTIFACT.json
+          MCFT_ARTIFACT_ARCHIVE_PATH: acceptance-output/mcft-cap-08-s1-attestation.tar.gz
+          MCFT_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          MCFT_REPOSITORY_NAME: GEOX
+          MCFT_ARTIFACT_NAME: mcft-cap-08-s1-exact-sha-${{ inputs.subject_sha || github.sha }}
+          MCFT_RETENTION_LEVEL: R1
+          MCFT_RETENTION_DAYS: 180
+        run: node scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs --upload-readback
+      - name: Cleanup fresh database
+        if: always()
+        env: { PGPASSWORD: postgres }
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='geox_mcft_cap08_s1_exact' AND pid<>pg_backend_pid();"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS geox_mcft_cap08_s1_exact;"
+      - id: artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s1-exact-sha-${{ inputs.subject_sha || github.sha }}
+          path: acceptance-output/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish exact-SHA status
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          JOB_STATUS: ${{ job.status }}
+          ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const fs=require('fs');let a=null;try{a=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_08_S1_AUTHORITY_ARTIFACT.json','utf8'))}catch{}
+            const ok=process.env.JOB_STATUS==='success'&&a?.status==='PASS'&&a?.effective_delivery_frontier_projection?.effective_status==='S1_BASE_RUNTIME_IMPLEMENTED_EFFECTIVE'&&String(process.env.ARTIFACT_ID||'').length>0;
+            const [owner,repo]=process.env.GITHUB_REPOSITORY.split('/');
+            await github.rest.repos.createCommitStatus({owner,repo,sha:process.env.MCFT_SUBJECT_SHA,state:ok?'success':'failure',context:'mcft-cap-08/slice-exact-sha-attestation',description:(ok?`PASS S1 next=S2 artifact=${process.env.ARTIFACT_ID}`:'FAIL S1 exact-SHA').slice(0,140),target_url:`${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`});

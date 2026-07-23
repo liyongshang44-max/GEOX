@@ -1,0 +1,93 @@
+name: mcft-cap-08-s1-base-runtime
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/domain/twin_runtime/cap08_*'
+      - 'apps/server/src/runtime/twin_runtime/cap08_*'
+      - 'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S1_*'
+      - 'scripts/runtime_acceptance/mcft_cap_08_s1_fixture_v1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S1_*'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_SLICE_EXACT_SHA_ATTESTATION.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s1_artifact_finalize.cjs'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S1-*'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+      - '.github/workflows/mcft-cap-08-s1-base-runtime.yml'
+      - '.github/workflows/mcft-cap-08-slice-exact-sha-attestation.yml'
+  merge_group:
+    types: [checks_requested]
+permissions:
+  contents: read
+concurrency:
+  group: mcft-cap-08-s1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+jobs:
+  s1-base-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: postgres }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres" --health-interval 3s --health-timeout 2s --health-retries 30
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.11.1, cache: pnpm }
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck server and S1 scripts
+        run: pnpm --filter @geox/server typecheck
+      - name: Validate exact S1 changed-file and successor boundary
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S1_BOUNDARY.cjs
+      - name: Bootstrap fresh bounded-writer database
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_s1_candidate
+          MCFT_CAP08_RUNNER_PASSWORD: cap08-s1-runner-password
+          MCFT_CAP08_MIGRATOR_PASSWORD: cap08-s1-migrator-password
+          MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: cap08-s1-legacy-runtime-password
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+      - name: Execute fresh PostgreSQL B00 plus 24-Tick S1 proof
+        env:
+          DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap08-s1-runner-password@127.0.0.1:5432/geox_mcft_cap08_s1_candidate
+          MCFT_CAP08_S1_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: |
+          mkdir -p acceptance-output
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S1_BASE_RUNTIME_DB.ts 2>&1 \
+            | tee acceptance-output/MCFT_CAP_08_S1_RUNTIME_EXECUTION.log
+      - name: Finalize candidate artifact
+        env:
+          MCFT_ARTIFACT_STAGE: CANDIDATE_HEAD
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/governance_acceptance/mcft_cap08_s1_artifact_finalize.cjs
+      - name: Cleanup fresh database
+        if: always()
+        env: { PGPASSWORD: postgres }
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='geox_mcft_cap08_s1_candidate' AND pid<>pg_backend_pid();"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS geox_mcft_cap08_s1_candidate;"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-08-s1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/
+          if-no-files-found: error
+          retention-days: 90

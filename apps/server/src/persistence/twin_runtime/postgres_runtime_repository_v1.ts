@@ -65,14 +65,26 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
-      const existing = await client.query(
-        "SELECT determinism_hash,semantic_object_id FROM twin_object_idempotency_index_v1 WHERE idempotency_key=$1 FOR UPDATE",
-        [config.idempotency_key],
+      const reservation = await client.query(
+        `INSERT INTO twin_object_idempotency_index_v1
+         (identity_kind,idempotency_key,semantic_object_id,determinism_hash)
+         VALUES ('RUNTIME_CONFIG',$1,$2,$3)
+         ON CONFLICT (idempotency_key) DO NOTHING
+         RETURNING idempotency_key`,
+        [config.idempotency_key, config.object_id, config.determinism_hash],
       );
-      if (existing.rows.length) {
-        if (existing.rows[0].determinism_hash !== config.determinism_hash || existing.rows[0].semantic_object_id !== config.object_id) throw new Error("IDEMPOTENCY_CONFLICT");
+      if (reservation.rows.length === 0) {
+        const existing = await client.query(
+          "SELECT determinism_hash,semantic_object_id FROM twin_object_idempotency_index_v1 WHERE idempotency_key=$1",
+          [config.idempotency_key],
+        );
+        if (existing.rows.length !== 1
+          || existing.rows[0].determinism_hash !== config.determinism_hash
+          || existing.rows[0].semantic_object_id !== config.object_id) {
+          throw new Error("IDEMPOTENCY_CONFLICT");
+        }
         const fact = await client.query(
-          "SELECT record_json FROM facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json->'payload'->>'object_id'=$1 LIMIT 1",
+          "SELECT record_json FROM facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json->'payload'->>'object_id'=$1 LIMIT 2",
           [config.object_id],
         );
         if (fact.rows.length !== 1) throw new Error("IDEMPOTENT_RUNTIME_CONFIG_INCOMPLETE");
@@ -82,13 +94,10 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
         await client.query("COMMIT");
         return { status: "EXISTING_IDEMPOTENT_SUCCESS" as const, object_id: config.object_id, fact_id: factId(config.object_id) };
       }
+      if (reservation.rows.length !== 1) throw new Error("RUNTIME_CONFIG_IDEMPOTENCY_RESERVATION_CARDINALITY");
       await client.query(
         "INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,'system',$3::jsonb)",
         [factId(config.object_id), config.logical_time, recordJson(config)],
-      );
-      await client.query(
-        "INSERT INTO twin_object_idempotency_index_v1 (identity_kind,idempotency_key,semantic_object_id,determinism_hash) VALUES ('RUNTIME_CONFIG',$1,$2,$3)",
-        [config.idempotency_key, config.object_id, config.determinism_hash],
       );
       await client.query("COMMIT");
       return { status: "INSERTED" as const, object_id: config.object_id, fact_id: factId(config.object_id) };
@@ -185,12 +194,32 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
     const inject = (stage: string) => input.fault_injection?.(stage);
     try {
       await client.query("BEGIN");
-      const existing = await client.query(
-        "SELECT record_set_id,determinism_hash FROM twin_object_idempotency_index_v1 WHERE identity_kind='A0_RECORD_SET' AND idempotency_key=$1 FOR UPDATE",
-        [input.record_set.a0_idempotency_key],
+      inject("before_idempotency_index");
+      const reservation = await client.query(
+        `INSERT INTO twin_object_idempotency_index_v1
+         (identity_kind,idempotency_key,record_set_id,determinism_hash,identity_basis,member_object_ids,member_determinism_hashes)
+         VALUES ('A0_RECORD_SET',$1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb)
+         ON CONFLICT (idempotency_key) DO NOTHING
+         RETURNING idempotency_key`,
+        [
+          input.record_set.a0_idempotency_key,
+          input.record_set.a0_record_set_id,
+          input.record_set.a0_record_set_determinism_hash,
+          JSON.stringify({ a0_identity_input: input.record_set.a0_identity_input, a0_semantic_seed: input.record_set.a0_semantic_seed }),
+          JSON.stringify(input.record_set.members.map((member) => member.object_id)),
+          JSON.stringify(Object.fromEntries(input.record_set.members.map((member) => [member.object_id, member.determinism_hash]))),
+        ],
       );
-      if (existing.rows.length) {
-        if (existing.rows[0].record_set_id !== input.record_set.a0_record_set_id || existing.rows[0].determinism_hash !== input.record_set.a0_record_set_determinism_hash) throw new Error("IDEMPOTENCY_CONFLICT");
+      if (reservation.rows.length === 0) {
+        const existing = await client.query(
+          "SELECT record_set_id,determinism_hash FROM twin_object_idempotency_index_v1 WHERE identity_kind='A0_RECORD_SET' AND idempotency_key=$1",
+          [input.record_set.a0_idempotency_key],
+        );
+        if (existing.rows.length !== 1
+          || existing.rows[0].record_set_id !== input.record_set.a0_record_set_id
+          || existing.rows[0].determinism_hash !== input.record_set.a0_record_set_determinism_hash) {
+          throw new Error("IDEMPOTENCY_CONFLICT");
+        }
         const recordSet = await this.readBootstrapRecordSetWithClient(client, input.record_set.a0_record_set_id);
         if (!recordSet) throw new Error("IDEMPOTENT_RECORD_SET_INCOMPLETE");
         validateA0RecordSetV1(recordSet);
@@ -202,6 +231,7 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
           fact_ids_by_object_id: Object.fromEntries(recordSet.members.map((member) => [member.object_id, factId(member.object_id)])),
         };
       }
+      if (reservation.rows.length !== 1) throw new Error("A0_IDEMPOTENCY_RESERVATION_CARDINALITY");
 
       await this.verifyLease(client, input.scope, input.lease);
       await this.verifyRuntimeConfig(client, input.record_set);
@@ -262,11 +292,6 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
       await client.query(
         "INSERT INTO twin_runtime_health_latest_index_v1 (tenant_id,project_id,group_id,field_id,season_id,zone_id,health_object_id,operation_status,logical_time,determinism_hash,source_fact_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11)",
         [...scopeValues(input.scope), rows.runtime_health_latest.health_object_id, rows.runtime_health_latest.operation_status, rows.runtime_health_latest.logical_time, rows.runtime_health_latest.determinism_hash, rows.runtime_health_latest.source_fact_id],
-      );
-      inject("before_idempotency_index");
-      await client.query(
-        "INSERT INTO twin_object_idempotency_index_v1 (identity_kind,idempotency_key,record_set_id,determinism_hash,identity_basis,member_object_ids,member_determinism_hashes) VALUES ('A0_RECORD_SET',$1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb)",
-        [input.record_set.a0_idempotency_key, input.record_set.a0_record_set_id, input.record_set.a0_record_set_determinism_hash, JSON.stringify({ a0_identity_input: input.record_set.a0_identity_input, a0_semantic_seed: input.record_set.a0_semantic_seed }), JSON.stringify(input.record_set.members.map((member) => member.object_id)), JSON.stringify(Object.fromEntries(input.record_set.members.map((member) => [member.object_id, member.determinism_hash])))],
       );
       inject("before_commit");
       await client.query("COMMIT");

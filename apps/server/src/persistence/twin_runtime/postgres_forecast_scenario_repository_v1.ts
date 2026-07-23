@@ -264,12 +264,35 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
     const inject = (stage: string) => input.fault_injection?.(stage);
     try {
       await client.query("BEGIN");
-      const existing = await client.query(
-        `SELECT record_set_id,determinism_hash FROM twin_object_idempotency_index_v1
-         WHERE idempotency_key=$1 FOR UPDATE`,
-        [input.record_set.idempotency_key],
+      inject("before_idempotency_index");
+      const reservation = await client.query(
+        `INSERT INTO twin_object_idempotency_index_v1
+         (identity_kind,idempotency_key,record_set_id,determinism_hash,identity_basis,member_object_ids,member_determinism_hashes)
+         VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb)
+         ON CONFLICT (idempotency_key) DO NOTHING
+         RETURNING idempotency_key`,
+        [
+          identityKind,
+          input.record_set.idempotency_key,
+          input.record_set.record_set_id,
+          input.record_set.aggregate_determinism_hash,
+          JSON.stringify({
+            record_set_contract_id: input.record_set.record_set_contract_id,
+            terminal_tick_uniqueness_key: input.record_set.terminal_tick_uniqueness_key,
+            terminal_tick_uniqueness_key_hash: input.record_set.terminal_tick_uniqueness_key_hash,
+            operation_key: input.record_set.operation_key,
+            operation_key_hash: input.record_set.operation_key_hash,
+            aggregate_identity_input: input.record_set.aggregate_identity_input,
+          }),
+          JSON.stringify(input.record_set.member_object_ids),
+          JSON.stringify(Object.fromEntries(input.record_set.members.map((member) => [member.object_id, member.determinism_hash]))),
+        ],
       );
-      if (existing.rows.length) {
+      if (reservation.rows.length === 0) {
+        const existing = await client.query(
+          "SELECT record_set_id,determinism_hash FROM twin_object_idempotency_index_v1 WHERE idempotency_key=$1",
+          [input.record_set.idempotency_key],
+        );
         if (existing.rows.length !== 1
           || existing.rows[0].record_set_id !== input.record_set.record_set_id
           || existing.rows[0].determinism_hash !== input.record_set.aggregate_determinism_hash) {
@@ -284,24 +307,21 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
           fact_ids_by_object_id: Object.fromEntries(recordSet.members.map((member) => [member.object_id, factIdV1(member.object_id)])),
         };
       }
+      if (reservation.rows.length !== 1) throw new Error("CAP04_A_IDEMPOTENCY_RESERVATION_CARDINALITY");
 
       await this.verifyLeaseV1(client, input.scope, input.lease);
-      const terminal = await client.query(
-        `SELECT record_set_id,aggregate_determinism_hash FROM twin_terminal_tick_uniqueness_v1
-         WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
-           AND lineage_id=$7 AND revision_id=$8 AND logical_time=$9::timestamptz FOR UPDATE`,
-        [...scopeValuesV1(input.scope), input.record_set.operation_key.lineage_id, input.record_set.operation_key.revision_id, input.record_set.operation_key.logical_time],
-      );
-      if (terminal.rows.length !== 0) throw new Error("TERMINAL_TICK_VARIANT_CONFLICT");
       await this.verifyAExpectedPointersV1(client, input.scope, input.expected, input.record_set);
 
       const tick = requireMemberV1(input.record_set, "twin_runtime_tick_v1");
       inject("before_terminal_uniqueness_guard");
-      await client.query(
+      const terminalReservation = await client.query(
         `INSERT INTO twin_terminal_tick_uniqueness_v1
          (tenant_id,project_id,group_id,field_id,season_id,zone_id,lineage_id,revision_id,logical_time,
           terminal_tick_uniqueness_key_hash,operation_variant,record_set_id,aggregate_determinism_hash,source_tick_object_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11,$12,$13,$14)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11,$12,$13,$14)
+         ON CONFLICT (tenant_id,project_id,group_id,field_id,season_id,zone_id,lineage_id,revision_id,logical_time)
+         DO NOTHING
+         RETURNING record_set_id`,
         [
           ...scopeValuesV1(input.scope),
           input.record_set.operation_key.lineage_id,
@@ -314,6 +334,7 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
           tick.object_id,
         ],
       );
+      if (terminalReservation.rows.length !== 1) throw new Error("TERMINAL_TICK_VARIANT_CONFLICT");
 
       const factIds: Record<string, string> = {};
       for (let index = 0; index < input.record_set.members.length; index += 1) {
@@ -405,28 +426,6 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
       inject("before_forecast_run_projection");
       await this.insertForecastProjectionRowsV1(client, forecastRows);
 
-      inject("before_idempotency_index");
-      await client.query(
-        `INSERT INTO twin_object_idempotency_index_v1
-         (identity_kind,idempotency_key,record_set_id,determinism_hash,identity_basis,member_object_ids,member_determinism_hashes)
-         VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb)`,
-        [
-          identityKind,
-          input.record_set.idempotency_key,
-          input.record_set.record_set_id,
-          input.record_set.aggregate_determinism_hash,
-          JSON.stringify({
-            record_set_contract_id: input.record_set.record_set_contract_id,
-            terminal_tick_uniqueness_key: input.record_set.terminal_tick_uniqueness_key,
-            terminal_tick_uniqueness_key_hash: input.record_set.terminal_tick_uniqueness_key_hash,
-            operation_key: input.record_set.operation_key,
-            operation_key_hash: input.record_set.operation_key_hash,
-            aggregate_identity_input: input.record_set.aggregate_identity_input,
-          }),
-          JSON.stringify(input.record_set.member_object_ids),
-          JSON.stringify(Object.fromEntries(input.record_set.members.map((member) => [member.object_id, member.determinism_hash]))),
-        ],
-      );
       inject("before_commit");
       await client.query("COMMIT");
       return {
@@ -559,12 +558,34 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
     const inject = (stage: string) => input.fault_injection?.(stage);
     try {
       await client.query("BEGIN");
-      const existing = await client.query(
-        `SELECT record_set_id,determinism_hash FROM twin_object_idempotency_index_v1
-         WHERE idempotency_key=$1 FOR UPDATE`,
-        [input.record.idempotency_key],
+      inject("before_scenario_idempotency_index");
+      const reservation = await client.query(
+        `INSERT INTO twin_object_idempotency_index_v1
+         (identity_kind,idempotency_key,record_set_id,determinism_hash,identity_basis,member_object_ids,member_determinism_hashes)
+         VALUES ('B_SCENARIO_SET',$1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb)
+         ON CONFLICT (idempotency_key) DO NOTHING
+         RETURNING idempotency_key`,
+        [
+          input.record.idempotency_key,
+          input.record.scenario_set_id,
+          input.record.aggregate_determinism_hash,
+          JSON.stringify({
+            record_set_contract_id: input.record.record_set_contract_id,
+            transaction_variant: input.record.transaction_variant,
+            scenario_set_uniqueness_key: input.record.scenario_set_uniqueness_key,
+            scenario_set_uniqueness_key_hash: input.record.scenario_set_uniqueness_key_hash,
+            operation_key: input.record.operation_key,
+            operation_key_hash: input.record.operation_key_hash,
+          }),
+          JSON.stringify([scenario.object_id]),
+          JSON.stringify({ [scenario.object_id]: scenario.determinism_hash }),
+        ],
       );
-      if (existing.rows.length) {
+      if (reservation.rows.length === 0) {
+        const existing = await client.query(
+          "SELECT record_set_id,determinism_hash FROM twin_object_idempotency_index_v1 WHERE idempotency_key=$1",
+          [input.record.idempotency_key],
+        );
         if (existing.rows.length !== 1
           || existing.rows[0].record_set_id !== input.record.scenario_set_id
           || existing.rows[0].determinism_hash !== input.record.aggregate_determinism_hash) {
@@ -575,6 +596,7 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
         await client.query("COMMIT");
         return { status: "EXISTING_IDEMPOTENT_SUCCESS", record, fact_id: factIdV1(record.scenario_set_id) };
       }
+      if (reservation.rows.length !== 1) throw new Error("CAP04_B_IDEMPOTENCY_RESERVATION_CARDINALITY");
 
       await this.verifyLeaseV1(client, input.scope, input.lease);
       const sourceForecast = await this.readCanonicalObjectWithClientV1(client, input.record.scenario_set_uniqueness_key.source_forecast_ref);
@@ -598,23 +620,15 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
         throw new Error("CAP04_B_SOURCE_FORECAST_NOT_LATEST_SUCCESS");
       }
 
-      const uniqueness = await client.query(
-        `SELECT scenario_set_id,aggregate_determinism_hash FROM twin_scenario_set_uniqueness_v1
-         WHERE source_forecast_ref=$1 AND source_forecast_hash=$2 AND lineage_id=$3 AND revision_id=$4 FOR UPDATE`,
-        [
-          input.record.scenario_set_uniqueness_key.source_forecast_ref,
-          input.record.scenario_set_uniqueness_key.source_forecast_hash,
-          input.record.scenario_set_uniqueness_key.lineage_id,
-          input.record.scenario_set_uniqueness_key.revision_id,
-        ],
-      );
-      if (uniqueness.rows.length !== 0) throw new Error("SCENARIO_SET_CANONICAL_UNIQUENESS_CONFLICT");
 
       inject("before_scenario_uniqueness_guard");
-      await client.query(
+      const uniquenessReservation = await client.query(
         `INSERT INTO twin_scenario_set_uniqueness_v1
          (source_forecast_ref,source_forecast_hash,lineage_id,revision_id,scenario_set_uniqueness_key_hash,scenario_set_id,aggregate_determinism_hash)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7)
+         ON CONFLICT (source_forecast_ref,source_forecast_hash,lineage_id,revision_id)
+         DO NOTHING
+         RETURNING scenario_set_id`,
         [
           input.record.scenario_set_uniqueness_key.source_forecast_ref,
           input.record.scenario_set_uniqueness_key.source_forecast_hash,
@@ -625,6 +639,7 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
           input.record.aggregate_determinism_hash,
         ],
       );
+      if (uniquenessReservation.rows.length !== 1) throw new Error("SCENARIO_SET_CANONICAL_UNIQUENESS_CONFLICT");
 
       const id = factIdV1(scenario.object_id);
       inject("before_scenario_fact");
@@ -636,27 +651,6 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
       inject("before_scenario_projections");
       await this.insertScenarioProjectionRowsV1(client, rows);
 
-      inject("before_scenario_idempotency_index");
-      await client.query(
-        `INSERT INTO twin_object_idempotency_index_v1
-         (identity_kind,idempotency_key,record_set_id,determinism_hash,identity_basis,member_object_ids,member_determinism_hashes)
-         VALUES ('B_SCENARIO_SET',$1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb)`,
-        [
-          input.record.idempotency_key,
-          input.record.scenario_set_id,
-          input.record.aggregate_determinism_hash,
-          JSON.stringify({
-            record_set_contract_id: input.record.record_set_contract_id,
-            transaction_variant: input.record.transaction_variant,
-            scenario_set_uniqueness_key: input.record.scenario_set_uniqueness_key,
-            scenario_set_uniqueness_key_hash: input.record.scenario_set_uniqueness_key_hash,
-            operation_key: input.record.operation_key,
-            operation_key_hash: input.record.operation_key_hash,
-          }),
-          JSON.stringify([scenario.object_id]),
-          JSON.stringify({ [scenario.object_id]: scenario.determinism_hash }),
-        ],
-      );
       inject("before_commit");
       await client.query("COMMIT");
       return { status: "INSERTED", record: input.record, fact_id: id };
