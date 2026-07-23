@@ -12,6 +12,7 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S1_*'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_SLICE_EXACT_SHA_ATTESTATION.cjs'
       - 'scripts/governance_acceptance/mcft_cap08_s1_artifact_finalize.cjs'
+      - 'scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S1-*'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-DELIVERY-STATUS-V1.json'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
@@ -25,7 +26,46 @@ concurrency:
   group: mcft-cap-08-s1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
   cancel-in-progress: true
 jobs:
+  resolve-applicability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      disposition: ${{ steps.resolve.outputs.disposition }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.11.1 }
+      - id: resolve
+        name: Resolve Registry-owned candidate transition
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          MCFT_EXPECTED_FOCUSED_WORKFLOW: mcft-cap-08-s1-base-runtime
+        run: |
+          DISPOSITION="$(node scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs --resolve)"
+          echo "disposition=${DISPOSITION}" >> "${GITHUB_OUTPUT}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-08-s1-applicability-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 30
+
+  not-applicable:
+    needs: resolve-applicability
+    if: needs.resolve-applicability.outputs.disposition == 'NOT_APPLICABLE'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "mcft-cap-08-s1-base-runtime NOT_APPLICABLE for this registered transition"
+
   s1-base-runtime:
+    needs: resolve-applicability
+    if: needs.resolve-applicability.outputs.disposition == 'APPLICABLE'
     runs-on: ubuntu-latest
     timeout-minutes: 55
     services:
@@ -61,7 +101,7 @@ jobs:
           MCFT_CAP08_RUNNER_PASSWORD: cap08-s1-runner-password
           MCFT_CAP08_MIGRATOR_PASSWORD: cap08-s1-migrator-password
           MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: cap08-s1-legacy-runtime-password
-          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
       - name: Execute fresh PostgreSQL B00 plus 24-Tick S1 proof
         env:
@@ -76,7 +116,7 @@ jobs:
         env:
           MCFT_ARTIFACT_STAGE: CANDIDATE_HEAD
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
-          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
         run: node scripts/governance_acceptance/mcft_cap08_s1_artifact_finalize.cjs
       - name: Cleanup fresh database
         if: always()

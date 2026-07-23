@@ -1,0 +1,63 @@
+name: mcft-cap-08-s2-pre-candidate-foundation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-07-s0-authorization.yml'
+      - '.github/workflows/mcft-cap-07-s4-api.yml'
+      - '.github/workflows/mcft-cap-07-s6-closure.yml'
+      - '.github/workflows/mcft-cap-08-authority-reconciliation.yml'
+      - '.github/workflows/mcft-cap-08-s1-base-runtime.yml'
+      - '.github/workflows/mcft-cap-08-s2-pre-candidate-foundation.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-PRE-CANDIDATE-ENTRY-GATES-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs'
+      - 'scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/MCFT_SYNTHETIC_MERGE_ATTESTATION_HARNESS_V1.cjs'
+      - 'scripts/governance_acceptance/MCFT_ATTESTATION_RETENTION_LOCAL_BACKEND_V1.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap08-s2-pre-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  pre-candidate-foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Validate governance script syntax
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs
+          node --check scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs
+          node --check scripts/governance_acceptance/MCFT_SYNTHETIC_MERGE_ATTESTATION_HARNESS_V1.cjs
+          node --check scripts/governance_acceptance/MCFT_ATTESTATION_RETENTION_LOCAL_BACKEND_V1.cjs
+
+      - name: Prove merge harness, fail-closed Registry lifecycle and blocked S2 transition
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap08-s2-pre-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/
+          if-no-files-found: error
+          retention-days: 90

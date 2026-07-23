@@ -8,10 +8,10 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_*.cjs'
       - 'scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs'
       - 'scripts/governance_acceptance/mcft_cap07_slice_workflow_mode_v1.cjs'
+      - 'scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs'
       - '.github/workflows/mcft-cap-07-*.yml'
   merge_group:
     types: [checks_requested]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -23,14 +23,53 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  resolve-applicability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      disposition: ${{ steps.resolve.outputs.disposition }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.11.1 }
+      - id: resolve
+        name: Resolve Registry-owned candidate transition
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          MCFT_EXPECTED_FOCUSED_WORKFLOW: mcft-cap-07-s0-authorization
+        run: |
+          DISPOSITION="$(node scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs --resolve)"
+          echo "disposition=${DISPOSITION}" >> "${GITHUB_OUTPUT}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-07-s0-applicability-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 30
+
+  not-applicable:
+    needs: resolve-applicability
+    if: needs.resolve-applicability.outputs.disposition == 'NOT_APPLICABLE'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "mcft-cap-07-s0-authorization NOT_APPLICABLE for this registered transition"
+
   mcft-cap-07-s0-authorization:
+    needs: resolve-applicability
+    if: needs.resolve-applicability.outputs.disposition == 'APPLICABLE'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout exact candidate head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
