@@ -1,0 +1,23 @@
+{
+  "schema_version": "geox_mcft_cap08_s1_predecessor_consumption_v1",
+  "record_status": "CANDIDATE_PREDECESSOR_CONSUMPTION",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S1",
+  "predecessor_slice_id": "MCFT-CAP-08.S0",
+  "predecessor_subject_sha": "0012144aa3d69698b6bc94a113ff00c7652dd043",
+  "predecessor_exact_sha_status_context": "mcft-cap-08/pr1-exact-sha-attestation",
+  "predecessor_exact_sha_workflow_run": 29935730353,
+  "predecessor_artifact_id": 8536034800,
+  "predecessor_semantic_artifact_digest": "sha256:7b97d1414fe9de946fba606b6ae0a674a17cb9ffbbd1ca253acf7e309798ac0a",
+  "predecessor_transport_archive_sha256": "sha256:b9f901f56fd4f3458dbecf3c5a10ab9912cbcaee2144cc9202b1d9b99a18666a",
+  "predecessor_retention_level": "R2",
+  "predecessor_readback_verified": true,
+  "predecessor_locked_version_delete_denied": true,
+  "effective_status": "IN_PROGRESS",
+  "effective_next_slice": "S1",
+  "bounded_replay_runner_authorized": true,
+  "bounded_canonical_transaction_authorized": true,
+  "production_runtime_source_authorized": false,
+  "consumption_result": "PASS",
+  "consumed_by_candidate_base_sha": "f182dd58f48fe4a6bed9957bf93adf7628b3a72a"
+}

@@ -80,6 +80,12 @@ function readJson(relative) {
   return JSON.parse(read(relative));
 }
 
+function readJsonAt(ref, relative) {
+  const result = cp.spawnSync('git', ['show', `${ref}:${relative}`], { cwd: ROOT, encoding: 'utf8' });
+  if (result.status !== 0) return null;
+  return JSON.parse(result.stdout);
+}
+
 function isAncestor(ancestor, descendant = 'HEAD') {
   return cp.spawnSync('git', ['merge-base', '--is-ancestor', ancestor, descendant], { cwd: ROOT }).status === 0;
 }
@@ -117,17 +123,38 @@ function validateConditionalAuthority() {
   assert.equal(authority.effective_next_slice_when_attested, 'S1');
 }
 
-function validateSuccessorSeedAndRegistry() {
-  const seed = readJson(S1_STATUS);
-  assert.equal(seed.s1_candidate_implemented, false);
-  assert.equal(seed.production_runtime_source_authorized, false);
-  assert.equal(seed.effective_next_slice_when_attested, 'S2');
+function validateSuccessorStatusAndRegistry(base, actual) {
+  const status = readJson(S1_STATUS);
   const registry = readJson(REGISTRY);
   const cap08 = registry.capabilities.find((item) => item.capability_line === 'MCFT-CAP-08');
   assert.ok(cap08, 'CAP08_REGISTRY_ENTRY_MISSING');
-  const rule = cap08.candidate_transition_fields.find((item) => item.status_file === S1_STATUS && item.field_path === 's1_candidate_implemented');
+  assert.ok(cap08.authoritative_candidate_status_paths.includes(S1_STATUS), 'CAP08_S1_STATUS_PATH_NOT_REGISTERED');
+  const rule = cap08.candidate_transition_fields.find(
+    (item) => item.status_file === S1_STATUS && item.field_path === 's1_candidate_implemented',
+  );
   assert.ok(rule, 'CAP08_S1_REGISTRY_RULE_MISSING');
   assert.deepEqual(rule.allowed_candidate_values, [true]);
+  assert.equal(typeof status.s1_candidate_implemented, 'boolean');
+  assert.equal(status.production_runtime_source_authorized, false);
+  assert.equal(status.effective_next_slice_when_attested, 'S2');
+
+  const baseStatus = readJsonAt(base, S1_STATUS);
+  const previous = baseStatus ? baseStatus.s1_candidate_implemented : false;
+  const current = status.s1_candidate_implemented;
+  assert.equal(typeof previous, 'boolean');
+  assert.equal(previous === true && current === false, false, 'S1_CANDIDATE_TRANSITION_ROLLBACK_FORBIDDEN');
+  const transition = previous === false && current === true;
+
+  if (current) {
+    assert.equal(status.candidate_field, 's1_candidate_implemented');
+    assert.equal(status.candidate_value, true);
+    assert.equal(status.focused_workflow, rule.focused_workflow);
+    assert.equal(status.standard_workflow, rule.standard_workflow);
+    assert.equal(status.effectiveness_condition, 'PRESENT_ON_MAIN_AND_EXACT_SHA_ATTESTATION_PASS');
+  }
+  if (transition) assert.ok(actual.includes(S1_STATUS), 'S1_STATUS_TRANSITION_FILE_MISSING');
+
+  return { previous, current, transition, rule };
 }
 
 function validateSettlement(actual) {
@@ -200,13 +227,16 @@ function accept(mode) {
     fn();
     checks.push({ name, status: 'PASS' });
   };
+  let successor = null;
 
   check('HEAD_DESCENDS_FROM_REQUIRED_AUTHORITY', () => {
     if (mode === 'S0_EXACT_AUTHORITY_MODE') assert.equal(base, S0_BASE);
     else assert.ok(isAncestor(S0_EFFECTIVE_SUBJECT, 'HEAD'));
   });
   check('CONDITIONAL_AUTHORITY_REMAINS_UNMUTATED', validateConditionalAuthority);
-  check('S1_SEED_AND_REGISTRY_RULE_REMAIN_FAIL_CLOSED', validateSuccessorSeedAndRegistry);
+  check('S1_STATUS_IS_FAIL_CLOSED_OR_REGISTERED_CANDIDATE', () => {
+    successor = validateSuccessorStatusAndRegistry(base, actual);
+  });
   check('PROTECTED_S0_SEMANTIC_FILES_REMAIN_BYTE_IDENTICAL', () => {
     if (mode !== 'S0_EXACT_AUTHORITY_MODE') assertProtectedS0FilesUnchanged();
   });
@@ -220,6 +250,12 @@ function accept(mode) {
     check('STEADY_STATE_HAS_ZERO_CHANGED_FILES', () => assert.deepEqual(actual, []));
   } else if (mode === 'POST_S0_SUCCESSOR_REGRESSION_MODE') {
     check('SUCCESSOR_PR_DOES_NOT_REWRITE_S0_AUTHORITY', assertProtectedS0FilesUnchanged);
+    check('REGISTERED_S1_TRANSITION_IS_EXPLICIT', () => {
+      if (successor.transition) {
+        assert.equal(successor.current, true);
+        assert.ok(actual.includes(S1_STATUS));
+      }
+    });
   } else if (mode === 'S0_EXACT_AUTHORITY_MODE') {
     check('ORIGINAL_S0_BOUNDARY_IS_EXACT', () => assert.deepEqual(actual, originalS0Files()));
   } else {
@@ -227,8 +263,9 @@ function accept(mode) {
   }
 
   while (checks.length < 12) checks.push({ name: `BOUNDARY_INVARIANT_${String(checks.length + 1).padStart(2, '0')}`, status: 'PASS' });
+  const runtimeSources = actual.filter((file) => /^apps\/server\/src\/(domain|runtime|persistence)\/twin_runtime\/.*\.ts$/.test(file));
   const result = {
-    schema_version: 'geox_mcft_cap08_post_s0_successor_boundary_result_v1',
+    schema_version: 'geox_mcft_cap08_post_s0_successor_boundary_result_v2',
     status: 'PASS',
     acceptance_mode: mode,
     base_sha: base,
@@ -236,8 +273,9 @@ function accept(mode) {
     changed_file_count: actual.length,
     check_count: checks.length,
     checks,
-    candidate_transition: false,
-    runtime_source_delta: 0,
+    candidate_transition: Boolean(successor?.transition),
+    candidate_slice: successor?.transition ? 'MCFT-CAP-08.S1' : null,
+    runtime_source_delta: runtimeSources.length,
     canonical_runtime_data_delta: 0,
     database_acl_delta: 0,
     production_runtime_source_authorized: false,
@@ -261,7 +299,7 @@ try {
   else throw new Error('USAGE: --resolve-mode | --accept-mode <MODE>');
 } catch (error) {
   const result = {
-    schema_version: 'geox_mcft_cap08_post_s0_successor_boundary_result_v1',
+    schema_version: 'geox_mcft_cap08_post_s0_successor_boundary_result_v2',
     status: 'FAIL',
     error: error instanceof Error ? error.message : String(error),
   };

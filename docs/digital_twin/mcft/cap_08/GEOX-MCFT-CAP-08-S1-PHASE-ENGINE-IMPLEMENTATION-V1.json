@@ -1,0 +1,140 @@
+{
+  "schema_version": "geox_mcft_cap08_s1_phase_engine_implementation_v1",
+  "record_status": "S1_IMPLEMENTATION_CANDIDATE",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S1",
+  "run_contract_id": "GEOX-MCFT-CAP-08-24-TICK-RUN-CONTRACT-V1",
+  "phase_contract_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-PHASE-ORCHESTRATION-CONTRACT-V1.json",
+  "phase_engine_contract_digest": "sha256:41428596e893112483a8695ccd7bc28dc19dee35c2c3bf29e78395a86133d466",
+  "phase_engine_source_digest": "sha256:68d4c42d300268842291956f32b48fdd0e70fb30f4f560f828f7fee7e9fd878a",
+  "phase_source_digest_algorithm": "SHA256_SORTED_PATH_NUL_BYTES_NUL_V1",
+  "phase_order": [
+    "resolve",
+    "E",
+    "H",
+    "A",
+    "B",
+    "G",
+    "C",
+    "barrier"
+  ],
+  "s1_providers": {
+    "E": "BASE_CONTROLLED_REPLAY_DATASET_ADAPTER",
+    "H": "EMPTY",
+    "A": "QUALIFIED_CAP04_STATE_AND_FORECAST_PROVIDER",
+    "B": "QUALIFIED_CAP04_SCENARIO_PROVIDER_WITH_DEFERRED_CANONICAL_COMMIT",
+    "G": "EMPTY",
+    "C": "EMPTY"
+  },
+  "s1_empty_providers": [
+    "H",
+    "G",
+    "C"
+  ],
+  "canonical_write_order": "A_THEN_B",
+  "deferred_b_contract": {
+    "scenario_math_owner": "CAP04_REUSED_UNCHANGED",
+    "a_commit_owner": "CAP04_REUSED_UNCHANGED",
+    "b_candidate_staged_in_process": true,
+    "b_canonical_commit_phase": "B",
+    "a_or_b_history_rewrite": false,
+    "idempotent_existing_b_readback": true,
+    "a_committed_b_missing_recovery": true
+  },
+  "source_files": [
+    "apps/server/src/domain/twin_runtime/cap08_phase_engine_contracts_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts",
+    "apps/server/src/runtime/twin_runtime/cap08_deferred_scenario_persistence_v1.ts",
+    "apps/server/src/runtime/twin_runtime/cap08_frozen_evidence_source_v1.ts",
+    "apps/server/src/runtime/twin_runtime/cap08_s1_base_range_service_v1.ts",
+    "apps/server/src/runtime/twin_runtime/cap08_s1_base_runtime_service_v1.ts",
+    "apps/server/src/runtime/twin_runtime/cap08_s1_base_tick_service_v1.ts"
+  ],
+  "slice_acceptance": {
+    "database_class": "FRESH_DISPOSABLE_POSTGRESQL_DATABASE",
+    "bounded_writer_identity": "geox_mcft_cap08_runner_v1",
+    "bootstrap_id": "B00",
+    "successful_tick_count": 24,
+    "bootstrap_inclusive_state_count": 25,
+    "successful_forecast_count": 24,
+    "forecast_point_count": 1728,
+    "scenario_set_count": 24,
+    "scenario_option_count": 72,
+    "scenario_point_count": 5184,
+    "final_formal_run_id": null,
+    "slice_acceptance_only": true
+  },
+  "s2_provider_qualification_preclaimed": false,
+  "final_formal_closure_executed": false,
+  "production_runtime_source_authorized": false,
+  "public_http_writer_authorized": false,
+  "background_scheduler_authorized": false,
+  "live_ingestion_authorized": false,
+  "model_activation_authorized": false,
+  "mcft_cap_09_authorized": false,
+  "a0_bootstrap_next_tick_snapshot_dispatch": {
+    "operation_variant": "A0_BOOTSTRAP_STATE_COMMIT",
+    "validation": "CANONICAL_FOUR_OBJECT_GRAPH",
+    "continuation_validator_used": false
+  },
+  "bounded_run_lease_contract": {
+    "owner_scope": "ONE_OWNER_PER_EXPLICIT_INVOCATION",
+    "bootstrap_and_tick_owner_reused": true,
+    "per_tick_owner_derivation": false,
+    "renewal": "SAME_OWNER_FENCING_TOKEN_INCREMENT",
+    "release_required_between_ticks": false
+  },
+  "authority_snapshot_persistence_contract": {
+    "table": "twin_runtime_authority_snapshot_v1",
+    "immutability": "INSERT_ONCE_EXACT_READBACK",
+    "write_algorithm": "INSERT_ON_CONFLICT_DO_NOTHING_THEN_SELECT_AND_VALIDATE",
+    "required_table_privileges": [
+      "SELECT",
+      "INSERT"
+    ],
+    "update_privilege_required": false,
+    "delete_privilege_required": false,
+    "acl_delta": 0
+  },
+  "shared_persistence_compatibility_fixes": {
+    "database_acl_delta": 0,
+    "required_immutable_guard_privileges": [
+      "SELECT",
+      "INSERT"
+    ],
+    "files": [
+      {
+        "path": "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
+        "guard": "twin_runtime_authority_snapshot_v1",
+        "algorithm": "INSERT_ON_CONFLICT_DO_NOTHING_THEN_EXACT_READBACK"
+      },
+      {
+        "path": "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts",
+        "guards": [
+          "twin_object_idempotency_index_v1"
+        ],
+        "operations": [
+          "RUNTIME_CONFIG",
+          "A0_RECORD_SET"
+        ],
+        "algorithm": "INSERT_ON_CONFLICT_DO_NOTHING_THEN_EXACT_READBACK"
+      },
+      {
+        "path": "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts",
+        "guards": [
+          "twin_object_idempotency_index_v1",
+          "twin_terminal_tick_uniqueness_v1",
+          "twin_scenario_set_uniqueness_v1"
+        ],
+        "operations": [
+          "A_RECORD_SET",
+          "B_SCENARIO_SET"
+        ],
+        "algorithm": "INSERT_RESERVATION_ON_CONFLICT_DO_NOTHING"
+      }
+    ],
+    "lease_and_mutable_pointer_row_locks_preserved": true
+  }
+}

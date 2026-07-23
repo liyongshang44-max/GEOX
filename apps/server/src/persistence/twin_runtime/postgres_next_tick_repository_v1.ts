@@ -29,6 +29,8 @@ function scopeValuesV1(scope: TwinScopeKeyV1): unknown[] {
   return [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id];
 }
 
+const A0_BOOTSTRAP_OPERATION_VARIANT_V1 = "A0_BOOTSTRAP_STATE_COMMIT" as const;
+
 function exactCap04TerminalTickV1(object: CanonicalObjectEnvelopeV1): boolean {
   if (object.object_type !== "twin_runtime_tick_v1") return false;
   const contractId = object.payload.record_set_contract_id;
@@ -46,6 +48,11 @@ function exactAssimilatedContinuationTickV1(object: CanonicalObjectEnvelopeV1): 
   const contractId = object.payload.record_set_contract_id;
   return contractId === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1
     || contractId === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V2;
+}
+
+function exactA0BootstrapTickV1(object: CanonicalObjectEnvelopeV1): boolean {
+  return object.object_type === "twin_runtime_tick_v1"
+    && object.payload.operation_variant === A0_BOOTSTRAP_OPERATION_VARIANT_V1;
 }
 
 function parseFactObjectRawV1(recordJsonValue: unknown): CanonicalObjectEnvelopeV1 {
@@ -76,6 +83,27 @@ function validateExactCap04SnapshotGraphV1(input: {
   if ((variant === CAP04_A1_OPERATION_VARIANT_V1 && forecastPayload.status !== "COMPLETED")
     || (variant === CAP04_A2_OPERATION_VARIANT_V1 && forecastPayload.status !== "BLOCKED")) {
     throw new Error("CAP04_EXACT_FORECAST_VARIANT_STATUS_MISMATCH");
+  }
+}
+
+function validateExactA0SnapshotGraphV1(input: {
+  tick: CanonicalObjectEnvelopeV1;
+  checkpoint: CanonicalObjectEnvelopeV1;
+  state: CanonicalObjectEnvelopeV1;
+  forecast: CanonicalObjectEnvelopeV1;
+}): void {
+  if (!exactA0BootstrapTickV1(input.tick)) throw new Error("A0_EXACT_TICK_DISPATCH_REQUIRED");
+  for (const member of [input.tick, input.checkpoint, input.state, input.forecast]) validateCanonicalObjectV1(member);
+  if (input.checkpoint.payload.checkpoint_kind !== "INITIAL") throw new Error("A0_EXACT_CHECKPOINT_KIND_MISMATCH");
+  if (input.forecast.payload.status !== "BLOCKED") throw new Error("A0_EXACT_FORECAST_STATUS_MISMATCH");
+  if (input.tick.payload.checkpoint_ref !== input.checkpoint.object_id) throw new Error("A0_EXACT_CHECKPOINT_REF_MISMATCH");
+  if (input.tick.payload.posterior_state_ref !== input.state.object_id) throw new Error("A0_EXACT_STATE_REF_MISMATCH");
+  if (input.tick.payload.forecast_result_ref !== input.forecast.object_id) throw new Error("A0_EXACT_FORECAST_REF_MISMATCH");
+  if (input.checkpoint.payload.last_completed_tick_ref !== input.tick.object_id) throw new Error("A0_EXACT_TICK_REF_MISMATCH");
+  if (input.checkpoint.payload.last_posterior_state_ref !== input.state.object_id) throw new Error("A0_EXACT_CHECKPOINT_STATE_REF_MISMATCH");
+  if (input.checkpoint.payload.forecast_result_ref !== input.forecast.object_id) throw new Error("A0_EXACT_CHECKPOINT_FORECAST_REF_MISMATCH");
+  if (input.checkpoint.payload.next_tick_logical_time !== input.tick.payload.next_tick_logical_time) {
+    throw new Error("A0_EXACT_NEXT_TICK_TIME_MISMATCH");
   }
 }
 
@@ -115,15 +143,30 @@ export class PostgresNextTickRepositoryV1 implements RuntimeAuthoritySnapshotRep
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
-      const existing = await client.query("SELECT determinism_hash,semantic_payload FROM twin_runtime_authority_snapshot_v1 WHERE authority_kind='REALITY_BINDING' AND authority_ref=$1 FOR UPDATE", [snapshot.binding_id]);
-      if (existing.rows.length) {
-        if (existing.rows[0].determinism_hash !== snapshot.determinism_hash || canonicalJsonV1(existing.rows[0].semantic_payload) !== canonicalJsonV1(snapshot)) throw new Error("REALITY_BINDING_SNAPSHOT_CONFLICT");
+      const inserted = await client.query(
+        `INSERT INTO twin_runtime_authority_snapshot_v1
+         (authority_kind,authority_ref,determinism_hash,semantic_payload)
+         VALUES ('REALITY_BINDING',$1,$2,$3::jsonb)
+         ON CONFLICT (authority_kind,authority_ref) DO NOTHING
+         RETURNING authority_ref`,
+        [snapshot.binding_id, snapshot.determinism_hash, JSON.stringify(snapshot)],
+      );
+      if (inserted.rows.length === 1) {
         await client.query("COMMIT");
-        return { status: "EXISTING_IDEMPOTENT_SUCCESS", binding_id: snapshot.binding_id };
+        return { status: "INSERTED", binding_id: snapshot.binding_id };
       }
-      await client.query("INSERT INTO twin_runtime_authority_snapshot_v1 (authority_kind,authority_ref,determinism_hash,semantic_payload) VALUES ('REALITY_BINDING',$1,$2,$3::jsonb)", [snapshot.binding_id, snapshot.determinism_hash, JSON.stringify(snapshot)]);
+      if (inserted.rows.length !== 0) throw new Error("REALITY_BINDING_SNAPSHOT_INSERT_CARDINALITY");
+      const existing = await client.query(
+        "SELECT determinism_hash,semantic_payload FROM twin_runtime_authority_snapshot_v1 WHERE authority_kind='REALITY_BINDING' AND authority_ref=$1",
+        [snapshot.binding_id],
+      );
+      if (existing.rows.length !== 1) throw new Error("REALITY_BINDING_SNAPSHOT_CONFLICT");
+      if (existing.rows[0].determinism_hash !== snapshot.determinism_hash
+        || canonicalJsonV1(existing.rows[0].semantic_payload) !== canonicalJsonV1(snapshot)) {
+        throw new Error("REALITY_BINDING_SNAPSHOT_CONFLICT");
+      }
       await client.query("COMMIT");
-      return { status: "INSERTED", binding_id: snapshot.binding_id };
+      return { status: "EXISTING_IDEMPOTENT_SUCCESS", binding_id: snapshot.binding_id };
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
@@ -179,6 +222,13 @@ export class PostgresNextTickRepositoryV1 implements RuntimeAuthoritySnapshotRep
       const lastTerminalTick = await this.readCanonicalObjectRawV1(client, lastCompletedTickRef, "twin_runtime_tick_v1");
       if (exactCap04TerminalTickV1(lastTerminalTick)) {
         validateExactCap04SnapshotGraphV1({
+          tick: lastTerminalTick,
+          checkpoint,
+          state: previousPosterior,
+          forecast: previousForecastResult,
+        });
+      } else if (exactA0BootstrapTickV1(lastTerminalTick)) {
+        validateExactA0SnapshotGraphV1({
           tick: lastTerminalTick,
           checkpoint,
           state: previousPosterior,

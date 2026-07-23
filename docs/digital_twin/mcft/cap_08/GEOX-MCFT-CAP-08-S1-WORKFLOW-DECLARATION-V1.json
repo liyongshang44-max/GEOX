@@ -1,0 +1,42 @@
+{
+  "schema_version": "geox_mcft_cap08_s1_workflow_declaration_v1",
+  "record_status": "S1_WORKFLOW_CANDIDATE",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S1",
+  "candidate_workflow": {
+    "name": "mcft-cap-08-s1-base-runtime",
+    "path": ".github/workflows/mcft-cap-08-s1-base-runtime.yml",
+    "exact_head_checkout": true,
+    "fresh_postgresql_database": "geox_mcft_cap08_s1_candidate",
+    "bounded_writer_identity": "geox_mcft_cap08_runner_v1",
+    "runs_server_typecheck": true,
+    "runs_exact_changed_file_boundary": true,
+    "runs_b00_plus_24_tick_acceptance": true,
+    "runs_final_formal_closure": false,
+    "artifact_retention_days": 90,
+    "validates_select_insert_only_authority_snapshot_idempotency": true,
+    "changed_file_count": 24,
+    "database_acl_delta": "ZERO",
+    "validates_select_insert_only_immutable_guard_idempotency": true,
+    "shared_persistence_compatibility_fix_count": 3,
+    "validates_registered_post_s0_candidate_transition": true,
+    "validates_a0_bootstrap_next_tick_snapshot_dispatch": true,
+    "validates_single_bounded_run_lease_owner": true
+  },
+  "exact_sha_workflow": {
+    "name": "mcft-cap-08-slice-exact-sha-attestation",
+    "path": ".github/workflows/mcft-cap-08-slice-exact-sha-attestation.yml",
+    "exact_subject_checkout": true,
+    "requires_candidate_merge_tree_equality": true,
+    "reexecutes_fresh_postgresql_acceptance": true,
+    "retention_level": "R1",
+    "retention_days": 180,
+    "status_context": "mcft-cap-08/slice-exact-sha-attestation",
+    "postmerge_repository_writeback": false
+  },
+  "standard_workflow": "ci",
+  "production_runtime_source_authorized": false,
+  "public_http_writer_authorized": false,
+  "background_scheduler_authorized": false,
+  "mcft_cap_09_authorized": false
+}
