@@ -1,30 +1,237 @@
 #!/usr/bin/env node
 'use strict';
-const a=require('node:assert/strict'),c=require('node:child_process'),f=require('node:fs'),p=require('node:path');
-const R=p.resolve(__dirname,'../..'),O=p.join(R,'acceptance-output/MCFT_CAP_08_S2_BOUNDARY_RESULT.json');
-const M='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-CHANGED-FILE-BOUNDARY-V1.json',S='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-DELIVERY-STATUS-V1.json',I='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-IMPLEMENTATION-V1.json',W='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-WORKFLOW-DECLARATION-V1.json',P='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-PREDECESSOR-CONSUMPTION-V1.json',V='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-OWNER-REVIEW-WAIVER-V1.json',G='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-PRE-CANDIDATE-ENTRY-GATES-V1.json';
-const PREP='da8d5456748ea817fae662937404766473af6459',G3='65b0d8fc3f73c0b343146e5b616cb439ad972149',S1='f39b7df37571156f23cfb9153bad024fdb723261',OWNER_BLOB='4f9bc646d67b62c1179af88c438ea982ad24d407',GATES_BLOB='f01c638219e68b16329104c5bc452de5dc09545d';
-const PROVIDER=["apps/server/src/domain/twin_runtime/cap08_s2_formal_provider_contracts_v1.ts", "apps/server/src/runtime/twin_runtime/cap08_s2_qualified_evidence_source_v1.ts", "apps/server/src/runtime/twin_runtime/cap08_s2_formal_provider_qualification_service_v1.ts", "scripts/runtime_acceptance/mcft_cap08_s2_formal_provider_fixture_v1.ts"];
-const G3CORE=["apps/server/src/domain/twin_runtime/cap08_completion_authority_contracts_v1.ts", "apps/server/src/persistence/twin_runtime/postgres_completion_authority_repository_v1.ts", "apps/server/src/runtime/twin_runtime/a0_bootstrap_runtime_service_v1.ts", "apps/server/src/runtime/twin_runtime/cap08_completion_authority_service_v1.ts", "apps/server/src/runtime/twin_runtime/cap08_s1_base_range_service_v1.ts", "apps/server/src/runtime/twin_runtime/cap08_s1_base_runtime_service_v1.ts", "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_COMPLETION_AUTHORITY_NEGATIVE_DB.ts", "scripts/runtime_acceptance/mcft_cap08_s2_g3_acceptance_support_v1.ts", "scripts/runtime_acceptance/mcft_cap08_s2_g3_negative_cases_v1.ts"];
-const git=x=>c.execFileSync('git',x,{cwd:R,encoding:'utf8'}).trim(),j=x=>JSON.parse(f.readFileSync(p.join(R,x),'utf8'));
-const write=x=>{f.mkdirSync(p.dirname(O),{recursive:true});f.writeFileSync(O,JSON.stringify(x,null,2)+'\n')};
-const files=(b,h='HEAD')=>{const q=git(['diff','--name-only',`${b}...${h}`]);return q?q.split(/\r?\n/).filter(Boolean).sort():[]};
-try{
- const b=String(process.env.MCFT_BASE_SHA||'').trim();a.match(b,/^[0-9a-f]{40}$/);a.equal(git(['merge-base',b,'HEAD']),b);a.equal(git(['diff','--check',`${b}...HEAD`]),'');
- const m=j(M),actual=files(b);a.equal(m.base_sha,'e68e7d1f12025726aad2c1d9edccf82a82058ee9');a.equal(m.changed_file_count,12);a.deepEqual(actual,[...m.changed_files].sort());a.equal(Number(git(['rev-list','--count',`${b}..HEAD`])),1);
- const s=j(S),i=j(I),w=j(W),pred=j(P),v=j(V),g=j(G);
- a.equal(s.s2_candidate_implemented,true);a.equal(s.delivery_state,'CANDIDATE_IMPLEMENTED_AWAITING_PROTECTED_MERGE_AND_EXACT_SHA_ATTESTATION');a.equal(s.focused_workflow,'mcft-cap-08-s2-forcing-state-forecast');a.equal(s.standard_workflow,'ci');a.equal(s.independent_review_satisfied,false);a.equal(s.independent_review_waived,true);a.equal(s.s2_effective,false);a.equal(s.s3_authorized,false);a.equal(s.production_runtime_source_authorized,false);
- a.equal(v.independent_review_satisfied,false);a.equal(v.independent_review_performed,false);a.equal(v.independent_review_waived,true);a.equal(v.waiver_effect.technical_gate_relaxation,false);
- a.equal(git(['rev-parse',`HEAD:${V}`]),OWNER_BLOB);a.equal(git(['rev-parse',`HEAD:${G}`]),GATES_BLOB);
- a.equal(i.formal_provider_contract_digest,'sha256:4ac1b1f9175e54a7560e5d7c907d8b31f2a39179e6f140a25ebcc17eb99dc8d1');a.equal(i.formal_provider_preparation_merge,PREP);a.equal(i.completion_authority_merge,G3);a.equal(i.formal_run.successful_tick_count,24);a.equal(i.formal_run.forecast_point_count,1728);a.deepEqual(i.selected_state_observations_by_tick,{T02:'FVO-02',T03:'FVO-03',T04:'FVO-04',T10:'FVO-10',T22:'FVO-22'});a.equal(i.quarantine.residual_only_count,17);a.equal(i.quarantine.late_state_correction_count,1);
- for(const x of PROVIDER)a.equal(git(['rev-parse',`HEAD:${x}`]),git(['rev-parse',`${PREP}:${x}`]),`PROVIDER_SOURCE_DRIFT:${x}`);
- for(const x of G3CORE)a.equal(git(['rev-parse',`HEAD:${x}`]),git(['rev-parse',`${G3}:${x}`]),`G3_CORE_DRIFT:${x}`);
- a.equal(pred.predecessor_merge_subject,S1);a.equal(pred.predecessor_exact_sha_workflow_run,29980589779);a.equal(pred.predecessor_exact_sha_artifact_id,8553043184);a.equal(pred.predecessor_semantic_artifact_digest,'sha256:7f8e6d61f038ddfd6a6b86430c230fc7e36509011d4131bae1670034ff2b74bc');a.equal(pred.predecessor_effective_status,'S1_BASE_RUNTIME_IMPLEMENTED_EFFECTIVE');a.equal(pred.effective_next_slice,'S2');a.equal(pred.readback_verified,true);
- a.equal(w.candidate_workflow.runs_provider_positive_and_source_negatives,true);a.equal(w.candidate_workflow.runs_completion_authority_n1_n14,true);a.equal(w.exact_sha_workflow.replays_boundary_on_detached_candidate_sha,true);a.equal(w.exact_sha_workflow.upload_readback_required,true);
- const fy=f.readFileSync(p.join(R,'.github/workflows/mcft-cap-08-s2-forcing-state-forecast.yml'),'utf8'),ey=f.readFileSync(p.join(R,'.github/workflows/mcft-cap-08-s2-exact-sha-attestation.yml'),'utf8');
- for(const x of ['ACCEPTANCE_MCFT_CAP_08_S2_BOUNDARY.cjs','ACCEPTANCE_MCFT_CAP_08_S2_FORCING_STATE_FORECAST_DB.ts','ACCEPTANCE_MCFT_CAP_08_S2_COMPLETION_AUTHORITY_NEGATIVE_DB.ts','mcft_cap08_s2_artifact_finalize.cjs'])a.ok(fy.includes(x),`FOCUSED_WORKFLOW_MISSING:${x}`);
- for(const x of ['ACCEPTANCE_MCFT_CAP_08_S2_EXACT_SHA_ATTESTATION.cjs','ACCEPTANCE_MCFT_CAP_08_S2_BOUNDARY.cjs','ACCEPTANCE_MCFT_CAP_08_S2_FORCING_STATE_FORECAST_DB.ts','ACCEPTANCE_MCFT_CAP_08_S2_COMPLETION_AUTHORITY_NEGATIVE_DB.ts','mcft_cap08_s2_artifact_finalize.cjs','mcft_attestation_retention_store_v1.cjs'])a.ok(ey.includes(x),`EXACT_WORKFLOW_MISSING:${x}`);
- a.doesNotMatch(fy,/workflow_dispatch/);a.match(ey,/workflow_dispatch/);
- const forbidden=actual.filter(x=>x.startsWith('apps/web/')||x.startsWith('apps/server/src/routes/')||x.startsWith('apps/server/db/migrations/')||x.startsWith('docker/postgres/init/')||x.includes('scheduler')||x.includes('model_activation'));a.deepEqual(forbidden,[]);
- const result={schema_version:'geox_mcft_cap08_s2_boundary_result_v1',status:'PASS',base_sha:b,candidate_sha:git(['rev-parse','HEAD']),commit_count:1,changed_file_count:actual.length,changed_files:actual,provider_source_merge:PREP,completion_authority_merge:G3,provider_source_file_count:PROVIDER.length,g3_core_file_count:G3CORE.length,owner_review_waived:true,independent_review_satisfied:false,s2_candidate_implemented:true,s2_effective:false,s3_authorized:false,production_runtime_source_authorized:false};write(result);console.log(JSON.stringify(result));
-}catch(e){write({schema_version:'geox_mcft_cap08_s2_boundary_result_v1',status:'FAIL',error:e.message});console.error(e);process.exitCode=1}
+
+const assert = require('node:assert/strict');
+const cp = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const ROOT = path.resolve(__dirname, '../..');
+const OUTPUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_08_S2_BOUNDARY_RESULT.json');
+const FORMAL_BASE = 'e68e7d1f12025726aad2c1d9edccf82a82058ee9';
+const FAILED_EXACT_MERGE = '15d26d86ff955bab982871adf6e1bd8c75b07972';
+const PREP = 'da8d5456748ea817fae662937404766473af6459';
+const G3 = '65b0d8fc3f73c0b343146e5b616cb439ad972149';
+const S1 = 'f39b7df37571156f23cfb9153bad024fdb723261';
+
+const MANIFEST = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-CHANGED-FILE-BOUNDARY-V1.json';
+const STATUS = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-DELIVERY-STATUS-V1.json';
+const IMPLEMENTATION = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-IMPLEMENTATION-V1.json';
+const WORKFLOW_DECLARATION = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-WORKFLOW-DECLARATION-V1.json';
+const PREDECESSOR = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-PREDECESSOR-CONSUMPTION-V1.json';
+const OWNER_WAIVER = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-OWNER-REVIEW-WAIVER-V1.json';
+const ENTRY_GATES = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-PRE-CANDIDATE-ENTRY-GATES-V1.json';
+const EXACT_SCRIPT = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_EXACT_SHA_ATTESTATION.cjs';
+const BOUNDARY_SCRIPT = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_BOUNDARY.cjs';
+
+const PROVIDER = [
+  'apps/server/src/domain/twin_runtime/cap08_s2_formal_provider_contracts_v1.ts',
+  'apps/server/src/runtime/twin_runtime/cap08_s2_qualified_evidence_source_v1.ts',
+  'apps/server/src/runtime/twin_runtime/cap08_s2_formal_provider_qualification_service_v1.ts',
+  'scripts/runtime_acceptance/mcft_cap08_s2_formal_provider_fixture_v1.ts',
+];
+const G3_CORE = [
+  'apps/server/src/domain/twin_runtime/cap08_completion_authority_contracts_v1.ts',
+  'apps/server/src/persistence/twin_runtime/postgres_completion_authority_repository_v1.ts',
+  'apps/server/src/runtime/twin_runtime/a0_bootstrap_runtime_service_v1.ts',
+  'apps/server/src/runtime/twin_runtime/cap08_completion_authority_service_v1.ts',
+  'apps/server/src/runtime/twin_runtime/cap08_s1_base_range_service_v1.ts',
+  'apps/server/src/runtime/twin_runtime/cap08_s1_base_runtime_service_v1.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_COMPLETION_AUTHORITY_NEGATIVE_DB.ts',
+  'scripts/runtime_acceptance/mcft_cap08_s2_g3_acceptance_support_v1.ts',
+  'scripts/runtime_acceptance/mcft_cap08_s2_g3_negative_cases_v1.ts',
+];
+const REMEDIATION_FILES = [BOUNDARY_SCRIPT, EXACT_SCRIPT].sort();
+const FORMAL_FILES_FROZEN_ON_REMEDIATION = [
+  '.github/workflows/mcft-cap-08-s2-exact-sha-attestation.yml',
+  '.github/workflows/mcft-cap-08-s2-forcing-state-forecast.yml',
+  MANIFEST,
+  STATUS,
+  IMPLEMENTATION,
+  PREDECESSOR,
+  WORKFLOW_DECLARATION,
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs',
+  'scripts/governance_acceptance/mcft_cap08_s2_artifact_finalize.cjs',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_FORCING_STATE_FORECAST_DB.ts',
+];
+
+function git(args) {
+  return cp.execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
+}
+function readJson(relative) {
+  return JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
+}
+function read(relative) {
+  return fs.readFileSync(path.join(ROOT, relative), 'utf8');
+}
+function write(value) {
+  fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
+  fs.writeFileSync(OUTPUT, `${JSON.stringify(value, null, 2)}\n`);
+}
+function changedFiles(base, head = 'HEAD') {
+  const raw = git(['diff', '--name-only', `${base}...${head}`]);
+  return raw ? raw.split(/\r?\n/).filter(Boolean).sort() : [];
+}
+function freezeAgainst(subject, files) {
+  const mismatches = [];
+  for (const file of files) {
+    const historicalBlob = git(['rev-parse', `${subject}:${file}`]);
+    const currentBlob = git(['rev-parse', `HEAD:${file}`]);
+    if (historicalBlob !== currentBlob) mismatches.push({ file, historical_blob: historicalBlob, current_blob: currentBlob });
+  }
+  assert.deepEqual(mismatches, [], 'FROZEN_FORMAL_CANDIDATE_DRIFT');
+  return { subject, file_count: files.length, mismatches };
+}
+function validateState() {
+  const status = readJson(STATUS);
+  const implementation = readJson(IMPLEMENTATION);
+  const declaration = readJson(WORKFLOW_DECLARATION);
+  const predecessor = readJson(PREDECESSOR);
+  const waiver = readJson(OWNER_WAIVER);
+  const gates = readJson(ENTRY_GATES);
+
+  assert.equal(status.s2_candidate_implemented, true);
+  assert.equal(status.delivery_state, 'CANDIDATE_IMPLEMENTED_AWAITING_PROTECTED_MERGE_AND_EXACT_SHA_ATTESTATION');
+  assert.equal(status.focused_workflow, 'mcft-cap-08-s2-forcing-state-forecast');
+  assert.equal(status.standard_workflow, 'ci');
+  assert.equal(status.independent_review_satisfied, false);
+  assert.equal(status.independent_review_waived, true);
+  assert.equal(status.s2_effective, false);
+  assert.equal(status.s3_authorized, false);
+  assert.equal(status.production_runtime_source_authorized, false);
+
+  assert.equal(waiver.independent_review_satisfied, false);
+  assert.equal(waiver.independent_review_performed, false);
+  assert.equal(waiver.independent_review_waived, true);
+  assert.equal(waiver.waiver_effect.technical_gate_relaxation, false);
+  assert.equal(gates.production_runtime_source_authorized, false);
+  assert.equal(gates.mcft_cap_09_authorized, false);
+
+  assert.equal(implementation.formal_provider_contract_digest, 'sha256:4ac1b1f9175e54a7560e5d7c907d8b31f2a39179e6f140a25ebcc17eb99dc8d1');
+  assert.equal(implementation.formal_provider_preparation_merge, PREP);
+  assert.equal(implementation.completion_authority_merge, G3);
+  assert.equal(implementation.formal_run.successful_tick_count, 24);
+  assert.equal(implementation.formal_run.forecast_point_count, 1728);
+  assert.deepEqual(implementation.selected_state_observations_by_tick, {
+    T02: 'FVO-02', T03: 'FVO-03', T04: 'FVO-04', T10: 'FVO-10', T22: 'FVO-22',
+  });
+  assert.equal(implementation.quarantine.residual_only_count, 17);
+  assert.equal(implementation.quarantine.late_state_correction_count, 1);
+
+  for (const file of PROVIDER) {
+    assert.equal(git(['rev-parse', `HEAD:${file}`]), git(['rev-parse', `${PREP}:${file}`]), `PROVIDER_SOURCE_DRIFT:${file}`);
+  }
+  for (const file of G3_CORE) {
+    assert.equal(git(['rev-parse', `HEAD:${file}`]), git(['rev-parse', `${G3}:${file}`]), `G3_CORE_DRIFT:${file}`);
+  }
+
+  assert.equal(predecessor.predecessor_merge_subject, S1);
+  assert.equal(predecessor.predecessor_exact_sha_workflow_run, 29980589779);
+  assert.equal(predecessor.predecessor_exact_sha_artifact_id, 8553043184);
+  assert.equal(predecessor.predecessor_semantic_artifact_digest, 'sha256:7f8e6d61f038ddfd6a6b86430c230fc7e36509011d4131bae1670034ff2b74bc');
+  assert.equal(predecessor.predecessor_effective_status, 'S1_BASE_RUNTIME_IMPLEMENTED_EFFECTIVE');
+  assert.equal(predecessor.effective_next_slice, 'S2');
+  assert.equal(predecessor.readback_verified, true);
+
+  assert.equal(declaration.candidate_workflow.runs_provider_positive_and_source_negatives, true);
+  assert.equal(declaration.candidate_workflow.runs_completion_authority_n1_n14, true);
+  assert.equal(declaration.exact_sha_workflow.replays_boundary_on_detached_candidate_sha, true);
+  assert.equal(declaration.exact_sha_workflow.upload_readback_required, true);
+  return { status };
+}
+
+try {
+  const base = String(process.env.MCFT_BASE_SHA || '').trim();
+  assert.match(base, /^[0-9a-f]{40}$/);
+  assert.equal(git(['merge-base', base, 'HEAD']), base);
+  assert.equal(git(['diff', '--check', `${base}...HEAD`]), '');
+  const actual = changedFiles(base);
+  const commitCount = Number(git(['rev-list', '--count', `${base}..HEAD`]));
+  assert.equal(commitCount, 1, 'S2_BOUNDARY_ONE_COMMIT_REQUIRED');
+
+  const { status } = validateState();
+  let classification;
+  let frozenCandidate = null;
+
+  if (base === FORMAL_BASE) {
+    const manifest = readJson(MANIFEST);
+    assert.equal(manifest.base_sha, FORMAL_BASE);
+    assert.equal(manifest.changed_file_count, 12);
+    assert.deepEqual(actual, [...manifest.changed_files].sort());
+    classification = 'FORMAL_S2_CANDIDATE_MODE';
+  } else if (base === FAILED_EXACT_MERGE) {
+    assert.deepEqual(actual, REMEDIATION_FILES, 'EXACT_SHA_REMEDIATION_EXACT_FILES');
+    frozenCandidate = freezeAgainst(FAILED_EXACT_MERGE, FORMAL_FILES_FROZEN_ON_REMEDIATION);
+    const verifier = read(EXACT_SCRIPT);
+    assert.match(verifier, /MCFT_CAP08_S2_EXACT_SHA_REMEDIATION_V1/);
+    assert.match(verifier, /MCFT_CANDIDATE_DECLARATION_V2/);
+    assert.match(verifier, /ORIGINAL_CANDIDATE_PR = 2637/);
+    assert.match(verifier, /\/commits\/\$\{subject\}\/pulls/);
+    assert.match(verifier, /pull\.merge_commit_sha === subject/);
+    assert.match(verifier, /\/pulls\/\$\{ORIGINAL_CANDIDATE_PR\}/);
+    assert.doesNotMatch(verifier, /\/puls/);
+    assert.doesNotMatch(verifier, /imerge_commit_sha/);
+    assert.match(verifier, /MERGED_PULLS_API_PATH_INVALID/);
+    classification = 'EXACT_SHA_VERIFIER_REMEDIATION_MODE';
+  } else {
+    throw new Error(`S2_BOUNDARY_BASE_UNAUTHORIZED:${base}`);
+  }
+
+  const focused = read('.github/workflows/mcft-cap-08-s2-forcing-state-forecast.yml');
+  const exact = read('.github/workflows/mcft-cap-08-s2-exact-sha-attestation.yml');
+  for (const token of [
+    'ACCEPTANCE_MCFT_CAP_08_S2_BOUNDARY.cjs',
+    'ACCEPTANCE_MCFT_CAP_08_S2_FORCING_STATE_FORECAST_DB.ts',
+    'ACCEPTANCE_MCFT_CAP_08_S2_COMPLETION_AUTHORITY_NEGATIVE_DB.ts',
+    'mcft_cap08_s2_artifact_finalize.cjs',
+  ]) assert.ok(focused.includes(token), `FOCUSED_WORKFLOW_MISSING:${token}`);
+  for (const token of [
+    'ACCEPTANCE_MCFT_CAP_08_S2_EXACT_SHA_ATTESTATION.cjs',
+    'ACCEPTANCE_MCFT_CAP_08_S2_BOUNDARY.cjs',
+    'ACCEPTANCE_MCFT_CAP_08_S2_FORCING_STATE_FORECAST_DB.ts',
+    'ACCEPTANCE_MCFT_CAP_08_S2_COMPLETION_AUTHORITY_NEGATIVE_DB.ts',
+    'mcft_cap08_s2_artifact_finalize.cjs',
+    'mcft_attestation_retention_store_v1.cjs',
+  ]) assert.ok(exact.includes(token), `EXACT_WORKFLOW_MISSING:${token}`);
+  assert.doesNotMatch(focused, /workflow_dispatch/);
+  assert.match(exact, /workflow_dispatch/);
+
+  const forbidden = actual.filter((file) =>
+    file.startsWith('apps/web/') ||
+    file.startsWith('apps/server/src/routes/') ||
+    file.startsWith('apps/server/db/migrations/') ||
+    file.startsWith('docker/postgres/init/') ||
+    file.includes('scheduler') ||
+    file.includes('model_activation'));
+  assert.deepEqual(forbidden, []);
+
+  const result = {
+    schema_version: 'geox_mcft_cap08_s2_boundary_result_v4',
+    status: 'PASS',
+    classification,
+    base_sha: base,
+    candidate_sha: git(['rev-parse', 'HEAD']),
+    commit_count: commitCount,
+    changed_file_count: actual.length,
+    changed_files: actual,
+    frozen_formal_candidate: frozenCandidate,
+    provider_source_merge: PREP,
+    completion_authority_merge: G3,
+    owner_review_waived: true,
+    independent_review_satisfied: false,
+    s2_candidate_implemented: status.s2_candidate_implemented,
+    s2_effective: false,
+    s3_authorized: false,
+    production_runtime_source_authorized: false,
+  };
+  write(result);
+  console.log(JSON.stringify(result));
+} catch (error) {
+  write({
+    schema_version: 'geox_mcft_cap08_s2_boundary_result_v4',
+    status: 'FAIL',
+    error: error instanceof Error ? error.message : String(error),
+  });
+  console.error(error);
+  process.exitCode = 1;
+}
