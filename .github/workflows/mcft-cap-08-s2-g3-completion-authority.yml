@@ -1,0 +1,97 @@
+name: mcft-cap-08-s2-g3-completion-authority
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/domain/twin_runtime/cap08_completion_authority_contracts_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_completion_authority_repository_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/a0_bootstrap_runtime_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/cap08_completion_authority_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/cap08_s1_base_range_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/cap08_s1_base_runtime_service_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_COMPLETION_AUTHORITY_NEGATIVE_DB.ts'
+      - 'scripts/runtime_acceptance/mcft_cap08_s2_g3_acceptance_support_v1.ts'
+      - 'scripts/runtime_acceptance/mcft_cap08_s2_g3_negative_cases_v1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_G3_BOUNDARY.cjs'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-PRE-CANDIDATE-ENTRY-GATES-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-DELIVERY-STATUS-V1.json'
+      - '.github/workflows/mcft-cap-08-s2-g3-completion-authority.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap-08-s2-g3-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  g3-completion-authority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.11.1, cache: pnpm }
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck server and G3 scripts
+        run: pnpm --filter @geox/server typecheck
+      - name: Validate exact G3 boundary and machine state
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_G3_BOUNDARY.cjs
+      - name: Bootstrap fresh bounded-writer database
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_s2_g3_candidate
+          MCFT_CAP08_RUNNER_PASSWORD: cap08-s2-g3-runner-password
+          MCFT_CAP08_MIGRATOR_PASSWORD: cap08-s2-g3-migrator-password
+          MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: cap08-s2-g3-legacy-runtime-password
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+      - name: Execute completion authority positive proof and PostgreSQL N1-N14
+        env:
+          DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap08-s2-g3-runner-password@127.0.0.1:5432/geox_mcft_cap08_s2_g3_candidate
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap08_s2_g3_candidate
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: |
+          mkdir -p acceptance-output
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_COMPLETION_AUTHORITY_NEGATIVE_DB.ts 2>&1 \
+            | tee acceptance-output/MCFT_CAP_08_S2_G3_RUNTIME_EXECUTION.log
+      - name: Cleanup fresh database
+        if: always()
+        env: { PGPASSWORD: postgres }
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='geox_mcft_cap08_s2_g3_candidate' AND pid<>pg_backend_pid();"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS geox_mcft_cap08_s2_g3_candidate;"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-08-s2-g3-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/
+          if-no-files-found: error
+          retention-days: 90

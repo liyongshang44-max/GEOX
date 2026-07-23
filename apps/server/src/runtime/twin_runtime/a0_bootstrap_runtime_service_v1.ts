@@ -1,5 +1,5 @@
 // apps/server/src/runtime/twin_runtime/a0_bootstrap_runtime_service_v1.ts
-// Purpose: orchestrate one controlled Replay A0 bootstrap by loading and validating Evidence before any canonical write, then persisting immutable Runtime Config, checking A0 idempotency before lease, and committing the nine-object record set atomically.
+// Purpose: orchestrate one controlled Replay A0 bootstrap and provide an explicit read-only exact reconstruction path for completed-run replay.
 // Boundary: A0 integration only; no propagation, successful Forecast, Scenario, Recommendation, AO-ACT, routes, scheduler, restart/backfill, or wall-clock reads.
 
 import type { SoilHydraulicBoundsV1 } from "../../domain/twin_runtime/physical_bounds_v1.js";
@@ -40,6 +40,12 @@ function nextTickFromRecordSetV1(recordSet: A0RecordSetV1): string {
   return nextTick;
 }
 
+function validateInputV1(input: ExecuteA0BootstrapInputV1): void {
+  if (input.runtime_config.object_type !== "twin_runtime_config_v1") throw new Error("RUNTIME_CONFIG_OBJECT_TYPE_REQUIRED");
+  if (!input.lease_owner) throw new Error("LEASE_OWNER_REQUIRED");
+  if (!Number.isInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0) throw new Error("LEASE_DURATION_INVALID");
+}
+
 export class A0BootstrapRuntimeServiceV1 {
   constructor(
     private readonly runtimeConfigRepository: RuntimeConfigRepositoryPortV1,
@@ -47,11 +53,11 @@ export class A0BootstrapRuntimeServiceV1 {
     private readonly evidenceSource: ReplayEvidenceSourcePortV1,
   ) {}
 
-  async execute(input: ExecuteA0BootstrapInputV1): Promise<ExecuteA0BootstrapResultV1> {
-    if (input.runtime_config.object_type !== "twin_runtime_config_v1") throw new Error("RUNTIME_CONFIG_OBJECT_TYPE_REQUIRED");
-    if (!input.lease_owner) throw new Error("LEASE_OWNER_REQUIRED");
-    if (!Number.isInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0) throw new Error("LEASE_DURATION_INVALID");
-
+  private async buildCandidateV1(input: ExecuteA0BootstrapInputV1): Promise<{
+    evidenceWindow: FrozenEvidenceWindowV1;
+    recordSet: A0RecordSetV1;
+  }> {
+    validateInputV1(input);
     const candidateRecords = await this.evidenceSource.loadCandidateRecords({ scope: input.scope, logical_time: input.logical_time });
     const evidenceWindow = buildFrozenEvidenceWindowV1({
       scope: input.scope,
@@ -67,7 +73,33 @@ export class A0BootstrapRuntimeServiceV1 {
       hydraulic: input.hydraulic,
       soil_hydraulic_config_ref: input.soil_hydraulic_config_ref,
     });
+    return { evidenceWindow, recordSet };
+  }
 
+  async readExisting(input: ExecuteA0BootstrapInputV1): Promise<ExecuteA0BootstrapResultV1> {
+    const { evidenceWindow, recordSet } = await this.buildCandidateV1(input);
+    const persistedConfig = await this.runtimeConfigRepository.readRuntimeConfig(input.runtime_config.object_id);
+    if (!persistedConfig || persistedConfig.determinism_hash !== input.runtime_config.determinism_hash) {
+      throw new Error("CAP08_B00_RUNTIME_CONFIG_NOT_ESTABLISHED_EXACT");
+    }
+    const existing = await this.persistence.lookupA0RecordSet(recordSet.a0_idempotency_key);
+    if (!existing
+      || existing.a0_record_set_id !== recordSet.a0_record_set_id
+      || existing.a0_record_set_determinism_hash !== recordSet.a0_record_set_determinism_hash) {
+      throw new Error("CAP08_B00_RECORD_SET_NOT_ESTABLISHED_EXACT");
+    }
+    return {
+      status: "EXISTING_IDEMPOTENT_SUCCESS",
+      runtime_config_status: "EXISTING_IDEMPOTENT_SUCCESS",
+      evidence_window: evidenceWindow,
+      record_set: existing,
+      fact_ids_by_object_id: Object.fromEntries(existing.members.map((member) => [member.object_id, `fact_${member.object_id}`])),
+      next_tick_logical_time: nextTickFromRecordSetV1(existing),
+    };
+  }
+
+  async execute(input: ExecuteA0BootstrapInputV1): Promise<ExecuteA0BootstrapResultV1> {
+    const { evidenceWindow, recordSet } = await this.buildCandidateV1(input);
     const runtimeConfigCommit = await this.runtimeConfigRepository.commitRuntimeConfig(input.runtime_config);
     const existing = await this.persistence.lookupA0RecordSet(recordSet.a0_idempotency_key);
     if (existing) {

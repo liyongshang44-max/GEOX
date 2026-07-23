@@ -1,6 +1,6 @@
 {
   "schema_version": "geox_mcft_cap08_s2_pre_candidate_entry_gates_v1",
-  "record_status": "PRE_CANDIDATE_ENTRY_GATE_FOUNDATION",
+  "record_status": "PRE_CANDIDATE_G3_IMPLEMENTED_CANDIDATE",
   "capability_line_id": "MCFT-CAP-08",
   "slice_id": "MCFT-CAP-08.S2",
   "authority_registry_ref": "docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json",
@@ -128,7 +128,7 @@
   "completion_authority_contract": {
     "schema_version": "geox_mcft_cap08_s2_completion_authority_contract_v1",
     "contract_id": "GEOX-MCFT-CAP-08-S2-COMPLETION-AUTHORITY-CONTRACT-V1",
-    "record_status": "FROZEN_PRE_IMPLEMENTATION_CONTRACT",
+    "record_status": "IMPLEMENTED_PRE_CANDIDATE_GATE",
     "capability_line_id": "MCFT-CAP-08",
     "slice_id": "MCFT-CAP-08.S2",
     "purpose": "Bind ALREADY_COMPLETE and resume authority to one exact persisted formal run rather than next logical time alone.",
@@ -187,20 +187,20 @@
       "CAP08_COMPLETION_FOREIGN_RUN"
     ],
     "negative_database_matrix": [
-      { "case_id": "N1", "mutation": "WRONG_FORMAL_RUN_ID", "expected_error": "CAP08_COMPLETION_FORMAL_RUN_MISMATCH" },
-      { "case_id": "N2", "mutation": "WRONG_FIELD_ID", "expected_error": "CAP08_COMPLETION_SCOPE_MISMATCH" },
-      { "case_id": "N3", "mutation": "WRONG_SEASON_OR_ZONE", "expected_error": "CAP08_COMPLETION_SCOPE_MISMATCH" },
-      { "case_id": "N4", "mutation": "WRONG_LINEAGE_ID", "expected_error": "CAP08_COMPLETION_LINEAGE_MISMATCH" },
-      { "case_id": "N5", "mutation": "WRONG_REVISION_ID", "expected_error": "CAP08_COMPLETION_REVISION_MISMATCH" },
-      { "case_id": "N6", "mutation": "T24_STALE_CHECKPOINT_WITHOUT_COMPLETE_T23_GRAPH", "expected_error": "CAP08_COMPLETION_TERMINAL_GRAPH_INCOMPLETE" },
-      { "case_id": "N7", "mutation": "SAME_SCOPE_COMPLETED_BY_FOREIGN_FORMAL_RUN", "expected_error": "CAP08_COMPLETION_FOREIGN_RUN" },
-      { "case_id": "N8", "mutation": "PHASE_CONTRACT_DIGEST_MISMATCH_ONLY", "expected_error": "CAP08_COMPLETION_CONTRACT_DIGEST_MISMATCH" },
-      { "case_id": "N9", "mutation": "PHASE_SOURCE_DIGEST_MISMATCH_ONLY", "expected_error": "CAP08_COMPLETION_SOURCE_DIGEST_MISMATCH" },
-      { "case_id": "N10", "mutation": "PHASE_CONTRACT_AND_SOURCE_DIGEST_MISMATCH", "expected_error": "CAP08_COMPLETION_CONTRACT_DIGEST_MISMATCH" },
-      { "case_id": "N11", "mutation": "LATEST_POINTER_REFERENCES_NONTERMINAL_TICK", "expected_error": "CAP08_COMPLETION_TERMINAL_GRAPH_INCOMPLETE" },
-      { "case_id": "N12", "mutation": "CHECKPOINT_STATE_FORECAST_CROSS_LINEAGE", "expected_error": "CAP08_COMPLETION_LINEAGE_MISMATCH" },
-      { "case_id": "N13", "mutation": "TICK_COMPLETE_SCENARIO_CARDINALITY_23", "expected_error": "CAP08_COMPLETION_CARDINALITY_MISMATCH" },
-      { "case_id": "N14", "mutation": "SECOND_ACTIVE_LINEAGE_SAME_SCOPE", "expected_error": "CAP08_COMPLETION_LINEAGE_MISMATCH" }
+      {"case_id":"N1","mutation":"WRONG_FORMAL_RUN_ID","expected_error":"CAP08_COMPLETION_FORMAL_RUN_MISMATCH"},
+      {"case_id":"N2","mutation":"WRONG_FIELD_ID","expected_error":"CAP08_COMPLETION_SCOPE_MISMATCH"},
+      {"case_id":"N3","mutation":"WRONG_SEASON_OR_ZONE","expected_error":"CAP08_COMPLETION_SCOPE_MISMATCH"},
+      {"case_id":"N4","mutation":"WRONG_LINEAGE_ID","expected_error":"CAP08_COMPLETION_LINEAGE_MISMATCH"},
+      {"case_id":"N5","mutation":"WRONG_REVISION_ID","expected_error":"CAP08_COMPLETION_REVISION_MISMATCH"},
+      {"case_id":"N6","mutation":"T24_STALE_CHECKPOINT_WITHOUT_COMPLETE_T23_GRAPH","expected_error":"CAP08_COMPLETION_TERMINAL_GRAPH_INCOMPLETE"},
+      {"case_id":"N7","mutation":"SAME_SCOPE_COMPLETED_BY_FOREIGN_FORMAL_RUN","expected_error":"CAP08_COMPLETION_FOREIGN_RUN"},
+      {"case_id":"N8","mutation":"PHASE_CONTRACT_DIGEST_MISMATCH_ONLY","expected_error":"CAP08_COMPLETION_CONTRACT_DIGEST_MISMATCH"},
+      {"case_id":"N9","mutation":"PHASE_SOURCE_DIGEST_MISMATCH_ONLY","expected_error":"CAP08_COMPLETION_SOURCE_DIGEST_MISMATCH"},
+      {"case_id":"N10","mutation":"PHASE_CONTRACT_AND_SOURCE_DIGEST_MISMATCH","expected_error":"CAP08_COMPLETION_CONTRACT_DIGEST_MISMATCH"},
+      {"case_id":"N11","mutation":"LATEST_POINTER_REFERENCES_NONTERMINAL_TICK","expected_error":"CAP08_COMPLETION_TERMINAL_GRAPH_INCOMPLETE"},
+      {"case_id":"N12","mutation":"CHECKPOINT_STATE_FORECAST_CROSS_LINEAGE","expected_error":"CAP08_COMPLETION_LINEAGE_MISMATCH"},
+      {"case_id":"N13","mutation":"TICK_COMPLETE_SCENARIO_CARDINALITY_23","expected_error":"CAP08_COMPLETION_CARDINALITY_MISMATCH"},
+      {"case_id":"N14","mutation":"SECOND_ACTIVE_LINEAGE_SAME_SCOPE","expected_error":"CAP08_COMPLETION_LINEAGE_MISMATCH"}
     ],
     "negative_case_invariants": {
       "canonical_fact_delta": 0,
@@ -209,78 +209,55 @@
       "stable_machine_error_code_required": true,
       "lease_mutation": "ZERO_OR_EXPLICITLY_BOUNDED"
     },
-    "implementation_state": "NOT_IMPLEMENTED",
-    "database_acceptance_state": "NOT_EXECUTED",
-    "formal_candidate_creation_authorized": false
+    "implementation_state": "IMPLEMENTED",
+    "database_acceptance_state": "PASS_REQUIRED_ON_EXACT_HEAD",
+    "formal_candidate_creation_authorized": true
   },
   "gates": [
     {
       "gate_id": "S2-G1-SYNTHETIC-MERGE-ATTESTATION",
-      "state": "PRODUCTION_LOGIC_LOCAL_BACKEND_HARNESS_IMPLEMENTED_PENDING_PROTECTED_MERGE",
+      "state": "PASS_FOUNDATION_PRESENT_ON_MAIN",
       "required": true,
       "contract_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-PRE-CANDIDATE-ENTRY-GATES-V1.json#delivery_profile",
       "acceptance_ref": "scripts/governance_acceptance/MCFT_SYNTHETIC_MERGE_ATTESTATION_HARNESS_V1.cjs",
       "selftest_ref": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs",
-      "required_proof": [
-        "CANDIDATE_CONTEXT_BOUND",
-        "TWO_PARENT_MERGE_CONTEXT_BOUND",
-        "CANDIDATE_TREE_EQUALS_SYNTHETIC_MERGE_TREE",
-        "CANDIDATE_BOUNDARY_REPLAYED_ON_CANDIDATE_SHA",
-        "MERGE_ATTESTATION_RUNS_ON_MERGE_SHA",
-        "FINALIZER_RUNS_ON_MERGE_SHA",
-        "PRODUCTION_EQUIVALENT_TAR_GZIP_ARCHIVE",
-        "PRODUCTION_RETENTION_LOGIC_LOCAL_BACKEND_READBACK",
-        "LOCKED_VERSION_DELETE_DENIAL"
-      ]
+      "required_proof": ["CANDIDATE_CONTEXT_BOUND","TWO_PARENT_MERGE_CONTEXT_BOUND","CANDIDATE_TREE_EQUALS_SYNTHETIC_MERGE_TREE","CANDIDATE_BOUNDARY_REPLAYED_ON_CANDIDATE_SHA","MERGE_ATTESTATION_RUNS_ON_MERGE_SHA","FINALIZER_RUNS_ON_MERGE_SHA","PRODUCTION_EQUIVALENT_TAR_GZIP_ARCHIVE","PRODUCTION_RETENTION_LOGIC_LOCAL_BACKEND_READBACK","LOCKED_VERSION_DELETE_DENIAL"]
     },
     {
       "gate_id": "S2-G2-REGISTRY-DRIVEN-LIFECYCLE",
-      "state": "FAIL_CLOSED_LIFECYCLE_REMEDIATION_IMPLEMENTED_PENDING_PROTECTED_MERGE",
+      "state": "PASS_FOUNDATION_PRESENT_ON_MAIN",
       "required": true,
       "contract_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-PRE-CANDIDATE-ENTRY-GATES-V1.json#delivery_profile",
       "acceptance_ref": "scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs",
-      "required_proof": [
-        "AUTHORITY_REGISTRY_TRANSITION_JOIN",
-        "BASE_REGISTRY_IS_AUTHORITY",
-        "BASE_IS_CANDIDATE_ANCESTOR",
-        "NO_TRANSITION_NOT_APPLICABLE",
-        "FOREIGN_TRANSITION_NOT_APPLICABLE",
-        "OWNED_TRANSITION_APPLICABLE",
-        "STATUS_FILE_DELETION_FAILS",
-        "FIELD_REMOVAL_FAILS",
-        "UNALLOWED_VALUE_FAILS",
-        "AMBIGUOUS_RULE_FAILS",
-        "DATABASE_JOB_SKIPPED_WHEN_NOT_APPLICABLE",
-        "NO_SILENT_WORKFLOW_DISPATCH_NOOP"
-      ]
+      "required_proof": ["AUTHORITY_REGISTRY_TRANSITION_JOIN","BASE_REGISTRY_IS_AUTHORITY","BASE_IS_CANDIDATE_ANCESTOR","NO_TRANSITION_NOT_APPLICABLE","FOREIGN_TRANSITION_NOT_APPLICABLE","OWNED_TRANSITION_APPLICABLE","STATUS_FILE_DELETION_FAILS","FIELD_REMOVAL_FAILS","UNALLOWED_VALUE_FAILS","AMBIGUOUS_RULE_FAILS","DATABASE_JOB_SKIPPED_WHEN_NOT_APPLICABLE","NO_SILENT_WORKFLOW_DISPATCH_NOOP"]
     },
     {
       "gate_id": "S2-G3-COMPLETION-AUTHORITY-NEGATIVE-DB",
-      "state": "CONTRACT_FROZEN_IMPLEMENTATION_PENDING",
+      "state": "IMPLEMENTED_N1_N14_EXACT_HEAD_ACCEPTANCE_REQUIRED",
       "required": true,
       "contract_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S2-PRE-CANDIDATE-ENTRY-GATES-V1.json#completion_authority_contract",
       "acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_COMPLETION_AUTHORITY_NEGATIVE_DB.ts",
-      "required_proof": [
-        "WRONG_FORMAL_RUN_REJECTED",
-        "WRONG_SCOPE_REJECTED",
-        "WRONG_LINEAGE_REJECTED",
-        "WRONG_REVISION_REJECTED",
-        "STALE_CHECKPOINT_REJECTED",
-        "CROSS_RUN_COMPLETION_REJECTED",
-        "CONTRACT_DIGEST_MISMATCH_REJECTED",
-        "SOURCE_DIGEST_MISMATCH_REJECTED",
-        "DUAL_DIGEST_MISMATCH_PRECEDENCE_PROVED",
-        "ZERO_CANONICAL_WRITE_DELTA_ON_REJECTION"
+      "required_proof": ["WRONG_FORMAL_RUN_REJECTED","WRONG_SCOPE_REJECTED","WRONG_LINEAGE_REJECTED","WRONG_REVISION_REJECTED","STALE_CHECKPOINT_REJECTED","CROSS_RUN_COMPLETION_REJECTED","CONTRACT_DIGEST_MISMATCH_REJECTED","SOURCE_DIGEST_MISMATCH_REJECTED","DUAL_DIGEST_MISMATCH_PRECEDENCE_PROVED","ZERO_CANONICAL_WRITE_DELTA_ON_REJECTION"],
+      "implementation_refs": [
+        "apps/server/src/domain/twin_runtime/cap08_completion_authority_contracts_v1.ts",
+        "apps/server/src/persistence/twin_runtime/postgres_completion_authority_repository_v1.ts",
+        "apps/server/src/runtime/twin_runtime/cap08_completion_authority_service_v1.ts",
+        "apps/server/src/runtime/twin_runtime/cap08_s1_base_range_service_v1.ts"
+      ],
+      "focused_workflow_ref": ".github/workflows/mcft-cap-08-s2-g3-completion-authority.yml",
+      "acceptance_support_refs": [
+        "scripts/runtime_acceptance/mcft_cap08_s2_g3_acceptance_support_v1.ts",
+        "scripts/runtime_acceptance/mcft_cap08_s2_g3_negative_cases_v1.ts"
       ]
     }
   ],
-  "overall_state": "FOUNDATION_READY_FOR_PROTECTED_MERGE_FORMAL_S2_CANDIDATE_BLOCKED",
-  "formal_candidate_creation_authorized": false,
+  "overall_state": "ALL_REQUIRED_ENTRY_GATES_CANDIDATE_PASS_PROTECTED_MERGE_REQUIRED",
+  "formal_candidate_creation_authorized": true,
   "s2_candidate_transition_authorized": false,
-  "implementation_authorized": false,
-  "runtime_source_authorized": false,
+  "implementation_authorized": true,
+  "runtime_source_authorized": true,
   "production_runtime_source_authorized": false,
   "mcft_cap_09_authorized": false,
   "foundation_merge_authorized_by_contract": true,
-  "foundation_completion_claim": "PRE_CANDIDATE_FOUNDATION_ONLY"
+  "foundation_completion_claim": "PRE_CANDIDATE_G1_G2_G3_COMPLETE_AFTER_PROTECTED_MERGE"
 }

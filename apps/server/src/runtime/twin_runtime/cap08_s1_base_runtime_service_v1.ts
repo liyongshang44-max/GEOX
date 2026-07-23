@@ -1,5 +1,5 @@
 // apps/server/src/runtime/twin_runtime/cap08_s1_base_runtime_service_v1.ts
-// Purpose: establish the MCFT-CAP-08 B00 bootstrap root and execute the bounded S1 T00-T23 base range.
+// Purpose: establish the MCFT-CAP-08 B00 bootstrap root, execute T00-T23, and use persisted completion authority for exact zero-write replay.
 // Boundary: one explicit Replay invocation only; no final formal closure classification, restart fault injection, late correction, Decision, Action Feedback, Residual, Calibration, route, scheduler, or live ingestion.
 
 import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
@@ -7,6 +7,7 @@ import type { SoilHydraulicBoundsV1 } from "../../domain/twin_runtime/physical_b
 import { CAP08_S1_RUNTIME_START_V1 } from "../../domain/twin_runtime/cap08_phase_engine_contracts_v1.js";
 import {
   A0BootstrapRuntimeServiceV1,
+  type ExecuteA0BootstrapInputV1,
   type ExecuteA0BootstrapResultV1,
 } from "./a0_bootstrap_runtime_service_v1.js";
 import type { TwinScopeKeyV1 } from "./ports.js";
@@ -41,12 +42,11 @@ export class Cap08S1BaseRuntimeServiceV1 {
     private readonly rangeService: Cap08S1BaseRangeServiceV1,
   ) {}
 
-  async execute(input: ExecuteCap08S1BaseRuntimeInputV1): Promise<ExecuteCap08S1BaseRuntimeResultV1> {
-    const bootstrapLogicalTime = new Date(Date.parse(CAP08_S1_RUNTIME_START_V1) - 3_600_000).toISOString();
-    if (input.bootstrap_runtime_config.logical_time !== bootstrapLogicalTime) {
-      throw new Error("CAP08_B00_RUNTIME_CONFIG_LOGICAL_TIME_MISMATCH");
-    }
-    const bootstrap = await this.bootstrapService.execute({
+  private bootstrapInputV1(
+    input: ExecuteCap08S1BaseRuntimeInputV1,
+    bootstrapLogicalTime: string,
+  ): ExecuteA0BootstrapInputV1 {
+    return {
       scope: input.scope,
       logical_time: bootstrapLogicalTime,
       created_at: input.created_at,
@@ -55,12 +55,16 @@ export class Cap08S1BaseRuntimeServiceV1 {
       soil_hydraulic_config_ref: input.soil_hydraulic_config_ref,
       lease_owner: input.lease_owner,
       lease_duration_seconds: input.lease_duration_seconds,
-    });
-    if (bootstrap.next_tick_logical_time !== CAP08_S1_RUNTIME_START_V1) {
-      throw new Error("CAP08_B00_HANDOFF_TO_T00_REQUIRED");
+    };
+  }
+
+  async execute(input: ExecuteCap08S1BaseRuntimeInputV1): Promise<ExecuteCap08S1BaseRuntimeResultV1> {
+    const bootstrapLogicalTime = new Date(Date.parse(CAP08_S1_RUNTIME_START_V1) - 3_600_000).toISOString();
+    if (input.bootstrap_runtime_config.logical_time !== bootstrapLogicalTime) {
+      throw new Error("CAP08_B00_RUNTIME_CONFIG_LOGICAL_TIME_MISMATCH");
     }
 
-    const range = await this.rangeService.runRange({
+    const rangeInput: RunCap08S1BaseRangeInputV1 = {
       formal_run_id: input.formal_run_id,
       scope: input.scope,
       created_at: input.created_at,
@@ -70,8 +74,17 @@ export class Cap08S1BaseRuntimeServiceV1 {
       crop_stage_context: input.crop_stage_context,
       lease_owner: input.lease_owner,
       lease_duration_seconds: input.lease_duration_seconds,
-    });
+    };
 
+    const completion = await this.rangeService.inspectCompletion(rangeInput);
+    const bootstrap = completion.disposition === "ALREADY_COMPLETE_EXACT"
+      ? await this.bootstrapService.readExisting(this.bootstrapInputV1(input, bootstrapLogicalTime))
+      : await this.bootstrapService.execute(this.bootstrapInputV1(input, bootstrapLogicalTime));
+    if (bootstrap.next_tick_logical_time !== CAP08_S1_RUNTIME_START_V1) {
+      throw new Error("CAP08_B00_HANDOFF_TO_T00_REQUIRED");
+    }
+
+    const range = await this.rangeService.runRange(rangeInput);
     return {
       status: range.status,
       bootstrap_id: "B00",
