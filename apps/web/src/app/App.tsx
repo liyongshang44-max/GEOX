@@ -19,6 +19,7 @@ import { renderEvidenceRoutes } from "./routes/evidenceRoutes";
 import { renderSkillsRoutes } from "./routes/skillsRoutes";
 import OperatorFieldRuntimeRoutes from "./routes/operatorFieldRuntimeRoutes";
 import { trackMainActionClick, usePageEnterEvent } from "../shared/telemetry/pageEvents";
+import { fetchAuthMe } from "../api/auth";
 
 const JudgeRunPage = React.lazy(() => import("../views/JudgeRunPage"));
 const JudgeRecordsPage = React.lazy(() => import("../views/JudgeRecordsPage"));
