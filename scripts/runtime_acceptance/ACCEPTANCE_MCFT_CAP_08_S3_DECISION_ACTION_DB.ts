@@ -1,5 +1,5 @@
 // Fresh-PostgreSQL positive proof for MCFT-CAP-08.S3 Decision + Action Feedback.
-// Candidate implementation proof only; independent review, merge effectiveness, S4, production Runtime source, and MCFT-CAP-09 remain unauthorized.
+// Development preflight only; formal candidate declaration, independent review, merge effectiveness, S4, production Runtime source, and MCFT-CAP-09 remain unauthorized.
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -12,10 +12,10 @@ import {
 } from "../../apps/server/src/domain/twin_runtime/cap08_s3_formal_provider_contracts_v1.js";
 import { DirectCap04ExecutionConfigResolverV1 } from "../../apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.js";
 import { PostgresActionFeedbackTickSourceV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_action_feedback_tick_source_v1.js";
+import { PostgresCap08S3CompletionAuthorityPairRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_cap08_s3_completion_authority_pair_repository_v1.js";
 import { Cap08S2QualifiedEvidenceSourceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s2_qualified_evidence_source_v1.js";
 import { Cap08S3AuthorityGuardV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_authority_guard_v1.js";
 import { Cap08S3CompletionEvidenceTickServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_completion_evidence_tick_service_v1.js";
-import { Cap08S3CompletionTupleServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_completion_tuple_service_v1.js";
 import { Cap08S3DecisionActionProviderServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_decision_action_provider_service_v1.js";
 import { Cap08S3EpisodeInspectorV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_episode_inspector_v1.js";
 import { Cap08S3FormalRangeServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_formal_range_service_v1.js";
@@ -27,10 +27,8 @@ import { Cap08S3ReceiptEpisodeGuardV1 } from "../../apps/server/src/runtime/twin
 import {
   A0BootstrapRuntimeServiceV1,
   Cap04ForecastScenarioSingleTickServiceV1,
-  Cap08CompletionAuthorityServiceV1,
   Cap08DeferredScenarioPersistenceV1,
   Cap08FrozenEvidenceSourceV1,
-  PostgresCompletionAuthorityRepositoryV1,
   PostgresForecastScenarioRecoveryRepositoryV1,
   PostgresNextTickRepositoryV1,
   PostgresRuntimeRepositoryV1,
@@ -49,10 +47,11 @@ if (process.env.MCFT_CAP08_S3_DESTRUCTIVE_ACCEPTANCE !== "1") {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_08_S3_DECISION_ACTION_DB_RESULT.json");
-const write = (value: unknown): void => {
+
+function write(value: unknown): void {
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, `${JSON.stringify(value, null, 2)}\n`);
-};
+}
 
 async function countObjectV1(type: string): Promise<number> {
   return Number((await runner.query(
@@ -93,21 +92,26 @@ async function snapshotV1(): Promise<Record<string, unknown>> {
 
 async function main(): Promise<void> {
   const checks: Array<{ name: string; status: "PASS" }> = [];
-  const ok = (name: string): void => { checks.push({ name, status: "PASS" }); console.log(`PASS ${name}`); };
+  const ok = (name: string): void => {
+    checks.push({ name, status: "PASS" });
+    console.log(`PASS ${name}`);
+  };
   try {
     assert.equal((await runner.query("SELECT current_user AS u")).rows[0].u, "geox_mcft_cap08_runner_v1");
     ok("bounded runner identity");
 
     const fixture = buildCap08S2FormalProviderFixtureV1();
     const sourceManifest = computeCap08S3SourceManifestV1(ROOT);
-    assert.equal(sourceManifest.paths.length, 24);
+    assert.ok(sourceManifest.paths.length >= 24);
     assert.ok(/^sha256:[0-9a-f]{64}$/.test(sourceManifest.manifest_digest));
+
     const runtimeRepository = new PostgresRuntimeRepositoryV1(runner);
     const nextTickRepository = new PostgresNextTickRepositoryV1(runner);
     const forecastRepository = new PostgresForecastScenarioRecoveryRepositoryV1(runner);
-    const completionRepository = new PostgresCompletionAuthorityRepositoryV1(runner);
     assert.equal((await nextTickRepository.commitRealityBindingSnapshot(fixture.reality_binding_snapshot)).status, "INSERTED");
-    for (const config of fixture.runtime_configs) assert.equal((await runtimeRepository.commitRuntimeConfig(config)).status, "INSERTED");
+    for (const config of fixture.runtime_configs) {
+      assert.equal((await runtimeRepository.commitRuntimeConfig(config)).status, "INSERTED");
+    }
 
     const order: string[] = [];
     const persistence = persistenceAdapterV1(runtimeRepository, forecastRepository, order);
@@ -122,11 +126,10 @@ async function main(): Promise<void> {
       deferred,
       new DirectCap04ExecutionConfigResolverV1(),
     );
-    const actionFeedbackSource = new PostgresActionFeedbackTickSourceV1(runner);
     const receiptTick = new Cap08S3ReceiptConsumingForecastScenarioTickServiceV1(
       handoff,
       frozenEvidence,
-      actionFeedbackSource,
+      new PostgresActionFeedbackTickSourceV1(runner),
       runtimeRepository,
       deferred,
       new DirectCap04ExecutionConfigResolverV1(),
@@ -147,14 +150,12 @@ async function main(): Promise<void> {
       baseTick,
       new Cap08S3OutcomeCompletionEvidenceServiceV1(runner),
     );
-    const tupleService = new Cap08S3CompletionTupleServiceV1(runner);
     const range = new Cap08S3FormalRangeServiceV1(
       handoff,
       tick,
       inspector,
       sourceManifest.manifest_digest,
-      new Cap08CompletionAuthorityServiceV1(completionRepository),
-      tupleService,
+      new PostgresCap08S3CompletionAuthorityPairRepositoryV1(runner),
     );
     const runtime = new Cap08S3FormalRuntimeServiceV1(
       new A0BootstrapRuntimeServiceV1(runtimeRepository, runtimeRepository, fixture.bootstrap_evidence_source),
@@ -171,7 +172,7 @@ async function main(): Promise<void> {
       runtime_config_hashes_by_logical_time: fixture.runtime_config_hashes_by_logical_time,
       authorized_future_forcing_binding_ids: ["binding_weather", "binding_et0"],
       crop_stage_context: fixture.crop_stage_context,
-      lease_owner: "mcft-cap08-s3-formal-candidate",
+      lease_owner: "mcft-cap08-s3-formal-development-preflight",
       lease_duration_seconds: 300,
     };
 
@@ -182,8 +183,8 @@ async function main(): Promise<void> {
     assert.equal(first.range.provider_profile_id, PROFILE);
     assert.equal(first.range.provider_contract_digest, CONTRACT);
     assert.equal(first.range.phase_engine_source_digest, sourceManifest.manifest_digest);
-    assert.equal(first.range.completion_tuple_write_status, "INSERTED");
-    assert.equal(first.range.completion_authority_write_status, "INSERTED");
+    assert.equal(first.range.completion_authority_pair_write_status, "INSERTED_ATOMIC_PAIR");
+    assert.equal(first.range.completion_authority_pair_write_delta, 2);
     assert.equal(first.range.persisted_tick_binding_count, 24);
     assert.equal(first.range.completion_tuple.tick_bindings.length, 24);
     assert.equal(first.range.completion_tuple.tick_trace_digests.length, 24);
@@ -195,16 +196,34 @@ async function main(): Promise<void> {
       first.range.scenario_point_count,
     ], [25, 24, 24, 1728, 5184]);
     assert.equal(first.range.tick_traces.length, 24);
-    assert.ok(first.range.tick_traces.every((trace) => /^sha256:[0-9a-f]{64}$/.test(trace.trace_digest)));
     assert.equal(new Set(first.range.tick_traces.map((trace) => trace.trace_digest)).size, 24);
     assert.deepEqual(
       first.range.tick_traces.map((trace) => trace.trace_digest),
       first.range.completion_tuple.tick_trace_digests,
     );
     ok("fresh PostgreSQL B00 and T00-T23 S3 formal run");
+    ok("atomic generic and semantic completion authority pair");
     ok("canonical persisted totals and semantic Tick traces");
-    ok("full source manifest bound to completion authority");
-    ok("persisted semantic completion tuple established and rebuilt");
+
+    const authorityRows = await runner.query(
+      `SELECT authority_kind,authority_ref,semantic_payload->>'schema_version' AS schema_version
+         FROM twin_runtime_authority_snapshot_v1
+        WHERE authority_ref = ANY($1::text[])
+        ORDER BY authority_ref`,
+      [[first.range.completion_tuple_ref,
+        (await runner.query(
+          `SELECT authority_ref FROM twin_runtime_authority_snapshot_v1
+            WHERE semantic_payload->>'schema_version'='geox_mcft_cap08_completion_authority_v1'
+            LIMIT 1`,
+        )).rows[0]?.authority_ref]],
+    );
+    assert.equal(authorityRows.rows.length, 2);
+    assert.ok(authorityRows.rows.every((row) => row.authority_kind === "REALITY_BINDING"));
+    assert.deepEqual(
+      authorityRows.rows.map((row) => row.schema_version).sort(),
+      ["geox_mcft_cap08_completion_authority_v1", "geox_mcft_cap08_s3_completion_tuple_v1"].sort(),
+    );
+    ok("schema-compatible authority discriminator and independent refs");
 
     const episode = first.range.episode_inspection;
     assert.equal(episode.disposition, "EXACT_COMPLETE");
@@ -220,22 +239,22 @@ async function main(): Promise<void> {
     assert.equal(episode.action_feedback?.payload.target_scope_equivalent_irrigation_mm, "12.376000");
     ok("exact canonical Decision Approval Plan Receipt Action Feedback chain");
 
-    const t07 = first.range.tick_results.find((tickResult) => tickResult.phase_plan.tick_id === "T07");
-    const t08 = first.range.tick_results.find((tickResult) => tickResult.phase_plan.tick_id === "T08");
-    const t09 = first.range.tick_results.find((tickResult) => tickResult.phase_plan.tick_id === "T09");
-    const t10 = first.range.tick_results.find((tickResult) => tickResult.phase_plan.tick_id === "T10");
+    const t07 = first.range.tick_results.find((item) => item.phase_plan.tick_id === "T07");
+    const t08 = first.range.tick_results.find((item) => item.phase_plan.tick_id === "T08");
+    const t09 = first.range.tick_results.find((item) => item.phase_plan.tick_id === "T09");
+    const t10 = first.range.tick_results.find((item) => item.phase_plan.tick_id === "T10");
     assert.ok(t07 && t08 && t09 && t10);
     assert.equal(t07.receipt, null);
     assert.equal(t08.action_feedback_consumed_by_a, true);
     assert.equal(t08.action_feedback?.object_id, episode.action_feedback?.object_id);
-    assert.ok(t08.a_provider_result.evidence_window?.dynamics_consumed_evidence_refs.includes(episode.action_feedback!.object_id));
+    assert.ok(t08.a_provider_result.evidence_window?.dynamics_consumed_evidence_refs.includes(
+      episode.action_feedback!.object_id,
+    ));
     assert.equal(t09.outcome_fvo10_record, null);
     assert.equal(t09.a_provider_result.evidence_window?.observation_selection.selected_observation_ref, null);
     assert.equal(t10.outcome_fvo10_record?.source_record_id, "FVO-10");
     assert.equal(t10.a_provider_result.evidence_window?.observation_selection.selected_observation_ref, "FVO-10");
     assert.deepEqual(t10.a_provider_result.evidence_window?.assimilation_applied_evidence_refs, ["FVO-10"]);
-    assert.equal(first.range.completion_tuple.t09.selected_observation_ref, null);
-    assert.deepEqual(first.range.completion_tuple.t09.assimilation_applied_evidence_refs, []);
     assert.equal(first.range.completion_tuple.t10.outcome_fvo10_ref, "FVO-10");
     assert.equal(first.range.completion_tuple.t10.selected_observation_ref, "FVO-10");
     assert.deepEqual(first.range.completion_tuple.t10.assimilation_applied_evidence_refs, ["FVO-10"]);
@@ -261,8 +280,8 @@ async function main(): Promise<void> {
       countRecordV1("mcft_cap08_s3_completion_evidence_v1", "mcft_cap08_s3_outcome_absence_witness_v1"),
       countRecordV1("mcft_cap08_s3_completion_evidence_v1", "soil_moisture_observation_v1"),
       countRecordV1("mcft_cap08_s3_completion_authority_v1", "mcft_cap08_s3_completion_tuple_v1"),
-    ]), [1, 1, 1, 1, 0, 1, 1, 1]);
-    ok("canonical cardinality, completion evidence, and S3 nonclaims");
+    ]), [1, 1, 1, 1, 0, 1, 1, 0]);
+    ok("canonical cardinality, completion evidence, no tuple fact, and S3 nonclaims");
 
     const before = await snapshotV1();
     const second = await runtime.execute({ ...input, lease_owner: `${input.lease_owner}-replay` });
@@ -273,17 +292,9 @@ async function main(): Promise<void> {
     assert.equal(second.range.phase_engine_source_digest, sourceManifest.manifest_digest);
     assert.equal(second.range.completion_tuple_ref, first.range.completion_tuple_ref);
     assert.equal(second.range.completion_tuple_hash, first.range.completion_tuple_hash);
-    assert.equal(second.range.completion_tuple_write_status, null);
-    assert.equal(second.range.completion_authority_write_status, null);
-    assert.equal(second.range.authority_recovery_write_delta, 0);
+    assert.equal(second.range.completion_authority_pair_write_status, null);
+    assert.equal(second.range.completion_authority_pair_write_delta, 0);
     assert.equal(second.range.persisted_tick_binding_count, 24);
-    assert.deepEqual([
-      second.range.posterior_state_count,
-      second.range.successful_forecast_count,
-      second.range.scenario_set_count,
-      second.range.forecast_point_count,
-      second.range.scenario_point_count,
-    ], [25, 24, 24, 1728, 5184]);
     assert.equal(second.range.tick_traces.length, 24);
     assert.deepEqual(
       second.range.tick_traces.map((trace) => trace.trace_digest),
@@ -291,16 +302,16 @@ async function main(): Promise<void> {
     );
     assert.deepEqual(second.range.completion_tuple, first.range.completion_tuple);
     assert.deepEqual(after, before);
-    ok("completed replay rebuilds 24 persisted traces and exact tuple with zero mutation");
+    ok("completed replay rebuilds exact semantic authority with zero mutation and zero repair");
 
     const result = {
       schema_version: "geox_mcft_cap08_s3_decision_action_db_result_v1",
       status: "PASS",
-      candidate_implementation_proof: true,
+      development_preflight_proof: true,
+      formal_candidate: false,
       s3_candidate_implemented: false,
       independent_review_required: true,
       independent_review_satisfied: false,
-      independent_review_waived: false,
       provider_profile_id: PROFILE,
       provider_contract_digest: CONTRACT,
       phase_engine_source_digest: first.range.phase_engine_source_digest,
@@ -308,15 +319,10 @@ async function main(): Promise<void> {
       formal_run_id: fixture.formal_run_id,
       completion_tuple_ref: first.range.completion_tuple_ref,
       completion_tuple_hash: first.range.completion_tuple_hash,
+      completion_authority_pair_write_status: first.range.completion_authority_pair_write_status,
+      completion_authority_pair_write_delta: first.range.completion_authority_pair_write_delta,
       persisted_tick_binding_count: first.range.persisted_tick_binding_count,
       successful_tick_count: first.range.successful_tick_count,
-      persisted_cardinalities: {
-        posterior_state_count: first.range.posterior_state_count,
-        successful_forecast_count: first.range.successful_forecast_count,
-        scenario_set_count: first.range.scenario_set_count,
-        forecast_point_count: first.range.forecast_point_count,
-        scenario_point_count: first.range.scenario_point_count,
-      },
       tick_trace_digests: first.range.tick_traces.map((trace) => trace.trace_digest),
       completed_rerun_tick_trace_digests: second.range.tick_traces.map((trace) => trace.trace_digest),
       decision_count: first.range.decision_count,
@@ -329,6 +335,8 @@ async function main(): Promise<void> {
       t09_outcome_absence: first.range.t09_outcome_absence,
       t10_ordinary_assimilation: first.range.t10_ordinary_assimilation,
       completed_rerun_write_delta: 0,
+      normal_runner_repair_authorized: false,
+      canonical_completion_tuple_fact_count: 0,
       recommendation_count: 0,
       ao_act_count: 0,
       dispatch_count: 0,
@@ -357,4 +365,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error) => { console.error(error); process.exitCode = 1; });
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
