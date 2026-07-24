@@ -1,0 +1,42 @@
+{
+  "schema_version": "geox_mcft_cap08_s3_changed_file_boundary_v1",
+  "record_status": "PRE_CANDIDATE_GOVERNANCE_BOUNDARY_FROZEN",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S3",
+  "base_sha": "e8dc01b72def45c9931d70dab06f78dbc2b5a527",
+  "changed_file_count": 11,
+  "changed_files": [
+    ".github/workflows/mcft-cap-08-s3-pre-candidate-governance.yml",
+    "docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-CHANGED-FILE-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-CONTRACT-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-EVIDENCE-IDENTITIES-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-PRE-CANDIDATE-GOVERNANCE-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-PREDECESSOR-CONSUMPTION-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-REVIEW-POLICY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-WORKFLOW-DECLARATION-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S3_PRE_CANDIDATE_GOVERNANCE.cjs"
+  ],
+  "runtime_source_file_count": 0,
+  "governance_file_count": 11,
+  "candidate_declaration_expected": false,
+  "s3_candidate_implemented_expected": false,
+  "canonical_runtime_data_delta_expected": 0,
+  "database_acl_delta_expected": 0,
+  "business_schema_delta_expected": 0,
+  "forbidden_prefixes": [
+    "apps/server/src/domain/twin_runtime/",
+    "apps/server/src/runtime/twin_runtime/",
+    "apps/server/src/persistence/twin_runtime/",
+    "apps/server/src/routes/",
+    "apps/server/db/migrations/",
+    "apps/web/",
+    "docker/postgres/init/"
+  ],
+  "forbidden_tokens": [
+    "scheduler",
+    "model_activation"
+  ],
+  "taskbook_blob_must_remain": "a24114ff629560345b3bd3cda6b4024b9f3d61e4"
+}
