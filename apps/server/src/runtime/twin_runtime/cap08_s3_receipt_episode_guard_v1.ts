@@ -105,11 +105,21 @@ export class Cap08S3ReceiptEpisodeGuardV1 {
     ]);
     if (active.rows.length !== 1 || state.rows.length !== 1) throw new Error("CAP08_S3_RECEIPT_GUARD_ACTIVE_CONTEXT_CARDINALITY");
     const activeLineageRef = requiredStringV1(active.rows[0].active_lineage_ref, "CAP08_S3_RECEIPT_GUARD_ACTIVE_LINEAGE_REQUIRED");
-    const lineageId = requiredStringV1(state.rows[0].lineage_id, "CAP08_S3_RECEIPT_GUARD_LINEAGE_REQUIRED");
-    if (lineageId !== activeLineageRef) throw new Error("CAP08_S3_RECEIPT_GUARD_CURRENT_POINTER_CROSS_LINEAGE");
+    const lineage = await this.pool.query(
+      `SELECT record_json->'payload'->>'lineage_id' AS lineage_id
+       FROM facts
+       WHERE record_json->>'type'='twin_runtime_lineage_v1'
+         AND record_json->'payload'->>'object_id'=$1
+       LIMIT 2`,
+      [activeLineageRef],
+    );
+    if (lineage.rows.length !== 1) throw new Error("CAP08_S3_RECEIPT_GUARD_ACTIVE_LINEAGE_CANONICAL_CARDINALITY");
+    const activeLineageId = requiredStringV1(lineage.rows[0].lineage_id, "CAP08_S3_RECEIPT_GUARD_ACTIVE_LINEAGE_ID_REQUIRED");
+    const stateLineageId = requiredStringV1(state.rows[0].lineage_id, "CAP08_S3_RECEIPT_GUARD_LINEAGE_REQUIRED");
+    if (stateLineageId !== activeLineageId) throw new Error("CAP08_S3_RECEIPT_GUARD_CURRENT_POINTER_CROSS_LINEAGE");
     return {
       active_lineage_ref: activeLineageRef,
-      lineage_id: lineageId,
+      lineage_id: activeLineageId,
       revision_id: requiredStringV1(state.rows[0].revision_id, "CAP08_S3_RECEIPT_GUARD_REVISION_REQUIRED"),
     };
   }
