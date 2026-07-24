@@ -85,7 +85,7 @@ export class Cap08S3ReceiptEpisodeGuardV1 {
     return requiredStringV1(result.rows[0].source_record_hash, "CAP08_S3_RECEIPT_GUARD_RECEIPT_HASH_REQUIRED");
   }
 
-  private async activeContextV1(scope: TwinScopeKeyV1): Promise<{
+  private async activeContextV1(scope: TwinScopeKeyV1, expectedActiveLineageRef: string): Promise<{
     active_lineage_ref: string;
     lineage_id: string;
     revision_id: string;
@@ -105,6 +105,7 @@ export class Cap08S3ReceiptEpisodeGuardV1 {
     ]);
     if (active.rows.length !== 1 || state.rows.length !== 1) throw new Error("CAP08_S3_RECEIPT_GUARD_ACTIVE_CONTEXT_CARDINALITY");
     const activeLineageRef = requiredStringV1(active.rows[0].active_lineage_ref, "CAP08_S3_RECEIPT_GUARD_ACTIVE_LINEAGE_REQUIRED");
+    if (activeLineageRef !== expectedActiveLineageRef) throw new Error("CAP08_S3_RECEIPT_GUARD_LINEAGE_MISMATCH");
     const lineage = await this.pool.query(
       `SELECT record_json->'payload'->>'lineage_id' AS lineage_id
        FROM facts
@@ -169,8 +170,7 @@ export class Cap08S3ReceiptEpisodeGuardV1 {
     const object = await this.canonical.readCanonicalObject(decisionRows.rows[0].decision_object_id);
     if (!object || object.object_type !== "twin_decision_record_v1") throw new Error("CAP08_S3_RECEIPT_GUARD_DECISION_CANONICAL_MISSING");
     const decision = object as Cap05DecisionEnvelopeV1;
-    const context = await this.activeContextV1(input.scope);
-    if (decision.context_lineage_ref !== context.active_lineage_ref) throw new Error("CAP08_S3_RECEIPT_GUARD_LINEAGE_MISMATCH");
+    const context = await this.activeContextV1(input.scope, decision.context_lineage_ref);
     if (decision.context_revision_ref !== context.revision_id) throw new Error("CAP08_S3_RECEIPT_GUARD_REVISION_MISMATCH");
     return {
       schema_version: "geox_mcft_cap08_s3_receipt_episode_guard_result_v1",
