@@ -93,9 +93,14 @@ try {
 
   assert.equal(boundary.record_status, 'FORMAL_S3_CANDIDATE_CHANGED_FILE_BOUNDARY_FROZEN');
   assert.equal(boundary.base_sha, FORMAL_BASE);
+  assert.equal(boundary.changed_file_count, 28);
   assert.equal(boundary.changed_file_count, boundary.changed_files.length);
   assert.deepEqual(actual, [...boundary.changed_files].sort(), 'S3_CHANGED_FILE_BOUNDARY_MISMATCH');
-  assert.equal(boundary.runtime_source_file_count, 15);
+  assert.equal(boundary.workflow_file_count, 2);
+  assert.equal(boundary.runtime_source_file_count, 16);
+  assert.equal(boundary.candidate_ssot_file_count, 3);
+  assert.equal(boundary.governance_acceptance_file_count, 3);
+  assert.equal(boundary.runtime_acceptance_file_count, 4);
   assert.equal(boundary.database_migration_file_count, 0);
   assert.equal(boundary.route_file_count, 0);
   assert.equal(boundary.web_file_count, 0);
