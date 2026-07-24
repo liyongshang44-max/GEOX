@@ -58,29 +58,30 @@ export class PostgresApprovalPlanEvidenceRepositoryV1 {
   ): Promise<{ status: Cap05EvidencePersistenceStatusV1; fact_id: string }> {
     assertCap05ReplayEvidenceSourceRecordHashV1(record as unknown as Record<string, unknown>);
     const factId = evidenceFactIdV1(record);
-    const existing = await client.query(
-      `SELECT source,record_json FROM facts WHERE fact_id=$1 FOR UPDATE`,
-      [factId],
-    );
-    if (existing.rows.length > 1) throw new Error("CAP05_EVIDENCE_FACT_CARDINALITY");
-    if (existing.rows.length === 1) {
-      const payload = existing.rows[0].record_json?.payload as ReplayEvidenceRecordV1 | undefined;
-      if (existing.rows[0].source !== "mcft_cap05_replay_evidence_v1"
-        || !payload
-        || payload.record_type !== record.record_type
-        || payload.evidence_identity_key !== record.evidence_identity_key
-        || payload.source_record_id !== record.source_record_id) {
-        throw new Error("CAP05_EVIDENCE_IDENTITY_CORRUPTION");
-      }
-      if (payload.source_record_hash !== record.source_record_hash) throw new Error("CAP05_EVIDENCE_IDENTITY_CONFLICT");
-      return { status: "EXISTING_IDEMPOTENT_SUCCESS", fact_id: factId };
-    }
-    await client.query(
+    const inserted = await client.query(
       `INSERT INTO facts (fact_id,occurred_at,source,record_json)
-       VALUES ($1,$2::timestamptz,'mcft_cap05_replay_evidence_v1',$3::jsonb)`,
+       VALUES ($1,$2::timestamptz,'mcft_cap05_replay_evidence_v1',$3::jsonb)
+       ON CONFLICT (fact_id) DO NOTHING
+       RETURNING fact_id`,
       [factId, record.available_to_runtime_at, recordJsonV1(record)],
     );
-    return { status: "INSERTED", fact_id: factId };
+    if (inserted.rows.length === 1) return { status: "INSERTED", fact_id: factId };
+    if (inserted.rows.length !== 0) throw new Error("CAP05_EVIDENCE_FACT_INSERT_CARDINALITY");
+    const existing = await client.query(
+      `SELECT source,record_json FROM facts WHERE fact_id=$1`,
+      [factId],
+    );
+    if (existing.rows.length !== 1) throw new Error("CAP05_EVIDENCE_FACT_CARDINALITY");
+    const payload = existing.rows[0].record_json?.payload as ReplayEvidenceRecordV1 | undefined;
+    if (existing.rows[0].source !== "mcft_cap05_replay_evidence_v1"
+      || !payload
+      || payload.record_type !== record.record_type
+      || payload.evidence_identity_key !== record.evidence_identity_key
+      || payload.source_record_id !== record.source_record_id) {
+      throw new Error("CAP05_EVIDENCE_IDENTITY_CORRUPTION");
+    }
+    if (payload.source_record_hash !== record.source_record_hash) throw new Error("CAP05_EVIDENCE_IDENTITY_CONFLICT");
+    return { status: "EXISTING_IDEMPOTENT_SUCCESS", fact_id: factId };
   }
 
   private resultV1(input: {
