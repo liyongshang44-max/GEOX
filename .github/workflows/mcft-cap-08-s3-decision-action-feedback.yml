@@ -64,7 +64,7 @@ jobs:
         run: pnpm --filter @geox/server typecheck
       - name: Validate exact formal S3 candidate boundary
         env:
-          MCFT_BASE_SHA: e6d64290c0f6bdef791cc1cbd184571b99d8bc71
+          MCFT_BASE_SHA: 8e88fdd91af25ef82f765f7d4a21b1471e2ab008
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S3_BOUNDARY.cjs
       - name: Bootstrap S3 positive database
         env:
@@ -134,7 +134,7 @@ jobs:
       - name: Finalize candidate authority artifact
         env:
           MCFT_ARTIFACT_STAGE: CANDIDATE_HEAD
-          MCFT_BASE_SHA: e6d64290c0f6bdef791cc1cbd184571b99d8bc71
+          MCFT_BASE_SHA: 8e88fdd91af25ef82f765f7d4a21b1471e2ab008
           MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
         run: node scripts/governance_acceptance/mcft_cap08_s3_artifact_finalize.cjs
       - name: Cleanup S3 negative database
