@@ -14,11 +14,13 @@ import {
 import { DirectCap04ExecutionConfigResolverV1 } from "../../apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.js";
 import { PostgresActionFeedbackTickSourceV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_action_feedback_tick_source_v1.js";
 import { Cap08S2QualifiedEvidenceSourceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s2_qualified_evidence_source_v1.js";
+import { Cap08S3AuthorityGuardV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_authority_guard_v1.js";
 import { Cap08S3DecisionActionProviderServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_decision_action_provider_service_v1.js";
 import { Cap08S3EpisodeInspectorV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_episode_inspector_v1.js";
 import { Cap08S3FormalRangeServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_formal_range_service_v1.js";
 import { Cap08S3FormalRuntimeServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_formal_runtime_service_v1.js";
 import { Cap08S3FormalTickServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_formal_tick_service_v1.js";
+import { Cap08S3ReceiptEpisodeGuardV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_receipt_episode_guard_v1.js";
 import { Cap05ReceiptConsumingForecastScenarioTickServiceV1 } from "../../apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.js";
 import {
   A0BootstrapRuntimeServiceV1,
@@ -61,9 +63,11 @@ function s3SourceDigestV1(): string {
     "apps/server/src/runtime/twin_runtime/cap08_deferred_scenario_persistence_v1.ts",
     "apps/server/src/runtime/twin_runtime/cap08_frozen_evidence_source_v1.ts",
     "apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts",
+    "apps/server/src/runtime/twin_runtime/cap08_s3_authority_guard_v1.ts",
     "apps/server/src/runtime/twin_runtime/cap08_s3_decision_action_provider_service_v1.ts",
     "apps/server/src/runtime/twin_runtime/cap08_s3_episode_inspector_v1.ts",
     "apps/server/src/runtime/twin_runtime/cap08_s3_formal_tick_service_v1.ts",
+    "apps/server/src/runtime/twin_runtime/cap08_s3_receipt_episode_guard_v1.ts",
     "apps/server/src/runtime/twin_runtime/cap08_s3_formal_range_service_v1.ts",
     "apps/server/src/runtime/twin_runtime/cap08_s3_formal_runtime_service_v1.ts",
   ].sort();
@@ -162,6 +166,8 @@ async function main(): Promise<void> {
       normalTick,
       receiptTick,
       provider,
+      new Cap08S3ReceiptEpisodeGuardV1(runner),
+      new Cap08S3AuthorityGuardV1(runner),
     );
     const range = new Cap08S3FormalRangeServiceV1(
       handoff,
