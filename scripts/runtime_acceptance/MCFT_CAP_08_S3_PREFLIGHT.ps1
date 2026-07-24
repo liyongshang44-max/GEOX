@@ -1,5 +1,5 @@
 param(
-  [string]$BaseSha = "13e3e1260c70b9c2b6dd1fd6b8d57fd50fb3202e",
+  [string]$BaseSha = "cabd5fb171ffa24439a40dd27a3471de04049faf",
   [string]$AdminUrl = "postgres://postgres:postgres@127.0.0.1:5433/postgres",
   [string]$RunnerHost = "127.0.0.1",
   [int]$RunnerPort = 5433,
@@ -65,7 +65,7 @@ try {
   }
 
   $env:MCFT_CAP08_S3_COMPLETED_RERUN_NEGATIVE_DESTRUCTIVE_ACCEPTANCE = "1"
-  Invoke-Step "Completed-rerun persisted semantic corruption suite" {
+  Invoke-Step "Completed-rerun semantic corruption S3-CR01 through S3-CR08" {
     pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S3_COMPLETED_RERUN_NEGATIVE_DB.ts
   }
   Remove-Database $PositiveDb
