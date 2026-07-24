@@ -21,10 +21,18 @@ try {
   const registryPath = 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json';
   const signalPath = 'docs/digital_twin/mcft/MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1.json';
   const detectorPath = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs';
-  const workflowPath = '.github/workflows/mcft-candidate-declaration-integrity-v2.yml';
+  const enforcementWorkflowPath = '.github/workflows/mcft-candidate-declaration-integrity-v2.yml';
+  const selftestWorkflowPath = '.github/workflows/mcft-candidate-declaration-selftest-v2.yml';
   const cap07StatusPath = 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CURRENT-AUTHORITY-V1.json';
 
-  for (const item of [policyPath, registryPath, signalPath, detectorPath, workflowPath]) {
+  for (const item of [
+    policyPath,
+    registryPath,
+    signalPath,
+    detectorPath,
+    enforcementWorkflowPath,
+    selftestWorkflowPath,
+  ]) {
     assert.equal(exists(item), true, `P1B_REQUIRED_FILE_MISSING:${item}`);
   }
 
@@ -32,7 +40,8 @@ try {
   const registry = json(registryPath);
   const signal = json(signalPath);
   const detector = read(detectorPath);
-  const workflow = read(workflowPath);
+  const enforcementWorkflow = read(enforcementWorkflowPath);
+  const selftestWorkflow = read(selftestWorkflowPath);
 
   assert.equal(policy.policy_id, 'MCFT-DELIVERY-POLICY-V2');
   assert.equal(policy.workflow_security.pull_request_target_executes_default_branch_policy_only, true);
@@ -64,15 +73,25 @@ try {
 
   assert.equal(detector.includes('collectExplicitDeliveryCandidateSignals'), true);
   assert.equal(detector.includes('REGISTRY_DRIVEN_EXPLICIT_SIGNAL_CONTRACT'), true);
-  assert.equal(detector.includes("/candidate/i.test(current)"), false, 'P1B_BROAD_DOMAIN_STRING_HEURISTIC_FORBIDDEN');
+  assert.equal(detector.includes('/candidate/i.test(current)'), false, 'P1B_BROAD_DOMAIN_STRING_HEURISTIC_FORBIDDEN');
   assert.equal(detector.includes('CANDIDATE_STATUS_FALLBACK'), false, 'P1B_INLINE_FALLBACK_STATUS_SET_FORBIDDEN');
   assert.equal(detector.includes('CANDIDATE_DECLARATION_DISABLED'), true);
 
-  assert.match(workflow, /name:\s+Checkout trusted default-branch policy/);
-  assert.match(workflow, /ref:\s+\$\{\{\s*github\.event\.repository\.default_branch\s*\}\}/);
-  assert.equal(workflow.includes(`- '${signalPath}'`), true, 'P1B_SIGNAL_CONTRACT_PUSH_TRIGGER_MISSING');
-  assert.equal(/contents:\s*write/.test(workflow), false);
-  assert.equal(workflow.includes('persist-credentials: false'), true);
+  assert.match(enforcementWorkflow, /^name:\s+mcft-candidate-declaration-integrity-v2$/m);
+  assert.match(enforcementWorkflow, /^  pull_request_target:\s*$/m);
+  assert.doesNotMatch(enforcementWorkflow, /^  pull_request:\s*$/m);
+  assert.match(enforcementWorkflow, /name:\s+Checkout trusted default-branch policy/);
+  assert.match(enforcementWorkflow, /ref:\s+\$\{\{\s*github\.event\.repository\.default_branch\s*\}\}/);
+
+  assert.match(selftestWorkflow, /^name:\s+mcft-candidate-declaration-selftest-v2$/m);
+  assert.match(selftestWorkflow, /^  pull_request:\s*$/m);
+  assert.doesNotMatch(selftestWorkflow, /^  pull_request_target:\s*$/m);
+  assert.equal(selftestWorkflow.includes(`- '${signalPath}'`), true, 'P1B_SIGNAL_CONTRACT_PUSH_TRIGGER_MISSING');
+
+  for (const workflow of [enforcementWorkflow, selftestWorkflow]) {
+    assert.equal(/contents:\s*write/.test(workflow), false);
+    assert.equal(workflow.includes('persist-credentials: false'), true);
+  }
 
   const selftest = spawnSync(process.execPath, [path.join(ROOT, detectorPath), '--selftest'], {
     cwd: ROOT,
@@ -97,12 +116,13 @@ try {
     nested_array_detection: 'PASS',
     unregistered_delivery_signal_fail_closed_preserved: true,
     trusted_default_branch_registry: 'PASS',
+    candidate_integrity_workflow_identity_split: true,
     pr_modified_registry_trusted_for_same_pr: false,
     cap07_minimal_registry_bootstrap: 'PASS',
     cap07_implementation_authorized: false,
     runtime_authority_delta: 0,
     canonical_write_authority_delta: 0,
-    capability_slice: false
+    capability_slice: false,
   };
   write(result);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
@@ -110,7 +130,7 @@ try {
   const result = {
     schema_version: 'geox_mcft_cap_07_p_minus_1b_bootstrap_result_v1',
     status: 'FAIL',
-    error: error instanceof Error ? error.message : String(error)
+    error: error instanceof Error ? error.message : String(error),
   };
   write(result);
   console.error(JSON.stringify(result, null, 2));

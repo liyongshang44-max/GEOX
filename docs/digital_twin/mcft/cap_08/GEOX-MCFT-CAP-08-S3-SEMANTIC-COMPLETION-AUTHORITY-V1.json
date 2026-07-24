@@ -1,0 +1,144 @@
+{
+  "schema_version": "geox_mcft_cap08_s3_semantic_completion_authority_v1",
+  "record_status": "FROZEN_PRE_CANDIDATE_GOVERNANCE",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S3",
+  "authority_profile_id": "MCFT-CAP-08.S3-SEMANTIC-COMPLETION-AUTHORITY-V1",
+  "taskbook_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+  "s3_contract_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-CONTRACT-V1.json",
+  "storage_contract": {
+    "table": "twin_runtime_authority_snapshot_v1",
+    "authority_kind": "MCFT_CAP08_S3_SEMANTIC_COMPLETION",
+    "canonical_fact_write": false,
+    "projection_write": false,
+    "mutable_read_index_write": false,
+    "immutable_insert_only": true,
+    "conflicting_duplicate_effect": "FAIL_CLOSED"
+  },
+  "authority_identity": [
+    "run_contract_id",
+    "formal_run_id",
+    "tenant_id",
+    "project_id",
+    "group_id",
+    "field_id",
+    "season_id",
+    "zone_id",
+    "phase_engine_contract_digest",
+    "phase_engine_source_digest"
+  ],
+  "completion_pair": {
+    "generic_authority_kind": "REALITY_BINDING",
+    "semantic_authority_kind": "MCFT_CAP08_S3_SEMANTIC_COMPLETION",
+    "commit_requirement": "ONE_DATABASE_TRANSACTION",
+    "transaction_isolation": "SERIALIZABLE_OR_EQUIVALENT_EXACT_LOCKING",
+    "pair_insert_order": "UNOBSERVABLE_OUTSIDE_TRANSACTION",
+    "partial_pair_effect": "FAIL_CLOSED_ZERO_WRITE",
+    "normal_runner_repair_authorized": false
+  },
+  "stored_semantic_payload": {
+    "exact_episode_edges": [
+      "decision",
+      "approval_assertion",
+      "approved_plan",
+      "execution_receipt",
+      "action_feedback"
+    ],
+    "tick_binding_count": 24,
+    "per_tick_bindings": [
+      "tick_ref_hash",
+      "evidence_window_ref_hash",
+      "assimilation_update_ref_hash",
+      "provider_trace_digest"
+    ],
+    "t08_required": [
+      "action_feedback_ref_hash",
+      "dynamics_consumed_evidence_refs_contains_action_feedback"
+    ],
+    "t09_required": [
+      "outcome_absence_witness_ref_hash",
+      "selected_observation_ref_null",
+      "evidence_window_assimilation_refs_empty",
+      "assimilation_update_refs_empty"
+    ],
+    "t10_required": [
+      "outcome_fvo10_ref_hash",
+      "selected_observation_ref_equals_fvo10",
+      "evidence_window_assimilation_refs_exact_fvo10",
+      "assimilation_update_refs_exact_fvo10"
+    ],
+    "tick_trace_digest_count": 24,
+    "semantic_determinism_hash_required": true
+  },
+  "rebuild_contract": {
+    "source": "POSTGRESQL_CANONICAL_FACTS_AND_EXACT_PROJECTIONS",
+    "read_transaction": "REPEATABLE_READ_READ_ONLY",
+    "stored_equals_rebuilt": "CANONICAL_JSON_AND_DETERMINISM_HASH_EXACT",
+    "projection_only_truth_forbidden": true,
+    "hard_coded_qualification_truth_forbidden": true
+  },
+  "normal_already_complete_contract": {
+    "generic_authority_exact": true,
+    "semantic_authority_exact": true,
+    "stored_equals_rebuilt": true,
+    "write_delta": 0,
+    "lease_delta": 0,
+    "authority_snapshot_delta": 0,
+    "failure_effect": "FAIL_CLOSED"
+  },
+  "corruption_matrix": [
+    {
+      "case_id": "S3-CR01",
+      "mutation": "T08_H_CONSUMPTION_EDGE",
+      "expected": "REJECT_ZERO_WRITE"
+    },
+    {
+      "case_id": "S3-CR02",
+      "mutation": "T09_ABSENCE_SEMANTICS",
+      "expected": "REJECT_ZERO_WRITE"
+    },
+    {
+      "case_id": "S3-CR03",
+      "mutation": "T09_ABSENCE_WITNESS_MISSING",
+      "expected": "REJECT_ZERO_WRITE"
+    },
+    {
+      "case_id": "S3-CR04",
+      "mutation": "T10_FVO10_HASH",
+      "expected": "REJECT_ZERO_WRITE"
+    },
+    {
+      "case_id": "S3-CR05",
+      "mutation": "T10_ASSIMILATION_EDGE",
+      "expected": "REJECT_ZERO_WRITE"
+    },
+    {
+      "case_id": "S3-CR06",
+      "mutation": "TICK_TRACE_BINDING",
+      "expected": "REJECT_ZERO_WRITE"
+    },
+    {
+      "case_id": "S3-CR07",
+      "mutation": "GENERIC_AUTHORITY_ONLY",
+      "expected": "REJECT_ZERO_WRITE"
+    },
+    {
+      "case_id": "S3-CR08",
+      "mutation": "SEMANTIC_AUTHORITY_ONLY",
+      "expected": "REJECT_ZERO_WRITE"
+    }
+  ],
+  "nonclaims": [
+    "NO_CANONICAL_COMPLETION_TUPLE_FACT",
+    "NO_NORMAL_RUNNER_SELF_HEAL",
+    "NO_LATE_CORRECTION",
+    "NO_RESIDUAL",
+    "NO_CALIBRATION",
+    "NO_SHADOW",
+    "NO_MODEL_ACTIVATION",
+    "NO_PRODUCTION_RUNTIME_SOURCE",
+    "NO_S4_AUTHORITY"
+  ],
+  "digest_policy": "SHA256_CANONICAL_JSON_SORT_KEYS_EXCLUDING_SEMANTIC_DIGEST_V1",
+  "semantic_digest": "sha256:7ac1b441bfed1842155aa60d68c94abd850511d9dadb41b7049576de88996294"
+}

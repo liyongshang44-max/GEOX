@@ -1,20 +1,10 @@
 name: mcft-candidate-declaration-integrity-v2
 
 on:
-  pull_request:
   pull_request_target:
     types: [opened, synchronize, edited, reopened, ready_for_review]
   merge_group:
     types: [checks_requested]
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
-      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
-      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
-      - 'docs/digital_twin/mcft/MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,28 +16,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  mcft-candidate-integrity-pr-selftest:
-    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 1
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-      - name: Run registry-driven explicit-signal candidate declaration selftest
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs --selftest
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mcft-candidate-integrity-v2-selftest-${{ github.sha }}
-          path: acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2_RESULT.json
-          if-no-files-found: error
-
   mcft-candidate-integrity-enforce-current-pr:
     if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest

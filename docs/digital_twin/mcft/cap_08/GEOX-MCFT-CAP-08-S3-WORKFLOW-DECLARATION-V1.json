@@ -7,7 +7,17 @@
     "name": "mcft-cap-08-s3-pre-candidate-governance",
     "file": ".github/workflows/mcft-cap-08-s3-pre-candidate-governance.yml",
     "candidate_declaration_expected": false,
-    "runtime_database_execution": false
+    "runtime_database_execution": false,
+    "historical_subject_sha": "13e3e1260c70b9c2b6dd1fd6b8d57fd50fb3202e",
+    "pull_request_trigger_retired_after_merge": true,
+    "manual_replay_only": true
+  },
+  "hardening_workflow": {
+    "name": "mcft-cap-08-s3-preflight-hardening",
+    "file": ".github/workflows/mcft-cap-08-s3-preflight-hardening.yml",
+    "candidate_declaration_expected": false,
+    "runtime_database_execution": false,
+    "runtime_source_delta": 0
   },
   "candidate_workflow": {
     "name": "mcft-cap-08-s3-decision-action-feedback",
@@ -15,8 +25,13 @@
     "present_in_governance_pr": false,
     "fresh_postgresql_database": "geox_mcft_cap08_s3_candidate",
     "runs_positive_t05_t10": true,
+    "runs_exact_completed_rerun": true,
+    "runs_completed_rerun_corruption_matrix": true,
     "runs_s3_n01_n22_database_matrix": true,
     "runs_pointer_integrity_matrix": true,
+    "uses_atomic_completion_authority_pair": true,
+    "canonical_completion_tuple_fact": false,
+    "one_shot_preflight_required_before_declaration": true,
     "finalizes_candidate_artifact": true
   },
   "exact_sha_workflow": {
@@ -31,6 +46,15 @@
     "retention_days": 180,
     "upload_readback_required": true,
     "status_context": "mcft-cap-08/s3-exact-sha-attestation"
+  },
+  "candidate_integrity_workflows": {
+    "enforcement_name": "mcft-candidate-declaration-integrity-v2",
+    "enforcement_file": ".github/workflows/mcft-candidate-declaration-integrity-v2.yml",
+    "enforcement_event": "pull_request_target",
+    "selftest_name": "mcft-candidate-declaration-selftest-v2",
+    "selftest_file": ".github/workflows/mcft-candidate-declaration-selftest-v2.yml",
+    "selftest_event": "pull_request",
+    "shared_visible_workflow_identity": false
   },
   "required_pull_request_workflows": [
     "mcft-cap-08-s3-decision-action-feedback",

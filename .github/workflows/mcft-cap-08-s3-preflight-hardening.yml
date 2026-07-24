@@ -1,0 +1,45 @@
+name: mcft-cap-08-s3-preflight-hardening
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s3-preflight-hardening.yml'
+      - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
+      - '.github/workflows/mcft-candidate-declaration-selftest-v2.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-SEMANTIC-COMPLETION-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-WORKFLOW-DECLARATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S3_PREFLIGHT_HARDENING.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap08-s3-preflight-hardening-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  s3-preflight-hardening:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate semantic completion authority and candidate integrity identity split
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S3_PREFLIGHT_HARDENING.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap08-s3-preflight-hardening-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_08_S3_PREFLIGHT_HARDENING_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

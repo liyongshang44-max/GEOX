@@ -1,18 +1,6 @@
 name: mcft-cap-08-s3-pre-candidate-governance
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/mcft-cap-08-s3-pre-candidate-governance.yml"
-      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-CHANGED-FILE-BOUNDARY-V1.json"
-      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-CONTRACT-V1.json"
-      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-EVIDENCE-IDENTITIES-V1.json"
-      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-PRE-CANDIDATE-GOVERNANCE-V1.json"
-      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-PREDECESSOR-CONSUMPTION-V1.json"
-      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-REVIEW-POLICY-V1.json"
-      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-WORKFLOW-DECLARATION-V1.json"
-      - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S3_PRE_CANDIDATE_GOVERNANCE.cjs"
-  merge_group:
   workflow_dispatch:
 
 permissions:
@@ -22,32 +10,23 @@ jobs:
   governance:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact historical governance subject
+        uses: actions/checkout@v4
         with:
+          ref: 13e3e1260c70b9c2b6dd1fd6b8d57fd50fb3202e
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: "20.11.1"
-      - name: Resolve trusted base
-        id: base
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ github.event_name }}" == "merge_group" ]]; then
-            echo "sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "sha=e8dc01b72def45c9931d70dab06f78dbc2b5a527" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Verify S3 pre-candidate governance
+      - name: Verify exact merged S3 pre-candidate governance
         env:
-          BASE_SHA: ${{ steps.base.outputs.sha }}
+          BASE_SHA: e8dc01b72def45c9931d70dab06f78dbc2b5a527
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S3_PRE_CANDIDATE_GOVERNANCE.cjs
       - name: Upload governance result
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap08-s3-pre-candidate-governance
+          name: mcft-cap08-s3-pre-candidate-governance-13e3e126
           path: tmp/mcft-cap08-s3-pre-candidate-governance/MCFT_CAP_08_S3_PRE_CANDIDATE_GOVERNANCE_RESULT.json
           if-no-files-found: error
           retention-days: 30
