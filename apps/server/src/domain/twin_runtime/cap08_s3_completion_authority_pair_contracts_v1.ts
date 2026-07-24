@@ -1,15 +1,20 @@
 // Purpose: define the exact atomic authority pair required to classify MCFT-CAP-08.S3 as semantically complete.
 // Boundary: pure contracts only; no SQL, canonical writes, Runtime execution, route, scheduler, wall clock, or production authority.
 
-import type {
-  Cap08CompletionAuthorityV1,
-  Cap08CompletionGraphV1,
-  InspectCap08CompletionAuthorityInputV1,
+import {
+  CAP08_COMPLETION_AUTHORITY_KIND_V1,
+  type Cap08CompletionAuthorityV1,
+  type Cap08CompletionGraphV1,
+  type InspectCap08CompletionAuthorityInputV1,
 } from "./cap08_completion_authority_contracts_v1.js";
 import type { Cap08S3CompletionTupleV1 } from "./cap08_s3_completion_tuple_v1.js";
 
+// The physical table is schema-frozen to REALITY_BINDING. The semantic row is
+// distinguished by its independent authority_ref namespace and payload profile.
 export const CAP08_S3_SEMANTIC_COMPLETION_AUTHORITY_KIND_V1 =
-  "MCFT_CAP08_S3_SEMANTIC_COMPLETION" as const;
+  CAP08_COMPLETION_AUTHORITY_KIND_V1;
+export const CAP08_S3_SEMANTIC_COMPLETION_AUTHORITY_PROFILE_ID_V1 =
+  "MCFT-CAP-08.S3-SEMANTIC-COMPLETION-AUTHORITY-V1" as const;
 
 export type Cap08S3CompletionAuthorityPairDispositionV1 =
   | "NOT_STARTED"
