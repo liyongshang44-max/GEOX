@@ -1,0 +1,65 @@
+{
+  "schema_version": "geox_mcft_cap08_interim_owner_review_waiver_v1",
+  "record_status": "OWNER_DIRECTIVE_RECORDED_FOR_PROTECTED_MERGE",
+  "capability_line_id": "MCFT-CAP-08",
+  "policy_id": "MCFT-CAP-08-S3-S5-INTERIM-OWNER-REVIEW-WAIVER-V1",
+  "owner_directive_issue_ref": "https://github.com/liyongshang44-max/GEOX/issues/2649",
+  "waiver_authority": "REPOSITORY_OWNER_DIRECTIVE",
+  "repository_owner_login": "liyongshang44-max",
+  "interim_slice_scope": [
+    "MCFT-CAP-08.S3",
+    "MCFT-CAP-08.S4",
+    "MCFT-CAP-08.S5"
+  ],
+  "final_closure_slice": "MCFT-CAP-08.S6",
+  "interim_review_policy": {
+    "independent_review_required": false,
+    "independent_review_satisfied": false,
+    "independent_review_performed": false,
+    "independent_review_waived": true,
+    "retroactive_exact_head_approval_claim_allowed": false,
+    "technical_gate_relaxation": false,
+    "focused_workflow_required": true,
+    "standard_ci_required": true,
+    "protected_merge_required": true,
+    "candidate_to_merge_tree_equality_required": true,
+    "exact_merge_sha_attestation_required": true,
+    "immutable_artifact_readback_required": true
+  },
+  "final_closure_review_policy": {
+    "independent_review_required": true,
+    "verified_second_github_account_required": true,
+    "review_must_target_exact_s6_candidate_head": true,
+    "approval_event_required": "APPROVE",
+    "review_scope_includes_interim_chain": true,
+    "required_inherited_slices": [
+      "MCFT-CAP-08.S3",
+      "MCFT-CAP-08.S4",
+      "MCFT-CAP-08.S5"
+    ],
+    "required_evidence_classes": [
+      "MACHINE_CONTRACTS",
+      "CHANGED_FILE_BOUNDARIES",
+      "FOCUSED_WORKFLOW_ARTIFACTS",
+      "EXACT_SHA_ARTIFACTS",
+      "EFFECTIVENESS_CHAIN",
+      "S6_FINAL_CLOSURE_PROOF"
+    ],
+    "s6_merge_authorized_without_independent_review": false,
+    "s6_exact_sha_closure_authorized_without_independent_review": false
+  },
+  "failure_effect": {
+    "s6_review_absent": "MCFT_CAP_08_REMAINS_INCOMPLETE",
+    "mcft_cap_09_authorized": false
+  },
+  "nonclaims": [
+    "NO_CURRENT_CANDIDATE_APPROVAL",
+    "NO_RETROACTIVE_EXACT_HEAD_APPROVAL",
+    "NO_TECHNICAL_GATE_RELAXATION",
+    "NO_S3_EFFECTIVENESS_FROM_POLICY_ONLY",
+    "NO_S4_IMPLEMENTATION_AUTHORITY_FROM_POLICY_ONLY",
+    "NO_S5_IMPLEMENTATION_AUTHORITY_FROM_POLICY_ONLY",
+    "NO_S6_COMPLETION_AUTHORITY_FROM_POLICY_ONLY",
+    "NO_MCFT_CAP_09_AUTHORITY"
+  ]
+}
