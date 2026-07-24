@@ -1,0 +1,43 @@
+{
+  "schema_version": "geox_mcft_cap08_s4_workflow_declaration_v1",
+  "record_status": "FUTURE_FORMAL_CANDIDATE_WORKFLOWS_PRE_REGISTERED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S4",
+  "governance_workflow": {
+    "name": "mcft-cap-08-s4-pre-candidate-governance",
+    "file": ".github/workflows/mcft-cap-08-s4-pre-candidate-governance.yml",
+    "candidate_declaration_expected": false,
+    "runtime_database_execution": false
+  },
+  "candidate_workflow": {
+    "name": "mcft-cap-08-s4-late-evidence-append-forward",
+    "file": ".github/workflows/mcft-cap-08-s4-late-evidence-append-forward.yml",
+    "present_in_governance_pr": false,
+    "fresh_postgresql_database_required": true,
+    "runs_all_twelve_shared_vectors": true,
+    "runs_t16_append_forward_proof": true,
+    "runs_historical_hash_immutability_proof": true,
+    "runs_t17_corrected_predecessor_proof": true,
+    "runs_negative_and_recovery_matrix": true,
+    "finalizes_candidate_artifact": true
+  },
+  "exact_sha_workflow": {
+    "name": "mcft-cap-08-s4-exact-sha-attestation",
+    "file": ".github/workflows/mcft-cap-08-s4-exact-sha-attestation.yml",
+    "present_in_governance_pr": false,
+    "requires_two_parent_merge": true,
+    "requires_candidate_merge_tree_equality": true,
+    "replays_boundary_on_detached_candidate_sha": true,
+    "runs_fresh_postgresql_on_exact_merge_sha": true,
+    "retention_level": "R1",
+    "retention_days": 180,
+    "upload_readback_required": true,
+    "status_context": "mcft-cap-08/s4-exact-sha-attestation"
+  },
+  "required_pull_request_workflows": [
+    "mcft-cap-08-s4-late-evidence-append-forward",
+    "ci"
+  ],
+  "production_runtime_source_authorized": false,
+  "s5_authorized": false
+}
