@@ -7,9 +7,12 @@ on:
       - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
       - '.github/workflows/mcft-candidate-declaration-selftest-v2.yml'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-REVIEW-POLICY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-INTERIM-OWNER-REVIEW-WAIVER-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-SEMANTIC-COMPLETION-AUTHORITY-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-WORKFLOW-DECLARATION-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S3_PREFLIGHT_HARDENING.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_DEFERRED_REVIEW_POLICY.cjs'
   merge_group:
     types: [checks_requested]
 
@@ -36,10 +39,14 @@ jobs:
           node-version: 20.11.1
       - name: Validate semantic completion authority and candidate integrity identity split
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S3_PREFLIGHT_HARDENING.cjs
+      - name: Validate deferred independent review owner policy
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_DEFERRED_REVIEW_POLICY.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mcft-cap08-s3-preflight-hardening-${{ github.sha }}
-          path: acceptance-output/MCFT_CAP_08_S3_PREFLIGHT_HARDENING_RESULT.json
+          path: |
+            acceptance-output/MCFT_CAP_08_S3_PREFLIGHT_HARDENING_RESULT.json
+            acceptance-output/MCFT_CAP_08_DEFERRED_REVIEW_POLICY_RESULT.json
           if-no-files-found: error
           retention-days: 90
