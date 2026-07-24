@@ -5,6 +5,7 @@
   "slice_id": "MCFT-CAP-08.S3",
   "implementation_strategy": "BOUNDED_REPLAY_DECISION_ACTION_FEEDBACK_OVER_EXISTING_CAP04_CAP05_PRIMITIVES",
   "formal_provider_profile_id": "MCFT-CAP-08.S3-DECISION-ACTION-FEEDBACK-V1",
+  "machine_contract_semantic_digest": "sha256:bc4355d20bea6ba127ffdaccc2bd19f2d950237d10bffb652479bb712739b8a5",
   "formal_provider_contract_digest": "sha256:5816ce6dad81c8b267ed1382ca00a44aa5f1ef271e3f621f181d45d069655746",
   "source_manifest_helper": "scripts/runtime_acceptance/mcft_cap08_s3_source_manifest_v1.ts",
   "source_manifest_file_count": 20,
