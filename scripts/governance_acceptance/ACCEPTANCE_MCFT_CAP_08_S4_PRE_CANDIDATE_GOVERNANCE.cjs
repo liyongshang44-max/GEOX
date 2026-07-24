@@ -165,6 +165,34 @@ try {
   assert.equal(workflows.exact_sha_workflow.present_in_governance_pr, false);
   assert.equal(workflows.exact_sha_workflow.retention_level, 'R1');
 
+  const baseRegistry = JSON.parse(git('show', `${base}:${P.registry}`));
+  const topLevelCurrent = structuredClone(registry);
+  const topLevelBase = structuredClone(baseRegistry);
+  delete topLevelCurrent.registry_revision;
+  delete topLevelBase.registry_revision;
+  delete topLevelCurrent.capabilities;
+  delete topLevelBase.capabilities;
+  assert.deepEqual(topLevelCurrent, topLevelBase, 'S4_REGISTRY_TOP_LEVEL_DRIFT');
+
+  for (const capabilityLine of ['MCFT-CAP-06', 'MCFT-CAP-07']) {
+    assert.deepEqual(
+      registry.capabilities.find((entry) => entry.capability_line === capabilityLine),
+      baseRegistry.capabilities.find((entry) => entry.capability_line === capabilityLine),
+      `S4_REGISTRY_PREDECESSOR_CAPABILITY_DRIFT:${capabilityLine}`
+    );
+  }
+
+  const currentCap08ForComparison = structuredClone(
+    registry.capabilities.find((entry) => entry.capability_line === 'MCFT-CAP-08')
+  );
+  const baseCap08ForComparison = baseRegistry.capabilities.find((entry) => entry.capability_line === 'MCFT-CAP-08');
+  currentCap08ForComparison.authoritative_candidate_status_paths =
+    currentCap08ForComparison.authoritative_candidate_status_paths.filter((item) => item !== P.status);
+  currentCap08ForComparison.candidate_transition_fields =
+    currentCap08ForComparison.candidate_transition_fields.filter((entry) =>
+      !(entry.status_file === P.status && entry.field_path === 's4_candidate_implemented'));
+  assert.deepEqual(currentCap08ForComparison, baseCap08ForComparison, 'S4_REGISTRY_CAP08_NON_S4_DRIFT');
+
   assert.equal(registry.registry_revision, '1.2');
   const cap08 = registry.capabilities.find((entry) => entry.capability_line === 'MCFT-CAP-08');
   assert.ok(cap08, 'S4_REGISTRY_CAP08_MISSING');
