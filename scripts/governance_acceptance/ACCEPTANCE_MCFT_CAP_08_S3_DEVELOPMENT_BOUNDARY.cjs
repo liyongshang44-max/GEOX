@@ -8,7 +8,7 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const OUTPUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_08_S3_BOUNDARY_RESULT.json');
-const TRUSTED_BASE = '13e3e1260c70b9c2b6dd1fd6b8d57fd50fb3202e';
+const TRUSTED_BASE = 'cabd5fb171ffa24439a40dd27a3471de04049faf';
 const TASKBOOK = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md';
 
 function git(...args) {
@@ -50,16 +50,20 @@ try {
   assert.deepEqual(forbidden, [], 'S3_PREFLIGHT_FORBIDDEN_FILE_BOUNDARY');
 
   for (const required of [
+    'apps/server/src/domain/twin_runtime/cap08_s3_completion_authority_pair_contracts_v1.ts',
     'apps/server/src/domain/twin_runtime/cap08_s3_completion_tuple_v1.ts',
+    'apps/server/src/persistence/twin_runtime/postgres_cap08_s3_completion_authority_pair_repository_v1.ts',
     'apps/server/src/runtime/twin_runtime/cap08_s3_completion_evidence_tick_service_v1.ts',
     'apps/server/src/runtime/twin_runtime/cap08_s3_completion_tuple_service_v1.ts',
+    'apps/server/src/runtime/twin_runtime/cap08_s3_formal_range_service_v1.ts',
     'apps/server/src/runtime/twin_runtime/cap08_s3_outcome_completion_evidence_service_v1.ts',
     'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S3_COMPLETED_RERUN_NEGATIVE_DB.ts',
+    'scripts/runtime_acceptance/MCFT_CAP_08_S3_PREFLIGHT.ps1',
     'scripts/runtime_acceptance/mcft_cap08_s3_source_manifest_v1.ts',
   ]) assert.ok(actual.includes(required), `S3_PREFLIGHT_REQUIRED_FILE_MISSING:${required}`);
 
   const result = {
-    schema_version: 'geox_mcft_cap08_s3_development_boundary_result_v1',
+    schema_version: 'geox_mcft_cap08_s3_development_boundary_result_v2',
     status: 'PASS',
     classification: 'DEVELOPMENT_PREFLIGHT_NOT_CANDIDATE',
     base_sha: base,
@@ -70,6 +74,11 @@ try {
     changed_file_count: actual.length,
     changed_files: actual,
     forbidden_file_count: 0,
+    database_migration_delta: 0,
+    business_schema_delta: 0,
+    canonical_completion_tuple_fact_authorized: false,
+    atomic_completion_authority_pair_required: true,
+    normal_completed_rerun_repair_authorized: false,
     candidate_declaration_authorized: false,
     merge_authorized: false,
     production_runtime_source_authorized: false,
@@ -80,7 +89,7 @@ try {
   console.log(JSON.stringify(result));
 } catch (error) {
   write({
-    schema_version: 'geox_mcft_cap08_s3_development_boundary_result_v1',
+    schema_version: 'geox_mcft_cap08_s3_development_boundary_result_v2',
     status: 'FAIL',
     error: error instanceof Error ? error.message : String(error),
   });
