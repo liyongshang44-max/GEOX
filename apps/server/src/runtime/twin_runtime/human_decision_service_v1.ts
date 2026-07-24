@@ -12,7 +12,8 @@ import {
 import { adjudicateCap05DecisionSecondWriteV1 } from "../../domain/twin_runtime/decision_second_write_policy_v1.js";
 import type { Cap04ScenarioOptionIdV1 } from "../../domain/twin_runtime/forecast_scenario_contracts_v1.js";
 import type { ContinuationScopeV1 } from "../../domain/twin_runtime/continuation_operation_identity_v1.js";
-import { PostgresFeedbackPersistenceRepositoryV1, type Cap05PersistenceResultV1 } from "../../persistence/twin_runtime/postgres_feedback_persistence_repository_v1.js";
+import type { Cap05PersistenceResultV1 } from "../../persistence/twin_runtime/postgres_feedback_persistence_repository_v1.js";
+import { PostgresImmutableDecisionActionCommitRepositoryV1 } from "../../persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.js";
 import { PostgresForecastScenarioRecoveryRepositoryV1 } from "../../persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.js";
 
 export const CAP05_HUMAN_DECISION_SERVICE_ID_V1 = "MCFT_CAP_05_CONTROLLED_REPLAY_HUMAN_DECISION_SERVICE_V1" as const;
@@ -102,11 +103,11 @@ function parseEvidenceRecordV1(value: unknown): DecisionRequestEvidenceV1 {
 
 export class Cap05HumanDecisionServiceV1 {
   private readonly scenarioRepository: PostgresForecastScenarioRecoveryRepositoryV1;
-  private readonly feedbackRepository: PostgresFeedbackPersistenceRepositoryV1;
+  private readonly feedbackRepository: PostgresImmutableDecisionActionCommitRepositoryV1;
 
   constructor(private readonly pool: Pool) {
     this.scenarioRepository = new PostgresForecastScenarioRecoveryRepositoryV1(pool);
-    this.feedbackRepository = new PostgresFeedbackPersistenceRepositoryV1(pool);
+    this.feedbackRepository = new PostgresImmutableDecisionActionCommitRepositoryV1(pool);
   }
 
   private async readDecisionRequestEvidenceV1(
