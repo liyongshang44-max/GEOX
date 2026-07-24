@@ -168,11 +168,11 @@ try {
   const baseRegistry = JSON.parse(git('show', `${base}:${P.registry}`));
   const topLevelCurrent = structuredClone(registry);
   const topLevelBase = structuredClone(baseRegistry);
-  delete topLevelCurrent.registry_revision;
-  delete topLevelBase.registry_revision;
+  delete topLevelCurrent.authority_set_revision;
+  delete topLevelCurrent.authority_set_change_id;
   delete topLevelCurrent.capabilities;
   delete topLevelBase.capabilities;
-  assert.deepEqual(topLevelCurrent, topLevelBase, 'S4_REGISTRY_TOP_LEVEL_DRIFT');
+  assert.deepEqual(topLevelCurrent, topLevelBase, 'S4_REGISTRY_TOP_LEVEL_COMPATIBILITY_DRIFT');
 
   for (const capabilityLine of ['MCFT-CAP-06', 'MCFT-CAP-07']) {
     assert.deepEqual(
@@ -193,7 +193,9 @@ try {
       !(entry.status_file === P.status && entry.field_path === 's4_candidate_implemented'));
   assert.deepEqual(currentCap08ForComparison, baseCap08ForComparison, 'S4_REGISTRY_CAP08_NON_S4_DRIFT');
 
-  assert.equal(registry.registry_revision, '1.2');
+  assert.equal(registry.registry_revision, '1.1');
+  assert.equal(registry.authority_set_revision, '1.2');
+  assert.equal(registry.authority_set_change_id, 'MCFT-CAP-08.S4-PRE-CANDIDATE-REGISTRATION');
   const cap08 = registry.capabilities.find((entry) => entry.capability_line === 'MCFT-CAP-08');
   assert.ok(cap08, 'S4_REGISTRY_CAP08_MISSING');
   assert.equal(cap08.authoritative_candidate_status_paths.includes(P.status), true);
@@ -216,7 +218,8 @@ try {
     late_vectors_blob_sha: contract.late_vectors_blob_sha,
     shared_vector_count: contract.vector_authority.vector_count,
     changed_file_count: changed.length,
-    registry_revision: registry.registry_revision,
+    registry_compatibility_revision: registry.registry_revision,
+    authority_set_revision: registry.authority_set_revision,
     s4_status_seed_present: true,
     s4_registry_rule_present: true,
     predecessor_effectiveness_satisfied: false,
