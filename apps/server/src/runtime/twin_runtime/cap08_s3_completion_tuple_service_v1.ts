@@ -1,16 +1,13 @@
-// Purpose: rebuild, persist, and exactly verify the MCFT-CAP-08.S3 semantic completion tuple exclusively from PostgreSQL canonical facts and exact episode projections.
-// Boundary: bounded completion proof only; no Tick execution, State/Forecast/Scenario mutation, route, scheduler, wall clock, filesystem, environment, or production authority.
+// Purpose: rebuild the MCFT-CAP-08.S3 semantic completion tuple exclusively from PostgreSQL canonical facts and exact projections.
+// Boundary: read-only bounded reconstruction only; no fact append, authority write, Tick execution, State/Forecast/Scenario mutation, route, scheduler, wall clock, filesystem, environment, or production authority.
 
-import crypto from "node:crypto";
 import type { Pool } from "pg";
 import {
   validateCanonicalObjectV1,
   type CanonicalObjectEnvelopeV1,
 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import {
-  CAP08_S3_COMPLETION_TUPLE_RECORD_TYPE_V1,
   buildCap08S3CompletionTupleV1,
-  validateCap08S3CompletionTupleV1,
   type Cap08S3CompletionTupleV1,
   type Cap08S3PersistedTickBindingV1,
 } from "../../domain/twin_runtime/cap08_s3_completion_tuple_v1.js";
@@ -23,31 +20,12 @@ import {
   buildCap08S3ProviderTickTraceV1,
   type Cap08S3ProviderTickTraceV1,
 } from "../../domain/twin_runtime/cap08_s3_formal_provider_contracts_v1.js";
-import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
 import {
   Cap08S3EpisodeInspectorV1,
   type Cap08S3EpisodeInspectionV1,
 } from "./cap08_s3_episode_inspector_v1.js";
-import {
-  CAP08_S3_COMPLETION_EVIDENCE_SOURCE_V1,
-  Cap08S3OutcomeCompletionEvidenceServiceV1,
-} from "./cap08_s3_outcome_completion_evidence_service_v1.js";
+import { Cap08S3OutcomeCompletionEvidenceServiceV1 } from "./cap08_s3_outcome_completion_evidence_service_v1.js";
 import type { TwinScopeKeyV1 } from "./ports.js";
-
-export const CAP08_S3_COMPLETION_TUPLE_SOURCE_V1 =
-  "mcft_cap08_s3_completion_authority_v1" as const;
-
-export type Cap08S3CompletionTupleInspectionV1 = {
-  disposition: "ABSENT" | "EXACT_COMPLETE";
-  tuple: Cap08S3CompletionTupleV1 | null;
-  rebuilt_tuple: Cap08S3CompletionTupleV1 | null;
-};
-
-export type Cap08S3CompletionTupleEstablishmentV1 = {
-  disposition: "ALREADY_COMPLETE_EXACT";
-  write_status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS";
-  tuple: Cap08S3CompletionTupleV1;
-};
 
 type PersistedTickGraphV1 = {
   tick: CanonicalObjectEnvelopeV1;
@@ -61,7 +39,9 @@ function requiredStringV1(value: unknown, code: string): string {
 }
 
 function requiredArrayV1(value: unknown, code: string): string[] {
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) throw new Error(code);
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new Error(code);
+  }
   return [...value] as string[];
 }
 
@@ -93,10 +73,6 @@ function exactEpisodeV1(episode: Cap08S3EpisodeInspectionV1): asserts episode is
   }
 }
 
-function factIdV1(tupleRef: string): string {
-  return `fact_mcft08_s3_completion_${crypto.createHash("sha256").update(tupleRef, "utf8").digest("hex").slice(0, 32)}`;
-}
-
 function traceForTickV1(input: {
   formal_run_id: string;
   scope: TwinScopeKeyV1;
@@ -110,7 +86,6 @@ function traceForTickV1(input: {
     action_feedback: NonNullable<Cap08S3EpisodeInspectionV1["action_feedback"]>;
   };
   t08_consumed: boolean;
-  outcome_hash: string;
 }): Cap08S3ProviderTickTraceV1 {
   const index = input.index;
   return buildCap08S3ProviderTickTraceV1({
@@ -151,35 +126,41 @@ export class Cap08S3CompletionTupleServiceV1 {
   private async readCanonicalV1(ref: string, expectedType: string): Promise<CanonicalObjectEnvelopeV1> {
     const rows = await this.pool.query(
       `SELECT record_json->'payload' AS payload
-       FROM facts
-       WHERE record_json->'payload'->>'object_id'=$1
-       LIMIT 2`,
+         FROM facts
+        WHERE record_json->'payload'->>'object_id'=$1
+        LIMIT 2`,
       [ref],
     );
-    if (rows.rows.length !== 1) throw new Error(`CAP08_S3_COMPLETION_CANONICAL_CARDINALITY:${expectedType}:${ref}`);
+    if (rows.rows.length !== 1) {
+      throw new Error(`CAP08_S3_COMPLETION_CANONICAL_CARDINALITY:${expectedType}:${ref}`);
+    }
     const object = structuredClone(rows.rows[0].payload as CanonicalObjectEnvelopeV1);
     validateCanonicalObjectV1(object);
-    if (object.object_type !== expectedType) throw new Error(`CAP08_S3_COMPLETION_CANONICAL_TYPE_MISMATCH:${expectedType}`);
+    if (object.object_type !== expectedType) {
+      throw new Error(`CAP08_S3_COMPLETION_CANONICAL_TYPE_MISMATCH:${expectedType}`);
+    }
     return object;
   }
 
-  private async loadTickGraphV1(input: {
-    scope: TwinScopeKeyV1;
-  }): Promise<PersistedTickGraphV1[]> {
+  private async loadTickGraphV1(input: { scope: TwinScopeKeyV1 }): Promise<PersistedTickGraphV1[]> {
     const rows = await this.pool.query(
       `SELECT record_json->'payload' AS payload
-       FROM facts
-       WHERE record_json->>'type'='twin_runtime_tick_v1'
-         AND record_json->'payload'->>'tenant_id'=$1
-         AND record_json->'payload'->>'project_id'=$2
-         AND record_json->'payload'->>'group_id'=$3
-         AND record_json->'payload'->>'field_id'=$4
-         AND record_json->'payload'->>'season_id'=$5
-         AND record_json->'payload'->>'zone_id'=$6
-         AND record_json->'payload'->>'logical_time'>=$7
-         AND record_json->'payload'->>'logical_time'<=$8
-       ORDER BY record_json->'payload'->>'logical_time', fact_id`,
-      [...exactScopeValuesV1(input.scope), cap08TickLogicalTimeV1(0), cap08TickLogicalTimeV1(CAP08_S1_TICK_COUNT_V1 - 1)],
+         FROM facts
+        WHERE record_json->>'type'='twin_runtime_tick_v1'
+          AND record_json->'payload'->>'tenant_id'=$1
+          AND record_json->'payload'->>'project_id'=$2
+          AND record_json->'payload'->>'group_id'=$3
+          AND record_json->'payload'->>'field_id'=$4
+          AND record_json->'payload'->>'season_id'=$5
+          AND record_json->'payload'->>'zone_id'=$6
+          AND record_json->'payload'->>'logical_time'>=$7
+          AND record_json->'payload'->>'logical_time'<=$8
+        ORDER BY record_json->'payload'->>'logical_time', fact_id`,
+      [
+        ...exactScopeValuesV1(input.scope),
+        cap08TickLogicalTimeV1(0),
+        cap08TickLogicalTimeV1(CAP08_S1_TICK_COUNT_V1 - 1),
+      ],
     );
     if (rows.rows.length !== CAP08_S1_TICK_COUNT_V1) {
       throw new Error(`CAP08_S3_COMPLETION_TICK_CARDINALITY:${rows.rows.length}`);
@@ -189,11 +170,18 @@ export class Cap08S3CompletionTupleServiceV1 {
       const tick = structuredClone(rows.rows[index].payload as CanonicalObjectEnvelopeV1);
       validateCanonicalObjectV1(tick);
       exactScopeV1(input.scope, tick, "CAP08_S3_COMPLETION_TICK_SCOPE_MISMATCH");
-      if (tick.object_type !== "twin_runtime_tick_v1" || tick.logical_time !== cap08TickLogicalTimeV1(index)) {
+      if (tick.object_type !== "twin_runtime_tick_v1"
+        || tick.logical_time !== cap08TickLogicalTimeV1(index)) {
         throw new Error(`CAP08_S3_COMPLETION_TICK_IDENTITY_MISMATCH:T${String(index).padStart(2, "0")}`);
       }
-      const evidenceRef = requiredStringV1(tick.payload.evidence_window_ref, "CAP08_S3_COMPLETION_EVIDENCE_REF_REQUIRED");
-      const assimilationRef = requiredStringV1(tick.payload.assimilation_update_ref, "CAP08_S3_COMPLETION_ASSIMILATION_REF_REQUIRED");
+      const evidenceRef = requiredStringV1(
+        tick.payload.evidence_window_ref,
+        "CAP08_S3_COMPLETION_EVIDENCE_REF_REQUIRED",
+      );
+      const assimilationRef = requiredStringV1(
+        tick.payload.assimilation_update_ref,
+        "CAP08_S3_COMPLETION_ASSIMILATION_REF_REQUIRED",
+      );
       const [evidence, assimilation] = await Promise.all([
         this.readCanonicalV1(evidenceRef, "twin_evidence_window_v1"),
         this.readCanonicalV1(assimilationRef, "twin_assimilation_update_v1"),
@@ -211,7 +199,13 @@ export class Cap08S3CompletionTupleServiceV1 {
     scope: TwinScopeKeyV1;
     phase_engine_source_digest: string;
   }): Promise<Cap08S3CompletionTupleV1> {
-    const formalRunId = requiredStringV1(input.formal_run_id, "CAP08_S3_COMPLETION_FORMAL_RUN_REQUIRED");
+    const formalRunId = requiredStringV1(
+      input.formal_run_id,
+      "CAP08_S3_COMPLETION_FORMAL_RUN_REQUIRED",
+    );
+    if (!/^sha256:[0-9a-f]{64}$/.test(input.phase_engine_source_digest)) {
+      throw new Error("CAP08_S3_COMPLETION_SOURCE_DIGEST_INVALID");
+    }
     const [episode, tickGraph, witness, outcome] = await Promise.all([
       this.episodeInspector.inspect({ formal_run_id: formalRunId, scope: input.scope }),
       this.loadTickGraphV1({ scope: input.scope }),
@@ -240,9 +234,14 @@ export class Cap08S3CompletionTupleServiceV1 {
       t09.evidence.payload.assimilation_applied_evidence_refs,
       "CAP08_S3_COMPLETION_T09_APPLIED_REFS_REQUIRED",
     );
-    if (!t09Selection || t09Selection.selected_observation_ref !== null || t09Applied.length !== 0
+    if (!t09Selection
+      || t09Selection.selected_observation_ref !== null
+      || t09Applied.length !== 0
       || t09.assimilation.payload.selected_observation_ref !== null
-      || requiredArrayV1(t09.assimilation.payload.applied_observation_refs, "CAP08_S3_COMPLETION_T09_ASSIMILATION_APPLIED_REQUIRED").length !== 0) {
+      || requiredArrayV1(
+        t09.assimilation.payload.applied_observation_refs,
+        "CAP08_S3_COMPLETION_T09_ASSIMILATION_APPLIED_REQUIRED",
+      ).length !== 0) {
       throw new Error("CAP08_S3_COMPLETION_T09_ABSENCE_NOT_REBUILT");
     }
     const t10Selection = t10.evidence.payload.observation_selection as Record<string, unknown> | undefined;
@@ -254,7 +253,10 @@ export class Cap08S3CompletionTupleServiceV1 {
       || t10Selection.selected_observation_ref !== CAP08_S3_OUTCOME_FVO_ID_V1
       || JSON.stringify(t10Applied) !== JSON.stringify([CAP08_S3_OUTCOME_FVO_ID_V1])
       || t10.assimilation.payload.selected_observation_ref !== CAP08_S3_OUTCOME_FVO_ID_V1
-      || JSON.stringify(requiredArrayV1(t10.assimilation.payload.applied_observation_refs, "CAP08_S3_COMPLETION_T10_ASSIMILATION_APPLIED_REQUIRED")) !== JSON.stringify([CAP08_S3_OUTCOME_FVO_ID_V1])) {
+      || JSON.stringify(requiredArrayV1(
+        t10.assimilation.payload.applied_observation_refs,
+        "CAP08_S3_COMPLETION_T10_ASSIMILATION_APPLIED_REQUIRED",
+      )) !== JSON.stringify([CAP08_S3_OUTCOME_FVO_ID_V1])) {
       throw new Error("CAP08_S3_COMPLETION_T10_ASSIMILATION_NOT_REBUILT");
     }
 
@@ -264,7 +266,6 @@ export class Cap08S3CompletionTupleServiceV1 {
       index,
       episode,
       t08_consumed: t08Consumed.includes(episode.action_feedback.object_id),
-      outcome_hash: outcome.source_record_hash,
     }));
     const bindings: Cap08S3PersistedTickBindingV1[] = tickGraph.map((graph, index) => ({
       tick_id: `T${String(index).padStart(2, "0")}`,
@@ -348,72 +349,5 @@ export class Cap08S3CompletionTupleServiceV1 {
       tick_bindings: bindings,
       tick_traces: traces,
     });
-  }
-
-  async readStored(input: {
-    formal_run_id: string;
-    scope: TwinScopeKeyV1;
-    phase_engine_source_digest: string;
-  }): Promise<Cap08S3CompletionTupleV1 | null> {
-    const rows = await this.pool.query(
-      `SELECT record_json->'payload' AS payload
-       FROM facts
-       WHERE source=$1
-         AND record_json->>'type'=$2
-         AND record_json->'payload'->>'formal_run_id'=$3
-       LIMIT 2`,
-      [CAP08_S3_COMPLETION_TUPLE_SOURCE_V1, CAP08_S3_COMPLETION_TUPLE_RECORD_TYPE_V1, input.formal_run_id],
-    );
-    if (rows.rows.length === 0) return null;
-    if (rows.rows.length !== 1) throw new Error("CAP08_S3_COMPLETION_TUPLE_CARDINALITY");
-    const tuple = structuredClone(rows.rows[0].payload as Cap08S3CompletionTupleV1);
-    exactScopeV1(input.scope, tuple.scope, "CAP08_S3_COMPLETION_TUPLE_SCOPE_MISMATCH");
-    if (tuple.phase_engine_source_digest !== input.phase_engine_source_digest) {
-      throw new Error("CAP08_S3_COMPLETION_TUPLE_SOURCE_DIGEST_MISMATCH");
-    }
-    validateCap08S3CompletionTupleV1(tuple);
-    return tuple;
-  }
-
-  async inspect(input: {
-    formal_run_id: string;
-    scope: TwinScopeKeyV1;
-    phase_engine_source_digest: string;
-  }): Promise<Cap08S3CompletionTupleInspectionV1> {
-    const stored = await this.readStored(input);
-    if (!stored) return { disposition: "ABSENT", tuple: null, rebuilt_tuple: null };
-    const rebuilt = await this.rebuild(input);
-    if (semanticHashV1(stored) !== semanticHashV1(rebuilt)) {
-      throw new Error("CAP08_S3_COMPLETION_TUPLE_REBUILD_MISMATCH");
-    }
-    return { disposition: "EXACT_COMPLETE", tuple: stored, rebuilt_tuple: rebuilt };
-  }
-
-  async establish(input: {
-    formal_run_id: string;
-    scope: TwinScopeKeyV1;
-    phase_engine_source_digest: string;
-  }): Promise<Cap08S3CompletionTupleEstablishmentV1> {
-    const rebuilt = await this.rebuild(input);
-    const factId = factIdV1(rebuilt.tuple_ref);
-    const recordJson = { type: rebuilt.record_type, payload: rebuilt };
-    const inserted = await this.pool.query(
-      `INSERT INTO facts (fact_id,occurred_at,source,record_json)
-       VALUES ($1,$2::timestamptz,$3,$4::jsonb)
-       ON CONFLICT (fact_id) DO NOTHING
-       RETURNING fact_id`,
-      [factId, cap08TickLogicalTimeV1(23), CAP08_S3_COMPLETION_TUPLE_SOURCE_V1, JSON.stringify(recordJson)],
-    );
-    if (inserted.rows.length > 1) throw new Error("CAP08_S3_COMPLETION_TUPLE_INSERT_CARDINALITY");
-    const writeStatus = inserted.rows.length === 1 ? "INSERTED" : "EXISTING_IDEMPOTENT_SUCCESS";
-    const inspected = await this.inspect(input);
-    if (inspected.disposition !== "EXACT_COMPLETE" || !inspected.tuple) {
-      throw new Error("CAP08_S3_COMPLETION_TUPLE_ESTABLISHMENT_FAILED");
-    }
-    return {
-      disposition: "ALREADY_COMPLETE_EXACT",
-      write_status: writeStatus,
-      tuple: inspected.tuple,
-    };
   }
 }
