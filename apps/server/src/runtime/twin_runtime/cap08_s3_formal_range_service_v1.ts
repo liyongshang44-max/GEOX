@@ -1,7 +1,11 @@
-// Purpose: execute, resume, recover, or exactly read back the bounded MCFT-CAP-08.S3 T00-T23 Replay range using a PostgreSQL-reconstructed semantic completion tuple.
-// Boundary: fixed 24-Tick forward range only; no B00 construction, late correction, Residual, Calibration, Shadow, route, scheduler, live ingestion, or production Runtime authority.
+// Purpose: execute, resume, or exactly read back the bounded MCFT-CAP-08.S3 T00-T23 Replay range using one atomic generic/semantic completion-authority pair.
+// Boundary: fixed 24-Tick forward range only; no B00 construction, authority self-heal, late correction, Residual, Calibration, Shadow, route, scheduler, live ingestion, or production Runtime authority.
 
 import type { InspectCap08CompletionAuthorityInputV1 } from "../../domain/twin_runtime/cap08_completion_authority_contracts_v1.js";
+import type {
+  Cap08S3CompletionAuthorityPairPortV1,
+  EstablishCap08S3CompletionAuthorityPairResultV1,
+} from "../../domain/twin_runtime/cap08_s3_completion_authority_pair_contracts_v1.js";
 import type { Cap08S3CompletionTupleV1 } from "../../domain/twin_runtime/cap08_s3_completion_tuple_v1.js";
 import {
   CAP08_S1_PHASE_ENGINE_CONTRACT_DIGEST_V1,
@@ -20,21 +24,16 @@ import {
   type Cap08S3ProviderTickTraceV1,
 } from "../../domain/twin_runtime/cap08_s3_formal_provider_contracts_v1.js";
 import type { ContinuationCropStageConfigurationContextV1 } from "./continuation_evidence_window_service_v1.js";
-import type { PreparedNextTickInputV1, TwinScopeKeyV1 } from "./ports.js";
-import { Cap08CompletionAuthorityServiceV1 } from "./cap08_completion_authority_service_v1.js";
 import {
   Cap08S3EpisodeInspectorV1,
   type Cap08S3EpisodeInspectionV1,
 } from "./cap08_s3_episode_inspector_v1.js";
-import {
-  Cap08S3CompletionTupleServiceV1,
-  type Cap08S3CompletionTupleEstablishmentV1,
-} from "./cap08_s3_completion_tuple_service_v1.js";
 import type {
   ExecuteCap08S3FormalTickInputV1,
   ExecuteCap08S3FormalTickResultV1,
   PrepareCap08S3NextTickInputPortV1,
 } from "./cap08_s3_formal_tick_service_v1.js";
+import type { PreparedNextTickInputV1, TwinScopeKeyV1 } from "./ports.js";
 
 export type ExecuteCap08S3FormalTickPortV1 = {
   executeOneTick(input: ExecuteCap08S3FormalTickInputV1): Promise<ExecuteCap08S3FormalTickResultV1>;
@@ -53,7 +52,7 @@ export type RunCap08S3FormalRangeInputV1 = {
 };
 
 export type RunCap08S3FormalRangeResultV1 = Cap08S3FormalProviderQualificationV1 & {
-  status: "COMPLETED" | "ALREADY_COMPLETE" | "RECOVERED_COMPLETION_AUTHORITY";
+  status: "COMPLETED" | "ALREADY_COMPLETE";
   persisted_start_logical_time: string;
   executed_tick_count: number;
   completed_tick_count: 24;
@@ -72,9 +71,11 @@ export type RunCap08S3FormalRangeResultV1 = Cap08S3FormalProviderQualificationV1
   phase_engine_contract_digest: typeof CAP08_S1_PHASE_ENGINE_CONTRACT_DIGEST_V1;
   phase_engine_source_digest: string;
   completion_authority_disposition: "ALREADY_COMPLETE_EXACT";
-  completion_authority_write_status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS" | null;
-  completion_tuple_write_status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS" | null;
-  authority_recovery_write_delta: 0 | 1;
+  completion_authority_pair_write_status:
+    | "INSERTED_ATOMIC_PAIR"
+    | "EXISTING_IDEMPOTENT_PAIR"
+    | null;
+  completion_authority_pair_write_delta: 0 | 2;
   slice_acceptance_only: true;
   final_formal_run_id: null;
 };
@@ -137,6 +138,7 @@ function tracesFromTupleV1(tuple: Cap08S3CompletionTupleV1): Cap08S3ProviderTick
 
 function qualificationV1(input: {
   request: RunCap08S3FormalRangeInputV1;
+  phase_engine_source_digest: string;
   status: RunCap08S3FormalRangeResultV1["status"];
   persisted_start_logical_time: string;
   executed_tick_count: number;
@@ -144,15 +146,26 @@ function qualificationV1(input: {
   final_handoff: PreparedNextTickInputV1;
   episode: Cap08S3EpisodeInspectionV1;
   tuple: Cap08S3CompletionTupleV1;
-  completion_authority_write_status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS" | null;
-  completion_tuple_write_status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS" | null;
-  authority_recovery_write_delta: 0 | 1;
+  pair_write_status: RunCap08S3FormalRangeResultV1["completion_authority_pair_write_status"];
+  pair_write_delta: 0 | 2;
 }): RunCap08S3FormalRangeResultV1 {
   exactEpisodeV1(input.episode);
   const tuple = input.tuple;
   if (tuple.formal_run_id !== input.request.formal_run_id
-    || tuple.phase_engine_source_digest !== input.tuple.phase_engine_source_digest) {
+    || tuple.phase_engine_source_digest !== input.phase_engine_source_digest) {
     throw new Error("CAP08_S3_COMPLETION_TUPLE_REQUEST_MISMATCH");
+  }
+  for (const field of [
+    "tenant_id",
+    "project_id",
+    "group_id",
+    "field_id",
+    "season_id",
+    "zone_id",
+  ] as const) {
+    if (tuple.scope[field] !== input.request.scope[field]) {
+      throw new Error(`CAP08_S3_COMPLETION_TUPLE_SCOPE_MISMATCH:${field}`);
+    }
   }
   const t08HBeforeA = tuple.t08.action_feedback_ref === tuple.action_feedback.ref
     && tuple.t08.action_feedback_hash === tuple.action_feedback.hash
@@ -163,7 +176,8 @@ function qualificationV1(input: {
     && Boolean(tuple.t09.absence_witness_hash);
   const t10OrdinaryAssimilation = tuple.t10.outcome_fvo10_ref === CAP08_S3_OUTCOME_FVO_ID_V1
     && tuple.t10.selected_observation_ref === CAP08_S3_OUTCOME_FVO_ID_V1
-    && JSON.stringify(tuple.t10.assimilation_applied_evidence_refs) === JSON.stringify([CAP08_S3_OUTCOME_FVO_ID_V1]);
+    && JSON.stringify(tuple.t10.assimilation_applied_evidence_refs)
+      === JSON.stringify([CAP08_S3_OUTCOME_FVO_ID_V1]);
   if (!t08HBeforeA || !t09OutcomeAbsence || !t10OrdinaryAssimilation) {
     throw new Error("CAP08_S3_COMPLETION_TUPLE_QUALIFICATION_FAILED");
   }
@@ -215,9 +229,8 @@ function qualificationV1(input: {
     phase_engine_contract_digest: CAP08_S1_PHASE_ENGINE_CONTRACT_DIGEST_V1,
     phase_engine_source_digest: tuple.phase_engine_source_digest,
     completion_authority_disposition: "ALREADY_COMPLETE_EXACT",
-    completion_authority_write_status: input.completion_authority_write_status,
-    completion_tuple_write_status: input.completion_tuple_write_status,
-    authority_recovery_write_delta: input.authority_recovery_write_delta,
+    completion_authority_pair_write_status: input.pair_write_status,
+    completion_authority_pair_write_delta: input.pair_write_delta,
     slice_acceptance_only: true,
     final_formal_run_id: null,
   };
@@ -229,10 +242,11 @@ export class Cap08S3FormalRangeServiceV1 {
     private readonly tickService: ExecuteCap08S3FormalTickPortV1,
     private readonly episodeInspector: Cap08S3EpisodeInspectorV1,
     private readonly phaseEngineSourceDigest: string,
-    private readonly completionAuthorityService: Cap08CompletionAuthorityServiceV1,
-    private readonly completionTupleService: Cap08S3CompletionTupleServiceV1,
+    private readonly completionAuthorityPair: Cap08S3CompletionAuthorityPairPortV1,
   ) {
-    if (!/^sha256:[0-9a-f]{64}$/.test(phaseEngineSourceDigest)) throw new Error("CAP08_S3_PHASE_ENGINE_SOURCE_DIGEST_INVALID");
+    if (!/^sha256:[0-9a-f]{64}$/.test(phaseEngineSourceDigest)) {
+      throw new Error("CAP08_S3_PHASE_ENGINE_SOURCE_DIGEST_INVALID");
+    }
   }
 
   private inspectionInputV1(input: RunCap08S3FormalRangeInputV1): InspectCap08CompletionAuthorityInputV1 {
@@ -253,16 +267,8 @@ export class Cap08S3FormalRangeServiceV1 {
     };
   }
 
-  private tupleInputV1(input: RunCap08S3FormalRangeInputV1) {
-    return {
-      formal_run_id: input.formal_run_id,
-      scope: input.scope,
-      phase_engine_source_digest: this.phaseEngineSourceDigest,
-    };
-  }
-
   async inspectCompletion(input: RunCap08S3FormalRangeInputV1) {
-    return this.completionAuthorityService.inspect(this.inspectionInputV1(input));
+    return this.completionAuthorityPair.inspect(this.inspectionInputV1(input));
   }
 
   private async exactEpisodeAndHandoffV1(input: RunCap08S3FormalRangeInputV1): Promise<{
@@ -277,27 +283,31 @@ export class Cap08S3FormalRangeServiceV1 {
     return { episode, final_handoff: finalHandoff };
   }
 
-  private async recoverGenericAuthorityV1(input: RunCap08S3FormalRangeInputV1, tuple: Cap08S3CompletionTupleV1): Promise<RunCap08S3FormalRangeResultV1> {
-    const established = await this.completionAuthorityService.establish(this.inspectionInputV1(input));
-    if (established.disposition !== "ALREADY_COMPLETE_EXACT") throw new Error("CAP08_S3_GENERIC_AUTHORITY_RECOVERY_FAILED");
-    const exactTuple = await this.completionTupleService.inspect(this.tupleInputV1(input));
-    if (exactTuple.disposition !== "EXACT_COMPLETE" || !exactTuple.tuple
-      || exactTuple.tuple.determinism_hash !== tuple.determinism_hash) {
-      throw new Error("CAP08_S3_TUPLE_CHANGED_DURING_AUTHORITY_RECOVERY");
-    }
-    const exact = await this.exactEpisodeAndHandoffV1(input);
+  private completeResultV1(input: {
+    request: RunCap08S3FormalRangeInputV1;
+    status: RunCap08S3FormalRangeResultV1["status"];
+    persisted_start_logical_time: string;
+    executed_tick_count: number;
+    tick_results: ExecuteCap08S3FormalTickResultV1[];
+    exact: { episode: Cap08S3EpisodeInspectionV1; final_handoff: PreparedNextTickInputV1 };
+    pair: EstablishCap08S3CompletionAuthorityPairResultV1 | {
+      write_status: null;
+      authority_pair_write_delta: 0;
+      semantic_authority: Cap08S3CompletionTupleV1;
+    };
+  }): RunCap08S3FormalRangeResultV1 {
     return qualificationV1({
-      request: input,
-      status: "RECOVERED_COMPLETION_AUTHORITY",
-      persisted_start_logical_time: exact.final_handoff.next_logical_tick_time,
-      executed_tick_count: 0,
-      tick_results: [],
-      final_handoff: exact.final_handoff,
-      episode: exact.episode,
-      tuple: exactTuple.tuple,
-      completion_authority_write_status: established.write_status,
-      completion_tuple_write_status: null,
-      authority_recovery_write_delta: established.write_status === "INSERTED" ? 1 : 0,
+      request: input.request,
+      phase_engine_source_digest: this.phaseEngineSourceDigest,
+      status: input.status,
+      persisted_start_logical_time: input.persisted_start_logical_time,
+      executed_tick_count: input.executed_tick_count,
+      tick_results: input.tick_results,
+      final_handoff: input.exact.final_handoff,
+      episode: input.exact.episode,
+      tuple: input.pair.semantic_authority,
+      pair_write_status: input.pair.write_status,
+      pair_write_delta: input.pair.authority_pair_write_delta,
     });
   }
 
@@ -305,59 +315,59 @@ export class Cap08S3FormalRangeServiceV1 {
     requiredStringV1(input.formal_run_id, "CAP08_S3_FORMAL_RUN_ID_REQUIRED");
     canonicalIsoV1(input.created_at, "CAP08_S3_RANGE_CREATED_AT_INVALID");
     requiredStringV1(input.lease_owner, "CAP08_S3_RANGE_LEASE_OWNER_REQUIRED");
-    if (!Number.isInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0) throw new Error("CAP08_S3_RANGE_LEASE_DURATION_INVALID");
+    if (!Number.isInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0) {
+      throw new Error("CAP08_S3_RANGE_LEASE_DURATION_INVALID");
+    }
     if (!Array.isArray(input.authorized_future_forcing_binding_ids)
       || input.authorized_future_forcing_binding_ids.length === 0
-      || input.authorized_future_forcing_binding_ids.some((value) => typeof value !== "string" || !value.trim())) {
+      || input.authorized_future_forcing_binding_ids.some(
+        (value) => typeof value !== "string" || !value.trim(),
+      )) {
       throw new Error("CAP08_S3_RANGE_FORCING_BINDING_AUTHORITY_REQUIRED");
     }
 
-    const tupleInspection = await this.completionTupleService.inspect(this.tupleInputV1(input));
-    let completion;
-    try {
-      completion = await this.inspectCompletion(input);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (message === "CAP08_COMPLETION_TERMINAL_GRAPH_INCOMPLETE"
-        && tupleInspection.disposition === "EXACT_COMPLETE"
-        && tupleInspection.tuple) {
-        return this.recoverGenericAuthorityV1(input, tupleInspection.tuple);
-      }
-      throw error;
-    }
+    const completion = await this.inspectCompletion(input);
     if (completion.disposition === "ALREADY_COMPLETE_EXACT") {
-      if (tupleInspection.disposition !== "EXACT_COMPLETE" || !tupleInspection.tuple) {
-        throw new Error("CAP08_S3_COMPLETION_TUPLE_REQUIRED_FOR_ALREADY_COMPLETE");
+      if (!completion.semantic_authority) {
+        throw new Error("CAP08_S3_SEMANTIC_COMPLETION_AUTHORITY_REQUIRED");
       }
       const exact = await this.exactEpisodeAndHandoffV1(input);
-      return qualificationV1({
+      return this.completeResultV1({
         request: input,
         status: "ALREADY_COMPLETE",
         persisted_start_logical_time: exact.final_handoff.next_logical_tick_time,
         executed_tick_count: 0,
         tick_results: [],
-        final_handoff: exact.final_handoff,
-        episode: exact.episode,
-        tuple: tupleInspection.tuple,
-        completion_authority_write_status: null,
-        completion_tuple_write_status: null,
-        authority_recovery_write_delta: 0,
+        exact,
+        pair: {
+          write_status: null,
+          authority_pair_write_delta: 0,
+          semantic_authority: completion.semantic_authority,
+        },
       });
     }
-    if (tupleInspection.disposition !== "ABSENT") {
-      throw new Error("CAP08_S3_COMPLETION_TUPLE_PRESENT_BEFORE_TERMINAL_GRAPH");
+    if (completion.semantic_authority || completion.generic_authority) {
+      throw new Error("CAP08_S3_COMPLETION_AUTHORITY_PARTIAL_PAIR");
     }
 
     const initialHandoff = await this.handoffService.prepareNextTickInput(input.scope);
     const persistedStart = initialHandoff.next_logical_tick_time;
     const completedNext = this.inspectionInputV1(input).expected_next_logical_time;
-    if (persistedStart === completedNext) throw new Error("CAP08_S3_COMPLETION_TERMINAL_GRAPH_INCOMPLETE");
+    if (persistedStart === completedNext) {
+      throw new Error("CAP08_S3_COMPLETION_TERMINAL_GRAPH_WITHOUT_AUTHORITY_PAIR");
+    }
     const startIndex = cap08TickIndexFromLogicalTimeV1(persistedStart);
     const tickResults: ExecuteCap08S3FormalTickResultV1[] = [];
     for (let index = startIndex; index < CAP08_S1_TICK_COUNT_V1; index += 1) {
       const logicalTime = cap08TickLogicalTimeV1(index);
-      const runtimeConfigRef = requiredStringV1(input.runtime_config_refs_by_logical_time[logicalTime], `CAP08_S3_RUNTIME_CONFIG_REF_REQUIRED:${logicalTime}`);
-      const runtimeConfigHash = requiredStringV1(input.runtime_config_hashes_by_logical_time[logicalTime], `CAP08_S3_RUNTIME_CONFIG_HASH_REQUIRED:${logicalTime}`);
+      const runtimeConfigRef = requiredStringV1(
+        input.runtime_config_refs_by_logical_time[logicalTime],
+        `CAP08_S3_RUNTIME_CONFIG_REF_REQUIRED:${logicalTime}`,
+      );
+      const runtimeConfigHash = requiredStringV1(
+        input.runtime_config_hashes_by_logical_time[logicalTime],
+        `CAP08_S3_RUNTIME_CONFIG_HASH_REQUIRED:${logicalTime}`,
+      );
       tickResults.push(await this.tickService.executeOneTick({
         formal_run_id: input.formal_run_id,
         scope: input.scope,
@@ -372,29 +382,23 @@ export class Cap08S3FormalRangeServiceV1 {
       }));
     }
     const exact = await this.exactEpisodeAndHandoffV1(input);
-    if (exact.final_handoff.next_logical_tick_time !== completedNext) throw new Error("CAP08_S3_RANGE_FINAL_HANDOFF_MISMATCH");
-
-    const tupleEstablished: Cap08S3CompletionTupleEstablishmentV1 =
-      await this.completionTupleService.establish(this.tupleInputV1(input));
-    const authorityEstablished = await this.completionAuthorityService.establish(this.inspectionInputV1(input));
-    if (authorityEstablished.disposition !== "ALREADY_COMPLETE_EXACT") throw new Error("CAP08_S3_COMPLETION_AUTHORITY_ESTABLISHMENT_FAILED");
-    const finalTuple = await this.completionTupleService.inspect(this.tupleInputV1(input));
-    if (finalTuple.disposition !== "EXACT_COMPLETE" || !finalTuple.tuple
-      || finalTuple.tuple.determinism_hash !== tupleEstablished.tuple.determinism_hash) {
-      throw new Error("CAP08_S3_COMPLETION_TUPLE_FINAL_READBACK_FAILED");
+    if (exact.final_handoff.next_logical_tick_time !== completedNext) {
+      throw new Error("CAP08_S3_RANGE_FINAL_HANDOFF_MISMATCH");
     }
-    return qualificationV1({
+    const pair = await this.completionAuthorityPair.establish(this.inspectionInputV1(input));
+    if (pair.disposition !== "ALREADY_COMPLETE_EXACT"
+      || pair.semantic_authority.determinism_hash
+        !== pair.rebuilt_semantic_authority.determinism_hash) {
+      throw new Error("CAP08_S3_COMPLETION_AUTHORITY_PAIR_FINAL_READBACK_FAILED");
+    }
+    return this.completeResultV1({
       request: input,
       status: "COMPLETED",
       persisted_start_logical_time: persistedStart,
       executed_tick_count: tickResults.length,
       tick_results: tickResults,
-      final_handoff: exact.final_handoff,
-      episode: exact.episode,
-      tuple: finalTuple.tuple,
-      completion_authority_write_status: authorityEstablished.write_status,
-      completion_tuple_write_status: tupleEstablished.write_status,
-      authority_recovery_write_delta: 0,
+      exact,
+      pair,
     });
   }
 }
