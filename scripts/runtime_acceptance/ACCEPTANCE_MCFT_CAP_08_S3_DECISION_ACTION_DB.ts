@@ -2,7 +2,6 @@
 // Candidate implementation proof only; independent review, merge effectiveness, S4, production Runtime source, and MCFT-CAP-09 remain unauthorized.
 
 import assert from "node:assert/strict";
-import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,8 +19,8 @@ import { Cap08S3EpisodeInspectorV1 } from "../../apps/server/src/runtime/twin_ru
 import { Cap08S3FormalRangeServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_formal_range_service_v1.js";
 import { Cap08S3FormalRuntimeServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_formal_runtime_service_v1.js";
 import { Cap08S3FormalTickServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_formal_tick_service_v1.js";
+import { Cap08S3ReceiptConsumingForecastScenarioTickServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_receipt_consuming_tick_service_v1.js";
 import { Cap08S3ReceiptEpisodeGuardV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_receipt_episode_guard_v1.js";
-import { Cap05ReceiptConsumingForecastScenarioTickServiceV1 } from "../../apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.js";
 import {
   A0BootstrapRuntimeServiceV1,
   Cap04ForecastScenarioSingleTickServiceV1,
@@ -39,6 +38,7 @@ import {
   runner,
 } from "./mcft_cap08_s2_g3_acceptance_support_v1.js";
 import { buildCap08S2FormalProviderFixtureV1 } from "./mcft_cap08_s2_formal_provider_fixture_v1.js";
+import { computeCap08S3SourceManifestV1 } from "./mcft_cap08_s3_source_manifest_v1.js";
 
 if (process.env.MCFT_CAP08_S3_DESTRUCTIVE_ACCEPTANCE !== "1") {
   throw new Error("SET_MCFT_CAP08_S3_DESTRUCTIVE_ACCEPTANCE_1");
@@ -50,36 +50,6 @@ const write = (value: unknown): void => {
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, `${JSON.stringify(value, null, 2)}\n`);
 };
-
-function s3SourceDigestV1(): string {
-  const files = [
-    "apps/server/src/domain/twin_runtime/cap08_phase_engine_contracts_v1.ts",
-    "apps/server/src/domain/twin_runtime/cap08_s3_formal_provider_contracts_v1.ts",
-    "apps/server/src/domain/twin_runtime/cap08_s3_phase_contracts_v1.ts",
-    "apps/server/src/persistence/twin_runtime/postgres_approval_plan_evidence_repository_v1.ts",
-    "apps/server/src/persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.ts",
-    "apps/server/src/runtime/twin_runtime/action_feedback_normalization_service_v1.ts",
-    "apps/server/src/runtime/twin_runtime/human_decision_service_v1.ts",
-    "apps/server/src/runtime/twin_runtime/cap08_deferred_scenario_persistence_v1.ts",
-    "apps/server/src/runtime/twin_runtime/cap08_frozen_evidence_source_v1.ts",
-    "apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts",
-    "apps/server/src/runtime/twin_runtime/cap08_s3_authority_guard_v1.ts",
-    "apps/server/src/runtime/twin_runtime/cap08_s3_decision_action_provider_service_v1.ts",
-    "apps/server/src/runtime/twin_runtime/cap08_s3_episode_inspector_v1.ts",
-    "apps/server/src/runtime/twin_runtime/cap08_s3_formal_tick_service_v1.ts",
-    "apps/server/src/runtime/twin_runtime/cap08_s3_receipt_episode_guard_v1.ts",
-    "apps/server/src/runtime/twin_runtime/cap08_s3_formal_range_service_v1.ts",
-    "apps/server/src/runtime/twin_runtime/cap08_s3_formal_runtime_service_v1.ts",
-  ].sort();
-  const hash = crypto.createHash("sha256");
-  for (const file of files) {
-    hash.update(file);
-    hash.update("\0");
-    hash.update(fs.readFileSync(path.join(ROOT, file)));
-    hash.update("\0");
-  }
-  return `sha256:${hash.digest("hex")}`;
-}
 
 async function countObjectV1(type: string): Promise<number> {
   return Number((await runner.query(
@@ -126,6 +96,9 @@ async function main(): Promise<void> {
     ok("bounded runner identity");
 
     const fixture = buildCap08S2FormalProviderFixtureV1();
+    const sourceManifest = computeCap08S3SourceManifestV1(ROOT);
+    assert.equal(sourceManifest.paths.length, 20);
+    assert.ok(/^sha256:[0-9a-f]{64}$/.test(sourceManifest.manifest_digest));
     const runtimeRepository = new PostgresRuntimeRepositoryV1(runner);
     const nextTickRepository = new PostgresNextTickRepositoryV1(runner);
     const forecastRepository = new PostgresForecastScenarioRecoveryRepositoryV1(runner);
@@ -147,7 +120,7 @@ async function main(): Promise<void> {
       new DirectCap04ExecutionConfigResolverV1(),
     );
     const actionFeedbackSource = new PostgresActionFeedbackTickSourceV1(runner);
-    const receiptTick = new Cap05ReceiptConsumingForecastScenarioTickServiceV1(
+    const receiptTick = new Cap08S3ReceiptConsumingForecastScenarioTickServiceV1(
       handoff,
       frozenEvidence,
       actionFeedbackSource,
@@ -171,7 +144,7 @@ async function main(): Promise<void> {
       handoff,
       tick,
       inspector,
-      s3SourceDigestV1(),
+      sourceManifest.manifest_digest,
       new Cap08CompletionAuthorityServiceV1(completionRepository),
     );
     const runtime = new Cap08S3FormalRuntimeServiceV1(
@@ -199,6 +172,7 @@ async function main(): Promise<void> {
     assert.equal(order.length, 48);
     assert.equal(first.range.provider_profile_id, PROFILE);
     assert.equal(first.range.provider_contract_digest, CONTRACT);
+    assert.equal(first.range.phase_engine_source_digest, sourceManifest.manifest_digest);
     assert.deepEqual([
       first.range.posterior_state_count,
       first.range.successful_forecast_count,
@@ -211,6 +185,7 @@ async function main(): Promise<void> {
     assert.equal(new Set(first.range.tick_traces.map((trace) => trace.trace_digest)).size, 24);
     ok("fresh PostgreSQL B00 and T00-T23 S3 formal run");
     ok("canonical persisted totals and semantic Tick traces");
+    ok("full source manifest bound to completion authority");
 
     const episode = first.range.episode_inspection;
     assert.equal(episode.disposition, "EXACT_COMPLETE");
@@ -268,6 +243,7 @@ async function main(): Promise<void> {
     assert.equal(second.status, "ALREADY_COMPLETE");
     assert.equal(second.range.executed_tick_count, 0);
     assert.equal(second.range.episode_inspection.disposition, "EXACT_COMPLETE");
+    assert.equal(second.range.phase_engine_source_digest, sourceManifest.manifest_digest);
     assert.deepEqual([
       second.range.posterior_state_count,
       second.range.successful_forecast_count,
@@ -290,6 +266,7 @@ async function main(): Promise<void> {
       provider_profile_id: PROFILE,
       provider_contract_digest: CONTRACT,
       phase_engine_source_digest: first.range.phase_engine_source_digest,
+      source_manifest: sourceManifest,
       formal_run_id: fixture.formal_run_id,
       successful_tick_count: first.range.successful_tick_count,
       persisted_cardinalities: {
