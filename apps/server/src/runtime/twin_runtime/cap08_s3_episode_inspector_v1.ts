@@ -10,11 +10,20 @@ import {
   CAP08_S3_SELECTED_OPTION_ID_V1,
   CAP08_S3_TARGET_SCOPE_EQUIVALENT_AMOUNT_MM_V1,
 } from "../../domain/twin_runtime/cap08_s3_formal_provider_contracts_v1.js";
-import type { Cap05ActionFeedbackEnvelopeV1, Cap05DecisionEnvelopeV1 } from "../../domain/twin_runtime/feedback_canonical_contracts_v1.js";
-import type { Cap05ApprovalAssertionEvidenceV1, Cap05ApprovedPlanEvidenceV1 } from "../../evidence/twin_runtime/approval_plan_evidence_contracts_v1.js";
+import {
+  validateCap05ActionFeedbackV1,
+  validateCap05DecisionV1,
+  type Cap05ActionFeedbackEnvelopeV1,
+  type Cap05DecisionEnvelopeV1,
+} from "../../domain/twin_runtime/feedback_canonical_contracts_v1.js";
+import type {
+  Cap05ApprovalAssertionEvidenceV1,
+  Cap05ApprovedPlanEvidenceV1,
+} from "../../evidence/twin_runtime/approval_plan_evidence_contracts_v1.js";
 import type { Cap05ExecutionReceiptEvidenceV1 } from "../../evidence/twin_runtime/execution_receipt_evidence_contract_v1.js";
-import { PostgresImmutableDecisionActionCommitRepositoryV1 } from "../../persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.js";
 import type { TwinScopeKeyV1 } from "./ports.js";
+
+export type Cap08S3ReadQueryPortV1 = Pick<Pool, "query">;
 
 export type Cap08S3EpisodeInspectionV1 = {
   schema_version: "geox_mcft_cap08_s3_episode_inspection_v1";
@@ -56,11 +65,7 @@ function exactScopeV1(value: TwinScopeKeyV1, expected: TwinScopeKeyV1, code: str
 }
 
 export class Cap08S3EpisodeInspectorV1 {
-  private readonly canonicalRepository: PostgresImmutableDecisionActionCommitRepositoryV1;
-
-  constructor(private readonly pool: Pool) {
-    this.canonicalRepository = new PostgresImmutableDecisionActionCommitRepositoryV1(pool);
-  }
+  constructor(private readonly database: Cap08S3ReadQueryPortV1) {}
 
   private async sourceEvidenceV1<T>(input: {
     source: string;
@@ -68,28 +73,68 @@ export class Cap08S3EpisodeInspectorV1 {
     formal_run_id: string;
     scope: TwinScopeKeyV1;
   }): Promise<T[]> {
-    const rows = await this.pool.query(
+    const rows = await this.database.query(
       `SELECT record_json->'payload' AS payload
-       FROM facts
-       WHERE source=$1 AND record_json->>'type'=$2
-         AND record_json->'payload'->>'formal_run_id'=$3
-         AND record_json->'payload'->>'tenant_id'=$4
-         AND record_json->'payload'->>'project_id'=$5
-         AND record_json->'payload'->>'group_id'=$6
-         AND record_json->'payload'->>'field_id'=$7
-         AND record_json->'payload'->>'season_id'=$8
-         AND record_json->'payload'->>'zone_id'=$9
-       ORDER BY fact_id`,
+         FROM facts
+        WHERE source=$1 AND record_json->>'type'=$2
+          AND record_json->'payload'->>'formal_run_id'=$3
+          AND record_json->'payload'->>'tenant_id'=$4
+          AND record_json->'payload'->>'project_id'=$5
+          AND record_json->'payload'->>'group_id'=$6
+          AND record_json->'payload'->>'field_id'=$7
+          AND record_json->'payload'->>'season_id'=$8
+          AND record_json->'payload'->>'zone_id'=$9
+        ORDER BY fact_id`,
       [input.source, input.type, input.formal_run_id, ...exactScopeValuesV1(input.scope)],
     );
-    return rows.rows.map((row: Record<string, unknown>) => parseEvidenceV1<T>(row.payload, "CAP08_S3_EPISODE_EVIDENCE_INVALID"));
+    return rows.rows.map((row: Record<string, unknown>) =>
+      parseEvidenceV1<T>(row.payload, "CAP08_S3_EPISODE_EVIDENCE_INVALID"));
+  }
+
+  private async canonicalDecisionV1(objectId: string): Promise<Cap05DecisionEnvelopeV1 | null> {
+    const rows = await this.database.query(
+      `SELECT record_json->>'type' AS object_type,record_json->'payload' AS payload
+         FROM facts
+        WHERE record_json->'payload'->>'object_id'=$1
+        LIMIT 2`,
+      [objectId],
+    );
+    if (rows.rows.length === 0) return null;
+    if (rows.rows.length !== 1) throw new Error("CAP08_S3_EPISODE_DECISION_CANONICAL_CARDINALITY");
+    if (rows.rows[0].object_type !== "twin_decision_record_v1") {
+      throw new Error("CAP08_S3_EPISODE_DECISION_CANONICAL_MISSING");
+    }
+    const object = structuredClone(rows.rows[0].payload as Cap05DecisionEnvelopeV1);
+    validateCap05DecisionV1(object);
+    return object;
+  }
+
+  private async canonicalActionFeedbackV1(objectId: string): Promise<Cap05ActionFeedbackEnvelopeV1 | null> {
+    const rows = await this.database.query(
+      `SELECT record_json->>'type' AS object_type,record_json->'payload' AS payload
+         FROM facts
+        WHERE record_json->'payload'->>'object_id'=$1
+        LIMIT 2`,
+      [objectId],
+    );
+    if (rows.rows.length === 0) return null;
+    if (rows.rows.length !== 1) throw new Error("CAP08_S3_EPISODE_ACTION_FEEDBACK_CANONICAL_CARDINALITY");
+    if (rows.rows[0].object_type !== "twin_action_feedback_v1") {
+      throw new Error("CAP08_S3_EPISODE_ACTION_FEEDBACK_CANONICAL_MISSING");
+    }
+    const object = structuredClone(rows.rows[0].payload as Cap05ActionFeedbackEnvelopeV1);
+    validateCap05ActionFeedbackV1(object);
+    return object;
   }
 
   async inspect(input: {
     formal_run_id: string;
     scope: TwinScopeKeyV1;
   }): Promise<Cap08S3EpisodeInspectionV1> {
-    const formalRunId = requiredStringV1(input.formal_run_id, "CAP08_S3_EPISODE_FORMAL_RUN_ID_REQUIRED");
+    const formalRunId = requiredStringV1(
+      input.formal_run_id,
+      "CAP08_S3_EPISODE_FORMAL_RUN_ID_REQUIRED",
+    );
     const decisionRequests = await this.sourceEvidenceV1<Record<string, unknown>>({
       source: "mcft_cap08_s3_replay_evidence_v1",
       type: "controlled_human_decision_request_v1",
@@ -109,23 +154,23 @@ export class Cap08S3EpisodeInspectorV1 {
       scope: input.scope,
     });
 
-    const decisionRows = await this.pool.query(
+    const decisionRows = await this.database.query(
       `SELECT decision_object_id FROM twin_decision_record_projection_v1
-       WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
-       ORDER BY logical_time,decision_object_id`,
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
+        ORDER BY logical_time,decision_object_id`,
       exactScopeValuesV1(input.scope),
     );
-    const planRows = await this.pool.query(
+    const planRows = await this.database.query(
       `SELECT canonical_evidence FROM twin_approved_plan_binding_projection_v1
-       WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
-         AND active_for_decision=true
-       ORDER BY plan_effective_from,approved_plan_evidence_ref`,
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
+          AND active_for_decision=true
+        ORDER BY plan_effective_from,approved_plan_evidence_ref`,
       exactScopeValuesV1(input.scope),
     );
-    const feedbackRows = await this.pool.query(
+    const feedbackRows = await this.database.query(
       `SELECT action_feedback_object_id FROM twin_action_feedback_projection_v1
-       WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
-       ORDER BY logical_time,as_of,action_feedback_object_id`,
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
+        ORDER BY logical_time,as_of,action_feedback_object_id`,
       exactScopeValuesV1(input.scope),
     );
 
@@ -156,21 +201,23 @@ export class Cap08S3EpisodeInspectorV1 {
       if (value !== 1) throw new Error(`CAP08_S3_EPISODE_CARDINALITY:${field}:${value}`);
     }
 
-    const decisionObject = await this.canonicalRepository.readCanonicalObject(decisionRows.rows[0].decision_object_id);
-    const feedbackObject = await this.canonicalRepository.readCanonicalObject(feedbackRows.rows[0].action_feedback_object_id);
-    if (!decisionObject || decisionObject.object_type !== "twin_decision_record_v1") throw new Error("CAP08_S3_EPISODE_DECISION_CANONICAL_MISSING");
-    if (!feedbackObject || feedbackObject.object_type !== "twin_action_feedback_v1") throw new Error("CAP08_S3_EPISODE_ACTION_FEEDBACK_CANONICAL_MISSING");
-    const decision = decisionObject as Cap05DecisionEnvelopeV1;
+    const decision = await this.canonicalDecisionV1(decisionRows.rows[0].decision_object_id);
+    const feedback = await this.canonicalActionFeedbackV1(feedbackRows.rows[0].action_feedback_object_id);
+    if (!decision) throw new Error("CAP08_S3_EPISODE_DECISION_CANONICAL_MISSING");
+    if (!feedback) throw new Error("CAP08_S3_EPISODE_ACTION_FEEDBACK_CANONICAL_MISSING");
     const approval = approvalAssertions[0];
-    const plan = parseEvidenceV1<Cap05ApprovedPlanEvidenceV1 & { formal_run_id?: string }>(planRows.rows[0].canonical_evidence, "CAP08_S3_EPISODE_PLAN_INVALID");
+    const plan = parseEvidenceV1<Cap05ApprovedPlanEvidenceV1 & { formal_run_id?: string }>(
+      planRows.rows[0].canonical_evidence,
+      "CAP08_S3_EPISODE_PLAN_INVALID",
+    );
     const receipt = receipts[0] as Cap05ExecutionReceiptEvidenceV1 & { formal_run_id?: string };
-    const feedback = feedbackObject as Cap05ActionFeedbackEnvelopeV1;
 
     for (const candidate of [decision, approval, plan, receipt, feedback] as TwinScopeKeyV1[]) {
       exactScopeV1(candidate, input.scope, "CAP08_S3_EPISODE_SCOPE_MISMATCH");
     }
     const request = decisionRequests[0];
-    if (request.dataset_id !== CAP08_S3_FORMAL_DATASET_ID_V1 || request.formal_run_id !== formalRunId) {
+    if (request.dataset_id !== CAP08_S3_FORMAL_DATASET_ID_V1
+      || request.formal_run_id !== formalRunId) {
       throw new Error("CAP08_S3_EPISODE_DECISION_SOURCE_IDENTITY_MISMATCH");
     }
     if (plan.formal_run_id !== formalRunId || receipt.formal_run_id !== formalRunId) {
@@ -200,7 +247,8 @@ export class Cap08S3EpisodeInspectorV1 {
       || receipt.canonical_payload.approved_plan_hash !== plan.source_record_hash
       || String(receipt.canonical_payload.actual_amount_mm) !== CAP08_S3_EXECUTED_AMOUNT_MM_V1
       || String(receipt.canonical_payload.spatial_coverage_fraction) !== CAP08_S3_COVERAGE_FRACTION_V1
-      || String(receipt.canonical_payload.target_scope_equivalent_irrigation_mm) !== CAP08_S3_TARGET_SCOPE_EQUIVALENT_AMOUNT_MM_V1) {
+      || String(receipt.canonical_payload.target_scope_equivalent_irrigation_mm)
+        !== CAP08_S3_TARGET_SCOPE_EQUIVALENT_AMOUNT_MM_V1) {
       throw new Error("CAP08_S3_EPISODE_RECEIPT_CHAIN_MISMATCH");
     }
     if (feedback.payload.decision_ref !== decision.object_id
@@ -213,7 +261,8 @@ export class Cap08S3EpisodeInspectorV1 {
       || feedback.context_revision_ref !== decision.context_revision_ref
       || feedback.payload.actual_amount_mm !== CAP08_S3_EXECUTED_AMOUNT_MM_V1
       || feedback.payload.spatial_coverage_fraction !== CAP08_S3_COVERAGE_FRACTION_V1
-      || feedback.payload.target_scope_equivalent_irrigation_mm !== CAP08_S3_TARGET_SCOPE_EQUIVALENT_AMOUNT_MM_V1) {
+      || feedback.payload.target_scope_equivalent_irrigation_mm
+        !== CAP08_S3_TARGET_SCOPE_EQUIVALENT_AMOUNT_MM_V1) {
       throw new Error("CAP08_S3_EPISODE_ACTION_FEEDBACK_CHAIN_MISMATCH");
     }
 
