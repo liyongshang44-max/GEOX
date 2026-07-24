@@ -9,7 +9,10 @@
   "independent_review_performed": false,
   "independent_review_waived": false,
   "s2_owner_review_waiver_inherited": false,
-  "required_before_formal_candidate_creation": true,
+  "required_before_formal_candidate_creation": false,
+  "required_before_candidate_declaration": false,
+  "required_before_candidate_merge": true,
+  "required_before_exact_sha_attestation": true,
   "required_review_subjects": [
     "S3_MACHINE_CONTRACT",
     "S3_EVIDENCE_IDENTITIES",
@@ -24,18 +27,21 @@
     "verified_second_github_account_required": true,
     "review_must_target_exact_candidate_head": true,
     "approval_event_required": "APPROVE",
-    "owner_self_approval_counts_as_independent_review": false
+    "owner_self_approval_counts_as_independent_review": false,
+    "new_commit_after_approval_requires_reapproval": true
   },
   "technical_gate_relaxation": false,
-  "formal_candidate_creation_authorized": false,
-  "candidate_transition_authorized": false,
+  "formal_candidate_creation_authorized_after_governance_merge": true,
+  "candidate_transition_authorized_after_governance_merge": true,
+  "candidate_merge_authorized_without_independent_review": false,
+  "exact_sha_attestation_authorized_without_independent_review": false,
   "implementation_authorized": false,
   "runtime_source_authorized": false,
   "nonclaims": [
     "NO_REVIEW_SATISFACTION_CLAIM",
     "NO_WAIVER",
     "NO_RUNTIME_AUTHORITY",
-    "NO_CANDIDATE_DECLARATION",
+    "NO_CANDIDATE_DECLARATION_IN_THIS_GOVERNANCE_PR",
     "NO_S3_EFFECTIVENESS"
   ]
 }
