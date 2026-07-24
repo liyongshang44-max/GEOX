@@ -203,27 +203,30 @@ export class Cap08S3DecisionActionProviderServiceV1 {
     const factId = standaloneFactIdV1(record);
     const sourceRecordId = requiredStringV1(record.source_record_id, "CAP08_S3_SOURCE_RECORD_ID_REQUIRED");
     const sourceRecordHash = requiredStringV1(record.source_record_hash, "CAP08_S3_SOURCE_RECORD_HASH_REQUIRED");
+    const occurredAt = canonicalInstantV1(record.available_to_runtime_at, "CAP08_S3_EVIDENCE_AVAILABLE_AT_INVALID");
+    const recordJson = JSON.stringify({ type: record.record_type, payload: record });
+    const inserted = await this.pool.query(
+      `INSERT INTO facts (fact_id,occurred_at,source,record_json)
+       VALUES ($1,$2::timestamptz,'mcft_cap08_s3_replay_evidence_v1',$3::jsonb)
+       ON CONFLICT (fact_id) DO NOTHING
+       RETURNING fact_id`,
+      [factId, occurredAt, recordJson],
+    );
+    if (inserted.rows.length === 1) return "INSERTED";
+    if (inserted.rows.length !== 0) throw new Error("CAP08_S3_EVIDENCE_INSERT_CARDINALITY");
     const existing = await this.pool.query(
-      "SELECT source,record_json FROM facts WHERE fact_id=$1 FOR UPDATE",
+      "SELECT source,record_json FROM facts WHERE fact_id=$1",
       [factId],
     );
-    if (existing.rows.length > 1) throw new Error("CAP08_S3_EVIDENCE_FACT_CARDINALITY");
-    if (existing.rows.length === 1) {
-      const payload = existing.rows[0].record_json?.payload as Record<string, unknown> | undefined;
-      if (existing.rows[0].source !== "mcft_cap08_s3_replay_evidence_v1"
-        || !payload
-        || payload.source_record_id !== sourceRecordId
-        || payload.source_record_hash !== sourceRecordHash) {
-        throw new Error("CAP08_S3_EVIDENCE_IDEMPOTENCY_CONFLICT");
-      }
-      return "EXISTING_IDEMPOTENT_SUCCESS";
+    if (existing.rows.length !== 1) throw new Error("CAP08_S3_EVIDENCE_FACT_CARDINALITY");
+    const payload = existing.rows[0].record_json?.payload as Record<string, unknown> | undefined;
+    if (existing.rows[0].source !== "mcft_cap08_s3_replay_evidence_v1"
+      || !payload
+      || payload.source_record_id !== sourceRecordId
+      || payload.source_record_hash !== sourceRecordHash) {
+      throw new Error("CAP08_S3_EVIDENCE_IDEMPOTENCY_CONFLICT");
     }
-    await this.pool.query(
-      `INSERT INTO facts (fact_id,occurred_at,source,record_json)
-       VALUES ($1,$2::timestamptz,'mcft_cap08_s3_replay_evidence_v1',$3::jsonb)`,
-      [factId, canonicalInstantV1(record.available_to_runtime_at, "CAP08_S3_EVIDENCE_AVAILABLE_AT_INVALID"), JSON.stringify({ type: record.record_type, payload: record })],
-    );
-    return "INSERTED";
+    return "EXISTING_IDEMPOTENT_SUCCESS";
   }
 
   private async readUniqueDecisionV1(scope: ContinuationScopeV1): Promise<Cap05DecisionEnvelopeV1> {
