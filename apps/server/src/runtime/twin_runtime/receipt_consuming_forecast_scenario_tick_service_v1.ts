@@ -1,8 +1,8 @@
-// apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts
 // Purpose: compose one explicit CAP-05 receipt-consuming hourly tick by adapting canonical H Action Feedback into the existing CAP-04 A1 Dynamics input path, then reusing unchanged State, Assimilation, 72-hour Forecast, Scenario and persistence orchestration.
 // Boundary: one requested tick only; no range loop, restart/backfill, route, scheduler, wall clock, approval, dispatch, Recommendation, AO-ACT, calibration, model activation, migration or CAP-06 authority.
 
 import type { Cap05ActionFeedbackEnvelopeV1 } from "../../domain/twin_runtime/feedback_canonical_contracts_v1.js";
+import type { Cap04ExecutionConfigResolverPortV1 } from "../../domain/twin_runtime/runtime_config_execution_view_v1.js";
 import {
   selectCap05ActionFeedbackForTickV1,
   type Cap05ActionFeedbackTickSelectionTraceV1,
@@ -165,6 +165,7 @@ export class Cap05ReceiptConsumingForecastScenarioTickServiceV1 {
     actionFeedbackSource: Cap05ActionFeedbackSourcePortV1,
     runtimeConfigRepository: RuntimeConfigRepositoryPortV1,
     persistence: Cap04SingleTickPersistencePortV1,
+    executionConfigResolver: Cap04ExecutionConfigResolverPortV1 = new Cap05InheritedCap04ExecutionConfigResolverV1(),
   ) {
     this.evidenceSource = new Cap05ReceiptConsumingEvidenceSourceV1(baseEvidenceSource, actionFeedbackSource);
     this.inner = new Cap04ForecastScenarioSingleTickServiceV1(
@@ -172,7 +173,7 @@ export class Cap05ReceiptConsumingForecastScenarioTickServiceV1 {
       this.evidenceSource,
       runtimeConfigRepository,
       persistence,
-      new Cap05InheritedCap04ExecutionConfigResolverV1(),
+      executionConfigResolver,
     );
   }
 
