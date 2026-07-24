@@ -71,6 +71,7 @@ try {
   assert.equal(status.production_runtime_source_authorized, false);
 
   assert.equal(implementation.record_status, 'FORMAL_CANDIDATE_IMPLEMENTATION_PREPARED_NOT_EFFECTIVE');
+  assert.equal(implementation.machine_contract_semantic_digest, 'sha256:bc4355d20bea6ba127ffdaccc2bd19f2d950237d10bffb652479bb712739b8a5');
   assert.equal(implementation.formal_provider_contract_digest, 'sha256:5816ce6dad81c8b267ed1382ca00a44aa5f1ef271e3f621f181d45d069655746');
   assert.equal(implementation.source_manifest_file_count, 20);
   assert.equal(implementation.formal_run_cardinality.successful_tick_count, 24);
@@ -87,7 +88,7 @@ try {
   assert.equal(contract.capability_line_id, 'MCFT-CAP-08');
   assert.equal(contract.slice_id, 'MCFT-CAP-08.S3');
   assert.equal(contract.provider_profile_id, implementation.formal_provider_profile_id);
-  assert.equal(contract.semantic_digest, implementation.formal_provider_contract_digest);
+  assert.equal(contract.semantic_digest, implementation.machine_contract_semantic_digest);
   assert.deepEqual(contract.phase_order, implementation.phase_order);
   assert.equal(contract.taskbook_blob_sha, candidateTaskbookBlob);
   assert.equal(review.independent_review_required, true);
@@ -154,7 +155,8 @@ try {
     candidate_sha: git('rev-parse', 'HEAD'),
     candidate_tree_sha: git('rev-parse', 'HEAD^{tree}'),
     taskbook_blob_sha: candidateTaskbookBlob,
-    contract_digest: contract.semantic_digest,
+    machine_contract_digest: contract.semantic_digest,
+    provider_contract_digest: implementation.formal_provider_contract_digest,
     changed_file_count: actual.length,
     changed_files: actual,
     source_manifest_file_count: implementation.source_manifest_file_count,
