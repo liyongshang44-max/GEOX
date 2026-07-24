@@ -1,7 +1,6 @@
 // Purpose: rebuild the MCFT-CAP-08.S3 semantic completion tuple exclusively from PostgreSQL canonical facts and exact projections.
 // Boundary: read-only bounded reconstruction only; no fact append, authority write, Tick execution, State/Forecast/Scenario mutation, route, scheduler, wall clock, filesystem, environment, or production authority.
 
-import type { Pool } from "pg";
 import {
   validateCanonicalObjectV1,
   type CanonicalObjectEnvelopeV1,
@@ -23,6 +22,7 @@ import {
 import {
   Cap08S3EpisodeInspectorV1,
   type Cap08S3EpisodeInspectionV1,
+  type Cap08S3ReadQueryPortV1,
 } from "./cap08_s3_episode_inspector_v1.js";
 import { Cap08S3OutcomeCompletionEvidenceServiceV1 } from "./cap08_s3_outcome_completion_evidence_service_v1.js";
 import type { TwinScopeKeyV1 } from "./ports.js";
@@ -118,13 +118,13 @@ export class Cap08S3CompletionTupleServiceV1 {
   private readonly episodeInspector: Cap08S3EpisodeInspectorV1;
   private readonly outcomeEvidence: Cap08S3OutcomeCompletionEvidenceServiceV1;
 
-  constructor(private readonly pool: Pool) {
-    this.episodeInspector = new Cap08S3EpisodeInspectorV1(pool);
-    this.outcomeEvidence = new Cap08S3OutcomeCompletionEvidenceServiceV1(pool);
+  constructor(private readonly database: Cap08S3ReadQueryPortV1) {
+    this.episodeInspector = new Cap08S3EpisodeInspectorV1(database);
+    this.outcomeEvidence = new Cap08S3OutcomeCompletionEvidenceServiceV1(database);
   }
 
   private async readCanonicalV1(ref: string, expectedType: string): Promise<CanonicalObjectEnvelopeV1> {
-    const rows = await this.pool.query(
+    const rows = await this.database.query(
       `SELECT record_json->'payload' AS payload
          FROM facts
         WHERE record_json->'payload'->>'object_id'=$1
@@ -143,7 +143,7 @@ export class Cap08S3CompletionTupleServiceV1 {
   }
 
   private async loadTickGraphV1(input: { scope: TwinScopeKeyV1 }): Promise<PersistedTickGraphV1[]> {
-    const rows = await this.pool.query(
+    const rows = await this.database.query(
       `SELECT record_json->'payload' AS payload
          FROM facts
         WHERE record_json->>'type'='twin_runtime_tick_v1'
