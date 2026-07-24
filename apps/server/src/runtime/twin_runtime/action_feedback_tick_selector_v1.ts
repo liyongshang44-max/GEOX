@@ -20,12 +20,17 @@ import type { TwinScopeKeyV1 } from "./ports.js";
 export const CAP05_ACTION_FEEDBACK_TICK_SELECTOR_ID_V1 = "CANONICAL_H_ACTION_FEEDBACK_HOURLY_SELECTOR_V1" as const;
 export const CAP05_ACTION_FEEDBACK_EVIDENCE_CUTOFF_POLICY_ID_V1 = "AVAILABLE_TO_RUNTIME_AT_LE_TARGET_LOGICAL_TIME_V1" as const;
 export const CAP05_ACTION_FEEDBACK_LATE_POLICY_ID_V1 = "NO_SHIFT_NO_AUTOMATIC_HISTORY_REWRITE_V1" as const;
+export const CAP08_S3_ACTION_FEEDBACK_LATE_POLICY_ID_V1 = "DEFER_TO_FIRST_LEGAL_TICK_AFTER_AVAILABILITY_V1" as const;
 export const CAP05_ACTION_FEEDBACK_INTERVAL_POLICY_ID_V1 = "OPEN_START_CLOSED_END_PT1H_V1" as const;
 export const CAP05_ACTION_FEEDBACK_MULTIPLE_EVENT_POLICY_ID_V1 = "EXACTLY_ONE_ELIGIBLE_EXECUTION_EVENT_PER_TICK_V1" as const;
 export const CAP05_ACTION_FEEDBACK_SPATIAL_OVERLAP_POLICY_ID_V1 = "NOT_ESTABLISHED" as const;
 export const CAP05_ACTION_FEEDBACK_AMOUNT_SEMANTICS_POLICY_ID_V1 = "COVERED_FOOTPRINT_AVERAGE_DEPTH_MM_V1" as const;
 export const CAP05_ACTION_FEEDBACK_VOLUME_TO_DEPTH_POLICY_ID_V1 = "NOT_ESTABLISHED" as const;
 export const CAP05_ACTION_FEEDBACK_ADAPTER_POLICY_ID_V1 = "ACTION_FEEDBACK_TO_EXECUTED_IRRIGATION_CANDIDATE_V1" as const;
+
+export type Cap05ActionFeedbackLatePolicyIdV1 =
+  | typeof CAP05_ACTION_FEEDBACK_LATE_POLICY_ID_V1
+  | typeof CAP08_S3_ACTION_FEEDBACK_LATE_POLICY_ID_V1;
 
 export type Cap05ReceiptConsumingRuntimePolicyPayloadV1 = {
   action_feedback_state_input_policy_id: typeof CAP05_ACTION_FEEDBACK_ELIGIBILITY_POLICY_V1;
@@ -68,7 +73,7 @@ export type Cap05ActionFeedbackTickTraceEntryV1 = {
 export type Cap05ActionFeedbackTickSelectionTraceV1 = {
   selector_id: typeof CAP05_ACTION_FEEDBACK_TICK_SELECTOR_ID_V1;
   evidence_cutoff_policy_id: typeof CAP05_ACTION_FEEDBACK_EVIDENCE_CUTOFF_POLICY_ID_V1;
-  late_policy_id: typeof CAP05_ACTION_FEEDBACK_LATE_POLICY_ID_V1;
+  late_policy_id: Cap05ActionFeedbackLatePolicyIdV1;
   interval_policy_id: typeof CAP05_ACTION_FEEDBACK_INTERVAL_POLICY_ID_V1;
   multiple_event_policy_id: typeof CAP05_ACTION_FEEDBACK_MULTIPLE_EVENT_POLICY_ID_V1;
   spatial_overlap_policy_id: typeof CAP05_ACTION_FEEDBACK_SPATIAL_OVERLAP_POLICY_ID_V1;
@@ -106,6 +111,16 @@ function requiredCanonicalIsoV1(value: unknown, code: string): string {
 
 function previousHourV1(logicalTime: string): string {
   return new Date(Date.parse(logicalTime) - 3_600_000).toISOString();
+}
+
+function previousTwoHoursV1(logicalTime: string): string {
+  return new Date(Date.parse(logicalTime) - 7_200_000).toISOString();
+}
+
+function firstHourlyCutoffAtOrAfterV1(value: string): string {
+  const parsed = Date.parse(value);
+  const hour = 3_600_000;
+  return new Date(Math.ceil(parsed / hour) * hour).toISOString();
 }
 
 function sameScopeV1(feedback: Cap05ActionFeedbackEnvelopeV1, scope: TwinScopeKeyV1): boolean {
@@ -182,11 +197,31 @@ function baseEntryV1(feedback: Cap05ActionFeedbackEnvelopeV1): Cap05ActionFeedba
   };
 }
 
+function adaptSelectedV1(
+  feedback: Cap05ActionFeedbackEnvelopeV1,
+  entry: Cap05ActionFeedbackTickTraceEntryV1,
+  reasonCode: string | null,
+): ClassifiedFeedbackV1 {
+  try {
+    const adapted = adaptCap05ActionFeedbackToExecutedIrrigationV1(feedback);
+    return {
+      feedback,
+      entry: { ...entry, disposition: "SELECTED", reason_code: reasonCode },
+      candidate: adapted.candidate,
+      adapter_trace: adapted.trace,
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "ACTION_FEEDBACK_INELIGIBLE";
+    return { feedback, entry: { ...entry, disposition: "EXCLUDED_INELIGIBLE", reason_code: reason }, candidate: null, adapter_trace: null };
+  }
+}
+
 function classifyV1(input: {
   feedback: Cap05ActionFeedbackEnvelopeV1;
   scope: TwinScopeKeyV1;
   logical_time: string;
   window_start: string;
+  late_policy_id: Cap05ActionFeedbackLatePolicyIdV1;
 }): ClassifiedFeedbackV1 {
   validateCap05ActionFeedbackV1(input.feedback);
   const feedback = input.feedback;
@@ -204,19 +239,20 @@ function classifyV1(input: {
     return { feedback, entry: { ...entry, disposition: "EXCLUDED_FUTURE", reason_code: "FUTURE_ACTION_FEEDBACK_FORBIDDEN" }, candidate: null, adapter_trace: null };
   }
   if (executionEnd <= input.window_start) {
+    const deferredFirstLegal = input.late_policy_id === CAP08_S3_ACTION_FEEDBACK_LATE_POLICY_ID_V1
+      && availableAt <= input.logical_time
+      && ingestedAt <= input.logical_time
+      && firstHourlyCutoffAtOrAfterV1(availableAt) === input.logical_time
+      && executionEnd > previousTwoHoursV1(input.logical_time);
+    if (deferredFirstLegal) {
+      return adaptSelectedV1(feedback, entry, "DEFERRED_TO_FIRST_LEGAL_TICK_AFTER_AVAILABILITY");
+    }
     return { feedback, entry: { ...entry, disposition: "EXCLUDED_OUTSIDE_WINDOW", reason_code: "OUTSIDE_OPEN_START_CLOSED_END_WINDOW" }, candidate: null, adapter_trace: null };
   }
   if (availableAt > input.logical_time || ingestedAt > input.logical_time) {
     return { feedback, entry: { ...entry, disposition: "EXCLUDED_LATE", reason_code: "ACTION_FEEDBACK_NOT_AVAILABLE_AT_TICK_CUTOFF" }, candidate: null, adapter_trace: null };
   }
-
-  try {
-    const adapted = adaptCap05ActionFeedbackToExecutedIrrigationV1(feedback);
-    return { feedback, entry: { ...entry, disposition: "SELECTED", reason_code: null }, candidate: adapted.candidate, adapter_trace: adapted.trace };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : "ACTION_FEEDBACK_INELIGIBLE";
-    return { feedback, entry: { ...entry, disposition: "EXCLUDED_INELIGIBLE", reason_code: reason }, candidate: null, adapter_trace: null };
-  }
+  return adaptSelectedV1(feedback, entry, null);
 }
 
 function traceDigestV1(value: Omit<Cap05ActionFeedbackTickSelectionTraceV1, "semantic_digest">): string {
@@ -227,12 +263,20 @@ export function selectCap05ActionFeedbackForTickV1(input: {
   scope: TwinScopeKeyV1;
   logical_time: string;
   feedback_objects: readonly Cap05ActionFeedbackEnvelopeV1[];
+  late_policy_id?: Cap05ActionFeedbackLatePolicyIdV1;
 }): Cap05ActionFeedbackTickSelectionV1 {
   const logicalTime = requiredCanonicalIsoV1(input.logical_time, "CAP05_RECEIPT_TICK_LOGICAL_TIME_INVALID");
   if (!logicalTime.endsWith(":00:00.000Z")) throw new Error("CAP05_RECEIPT_TICK_LOGICAL_TIME_MUST_BE_HOURLY");
   if (!Array.isArray(input.feedback_objects)) throw new Error("CAP05_RECEIPT_TICK_FEEDBACK_ARRAY_REQUIRED");
+  const latePolicyId = input.late_policy_id ?? CAP05_ACTION_FEEDBACK_LATE_POLICY_ID_V1;
   const windowStart = previousHourV1(logicalTime);
-  const classified = input.feedback_objects.map((feedback) => classifyV1({ feedback, scope: input.scope, logical_time: logicalTime, window_start: windowStart }));
+  const classified = input.feedback_objects.map((feedback) => classifyV1({
+    feedback,
+    scope: input.scope,
+    logical_time: logicalTime,
+    window_start: windowStart,
+    late_policy_id: latePolicyId,
+  }));
   const eligible = classified.filter((item) => item.candidate !== null);
   const groups = new Map<string, ClassifiedFeedbackV1[]>();
   for (const item of eligible) {
@@ -274,7 +318,7 @@ export function selectCap05ActionFeedbackForTickV1(input: {
   const traceWithoutDigest: Omit<Cap05ActionFeedbackTickSelectionTraceV1, "semantic_digest"> = {
     selector_id: CAP05_ACTION_FEEDBACK_TICK_SELECTOR_ID_V1,
     evidence_cutoff_policy_id: CAP05_ACTION_FEEDBACK_EVIDENCE_CUTOFF_POLICY_ID_V1,
-    late_policy_id: CAP05_ACTION_FEEDBACK_LATE_POLICY_ID_V1,
+    late_policy_id: latePolicyId,
     interval_policy_id: CAP05_ACTION_FEEDBACK_INTERVAL_POLICY_ID_V1,
     multiple_event_policy_id: CAP05_ACTION_FEEDBACK_MULTIPLE_EVENT_POLICY_ID_V1,
     spatial_overlap_policy_id: CAP05_ACTION_FEEDBACK_SPATIAL_OVERLAP_POLICY_ID_V1,
