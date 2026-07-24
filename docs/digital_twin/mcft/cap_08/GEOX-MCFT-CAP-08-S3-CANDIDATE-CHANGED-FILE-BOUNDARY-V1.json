@@ -77,7 +77,7 @@
   ],
   "historical_pre_candidate_boundary_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-CHANGED-FILE-BOUNDARY-V1.json",
   "taskbook_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
-  "taskbook_blob_sha": "a24114ff629560345b3bdc6da6b4024b9f3d61e4",
+  "taskbook_blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
   "production_runtime_source_authorized": false,
   "s3_effective": false,
   "s4_authorized": false,
