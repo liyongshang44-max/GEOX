@@ -1,5 +1,5 @@
 // scripts/runtime_acceptance/mcft_cap08_s2_g3_acceptance_support_v1.ts
-// Purpose: share exact fresh-PostgreSQL fixture, persistence adapters, source digest, mutation snapshots, and explicitly bounded authority adapters for CAP-08 acceptance.
+// Purpose: share exact fresh-PostgreSQL fixture, persistence adapters, source digest, mutation snapshots, and explicitly bounded authority/lease adapters for CAP-08 acceptance.
 // Boundary: destructive disposable-database acceptance support only; no production database, route, scheduler, formal candidate, Runtime authority, or product claim.
 
 import assert from "node:assert/strict";
@@ -27,7 +27,7 @@ import { PostgresCompletionAuthorityRepositoryV1 as ProductionPostgresCompletion
 import { PostgresForecastScenarioRecoveryRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.js";
 import { PostgresNextTickRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.js";
 import { PostgresRuntimeRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.js";
-import { A0BootstrapRuntimeServiceV1 } from "../../apps/server/src/runtime/twin_runtime/a0_bootstrap_runtime_service_v1.js";
+import { A0BootstrapRuntimeServiceV1 as ProductionA0BootstrapRuntimeServiceV1 } from "../../apps/server/src/runtime/twin_runtime/a0_bootstrap_runtime_service_v1.js";
 import { Cap08CompletionAuthorityServiceV1 as ProductionCap08CompletionAuthorityServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_completion_authority_service_v1.js";
 import { Cap08DeferredScenarioPersistenceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_deferred_scenario_persistence_v1.js";
 import { Cap08FrozenEvidenceSourceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_frozen_evidence_source_v1.js";
@@ -65,6 +65,10 @@ const OUTPUT = path.join(ROOT, "acceptance-output/MCFT_CAP_08_S2_COMPLETION_AUTH
 export const runner = new Pool({ connectionString: databaseUrl, max: 4 });
 export const admin = new Pool({ connectionString: adminDatabaseUrl, max: 2 });
 
+function s3NegativeModeV1(): boolean {
+  return process.env.MCFT_CAP08_S3_NEGATIVE_DESTRUCTIVE_ACCEPTANCE === "1";
+}
+
 export class PostgresCompletionAuthorityRepositoryV1
 extends ProductionPostgresCompletionAuthorityRepositoryV1 {
   constructor(public readonly acceptancePool: Pool) {
@@ -72,8 +76,14 @@ extends ProductionPostgresCompletionAuthorityRepositoryV1 {
   }
 }
 
-function s3NegativeModeV1(): boolean {
-  return process.env.MCFT_CAP08_S3_NEGATIVE_DESTRUCTIVE_ACCEPTANCE === "1";
+class A0BootstrapRuntimeServiceV1 extends ProductionA0BootstrapRuntimeServiceV1 {
+  async execute(
+    input: Parameters<ProductionA0BootstrapRuntimeServiceV1["execute"]>[0],
+  ): ReturnType<ProductionA0BootstrapRuntimeServiceV1["execute"]> {
+    return super.execute(s3NegativeModeV1()
+      ? { ...input, lease_owner: "mcft-cap08-s3-negative" }
+      : input);
+  }
 }
 
 async function seedS3CompletionEvidenceV1(
