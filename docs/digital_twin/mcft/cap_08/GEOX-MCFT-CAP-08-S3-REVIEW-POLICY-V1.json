@@ -1,0 +1,47 @@
+{
+  "schema_version": "geox_mcft_cap08_s3_review_policy_v1",
+  "record_status": "REVIEW_POLICY_FROZEN_PRE_CANDIDATE",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S3",
+  "policy_id": "MCFT-CAP-08.S3-INDEPENDENT-REVIEW-REQUIRED-V1",
+  "independent_review_required": true,
+  "independent_review_satisfied": false,
+  "independent_review_performed": false,
+  "independent_review_waived": false,
+  "s2_owner_review_waiver_inherited": false,
+  "required_before_formal_candidate_creation": false,
+  "required_before_candidate_declaration": false,
+  "required_before_candidate_merge": true,
+  "required_before_exact_sha_attestation": true,
+  "required_review_subjects": [
+    "S3_MACHINE_CONTRACT",
+    "S3_EVIDENCE_IDENTITIES",
+    "G_H_PROVIDER_IMPLEMENTATION",
+    "FRESH_POSTGRESQL_POSITIVE_PROOF",
+    "S3_N01_N22_DATABASE_MATRIX",
+    "POINTER_INTEGRITY_MATRIX",
+    "CANDIDATE_CHANGED_FILE_BOUNDARY"
+  ],
+  "review_identity_requirements": {
+    "reviewer_must_not_be_candidate_author": true,
+    "verified_second_github_account_required": true,
+    "review_must_target_exact_candidate_head": true,
+    "approval_event_required": "APPROVE",
+    "owner_self_approval_counts_as_independent_review": false,
+    "new_commit_after_approval_requires_reapproval": true
+  },
+  "technical_gate_relaxation": false,
+  "formal_candidate_creation_authorized_after_governance_merge": true,
+  "candidate_transition_authorized_after_governance_merge": true,
+  "candidate_merge_authorized_without_independent_review": false,
+  "exact_sha_attestation_authorized_without_independent_review": false,
+  "implementation_authorized": false,
+  "runtime_source_authorized": false,
+  "nonclaims": [
+    "NO_REVIEW_SATISFACTION_CLAIM",
+    "NO_WAIVER",
+    "NO_RUNTIME_AUTHORITY",
+    "NO_CANDIDATE_DECLARATION_IN_THIS_GOVERNANCE_PR",
+    "NO_S3_EFFECTIVENESS"
+  ]
+}

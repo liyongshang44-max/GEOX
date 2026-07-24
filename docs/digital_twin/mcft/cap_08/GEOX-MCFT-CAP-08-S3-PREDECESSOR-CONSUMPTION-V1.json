@@ -1,0 +1,31 @@
+{
+  "schema_version": "geox_mcft_cap08_s3_predecessor_consumption_v1",
+  "record_status": "PREDECESSOR_EFFECTIVENESS_CONSUMED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S3",
+  "predecessor_slice_id": "MCFT-CAP-08.S2",
+  "predecessor_original_candidate_pr": 2637,
+  "predecessor_original_candidate_head": "88dba989203d93a994ed0a7e7002b0a106ed7d88",
+  "predecessor_original_candidate_merge": "15d26d86ff955bab982871adf6e1bd8c75b07972",
+  "predecessor_exact_sha_remediation_pr": 2638,
+  "predecessor_merge_subject": "1f37d6247a5f2e90327720c9feed4faf729d1db3",
+  "predecessor_tree_sha": "531ac3d53a05d08bbd1df39099f3721abb7095e2",
+  "predecessor_exact_sha_workflow_run": 30034240206,
+  "predecessor_exact_sha_artifact_id": 8574593152,
+  "predecessor_exact_sha_status_context": "mcft-cap-08/s2-exact-sha-attestation",
+  "predecessor_exact_sha_status": "SUCCESS",
+  "predecessor_archive_digest": "sha256:8bb99559bcdbda63de5ff196bb9d7040269d07acf7b80374341a620beae60da7",
+  "predecessor_authority_artifact_semantic_digest": "sha256:fe4c9579ed9883998bff650266b9d2af5b767278a468e5e56ce900fff8b627a4",
+  "predecessor_provider_contract_digest": "sha256:4ac1b1f9175e54a7560e5d7c907d8b31f2a39179e6f140a25ebcc17eb99dc8d1",
+  "predecessor_phase_engine_contract_digest": "sha256:41428596e893112483a8695ccd7bc28dc19dee35c2c3bf29e78395a86133d466",
+  "predecessor_effective_status": "S2_FORCING_EVIDENCE_STATE_FORECAST_IMPLEMENTED_EFFECTIVE",
+  "effective_next_slice": "S3",
+  "readback_verified": true,
+  "effective_authority_projection": {
+    "bounded_replay_runner_authorized": true,
+    "bounded_canonical_transaction_authorized": true,
+    "formal_forcing_evidence_state_forecast_authorized": true,
+    "decision_action_feedback_authorized": false,
+    "production_runtime_source_authorized": false
+  }
+}
