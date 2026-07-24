@@ -131,9 +131,7 @@ async function main(): Promise<void> {
     const forecastRepository = new PostgresForecastScenarioRecoveryRepositoryV1(runner);
     const completionRepository = new PostgresCompletionAuthorityRepositoryV1(runner);
     assert.equal((await nextTickRepository.commitRealityBindingSnapshot(fixture.reality_binding_snapshot)).status, "INSERTED");
-    for (const config of fixture.runtime_configs) {
-      assert.equal((await runtimeRepository.commitRuntimeConfig(config)).status, "INSERTED");
-    }
+    for (const config of fixture.runtime_configs) assert.equal((await runtimeRepository.commitRuntimeConfig(config)).status, "INSERTED");
 
     const order: string[] = [];
     const persistence = persistenceAdapterV1(runtimeRepository, forecastRepository, order);
@@ -201,7 +199,18 @@ async function main(): Promise<void> {
     assert.equal(order.length, 48);
     assert.equal(first.range.provider_profile_id, PROFILE);
     assert.equal(first.range.provider_contract_digest, CONTRACT);
+    assert.deepEqual([
+      first.range.posterior_state_count,
+      first.range.successful_forecast_count,
+      first.range.scenario_set_count,
+      first.range.forecast_point_count,
+      first.range.scenario_point_count,
+    ], [25, 24, 24, 1728, 5184]);
+    assert.equal(first.range.tick_traces.length, 24);
+    assert.ok(first.range.tick_traces.every((trace) => /^sha256:[0-9a-f]{64}$/.test(trace.trace_digest)));
+    assert.equal(new Set(first.range.tick_traces.map((trace) => trace.trace_digest)).size, 24);
     ok("fresh PostgreSQL B00 and T00-T23 S3 formal run");
+    ok("canonical persisted totals and semantic Tick traces");
 
     const episode = first.range.episode_inspection;
     assert.equal(episode.disposition, "EXACT_COMPLETE");
@@ -259,6 +268,14 @@ async function main(): Promise<void> {
     assert.equal(second.status, "ALREADY_COMPLETE");
     assert.equal(second.range.executed_tick_count, 0);
     assert.equal(second.range.episode_inspection.disposition, "EXACT_COMPLETE");
+    assert.deepEqual([
+      second.range.posterior_state_count,
+      second.range.successful_forecast_count,
+      second.range.scenario_set_count,
+      second.range.forecast_point_count,
+      second.range.scenario_point_count,
+    ], [25, 24, 24, 1728, 5184]);
+    assert.deepEqual(second.range.tick_traces, []);
     assert.deepEqual(after, before);
     ok("completed replay exact readback and zero mutation");
 
@@ -275,6 +292,14 @@ async function main(): Promise<void> {
       phase_engine_source_digest: first.range.phase_engine_source_digest,
       formal_run_id: fixture.formal_run_id,
       successful_tick_count: first.range.successful_tick_count,
+      persisted_cardinalities: {
+        posterior_state_count: first.range.posterior_state_count,
+        successful_forecast_count: first.range.successful_forecast_count,
+        scenario_set_count: first.range.scenario_set_count,
+        forecast_point_count: first.range.forecast_point_count,
+        scenario_point_count: first.range.scenario_point_count,
+      },
+      tick_trace_digests: first.range.tick_traces.map((trace) => trace.trace_digest),
       decision_count: first.range.decision_count,
       approval_assertion_count: first.range.approval_assertion_count,
       approved_plan_count: first.range.approved_plan_count,
