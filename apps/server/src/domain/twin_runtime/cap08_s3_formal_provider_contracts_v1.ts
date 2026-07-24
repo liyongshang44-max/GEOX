@@ -28,8 +28,7 @@ export type Cap08S3TickObligationV1 = {
   tick_id: string;
   tick_index: number;
   logical_time: string;
-  materialize_decision_request_at_e: boolean;
-  commit_human_decision_at_g: boolean;
+  resolve_decision_source_and_commit_at_g: boolean;
   commit_approval_plan_binding_at_e: boolean;
   materialize_receipt_at_e: boolean;
   commit_action_feedback_at_h: boolean;
@@ -107,8 +106,7 @@ export function buildCap08S3TickObligationV1(logicalTime: string): Cap08S3TickOb
     tick_id: cap08TickIdV1(index),
     tick_index: index,
     logical_time: cap08TickLogicalTimeV1(index),
-    materialize_decision_request_at_e: index === 5,
-    commit_human_decision_at_g: index === 5,
+    resolve_decision_source_and_commit_at_g: index === 5,
     commit_approval_plan_binding_at_e: index === 6,
     materialize_receipt_at_e: index === 8,
     commit_action_feedback_at_h: index === 8,
