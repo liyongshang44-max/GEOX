@@ -41,6 +41,25 @@ function exactScopeV1(expected: TwinScopeKeyV1, actual: TwinScopeKeyV1, code: st
   }
 }
 
+function outcomeSourceHashV1(record: CanonicalReplayEvidenceRecordV1): string {
+  return semanticHashV1({
+    dataset_id: record.dataset_id,
+    source_record_id: record.source_record_id,
+    binding_id: record.binding_id,
+    scope: {
+      tenant_id: record.tenant_id,
+      project_id: record.project_id,
+      group_id: record.group_id,
+      field_id: record.field_id,
+      season_id: record.season_id,
+      zone_id: record.zone_id,
+    },
+    role_time: record.role_time,
+    canonical_payload: record.canonical_payload,
+    quality_status: record.quality.status,
+  });
+}
+
 function factIdV1(kind: string, formalRunId: string, sourceRecordId: string): string {
   const digest = crypto.createHash("sha256")
     .update(`${kind}\0${formalRunId}\0${sourceRecordId}`, "utf8")
@@ -67,7 +86,9 @@ function exactOutcomeV1(input: {
     || record.canonical_payload.quantity_kind !== "VOLUMETRIC_WATER_CONTENT") {
     throw new Error("CAP08_S3_OUTCOME_COMPLETION_EVIDENCE_IDENTITY_MISMATCH");
   }
-  requiredStringV1(record.source_record_hash, "CAP08_S3_OUTCOME_HASH_REQUIRED");
+  if (record.source_record_hash !== outcomeSourceHashV1(record)) {
+    throw new Error("CAP08_S3_OUTCOME_COMPLETION_EVIDENCE_HASH_MISMATCH");
+  }
   return { ...record, formal_run_id: formalRunId };
 }
 
