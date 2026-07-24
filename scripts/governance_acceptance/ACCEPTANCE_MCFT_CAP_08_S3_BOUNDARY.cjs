@@ -9,7 +9,6 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '../..');
 const OUTPUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_08_S3_BOUNDARY_RESULT.json');
 const FORMAL_BASE = '13e3e1260c70b9c2b6dd1fd6b8d57fd50fb3202e';
-const TASKBOOK_BLOB = 'a24114ff629560345b3bdc6da6b4024b9f3d61e4';
 const TASKBOOK = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md';
 const STATUS = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-DELIVERY-STATUS-V1.json';
 const IMPLEMENTATION = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-IMPLEMENTATION-V1.json';
@@ -43,7 +42,9 @@ try {
   assert.equal(base, FORMAL_BASE, 'S3_FORMAL_BASE_MISMATCH');
   assert.equal(git('merge-base', base, 'HEAD'), base, 'S3_BASE_NOT_ANCESTOR');
   assert.equal(git('diff', '--check', `${base}...HEAD`), '', 'S3_DIFF_CHECK_FAILED');
-  assert.equal(git('rev-parse', `HEAD:${TASKBOOK}`), TASKBOOK_BLOB, 'S3_TASKBOOK_BLOB_DRIFT');
+  const baseTaskbookBlob = git('rev-parse', `${base}:${TASKBOOK}`);
+  const candidateTaskbookBlob = git('rev-parse', `HEAD:${TASKBOOK}`);
+  assert.equal(candidateTaskbookBlob, baseTaskbookBlob, 'S3_TASKBOOK_BLOB_DRIFT');
 
   const status = json(STATUS);
   const implementation = json(IMPLEMENTATION);
@@ -93,6 +94,7 @@ try {
 
   assert.equal(boundary.record_status, 'FORMAL_S3_CANDIDATE_CHANGED_FILE_BOUNDARY_FROZEN');
   assert.equal(boundary.base_sha, FORMAL_BASE);
+  assert.equal(boundary.taskbook_blob_sha, candidateTaskbookBlob);
   assert.equal(boundary.changed_file_count, 28);
   assert.equal(boundary.changed_file_count, boundary.changed_files.length);
   assert.deepEqual(actual, [...boundary.changed_files].sort(), 'S3_CHANGED_FILE_BOUNDARY_MISMATCH');
@@ -145,6 +147,7 @@ try {
     base_sha: base,
     candidate_sha: git('rev-parse', 'HEAD'),
     candidate_tree_sha: git('rev-parse', 'HEAD^{tree}'),
+    taskbook_blob_sha: candidateTaskbookBlob,
     changed_file_count: actual.length,
     changed_files: actual,
     source_manifest_file_count: implementation.source_manifest_file_count,
