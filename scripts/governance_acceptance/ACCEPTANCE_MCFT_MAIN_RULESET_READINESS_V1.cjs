@@ -11,7 +11,8 @@ const TRUSTED_PATH = path.join(ROOT, 'docs/digital_twin/mcft/MCFT-TRUSTED-ENFORC
 const RESULT_PATH = path.join(ROOT, 'acceptance-output/MCFT_MAIN_RULESET_READINESS_V1_RESULT.json');
 
 const WORKFLOWS = {
-  candidate: path.join(ROOT, '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'),
+  candidateEnforcement: path.join(ROOT, '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'),
+  candidateSelftest: path.join(ROOT, '.github/workflows/mcft-candidate-declaration-selftest-v2.yml'),
   release: path.join(ROOT, '.github/workflows/mcft-release-lane-v1.yml'),
   delivery: path.join(ROOT, '.github/workflows/mcft-delivery-policy-v2.yml'),
   readiness: path.join(ROOT, '.github/workflows/mcft-main-ruleset-readiness-v1.yml'),
@@ -82,11 +83,12 @@ function main() {
   assert.equal(new Set(allRequired).size, allRequired.length, 'RULESET_REQUIRED_CHECK_NAMES_MUST_BE_UNIQUE');
 
   const sources = Object.fromEntries(Object.entries(WORKFLOWS).map(([key, value]) => [key, read(value)]));
-  for (const key of ['candidate', 'release', 'delivery', 'readiness']) {
+  for (const key of ['candidateEnforcement', 'candidateSelftest', 'release', 'delivery', 'readiness']) {
     assert.equal(pullRequestBlockHasFilter(sources[key]), false, `${key.toUpperCase()}_PULL_REQUEST_FILTER_FORBIDDEN`);
   }
   const expectedJobs = {
-    candidate: ['mcft-candidate-integrity-pr-selftest', 'mcft-candidate-integrity-enforce-current-pr', 'mcft-candidate-integrity-merge-group'],
+    candidateEnforcement: ['mcft-candidate-integrity-enforce-current-pr', 'mcft-candidate-integrity-merge-group'],
+    candidateSelftest: ['mcft-candidate-integrity-pr-selftest'],
     release: ['mcft-release-lane-pr-selftest', 'mcft-release-lane-enforce-current-pr', 'mcft-release-lane-merge-group'],
     delivery: ['mcft-delivery-policy-v2-contract'],
     readiness: ['mcft-main-ruleset-readiness-v1'],
@@ -102,11 +104,15 @@ function main() {
   assert.equal(new Set(selectedObserved).size, selectedObserved.length, 'SELECTED_REQUIRED_JOB_NAME_COLLISION');
   for (const check of allRequired) assert.ok(observed.includes(check), `REQUIRED_CHECK_NOT_EMITTED:${check}`);
 
-  assert.match(sources.candidate, /pull_request_target:/);
+  assert.match(sources.candidateEnforcement, /pull_request_target:/);
+  assert.doesNotMatch(sources.candidateSelftest, /pull_request_target:/);
+  assert.match(sources.candidateSelftest, /^  pull_request:\s*$/m);
   assert.match(sources.release, /pull_request_target:/);
-  assert.doesNotMatch(sources.candidate, /permissions:\s*[\s\S]*contents:\s*write/);
+  assert.doesNotMatch(sources.candidateEnforcement, /permissions:\s*[\s\S]*contents:\s*write/);
+  assert.doesNotMatch(sources.candidateSelftest, /permissions:\s*[\s\S]*contents:\s*write/);
   assert.doesNotMatch(sources.release, /permissions:\s*[\s\S]*contents:\s*write/);
-  assert.match(sources.candidate, /group:\s*mcft-candidate-integrity-v2-\$\{\{ github\.event_name \}\}-/);
+  assert.match(sources.candidateEnforcement, /group:\s*mcft-candidate-integrity-v2-\$\{\{ github\.event_name \}\}-/);
+  assert.match(sources.candidateSelftest, /group:\s*mcft-candidate-integrity-selftest-v2-/);
   assert.match(sources.release, /group:\s*mcft-release-lane-v1-\$\{\{ github\.event_name \}\}-/);
 
   assert.equal(profile.trusted_enforcement_verification_ref, 'docs/digital_twin/mcft/MCFT-TRUSTED-ENFORCEMENT-OPERATIONAL-VERIFICATION-V1.json');
@@ -140,6 +146,7 @@ function main() {
     selected_required_check_name_collision_count: 0,
     pull_request_path_filter_count_on_required_workflows: 0,
     cross_event_concurrency_collision_count: 0,
+    candidate_integrity_workflow_identity_split: true,
     strict_up_to_date_required: true,
     merge_queue_required: false,
     ruleset_configuration_recorded_in_profile: configured,
