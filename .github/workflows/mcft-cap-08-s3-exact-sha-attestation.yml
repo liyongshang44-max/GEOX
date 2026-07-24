@@ -207,7 +207,9 @@ jobs:
             const ok=process.env.JOB_STATUS==='success'
               && a?.status==='PASS'
               && a?.effective_delivery_frontier_projection?.effective_status==='S3_DECISION_ACTION_FEEDBACK_IMPLEMENTED_EFFECTIVE'
-              && a?.independent_review?.satisfied!==false
+              && a?.independent_review?.required===true
+              && a?.independent_review?.satisfied===true
+              && a?.independent_review?.waived===false
               && String(process.env.ARTIFACT_ID||'').length>0;
             const [owner,repo]=process.env.GITHUB_REPOSITORY.split('/');
             await github.rest.repos.createCommitStatus({
