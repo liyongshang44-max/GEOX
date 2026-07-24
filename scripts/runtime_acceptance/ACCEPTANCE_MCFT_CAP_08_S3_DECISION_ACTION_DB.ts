@@ -54,6 +54,10 @@ function s3SourceDigestV1(): string {
     "apps/server/src/domain/twin_runtime/cap08_phase_engine_contracts_v1.ts",
     "apps/server/src/domain/twin_runtime/cap08_s3_formal_provider_contracts_v1.ts",
     "apps/server/src/domain/twin_runtime/cap08_s3_phase_contracts_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_approval_plan_evidence_repository_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.ts",
+    "apps/server/src/runtime/twin_runtime/action_feedback_normalization_service_v1.ts",
+    "apps/server/src/runtime/twin_runtime/human_decision_service_v1.ts",
     "apps/server/src/runtime/twin_runtime/cap08_deferred_scenario_persistence_v1.ts",
     "apps/server/src/runtime/twin_runtime/cap08_frozen_evidence_source_v1.ts",
     "apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts",
@@ -95,10 +99,11 @@ async function rowsV1(table: string, orderBy: string): Promise<unknown[]> {
 async function snapshotV1(): Promise<Record<string, unknown>> {
   return {
     facts: await rowsV1("facts", "fact_id"),
+    object_idempotency: await rowsV1("twin_object_idempotency_index_v1", "idempotency_key"),
     decisions: await rowsV1("twin_decision_record_projection_v1", "decision_object_id"),
     plans: await rowsV1("twin_approved_plan_binding_projection_v1", "approved_plan_evidence_ref"),
     action_feedback: await rowsV1("twin_action_feedback_projection_v1", "action_feedback_object_id"),
-    action_feedback_idempotency: await rowsV1("twin_action_feedback_idempotency_v1", "idempotency_key"),
+    action_feedback_evidence: await rowsV1("twin_action_feedback_evidence_index_v1", "action_feedback_object_id,evidence_kind,evidence_ref"),
     authority: await rowsV1("twin_runtime_authority_snapshot_v1", "authority_kind,authority_ref"),
     active_lineage: await rowsV1("twin_active_lineage_index_v1", "tenant_id,project_id,group_id,field_id,season_id,zone_id"),
     checkpoint_latest: await rowsV1("twin_runtime_checkpoint_latest_index_v1", "tenant_id,project_id,group_id,field_id,season_id,zone_id"),
