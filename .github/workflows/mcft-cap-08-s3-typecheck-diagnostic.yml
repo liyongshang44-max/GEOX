@@ -1,0 +1,35 @@
+name: mcft-cap-08-s3-typecheck-diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s3-typecheck-diagnostic.yml'
+      - 'apps/server/src/domain/twin_runtime/cap08_s3_**'
+      - 'apps/server/src/runtime/twin_runtime/cap08_s3_**'
+      - 'apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install locked workspace quietly
+        run: pnpm install --frozen-lockfile --reporter=silent
+      - name: Typecheck S3 server surface
+        run: pnpm --filter @geox/server typecheck
