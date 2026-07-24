@@ -9,6 +9,7 @@ on:
       - 'apps/server/src/persistence/twin_runtime/postgres_approval_plan_evidence_repository_v1.ts'
       - 'apps/server/src/persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/action_feedback_normalization_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/action_feedback_tick_selector_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/human_decision_service_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/cap08_s3_**'
       - 'apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts'
@@ -110,6 +111,15 @@ jobs:
         run: |
           set -o pipefail
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S3_NEGATIVE_DB.ts 2>&1 | tee acceptance-output/MCFT_CAP_08_S3_NEGATIVE_EXECUTION.log
+      - name: Execute S3 deferred-receipt and exact-pointer edge proof
+        env:
+          DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap08-s3-negative-runner-password@127.0.0.1:5432/geox_mcft_cap08_s3_negative
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap08_s3_negative
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S3_EDGE_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S3_EDGE_SEMANTICS_DB.ts 2>&1 | tee acceptance-output/MCFT_CAP_08_S3_EDGE_SEMANTICS_EXECUTION.log
       - name: Cleanup S3 negative database
         if: always()
         env:
