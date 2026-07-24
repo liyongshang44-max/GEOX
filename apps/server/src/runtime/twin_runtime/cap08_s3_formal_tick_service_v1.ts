@@ -40,6 +40,7 @@ import {
 } from "./receipt_consuming_forecast_scenario_tick_service_v1.js";
 import { Cap08DeferredScenarioPersistenceV1, type Cap08ScenarioFlushResultV1 } from "./cap08_deferred_scenario_persistence_v1.js";
 import { Cap08FrozenEvidenceSourceV1 } from "./cap08_frozen_evidence_source_v1.js";
+import { Cap08S3AuthorityGuardV1 } from "./cap08_s3_authority_guard_v1.js";
 import {
   Cap08S3DecisionActionProviderServiceV1,
   type Cap08S3ActionFeedbackCommitResultV1,
@@ -47,6 +48,7 @@ import {
   type Cap08S3DecisionCommitResultV1,
   type Cap08S3ReceiptMaterializationResultV1,
 } from "./cap08_s3_decision_action_provider_service_v1.js";
+import { Cap08S3ReceiptEpisodeGuardV1 } from "./cap08_s3_receipt_episode_guard_v1.js";
 import type { CanonicalReplayEvidenceRecordV1, PreparedNextTickInputV1, TwinScopeKeyV1 } from "./ports.js";
 
 export type Cap08S3PhaseTraceV1 = {
@@ -104,17 +106,32 @@ function scenarioPointCountV1(record: Cap04ScenarioSetRecordV1): number {
   return record.scenario_set.payload.options.reduce((sum, option) => sum + option.trajectory_points.length, 0);
 }
 
-function outcomeFvo10V1(records: readonly CanonicalReplayEvidenceRecordV1[]): CanonicalReplayEvidenceRecordV1 | null {
-  const matches = records.filter((record) => record.source_record_id === CAP08_S3_OUTCOME_FVO_ID_V1);
+function assertScopeV1(expected: TwinScopeKeyV1, actual: TwinScopeKeyV1): void {
+  for (const field of ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"] as const) {
+    if (expected[field] !== actual[field]) throw new Error(`CAP08_S3_OUTCOME_SCOPE_MISMATCH:${field}`);
+  }
+}
+
+function outcomeFvo10V1(input: {
+  records: readonly CanonicalReplayEvidenceRecordV1[];
+  scope: TwinScopeKeyV1;
+  logical_time: string;
+}): CanonicalReplayEvidenceRecordV1 | null {
+  const matches = input.records.filter((record) => record.source_record_id === CAP08_S3_OUTCOME_FVO_ID_V1);
   if (matches.length > 1) throw new Error("CAP08_S3_OUTCOME_FVO10_DUPLICATE");
   if (matches.length === 0) return null;
   const record = matches[0];
+  assertScopeV1(input.scope, record);
   if (record.record_type !== "soil_moisture_observation_v1"
     || record.binding_id !== "soil_obs_c8_20cm_v1"
     || record.canonical_payload.value !== Number(CAP08_S3_OUTCOME_VALUE_V1)
-    || record.canonical_payload.unit !== "fraction") {
+    || record.canonical_payload.unit !== "fraction"
+    || record.canonical_payload.quantity_kind !== "VOLUMETRIC_WATER_CONTENT") {
     throw new Error("CAP08_S3_OUTCOME_FVO10_IDENTITY_MISMATCH");
   }
+  if (record.role_time.observed_at !== "2026-06-01T10:00:00.000Z") throw new Error("CAP08_S3_OUTCOME_FVO10_OBSERVED_AT_MISMATCH");
+  if (record.available_to_runtime_at !== "2026-06-01T10:00:00.000Z") throw new Error("CAP08_S3_OUTCOME_FVO10_VISIBILITY_EPOCH_MISMATCH");
+  if (record.available_to_runtime_at > input.logical_time) throw new Error("CAP08_S3_OUTCOME_FVO10_NOT_AVAILABLE");
   return structuredClone(record);
 }
 
@@ -130,6 +147,8 @@ export class Cap08S3FormalTickServiceV1 {
     private readonly normalTick: Cap04ForecastScenarioSingleTickServiceV1,
     private readonly receiptTick: Cap05ReceiptConsumingForecastScenarioTickServiceV1,
     private readonly provider: Cap08S3DecisionActionProviderServiceV1,
+    private readonly receiptEpisodeGuard: Cap08S3ReceiptEpisodeGuardV1,
+    private readonly authorityGuard: Cap08S3AuthorityGuardV1,
   ) {}
 
   async executeOneTick(input: ExecuteCap08S3FormalTickInputV1): Promise<ExecuteCap08S3FormalTickResultV1> {
@@ -163,7 +182,7 @@ export class Cap08S3FormalTickServiceV1 {
       });
     }
     const frozenRecords = await this.evidence.freeze({ scope: input.scope, logical_time: plan.logical_time });
-    const outcome = outcomeFvo10V1(frozenRecords);
+    const outcome = outcomeFvo10V1({ records: frozenRecords, scope: input.scope, logical_time: plan.logical_time });
     if (obligation.require_outcome_absence && outcome) throw new Error("CAP08_S3_T09_OUTCOME_PREMATURELY_VISIBLE");
     if (obligation.require_outcome_fvo10_identity && !outcome) throw new Error("CAP08_S3_T10_OUTCOME_FVO10_REQUIRED");
     phases.push({
@@ -179,10 +198,19 @@ export class Cap08S3FormalTickServiceV1 {
       ].join("+"),
     });
 
+    const hAuthority = obligation.commit_action_feedback_at_h || obligation.require_action_feedback_readback_at_h
+      ? await this.authorityGuard.capture(input.scope)
+      : null;
     let actionFeedbackCommit: Cap08S3ActionFeedbackCommitResultV1 | null = null;
     let actionFeedbackReadback: Cap05ActionFeedbackEnvelopeV1 | null = null;
     if (obligation.commit_action_feedback_at_h) {
       if (!receipt) throw new Error("CAP08_S3_H_RECEIPT_REQUIRED");
+      await this.receiptEpisodeGuard.validateReceipt({
+        formal_run_id: input.formal_run_id,
+        scope: input.scope,
+        receipt_ref: receipt.receipt.source_record_id,
+        receipt_hash: receipt.receipt.source_record_hash,
+      });
       actionFeedbackCommit = await this.provider.commitActionFeedbackAtH({
         scope: input.scope,
         receipt_ref: receipt.receipt.source_record_id,
@@ -191,6 +219,17 @@ export class Cap08S3FormalTickServiceV1 {
       actionFeedbackReadback = actionFeedbackCommit.action_feedback;
     } else if (obligation.require_action_feedback_readback_at_h) {
       actionFeedbackReadback = await this.provider.readActionFeedbackExact({ scope: input.scope });
+    }
+    if (actionFeedbackReadback) {
+      await this.receiptEpisodeGuard.validateActionFeedback({
+        formal_run_id: input.formal_run_id,
+        scope: input.scope,
+        action_feedback: actionFeedbackReadback,
+      });
+    }
+    if (hAuthority) await this.authorityGuard.assertUnchanged(hAuthority);
+    if (obligation.require_outcome_fvo10_identity && (!outcome || !actionFeedbackReadback)) {
+      throw new Error("CAP08_S3_OUTCOME_FVO10_EXACT_H_ATTACHMENT_REQUIRED");
     }
     phases.push({
       phase: "H",
@@ -233,6 +272,9 @@ export class Cap08S3FormalTickServiceV1 {
     }
     phases.push({ phase: "B", status: "COMPLETE", canonical_write: "B_SCENARIO", result: bFlush.status });
 
+    const gAuthority = obligation.resolve_decision_source_and_commit_at_g
+      ? await this.authorityGuard.capture(input.scope)
+      : null;
     let decisionCommit: Cap08S3DecisionCommitResultV1 | null = null;
     if (obligation.resolve_decision_source_and_commit_at_g) {
       decisionCommit = await this.provider.commitDecisionAfterScenario({
@@ -242,6 +284,7 @@ export class Cap08S3FormalTickServiceV1 {
         decided_at: plan.logical_time,
       });
     }
+    if (gAuthority) await this.authorityGuard.assertUnchanged(gAuthority);
     phases.push({
       phase: "G",
       status: "COMPLETE",
