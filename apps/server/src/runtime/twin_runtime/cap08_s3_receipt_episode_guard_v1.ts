@@ -7,7 +7,11 @@ import {
   CAP08_S3_EXECUTED_AMOUNT_MM_V1,
   CAP08_S3_TARGET_SCOPE_EQUIVALENT_AMOUNT_MM_V1,
 } from "../../domain/twin_runtime/cap08_s3_formal_provider_contracts_v1.js";
-import type { Cap05ActionFeedbackEnvelopeV1, Cap05DecisionEnvelopeV1 } from "../../domain/twin_runtime/feedback_canonical_contracts_v1.js";
+import {
+  validateCap05ActionFeedbackV1,
+  type Cap05ActionFeedbackEnvelopeV1,
+  type Cap05DecisionEnvelopeV1,
+} from "../../domain/twin_runtime/feedback_canonical_contracts_v1.js";
 import type { Cap05ExecutionReceiptEvidenceV1 } from "../../evidence/twin_runtime/execution_receipt_evidence_contract_v1.js";
 import { PostgresImmutableDecisionActionCommitRepositoryV1 } from "../../persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.js";
 import type { TwinScopeKeyV1 } from "./ports.js";
@@ -100,9 +104,12 @@ export class Cap08S3ReceiptEpisodeGuardV1 {
       ),
     ]);
     if (active.rows.length !== 1 || state.rows.length !== 1) throw new Error("CAP08_S3_RECEIPT_GUARD_ACTIVE_CONTEXT_CARDINALITY");
+    const activeLineageRef = requiredStringV1(active.rows[0].active_lineage_ref, "CAP08_S3_RECEIPT_GUARD_ACTIVE_LINEAGE_REQUIRED");
+    const lineageId = requiredStringV1(state.rows[0].lineage_id, "CAP08_S3_RECEIPT_GUARD_LINEAGE_REQUIRED");
+    if (lineageId !== activeLineageRef) throw new Error("CAP08_S3_RECEIPT_GUARD_CURRENT_POINTER_CROSS_LINEAGE");
     return {
-      active_lineage_ref: requiredStringV1(active.rows[0].active_lineage_ref, "CAP08_S3_RECEIPT_GUARD_ACTIVE_LINEAGE_REQUIRED"),
-      lineage_id: requiredStringV1(state.rows[0].lineage_id, "CAP08_S3_RECEIPT_GUARD_LINEAGE_REQUIRED"),
+      active_lineage_ref: activeLineageRef,
+      lineage_id: lineageId,
       revision_id: requiredStringV1(state.rows[0].revision_id, "CAP08_S3_RECEIPT_GUARD_REVISION_REQUIRED"),
     };
   }
@@ -178,13 +185,31 @@ export class Cap08S3ReceiptEpisodeGuardV1 {
     scope: TwinScopeKeyV1;
     action_feedback: Cap05ActionFeedbackEnvelopeV1;
   }): Promise<Cap08S3ReceiptEpisodeGuardResultV1> {
+    validateCap05ActionFeedbackV1(input.action_feedback);
     assertScopeV1(input.scope, input.action_feedback, "CAP08_S3_H_GUARD_SCOPE_MISMATCH");
     const receiptRef = requiredStringV1(input.action_feedback.payload.receipt_ref, "CAP08_S3_H_GUARD_RECEIPT_REF_REQUIRED");
-    return this.validateReceipt({
+    const result = await this.validateReceipt({
       formal_run_id: input.formal_run_id,
       scope: input.scope,
       receipt_ref: receiptRef,
       receipt_hash: await this.receiptHashByRefV1(receiptRef),
     });
+    const feedback = input.action_feedback;
+    if (feedback.payload.source_record_id !== result.receipt_ref) throw new Error("CAP08_S3_H_GUARD_RECEIPT_SOURCE_MISMATCH");
+    if (feedback.payload.decision_ref !== result.decision_ref || feedback.payload.decision_hash !== result.decision_hash) {
+      throw new Error("CAP08_S3_H_GUARD_DECISION_MISMATCH");
+    }
+    if (feedback.payload.approved_plan_evidence_ref !== result.approved_plan_ref
+      || feedback.payload.approved_plan_evidence_hash !== result.approved_plan_hash) {
+      throw new Error("CAP08_S3_H_GUARD_PLAN_MISMATCH");
+    }
+    if (feedback.context_lineage_ref !== result.active_lineage_ref) throw new Error("CAP08_S3_H_GUARD_LINEAGE_MISMATCH");
+    if (feedback.context_revision_ref !== result.revision_id) throw new Error("CAP08_S3_H_GUARD_REVISION_MISMATCH");
+    if (feedback.payload.actual_amount_mm !== result.actual_amount_mm
+      || feedback.payload.spatial_coverage_fraction !== result.spatial_coverage_fraction
+      || feedback.payload.target_scope_equivalent_irrigation_mm !== result.target_scope_equivalent_irrigation_mm) {
+      throw new Error("CAP08_S3_H_GUARD_AMOUNT_MISMATCH");
+    }
+    return result;
   }
 }
