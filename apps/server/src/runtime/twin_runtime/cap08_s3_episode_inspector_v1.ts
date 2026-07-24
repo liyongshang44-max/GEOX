@@ -13,7 +13,7 @@ import {
 import type { Cap05ActionFeedbackEnvelopeV1, Cap05DecisionEnvelopeV1 } from "../../domain/twin_runtime/feedback_canonical_contracts_v1.js";
 import type { Cap05ApprovalAssertionEvidenceV1, Cap05ApprovedPlanEvidenceV1 } from "../../evidence/twin_runtime/approval_plan_evidence_contracts_v1.js";
 import type { Cap05ExecutionReceiptEvidenceV1 } from "../../evidence/twin_runtime/execution_receipt_evidence_contract_v1.js";
-import { PostgresFeedbackPersistenceRepositoryV1 } from "../../persistence/twin_runtime/postgres_feedback_persistence_repository_v1.js";
+import { PostgresImmutableDecisionActionCommitRepositoryV1 } from "../../persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.js";
 import type { TwinScopeKeyV1 } from "./ports.js";
 
 export type Cap08S3EpisodeInspectionV1 = {
@@ -56,10 +56,10 @@ function exactScopeV1(value: TwinScopeKeyV1, expected: TwinScopeKeyV1, code: str
 }
 
 export class Cap08S3EpisodeInspectorV1 {
-  private readonly feedbackRepository: PostgresFeedbackPersistenceRepositoryV1;
+  private readonly canonicalRepository: PostgresImmutableDecisionActionCommitRepositoryV1;
 
   constructor(private readonly pool: Pool) {
-    this.feedbackRepository = new PostgresFeedbackPersistenceRepositoryV1(pool);
+    this.canonicalRepository = new PostgresImmutableDecisionActionCommitRepositoryV1(pool);
   }
 
   private async sourceEvidenceV1<T>(input: {
@@ -156,14 +156,14 @@ export class Cap08S3EpisodeInspectorV1 {
       if (value !== 1) throw new Error(`CAP08_S3_EPISODE_CARDINALITY:${field}:${value}`);
     }
 
-    const decisionObject = await this.feedbackRepository.readCanonicalObject(decisionRows.rows[0].decision_object_id);
-    const feedbackObject = await this.feedbackRepository.readCanonicalObject(feedbackRows.rows[0].action_feedback_object_id);
+    const decisionObject = await this.canonicalRepository.readCanonicalObject(decisionRows.rows[0].decision_object_id);
+    const feedbackObject = await this.canonicalRepository.readCanonicalObject(feedbackRows.rows[0].action_feedback_object_id);
     if (!decisionObject || decisionObject.object_type !== "twin_decision_record_v1") throw new Error("CAP08_S3_EPISODE_DECISION_CANONICAL_MISSING");
     if (!feedbackObject || feedbackObject.object_type !== "twin_action_feedback_v1") throw new Error("CAP08_S3_EPISODE_ACTION_FEEDBACK_CANONICAL_MISSING");
     const decision = decisionObject as Cap05DecisionEnvelopeV1;
     const approval = approvalAssertions[0];
-    const plan = parseEvidenceV1<Cap05ApprovedPlanEvidenceV1>(planRows.rows[0].canonical_evidence, "CAP08_S3_EPISODE_PLAN_INVALID");
-    const receipt = receipts[0];
+    const plan = parseEvidenceV1<Cap05ApprovedPlanEvidenceV1 & { formal_run_id?: string }>(planRows.rows[0].canonical_evidence, "CAP08_S3_EPISODE_PLAN_INVALID");
+    const receipt = receipts[0] as Cap05ExecutionReceiptEvidenceV1 & { formal_run_id?: string };
     const feedback = feedbackObject as Cap05ActionFeedbackEnvelopeV1;
 
     for (const candidate of [decision, approval, plan, receipt, feedback] as TwinScopeKeyV1[]) {
@@ -172,6 +172,9 @@ export class Cap08S3EpisodeInspectorV1 {
     const request = decisionRequests[0];
     if (request.dataset_id !== CAP08_S3_FORMAL_DATASET_ID_V1 || request.formal_run_id !== formalRunId) {
       throw new Error("CAP08_S3_EPISODE_DECISION_SOURCE_IDENTITY_MISMATCH");
+    }
+    if (plan.formal_run_id !== formalRunId || receipt.formal_run_id !== formalRunId) {
+      throw new Error("CAP08_S3_EPISODE_FORMAL_RUN_CHAIN_MISMATCH");
     }
     if (decision.payload.decision_request_evidence_ref !== request.source_record_id
       || decision.payload.decision_request_evidence_hash !== request.source_record_hash
@@ -186,6 +189,10 @@ export class Cap08S3EpisodeInspectorV1 {
     }
     if (plan.canonical_payload.approval_assertion_ref !== approval.source_record_id
       || plan.canonical_payload.approval_assertion_hash !== approval.source_record_hash
+      || plan.canonical_payload.decision_request_ref !== decision.payload.decision_request_evidence_ref
+      || plan.canonical_payload.decision_request_hash !== decision.payload.decision_request_evidence_hash
+      || plan.canonical_payload.selected_option_ref !== decision.payload.selected_option_ref
+      || plan.canonical_payload.selected_option_hash !== decision.payload.selected_option_hash
       || String(plan.canonical_payload.approved_amount_mm) !== CAP08_S3_APPROVED_AMOUNT_MM_V1) {
       throw new Error("CAP08_S3_EPISODE_PLAN_CHAIN_MISMATCH");
     }
@@ -196,8 +203,14 @@ export class Cap08S3EpisodeInspectorV1 {
       || String(receipt.canonical_payload.target_scope_equivalent_irrigation_mm) !== CAP08_S3_TARGET_SCOPE_EQUIVALENT_AMOUNT_MM_V1) {
       throw new Error("CAP08_S3_EPISODE_RECEIPT_CHAIN_MISMATCH");
     }
-    if (feedback.payload.receipt_ref !== receipt.source_record_id
+    if (feedback.payload.decision_ref !== decision.object_id
+      || feedback.payload.decision_hash !== decision.determinism_hash
+      || feedback.payload.approved_plan_evidence_ref !== plan.source_record_id
+      || feedback.payload.approved_plan_evidence_hash !== plan.source_record_hash
+      || feedback.payload.receipt_ref !== receipt.source_record_id
       || feedback.payload.source_record_id !== receipt.source_record_id
+      || feedback.context_lineage_ref !== decision.context_lineage_ref
+      || feedback.context_revision_ref !== decision.context_revision_ref
       || feedback.payload.actual_amount_mm !== CAP08_S3_EXECUTED_AMOUNT_MM_V1
       || feedback.payload.spatial_coverage_fraction !== CAP08_S3_COVERAGE_FRACTION_V1
       || feedback.payload.target_scope_equivalent_irrigation_mm !== CAP08_S3_TARGET_SCOPE_EQUIVALENT_AMOUNT_MM_V1) {
