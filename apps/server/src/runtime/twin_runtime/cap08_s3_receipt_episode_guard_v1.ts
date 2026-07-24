@@ -68,6 +68,19 @@ export class Cap08S3ReceiptEpisodeGuardV1 {
     return structuredClone(receipt);
   }
 
+  private async receiptHashByRefV1(ref: string): Promise<string> {
+    const result = await this.pool.query(
+      `SELECT record_json->'payload'->>'source_record_hash' AS source_record_hash
+       FROM facts
+       WHERE record_json->>'type'='irrigation_execution_receipt_evidence_v1'
+         AND record_json->'payload'->>'source_record_id'=$1
+       LIMIT 2`,
+      [ref],
+    );
+    if (result.rows.length !== 1) throw new Error("CAP08_S3_RECEIPT_GUARD_CARDINALITY");
+    return requiredStringV1(result.rows[0].source_record_hash, "CAP08_S3_RECEIPT_GUARD_RECEIPT_HASH_REQUIRED");
+  }
+
   private async activeContextV1(scope: TwinScopeKeyV1): Promise<{
     active_lineage_ref: string;
     lineage_id: string;
@@ -124,11 +137,7 @@ export class Cap08S3ReceiptEpisodeGuardV1 {
          AND tenant_id=$3 AND project_id=$4 AND group_id=$5 AND field_id=$6 AND season_id=$7 AND zone_id=$8
          AND active_for_decision=true
        LIMIT 2`,
-      [
-        receipt.canonical_payload.approved_plan_ref,
-        receipt.canonical_payload.approved_plan_hash,
-        ...scopeValuesV1(input.scope),
-      ],
+      [receipt.canonical_payload.approved_plan_ref, receipt.canonical_payload.approved_plan_hash, ...scopeValuesV1(input.scope)],
     );
     if (plan.rows.length !== 1) throw new Error("CAP08_S3_RECEIPT_GUARD_PLAN_CARDINALITY");
     const decisionRows = await this.pool.query(
@@ -170,11 +179,12 @@ export class Cap08S3ReceiptEpisodeGuardV1 {
     action_feedback: Cap05ActionFeedbackEnvelopeV1;
   }): Promise<Cap08S3ReceiptEpisodeGuardResultV1> {
     assertScopeV1(input.scope, input.action_feedback, "CAP08_S3_H_GUARD_SCOPE_MISMATCH");
+    const receiptRef = requiredStringV1(input.action_feedback.payload.receipt_ref, "CAP08_S3_H_GUARD_RECEIPT_REF_REQUIRED");
     return this.validateReceipt({
       formal_run_id: input.formal_run_id,
       scope: input.scope,
-      receipt_ref: input.action_feedback.payload.receipt_ref,
-      receipt_hash: input.action_feedback.payload.source_record_hash,
+      receipt_ref: receiptRef,
+      receipt_hash: await this.receiptHashByRefV1(receiptRef),
     });
   }
 }
