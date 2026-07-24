@@ -93,24 +93,40 @@ function validIndependentReview(reviews, pull, candidateHead) {
     }
   }
   const author = String(pull.user?.login || '').toLowerCase();
-  const candidates = [...latestByReviewer.values()].filter((review) =>
-    String(review.state || '').toUpperCase() === 'APPROVED'
-    && review.commit_id === candidateHead
-    && String(review.user?.login || '').toLowerCase() !== author
-    && String(review.user?.type || '') === 'User'
-    && !String(review.user?.login || '').endsWith('[bot]'));
-  assert.equal(candidates.length, 1, `S3_INDEPENDENT_EXACT_HEAD_APPROVAL_CARDINALITY:${candidates.length}`);
-  const review = candidates[0];
+  const qualifying = [...latestByReviewer.values()]
+    .filter((review) =>
+      String(review.state || '').toUpperCase() === 'APPROVED'
+      && review.commit_id === candidateHead
+      && String(review.user?.login || '').toLowerCase() !== author
+      && String(review.user?.type || '') === 'User'
+      && !String(review.user?.login || '').toLowerCase().endsWith('[bot]'))
+    .sort((left, right) => Date.parse(right.submitted_at || 0) - Date.parse(left.submitted_at || 0)
+      || Number(right.id) - Number(left.id));
+  assert.ok(qualifying.length >= 1, 'S3_INDEPENDENT_EXACT_HEAD_APPROVAL_REQUIRED');
+  const primary = qualifying[0];
   return {
-    review_id: review.id,
-    reviewer_login: review.user.login,
-    reviewer_type: review.user.type,
-    reviewer_author_association: review.author_association || null,
-    review_state: review.state,
-    review_commit_sha: review.commit_id,
-    submitted_at: review.submitted_at,
+    required: true,
+    satisfied: true,
+    waived: false,
+    qualifying_review_count: qualifying.length,
+    primary_review_id: primary.id,
+    primary_reviewer_login: primary.user.login,
+    primary_reviewer_type: primary.user.type,
+    primary_reviewer_author_association: primary.author_association || null,
+    primary_review_state: primary.state,
+    review_commit_sha: primary.commit_id,
+    primary_submitted_at: primary.submitted_at,
     candidate_author_login: pull.user.login,
     reviewer_is_candidate_author: false,
+    qualifying_reviews: qualifying.map((review) => ({
+      review_id: review.id,
+      reviewer_login: review.user.login,
+      reviewer_type: review.user.type,
+      reviewer_author_association: review.author_association || null,
+      review_state: review.state,
+      review_commit_sha: review.commit_id,
+      submitted_at: review.submitted_at,
+    })),
   };
 }
 
