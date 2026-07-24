@@ -88,15 +88,11 @@ function parseGenericAuthorityV1(value: unknown): Cap08CompletionAuthorityV1 {
 }
 
 function parseSemanticAuthorityV1(value: unknown): Cap08S3CompletionTupleV1 {
-  const tuple = structuredClone(parseJsonObjectV1(value) as unknown as Cap08S3CompletionTupleV1);
+  const tuple = structuredClone(
+    parseJsonObjectV1(value) as unknown as Cap08S3CompletionTupleV1,
+  );
   validateCap08S3CompletionTupleV1(tuple);
   return tuple;
-}
-
-function queryBoundPoolV1(client: PoolClient): Pool {
-  // The tuple rebuilder is query-only. Binding its query method to the transaction client
-  // guarantees that stored/read/rebuilt semantics use the same PostgreSQL snapshot.
-  return { query: client.query.bind(client) } as unknown as Pool;
 }
 
 async function readObjectV1(
@@ -329,7 +325,11 @@ function genericRepositoryBoundToClientV1(
 ): Cap08CompletionAuthorityRepositoryPortV1 {
   return {
     async readAuthority(authorityRef) {
-      const row = await readAuthorityRowV1(client, CAP08_COMPLETION_AUTHORITY_KIND_V1, authorityRef);
+      const row = await readAuthorityRowV1(
+        client,
+        CAP08_COMPLETION_AUTHORITY_KIND_V1,
+        authorityRef,
+      );
       return row ? parseGenericAuthorityV1(row.semantic_payload) : null;
     },
     async readAuthoritiesForScope(input) {
@@ -379,9 +379,16 @@ implements Cap08S3CompletionAuthorityPairPortV1 {
       scope: input.scope,
       phase_engine_source_digest: input.phase_engine_source_digest,
     });
+    if (genericRef === semanticRef) {
+      throw new Error("CAP08_S3_COMPLETION_AUTHORITY_REF_COLLISION");
+    }
     const [genericRow, semanticRow] = await Promise.all([
       readAuthorityRowV1(client, CAP08_COMPLETION_AUTHORITY_KIND_V1, genericRef),
-      readAuthorityRowV1(client, CAP08_S3_SEMANTIC_COMPLETION_AUTHORITY_KIND_V1, semanticRef),
+      readAuthorityRowV1(
+        client,
+        CAP08_S3_SEMANTIC_COMPLETION_AUTHORITY_KIND_V1,
+        semanticRef,
+      ),
     ]);
     if (Boolean(genericRow) !== Boolean(semanticRow)) throw new Error(PARTIAL_PAIR);
 
@@ -404,15 +411,15 @@ implements Cap08S3CompletionAuthorityPairPortV1 {
     }
 
     const genericInspection = await genericService.inspect(input);
-    if (genericInspection.disposition !== "ALREADY_COMPLETE_EXACT" || !genericInspection.authority) {
+    if (genericInspection.disposition !== "ALREADY_COMPLETE_EXACT"
+      || !genericInspection.authority) {
       throw new Error("CAP08_S3_GENERIC_COMPLETION_AUTHORITY_NOT_EXACT");
     }
     const semantic = parseSemanticAuthorityV1(semanticRow?.semantic_payload);
     if (semanticRow?.determinism_hash !== semantic.determinism_hash) {
       throw new Error("CAP08_S3_SEMANTIC_COMPLETION_AUTHORITY_HASH_MISMATCH");
     }
-    const tupleService = new Cap08S3CompletionTupleServiceV1(queryBoundPoolV1(client));
-    const rebuilt = await tupleService.rebuild({
+    const rebuilt = await new Cap08S3CompletionTupleServiceV1(client).rebuild({
       formal_run_id: input.formal_run_id,
       scope: input.scope,
       phase_engine_source_digest: input.phase_engine_source_digest,
@@ -468,9 +475,16 @@ implements Cap08S3CompletionAuthorityPairPortV1 {
         scope: input.scope,
         phase_engine_source_digest: input.phase_engine_source_digest,
       });
+      if (genericRef === semanticRef) {
+        throw new Error("CAP08_S3_COMPLETION_AUTHORITY_REF_COLLISION");
+      }
       const [genericRow, semanticRow] = await Promise.all([
         readAuthorityRowV1(client, CAP08_COMPLETION_AUTHORITY_KIND_V1, genericRef),
-        readAuthorityRowV1(client, CAP08_S3_SEMANTIC_COMPLETION_AUTHORITY_KIND_V1, semanticRef),
+        readAuthorityRowV1(
+          client,
+          CAP08_S3_SEMANTIC_COMPLETION_AUTHORITY_KIND_V1,
+          semanticRef,
+        ),
       ]);
       if (Boolean(genericRow) !== Boolean(semanticRow)) throw new Error(PARTIAL_PAIR);
       if (genericRow && semanticRow) {
@@ -478,24 +492,24 @@ implements Cap08S3CompletionAuthorityPairPortV1 {
         if (existing.disposition !== "ALREADY_COMPLETE_EXACT"
           || !existing.generic_authority
           || !existing.semantic_authority
-          || !existing.rebuilt_semantic_authority) {
+          || !existing.rebuilt_semantic_authority
+          || !existing.graph) {
           throw new Error("CAP08_S3_EXISTING_COMPLETION_AUTHORITY_PAIR_NOT_EXACT");
         }
         await client.query("COMMIT");
         return {
-          ...existing,
           disposition: "ALREADY_COMPLETE_EXACT",
           write_status: "EXISTING_IDEMPOTENT_PAIR",
           generic_authority: existing.generic_authority,
           semantic_authority: existing.semantic_authority,
           rebuilt_semantic_authority: existing.rebuilt_semantic_authority,
-          graph: existing.graph as Cap08CompletionGraphV1,
+          graph: existing.graph,
           authority_pair_write_delta: 0,
         };
       }
 
       const generic = buildCap08CompletionAuthorityV1({ inspection: input, graph });
-      const semantic = await new Cap08S3CompletionTupleServiceV1(queryBoundPoolV1(client)).rebuild({
+      const semantic = await new Cap08S3CompletionTupleServiceV1(client).rebuild({
         formal_run_id: input.formal_run_id,
         scope: input.scope,
         phase_engine_source_digest: input.phase_engine_source_digest,
