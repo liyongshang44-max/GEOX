@@ -14,11 +14,14 @@ import { DirectCap04ExecutionConfigResolverV1 } from "../../apps/server/src/doma
 import { PostgresActionFeedbackTickSourceV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_action_feedback_tick_source_v1.js";
 import { Cap08S2QualifiedEvidenceSourceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s2_qualified_evidence_source_v1.js";
 import { Cap08S3AuthorityGuardV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_authority_guard_v1.js";
+import { Cap08S3CompletionEvidenceTickServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_completion_evidence_tick_service_v1.js";
+import { Cap08S3CompletionTupleServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_completion_tuple_service_v1.js";
 import { Cap08S3DecisionActionProviderServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_decision_action_provider_service_v1.js";
 import { Cap08S3EpisodeInspectorV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_episode_inspector_v1.js";
 import { Cap08S3FormalRangeServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_formal_range_service_v1.js";
 import { Cap08S3FormalRuntimeServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_formal_runtime_service_v1.js";
 import { Cap08S3FormalTickServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_formal_tick_service_v1.js";
+import { Cap08S3OutcomeCompletionEvidenceServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_outcome_completion_evidence_service_v1.js";
 import { Cap08S3ReceiptConsumingForecastScenarioTickServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_receipt_consuming_tick_service_v1.js";
 import { Cap08S3ReceiptEpisodeGuardV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s3_receipt_episode_guard_v1.js";
 import {
@@ -97,7 +100,7 @@ async function main(): Promise<void> {
 
     const fixture = buildCap08S2FormalProviderFixtureV1();
     const sourceManifest = computeCap08S3SourceManifestV1(ROOT);
-    assert.equal(sourceManifest.paths.length, 20);
+    assert.equal(sourceManifest.paths.length, 24);
     assert.ok(/^sha256:[0-9a-f]{64}$/.test(sourceManifest.manifest_digest));
     const runtimeRepository = new PostgresRuntimeRepositoryV1(runner);
     const nextTickRepository = new PostgresNextTickRepositoryV1(runner);
@@ -130,7 +133,7 @@ async function main(): Promise<void> {
     );
     const provider = new Cap08S3DecisionActionProviderServiceV1(runner);
     const inspector = new Cap08S3EpisodeInspectorV1(runner);
-    const tick = new Cap08S3FormalTickServiceV1(
+    const baseTick = new Cap08S3FormalTickServiceV1(
       handoff,
       frozenEvidence,
       deferred,
@@ -140,12 +143,18 @@ async function main(): Promise<void> {
       new Cap08S3ReceiptEpisodeGuardV1(runner),
       new Cap08S3AuthorityGuardV1(runner),
     );
+    const tick = new Cap08S3CompletionEvidenceTickServiceV1(
+      baseTick,
+      new Cap08S3OutcomeCompletionEvidenceServiceV1(runner),
+    );
+    const tupleService = new Cap08S3CompletionTupleServiceV1(runner);
     const range = new Cap08S3FormalRangeServiceV1(
       handoff,
       tick,
       inspector,
       sourceManifest.manifest_digest,
       new Cap08CompletionAuthorityServiceV1(completionRepository),
+      tupleService,
     );
     const runtime = new Cap08S3FormalRuntimeServiceV1(
       new A0BootstrapRuntimeServiceV1(runtimeRepository, runtimeRepository, fixture.bootstrap_evidence_source),
@@ -173,6 +182,11 @@ async function main(): Promise<void> {
     assert.equal(first.range.provider_profile_id, PROFILE);
     assert.equal(first.range.provider_contract_digest, CONTRACT);
     assert.equal(first.range.phase_engine_source_digest, sourceManifest.manifest_digest);
+    assert.equal(first.range.completion_tuple_write_status, "INSERTED");
+    assert.equal(first.range.completion_authority_write_status, "INSERTED");
+    assert.equal(first.range.persisted_tick_binding_count, 24);
+    assert.equal(first.range.completion_tuple.tick_bindings.length, 24);
+    assert.equal(first.range.completion_tuple.tick_trace_digests.length, 24);
     assert.deepEqual([
       first.range.posterior_state_count,
       first.range.successful_forecast_count,
@@ -183,9 +197,14 @@ async function main(): Promise<void> {
     assert.equal(first.range.tick_traces.length, 24);
     assert.ok(first.range.tick_traces.every((trace) => /^sha256:[0-9a-f]{64}$/.test(trace.trace_digest)));
     assert.equal(new Set(first.range.tick_traces.map((trace) => trace.trace_digest)).size, 24);
+    assert.deepEqual(
+      first.range.tick_traces.map((trace) => trace.trace_digest),
+      first.range.completion_tuple.tick_trace_digests,
+    );
     ok("fresh PostgreSQL B00 and T00-T23 S3 formal run");
     ok("canonical persisted totals and semantic Tick traces");
     ok("full source manifest bound to completion authority");
+    ok("persisted semantic completion tuple established and rebuilt");
 
     const episode = first.range.episode_inspection;
     assert.equal(episode.disposition, "EXACT_COMPLETE");
@@ -215,7 +234,12 @@ async function main(): Promise<void> {
     assert.equal(t10.outcome_fvo10_record?.source_record_id, "FVO-10");
     assert.equal(t10.a_provider_result.evidence_window?.observation_selection.selected_observation_ref, "FVO-10");
     assert.deepEqual(t10.a_provider_result.evidence_window?.assimilation_applied_evidence_refs, ["FVO-10"]);
-    ok("T07 absence T08 H-before-A T09 absence T10 ordinary assimilation");
+    assert.equal(first.range.completion_tuple.t09.selected_observation_ref, null);
+    assert.deepEqual(first.range.completion_tuple.t09.assimilation_applied_evidence_refs, []);
+    assert.equal(first.range.completion_tuple.t10.outcome_fvo10_ref, "FVO-10");
+    assert.equal(first.range.completion_tuple.t10.selected_observation_ref, "FVO-10");
+    assert.deepEqual(first.range.completion_tuple.t10.assimilation_applied_evidence_refs, ["FVO-10"]);
+    ok("T07 absence T08 H-before-A T09 persisted absence T10 persisted ordinary assimilation");
 
     assert.deepEqual(await Promise.all([
       countObjectV1("twin_state_estimate_v1"),
@@ -234,8 +258,11 @@ async function main(): Promise<void> {
       countRecordV1("mcft_cap05_replay_evidence_v1", "approved_irrigation_plan_snapshot_v1"),
       countRecordV1("mcft_cap08_s3_replay_evidence_v1", "irrigation_execution_receipt_evidence_v1"),
       countRecordV1("mcft_cap05_replay_evidence_v1", "external_dispatch_evidence_v1"),
-    ]), [1, 1, 1, 1, 0]);
-    ok("canonical cardinality and S3 nonclaims");
+      countRecordV1("mcft_cap08_s3_completion_evidence_v1", "mcft_cap08_s3_outcome_absence_witness_v1"),
+      countRecordV1("mcft_cap08_s3_completion_evidence_v1", "soil_moisture_observation_v1"),
+      countRecordV1("mcft_cap08_s3_completion_authority_v1", "mcft_cap08_s3_completion_tuple_v1"),
+    ]), [1, 1, 1, 1, 0, 1, 1, 1]);
+    ok("canonical cardinality, completion evidence, and S3 nonclaims");
 
     const before = await snapshotV1();
     const second = await runtime.execute({ ...input, lease_owner: `${input.lease_owner}-replay` });
@@ -244,6 +271,12 @@ async function main(): Promise<void> {
     assert.equal(second.range.executed_tick_count, 0);
     assert.equal(second.range.episode_inspection.disposition, "EXACT_COMPLETE");
     assert.equal(second.range.phase_engine_source_digest, sourceManifest.manifest_digest);
+    assert.equal(second.range.completion_tuple_ref, first.range.completion_tuple_ref);
+    assert.equal(second.range.completion_tuple_hash, first.range.completion_tuple_hash);
+    assert.equal(second.range.completion_tuple_write_status, null);
+    assert.equal(second.range.completion_authority_write_status, null);
+    assert.equal(second.range.authority_recovery_write_delta, 0);
+    assert.equal(second.range.persisted_tick_binding_count, 24);
     assert.deepEqual([
       second.range.posterior_state_count,
       second.range.successful_forecast_count,
@@ -251,9 +284,14 @@ async function main(): Promise<void> {
       second.range.forecast_point_count,
       second.range.scenario_point_count,
     ], [25, 24, 24, 1728, 5184]);
-    assert.deepEqual(second.range.tick_traces, []);
+    assert.equal(second.range.tick_traces.length, 24);
+    assert.deepEqual(
+      second.range.tick_traces.map((trace) => trace.trace_digest),
+      first.range.tick_traces.map((trace) => trace.trace_digest),
+    );
+    assert.deepEqual(second.range.completion_tuple, first.range.completion_tuple);
     assert.deepEqual(after, before);
-    ok("completed replay exact readback and zero mutation");
+    ok("completed replay rebuilds 24 persisted traces and exact tuple with zero mutation");
 
     const result = {
       schema_version: "geox_mcft_cap08_s3_decision_action_db_result_v1",
@@ -268,6 +306,9 @@ async function main(): Promise<void> {
       phase_engine_source_digest: first.range.phase_engine_source_digest,
       source_manifest: sourceManifest,
       formal_run_id: fixture.formal_run_id,
+      completion_tuple_ref: first.range.completion_tuple_ref,
+      completion_tuple_hash: first.range.completion_tuple_hash,
+      persisted_tick_binding_count: first.range.persisted_tick_binding_count,
       successful_tick_count: first.range.successful_tick_count,
       persisted_cardinalities: {
         posterior_state_count: first.range.posterior_state_count,
@@ -277,6 +318,7 @@ async function main(): Promise<void> {
         scenario_point_count: first.range.scenario_point_count,
       },
       tick_trace_digests: first.range.tick_traces.map((trace) => trace.trace_digest),
+      completed_rerun_tick_trace_digests: second.range.tick_traces.map((trace) => trace.trace_digest),
       decision_count: first.range.decision_count,
       approval_assertion_count: first.range.approval_assertion_count,
       approved_plan_count: first.range.approved_plan_count,
