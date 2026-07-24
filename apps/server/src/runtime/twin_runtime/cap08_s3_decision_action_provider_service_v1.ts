@@ -26,7 +26,7 @@ import {
   type Cap05ApprovedPlanEvidenceV1,
 } from "../../evidence/twin_runtime/approval_plan_evidence_contracts_v1.js";
 import type { Cap05ExecutionReceiptEvidenceV1 } from "../../evidence/twin_runtime/execution_receipt_evidence_contract_v1.js";
-import { PostgresFeedbackPersistenceRepositoryV1 } from "../../persistence/twin_runtime/postgres_feedback_persistence_repository_v1.js";
+import { PostgresImmutableDecisionActionCommitRepositoryV1 } from "../../persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.js";
 import { Cap05ActionFeedbackNormalizationServiceV1 } from "./action_feedback_normalization_service_v1.js";
 import { Cap05ApprovalPlanBindingServiceV1 } from "./approval_plan_binding_service_v1.js";
 import { Cap05HumanDecisionServiceV1 } from "./human_decision_service_v1.js";
@@ -109,6 +109,12 @@ type DecisionRequestEvidenceV1 = ContinuationScopeV1 & {
   canonical_payload: DecisionRequestEvidenceV1["source_payload"];
 };
 
+type FormalRunEvidenceV1 = {
+  formal_run_id?: string;
+  source_record_id: string;
+  source_record_hash: string;
+};
+
 type EvidenceBaseInputV1<Payload extends Record<string, unknown>> = {
   formal_run_id: string;
   scope: ContinuationScopeV1;
@@ -188,13 +194,13 @@ export class Cap08S3DecisionActionProviderServiceV1 {
   private readonly decisionService: Cap05HumanDecisionServiceV1;
   private readonly approvalPlanService: Cap05ApprovalPlanBindingServiceV1;
   private readonly actionFeedbackService: Cap05ActionFeedbackNormalizationServiceV1;
-  private readonly feedbackRepository: PostgresFeedbackPersistenceRepositoryV1;
+  private readonly canonicalRepository: PostgresImmutableDecisionActionCommitRepositoryV1;
 
   constructor(private readonly pool: Pool) {
     this.decisionService = new Cap05HumanDecisionServiceV1(pool);
     this.approvalPlanService = new Cap05ApprovalPlanBindingServiceV1(pool);
     this.actionFeedbackService = new Cap05ActionFeedbackNormalizationServiceV1(pool);
-    this.feedbackRepository = new PostgresFeedbackPersistenceRepositoryV1(pool);
+    this.canonicalRepository = new PostgresImmutableDecisionActionCommitRepositoryV1(pool);
   }
 
   private async appendStandaloneEvidenceV1(
@@ -214,10 +220,7 @@ export class Cap08S3DecisionActionProviderServiceV1 {
     );
     if (inserted.rows.length === 1) return "INSERTED";
     if (inserted.rows.length !== 0) throw new Error("CAP08_S3_EVIDENCE_INSERT_CARDINALITY");
-    const existing = await this.pool.query(
-      "SELECT source,record_json FROM facts WHERE fact_id=$1",
-      [factId],
-    );
+    const existing = await this.pool.query("SELECT source,record_json FROM facts WHERE fact_id=$1", [factId]);
     if (existing.rows.length !== 1) throw new Error("CAP08_S3_EVIDENCE_FACT_CARDINALITY");
     const payload = existing.rows[0].record_json?.payload as Record<string, unknown> | undefined;
     if (existing.rows[0].source !== "mcft_cap08_s3_replay_evidence_v1"
@@ -229,7 +232,22 @@ export class Cap08S3DecisionActionProviderServiceV1 {
     return "EXISTING_IDEMPOTENT_SUCCESS";
   }
 
-  private async readUniqueDecisionV1(scope: ContinuationScopeV1): Promise<Cap05DecisionEnvelopeV1> {
+  private async assertDecisionFormalRunV1(decision: Cap05DecisionEnvelopeV1, formalRunId: string): Promise<void> {
+    const rows = await this.pool.query(
+      `SELECT record_json->'payload' AS payload
+       FROM facts
+       WHERE record_json->>'type'='controlled_human_decision_request_v1'
+         AND record_json->'payload'->>'source_record_id'=$1
+         AND record_json->'payload'->>'source_record_hash'=$2
+       LIMIT 2`,
+      [decision.payload.decision_request_evidence_ref, decision.payload.decision_request_evidence_hash],
+    );
+    if (rows.rows.length !== 1) throw new Error("CAP08_S3_DECISION_SOURCE_CARDINALITY");
+    const source = rows.rows[0].payload as FormalRunEvidenceV1 | undefined;
+    if (!source || source.formal_run_id !== formalRunId) throw new Error("CAP08_S3_DECISION_FORMAL_RUN_MISMATCH");
+  }
+
+  private async readUniqueDecisionV1(scope: ContinuationScopeV1, formalRunId: string): Promise<Cap05DecisionEnvelopeV1> {
     const rows = await this.pool.query(
       `SELECT decision_object_id FROM twin_decision_record_projection_v1
        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
@@ -237,12 +255,14 @@ export class Cap08S3DecisionActionProviderServiceV1 {
       exactScopeValuesV1(scope),
     );
     if (rows.rows.length !== 1) throw new Error("CAP08_S3_DECISION_CARDINALITY");
-    const object = await this.feedbackRepository.readCanonicalObject(rows.rows[0].decision_object_id);
+    const object = await this.canonicalRepository.readCanonicalObject(rows.rows[0].decision_object_id);
     if (!object || object.object_type !== "twin_decision_record_v1") throw new Error("CAP08_S3_DECISION_CANONICAL_MISSING");
-    return object;
+    const decision = object as Cap05DecisionEnvelopeV1;
+    await this.assertDecisionFormalRunV1(decision, formalRunId);
+    return decision;
   }
 
-  private async readActivePlanV1(scope: ContinuationScopeV1): Promise<Cap05ApprovedPlanEvidenceV1> {
+  private async readActivePlanV1(scope: ContinuationScopeV1, formalRunId: string): Promise<Cap05ApprovedPlanEvidenceV1> {
     const rows = await this.pool.query(
       `SELECT canonical_evidence FROM twin_approved_plan_binding_projection_v1
        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
@@ -251,7 +271,9 @@ export class Cap08S3DecisionActionProviderServiceV1 {
       exactScopeValuesV1(scope),
     );
     if (rows.rows.length !== 1) throw new Error("CAP08_S3_APPROVED_PLAN_CARDINALITY");
-    return structuredClone(rows.rows[0].canonical_evidence as Cap05ApprovedPlanEvidenceV1);
+    const plan = structuredClone(rows.rows[0].canonical_evidence as Cap05ApprovedPlanEvidenceV1 & { formal_run_id?: string });
+    if (plan.formal_run_id !== formalRunId) throw new Error("CAP08_S3_APPROVED_PLAN_FORMAL_RUN_MISMATCH");
+    return plan;
   }
 
   async commitDecisionAfterScenario(input: {
@@ -260,6 +282,7 @@ export class Cap08S3DecisionActionProviderServiceV1 {
     scenario_record: Cap04ScenarioSetRecordV1;
     decided_at: string;
   }): Promise<Cap08S3DecisionCommitResultV1> {
+    const formalRunId = requiredStringV1(input.formal_run_id, "CAP08_S3_DECISION_FORMAL_RUN_REQUIRED");
     const decidedAt = canonicalInstantV1(input.decided_at, "CAP08_S3_DECIDED_AT_INVALID");
     const scenario = input.scenario_record.scenario_set;
     const optionRef = buildCap05ScenarioOptionMemberRefV1(scenario.object_id, CAP08_S3_SELECTED_OPTION_ID_V1);
@@ -267,7 +290,7 @@ export class Cap08S3DecisionActionProviderServiceV1 {
     const payload = {
       actor_class: "HUMAN" as const,
       actor_ref: "human_operator_mcft_cap08_s3_v1",
-      decision_cycle_key: `${input.formal_run_id}:T05`,
+      decision_cycle_key: `${formalRunId}:T05`,
       scenario_set_ref: scenario.object_id,
       scenario_set_hash: scenario.determinism_hash,
       selected_option_ref: optionRef,
@@ -276,7 +299,7 @@ export class Cap08S3DecisionActionProviderServiceV1 {
       requested_disposition: "SELECT_OPTION" as const,
     };
     const request = buildEvidenceRecordV1({
-      formal_run_id: input.formal_run_id,
+      formal_run_id: formalRunId,
       scope: input.scope,
       record_type: "controlled_human_decision_request_v1",
       binding_id: CAP08_S3_DECISION_REQUEST_BINDING_ID_V1,
@@ -308,8 +331,9 @@ export class Cap08S3DecisionActionProviderServiceV1 {
     scope: ContinuationScopeV1;
     available_to_runtime_at: string;
   }): Promise<Cap08S3ApprovalPlanCommitResultV1> {
+    const formalRunId = requiredStringV1(input.formal_run_id, "CAP08_S3_APPROVAL_FORMAL_RUN_REQUIRED");
     const availableAt = canonicalInstantV1(input.available_to_runtime_at, "CAP08_S3_APPROVAL_AVAILABLE_AT_INVALID");
-    const decision = await this.readUniqueDecisionV1(input.scope);
+    const decision = await this.readUniqueDecisionV1(input.scope, formalRunId);
     const assertionPayload = {
       approval_semantics: "EXTERNAL_OR_HUMAN_EVIDENCE_ASSERTION" as const,
       approval_status: "APPROVED" as const,
@@ -323,7 +347,7 @@ export class Cap08S3DecisionActionProviderServiceV1 {
       geox_approval_authority_exercised: false as const,
     };
     const assertion = buildEvidenceRecordV1({
-      formal_run_id: input.formal_run_id,
+      formal_run_id: formalRunId,
       scope: input.scope,
       record_type: "approval_assertion_evidence_v1",
       binding_id: CAP08_S3_APPROVAL_ASSERTION_BINDING_ID_V1,
@@ -349,7 +373,7 @@ export class Cap08S3DecisionActionProviderServiceV1 {
       target_scope: structuredClone(input.scope),
     };
     const plan = buildEvidenceRecordV1({
-      formal_run_id: input.formal_run_id,
+      formal_run_id: formalRunId,
       scope: input.scope,
       record_type: "approved_irrigation_plan_snapshot_v1",
       binding_id: CAP08_S3_APPROVED_PLAN_BINDING_ID_V1,
@@ -388,14 +412,15 @@ export class Cap08S3DecisionActionProviderServiceV1 {
     scope: ContinuationScopeV1;
     available_to_runtime_at: string;
   }): Promise<Cap08S3ReceiptMaterializationResultV1> {
+    const formalRunId = requiredStringV1(input.formal_run_id, "CAP08_S3_RECEIPT_FORMAL_RUN_REQUIRED");
     const availableAt = canonicalInstantV1(input.available_to_runtime_at, "CAP08_S3_RECEIPT_AVAILABLE_AT_INVALID");
-    const plan = await this.readActivePlanV1(input.scope);
+    const plan = await this.readActivePlanV1(input.scope, formalRunId);
     const payload = {
       approved_plan_ref: plan.source_record_id,
       approved_plan_hash: plan.source_record_hash,
       external_dispatch_ref: null,
       external_dispatch_hash: null,
-      event_id: `${input.formal_run_id}:irrigation:T07`,
+      event_id: `${formalRunId}:irrigation:T07`,
       execution_status: "PARTIAL" as const,
       validation_status: "PASSED" as const,
       source_quality: "PASS" as const,
@@ -407,7 +432,7 @@ export class Cap08S3DecisionActionProviderServiceV1 {
       unit: "mm" as const,
     };
     const receipt = buildEvidenceRecordV1({
-      formal_run_id: input.formal_run_id,
+      formal_run_id: formalRunId,
       scope: input.scope,
       record_type: "irrigation_execution_receipt_evidence_v1",
       binding_id: CAP08_S3_EXECUTION_RECEIPT_BINDING_ID_V1,
@@ -459,7 +484,7 @@ export class Cap08S3DecisionActionProviderServiceV1 {
       exactScopeValuesV1(input.scope),
     );
     if (rows.rows.length !== 1) throw new Error("CAP08_S3_ACTION_FEEDBACK_CARDINALITY");
-    const object = await this.feedbackRepository.readCanonicalObject(rows.rows[0].action_feedback_object_id);
+    const object = await this.canonicalRepository.readCanonicalObject(rows.rows[0].action_feedback_object_id);
     if (!object || object.object_type !== "twin_action_feedback_v1") throw new Error("CAP08_S3_ACTION_FEEDBACK_CANONICAL_MISSING");
     return object as Cap05ActionFeedbackEnvelopeV1;
   }
