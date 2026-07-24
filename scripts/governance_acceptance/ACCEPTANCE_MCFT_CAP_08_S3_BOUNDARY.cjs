@@ -83,7 +83,13 @@ try {
   assert.equal(implementation.persistence_policy.migration_delta, 0);
   assert.equal(implementation.production_runtime_source_authorized, false);
 
-  assert.equal(contract.contract_id, 'GEOX-MCFT-CAP-08-S3-CONTRACT-V1');
+  assert.equal(contract.schema_version, 'geox_mcft_cap08_s3_contract_v1');
+  assert.equal(contract.capability_line_id, 'MCFT-CAP-08');
+  assert.equal(contract.slice_id, 'MCFT-CAP-08.S3');
+  assert.equal(contract.provider_profile_id, implementation.formal_provider_profile_id);
+  assert.equal(contract.semantic_digest, implementation.formal_provider_contract_digest);
+  assert.deepEqual(contract.phase_order, implementation.phase_order);
+  assert.equal(contract.taskbook_blob_sha, candidateTaskbookBlob);
   assert.equal(review.independent_review_required, true);
   assert.equal(review.required_before_candidate_merge, true);
   assert.equal(review.required_before_exact_sha_attestation, true);
@@ -148,6 +154,7 @@ try {
     candidate_sha: git('rev-parse', 'HEAD'),
     candidate_tree_sha: git('rev-parse', 'HEAD^{tree}'),
     taskbook_blob_sha: candidateTaskbookBlob,
+    contract_digest: contract.semantic_digest,
     changed_file_count: actual.length,
     changed_files: actual,
     source_manifest_file_count: implementation.source_manifest_file_count,
