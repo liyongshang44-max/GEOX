@@ -81,13 +81,38 @@ if (status.implementation_authorized !== false || status.runtime_source_authoriz
 if (status.independent_review_required !== true || status.independent_review_satisfied !== false || status.independent_review_waived !== false) {
   fail("S3_STATUS_REVIEW_POLICY_INVALID");
 }
+if (status.formal_candidate_creation_authorized_after_governance_merge !== true ||
+    status.candidate_transition_authorized_after_governance_merge !== true) {
+  fail("S3_STATUS_POST_GOVERNANCE_CANDIDATE_ENTRY_INVALID");
+}
+if (status.candidate_merge_requires_independent_review !== true ||
+    status.exact_sha_attestation_requires_independent_review !== true) {
+  fail("S3_STATUS_REVIEW_ENFORCEMENT_PHASE_INVALID");
+}
 if (status.focused_workflow !== "mcft-cap-08-s3-decision-action-feedback") fail("S3_STATUS_FOCUSED_WORKFLOW_INVALID");
 if (status.exact_sha_status_context !== "mcft-cap-08/s3-exact-sha-attestation") fail("S3_STATUS_CONTEXT_INVALID");
 
 if (review.independent_review_required !== true) fail("S3_REVIEW_MUST_BE_REQUIRED");
 if (review.independent_review_satisfied !== false || review.independent_review_waived !== false) fail("S3_REVIEW_MUST_REMAIN_UNSATISFIED_UNWAIVED");
 if (review.s2_owner_review_waiver_inherited !== false) fail("S3_REVIEW_S2_WAIVER_INHERITANCE_FORBIDDEN");
-if (review.formal_candidate_creation_authorized !== false) fail("S3_REVIEW_FORMAL_CANDIDATE_AUTHORITY_FORBIDDEN");
+if (review.required_before_formal_candidate_creation !== false || review.required_before_candidate_declaration !== false) {
+  fail("S3_REVIEW_CIRCULAR_PRE_CREATION_GATE_FORBIDDEN");
+}
+if (review.required_before_candidate_merge !== true || review.required_before_exact_sha_attestation !== true) {
+  fail("S3_REVIEW_MERGE_AND_ATTESTATION_GATE_REQUIRED");
+}
+if (review.formal_candidate_creation_authorized_after_governance_merge !== true ||
+    review.candidate_transition_authorized_after_governance_merge !== true) {
+  fail("S3_REVIEW_POST_GOVERNANCE_CANDIDATE_ENTRY_INVALID");
+}
+if (review.candidate_merge_authorized_without_independent_review !== false ||
+    review.exact_sha_attestation_authorized_without_independent_review !== false) {
+  fail("S3_REVIEW_BYPASS_FORBIDDEN");
+}
+if (review.review_identity_requirements.review_must_target_exact_candidate_head !== true ||
+    review.review_identity_requirements.new_commit_after_approval_requires_reapproval !== true) {
+  fail("S3_REVIEW_EXACT_HEAD_BINDING_INVALID");
+}
 
 if (predecessor.predecessor_merge_subject !== "1f37d6247a5f2e90327720c9feed4faf729d1db3") fail("S3_PREDECESSOR_SUBJECT_INVALID");
 if (predecessor.predecessor_tree_sha !== "531ac3d53a05d08bbd1df39099f3721abb7095e2") fail("S3_PREDECESSOR_TREE_INVALID");
@@ -181,6 +206,10 @@ if (governance.candidate_declaration_present !== false ||
     governance.implementation_authorized !== false) {
   fail("S3_GOVERNANCE_NONCLAIM_INVALID");
 }
+if (governance.review_policy !== "INDEPENDENT_REVIEW_REQUIRED_BEFORE_CANDIDATE_MERGE_AND_EXACT_SHA_ATTESTATION" ||
+    governance.first_legal_action_after_effective_merge !== "CREATE_SEPARATE_S3_IMPLEMENTATION_CANDIDATE_THEN_REQUIRE_EXACT_HEAD_INDEPENDENT_APPROVAL_BEFORE_MERGE") {
+  fail("S3_GOVERNANCE_LIFECYCLE_ORDER_INVALID");
+}
 if (governance.s3_machine_contract_digest !== contract.semantic_digest ||
     governance.s3_evidence_identity_digest !== identities.semantic_digest) {
   fail("S3_GOVERNANCE_DIGEST_BINDING_INVALID");
@@ -196,7 +225,9 @@ const result = {
   s2_predecessor_artifact_id: predecessor.predecessor_exact_sha_artifact_id,
   s3_status_seed: "FALSE_PRE_REGISTERED",
   s3_registry_rule: "PRESENT_IN_CANDIDATE_TREE_FOR_POSTMERGE_TRUST",
-  independent_review_required: true,
+  candidate_creation_after_governance_merge_authorized: true,
+  independent_review_required_before_candidate_merge: true,
+  independent_review_required_before_exact_sha_attestation: true,
   independent_review_satisfied: false,
   independent_review_waived: false,
   s3_contract_digest: contract.semantic_digest,
