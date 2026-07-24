@@ -12,7 +12,7 @@
   "s3_registry_rule": "PROPOSED_FOR_PROTECTED_MERGE_TRUST",
   "s3_machine_contract_digest": "sha256:bc4355d20bea6ba127ffdaccc2bd19f2d950237d10bffb652479bb712739b8a5",
   "s3_evidence_identity_digest": "sha256:ec30bd67e1a6d8ec87f4594a3190e324602b6e6960785b8160cd4051f9467bfb",
-  "review_policy": "INDEPENDENT_REVIEW_REQUIRED_NOT_SATISFIED",
+  "review_policy": "INDEPENDENT_REVIEW_REQUIRED_BEFORE_CANDIDATE_MERGE_AND_EXACT_SHA_ATTESTATION",
   "candidate_declaration_present": false,
   "s3_candidate_implemented": false,
   "runtime_source_delta": 0,
@@ -23,7 +23,7 @@
   "scheduler_delta": 0,
   "production_authority_delta": 0,
   "implementation_authorized": false,
-  "first_legal_action_after_effective_merge": "CREATE_SEPARATE_S3_IMPLEMENTATION_CANDIDATE_AFTER_INDEPENDENT_REVIEW_ENTRY_GATE",
+  "first_legal_action_after_effective_merge": "CREATE_SEPARATE_S3_IMPLEMENTATION_CANDIDATE_THEN_REQUIRE_EXACT_HEAD_INDEPENDENT_APPROVAL_BEFORE_MERGE",
   "nonclaims": [
     "NO_S3_IMPLEMENTATION",
     "NO_S3_CANDIDATE_DECLARATION",
