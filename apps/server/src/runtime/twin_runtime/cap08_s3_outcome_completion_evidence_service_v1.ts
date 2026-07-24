@@ -2,7 +2,6 @@
 // Boundary: bounded append-or-exact-verify Evidence facts only; no State/Forecast/Scenario mutation, projection, route, scheduler, wall clock, filesystem, environment, or production authority.
 
 import crypto from "node:crypto";
-import type { Pool } from "pg";
 import {
   CAP08_S3_OUTCOME_FVO_ID_V1,
   CAP08_S3_OUTCOME_VALUE_V1,
@@ -18,6 +17,7 @@ import type {
   CanonicalReplayEvidenceRecordV1,
   TwinScopeKeyV1,
 } from "./ports.js";
+import type { Cap08S3ReadQueryPortV1 } from "./cap08_s3_episode_inspector_v1.js";
 
 export const CAP08_S3_COMPLETION_EVIDENCE_SOURCE_V1 =
   "mcft_cap08_s3_completion_evidence_v1" as const;
@@ -73,7 +73,10 @@ function exactOutcomeV1(input: {
   scope: TwinScopeKeyV1;
   record: CanonicalReplayEvidenceRecordV1;
 }): Cap08S3PersistedOutcomeEvidenceV1 {
-  const formalRunId = requiredStringV1(input.formal_run_id, "CAP08_S3_OUTCOME_FORMAL_RUN_REQUIRED");
+  const formalRunId = requiredStringV1(
+    input.formal_run_id,
+    "CAP08_S3_OUTCOME_FORMAL_RUN_REQUIRED",
+  );
   const record = structuredClone(input.record);
   exactScopeV1(input.scope, record, "CAP08_S3_OUTCOME_SCOPE_MISMATCH");
   if (record.source_record_id !== CAP08_S3_OUTCOME_FVO_ID_V1
@@ -97,7 +100,7 @@ function recordJsonV1(type: string, payload: unknown): Record<string, unknown> {
 }
 
 export class Cap08S3OutcomeCompletionEvidenceServiceV1 {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly database: Cap08S3ReadQueryPortV1) {}
 
   private async commitExactV1<T extends { source_record_id: string; source_record_hash: string }>(input: {
     formal_run_id: string;
@@ -105,18 +108,31 @@ export class Cap08S3OutcomeCompletionEvidenceServiceV1 {
     occurred_at: string;
     evidence: T;
   }): Promise<Cap08S3CompletionEvidenceCommitResultV1<T>> {
-    const factId = factIdV1(input.record_type, input.formal_run_id, input.evidence.source_record_id);
+    const factId = factIdV1(
+      input.record_type,
+      input.formal_run_id,
+      input.evidence.source_record_id,
+    );
     const recordJson = recordJsonV1(input.record_type, input.evidence);
-    const inserted = await this.pool.query(
+    const inserted = await this.database.query(
       `INSERT INTO facts (fact_id,occurred_at,source,record_json)
        VALUES ($1,$2::timestamptz,$3,$4::jsonb)
        ON CONFLICT (fact_id) DO NOTHING
        RETURNING fact_id`,
-      [factId, input.occurred_at, CAP08_S3_COMPLETION_EVIDENCE_SOURCE_V1, JSON.stringify(recordJson)],
+      [
+        factId,
+        input.occurred_at,
+        CAP08_S3_COMPLETION_EVIDENCE_SOURCE_V1,
+        JSON.stringify(recordJson),
+      ],
     );
-    if (inserted.rows.length === 1) return { status: "INSERTED", evidence: structuredClone(input.evidence) };
-    if (inserted.rows.length !== 0) throw new Error("CAP08_S3_COMPLETION_EVIDENCE_INSERT_CARDINALITY");
-    const existing = await this.pool.query(
+    if (inserted.rows.length === 1) {
+      return { status: "INSERTED", evidence: structuredClone(input.evidence) };
+    }
+    if (inserted.rows.length !== 0) {
+      throw new Error("CAP08_S3_COMPLETION_EVIDENCE_INSERT_CARDINALITY");
+    }
+    const existing = await this.database.query(
       "SELECT source,record_json FROM facts WHERE fact_id=$1",
       [factId],
     );
@@ -125,7 +141,10 @@ export class Cap08S3OutcomeCompletionEvidenceServiceV1 {
       || semanticHashV1(existing.rows[0].record_json) !== semanticHashV1(recordJson)) {
       throw new Error("CAP08_S3_COMPLETION_EVIDENCE_IDEMPOTENCY_CONFLICT");
     }
-    return { status: "EXISTING_IDEMPOTENT_SUCCESS", evidence: structuredClone(input.evidence) };
+    return {
+      status: "EXISTING_IDEMPOTENT_SUCCESS",
+      evidence: structuredClone(input.evidence),
+    };
   }
 
   async commitOutcomeFvo10(input: {
@@ -160,36 +179,52 @@ export class Cap08S3OutcomeCompletionEvidenceServiceV1 {
     formal_run_id: string;
     scope: TwinScopeKeyV1;
   }): Promise<Cap08S3PersistedOutcomeEvidenceV1 | null> {
-    const rows = await this.pool.query(
+    const rows = await this.database.query(
       `SELECT record_json->'payload' AS payload
-       FROM facts
-       WHERE source=$1
-         AND record_json->>'type'='soil_moisture_observation_v1'
-         AND record_json->'payload'->>'formal_run_id'=$2
-         AND record_json->'payload'->>'source_record_id'=$3
-       LIMIT 2`,
-      [CAP08_S3_COMPLETION_EVIDENCE_SOURCE_V1, input.formal_run_id, CAP08_S3_OUTCOME_FVO_ID_V1],
+         FROM facts
+        WHERE source=$1
+          AND record_json->>'type'='soil_moisture_observation_v1'
+          AND record_json->'payload'->>'formal_run_id'=$2
+          AND record_json->'payload'->>'source_record_id'=$3
+        LIMIT 2`,
+      [
+        CAP08_S3_COMPLETION_EVIDENCE_SOURCE_V1,
+        input.formal_run_id,
+        CAP08_S3_OUTCOME_FVO_ID_V1,
+      ],
     );
     if (rows.rows.length === 0) return null;
-    if (rows.rows.length !== 1) throw new Error("CAP08_S3_OUTCOME_COMPLETION_EVIDENCE_CARDINALITY");
-    return exactOutcomeV1({ formal_run_id: input.formal_run_id, scope: input.scope, record: rows.rows[0].payload });
+    if (rows.rows.length !== 1) {
+      throw new Error("CAP08_S3_OUTCOME_COMPLETION_EVIDENCE_CARDINALITY");
+    }
+    return exactOutcomeV1({
+      formal_run_id: input.formal_run_id,
+      scope: input.scope,
+      record: rows.rows[0].payload,
+    });
   }
 
   async readOutcomeAbsenceWitness(input: {
     formal_run_id: string;
     scope: TwinScopeKeyV1;
   }): Promise<Cap08S3OutcomeAbsenceWitnessV1 | null> {
-    const rows = await this.pool.query(
+    const rows = await this.database.query(
       `SELECT record_json->'payload' AS payload
-       FROM facts
-       WHERE source=$1
-         AND record_json->>'type'=$2
-         AND record_json->'payload'->>'formal_run_id'=$3
-       LIMIT 2`,
-      [CAP08_S3_COMPLETION_EVIDENCE_SOURCE_V1, CAP08_S3_OUTCOME_ABSENCE_WITNESS_RECORD_TYPE_V1, input.formal_run_id],
+         FROM facts
+        WHERE source=$1
+          AND record_json->>'type'=$2
+          AND record_json->'payload'->>'formal_run_id'=$3
+        LIMIT 2`,
+      [
+        CAP08_S3_COMPLETION_EVIDENCE_SOURCE_V1,
+        CAP08_S3_OUTCOME_ABSENCE_WITNESS_RECORD_TYPE_V1,
+        input.formal_run_id,
+      ],
     );
     if (rows.rows.length === 0) return null;
-    if (rows.rows.length !== 1) throw new Error("CAP08_S3_ABSENCE_WITNESS_CARDINALITY");
+    if (rows.rows.length !== 1) {
+      throw new Error("CAP08_S3_ABSENCE_WITNESS_CARDINALITY");
+    }
     const witness = structuredClone(rows.rows[0].payload as Cap08S3OutcomeAbsenceWitnessV1);
     exactScopeV1(input.scope, witness.scope, "CAP08_S3_ABSENCE_WITNESS_SCOPE_MISMATCH");
     validateCap08S3OutcomeAbsenceWitnessV1(witness);
