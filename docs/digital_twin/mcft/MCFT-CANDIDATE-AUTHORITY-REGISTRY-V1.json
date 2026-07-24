@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_candidate_authority_registry_v1",
   "registry_id": "MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1",
-  "registry_revision": "1.2",
+  "registry_revision": "1.1",
   "record_status": "EFFECTIVE_REPOSITORY_AUTHORITY",
   "policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json",
   "delivery_candidate_signal_contract_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1.json",
