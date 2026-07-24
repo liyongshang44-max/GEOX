@@ -74,7 +74,10 @@ try {
     authority.schema_version,
     'geox_mcft_cap08_s3_semantic_completion_authority_v1',
   );
-  assert.equal(authority.record_status, 'FROZEN_PRE_CANDIDATE_GOVERNANCE');
+  assert.equal(
+    authority.record_status,
+    'FROZEN_PRE_CANDIDATE_GOVERNANCE_STORAGE_CORRECTED',
+  );
   assert.equal(
     authority.authority_profile_id,
     'MCFT-CAP-08.S3-SEMANTIC-COMPLETION-AUTHORITY-V1',
@@ -83,7 +86,12 @@ try {
 
   assert.deepEqual(authority.storage_contract, {
     table: 'twin_runtime_authority_snapshot_v1',
-    authority_kind: 'MCFT_CAP08_S3_SEMANTIC_COMPLETION',
+    authority_kind: 'REALITY_BINDING',
+    authority_ref_namespace: 'cap08_s3_completion_tuple',
+    semantic_profile_field: 'schema_version',
+    semantic_profile_value: 'geox_mcft_cap08_s3_completion_tuple_v1',
+    physical_constraint_compatible: true,
+    database_migration_required: false,
     canonical_fact_write: false,
     projection_write: false,
     mutable_read_index_write: false,
@@ -91,10 +99,12 @@ try {
     conflicting_duplicate_effect: 'FAIL_CLOSED',
   });
   assert.equal(authority.completion_pair.generic_authority_kind, 'REALITY_BINDING');
+  assert.equal(authority.completion_pair.semantic_authority_kind, 'REALITY_BINDING');
   assert.equal(
-    authority.completion_pair.semantic_authority_kind,
-    'MCFT_CAP08_S3_SEMANTIC_COMPLETION',
+    authority.completion_pair.semantic_authority_profile_id,
+    'MCFT-CAP-08.S3-SEMANTIC-COMPLETION-AUTHORITY-V1',
   );
+  assert.equal(authority.completion_pair.authority_ref_collision_forbidden, true);
   assert.equal(authority.completion_pair.commit_requirement, 'ONE_DATABASE_TRANSACTION');
   assert.equal(authority.completion_pair.partial_pair_effect, 'FAIL_CLOSED_ZERO_WRITE');
   assert.equal(authority.completion_pair.normal_runner_repair_authorized, false);
@@ -116,6 +126,8 @@ try {
     authority.corruption_matrix.map((item) => item.case_id),
     ['S3-CR01', 'S3-CR02', 'S3-CR03', 'S3-CR04', 'S3-CR05', 'S3-CR06', 'S3-CR07', 'S3-CR08'],
   );
+  assert.equal(authority.nonclaims.includes('NO_DATABASE_MIGRATION'), true);
+  assert.equal(authority.nonclaims.includes('NO_BUSINESS_SCHEMA_CHANGE'), true);
 
   assert.equal(status.record_status, 'PRE_REGISTERED_SUCCESSOR_STATUS_SEED');
   assert.equal(status.s3_candidate_implemented, false);
@@ -125,9 +137,17 @@ try {
     'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-SEMANTIC-COMPLETION-AUTHORITY-V1.json',
   );
   assert.equal(status.semantic_completion_authority_storage, 'twin_runtime_authority_snapshot_v1');
-  assert.equal(status.semantic_completion_authority_kind, 'MCFT_CAP08_S3_SEMANTIC_COMPLETION');
+  assert.equal(status.semantic_completion_authority_kind, 'REALITY_BINDING');
+  assert.equal(
+    status.semantic_completion_authority_profile_id,
+    'MCFT-CAP-08.S3-SEMANTIC-COMPLETION-AUTHORITY-V1',
+  );
+  assert.equal(status.semantic_completion_authority_ref_namespace, 'cap08_s3_completion_tuple');
+  assert.equal(status.semantic_completion_authority_schema_migration_required, false);
   assert.equal(status.canonical_completion_tuple_fact_authorized, false);
   assert.equal(status.normal_completed_rerun_repair_authorized, false);
+  assert.equal(status.database_migration_delta, 0);
+  assert.equal(status.business_schema_delta, 0);
   assert.equal(status.s3_effective, false);
   assert.equal(status.s4_authorized, false);
 
@@ -171,6 +191,10 @@ try {
     status: 'PASS',
     semantic_completion_authority_digest: authority.semantic_digest,
     storage_table: authority.storage_contract.table,
+    storage_authority_kind: authority.storage_contract.authority_kind,
+    semantic_authority_profile_id: authority.authority_profile_id,
+    physical_constraint_compatible: true,
+    database_migration_required: false,
     canonical_completion_tuple_fact_authorized: false,
     atomic_completion_authority_pair_required: true,
     normal_completed_rerun_write_delta: 0,

@@ -1,6 +1,6 @@
 {
   "schema_version": "geox_mcft_cap08_s3_semantic_completion_authority_v1",
-  "record_status": "FROZEN_PRE_CANDIDATE_GOVERNANCE",
+  "record_status": "FROZEN_PRE_CANDIDATE_GOVERNANCE_STORAGE_CORRECTED",
   "capability_line_id": "MCFT-CAP-08",
   "slice_id": "MCFT-CAP-08.S3",
   "authority_profile_id": "MCFT-CAP-08.S3-SEMANTIC-COMPLETION-AUTHORITY-V1",
@@ -8,7 +8,12 @@
   "s3_contract_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-CONTRACT-V1.json",
   "storage_contract": {
     "table": "twin_runtime_authority_snapshot_v1",
-    "authority_kind": "MCFT_CAP08_S3_SEMANTIC_COMPLETION",
+    "authority_kind": "REALITY_BINDING",
+    "authority_ref_namespace": "cap08_s3_completion_tuple",
+    "semantic_profile_field": "schema_version",
+    "semantic_profile_value": "geox_mcft_cap08_s3_completion_tuple_v1",
+    "physical_constraint_compatible": true,
+    "database_migration_required": false,
     "canonical_fact_write": false,
     "projection_write": false,
     "mutable_read_index_write": false,
@@ -29,7 +34,9 @@
   ],
   "completion_pair": {
     "generic_authority_kind": "REALITY_BINDING",
-    "semantic_authority_kind": "MCFT_CAP08_S3_SEMANTIC_COMPLETION",
+    "semantic_authority_kind": "REALITY_BINDING",
+    "semantic_authority_profile_id": "MCFT-CAP-08.S3-SEMANTIC-COMPLETION-AUTHORITY-V1",
+    "authority_ref_collision_forbidden": true,
     "commit_requirement": "ONE_DATABASE_TRANSACTION",
     "transaction_isolation": "SERIALIZABLE_OR_EQUIVALENT_EXACT_LOCKING",
     "pair_insert_order": "UNOBSERVABLE_OUTSIDE_TRANSACTION",
@@ -129,6 +136,8 @@
     }
   ],
   "nonclaims": [
+    "NO_DATABASE_MIGRATION",
+    "NO_BUSINESS_SCHEMA_CHANGE",
     "NO_CANONICAL_COMPLETION_TUPLE_FACT",
     "NO_NORMAL_RUNNER_SELF_HEAL",
     "NO_LATE_CORRECTION",
@@ -140,5 +149,5 @@
     "NO_S4_AUTHORITY"
   ],
   "digest_policy": "SHA256_CANONICAL_JSON_SORT_KEYS_EXCLUDING_SEMANTIC_DIGEST_V1",
-  "semantic_digest": "sha256:7ac1b441bfed1842155aa60d68c94abd850511d9dadb41b7049576de88996294"
+  "semantic_digest": "sha256:1cd524a5d3d8419f8ab3f57698512b56024961184912c24c944f40186af58b17"
 }
