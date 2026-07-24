@@ -196,8 +196,8 @@ export class Cap08S3EpisodeInspectorV1 {
       || String(receipt.canonical_payload.target_scope_equivalent_irrigation_mm) !== CAP08_S3_TARGET_SCOPE_EQUIVALENT_AMOUNT_MM_V1) {
       throw new Error("CAP08_S3_EPISODE_RECEIPT_CHAIN_MISMATCH");
     }
-    if (feedback.payload.receipt_evidence_ref !== receipt.source_record_id
-      || feedback.payload.receipt_evidence_hash !== receipt.source_record_hash
+    if (feedback.payload.receipt_ref !== receipt.source_record_id
+      || feedback.payload.source_record_id !== receipt.source_record_id
       || feedback.payload.actual_amount_mm !== CAP08_S3_EXECUTED_AMOUNT_MM_V1
       || feedback.payload.spatial_coverage_fraction !== CAP08_S3_COVERAGE_FRACTION_V1
       || feedback.payload.target_scope_equivalent_irrigation_mm !== CAP08_S3_TARGET_SCOPE_EQUIVALENT_AMOUNT_MM_V1) {
