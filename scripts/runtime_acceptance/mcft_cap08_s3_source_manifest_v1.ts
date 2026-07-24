@@ -1,4 +1,4 @@
-// Purpose: compute one deterministic source manifest for the bounded MCFT-CAP-08.S3 implementation and its inherited execution seams.
+// Purpose: compute one deterministic source manifest for the bounded MCFT-CAP-08.S3 implementation and its inherited execution/authority seams.
 // Boundary: acceptance evidence helper only; no database, Runtime execution, candidate declaration, network, or production authority.
 
 import crypto from "node:crypto";
@@ -6,16 +6,21 @@ import fs from "node:fs";
 import path from "node:path";
 
 export const CAP08_S3_SOURCE_MANIFEST_PATHS_V1 = [
+  "apps/server/src/domain/twin_runtime/canonical_json_v1.ts",
+  "apps/server/src/domain/twin_runtime/cap08_completion_authority_contracts_v1.ts",
   "apps/server/src/domain/twin_runtime/cap08_phase_engine_contracts_v1.ts",
+  "apps/server/src/domain/twin_runtime/cap08_s3_completion_authority_pair_contracts_v1.ts",
   "apps/server/src/domain/twin_runtime/cap08_s3_completion_tuple_v1.ts",
   "apps/server/src/domain/twin_runtime/cap08_s3_formal_provider_contracts_v1.ts",
   "apps/server/src/domain/twin_runtime/cap08_s3_phase_contracts_v1.ts",
   "apps/server/src/persistence/twin_runtime/postgres_action_feedback_tick_source_v1.ts",
   "apps/server/src/persistence/twin_runtime/postgres_approval_plan_evidence_repository_v1.ts",
+  "apps/server/src/persistence/twin_runtime/postgres_cap08_s3_completion_authority_pair_repository_v1.ts",
   "apps/server/src/persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.ts",
   "apps/server/src/runtime/twin_runtime/action_feedback_normalization_service_v1.ts",
   "apps/server/src/runtime/twin_runtime/action_feedback_tick_selector_v1.ts",
   "apps/server/src/runtime/twin_runtime/human_decision_service_v1.ts",
+  "apps/server/src/runtime/twin_runtime/cap08_completion_authority_service_v1.ts",
   "apps/server/src/runtime/twin_runtime/cap08_deferred_scenario_persistence_v1.ts",
   "apps/server/src/runtime/twin_runtime/cap08_frozen_evidence_source_v1.ts",
   "apps/server/src/runtime/twin_runtime/cap08_s3_authority_guard_v1.ts",
