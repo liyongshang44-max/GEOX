@@ -7,6 +7,7 @@ import path from "node:path";
 
 export const CAP08_S3_SOURCE_MANIFEST_PATHS_V1 = [
   "apps/server/src/domain/twin_runtime/cap08_phase_engine_contracts_v1.ts",
+  "apps/server/src/domain/twin_runtime/cap08_s3_completion_tuple_v1.ts",
   "apps/server/src/domain/twin_runtime/cap08_s3_formal_provider_contracts_v1.ts",
   "apps/server/src/domain/twin_runtime/cap08_s3_phase_contracts_v1.ts",
   "apps/server/src/persistence/twin_runtime/postgres_action_feedback_tick_source_v1.ts",
@@ -18,11 +19,14 @@ export const CAP08_S3_SOURCE_MANIFEST_PATHS_V1 = [
   "apps/server/src/runtime/twin_runtime/cap08_deferred_scenario_persistence_v1.ts",
   "apps/server/src/runtime/twin_runtime/cap08_frozen_evidence_source_v1.ts",
   "apps/server/src/runtime/twin_runtime/cap08_s3_authority_guard_v1.ts",
+  "apps/server/src/runtime/twin_runtime/cap08_s3_completion_evidence_tick_service_v1.ts",
+  "apps/server/src/runtime/twin_runtime/cap08_s3_completion_tuple_service_v1.ts",
   "apps/server/src/runtime/twin_runtime/cap08_s3_decision_action_provider_service_v1.ts",
   "apps/server/src/runtime/twin_runtime/cap08_s3_episode_inspector_v1.ts",
   "apps/server/src/runtime/twin_runtime/cap08_s3_formal_range_service_v1.ts",
   "apps/server/src/runtime/twin_runtime/cap08_s3_formal_runtime_service_v1.ts",
   "apps/server/src/runtime/twin_runtime/cap08_s3_formal_tick_service_v1.ts",
+  "apps/server/src/runtime/twin_runtime/cap08_s3_outcome_completion_evidence_service_v1.ts",
   "apps/server/src/runtime/twin_runtime/cap08_s3_receipt_consuming_tick_service_v1.ts",
   "apps/server/src/runtime/twin_runtime/cap08_s3_receipt_episode_guard_v1.ts",
   "apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts",
