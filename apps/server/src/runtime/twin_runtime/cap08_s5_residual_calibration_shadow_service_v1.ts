@@ -13,7 +13,7 @@ import {
   type Cap08S5ResidualSetAuthorityV1,
   type Cap08S5ScopeV1,
 } from "../../domain/twin_runtime/cap08_s5_residual_calibration_shadow_contracts_v1.js";
-import { buildCap06CaseWindowV1, buildCap06CaseWindowsV1 } from "../../domain/calibration/case_builder_v1.js";
+import { buildCap06CaseWindowsV1 } from "../../domain/calibration/case_builder_v1.js";
 import { runCap06CalibrationGridSearchV1 } from "../../domain/calibration/grid_search_v1.js";
 import { runCap06PairedHistoricalShadowV1 } from "../../domain/calibration/shadow_evaluation_v1.js";
 import {
@@ -29,6 +29,7 @@ import {
 } from "../../persistence/calibration/postgres_calibration_governance_repository_v1.js";
 import { PostgresCap08S5ResidualCalibrationShadowRepositoryV1 } from "../../persistence/twin_runtime/postgres_cap08_s5_residual_calibration_shadow_repository_v1.js";
 import { Cap08S5CasePredictionAdapterV1 } from "./cap08_s5_case_prediction_adapter_v1.js";
+import { buildCap08S5CaseWindowV1 } from "./cap08_s5_case_window_adapter_v1.js";
 import { Cap08S5PersistedSourceReaderV1 } from "./cap08_s5_persisted_source_reader_v1.js";
 import type { ReplayEvidenceSourcePortV1 } from "./ports.js";
 
@@ -191,13 +192,13 @@ export class Cap08S5ResidualCalibrationShadowServiceV1 {
     };
     validateCap08S5ResidualSetAuthorityV1({ authority: residualAuthority, residuals: sources.residuals });
 
-    const calibrationWindow = buildCap06CaseWindowV1({
+    const calibrationWindow = buildCap08S5CaseWindowV1({
       role: "CALIBRATION",
       orderedResidualRefs: residualAuthority.calibration_residual_refs,
       loadedCases: sources.case_sources.slice(0, 16),
       sourceDatasetIdentity: sources.source_dataset_identity,
     });
-    const holdoutWindow = buildCap06CaseWindowV1({
+    const holdoutWindow = buildCap08S5CaseWindowV1({
       role: "HOLDOUT",
       orderedResidualRefs: residualAuthority.holdout_residual_refs,
       loadedCases: sources.case_sources.slice(16),
