@@ -1,9 +1,9 @@
 {
-  "schema_version": "geox_mcft_cap08_s3_implementation_v2",
+  "schema_version": "geox_mcft_cap08_s3_implementation_v3",
   "record_status": "FORMAL_CANDIDATE_IMPLEMENTATION_PREPARED_NOT_EFFECTIVE",
   "capability_line_id": "MCFT-CAP-08",
   "slice_id": "MCFT-CAP-08.S3",
-  "trusted_base_sha": "e6d64290c0f6bdef791cc1cbd184571b99d8bc71",
+  "trusted_base_sha": "8e88fdd91af25ef82f765f7d4a21b1471e2ab008",
   "development_subject": {
     "head_sha": "046d8de2ed191abf32f1840510e2dd7ff77733e5",
     "tree_sha": "6c753b40ccfbfa56d7edddc78dff898b6a3de499",
@@ -54,16 +54,7 @@
     "apps/server/src/runtime/twin_runtime/human_decision_service_v1.ts",
     "apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts"
   ],
-  "phase_order": [
-    "resolve",
-    "E",
-    "H",
-    "A",
-    "B",
-    "G",
-    "C",
-    "barrier"
-  ],
+  "phase_order": ["resolve", "E", "H", "A", "B", "G", "C", "barrier"],
   "formal_run_cardinality": {
     "successful_tick_count": 24,
     "posterior_state_count": 25,
@@ -110,6 +101,13 @@
     "canonical_identity_blob_unchanged": true,
     "s2_g3_acceptance_support_blob_unchanged": true
   },
+  "successor_governance": {
+    "s4_status_seed_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-DELIVERY-STATUS-V1.json",
+    "s4_machine_contract_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-CONTRACT-V1.json",
+    "s4_registry_rule_required": true,
+    "s4_candidate_implemented": false,
+    "s4_implementation_authorized_before_s3_exact_sha": false
+  },
   "persistence_policy": {
     "runtime_acl_expansion": false,
     "migration_delta": 0,
@@ -118,9 +116,18 @@
     "web_delta": 0,
     "scheduler_delta": 0
   },
-  "independent_review_required": true,
-  "independent_review_satisfied": false,
-  "independent_review_waived": false,
+  "review_policy": {
+    "mode": "OWNER_WAIVED_DEFERRED_TO_S6",
+    "owner_review_waiver_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-INTERIM-OWNER-REVIEW-WAIVER-V1.json",
+    "owner_directive_issue_ref": "https://github.com/liyongshang44-max/GEOX/issues/2649",
+    "independent_review_required": false,
+    "independent_review_satisfied": false,
+    "independent_review_performed": false,
+    "independent_review_waived": true,
+    "technical_gate_relaxation": false,
+    "retroactive_exact_head_approval_claim_allowed": false,
+    "final_s6_independent_review_required": true
+  },
   "candidate_declaration_last_write_required": true,
   "candidate_tree_frozen_after_declaration": true,
   "production_runtime_source_authorized": false,
