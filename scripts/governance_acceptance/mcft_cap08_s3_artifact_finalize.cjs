@@ -11,22 +11,14 @@ const ROOT = path.resolve(__dirname, '../..');
 const OUTPUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_08_S3_AUTHORITY_ARTIFACT.json');
 const STAGE = String(process.env.MCFT_ARTIFACT_STAGE || 'CANDIDATE_HEAD');
 
-function read(relative) {
-  return JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
-}
-function git(...args) {
-  return cp.execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
-}
+function read(relative) { return JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8')); }
+function git(...args) { return cp.execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim(); }
 function canonical(value) {
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
-  if (value && typeof value === 'object') {
-    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
-  }
+  if (value && typeof value === 'object') return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
   return JSON.stringify(value);
 }
-function digest(value) {
-  return `sha256:${crypto.createHash('sha256').update(Buffer.from(canonical(value))).digest('hex')}`;
-}
+function digest(value) { return `sha256:${crypto.createHash('sha256').update(Buffer.from(canonical(value))).digest('hex')}`; }
 function sha(value, code) {
   const candidate = String(value || '').trim();
   assert.match(candidate, /^[0-9a-f]{40}$/, code);
@@ -39,7 +31,6 @@ function write(value) {
 
 try {
   assert.ok(['CANDIDATE_HEAD', 'EXACT_MERGE_SHA'].includes(STAGE), 'S3_ARTIFACT_STAGE_INVALID');
-
   const boundary = read('acceptance-output/MCFT_CAP_08_S3_BOUNDARY_RESULT.json');
   const positive = read('acceptance-output/MCFT_CAP_08_S3_DECISION_ACTION_DB_RESULT.json');
   const completed = read('acceptance-output/MCFT_CAP_08_S3_COMPLETED_RERUN_NEGATIVE_DB_RESULT.json');
@@ -48,16 +39,25 @@ try {
   const status = read('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-DELIVERY-STATUS-V1.json');
   const implementation = read('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-IMPLEMENTATION-V1.json');
   const predecessor = read('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S3-PREDECESSOR-CONSUMPTION-V1.json');
+  const waiver = read('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-INTERIM-OWNER-REVIEW-WAIVER-V1.json');
 
-  for (const result of [boundary, positive, completed, negative, edge]) {
-    assert.equal(result.status, 'PASS');
-  }
-
+  for (const result of [boundary, positive, completed, negative, edge]) assert.equal(result.status, 'PASS');
   assert.equal(boundary.classification, 'FORMAL_S3_CANDIDATE_MODE');
   assert.equal(boundary.changed_file_count, 36);
-  assert.equal(boundary.independent_review_required, true);
+  assert.equal(boundary.review_mode, 'OWNER_WAIVED_DEFERRED_TO_S6');
+  assert.equal(boundary.independent_review_required, false);
   assert.equal(boundary.independent_review_satisfied, false);
+  assert.equal(boundary.independent_review_performed, false);
+  assert.equal(boundary.independent_review_waived, true);
+  assert.equal(boundary.technical_gate_relaxation, false);
+  assert.equal(boundary.final_s6_independent_review_required, true);
   assert.equal(status.s3_candidate_implemented, true);
+  assert.equal(status.independent_review_required, false);
+  assert.equal(status.independent_review_satisfied, false);
+  assert.equal(status.independent_review_performed, false);
+  assert.equal(status.independent_review_waived, true);
+  assert.equal(status.technical_gate_relaxation, false);
+  assert.equal(status.final_s6_independent_review_required, true);
   assert.equal(status.s3_effective, false);
   assert.equal(status.s4_authorized, false);
   assert.equal(status.production_runtime_source_authorized, false);
@@ -78,7 +78,6 @@ try {
   assert.equal(positive.t08_h_before_a, true);
   assert.equal(positive.t09_outcome_absence, true);
   assert.equal(positive.t10_ordinary_assimilation, true);
-
   assert.equal(completed.completed_rerun_corruption_case_count, 8);
   assert.equal(completed.all_runtime_deltas_zero, true);
   assert.equal(completed.suite_restore_delta, 0);
@@ -94,41 +93,43 @@ try {
   assert.match(edgeById['S3-P04'].observed_error, /^PERSISTED_OBJECT_CARDINALITY:twin_runtime_checkpoint_v1:/);
   assert.equal(edgeById['S3-P04'].silent_pointer_repair, false);
   assert.equal(edgeById['S3-P04'].runtime_delta, 0);
-
   assert.equal(predecessor.predecessor_effective_status, 'S2_FORCING_EVIDENCE_STATE_FORECAST_IMPLEMENTED_EFFECTIVE');
   assert.equal(predecessor.effective_next_slice, 'S3');
   assert.equal(predecessor.readback_verified, true);
 
-  const exact = STAGE === 'EXACT_MERGE_SHA'
-    ? read('acceptance-output/MCFT_CAP_08_S3_EXACT_SHA_ATTESTATION_RESULT.json')
-    : null;
-  const candidateHead = sha(
-    STAGE === 'EXACT_MERGE_SHA' ? exact.candidate_head_sha : process.env.MCFT_CANDIDATE_SHA,
-    'S3_ARTIFACT_CANDIDATE_SHA_INVALID',
-  );
-  const baseHead = sha(
-    STAGE === 'EXACT_MERGE_SHA' ? exact.base_head_sha : process.env.MCFT_BASE_SHA,
-    'S3_ARTIFACT_BASE_SHA_INVALID',
-  );
-  const subjectSha = STAGE === 'EXACT_MERGE_SHA'
-    ? sha(exact.subject_sha, 'S3_ARTIFACT_SUBJECT_SHA_INVALID')
-    : candidateHead;
+  const exact = STAGE === 'EXACT_MERGE_SHA' ? read('acceptance-output/MCFT_CAP_08_S3_EXACT_SHA_ATTESTATION_RESULT.json') : null;
+  const candidateHead = sha(STAGE === 'EXACT_MERGE_SHA' ? exact.candidate_head_sha : process.env.MCFT_CANDIDATE_SHA, 'S3_ARTIFACT_CANDIDATE_SHA_INVALID');
+  const baseHead = sha(STAGE === 'EXACT_MERGE_SHA' ? exact.base_head_sha : process.env.MCFT_BASE_SHA, 'S3_ARTIFACT_BASE_SHA_INVALID');
+  const subjectSha = STAGE === 'EXACT_MERGE_SHA' ? sha(exact.subject_sha, 'S3_ARTIFACT_SUBJECT_SHA_INVALID') : candidateHead;
 
   if (STAGE === 'EXACT_MERGE_SHA') {
     assert.equal(exact.status, 'PASS');
     assert.equal(exact.candidate_to_merge_tree_delta, 0);
-    assert.equal(exact.independent_review_required, true);
-    assert.equal(exact.independent_review_satisfied, true);
-    assert.equal(exact.independent_review_waived, false);
-    assert.equal(exact.review_commit_sha, candidateHead);
+    assert.equal(exact.review_mode, 'OWNER_WAIVED_DEFERRED_TO_S6');
+    assert.equal(exact.independent_review_required, false);
+    assert.equal(exact.independent_review_satisfied, false);
+    assert.equal(exact.independent_review_performed, false);
+    assert.equal(exact.independent_review_waived, true);
+    assert.equal(exact.technical_gate_relaxation, false);
+    assert.equal(exact.owner_waiver.final_s6_independent_review_required, true);
   }
 
-  const independentReview = STAGE === 'EXACT_MERGE_SHA'
-    ? exact.independent_review
-    : { required: true, satisfied: false, waived: false };
+  const reviewAuthority = STAGE === 'EXACT_MERGE_SHA' ? exact.owner_waiver : {
+    mode: 'OWNER_WAIVED_DEFERRED_TO_S6',
+    required: false,
+    satisfied: false,
+    performed: false,
+    waived: true,
+    technical_gate_relaxation: false,
+    retroactive_exact_head_approval_claim_allowed: false,
+    final_s6_independent_review_required: true,
+    policy_id: waiver.policy_id,
+    owner_directive_issue_ref: waiver.owner_directive_issue_ref,
+    exact_head_approval_count: null,
+  };
 
   const artifact = {
-    schema_version: 'geox_mcft_cap08_s3_authority_artifact_v2',
+    schema_version: 'geox_mcft_cap08_s3_authority_artifact_v3',
     status: 'PASS',
     capability_line_id: 'MCFT-CAP-08',
     slice_id: 'MCFT-CAP-08.S3',
@@ -136,9 +137,7 @@ try {
     subject_sha: subjectSha,
     base_head_sha: baseHead,
     candidate_head_sha: candidateHead,
-    candidate_tree_sha: STAGE === 'EXACT_MERGE_SHA'
-      ? exact.candidate_tree_sha
-      : git('rev-parse', `${candidateHead}^{tree}`),
+    candidate_tree_sha: STAGE === 'EXACT_MERGE_SHA' ? exact.candidate_tree_sha : git('rev-parse', `${candidateHead}^{tree}`),
     merge_commit_sha: STAGE === 'EXACT_MERGE_SHA' ? exact.merge_commit_sha : null,
     merge_tree_sha: STAGE === 'EXACT_MERGE_SHA' ? exact.merge_tree_sha : null,
     candidate_to_merge_tree_delta: STAGE === 'EXACT_MERGE_SHA' ? 0 : null,
@@ -148,8 +147,13 @@ try {
       candidate_field: 's3_candidate_implemented',
       candidate_value: true,
       repository_delivery_state: status.delivery_state,
-      independent_review_required: true,
-      independent_review_satisfied: STAGE === 'EXACT_MERGE_SHA',
+      review_mode: 'OWNER_WAIVED_DEFERRED_TO_S6',
+      independent_review_required: false,
+      independent_review_satisfied: false,
+      independent_review_performed: false,
+      independent_review_waived: true,
+      technical_gate_relaxation: false,
+      final_s6_independent_review_required: true,
     },
     implementation: {
       provider_profile_id: positive.provider_profile_id,
@@ -174,13 +178,12 @@ try {
       edge_semantics: edge,
       exact_sha_attestation: exact,
     },
-    independent_review: independentReview,
-    effective_delivery_frontier_projection: STAGE === 'EXACT_MERGE_SHA'
-      ? {
-          effective_status: 'S3_DECISION_ACTION_FEEDBACK_IMPLEMENTED_EFFECTIVE',
-          effective_next_slice: 'S4',
-        }
-      : null,
+    independent_review: reviewAuthority,
+    owner_waiver: reviewAuthority,
+    effective_delivery_frontier_projection: STAGE === 'EXACT_MERGE_SHA' ? {
+      effective_status: 'S3_DECISION_ACTION_FEEDBACK_IMPLEMENTED_EFFECTIVE',
+      effective_next_slice: 'S4',
+    } : null,
     effective_authority_projection: {
       bounded_replay_runner_authorized: STAGE === 'EXACT_MERGE_SHA',
       bounded_canonical_transaction_authorized: STAGE === 'EXACT_MERGE_SHA',
@@ -200,7 +203,7 @@ try {
   console.log(JSON.stringify(artifact));
 } catch (error) {
   write({
-    schema_version: 'geox_mcft_cap08_s3_authority_artifact_v2',
+    schema_version: 'geox_mcft_cap08_s3_authority_artifact_v3',
     status: 'FAIL',
     error: error instanceof Error ? error.message : String(error),
   });
