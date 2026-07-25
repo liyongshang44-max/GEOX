@@ -13,20 +13,20 @@ import {
   type Cap08S5ResidualSetAuthorityV1,
   type Cap08S5ScopeV1,
 } from "../../domain/twin_runtime/cap08_s5_residual_calibration_shadow_contracts_v1.js";
-import {
-  buildCap06CaseWindowV1,
-  buildCap06CaseWindowsV1,
-} from "../../domain/calibration/case_builder_v1.js";
+import { buildCap06CaseWindowV1, buildCap06CaseWindowsV1 } from "../../domain/calibration/case_builder_v1.js";
 import { runCap06CalibrationGridSearchV1 } from "../../domain/calibration/grid_search_v1.js";
 import { runCap06PairedHistoricalShadowV1 } from "../../domain/calibration/shadow_evaluation_v1.js";
 import {
   buildCap06CalibrationCandidateDraftV1,
   buildCap06ShadowEvaluationDraftV1,
+  type Cap06CalibrationCandidateDraftV1,
+  type Cap06ShadowEvaluationDraftV1,
 } from "../../domain/calibration/envelope_profiles_v1.js";
+import { isCap06CandidateAppendingStatusV1 } from "../../domain/calibration/contracts_v1.js";
 import {
-  isCap06CandidateAppendingStatusV1,
-} from "../../domain/calibration/contracts_v1.js";
-import { PostgresCalibrationGovernanceRepositoryV1 } from "../../persistence/calibration/postgres_calibration_governance_repository_v1.js";
+  PostgresCalibrationGovernanceRepositoryV1,
+  type Cap06GovernanceObjectV1,
+} from "../../persistence/calibration/postgres_calibration_governance_repository_v1.js";
 import { PostgresCap08S5ResidualCalibrationShadowRepositoryV1 } from "../../persistence/twin_runtime/postgres_cap08_s5_residual_calibration_shadow_repository_v1.js";
 import { Cap08S5CasePredictionAdapterV1 } from "./cap08_s5_case_prediction_adapter_v1.js";
 import { Cap08S5PersistedSourceReaderV1 } from "./cap08_s5_persisted_source_reader_v1.js";
@@ -76,6 +76,17 @@ function req(value: unknown, code: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(code);
   return value;
 }
+function exactGovernanceObject<T extends Cap06GovernanceObjectV1>(
+  value: Cap06GovernanceObjectV1 | null,
+  expected: T,
+  type: T["object_type"],
+  code: string,
+): T | null {
+  if (!value) return null;
+  if (value.object_type !== type || value.object_id !== expected.object_id
+    || value.determinism_hash !== expected.determinism_hash) throw new Error(code);
+  return value as T;
+}
 
 export class Cap08S5ResidualCalibrationShadowServiceV1 {
   private readonly sourceReader: Cap08S5PersistedSourceReaderV1;
@@ -86,6 +97,49 @@ export class Cap08S5ResidualCalibrationShadowServiceV1 {
     this.sourceReader = new Cap08S5PersistedSourceReaderV1(pool, evidenceSource);
     this.sliceRepository = new PostgresCap08S5ResidualCalibrationShadowRepositoryV1(pool);
     this.governanceRepository = new PostgresCalibrationGovernanceRepositoryV1(pool);
+  }
+
+  private result(input: {
+    status: "COMPLETED" | "ALREADY_COMPLETE";
+    residualAuthority: Cap08S5ResidualSetAuthorityV1;
+    candidate: Cap06CalibrationCandidateDraftV1;
+    shadow: Cap06ShadowEvaluationDraftV1;
+    completion: Cap08S5CompletionAuthorityV1;
+    residualDelta: 0 | 26;
+    candidateDelta: 0 | 1;
+    shadowDelta: 0 | 1;
+    completionDelta: 0 | 2;
+  }): ExecuteCap08S5ResultV1 {
+    return {
+      status: input.status,
+      write_delta: input.residualDelta + input.candidateDelta + input.shadowDelta + input.completionDelta,
+      residual_write_delta: input.residualDelta,
+      candidate_write_delta: input.candidateDelta,
+      shadow_write_delta: input.shadowDelta,
+      completion_write_delta: input.completionDelta,
+      residual_authority: input.residualAuthority,
+      candidate_ref: input.candidate.object_id,
+      candidate_hash: input.candidate.determinism_hash,
+      candidate_parameter_value: CAP08_S5_EXPECTED_PARAMETER_V1,
+      shadow_ref: input.shadow.object_id,
+      shadow_hash: input.shadow.determinism_hash,
+      completion_authority: input.completion,
+      residual_count: 24,
+      calibration_case_count: 16,
+      holdout_case_count: 8,
+      grid_point_count: 21,
+      calibration_candidate_count: 1,
+      shadow_evaluation_count: 1,
+      future_leakage_count: 0,
+      model_activation_count: 0,
+      active_config_switch_count: 0,
+      runtime_parameter_change_count: 0,
+      state_pointer_delta: 0,
+      checkpoint_pointer_delta: 0,
+      production_runtime_source_authorized: false,
+      s6_authorized: false,
+      mcft_cap_09_authorized: false,
+    };
   }
 
   async execute(input: ExecuteCap08S5InputV1): Promise<ExecuteCap08S5ResultV1> {
@@ -137,47 +191,6 @@ export class Cap08S5ResidualCalibrationShadowServiceV1 {
     };
     validateCap08S5ResidualSetAuthorityV1({ authority: residualAuthority, residuals: sources.residuals });
 
-    const completionProbe = buildCap08S5CompletionAuthorityV1({
-      formal_run_id: sources.formal_run_id,
-      scope: sources.scope,
-      lineage_id: sources.lineage_id,
-      revision_id: sources.revision_id,
-      residual_set: { ref: residualAuthority.authority_ref, hash: residualAuthority.determinism_hash },
-      calibration_candidate: { ref: "PENDING_CANDIDATE", hash: `sha256:${"0".repeat(64)}` },
-      shadow_evaluation: { ref: "PENDING_SHADOW", hash: `sha256:${"0".repeat(64)}` },
-      candidate_parameter_value: CAP08_S5_EXPECTED_PARAMETER_V1,
-      residual_count: 24,
-      calibration_case_count: 16,
-      holdout_case_count: 8,
-      calibration_candidate_count: 1,
-      shadow_evaluation_count: 1,
-      grid_point_count: CAP08_S5_GRID_POINT_COUNT_V1,
-      future_leakage_count: 0,
-      model_activation_count: 0,
-      active_config_switch_count: 0,
-      runtime_parameter_change_count: 0,
-      state_pointer_delta: 0,
-      checkpoint_pointer_delta: 0,
-      completed_rerun_write_delta: 0,
-      phase_engine_contract_digest: sources.phase_engine_contract_digest,
-      phase_engine_source_digest: sources.phase_engine_source_digest,
-      slice_acceptance_only: true,
-      final_formal_run_id: null,
-      production_runtime_source_authorized: false,
-      s6_authorized: false,
-      mcft_cap_09_authorized: false,
-    });
-    const existingCompletionRows = await this.governanceRepository.readCanonicalObject(completionProbe.authority_ref);
-    if (existingCompletionRows) throw new Error("CAP08_S5_COMPLETION_AUTHORITY_OBJECT_ID_COLLISION");
-
-    inject("before_residual_set");
-    const residualPersistence = await this.sliceRepository.establishResidualSet({
-      authority: residualAuthority,
-      residuals: sources.residuals,
-      fault_injection: input.fault_injection,
-    });
-    inject("after_residual_set");
-
     const calibrationWindow = buildCap06CaseWindowV1({
       role: "CALIBRATION",
       orderedResidualRefs: residualAuthority.calibration_residual_refs,
@@ -200,14 +213,6 @@ export class Cap08S5ResidualCalibrationShadowServiceV1 {
       throw new Error(`CAP08_S5_FORMAL_CANDIDATE_ORACLE_MISMATCH:${attempt.status}:${attempt.selected_parameter_value}`);
     }
     const candidateDraft = buildCap06CalibrationCandidateDraftV1({ calibrationWindow, attempt });
-    inject("before_candidate_commit");
-    const candidatePersistence = await this.governanceRepository.commitCanonicalObject({ object: candidateDraft });
-    inject("after_candidate_commit");
-    if (candidatePersistence.object.object_type !== "twin_calibration_candidate_v1"
-      || candidatePersistence.object.determinism_hash !== candidateDraft.determinism_hash) {
-      throw new Error("CAP08_S5_CANDIDATE_READBACK_MISMATCH");
-    }
-
     const shadowFirst = await runCap06PairedHistoricalShadowV1({
       holdoutWindow,
       candidateParameterValue: CAP08_S5_EXPECTED_PARAMETER_V1,
@@ -224,19 +229,7 @@ export class Cap08S5ResidualCalibrationShadowServiceV1 {
       || shadowFirst.active_config_switch_performed !== false) {
       throw new Error("CAP08_S5_SHADOW_DETERMINISM_OR_BOUNDARY_MISMATCH");
     }
-    const shadowDraft = buildCap06ShadowEvaluationDraftV1({
-      holdoutWindow,
-      candidate: candidateDraft,
-      shadow: shadowFirst,
-    });
-    inject("before_shadow_commit");
-    const shadowPersistence = await this.governanceRepository.commitCanonicalObject({ object: shadowDraft });
-    inject("after_shadow_commit");
-    if (shadowPersistence.object.object_type !== "twin_shadow_evaluation_v1"
-      || shadowPersistence.object.determinism_hash !== shadowDraft.determinism_hash) {
-      throw new Error("CAP08_S5_SHADOW_READBACK_MISMATCH");
-    }
-
+    const shadowDraft = buildCap06ShadowEvaluationDraftV1({ holdoutWindow, candidate: candidateDraft, shadow: shadowFirst });
     const completionAuthority = buildCap08S5CompletionAuthorityV1({
       formal_run_id: sources.formal_run_id,
       scope: sources.scope,
@@ -267,49 +260,71 @@ export class Cap08S5ResidualCalibrationShadowServiceV1 {
       s6_authorized: false,
       mcft_cap_09_authorized: false,
     });
-    inject("before_completion_commit");
-    const completionPersistence = await this.sliceRepository.establishCompletion({
-      authority: completionAuthority,
+
+    const [residualState, candidateById, candidateByKey, shadowById, shadowByKey, completionState] = await Promise.all([
+      this.sliceRepository.inspectResidualSet(residualAuthority),
+      this.governanceRepository.readCanonicalObject(candidateDraft.object_id),
+      this.governanceRepository.lookupByIdempotencyKey(candidateDraft.idempotency_key),
+      this.governanceRepository.readCanonicalObject(shadowDraft.object_id),
+      this.governanceRepository.lookupByIdempotencyKey(shadowDraft.idempotency_key),
+      this.sliceRepository.inspectCompletion(completionAuthority),
+    ]);
+    const existingCandidate = exactGovernanceObject(candidateById, candidateDraft, "twin_calibration_candidate_v1", "CAP08_S5_EXISTING_CANDIDATE_CONFLICT");
+    const candidateByGuard = exactGovernanceObject(candidateByKey, candidateDraft, "twin_calibration_candidate_v1", "CAP08_S5_CANDIDATE_GUARD_CONFLICT");
+    const existingShadow = exactGovernanceObject(shadowById, shadowDraft, "twin_shadow_evaluation_v1", "CAP08_S5_EXISTING_SHADOW_CONFLICT");
+    const shadowByGuard = exactGovernanceObject(shadowByKey, shadowDraft, "twin_shadow_evaluation_v1", "CAP08_S5_SHADOW_GUARD_CONFLICT");
+    if (Boolean(existingCandidate) !== Boolean(candidateByGuard)) throw new Error("CAP08_S5_CANDIDATE_PARTIAL_SET");
+    if (Boolean(existingShadow) !== Boolean(shadowByGuard)) throw new Error("CAP08_S5_SHADOW_PARTIAL_SET");
+    const present = [
+      residualState.disposition === "ALREADY_COMPLETE_EXACT",
+      Boolean(existingCandidate),
+      Boolean(existingShadow),
+      completionState.disposition === "ALREADY_COMPLETE_EXACT",
+    ];
+    if (present.every(Boolean)) {
+      return this.result({
+        status: "ALREADY_COMPLETE",
+        residualAuthority: residualState.disposition === "ALREADY_COMPLETE_EXACT" ? residualState.authority : residualAuthority,
+        candidate: candidateDraft,
+        shadow: shadowDraft,
+        completion: completionState.disposition === "ALREADY_COMPLETE_EXACT" ? completionState.authority : completionAuthority,
+        residualDelta: 0, candidateDelta: 0, shadowDelta: 0, completionDelta: 0,
+      });
+    }
+    if (present.some(Boolean)) throw new Error(`CAP08_S5_PARTIAL_CHAIN_DETECTED:${present.map(Number).join("")}`);
+
+    inject("before_residual_set");
+    const residualPersistence = await this.sliceRepository.establishResidualSet({
+      authority: residualAuthority,
+      residuals: sources.residuals,
       fault_injection: input.fault_injection,
     });
+    inject("after_residual_set");
+    inject("before_candidate_commit");
+    const candidatePersistence = await this.governanceRepository.commitCanonicalObject({ object: candidateDraft });
+    inject("after_candidate_commit");
+    if (candidatePersistence.object.object_type !== "twin_calibration_candidate_v1"
+      || candidatePersistence.object.determinism_hash !== candidateDraft.determinism_hash) throw new Error("CAP08_S5_CANDIDATE_READBACK_MISMATCH");
+    inject("before_shadow_commit");
+    const shadowPersistence = await this.governanceRepository.commitCanonicalObject({ object: shadowDraft });
+    inject("after_shadow_commit");
+    if (shadowPersistence.object.object_type !== "twin_shadow_evaluation_v1"
+      || shadowPersistence.object.determinism_hash !== shadowDraft.determinism_hash) throw new Error("CAP08_S5_SHADOW_READBACK_MISMATCH");
+    inject("before_completion_commit");
+    const completionPersistence = await this.sliceRepository.establishCompletion({ authority: completionAuthority, fault_injection: input.fault_injection });
     inject("after_completion_commit");
-
-    const candidateWriteDelta = candidatePersistence.status === "INSERTED" ? 1 : 0;
-    const shadowWriteDelta = shadowPersistence.status === "INSERTED" ? 1 : 0;
-    const totalWriteDelta = residualPersistence.write_delta + candidateWriteDelta + shadowWriteDelta + completionPersistence.write_delta;
-    const alreadyComplete = totalWriteDelta === 0;
-    if (!alreadyComplete && totalWriteDelta !== 30) {
-      throw new Error(`CAP08_S5_PARTIAL_CHAIN_DETECTED:${totalWriteDelta}`);
+    const candidateDelta: 0 | 1 = candidatePersistence.status === "INSERTED" ? 1 : 0;
+    const shadowDelta: 0 | 1 = shadowPersistence.status === "INSERTED" ? 1 : 0;
+    if (residualPersistence.write_delta !== 26 || candidateDelta !== 1 || shadowDelta !== 1 || completionPersistence.write_delta !== 2) {
+      throw new Error("CAP08_S5_FIRST_COMMIT_DELTA_MISMATCH");
     }
-    return {
-      status: alreadyComplete ? "ALREADY_COMPLETE" : "COMPLETED",
-      write_delta: totalWriteDelta,
-      residual_write_delta: residualPersistence.write_delta,
-      candidate_write_delta: candidateWriteDelta,
-      shadow_write_delta: shadowWriteDelta,
-      completion_write_delta: completionPersistence.write_delta,
-      residual_authority: residualPersistence.authority,
-      candidate_ref: candidateDraft.object_id,
-      candidate_hash: candidateDraft.determinism_hash,
-      candidate_parameter_value: CAP08_S5_EXPECTED_PARAMETER_V1,
-      shadow_ref: shadowDraft.object_id,
-      shadow_hash: shadowDraft.determinism_hash,
-      completion_authority: completionPersistence.authority,
-      residual_count: 24,
-      calibration_case_count: 16,
-      holdout_case_count: 8,
-      grid_point_count: 21,
-      calibration_candidate_count: 1,
-      shadow_evaluation_count: 1,
-      future_leakage_count: 0,
-      model_activation_count: 0,
-      active_config_switch_count: 0,
-      runtime_parameter_change_count: 0,
-      state_pointer_delta: 0,
-      checkpoint_pointer_delta: 0,
-      production_runtime_source_authorized: false,
-      s6_authorized: false,
-      mcft_cap_09_authorized: false,
-    };
+    return this.result({
+      status: "COMPLETED",
+      residualAuthority: residualPersistence.authority,
+      candidate: candidateDraft,
+      shadow: shadowDraft,
+      completion: completionPersistence.authority,
+      residualDelta: 26, candidateDelta: 1, shadowDelta: 1, completionDelta: 2,
+    });
   }
 }
