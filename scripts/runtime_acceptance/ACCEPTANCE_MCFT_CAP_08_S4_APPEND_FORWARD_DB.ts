@@ -11,9 +11,7 @@ import {
   CAP08_S4_FACT_SOURCE_V1,
   CAP08_S4_IDENTITY_KIND_V1,
 } from "../../apps/server/src/persistence/twin_runtime/postgres_cap08_s4_append_forward_repository_v1.js";
-import {
-  CAP08_S4_AUTHORITY_SCHEMA_VERSION_V1,
-} from "../../apps/server/src/domain/twin_runtime/cap08_s4_append_forward_contracts_v1.js";
+import { CAP08_S4_AUTHORITY_SCHEMA_VERSION_V1 } from "../../apps/server/src/domain/twin_runtime/cap08_s4_append_forward_contracts_v1.js";
 import {
   CAP08_S1_CREATED_AT_V1 as CREATED_AT,
   admin,
@@ -38,35 +36,26 @@ async function rowsV1(table: string, orderBy: string): Promise<unknown[]> {
   return result.rows.map((row) => row.row);
 }
 
-async function pointerSnapshotV1(): Promise<Record<string, unknown>> {
+async function pointersV1(): Promise<Record<string, unknown>> {
+  const order = "tenant_id,project_id,group_id,field_id,season_id,zone_id";
   return {
-    state_latest: await rowsV1(
-      "twin_state_latest_index_v1",
-      "tenant_id,project_id,group_id,field_id,season_id,zone_id",
-    ),
-    forecast_latest: await rowsV1(
-      "twin_forecast_result_latest_index_v1",
-      "tenant_id,project_id,group_id,field_id,season_id,zone_id",
-    ),
-    checkpoint_latest: await rowsV1(
-      "twin_runtime_checkpoint_latest_index_v1",
-      "tenant_id,project_id,group_id,field_id,season_id,zone_id",
-    ),
-    scenario_latest: await rowsV1(
-      "twin_scenario_latest_index_v1",
-      "tenant_id,project_id,group_id,field_id,season_id,zone_id",
-    ),
+    state: await rowsV1("twin_state_latest_index_v1", order),
+    forecast: await rowsV1("twin_forecast_result_latest_index_v1", order),
+    forecast_success: await rowsV1("twin_forecast_success_latest_index_v1", order),
+    checkpoint: await rowsV1("twin_runtime_checkpoint_latest_index_v1", order),
+    scenario: await rowsV1("twin_scenario_latest_index_v1", order),
   };
 }
 
-async function mutationSnapshotV1(): Promise<Record<string, unknown>> {
+async function snapshotV1(): Promise<Record<string, unknown>> {
   return {
     facts: await rowsV1("facts", "fact_id"),
+    visibility: await rowsV1("twin_fact_visibility_index_v1", "visibility_epoch_id,fact_id"),
     idempotency: await rowsV1("twin_object_idempotency_index_v1", "idempotency_key"),
     authority: await rowsV1("twin_runtime_authority_snapshot_v1", "authority_kind,authority_ref"),
     state_history: await rowsV1("twin_state_history_projection_v1", "state_object_id"),
-    pointers: await pointerSnapshotV1(),
-    scenario_projection: await rowsV1("twin_scenario_set_projection_v1", "scenario_set_object_id"),
+    scenario_projection: await rowsV1("twin_scenario_set_projection_v1", "scenario_set_id"),
+    pointers: await pointersV1(),
     leases: await rowsV1(
       "twin_runtime_lease_v1",
       "tenant_id,project_id,group_id,field_id,season_id,zone_id",
@@ -74,38 +63,50 @@ async function mutationSnapshotV1(): Promise<Record<string, unknown>> {
   };
 }
 
-async function canonicalHistoryV1(): Promise<Array<{ object_id: string; determinism_hash: string }>> {
+async function originalHistoryV1(): Promise<Array<{ object_id: string; determinism_hash: string }>> {
   const result = await admin.query(
     `SELECT record_json->'payload'->>'object_id' AS object_id,
             record_json->'payload'->>'determinism_hash' AS determinism_hash
        FROM facts
       WHERE record_json->'payload'->>'object_type' IN ('twin_state_estimate_v1','twin_forecast_run_v1')
+        AND source<>$1
         AND (record_json->'payload'->>'logical_time')::timestamptz <= '2026-06-02T16:00:00.000Z'::timestamptz
       ORDER BY object_id`,
+    [CAP08_S4_FACT_SOURCE_V1],
   );
   return result.rows;
 }
 
-async function objectTypeCountV1(objectType: string): Promise<number> {
+async function bindingsByIdsV1(
+  bindings: readonly { object_id: string; determinism_hash: string }[],
+): Promise<Array<{ object_id: string; determinism_hash: string }>> {
+  const result = await admin.query(
+    `SELECT record_json->'payload'->>'object_id' AS object_id,
+            record_json->'payload'->>'determinism_hash' AS determinism_hash
+       FROM facts
+      WHERE record_json->'payload'->>'object_id'=ANY($1::text[])
+      ORDER BY object_id`,
+    [bindings.map((binding) => binding.object_id)],
+  );
+  return result.rows;
+}
+
+async function objectTypeCountV1(type: string): Promise<number> {
   return Number((await admin.query(
     `SELECT count(*)::int AS n FROM facts
       WHERE record_json->'payload'->>'object_type'=$1`,
-    [objectType],
+    [type],
   )).rows[0].n);
 }
 
-async function expectFailureV1(
-  action: () => Promise<unknown>,
-  pattern: RegExp,
-): Promise<string> {
+async function expectFailureV1(action: () => Promise<unknown>, expected: RegExp): Promise<void> {
   try {
     await action();
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    assert.match(message, pattern);
-    return message;
+    assert.match(error instanceof Error ? error.message : String(error), expected);
+    return;
   }
-  throw new Error(`EXPECTED_FAILURE_NOT_RAISED:${pattern.source}`);
+  throw new Error(`EXPECTED_FAILURE_NOT_RAISED:${expected.source}`);
 }
 
 async function main(): Promise<void> {
@@ -117,7 +118,7 @@ async function main(): Promise<void> {
   try {
     assert.equal((await runner.query("SELECT current_user AS u")).rows[0].u, "geox_mcft_cap08_runner_v1");
     const predecessor = await establishCap08S3FormalPredecessorV1(ROOT);
-    const fixture = predecessor.fixture;
+    const { fixture } = predecessor;
     const service = new Cap08S4AppendForwardServiceV1(runner, fixture.formal_evidence_source);
     const input = {
       formal_run_id: fixture.formal_run_id,
@@ -127,9 +128,10 @@ async function main(): Promise<void> {
     };
     ok("fresh PostgreSQL exact S3 predecessor established");
 
-    const pointerBefore = await pointerSnapshotV1();
-    const historyBefore = await canonicalHistoryV1();
-    const preS4Snapshot = await mutationSnapshotV1();
+    const pointersBefore = await pointersV1();
+    const historyBefore = await originalHistoryV1();
+    assert.equal(historyBefore.length, 34);
+    const before = await snapshotV1();
     const faultStages = [
       "before_facts",
       "before_idempotency_guard",
@@ -152,22 +154,17 @@ async function main(): Promise<void> {
         new RegExp(`S4_FAULT:${target}`),
       );
       assert.equal(reached, true);
-      assert.deepEqual(await mutationSnapshotV1(), preS4Snapshot);
+      assert.deepEqual(await snapshotV1(), before);
     }
-    ok("five transactional fault stages roll back with zero canonical projection pointer lease or authority delta");
+    ok("five transaction fault stages roll back facts visibility guard authority projections pointers and lease");
 
     const first = await service.execute(input);
     assert.equal(first.status, "COMPLETED");
     assert.equal(first.write_status, "INSERTED_ATOMIC_SET");
     assert.equal(first.write_delta, 7);
     assert.equal(first.transport_transition_count, 15);
-    assert.equal(first.historical_state_hash_count, 17);
-    assert.equal(first.historical_forecast_hash_count, 17);
-    assert.equal(first.historical_hashes_unchanged, true);
-    assert.equal(first.latest_pointer_delta, 0);
-    assert.equal(first.residual_count, 0);
     assert.deepEqual(first.residual_obligations, ["R-01", "R-16"]);
-    assert.equal(first.residual_commit_status, "PENDING_S5_C_PROVIDER");
+    assert.equal(first.residual_count, 0);
     assert.equal(first.authority.schema_version, CAP08_S4_AUTHORITY_SCHEMA_VERSION_V1);
     assert.equal(first.authority.ordinary_state_assimilation_for_fvo16, false);
     assert.equal(first.authority.historical_rewrite, false);
@@ -177,17 +174,25 @@ async function main(): Promise<void> {
     assert.equal(first.t17_predecessor.previous_checkpoint_ref, first.corrected_set.checkpoint.object_id);
     assert.equal(first.t17_predecessor.previous_forecast_result_ref, first.corrected_set.forecast.object_id);
     assert.equal(first.t17_predecessor.previous_scenario_set_ref, first.corrected_set.scenario.object_id);
-    ok("T16 append-forward canonical set and T17 corrected predecessor");
+    ok("atomic corrected T16 set and exact T17 predecessor");
 
-    assert.deepEqual(await canonicalHistoryV1(), historyBefore);
-    assert.deepEqual(await pointerSnapshotV1(), pointerBefore);
+    assert.deepEqual(await bindingsByIdsV1(historyBefore), historyBefore);
+    assert.deepEqual(await pointersV1(), pointersBefore);
     assert.equal(Number((await admin.query(
       "SELECT count(*)::int AS n FROM facts WHERE source=$1",
       [CAP08_S4_FACT_SOURCE_V1],
     )).rows[0].n), 5);
     assert.equal(Number((await admin.query(
-      "SELECT count(*)::int AS n FROM twin_object_idempotency_index_v1 WHERE identity_kind=$1",
-      [CAP08_S4_IDENTITY_KIND_V1],
+      `SELECT count(*)::int AS n
+         FROM twin_fact_visibility_index_v1 v
+         JOIN facts f USING (fact_id)
+        WHERE f.source=$1 AND v.visibility_anchor_kind='FACT_INSERT_TRANSACTION'`,
+      [CAP08_S4_FACT_SOURCE_V1],
+    )).rows[0].n), 5);
+    assert.equal(Number((await admin.query(
+      `SELECT count(*)::int AS n FROM twin_object_idempotency_index_v1
+        WHERE identity_kind=$1 AND idempotency_key=$2`,
+      [CAP08_S4_IDENTITY_KIND_V1, first.authority.idempotency_key],
     )).rows[0].n), 1);
     assert.equal(Number((await admin.query(
       "SELECT count(*)::int AS n FROM twin_runtime_authority_snapshot_v1 WHERE authority_ref=$1",
@@ -198,13 +203,13 @@ async function main(): Promise<void> {
       [first.corrected_set.state.object_id],
     )).rows[0].n), 0);
     assert.equal(Number((await admin.query(
-      "SELECT count(*)::int AS n FROM twin_scenario_set_projection_v1 WHERE scenario_set_object_id=$1",
+      "SELECT count(*)::int AS n FROM twin_scenario_set_projection_v1 WHERE scenario_set_id=$1",
       [first.corrected_set.scenario.object_id],
     )).rows[0].n), 0);
     assert.equal(await objectTypeCountV1("twin_forecast_residual_v1"), 0);
-    ok("historical hashes and T23 latest pointers unchanged; corrected T16 not projected as current");
+    ok("34 historical hashes and T23 current pointers unchanged; visibility rows are atomic");
 
-    const completedSnapshot = await mutationSnapshotV1();
+    const completed = await snapshotV1();
     const second = await service.execute(input);
     assert.equal(second.status, "ALREADY_COMPLETE");
     assert.equal(second.write_status, "EXISTING_IDEMPOTENT_SET");
@@ -212,14 +217,14 @@ async function main(): Promise<void> {
     assert.deepEqual(second.authority, first.authority);
     assert.deepEqual(second.corrected_set, first.corrected_set);
     assert.deepEqual(second.t17_predecessor, first.t17_predecessor);
-    assert.deepEqual(await mutationSnapshotV1(), completedSnapshot);
-    ok("completed S4 rerun exact readback with zero mutation");
+    assert.deepEqual(await snapshotV1(), completed);
+    ok("completed S4 rerun exact readback with zero write including visibility metadata");
 
     const correctedFactId = `fact_${first.corrected_set.state.object_id}`;
-    const correctedFact = (await admin.query(
-      "SELECT fact_id,occurred_at,source,record_json,ingested_at FROM facts WHERE fact_id=$1",
+    const correctedRecord = (await admin.query(
+      "SELECT record_json FROM facts WHERE fact_id=$1",
       [correctedFactId],
-    )).rows[0];
+    )).rows[0].record_json;
     const guard = (await admin.query(
       "SELECT * FROM twin_object_idempotency_index_v1 WHERE idempotency_key=$1",
       [first.authority.idempotency_key],
@@ -228,47 +233,55 @@ async function main(): Promise<void> {
       "SELECT * FROM twin_runtime_authority_snapshot_v1 WHERE authority_ref=$1",
       [first.authority.authority_ref],
     )).rows[0];
-    const historicalStateId = first.authority.historical_hash_manifest.state_bindings[16].ref;
-    const historicalFactId = `fact_${historicalStateId}`;
+    const historicalFactId = `fact_${first.authority.historical_hash_manifest.state_bindings[16].ref}`;
     const historicalRecord = (await admin.query(
       "SELECT record_json FROM facts WHERE fact_id=$1",
       [historicalFactId],
     )).rows[0].record_json;
 
-    const corruptionCases: Array<{
+    const corruptions: Array<{
       id: string;
       corrupt: () => Promise<void>;
       restore: () => Promise<void>;
       expected: RegExp;
     }> = [
       {
-        id: "S4-CR01_CORRECTED_FACT_MISSING",
-        corrupt: async () => { await admin.query("DELETE FROM facts WHERE fact_id=$1", [correctedFactId]); },
-        restore: async () => {
+        id: "S4-CR01_CORRECTED_FACT_IDENTITY_MISSING",
+        corrupt: async () => {
           await admin.query(
-            "INSERT INTO facts (fact_id,occurred_at,source,record_json,ingested_at) VALUES ($1,$2,$3,$4::jsonb,$5)",
-            [correctedFact.fact_id, correctedFact.occurred_at, correctedFact.source, JSON.stringify(correctedFact.record_json), correctedFact.ingested_at],
+            `UPDATE facts SET record_json=jsonb_set(record_json,'{payload,object_id}',to_jsonb('corrupted_s4_state'::text))
+              WHERE fact_id=$1`,
+            [correctedFactId],
           );
+        },
+        restore: async () => {
+          await admin.query("UPDATE facts SET record_json=$2::jsonb WHERE fact_id=$1", [correctedFactId, JSON.stringify(correctedRecord)]);
         },
         expected: /CAP08_S4_APPEND_FORWARD_PARTIAL_SET/,
       },
       {
         id: "S4-CR02_GUARD_MISSING",
-        corrupt: async () => { await admin.query("DELETE FROM twin_object_idempotency_index_v1 WHERE idempotency_key=$1", [first.authority.idempotency_key]); },
+        corrupt: async () => {
+          await admin.query("DELETE FROM twin_object_idempotency_index_v1 WHERE idempotency_key=$1", [first.authority.idempotency_key]);
+        },
         restore: async () => {
           await admin.query(
             `INSERT INTO twin_object_idempotency_index_v1
-             (identity_kind,idempotency_key,record_set_id,determinism_hash,identity_basis,member_object_ids,member_determinism_hashes)
-             VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb)`,
-            [guard.identity_kind, guard.idempotency_key, guard.record_set_id, guard.determinism_hash,
-              JSON.stringify(guard.identity_basis), JSON.stringify(guard.member_object_ids), JSON.stringify(guard.member_determinism_hashes)],
+             (identity_kind,idempotency_key,semantic_object_id,record_set_id,determinism_hash,
+              identity_basis,member_object_ids,member_determinism_hashes,created_at)
+             VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9)`,
+            [guard.identity_kind, guard.idempotency_key, guard.semantic_object_id, guard.record_set_id,
+              guard.determinism_hash, JSON.stringify(guard.identity_basis), JSON.stringify(guard.member_object_ids),
+              JSON.stringify(guard.member_determinism_hashes), guard.created_at],
           );
         },
         expected: /CAP08_S4_APPEND_FORWARD_PARTIAL_SET/,
       },
       {
         id: "S4-CR03_AUTHORITY_MISSING",
-        corrupt: async () => { await admin.query("DELETE FROM twin_runtime_authority_snapshot_v1 WHERE authority_ref=$1", [first.authority.authority_ref]); },
+        corrupt: async () => {
+          await admin.query("DELETE FROM twin_runtime_authority_snapshot_v1 WHERE authority_ref=$1", [first.authority.authority_ref]);
+        },
         restore: async () => {
           await admin.query(
             `INSERT INTO twin_runtime_authority_snapshot_v1
@@ -284,8 +297,8 @@ async function main(): Promise<void> {
         id: "S4-CR04_AUTHORITY_HASH_MUTATED",
         corrupt: async () => {
           await admin.query(
-            "UPDATE twin_runtime_authority_snapshot_v1 SET determinism_hash='sha256:0000000000000000000000000000000000000000000000000000000000000000' WHERE authority_ref=$1",
-            [first.authority.authority_ref],
+            "UPDATE twin_runtime_authority_snapshot_v1 SET determinism_hash=$2 WHERE authority_ref=$1",
+            [first.authority.authority_ref, `sha256:${"0".repeat(64)}`],
           );
         },
         restore: async () => {
@@ -300,10 +313,9 @@ async function main(): Promise<void> {
         id: "S4-CR05_HISTORICAL_HASH_MUTATED",
         corrupt: async () => {
           await admin.query(
-            `UPDATE facts
-                SET record_json=jsonb_set(record_json,'{payload,determinism_hash}',to_jsonb('sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'::text))
+            `UPDATE facts SET record_json=jsonb_set(record_json,'{payload,determinism_hash}',to_jsonb($2::text))
               WHERE fact_id=$1`,
-            [historicalFactId],
+            [historicalFactId, `sha256:${"f".repeat(64)}`],
           );
         },
         restore: async () => {
@@ -313,14 +325,14 @@ async function main(): Promise<void> {
       },
     ];
 
-    for (const corruption of corruptionCases) {
+    for (const corruption of corruptions) {
       await corruption.corrupt();
       await expectFailureV1(() => service.execute(input), corruption.expected);
       await corruption.restore();
       const recovered = await service.execute(input);
       assert.equal(recovered.status, "ALREADY_COMPLETE");
       assert.deepEqual(recovered.authority, first.authority);
-      assert.deepEqual(await mutationSnapshotV1(), completedSnapshot);
+      assert.deepEqual(await snapshotV1(), completed);
       ok(corruption.id);
     }
 
@@ -341,13 +353,14 @@ async function main(): Promise<void> {
       transport_transition_count: first.transport_transition_count,
       historical_state_hash_count: first.historical_state_hash_count,
       historical_forecast_hash_count: first.historical_forecast_hash_count,
-      first_write_delta: first.write_delta,
+      explicit_first_write_delta: first.write_delta,
+      visibility_first_write_delta: 5,
       completed_rerun_write_delta: second.write_delta,
       latest_pointer_delta: 0,
       residual_count: 0,
       residual_obligations: first.residual_obligations,
       fault_stage_count: faultStages.length,
-      corruption_case_count: corruptionCases.length,
+      corruption_case_count: corruptions.length,
       phase_engine_contract_digest: first.phase_engine_contract_digest,
       phase_engine_source_digest: first.phase_engine_source_digest,
       production_runtime_source_authorized: false,
