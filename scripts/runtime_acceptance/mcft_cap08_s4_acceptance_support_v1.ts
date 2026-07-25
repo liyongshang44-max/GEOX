@@ -1,6 +1,7 @@
 // Purpose: establish the exact MCFT-CAP-08.S3 B00-to-T23 predecessor in a caller-provisioned fresh PostgreSQL database for S4 acceptance.
 // Boundary: acceptance support only; no formal candidate signal, S4 implementation logic, migration, route, scheduler, production Runtime authority, or MCFT-CAP-09 authority.
 
+import { types as pgTypes } from "pg";
 import { DirectCap04ExecutionConfigResolverV1 } from "../../apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.js";
 import { PostgresActionFeedbackTickSourceV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_action_feedback_tick_source_v1.js";
 import { PostgresCap08S3CompletionAuthorityPairRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_cap08_s3_completion_authority_pair_repository_v1.js";
@@ -30,6 +31,11 @@ import {
 } from "./mcft_cap08_s2_g3_acceptance_support_v1.js";
 import { buildCap08S2FormalProviderFixtureV1 } from "./mcft_cap08_s2_formal_provider_fixture_v1.js";
 import { computeCap08S3SourceManifestV1 } from "./mcft_cap08_s3_source_manifest_v1.js";
+
+// node-postgres normally converts PostgreSQL timestamps to JavaScript Date and drops
+// sub-millisecond precision. S4 corruption recovery must restore exact database bytes.
+pgTypes.setTypeParser(1184, (value: string): string => value);
+pgTypes.setTypeParser(1114, (value: string): string => value);
 
 export async function establishCap08S3FormalPredecessorV1(root: string) {
   const fixture = buildCap08S2FormalProviderFixtureV1();
