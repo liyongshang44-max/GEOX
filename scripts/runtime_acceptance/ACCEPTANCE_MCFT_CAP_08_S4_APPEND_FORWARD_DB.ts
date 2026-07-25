@@ -70,7 +70,6 @@ async function originalHistoryV1(): Promise<Array<{ object_id: string; determini
        FROM facts
       WHERE record_json->'payload'->>'object_type' IN ('twin_state_estimate_v1','twin_forecast_run_v1')
         AND source<>$1
-        AND (record_json->'payload'->>'logical_time')::timestamptz <= '2026-06-02T16:00:00.000Z'::timestamptz
       ORDER BY object_id`,
     [CAP08_S4_FACT_SOURCE_V1],
   );
@@ -130,7 +129,7 @@ async function main(): Promise<void> {
 
     const pointersBefore = await pointersV1();
     const historyBefore = await originalHistoryV1();
-    assert.equal(historyBefore.length, 34);
+    assert.equal(historyBefore.length, 50);
     const before = await snapshotV1();
     const faultStages = [
       "before_facts",
@@ -207,7 +206,7 @@ async function main(): Promise<void> {
       [first.corrected_set.scenario.object_id],
     )).rows[0].n), 0);
     assert.equal(await objectTypeCountV1("twin_forecast_residual_v1"), 0);
-    ok("34 historical hashes and T23 current pointers unchanged; visibility rows are atomic");
+    ok("all 50 S3 State and Forecast hashes and T23 current pointers unchanged; visibility rows are atomic");
 
     const completed = await snapshotV1();
     const second = await service.execute(input);
@@ -353,6 +352,7 @@ async function main(): Promise<void> {
       transport_transition_count: first.transport_transition_count,
       historical_state_hash_count: first.historical_state_hash_count,
       historical_forecast_hash_count: first.historical_forecast_hash_count,
+      all_s3_state_forecast_hash_count: historyBefore.length,
       explicit_first_write_delta: first.write_delta,
       visibility_first_write_delta: 5,
       completed_rerun_write_delta: second.write_delta,
