@@ -4,8 +4,12 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-08-s5-pre-candidate-governance.yml'
-      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
-      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-*'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-CHANGED-FILE-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-CONTRACT-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-PREDECESSOR-CONSUMPTION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-REVIEW-POLICY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-WORKFLOW-DECLARATION-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_PRE_CANDIDATE_GOVERNANCE.cjs'
   merge_group:
     types: [checks_requested]
