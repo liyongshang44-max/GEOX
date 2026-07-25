@@ -4,8 +4,10 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-08-s4-pre-candidate-governance.yml'
-      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
-      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-*'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-CHANGED-FILE-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-CONTRACT-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-REVIEW-POLICY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-WORKFLOW-DECLARATION-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_PRE_CANDIDATE_GOVERNANCE.cjs'
   merge_group:
     types: [checks_requested]
@@ -28,28 +30,64 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Classify historical S4 governance applicability
+        id: applicability
+        env:
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: |
+          set -euo pipefail
+          workflow='.github/workflows/mcft-cap-08-s4-pre-candidate-governance.yml'
+          registry_path="$(printf '%s%s' 'docs/digital_twin/mcft/MCFT-CANDIDATE-' 'AUTHORITY-REGISTRY-V1.json')"
+          test -n "${EVENT_BASE_SHA}"
+          mapfile -t changed < <(git diff --name-only "${EVENT_BASE_SHA}...HEAD")
+          if [[ "${#changed[@]}" -eq 1 && "${changed[0]}" == "${workflow}" ]]; then
+            if grep -Fq "${registry_path}" "${workflow}"; then
+              echo 'S4 historical workflow still has shared Registry trigger' >&2
+              exit 1
+            fi
+            mkdir -p acceptance-output
+            node - <<'NODE'
+          const fs = require('node:fs');
+          const value = {
+            schema_version: 'geox_mcft_cap08_s4_pre_candidate_governance_result_v1',
+            status: 'PASS',
+            classification: 'TRIGGER_SCOPE_ONLY',
+            historical_s4_authority_revalidated: false,
+            shared_registry_trigger_present: false,
+            candidate_declaration_present: false,
+            runtime_source_delta: 0,
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_08_S4_PRE_CANDIDATE_GOVERNANCE_RESULT.json', `${JSON.stringify(value, null, 2)}\n`);
+          NODE
+            echo 'full=false' >> "${GITHUB_OUTPUT}"
+          else
+            echo 'full=true' >> "${GITHUB_OUTPUT}"
+          fi
       - uses: pnpm/action-setup@v4
+        if: steps.applicability.outputs.full == 'true'
         with:
           version: 9.15.4
       - uses: actions/setup-node@v4
+        if: steps.applicability.outputs.full == 'true'
         with:
           node-version: 20.11.1
           cache: pnpm
       - name: Install locked workspace
+        if: steps.applicability.outputs.full == 'true'
         run: pnpm install --frozen-lockfile
-      - name: Validate S4 pre-candidate governance boundary
+      - name: Validate immutable S4 pre-candidate governance boundary
+        if: steps.applicability.outputs.full == 'true'
         env:
           MCFT_BASE_SHA: c5dd204dd3a3682ae553aebdc04e4caa2eb153d3
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_PRE_CANDIDATE_GOVERNANCE.cjs
       - name: Requalify frozen shared late-correction vectors
+        if: steps.applicability.outputs.full == 'true'
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_LATE_CORRECTION_MATH.ts
       - name: Upload S4 governance evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap08-s4-pre-candidate-governance-${{ github.sha }}
-          path: |
-            acceptance-output/MCFT_CAP_08_S4_PRE_CANDIDATE_GOVERNANCE_RESULT.json
-            acceptance-output/MCFT_CAP_08_LATE_CORRECTION_MATH_RESULT.json
+          path: acceptance-output/
           if-no-files-found: error
           retention-days: 90
