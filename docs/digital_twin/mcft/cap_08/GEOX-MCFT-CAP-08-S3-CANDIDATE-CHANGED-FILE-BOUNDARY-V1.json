@@ -1,9 +1,9 @@
 {
-  "schema_version": "geox_mcft_cap08_s3_candidate_changed_file_boundary_v2",
+  "schema_version": "geox_mcft_cap08_s3_candidate_changed_file_boundary_v3",
   "record_status": "FORMAL_S3_CANDIDATE_CHANGED_FILE_BOUNDARY_FROZEN",
   "capability_line_id": "MCFT-CAP-08",
   "slice_id": "MCFT-CAP-08.S3",
-  "base_sha": "e6d64290c0f6bdef791cc1cbd184571b99d8bc71",
+  "base_sha": "8e88fdd91af25ef82f765f7d4a21b1471e2ab008",
   "taskbook_blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
   "changed_file_count": 36,
   "changed_files": [
@@ -59,8 +59,16 @@
     "apps/server/src/domain/twin_runtime/canonical_identity_v1.ts",
     "scripts/runtime_acceptance/mcft_cap08_s2_g3_acceptance_support_v1.ts"
   ],
+  "review_mode": "OWNER_WAIVED_DEFERRED_TO_S6",
+  "independent_review_required": false,
+  "independent_review_satisfied": false,
+  "independent_review_performed": false,
+  "independent_review_waived": true,
+  "technical_gate_relaxation": false,
   "candidate_declaration_last_write_required": true,
   "candidate_tree_frozen_after_declaration": true,
+  "s4_successor_seed_required_on_base": true,
+  "s4_registry_rule_required_on_base": true,
   "production_runtime_source_authorized": false,
   "s3_effective": false,
   "s4_authorized": false
