@@ -32,11 +32,6 @@ import {
 import { buildCap08S2FormalProviderFixtureV1 } from "./mcft_cap08_s2_formal_provider_fixture_v1.js";
 import { computeCap08S3SourceManifestV1 } from "./mcft_cap08_s3_source_manifest_v1.js";
 
-// node-postgres normally converts PostgreSQL timestamps to JavaScript Date and drops
-// sub-millisecond precision. S4 corruption recovery must restore exact database bytes.
-pgTypes.setTypeParser(1184, (value: string): string => value);
-pgTypes.setTypeParser(1114, (value: string): string => value);
-
 export async function establishCap08S3FormalPredecessorV1(root: string) {
   const fixture = buildCap08S2FormalProviderFixtureV1();
   const sourceManifest = computeCap08S3SourceManifestV1(root);
@@ -117,6 +112,13 @@ export async function establishCap08S3FormalPredecessorV1(root: string) {
     || first.range.completion_authority_pair_write_delta !== 2) {
     throw new Error("CAP08_S4_S3_PREDECESSOR_NOT_EXACT");
   }
+
+  // From this point onward the acceptance suite needs exact PostgreSQL timestamp
+  // text for corruption backup/restore. Delaying the parser switch preserves all
+  // predecessor Runtime paths that require canonical ISO instants.
+  pgTypes.setTypeParser(1184, (value: string): string => value);
+  pgTypes.setTypeParser(1114, (value: string): string => value);
+
   return {
     fixture,
     source_manifest: sourceManifest,
