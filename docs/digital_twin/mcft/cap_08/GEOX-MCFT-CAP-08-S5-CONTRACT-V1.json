@@ -1,24 +1,15 @@
 {
   "schema_version": "geox_mcft_cap08_s5_contract_v1",
-  "record_status": "FROZEN_PRE_CANDIDATE_MACHINE_CONTRACT",
+  "record_status": "ARCHITECTURE_DEVIATION_ADJUDICATED_PRE_CANDIDATE_MACHINE_CONTRACT",
   "capability_line_id": "MCFT-CAP-08",
   "slice_id": "MCFT-CAP-08.S5",
   "contract_id": "MCFT-CAP-08.S5-RESIDUAL-CALIBRATION-SHADOW-V1",
   "taskbook_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
   "taskbook_blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
-  "retained_architecture_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK-v0.3.5-HISTORICAL-FULL.md",
-  "retained_architecture_blob_sha": "ab4f4e7d9d3978ac3be979583cda4ccdc94a2fb6",
+  "architecture_deviation_adjudication_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-CALIBRATION-ARCHITECTURE-DEVIATION-ADJUDICATION-V1.json",
+  "architecture_deviation_issue_ref": "https://github.com/liyongshang44-max/GEOX/issues/2670",
   "phase_engine_contract_digest": "sha256:41428596e893112483a8695ccd7bc28dc19dee35c2c3bf29e78395a86133d466",
-  "required_phase_order": [
-    "resolve",
-    "E",
-    "H",
-    "A",
-    "B",
-    "G",
-    "C",
-    "barrier"
-  ],
+  "required_phase_order": ["resolve", "E", "H", "A", "B", "G", "C", "barrier"],
   "residual_contract": {
     "residual_count": 24,
     "mapping": "R-i = Forecast T(i-1) H=1 + FVO-i",
@@ -29,69 +20,49 @@
     "future_leakage_forbidden": true
   },
   "dataset_split": {
-    "calibration_case_ids": [
-      "R-01",
-      "R-02",
-      "R-03",
-      "R-04",
-      "R-05",
-      "R-06",
-      "R-07",
-      "R-08",
-      "R-09",
-      "R-10",
-      "R-11",
-      "R-12",
-      "R-13",
-      "R-14",
-      "R-15",
-      "R-16"
-    ],
-    "holdout_case_ids": [
-      "R-17",
-      "R-18",
-      "R-19",
-      "R-20",
-      "R-21",
-      "R-22",
-      "R-23",
-      "R-24"
-    ],
+    "calibration_case_ids": ["R-01", "R-02", "R-03", "R-04", "R-05", "R-06", "R-07", "R-08", "R-09", "R-10", "R-11", "R-12", "R-13", "R-14", "R-15", "R-16"],
+    "holdout_case_ids": ["R-17", "R-18", "R-19", "R-20", "R-21", "R-22", "R-23", "R-24"],
     "calibration_case_count": 16,
     "holdout_case_count": 8
   },
-  "candidate_oracle": {
+  "calibration_attempt_contract": {
     "parameter_path": "dynamics_parameters.drainage_coefficient_per_hour",
     "base_value": "0.030000",
-    "expected_candidate_value": "0.034000",
     "grid_point_count": 21,
-    "expected_value_drift_effect": "ARCHITECTURE_DEVIATION_ADJUDICATION_REQUIRED",
+    "controlled_mechanism_oracle": "0.034000",
+    "controlled_mechanism_oracle_source": "MCFT-CAP-06",
+    "formal_dataset_expected_status": "INSUFFICIENT_PARAMETER_EXCITATION",
+    "formal_dataset_diagnostic_selected_boundary_value": "0.040000",
+    "formal_dataset_candidate_materialization_authorized": false,
+    "attempt_count": 1,
+    "disposition_count": 1,
+    "disposition": "INSUFFICIENT_PARAMETER_EXCITATION",
     "silent_expected_value_change_forbidden": true
   },
   "shadow_contract": {
-    "shadow_evaluation_count": 1,
-    "paired_holdout_case_count": 8,
+    "shadow_evaluation_count": 0,
+    "reason": "NO_APPENDABLE_CALIBRATION_CANDIDATE",
     "candidate_active_during_shadow": false,
     "future_leakage_count": 0,
     "active_runtime_config_switch_count": 0,
     "model_activation_count": 0,
     "state_pointer_delta": 0,
-    "checkpoint_pointer_delta": 0,
-    "candidate_non_consumption_required": true
+    "checkpoint_pointer_delta": 0
   },
   "cardinality_oracle": {
     "residual": 24,
     "calibration": 16,
     "holdout": 8,
-    "candidate": 1,
-    "shadow": 1,
+    "calibration_attempt": 1,
+    "calibration_disposition": 1,
+    "candidate": 0,
+    "shadow": 0,
     "model_activation": 0
   },
   "recovery_contract": {
     "completed_rerun_zero_write_required": true,
     "partial_residual_set_effect": "FAIL_CLOSED",
-    "partial_calibration_set_effect": "FAIL_CLOSED",
-    "partial_shadow_set_effect": "FAIL_CLOSED",
+    "partial_calibration_attempt_effect": "FAIL_CLOSED",
     "silent_repair_authorized": false
   },
   "negative_requirements": [
@@ -99,7 +70,7 @@
     "R01_ORDER_DRIFT_FORBIDDEN",
     "CALIBRATION_HOLDOUT_OVERLAP_FORBIDDEN",
     "FUTURE_LEAKAGE_FORBIDDEN",
-    "EXPECTED_CANDIDATE_DRIFT_FORBIDDEN",
+    "NON_APPENDABLE_RESULT_MATERIALIZATION_FORBIDDEN",
     "CANDIDATE_CONSUMPTION_FORBIDDEN",
     "ACTIVE_CONFIG_SWITCH_FORBIDDEN",
     "MODEL_ACTIVATION_FORBIDDEN",
@@ -118,5 +89,5 @@
   "candidate_declaration_authorized": false,
   "s5_effective": false,
   "s6_authorized": false,
-  "semantic_digest": "sha256:c21c27264d345643c3d3dcd4d0c275ec4aaf3979d00edbcef23b851e48f5b6bd"
+  "semantic_digest": "sha256:228ea51b3f4ca8f469250a94fb0506c1aa410e8c278f902a47aa8d6e48b928ba"
 }
