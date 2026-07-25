@@ -284,10 +284,10 @@ async function main(): Promise<void> {
         restore: async () => {
           await admin.query(
             `INSERT INTO twin_runtime_authority_snapshot_v1
-             (authority_kind,authority_ref,determinism_hash,semantic_payload,recorded_at)
-             VALUES ($1,$2,$3,$4::jsonb,$5)`,
+             (authority_kind,authority_ref,determinism_hash,semantic_payload)
+             VALUES ($1,$2,$3,$4::jsonb)`,
             [authority.authority_kind, authority.authority_ref, authority.determinism_hash,
-              JSON.stringify(authority.semantic_payload), authority.recorded_at],
+              JSON.stringify(authority.semantic_payload)],
           );
         },
         expected: /CAP08_S4_APPEND_FORWARD_PARTIAL_SET/,
