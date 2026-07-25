@@ -1,0 +1,51 @@
+{
+  "schema_version": "geox_mcft_cap08_s5_review_policy_v1",
+  "record_status": "INTERIM_OWNER_WAIVER_PRE_REGISTERED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S5",
+  "policy_id": "MCFT-CAP-08.S5-OWNER-WAIVER-DEFERRED-S6-REVIEW-V1",
+  "interim_owner_review_waiver_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-INTERIM-OWNER-REVIEW-WAIVER-V1.json",
+  "owner_directive_issue_ref": "https://github.com/liyongshang44-max/GEOX/issues/2649",
+  "independent_review_required": false,
+  "independent_review_satisfied": false,
+  "independent_review_performed": false,
+  "independent_review_waived": true,
+  "technical_gate_relaxation": false,
+  "retroactive_exact_head_approval_claim_allowed": false,
+  "required_before_candidate_merge": false,
+  "required_before_exact_sha_attestation": false,
+  "candidate_merge_authorized_under_owner_waiver_after_all_technical_gates": true,
+  "exact_sha_attestation_authorized_under_owner_waiver": true,
+  "required_slice_evidence": [
+    "S5_MACHINE_CONTRACT",
+    "EXACT_24_RESIDUAL_LEDGER",
+    "16_CALIBRATION_8_HOLDOUT_SPLIT",
+    "21_POINT_GRID_SEARCH",
+    "EXPECTED_0_034000_CANDIDATE",
+    "PAIRED_HOLDOUT_SHADOW_EVALUATION",
+    "CANDIDATE_NON_CONSUMPTION",
+    "ACTIVE_RUNTIME_CONFIG_UNCHANGED",
+    "MODEL_ACTIVATION_ZERO",
+    "CANDIDATE_CHANGED_FILE_BOUNDARY",
+    "EXACT_MERGE_SHA_ARTIFACT_READBACK"
+  ],
+  "final_closure_review": {
+    "slice_id": "MCFT-CAP-08.S6",
+    "independent_review_required": true,
+    "verified_second_github_account_required": true,
+    "review_must_target_exact_s6_candidate_head": true,
+    "review_scope_includes_s5_contract_implementation_and_artifacts": true,
+    "approval_event_required": "APPROVE"
+  },
+  "implementation_authorized": false,
+  "runtime_source_authorized": false,
+  "nonclaims": [
+    "NO_REVIEW_SATISFACTION_CLAIM",
+    "NO_REVIEW_PERFORMED_CLAIM",
+    "NO_RETROACTIVE_APPROVAL",
+    "NO_S5_IMPLEMENTATION",
+    "NO_S5_EFFECTIVENESS",
+    "NO_S6_AUTHORITY",
+    "NO_MCFT_CAP_09_AUTHORITY"
+  ]
+}
