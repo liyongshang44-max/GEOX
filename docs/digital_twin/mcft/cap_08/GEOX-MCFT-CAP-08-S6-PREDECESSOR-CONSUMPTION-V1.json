@@ -1,0 +1,29 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_predecessor_consumption_v1",
+  "record_status": "PRE_REGISTERED_AWAITING_S5_EXACT_SHA_EFFECTIVENESS",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "source_slice_id": "MCFT-CAP-08.S5",
+  "required_effective_status": "S5_RESIDUAL_CALIBRATION_SHADOW_IMPLEMENTED_EFFECTIVE",
+  "required_effective_next_slice": "S6",
+  "required_status_context": "mcft-cap-08/s5-exact-sha-attestation",
+  "required_retention_class": "R1_180_DAYS",
+  "required_artifact_readback": true,
+  "candidate_to_merge_tree_delta_required": 0,
+  "source_merge_subject_sha": null,
+  "source_candidate_head_sha": null,
+  "source_candidate_tree_sha": null,
+  "source_exact_sha_workflow_run_id": null,
+  "source_artifact_id": null,
+  "source_semantic_artifact_digest": null,
+  "predecessor_effectiveness_satisfied": false,
+  "implementation_entry_authorized": false,
+  "materialization_rule": "S6_FORMAL_CANDIDATE_MUST_BIND_EXTERNAL_S5_EXACT_SHA_R1_ARTIFACT_WITHOUT_POSTMERGE_S5_SSOT_REWRITE",
+  "nonclaims": [
+    "NO_S5_EFFECTIVENESS",
+    "NO_S6_IMPLEMENTATION",
+    "NO_S6_CANDIDATE_DECLARATION",
+    "NO_MCFT_CAP_08_COMPLETION",
+    "NO_MCFT_CAP_09_AUTHORITY"
+  ]
+}
