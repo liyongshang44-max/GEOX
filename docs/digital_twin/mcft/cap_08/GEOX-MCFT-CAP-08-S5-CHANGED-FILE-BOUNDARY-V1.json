@@ -5,8 +5,9 @@
   "slice_id": "MCFT-CAP-08.S5",
   "base_sha": "41073db21c550bbed160295ca5ef76d0a04f2f91",
   "taskbook_blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
-  "changed_file_count": 9,
+  "changed_file_count": 10,
   "changed_files": [
+    ".github/workflows/mcft-cap-08-s4-pre-candidate-governance.yml",
     ".github/workflows/mcft-cap-08-s5-pre-candidate-governance.yml",
     "docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json",
     "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-CHANGED-FILE-BOUNDARY-V1.json",
@@ -17,7 +18,7 @@
     "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-WORKFLOW-DECLARATION-V1.json",
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_PRE_CANDIDATE_GOVERNANCE.cjs"
   ],
-  "workflow_file_count": 1,
+  "workflow_file_count": 2,
   "registry_file_count": 1,
   "candidate_ssot_file_count": 5,
   "governance_acceptance_file_count": 1,
