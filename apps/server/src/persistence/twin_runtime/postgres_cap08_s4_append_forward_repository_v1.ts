@@ -1,4 +1,4 @@
-// Purpose: atomically persist and exactly inspect the MCFT-CAP-08.S4 corrected T16 five-object canonical set, one schema-compatible idempotency guard, and immutable append-forward authority without regressing Runtime pointers.
+// Purpose: atomically persist and exactly inspect the MCFT-CAP-08.S4 corrected T16 canonical set, one schema-compatible idempotency guard, and immutable append-forward authority without regressing Runtime pointers.
 // Boundary: bounded PostgreSQL persistence only; no math, candidate construction, projection/latest-pointer mutation, route, scheduler, Residual commit, Calibration, Shadow, historical rewrite, or production Runtime authority.
 
 import type { Pool, PoolClient } from "pg";
@@ -20,19 +20,14 @@ import {
 import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import type { Cap04ScenarioSetEnvelopeV1 } from "../../domain/twin_runtime/forecast_scenario_contracts_v1.js";
 
-// Physical storage discriminator. S4 semantic identity remains in identity_basis and authority schema.
-// Reusing OBJECT is required because S4 explicitly authorizes zero database-schema delta.
+// S4 has zero schema delta; OBJECT is the existing physical discriminator.
+// S4 semantics are bound by identity_basis plus the immutable authority schema.
 export const CAP08_S4_IDENTITY_KIND_V1 = "OBJECT" as const;
 export const CAP08_S4_FACT_SOURCE_V1 = "mcft_cap08_s4_late_append_forward_v1" as const;
 
 export type InspectCap08S4AppendForwardResultV1 =
   | { disposition: "NOT_ESTABLISHED"; authority: null; corrected_set: null; write_delta: 0 }
-  | {
-    disposition: "ALREADY_COMPLETE_EXACT";
-    authority: Cap08S4AppendForwardAuthorityV1;
-    corrected_set: Cap08S4CorrectedCanonicalSetV1;
-    write_delta: 0;
-  };
+  | { disposition: "ALREADY_COMPLETE_EXACT"; authority: Cap08S4AppendForwardAuthorityV1; corrected_set: Cap08S4CorrectedCanonicalSetV1; write_delta: 0 };
 
 export type EstablishCap08S4AppendForwardResultV1 = {
   disposition: "ALREADY_COMPLETE_EXACT";
@@ -69,13 +64,8 @@ function parseFactObjectV1(value: unknown): PersistedObjectV1 {
   return payload;
 }
 
-function factIdV1(objectId: string): string {
-  return `fact_${objectId}`;
-}
-
-function recordJsonV1(object: PersistedObjectV1): string {
-  return JSON.stringify({ type: object.object_type, payload: object });
-}
+function factIdV1(objectId: string): string { return `fact_${objectId}`; }
+function recordJsonV1(object: PersistedObjectV1): string { return JSON.stringify({ type: object.object_type, payload: object }); }
 
 function correctedObjectsV1(set: Cap08S4CorrectedCanonicalSetV1): PersistedObjectV1[] {
   return [set.state, set.forecast, set.scenario, set.tick, set.checkpoint];
@@ -95,27 +85,22 @@ function correctedHashesV1(authority: Cap08S4AppendForwardAuthorityV1): Record<s
   return Object.fromEntries(correctedBindingsV1(authority).map((binding) => [binding.ref, binding.hash]));
 }
 
-async function readAuthorityV1(
-  client: PoolClient,
-  authorityRef: string,
-): Promise<{ determinism_hash: string; semantic_payload: unknown } | null> {
+async function readAuthorityV1(client: PoolClient, authorityRef: string) {
   const result = await client.query(
-    `SELECT determinism_hash,semantic_payload
-       FROM twin_runtime_authority_snapshot_v1
+    `SELECT determinism_hash,semantic_payload FROM twin_runtime_authority_snapshot_v1
       WHERE authority_kind=$1 AND authority_ref=$2`,
     [CAP08_S4_AUTHORITY_KIND_V1, authorityRef],
   );
   if (result.rows.length === 0) return null;
   if (result.rows.length !== 1) throw new Error("CAP08_S4_AUTHORITY_CARDINALITY");
-  return result.rows[0];
+  return result.rows[0] as { determinism_hash: string; semantic_payload: unknown };
 }
 
 async function readGuardV1(client: PoolClient, key: string): Promise<GuardRowV1 | null> {
   const result = await client.query(
     `SELECT identity_kind,record_set_id,determinism_hash,identity_basis,
             member_object_ids,member_determinism_hashes
-       FROM twin_object_idempotency_index_v1
-      WHERE idempotency_key=$1`,
+       FROM twin_object_idempotency_index_v1 WHERE idempotency_key=$1`,
     [key],
   );
   if (result.rows.length === 0) return null;
@@ -123,25 +108,21 @@ async function readGuardV1(client: PoolClient, key: string): Promise<GuardRowV1 
   return result.rows[0] as GuardRowV1;
 }
 
-async function readFactsV1(
-  client: PoolClient,
-  objectIds: readonly string[],
-): Promise<Map<string, PersistedObjectV1>> {
+async function readFactsV1(client: PoolClient, objectIds: readonly string[]): Promise<Map<string, PersistedObjectV1>> {
   const ids = [...new Set(objectIds)];
   if (ids.length === 0) return new Map();
   const result = await client.query(
     `SELECT record_json FROM facts
-      WHERE record_json->'payload'->>'object_id'=ANY($1::text[])
-      ORDER BY fact_id`,
+      WHERE record_json->'payload'->>'object_id'=ANY($1::text[]) ORDER BY fact_id`,
     [ids],
   );
-  const map = new Map<string, PersistedObjectV1>();
+  const objects = new Map<string, PersistedObjectV1>();
   for (const row of result.rows) {
     const object = parseFactObjectV1(row.record_json);
-    if (map.has(object.object_id)) throw new Error("CAP08_S4_CANONICAL_OBJECT_ID_NOT_UNIQUE");
-    map.set(object.object_id, object);
+    if (objects.has(object.object_id)) throw new Error("CAP08_S4_CANONICAL_OBJECT_ID_NOT_UNIQUE");
+    objects.set(object.object_id, object);
   }
-  return map;
+  return objects;
 }
 
 async function verifyBindingsV1(
@@ -157,13 +138,9 @@ async function verifyBindingsV1(
   }
 }
 
-async function verifyS3CompletionV1(
-  client: PoolClient,
-  authority: Cap08S4AppendForwardAuthorityV1,
-): Promise<void> {
+async function verifyS3CompletionV1(client: PoolClient, authority: Cap08S4AppendForwardAuthorityV1): Promise<void> {
   const result = await client.query(
-    `SELECT determinism_hash,semantic_payload
-       FROM twin_runtime_authority_snapshot_v1
+    `SELECT determinism_hash,semantic_payload FROM twin_runtime_authority_snapshot_v1
       WHERE semantic_payload->>'schema_version'=$1
         AND semantic_payload->>'formal_run_id'=$2
         AND semantic_payload->'scope'->>'tenant_id'=$3
@@ -175,10 +152,8 @@ async function verifyS3CompletionV1(
     [CAP08_S3_COMPLETION_TUPLE_SCHEMA_VERSION_V1, authority.formal_run_id, ...scopeValuesV1(authority.scope)],
   );
   if (result.rows.length !== 1) throw new Error("CAP08_S4_S3_COMPLETION_TUPLE_CARDINALITY");
-  const tuple = structuredClone(
-    jsonObjectV1(result.rows[0].semantic_payload, "CAP08_S4_S3_COMPLETION_TUPLE_INVALID")
-      as unknown as Cap08S3CompletionTupleV1,
-  );
+  const tupleRaw = jsonObjectV1(result.rows[0].semantic_payload, "CAP08_S4_S3_COMPLETION_TUPLE_INVALID");
+  const tuple = structuredClone(tupleRaw) as unknown as Cap08S3CompletionTupleV1;
   validateCap08S3CompletionTupleV1(tuple);
   if (tuple.determinism_hash !== result.rows[0].determinism_hash
     || tuple.phase_engine_source_digest !== authority.phase_engine_source_digest) {
@@ -202,12 +177,27 @@ function reconstructSetV1(
     return object as T;
   };
   return {
-    state: requireObject<CanonicalObjectEnvelopeV1>(authority.corrected_objects.state, "twin_state_estimate_v1", "CAP08_S4_CORRECTED_STATE_INVALID"),
-    forecast: requireObject<CanonicalObjectEnvelopeV1>(authority.corrected_objects.forecast, "twin_forecast_run_v1", "CAP08_S4_CORRECTED_FORECAST_INVALID"),
-    scenario: requireObject<Cap04ScenarioSetEnvelopeV1>(authority.corrected_objects.scenario, "twin_scenario_set_v1", "CAP08_S4_CORRECTED_SCENARIO_INVALID"),
-    tick: requireObject<CanonicalObjectEnvelopeV1>(authority.corrected_objects.tick, "twin_runtime_tick_v1", "CAP08_S4_CORRECTED_TICK_INVALID"),
-    checkpoint: requireObject<CanonicalObjectEnvelopeV1>(authority.corrected_objects.checkpoint, "twin_runtime_checkpoint_v1", "CAP08_S4_CORRECTED_CHECKPOINT_INVALID"),
+    state: requireObject(authority.corrected_objects.state, "twin_state_estimate_v1", "CAP08_S4_CORRECTED_STATE_INVALID"),
+    forecast: requireObject(authority.corrected_objects.forecast, "twin_forecast_run_v1", "CAP08_S4_CORRECTED_FORECAST_INVALID"),
+    scenario: requireObject(authority.corrected_objects.scenario, "twin_scenario_set_v1", "CAP08_S4_CORRECTED_SCENARIO_INVALID"),
+    tick: requireObject(authority.corrected_objects.tick, "twin_runtime_tick_v1", "CAP08_S4_CORRECTED_TICK_INVALID"),
+    checkpoint: requireObject(authority.corrected_objects.checkpoint, "twin_runtime_checkpoint_v1", "CAP08_S4_CORRECTED_CHECKPOINT_INVALID"),
   };
+}
+
+async function validateExternalBindingsV1(client: PoolClient, authority: Cap08S4AppendForwardAuthorityV1): Promise<void> {
+  await verifyS3CompletionV1(client, authority);
+  await verifyBindingsV1(client, [
+    authority.identity_input.base_t16_state,
+    authority.identity_input.base_t16_forecast,
+    authority.identity_input.base_t16_tick,
+    authority.identity_input.base_t16_checkpoint,
+    authority.identity_input.source_t01_state,
+  ], "CAP08_S4_BASE_BINDING_OBJECT_MISSING", "CAP08_S4_BASE_BINDING_HASH_MISMATCH");
+  await verifyBindingsV1(client, [
+    ...authority.historical_hash_manifest.state_bindings,
+    ...authority.historical_hash_manifest.forecast_bindings,
+  ], "CAP08_S4_HISTORICAL_OBJECT_MISSING", "CAP08_S4_HISTORICAL_HASH_MUTATION_DETECTED");
 }
 
 async function inspectWithClientV1(
@@ -224,21 +214,18 @@ async function inspectWithClientV1(
     readFactsV1(client, bindings.map((binding) => binding.ref)),
   ]);
   const presence = Number(Boolean(authorityRow)) + Number(Boolean(guard)) + facts.size;
-  if (presence === 0) {
-    return { disposition: "NOT_ESTABLISHED", authority: null, corrected_set: null, write_delta: 0 };
-  }
+  if (presence === 0) return { disposition: "NOT_ESTABLISHED", authority: null, corrected_set: null, write_delta: 0 };
   if (!authorityRow || !guard || facts.size !== 5) throw new Error("CAP08_S4_APPEND_FORWARD_PARTIAL_SET");
 
-  const authority = structuredClone(
-    jsonObjectV1(authorityRow.semantic_payload, "CAP08_S4_AUTHORITY_PAYLOAD_INVALID")
-      as unknown as Cap08S4AppendForwardAuthorityV1,
-  );
+  const authorityRaw = jsonObjectV1(authorityRow.semantic_payload, "CAP08_S4_AUTHORITY_PAYLOAD_INVALID");
+  const authority = structuredClone(authorityRaw) as unknown as Cap08S4AppendForwardAuthorityV1;
   if (authorityRow.determinism_hash !== authority.determinism_hash
     || authority.authority_ref !== requested.authority_ref
     || authority.idempotency_key !== requested.idempotency_key
     || canonicalJsonV1(authority.identity_input) !== canonicalJsonV1(requested.identity_input)) {
     throw new Error("CAP08_S4_EXISTING_AUTHORITY_CONFLICT");
   }
+
   const basis = jsonObjectV1(guard.identity_basis, "CAP08_S4_GUARD_IDENTITY_BASIS_INVALID");
   const storedIds = Array.isArray(guard.member_object_ids)
     ? [...guard.member_object_ids]
@@ -257,18 +244,7 @@ async function inspectWithClientV1(
 
   const set = reconstructSetV1(authority, facts);
   validateCap08S4AppendForwardAuthorityV1({ authority, corrected_set: set });
-  await verifyS3CompletionV1(client, authority);
-  await verifyBindingsV1(client, [
-    authority.identity_input.base_t16_state,
-    authority.identity_input.base_t16_forecast,
-    authority.identity_input.base_t16_tick,
-    authority.identity_input.base_t16_checkpoint,
-    authority.identity_input.source_t01_state,
-  ], "CAP08_S4_BASE_BINDING_OBJECT_MISSING", "CAP08_S4_BASE_BINDING_HASH_MISMATCH");
-  await verifyBindingsV1(client, [
-    ...authority.historical_hash_manifest.state_bindings,
-    ...authority.historical_hash_manifest.forecast_bindings,
-  ], "CAP08_S4_HISTORICAL_OBJECT_MISSING", "CAP08_S4_HISTORICAL_HASH_MUTATION_DETECTED");
+  await validateExternalBindingsV1(client, authority);
   return { disposition: "ALREADY_COMPLETE_EXACT", authority, corrected_set: set, write_delta: 0 };
 }
 
@@ -318,19 +294,7 @@ export class PostgresCap08S4AppendForwardRepositoryV1 {
         };
       }
 
-      await verifyS3CompletionV1(client, input.authority);
-      await verifyBindingsV1(client, [
-        input.authority.identity_input.base_t16_state,
-        input.authority.identity_input.base_t16_forecast,
-        input.authority.identity_input.base_t16_tick,
-        input.authority.identity_input.base_t16_checkpoint,
-        input.authority.identity_input.source_t01_state,
-      ], "CAP08_S4_BASE_BINDING_OBJECT_MISSING", "CAP08_S4_BASE_BINDING_HASH_MISMATCH");
-      await verifyBindingsV1(client, [
-        ...input.authority.historical_hash_manifest.state_bindings,
-        ...input.authority.historical_hash_manifest.forecast_bindings,
-      ], "CAP08_S4_HISTORICAL_OBJECT_MISSING", "CAP08_S4_HISTORICAL_HASH_MUTATION_DETECTED");
-
+      await validateExternalBindingsV1(client, input.authority);
       inject("before_facts");
       for (const object of correctedObjectsV1(input.corrected_set)) {
         await client.query(
