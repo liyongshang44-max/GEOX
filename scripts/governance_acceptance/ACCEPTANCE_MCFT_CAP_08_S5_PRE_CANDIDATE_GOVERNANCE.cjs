@@ -21,6 +21,7 @@ const P = {
   waiver: 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-INTERIM-OWNER-REVIEW-WAIVER-V1.json',
   taskbook: 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md',
   historical: 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK-v0.3.5-HISTORICAL-FULL.md',
+  s4ApplicabilityWorkflow: '.github/workflows/mcft-cap-08-s4-pre-candidate-governance.yml',
 };
 const git = (...args) => cp.execFileSync('git', args, {cwd: ROOT, encoding: 'utf8'}).trim();
 const read = (file) => JSON.parse(fs.readFileSync(path.join(ROOT, file), 'utf8'));
@@ -56,12 +57,20 @@ try {
   const changed = git('diff', '--name-only', `${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
 
   assert.deepEqual(changed, [...boundary.changed_files].sort(), 'S5_GOVERNANCE_CHANGED_FILE_BOUNDARY_MISMATCH');
-  assert.equal(changed.length, 9, 'S5_GOVERNANCE_CHANGED_FILE_COUNT');
+  assert.equal(changed.length, 10, 'S5_GOVERNANCE_CHANGED_FILE_COUNT');
+  assert.equal(boundary.changed_file_count, 10);
+  assert.equal(boundary.workflow_file_count, 2);
   assert.equal(boundary.base_sha, base);
   for (const field of ['runtime_source_file_count','runtime_acceptance_file_count','database_migration_file_count','route_file_count','web_file_count']) assert.equal(boundary[field], 0);
   assert.equal(boundary.candidate_declaration_present, false);
   assert.equal(boundary.s5_candidate_implemented, false);
   assert.equal(changed.some((file) => file.startsWith('apps/server/') || file.startsWith('apps/web/') || file.includes('migration') || file.includes('scheduler')), false);
+
+  const s4Workflow = fs.readFileSync(path.join(ROOT, P.s4ApplicabilityWorkflow), 'utf8');
+  assert.equal(s4Workflow.includes('Classify S4 governance applicability'), true, 'S4_APPLICABILITY_CLASSIFIER_MISSING');
+  assert.equal(s4Workflow.includes('NOT_APPLICABLE_SHARED_REGISTRY_EXTENSION'), true, 'S4_SHARED_REGISTRY_NA_CLASSIFICATION_MISSING');
+  assert.equal(s4Workflow.includes("file.startsWith('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-')"), true, 'S4_OWNED_PATH_CLASSIFIER_MISSING');
+  assert.equal(s4Workflow.includes("file === 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_PRE_CANDIDATE_GOVERNANCE.cjs'"), true, 'S4_OWNED_VALIDATOR_CLASSIFIER_MISSING');
 
   assert.equal(git('rev-parse', `HEAD:${P.taskbook}`), 'a24114ff629560345b3bd3cda6b4024b9f3d61e4');
   assert.equal(git('rev-parse', `HEAD:${P.historical}`), 'ab4f4e7d9d3978ac3be979583cda4ccdc94a2fb6');
@@ -167,7 +176,8 @@ try {
   const result = {schema_version:'geox_mcft_cap08_s5_pre_candidate_governance_result_v1',status:'PASS',base_sha:base,
     subject_sha:git('rev-parse','HEAD'),changed_file_count:changed.length,registry_revision:registry.registry_revision,
     authority_set_revision:registry.authority_set_revision,contract_semantic_digest:contract.semantic_digest,
-    s5_candidate_implemented:false,runtime_source_delta:0,candidate_declaration_present:false,s6_authorized:false,mcft_cap_09_authorized:false};
+    s4_applicability_classification_required:true,s5_candidate_implemented:false,runtime_source_delta:0,
+    candidate_declaration_present:false,s6_authorized:false,mcft_cap_09_authorized:false};
   write(result);
   console.log(JSON.stringify(result));
 } catch (error) {
