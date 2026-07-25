@@ -1,0 +1,45 @@
+name: mcft-cap-08-s5-pre-candidate-governance
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s5-pre-candidate-governance.yml'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-*'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_PRE_CANDIDATE_GOVERNANCE.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap08-s5-governance-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  s5-pre-candidate-governance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact governance head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate exact non-candidate S5 governance package
+        env:
+          MCFT_BASE_SHA: ba57380cc20d18d59d6ae9a35ab8e30320000476
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_PRE_CANDIDATE_GOVERNANCE.cjs
+      - name: Upload governance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s5-pre-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_08_S5_PRE_CANDIDATE_GOVERNANCE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
