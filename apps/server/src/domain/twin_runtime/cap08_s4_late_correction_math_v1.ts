@@ -74,7 +74,8 @@ function transitionV1(
   const predictedVariance = Math.max(variance + step.process_variance, input.minimum_variance);
   if (!step.ordinary_observation) return { mean: predictedMean, variance: predictedVariance };
   const observation = step.ordinary_observation;
-  const gain = observation.quality * predictedVariance / (predictedVariance + observation.variance);
+  const gain = observation.quality * predictedVariance
+    / (predictedVariance + observation.variance);
   return {
     mean: clipV1(
       predictedMean + gain * (observation.value - predictedMean),
@@ -113,11 +114,7 @@ function inputFiniteV1(input: Cap08S4LateCorrectionInputV1): boolean {
   });
 }
 
-export function calculateCap08S4LateCorrectionV1(
-  input: Cap08S4LateCorrectionInputV1,
-): Cap08S4LateCorrectionResultV1 {
-  if (!inputFiniteV1(input)) return { disposition: "REJECTED_NON_FINITE" };
-  if (input.lag_hours > input.max_lag_hours) return { disposition: "REJECTED_LAG_EXCEEDED" };
+function parametersValidV1(input: Cap08S4LateCorrectionInputV1): boolean {
   if (
     input.observation_variance <= 0
     || input.source_variance < 0
@@ -125,12 +122,26 @@ export function calculateCap08S4LateCorrectionV1(
     || input.minimum_variance < 0
     || input.epsilon <= 0
     || input.a_max < 0
+    || input.lag_hours < 0
+    || input.max_lag_hours < 0
+    || input.lambda_per_hour < 0
+    || input.quality <= 0
+    || input.quality > 1
     || input.lower_bound > input.upper_bound
-    || input.transitions.some((step) => step.process_variance < 0
-      || (step.ordinary_observation?.variance ?? 1) <= 0)
-  ) {
-    return { disposition: "REJECTED_INVALID_VARIANCE" };
-  }
+  ) return false;
+  return input.transitions.every((step) => step.process_variance >= 0
+    && (!step.ordinary_observation
+      || (step.ordinary_observation.variance > 0
+        && step.ordinary_observation.quality > 0
+        && step.ordinary_observation.quality <= 1)));
+}
+
+export function calculateCap08S4LateCorrectionV1(
+  input: Cap08S4LateCorrectionInputV1,
+): Cap08S4LateCorrectionResultV1 {
+  if (!inputFiniteV1(input)) return { disposition: "REJECTED_NON_FINITE" };
+  if (!parametersValidV1(input)) return { disposition: "REJECTED_INVALID_VARIANCE" };
+  if (input.lag_hours > input.max_lag_hours) return { disposition: "REJECTED_LAG_EXCEEDED" };
 
   const sourceMean = input.source_mean as number;
   const currentMean = input.current_mean as number;
