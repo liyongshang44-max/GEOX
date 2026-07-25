@@ -18,7 +18,8 @@ import {
   validateAndNormalizeCap05ExecutionReceiptEvidenceV1,
   type Cap05ExecutionReceiptEvidenceV1,
 } from "../../evidence/twin_runtime/execution_receipt_evidence_contract_v1.js";
-import { PostgresFeedbackPersistenceRepositoryV1, type Cap05PersistenceStatusV1 } from "../../persistence/twin_runtime/postgres_feedback_persistence_repository_v1.js";
+import type { Cap05PersistenceStatusV1 } from "../../persistence/twin_runtime/postgres_feedback_persistence_repository_v1.js";
+import { PostgresImmutableDecisionActionCommitRepositoryV1 } from "../../persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.js";
 
 export const CAP05_ACTION_FEEDBACK_NORMALIZATION_SERVICE_ID_V1 = "MCFT_CAP_05_ACTION_FEEDBACK_NORMALIZATION_SERVICE_V1" as const;
 
@@ -98,10 +99,10 @@ function assertScopeV1(expected: ContinuationScopeV1, actual: ContinuationScopeV
 }
 
 export class Cap05ActionFeedbackNormalizationServiceV1 {
-  private readonly repository: PostgresFeedbackPersistenceRepositoryV1;
+  private readonly repository: PostgresImmutableDecisionActionCommitRepositoryV1;
 
   constructor(private readonly pool: Pool) {
-    this.repository = new PostgresFeedbackPersistenceRepositoryV1(pool);
+    this.repository = new PostgresImmutableDecisionActionCommitRepositoryV1(pool);
   }
 
   private async readReceiptEvidenceV1(
