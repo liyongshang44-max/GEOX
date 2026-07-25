@@ -46,12 +46,15 @@ try {
   const source = changed.map((file) => fs.readFileSync(path.join(ROOT, file), 'utf8')).join('\n');
   const declaration = ['MCFT','CANDIDATE','DECLARATION','V2'].join('_');
   assert.equal(source.includes(declaration), false, 'CAP08_S5_DEVELOPMENT_CANDIDATE_DECLARATION_FORBIDDEN');
-  for (const token of [
-    'production_runtime_source_authorized: true',
-    'mcft_cap_09_authorized: true',
-    'model_activation_count: 1',
-    'active_config_switch_count: 1',
-  ]) assert.equal(source.includes(token), false, `CAP08_S5_DEVELOPMENT_PREMATURE_AUTHORITY:${token}`);
+  const forbiddenTokens = [
+    ['production_runtime_source_authorized', 'true'].join(': '),
+    ['mcft_cap_09_authorized', 'true'].join(': '),
+    ['model_activation_count', '1'].join(': '),
+    ['active_config_switch_count', '1'].join(': '),
+  ];
+  for (const token of forbiddenTokens) {
+    assert.equal(source.includes(token), false, `CAP08_S5_DEVELOPMENT_PREMATURE_AUTHORITY:${token}`);
+  }
   const result = {
     schema_version: 'geox_mcft_cap08_s5_development_boundary_result_v1',
     status: 'PASS', base_sha: base, subject_sha: git('rev-parse','HEAD'),
