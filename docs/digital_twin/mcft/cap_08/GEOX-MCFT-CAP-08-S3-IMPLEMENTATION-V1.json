@@ -3,7 +3,7 @@
   "record_status": "FORMAL_CANDIDATE_IMPLEMENTATION_PREPARED_NOT_EFFECTIVE",
   "capability_line_id": "MCFT-CAP-08",
   "slice_id": "MCFT-CAP-08.S3",
-  "trusted_base_sha": "8e88fdd91af25ef82f765f7d4a21b1471e2ab008",
+  "trusted_base_sha": "3343eb65d1d7dab55166f199bb8670b683a83847",
   "development_subject": {
     "head_sha": "046d8de2ed191abf32f1840510e2dd7ff77733e5",
     "tree_sha": "6c753b40ccfbfa56d7edddc78dff898b6a3de499",
