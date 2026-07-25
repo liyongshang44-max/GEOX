@@ -25,7 +25,6 @@ import {
 import {
   CAP08_S4_AUTHORITY_SCHEMA_VERSION_V1,
   type Cap08S4AppendForwardAuthorityV1,
-  type Cap08S4ScopeV1,
 } from "../../domain/twin_runtime/cap08_s4_append_forward_contracts_v1.js";
 import {
   CAP06_HOLDOUT_GENERALIZATION_CLAIM_V1,
@@ -84,7 +83,18 @@ function addHours(value: string, hours: number): string {
 function scopeValues(scope: Cap08S5ScopeV1): unknown[] {
   return [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id];
 }
-function exactScope(actual: {tenant_id:string;project_id:string;group_id?:string;field_id:string;season_id?:string;zone_id?:string}, expected: Cap08S5ScopeV1, code: string): void {
+function exactScope(
+  actual: {
+    tenant_id: string;
+    project_id: string;
+    group_id?: string | null;
+    field_id: string;
+    season_id?: string | null;
+    zone_id?: string | null;
+  },
+  expected: Cap08S5ScopeV1,
+  code: string,
+): void {
   for (const field of ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"] as const) {
     if (actual[field] !== expected[field]) throw new Error(`${code}:${field}`);
   }
