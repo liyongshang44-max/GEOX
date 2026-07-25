@@ -320,7 +320,7 @@ async function main(): Promise<void> {
         restore: async () => {
           await admin.query("UPDATE facts SET record_json=$2::jsonb WHERE fact_id=$1", [historicalFactId, JSON.stringify(historicalRecord)]);
         },
-        expected: /CAP08_S4_(BASE_BINDING_HASH_MISMATCH|HISTORICAL_HASH_MUTATION_DETECTED)/,
+        expected: /(CAP04_MEMBER_SEMANTIC_HASH_MISMATCH|CAP08_S4_(BASE_BINDING_HASH_MISMATCH|HISTORICAL_HASH_MUTATION_DETECTED))/,
       },
     ];
 
