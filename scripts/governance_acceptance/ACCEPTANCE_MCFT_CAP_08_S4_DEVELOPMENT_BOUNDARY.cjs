@@ -32,7 +32,13 @@ if (actual.some((file) => forbiddenPrefixes.some((prefix) => file.startsWith(pre
   throw new Error('CAP08_S4_DEVELOPMENT_FORBIDDEN_PRODUCT_OR_SCHEMA_DELTA');
 }
 const source = actual.map((file) => fs.readFileSync(path.resolve(file), 'utf8')).join('\n');
-for (const token of ['MCFT_CANDIDATE_DECLARATION_V2','"s4_candidate_implemented": true','production_runtime_source_authorized: true','mcft_cap_09_authorized: true']) {
+const forbiddenTokens = [
+  ['MCFT', 'CANDIDATE', 'DECLARATION', 'V2'].join('_'),
+  `"s4_candidate_implemented"${':'} true`,
+  ['production_runtime_source_authorized', 'true'].join(': '),
+  ['mcft_cap_09_authorized', 'true'].join(': '),
+];
+for (const token of forbiddenTokens) {
   if (source.includes(token)) throw new Error(`CAP08_S4_DEVELOPMENT_PREMATURE_AUTHORITY:${token}`);
 }
 console.log(JSON.stringify({status:'PASS',base,changed_file_count:actual.length,files:actual,formal_candidate:false}));
