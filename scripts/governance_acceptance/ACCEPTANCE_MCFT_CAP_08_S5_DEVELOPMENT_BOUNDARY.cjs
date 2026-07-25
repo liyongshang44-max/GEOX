@@ -14,6 +14,7 @@ const EXPECTED = [
   'apps/server/src/domain/twin_runtime/cap08_s5_residual_calibration_shadow_contracts_v1.ts',
   'apps/server/src/persistence/twin_runtime/postgres_cap08_s5_residual_calibration_shadow_repository_v1.ts',
   'apps/server/src/runtime/twin_runtime/cap08_s5_case_prediction_adapter_v1.ts',
+  'apps/server/src/runtime/twin_runtime/cap08_s5_case_window_adapter_v1.ts',
   'apps/server/src/runtime/twin_runtime/cap08_s5_persisted_source_reader_v1.ts',
   'apps/server/src/runtime/twin_runtime/cap08_s5_residual_calibration_shadow_service_v1.ts',
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_DEVELOPMENT_BOUNDARY.cjs',
@@ -35,8 +36,8 @@ try {
   const raw = git('diff', '--name-only', `${base}...HEAD`);
   const changed = raw ? raw.split(/\r?\n/).filter(Boolean).sort() : [];
   assert.deepEqual(changed, EXPECTED, 'CAP08_S5_DEVELOPMENT_CHANGED_FILE_BOUNDARY_MISMATCH');
-  assert.equal(changed.length, 9);
-  assert.equal(changed.filter((f) => f.startsWith('apps/server/src/')).length, 5);
+  assert.equal(changed.length, 10);
+  assert.equal(changed.filter((f) => f.startsWith('apps/server/src/')).length, 6);
   assert.equal(changed.filter((f) => f.startsWith('scripts/runtime_acceptance/')).length, 2);
   const forbidden = changed.filter((file) =>
     file.includes('/db/migrations/') || file.startsWith('apps/server/src/routes/')
@@ -58,9 +59,10 @@ try {
   const result = {
     schema_version: 'geox_mcft_cap08_s5_development_boundary_result_v1',
     status: 'PASS', base_sha: base, subject_sha: git('rev-parse','HEAD'),
-    changed_file_count: changed.length, production_source_file_count: 5,
+    changed_file_count: changed.length, production_source_file_count: 6,
     runtime_acceptance_file_count: 2, migration_delta: 0, route_delta: 0,
     web_delta: 0, scheduler_delta: 0, candidate_declaration_present: false,
+    zero_excess_compatibility_policy: 'ZERO_EXCESS_PRESERVED_AND_CLASSIFIED_LOW_EXCESS_FOR_SHARED_ENGINE_V1',
     s5_candidate_implemented: false, s5_effective: false, s6_authorized: false,
     mcft_cap_09_authorized: false,
   };
