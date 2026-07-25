@@ -28,20 +28,63 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Classify S4 governance applicability
+        id: scope
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          MERGE_GROUP_BASE_SHA: ${{ github.event.merge_group.base_sha || '' }}
+        run: |
+          node - <<'NODE'
+          const cp = require('node:child_process');
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const base = String(process.env.PR_BASE_SHA || process.env.MERGE_GROUP_BASE_SHA || '').trim()
+            || cp.execFileSync('git', ['rev-parse', 'HEAD^1'], { encoding: 'utf8' }).trim();
+          const changedRaw = cp.execFileSync('git', ['diff', '--name-only', `${base}...HEAD`], { encoding: 'utf8' }).trim();
+          const changed = changedRaw ? changedRaw.split(/\r?\n/).filter(Boolean) : [];
+          const s4Owned = changed.filter((file) =>
+            file.startsWith('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-')
+            || file === 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_PRE_CANDIDATE_GOVERNANCE.cjs');
+          const applicable = s4Owned.length > 0;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `applicable=${applicable}\nbase=${base}\n`);
+          fs.mkdirSync('acceptance-output', { recursive: true });
+          fs.writeFileSync(
+            path.join('acceptance-output', 'MCFT_CAP_08_S4_GOVERNANCE_APPLICABILITY.json'),
+            `${JSON.stringify({
+              schema_version: 'geox_mcft_cap08_s4_governance_applicability_v1',
+              status: 'PASS',
+              applicable,
+              classification: applicable ? 'S4_OWNED_CHANGE_PRESENT' : 'NOT_APPLICABLE_SHARED_REGISTRY_EXTENSION',
+              base_sha: base,
+              changed_files: changed,
+              s4_owned_files: s4Owned,
+            }, null, 2)}\n`,
+          );
+          NODE
+      - name: Record explicit not-applicable result
+        if: steps.scope.outputs.applicable != 'true'
+        run: |
+          cp acceptance-output/MCFT_CAP_08_S4_GOVERNANCE_APPLICABILITY.json \
+             acceptance-output/MCFT_CAP_08_S4_PRE_CANDIDATE_GOVERNANCE_RESULT.json
       - uses: pnpm/action-setup@v4
+        if: steps.scope.outputs.applicable == 'true'
         with:
           version: 9.15.4
       - uses: actions/setup-node@v4
+        if: steps.scope.outputs.applicable == 'true'
         with:
           node-version: 20.11.1
           cache: pnpm
       - name: Install locked workspace
+        if: steps.scope.outputs.applicable == 'true'
         run: pnpm install --frozen-lockfile
       - name: Validate S4 pre-candidate governance boundary
+        if: steps.scope.outputs.applicable == 'true'
         env:
           MCFT_BASE_SHA: c5dd204dd3a3682ae553aebdc04e4caa2eb153d3
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_PRE_CANDIDATE_GOVERNANCE.cjs
       - name: Requalify frozen shared late-correction vectors
+        if: steps.scope.outputs.applicable == 'true'
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_LATE_CORRECTION_MATH.ts
       - name: Upload S4 governance evidence
         if: always()
@@ -49,6 +92,7 @@ jobs:
         with:
           name: mcft-cap08-s4-pre-candidate-governance-${{ github.sha }}
           path: |
+            acceptance-output/MCFT_CAP_08_S4_GOVERNANCE_APPLICABILITY.json
             acceptance-output/MCFT_CAP_08_S4_PRE_CANDIDATE_GOVERNANCE_RESULT.json
             acceptance-output/MCFT_CAP_08_LATE_CORRECTION_MATH_RESULT.json
           if-no-files-found: error
