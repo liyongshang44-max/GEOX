@@ -95,12 +95,17 @@ export async function establishCap08S4FormalPredecessorV1(root: string) {
     || rerun.authority.determinism_hash !== first.authority.determinism_hash) {
     throw new Error("CAP08_S5_S4_PREDECESSOR_RERUN_NOT_EXACT");
   }
+  const s5EvidenceSource = extendThroughG00(s3.fixture.formal_evidence_source);
   return {
     ...s3,
+    fixture: {
+      ...s3.fixture,
+      formal_evidence_source: s5EvidenceSource,
+    },
     s4_service: service,
     s4_input: input,
     s4_result: first,
-    s5_evidence_source: extendThroughG00(s3.fixture.formal_evidence_source),
+    s5_evidence_source: s5EvidenceSource,
     phase_engine_contract_digest: CAP08_S1_PHASE_ENGINE_CONTRACT_DIGEST_V1,
   };
 }
