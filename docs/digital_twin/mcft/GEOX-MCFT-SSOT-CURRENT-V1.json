@@ -2,15 +2,22 @@
   "schema_version": "geox_mcft_ssot_current_v1",
   "authority_id": "GEOX-MCFT-SSOT-CURRENT-V1",
   "record_status": "EFFECTIVE_REPOSITORY_POINTER_WHEN_PRESENT_ON_MAIN",
-  "settlement_kind": "POST_CAP08_S0_EXTERNAL_EFFECTIVENESS_GLOBAL_SSOT_SUPERSESSION",
-  "settlement_subject_main": "0012144aa3d69698b6bc94a113ff00c7652dd043",
+  "settlement_kind": "POST_CAP08_S4_EXTERNAL_EFFECTIVENESS_CURRENT_FRONTIER_RECONCILIATION",
+  "settlement_subject_main": "75fc9c509d455c12202ae6c5597f7185796ec3d6",
   "current_authority": {
     "master": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md",
     "implementation_map": "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md",
     "vertical_matrix": "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json",
     "stage_1a_closure": "docs/digital_twin/mcft/GEOX-MCFT-STAGE-1-CLOSURE-AUTHORITY-V2.json",
     "cap_08_taskbook": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+    "cap_08_current_frontier": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json",
     "candidate_registry": "docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json"
+  },
+  "authority_interpretation": {
+    "taskbook_architecture": "CURRENT",
+    "taskbook_embedded_repository_snapshot": "HISTORICAL_WHEN_CONTRADICTED_BY_CURRENT_FRONTIER",
+    "current_delivery_frontier": "CAP_08_CURRENT_FRONTIER_FILE",
+    "effectiveness_source": "EXACT_MERGE_SHA_IMMUTABLE_ARTIFACT"
   },
   "historical_files_retained_not_current": [
     "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md",
@@ -29,10 +36,26 @@
     "exact_sha_workflow_run": 29935730353,
     "artifact_id": 8536034800,
     "semantic_artifact_digest": "sha256:7b97d1414fe9de946fba606b6ae0a674a17cb9ffbbd1ca253acf7e309798ac0a",
-    "effective_next_slice": "S1",
     "bounded_replay_runner_authorized": true,
     "bounded_canonical_transaction_authorized": true,
     "production_runtime_source_authorized": false
+  },
+  "cap_08_current_frontier_projection": {
+    "current_effective_slice_id": "MCFT-CAP-08.S4",
+    "current_effective_status": "S4_LATE_EVIDENCE_APPEND_FORWARD_IMPLEMENTED_EFFECTIVE",
+    "subject_sha": "bda9d37519ca536d3d83d68cb3a2d4b395ff2ee9",
+    "exact_sha_workflow_run": 30154846799,
+    "artifact_id": 8618701918,
+    "semantic_artifact_digest": "sha256:c3ba7d058898ed073dbc907a1a0d957903c312c955be45300cb6f62e49ea7338",
+    "immutable_readback_verified": true,
+    "next_authorized_slice_id": "MCFT-CAP-08.S5",
+    "s5_status_seed_present": true,
+    "s5_registry_rule_present": true,
+    "s5_implementation_authorized": true,
+    "s5_candidate_implemented": false,
+    "s6_status_seed_present": true,
+    "s6_registry_rule_present": true,
+    "s6_implementation_authorized": false
   },
   "runtime_delta": {
     "runtime_source_files": 0,
@@ -44,5 +67,8 @@
   },
   "candidate_transition": false,
   "postmerge_proof_carrier": false,
+  "model_activation_authorized": false,
+  "production_runtime_source_authorized": false,
+  "mcft_cap_08_complete": false,
   "mcft_cap_09_authorized": false
 }

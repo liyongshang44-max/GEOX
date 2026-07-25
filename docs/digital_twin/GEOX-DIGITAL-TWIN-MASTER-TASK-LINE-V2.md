@@ -5,9 +5,9 @@
 
 ```text
 repository: liyongshang44-max/GEOX
-authority_version: V2.1
+authority_version: V2.2
 authority_status: CURRENT
-settlement_subject_main: 0012144aa3d69698b6bc94a113ff00c7652dd043
+frontier_reconciliation_base_main: 75fc9c509d455c12202ae6c5597f7185796ec3d6
 primary_mainline: Minimum Complete Field Twin
 ultimate_goal: Complete Agricultural Digital Twin
 ```
@@ -23,10 +23,15 @@ Current authority chain:
 GEOX-MCFT-SSOT-CURRENT-V1.json
 → this Master V2
 → GEOX-MCFT-STAGE-1-CLOSURE-AUTHORITY-V2.json
-→ GEOX-MCFT-CAP-08-TASK.md
-→ capability Current Authority / delivery status
+→ GEOX-MCFT-CAP-08-TASK.md v0.3.9 architecture
+→ GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json
+→ capability delivery status / Candidate Registry
 → exact merge-SHA immutable artifact
 ```
+
+The taskbook remains the design authority. Its embedded repository-state
+paragraphs are historical snapshots when they conflict with the dedicated
+current-frontier projection.
 
 ## 1. Completion levels
 
@@ -145,29 +150,46 @@ availability and recovery adapters.
 
 ## 5. Current repository frontier
 
-At S0 settlement subject `0012144aa3d69698b6bc94a113ff00c7652dd043`:
+The current externally effective projection is:
 
 ```text
 MCFT-CAP-01 through MCFT-CAP-06: COMPLETE
 MCFT-CAP-07: COMPLETE
 
-MCFT-CAP-08.S0: EXTERNALLY_EFFECTIVE
-exact_sha_workflow_run: 29935730353
-artifact_id: 8536034800
-semantic_artifact_digest:
-sha256:7b97d1414fe9de946fba606b6ae0a674a17cb9ffbbd1ca253acf7e309798ac0a
+MCFT-CAP-08.S0: EFFECTIVE
+MCFT-CAP-08.S1: S1_BASE_RUNTIME_IMPLEMENTED_EFFECTIVE
+MCFT-CAP-08.S2: S2_FORCING_EVIDENCE_STATE_FORECAST_IMPLEMENTED_EFFECTIVE
+MCFT-CAP-08.S3: S3_DECISION_ACTION_FEEDBACK_IMPLEMENTED_EFFECTIVE
+MCFT-CAP-08.S4: S4_LATE_EVIDENCE_APPEND_FORWARD_IMPLEMENTED_EFFECTIVE
 
-effective_next_slice: MCFT-CAP-08.S1
+S4 subject_sha: bda9d37519ca536d3d83d68cb3a2d4b395ff2ee9
+S4 exact_sha_workflow_run: 30154846799
+S4 artifact_id: 8618701918
+S4 semantic_artifact_digest:
+sha256:c3ba7d058898ed073dbc907a1a0d957903c312c955be45300cb6f62e49ea7338
+S4 candidate_to_merge_tree_delta: 0
+S4 immutable_readback_verified: true
+
+current_effective_slice: MCFT-CAP-08.S4
+next_authorized_slice: MCFT-CAP-08.S5
+S5 status seed / Registry rule: PRESENT
+S5 candidate implemented: false
+S6 status seed / Registry rule: PRESENT
+S6 implementation authorized: false
+
 bounded_replay_runner_authorized: true
 bounded_canonical_transaction_authorized: true
 production_runtime_source_authorized: false
-
+model_activation_authorized: false
 MCFT-CAP-09: NOT AUTHORIZED
 ```
 
+Repository candidate-state files are not rewritten after merge. External
+slice effectiveness is projected only by exact merge-SHA immutable evidence.
+
 ## 6. MCFT-CAP-08 delivery order
 
-This order is aligned exactly with `GEOX-MCFT-CAP-08-TASK.md` v0.3.8:
+This order is aligned with the current `GEOX-MCFT-CAP-08-TASK.md` v0.3.9:
 
 ```text
 S1 Base Runtime + 24-Tick stable phase-engine skeleton
@@ -187,37 +209,55 @@ resolve → E → H → A → B → G → C → barrier
 Slice acceptance is not final closure evidence. Only S6 may execute the formal
 two-run closure.
 
-## 7. Current S1 boundary
+## 7. Current S5 boundary
 
-S1 may implement:
+S5 may implement only the frozen Residual / Calibration / Shadow provider set:
 
 ```text
-B00 bootstrap root
-T00–T23 bounded base range
-State / Forecast / Scenario persistence through existing qualified providers
-stable phase engine
-base E/A/B providers
-empty G / H / C providers
-fresh disposable PostgreSQL slice acceptance
-S2 non-candidate successor seed
-S2 Registry candidate rule
+24 Forecast Residual records
+R-i = Forecast T(i-1) H=1 + FVO-i
+ordered by forecast_target_time
+R-01 committed at T16 but ordered first
+16 Calibration cases
+8 disjoint Holdout cases
+one Calibration Candidate
+one eight-case paired Shadow Evaluation
+zero Model Activation
+zero active Runtime Config switch
+phase_engine_contract_digest unchanged
+fresh disposable PostgreSQL Slice acceptance
 ```
 
-S1 may not claim that the full formal Forcing/Evidence/State/Forecast provider
-qualification owned by S2 is complete. It also may not implement or claim:
+Frozen calibration oracle:
 
 ```text
+parameter: dynamics_parameters.drainage_coefficient_per_hour
+base: 0.030000
+expected candidate: 0.034000
+grid points: 21
+```
+
+If the formal dataset no longer selects `0.034000`, implementation must stop for
+Architecture Deviation Adjudication. Expected values must not be silently edited.
+
+S5 may not implement or claim:
+
+```text
+final formal closure
+fresh-process full recovery completion
+extreme pointer rebuild
+CAP-07 full-chain final readback
+Model Activation
 production Runtime source
 public HTTP writer
 background scheduler
 live ingestion
-Decision / Action Feedback episode
-persisted late correction
-Residual / Calibration / Shadow
-Model Activation
-final formal closure
 MCFT-CAP-09 authority
 ```
+
+The first legal next action is a formal S5 candidate constructed from exact
+current `main`. The S5 PR must not modify its own Registry rule or create S6
+authority; both successor governance prerequisites are already present on main.
 
 ## 8. Delivery discipline
 
@@ -230,6 +270,7 @@ candidate tree = merge tree where required
 external immutable evidence for effectiveness
 no postmerge proof-carrier writeback
 no CI source transport
+no carrier PR for S5 source assembly
 no slice evidence promoted into final closure evidence
 ```
 
@@ -238,4 +279,5 @@ Current navigation SSOT:
 ```text
 docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md
 docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json
+docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json
 ```
