@@ -3,7 +3,24 @@ on:
   push:
     branches: [main]
     paths:
-      - 'docs/digital_twin/mcft/cap_08/**'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-24-TICK-RUN-CONTRACT-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-EXPECTED-OBJECT-COUNTS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-FORECAST-GRID-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-FROZEN-SCOPE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-LATE-CORRECTION-MATH-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-LATE-CORRECTION-TEST-VECTORS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-OPERATING-POLICY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-PHASE-ENGINE-CONTRACT-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-REPLAY-DATASET-MANIFEST-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RESIDUAL-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RESOLVED-MANIFEST-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CONTRACT-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUNTIME-CONFIG-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S0-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-SEED-PACK-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-WORKED-EXAMPLE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CHANGED-FILE-BOUNDARY-V1.json'
       - 'docs/digital_twin/mcft/GEOX-MCFT-STAGE-1-CLOSURE-AUTHORITY-V2.*'
       - '.github/workflows/mcft-cap-08-exact-sha-attestation.yml'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_EXACT_SHA_ATTESTATION.cjs'
@@ -62,14 +79,12 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_EXACT_SHA_ATTESTATION.cjs
       - name: Revalidate dedicated database effective privilege and S0 proof
         env:
-
           MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
           MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_pr1_exact
           MCFT_CAP08_RUNNER_PASSWORD: cap08-acceptance-runner-password
           MCFT_CAP08_MIGRATOR_PASSWORD: cap08-acceptance-migrator-password
           MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: cap08-acceptance-legacy-runtime-password
           MCFT_CANDIDATE_SHA: ${{ inputs.subject_sha || github.sha }}
-
         run: |
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
           pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_WRITER_PRIVILEGE_NEGATIVE_DB.ts
