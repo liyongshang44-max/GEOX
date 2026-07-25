@@ -56,7 +56,10 @@ jobs:
           MCFT_BASE_SHA: 41073db21c550bbed160295ca5ef76d0a04f2f91
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_DEVELOPMENT_BOUNDARY.cjs
       - name: Typecheck server
-        run: pnpm --filter @geox/server typecheck
+        run: |
+          mkdir -p acceptance-output
+          set -o pipefail
+          pnpm --filter @geox/server typecheck 2>&1 | tee acceptance-output/MCFT_CAP_08_S4_TYPECHECK.log
       - name: Qualify production late-correction math against all twelve frozen vectors
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_LATE_CORRECTION_MATH.ts
       - name: Bootstrap fresh S4 development database
