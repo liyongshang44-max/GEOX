@@ -3,7 +3,7 @@
   "record_status": "FORMAL_S3_CANDIDATE_CHANGED_FILE_BOUNDARY_FROZEN",
   "capability_line_id": "MCFT-CAP-08",
   "slice_id": "MCFT-CAP-08.S3",
-  "base_sha": "8e88fdd91af25ef82f765f7d4a21b1471e2ab008",
+  "base_sha": "3343eb65d1d7dab55166f199bb8670b683a83847",
   "taskbook_blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
   "changed_file_count": 36,
   "changed_files": [
