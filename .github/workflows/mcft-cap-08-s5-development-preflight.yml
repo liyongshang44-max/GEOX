@@ -1,0 +1,97 @@
+name: mcft-cap-08-s5-development-preflight
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s5-development-preflight.yml'
+      - 'apps/server/src/domain/twin_runtime/cap08_s5_**'
+      - 'apps/server/src/persistence/twin_runtime/postgres_cap08_s5_**'
+      - 'apps/server/src/runtime/twin_runtime/cap08_s5_**'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_DEVELOPMENT_BOUNDARY.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_**'
+      - 'scripts/runtime_acceptance/mcft_cap08_s5_**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap08-s5-development-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  s5-development-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - name: Checkout exact development head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Validate exact development boundary
+        env:
+          MCFT_BASE_SHA: 75fc9c509d455c12202ae6c5597f7185796ec3d6
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_DEVELOPMENT_BOUNDARY.cjs
+      - name: Typecheck server
+        run: |
+          mkdir -p acceptance-output
+          set -o pipefail
+          pnpm --filter @geox/server typecheck 2>&1 | tee acceptance-output/MCFT_CAP_08_S5_TYPECHECK.log
+      - name: Bootstrap fresh S5 development database
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_s5_development
+          MCFT_CAP08_RUNNER_PASSWORD: cap08-s5-development-runner-password
+          MCFT_CAP08_MIGRATOR_PASSWORD: cap08-s5-development-migrator-password
+          MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: cap08-s5-development-legacy-password
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          mkdir -p acceptance-output
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts 2>&1 | tee acceptance-output/MCFT_CAP_08_S5_BOOTSTRAP.log
+      - name: Execute S3 S4 predecessor and S5 PostgreSQL proof
+        env:
+          DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap08-s5-development-runner-password@127.0.0.1:5432/geox_mcft_cap08_s5_development
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap08_s5_development
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S4_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S5_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: |
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_RESIDUAL_CALIBRATION_SHADOW_DB.ts 2>&1 | tee acceptance-output/MCFT_CAP_08_S5_RESIDUAL_CALIBRATION_SHADOW_DB.log
+      - name: Cleanup development database
+        if: always()
+        env: { PGPASSWORD: postgres }
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='geox_mcft_cap08_s5_development' AND pid<>pg_backend_pid();"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS geox_mcft_cap08_s5_development;"
+      - name: Upload development evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s5-development-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/
+          if-no-files-found: warn
+          retention-days: 30
