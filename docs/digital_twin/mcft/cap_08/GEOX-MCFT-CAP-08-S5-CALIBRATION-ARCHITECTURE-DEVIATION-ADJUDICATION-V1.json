@@ -1,0 +1,67 @@
+{
+  "schema_version": "geox_mcft_cap08_s5_calibration_architecture_deviation_adjudication_v1",
+  "record_status": "EFFECTIVE_WHEN_PRESENT_ON_MAIN",
+  "capability_line_id": "MCFT-CAP-08",
+  "affected_slices": [
+    "MCFT-CAP-08.S5",
+    "MCFT-CAP-08.S6"
+  ],
+  "adjudication_id": "MCFT-CAP-08.S5-CALIBRATION-NON-IDENTIFIABILITY-V1",
+  "owner_directive_issue_ref": "https://github.com/liyongshang44-max/GEOX/issues/2670",
+  "trigger_contract_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-CONTRACT-V1.json",
+  "trigger_clause": "candidate_oracle.expected_value_drift_effect",
+  "exact_machine_evidence": {
+    "development_base_sha": "75fc9c509d455c12202ae6c5597f7185796ec3d6",
+    "development_head_sha": "24f7fbefaf72b94c5204ce3f62748d8a5c39c1dc",
+    "focused_workflow_run_id": 30165028244,
+    "artifact_id": 8621311300,
+    "artifact_digest": "sha256:8a85e8723e54ba4cd098bab1f89d0a7fadeb3e8accf31338aca3d14e960bc787",
+    "calibration_status": "INSUFFICIENT_PARAMETER_EXCITATION",
+    "diagnostic_selected_boundary_value": "0.040000",
+    "frozen_mechanism_oracle": "0.034000"
+  },
+  "root_cause": {
+    "parameter_path": "dynamics_parameters.drainage_coefficient_per_hour",
+    "formal_case_window": [
+      "R-01",
+      "R-16"
+    ],
+    "finding": "EFFECTIVE_FORMAL_DATASET_HAS_INSUFFICIENT_DRAINAGE_PARAMETER_EXCITATION",
+    "non_positive_excess_cases_present": true,
+    "search_boundary_is_candidate": false
+  },
+  "decision": {
+    "preserve_s1_through_s4_exact_authority": true,
+    "preserve_residual_mapping": "R-i = Forecast T(i-1) H=1 + FVO-i",
+    "calibration_attempt_count": 1,
+    "calibration_attempt_disposition": "INSUFFICIENT_PARAMETER_EXCITATION",
+    "calibration_disposition_count": 1,
+    "calibration_candidate_count": 0,
+    "shadow_evaluation_count": 0,
+    "model_activation_count": 0,
+    "active_runtime_config_switch_count": 0,
+    "future_leakage_count": 0,
+    "cap06_controlled_mechanism_oracle_preserved": "0.034000",
+    "cap06_oracle_may_be_claimed_as_cap08_data_result": false
+  },
+  "rejected_alternatives": [
+    "MATERIALIZE_0_040000_AS_CANDIDATE",
+    "SILENTLY_CHANGE_0_034000_EXPECTED_VALUE",
+    "FABRICATE_POSITIVE_EXCESS_OR_ASSIMILATION_REFS",
+    "MUTATE_EFFECTIVE_S1_S2_FORMAL_FORCING",
+    "CROSS_RUN_STITCH_SEPARATE_CALIBRATION_PROFILE"
+  ],
+  "delivery_effect": {
+    "s5_candidate_declaration_rule_unchanged": true,
+    "s5_domain_candidate_object_required": false,
+    "s5_exact_sha_r1_still_required": true,
+    "s6_two_run_r2_closure_still_required": true,
+    "s6_exact_head_independent_review_still_required": true,
+    "mcft_cap_09_authorized": false
+  },
+  "runtime_source_delta": 0,
+  "database_migration_delta": 0,
+  "registry_delta": 0,
+  "taskbook_byte_delta": 0,
+  "semantic_digest": "sha256:037cd193f97822d809f0641794507ddfac1c38fb93a368a45341aee4ccfbf3cd"
+}
