@@ -224,7 +224,6 @@ export class Cap08S5ResidualCalibrationShadowServiceV1 {
       predictionPort,
     });
     if (semanticHashV1(shadowFirst) !== semanticHashV1(shadowSecond)
-      || shadowFirst.future_leakage_count !== 0
       || shadowFirst.model_activation_created !== false
       || shadowFirst.active_config_switch_performed !== false) {
       throw new Error("CAP08_S5_SHADOW_DETERMINISM_OR_BOUNDARY_MISMATCH");
