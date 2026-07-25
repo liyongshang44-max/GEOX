@@ -62,7 +62,7 @@ try {
     changed_file_count: changed.length, production_source_file_count: 6,
     runtime_acceptance_file_count: 2, migration_delta: 0, route_delta: 0,
     web_delta: 0, scheduler_delta: 0, candidate_declaration_present: false,
-    zero_excess_compatibility_policy: 'ZERO_EXCESS_PRESERVED_AND_CLASSIFIED_LOW_EXCESS_FOR_SHARED_ENGINE_V1',
+    non_positive_excess_compatibility_policy: 'NON_POSITIVE_EXCESS_PRESERVED_AND_CLASSIFIED_LOW_EXCESS_FOR_SHARED_ENGINE_V1',
     s5_candidate_implemented: false, s5_effective: false, s6_authorized: false,
     mcft_cap_09_authorized: false,
   };
