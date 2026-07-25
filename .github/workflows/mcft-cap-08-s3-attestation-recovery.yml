@@ -63,7 +63,8 @@ jobs:
           for (const token of required) {
             if (!workflow.includes(token)) throw new Error(`RECOVERY_WORKFLOW_TOKEN_MISSING:${token}`);
           }
-          if (workflow.includes('s3_effective: true')) throw new Error('RECOVERY_WORKFLOW_SSOT_WRITEBACK_FORBIDDEN');
+          const forbiddenWrite = ['s3_effective', 'true'].join(': ');
+          if (workflow.includes(forbiddenWrite)) throw new Error('RECOVERY_WORKFLOW_SSOT_WRITEBACK_FORBIDDEN');
           console.log(JSON.stringify({ schema_version: 'mcft_cap08_s3_recovery_contract_v1', status: 'PASS' }));
           NODE
 
