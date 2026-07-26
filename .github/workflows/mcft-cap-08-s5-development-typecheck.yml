@@ -1,0 +1,61 @@
+name: mcft-cap-08-s5-development-typecheck
+
+on:
+  pull_request:
+    paths:
+      - "apps/server/src/domain/twin_runtime/cap08_s5_*.ts"
+      - "apps/server/src/persistence/twin_runtime/postgres_cap08_s5_*.ts"
+      - "apps/server/src/runtime/twin_runtime/cap08_s5_*.ts"
+      - "docs/digital_twin/mcft/cap_08/*S5-DEVELOPMENT*"
+      - ".github/workflows/mcft-cap-08-s5-development-typecheck.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck-log:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Capture full recursive typecheck log
+        id: typecheck
+        shell: bash
+        run: |
+          set +e
+          mkdir -p acceptance-output
+          pnpm -r typecheck > acceptance-output/mcft-cap08-s5-development-typecheck.log 2>&1
+          rc=$?
+          echo "exit_code=$rc" >> "$GITHUB_OUTPUT"
+          cat acceptance-output/mcft-cap08-s5-development-typecheck.log
+          exit 0
+
+      - name: Upload typecheck log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap08-s5-development-typecheck-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/mcft-cap08-s5-development-typecheck.log
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Enforce typecheck result
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.typecheck.outputs.exit_code }}" = "0"
