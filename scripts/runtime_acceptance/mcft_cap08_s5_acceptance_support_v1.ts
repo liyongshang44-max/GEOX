@@ -78,7 +78,7 @@ export async function establishCap08S5SlicePredecessorV1(root = path.resolve("."
     throw new Error("CAP08_S5_ACCEPTANCE_S4_PREDECESSOR_NOT_EXACT");
   }
 
-  const tickResults = predecessor.predecessor_result.tick_results;
+  const tickResults = predecessor.predecessor_result.range.tick_results;
   if (tickResults.length !== 24) throw new Error(`CAP08_S5_ACCEPTANCE_TICK_RESULT_COUNT:${tickResults.length}`);
   const obligations: Cap08S5ResidualObligationV1[] = [];
   for (let order = 1; order <= 24; order += 1) {
