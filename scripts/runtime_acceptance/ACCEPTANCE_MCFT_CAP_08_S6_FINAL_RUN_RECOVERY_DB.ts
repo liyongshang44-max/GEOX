@@ -16,6 +16,7 @@ import { Cap06RestartReadbackRebuildServiceV1 } from "../../apps/server/src/runt
 import { Cap05RestartLateReceiptRebuildServiceV1 } from "../../apps/server/src/runtime/twin_runtime/restart_late_receipt_rebuild_service_v1.js";
 import { Cap08S5ResidualCalibrationShadowServiceV1 } from "../../apps/server/src/runtime/twin_runtime/cap08_s5_residual_calibration_shadow_service_v1.js";
 import { registerMcftFieldTwinReadRoutesV1 } from "../../apps/server/src/routes/v1/mcft_field_twin_read_v1.js";
+import { PostgresMcftFieldTwinReadApiV1 } from "../../apps/server/src/services/mcft_field_twin_read_api_v1.js";
 import { admin, runner } from "./mcft_cap08_s2_g3_acceptance_support_v1.js";
 import {
   findLatestRecordSetAuthority,
@@ -79,6 +80,11 @@ async function operatorReadback(pool: Pool, auditPool: Pool, scope: Record<strin
   process.env.MCFT_CURSOR_SIGNING_KEYS_JSON = JSON.stringify({ s6: "s6-final-closure-signing-key-00000000000000000001" });
   process.env.MCFT_CURSOR_PRIMARY_KEY_ID = "s6";
   const before = await tableCardinalitySnapshot(auditPool);
+  try {
+    await new PostgresMcftFieldTwinReadApiV1(pool).readRuntime({ scope: scope as any });
+  } catch (error) {
+    throw new Error(`S6_DIRECT_RUNTIME_DIAGNOSTIC:${error instanceof Error ? error.message : String(error)}`);
+  }
   const app = Fastify({ logger: false });
   registerMcftFieldTwinReadRoutesV1(app, pool, {
     authorizeScope: (_request, requested) => ({
