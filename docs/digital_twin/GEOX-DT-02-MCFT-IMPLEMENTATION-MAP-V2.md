@@ -1,211 +1,160 @@
-<!-- docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md -->
-# GEOX DT-02 to MCFT Implementation Map V2
+# GEOX DT-02 Minimum Complete Field Twin Implementation Map V2.3
 
-## 0. Purpose
+Status: current SSOT implementation map after MCFT-CAP-08 S5 Architecture Deviation adjudication  
+Authority: Master V2.1 + Stage-1 Closure Authority V2 + current MCFT taskbooks + current exact-SHA effectiveness projection + CAP-08 S5 adjudication  
+Current effective frontier: `MCFT-CAP-08.S4`  
+Blocked slice: `MCFT-CAP-08.S5`  
+First legal next action: `MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION`
 
-This is the compact current-frontier implementation map. Historical delivery
-details remain in capability-specific records and the legacy implementation
-map. This document does not rewrite historical capability evidence.
+This map converts the DT-02 architecture into an executable capability sequence. It does not replace the Master V2.1 architecture. It records which capability lines are effective, which successor action is authorized, and which claims remain prohibited.
+
+## 1. Current settlement snapshot
 
 ```text
-map_version: V2.2
-frontier_reconciliation_base_main: 75fc9c509d455c12202ae6c5597f7185796ec3d6
-current_capability_line: MCFT-CAP-08
-current_effective_slice: MCFT-CAP-08.S4
-next_authorized_slice: MCFT-CAP-08.S5
+current_effective_capability_line_id = MCFT-CAP-08
+current_effective_slice_id           = MCFT-CAP-08.S4
+current_effective_status             = S4_LATE_EVIDENCE_APPEND_FORWARD_IMPLEMENTED_EFFECTIVE
+blocked_slice_id                     = MCFT-CAP-08.S5
+architecture_deviation_adjudicated   = true
+next_authorized_slice_id             = null
+first_legal_next_action              = MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION
+s5_formal_candidate_authorized       = false
+s6_implementation_authorized         = false
+MCFT-CAP-08 complete                 = false
+MCFT-CAP-09 authorized               = false
 ```
 
-## 1. Capability frontier
+The CAP-08 S1 through S4 v1 exact-SHA artifacts remain valid historical effectiveness evidence. They do not establish the replay-dataset v2 predecessor required for a future S5 Candidate.
 
-| Capability | Name | Current status | Active / next boundary |
+## 2. Capability-line map
+
+| Capability line | Purpose | Current status | Current authority / next action |
 |---|---|---|---|
-| MCFT-CAP-01 | First-Class Water State Estimate | COMPLETE | none |
-| MCFT-CAP-02 | Hourly Dynamics and Persistence | COMPLETE | none |
-| MCFT-CAP-03 | Observation Assimilation and State Innovation | COMPLETE | none |
-| MCFT-CAP-04 | 72-Hour Forecast and Three Scenarios | COMPLETE | none |
-| MCFT-CAP-05 | Human Decision and Execution-Receipt Feedback | COMPLETE | none |
-| MCFT-CAP-06 | Calibration Candidate and Shadow Evaluation | COMPLETE | none |
-| MCFT-CAP-07 | Minimal Field Twin Read Model and Timeline | COMPLETE | none |
-| MCFT-CAP-08 | 24-Tick End-to-End Closure | IN_PROGRESS | S4 EFFECTIVE / S5 AUTHORIZED_NOT_IMPLEMENTED |
-| MCFT-CAP-09 | Shadow-Online Promotion | BLOCKED | independent successor authority required |
-| MCFT-CAP-10 | Controlled-Action Feedback Closure | BLOCKED | requires CAP-09 completion |
+| `MCFT-CAP-00` | Architecture freeze, reality/source/config/evidence authority | Effective predecessor | Retained; no reopening authorized |
+| `MCFT-CAP-01` | Evidence-backed `StateEstimate`, confidence and use eligibility | Effective predecessor | Retained; no reopening authorized |
+| `MCFT-CAP-02` | Deterministic `StateTransition` and replayable Dynamics | Effective predecessor | Retained; no reopening authorized |
+| `MCFT-CAP-03` | Observation-aware assimilation | Effective predecessor | Retained; no reopening authorized |
+| `MCFT-CAP-04` | Forecast and three-scenario comparison | Effective predecessor | Retained; no reopening authorized |
+| `MCFT-CAP-05` | Human Decision, execution receipt and Action Feedback | Effective predecessor | Retained; no reopening authorized |
+| `MCFT-CAP-06` | Calibration Candidate and Shadow Evaluation | Effective predecessor | Existing engines may be reused only through explicit CAP-08 adapters |
+| `MCFT-CAP-07` | Read-only Runtime exposure and Operator workbench | Effective predecessor | Ten GET surfaces remain required in CAP-08 final closure |
+| `MCFT-CAP-08.S1` | Base Runtime plus deterministic 24-Tick skeleton | Effective | Exact-SHA artifact retained |
+| `MCFT-CAP-08.S2` | Forcing, Evidence, State and Forecast providers | Effective v1 historical predecessor | Must be requalified on replay-dataset v2 before S5 Candidate authority |
+| `MCFT-CAP-08.S3` | Decision plus Action Feedback episode | Effective v1 historical predecessor | FVO-10 business-outcome identity must remain exact in v2 |
+| `MCFT-CAP-08.S4` | Late Evidence append-forward | Current effective frontier | v1 effectiveness retained; v2 exact predecessor not yet established |
+| `MCFT-CAP-08.S5` | 24 Residual, 16/8 Calibration/Holdout, Candidate and Shadow | Blocked by adjudicated Architecture Deviation | Direct implementation and Candidate authority suspended |
+| `MCFT-CAP-08.S5-PQ` | Replay-dataset v2 predecessor prequalification | Authorized governance action, not a capability slice | Implement acceptance-only v2 dataset/provider, rerun S1–S4 and prove oracle without Candidate/Shadow writes |
+| `MCFT-CAP-08.S6` | Two-run final closure, recovery and read-model proof | Seeded, not authorized | Requires effective S5 exact-SHA predecessor and exact-head independent approval |
+| `MCFT-CAP-09` | Later controlled online/shadow expansion | Not authorized | Remains outside current frontier |
 
-## 2. Current authority references
+## 3. CAP-08 S5 Architecture Deviation
+
+The original v1 replay dataset did not reproduce the frozen `0.034000` Candidate oracle:
 
 ```text
-Stage 1A closure:
-docs/digital_twin/mcft/GEOX-MCFT-STAGE-1-CLOSURE-AUTHORITY-V2.json
-
-CAP-08 taskbook architecture (v0.3.9):
-docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md
-
-CAP-08 current delivery frontier:
-docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json
-
-CAP-08 resolved manifest:
-docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RESOLVED-MANIFEST-V1.json
-
-CAP-08 conditional repository authority:
-docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-AUTHORITY-V1.json
-
-CAP-08 S5 successor seed:
-docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-DELIVERY-STATUS-V1.json
-
-CAP-08 S6 final-closure seed:
-docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json
-
-Candidate Registry:
-docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json
+v1 selected parameter        = 0.040000
+v1 disposition               = SEARCH_BOUNDARY_HIT_INCONCLUSIVE
+v1 Candidate append allowed  = false
 ```
 
-The v0.3.9 taskbook remains current for architecture and Slice contracts. Its
-embedded frontier statements are historical when contradicted by the dedicated
-current frontier projection.
-
-## 3. Effective Slice history
+The confirmed root cause is:
 
 ```text
-S0 Authority Reconciliation:
-status: EFFECTIVE
-subject: 0012144aa3d69698b6bc94a113ff00c7652dd043
-workflow: 29935730353
-artifact: 8536034800
-semantic digest:
-sha256:7b97d1414fe9de946fba606b6ae0a674a17cb9ffbbd1ca253acf7e309798ac0a
-
-S1 Base Runtime:
-status: S1_BASE_RUNTIME_IMPLEMENTED_EFFECTIVE
-subject: f39b7df37571156f23cfb9153bad024fdb723261
-workflow: 29980589779
-artifact: 8553043184
-semantic digest:
-sha256:7f8e6d61f038ddfd6a6b86430c230fc7e36509011d4131bae1670034ff2b74bc
-
-S2 Forcing / Evidence / State / Forecast:
-status: S2_FORCING_EVIDENCE_STATE_FORECAST_IMPLEMENTED_EFFECTIVE
-subject: 1f37d6247a5f2e90327720c9feed4faf729d1db3
-workflow: 30034240206
-artifact: 8574593152
-semantic digest:
-sha256:8bb99559bcdbda63de5ff196bb9d7040269d07acf7b80374341a620beae60da7
-
-S3 Decision + Action Feedback:
-status: S3_DECISION_ACTION_FEEDBACK_IMPLEMENTED_EFFECTIVE
-subject: bcffb63003667ebc5f60ef4aa83c8243f99c5917
-workflow: 30142920081
-artifact: 8615076849
-semantic digest:
-sha256:bbfcd8553550dc5c33f36f6f2646a3fe56803318f8f9b9d8c15f03ec751af691
-
-S4 Late Evidence append-forward:
-status: S4_LATE_EVIDENCE_APPEND_FORWARD_IMPLEMENTED_EFFECTIVE
-subject: bda9d37519ca536d3d83d68cb3a2d4b395ff2ee9
-candidate: a8c8abccbe2ab25dad5f0fa4a9653269f6c4acc4
-candidate tree: 4c14fc80a291e6f4fd8cb61a13a8ba2926aa0e1a
-merge tree: 4c14fc80a291e6f4fd8cb61a13a8ba2926aa0e1a
-tree delta: 0
-workflow: 30154846799
-artifact: 8618701918
-semantic digest:
-sha256:c3ba7d058898ed073dbc907a1a0d957903c312c955be45300cb6f62e49ea7338
-R1 immutable readback: PASS
+CAP-06 oracle source     = observations generated from hidden 0.034000 replay
+CAP-08 v1 FVO source     = independent static linear sequence
+FVO-10 semantic role     = frozen S3 business outcome
+FVO-10 calibration role  = invalid as drainage-parameter objective evidence
 ```
 
-Repository status files intentionally retain their candidate-state records.
-External effectiveness comes from exact-SHA immutable evidence; postmerge status
-mutation is forbidden.
-
-## 4. Current S5 implementation map
-
-S5 must produce:
+The adjudicated v2 design preserves all 24 Residuals and the 16/8 membership while applying:
 
 ```text
-C provider for R-01 through R-24
-exact Forecast/FVO predecessor binding
-ordered Residual set by forecast_target_time
-16-case Calibration window
-8-case disjoint Holdout window
-one Calibration Candidate
-one eight-case paired Shadow Evaluation
-zero Model Activation
-zero active Runtime Config switch
-phase_engine_contract_digest unchanged
-fresh-database SLICE_ACCEPTANCE_RUN
-final_formal_run_id = null
-slice_acceptance_only = true
+multi-regime rainfall profile
+Forecast-derived hidden-0.034 FVO values
+FVO-10 value retained at 0.304500
+FVO-10 retained as Residual/window member
+FVO-10 objective_eligible = false
+objective case count = 15
 ```
 
-Frozen oracle:
+The exact development diagnostic produced:
 
 ```text
-parameter: dynamics_parameters.drainage_coefficient_per_hour
-base: 0.030000
-expected candidate: 0.034000
-grid points: 21
+selected parameter           = 0.034000
+status                       = BOUNDED_PARAMETER_DELTA_CANDIDATE
+canonical append allowed     = true
+sensitive case count         = 7
+sensitive wetness regimes    = HIGH_EXCESS, MID_EXCESS
 ```
 
-S5 entry authority:
+This result authorizes prequalification only. It does not establish an S5 Candidate or any effectiveness claim.
+
+## 4. Authorized prequalification boundary
+
+The next repository action may change only acceptance-dataset/provider, prequalification acceptance, immutable evidence workflow and required governance files.
+
+Required proof:
 
 ```text
-S4 exact-SHA R1 effectiveness: PASS
-S5 status seed on trusted main: PRESENT
-S5 candidate Registry rule on trusted main: PRESENT
-S5 implementation authorized: true
-S5 candidate implemented: false
-S5 effective: false
-S6 status seed on trusted main: PRESENT
-S6 candidate Registry rule on trusted main: PRESENT
-S6 implementation authorized: false
+fresh database
+24-Tick S1/S2 replay on dataset v2
+S3 Decision/Action Feedback with exact FVO-10 outcome identity
+S4 late append-forward
+24 exact Residual roots
+16 Calibration / 8 Holdout membership unchanged
+15 objective-eligible Calibration cases
+FVO-10 diagnostic-only objective role
+21-point grid selects 0.034000
+Candidate append count = 0
+Shadow append count = 0
+Model Activation count = 0
+active Runtime Config switch count = 0
+exact merge-SHA R1 artifact and readback
 ```
 
-S5 nonclaims:
+Forbidden during prequalification:
 
 ```text
-FINAL_FORMAL_CLOSURE_NOT_EXECUTED
-NO_FULL_RECOVERY_CLOSURE
-NO_EXTREME_POINTER_REBUILD
-NO_CAP07_FINAL_READBACK_CLAIM
-NO_MODEL_ACTIVATION
-NO_ACTIVE_CONFIG_SWITCH
-NO_PRODUCTION_RUNTIME_SOURCE
-NO_PUBLIC_HTTP_WRITER
-NO_BACKGROUND_SCHEDULER
-NO_LIVE_INGESTION
-NO_MCFT_CAP_09_AUTHORITY
+Candidate Declaration
+S5 Candidate or Shadow canonical writes
+production Runtime source
+route, web or scheduler changes
+Model Activation
+S6 authority
+MCFT-CAP-09 authority
 ```
 
-## 5. S6 remaining map
+## 5. Completion semantics
 
-S6 alone may:
+`MCFT-CAP-08` is not complete. Completion still requires:
 
 ```text
-execute two independent fresh PostgreSQL complete runs
-use one deterministic formal_run_id and distinct run_instance_id values
-run B00 → T00-T23 → G00-G02 with all providers enabled from start
-prove restart/failure/response-loss/concurrency
-prove extreme pointer loss and deterministic rebuild
-read back through all ten CAP-07 GET surfaces
-prove Timeline/Trace/pagination and Operator zero-write behavior
-pass HA-01 through HA-24
-prove semantic, operational-invariant and closure digest equality
-prove candidate-tree / merge-tree equivalence
-publish immutable exact-SHA R2 closure evidence
+v2 predecessor prequalification effective
+S5 formal Candidate implemented and exact-SHA effective
+S6 two independent fresh-database formal runs
+24 hard-acceptance items
+10 CAP-07 GET surfaces
+semantic / operational / closure digest equality
+candidate-to-merge tree equality
+exact-head independent human approval
+R2 retention artifact
 ```
 
-S6 requires an exact-head `APPROVED` review from a verified human GitHub account
-different from the candidate author. S6 does not create or authorize MCFT-CAP-09.
-
-## 6. Owner work-package projection
-
-Capability completion does not imply horizontal package completion.
+Only after S6 exact-SHA effectiveness may the repository claim:
 
 ```text
-MCFT-00 through MCFT-18: PARTIALLY_ESTABLISHED
+MCFT_CAP_08_COMPLETE
+```
 
-MCFT-16 closed-loop orchestration:
-current implementation focus = CAP-08 S5 then S6
+## 6. Current authority chain
 
-MCFT-17 / MCFT-18:
-read path established by CAP-07;
-full formal-chain qualification remains CAP-08 S6 work
+```text
+GEOX-MCFT-SSOT-CURRENT-V1.json
+  -> GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md
+  -> GEOX-MCFT-STAGE-1-CLOSURE-AUTHORITY-V2.json
+  -> GEOX-MCFT-CAP-08-TASK.md (v0.3.9 architecture)
+  -> GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json
+  -> GEOX-MCFT-CAP-08-S5-ARCHITECTURE-DEVIATION-ADJUDICATION-V1.json
+  -> GEOX-MCFT-CAP-08-S5-REPLAY-DATASET-V2-PREQUALIFICATION-CONTRACT-V1.json
+  -> GEOX-MCFT-CAP-08-S5-ARCHITECTURE-DEVIATION-STATUS-V1.json
 ```

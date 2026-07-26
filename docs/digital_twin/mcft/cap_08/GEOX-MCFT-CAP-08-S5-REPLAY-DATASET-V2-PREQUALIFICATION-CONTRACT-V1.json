@@ -1,0 +1,111 @@
+{
+  "schema_version": "geox_mcft_cap08_s5_replay_dataset_v2_prequalification_contract_v1",
+  "contract_id": "MCFT-CAP-08.S5-REPLAY-DATASET-V2-PREQUALIFICATION-V1",
+  "record_status": "FROZEN_NON_CANDIDATE_PREQUALIFICATION_CONTRACT",
+  "capability_line_id": "MCFT-CAP-08",
+  "blocked_slice_id": "MCFT-CAP-08.S5",
+  "adjudication_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-ARCHITECTURE-DEVIATION-ADJUDICATION-V1.json",
+  "prequalification_base_main": "6838bf07a96022640bea6ddb20e461f748a5114c",
+  "dataset": {
+    "dataset_id": "mcft_cap08_stage1a_replay_v2",
+    "supersedes_for_future_s5_candidates": "mcft_cap08_stage1a_replay_v1",
+    "v1_artifacts_retained_historical": true,
+    "tick_count": 24,
+    "fvo_count": 24,
+    "residual_count": 24,
+    "calibration_membership": ["R-01","R-02","R-03","R-04","R-05","R-06","R-07","R-08","R-09","R-10","R-11","R-12","R-13","R-14","R-15","R-16"],
+    "holdout_membership": ["R-17","R-18","R-19","R-20","R-21","R-22","R-23","R-24"],
+    "calibration_window_count": 16,
+    "holdout_window_count": 8,
+    "window_membership_unchanged": true
+  },
+  "forcing_profile": {
+    "profile_id": "MULTI_REGIME_RAINFALL_PROFILE_V2",
+    "tick_0_through_7_mm": "0.2 + (tick_index % 4) * 0.1",
+    "tick_8_through_23_mm": "5.2 + (tick_index % 4) * 0.2",
+    "purpose": "ESTABLISH_AT_LEAST_TWO_DRAINAGE_SENSITIVE_WETNESS_REGIMES",
+    "weather_et0_pairing_policy_unchanged": true
+  },
+  "fvo_generation": {
+    "profile_id": "FORECAST_DERIVED_HIDDEN_0034_FVO_V2",
+    "hidden_parameter_path": "dynamics_parameters.drainage_coefficient_per_hour",
+    "hidden_parameter_value": "0.034000",
+    "source": "EXACT_SOURCE_FORECAST_H1_REPLAY",
+    "fvo10_exception": {
+      "observation_ref": "FVO-10",
+      "value": "0.304500",
+      "reason": "FROZEN_S3_BUSINESS_OUTCOME_IDENTITY",
+      "hidden_parameter_generated": false
+    },
+    "fvo01_dual_time_preserved": true,
+    "fvo03_quality_limited_preserved": true,
+    "ordinary_assimilation_orders_preserved": [2,3,4,10,22],
+    "residual_only_roles_preserved": true
+  },
+  "objective_eligibility": {
+    "policy_id": "MCFT_CAP_08_S5_BUSINESS_OUTCOME_OBJECTIVE_ELIGIBILITY_V1",
+    "case_window_count": 16,
+    "objective_case_count": 15,
+    "diagnostic_only_case_count": 1,
+    "objective_ineligible_observation_refs": ["FVO-10"],
+    "objective_ineligible_residual_ids": ["R-10"],
+    "fvo10_residual_required": true,
+    "fvo10_window_membership_required": true,
+    "fvo10_physical_and_mass_balance_checks_required": true,
+    "fvo10_objective_weight": 0,
+    "reason": "BUSINESS_OUTCOME_ANCHOR_IS_NOT_DRAINAGE_PARAMETER_IDENTIFICATION_EVIDENCE"
+  },
+  "oracle": {
+    "base_parameter_value": "0.030000",
+    "expected_candidate_value": "0.034000",
+    "grid_minimum": "0.020000",
+    "grid_maximum": "0.040000",
+    "grid_step": "0.001000",
+    "grid_point_count": 21,
+    "minimum_sensitive_case_count": 4,
+    "minimum_sensitive_wetness_regime_count": 2,
+    "expected_status": "BOUNDED_PARAMETER_DELTA_CANDIDATE"
+  },
+  "required_requalification": {
+    "fresh_database_required": true,
+    "reexecute_s1_s2_s3_s4": true,
+    "s3_fvo10_identity_guard_must_pass": true,
+    "s4_late_append_forward_must_pass": true,
+    "historical_rewrite_forbidden": true,
+    "exact_24_residual_prequalification_required": true,
+    "objective_eligibility_diagnostic_required": true,
+    "expected_oracle_required": true,
+    "candidate_append_forbidden": true,
+    "shadow_append_forbidden": true,
+    "model_activation_count": 0,
+    "active_runtime_config_switch_count": 0,
+    "state_pointer_delta_after_diagnostic": 0,
+    "checkpoint_pointer_delta_after_diagnostic": 0,
+    "immutable_r1_artifact_required": true,
+    "exact_merge_sha_attestation_required": true
+  },
+  "authorization_after_prequalification": {
+    "s5_formal_candidate_authorized_only_when": [
+      "V2_PREQUALIFICATION_PRESENT_ON_MAIN",
+      "EXACT_MERGE_SHA_R1_ATTESTATION_PASS",
+      "ARTIFACT_READBACK_VERIFIED",
+      "SELECTED_PARAMETER_VALUE_0_034000",
+      "CANONICAL_APPEND_ALLOWED_TRUE",
+      "SENSITIVE_WETNESS_REGIME_COUNT_AT_LEAST_2",
+      "FVO10_OBJECTIVE_INELIGIBILITY_PROVEN",
+      "NO_CANDIDATE_OR_SHADOW_WRITES_DURING_PREQUALIFICATION"
+    ],
+    "automatic_s5_effectiveness": false,
+    "automatic_s6_authority": false
+  },
+  "nonclaims": [
+    "NO_S5_CANDIDATE",
+    "NO_S5_EFFECTIVENESS",
+    "NO_S6_IMPLEMENTATION_AUTHORITY",
+    "NO_FINAL_FORMAL_RUN",
+    "NO_PRODUCTION_RUNTIME_SOURCE",
+    "NO_MODEL_ACTIVATION",
+    "NO_MCFT_CAP_09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:85fe66eda022531dd426a0ac70624ff0c22a2662a8d5f9c661cd1891bd6a8194"
+}

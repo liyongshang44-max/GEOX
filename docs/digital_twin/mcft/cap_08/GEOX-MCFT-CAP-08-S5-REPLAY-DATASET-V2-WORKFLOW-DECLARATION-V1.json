@@ -1,0 +1,22 @@
+{
+  "schema_version": "geox_mcft_cap08_s5_replay_dataset_v2_prequalification_workflow_declaration_v1",
+  "declaration_id": "GEOX-MCFT-CAP-08-S5-REPLAY-DATASET-V2-PREQUALIFICATION-WORKFLOW-DECLARATION-V1",
+  "record_status": "PRE_REGISTERED_NON_CANDIDATE_WORKFLOW",
+  "capability_line_id": "MCFT-CAP-08",
+  "action_id": "MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION",
+  "workflow_name": "mcft-cap-08-s5-replay-dataset-v2-prequalification",
+  "exact_sha_workflow_name": "mcft-cap-08-s5-replay-dataset-v2-exact-sha-attestation",
+  "status_context": "mcft-cap-08/s5-replay-dataset-v2-prequalification",
+  "candidate_field": null,
+  "candidate_transition": false,
+  "registry_rule_required": false,
+  "candidate_declaration_forbidden": true,
+  "implementation_scope": "ACCEPTANCE_DATASET_PROVIDER_AND_PREQUALIFICATION_ONLY",
+  "production_runtime_source_authorized": false,
+  "candidate_or_shadow_persistence_authorized": false,
+  "retention_class": "R1_180_DAYS",
+  "first_legal_next_action_after_effectiveness": "MCFT_CAP_08_S5_FORMAL_CANDIDATE_FROM_EXACT_REQUALIFIED_MAIN",
+  "s6_authorized": false,
+  "mcft_cap_09_authorized": false,
+  "semantic_digest": "sha256:62bc7042fde25bffc4135ed094cad2a2873332aa50cb009e814abe6f2305dce7"
+}
