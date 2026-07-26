@@ -1,0 +1,28 @@
+name: mcft-cap-08-s5-replay-dataset-v2-effectiveness-settlement
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s5-replay-dataset-v2-effectiveness-settlement.yml'
+      - 'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md'
+      - 'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json'
+      - 'docs/digital_twin/mcft/GEOX-MCFT-SSOT-CURRENT-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-REPLAY-DATASET-V2-EFFECTIVENESS-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_ARCHITECTURE_DEVIATION_ADJUDICATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_EFFECTIVENESS_SETTLEMENT.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  effectiveness-settlement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ github.event.pull_request.head.sha }}', fetch-depth: 0, persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.11.1 }
+      - name: Validate exact external effectiveness settlement
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_EFFECTIVENESS_SETTLEMENT.cjs
