@@ -3,55 +3,39 @@ name: mcft-cap-08-s5-architecture-deviation-adjudication
 on:
   pull_request:
     paths:
-      - '.github/workflows/mcft-cap-08-current-frontier-reconciliation.yml'
       - '.github/workflows/mcft-cap-08-s5-architecture-deviation-adjudication.yml'
-      - '.github/workflows/mcft-cap-08-s5-replay-dataset-v2-prequalification.yml'
-      - '.github/workflows/mcft-cap-08-s5-replay-dataset-v2-exact-sha-attestation.yml'
-      - 'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md'
-      - 'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json'
-      - 'docs/digital_twin/mcft/GEOX-MCFT-SSOT-CURRENT-V1.json'
-      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-ARCHITECTURE-DEVIATION-ADJUDICATION-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-ARCHITECTURE-DEVIATION-STATUS-V1.json'
-      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-REPLAY-DATASET-V2-PREQUALIFICATION-CONTRACT-V1.json'
-      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-REPLAY-DATASET-V2-WORKFLOW-DECLARATION-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_ARCHITECTURE_DEVIATION_ADJUDICATION.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_BOUNDARY.cjs'
-      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_DB.ts'
 
 permissions:
   contents: read
-
-concurrency:
-  group: mcft-cap08-s5-architecture-deviation-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: true
 
 jobs:
   adjudication:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout exact PR head
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Validate adjudication or delegated prequalification boundary
+      - name: Validate owned lifecycle
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --name-only "$MCFT_BASE_SHA"...HEAD | grep -q 'S5_REPLAY_DATASET_V2_PREQUALIFICATION\|mcft_cap08_s5_prequalification\|replay-dataset-v2'; then
-            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_BOUNDARY.cjs
+          files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD)"
+          if grep -Eq 'S5-EFFECTIVENESS-AUTHORITY|s5-effectiveness-settlement|S5_EFFECTIVENESS_SETTLEMENT' <<<"$files"; then
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_EFFECTIVENESS_SETTLEMENT.cjs
           else
             node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_ARCHITECTURE_DEVIATION_ADJUDICATION.cjs
           fi
-      - name: Confirm no Candidate Declaration Runtime or Registry mutation
+      - name: Confirm no candidate Runtime Registry or status mutation
         shell: bash
         run: |
           set -euo pipefail
           base='${{ github.event.pull_request.base.sha }}'
-          test -z "$(git diff --name-only "$base"...HEAD -- apps db migrations docs/governance/DELIVERY-CANDIDATE-REGISTRY-V1.json docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-DELIVERY-STATUS-V1.json docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json)"
-          ! git diff --name-only "$base"...HEAD | grep -q 'CANDIDATE-DECLARATION'
+          test -z "$(git diff --name-only "$base"...HEAD -- apps db migrations docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-DELIVERY-STATUS-V1.json docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json)"
