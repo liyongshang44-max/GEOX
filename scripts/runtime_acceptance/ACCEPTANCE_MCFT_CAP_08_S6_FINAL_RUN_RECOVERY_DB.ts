@@ -189,11 +189,11 @@ async function main(): Promise<void> {
     assert.equal(factsAfterPointerRecovery, factsBeforePointerRecovery, "S6_POINTER_RECOVERY_CANONICAL_WRITE");
     assert.deepEqual(await pointerSnapshot(admin, request.scope), pointersBeforeLoss, "S6_POINTER_RECOVERY_DIVERGENCE");
 
-    const feedbackRebuild = await new Cap05RestartLateReceiptRebuildServiceV1(recoveryPoolA)
+    const feedbackRebuild = await new Cap05RestartLateReceiptRebuildServiceV1(admin)
       .rebuildSupportStateFailClosed();
     assert.equal(feedbackRebuild.canonical_fact_delta, 0);
     const governanceRebuild = await new Cap06RestartReadbackRebuildServiceV1(
-      new PostgresCalibrationGovernanceRepositoryV1(recoveryPoolA),
+      new PostgresCalibrationGovernanceRepositoryV1(admin),
     ).recover({
       evaluationRef: materialization.shadow_ref,
       evaluationHash: materialization.shadow_hash,
