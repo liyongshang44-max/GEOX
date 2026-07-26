@@ -29,6 +29,14 @@ import { computeAssimilatedContinuationRecordSetDeterminismHashV1, type Assimila
 import { computeAssimilatedContinuationRecordSetDeterminismHashV2, type AssimilatedContinuationAggregateIdentityInputV2 } from "../../domain/twin_runtime/assimilated_continuation_record_set_identity_v2.js";
 import { ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1 } from "../../domain/twin_runtime/assimilated_continuation_contracts_v1.js";
 import { ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V2 } from "../../domain/twin_runtime/assimilated_continuation_contracts_v2.js";
+import {
+  CAP04_BLOCKED_FORECAST_CONTRACT_ID_V1,
+  CAP04_COMPLETED_FORECAST_CONTRACT_ID_V1,
+} from "../../domain/twin_runtime/forecast_scenario_contracts_v1.js";
+import {
+  computeCap04AAggregateDeterminismHashV1,
+  type Cap04AAggregateIdentityInputV1,
+} from "../../domain/twin_runtime/forecast_scenario_record_set_identity_v1.js";
 import { canonicalJsonV1 } from "../../domain/twin_runtime/canonical_json_v1.js";
 import type { PostgresFieldTwinSnapshotContextV1 } from "./postgres_field_twin_snapshot_repository_v1.js";
 
@@ -119,6 +127,12 @@ function exactStringMap(value: unknown, code: string): Record<string, string> {
   const record = asRecord(value, code);
   for (const [key, item] of Object.entries(record)) if (!key || typeof item !== "string" || !item) fail(code);
   return record as Record<string, string>;
+}
+
+function exactRecordSetMemberIds(value: unknown, code: string): string[] {
+  return Array.isArray(value)
+    ? exactStringArray(value, code)
+    : Object.values(exactStringMap(value, code));
 }
 
 function scopeValues(scope: FieldTwinScopeV1): readonly string[] {
@@ -293,10 +307,19 @@ export class PostgresFieldTwinReadRepositoryV1 {
 
   private recomputeRecordSetHash(index: RecordSetIndexRowV1, members: readonly VisibleCanonicalFactV1[]): string {
     if (index.identity_kind === "A0_RECORD_SET") return computeA0RecordSetDeterminismHashV1({ a0_record_set_id: index.record_set_id, members: members.map((item) => item.object as unknown as JsonRecord) });
-    if (index.identity_kind !== "A2_RECORD_SET") fail("MCFT_RECORD_SET_IDENTITY_INVALID", `IDENTITY_KIND:${index.identity_kind}`);
     const identityBasis = asRecord(index.identity_basis, "MCFT_RECORD_SET_IDENTITY_INVALID:IDENTITY_BASIS");
     const aggregate = asRecord(identityBasis.aggregate_identity_input, "MCFT_RECORD_SET_IDENTITY_INVALID:AGGREGATE_IDENTITY_INPUT");
     const contractId = optionalText(identityBasis.record_set_contract_id) ?? optionalText(aggregate.record_set_contract_id);
+    if (
+      index.identity_kind === "A1_RECORD_SET"
+      || contractId === CAP04_COMPLETED_FORECAST_CONTRACT_ID_V1
+      || contractId === CAP04_BLOCKED_FORECAST_CONTRACT_ID_V1
+    ) {
+      return computeCap04AAggregateDeterminismHashV1(
+        aggregate as unknown as Cap04AAggregateIdentityInputV1,
+      );
+    }
+    if (index.identity_kind !== "A2_RECORD_SET") fail("MCFT_RECORD_SET_IDENTITY_INVALID", `IDENTITY_KIND:${index.identity_kind}`);
     if (contractId === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1) return computeAssimilatedContinuationRecordSetDeterminismHashV1(aggregate as unknown as AssimilatedContinuationAggregateIdentityInputV1);
     if (contractId === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V2) return computeAssimilatedContinuationRecordSetDeterminismHashV2(aggregate as unknown as AssimilatedContinuationAggregateIdentityInputV2);
     return computeContinuationRecordSetDeterminismHashV1(aggregate as unknown as ContinuationAggregateIdentityInputV1);
@@ -307,14 +330,18 @@ export class PostgresFieldTwinReadRepositoryV1 {
     const result = await context.client.query<RecordSetIndexRowV1>(
       `SELECT identity_kind,idempotency_key,record_set_id,determinism_hash,identity_basis,member_object_ids,member_determinism_hashes
          FROM public.twin_object_idempotency_index_v1
-        WHERE identity_kind IN ('A0_RECORD_SET','A2_RECORD_SET')
-          AND member_object_ids @> $1::jsonb
+        WHERE identity_kind IN ('A0_RECORD_SET','A1_RECORD_SET','A2_RECORD_SET')
+          AND (
+            (jsonb_typeof(member_object_ids)='array' AND member_object_ids @> $1::jsonb)
+            OR
+            (jsonb_typeof(member_object_ids)='object' AND member_object_ids @> pg_catalog.jsonb_build_object('twin_runtime_checkpoint_v1',$2))
+          )
         LIMIT 2`,
-      [JSON.stringify([checkpointRef])],
+      [JSON.stringify([checkpointRef]), checkpointRef],
     );
     if ((result.rowCount ?? 0) !== 1) fail("MCFT_RECORD_SET_IDENTITY_INVALID", `CHECKPOINT_MEMBERSHIP:${result.rowCount ?? 0}`);
     const index = result.rows[0];
-    const memberIds = exactStringArray(index.member_object_ids, "MCFT_RECORD_SET_IDENTITY_INVALID:MEMBER_IDS");
+    const memberIds = exactRecordSetMemberIds(index.member_object_ids, "MCFT_RECORD_SET_IDENTITY_INVALID:MEMBER_IDS");
     const declaredHashes = exactStringMap(index.member_determinism_hashes, "MCFT_RECORD_SET_IDENTITY_INVALID:MEMBER_HASHES");
     if (memberIds.length === 0 || new Set(memberIds).size !== memberIds.length || Object.keys(declaredHashes).length !== memberIds.length) fail("MCFT_RECORD_SET_IDENTITY_INVALID", "MEMBER_CARDINALITY");
     const factsResult = await context.client.query<{ fact_id: string; record_json: unknown }>(
