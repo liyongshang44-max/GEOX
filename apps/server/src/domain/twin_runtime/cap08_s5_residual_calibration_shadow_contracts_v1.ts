@@ -21,6 +21,29 @@ export const CAP08_S5_HOLDOUT_COUNT_V1 = 8 as const;
 export const CAP08_S5_EXPECTED_CANDIDATE_PARAMETER_V1 = "0.034000" as const;
 export const CAP08_S5_PHASE_ENGINE_CONTRACT_DIGEST_V1 =
   "sha256:41428596e893112483a8695ccd7bc28dc19dee35c2c3bf29e78395a86133d466" as const;
+export const CAP08_S5_REQUIRED_S4_EFFECTIVE_STATUS_V1 =
+  "S4_LATE_EVIDENCE_APPEND_FORWARD_IMPLEMENTED_EFFECTIVE" as const;
+export const CAP08_S5_REQUIRED_S4_NEXT_SLICE_V1 = "S5" as const;
+export const CAP08_S5_REQUIRED_S4_STATUS_CONTEXT_V1 =
+  "mcft-cap-08/s4-exact-sha-attestation" as const;
+export const CAP08_S5_REQUIRED_S4_RETENTION_CLASS_V1 = "R1_180_DAYS" as const;
+
+export type Cap08S5PredecessorEvidenceV1 = {
+  effective_status: typeof CAP08_S5_REQUIRED_S4_EFFECTIVE_STATUS_V1;
+  effective_next_slice: typeof CAP08_S5_REQUIRED_S4_NEXT_SLICE_V1;
+  status_context: typeof CAP08_S5_REQUIRED_S4_STATUS_CONTEXT_V1;
+  retention_class: typeof CAP08_S5_REQUIRED_S4_RETENTION_CLASS_V1;
+  merge_subject_sha: string;
+  candidate_head_sha: string;
+  candidate_tree_sha: string;
+  merge_tree_sha: string;
+  candidate_to_merge_tree_delta: 0;
+  exact_sha_workflow_run_id: string;
+  artifact_id: string;
+  artifact_digest: string;
+  semantic_artifact_digest: string;
+  artifact_readback_verified: true;
+};
 
 export type Cap08S5ObservationV1 = {
   fvo_id: string;
@@ -53,9 +76,16 @@ export type Cap08S5ReplayAuthorityV1 = {
   base_config: HourlyWaterBalanceConfigV1;
 };
 
+export type Cap08S5ResidualPersistenceStatusV1 =
+  | "INSERTED"
+  | "EXISTING_IDEMPOTENT_SUCCESS"
+  | "EXISTING_RECOVERED";
+
 export type Cap08S5ResolvedObligationV1 = {
   obligation: Cap08S5ResidualObligationV1;
   residual: Cap05ForecastResidualEnvelopeV1;
+  residual_fact_id: string;
+  residual_persistence_status: Cap08S5ResidualPersistenceStatusV1;
   case_source: Cap06CalibrationCaseSourceV1 & {
     source_runtime_config_logical_time: string;
   };
@@ -85,6 +115,35 @@ function canonicalInstantV1(value: unknown, code: string): string {
 
 function expectedIdV1(prefix: string, index: number): string {
   return `${prefix}-${String(index).padStart(2, "0")}`;
+}
+
+export function validateCap08S5PredecessorEvidenceV1(
+  value: Cap08S5PredecessorEvidenceV1,
+): Cap08S5PredecessorEvidenceV1 {
+  if (value.effective_status !== CAP08_S5_REQUIRED_S4_EFFECTIVE_STATUS_V1
+    || value.effective_next_slice !== CAP08_S5_REQUIRED_S4_NEXT_SLICE_V1
+    || value.status_context !== CAP08_S5_REQUIRED_S4_STATUS_CONTEXT_V1
+    || value.retention_class !== CAP08_S5_REQUIRED_S4_RETENTION_CLASS_V1
+    || value.candidate_to_merge_tree_delta !== 0
+    || value.artifact_readback_verified !== true) {
+    throw new Error("CAP08_S5_S4_PREDECESSOR_EFFECTIVENESS_REQUIRED");
+  }
+  for (const [field, fieldValue] of Object.entries({
+    merge_subject_sha: value.merge_subject_sha,
+    candidate_head_sha: value.candidate_head_sha,
+    candidate_tree_sha: value.candidate_tree_sha,
+    merge_tree_sha: value.merge_tree_sha,
+    exact_sha_workflow_run_id: value.exact_sha_workflow_run_id,
+    artifact_id: value.artifact_id,
+    artifact_digest: value.artifact_digest,
+    semantic_artifact_digest: value.semantic_artifact_digest,
+  })) {
+    requiredStringV1(fieldValue, `CAP08_S5_S4_PREDECESSOR_${field.toUpperCase()}_REQUIRED`);
+  }
+  if (value.candidate_tree_sha !== value.merge_tree_sha) {
+    throw new Error("CAP08_S5_S4_PREDECESSOR_TREE_MISMATCH");
+  }
+  return structuredClone(value);
 }
 
 export function validateCap08S5ResidualObligationsV1(
