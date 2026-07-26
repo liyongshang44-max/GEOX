@@ -129,6 +129,106 @@ function memberIds(value: unknown): string[] {
   return [];
 }
 
+function quotedIdentifier(value: string): string {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+async function assertScopedSourceFactBindings(pool: Pool, scope: Record<string, string>): Promise<void> {
+  const requiredColumns = ["source_fact_id", "tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"];
+  const relations = await pool.query<{ table_name: string }>(
+    `SELECT table_name
+       FROM information_schema.columns
+      WHERE table_schema='public'
+        AND column_name=ANY($1::text[])
+      GROUP BY table_name
+     HAVING count(DISTINCT column_name)=$2
+      ORDER BY table_name`,
+    [requiredColumns, requiredColumns.length],
+  );
+  const values = [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id];
+  const mismatches: Array<Record<string, unknown>> = [];
+  for (const { table_name: table } of relations.rows) {
+    const relation = quotedIdentifier(table);
+    const result = await pool.query(
+      `SELECT $7::text AS relation_name,
+              t.source_fact_id,
+              f.record_json->>'type' AS object_type,
+              f.record_json->'payload'->>'object_id' AS object_id,
+              f.record_json->'payload'->>'tenant_id' AS actual_tenant_id,
+              f.record_json->'payload'->>'project_id' AS actual_project_id,
+              f.record_json->'payload'->>'group_id' AS actual_group_id,
+              f.record_json->'payload'->>'field_id' AS actual_field_id,
+              f.record_json->'payload'->>'season_id' AS actual_season_id,
+              f.record_json->'payload'->>'zone_id' AS actual_zone_id
+         FROM ${relation} AS t
+         LEFT JOIN facts AS f ON f.fact_id=t.source_fact_id
+        WHERE t.tenant_id=$1 AND t.project_id=$2 AND t.group_id=$3
+          AND t.field_id=$4 AND t.season_id=$5 AND t.zone_id=$6
+          AND (
+            f.fact_id IS NULL
+            OR f.record_json->'payload'->>'tenant_id' IS DISTINCT FROM $1
+            OR f.record_json->'payload'->>'project_id' IS DISTINCT FROM $2
+            OR f.record_json->'payload'->>'group_id' IS DISTINCT FROM $3
+            OR f.record_json->'payload'->>'field_id' IS DISTINCT FROM $4
+            OR f.record_json->'payload'->>'season_id' IS DISTINCT FROM $5
+            OR f.record_json->'payload'->>'zone_id' IS DISTINCT FROM $6
+          )
+        ORDER BY t.source_fact_id`,
+      [...values, table],
+    );
+    mismatches.push(...result.rows);
+  }
+  assert.deepEqual(mismatches, [], `S6_SCOPED_SOURCE_FACT_BINDING_MISMATCH:${JSON.stringify(mismatches)}`);
+}
+
+async function assertLatestRecordSetMemberScopes(
+  pool: Pool,
+  scope: Record<string, string>,
+  checkpointRef: string,
+): Promise<void> {
+  const guards = await pool.query(
+    `SELECT identity_kind,record_set_id,member_object_ids
+       FROM twin_object_idempotency_index_v1
+      WHERE identity_kind IN ('A0_RECORD_SET','A1_RECORD_SET','A2_RECORD_SET')
+        AND (
+          (jsonb_typeof(member_object_ids)='array' AND member_object_ids @> $1::jsonb)
+          OR
+          (jsonb_typeof(member_object_ids)='object' AND member_object_ids @> jsonb_build_object('twin_runtime_checkpoint_v1',$2::text))
+        )`,
+    [JSON.stringify([checkpointRef]), checkpointRef],
+  );
+  assert.equal(guards.rows.length, 1, `S6_SCOPE_DIAGNOSTIC_RECORD_SET_CARDINALITY:${guards.rows.length}`);
+  const ids = memberIds(guards.rows[0].member_object_ids);
+  const facts = await pool.query(
+    `SELECT fact_id,
+            record_json->>'type' AS object_type,
+            record_json->'payload'->>'object_id' AS object_id,
+            record_json->'payload'->>'tenant_id' AS actual_tenant_id,
+            record_json->'payload'->>'project_id' AS actual_project_id,
+            record_json->'payload'->>'group_id' AS actual_group_id,
+            record_json->'payload'->>'field_id' AS actual_field_id,
+            record_json->'payload'->>'season_id' AS actual_season_id,
+            record_json->'payload'->>'zone_id' AS actual_zone_id
+       FROM facts
+      WHERE record_json->'payload'->>'object_id'=ANY($1::text[])
+        AND (
+          record_json->'payload'->>'tenant_id' IS DISTINCT FROM $2
+          OR record_json->'payload'->>'project_id' IS DISTINCT FROM $3
+          OR record_json->'payload'->>'group_id' IS DISTINCT FROM $4
+          OR record_json->'payload'->>'field_id' IS DISTINCT FROM $5
+          OR record_json->'payload'->>'season_id' IS DISTINCT FROM $6
+          OR record_json->'payload'->>'zone_id' IS DISTINCT FROM $7
+        )
+      ORDER BY record_json->>'type',record_json->'payload'->>'object_id'`,
+    [ids, scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id],
+  );
+  assert.deepEqual(
+    facts.rows,
+    [],
+    `S6_RECORD_SET_MEMBER_SCOPE_MISMATCH:${guards.rows[0].identity_kind}:${guards.rows[0].record_set_id}:${JSON.stringify(facts.rows)}`,
+  );
+}
+
 export async function pointerSnapshot(pool: Pool, scope: Record<string, string>): Promise<PointerSnapshot> {
   const tables = [
     "twin_state_latest_index_v1",
@@ -147,6 +247,12 @@ export async function pointerSnapshot(pool: Pool, scope: Record<string, string>)
         ORDER BY 1`, values,
     )).rows.map((row) => row.row);
   }
+  await assertScopedSourceFactBindings(pool, scope);
+  await assertLatestRecordSetMemberScopes(
+    pool,
+    scope,
+    String(pointerRow(output, "twin_runtime_checkpoint_latest_index_v1").checkpoint_object_id),
+  );
   return output;
 }
 
