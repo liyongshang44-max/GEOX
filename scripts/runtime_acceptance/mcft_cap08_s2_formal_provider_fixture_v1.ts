@@ -33,14 +33,21 @@ export type Cap08S2FormalProviderFixtureV1 =
 function fvoIndexV1(fvoId: string): number {
   const match = /^FVO-(\d{2})$/.exec(fvoId);
   if (!match) throw new Error(`CAP08_S2_FIXTURE_FVO_ID_INVALID:${fvoId}`);
-  return Number(match[1]);
+  const index = Number(match[1]);
+  if (!Number.isInteger(index) || index < 1 || index > 24) {
+    throw new Error(`CAP08_S2_FIXTURE_FVO_INDEX_INVALID:${fvoId}`);
+  }
+  return index;
 }
 
 function addHoursV1(value: string, hours: number): string {
   return new Date(Date.parse(value) + hours * 3_600_000).toISOString();
 }
 
-function fvoRecordV1(scope: TwinScopeKeyV1, fvoId: string): CanonicalReplayEvidenceRecordV1 {
+export function buildCap08S2FormalFvoRecordV1(
+  scope: TwinScopeKeyV1,
+  fvoId: string,
+): CanonicalReplayEvidenceRecordV1 {
   const index = fvoIndexV1(fvoId);
   const observedAt = addHoursV1(CAP08_S1_RUNTIME_START_V1, index);
   const availableAt = index === 1 ? addHoursV1(CAP08_S1_RUNTIME_START_V1, 16) : observedAt;
@@ -92,7 +99,7 @@ export function buildCap08S2FormalProviderFixtureV1(): Cap08S2FormalProviderFixt
       const due = buildCap08S2FormalDueObligationV1(input.logical_time);
       const baseRecords = structuredClone(await base.evidence_source.loadCandidateRecords(input));
       const withoutS1Observation = baseRecords.filter((record) => record.record_type !== "soil_moisture_observation_v1");
-      const dueObservations = due.due_fvo_ids.map((fvoId) => fvoRecordV1(input.scope, fvoId));
+      const dueObservations = due.due_fvo_ids.map((fvoId) => buildCap08S2FormalFvoRecordV1(input.scope, fvoId));
       return [...withoutS1Observation, ...dueObservations];
     },
   };
