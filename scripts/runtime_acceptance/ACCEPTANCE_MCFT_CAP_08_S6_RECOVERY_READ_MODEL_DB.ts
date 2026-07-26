@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 
 import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
 import { PostgresForecastScenarioRecoveryRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.js";
@@ -21,6 +21,7 @@ if (!databaseUrl || !adminDatabaseUrl) throw new Error("MCFT_CAP08_S6_DATABASE_U
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const EXECUTE = path.join(ROOT, `acceptance-output/MCFT_CAP_08_S6_${runInstanceId}_EXECUTE_RESULT.json`);
 const OUT = path.join(ROOT, `acceptance-output/MCFT_CAP_08_S6_${runInstanceId}_FORMAL_RUN_RESULT.json`);
+const S4_APPEND_FORWARD_FACT_SOURCE = "mcft_cap08_s4_late_append_forward_v1";
 const pool = new Pool({ connectionString: databaseUrl, max: 8 });
 const admin = new Pool({ connectionString: adminDatabaseUrl, max: 2 });
 
@@ -76,16 +77,21 @@ async function pointerSnapshot(): Promise<Record<string, any[]>> {
   return result;
 }
 
-async function rebuildCorePointersAndStateHistory(): Promise<void> {
-  await admin.query(`
+async function rebuildCorePointersAndStateHistory(client: PoolClient): Promise<void> {
+  await client.query(`
     INSERT INTO public.twin_state_history_projection_v1
       (state_object_id,tenant_id,project_id,group_id,field_id,season_id,zone_id,lineage_id,revision_id,logical_time,determinism_hash,canonical_payload,source_fact_id)
     SELECT p->>'object_id',p->>'tenant_id',p->>'project_id',p->>'group_id',p->>'field_id',p->>'season_id',p->>'zone_id',
            p->>'lineage_id',p->>'revision_id',(p->>'logical_time')::timestamptz,p->>'determinism_hash',p,fact_id
-      FROM (SELECT fact_id,record_json->'payload' AS p FROM facts WHERE record_json->>'type'='twin_state_estimate_v1') s
+      FROM (
+        SELECT fact_id,record_json->'payload' AS p
+          FROM facts
+         WHERE record_json->>'type'='twin_state_estimate_v1'
+           AND source<>$1
+      ) s
     ORDER BY p->>'logical_time',p->>'object_id'
-  `);
-  await admin.query(`
+  `, [S4_APPEND_FORWARD_FACT_SOURCE]);
+  await client.query(`
     INSERT INTO public.twin_state_latest_index_v1
       (tenant_id,project_id,group_id,field_id,season_id,zone_id,state_object_id,lineage_id,revision_id,logical_time,determinism_hash,source_fact_id)
     SELECT tenant_id,project_id,group_id,field_id,season_id,zone_id,object_id,lineage_id,revision_id,logical_time,determinism_hash,fact_id
@@ -95,10 +101,15 @@ async function rebuildCorePointersAndStateHistory(): Promise<void> {
                p->>'revision_id' revision_id,(p->>'logical_time')::timestamptz logical_time,p->>'determinism_hash' determinism_hash,
                row_number() OVER (PARTITION BY p->>'tenant_id',p->>'project_id',p->>'group_id',p->>'field_id',p->>'season_id',p->>'zone_id'
                                   ORDER BY (p->>'logical_time')::timestamptz DESC,p->>'object_id' DESC) rn
-          FROM (SELECT fact_id,record_json->'payload' p FROM facts WHERE record_json->>'type'='twin_state_estimate_v1') f
+          FROM (
+            SELECT fact_id,record_json->'payload' p
+              FROM facts
+             WHERE record_json->>'type'='twin_state_estimate_v1'
+               AND source<>$1
+          ) f
       ) ranked WHERE rn=1
-  `);
-  await admin.query(`
+  `, [S4_APPEND_FORWARD_FACT_SOURCE]);
+  await client.query(`
     INSERT INTO public.twin_runtime_checkpoint_latest_index_v1
       (tenant_id,project_id,group_id,field_id,season_id,zone_id,checkpoint_object_id,lineage_id,revision_id,logical_time,determinism_hash,source_fact_id)
     SELECT tenant_id,project_id,group_id,field_id,season_id,zone_id,object_id,lineage_id,revision_id,logical_time,determinism_hash,fact_id
@@ -108,10 +119,15 @@ async function rebuildCorePointersAndStateHistory(): Promise<void> {
                p->>'revision_id' revision_id,(p->>'logical_time')::timestamptz logical_time,p->>'determinism_hash' determinism_hash,
                row_number() OVER (PARTITION BY p->>'tenant_id',p->>'project_id',p->>'group_id',p->>'field_id',p->>'season_id',p->>'zone_id'
                                   ORDER BY (p->>'logical_time')::timestamptz DESC,p->>'object_id' DESC) rn
-          FROM (SELECT fact_id,record_json->'payload' p FROM facts WHERE record_json->>'type'='twin_runtime_checkpoint_v1') f
+          FROM (
+            SELECT fact_id,record_json->'payload' p
+              FROM facts
+             WHERE record_json->>'type'='twin_runtime_checkpoint_v1'
+               AND source<>$1
+          ) f
       ) ranked WHERE rn=1
-  `);
-  await admin.query(`
+  `, [S4_APPEND_FORWARD_FACT_SOURCE]);
+  await client.query(`
     INSERT INTO public.twin_forecast_result_latest_index_v1
       (tenant_id,project_id,group_id,field_id,season_id,zone_id,forecast_object_id,forecast_status,logical_time,determinism_hash,source_fact_id)
     SELECT tenant_id,project_id,group_id,field_id,season_id,zone_id,object_id,status,logical_time,determinism_hash,fact_id
@@ -121,10 +137,15 @@ async function rebuildCorePointersAndStateHistory(): Promise<void> {
                (p->>'logical_time')::timestamptz logical_time,p->>'determinism_hash' determinism_hash,
                row_number() OVER (PARTITION BY p->>'tenant_id',p->>'project_id',p->>'group_id',p->>'field_id',p->>'season_id',p->>'zone_id'
                                   ORDER BY (p->>'logical_time')::timestamptz DESC,p->>'object_id' DESC) rn
-          FROM (SELECT fact_id,record_json->'payload' p FROM facts WHERE record_json->>'type'='twin_forecast_run_v1') f
+          FROM (
+            SELECT fact_id,record_json->'payload' p
+              FROM facts
+             WHERE record_json->>'type'='twin_forecast_run_v1'
+               AND source<>$1
+          ) f
       ) ranked WHERE rn=1
-  `);
-  await admin.query(`
+  `, [S4_APPEND_FORWARD_FACT_SOURCE]);
+  await client.query(`
     INSERT INTO public.twin_forecast_success_latest_index_v1
       (tenant_id,project_id,group_id,field_id,season_id,zone_id,forecast_object_id,logical_time,determinism_hash,source_fact_id)
     SELECT tenant_id,project_id,group_id,field_id,season_id,zone_id,object_id,logical_time,determinism_hash,fact_id
@@ -134,11 +155,16 @@ async function rebuildCorePointersAndStateHistory(): Promise<void> {
                p->>'determinism_hash' determinism_hash,
                row_number() OVER (PARTITION BY p->>'tenant_id',p->>'project_id',p->>'group_id',p->>'field_id',p->>'season_id',p->>'zone_id'
                                   ORDER BY (p->>'logical_time')::timestamptz DESC,p->>'object_id' DESC) rn
-          FROM (SELECT fact_id,record_json->'payload' p FROM facts
-                 WHERE record_json->>'type'='twin_forecast_run_v1' AND record_json->'payload'->'payload'->>'status'='COMPLETED') f
+          FROM (
+            SELECT fact_id,record_json->'payload' p
+              FROM facts
+             WHERE record_json->>'type'='twin_forecast_run_v1'
+               AND record_json->'payload'->'payload'->>'status'='COMPLETED'
+               AND source<>$1
+          ) f
       ) ranked WHERE rn=1
-  `);
-  await admin.query(`
+  `, [S4_APPEND_FORWARD_FACT_SOURCE]);
+  await client.query(`
     INSERT INTO public.twin_runtime_health_latest_index_v1
       (tenant_id,project_id,group_id,field_id,season_id,zone_id,health_object_id,operation_status,logical_time,determinism_hash,source_fact_id)
     SELECT tenant_id,project_id,group_id,field_id,season_id,zone_id,object_id,operation_status,logical_time,determinism_hash,fact_id
@@ -151,7 +177,7 @@ async function rebuildCorePointersAndStateHistory(): Promise<void> {
           FROM (SELECT fact_id,record_json->'payload' p FROM facts WHERE record_json->>'type'='twin_runtime_health_v1') f
       ) ranked WHERE rn=1
   `);
-  await admin.query(`
+  await client.query(`
     INSERT INTO public.twin_active_lineage_index_v1
       (tenant_id,project_id,group_id,field_id,season_id,zone_id,active_lineage_ref,activation_authority_kind,activation_authority_ref,expected_previous_active_lineage)
     SELECT p->>'tenant_id',p->>'project_id',p->>'group_id',p->>'field_id',p->>'season_id',p->>'zone_id',p->>'object_id',
@@ -180,24 +206,27 @@ async function main(): Promise<void> {
     const projectionCountsBefore = await tableCounts();
 
     const recovery = new PostgresForecastScenarioRecoveryRepositoryV1(pool);
-    await admin.query("BEGIN");
+    const destroyClient = await admin.connect();
     try {
-      await admin.query("DELETE FROM twin_forecast_point_projection_v1");
-      await admin.query("DELETE FROM twin_forecast_run_projection_v1");
-      await admin.query("DELETE FROM twin_scenario_point_projection_v1");
-      await admin.query("DELETE FROM twin_scenario_set_projection_v1");
-      await admin.query("DELETE FROM twin_scenario_latest_index_v1");
-      await admin.query("DELETE FROM twin_state_history_projection_v1");
+      await destroyClient.query("BEGIN");
+      await destroyClient.query("DELETE FROM twin_forecast_point_projection_v1");
+      await destroyClient.query("DELETE FROM twin_forecast_run_projection_v1");
+      await destroyClient.query("DELETE FROM twin_scenario_point_projection_v1");
+      await destroyClient.query("DELETE FROM twin_scenario_set_projection_v1");
+      await destroyClient.query("DELETE FROM twin_scenario_latest_index_v1");
+      await destroyClient.query("DELETE FROM twin_state_history_projection_v1");
       for (const [table] of POINTER_TABLES.filter(([table]) => table !== "twin_scenario_latest_index_v1")) {
-        await admin.query(`DELETE FROM public.${table}`);
+        await destroyClient.query(`DELETE FROM public.${table}`);
       }
-      await admin.query("COMMIT");
+      await rebuildCorePointersAndStateHistory(destroyClient);
+      await destroyClient.query("COMMIT");
     } catch (error) {
-      await admin.query("ROLLBACK");
+      await destroyClient.query("ROLLBACK");
       throw error;
+    } finally {
+      destroyClient.release();
     }
 
-    await rebuildCorePointersAndStateHistory();
     const recordSets = (await admin.query(
       "SELECT record_set_id FROM twin_object_idempotency_index_v1 WHERE identity_kind IN ('A1_RECORD_SET','A2_RECORD_SET') ORDER BY record_set_id",
     )).rows.map((row) => String(row.record_set_id));
@@ -318,7 +347,9 @@ async function main(): Promise<void> {
       hard_acceptance_ledger: hardAcceptanceLedger,
       hard_acceptance_pass_count: 23,
       hard_acceptance_pending_exact_merge_count: 1,
-      counts: execute.counts,
+      canonical_total_counts: execute.canonical_total_counts,
+      primary_chain_counts: execute.primary_chain_counts,
+      append_forward_counts: execute.append_forward_counts,
       forecast_point_count: execute.forecast_point_count,
       scenario_option_count: execute.scenario_option_count,
       scenario_point_count: execute.scenario_point_count,
