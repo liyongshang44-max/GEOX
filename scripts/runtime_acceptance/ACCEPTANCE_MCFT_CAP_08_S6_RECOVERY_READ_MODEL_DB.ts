@@ -90,7 +90,17 @@ async function rebuildCorePointersAndStateHistory(client: PoolClient): Promise<v
     INSERT INTO public.twin_state_history_projection_v1
       (state_object_id,tenant_id,project_id,group_id,field_id,season_id,zone_id,lineage_id,revision_id,logical_time,determinism_hash,canonical_payload,source_fact_id)
     SELECT p->>'object_id',p->>'tenant_id',p->>'project_id',p->>'group_id',p->>'field_id',p->>'season_id',p->>'zone_id',
-           p->>'lineage_id',p->>'revision_id',(p->>'logical_time')::timestamptz,p->>'determinism_hash',p,fact_id
+           p->>'lineage_id',p->>'revision_id',(p->>'logical_time')::timestamptz,p->>'determinism_hash',
+           CASE
+             WHEN EXISTS (
+               SELECT 1
+                 FROM twin_object_idempotency_index_v1 i
+                WHERE i.identity_kind IN ('A1_RECORD_SET','A2_RECORD_SET')
+                  AND i.member_object_ids->>'twin_state_estimate_v1'=p->>'object_id'
+             ) THEN p->'payload'
+             ELSE p
+           END,
+           fact_id
       FROM (
         SELECT fact_id,record_json->'payload' AS p
           FROM facts
