@@ -71,14 +71,14 @@ async function tableCardinalitySnapshot(pool: Pool): Promise<Array<{ table: stri
   return output;
 }
 
-async function operatorReadback(pool: Pool, scope: Record<string, string>): Promise<{
+async function operatorReadback(pool: Pool, auditPool: Pool, scope: Record<string, string>): Promise<{
   surfaces: Array<{ endpoint: string; status: number; content_hash: string | null; response_hash: string | null }>;
   response_bodies: Record<string, Record<string, unknown>>;
   product_read_write_delta: 0;
 }> {
   process.env.MCFT_CURSOR_SIGNING_KEYS_JSON = JSON.stringify({ s6: "s6-final-closure-signing-key-00000000000000000001" });
   process.env.MCFT_CURSOR_PRIMARY_KEY_ID = "s6";
-  const before = await tableCardinalitySnapshot(pool);
+  const before = await tableCardinalitySnapshot(auditPool);
   const app = Fastify({ logger: false });
   registerMcftFieldTwinReadRoutesV1(app, pool, {
     authorizeScope: (_request, requested) => ({
@@ -135,7 +135,7 @@ async function operatorReadback(pool: Pool, scope: Record<string, string>): Prom
   } finally {
     await app.close();
   }
-  const after = await tableCardinalitySnapshot(pool);
+  const after = await tableCardinalitySnapshot(auditPool);
   assert.deepEqual(after, before, "S6_OPERATOR_GET_WRITE_DELTA");
   return { surfaces, response_bodies: responseBodies, product_read_write_delta: 0 };
 }
@@ -203,7 +203,7 @@ async function main(): Promise<void> {
     assert.equal(governanceRebuild.canonical_fact_append_count, 0);
     assert.equal(governanceRebuild.deterministic_second_rebuild_verified, true);
 
-    const operator = await operatorReadback(recoveryPoolA, request.scope);
+    const operator = await operatorReadback(recoveryPoolA, admin, request.scope);
     assert.equal(operator.surfaces.length, 10);
     assert.equal(operator.product_read_write_delta, 0);
     const factsAfterRestart = await factCount(admin);
