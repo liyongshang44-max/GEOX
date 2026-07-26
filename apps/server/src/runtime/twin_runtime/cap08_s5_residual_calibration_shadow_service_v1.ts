@@ -2,27 +2,35 @@
 // Boundary: one caller-provided formal chain only; no repository search, latest lookup, active Config mutation, Model Activation, State/checkpoint mutation, route, scheduler, production Runtime source, or MCFT-CAP-09 authority.
 
 import {
-  buildCap06CaseWindowV1,
-  buildCap06CaseWindowsV1,
-  type Cap06BuiltCaseWindowV1,
-  type Cap06BuiltCaseWindowsV1,
-} from "../../domain/calibration/case_builder_v1.js";
-import {
   CAP06_HOLDOUT_GENERALIZATION_CLAIM_V1,
   CAP06_HOLDOUT_PURPOSE_V1,
+  CAP06_SEARCH_MAXIMUM_V1,
+  CAP06_SEARCH_MINIMUM_V1,
   CAP06_WINDOW_HASH_SEMANTICS_V1,
   isCap06CandidateAppendingStatusV1,
+  type Cap06CalibrationCaseV1,
   type Cap06RealityScopeV1,
   type Cap06SourceDatasetIdentityV1,
 } from "../../domain/calibration/contracts_v1.js";
 import { runCap06CalibrationGridSearchV1 } from "../../domain/calibration/grid_search_v1.js";
 import { runCap06PairedHistoricalShadowV1 } from "../../domain/calibration/shadow_evaluation_v1.js";
-import {
-  buildCap06CalibrationCandidateDraftV1,
-  buildCap06ShadowEvaluationDraftV1,
-  type Cap06CalibrationCandidateDraftV1,
-  type Cap06ShadowEvaluationDraftV1,
+import type {
+  Cap06CalibrationCandidateDraftV1,
+  Cap06ShadowEvaluationDraftV1,
 } from "../../domain/calibration/envelope_profiles_v1.js";
+import {
+  CAP08_S5_NO_POSITIVE_EXCESS_REGIME_V1,
+  asCap06ComputeWindowV1,
+  buildCap08S5CaseWindowV1,
+  buildCap08S5CaseWindowsV1,
+  type Cap08S5BuiltCaseWindowV1,
+  type Cap08S5BuiltCaseWindowsV1,
+  type Cap08S5CalibrationCaseV1,
+} from "../../domain/calibration/cap08_s5_case_builder_v1.js";
+import {
+  buildCap08S5CalibrationCandidateDraftV1,
+  buildCap08S5ShadowEvaluationDraftV1,
+} from "../../domain/calibration/cap08_s5_envelope_profiles_v1.js";
 import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
 import {
   CAP08_S5_CALIBRATION_COUNT_V1,
@@ -66,9 +74,12 @@ export type Cap08S5ServiceResultV1 = {
   calibration_residual_refs: string[];
   holdout_residual_refs: string[];
   source_dataset_identity: Cap06SourceDatasetIdentityV1;
-  case_windows: Cap06BuiltCaseWindowsV1;
-  calibration_window: Cap06BuiltCaseWindowV1;
-  holdout_window: Cap06BuiltCaseWindowV1;
+  case_windows: Cap08S5BuiltCaseWindowsV1;
+  calibration_window: Cap08S5BuiltCaseWindowV1;
+  holdout_window: Cap08S5BuiltCaseWindowV1;
+  no_positive_excess_calibration_case_count: number;
+  no_positive_excess_holdout_case_count: number;
+  no_positive_excess_parameter_insensitivity_verified: true;
   candidate: Cap06CalibrationCandidateDraftV1;
   candidate_persistence_status: Cap06GovernancePersistenceResultV1["status"];
   candidate_append_count: 0 | 1;
@@ -195,6 +206,43 @@ function verifyCanonicalReadbackV1(input: {
   }
 }
 
+async function verifyNoPositiveExcessParameterInsensitivityV1(input: {
+  calibrationWindow: Cap08S5BuiltCaseWindowV1;
+  holdoutWindow: Cap08S5BuiltCaseWindowV1;
+  predictionPort: Cap08S5ReplayPredictionAdapterV1;
+}): Promise<void> {
+  const cases = [...input.calibrationWindow.cases, ...input.holdoutWindow.cases]
+    .filter((item) => item.wetness_regime === CAP08_S5_NO_POSITIVE_EXCESS_REGIME_V1);
+  for (const item of cases) {
+    if (item.drainage_excitation_eligible !== false) {
+      throw new Error(`CAP08_S5_NO_POSITIVE_EXCESS_CASE_MARKED_EXCITING:${item.residual_ref}`);
+    }
+    const computeCase = item as unknown as Cap06CalibrationCaseV1;
+    const minimum = await input.predictionPort.predictCase(computeCase, CAP06_SEARCH_MINIMUM_V1);
+    const maximum = await input.predictionPort.predictCase(computeCase, CAP06_SEARCH_MAXIMUM_V1);
+    if (minimum.prediction_vwc !== maximum.prediction_vwc
+      || minimum.storage_mm !== maximum.storage_mm
+      || minimum.physical_invariant_status !== "PASS"
+      || maximum.physical_invariant_status !== "PASS"
+      || minimum.mass_balance_status !== "PASS"
+      || maximum.mass_balance_status !== "PASS") {
+      throw new Error(`CAP08_S5_NO_POSITIVE_EXCESS_CASE_PARAMETER_SENSITIVE:${item.residual_ref}`);
+    }
+  }
+}
+
+function assertNoDryExcitationLeakV1(attempt: {
+  objective_surface: Array<{ represented_sensitive_wetness_regimes: readonly unknown[] }>;
+}): void {
+  for (const point of attempt.objective_surface) {
+    if (point.represented_sensitive_wetness_regimes.some(
+      (value) => value === CAP08_S5_NO_POSITIVE_EXCESS_REGIME_V1,
+    )) {
+      throw new Error("CAP08_S5_NO_POSITIVE_EXCESS_COUNTED_AS_PARAMETER_EXCITATION");
+    }
+  }
+}
+
 export class Cap08S5ResidualCalibrationShadowServiceV1 {
   constructor(
     private readonly exactSourcePort: Cap08S5ExactSourcePortV1,
@@ -262,27 +310,33 @@ export class Cap08S5ResidualCalibrationShadowServiceV1 {
       throw new Error("CAP08_S5_CALIBRATION_HOLDOUT_OVERLAP");
     }
 
-    const calibrationWindow = buildCap06CaseWindowV1({
+    const calibrationWindow = buildCap08S5CaseWindowV1({
       role: "CALIBRATION",
       orderedResidualRefs: calibrationRefs,
       loadedCases: calibrationResolved.map((item) => item.case_source),
       sourceDatasetIdentity,
     });
-    const holdoutWindow = buildCap06CaseWindowV1({
+    const holdoutWindow = buildCap08S5CaseWindowV1({
       role: "HOLDOUT",
       orderedResidualRefs: holdoutRefs,
       loadedCases: holdoutResolved.map((item) => item.case_source),
       sourceDatasetIdentity,
     });
-    const caseWindows = buildCap06CaseWindowsV1({
+    const caseWindows = buildCap08S5CaseWindowsV1({
       calibration: calibrationWindow,
       holdout: holdoutWindow,
     });
     const predictionPort = new Cap08S5ReplayPredictionAdapterV1(resolved);
-    const attempt = await runCap06CalibrationGridSearchV1({
+    await verifyNoPositiveExcessParameterInsensitivityV1({
       calibrationWindow,
+      holdoutWindow,
       predictionPort,
     });
+    const attempt = await runCap06CalibrationGridSearchV1({
+      calibrationWindow: asCap06ComputeWindowV1(calibrationWindow),
+      predictionPort,
+    });
+    assertNoDryExcitationLeakV1(attempt);
     if (!isCap06CandidateAppendingStatusV1(attempt.status)
       || attempt.selected_parameter_value !== CAP08_S5_EXPECTED_CANDIDATE_PARAMETER_V1) {
       throw new Error(
@@ -290,7 +344,7 @@ export class Cap08S5ResidualCalibrationShadowServiceV1 {
       );
     }
 
-    const candidate = buildCap06CalibrationCandidateDraftV1({
+    const candidate = buildCap08S5CalibrationCandidateDraftV1({
       calibrationWindow,
       attempt,
     });
@@ -309,20 +363,21 @@ export class Cap08S5ResidualCalibrationShadowServiceV1 {
       code: "CAP08_S5_CANDIDATE_CANONICAL_READBACK_MISMATCH",
     });
 
+    const computeHoldoutWindow = asCap06ComputeWindowV1(holdoutWindow);
     const shadowFirst = await runCap06PairedHistoricalShadowV1({
-      holdoutWindow,
+      holdoutWindow: computeHoldoutWindow,
       candidateParameterValue: CAP08_S5_EXPECTED_CANDIDATE_PARAMETER_V1,
       predictionPort,
     });
     const shadowSecond = await runCap06PairedHistoricalShadowV1({
-      holdoutWindow,
+      holdoutWindow: computeHoldoutWindow,
       candidateParameterValue: CAP08_S5_EXPECTED_CANDIDATE_PARAMETER_V1,
       predictionPort,
     });
     if (semanticHashV1(shadowFirst) !== semanticHashV1(shadowSecond)) {
       throw new Error("CAP08_S5_SHADOW_DETERMINISTIC_RERUN_MISMATCH");
     }
-    const shadowEvaluation = buildCap06ShadowEvaluationDraftV1({
+    const shadowEvaluation = buildCap08S5ShadowEvaluationDraftV1({
       holdoutWindow,
       candidate,
       shadow: shadowFirst,
@@ -360,6 +415,9 @@ export class Cap08S5ResidualCalibrationShadowServiceV1 {
       case_windows: caseWindows,
       calibration_window: calibrationWindow,
       holdout_window: holdoutWindow,
+      no_positive_excess_calibration_case_count: calibrationWindow.no_positive_excess_case_count,
+      no_positive_excess_holdout_case_count: holdoutWindow.no_positive_excess_case_count,
+      no_positive_excess_parameter_insensitivity_verified: true as const,
       candidate,
       candidate_persistence_status: candidatePersisted.status,
       candidate_append_count: candidatePersisted.status === "INSERTED" ? 1 as const : 0 as const,
