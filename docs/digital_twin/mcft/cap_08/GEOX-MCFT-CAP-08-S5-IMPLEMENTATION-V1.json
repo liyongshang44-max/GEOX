@@ -1,0 +1,76 @@
+{
+  "schema_version": "geox_mcft_cap08_s5_implementation_v2",
+  "record_status": "FORMAL_S5_CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S5",
+  "contract_id": "MCFT-CAP-08.S5-RESIDUAL-CALIBRATION-SHADOW-V2",
+  "base_sha": "1a6ff1b3c2b9974f859fe473b09a49a5c8fdb678",
+  "prequalification_authority_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-REPLAY-DATASET-V2-EFFECTIVENESS-AUTHORITY-V1.json",
+  "predecessor_consumption_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-PREDECESSOR-CONSUMPTION-V1.json",
+  "implementation_source": {
+    "residual_contract": "apps/server/src/domain/twin_runtime/cap08_s5_residual_calibration_shadow_contracts_v1.ts",
+    "prequalification_contract": "apps/server/src/domain/twin_runtime/cap08_s5_replay_dataset_v2_authority_v1.ts",
+    "case_builder": "apps/server/src/domain/calibration/cap08_s5_case_builder_v1.ts",
+    "objective_grid_search": "apps/server/src/domain/calibration/cap08_s5_objective_grid_search_v1.ts",
+    "envelope_profiles": "apps/server/src/domain/calibration/cap08_s5_envelope_profiles_v1.ts",
+    "exact_source": "apps/server/src/persistence/twin_runtime/postgres_cap08_s5_exact_source_v1.ts",
+    "replay_adapter": "apps/server/src/runtime/twin_runtime/cap08_s5_replay_prediction_adapter_v1.ts",
+    "service": "apps/server/src/runtime/twin_runtime/cap08_s5_residual_calibration_shadow_service_v1.ts"
+  },
+  "preflight_provenance": {
+    "head_sha": "62c77da3634997f32f1f5840a813344c1f7ff483",
+    "tree_sha": "a3604fa43c7caf9dcd52668f8c8ca448a290d366",
+    "workflow_run_id": "30196732745",
+    "artifact_id": "8630347607",
+    "artifact_digest": "sha256:0053af2d577d9a99eba454ee9648f00a5e012a33f16058cf044ac1b1f21c909d",
+    "standard_ci_run_id": "30196732749",
+    "prior_evidence_is_not_candidate_proof": true
+  },
+  "formal_oracle": {
+    "residual_count": 24,
+    "calibration_case_count": 16,
+    "objective_case_count": 15,
+    "diagnostic_only_case_count": 1,
+    "diagnostic_only_observation_refs": [
+      "FVO-10"
+    ],
+    "holdout_case_count": 8,
+    "grid_point_count": 21,
+    "base_parameter_value": "0.030000",
+    "candidate_parameter_value": "0.034000",
+    "sensitive_case_count": 7,
+    "sensitive_wetness_regimes": [
+      "HIGH_EXCESS",
+      "MID_EXCESS"
+    ],
+    "candidate_ref": "twin_calibration_candidate_17643469dcc3562b0b99f4d2",
+    "candidate_hash": "sha256:56b12214f5c41310f38ce97b8256651aa76ffcd3b0621a1f79b56bbcad42b86a",
+    "shadow_ref": "twin_shadow_evaluation_7cd3b55e0633267e790e05c5",
+    "shadow_hash": "sha256:faf7fd5f6856ea008db3e960e82712040feb76d82d4ab2912365805d7ac3cbbd"
+  },
+  "persistence_oracle": {
+    "residual_fact_count": 24,
+    "candidate_fact_count": 1,
+    "shadow_fact_count": 1,
+    "completed_rerun_write_count": 0,
+    "candidate_fault_stage_count": 4,
+    "shadow_fault_stage_count": 4,
+    "partial_graph_corruption_case_count": 3,
+    "model_activation_count": 0,
+    "active_runtime_config_switch_count": 0,
+    "state_pointer_delta": 0,
+    "checkpoint_pointer_delta": 0
+  },
+  "review_mode": "OWNER_WAIVED_DEFERRED_TO_S6",
+  "independent_review_required": false,
+  "independent_review_satisfied": false,
+  "independent_review_performed": false,
+  "independent_review_waived": true,
+  "technical_gate_relaxation": false,
+  "final_s6_independent_review_required": true,
+  "runtime_source_scope": "BOUNDED_FORMAL_AND_ACCEPTANCE_PROVIDER_ONLY",
+  "production_runtime_source_authorized": false,
+  "s5_effective": false,
+  "s6_authorized": false,
+  "mcft_cap_09_authorized": false
+}
