@@ -5,6 +5,7 @@ import type { Cap04ForecastPointV1 } from "./forecast_scenario_contracts_v1.js";
 import type { CanonicalObjectEnvelopeV1 } from "./canonical_object_contracts_v1.js";
 import type { Cap05ForecastResidualEnvelopeV1 } from "./forecast_observation_residual_v1.js";
 import type { ResolvedCap04ExecutionConfigV1 } from "./runtime_config_execution_view_v1.js";
+import { CAP08_S1_RUNTIME_START_V1 } from "./cap08_phase_engine_contracts_v1.js";
 import type {
   Cap06CalibrationCaseSourceV1,
   Cap06RealityScopeV1,
@@ -27,6 +28,7 @@ export const CAP08_S5_REQUIRED_S4_NEXT_SLICE_V1 = "S5" as const;
 export const CAP08_S5_REQUIRED_S4_STATUS_CONTEXT_V1 =
   "mcft-cap-08/s4-exact-sha-attestation" as const;
 export const CAP08_S5_REQUIRED_S4_RETENTION_CLASS_V1 = "R1_180_DAYS" as const;
+export const CAP08_S5_ORDINARY_ASSIMILATION_ORDERS_V1 = [2, 3, 4, 10, 22] as const;
 
 export type Cap08S5PredecessorEvidenceV1 = {
   effective_status: typeof CAP08_S5_REQUIRED_S4_EFFECTIVE_STATUS_V1;
@@ -117,6 +119,20 @@ function expectedIdV1(prefix: string, index: number): string {
   return `${prefix}-${String(index).padStart(2, "0")}`;
 }
 
+function addHoursV1(value: string, hours: number): string {
+  return new Date(Date.parse(value) + hours * 3_600_000).toISOString();
+}
+
+function expectedCommitPhaseV1(order: number): string {
+  if (order === 1 || order === 16) return "T16";
+  if (order === 24) return "G00";
+  return `T${String(order).padStart(2, "0")}`;
+}
+
+function ordinaryAssimilationRequiredV1(order: number): boolean {
+  return (CAP08_S5_ORDINARY_ASSIMILATION_ORDERS_V1 as readonly number[]).includes(order);
+}
+
 export function validateCap08S5PredecessorEvidenceV1(
   value: Cap08S5PredecessorEvidenceV1,
 ): Cap08S5PredecessorEvidenceV1 {
@@ -167,18 +183,38 @@ export function validateCap08S5ResidualObligationsV1(
     if (item.observation.canonical_unit !== "fraction") {
       throw new Error(`CAP08_S5_FVO_UNIT_MISMATCH:${order}`);
     }
-    if (item.observation.quality_status !== "PASS" && item.observation.quality_status !== "LIMITED") {
-      throw new Error(`CAP08_S5_FVO_QUALITY_INVALID:${order}`);
+    const expectedQuality = order === 3 ? "LIMITED" : "PASS";
+    if (item.observation.quality_status !== expectedQuality) {
+      throw new Error(`CAP08_S5_FVO_QUALITY_MISMATCH:${order}`);
     }
-    canonicalInstantV1(item.observation.observed_at, `CAP08_S5_FVO_OBSERVED_AT_INVALID:${order}`);
-    canonicalInstantV1(item.observation.available_to_runtime_at, `CAP08_S5_FVO_AVAILABLE_AT_INVALID:${order}`);
+    const observedAt = canonicalInstantV1(
+      item.observation.observed_at,
+      `CAP08_S5_FVO_OBSERVED_AT_INVALID:${order}`,
+    );
+    const availableAt = canonicalInstantV1(
+      item.observation.available_to_runtime_at,
+      `CAP08_S5_FVO_AVAILABLE_AT_INVALID:${order}`,
+    );
+    const expectedObservedAt = addHoursV1(CAP08_S1_RUNTIME_START_V1, order);
+    const expectedAvailableAt = order === 1
+      ? addHoursV1(CAP08_S1_RUNTIME_START_V1, 16)
+      : expectedObservedAt;
+    if (observedAt !== expectedObservedAt || availableAt !== expectedAvailableAt) {
+      throw new Error(`CAP08_S5_FVO_DUAL_TIME_MISMATCH:${order}`);
+    }
     requiredStringV1(item.observation.source_record_hash, `CAP08_S5_FVO_HASH_REQUIRED:${order}`);
     requiredStringV1(item.observation.canonical_value, `CAP08_S5_FVO_VALUE_REQUIRED:${order}`);
     requiredStringV1(item.forecast_ref, `CAP08_S5_FORECAST_REF_REQUIRED:${order}`);
     requiredStringV1(item.forecast_hash, `CAP08_S5_FORECAST_HASH_REQUIRED:${order}`);
-    requiredStringV1(item.commit_phase, `CAP08_S5_COMMIT_PHASE_REQUIRED:${order}`);
+    if (item.commit_phase !== expectedCommitPhaseV1(order)) {
+      throw new Error(`CAP08_S5_COMMIT_PHASE_MISMATCH:${order}`);
+    }
     if ((item.assimilation_update_ref === null) !== (item.assimilation_update_hash === null)) {
       throw new Error(`CAP08_S5_ASSIMILATION_IDENTITY_PARTIAL:${order}`);
+    }
+    const ordinaryRequired = ordinaryAssimilationRequiredV1(order);
+    if (ordinaryRequired !== (item.assimilation_update_ref !== null)) {
+      throw new Error(`CAP08_S5_ASSIMILATION_ROLE_MISMATCH:${order}`);
     }
     return structuredClone(item);
   });
@@ -188,9 +224,5 @@ export function validateCap08S5ResidualObligationsV1(
   if (new Set(normalized.map((item) => item.observation.source_record_id)).size !== CAP08_S5_RESIDUAL_OBLIGATION_COUNT_V1) {
     throw new Error("CAP08_S5_FVO_REFS_NOT_UNIQUE");
   }
-  if (normalized[0].commit_phase !== "T16" || normalized[15].commit_phase !== "T16") {
-    throw new Error("CAP08_S5_T16_R01_R16_COMMIT_REQUIRED");
-  }
-  if (normalized[23].commit_phase !== "G00") throw new Error("CAP08_S5_R24_G00_COMMIT_REQUIRED");
   return normalized;
 }
