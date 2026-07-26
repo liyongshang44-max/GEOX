@@ -12,6 +12,7 @@ import {
   CAP06_HOLDOUT_PURPOSE_V1,
   CAP06_WINDOW_HASH_SEMANTICS_V1,
   isCap06CandidateAppendingStatusV1,
+  type Cap06RealityScopeV1,
   type Cap06SourceDatasetIdentityV1,
 } from "../../domain/calibration/contracts_v1.js";
 import { runCap06CalibrationGridSearchV1 } from "../../domain/calibration/grid_search_v1.js";
@@ -95,8 +96,8 @@ function canonicalInstantV1(value: unknown, code: string): string {
 }
 
 function exactScopeV1(
-  left: Record<string, string>,
-  right: Record<string, string>,
+  left: Pick<Cap06RealityScopeV1, "tenant_id" | "project_id" | "group_id" | "field_id" | "season_id" | "zone_id">,
+  right: Cap06RealityScopeV1,
   code: string,
 ): void {
   for (const field of ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"] as const) {
@@ -107,7 +108,7 @@ function exactScopeV1(
 function validateResolvedV1(input: {
   resolved: Cap08S5ResolvedObligationV1;
   obligation: Cap08S5ResidualObligationV1;
-  scope: Record<string, string>;
+  scope: Cap06RealityScopeV1;
   index: number;
 }): Cap08S5ResolvedObligationV1 {
   const { resolved, obligation, scope, index } = input;
@@ -210,7 +211,7 @@ export class Cap08S5ResidualCalibrationShadowServiceV1 {
   }
 
   async execute(input: {
-    scope: Record<string, string>;
+    scope: Cap06RealityScopeV1;
     formal_run_id: string;
     created_at: string;
     predecessor: Cap08S5PredecessorEvidenceV1;
