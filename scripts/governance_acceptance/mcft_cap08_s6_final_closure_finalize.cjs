@@ -30,6 +30,21 @@ function write(value) {
 try {
   const a = readRun('RUN_A');
   const b = readRun('RUN_B');
+  const expectedCanonicalTotal = {
+    lineage: 1,
+    ticks: 26,
+    states: 26,
+    forecasts: 26,
+    scenarios: 25,
+    decisions: 1,
+    feedback: 1,
+    residuals: 24,
+    candidates: 1,
+    shadows: 1,
+    activations: 0,
+  };
+  const expectedPrimary = { successful_tick_count: 24, successful_forecast_count: 24, scenario_set_count: 24 };
+  const expectedAppendForward = { corrected_tick_count: 1, corrected_state_count: 1, corrected_forecast_count: 1, corrected_scenario_count: 1 };
   for (const [name, run] of [['RUN_A', a], ['RUN_B', b]]) {
     assert.equal(run.status, 'PASS', `${name}_STATUS`);
     assert.equal(run.run_instance_id, name, `${name}_INSTANCE`);
@@ -53,19 +68,9 @@ try {
     assert.equal(run.diagnostic_only_case_count, 1, `${name}_DIAGNOSTIC_COUNT`);
     assert.equal(run.holdout_case_count, 8, `${name}_HOLDOUT_COUNT`);
     assert.equal(run.candidate_parameter_value, '0.034000', `${name}_CANDIDATE_VALUE`);
-    assert.deepEqual(run.counts, {
-      lineage: 1,
-      ticks: 25,
-      states: 25,
-      forecasts: 25,
-      scenarios: 24,
-      decisions: 1,
-      feedback: 1,
-      residuals: 24,
-      candidates: 1,
-      shadows: 1,
-      activations: 0,
-    }, `${name}_CARDINALITY`);
+    assert.deepEqual(run.canonical_total_counts, expectedCanonicalTotal, `${name}_CANONICAL_TOTAL_CARDINALITY`);
+    assert.deepEqual(run.primary_chain_counts, expectedPrimary, `${name}_PRIMARY_CHAIN_CARDINALITY`);
+    assert.deepEqual(run.append_forward_counts, expectedAppendForward, `${name}_APPEND_FORWARD_CARDINALITY`);
     assert.equal(run.hard_acceptance_ledger.length, 24, `${name}_HA_COUNT`);
     assert.equal(run.hard_acceptance_pass_count, 23, `${name}_HA_PASS_COUNT`);
     assert.equal(run.hard_acceptance_pending_exact_merge_count, 1, `${name}_HA_PENDING_COUNT`);
@@ -101,7 +106,9 @@ try {
     hard_acceptance_item_count: 24,
     technical_hard_acceptance_pass_count: 23,
     exact_merge_r2_pending_count: 1,
-    counts: a.counts,
+    canonical_total_counts: a.canonical_total_counts,
+    primary_chain_counts: a.primary_chain_counts,
+    append_forward_counts: a.append_forward_counts,
     forecast_point_count: 1728,
     scenario_option_count: 72,
     scenario_point_count: 5184,
