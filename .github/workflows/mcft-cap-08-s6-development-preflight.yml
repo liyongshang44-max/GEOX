@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-08-s6-development-preflight.yml'
+      - 'apps/server/src/repositories/field_twin_read_model/postgres_field_twin_read_repository_v1.ts'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_DEVELOPMENT_BOUNDARY.cjs'
       - 'scripts/governance_acceptance/mcft_cap08_s6_two_run_compare.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_RUN_RECOVERY_DB.ts'
