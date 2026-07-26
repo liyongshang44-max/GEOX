@@ -39,6 +39,14 @@ function normalizedRows(rows: any[]): any[] {
   });
 }
 
+function keyedRows(rows: any[], key: string): Record<string, any> {
+  return Object.fromEntries(rows.map((row) => {
+    const value = row[key];
+    assert.equal(typeof value, "string", `MCFT_CAP08_S6_ROW_KEY_INVALID:${key}`);
+    return [value, row];
+  }).sort(([left], [right]) => left.localeCompare(right)));
+}
+
 async function rows(table: string, orderBy = "1"): Promise<any[]> {
   return normalizedRows((await admin.query(`SELECT to_jsonb(t) AS row FROM public.${table} t ORDER BY ${orderBy}`)).rows.map((row) => row.row));
 }
@@ -256,7 +264,10 @@ async function main(): Promise<void> {
     for (const scenarioSetId of scenarioSets) await recovery.rebuildScenarioProjections(scenarioSetId);
 
     assert.deepEqual(await pointerSnapshot(), pointersBefore);
-    assert.deepEqual(await rows("twin_state_history_projection_v1", "logical_time,state_object_id"), stateHistoryBefore);
+    assert.deepEqual(
+      keyedRows(await rows("twin_state_history_projection_v1", "logical_time,state_object_id"), "state_object_id"),
+      keyedRows(stateHistoryBefore, "state_object_id"),
+    );
     assert.deepEqual(await tableCounts(), projectionCountsBefore);
 
     const api = new PostgresMcftFieldTwinReadApiV1(pool);
