@@ -1,0 +1,161 @@
+name: mcft-cap-08-s6-final-closure
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-final-closure.yml'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_support_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_EXECUTE_DB.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RECOVERY_READ_MODEL_DB.ts'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_final_closure_finalize.cjs'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap08-s6-final-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  development-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify pre-candidate development boundary
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check "$BASE_SHA"...HEAD
+          mapfile -t changed < <(git diff --name-only "$BASE_SHA"...HEAD | sort)
+          allowed=(
+            '.github/workflows/mcft-cap-08-s6-final-closure.yml'
+            'scripts/governance_acceptance/mcft_cap08_s6_final_closure_finalize.cjs'
+            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_EXECUTE_DB.ts'
+            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RECOVERY_READ_MODEL_DB.ts'
+            'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_support_v1.ts'
+          )
+          test "${#changed[@]}" -eq "${#allowed[@]}"
+          diff -u <(printf '%s\n' "${allowed[@]}" | sort) <(printf '%s\n' "${changed[@]}")
+          test -z "$(git diff --name-only "$BASE_SHA"...HEAD -- apps db migrations docs)"
+          marker='MCFT_CANDIDATE''_DECLARATION_V2'
+          ! git diff "$BASE_SHA"...HEAD | grep -q "$marker"
+
+  formal-run:
+    needs: development-boundary
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - run_instance_id: RUN_A
+            database_name: geox_mcft_cap08_s6_run_a
+            runner_password: cap08-s6-run-a-runner
+            migrator_password: cap08-s6-run-a-migrator
+            legacy_password: cap08-s6-run-a-legacy
+          - run_instance_id: RUN_B
+            database_name: geox_mcft_cap08_s6_run_b
+            runner_password: cap08-s6-run-b-runner
+            migrator_password: cap08-s6-run-b-migrator
+            legacy_password: cap08-s6-run-b-legacy
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: postgres }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - name: Checkout exact development head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.11.1, cache: pnpm }
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck server dependencies
+        run: pnpm --filter @geox/server typecheck
+      - name: Bootstrap independent fresh formal database
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CAP08_TARGET_DATABASE_NAME: ${{ matrix.database_name }}
+          MCFT_CAP08_RUNNER_PASSWORD: ${{ matrix.runner_password }}
+          MCFT_CAP08_MIGRATOR_PASSWORD: ${{ matrix.migrator_password }}
+          MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: ${{ matrix.legacy_password }}
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+      - name: Execute complete final-formal S1-S5 chain
+        env:
+          DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:${{ matrix.runner_password }}@127.0.0.1:5432/${{ matrix.database_name }}
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/${{ matrix.database_name }}
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S4_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S6_FINAL_DESTRUCTIVE: '1'
+          MCFT_CAP08_S6_RUN_INSTANCE_ID: ${{ matrix.run_instance_id }}
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_EXECUTE_DB.ts
+      - name: Recover and read through a fresh Node process
+        env:
+          DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:${{ matrix.runner_password }}@127.0.0.1:5432/${{ matrix.database_name }}
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/${{ matrix.database_name }}
+          MCFT_CAP08_S6_FINAL_DESTRUCTIVE: '1'
+          MCFT_CAP08_S6_RUN_INSTANCE_ID: ${{ matrix.run_instance_id }}
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RECOVERY_READ_MODEL_DB.ts
+      - name: Cleanup independent formal database
+        if: always()
+        env: { PGPASSWORD: postgres }
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${{ matrix.database_name }}' AND pid<>pg_backend_pid();"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS ${{ matrix.database_name }};"
+      - name: Upload per-run evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.run_instance_id }}
+          path: |
+            acceptance-output/MCFT_CAP_08_S6_${{ matrix.run_instance_id }}_EXECUTE_RESULT.json
+            acceptance-output/MCFT_CAP_08_S6_${{ matrix.run_instance_id }}_FORMAL_RUN_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: formal-run
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: RUN_*
+          path: acceptance-output
+      - name: Compare two independent formal runs
+        env:
+          MCFT_ARTIFACT_STAGE: DEVELOPMENT_PREFLIGHT
+        run: node scripts/governance_acceptance/mcft_cap08_s6_final_closure_finalize.cjs
+      - name: Upload aggregate closure evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-development-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_FINAL_CLOSURE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
