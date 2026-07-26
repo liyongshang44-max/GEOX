@@ -14,6 +14,19 @@ if (runInstanceId !== "RUN_A" && runInstanceId !== "RUN_B") throw new Error("MCF
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const OUT = path.join(ROOT, `acceptance-output/MCFT_CAP_08_S6_${runInstanceId}_EXECUTE_RESULT.json`);
+const EXPECTED_TOTAL_COUNTS = {
+  lineage: 1,
+  ticks: 26,
+  states: 26,
+  forecasts: 26,
+  scenarios: 25,
+  decisions: 1,
+  feedback: 1,
+  residuals: 24,
+  candidates: 1,
+  shadows: 1,
+  activations: 0,
+} as const;
 
 function write(value: unknown): void {
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
@@ -103,8 +116,9 @@ async function main(): Promise<void> {
       /S6_PRECOMMIT_CANDIDATE_ROLLBACK/,
     );
     assert.deepEqual(await exactCounts(), {
-      lineage: 1, ticks: 25, states: 25, forecasts: 25, scenarios: 24,
-      decisions: 1, feedback: 1, residuals: 24, candidates: 0, shadows: 0, activations: 0,
+      ...EXPECTED_TOTAL_COUNTS,
+      candidates: 0,
+      shadows: 0,
     });
 
     await expectFailure(
@@ -141,10 +155,7 @@ async function main(): Promise<void> {
     assert.equal(concurrent[1].shadow_evaluation.determinism_hash, completed.shadow_evaluation.determinism_hash);
 
     const finalCounts = await exactCounts();
-    assert.deepEqual(finalCounts, {
-      lineage: 1, ticks: 25, states: 25, forecasts: 25, scenarios: 24,
-      decisions: 1, feedback: 1, residuals: 24, candidates: 1, shadows: 1, activations: 0,
-    });
+    assert.deepEqual(finalCounts, EXPECTED_TOTAL_COUNTS);
 
     const responseLossReadback = await makeService().execute(request);
     assert.equal(responseLossReadback.residual_insert_count, 0);
@@ -204,7 +215,18 @@ async function main(): Promise<void> {
       operational_invariant_digest: operationalInvariantDigest,
       operational_invariant: operationalInvariant,
       canonical_object_manifest_count: canonicalRows.length,
-      counts: finalCounts,
+      canonical_total_counts: finalCounts,
+      primary_chain_counts: {
+        successful_tick_count: established.predecessor_result.range.executed_tick_count,
+        successful_forecast_count: 24,
+        scenario_set_count: 24,
+      },
+      append_forward_counts: {
+        corrected_tick_count: 1,
+        corrected_state_count: 1,
+        corrected_forecast_count: 1,
+        corrected_scenario_count: 1,
+      },
       forecast_point_count: Number((await admin.query("SELECT count(*)::int AS n FROM twin_forecast_point_projection_v1")).rows[0].n),
       scenario_option_count: 72,
       scenario_point_count: Number((await admin.query("SELECT count(*)::int AS n FROM twin_scenario_point_projection_v1")).rows[0].n),
