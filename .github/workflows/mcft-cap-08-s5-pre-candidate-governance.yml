@@ -4,13 +4,18 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-08-s5-pre-candidate-governance.yml'
+      - '.github/workflows/mcft-cap-08-s5-residual-calibration-shadow.yml'
+      - '.github/workflows/mcft-cap-08-s5-exact-sha-attestation.yml'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-CHANGED-FILE-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-CANDIDATE-CHANGED-FILE-BOUNDARY-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-CONTRACT-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-IMPLEMENTATION-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-DELIVERY-STATUS-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-PREDECESSOR-CONSUMPTION-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-REVIEW-POLICY-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-WORKFLOW-DECLARATION-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_PRE_CANDIDATE_GOVERNANCE.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_FORMAL_CANDIDATE_BOUNDARY.cjs'
   merge_group:
     types: [checks_requested]
 
@@ -35,15 +40,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Validate exact non-candidate S5 governance package
+      - name: Validate S5 governance lifecycle
         env:
-          MCFT_BASE_SHA: ba57380cc20d18d59d6ae9a35ab8e30320000476
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_PRE_CANDIDATE_GOVERNANCE.cjs
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --name-only "$MCFT_BASE_SHA"...HEAD | grep -q 'mcft-cap-08-s5-residual-calibration-shadow.yml'; then
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_FORMAL_CANDIDATE_BOUNDARY.cjs
+          else
+            MCFT_BASE_SHA=ba57380cc20d18d59d6ae9a35ab8e30320000476               node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_PRE_CANDIDATE_GOVERNANCE.cjs
+          fi
       - name: Upload governance evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap-08-s5-pre-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          path: acceptance-output/MCFT_CAP_08_S5_PRE_CANDIDATE_GOVERNANCE_RESULT.json
-          if-no-files-found: error
+          name: mcft-cap-08-s5-governance-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_08_S5_PRE_CANDIDATE_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_08_S5_FORMAL_CANDIDATE_BOUNDARY_RESULT.json
+          if-no-files-found: warn
           retention-days: 90

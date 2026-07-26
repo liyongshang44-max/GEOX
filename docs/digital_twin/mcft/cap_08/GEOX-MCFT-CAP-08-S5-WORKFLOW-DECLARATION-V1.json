@@ -1,21 +1,23 @@
 {
-  "schema_version": "geox_mcft_cap08_s5_workflow_declaration_v1",
-  "record_status": "FUTURE_FORMAL_CANDIDATE_WORKFLOWS_PRE_REGISTERED",
+  "schema_version": "geox_mcft_cap08_s5_workflow_declaration_v2",
+  "record_status": "FORMAL_CANDIDATE_WORKFLOWS_PRESENT_NOT_EFFECTIVE",
   "capability_line_id": "MCFT-CAP-08",
   "slice_id": "MCFT-CAP-08.S5",
   "governance_workflow": {
     "name": "mcft-cap-08-s5-pre-candidate-governance",
     "file": ".github/workflows/mcft-cap-08-s5-pre-candidate-governance.yml",
-    "candidate_declaration_expected": false,
+    "formal_candidate_delegation_present": true,
     "runtime_database_execution": false
   },
   "candidate_workflow": {
     "name": "mcft-cap-08-s5-residual-calibration-shadow",
     "file": ".github/workflows/mcft-cap-08-s5-residual-calibration-shadow.yml",
-    "present_in_governance_pr": false,
+    "present_in_formal_candidate": true,
+    "candidate_declaration_required": true,
     "fresh_postgresql_database_required": true,
     "runs_exact_24_residual_proof": true,
     "runs_16_calibration_8_holdout_proof": true,
+    "runs_15_objective_1_diagnostic_proof": true,
     "runs_21_point_grid_search": true,
     "runs_expected_candidate_proof": true,
     "runs_paired_holdout_shadow_proof": true,
@@ -26,7 +28,7 @@
   "exact_sha_workflow": {
     "name": "mcft-cap-08-s5-exact-sha-attestation",
     "file": ".github/workflows/mcft-cap-08-s5-exact-sha-attestation.yml",
-    "present_in_governance_pr": false,
+    "present_in_formal_candidate": true,
     "requires_two_parent_merge": true,
     "requires_candidate_merge_tree_equality": true,
     "replays_boundary_on_detached_candidate_sha": true,
@@ -41,5 +43,6 @@
     "ci"
   ],
   "production_runtime_source_authorized": false,
+  "s5_effective": false,
   "s6_authorized": false
 }
