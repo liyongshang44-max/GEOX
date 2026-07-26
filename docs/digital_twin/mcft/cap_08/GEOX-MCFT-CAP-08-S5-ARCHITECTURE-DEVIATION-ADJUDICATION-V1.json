@@ -1,0 +1,102 @@
+{
+  "schema_version": "geox_mcft_cap08_s5_architecture_deviation_adjudication_v1",
+  "authority_id": "GEOX-MCFT-CAP-08-S5-ARCHITECTURE-DEVIATION-ADJUDICATION-V1",
+  "record_status": "ARCHITECTURE_DEVIATION_ADJUDICATED_PREQUALIFICATION_REQUIRED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S5",
+  "adjudication_base_main": "6838bf07a96022640bea6ddb20e461f748a5114c",
+  "taskbook_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+  "taskbook_version": "v0.3.9",
+  "s5_contract_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-CONTRACT-V1.json",
+  "s5_contract_semantic_digest": "sha256:c21c27264d345643c3d3dcd4d0c275ec4aaf3979d00edbcef23b851e48f5b6bd",
+  "development_preflight": {
+    "pull_request": 2671,
+    "merged": false,
+    "closed_without_merge": true,
+    "head_sha": "42ecee1f04285915d15f453af6ac68b1cb6d8c2c",
+    "workflow_run_id": 30188166823,
+    "artifact_id": 8627678011,
+    "artifact_digest": "sha256:cfa98598b1e8467b2f26db602fafd1853ebbdde74e5d67881821724604cb8bc0",
+    "result_file_digest": "sha256:5d203cdf2dda1d701182d502efe9e20841a1904b595d19540e10fc22b032540d",
+    "retention_class": "DEVELOPMENT_DIAGNOSTIC_1_DAY",
+    "candidate_declaration_present": false,
+    "candidate_created": false,
+    "shadow_created": false
+  },
+  "confirmed_findings": {
+    "v1_replay_dataset_mechanism_aligned_with_oracle": false,
+    "v1_selected_parameter_value": "0.040000",
+    "v1_disposition": "SEARCH_BOUNDARY_HIT_INCONCLUSIVE",
+    "v1_candidate_append_allowed": false,
+    "frozen_expected_candidate_value": "0.034000",
+    "oracle_provenance": "CAP06_CONTROLLED_OBSERVATIONS_GENERATED_BY_HIDDEN_PARAMETER_0_034000",
+    "cap08_v1_fvo_generation": "INDEPENDENT_STATIC_LINEAR_SEQUENCE",
+    "root_cause": "DATASET_ORACLE_MECHANISM_MISMATCH_PLUS_FVO10_BUSINESS_OUTCOME_OBJECTIVE_CONTAMINATION"
+  },
+  "outcome_preserving_v2_diagnostic": {
+    "dataset_id": "mcft_cap08_stage1a_replay_v2_architecture_diagnostic",
+    "generation_profile_id": "MULTI_REGIME_RAINFALL_PLUS_FORECAST_DERIVED_HIDDEN_0034_FVO_V1",
+    "outcome_exception_profile": "FVO10_FROZEN_BUSINESS_OUTCOME_ANCHOR_V1",
+    "formal_run_id": "cap08_v2out_cb6a1d64d5f156b8cf41c4ef",
+    "hidden_parameter_value": "0.034000",
+    "fvo10_value": "0.304500",
+    "unfiltered_attempt": {
+      "determinism_hash": "sha256:fe21b94fdaf2d4031ca1536a9a78046ef573d49b022955cfe6972adb05f67149",
+      "status": "SEARCH_BOUNDARY_HIT_INCONCLUSIVE",
+      "selected_parameter_value": "0.040000",
+      "canonical_append_allowed": false,
+      "sensitive_case_count": 8,
+      "represented_sensitive_wetness_regimes": [
+        "HIGH_EXCESS",
+        "MID_EXCESS"
+      ]
+    },
+    "eligibility_aware_attempt": {
+      "determinism_hash": "sha256:4ac20ce3dadfac92ce8f1eff71a1e1cc473fe2364e47dd849ab5d4299d5cd1e9",
+      "status": "BOUNDED_PARAMETER_DELTA_CANDIDATE",
+      "selected_parameter_value": "0.034000",
+      "selected_parameter_delta": "0.004000",
+      "canonical_append_allowed": true,
+      "case_window_count": 16,
+      "objective_case_count": 15,
+      "diagnostic_only_case_count": 1,
+      "objective_ineligible_observation_refs": [
+        "FVO-10"
+      ],
+      "sensitive_case_count": 7,
+      "represented_sensitive_wetness_regimes": [
+        "HIGH_EXCESS",
+        "MID_EXCESS"
+      ],
+      "objective_mse_range_sse_scale_18": "10615422000000",
+      "best_vs_second_mse_margin_sse_scale_18": "53984000000"
+    },
+    "architecture_deviation_resolution_proven": true
+  },
+  "adjudication": {
+    "s4_v1_effectiveness_revoked": false,
+    "s4_v1_effectiveness_remains_historical": true,
+    "s4_v1_artifact_sufficient_as_v2_s5_predecessor": false,
+    "s5_direct_implementation_authorized": false,
+    "s5_formal_candidate_authorized": false,
+    "replay_dataset_v2_prequalification_authorized": true,
+    "s1_s4_v2_requalification_required": true,
+    "s6_implementation_authorized": false,
+    "model_activation_authorized": false,
+    "production_runtime_source_authorized": false,
+    "mcft_cap_09_authorized": false
+  },
+  "required_next_action": {
+    "action_id": "MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION",
+    "contract_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-REPLAY-DATASET-V2-PREQUALIFICATION-CONTRACT-V1.json",
+    "status_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-ARCHITECTURE-DEVIATION-STATUS-V1.json",
+    "candidate_transition": false,
+    "runtime_source_delta": 0,
+    "canonical_runtime_data_delta": 0,
+    "business_schema_delta": 0,
+    "route_delta": 0,
+    "web_delta": 0,
+    "scheduler_delta": 0
+  },
+  "semantic_digest": "sha256:b4296f9dac5e0176bec73a59304ba9d9f392730e80ffcf8b1ae4a9b3771439d3"
+}
