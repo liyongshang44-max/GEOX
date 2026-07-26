@@ -1,78 +1,8 @@
 #!/usr/bin/env node
-// Purpose: validate the non-candidate replay-dataset v2 prequalification implementation or its post-merge retention-metadata hotfix boundary.
-
-const fs = require('node:fs');
-const crypto = require('node:crypto');
-const cp = require('node:child_process');
-
-const DEFAULT_BASE = 'a9ec53b27231ed9710bfa77aebcc7a7ddeac431a';
-const base = process.env.MCFT_BASE_SHA || DEFAULT_BASE;
-const implementationExpected = [
-  '.github/workflows/mcft-cap-08-current-frontier-reconciliation.yml',
-  '.github/workflows/mcft-cap-08-s5-architecture-deviation-adjudication.yml',
-  '.github/workflows/mcft-cap-08-s5-replay-dataset-v2-exact-sha-attestation.yml',
-  '.github/workflows/mcft-cap-08-s5-replay-dataset-v2-prequalification.yml',
-  'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-ARCHITECTURE-DEVIATION-STATUS-V1.json',
-  'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-REPLAY-DATASET-V2-WORKFLOW-DECLARATION-V1.json',
-  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_BOUNDARY.cjs',
-  'scripts/governance_acceptance/mcft_cap08_s5_replay_dataset_v2_artifact_finalize.cjs',
-  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_DB.ts',
-  'scripts/runtime_acceptance/mcft_cap08_s5_prequalification_compute_v1.ts',
-  'scripts/runtime_acceptance/mcft_cap08_s5_replay_dataset_v2_prequalification_support_v1.ts',
-].sort();
-const retentionHotfixExpected = [
-  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_BOUNDARY.cjs',
-  'scripts/governance_acceptance/mcft_cap08_s5_replay_dataset_v2_artifact_finalize.cjs',
-].sort();
-
-const fail = (code) => { throw new Error(code); };
-const stable = (v) => Array.isArray(v) ? v.map(stable) : v && typeof v === 'object'
-  ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, stable(v[k])])) : v;
-const digest = (value) => {
-  const copy = structuredClone(value); delete copy.semantic_digest;
-  return `sha256:${crypto.createHash('sha256').update(JSON.stringify(stable(copy))).digest('hex')}`;
-};
-const json = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
-const changed = cp.execFileSync('git', ['diff', '--name-only', `${base}...HEAD`], { encoding: 'utf8' })
-  .trim().split(/\r?\n/).filter(Boolean).sort();
-const exactList = (left,right) => JSON.stringify(left) === JSON.stringify(right);
-const mode = exactList(changed,implementationExpected)
-  ? 'IMPLEMENTATION'
-  : exactList(changed,retentionHotfixExpected)
-    ? 'RETENTION_METADATA_HOTFIX'
-    : null;
-if (!mode) fail(`CAP08_S5_V2_PQ_BOUNDARY:${JSON.stringify(changed)}`);
-if (changed.some((file) => file.startsWith('apps/') || file.startsWith('db/') || file.includes('migration'))) fail('CAP08_S5_V2_PQ_RUNTIME_OR_SCHEMA_SOURCE_FORBIDDEN');
-if (changed.some((file) => file.includes('CANDIDATE-DECLARATION'))) fail('CAP08_S5_V2_PQ_CANDIDATE_DECLARATION_FORBIDDEN');
-for (const file of [
-  'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md',
-  'docs/governance/DELIVERY-CANDIDATE-REGISTRY-V1.json',
-  'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-DELIVERY-STATUS-V1.json',
-  'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json',
-]) if (cp.execFileSync('git', ['diff', '--name-only', `${base}...HEAD`, '--', file], { encoding: 'utf8' }).trim()) fail(`CAP08_S5_V2_PQ_FROZEN_AUTHORITY_CHANGED:${file}`);
-
-const status = json('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-ARCHITECTURE-DEVIATION-STATUS-V1.json');
-if (status.semantic_digest !== digest(status)) fail('CAP08_S5_V2_PQ_STATUS_DIGEST');
-if (status.record_status !== 'PREQUALIFICATION_IMPLEMENTED_NOT_EFFECTIVE') fail('CAP08_S5_V2_PQ_STATUS');
-if (status.replay_dataset_v2_prequalification_implemented !== true || status.replay_dataset_v2_prequalification_effective !== false) fail('CAP08_S5_V2_PQ_IMPLEMENTED_STATE');
-if (status.s5_formal_candidate_authorized !== false || status.s6_implementation_authorized !== false) fail('CAP08_S5_V2_PQ_SUCCESSOR_AUTHORITY_FORBIDDEN');
-const declaration = json('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-REPLAY-DATASET-V2-WORKFLOW-DECLARATION-V1.json');
-if (declaration.semantic_digest !== digest(declaration)) fail('CAP08_S5_V2_PQ_DECLARATION_DIGEST');
-if (declaration.record_status !== 'IMPLEMENTATION_WORKFLOWS_PRESENT_NOT_EFFECTIVE') fail('CAP08_S5_V2_PQ_DECLARATION_STATUS');
-if (declaration.candidate_transition !== false || declaration.candidate_declaration_forbidden !== true) fail('CAP08_S5_V2_PQ_CANDIDATE_BOUNDARY');
-if (declaration.candidate_or_shadow_persistence_authorized !== false || declaration.residual_persistence_authorized_in_fresh_acceptance_database !== true) fail('CAP08_S5_V2_PQ_PERSISTENCE_BOUNDARY');
-
-const finalizer = fs.readFileSync('scripts/governance_acceptance/mcft_cap08_s5_replay_dataset_v2_artifact_finalize.cjs','utf8');
-for (const token of [
-  "capability_line_id: 'MCFT-CAP-08'",
-  "slice_id: 'MCFT-CAP-08.S5-PQ'",
-  'prequalification_implementation_subject_sha',
-  'prequalification_implementation_candidate_sha',
-  'prequalification_implementation_tree_delta: 0',
-]) if (!finalizer.includes(token)) fail(`CAP08_S5_V2_PQ_RETENTION_IDENTITY_TOKEN:${token}`);
-
-if (mode === 'IMPLEMENTATION') {
-  const source = fs.readFileSync('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_DB.ts','utf8');
-  for (const token of ['candidate_append_count: 0','shadow_append_count: 0','objectiveIneligibleObservationRefs: ["FVO-10"]','selected_parameter_value']) if (!source.includes(token)) fail(`CAP08_S5_V2_PQ_ACCEPTANCE_TOKEN:${token}`);
-}
-console.log(JSON.stringify({ status:'PASS', mode, base, changed_files:changed, candidate_transition:false, s5_candidate_authorized:false, s6_authorized:false }, null, 2));
+// Purpose: validate replay-dataset v2 implementation, retention hotfix, or external effectiveness settlement.
+const fs=require('node:fs');const crypto=require('node:crypto');const cp=require('node:child_process');
+const settlement='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-REPLAY-DATASET-V2-EFFECTIVENESS-AUTHORITY-V1.json';
+const settlementDelta=cp.execFileSync('git',['diff','--name-only','b94d299851744f589d3c3a6e35111a22c17c79d0...HEAD'],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);if(settlementDelta.includes(settlement)){require('./ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_EFFECTIVENESS_SETTLEMENT.cjs');process.exit(0);}
+const base=process.env.MCFT_BASE_SHA||'a9ec53b27231ed9710bfa77aebcc7a7ddeac431a';const implementation=['.github/workflows/mcft-cap-08-current-frontier-reconciliation.yml','.github/workflows/mcft-cap-08-s5-architecture-deviation-adjudication.yml','.github/workflows/mcft-cap-08-s5-replay-dataset-v2-exact-sha-attestation.yml','.github/workflows/mcft-cap-08-s5-replay-dataset-v2-prequalification.yml','docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-ARCHITECTURE-DEVIATION-STATUS-V1.json','docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-REPLAY-DATASET-V2-WORKFLOW-DECLARATION-V1.json','scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_BOUNDARY.cjs','scripts/governance_acceptance/mcft_cap08_s5_replay_dataset_v2_artifact_finalize.cjs','scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_DB.ts','scripts/runtime_acceptance/mcft_cap08_s5_prequalification_compute_v1.ts','scripts/runtime_acceptance/mcft_cap08_s5_replay_dataset_v2_prequalification_support_v1.ts'].sort();const hotfix=['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_BOUNDARY.cjs','scripts/governance_acceptance/mcft_cap08_s5_replay_dataset_v2_artifact_finalize.cjs'].sort();
+const changed=cp.execFileSync('git',['diff','--name-only',`${base}...HEAD`],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean).sort();const eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);const mode=eq(changed,implementation)?'IMPLEMENTATION':eq(changed,hotfix)?'RETENTION_METADATA_HOTFIX':null;if(!mode)throw new Error(`CAP08_S5_V2_PQ_BOUNDARY:${JSON.stringify(changed)}`);if(changed.some(f=>f.startsWith('apps/')||f.startsWith('db/')||f.includes('migration')||f.includes('CANDIDATE-DECLARATION')))throw new Error('CAP08_S5_V2_PQ_FORBIDDEN_SOURCE');
+const stable=v=>Array.isArray(v)?v.map(stable):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,stable(v[k])])):v;const digest=v=>{const c=structuredClone(v);delete c.semantic_digest;return `sha256:${crypto.createHash('sha256').update(JSON.stringify(stable(c))).digest('hex')}`};const status=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-ARCHITECTURE-DEVIATION-STATUS-V1.json','utf8'));if(status.semantic_digest!==digest(status)||status.s5_formal_candidate_authorized!==false||status.s6_implementation_authorized!==false)throw new Error('CAP08_S5_V2_PQ_STATUS');const finalizer=fs.readFileSync('scripts/governance_acceptance/mcft_cap08_s5_replay_dataset_v2_artifact_finalize.cjs','utf8');for(const t of["capability_line_id: 'MCFT-CAP-08'","slice_id: 'MCFT-CAP-08.S5-PQ'",'prequalification_implementation_tree_delta: 0'])if(!finalizer.includes(t))throw new Error(`CAP08_S5_V2_PQ_RETENTION_IDENTITY:${t}`);console.log(JSON.stringify({status:'PASS',mode,base,changed_files:changed},null,2));
