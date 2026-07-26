@@ -40,18 +40,36 @@ jobs:
       - name: Checkout exact PR head
         uses: actions/checkout@v4
         with: { ref: '${{ github.event.pull_request.head.sha || github.sha }}', fetch-depth: 0, persist-credentials: false }
-      - uses: pnpm/action-setup@v4
+      - name: Route owned lifecycle
+        id: lifecycle
+        env:
+          MCFT_BASE_SHA: '${{ github.event.pull_request.base.sha }}'
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD)"
+          settlement_authority='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-EFFECTIVENESS-AUTHORITY-V1.json'
+          if grep -Fxq "$settlement_authority" <<<"$files"; then
+            echo 'settlement=true' >> "$GITHUB_OUTPUT"
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_EFFECTIVENESS_SETTLEMENT.cjs
+          else
+            echo 'settlement=false' >> "$GITHUB_OUTPUT"
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_BOUNDARY.cjs
+          fi
+      - if: steps.lifecycle.outputs.settlement != 'true'
+        uses: pnpm/action-setup@v4
         with: { version: 9.15.4 }
-      - uses: actions/setup-node@v4
+      - if: steps.lifecycle.outputs.settlement != 'true'
+        uses: actions/setup-node@v4
         with: { node-version: 20.11.1, cache: pnpm }
       - name: Install locked workspace
+        if: steps.lifecycle.outputs.settlement != 'true'
         run: pnpm install --frozen-lockfile
-      - name: Validate non-candidate implementation boundary
-        env: { MCFT_BASE_SHA: '${{ github.event.pull_request.base.sha }}' }
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_BOUNDARY.cjs
       - name: Typecheck server and acceptance source
+        if: steps.lifecycle.outputs.settlement != 'true'
         run: pnpm --filter @geox/server typecheck
       - name: Bootstrap fresh prequalification database
+        if: steps.lifecycle.outputs.settlement != 'true'
         env:
           MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
           MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_s5_v2_pq
@@ -61,6 +79,7 @@ jobs:
           MCFT_CANDIDATE_SHA: '${{ github.event.pull_request.head.sha || github.sha }}'
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
       - name: Reexecute v2 S1-S4 and qualify 24 Residual roots
+        if: steps.lifecycle.outputs.settlement != 'true'
         env:
           DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap08-s5-v2-pq-runner-password@127.0.0.1:5432/geox_mcft_cap08_s5_v2_pq
           MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap08_s5_v2_pq
@@ -69,12 +88,14 @@ jobs:
           MCFT_CAP08_S5_V2_PREQUALIFICATION_DESTRUCTIVE: '1'
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_DB.ts
       - name: Cleanup database
-        if: always()
+        if: ${{ always() && steps.lifecycle.outputs.settlement != 'true' }}
         env: { PGPASSWORD: postgres }
         run: |
-          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='geox_mcft_cap08_s5_v2_pq' AND pid<>pg_backend_pid();"
-          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS geox_mcft_cap08_s5_v2_pq;"
-      - name: Upload prequalification evidence
+          if psql -h 127.0.0.1 -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='geox_mcft_cap08_s5_v2_pq'" | grep -qx 1; then
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='geox_mcft_cap08_s5_v2_pq' AND pid<>pg_backend_pid();"
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE geox_mcft_cap08_s5_v2_pq;"
+          fi
+      - name: Upload lifecycle evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
