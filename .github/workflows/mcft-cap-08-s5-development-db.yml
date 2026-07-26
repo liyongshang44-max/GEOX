@@ -69,7 +69,14 @@ jobs:
           MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: '1'
           MCFT_CAP08_S4_DESTRUCTIVE_ACCEPTANCE: '1'
           MCFT_CAP08_S5_DESTRUCTIVE_ACCEPTANCE: '1'
-        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_RESIDUAL_CALIBRATION_SHADOW_DB.ts
+        shell: bash
+        run: |
+          set +e
+          mkdir -p acceptance-output
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_RESIDUAL_CALIBRATION_SHADOW_DB.ts > acceptance-output/mcft-cap08-s5-development-db.log 2>&1
+          rc=$?
+          cat acceptance-output/mcft-cap08-s5-development-db.log
+          exit $rc
 
       - name: Cleanup development database
         if: always()
@@ -84,5 +91,5 @@ jobs:
         with:
           name: mcft-cap-08-s5-development-${{ github.event.pull_request.head.sha || github.sha }}
           path: acceptance-output/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 1
