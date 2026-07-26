@@ -70,8 +70,9 @@ export async function establishCap08S5SlicePredecessorV1(root = path.resolve("."
     created_at: CAP08_S1_CREATED_AT_V1,
     phase_engine_source_digest: predecessor.source_manifest.manifest_digest,
   });
-  if (s4.status !== "COMPLETED"
-    || s4.write_delta !== 7
+  const exactFirstCompletion = s4.status === "COMPLETED" && s4.write_delta === 7;
+  const exactIdempotentReadback = s4.status === "ALREADY_COMPLETE" && s4.write_delta === 0;
+  if ((!exactFirstCompletion && !exactIdempotentReadback)
     || s4.slice_acceptance_only !== true
     || s4.final_formal_run_id !== null
     || s4.corrected_set.forecast.object_id !== s4.t17_predecessor.previous_forecast_result_ref) {
