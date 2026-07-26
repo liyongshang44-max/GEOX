@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/mcft-cap-08-current-frontier-reconciliation.yml'
       - '.github/workflows/mcft-cap-08-s5-architecture-deviation-adjudication.yml'
+      - '.github/workflows/mcft-cap-08-s5-replay-dataset-v2-prequalification.yml'
+      - '.github/workflows/mcft-cap-08-s5-replay-dataset-v2-exact-sha-attestation.yml'
       - 'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md'
       - 'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json'
       - 'docs/digital_twin/mcft/GEOX-MCFT-SSOT-CURRENT-V1.json'
@@ -14,6 +16,8 @@ on:
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-REPLAY-DATASET-V2-PREQUALIFICATION-CONTRACT-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-REPLAY-DATASET-V2-WORKFLOW-DECLARATION-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_ARCHITECTURE_DEVIATION_ADJUDICATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_BOUNDARY.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_DB.ts'
 
 permissions:
   contents: read
@@ -33,12 +37,21 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Validate frozen eleven-file governance boundary
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_ARCHITECTURE_DEVIATION_ADJUDICATION.cjs
+      - name: Validate adjudication or delegated prequalification boundary
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --name-only "$MCFT_BASE_SHA"...HEAD | grep -q 'S5_REPLAY_DATASET_V2_PREQUALIFICATION\|mcft_cap08_s5_prequalification\|replay-dataset-v2'; then
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_REPLAY_DATASET_V2_PREQUALIFICATION_BOUNDARY.cjs
+          else
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_ARCHITECTURE_DEVIATION_ADJUDICATION.cjs
+          fi
       - name: Confirm no Candidate Declaration Runtime or Registry mutation
         shell: bash
         run: |
           set -euo pipefail
-          base=6838bf07a96022640bea6ddb20e461f748a5114c
+          base='${{ github.event.pull_request.base.sha }}'
           test -z "$(git diff --name-only "$base"...HEAD -- apps db migrations docs/governance/DELIVERY-CANDIDATE-REGISTRY-V1.json docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-DELIVERY-STATUS-V1.json docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json)"
           ! git diff --name-only "$base"...HEAD | grep -q 'CANDIDATE-DECLARATION'
