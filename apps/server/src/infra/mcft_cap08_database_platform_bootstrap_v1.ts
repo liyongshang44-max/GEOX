@@ -8,7 +8,10 @@ export const MCFT_CAP08_RELATION_PRIVILEGES_V1 = {
   facts: ["SELECT", "INSERT"],
   twin_fact_visibility_epoch_v1: ["SELECT"],
   twin_fact_visibility_index_v1: ["SELECT"],
-  twin_object_idempotency_index_v1: ["SELECT", "INSERT"],
+  // Existing CAP-05/CAP-06 persistence acquires SELECT ... FOR UPDATE locks on
+  // exact idempotency rows; PostgreSQL therefore requires UPDATE in addition
+  // to SELECT even though the locked row is never mutated by S5.
+  twin_object_idempotency_index_v1: ["SELECT", "INSERT", "UPDATE"],
   twin_runtime_lease_v1: ["SELECT", "INSERT", "UPDATE"],
   twin_runtime_authority_snapshot_v1: ["SELECT", "INSERT"],
   twin_active_lineage_index_v1: ["SELECT", "INSERT", "UPDATE"],
@@ -28,7 +31,9 @@ export const MCFT_CAP08_RELATION_PRIVILEGES_V1 = {
   twin_decision_record_projection_v1: ["SELECT", "INSERT"],
   twin_action_feedback_projection_v1: ["SELECT", "INSERT"],
   twin_action_feedback_evidence_index_v1: ["SELECT", "INSERT"],
-  twin_forecast_residual_projection_v1: ["SELECT", "INSERT"],
+  // Residual idempotent readback uses ON CONFLICT ... DO UPDATE to restore the
+  // deterministic projection from its canonical fact.
+  twin_forecast_residual_projection_v1: ["SELECT", "INSERT", "UPDATE"],
   twin_approved_plan_binding_projection_v1: ["SELECT", "INSERT", "UPDATE"],
   twin_action_feedback_cycle_projection_v1: ["SELECT", "INSERT", "UPDATE"],
   twin_calibration_candidate_projection_v1: ["SELECT", "INSERT"],
