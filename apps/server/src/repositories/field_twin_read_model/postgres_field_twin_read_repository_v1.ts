@@ -33,6 +33,7 @@ import {
   CAP04_BLOCKED_FORECAST_CONTRACT_ID_V1,
   CAP04_COMPLETED_FORECAST_CONTRACT_ID_V1,
 } from "../../domain/twin_runtime/forecast_scenario_contracts_v1.js";
+import { computeCap04AMemberDeterminismHashV1 } from "../../domain/twin_runtime/forecast_scenario_member_hash_v1.js";
 import {
   computeCap04AAggregateDeterminismHashV1,
   type Cap04AAggregateIdentityInputV1,
@@ -181,12 +182,23 @@ function composerObject(object: CanonicalObjectEnvelopeV1, factId: string, profi
   });
 }
 
+function isCap04AggregateTickV1(object: CanonicalObjectEnvelopeV1): boolean {
+  return object.object_type === "twin_runtime_tick_v1"
+    && typeof object.payload?.aggregate_determinism_hash === "string";
+}
+
+function canonicalMemberHashV1(object: CanonicalObjectEnvelopeV1): string {
+  return isCap04AggregateTickV1(object)
+    ? computeCap04AMemberDeterminismHashV1(object)
+    : computeMemberDeterminismHashV1(object as unknown as JsonRecord);
+}
+
 function parseVisibleFactRow(row: { fact_id: string; record_json: unknown }, scope: FieldTwinScopeV1): VisibleCanonicalFactV1 {
   const envelope = asRecord(row.record_json, "MCFT_FACT_ENVELOPE_INVALID");
   const object = asRecord(envelope.payload, "MCFT_FACT_ENVELOPE_INVALID:payload") as unknown as CanonicalObjectEnvelopeV1;
   if (envelope.type !== object.object_type) fail("MCFT_FACT_ENVELOPE_TYPE_MISMATCH", row.fact_id);
   assertScope(object, scope);
-  const recomputed = computeMemberDeterminismHashV1(object as unknown as JsonRecord);
+  const recomputed = canonicalMemberHashV1(object);
   if (recomputed !== object.determinism_hash) fail("MCFT_DIRECT_CANONICAL_TWIN_FACT_INVALID", `${row.fact_id}:DETERMINISM_HASH`);
   return { fact_id: row.fact_id, record_json: envelope, object };
 }
@@ -289,7 +301,7 @@ export class PostgresFieldTwinReadRepositoryV1 {
 
   private validateDirectCanonicalFact(fact: VisibleCanonicalFactV1): FieldTwinSourceValidationResultV1 {
     const supported = new Set(["twin_runtime_lineage_v1", "twin_revision_run_v1", "twin_lineage_promotion_v1", "twin_runtime_tick_v1", "twin_evidence_window_v1", "twin_state_transition_v1", "twin_assimilation_update_v1", "twin_runtime_attempt_v1", "twin_forecast_failure_v1", "twin_runtime_checkpoint_v1", "twin_runtime_health_v1", "twin_runtime_config_v1", "twin_model_activation_v1"]);
-    if (supported.has(fact.object.object_type)) {
+    if (supported.has(fact.object.object_type) && !isCap04AggregateTickV1(fact.object)) {
       this.canonicalResolver.resolve({ fact_id: fact.fact_id, record_json: fact.record_json, expected_type: fact.object.object_type as never, expected_object_ref: fact.object.object_id, expected_scope: { tenant_id: fact.object.tenant_id, project_id: fact.object.project_id, group_id: exactText(fact.object.group_id, "MCFT_SCOPE_INVALID"), field_id: fact.object.field_id, season_id: exactText(fact.object.season_id, "MCFT_SCOPE_INVALID"), zone_id: exactText(fact.object.zone_id, "MCFT_SCOPE_INVALID") }, expected_hash: fact.object.determinism_hash as SemanticHashTextV1 });
     }
     return { source_name: `public.facts#record_json.type=${fact.object.object_type}`, profile_family: "CANONICAL_TWIN_FACT_DIRECT", validation_status: "PASS", failure_code: null, validated_object_ref: fact.object.object_id, validated_object_hash: fact.object.determinism_hash as SemanticHashTextV1, evidence_refs: [{ ref_type: "FACT", ref_value: fact.fact_id }] };
