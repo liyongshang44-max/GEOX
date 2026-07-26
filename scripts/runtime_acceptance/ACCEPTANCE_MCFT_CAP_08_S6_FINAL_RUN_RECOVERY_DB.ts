@@ -159,8 +159,10 @@ async function main(): Promise<void> {
     const latestRecordSetAuthority = await findLatestRecordSetAuthority(recoveryPoolA, pointersBeforeLoss);
     await removeRecoverablePointers(admin, request.scope);
     const factsBeforePointerRecovery = await factCount(admin);
-    const runtimeProjectionRebuild = await rebuildLatestRuntimeAuthority(recoveryPoolA, latestRecordSetAuthority);
-    const scenarioProjectionRebuild = await rebuildScenarioAuthority(recoveryPoolA, pointersBeforeLoss);
+    // Projection rebuild is an explicit external-admin disaster-recovery operation because
+    // the bounded CAP-08 runner intentionally has no DELETE authority on projection tables.
+    const runtimeProjectionRebuild = await rebuildLatestRuntimeAuthority(admin, latestRecordSetAuthority);
+    const scenarioProjectionRebuild = await rebuildScenarioAuthority(admin, pointersBeforeLoss);
     const recoveryRequest = request;
     const serviceA = new Cap08S5ResidualCalibrationShadowServiceV1(
       new PostgresCap08S5ExactSourceV1(recoveryPoolA, new PostgresFeedbackPersistenceRepositoryV1(recoveryPoolA)),
