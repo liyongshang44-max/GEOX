@@ -1,0 +1,13 @@
+{
+  "schema_version": "geox_mcft_cap08_s5_development_preflight_boundary_v1",
+  "record_status": "DISPOSABLE_DEVELOPMENT_PREFLIGHT_ONLY",
+  "base_sha": "6838bf07a96022640bea6ddb20e461f748a5114c",
+  "branch": "agent/mcft-cap08-s5-development",
+  "candidate_declaration": false,
+  "merge_authorized": false,
+  "close_without_merge": true,
+  "production_runtime_source_authorized": false,
+  "s5_effective": false,
+  "s6_authorized": false,
+  "mcft_cap_09_authorized": false
+}
