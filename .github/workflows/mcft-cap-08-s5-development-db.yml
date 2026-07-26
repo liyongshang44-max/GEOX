@@ -8,7 +8,7 @@ on:
       - 'apps/server/src/domain/twin_runtime/cap08_s5_**'
       - 'apps/server/src/persistence/twin_runtime/postgres_cap08_s5_**'
       - 'apps/server/src/runtime/twin_runtime/cap08_s5_**'
-      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_RESIDUAL_CALIBRATION_SHADOW_DB.ts'
+      - 'scripts/runtime_acceptance/DIAGNOSTIC_MCFT_CAP_08_S5_OBJECTIVE_SURFACE_DB.ts'
       - 'scripts/runtime_acceptance/mcft_cap08_s5_acceptance_support_v1.ts'
       - 'scripts/runtime_acceptance/mcft_cap08_s2_formal_provider_fixture_v1.ts'
 
@@ -63,7 +63,7 @@ jobs:
           MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
 
-      - name: Execute S3 S4 predecessor and S5 development proof
+      - name: Compute exact 21-point S5 objective surface
         env:
           DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap08-s5-development-runner-password@127.0.0.1:5432/geox_mcft_cap08_s5_development
           MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap08_s5_development
@@ -74,9 +74,9 @@ jobs:
         run: |
           set +e
           mkdir -p acceptance-output
-          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_RESIDUAL_CALIBRATION_SHADOW_DB.ts > acceptance-output/mcft-cap08-s5-development-db.log 2>&1
+          pnpm -w exec tsx scripts/runtime_acceptance/DIAGNOSTIC_MCFT_CAP_08_S5_OBJECTIVE_SURFACE_DB.ts > acceptance-output/mcft-cap08-s5-objective-surface.log 2>&1
           rc=$?
-          cat acceptance-output/mcft-cap08-s5-development-db.log
+          cat acceptance-output/mcft-cap08-s5-objective-surface.log
           exit $rc
 
       - name: Cleanup development database
@@ -90,7 +90,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap-08-s5-development-${{ github.event.pull_request.head.sha || github.sha }}
+          name: mcft-cap-08-s5-objective-${{ github.event.pull_request.head.sha || github.sha }}
           path: acceptance-output/
           if-no-files-found: error
           retention-days: 1
