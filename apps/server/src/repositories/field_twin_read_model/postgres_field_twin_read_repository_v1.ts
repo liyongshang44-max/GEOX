@@ -334,7 +334,7 @@ export class PostgresFieldTwinReadRepositoryV1 {
           AND (
             (jsonb_typeof(member_object_ids)='array' AND member_object_ids @> $1::jsonb)
             OR
-            (jsonb_typeof(member_object_ids)='object' AND member_object_ids @> pg_catalog.jsonb_build_object('twin_runtime_checkpoint_v1',$2))
+            (jsonb_typeof(member_object_ids)='object' AND member_object_ids @> pg_catalog.jsonb_build_object('twin_runtime_checkpoint_v1',$2::text))
           )
         LIMIT 2`,
       [JSON.stringify([checkpointRef]), checkpointRef],
