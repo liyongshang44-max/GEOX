@@ -205,7 +205,7 @@ async function main(): Promise<void> {
     const stateHistoryBefore = await rows("twin_state_history_projection_v1", "logical_time,state_object_id");
     const projectionCountsBefore = await tableCounts();
 
-    const recovery = new PostgresForecastScenarioRecoveryRepositoryV1(pool);
+    const recovery = new PostgresForecastScenarioRecoveryRepositoryV1(admin);
     const destroyClient = await admin.connect();
     try {
       await destroyClient.query("BEGIN");
