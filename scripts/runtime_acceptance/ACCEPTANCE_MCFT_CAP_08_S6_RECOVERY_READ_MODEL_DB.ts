@@ -228,11 +228,30 @@ async function main(): Promise<void> {
     }
 
     const recordSets = (await admin.query(
-      "SELECT record_set_id FROM twin_object_idempotency_index_v1 WHERE identity_kind IN ('A1_RECORD_SET','A2_RECORD_SET') ORDER BY record_set_id",
+      `SELECT i.record_set_id
+         FROM twin_object_idempotency_index_v1 i
+         JOIN facts f
+           ON f.record_json->'payload'->>'object_id'=i.member_object_ids->>'twin_forecast_run_v1'
+        WHERE i.identity_kind IN ('A1_RECORD_SET','A2_RECORD_SET')
+          AND f.record_json->>'type'='twin_forecast_run_v1'
+          AND f.source<>$1
+        ORDER BY (f.record_json->'payload'->>'logical_time')::timestamptz,
+                 f.record_json->'payload'->>'object_id'`,
+      [S4_APPEND_FORWARD_FACT_SOURCE],
     )).rows.map((row) => String(row.record_set_id));
     assert.equal(recordSets.length, 24);
     for (const recordSetId of recordSets) await recovery.rebuildForecastProjections(recordSetId);
-    const scenarioSets = (await admin.query("SELECT scenario_set_id FROM twin_scenario_set_uniqueness_v1 ORDER BY scenario_set_id")).rows.map((row) => String(row.scenario_set_id));
+    const scenarioSets = (await admin.query(
+      `SELECT u.scenario_set_id
+         FROM twin_scenario_set_uniqueness_v1 u
+         JOIN facts f
+           ON f.record_json->'payload'->>'object_id'=u.scenario_set_id
+        WHERE f.record_json->>'type'='twin_scenario_set_v1'
+          AND f.source<>$1
+        ORDER BY (f.record_json->'payload'->>'logical_time')::timestamptz,
+                 f.record_json->'payload'->>'object_id'`,
+      [S4_APPEND_FORWARD_FACT_SOURCE],
+    )).rows.map((row) => String(row.scenario_set_id));
     assert.equal(scenarioSets.length, 24);
     for (const scenarioSetId of scenarioSets) await recovery.rebuildScenarioProjections(scenarioSetId);
 
