@@ -1,0 +1,80 @@
+{
+  "schema_version": "geox_mcft_cap07_cap04_scenario_option_count_reconciliation_v1",
+  "reconciliation_id": "GEOX-MCFT-CAP-07-CAP04-SCENARIO-OPTION-COUNT-RECONCILIATION-V1",
+  "record_status": "NON_CANDIDATE_SOURCE_CONTRACT_RECONCILIATION",
+  "capability_line_id": "MCFT-CAP-07",
+  "discovered_by": "MCFT-CAP-08.S6 development preflight",
+  "base_main_sha": "242d027101574512decdfa1ee3647b557d2fd858",
+  "base_matrix_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-SOURCE-VALIDATION-MATRIX-V1.json",
+  "base_matrix_blob": "9bc4713357f3c89d1f6d799fd2502a4da7181b00",
+  "historical_matrix_mutation": false,
+  "affected_source_count": 1,
+  "affected_comparison_count": 1,
+  "affected_sources": [
+    {
+      "source_name": "public.twin_scenario_set_projection_v1",
+      "profile_family": "CANONICAL_AGGREGATE_PROJECTION",
+      "projection_column": "option_count",
+      "prior_canonical_path": "record_json.payload.payload.option_count",
+      "prior_comparison": "EXACT",
+      "effective_canonical_path": "record_json.payload.payload.options.length",
+      "effective_comparison": "EXACT",
+      "canonical_authority_path": "record_json.payload.payload.options",
+      "canonical_authority_rule": "ARRAY_LENGTH_EQUALS_PROJECTION_OPTION_COUNT",
+      "canonical_field_option_count_present": false,
+      "projection_derivation": "buildCap04ScenarioProjectionRowsV1:option_count=payload.options.length"
+    }
+  ],
+  "audited_successor_sources": [
+    {
+      "source_name": "public.twin_action_feedback_projection_v1",
+      "result": "NO_PATH_DRIFT_FOUND",
+      "builder_ref": "apps/server/src/projections/twin_runtime/feedback_persistence_projection_v1.ts"
+    },
+    {
+      "source_name": "public.twin_forecast_residual_projection_v1",
+      "result": "NO_PATH_DRIFT_FOUND",
+      "builder_ref": "apps/server/src/projections/twin_runtime/feedback_persistence_projection_v1.ts"
+    },
+    {
+      "source_name": "public.twin_calibration_candidate_projection_v1",
+      "result": "PREVIOUSLY_RECONCILED_AND_FRESH_DB_PROVEN"
+    },
+    {
+      "source_name": "public.twin_shadow_evaluation_projection_v1",
+      "result": "PREVIOUSLY_RECONCILED_AND_FRESH_DB_PROVEN"
+    }
+  ],
+  "preserved_obligations": [
+    "scenario object identity",
+    "six-key scope",
+    "lineage and revision",
+    "logical time",
+    "source forecast ref/hash",
+    "source posterior ref/hash",
+    "runtime config ref/hash",
+    "scenario policy id",
+    "determinism hash",
+    "canonical payload",
+    "source fact identity",
+    "snapshot visibility"
+  ],
+  "implementation_rule": {
+    "path_reader_extension": "reuse existing terminal array .length support",
+    "arbitrary_array_indexing": false,
+    "undefined_coercion": false,
+    "unknown_comparison_modes": "FAIL_CLOSED"
+  },
+  "nonclaims": {
+    "canonical_fact_rewrite": false,
+    "projection_rewrite": false,
+    "database_schema_delta": 0,
+    "route_delta": 0,
+    "runtime_write_authority_delta": 0,
+    "s6_candidate_implemented": false,
+    "mcft_cap_08_complete": false,
+    "production_runtime_source_authorized": false,
+    "model_activation_authorized": false,
+    "mcft_cap_09_authorized": false
+  }
+}

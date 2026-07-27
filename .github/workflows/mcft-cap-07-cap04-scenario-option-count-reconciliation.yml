@@ -1,0 +1,96 @@
+name: mcft-cap-07-cap04-scenario-option-count-reconciliation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-07-cap04-scenario-option-count-reconciliation.yml'
+      - 'apps/server/src/domain/field_twin_read_model/s4_source_obligations_v1.ts'
+      - 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CAP04-SCENARIO-OPTION-COUNT-RECONCILIATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_CAP04_FORECAST_POINT_COUNT_RECONCILIATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_CAP04_SCENARIO_OPTION_COUNT_RECONCILIATION.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_CAP04_SCENARIO_OPTION_COUNT_COMPATIBILITY_DB.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap07-cap04-scenario-option-count-reconciliation-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  reconciliation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: postgres }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.11.1, cache: pnpm }
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Validate exact non-candidate Scenario reconciliation boundary
+        env:
+          MCFT_BASE_SHA: '${{ github.event.pull_request.base.sha }}'
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_CAP04_SCENARIO_OPTION_COUNT_RECONCILIATION.cjs
+      - name: Typecheck server and Scenario acceptance
+        shell: bash
+        run: |
+          mkdir -p acceptance-output
+          set -o pipefail
+          pnpm --filter @geox/server typecheck 2>&1 | tee acceptance-output/MCFT_CAP_07_CAP04_SCENARIO_OPTION_COUNT_TYPECHECK.log
+      - name: Bootstrap fresh dedicated database
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_cap07_scenario_option_count_reconciliation
+          MCFT_CAP08_RUNNER_PASSWORD: cap07-cap04-scenario-option-count-runner
+          MCFT_CAP08_MIGRATOR_PASSWORD: cap07-cap04-scenario-option-count-migrator
+          MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: cap07-cap04-scenario-option-count-legacy
+          MCFT_CANDIDATE_SHA: '${{ github.event.pull_request.head.sha }}'
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+      - name: Materialize exact S1-S5 chain
+        env:
+          DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap07-cap04-scenario-option-count-runner@127.0.0.1:5432/geox_mcft_cap08_cap07_scenario_option_count_reconciliation
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap08_cap07_scenario_option_count_reconciliation
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S4_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S5_V2_FORMAL_PREFLIGHT_DESTRUCTIVE: '1'
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_V2_FORMAL_PREFLIGHT_DB.ts
+      - name: Prove CAP-04 Scenario option-count collection readback
+        env:
+          DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap07-cap04-scenario-option-count-runner@127.0.0.1:5432/geox_mcft_cap08_cap07_scenario_option_count_reconciliation
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap08_cap07_scenario_option_count_reconciliation
+          MCFT_CAP07_CAP04_SCENARIO_OPTION_COUNT_RECONCILIATION_DESTRUCTIVE: '1'
+          MCFT_CURSOR_SIGNING_KEYS_JSON: '{"reconciliation":"cap07-cap04-scenario-option-count-reconciliation-signing-key-0001"}'
+          MCFT_CURSOR_PRIMARY_KEY_ID: reconciliation
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_CAP04_SCENARIO_OPTION_COUNT_COMPATIBILITY_DB.ts
+      - name: Cleanup fresh dedicated database
+        if: always()
+        env: { PGPASSWORD: postgres }
+        run: |
+          if psql -h 127.0.0.1 -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='geox_mcft_cap08_cap07_scenario_option_count_reconciliation'" | grep -qx 1; then
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='geox_mcft_cap08_cap07_scenario_option_count_reconciliation' AND pid<>pg_backend_pid();"
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE geox_mcft_cap08_cap07_scenario_option_count_reconciliation;"
+          fi
+      - name: Upload Scenario reconciliation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-07-cap04-scenario-option-count-reconciliation-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/
+          if-no-files-found: error
+          retention-days: 90
