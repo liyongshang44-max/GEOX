@@ -1,0 +1,234 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_ha_proof_contract_shard_v1",
+  "record_status": "PROPOSED_FOR_HUMAN_REVIEW",
+  "base_main_sha": "50e46a320a33800f2eb68f25e1ac6e25e20ea279",
+  "mapping_id": "GEOX-MCFT-CAP-08-S6-HA-WITNESS-MAPPING-V1",
+  "contract_ids": [
+    "PC-00",
+    "PC-01",
+    "PC-02",
+    "PC-03",
+    "PC-04",
+    "PC-05",
+    "PC-06",
+    "PC-07",
+    "PC-08"
+  ],
+  "contract_count": 9,
+  "proof_contracts": {
+    "PC-00": {
+      "phase": "CROSS_RUN",
+      "instance_policy": "EXACT_RUN_A_RUN_B_PAIR",
+      "producer_id": "mcft_cap08_s6_cross_run_digest_comparator_v1",
+      "artifact_kind": "MCFT_CAP_08_S6_CROSS_RUN_COMPARISON_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CROSS_RUN_PAIR",
+      "object_set_id": "RUN_A_RUN_B_CLOSURE_ARTIFACT_PAIR",
+      "selector_id": "cross_run_digest_manifest_pair_v1",
+      "selector_profile": "CROSS_RUN_ARTIFACT_PAIR",
+      "selector_parameters": {},
+      "expected_contract": {
+        "run_count": 2,
+        "semantic_chain_digest_byte_equal": true,
+        "operational_invariant_digest_byte_equal": true,
+        "closure_digest_byte_equal": true
+      }
+    },
+    "PC-01": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_chain_witness_v1",
+      "artifact_kind": "PER_RUN_CHAIN_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CLOSURE_MEMBER",
+      "object_set_id": "PER_RUN_CLOSURE_CHAIN_MEMBERS",
+      "selector_id": "bootstrap_root_and_contiguous_tick_sequence_v1",
+      "selector_profile": "PER_RUN_CANONICAL_MEMBERS",
+      "selector_parameters": {
+        "member_roles": [
+          "BOOTSTRAP_ROOT",
+          "SUCCESSFUL_TICK"
+        ]
+      },
+      "expected_contract": {
+        "bootstrap_root_count": 1,
+        "successful_tick_count": 24,
+        "tick_ordinals": "T00-T23_CONTIGUOUS",
+        "required_sequence": [
+          "B00",
+          "T00-T23",
+          "G00-G02"
+        ]
+      }
+    },
+    "PC-02": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_state_chain_witness_v1",
+      "artifact_kind": "PER_RUN_STATE_CHAIN_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CLOSURE_MEMBER",
+      "object_set_id": "PER_RUN_STATE_CHAIN_MEMBERS",
+      "selector_id": "immutable_state_chain_exact_refs_v1",
+      "selector_profile": "PER_RUN_CANONICAL_MEMBERS",
+      "selector_parameters": {
+        "member_roles": [
+          "BOOTSTRAP_STATE",
+          "POSTERIOR_STATE"
+        ]
+      },
+      "expected_contract": {
+        "bootstrap_state_count": 1,
+        "new_posterior_state_count": 24,
+        "bootstrap_inclusive_state_count": 25,
+        "historical_hash_rewrite_count": 0,
+        "predecessor_ref_mismatch_count": 0,
+        "predecessor_hash_mismatch_count": 0
+      }
+    },
+    "PC-03": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_assimilation_witness_v1",
+      "artifact_kind": "PER_RUN_ASSIMILATION_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CLOSURE_MEMBER",
+      "object_set_id": "PER_RUN_ASSIMILATION_TRACE_MEMBERS",
+      "selector_id": "dynamics_only_without_eligible_observation_v1",
+      "selector_profile": "PER_RUN_CANONICAL_MEMBERS",
+      "selector_parameters": {
+        "member_roles": [
+          "TICK",
+          "STATE_ESTIMATE",
+          "DYNAMICS_TRACE"
+        ]
+      },
+      "expected_contract": {
+        "due_map_source": "FROZEN_FORMAL_DATASET",
+        "ineligible_observation_consumption_count": 0,
+        "dynamics_only_transition_mismatch_count": 0
+      }
+    },
+    "PC-04": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_assimilation_witness_v1",
+      "artifact_kind": "PER_RUN_ASSIMILATION_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CLOSURE_MEMBER",
+      "object_set_id": "PER_RUN_ASSIMILATION_TRACE_MEMBERS",
+      "selector_id": "ordinary_assimilation_trace_v1",
+      "selector_profile": "PER_RUN_CANONICAL_MEMBERS",
+      "selector_parameters": {
+        "member_roles": [
+          "OBSERVATION_EVIDENCE_WINDOW",
+          "ASSIMILATION_TRACE",
+          "POSTERIOR_STATE"
+        ]
+      },
+      "expected_contract": {
+        "ordinary_assimilation_count": "EXACT_FROM_FROZEN_FORMAL_DATASET",
+        "observation_ref_mismatch_count": 0,
+        "trace_gap_count": 0
+      }
+    },
+    "PC-05": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_assimilation_witness_v1",
+      "artifact_kind": "PER_RUN_ASSIMILATION_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CLOSURE_MEMBER",
+      "object_set_id": "PER_RUN_ASSIMILATION_TRACE_MEMBERS",
+      "selector_id": "posterior_derivation_not_direct_observation_copy_v1",
+      "selector_profile": "PER_RUN_CANONICAL_MEMBERS",
+      "selector_parameters": {
+        "member_roles": [
+          "OBSERVATION",
+          "DYNAMICS_TRACE",
+          "ASSIMILATION_TRACE",
+          "POSTERIOR_STATE"
+        ]
+      },
+      "expected_contract": {
+        "direct_observation_copy_count": 0,
+        "dynamics_then_assimilation_derivation_required": true,
+        "posterior_hash_verification_required": true
+      }
+    },
+    "PC-06": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_assimilation_witness_v1",
+      "artifact_kind": "PER_RUN_ASSIMILATION_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CLOSURE_MEMBER",
+      "object_set_id": "PER_RUN_ASSIMILATION_TRACE_MEMBERS",
+      "selector_id": "quality_weight_downweight_rejection_trace_v1",
+      "selector_profile": "PER_RUN_CANONICAL_MEMBERS",
+      "selector_parameters": {
+        "member_roles": [
+          "OBSERVATION",
+          "QUALITY_WEIGHT_TRACE",
+          "ASSIMILATION_TRACE",
+          "POSTERIOR_STATE"
+        ]
+      },
+      "expected_contract": {
+        "invalid_quality_acceptance_count": 0,
+        "quality_weight_trace_complete": true,
+        "rejection_write_delta": 0,
+        "frozen_vector_conformance": true
+      }
+    },
+    "PC-07": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_forecast_scenario_witness_v1",
+      "artifact_kind": "PER_RUN_FORECAST_SCENARIO_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CLOSURE_MEMBER",
+      "object_set_id": "PER_RUN_FORECAST_MEMBERS",
+      "selector_id": "successful_forecasts_and_points_v1",
+      "selector_profile": "PER_RUN_CANONICAL_MEMBERS",
+      "selector_parameters": {
+        "member_roles": [
+          "FORECAST_RUN",
+          "FORECAST_POINT"
+        ]
+      },
+      "expected_contract": {
+        "successful_forecast_count": 24,
+        "points_per_forecast": 72,
+        "total_forecast_point_count": 1728,
+        "non_completed_forecast_count": 0
+      }
+    },
+    "PC-08": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_forecast_scenario_witness_v1",
+      "artifact_kind": "PER_RUN_FORECAST_SCENARIO_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CLOSURE_MEMBER",
+      "object_set_id": "PER_RUN_SCENARIO_MEMBERS",
+      "selector_id": "scenario_sets_options_and_trajectory_points_v1",
+      "selector_profile": "PER_RUN_CANONICAL_MEMBERS",
+      "selector_parameters": {
+        "member_roles": [
+          "SCENARIO_SET",
+          "SCENARIO_OPTION",
+          "SCENARIO_TRAJECTORY_POINT"
+        ]
+      },
+      "expected_contract": {
+        "scenario_set_count": 24,
+        "options_per_set": 3,
+        "total_option_count": 72,
+        "trajectory_points_per_option": 72,
+        "total_trajectory_point_count": 5184
+      }
+    }
+  },
+  "semantic_digest": "sha256:6bb2bfed393e2f3ef9567397cd7e2891a72d7c9082835cffd7eed5e194af1c8b"
+}

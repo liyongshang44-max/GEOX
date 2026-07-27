@@ -1,0 +1,222 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_ha_proof_contract_shard_v1",
+  "record_status": "PROPOSED_FOR_HUMAN_REVIEW",
+  "base_main_sha": "50e46a320a33800f2eb68f25e1ac6e25e20ea279",
+  "mapping_id": "GEOX-MCFT-CAP-08-S6-HA-WITNESS-MAPPING-V1",
+  "contract_ids": [
+    "PC-09",
+    "PC-10",
+    "PC-11",
+    "PC-12",
+    "PC-13",
+    "PC-14",
+    "PC-15",
+    "PC-16"
+  ],
+  "contract_count": 8,
+  "proof_contracts": {
+    "PC-09": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_decision_action_witness_v1",
+      "artifact_kind": "PER_RUN_DECISION_ACTION_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CLOSURE_MEMBER",
+      "object_set_id": "PER_RUN_DECISION_ACTION_MEMBERS",
+      "selector_id": "decision_after_t05_scenario_commit_v1",
+      "selector_profile": "PER_RUN_CANONICAL_MEMBERS",
+      "selector_parameters": {
+        "member_roles": [
+          "SCENARIO_SET_T05",
+          "DECISION_RECORD"
+        ]
+      },
+      "expected_contract": {
+        "decision_count": 1,
+        "decision_tick": "T05",
+        "scenario_tick": "T05",
+        "scenario_predecessor_exact": true,
+        "decision_after_scenario_commit": true,
+        "recommendation_count": 0
+      }
+    },
+    "PC-10": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_decision_action_witness_v1",
+      "artifact_kind": "PER_RUN_DECISION_ACTION_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CLOSURE_MEMBER",
+      "object_set_id": "PER_RUN_DECISION_ACTION_MEMBERS",
+      "selector_id": "approval_plan_receipt_separation_v1",
+      "selector_profile": "PER_RUN_CANONICAL_MEMBERS",
+      "selector_parameters": {
+        "member_roles": [
+          "APPROVAL_ASSERTION",
+          "APPROVED_PLAN",
+          "EXECUTION_RECEIPT"
+        ]
+      },
+      "expected_contract": {
+        "approval_assertion_count": 1,
+        "approved_plan_count": 1,
+        "execution_receipt_count": 1,
+        "distinct_object_identity": true,
+        "exact_predecessor_edges": true
+      }
+    },
+    "PC-11": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_decision_action_witness_v1",
+      "artifact_kind": "PER_RUN_DECISION_ACTION_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CLOSURE_MEMBER",
+      "object_set_id": "PER_RUN_DECISION_ACTION_MEMBERS",
+      "selector_id": "execution_consumption_first_legal_tick_v1",
+      "selector_profile": "PER_RUN_CANONICAL_MEMBERS",
+      "selector_parameters": {
+        "member_roles": [
+          "EXECUTION_RECEIPT",
+          "ACTION_FEEDBACK",
+          "STATE_ESTIMATE"
+        ]
+      },
+      "expected_contract": {
+        "t07_execution_consumption_count": 0,
+        "first_legal_consumption_tick": "T08",
+        "premature_consumption_count": 0
+      }
+    },
+    "PC-12": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_phase_order_witness_v1",
+      "artifact_kind": "PER_RUN_PHASE_ORDER_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "RUN_INSTANCE_OPERATIONAL",
+      "object_set_id": "PER_RUN_OPERATIONAL_PHASE_EVENTS",
+      "selector_id": "t08_h_commit_before_a_snapshot_v1",
+      "selector_profile": "PER_RUN_OPERATIONAL_EVENTS",
+      "selector_parameters": {
+        "event_roles": [
+          "T08_PHASE_EVENT_E",
+          "T08_PHASE_EVENT_H",
+          "T08_PHASE_EVENT_A",
+          "T08_PHASE_EVENT_B"
+        ]
+      },
+      "expected_contract": {
+        "tick": "T08",
+        "phase_order": [
+          "E",
+          "H",
+          "A",
+          "B"
+        ],
+        "h_committed_before_a_snapshot": true,
+        "a_consumes_exact_h_ref": true
+      }
+    },
+    "PC-13": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_decision_action_witness_v1",
+      "artifact_kind": "PER_RUN_DECISION_ACTION_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CLOSURE_MEMBER",
+      "object_set_id": "PER_RUN_DECISION_ACTION_MEMBERS",
+      "selector_id": "outcome_and_fvo10_single_identity_v1",
+      "selector_profile": "PER_RUN_CANONICAL_MEMBERS",
+      "selector_parameters": {
+        "member_roles": [
+          "OUTCOME_EVIDENCE",
+          "FORECAST_VERIFICATION_OBSERVATION"
+        ]
+      },
+      "expected_contract": {
+        "outcome_evidence_identity_count": 1,
+        "forecast_verification_identity_count": 1,
+        "same_identity": true,
+        "duplicate_identity_count": 0,
+        "tick": "T10"
+      }
+    },
+    "PC-14": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_recovery_fault_witness_v1",
+      "artifact_kind": "PER_RUN_RECOVERY_FAULT_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "RUN_INSTANCE_OPERATIONAL",
+      "object_set_id": "PER_RUN_RECOVERY_EVENTS",
+      "selector_id": "t11_precommit_fault_rollback_v1",
+      "selector_profile": "PER_RUN_OPERATIONAL_EVENTS",
+      "selector_parameters": {
+        "event_roles": [
+          "T11_PRECOMMIT_FAULT",
+          "ROLLBACK_RESULT",
+          "RETRY_RESULT"
+        ]
+      },
+      "expected_contract": {
+        "fault_tick": "T11",
+        "fault_stage": "PRE_COMMIT",
+        "canonical_write_delta": 0,
+        "projection_write_delta": 0,
+        "pointer_write_delta": 0,
+        "retry_success_count": 1
+      }
+    },
+    "PC-15": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_recovery_fault_witness_v1",
+      "artifact_kind": "PER_RUN_RECOVERY_FAULT_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "RUN_INSTANCE_OPERATIONAL",
+      "object_set_id": "PER_RUN_RECOVERY_EVENTS",
+      "selector_id": "t12_postcommit_response_loss_recovery_v1",
+      "selector_profile": "PER_RUN_OPERATIONAL_EVENTS",
+      "selector_parameters": {
+        "event_roles": [
+          "T12_POSTCOMMIT_RESPONSE_LOSS",
+          "RETRY_RESULT",
+          "CANONICAL_READBACK"
+        ]
+      },
+      "expected_contract": {
+        "fault_tick": "T12",
+        "commit_completed": true,
+        "response_lost": true,
+        "retry_duplicate_write_count": 0,
+        "canonical_readback_exact": true
+      }
+    },
+    "PC-16": {
+      "phase": "PER_RUN",
+      "instance_policy": "BOTH_FORMAL_RUN_INSTANCES",
+      "producer_id": "mcft_cap08_s6_per_run_late_append_forward_witness_v1",
+      "artifact_kind": "PER_RUN_LATE_APPEND_FORWARD_WITNESS_V1",
+      "artifact_contract_profile": "STANDARD_HA_WITNESS",
+      "counting_domain": "CLOSURE_MEMBER",
+      "object_set_id": "PER_RUN_LATE_APPEND_FORWARD_MEMBERS",
+      "selector_id": "t16_append_forward_history_immutability_v1",
+      "selector_profile": "PER_RUN_CANONICAL_MEMBERS",
+      "selector_parameters": {
+        "member_roles": [
+          "LATE_EVIDENCE",
+          "CORRECTED_POSTERIOR_STATE",
+          "T17_CONSUMPTION_TRACE"
+        ]
+      },
+      "expected_contract": {
+        "correction_tick": "T16",
+        "append_forward_correction_count": 1,
+        "historical_hash_rewrite_count": 0,
+        "t17_consumes_corrected_posterior": true
+      }
+    }
+  },
+  "semantic_digest": "sha256:017c9a6dc83ca832c51fd322bbe28ba4d12d7854dc93f2c18ddbe99c5ce60c0b"
+}
