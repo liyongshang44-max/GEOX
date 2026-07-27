@@ -1,0 +1,141 @@
+name: mcft-cap-08-s6-development-preflight
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-development-preflight.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_DEVELOPMENT_BOUNDARY.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_two_run_compare.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_RUN_RECOVERY_DB.ts'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_existing_recovery_support_v1.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap08-s6-development-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  two-run-final-closure-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: postgres }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.11.1, cache: pnpm }
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Validate development boundary
+        env: { MCFT_BASE_SHA: '${{ github.event.pull_request.base.sha }}' }
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_DEVELOPMENT_BOUNDARY.cjs
+      - name: Typecheck server and S6 acceptance
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Bootstrap fresh database RUN_A
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_s6_run_a
+          MCFT_CAP08_RUNNER_PASSWORD: cap08-s6-run-a-runner
+          MCFT_CAP08_MIGRATOR_PASSWORD: cap08-s6-run-a-migrator
+          MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: cap08-s6-run-a-legacy
+          MCFT_CANDIDATE_SHA: '${{ github.event.pull_request.head.sha }}'
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+      - name: Materialize exact S1-S5 chain RUN_A
+        env:
+          DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap08-s6-run-a-runner@127.0.0.1:5432/geox_mcft_cap08_s6_run_a
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap08_s6_run_a
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S4_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S5_V2_FORMAL_PREFLIGHT_DESTRUCTIVE: '1'
+        run: |
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_V2_FORMAL_PREFLIGHT_DB.ts
+          cp acceptance-output/MCFT_CAP_08_S5_V2_FORMAL_PREFLIGHT_RESULT.json acceptance-output/MCFT_CAP_08_S6_RUN_A_MATERIALIZATION.json
+      - name: Recover and read back RUN_A in a fresh process
+        env:
+          DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap08-s6-run-a-runner@127.0.0.1:5432/geox_mcft_cap08_s6_run_a
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap08_s6_run_a
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S4_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S6_FINAL_RUN_DESTRUCTIVE: '1'
+          MCFT_CAP08_S6_RUN_LABEL: RUN_A
+          MCFT_CAP08_S6_OPERATIONAL_INSTANCE_ID: s6-operational-run-a
+          MCFT_CAP08_S6_MATERIALIZATION_RESULT: acceptance-output/MCFT_CAP_08_S6_RUN_A_MATERIALIZATION.json
+          MCFT_CURSOR_SIGNING_KEYS_JSON: '{"s6":"s6-final-closure-signing-key-00000000000000000001"}'
+          MCFT_CURSOR_PRIMARY_KEY_ID: s6
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_RUN_RECOVERY_DB.ts
+      - name: Cleanup RUN_A
+        if: always()
+        env: { PGPASSWORD: postgres }
+        run: |
+          if psql -h 127.0.0.1 -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='geox_mcft_cap08_s6_run_a'" | grep -qx 1; then
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='geox_mcft_cap08_s6_run_a' AND pid<>pg_backend_pid();"
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE geox_mcft_cap08_s6_run_a;"
+          fi
+
+      - name: Bootstrap fresh database RUN_B
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_s6_run_b
+          MCFT_CAP08_RUNNER_PASSWORD: cap08-s6-run-b-runner
+          MCFT_CAP08_MIGRATOR_PASSWORD: cap08-s6-run-b-migrator
+          MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: cap08-s6-run-b-legacy
+          MCFT_CANDIDATE_SHA: '${{ github.event.pull_request.head.sha }}'
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+      - name: Materialize exact S1-S5 chain RUN_B
+        env:
+          DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap08-s6-run-b-runner@127.0.0.1:5432/geox_mcft_cap08_s6_run_b
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap08_s6_run_b
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S4_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S5_V2_FORMAL_PREFLIGHT_DESTRUCTIVE: '1'
+        run: |
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_V2_FORMAL_PREFLIGHT_DB.ts
+          cp acceptance-output/MCFT_CAP_08_S5_V2_FORMAL_PREFLIGHT_RESULT.json acceptance-output/MCFT_CAP_08_S6_RUN_B_MATERIALIZATION.json
+      - name: Recover and read back RUN_B in a fresh process
+        env:
+          DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap08-s6-run-b-runner@127.0.0.1:5432/geox_mcft_cap08_s6_run_b
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap08_s6_run_b
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S4_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP08_S6_FINAL_RUN_DESTRUCTIVE: '1'
+          MCFT_CAP08_S6_RUN_LABEL: RUN_B
+          MCFT_CAP08_S6_OPERATIONAL_INSTANCE_ID: s6-operational-run-b
+          MCFT_CAP08_S6_MATERIALIZATION_RESULT: acceptance-output/MCFT_CAP_08_S6_RUN_B_MATERIALIZATION.json
+          MCFT_CURSOR_SIGNING_KEYS_JSON: '{"s6":"s6-final-closure-signing-key-00000000000000000001"}'
+          MCFT_CURSOR_PRIMARY_KEY_ID: s6
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_RUN_RECOVERY_DB.ts
+      - name: Cleanup RUN_B
+        if: always()
+        env: { PGPASSWORD: postgres }
+        run: |
+          if psql -h 127.0.0.1 -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='geox_mcft_cap08_s6_run_b'" | grep -qx 1; then
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='geox_mcft_cap08_s6_run_b' AND pid<>pg_backend_pid();"
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE geox_mcft_cap08_s6_run_b;"
+          fi
+      - name: Compare independent formal runs
+        run: node scripts/governance_acceptance/mcft_cap08_s6_two_run_compare.cjs
+      - name: Upload S6 development evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-development-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/
+          if-no-files-found: error
+          retention-days: 90
