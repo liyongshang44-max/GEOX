@@ -5,8 +5,15 @@ on:
     paths:
       - '.github/workflows/mcft-cap-08-s6-pre-candidate-governance.yml'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
-      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-*'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CHANGED-FILE-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PREDECESSOR-CONSUMPTION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REVIEW-POLICY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-WORKFLOW-DECLARATION-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_GOVERNANCE.cjs'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PRE-CANDIDATE-TRIGGER-RECONCILIATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_TRIGGER_RECONCILIATION.cjs'
   merge_group:
     types: [checks_requested]
 
@@ -31,7 +38,37 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
+      - name: Determine validation mode
+        id: validation-mode
+        shell: bash
+        env:
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: |
+          set -euo pipefail
+          base_sha="${EVENT_BASE_SHA}"
+          if [[ -z "${base_sha}" ]]; then
+            echo "mode=historical" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          mapfile -t changed < <(git diff --name-only "${base_sha}...HEAD" | sort)
+          expected=(
+            '.github/workflows/mcft-cap-08-s6-pre-candidate-governance.yml'
+            'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PRE-CANDIDATE-TRIGGER-RECONCILIATION-V1.json'
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_TRIGGER_RECONCILIATION.cjs'
+          )
+          mapfile -t expected < <(printf '%s\n' "${expected[@]}" | sort)
+          if [[ "${#changed[@]}" -eq "${#expected[@]}" ]] && diff -u <(printf '%s\n' "${expected[@]}") <(printf '%s\n' "${changed[@]}"); then
+            echo "mode=reconciliation" >> "${GITHUB_OUTPUT}"
+          else
+            echo "mode=historical" >> "${GITHUB_OUTPUT}"
+          fi
+      - name: Validate trigger reconciliation
+        if: steps.validation-mode.outputs.mode == 'reconciliation'
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_TRIGGER_RECONCILIATION.cjs
       - name: Validate exact non-candidate S6 governance package
+        if: steps.validation-mode.outputs.mode == 'historical'
         env:
           MCFT_BASE_SHA: 19f75275a223caa5196982344be57c871e7755d2
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_GOVERNANCE.cjs
@@ -40,6 +77,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap-08-s6-pre-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          path: acceptance-output/MCFT_CAP_08_S6_PRE_CANDIDATE_GOVERNANCE_RESULT.json
+          path: acceptance-output/MCFT_CAP_08_S6_PRE_CANDIDATE_*RESULT.json
           if-no-files-found: error
           retention-days: 90
