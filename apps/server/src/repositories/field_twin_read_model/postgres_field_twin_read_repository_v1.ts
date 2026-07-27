@@ -29,6 +29,15 @@ import { computeAssimilatedContinuationRecordSetDeterminismHashV1, type Assimila
 import { computeAssimilatedContinuationRecordSetDeterminismHashV2, type AssimilatedContinuationAggregateIdentityInputV2 } from "../../domain/twin_runtime/assimilated_continuation_record_set_identity_v2.js";
 import { ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1 } from "../../domain/twin_runtime/assimilated_continuation_contracts_v1.js";
 import { ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V2 } from "../../domain/twin_runtime/assimilated_continuation_contracts_v2.js";
+import {
+  CAP04_BLOCKED_FORECAST_CONTRACT_ID_V1,
+  CAP04_COMPLETED_FORECAST_CONTRACT_ID_V1,
+} from "../../domain/twin_runtime/forecast_scenario_contracts_v1.js";
+import { computeCap04AMemberDeterminismHashV1 } from "../../domain/twin_runtime/forecast_scenario_member_hash_v1.js";
+import {
+  computeCap04AAggregateDeterminismHashV1,
+  type Cap04AAggregateIdentityInputV1,
+} from "../../domain/twin_runtime/forecast_scenario_record_set_identity_v1.js";
 import { canonicalJsonV1 } from "../../domain/twin_runtime/canonical_json_v1.js";
 import type { PostgresFieldTwinSnapshotContextV1 } from "./postgres_field_twin_snapshot_repository_v1.js";
 
@@ -92,6 +101,11 @@ export type ResolvedRuntimeRootV1 = {
   canonical_payloads_by_ref: ReadonlyMap<string, CanonicalObjectEnvelopeV1>;
 };
 
+const NON_LINEAGE_CONTEXT_SCOPE_TYPES_V1 = new Set([
+  "twin_calibration_candidate_v1",
+  "twin_shadow_evaluation_v1",
+]);
+
 function fail(code: string, detail?: string): never {
   throw new PostgresFieldTwinReadRepositoryErrorV1(code, detail);
 }
@@ -121,13 +135,35 @@ function exactStringMap(value: unknown, code: string): Record<string, string> {
   return record as Record<string, string>;
 }
 
+function exactRecordSetMemberIds(value: unknown, code: string): string[] {
+  return Array.isArray(value)
+    ? exactStringArray(value, code)
+    : Object.values(exactStringMap(value, code));
+}
+
+function canonicalScopeV1(object: CanonicalObjectEnvelopeV1): FieldTwinScopeV1 {
+  const objectRecord = object as unknown as JsonRecord;
+  const source = NON_LINEAGE_CONTEXT_SCOPE_TYPES_V1.has(object.object_type)
+    ? asRecord(objectRecord.scope, `MCFT_CANONICAL_SCOPE_MISSING:${object.object_type}:${object.object_id}`)
+    : objectRecord;
+  return {
+    tenant_id: exactText(source.tenant_id, `MCFT_CANONICAL_SCOPE_INVALID:${object.object_type}:${object.object_id}:tenant_id`),
+    project_id: exactText(source.project_id, `MCFT_CANONICAL_SCOPE_INVALID:${object.object_type}:${object.object_id}:project_id`),
+    group_id: exactText(source.group_id, `MCFT_CANONICAL_SCOPE_INVALID:${object.object_type}:${object.object_id}:group_id`),
+    field_id: exactText(source.field_id, `MCFT_CANONICAL_SCOPE_INVALID:${object.object_type}:${object.object_id}:field_id`),
+    season_id: exactText(source.season_id, `MCFT_CANONICAL_SCOPE_INVALID:${object.object_type}:${object.object_id}:season_id`),
+    zone_id: exactText(source.zone_id, `MCFT_CANONICAL_SCOPE_INVALID:${object.object_type}:${object.object_id}:zone_id`),
+  };
+}
+
 function scopeValues(scope: FieldTwinScopeV1): readonly string[] {
   return [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id];
 }
 
 function assertScope(object: CanonicalObjectEnvelopeV1, scope: FieldTwinScopeV1, code = "MCFT_CANONICAL_SCOPE_MISMATCH"): void {
+  const canonicalScope = canonicalScopeV1(object);
   for (const key of ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"] as const) {
-    if (object[key] !== scope[key]) fail(code, key);
+    if (canonicalScope[key] !== scope[key]) fail(code, `${object.object_type}:${object.object_id}:${key}`);
   }
 }
 
@@ -155,7 +191,7 @@ function canonicalObjectRef(object: CanonicalObjectEnvelopeV1, factId: string): 
 function composerObject(object: CanonicalObjectEnvelopeV1, factId: string, profile: FieldTwinComposerObjectV1["validation_profile"] = "CANONICAL_TWIN_FACT_DIRECT"): FieldTwinComposerObjectV1 {
   return Object.freeze({
     ...canonicalObjectRef(object, factId),
-    scope: Object.freeze({ tenant_id: object.tenant_id, project_id: object.project_id, group_id: exactText(object.group_id, "MCFT_SCOPE_INVALID:group_id"), field_id: object.field_id, season_id: exactText(object.season_id, "MCFT_SCOPE_INVALID:season_id"), zone_id: exactText(object.zone_id, "MCFT_SCOPE_INVALID:zone_id") }),
+    scope: Object.freeze(canonicalScopeV1(object)),
     lineage_id: optionalText(object.lineage_id),
     revision_id: optionalText(object.revision_id),
     logical_time: normalizeInstant(object.logical_time, "MCFT_CANONICAL_LOGICAL_TIME_INVALID"),
@@ -167,12 +203,23 @@ function composerObject(object: CanonicalObjectEnvelopeV1, factId: string, profi
   });
 }
 
+function isCap04AggregateTickV1(object: CanonicalObjectEnvelopeV1): boolean {
+  return object.object_type === "twin_runtime_tick_v1"
+    && typeof object.payload?.aggregate_determinism_hash === "string";
+}
+
+function canonicalMemberHashV1(object: CanonicalObjectEnvelopeV1): string {
+  return isCap04AggregateTickV1(object)
+    ? computeCap04AMemberDeterminismHashV1(object)
+    : computeMemberDeterminismHashV1(object as unknown as JsonRecord);
+}
+
 function parseVisibleFactRow(row: { fact_id: string; record_json: unknown }, scope: FieldTwinScopeV1): VisibleCanonicalFactV1 {
   const envelope = asRecord(row.record_json, "MCFT_FACT_ENVELOPE_INVALID");
   const object = asRecord(envelope.payload, "MCFT_FACT_ENVELOPE_INVALID:payload") as unknown as CanonicalObjectEnvelopeV1;
   if (envelope.type !== object.object_type) fail("MCFT_FACT_ENVELOPE_TYPE_MISMATCH", row.fact_id);
   assertScope(object, scope);
-  const recomputed = computeMemberDeterminismHashV1(object as unknown as JsonRecord);
+  const recomputed = canonicalMemberHashV1(object);
   if (recomputed !== object.determinism_hash) fail("MCFT_DIRECT_CANONICAL_TWIN_FACT_INVALID", `${row.fact_id}:DETERMINISM_HASH`);
   return { fact_id: row.fact_id, record_json: envelope, object };
 }
@@ -268,15 +315,15 @@ export class PostgresFieldTwinReadRepositoryV1 {
       canonical_ref: target.object.object_id,
       canonical_hash: target.object.determinism_hash as SemanticHashTextV1,
       scope,
-      canonical_scope: { tenant_id: target.object.tenant_id, project_id: target.object.project_id, group_id: exactText(target.object.group_id, "MCFT_SCOPE_INVALID"), field_id: target.object.field_id, season_id: exactText(target.object.season_id, "MCFT_SCOPE_INVALID"), zone_id: exactText(target.object.zone_id, "MCFT_SCOPE_INVALID") },
+      canonical_scope: canonicalScopeV1(target.object),
     });
     return { source_name: "operational_pointer", profile_family: "OPERATIONAL_POINTER_INDEX", validation_status: "PASS", failure_code: null, validated_object_ref: target.object.object_id, validated_object_hash: target.object.determinism_hash as SemanticHashTextV1, evidence_refs: [{ ref_type: "FACT", ref_value: target.fact_id }] };
   }
 
   private validateDirectCanonicalFact(fact: VisibleCanonicalFactV1): FieldTwinSourceValidationResultV1 {
     const supported = new Set(["twin_runtime_lineage_v1", "twin_revision_run_v1", "twin_lineage_promotion_v1", "twin_runtime_tick_v1", "twin_evidence_window_v1", "twin_state_transition_v1", "twin_assimilation_update_v1", "twin_runtime_attempt_v1", "twin_forecast_failure_v1", "twin_runtime_checkpoint_v1", "twin_runtime_health_v1", "twin_runtime_config_v1", "twin_model_activation_v1"]);
-    if (supported.has(fact.object.object_type)) {
-      this.canonicalResolver.resolve({ fact_id: fact.fact_id, record_json: fact.record_json, expected_type: fact.object.object_type as never, expected_object_ref: fact.object.object_id, expected_scope: { tenant_id: fact.object.tenant_id, project_id: fact.object.project_id, group_id: exactText(fact.object.group_id, "MCFT_SCOPE_INVALID"), field_id: fact.object.field_id, season_id: exactText(fact.object.season_id, "MCFT_SCOPE_INVALID"), zone_id: exactText(fact.object.zone_id, "MCFT_SCOPE_INVALID") }, expected_hash: fact.object.determinism_hash as SemanticHashTextV1 });
+    if (supported.has(fact.object.object_type) && !isCap04AggregateTickV1(fact.object)) {
+      this.canonicalResolver.resolve({ fact_id: fact.fact_id, record_json: fact.record_json, expected_type: fact.object.object_type as never, expected_object_ref: fact.object.object_id, expected_scope: canonicalScopeV1(fact.object), expected_hash: fact.object.determinism_hash as SemanticHashTextV1 });
     }
     return { source_name: `public.facts#record_json.type=${fact.object.object_type}`, profile_family: "CANONICAL_TWIN_FACT_DIRECT", validation_status: "PASS", failure_code: null, validated_object_ref: fact.object.object_id, validated_object_hash: fact.object.determinism_hash as SemanticHashTextV1, evidence_refs: [{ ref_type: "FACT", ref_value: fact.fact_id }] };
   }
@@ -293,10 +340,19 @@ export class PostgresFieldTwinReadRepositoryV1 {
 
   private recomputeRecordSetHash(index: RecordSetIndexRowV1, members: readonly VisibleCanonicalFactV1[]): string {
     if (index.identity_kind === "A0_RECORD_SET") return computeA0RecordSetDeterminismHashV1({ a0_record_set_id: index.record_set_id, members: members.map((item) => item.object as unknown as JsonRecord) });
-    if (index.identity_kind !== "A2_RECORD_SET") fail("MCFT_RECORD_SET_IDENTITY_INVALID", `IDENTITY_KIND:${index.identity_kind}`);
     const identityBasis = asRecord(index.identity_basis, "MCFT_RECORD_SET_IDENTITY_INVALID:IDENTITY_BASIS");
     const aggregate = asRecord(identityBasis.aggregate_identity_input, "MCFT_RECORD_SET_IDENTITY_INVALID:AGGREGATE_IDENTITY_INPUT");
     const contractId = optionalText(identityBasis.record_set_contract_id) ?? optionalText(aggregate.record_set_contract_id);
+    if (
+      index.identity_kind === "A1_RECORD_SET"
+      || contractId === CAP04_COMPLETED_FORECAST_CONTRACT_ID_V1
+      || contractId === CAP04_BLOCKED_FORECAST_CONTRACT_ID_V1
+    ) {
+      return computeCap04AAggregateDeterminismHashV1(
+        aggregate as unknown as Cap04AAggregateIdentityInputV1,
+      );
+    }
+    if (index.identity_kind !== "A2_RECORD_SET") fail("MCFT_RECORD_SET_IDENTITY_INVALID", `IDENTITY_KIND:${index.identity_kind}`);
     if (contractId === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1) return computeAssimilatedContinuationRecordSetDeterminismHashV1(aggregate as unknown as AssimilatedContinuationAggregateIdentityInputV1);
     if (contractId === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V2) return computeAssimilatedContinuationRecordSetDeterminismHashV2(aggregate as unknown as AssimilatedContinuationAggregateIdentityInputV2);
     return computeContinuationRecordSetDeterminismHashV1(aggregate as unknown as ContinuationAggregateIdentityInputV1);
@@ -307,14 +363,18 @@ export class PostgresFieldTwinReadRepositoryV1 {
     const result = await context.client.query<RecordSetIndexRowV1>(
       `SELECT identity_kind,idempotency_key,record_set_id,determinism_hash,identity_basis,member_object_ids,member_determinism_hashes
          FROM public.twin_object_idempotency_index_v1
-        WHERE identity_kind IN ('A0_RECORD_SET','A2_RECORD_SET')
-          AND member_object_ids @> $1::jsonb
+        WHERE identity_kind IN ('A0_RECORD_SET','A1_RECORD_SET','A2_RECORD_SET')
+          AND (
+            (jsonb_typeof(member_object_ids)='array' AND member_object_ids @> $1::jsonb)
+            OR
+            (jsonb_typeof(member_object_ids)='object' AND member_object_ids @> pg_catalog.jsonb_build_object('twin_runtime_checkpoint_v1',$2::text))
+          )
         LIMIT 2`,
-      [JSON.stringify([checkpointRef])],
+      [JSON.stringify([checkpointRef]), checkpointRef],
     );
     if ((result.rowCount ?? 0) !== 1) fail("MCFT_RECORD_SET_IDENTITY_INVALID", `CHECKPOINT_MEMBERSHIP:${result.rowCount ?? 0}`);
     const index = result.rows[0];
-    const memberIds = exactStringArray(index.member_object_ids, "MCFT_RECORD_SET_IDENTITY_INVALID:MEMBER_IDS");
+    const memberIds = exactRecordSetMemberIds(index.member_object_ids, "MCFT_RECORD_SET_IDENTITY_INVALID:MEMBER_IDS");
     const declaredHashes = exactStringMap(index.member_determinism_hashes, "MCFT_RECORD_SET_IDENTITY_INVALID:MEMBER_HASHES");
     if (memberIds.length === 0 || new Set(memberIds).size !== memberIds.length || Object.keys(declaredHashes).length !== memberIds.length) fail("MCFT_RECORD_SET_IDENTITY_INVALID", "MEMBER_CARDINALITY");
     const factsResult = await context.client.query<{ fact_id: string; record_json: unknown }>(
@@ -536,8 +596,12 @@ export class PostgresFieldTwinReadRepositoryV1 {
         WHERE visibility.visibility_epoch_id=$1
           AND pg_catalog.pg_visible_in_snapshot(visibility.visibility_anchor_xid8,$2::pg_snapshot)
           AND f.record_json->>'type'=ANY($3::text[])
-          AND f.record_json->'payload'->>'tenant_id'=$4 AND f.record_json->'payload'->>'project_id'=$5 AND f.record_json->'payload'->>'group_id'=$6
-          AND f.record_json->'payload'->>'field_id'=$7 AND f.record_json->'payload'->>'season_id'=$8 AND f.record_json->'payload'->>'zone_id'=$9
+          AND COALESCE(f.record_json->'payload'->'scope'->>'tenant_id',f.record_json->'payload'->>'tenant_id')=$4
+          AND COALESCE(f.record_json->'payload'->'scope'->>'project_id',f.record_json->'payload'->>'project_id')=$5
+          AND COALESCE(f.record_json->'payload'->'scope'->>'group_id',f.record_json->'payload'->>'group_id')=$6
+          AND COALESCE(f.record_json->'payload'->'scope'->>'field_id',f.record_json->'payload'->>'field_id')=$7
+          AND COALESCE(f.record_json->'payload'->'scope'->>'season_id',f.record_json->'payload'->>'season_id')=$8
+          AND COALESCE(f.record_json->'payload'->'scope'->>'zone_id',f.record_json->'payload'->>'zone_id')=$9
         ORDER BY (f.record_json->'payload'->>'logical_time')::timestamptz ASC, f.record_json->'payload'->>'object_id' ASC
         LIMIT 201`,
       [context.canonical_visibility_snapshot.database_visibility_epoch_id, context.canonical_visibility_snapshot.pg_snapshot_token, types, ...scopeValues(context.scope)],

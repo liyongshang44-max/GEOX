@@ -19,6 +19,11 @@ export const A0_MEMBER_OBJECT_TYPES_V1 = [
 
 export type A0MemberObjectTypeV1 = (typeof A0_MEMBER_OBJECT_TYPES_V1)[number];
 
+const CAP06_NON_LINEAGE_GOVERNANCE_OBJECT_TYPES_V1 = new Set([
+  "twin_calibration_candidate_v1",
+  "twin_shadow_evaluation_v1",
+]);
+
 function shortHash(value: unknown): string {
   return semanticHashV1(value).slice(7, 31);
 }
@@ -47,6 +52,16 @@ export function deriveA0IdentityV1(seed: A0SemanticSeedInputV1) {
 }
 
 export function computeMemberDeterminismHashV1(member: Record<string, unknown>): string {
+  const objectType = String(member.object_type ?? "");
+  if (CAP06_NON_LINEAGE_GOVERNANCE_OBJECT_TYPES_V1.has(objectType)) {
+    if (member.envelope_profile !== "NON_LINEAGE_CONTEXT"
+      || member.record_class !== "CANONICAL_MODEL_GOVERNANCE_HISTORY") {
+      throw new Error("CAP06_NON_LINEAGE_GOVERNANCE_HASH_PROFILE_INVALID");
+    }
+    const semantic = structuredClone(member);
+    semantic.determinism_hash = "";
+    return semanticHashV1(semantic);
+  }
   return semanticHashV1(omitSemanticFieldsV1(member, ["determinism_hash", "fact_id", "created_at", "persisted_at"]));
 }
 
