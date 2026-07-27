@@ -1,0 +1,70 @@
+{
+  "schema_version": "geox_mcft_cap07_cap04_forecast_payload_reconciliation_v1",
+  "reconciliation_id": "GEOX-MCFT-CAP-07-CAP04-FORECAST-PAYLOAD-RECONCILIATION-V1",
+  "record_status": "NON_CANDIDATE_READ_CONTRACT_RECONCILIATION",
+  "capability_line_id": "MCFT-CAP-07",
+  "producer_capability_line_id": "MCFT-CAP-04",
+  "consumer_trigger_slice_id": "MCFT-CAP-08.S6",
+  "baseline_main_commit": "12df989d370b047020b264625f901a93f0330947",
+  "problem": "CAP-07 scenario-source read validation tested a nonexistent canonical payload.point_count field. CAP-04 freezes completed Forecast cardinality as payload.points with exactly 72 canonical point objects and provides validateCap04ForecastRunPayloadV1 as the authoritative payload validator.",
+  "producer_authority": {
+    "contract_ref": "apps/server/src/domain/twin_runtime/forecast_scenario_contracts_v1.ts",
+    "canonical_object_type": "twin_forecast_run_v1",
+    "completed_status": "COMPLETED",
+    "canonical_points_path": "record_json.payload.payload.points",
+    "canonical_point_count": 72,
+    "authoritative_validator": "validateCap04ForecastRunPayloadV1",
+    "nonexistent_consumer_path": "record_json.payload.payload.point_count"
+  },
+  "consumer_remediation": {
+    "source_ref": "apps/server/src/services/mcft_field_twin_read_api_v1.ts",
+    "method": "assertCompletedScenarioSourceForecastV1",
+    "required_checks": [
+      "payload.status === COMPLETED",
+      "Array.isArray(payload.points)",
+      "payload.points.length === 72",
+      "validateCap04ForecastRunPayloadV1(payload)"
+    ],
+    "forbidden_checks": [
+      "payload.point_count",
+      "projection point_count as canonical truth",
+      "derived canonical payload mutation"
+    ],
+    "failure_mapping": {
+      "status_or_cardinality": "MCFT_SCENARIO_FORECAST_POINTER_INVALID:SOURCE_FORECAST_NOT_COMPLETED_72",
+      "cap04_payload_contract": "MCFT_SCENARIO_FORECAST_POINTER_INVALID:SOURCE_FORECAST_CAP04_CONTRACT_INVALID"
+    }
+  },
+  "focused_proof": {
+    "fresh_database_required": true,
+    "materialization_chain": "EXACT_S1_THROUGH_S5",
+    "materialization_preflight_status": "PASS_REQUIRED",
+    "required_http_surfaces": [
+      "runtime",
+      "timeline_first_page"
+    ],
+    "terminal_scenario_source_cardinality": 1,
+    "terminal_source_forecast_status": "COMPLETED",
+    "terminal_source_forecast_point_count": 72,
+    "canonical_point_count_field_absent": true,
+    "product_read_write_delta": 0,
+    "model_activation_count": 0
+  },
+  "explicit_follow_on": {
+    "timeline_cursor_continuation_status": "OUT_OF_SCOPE_BLOCKED",
+    "failure_code": "MCFT_RUNTIME_HEALTH_ROLE_UNRESOLVED:ATTEMPT_REF",
+    "classification": "SEPARATE_CAP07_HISTORICAL_ROOT_HEALTH_ROLE_REMEDIATION",
+    "must_not_be_hidden_by_this_reconciliation": true
+  },
+  "delivery_classification": {
+    "candidate_declaration": false,
+    "candidate_signal_delta": 0,
+    "runtime_write_authority_delta": 0,
+    "database_schema_delta": 0,
+    "canonical_data_delta": 0,
+    "route_delta": 0,
+    "production_runtime_source_authorized": false,
+    "mcft_cap_08_complete": false,
+    "mcft_cap_09_authorized": false
+  }
+}
