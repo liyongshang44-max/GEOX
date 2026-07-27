@@ -1,0 +1,58 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_pre_candidate_trigger_reconciliation_v1",
+  "reconciliation_id": "GEOX-MCFT-CAP-08-S6-PRE-CANDIDATE-TRIGGER-RECONCILIATION-V1",
+  "record_status": "NON_CANDIDATE_WORKFLOW_TRIGGER_RECONCILIATION",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "af56ee8efa432bdf88fb00173707cbb2157add55",
+  "discovered_by_pr": 2693,
+  "failed_workflow_run": 30287215802,
+  "failed_workflow_name": "mcft-cap-08-s6-pre-candidate-governance",
+  "historical_workflow_blob": "d0ad07b4d4b9ef2ab94aac54f512e4bf3cf99e25",
+  "historical_acceptance_blob": "edbf3d6b17a2d8824abfe06fe5d095118823d494",
+  "defect": {
+    "trigger_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-*",
+    "validation_boundary": "EXACT_HISTORICAL_NINE_FILE_PRE_CANDIDATE_PACKAGE",
+    "historical_base_sha": "19f75275a223caa5196982344be57c871e7755d2",
+    "failure_mode": "SUCCESSOR_S6_GOVERNANCE_FILES_TRIGGER_HISTORICAL_EXACT_PACKAGE_ASSERTION",
+    "product_defect": false,
+    "mapping_defect": false
+  },
+  "resolution": {
+    "wildcard_removed": true,
+    "historical_package_paths_enumerated_exactly": true,
+    "historical_acceptance_semantics_preserved": true,
+    "historical_base_sha_preserved": true,
+    "reconciliation_mode_added": true,
+    "successor_mapping_files_trigger_historical_gate": false,
+    "merge_group_support_preserved": true
+  },
+  "historical_package_paths": [
+    ".github/workflows/mcft-cap-08-s6-pre-candidate-governance.yml",
+    "docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CHANGED-FILE-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PREDECESSOR-CONSUMPTION-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REVIEW-POLICY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-WORKFLOW-DECLARATION-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_GOVERNANCE.cjs"
+  ],
+  "changed_file_count": 3,
+  "changed_files": [
+    ".github/workflows/mcft-cap-08-s6-pre-candidate-governance.yml",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PRE-CANDIDATE-TRIGGER-RECONCILIATION-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_TRIGGER_RECONCILIATION.cjs"
+  ],
+  "runtime_source_file_count": 0,
+  "runtime_acceptance_file_count": 0,
+  "database_migration_file_count": 0,
+  "candidate_declaration_present": false,
+  "s6_candidate_implemented": false,
+  "mapping_frozen": false,
+  "witness_implementation_authorized": false,
+  "dual_run_ci_authorized": false,
+  "mcft_cap_08_complete": false,
+  "mcft_cap_09_authorized": false,
+  "semantic_digest": "sha256:52566d498ae97935b8859f8f7d8ec2daa4c25cf3c52071779473784f7068600b"
+}
