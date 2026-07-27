@@ -34,6 +34,10 @@ import {
 import { canonicalObjectRefV1, type FieldTwinComposerObjectV1 } from "../domain/field_twin_read_model/composer_contracts_v1.js";
 import { semanticHashV1 } from "../domain/twin_runtime/canonical_json_v1.js";
 import type { CanonicalObjectEnvelopeV1 } from "../domain/twin_runtime/canonical_object_contracts_v1.js";
+import {
+  validateCap04ForecastRunPayloadV1,
+  type Cap04ForecastRunPayloadV1,
+} from "../domain/twin_runtime/forecast_scenario_contracts_v1.js";
 import { decodeUntrustedFieldTwinCursorEnvelopeV1 } from "./mcft_field_twin_cursor_transport_v1.js";
 import { S4RuntimeHealthComposerV1 } from "./mcft_field_twin_s4_health_composer_v1.js";
 import {
@@ -159,7 +163,14 @@ export class PostgresMcftFieldTwinReadApiV1 implements McftFieldTwinReadApiV1 {
 
   private assertCompletedScenarioSourceForecastV1(forecast: ExactCanonicalObjectReadV1): void {
     const payload = payloadRecordV1(forecast.payload, "MCFT_SCENARIO_FORECAST_POINTER_INVALID");
-    if (payload.status !== "COMPLETED" || payload.point_count !== 72) throw new McftFieldTwinReadApiErrorV1("MCFT_SCENARIO_FORECAST_POINTER_INVALID", 409, "SOURCE_FORECAST_NOT_COMPLETED_72");
+    if (payload.status !== "COMPLETED" || !Array.isArray(payload.points) || payload.points.length !== 72) {
+      throw new McftFieldTwinReadApiErrorV1("MCFT_SCENARIO_FORECAST_POINTER_INVALID", 409, "SOURCE_FORECAST_NOT_COMPLETED_72");
+    }
+    try {
+      validateCap04ForecastRunPayloadV1(payload as unknown as Cap04ForecastRunPayloadV1);
+    } catch {
+      throw new McftFieldTwinReadApiErrorV1("MCFT_SCENARIO_FORECAST_POINTER_INVALID", 409, "SOURCE_FORECAST_CAP04_CONTRACT_INVALID");
+    }
   }
 
   private async composeRuntimeV1(context: PostgresFieldTwinSnapshotContextV1, root: ResolvedRuntimeRootV1): Promise<MinimalFieldTwinRuntimeReadModelV1> {
