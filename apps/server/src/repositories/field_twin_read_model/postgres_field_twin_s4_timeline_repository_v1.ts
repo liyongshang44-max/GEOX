@@ -54,15 +54,23 @@ export class PostgresFieldTwinS4TimelineRepositoryV1 {
     const result = await context.client.query<{ record_set_id: string; member_object_ids: unknown }>(
       `SELECT record_set_id,member_object_ids
          FROM public.twin_object_idempotency_index_v1
-        WHERE identity_kind IN ('A0_RECORD_SET','A2_RECORD_SET')
-          AND member_object_ids ?| $1::text[]`,
+        WHERE identity_kind IN ('A0_RECORD_SET','A1_RECORD_SET','A2_RECORD_SET')
+          AND (
+            (jsonb_typeof(member_object_ids)='array' AND member_object_ids ?| $1::text[])
+            OR
+            (jsonb_typeof(member_object_ids)='object' AND EXISTS (
+              SELECT 1
+                FROM jsonb_each_text(member_object_ids) AS member
+               WHERE member.value=ANY($1::text[])
+            ))
+          )`,
       [refs],
     );
     const map = new Map<string, MembershipV1>();
     for (const row of result.rows) {
       const members = Array.isArray(row.member_object_ids)
         ? row.member_object_ids.map(String)
-        : Object.keys(record(row.member_object_ids, "MCFT_RECORD_SET_IDENTITY_INVALID"));
+        : Object.values(record(row.member_object_ids, "MCFT_RECORD_SET_IDENTITY_INVALID")).map(String);
       const checkpoints: string[] = [];
       for (const ref of members) {
         try {
