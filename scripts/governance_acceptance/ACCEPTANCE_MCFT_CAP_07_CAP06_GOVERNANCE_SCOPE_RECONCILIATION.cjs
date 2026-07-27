@@ -5,7 +5,8 @@ const cp=require('node:child_process');
 const fs=require('node:fs');
 const path=require('node:path');
 const ROOT=path.resolve(__dirname,'../..');
-const BASE='8f9bcfd5b441317649dd7bcbbc28eec0a17f6bf4';
+const ORIGINAL_BASE='8f9bcfd5b441317649dd7bcbbc28eec0a17f6bf4';
+const ORIGINAL_MERGE='12df989d370b047020b264625f901a93f0330947';
 const OUT=path.join(ROOT,'acceptance-output/MCFT_CAP_07_CAP06_GOVERNANCE_SCOPE_RECONCILIATION_RESULT.json');
 const MATRIX='docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-SOURCE-VALIDATION-MATRIX-V1.json';
 const RECON='docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CAP06-GOVERNANCE-SCOPE-RECONCILIATION-V1.json';
@@ -15,18 +16,14 @@ const READER='apps/server/src/repositories/field_twin_read_model/postgres_field_
 const SELF='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_CAP06_GOVERNANCE_SCOPE_RECONCILIATION.cjs';
 const DB='scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_CAP06_GOVERNANCE_SCOPE_COMPATIBILITY_DB.ts';
 const WORKFLOW='.github/workflows/mcft-cap-07-cap06-governance-scope-reconciliation.yml';
-const EXPECTED=[RECON,LOADER,HASH,READER,SELF,DB,WORKFLOW];
+const ORIGINAL_EXPECTED=[RECON,LOADER,HASH,READER,SELF,DB,WORKFLOW];
 const git=(...args)=>cp.execFileSync('git',args,{cwd:ROOT,encoding:'utf8'}).trim();
 const readJson=file=>JSON.parse(fs.readFileSync(path.join(ROOT,file),'utf8'));
 function write(value){fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,`${JSON.stringify(value,null,2)}\n`)}
-try{
- const base=String(process.env.MCFT_BASE_SHA||BASE).trim();
- assert.equal(base,BASE,'CAP07_CAP06_SCOPE_RECONCILIATION_BASE_MISMATCH');
- assert.equal(git('merge-base',base,'HEAD'),base,'CAP07_CAP06_SCOPE_RECONCILIATION_BASE_NOT_ANCESTOR');
- assert.equal(git('diff','--check',`${base}...HEAD`),'','CAP07_CAP06_SCOPE_RECONCILIATION_DIFF_CHECK');
- const changed=git('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
- assert.deepEqual(changed,[...EXPECTED].sort(),'CAP07_CAP06_SCOPE_RECONCILIATION_BOUNDARY');
- assert.equal(changed.length,7);
+function isAncestor(ancestor,descendant){
+ try{cp.execFileSync('git',['merge-base','--is-ancestor',ancestor,descendant],{cwd:ROOT,stdio:'ignore'});return true}catch{return false}
+}
+function assertAuthoritySemantics(){
  assert.equal(git('rev-parse',`HEAD:${MATRIX}`),'9bc4713357f3c89d1f6d799fd2502a4da7181b00','CAP07_SOURCE_MATRIX_MUTATED');
  const reconciliation=readJson(RECON);
  assert.equal(reconciliation.record_status,'NON_CANDIDATE_SOURCE_CONTRACT_RECONCILIATION');
@@ -61,11 +58,40 @@ try{
  const reader=fs.readFileSync(path.join(ROOT,READER),'utf8');
  for(const token of ['NON_LINEAGE_CONTEXT_SCOPE_TYPES_V1','twin_calibration_candidate_v1','twin_shadow_evaluation_v1','computeCap04AAggregateDeterminismHashV1','computeCap04AMemberDeterminismHashV1',"identity_kind IN ('A0_RECORD_SET','A1_RECORD_SET','A2_RECORD_SET')",'COALESCE(f.record_json->\'payload\'->\'scope\''])assert.equal(reader.includes(token),true,`CAP07_SCOPE_READER_TOKEN:${token}`);
  for(const sourceFile of [reader,hash])for(const forbidden of [/\bINSERT\s+INTO\b/i,/\bUPDATE\s+[a-z_]/i,/\bDELETE\s+FROM\b/i,/\bCREATE\s+(TABLE|FUNCTION|TRIGGER|ROLE)\b/i,/\bALTER\s+(TABLE|ROLE|DEFAULT)\b/i,/\bDROP\s+(TABLE|FUNCTION|ROLE)\b/i])assert.equal(forbidden.test(sourceFile),false,`CAP07_SCOPE_SOURCE_WRITE_FORBIDDEN:${forbidden}`);
- assert.equal(changed.some(file=>file.startsWith('db/')||file.includes('migration')||file.includes('/routes/')||file.includes('scheduler')),false);
- assert.equal(changed.some(file=>file.includes('MCFT-CANDIDATE-AUTHORITY-REGISTRY')||file.includes('DELIVERY-STATUS')||file.endsWith('GEOX-MCFT-CAP-08-TASK.md')),false);
- const source=changed.map(file=>fs.readFileSync(path.join(ROOT,file),'utf8')).join('\n');
- const declarationMarker=['MCFT','CANDIDATE','DECLARATION','V2'].join('_');
- assert.equal(source.includes(declarationMarker),false);
- const result={schema_version:'geox_mcft_cap07_cap06_governance_scope_reconciliation_result_v1',status:'PASS',base_sha:base,subject_sha:git('rev-parse','HEAD'),changed_file_count:7,changed_files:changed,historical_matrix_blob:'9bc4713357f3c89d1f6d799fd2502a4da7181b00',historical_matrix_unchanged:true,reconciled_source_count:2,reconciled_sources:expectedSources,reconciled_scope_profile:true,reconciled_canonical_hash_profile:true,canonical_fact_rewrite:false,canonical_hash_rewrite:false,candidate_declaration_present:false,runtime_write_authority_delta:0,database_schema_delta:0,canonical_data_delta:0,route_delta:0,mcft_cap_08_complete:false,mcft_cap_09_authorized:false};
- write(result);console.log(JSON.stringify(result));
-}catch(error){write({schema_version:'geox_mcft_cap07_cap06_governance_scope_reconciliation_result_v1',status:'FAIL',error:error instanceof Error?error.message:String(error)});console.error(error);process.exitCode=1}
+ return expectedSources;
+}
+try{
+ const base=String(process.env.MCFT_BASE_SHA||ORIGINAL_BASE).trim();
+ const subject=git('rev-parse','HEAD');
+ assert.equal(git('merge-base',base,subject),base,'CAP07_CAP06_SCOPE_RECONCILIATION_BASE_NOT_ANCESTOR');
+ assert.equal(git('diff','--check',`${base}...HEAD`),'','CAP07_CAP06_SCOPE_RECONCILIATION_DIFF_CHECK');
+ const changed=git('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
+ const expectedSources=assertAuthoritySemantics();
+ if(base===ORIGINAL_BASE){
+  assert.deepEqual(changed,[...ORIGINAL_EXPECTED].sort(),'CAP07_CAP06_SCOPE_RECONCILIATION_BOUNDARY');
+  assert.equal(changed.length,7);
+  assert.equal(changed.some(file=>file.startsWith('db/')||file.includes('migration')||file.includes('/routes/')||file.includes('scheduler')),false);
+  assert.equal(changed.some(file=>file.includes('MCFT-CANDIDATE-AUTHORITY-REGISTRY')||file.includes('DELIVERY-STATUS')||file.endsWith('GEOX-MCFT-CAP-08-TASK.md')),false);
+  const source=changed.map(file=>fs.readFileSync(path.join(ROOT,file),'utf8')).join('\n');
+  const declarationMarker=['MCFT','CANDIDATE','DECLARATION','V2'].join('_');
+  assert.equal(source.includes(declarationMarker),false);
+  const result={schema_version:'geox_mcft_cap07_cap06_governance_scope_reconciliation_result_v2',status:'PASS',validation_mode:'ORIGINAL_EXACT_DELIVERY_BOUNDARY',base_sha:base,subject_sha:subject,changed_file_count:7,changed_files:changed,historical_matrix_blob:'9bc4713357f3c89d1f6d799fd2502a4da7181b00',historical_matrix_unchanged:true,reconciled_source_count:2,reconciled_sources:expectedSources,reconciled_scope_profile:true,reconciled_canonical_hash_profile:true,canonical_fact_rewrite:false,canonical_hash_rewrite:false,candidate_declaration_present:false,runtime_write_authority_delta:0,database_schema_delta:0,canonical_data_delta:0,route_delta:0,mcft_cap_08_complete:false,mcft_cap_09_authorized:false};
+  write(result);console.log(JSON.stringify(result));
+ }else{
+  assert.equal(isAncestor(ORIGINAL_MERGE,base),true,'CAP07_CAP06_SUCCESSOR_BASE_MISSING_EFFECTIVE_RECONCILIATION');
+  assert.equal(isAncestor(ORIGINAL_MERGE,subject),true,'CAP07_CAP06_SUCCESSOR_HEAD_MISSING_EFFECTIVE_RECONCILIATION');
+  const protectedFiles=[MATRIX,RECON,HASH,READER,DB,WORKFLOW];
+  for(const file of protectedFiles){
+   assert.equal(changed.includes(file),false,`CAP07_CAP06_SUCCESSOR_PROTECTED_FILE_CHANGED:${file}`);
+   assert.equal(git('rev-parse',`HEAD:${file}`),git('rev-parse',`${base}:${file}`),`CAP07_CAP06_SUCCESSOR_PROTECTED_BLOB_CHANGED:${file}`);
+  }
+  const originalBoundaryIntersection=changed.filter(file=>ORIGINAL_EXPECTED.includes(file));
+  assert.deepEqual(originalBoundaryIntersection.filter(file=>file!==LOADER&&file!==SELF),[],'CAP07_CAP06_SUCCESSOR_ORIGINAL_BOUNDARY_INTRUSION');
+  assert.equal(changed.includes(LOADER),true,'CAP07_CAP06_SUCCESSOR_LOADER_CHANGE_REQUIRED');
+  const source=changed.map(file=>fs.readFileSync(path.join(ROOT,file),'utf8')).join('\n');
+  const declarationMarker=['MCFT','CANDIDATE','DECLARATION','V2'].join('_');
+  assert.equal(source.includes(declarationMarker),false,'CAP07_CAP06_SUCCESSOR_CANDIDATE_DECLARATION_FORBIDDEN');
+  const result={schema_version:'geox_mcft_cap07_cap06_governance_scope_reconciliation_result_v2',status:'PASS',validation_mode:'SUCCESSOR_REGRESSION_GUARD',base_sha:base,subject_sha:subject,original_effective_merge_sha:ORIGINAL_MERGE,changed_file_count:changed.length,changed_files:changed,historical_matrix_blob:'9bc4713357f3c89d1f6d799fd2502a4da7181b00',historical_matrix_unchanged:true,protected_cap06_file_count:protectedFiles.length,protected_cap06_files_unchanged:true,reconciled_source_count:2,reconciled_sources:expectedSources,reconciled_scope_profile:true,reconciled_canonical_hash_profile:true,loader_successor_change_consumed:true,candidate_declaration_present:false,runtime_write_authority_delta:0,database_schema_delta:0,canonical_data_delta:0,route_delta:0,mcft_cap_08_complete:false,mcft_cap_09_authorized:false};
+  write(result);console.log(JSON.stringify(result));
+ }
+}catch(error){write({schema_version:'geox_mcft_cap07_cap06_governance_scope_reconciliation_result_v2',status:'FAIL',error:error instanceof Error?error.message:String(error)});console.error(error);process.exitCode=1}

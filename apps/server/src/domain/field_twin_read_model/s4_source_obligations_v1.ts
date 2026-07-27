@@ -3,6 +3,7 @@
 
 import sourceMatrixJson from "../../../../../docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-SOURCE-VALIDATION-MATRIX-V1.json" with { type: "json" };
 import governanceScopeReconciliationJson from "../../../../../docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CAP06-GOVERNANCE-SCOPE-RECONCILIATION-V1.json" with { type: "json" };
+import forecastPointCountReconciliationJson from "../../../../../docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CAP04-FORECAST-POINT-COUNT-RECONCILIATION-V1.json" with { type: "json" };
 import type { FieldTwinSourceValidationObligationRowV1 } from "./contracts_v1.js";
 import { validateSourceValidationObligationMatrixV1 } from "./source_validation_registry_v1.js";
 
@@ -147,7 +148,88 @@ function applyGovernanceScopeReconciliationV1(): ReturnType<typeof validateSourc
   return validateSourceValidationObligationMatrixV1({ ...base, rows });
 }
 
-const sourceMatrix = applyGovernanceScopeReconciliationV1();
+function applyForecastProjectionReconciliationV1(
+  base: ReturnType<typeof validateSourceValidationObligationMatrixV1>,
+): ReturnType<typeof validateSourceValidationObligationMatrixV1> {
+  const reconciliation = requiredRecordV1(
+    forecastPointCountReconciliationJson,
+    "MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_INVALID",
+  );
+  if (reconciliation.record_status !== "NON_CANDIDATE_SOURCE_CONTRACT_RECONCILIATION") {
+    throw new Error("MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_STATUS_INVALID");
+  }
+  if (reconciliation.base_matrix_blob !== "9bc4713357f3c89d1f6d799fd2502a4da7181b00") {
+    throw new Error("MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_BASE_BLOB_INVALID");
+  }
+  const affected = reconciliation.affected_sources;
+  if (!Array.isArray(affected)
+    || affected.length !== 1
+    || reconciliation.affected_source_count !== 1
+    || reconciliation.affected_comparison_count !== 2) {
+    throw new Error("MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_CARDINALITY_INVALID");
+  }
+  const sourceRule = requiredRecordV1(affected[0], "MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_SOURCE_RULE_INVALID");
+  const sourceName = requiredStringV1(sourceRule.source_name, "MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_SOURCE_INVALID");
+  const rawRules = sourceRule.comparison_rules;
+  if (sourceName !== "public.twin_forecast_run_projection_v1" || !Array.isArray(rawRules) || rawRules.length !== 2) {
+    throw new Error("MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_SOURCE_DRIFT");
+  }
+  const rules = new Map<string, { prior_path: string; effective_path: string; authority_rule: string }>();
+  for (const raw of rawRules) {
+    const rule = requiredRecordV1(raw, "MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_RULE_INVALID");
+    const projectionColumn = requiredStringV1(rule.projection_column, "MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_COLUMN_INVALID");
+    if (rules.has(projectionColumn) || rule.prior_comparison !== "EXACT" || rule.effective_comparison !== "EXACT") {
+      throw new Error(`MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_RULE_DUPLICATE_OR_MODE:${projectionColumn}`);
+    }
+    rules.set(projectionColumn, {
+      prior_path: requiredStringV1(rule.prior_canonical_path, `MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_PRIOR_PATH_INVALID:${projectionColumn}`),
+      effective_path: requiredStringV1(rule.effective_canonical_path, `MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_EFFECTIVE_PATH_INVALID:${projectionColumn}`),
+      authority_rule: requiredStringV1(rule.canonical_authority_rule, `MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_AUTHORITY_RULE_INVALID:${projectionColumn}`),
+    });
+  }
+  const forecastStatusRule = rules.get("forecast_status");
+  const pointCountRule = rules.get("point_count");
+  if (!forecastStatusRule
+    || forecastStatusRule.prior_path !== "record_json.payload.payload.forecast_status"
+    || forecastStatusRule.effective_path !== "record_json.payload.payload.status"
+    || forecastStatusRule.authority_rule !== "CAP04_FORECAST_STATUS_FIELD"
+    || !pointCountRule
+    || pointCountRule.prior_path !== "record_json.payload.payload.point_count"
+    || pointCountRule.effective_path !== "record_json.payload.payload.points.length"
+    || pointCountRule.authority_rule !== "ARRAY_LENGTH_EQUALS_PROJECTION_POINT_COUNT") {
+    throw new Error("MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_RULE_DRIFT");
+  }
+  let sourceApplied = 0;
+  let comparisonApplied = 0;
+  const rows = base.rows.map((row) => {
+    if (row.source_name !== sourceName) return row;
+    sourceApplied += 1;
+    const comparisons = row.required_column_comparisons.map((value, index) => {
+      const comparison = requiredRecordV1(
+        value,
+        `MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_COMPARISON_INVALID:${index}`,
+      );
+      const projectionColumn = requiredStringV1(
+        comparison.projection_column,
+        `MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_COMPARISON_COLUMN_INVALID:${index}`,
+      );
+      const rule = rules.get(projectionColumn);
+      if (!rule) return comparison;
+      comparisonApplied += 1;
+      if (comparison.canonical_path !== rule.prior_path || comparison.comparison !== "EXACT") {
+        throw new Error(`MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_PRIOR_DRIFT:${projectionColumn}`);
+      }
+      return Object.freeze({ ...comparison, canonical_path: rule.effective_path });
+    });
+    return Object.freeze({ ...row, required_column_comparisons: Object.freeze(comparisons) });
+  });
+  if (sourceApplied !== 1 || comparisonApplied !== 2) {
+    throw new Error(`MCFT_CAP_07_FORECAST_PROJECTION_RECONCILIATION_APPLIED_COUNT_INVALID:${sourceApplied}:${comparisonApplied}`);
+  }
+  return validateSourceValidationObligationMatrixV1({ ...base, rows });
+}
+
+const sourceMatrix = applyForecastProjectionReconciliationV1(applyGovernanceScopeReconciliationV1());
 
 export const MCFT_CAP_07_S4_SOURCE_OBLIGATIONS_V1: readonly FieldTwinSourceValidationObligationRowV1[] = Object.freeze(
   MCFT_CAP_07_S4_SOURCE_NAMES_V1.map((sourceName) => {
