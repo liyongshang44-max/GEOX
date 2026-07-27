@@ -1,0 +1,57 @@
+{
+  "schema_version": "geox_mcft_cap07_timeline_a1_health_role_reconciliation_v1",
+  "reconciliation_id": "GEOX-MCFT-CAP-07-TIMELINE-A1-HEALTH-ROLE-RECONCILIATION-V1",
+  "record_status": "NON_CANDIDATE_READ_CONTRACT_RECONCILIATION",
+  "capability_line_id": "MCFT-CAP-07",
+  "producer_capability_line_id": "MCFT-CAP-04",
+  "consumer_trigger_slice_id": "MCFT-CAP-08.S6",
+  "baseline_main_commit": "46dd7781867fb5a509bdd19efd9348dd7044c8fd",
+  "problem": "Timeline cursor continuation encountered a CAP-04 A1 terminal Runtime Health object but failed to resolve its record-set membership. The Timeline membership query excluded A1_RECORD_SET, JSONB ?| matched object keys rather than object values, and object-form member_object_ids was decoded with Object.keys even though canonical object refs are stored as values.",
+  "producer_authority": {
+    "identity_kind": "A1_RECORD_SET",
+    "identity_index": "public.twin_object_idempotency_index_v1",
+    "member_object_ids_shape": "JSON_OBJECT_TYPE_TO_OBJECT_REF",
+    "member_ref_location": "OBJECT_VALUES",
+    "terminal_health_object_type": "twin_runtime_health_v1",
+    "checkpoint_object_type": "twin_runtime_checkpoint_v1"
+  },
+  "consumer_remediation": {
+    "source_ref": "apps/server/src/repositories/field_twin_read_model/postgres_field_twin_s4_timeline_repository_v1.ts",
+    "method": "recordSetMemberships",
+    "required_identity_kinds": [
+      "A0_RECORD_SET",
+      "A1_RECORD_SET",
+      "A2_RECORD_SET"
+    ],
+    "array_membership_rule": "member_object_ids ?| requested_refs",
+    "object_membership_rule": "EXISTS jsonb_each_text(member_object_ids) WHERE member.value = ANY(requested_refs)",
+    "object_decode_rule": "Object.values(member_object_ids)",
+    "authoritative_root_validation": "resolveHistoricalRuntimeRoot(checkpoint_ref)",
+    "expected_health_resolution": {
+      "transaction_family": "A_STATE_TICK_COMMIT",
+      "health_role": "TERMINAL_RECORD_SET_MEMBER",
+      "health_resolution_basis": "EXACT_RECORD_SET_MEMBERSHIP"
+    }
+  },
+  "focused_proof": {
+    "fresh_database_required": true,
+    "materialization_chain": "EXACT_S1_THROUGH_S5",
+    "timeline_page_limit": 10,
+    "minimum_page_count": 2,
+    "all_cursor_pages_must_return_200": true,
+    "a1_terminal_health_role_required": true,
+    "product_read_write_delta": 0,
+    "model_activation_count": 0
+  },
+  "delivery_classification": {
+    "candidate_declaration": false,
+    "candidate_signal_delta": 0,
+    "runtime_write_authority_delta": 0,
+    "database_schema_delta": 0,
+    "canonical_data_delta": 0,
+    "route_delta": 0,
+    "production_runtime_source_authorized": false,
+    "mcft_cap_08_complete": false,
+    "mcft_cap_09_authorized": false
+  }
+}
