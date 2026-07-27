@@ -1,0 +1,92 @@
+{
+  "schema_version": "geox_mcft_cap07_cap06_governance_scope_reconciliation_v1",
+  "reconciliation_id": "GEOX-MCFT-CAP-07-CAP06-GOVERNANCE-SCOPE-RECONCILIATION-V1",
+  "record_status": "NON_CANDIDATE_SOURCE_CONTRACT_RECONCILIATION",
+  "capability_line_id": "MCFT-CAP-07",
+  "consumer_capability_line_id": "MCFT-CAP-08",
+  "trigger_slice_id": "MCFT-CAP-08.S6",
+  "base_matrix_ref": "docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-SOURCE-VALIDATION-MATRIX-V1.json",
+  "base_matrix_blob": "9bc4713357f3c89d1f6d799fd2502a4da7181b00",
+  "base_matrix_mutated": false,
+  "canonical_authority_refs": [
+    "apps/server/src/domain/calibration/envelope_profiles_v1.ts",
+    "apps/server/src/persistence/calibration/postgres_calibration_governance_repository_v1.ts",
+    "apps/server/src/projections/calibration/calibration_governance_projection_v1.ts"
+  ],
+  "problem": "The frozen CAP-07 source-validation rows classified CAP-06 NON_LINEAGE_CONTEXT governance facts as if their six-key scope were top-level canonical envelope fields and as if their determinism hash used the generic Twin member omit-fields profile. The canonical CAP-06 contract stores the exact six-key scope in record_json.payload.scope and computes the governance-object determinism hash by cloning the complete object, setting determinism_hash to the empty string, and applying semanticHashV1.",
+  "affected_source_count": 2,
+  "affected_sources": [
+    {
+      "source_name": "public.twin_calibration_candidate_projection_v1",
+      "canonical_object_type": "twin_calibration_candidate_v1",
+      "canonical_envelope_profile": "NON_LINEAGE_CONTEXT",
+      "prior_scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "effective_scope_path": {
+        "tenant_id": "record_json.payload.scope.tenant_id",
+        "project_id": "record_json.payload.scope.project_id",
+        "group_id": "record_json.payload.scope.group_id",
+        "field_id": "record_json.payload.scope.field_id",
+        "season_id": "record_json.payload.scope.season_id",
+        "zone_id": "record_json.payload.scope.zone_id"
+      },
+      "prior_canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "effective_canonical_hash_function": "semanticHashV1(assign(structuredClone(canonical_object),{determinism_hash:\"\"}))"
+    },
+    {
+      "source_name": "public.twin_shadow_evaluation_projection_v1",
+      "canonical_object_type": "twin_shadow_evaluation_v1",
+      "canonical_envelope_profile": "NON_LINEAGE_CONTEXT",
+      "prior_scope_path": {
+        "tenant_id": "record_json.payload.tenant_id",
+        "project_id": "record_json.payload.project_id",
+        "group_id": "record_json.payload.group_id",
+        "field_id": "record_json.payload.field_id",
+        "season_id": "record_json.payload.season_id",
+        "zone_id": "record_json.payload.zone_id"
+      },
+      "effective_scope_path": {
+        "tenant_id": "record_json.payload.scope.tenant_id",
+        "project_id": "record_json.payload.scope.project_id",
+        "group_id": "record_json.payload.scope.group_id",
+        "field_id": "record_json.payload.scope.field_id",
+        "season_id": "record_json.payload.scope.season_id",
+        "zone_id": "record_json.payload.scope.zone_id"
+      },
+      "prior_canonical_hash_function": "semanticHashV1(omitSemanticFieldsV1(canonical_object,[determinism_hash,fact_id,created_at,persisted_at]))",
+      "effective_canonical_hash_function": "semanticHashV1(assign(structuredClone(canonical_object),{determinism_hash:\"\"}))"
+    }
+  ],
+  "application_rule": "Replace only scope_path, the six scope-related required_column_comparisons, and canonical_hash_function for the two exact source rows; all other base-matrix bytes and semantic obligations remain effective.",
+  "required_invariants": {
+    "exact_affected_source_count": 2,
+    "base_matrix_blob_unchanged": true,
+    "identity_path_unchanged": true,
+    "payload_path_unchanged": true,
+    "logical_time_path_unchanged": true,
+    "as_of_path_unchanged": true,
+    "canonical_hash_profile_reconciled": true,
+    "visibility_rule_unchanged": true,
+    "projection_source_fact_binding_required": true,
+    "projection_scope_equals_nested_canonical_scope": true,
+    "canonical_fact_rewrite": false,
+    "canonical_hash_rewrite": false
+  },
+  "delivery_classification": {
+    "candidate_declaration": false,
+    "candidate_signal_delta": 0,
+    "runtime_write_authority_delta": 0,
+    "database_schema_delta": 0,
+    "canonical_data_delta": 0,
+    "route_delta": 0,
+    "production_runtime_source_authorized": false,
+    "mcft_cap_08_complete": false,
+    "mcft_cap_09_authorized": false
+  }
+}
