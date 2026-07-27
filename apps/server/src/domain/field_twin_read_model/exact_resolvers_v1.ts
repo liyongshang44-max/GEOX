@@ -66,9 +66,14 @@ function semanticHash(value: unknown): SemanticHashTextV1 {
 }
 
 function readPath(root: unknown, path: string): unknown {
+  const tokens = path.split(".").filter(Boolean);
   let current: unknown = root;
-  for (const token of path.split(".").filter(Boolean)) {
-    if (!current || typeof current !== "object" || Array.isArray(current)) return undefined;
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (Array.isArray(current)) {
+      return token === "length" && index === tokens.length - 1 ? current.length : undefined;
+    }
+    if (!current || typeof current !== "object") return undefined;
     current = (current as Record<string, unknown>)[token];
   }
   return current;
