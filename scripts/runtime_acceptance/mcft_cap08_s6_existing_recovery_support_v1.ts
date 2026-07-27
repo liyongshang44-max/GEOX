@@ -133,6 +133,15 @@ function quotedIdentifier(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;
 }
 
+const canonicalScopeSql = {
+  tenant_id: "COALESCE(f.record_json->'payload'->>'tenant_id',f.record_json->'payload'->'scope'->>'tenant_id')",
+  project_id: "COALESCE(f.record_json->'payload'->>'project_id',f.record_json->'payload'->'scope'->>'project_id')",
+  group_id: "COALESCE(f.record_json->'payload'->>'group_id',f.record_json->'payload'->'scope'->>'group_id')",
+  field_id: "COALESCE(f.record_json->'payload'->>'field_id',f.record_json->'payload'->'scope'->>'field_id')",
+  season_id: "COALESCE(f.record_json->'payload'->>'season_id',f.record_json->'payload'->'scope'->>'season_id')",
+  zone_id: "COALESCE(f.record_json->'payload'->>'zone_id',f.record_json->'payload'->'scope'->>'zone_id')",
+} as const;
+
 async function assertScopedSourceFactBindings(pool: Pool, scope: Record<string, string>): Promise<void> {
   const requiredColumns = ["source_fact_id", "tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"];
   const relations = await pool.query<{ table_name: string }>(
@@ -154,24 +163,24 @@ async function assertScopedSourceFactBindings(pool: Pool, scope: Record<string, 
               t.source_fact_id,
               f.record_json->>'type' AS object_type,
               f.record_json->'payload'->>'object_id' AS object_id,
-              f.record_json->'payload'->>'tenant_id' AS actual_tenant_id,
-              f.record_json->'payload'->>'project_id' AS actual_project_id,
-              f.record_json->'payload'->>'group_id' AS actual_group_id,
-              f.record_json->'payload'->>'field_id' AS actual_field_id,
-              f.record_json->'payload'->>'season_id' AS actual_season_id,
-              f.record_json->'payload'->>'zone_id' AS actual_zone_id
+              ${canonicalScopeSql.tenant_id} AS actual_tenant_id,
+              ${canonicalScopeSql.project_id} AS actual_project_id,
+              ${canonicalScopeSql.group_id} AS actual_group_id,
+              ${canonicalScopeSql.field_id} AS actual_field_id,
+              ${canonicalScopeSql.season_id} AS actual_season_id,
+              ${canonicalScopeSql.zone_id} AS actual_zone_id
          FROM ${relation} AS t
          LEFT JOIN facts AS f ON f.fact_id=t.source_fact_id
         WHERE t.tenant_id=$1 AND t.project_id=$2 AND t.group_id=$3
           AND t.field_id=$4 AND t.season_id=$5 AND t.zone_id=$6
           AND (
             f.fact_id IS NULL
-            OR f.record_json->'payload'->>'tenant_id' IS DISTINCT FROM $1
-            OR f.record_json->'payload'->>'project_id' IS DISTINCT FROM $2
-            OR f.record_json->'payload'->>'group_id' IS DISTINCT FROM $3
-            OR f.record_json->'payload'->>'field_id' IS DISTINCT FROM $4
-            OR f.record_json->'payload'->>'season_id' IS DISTINCT FROM $5
-            OR f.record_json->'payload'->>'zone_id' IS DISTINCT FROM $6
+            OR ${canonicalScopeSql.tenant_id} IS DISTINCT FROM $1
+            OR ${canonicalScopeSql.project_id} IS DISTINCT FROM $2
+            OR ${canonicalScopeSql.group_id} IS DISTINCT FROM $3
+            OR ${canonicalScopeSql.field_id} IS DISTINCT FROM $4
+            OR ${canonicalScopeSql.season_id} IS DISTINCT FROM $5
+            OR ${canonicalScopeSql.zone_id} IS DISTINCT FROM $6
           )
         ORDER BY t.source_fact_id`,
       [...values, table],
@@ -203,21 +212,21 @@ async function assertLatestRecordSetMemberScopes(
     `SELECT fact_id,
             record_json->>'type' AS object_type,
             record_json->'payload'->>'object_id' AS object_id,
-            record_json->'payload'->>'tenant_id' AS actual_tenant_id,
-            record_json->'payload'->>'project_id' AS actual_project_id,
-            record_json->'payload'->>'group_id' AS actual_group_id,
-            record_json->'payload'->>'field_id' AS actual_field_id,
-            record_json->'payload'->>'season_id' AS actual_season_id,
-            record_json->'payload'->>'zone_id' AS actual_zone_id
-       FROM facts
+            ${canonicalScopeSql.tenant_id} AS actual_tenant_id,
+            ${canonicalScopeSql.project_id} AS actual_project_id,
+            ${canonicalScopeSql.group_id} AS actual_group_id,
+            ${canonicalScopeSql.field_id} AS actual_field_id,
+            ${canonicalScopeSql.season_id} AS actual_season_id,
+            ${canonicalScopeSql.zone_id} AS actual_zone_id
+       FROM facts AS f
       WHERE record_json->'payload'->>'object_id'=ANY($1::text[])
         AND (
-          record_json->'payload'->>'tenant_id' IS DISTINCT FROM $2
-          OR record_json->'payload'->>'project_id' IS DISTINCT FROM $3
-          OR record_json->'payload'->>'group_id' IS DISTINCT FROM $4
-          OR record_json->'payload'->>'field_id' IS DISTINCT FROM $5
-          OR record_json->'payload'->>'season_id' IS DISTINCT FROM $6
-          OR record_json->'payload'->>'zone_id' IS DISTINCT FROM $7
+          ${canonicalScopeSql.tenant_id} IS DISTINCT FROM $2
+          OR ${canonicalScopeSql.project_id} IS DISTINCT FROM $3
+          OR ${canonicalScopeSql.group_id} IS DISTINCT FROM $4
+          OR ${canonicalScopeSql.field_id} IS DISTINCT FROM $5
+          OR ${canonicalScopeSql.season_id} IS DISTINCT FROM $6
+          OR ${canonicalScopeSql.zone_id} IS DISTINCT FROM $7
         )
       ORDER BY record_json->>'type',record_json->'payload'->>'object_id'`,
     [ids, scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id],
