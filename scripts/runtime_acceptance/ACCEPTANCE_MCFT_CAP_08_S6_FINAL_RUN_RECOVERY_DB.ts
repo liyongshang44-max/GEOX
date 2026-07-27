@@ -216,8 +216,14 @@ async function main(): Promise<void> {
     assert.equal(factsAfterRestart, factsBeforeRestart, "S6_RESTART_CANONICAL_WRITE_DELTA");
 
     const counts = await typeCounts(recoveryPoolA);
-    assert.equal(counts.twin_runtime_config_v1, 1);
     assert.equal(counts.twin_runtime_tick_v1, 24);
+    const runtimeConfigChainCount = Number(counts.twin_runtime_config_v1 ?? 0);
+    const expectedRuntimeConfigChainCount = counts.twin_runtime_tick_v1 + 1;
+    assert.equal(
+      runtimeConfigChainCount,
+      expectedRuntimeConfigChainCount,
+      "S6_RUNTIME_CONFIG_CHAIN_CARDINALITY",
+    );
     assert.equal(counts.twin_forecast_run_v1, 24);
     assert.equal(counts.twin_scenario_set_v1, 24);
     assert.equal(counts.twin_forecast_residual_v1, 24);
@@ -227,7 +233,7 @@ async function main(): Promise<void> {
 
     const hardAcceptance = [
       ["HA01", materialization.status === "PASS"],
-      ["HA02", counts.twin_runtime_config_v1 === 1],
+      ["HA02", runtimeConfigChainCount === expectedRuntimeConfigChainCount],
       ["HA03", counts.twin_runtime_tick_v1 === 24],
       ["HA04", Number(counts.twin_state_estimate_v1 ?? 0) >= 25],
       ["HA05", counts.twin_forecast_run_v1 === 24],
@@ -282,7 +288,7 @@ async function main(): Promise<void> {
     const closureProjection = {
       hard_acceptance: hardAcceptance,
       operator_content_hashes: operator.surfaces.map((surface) => ({ endpoint: surface.endpoint, content_hash: surface.content_hash })),
-      exact_cardinality: { bootstrap: 1, ticks: 24, forecasts: 24, scenarios: 24, residuals: 24, calibration: 16, holdout: 8, candidate: 1, shadow: 1, activation: 0 },
+      exact_cardinality: { bootstrap: 1, runtime_configs: runtimeConfigChainCount, ticks: 24, forecasts: 24, scenarios: 24, residuals: 24, calibration: 16, holdout: 8, candidate: 1, shadow: 1, activation: 0 },
       no_recommendation_ao_act_dispatch: true,
     };
     const result = {
@@ -296,6 +302,8 @@ async function main(): Promise<void> {
       facts_before_restart: factsBeforeRestart,
       facts_after_restart: factsAfterRestart,
       type_counts: counts,
+      runtime_config_chain_count: runtimeConfigChainCount,
+      expected_runtime_config_chain_count: expectedRuntimeConfigChainCount,
       pointer_loss_rebuilt: true,
       latest_record_set_authority: latestRecordSetAuthority,
       runtime_projection_rebuild: runtimeProjectionRebuild,
