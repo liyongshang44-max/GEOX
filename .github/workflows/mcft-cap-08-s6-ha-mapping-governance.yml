@@ -1,0 +1,40 @@
+name: mcft-cap-08-s6-ha-mapping-governance
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-ha-mapping-governance.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-HA-WITNESS-MAPPING-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-WITNESS-LIFECYCLE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-HA-MAPPING-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_LEDGER_COVERAGE.cjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap08-s6-ha-mapping-governance-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  ledger-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate Ledger-derived mapping and lifecycle
+        env:
+          MCFT_BASE_SHA: '${{ github.event.pull_request.base.sha }}'
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_LEDGER_COVERAGE.cjs
+      - name: Upload mapping governance result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-ha-mapping-governance-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_LEDGER_COVERAGE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

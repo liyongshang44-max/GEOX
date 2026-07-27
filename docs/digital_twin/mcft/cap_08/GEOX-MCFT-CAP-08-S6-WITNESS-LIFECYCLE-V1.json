@@ -1,0 +1,118 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_witness_lifecycle_v1",
+  "contract_id": "GEOX-MCFT-CAP-08-S6-WITNESS-LIFECYCLE-V1",
+  "record_status": "PROPOSED_FOR_HUMAN_REVIEW",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "af56ee8efa432bdf88fb00173707cbb2157add55",
+  "source_mapping_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-HA-WITNESS-MAPPING-V1.json",
+  "allowed_proof_phases": [
+    "PER_RUN",
+    "CROSS_RUN",
+    "EXACT_CANDIDATE_HEAD",
+    "MERGE_SHA",
+    "RETENTION_ATTESTATION",
+    "FINAL_SETTLEMENT"
+  ],
+  "allowed_witness_statuses": [
+    "PENDING",
+    "NOT_YET_ELIGIBLE",
+    "PASS",
+    "FAIL"
+  ],
+  "phase_order": [
+    "PER_RUN",
+    "CROSS_RUN",
+    "EXACT_CANDIDATE_HEAD",
+    "MERGE_SHA",
+    "RETENTION_ATTESTATION",
+    "FINAL_SETTLEMENT"
+  ],
+  "producer_separation": [
+    {
+      "producer_id": "RUN_A_WITNESS_PRODUCER",
+      "phase": "PER_RUN",
+      "run_label": "RUN_A",
+      "may_finalize_ledger": false
+    },
+    {
+      "producer_id": "RUN_B_WITNESS_PRODUCER",
+      "phase": "PER_RUN",
+      "run_label": "RUN_B",
+      "may_finalize_ledger": false
+    },
+    {
+      "producer_id": "CROSS_RUN_COMPARATOR",
+      "phase": "CROSS_RUN",
+      "may_finalize_ledger": false
+    },
+    {
+      "producer_id": "EXACT_CANDIDATE_HEAD_WITNESS_PRODUCER",
+      "phase": "EXACT_CANDIDATE_HEAD",
+      "may_finalize_ledger": false
+    },
+    {
+      "producer_id": "MERGE_TREE_WITNESS_PRODUCER",
+      "phase": "MERGE_SHA",
+      "may_finalize_ledger": false
+    },
+    {
+      "producer_id": "R2_RETENTION_WITNESS_PRODUCER",
+      "phase": "RETENTION_ATTESTATION",
+      "may_finalize_ledger": false
+    },
+    {
+      "producer_id": "FINAL_LEDGER_SETTLEMENT",
+      "phase": "FINAL_SETTLEMENT",
+      "may_finalize_ledger": true
+    }
+  ],
+  "eligibility_rules": {
+    "phase_mismatch_status": "NOT_YET_ELIGIBLE",
+    "pass_outside_required_phase_forbidden": true,
+    "pass_without_artifact_forbidden": true,
+    "pass_without_witness_forbidden": true,
+    "pass_without_exact_subject_sha_forbidden": true,
+    "pass_without_object_set_ref_forbidden": true,
+    "pass_without_counting_domain_forbidden": true,
+    "pass_without_selector_observed_forbidden": true,
+    "development_witness_may_not_be_final_settlement_input": true,
+    "slice_acceptance_witness_may_not_be_final_settlement_input": true,
+    "formal_closure_class_required": "FINAL_FORMAL_CLOSURE_RUN"
+  },
+  "candidate_binding": {
+    "per_run_and_cross_run_witness_subject_must_equal_exact_candidate_head": true,
+    "candidate_head_change_invalidates_prior_witnesses": true,
+    "candidate_head_producer_binds_manifest_set_not_ledger_item": true
+  },
+  "merge_binding": {
+    "full_run_rerun_at_merge_sha_required": false,
+    "candidate_merge_tree_equality_required": true,
+    "merge_witness_may_not_pass_before_merge_sha_exists": true
+  },
+  "retention_binding": {
+    "level": "R2",
+    "days": 730,
+    "upload_readback_required": true,
+    "locked_version_delete_denied_required": true
+  },
+  "final_settlement": {
+    "only_authorized_producer": "FINAL_LEDGER_SETTLEMENT",
+    "ledger_item_count": 24,
+    "exact_item_set_equality_required": true,
+    "all_required_phase_witnesses_required": true,
+    "all_items_pass_required": true,
+    "not_yet_eligible_count_required": 0,
+    "missing_artifact_count_required": 0,
+    "duplicate_item_id_count_required": 0,
+    "unknown_item_id_count_required": 0,
+    "final_status": "PASS"
+  },
+  "nonclaims": {
+    "mapping_human_review_complete": false,
+    "mapping_frozen": false,
+    "witness_implementation_authorized": false,
+    "dual_run_ci_authorized": false
+  },
+  "semantic_digest": "sha256:aa7ab3015c0cf9995c531a5cc8e3212afedca79f5f3b9f4e512d1729e3fc3c2e"
+}

@@ -1,0 +1,1537 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_ha_witness_mapping_v1",
+  "mapping_id": "GEOX-MCFT-CAP-08-S6-HA-WITNESS-MAPPING-V1",
+  "record_status": "PROPOSED_FOR_HUMAN_REVIEW",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "af56ee8efa432bdf88fb00173707cbb2157add55",
+  "authority_resolution": {
+    "item_id_and_requirement_ssot": "FROZEN_HARD_ACCEPTANCE_LEDGER_ONLY",
+    "taskbook_role": "SEMANTIC_AND_OBJECT_CONTRACT_ONLY",
+    "taskbook_numbering_may_not_override_ledger": true,
+    "implementation_reauthoring_forbidden": true
+  },
+  "source_ledger": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+    "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+    "item_count": 24
+  },
+  "allowed_proof_phases": [
+    "PER_RUN",
+    "CROSS_RUN",
+    "EXACT_CANDIDATE_HEAD",
+    "MERGE_SHA",
+    "RETENTION_ATTESTATION",
+    "FINAL_SETTLEMENT"
+  ],
+  "mapping_item_count": 24,
+  "items": [
+    {
+      "ledger_index": 0,
+      "item_id": "HA-01",
+      "requirement": "RUN_A_RUN_B_DIGEST_EQUALITY",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "CROSS_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CROSS_RUN_PAIR",
+      "selector_id": "cross_run_digest_manifest_pair_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": false,
+        "closure_manifest_membership_required": false,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "run_count": 2,
+        "run_labels": [
+          "RUN_A",
+          "RUN_B"
+        ],
+        "same_formal_run_id": true,
+        "different_run_instance_id": true,
+        "semantic_digest_equal": true,
+        "operational_invariant_digest_equal": true,
+        "closure_digest_equal": true
+      },
+      "witness_producer": "mcft_cap08_s6_cross_run_comparator_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_CROSS_RUN_COMPARISON_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 1,
+      "item_id": "HA-02",
+      "requirement": "B00_PLUS_24_CONTIGUOUS_TICKS",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "bootstrap_root_and_contiguous_tick_sequence_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "bootstrap_root": 1,
+        "successful_tick_count": 24,
+        "tick_ordinals": "T00-T23_CONTIGUOUS",
+        "sequence": [
+          "B00",
+          "T00-T23",
+          "G00-G02"
+        ]
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_chain_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_PER_RUN_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 2,
+      "item_id": "HA-03",
+      "requirement": "IMMUTABLE_STATE_CHAIN_EXACT_REFS",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "immutable_state_chain_exact_refs_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "bootstrap_inclusive_state_count": 25,
+        "historical_hash_rewrite_count": 0,
+        "predecessor_ref_mismatch_count": 0,
+        "predecessor_hash_mismatch_count": 0
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_state_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_STATE_CHAIN_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 3,
+      "item_id": "HA-04",
+      "requirement": "NO_OBSERVATION_DYNAMICS_ONLY",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "dynamics_only_transitions_without_eligible_observation_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "ineligible_observation_consumption_count": 0,
+        "dynamics_ref_required": true,
+        "assimilation_ref_required": false,
+        "due_map_conformance": true
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_assimilation_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_ASSIMILATION_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 4,
+      "item_id": "HA-05",
+      "requirement": "ORDINARY_ASSIMILATION_TRACE",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "ordinary_assimilation_trace_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "ordinary_assimilation_count": 5,
+        "observation_ref_mismatch_count": 0,
+        "trace_gap_count": 0,
+        "due_map_conformance": true
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_assimilation_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_ASSIMILATION_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 5,
+      "item_id": "HA-06",
+      "requirement": "POSTERIOR_NOT_DIRECT_OBSERVATION",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "posterior_derivation_not_direct_observation_copy_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "direct_observation_copy_count": 0,
+        "dynamics_then_assimilation_derivation_required": true,
+        "posterior_hash_verified": true
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_assimilation_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_ASSIMILATION_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 6,
+      "item_id": "HA-07",
+      "requirement": "QUALITY_DOWNWEIGHT_REJECTION",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "quality_weight_downweight_rejection_trace_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "invalid_quality_acceptance_count": 0,
+        "quality_weight_trace_complete": true,
+        "rejection_zero_write": true,
+        "frozen_vector_conformance": true
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_assimilation_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_ASSIMILATION_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 7,
+      "item_id": "HA-08",
+      "requirement": "24_SUCCESSFUL_FORECASTS_72_POINTS",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "successful_forecast_and_points_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "successful_forecast_count": 24,
+        "points_per_forecast": 72,
+        "total_point_count": 1728,
+        "non_completed_forecast_count": 0
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_forecast_scenario_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_FORECAST_SCENARIO_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 8,
+      "item_id": "HA-09",
+      "requirement": "THREE_SCENARIOS_PER_TICK",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "scenario_set_options_per_tick_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "scenario_set_count": 24,
+        "options_per_set": 3,
+        "total_option_count": 72,
+        "total_trajectory_point_count": 5184
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_forecast_scenario_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_FORECAST_SCENARIO_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 9,
+      "item_id": "HA-10",
+      "requirement": "DECISION_AFTER_B_T05",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "decision_after_t05_scenario_commit_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "decision_count": 1,
+        "decision_tick": "T05",
+        "scenario_tick": "T05",
+        "scenario_predecessor_exact": true,
+        "decision_after_scenario_commit": true,
+        "recommendation_count": 0
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_decision_action_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_DECISION_ACTION_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 10,
+      "item_id": "HA-11",
+      "requirement": "APPROVAL_PLAN_EVIDENCE_SEPARATE",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "approval_plan_evidence_separation_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "approval_assertion_count": 1,
+        "approved_plan_count": 1,
+        "execution_receipt_count": 1,
+        "distinct_object_identity": true,
+        "exact_predecessor_edges": true
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_decision_action_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_DECISION_ACTION_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 11,
+      "item_id": "HA-12",
+      "requirement": "NO_PREMATURE_EXECUTION_CONSUMPTION",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "execution_consumption_first_legal_tick_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "t07_execution_consumption_count": 0,
+        "first_legal_consumption_tick": "T08",
+        "premature_consumption_count": 0
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_decision_action_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_DECISION_ACTION_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 12,
+      "item_id": "HA-13",
+      "requirement": "H_BEFORE_A_T08",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "RUN_INSTANCE",
+      "selector_id": "t08_h_commit_before_a_snapshot_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": false,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "tick": "T08",
+        "h_committed_before_a_snapshot": true,
+        "a_consumes_exact_h_ref": true,
+        "phase_order": [
+          "E",
+          "H",
+          "A",
+          "B"
+        ]
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_phase_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_PHASE_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 13,
+      "item_id": "HA-14",
+      "requirement": "OUTCOME_EQUALS_FVO10",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "outcome_and_fvo10_single_identity_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "outcome_evidence_identity_count": 1,
+        "forecast_verification_identity_count": 1,
+        "same_identity": true,
+        "duplicate_identity_count": 0,
+        "tick": "T10"
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_decision_action_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_DECISION_ACTION_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 14,
+      "item_id": "HA-15",
+      "requirement": "T11_PRECOMMIT_ROLLBACK",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "RUN_INSTANCE",
+      "selector_id": "t11_precommit_fault_rollback_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": false,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "fault_tick": "T11",
+        "fault_stage": "PRE_COMMIT",
+        "canonical_write_delta": 0,
+        "projection_write_delta": 0,
+        "pointer_write_delta": 0,
+        "retry_success_count": 1
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_recovery_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_RECOVERY_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 15,
+      "item_id": "HA-16",
+      "requirement": "T12_RESPONSE_LOSS_RECOVERY",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "RUN_INSTANCE",
+      "selector_id": "t12_postcommit_response_loss_recovery_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": false,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "fault_tick": "T12",
+        "commit_completed": true,
+        "response_lost": true,
+        "retry_duplicate_write_count": 0,
+        "canonical_readback_exact": true
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_recovery_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_RECOVERY_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 16,
+      "item_id": "HA-17",
+      "requirement": "T16_APPEND_FORWARD_NO_HISTORY_REWRITE",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "t16_append_forward_history_immutability_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "correction_tick": "T16",
+        "append_forward_correction_count": 1,
+        "historical_hash_rewrite_count": 0,
+        "t17_consumes_corrected_posterior": true
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_late_residual_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_LATE_RESIDUAL_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 17,
+      "item_id": "HA-18",
+      "requirement": "R01_AND_R16_SAME_C_PHASE",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "RUN_INSTANCE",
+      "selector_id": "r01_r16_same_c_phase_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": false,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "tick": "T16",
+        "r01_count": 1,
+        "r16_count": 1,
+        "same_c_phase": true,
+        "r01_pre_t16_count": 0
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_late_residual_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_LATE_RESIDUAL_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 18,
+      "item_id": "HA-19",
+      "requirement": "EXACT_24_RESIDUALS",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "exact_residual_due_map_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "residual_count": 24,
+        "duplicate_residual_count": 0,
+        "missing_due_mapping_count": 0,
+        "ordered_by": "forecast_target_time"
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_calibration_shadow_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_CALIBRATION_SHADOW_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 19,
+      "item_id": "HA-20",
+      "requirement": "CALIBRATION_16_HOLDOUT_8",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_MEMBER",
+      "selector_id": "calibration_holdout_partition_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "calibration_case_count": 16,
+        "holdout_case_count": 8,
+        "overlap_count": 0,
+        "candidate_parameter": "0.034000",
+        "grid_point_count": 21
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_calibration_shadow_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_CALIBRATION_SHADOW_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 20,
+      "item_id": "HA-21",
+      "requirement": "ONE_CANDIDATE_NOT_ACTIVE",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "GOVERNANCE_STATE",
+      "selector_id": "single_candidate_inactive_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "candidate_count": 1,
+        "model_activation_count": 0,
+        "active_runtime_config_switch_count": 0,
+        "candidate_consumption_count": 0
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_calibration_shadow_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_CALIBRATION_SHADOW_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 21,
+      "item_id": "HA-22",
+      "requirement": "ONE_SHADOW_NON_CONSUMING_ZERO_ACTIVATION",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "GOVERNANCE_STATE",
+      "selector_id": "single_shadow_non_consuming_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "shadow_evaluation_count": 1,
+        "paired_holdout_count": 8,
+        "model_activation_count": 0,
+        "state_write_delta_by_shadow": 0,
+        "checkpoint_write_delta_by_shadow": 0
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_calibration_shadow_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_CALIBRATION_SHADOW_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 22,
+      "item_id": "HA-23",
+      "requirement": "READ_MODEL_TIMELINE_ZERO_WRITE",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "PER_RUN"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "CLOSURE_OUTPUT",
+      "selector_id": "cap07_complete_paginated_readback_zero_write_v1",
+      "selector_contract": {
+        "formal_run_id_required": true,
+        "run_instance_id_required": true,
+        "closure_manifest_membership_required": true,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "get_surface_count": 10,
+        "timeline_complete_pagination": true,
+        "trace_complete": true,
+        "operator_readback": true,
+        "product_read_write_delta": 0
+      },
+      "witness_producer": "mcft_cap08_s6_per_run_read_model_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_{RUN}_READ_MODEL_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    },
+    {
+      "ledger_index": 23,
+      "item_id": "HA-24",
+      "requirement": "TREE_EQUIVALENT_MERGE_R2_ATTESTATION",
+      "identity_source": "MATERIALIZED_FROM_FROZEN_LEDGER_INDEX",
+      "authority_refs": [
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json",
+          "blob_sha": "d6e0000e1d0e5c88d927b94aaadc4bada07f6bd1",
+          "role": "ITEM_ID_AND_REQUIREMENT_SSOT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+          "blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+          "role": "FINAL_CLOSURE_MACHINE_CONTRACT"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RUN-CLASSIFICATION-V1.json",
+          "blob_sha": "86482874b1b557ca8bfa8b6812daa9666f49b128",
+          "role": "RUN_CLASSIFICATION"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md",
+          "blob_sha": "a24114ff629560345b3bd3cda6b4024b9f3d61e4",
+          "role": "CURRENT_DESIGN_AUTHORITY"
+        }
+      ],
+      "required_proof_phases": [
+        "MERGE_SHA",
+        "RETENTION_ATTESTATION"
+      ],
+      "finalization_phase": "FINAL_SETTLEMENT",
+      "counting_domain": "EXTERNAL_EFFECTIVENESS",
+      "selector_id": "candidate_merge_tree_and_r2_retention_v1",
+      "selector_contract": {
+        "formal_run_id_required": false,
+        "run_instance_id_required": false,
+        "closure_manifest_membership_required": false,
+        "global_type_count_forbidden": true
+      },
+      "expected_contract": {
+        "candidate_merge_tree_equal": true,
+        "merge_subject_exact": true,
+        "retention_level": "R2",
+        "retention_days": 730,
+        "upload_readback": true,
+        "locked_version_delete_denied": true
+      },
+      "witness_producer": "mcft_cap08_s6_merge_and_retention_witness_v1",
+      "artifact_contract": {
+        "artifact_name": "MCFT_CAP_08_S6_MERGE_R2_WITNESS_V1.json",
+        "exact_subject_sha_required": true,
+        "artifact_digest_required": true,
+        "object_set_ref_required": true,
+        "selector_observed_required": true
+      },
+      "finalization_rule": {
+        "pass_requires_all_required_phases": true,
+        "not_yet_eligible_outside_required_phase": true,
+        "pass_without_witness_forbidden": true,
+        "slice_acceptance_reuse_forbidden": true,
+        "cross_run_stitching_forbidden": true
+      }
+    }
+  ],
+  "witness_code_policy": {
+    "literal_item_id_forbidden": true,
+    "literal_requirement_forbidden": true,
+    "ledger_runtime_load_required": true,
+    "witness_manifest_link_required": true
+  },
+  "nonclaims": {
+    "mapping_human_review_complete": false,
+    "mapping_frozen": false,
+    "witness_implementation_authorized": false,
+    "dual_run_ci_authorized": false,
+    "s6_candidate_implemented": false,
+    "mcft_cap_08_complete": false,
+    "mcft_cap_09_authorized": false
+  },
+  "semantic_digest": "sha256:09bb10145b0e5c4357f094f25e4a73c9a606b3b35a41978d9326f40deb4bd6e6"
+}
