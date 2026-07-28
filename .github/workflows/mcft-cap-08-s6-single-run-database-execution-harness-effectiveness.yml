@@ -1,0 +1,40 @@
+name: mcft-cap-08-s6-single-run-database-execution-harness-effectiveness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-single-run-database-execution-harness-effectiveness.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-SINGLE-RUN-DATABASE-EXECUTION-HARNESS-EFFECTIVENESS-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-SINGLE-RUN-DATABASE-EXECUTION-WORKFLOW-IMPLEMENTATION-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-SINGLE-RUN-DATABASE-EXECUTION-HARNESS-EFFECTIVENESS-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_SINGLE_RUN_DATABASE_EXECUTION_HARNESS_EFFECTIVENESS.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  harness-effectiveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate harness effectiveness and workflow implementation authority
+        env:
+          MCFT_BASE_SHA: b9833f2004c49b8aa147f7c856f9019177560d87
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_SINGLE_RUN_DATABASE_EXECUTION_HARNESS_EFFECTIVENESS.cjs
+      - name: Upload effectiveness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-single-run-database-execution-harness-effectiveness-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_SINGLE_RUN_DATABASE_EXECUTION_HARNESS_EFFECTIVENESS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
