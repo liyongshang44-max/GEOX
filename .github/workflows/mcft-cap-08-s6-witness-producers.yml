@@ -6,6 +6,7 @@ on:
       - '.github/workflows/mcft-cap-08-s6-witness-producers.yml'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-WITNESS-PRODUCER-BOUNDARY-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-WITNESS-PRODUCER-IMPLEMENTATION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-EXACT-OBJECT-SET-REF-RECONCILIATION-AUTHORITY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_WITNESS_PRODUCERS.cjs'
       - 'scripts/governance_acceptance/mcft_cap08_s6_witness/catalog_v1.cjs'
       - 'scripts/governance_acceptance/mcft_cap08_s6_witness/core_v1.cjs'
@@ -48,9 +49,27 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Validate separated witness producers
+      - name: Classify historical candidate or exact-ref successor reconciliation
+        id: classify
+        shell: bash
+        run: |
+          set -euo pipefail
+          authority='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-EXACT-OBJECT-SET-REF-RECONCILIATION-AUTHORITY-V1.json'
+          base='${{ github.event.pull_request.base.sha }}'
+          if git diff --name-only "$base"...HEAD | grep -Fxq "$authority"; then
+            echo 'mode=EXACT_REF_RECONCILIATION' >> "$GITHUB_OUTPUT"
+          else
+            echo 'mode=HISTORICAL_WITNESS_PRODUCER' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate historical separated witness producer candidate
+        if: steps.classify.outputs.mode == 'HISTORICAL_WITNESS_PRODUCER'
         env:
           MCFT_BASE_SHA: 6def5a56d7af0fc769b576c4cd8c2c965862228f
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_WITNESS_PRODUCERS.cjs
+      - name: Replay witness producer contracts for exact-ref reconciliation
+        if: steps.classify.outputs.mode == 'EXACT_REF_RECONCILIATION'
+        env:
+          MCFT_LOCAL_REPLAY: '1'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_WITNESS_PRODUCERS.cjs
       - name: Upload witness producer evidence
         if: always()

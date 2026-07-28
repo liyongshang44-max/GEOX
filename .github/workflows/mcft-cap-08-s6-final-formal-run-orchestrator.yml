@@ -6,7 +6,12 @@ on:
       - '.github/workflows/mcft-cap-08-s6-final-formal-run-orchestrator.yml'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-FORMAL-RUN-ORCHESTRATOR-BOUNDARY-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-FORMAL-RUN-ORCHESTRATOR-IMPLEMENTATION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-EXACT-OBJECT-SET-REF-RECONCILIATION-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-EXACT-OBJECT-SET-REF-RECONCILIATION-IMPLEMENTATION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-EXACT-OBJECT-SET-REF-RECONCILIATION-BOUNDARY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_FORMAL_RUN_ORCHESTRATOR.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_OBJECT_SET_REF_RECONCILIATION.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/synthetic_fixture_v1.cjs'
       - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/cap07_readback_plan_v1.cjs'
       - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/closure_member_manifest_v1.cjs'
       - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/contract_loader_v1.cjs'
@@ -37,15 +42,35 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Validate single-run orchestrator contract without execution
+      - name: Classify historical candidate or exact-ref successor reconciliation
+        id: classify
+        shell: bash
+        run: |
+          set -euo pipefail
+          authority='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-EXACT-OBJECT-SET-REF-RECONCILIATION-AUTHORITY-V1.json'
+          base='${{ github.event.pull_request.base.sha }}'
+          if git diff --name-only "$base"...HEAD | grep -Fxq "$authority"; then
+            echo 'mode=EXACT_REF_RECONCILIATION' >> "$GITHUB_OUTPUT"
+          else
+            echo 'mode=HISTORICAL_ORCHESTRATOR' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate historical orchestrator candidate boundary
+        if: steps.classify.outputs.mode == 'HISTORICAL_ORCHESTRATOR'
         env:
           MCFT_BASE_SHA: 5c681ddedac795183274e98278bd821ec4bfa0a1
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_FORMAL_RUN_ORCHESTRATOR.cjs
+      - name: Validate exact canonical object-ref successor reconciliation
+        if: steps.classify.outputs.mode == 'EXACT_REF_RECONCILIATION'
+        env:
+          MCFT_BASE_SHA: c767416f576c2587a1e7513fb30312c9ce5719b4
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_OBJECT_SET_REF_RECONCILIATION.cjs
       - name: Upload orchestrator contract evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap-08-s6-final-formal-run-orchestrator-${{ github.event.pull_request.head.sha }}
-          path: acceptance-output/MCFT_CAP_08_S6_FINAL_FORMAL_RUN_ORCHESTRATOR_RESULT.json
+          path: |
+            acceptance-output/MCFT_CAP_08_S6_FINAL_FORMAL_RUN_ORCHESTRATOR_RESULT.json
+            acceptance-output/MCFT_CAP_08_S6_EXACT_OBJECT_SET_REF_RECONCILIATION_RESULT.json
           if-no-files-found: error
           retention-days: 90
