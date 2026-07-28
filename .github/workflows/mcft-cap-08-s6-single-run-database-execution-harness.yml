@@ -1,0 +1,40 @@
+name: mcft-cap-08-s6-single-run-database-execution-harness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-single-run-database-execution-harness.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-SINGLE-RUN-DATABASE-EXECUTION-HARNESS-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-SINGLE-RUN-DATABASE-EXECUTION-HARNESS-IMPLEMENTATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_SINGLE_RUN_DATABASE_EXECUTION_HARNESS.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/**'
+
+permissions:
+  contents: read
+
+jobs:
+  harness-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate single-run database harness without database execution
+        env:
+          MCFT_BASE_SHA: 2dfb9054f5cc660264a94ae477f829c788ca57f9
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_SINGLE_RUN_DATABASE_EXECUTION_HARNESS.cjs
+      - name: Upload harness contract evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-single-run-database-execution-harness-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_SINGLE_RUN_DATABASE_EXECUTION_HARNESS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
