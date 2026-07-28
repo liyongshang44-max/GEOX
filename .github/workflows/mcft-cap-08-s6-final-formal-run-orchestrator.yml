@@ -1,0 +1,50 @@
+name: mcft-cap-08-s6-final-formal-run-orchestrator
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-final-formal-run-orchestrator.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-FORMAL-RUN-ORCHESTRATOR-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-FORMAL-RUN-ORCHESTRATOR-IMPLEMENTATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_FORMAL_RUN_ORCHESTRATOR.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/cap07_readback_plan_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/closure_member_manifest_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/contract_loader_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/identity_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/operational_event_manifest_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/orchestrator_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/plan_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/recovery_plan_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/source_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/synthetic_adapter_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/witness_invocation_v1.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  orchestrator-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate single-run orchestrator contract without execution
+        env:
+          MCFT_BASE_SHA: 5c681ddedac795183274e98278bd821ec4bfa0a1
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_FORMAL_RUN_ORCHESTRATOR.cjs
+      - name: Upload orchestrator contract evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-final-formal-run-orchestrator-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_FINAL_FORMAL_RUN_ORCHESTRATOR_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

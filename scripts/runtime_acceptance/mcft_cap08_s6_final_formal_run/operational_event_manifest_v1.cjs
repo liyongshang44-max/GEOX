@@ -1,0 +1,6 @@
+#!/usr/bin/env node
+'use strict';
+const assert=require('node:assert/strict');
+const {sha}=require('./identity_v1.cjs');
+function buildOperationalEventManifestV1({plan,events,databaseInstanceDigest,artifactDigest,synthetic=false}){assert.match(databaseInstanceDigest,/^sha256:[0-9a-f]{64}$/);assert.match(artifactDigest,/^sha256:[0-9a-f]{64}$/);for(const e of events){assert.equal(e.run_label,plan.run_label);assert.equal(e.operational_run_instance_id,plan.operational_run_instance_id);assert.equal(e.formal_run_id,plan.formal_run_id);assert.ok(plan.phases.some(p=>p.phase_id===e.phase_id));}return{schema_version:'geox_mcft_cap08_s6_operational_event_manifest_v1',classification:synthetic?'SYNTHETIC_OPERATIONAL_MANIFEST_NOT_CLOSURE_EVIDENCE':'FINAL_FORMAL_CLOSURE_OPERATIONAL_EVENT_MANIFEST_V1',exact_subject_sha:plan.exact_subject_sha,run_label:plan.run_label,formal_run_id:plan.formal_run_id,operational_run_instance_id:plan.operational_run_instance_id,...plan.scope,lineage_id:plan.lineage_id,revision_id:plan.revision_id,database_instance_digest:databaseInstanceDigest,artifact_digest:artifactDigest,event_count:events.length,events,event_manifest_digest:`sha256:${sha(events)}`,hard_acceptance_source_eligible:!synthetic};}
+module.exports={buildOperationalEventManifestV1};
