@@ -1,190 +1,94 @@
 #!/usr/bin/env node
 'use strict';
-
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
+const cp = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
-
-const ROOT = process.env.MCFT_REPO_ROOT
-  ? path.resolve(process.env.MCFT_REPO_ROOT)
-  : path.resolve(__dirname, '../..');
-const CAP08 = 'docs/digital_twin/mcft/cap_08/';
-const PATHS = Object.freeze({
-  ledger: `${CAP08}GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json`,
-  mapping: `${CAP08}GEOX-MCFT-CAP-08-S6-HA-WITNESS-MAPPING-V1.json`,
-  lifecycle: `${CAP08}GEOX-MCFT-CAP-08-S6-WITNESS-LIFECYCLE-V1.json`,
-});
-const OUTPUT_JSON = path.join(ROOT, 'acceptance-output/MCFT_CAP_08_S6_HA_MAPPING_REVIEW.json');
-const OUTPUT_MD = path.join(ROOT, 'acceptance-output/MCFT_CAP_08_S6_HA_MAPPING_REVIEW.md');
-
-function readJson(repoPath) {
-  return JSON.parse(fs.readFileSync(path.join(ROOT, repoPath), 'utf8'));
+const ROOT = path.resolve(__dirname, '../..');
+const CAP = 'docs/digital_twin/mcft/cap_08';
+const PATHS = {
+  ledger: `${CAP}/GEOX-MCFT-CAP-08-HARD-ACCEPTANCE-LEDGER-V1.json`,
+  mapping: `${CAP}/GEOX-MCFT-CAP-08-S6-HA-WITNESS-MAPPING-V1.json`,
+  lifecycle: `${CAP}/GEOX-MCFT-CAP-08-S6-WITNESS-LIFECYCLE-V1.json`,
+  closureMember: `${CAP}/GEOX-MCFT-CAP-08-S6-CLOSURE-MEMBER-MANIFEST-CONTRACT-V1.json`,
+  closureContract: `${CAP}/GEOX-MCFT-CAP-08-S6-CLOSURE-CONTRACT-WITNESS-MAPPING-V1.json`,
+};
+function readJson(repoPath) { return JSON.parse(fs.readFileSync(path.join(ROOT, repoPath), 'utf8')); }
+function canonical(value) {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (value && typeof value === 'object') return `{${Object.keys(value).sort().map((k) => `${JSON.stringify(k)}:${canonical(value[k])}`).join(',')}}`;
+  return JSON.stringify(value);
 }
-
-function loadProofContracts(mapping) {
-  const catalog = {};
-  for (const shardRef of mapping.proof_contract_shards) {
-    const shard = readJson(shardRef.path);
-    assert.equal(shard.mapping_id, mapping.mapping_id);
-    assert.equal(shard.contract_count, shard.contract_ids.length);
-    for (const contractId of shard.contract_ids) {
-      assert.equal(Object.hasOwn(catalog, contractId), false, `DUPLICATE_PROOF_CONTRACT:${contractId}`);
-      assert.ok(shard.proof_contracts[contractId], `MISSING_SHARD_CONTRACT:${contractId}`);
-      catalog[contractId] = shard.proof_contracts[contractId];
-    }
-  }
-  return catalog;
-}
-
-function resolveProof(mapping, proofContracts, contractRef) {
-  const source = proofContracts[contractRef];
-  assert.ok(source, `UNKNOWN_PROOF_CONTRACT:${contractRef}`);
-  const selectorProfile = mapping.selector_profiles[source.selector_profile];
-  assert.ok(selectorProfile, `UNKNOWN_SELECTOR_PROFILE:${source.selector_profile}`);
-  const artifactContract = mapping.artifact_contract_profiles[source.artifact_contract_profile];
-  assert.ok(artifactContract, `UNKNOWN_ARTIFACT_PROFILE:${source.artifact_contract_profile}`);
-  return {
-    proof_contract_ref: contractRef,
-    phase: source.phase,
-    instance_policy: source.instance_policy,
-    producer_id: source.producer_id,
-    artifact_kind: source.artifact_kind,
-    counting_domain: source.counting_domain,
-    object_set_id: source.object_set_id,
-    selector_id: source.selector_id,
-    selector_profile: source.selector_profile,
-    selector_contract: selectorProfile,
-    selector_parameters: source.selector_parameters,
-    expected_contract: source.expected_contract,
-    artifact_contract_profile: source.artifact_contract_profile,
-    artifact_contract: artifactContract,
-  };
-}
-
-function materialize() {
+function semanticDigest(value) { const copy = structuredClone(value); delete copy.semantic_digest; return `sha256:${crypto.createHash('sha256').update(canonical(copy)).digest('hex')}`; }
+function git(...args) { return cp.execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim(); }
+function gitBlob(repoPath, ref = 'HEAD') { return git('rev-parse', `${ref}:${repoPath}`); }
+function assertDigest(value, label) { assert.equal(value.semantic_digest, semanticDigest(value), `${label}_SEMANTIC_DIGEST`); }
+function loadCatalog({ strictAuthorityBlobs = process.env.MCFT_CAP08_S6_SKIP_EXACT_AUTHORITY_BLOB_CHECK !== '1' } = {}) {
   const ledger = readJson(PATHS.ledger);
   const mapping = readJson(PATHS.mapping);
   const lifecycle = readJson(PATHS.lifecycle);
+  const closureMember = readJson(PATHS.closureMember);
+  const closureContract = readJson(PATHS.closureContract);
+  for (const [label, value] of Object.entries({ mapping, lifecycle, closureMember, closureContract })) assertDigest(value, label.toUpperCase());
+  assert.equal(mapping.authority_refs.frozen_ledger.blob_sha, 'd6e0000e1d0e5c88d927b94aaadc4bada07f6bd1');
+  if (strictAuthorityBlobs) {
+    for (const [key, ref] of Object.entries(mapping.authority_refs)) assert.equal(gitBlob(ref.path), ref.blob_sha, `AUTHORITY_BLOB_DRIFT:${key}`);
+  }
+  const rules = [];
+  for (const shardRef of mapping.rule_shards) {
+    const shard = readJson(shardRef.path); assertDigest(shard, `RULE_SHARD:${shardRef.path}`);
+    if (strictAuthorityBlobs) assert.equal(gitBlob(shardRef.path), shardRef.blob_sha, `RULE_SHARD_BLOB:${shardRef.path}`);
+    assert.equal(shard.semantic_digest, shardRef.semantic_digest); rules.push(...shard.rules);
+  }
+  const proofContracts = {};
+  for (const shardRef of mapping.proof_contract_shards) {
+    const shard = readJson(shardRef.path); assertDigest(shard, `PROOF_SHARD:${shardRef.path}`);
+    if (strictAuthorityBlobs) assert.equal(gitBlob(shardRef.path), shardRef.blob_sha, `PROOF_SHARD_BLOB:${shardRef.path}`);
+    assert.equal(shard.semantic_digest, shardRef.semantic_digest);
+    for (const [id, contract] of Object.entries(shard.proof_contracts)) { assert.equal(proofContracts[id], undefined, `DUPLICATE_PROOF_CONTRACT:${id}`); proofContracts[id] = contract; }
+  }
+  return { ledger, mapping, lifecycle, closureMember, closureContract, rules, proofContracts };
+}
 
-  assert.equal(ledger.item_count, 24);
-  assert.equal(ledger.items.length, 24);
-  assert.equal(mapping.rule_count, 24);
-  assert.equal(mapping.rules.length, 24);
-  assert.equal(mapping.proof_contract_count, 25);
-  const proofContracts = loadProofContracts(mapping);
-  assert.equal(Object.keys(proofContracts).length, 25);
-  assert.equal(mapping.identity_join.join_key, 'ledger_index');
-  assert.equal(mapping.proof_contract_location, 'REFERENCED_SHARDED_PROOF_CONTRACT_CATALOG');
-
-  const items = mapping.rules.map((rule, ledgerIndex) => {
-    assert.equal(rule.ledger_index, ledgerIndex, `LEDGER_INDEX_MISMATCH:${ledgerIndex}`);
-    const ledgerItem = ledger.items[ledgerIndex];
-    assert.ok(ledgerItem && typeof ledgerItem === 'object');
-    const finalizationRule = mapping.finalization_profiles[rule.finalization_profile];
-    assert.ok(finalizationRule, `UNKNOWN_FINALIZATION_PROFILE:${rule.finalization_profile}`);
-    return {
-      ledger_index: ledgerIndex,
-      item_id: ledgerItem.item_id,
-      requirement: ledgerItem.requirement,
-      authority_bindings: [
-        mapping.identity_authority_binding,
-        ...rule.semantic_authority_bindings,
-      ],
-      proof_requirements: rule.proof_contract_refs.map((ref) => resolveProof(mapping, proofContracts, ref)),
-      finalization_profile: rule.finalization_profile,
-      finalization_rule: finalizationRule,
-    };
+function phaseInstances(rule, proofContracts, mapping) {
+  const profile = mapping.finalization_profiles[rule.finalization_profile];
+  return rule.proof_contract_refs.flatMap((id) => {
+    const pc = proofContracts[id];
+    if (pc.phase === 'PER_RUN') return ['RUN_A', 'RUN_B'].map((instance) => ({ proof_contract_id: id, phase: pc.phase, phase_instance: instance }));
+    if (pc.phase === 'CROSS_RUN') return [{ proof_contract_id: id, phase: pc.phase, phase_instance: 'RUN_A_RUN_B_PAIR' }];
+    if (pc.phase === 'MERGE_SHA') return [{ proof_contract_id: id, phase: pc.phase, phase_instance: 'EXACT_MERGE_SHA' }];
+    if (pc.phase === 'RETENTION_ATTESTATION') return [{ proof_contract_id: id, phase: pc.phase, phase_instance: 'EXACT_LOCKED_R2_ARTIFACT_VERSION' }];
+    throw new Error(`UNKNOWN_HA_PROOF_PHASE:${pc.phase}`);
   });
-
+}
+function materialize(options = {}) {
+  const c = loadCatalog(options);
+  const byIndex = new Map(c.rules.map((r) => [r.ledger_index, r]));
+  const items = c.ledger.items.map((identity, ledgerIndex) => {
+    const rule = byIndex.get(ledgerIndex); assert.ok(rule, `MISSING_RULE:${ledgerIndex}`);
+    const proof_contracts = rule.proof_contract_refs.map((id) => ({ proof_contract_id: id, ...c.proofContracts[id] }));
+    return { ledger_index: ledgerIndex, item_id: identity.item_id, requirement: identity.requirement, ledger_status: identity.status, semantic_authority_bindings: rule.semantic_authority_bindings, finalization_profile: rule.finalization_profile, proof_contracts, expected_phase_witness_instances: phaseInstances(rule, c.proofContracts, c.mapping) };
+  });
+  const expectedCount = items.reduce((n, item) => n + item.expected_phase_witness_instances.length, 0);
   return {
-    schema_version: 'geox_mcft_cap08_s6_ha_mapping_review_v3',
-    record_status: mapping.record_status,
-    source_ledger: {
-      path: PATHS.ledger,
-      blob_sha: mapping.authority_refs.frozen_ledger.blob_sha,
-      item_count: ledger.item_count,
-    },
-    source_mapping: {
-      path: PATHS.mapping,
-      semantic_digest: mapping.semantic_digest,
-      identity_join: mapping.identity_join,
-      authority_precedence: mapping.authority_precedence,
-      proof_contract_count: mapping.proof_contract_count,
-    },
-    lifecycle: {
-      path: PATHS.lifecycle,
-      semantic_digest: lifecycle.semantic_digest,
-      phase_multiplicity: lifecycle.phase_multiplicity,
-    },
-    item_count: items.length,
-    proof_requirement_count: items.reduce((sum, item) => sum + item.proof_requirements.length, 0),
-    expected_phase_witness_instance_count: lifecycle.final_settlement.expected_ha_phase_witness_instance_count,
-    items,
-    nonclaims: mapping.nonclaims,
+    schema_version: 'geox_mcft_cap08_s6_ha_mapping_review_v4', record_status: 'PROPOSED_FOR_HUMAN_REVIEW',
+    source_ledger: { path: PATHS.ledger, blob_sha: c.mapping.authority_refs.frozen_ledger.blob_sha, item_count: c.ledger.item_count },
+    source_mapping: { path: PATHS.mapping, blob_sha: options.strictAuthorityBlobs === false ? null : gitBlob(PATHS.mapping), rule_shard_count: c.mapping.rule_shards.length, proof_contract_shard_count: c.mapping.proof_contract_shards.length },
+    lifecycle: { path: PATHS.lifecycle, blob_sha: options.strictAuthorityBlobs === false ? null : gitBlob(PATHS.lifecycle), expected_phase_witness_instance_count: c.lifecycle.expected_phase_witness_instance_count },
+    item_count: items.length, proof_requirement_count: Object.keys(c.proofContracts).length, expected_phase_witness_instance_count: expectedCount, items,
+    nonclaims: c.mapping.nonclaims,
   };
 }
-
-function markdown(review) {
-  const lines = [
-    '# MCFT-CAP-08 S6 Hard Acceptance Mapping Review',
-    '',
-    `Record status: \`${review.record_status}\``,
-    '',
-    `Ledger items: \`${review.item_count}\``,
-    '',
-    `Proof requirements: \`${review.proof_requirement_count}\``,
-    '',
-    `Required phase witness instances: \`${review.expected_phase_witness_instance_count}\``,
-    '',
-    '| Item | Requirement | Phase / instance | Counting domain | Object set | Selector | Producer | Artifact |',
-    '|---|---|---|---|---|---|---|---|',
-  ];
-  for (const item of review.items) {
-    for (const proof of item.proof_requirements) {
-      lines.push(`| ${item.item_id} | ${item.requirement} | ${proof.phase}:${proof.instance_policy} | ${proof.counting_domain} | ${proof.object_set_id} | ${proof.selector_id} | ${proof.producer_id} | ${proof.artifact_kind} |`);
-    }
-  }
-  lines.push('', '## Authority and proof contracts', '');
-  for (const item of review.items) {
-    lines.push(`### ${item.item_id} — ${item.requirement}`, '');
-    lines.push('Authority bindings:', '', '```json', JSON.stringify(item.authority_bindings, null, 2), '```', '');
-    for (const proof of item.proof_requirements) {
-      lines.push(`#### ${proof.phase} — ${proof.producer_id}`, '');
-      lines.push('```json', JSON.stringify({
-        proof_contract_ref: proof.proof_contract_ref,
-        instance_policy: proof.instance_policy,
-        counting_domain: proof.counting_domain,
-        object_set_id: proof.object_set_id,
-        selector_id: proof.selector_id,
-        selector_profile: proof.selector_profile,
-        selector_contract: proof.selector_contract,
-        selector_parameters: proof.selector_parameters,
-        expected_contract: proof.expected_contract,
-        artifact_kind: proof.artifact_kind,
-        artifact_contract_profile: proof.artifact_contract_profile,
-        artifact_contract: proof.artifact_contract,
-      }, null, 2), '```', '');
-    }
-    lines.push('Finalization rule:', '', '```json', JSON.stringify(item.finalization_rule, null, 2), '```', '');
-  }
-  return `${lines.join('\n')}\n`;
+function toMarkdown(review) {
+  const rows = review.items.map((item) => `| ${item.ledger_index} | ${item.item_id} | ${item.requirement} | ${item.finalization_profile} | ${item.proof_contracts.map((p) => p.proof_contract_id).join(', ')} | ${item.expected_phase_witness_instances.length} |`);
+  return ['# MCFT-CAP-08 S6 Hard Acceptance Mapping Review', '', `Status: ${review.record_status}`, '', `Items: ${review.item_count}`, '', `Proof contracts: ${review.proof_requirement_count}`, '', `Expected phase witness instances: ${review.expected_phase_witness_instance_count}`, '', '| Index | Item | Requirement | Finalization | Proof contracts | Instances |', '|---:|---|---|---|---|---:|', ...rows, ''].join('\n');
 }
-
-function writeReview(review = materialize()) {
-  fs.mkdirSync(path.dirname(OUTPUT_JSON), { recursive: true });
-  fs.writeFileSync(OUTPUT_JSON, `${JSON.stringify(review, null, 2)}\n`);
-  fs.writeFileSync(OUTPUT_MD, markdown(review));
-  return { json: OUTPUT_JSON, markdown: OUTPUT_MD, review };
+function writeReview(review) {
+  const outDir = path.join(ROOT, 'acceptance-output'); fs.mkdirSync(outDir, { recursive: true });
+  fs.writeFileSync(path.join(outDir, 'MCFT_CAP_08_S6_HA_MAPPING_REVIEW.json'), `${JSON.stringify(review, null, 2)}\n`);
+  fs.writeFileSync(path.join(outDir, 'MCFT_CAP_08_S6_HA_MAPPING_REVIEW.md'), toMarkdown(review));
 }
+if (require.main === module) { const review = materialize(); writeReview(review); console.log(JSON.stringify({ status: 'PASS', item_count: review.item_count, proof_requirement_count: review.proof_requirement_count, expected_phase_witness_instance_count: review.expected_phase_witness_instance_count }, null, 2)); }
+module.exports = { ROOT, PATHS, readJson, canonical, semanticDigest, git, gitBlob, assertDigest, loadCatalog, materialize, toMarkdown, writeReview };
 
-if (require.main === module) {
-  const result = writeReview();
-  console.log(JSON.stringify({
-    status: 'PASS',
-    item_count: result.review.item_count,
-    proof_requirement_count: result.review.proof_requirement_count,
-    expected_phase_witness_instance_count: result.review.expected_phase_witness_instance_count,
-  }));
-}
-
-module.exports = { materialize, writeReview, loadProofContracts, resolveProof };
