@@ -26,15 +26,33 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Validate single-run database harness without database execution
+      - name: Classify harness candidate or successor reconciliation
+        id: classify
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          changed="$(git diff --name-only "$PR_BASE_SHA...HEAD")"
+          if grep -qx 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-MATERIALIZER-IDENTITY-RECONCILIATION-AUTHORITY-V1.json' <<<"$changed"; then
+            echo 'mode=MATERIALIZER_IDENTITY_RECONCILIATION' >> "$GITHUB_OUTPUT"
+          else
+            echo 'mode=FROZEN_HARNESS_CANDIDATE' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate frozen harness candidate
+        if: steps.classify.outputs.mode == 'FROZEN_HARNESS_CANDIDATE'
         env:
           MCFT_BASE_SHA: 2dfb9054f5cc660264a94ae477f829c788ca57f9
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_SINGLE_RUN_DATABASE_EXECUTION_HARNESS.cjs
+      - name: Replay harness under materializer-bound identity
+        if: steps.classify.outputs.mode == 'MATERIALIZER_IDENTITY_RECONCILIATION'
+        env:
+          MCFT_BASE_SHA: 1993130d859b68807f733ef9ac69ebb9dd8de08b
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_MATERIALIZER_IDENTITY_RECONCILIATION.cjs
       - name: Upload harness contract evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap-08-s6-single-run-database-execution-harness-${{ github.event.pull_request.head.sha }}
-          path: acceptance-output/MCFT_CAP_08_S6_SINGLE_RUN_DATABASE_EXECUTION_HARNESS_RESULT.json
+          path: acceptance-output/*.json
           if-no-files-found: error
           retention-days: 90

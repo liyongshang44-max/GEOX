@@ -1,0 +1,47 @@
+name: mcft-cap-08-s6-materializer-identity-reconciliation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-materializer-identity-reconciliation.yml'
+      - '.github/workflows/mcft-cap-08-s6-single-run-database-execution-harness.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-MATERIALIZER-IDENTITY-RECONCILIATION-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-MATERIALIZER-IDENTITY-RECONCILIATION-IMPLEMENTATION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-MATERIALIZER-IDENTITY-RECONCILIATION-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_MATERIALIZER_IDENTITY_RECONCILIATION.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/execution_spec_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/materializer_adapter_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/receipt_manifest_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/harness_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/synthetic_fixture_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/synthetic_data_acceptance_v1.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  materializer-identity-reconciliation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate materializer-bound product identity
+        env:
+          MCFT_BASE_SHA: 1993130d859b68807f733ef9ac69ebb9dd8de08b
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_MATERIALIZER_IDENTITY_RECONCILIATION.cjs
+      - name: Upload reconciliation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-materializer-identity-reconciliation-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_MATERIALIZER_IDENTITY_RECONCILIATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
