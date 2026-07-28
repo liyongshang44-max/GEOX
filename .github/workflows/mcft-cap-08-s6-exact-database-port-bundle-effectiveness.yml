@@ -1,0 +1,40 @@
+name: mcft-cap-08-s6-exact-database-port-bundle-effectiveness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-exact-database-port-bundle-effectiveness.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-EXACT-DATABASE-PORT-BUNDLE-EFFECTIVENESS-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-SINGLE-RUN-DATABASE-QUALIFICATION-AUTHORITY-ISSUANCE-GATE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-EXACT-DATABASE-PORT-BUNDLE-EFFECTIVENESS-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_DATABASE_PORT_BUNDLE_EFFECTIVENESS.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-port-bundle-effectiveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate port-bundle effectiveness and qualification-authority issuance gate
+        env:
+          MCFT_BASE_SHA: c83fe6d83751861e3f0d83fc27f479ef08b28273
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_DATABASE_PORT_BUNDLE_EFFECTIVENESS.cjs
+      - name: Upload port-bundle effectiveness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-exact-port-bundle-effectiveness-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_EXACT_DATABASE_PORT_BUNDLE_EFFECTIVENESS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
