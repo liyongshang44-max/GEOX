@@ -1,0 +1,40 @@
+name: mcft-cap-08-s6-exact-database-port-bundle-implementation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-exact-database-port-bundle-implementation.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-EXACT-DATABASE-PORT-BUNDLE-IMPLEMENTATION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-EXACT-DATABASE-PORT-BUNDLE-IMPLEMENTATION-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_DATABASE_PORT_BUNDLE_IMPLEMENTATION.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/**'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-port-bundle-static-acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate exact database port bundle without execution
+        env:
+          MCFT_BASE_SHA: 24e5f2c60d63a2aa69d73111b7899cb65a5847a3
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_DATABASE_PORT_BUNDLE_IMPLEMENTATION.cjs
+      - name: Upload static port-bundle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-exact-port-bundle-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_EXACT_DATABASE_PORT_BUNDLE_IMPLEMENTATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
