@@ -11,6 +11,7 @@ on:
       - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/closure_member_manifest_v1.cjs'
       - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/contract_loader_v1.cjs'
       - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/identity_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/object_set_v1.cjs'
       - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/operational_event_manifest_v1.cjs'
       - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/orchestrator_v1.cjs'
       - 'scripts/runtime_acceptance/mcft_cap08_s6_final_formal_run/plan_v1.cjs'
