@@ -1,0 +1,62 @@
+name: mcft-cap-08-s6-witness-producers
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-witness-producers.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-WITNESS-PRODUCER-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-WITNESS-PRODUCER-IMPLEMENTATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_WITNESS_PRODUCERS.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/catalog_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/core_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_cross_run_digest_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_merge_tree_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_calibration_partition_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_candidate_nonconsumption_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_contiguous_sequence_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_decision_action_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_evidence_quality_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_forecast_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_late_append_forward_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_phase_order_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_read_model_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_recovery_fault_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_residual_phase_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_residual_set_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_scenario_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_shadow_nonconsumption_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_state_chain_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_per_run_state_transition_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/mcft_cap08_s6_r2_retention_witness_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/registry_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s6_witness/synthetic_fixture_v1.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  witness-producer-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate separated witness producers
+        env:
+          MCFT_BASE_SHA: 6def5a56d7af0fc769b576c4cd8c2c965862228f
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_WITNESS_PRODUCERS.cjs
+      - name: Upload witness producer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-witness-producers-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_WITNESS_PRODUCER_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

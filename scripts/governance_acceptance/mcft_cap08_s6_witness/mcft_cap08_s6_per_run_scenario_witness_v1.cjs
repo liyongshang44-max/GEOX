@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+'use strict';
+const {createProducerV1}=require('./core_v1.cjs');
+module.exports=createProducerV1({producerId:"mcft_cap08_s6_per_run_scenario_witness_v1",implementationStatus:"IMPLEMENTED",select(contract,source){const sets=source.scenario_sets;const counts=[...new Set(sets.map((x)=>x.options.length))];const all=sets.flatMap((x)=>x.options);const required=contract.selector_parameters.scenario_options;return{scenario_set_count:sets.length,scenario_option_count_per_set:counts.length===1?counts[0]:null,total_scenario_option_count:all.length,trajectory_point_count:all.reduce((n,x)=>n+x.trajectory_point_count,0),missing_option_count:sets.reduce((n,x)=>n+required.filter((r)=>!x.options.some((o)=>o.kind===r)).length,0),duplicate_option_count:sets.reduce((n,x)=>n+x.options.length-new Set(x.options.map((o)=>o.kind)).size,0)};}});

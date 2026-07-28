@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+'use strict';
+const {createProducerV1}=require('./core_v1.cjs');
+module.exports=createProducerV1({producerId:"mcft_cap08_s6_per_run_recovery_fault_witness_v1",implementationStatus:"IMPLEMENTED",select(contract,source){const id=contract.selector_id;const r=source.recovery;if(id==='t11_precommit_fault_rollback_v1')return{fault_tick:r.t11.fault_tick,fault_stage:r.t11.fault_stage,canonical_write_delta:r.t11.canonical_write_delta,projection_write_delta:r.t11.projection_write_delta,pointer_write_delta:r.t11.pointer_write_delta,retry_success_count:r.t11.retry_success_count};if(id==='t12_postcommit_response_loss_recovery_v1')return{fault_tick:r.t12.fault_tick,commit_completed:r.t12.commit_completed,response_lost:r.t12.response_lost,retry_duplicate_write_count:r.t12.retry_duplicate_write_count,canonical_readback_exact:r.t12.canonical_readback_exact};throw new Error(`UNSUPPORTED_SELECTOR:${id}`);}});
