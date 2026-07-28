@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+'use strict';
+const {createProducerV1}=require('./core_v1.cjs');
+module.exports=createProducerV1({producerId:"mcft_cap08_s6_per_run_residual_set_witness_v1",implementationStatus:"IMPLEMENTED",select(contract,source){const rows=[...source.residuals].sort((a,b)=>a.forecast_target_time.localeCompare(b.forecast_target_time));const ids=rows.map((x)=>x.residual_id);const expected=contract.selector_parameters.residual_ids;return{residual_count:rows.length,residual_ids:ids,missing_residual_count:expected.filter((x)=>!ids.includes(x)).length,duplicate_residual_count:ids.length-new Set(ids).size,foreign_residual_count:ids.filter((x)=>!expected.includes(x)).length,ordered_by_forecast_target_time:source.residuals.every((x,i,a)=>i===0||a[i-1].forecast_target_time<=x.forecast_target_time),r01_ordered_position:ids.indexOf('R-01')+1,r01_commit_phase:rows.find((x)=>x.residual_id==='R-01')?.commit_phase??null};}});

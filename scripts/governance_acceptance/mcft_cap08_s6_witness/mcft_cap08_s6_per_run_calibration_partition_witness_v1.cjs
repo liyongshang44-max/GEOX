@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+'use strict';
+const {createProducerV1}=require('./core_v1.cjs');
+module.exports=createProducerV1({producerId:"mcft_cap08_s6_per_run_calibration_partition_witness_v1",implementationStatus:"IMPLEMENTED",select(contract,source){const rows=source.residuals;const cal=rows.filter((x)=>x.partition==='CALIBRATION').map((x)=>x.residual_id);const hold=rows.filter((x)=>x.partition==='HOLDOUT').map((x)=>x.residual_id);return{calibration_count:cal.length,holdout_count:hold.length,calibration_ids:cal,holdout_ids:hold,overlap_count:cal.filter((x)=>hold.includes(x)).length,unassigned_residual_count:rows.filter((x)=>!['CALIBRATION','HOLDOUT'].includes(x.partition)).length,objective_case_count:rows.filter((x)=>x.objective_eligible).length,diagnostic_only_case_count:rows.filter((x)=>x.diagnostic_only).length,diagnostic_only_residual_id:rows.find((x)=>x.diagnostic_only)?.residual_id??null};}});
