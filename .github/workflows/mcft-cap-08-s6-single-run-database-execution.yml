@@ -1,0 +1,140 @@
+name: mcft-cap-08-s6-single-run-database-execution
+
+on:
+  workflow_dispatch:
+    inputs:
+      exact_subject_sha:
+        description: Exact 40-hex commit to execute
+        required: true
+        type: string
+      run_label:
+        description: Exactly one formal run label
+        required: true
+        type: choice
+        options: [RUN_A, RUN_B]
+      operational_run_instance_id:
+        description: Unique operational run instance
+        required: true
+        type: string
+      execution_authority_path:
+        description: Main-branch exact execution authority JSON path
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  PNPM_VERSION: 9.15.4
+  NODE_VERSION: 20.11.1
+
+jobs:
+  authorize-before-database:
+    runs-on: ubuntu-latest
+    outputs:
+      authorized: ${{ steps.gate.outputs.authorized }}
+      exact_subject_sha: ${{ steps.gate.outputs.exact_subject_sha }}
+      run_label: ${{ steps.gate.outputs.run_label }}
+      operational_run_instance_id: ${{ steps.gate.outputs.operational_run_instance_id }}
+      port_bundle_path: ${{ steps.gate.outputs.port_bundle_path }}
+    steps:
+      - name: Checkout authority-bearing main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Gate exact execution authority before PostgreSQL scheduling
+        id: gate
+        env:
+          MCFT_CAP08_EXECUTION_AUTHORITY_PATH: ${{ inputs.execution_authority_path }}
+          MCFT_CAP08_EXACT_SUBJECT_SHA: ${{ inputs.exact_subject_sha }}
+          MCFT_CAP08_RUN_LABEL: ${{ inputs.run_label }}
+          MCFT_CAP08_OPERATIONAL_RUN_INSTANCE_ID: ${{ inputs.operational_run_instance_id }}
+        run: node scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/execution_authority_gate_v1.cjs
+      - name: Upload normalized execution authority
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-execution-authority-${{ inputs.exact_subject_sha }}-${{ inputs.run_label }}
+          path: acceptance-output/MCFT_CAP_08_S6_NORMALIZED_EXECUTION_AUTHORITY.json
+          if-no-files-found: error
+          retention-days: 90
+
+  execute-one-fresh-database:
+    needs: authorize-before-database
+    if: needs.authorize-before-database.outputs.authorized == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - name: Checkout exact execution subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.authorize-before-database.outputs.exact_subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Download normalized authority
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-execution-authority-${{ inputs.exact_subject_sha }}-${{ inputs.run_label }}
+          path: acceptance-output/execution-authority
+      - name: Prepare disposable database identity
+        shell: bash
+        run: |
+          label="$(printf '%s' '${{ inputs.run_label }}' | tr '[:upper:]' '[:lower:]')"
+          echo "MCFT_CAP08_DB_NAME=geox_mcft_cap08_s6_${label}_${{ github.run_id }}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_RUNNER_PASSWORD=cap08-s6-runner-${{ github.run_id }}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_MIGRATOR_PASSWORD=cap08-s6-migrator-${{ github.run_id }}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_LEGACY_RUNTIME_PASSWORD=cap08-s6-legacy-${{ github.run_id }}" >> "$GITHUB_ENV"
+      - name: Bootstrap one fresh disposable PostgreSQL database
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CANDIDATE_SHA: ${{ inputs.exact_subject_sha }}
+        run: |
+          export MCFT_CAP08_TARGET_DATABASE_NAME="$MCFT_CAP08_DB_NAME"
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+      - name: Execute merged single-run harness through exact port bundle
+        env:
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: "1"
+          MCFT_CAP08_EXACT_SUBJECT_SHA: ${{ inputs.exact_subject_sha }}
+          MCFT_CAP08_RUN_LABEL: ${{ inputs.run_label }}
+          MCFT_CAP08_OPERATIONAL_RUN_INSTANCE_ID: ${{ inputs.operational_run_instance_id }}
+          MCFT_CAP08_NORMALIZED_EXECUTION_AUTHORITY: acceptance-output/execution-authority/MCFT_CAP_08_S6_NORMALIZED_EXECUTION_AUTHORITY.json
+        run: |
+          export DATABASE_URL="postgres://geox_mcft_cap08_runner_v1:${MCFT_CAP08_RUNNER_PASSWORD}@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          export MCFT_CAP08_ADMIN_DATABASE_URL="postgres://postgres:postgres@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          pnpm -w exec tsx scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/workflow_entrypoint_v1.ts
+      - name: Upload one-run artifact only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-${{ inputs.run_label }}-${{ inputs.exact_subject_sha }}
+          path: acceptance-output/
+          if-no-files-found: error
+          retention-days: 365
+      - name: Drop disposable database
+        if: always()
+        env: { PGPASSWORD: postgres }
+        run: |
+          db="$MCFT_CAP08_DB_NAME"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${db}' AND pid<>pg_backend_pid();"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"${db}\";"

@@ -1,0 +1,40 @@
+name: mcft-cap-08-s6-single-run-database-execution-workflow-implementation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-single-run-database-execution.yml'
+      - '.github/workflows/mcft-cap-08-s6-single-run-database-execution-workflow-implementation.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-SINGLE-RUN-DATABASE-EXECUTION-WORKFLOW-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-SINGLE-RUN-DATABASE-EXECUTION-WORKFLOW-IMPLEMENTATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_SINGLE_RUN_DATABASE_EXECUTION_WORKFLOW_IMPLEMENTATION.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/execution_authority_gate_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/workflow_entrypoint_v1.ts'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/workflow_port_bundle_contract_v1.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  static-workflow-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Validate workflow implementation without database execution
+        env:
+          MCFT_BASE_SHA: 3d398859c1fb7957aa84c11c04e8be5a7b193494
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_SINGLE_RUN_DATABASE_EXECUTION_WORKFLOW_IMPLEMENTATION.cjs
+      - name: Upload static implementation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-single-run-workflow-implementation-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_SINGLE_RUN_DATABASE_EXECUTION_WORKFLOW_IMPLEMENTATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
