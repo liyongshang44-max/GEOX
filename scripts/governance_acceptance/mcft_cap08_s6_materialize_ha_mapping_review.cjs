@@ -91,4 +91,3 @@ function writeReview(review) {
 }
 if (require.main === module) { const review = materialize(); writeReview(review); console.log(JSON.stringify({ status: 'PASS', item_count: review.item_count, proof_requirement_count: review.proof_requirement_count, expected_phase_witness_instance_count: review.expected_phase_witness_instance_count }, null, 2)); }
 module.exports = { ROOT, PATHS, readJson, canonical, semanticDigest, git, gitBlob, assertDigest, loadCatalog, materialize, toMarkdown, writeReview };
-
