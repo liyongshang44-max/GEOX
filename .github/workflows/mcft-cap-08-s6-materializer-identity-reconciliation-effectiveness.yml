@@ -1,0 +1,40 @@
+name: mcft-cap-08-s6-materializer-identity-reconciliation-effectiveness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-materializer-identity-reconciliation-effectiveness.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-MATERIALIZER-IDENTITY-RECONCILIATION-EFFECTIVENESS-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-EXACT-DATABASE-PORT-BUNDLE-POST-MATERIALIZER-IDENTITY-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-MATERIALIZER-IDENTITY-RECONCILIATION-EFFECTIVENESS-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_MATERIALIZER_IDENTITY_RECONCILIATION_EFFECTIVENESS.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  materializer-identity-effectiveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate materializer identity effectiveness and port-bundle continuation authority
+        env:
+          MCFT_BASE_SHA: a0987c457a28ad8088ac39bdb5b4a958fecb8a10
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_MATERIALIZER_IDENTITY_RECONCILIATION_EFFECTIVENESS.cjs
+      - name: Upload materializer identity effectiveness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-materializer-identity-effectiveness-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_MATERIALIZER_IDENTITY_RECONCILIATION_EFFECTIVENESS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
