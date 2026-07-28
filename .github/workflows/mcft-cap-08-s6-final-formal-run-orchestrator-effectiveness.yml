@@ -1,0 +1,40 @@
+name: mcft-cap-08-s6-final-formal-run-orchestrator-effectiveness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-final-formal-run-orchestrator-effectiveness.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-FORMAL-RUN-ORCHESTRATOR-EFFECTIVENESS-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-SINGLE-RUN-DATABASE-EXECUTION-IMPLEMENTATION-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-FORMAL-RUN-ORCHESTRATOR-EFFECTIVENESS-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_FORMAL_RUN_ORCHESTRATOR_EFFECTIVENESS.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  orchestrator-effectiveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate orchestrator effectiveness and execution-harness authority
+        env:
+          MCFT_BASE_SHA: cec73dafffd59a726e082f353e0fa820cbe36889
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_FORMAL_RUN_ORCHESTRATOR_EFFECTIVENESS.cjs
+      - name: Upload effectiveness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-final-formal-run-orchestrator-effectiveness-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_FINAL_FORMAL_RUN_ORCHESTRATOR_EFFECTIVENESS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
