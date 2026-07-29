@@ -1,0 +1,38 @@
+#!/usr/bin/env node
+'use strict';
+const A=require('node:assert/strict'),C=require('node:crypto'),P=require('node:child_process'),F=require('node:fs'),O=require('node:os'),X=require('node:path');
+const R=X.resolve(__dirname,'../..'),D='docs/digital_twin/mcft/cap_08';
+const AP=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-ENTRYPOINT-CORRECTION-EFFECTIVENESS-AUTHORITY-V1.json`;
+const BP=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-ENTRYPOINT-CORRECTION-EFFECTIVENESS-BOUNDARY-V1.json`;
+const GP=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-REPLACEMENT-AUTHORITY-ISSUANCE-GATE-V1.json`;
+const W='.github/workflows/mcft-cap-08-s6-run-a-qualification-entrypoint-correction-effectiveness.yml';
+const ORIGINAL='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_ENTRYPOINT_CORRECTION.cjs';
+const Q=X.join(R,'acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_ENTRYPOINT_CORRECTION_EFFECTIVENESS_RESULT.json');
+const read=p=>JSON.parse(F.readFileSync(X.join(R,p),'utf8')),text=p=>F.readFileSync(X.join(R,p),'utf8'),git=(...a)=>P.execFileSync('git',a,{cwd:R,encoding:'utf8'}).trim();
+const canon=v=>Array.isArray(v)?`[${v.map(canon).join(',')}]`:v&&typeof v==='object'?`{${Object.keys(v).sort().map(k=>`${JSON.stringify(k)}:${canon(v[k])}`).join(',')}}`:JSON.stringify(v);
+function sd(v){const x=structuredClone(v);delete x.semantic_digest;return`sha256:${C.createHash('sha256').update(canon(x)).digest('hex')}`;}
+function out(v){F.mkdirSync(X.dirname(Q),{recursive:true});F.writeFileSync(Q,JSON.stringify(v,null,2)+'\n');}
+try{
+ const a=read(AP),b=read(BP),g=read(GP),base=String(process.env.MCFT_BASE_SHA||b.base_main_sha).trim();
+ A.equal(base,b.base_main_sha);A.equal(git('merge-base',base,'HEAD'),base);A.equal(git('diff','--check',`${base}...HEAD`),'');
+ const changed=git('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();A.deepEqual(changed,[...b.changed_files].sort());A.equal(changed.length,5);
+ for(const v of[a,b,g])A.equal(v.semantic_digest,sd(v),'SEMANTIC_DIGEST');
+ const s=a.implementation_subject;
+ A.equal(s.pull_request_number,2714);A.equal(s.candidate_head_sha,'db64149ca98ee5a11387171415545841784e2501');A.equal(s.candidate_tree_sha,'350d2628393530124d8e93e8d58b2275fa2ec707');A.equal(s.merge_commit_sha,'cc766a39788c6eeeb34e1774cc859355f0314437');A.equal(s.merge_tree_sha,'350d2628393530124d8e93e8d58b2275fa2ec707');A.equal(s.candidate_to_merge_file_delta,0);A.equal(s.candidate_to_merge_tree_equal,true);
+ A.equal(git('rev-parse','db64149ca98ee5a11387171415545841784e2501^{tree}'),'350d2628393530124d8e93e8d58b2275fa2ec707');A.equal(git('rev-parse','cc766a39788c6eeeb34e1774cc859355f0314437^{tree}'),'350d2628393530124d8e93e8d58b2275fa2ec707');A.equal(git('diff','--name-only','db64149ca98ee5a11387171415545841784e2501','cc766a39788c6eeeb34e1774cc859355f0314437'),'');
+ for(const [p,h] of Object.entries(a.implementation_object_set))A.equal(git('rev-parse',`cc766a39788c6eeeb34e1774cc859355f0314437:${p}`),h,`IMPLEMENTATION_BLOB_DRIFT:${p}`);
+ const e=a.exact_head_evidence;A.equal(e.focused_workflow_run_id,30444735574);A.equal(e.focused_artifact_id,8720930453);A.equal(e.focused_artifact_digest,'sha256:06948b62d462431c1864d786c582d376fe1e6ffbcc4d4fd8eb54e68a692417a0');A.equal(e.historical_successor_workflow_run_id,30444735604);A.equal(e.standard_ci_run_id,30444735627);A.equal(e.standard_ci_status,'PASS');A.equal(e.required_workflow_count,9);A.equal(e.required_workflow_success_count,9);
+ const v=a.verified_result;A.equal(v.failed_workflow_run_id,30437329843);A.equal(v.failed_execution_job_id,90528078435);A.equal(v.failed_operational_instance_id,'MCFT-CAP-08-S6-RUN-A-QUAL-20260729-001');A.equal(v.failed_database_name,'geox_mcft_cap08_s6_run_a_qual_001');A.equal(v.database_drop_completed,true);A.equal(v.qualification_harness_entered,false);A.equal(v.qualification_result_generated,false);A.equal(v.entrypoint_cjs_typecheck_pass,true);A.equal(v.historical_successor_classifier_pass,true);A.equal(v.corrected_entrypoint_blob_sha,'fd0592ece178962462790e9fff22edc167419053');
+ const ef=a.effect;A.equal(ef.entrypoint_correction_effective,true);A.equal(ef.failed_operational_instance_reusable,false);A.equal(ef.failed_database_identity_reusable,false);A.equal(ef.replacement_authority_may_be_issued_separately,true);A.equal(ef.replacement_authority_subject_must_equal_this_effectiveness_merge_sha,true);A.equal(ef.actual_execution_authority_present,false);A.equal(ef.database_execution_authorized,false);A.equal(ef.run_a_qualification_completed,false);
+ A.equal(g.record_status,'RUN_A_QUALIFICATION_REPLACEMENT_AUTHORITY_ISSUANCE_AUTHORIZED');const ic=g.issuance_constraints;A.equal(ic.authorized_run_label,'RUN_A');A.equal(ic.execution_subject_selector,'THIS_EFFECTIVENESS_MERGE_SHA');A.equal(ic.failed_operational_run_instance_id,'MCFT-CAP-08-S6-RUN-A-QUAL-20260729-001');A.equal(ic.failed_database_name,'geox_mcft_cap08_s6_run_a_qual_001');A.equal(ic.replacement_operational_instance_must_differ,true);A.equal(ic.replacement_database_name_must_differ,true);A.equal(ic.maximum_authority_lifetime_hours,24);A.equal(ic.port_bundle_blob_sha,'2f574588ba3010a94e64f965bb17fc97b3b33c72');A.equal(ic.qualification_workflow_blob_sha,'2478bf7fd75fbf89179f6bafbeda41499c89b55c');A.equal(ic.qualification_gate_blob_sha,'101ab0177db548f66493ee3aae75d3a9cf6b7080');A.equal(ic.corrected_entrypoint_blob_sha,'fd0592ece178962462790e9fff22edc167419053');
+ A.equal(g.execution_constraints.actual_execution_authority_present,false);A.equal(g.execution_constraints.workflow_dispatch_execution_authorized,false);A.equal(g.execution_constraints.database_execution_performed,false);
+ const workflow=text(W);A.match(workflow,/pull_request:/);for(const x of[/workflow_dispatch:/,/services:\s*\n\s*postgres:/,/DATABASE_URL/])A.doesNotMatch(workflow,x);
+ const tmp=F.mkdtempSync(X.join(O.tmpdir(),'mcft-cap08-entrypoint-effect-'));
+ try{
+  git('worktree','add','--detach',tmp,'cc766a39788c6eeeb34e1774cc859355f0314437');
+  F.symlinkSync(X.join(R,'node_modules'),X.join(tmp,'node_modules'),'dir');
+  P.execFileSync(process.execPath,[ORIGINAL],{cwd:tmp,env:{...process.env,MCFT_BASE_SHA:'6a892f4876a61a0522599d839a5dca971ab22b91',GITHUB_EVENT_PATH:''},stdio:'pipe'});
+ }finally{try{git('worktree','remove','--force',tmp)}catch{}}
+ const z={schema_version:'geox_mcft_cap08_s6_run_a_qualification_entrypoint_correction_effectiveness_result_v1',status:'PASS',subject_sha:git('rev-parse','HEAD'),base_sha:base,changed_file_count:5,implementation_subject_sha:'cc766a39788c6eeeb34e1774cc859355f0314437',implementation_candidate_sha:'db64149ca98ee5a11387171415545841784e2501',implementation_tree_sha:'350d2628393530124d8e93e8d58b2275fa2ec707',implementation_blob_count:7,focused_workflow_run_id:30444735574,focused_artifact_id:8720930453,standard_ci_run_id:30444735627,failed_operational_instance_id:'MCFT-CAP-08-S6-RUN-A-QUAL-20260729-001',failed_instance_reusable:false,database_drop_completed:true,entrypoint_correction_effective:true,corrected_entrypoint_blob_sha:'fd0592ece178962462790e9fff22edc167419053',replacement_authority_may_be_issued_separately:true,actual_execution_authority_present:false,database_execution_performed:false,run_a_qualification_completed:false,run_b_executed:false,s6_candidate_implemented:false,mcft_cap_08_complete:false,mcft_cap_09_authorized:false};
+ out(z);console.log(JSON.stringify(z,null,2));
+}catch(error){out({schema_version:'geox_mcft_cap08_s6_run_a_qualification_entrypoint_correction_effectiveness_result_v1',status:'FAIL',error:error instanceof Error?error.message:String(error)});console.error(error);process.exitCode=1;}
