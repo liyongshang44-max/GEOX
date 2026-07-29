@@ -1,0 +1,39 @@
+name: mcft-cap-08-s6-run-a-qualification-execution-authority
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-execution-authority.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-EXECUTION-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-EXECUTION-AUTHORITY-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_EXECUTION_AUTHORITY.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  run-a-qualification-execution-authority-static-acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate exact RUN_A qualification execution authority without execution
+        env:
+          MCFT_BASE_SHA: f0b22f858cf5b4f69f77e122492c827ccaee4687
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_EXECUTION_AUTHORITY.cjs
+      - name: Upload RUN_A qualification authority evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-a-qualification-authority-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_EXECUTION_AUTHORITY_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
