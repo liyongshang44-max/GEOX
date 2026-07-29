@@ -1,0 +1,47 @@
+name: mcft-cap-08-s6-run-a-qualification-entrypoint-correction-effectiveness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-entrypoint-correction-effectiveness.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-ENTRYPOINT-CORRECTION-EFFECTIVENESS-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-ENTRYPOINT-CORRECTION-EFFECTIVENESS-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-REPLACEMENT-AUTHORITY-ISSUANCE-GATE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_ENTRYPOINT_CORRECTION_EFFECTIVENESS.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  run-a-qualification-entrypoint-correction-effectiveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate merged entrypoint correction effectiveness
+        env:
+          MCFT_BASE_SHA: cc766a39788c6eeeb34e1774cc859355f0314437
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_ENTRYPOINT_CORRECTION_EFFECTIVENESS.cjs
+      - name: Upload entrypoint correction effectiveness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-a-qualification-entrypoint-correction-effectiveness-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_ENTRYPOINT_CORRECTION_EFFECTIVENESS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
