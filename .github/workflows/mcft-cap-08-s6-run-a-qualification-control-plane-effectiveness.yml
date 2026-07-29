@@ -1,0 +1,40 @@
+name: mcft-cap-08-s6-run-a-qualification-control-plane-effectiveness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-control-plane-effectiveness.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-CONTROL-PLANE-EFFECTIVENESS-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-AUTHORITY-ISSUANCE-GATE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-CONTROL-PLANE-EFFECTIVENESS-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_CONTROL_PLANE_EFFECTIVENESS.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  run-a-qualification-control-plane-effectiveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate RUN_A qualification control-plane effectiveness
+        env:
+          MCFT_BASE_SHA: 76413dbdea0be7e827190fa532ab5253a0d359ef
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_CONTROL_PLANE_EFFECTIVENESS.cjs
+      - name: Upload RUN_A qualification control-plane effectiveness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-a-qualification-control-plane-effectiveness-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_CONTROL_PLANE_EFFECTIVENESS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
