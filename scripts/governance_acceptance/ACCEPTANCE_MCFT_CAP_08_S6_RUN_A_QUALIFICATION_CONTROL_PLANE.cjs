@@ -5,12 +5,31 @@ const R=X.resolve(__dirname,'../..'),D='docs/digital_twin/mcft/cap_08';
 const B=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-CONTROL-PLANE-BOUNDARY-V1.json`;
 const I=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-CONTROL-PLANE-IMPLEMENTATION-V1.json`;
 const S=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-SUBJECT-RECONCILIATION-V1.json`;
+const CB=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-ENTRYPOINT-CORRECTION-BOUNDARY-V1.json`;
+const CI=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-ENTRYPOINT-CORRECTION-V1.json`;
+const FI=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-FAILED-ATTEMPT-001-V1.json`;
+const EP='scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/qualification_workflow_entrypoint_v1.ts';
 const Q=X.join(R,'acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_CONTROL_PLANE_RESULT.json');
 const read=p=>JSON.parse(F.readFileSync(X.join(R,p),'utf8')),text=p=>F.readFileSync(X.join(R,p),'utf8'),git=(...a)=>P.execFileSync('git',a,{cwd:R,encoding:'utf8'}).trim();
 const canon=v=>Array.isArray(v)?`[${v.map(canon).join(',')}]`:v&&typeof v==='object'?`{${Object.keys(v).sort().map(k=>`${JSON.stringify(k)}:${canon(v[k])}`).join(',')}}`:JSON.stringify(v);
 function sd(v){const x=structuredClone(v);delete x.semantic_digest;return`sha256:${C.createHash('sha256').update(canon(x)).digest('hex')}`;}
 function write(v){F.mkdirSync(X.dirname(Q),{recursive:true});F.writeFileSync(Q,JSON.stringify(v,null,2)+'\n');}
 try{
+ const eventPath=String(process.env.GITHUB_EVENT_PATH||'').trim();
+ if(eventPath&&F.existsSync(eventPath)&&F.existsSync(X.join(R,CI))&&F.existsSync(X.join(R,CB))&&F.existsSync(X.join(R,FI))){
+  const event=JSON.parse(F.readFileSync(eventPath,'utf8')),prBase=String(event?.pull_request?.base?.sha||'').trim(),ci=read(CI),cb=read(CB),fi=read(FI);
+  const successorChanged=prBase?git('diff','--name-only',`${prBase}...HEAD`).split(/\r?\n/).filter(Boolean).sort():[];
+  if(prBase===ci.base_main_sha&&successorChanged.length===cb.changed_file_count&&JSON.stringify(successorChanged)===JSON.stringify([...cb.changed_files].sort())){
+   A.equal(git('diff','--check',`${prBase}...HEAD`),'');for(const v of[ci,cb,fi])A.equal(v.semantic_digest,sd(v),'SEMANTIC_DIGEST');
+   A.equal(ci.record_status,'RUN_A_QUALIFICATION_ENTRYPOINT_CORRECTION_IMPLEMENTED_NOT_EFFECTIVE');A.equal(ci.correction.entrypoint_semantics_changed,false);A.equal(ci.correction.historical_control_plane_successor_classifier_added,true);
+   A.equal(fi.workflow_run.run_id,30437329843);A.equal(fi.execution_job.job_id,90528078435);A.equal(fi.step_outcomes.qualification_harness_entered,false);A.equal(fi.step_outcomes.disposable_database_drop_completed,true);A.equal(fi.classification.operational_instance_reusable,false);A.equal(fi.classification.rerun_jobs_authorized,false);
+   const entry=text(EP);A.match(entry,/async function main\(\):Promise<void>/);A.match(entry,/main\(\)\.catch/);A.doesNotMatch(entry,/import\.meta|pathToFileURL|fileURLToPath|createRequire|const imported=await import/);
+   A.equal(git('rev-parse',`${prBase}:${EP}`),ci.correction.superseded_blob_sha);A.notEqual(git('rev-parse',`HEAD:${EP}`),ci.correction.superseded_blob_sha);
+   for(const [p,h] of[[ci.preserved_frozen_objects.port_bundle_path,ci.preserved_frozen_objects.port_bundle_blob_sha],[ci.preserved_frozen_objects.qualification_workflow_path,ci.preserved_frozen_objects.qualification_workflow_blob_sha],[ci.preserved_frozen_objects.qualification_gate_path,ci.preserved_frozen_objects.qualification_gate_blob_sha]])A.equal(git('rev-parse',`HEAD:${p}`),h,`FROZEN_BLOB_DRIFT:${p}`);
+   const result={schema_version:'geox_mcft_cap08_s6_run_a_qualification_control_plane_result_v1',status:'PASS',applicability:'SUCCESSOR_ENTRYPOINT_CORRECTION',subject_sha:git('rev-parse','HEAD'),base_sha:prBase,changed_file_count:cb.changed_file_count,original_control_plane_replay_required:false,successor_correction_static_acceptance_pass:true,dedicated_cjs_typecheck_workflow_required:true,database_execution_performed:false,run_a_qualification_completed:false,run_b_executed:false,s6_candidate_implemented:false,mcft_cap_08_complete:false,mcft_cap_09_authorized:false};
+   write(result);console.log(JSON.stringify(result,null,2));process.exit(0);
+  }
+ }
  const b=read(B),i=read(I),s=read(S),base=String(process.env.MCFT_BASE_SHA||b.base_main_sha).trim();
  A.equal(base,b.base_main_sha);A.equal(git('merge-base',base,'HEAD'),base);A.equal(git('diff','--check',`${base}...HEAD`),'');
  const changed=git('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
@@ -20,7 +39,7 @@ try{
  const execution=text('.github/workflows/mcft-cap-08-s6-run-a-qualification-database-execution.yml');
  const focused=text('.github/workflows/mcft-cap-08-s6-run-a-qualification-control-plane.yml');
  const gate=text('scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/qualification_execution_authority_gate_v1.cjs');
- const entry=text('scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/qualification_workflow_entrypoint_v1.ts');
+ const entry=text(EP);
  const harness=text('scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification/qualification_harness_v1.cjs');
  A.match(execution,/workflow_dispatch:/);A.doesNotMatch(execution,/pull_request:/);A.match(execution,/authorize-before-database:/);A.match(execution,/execute-one-fresh-qualification-database:/);
  A.match(execution,/RUN_A/);A.doesNotMatch(execution,/RUN_B/);A.match(execution,/qualification_workflow_entrypoint_v1\.ts/);A.doesNotMatch(execution,/mcft_cap08_s6_single_run_workflow\/workflow_entrypoint_v1\.ts/);
