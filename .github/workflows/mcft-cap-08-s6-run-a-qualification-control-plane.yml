@@ -1,0 +1,44 @@
+name: mcft-cap-08-s6-run-a-qualification-control-plane
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-control-plane.yml'
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-database-execution.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-CONTROL-PLANE-IMPLEMENTATION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-CONTROL-PLANE-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-SUBJECT-RECONCILIATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_CONTROL_PLANE.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/qualification_execution_authority_gate_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/qualification_workflow_entrypoint_v1.ts'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification/qualification_harness_v1.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  run-a-qualification-control-plane-static-acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate RUN_A qualification control plane without database execution
+        env:
+          MCFT_BASE_SHA: cc1371773bd1ed507517ac6ff3d429271bfc9973
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_CONTROL_PLANE.cjs
+      - name: Upload RUN_A qualification control-plane evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-a-qualification-control-plane-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_CONTROL_PLANE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
