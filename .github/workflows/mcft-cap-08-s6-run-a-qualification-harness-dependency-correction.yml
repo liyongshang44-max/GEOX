@@ -1,0 +1,46 @@
+name: mcft-cap-08-s6-run-a-qualification-harness-dependency-correction
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-harness-dependency-correction.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-HARNESS-DEPENDENCY-CORRECTION-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-HARNESS-DEPENDENCY-CORRECTION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-HARNESS-DEPENDENCY-FAILED-ATTEMPT-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_CONTROL_PLANE.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_HARNESS_DEPENDENCY_CORRECTION.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification/qualification_cap07_readback_execution_adapter_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification/qualification_harness_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification/qualification_materializer_adapter_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification/qualification_port_contract_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification/qualification_recovery_execution_adapter_v1.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  run-a-qualification-harness-dependency-correction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate dependency correction and complete mock qualification replay
+        env:
+          MCFT_BASE_SHA: 51f6d20c11832aff4b679b78bb920d66b478a8fb
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_HARNESS_DEPENDENCY_CORRECTION.cjs
+      - name: Upload dependency correction evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-a-qualification-harness-dependency-correction-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_HARNESS_DEPENDENCY_CORRECTION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
