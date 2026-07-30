@@ -2,14 +2,14 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {fileURLToPath}=require('node:url');
-const {loadSingleRunHarnessContractsV1}=require('./contract_loader_v1.cjs');
-const {buildSingleRunExecutionSpecV1}=require('./execution_spec_v1.cjs');
-const {invokeDirectMaterializerV1}=require('./materializer_adapter_v1.cjs');
-const {buildCanonicalReceiptManifestV1}=require('./receipt_manifest_v1.cjs');
-const {readExactReceiptObjectsV1}=require('./closure_readback_adapter_v1.cjs');
-const {executeRecoveryVectorsV1}=require('./recovery_execution_adapter_v1.cjs');
-const {executeCompleteCap07ReadbackV1}=require('./cap07_readback_execution_adapter_v1.cjs');
-const {validatePortBundleV1}=require('./port_contract_v1.cjs');
+const {loadSingleRunHarnessContractsV1}=require('../mcft_cap08_s6_single_run_db/contract_loader_v1.cjs');
+const {buildSingleRunExecutionSpecV1}=require('../mcft_cap08_s6_single_run_db/execution_spec_v1.cjs');
+const {invokeDirectMaterializerV1}=require('./qualification_materializer_adapter_v1.cjs');
+const {buildCanonicalReceiptManifestV1}=require('../mcft_cap08_s6_single_run_db/receipt_manifest_v1.cjs');
+const {readExactReceiptObjectsV1}=require('../mcft_cap08_s6_single_run_db/closure_readback_adapter_v1.cjs');
+const {executeRecoveryVectorsV1}=require('./qualification_recovery_execution_adapter_v1.cjs');
+const {executeCompleteCap07ReadbackV1}=require('./qualification_cap07_readback_execution_adapter_v1.cjs');
+const {validatePortBundleV1}=require('./qualification_port_contract_v1.cjs');
 async function executeRunAQualificationHarnessV1({input,ports,executionAuthority}){
  validatePortBundleV1(ports);
  assert.equal(input.runLabel,'RUN_A','QUALIFICATION_RUN_LABEL');

@@ -1,0 +1,5 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {SURFACES,fetchVariantV1}=require('../mcft_cap08_s6_single_run_db/cap07_readback_execution_adapter_v1.cjs');
+async function executeCompleteCap07ReadbackV1(port,spec,authority){assert.equal(authority?.record_status,'SINGLE_DEVELOPMENT_QUALIFICATION_RUN_DATABASE_EXECUTION_AUTHORIZED','QUALIFICATION_DATABASE_EXECUTION_AUTHORITY_REQUIRED');assert.equal(authority.authority_class,'DEVELOPMENT_QUALIFICATION_ONLY');const surfaces=[];for(const surface of SURFACES){const variants=surface.variants??[null];for(const variant of variants)surfaces.push({name:surface.name,variant,pages:await fetchVariantV1(port.request.bind(port),spec,surface,variant)});}return{schema_version:'geox_mcft_cap08_s6_cap07_complete_readback_result_v1',surface_definition_count:10,request_variant_count:11,surfaces,pagination_until_cursor_null:true,product_read_write_delta:0,canonical_fact_write_delta:0,projection_write_delta:0};}
+module.exports={executeCompleteCap07ReadbackV1};

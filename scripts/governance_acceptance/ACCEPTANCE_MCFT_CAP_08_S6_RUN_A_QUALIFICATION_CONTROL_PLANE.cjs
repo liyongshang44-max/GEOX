@@ -8,6 +8,10 @@ const S=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-SUBJECT-RECONCILIATION-V1.
 const CB=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-ENTRYPOINT-CORRECTION-BOUNDARY-V1.json`;
 const CI=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-ENTRYPOINT-CORRECTION-V1.json`;
 const FI=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-FAILED-ATTEMPT-001-V1.json`;
+const HB=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-HARNESS-DEPENDENCY-CORRECTION-BOUNDARY-V1.json`;
+const HC=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-HARNESS-DEPENDENCY-CORRECTION-V1.json`;
+const HF=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-HARNESS-DEPENDENCY-FAILED-ATTEMPT-V1.json`;
+const HV='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_HARNESS_DEPENDENCY_CORRECTION.cjs';
 const EP='scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/qualification_workflow_entrypoint_v1.ts';
 const Q=X.join(R,'acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_CONTROL_PLANE_RESULT.json');
 const read=p=>JSON.parse(F.readFileSync(X.join(R,p),'utf8')),text=p=>F.readFileSync(X.join(R,p),'utf8'),git=(...a)=>P.execFileSync('git',a,{cwd:R,encoding:'utf8'}).trim();
@@ -16,18 +20,27 @@ function sd(v){const x=structuredClone(v);delete x.semantic_digest;return`sha256
 function write(v){F.mkdirSync(X.dirname(Q),{recursive:true});F.writeFileSync(Q,JSON.stringify(v,null,2)+'\n');}
 try{
  const eventPath=String(process.env.GITHUB_EVENT_PATH||'').trim();
- if(eventPath&&F.existsSync(eventPath)&&F.existsSync(X.join(R,CI))&&F.existsSync(X.join(R,CB))&&F.existsSync(X.join(R,FI))){
-  const event=JSON.parse(F.readFileSync(eventPath,'utf8')),prBase=String(event?.pull_request?.base?.sha||'').trim(),ci=read(CI),cb=read(CB),fi=read(FI);
-  const successorChanged=prBase?git('diff','--name-only',`${prBase}...HEAD`).split(/\r?\n/).filter(Boolean).sort():[];
-  if(prBase===ci.base_main_sha&&successorChanged.length===cb.changed_file_count&&JSON.stringify(successorChanged)===JSON.stringify([...cb.changed_files].sort())){
-   A.equal(git('diff','--check',`${prBase}...HEAD`),'');for(const v of[ci,cb,fi])A.equal(v.semantic_digest,sd(v),'SEMANTIC_DIGEST');
-   A.equal(ci.record_status,'RUN_A_QUALIFICATION_ENTRYPOINT_CORRECTION_IMPLEMENTED_NOT_EFFECTIVE');A.equal(ci.correction.entrypoint_semantics_changed,false);A.equal(ci.correction.historical_control_plane_successor_classifier_added,true);
-   A.equal(fi.workflow_run.run_id,30437329843);A.equal(fi.execution_job.job_id,90528078435);A.equal(fi.step_outcomes.qualification_harness_entered,false);A.equal(fi.step_outcomes.disposable_database_drop_completed,true);A.equal(fi.classification.operational_instance_reusable,false);A.equal(fi.classification.rerun_jobs_authorized,false);
-   const entry=text(EP);A.match(entry,/async function main\(\):Promise<void>/);A.match(entry,/main\(\)\.catch/);A.doesNotMatch(entry,/import\.meta|pathToFileURL|fileURLToPath|createRequire|const imported=await import/);
-   A.equal(git('rev-parse',`${prBase}:${EP}`),ci.correction.superseded_blob_sha);A.notEqual(git('rev-parse',`HEAD:${EP}`),ci.correction.superseded_blob_sha);
-   for(const [p,h] of[[ci.preserved_frozen_objects.port_bundle_path,ci.preserved_frozen_objects.port_bundle_blob_sha],[ci.preserved_frozen_objects.qualification_workflow_path,ci.preserved_frozen_objects.qualification_workflow_blob_sha],[ci.preserved_frozen_objects.qualification_gate_path,ci.preserved_frozen_objects.qualification_gate_blob_sha]])A.equal(git('rev-parse',`HEAD:${p}`),h,`FROZEN_BLOB_DRIFT:${p}`);
-   const result={schema_version:'geox_mcft_cap08_s6_run_a_qualification_control_plane_result_v1',status:'PASS',applicability:'SUCCESSOR_ENTRYPOINT_CORRECTION',subject_sha:git('rev-parse','HEAD'),base_sha:prBase,changed_file_count:cb.changed_file_count,original_control_plane_replay_required:false,successor_correction_static_acceptance_pass:true,dedicated_cjs_typecheck_workflow_required:true,database_execution_performed:false,run_a_qualification_completed:false,run_b_executed:false,s6_candidate_implemented:false,mcft_cap_08_complete:false,mcft_cap_09_authorized:false};
-   write(result);console.log(JSON.stringify(result,null,2));process.exit(0);
+ if(eventPath&&F.existsSync(eventPath)){
+  const event=JSON.parse(F.readFileSync(eventPath,'utf8')),prBase=String(event?.pull_request?.base?.sha||'').trim();
+  if(F.existsSync(X.join(R,HC))&&F.existsSync(X.join(R,HB))&&F.existsSync(X.join(R,HF))){
+   const hc=read(HC),hb=read(HB),hf=read(HF),successorChanged=prBase?git('diff','--name-only',`${prBase}...HEAD`).split(/\r?\n/).filter(Boolean).sort():[];
+   if(prBase===hc.base_main_sha&&successorChanged.length===hb.changed_file_count&&JSON.stringify(successorChanged)===JSON.stringify([...hb.changed_files].sort())){
+    A.equal(git('diff','--check',`${prBase}...HEAD`),'');for(const v of[hc,hb,hf])A.equal(v.semantic_digest,sd(v),'SEMANTIC_DIGEST');
+    P.execFileSync(process.execPath,[HV],{cwd:R,stdio:'inherit',env:{...process.env,MCFT_BASE_SHA:prBase}});
+    const result={schema_version:'geox_mcft_cap08_s6_run_a_qualification_control_plane_result_v1',status:'PASS',applicability:'SUCCESSOR_HARNESS_DEPENDENCY_CORRECTION',subject_sha:git('rev-parse','HEAD'),base_sha:prBase,changed_file_count:hb.changed_file_count,original_control_plane_replay_required:false,successor_correction_mock_replay_pass:true,database_execution_performed:false,run_a_qualification_completed:false,run_b_executed:false,s6_candidate_implemented:false,mcft_cap_08_complete:false,mcft_cap_09_authorized:false};write(result);console.log(JSON.stringify(result,null,2));process.exit(0);
+   }
+  }
+  if(F.existsSync(X.join(R,CI))&&F.existsSync(X.join(R,CB))&&F.existsSync(X.join(R,FI))){
+   const ci=read(CI),cb=read(CB),fi=read(FI),successorChanged=prBase?git('diff','--name-only',`${prBase}...HEAD`).split(/\r?\n/).filter(Boolean).sort():[];
+   if(prBase===ci.base_main_sha&&successorChanged.length===cb.changed_file_count&&JSON.stringify(successorChanged)===JSON.stringify([...cb.changed_files].sort())){
+    A.equal(git('diff','--check',`${prBase}...HEAD`),'');for(const v of[ci,cb,fi])A.equal(v.semantic_digest,sd(v),'SEMANTIC_DIGEST');
+    A.equal(ci.record_status,'RUN_A_QUALIFICATION_ENTRYPOINT_CORRECTION_IMPLEMENTED_NOT_EFFECTIVE');A.equal(ci.correction.entrypoint_semantics_changed,false);A.equal(ci.correction.historical_control_plane_successor_classifier_added,true);
+    A.equal(fi.workflow_run.run_id,30437329843);A.equal(fi.execution_job.job_id,90528078435);A.equal(fi.step_outcomes.qualification_harness_entered,false);A.equal(fi.step_outcomes.disposable_database_drop_completed,true);A.equal(fi.classification.operational_instance_reusable,false);A.equal(fi.classification.rerun_jobs_authorized,false);
+    const entry=text(EP);A.match(entry,/async function main\(\):Promise<void>/);A.match(entry,/main\(\)\.catch/);A.doesNotMatch(entry,/import\.meta|pathToFileURL|fileURLToPath|createRequire|const imported=await import/);
+    A.equal(git('rev-parse',`${prBase}:${EP}`),ci.correction.superseded_blob_sha);A.notEqual(git('rev-parse',`HEAD:${EP}`),ci.correction.superseded_blob_sha);
+    for(const [p,h] of[[ci.preserved_frozen_objects.port_bundle_path,ci.preserved_frozen_objects.port_bundle_blob_sha],[ci.preserved_frozen_objects.qualification_workflow_path,ci.preserved_frozen_objects.qualification_workflow_blob_sha],[ci.preserved_frozen_objects.qualification_gate_path,ci.preserved_frozen_objects.qualification_gate_blob_sha]])A.equal(git('rev-parse',`HEAD:${p}`),h,`FROZEN_BLOB_DRIFT:${p}`);
+    const result={schema_version:'geox_mcft_cap08_s6_run_a_qualification_control_plane_result_v1',status:'PASS',applicability:'SUCCESSOR_ENTRYPOINT_CORRECTION',subject_sha:git('rev-parse','HEAD'),base_sha:prBase,changed_file_count:cb.changed_file_count,original_control_plane_replay_required:false,successor_correction_static_acceptance_pass:true,dedicated_cjs_typecheck_workflow_required:true,database_execution_performed:false,run_a_qualification_completed:false,run_b_executed:false,s6_candidate_implemented:false,mcft_cap_08_complete:false,mcft_cap_09_authorized:false};write(result);console.log(JSON.stringify(result,null,2));process.exit(0);
+   }
   }
  }
  const b=read(B),i=read(I),s=read(S),base=String(process.env.MCFT_BASE_SHA||b.base_main_sha).trim();
