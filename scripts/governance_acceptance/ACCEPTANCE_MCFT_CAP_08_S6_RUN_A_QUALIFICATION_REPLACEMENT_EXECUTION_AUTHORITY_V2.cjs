@@ -1,0 +1,68 @@
+#!/usr/bin/env node
+'use strict';
+const A=require('node:assert/strict'),C=require('node:crypto'),P=require('node:child_process'),F=require('node:fs'),X=require('node:path');
+const R=X.resolve(__dirname,'../..'),D='docs/digital_twin/mcft/cap_08';
+const E=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-EXPIRED-BEFORE-DATABASE-ATTEMPT-V1.json`;
+const G=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-REPLACEMENT-AUTHORITY-ISSUANCE-GATE-V2.json`;
+const AP=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-REPLACEMENT-EXECUTION-AUTHORITY-V2.json`;
+const BP=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-REPLACEMENT-EXECUTION-AUTHORITY-BOUNDARY-V2.json`;
+const OLD=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-REPLACEMENT-EXECUTION-AUTHORITY-V1.json`;
+const W='.github/workflows/mcft-cap-08-s6-run-a-qualification-replacement-execution-authority-v2.yml';
+const Q=X.join(R,'acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_REPLACEMENT_EXECUTION_AUTHORITY_V2_RESULT.json');
+const read=p=>JSON.parse(F.readFileSync(X.join(R,p),'utf8')),text=p=>F.readFileSync(X.join(R,p),'utf8'),git=(...a)=>P.execFileSync('git',a,{cwd:R,encoding:'utf8'}).trim();
+const canon=v=>Array.isArray(v)?`[${v.map(canon).join(',')}]`:v&&typeof v==='object'?`{${Object.keys(v).sort().map(k=>`${JSON.stringify(k)}:${canon(v[k])}`).join(',')}}`:JSON.stringify(v);
+function sd(v){const x=structuredClone(v);delete x.semantic_digest;return`sha256:${C.createHash('sha256').update(canon(x)).digest('hex')}`;}
+function out(v){F.mkdirSync(X.dirname(Q),{recursive:true});F.writeFileSync(Q,JSON.stringify(v,null,2)+'\n');}
+try{
+ const e=read(E),g=read(G),a=read(AP),b=read(BP),old=read(OLD),base=String(process.env.MCFT_BASE_SHA||b.base_main_sha).trim();
+ const subject='9b96386c137a3c5e0984525faa96480ee39f1212';
+ A.equal(base,'728c85b147229450b4e465f947e0d2f7c4d6d894');A.equal(base,b.base_main_sha);
+ A.equal(git('merge-base',base,'HEAD'),base);A.equal(git('diff','--check',`${base}...HEAD`),'');
+ const changed=git('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
+ A.deepEqual(changed,[...b.changed_files].sort());A.equal(changed.length,6);
+ for(const v of[e,g,a,b])A.equal(v.semantic_digest,sd(v),'SEMANTIC_DIGEST');
+ A.equal(git('rev-parse',`${base}:${OLD}`),'4d67a4e10642a60f44602ba252a8c342414ba4df');
+ A.equal(old.operational_run_instance_id,'MCFT-CAP-08-S6-RUN-A-QUAL-20260729-002');
+ A.equal(old.database_identity.database_name,'geox_mcft_cap08_s6_run_a_qual_002');
+ A.equal(old.expires_at,'2026-07-30T10:50:00.000Z');
+ A.equal(e.record_status,'RUN_A_QUALIFICATION_AUTHORITY_EXPIRED_BEFORE_DATABASE');
+ A.equal(e.workflow_run_id,30544634105);A.equal(e.workflow_run_number,2);A.equal(e.workflow_head_sha,base);
+ A.equal(e.authorize_job_id,90877576061);A.equal(e.authorize_job_conclusion,'FAILURE');
+ A.equal(e.database_job_id,90877613224);A.equal(e.database_job_conclusion,'SKIPPED');
+ A.equal(e.failure_code,'QUALIFICATION_AUTHORITY_EXPIRED');
+ A.equal(e.exact_subject_sha,subject);A.equal(e.operational_run_instance_id,old.operational_run_instance_id);A.equal(e.database_name,old.database_identity.database_name);
+ A.ok(Date.parse(e.failure_observed_at)>Date.parse(e.authority_expires_at),'EXPIRY_ORDER');
+ for(const k of['normalized_authority_uploaded','postgres_service_scheduled','database_bootstrap_entered','database_created','qualification_harness_entered','qualification_result_generated','retired_instance_reusable','retired_database_identity_reusable'])A.equal(e[k],false,k);
+ A.equal(e.workflow_artifact_count,0);
+ A.equal(g.record_status,'RUN_A_QUALIFICATION_EXPIRY_REPLACEMENT_AUTHORITY_ISSUANCE_AUTHORIZED');
+ A.equal(g.authority_bearing_main_sha,base);A.equal(g.exact_execution_subject_sha,subject);A.equal(g.expired_attempt_record_path,E);
+ A.equal(g.expired_workflow_run_id,e.workflow_run_id);A.equal(g.expired_authorize_job_id,e.authorize_job_id);A.equal(g.skipped_database_job_id,e.database_job_id);
+ A.equal(g.retired_operational_run_instance_id,e.operational_run_instance_id);A.equal(g.retired_database_name,e.database_name);
+ A.equal(g.replacement_operational_run_instance_id,'MCFT-CAP-08-S6-RUN-A-QUAL-20260730-003');
+ A.equal(g.replacement_database_name,'geox_mcft_cap08_s6_run_a_qual_003');
+ A.equal(g.maximum_authority_lifetime_hours,24);A.equal(g.single_replacement_authority_may_be_issued,true);
+ for(const k of['retired_instance_reusable','retired_database_identity_reusable','database_execution_in_issuance_pr_authorized','workflow_dispatch_in_issuance_pr_authorized','run_b_authorized','final_formal_run_authorized','hard_acceptance_authorized','s6_candidate_authorized','cap08_completion_authorized','cap09_authorized'])A.equal(g[k],false,k);
+ A.equal(a.record_status,'SINGLE_DEVELOPMENT_QUALIFICATION_RUN_DATABASE_EXECUTION_AUTHORIZED');
+ A.equal(a.authority_class,'DEVELOPMENT_QUALIFICATION_ONLY');A.equal(a.evidence_class,'DEVELOPMENT_QUALIFICATION_ONLY');
+ A.equal(a.exact_subject_sha,subject);A.equal(a.authorized_run_label,'RUN_A');
+ A.equal(a.operational_run_instance_id,g.replacement_operational_run_instance_id);
+ A.deepEqual(a.database_identity,{database_name:g.replacement_database_name,fresh_disposable_required:true,drop_after_run_required:true,identity_frozen:true});
+ A.notEqual(a.operational_run_instance_id,e.operational_run_instance_id);A.notEqual(a.database_identity.database_name,e.database_name);
+ const issued=Date.parse(a.issued_at),expires=Date.parse(a.expires_at);
+ A.ok(Number.isFinite(issued)&&Number.isFinite(expires)&&expires>issued&&expires-issued<=86400000&&expires>Date.now(),'REPLACEMENT_AUTHORITY_V2_TIME_INVALID');
+ for(const k of['single_run_database_execution_authorized','database_execution_workflow_authorized','workflow_dispatch_execution_authorized'])A.equal(a[k],true,k);
+ for(const k of['final_formal_run_execution_authorized','final_closure_eligible','hard_acceptance_eligible','s6_candidate_evidence_eligible','cross_run_comparison_eligible','ledger_settlement_eligible','dual_run_ci_authorized','cross_run_comparator_authorized','final_ledger_settlement_authorized'])A.equal(a[k],false,k);
+ A.equal(a.expired_attempt_record_path,E);A.equal(a.expired_attempt_record_blob_sha,'c1045e5d91744f08e51579bac02c5b122d9a697a');
+ A.equal(a.issuance_gate_path,G);A.equal(a.issuance_gate_blob_sha,'a619f580bc9f42ae33bb888aa9f0405ef9c223f5');
+ A.equal(git('rev-parse',`HEAD:${E}`),a.expired_attempt_record_blob_sha);A.equal(git('rev-parse',`HEAD:${G}`),a.issuance_gate_blob_sha);
+ A.deepEqual(a.replacement_context.all_retired_operational_run_instance_ids,['MCFT-CAP-08-S6-RUN-A-QUAL-20260729-001','MCFT-CAP-08-S6-RUN-A-QUAL-20260729-002']);
+ A.deepEqual(a.replacement_context.all_retired_database_names,['geox_mcft_cap08_s6_run_a_qual_001','geox_mcft_cap08_s6_run_a_qual_002']);
+ for(const [p,h] of[[a.port_bundle_path,a.port_bundle_blob_sha],[a.qualification_workflow_path,a.qualification_workflow_blob_sha],[a.qualification_gate_path,a.qualification_gate_blob_sha],[a.corrected_entrypoint_path,a.corrected_entrypoint_blob_sha]])A.equal(git('rev-parse',`${subject}:${p}`),h,`FROZEN_BLOB_DRIFT:${p}`);
+ const validated=require(X.join(R,a.qualification_gate_path)).validateQualificationAuthorityV1(a,{exactSubjectSha:subject,runLabel:'RUN_A',operationalRunInstanceId:a.operational_run_instance_id});
+ A.equal(validated.module_path,a.port_bundle_path);A.equal(validated.database_name,a.database_identity.database_name);
+ const workflow=text(W);A.match(workflow,/pull_request:/);for(const x of[/workflow_dispatch:/,/services:\s*\n\s*postgres:/,/DATABASE_URL/])A.doesNotMatch(workflow,x);
+ A.equal(b.product_runtime_source_file_count,0);A.equal(b.runtime_acceptance_file_count,0);A.equal(b.database_execution_workflow_file_count,0);A.equal(b.port_bundle_file_count,0);A.equal(b.qualification_gate_file_count,0);A.equal(b.entrypoint_file_count,0);
+ A.equal(b.database_execution_performed,false);A.equal(b.workflow_dispatch_performed,false);
+ const z={schema_version:'geox_mcft_cap08_s6_run_a_qualification_replacement_execution_authority_v2_result_v1',status:'PASS',subject_sha:git('rev-parse','HEAD'),base_sha:base,changed_file_count:6,expired_workflow_run_id:e.workflow_run_id,expired_authorize_job_id:e.authorize_job_id,skipped_database_job_id:e.database_job_id,failure_code:e.failure_code,expired_operational_run_instance_id:e.operational_run_instance_id,expired_database_name:e.database_name,authority_status:a.record_status,authority_class:a.authority_class,evidence_class:a.evidence_class,exact_subject_sha:a.exact_subject_sha,run_label:a.authorized_run_label,operational_run_instance_id:a.operational_run_instance_id,database_name:a.database_identity.database_name,expires_at:a.expires_at,database_execution_performed:false,workflow_dispatch_performed:false,run_a_qualification_completed:false,run_b_executed:false,hard_acceptance_eligible:false,s6_candidate_implemented:false,mcft_cap_08_complete:false,mcft_cap_09_authorized:false};
+ out(z);console.log(JSON.stringify(z,null,2));
+}catch(error){out({schema_version:'geox_mcft_cap08_s6_run_a_qualification_replacement_execution_authority_v2_result_v1',status:'FAIL',error:error instanceof Error?error.message:String(error)});console.error(error);process.exitCode=1;}
