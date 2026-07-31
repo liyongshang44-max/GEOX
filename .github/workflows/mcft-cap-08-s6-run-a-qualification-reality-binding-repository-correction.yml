@@ -1,0 +1,42 @@
+name: mcft-cap-08-s6-run-a-qualification-reality-binding-repository-correction
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-reality-binding-repository-correction.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-V5-REALITY-BINDING-REPOSITORY-FAILURE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-REALITY-BINDING-REPOSITORY-CORRECTION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-REALITY-BINDING-REPOSITORY-CORRECTION-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_REALITY_BINDING_REPOSITORY_CORRECTION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_DATABASE_PORT_BUNDLE_IMPLEMENTATION.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_chain_v1.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  run-a-qualification-reality-binding-repository-correction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate RUN_A qualification Reality Binding repository correction
+        env:
+          MCFT_BASE_SHA: aa9c6faa8255dba6393324bff8255f6dfe0ac273
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_REALITY_BINDING_REPOSITORY_CORRECTION.cjs
+      - name: Upload repository-binding correction evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-a-qualification-reality-binding-repository-correction-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_REALITY_BINDING_REPOSITORY_CORRECTION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
