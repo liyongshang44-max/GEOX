@@ -24,7 +24,7 @@ const runtimeRepository=new p.PostgresRuntimeRepositoryV1(pool);
 const forecastRepository=new p.PostgresForecastScenarioRecoveryRepositoryV1(pool);
 const nextTickRepository=new p.PostgresNextTickRepositoryV1(pool);
 
-assert.equal((await runtimeRepository.commitRealityBindingSnapshot(fixture.reality_binding_snapshot)).status,'INSERTED');
+assert.equal((await nextTickRepository.commitRealityBindingSnapshot(fixture.reality_binding_snapshot)).status,'INSERTED');
 for(const config of fixture.runtime_configs){
   assert.equal((await runtimeRepository.commitRuntimeConfig(config)).status,'INSERTED');
 }
