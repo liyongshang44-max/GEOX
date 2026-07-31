@@ -1,0 +1,40 @@
+name: mcft-cap-08-s6-run-a-qualification-s4-persistence-interleave-correction-effectiveness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-s4-persistence-interleave-correction-effectiveness.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-S4-PERSISTENCE-INTERLEAVE-CORRECTION-EFFECTIVENESS-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-S4-PERSISTENCE-INTERLEAVE-CORRECTION-EFFECTIVENESS-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-S4-PERSISTENCE-INTERLEAVE-REPLACEMENT-AUTHORITY-ISSUANCE-GATE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_S4_PERSISTENCE_INTERLEAVE_CORRECTION_EFFECTIVENESS.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  s4-persistence-interleave-correction-effectiveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate merged S4 persistence interleave correction effectiveness
+        env:
+          MCFT_BASE_SHA: e9f5f976fe1af0de03bd8d3b8e30b518abf2ce57
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_S4_PERSISTENCE_INTERLEAVE_CORRECTION_EFFECTIVENESS.cjs
+      - name: Upload S4 persistence interleave correction effectiveness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-s4-persistence-interleave-correction-effectiveness-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_S4_PERSISTENCE_INTERLEAVE_CORRECTION_EFFECTIVENESS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
