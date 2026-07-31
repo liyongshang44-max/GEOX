@@ -39,6 +39,47 @@ function write(value){
   F.mkdirSync(X.dirname(OUT),{recursive:true});
   F.writeFileSync(OUT,JSON.stringify(value,null,2)+'\n');
 }
+function exactBoundaryV1(boundary){
+  const base=boundary.base_main_sha;
+  let mergeBase;
+  try{mergeBase=git('merge-base',base,'HEAD');}catch{return null;}
+  if(mergeBase!==base)return null;
+  const changed=git('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
+  if(JSON.stringify(changed)!==JSON.stringify([...boundary.changed_files].sort()))return null;
+  return{base,changed};
+}
+function s4PersistenceInterleaveSuccessorV1(){
+  const boundaryPath=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-S4-PERSISTENCE-INTERLEAVE-CORRECTION-BOUNDARY-V1.json`;
+  if(!F.existsSync(X.join(R,boundaryPath)))return false;
+  const exact=exactBoundaryV1(read(boundaryPath));
+  if(!exact)return false;
+  const validator='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_S4_PERSISTENCE_INTERLEAVE_CORRECTION.cjs';
+  P.execFileSync(process.execPath,[validator],{cwd:R,stdio:'pipe',env:{...process.env,MCFT_BASE_SHA:exact.base}});
+  const focused=read('acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_S4_PERSISTENCE_INTERLEAVE_CORRECTION_RESULT.json');
+  A.equal(focused.status,'PASS');
+  A.equal(focused.base_sha,exact.base);
+  A.equal(focused.changed_file_count,10);
+  const result={
+    schema_version:'geox_mcft_cap08_s6_run_a_qualification_composite_range_correction_result_v1',
+    status:'PASS',
+    subject_sha:git('rev-parse','HEAD'),
+    base_sha:exact.base,
+    changed_file_count:exact.changed.length,
+    successor_classification:'SUCCESSOR_S4_PERSISTENCE_INTERLEAVE_CORRECTION',
+    original_composite_range_correction_reopened:false,
+    corrected_product_loader_blob_sha:focused.corrected_product_loader_blob_sha,
+    s6_s4_atomic_persistence_adapter_blob_sha:focused.s6_s4_atomic_persistence_adapter_blob_sha,
+    s3_slice_orchestrator_reuse_count:0,
+    t00_t16_binding_count:17,
+    database_execution_performed:false,
+    workflow_dispatch_performed:false,
+    new_execution_authority_issued:false,
+    run_a_qualification_completed:false,
+  };
+  write(result);
+  console.log(JSON.stringify(result,null,2));
+  return true;
+}
 function record(scope,type,id,index){
   const logicalTime=new Date(Date.parse('2026-01-01T00:00:00.000Z')+index*3600000).toISOString();
   const payload={
@@ -78,6 +119,7 @@ function buildMockRows(count){
 }
 (async()=>{
   try{
+    if(s4PersistenceInterleaveSuccessorV1())return;
     const failure=read(PATHS.failure);
     const correction=read(PATHS.correction);
     const boundary=read(PATHS.boundary);
