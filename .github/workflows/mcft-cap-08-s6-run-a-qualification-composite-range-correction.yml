@@ -1,0 +1,44 @@
+name: mcft-cap-08-s6-run-a-qualification-composite-range-correction
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-composite-range-correction.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-V6-COMPOSITE-RANGE-FAILURE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-COMPOSITE-RANGE-CORRECTION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-COMPOSITE-RANGE-CORRECTION-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_DATABASE_PORT_BUNDLE_IMPLEMENTATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_REALITY_BINDING_REPOSITORY_CORRECTION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_COMPOSITE_RANGE_CORRECTION.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_chain_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_loader_v1.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  composite-range-correction-static-acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate S6 composite range correction without PostgreSQL
+        env:
+          MCFT_BASE_SHA: 43a76627e222f2b16c60029fc84bb8cc2a5c6fff
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_COMPOSITE_RANGE_CORRECTION.cjs
+      - name: Upload composite range correction evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-composite-range-correction-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_COMPOSITE_RANGE_CORRECTION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

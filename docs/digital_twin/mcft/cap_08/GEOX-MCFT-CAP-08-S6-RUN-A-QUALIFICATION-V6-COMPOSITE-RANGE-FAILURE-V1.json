@@ -1,0 +1,53 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_run_a_qualification_v6_composite_range_failure_v1",
+  "record_id": "GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-V6-COMPOSITE-RANGE-FAILURE-V1",
+  "record_status": "RUN_A_QUALIFICATION_V6_COMPOSITE_RANGE_FAILED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "workflow_run_id": 30644371587,
+  "workflow_name": "mcft-cap-08-s6-run-a-qualification-database-execution",
+  "authority_bearing_main_sha": "43a76627e222f2b16c60029fc84bb8cc2a5c6fff",
+  "exact_subject_sha": "34852005d79302a5ec188a1ccfca3768c8171fca",
+  "execution_authority_version": "V6",
+  "operational_run_instance_id": "MCFT-CAP-08-S6-RUN-A-QUAL-20260731-007",
+  "database_name": "geox_mcft_cap08_s6_run_a_qual_007",
+  "authority_job": {
+    "status": "PASS",
+    "artifact_id": 8798775705,
+    "artifact_digest": "sha256:c08608d9e7bdd886900168e45451f321f5275254d53a4f1c5f1e8b9219cac6cb"
+  },
+  "execution_job": {
+    "status": "FAIL",
+    "failed_step": "Execute RUN_A development qualification through exact port bundle"
+  },
+  "database_bootstrap_status": "PASS",
+  "qualification_product_chain_status": "FAIL",
+  "database_drop_status": "PASS",
+  "qualification_artifact": {
+    "artifact_id": 8798807382,
+    "artifact_digest": "sha256:35628c293b074433a31b856604c503fc9891cc38ba15751e32ff5d5e0c3f6035",
+    "qualification_result_present": false
+  },
+  "first_failure": {
+    "message": "CAP08_S4_S3_COMPLETION_TUPLE_CARDINALITY",
+    "source_path": "apps/server/src/runtime/twin_runtime/cap08_s4_persisted_chain_reader_v1.ts",
+    "source_line": 214,
+    "classification": "S6_COMPOSITE_ORCHESTRATION_REUSED_S3_SLICE_COMPLETION_CONTRACT",
+    "observed_phase": "AFTER_T16_COMMIT_BEFORE_T17_HANDOFF",
+    "root_cause": "The S6 port bundle invoked the S4 append-forward service during the T16-to-T17 handoff while reusing Cap08S3FormalRangeServiceV1 and Cap08S3FormalRuntimeServiceV1. Those S3 slice orchestrators establish the semantic completion tuple only after T23 and explicitly exclude late correction, so S4 could not read a completed S3 tuple at its required interleave boundary."
+  },
+  "secondary_incompatibility": {
+    "code": "S3_SLICE_COMPLETION_REBUILD_INCOMPATIBLE_WITH_CORRECTED_T16",
+    "detail": "After S4 appends the corrected T16 objects, the standard S3 slice completion rebuild would observe the original and corrected T16 Tick identities and is not the final-formal selected-member closure view."
+  },
+  "operational_instance_reusable": false,
+  "database_identity_reusable": false,
+  "execution_authority_reusable": false,
+  "rerun_jobs_authorized": false,
+  "formal_run_a_authorized": false,
+  "run_b_authorized": false,
+  "s6_candidate_implemented": false,
+  "mcft_cap_08_complete": false,
+  "mcft_cap_09_authorized": false,
+  "semantic_digest": "sha256:e13301480aaf00f7312883dab5456b92a7926159b3a40497fc9d4f174c3ca98d"
+}
