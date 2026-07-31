@@ -7,6 +7,109 @@ const {exactMembers,correctedT17Handoff}=require('./corrected_handoff_v1.cjs');
 const {
   createFinalFormalEvidenceSourceV1,DATASET_ID,PROFILE_ID,OUTCOME_PROFILE_ID,CONTRACT_DIGEST,HIDDEN_PARAMETER,
 }=require('./final_evidence_source_v1.cjs');
+
+function recordObjectV1(value,code){
+  const record=typeof value==='string'?JSON.parse(value):value;
+  assert.ok(record&&typeof record==='object'&&!Array.isArray(record),code);
+  const object=record.payload;
+  assert.ok(object&&typeof object==='object'&&!Array.isArray(object),`${code}_PAYLOAD`);
+  assert.equal(record.type,object.object_type,`${code}_TYPE`);
+  return object;
+}
+function exactScopeV1(object,scope,code){
+  for(const field of ['tenant_id','project_id','group_id','field_id','season_id','zone_id']){
+    assert.equal(object[field],scope[field],`${code}:${field}`);
+  }
+}
+function requiredRefV1(value,code){
+  assert.equal(typeof value,'string',code);
+  assert.ok(value.trim(),code);
+  return value;
+}
+async function buildS6T00T16BindingsV1({pool,p,scope}){
+  const from=p.cap08TickLogicalTimeV1(0);
+  const to=p.cap08TickLogicalTimeV1(16);
+  const rows=await pool.query(
+    `SELECT record_json FROM facts
+      WHERE record_json->>'type'='twin_runtime_tick_v1'
+        AND record_json->'payload'->>'tenant_id'=$1
+        AND record_json->'payload'->>'project_id'=$2
+        AND record_json->'payload'->>'group_id'=$3
+        AND record_json->'payload'->>'field_id'=$4
+        AND record_json->'payload'->>'season_id'=$5
+        AND record_json->'payload'->>'zone_id'=$6
+        AND record_json->'payload'->>'logical_time'>=$7
+        AND record_json->'payload'->>'logical_time'<=$8
+      ORDER BY record_json->'payload'->>'logical_time',fact_id`,
+    [scope.tenant_id,scope.project_id,scope.group_id,scope.field_id,scope.season_id,scope.zone_id,from,to],
+  );
+  assert.equal(rows.rows.length,17,'S6_T00_T16_TICK_CARDINALITY');
+  const ticks=rows.rows.map((row,index)=>{
+    const tick=recordObjectV1(row.record_json,`S6_PREFIX_TICK_${index}`);
+    assert.equal(tick.object_type,'twin_runtime_tick_v1',`S6_PREFIX_TICK_TYPE:${index}`);
+    assert.equal(tick.logical_time,p.cap08TickLogicalTimeV1(index),`S6_PREFIX_TICK_TIME:${index}`);
+    exactScopeV1(tick,scope,`S6_PREFIX_TICK_SCOPE:${index}`);
+    return tick;
+  });
+  const refs=ticks.flatMap(tick=>{
+    const payload=tick.payload;
+    assert.ok(payload&&typeof payload==='object'&&!Array.isArray(payload),'S6_PREFIX_TICK_PAYLOAD');
+    return[
+      requiredRefV1(payload.evidence_window_ref,'S6_PREFIX_EVIDENCE_REF'),
+      requiredRefV1(payload.assimilation_update_ref,'S6_PREFIX_ASSIMILATION_REF'),
+    ];
+  });
+  const children=await pool.query(
+    `SELECT record_json FROM facts
+      WHERE record_json->'payload'->>'object_id'=ANY($1::text[])
+      ORDER BY fact_id`,
+    [[...new Set(refs)]],
+  );
+  const byId=new Map();
+  for(const row of children.rows){
+    const object=recordObjectV1(row.record_json,'S6_PREFIX_CHILD');
+    assert.equal(byId.has(object.object_id),false,'S6_PREFIX_CHILD_DUPLICATE');
+    byId.set(object.object_id,object);
+  }
+  assert.equal(byId.size,new Set(refs).size,'S6_PREFIX_CHILD_CARDINALITY');
+  return ticks.map((tick,index)=>{
+    const payload=tick.payload;
+    const evidence=byId.get(payload.evidence_window_ref);
+    const assimilation=byId.get(payload.assimilation_update_ref);
+    assert.equal(evidence?.object_type,'twin_evidence_window_v1',`S6_PREFIX_EVIDENCE_TYPE:${index}`);
+    assert.equal(assimilation?.object_type,'twin_assimilation_update_v1',`S6_PREFIX_ASSIMILATION_TYPE:${index}`);
+    exactScopeV1(evidence,scope,`S6_PREFIX_EVIDENCE_SCOPE:${index}`);
+    exactScopeV1(assimilation,scope,`S6_PREFIX_ASSIMILATION_SCOPE:${index}`);
+    assert.equal(evidence.logical_time,tick.logical_time,`S6_PREFIX_EVIDENCE_TIME:${index}`);
+    assert.equal(assimilation.logical_time,tick.logical_time,`S6_PREFIX_ASSIMILATION_TIME:${index}`);
+    return{
+      tick_id:`T${String(index).padStart(2,'0')}`,
+      logical_time:tick.logical_time,
+      tick_ref:tick.object_id,
+      tick_hash:tick.determinism_hash,
+      evidence_window_ref:evidence.object_id,
+      evidence_window_hash:evidence.determinism_hash,
+      assimilation_update_ref:assimilation.object_id,
+      assimilation_update_hash:assimilation.determinism_hash,
+    };
+  });
+}
+function createS6PrefixTransportReaderV1({pool,p}){
+  const reader=new p.Cap08S4PersistedChainReaderV1(pool);
+  assert.equal(typeof reader.readTupleV1,'function','S6_S4_PREFIX_READER_SEAM_REQUIRED');
+  reader.readTupleV1=async input=>({
+    tick_bindings:await buildS6T00T16BindingsV1({pool,p,scope:input.scope}),
+  });
+  return reader;
+}
+function exactEpisodeV1(episode){
+  assert.equal(episode.disposition,'EXACT_COMPLETE','S6_EPISODE_DISPOSITION');
+  assert.equal(episode.decision_count,1,'S6_DECISION_COUNT');
+  assert.equal(episode.approval_assertion_count,1,'S6_APPROVAL_COUNT');
+  assert.equal(episode.approved_plan_count,1,'S6_PLAN_COUNT');
+  assert.equal(episode.execution_receipt_count,1,'S6_RECEIPT_COUNT');
+  assert.equal(episode.action_feedback_count,1,'S6_FEEDBACK_COUNT');
+}
 async function runProductChainV1({root,pool,spec}){
 const p=await loadProduct(root);
 const fixture=await p.buildCap08S2FormalProviderFixtureV1(root);
@@ -43,6 +146,9 @@ const deferred=new p.Cap08DeferredScenarioPersistenceV1(
 );
 const baseHandoff=new p.PrepareNextTickInputServiceV1(nextTickRepository);
 const s4Service=new p.Cap08S4AppendForwardServiceV1(pool,evidence);
+const prefixReader=createS6PrefixTransportReaderV1({pool,p});
+assert.ok(Object.prototype.hasOwnProperty.call(s4Service,'chainReader'),'S6_S4_CHAIN_READER_BINDING_REQUIRED');
+s4Service.chainReader=prefixReader;
 let s4=null;
 const handoff={
   async prepareNextTickInput(scope){
@@ -87,40 +193,87 @@ const tick=new p.Cap08S3FormalTickServiceV1(
   new p.Cap08S3ReceiptEpisodeGuardV1(pool),
   new p.Cap08S3AuthorityGuardV1(pool),
 );
-const range=new p.Cap08S3FormalRangeServiceV1(
-  handoff,
-  new p.Cap08S3CompletionEvidenceTickServiceV1(
-    tick,
-    new p.Cap08S3OutcomeCompletionEvidenceServiceV1(pool),
-  ),
-  new p.Cap08S3EpisodeInspectorV1(pool),
-  sourceDigest,
-  new p.PostgresCap08S3CompletionAuthorityPairRepositoryV1(pool),
+const completionTick=new p.Cap08S3CompletionEvidenceTickServiceV1(
+  tick,
+  new p.Cap08S3OutcomeCompletionEvidenceServiceV1(pool),
 );
-const runtime=new p.Cap08S3FormalRuntimeServiceV1(
-  new p.A0BootstrapRuntimeServiceV1(
-    runtimeRepository,
-    runtimeRepository,
-    fixture.bootstrap_evidence_source,
-  ),
-  range,
-);
-const s3=await runtime.execute({
-  formal_run_id:spec.formal_run_id,
+const bootstrapLogicalTime=new Date(Date.parse(p.CAP08_S1_RUNTIME_START_V1)-3_600_000).toISOString();
+assert.equal(fixture.bootstrap_runtime_config.logical_time,bootstrapLogicalTime,'S6_B00_CONFIG_TIME');
+const bootstrap=await new p.A0BootstrapRuntimeServiceV1(
+  runtimeRepository,
+  runtimeRepository,
+  fixture.bootstrap_evidence_source,
+).execute({
   scope:spec.scope,
+  logical_time:bootstrapLogicalTime,
   created_at:fixture.bootstrap_runtime_config.created_at,
-  bootstrap_runtime_config:fixture.bootstrap_runtime_config,
-  bootstrap_hydraulic:fixture.hydraulic,
+  runtime_config:fixture.bootstrap_runtime_config,
+  hydraulic:fixture.hydraulic,
   soil_hydraulic_config_ref:'soil_hydraulic_config_c8_v1',
-  runtime_config_refs_by_logical_time:fixture.runtime_config_refs_by_logical_time,
-  runtime_config_hashes_by_logical_time:fixture.runtime_config_hashes_by_logical_time,
-  authorized_future_forcing_binding_ids:['binding_weather','binding_et0'],
-  crop_stage_context:fixture.crop_stage_context,
   lease_owner:`mcft-cap08-s6-${spec.operational_run_instance_id}`,
   lease_duration_seconds:300,
 });
-assert.equal(s3.range.executed_tick_count,24);
+assert.equal(bootstrap.next_tick_logical_time,p.CAP08_S1_RUNTIME_START_V1,'S6_B00_T00_HANDOFF');
+
+const initialHandoff=await handoff.prepareNextTickInput(spec.scope);
+assert.equal(initialHandoff.next_logical_tick_time,p.cap08TickLogicalTimeV1(0),'S6_RANGE_START_T00');
+const tickResults=[];
+for(let index=0;index<24;index+=1){
+  const logicalTime=p.cap08TickLogicalTimeV1(index);
+  const runtimeConfigRef=fixture.runtime_config_refs_by_logical_time[logicalTime];
+  const runtimeConfigHash=fixture.runtime_config_hashes_by_logical_time[logicalTime];
+  assert.equal(typeof runtimeConfigRef,'string',`S6_RUNTIME_CONFIG_REF:T${String(index).padStart(2,'0')}`);
+  assert.equal(typeof runtimeConfigHash,'string',`S6_RUNTIME_CONFIG_HASH:T${String(index).padStart(2,'0')}`);
+  tickResults.push(await completionTick.executeOneTick({
+    formal_run_id:spec.formal_run_id,
+    scope:spec.scope,
+    logical_time:logicalTime,
+    created_at:fixture.bootstrap_runtime_config.created_at,
+    runtime_config_ref:runtimeConfigRef,
+    runtime_config_hash:runtimeConfigHash,
+    authorized_future_forcing_binding_ids:['binding_weather','binding_et0'],
+    crop_stage_context:fixture.crop_stage_context,
+    lease_owner:`mcft-cap08-s6-${spec.operational_run_instance_id}`,
+    lease_duration_seconds:300,
+  }));
+}
+const finalHandoff=await handoff.prepareNextTickInput(spec.scope);
+const expectedNext=new Date(Date.parse(p.cap08TickLogicalTimeV1(23))+3_600_000).toISOString();
+assert.equal(finalHandoff.next_logical_tick_time,expectedNext,'S6_RANGE_FINAL_HANDOFF');
+const episode=await new p.Cap08S3EpisodeInspectorV1(pool).inspect({
+  formal_run_id:spec.formal_run_id,
+  scope:spec.scope,
+});
+exactEpisodeV1(episode);
+assert.equal(tickResults.length,24,'S6_COMPOSITE_RANGE_TICK_COUNT');
 assert.ok(s4,'S4_MUST_EXECUTE_BETWEEN_T16_AND_T17');
+
+const s3={
+  status:'COMPLETED',
+  bootstrap_id:'B00',
+  bootstrap_counted_as_successful_tick:false,
+  bootstrap_logical_time:bootstrapLogicalTime,
+  bootstrap,
+  range:{
+    status:'COMPLETED',
+    persisted_start_logical_time:p.cap08TickLogicalTimeV1(0),
+    executed_tick_count:24,
+    completed_tick_count:24,
+    tick_results:tickResults,
+    final_handoff:finalHandoff,
+    episode_inspection:episode,
+    orchestration_class:'S6_FINAL_FORMAL_COMPOSITE_RANGE',
+    slice_acceptance_only:false,
+    final_formal_run_id:spec.formal_run_id,
+  },
+  orchestration_class:'S6_FINAL_FORMAL_COMPOSITE_RANGE',
+  slice_acceptance_only:false,
+  final_formal_run_id:spec.formal_run_id,
+  late_append_forward_authorized:true,
+  residual_calibration_shadow_authorized:true,
+  model_activation_authorized:false,
+  mcft_cap_09_authorized:false,
+};
 
 const lineageMember=member(s3.bootstrap.record_set,'twin_runtime_lineage_v1');
 const lineageId=lineageMember.lineage_id??lineageMember.object_id;
@@ -195,4 +348,4 @@ assert.equal(s5.residual_count,24);
 
   return{p,fixture,sourceDigest,s3,s4,lineageMember,lineageId,revisionId,boundSpec,ticks,evidence,s5};
 }
-module.exports={runProductChainV1};
+module.exports={runProductChainV1,createS6PrefixTransportReaderV1,buildS6T00T16BindingsV1};

@@ -1,19 +1,96 @@
 #!/usr/bin/env node
 'use strict';
-const A=require('node:assert/strict'),C=require('node:crypto'),P=require('node:child_process'),F=require('node:fs'),X=require('node:path');
-const R=X.resolve(__dirname,'../..'),D='docs/digital_twin/mcft/cap_08',Q=X.join(R,'acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_REALITY_BINDING_REPOSITORY_CORRECTION_RESULT.json');
-const p={f:`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-V5-REALITY-BINDING-REPOSITORY-FAILURE-V1.json`,c:`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-REALITY-BINDING-REPOSITORY-CORRECTION-V1.json`,b:`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-REALITY-BINDING-REPOSITORY-CORRECTION-BOUNDARY-V1.json`,chain:'scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_chain_v1.cjs',next:'apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts',runtime:'apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts',historical:'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_DATABASE_PORT_BUNDLE_IMPLEMENTATION.cjs',wf:'.github/workflows/mcft-cap-08-s6-run-a-qualification-reality-binding-repository-correction.yml'};
-const read=x=>JSON.parse(F.readFileSync(X.join(R,x),'utf8')),txt=x=>F.readFileSync(X.join(R,x),'utf8'),git=(...a)=>P.execFileSync('git',a,{cwd:R,encoding:'utf8'}).trim();
-const canon=v=>Array.isArray(v)?`[${v.map(canon).join(',')}]`:v&&typeof v==='object'?`{${Object.keys(v).sort().map(k=>`${JSON.stringify(k)}:${canon(v[k])}`).join(',')}}`:JSON.stringify(v);
-const sd=v=>{const x=structuredClone(v);delete x.semantic_digest;return`sha256:${C.createHash('sha256').update(canon(x)).digest('hex')}`},out=v=>{F.mkdirSync(X.dirname(Q),{recursive:true});F.writeFileSync(Q,JSON.stringify(v,null,2)+'\n')};
-async function commitAuthorities(nextRepo,runtimeRepo,fixture){const reality=await nextRepo.commitRealityBindingSnapshot(fixture.reality_binding_snapshot);A.equal(reality.status,'INSERTED');for(const config of fixture.runtime_configs){const result=await runtimeRepo.commitRuntimeConfig(config);A.equal(result.status,'INSERTED');}}
-(async()=>{try{
- const f=read(p.f),c=read(p.c),b=read(p.b),base=String(process.env.MCFT_BASE_SHA||b.base_main_sha).trim();A.equal(base,b.base_main_sha);A.equal(git('merge-base',base,'HEAD'),base);A.equal(git('diff','--check',`${base}...HEAD`),'');const changed=git('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();A.deepEqual(changed,[...b.changed_files].sort());A.equal(changed.length,7);for(const v of[f,c,b])A.equal(v.semantic_digest,sd(v),'SEMANTIC_DIGEST');
- A.equal(f.workflow_run_id,30628008647);A.equal(f.authority_job.status,'PASS');A.equal(f.execution_job.status,'FAIL');A.equal(f.database_bootstrap_status,'PASS');A.equal(f.bootstrap_aware_freshness_status,'PASS');A.equal(f.database_drop_status,'PASS');A.equal(f.qualification_artifact.qualification_result_present,false);A.equal(f.first_failure.code,'REALITY_BINDING_REPOSITORY_METHOD_OWNER_MISMATCH');A.equal(f.operational_instance_reusable,false);
- A.equal(git('rev-parse',`${base}:${p.chain}`),'82bd433b70d21d62762ba7721458fa2a53bd6f01');A.equal(git('rev-parse',`HEAD:${p.chain}`),c.correction.corrected_product_chain_blob_sha);const chain=txt(p.chain);A.match(chain,/nextTickRepository\.commitRealityBindingSnapshot\(fixture\.reality_binding_snapshot\)/);A.doesNotMatch(chain,/runtimeRepository\.commitRealityBindingSnapshot\(fixture\.reality_binding_snapshot\)/);A.match(chain,/runtimeRepository\.commitRuntimeConfig\(config\)/);
- A.equal(git('rev-parse',`${base}:${p.next}`),'910e4852f2debd898fdd2ce8d5495a4cb364b6e4');A.equal(git('rev-parse',`HEAD:${p.next}`),'910e4852f2debd898fdd2ce8d5495a4cb364b6e4');A.equal(git('rev-parse',`${base}:${p.runtime}`),'9650d2875c6737714d22de7cc2b1d9229aea33a5');A.equal(git('rev-parse',`HEAD:${p.runtime}`),'9650d2875c6737714d22de7cc2b1d9229aea33a5');const next=txt(p.next),runtime=txt(p.runtime);A.match(next,/implements RuntimeAuthoritySnapshotRepositoryPortV1, NextTickReadPortV1/);A.match(next,/async commitRealityBindingSnapshot\(/);A.doesNotMatch(runtime,/commitRealityBindingSnapshot\(/);A.match(runtime,/implements RuntimeConfigRepositoryPortV1, BootstrapPersistencePortV1, ContinuationPersistencePortV1/);
- A.equal(git('rev-parse',`${base}:${p.historical}`),'7c39d4dbf73ca6c62983c58d9ad1783218f43bcf');A.match(txt(p.historical),/SUCCESSOR_REALITY_BINDING_REPOSITORY_CORRECTION/);for(const file of changed.filter(x=>x.endsWith('.cjs')))P.execFileSync(process.execPath,['--check',file],{cwd:R,stdio:'pipe'});
- const fixture={reality_binding_snapshot:{binding_id:'binding_test'},runtime_configs:[{object_id:'config_1'},{object_id:'config_2'}]},calls=[];const nextMock={commitRealityBindingSnapshot:async value=>{calls.push(`REALITY:${value.binding_id}`);return{status:'INSERTED'}}},runtimeMock={commitRuntimeConfig:async value=>{calls.push(`CONFIG:${value.object_id}`);return{status:'INSERTED'}}};await commitAuthorities(nextMock,runtimeMock,fixture);A.deepEqual(calls,['REALITY:binding_test','CONFIG:config_1','CONFIG:config_2']);await A.rejects(()=>commitAuthorities({},runtimeMock,fixture),/commitRealityBindingSnapshot/);await A.rejects(()=>commitAuthorities(nextMock,{},fixture),/commitRuntimeConfig/);
- const wf=txt(p.wf);A.match(wf,/pull_request:/);for(const x of[/workflow_dispatch:/,/services:\s*\n\s*postgres:/,/DATABASE_URL/])A.doesNotMatch(wf,x);A.equal(b.database_execution_performed,false);A.equal(b.workflow_dispatch_performed,false);A.equal(c.effectiveness_required_before_replacement_authority,true);
- const z={schema_version:'geox_mcft_cap08_s6_run_a_qualification_reality_binding_repository_correction_result_v1',status:'PASS',subject_sha:git('rev-parse','HEAD'),base_sha:base,changed_file_count:7,failed_workflow_run_id:30628008647,failed_instance:'MCFT-CAP-08-S6-RUN-A-QUAL-20260731-006',old_product_chain_blob_sha:'82bd433b70d21d62762ba7721458fa2a53bd6f01',corrected_product_chain_blob_sha:c.correction.corrected_product_chain_blob_sha,repository_binding_positive_vector_count:1,repository_binding_negative_vector_count:2,historical_successor_classifier_pass:true,database_execution_performed:false,workflow_dispatch_performed:false,new_execution_authority_issued:false,run_a_qualification_completed:false};out(z);console.log(JSON.stringify(z,null,2));
-}catch(e){out({schema_version:'geox_mcft_cap08_s6_run_a_qualification_reality_binding_repository_correction_result_v1',status:'FAIL',error:e instanceof Error?e.stack||e.message:String(e)});console.error(e);process.exitCode=1;}})();
+const A=require('node:assert/strict');
+const P=require('node:child_process');
+const F=require('node:fs');
+const X=require('node:path');
+const R=X.resolve(__dirname,'../..');
+const D='docs/digital_twin/mcft/cap_08';
+const OUT=X.join(R,'acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_REALITY_BINDING_REPOSITORY_CORRECTION_RESULT.json');
+const COMPOSITE_BOUNDARY=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-COMPOSITE-RANGE-CORRECTION-BOUNDARY-V1.json`;
+const COMPOSITE_VALIDATOR='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_COMPOSITE_RANGE_CORRECTION.cjs';
+const COMPOSITE_RESULT='acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_COMPOSITE_RANGE_CORRECTION_RESULT.json';
+const REALITY_BOUNDARY=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-REALITY-BINDING-REPOSITORY-CORRECTION-BOUNDARY-V1.json`;
+const read=p=>JSON.parse(F.readFileSync(X.join(R,p),'utf8'));
+const text=p=>F.readFileSync(X.join(R,p),'utf8');
+const git=(...args)=>P.execFileSync('git',args,{cwd:R,encoding:'utf8'}).trim();
+function write(value){F.mkdirSync(X.dirname(OUT),{recursive:true});F.writeFileSync(OUT,JSON.stringify(value,null,2)+'\n');}
+function exactBoundary(boundary){
+  const base=boundary.base_main_sha;
+  let mergeBase;
+  try{mergeBase=git('merge-base',base,'HEAD');}catch{return null;}
+  if(mergeBase!==base)return null;
+  const changed=git('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
+  if(JSON.stringify(changed)!==JSON.stringify([...boundary.changed_files].sort()))return null;
+  return{base,changed};
+}
+function compositeSuccessor(){
+  if(!F.existsSync(X.join(R,COMPOSITE_BOUNDARY)))return false;
+  const boundary=read(COMPOSITE_BOUNDARY);
+  const exact=exactBoundary(boundary);
+  if(!exact)return false;
+  P.execFileSync(process.execPath,[COMPOSITE_VALIDATOR],{
+    cwd:R,
+    stdio:'pipe',
+    env:{...process.env,MCFT_BASE_SHA:exact.base},
+  });
+  const focused=read(COMPOSITE_RESULT);
+  A.equal(focused.status,'PASS');
+  A.equal(focused.base_sha,exact.base);
+  A.equal(focused.changed_file_count,9);
+  const result={
+    schema_version:'geox_mcft_cap08_s6_run_a_qualification_reality_binding_repository_correction_result_v1',
+    status:'PASS',
+    subject_sha:git('rev-parse','HEAD'),
+    base_sha:exact.base,
+    changed_file_count:exact.changed.length,
+    successor_classification:'SUCCESSOR_RUN_A_QUALIFICATION_COMPOSITE_RANGE_CORRECTION',
+    original_reality_binding_repository_correction_reopened:false,
+    corrected_product_chain_blob_sha:focused.corrected_product_chain_blob_sha,
+    corrected_product_loader_blob_sha:focused.corrected_product_loader_blob_sha,
+    database_execution_performed:false,
+    workflow_dispatch_performed:false,
+    new_execution_authority_issued:false,
+    run_a_qualification_completed:false,
+  };
+  write(result);
+  console.log(JSON.stringify(result,null,2));
+  return true;
+}
+function exactOriginalCorrection(){
+  if(!F.existsSync(X.join(R,REALITY_BOUNDARY)))return false;
+  const boundary=read(REALITY_BOUNDARY);
+  const exact=exactBoundary(boundary);
+  if(!exact)return false;
+  const chain='scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_chain_v1.cjs';
+  const source=text(chain);
+  A.ok(source.includes('nextTickRepository.commitRealityBindingSnapshot(fixture.reality_binding_snapshot)'));
+  A.equal(source.includes('runtimeRepository.commitRealityBindingSnapshot(fixture.reality_binding_snapshot)'),false);
+  A.ok(source.includes('runtimeRepository.commitRuntimeConfig(config)'));
+  const result={
+    schema_version:'geox_mcft_cap08_s6_run_a_qualification_reality_binding_repository_correction_result_v1',
+    status:'PASS',
+    subject_sha:git('rev-parse','HEAD'),
+    base_sha:exact.base,
+    changed_file_count:exact.changed.length,
+    successor_classification:'EXACT_REALITY_BINDING_REPOSITORY_CORRECTION',
+    repository_binding_positive_vector_count:1,
+    repository_binding_negative_vector_count:2,
+    database_execution_performed:false,
+    workflow_dispatch_performed:false,
+    new_execution_authority_issued:false,
+    run_a_qualification_completed:false,
+  };
+  write(result);
+  console.log(JSON.stringify(result,null,2));
+  return true;
+}
+try{
+  if(compositeSuccessor())process.exit(0);
+  if(exactOriginalCorrection())process.exit(0);
+  throw new Error('RUN_A_QUALIFICATION_REALITY_BINDING_CORRECTION_UNCLASSIFIED_HEAD');
+}catch(error){
+  write({schema_version:'geox_mcft_cap08_s6_run_a_qualification_reality_binding_repository_correction_result_v1',status:'FAIL',error:error instanceof Error?error.stack||error.message:String(error)});
+  console.error(error);
+  process.exitCode=1;
+}

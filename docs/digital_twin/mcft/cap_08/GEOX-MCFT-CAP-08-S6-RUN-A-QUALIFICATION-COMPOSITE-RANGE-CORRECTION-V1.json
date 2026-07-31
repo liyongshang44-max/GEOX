@@ -1,0 +1,81 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_run_a_qualification_composite_range_correction_v1",
+  "correction_id": "GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-COMPOSITE-RANGE-CORRECTION-V1",
+  "record_status": "IMPLEMENTED_NOT_EFFECTIVE",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "43a76627e222f2b16c60029fc84bb8cc2a5c6fff",
+  "failure_consumed": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-V6-COMPOSITE-RANGE-FAILURE-V1.json",
+    "workflow_run_id": 30644371587,
+    "retired_operational_run_instance_id": "MCFT-CAP-08-S6-RUN-A-QUAL-20260731-007",
+    "retired_database_name": "geox_mcft_cap08_s6_run_a_qual_007"
+  },
+  "correction": {
+    "old_product_chain_blob_sha": "bc449128ffc7d639213406441c57ee73c1f23be0",
+    "corrected_product_chain_blob_sha": "79c4b0bc081cf74749ee2f38ec3b6ae51e271cc3",
+    "old_product_loader_blob_sha": "6dde99b6d22cf668bf81cc3af8f9a042334348f4",
+    "corrected_product_loader_blob_sha": "283b157a65fc36bfc00f4b89c3971a586a965872",
+    "old_historical_validator_blob_sha": "02a4e7521ec61e23792c75885b2c835173e20431",
+    "corrected_historical_validator_blob_sha": "c63cd8bfc9380e95e49bb274cc823a738899545d",
+    "focused_validator_blob_sha": "c4d895672ed274a8bcf6ecea9d2ca855f4f54cd9",
+    "focused_workflow_blob_sha": "dffdf4f13c8c7a912379acaf189b10f67bcc768d",
+    "orchestration_class": "S6_FINAL_FORMAL_COMPOSITE_RANGE",
+    "removed_s3_slice_orchestrator_reuse": [
+      "Cap08S3FormalRangeServiceV1",
+      "Cap08S3FormalRuntimeServiceV1",
+      "PostgresCap08S3CompletionAuthorityPairRepositoryV1"
+    ],
+    "retained_product_services": [
+      "A0BootstrapRuntimeServiceV1",
+      "Cap08S3FormalTickServiceV1",
+      "Cap08S3CompletionEvidenceTickServiceV1",
+      "Cap08S4AppendForwardServiceV1",
+      "Cap08S5ResidualCalibrationShadowServiceV1"
+    ],
+    "s4_transport_source": "S6_IN_MEMORY_T00_T16_PREFIX_BINDINGS_FROM_PERSISTED_CANONICAL_FACTS",
+    "s4_transport_reader": "Cap08S4PersistedChainReaderV1",
+    "persisted_s3_completion_tuple_fabricated": false,
+    "persisted_s3_completion_authority_pair_written": false,
+    "t00_t16_binding_count": 17,
+    "s4_interleave_boundary": "AFTER_T16_COMMIT_BEFORE_T17_HANDOFF",
+    "t17_corrected_predecessor_consumed": true,
+    "final_formal_run_id_bound": true,
+    "slice_acceptance_only": false,
+    "reality_binding_validator_blob_sha": "45f27fa0651b977a701c010cb63507dfff3be398"
+  },
+  "static_acceptance": {
+    "positive_vector_count": 1,
+    "negative_vector_count": 1,
+    "negative_case": "T00_T16_TICK_CARDINALITY_16_REJECTED",
+    "node_syntax_checked": true,
+    "product_runtime_source_file_count": 0,
+    "database_migration_file_count": 0,
+    "route_or_web_file_count": 0,
+    "database_execution_workflow_file_count": 0,
+    "database_execution_performed": false,
+    "workflow_dispatch_performed": false
+  },
+  "effectiveness_required_before_replacement_authority": true,
+  "replacement_execution_authority_issued": false,
+  "run_a_qualification_completed": false,
+  "run_a_authorized": false,
+  "run_b_authorized": false,
+  "s6_candidate_implemented": false,
+  "mcft_cap_08_complete": false,
+  "mcft_cap_09_authorized": false,
+  "first_legal_next_action_after_merge": "RUN_DETACHED_MERGED_MAIN_EFFECTIVENESS_PROOF_WITHOUT_DATABASE_EXECUTION",
+  "nonclaims": [
+    "NO_DATABASE_EXECUTION",
+    "NO_WORKFLOW_DISPATCH",
+    "NO_REPLACEMENT_EXECUTION_AUTHORITY",
+    "NO_RUN_A_QUALIFICATION_PASS",
+    "NO_FORMAL_RUN_A",
+    "NO_RUN_B",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_MCFT_CAP_08_COMPLETION",
+    "NO_MCFT_CAP_09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:9c7f0a171333ad09fed49e3d4e3bd378ba7464d3a968d61d7650b902bd52b462"
+}
