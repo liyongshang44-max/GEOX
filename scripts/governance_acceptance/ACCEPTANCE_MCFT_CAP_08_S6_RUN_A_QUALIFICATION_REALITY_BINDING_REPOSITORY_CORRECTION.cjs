@@ -10,6 +10,9 @@ const OUT=X.join(R,'acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_REALITY
 const COMPOSITE_BOUNDARY=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-COMPOSITE-RANGE-CORRECTION-BOUNDARY-V1.json`;
 const COMPOSITE_VALIDATOR='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_COMPOSITE_RANGE_CORRECTION.cjs';
 const COMPOSITE_RESULT='acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_COMPOSITE_RANGE_CORRECTION_RESULT.json';
+const INTERLEAVE_BOUNDARY=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-S4-PERSISTENCE-INTERLEAVE-CORRECTION-BOUNDARY-V1.json`;
+const INTERLEAVE_VALIDATOR='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_S4_PERSISTENCE_INTERLEAVE_CORRECTION.cjs';
+const INTERLEAVE_RESULT='acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_S4_PERSISTENCE_INTERLEAVE_CORRECTION_RESULT.json';
 const REALITY_BOUNDARY=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-REALITY-BINDING-REPOSITORY-CORRECTION-BOUNDARY-V1.json`;
 const read=p=>JSON.parse(F.readFileSync(X.join(R,p),'utf8'));
 const text=p=>F.readFileSync(X.join(R,p),'utf8');
@@ -23,6 +26,38 @@ function exactBoundary(boundary){
   const changed=git('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
   if(JSON.stringify(changed)!==JSON.stringify([...boundary.changed_files].sort()))return null;
   return{base,changed};
+}
+function interleaveSuccessor(){
+  if(!F.existsSync(X.join(R,INTERLEAVE_BOUNDARY)))return false;
+  const exact=exactBoundary(read(INTERLEAVE_BOUNDARY));
+  if(!exact)return false;
+  P.execFileSync(process.execPath,[INTERLEAVE_VALIDATOR],{
+    cwd:R,
+    stdio:'pipe',
+    env:{...process.env,MCFT_BASE_SHA:exact.base},
+  });
+  const focused=read(INTERLEAVE_RESULT);
+  A.equal(focused.status,'PASS');
+  A.equal(focused.base_sha,exact.base);
+  A.equal(focused.changed_file_count,10);
+  const result={
+    schema_version:'geox_mcft_cap08_s6_run_a_qualification_reality_binding_repository_correction_result_v1',
+    status:'PASS',
+    subject_sha:git('rev-parse','HEAD'),
+    base_sha:exact.base,
+    changed_file_count:exact.changed.length,
+    successor_classification:'SUCCESSOR_S4_PERSISTENCE_INTERLEAVE_CORRECTION',
+    original_reality_binding_repository_correction_reopened:false,
+    corrected_product_loader_blob_sha:focused.corrected_product_loader_blob_sha,
+    s6_s4_atomic_persistence_adapter_blob_sha:focused.s6_s4_atomic_persistence_adapter_blob_sha,
+    database_execution_performed:false,
+    workflow_dispatch_performed:false,
+    new_execution_authority_issued:false,
+    run_a_qualification_completed:false,
+  };
+  write(result);
+  console.log(JSON.stringify(result,null,2));
+  return true;
 }
 function compositeSuccessor(){
   if(!F.existsSync(X.join(R,COMPOSITE_BOUNDARY)))return false;
@@ -86,6 +121,7 @@ function exactOriginalCorrection(){
   return true;
 }
 try{
+  if(interleaveSuccessor())process.exit(0);
   if(compositeSuccessor())process.exit(0);
   if(exactOriginalCorrection())process.exit(0);
   throw new Error('RUN_A_QUALIFICATION_REALITY_BINDING_CORRECTION_UNCLASSIFIED_HEAD');

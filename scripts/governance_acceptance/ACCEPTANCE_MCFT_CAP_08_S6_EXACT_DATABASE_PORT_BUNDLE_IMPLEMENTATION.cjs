@@ -34,6 +34,47 @@ function exactSuccessorBoundaryV1(boundary){
   if(JSON.stringify(changed)!==JSON.stringify([...boundary.changed_files].sort()))return null;
   return{base,changed};
 }
+function successorS4PersistenceInterleaveCorrectionV1(){
+  const SB=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-S4-PERSISTENCE-INTERLEAVE-CORRECTION-BOUNDARY-V1.json`;
+  if(!F.existsSync(X.join(R,SB)))return false;
+  const exact=exactSuccessorBoundaryV1(r(SB));
+  if(!exact)return false;
+  const validator='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_S4_PERSISTENCE_INTERLEAVE_CORRECTION.cjs';
+  P.execFileSync(process.execPath,[validator],{
+    cwd:R,
+    stdio:'pipe',
+    env:{...process.env,MCFT_BASE_SHA:exact.base},
+  });
+  const result=r('acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_S4_PERSISTENCE_INTERLEAVE_CORRECTION_RESULT.json');
+  A.equal(result.status,'PASS');
+  A.equal(result.base_sha,exact.base);
+  A.equal(result.changed_file_count,10);
+  const q={
+    schema_version:'geox_mcft_cap08_s6_exact_database_port_bundle_implementation_result_v1',
+    status:'PASS',
+    subject_sha:g('rev-parse','HEAD'),
+    base_sha:exact.base,
+    changed_file_count:exact.changed.length,
+    successor_classification:'SUCCESSOR_S4_PERSISTENCE_INTERLEAVE_CORRECTION',
+    original_port_bundle_implementation_reopened:false,
+    corrected_product_loader_blob_sha:result.corrected_product_loader_blob_sha,
+    s6_s4_atomic_persistence_adapter_blob_sha:result.s6_s4_atomic_persistence_adapter_blob_sha,
+    t00_t16_binding_count:17,
+    completion_tuple_fabrication_count:0,
+    atomic_write_member_count:7,
+    database_execution_performed:false,
+    workflow_dispatch_present:false,
+    single_run_database_execution_authorized:false,
+    run_a_executed:false,
+    run_b_executed:false,
+    s6_candidate_implemented:false,
+    mcft_cap_08_complete:false,
+    mcft_cap_09_authorized:false,
+  };
+  w(q);
+  console.log(JSON.stringify(q,null,2));
+  return true;
+}
 function successorCompositeRangeCorrectionV1(){
   const SB=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-COMPOSITE-RANGE-CORRECTION-BOUNDARY-V1.json`;
   if(!F.existsSync(X.join(R,SB)))return false;
@@ -124,6 +165,7 @@ function successorRealityBindingRepositoryCorrectionV1(){
   console.log(JSON.stringify(q,null,2));
   return true;
 }
+if(successorS4PersistenceInterleaveCorrectionV1())process.exit(0);
 if(successorCompositeRangeCorrectionV1())process.exit(0);
 if(successorRealityBindingRepositoryCorrectionV1())process.exit(0);
 try{

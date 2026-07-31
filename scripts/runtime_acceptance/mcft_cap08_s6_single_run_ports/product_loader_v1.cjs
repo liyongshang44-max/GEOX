@@ -1,12 +1,17 @@
 'use strict';
+const assert=require('node:assert/strict');
 const {product}=require('./shared_v1.cjs');
+const {createS6S4AtomicPersistenceRepositoryV1}=require('./s6_s4_atomic_persistence_repository_v1.cjs');
 async function loadProduct(root){
   const modules=await Promise.all([
     product(root,'apps/server/src/domain/soil_water/hourly_water_balance_v1.ts'),
     product(root,'apps/server/src/domain/twin_runtime/canonical_identity_v1.ts'),
+    product(root,'apps/server/src/domain/twin_runtime/canonical_json_v1.ts'),
     product(root,'apps/server/src/domain/twin_runtime/cap08_phase_engine_contracts_v1.ts'),
     product(root,'apps/server/src/domain/twin_runtime/cap08_s2_formal_provider_contracts_v1.ts'),
     product(root,'apps/server/src/domain/twin_runtime/cap08_s3_formal_provider_contracts_v1.ts'),
+    product(root,'apps/server/src/domain/twin_runtime/cap08_s3_completion_tuple_v1.ts'),
+    product(root,'apps/server/src/domain/twin_runtime/cap08_s4_append_forward_contracts_v1.ts'),
     product(root,'apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts'),
     product(root,'apps/server/src/persistence/twin_runtime/postgres_action_feedback_tick_source_v1.ts'),
     product(root,'apps/server/src/runtime/twin_runtime/cap08_s2_qualified_evidence_source_v1.ts'),
@@ -36,7 +41,17 @@ async function loadProduct(root){
     product(root,'scripts/runtime_acceptance/mcft_cap08_s2_formal_provider_fixture_v1.ts'),
     product(root,'scripts/runtime_acceptance/mcft_cap08_s3_source_manifest_v1.ts'),
   ]);
-  return Object.assign({},...modules);
+  const p=Object.assign({},...modules);
+  const ProductS4Service=p.Cap08S4AppendForwardServiceV1;
+  assert.equal(typeof ProductS4Service,'function','S6_S4_PRODUCT_SERVICE_REQUIRED');
+  p.Cap08S4AppendForwardServiceV1=class S6CompositeCap08S4AppendForwardServiceV1 extends ProductS4Service{
+    constructor(pool,evidenceSource){
+      super(pool,evidenceSource);
+      assert.ok(Object.prototype.hasOwnProperty.call(this,'repository'),'S6_S4_PERSISTENCE_REPOSITORY_SEAM_REQUIRED');
+      this.repository=createS6S4AtomicPersistenceRepositoryV1({pool,p});
+    }
+  };
+  return p;
 }
 
 module.exports={loadProduct};
