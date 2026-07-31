@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const {Pool}=require('pg');
-const {createFreshDatabasePortV1}=require('../mcft_cap08_s6_single_run_ports/fresh_database_v1.cjs');
+const {createQualificationFreshDatabasePortV1}=require('./fresh_database_v1.cjs');
 const {createDirectQualificationMaterializerV1}=require('./direct_materializer_v1.cjs');
 const {createClosureReaderV1}=require('../mcft_cap08_s6_single_run_ports/closure_reader_v1.cjs');
 const {createRecoveryPortV1}=require('../mcft_cap08_s6_single_run_ports/recovery_v1.cjs');
@@ -25,7 +25,7 @@ async function createPortsV1({root,authority,exactSubjectSha,runLabel,operationa
  const adminPool=new Pool({connectionString:adminUrl,max:4});
  const shared={receipts:[],selector:null,recovery:new Map(),readModel:new Map()};
  return{
-  freshDatabase:createFreshDatabasePortV1({pool,adminPool}),
+  freshDatabase:createQualificationFreshDatabasePortV1({pool,adminPool}),
   materializer:createDirectQualificationMaterializerV1({root,pool,adminPool,shared,authority}),
   closureReader:createClosureReaderV1({pool}),
   recovery:createRecoveryPortV1({pool,adminPool,shared}),
