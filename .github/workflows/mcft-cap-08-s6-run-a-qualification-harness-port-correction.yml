@@ -1,0 +1,45 @@
+name: mcft-cap-08-s6-run-a-qualification-harness-port-correction
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-harness-port-correction.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-FAILED-ATTEMPT-003-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-HARNESS-PORT-CORRECTION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-HARNESS-PORT-CORRECTION-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_CONTROL_PLANE.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_HARNESS_PORT_CORRECTION.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification/qualification_harness_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification_ports/direct_materializer_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification_ports/index_v1.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  run-a-qualification-harness-port-correction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate harness and qualification port correction without database execution
+        env:
+          MCFT_BASE_SHA: 51f6d20c11832aff4b679b78bb920d66b478a8fb
+          MCFT_LOCAL_REPLAY: '1'
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_HARNESS_PORT_CORRECTION.cjs
+      - name: Upload harness-port correction evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-a-qualification-harness-port-correction-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_HARNESS_PORT_CORRECTION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
