@@ -1,0 +1,42 @@
+name: mcft-cap-08-s6-run-a-qualification-port-binding-correction
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-port-binding-correction.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-PORT-BINDING-CORRECTION-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-PORT-BINDING-CORRECTION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-V3-PORT-BINDING-INCOMPATIBILITY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_PORT_BINDING_CORRECTION.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification_ports/direct_materializer_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification_ports/index_v1.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  run-a-qualification-port-binding-correction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate qualification port binding correction without database execution
+        env:
+          MCFT_BASE_SHA: dbbe1f7dabc728ee453c2174d98152051b2ddc22
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_PORT_BINDING_CORRECTION.cjs
+      - name: Upload qualification port binding correction evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-a-qualification-port-binding-correction-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_PORT_BINDING_CORRECTION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
