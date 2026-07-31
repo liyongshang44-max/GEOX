@@ -1,0 +1,29 @@
+#!/usr/bin/env node
+'use strict';
+const A=require('node:assert/strict'),C=require('node:crypto'),P=require('node:child_process'),F=require('node:fs'),O=require('node:os'),X=require('node:path');
+const R=X.resolve(__dirname,'../..'),D='docs/digital_twin/mcft/cap_08';
+const AP=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-BOOTSTRAP-FRESHNESS-CORRECTION-EFFECTIVENESS-AUTHORITY-V1.json`;
+const BP=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-BOOTSTRAP-FRESHNESS-CORRECTION-EFFECTIVENESS-BOUNDARY-V1.json`;
+const GP=`${D}/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-BOOTSTRAP-FRESHNESS-REPLACEMENT-AUTHORITY-ISSUANCE-GATE-V1.json`;
+const ORIGINAL='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_BOOTSTRAP_FRESHNESS_CORRECTION.cjs';
+const W='.github/workflows/mcft-cap-08-s6-run-a-qualification-bootstrap-freshness-correction-effectiveness.yml',Q=X.join(R,'acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_BOOTSTRAP_FRESHNESS_CORRECTION_EFFECTIVENESS_RESULT.json');
+const read=p=>JSON.parse(F.readFileSync(X.join(R,p),'utf8')),text=p=>F.readFileSync(X.join(R,p),'utf8'),git=(cwd,...a)=>P.execFileSync('git',a,{cwd,encoding:'utf8'}).trim();
+const canon=v=>Array.isArray(v)?`[${v.map(canon).join(',')}]`:v&&typeof v==='object'?`{${Object.keys(v).sort().map(k=>`${JSON.stringify(k)}:${canon(v[k])}`).join(',')}}`:JSON.stringify(v);
+const sd=v=>{const x=structuredClone(v);delete x.semantic_digest;return`sha256:${C.createHash('sha256').update(canon(x)).digest('hex')}`},out=v=>{F.mkdirSync(X.dirname(Q),{recursive:true});F.writeFileSync(Q,JSON.stringify(v,null,2)+'\n')};
+let worktree=null;
+try{
+ const a=read(AP),b=read(BP),g=read(GP),base=String(process.env.MCFT_BASE_SHA||b.base_main_sha).trim();
+ A.equal(base,b.base_main_sha);A.equal(git(R,'merge-base',base,'HEAD'),base);A.equal(git(R,'diff','--check',`${base}...HEAD`),'');
+ const changed=git(R,'diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();A.deepEqual(changed,[...b.changed_files].sort());A.equal(changed.length,5);for(const v of[a,b,g])A.equal(v.semantic_digest,sd(v),'SEMANTIC_DIGEST');
+ const s=a.implementation_subject;A.equal(s.merge_commit_sha,base);A.equal(git(R,'rev-parse',`${s.candidate_head_sha}^{tree}`),s.candidate_tree_sha);A.equal(git(R,'rev-parse',`${s.merge_commit_sha}^{tree}`),s.merge_tree_sha);A.equal(s.candidate_tree_sha,s.merge_tree_sha);A.equal(git(R,'diff','--name-only',s.candidate_head_sha,s.merge_commit_sha),'');
+ for(const [p,h] of Object.entries(a.implementation_object_set))A.equal(git(R,'rev-parse',`${base}:${p}`),h,`IMPLEMENTATION_BLOB_DRIFT:${p}`);
+ A.equal(a.exact_head_evidence.required_workflow_count,9);A.equal(a.exact_head_evidence.required_workflow_success_count,9);A.equal(a.verified_result.bootstrap_fact_count,11);A.equal(a.verified_result.bootstrap_visibility_count,11);A.equal(a.verified_result.positive_vector_count,1);A.equal(a.verified_result.negative_vector_count,6);A.equal(a.verified_result.v4_operational_instance_reusable,false);
+ A.equal(g.record_status,'RUN_A_QUALIFICATION_REPLACEMENT_AUTHORITY_V5_ISSUANCE_AUTHORIZED');A.equal(g.effectiveness_authority_semantic_digest,a.semantic_digest);A.equal(g.issuance_constraints.execution_subject_selector,'THIS_EFFECTIVENESS_MERGE_SHA');A.equal(g.issuance_constraints.qualification_fresh_database_port_blob_sha,'6850c56a45b123481e11f9335bbbb582aac09651');A.equal(g.issuance_constraints.qualification_port_bundle_blob_sha,'257e8b8a0aabe05b92d94106dcb887a8de095d0e');A.equal(g.issuance_constraints.retired_operational_run_instance_ids.at(-1),'MCFT-CAP-08-S6-RUN-A-QUAL-20260731-005');
+ worktree=F.mkdtempSync(X.join(O.tmpdir(),'mcft-cap08-freshness-effectiveness-'));P.execFileSync('git',['worktree','add','--detach',worktree,s.merge_commit_sha],{cwd:R,stdio:'pipe'});
+ P.execFileSync(process.execPath,[ORIGINAL],{cwd:worktree,env:{...process.env,MCFT_BASE_SHA:'bcc517b54b6c667ad798e4464b9c8c74fe5c8cfb'},stdio:'pipe'});
+ const replay=JSON.parse(F.readFileSync(X.join(worktree,'acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_BOOTSTRAP_FRESHNESS_CORRECTION_RESULT.json'),'utf8'));
+ A.equal(replay.status,'PASS');A.equal(replay.subject_sha,s.merge_commit_sha);A.equal(replay.changed_file_count,8);A.equal(replay.bootstrap_fact_count,11);A.equal(replay.visibility_count,11);A.equal(replay.positive_vector_count,1);A.equal(replay.negative_vector_count,6);A.equal(replay.database_execution_performed,false);A.equal(replay.workflow_dispatch_performed,false);
+ const wf=text(W);A.match(wf,/pull_request:/);for(const x of[/workflow_dispatch:/,/services:\s*\n\s*postgres:/,/DATABASE_URL/])A.doesNotMatch(wf,x);A.equal(b.runtime_acceptance_file_count,0);A.equal(b.database_execution_performed,false);
+ const z={schema_version:'geox_mcft_cap08_s6_run_a_qualification_bootstrap_freshness_correction_effectiveness_result_v1',status:'PASS',subject_sha:git(R,'rev-parse','HEAD'),base_sha:base,changed_file_count:5,implementation_merge_sha:s.merge_commit_sha,candidate_to_merge_file_delta:0,detached_merge_replay_pass:true,bootstrap_fact_count:11,visibility_count:11,positive_vector_count:1,negative_vector_count:6,qualification_fresh_database_port_blob_sha:g.issuance_constraints.qualification_fresh_database_port_blob_sha,qualification_port_bundle_blob_sha:g.issuance_constraints.qualification_port_bundle_blob_sha,replacement_authority_v5_issuance_authorized:true,database_execution_performed:false,workflow_dispatch_performed:false,run_a_qualification_completed:false,run_b_executed:false};out(z);console.log(JSON.stringify(z,null,2));
+}catch(e){out({schema_version:'geox_mcft_cap08_s6_run_a_qualification_bootstrap_freshness_correction_effectiveness_result_v1',status:'FAIL',error:e instanceof Error?e.stack||e.message:String(e)});console.error(e);process.exitCode=1}
+finally{if(worktree){try{P.execFileSync('git',['worktree','remove','--force',worktree],{cwd:R,stdio:'pipe'})}catch{}try{F.rmSync(worktree,{recursive:true,force:true})}catch{}}}
