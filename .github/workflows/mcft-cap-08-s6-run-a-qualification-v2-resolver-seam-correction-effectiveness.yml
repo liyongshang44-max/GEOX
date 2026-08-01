@@ -1,0 +1,40 @@
+name: mcft-cap-08-s6-run-a-qualification-v2-resolver-seam-correction-effectiveness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-v2-resolver-seam-correction-effectiveness.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-V2-RESOLVER-SEAM-CORRECTION-EFFECTIVENESS-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-V2-RESOLVER-SEAM-V9-AUTHORITY-ISSUANCE-GATE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-V2-RESOLVER-SEAM-CORRECTION-EFFECTIVENESS-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_V2_RESOLVER_SEAM_CORRECTION_EFFECTIVENESS.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  qualification-v2-resolver-seam-correction-effectiveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate detached merged-main qualification v2 resolver seam effectiveness
+        env:
+          MCFT_BASE_SHA: d3f94d898552daa7f1fef89bb9ea17415c8a8e6a
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_V2_RESOLVER_SEAM_CORRECTION_EFFECTIVENESS.cjs
+      - name: Upload qualification v2 resolver seam effectiveness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-qualification-v2-resolver-seam-effectiveness-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_V2_RESOLVER_SEAM_CORRECTION_EFFECTIVENESS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
