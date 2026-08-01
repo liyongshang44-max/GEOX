@@ -1,0 +1,52 @@
+name: mcft-cap-08-s4-t17-product-timeline-adjudication
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/mcft-cap-08-s4-t17-product-timeline-adjudication.yml"
+      - "apps/server/src/domain/twin_runtime/cap08_t17_transition_contracts_v1.ts"
+      - "apps/server/src/domain/twin_runtime/cap08_t17_transition_witness_identity_v1.ts"
+      - "apps/server/src/runtime/twin_runtime/cap08_t17_transition_persistence_port_v1.ts"
+      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-T17-ACCEPTANCE-MATRIX-V1.json"
+      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-T17-ADR-BOUNDARY-V1.json"
+      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-T17-PRODUCT-TIMELINE-ARCHITECTURE-ADJUDICATION-V1.md"
+      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-T17-SQL-TRANSACTION-SPECIFICATION-V1.json"
+      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-T17-TRANSITION-STATE-MACHINE-V1.json"
+      - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_T17_PRODUCT_TIMELINE_ADJUDICATION_V1.ts"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-s4-t17-product-timeline-adjudication:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Verify ADR and machine contracts without database execution
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: pnpm exec tsx scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_T17_PRODUCT_TIMELINE_ADJUDICATION_V1.ts
+      - name: Upload ADR evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s4-t17-product-timeline-adjudication-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S4_T17_PRODUCT_TIMELINE_ADJUDICATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
