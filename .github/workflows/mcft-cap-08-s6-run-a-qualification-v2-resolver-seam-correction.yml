@@ -1,0 +1,45 @@
+name: mcft-cap-08-s6-run-a-qualification-v2-resolver-seam-correction
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-v2-resolver-seam-correction.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-V8-T17-RESOLVER-READBACK-FAILURE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-V2-RESOLVER-SEAM-CORRECTION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-V2-RESOLVER-SEAM-CORRECTION-BOUNDARY-V1.json'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification_ports_v2/qualification_product_chain_v2.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification_ports_v2/direct_materializer_v2.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification_ports_v2/index_v2.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/qualification_workflow_entrypoint_v2.ts'
+      - '.github/workflows/mcft-cap-08-s6-run-a-qualification-database-execution-v2.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_V2_RESOLVER_SEAM_CORRECTION.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  qualification-v2-resolver-seam-correction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate qualification v2 resolver seam correction without PostgreSQL
+        env:
+          MCFT_BASE_SHA: 45728a119237728abdfc316e13446b7c28ff5cf7
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_QUALIFICATION_V2_RESOLVER_SEAM_CORRECTION.cjs
+      - name: Upload qualification v2 resolver seam correction evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-qualification-v2-resolver-seam-correction-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_RUN_A_QUALIFICATION_V2_RESOLVER_SEAM_CORRECTION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
