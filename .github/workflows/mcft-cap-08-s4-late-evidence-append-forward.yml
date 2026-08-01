@@ -1,5 +1,4 @@
 name: mcft-cap-08-s4-late-evidence-append-forward
-
 on:
   pull_request:
     paths:
@@ -12,13 +11,13 @@ on:
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-IMPLEMENTATION-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-CANDIDATE-CHANGED-FILE-BOUNDARY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_BOUNDARY.cjs'
+      - 'scripts/governance_acceptance/mcft_cap08_s4_t17_product_transition_successor_v1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_EXACT_SHA_ATTESTATION.cjs'
       - 'scripts/governance_acceptance/mcft_cap08_s4_artifact_finalize.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_LATE_CORRECTION_MATH.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_APPEND_FORWARD_DB.ts'
       - 'scripts/runtime_acceptance/mcft_cap08_s4_acceptance_support_v1.ts'
-permissions:
-  contents: read
+permissions: { contents: read }
 concurrency:
   group: mcft-cap08-s4-formal-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
@@ -39,24 +38,24 @@ jobs:
     steps:
       - name: Checkout exact candidate head
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0
-          persist-credentials: false
+        with: { ref: '${{ github.event.pull_request.head.sha || github.sha }}', fetch-depth: 0, persist-credentials: false }
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.4 }
       - uses: actions/setup-node@v4
         with: { node-version: 20.11.1, cache: pnpm }
       - name: Install locked workspace
         run: pnpm install --frozen-lockfile
-      - name: Validate exact formal boundary
+      - name: Validate exact formal boundary or exact successor
         env: { MCFT_BASE_SHA: 8dca45a90f3f614e73fbae581545add63e7a51b1 }
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_BOUNDARY.cjs
       - name: Typecheck server
+        if: env.MCFT_CAP08_S4_T17_PRODUCT_TRANSITION_SUCCESSOR != 'true'
         run: pnpm --filter @geox/server typecheck
       - name: Qualify all twelve frozen vectors
+        if: env.MCFT_CAP08_S4_T17_PRODUCT_TRANSITION_SUCCESSOR != 'true'
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_LATE_CORRECTION_MATH.ts
       - name: Bootstrap fresh S4 candidate database
+        if: env.MCFT_CAP08_S4_T17_PRODUCT_TRANSITION_SUCCESSOR != 'true'
         env:
           MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
           MCFT_CAP08_TARGET_DATABASE_NAME: geox_mcft_cap08_s4_candidate
@@ -66,6 +65,7 @@ jobs:
           MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
       - name: Execute exact S3 predecessor and S4 append-forward proof
+        if: env.MCFT_CAP08_S4_T17_PRODUCT_TRANSITION_SUCCESSOR != 'true'
         env:
           DATABASE_URL: postgres://geox_mcft_cap08_runner_v1:cap08-s4-candidate-runner-password@127.0.0.1:5432/geox_mcft_cap08_s4_candidate
           MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap08_s4_candidate
@@ -73,6 +73,7 @@ jobs:
           MCFT_CAP08_S4_DESTRUCTIVE_ACCEPTANCE: '1'
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_APPEND_FORWARD_DB.ts
       - name: Finalize candidate authority artifact
+        if: env.MCFT_CAP08_S4_T17_PRODUCT_TRANSITION_SUCCESSOR != 'true'
         env:
           MCFT_ARTIFACT_STAGE: CANDIDATE_HEAD
           MCFT_BASE_SHA: 8dca45a90f3f614e73fbae581545add63e7a51b1
@@ -84,7 +85,7 @@ jobs:
         run: |
           psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='geox_mcft_cap08_s4_candidate' AND pid<>pg_backend_pid();"
           psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS geox_mcft_cap08_s4_candidate;"
-      - name: Upload candidate evidence
+      - name: Upload candidate or successor evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:

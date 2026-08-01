@@ -13,7 +13,11 @@ export const MCFT_CAP08_RELATION_PRIVILEGES_V1 = {
   // to SELECT even though the locked row is never mutated by S5.
   twin_object_idempotency_index_v1: ["SELECT", "INSERT", "UPDATE"],
   twin_runtime_lease_v1: ["SELECT", "INSERT", "UPDATE"],
-  twin_runtime_authority_snapshot_v1: ["SELECT", "INSERT"],
+  // The S4/T17 transition reads the immutable authority row under FOR SHARE.
+  // PostgreSQL requires UPDATE privilege for row-lock clauses; product code
+  // contains no authority UPDATE statement.
+  twin_runtime_authority_snapshot_v1: ["SELECT", "INSERT", "UPDATE"],
+  twin_cap08_s4_t17_transition_guard_v1: ["SELECT", "INSERT", "UPDATE"],
   twin_active_lineage_index_v1: ["SELECT", "INSERT", "UPDATE"],
   twin_state_history_projection_v1: ["SELECT", "INSERT"],
   twin_state_latest_index_v1: ["SELECT", "INSERT", "UPDATE"],

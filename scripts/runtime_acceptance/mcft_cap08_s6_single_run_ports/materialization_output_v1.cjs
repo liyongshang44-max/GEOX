@@ -73,8 +73,9 @@ const phaseResults=boundSpec.phases.map(phase=>({
   status:'COMPLETE',
   providers_enabled:[...phase.providers_enabled],
 }));
+assert.deepEqual([...p.CAP08_PHASE_ORDER_V1],['resolve','E','H','A','B','G','C','barrier']);
 const operationalEvents=boundSpec.phases.flatMap(phase=>
-  phase.phase_order.map((provider,sequence)=>({
+  p.CAP08_PHASE_ORDER_V1.map((provider,sequence)=>({
     run_label:spec.run_label,
     formal_run_id:spec.formal_run_id,
     operational_run_instance_id:spec.operational_run_instance_id,

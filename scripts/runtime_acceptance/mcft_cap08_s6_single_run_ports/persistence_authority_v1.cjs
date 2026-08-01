@@ -2,6 +2,8 @@
 const {readJson}=require('./shared_v1.cjs');
 function persistenceAdapter(runtimeRepository,forecastRepository){
   return{
+    __cap08_runtime_repository:runtimeRepository,
+    __cap08_forecast_repository:forecastRepository,
     acquireLease:runtimeRepository.acquireLease.bind(runtimeRepository),
     lookupARecordSet:forecastRepository.lookupARecordSet.bind(forecastRepository),
     commitARecordSet:forecastRepository.commitARecordSet.bind(forecastRepository),
@@ -63,6 +65,5 @@ function evidenceAuthorities(root){
     },
   };
 }
-
 
 module.exports={persistenceAdapter,evidenceAuthorities};

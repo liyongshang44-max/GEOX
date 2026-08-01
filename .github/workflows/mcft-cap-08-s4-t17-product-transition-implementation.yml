@@ -1,0 +1,173 @@
+name: mcft-cap-08-s4-t17-product-transition-implementation
+
+on:
+  pull_request:
+    paths:
+      - "apps/server/db/migrations/2026_08_01_mcft_cap08_s4_t17_transition.sql"
+      - "apps/server/src/infra/mcft_cap08_database_platform_bootstrap_v1.ts"
+      - "apps/server/src/persistence/twin_runtime/postgres_cap08_s4_t17_transition_repository_v1.ts"
+      - "apps/server/src/runtime/twin_runtime/cap08_s4_t17_routing_persistence_v1.ts"
+      - "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_loader_v1.cjs"
+      - "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/persistence_authority_v1.cjs"
+      - "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_chain_v1.cjs"
+      - "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/final_evidence_source_v1.cjs"
+      - "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/materialization_output_v1.cjs"
+      - "scripts/runtime_acceptance/mcft_cap08_s4_t17_product_transition/**"
+      - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_T17_PRODUCT_TRANSITION_IMPLEMENTATION_V1.ts"
+      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-T17-PRODUCT-TRANSITION-IMPLEMENTATION-BOUNDARY-V1.json"
+      - ".github/workflows/mcft-cap-08-s4-t17-product-transition-implementation.yml"
+
+permissions:
+  contents: read
+
+env:
+  PNPM_VERSION: 9.15.4
+  NODE_VERSION: 20.11.1
+
+jobs:
+  static-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify implementation boundary and A2 pre-lease fail-closed routing
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: pnpm exec tsx scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_T17_PRODUCT_TRANSITION_IMPLEMENTATION_V1.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-08-s4-t17-product-transition-static-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S4_T17_PRODUCT_TRANSITION_IMPLEMENTATION_STATIC_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
+
+  development-double-pass:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        attempt: [1, 2]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Prepare independent database identity
+        shell: bash
+        run: |
+          attempt="${{ matrix.attempt }}"
+          echo "MCFT_CAP08_DB_NAME=geox_mcft_cap08_s6_t17_impl_${{ github.run_id }}_${attempt}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_RUNNER_PASSWORD=cap08-t17-impl-${{ github.run_id }}-${attempt}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_MIGRATOR_PASSWORD=cap08-t17-migrator-${{ github.run_id }}-${attempt}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_LEGACY_RUNTIME_PASSWORD=cap08-t17-legacy-${{ github.run_id }}-${attempt}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_DEV_OPERATIONAL_RUN_INSTANCE_ID=MCFT-CAP-08-T17-IMPL-${{ github.run_id }}-${attempt}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_DEV_CONTINUITY_CONTEXT_PATH=acceptance-output/t17-product-transition/continuity_context.json" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_DEV_PRIMARY_RESULT_PATH=acceptance-output/t17-product-transition/primary_result.json" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_DEV_RESTART_RESULT_PATH=acceptance-output/t17-product-transition/restart_result.json" >> "$GITHUB_ENV"
+      - name: Bootstrap fresh PostgreSQL 16 database and exact runner ACL
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          export MCFT_CAP08_TARGET_DATABASE_NAME="$MCFT_CAP08_DB_NAME"
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+      - name: Execute complete 24-Tick product transition
+        id: primary
+        continue-on-error: true
+        env:
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: "1"
+          MCFT_CAP08_DEV_EXACT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p acceptance-output/t17-product-transition
+          export DATABASE_URL="postgres://geox_mcft_cap08_runner_v1:${MCFT_CAP08_RUNNER_PASSWORD}@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          export MCFT_CAP08_ADMIN_DATABASE_URL="postgres://postgres:postgres@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/mcft_cap08_s4_t17_product_transition/development_runner_v1.cjs 2>&1 | tee acceptance-output/t17-product-transition/primary.log
+      - name: Verify fresh-process continuity
+        id: restart
+        if: steps.primary.outcome == 'success'
+        continue-on-error: true
+        run: |
+          export MCFT_CAP08_ADMIN_DATABASE_URL="postgres://postgres:postgres@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          set -o pipefail
+          node scripts/runtime_acceptance/mcft_cap08_s4_t17_product_transition/restart_readback_v1.cjs 2>&1 | tee acceptance-output/t17-product-transition/restart.log
+      - name: Drop disposable database
+        if: always()
+        env:
+          PGPASSWORD: postgres
+        run: |
+          db="$MCFT_CAP08_DB_NAME"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${db}' AND pid<>pg_backend_pid();"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"${db}\";"
+          present="$(psql -h 127.0.0.1 -U postgres -d postgres -At -c "SELECT count(*) FROM pg_database WHERE datname='${db}';")"
+          test "$present" = "0"
+          printf '{"status":"PASS","database_name":"%s","database_absent_after_drop":true}\n' "$db" > acceptance-output/t17-product-transition/drop_result.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-08-s4-t17-product-transition-attempt-${{ matrix.attempt }}-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/t17-product-transition/
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Enforce attempt PASS
+        if: always()
+        run: |
+          test "${{ steps.primary.outcome }}" = "success"
+          test "${{ steps.restart.outcome }}" = "success"
+
+  settle-double-pass:
+    needs: development-double-pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s4-t17-product-transition-attempt-1-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/t17-product-double-pass/attempt-1
+      - uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s4-t17-product-transition-attempt-2-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/t17-product-double-pass/attempt-2
+      - run: node scripts/runtime_acceptance/mcft_cap08_s4_t17_product_transition/double_pass_settlement_v1.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s4-t17-product-transition-double-pass-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S4_T17_PRODUCT_TRANSITION_DOUBLE_PASS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
