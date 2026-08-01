@@ -1,0 +1,159 @@
+name: mcft-cap-08-s6-development-qualification-double-run
+
+on:
+  workflow_dispatch:
+    inputs:
+      exact_subject_sha:
+        description: Exact development qualification subject
+        required: true
+        type: string
+  pull_request:
+    paths:
+      - "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_chain_v1.cjs"
+      - "scripts/runtime_acceptance/mcft_cap08_s6_development_qualification/**"
+      - "scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification_ports_v2/qualification_product_chain_v2.cjs"
+      - ".github/workflows/mcft-cap-08-s6-development-qualification-double-run.yml"
+      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-QUALIFICATION-V9-FAILURE-CLASSIFICATION-V1.json"
+      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DEVELOPMENT-QUALIFICATION-DOUBLE-RUN-BOUNDARY-V1.json"
+      - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_DEVELOPMENT_QUALIFICATION_DOUBLE_RUN_V1.cjs"
+
+permissions:
+  contents: read
+
+env:
+  PNPM_VERSION: 9.15.4
+  NODE_VERSION: 20.11.1
+
+jobs:
+  development-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        attempt: [1, 2]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.exact_subject_sha || github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate development runner boundary
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_DEVELOPMENT_QUALIFICATION_DOUBLE_RUN_V1.cjs
+      - name: Prepare independent fresh database identity
+        shell: bash
+        run: |
+          attempt="${{ matrix.attempt }}"
+          echo "MCFT_CAP08_DB_NAME=geox_mcft_cap08_s6_dev_qual_${{ github.run_id }}_${attempt}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_RUNNER_PASSWORD=cap08-s6-dev-runner-${{ github.run_id }}-${attempt}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_MIGRATOR_PASSWORD=cap08-s6-dev-migrator-${{ github.run_id }}-${attempt}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_LEGACY_RUNTIME_PASSWORD=cap08-s6-dev-legacy-${{ github.run_id }}-${attempt}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_DEV_OPERATIONAL_RUN_INSTANCE_ID=MCFT-CAP-08-S6-DEV-QUAL-${{ github.run_id }}-${attempt}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_DEV_CONTINUITY_CONTEXT_PATH=acceptance-output/development-qualification/continuity_context.json" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_DEV_PRIMARY_RESULT_PATH=acceptance-output/development-qualification/primary_result.json" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_DEV_RESTART_RESULT_PATH=acceptance-output/development-qualification/restart_result.json" >> "$GITHUB_ENV"
+      - name: Bootstrap fresh PostgreSQL 16 development qualification database
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CANDIDATE_SHA: ${{ inputs.exact_subject_sha || github.event.pull_request.head.sha }}
+        run: |
+          export MCFT_CAP08_TARGET_DATABASE_NAME="$MCFT_CAP08_DB_NAME"
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+      - name: Execute complete 24-Tick development qualification
+        id: primary
+        continue-on-error: true
+        env:
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: "1"
+          MCFT_CAP08_DEV_EXACT_SUBJECT_SHA: ${{ inputs.exact_subject_sha || github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p acceptance-output/development-qualification
+          export DATABASE_URL="postgres://geox_mcft_cap08_runner_v1:${MCFT_CAP08_RUNNER_PASSWORD}@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          export MCFT_CAP08_ADMIN_DATABASE_URL="postgres://postgres:postgres@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/mcft_cap08_s6_development_qualification/development_runner_v1.cjs 2>&1 | tee acceptance-output/development-qualification/primary.log
+      - name: Verify fresh-process restart and read continuity
+        id: restart
+        if: steps.primary.outcome == 'success'
+        continue-on-error: true
+        run: |
+          mkdir -p acceptance-output/development-qualification
+          export DATABASE_URL="postgres://geox_mcft_cap08_runner_v1:${MCFT_CAP08_RUNNER_PASSWORD}@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          export MCFT_CAP08_ADMIN_DATABASE_URL="postgres://postgres:postgres@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          set -o pipefail
+          pnpm -w exec tsx scripts/runtime_acceptance/mcft_cap08_s6_development_qualification/restart_readback_v1.cjs 2>&1 | tee acceptance-output/development-qualification/restart.log
+      - name: Drop and verify disposable database absence
+        if: always()
+        env:
+          PGPASSWORD: postgres
+        shell: bash
+        run: |
+          db="$MCFT_CAP08_DB_NAME"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${db}' AND pid<>pg_backend_pid();"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"${db}\";"
+          present="$(psql -h 127.0.0.1 -U postgres -d postgres -At -c "SELECT count(*) FROM pg_database WHERE datname='${db}';")"
+          test "$present" = "0"
+          mkdir -p acceptance-output/development-qualification
+          printf '{"schema_version":"geox_mcft_cap08_s6_development_qualification_drop_result_v1","status":"PASS","database_name":"%s","database_absent_after_drop":true}\n' "$db" > acceptance-output/development-qualification/drop_result.json
+      - name: Upload development qualification attempt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-development-qualification-attempt-${{ matrix.attempt }}-${{ inputs.exact_subject_sha || github.event.pull_request.head.sha }}
+          path: acceptance-output/development-qualification/
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Enforce attempt PASS
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.primary.outcome }}" = "success"
+          test "${{ steps.restart.outcome }}" = "success"
+
+  settle-double-pass:
+    needs: development-qualification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.exact_subject_sha || github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-development-qualification-attempt-1-${{ inputs.exact_subject_sha || github.event.pull_request.head.sha }}
+          path: acceptance-output/development-double-pass/attempt-1
+      - uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-development-qualification-attempt-2-${{ inputs.exact_subject_sha || github.event.pull_request.head.sha }}
+          path: acceptance-output/development-double-pass/attempt-2
+      - name: Settle two consecutive independent fresh-database PASS results
+        run: node scripts/runtime_acceptance/mcft_cap08_s6_development_qualification/double_pass_settlement_v1.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-development-qualification-double-pass-${{ inputs.exact_subject_sha || github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_DEVELOPMENT_QUALIFICATION_DOUBLE_PASS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

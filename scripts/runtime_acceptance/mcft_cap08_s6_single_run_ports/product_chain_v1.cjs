@@ -150,18 +150,11 @@ const prefixReader=createS6PrefixTransportReaderV1({pool,p});
 assert.ok(Object.prototype.hasOwnProperty.call(s4Service,'chainReader'),'S6_S4_CHAIN_READER_BINDING_REQUIRED');
 s4Service.chainReader=prefixReader;
 let s4=null;
+const t17LogicalTime=p.cap08TickLogicalTimeV1(17);
 const handoff={
   async prepareNextTickInput(scope){
     const base=await baseHandoff.prepareNextTickInput(scope);
-    const t17=p.cap08TickLogicalTimeV1(17);
-    if(base.next_logical_tick_time===t17&&!s4){
-      s4=await s4Service.execute({
-        formal_run_id:spec.formal_run_id,
-        scope:spec.scope,
-        created_at:fixture.bootstrap_runtime_config.created_at,
-        phase_engine_source_digest:sourceDigest,
-      });
-      assert.equal(s4.status,'COMPLETED');
+    if(base.next_logical_tick_time===t17LogicalTime&&s4){
       return correctedT17Handoff(base,s4);
     }
     return base;
@@ -224,7 +217,7 @@ for(let index=0;index<24;index+=1){
   const runtimeConfigHash=fixture.runtime_config_hashes_by_logical_time[logicalTime];
   assert.equal(typeof runtimeConfigRef,'string',`S6_RUNTIME_CONFIG_REF:T${String(index).padStart(2,'0')}`);
   assert.equal(typeof runtimeConfigHash,'string',`S6_RUNTIME_CONFIG_HASH:T${String(index).padStart(2,'0')}`);
-  tickResults.push(await completionTick.executeOneTick({
+  const tickResult=await completionTick.executeOneTick({
     formal_run_id:spec.formal_run_id,
     scope:spec.scope,
     logical_time:logicalTime,
@@ -235,7 +228,22 @@ for(let index=0;index<24;index+=1){
     crop_stage_context:fixture.crop_stage_context,
     lease_owner:`mcft-cap08-s6-${spec.operational_run_instance_id}`,
     lease_duration_seconds:300,
-  }));
+  });
+  tickResults.push(tickResult);
+  if(index===16){
+    assert.equal(s4,null,'S4_MUST_NOT_EXECUTE_BEFORE_T16_POSTCONDITION');
+    assert.equal(tickResult.next_handoff.next_logical_tick_time,t17LogicalTime,'S6_T16_POSTCONDITION_BASE_HANDOFF');
+    s4=await s4Service.execute({
+      formal_run_id:spec.formal_run_id,
+      scope:spec.scope,
+      created_at:fixture.bootstrap_runtime_config.created_at,
+      phase_engine_source_digest:sourceDigest,
+    });
+    assert.equal(s4.status,'COMPLETED');
+    const corrected=correctedT17Handoff(tickResult.next_handoff,s4);
+    assert.equal(corrected.previous_posterior_ref,s4.corrected_set.state.object_id,'S6_T17_CORRECTED_POSTERIOR_REF');
+    assert.equal(corrected.next_logical_tick_time,t17LogicalTime,'S6_T17_CORRECTED_HANDOFF_TIME');
+  }
 }
 const finalHandoff=await handoff.prepareNextTickInput(spec.scope);
 const expectedNext=new Date(Date.parse(p.cap08TickLogicalTimeV1(23))+3_600_000).toISOString();
