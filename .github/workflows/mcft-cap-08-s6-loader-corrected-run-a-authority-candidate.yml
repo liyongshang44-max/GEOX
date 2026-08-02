@@ -1,0 +1,47 @@
+name: mcft-cap-08-s6-loader-corrected-run-a-authority-candidate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-loader-corrected-run-a-authority-candidate.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-LOADER-CORRECTED-FORMAL-RUN-A-AUTHORITY-CANDIDATE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-LOADER-CORRECTED-RUN-A-AUTHORITY-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-LOADER-CORRECTED-RUN-A-AUTHORITY-ISSUANCE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-LOADER-CORRECTED-RUN-A-AUTHORITY-OBJECT-SET-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_LOADER_CORRECTED_RUN_A_AUTHORITY_CANDIDATE_V1.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap08-s6-loader-corrected-run-a-authority-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  authority-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact authority candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate 50-object set, corrected loader, fresh identity, and non-effective authority
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_LOADER_CORRECTED_RUN_A_AUTHORITY_CANDIDATE_V1.cjs
+      - name: Upload authority candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-loader-corrected-run-a-authority-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_LOADER_CORRECTED_RUN_A_AUTHORITY_CANDIDATE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
