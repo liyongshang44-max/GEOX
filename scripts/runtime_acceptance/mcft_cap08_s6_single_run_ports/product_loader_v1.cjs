@@ -28,6 +28,8 @@ async function loadProduct(root){
     product(root,'apps/server/src/runtime/twin_runtime/cap08_frozen_evidence_source_v1.ts'),
     product(root,'apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts'),
     product(root,'apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts'),
+    product(root,'apps/server/src/runtime/twin_runtime/cap08_t17_authority_bound_forecast_resolver_v1.ts'),
+    product(root,'apps/server/src/persistence/twin_runtime/postgres_cap08_t17_transition_repository_v1.ts'),
     product(root,'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts'),
     product(root,'apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts'),
     product(root,'apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts'),
@@ -49,6 +51,10 @@ async function loadProduct(root){
       super(pool,evidenceSource);
       assert.ok(Object.prototype.hasOwnProperty.call(this,'repository'),'S6_S4_PERSISTENCE_REPOSITORY_SEAM_REQUIRED');
       this.repository=createS6S4AtomicPersistenceRepositoryV1({pool,p});
+      assert.ok(Object.prototype.hasOwnProperty.call(this,'resolver'),'S6_S4_RESOLVER_SEAM_REQUIRED');
+      assert.ok(this.resolver&&typeof this.resolver==='object','S6_S4_RESOLVER_OBJECT_REQUIRED');
+      assert.ok(Object.prototype.hasOwnProperty.call(this.resolver,'repository'),'S6_S4_RESOLVER_REPOSITORY_SEAM_REQUIRED');
+      this.resolver.repository=this.repository;
     }
   };
   return p;
