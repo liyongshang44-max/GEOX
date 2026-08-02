@@ -1,0 +1,62 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_cto_dual_account_verification_deferral_v1",
+  "record_status": "CTO_DUAL_ACCOUNT_VERIFICATION_DEFERRAL_EFFECTIVE_ON_MERGE",
+  "ruling_id": "MCFT-CAP-08.S6-CTO-DUAL-ACCOUNT-VERIFICATION-DEFERRAL-2026-08-02",
+  "ruling_authority": "CTO",
+  "ruling_date": "2026-08-02",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "ruling_text_zh": "CTO裁决：搁置双账户的验证。",
+  "ruling_text_en": "CTO ruling: dual-account verification is suspended.",
+  "scope": "MCFT-CAP-08.S6_FINAL_CLOSURE_ONLY",
+  "effect": {
+    "independent_review_requirement_state": "SUSPENDED_BY_CTO_RULING",
+    "verified_second_github_account_required": false,
+    "candidate_merge_blocked_by_dual_account_verification": false,
+    "exact_sha_attestation_blocked_by_dual_account_verification": false,
+    "independent_review_satisfied": false,
+    "independent_review_performed": false,
+    "independent_review_waived": false,
+    "retroactive_approval_claim_allowed": false,
+    "reactivation_requires_separate_cto_ruling": true
+  },
+  "superseded_current_enforcement_points": [
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REVIEW-POLICY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-WORKFLOW-DECLARATION-V1.json",
+    "docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json"
+  ],
+  "preserved_mandatory_gates": [
+    "FOCUSED_WORKFLOW_PASS",
+    "STANDARD_CI_PASS",
+    "EXACT_CHANGED_FILE_BOUNDARY",
+    "PROTECTED_MERGE",
+    "CANDIDATE_TO_MERGE_TREE_EQUALITY",
+    "EXACT_MERGE_SHA_REEXECUTION",
+    "R2_730_DAY_IMMUTABLE_UPLOAD_READBACK",
+    "LOCKED_VERSION_DELETE_DENIED",
+    "TWO_INDEPENDENT_FRESH_POSTGRESQL_RUNS",
+    "RUN_A_RUN_B_SEMANTIC_OPERATIONAL_AND_CLOSURE_EQUALITY",
+    "HARD_ACCEPTANCE_24_OF_24",
+    "CAP07_TEN_GET_SURFACES_ZERO_PRODUCT_WRITE",
+    "FINAL_LEDGER_SETTLEMENT"
+  ],
+  "technical_gate_relaxation": false,
+  "database_execution_performed": false,
+  "workflow_dispatch_performed": false,
+  "s6_candidate_implemented": false,
+  "mcft_cap_08_complete": false,
+  "mcft_cap_09_authorized": false,
+  "nonclaims": [
+    "NO_INDEPENDENT_REVIEW_SATISFACTION_CLAIM",
+    "NO_INDEPENDENT_REVIEW_PERFORMED_CLAIM",
+    "NO_PERMANENT_REVIEW_WAIVER",
+    "NO_RETROACTIVE_APPROVAL",
+    "NO_TECHNICAL_GATE_RELAXATION",
+    "NO_S6_CANDIDATE",
+    "NO_MCFT_CAP_08_COMPLETION",
+    "NO_MCFT_CAP_09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:2f0e0f8424562ae5017bad355a1942b15c14b5590a0450132d35830f25a010ab"
+}
