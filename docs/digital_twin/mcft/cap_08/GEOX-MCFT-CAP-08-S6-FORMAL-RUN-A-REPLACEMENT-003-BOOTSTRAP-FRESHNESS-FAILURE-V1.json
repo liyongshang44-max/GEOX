@@ -1,0 +1,69 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_run_a_replacement_003_bootstrap_freshness_failure_v1",
+  "record_status": "FORMAL_RUN_A_REPLACEMENT_003_DATABASE_STARTED_BOOTSTRAP_FRESHNESS_REJECTED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "workflow_run_id": 30745867826,
+  "authority_job_id": 91491255497,
+  "execution_job_id": 91491273133,
+  "authority_bearing_main_sha": "9e43fbda8a96d8b8fd704806080d8eff75ed3695",
+  "exact_subject_sha": "d91a1fb52cf4ea3f1f0650f664f4ce94667e1a59",
+  "authority_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-LOADER-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+  "authority_blob_sha": "01669ba4ef6c4193664eb952c40f2c6edcf25993",
+  "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-003",
+  "database_name": "geox_mcft_cap08_s6_run_a_30745867826",
+  "authority_job_status": "PASS",
+  "database_bootstrap_status": "PASS",
+  "formal_harness_entered": true,
+  "first_failure_code": "DATABASE_NOT_FRESH",
+  "first_failure_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/fresh_database_v1.cjs",
+  "first_failure_blob_sha": "95d6d2e7179df06aa728df4a4fde0ab7fc2a788c",
+  "product_materializer_entered": false,
+  "formal_result_generated": false,
+  "database_drop_status": "PASS",
+  "database_identity_reusable": false,
+  "operational_instance_reusable": false,
+  "rerun_jobs_authorized": false,
+  "artifacts": {
+    "authority": {
+      "artifact_id": 8832847712,
+      "digest": "sha256:53936ff997a713670aa436f63a55f59493f8090ac55f8762c8e2779f04cb6e17"
+    },
+    "formal_run": {
+      "artifact_id": 8832858695,
+      "digest": "sha256:f6668c3bb8e449b814a8361670efddf87af879ba4de74d7ecb6cd9df442e4962",
+      "formal_result_present": false,
+      "bootstrap_result_present": true
+    }
+  },
+  "bootstrap_baseline_evidence": {
+    "bootstrap_result_status": "PASS",
+    "init_file_count": 4,
+    "legacy_migration_applied_count": 71,
+    "cap07_visibility_migration_status": "PASS",
+    "relation_count": 30,
+    "business_schema_digest_stable": true,
+    "fact_count": 11,
+    "active_visibility_epoch_count": 1,
+    "visibility_row_count": 11,
+    "canonical_runtime_relations_zero": true,
+    "classification": "LEGAL_PLATFORM_BOOTSTRAP_BASELINE_NOT_PRIOR_FORMAL_RUN_CONTAMINATION"
+  },
+  "failure_classification": {
+    "stage": "FORMAL_FRESH_DATABASE_PREDICATE",
+    "code": "GLOBAL_ZERO_FACT_PREDICATE_REJECTS_LEGAL_BOOTSTRAP_BASELINE",
+    "product_semantics_evaluated": false,
+    "formal_result_emitted": false
+  },
+  "required_remediation": "REPLACE_FORMAL_FRESHNESS_PREDICATE_WITH_BOOTSTRAP_AWARE_RUN_SCOPED_PREDICATE",
+  "nonclaims": [
+    "NO_FORMAL_RUN_A_RESULT",
+    "NO_RUN_A_TERMINAL_SUCCESS",
+    "NO_RUN_B_AUTHORITY",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:4541e196e008ad76c3a1cc6c8015ce4e14d90b8d3f1e80b11a1c07aa072b77c1"
+}
