@@ -97,11 +97,12 @@ jobs:
         with:
           name: mcft-cap-08-s6-execution-authority-${{ inputs.exact_subject_sha }}-${{ inputs.run_label }}
           path: acceptance-output/execution-authority
-      - name: Prepare disposable database identity
+      - name: Prepare authority-bound disposable database identity
+        env:
+          MCFT_CAP08_NORMALIZED_EXECUTION_AUTHORITY: acceptance-output/execution-authority/MCFT_CAP_08_S6_NORMALIZED_EXECUTION_AUTHORITY.json
         shell: bash
         run: |
-          label="$(printf '%s' '${{ inputs.run_label }}' | tr '[:upper:]' '[:lower:]')"
-          echo "MCFT_CAP08_DB_NAME=geox_mcft_cap08_s6_${label}_${{ github.run_id }}" >> "$GITHUB_ENV"
+          node scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/database_identity_v1.cjs
           echo "MCFT_CAP08_RUNNER_PASSWORD=cap08-s6-runner-${{ github.run_id }}" >> "$GITHUB_ENV"
           echo "MCFT_CAP08_MIGRATOR_PASSWORD=cap08-s6-migrator-${{ github.run_id }}" >> "$GITHUB_ENV"
           echo "MCFT_CAP08_LEGACY_RUNTIME_PASSWORD=cap08-s6-legacy-${{ github.run_id }}" >> "$GITHUB_ENV"
