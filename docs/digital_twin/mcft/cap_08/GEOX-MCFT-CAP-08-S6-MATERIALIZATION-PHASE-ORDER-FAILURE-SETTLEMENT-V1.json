@@ -1,0 +1,85 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_materialization_phase_order_failure_settlement_v1",
+  "record_status": "RUN_A_MATERIALIZATION_PHASE_ORDER_FAILURE_SETTLED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "2c3e82480ff00e049796905a302c49b570650782",
+  "failed_dispatch": {
+    "workflow_run_id": 30760836890,
+    "run_attempt": 1,
+    "workflow_head_sha": "2c3e82480ff00e049796905a302c49b570650782",
+    "exact_subject_sha": "923a794e0fa865a4a8493680b1b8ac2e98e57fbc",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-007",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-007",
+    "physical_database_name": "geox_mcft_cap08_s6_run_a_replacement_007_30760836890",
+    "authority_artifact_id": 8837388975,
+    "authority_artifact_digest": "sha256:0908b0f5603856c6e3099b6cee445c384359b059d4a43289688225a02da90998",
+    "failed_run_artifact_id": 8837403277,
+    "failed_run_artifact_digest": "sha256:2761510ba296ef6853c83bd257ff8c8bfb2bdbd99637f1297ccba4b9ec393e42",
+    "database_dropped": true
+  },
+  "terminal_failure": {
+    "exception_class": "TypeError",
+    "message": "Cannot read properties of undefined (reading 'map')",
+    "stage": "FORMAL_MATERIALIZATION_OUTPUT_OPERATIONAL_EVENT_ASSEMBLY",
+    "source_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/materialization_output_v1.cjs",
+    "source_line": 77,
+    "product_chain_entered": true,
+    "product_chain_completed": true,
+    "canonical_receipt_count_before_failure": 153,
+    "formal_result_present": false
+  },
+  "root_cause": {
+    "s6_contract_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json",
+    "s6_contract_blob_sha": "47ff4215d711b229604b29ce6c663e62b59efc39",
+    "frozen_required_phase_order": [
+      "resolve",
+      "E",
+      "H",
+      "A",
+      "B",
+      "G",
+      "C",
+      "barrier"
+    ],
+    "prior_execution_spec_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/execution_spec_v1.cjs",
+    "prior_execution_spec_blob_sha": "906b2287dea662a74101fcbdf7bb2265f22976fa",
+    "prior_execution_spec_included_phase_order": false,
+    "prior_materialization_output_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/materialization_output_v1.cjs",
+    "prior_materialization_output_blob_sha": "774b8fec5b888932b38371885ad4feda8e7d71f8",
+    "materialization_output_required_phase_order": true
+  },
+  "correction": {
+    "execution_spec_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/execution_spec_v1.cjs",
+    "phase_order_copied_from_frozen_contract": true,
+    "phase_order_included_in_execution_spec_digest": true,
+    "materialization_output_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/materialization_output_v1.cjs",
+    "explicit_phase_order_validation_added": true,
+    "expected_phase_count": 28,
+    "expected_events_per_phase": 8,
+    "expected_operational_event_count": 224,
+    "empty_event_fallback_authorized": false,
+    "product_runtime_changed": false,
+    "migration_changed": false,
+    "formal_database_workflow_changed": false
+  },
+  "consumed_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-T17-GUARD-ACL-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "prior_blob_sha": "d437cbad61e39f4d155b358b99c18c9b8f17fcee",
+    "record_status": "SINGLE_FINAL_FORMAL_RUN_AUTHORITY_CONSUMED_MATERIALIZATION_PHASE_ORDER_FAILURE",
+    "reusable": false
+  },
+  "next_legal_action_after_merge": "ISSUE_NEW_NON_EFFECTIVE_RUN_A_AUTHORITY_CANDIDATE",
+  "nonclaims": [
+    "NO_REPLACEMENT_AUTHORITY_IN_CORRECTION_PR",
+    "NO_DATABASE_EXECUTION_IN_CORRECTION_PR",
+    "NO_WORKFLOW_DISPATCH_IN_CORRECTION_PR",
+    "NO_RUN_A_RESULT",
+    "NO_RUN_B_AUTHORITY",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:e76367fe33d6d471d1e6f8183da8aa3e453fa30ba18f283750d9270e237f9903"
+}
