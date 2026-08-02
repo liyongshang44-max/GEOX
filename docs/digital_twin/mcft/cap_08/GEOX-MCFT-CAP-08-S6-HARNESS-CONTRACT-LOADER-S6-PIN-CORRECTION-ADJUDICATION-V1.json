@@ -1,0 +1,56 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_harness_contract_loader_s6_pin_correction_adjudication_v1",
+  "record_status": "HARNESS_CONTRACT_LOADER_S6_PIN_CORRECTION_ADJUDICATED_NOT_EFFECTIVE_AUTHORITY",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "trigger": {
+    "closed_pull_request_number": 2754,
+    "invalid_candidate_head_sha": "95a151bed55148c0186062e5636411b86a0bcb8d",
+    "focused_workflow_run_id": 30740234139,
+    "focused_artifact_id": 8831021925,
+    "focused_artifact_digest": "sha256:a5da4f52fe2ce46703b396471cae1295997c8a43068489a9396db86cd4d316f0",
+    "observed_failure": "HARNESS_AUTHORITY_BLOB_DRIFT:s6"
+  },
+  "root_cause": {
+    "loader_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/contract_loader_v1.cjs",
+    "loader_blob_sha": "810ee6fc0944364ed825b80f922d977f37c56b34",
+    "pinned_s6_blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+    "current_s6_blob_sha": "47ff4215d711b229604b29ce6c663e62b59efc39",
+    "current_s6_record_status": "FROZEN_PRE_CANDIDATE_FINAL_CLOSURE_MACHINE_CONTRACT_CTO_REVIEW_AMENDED",
+    "amendment_merge_sha": "af608d3cd89e6621d1d9588bbf0ef754f62f2c89",
+    "amendment_pull_request_number": 2748,
+    "amendment_scope": "REVIEW_GOVERNANCE_ONLY",
+    "technical_gate_relaxation": false,
+    "execution_machine_semantics_changed": false
+  },
+  "correction": {
+    "strategy": "ADVANCE_ONLY_THE_S6_EXACT_BLOB_PIN",
+    "previous_loader_blob_sha": "810ee6fc0944364ed825b80f922d977f37c56b34",
+    "corrected_loader_blob_sha": "27903ddc8566505053e3e6ccf4e8d08dfc576869",
+    "other_five_contract_pins_changed": false,
+    "exact_blob_pinning_removed": false,
+    "local_replay_bypass_expanded": false,
+    "formal_identity_basis_changed": false
+  },
+  "invalidated_authority_candidate": {
+    "authority_candidate_id": "GEOX-MCFT-CAP-08-S6-HARNESS-CORRECTED-FORMAL-RUN-A-AUTHORITY-CANDIDATE-V1",
+    "candidate_blob_sha": "a3c7278a17f03569686badbd8c9b18811ecfeb12",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-002",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-002",
+    "candidate_merged": false,
+    "authority_effective": false,
+    "database_execution_performed": false,
+    "workflow_dispatch_performed": false,
+    "identity_reuse_authorized": false
+  },
+  "next_legal_action_after_merge": "CREATE_NEW_RUN_A_AUTHORITY_CANDIDATE_WITH_NEW_SUBJECT_AND_NEW_IDENTITY",
+  "database_execution_performed": false,
+  "workflow_dispatch_performed": false,
+  "replacement_authority_present": false,
+  "run_b_dispatch_authorized": false,
+  "formal_run_result_present": false,
+  "s6_candidate_implemented": false,
+  "mcft_cap_08_complete": false,
+  "mcft_cap_09_authorized": false,
+  "semantic_digest": "sha256:d9542702b2beba64ae59031083fdb64d1a45956c426504d1f096563ab9af15fb"
+}

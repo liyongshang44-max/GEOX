@@ -1,0 +1,59 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_harness_contract_loader_s6_pin_correction_boundary_v1",
+  "record_status": "HARNESS_CONTRACT_LOADER_S6_PIN_CORRECTION_BOUNDARY_FROZEN",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "6c17cf1043081621609371b6a46c6ecbeb1ad706",
+  "changed_file_count": 5,
+  "changed_files": [
+    ".github/workflows/mcft-cap-08-s6-harness-contract-loader-s6-pin-correction.yml",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-HARNESS-CONTRACT-LOADER-S6-PIN-CORRECTION-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-HARNESS-CONTRACT-LOADER-S6-PIN-CORRECTION-ADJUDICATION-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_HARNESS_CONTRACT_LOADER_S6_PIN_CORRECTION_V1.cjs",
+    "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/contract_loader_v1.cjs"
+  ],
+  "new_file_count": 4,
+  "modified_file_count": 1,
+  "governance_file_count": 4,
+  "runtime_acceptance_file_count": 1,
+  "product_runtime_file_count": 0,
+  "port_bundle_file_count": 0,
+  "harness_entrypoint_file_count": 0,
+  "migration_file_count": 0,
+  "database_execution_workflow_file_count": 0,
+  "loader_source": {
+    "path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/contract_loader_v1.cjs",
+    "previous_blob_sha": "810ee6fc0944364ed825b80f922d977f37c56b34",
+    "corrected_blob_sha": "27903ddc8566505053e3e6ccf4e8d08dfc576869",
+    "corrected_source_sha256": "sha256:2d013decd51088baf6fa7f82cd2b8b82c35d5f47cf0c6b3fb5931fa83c34d962",
+    "only_authorized_source_delta": "S6_EXACT_BLOB_PIN_9CECC1AA_TO_47FF4215"
+  },
+  "contract_pin_state": {
+    "authority": "e517aa42b51557d7ced75db92ff4c104945ecc36",
+    "effect": "05ca47c17e9700dfdee042ae396395494d099fc7",
+    "orchestrator": "c5d1232bcb1810a3ebd0898c213578ca49d0cd1d",
+    "run": "7a5feecbdb204c8fdf8c21ee8ea66576133c17dd",
+    "s6_previous": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+    "s6_current": "47ff4215d711b229604b29ce6c663e62b59efc39",
+    "dataset": "b7baa289daf9f391f0b200d77c6d7ee7f18e7252"
+  },
+  "protected_objects": {
+    "formal_identity_source_blob_sha": "9da7fb9f3c4a89d14a864043867dec7d68fab58a",
+    "formal_identity_s6_basis_blob_sha": "9cecc1aa6bd4063b770304f2539bc68a1ed2390c",
+    "corrected_harness_blob_sha": "1833c793a10bba383f54200a35cb3f8912b60b94",
+    "port_contract_blob_sha": "1f7b4a8aaac0a2db2e9ec6826672dd1a3a341681",
+    "port_bundle_blob_sha": "2f574588ba3010a94e64f965bb17fc97b3b33c72",
+    "database_workflow_blob_sha": "47b5f7748c917a099dc92219f1cbd4055bfb4862"
+  },
+  "database_execution_performed": false,
+  "workflow_dispatch_performed": false,
+  "replacement_authority_present": false,
+  "authority_effectiveness_present": false,
+  "run_b_dispatch_authorized": false,
+  "formal_run_result_present": false,
+  "s6_candidate_implemented": false,
+  "stage_1a_closure_established": false,
+  "mcft_cap_08_complete": false,
+  "mcft_cap_09_authorized": false,
+  "semantic_digest": "sha256:c80d7ad7298f9001a4a76081cc911ba1bd968c54608b1c38776acb67fdb1a4c0"
+}
