@@ -1,0 +1,50 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_t17_guard_acl_correction_boundary_v1",
+  "record_status": "RUN_A_T17_GUARD_ACL_CORRECTION_BOUNDARY_FROZEN",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "abe5cb7e0d6bf5e554be1d2ecdd9b6e554a21053",
+  "changed_file_count": 7,
+  "changed_files": [
+    ".github/workflows/mcft-cap-08-s6-run-a-t17-guard-acl-correction.yml",
+    "apps/server/src/infra/mcft_cap08_database_platform_bootstrap_base_v1.ts",
+    "apps/server/src/infra/mcft_cap08_database_platform_bootstrap_v1.ts",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-T17-GUARD-ACL-CORRECTION-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-T17-GUARD-ACL-FAILURE-SETTLEMENT-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-T17-INTERLEAVE-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_T17_GUARD_ACL_CORRECTION_V1.cjs"
+  ],
+  "new_file_count": 5,
+  "modified_file_count": 2,
+  "governance_file_count": 5,
+  "runtime_source_file_count": 0,
+  "infra_source_file_count": 2,
+  "runtime_acceptance_file_count": 0,
+  "product_runtime_file_count": 0,
+  "migration_file_count": 0,
+  "formal_database_workflow_file_count": 0,
+  "database_execution_performed": false,
+  "workflow_dispatch_performed": false,
+  "replacement_authority_present": false,
+  "run_b_dispatch_authorized": false,
+  "formal_run_result_present": false,
+  "acl_extension": {
+    "relation": "public.twin_cap08_s4_t17_transition_guard_v1",
+    "exact_privileges": [
+      "SELECT",
+      "INSERT"
+    ],
+    "update": false,
+    "delete": false,
+    "truncate": false,
+    "references": false,
+    "trigger": false
+  },
+  "consumed_authority_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-T17-INTERLEAVE-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+  "consumed_authority_blob_sha": "a5bf87adbacd43cf2177a9f9bc433cf9e0e8bcb3",
+  "base_bootstrap_blob_sha": "720e14c5567c227b02c39579f17ec80c2f1fbf5b",
+  "wrapper_bootstrap_blob_sha": "31ef663a85ea93fe0319db598515840b12111135",
+  "mcft_cap_08_complete": false,
+  "mcft_cap_09_authorized": false,
+  "semantic_digest": "sha256:e82b901d8bfccf4382a943e3c5f659ffa6f4144a6fecc1a5e222289f95ff650c"
+}
