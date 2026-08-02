@@ -1,8 +1,10 @@
 {
   "schema_version": "geox_mcft_cap08_s6_workflow_declaration_v1",
-  "record_status": "FUTURE_FINAL_CLOSURE_CANDIDATE_WORKFLOWS_PRE_REGISTERED",
+  "record_status": "FUTURE_FINAL_CLOSURE_CANDIDATE_WORKFLOWS_PRE_REGISTERED_CTO_REVIEW_AMENDED",
   "capability_line_id": "MCFT-CAP-08",
   "slice_id": "MCFT-CAP-08.S6",
+  "cto_ruling_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CTO-DUAL-ACCOUNT-VERIFICATION-DEFERRAL-V1.json",
+  "cto_ruling_text_zh": "CTO裁决：搁置双账户的验证。",
   "governance_workflow": {
     "name": "mcft-cap-08-s6-pre-candidate-governance",
     "file": ".github/workflows/mcft-cap-08-s6-pre-candidate-governance.yml",
@@ -21,7 +23,9 @@
     "runs_24_hard_acceptance_items": true,
     "runs_cap07_ten_get_surfaces": true,
     "runs_operator_zero_write_readback": true,
-    "requires_exact_head_independent_approval": true,
+    "requires_exact_head_independent_approval": false,
+    "dual_account_verification_suspended_by_cto": true,
+    "technical_gate_relaxation": false,
     "finalizes_candidate_artifact": true
   },
   "exact_sha_workflow": {
@@ -30,7 +34,9 @@
     "present_in_governance_pr": false,
     "requires_two_parent_merge": true,
     "requires_candidate_merge_tree_equality": true,
-    "requires_exact_head_independent_approval": true,
+    "requires_exact_head_independent_approval": false,
+    "dual_account_verification_suspended_by_cto": true,
+    "technical_gate_relaxation": false,
     "runs_two_fresh_databases_on_exact_merge_sha": true,
     "retention_level": "R2",
     "retention_days": 730,
