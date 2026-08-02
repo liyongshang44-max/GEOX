@@ -1,0 +1,59 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_t17_guard_acl_corrected_run_a_authority_issuance_v1",
+  "record_status": "T17_GUARD_ACL_CORRECTED_RUN_A_REPLACEMENT_AUTHORITY_CANDIDATE_ISSUED_NOT_EFFECTIVE",
+  "issuance_id": "GEOX-MCFT-CAP-08-S6-T17-GUARD-ACL-CORRECTED-RUN-A-AUTHORITY-ISSUANCE-V1",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "923a794e0fa865a4a8493680b1b8ac2e98e57fbc",
+  "t17_guard_acl_correction_merge_sha": "923a794e0fa865a4a8493680b1b8ac2e98e57fbc",
+  "candidate_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-T17-GUARD-ACL-CORRECTED-FORMAL-RUN-A-AUTHORITY-CANDIDATE-V1.json",
+    "blob_sha": "2cc7b11711d5afe0063bb74e84455dadc36f436d",
+    "semantic_digest": "sha256:7cf5319d9a6355dfd4020cdc0965145eb70608e9681e5a35c3947faec93bb3c6",
+    "record_status": "FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORITY_CANDIDATE_NOT_EFFECTIVE",
+    "runtime_gate_eligible": false
+  },
+  "object_set_manifest": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-T17-GUARD-ACL-CORRECTED-RUN-A-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "37ad609382dc1f40a8e77272ffab7ffd525e01c5",
+    "semantic_digest": "sha256:9d6e876c867a3c122da405f8053fd817c0c89416fea50f85cb40594dda859925",
+    "object_count": 54
+  },
+  "identity": {
+    "run_label": "RUN_A",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-007",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-007",
+    "physical_database_name_template": "geox_mcft_cap08_s6_run_a_replacement_007_<github_run_id>",
+    "prior_operational_identity_reused": false,
+    "prior_database_identity_reused": false
+  },
+  "preserved_retirement_state": {
+    "replacement_006_consumed": true,
+    "replacement_006_consumed_authority_blob_sha": "a5bf87adbacd43cf2177a9f9bc433cf9e0e8bcb3",
+    "replacement_005_consumed": true,
+    "replacement_004_consumed": true,
+    "replacement_003_consumed": true,
+    "replacement_002_invalidated": true,
+    "run_b_dispatch_authorized": false
+  },
+  "activation": {
+    "separate_effectiveness_required": true,
+    "database_execution_authorized": false,
+    "workflow_dispatch_authorized": false,
+    "max_dispatch_count_after_effectiveness": 1,
+    "rerun_authorized_after_effectiveness": false
+  },
+  "first_legal_next_action_after_merge": "ESTABLISH_T17_GUARD_ACL_CORRECTED_RUN_A_AUTHORITY_EFFECTIVENESS",
+  "nonclaims": [
+    "NO_DATABASE_EXECUTION",
+    "NO_WORKFLOW_DISPATCH",
+    "NO_EFFECTIVE_AUTHORITY",
+    "NO_RUN_A_RESULT",
+    "NO_RUN_B_AUTHORITY",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:a7733a13e085c7f6a5aa10961137cd16a2b6904153dd17950af2653acc1fb5f8"
+}
