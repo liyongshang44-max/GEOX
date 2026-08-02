@@ -1,0 +1,93 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_run_a_t17_interleave_assembly_failure_settlement_v1",
+  "record_status": "FORMAL_RUN_A_AUTHORITY_CONSUMED_T17_INTERLEAVE_ASSEMBLY_FAILURE_SETTLED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "failed_dispatch": {
+    "github_workflow_run_id": 30756390297,
+    "github_run_attempt": 1,
+    "workflow_head_sha": "7fbe6b5a49a1012ca0ecfb3dc93f269f35b984e9",
+    "checked_out_exact_subject_sha": "d676aacc7d2227609daa2ed97a6ce572e05cc754",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-005",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-005",
+    "physical_database_name": "geox_mcft_cap08_s6_run_a_replacement_005_30756390297",
+    "authority_artifact_id": 8836046990,
+    "authority_artifact_digest": "sha256:e22c6b47421faddf0221585864dbc926b51519c44edfb77c28787466bf067f32",
+    "failed_run_artifact_id": 8836059587,
+    "failed_run_artifact_digest": "sha256:4dba7909dec3945d6f4a00550277df90edb315ae5e7da20bd00203f5dba36ce3",
+    "postgres_version": "16.14",
+    "legacy_migration_applied_count": 71,
+    "cap07_visibility_migration_status": "PASS",
+    "relation_count": 30,
+    "fresh_database_bootstrap_status": "PASS",
+    "authority_bound_database_identity_status": "PASS",
+    "database_dropped": true
+  },
+  "failure_classification": {
+    "stage": "T16_POST_A_NEXT_HANDOFF_VALIDATION",
+    "code": "CAP04_SINGLE_TICK_NEXT_HANDOFF_STATE_MISMATCH",
+    "formal_harness_entered": true,
+    "product_chain_entered": true,
+    "s4_append_forward_completed_before_failure": true,
+    "t17_tick_entered": false,
+    "formal_result_emitted": false,
+    "formal_run_terminal_success": false
+  },
+  "root_cause": {
+    "class": "S6_PRODUCT_CHAIN_T17_INTERLEAVE_ASSEMBLY_BYPASSED_DEDICATED_PRODUCT_BRIDGE",
+    "ordinary_cap04_invariant_correct": true,
+    "ordinary_cap04_invariant_must_not_be_weakened": true,
+    "old_product_chain_blob_sha": "79c4b0bc081cf74749ee2f38ec3b6ae51e271cc3",
+    "old_product_loader_blob_sha": "49b3f70e4712979b0bc96257f255b1fe9203a3a0",
+    "misordered_behavior": [
+      "T16_A_RECORD_SET_PERSISTED",
+      "S4_EXECUTED_INSIDE_CAP04_POST_A_HANDOFF_READ",
+      "CORRECTED_T16_HANDOFF_RETURNED_TO_ORDINARY_CAP04_ASSERTION",
+      "ORDINARY_CAP04_EXPECTED_BASE_T16_AND_FAILED_CLOSED"
+    ],
+    "required_behavior": [
+      "T00_THROUGH_T16_COMPLETE_ON_ORDINARY_CAP04_PATH",
+      "S4_EXECUTES_AT_OUTER_RANGE_BOUNDARY",
+      "T17_USES_DEDICATED_AUTHORITY_BOUND_TRANSITION_PATH",
+      "T18_THROUGH_T23_RETURN_TO_ORDINARY_PATH"
+    ]
+  },
+  "correction": {
+    "product_chain_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_chain_v1.cjs",
+    "corrected_product_chain_blob_sha": "fe3472b1ac2e0f6e91800172315060d7a4456b0b",
+    "product_loader_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_loader_v1.cjs",
+    "corrected_product_loader_blob_sha": "9ede26f14b97677cfa926f67a18aa8b9bc1b5a29",
+    "existing_product_bridge": {
+      "corrected_handoff_service_blob_sha": "c7ee1472daf95570163e38f3101ae7c8265c0119",
+      "transition_persistence_adapter_blob_sha": "891a7ffba8920e3c3a625a3d30c6b4f32de65fc5",
+      "explicit_routing_tick_service_blob_sha": "b9e7f748f464ce0540f0ac95fb1ee9400cfa4441",
+      "transition_repository_blob_sha": "7754cde4570b5417d8dd8ceeff82aff2322ef1d0"
+    },
+    "product_runtime_modified": false,
+    "migration_modified": false,
+    "database_workflow_modified": false,
+    "database_execution_in_correction_pr": false
+  },
+  "authority_settlement": {
+    "replacement_005_consumed": true,
+    "replacement_005_reusable": false,
+    "rerun_authorized": false,
+    "duplicate_dispatch_authorized": false,
+    "replacement_authority_issued": false,
+    "run_b_authorized": false
+  },
+  "next_legal_action_after_merge": "ISSUE_NEW_NON_EFFECTIVE_RUN_A_AUTHORITY_CANDIDATE",
+  "nonclaims": [
+    "NO_RUN_A_TERMINAL_SUCCESS",
+    "NO_REPLACEMENT_AUTHORITY_IN_CORRECTION_PR",
+    "NO_DATABASE_EXECUTION_IN_CORRECTION_PR",
+    "NO_WORKFLOW_DISPATCH_IN_CORRECTION_PR",
+    "NO_RUN_B_AUTHORITY",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_STAGE_1A_CLOSURE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:ee51ef434b79952eb17d15ab27e4d1eebab2b45809c68d653b52825f1fa386ba"
+}

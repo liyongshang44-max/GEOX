@@ -1,0 +1,54 @@
+name: mcft-cap-08-s6-run-a-t17-interleave-correction
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-run-a-t17-interleave-correction.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-MATERIALIZER-BOUND-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-T17-INTERLEAVE-ASSEMBLY-FAILURE-SETTLEMENT-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-T17-INTERLEAVE-CORRECTION-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_T17_INTERLEAVE_CORRECTION_V1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_loader_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_chain_v1.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap08-s6-run-a-t17-interleave-correction-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  t17-interleave-correction:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact correction head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install exact dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate consumed RUN_A settlement and T17 product bridge correction
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_T17_INTERLEAVE_CORRECTION_V1.cjs
+      - name: Upload correction evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-a-t17-interleave-correction-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_RUN_A_T17_INTERLEAVE_CORRECTION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

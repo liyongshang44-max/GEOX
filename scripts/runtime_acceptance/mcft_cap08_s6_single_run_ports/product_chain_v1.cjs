@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const {member,phaseForOrder}=require('./shared_v1.cjs');
 const {loadProduct}=require('./product_loader_v1.cjs');
 const {persistenceAdapter,evidenceAuthorities}=require('./persistence_authority_v1.cjs');
-const {exactMembers,correctedT17Handoff}=require('./corrected_handoff_v1.cjs');
+const {exactMembers}=require('./corrected_handoff_v1.cjs');
 const {
   createFinalFormalEvidenceSourceV1,DATASET_ID,PROFILE_ID,OUTCOME_PROFILE_ID,CONTRACT_DIGEST,HIDDEN_PARAMETER,
 }=require('./final_evidence_source_v1.cjs');
@@ -110,6 +110,52 @@ function exactEpisodeV1(episode){
   assert.equal(episode.execution_receipt_count,1,'S6_RECEIPT_COUNT');
   assert.equal(episode.action_feedback_count,1,'S6_FEEDBACK_COUNT');
 }
+async function executeS6CompositeTickRangeV1({executeBeforeS4,executeS4,executeAfterS4}){
+  const results=[];
+  for(let index=0;index<=16;index+=1){
+    results.push(await executeBeforeS4(index));
+  }
+  const s4=await executeS4();
+  for(let index=17;index<24;index+=1){
+    results.push(await executeAfterS4(index));
+  }
+  return{results,s4};
+}
+function createTickInputV1({p,fixture,spec,index}){
+  const logicalTime=p.cap08TickLogicalTimeV1(index);
+  const runtimeConfigRef=fixture.runtime_config_refs_by_logical_time[logicalTime];
+  const runtimeConfigHash=fixture.runtime_config_hashes_by_logical_time[logicalTime];
+  assert.equal(typeof runtimeConfigRef,'string',`S6_RUNTIME_CONFIG_REF:T${String(index).padStart(2,'0')}`);
+  assert.equal(typeof runtimeConfigHash,'string',`S6_RUNTIME_CONFIG_HASH:T${String(index).padStart(2,'0')}`);
+  return{
+    formal_run_id:spec.formal_run_id,
+    scope:spec.scope,
+    logical_time:logicalTime,
+    created_at:fixture.bootstrap_runtime_config.created_at,
+    runtime_config_ref:runtimeConfigRef,
+    runtime_config_hash:runtimeConfigHash,
+    authorized_future_forcing_binding_ids:['binding_weather','binding_et0'],
+    crop_stage_context:fixture.crop_stage_context,
+    lease_owner:`mcft-cap08-s6-${spec.operational_run_instance_id}`,
+    lease_duration_seconds:300,
+  };
+}
+function createCompletionTickV1({p,pool,handoff,frozen,deferred,normal,receiptTick}){
+  const tick=new p.Cap08S3FormalTickServiceV1(
+    handoff,
+    frozen,
+    deferred,
+    normal,
+    receiptTick,
+    new p.Cap08S3DecisionActionProviderServiceV1(pool),
+    new p.Cap08S3ReceiptEpisodeGuardV1(pool),
+    new p.Cap08S3AuthorityGuardV1(pool),
+  );
+  return new p.Cap08S3CompletionEvidenceTickServiceV1(
+    tick,
+    new p.Cap08S3OutcomeCompletionEvidenceServiceV1(pool),
+  );
+}
 async function runProductChainV1({root,pool,spec}){
 const p=await loadProduct(root);
 const fixture=await p.buildCap08S2FormalProviderFixtureV1(root);
@@ -141,62 +187,33 @@ const evidence=createFinalFormalEvidenceSourceV1({
   product:p,
 });
 const frozen=new p.Cap08FrozenEvidenceSourceV1(new p.Cap08S2QualifiedEvidenceSourceV1(evidence));
-const deferred=new p.Cap08DeferredScenarioPersistenceV1(
-  persistenceAdapter(runtimeRepository,forecastRepository),
-);
+const ordinaryPersistence=persistenceAdapter(runtimeRepository,forecastRepository);
+const baseDeferred=new p.Cap08DeferredScenarioPersistenceV1(ordinaryPersistence);
 const baseHandoff=new p.PrepareNextTickInputServiceV1(nextTickRepository);
+const baseNormal=new p.Cap04ForecastScenarioSingleTickServiceV1(
+  baseHandoff,
+  frozen,
+  runtimeRepository,
+  baseDeferred,
+  new p.DirectCap04ExecutionConfigResolverV1(),
+);
+const baseReceiptTick=new p.Cap08S3ReceiptConsumingForecastScenarioTickServiceV1(
+  baseHandoff,
+  frozen,
+  new p.PostgresActionFeedbackTickSourceV1(pool),
+  runtimeRepository,
+  baseDeferred,
+  new p.DirectCap04ExecutionConfigResolverV1(),
+);
+const baseCompletionTick=createCompletionTickV1({
+  p,pool,handoff:baseHandoff,frozen,deferred:baseDeferred,normal:baseNormal,receiptTick:baseReceiptTick,
+});
+
 const s4Service=new p.Cap08S4AppendForwardServiceV1(pool,evidence);
 const prefixReader=createS6PrefixTransportReaderV1({pool,p});
 assert.ok(Object.prototype.hasOwnProperty.call(s4Service,'chainReader'),'S6_S4_CHAIN_READER_BINDING_REQUIRED');
 s4Service.chainReader=prefixReader;
-let s4=null;
-const handoff={
-  async prepareNextTickInput(scope){
-    const base=await baseHandoff.prepareNextTickInput(scope);
-    const t17=p.cap08TickLogicalTimeV1(17);
-    if(base.next_logical_tick_time===t17&&!s4){
-      s4=await s4Service.execute({
-        formal_run_id:spec.formal_run_id,
-        scope:spec.scope,
-        created_at:fixture.bootstrap_runtime_config.created_at,
-        phase_engine_source_digest:sourceDigest,
-      });
-      assert.equal(s4.status,'COMPLETED');
-      return correctedT17Handoff(base,s4);
-    }
-    return base;
-  },
-};
 
-const normal=new p.Cap04ForecastScenarioSingleTickServiceV1(
-  handoff,
-  frozen,
-  runtimeRepository,
-  deferred,
-  new p.DirectCap04ExecutionConfigResolverV1(),
-);
-const receiptTick=new p.Cap08S3ReceiptConsumingForecastScenarioTickServiceV1(
-  handoff,
-  frozen,
-  new p.PostgresActionFeedbackTickSourceV1(pool),
-  runtimeRepository,
-  deferred,
-  new p.DirectCap04ExecutionConfigResolverV1(),
-);
-const tick=new p.Cap08S3FormalTickServiceV1(
-  handoff,
-  frozen,
-  deferred,
-  normal,
-  receiptTick,
-  new p.Cap08S3DecisionActionProviderServiceV1(pool),
-  new p.Cap08S3ReceiptEpisodeGuardV1(pool),
-  new p.Cap08S3AuthorityGuardV1(pool),
-);
-const completionTick=new p.Cap08S3CompletionEvidenceTickServiceV1(
-  tick,
-  new p.Cap08S3OutcomeCompletionEvidenceServiceV1(pool),
-);
 const bootstrapLogicalTime=new Date(Date.parse(p.CAP08_S1_RUNTIME_START_V1)-3_600_000).toISOString();
 assert.equal(fixture.bootstrap_runtime_config.logical_time,bootstrapLogicalTime,'S6_B00_CONFIG_TIME');
 const bootstrap=await new p.A0BootstrapRuntimeServiceV1(
@@ -215,29 +232,98 @@ const bootstrap=await new p.A0BootstrapRuntimeServiceV1(
 });
 assert.equal(bootstrap.next_tick_logical_time,p.CAP08_S1_RUNTIME_START_V1,'S6_B00_T00_HANDOFF');
 
-const initialHandoff=await handoff.prepareNextTickInput(spec.scope);
+const initialHandoff=await baseHandoff.prepareNextTickInput(spec.scope);
 assert.equal(initialHandoff.next_logical_tick_time,p.cap08TickLogicalTimeV1(0),'S6_RANGE_START_T00');
-const tickResults=[];
-for(let index=0;index<24;index+=1){
-  const logicalTime=p.cap08TickLogicalTimeV1(index);
-  const runtimeConfigRef=fixture.runtime_config_refs_by_logical_time[logicalTime];
-  const runtimeConfigHash=fixture.runtime_config_hashes_by_logical_time[logicalTime];
-  assert.equal(typeof runtimeConfigRef,'string',`S6_RUNTIME_CONFIG_REF:T${String(index).padStart(2,'0')}`);
-  assert.equal(typeof runtimeConfigHash,'string',`S6_RUNTIME_CONFIG_HASH:T${String(index).padStart(2,'0')}`);
-  tickResults.push(await completionTick.executeOneTick({
-    formal_run_id:spec.formal_run_id,
-    scope:spec.scope,
-    logical_time:logicalTime,
-    created_at:fixture.bootstrap_runtime_config.created_at,
-    runtime_config_ref:runtimeConfigRef,
-    runtime_config_hash:runtimeConfigHash,
-    authorized_future_forcing_binding_ids:['binding_weather','binding_et0'],
-    crop_stage_context:fixture.crop_stage_context,
-    lease_owner:`mcft-cap08-s6-${spec.operational_run_instance_id}`,
-    lease_duration_seconds:300,
-  }));
-}
-const finalHandoff=await handoff.prepareNextTickInput(spec.scope);
+
+let transitionCompletionTick=null;
+const range=await executeS6CompositeTickRangeV1({
+  executeBeforeS4:index=>baseCompletionTick.executeOneTick(createTickInputV1({p,fixture,spec,index})),
+  executeS4:async()=>{
+    const s4=await s4Service.execute({
+      formal_run_id:spec.formal_run_id,
+      scope:spec.scope,
+      created_at:fixture.bootstrap_runtime_config.created_at,
+      phase_engine_source_digest:sourceDigest,
+    });
+    assert.equal(s4.status,'COMPLETED');
+    const transitionRepository=new p.PostgresCap08S4T17TransitionRepositoryV1(pool);
+    const transitionAdapter=new p.Cap08S4T17TransitionPersistenceAdapterV1(
+      ordinaryPersistence,
+      transitionRepository,
+    );
+    const transitionDeferred=new p.Cap08DeferredScenarioPersistenceV1(transitionAdapter);
+    const t17=p.cap08TickLogicalTimeV1(17);
+    const correctedHandoff=new p.Cap08S4T17CorrectedHandoffServiceV1(
+      spec.formal_run_id,
+      t17,
+      baseHandoff,
+      transitionRepository,
+    );
+    const genericTransitionTick=new p.Cap04ForecastScenarioSingleTickServiceV1(
+      correctedHandoff,
+      frozen,
+      runtimeRepository,
+      transitionDeferred,
+      new p.DirectCap04ExecutionConfigResolverV1(),
+    );
+    const transitionService=new p.Cap08S4T17TransitionTickServiceV1(
+      genericTransitionTick,
+      transitionAdapter,
+      frozen,
+      runtimeRepository,
+      transitionRepository,
+    );
+    const contextResolver={
+      async resolve(input){
+        const context=await transitionRepository.resolvePersistenceContext({
+          formal_run_id:input.formal_run_id,
+          scope:input.scope,
+          expected_t17_logical_time:input.t17_logical_time,
+        });
+        return{
+          formal_run_id:input.formal_run_id,
+          scope:structuredClone(input.scope),
+          lineage_id:String(context.corrected_state.lineage_id),
+          revision_id:String(context.corrected_state.revision_id),
+          t17_logical_time:input.t17_logical_time,
+          expected_latest_base:context.expected_latest_base,
+          corrected_computation_predecessor:context.corrected_computation_predecessor,
+          correction_authority:context.correction_authority,
+        };
+      },
+    };
+    const routedNormal=new p.Cap08S4T17ExplicitRoutingTickServiceV1(
+      genericTransitionTick,
+      transitionService,
+      contextResolver,
+    );
+    const transitionReceiptTick=new p.Cap08S3ReceiptConsumingForecastScenarioTickServiceV1(
+      correctedHandoff,
+      frozen,
+      new p.PostgresActionFeedbackTickSourceV1(pool),
+      runtimeRepository,
+      transitionDeferred,
+      new p.DirectCap04ExecutionConfigResolverV1(),
+    );
+    transitionCompletionTick=createCompletionTickV1({
+      p,
+      pool,
+      handoff:correctedHandoff,
+      frozen,
+      deferred:transitionDeferred,
+      normal:routedNormal,
+      receiptTick:transitionReceiptTick,
+    });
+    return s4;
+  },
+  executeAfterS4:index=>{
+    assert.ok(transitionCompletionTick,'S6_T17_PRODUCT_BRIDGE_REQUIRED');
+    return transitionCompletionTick.executeOneTick(createTickInputV1({p,fixture,spec,index}));
+  },
+});
+const tickResults=range.results;
+const s4=range.s4;
+const finalHandoff=await baseHandoff.prepareNextTickInput(spec.scope);
 const expectedNext=new Date(Date.parse(p.cap08TickLogicalTimeV1(23))+3_600_000).toISOString();
 assert.equal(finalHandoff.next_logical_tick_time,expectedNext,'S6_RANGE_FINAL_HANDOFF');
 const episode=await new p.Cap08S3EpisodeInspectorV1(pool).inspect({
@@ -247,6 +333,16 @@ const episode=await new p.Cap08S3EpisodeInspectorV1(pool).inspect({
 exactEpisodeV1(episode);
 assert.equal(tickResults.length,24,'S6_COMPOSITE_RANGE_TICK_COUNT');
 assert.ok(s4,'S4_MUST_EXECUTE_BETWEEN_T16_AND_T17');
+assert.equal(
+  tickResults[17].a_provider_result.transition_status,
+  'INSERTED_ATOMIC_TRANSITION',
+  'S6_T17_AUTHORITY_BOUND_TRANSITION_REQUIRED',
+);
+assert.equal(
+  tickResults[17].a_provider_result.transition_write_delta,
+  10,
+  'S6_T17_TRANSITION_WRITE_DELTA',
+);
 
 const s3={
   status:'COMPLETED',
@@ -348,4 +444,9 @@ assert.equal(s5.residual_count,24);
 
   return{p,fixture,sourceDigest,s3,s4,lineageMember,lineageId,revisionId,boundSpec,ticks,evidence,s5};
 }
-module.exports={runProductChainV1,createS6PrefixTransportReaderV1,buildS6T00T16BindingsV1};
+module.exports={
+  runProductChainV1,
+  createS6PrefixTransportReaderV1,
+  buildS6T00T16BindingsV1,
+  executeS6CompositeTickRangeV1,
+};
