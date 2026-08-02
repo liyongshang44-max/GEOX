@@ -1,0 +1,35 @@
+name: mcft-cap-08-s6-final-replacement-formal-execution-authority
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/mcft-cap-08-s6-final-replacement-formal-execution-authority.yml"
+      - "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-REPLACEMENT-FORMAL-*.json"
+      - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_REPLACEMENT_FORMAL_EXECUTION_AUTHORITY_V1.cjs"
+      - "scripts/governance_acceptance/mcft_cap08_s6_final_replacement_authority_*_v1.cjs"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-final-replacement-formal-execution-authority:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Verify one final replacement authority candidate
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_REPLACEMENT_FORMAL_EXECUTION_AUTHORITY_V1.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-08-s6-final-replacement-formal-execution-authority-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_FINAL_REPLACEMENT_FORMAL_EXECUTION_AUTHORITY_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
