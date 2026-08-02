@@ -1,0 +1,69 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_run_a_harness_port_validator_failure_settlement_v1",
+  "record_status": "RUN_A_DISPATCH_CONSUMED_HARNESS_PORT_VALIDATOR_FAILURE_SETTLED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "failed_dispatch": {
+    "github_workflow_run_id": 30738876293,
+    "github_run_attempt": 1,
+    "workflow_head_sha": "1bda1926c0ee89ee8e5367413412db97577202f0",
+    "exact_subject_sha": "93eb19f74faed372908764e5e3d2410a2ff50b45",
+    "run_label": "RUN_A",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-001",
+    "authority_artifact_id": 8830579159,
+    "authority_artifact_digest": "sha256:f960d6375e1f21b45b9975b246680e6ee039ed8ca37a76f75250f8ba9aeb0072",
+    "failed_run_artifact_id": 8830586081,
+    "failed_run_artifact_digest": "sha256:7b914c98ab0f8c55277ac6858e1abee3962971ccc4194e4c02edd13f550667c2"
+  },
+  "database_evidence": {
+    "bootstrap_status": "PASS",
+    "database_name": "geox_mcft_cap08_s6_run_a_30738876293",
+    "postgres_version": "16.14",
+    "legacy_migration_applied_count": 71,
+    "cap07_visibility_migration_status": "PASS",
+    "relation_count": 30,
+    "canonical_runtime_write_count_before": 0,
+    "canonical_runtime_write_count_after": 0,
+    "database_dropped": true
+  },
+  "failure_classification": {
+    "stage": "HARNESS_PORT_VALIDATION_BINDING",
+    "code": "HARNESS_PORT_VALIDATOR_EXPORT_NAME_MISMATCH",
+    "observed_error": "TypeError: validatePortBundleV1 is not a function",
+    "formal_harness_entered": true,
+    "port_validation_completed": false,
+    "materializer_entered": false,
+    "product_semantics_evaluated": false,
+    "formal_result_emitted": false
+  },
+  "source_evidence": {
+    "harness_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/harness_v1.cjs",
+    "failed_harness_blob_sha": "0009facd64cc81c946351c901ba26a257548f29a",
+    "port_contract_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/port_contract_v1.cjs",
+    "port_contract_blob_sha": "1f7b4a8aaac0a2db2e9ec6826672dd1a3a341681",
+    "harness_imported_symbol": "validatePortBundleV1",
+    "port_contract_exported_symbol": "validateHarnessPortsV1"
+  },
+  "authority_disposition": {
+    "authority_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PREHARNESS-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "authority_consumed": true,
+    "rerun_authorized": false,
+    "authority_reuse_authorized": false,
+    "replacement_authority_present_in_this_candidate": false
+  },
+  "run_b_state": {
+    "authority_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-RUN-B-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "authority_blob_sha": "8cbb319aa24c919cddb5a82f62c3fcdcb41e050f",
+    "record_status": "SINGLE_FINAL_FORMAL_RUN_AUTHORITY_RETIRED_OBSOLETE_SUBJECT",
+    "dispatch_authorized_now": false
+  },
+  "next_legal_action_after_merge": "CREATE_NEW_REPLACEMENT_RUN_A_AUTHORITY_CANDIDATE_FOR_HARNESS_CORRECTED_SUBJECT",
+  "database_execution_performed_in_candidate": false,
+  "workflow_dispatch_performed_in_candidate": false,
+  "formal_run_result_present": false,
+  "s6_candidate_implemented": false,
+  "stage_1a_closure_established": false,
+  "mcft_cap_08_complete": false,
+  "mcft_cap_09_authorized": false,
+  "semantic_digest": "sha256:46721bfec8837beb16ead2c5a1505399eee2c4656989ad0ea9bb320fec69a5d2"
+}

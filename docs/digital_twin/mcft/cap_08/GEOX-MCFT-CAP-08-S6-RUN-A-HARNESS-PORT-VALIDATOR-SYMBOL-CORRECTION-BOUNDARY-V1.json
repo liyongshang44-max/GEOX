@@ -1,0 +1,48 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_run_a_harness_port_validator_symbol_correction_boundary_v1",
+  "record_status": "RUN_A_HARNESS_PORT_VALIDATOR_SYMBOL_CORRECTION_BOUNDARY_FROZEN",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "1bda1926c0ee89ee8e5367413412db97577202f0",
+  "changed_file_count": 6,
+  "changed_files": [
+    ".github/workflows/mcft-cap-08-s6-run-a-harness-port-validator-symbol-correction.yml",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PREHARNESS-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-HARNESS-PORT-VALIDATOR-SYMBOL-CORRECTION-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-HARNESS-PORT-VALIDATOR-FAILURE-SETTLEMENT-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_HARNESS_PORT_VALIDATOR_SYMBOL_CORRECTION_V1.cjs",
+    "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/harness_v1.cjs"
+  ],
+  "new_file_count": 4,
+  "modified_file_count": 2,
+  "governance_file_count": 5,
+  "runtime_acceptance_file_count": 1,
+  "product_runtime_file_count": 0,
+  "port_contract_file_count": 0,
+  "port_bundle_file_count": 0,
+  "migration_file_count": 0,
+  "database_execution_workflow_file_count": 0,
+  "harness_source": {
+    "path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/harness_v1.cjs",
+    "previous_blob_sha": "0009facd64cc81c946351c901ba26a257548f29a",
+    "corrected_source_sha256": "sha256:e2200dee67d230c67d61731a9dacb2cd53a5b59e89162321a6737809fd5631d5",
+    "correction": "BIND_HARNESS_TO_EXPORTED_VALIDATE_HARNESS_PORTS_V1"
+  },
+  "protected_objects": {
+    "port_contract_blob_sha": "1f7b4a8aaac0a2db2e9ec6826672dd1a3a341681",
+    "port_bundle_blob_sha": "2f574588ba3010a94e64f965bb17fc97b3b33c72",
+    "entrypoint_blob_sha": "4b68df5cb74b445301e4554ef3fe160ed9c14500",
+    "database_workflow_blob_sha": "47b5f7748c917a099dc92219f1cbd4055bfb4862",
+    "retired_run_b_authority_blob_sha": "8cbb319aa24c919cddb5a82f62c3fcdcb41e050f"
+  },
+  "database_execution_performed_in_candidate": false,
+  "workflow_dispatch_performed_in_candidate": false,
+  "replacement_authority_present": false,
+  "run_b_dispatch_authorized": false,
+  "formal_run_result_present": false,
+  "s6_candidate_implemented": false,
+  "stage_1a_closure_established": false,
+  "mcft_cap_08_complete": false,
+  "mcft_cap_09_authorized": false,
+  "semantic_digest": "sha256:2bd807d1b8273f9dffb2f6dda326ea848afea7fdd0df1bd2d89918f9781a766a"
+}
