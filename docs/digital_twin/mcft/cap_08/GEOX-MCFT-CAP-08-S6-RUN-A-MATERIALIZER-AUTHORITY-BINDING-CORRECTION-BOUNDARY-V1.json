@@ -1,0 +1,114 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_run_a_materializer_authority_binding_correction_boundary_v1",
+  "record_status": "RUN_A_FAILURE_SETTLEMENT_AND_CONTROL_PLANE_CORRECTION_FROZEN_NOT_AUTHORITY",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "a1b91054a6a9ed1a04fc8e901767580ba7165f56",
+  "failed_workflow_run_id": 30749559715,
+  "failed_run_attempt": 1,
+  "consumed_operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-004",
+  "consumed_logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-004",
+  "changed_file_count": 10,
+  "changed_files": [
+    ".github/workflows/mcft-cap-08-s6-run-a-materializer-authority-binding-correction.yml",
+    ".github/workflows/mcft-cap-08-s6-single-run-database-execution.yml",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-BOOTSTRAP-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-MATERIALIZER-AUTHORITY-BINDING-CORRECTION-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-MATERIALIZER-AUTHORITY-BINDING-FAILURE-SETTLEMENT-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_MATERIALIZER_AUTHORITY_BINDING_CORRECTION_V1.cjs",
+    "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/direct_materializer_v1.cjs",
+    "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/fresh_database_v1.cjs",
+    "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/index_v1.cjs",
+    "scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/database_identity_v1.cjs"
+  ],
+  "source_corrections": {
+    "formal_port_bundle_factory": {
+      "path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/index_v1.cjs",
+      "previous_blob_sha": "2f574588ba3010a94e64f965bb17fc97b3b33c72",
+      "corrected_blob_sha": "065b2da057a663ef0700003312e9f04a15d4a875",
+      "correction": "BIND_VALIDATED_AUTHORITY_AT_PORT_FACTORY_AND_PASS_TO_FRESH_DATABASE_AND_MATERIALIZER"
+    },
+    "formal_direct_materializer": {
+      "path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/direct_materializer_v1.cjs",
+      "previous_blob_sha": "69734776a265ef1a6a33fecdc0a50e5d2e366a32",
+      "corrected_blob_sha": "8369efaf8e8be1279f33196d1dcf743612b72852",
+      "correction": "ALIGN_EXECUTE_DIRECT_FORMAL_RUN_WITH_SHARED_ADAPTER_OBJECT_CONTRACT_AND_CLOSURE_BIND_AUTHORITY"
+    },
+    "formal_fresh_database": {
+      "path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/fresh_database_v1.cjs",
+      "previous_blob_sha": "a62a8bb58bf623ddbf1cf701792527d156923d1e",
+      "corrected_blob_sha": "275a9140243c4f29d343fb61fadf9e5998c08928",
+      "correction": "REQUIRE_EXACT_AUTHORITY_MATERIALIZED_PHYSICAL_DATABASE_NAME"
+    },
+    "database_identity_materializer": {
+      "path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/database_identity_v1.cjs",
+      "previous_blob_sha": null,
+      "corrected_blob_sha": "4862f8e6b34aecba488db91e543d51ac83ffb719",
+      "correction": "MATERIALIZE_ONE_FROZEN_PHYSICAL_NAME_TEMPLATE_WITH_GITHUB_RUN_ID"
+    },
+    "formal_database_workflow": {
+      "path": ".github/workflows/mcft-cap-08-s6-single-run-database-execution.yml",
+      "previous_blob_sha": "47b5f7748c917a099dc92219f1cbd4055bfb4862",
+      "corrected_blob_sha": "2371b3797999f61f55c58551b85c59279eb2f0a2",
+      "correction": "CREATE_DATABASE_NAME_FROM_NORMALIZED_AUTHORITY_INSTEAD_OF_GENERIC_RUN_LABEL"
+    }
+  },
+  "corrected_objects": {
+    "focused_workflow_path": ".github/workflows/mcft-cap-08-s6-run-a-materializer-authority-binding-correction.yml",
+    "focused_workflow_blob_sha": "8c303f8554e54955a8cf862146ae6a8847442dd1",
+    "validator_path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_MATERIALIZER_AUTHORITY_BINDING_CORRECTION_V1.cjs",
+    "validator_blob_sha": "a0db761b0f3e2e5bba2dcb906a6396ae1449e5ed",
+    "consumed_authority_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-BOOTSTRAP-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "consumed_authority_previous_blob_sha": "037dda835463a3ee9d4f6d653eb7f3bba092229d",
+    "consumed_authority_corrected_blob_sha": "2c19e7be380bf8c677f1b7590dc8314145a18c97",
+    "failure_settlement_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-MATERIALIZER-AUTHORITY-BINDING-FAILURE-SETTLEMENT-V1.json",
+    "failure_settlement_blob_sha": "023644ac441dbb2e43b1042f5453619c065fbcfc",
+    "boundary_blob_sha_omitted": true
+  },
+  "protected_objects": {
+    "materializer_adapter_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/materializer_adapter_v1.cjs",
+    "materializer_adapter_blob_sha": "ef4831dd32069be4976785e16d90bc7a262bf00d",
+    "harness_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/harness_v1.cjs",
+    "harness_blob_sha": "1833c793a10bba383f54200a35cb3f8912b60b94",
+    "workflow_entrypoint_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/workflow_entrypoint_v1.ts",
+    "workflow_entrypoint_blob_sha": "4b68df5cb74b445301e4554ef3fe160ed9c14500",
+    "contract_loader_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/contract_loader_v1.cjs",
+    "contract_loader_blob_sha": "27903ddc8566505053e3e6ccf4e8d08dfc576869",
+    "port_contract_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/port_contract_v1.cjs",
+    "port_contract_blob_sha": "1f7b4a8aaac0a2db2e9ec6826672dd1a3a341681"
+  },
+  "correction_invariants": {
+    "consumed_authority_rejected_by_production_gate": true,
+    "formal_adapter_changed": false,
+    "formal_harness_changed": false,
+    "formal_materializer_authority_bound_before_product_chain": true,
+    "formal_materializer_contract_matches_adapter": true,
+    "database_name_derived_from_normalized_authority": true,
+    "fresh_database_requires_exact_authority_bound_name": true,
+    "old_generic_database_name_rejected": true,
+    "product_runtime_source_file_count": 0,
+    "database_migration_file_count": 0,
+    "replacement_authority_file_count": 0
+  },
+  "database_execution_performed_in_correction": false,
+  "workflow_dispatch_performed_in_correction": false,
+  "replacement_authority_present": false,
+  "run_b_dispatch_authorized": false,
+  "cross_run_comparator_authorized": false,
+  "s6_candidate_implemented": false,
+  "mcft_cap_08_complete": false,
+  "mcft_cap_09_authorized": false,
+  "next_legal_action_after_merge": "ISSUE_NEW_FORMAL_RUN_A_REPLACEMENT_AUTHORITY_CANDIDATE_WITH_NEW_SUBJECT_OPERATIONAL_IDENTITY_AND_LOGICAL_DATABASE_IDENTITY",
+  "nonclaims": [
+    "NO_DATABASE_EXECUTION",
+    "NO_WORKFLOW_DISPATCH",
+    "NO_REPLACEMENT_AUTHORITY",
+    "NO_RUN_A_RESULT",
+    "NO_RUN_B_AUTHORITY",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:1a26127e65a2169c0ff8bf531f4eac59b0f3b08c5b4ed6197d07f4680bb03e74"
+}
