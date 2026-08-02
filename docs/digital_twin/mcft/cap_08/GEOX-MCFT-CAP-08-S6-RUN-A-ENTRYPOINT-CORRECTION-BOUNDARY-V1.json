@@ -1,0 +1,39 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_run_a_entrypoint_correction_boundary_v1",
+  "record_status": "RUN_A_PREHARNESS_ENTRYPOINT_CORRECTION_BOUNDARY_FROZEN",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "a2dfc3ee1e5d132059379a0a67be2f033388e8b5",
+  "changed_file_count": 6,
+  "changed_files": [
+    ".github/workflows/mcft-cap-08-s6-run-a-preharness-entrypoint-correction.yml",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-ENTRYPOINT-CORRECTION-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-RUN-A-PREHARNESS-FAILURE-SETTLEMENT-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_RUN_A_PREHARNESS_ENTRYPOINT_CORRECTION_V1.cjs",
+    "scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/workflow_entrypoint_v1.ts"
+  ],
+  "entrypoint_source": {
+    "path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/workflow_entrypoint_v1.ts",
+    "previous_blob_sha": "43a6cdea691c906868a5c9a9d961378be585d121",
+    "corrected_source_sha256": "sha256:3b6d826a9b29a738ee0bb103dd792fc1ae8daf5c085cf80bcc6dc70cf2a994b3"
+  },
+  "failed_dispatch_run_id": 30736728638,
+  "authority_retirement_file_count": 1,
+  "governance_file_count": 4,
+  "runtime_acceptance_file_count": 1,
+  "runtime_source_file_count": 0,
+  "product_runtime_file_count": 0,
+  "port_bundle_file_count": 0,
+  "harness_file_count": 0,
+  "migration_file_count": 0,
+  "database_execution_workflow_file_count": 0,
+  "database_execution_performed_in_candidate": false,
+  "workflow_dispatch_performed_in_candidate": false,
+  "replacement_authority_present": false,
+  "run_b_dispatch_authorized": false,
+  "s6_candidate_implemented": false,
+  "mcft_cap_08_complete": false,
+  "mcft_cap_09_authorized": false,
+  "semantic_digest": "sha256:b606fb5dd8e3d16bd939cca9bdbaa14e5978d585d1de8174f67ce91461f7b0f0"
+}

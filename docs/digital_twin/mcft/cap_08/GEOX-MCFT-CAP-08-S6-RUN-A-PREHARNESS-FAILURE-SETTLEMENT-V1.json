@@ -1,0 +1,79 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_run_a_preharness_failure_settlement_v1",
+  "record_status": "RUN_A_PREHARNESS_FAILURE_SETTLEMENT_AND_ENTRYPOINT_CORRECTION_CANDIDATE_NOT_EFFECTIVE",
+  "settlement_id": "GEOX-MCFT-CAP-08-S6-RUN-A-PREHARNESS-FAILURE-SETTLEMENT-V1",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "a2dfc3ee1e5d132059379a0a67be2f033388e8b5",
+  "failed_dispatch": {
+    "github_workflow_run_id": 30736728638,
+    "github_run_attempt": 1,
+    "head_branch": "main",
+    "head_sha": "a2dfc3ee1e5d132059379a0a67be2f033388e8b5",
+    "run_label": "RUN_A",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-001",
+    "exact_subject_sha": "26d94d5c47ce640e80374124bb473d62003cc9a6",
+    "authority_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "authority_gate_status": "AUTHORIZED",
+    "authority_artifact_id": 8829819756,
+    "authority_artifact_digest": "sha256:503e6c050dd0dbefb117cb8882844a32bf3efde3d8169db36a5591727d12e091",
+    "failed_run_artifact_id": 8829827601,
+    "failed_run_artifact_digest": "sha256:d04da801a0168ede375327ecf2dfbf34865e11e5902fc1d26e34934302117ae7"
+  },
+  "database_evidence": {
+    "physical_database_name": "geox_mcft_cap08_s6_run_a_30736728638",
+    "postgres_version": "16.14",
+    "bootstrap_status": "PASS",
+    "relation_count": 30,
+    "legacy_migration_count": 71,
+    "cap07_visibility_migration_status": "PASS",
+    "zero_canonical_runtime_data_delta": true,
+    "database_dropped": true
+  },
+  "failure_classification": {
+    "stage": "PREHARNESS_ENTRYPOINT_TRANSFORM",
+    "code": "TOP_LEVEL_AWAIT_CJS_TRANSFORM_UNSUPPORTED",
+    "source_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/workflow_entrypoint_v1.ts",
+    "source_blob_sha": "43a6cdea691c906868a5c9a9d961378be585d121",
+    "tsx_output_format": "cjs",
+    "formal_harness_entered": false,
+    "product_semantics_evaluated": false,
+    "formal_result_emitted": false,
+    "run_a_terminal_success": false
+  },
+  "authority_disposition": {
+    "authority_consumed": true,
+    "authority_reuse_authorized": false,
+    "rerun_authorized": false,
+    "duplicate_dispatch_authorized": false,
+    "replacement_authority_present_in_this_candidate": false
+  },
+  "entrypoint_correction": {
+    "scope": "CJS_COMPATIBILITY_ONLY",
+    "remove_top_level_await": true,
+    "remove_import_meta_dependency": true,
+    "use_explicit_async_main": true,
+    "use_cjs_require_for_port_bundle": true,
+    "port_bundle_change": false,
+    "harness_change": false,
+    "database_schema_change": false,
+    "product_runtime_change": false
+  },
+  "run_b_state": {
+    "authority_blob_sha": "5fd46c4bbe1fbd816412bde47de3230c2764bff6",
+    "dispatch_precondition": "RUN_A_TERMINAL_SUCCESS",
+    "dispatch_authorized_now": false
+  },
+  "next_legal_action_after_merge": "CREATE_NEW_REPLACEMENT_RUN_A_AUTHORITY_CANDIDATE_FOR_CORRECTED_SUBJECT",
+  "nonclaims": [
+    "NO_FORMAL_RUN_A_SUCCESS",
+    "NO_FORMAL_RUN_A_RESULT",
+    "NO_RUN_B_DISPATCH",
+    "NO_REPLACEMENT_AUTHORITY_IN_THIS_CANDIDATE",
+    "NO_DATABASE_EXECUTION_IN_THIS_CANDIDATE",
+    "NO_S6_CANDIDATE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:3bed8511e30b0a5beab779e6ca71cbc5d22738ac65358350e07e85ab34762988"
+}
