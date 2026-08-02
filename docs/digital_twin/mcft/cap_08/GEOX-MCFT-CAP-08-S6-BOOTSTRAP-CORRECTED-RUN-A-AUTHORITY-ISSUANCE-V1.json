@@ -1,0 +1,55 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_bootstrap_corrected_run_a_authority_issuance_v1",
+  "record_status": "BOOTSTRAP_CORRECTED_RUN_A_REPLACEMENT_AUTHORITY_CANDIDATE_ISSUED_NOT_EFFECTIVE",
+  "issuance_id": "GEOX-MCFT-CAP-08-S6-BOOTSTRAP-CORRECTED-RUN-A-AUTHORITY-ISSUANCE-V1",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "0187c6ad375c4752b67b58259878dfa552384571",
+  "freshness_correction_merge_sha": "0187c6ad375c4752b67b58259878dfa552384571",
+  "candidate_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-BOOTSTRAP-CORRECTED-FORMAL-RUN-A-AUTHORITY-CANDIDATE-V1.json",
+    "blob_sha": "e11631abd32ad8380b0a21a8f40648c2a149327e",
+    "semantic_digest": "sha256:f094f0596b15bef5e131a47e46f5b5d380d8c7325208990f5e4d28f1d129530f",
+    "record_status": "FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORITY_CANDIDATE_NOT_EFFECTIVE",
+    "runtime_gate_eligible": false
+  },
+  "object_set_manifest": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-BOOTSTRAP-CORRECTED-RUN-A-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "3b48065b48add7d31bafb13142caaa0dc047b2c5",
+    "semantic_digest": "sha256:dc6e9c971c5c8980185f9eea7f77a0590dfeb17368499830cb5995962d4255dc",
+    "object_count": 50
+  },
+  "identity": {
+    "run_label": "RUN_A",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-004",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-004",
+    "prior_operational_identity_reused": false,
+    "prior_database_identity_reused": false
+  },
+  "preserved_retirement_state": {
+    "replacement_003_consumed": true,
+    "replacement_003_consumed_authority_blob_sha": "e6ec4ae83bfa51360c162cc2144b65130f9b58a4",
+    "replacement_002_invalidated": true,
+    "run_b_dispatch_authorized": false
+  },
+  "activation": {
+    "separate_effectiveness_required": true,
+    "database_execution_authorized": false,
+    "workflow_dispatch_authorized": false,
+    "max_dispatch_count_after_effectiveness": 1,
+    "rerun_authorized_after_effectiveness": false
+  },
+  "first_legal_next_action_after_merge": "ESTABLISH_BOOTSTRAP_CORRECTED_RUN_A_AUTHORITY_EFFECTIVENESS",
+  "nonclaims": [
+    "NO_DATABASE_EXECUTION",
+    "NO_WORKFLOW_DISPATCH",
+    "NO_EFFECTIVE_AUTHORITY",
+    "NO_RUN_A_RESULT",
+    "NO_RUN_B_AUTHORITY",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:4afceb356bc0969d81de25daf4e873c2233f529105aaca52b2efee166e674677"
+}
