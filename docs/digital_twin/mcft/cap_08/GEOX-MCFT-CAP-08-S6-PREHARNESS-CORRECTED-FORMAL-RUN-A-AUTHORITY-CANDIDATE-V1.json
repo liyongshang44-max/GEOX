@@ -1,0 +1,95 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_preharness_corrected_formal_run_a_authority_candidate_v1",
+  "authority_id": "GEOX-MCFT-CAP-08-S6-PREHARNESS-CORRECTED-FORMAL-RUN-A-AUTHORITY-CANDIDATE-V1",
+  "record_status": "FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORITY_CANDIDATE_NOT_EFFECTIVE",
+  "authority_class": "FINAL_FORMAL_RUN_ONLY",
+  "evidence_class": "FINAL_FORMAL_EVIDENCE_ELIGIBLE_AFTER_AUTHORITY_EFFECTIVENESS_AND_TERMINAL_SUCCESS",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "replacement_reason": "PREHARNESS_ENTRYPOINT_TRANSFORM_CORRECTION",
+  "replaces_consumed_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "712fc4b59c870f9b7e243c21b29c2eac24d8b9e3",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-001",
+    "failed_workflow_run_id": 30736728638,
+    "formal_result_status": "ABSENT_PREHARNESS_FAILURE",
+    "reusable": false
+  },
+  "exact_subject_sha": "93eb19f74faed372908764e5e3d2410a2ff50b45",
+  "authorized_run_label": "RUN_A",
+  "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-001",
+  "logical_database_identity": {
+    "identity_id": "MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-001",
+    "physical_name_template": "geox_mcft_cap08_s6_run_a_replacement_<github_run_id>",
+    "fresh_disposable_required": true,
+    "drop_after_run_required": true,
+    "identity_frozen": true,
+    "reusable": false
+  },
+  "issued_at": "2026-08-02T07:30:00.000Z",
+  "proposed_expires_at": "2026-08-05T07:30:00.000Z",
+  "single_use_contract": {
+    "max_dispatch_count": 1,
+    "github_run_attempt_required": 1,
+    "rerun_authorized": false,
+    "duplicate_dispatch_authorized": false,
+    "authority_reuse_authorized": false,
+    "consumption_evidence_required": true
+  },
+  "sequence_contract": {
+    "max_parallel": 1,
+    "dispatch_precondition": "REPLACEMENT_AUTHORITY_EFFECTIVENESS_MERGED",
+    "parallel_run_a_and_run_b_authorized": false,
+    "run_b_remains_blocked": true
+  },
+  "object_set_manifest_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PREHARNESS-CORRECTED-RUN-A-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "88b70f6153111e2975c4366be6e36d4def1c600b",
+    "semantic_digest": "sha256:0a7e1dfdbb306a1a9f606be75789f54a32d382264d2efb0f932d903b149e5790",
+    "required_record_status": "PREHARNESS_CORRECTED_RUN_A_AUTHORITY_OBJECT_SET_FROZEN"
+  },
+  "correction_merge_ref": {
+    "candidate_sha": "0742a9b79eb60b338a87cf00ff96a0526d334597",
+    "merge_sha": "93eb19f74faed372908764e5e3d2410a2ff50b45",
+    "candidate_to_merge_file_delta": 0,
+    "corrected_entrypoint_blob_sha": "4b68df5cb74b445301e4554ef3fe160ed9c14500"
+  },
+  "activation_contract": {
+    "separate_effectiveness_required": true,
+    "candidate_record_is_runtime_gate_eligible": false,
+    "effective_record_status_required": "SINGLE_FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORIZED",
+    "effective_authority_must_preserve_candidate_semantic_digest": true
+  },
+  "authorization_state": {
+    "authority_effective": false,
+    "single_run_database_execution_authorized": false,
+    "database_execution_workflow_authorized": false,
+    "workflow_dispatch_execution_authorized": false,
+    "final_formal_run_execution_authorized": false,
+    "hard_acceptance_eligible": false,
+    "s6_candidate_evidence_eligible": false,
+    "cross_run_comparison_eligible": false,
+    "ledger_settlement_eligible": false,
+    "database_execution_performed": false,
+    "workflow_dispatch_performed": false,
+    "formal_run_executed": false
+  },
+  "port_bundle_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/index_v1.cjs",
+  "port_bundle_blob_sha": "2f574588ba3010a94e64f965bb17fc97b3b33c72",
+  "workflow_path": ".github/workflows/mcft-cap-08-s6-single-run-database-execution.yml",
+  "workflow_blob_sha": "47b5f7748c917a099dc92219f1cbd4055bfb4862",
+  "nonclaims": [
+    "NO_RUNTIME_GATE_ELIGIBILITY_BEFORE_EFFECTIVENESS",
+    "NO_DATABASE_EXECUTION_IN_AUTHORITY_CANDIDATE_PR",
+    "NO_WORKFLOW_DISPATCH_IN_AUTHORITY_CANDIDATE_PR",
+    "NO_AUTHORITY_IDENTITY_REUSE",
+    "NO_OLD_RUN_B_DISPATCH",
+    "NO_FORMAL_RUN_RESULT",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_STAGE_1A_CLOSURE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:5a6ecd7a755772d51ba040a5090a996872b5f5f326f017dc4c41a80f92b2334d"
+}
