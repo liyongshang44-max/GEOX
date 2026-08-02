@@ -4,10 +4,10 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-08-s6-final-replacement-formal-execution-authority-effectiveness.yml'
-      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-REPLACEMENT-FORMAL-EXECUTION-AUTHORITY-EFFECTIVENESS-BOUNDARY-V1.json'
-      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-REPLACEMENT-FORMAL-EXECUTION-AUTHORITY-EFFECTIVENESS-V1.json'
-      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-REPLACEMENT-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json'
-      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-REPLACEMENT-FORMAL-RUN-B-EXECUTION-AUTHORITY-EFFECTIVE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-AUTHORITY-EFFECTIVENESS-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-AUTHORITY-EFFECTIVENESS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-RUN-B-EXECUTION-AUTHORITY-EFFECTIVE-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_REPLACEMENT_FORMAL_EXECUTION_AUTHORITY_EFFECTIVENESS_V1.cjs'
   merge_group:
     types: [checks_requested]
