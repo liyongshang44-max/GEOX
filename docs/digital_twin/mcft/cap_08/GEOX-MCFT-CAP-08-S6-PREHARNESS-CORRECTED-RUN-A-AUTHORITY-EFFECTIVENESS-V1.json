@@ -1,0 +1,63 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_preharness_corrected_run_a_authority_effectiveness_v1",
+  "record_status": "PREHARNESS_CORRECTED_RUN_A_REPLACEMENT_AUTHORITY_EFFECTIVE_ON_MERGE",
+  "effectiveness_id": "GEOX-MCFT-CAP-08-S6-PREHARNESS-CORRECTED-RUN-A-AUTHORITY-EFFECTIVENESS-V1",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "7faa047da78e3a227a18bea62bcd40d870469b2f",
+  "candidate_head_sha": "3f353ee44e4d0db73b10b703eac0a1070516eba3",
+  "candidate_merge_sha": "7faa047da78e3a227a18bea62bcd40d870469b2f",
+  "candidate_to_merge_file_delta": 0,
+  "candidate_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PREHARNESS-CORRECTED-FORMAL-RUN-A-AUTHORITY-CANDIDATE-V1.json",
+    "blob_sha": "81bc764a3c1ee1e1b63564f8c220dafc8509d34c",
+    "semantic_digest": "sha256:5a6ecd7a755772d51ba040a5090a996872b5f5f326f017dc4c41a80f92b2334d",
+    "record_status": "FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORITY_CANDIDATE_NOT_EFFECTIVE"
+  },
+  "effective_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PREHARNESS-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "82be6bdd511f118e5a6e3ad0b5c2fa5024c9a9bc",
+    "semantic_digest": "sha256:18fb6555b48b8ba24d6490ea6fd49080d3f65da6baebd2e627fe5c2610ddd6fe",
+    "record_status": "SINGLE_FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORIZED",
+    "runtime_gate_eligible_after_merge": true
+  },
+  "corrected_object_set": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PREHARNESS-CORRECTED-RUN-A-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "88b70f6153111e2975c4366be6e36d4def1c600b",
+    "semantic_digest": "sha256:0a7e1dfdbb306a1a9f606be75789f54a32d382264d2efb0f932d903b149e5790",
+    "exact_subject_sha": "93eb19f74faed372908764e5e3d2410a2ff50b45",
+    "corrected_entrypoint_blob_sha": "4b68df5cb74b445301e4554ef3fe160ed9c14500"
+  },
+  "identity": {
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-001",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-001",
+    "old_run_a_identity_reused": false,
+    "old_run_b_identity_reused": false,
+    "old_database_identity_reused": false
+  },
+  "obsolete_authorities": {
+    "old_run_a_retired_blob_sha": "712fc4b59c870f9b7e243c21b29c2eac24d8b9e3",
+    "old_run_b_retired_blob_sha": "8cbb319aa24c919cddb5a82f62c3fcdcb41e050f",
+    "old_run_b_dispatch_authorized": false
+  },
+  "effect": {
+    "run_a_single_dispatch_authorized_after_merge": true,
+    "max_dispatch_count": 1,
+    "rerun_authorized": false,
+    "run_b_dispatch_authorized": false,
+    "database_execution_performed_in_effectiveness_pr": false,
+    "workflow_dispatch_performed_in_effectiveness_pr": false
+  },
+  "next_legal_action_after_merge": "DISPATCH_PREHARNESS_CORRECTED_FORMAL_RUN_A_ONCE",
+  "nonclaims": [
+    "NO_DATABASE_EXECUTION",
+    "NO_WORKFLOW_DISPATCH",
+    "NO_FORMAL_RUN_RESULT",
+    "NO_RUN_B_AUTHORITY",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:214ced60d76c80e6137b3ba700261a3db06e6023a01955e7344e5986ed57c2dd"
+}
