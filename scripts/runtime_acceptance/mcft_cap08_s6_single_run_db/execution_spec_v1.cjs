@@ -1,10 +1,121 @@
 'use strict';
-const assert=require('node:assert/strict');
-const {deriveFormalIdentityV1,validateRunInstanceV1,sha}=require('../mcft_cap08_s6_final_formal_run/identity_v1.cjs');
-function buildSingleRunExecutionSpecV1({contracts,runLabel,operationalRunInstanceId,exactSubjectSha}){
- validateRunInstanceV1(runLabel,operationalRunInstanceId);assert.match(exactSubjectSha,/^[0-9a-f]{40}$/);
- const derived=deriveFormalIdentityV1(contracts);
- const phases=['B00',...contracts.run.tick_ids,...contracts.run.post_run_phases].map((phase_id,index)=>({phase_id,index,providers_enabled:[...contracts.s6.formal_run_contract.all_providers_enabled_from_start],transaction_boundary:'ONE_PHASE_ONE_COMMIT_FAMILY',receipt_collection_required:true}));assert.equal(phases.length,28);
- return{schema_version:'geox_mcft_cap08_s6_single_run_execution_spec_v2',classification:'IMPLEMENTATION_SPEC_NOT_EXECUTION',exact_subject_sha:exactSubjectSha,run_label:runLabel,operational_run_instance_id:operationalRunInstanceId,formal_run_id:derived.formal_run_id,identity_basis:derived.identity_basis,identity_digest:derived.identity_digest,scope:{...contracts.run.scope},lineage_id:null,revision_id:null,canonical_identity_binding:'MATERIALIZER_BOUND_PRODUCT_A0_IDENTITY',materializer_identity_binding_required:true,fresh_database_required:true,database_name_pattern:'(mcft|cap08|s6|formal|closure|acceptance|test)',isolated_schema_mode_forbidden:true,phase_count:phases.length,phases,recovery_vector_ids:['FRESH_PROCESS_RESTART','T11_PRECOMMIT_ROLLBACK','T12_POSTCOMMIT_RESPONSE_LOSS','CONCURRENCY_FENCING','EXTREME_POINTER_LOSS_REBUILD','PROJECTION_LOSS_REBUILD','RESPONSE_AND_POINTER_LOSS'],cap07_surface_names:['runtime','timeline','trace','states','forecasts','scenarios','residuals','action-lifecycle','model-governance','health'],execution_spec_digest:`sha256:${sha({exactSubjectSha,runLabel,operationalRunInstanceId,formal_run_id:derived.formal_run_id,canonical_identity_binding:'MATERIALIZER_BOUND_PRODUCT_A0_IDENTITY',phases:phases.map(x=>x.phase_id)})}`,database_execution_authorized:false,hard_acceptance_eligible:false};
+
+const assert = require('node:assert/strict');
+const {
+  deriveFormalIdentityV1,
+  validateRunInstanceV1,
+  sha,
+} = require('../mcft_cap08_s6_final_formal_run/identity_v1.cjs');
+
+const REQUIRED_PHASE_ORDER_V1 = Object.freeze([
+  'resolve',
+  'E',
+  'H',
+  'A',
+  'B',
+  'G',
+  'C',
+  'barrier',
+]);
+
+function buildSingleRunExecutionSpecV1({
+  contracts,
+  runLabel,
+  operationalRunInstanceId,
+  exactSubjectSha,
+}) {
+  validateRunInstanceV1(runLabel, operationalRunInstanceId);
+  assert.match(exactSubjectSha, /^[0-9a-f]{40}$/);
+  assert.deepEqual(
+    contracts.s6.required_phase_order,
+    REQUIRED_PHASE_ORDER_V1,
+    'S6_REQUIRED_PHASE_ORDER_DRIFT',
+  );
+
+  const derived = deriveFormalIdentityV1(contracts);
+  const providersEnabled = [
+    ...contracts.s6.formal_run_contract.all_providers_enabled_from_start,
+  ];
+  const phases = [
+    'B00',
+    ...contracts.run.tick_ids,
+    ...contracts.run.post_run_phases,
+  ].map((phase_id, index) => ({
+    phase_id,
+    index,
+    phase_order: [...contracts.s6.required_phase_order],
+    providers_enabled: [...providersEnabled],
+    transaction_boundary: 'ONE_PHASE_ONE_COMMIT_FAMILY',
+    receipt_collection_required: true,
+  }));
+
+  assert.equal(phases.length, 28);
+  assert.ok(
+    phases.every(phase => (
+      Array.isArray(phase.phase_order)
+      && phase.phase_order.length === REQUIRED_PHASE_ORDER_V1.length
+    )),
+    'S6_PHASE_ORDER_REQUIRED_FOR_EVERY_PHASE',
+  );
+
+  return {
+    schema_version: 'geox_mcft_cap08_s6_single_run_execution_spec_v3',
+    classification: 'IMPLEMENTATION_SPEC_NOT_EXECUTION',
+    exact_subject_sha: exactSubjectSha,
+    run_label: runLabel,
+    operational_run_instance_id: operationalRunInstanceId,
+    formal_run_id: derived.formal_run_id,
+    identity_basis: derived.identity_basis,
+    identity_digest: derived.identity_digest,
+    scope: { ...contracts.run.scope },
+    lineage_id: null,
+    revision_id: null,
+    canonical_identity_binding: 'MATERIALIZER_BOUND_PRODUCT_A0_IDENTITY',
+    materializer_identity_binding_required: true,
+    fresh_database_required: true,
+    database_name_pattern: '(mcft|cap08|s6|formal|closure|acceptance|test)',
+    isolated_schema_mode_forbidden: true,
+    phase_count: phases.length,
+    phases,
+    recovery_vector_ids: [
+      'FRESH_PROCESS_RESTART',
+      'T11_PRECOMMIT_ROLLBACK',
+      'T12_POSTCOMMIT_RESPONSE_LOSS',
+      'CONCURRENCY_FENCING',
+      'EXTREME_POINTER_LOSS_REBUILD',
+      'PROJECTION_LOSS_REBUILD',
+      'RESPONSE_AND_POINTER_LOSS',
+    ],
+    cap07_surface_names: [
+      'runtime',
+      'timeline',
+      'trace',
+      'states',
+      'forecasts',
+      'scenarios',
+      'residuals',
+      'action-lifecycle',
+      'model-governance',
+      'health',
+    ],
+    execution_spec_digest: `sha256:${sha({
+      exactSubjectSha,
+      runLabel,
+      operationalRunInstanceId,
+      formal_run_id: derived.formal_run_id,
+      canonical_identity_binding: 'MATERIALIZER_BOUND_PRODUCT_A0_IDENTITY',
+      phases: phases.map(phase => ({
+        phase_id: phase.phase_id,
+        phase_order: phase.phase_order,
+        providers_enabled: phase.providers_enabled,
+      })),
+    })}`,
+    database_execution_authorized: false,
+    hard_acceptance_eligible: false,
+  };
 }
-module.exports={buildSingleRunExecutionSpecV1};
+
+module.exports = {
+  REQUIRED_PHASE_ORDER_V1,
+  buildSingleRunExecutionSpecV1,
+};
