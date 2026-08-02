@@ -1,6 +1,6 @@
 {
   "schema_version": "geox_mcft_cap08_s6_contract_v1",
-  "record_status": "FROZEN_PRE_CANDIDATE_FINAL_CLOSURE_MACHINE_CONTRACT",
+  "record_status": "FROZEN_PRE_CANDIDATE_FINAL_CLOSURE_MACHINE_CONTRACT_CTO_REVIEW_AMENDED",
   "capability_line_id": "MCFT-CAP-08",
   "slice_id": "MCFT-CAP-08.S6",
   "contract_id": "MCFT-CAP-08.S6-FINAL-TWO-RUN-CLOSURE-RECOVERY-READ-MODEL-V1",
@@ -9,15 +9,40 @@
   "retained_architecture_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK-v0.3.5-HISTORICAL-FULL.md",
   "retained_architecture_blob_sha": "ab4f4e7d9d3978ac3be979583cda4ccdc94a2fb6",
   "phase_engine_contract_digest": "sha256:41428596e893112483a8695ccd7bc28dc19dee35c2c3bf29e78395a86133d466",
-  "required_phase_order": ["resolve", "E", "H", "A", "B", "G", "C", "barrier"],
+  "required_phase_order": [
+    "resolve",
+    "E",
+    "H",
+    "A",
+    "B",
+    "G",
+    "C",
+    "barrier"
+  ],
   "formal_run_contract": {
     "run_count": 2,
-    "run_ids": ["RUN_A", "RUN_B"],
+    "run_ids": [
+      "RUN_A",
+      "RUN_B"
+    ],
     "fresh_database_per_run": true,
     "same_deterministic_formal_run_id": true,
     "different_operational_run_instance_id": true,
-    "required_sequence": ["B00", "T00-T23", "G00-G02"],
-    "all_providers_enabled_from_start": ["E", "H", "A", "B", "G", "C", "D", "F"],
+    "required_sequence": [
+      "B00",
+      "T00-T23",
+      "G00-G02"
+    ],
+    "all_providers_enabled_from_start": [
+      "E",
+      "H",
+      "A",
+      "B",
+      "G",
+      "C",
+      "D",
+      "F"
+    ],
     "slice_acceptance_object_reuse_forbidden": true,
     "cross_run_stitching_forbidden": true
   },
@@ -67,16 +92,22 @@
     "candidate_merge_tree_equality_required": true
   },
   "review_contract": {
-    "independent_review_required": true,
-    "verified_second_github_account_required": true,
-    "reviewer_must_differ_from_candidate_author": true,
-    "review_state_required": "APPROVED",
-    "review_must_target_exact_candidate_head": true,
+    "cto_ruling_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CTO-DUAL-ACCOUNT-VERIFICATION-DEFERRAL-V1.json",
+    "cto_ruling_text_zh": "CTO裁决：搁置双账户的验证。",
+    "independent_review_requirement_state": "SUSPENDED_BY_CTO_RULING",
+    "independent_review_required": false,
+    "verified_second_github_account_required": false,
+    "reviewer_must_differ_from_candidate_author": false,
+    "review_state_required": null,
+    "review_must_target_exact_candidate_head": false,
     "bot_review_forbidden": true,
     "owner_self_approval_forbidden": true,
     "waiver_authorized": false,
-    "review_scope_includes_s1_through_s6": true,
-    "review_scope_includes_interim_owner_waivers": true
+    "suspension_authorized": true,
+    "reactivation_requires_separate_cto_ruling": true,
+    "review_scope_includes_s1_through_s6_if_reactivated": true,
+    "review_scope_includes_interim_owner_waivers_if_reactivated": true,
+    "technical_gate_relaxation": false
   },
   "retention_contract": {
     "level": "R2",
@@ -103,5 +134,5 @@
   "candidate_declaration_authorized": false,
   "mcft_cap_08_complete": false,
   "mcft_cap_09_authorized": false,
-  "semantic_digest": "sha256:c288a987b007eccc25a22f117eb1d9b53e8f551a9566ce322674a1bd082657ab"
+  "semantic_digest": "sha256:94c4deee52099563abce6442ddde37103f4efead6bd97ac7bba6b3251549147f"
 }
