@@ -1,0 +1,79 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_t17_guard_acl_corrected_run_a_authority_effectiveness_v1",
+  "record_status": "T17_GUARD_ACL_CORRECTED_RUN_A_AUTHORITY_EFFECTIVENESS_ESTABLISHED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "872b4323e88e241147fc032b9c4b900f01dd7ae4",
+  "candidate_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-T17-GUARD-ACL-CORRECTED-FORMAL-RUN-A-AUTHORITY-CANDIDATE-V1.json",
+    "blob_sha": "2cc7b11711d5afe0063bb74e84455dadc36f436d",
+    "semantic_digest": "sha256:7cf5319d9a6355dfd4020cdc0965145eb70608e9681e5a35c3947faec93bb3c6",
+    "head_sha": "ecf369a7ef72fb29c06c26af2b625c2bf07a524b",
+    "merge_sha": "872b4323e88e241147fc032b9c4b900f01dd7ae4",
+    "candidate_to_merge_file_delta": 0
+  },
+  "effective_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-T17-GUARD-ACL-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "d437cbad61e39f4d155b358b99c18c9b8f17fcee",
+    "semantic_digest": "sha256:3af27c065ba643f0acd07e13fc0d2bddb08a01e6c6a111bc2ae74ef80446d73b",
+    "record_status": "SINGLE_FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORIZED",
+    "runtime_gate_eligible_after_merge": true
+  },
+  "object_set_manifest": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-T17-GUARD-ACL-CORRECTED-RUN-A-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "37ad609382dc1f40a8e77272ffab7ffd525e01c5",
+    "semantic_digest": "sha256:9d6e876c867a3c122da405f8053fd817c0c89416fea50f85cb40594dda859925",
+    "object_count": 54
+  },
+  "identity": {
+    "run_label": "RUN_A",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-007",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-007",
+    "physical_database_name_template": "geox_mcft_cap08_s6_run_a_replacement_007_<github_run_id>"
+  },
+  "effect": {
+    "single_run_database_execution_authorized": true,
+    "database_execution_workflow_authorized": true,
+    "workflow_dispatch_execution_authorized": true,
+    "max_dispatch_count": 1,
+    "github_run_attempt_required": 1,
+    "rerun_authorized": false,
+    "duplicate_dispatch_authorized": false,
+    "authority_reuse_authorized": false,
+    "run_b_dispatch_authorized": false,
+    "cross_run_comparator_authorized": false,
+    "final_ledger_settlement_authorized": false
+  },
+  "preserved_execution_set": {
+    "database_bootstrap_object_count": 3,
+    "full_object_count": 54,
+    "platform_bootstrap_blob_sha": "31ef663a85ea93fe0319db598515840b12111135",
+    "platform_bootstrap_base_blob_sha": "720e14c5567c227b02c39579f17ec80c2f1fbf5b",
+    "platform_bootstrap_acceptance_blob_sha": "2fa649c8f176fbc4b4d3c73611b39131209d7b1c",
+    "t17_guard_acl_exact_select_insert": true
+  },
+  "execution_state": {
+    "database_execution_performed": false,
+    "workflow_dispatch_performed": false,
+    "formal_run_result_present": false,
+    "run_b_authority_present": false,
+    "cross_run_comparator_result_present": false,
+    "s6_candidate_implemented": false,
+    "stage_1a_closure_established": false,
+    "mcft_cap_08_complete": false,
+    "mcft_cap_09_authorized": false
+  },
+  "first_legal_next_action_after_merge": "DISPATCH_T17_GUARD_ACL_CORRECTED_FORMAL_RUN_A_ONCE",
+  "nonclaims": [
+    "NO_DATABASE_EXECUTION_IN_EFFECTIVENESS_PR",
+    "NO_WORKFLOW_DISPATCH_IN_EFFECTIVENESS_PR",
+    "NO_RUN_A_RESULT",
+    "NO_RUN_B_AUTHORITY",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_STAGE_1A_CLOSURE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:e9b3eba614673b7fe73aadf8178132823594826d32e3bc703f402da8cc65b8d9"
+}
