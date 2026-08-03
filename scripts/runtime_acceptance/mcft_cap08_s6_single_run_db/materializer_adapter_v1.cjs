@@ -1,14 +1,86 @@
 'use strict';
-const assert=require('node:assert/strict');
-function buildDirectMaterializerPlanV1(spec){return{schema_version:'geox_mcft_cap08_s6_direct_materializer_plan_v2',strategy:'DIRECT_PRODUCT_SERVICE_ASSEMBLY',formal_run_id:spec.formal_run_id,scope:{...spec.scope},canonical_identity_binding:'MATERIALIZER_BOUND_PRODUCT_A0_IDENTITY',phases:spec.phases.map(p=>({phase_id:p.phase_id,providers_enabled:[...p.providers_enabled],required_product_service_boundary:true})),required_outputs:['canonical_receipts','phase_results','selector_snapshot','lineage_id','revision_id','final_formal_run_id'],forbidden_acceptance_promotions:['S5_SLICE_RESULT_PROMOTION','SLICE_RUN_RELABEL','CROSS_RUN_OBJECT_REUSE'],database_execution_authorized:false};}
-function requiredIdentity(value,code,prefix){assert.equal(typeof value,'string',code);assert.match(value,new RegExp(`^${prefix}_[a-z0-9]{24}$`),code);return value;}
-function bindMaterializedCanonicalIdentityV1(spec,result){
- assert.equal(spec.materializer_identity_binding_required,true,'MATERIALIZER_IDENTITY_BINDING_NOT_REQUIRED');assert.equal(spec.lineage_id,null,'PREBOUND_LINEAGE_FORBIDDEN');assert.equal(spec.revision_id,null,'PREBOUND_REVISION_FORBIDDEN');
- const lineageId=requiredIdentity(result?.lineage_id,'MATERIALIZER_LINEAGE_REQUIRED','lineage');const revisionId=requiredIdentity(result?.revision_id,'MATERIALIZER_REVISION_REQUIRED','revision');
- assert.notEqual(lineageId,revisionId,'LINEAGE_REVISION_IDENTITY_COLLISION');
- const receipts=Array.isArray(result?.canonical_receipts)?result.canonical_receipts:[];assert.ok(receipts.length>0,'MATERIALIZER_RECEIPTS_REQUIRED');
- for(const receipt of receipts){assert.equal(receipt.lineage_id,lineageId,`MATERIALIZER_RECEIPT_LINEAGE:${receipt.member_role}`);assert.equal(receipt.revision_id,revisionId,`MATERIALIZER_RECEIPT_REVISION:${receipt.member_role}`);}
- return Object.freeze({...spec,lineage_id:lineageId,revision_id:revisionId,canonical_identity_binding:'BOUND_TO_PRODUCT_A0_IDENTITY',materializer_identity_binding_required:false});
+
+const assert = require('node:assert/strict');
+const { validateExactPathAuthorityV1 } = require('../mcft_cap08_s6_single_run_workflow/execution_authority_gate_v1.cjs');
+
+function buildDirectMaterializerPlanV1(spec) {
+  return {
+    schema_version: 'geox_mcft_cap08_s6_direct_materializer_plan_v2',
+    strategy: 'DIRECT_PRODUCT_SERVICE_ASSEMBLY',
+    formal_run_id: spec.formal_run_id,
+    scope: { ...spec.scope },
+    canonical_identity_binding: 'MATERIALIZER_BOUND_PRODUCT_A0_IDENTITY',
+    phases: spec.phases.map(phase => ({
+      phase_id: phase.phase_id,
+      providers_enabled: [...phase.providers_enabled],
+      required_product_service_boundary: true,
+    })),
+    required_outputs: [
+      'canonical_receipts',
+      'phase_results',
+      'selector_snapshot',
+      'lineage_id',
+      'revision_id',
+      'final_formal_run_id',
+    ],
+    forbidden_acceptance_promotions: [
+      'S5_SLICE_RESULT_PROMOTION',
+      'SLICE_RUN_RELABEL',
+      'CROSS_RUN_OBJECT_REUSE',
+    ],
+    database_execution_authorized: false,
+  };
 }
-async function invokeDirectMaterializerV1(port,spec,authority){assert.equal(authority?.record_status,'SINGLE_FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORIZED','DATABASE_EXECUTION_AUTHORITY_REQUIRED');const plan=buildDirectMaterializerPlanV1(spec);const result=await port.executeDirectFormalRun({spec,plan});assert.equal(result.formal_run_id,spec.formal_run_id);assert.notEqual(result.slice_acceptance_only,true,'SLICE_ACCEPTANCE_PROMOTION_FORBIDDEN');assert.notEqual(result.final_formal_run_id,null,'NULL_FINAL_FORMAL_RUN_ID_FORBIDDEN');assert.equal(result.final_formal_run_id,spec.formal_run_id,'FINAL_FORMAL_RUN_ID_MISMATCH');assert.equal(result.phase_results.length,28);assert.ok(Array.isArray(result.canonical_receipts)&&result.canonical_receipts.length>0);assert.ok(result.selector_snapshot&&typeof result.selector_snapshot==='object');const boundSpec=bindMaterializedCanonicalIdentityV1(spec,result);return{plan,result,bound_spec:boundSpec};}
-module.exports={buildDirectMaterializerPlanV1,bindMaterializedCanonicalIdentityV1,invokeDirectMaterializerV1};
+
+function requiredIdentity(value, code, prefix) {
+  assert.equal(typeof value, 'string', code);
+  assert.match(value, new RegExp(`^${prefix}_[a-z0-9]{24}$`), code);
+  return value;
+}
+
+function bindMaterializedCanonicalIdentityV1(spec, result) {
+  assert.equal(spec.materializer_identity_binding_required, true, 'MATERIALIZER_IDENTITY_BINDING_NOT_REQUIRED');
+  assert.equal(spec.lineage_id, null, 'PREBOUND_LINEAGE_FORBIDDEN');
+  assert.equal(spec.revision_id, null, 'PREBOUND_REVISION_FORBIDDEN');
+  const lineageId = requiredIdentity(result?.lineage_id, 'MATERIALIZER_LINEAGE_REQUIRED', 'lineage');
+  const revisionId = requiredIdentity(result?.revision_id, 'MATERIALIZER_REVISION_REQUIRED', 'revision');
+  assert.notEqual(lineageId, revisionId, 'LINEAGE_REVISION_IDENTITY_COLLISION');
+  const receipts = Array.isArray(result?.canonical_receipts) ? result.canonical_receipts : [];
+  assert.ok(receipts.length > 0, 'MATERIALIZER_RECEIPTS_REQUIRED');
+  for (const receipt of receipts) {
+    assert.equal(receipt.lineage_id, lineageId, `MATERIALIZER_RECEIPT_LINEAGE:${receipt.member_role}`);
+    assert.equal(receipt.revision_id, revisionId, `MATERIALIZER_RECEIPT_REVISION:${receipt.member_role}`);
+  }
+  return Object.freeze({
+    ...spec,
+    lineage_id: lineageId,
+    revision_id: revisionId,
+    canonical_identity_binding: 'BOUND_TO_PRODUCT_A0_IDENTITY',
+    materializer_identity_binding_required: false,
+  });
+}
+
+async function invokeDirectMaterializerV1(port, spec, authority) {
+  validateExactPathAuthorityV1(authority, {
+    exactSubjectSha: spec.exact_subject_sha,
+    runLabel: spec.run_label,
+    operationalRunInstanceId: spec.operational_run_instance_id,
+  });
+  const plan = buildDirectMaterializerPlanV1(spec);
+  const result = await port.executeDirectFormalRun({ spec, plan });
+  assert.equal(result.formal_run_id, spec.formal_run_id);
+  assert.notEqual(result.slice_acceptance_only, true, 'SLICE_ACCEPTANCE_PROMOTION_FORBIDDEN');
+  assert.notEqual(result.final_formal_run_id, null, 'NULL_FINAL_FORMAL_RUN_ID_FORBIDDEN');
+  assert.equal(result.final_formal_run_id, spec.formal_run_id, 'FINAL_FORMAL_RUN_ID_MISMATCH');
+  assert.equal(result.phase_results.length, 28);
+  assert.ok(Array.isArray(result.canonical_receipts) && result.canonical_receipts.length > 0);
+  assert.ok(result.selector_snapshot && typeof result.selector_snapshot === 'object');
+  const boundSpec = bindMaterializedCanonicalIdentityV1(spec, result);
+  return { plan, result, bound_spec: boundSpec };
+}
+
+module.exports = {
+  buildDirectMaterializerPlanV1,
+  bindMaterializedCanonicalIdentityV1,
+  invokeDirectMaterializerV1,
+};
