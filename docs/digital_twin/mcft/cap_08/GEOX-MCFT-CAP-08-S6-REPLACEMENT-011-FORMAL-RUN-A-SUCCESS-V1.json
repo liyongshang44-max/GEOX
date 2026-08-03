@@ -1,0 +1,81 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_replacement_011_formal_run_a_success_v1",
+  "record_status": "FORMAL_RUN_A_TERMINAL_SUCCESS_ESTABLISHED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "settlement_base_main_sha": "191e363e1fd9fa4c77c8b5135fb9673c3a9286d1",
+  "authority_main_sha": "191e363e1fd9fa4c77c8b5135fb9673c3a9286d1",
+  "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+  "run_label": "RUN_A",
+  "formal_workflow": {
+    "path": ".github/workflows/mcft-cap-08-s6-single-run-database-execution.yml",
+    "blob_sha": "2371b3797999f61f55c58551b85c59279eb2f0a2",
+    "workflow_run_id": 30845476698,
+    "workflow_run_number": 11,
+    "workflow_run_attempt": 1,
+    "event": "workflow_dispatch",
+    "head_sha": "191e363e1fd9fa4c77c8b5135fb9673c3a9286d1",
+    "head_branch": "main",
+    "created_at": "2026-08-03T19:22:27Z",
+    "completed_at": "2026-08-03T19:24:19Z",
+    "conclusion": "success"
+  },
+  "formal_identity": {
+    "formal_run_id": "cap08_62f42f95591e40bfb3a0274f827628fe",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260804-REPLACEMENT-011",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260804-REPLACEMENT-011",
+    "physical_database_name": "geox_mcft_cap08_s6_run_a_replacement_011_30845476698",
+    "lineage_id": "lineage_24d698cf6bec8dfd57cac231",
+    "revision_id": "revision_95de2e84ecba17cca0357233",
+    "canonical_identity_binding": "BOUND_TO_PRODUCT_A0_IDENTITY"
+  },
+  "effective_authority_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-MERGED-MAIN-QUALIFIED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "fe55502277682e8a3e5cbf87ba97feb3f94988b0",
+    "semantic_digest": "sha256:f01f3328e47f2c0daeabb1d31911467bbd43075398d0d50abcec7dfe5886fa23"
+  },
+  "execution_evidence": {
+    "normalized_authority_artifact_id": 8868490523,
+    "normalized_authority_artifact_digest": "sha256:1226a5d0e3328c33af7058fd9e3185eb28553df123f769632d377d27740ed97f",
+    "one_run_artifact_id": 8868535301,
+    "one_run_artifact_digest": "sha256:4d59d3aa0373bee0c9eb33ab78dd427eb324d4d259e0786aa9c4dea9effdaf2f",
+    "formal_artifact_digest": "sha256:e592f00fb0b6c3234985f57e8d20955afc6246964d04aca7a56f9eea9b79e696",
+    "artifact_transport_digest": "sha256:bb1c71bc5fadbe09e4df12ad4618e566782e40f138bd6ac3e51c200d594bbb2f",
+    "database_instance_digest": "sha256:92bfc20d73d18f9c3004d3956d0951f54a4f7c18b403a85fef7a54abb76b7d39"
+  },
+  "terminal_invariants": {
+    "bootstrap_fact_count": 11,
+    "phase_count": 28,
+    "canonical_receipt_count": 153,
+    "operational_event_count": 224,
+    "recovery_vector_count": 7,
+    "cap07_surface_count": 10,
+    "cap07_request_variant_count": 11,
+    "per_run_witness_count": 22,
+    "per_run_witness_pass_count": 22,
+    "exact_witness_producer_path_executed": true,
+    "synthetic_witness_producer_used": false,
+    "fresh_disposable_database": true,
+    "database_drop_completed": true,
+    "hard_acceptance_eligible": true,
+    "formal_evidence_eligible": true
+  },
+  "authority_consumed": true,
+  "dispatch_count_consumed": 1,
+  "rerun_authorized": false,
+  "duplicate_dispatch_authorized": false,
+  "authority_reuse_authorized": false,
+  "run_b_authorized": false,
+  "cross_run_comparator_authorized": false,
+  "next_legal_action": "ISSUE_FRESH_NON_EFFECTIVE_FORMAL_RUN_B_AUTHORITY_CANDIDATE",
+  "nonclaims": [
+    "NO_RUN_B_EXECUTION",
+    "NO_FORMAL_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_CANDIDATE_DECLARATION",
+    "NO_LEDGER_SETTLEMENT",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:b55cb21a7c477d7adef40a38fad2304ac5fc392c579d48f95ab1b70367f4fb9c"
+}
