@@ -1,0 +1,48 @@
+name: mcft-cap-08-s6-exact-path-development-rehearsal-static
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-exact-path-development-rehearsal.yml'
+      - '.github/workflows/mcft-cap-08-s6-exact-path-development-rehearsal-static.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-EXACT-PATH-DEVELOPMENT-REHEARSAL-OBJECT-SET-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_PATH_DEVELOPMENT_REHEARSAL_V1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/**'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/**'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/**'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap08-s6-exact-path-development-rehearsal-static-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  exact-path-static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact implementation head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate exact-path rehearsal architecture and frozen object set
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_PATH_DEVELOPMENT_REHEARSAL_V1.cjs
+      - name: Upload static architecture evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-exact-path-development-rehearsal-static-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_EXACT_PATH_DEVELOPMENT_REHEARSAL_STATIC_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

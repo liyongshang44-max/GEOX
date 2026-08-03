@@ -48,7 +48,10 @@ function buildStateRowsV1(state: CanonicalFactReadV1) {
       revision_id: state.object.revision_id,
       logical_time: state.object.logical_time,
       determinism_hash: state.object.determinism_hash,
-      canonical_payload: state.object,
+      // CAP-07 validates aggregate projections against record_json.payload.payload.
+      // Projection storage therefore carries the canonical object's semantic payload,
+      // not the outer canonical envelope that is already represented by typed columns.
+      canonical_payload: structuredClone(state.object.payload),
       source_fact_id: state.fact_id,
     },
     state_latest: {

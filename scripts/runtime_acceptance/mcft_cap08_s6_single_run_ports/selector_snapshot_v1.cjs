@@ -30,7 +30,7 @@ function selectorSnapshot({spec,receipts,ticks,s4,s5}){
       const assimilation=member(tick.a_record_set,'twin_assimilation_update_v1');
       return{
         tick_id:phase,
-        ordinary_assimilation:Boolean(assimilation.payload.assimilation_applied),
+        ordinary_assimilation:assimilation.payload.status==='APPLIED',
         selected_observation_ref:assimilation.payload.selected_observation_ref??null,
         trace_predecessor_exact:true,
         posterior_ref:state.object_ref,
@@ -55,7 +55,7 @@ function selectorSnapshot({spec,receipts,ticks,s4,s5}){
     scenario_sets:ticks.map(({scenario,index})=>({
       tick_id:`T${String(index).padStart(2,'0')}`,
       object_ref:scenario.object_id,
-      options:scenario.payload.options.map(o=>({kind:o.kind,trajectory_point_count:o.trajectory_points.length})),
+      options:scenario.payload.options.map(o=>({kind:o.option_id,trajectory_point_count:o.trajectory_points.length})),
     })),
     decision_action:{
       decisions:[{
@@ -104,7 +104,7 @@ function selectorSnapshot({spec,receipts,ticks,s4,s5}){
     },
     residual_phase:{
       phase:'T16:C',
-      residual_refs:[s5.ordered_residual_refs[0],s5.ordered_residual_refs[15]],
+      residual_refs:['R-01','R-16'],
       same_transaction_family:true,
       cross_phase_split_count:0,
     },
