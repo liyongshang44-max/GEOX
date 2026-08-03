@@ -1,0 +1,46 @@
+name: mcft-cap-08-s6-closure-fvo10-corrected-run-a-authority-effectiveness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-closure-fvo10-corrected-run-a-authority-effectiveness.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CLOSURE-FVO10-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CLOSURE-FVO10-CORRECTED-RUN-A-AUTHORITY-EFFECTIVENESS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CLOSURE-FVO10-CORRECTED-RUN-A-AUTHORITY-EFFECTIVENESS-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_CLOSURE_FVO10_CORRECTED_RUN_A_AUTHORITY_EFFECTIVENESS_V1.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap08-s6-closure-fvo10-corrected-run-a-authority-effectiveness-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  authority-effectiveness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact effectiveness head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate candidate preservation, 54-object set, FVO-10 canonical alias, database identity, and production gate eligibility
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_CLOSURE_FVO10_CORRECTED_RUN_A_AUTHORITY_EFFECTIVENESS_V1.cjs
+      - name: Upload effectiveness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-closure-fvo10-corrected-run-a-authority-effectiveness-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_CLOSURE_FVO10_CORRECTED_RUN_A_AUTHORITY_EFFECTIVENESS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

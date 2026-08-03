@@ -1,0 +1,83 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_closure_fvo10_corrected_run_a_authority_effectiveness_v1",
+  "record_status": "CLOSURE_FVO10_CORRECTED_RUN_A_AUTHORITY_EFFECTIVENESS_ESTABLISHED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "c022bfea62d4bb831cacb00e2463b68f7d50a245",
+  "candidate": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CLOSURE-FVO10-CORRECTED-FORMAL-RUN-A-AUTHORITY-CANDIDATE-V1.json",
+    "blob_sha": "a5ead14e052657aaf5cd6f19f1250ce07b27d828",
+    "head_sha": "3167a46b84413f68af73cc33cd3a1ac5d706fb99",
+    "merge_sha": "c022bfea62d4bb831cacb00e2463b68f7d50a245",
+    "candidate_to_merge_file_delta": 0,
+    "semantic_digest": "sha256:9084bf4fba09bf07009a4be7377427b7956b63c8117a5c2397faddd2cf034968"
+  },
+  "effective_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CLOSURE-FVO10-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "2c874123256dc2fcf26cdaed2c1d5322b06df5a0",
+    "semantic_digest": "sha256:22c3bded3482bd7eabf52ea5e738f7a6d571de51aca6d94c8e887fff6d39e6f8",
+    "record_status": "SINGLE_FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORIZED"
+  },
+  "object_set": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CLOSURE-FVO10-CORRECTED-RUN-A-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "4aa37e53b395ffc9e757f591c801a98eb9a64981",
+    "semantic_digest": "sha256:5ac26a119c178b1d6765ffb4eeadea5c102124a35629c1879ac87429b3995cc4",
+    "object_count": 54
+  },
+  "identity": {
+    "run_label": "RUN_A",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-009",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-009",
+    "physical_database_name_template": "geox_mcft_cap08_s6_run_a_replacement_009_<github_run_id>"
+  },
+  "closure_contract": {
+    "canonical_ref": "FVO-10",
+    "exact_alias_sources": [
+      "mcft_cap08_s6_final_formal_evidence_v1",
+      "mcft_cap08_s3_completion_evidence_v1"
+    ],
+    "semantic_identity_equality_required": true,
+    "preferred_canonical_carrier": "mcft_cap08_s3_completion_evidence_v1",
+    "arbitrary_duplicate_coalescing_forbidden": true,
+    "canonical_receipt_count": 153
+  },
+  "phase_order_contract": {
+    "required_phase_order": [
+      "resolve",
+      "E",
+      "H",
+      "A",
+      "B",
+      "G",
+      "C",
+      "barrier"
+    ],
+    "phase_count": 28,
+    "operational_event_count": 224
+  },
+  "authorization": {
+    "max_dispatch_count": 1,
+    "github_run_attempt_required": 1,
+    "rerun_authorized": false,
+    "duplicate_dispatch_authorized": false,
+    "authority_reuse_authorized": false,
+    "run_b_dispatch_authorized": false,
+    "cross_run_comparator_authorized": false
+  },
+  "database_execution_performed": false,
+  "workflow_dispatch_performed": false,
+  "formal_run_result_present": false,
+  "next_legal_action_after_merge": "DISPATCH_CLOSURE_FVO10_CORRECTED_FORMAL_RUN_A_ONCE",
+  "nonclaims": [
+    "NO_DATABASE_EXECUTION_IN_EFFECTIVENESS_PR",
+    "NO_WORKFLOW_DISPATCH_IN_EFFECTIVENESS_PR",
+    "NO_FORMAL_RUN_RESULT",
+    "NO_RUN_B_AUTHORITY",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_STAGE_1A_CLOSURE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:c1b42f245a5f3f661ed512da5e416b2b128e72aff99214b741754fb7120fcd23"
+}
