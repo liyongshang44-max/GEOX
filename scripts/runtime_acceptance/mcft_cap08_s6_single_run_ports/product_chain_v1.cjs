@@ -401,7 +401,7 @@ for(let order=1;order<=24;order+=1){
   const fvoId=`FVO-${String(order).padStart(2,'0')}`;
   const observation=await evidence.buildFvoFromForecastV1({
     fvoId,
-    forecast:observationSourceForecast,
+    forecast:residualForecast,
   });
   const ordinary=p.CAP08_S5_ORDINARY_ASSIMILATION_ORDERS_V1.includes(order)
     ?member(ticks[order].tick.a_record_set,'twin_assimilation_update_v1')
