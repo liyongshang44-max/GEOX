@@ -1,0 +1,89 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_closure_fvo10_canonical_alias_failure_settlement_v1",
+  "record_status": "RUN_A_CLOSURE_FVO10_CANONICAL_ALIAS_FAILURE_SETTLED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "40f1c8767438c567ba24cda973725bde3ce87235",
+  "failed_dispatch": {
+    "workflow_run_id": 30778431135,
+    "run_attempt": 1,
+    "workflow_head_sha": "40f1c8767438c567ba24cda973725bde3ce87235",
+    "exact_subject_sha": "0186ce5f3ae82724886ea633a29f58791449ddec",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-008",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-008",
+    "physical_database_name": "geox_mcft_cap08_s6_run_a_replacement_008_30778431135",
+    "authority_artifact_id": 8842832130,
+    "authority_artifact_digest": "sha256:899b824465b5eff5905af35c60decc6ce2646bf032b2771c3dfaaa1833a5c481",
+    "failed_run_artifact_id": 8842846060,
+    "failed_run_artifact_digest": "sha256:d83017fa8bdc16ed2ccff5bc50c0c79902ac8a93af1ee7f9baa905a93c9bf324",
+    "database_dropped": true
+  },
+  "terminal_failure": {
+    "exception_class": "Error",
+    "message": "CLOSURE_REF_DUPLICATE:FVO-10",
+    "stage": "FORMAL_CLOSURE_EXACT_RECEIPT_READBACK",
+    "source_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/closure_reader_v1.cjs",
+    "source_line": 35,
+    "product_chain_completed": true,
+    "materialization_output_completed": true,
+    "canonical_receipt_count": 153,
+    "operational_event_count": 224,
+    "formal_result_present": false
+  },
+  "root_cause": {
+    "receipt_manifest_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_db/receipt_manifest_v1.cjs",
+    "receipt_manifest_blob_sha": "68ef6934bab0243b29c3ae90b22d4e5603f1c4fb",
+    "receipt_ref_unique": true,
+    "closure_reader_prior_blob_sha": "427b4f28c19f9109392aa4491a8eaa42e4cd2402",
+    "final_formal_evidence_source_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/final_evidence_source_v1.cjs",
+    "final_formal_evidence_source_blob_sha": "3f2108991f64f63fb17606a75a491620f6fd8a27",
+    "completion_evidence_service_path": "apps/server/src/runtime/twin_runtime/cap08_s3_outcome_completion_evidence_service_v1.ts",
+    "completion_evidence_service_blob_sha": "9de83009285fb7cacb12b2a49ad5ebb75ce2486b",
+    "completion_evidence_tick_service_path": "apps/server/src/runtime/twin_runtime/cap08_s3_completion_evidence_tick_service_v1.ts",
+    "completion_evidence_tick_service_blob_sha": "5a5a38b44150fb2eb41ed67581feda570c50c90f",
+    "canonical_ref": "FVO-10",
+    "canonical_hash_equal": true,
+    "physical_fact_ids_distinct": true,
+    "physical_sources_distinct": true,
+    "query_join_amplification": false,
+    "closure_reader_required_canonical_alias_rule": true
+  },
+  "correction": {
+    "closure_reader_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/closure_reader_v1.cjs",
+    "canonical_alias_ref": "FVO-10",
+    "allowed_source_pair": [
+      "mcft_cap08_s6_final_formal_evidence_v1",
+      "mcft_cap08_s3_completion_evidence_v1"
+    ],
+    "semantic_identity_equality_required": true,
+    "same_source_duplicate_rejected": true,
+    "third_carrier_rejected": true,
+    "non_fvo10_duplicate_rejected": true,
+    "hash_drift_rejected": true,
+    "preferred_canonical_carrier": "mcft_cap08_s3_completion_evidence_v1",
+    "final_formal_evidence_persistence_preserved": true,
+    "product_completion_evidence_persistence_preserved": true,
+    "product_runtime_changed": false,
+    "migration_changed": false,
+    "formal_database_workflow_changed": false
+  },
+  "consumed_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PHASE-ORDER-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "prior_blob_sha": "bfaa04843c60c36c85261c84a485053972cf5705",
+    "record_status": "SINGLE_FINAL_FORMAL_RUN_AUTHORITY_CONSUMED_CLOSURE_FVO10_ALIAS_FAILURE",
+    "reusable": false
+  },
+  "next_legal_action_after_merge": "ISSUE_NEW_NON_EFFECTIVE_RUN_A_AUTHORITY_CANDIDATE",
+  "nonclaims": [
+    "NO_REPLACEMENT_AUTHORITY_IN_CORRECTION_PR",
+    "NO_DATABASE_EXECUTION_IN_CORRECTION_PR",
+    "NO_WORKFLOW_DISPATCH_IN_CORRECTION_PR",
+    "NO_RUN_A_RESULT",
+    "NO_RUN_B_AUTHORITY",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:7252df19b27e50621a279bf92887e27bf93a31440b386efb54e21c6be610db1e"
+}
