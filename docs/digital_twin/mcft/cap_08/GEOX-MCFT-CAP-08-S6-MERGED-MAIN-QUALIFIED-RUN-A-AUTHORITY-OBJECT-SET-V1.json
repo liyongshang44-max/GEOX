@@ -1,0 +1,86 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_merged_main_qualified_run_a_authority_object_set_v1",
+  "record_status": "MERGED_MAIN_QUALIFIED_RUN_A_AUTHORITY_OBJECT_SET_FROZEN",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_governance_main_sha": "0ef5db98aee3b54257bbd404fa1e57daa34957f7",
+  "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+  "binding_mode": "IMMUTABLE_QUALIFIED_MANIFEST_REF_WITH_FULL_BLOB_READBACK",
+  "qualified_execution_manifest_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-EXACT-PATH-DEVELOPMENT-REHEARSAL-OBJECT-SET-V1.json",
+    "blob_sha": "dca4c8b35e2b9c4635f2b1b2e82fff23a8247c0e",
+    "semantic_digest": "sha256:b3e4293cfe802b1d58ba6b26cf4c3d918e21dd8538bc4337e3c95a6860e378f7",
+    "required_record_status": "EXACT_PATH_DEVELOPMENT_REHEARSAL_OBJECT_SET_FROZEN",
+    "object_count": 56
+  },
+  "merged_main_qualification": {
+    "workflow_run_id": 30837192005,
+    "run_dev_a_artifact_id": 8865363139,
+    "run_dev_a_artifact_digest": "sha256:747ada7c3d7558015d9d985f77f6be45119e97c31b3d68324dc6383ab579ce67",
+    "run_dev_b_artifact_id": 8865358556,
+    "run_dev_b_artifact_digest": "sha256:f59039fb2d35079ae91c1e3db069fa25599ffe603806736d0880f006024cd6d5",
+    "semantic_comparator_artifact_id": 8865374104,
+    "semantic_comparator_artifact_digest": "sha256:2c69d77bdcdd887fa7addbd9f7af8e00ee3748f9fd01104ccc84a7ef2dd19bc7",
+    "integration_qualification_artifact_id": 8865385476,
+    "integration_qualification_artifact_digest": "sha256:5bccada8f5713d1ef8a5e6534b1cf2f8165e76a57631c8b7377f6ff2e082a3ed",
+    "semantic_digest_a": "sha256:32c93d4f5ecd1fc50ff94418407767b48b057d77c81bf93dfe3fccf58f0df2f8",
+    "semantic_digest_b": "sha256:32c93d4f5ecd1fc50ff94418407767b48b057d77c81bf93dfe3fccf58f0df2f8",
+    "difference_count": 0,
+    "integration_status": "PASS",
+    "formal_authority_predecessor_satisfied": true
+  },
+  "governance_main_delta_proof": {
+    "qualified_runtime_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+    "current_governance_main_sha": "0ef5db98aee3b54257bbd404fa1e57daa34957f7",
+    "changed_files": [
+      "docs/handoff/GEOX-MCFT-CAP-08-S6-HANDOFF.md"
+    ],
+    "qualified_execution_object_delta": 0,
+    "runtime_source_delta": 0,
+    "workflow_delta": 0,
+    "port_bundle_delta": 0,
+    "harness_delta": 0,
+    "migration_delta": 0
+  },
+  "formal_execution_binding": {
+    "workflow_path": ".github/workflows/mcft-cap-08-s6-single-run-database-execution.yml",
+    "workflow_blob_sha": "2371b3797999f61f55c58551b85c59279eb2f0a2",
+    "port_bundle_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/index_v1.cjs",
+    "port_bundle_blob_sha": "900ed1a426158f9d27c0e8e5537432764356d8dc",
+    "object_count": 56
+  },
+  "retired_non_effective_predecessor": {
+    "candidate_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FVO17-FORECAST-BINDING-CORRECTED-FORMAL-RUN-A-AUTHORITY-CANDIDATE-V1.json",
+    "candidate_blob_sha": "3873a9c3b7a64a63287d24fec17e587d01a96eb5",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-010",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-010",
+    "effectiveness_pr": 2780,
+    "effectiveness_pr_closed_unmerged": true,
+    "authority_effective": false,
+    "authority_consumed": false,
+    "identity_reuse_authorized": false
+  },
+  "required_regression_matrix": [
+    "CJS_MODULE_LOADING",
+    "PORT_EXPORT_IMPORT_BINDING",
+    "FRESH_BOOTSTRAP_FACTS",
+    "AUTHORITY_ARGUMENT_TRANSPORT",
+    "PHYSICAL_DATABASE_IDENTITY",
+    "T16_S4_T17_INTERLEAVE",
+    "T17_GUARD_ACL",
+    "EXECUTION_PHASE_ORDER",
+    "STATE_PROJECTION_CANONICAL_PAYLOAD",
+    "CANONICAL_RECEIPT_CARDINALITY_153",
+    "OPERATIONAL_EVENT_CARDINALITY_224",
+    "FVO10_CANONICAL_ALIAS",
+    "FVO17_CORRECTED_FORECAST_BINDING",
+    "EXACT_WITNESS_PRODUCERS_22",
+    "RESTART_READ_CONTINUITY",
+    "DATABASE_CLEAN_DROP"
+  ],
+  "object_count": 56,
+  "formal_authority_effective": false,
+  "database_execution_performed": false,
+  "workflow_dispatch_performed": false,
+  "semantic_digest": "sha256:fe69b32a633f5c7eeb93570b68f791ddc94441dd2a5959a44d721cf838acf586"
+}
