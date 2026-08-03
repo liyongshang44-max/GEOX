@@ -1,0 +1,86 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_merged_main_qualified_run_a_authority_effectiveness_v1",
+  "record_status": "MERGED_MAIN_QUALIFIED_RUN_A_AUTHORITY_EFFECTIVENESS_ESTABLISHED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "de5e1b6aaf8138ba703bc5d2ea584e2b8a35b690",
+  "candidate_head_sha": "9cda46a71efbf99070bf2382f674bff5df3a6e31",
+  "candidate_merge_sha": "de5e1b6aaf8138ba703bc5d2ea584e2b8a35b690",
+  "candidate_to_merge_file_delta": 0,
+  "candidate_to_merge_execution_object_delta": 0,
+  "candidate_authority_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-MERGED-MAIN-QUALIFIED-FORMAL-RUN-A-AUTHORITY-CANDIDATE-V1.json",
+    "blob_sha": "ea8bf226434dfe19edd7b6abc4f67abf08a0af92",
+    "semantic_digest": "sha256:ebc1c111d4bb6c112f0e29fd31ac4228b3f58dbb15aa981788495004d115a06b"
+  },
+  "object_set_manifest_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-MERGED-MAIN-QUALIFIED-RUN-A-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "f33475ad41c49fa348d8e52b1e0e0e60dc2bf8bd",
+    "semantic_digest": "sha256:fe69b32a633f5c7eeb93570b68f791ddc94441dd2a5959a44d721cf838acf586",
+    "object_count": 56
+  },
+  "effective_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-MERGED-MAIN-QUALIFIED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "fe55502277682e8a3e5cbf87ba97feb3f94988b0",
+    "semantic_digest": "sha256:f01f3328e47f2c0daeabb1d31911467bbd43075398d0d50abcec7dfe5886fa23",
+    "record_status": "SINGLE_FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORIZED",
+    "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260804-REPLACEMENT-011",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260804-REPLACEMENT-011",
+    "max_dispatch_count": 1,
+    "rerun_authorized": false,
+    "run_b_remains_blocked": true
+  },
+  "qualification_provenance": {
+    "merged_main_qualification_run_id": 30837192005,
+    "integration_qualification_artifact_id": 8865385476,
+    "integration_qualification_artifact_digest": "sha256:5bccada8f5713d1ef8a5e6534b1cf2f8165e76a57631c8b7377f6ff2e082a3ed",
+    "semantic_comparator_artifact_id": 8865374104,
+    "semantic_comparator_artifact_digest": "sha256:2c69d77bdcdd887fa7addbd9f7af8e00ee3748f9fd01104ccc84a7ef2dd19bc7",
+    "semantic_digest_a": "sha256:32c93d4f5ecd1fc50ff94418407767b48b057d77c81bf93dfe3fccf58f0df2f8",
+    "semantic_digest_b": "sha256:32c93d4f5ecd1fc50ff94418407767b48b057d77c81bf93dfe3fccf58f0df2f8",
+    "difference_count": 0,
+    "formal_authority_predecessor_satisfied": true
+  },
+  "closure_contract": {
+    "canonical_receipt_count": 153,
+    "operational_event_count": 224,
+    "phase_count": 28,
+    "required_phase_order": [
+      "resolve",
+      "E",
+      "H",
+      "A",
+      "B",
+      "G",
+      "C",
+      "barrier"
+    ],
+    "state_projection_canonical_payload_required": true,
+    "fvo10_exact_alias_rule_preserved": true,
+    "fvo17_observation_and_residual_share_corrected_forecast": true,
+    "exact_witness_producer_count": 22,
+    "restart_read_continuity_required": true,
+    "database_clean_drop_required": true
+  },
+  "production_gate_eligible": true,
+  "database_execution_performed": false,
+  "workflow_dispatch_performed": false,
+  "formal_run_result_present": false,
+  "run_b_dispatch_authorized": false,
+  "cross_run_comparator_authorized": false,
+  "explicit_dispatch_approval_required": true,
+  "next_legal_action_after_merge": "REQUEST_EXPLICIT_ONE_SHOT_FORMAL_RUN_A_DISPATCH_AUTHORIZATION",
+  "nonclaims": [
+    "NO_DATABASE_EXECUTION_IN_EFFECTIVENESS_PR",
+    "NO_WORKFLOW_DISPATCH_IN_EFFECTIVENESS_PR",
+    "NO_FORMAL_RUN_RESULT",
+    "NO_RUN_B_AUTHORITY",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_STAGE_1A_CLOSURE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:bf8a9f977789e699e9592f5abff01cc0b26f974d74c90f37cc0a6037b57b9713"
+}
