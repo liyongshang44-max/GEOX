@@ -1,0 +1,69 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_fvo17_forecast_binding_corrected_run_a_authority_effectiveness_v1",
+  "record_status": "FVO17_FORECAST_BINDING_CORRECTED_RUN_A_AUTHORITY_EFFECTIVENESS_ESTABLISHED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "1475b326994e15e9e0ce6a393dde825825763ff6",
+  "candidate_head_sha": "28cfc061a7b47b0fe405a7a07001512e915c2cd6",
+  "candidate_merge_sha": "1475b326994e15e9e0ce6a393dde825825763ff6",
+  "candidate_to_merge_file_delta": 0,
+  "candidate_authority_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FVO17-FORECAST-BINDING-CORRECTED-FORMAL-RUN-A-AUTHORITY-CANDIDATE-V1.json",
+    "blob_sha": "3873a9c3b7a64a63287d24fec17e587d01a96eb5",
+    "semantic_digest": "sha256:27bd5c0fe936e817c19491b0dc898d7f10adfb3d5fab556dedd0697115f74233"
+  },
+  "object_set_manifest_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FVO17-FORECAST-BINDING-CORRECTED-RUN-A-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "cbeae03ad6118c8f8138df18b7260e5d20cdbb3e",
+    "semantic_digest": "sha256:63c77a83fddd7fed476b10b3267c44921486b79f0d99c9d46f0e5b4b6cb0dea7",
+    "object_count": 54
+  },
+  "effective_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FVO17-FORECAST-BINDING-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "record_status": "SINGLE_FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORIZED",
+    "exact_subject_sha": "89517a1b3ff61a1a1ba3259ef4e04001d6e1fee8",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-010",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-010",
+    "max_dispatch_count": 1,
+    "rerun_authorized": false,
+    "run_b_remains_blocked": true
+  },
+  "closure_contract": {
+    "canonical_receipt_count": 153,
+    "operational_event_count": 224,
+    "phase_count": 28,
+    "required_phase_order": [
+      "resolve",
+      "E",
+      "H",
+      "A",
+      "B",
+      "G",
+      "C",
+      "barrier"
+    ],
+    "fvo10_exact_alias_rule_preserved": true,
+    "fvo17_observation_and_residual_share_corrected_forecast": true,
+    "other_23_order_bindings_preserved": true,
+    "arbitrary_duplicate_coalescing_forbidden": true
+  },
+  "production_gate_eligible": true,
+  "database_execution_performed": false,
+  "workflow_dispatch_performed": false,
+  "formal_run_result_present": false,
+  "run_b_dispatch_authorized": false,
+  "cross_run_comparator_authorized": false,
+  "next_legal_action_after_merge": "DISPATCH_FVO17_FORECAST_BINDING_CORRECTED_FORMAL_RUN_A_ONCE",
+  "nonclaims": [
+    "NO_DATABASE_EXECUTION_IN_EFFECTIVENESS_PR",
+    "NO_WORKFLOW_DISPATCH_IN_EFFECTIVENESS_PR",
+    "NO_FORMAL_RUN_RESULT",
+    "NO_RUN_B_AUTHORITY",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_STAGE_1A_CLOSURE",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:77e259c363b572c073692712f65250750bd724593a7692bad48e5012b6164e90"
+}
