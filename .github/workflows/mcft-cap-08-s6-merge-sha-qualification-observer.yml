@@ -1,0 +1,427 @@
+name: mcft-cap-08-s6-merge-sha-qualification-observer
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-merge-sha-qualification-observer.yml'
+
+permissions:
+  contents: read
+
+env:
+  PNPM_VERSION: 9.15.4
+  NODE_VERSION: 20.11.1
+  MERGED_MAIN_SUBJECT_SHA: ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59
+
+concurrency:
+  group: mcft-cap08-s6-merge-sha-qualification-observer-ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59
+  cancel-in-progress: true
+
+jobs:
+  prepare-development-authorities:
+    name: prepare-development-authorities
+    runs-on: ubuntu-latest
+    outputs:
+      exact_subject_sha: ${{ steps.subject.outputs.sha }}
+    steps:
+      - name: Checkout exact merged-main subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.MERGED_MAIN_SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Freeze and verify exact merged-main subject
+        id: subject
+        shell: bash
+        run: |
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$MERGED_MAIN_SUBJECT_SHA"
+          echo "sha=$actual" >> "$GITHUB_OUTPUT"
+      - name: Validate exact 56-object set and build disposable development authorities
+        run: node scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/development_rehearsal_authority_builder_v1.cjs
+      - name: Record observer separation
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const out = path.resolve('acceptance-output/development-rehearsal-authority/MERGE_SHA_OBSERVER_CONTEXT.json');
+          fs.writeFileSync(out, JSON.stringify({
+            schema_version: 'geox_mcft_cap08_s6_merge_sha_observer_context_v1',
+            status: 'PASS',
+            exact_merged_main_subject_sha: process.env.MERGED_MAIN_SUBJECT_SHA,
+            observer_pr_head_sha: process.env.OBSERVER_HEAD_SHA,
+            observer_is_not_execution_subject: process.env.OBSERVER_HEAD_SHA !== process.env.MERGED_MAIN_SUBJECT_SHA,
+            authority_class: 'DEVELOPMENT_REHEARSAL',
+            evidence_class: 'NON_FORMAL',
+            formal_dispatch: false
+          }, null, 2) + '\n');
+          NODE
+        env:
+          OBSERVER_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      - name: Upload development authorities
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-development-rehearsal-authorities-${{ steps.subject.outputs.sha }}
+          path: acceptance-output/development-rehearsal-authority/
+          if-no-files-found: error
+          retention-days: 30
+
+  run-dev-a:
+    name: run-dev-a
+    needs: prepare-development-authorities
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - name: Checkout exact merged-main subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Download RUN_DEV_A authority
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-development-rehearsal-authorities-${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          path: acceptance-output/authority-source
+      - name: Bind RUN_DEV_A authority arguments
+        shell: bash
+        run: |
+          authority="acceptance-output/authority-source/MCFT_CAP_08_S6_RUN_DEV_A_AUTHORITY.json"
+          node - "$authority" <<'NODE' >> "$GITHUB_ENV"
+          const fs = require('node:fs');
+          const authority = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          console.log(`MCFT_CAP08_DEVELOPMENT_AUTHORITY_PATH=${process.argv[2]}`);
+          console.log(`MCFT_CAP08_RUN_LABEL=${authority.authorized_run_label}`);
+          console.log(`MCFT_CAP08_REHEARSAL_RUN_LABEL=${authority.rehearsal_run_label}`);
+          console.log(`MCFT_CAP08_OPERATIONAL_RUN_INSTANCE_ID=${authority.operational_run_instance_id}`);
+          console.log('MCFT_CAP08_NORMALIZED_EXECUTION_AUTHORITY=acceptance-output/run-dev-a/NORMALIZED_DEVELOPMENT_AUTHORITY.json');
+          NODE
+      - name: Gate non-formal development authority
+        env:
+          MCFT_CAP08_EXACT_SUBJECT_SHA: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+        run: node scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/development_rehearsal_authority_gate_v1.cjs
+      - name: Prepare exact disposable database identity and role credentials
+        env:
+          MCFT_CAP08_EXACT_SUBJECT_SHA: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+        shell: bash
+        run: |
+          node scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/database_identity_v1.cjs
+          echo "MCFT_CAP08_RUNNER_PASSWORD=cap08-s6-merge-sha-a-runner-${{ github.run_id }}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_MIGRATOR_PASSWORD=cap08-s6-merge-sha-a-migrator-${{ github.run_id }}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_LEGACY_RUNTIME_PASSWORD=cap08-s6-merge-sha-a-legacy-${{ github.run_id }}" >> "$GITHUB_ENV"
+      - name: Bootstrap fresh PostgreSQL A with exact migrations, roles, ACL and seed facts
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CANDIDATE_SHA: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+        shell: bash
+        run: |
+          export MCFT_CAP08_TARGET_DATABASE_NAME="$MCFT_CAP08_DB_NAME"
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+      - name: Execute RUN_DEV_A through exact entrypoint, harness and port bundle
+        env:
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: "1"
+          MCFT_CAP08_EXACT_SUBJECT_SHA: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+        shell: bash
+        run: |
+          export DATABASE_URL="postgres://geox_mcft_cap08_runner_v1:${MCFT_CAP08_RUNNER_PASSWORD}@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          export MCFT_CAP08_ADMIN_DATABASE_URL="postgres://postgres:postgres@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          pnpm -w exec tsx scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/workflow_entrypoint_v1.ts
+      - name: Restart process and perform exact readback A
+        env:
+          MCFT_CAP08_EXACT_SUBJECT_SHA: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          MCFT_CAP08_REHEARSAL_BUNDLE: acceptance-output/MCFT_CAP_08_S6_RUN_A_DEVELOPMENT_REHEARSAL_BUNDLE.json
+          MCFT_CAP08_RESTART_READBACK_OUTPUT: acceptance-output/run-dev-a/RESTART_READBACK_RESULT.json
+        shell: bash
+        run: |
+          export DATABASE_URL="postgres://geox_mcft_cap08_runner_v1:${MCFT_CAP08_RUNNER_PASSWORD}@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          export MCFT_CAP08_ADMIN_DATABASE_URL="postgres://postgres:postgres@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          node scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/restart_readback_v1.cjs
+      - name: Qualify unified RUN_DEV_A regression matrix
+        env:
+          MCFT_CAP08_REHEARSAL_BUNDLE: acceptance-output/MCFT_CAP_08_S6_RUN_A_DEVELOPMENT_REHEARSAL_BUNDLE.json
+          MCFT_CAP08_RESTART_READBACK_RESULT: acceptance-output/run-dev-a/RESTART_READBACK_RESULT.json
+          MCFT_CAP08_RUN_QUALIFICATION_OUTPUT: acceptance-output/run-dev-a/RUN_QUALIFICATION_RESULT.json
+        shell: bash
+        run: |
+          export DATABASE_URL="postgres://geox_mcft_cap08_runner_v1:${MCFT_CAP08_RUNNER_PASSWORD}@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          export MCFT_CAP08_ADMIN_DATABASE_URL="postgres://postgres:postgres@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          node scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/run_qualification_v1.cjs
+      - name: Drop disposable PostgreSQL A and verify absence
+        if: always()
+        env:
+          PGPASSWORD: postgres
+        shell: bash
+        run: |
+          mkdir -p acceptance-output/run-dev-a
+          db="${MCFT_CAP08_DB_NAME:-}"
+          if [[ -z "$db" ]]; then
+            printf '%s\n' '{"schema_version":"geox_mcft_cap08_s6_development_rehearsal_drop_result_v1","status":"FAIL","error":"DATABASE_NAME_ABSENT"}' > acceptance-output/run-dev-a/DROP_RESULT.json
+            exit 1
+          fi
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${db}' AND pid<>pg_backend_pid();"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"${db}\";"
+          remaining="$(psql -h 127.0.0.1 -U postgres -d postgres -At -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM pg_database WHERE datname='${db}';")"
+          test "$remaining" = "0"
+          node - "$db" <<'NODE' > acceptance-output/run-dev-a/DROP_RESULT.json
+          const db = process.argv[2];
+          console.log(JSON.stringify({
+            schema_version: 'geox_mcft_cap08_s6_development_rehearsal_drop_result_v1',
+            status: 'PASS',
+            rehearsal_run_label: 'RUN_DEV_A',
+            physical_database_name: db,
+            database_absent_after_drop: true
+          }, null, 2));
+          NODE
+      - name: Upload RUN_DEV_A exact-path evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-dev-a-${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          path: acceptance-output/
+          if-no-files-found: error
+          retention-days: 90
+
+  run-dev-b:
+    name: run-dev-b
+    needs: prepare-development-authorities
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - name: Checkout exact merged-main subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Download RUN_DEV_B authority
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-development-rehearsal-authorities-${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          path: acceptance-output/authority-source
+      - name: Bind RUN_DEV_B authority arguments
+        shell: bash
+        run: |
+          authority="acceptance-output/authority-source/MCFT_CAP_08_S6_RUN_DEV_B_AUTHORITY.json"
+          node - "$authority" <<'NODE' >> "$GITHUB_ENV"
+          const fs = require('node:fs');
+          const authority = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          console.log(`MCFT_CAP08_DEVELOPMENT_AUTHORITY_PATH=${process.argv[2]}`);
+          console.log(`MCFT_CAP08_RUN_LABEL=${authority.authorized_run_label}`);
+          console.log(`MCFT_CAP08_REHEARSAL_RUN_LABEL=${authority.rehearsal_run_label}`);
+          console.log(`MCFT_CAP08_OPERATIONAL_RUN_INSTANCE_ID=${authority.operational_run_instance_id}`);
+          console.log('MCFT_CAP08_NORMALIZED_EXECUTION_AUTHORITY=acceptance-output/run-dev-b/NORMALIZED_DEVELOPMENT_AUTHORITY.json');
+          NODE
+      - name: Gate non-formal development authority
+        env:
+          MCFT_CAP08_EXACT_SUBJECT_SHA: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+        run: node scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/development_rehearsal_authority_gate_v1.cjs
+      - name: Prepare exact disposable database identity and role credentials
+        env:
+          MCFT_CAP08_EXACT_SUBJECT_SHA: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+        shell: bash
+        run: |
+          node scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/database_identity_v1.cjs
+          echo "MCFT_CAP08_RUNNER_PASSWORD=cap08-s6-merge-sha-b-runner-${{ github.run_id }}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_MIGRATOR_PASSWORD=cap08-s6-merge-sha-b-migrator-${{ github.run_id }}" >> "$GITHUB_ENV"
+          echo "MCFT_CAP08_LEGACY_RUNTIME_PASSWORD=cap08-s6-merge-sha-b-legacy-${{ github.run_id }}" >> "$GITHUB_ENV"
+      - name: Bootstrap fresh PostgreSQL B with exact migrations, roles, ACL and seed facts
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CANDIDATE_SHA: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+        shell: bash
+        run: |
+          export MCFT_CAP08_TARGET_DATABASE_NAME="$MCFT_CAP08_DB_NAME"
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+      - name: Execute RUN_DEV_B through exact entrypoint, harness and port bundle
+        env:
+          MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: "1"
+          MCFT_CAP08_EXACT_SUBJECT_SHA: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+        shell: bash
+        run: |
+          export DATABASE_URL="postgres://geox_mcft_cap08_runner_v1:${MCFT_CAP08_RUNNER_PASSWORD}@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          export MCFT_CAP08_ADMIN_DATABASE_URL="postgres://postgres:postgres@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          pnpm -w exec tsx scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/workflow_entrypoint_v1.ts
+      - name: Restart process and perform exact readback B
+        env:
+          MCFT_CAP08_EXACT_SUBJECT_SHA: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          MCFT_CAP08_REHEARSAL_BUNDLE: acceptance-output/MCFT_CAP_08_S6_RUN_B_DEVELOPMENT_REHEARSAL_BUNDLE.json
+          MCFT_CAP08_RESTART_READBACK_OUTPUT: acceptance-output/run-dev-b/RESTART_READBACK_RESULT.json
+        shell: bash
+        run: |
+          export DATABASE_URL="postgres://geox_mcft_cap08_runner_v1:${MCFT_CAP08_RUNNER_PASSWORD}@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          export MCFT_CAP08_ADMIN_DATABASE_URL="postgres://postgres:postgres@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          node scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/restart_readback_v1.cjs
+      - name: Qualify unified RUN_DEV_B regression matrix
+        env:
+          MCFT_CAP08_REHEARSAL_BUNDLE: acceptance-output/MCFT_CAP_08_S6_RUN_B_DEVELOPMENT_REHEARSAL_BUNDLE.json
+          MCFT_CAP08_RESTART_READBACK_RESULT: acceptance-output/run-dev-b/RESTART_READBACK_RESULT.json
+          MCFT_CAP08_RUN_QUALIFICATION_OUTPUT: acceptance-output/run-dev-b/RUN_QUALIFICATION_RESULT.json
+        shell: bash
+        run: |
+          export DATABASE_URL="postgres://geox_mcft_cap08_runner_v1:${MCFT_CAP08_RUNNER_PASSWORD}@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          export MCFT_CAP08_ADMIN_DATABASE_URL="postgres://postgres:postgres@127.0.0.1:5432/${MCFT_CAP08_DB_NAME}"
+          node scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/run_qualification_v1.cjs
+      - name: Drop disposable PostgreSQL B and verify absence
+        if: always()
+        env:
+          PGPASSWORD: postgres
+        shell: bash
+        run: |
+          mkdir -p acceptance-output/run-dev-b
+          db="${MCFT_CAP08_DB_NAME:-}"
+          if [[ -z "$db" ]]; then
+            printf '%s\n' '{"schema_version":"geox_mcft_cap08_s6_development_rehearsal_drop_result_v1","status":"FAIL","error":"DATABASE_NAME_ABSENT"}' > acceptance-output/run-dev-b/DROP_RESULT.json
+            exit 1
+          fi
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${db}' AND pid<>pg_backend_pid();"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"${db}\";"
+          remaining="$(psql -h 127.0.0.1 -U postgres -d postgres -At -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM pg_database WHERE datname='${db}';")"
+          test "$remaining" = "0"
+          node - "$db" <<'NODE' > acceptance-output/run-dev-b/DROP_RESULT.json
+          const db = process.argv[2];
+          console.log(JSON.stringify({
+            schema_version: 'geox_mcft_cap08_s6_development_rehearsal_drop_result_v1',
+            status: 'PASS',
+            rehearsal_run_label: 'RUN_DEV_B',
+            physical_database_name: db,
+            database_absent_after_drop: true
+          }, null, 2));
+          NODE
+      - name: Upload RUN_DEV_B exact-path evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-dev-b-${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          path: acceptance-output/
+          if-no-files-found: error
+          retention-days: 90
+
+  semantic-comparator-a-b:
+    name: semantic-comparator-a-b
+    needs: [prepare-development-authorities, run-dev-a, run-dev-b]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact merged-main subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Download RUN_DEV_A evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-dev-a-${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          path: acceptance-output/run-dev-a-artifact
+      - name: Download RUN_DEV_B evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-dev-b-${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          path: acceptance-output/run-dev-b-artifact
+      - name: Compare independent database semantics A/B
+        env:
+          MCFT_CAP08_RUN_DEV_A_BUNDLE: acceptance-output/run-dev-a-artifact/MCFT_CAP_08_S6_RUN_A_DEVELOPMENT_REHEARSAL_BUNDLE.json
+          MCFT_CAP08_RUN_DEV_B_BUNDLE: acceptance-output/run-dev-b-artifact/MCFT_CAP_08_S6_RUN_B_DEVELOPMENT_REHEARSAL_BUNDLE.json
+          MCFT_CAP08_COMPARATOR_OUTPUT: acceptance-output/comparator/SEMANTIC_COMPARATOR_RESULT.json
+        run: node scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/semantic_comparator_v1.cjs
+      - name: Upload A/B comparator evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-development-rehearsal-comparator-${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          path: acceptance-output/comparator/
+          if-no-files-found: error
+          retention-days: 180
+
+  integration-qualification-owner:
+    name: integration-qualification-owner
+    needs: [prepare-development-authorities, run-dev-a, run-dev-b, semantic-comparator-a-b]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact merged-main subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Download RUN_DEV_A evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-dev-a-${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          path: acceptance-output/run-dev-a-artifact
+      - name: Download RUN_DEV_B evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-run-dev-b-${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          path: acceptance-output/run-dev-b-artifact
+      - name: Download comparator evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-development-rehearsal-comparator-${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          path: acceptance-output/comparator-artifact
+      - name: Independently qualify complete double-run rehearsal evidence
+        env:
+          MCFT_CAP08_RUN_DEV_A_QUALIFICATION: acceptance-output/run-dev-a-artifact/run-dev-a/RUN_QUALIFICATION_RESULT.json
+          MCFT_CAP08_RUN_DEV_B_QUALIFICATION: acceptance-output/run-dev-b-artifact/run-dev-b/RUN_QUALIFICATION_RESULT.json
+          MCFT_CAP08_RUN_DEV_A_RESTART: acceptance-output/run-dev-a-artifact/run-dev-a/RESTART_READBACK_RESULT.json
+          MCFT_CAP08_RUN_DEV_B_RESTART: acceptance-output/run-dev-b-artifact/run-dev-b/RESTART_READBACK_RESULT.json
+          MCFT_CAP08_RUN_DEV_A_DROP: acceptance-output/run-dev-a-artifact/run-dev-a/DROP_RESULT.json
+          MCFT_CAP08_RUN_DEV_B_DROP: acceptance-output/run-dev-b-artifact/run-dev-b/DROP_RESULT.json
+          MCFT_CAP08_DEVELOPMENT_COMPARATOR: acceptance-output/comparator-artifact/SEMANTIC_COMPARATOR_RESULT.json
+          MCFT_CAP08_INTEGRATION_QUALIFICATION_OUTPUT: acceptance-output/integration-owner/INTEGRATION_QUALIFICATION_RESULT.json
+        run: node scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/integration_qualification_v1.cjs
+      - name: Upload integration qualification owner artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-integration-qualification-${{ needs.prepare-development-authorities.outputs.exact_subject_sha }}
+          path: acceptance-output/integration-owner/
+          if-no-files-found: error
+          retention-days: 180
