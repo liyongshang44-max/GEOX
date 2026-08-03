@@ -1,0 +1,125 @@
+name: mcft-cap-08-s6-replacement-011-run-a-success-settlement
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-replacement-011-run-a-success-settlement.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-011-FORMAL-RUN-A-SUCCESS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-011-RUN-A-AUTHORITY-CONSUMPTION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-011-RUN-A-SUCCESS-SETTLEMENT-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_REPLACEMENT_011_RUN_A_SUCCESS_SETTLEMENT_V1.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap08-s6-replacement-011-run-a-success-settlement-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  run-a-success-settlement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact settlement head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Download exact Formal RUN_A artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-RUN_A-ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59
+          path: acceptance-input/formal-run-a
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 30845476698
+
+      - name: Audit exact Actions run, jobs, steps and artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-input
+          python - <<'PY'
+          import json, os, urllib.parse, urllib.request
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          token = os.environ['GH_TOKEN']
+          headers = {
+              'Accept': 'application/vnd.github+json',
+              'Authorization': f'Bearer {token}',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'mcft-cap08-s6-run-a-success-settlement',
+          }
+          def get(path):
+              request = urllib.request.Request(f'https://api.github.com/repos/{repo}{path}', headers=headers)
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+          def slim_run(run):
+              return {key: run.get(key) for key in ['id','name','event','status','conclusion','head_sha','head_branch','run_number','run_attempt','created_at','updated_at']}
+          def slim_jobs(data):
+              return [
+                  {
+                      'id': job['id'], 'name': job['name'], 'status': job['status'], 'conclusion': job.get('conclusion'),
+                      'steps': [{'name': step['name'], 'status': step['status'], 'conclusion': step.get('conclusion'), 'number': step['number']} for step in job.get('steps', [])],
+                  }
+                  for job in data.get('jobs', [])
+              ]
+
+          formal = get('/actions/runs/30845476698')
+          broker = get('/actions/runs/30845461481')
+          formal_jobs = slim_jobs(get('/actions/runs/30845476698/jobs?per_page=100'))
+          broker_jobs = slim_jobs(get('/actions/runs/30845461481/jobs?per_page=100'))
+          artifacts = get('/actions/runs/30845476698/artifacts?per_page=100').get('artifacts', [])
+          by_id = {item['id']: item for item in artifacts}
+          workflow = urllib.parse.quote('mcft-cap-08-s6-single-run-database-execution.yml', safe='')
+          runs = get(f'/actions/workflows/{workflow}/runs?event=workflow_dispatch&branch=main&per_page=100').get('workflow_runs', [])
+          matching = [run for run in runs if run.get('head_sha') == '191e363e1fd9fa4c77c8b5135fb9673c3a9286d1']
+          result = {
+              'schema_version': 'geox_mcft_cap08_s6_replacement_011_github_run_a_audit_v1',
+              'status': 'PASS',
+              'formal_run': slim_run(formal),
+              'broker_run': slim_run(broker),
+              'matching_formal_run_count': len(matching),
+              'duplicate_formal_run_detected': len(matching) != 1,
+              'formal_jobs': formal_jobs,
+              'broker_jobs': broker_jobs,
+              'artifacts': {
+                  'one_run': {'id': 8868535301, 'name': by_id[8868535301]['name'], 'digest': by_id[8868535301]['digest']},
+                  'authority': {'id': 8868490523, 'name': by_id[8868490523]['name'], 'digest': by_id[8868490523]['digest']},
+              },
+          }
+          with open('acceptance-input/GITHUB_RUN_A_AUDIT.json', 'w', encoding='utf-8') as handle:
+              json.dump(result, handle, indent=2)
+              handle.write('\n')
+          print(json.dumps(result, indent=2))
+          PY
+
+      - name: Validate Formal RUN_A terminal success and authority consumption
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_RUN_A_ARTIFACT_DIR: acceptance-input/formal-run-a
+          MCFT_GITHUB_AUDIT_PATH: acceptance-input/GITHUB_RUN_A_AUDIT.json
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_REPLACEMENT_011_RUN_A_SUCCESS_SETTLEMENT_V1.cjs
+
+      - name: Upload RUN_A success settlement evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-replacement-011-run-a-success-settlement-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_08_S6_REPLACEMENT_011_RUN_A_SUCCESS_SETTLEMENT_RESULT.json
+            acceptance-input/GITHUB_RUN_A_AUDIT.json
+          if-no-files-found: error
+          retention-days: 365

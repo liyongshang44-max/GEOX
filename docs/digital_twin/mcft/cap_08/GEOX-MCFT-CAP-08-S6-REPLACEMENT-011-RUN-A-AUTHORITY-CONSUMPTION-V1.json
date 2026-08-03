@@ -1,0 +1,53 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_replacement_011_run_a_authority_consumption_v1",
+  "record_status": "SINGLE_FINAL_FORMAL_RUN_A_AUTHORITY_CONSUMED_TERMINAL_SUCCESS",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "settlement_base_main_sha": "191e363e1fd9fa4c77c8b5135fb9673c3a9286d1",
+  "effective_authority_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-MERGED-MAIN-QUALIFIED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "fe55502277682e8a3e5cbf87ba97feb3f94988b0"
+  },
+  "dispatch_broker": {
+    "path": ".github/workflows/mcft-cap-08-s6-replacement-011-one-shot-dispatch-broker.yml",
+    "blob_sha": "c369f28403c2fec1ba4edd235c1ac47333509e05",
+    "workflow_run_id": 30845461481,
+    "workflow_run_number": 2,
+    "workflow_run_attempt": 1,
+    "head_sha": "191e363e1fd9fa4c77c8b5135fb9673c3a9286d1",
+    "authority_gate_passed": true,
+    "dispatch_api_accepted": true,
+    "dispatch_http_status": 204,
+    "overall_conclusion": "failure",
+    "terminal_failure_class": "POST_DISPATCH_CLOSED_PR_COMMENT_FORBIDDEN",
+    "terminal_failure_http_status": 403,
+    "dispatch_failure": false
+  },
+  "consumed_execution": {
+    "formal_workflow_run_id": 30845476698,
+    "formal_workflow_run_attempt": 1,
+    "formal_workflow_conclusion": "success",
+    "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+    "run_label": "RUN_A",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260804-REPLACEMENT-011",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260804-REPLACEMENT-011",
+    "physical_database_name": "geox_mcft_cap08_s6_run_a_replacement_011_30845476698",
+    "one_run_artifact_id": 8868535301,
+    "one_run_artifact_digest": "sha256:4d59d3aa0373bee0c9eb33ab78dd427eb324d4d259e0786aa9c4dea9effdaf2f",
+    "terminal_success": true,
+    "database_drop_completed": true
+  },
+  "dispatch_count_consumed": 1,
+  "maximum_dispatch_count": 1,
+  "rerun_authorized": false,
+  "duplicate_dispatch_authorized": false,
+  "authority_reuse_authorized": false,
+  "operational_identity_reuse_authorized": false,
+  "logical_database_identity_reuse_authorized": false,
+  "physical_database_identity_reuse_authorized": false,
+  "workflow_dispatch_authorized_after_consumption": false,
+  "run_b_dispatch_authorized": false,
+  "cross_run_comparator_authorized": false,
+  "next_legal_action": "ISSUE_FRESH_NON_EFFECTIVE_FORMAL_RUN_B_AUTHORITY_CANDIDATE",
+  "semantic_digest": "sha256:88fdc32ed7d96d3f037d8ee9b64858e21d01fc8d0d92752dd74433452469f27f"
+}
