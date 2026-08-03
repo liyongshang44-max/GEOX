@@ -2,7 +2,7 @@
 title: "GEOX MCFT-CAP-08 S6 Handoff"
 document_id: "GEOX-MCFT-CAP-08-S6-HANDOFF"
 repository: "liyongshang44-max/GEOX"
-generated_at: "2026-08-02T20:44:00+08:00"
+generated_at: "2026-08-03T16:05:00+08:00"
 status: "ACTIVE_HANDOFF"
 language: "zh-CN"
 supersedes:
@@ -12,52 +12,59 @@ supersedes:
 
 # GEOX MCFT-CAP-08 S6 交接文档
 
-> 本文件是 MCFT-CAP-08 S6 的仓库内唯一活动交接文档。  
-> 新对话必须先读本文，再通过 GitHub 重新核对 `main`、开放 PR、最近 workflow run 和 authority 原文。  
-> 不得根据聊天记忆继续工作，也不得沿用本文之前的日期版 handoff 中的旧 SHA、旧 authority、旧 operational identity 或旧数据库 identity。
+> 本文件是 MCFT-CAP-08 S6 的仓库内唯一活动交接入口。  
+> 新对话必须先读本文，再通过 GitHub 重新核对 `main`、开放 PR、workflow run、artifact 和 authority 原文。  
+> 不得依据聊天记忆继续，不得复用任何已经 dispatch 或失败的 authority、operational identity、logical database identity 或 physical database identity。
 
 ---
 
-## 0. 新对话的第一条指令
+## 0. 接手后必须先做的事实核验
 
 ```text
-repository:
+repository
 liyongshang44-max/GEOX
 
-expected main at handoff:
-5704321af7a81db9c870a6f319b7d49fc0a125af
+expected main at handoff
+1475b326994e15e9e0ce6a393dde825825763ff6
 
-expected main meaning:
-Merge PR #2760
-MCFT-CAP-08 S6: establish bootstrap-corrected RUN_A authority effectiveness
+expected main meaning
+Merge PR #2779
+Issue REPLACEMENT-010 non-effective RUN_A authority candidate
 ```
 
-接手后先核验：
+接手后依次核验：
 
 ```text
-1. current main 是否仍为 5704321af7a81db9c870a6f319b7d49fc0a125af；
-2. PR #2758、#2759、#2760 是否仍为 merged；
-3. 是否已经出现 REPLACEMENT-004 的 workflow_dispatch run；
-4. 若出现，是否只有一次 dispatch，run_attempt 是否为 1；
-5. 是否有人点击过 Re-run jobs、重复 dispatch 或提前触发 RUN_B；
-6. effective authority 是否仍是：
-   docs/digital_twin/mcft/cap_08/
-   GEOX-MCFT-CAP-08-S6-BOOTSTRAP-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json
-7. authority 是否仍未过期；
-8. main 是否包含新的 correction / settlement / authority 提交；
-9. 是否存在开放的 MCFT-CAP-08 S6 PR；
-10. 当前正式数据库 run 的终态、artifact、database cleanup 和 authority consumption 状态。
+1. current main 是否仍为 1475b326994e15e9e0ce6a393dde825825763ff6；
+2. PR #2779 是否 merged；
+3. PR #2780 是否仍 open / draft / 未合并；
+4. PR #2781 的实际 head 是否仍为
+   55d7b4314f7f73aac9355a2ba06288d252996b65；
+5. PR #2781 是否仍是单提交、22 文件；
+6. exact-path rehearsal run 30792360746 的终态是否仍为 failure；
+7. RUN_DEV_A 与 RUN_DEV_B 是否都在 CAP-07 readback 同一位置失败；
+8. 两个 disposable PostgreSQL 数据库是否都已删除；
+9. 是否出现新的 correction PR、replacement authority 或 workflow dispatch；
+10. 是否有人错误合并 PR #2780、触发正式 RUN_A、点击 Re-run jobs 或启动 RUN_B。
 ```
 
-若 `main` 已前推，先审计新提交，不得直接使用本文中的 SHA 或 dispatch 参数。
+特别注意：
+
+```text
+PR #2781 描述中的 candidate head/tree 已过时。
+实际 GitHub head 才是事实：
+55d7b4314f7f73aac9355a2ba06288d252996b65
+```
+
+若 `main`、PR head 或 run 状态已变化，先审计新事实，再决定路径，不得直接沿用本文中的 SHA。
 
 ---
 
-# 1. 我们正在做什么任务
+# 1. 我们正在做什么
 
-## 1.1 主任务
+## 1.1 最终任务
 
-当前任务是关闭：
+当前目标仍是关闭：
 
 ```text
 MCFT-CAP-08
@@ -66,66 +73,355 @@ S6 Final Two-Run Closure
 Stage 1A Replay-backed Closure
 ```
 
-最终要在两个相互独立、全新的 PostgreSQL 16 实例中，对同一冻结正式对象集分别执行：
+最终必须在两个相互独立、全新的 PostgreSQL 16 实例中，对同一冻结正式执行对象集完成：
 
 ```text
-RUN_A
-RUN_B
+Formal RUN_A
+Formal RUN_B
+cross-run semantic comparator
+S6 Candidate exact head freeze
+Candidate Declaration + human approval
+R2 / 730-day retention attestation
+24/24 Hard Acceptance Ledger settlement
+MCFT-CAP-08 closure
 ```
 
-并证明：
+完整运行链包含：
 
 ```text
 B00 bootstrap
 → T00–T23
 → State / Checkpoint / Forecast / Scenario
 → Decision / Approval / Plan / Execution / Outcome
-→ 24 Forecast Verification Observations
+→ 24 FVO
 → 24 Residual
 → 16 Calibration + 8 Holdout
 → Calibration Candidate
 → Shadow Evaluation
-→ 0 Model Activation
-→ Recovery / Restart / Late Evidence
+→ zero Model Activation
+→ Restart / Recovery / Late Evidence
 → CAP-07 readback
-→ cross-run semantic equality
+→ 22 real witness producers
 → exact closure identity
-→ final Candidate
-→ R2 / 730-day retention
-→ 24/24 Hard Acceptance Ledger settlement
 ```
 
 ## 1.2 当前具体工作包
 
-当前唯一合法动作是：
+当前不是正式 RUN_A 阶段。
+
+当前唯一活动工作包是：
 
 ```text
-DISPATCH_BOOTSTRAP_CORRECTED_FORMAL_RUN_A_ONCE
+PR #2781
+Exact-path double-run development rehearsal
 ```
 
-当前不是在做：
+目的：在不消耗正式 authority、不产生正式 evidence 的前提下，用与正式 workflow 相同的真实路径，提前执行：
 
 ```text
-新的产品 Runtime 实现
-新的 qualification 版本
-generic CAP-04 重构
-RUN_B
-cross-run comparator
-S6 Candidate
-Candidate Declaration
-R2 settlement
-final Ledger settlement
-MCFT-CAP-08 completion
-MCFT-CAP-09 authorization
+RUN_DEV_A
+RUN_DEV_B
+two fresh PostgreSQL 16 databases
+exact migrations / roles / ACL / seed
+same workflow entrypoint
+same harness
+same port bundle
+same product chain
+same T16 → S4 → T17 bridge
+same materialization and closure reader
+restart/readback
+semantic comparator
+integration-owner qualification
+clean database drops
+```
+
+这是为终止“每次正式 one-shot RUN_A 才暴露下一个错误”的错误工作方式。
+
+---
+
+# 2. 当前仓库状态
+
+## 2.1 `main`
+
+```text
+main
+1475b326994e15e9e0ce6a393dde825825763ff6
+
+source PR
+#2779
+
+meaning
+REPLACEMENT-010 candidate merged
+candidate remains NON-EFFECTIVE
+```
+
+## 2.2 REPLACEMENT-010 candidate
+
+```text
+candidate head
+28cfc061a7b47b0fe405a7a07001512e915c2cd6
+
+candidate merge
+1475b326994e15e9e0ce6a393dde825825763ff6
+
+exact execution subject
+89517a1b3ff61a1a1ba3259ef4e04001d6e1fee8
+
+operational identity
+MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-010
+
+logical database identity
+MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-010
+
+physical database template
+geox_mcft_cap08_s6_run_a_replacement_010_<github_run_id>
+
+object count
+54
+```
+
+Candidate 状态：
+
+```text
+authority effective             false
+database execution authorized   false
+workflow dispatch authorized    false
+runtime gate eligible           false
+RUN_B authorized                false
+```
+
+冻结对象：
+
+```text
+candidate authority blob
+3873a9c3b7a64a63287d24fec17e587d01a96eb5
+
+candidate semantic digest
+sha256:27bd5c0fe936e817c19491b0dc898d7f10adfb3d5fab556dedd0697115f74233
+
+object-set manifest blob
+cbeae03ad6118c8f8138df18b7260e5d20cdbb3e
+
+object-set semantic digest
+sha256:63c77a83fddd7fed476b10b3267c44921486b79f0d99c9d46f0e5b4b6cb0dea7
+
+product chain
+de12666d4d5bebeac9b57f07d663a0f0f2dc4de1
+
+closure reader
+cdee98e8b7bbd4a1d5ba45361978d5803873b610
+```
+
+## 2.3 PR #2780：effectiveness，当前必须保持阻塞
+
+```text
+URL
+https://github.com/liyongshang44-max/GEOX/pull/2780
+
+state
+open / draft
+
+head
+f00ba3ed3f20f6e7722edd6e3ea854208831c449
+
+base
+1475b326994e15e9e0ce6a393dde825825763ff6
+
+changed files
+5
+```
+
+PR #2780 原计划把 REPLACEMENT-010 激活为一次性正式 RUN_A authority。
+
+现在不得合并，原因：
+
+```text
+1. PR #2781 的 exact-path development rehearsal 尚未 PASS；
+2. PR #2781 会修改正式执行路径相关对象；
+3. PR #2781 合并后，#2779 冻结的 54-object set 很可能不再等于实际 merged execution path；
+4. 因此 #2780 不能在 #2781 之后直接视为仍然有效；
+5. 默认正确路径是：
+   integration qualification PASS
+   → merge #2781
+   → post-merge rehearsal PASS
+   → 重新冻结 candidate
+   → 新的独立 effectiveness
+   → 单次正式 RUN_A。
+```
+
+除非治理审计明确证明 object set 未漂移，否则不要尝试“保留 #2780 直接合并”。
+
+## 2.4 PR #2781：当前活动实现 PR
+
+```text
+URL
+https://github.com/liyongshang44-max/GEOX/pull/2781
+
+state
+open / draft / mergeable
+
+actual head
+55d7b4314f7f73aac9355a2ba06288d252996b65
+
+base
+1475b326994e15e9e0ce6a393dde825825763ff6
+
+commits
+1
+
+changed files
+22
+```
+
+已通过：
+
+```text
+static architecture gate
+run 30792360795
+PASS
+
+standard CI
+run 30792360699
+PASS
+
+delivery policy
+PASS
+
+release lane
+PASS
+
+ruleset readiness
+PASS
+
+candidate declaration selftest
+PASS
+
+authority reconciliation
+PASS
+
+CAP-07 closure applicability
+PASS
+```
+
+真实 exact-path rehearsal：
+
+```text
+run
+30792360746
+
+result
+FAIL
 ```
 
 ---
 
-# 2. 已经完成了什么
+# 3. 当前真正卡点
 
-## 2.1 S1–S5 与 S6 基础设施
+## 3.1 两个独立 development runs 同点失败
 
-以下能力已完成或有效，不得重做：
+```text
+RUN_DEV_A
+job 91618468132
+FAIL
+
+RUN_DEV_B
+job 91618468105
+FAIL
+```
+
+两条路径均已通过：
+
+```text
+development authority generation
+non-formal authority gate
+exact subject checkout
+PostgreSQL 16 container
+fresh disposable database identity
+migrations
+migrator / runner roles
+ACL
+bootstrap seed facts
+formal workflow entrypoint
+product execution path before CAP-07 readback
+clean database drop
+artifact upload
+```
+
+两条路径均在同一步失败：
+
+```text
+Execute RUN_DEV_A/B through exact formal entrypoint,
+harness and port bundle
+```
+
+准确异常：
+
+```text
+TypeError: Cannot read properties of undefined (reading 'scope')
+
+scripts/runtime_acceptance/
+mcft_cap08_s6_single_run_ports/
+cap07_reader_v1.cjs
+
+called by:
+scripts/runtime_acceptance/
+mcft_cap08_s6_single_run_db/
+cap07_readback_execution_adapter_v1.cjs
+```
+
+调用链：
+
+```text
+cap07_reader_v1.cjs request()
+→ fetchVariantV1()
+→ executeCompleteCap07ReadbackV1()
+→ executeSingleRunDatabaseHarnessV1()
+→ workflow_entrypoint_v1.ts
+```
+
+当前工程判断：
+
+```text
+CAP-07 readback adapter 与 CAP-07 reader 的 request shape 不一致；
+reader 读取了 undefined payload/context 的 scope；
+这是 exact-path integration defect；
+不是数据库 bootstrap、authority、identity、T17、FVO 或 comparator 问题。
+```
+
+因执行在 CAP-07 readback 前终止，以下步骤尚未执行：
+
+```text
+restart/readback A
+restart/readback B
+unified regression matrix A/B
+semantic comparator A/B
+integration qualification owner
+post-merge rehearsal
+```
+
+## 3.2 当前证据
+
+```text
+rehearsal authority artifact
+8847522549
+sha256:183dec6dcdff4de52bd11ccf3bfb8d6504e3f46c4ded1111a0ac405b7db4733a
+
+RUN_DEV_A artifact
+8847549675
+sha256:23bfe1bb5a504f25d6159951c9cd869e199a8c5653d674ee1c5f687d7470f383
+
+RUN_DEV_B artifact
+8847548183
+sha256:a8a0ffcbd565144c0ac43b595447f3675af224947d59387ed7c89035fd363e14
+```
+
+两个 development database 均已清理。Development rehearsal 不消耗 REPLACEMENT-010。
+
+---
+
+# 4. 已经完成的核心能力
+
+以下能力已完成，不得重做或绕开：
 
 ```text
 S1–S5 implementation / effectiveness
@@ -134,982 +430,544 @@ coverage gate
 separated witness producers
 orchestrator
 single-run harness
-workflow control plane
-qualification / formal port bundle
+formal workflow control plane
 fresh PostgreSQL bootstrap
+migrator / runner role separation
+platform ACL
+54-object exact execution set
 153 canonical receipts
+224 operational events
 7 recovery vectors
 10 CAP-07 surfaces
-22 per-run witnesses / proof object sets
+22 real witness producers / proof sets
+T16 → S4 → T17 authority-bound transition
+T17 transition guard
+phase-order transport
+FVO-10 exact canonical alias handling
+FVO-17 corrected forecast binding
+database cleanup proof
 ```
 
-## 2.2 S4/T17 产品转换实现已经完成
-
-旧 handoff 停在 S4/T17 ADR、尚未实现产品 bridge。该状态已过时。
-
-### PR #2743：产品实现
+## 4.1 关键产品修复已经成立
 
 ```text
-candidate:
-07314c708fdb02478b0b6a14580ff553483b18cc
-
-merge:
-395ba4887553c505c6ff1fe79a163f33cea9e843
-
-scope:
-authority-bound corrected-T16 → T17 product transition
+T16 base state
+→ S4 append-forward corrected T16
+→ dedicated T17 transition bridge
+→ T17 consumes corrected posterior
+→ T18–T23 ordinary path
 ```
 
-已建立：
+不允许回退到：
 
 ```text
-专用 T17 application seam
-双前驱语义
-base T16 four-pointer CAS
-corrected T16 computation predecessor
-single atomic transaction
-transition witness persistence
-transition uniqueness guard
-replay-first classification
-bounded SQLSTATE 40001 retry
-exact replay zero-write
-projection divergence fail-closed
+generic CAP-04 assertion relaxation
+temporary corrected handoff wrapper
+latest-pointer mutation for S4
+synthetic T17 simulation
 ```
 
-### PR #2745：实现 effectiveness
+## 4.2 FVO 语义边界
+
+FVO-10：
 
 ```text
-candidate:
-0cfefae709d052b72c39fd6f015170552352ee79
-
-merge:
-001a6d4385b49a60d604cc69c0779632492ae127
+允许两个冻结物理载体折叠为一个 canonical object，
+前提是 exact source pair + exact semantic hash equality。
 ```
 
-S4/T17 产品实现已进入 merged-main effectiveness。
-
-## 2.3 Formal authority chain 已重新开放
-
-### PR #2746：recovery adjudication
+其他重复：
 
 ```text
-merge:
-26d94d5c47ce640e80374124bb473d62003cc9a6
+同来源重复
+第三载体
+哈希漂移
+其他 FVO ref 重复
+全部 fail-closed。
 ```
 
-该 PR 只允许建立一条最终替代 authority chain，不执行数据库。
-
-### PR #2747：最终替代 authority candidate
+FVO-17：
 
 ```text
-candidate:
-3e604416fcb31e20ea7102f07fdfe71b121550ba
-
-merge:
-208ad8ec34cde4e129e66805d47a994141303d24
-```
-
-建立了非可执行 authority candidate 与冻结 object set。
-
-## 2.4 CTO 双账户验证裁决已合并
-
-### PR #2748
-
-```text
-merge:
-af608d3cd89e6621d1d9588bbf0ef754f62f2c89
-```
-
-正式原文：
-
-```text
-CTO裁决：搁置双账户的验证。
-```
-
-准确语义：
-
-```text
-independent review requirement   SUSPENDED_BY_CTO_RULING
-第二 GitHub 账户验证              不再是当前 S6 阻塞条件
-independent review satisfied     false
-independent review performed     false
-independent review waived        false
-永久豁免                          false
-```
-
-技术门禁没有放松。仍强制：
-
-```text
-focused workflow
-standard CI
-protected merge
-candidate/merge tree equality
-two fresh PostgreSQL runs
-cross-run equality
-R2 / 730-day retention
-24/24 Hard Acceptance
-final Ledger settlement
-```
-
-## 2.5 正式 single-run workflow 与 authority effectiveness 已建立
-
-### PR #2749
-
-```text
-merge:
-a2dfc3ee1e5d132059379a0a67be2f033388e8b5
-```
-
-建立了正式单次数据库执行 workflow 的 merged-main authority effectiveness。
-
-正式 workflow：
-
-```text
-.github/workflows/mcft-cap-08-s6-single-run-database-execution.yml
-```
-
-注意不要选错历史 workflow：
-
-```text
-错误：
-mcft-cap-08-s6-single-run-database-execution-harness
-
-正确：
-mcft-cap-08-s6-single-run-database-execution
+不是合法 alias；
+此前是真实语义分叉：
+T17 使用 corrected T16 forecast，
+S5 observation rebuild 使用 base T16 forecast。
+现已修正为 FVO-17 与 R-17 共用 corrected T16 forecast。
 ```
 
 ---
 
-# 3. 已发生的正式 RUN_A 失败与修复
+# 5. 正式 RUN_A 失败阶梯
 
-这些 run 都已消费各自 authority。禁止 rerun、禁止复用身份。
+以下 run 都已经消费各自 authority。禁止 rerun、禁止复用身份。
 
-## 3.1 Run 30736728638：pre-harness top-level await
+| Run | Authority | 首个失败点 | 结算/修复 |
+|---|---|---|---|
+| `30736728638` | earlier replacement | top-level await / CJS transform | PR #2750 |
+| `30738876293` | earlier replacement | harness validator symbol mismatch | PR #2753，loader pin PR #2755 |
+| `30745867826` | REPLACEMENT-003 | legal bootstrap baseline 被误判为不 fresh | PR #2758 |
+| `30749559715` | REPLACEMENT-004 | materializer 未绑定 authority；DB identity template 漂移 | PR #2762 |
+| `30756390297` | REPLACEMENT-005 | CAP04 next-handoff mismatch；S4/T17 时序错误 | PR #2765 |
+| `30758716511` | REPLACEMENT-006 | T17 guard ACL `42501 permission denied` | PR #2768 |
+| `30760836890` | REPLACEMENT-007 | execution spec 缺少 `phase_order` | PR #2772 |
+| `30778431135` | REPLACEMENT-008 | `CLOSURE_REF_DUPLICATE:FVO-10` | PR #2775 |
+| `30781414909` | REPLACEMENT-009 | `CLOSURE_REF_DUPLICATE:FVO-17` | PR #2778 |
 
-```text
-authority gate        PASS
-fresh database        PASS
-formal harness        NOT ENTERED
-database cleanup      PASS
-failure:
-TOP_LEVEL_AWAIT_CJS_TRANSFORM_UNSUPPORTED
-```
-
-根因：
-
-```text
-workflow entrypoint 含 top-level await
-tsx / esbuild 按 CJS 转译时拒绝
-```
-
-修复与结算：
+上述失败说明：
 
 ```text
-PR #2750
-merge:
-93eb19f74faed372908764e5e3d2410a2ff50b45
-```
-
-## 3.2 Run 30738876293：harness validator symbol mismatch
-
-```text
-authority gate        PASS
-fresh database        PASS
-formal harness        ENTERED
-materializer          NOT ENTERED
-database cleanup      PASS
-failure:
-TypeError: validatePortBundleV1 is not a function
-```
-
-根因：
-
-```text
-harness import:
-validatePortBundleV1
-
-port contract actual export:
-validateHarnessPortsV1
-```
-
-修复与结算：
-
-```text
-PR #2753
-merge:
-6c17cf1043081621609371b6a46c6ecbeb1ad706
-```
-
-随后发现 harness contract loader 的 S6 exact pin 仍指向 CTO 裁决前的合法旧 blob。
-
-loader pin 修复：
-
-```text
-PR #2755
-merge:
-d91a1fb52cf4ea3f1f0650f664f4ce94667e1a59
-```
-
-保持：
-
-```text
-current governance S6 contract blob:
-47ff4215d711b229604b29ce6c663e62b59efc39
-
-formal identity S6 basis blob:
-9cecc1aa6bd4063b770304f2539bc68a1ed2390c
-```
-
-即：
-
-```text
-loader 读取当前合法治理契约
-formal identity 仍保持原冻结 machine-contract basis
-```
-
-## 3.3 Run 30745867826：legal bootstrap baseline 被错误判定为不新鲜
-
-```text
-authority gate                 PASS
-exact subject checkout         PASS
-fresh PostgreSQL bootstrap     PASS
-formal harness entered         YES
-first failure                  DATABASE_NOT_FRESH
-product materializer entered   NO
-formal result emitted          NO
-database cleanup               PASS
-```
-
-该数据库实际是合法 fresh platform baseline：
-
-```text
-facts                           11
-ACTIVE visibility epochs        1
-visibility rows                 11
-missing visibility rows         0
-canonical Runtime rows          0
-legacy migrations applied       71
-CAP-07 visibility migration     PASS
-relation count                  30
-```
-
-错误 predicate：
-
-```text
-facts = 0
-```
-
-正确 predicate：
-
-```text
-允许 exact legal bootstrap baseline：
-11 bootstrap facts
-完整 visibility
-0 formal Runtime rows
-0 当前 operational identity / subject / formal run contamination
-正确 disposable database name
-正确 runner role
-所需 relations 全部存在
-```
-
-修复与结算：
-
-```text
-PR #2758
-candidate:
-7941af546f64edf1531950d67bafe4f7d07db7b0
-
-merge:
-0187c6ad375c4752b67b58259878dfa552384571
-```
-
-证据：
-
-```text
-authority artifact ID:
-8832847712
-
-authority digest:
-sha256:53936ff997a713670aa436f63a55f59493f8090ac55f8762c8e2779f04cb6e17
-
-failed-run artifact ID:
-8832858695
-
-failed-run digest:
-sha256:f6668c3bb8e449b814a8361670efddf87af879ba4de74d7ecb6cd9df442e4962
-```
-
-`REPLACEMENT-003` 已消费且永久不可复用。
-
----
-
-# 4. 当前 authority 状态
-
-## 4.1 PR #2759：REPLACEMENT-004 candidate
-
-```text
-candidate:
-ef1880a8692a650ab40187b5bfe6d763d88572d0
-
-candidate tree:
-d880155fd1aa8107515350d4b07f30908d8b7e44
-
-merge:
-519d559ab38503d316509912a82a8fac5d64a161
-
-changed files:
-6
-
-object count:
-50
-```
-
-该 candidate 使用全新身份：
-
-```text
-operational run instance:
-MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-004
-
-logical database identity:
-MCFT-CAP-08-S6-FORMAL-DB-A-20260802-REPLACEMENT-004
-```
-
-候选本身不可执行。
-
-## 4.2 PR #2760：REPLACEMENT-004 effectiveness
-
-```text
-candidate:
-7e237184474c8885f289ad96d89535f42b2b3024
-
-candidate tree:
-167e9a32ca6ae20caa1f7cfee511b33db1d2853a
-
-merge:
-5704321af7a81db9c870a6f319b7d49fc0a125af
-
-changed files:
-5
-
-candidate-to-merge file delta:
-0
-```
-
-当前 effective authority：
-
-```text
-path:
-docs/digital_twin/mcft/cap_08/
-GEOX-MCFT-CAP-08-S6-BOOTSTRAP-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json
-
-blob:
-037dda835463a3ee9d4f6d653eb7f3bba092229d
-
-record_status:
-SINGLE_FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORIZED
-
-max dispatch:
-1
-
-run attempt:
-1
-
-rerun:
-false
-
-duplicate dispatch:
-false
-
-RUN_B:
-blocked
-```
-
-冻结执行对象：
-
-```text
-object count:
-50
-
-candidate authority blob:
-e11631abd32ad8380b0a21a8f40648c2a149327e
-
-object-set manifest blob:
-3b48065b48add7d31bafb13142caaa0dc047b2c5
-
-corrected fresh-database port:
-a62a8bb58bf623ddbf1cf701792527d156923d1e
-
-corrected harness:
-1833c793a10bba383f54200a35cb3f8912b60b94
-
-corrected loader:
-27903ddc8566505053e3e6ccf4e8d08dfc576869
-
-port bundle:
-2f574588ba3010a94e64f965bb17fc97b3b33c72
-
-database workflow:
-47b5f7748c917a099dc92219f1cbd4055bfb4862
-```
-
----
-
-# 5. 当前卡在哪里
-
-当前没有代码或架构卡点。
-
-当前卡在一个必须由 GitHub UI 完成的一次性外部动作：
-
-```text
-正式 dispatch REPLACEMENT-004 RUN_A 一次
-```
-
-连接器没有创建首次 `workflow_dispatch` 的写接口，因此实施负责人不能假装已触发，也不能用：
-
-```text
-Re-run jobs
-rerun failed jobs
-rerun workflow
-```
-
-替代首次正式 dispatch。
-
-交接时仓库 authority 原文仍声明：
-
-```text
-database_execution_performed = false
-workflow_dispatch_performed = false
-formal_run_executed = false
-```
-
-因此，在没有新的 Actions run URL 和终态证据前，准确状态是：
-
-```text
-REPLACEMENT-004 authority     EFFECTIVE
-REPLACEMENT-004 dispatch      NOT YET PROVEN
-formal RUN_A result           ABSENT
-RUN_B authority               ABSENT / BLOCKED
-cross-run comparator          NOT AUTHORIZED
-S6 Candidate                  FALSE
-Stage 1A closure              FALSE
-MCFT-CAP-08 complete          FALSE
+正式 one-shot workflow 被当成串行调试器，
+每次只能暴露最深路径中的下一个错误；
+因此必须先完成 PR #2781 的永久 exact-path rehearsal。
 ```
 
 ---
 
 # 6. 下一步计划
 
-## 6.1 第一步：重新核对是否已 dispatch
+## Step 1：修复 PR #2781 当前 CAP-07 request contract
 
-新对话先检查：
+目标：
 
 ```text
-Actions
-→ mcft-cap-08-s6-single-run-database-execution
-→ event = workflow_dispatch
-→ branch = main
-→ operational identity contains REPLACEMENT-004
+cap07_readback_execution_adapter_v1.cjs
+与
+cap07_reader_v1.cjs
+
+对 request payload/context/scope 的合同完全一致。
 ```
 
-若没有 run，使用以下 exact inputs，且只点击一次：
+要求：
 
 ```text
-Branch:
-main
-
-exact_subject_sha:
-0187c6ad375c4752b67b58259878dfa552384571
-
-run_label:
-RUN_A
-
-operational_run_instance_id:
-MCFT-CAP-08-S6-FORMAL-RUN-A-20260802-REPLACEMENT-004
-
-execution_authority_path:
-docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-BOOTSTRAP-CORRECTED-FORMAL-RUN-A-EXECUTION-AUTHORITY-EFFECTIVE-V1.json
+不要用 optional chaining 或空 scope 兜底；
+不要绕过 CAP-07 readback；
+不要模拟 10 个 CAP-07 surfaces；
+必须由 exact formal path 真实执行。
 ```
 
-## 6.2 第二步：审计 RUN_A
-
-必须逐项验证：
+应增加 focused acceptance，至少证明：
 
 ```text
-workflow event = workflow_dispatch
-branch/ref = main
-run_attempt = 1
-authority gate = PASS
-authority exact blob = expected
-exact subject checkout = 0187c6ad...
-physical database name uses replacement_004 + GitHub run ID
-fresh PostgreSQL bootstrap = PASS
-formal harness = entered
-materializer = entered
-24-Tick formal sequence = complete
-153 canonical receipts
-22 witnesses / proof sets
-7 recovery vectors
-10 CAP-07 surfaces
-formal result = PASS
-hard_acceptance_eligible = true
-artifact digests present
-database cleanup = PASS
-terminal-success witness present
+all CAP-07 variants receive exact six-key scope
+missing scope fails with explicit contract error
+request envelope is deterministic
+readback returns all required surfaces
+reader and adapter use one shared request schema
 ```
 
-若失败：
+## Step 2：在 PR #2781 内重新运行完整 rehearsal
+
+必须全部 PASS：
 
 ```text
-禁止 rerun
-禁止复用 authority
-禁止复用 operational identity
-禁止复用 logical database identity
-先结算失败，再做 correction → candidate → effectiveness
+static architecture gate
+RUN_DEV_A execution
+RUN_DEV_A restart/readback
+RUN_DEV_A unified matrix
+RUN_DEV_A clean drop
+
+RUN_DEV_B execution
+RUN_DEV_B restart/readback
+RUN_DEV_B unified matrix
+RUN_DEV_B clean drop
+
+semantic comparator A/B
+integration qualification owner
+standard CI
+current governance required checks
 ```
 
-## 6.3 第三步：RUN_A terminal success 后才能处理 RUN_B
-
-顺序：
+若修改 PR head：
 
 ```text
-RUN_A terminal PASS
-→ immutable RUN_A evidence settlement
-→ issue new RUN_B candidate on same corrected subject
-→ RUN_B effectiveness
-→ dispatch RUN_B once
+保持相对同一 base 的单提交；
+原子替换 head；
+更新 PR 描述中的 actual head / tree；
+不得积累调试提交链。
 ```
 
-不得复活旧 RUN_B authority；旧 authority 的 subject、harness 或 freshness object set 已过时。
+## Step 3：合并 PR #2781 后做 merged-main rehearsal
 
-## 6.4 第四步：两个 run 均 PASS 后
+PR checks PASS 不等于 merged-main execution path 已证明。
+
+必须在 exact merge SHA 上再次执行 development rehearsal，并取得：
 
 ```text
-formal dual-run execution settlement
-→ cross-run comparator implementation authority
-→ read-only comparator implementation
-→ comparator merged-main effectiveness
+two fresh PostgreSQL PASS
+two restart/readback PASS
+two clean drops PASS
+semantic comparator PASS
+integration-owner artifact PASS
 ```
 
-比较必须覆盖：
+## Step 4：重建正式 authority chain
+
+PR #2781 合并会改变正式执行对象，因此：
 
 ```text
-semantic payload digest
-153-member closure identity
-22 proof object sets
-16 object-set refs
-7 recovery vectors
-10 CAP-07 surfaces
-formal identity
-explicit run-specific exclusion allowlist
-mismatch JSON pointers
+不要直接合并 PR #2780；
+不要沿用旧 54-object manifest；
+不要假设 REPLACEMENT-010 candidate 仍与 merged path 一致。
 ```
 
-## 6.5 第五步：最终关闭
+正确路径：
 
 ```text
-freeze exact formal S6 Candidate
-→ Candidate Declaration
-→ CTO 裁决下不等待双账户验证
+审计 merged-main exact object set
+→ 新 non-effective RUN_A candidate
 → protected merge
-→ candidate/merge tree witness
-→ R2 / 730-day immutable retention attestation
-→ locked-version delete-denied proof
-→ 24/24 Hard Acceptance Ledger settlement
-→ Stage 1A closure
-→ MCFT-CAP-08 complete
+→ candidate-to-merge zero file delta
+→ independent effectiveness PR
+→ protected merge
+→ single-use formal authority readback
 ```
 
-CAP-09 只有在 CAP-08 正式关闭后才能单独授权。
+## Step 5：只执行一次新的 Formal RUN_A
+
+仅当：
+
+```text
+post-merge development rehearsal PASS
+integration-owner qualification PASS
+new candidate merged
+new effectiveness merged
+authority unexpired
+main/object set exact
+```
+
+才允许：
+
+```text
+workflow_dispatch Formal RUN_A exactly once
+run_attempt = 1
+```
+
+Formal RUN_A terminal success 之前：
+
+```text
+RUN_B blocked
+comparator blocked
+S6 Candidate blocked
+R2 blocked
+Ledger settlement blocked
+MCFT-CAP-08 completion blocked
+```
 
 ---
 
-# 7. 踩过的坑与必须避免的事项
+# 7. 已踩过的坑与禁止事项
 
-## 7.1 不要把远端正式 run 当调试器
+## 7.1 不要再用正式 one-shot run 调试
 
-已经发生多次：
+错误模式：
 
 ```text
-一次 authority
-→ 暴露一个静态缺陷
-→ authority 消费
+dispatch formal RUN_A
+→ 暴露第一个深层错误
+→ 消费 authority
 → correction
-→ 新 authority
+→ candidate
+→ effectiveness
+→ 再 dispatch
 ```
 
-正式 dispatch 前必须完成：
+正确模式：
 
 ```text
-Node / CJS syntax
-TypeScript / tsx transform
-module export/import shape
-full require graph
-contract-loader exact pins
-production authority gate
-fresh-process harness sentinel
-synthetic 153 / 1 / 22 / 22
-freshness legal-bootstrap fixture
-workflow path collision audit
+exact-path non-formal rehearsal
+→ two independent DB runs
+→ restart/readback
+→ comparator
+→ integration owner
+→ merged-main rehearsal
+→ formal authority
+→ one-shot formal run
 ```
 
-## 7.2 一次 dispatch 即消费 authority
-
-无论失败发生在：
-
-```text
-entrypoint
-loader
-harness
-freshness predicate
-materializer
-```
-
-只要完成了正式 workflow dispatch，该 authority 就不能 rerun 或复用。
+## 7.2 每个正式 authority 即使失败也被消费
 
 禁止：
 
 ```text
 Re-run jobs
 rerun failed jobs
-duplicate dispatch
+duplicate workflow_dispatch
 reuse operational identity
-reuse database identity
+reuse logical database identity
+reuse physical database identity
+edit consumed authority back to effective
 ```
 
-## 7.3 不要选错 workflow
-
-错误：
+## 7.3 candidate、effectiveness、dispatch 必须分离
 
 ```text
-mcft-cap-08-s6-single-run-database-execution-harness
-Triggered via pull request
-Re-run jobs
+candidate != effective authority
+effective authority != executed run
+PR checks != merged-main proof
+failed artifact != formal result
 ```
 
-正确：
+不得在一个 PR 中同时做：
 
 ```text
-mcft-cap-08-s6-single-run-database-execution
-workflow_dispatch
-Run workflow
+implementation
+authority candidate
+effectiveness
+database execution
+formal settlement
 ```
 
-## 7.4 GitHub 表单字段可能视觉截断
+## 7.4 不要把所有红色 workflow 当成当前失败
 
-输入框显示不完整不代表值正确。
+仓库存在大量历史 frozen-boundary workflow。新 PR 修改治理对象后，它们可能按旧 blob 正常拒绝。
 
-提交前对长字段执行：
+裁决顺序：
 
 ```text
-click input
-Ctrl+A
-Ctrl+C
-粘贴到文本编辑器
-逐字符核对
+current focused workflow
+current required branch contexts
+standard CI
+exact-path integration workflow
+job terminal logs
+artifact
 ```
 
-## 7.5 不要把合法 bootstrap facts 当污染
+不要仅凭 GitHub 页面“有红灯”就修改代码。
 
-Fresh database 不等于：
+## 7.5 PR 描述可能已经过时
+
+PR #2781 的 body 中旧 candidate head/tree 与实际 GitHub head 不一致。
+
+永远以：
 
 ```text
-facts = 0
+PR API actual head SHA
+compare_commits
+actual changed files
+workflow run head SHA
 ```
 
-平台 migration / bootstrap 可合法产生：
+为准，不以描述文本或聊天记录为准。
+
+## 7.6 不要放宽底层断言掩盖上层装配错误
+
+已经证明的原则：
 
 ```text
-11 bootstrap facts
-1 ACTIVE visibility epoch
-11 visibility rows
+CAP04 handoff mismatch
+→ 修 S4/T17 orchestration
+不是放宽 CAP04 assertion
+
+FVO-17 duplicate
+→ 修 product-chain forecast binding
+不是扩大 closure alias whitelist
+
+CAP-07 scope undefined
+→ 修 adapter/reader contract
+不是返回空 readback
 ```
 
-正式 freshness 关注的是：
+## 7.7 数据库 fresh 不等于 facts=0
+
+合法 fresh platform baseline 可以包含：
 
 ```text
-0 formal Runtime rows
-0 当前 run identity contamination
-0 当前 subject contamination
-0 formal run identity contamination
+bootstrap facts
+visibility epoch/index
+migrations
+security roles
+seed identities
 ```
 
-## 7.6 loader pin 与 formal identity basis 不是同一概念
-
-当前合法语义：
+Fresh 的正确含义：
 
 ```text
-loader S6 pin:
-当前 CTO-amended governance contract blob
-
-formal identity S6 basis:
-原冻结 machine-contract blob
+zero formal Runtime contamination
+zero current operational identity contamination
+exact DB identity
+exact role
+exact required relations
+exact bootstrap baseline
 ```
 
-不要为了消除 blob drift 而改写 formal identity。
+## 7.8 migration 中的 conditional GRANT 不足以证明最终 ACL
 
-## 7.7 不要恢复已失效身份
+若 role 在 migration 之后创建，conditional GRANT 可能未生效。
 
-永久不可复用：
+最终权限事实必须由：
 
 ```text
-REPLACEMENT-001
-REPLACEMENT-002
-REPLACEMENT-003
-以及其 logical database identities
+platform security bootstrap whitelist
++
+real PostgreSQL ACL acceptance
 ```
 
-当前唯一有效身份是：
+证明。
+
+## 7.9 TypeScript 模块加载必须走统一 loader
+
+Native：
 
 ```text
-REPLACEMENT-004
+import(file://*.ts)
 ```
 
-仅在尚未 dispatch 的前提下有效。
+在 exact rehearsal 中已被证明不可用。
 
-## 7.8 不要提前创建 RUN_B
-
-当前：
+PR #2781 已改为：
 
 ```text
-RUN_B remains blocked = true
-replacement RUN_B authority = absent
-parallel RUN_A / RUN_B = forbidden
+tsx/esm/api
+tsImport()
 ```
 
-RUN_A terminal-success witness 之前禁止 RUN_B candidate。
-
-## 7.9 历史 workflow path collision
-
-新文件名可能误触发旧 exact-boundary workflow，出现红灯。
-
-必须区分：
+当前 rehearsal 已越过 loader，进入 CAP-07 readback，说明 loader 修复方向有效。不要引入：
 
 ```text
-当前 focused authority gate
-required ruleset checks
-历史 workflow path collision
+compiled substitute
+synthetic module list
+test-only fake loader
 ```
 
-历史误触发不能掩盖当前门禁失败，也不能为了清红灯篡改旧证明。
+## 7.10 不要长时间无结论轮询 CI
 
-## 7.10 Git Data API 运输必须核对 blob SHA
-
-已经发生过：
+正确工作方式：
 
 ```text
-base64 手工搬运插入空格
-末尾换行改变 blob
-长载荷未真正写入
-错误 blob 成为不可达对象
+读取一次当前 job steps
+确定正在运行的具体阶段
+只在状态变化后更新
+完成后读取 terminal logs/artifacts
+立即给出裁决
 ```
 
-纪律：
+不要连续重复查询同一 in-progress step，也不要让“等待 CI”掩盖实际工程状态。
+
+## 7.11 不要信任未落入 GitHub 的工作结果
+
+此前出现过聊天中声称 PR/branch 已建立、但 GitHub 实际不存在的情况。
+
+完成定义必须是：
 
 ```text
-local git hash-object
-=
-GitHub returned blob SHA
-=
-fetch_blob readback
-```
-
-不一致不得创建 tree。
-
-## 7.11 不要把 Draft PR 的失败修复堆成多提交
-
-候选必须尽量保持：
-
-```text
-one exact base
-one parent
-one candidate commit
-exact changed-file boundary
-```
-
-发现 validator-only 错误时，应从原 base 原子重建 candidate，而不是保留调试提交链。
-
-## 7.12 CTO 双账户裁决不是“审批已通过”
-
-必须继续写：
-
-```text
-independent review satisfied = false
-independent review performed = false
-independent review waived = false
-```
-
-它只是不再阻塞当前 S6 closure。
-
----
-
-# 8. 关键 PR / run / artifact 索引
-
-## 产品实现与 authority chain
-
-```text
-#2743  S4/T17 product implementation
-merge  395ba4887553c505c6ff1fe79a163f33cea9e843
-
-#2745  S4/T17 implementation effectiveness
-merge  001a6d4385b49a60d604cc69c0779632492ae127
-
-#2746  authority chain recovery adjudication
-merge  26d94d5c47ce640e80374124bb473d62003cc9a6
-
-#2747  final replacement authority candidate
-merge  208ad8ec34cde4e129e66805d47a994141303d24
-
-#2748  CTO dual-account verification deferral
-merge  af608d3cd89e6621d1d9588bbf0ef754f62f2c89
-
-#2749  initial authority effectiveness
-merge  a2dfc3ee1e5d132059379a0a67be2f033388e8b5
-```
-
-## 正式 run correction 链
-
-```text
-run 30736728638
-failure:
-TOP_LEVEL_AWAIT_CJS_TRANSFORM_UNSUPPORTED
-
-#2750
-merge:
-93eb19f74faed372908764e5e3d2410a2ff50b45
-```
-
-```text
-run 30738876293
-failure:
-validatePortBundleV1 is not a function
-
-#2753
-merge:
-6c17cf1043081621609371b6a46c6ecbeb1ad706
-
-#2755
-merge:
-d91a1fb52cf4ea3f1f0650f664f4ce94667e1a59
-```
-
-```text
-run 30745867826
-failure:
-DATABASE_NOT_FRESH
-
-authority artifact:
-8832847712
-sha256:53936ff997a713670aa436f63a55f59493f8090ac55f8762c8e2779f04cb6e17
-
-failed-run artifact:
-8832858695
-sha256:f6668c3bb8e449b814a8361670efddf87af879ba4de74d7ecb6cd9df442e4962
-
-#2758
-merge:
-0187c6ad375c4752b67b58259878dfa552384571
-```
-
-## 当前有效 authority
-
-```text
-#2759
-candidate:
-ef1880a8692a650ab40187b5bfe6d763d88572d0
-merge:
-519d559ab38503d316509912a82a8fac5d64a161
-
-#2760
-effectiveness candidate:
-7e237184474c8885f289ad96d89535f42b2b3024
-merge:
-5704321af7a81db9c870a6f319b7d49fc0a125af
+blob exists
+tree exists
+commit exists
+branch points to commit
+PR exists
+actual diff verified
+workflow evidence exists
 ```
 
 ---
 
-# 9. 当前状态矩阵
+# 8. 关键入口
 
 ```text
-S1–S5                                           COMPLETE / EFFECTIVE
-S6 general infrastructure                       IMPLEMENTED
-S4/T17 product transition                       IMPLEMENTED / EFFECTIVE
-formal single-run workflow                      IMPLEMENTED
-CTO dual-account verification                   SUSPENDED
-RUN_A REPLACEMENT-001                            CONSUMED / RETIRED
-RUN_A REPLACEMENT-002                            INVALID / UNMERGED / NEVER REUSE
-RUN_A REPLACEMENT-003                            CONSUMED / RETIRED
-bootstrap freshness correction                   MERGED
-RUN_A REPLACEMENT-004 candidate                  MERGED
-RUN_A REPLACEMENT-004 effectiveness              MERGED / AUTHORIZED
-RUN_A REPLACEMENT-004 dispatch                   NOT PROVEN AT HANDOFF
-formal RUN_A terminal result                     ABSENT
-replacement RUN_B authority                      ABSENT
-formal RUN_B                                     FALSE
-formal dual-run settlement                       FALSE
-cross-run comparator                             FALSE
-S6 Candidate                                     FALSE
-Candidate Declaration                            FALSE
-merge-tree witness                               FALSE
-R2 / 730-day retention attestation               FALSE
-24/24 Hard Acceptance Ledger settlement          FALSE
-Stage 1A closure                                 FALSE
-MCFT-CAP-08 complete                             FALSE
-MCFT-CAP-09 authorized                           FALSE
+active handoff
+docs/handoff/GEOX-MCFT-CAP-08-S6-HANDOFF.md
+
+formal workflow
+.github/workflows/mcft-cap-08-s6-single-run-database-execution.yml
+
+current active development PR
+https://github.com/liyongshang44-max/GEOX/pull/2781
+
+blocked effectiveness PR
+https://github.com/liyongshang44-max/GEOX/pull/2780
+
+latest merged authority candidate
+https://github.com/liyongshang44-max/GEOX/pull/2779
+
+current rehearsal run
+https://github.com/liyongshang44-max/GEOX/actions/runs/30792360746
+```
+
+Current error files：
+
+```text
+scripts/runtime_acceptance/
+mcft_cap08_s6_single_run_ports/
+cap07_reader_v1.cjs
+
+scripts/runtime_acceptance/
+mcft_cap08_s6_single_run_db/
+cap07_readback_execution_adapter_v1.cjs
+```
+
+Current exact execution path also includes：
+
+```text
+scripts/runtime_acceptance/
+mcft_cap08_s6_single_run_workflow/
+workflow_entrypoint_v1.ts
+
+scripts/runtime_acceptance/
+mcft_cap08_s6_single_run_db/
+harness_v1.cjs
+
+scripts/runtime_acceptance/
+mcft_cap08_s6_single_run_ports/
+product_chain_v1.cjs
 ```
 
 ---
 
-# 10. 新对话推荐开场提示词
+# 9. 新对话的最小接手指令
 
 ```text
-由你继续接手 GEOX 的 MCFT-CAP-08 S6。
+由你接手 MCFT-CAP-08 S6。
 
-先完整阅读：
+先读取：
 docs/handoff/GEOX-MCFT-CAP-08-S6-HANDOFF.md
 
 然后通过 GitHub 重新核对：
+- current main
+- PR #2779 / #2780 / #2781
+- PR #2781 actual head
+- workflow run 30792360746
+- RUN_DEV_A/B job logs and artifacts
 
-1. current main 是否仍为 5704321af7a81db9c870a6f319b7d49fc0a125af；
-2. #2758、#2759、#2760 是否 merged；
-3. 是否已存在 REPLACEMENT-004 的正式 workflow_dispatch run；
-4. 是否发生 duplicate dispatch 或 rerun；
-5. effective authority 是否仍未过期；
-6. RUN_B 是否仍 blocked。
+当前不要合并 #2780，不要执行 formal RUN_A，不要执行 RUN_B。
 
-当前唯一合法动作是：
+先修复 PR #2781 中
+cap07_readback_execution_adapter_v1.cjs
+与
+cap07_reader_v1.cjs
+的 request/scope contract，
+并取得 two-run exact-path rehearsal、
+restart/readback、semantic comparator、
+integration-owner artifact 全部 PASS。
 
-若 REPLACEMENT-004 尚未 dispatch：
-按 handoff 中的 exact inputs，只 dispatch RUN_A 一次。
-
-若已 dispatch：
-立即审计该 run 的 authority gate、exact subject、fresh PostgreSQL、
-formal harness、formal result、artifact 和 database cleanup。
-
-不要重新运行任何旧 run，
-不要复用 REPLACEMENT-001/002/003，
-不要触发 RUN_B，
-不要提前实现 comparator、Candidate 或 Ledger settlement。
+之后合并 #2781，执行 merged-main rehearsal，
+重新冻结新的 formal candidate/effectiveness，
+最后才允许一次正式 RUN_A。
 ```
 
 ---
 
-# 11. 最终交接裁决
-
-交接时的准确结论：
+# 10. 当前总裁决
 
 ```text
-MCFT-CAP-08 S6 已经完成产品实现、正式 single-run harness、
-三轮正式 pre-materializer 缺陷修复，以及 bootstrap-aware freshness correction。
-
-当前 main 已建立 REPLACEMENT-004 的单次、不可 rerun、不可复用 RUN_A authority。
-
-现在没有产品实现卡点。
-唯一外部阻塞是：
-由 GitHub UI 对正确 workflow 执行一次精确 RUN_A dispatch，
-或者在已经 dispatch 的情况下取得并审计其 run URL。
-
-在 RUN_A terminal PASS 之前，RUN_B、cross-run comparator、
-S6 Candidate、R2 retention、Ledger settlement 和 CAP-08 completion
-全部保持禁止。
+S1–S5                               COMPLETE / EFFECTIVE
+S6 core execution path              IMPLEMENTED
+T16 → S4 → T17                      IMPLEMENTED / PROVEN TO REACH
+153 receipts                        PROVEN
+224 events                          PROVEN
+FVO-10 alias                        CORRECTED
+FVO-17 forecast binding             CORRECTED
+REPLACEMENT-009                     CONSUMED
+REPLACEMENT-010 candidate           MERGED / NON-EFFECTIVE
+PR #2780 effectiveness              BLOCKED
+PR #2781 development rehearsal      ACTIVE / FAILING AT CAP-07 READBACK
+Formal RUN_A terminal success       NOT ESTABLISHED
+Formal RUN_B                        BLOCKED
+Cross-run comparator                BLOCKED
+S6 Candidate                        NOT ESTABLISHED
+R2 / 730-day retention              NOT ESTABLISHED
+24/24 Ledger settlement             NOT ESTABLISHED
+MCFT-CAP-08                         NOT COMPLETE
+MCFT-CAP-09                         NOT AUTHORIZED
 ```
