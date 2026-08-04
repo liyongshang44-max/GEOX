@@ -1,0 +1,86 @@
+{
+  "schema_version": "geox_pfe14_s2_apple_visual_contract_v1",
+  "contract_id": "PFE-14-S2-APPLE-VISUAL-CONTRACT",
+  "record_status": "VISUAL_FOUNDATION_FROZEN_NOT_APPLIED_TO_PAGES",
+  "base_main_sha": "41e41d30dd36755beee9edac7262882dbba2c48c",
+  "scope": "OPERATOR_RUNTIME_CONSOLE_ONLY",
+  "principles": ["CLARITY", "DEFERENCE", "DEPTH", "CONTINUITY"],
+  "brand_boundary": {
+    "apple_inspired_product_principles": true,
+    "apple_brand_claim": false,
+    "apple_trademark_assets": false,
+    "bundled_apple_fonts": false,
+    "macos_control_imitation": false
+  },
+  "css_scope_selectors": [
+    ".operatorProductSurface",
+    ".operatorRuntimeVisualRoot",
+    "[data-surface=\"operator\"]"
+  ],
+  "tokens": {
+    "font_family": "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica Neue, Arial, sans-serif",
+    "font_weights_allowed": [400, 500, 600],
+    "font_weights_forbidden": [700, 750, 800, 850, 900],
+    "page_background": "#F5F5F7",
+    "panel_background": "rgba(255, 255, 255, 0.88)",
+    "panel_background_solid": "#FFFFFF",
+    "text_primary": "#1D1D1F",
+    "text_secondary": "#6E6E73",
+    "separator": "rgba(60, 60, 67, 0.16)",
+    "accent": "#176B45",
+    "accent_soft": "rgba(23, 107, 69, 0.10)",
+    "focus_ring": "rgba(0, 122, 255, 0.82)",
+    "radius_control": "12px",
+    "radius_card": "16px",
+    "radius_container": "20px",
+    "shadow_panel": "0 1px 2px rgba(0, 0, 0, 0.04)",
+    "shadow_elevated": "0 8px 24px rgba(0, 0, 0, 0.08)",
+    "motion_fast": "160ms",
+    "motion_normal": "220ms"
+  },
+  "components": [
+    {
+      "name": "ProductSegmentedControl",
+      "purpose": "Compact accessible navigation or local view switching without business inference",
+      "business_semantics": false,
+      "keyboard_required": true,
+      "active_state_text_or_aria_required": true
+    },
+    {
+      "name": "ProductTechnicalDisclosure",
+      "purpose": "Progressive disclosure for object refs, hashes, reason codes and other technical fields",
+      "business_semantics": false,
+      "native_details_summary": true,
+      "raw_payload_default_open": false
+    }
+  ],
+  "layout_rules": [
+    "default page chrome yields to data",
+    "one dominant title per page",
+    "primary cards use thin separators and minimal shadows",
+    "pills are reserved for short status or mode labels",
+    "long identifiers never become primary headings",
+    "technical fields remain available through progressive disclosure"
+  ],
+  "motion_rules": {
+    "allowed": ["hover", "focus", "segmented-control selection", "details expansion", "refresh state"],
+    "forbidden": ["continuous pulse", "permanent spinner", "flashing warning", "automatic scrolling", "decorative number animation"],
+    "prefers_reduced_motion_required": true
+  },
+  "accessibility_rules": [
+    "focus-visible ring required",
+    "minimum interactive target 36px in product primitives",
+    "status meaning may not rely on color alone",
+    "segmented control exposes current or pressed state",
+    "technical disclosure uses native details and summary semantics"
+  ],
+  "implementation_boundary": {
+    "tokens_and_primitives_only": true,
+    "operator_page_migration": false,
+    "operator_layout_migration": false,
+    "runtime_view_model_change": false,
+    "runtime_claim_change": false,
+    "customer_visual_change": false,
+    "admin_visual_change": false
+  }
+}
