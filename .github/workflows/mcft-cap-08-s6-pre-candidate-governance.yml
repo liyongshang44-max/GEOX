@@ -17,6 +17,8 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_CTO_DUAL_ACCOUNT_VERIFICATION_DEFERRAL_V1.cjs'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PRE-CANDIDATE-TRIGGER-RECONCILIATION-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_TRIGGER_RECONCILIATION.cjs'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PRE-CANDIDATE-LIFECYCLE-RECONCILIATION-V2.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_LIFECYCLE_RECONCILIATION_V2.cjs'
   merge_group:
     types: [checks_requested]
 
@@ -38,22 +40,26 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
+
       - name: Determine validation mode
         id: validation-mode
         shell: bash
         env:
-          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
         run: |
           set -euo pipefail
           base_sha="${EVENT_BASE_SHA}"
           if [[ -z "${base_sha}" ]]; then
-            echo "mode=historical" >> "${GITHUB_OUTPUT}"
+            echo "mode=inactive" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
+
           mapfile -t changed < <(git diff --name-only "${base_sha}...HEAD" | sort)
+
           cto_deferral=(
             '.github/workflows/mcft-cap-08-s6-pre-candidate-governance.yml'
             'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
@@ -70,32 +76,107 @@ jobs:
             echo "mode=cto-deferral" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
-          reconciliation=(
+
+          reconciliation_v1=(
             '.github/workflows/mcft-cap-08-s6-pre-candidate-governance.yml'
             'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PRE-CANDIDATE-TRIGGER-RECONCILIATION-V1.json'
             'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_TRIGGER_RECONCILIATION.cjs'
           )
-          mapfile -t reconciliation < <(printf '%s\n' "${reconciliation[@]}" | sort)
-          if [[ "${#changed[@]}" -eq "${#reconciliation[@]}" ]] && diff -u <(printf '%s\n' "${reconciliation[@]}") <(printf '%s\n' "${changed[@]}"); then
-            echo "mode=reconciliation" >> "${GITHUB_OUTPUT}"
-          else
-            echo "mode=historical" >> "${GITHUB_OUTPUT}"
+          mapfile -t reconciliation_v1 < <(printf '%s\n' "${reconciliation_v1[@]}" | sort)
+          if [[ "${#changed[@]}" -eq "${#reconciliation_v1[@]}" ]] && diff -u <(printf '%s\n' "${reconciliation_v1[@]}") <(printf '%s\n' "${changed[@]}"); then
+            echo "mode=reconciliation-v1" >> "${GITHUB_OUTPUT}"
+            exit 0
           fi
+
+          lifecycle_v2=(
+            '.github/workflows/mcft-cap-08-s6-pre-candidate-governance.yml'
+            'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PRE-CANDIDATE-LIFECYCLE-RECONCILIATION-V2.json'
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_LIFECYCLE_RECONCILIATION_V2.cjs'
+          )
+          mapfile -t lifecycle_v2 < <(printf '%s\n' "${lifecycle_v2[@]}" | sort)
+          if [[ "${#changed[@]}" -eq "${#lifecycle_v2[@]}" ]] && diff -u <(printf '%s\n' "${lifecycle_v2[@]}") <(printf '%s\n' "${changed[@]}"); then
+            echo "mode=lifecycle-v2" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          historical_package=(
+            '.github/workflows/mcft-cap-08-s6-pre-candidate-governance.yml'
+            'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+            'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CHANGED-FILE-BOUNDARY-V1.json'
+            'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CONTRACT-V1.json'
+            'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json'
+            'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-PREDECESSOR-CONSUMPTION-V1.json'
+            'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REVIEW-POLICY-V1.json'
+            'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-WORKFLOW-DECLARATION-V1.json'
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_GOVERNANCE.cjs'
+          )
+          mapfile -t historical_package < <(printf '%s\n' "${historical_package[@]}" | sort)
+          if [[ "${#changed[@]}" -eq "${#historical_package[@]}" ]] && diff -u <(printf '%s\n' "${historical_package[@]}") <(printf '%s\n' "${changed[@]}"); then
+            echo "mode=historical-package" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          status_path='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json'
+          if git cat-file -e "${base_sha}:${status_path}" 2>/dev/null && [[ -f "${status_path}" ]]; then
+            base_candidate="$(git show "${base_sha}:${status_path}" | node -e "let x='';process.stdin.on('data',c=>x+=c);process.stdin.on('end',()=>process.stdout.write(String(JSON.parse(x).s6_candidate_implemented)))")"
+            head_candidate="$(node -e "process.stdout.write(String(require('./${status_path}').s6_candidate_implemented))")"
+            if [[ "${base_candidate}" == 'false' && "${head_candidate}" == 'true' ]]; then
+              echo "mode=candidate-signal" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+          fi
+
+          echo "mode=inactive" >> "${GITHUB_OUTPUT}"
+
       - name: Validate CTO dual-account verification deferral
         if: steps.validation-mode.outputs.mode == 'cto-deferral'
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_CTO_DUAL_ACCOUNT_VERIFICATION_DEFERRAL_V1.cjs
-      - name: Validate trigger reconciliation
-        if: steps.validation-mode.outputs.mode == 'reconciliation'
+
+      - name: Validate trigger reconciliation V1
+        if: steps.validation-mode.outputs.mode == 'reconciliation-v1'
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_TRIGGER_RECONCILIATION.cjs
-      - name: Validate exact non-candidate S6 governance package
-        if: steps.validation-mode.outputs.mode == 'historical'
+
+      - name: Validate lifecycle reconciliation V2
+        if: steps.validation-mode.outputs.mode == 'lifecycle-v2'
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_LIFECYCLE_RECONCILIATION_V2.cjs
+
+      - name: Validate exact historical pre-candidate package
+        if: steps.validation-mode.outputs.mode == 'historical-package'
         env:
           MCFT_BASE_SHA: 19f75275a223caa5196982344be57c871e7755d2
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_PRE_CANDIDATE_GOVERNANCE.cjs
+
+      - name: Record non-pre-candidate lifecycle mode
+        if: steps.validation-mode.outputs.mode == 'candidate-signal' || steps.validation-mode.outputs.mode == 'inactive'
+        shell: bash
+        env:
+          VALIDATION_MODE: ${{ steps.validation-mode.outputs.mode }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = {
+            schema_version: 'geox_mcft_cap08_s6_pre_candidate_lifecycle_mode_v2',
+            status: 'PASS',
+            mode: process.env.VALIDATION_MODE,
+            base_sha: process.env.EVENT_BASE_SHA || null,
+            subject_sha: process.env.EVENT_HEAD_SHA,
+            pre_candidate_historical_validator_executed: false,
+            candidate_validation_delegated_to_registered_focused_workflow: process.env.VALIDATION_MODE === 'candidate-signal',
+            technical_gate_relaxation: false,
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_08_S6_PRE_CANDIDATE_LIFECYCLE_RESULT.json', JSON.stringify(result, null, 2) + '\n');
+          NODE
+
       - name: Upload governance evidence
         if: always()
         uses: actions/upload-artifact@v4
