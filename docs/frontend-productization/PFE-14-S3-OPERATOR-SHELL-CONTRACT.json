@@ -1,0 +1,73 @@
+{
+  "schema_version": "geox_pfe14_s3_operator_shell_contract_v1",
+  "contract_id": "PFE-14-S3-OPERATOR-SHELL-CONTRACT",
+  "record_status": "SHELL_CONSOLIDATION_FROZEN",
+  "base_main_sha": "79fbda35e19196f0d1752e06e27a2a08fd8454d9",
+  "surface": "Operator Runtime Console",
+  "layout_owner": "apps/web/src/layouts/OperatorLayout.tsx",
+  "style_owner": "apps/web/src/styles/operatorShellApple.css",
+  "valid_primary_navigation": [
+    {"key":"overview","route":"/operator/twin","reason":"existing formal reachable route"},
+    {"key":"fields","route":"/operator/fields","reason":"existing canonical reachable route family"}
+  ],
+  "removed_navigation_slots": [
+    {"key":"evidence","reason":"available only within field runtime; no formal console route"},
+    {"key":"forecast","reason":"field tab, not console-level navigation"},
+    {"key":"calibration","reason":"field tab, not console-level navigation"},
+    {"key":"health","reason":"field tab until an authoritative aggregate health route exists"},
+    {"key":"settings","reason":"no formal operator settings route"},
+    {"key":"pilot","reason":"PFE-13 inventory records the route but current OperatorRoutes does not own it; layout injection is not route ownership"}
+  ],
+  "pilot_route_policy": {
+    "operator_layout_injection_removed": true,
+    "navigation_visible": false,
+    "page_deleted": false,
+    "future_route_repair_requires_separate_authorized_slice": true
+  },
+  "runtime_context_slot": {
+    "component_owner": "OperatorLayout",
+    "accepts_external_descriptor": true,
+    "default_source": "governed-static-nonclaim",
+    "authoritative_source_value": "authoritative-read-model",
+    "authoritative_source_enabled_in_s3": false,
+    "default_mode": "REPLAY_BACKED_DEMO",
+    "default_read_only": true,
+    "default_details": [
+      "LIVE_DEVICE_NOT_CONNECTED",
+      "PRODUCTION_GATEWAY_NOT_ONLINE",
+      "FIELD_PILOT_NOT_STARTED",
+      "CONTROLLED_EXECUTION_DISABLED"
+    ],
+    "shadow_online_default_forbidden": true,
+    "browser_derived_context_forbidden": true
+  },
+  "single_nonclaim_area": {
+    "required": true,
+    "primary_mode_visible": true,
+    "read_only_visible": true,
+    "technical_details_progressive": true,
+    "duplicate_banner_forbidden": true
+  },
+  "style_rules": {
+    "operator_owned_class_names": true,
+    "customer_shell_class_dependency_removed": true,
+    "uses_s2_visual_tokens": true,
+    "font_weights_allowed": [400,500,600],
+    "dark_full_height_sidebar_forbidden": true,
+    "heavy_card_shadow_forbidden": true,
+    "disabled_navigation_placeholders_forbidden": true,
+    "responsive_sidebar_stack_required": true,
+    "focus_visible_required": true
+  },
+  "implementation_boundary": {
+    "operator_layout_changed": true,
+    "operator_shell_css_added": true,
+    "operator_page_changed": false,
+    "route_changed": false,
+    "api_client_changed": false,
+    "runtime_view_model_changed": false,
+    "runtime_claim_changed": false,
+    "customer_surface_changed": false,
+    "admin_surface_changed": false
+  }
+}
