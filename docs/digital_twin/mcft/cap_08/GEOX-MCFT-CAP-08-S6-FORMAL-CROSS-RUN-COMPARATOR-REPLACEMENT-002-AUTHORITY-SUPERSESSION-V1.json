@@ -1,0 +1,55 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_replacement_002_authority_supersession_v1",
+  "record_status": "REPLACEMENT_001_COMPARATOR_AUTHORITY_CONSUMED_AND_SUPERSEDED_BY_REPLACEMENT_002_CANDIDATE",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "predecessor": {
+    "effective_authority_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "effective_authority_blob_sha": "c2df7c3da181ff231931a66c7f6c6b2312b7015a",
+    "candidate_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-CANDIDATE-V1.json",
+    "candidate_blob_sha": "dffb2a6df42c4a0860f461761f1cf3e2d360c8ac",
+    "comparator_execution_id": "MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-20260804-REPLACEMENT-001",
+    "formal_workflow_run_id": 30893508924,
+    "formal_workflow_run_attempt": 1,
+    "formal_workflow_conclusion": "failure",
+    "authority_consumed": true,
+    "remaining_execution_count": 0,
+    "rerun_authorized": false,
+    "authority_reuse_authorized": false,
+    "same_execution_id_reuse_authorized": false
+  },
+  "terminal_settlement": {
+    "failure_settlement_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-FAILURE-SETTLEMENT-V1.json",
+    "failure_settlement_blob_sha": "f1aa8da7c1f855e80069a08651eec014a82f00e5",
+    "authority_consumption_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-CONSUMPTION-V1.json",
+    "authority_consumption_blob_sha": "dc03eac0b384ee26a43e6299842864c8190e99ba",
+    "failure_class": "CONTROL_PLANE_PROVENANCE_IDENTITY_CONFLATION",
+    "semantic_comparator_executed": false,
+    "formal_comparator_evidence_created": false
+  },
+  "corrective_merge": {
+    "merge_sha": "aa58176ae061ff42eaa64069c10f88901669a671",
+    "workflow_blob_sha": "247355dc2f0a3fcb782f1621503bd30713871a81",
+    "control_blob_sha": "2cdc4e903dacb00b87f175dea58d89d80c6f3108",
+    "contract_blob_sha": "1004465d3f1c588a4a51c468c3bed0e1ce7dd527",
+    "boundary_blob_sha": "9ffd95cd4d02967636211c8c68622098fd567ab9",
+    "qualification_workflow_run_id": 30896387338,
+    "qualification_artifact_id": 8887189421,
+    "qualification_artifact_digest": "sha256:a0e363f9d2cfcffce664bc6ff36d62291cc7241ea6a67a1309354abef4c008f7"
+  },
+  "replacement": {
+    "candidate_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-AUTHORITY-CANDIDATE-V1.json",
+    "candidate_blob_sha": "c9ddd552a1c9b7687639675ef7721e0e6ef5d067",
+    "object_set_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-AUTHORITY-OBJECT-SET-V1.json",
+    "object_set_blob_sha": "cde589b07a1ff96c3de1428ccf1f8b2281938dc2",
+    "issuance_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-AUTHORITY-ISSUANCE-V1.json",
+    "issuance_blob_sha": "dc7572214c5e6e1cebab4946a0f9323e44fa112d",
+    "comparator_execution_id": "MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-20260804-REPLACEMENT-002",
+    "authority_effective": false,
+    "comparator_execution_authorized": false
+  },
+  "append_forward_only": true,
+  "historical_predecessor_mutation_authorized": false,
+  "next_legal_action": "MERGE_REPLACEMENT_002_NON_EFFECTIVE_AUTHORITY_CANDIDATE",
+  "semantic_digest": "sha256:59bc514a437bcbc1f99707ae5259049d39b9d249631d41e8b6ca9fa11112aa3a"
+}

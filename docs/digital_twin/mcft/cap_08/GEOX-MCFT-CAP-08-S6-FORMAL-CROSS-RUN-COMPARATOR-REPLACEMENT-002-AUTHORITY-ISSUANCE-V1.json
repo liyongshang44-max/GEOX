@@ -1,0 +1,62 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_replacement_002_authority_issuance_v1",
+  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_002_AUTHORITY_CANDIDATE_ISSUED_NOT_EFFECTIVE",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_governance_main_sha": "aa58176ae061ff42eaa64069c10f88901669a671",
+  "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+  "comparator_execution_id": "MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-20260804-REPLACEMENT-002",
+  "candidate": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-AUTHORITY-CANDIDATE-V1.json",
+    "blob_sha": "c9ddd552a1c9b7687639675ef7721e0e6ef5d067",
+    "semantic_digest": "sha256:931a4c474d4792cefae44ac314752342d38c87665225ff014bf9ebdab3beea03",
+    "record_status": "FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_002_AUTHORITY_CANDIDATE_NOT_EFFECTIVE"
+  },
+  "object_set": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "cde589b07a1ff96c3de1428ccf1f8b2281938dc2",
+    "semantic_digest": "sha256:ec8e25218b3324ac7ea309180c19bdbf63185fb9a730ebab24b0f27302afba76",
+    "object_count": 12
+  },
+  "corrected_execution_transport": {
+    "workflow_path": ".github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-execution.yml",
+    "workflow_blob_sha": "247355dc2f0a3fcb782f1621503bd30713871a81",
+    "control_path": "scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_comparator_execution_control_v1.cjs",
+    "control_blob_sha": "2cdc4e903dacb00b87f175dea58d89d80c6f3108",
+    "contract_blob_sha": "1004465d3f1c588a4a51c468c3bed0e1ce7dd527",
+    "boundary_blob_sha": "9ffd95cd4d02967636211c8c68622098fd567ab9",
+    "merge_sha": "aa58176ae061ff42eaa64069c10f88901669a671",
+    "qualification_workflow_run_id": 30896387338,
+    "qualification_artifact_id": 8887189421,
+    "qualification_artifact_digest": "sha256:a0e363f9d2cfcffce664bc6ff36d62291cc7241ea6a67a1309354abef4c008f7"
+  },
+  "predecessor_terminal": {
+    "failure_settlement_blob_sha": "f1aa8da7c1f855e80069a08651eec014a82f00e5",
+    "authority_consumption_blob_sha": "dc03eac0b384ee26a43e6299842864c8190e99ba",
+    "authority_consumed": true,
+    "remaining_execution_count": 0,
+    "rerun_authorized": false,
+    "same_execution_id_reuse_authorized": false
+  },
+  "activation": {
+    "separate_effectiveness_required": true,
+    "authority_effective": false,
+    "comparator_execution_authorized": false,
+    "maximum_execution_count_after_effectiveness": 1,
+    "required_execution_attempt": 1,
+    "fresh_execution_identity_required": true,
+    "explicit_one_shot_execution_approval_required": true
+  },
+  "formal_comparator_execution_performed": false,
+  "formal_comparator_evidence_present": false,
+  "next_legal_action_after_merge": "ESTABLISH_REPLACEMENT_002_FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_EFFECTIVENESS",
+  "nonclaims": [
+    "NO_REPLACEMENT_001_RERUN",
+    "NO_FORMAL_COMPARATOR_EXECUTION_IN_AUTHORITY_CANDIDATE_PR",
+    "NO_FORMAL_COMPARATOR_EVIDENCE",
+    "NO_S6_CANDIDATE",
+    "NO_LEDGER_SETTLEMENT",
+    "NO_CAP08_COMPLETION"
+  ],
+  "semantic_digest": "sha256:fdbb21bcb30bed751d2e6b109d393ba512578405808532294f51a36ab6484c19"
+}
