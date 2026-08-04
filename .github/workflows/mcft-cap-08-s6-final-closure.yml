@@ -1,0 +1,104 @@
+name: mcft-cap-08-s6-final-closure
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-exact-sha-attestation.yml'
+      - '.github/workflows/mcft-cap-08-s6-final-closure.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CANDIDATE-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-CLOSURE-EVIDENCE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-HARD-ACCEPTANCE-LEDGER-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_SHA_ATTESTATION_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_CLOSURE_CANDIDATE_V1.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap08-s6-final-closure-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  qualify-s6-final-closure-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve exact candidate and base
+        id: delivery
+        shell: bash
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
+        run: |
+          set -euo pipefail
+          test -n "$EVENT_HEAD_SHA"
+          if [[ -n "$EVENT_BASE_SHA" ]]; then BASE_SHA="$EVENT_BASE_SHA"; else git fetch --no-tags origin main; BASE_SHA="$(git rev-parse origin/main)"; fi
+          test "$(git rev-parse HEAD)" = "$EVENT_HEAD_SHA"
+          echo "exact_sha=$EVENT_HEAD_SHA" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Download immutable formal evidence artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-input/run-a acceptance-input/run-b acceptance-input/comparator
+          curl --fail --silent --show-error --location \
+            --header 'Accept: application/vnd.github+json' \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/8868535301/zip" \
+            --output acceptance-input/run-a.zip
+          curl --fail --silent --show-error --location \
+            --header 'Accept: application/vnd.github+json' \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/8880057024/zip" \
+            --output acceptance-input/run-b.zip
+          curl --fail --silent --show-error --location \
+            --header 'Accept: application/vnd.github+json' \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/8888940447/zip" \
+            --output acceptance-input/comparator.zip
+          unzip -q acceptance-input/run-a.zip -d acceptance-input/run-a
+          unzip -q acceptance-input/run-b.zip -d acceptance-input/run-b
+          unzip -q acceptance-input/comparator.zip -d acceptance-input/comparator
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Validate exact formal evidence and 24-of-24 Candidate ledger
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MCFT_BASE_SHA: ${{ steps.delivery.outputs.base_sha }}
+          MCFT_EXACT_SHA: ${{ steps.delivery.outputs.exact_sha }}
+          MCFT_RUN_A_ZIP: acceptance-input/run-a.zip
+          MCFT_RUN_B_ZIP: acceptance-input/run-b.zip
+          MCFT_COMPARATOR_ZIP: acceptance-input/comparator.zip
+          MCFT_RUN_A_DIR: acceptance-input/run-a
+          MCFT_RUN_B_DIR: acceptance-input/run-b
+          MCFT_COMPARATOR_DIR: acceptance-input/comparator
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_CLOSURE_CANDIDATE_V1.cjs
+
+      - name: Upload S6 Candidate qualification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-final-closure-${{ steps.delivery.outputs.exact_sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_FINAL_CLOSURE_CANDIDATE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
