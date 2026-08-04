@@ -1,195 +1,35 @@
 #!/usr/bin/env node
 'use strict';
-
-const assert = require('node:assert/strict');
-const cp = require('node:child_process');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-
-const ROOT = process.env.MCFT_REPOSITORY_ROOT
-  ? path.resolve(process.env.MCFT_REPOSITORY_ROOT)
-  : path.resolve(__dirname, '../..');
-const REGISTRY = 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json';
-const OUT = path.join(ROOT, 'acceptance-output/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1_RESULT.json');
-const MODE = process.argv[2] || '--resolve';
-
-function git(root, args, options = {}) {
-  return cp.execFileSync('git', args, { cwd: root, encoding: 'utf8', ...options }).trim();
+const A=require('node:assert/strict'),C=require('node:child_process'),F=require('node:fs'),O=require('node:os'),P=require('node:path');
+const ROOT=process.env.MCFT_REPOSITORY_ROOT?P.resolve(process.env.MCFT_REPOSITORY_ROOT):P.resolve(__dirname,'../..');
+const REG='docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',RES='scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs',W='.github/workflows/mcft-cap-08-s2-pre-candidate-foundation.yml',V='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs',BOOT=[W,V,RES].sort(),OLD='8e74500081d47c160a33c8a5b9593f5e4379fdde',OUT=P.join(ROOT,'acceptance-output/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1_RESULT.json'),MODE=process.argv[2]||'--resolve';
+const git=(r,a)=>C.execFileSync('git',a,{cwd:r,encoding:'utf8'}).trim(),eq=(a,b)=>{try{A.deepEqual(a,b);return true}catch{return false}},bad=(c,d='')=>{throw Error(d?`${c}:${d}`:c)};
+const field=(v,q)=>String(q).split('.').filter(Boolean).reduce((x,k)=>x&&typeof x==='object'&&k in x?x[k]:undefined,v);
+function text(r,ref,file){const x=C.spawnSync('git',['show',`${ref}:${file}`],{cwd:r,encoding:'utf8'});return x.status===0?x.stdout:null}
+function json(r,ref,file,prefix){const x=text(r,ref,file);if(x==null)return null;try{return JSON.parse(x)}catch{bad(`${prefix}_INVALID_JSON`,file)}}
+function write(v){F.mkdirSync(P.dirname(OUT),{recursive:true});F.writeFileSync(OUT,JSON.stringify(v,null,2)+'\n')}
+function sha(r,v,l){v=String(v||'').trim();A.match(v,/^[0-9a-f]{40}$/,`${l}_INVALID`);return git(r,['rev-parse',`${v}^{commit}`])}
+function diff(r,b,h){const x=git(r,['diff','--name-only',`${b}...${h}`]);return x?x.split(/\r?\n/).filter(Boolean).sort():[]}
+function rules(reg,wf){A.equal(reg.registry_id,'MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1');A.ok(Array.isArray(reg.capabilities),'REGISTRY_CAPABILITIES_INVALID');const out=reg.capabilities.flatMap(c=>(c.candidate_transition_fields||[]).filter(x=>x.focused_workflow!=null).map(x=>({capability_line:c.capability_line,...x}))),keys=new Set(),wfs=new Set();for(const x of out){if(!x.status_file)bad('REGISTERED_TRANSITION_RULE_AMBIGUOUS','STATUS_FILE');if(!x.field_path)bad('REGISTERED_TRANSITION_RULE_AMBIGUOUS','FIELD_PATH');if(!x.focused_workflow)bad('REGISTERED_TRANSITION_RULE_AMBIGUOUS','FOCUSED_WORKFLOW');if(!Array.isArray(x.allowed_candidate_values)||!x.allowed_candidate_values.length)bad('REGISTERED_TRANSITION_RULE_AMBIGUOUS',`${x.status_file}:${x.field_path}:ALLOWED_VALUES`);const k=`${x.status_file}#${x.field_path}`;if(keys.has(k)||wfs.has(x.focused_workflow))bad('REGISTERED_TRANSITION_RULE_AMBIGUOUS',`${k}:${x.focused_workflow}`);keys.add(k);wfs.add(x.focused_workflow)}if(!wfs.has(wf))bad('EXPECTED_WORKFLOW_NOT_REGISTERED',wf);return out}
+function statusPaths(reg){const s=new Set();for(const c of reg.capabilities||[]){for(const x of c.authoritative_candidate_status_paths||[])if(x)s.add(x);for(const x of c.candidate_transition_fields||[])if(x.status_file)s.add(x.status_file)}return s}
+function na(w,b,h,ch,reason){return{schema_version:'geox_mcft_registry_focused_workflow_applicability_v1_result',status:'PASS',disposition:'NOT_APPLICABLE',reason,expected_focused_workflow:w,base_sha:b,head_sha:h,authority_registry_subject:b,registered_transition_count:0,owned_transition_count:0,transitions:[],changed_files:ch,database_execution_required:false,foreign_slice_failure:false,pr_modified_registry_used_for_candidate_authority:false}}
+function maintenance(r,{wf,b,h,reg,ch,env}){
+ if(eq(ch,BOOT)){rules(reg,wf);const expected=String(env.MCFT_RESOLVER_BOOTSTRAP_BASE_BLOB||OLD),bb=git(r,['rev-parse',`${b}:${RES}`]),hb=git(r,['rev-parse',`${h}:${RES}`]);if(bb!==expected)bad('CAP08_S2_RESOLVER_BOOTSTRAP_BASE_BLOB_INVALID',`${bb}:${expected}`);if(hb===bb)bad('CAP08_S2_RESOLVER_BOOTSTRAP_RESOLVER_UNCHANGED');if(!(text(r,h,W)||'').includes('SHARED_RESOLVER_GOVERNANCE_BOOTSTRAP_MODE: DEDICATED_FAIL_CLOSED'))bad('CAP08_S2_RESOLVER_BOOTSTRAP_WORKFLOW_MARKER_MISSING');if(!(text(r,h,V)||'').includes('SHARED_RESOLVER_GOVERNANCE_BOOTSTRAP_MODE'))bad('CAP08_S2_RESOLVER_BOOTSTRAP_VALIDATOR_MARKER_MISSING');return na(wf,b,h,ch,'CAP08_S2_CLASSIFIER_AND_RESOLVER_GOVERNANCE_BOOTSTRAP_WITHOUT_REGISTERED_STATUS_TRANSITION')}
+ if(eq(ch,[RES])){rules(reg,wf);return na(wf,b,h,ch,'RESOLVER_SELF_MAINTENANCE_WITHOUT_REGISTERED_STATUS_TRANSITION')}
+ if(!ch.includes(REG))return null;const hr=json(r,h,REG,'HEAD_AUTHORITY_REGISTRY');if(!hr)bad('HEAD_AUTHORITY_REGISTRY_MISSING',REG);rules(reg,wf);rules(hr,wf);const sup=ch.filter(x=>x!==REG);if(sup.length<1||sup.length>4)bad('REGISTRY_MAINTENANCE_BOUNDARY_INVALID',JSON.stringify(ch));const re=/^docs\/digital_twin\/mcft\/cap_[0-9]+\/GEOX-MCFT-CAP-[0-9]+-.*REGISTRY.*CORRECTION.*\.json$/;for(const x of sup){if(!re.test(x))bad('REGISTRY_MAINTENANCE_SUPPORT_PATH_INVALID',x);const d=json(r,h,x,'REGISTRY_MAINTENANCE_SUPPORT');if(!d)bad('REGISTRY_MAINTENANCE_SUPPORT_MISSING',x);for(const [k,v] of [['candidate_transition',false],['global_applicability_resolver_delta',0],['runtime_source_delta',0]])if(d[k]!==v)bad('REGISTRY_MAINTENANCE_SUPPORT_INVALID',`${x}:${k}`);if((text(r,h,x)||'').includes('MCFT_CANDIDATE_DECLARATION_V2'))bad('REGISTRY_MAINTENANCE_CANDIDATE_DECLARATION_FORBIDDEN',x)}const sp=new Set([...statusPaths(reg),...statusPaths(hr)]),cs=ch.filter(x=>sp.has(x));if(cs.length)bad('REGISTRY_MAINTENANCE_REGISTERED_STATUS_CHANGED',JSON.stringify(cs));const sl=ch.filter(x=>/^docs\/digital_twin\/mcft\/cap_[0-9]+\/.*(?:CURRENT-AUTHORITY|DELIVERY-STATUS).*\.json$/.test(x));if(sl.length)bad('REGISTRY_MAINTENANCE_STATUS_LIKE_FILE_CHANGED',JSON.stringify(sl));return na(wf,b,h,ch,'TRUSTED_REGISTRY_MAINTENANCE_WITHOUT_REGISTERED_STATUS_TRANSITION')
 }
-function same(left, right) {
-  try { assert.deepEqual(left, right); return true; } catch { return false; }
-}
-function getField(value, fieldPath) {
-  return String(fieldPath).split('.').filter(Boolean).reduce((current, key) => {
-    if (!current || typeof current !== 'object' || !(key in current)) return undefined;
-    return current[key];
-  }, value);
-}
-function readJsonAt(root, ref, relative, errorPrefix) {
-  const result = cp.spawnSync('git', ['show', `${ref}:${relative}`], { cwd: root, encoding: 'utf8' });
-  if (result.status !== 0) return null;
-  try { return JSON.parse(result.stdout); }
-  catch { throw new Error(`${errorPrefix}_INVALID_JSON:${relative}`); }
-}
-function write(value) {
-  fs.mkdirSync(path.dirname(OUT), { recursive: true });
-  fs.writeFileSync(OUT, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-}
-function canonicalCommit(root, value, label) {
-  const raw = String(value || '').trim();
-  assert.match(raw, /^[0-9a-f]{40}$/, `${label}_INVALID`);
-  return git(root, ['rev-parse', `${raw}^{commit}`]);
-}
-function fail(code, detail = '') {
-  throw new Error(detail ? `${code}:${detail}` : code);
-}
-function validateRules(registry, expectedWorkflow) {
-  assert.equal(registry.registry_id, 'MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1');
-  assert.ok(Array.isArray(registry.capabilities), 'REGISTRY_CAPABILITIES_INVALID');
-  const rules = registry.capabilities.flatMap((capability) =>
-    (capability.candidate_transition_fields || [])
-      .filter((rule) => rule.focused_workflow != null)
-      .map((rule) => ({ capability_line: capability.capability_line, ...rule })),
-  );
-  const keySeen = new Set();
-  const workflowSeen = new Set();
-  for (const rule of rules) {
-    if (typeof rule.status_file !== 'string' || !rule.status_file) fail('REGISTERED_TRANSITION_RULE_AMBIGUOUS', 'STATUS_FILE');
-    if (typeof rule.field_path !== 'string' || !rule.field_path) fail('REGISTERED_TRANSITION_RULE_AMBIGUOUS', 'FIELD_PATH');
-    if (typeof rule.focused_workflow !== 'string' || !rule.focused_workflow) fail('REGISTERED_TRANSITION_RULE_AMBIGUOUS', 'FOCUSED_WORKFLOW');
-    if (!Array.isArray(rule.allowed_candidate_values) || rule.allowed_candidate_values.length === 0) {
-      fail('REGISTERED_TRANSITION_RULE_AMBIGUOUS', `${rule.status_file}:${rule.field_path}:ALLOWED_VALUES`);
-    }
-    const key = `${rule.status_file}#${rule.field_path}`;
-    if (keySeen.has(key) || workflowSeen.has(rule.focused_workflow)) {
-      fail('REGISTERED_TRANSITION_RULE_AMBIGUOUS', `${key}:${rule.focused_workflow}`);
-    }
-    keySeen.add(key);
-    workflowSeen.add(rule.focused_workflow);
-  }
-  if (!workflowSeen.has(expectedWorkflow)) fail('EXPECTED_WORKFLOW_NOT_REGISTERED', expectedWorkflow);
-  return rules;
-}
-function resolve(root, env) {
-  const expectedWorkflow = String(env.MCFT_EXPECTED_FOCUSED_WORKFLOW || '').trim();
-  assert.match(expectedWorkflow, /^[A-Za-z0-9_.-]+$/, 'MCFT_EXPECTED_FOCUSED_WORKFLOW_INVALID');
-  const base = canonicalCommit(root, env.MCFT_BASE_SHA, 'MCFT_BASE_SHA');
-  const head = canonicalCommit(root, env.MCFT_CANDIDATE_SHA || git(root, ['rev-parse', 'HEAD']), 'MCFT_CANDIDATE_SHA');
-  const ancestry = cp.spawnSync('git', ['merge-base', '--is-ancestor', base, head], { cwd: root });
-  if (ancestry.status !== 0) fail('MCFT_BASE_NOT_ANCESTOR_OF_HEAD', `${base}:${head}`);
-  const registry = readJsonAt(root, base, REGISTRY, 'BASE_AUTHORITY_REGISTRY');
-  if (!registry) fail('BASE_AUTHORITY_REGISTRY_MISSING', REGISTRY);
-  const rules = validateRules(registry, expectedWorkflow);
-  const transitions = [];
-  for (const rule of rules) {
-    const beforeDocument = readJsonAt(root, base, rule.status_file, 'BASE_REGISTERED_STATUS_FILE');
-    if (!beforeDocument) fail('BASE_REGISTERED_STATUS_FILE_MISSING', rule.status_file);
-    const afterDocument = readJsonAt(root, head, rule.status_file, 'REGISTERED_STATUS_FILE');
-    if (!afterDocument) fail('REGISTERED_STATUS_FILE_DELETED', rule.status_file);
-    const before = getField(beforeDocument, rule.field_path);
-    if (before === undefined) fail('BASE_REGISTERED_CANDIDATE_FIELD_MISSING', `${rule.status_file}:${rule.field_path}`);
-    const after = getField(afterDocument, rule.field_path);
-    if (after === undefined) fail('REGISTERED_CANDIDATE_FIELD_REMOVED', `${rule.status_file}:${rule.field_path}`);
-    if (same(before, after)) continue;
-    const allowed = rule.allowed_candidate_values.some((value) => same(value, after));
-    if (!allowed) {
-      fail('REGISTERED_CANDIDATE_FIELD_CHANGED_TO_UNALLOWED_VALUE',
-        `${rule.status_file}:${rule.field_path}:${JSON.stringify(after)}`);
-    }
-    transitions.push({
-      capability_line: rule.capability_line,
-      status_file: rule.status_file,
-      field_path: rule.field_path,
-      before,
-      after,
-      focused_workflow: rule.focused_workflow,
-      standard_workflow: rule.standard_workflow || null,
-    });
-  }
-  if (transitions.length > 1) fail('MULTIPLE_REGISTERED_CANDIDATE_TRANSITIONS', JSON.stringify(transitions));
-  const owned = transitions.filter((transition) => transition.focused_workflow === expectedWorkflow);
-  const disposition = owned.length === 1 ? 'APPLICABLE' : 'NOT_APPLICABLE';
-  const reason = owned.length === 1
-    ? 'REGISTERED_TRANSITION_OWNED_BY_EXPECTED_WORKFLOW'
-    : transitions.length === 1
-      ? 'REGISTERED_TRANSITION_OWNED_BY_FOREIGN_WORKFLOW'
-      : 'NO_REGISTERED_CANDIDATE_TRANSITION';
-  const changedRaw = git(root, ['diff', '--name-only', `${base}...${head}`]);
-  return {
-    schema_version: 'geox_mcft_registry_focused_workflow_applicability_v1_result',
-    status: 'PASS', disposition, reason, expected_focused_workflow: expectedWorkflow,
-    base_sha: base, head_sha: head, authority_registry_subject: base,
-    registered_transition_count: transitions.length, owned_transition_count: owned.length,
-    transitions, changed_files: changedRaw ? changedRaw.split(/\r?\n/).filter(Boolean).sort() : [],
-    database_execution_required: disposition === 'APPLICABLE', foreign_slice_failure: false,
-  };
-}
-function writeRepoFile(root, relative, value) {
-  const target = path.join(root, relative);
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, typeof value === 'string' ? value : `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-}
-function selfTestScenario(name, options) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), `mcft-resolver-${name}-`));
-  try {
-    git(root, ['init', '-b', 'main']);
-    git(root, ['config', 'user.name', 'MCFT Resolver']);
-    git(root, ['config', 'user.email', 'mcft-resolver@example.invalid']);
-    const rules = options.rules || [
-      { status_file: 'docs/s1.json', field_path: 'candidate', allowed_candidate_values: [true], focused_workflow: 'wf-s1', standard_workflow: 'ci' },
-      { status_file: 'docs/s2.json', field_path: 'candidate', allowed_candidate_values: [true], focused_workflow: 'wf-s2', standard_workflow: 'ci' },
-    ];
-    writeRepoFile(root, REGISTRY, { registry_id: 'MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1', capabilities: [{ capability_line: 'MCFT-CAP-08', candidate_transition_fields: rules }] });
-    if (!options.omitBaseS1) writeRepoFile(root, 'docs/s1.json', options.baseS1 || { candidate: false });
-    if (!options.omitBaseS2) writeRepoFile(root, 'docs/s2.json', options.baseS2 || { candidate: false });
-    writeRepoFile(root, 'README.md', 'base\n');
-    git(root, ['add', '.']); git(root, ['commit', '-m', 'base']);
-    const base = git(root, ['rev-parse', 'HEAD']);
-    if (options.mutate) options.mutate(root);
-    writeRepoFile(root, 'touch.txt', `${name}\n`);
-    git(root, ['add', '-A']); git(root, ['commit', '-m', name]);
-    const head = git(root, ['rev-parse', 'HEAD']);
-    try {
-      const result = resolve(root, { MCFT_BASE_SHA: base, MCFT_CANDIDATE_SHA: head, MCFT_EXPECTED_FOCUSED_WORKFLOW: options.workflow || 'wf-s2' });
-      if (options.expectedError) throw new Error(`SELFTEST_EXPECTED_ERROR_NOT_THROWN:${options.expectedError}`);
-      assert.equal(result.disposition, options.expectedDisposition);
-      return { name, disposition: result.disposition };
-    } catch (error) {
-      if (!options.expectedError) throw error;
-      assert.match(String(error.message), new RegExp(`^${options.expectedError}(?::|$)`));
-      return { name, error: options.expectedError };
-    }
-  } finally { fs.rmSync(root, { recursive: true, force: true }); }
-}
-function selfTest() {
-  const scenarios = [
-    selfTestScenario('no-transition', { expectedDisposition: 'NOT_APPLICABLE' }),
-    selfTestScenario('owned-transition', { mutate: (r) => writeRepoFile(r, 'docs/s2.json', { candidate: true }), expectedDisposition: 'APPLICABLE' }),
-    selfTestScenario('foreign-transition', { mutate: (r) => writeRepoFile(r, 'docs/s2.json', { candidate: true }), workflow: 'wf-s1', expectedDisposition: 'NOT_APPLICABLE' }),
-    selfTestScenario('status-deleted', { mutate: (r) => fs.rmSync(path.join(r, 'docs/s2.json')), expectedError: 'REGISTERED_STATUS_FILE_DELETED' }),
-    selfTestScenario('field-removed', { mutate: (r) => writeRepoFile(r, 'docs/s2.json', {}), expectedError: 'REGISTERED_CANDIDATE_FIELD_REMOVED' }),
-    selfTestScenario('unalowed-rollback', { baseS2: { candidate: true }, mutate: (r) => writeRepoFile(r, 'docs/s2.json', { candidate: false }), expectedError: 'REGISTERED_CANDIDATE_FIELD_CHANGED_TO_UNALLOWED_VALUE' }),
-    selfTestScenario('illegal-type', { mutate: (r) => writeRepoFile(r, 'docs/s2.json', { candidate: 'true' }), expectedError: 'REGISTERED_CANDIDATE_FIELD_CHANGED_TO_UNALLOWED_VALUE' }),
-    selfTestScenario('ambiguous-rule', { rules: [
-      { status_file: 'docs/s2.json', field_path: 'candidate', allowed_candidate_values: [true], focused_workflow: 'wf-s2' },
-      { status_file: 'docs/s2.json', field_path: 'candidate', allowed_candidate_values: [true], focused_workflow: 'wf-s2-duplicate' },
-    ], expectedError: 'REGISTERED_TRANSITION_RULE_AMBIGUOUS' }),
-    selfTestScenario('multiple-transitions', { mutate: (r) => { writeRepoFile(r, 'docs/s1.json', { candidate: true }); writeRepoFile(r, 'docs/s2.json', { candidate: true }); }, expectedError: 'MULTIPLE_REGISTERED_CANDIDATE_TRANSITIONS' }),
-  ];
-  return { schema_version: 'geox_mcft_registry_focused_workflow_applicability_v1_selftest', status: 'PASS', scenario_count: scenarios.length, scenarios };
-}
-
-try {
-  if (MODE === '--self-test') {
-    console.log(JSON.stringify(selfTest()));
-  } else {
-    assert.equal(MODE, '--resolve', 'UNKNOWN_MODE');
-    const result = resolve(ROOT, process.env);
-    write(result);
-    console.log(result.disposition);
-  }
-} catch (error) {
-  const result = { schema_version: 'geox_mcft_registry_focused_workflow_applicability_v1_result', status: 'FAIL', error: error instanceof Error ? error.message : String(error) };
-  write(result); console.error(result.error); process.exitCode = 1;
-}
+function resolve(r,e){const wf=String(e.MCFT_EXPECTED_FOCUSED_WORKFLOW||'').trim();A.match(wf,/^[A-Za-z0-9_.-]+$/,'MCFT_EXPECTED_FOCUSED_WORKFLOW_INVALID');const b=sha(r,e.MCFT_BASE_SHA,'MCFT_BASE_SHA'),h=sha(r,e.MCFT_CANDIDATE_SHA||git(r,['rev-parse','HEAD']),'MCFT_CANDIDATE_SHA');if(C.spawnSync('git',['merge-base','--is-ancestor',b,h],{cwd:r}).status)bad('MCFT_BASE_NOT_ANCESTOR_OF_HEAD',`${b}:${h}`);const reg=json(r,b,REG,'BASE_AUTHORITY_REGISTRY');if(!reg)bad('BASE_AUTHORITY_REGISTRY_MISSING',REG);const ch=diff(r,b,h),m=maintenance(r,{wf,b,h,reg,ch,env:e});if(m)return m;const rs=rules(reg,wf),ts=[];for(const x of rs){const bd=json(r,b,x.status_file,'BASE_REGISTERED_STATUS_FILE');if(!bd)bad('BASE_REGISTERED_STATUS_FILE_MISSING',x.status_file);const hd=json(r,h,x.status_file,'REGISTERED_STATUS_FILE');if(!hd)bad('REGISTERED_STATUS_FILE_DELETED',x.status_file);const before=field(bd,x.field_path),after=field(hd,x.field_path);if(before===undefined)bad('BASE_REGISTERED_CANDIDATE_FIELD_MISSING',`${x.status_file}:${x.field_path}`);if(after===undefined)bad('REGISTERED_CANDIDATE_FIELD_REMOVED',`${x.status_file}:${x.field_path}`);if(eq(before,after))continue;if(!x.allowed_candidate_values.some(v=>eq(v,after)))bad('REGISTERED_CANDIDATE_FIELD_CHANGED_TO_UNALLOWED_VALUE',`${x.status_file}:${x.field_path}:${JSON.stringify(after)}`);ts.push({capability_line:x.capability_line,status_file:x.status_file,field_path:x.field_path,before,after,focused_workflow:x.focused_workflow,standard_workflow:x.standard_workflow||null})}if(ts.length>1)bad('MULTIPLE_REGISTERED_CANDIDATE_TRANSITIONS',JSON.stringify(ts));const own=ts.filter(x=>x.focused_workflow===wf),disp=own.length===1?'APPLICABLE':'NOT_APPLICABLE',reason=own.length===1?'REGISTERED_TRANSITION_OWNED_BY_EXPECTED_WORKFLOW':ts.length===1?'REGISTERED_TRANSITION_OWNED_BY_FOREIGN_WORKFLOW':'NO_REGISTERED_CANDIDATE_TRANSITION';return{schema_version:'geox_mcft_registry_focused_workflow_applicability_v1_result',status:'PASS',disposition:disp,reason,expected_focused_workflow:wf,base_sha:b,head_sha:h,authority_registry_subject:b,registered_transition_count:ts.length,owned_transition_count:own.length,transitions:ts,changed_files:ch,database_execution_required:disp==='APPLICABLE',foreign_slice_failure:false,pr_modified_registry_used_for_candidate_authority:false}}
+function put(r,file,v){const q=P.join(r,file);F.mkdirSync(P.dirname(q),{recursive:true});F.writeFileSync(q,typeof v==='string'?v:JSON.stringify(v,null,2)+'\n')}
+function scenario(name,o={}){const r=F.mkdtempSync(P.join(O.tmpdir(),`mcft-${name}-`));try{git(r,['init','-b','main']);git(r,['config','user.name','MCFT']);git(r,['config','user.email','mcft@example.invalid']);const rr=o.rules||[{status_file:'docs/s1.json',field_path:'candidate',allowed_candidate_values:[true],focused_workflow:'wf-s1',standard_workflow:'ci'},{status_file:'docs/s2.json',field_path:'candidate',allowed_candidate_values:[true],focused_workflow:'wf-s2',standard_workflow:'ci'}],reg=o.registry||{registry_id:'MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1',capabilities:[{capability_line:'MCFT-CAP-08',authoritative_candidate_status_paths:[...new Set(rr.map(x=>x.status_file))],candidate_transition_fields:rr}]};put(r,REG,reg);if(!o.no1)put(r,'docs/s1.json',o.b1||{candidate:false});if(!o.no2)put(r,'docs/s2.json',o.b2||{candidate:false});put(r,RES,'base\n');put(r,'README.md','base\n');git(r,['add','.']);git(r,['commit','-m','base']);const b=git(r,['rev-parse','HEAD']);if(o.m)o.m(r,reg);if(!o.noTouch)put(r,'touch.txt',name+'\n');git(r,['add','-A']);git(r,['commit','-m',name]);const h=git(r,['rev-parse','HEAD']);try{const z=resolve(r,{MCFT_BASE_SHA:b,MCFT_CANDIDATE_SHA:h,MCFT_EXPECTED_FOCUSED_WORKFLOW:o.w||'wf-s2',MCFT_RESOLVER_BOOTSTRAP_BASE_BLOB:o.actual?git(r,['rev-parse',`${b}:${RES}`]):undefined});if(o.err)throw Error('EXPECTED_ERROR');A.equal(z.disposition,o.disp);if(o.reason)A.equal(z.reason,o.reason);return{name,disposition:z.disposition,reason:z.reason}}catch(e){if(!o.err)throw e;A.match(e.message,new RegExp(`^${o.err}(?::|$)`));return{name,error:o.err}}}finally{F.rmSync(r,{recursive:true,force:true})}}
+const support=(x={})=>({record_status:'TRUSTED_REGISTRY_EXISTING_PATHS_CORRECTION_CANDIDATE_NOT_EFFECTIVE',candidate_transition:false,global_applicability_resolver_delta:0,runtime_source_delta:0,...x});
+function selftest(){const s=[
+ scenario('none',{disp:'NOT_APPLICABLE'}),scenario('owned',{m:r=>put(r,'docs/s2.json',{candidate:true}),disp:'APPLICABLE'}),scenario('foreign',{m:r=>put(r,'docs/s2.json',{candidate:true}),w:'wf-s1',disp:'NOT_APPLICABLE'}),
+ scenario('deleted',{m:r=>F.rmSync(P.join(r,'docs/s2.json')),err:'REGISTERED_STATUS_FILE_DELETED'}),scenario('removed',{m:r=>put(r,'docs/s2.json',{}),err:'REGISTERED_CANDIDATE_FIELD_REMOVED'}),scenario('rollback',{b2:{candidate:true},m:r=>put(r,'docs/s2.json',{candidate:false}),err:'REGISTERED_CANDIDATE_FIELD_CHANGED_TO_UNALLOWED_VALUE'}),scenario('type',{m:r=>put(r,'docs/s2.json',{candidate:'true'}),err:'REGISTERED_CANDIDATE_FIELD_CHANGED_TO_UNALLOWED_VALUE'}),
+ scenario('ambiguous',{rules:[{status_file:'docs/s2.json',field_path:'candidate',allowed_candidate_values:[true],focused_workflow:'wf-s2'},{status_file:'docs/s2.json',field_path:'candidate',allowed_candidate_values:[true],focused_workflow:'wf-x'}],err:'REGISTERED_TRANSITION_RULE_AMBIGUOUS'}),scenario('multiple',{m:r=>{put(r,'docs/s1.json',{candidate:true});put(r,'docs/s2.json',{candidate:true})},err:'MULTIPLE_REGISTERED_CANDIDATE_TRANSITIONS'}),
+ scenario('bootstrap',{noTouch:true,no2:true,actual:true,m:r=>{put(r,RES,'new\n');put(r,W,'SHARED_RESOLVER_GOVERNANCE_BOOTSTRAP_MODE: DEDICATED_FAIL_CLOSED\n');put(r,V,'SHARED_RESOLVER_GOVERNANCE_BOOTSTRAP_MODE\n')},disp:'NOT_APPLICABLE',reason:'CAP08_S2_CLASSIFIER_AND_RESOLVER_GOVERNANCE_BOOTSTRAP_WITHOUT_REGISTERED_STATUS_TRANSITION'}),
+ scenario('self',{noTouch:true,no2:true,m:r=>put(r,RES,'new\n'),disp:'NOT_APPLICABLE',reason:'RESOLVER_SELF_MAINTENANCE_WITHOUT_REGISTERED_STATUS_TRANSITION'}),
+ scenario('regfix',{noTouch:true,no2:true,w:'wf-s1',m:(r,b)=>{const h=structuredClone(b);h.capabilities[0].authoritative_candidate_status_paths=['docs/s1.json'];h.capabilities[0].candidate_transition_fields=[b.capabilities[0].candidate_transition_fields[0]];put(r,REG,h);put(r,'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-V1.json',support());put(r,'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-BOUNDARY-V1.json',support())},disp:'NOT_APPLICABLE',reason:'TRUSTED_REGISTRY_MAINTENANCE_WITHOUT_REGISTERED_STATUS_TRANSITION'}),
+ scenario('regclaim',{noTouch:true,m:(r,b)=>{const h=structuredClone(b);h.x=1;put(r,REG,h);put(r,'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-V1.json',support({candidate_transition:true}))},err:'REGISTRY_MAINTENANCE_SUPPORT_INVALID'}),
+ scenario('regstatus',{noTouch:true,m:(r,b)=>{const h=structuredClone(b);h.x=1;put(r,REG,h);put(r,'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-V1.json',support());put(r,'docs/s2.json',{candidate:true})},err:'REGISTRY_MAINTENANCE_SUPPORT_PATH_INVALID'}),
+ scenario('regfile',{noTouch:true,m:(r,b)=>{const h=structuredClone(b);h.x=1;put(r,REG,h);put(r,'README.md','x\n')},err:'REGISTRY_MAINTENANCE_SUPPORT_PATH_INVALID'})];return{schema_version:'geox_mcft_registry_focused_workflow_applicability_v1_selftest',status:'PASS',scenario_count:s.length,scenarios:s,maintenance_modes:['CAP08_S2_CLASSIFIER_AND_RESOLVER_GOVERNANCE_BOOTSTRAP_WITHOUT_REGISTERED_STATUS_TRANSITION','RESOLVER_SELF_MAINTENANCE_WITHOUT_REGISTERED_STATUS_TRANSITION','TRUSTED_REGISTRY_MAINTENANCE_WITHOUT_REGISTERED_STATUS_TRANSITION'],pr_modified_registry_used_for_candidate_authority:false}}
+try{if(MODE==='--self-test')console.log(JSON.stringify(selftest()));else{A.equal(MODE,'--resolve','UNKNOWN_MODE');const r=resolve(ROOT,process.env);write(r);console.log(r.disposition)}}catch(e){const r={schema_version:'geox_mcft_registry_focused_workflow_applicability_v1_result',status:'FAIL',error:e instanceof Error?e.message:String(e)};write(r);console.error(r.error);process.exitCode=1}
