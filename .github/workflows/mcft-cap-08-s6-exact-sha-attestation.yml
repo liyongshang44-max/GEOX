@@ -1,0 +1,157 @@
+name: mcft-cap-08-s6-exact-sha-attestation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-exact-sha-attestation.yml'
+      - '.github/workflows/mcft-cap-08-s6-final-closure.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CANDIDATE-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-CLOSURE-EVIDENCE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-HARD-ACCEPTANCE-LEDGER-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_SHA_ATTESTATION_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_CLOSURE_CANDIDATE_V1.cjs'
+  workflow_dispatch:
+    inputs:
+      subject_sha:
+        description: Exact current main S6 Candidate merge SHA to attest
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  statuses: write
+
+concurrency:
+  group: mcft-cap08-s6-exact-sha-${{ inputs.subject_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  exact-sha-r2-attestation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MCFT_SUBJECT_SHA: ${{ inputs.subject_sha || github.sha }}
+    steps:
+      - name: Checkout exact S6 Candidate merge SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.subject_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate exact current-main subject
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$MCFT_SUBJECT_SHA"
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = "$MCFT_SUBJECT_SHA"
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Derive exact merge-tree and closure authority artifact
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_SHA_ATTESTATION_V1.cjs
+
+      - name: Build deterministic R2 transport archive
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output/archive-input
+          cp acceptance-output/MCFT_CAP_08_S6_EXACT_SHA_ATTESTATION.json acceptance-output/archive-input/canonical-artifact.json
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+            -cf acceptance-output/mcft-cap-08-s6-exact-sha-attestation.tar \
+            -C acceptance-output/archive-input canonical-artifact.json
+          gzip -n -f acceptance-output/mcft-cap-08-s6-exact-sha-attestation.tar
+
+      - name: Upload and read back R2 730-day immutable authority
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_ATTESTATION_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_ATTESTATION_S3_SECRET_ACCESS_KEY }}
+          GEOX_MCFT_ATTESTATION_S3_ENDPOINT: ${{ vars.GEOX_MCFT_ATTESTATION_S3_ENDPOINT }}
+          GEOX_MCFT_ATTESTATION_S3_BUCKET: ${{ vars.GEOX_MCFT_ATTESTATION_S3_BUCKET }}
+          GEOX_MCFT_ATTESTATION_S3_REGION: ${{ vars.GEOX_MCFT_ATTESTATION_S3_REGION }}
+          GEOX_MCFT_ATTESTATION_S3_FORCE_PATH_STYLE: ${{ vars.GEOX_MCFT_ATTESTATION_S3_FORCE_PATH_STYLE }}
+          MCFT_CANONICAL_ARTIFACT_PATH: acceptance-output/MCFT_CAP_08_S6_EXACT_SHA_ATTESTATION.json
+          MCFT_ARTIFACT_ARCHIVE_PATH: acceptance-output/mcft-cap-08-s6-exact-sha-attestation.tar.gz
+          MCFT_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          MCFT_REPOSITORY_NAME: GEOX
+          MCFT_ARTIFACT_NAME: mcft-cap-08-s6-exact-sha-${{ inputs.subject_sha || github.sha }}
+          MCFT_RETENTION_LEVEL: R2
+          MCFT_RETENTION_DAYS: '730'
+        run: node scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs --upload-readback
+
+      - name: Verify and normalize R2 retention locator
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const source = 'acceptance-output/MCFT_CAP_07_ATTESTATION_RETENTION_LOCATOR.json';
+          const target = 'acceptance-output/MCFT_CAP_08_S6_ATTESTATION_RETENTION_LOCATOR.json';
+          const locator = JSON.parse(fs.readFileSync(source, 'utf8'));
+          if (locator.retention_level !== 'R2') throw new Error('R2_LEVEL_REQUIRED');
+          if (locator.readback_verified !== true) throw new Error('R2_READBACK_REQUIRED');
+          if (locator.locked_version_delete_denied !== true) throw new Error('R2_LOCKED_DELETE_DENIAL_REQUIRED');
+          const minimum = Date.now() + 729 * 86400000;
+          if (Date.parse(locator.retain_until) < minimum) throw new Error('R2_730_DAY_RETENTION_NOT_ESTABLISHED');
+          fs.writeFileSync(target, JSON.stringify(locator, null, 2) + '\n');
+          NODE
+
+      - name: Upload transient GitHub convenience copy
+        id: artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-exact-sha-${{ inputs.subject_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_08_S6_EXACT_SHA_ATTESTATION.json
+            acceptance-output/MCFT_CAP_08_S6_ATTESTATION_RETENTION_LOCATOR.json
+            acceptance-output/mcft-cap-08-s6-exact-sha-attestation.tar.gz
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish S6 exact-SHA R2 authority status
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          MCFT_JOB_STATUS: ${{ job.status }}
+          MCFT_ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const fs = require('node:fs');
+            let attestation = null;
+            let locator = null;
+            try { attestation = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_08_S6_EXACT_SHA_ATTESTATION.json', 'utf8')); } catch {}
+            try { locator = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_08_S6_ATTESTATION_RETENTION_LOCATOR.json', 'utf8')); } catch {}
+            const artifactId = String(process.env.MCFT_ARTIFACT_ID || '');
+            const ok = process.env.MCFT_JOB_STATUS === 'success'
+              && attestation?.status === 'PASS'
+              && attestation?.capability_complete === true
+              && attestation?.hard_acceptance_resolution?.effective_resolved_item_count === 24
+              && attestation?.candidate_to_merge_tree_delta === 0
+              && locator?.retention_level === 'R2'
+              && locator?.readback_verified === true
+              && locator?.locked_version_delete_denied === true
+              && artifactId.length > 0;
+            const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+            await github.rest.repos.createCommitStatus({
+              owner,
+              repo,
+              sha: process.env.MCFT_SUBJECT_SHA,
+              state: ok ? 'success' : 'failure',
+              context: 'mcft-cap-08/s6-exact-sha-attestation',
+              description: (ok
+                ? `PASS S6 COMPLETE R2/730 artifact=${artifactId}`
+                : `FAIL S6 exact-SHA run=${process.env.GITHUB_RUN_ID}`).slice(0, 140),
+              target_url: `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+            });

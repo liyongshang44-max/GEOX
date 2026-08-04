@@ -1,0 +1,49 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_candidate_boundary_v1",
+  "record_status": "S6_FINAL_CLOSURE_CANDIDATE_BOUNDARY_FROZEN",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "9441d9ec5ae831f570a7075cd0455eea420c7725",
+  "changed_file_count": 8,
+  "changed_files": [
+    ".github/workflows/mcft-cap-08-s6-exact-sha-attestation.yml",
+    ".github/workflows/mcft-cap-08-s6-final-closure.yml",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-CANDIDATE-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FINAL-CLOSURE-EVIDENCE-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-HARD-ACCEPTANCE-LEDGER-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_EXACT_SHA_ATTESTATION_V1.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FINAL_CLOSURE_CANDIDATE_V1.cjs"
+  ],
+  "status_transition": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json",
+    "field": "s6_candidate_implemented",
+    "base_value": false,
+    "candidate_value": true
+  },
+  "formal_database_execution_in_candidate_pr": false,
+  "formal_comparator_execution_in_candidate_pr": false,
+  "workflow_dispatch_in_candidate_pr": false,
+  "runtime_source_changed": false,
+  "migration_changed": false,
+  "business_schema_changed": false,
+  "route_changed": false,
+  "web_changed": false,
+  "scheduler_changed": false,
+  "candidate_hard_acceptance_pass_count": 24,
+  "candidate_merge_tree_equality_verified": false,
+  "r2_retention_attestation_created": false,
+  "capability_complete": false,
+  "mcft_cap_09_authorized": false,
+  "next_legal_action": "PROTECTED_MERGE_THEN_EXACT_SHA_R2_ATTESTATION",
+  "nonclaims": [
+    "NO_DATABASE_REEXECUTION",
+    "NO_COMPARATOR_RERUN",
+    "NO_RUNTIME_CHANGE",
+    "NO_PRODUCTION_WRITE_AUTHORITY",
+    "NO_PREMERGE_TREE_EQUALITY_CLAIM",
+    "NO_PREMERGE_R2_ATTESTATION",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ]
+}
