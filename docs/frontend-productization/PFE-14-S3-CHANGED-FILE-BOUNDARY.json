@@ -1,0 +1,64 @@
+{
+  "schema_version": "geox_pfe14_s3_changed_file_boundary_v1",
+  "boundary_id": "PFE-14-S3-CHANGED-FILE-BOUNDARY",
+  "change_class": "PFE_14_S3_OPERATOR_SHELL_CONSOLIDATION",
+  "base_main_sha": "79fbda35e19196f0d1752e06e27a2a08fd8454d9",
+  "predecessor_merge_sha": "79fbda35e19196f0d1752e06e27a2a08fd8454d9",
+  "expected_changed_file_count": 6,
+  "expected_changed_files": [
+    "apps/web/src/layouts/OperatorLayout.tsx",
+    "apps/web/src/styles/operatorShellApple.css",
+    "docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json",
+    "docs/frontend-productization/PFE-14-S3-CHANGED-FILE-BOUNDARY.json",
+    "docs/frontend-productization/PFE-14-S3-OPERATOR-SHELL-CONTRACT.json",
+    "scripts/frontend_acceptance/ACCEPTANCE_PFE_14_S3_OPERATOR_SHELL.cjs"
+  ],
+  "allowed_exact_files": [
+    "apps/web/src/layouts/OperatorLayout.tsx",
+    "apps/web/src/styles/operatorShellApple.css",
+    "docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json",
+    "docs/frontend-productization/PFE-14-S3-CHANGED-FILE-BOUNDARY.json",
+    "docs/frontend-productization/PFE-14-S3-OPERATOR-SHELL-CONTRACT.json",
+    "scripts/frontend_acceptance/ACCEPTANCE_PFE_14_S3_OPERATOR_SHELL.cjs"
+  ],
+  "forbidden_prefixes": [
+    ".github/",
+    "apps/server/",
+    "apps/web/src/api/",
+    "apps/web/src/app/",
+    "apps/web/src/features/",
+    "fixtures/",
+    "migrations/",
+    "packages/"
+  ],
+  "forbidden_exact_files": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "apps/web/package.json",
+    "apps/web/src/styles.css"
+  ],
+  "delta_assertions": {
+    "operator_layout_delta": 1,
+    "operator_shell_css_file_count": 1,
+    "valid_primary_nav_count": 2,
+    "disabled_nav_placeholder_count": 0,
+    "pilot_layout_injection_count": 0,
+    "page_source_delta": 0,
+    "route_source_delta": 0,
+    "api_client_delta": 0,
+    "backend_source_delta": 0,
+    "database_delta": 0,
+    "package_delta": 0,
+    "workflow_delta": 0,
+    "runtime_claim_delta": 0,
+    "controlled_action_delta": 0
+  },
+  "authoritative_runtime_context_enabled": false,
+  "default_runtime_context": "GOVERNED_STATIC_REPLAY_NONCLAIM",
+  "candidate_declaration": false,
+  "runtime_implementation_authority": false,
+  "shadow_online_product_claim": false,
+  "completion_claim_when_accepted": "PFE_14_S3_OPERATOR_SHELL_CONSOLIDATED",
+  "next_slice_after_effectiveness": "PFE-14.S4_SCOPE_AND_RUNTIME_OVERVIEW"
+}

@@ -1,0 +1,361 @@
+/* PFE-14 S3 Operator-owned shell styles. Imported after legacy operatorShell.css. */
+.operatorShell.operatorRuntimeVisualRoot {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  background: var(--operator-runtime-page-background);
+  color: var(--operator-runtime-text-primary);
+  font-family: var(--operator-runtime-font-family);
+  font-weight: 400;
+}
+
+.operatorShell__sidebar {
+  min-width: 0;
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  align-content: start;
+  gap: 24px;
+  padding: 24px 18px;
+  border-right: 1px solid var(--operator-runtime-separator);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: saturate(180%) blur(24px);
+}
+
+.operatorShell__brand {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 8px 18px;
+  border-bottom: 1px solid var(--operator-runtime-separator);
+  color: var(--operator-runtime-text-primary);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.operatorShell__brand > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.operatorShell__logoMark {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 8px 8px 8px 2px;
+  background: var(--operator-runtime-accent);
+  transform: rotate(-16deg);
+  box-shadow: var(--operator-runtime-shadow-panel);
+}
+
+.operatorShell__nav {
+  display: grid;
+  gap: 6px;
+}
+
+.operatorShell__navItem {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--operator-runtime-radius-control);
+  color: var(--operator-runtime-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-decoration: none;
+  transition:
+    color var(--operator-runtime-motion-fast) ease,
+    background-color var(--operator-runtime-motion-fast) ease,
+    border-color var(--operator-runtime-motion-fast) ease;
+}
+
+.operatorShell__navItem:hover {
+  color: var(--operator-runtime-text-primary);
+  background: rgba(118, 118, 128, 0.07);
+}
+
+.operatorShell__navItem.isActive {
+  color: var(--operator-runtime-accent);
+  background: var(--operator-runtime-accent-soft);
+  border-color: rgba(23, 107, 69, 0.16);
+  font-weight: 600;
+}
+
+.operatorShell__navItem:focus-visible {
+  outline: 3px solid var(--operator-runtime-focus-ring);
+  outline-offset: 2px;
+}
+
+.operatorShell__scope {
+  align-self: end;
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid var(--operator-runtime-separator);
+  border-radius: var(--operator-runtime-radius-card);
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: var(--operator-runtime-shadow-panel);
+}
+
+.operatorShell__scope span {
+  color: var(--operator-runtime-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.operatorShell__scope strong {
+  color: var(--operator-runtime-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.operatorShell__footer {
+  margin: 0;
+  padding: 0 4px;
+  color: var(--operator-runtime-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.operatorShell__mainWrap {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  padding: 28px 32px 40px;
+}
+
+.operatorShell__topbar {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 2px 2px 20px;
+  border-bottom: 1px solid var(--operator-runtime-separator);
+}
+
+.operatorShell__heading {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.operatorShell__eyebrow {
+  color: var(--operator-runtime-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+}
+
+.operatorShell__title {
+  margin: 0;
+  color: var(--operator-runtime-text-primary);
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.operatorShell__lead {
+  max-width: 780px;
+  margin: 0;
+  color: var(--operator-runtime-text-secondary);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.operatorShell__topActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.operatorShell__readOnly {
+  display: grid;
+  gap: 2px;
+  padding: 7px 10px;
+  border: 1px solid var(--operator-runtime-separator);
+  border-radius: var(--operator-runtime-radius-control);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--operator-runtime-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.operatorShell__readOnly small {
+  color: var(--operator-runtime-text-secondary);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.operatorShell .localeToggle {
+  min-height: 38px;
+  padding: 3px;
+  border: 1px solid var(--operator-runtime-separator);
+  border-radius: var(--operator-runtime-radius-control);
+  background: rgba(118, 118, 128, 0.08);
+}
+
+.operatorShell .localeToggle__button {
+  min-height: 30px;
+  border-radius: 9px;
+  color: var(--operator-runtime-text-secondary);
+  font-weight: 500;
+}
+
+.operatorShell .localeToggle__button.isActive {
+  background: var(--operator-runtime-panel-background-solid);
+  color: var(--operator-runtime-text-primary);
+  box-shadow: var(--operator-runtime-shadow-panel);
+  font-weight: 600;
+}
+
+.operatorShell .localeToggle__button:focus-visible {
+  outline: 3px solid var(--operator-runtime-focus-ring);
+  outline-offset: 2px;
+}
+
+.operatorShell__runtimeContext {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.75fr) minmax(360px, 1.25fr);
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid var(--operator-runtime-separator);
+  border-radius: var(--operator-runtime-radius-container);
+  background: var(--operator-runtime-panel-background);
+  box-shadow: var(--operator-runtime-shadow-panel);
+  backdrop-filter: saturate(180%) blur(18px);
+}
+
+.operatorShell__runtimePrimary {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  padding: 4px;
+}
+
+.operatorShell__runtimeHeadline {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+
+.operatorShell__runtimeHeadline strong {
+  color: var(--operator-runtime-text-primary);
+  font-size: clamp(20px, 2.2vw, 28px);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.operatorShell__runtimeHeadline span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 4px 9px;
+  border: 1px solid rgba(23, 107, 69, 0.16);
+  border-radius: 999px;
+  background: var(--operator-runtime-accent-soft);
+  color: var(--operator-runtime-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.operatorShell__runtimePrimary p {
+  margin: 0;
+  color: var(--operator-runtime-text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.operatorShell__runtimeContext .productTechnicalDisclosure {
+  align-self: start;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: none;
+}
+
+.operatorShell__content {
+  min-width: 0;
+}
+
+@media (max-width: 1040px) {
+  .operatorShell.operatorRuntimeVisualRoot {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .operatorShell__mainWrap {
+    padding-inline: 24px;
+  }
+
+  .operatorShell__runtimeContext {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 820px) {
+  .operatorShell.operatorRuntimeVisualRoot {
+    grid-template-columns: 1fr;
+  }
+
+  .operatorShell__sidebar {
+    min-height: auto;
+    grid-template-rows: auto auto;
+    padding: 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--operator-runtime-separator);
+  }
+
+  .operatorShell__nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operatorShell__scope,
+  .operatorShell__footer {
+    display: none;
+  }
+
+  .operatorShell__mainWrap {
+    padding: 22px 18px 32px;
+  }
+}
+
+@media (max-width: 620px) {
+  .operatorShell__topbar {
+    flex-direction: column;
+  }
+
+  .operatorShell__topActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .operatorShell__title {
+    font-size: 28px;
+  }
+
+  .operatorShell__runtimeContext {
+    padding: 14px;
+    border-radius: var(--operator-runtime-radius-card);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .operatorShell__navItem {
+    transition: none;
+  }
+}
