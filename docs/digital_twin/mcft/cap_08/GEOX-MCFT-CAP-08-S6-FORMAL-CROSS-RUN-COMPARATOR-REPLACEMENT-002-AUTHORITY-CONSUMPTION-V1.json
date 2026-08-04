@@ -1,0 +1,69 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_replacement_002_authority_consumption_v1",
+  "record_status": "SINGLE_FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_CONSUMED_TERMINAL_SUCCESS",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "settlement_base_main_sha": "5f8fa47f9ba0f6421fee9ff2eb5fa62ca4e4f642",
+  "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+  "comparator_execution_id": "MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-20260804-REPLACEMENT-002",
+  "effective_authority_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "591ad3c6c188d19c9e6eff89382e147854f25b63",
+    "maximum_execution_count": 1,
+    "required_execution_attempt": 1
+  },
+  "dispatch_broker": {
+    "path": ".github/workflows/mcft-cap-08-s6-formal-comparator-replacement-002-one-shot-dispatch-broker.yml",
+    "blob_sha": "9ee342492354b6f0f2bbeedb788c4fe011159284",
+    "workflow_run_id": 30900687468,
+    "workflow_run_attempt": 1,
+    "head_sha": "5f8fa47f9ba0f6421fee9ff2eb5fa62ca4e4f642",
+    "conclusion": "success",
+    "authority_gate_passed": true,
+    "preexisting_post_effectiveness_dispatch_count": 0,
+    "dispatch_api_accepted": true,
+    "dispatch_http_status": 204,
+    "target_workflow_run_id": 30900706086,
+    "target_workflow_run_attempt": 1,
+    "receipt_artifact_id": 8888932516,
+    "receipt_artifact_digest": "sha256:ccf5fb13a23c7892177d9d5e30c0be6ffe21c46a20ee19795da7a913c192628f"
+  },
+  "consumed_execution": {
+    "formal_workflow_path": ".github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-execution.yml",
+    "formal_workflow_blob_sha": "247355dc2f0a3fcb782f1621503bd30713871a81",
+    "formal_workflow_run_id": 30900706086,
+    "formal_workflow_run_attempt": 1,
+    "event": "workflow_dispatch",
+    "head_sha": "5f8fa47f9ba0f6421fee9ff2eb5fa62ca4e4f642",
+    "conclusion": "success",
+    "formal_artifact_id": 8888940447,
+    "formal_artifact_digest": "sha256:b2d24f90faa2fdf2b35c691b4bf02af14d6bcca7f1309d1fd7adaea45d6a972b",
+    "result_status": "PASS",
+    "semantic_equivalence": true,
+    "semantic_digest_a": "sha256:32c93d4f5ecd1fc50ff94418407767b48b057d77c81bf93dfe3fccf58f0df2f8",
+    "semantic_digest_b": "sha256:32c93d4f5ecd1fc50ff94418407767b48b057d77c81bf93dfe3fccf58f0df2f8",
+    "difference_count": 0,
+    "hard_acceptance_eligible": true
+  },
+  "consumption_state": {
+    "authority_consumed": true,
+    "execution_count_consumed": 1,
+    "remaining_execution_count": 0,
+    "workflow_dispatch_authorized_after_consumption": false,
+    "rerun_authorized": false,
+    "duplicate_execution_authorized": false,
+    "authority_reuse_authorized": false,
+    "same_execution_id_reuse_authorized": false
+  },
+  "next_legal_action": "MERGE_FORMAL_COMPARATOR_SUCCESS_SETTLEMENT_BEFORE_S6_CANDIDATE_FREEZE",
+  "nonclaims": [
+    "NO_AUTHORITY_REOPEN",
+    "NO_RERUN",
+    "NO_DUPLICATE_DISPATCH",
+    "NO_SAME_EXECUTION_ID_REUSE",
+    "NO_S6_CANDIDATE_IN_CONSUMPTION_RECORD",
+    "NO_LEDGER_SETTLEMENT",
+    "NO_CAP08_COMPLETION"
+  ],
+  "semantic_digest": "sha256:ddb49e2de1701fa2592d49bb8b3aa502306ae49eef411129d8c8c9f204617cca"
+}
