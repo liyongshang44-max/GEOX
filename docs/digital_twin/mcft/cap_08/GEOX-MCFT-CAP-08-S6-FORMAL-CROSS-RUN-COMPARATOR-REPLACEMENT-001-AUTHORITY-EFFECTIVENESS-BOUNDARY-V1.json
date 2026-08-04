@@ -1,0 +1,32 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_replacement_001_authority_effectiveness_boundary_v1",
+  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_001_AUTHORITY_EFFECTIVENESS_BOUNDARY_FROZEN",
+  "base_main_sha": "4959f5e97b1acea3b0906100ae2f353d352e4d8e",
+  "candidate_head_sha": "f5c5ab35dd4f2e1e462d8aff2ee955d6ef569176",
+  "candidate_merge_sha": "4959f5e97b1acea3b0906100ae2f353d352e4d8e",
+  "candidate_to_merge_file_delta": 0,
+  "new_file_count": 5,
+  "modified_file_count": 0,
+  "changed_files": [
+    ".github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-replacement-001-authority-effectiveness.yml",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-EFFECTIVENESS-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-EFFECTIVENESS-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_001_AUTHORITY_EFFECTIVENESS_V1.cjs"
+  ],
+  "runtime_source_file_count": 0,
+  "comparator_implementation_file_count": 0,
+  "execution_workflow_file_count": 0,
+  "effective_authority_file_count": 1,
+  "effectiveness_record_file_count": 1,
+  "workflow_dispatch_performed": false,
+  "formal_comparator_execution_performed": false,
+  "formal_evidence_created": false,
+  "candidate_authority_blob_sha": "dffb2a6df42c4a0860f461761f1cf3e2d360c8ac",
+  "object_set_blob_sha": "57d7817bc60074baee4ca3bd71c21e9bb5dab3b2",
+  "supersession_blob_sha": "1cb00a089a2e9085bf941d15df8b4add66a699d5",
+  "effective_authority_blob_sha": "c2df7c3da181ff231931a66c7f6c6b2312b7015a",
+  "effectiveness_record_blob_sha": "7d862055af2af71fd5f2c9ef20008874dc91e47c",
+  "next_legal_action": "REQUEST_EXPLICIT_ONE_SHOT_FORMAL_CROSS_RUN_COMPARATOR_EXECUTION_AUTHORIZATION",
+  "semantic_digest": "sha256:c47cf81dff3ca0331967966724e200072cb174299b259f4d0448e2d446a56e0c"
+}
