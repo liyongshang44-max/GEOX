@@ -1,21 +1,38 @@
 {
-  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_execution_workflow_v1",
-  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_EXECUTION_WORKFLOW_QUALIFIED_NOT_AUTHORIZED",
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_execution_workflow_v2",
+  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_PROVENANCE_BINDING_CORRECTED_QUALIFIED_NOT_AUTHORIZED",
   "capability_line_id": "MCFT-CAP-08",
   "slice_id": "MCFT-CAP-08.S6",
-  "base_main_sha": "b77531284ebda6c4819b78a3ee7dd2262c7a909b",
+  "base_main_sha": "da06d17670ff3ddfa261cb77bc3e765854edf176",
+  "supersedes": {
+    "contract_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-EXECUTION-WORKFLOW-V1.json",
+    "predecessor_contract_blob_sha": "403383b1ec0efaf2986b17a8265634024ec8313a",
+    "predecessor_workflow_blob_sha": "b11d60820f35ee39ac2df2a4372cbce7df8cf876",
+    "predecessor_control_blob_sha": "f6e1673681f734474340c1a1ffab79be60892a7a",
+    "reason": "CONTROL_PLANE_PROVENANCE_IDENTITY_CONFLATION"
+  },
+  "failure_settlement_precondition": {
+    "failure_settlement_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-FAILURE-SETTLEMENT-V1.json",
+    "failure_settlement_blob_sha": "f1aa8da7c1f855e80069a08651eec014a82f00e5",
+    "authority_consumption_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-CONSUMPTION-V1.json",
+    "authority_consumption_blob_sha": "dc03eac0b384ee26a43e6299842864c8190e99ba",
+    "replacement_001_authority_consumed": true,
+    "remaining_execution_count": 0,
+    "rerun_authorized": false
+  },
   "workflow": {
     "path": ".github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-execution.yml",
-    "blob_sha": "b11d60820f35ee39ac2df2a4372cbce7df8cf876",
+    "blob_sha": "247355dc2f0a3fcb782f1621503bd30713871a81",
     "workflow_dispatch_only_for_formal_execution": true,
     "pull_request_static_qualification_only": true,
     "maximum_execution_count": 1,
     "required_execution_attempt": 1,
-    "retention_days": 365
+    "retention_days": 365,
+    "authority_identity_forwarded_to_input_audit": true
   },
   "execution_control": {
     "path": "scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_comparator_execution_control_v1.cjs",
-    "blob_sha": "f6e1673681f734474340c1a1ffab79be60892a7a"
+    "blob_sha": "2cdc4e903dacb00b87f175dea58d89d80c6f3108"
   },
   "required_inputs": [
     "exact_subject_sha",
@@ -25,17 +42,54 @@
   "formal_inputs": {
     "run_a": {
       "workflow_run_id": 30845476698,
-      "artifact_id": 8868535301
+      "workflow_run_attempt": 1,
+      "workflow_head_sha": "191e363e1fd9fa4c77c8b5135fb9673c3a9286d1",
+      "artifact_id": 8868535301,
+      "artifact_digest": "sha256:4d59d3aa0373bee0c9eb33ab78dd427eb324d4d259e0786aa9c4dea9effdaf2f",
+      "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59"
     },
     "run_b": {
       "workflow_run_id": 30877450717,
-      "artifact_id": 8880057024
+      "workflow_run_attempt": 1,
+      "workflow_head_sha": "a5039a07455e8b325db23880dd8e8c460fc6aa0d",
+      "artifact_id": 8880057024,
+      "artifact_digest": "sha256:33e8b0333e1cd22bcd3002540ef5c12b72a8c545e58eb8ca185bf49edc6ae9cc",
+      "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59"
     }
+  },
+  "provenance_identity_model": {
+    "execution_subject_identity": "exact_subject_sha",
+    "control_plane_execution_identity": "workflow_head_sha",
+    "identities_are_distinct": true,
+    "workflow_head_must_equal_execution_subject": false,
+    "each_workflow_head_bound_to_settled_run": true,
+    "each_bundle_subject_bound_to_exact_subject": true
+  },
+  "qualification_matrix": {
+    "valid_distinct_workflow_heads": "PASS_REQUIRED",
+    "subject_substituted_for_workflow_head": "FAIL_REQUIRED",
+    "wrong_artifact_digest": "FAIL_REQUIRED",
+    "wrong_run_attempt": "FAIL_REQUIRED"
   },
   "authority_gate_before_artifact_transport": true,
   "input_audit_before_execution": true,
   "formal_comparator_execution_performed": false,
   "formal_comparator_evidence_created": false,
-  "next_legal_action": "ISSUE_REPLACEMENT_FORMAL_COMPARATOR_AUTHORITY_CANDIDATE_WITH_EXECUTION_WORKFLOW",
-  "semantic_digest": "sha256:51bd5439fc9fab6e057502c8d58b374b4486c907b6f5830995ca530fdab044f6"
+  "replacement_002_authority_candidate_created": false,
+  "replacement_002_authority_effective": false,
+  "fresh_execution_authorized": false,
+  "next_legal_action": "ISSUE_REPLACEMENT_002_FORMAL_COMPARATOR_AUTHORITY_CANDIDATE",
+  "nonclaims": [
+    "NO_RUNTIME_SOURCE_CHANGE",
+    "NO_DATABASE_REEXECUTION",
+    "NO_FORMAL_COMPARATOR_EXECUTION",
+    "NO_REPLACEMENT_001_RERUN",
+    "NO_REPLACEMENT_002_AUTHORITY_CANDIDATE",
+    "NO_REPLACEMENT_002_EFFECTIVENESS",
+    "NO_FRESH_EXECUTION_AUTHORIZATION",
+    "NO_S6_CANDIDATE",
+    "NO_LEDGER_SETTLEMENT",
+    "NO_CAP08_COMPLETION"
+  ],
+  "semantic_digest": "sha256:4f43167abb6d3b442d13542dcdf9a8c1b4804435a844a0e2773e071dd4597a4c"
 }

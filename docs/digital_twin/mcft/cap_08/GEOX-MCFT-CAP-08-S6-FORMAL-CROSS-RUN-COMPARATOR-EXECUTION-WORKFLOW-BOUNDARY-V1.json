@@ -1,7 +1,9 @@
 {
-  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_execution_workflow_boundary_v1",
-  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_EXECUTION_WORKFLOW_BOUNDARY_FROZEN",
-  "base_main_sha": "b77531284ebda6c4819b78a3ee7dd2262c7a909b",
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_provenance_binding_correction_boundary_v1",
+  "record_status": "FORMAL_COMPARATOR_PROVENANCE_BINDING_CORRECTION_BOUNDARY_FROZEN",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "da06d17670ff3ddfa261cb77bc3e765854edf176",
   "changed_file_count": 5,
   "changed_files": [
     ".github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-execution.yml",
@@ -10,14 +12,32 @@
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_EXECUTION_WORKFLOW_V1.cjs",
     "scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_comparator_execution_control_v1.cjs"
   ],
+  "correction_classification": "CONTROL_PLANE_PROVENANCE_IDENTITY_SEPARATION",
   "runtime_source_file_count": 0,
   "database_execution_file_count": 0,
   "formal_comparator_execution_workflow_file_count": 1,
   "execution_control_file_count": 1,
+  "semantic_comparator_implementation_file_count": 0,
   "authority_created": false,
   "authority_effective": false,
   "formal_comparator_execution_performed": false,
   "formal_evidence_created": false,
-  "next_legal_action": "ISSUE_REPLACEMENT_FORMAL_COMPARATOR_AUTHORITY_CANDIDATE_WITH_EXECUTION_WORKFLOW",
-  "semantic_digest": "sha256:79b83df4f0162c5550b598c466051b6a41b616fd4fa5ce86ede9ab6f82a39d4f"
+  "replacement_001_authority_consumed": true,
+  "replacement_001_rerun_authorized": false,
+  "replacement_002_authority_candidate_created": false,
+  "fresh_execution_authorized": false,
+  "failure_settlement_precondition_satisfied": true,
+  "next_legal_action": "ISSUE_REPLACEMENT_002_FORMAL_COMPARATOR_AUTHORITY_CANDIDATE",
+  "nonclaims": [
+    "NO_RUNTIME_CHANGE",
+    "NO_DATABASE_CHANGE",
+    "NO_EXECUTION",
+    "NO_RERUN",
+    "NO_AUTHORITY_REUSE",
+    "NO_REPLACEMENT_002_AUTHORITY",
+    "NO_S6_CANDIDATE",
+    "NO_LEDGER_SETTLEMENT",
+    "NO_CAP08_COMPLETION"
+  ],
+  "semantic_digest": "sha256:d7becf314a7bbef0fdafeb94c8bc617d79b51d36ec3d9b0626adaff71ba8b856"
 }
