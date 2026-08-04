@@ -1,0 +1,212 @@
+name: mcft-cap-08-s6-formal-comparator-replacement-001-one-shot-dispatch-broker
+run-name: Replacement-001 one-shot Formal Cross-Run Comparator dispatch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-formal-comparator-replacement-001-one-shot-dispatch-broker.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: mcft-cap08-s6-formal-comparator-replacement-001-one-shot-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch-once:
+    if: github.run_attempt == 1 && github.event.before == '09a320f9b855c36ff7b37a4f8b3815fad30ac1e4'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AUTHORITY_MAIN_SHA: ${{ github.sha }}
+      EXACT_SUBJECT_SHA: ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59
+      COMPARATOR_EXECUTION_ID: MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-20260804-REPLACEMENT-001
+      EXECUTION_AUTHORITY_PATH: docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-EXECUTION-AUTHORITY-EFFECTIVE-V1.json
+      EXPECTED_AUTHORITY_BLOB: c2df7c3da181ff231931a66c7f6c6b2312b7015a
+      EXPECTED_WORKFLOW_BLOB: b11d60820f35ee39ac2df2a4372cbce7df8cf876
+      EXPECTED_CONTROL_BLOB: f6e1673681f734474340c1a1ffab79be60892a7a
+      EXPECTED_WRAPPER_BLOB: 898fa85e2453add103671eac92ea792f0c600436
+      EXPECTED_NORMALIZATION_BLOB: 1a2f769aa8a305588eb169e43a4862e9f84db22f
+      TARGET_WORKFLOW: mcft-cap-08-s6-formal-cross-run-comparator-execution.yml
+    steps:
+      - name: Checkout authority-bearing exact main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.AUTHORITY_MAIN_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify frozen objects, authority validity, and zero prior dispatches
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$AUTHORITY_MAIN_SHA"
+          test "$(git rev-parse HEAD:$EXECUTION_AUTHORITY_PATH)" = "$EXPECTED_AUTHORITY_BLOB"
+          test "$(git rev-parse HEAD:.github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-execution.yml)" = "$EXPECTED_WORKFLOW_BLOB"
+          test "$(git rev-parse HEAD:scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_comparator_execution_control_v1.cjs)" = "$EXPECTED_CONTROL_BLOB"
+          test "$(git rev-parse HEAD:scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_semantic_comparator_v1.cjs)" = "$EXPECTED_WRAPPER_BLOB"
+          test "$(git rev-parse HEAD:scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/semantic_comparator_v1.cjs)" = "$EXPECTED_NORMALIZATION_BLOB"
+          mkdir -p acceptance-output
+          python - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          path = os.environ['EXECUTION_AUTHORITY_PATH']
+          with open(path, encoding='utf-8') as handle:
+              authority = json.load(handle)
+          assert authority['record_status'] == 'FORMAL_CROSS_RUN_COMPARATOR_AUTHORIZED'
+          assert authority['authority_effective'] is True
+          assert authority['comparator_execution_authorized'] is True
+          assert authority['maximum_execution_count'] == 1
+          assert authority['required_execution_attempt'] == 1
+          assert authority['rerun_authorized'] is False
+          assert authority['duplicate_execution_authorized'] is False
+          assert authority['authority_reuse_authorized'] is False
+          assert authority['workflow_dispatch_performed'] is False
+          assert authority['formal_comparator_executed'] is False
+          assert authority['formal_comparator_evidence_created'] is False
+          assert authority['exact_subject_sha'] == os.environ['EXACT_SUBJECT_SHA']
+          assert authority['comparator_execution_id'] == os.environ['COMPARATOR_EXECUTION_ID']
+          assert authority['dispatch_inputs']['execution_authority_path'] == path
+          expires = dt.datetime.fromisoformat(authority['expires_at'].replace('Z', '+00:00'))
+          assert dt.datetime.now(dt.timezone.utc) < expires
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          workflow = urllib.parse.quote(os.environ['TARGET_WORKFLOW'], safe='')
+          request = urllib.request.Request(
+              f'https://api.github.com/repos/{repo}/actions/workflows/{workflow}/runs?event=workflow_dispatch&branch=main&per_page=100',
+              headers={
+                  'Accept': 'application/vnd.github+json',
+                  'Authorization': f"Bearer {os.environ['GH_TOKEN']}",
+                  'X-GitHub-Api-Version': '2022-11-28',
+                  'User-Agent': 'mcft-cap08-s6-formal-comparator-dispatch-broker',
+              })
+          with urllib.request.urlopen(request, timeout=30) as response:
+              runs = json.load(response).get('workflow_runs', [])
+          assert len(runs) == 0, f'PRIOR_FORMAL_COMPARATOR_DISPATCH_COUNT_{len(runs)}'
+
+          receipt = {
+              'schema_version': 'geox_mcft_cap08_s6_formal_comparator_replacement_001_dispatch_broker_receipt_v1',
+              'status': 'PREFLIGHT_PASS_ZERO_PRIOR_DISPATCHES',
+              'broker_run_id': int(os.environ['GITHUB_RUN_ID']),
+              'broker_run_attempt': int(os.environ['GITHUB_RUN_ATTEMPT']),
+              'authority_main_sha': os.environ['AUTHORITY_MAIN_SHA'],
+              'exact_subject_sha': os.environ['EXACT_SUBJECT_SHA'],
+              'comparator_execution_id': os.environ['COMPARATOR_EXECUTION_ID'],
+              'execution_authority_path': path,
+              'preexisting_workflow_dispatch_count': 0,
+              'target_workflow_run_id': None,
+              'target_workflow_run_attempt': None,
+              'rerun_authorized': False,
+              'duplicate_dispatch_authorized': False,
+          }
+          with open('acceptance-output/MCFT_CAP_08_S6_FORMAL_COMPARATOR_REPLACEMENT_001_DISPATCH_BROKER_RECEIPT.json', 'w', encoding='utf-8') as handle:
+              json.dump(receipt, handle, indent=2)
+              handle.write('\n')
+          print(json.dumps(receipt, indent=2))
+          PY
+
+      - name: Dispatch Formal Cross-Run Comparator exactly once
+        id: dispatch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          dispatched_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          payload="$(python - <<'PY'
+          import json
+          import os
+          print(json.dumps({
+              'ref': 'main',
+              'inputs': {
+                  'exact_subject_sha': os.environ['EXACT_SUBJECT_SHA'],
+                  'comparator_execution_id': os.environ['COMPARATOR_EXECUTION_ID'],
+                  'execution_authority_path': os.environ['EXECUTION_AUTHORITY_PATH'],
+              },
+          }, separators=(',', ':')))
+          PY
+          )"
+          http_code="$(curl --silent --show-error --output acceptance-output/dispatch-response.txt --write-out '%{http_code}' --request POST --header 'Accept: application/vnd.github+json' --header "Authorization: Bearer $GH_TOKEN" --header 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/$TARGET_WORKFLOW/dispatches" --data "$payload")"
+          echo "$http_code" > acceptance-output/dispatch-http-status.txt
+          test "$http_code" = '204'
+          echo "dispatched_at=$dispatched_at" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve unique dispatched comparator run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISPATCHED_AT: ${{ steps.dispatch.outputs.dispatched_at }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          import time
+          import urllib.parse
+          import urllib.request
+
+          workflow = urllib.parse.quote(os.environ['TARGET_WORKFLOW'], safe='')
+          dispatched_at = dt.datetime.fromisoformat(os.environ['DISPATCHED_AT'].replace('Z', '+00:00'))
+          headers = {
+              'Accept': 'application/vnd.github+json',
+              'Authorization': f"Bearer {os.environ['GH_TOKEN']}",
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'mcft-cap08-s6-formal-comparator-dispatch-broker',
+          }
+          url = f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/actions/workflows/{workflow}/runs?event=workflow_dispatch&branch=main&per_page=20"
+          run = None
+          for _ in range(45):
+              with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=30) as response:
+                  data = json.load(response)
+              candidates = []
+              for item in data.get('workflow_runs', []):
+                  created = dt.datetime.fromisoformat(item['created_at'].replace('Z', '+00:00'))
+                  if created >= dispatched_at - dt.timedelta(seconds=5) and item.get('head_sha') == os.environ['AUTHORITY_MAIN_SHA'] and item.get('run_attempt') == 1:
+                      candidates.append(item)
+              if len(candidates) == 1:
+                  run = candidates[0]
+                  break
+              if len(candidates) > 1:
+                  raise SystemExit('MULTIPLE_MATCHING_FORMAL_COMPARATOR_RUNS')
+              time.sleep(2)
+          if run is None:
+              raise SystemExit('DISPATCHED_FORMAL_COMPARATOR_WORKFLOW_NOT_RESOLVED')
+
+          receipt_path = 'acceptance-output/MCFT_CAP_08_S6_FORMAL_COMPARATOR_REPLACEMENT_001_DISPATCH_BROKER_RECEIPT.json'
+          with open(receipt_path, encoding='utf-8') as handle:
+              receipt = json.load(handle)
+          receipt.update({
+              'status': 'DISPATCH_ACCEPTED_HTTP_204_AND_UNIQUE_TARGET_RESOLVED',
+              'target_workflow_run_id': run['id'],
+              'target_workflow_run_number': run['run_number'],
+              'target_workflow_run_attempt': run['run_attempt'],
+              'target_head_sha': run['head_sha'],
+              'target_event': run['event'],
+              'target_status': run['status'],
+              'target_created_at': run['created_at'],
+              'formal_comparator_executed_at_receipt_time': False,
+          })
+          with open(receipt_path, 'w', encoding='utf-8') as handle:
+              json.dump(receipt, handle, indent=2)
+              handle.write('\n')
+          print(json.dumps(receipt, indent=2))
+          PY
+
+      - name: Upload one-shot dispatch broker receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-formal-comparator-replacement-001-dispatch-broker-${{ github.run_id }}
+          path: acceptance-output/
+          if-no-files-found: error
+          retention-days: 365
