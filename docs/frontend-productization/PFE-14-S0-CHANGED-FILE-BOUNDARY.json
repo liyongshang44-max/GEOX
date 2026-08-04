@@ -1,0 +1,52 @@
+{
+  "schema_version": "geox_pfe14_s0_changed_file_boundary_v1",
+  "boundary_id": "PFE-14-S0-CHANGED-FILE-BOUNDARY",
+  "change_class": "PFE_14_S0_POST_FREEZE_AUTHORITY_AND_REPOSITORY_RECONCILIATION",
+  "base_main_sha": "0afea2012ae1a50b2160f57cf60c0c758052f132",
+  "expected_changed_file_count": 6,
+  "expected_changed_files": [
+    "docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json",
+    "docs/frontend-productization/PFE-14-MCFT-09-DEPENDENCY-MAP.json",
+    "docs/frontend-productization/PFE-14-ROUTE-OWNERSHIP.json",
+    "docs/frontend-productization/PFE-14-S0-CHANGED-FILE-BOUNDARY.json",
+    "docs/frontend-productization/PFE-14-SHADOW-ONLINE-OPERATOR-RUNTIME-CONSOLE-TASK.md",
+    "scripts/frontend_acceptance/ACCEPTANCE_PFE_14_S0_FOUNDATION.cjs"
+  ],
+  "allowed_prefixes": [
+    "docs/frontend-productization/PFE-14-",
+    "scripts/frontend_acceptance/ACCEPTANCE_PFE_14_"
+  ],
+  "forbidden_prefixes": [
+    ".github/",
+    "apps/server/",
+    "apps/web/src/",
+    "fixtures/",
+    "migrations/",
+    "packages/"
+  ],
+  "forbidden_exact_files": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "apps/web/package.json"
+  ],
+  "delta_assertions": {
+    "react_source_delta": 0,
+    "css_source_delta": 0,
+    "route_source_delta": 0,
+    "api_client_delta": 0,
+    "backend_source_delta": 0,
+    "database_delta": 0,
+    "package_delta": 0,
+    "workflow_delta": 0,
+    "customer_surface_delta": 0,
+    "admin_surface_delta": 0,
+    "runtime_claim_delta": 0,
+    "controlled_action_delta": 0
+  },
+  "candidate_declaration": false,
+  "runtime_implementation_authority": false,
+  "shadow_online_product_claim": false,
+  "completion_claim_when_accepted": "PFE_14_S0_REPOSITORY_RECONCILIATION_COMPLETE",
+  "next_slice_after_effectiveness": "PFE-14.S1_FRONTEND_READ_CONTRACT_AND_STATE_MATRIX"
+}

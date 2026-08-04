@@ -1,0 +1,42 @@
+{
+  "schema_version": "geox_pfe14_route_ownership_v1",
+  "inventory_id": "PFE-14-ROUTE-OWNERSHIP",
+  "base_main_sha": "0afea2012ae1a50b2160f57cf60c0c758052f132",
+  "surface": "Operator Runtime Console",
+  "canonical_route_module": "apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx",
+  "canonical_route_page": "apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx",
+  "canonical_api_client": "apps/web/src/api/mcftFieldTwinRuntime.ts",
+  "truth_policy": "CANONICAL_GET_ONLY_NO_LEGACY_TRUTH_FALLBACK",
+  "scope_policy": "EXACT_TENANT_PROJECT_GROUP_FIELD_SEASON_ZONE",
+  "formal_routes": [
+    {"route":"/operator/twin","classification":"FORMAL_CONSOLE_OVERVIEW","current_owner":"apps/web/src/features/operator/pages/OperatorTwinOverviewPage.tsx","pfe14_target_owner":"Operator Runtime Overview surface","migration_required":true},
+    {"route":"/operator/fields","classification":"FORMAL_SCOPE_NAVIGATOR","current_owner":"apps/web/src/features/operator/fieldRuntime/McftFieldRuntimeScopeNavigatorPage.tsx","pfe14_target_owner":"same canonical owner","migration_required":false},
+    {"route":"/operator/fields/:fieldId","classification":"FORMAL_FIELD_RUNTIME_OVERVIEW","current_owner":"apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx","canonical_tab":"overview"},
+    {"route":"/operator/fields/:fieldId/state","classification":"FORMAL_FIELD_RUNTIME_TAB","current_owner":"apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx","canonical_tab":"state"},
+    {"route":"/operator/fields/:fieldId/forecast","classification":"FORMAL_FIELD_RUNTIME_TAB","current_owner":"apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx","canonical_tab":"forecast"},
+    {"route":"/operator/fields/:fieldId/scenario","classification":"FORMAL_FIELD_RUNTIME_TAB","current_owner":"apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx","canonical_tab":"scenario"},
+    {"route":"/operator/fields/:fieldId/action-lifecycle","classification":"FORMAL_FIELD_RUNTIME_TAB_POST_PFE13","current_owner":"apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx","canonical_tab":"action-lifecycle","pfe13_inventory_reconciliation_required":true},
+    {"route":"/operator/fields/:fieldId/residual","classification":"FORMAL_FIELD_RUNTIME_TAB","current_owner":"apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx","canonical_tab":"residual"},
+    {"route":"/operator/fields/:fieldId/calibration","classification":"FORMAL_FIELD_RUNTIME_TAB","current_owner":"apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx","canonical_tab":"calibration"},
+    {"route":"/operator/fields/:fieldId/evidence-trace","classification":"FORMAL_FIELD_RUNTIME_TAB_POST_PFE13","current_owner":"apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx","canonical_tab":"evidence-trace","pfe13_inventory_reconciliation_required":true},
+    {"route":"/operator/fields/:fieldId/health","classification":"FORMAL_FIELD_RUNTIME_TAB","current_owner":"apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx","canonical_tab":"health"},
+    {"route":"/operator/fields/:fieldId/evidence","classification":"FORMAL_ALIAS","current_owner":"apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx","canonical_tab":"evidence-trace","alias_of":"/operator/fields/:fieldId/evidence-trace"},
+    {"route":"/operator/fields/:fieldId/audit","classification":"FORMAL_ALIAS","current_owner":"apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx","canonical_tab":"evidence-trace","alias_of":"/operator/fields/:fieldId/evidence-trace"},
+    {"route":"/operator/pilot","classification":"FORMAL_PILOT_READINESS","current_owner":"apps/web/src/features/operator/pilotReadiness/OperatorPilotPage.tsx","pfe14_target_owner":"same read-only readiness surface"}
+  ],
+  "legacy_route_family": [
+    {"route":"/operator/twin/fields/:fieldId","classification":"LEGACY_VISIBLE_BY_URL_ONLY","owner":"apps/web/src/features/operator/pages/OperatorFieldTwinWorkspacePage.tsx"},
+    {"route":"/operator/twin/fields/:fieldId/forecast","classification":"LEGACY_VISIBLE_BY_URL_ONLY","owner":"apps/web/src/features/operator/pages/OperatorFieldTwinForecastPage.tsx"},
+    {"route":"/operator/twin/fields/:fieldId/scenarios","classification":"LEGACY_VISIBLE_BY_URL_ONLY","owner":"apps/web/src/features/operator/pages/OperatorFieldTwinScenarioComparePage.tsx"},
+    {"route":"/operator/twin/fields/:fieldId/evidence","classification":"LEGACY_VISIBLE_BY_URL_ONLY","owner":"apps/web/src/features/operator/pages/OperatorFieldTwinEvidencePage.tsx"},
+    {"route":"/operator/twin/fields/:fieldId/calibration","classification":"LEGACY_VISIBLE_BY_URL_ONLY","owner":"apps/web/src/features/operator/pages/OperatorFieldTwinCalibrationPage.tsx"},
+    {"route":"/operator/twin/fields/:fieldId/post-irrigation","classification":"LEGACY_VISIBLE_BY_URL_ONLY","owner":"apps/web/src/features/operator/pages/OperatorFieldTwinPostIrrigationPage.tsx"},
+    {"route":"/operator/twin/production-workflow","classification":"LEGACY_VISIBLE_BY_URL_ONLY","owner":"apps/web/src/features/operator/pages/OperatorProductionWorkflowPage.tsx"},
+    {"route":"/operator/twin/gateway-demo","classification":"DEMO_URL_ONLY","owner":"apps/web/src/features/operator/pages/OperatorGatewayDemoViewerPage.tsx"},
+    {"route":"/operator/twin/traces/:decisionCycleId","classification":"LEGACY_TRACE_BRIDGE","owner":"apps/web/src/features/operator/pages/OperatorTwinTraceReadbackPage.tsx"}
+  ],
+  "forbidden_new_route_prefixes": ["/operator/shadow","/operator/mcft9","/app/operator/shadow"],
+  "s0_route_source_delta": 0,
+  "react_source_delta": 0,
+  "api_client_delta": 0
+}
