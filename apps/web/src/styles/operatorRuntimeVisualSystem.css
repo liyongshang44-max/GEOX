@@ -1,0 +1,224 @@
+/* PFE-14 S2 Operator Runtime visual foundation. Additive and operator-scoped. */
+.operatorProductSurface,
+.operatorRuntimeVisualRoot,
+[data-surface="operator"] {
+  --operator-runtime-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --operator-runtime-page-background: #f5f5f7;
+  --operator-runtime-panel-background: rgba(255, 255, 255, 0.88);
+  --operator-runtime-panel-background-solid: #ffffff;
+  --operator-runtime-text-primary: #1d1d1f;
+  --operator-runtime-text-secondary: #6e6e73;
+  --operator-runtime-separator: rgba(60, 60, 67, 0.16);
+  --operator-runtime-accent: #176b45;
+  --operator-runtime-accent-soft: rgba(23, 107, 69, 0.1);
+  --operator-runtime-focus-ring: rgba(0, 122, 255, 0.82);
+  --operator-runtime-radius-control: 12px;
+  --operator-runtime-radius-card: 16px;
+  --operator-runtime-radius-container: 20px;
+  --operator-runtime-shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --operator-runtime-shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --operator-runtime-motion-fast: 160ms;
+  --operator-runtime-motion-normal: 220ms;
+}
+
+.operatorRuntimeVisualRoot {
+  min-width: 0;
+  color: var(--operator-runtime-text-primary);
+  background: var(--operator-runtime-page-background);
+  font-family: var(--operator-runtime-font-family);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.operatorProductSurface .productSegmentedControl,
+.operatorRuntimeVisualRoot .productSegmentedControl,
+[data-surface="operator"] .productSegmentedControl {
+  display: inline-flex;
+  max-width: 100%;
+  gap: 2px;
+  padding: 3px;
+  overflow-x: auto;
+  border: 1px solid var(--operator-runtime-separator);
+  border-radius: var(--operator-runtime-radius-control);
+  background: rgba(118, 118, 128, 0.08);
+  box-shadow: var(--operator-runtime-shadow-panel);
+  scrollbar-width: none;
+}
+
+.operatorProductSurface .productSegmentedControl::-webkit-scrollbar,
+.operatorRuntimeVisualRoot .productSegmentedControl::-webkit-scrollbar,
+[data-surface="operator"] .productSegmentedControl::-webkit-scrollbar {
+  display: none;
+}
+
+.operatorProductSurface .productSegmentedControl__item,
+.operatorRuntimeVisualRoot .productSegmentedControl__item,
+[data-surface="operator"] .productSegmentedControl__item {
+  min-height: 36px;
+  padding: 8px 13px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--operator-runtime-text-secondary);
+  font: 500 14px/1.2 var(--operator-runtime-font-family);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--operator-runtime-motion-fast) ease,
+    background-color var(--operator-runtime-motion-fast) ease,
+    box-shadow var(--operator-runtime-motion-fast) ease;
+}
+
+.operatorProductSurface .productSegmentedControl__item:hover:not(:disabled),
+.operatorRuntimeVisualRoot .productSegmentedControl__item:hover:not(:disabled),
+[data-surface="operator"] .productSegmentedControl__item:hover:not(:disabled) {
+  color: var(--operator-runtime-text-primary);
+}
+
+.operatorProductSurface .productSegmentedControl__item[data-active="true"],
+.operatorRuntimeVisualRoot .productSegmentedControl__item[data-active="true"],
+[data-surface="operator"] .productSegmentedControl__item[data-active="true"] {
+  color: var(--operator-runtime-text-primary);
+  background: var(--operator-runtime-panel-background-solid);
+  box-shadow: var(--operator-runtime-shadow-panel);
+  font-weight: 600;
+}
+
+.operatorProductSurface .productSegmentedControl__item:disabled,
+.operatorRuntimeVisualRoot .productSegmentedControl__item:disabled,
+[data-surface="operator"] .productSegmentedControl__item:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.operatorProductSurface .productSegmentedControl__item:focus-visible,
+.operatorRuntimeVisualRoot .productSegmentedControl__item:focus-visible,
+[data-surface="operator"] .productSegmentedControl__item:focus-visible,
+.operatorProductSurface .productTechnicalDisclosure__summary:focus-visible,
+.operatorRuntimeVisualRoot .productTechnicalDisclosure__summary:focus-visible,
+[data-surface="operator"] .productTechnicalDisclosure__summary:focus-visible {
+  outline: 3px solid var(--operator-runtime-focus-ring);
+  outline-offset: 2px;
+}
+
+.operatorProductSurface .productTechnicalDisclosure,
+.operatorRuntimeVisualRoot .productTechnicalDisclosure,
+[data-surface="operator"] .productTechnicalDisclosure {
+  overflow: clip;
+  border: 1px solid var(--operator-runtime-separator);
+  border-radius: var(--operator-runtime-radius-card);
+  background: var(--operator-runtime-panel-background);
+  box-shadow: var(--operator-runtime-shadow-panel);
+  backdrop-filter: saturate(180%) blur(18px);
+}
+
+.operatorProductSurface .productTechnicalDisclosure__summary,
+.operatorRuntimeVisualRoot .productTechnicalDisclosure__summary,
+[data-surface="operator"] .productTechnicalDisclosure__summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 11px 14px;
+  color: var(--operator-runtime-text-primary);
+  font: 600 14px/1.35 var(--operator-runtime-font-family);
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.operatorProductSurface .productTechnicalDisclosure__body,
+.operatorRuntimeVisualRoot .productTechnicalDisclosure__body,
+[data-surface="operator"] .productTechnicalDisclosure__body {
+  display: grid;
+  gap: 14px;
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--operator-runtime-separator);
+}
+
+.operatorProductSurface .productTechnicalDisclosure__description,
+.operatorRuntimeVisualRoot .productTechnicalDisclosure__description,
+[data-surface="operator"] .productTechnicalDisclosure__description {
+  margin: 14px 0 0;
+  color: var(--operator-runtime-text-secondary);
+  font: 400 14px/1.5 var(--operator-runtime-font-family);
+}
+
+.operatorProductSurface .productTechnicalDisclosure__list,
+.operatorRuntimeVisualRoot .productTechnicalDisclosure__list,
+[data-surface="operator"] .productTechnicalDisclosure__list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.operatorProductSurface .productTechnicalDisclosure__item,
+.operatorRuntimeVisualRoot .productTechnicalDisclosure__item,
+[data-surface="operator"] .productTechnicalDisclosure__item {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.45fr) minmax(0, 1fr);
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--operator-runtime-separator);
+}
+
+.operatorProductSurface .productTechnicalDisclosure__item:last-child,
+.operatorRuntimeVisualRoot .productTechnicalDisclosure__item:last-child,
+[data-surface="operator"] .productTechnicalDisclosure__item:last-child {
+  border-bottom: 0;
+}
+
+.operatorProductSurface .productTechnicalDisclosure__item dt,
+.operatorRuntimeVisualRoot .productTechnicalDisclosure__item dt,
+[data-surface="operator"] .productTechnicalDisclosure__item dt {
+  color: var(--operator-runtime-text-secondary);
+  font: 500 13px/1.45 var(--operator-runtime-font-family);
+}
+
+.operatorProductSurface .productTechnicalDisclosure__item dd,
+.operatorRuntimeVisualRoot .productTechnicalDisclosure__item dd,
+[data-surface="operator"] .productTechnicalDisclosure__item dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--operator-runtime-text-primary);
+  font: 400 13px/1.45 var(--operator-runtime-font-family);
+  overflow-wrap: anywhere;
+}
+
+.operatorProductSurface .productTechnicalDisclosure__item dd[data-monospace="true"],
+.operatorRuntimeVisualRoot .productTechnicalDisclosure__item dd[data-monospace="true"],
+[data-surface="operator"] .productTechnicalDisclosure__item dd[data-monospace="true"] {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.operatorProductSurface .productTechnicalDisclosure__actions,
+.operatorRuntimeVisualRoot .productTechnicalDisclosure__actions,
+[data-surface="operator"] .productTechnicalDisclosure__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .operatorProductSurface .productSegmentedControl,
+  .operatorRuntimeVisualRoot .productSegmentedControl,
+  [data-surface="operator"] .productSegmentedControl {
+    display: flex;
+    width: 100%;
+  }
+
+  .operatorProductSurface .productTechnicalDisclosure__item,
+  .operatorRuntimeVisualRoot .productTechnicalDisclosure__item,
+  [data-surface="operator"] .productTechnicalDisclosure__item {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .operatorProductSurface .productSegmentedControl__item,
+  .operatorRuntimeVisualRoot .productSegmentedControl__item,
+  [data-surface="operator"] .productSegmentedControl__item {
+    transition: none;
+  }
+}

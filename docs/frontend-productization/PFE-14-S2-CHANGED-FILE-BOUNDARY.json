@@ -1,0 +1,69 @@
+{
+  "schema_version": "geox_pfe14_s2_changed_file_boundary_v1",
+  "boundary_id": "PFE-14-S2-CHANGED-FILE-BOUNDARY",
+  "change_class": "PFE_14_S2_APPLE_VISUAL_FOUNDATION",
+  "base_main_sha": "41e41d30dd36755beee9edac7262882dbba2c48c",
+  "predecessor_merge_sha": "41e41d30dd36755beee9edac7262882dbba2c48c",
+  "expected_changed_file_count": 9,
+  "expected_changed_files": [
+    "apps/web/src/design-system/product/ProductSegmentedControl.tsx",
+    "apps/web/src/design-system/product/ProductTechnicalDisclosure.tsx",
+    "apps/web/src/design-system/product/index.ts",
+    "apps/web/src/styles.css",
+    "apps/web/src/styles/operatorRuntimeVisualSystem.css",
+    "docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json",
+    "docs/frontend-productization/PFE-14-S2-APPLE-VISUAL-CONTRACT.json",
+    "docs/frontend-productization/PFE-14-S2-CHANGED-FILE-BOUNDARY.json",
+    "scripts/frontend_acceptance/ACCEPTANCE_PFE_14_S2_APPLE_VISUAL_FOUNDATION.cjs"
+  ],
+  "allowed_exact_files": [
+    "apps/web/src/design-system/product/ProductSegmentedControl.tsx",
+    "apps/web/src/design-system/product/ProductTechnicalDisclosure.tsx",
+    "apps/web/src/design-system/product/index.ts",
+    "apps/web/src/styles.css",
+    "apps/web/src/styles/operatorRuntimeVisualSystem.css",
+    "docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json",
+    "docs/frontend-productization/PFE-14-S2-APPLE-VISUAL-CONTRACT.json",
+    "docs/frontend-productization/PFE-14-S2-CHANGED-FILE-BOUNDARY.json",
+    "scripts/frontend_acceptance/ACCEPTANCE_PFE_14_S2_APPLE_VISUAL_FOUNDATION.cjs"
+  ],
+  "forbidden_prefixes": [
+    ".github/",
+    "apps/server/",
+    "apps/web/src/app/",
+    "apps/web/src/api/",
+    "apps/web/src/features/",
+    "apps/web/src/layouts/",
+    "fixtures/",
+    "migrations/",
+    "packages/"
+  ],
+  "forbidden_exact_files": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "apps/web/package.json"
+  ],
+  "delta_assertions": {
+    "new_product_primitive_count": 2,
+    "operator_visual_stylesheet_count": 1,
+    "global_style_import_delta": 1,
+    "page_source_delta": 0,
+    "layout_source_delta": 0,
+    "route_source_delta": 0,
+    "api_client_delta": 0,
+    "backend_source_delta": 0,
+    "database_delta": 0,
+    "package_delta": 0,
+    "workflow_delta": 0,
+    "runtime_claim_delta": 0,
+    "controlled_action_delta": 0
+  },
+  "page_migration": false,
+  "layout_migration": false,
+  "candidate_declaration": false,
+  "runtime_implementation_authority": false,
+  "shadow_online_product_claim": false,
+  "completion_claim_when_accepted": "PFE_14_S2_APPLE_VISUAL_FOUNDATION_COMPLETE",
+  "next_slice_after_effectiveness": "PFE-14.S3_OPERATOR_SHELL_CONSOLIDATION"
+}
