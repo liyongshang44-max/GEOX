@@ -1,0 +1,147 @@
+name: mcft-cap-08-s6-formal-comparator-replacement-002-success-settlement
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-formal-comparator-replacement-002-success-settlement.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-AUTHORITY-CONSUMPTION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-SUCCESS-SETTLEMENT-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-SUCCESS-SETTLEMENT-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_002_SUCCESS_SETTLEMENT_V1.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  settle-terminal-success:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE_MAIN_SHA: 5f8fa47f9ba0f6421fee9ff2eb5fa62ca4e4f642
+      BROKER_RUN_ID: '30900687468'
+      BROKER_ARTIFACT_NAME: mcft-cap-08-s6-formal-comparator-replacement-002-dispatch-broker-30900687468
+      COMPARATOR_RUN_ID: '30900706086'
+      COMPARATOR_ARTIFACT_NAME: mcft-cap-08-s6-formal-cross-run-comparator-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-20260804-REPLACEMENT-002
+      BROKER_WORKFLOW: mcft-cap-08-s6-formal-comparator-replacement-002-one-shot-dispatch-broker.yml
+      COMPARATOR_WORKFLOW: mcft-cap-08-s6-formal-cross-run-comparator-execution.yml
+    steps:
+      - name: Checkout exact success settlement head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node 20.11.1
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Download immutable one-shot broker receipt
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BROKER_ARTIFACT_NAME }}
+          path: acceptance-input/broker
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BROKER_RUN_ID }}
+
+      - name: Download immutable Formal Comparator evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMPARATOR_ARTIFACT_NAME }}
+          path: acceptance-input/comparator
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.COMPARATOR_RUN_ID }}
+
+      - name: Audit unique terminal runs, jobs, and artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-input
+          python - <<'PY'
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          token = os.environ['GH_TOKEN']
+          base = os.environ['BASE_MAIN_SHA']
+          headers = {
+              'Accept': 'application/vnd.github+json',
+              'Authorization': f'Bearer {token}',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'mcft-cap08-formal-comparator-replacement-002-success-settlement',
+          }
+          def get(path):
+              request = urllib.request.Request(f'https://api.github.com/repos/{repo}{path}', headers=headers)
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+          def matching(workflow, event):
+              encoded = urllib.parse.quote(workflow, safe='')
+              runs = get(f'/actions/workflows/{encoded}/runs?event={event}&branch=main&per_page=100').get('workflow_runs', [])
+              return [item for item in runs if item.get('head_sha') == base and item.get('run_attempt') == 1]
+          def artifacts(run_id):
+              return get(f'/actions/runs/{run_id}/artifacts?per_page=100').get('artifacts', [])
+
+          broker_id = int(os.environ['BROKER_RUN_ID'])
+          comparator_id = int(os.environ['COMPARATOR_RUN_ID'])
+          broker = get(f'/actions/runs/{broker_id}')
+          comparator = get(f'/actions/runs/{comparator_id}')
+          broker_matches = matching(os.environ['BROKER_WORKFLOW'], 'push')
+          comparator_matches = matching(os.environ['COMPARATOR_WORKFLOW'], 'workflow_dispatch')
+          broker_artifacts = artifacts(broker_id)
+          comparator_artifacts = artifacts(comparator_id)
+          broker_jobs = get(f'/actions/runs/{broker_id}/jobs?per_page=100').get('jobs', [])
+          comparator_jobs = get(f'/actions/runs/{comparator_id}/jobs?per_page=100').get('jobs', [])
+          result = {
+              'schema_version': 'geox_mcft_cap08_s6_formal_comparator_replacement_002_success_github_audit_v1',
+              'status': 'PASS',
+              'matching_broker_run_count': len(broker_matches),
+              'matching_comparator_run_count': len(comparator_matches),
+              'broker': broker,
+              'broker_jobs': broker_jobs,
+              'broker_artifacts': broker_artifacts,
+              'comparator': comparator,
+              'comparator_jobs': comparator_jobs,
+              'comparator_artifacts': comparator_artifacts,
+          }
+          with open('acceptance-input/GITHUB_FORMAL_COMPARATOR_SUCCESS_AUDIT.json', 'w', encoding='utf-8') as handle:
+              json.dump(result, handle, indent=2)
+              handle.write('\n')
+          print(json.dumps({
+              'status': 'PASS',
+              'broker_matches': len(broker_matches),
+              'comparator_matches': len(comparator_matches),
+              'broker_conclusion': broker.get('conclusion'),
+              'comparator_conclusion': comparator.get('conclusion'),
+              'comparator_artifact_count': len(comparator_artifacts),
+          }, indent=2))
+          PY
+
+      - name: Validate append-forward terminal success settlement
+        env:
+          MCFT_BASE_SHA: ${{ env.BASE_MAIN_SHA }}
+          MCFT_FORMAL_COMPARATOR_SUCCESS_AUDIT: acceptance-input/GITHUB_FORMAL_COMPARATOR_SUCCESS_AUDIT.json
+          MCFT_FORMAL_COMPARATOR_BROKER_RECEIPT: acceptance-input/broker/MCFT_CAP_08_S6_FORMAL_COMPARATOR_REPLACEMENT_002_DISPATCH_BROKER_RECEIPT.json
+          MCFT_FORMAL_COMPARATOR_RESULT: acceptance-input/comparator/acceptance-output/MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_RESULT.json
+          MCFT_FORMAL_COMPARATOR_INPUT_AUDIT: acceptance-input/comparator/acceptance-input/FORMAL_COMPARATOR_INPUT_AUDIT.json
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_002_SUCCESS_SETTLEMENT_V1.cjs
+
+      - name: Upload success settlement qualification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-formal-comparator-replacement-002-success-settlement-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_08_S6_FORMAL_COMPARATOR_REPLACEMENT_002_SUCCESS_SETTLEMENT_RESULT.json
+            acceptance-input/GITHUB_FORMAL_COMPARATOR_SUCCESS_AUDIT.json
+          if-no-files-found: error
+          retention-days: 365
