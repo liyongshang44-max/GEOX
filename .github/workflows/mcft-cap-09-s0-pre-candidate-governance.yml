@@ -1,0 +1,59 @@
+name: mcft-cap-09-s0-pre-candidate-governance
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PREDECESSOR-LOCK-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-CHANGED-FILE-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  statuses: read
+
+concurrency:
+  group: mcft-cap09-s0-pre-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  pre-candidate-governance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Download CAP-08 exact-SHA/R2 predecessor authority
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 30908130962
+          artifact-ids: 8891897316
+          path: acceptance-input/cap08-exact-sha
+          repository: liyongshang44-max/GEOX
+          github-token: ${{ github.token }}
+      - name: Validate CAP-09 S0 pre-candidate governance
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+          MCFT_CAP08_ARTIFACT_DIR: acceptance-input/cap08-exact-sha
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-s0-pre-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
