@@ -2,8 +2,8 @@
   "schema_version": "geox_mcft_candidate_authority_registry_v1",
   "registry_id": "MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1",
   "registry_revision": "1.1",
-  "authority_set_revision": "1.5",
-  "authority_set_change_id": "MCFT-CAP-08.S6-CTO-DUAL-ACCOUNT-VERIFICATION-DEFERRAL",
+  "authority_set_revision": "1.6",
+  "authority_set_change_id": "MCFT-CAP-09.S0-TRUSTED-REGISTRY-BOOTSTRAP",
   "record_status": "EFFECTIVE_REPOSITORY_AUTHORITY",
   "policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json",
   "delivery_candidate_signal_contract_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1.json",
@@ -245,6 +245,110 @@
       "mcft_cap_09_authorized": false,
       "resolved_manifest_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-RESOLVED-MANIFEST-V1.json",
       "taskbook_ref": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md"
+    },
+    {
+      "capability_line": "MCFT-CAP-09",
+      "registry_bootstrap_kind": "S0_PRE_CANDIDATE_GOVERNANCE_THEN_TRUSTED_REGISTRY",
+      "taskbook_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+      "scope_contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json",
+      "predecessor_lock_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PREDECESSOR-LOCK-V1.json",
+      "current_candidate_authority": false,
+      "candidate_declaration_enabled": true,
+      "candidate_authority_scope": "S0_AUTHORIZATION_THROUGH_S6_FINAL_SHADOW_ONLINE_CLOSURE",
+      "authoritative_candidate_status_paths": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DELIVERY-STATUS-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-DELIVERY-STATUS-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-DELIVERY-STATUS-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-DELIVERY-STATUS-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json"
+      ],
+      "candidate_transition_fields": [
+        {
+          "status_file": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json",
+          "field_path": "status",
+          "allowed_candidate_values": [
+            "AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE"
+          ],
+          "focused_workflow": "mcft-cap-09-s0-authorization",
+          "standard_workflow": "ci",
+          "predecessor_effective_evidence_required": true
+        },
+        {
+          "status_file": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json",
+          "field_path": "s1_candidate_implemented",
+          "allowed_candidate_values": [
+            true
+          ],
+          "focused_workflow": "mcft-cap-09-s1-adapter-contracts",
+          "standard_workflow": "ci",
+          "predecessor_effective_evidence_required": true
+        },
+        {
+          "status_file": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DELIVERY-STATUS-V1.json",
+          "field_path": "s2_candidate_implemented",
+          "allowed_candidate_values": [
+            true
+          ],
+          "focused_workflow": "mcft-cap-09-s2-database-evidence-ingress",
+          "standard_workflow": "ci",
+          "predecessor_effective_evidence_required": true
+        },
+        {
+          "status_file": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-DELIVERY-STATUS-V1.json",
+          "field_path": "s3_candidate_implemented",
+          "allowed_candidate_values": [
+            true
+          ],
+          "focused_workflow": "mcft-cap-09-s3-persistent-sequential-scheduler",
+          "standard_workflow": "ci",
+          "predecessor_effective_evidence_required": true
+        },
+        {
+          "status_file": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-DELIVERY-STATUS-V1.json",
+          "field_path": "s4_candidate_implemented",
+          "allowed_candidate_values": [
+            true
+          ],
+          "focused_workflow": "mcft-cap-09-s4-restart-backfill-stale",
+          "standard_workflow": "ci",
+          "predecessor_effective_evidence_required": true
+        },
+        {
+          "status_file": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-DELIVERY-STATUS-V1.json",
+          "field_path": "s5_candidate_implemented",
+          "allowed_candidate_values": [
+            true
+          ],
+          "focused_workflow": "mcft-cap-09-s5-shadow-online-integration",
+          "standard_workflow": "ci",
+          "predecessor_effective_evidence_required": true
+        },
+        {
+          "status_file": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json",
+          "field_path": "s6_candidate_implemented",
+          "allowed_candidate_values": [
+            true
+          ],
+          "focused_workflow": "mcft-cap-09-s6-final-closure",
+          "standard_workflow": "ci",
+          "predecessor_effective_evidence_required": true
+        }
+      ],
+      "terminal_state": "S6_FINAL_SHADOW_ONLINE_CLOSURE_CANDIDATE_PENDING_EXACT_MERGE_SHA_R2_ATTESTATION",
+      "effective_completion_state_when_attested": "MCFT_CAP_09_COMPLETE",
+      "post_completion_candidate_declaration_enabled": false,
+      "successor_capability_authorized": false,
+      "implementation_authorized": false,
+      "runtime_source_authorized": false,
+      "canonical_write_authorized": false,
+      "live_ingestion_authorized": false,
+      "background_scheduler_authorized": false,
+      "public_http_writer_authorized": false,
+      "model_activation_authorized": false,
+      "controlled_action_authorized": false
     }
   ]
 }
