@@ -1,0 +1,95 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_replacement_002_success_settlement_v1",
+  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_TERMINAL_SUCCESS_SETTLED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "settlement_base_main_sha": "5f8fa47f9ba0f6421fee9ff2eb5fa62ca4e4f642",
+  "authority_main_sha": "5f8fa47f9ba0f6421fee9ff2eb5fa62ca4e4f642",
+  "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+  "comparator_execution_id": "MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-20260804-REPLACEMENT-002",
+  "formal_workflow": {
+    "path": ".github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-execution.yml",
+    "blob_sha": "247355dc2f0a3fcb782f1621503bd30713871a81",
+    "workflow_run_id": 30900706086,
+    "workflow_run_number": 5,
+    "workflow_run_attempt": 1,
+    "event": "workflow_dispatch",
+    "head_sha": "5f8fa47f9ba0f6421fee9ff2eb5fa62ca4e4f642",
+    "head_branch": "main",
+    "created_at": "2026-08-04T10:27:21Z",
+    "conclusion": "success"
+  },
+  "effective_authority_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "591ad3c6c188d19c9e6eff89382e147854f25b63",
+    "semantic_digest": "sha256:6b6975a8f724ee27ed3141a919d28c215277c0580cd2e9487a091f743e5890f9"
+  },
+  "authority_consumption_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-AUTHORITY-CONSUMPTION-V1.json",
+    "blob_sha": "59c07812c60eb47d4940d1102f235f03958c88e5",
+    "semantic_digest": "sha256:ddb49e2de1701fa2592d49bb8b3aa502306ae49eef411129d8c8c9f204617cca"
+  },
+  "execution_evidence": {
+    "dispatch_broker_artifact_id": 8888932516,
+    "dispatch_broker_artifact_digest": "sha256:ccf5fb13a23c7892177d9d5e30c0be6ffe21c46a20ee19795da7a913c192628f",
+    "formal_comparator_artifact_id": 8888940447,
+    "formal_comparator_artifact_digest": "sha256:b2d24f90faa2fdf2b35c691b4bf02af14d6bcca7f1309d1fd7adaea45d6a972b",
+    "evidence_class": "FINAL_FORMAL_CROSS_RUN_COMPARATOR_EVIDENCE"
+  },
+  "formal_result": {
+    "status": "PASS",
+    "semantic_equivalence": true,
+    "difference_count": 0,
+    "semantic_digest_a": "sha256:32c93d4f5ecd1fc50ff94418407767b48b057d77c81bf93dfe3fccf58f0df2f8",
+    "semantic_digest_b": "sha256:32c93d4f5ecd1fc50ff94418407767b48b057d77c81bf93dfe3fccf58f0df2f8",
+    "independent_database_instances": true,
+    "hard_acceptance_eligible": true
+  },
+  "formal_inputs": {
+    "run_a": {
+      "workflow_run_id": 30845476698,
+      "workflow_head_sha": "191e363e1fd9fa4c77c8b5135fb9673c3a9286d1",
+      "artifact_id": 8868535301,
+      "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-A-20260804-REPLACEMENT-011",
+      "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-A-20260804-REPLACEMENT-011",
+      "physical_database_name": "geox_mcft_cap08_s6_run_a_replacement_011_30845476698",
+      "formal_artifact_digest": "sha256:e592f00fb0b6c3234985f57e8d20955afc6246964d04aca7a56f9eea9b79e696"
+    },
+    "run_b": {
+      "workflow_run_id": 30877450717,
+      "workflow_head_sha": "a5039a07455e8b325db23880dd8e8c460fc6aa0d",
+      "artifact_id": 8880057024,
+      "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-B-20260804-REPLACEMENT-001",
+      "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-B-20260804-REPLACEMENT-001",
+      "physical_database_name": "geox_mcft_cap08_s6_run_b_replacement_001_30877450717",
+      "formal_artifact_digest": "sha256:bacf1177784115836b2ebb2350ee2fbc4529af839202165699f540a657a8314e"
+    }
+  },
+  "terminal_invariants": {
+    "provenance_input_audit_pass": true,
+    "workflow_head_and_execution_subject_distinct": true,
+    "semantic_comparator_executed": true,
+    "semantic_equivalence_established": true,
+    "formal_evidence_created": true,
+    "authority_consumed": true,
+    "remaining_execution_count": 0,
+    "rerun_authorized": false
+  },
+  "s6_candidate_freeze_eligible": true,
+  "s6_candidate_established": false,
+  "candidate_declaration_established": false,
+  "ledger_settlement_authorized": false,
+  "next_legal_action": "FREEZE_S6_CANDIDATE_EXACT_HEAD",
+  "nonclaims": [
+    "NO_COMPARATOR_RERUN",
+    "NO_AUTHORITY_REUSE",
+    "NO_S6_CANDIDATE_IN_SUCCESS_SETTLEMENT_PR",
+    "NO_CANDIDATE_DECLARATION",
+    "NO_MERGE_TREE_WITNESS",
+    "NO_R2_RETENTION_ATTESTATION",
+    "NO_LEDGER_SETTLEMENT",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:25f4cd864b8dbf1831a63034f49bea5d0e20baffac4d16764d6eb187e9cb78f0"
+}
