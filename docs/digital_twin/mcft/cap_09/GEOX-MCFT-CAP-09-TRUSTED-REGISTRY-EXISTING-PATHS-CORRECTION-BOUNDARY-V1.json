@@ -1,0 +1,20 @@
+{
+  "schema_version": "geox_mcft_cap09_trusted_registry_existing_paths_correction_boundary_v1",
+  "boundary_id": "GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-BOUNDARY-V1",
+  "record_status": "FROZEN_NON_CANDIDATE_REGISTRY_CORRECTION_BOUNDARY",
+  "base_main_sha": "3968031dbffbcf547c46e1cb038b97974bd7a937",
+  "changed_file_count": 3,
+  "changed_files": [
+    "docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-V1.json"
+  ],
+  "registry_delta": 1,
+  "candidate_transition": false,
+  "candidate_declaration": false,
+  "runtime_source_delta": 0,
+  "migration_delta": 0,
+  "canonical_runtime_data_delta": 0,
+  "database_acl_delta": 0,
+  "global_applicability_resolver_delta": 0
+}
