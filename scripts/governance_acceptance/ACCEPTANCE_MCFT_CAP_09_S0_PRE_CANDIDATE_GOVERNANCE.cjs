@@ -4,6 +4,7 @@ const fs=require('node:fs'),p=require('node:path'),{execFileSync:x}=require('nod
 const R=process.cwd(),O=p.join(R,'acceptance-output/MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE_RESULT.json');
 const FOUNDATION_BASE='4784aeed9cfe6183f8acef4dd03cea939d24e6ef';
 const REPAIR_BASE='abadd19b2bd7460b397acbac6181253732b49fae';
+const CANDIDATE_REPAIR_BASE='fa26f024a1847f49545d18bcda3ecd0b9d81bf06';
 const S='67bd71560268046a7fa9a9433ee074ad3999cb71',RUN=30908130962,ART=8891897316;
 const WORKFLOW='.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml';
 const VALIDATOR='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs';
@@ -12,6 +13,7 @@ const STATUS='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-
 const FOUNDATION=[WORKFLOW,CURRENT,'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PREDECESSOR-LOCK-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-CHANGED-FILE-BOUNDARY-V1.json',STATUS,'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md',VALIDATOR].sort();
 const REGISTRY=['.github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml','docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',CURRENT,STATUS,'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOOTSTRAP-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOUNDARY-V1.json','scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs'].sort();
 const REPAIR=[WORKFLOW,VALIDATOR].sort();
+const CANDIDATE=['.github/workflows/mcft-cap-09-s0-authorization.yml',CURRENT,'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-BOUNDARY-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-V1.json',STATUS,'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_AUTHORIZATION.cjs'].sort();
 const rd=f=>fs.readFileSync(p.join(R,f),'utf8'),js=f=>JSON.parse(rd(f)),sh=(...a)=>x('git',a,{encoding:'utf8'}).trim();
 const ok=(v,c)=>{if(!v)throw Error(c)},same=(a,b)=>{try{assert.deepEqual(a,b);return true}catch{return false}};
 const write=v=>{fs.mkdirSync(p.dirname(O),{recursive:true});fs.writeFileSync(O,JSON.stringify(v,null,2)+'\n')};
@@ -21,12 +23,12 @@ const safeFiles=files=>{for(const f of files){const z=rd(f);ok(!z.includes(marke
 function artifact(n){const b=p.resolve(process.env.MCFT_CAP08_ARTIFACT_DIR||'acceptance-input/cap08-exact-sha'),q=[b];while(q.length){const d=q.pop();if(!fs.existsSync(d))continue;for(const e of fs.readdirSync(d,{withFileTypes:true})){const z=p.join(d,e.name);if(e.isDirectory())q.push(z);else if(e.name===n)return z}}throw Error('ARTIFACT_MISSING:'+n)}
 async function api(u){const t=process.env.GITHUB_TOKEN;ok(t,'TOKEN_REQUIRED');const r=await fetch(`https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}${u}`,{headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${t}`,'X-GitHub-Api-Version':'2022-11-28','User-Agent':'cap09-s0'}}),b=await r.text();ok(r.ok,`API_${r.status}:${u}:${b.slice(0,160)}`);return b?JSON.parse(b):null}
 function workflowRepair(base,head){
- ok(base===REPAIR_BASE,'REPAIR_BASE:'+base);
+ ok(base===REPAIR_BASE||base===CANDIDATE_REPAIR_BASE,'REPAIR_BASE:'+base);
  const files=changed(base);ok(same(files,REPAIR),'REPAIR_BOUNDARY:'+JSON.stringify(files));safeFiles(files);
  const w=rd(WORKFLOW);
- for(const token of ["mode='workflow-repair'","mode='registry-bootstrap'","mode='s0-foundation'","mode='unsupported'","if: steps.lifecycle.outputs.mode == 's0-foundation'","--workflow-repair","--registry-bootstrap"])ok(w.includes(token),'WORKFLOW_TOKEN:'+token);
+ for(const token of ["mode='workflow-repair'","mode='registry-bootstrap'","mode='candidate-signal'","mode='s0-foundation'","mode='unsupported'","if: steps.lifecycle.outputs.mode == 's0-foundation'","--workflow-repair","--registry-bootstrap","--candidate-signal"])ok(w.includes(token),'WORKFLOW_TOKEN:'+token);
  ok(!w.includes("if: steps.lifecycle.outputs.mode == 'registry-bootstrap'\n        uses: actions/download-artifact"),'REGISTRY_DOWNLOAD');
- const result={status:'PASS',change_class:'MCFT_CAP_09_S0_WORKFLOW_LIFECYCLE_REPAIR',base_sha:base,head_sha:head,changed_files:files,lifecycle_modes:['workflow-repair','registry-bootstrap','s0-foundation','unsupported'],cap08_artifact_download_mode:'s0-foundation',registry_bootstrap_reexecutes_foundation:false,implementation_authorized:false,runtime_source_delta:0,candidate_declaration:false,first_legal_next_action:'REBUILD_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP'};
+ const result={status:'PASS',change_class:base===CANDIDATE_REPAIR_BASE?'MCFT_CAP_09_S0_CANDIDATE_SIGNAL_LIFECYCLE_REPAIR':'MCFT_CAP_09_S0_WORKFLOW_LIFECYCLE_REPAIR',base_sha:base,head_sha:head,changed_files:files,lifecycle_modes:['workflow-repair','registry-bootstrap','candidate-signal','s0-foundation','unsupported'],cap08_artifact_download_mode:'s0-foundation',registry_bootstrap_reexecutes_foundation:false,candidate_signal_reexecutes_foundation:false,implementation_authorized:false,runtime_source_delta:0,candidate_declaration:false,first_legal_next_action:base===CANDIDATE_REPAIR_BASE?'MCFT_CAP_09_S0_AUTHORIZATION_CANDIDATE':'REBUILD_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP'};
  write(result);console.log(JSON.stringify(result,null,2));
 }
 function registryBootstrap(base,head){
@@ -44,6 +46,23 @@ function registryBootstrap(base,head){
  const result={status:'PASS',change_class:'MCFT_CAP_09_S0_SUCCESSOR_REGISTRY_BOOTSTRAP_LIFECYCLE',base_sha:base,head_sha:head,changed_files:files,foundation_reexecution:false,registry_rule_present:true,current_candidate_authority:false,candidate_transition:false,candidate_declaration:false,implementation_authorized:false,runtime_source_delta:0,canonical_runtime_data_delta:0,database_acl_delta:0,first_legal_next_action:'MCFT_CAP_09_S0_AUTHORIZATION_CANDIDATE'};
  write(result);console.log(JSON.stringify(result,null,2));
 }
+function candidateSignal(base,head){
+ const files=changed(base);ok(same(files,CANDIDATE),'CANDIDATE_BOUNDARY:'+JSON.stringify(files));safeFiles(files);
+ for(const f of ['docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PREDECESSOR-LOCK-V1.json','docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'])ok(sh('diff','--quiet',`${base}...HEAD`,'--',f)==='',`CANDIDATE_FOUNDATION_DRIFT:${f}`);
+ const cur=js(CURRENT),ds=js(STATUS),rec=js('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-V1.json'),b=js('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-BOUNDARY-V1.json');
+ ok(cur.status==='AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE','CANDIDATE_STATUS');
+ ok(cur.record_status==='S0_AUTHORIZATION_CANDIDATE','CANDIDATE_RECORD_STATUS');
+ ok(cur.registry_rule_present===true&&cur.implementation_authorized===false&&cur.runtime_source_authorized===false&&cur.live_ingestion_authorized===false&&cur.background_scheduler_authorized===false&&cur.canonical_write_authorized===false&&cur.public_http_writer_authorized===false&&cur.model_activation_authorized===false&&cur.controlled_action_authorized===false,'CANDIDATE_AUTH_BOUNDARY');
+ ok(cur.effectiveness_condition==='PRESENT_ON_PROTECTED_MAIN_AND_EXACT_SHA_R2_ATTESTATION_PASS'&&cur.effective_status_when_attested==='IN_PROGRESS'&&cur.effective_next_slice_when_attested==='S1','CANDIDATE_EFFECTIVENESS');
+ ok(ds.status==='AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE'&&ds.s0_candidate_implemented===true&&ds.externally_effective===false&&ds.candidate_declaration_present===true,'DELIVERY_CANDIDATE');
+ ok(ds.implementation_authorized===false&&ds.runtime_source_authorized===false&&ds.runtime_source_delta===0&&ds.canonical_runtime_data_delta===0&&ds.database_acl_delta===0&&ds.registry_delta===0,'DELIVERY_AUTH_BOUNDARY');
+ ok(rec.record_status==='S0_AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE'&&rec.base_main_sha===base&&rec.candidate_head_sha===head&&rec.candidate_transition_performed===true&&rec.external_effectiveness===false,'CANDIDATE_RECORD');
+ ok(rec.runtime_source_delta===0&&rec.migration_delta===0&&rec.registry_delta===0&&rec.taskbook_delta===0&&rec.canonical_runtime_data_delta===0&&rec.database_acl_delta===0,'CANDIDATE_ZERO_DELTA');
+ ok(b.base_main_sha===base&&b.candidate_head_sha===head&&b.changed_file_count===6&&same(b.changed_files,CANDIDATE)&&b.candidate_transition===true&&b.runtime_source_delta===0&&b.registry_delta===0,'CANDIDATE_BOUNDARY_RECORD');
+ const result={status:'PASS',change_class:'MCFT_CAP_09_S0_AUTHORIZATION_CANDIDATE_SIGNAL',base_sha:base,head_sha:head,changed_files:files,foundation_reexecution:false,registry_rewrite:false,candidate_transition:true,candidate_declaration_expected_in_pr_body:true,implementation_authorized:false,runtime_source_delta:0,canonical_runtime_data_delta:0,database_acl_delta:0,external_effectiveness:false,first_legal_next_action:'PROTECTED_MERGE_THEN_EXACT_SHA_R2_ATTESTATION'};
+ write(result);console.log(JSON.stringify(result,null,2));
+}
+
 async function foundation(base,head){
  ok(base===FOUNDATION_BASE,'FOUNDATION_BASE:'+base);
  const files=changed(base);ok(same(files,FOUNDATION),'FOUNDATION_BOUNDARY:'+JSON.stringify(files));safeFiles(files);
@@ -56,4 +75,4 @@ async function foundation(base,head){
  const result={status:'PASS',change_class:'MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE_FOUNDATION',base_sha:base,head_sha:head,changed_files:files,predecessor_subject_sha:S,predecessor_workflow_run_id:RUN,predecessor_artifact_id:ART,predecessor_semantic_digest:a.semantic_artifact_digest,retention_level:l.retention_level,retain_until:l.retain_until,taskbook_present:true,machine_scope_contract_present:true,status_seed_present:true,registry_rule_present:false,implementation_authorized:false,runtime_source_delta:0,canonical_runtime_data_delta:0,database_acl_delta:0,candidate_declaration:false,first_legal_next_action:'MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP'};
  write(result);console.log(JSON.stringify(result,null,2));
 }
-(async()=>{const base=process.env.MCFT_BASE_SHA,head=sh('rev-parse','HEAD'),arg=process.argv[2];try{if(arg==='--workflow-repair')workflowRepair(base,head);else if(arg==='--registry-bootstrap')registryBootstrap(base,head);else await foundation(base,head)}catch(e){const result={status:'FAIL',base_sha:base||null,head_sha:head,error:e.message};write(result);console.error(JSON.stringify(result,null,2));process.exitCode=1}})();
+(async()=>{const base=process.env.MCFT_BASE_SHA,head=sh('rev-parse','HEAD'),arg=process.argv[2];try{if(arg==='--workflow-repair')workflowRepair(base,head);else if(arg==='--registry-bootstrap')registryBootstrap(base,head);else if(arg==='--candidate-signal')candidateSignal(base,head);else await foundation(base,head)}catch(e){const result={status:'FAIL',base_sha:base||null,head_sha:head,error:e.message};write(result);console.error(JSON.stringify(result,null,2));process.exitCode=1}})();

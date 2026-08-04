@@ -64,10 +64,19 @@ jobs:
           repair_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml' \
             'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs' | sort)"
+          candidate_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s0-authorization.yml' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-BOUNDARY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_AUTHORIZATION.cjs' | sort)"
           if [[ "$files" == "$repair_files" ]]; then
             mode='workflow-repair'
           elif [[ "$files" == "$registry_files" ]]; then
             mode='registry-bootstrap'
+          elif [[ "$files" == "$candidate_files" ]]; then
+            mode='candidate-signal'
           elif [[ "$files" == "$foundation_files" ]]; then
             mode='s0-foundation'
           else
@@ -98,6 +107,9 @@ jobs:
               ;;
             registry-bootstrap)
               node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs --registry-bootstrap
+              ;;
+            candidate-signal)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs --candidate-signal
               ;;
             s0-foundation)
               node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs
