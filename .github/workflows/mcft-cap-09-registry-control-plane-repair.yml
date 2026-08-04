@@ -1,0 +1,46 @@
+name: mcft-cap-09-registry-control-plane-repair
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-registry-control-plane-repair.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-REGISTRY-CONTROL-PLANE-REPAIR-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION_CORE.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_REGISTRY_CONTROL_PLANE_REPAIR.cjs'
+      - 'scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1_CORE.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-registry-control-plane-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  registry-control-plane-repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate complete Registry trigger matrix control plane
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_REGISTRY_CONTROL_PLANE_REPAIR.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-registry-control-plane-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_REGISTRY_CONTROL_PLANE_REPAIR_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
