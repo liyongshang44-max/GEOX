@@ -1,0 +1,132 @@
+{
+  "schema_version": "geox_mcft_cap09_stage1b_scope_contract_v1",
+  "contract_id": "GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1",
+  "record_status": "PRE_CANDIDATE_DESIGN_AUTHORITY_WHEN_PRESENT_ON_MAIN",
+  "capability_line_id": "MCFT-CAP-09",
+  "canonical_name": "Shadow-Online Promotion",
+  "runtime_mode": "SHADOW_ONLINE",
+  "target_stage": "STAGE_1B_SHADOW_ONLINE_CLOSURE",
+  "shared_core_immutable": [
+    "domain_model",
+    "canonical_object_contracts",
+    "state_transition_semantics",
+    "forecast_scenario_semantics",
+    "transaction_families",
+    "resolve_E_H_A_B_G_C_barrier_order",
+    "append_only_facts",
+    "rebuildable_projections",
+    "idempotency",
+    "fencing",
+    "checkpoint",
+    "revision_rules",
+    "read_only_operator_runtime_api_family"
+  ],
+  "mode_specific_adapter_classes": [
+    "ClockPort",
+    "EvidenceIngressPort",
+    "SchedulerPort",
+    "ExecutionFeedbackPort",
+    "AvailabilityPort",
+    "operational_deployment_configuration"
+  ],
+  "formal_closure": {
+    "slot_ids": [
+      "O00",
+      "O01",
+      "O02",
+      "O03",
+      "O04",
+      "O05",
+      "O06",
+      "O07",
+      "O08",
+      "O09",
+      "O10",
+      "O11",
+      "O12",
+      "O13",
+      "O14",
+      "O15",
+      "O16",
+      "O17",
+      "O18",
+      "O19",
+      "O20",
+      "O21",
+      "O22",
+      "O23"
+    ],
+    "slot_count": 24,
+    "slot_interval": "PT1H",
+    "clock_source": "SCHEDULER_PROVIDED_UTC_WALL_CLOCK",
+    "accelerated_clock_allowed": false,
+    "scope_count": 1,
+    "required_restart_count": 1,
+    "required_missed_slot_backfill_count": 1,
+    "required_stale_evidence_case_count": 1,
+    "required_late_or_out_of_order_case_count": 1,
+    "future_evidence_leakage_allowed": false,
+    "automatic_real_world_action_allowed": false
+  },
+  "write_boundary": {
+    "future_slice_authorizable_object_families": [
+      "State",
+      "Forecast",
+      "Scenario",
+      "Residual",
+      "Checkpoint",
+      "RuntimeHealth"
+    ],
+    "current_s0_canonical_write_authorized": false,
+    "decision_write_authorized": false,
+    "approval_write_authorized": false,
+    "ao_act_write_authorized": false,
+    "dispatch_write_authorized": false,
+    "model_activation_authorized": false
+  },
+  "slice_plan": [
+    {
+      "slice_id": "MCFT-CAP-09.S0",
+      "name": "Design and pre-candidate governance",
+      "implementation_authorized": false
+    },
+    {
+      "slice_id": "MCFT-CAP-09.S1",
+      "name": "Adapter contracts and configuration freeze",
+      "implementation_authorized": false
+    },
+    {
+      "slice_id": "MCFT-CAP-09.S2",
+      "name": "Database Evidence ingress and boundary freeze",
+      "implementation_authorized": false
+    },
+    {
+      "slice_id": "MCFT-CAP-09.S3",
+      "name": "Persistent sequential scheduler",
+      "implementation_authorized": false
+    },
+    {
+      "slice_id": "MCFT-CAP-09.S4",
+      "name": "Restart backfill and stale detection",
+      "implementation_authorized": false
+    },
+    {
+      "slice_id": "MCFT-CAP-09.S5",
+      "name": "Shadow-online canonical integration",
+      "implementation_authorized": false
+    },
+    {
+      "slice_id": "MCFT-CAP-09.S6",
+      "name": "Formal 24-hour Stage 1B closure",
+      "implementation_authorized": false
+    }
+  ],
+  "separate_qualifications_not_established": [
+    "LONG_HORIZON_REPLAY_STABILITY_QUALIFICATION",
+    "MULTI_FIELD_SCALE",
+    "DISTRIBUTED_HA",
+    "PRODUCTION_GATEWAY_INGRESS",
+    "CONTROLLED_ACTION_FEEDBACK_CLOSURE",
+    "MODEL_ACTIVATION"
+  ]
+}
