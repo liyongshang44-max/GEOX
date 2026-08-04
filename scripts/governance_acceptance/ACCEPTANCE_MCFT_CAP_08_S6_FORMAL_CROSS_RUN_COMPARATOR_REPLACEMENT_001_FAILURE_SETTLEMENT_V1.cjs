@@ -1,0 +1,231 @@
+#!/usr/bin/env node
+'use strict';
+
+const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+const { execFileSync } = require('node:child_process');
+
+const ROOT = path.resolve(__dirname, '../..');
+const BASE = '54365415ffb25d8620b0aea0546e1fbd792425a5';
+const SUBJECT = 'ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59';
+const EXEC_ID = 'MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-20260804-REPLACEMENT-001';
+
+const FAILURE = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-FAILURE-SETTLEMENT-V1.json';
+const CONSUMPTION = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-CONSUMPTION-V1.json';
+const BOUNDARY = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-FAILURE-SETTLEMENT-BOUNDARY-V1.json';
+const VALIDATOR = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_001_FAILURE_SETTLEMENT_V1.cjs';
+const WORKFLOW = '.github/workflows/mcft-cap-08-s6-formal-comparator-replacement-001-failure-settlement.yml';
+const AUTHORITY = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-EXECUTION-AUTHORITY-EFFECTIVE-V1.json';
+const EXEC_WORKFLOW = '.github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-execution.yml';
+const CONTROL = 'scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_comparator_execution_control_v1.cjs';
+const RUN_A_SETTLEMENT = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-011-FORMAL-RUN-A-SUCCESS-V1.json';
+const RUN_B_SETTLEMENT = 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-001-FORMAL-RUN-B-SUCCESS-V1.json';
+const CHANGED = [FAILURE, CONSUMPTION, BOUNDARY, VALIDATOR, WORKFLOW].sort();
+
+const AUDIT = process.env.MCFT_FORMAL_COMPARATOR_FAILURE_AUDIT || path.join(ROOT, 'acceptance-input/GITHUB_FORMAL_COMPARATOR_FAILURE_AUDIT.json');
+const RECEIPT = process.env.MCFT_FORMAL_COMPARATOR_BROKER_RECEIPT || path.join(ROOT, 'acceptance-input/broker/MCFT_CAP_08_S6_FORMAL_COMPARATOR_REPLACEMENT_001_DISPATCH_BROKER_RECEIPT.json');
+const OUTPUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_08_S6_FORMAL_COMPARATOR_REPLACEMENT_001_FAILURE_SETTLEMENT_RESULT.json');
+
+const git = (...args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
+const readJson = (file) => JSON.parse(fs.readFileSync(path.join(ROOT, file), 'utf8'));
+const canonical = (value) => Array.isArray(value)
+  ? `[${value.map(canonical).join(',')}]`
+  : value && typeof value === 'object'
+    ? `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`
+    : JSON.stringify(value);
+
+function semanticDigest(value) {
+  const copy = structuredClone(value);
+  delete copy.semantic_digest;
+  return `sha256:${crypto.createHash('sha256').update(canonical(copy)).digest('hex')}`;
+}
+
+function save(value) {
+  fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
+  fs.writeFileSync(OUTPUT, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function requireStep(job, name, conclusion) {
+  const step = (job.steps || []).find((item) => item.name === name);
+  assert.ok(step, `MISSING_STEP:${name}`);
+  assert.equal(step.conclusion, conclusion, `STEP_CONCLUSION:${name}`);
+}
+
+function resolveExactPrHead() {
+  const headRef = String(process.env.GITHUB_HEAD_REF || '').trim();
+  return headRef ? git('rev-parse', `origin/${headRef}`) : git('rev-parse', 'HEAD');
+}
+
+try {
+  const base = String(process.env.MCFT_BASE_SHA || BASE).trim();
+  const exactHead = resolveExactPrHead();
+  assert.equal(base, BASE);
+  assert.equal(git('merge-base', BASE, exactHead), BASE);
+  assert.equal(git('rev-list', '--count', `${BASE}..${exactHead}`), '6');
+  assert.equal(git('diff', '--check', `${BASE}...${exactHead}`), '');
+  assert.deepEqual(
+    git('diff', '--name-only', `${BASE}...${exactHead}`).split(/\r?\n/).filter(Boolean).sort(),
+    CHANGED,
+  );
+
+  const failure = readJson(FAILURE);
+  const consumption = readJson(CONSUMPTION);
+  const boundary = readJson(BOUNDARY);
+  const runA = readJson(RUN_A_SETTLEMENT);
+  const runB = readJson(RUN_B_SETTLEMENT);
+  const authority = readJson(AUTHORITY);
+
+  for (const record of [failure, consumption, boundary]) {
+    assert.equal(record.semantic_digest, semanticDigest(record), `SEMANTIC_DIGEST:${record.schema_version}`);
+  }
+
+  assert.equal(git('rev-parse', `${exactHead}:${FAILURE}`), 'f1aa8da7c1f855e80069a08651eec014a82f00e5');
+  assert.equal(git('rev-parse', `${exactHead}:${CONSUMPTION}`), 'dc03eac0b384ee26a43e6299842864c8190e99ba');
+  assert.equal(git('rev-parse', `${exactHead}:${BOUNDARY}`), 'b61dc2b396b5430da435e9dae4919b5f95724f46');
+
+  for (const ref of [BASE, exactHead]) {
+    assert.equal(git('rev-parse', `${ref}:${AUTHORITY}`), 'c2df7c3da181ff231931a66c7f6c6b2312b7015a');
+    assert.equal(git('rev-parse', `${ref}:${EXEC_WORKFLOW}`), 'b11d60820f35ee39ac2df2a4372cbce7df8cf876');
+    assert.equal(git('rev-parse', `${ref}:${CONTROL}`), 'f6e1673681f734474340c1a1ffab79be60892a7a');
+    assert.equal(git('rev-parse', `${ref}:${RUN_A_SETTLEMENT}`), 'aec6a5d6ad91687c7f404f1638eecb0600c25df4');
+    assert.equal(git('rev-parse', `${ref}:${RUN_B_SETTLEMENT}`), 'a0ae9603622c195d54d7f0f96bdf022b652bed4b');
+  }
+
+  assert.equal(failure.record_status, 'FORMAL_CROSS_RUN_COMPARATOR_TERMINAL_FAILURE_SETTLED');
+  assert.equal(failure.exact_subject_sha, SUBJECT);
+  assert.equal(failure.comparator_execution_id, EXEC_ID);
+  assert.equal(failure.dispatch_broker.workflow_run_id, 30893129322);
+  assert.equal(failure.dispatch_broker.workflow_run_attempt, 1);
+  assert.equal(failure.dispatch_broker.dispatch_http_status, 204);
+  assert.equal(failure.dispatch_broker.preexisting_workflow_dispatch_count, 0);
+  assert.equal(failure.formal_comparator_execution.workflow_run_id, 30893508924);
+  assert.equal(failure.formal_comparator_execution.workflow_run_attempt, 1);
+  assert.equal(failure.formal_comparator_execution.conclusion, 'failure');
+  assert.equal(failure.formal_comparator_execution.input_audit_conclusion, 'failure');
+  assert.equal(failure.formal_comparator_execution.semantic_comparator_step_conclusion, 'skipped');
+  assert.equal(failure.formal_comparator_execution.formal_result_artifact_count, 0);
+  assert.equal(failure.failure_fingerprint.first_failed_input, 'RUN_A');
+  assert.equal(failure.failure_fingerprint.actual_workflow_head_sha, '191e363e1fd9fa4c77c8b5135fb9673c3a9286d1');
+  assert.equal(failure.failure_fingerprint.expected_exact_subject_sha, SUBJECT);
+  assert.equal(failure.failure_fingerprint.root_cause_classification, 'CONTROL_PLANE_PROVENANCE_IDENTITY_CONFLATION');
+  assert.equal(failure.failure_fingerprint.semantic_comparator_executed, false);
+  assert.equal(failure.terminal_governance.authority_consumed, true);
+  assert.equal(failure.terminal_governance.execution_count_consumed, 1);
+  assert.equal(failure.terminal_governance.rerun_authorized, false);
+  assert.equal(failure.terminal_governance.authority_reuse_authorized, false);
+
+  assert.equal(consumption.record_status, 'SINGLE_FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_CONSUMED_TERMINAL_FAILURE');
+  assert.equal(consumption.consumed_dispatch.formal_workflow_run_id, 30893508924);
+  assert.equal(consumption.consumed_dispatch.unique_target_resolved, true);
+  assert.equal(consumption.consumed_execution.conclusion, 'failure');
+  assert.equal(consumption.consumed_execution.semantic_comparator_executed, false);
+  assert.equal(consumption.consumption_state.remaining_execution_count, 0);
+  assert.equal(consumption.consumption_state.workflow_dispatch_authorized_after_consumption, false);
+  assert.equal(consumption.consumption_state.same_execution_id_reuse_authorized, false);
+
+  assert.equal(boundary.changed_file_count, 5);
+  assert.deepEqual([...boundary.changed_files].sort(), CHANGED);
+  assert.equal(boundary.runtime_source_changed, false);
+  assert.equal(boundary.database_execution_in_pr, false);
+  assert.equal(boundary.workflow_dispatch_in_pr, false);
+  assert.equal(boundary.workflow_rerun_in_pr, false);
+  assert.equal(boundary.execution_control_changed, false);
+  assert.equal(boundary.replacement_001_authority_consumed, true);
+  assert.equal(boundary.replacement_002_authority_candidate_created, false);
+
+  assert.equal(authority.maximum_execution_count, 1);
+  assert.equal(authority.required_execution_attempt, 1);
+  assert.equal(authority.rerun_authorized, false);
+  assert.equal(authority.duplicate_execution_authorized, false);
+  assert.equal(authority.authority_reuse_authorized, false);
+
+  assert.equal(runA.exact_subject_sha, SUBJECT);
+  assert.equal(runA.formal_workflow.head_sha, '191e363e1fd9fa4c77c8b5135fb9673c3a9286d1');
+  assert.notEqual(runA.formal_workflow.head_sha, runA.exact_subject_sha);
+  assert.equal(runB.exact_subject_sha, SUBJECT);
+  assert.equal(runB.formal_workflow.head_sha, 'a5039a07455e8b325db23880dd8e8c460fc6aa0d');
+  assert.notEqual(runB.formal_workflow.head_sha, runB.exact_subject_sha);
+
+  const control = fs.readFileSync(path.join(ROOT, CONTROL), 'utf8');
+  assert.ok(control.includes('assert.equal(run.head_sha,SUBJECT)'));
+
+  const audit = JSON.parse(fs.readFileSync(AUDIT, 'utf8'));
+  assert.equal(audit.status, 'PASS');
+  assert.equal(audit.matching_broker_run_count, 1);
+  assert.equal(audit.matching_comparator_run_count, 1);
+  assert.equal(audit.broker.id, 30893129322);
+  assert.equal(audit.broker.run_attempt, 1);
+  assert.equal(audit.broker.conclusion, 'success');
+  assert.equal(audit.comparator.id, 30893508924);
+  assert.equal(audit.comparator.run_attempt, 1);
+  assert.equal(audit.comparator.event, 'workflow_dispatch');
+  assert.equal(audit.comparator.head_sha, BASE);
+  assert.equal(audit.comparator.conclusion, 'failure');
+  assert.equal(audit.comparator_artifacts.length, 0);
+  assert.equal(audit.run_a.id, 30845476698);
+  assert.equal(audit.run_a.head_sha, '191e363e1fd9fa4c77c8b5135fb9673c3a9286d1');
+  assert.equal(audit.run_a.conclusion, 'success');
+  assert.equal(audit.run_a_artifact.id, 8868535301);
+  assert.equal(audit.run_a_artifact.digest, 'sha256:4d59d3aa0373bee0c9eb33ab78dd427eb324d4d259e0786aa9c4dea9effdaf2f');
+  assert.equal(audit.run_b.id, 30877450717);
+  assert.equal(audit.run_b.head_sha, 'a5039a07455e8b325db23880dd8e8c460fc6aa0d');
+  assert.equal(audit.run_b.conclusion, 'success');
+  assert.equal(audit.run_b_artifact.id, 8880057024);
+  assert.equal(audit.run_b_artifact.digest, 'sha256:33e8b0333e1cd22bcd3002540ef5c12b72a8c545e58eb8ca185bf49edc6ae9cc');
+
+  const job = audit.comparator_jobs.find((item) => item.id === 91940870114);
+  assert.ok(job);
+  assert.equal(job.conclusion, 'failure');
+  requireStep(job, 'Gate effective single-use comparator authority before artifact transport', 'success');
+  requireStep(job, 'Download exact settled Formal RUN_A artifact', 'success');
+  requireStep(job, 'Download exact settled Formal RUN_B artifact', 'success');
+  requireStep(job, 'Audit exact formal input runs and artifact digests', 'failure');
+  requireStep(job, 'Execute formal cross-run comparator exactly once', 'skipped');
+  requireStep(job, 'Upload one formal comparator artifact only', 'failure');
+
+  const receipt = JSON.parse(fs.readFileSync(RECEIPT, 'utf8'));
+  assert.equal(receipt.status, 'DISPATCH_ACCEPTED_HTTP_204_AND_UNIQUE_TARGET_RESOLVED');
+  assert.equal(receipt.broker_run_id, 30893129322);
+  assert.equal(receipt.broker_run_attempt, 1);
+  assert.equal(receipt.authority_main_sha, BASE);
+  assert.equal(receipt.exact_subject_sha, SUBJECT);
+  assert.equal(receipt.comparator_execution_id, EXEC_ID);
+  assert.equal(receipt.preexisting_workflow_dispatch_count, 0);
+  assert.equal(receipt.target_workflow_run_id, 30893508924);
+  assert.equal(receipt.target_workflow_run_attempt, 1);
+  assert.equal(receipt.rerun_authorized, false);
+  assert.equal(receipt.duplicate_dispatch_authorized, false);
+
+  const result = {
+    schema_version: 'geox_mcft_cap08_s6_formal_cross_run_comparator_replacement_001_failure_settlement_result_v1',
+    status: 'PASS',
+    base_main_sha: BASE,
+    exact_head_sha: exactHead,
+    exact_subject_sha: SUBJECT,
+    comparator_execution_id: EXEC_ID,
+    broker_run_id: 30893129322,
+    formal_comparator_run_id: 30893508924,
+    formal_comparator_run_attempt: 1,
+    formal_comparator_conclusion: 'failure',
+    failure_stage: 'EXACT_FORMAL_INPUT_PROVENANCE_AUDIT',
+    semantic_comparator_executed: false,
+    formal_artifact_created: false,
+    authority_consumed: true,
+    remaining_execution_count: 0,
+    rerun_authorized: false,
+    same_execution_id_reuse_authorized: false,
+    next_legal_action: 'CORRECT_FORMAL_INPUT_PROVENANCE_BINDING_THEN_ISSUE_FRESH_REPLACEMENT_002_AUTHORITY_CANDIDATE',
+  };
+  save(result);
+  console.log(JSON.stringify(result, null, 2));
+} catch (error) {
+  save({
+    schema_version: 'geox_mcft_cap08_s6_formal_cross_run_comparator_replacement_001_failure_settlement_result_v1',
+    status: 'FAIL',
+    error: error instanceof Error ? error.message : String(error),
+  });
+  console.error(error);
+  process.exitCode = 1;
+}
