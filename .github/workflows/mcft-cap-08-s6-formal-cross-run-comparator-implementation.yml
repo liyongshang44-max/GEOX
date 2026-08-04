@@ -1,0 +1,65 @@
+name: mcft-cap-08-s6-formal-cross-run-comparator-implementation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-implementation.yml'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_semantic_comparator_v1.cjs'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-IMPLEMENTATION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-IMPLEMENTATION-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_IMPLEMENTATION_V1.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap08-s6-formal-cross-run-comparator-implementation-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  implementation-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact implementation head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Download exact Formal RUN_A artifact for non-formal implementation qualification
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-RUN_A-ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59
+          path: acceptance-input/formal-run-a
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 30845476698
+      - name: Download exact Formal RUN_B artifact for non-formal implementation qualification
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-RUN_B-ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59
+          path: acceptance-input/formal-run-b
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 30877450717
+      - name: Validate formal comparator implementation without authority or formal execution
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_RUN_A_ARTIFACT_DIR: acceptance-input/formal-run-a
+          MCFT_RUN_B_ARTIFACT_DIR: acceptance-input/formal-run-b
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_IMPLEMENTATION_V1.cjs
+      - name: Upload non-formal implementation qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-formal-cross-run-comparator-implementation-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_IMPLEMENTATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 365

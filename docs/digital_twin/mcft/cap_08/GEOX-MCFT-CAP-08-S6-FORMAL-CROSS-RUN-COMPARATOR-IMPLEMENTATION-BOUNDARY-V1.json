@@ -1,0 +1,22 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_implementation_boundary_v1",
+  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_IMPLEMENTATION_BOUNDARY_FROZEN",
+  "base_main_sha": "536ef2db9ad084fd5911bd42c5a40e88d7f3b7c8",
+  "changed_file_count": 5,
+  "changed_files": [
+    ".github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-implementation.yml",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-IMPLEMENTATION-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-IMPLEMENTATION-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_IMPLEMENTATION_V1.cjs",
+    "scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_semantic_comparator_v1.cjs"
+  ],
+  "runtime_source_file_count": 0,
+  "database_execution_file_count": 0,
+  "formal_database_workflow_file_count": 0,
+  "comparator_implementation_file_count": 1,
+  "formal_comparator_authority_created": false,
+  "formal_comparator_execution_performed": false,
+  "formal_evidence_created": false,
+  "next_legal_action": "ESTABLISH_FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_CANDIDATE",
+  "semantic_digest": "sha256:19236d5dc4e6c3aa6cf1facb84435eaffe2080c34afe38a4804990f0d0c913f1"
+}
