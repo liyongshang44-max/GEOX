@@ -1,0 +1,102 @@
+name: mcft-cap-08-s6-formal-cross-run-comparator-replacement-001-authority-candidate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-replacement-001-authority-candidate.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-CANDIDATE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-OBJECT-SET-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-ISSUANCE-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-SUPERSESSION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_001_AUTHORITY_CANDIDATE_V1.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap08-s6-formal-comparator-replacement-001-authority-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  replacement-authority-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact replacement authority candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Download exact settled Formal RUN_A artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-RUN_A-ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59
+          path: acceptance-input/formal-run-a
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 30845476698
+      - name: Download exact settled Formal RUN_B artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-RUN_B-ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59
+          path: acceptance-input/formal-run-b
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 30877450717
+      - name: Audit formal inputs, implementation and execution workflow qualifications
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-input
+          python - <<'PY'
+          import json, os, urllib.request
+          repo=os.environ['GITHUB_REPOSITORY']; token=os.environ['GH_TOKEN']
+          headers={'Accept':'application/vnd.github+json','Authorization':f'Bearer {token}','X-GitHub-Api-Version':'2022-11-28','User-Agent':'mcft-cap08-comparator-replacement-001-candidate'}
+          def get(path):
+              req=urllib.request.Request(f'https://api.github.com/repos/{repo}{path}',headers=headers)
+              with urllib.request.urlopen(req,timeout=30) as r:return json.load(r)
+          specs={
+            'run_a':(30845476698,8868535301),
+            'run_b':(30877450717,8880057024),
+            'implementation':(30881117123,8881320548),
+            'execution_workflow':(30884238735,8882436260),
+          }
+          result={'schema_version':'geox_mcft_cap08_s6_formal_comparator_replacement_001_candidate_input_audit_v1','status':'PASS','exact_subject_sha':'ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59'}
+          for key,(run_id,artifact_id) in specs.items():
+              run=get(f'/actions/runs/{run_id}')
+              artifacts=get(f'/actions/runs/{run_id}/artifacts?per_page=100').get('artifacts',[])
+              item=next((x for x in artifacts if x.get('id')==artifact_id),None)
+              if item is None: raise SystemExit(f'MISSING_ARTIFACT:{key}:{artifact_id}')
+              result[key]={'workflow_run_id':run_id,'workflow_run_attempt':run.get('run_attempt'),'event':run.get('event'),'conclusion':run.get('conclusion'),'head_sha':run.get('head_sha'),'artifact_id':artifact_id,'artifact_digest':item.get('digest')}
+          jobs=get('/actions/runs/30884238735/jobs?per_page=100').get('jobs',[])
+          result['execution_workflow']['jobs']=[{'name':j.get('name'),'conclusion':j.get('conclusion')} for j in jobs]
+          with open('acceptance-input/FORMAL_COMPARATOR_REPLACEMENT_001_CANDIDATE_INPUT_AUDIT.json','w',encoding='utf-8') as f:json.dump(result,f,indent=2);f.write('\n')
+          print(json.dumps(result,indent=2))
+          PY
+      - name: Validate replacement non-effective comparator authority candidate
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_RUN_A_ARTIFACT_DIR: acceptance-input/formal-run-a
+          MCFT_RUN_B_ARTIFACT_DIR: acceptance-input/formal-run-b
+          MCFT_COMPARATOR_REPLACEMENT_INPUT_AUDIT: acceptance-input/FORMAL_COMPARATOR_REPLACEMENT_001_CANDIDATE_INPUT_AUDIT.json
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_001_AUTHORITY_CANDIDATE_V1.cjs
+      - name: Upload replacement authority candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-formal-comparator-replacement-001-authority-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_08_S6_FORMAL_COMPARATOR_REPLACEMENT_001_AUTHORITY_CANDIDATE_RESULT.json
+            acceptance-input/FORMAL_COMPARATOR_REPLACEMENT_001_CANDIDATE_INPUT_AUDIT.json
+          if-no-files-found: error
+          retention-days: 365

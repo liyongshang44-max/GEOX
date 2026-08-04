@@ -1,0 +1,26 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_replacement_001_authority_boundary_v1",
+  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_001_AUTHORITY_CANDIDATE_BOUNDARY_FROZEN",
+  "base_main_sha": "596510a233e9c3727ae46405b471acbb29d4984f",
+  "changed_file_count": 7,
+  "changed_files": [
+    ".github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-replacement-001-authority-candidate.yml",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-CANDIDATE-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-ISSUANCE-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-OBJECT-SET-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-SUPERSESSION-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_001_AUTHORITY_CANDIDATE_V1.cjs"
+  ],
+  "governance_file_count": 7,
+  "runtime_source_file_count": 0,
+  "comparator_implementation_file_count": 0,
+  "execution_workflow_file_count": 0,
+  "workflow_dispatch_in_pr": false,
+  "predecessor_candidate_superseded": true,
+  "replacement_authority_effective": false,
+  "formal_comparator_execution_performed": false,
+  "formal_comparator_evidence_created": false,
+  "next_legal_action": "ESTABLISH_REPLACEMENT_001_FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_EFFECTIVENESS",
+  "semantic_digest": "sha256:70c5e2a40063b3f9fba70de88b1fe77562c3aced49e39033dc4356cd2f7e4be7"
+}

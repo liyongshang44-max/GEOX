@@ -1,0 +1,77 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_replacement_001_authority_object_set_v1",
+  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_001_AUTHORITY_OBJECT_SET_FROZEN",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_governance_main_sha": "596510a233e9c3727ae46405b471acbb29d4984f",
+  "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+  "object_count": 12,
+  "objects": [
+    {
+      "role": "FORMAL_COMPARATOR_IMPLEMENTATION",
+      "path": "scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_semantic_comparator_v1.cjs",
+      "blob_sha": "898fa85e2453add103671eac92ea792f0c600436"
+    },
+    {
+      "role": "QUALIFIED_NORMALIZATION_DEPENDENCY",
+      "path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/semantic_comparator_v1.cjs",
+      "blob_sha": "1a2f769aa8a305588eb169e43a4862e9f84db22f"
+    },
+    {
+      "role": "FORMAL_COMPARATOR_IMPLEMENTATION_CONTRACT",
+      "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-IMPLEMENTATION-V1.json",
+      "blob_sha": "b2e795076a7fd13b0d3bc40118a947b6c2fd6a92"
+    },
+    {
+      "role": "FORMAL_COMPARATOR_IMPLEMENTATION_BOUNDARY",
+      "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-IMPLEMENTATION-BOUNDARY-V1.json",
+      "blob_sha": "799b4535d89d2ba3d61654ef8d5f3942be8a837f"
+    },
+    {
+      "role": "FORMAL_COMPARATOR_EXECUTION_WORKFLOW",
+      "path": ".github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-execution.yml",
+      "blob_sha": "b11d60820f35ee39ac2df2a4372cbce7df8cf876"
+    },
+    {
+      "role": "FORMAL_COMPARATOR_EXECUTION_CONTROL",
+      "path": "scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_comparator_execution_control_v1.cjs",
+      "blob_sha": "f6e1673681f734474340c1a1ffab79be60892a7a"
+    },
+    {
+      "role": "FORMAL_COMPARATOR_EXECUTION_WORKFLOW_CONTRACT",
+      "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-EXECUTION-WORKFLOW-V1.json",
+      "blob_sha": "403383b1ec0efaf2986b17a8265634024ec8313a"
+    },
+    {
+      "role": "FORMAL_COMPARATOR_EXECUTION_WORKFLOW_BOUNDARY",
+      "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-EXECUTION-WORKFLOW-BOUNDARY-V1.json",
+      "blob_sha": "a873b1cfcb10b891721387741ebe610d23d6eb46"
+    },
+    {
+      "role": "FORMAL_RUN_A_SUCCESS",
+      "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-011-FORMAL-RUN-A-SUCCESS-V1.json",
+      "blob_sha": "aec6a5d6ad91687c7f404f1638eecb0600c25df4"
+    },
+    {
+      "role": "FORMAL_RUN_A_AUTHORITY_CONSUMPTION",
+      "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-011-RUN-A-AUTHORITY-CONSUMPTION-V1.json",
+      "blob_sha": "13480ddf62fafc9b408988d89c4f8038c7f16eff"
+    },
+    {
+      "role": "FORMAL_RUN_B_SUCCESS",
+      "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-001-FORMAL-RUN-B-SUCCESS-V1.json",
+      "blob_sha": "a0ae9603622c195d54d7f0f96bdf022b652bed4b"
+    },
+    {
+      "role": "FORMAL_RUN_B_AUTHORITY_CONSUMPTION",
+      "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-001-RUN-B-AUTHORITY-CONSUMPTION-V1.json",
+      "blob_sha": "0a00095030734b7147c32829a2d32bc4d2a4a469"
+    }
+  ],
+  "formal_input_count": 2,
+  "object_drift_authorized": false,
+  "formal_input_substitution_authorized": false,
+  "execution_workflow_substitution_authorized": false,
+  "next_legal_action": "ISSUE_NON_EFFECTIVE_REPLACEMENT_001_FORMAL_COMPARATOR_AUTHORITY_CANDIDATE",
+  "semantic_digest": "sha256:d0b9bdaebafd0f71ea8d14dc6995018b7935d1b55c547bf5a32c39cb82a3d26b"
+}
