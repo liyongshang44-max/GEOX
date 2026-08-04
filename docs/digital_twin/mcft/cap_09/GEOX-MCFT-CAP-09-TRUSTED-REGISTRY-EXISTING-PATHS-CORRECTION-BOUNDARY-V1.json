@@ -1,0 +1,33 @@
+{
+  "schema_version": "geox_mcft_cap09_trusted_registry_existing_paths_correction_boundary_v1",
+  "boundary_id": "GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-BOUNDARY-V1",
+  "record_status": "FROZEN_REGISTRY_CORRECTION_BOUNDARY_NOT_EFFECTIVE",
+  "base_main_sha": "d5e31c20c356816294b6a902b27ed8dcbe79c42d",
+  "base_registry_blob_sha": "e92a5af9e422812b76b6b689b4a2d1b0263a41ab",
+  "corrected_registry_blob_sha": "ed9763b4120ff32e6fd192ab7e11c7d436b74a62",
+  "registry_serialization": "MINIFIED_UTF8_CANONICAL_JSON",
+  "changed_file_count": 3,
+  "changed_files": [
+    "docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-V1.json"
+  ],
+  "registry_delta": 1,
+  "registry_header_delta": 2,
+  "cap09_registry_entry_delta": 1,
+  "cap06_semantic_delta": 0,
+  "cap07_semantic_delta": 0,
+  "cap08_semantic_delta": 0,
+  "candidate_transition": false,
+  "global_applicability_resolver_delta": 0,
+  "current_authority_delta": 0,
+  "s0_delivery_status_delta": 0,
+  "taskbook_delta": 0,
+  "scope_contract_delta": 0,
+  "predecessor_lock_delta": 0,
+  "runtime_source_delta": 0,
+  "migration_delta": 0,
+  "canonical_runtime_data_delta": 0,
+  "database_acl_delta": 0,
+  "navigation_ssot_delta": 0
+}
