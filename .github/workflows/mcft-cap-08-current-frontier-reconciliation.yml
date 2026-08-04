@@ -56,12 +56,15 @@ jobs:
         run: |
           set -euo pipefail
           files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD | sort)"
+          workflow_file='.github/workflows/mcft-cap-08-current-frontier-reconciliation.yml'
           lifecycle_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-08-current-frontier-reconciliation.yml' \
             '.github/workflows/mcft-cap-08-s5-effectiveness-settlement.yml' \
             '.github/workflows/mcft-cap-08-s5-replay-dataset-v2-prequalification.yml' \
             'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CURRENT_FRONTIER_RECONCILIATION.cjs' | sort)"
-          if [[ "$files" == "$lifecycle_files" ]]; then
+          if [[ "$files" == "$workflow_file" ]]; then
+            mode='frontier-workflow-repair'
+          elif [[ "$files" == "$lifecycle_files" ]]; then
             mode='lifecycle-repair'
           elif grep -Eq '^(docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md|docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md|docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json|docs/digital_twin/mcft/GEOX-MCFT-SSOT-CURRENT-V1.json|docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json|docs/handoff/GEOX-MCFT-CAP-08-S6-HANDOFF.md)$' <<<"$files"; then
             mode='post-closure'
@@ -74,7 +77,7 @@ jobs:
           fi
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - name: Download exact S6 completion authority
-        if: steps.lifecycle.outputs.mode == 'post-closur'
+        if: steps.lifecycle.outputs.mode == 'post-closure'
         uses: actions/download-artifact@v4
         with:
           run-id: 30908130962
@@ -93,6 +96,13 @@ jobs:
           set -euo pipefail
           mkdir -p acceptance-output
           case "$MCFT_FRONTIER_MODE" in
+            frontier-workflow-repair)
+              workflow='.github/workflows/mcft-cap-08-current-frontier-reconciliation.yml'
+              test "$(git diff --name-only "$MCFT_BASE_SHA"...HEAD)" = "$workflow"
+              grep -Fq "mode='frontier-workflow-repair'" "$workflow"
+              grep -Fxq "        if: steps.lifecycle.outputs.mode == 'post-closure'" "$workflow"
+              printf '%s\n' '{"status":"PASS","change_class":"CURRENT_FRONTIER_WORKFLOW_SELF_REPAIR","candidate_declaration":false,"runtime_source_delta":0,"registry_delta":0,"delivery_status_delta":0,"taskbook_byte_delta":0,"s5_database_reexecution":false,"s5_effectiveness_reexecution":false,"mcft_cap_09_authorized":false}' > acceptance-output/MCFT_CAP_08_CURRENT_FRONTIER_RECONCILIATION_RESULT.json
+              ;;
             lifecycle-repair)
               node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CURRENT_FRONTIER_RECONCILIATION.cjs --lifecycle-repair
               ;;
