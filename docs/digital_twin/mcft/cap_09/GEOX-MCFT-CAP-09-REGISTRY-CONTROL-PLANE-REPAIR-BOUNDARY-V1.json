@@ -1,0 +1,40 @@
+{
+  "schema_version": "geox_mcft_cap09_registry_control_plane_repair_boundary_v1",
+  "boundary_id": "GEOX-MCFT-CAP-09-REGISTRY-CONTROL-PLANE-REPAIR-BOUNDARY-V1",
+  "record_status": "FROZEN_NON_CANDIDATE_CONTROL_PLANE_REPAIR",
+  "change_class": "MCFT_CAP_09_REGISTRY_CONTROL_PLANE_REPAIR",
+  "base_main_sha": "d5e31c20c356816294b6a902b27ed8dcbe79c42d",
+  "changed_file_count": 7,
+  "changed_files": [
+    ".github/workflows/mcft-cap-09-registry-control-plane-repair.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-REGISTRY-CONTROL-PLANE-REPAIR-BOUNDARY-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION_CORE.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_REGISTRY_CONTROL_PLANE_REPAIR.cjs",
+    "scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs",
+    "scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1_CORE.cjs"
+  ],
+  "resolver_behavior_preserved_for_normal_candidates": true,
+  "cap08_s2_lifecycle_behavior_preserved_for_normal_changes": true,
+  "normal_missing_registered_status_path_effect": "FAIL_CLOSED",
+  "special_control_plane_modes": [
+    "REGISTRY_CONTROL_PLANE_REPAIR",
+    "REGISTRY_EXISTING_PATHS_CORRECTION"
+  ],
+  "registry_delta": 0,
+  "candidate_transition": false,
+  "candidate_declaration": false,
+  "runtime_source_delta": 0,
+  "migration_delta": 0,
+  "canonical_runtime_data_delta": 0,
+  "database_acl_delta": 0,
+  "global_ci_bypass": false,
+  "first_legal_next_action": "MCFT_CAP_09_TRUSTED_REGISTRY_EXISTING_PATHS_CORRECTION",
+  "trusted_registry_lifecycle_modes_preserved": [
+    "workflow-repair",
+    "registry-existing-paths-correction",
+    "candidate-signal",
+    "bootstrap",
+    "unsupported"
+  ]
+}
