@@ -28,6 +28,7 @@ concurrency:
 
 env:
   FOUNDATION_LIFECYCLE_MODE: DEDICATED_FAIL_CLOSED_WITH_OWNER_WAIVER
+  SHARED_RESOLVER_GOVERNANCE_REPAIR_MODE: DEDICATED_FAIL_CLOSED
 
 jobs:
   pre-candidate-foundation-lifecycle:
@@ -48,13 +49,16 @@ jobs:
       - name: Validate dedicated lifecycle classifier syntax
         run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs
 
-      - name: Classify foundation, lifecycle remediation, owner waiver, or successor regression
+      - name: Classify foundation, lifecycle remediation, owner waiver, shared resolver governance repair, or successor regression
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
         run: |
           # OWNER_REVIEW_WAIVER_MODE records a repository-owner waiver without
           # claiming independent review satisfaction or relaxing technical gates.
+          # SHARED_RESOLVER_GOVERNANCE_LIFECYCLE_REPAIR_MODE only repairs this
+          # historical classifier; it requires the shared resolver blob itself
+          # to remain at the historical value in this PR.
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_PRE_CANDIDATE_FOUNDATION.cjs
 
       - uses: actions/upload-artifact@v4
