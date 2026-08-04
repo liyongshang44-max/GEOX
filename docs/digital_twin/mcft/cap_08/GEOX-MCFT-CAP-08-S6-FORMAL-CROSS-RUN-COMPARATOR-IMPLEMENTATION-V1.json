@@ -1,0 +1,59 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_implementation_v1",
+  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_IMPLEMENTATION_QUALIFIED_NOT_AUTHORIZED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "implementation_base_main_sha": "536ef2db9ad084fd5911bd42c5a40e88d7f3b7c8",
+  "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+  "implementation": {
+    "path": "scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_semantic_comparator_v1.cjs",
+    "blob_sha": "898fa85e2453add103671eac92ea792f0c600436",
+    "entrypoint": "main",
+    "authority_required": true,
+    "input_audit_required": true,
+    "normalization_dependency": {
+      "path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/semantic_comparator_v1.cjs",
+      "blob_sha": "1a2f769aa8a305588eb169e43a4862e9f84db22f"
+    }
+  },
+  "formal_inputs": {
+    "run_a": {
+      "workflow_run_id": 30845476698,
+      "workflow_run_attempt": 1,
+      "artifact_id": 8868535301,
+      "artifact_digest": "sha256:4d59d3aa0373bee0c9eb33ab78dd427eb324d4d259e0786aa9c4dea9effdaf2f",
+      "formal_artifact_digest": "sha256:e592f00fb0b6c3234985f57e8d20955afc6246964d04aca7a56f9eea9b79e696",
+      "bundle_file": "MCFT_CAP_08_S6_RUN_A_FINAL_FORMAL_RUN_BUNDLE.json"
+    },
+    "run_b": {
+      "workflow_run_id": 30877450717,
+      "workflow_run_attempt": 1,
+      "artifact_id": 8880057024,
+      "artifact_digest": "sha256:33e8b0333e1cd22bcd3002540ef5c12b72a8c545e58eb8ca185bf49edc6ae9cc",
+      "formal_artifact_digest": "sha256:bacf1177784115836b2ebb2350ee2fbc4529af839202165699f540a657a8314e",
+      "bundle_file": "MCFT_CAP_08_S6_RUN_B_FINAL_FORMAL_RUN_BUNDLE.json"
+    }
+  },
+  "qualification_expectation": {
+    "semantic_digest_a": "sha256:32c93d4f5ecd1fc50ff94418407767b48b057d77c81bf93dfe3fccf58f0df2f8",
+    "semantic_digest_b": "sha256:32c93d4f5ecd1fc50ff94418407767b48b057d77c81bf93dfe3fccf58f0df2f8",
+    "difference_count": 0,
+    "semantic_equivalence": true
+  },
+  "authority_state": {
+    "formal_comparator_authority_created": false,
+    "formal_comparator_authority_effective": false,
+    "formal_comparator_execution_authorized": false,
+    "formal_comparator_executed": false
+  },
+  "next_legal_action": "ESTABLISH_FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_CANDIDATE",
+  "nonclaims": [
+    "NO_FORMAL_COMPARATOR_AUTHORITY",
+    "NO_FORMAL_COMPARATOR_EXECUTION",
+    "NO_FORMAL_COMPARATOR_EVIDENCE",
+    "NO_S6_CANDIDATE",
+    "NO_LEDGER_SETTLEMENT",
+    "NO_CAP08_COMPLETION"
+  ],
+  "semantic_digest": "sha256:a73432bd7bd3d2ef3d85abe07c574ab378aa444fd95012847c88b01b01fcdb87"
+}
