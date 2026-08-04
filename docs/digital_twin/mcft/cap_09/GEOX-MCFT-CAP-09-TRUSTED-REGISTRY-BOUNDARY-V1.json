@@ -1,0 +1,26 @@
+{
+  "schema_version": "geox_mcft_cap09_trusted_registry_boundary_v1",
+  "boundary_id": "GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOUNDARY-V1",
+  "record_status": "FROZEN_TRUSTED_REGISTRY_BOOTSTRAP_BOUNDARY",
+  "base_main_sha": "abadd19b2bd7460b397acbac6181253732b49fae",
+  "changed_file_count": 7,
+  "changed_files": [
+    ".github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml",
+    "docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOOTSTRAP-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOUNDARY-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs"
+  ],
+  "registry_delta": 1,
+  "cap09_registry_entry_delta": 1,
+  "candidate_transition": false,
+  "candidate_declaration_present": false,
+  "runtime_source_delta": 0,
+  "migration_delta": 0,
+  "canonical_runtime_data_delta": 0,
+  "database_acl_delta": 0,
+  "navigation_ssot_delta": 0,
+  "implementation_authorized": false
+}

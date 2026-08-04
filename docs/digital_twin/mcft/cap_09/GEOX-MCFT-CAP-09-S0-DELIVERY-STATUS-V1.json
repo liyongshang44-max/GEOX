@@ -10,7 +10,7 @@
   "machine_scope_contract_present": true,
   "predecessor_lock_present": true,
   "status_seed_present": true,
-  "registry_rule_present": false,
+  "registry_rule_present": true,
   "implementation_authorized": false,
   "runtime_source_authorized": false,
   "candidate_declaration_authorized": false,
@@ -19,6 +19,6 @@
   "canonical_runtime_data_delta": 0,
   "database_acl_delta": 0,
   "registry_delta": 0,
-  "first_legal_next_action": "MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP",
+  "first_legal_next_action": "MCFT_CAP_09_S0_AUTHORIZATION_CANDIDATE",
   "postmerge_ssot_writeback_allowed": false
 }
