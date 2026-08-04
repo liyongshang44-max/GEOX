@@ -1,0 +1,36 @@
+{
+  "schema_version": "geox_mcft_cap09_trusted_registry_existing_paths_correction_v1",
+  "correction_id": "GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-V1",
+  "record_status": "TRUSTED_REGISTRY_EXISTING_PATHS_CORRECTION_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "3968031dbffbcf547c46e1cb038b97974bd7a937",
+  "base_registry_blob_sha": "e92a5af9e422812b76b6b689b4a2d1b0263a41ab",
+  "corrected_registry_blob_sha": "e066ad7e6ec57f8dae9d0c2a41a492434deec4e0",
+  "authority_set_revision_before": "1.6",
+  "authority_set_revision_after": "1.7",
+  "authority_set_change_id": "MCFT-CAP-09.S0-EXISTING-STATUS-PATHS-CORRECTION",
+  "registration_mode": "APPEND_STATUS_PATH_WHEN_FILE_EXISTS_ON_PROTECTED_MAIN",
+  "removed_nonexistent_status_path_count": 6,
+  "removed_nonexistent_transition_rule_count": 6,
+  "retained_existing_status_paths": [
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json"
+  ],
+  "deferred_status_paths": [
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json"
+  ],
+  "deferred_transition_registration_required": true,
+  "global_applicability_resolver_delta": 0,
+  "candidate_transition": false,
+  "candidate_declaration": false,
+  "implementation_authorized": false,
+  "runtime_source_delta": 0,
+  "migration_delta": 0,
+  "canonical_runtime_data_delta": 0,
+  "database_acl_delta": 0,
+  "first_legal_next_action": "PROTECTED_MERGE_THEN_REBUILD_MCFT_CAP_09_S0_AUTHORIZATION_CANDIDATE"
+}
