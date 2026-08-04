@@ -36,7 +36,46 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
+      - name: Classify CAP-09 S0 lifecycle
+        id: lifecycle
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD | sort)"
+          foundation_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PREDECESSOR-LOCK-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-CHANGED-FILE-BOUNDARY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs' | sort)"
+          registry_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml' \
+            'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOOTSTRAP-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOUNDARY-V1.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs' | sort)"
+          repair_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs' | sort)"
+          if [[ "$files" == "$repair_files" ]]; then
+            mode='workflow-repair'
+          elif [[ "$files" == "$registry_files" ]]; then
+            mode='registry-bootstrap'
+          elif [[ "$files" == "$foundation_files" ]]; then
+            mode='s0-foundation'
+          else
+            mode='unsupported'
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - name: Download CAP-08 exact-SHA/R2 predecessor authority
+        if: steps.lifecycle.outputs.mode == 's0-foundation'
         uses: actions/download-artifact@v4
         with:
           run-id: 30908130962
@@ -44,12 +83,30 @@ jobs:
           path: acceptance-input/cap08-exact-sha
           repository: liyongshang44-max/GEOX
           github-token: ${{ github.token }}
-      - name: Validate CAP-09 S0 pre-candidate governance
+      - name: Validate CAP-09 S0 routed lifecycle
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           GITHUB_TOKEN: ${{ github.token }}
           MCFT_CAP08_ARTIFACT_DIR: acceptance-input/cap08-exact-sha
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs
+          MCFT_CAP09_S0_MODE: ${{ steps.lifecycle.outputs.mode }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$MCFT_CAP09_S0_MODE" in
+            workflow-repair)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs --workflow-repair
+              ;;
+            registry-bootstrap)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs --registry-bootstrap
+              ;;
+            s0-foundation)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs
+              ;;
+            *)
+              echo "unsupported CAP-09 S0 lifecycle: $MCFT_CAP09_S0_MODE" >&2
+              exit 1
+              ;;
+          esac
       - uses: actions/upload-artifact@v4
         if: always()
         with:
