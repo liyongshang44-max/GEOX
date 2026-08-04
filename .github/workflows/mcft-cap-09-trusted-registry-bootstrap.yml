@@ -9,6 +9,8 @@ on:
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOOTSTRAP-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-BOUNDARY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs'
   merge_group:
     types: [checks_requested]
@@ -35,7 +37,41 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
+      - name: Classify CAP-09 trusted Registry lifecycle
+        id: lifecycle
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD | sort)"
+          repair_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs' | sort)"
+          correction_files="$(printf '%s\n' \
+            'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-BOUNDARY-V1.json' | sort)"
+          bootstrap_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml' \
+            'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOOTSTRAP-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOUNDARY-V1.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs' | sort)"
+          if [[ "$files" == "$repair_files" ]]; then
+            mode='workflow-repair'
+          elif [[ "$files" == "$correction_files" ]]; then
+            mode='registry-existing-paths-correction'
+          elif [[ "$files" == "$bootstrap_files" ]]; then
+            mode='bootstrap'
+          else
+            mode='unsupported'
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - name: Download CAP-09 S0 foundation evidence
+        if: steps.lifecycle.outputs.mode == 'bootstrap'
         uses: actions/download-artifact@v4
         with:
           run-id: 30920841465
@@ -43,12 +79,30 @@ jobs:
           path: acceptance-input/cap09-s0
           repository: liyongshang44-max/GEOX
           github-token: ${{ github.token }}
-      - name: Validate trusted Registry bootstrap
+      - name: Validate CAP-09 trusted Registry lifecycle
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           GITHUB_TOKEN: ${{ github.token }}
           MCFT_CAP09_S0_ARTIFACT_DIR: acceptance-input/cap09-s0
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs
+          MCFT_CAP09_REGISTRY_MODE: ${{ steps.lifecycle.outputs.mode }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$MCFT_CAP09_REGISTRY_MODE" in
+            workflow-repair)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs --workflow-repair
+              ;;
+            registry-existing-paths-correction)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs --registry-existing-paths-correction
+              ;;
+            bootstrap)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs --bootstrap
+              ;;
+            *)
+              echo "unsupported CAP-09 trusted Registry lifecycle: $MCFT_CAP09_REGISTRY_MODE" >&2
+              exit 1
+              ;;
+          esac
       - uses: actions/upload-artifact@v4
         if: always()
         with:
