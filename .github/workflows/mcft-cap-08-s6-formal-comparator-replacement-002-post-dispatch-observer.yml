@@ -1,0 +1,120 @@
+name: mcft-cap-08-s6-formal-comparator-replacement-002-post-dispatch-observer
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-formal-comparator-replacement-002-post-dispatch-observer.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  observe-terminal-runs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AUTHORITY_MAIN_SHA: 5f8fa47f9ba0f6421fee9ff2eb5fa62ca4e4f642
+      BROKER_WORKFLOW: mcft-cap-08-s6-formal-comparator-replacement-002-one-shot-dispatch-broker.yml
+      TARGET_WORKFLOW: mcft-cap-08-s6-formal-cross-run-comparator-execution.yml
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Observe unique broker and Formal Comparator terminal runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.parse
+          import urllib.request
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          token = os.environ['GH_TOKEN']
+          sha = os.environ['AUTHORITY_MAIN_SHA']
+          headers = {
+              'Accept': 'application/vnd.github+json',
+              'Authorization': f'Bearer {token}',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'mcft-cap08-replacement-002-post-dispatch-observer',
+          }
+
+          def get(path):
+              request = urllib.request.Request(f'https://api.github.com/repos/{repo}{path}', headers=headers)
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+
+          def workflow_runs(workflow, event):
+              encoded = urllib.parse.quote(workflow, safe='')
+              data = get(f'/actions/workflows/{encoded}/runs?event={event}&branch=main&per_page=100')
+              return [item for item in data.get('workflow_runs', []) if item.get('head_sha') == sha and item.get('run_attempt') == 1]
+
+          broker = None
+          target = None
+          for _ in range(150):
+              brokers = workflow_runs(os.environ['BROKER_WORKFLOW'], 'push')
+              targets = workflow_runs(os.environ['TARGET_WORKFLOW'], 'workflow_dispatch')
+              if len(brokers) > 1:
+                  raise SystemExit(f'MULTIPLE_BROKER_RUNS:{len(brokers)}')
+              if len(targets) > 1:
+                  raise SystemExit(f'MULTIPLE_TARGET_RUNS:{len(targets)}')
+              broker = brokers[0] if brokers else None
+              target = targets[0] if targets else None
+              if broker and target and broker.get('status') == 'completed' and target.get('status') == 'completed':
+                  break
+              time.sleep(2)
+          if broker is None:
+              raise SystemExit('BROKER_RUN_NOT_FOUND')
+          if target is None:
+              raise SystemExit('TARGET_RUN_NOT_FOUND')
+          if broker.get('status') != 'completed':
+              raise SystemExit('BROKER_NOT_TERMINAL')
+          if target.get('status') != 'completed':
+              raise SystemExit('TARGET_NOT_TERMINAL')
+
+          broker_jobs = get(f"/actions/runs/{broker['id']}/jobs?per_page=100").get('jobs', [])
+          target_jobs = get(f"/actions/runs/{target['id']}/jobs?per_page=100").get('jobs', [])
+          broker_artifacts = get(f"/actions/runs/{broker['id']}/artifacts?per_page=100").get('artifacts', [])
+          target_artifacts = get(f"/actions/runs/{target['id']}/artifacts?per_page=100").get('artifacts', [])
+
+          result = {
+              'schema_version': 'geox_mcft_cap08_s6_formal_comparator_replacement_002_post_dispatch_observation_v1',
+              'status': 'PASS',
+              'authority_main_sha': sha,
+              'matching_broker_run_count': 1,
+              'matching_target_run_count': 1,
+              'broker': broker,
+              'broker_jobs': broker_jobs,
+              'broker_artifacts': broker_artifacts,
+              'target': target,
+              'target_jobs': target_jobs,
+              'target_artifacts': target_artifacts,
+              'rerun_performed': False,
+              'duplicate_dispatch_performed': False,
+          }
+          with open('acceptance-output/MCFT_CAP_08_S6_FORMAL_COMPARATOR_REPLACEMENT_002_POST_DISPATCH_OBSERVATION.json', 'w', encoding='utf-8') as handle:
+              json.dump(result, handle, indent=2)
+              handle.write('\n')
+          print(json.dumps({
+              'status': 'PASS',
+              'broker_run_id': broker['id'],
+              'broker_conclusion': broker.get('conclusion'),
+              'target_run_id': target['id'],
+              'target_conclusion': target.get('conclusion'),
+              'target_artifact_count': len(target_artifacts),
+          }, indent=2))
+          PY
+      - name: Upload post-dispatch observation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-formal-comparator-replacement-002-post-dispatch-observation-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_08_S6_FORMAL_COMPARATOR_REPLACEMENT_002_POST_DISPATCH_OBSERVATION.json
+          if-no-files-found: error
+          retention-days: 365
