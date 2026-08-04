@@ -15,10 +15,10 @@
   "canonical_write_authorized": false,
   "public_http_writer_authorized": false,
   "candidate_declaration_authorized": false,
-  "registry_rule_present": false,
+  "registry_rule_present": true,
   "model_activation_authorized": false,
   "controlled_action_authorized": false,
   "effective_claim_when_present_on_main": "MCFT_CAP_09_PRE_CANDIDATE_GOVERNANCE_FOUNDATION",
-  "first_legal_next_action": "MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP",
+  "first_legal_next_action": "MCFT_CAP_09_S0_AUTHORIZATION_CANDIDATE",
   "postmerge_ssot_writeback_allowed": false
 }
