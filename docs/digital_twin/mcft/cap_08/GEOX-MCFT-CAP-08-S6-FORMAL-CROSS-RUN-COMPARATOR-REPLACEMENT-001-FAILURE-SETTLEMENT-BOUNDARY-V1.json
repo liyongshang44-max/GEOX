@@ -1,0 +1,42 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_replacement_001_failure_settlement_boundary_v1",
+  "record_status": "FORMAL_COMPARATOR_FAILURE_SETTLEMENT_BOUNDARY_FROZEN",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "54365415ffb25d8620b0aea0546e1fbd792425a5",
+  "changed_file_count": 5,
+  "changed_files": [
+    ".github/workflows/mcft-cap-08-s6-formal-comparator-replacement-001-failure-settlement.yml",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-CONSUMPTION-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-FAILURE-SETTLEMENT-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-FAILURE-SETTLEMENT-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_001_FAILURE_SETTLEMENT_V1.cjs"
+  ],
+  "runtime_source_changed": false,
+  "database_execution_in_pr": false,
+  "workflow_dispatch_in_pr": false,
+  "workflow_rerun_in_pr": false,
+  "formal_comparator_execution_in_pr": false,
+  "execution_control_changed": false,
+  "semantic_comparator_changed": false,
+  "authority_effectiveness_changed": false,
+  "replacement_001_authority_consumed": true,
+  "formal_comparator_terminal_failure": true,
+  "semantic_comparator_executed": false,
+  "formal_comparator_evidence_created": false,
+  "replacement_002_authority_candidate_created": false,
+  "fresh_execution_authorized": false,
+  "next_legal_action": "CORRECT_FORMAL_INPUT_PROVENANCE_BINDING_IN_SEPARATE_PR_AFTER_SETTLEMENT_EFFECTIVENESS",
+  "nonclaims": [
+    "NO_RUNTIME_CHANGE",
+    "NO_DATABASE_CHANGE",
+    "NO_EXECUTION",
+    "NO_RERUN",
+    "NO_AUTHORITY_REUSE",
+    "NO_REPLACEMENT_002_AUTHORITY",
+    "NO_S6_CANDIDATE",
+    "NO_LEDGER_SETTLEMENT",
+    "NO_CAP08_COMPLETION"
+  ],
+  "semantic_digest": "sha256:4bbe56fbe7465cfa2ad93489f4ed363d5cf6b16c863f29b481a67f5b93708a2f"
+}
