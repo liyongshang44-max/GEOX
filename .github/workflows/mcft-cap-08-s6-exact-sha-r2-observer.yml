@@ -1,0 +1,62 @@
+name: mcft-cap-08-s6-exact-sha-r2-observer
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-exact-sha-r2-observer.yml'
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+  statuses: read
+
+jobs:
+  observe-exact-sha-r2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TARGET_SHA: 67bd71560268046a7fa9a9433ee074ad3999cb71
+      TARGET_WORKFLOW: mcft-cap-08-s6-exact-sha-attestation.yml
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Observe exact-SHA R2 terminal run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          python - <<'PY'
+          import json, os, time, urllib.parse, urllib.request
+          repo=os.environ['GITHUB_REPOSITORY']; token=os.environ['GH_TOKEN']; sha=os.environ['TARGET_SHA']; workflow=os.environ['TARGET_WORKFLOW']
+          headers={'Accept':'application/vnd.github+json','Authorization':f'Bearer {token}','X-GitHub-Api-Version':'2022-11-28','User-Agent':'mcft-cap08-s6-exact-sha-r2-observer'}
+          def get(path):
+              req=urllib.request.Request(f'https://api.github.com/repos/{repo}{path}',headers=headers)
+              with urllib.request.urlopen(req,timeout=30) as r: return json.load(r)
+          encoded=urllib.parse.quote(workflow,safe='')
+          target=None
+          for _ in range(240):
+              data=get(f'/actions/workflows/{encoded}/runs?event=push&branch=main&per_page=100')
+              matches=[r for r in data.get('workflow_runs',[]) if r.get('head_sha')==sha and r.get('run_attempt')==1]
+              if len(matches)>1: raise SystemExit(f'MULTIPLE_EXACT_SHA_R2_RUNS:{len(matches)}')
+              target=matches[0] if matches else None
+              if target and target.get('status')=='completed': break
+              time.sleep(2)
+          if target is None: raise SystemExit('EXACT_SHA_R2_RUN_NOT_FOUND')
+          if target.get('status')!='completed': raise SystemExit('EXACT_SHA_R2_RUN_NOT_TERMINAL')
+          jobs=get(f"/actions/runs/{target['id']}/jobs?per_page=100").get('jobs',[])
+          artifacts=get(f"/actions/runs/{target['id']}/artifacts?per_page=100").get('artifacts',[])
+          checks=get(f'/commits/{sha}/check-runs?per_page=100').get('check_runs',[])
+          status=get(f'/commits/{sha}/status')
+          result={'schema_version':'geox_mcft_cap08_s6_exact_sha_r2_observation_v1','status':'PASS','target_sha':sha,'matching_run_count':1,'target_run':target,'jobs':jobs,'artifacts':artifacts,'check_runs':checks,'combined_status':status,'observer_only':True,'write_performed':False,'rerun_performed':False}
+          with open('acceptance-output/MCFT_CAP_08_S6_EXACT_SHA_R2_OBSERVATION.json','w') as f: json.dump(result,f,indent=2);f.write('\n')
+          print(json.dumps({'status':'PASS','run_id':target['id'],'run_number':target['run_number'],'run_attempt':target['run_attempt'],'conclusion':target.get('conclusion'),'jobs':[(j.get('id'),j.get('name'),j.get('conclusion')) for j in jobs],'artifacts':[(a.get('id'),a.get('name'),a.get('digest'),a.get('expires_at')) for a in artifacts],'exact_statuses':[(x.get('context'),x.get('state'),x.get('description')) for x in status.get('statuses',[]) if x.get('context')=='mcft-cap-08/s6-exact-sha-attestation']},indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-exact-sha-r2-observation-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_08_S6_EXACT_SHA_R2_OBSERVATION.json
+          if-no-files-found: error
+          retention-days: 90
