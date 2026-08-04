@@ -1,0 +1,58 @@
+{
+  "schema_version": "geox_pfe14_s1_state_matrix_v1",
+  "matrix_id": "PFE-14-S1-STATE-MATRIX",
+  "record_status": "DESIGN_FROZEN_NOT_IMPLEMENTED",
+  "base_main_sha": "dce309c7ea1045fc7a35e973fed09e1a0ab5f39c",
+  "precedence": [
+    "FORBIDDEN",
+    "API_ERROR",
+    "CONTRACT_INCOMPLETE",
+    "NO_SCOPE",
+    "RUNTIME_NOT_ESTABLISHED",
+    "SHADOW_NOT_AUTHORIZED",
+    "BLOCKED_FENCING",
+    "BLOCKED_LEASE",
+    "BACKFILLING",
+    "DEGRADED_STALE_EVIDENCE",
+    "DEGRADED_MISSING_DATA",
+    "RECOVERED",
+    "RUNNING",
+    "COMPLETED",
+    "WAITING_FOR_FIRST_SLOT",
+    "WAITING_NEXT_SLOT"
+  ],
+  "global_rules": {
+    "one_primary_state_per_surface": true,
+    "secondary_conditions_may_be_listed": true,
+    "color_only_status_forbidden": true,
+    "technical_reason_codes_preserved": true,
+    "browser_clock_verdict_forbidden": true,
+    "write_action_from_state_forbidden": true
+  },
+  "states": [
+    {"state":"LOADING","kind":"transient","http_status":null,"zh_title":"正在读取运行状态","en_title":"Loading runtime status","safe_action":"NONE","auto_retry":"REQUEST_POLICY","claims_allowed":[]},
+    {"state":"NO_SCOPE","kind":"input_required","http_status":400,"error_codes":["MISSING_SCOPE_KEYS"],"zh_title":"请先选择完整运行范围","en_title":"Select the complete runtime scope","safe_action":"OPEN_SCOPE_NAVIGATOR","auto_retry":"NO","claims_allowed":["scope is incomplete"],"claims_forbidden":["runtime is absent","runtime is healthy"]},
+    {"state":"RUNTIME_NOT_ESTABLISHED","kind":"empty_not_success","http_status":404,"error_codes":["MCFT_RUNTIME_NOT_ESTABLISHED"],"zh_title":"该范围尚未建立 Runtime","en_title":"Runtime is not established for this scope","safe_action":"READ_ONLY_SCOPE_REVIEW","auto_retry":"NO","claims_allowed":["no canonical runtime root exists for the exact scope"],"claims_forbidden":["no data means normal","show empty healthy dashboard"]},
+    {"state":"SHADOW_NOT_AUTHORIZED","kind":"governance_boundary","http_status":409,"error_codes":["SHADOW_ONLINE_NOT_AUTHORIZED"],"zh_title":"Shadow-online 尚未获得运行授权","en_title":"Shadow-online runtime is not authorized","safe_action":"OPEN_AUTHORITY_DETAILS","auto_retry":"NO","claims_allowed":["authorization is absent"],"claims_forbidden":["shadow runtime is online","scheduler is active"]},
+    {"state":"WAITING_FOR_FIRST_SLOT","kind":"operational","http_status":200,"zh_title":"等待首个调度时隙","en_title":"Waiting for the first scheduler slot","safe_action":"REFRESH_AT_SERVER_CADENCE","auto_retry":"SERVER_RECOMMENDED","claims_allowed":["runtime is established and no completed slot exists"],"claims_forbidden":["runtime completed","runtime failed"]},
+    {"state":"WAITING_NEXT_SLOT","kind":"operational","http_status":200,"zh_title":"等待下一时隙","en_title":"Waiting for the next slot","safe_action":"REFRESH_AT_SERVER_CADENCE","auto_retry":"SERVER_RECOMMENDED","claims_allowed":["previous eligible slot completed"],"claims_forbidden":["continuous realtime processing"]},
+    {"state":"RUNNING","kind":"operational","http_status":200,"zh_title":"当前时隙运行中","en_title":"Current slot is running","safe_action":"READ_ONLY_REFRESH","auto_retry":"SERVER_RECOMMENDED","claims_allowed":["server reports an active tick"],"claims_forbidden":["progress inferred from elapsed browser time"]},
+    {"state":"COMPLETED","kind":"operational","http_status":200,"zh_title":"最近时隙已完成","en_title":"Latest slot completed","safe_action":"OPEN_TRACE","auto_retry":"SERVER_RECOMMENDED","claims_allowed":["latest slot completed"],"claims_forbidden":["production is healthy","future slots will complete"]},
+    {"state":"DEGRADED_STALE_EVIDENCE","kind":"degraded","http_status":200,"zh_title":"Evidence 已陈旧，运行结果受限","en_title":"Evidence is stale; runtime output is limited","safe_action":"OPEN_EVIDENCE_DETAILS","auto_retry":"SERVER_RECOMMENDED","claims_allowed":["server freshness verdict is stale"],"claims_forbidden":["frontend threshold determined staleness","forecast is recommendation"]},
+    {"state":"DEGRADED_MISSING_DATA","kind":"degraded","http_status":200,"zh_title":"关键 Evidence 缺失，运行结果受限","en_title":"Required Evidence is missing; runtime output is limited","safe_action":"OPEN_EVIDENCE_DETAILS","auto_retry":"SERVER_RECOMMENDED","claims_allowed":["server reports missing required evidence"],"claims_forbidden":["missing data treated as zero"]},
+    {"state":"BACKFILLING","kind":"recovery","http_status":200,"zh_title":"正在按顺序补跑遗漏时隙","en_title":"Backfilling missed slots in order","safe_action":"OPEN_BACKFILL_DETAILS","auto_retry":"SERVER_RECOMMENDED","claims_allowed":["backfill status and queue depth returned by server"],"claims_forbidden":["queue order inferred by frontend","current slot is complete"]},
+    {"state":"RECOVERED","kind":"recovery","http_status":200,"zh_title":"Runtime 已从持久化检查点恢复","en_title":"Runtime recovered from a persisted checkpoint","safe_action":"OPEN_RECOVERY_TRACE","auto_retry":"SERVER_RECOMMENDED","claims_allowed":["server reports recovered status and checkpoint reference"],"claims_forbidden":["recovery proves production availability"]},
+    {"state":"BLOCKED_LEASE","kind":"blocked","http_status":409,"error_codes":["LEASE_UNAVAILABLE","LEASE_CONFLICT"],"zh_title":"Writer lease 阻止当前运行","en_title":"Writer lease blocks the current run","safe_action":"OPEN_TECHNICAL_DETAILS","auto_retry":"SERVER_RECOMMENDED","claims_allowed":["server reports lease block"],"claims_forbidden":["offer lease mutation","offer force takeover"]},
+    {"state":"BLOCKED_FENCING","kind":"blocked","http_status":409,"error_codes":["STALE_FENCING_TOKEN","FENCING_REJECTED"],"zh_title":"Fencing 校验阻止当前运行","en_title":"Fencing validation blocks the current run","safe_action":"OPEN_TECHNICAL_DETAILS","auto_retry":"NO","claims_allowed":["server reports fencing rejection"],"claims_forbidden":["expose mutation action","ignore stale writer"]},
+    {"state":"CONTRACT_INCOMPLETE","kind":"contract_error","http_status":200,"zh_title":"Runtime 响应缺少必要字段","en_title":"Runtime response is missing required fields","safe_action":"COPY_REQUEST_ID","auto_retry":"NO","claims_allowed":["response contract is incomplete"],"claims_forbidden":["fill with frontend defaults","show healthy state"]},
+    {"state":"FORBIDDEN","kind":"access_error","http_status":403,"zh_title":"当前账号无权读取该运行范围","en_title":"You cannot read this runtime scope","safe_action":"RETURN_TO_SCOPE_LIST","auto_retry":"NO","claims_allowed":["read access denied"],"claims_forbidden":["scope does not exist"]},
+    {"state":"API_ERROR","kind":"transport_error","http_status":[400,409,503,500],"zh_title":"无法读取 Runtime","en_title":"Runtime could not be read","safe_action":"RETRY_OR_COPY_REQUEST_ID","auto_retry":"POLICY_LIMITED","claims_allowed":["request failed with exact error code"],"claims_forbidden":["convert error into empty data","display raw secrets"]}
+  ],
+  "composition_rules": [
+    "BACKFILLING may include stale-evidence as a secondary condition but remains the primary state",
+    "RECOVERED is shown only when recovery_status equals RECOVERED; restart_detected alone is insufficient",
+    "COMPLETED does not override DEGRADED states when the completed slot used stale or missing Evidence",
+    "RUNTIME_NOT_ESTABLISHED is not an EMPTY success state",
+    "SHADOW_NOT_AUTHORIZED prevents any Shadow-online mode label outside governance-boundary copy"
+  ]
+}
