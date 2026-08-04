@@ -1,0 +1,46 @@
+{
+  "schema_version": "geox_pfe14_s3_effectiveness_settlement_boundary_v1",
+  "boundary_id": "PFE-14-S3-EFFECTIVENESS-SETTLEMENT-BOUNDARY",
+  "change_class": "PFE_14_S3_EFFECTIVENESS_SETTLEMENT_AND_S4_DEPENDENCY_HOLD",
+  "base_main_sha": "75dc18991843d33389b4ec5e8e2fb6c86605ee16",
+  "expected_changed_file_count": 4,
+  "expected_changed_files": [
+    "docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json",
+    "docs/frontend-productization/PFE-14-S3-EFFECTIVENESS-SETTLEMENT-BOUNDARY.json",
+    "docs/frontend-productization/PFE-14-S3-HANDOFF.json",
+    "scripts/frontend_acceptance/ACCEPTANCE_PFE_14_S3_EFFECTIVENESS_SETTLEMENT.cjs"
+  ],
+  "allowed_prefixes": [
+    "docs/frontend-productization/PFE-14-",
+    "scripts/frontend_acceptance/ACCEPTANCE_PFE_14_"
+  ],
+  "forbidden_prefixes": [
+    ".github/",
+    "apps/",
+    "fixtures/",
+    "migrations/",
+    "packages/"
+  ],
+  "forbidden_exact_files": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml"
+  ],
+  "delta_assertions": {
+    "frontend_source_delta": 0,
+    "route_source_delta": 0,
+    "api_client_delta": 0,
+    "backend_source_delta": 0,
+    "database_delta": 0,
+    "package_delta": 0,
+    "workflow_delta": 0,
+    "runtime_claim_delta": 0,
+    "controlled_action_delta": 0
+  },
+  "s3_effective": true,
+  "s4_dependency_satisfied": false,
+  "s4_implementation_authorized": false,
+  "candidate_declaration": false,
+  "completion_claim": "PFE_14_S3_EFFECTIVENESS_SETTLED",
+  "first_legal_next_action": "MCFT_CAP_09_PROVIDE_AUTHORIZED_SCHEDULER_AND_EVIDENCE_AVAILABILITY_READ_CONTRACT"
+}

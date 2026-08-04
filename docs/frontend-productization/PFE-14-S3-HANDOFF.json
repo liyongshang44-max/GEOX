@@ -1,0 +1,83 @@
+{
+  "schema_version": "geox_pfe14_s3_handoff_v1",
+  "handoff_id": "PFE-14-S3-HANDOFF",
+  "generated_at": "2026-08-05T04:24:00+08:00",
+  "product_line": "PFE-14",
+  "status": "S0_THROUGH_S3_EFFECTIVE_S4_DEPENDENCY_BLOCKED",
+  "completed_slices": [
+    {
+      "slice": "PFE-14.S0",
+      "claim": "PFE_14_S0_REPOSITORY_RECONCILIATION_COMPLETE",
+      "merge_sha": "dce309c7ea1045fc7a35e973fed09e1a0ab5f39c"
+    },
+    {
+      "slice": "PFE-14.S1",
+      "claim": "PFE_14_S1_FRONTEND_READ_CONTRACT_FROZEN",
+      "merge_sha": "41e41d30dd36755beee9edac7262882dbba2c48c"
+    },
+    {
+      "slice": "PFE-14.S2",
+      "claim": "PFE_14_S2_APPLE_VISUAL_FOUNDATION_COMPLETE",
+      "merge_sha": "79fbda35e19196f0d1752e06e27a2a08fd8454d9"
+    },
+    {
+      "slice": "PFE-14.S3",
+      "claim": "PFE_14_S3_OPERATOR_SHELL_CONSOLIDATED",
+      "merge_sha": "75dc18991843d33389b4ec5e8e2fb6c86605ee16"
+    }
+  ],
+  "frontend_facts": {
+    "canonical_operator_route_family": "/operator/fields/*",
+    "canonical_route_owner": "apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx",
+    "canonical_page_owner": "apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx",
+    "canonical_api_owner": "apps/web/src/api/mcftFieldTwinRuntime.ts",
+    "exact_six_key_scope_required": true,
+    "get_only": true,
+    "primary_navigation": ["/operator/twin", "/operator/fields"],
+    "invalid_disabled_navigation_removed": true,
+    "pilot_layout_injection_removed": true,
+    "runtime_context_slot_present": true,
+    "runtime_context_default_source": "governed-static-nonclaim",
+    "runtime_context_default_mode": "REPLAY_BACKED_DEMO",
+    "apple_inspired_visual_foundation_present": true,
+    "product_segmented_control_present": true,
+    "product_technical_disclosure_present": true
+  },
+  "validation": {
+    "s0_ci": "PASS",
+    "s1_ci": "PASS",
+    "s2_typecheck_build_frontend_audit_full_acceptance": "PASS",
+    "s3_typecheck_build_frontend_audit_full_acceptance": "PASS",
+    "runtime_claim_delta": 0,
+    "controlled_action_delta": 0
+  },
+  "runtime_dependency": {
+    "capability_line": "MCFT-CAP-09",
+    "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json",
+    "authority_status": "PRE_CANDIDATE_GOVERNANCE_FOUNDATION",
+    "authority_slice": "MCFT-CAP-09.S0",
+    "implementation_authorized": false,
+    "runtime_source_authorized": false,
+    "background_scheduler_authorized": false,
+    "canonical_write_authorized": false,
+    "required_for_s4": [
+      "authorized Runtime mode read contract",
+      "authorized Scheduler summary read contract",
+      "authorized Evidence Availability read contract",
+      "server-owned freshness verdict and threshold",
+      "server-owned latest and next UTC slot semantics"
+    ],
+    "dependency_satisfied": false
+  },
+  "forbidden_until_dependency": [
+    "display SHADOW_ONLINE as current mode",
+    "display authoritative latest or next scheduler slot",
+    "display authoritative Evidence freshness verdict",
+    "compute slot timing from browser clock",
+    "compute freshness verdict in frontend",
+    "implement S4 Runtime Overview cards from fixtures",
+    "create Runtime writes or controlled actions"
+  ],
+  "first_legal_next_action": "MCFT_CAP_09_PROVIDE_AUTHORIZED_SCHEDULER_AND_EVIDENCE_AVAILABILITY_READ_CONTRACT",
+  "frontend_resume_action": "PFE_14_S4_SCOPE_AND_RUNTIME_OVERVIEW_AUTHORIZATION"
+}
