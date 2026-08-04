@@ -95,6 +95,9 @@ jobs:
       - name: Audit exact formal input runs and artifact digests
         env:
           GH_TOKEN: ${{ github.token }}
+          MCFT_EXACT_SUBJECT_SHA: ${{ inputs.exact_subject_sha }}
+          MCFT_COMPARATOR_EXECUTION_ID: ${{ inputs.comparator_execution_id }}
+          MCFT_EXECUTION_AUTHORITY_PATH: ${{ inputs.execution_authority_path }}
           MCFT_COMPARATOR_INPUT_AUDIT_OUTPUT: acceptance-input/FORMAL_COMPARATOR_INPUT_AUDIT.json
         run: node scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_comparator_execution_control_v1.cjs audit
       - name: Execute formal cross-run comparator exactly once
