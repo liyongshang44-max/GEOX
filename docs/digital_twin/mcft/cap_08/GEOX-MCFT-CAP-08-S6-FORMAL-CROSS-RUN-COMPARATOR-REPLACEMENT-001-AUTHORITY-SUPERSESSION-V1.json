@@ -1,0 +1,41 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_authority_supersession_v1",
+  "record_status": "PREDECESSOR_COMPARATOR_AUTHORITY_CANDIDATE_SUPERSEDED_NOT_EFFECTIVE",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "predecessor": {
+    "candidate_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-AUTHORITY-CANDIDATE-V1.json",
+    "candidate_blob_sha": "235a1312af7951022a212159cd40e884cda8fbd9",
+    "object_set_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-AUTHORITY-OBJECT-SET-V1.json",
+    "object_set_blob_sha": "aa995487664fd70b736ffaaeea5cdd12e2679638",
+    "issuance_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-AUTHORITY-ISSUANCE-V1.json",
+    "issuance_blob_sha": "8aa3d0783553bb93025b815e680530b0c7397e84",
+    "merge_sha": "b77531284ebda6c4819b78a3ee7dd2262c7a909b",
+    "authority_effective": false,
+    "effectiveness_authorized": false
+  },
+  "defect": {
+    "class": "INCOMPLETE_EXECUTION_CONTROL_PLANE_OBJECT_SET",
+    "missing_roles": [
+      "FORMAL_COMPARATOR_EXECUTION_WORKFLOW",
+      "FORMAL_COMPARATOR_EXECUTION_CONTROL",
+      "FORMAL_COMPARATOR_EXECUTION_WORKFLOW_CONTRACT",
+      "FORMAL_COMPARATOR_EXECUTION_WORKFLOW_BOUNDARY"
+    ],
+    "predecessor_execution_authorized": false,
+    "predecessor_execution_performed": false
+  },
+  "replacement": {
+    "candidate_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-CANDIDATE-V1.json",
+    "candidate_blob_sha": "dffb2a6df42c4a0860f461761f1cf3e2d360c8ac",
+    "object_set_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-OBJECT-SET-V1.json",
+    "object_set_blob_sha": "57d7817bc60074baee4ca3bd71c21e9bb5dab3b2",
+    "issuance_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-AUTHORITY-ISSUANCE-V1.json",
+    "issuance_blob_sha": "7742c7a18c9a2d79136092456f1fdb360380b060",
+    "authority_effective": false
+  },
+  "append_forward_only": true,
+  "historical_predecessor_mutation_authorized": false,
+  "next_legal_action": "MERGE_REPLACEMENT_001_NON_EFFECTIVE_AUTHORITY_CANDIDATE",
+  "semantic_digest": "sha256:0ab9e393a4bb9b0654d500cedbdffc384ac54ea4b599eb88a51ce186a5b44c41"
+}
