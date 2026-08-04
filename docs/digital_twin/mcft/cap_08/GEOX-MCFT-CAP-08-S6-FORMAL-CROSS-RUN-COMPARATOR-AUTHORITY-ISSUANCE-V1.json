@@ -1,0 +1,49 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_authority_issuance_v1",
+  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_CANDIDATE_ISSUED_NOT_EFFECTIVE",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_governance_main_sha": "fd3e5662b8e80053365b4e9ca4e356233ff82194",
+  "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+  "candidate": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-AUTHORITY-CANDIDATE-V1.json",
+    "blob_sha": "235a1312af7951022a212159cd40e884cda8fbd9",
+    "semantic_digest": "sha256:ca43f496936663af3d7f43888502841ef17a055691c303faccccab3d224d4516",
+    "record_status": "FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_CANDIDATE_NOT_EFFECTIVE"
+  },
+  "object_set": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "aa995487664fd70b736ffaaeea5cdd12e2679638",
+    "semantic_digest": "sha256:3ce2357991c007eb1ca633f956556cd1c30743e88327d53bb209810008575f98",
+    "object_count": 8
+  },
+  "implementation": {
+    "merge_sha": "fd3e5662b8e80053365b4e9ca4e356233ff82194",
+    "path": "scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_semantic_comparator_v1.cjs",
+    "blob_sha": "898fa85e2453add103671eac92ea792f0c600436",
+    "qualification_workflow_run_id": 30881117123,
+    "qualification_artifact_id": 8881320548
+  },
+  "activation": {
+    "separate_effectiveness_required": true,
+    "authority_effective": false,
+    "comparator_execution_authorized": false,
+    "maximum_execution_count_after_effectiveness": 1,
+    "required_execution_attempt": 1,
+    "rerun_authorized": false,
+    "duplicate_execution_authorized": false,
+    "authority_reuse_authorized": false,
+    "explicit_one_shot_execution_approval_required": true
+  },
+  "formal_comparator_execution_performed": false,
+  "formal_comparator_evidence_present": false,
+  "next_legal_action_after_merge": "ESTABLISH_FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_EFFECTIVENESS",
+  "nonclaims": [
+    "NO_FORMAL_COMPARATOR_EXECUTION_IN_AUTHORITY_CANDIDATE_PR",
+    "NO_FORMAL_COMPARATOR_EVIDENCE",
+    "NO_S6_CANDIDATE",
+    "NO_LEDGER_SETTLEMENT",
+    "NO_CAP08_COMPLETION"
+  ],
+  "semantic_digest": "sha256:31308b669c258bf91d5f730128cc0f6866661a2c466e8a84426090e708477939"
+}

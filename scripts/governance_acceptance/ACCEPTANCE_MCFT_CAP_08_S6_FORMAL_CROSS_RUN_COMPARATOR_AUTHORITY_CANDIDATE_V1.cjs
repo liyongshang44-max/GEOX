@@ -1,0 +1,83 @@
+#!/usr/bin/env node
+'use strict';
+const assert=require('node:assert/strict');
+const crypto=require('node:crypto');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const {execFileSync,spawnSync}=require('node:child_process');
+const ROOT=path.resolve(__dirname,'../..');
+const BASE='fd3e5662b8e80053365b4e9ca4e356233ff82194';
+const SUBJECT='ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59';
+const CANDIDATE='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-AUTHORITY-CANDIDATE-V1.json';
+const OBJECTS='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-AUTHORITY-OBJECT-SET-V1.json';
+const ISSUANCE='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-AUTHORITY-ISSUANCE-V1.json';
+const BOUNDARY='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-AUTHORITY-BOUNDARY-V1.json';
+const WORKFLOW='.github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-authority-candidate.yml';
+const VALIDATOR='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_CANDIDATE_V1.cjs';
+const WRAPPER='scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_semantic_comparator_v1.cjs';
+const CHANGED=[CANDIDATE,OBJECTS,ISSUANCE,BOUNDARY,WORKFLOW,VALIDATOR].sort();
+const A_DIR=process.env.MCFT_RUN_A_ARTIFACT_DIR||path.join(ROOT,'acceptance-input/formal-run-a');
+const B_DIR=process.env.MCFT_RUN_B_ARTIFACT_DIR||path.join(ROOT,'acceptance-input/formal-run-b');
+const AUDIT=process.env.MCFT_COMPARATOR_INPUT_AUDIT||path.join(ROOT,'acceptance-input/FORMAL_COMPARATOR_AUTHORITY_INPUT_AUDIT.json');
+const OUTPUT=path.join(ROOT,'acceptance-output/MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_CANDIDATE_RESULT.json');
+const git=(...a)=>execFileSync('git',a,{cwd:ROOT,encoding:'utf8'}).trim();
+const read=p=>JSON.parse(fs.readFileSync(path.join(ROOT,p),'utf8'));
+function canonical(v){if(Array.isArray(v))return`[${v.map(canonical).join(',')}]`;if(v&&typeof v==='object')return`{${Object.keys(v).sort().map(k=>`${JSON.stringify(k)}:${canonical(v[k])}`).join(',')}}`;return JSON.stringify(v)}
+function semanticDigest(v){const c=structuredClone(v);delete c.semantic_digest;return`sha256:${crypto.createHash('sha256').update(canonical(c)).digest('hex')}`}
+function save(v){fs.mkdirSync(path.dirname(OUTPUT),{recursive:true});fs.writeFileSync(OUTPUT,`${JSON.stringify(v,null,2)}\n`)}
+try{
+ const base=String(process.env.MCFT_BASE_SHA||BASE).trim();
+ assert.equal(base,BASE,'BASE_MAIN_SHA');
+ assert.equal(git('merge-base',BASE,'HEAD'),BASE,'BASE_NOT_ANCESTOR');
+ assert.equal(git('rev-list','--count',`${BASE}..HEAD`),'1','COMMIT_COUNT');
+ assert.equal(git('diff','--check',`${BASE}...HEAD`),'','DIFF_CHECK');
+ assert.deepEqual(git('diff','--name-only',`${BASE}...HEAD`).split(/\r?\n/).filter(Boolean).sort(),CHANGED,'CANDIDATE_BOUNDARY');
+ const candidate=read(CANDIDATE), objects=read(OBJECTS), issuance=read(ISSUANCE), boundary=read(BOUNDARY);
+ for(const r of [candidate,objects,issuance,boundary])assert.equal(r.semantic_digest,semanticDigest(r),`SEMANTIC_DIGEST:${r.schema_version}`);
+ assert.equal(git('rev-parse',`HEAD:${CANDIDATE}`),'235a1312af7951022a212159cd40e884cda8fbd9');
+ assert.equal(git('rev-parse',`HEAD:${OBJECTS}`),'aa995487664fd70b736ffaaeea5cdd12e2679638');
+ assert.equal(git('rev-parse',`HEAD:${ISSUANCE}`),'8aa3d0783553bb93025b815e680530b0c7397e84');
+ assert.equal(git('rev-parse',`HEAD:${BOUNDARY}`),'96c6760fd27a15f11dd5737a658f389e6005a0ab');
+ assert.equal(candidate.schema_version,'geox_mcft_cap08_s6_formal_cross_run_comparator_authority_v1');
+ assert.equal(candidate.record_status,'FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_CANDIDATE_NOT_EFFECTIVE');
+ assert.equal(candidate.exact_subject_sha,SUBJECT);
+ assert.equal(candidate.authority_effective,false);
+ assert.equal(candidate.comparator_execution_authorized,false);
+ assert.equal(candidate.maximum_execution_count,1);
+ assert.equal(candidate.required_execution_attempt,1);
+ assert.equal(candidate.rerun_authorized,false);
+ assert.equal(candidate.duplicate_execution_authorized,false);
+ assert.equal(candidate.authority_reuse_authorized,false);
+ assert.equal(candidate.formal_comparator_executed,false);
+ assert.equal(candidate.formal_comparator_evidence_created,false);
+ assert.equal(candidate.s6_candidate_authorized,false);
+ assert.equal(candidate.implementation.blob_sha,'898fa85e2453add103671eac92ea792f0c600436');
+ assert.equal(candidate.implementation.normalization_blob_sha,'1a2f769aa8a305588eb169e43a4862e9f84db22f');
+ assert.equal(candidate.implementation.implementation_merge_sha,BASE);
+ assert.equal(candidate.implementation.qualification_workflow_run_id,30881117123);
+ assert.equal(candidate.implementation.qualification_artifact_id,8881320548);
+ assert.equal(candidate.object_set_manifest_ref.blob_sha,'aa995487664fd70b736ffaaeea5cdd12e2679638');
+ assert.equal(objects.object_count,8);
+ for(const item of objects.objects){assert.equal(git('rev-parse',`${BASE}:${item.path}`),item.blob_sha,`BASE_OBJECT:${item.role}`);assert.equal(git('rev-parse',`HEAD:${item.path}`),item.blob_sha,`HEAD_OBJECT:${item.role}`)}
+ assert.equal(boundary.changed_file_count,6);assert.deepEqual([...boundary.changed_files].sort(),CHANGED);assert.equal(boundary.workflow_dispatch_in_pr,false);assert.equal(boundary.formal_comparator_authority_effective,false);assert.equal(boundary.formal_comparator_execution_performed,false);
+ assert.equal(issuance.candidate.blob_sha,'235a1312af7951022a212159cd40e884cda8fbd9');assert.equal(issuance.object_set.blob_sha,'aa995487664fd70b736ffaaeea5cdd12e2679638');assert.equal(issuance.activation.authority_effective,false);assert.equal(issuance.activation.comparator_execution_authorized,false);
+ const audit=JSON.parse(fs.readFileSync(path.resolve(AUDIT),'utf8'));
+ assert.equal(audit.status,'PASS');assert.equal(audit.exact_subject_sha,SUBJECT);
+ assert.deepEqual([audit.run_a.workflow_run_id,audit.run_a.workflow_run_attempt,audit.run_a.event,audit.run_a.conclusion,audit.run_a.artifact_id,audit.run_a.artifact_digest],[30845476698,1,'workflow_dispatch','success',8868535301,'sha256:4d59d3aa0373bee0c9eb33ab78dd427eb324d4d259e0786aa9c4dea9effdaf2f']);
+ assert.deepEqual([audit.run_b.workflow_run_id,audit.run_b.workflow_run_attempt,audit.run_b.event,audit.run_b.conclusion,audit.run_b.artifact_id,audit.run_b.artifact_digest],[30877450717,1,'workflow_dispatch','success',8880057024,'sha256:33e8b0333e1cd22bcd3002540ef5c12b72a8c545e58eb8ca185bf49edc6ae9cc']);
+ assert.deepEqual([audit.implementation.workflow_run_id,audit.implementation.workflow_run_attempt,audit.implementation.conclusion,audit.implementation.head_sha,audit.implementation.artifact_id,audit.implementation.artifact_digest],[30881117123,1,'success','7a38276fcc1e4beb455db51b6d31d5c022bac37c',8881320548,'sha256:1593ef3f5f7b7a1217f26fb3126899d31ff0cee1416306b43e48897b0480639a']);
+ const mod=require(path.join(ROOT,WRAPPER));
+ const a=JSON.parse(fs.readFileSync(path.join(A_DIR,candidate.inputs.run_a.bundle_file),'utf8'));
+ const b=JSON.parse(fs.readFileSync(path.join(B_DIR,candidate.inputs.run_b.bundle_file),'utf8'));
+ mod.assertFormalBundleV1(a,'RUN_A');mod.assertFormalBundleV1(b,'RUN_B');
+ assert.equal(a.artifact_digest,candidate.inputs.run_a.formal_artifact_digest);assert.equal(b.artifact_digest,candidate.inputs.run_b.formal_artifact_digest);
+ assert.notEqual(a.spec.operational_run_instance_id,b.spec.operational_run_instance_id);assert.notEqual(a.fresh_database.logical_database_identity,b.fresh_database.logical_database_identity);assert.notEqual(a.fresh_database.database_name,b.fresh_database.database_name);assert.notEqual(a.materialization.database_instance_digest,b.materialization.database_instance_digest);
+ const da=mod.digestV1(mod.semanticProjectionV1(a)),db=mod.digestV1(mod.semanticProjectionV1(b)),diff=mod.semanticDifferencesV1(mod.semanticProjectionV1(a),mod.semanticProjectionV1(b));
+ assert.equal(da,'sha256:32c93d4f5ecd1fc50ff94418407767b48b057d77c81bf93dfe3fccf58f0df2f8');assert.equal(db,da);assert.equal(diff.difference_count,0);
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'mcft-comparator-candidate-'));const out=path.join(tmp,'formal.json');
+ const run=spawnSync(process.execPath,[path.join(ROOT,WRAPPER)],{encoding:'utf8',env:{...process.env,MCFT_CAP08_FORMAL_RUN_A_BUNDLE:path.join(A_DIR,candidate.inputs.run_a.bundle_file),MCFT_CAP08_FORMAL_RUN_B_BUNDLE:path.join(B_DIR,candidate.inputs.run_b.bundle_file),MCFT_CAP08_FORMAL_COMPARATOR_AUTHORITY:path.join(ROOT,CANDIDATE),MCFT_CAP08_FORMAL_COMPARATOR_INPUT_AUDIT:path.resolve(AUDIT),MCFT_CAP08_FORMAL_COMPARATOR_OUTPUT:out}});
+ assert.notEqual(run.status,0,'CANDIDATE_MUST_NOT_EXECUTE');assert.equal(fs.existsSync(out),false,'NO_FORMAL_OUTPUT_FROM_CANDIDATE');
+ const result={schema_version:'geox_mcft_cap08_s6_formal_cross_run_comparator_authority_candidate_result_v1',status:'PASS',evidence_class:'NON_EFFECTIVE_AUTHORITY_CANDIDATE_EVIDENCE',base_main_sha:BASE,exact_head_sha:git('rev-parse','HEAD'),exact_subject_sha:SUBJECT,authority_id:candidate.authority_id,semantic_digest_a:da,semantic_digest_b:db,difference_count:0,authority_effective:false,comparator_execution_authorized:false,formal_comparator_executed:false,next_legal_action:'ESTABLISH_FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_EFFECTIVENESS'};
+ save(result);console.log(JSON.stringify(result,null,2));
+}catch(e){save({schema_version:'geox_mcft_cap08_s6_formal_cross_run_comparator_authority_candidate_result_v1',status:'FAIL',error:e instanceof Error?e.message:String(e)});console.error(e);process.exitCode=1}
