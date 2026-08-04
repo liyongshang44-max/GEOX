@@ -1,176 +1,19 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const { execFileSync } = require('node:child_process');
-
-const root = process.cwd();
-const outDir = path.join(root, 'acceptance-output');
-const outPath = path.join(outDir, 'MCFT_CAP_08_CURRENT_FRONTIER_RECONCILIATION_RESULT.json');
-fs.mkdirSync(outDir, { recursive: true });
-
-const expectedFiles = [
-  '.github/workflows/mcft-cap-08-current-frontier-reconciliation.yml',
-  'docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md',
-  'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md',
-  'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json',
-  'docs/digital_twin/mcft/GEOX-MCFT-SSOT-CURRENT-V1.json',
-  'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json',
-  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CURRENT_FRONTIER_RECONCILIATION.cjs',
-].sort();
-
-const candidateMarker = ['MCFT', 'CANDIDATE', 'DECLARATION', 'V2'].join('_');
-const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
-const json = (p) => JSON.parse(read(p));
-const assert = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
-const writeResult = (result) => fs.writeFileSync(outPath, `${JSON.stringify(result, null, 2)}\n`);
-
-const baseSha = process.env.MCFT_BASE_SHA;
-const headSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
-
-try {
-  assert(/^[0-9a-f]{40}$/.test(baseSha || ''), 'MCFT_BASE_SHA must be an exact Git SHA');
-
-  const changedFiles = execFileSync(
-    'git',
-    ['diff', '--name-only', `${baseSha}...HEAD`],
-    { cwd: root, encoding: 'utf8' },
-  ).trim().split(/\r?\n/).filter(Boolean).sort();
-
-  assert(
-    JSON.stringify(changedFiles) === JSON.stringify(expectedFiles),
-    `CURRENT_FRONTIER_CHANGED_FILE_BOUNDARY_MISMATCH\nexpected=${JSON.stringify(expectedFiles)}\nactual=${JSON.stringify(changedFiles)}`,
-  );
-
-  for (const file of changedFiles) {
-    const content = read(file);
-    assert(!content.includes(candidateMarker), `Candidate Declaration forbidden: ${file}`);
-    assert(!file.startsWith('apps/'), `Runtime source forbidden: ${file}`);
-    assert(!file.startsWith('packages/'), `package source forbidden: ${file}`);
-    assert(!file.startsWith('migrations/'), `migration forbidden: ${file}`);
-    assert(file !== 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json', 'Registry delta forbidden');
-    assert(!/GEOX-MCFT-CAP-08-S[1-6]-DELIVERY-STATUS-V1\.json$/.test(file), 'delivery status mutation forbidden');
-    assert(file !== 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md', 'taskbook byte mutation forbidden');
-  }
-
-  const frontier = json('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json');
-  const pointer = json('docs/digital_twin/mcft/GEOX-MCFT-SSOT-CURRENT-V1.json');
-  const matrix = json('docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json');
-  const registry = json('docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json');
-  const s4Status = json('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-DELIVERY-STATUS-V1.json');
-  const s5Status = json('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-DELIVERY-STATUS-V1.json');
-  const s6Status = json('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json');
-  const master = read('docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md');
-  const implementationMap = read('docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md');
-
-  const expectedBase = '75fc9c509d455c12202ae6c5597f7185796ec3d6';
-  const expectedS4Subject = 'bda9d37519ca536d3d83d68cb3a2d4b395ff2ee9';
-  const expectedS4Candidate = 'a8c8abccbe2ab25dad5f0fa4a9653269f6c4acc4';
-  const expectedS4Tree = '4c14fc80a291e6f4fd8cb61a13a8ba2926aa0e1a';
-  const expectedS4Digest = 'sha256:c3ba7d058898ed073dbc907a1a0d957903c312c955be45300cb6f62e49ea7338';
-
-  assert(frontier.repository_main_at_reconciliation === expectedBase, 'frontier base mismatch');
-  assert(frontier.current_effective_slice_id === 'MCFT-CAP-08.S4', 'effective Slice mismatch');
-  assert(frontier.current_effective_status === 'S4_LATE_EVIDENCE_APPEND_FORWARD_IMPLEMENTED_EFFECTIVE', 'effective status mismatch');
-  assert(frontier.next_authorized_slice_id === 'MCFT-CAP-08.S5', 'next Slice mismatch');
-  assert(frontier.s5_implementation_authorized === true, 'S5 implementation authority missing');
-  assert(frontier.s5_candidate_implemented === false && frontier.s5_effective === false, 'S5 must remain not implemented/effective');
-  assert(frontier.s6_implementation_authorized === false, 'S6 must remain unauthorized');
-  assert(frontier.residual_calibration_shadow_authorized === false, 'S5 capability projected effective early');
-  assert(frontier.model_activation_authorized === false, 'Model Activation must remain false');
-  assert(frontier.production_runtime_source_authorized === false, 'production Runtime source must remain false');
-  assert(frontier.mcft_cap_09_authorized === false, 'CAP-09 must remain false');
-  assert(frontier.candidate_declaration_present === false, 'reconciliation must remain non-candidate');
-  assert(frontier.runtime_source_delta === 0 && frontier.canonical_runtime_data_delta === 0 && frontier.database_acl_delta === 0, 'zero-delta contract violated');
-
-  const s4 = frontier.effective_slices.find((entry) => entry.slice_id === 'MCFT-CAP-08.S4');
-  assert(s4, 'S4 evidence missing');
-  assert(s4.subject_sha === expectedS4Subject, 'S4 subject mismatch');
-  assert(s4.candidate_head_sha === expectedS4Candidate, 'S4 candidate mismatch');
-  assert(s4.candidate_tree_sha === expectedS4Tree && s4.merge_tree_sha === expectedS4Tree, 'S4 tree mismatch');
-  assert(s4.candidate_to_merge_tree_delta === 0, 'S4 tree delta must be zero');
-  assert(s4.workflow_run_id === 30154846799 && s4.artifact_id === 8618701918, 'S4 workflow/artifact mismatch');
-  assert(s4.semantic_artifact_digest === expectedS4Digest, 'S4 semantic digest mismatch');
-  assert(s4.immutable_readback_verified === true, 'S4 immutable readback missing');
-
-  assert(s4Status.s4_candidate_implemented === true, 'S4 candidate state missing');
-  assert(s4Status.effective_status_when_attested === frontier.current_effective_status, 'S4 projection mismatch');
-  assert(s5Status.s5_candidate_implemented === false, 'S5 seed must remain false');
-  assert(s6Status.s6_candidate_implemented === false, 'S6 seed must remain false');
-  assert(s6Status.independent_review_required === true, 'S6 review requirement missing');
-  assert(s6Status.mcft_cap_09_authorized === false, 'S6 must not authorize CAP-09');
-
-  const cap08 = registry.capabilities.find((entry) => entry.capability_line === 'MCFT-CAP-08');
-  assert(cap08, 'CAP-08 Registry entry missing');
-  const hasRule = (statusFile, fieldPath) => cap08.candidate_transition_fields.some(
-    (entry) => entry.status_file === statusFile
-      && entry.field_path === fieldPath
-      && entry.allowed_candidate_values.includes(true),
-  );
-  assert(hasRule('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-DELIVERY-STATUS-V1.json', 's5_candidate_implemented'), 'S5 Registry rule missing');
-  assert(hasRule('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json', 's6_candidate_implemented'), 'S6 Registry rule missing');
-  assert(cap08.mcft_cap_09_authorized === false, 'Registry must not authorize CAP-09');
-
-  assert(pointer.settlement_subject_main === expectedBase, 'SSOT base mismatch');
-  assert(pointer.current_authority.cap_08_current_frontier.endsWith('GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json'), 'frontier pointer missing');
-  assert(pointer.cap_08_current_frontier_projection.current_effective_slice_id === frontier.current_effective_slice_id, 'SSOT effective Slice mismatch');
-  assert(pointer.cap_08_current_frontier_projection.next_authorized_slice_id === frontier.next_authorized_slice_id, 'SSOT next Slice mismatch');
-  assert(pointer.candidate_transition === false && pointer.mcft_cap_09_authorized === false, 'SSOT nonclaim mismatch');
-
-  const cap08Matrix = matrix.capability_lines.find((entry) => entry.capability_line_id === 'MCFT-CAP-08');
-  assert(cap08Matrix?.effective_slice_id === frontier.current_effective_slice_id, 'matrix effective Slice mismatch');
-  assert(cap08Matrix?.next_authorized_slice_id === frontier.next_authorized_slice_id, 'matrix next Slice mismatch');
-  assert(matrix.current_frontier.effective_slice_id === frontier.current_effective_slice_id, 'matrix frontier mismatch');
-  assert(matrix.current_frontier.candidate_implemented === false, 'matrix must not claim S5 candidate');
-
-  for (const text of [master, implementationMap]) {
-    assert(text.includes('MCFT-CAP-08.S4'), 'S4 frontier missing from navigation document');
-    assert(text.includes('MCFT-CAP-08.S5'), 'S5 next Slice missing from navigation document');
-    assert(text.includes(expectedS4Subject), 'S4 subject missing from navigation document');
-    assert(text.includes('v0.3.9'), 'taskbook version missing from navigation document');
-  }
-
-  const result = {
-    status: 'PASS',
-    capability_line_id: 'MCFT-CAP-08',
-    change_class: 'NON_CANDIDATE_CURRENT_FRONTIER_RECONCILIATION',
-    base_sha: baseSha,
-    head_sha: headSha,
-    changed_files: changedFiles,
-    effective_slice_id: frontier.current_effective_slice_id,
-    effective_status: frontier.current_effective_status,
-    next_authorized_slice_id: frontier.next_authorized_slice_id,
-    s4_subject_sha: s4.subject_sha,
-    s4_workflow_run_id: s4.workflow_run_id,
-    s4_artifact_id: s4.artifact_id,
-    s4_semantic_artifact_digest: s4.semantic_artifact_digest,
-    s5_seed_and_rule_present: true,
-    s5_candidate_implemented: false,
-    s6_seed_and_rule_present: true,
-    s6_implementation_authorized: false,
-    candidate_declaration: false,
-    runtime_source_delta: 0,
-    registry_delta: 0,
-    delivery_status_delta: 0,
-    taskbook_byte_delta: 0,
-    canonical_runtime_data_delta: 0,
-    database_acl_delta: 0,
-    model_activation_authorized: false,
-    production_runtime_source_authorized: false,
-    mcft_cap_09_authorized: false,
-  };
-  writeResult(result);
-  console.log(JSON.stringify(result, null, 2));
-} catch (error) {
-  const result = {
-    status: 'FAIL',
-    capability_line_id: 'MCFT-CAP-08',
-    change_class: 'NON_CANDIDATE_CURRENT_FRONTIER_RECONCILIATION',
-    base_sha: baseSha || null,
-    head_sha: headSha,
-    error: error instanceof Error ? error.message : String(error),
-  };
-  writeResult(result);
-  console.error(JSON.stringify(result, null, 2));
-  process.exitCode = 1;
-}
+#!/usr/bin/env node
+'use strict';
+const fs=require('node:fs'),p=require('node:path'),{execFileSync:x}=require('node:child_process');
+const R=process.cwd(),O=p.join(R,'acceptance-output/MCFT_CAP_08_CURRENT_FRONTIER_RECONCILIATION_RESULT.json');
+const S='67bd71560268046a7fa9a9433ee074ad3999cb71',RUN=30908130962,ART=8891897316;
+const L=['.github/workflows/mcft-cap-08-current-frontier-reconciliation.yml','.github/workflows/mcft-cap-08-s5-effectiveness-settlement.yml','.github/workflows/mcft-cap-08-s5-replay-dataset-v2-prequalification.yml','scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CURRENT_FRONTIER_RECONCILIATION.cjs'].sort();
+const P=['docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md','docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md','docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json','docs/digital_twin/mcft/GEOX-MCFT-SSOT-CURRENT-V1.json','docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json','docs/handoff/GEOX-MCFT-CAP-08-S6-HANDOFF.md'].sort();
+const rd=f=>fs.readFileSync(p.join(R,f),'utf8'),js=f=>JSON.parse(rd(f)),ok=(v,c)=>{if(!v)throw Error(c)},wr=v=>{fs.mkdirSync(p.dirname(O),{recursive:true});fs.writeFileSync(O,JSON.stringify(v,null,2)+'\n')},mark=['MCFT','CANDIDATE','DECLARATION','V2'].join('_');
+const sh=(...a)=>x('git',a,{encoding:'utf8'}).trim(),eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+function artifact(n){const b=p.resolve(process.env.MCFT_S6_ARTIFACT_DIR||'acceptance-input/s6-exact-sha'),q=[b];while(q.length){const d=q.pop();if(!fs.existsSync(d))continue;for(const e of fs.readdirSync(d,{withFileTypes:true})){const z=p.join(d,e.name);if(e.isDirectory())q.push(z);else if(e.name===n)return z}}throw Error('ARTIFACT_MISSING:'+n)}
+async function api(u){const t=process.env.GITHUB_TOKEN;ok(t,'TOKEN_REQUIRED');const r=await fetch(`https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}${u}`,{headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${t}`,'X-GitHub-Api-Version':'2022-11-28','User-Agent':'cap08-frontier'}}),b=await r.text();ok(r.ok,`API_${r.status}:${u}:${b.slice(0,160)}`);return b?JSON.parse(b):null}
+(async()=>{const base=process.env.MCFT_BASE_SHA,head=sh('rev-parse','HEAD');try{const ch=sh('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
+if(process.argv.includes('--lifecycle-repair')){ok(base===S,'LIFE_BASE');ok(eq(ch,L),'LIFE_BOUNDARY:'+JSON.stringify(ch));const c=rd(L[0]),e=rd(L[1]),q=rd(L[2]),i=q.indexOf('  exact-prequalification:');for(const t of['lifecycle-repair','post-closure','run-id: 30908130962','artifact-ids: 8891897316','s5-settlement','s5-prequalification'])ok(c.includes(t),'CURRENT:'+t);for(const t of['lifecycle-repair','exact-settlement','successor-inactive'])ok(e.includes(t),'SETTLEMENT:'+t);for(const t of['lifecycle-repair','exact-prequalification','exact-settlement','successor-inactive'])ok(q.includes(t),'PREQUAL:'+t);ok(i>0,'EXACT_JOB');ok(!q.slice(0,i).includes('    services:'),'ROUTER_SERVICE');ok(q.slice(i).includes('    services:\n      postgres:'),'NO_POSTGRES');ok(q.includes("if: needs.prequalification.outputs.mode == 'exact-prequalification'"),'NO_JOB_GUARD');ok(!q.includes("if: steps.lifecycle.outputs.settlement != 'true'"),'OLD_ROUTE');for(const f of ch)ok(!rd(f).includes(mark),'DECL:'+f);const r={status:'PASS',change_class:'S5_SUCCESSOR_WORKFLOW_LIFECYCLE_REPAIR',base_sha:base,head_sha:head,changed_files:ch,s5_database_reexecution:false,s5_effectiveness_reexecution:false,candidate_declaration:false,runtime_source_delta:0,registry_delta:0,delivery_status_delta:0,taskbook_byte_delta:0,mcft_cap_09_authorized:false};wr(r);console.log(JSON.stringify(r,null,2));return}
+ok(sh('merge-base','--is-ancestor',S,base)==='','BASE_NOT_DESCENDANT');ok(eq(ch,P),'POST_BOUNDARY:'+JSON.stringify(ch));for(const f of ch){const z=rd(f);ok(!z.includes(mark),'DECL:'+f);ok(!/^(apps|packages|migrations)\//.test(f),'SOURCE:'+f)}
+const a=JSON.parse(fs.readFileSync(artifact('MCFT_CAP_08_S6_EXACT_SHA_ATTESTATION.json'))),l=JSON.parse(fs.readFileSync(artifact('MCFT_CAP_08_S6_ATTESTATION_RETENTION_LOCATOR.json')));ok(a.status==='PASS'&&a.subject_sha===S&&a.capability_complete===true,'ATTEST');ok(a.completion_level==='STAGE_1A_REPLAY_BACKED_CLOSURE_COMPLETE'&&a.candidate_to_merge_tree_delta===0,'CLOSURE');ok(a.hard_acceptance_resolution?.effective_resolved_item_count===24&&a.hard_acceptance_resolution?.failed_item_count===0,'HA');ok(a.effective_delivery_frontier_projection?.mcft_cap_09_authorized===false,'A_CAP09');ok(l.retention_level==='R2'&&l.readback_verified===true&&l.locked_version_delete_denied===true,'R2');ok(l.retain_until==='2028-08-03T12:13:37.980Z'&&Object.keys(l.object_versions||{}).length===4,'R2_META');
+const run=await api(`/actions/runs/${RUN}`);ok(run.head_sha===S&&run.event==='push'&&run.run_attempt===1&&run.status==='completed'&&run.conclusion==='success','RUN');const ar=(await api(`/actions/runs/${RUN}/artifacts?per_page=100`)).artifacts.find(v=>v.id===ART);ok(ar&&!ar.expired&&ar.digest==='sha256:ceb2dc797d6a9a3c54a6476435f9b1cc5f7dd0f08993af3d8ced424c65afe497','ART');const st=(await api(`/commits/${S}/status`)).statuses.find(v=>v.context==='mcft-cap-08/s6-exact-sha-attestation');ok(st?.state==='success','STATUS');
+const f=js(P[4]),s=js(P[3]),m=js(P[2]),g=js('docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'),d=js('docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json');ok(sh('rev-parse','HEAD:docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-TASK.md')==='a24114ff629560345b3bd3cda6b4024b9f3d61e4','TASK');ok(sh('rev-parse','HEAD:docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json')==='823c8afc5b149daad7b9635618d33d2eac1b2088','REG');ok(sh('rev-parse','HEAD:docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-DELIVERY-STATUS-V1.json')==='6efdaa0e46dd463c8884b0085c71f5cfe39a6e79','S6');ok(d.externally_effective===false&&d.mcft_cap_08_complete===false&&d.postmerge_ssot_writeback_allowed===false,'S6_STATE');
+ok(f.repository_main_at_reconciliation===S&&f.current_effective_status==='MCFT_CAP_08_COMPLETE'&&f.mcft_cap_08_complete===true,'FRONTIER');ok(f.next_authorized_slice_id===null&&f.blocked_slice_id==='MCFT-CAP-09'&&f.mcft_cap_09_authorized===false,'SUCCESSOR');ok(f.runtime_source_delta===0&&f.registry_delta===0&&f.delivery_status_delta===0&&f.taskbook_byte_delta===0,'F_DELTA');ok(f.s6_exact_sha_authority?.semantic_artifact_digest===a.semantic_artifact_digest&&f.r2_retention_authority?.retain_until===l.retain_until,'F_EVIDENCE');ok(s.settlement_subject_main===S&&s.current_frontier?.effective_status==='MCFT_CAP_08_COMPLETE'&&s.mcft_cap_09_authorized===false,'SSOT');ok(s.candidate_transition===false&&s.registry_delta===0&&s.delivery_status_delta===0&&s.taskbook_byte_delta===0,'S_DELTA');const c8=m.capability_lines.find(v=>v.capability_line_id==='MCFT-CAP-08'),c9=m.capability_lines.find(v=>v.capability_line_id==='MCFT-CAP-09');ok(c8?.status==='COMPLETE'&&c8.complete===true&&c9?.status==='NOT_AUTHORIZED'&&c9.implementation_authorized===false,'MATRIX');ok(!g.capabilities.some(v=>v.capability_line==='MCFT-CAP-09')&&g.capabilities.find(v=>v.capability_line==='MCFT-CAP-08')?.mcft_cap_09_authorized===false,'GOV');for(const z of [rd(P[0]),rd(P[1]),rd(P[5])])ok(z.includes(S)&&z.includes('MCFT_CAP_08_COMPLETE')&&z.includes('MCFT-CAP-09')&&z.includes('NOT AUTHORIZED')&&z.includes(l.retain_until),'NAV');
+const r={status:'PASS',change_class:'NON_CANDIDATE_POST_CLOSURE_CURRENT_FRONTIER_RECONCILIATION',base_sha:base,head_sha:head,changed_files:ch,completion_subject_sha:S,exact_sha_workflow_run_id:RUN,exact_sha_artifact_id:ART,exact_sha_artifact_digest:ar.digest,semantic_artifact_digest:a.semantic_artifact_digest,hard_acceptance_effective_count:24,retention_level:'R2',retain_until:l.retain_until,readback_verified:true,locked_version_delete_denied:true,mcft_cap_08_complete:true,mcft_cap_09_authorized:false,candidate_declaration:false,runtime_source_delta:0,registry_delta:0,delivery_status_delta:0,taskbook_byte_delta:0,postmerge_status_writeback:false};wr(r);console.log(JSON.stringify(r,null,2))}catch(e){const r={status:'FAIL',base_sha:base||null,head_sha:head,error:e.message};wr(r);console.error(JSON.stringify(r,null,2));process.exitCode=1}})();

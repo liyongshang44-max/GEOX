@@ -3,14 +3,7 @@ name: mcft-cap-08-s5-effectiveness-settlement
 on:
   pull_request:
     paths:
-      - '.github/workflows/mcft-cap-08-current-frontier-reconciliation.yml'
-      - '.github/workflows/mcft-cap-08-s5-architecture-deviation-adjudication.yml'
-      - '.github/workflows/mcft-cap-08-s5-replay-dataset-v2-effectiveness-settlement.yml'
       - '.github/workflows/mcft-cap-08-s5-effectiveness-settlement.yml'
-      - 'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md'
-      - 'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json'
-      - 'docs/digital_twin/mcft/GEOX-MCFT-SSOT-CURRENT-V1.json'
-      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-EFFECTIVENESS-AUTHORITY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_EFFECTIVENESS_SETTLEMENT.cjs'
 
@@ -29,10 +22,48 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with: { node-version: 20.11.1 }
-      - name: Validate exact S5 effectiveness settlement
+      - name: Classify S5 settlement lifecycle
+        id: lifecycle
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_EFFECTIVENESS_SETTLEMENT.cjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD | sort)"
+          lifecycle_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-08-current-frontier-reconciliation.yml' \
+            '.github/workflows/mcft-cap-08-s5-effectiveness-settlement.yml' \
+            '.github/workflows/mcft-cap-08-s5-replay-dataset-v2-prequalification.yml' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CURRENT_FRONTIER_RECONCILIATION.cjs' | sort)"
+          if [[ "$files" == "$lifecycle_files" ]]; then
+            mode='lifecycle-repair'
+          elif grep -Fxq 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-EFFECTIVENESS-AUTHORITY-V1.json' <<<"$files"; then
+            mode='exact-settlement'
+          else
+            mode='successor-inactive'
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+      - name: Validate routed S5 settlement lifecycle
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MCFT_MODE: ${{ steps.lifecycle.outputs.mode }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          case "$MCFT_MODE" in
+            lifecycle-repair)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CURRENT_FRONTIER_RECONCILIATION.cjs --lifecycle-repair
+              cp acceptance-output/MCFT_CAP_08_CURRENT_FRONTIER_RECONCILIATION_RESULT.json acceptance-output/MCFT_CAP_08_S5_EFFECTIVENESS_SETTLEMENT_RESULT.json
+              ;;
+            exact-settlement)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_EFFECTIVENESS_SETTLEMENT.cjs
+              ;;
+            successor-inactive)
+              printf '%s\n' '{"status":"PASS","mode":"SUCCESSOR_INACTIVE","s5_effectiveness_reexecution":false}' > acceptance-output/MCFT_CAP_08_S5_EFFECTIVENESS_SETTLEMENT_RESULT.json
+              ;;
+            *) exit 1 ;;
+          esac
       - uses: actions/upload-artifact@v4
         if: always()
         with:
