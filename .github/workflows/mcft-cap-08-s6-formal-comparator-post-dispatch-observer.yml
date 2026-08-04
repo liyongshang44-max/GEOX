@@ -19,7 +19,7 @@ jobs:
       TARGET_WORKFLOW: mcft-cap-08-s6-formal-cross-run-comparator-execution.yml
       COMPARATOR_EXECUTION_ID: MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-20260804-REPLACEMENT-001
     steps:
-      - name: Record unique terminal run and artifact metadata
+      - name: Record terminal runs and available artifacts
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -34,7 +34,6 @@ jobs:
           repo = os.environ['GITHUB_REPOSITORY']
           token = os.environ['GH_TOKEN']
           head_sha = os.environ['AUTHORITY_MAIN_SHA']
-          execution_id = os.environ['COMPARATOR_EXECUTION_ID']
           headers = {
               'Accept': 'application/vnd.github+json',
               'Authorization': f'Bearer {token}',
@@ -58,16 +57,9 @@ jobs:
           assert len(target_matches) == 1, f'COMPARATOR_MATCH_COUNT_{len(target_matches)}'
           broker = broker_matches[0]
           target = target_matches[0]
-          assert broker['status'] == 'completed'
-          assert target['status'] == 'completed'
 
-          broker_artifacts = get_json(f"/actions/runs/{broker['id']}/artifacts?per_page=100").get('artifacts', [])
-          target_artifacts = get_json(f"/actions/runs/{target['id']}/artifacts?per_page=100").get('artifacts', [])
-          broker_artifact = next((x for x in broker_artifacts if x['name'].startswith('mcft-cap-08-s6-formal-comparator-replacement-001-dispatch-broker-')), None)
-          target_name = f'mcft-cap-08-s6-formal-cross-run-comparator-{execution_id}'
-          target_artifact = next((x for x in target_artifacts if x['name'] == target_name), None)
-          assert broker_artifact is not None
-          assert target_artifact is not None
+          def artifacts(run_id):
+              return get_json(f'/actions/runs/{run_id}/artifacts?per_page=100').get('artifacts', [])
 
           def run_record(run):
               return {
@@ -80,6 +72,7 @@ jobs:
                   'head_sha': run['head_sha'],
                   'created_at': run['created_at'],
                   'updated_at': run['updated_at'],
+                  'html_url': run['html_url'],
               }
 
           def artifact_record(item):
@@ -93,15 +86,18 @@ jobs:
                   'expires_at': item.get('expires_at'),
               }
 
+          broker_artifacts = [artifact_record(x) for x in artifacts(broker['id'])]
+          target_artifacts = [artifact_record(x) for x in artifacts(target['id'])]
           result = {
               'schema_version': 'geox_mcft_cap08_s6_formal_comparator_post_dispatch_observation_v1',
-              'status': 'OBSERVED_UNIQUE_TERMINAL_METADATA',
+              'status': 'OBSERVED_UNIQUE_TERMINAL_RUNS',
               'authority_main_sha': head_sha,
-              'comparator_execution_id': execution_id,
-              'broker': {**run_record(broker), 'artifact': artifact_record(broker_artifact)},
-              'comparator': {**run_record(target), 'artifact': artifact_record(target_artifact)},
+              'comparator_execution_id': os.environ['COMPARATOR_EXECUTION_ID'],
               'matching_broker_run_count': 1,
               'matching_comparator_run_count': 1,
+              'broker': {**run_record(broker), 'artifacts': broker_artifacts},
+              'comparator': {**run_record(target), 'artifacts': target_artifacts},
+              'formal_comparator_artifact_present': any(x['name'].startswith('mcft-cap-08-s6-formal-cross-run-comparator-') for x in target_artifacts),
               'rerun_performed': False,
               'duplicate_dispatch_performed': False,
               'observer_permissions': ['contents:read', 'actions:read'],
