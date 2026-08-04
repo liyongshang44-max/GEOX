@@ -1,0 +1,23 @@
+{
+  "schema_version": "geox_mcft_cap09_s0_changed_file_boundary_v1",
+  "boundary_id": "GEOX-MCFT-CAP-09-S0-CHANGED-FILE-BOUNDARY-V1",
+  "record_status": "FROZEN_PRE_CANDIDATE_BOUNDARY",
+  "base_main_sha": "4784aeed9cfe6183f8acef4dd03cea939d24e6ef",
+  "changed_file_count": 8,
+  "changed_files": [
+    ".github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PREDECESSOR-LOCK-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-CHANGED-FILE-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs"
+  ],
+  "runtime_source_delta": 0,
+  "migration_delta": 0,
+  "registry_delta": 0,
+  "navigation_ssot_delta": 0,
+  "candidate_declaration_present": false,
+  "implementation_authorized": false
+}
