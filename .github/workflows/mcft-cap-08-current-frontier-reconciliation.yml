@@ -4,12 +4,13 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-08-current-frontier-reconciliation.yml'
-      - '.github/workflows/mcft-cap-08-s5-effectiveness-settlement.yml'
       - 'docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md'
       - 'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP-V2.md'
       - 'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json'
       - 'docs/digital_twin/mcft/GEOX-MCFT-SSOT-CURRENT-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-CURRENT-FRONTIER-V1.json'
+      - 'docs/handoff/GEOX-MCFT-CAP-08-S6-HANDOFF.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CURRENT_FRONTIER_RECONCILIATION.cjs'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-EFFECTIVENESS-AUTHORITY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_EFFECTIVENESS_SETTLEMENT.cjs'
       - '.github/workflows/mcft-cap-08-s5-architecture-deviation-adjudication.yml'
@@ -27,6 +28,8 @@ on:
 
 permissions:
   contents: read
+  actions: read
+  statuses: read
 
 concurrency:
   group: mcft-cap08-current-frontier-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
@@ -35,7 +38,7 @@ concurrency:
 jobs:
   current-frontier-reconciliation:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,16 +47,27 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with: { node-version: 20.11.1 }
+      - name: Download exact S6 completion authority
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 30908130962
+          artifact-ids: 8891897316
+          path: acceptance-input/s6-exact-sha
+          repository: liyongshang44-max/GEOX
+          github-token: ${{ github.token }}
       - name: Validate current frontier transition
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+          MCFT_S6_ARTIFACT_DIR: acceptance-input/s6-exact-sha
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p acceptance-output
           files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD)"
-          settlement_authority='docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-EFFECTIVENESS-AUTHORITY-V1.json'
-          if grep -Fxq "$settlement_authority" <<<"$files"; then
+          if grep -Fxq 'docs/handoff/GEOX-MCFT-CAP-08-S6-HANDOFF.md' <<<"$files"; then
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_CURRENT_FRONTIER_RECONCILIATION.cjs
+          elif grep -Fxq 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S5-EFFECTIVENESS-AUTHORITY-V1.json' <<<"$files"; then
             node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S5_EFFECTIVENESS_SETTLEMENT.cjs
             cp acceptance-output/MCFT_CAP_08_S5_EFFECTIVENESS_SETTLEMENT_RESULT.json acceptance-output/MCFT_CAP_08_CURRENT_FRONTIER_RECONCILIATION_RESULT.json
           elif grep -Eq 'S5_REPLAY_DATASET_V2_PREQUALIFICATION|mcft_cap08_s5_prequalification|replay-dataset-v2' <<<"$files"; then
