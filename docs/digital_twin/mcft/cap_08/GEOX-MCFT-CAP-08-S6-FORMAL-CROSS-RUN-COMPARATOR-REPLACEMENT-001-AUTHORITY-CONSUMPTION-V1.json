@@ -1,0 +1,58 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_replacement_001_authority_consumption_v1",
+  "record_status": "SINGLE_FORMAL_CROSS_RUN_COMPARATOR_AUTHORITY_CONSUMED_TERMINAL_FAILURE",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "settlement_base_main_sha": "54365415ffb25d8620b0aea0546e1fbd792425a5",
+  "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+  "comparator_execution_id": "MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-20260804-REPLACEMENT-001",
+  "authority_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "c2df7c3da181ff231931a66c7f6c6b2312b7015a",
+    "maximum_execution_count": 1,
+    "required_execution_attempt": 1
+  },
+  "consumed_dispatch": {
+    "broker_run_id": 30893129322,
+    "broker_run_attempt": 1,
+    "dispatch_api_accepted": true,
+    "dispatch_http_status": 204,
+    "preexisting_dispatch_count": 0,
+    "formal_workflow_run_id": 30893508924,
+    "formal_workflow_run_attempt": 1,
+    "unique_target_resolved": true
+  },
+  "consumed_execution": {
+    "formal_workflow_run_id": 30893508924,
+    "formal_workflow_run_attempt": 1,
+    "event": "workflow_dispatch",
+    "head_sha": "54365415ffb25d8620b0aea0546e1fbd792425a5",
+    "conclusion": "failure",
+    "failure_stage": "EXACT_FORMAL_INPUT_PROVENANCE_AUDIT",
+    "semantic_comparator_executed": false,
+    "formal_artifact_created": false
+  },
+  "consumption_state": {
+    "authority_consumed": true,
+    "execution_count_consumed": 1,
+    "remaining_execution_count": 0,
+    "workflow_dispatch_authorized_after_consumption": false,
+    "rerun_authorized": false,
+    "duplicate_execution_authorized": false,
+    "authority_reuse_authorized": false,
+    "same_execution_id_reuse_authorized": false
+  },
+  "failure_settlement_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-001-FAILURE-SETTLEMENT-V1.json"
+  },
+  "next_legal_action": "MERGE_FAILURE_SETTLEMENT_BEFORE_ANY_CONTROL_CORRECTION_OR_REPLACEMENT_AUTHORITY",
+  "nonclaims": [
+    "NO_AUTHORITY_REOPEN",
+    "NO_RERUN",
+    "NO_DUPLICATE_DISPATCH",
+    "NO_SAME_EXECUTION_ID_REUSE",
+    "NO_SEMANTIC_VERDICT",
+    "NO_CAP08_COMPLETION"
+  ],
+  "semantic_digest": "sha256:1611aeacd8ca09b9823746c0c8194c2535eccc8c9c59315e63958148d7f4cb92"
+}
