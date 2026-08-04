@@ -1,0 +1,41 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_execution_workflow_v1",
+  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_EXECUTION_WORKFLOW_QUALIFIED_NOT_AUTHORIZED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "b77531284ebda6c4819b78a3ee7dd2262c7a909b",
+  "workflow": {
+    "path": ".github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-execution.yml",
+    "blob_sha": "b11d60820f35ee39ac2df2a4372cbce7df8cf876",
+    "workflow_dispatch_only_for_formal_execution": true,
+    "pull_request_static_qualification_only": true,
+    "maximum_execution_count": 1,
+    "required_execution_attempt": 1,
+    "retention_days": 365
+  },
+  "execution_control": {
+    "path": "scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_comparator_execution_control_v1.cjs",
+    "blob_sha": "f6e1673681f734474340c1a1ffab79be60892a7a"
+  },
+  "required_inputs": [
+    "exact_subject_sha",
+    "comparator_execution_id",
+    "execution_authority_path"
+  ],
+  "formal_inputs": {
+    "run_a": {
+      "workflow_run_id": 30845476698,
+      "artifact_id": 8868535301
+    },
+    "run_b": {
+      "workflow_run_id": 30877450717,
+      "artifact_id": 8880057024
+    }
+  },
+  "authority_gate_before_artifact_transport": true,
+  "input_audit_before_execution": true,
+  "formal_comparator_execution_performed": false,
+  "formal_comparator_evidence_created": false,
+  "next_legal_action": "ISSUE_REPLACEMENT_FORMAL_COMPARATOR_AUTHORITY_CANDIDATE_WITH_EXECUTION_WORKFLOW",
+  "semantic_digest": "sha256:51bd5439fc9fab6e057502c8d58b374b4486c907b6f5830995ca530fdab044f6"
+}

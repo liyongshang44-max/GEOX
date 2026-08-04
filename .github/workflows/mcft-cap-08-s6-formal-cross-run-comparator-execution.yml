@@ -1,0 +1,116 @@
+name: mcft-cap-08-s6-formal-cross-run-comparator-execution
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-execution.yml'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_comparator_execution_control_v1.cjs'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-EXECUTION-WORKFLOW-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-EXECUTION-WORKFLOW-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_EXECUTION_WORKFLOW_V1.cjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+    inputs:
+      exact_subject_sha:
+        required: true
+        type: string
+      comparator_execution_id:
+        required: true
+        type: string
+      execution_authority_path:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap08-s6-formal-comparator-${{ github.event_name == 'workflow_dispatch' && inputs.comparator_execution_id || github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  static-qualification:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate formal comparator execution workflow without execution
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_EXECUTION_WORKFLOW_V1.cjs
+      - name: Upload non-formal workflow qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-formal-comparator-execution-workflow-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_EXECUTION_WORKFLOW_RESULT.json
+          if-no-files-found: error
+          retention-days: 365
+
+  execute-formal-comparator-once:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Gate effective single-use comparator authority before artifact transport
+        env:
+          MCFT_EXACT_SUBJECT_SHA: ${{ inputs.exact_subject_sha }}
+          MCFT_COMPARATOR_EXECUTION_ID: ${{ inputs.comparator_execution_id }}
+          MCFT_EXECUTION_AUTHORITY_PATH: ${{ inputs.execution_authority_path }}
+        run: node scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_comparator_execution_control_v1.cjs gate >> "$GITHUB_ENV"
+      - name: Download exact settled Formal RUN_A artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-RUN_A-ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59
+          path: acceptance-input/formal-run-a
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 30845476698
+      - name: Download exact settled Formal RUN_B artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-RUN_B-ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59
+          path: acceptance-input/formal-run-b
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 30877450717
+      - name: Audit exact formal input runs and artifact digests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MCFT_COMPARATOR_INPUT_AUDIT_OUTPUT: acceptance-input/FORMAL_COMPARATOR_INPUT_AUDIT.json
+        run: node scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_comparator_execution_control_v1.cjs audit
+      - name: Execute formal cross-run comparator exactly once
+        env:
+          MCFT_CAP08_FORMAL_RUN_A_BUNDLE: acceptance-input/formal-run-a/${{ env.MCFT_CAP08_FORMAL_RUN_A_BUNDLE_FILE }}
+          MCFT_CAP08_FORMAL_RUN_B_BUNDLE: acceptance-input/formal-run-b/${{ env.MCFT_CAP08_FORMAL_RUN_B_BUNDLE_FILE }}
+          MCFT_CAP08_FORMAL_COMPARATOR_INPUT_AUDIT: acceptance-input/FORMAL_COMPARATOR_INPUT_AUDIT.json
+          MCFT_CAP08_FORMAL_COMPARATOR_OUTPUT: acceptance-output/MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_RESULT.json
+        run: node scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_semantic_comparator_v1.cjs
+      - name: Upload one formal comparator artifact only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-formal-cross-run-comparator-${{ inputs.comparator_execution_id }}
+          path: |
+            acceptance-output/MCFT_CAP_08_S6_FORMAL_CROSS_RUN_COMPARATOR_RESULT.json
+            acceptance-input/FORMAL_COMPARATOR_INPUT_AUDIT.json
+          if-no-files-found: error
+          retention-days: 365
