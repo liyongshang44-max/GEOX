@@ -1,0 +1,32 @@
+{
+  "schema_version": "geox_mcft_cap09_s0_authorization_candidate_boundary_v1",
+  "boundary_id": "GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-BOUNDARY-V1",
+  "record_status": "FROZEN_CANDIDATE_BOUNDARY_NOT_EFFECTIVE",
+  "base_main_sha": "f07a7d0da50189c0ce2567b71d71f5d662771235",
+  "candidate_head_binding_mode": "PR_DECLARATION_V2_AND_GITHUB_EVENT",
+  "candidate_head_embedded": false,
+  "changed_file_count": 6,
+  "changed_files": [
+    ".github/workflows/mcft-cap-09-s0-authorization.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_AUTHORIZATION.cjs"
+  ],
+  "candidate_transition": true,
+  "candidate_declaration_location": "PULL_REQUEST_BODY_ONLY",
+  "external_effectiveness": false,
+  "runtime_source_delta": 0,
+  "migration_delta": 0,
+  "registry_delta": 0,
+  "taskbook_delta": 0,
+  "scope_contract_delta": 0,
+  "predecessor_lock_delta": 0,
+  "canonical_runtime_data_delta": 0,
+  "database_acl_delta": 0,
+  "navigation_ssot_delta": 0,
+  "public_http_writer_delta": 0,
+  "background_scheduler_delta": 0,
+  "live_ingestion_delta": 0
+}
