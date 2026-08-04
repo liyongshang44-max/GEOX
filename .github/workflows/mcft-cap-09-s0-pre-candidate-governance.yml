@@ -64,6 +64,7 @@ jobs:
           repair_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml' \
             'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs' | sort)"
+          # Candidate head binding mode: PR_DECLARATION_V2_AND_GITHUB_EVENT; candidate blobs never embed their own commit SHA.
           candidate_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-s0-authorization.yml' \
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json' \
