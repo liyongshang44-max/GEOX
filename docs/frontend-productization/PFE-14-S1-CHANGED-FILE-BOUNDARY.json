@@ -1,0 +1,53 @@
+{
+  "schema_version": "geox_pfe14_s1_changed_file_boundary_v1",
+  "boundary_id": "PFE-14-S1-CHANGED-FILE-BOUNDARY",
+  "change_class": "PFE_14_S1_FRONTEND_READ_CONTRACT_AND_STATE_MATRIX",
+  "base_main_sha": "dce309c7ea1045fc7a35e973fed09e1a0ab5f39c",
+  "predecessor_merge_sha": "dce309c7ea1045fc7a35e973fed09e1a0ab5f39c",
+  "expected_changed_file_count": 6,
+  "expected_changed_files": [
+    "docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json",
+    "docs/frontend-productization/PFE-14-S1-CHANGED-FILE-BOUNDARY.json",
+    "docs/frontend-productization/PFE-14-S1-COPY-NONCLAIM-CONTRACT.json",
+    "docs/frontend-productization/PFE-14-S1-FRONTEND-READ-CONTRACT.json",
+    "docs/frontend-productization/PFE-14-S1-STATE-MATRIX.json",
+    "scripts/frontend_acceptance/ACCEPTANCE_PFE_14_S1_READ_CONTRACT.cjs"
+  ],
+  "allowed_prefixes": [
+    "docs/frontend-productization/PFE-14-",
+    "scripts/frontend_acceptance/ACCEPTANCE_PFE_14_"
+  ],
+  "forbidden_prefixes": [
+    ".github/",
+    "apps/server/",
+    "apps/web/src/",
+    "fixtures/",
+    "migrations/",
+    "packages/"
+  ],
+  "forbidden_exact_files": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "apps/web/package.json"
+  ],
+  "delta_assertions": {
+    "react_source_delta": 0,
+    "css_source_delta": 0,
+    "route_source_delta": 0,
+    "api_client_delta": 0,
+    "backend_source_delta": 0,
+    "database_delta": 0,
+    "package_delta": 0,
+    "workflow_delta": 0,
+    "runtime_claim_delta": 0,
+    "shadow_online_label_runtime_delta": 0,
+    "controlled_action_delta": 0
+  },
+  "contract_design_only": true,
+  "candidate_declaration": false,
+  "runtime_implementation_authority": false,
+  "shadow_online_product_claim": false,
+  "completion_claim_when_accepted": "PFE_14_S1_FRONTEND_READ_CONTRACT_FROZEN",
+  "next_slice_after_effectiveness": "PFE-14.S2_APPLE_VISUAL_FOUNDATION"
+}

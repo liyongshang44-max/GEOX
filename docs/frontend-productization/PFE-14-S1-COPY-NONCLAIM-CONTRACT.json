@@ -1,0 +1,112 @@
+{
+  "schema_version": "geox_pfe14_s1_copy_nonclaim_contract_v1",
+  "contract_id": "PFE-14-S1-COPY-NONCLAIM-CONTRACT",
+  "record_status": "DESIGN_FROZEN_NOT_IMPLEMENTED",
+  "base_main_sha": "dce309c7ea1045fc7a35e973fed09e1a0ab5f39c",
+  "locales": ["zh-CN", "en-US"],
+  "surface": "Operator Runtime Console",
+  "product_terms": [
+    {"key":"runtime_overview","zh-CN":"运行总览","en-US":"Runtime Overview"},
+    {"key":"field_runtime","zh-CN":"地块运行视图","en-US":"Field Runtime"},
+    {"key":"evidence","zh-CN":"Evidence","en-US":"Evidence"},
+    {"key":"state","zh-CN":"状态估计","en-US":"State Estimate"},
+    {"key":"forecast","zh-CN":"预测","en-US":"Forecast"},
+    {"key":"scenario","zh-CN":"情景比较","en-US":"Scenario Comparison"},
+    {"key":"runtime_health","zh-CN":"运行健康","en-US":"Runtime Health"},
+    {"key":"audit","zh-CN":"审计与追踪","en-US":"Audit & Trace"},
+    {"key":"read_only","zh-CN":"只读","en-US":"Read-only"},
+    {"key":"technical_details","zh-CN":"技术详情","en-US":"Technical Details"}
+  ],
+  "required_boundary_copy": [
+    {
+      "condition":"ALL_FORMAL_OPERATOR_RUNTIME_PAGES",
+      "zh-CN":"此界面仅用于读取和追踪 Runtime，不创建建议、审批、任务或设备指令。",
+      "en-US":"This surface reads and traces Runtime only. It does not create recommendations, approvals, tasks, or device commands."
+    },
+    {
+      "condition":"REPLAY_BACKED",
+      "zh-CN":"当前内容来自受控回放，不代表实时设备、生产网关或真实田间在线运行。",
+      "en-US":"Current content is controlled replay data. It does not establish live devices, a production gateway, or online field operation."
+    },
+    {
+      "condition":"SHADOW_ONLINE",
+      "zh-CN":"Shadow-online 持续读取和计算，但不向真实世界发送控制指令。",
+      "en-US":"Shadow-online continuously reads and computes, but sends no control commands to the real world."
+    },
+    {
+      "condition":"FORECAST_PRESENT",
+      "zh-CN":"预测不是事实、建议或行动指令。",
+      "en-US":"A forecast is not a fact, recommendation, or action instruction."
+    },
+    {
+      "condition":"SCENARIO_PRESENT",
+      "zh-CN":"情景比较用于只读推演，不创建建议或执行任务。",
+      "en-US":"Scenario comparison is read-only projection. It creates no recommendation or execution task."
+    },
+    {
+      "condition":"RESIDUAL_PRESENT",
+      "zh-CN":"残差用于验证预测偏差，不构成因果证明。",
+      "en-US":"Residuals evaluate forecast error; they are not causal proof."
+    },
+    {
+      "condition":"HEALTH_PRESENT",
+      "zh-CN":"运行健康描述当前受治理 Runtime 状态，不等同于生产监控或服务可用性承诺。",
+      "en-US":"Runtime Health describes the governed Runtime state. It is not a production-monitoring or service-availability commitment."
+    }
+  ],
+  "dynamic_copy_rules": [
+    "SHADOW_ONLINE may appear only when runtime_mode is returned as SHADOW_ONLINE by the authoritative read model",
+    "fresh, stale, missing, degraded, recovered, backfilling, blocked, and completed are server verdict labels",
+    "all localized time copy must retain UTC in technical disclosure",
+    "reason codes may be translated for users but the exact code remains available",
+    "unknown values use explicit unknown copy and never a positive default"
+  ],
+  "forbidden_claims": [
+    "实时生产已上线",
+    "设备在线，除非权威设备状态明确返回在线",
+    "生产网关在线，除非权威网关状态明确返回在线",
+    "系统将自动执行",
+    "系统已自动执行",
+    "AI 已决定",
+    "建议已批准",
+    "Forecast 就是事实",
+    "Scenario 就是任务",
+    "Residual 证明了因果关系",
+    "Healthy 等同于生产可用",
+    "Live twin established",
+    "Production online",
+    "Automatic control enabled",
+    "AI decided",
+    "Forecast is fact",
+    "Residual proves causality"
+  ],
+  "forbidden_ui_labels_without_authority": [
+    "Live",
+    "Online",
+    "Production",
+    "Healthy",
+    "Safe",
+    "Ready to execute",
+    "Auto-approved",
+    "Connected"
+  ],
+  "error_copy_rules": [
+    {"error":"MCFT_RUNTIME_NOT_ESTABLISHED","zh-CN":"该精确范围尚未建立 Runtime。","en-US":"Runtime is not established for this exact scope."},
+    {"error":"MISSING_SCOPE_KEYS","zh-CN":"请选择完整的租户、项目、组、地块、季节和分区范围。","en-US":"Select the complete tenant, project, group, field, season, and zone scope."},
+    {"error":"SHADOW_ONLINE_NOT_AUTHORIZED","zh-CN":"Shadow-online 尚未获得运行授权。","en-US":"Shadow-online runtime is not authorized."},
+    {"error":"LEASE_CONFLICT","zh-CN":"Writer lease 冲突阻止当前运行；此界面不能接管 lease。","en-US":"A writer-lease conflict blocks the current run. This surface cannot take over the lease."},
+    {"error":"STALE_FENCING_TOKEN","zh-CN":"陈旧 fencing token 已被拒绝；此界面不能绕过校验。","en-US":"A stale fencing token was rejected. This surface cannot bypass validation."}
+  ],
+  "progressive_disclosure": {
+    "primary": ["human status", "server time", "scope", "evidence freshness", "latest and next slot"],
+    "secondary": ["reason summary", "coverage", "queue depth", "localized timestamps"],
+    "technical": ["object_ref", "object_hash", "source_fact_ref", "response_instance_hash", "lease_owner", "fencing_token", "checkpoint_ref", "exact reason codes"],
+    "raw_payload_default_visible": false
+  },
+  "style_boundary": {
+    "apple_inspired_principles_allowed": true,
+    "apple_brand_claim_allowed": false,
+    "apple_trademark_asset_allowed": false,
+    "bundled_apple_font_allowed": false
+  }
+}

@@ -1,0 +1,131 @@
+{
+  "schema_version": "geox_pfe14_s1_frontend_read_contract_v1",
+  "contract_id": "PFE-14-S1-FRONTEND-READ-CONTRACT",
+  "record_status": "DESIGN_FROZEN_NOT_IMPLEMENTED",
+  "base_main_sha": "dce309c7ea1045fc7a35e973fed09e1a0ab5f39c",
+  "surface": "Operator Runtime Console",
+  "runtime_dependency": "MCFT-CAP-09",
+  "canonical_api_owner": "apps/web/src/api/mcftFieldTwinRuntime.ts",
+  "canonical_page_owner": "apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx",
+  "scope_keys": ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"],
+  "request_policy": {
+    "methods": ["GET"],
+    "exact_scope_required": true,
+    "field_only_fallback_allowed": false,
+    "legacy_truth_fallback_allowed": false,
+    "fixture_truth_fallback_allowed": false,
+    "frontend_business_inference_allowed": false,
+    "server_time_is_authoritative": true,
+    "server_verdicts_are_authoritative": true
+  },
+  "implementation_state": {
+    "contract_frozen": true,
+    "api_implemented": false,
+    "view_model_implemented": false,
+    "shadow_online_claim_enabled": false
+  },
+  "envelope": {
+    "required": ["schema_version", "request_scope", "response_started_at", "response_instance_hash"],
+    "optional": ["refresh_after_seconds", "limitations", "validation_summary"],
+    "rules": [
+      "response_started_at is the display clock authority",
+      "response_instance_hash is technical disclosure, not a primary metric",
+      "missing required fields produce CONTRACT_INCOMPLETE, never a healthy fallback"
+    ]
+  },
+  "read_models": [
+    {
+      "model": "runtime_context",
+      "availability": "CONTRACT_REQUIRED_NOT_IMPLEMENTED",
+      "fields": [
+        {"name":"runtime_mode","type":"enum","values":["REPLAY_BACKED","SHADOW_ONLINE"],"nullable":false,"semantic_owner":"server","display_tier":"primary"},
+        {"name":"runtime_stage","type":"string","nullable":false,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"read_only","type":"boolean","nullable":false,"semantic_owner":"server","display_tier":"primary","required_value":true},
+        {"name":"live_device_status","type":"enum","nullable":true,"semantic_owner":"server","display_tier":"boundary"},
+        {"name":"production_gateway_status","type":"enum","nullable":true,"semantic_owner":"server","display_tier":"boundary"},
+        {"name":"controlled_execution_status","type":"enum","nullable":true,"semantic_owner":"server","display_tier":"boundary"}
+      ]
+    },
+    {
+      "model": "scheduler_summary",
+      "availability": "CONTRACT_REQUIRED_NOT_IMPLEMENTED",
+      "fields": [
+        {"name":"scheduler_status","type":"enum","values":["WAITING","RUNNING","COMPLETED","BACKFILLING","BLOCKED","NOT_ESTABLISHED"],"nullable":false,"semantic_owner":"server","display_tier":"primary"},
+        {"name":"latest_completed_slot","type":"utc_timestamp","nullable":true,"semantic_owner":"server","display_tier":"primary"},
+        {"name":"latest_tick_ref","type":"object_ref","nullable":true,"semantic_owner":"server","display_tier":"technical"},
+        {"name":"latest_tick_status","type":"enum","nullable":true,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"latest_tick_started_at","type":"utc_timestamp","nullable":true,"semantic_owner":"server","display_tier":"technical"},
+        {"name":"latest_tick_completed_at","type":"utc_timestamp","nullable":true,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"next_target_slot","type":"utc_timestamp","nullable":true,"semantic_owner":"server","display_tier":"primary"},
+        {"name":"next_target_at","type":"utc_timestamp","nullable":true,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"scheduler_lag_ms","type":"integer","nullable":true,"semantic_owner":"server","display_tier":"secondary","frontend_threshold_forbidden":true}
+      ]
+    },
+    {
+      "model": "evidence_availability",
+      "availability": "CONTRACT_REQUIRED_NOT_IMPLEMENTED",
+      "fields": [
+        {"name":"latest_evidence_observed_at","type":"utc_timestamp","nullable":true,"semantic_owner":"server","display_tier":"primary"},
+        {"name":"latest_evidence_ingested_at","type":"utc_timestamp","nullable":true,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"evidence_age_ms","type":"integer","nullable":true,"semantic_owner":"server","display_tier":"primary"},
+        {"name":"freshness_status","type":"enum","values":["FRESH","STALE","MISSING","UNKNOWN"],"nullable":false,"semantic_owner":"server","display_tier":"primary","frontend_verdict_forbidden":true},
+        {"name":"freshness_threshold_ms","type":"integer","nullable":true,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"coverage_ratio","type":"number_0_1","nullable":true,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"maximum_gap_ms","type":"integer","nullable":true,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"future_excluded_count","type":"integer","nullable":false,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"late_evidence_count","type":"integer","nullable":false,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"out_of_order_count","type":"integer","nullable":false,"semantic_owner":"server","display_tier":"secondary"}
+      ]
+    },
+    {
+      "model": "persistence_and_recovery",
+      "availability": "CONTRACT_REQUIRED_NOT_IMPLEMENTED",
+      "fields": [
+        {"name":"persistent_cursor_ref","type":"object_ref","nullable":true,"semantic_owner":"server","display_tier":"technical"},
+        {"name":"cursor_slot","type":"utc_timestamp","nullable":true,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"lease_status","type":"enum","nullable":true,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"lease_owner","type":"string","nullable":true,"semantic_owner":"server","display_tier":"technical"},
+        {"name":"fencing_token","type":"string","nullable":true,"semantic_owner":"server","display_tier":"technical"},
+        {"name":"missed_slot_count","type":"integer","nullable":false,"semantic_owner":"server","display_tier":"primary"},
+        {"name":"backfill_status","type":"enum","values":["NONE","QUEUED","RUNNING","COMPLETED","BLOCKED"],"nullable":false,"semantic_owner":"server","display_tier":"primary"},
+        {"name":"backfill_queue_depth","type":"integer","nullable":false,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"oldest_backfill_slot","type":"utc_timestamp","nullable":true,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"restart_detected","type":"boolean","nullable":false,"semantic_owner":"server","display_tier":"secondary"},
+        {"name":"recovery_status","type":"enum","values":["NOT_REQUIRED","PENDING","RECOVERING","RECOVERED","FAILED"],"nullable":false,"semantic_owner":"server","display_tier":"primary"},
+        {"name":"recovered_checkpoint_ref","type":"object_ref","nullable":true,"semantic_owner":"server","display_tier":"technical"}
+      ]
+    },
+    {
+      "model": "runtime_health",
+      "availability": "CONTRACT_REQUIRED_NOT_IMPLEMENTED",
+      "fields": [
+        {"name":"runtime_degradation_status","type":"enum","values":["NORMAL","DEGRADED","BLOCKED","NOT_ESTABLISHED"],"nullable":false,"semantic_owner":"server","display_tier":"primary"},
+        {"name":"degradation_reason_codes","type":"string_array","nullable":false,"semantic_owner":"server","display_tier":"secondary"}
+      ]
+    },
+    {
+      "model": "forecast_qualification",
+      "availability": "PARTIALLY_PRESENT_REQUIRES_MCFT09_PROMOTION",
+      "fields": [
+        {"name":"forecast_status","type":"enum","nullable":true,"semantic_owner":"server","display_tier":"primary"},
+        {"name":"scenario_source_eligible","type":"boolean","nullable":false,"semantic_owner":"server","display_tier":"primary","frontend_inference_forbidden":true},
+        {"name":"scenario_ineligibility_reason_codes","type":"string_array","nullable":false,"semantic_owner":"server","display_tier":"secondary"}
+      ]
+    }
+  ],
+  "view_model_rules": [
+    "ViewModel may rename fields for presentation but may not change verdict semantics",
+    "all UTC timestamps remain available in technical disclosure even when localized for display",
+    "null and absent are distinct; absent required fields are contract failures",
+    "technical identifiers are never primary card titles",
+    "refresh cadence uses refresh_after_seconds when present and never simulates realtime with one-second polling"
+  ],
+  "forbidden_frontend_derivations": [
+    "derive runtime_mode from URL, object count, or current date",
+    "derive scheduler slot from browser clock",
+    "derive freshness_status from a frontend threshold",
+    "derive scenario_source_eligible from forecast presence",
+    "derive production readiness from health status",
+    "convert HTTP 404 runtime-not-established into an empty successful model"
+  ]
+}
