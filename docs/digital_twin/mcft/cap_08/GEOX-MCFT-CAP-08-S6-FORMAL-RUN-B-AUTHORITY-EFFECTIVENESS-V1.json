@@ -1,0 +1,87 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_run_b_authority_effectiveness_v1",
+  "record_status": "FORMAL_RUN_B_AUTHORITY_EFFECTIVENESS_ESTABLISHED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "07426c05c39b792738803d04af48582d3f81c204",
+  "candidate_head_sha": "4b134fae539d7caa81a9a7ebd6d031395170a71c",
+  "candidate_merge_sha": "07426c05c39b792738803d04af48582d3f81c204",
+  "candidate_to_merge_file_delta": 0,
+  "candidate_to_merge_execution_object_delta": 0,
+  "candidate_authority_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-RUN-B-AUTHORITY-CANDIDATE-V1.json",
+    "blob_sha": "1691a163a7fc29c1a0186cd638b77e02182b913a",
+    "semantic_digest": "sha256:ec0327beefb703b4990df8c682231af0b9d7456fad81ff9072d16af3e2a0ac67"
+  },
+  "object_set_manifest_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-RUN-B-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "977e8742d3bc9a0a4259f9795b24266dbf944b97",
+    "semantic_digest": "sha256:083d8338f579957bd0fd01d131cb035d88058ed07ac0be2c3fb614c94cf2f85a",
+    "object_count": 56
+  },
+  "effective_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-RUN-B-REPLACEMENT-001-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "eba4c307795b3b86bd108c547119d817d28fe47e",
+    "semantic_digest": "sha256:d4d79e90fe488ffe1bed950499957856391c27e8f5feb488cd5dfff38ef75be4",
+    "record_status": "SINGLE_FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORIZED",
+    "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-B-20260804-REPLACEMENT-001",
+    "logical_database_identity": "MCFT-CAP-08-S6-FORMAL-DB-B-20260804-REPLACEMENT-001",
+    "max_dispatch_count": 1,
+    "rerun_authorized": false
+  },
+  "retired_run_b_predecessor": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-RUN-B-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "8cbb319aa24c919cddb5a82f62c3fcdcb41e050f",
+    "preserved_unchanged": true
+  },
+  "formal_run_a_predecessor": {
+    "success_record_blob_sha": "aec6a5d6ad91687c7f404f1638eecb0600c25df4",
+    "consumption_record_blob_sha": "13480ddf62fafc9b408988d89c4f8038c7f16eff",
+    "settlement_merge_sha": "4639b12baa6f87fbb5ea093faf5e6936638693e0",
+    "workflow_run_id": 30845476698,
+    "terminal_success": true,
+    "authority_consumed": true,
+    "database_drop_completed": true
+  },
+  "closure_contract": {
+    "canonical_receipt_count": 153,
+    "operational_event_count": 224,
+    "phase_count": 28,
+    "required_phase_order": [
+      "resolve",
+      "E",
+      "H",
+      "A",
+      "B",
+      "G",
+      "C",
+      "barrier"
+    ],
+    "state_projection_canonical_payload_required": true,
+    "fvo10_exact_alias_rule_preserved": true,
+    "fvo17_observation_and_residual_share_corrected_forecast": true,
+    "exact_witness_producer_count": 22,
+    "restart_read_continuity_required": true,
+    "database_clean_drop_required": true
+  },
+  "production_gate_eligible": true,
+  "database_execution_performed": false,
+  "workflow_dispatch_performed": false,
+  "formal_run_result_present": false,
+  "cross_run_comparator_authorized": false,
+  "explicit_dispatch_approval_required": true,
+  "next_legal_action_after_merge": "REQUEST_EXPLICIT_ONE_SHOT_FORMAL_RUN_B_DISPATCH_AUTHORIZATION",
+  "nonclaims": [
+    "NO_HISTORY_REWRITE_OF_RETIRED_RUN_B_AUTHORITY",
+    "NO_DATABASE_EXECUTION_IN_EFFECTIVENESS_PR",
+    "NO_WORKFLOW_DISPATCH_IN_EFFECTIVENESS_PR",
+    "NO_FORMAL_RUN_B_RESULT",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_LEDGER_SETTLEMENT",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:fd8d57da61132e0e897b4f852ffe155b44fde86837a465685e4c3fbd0d393d47"
+}
