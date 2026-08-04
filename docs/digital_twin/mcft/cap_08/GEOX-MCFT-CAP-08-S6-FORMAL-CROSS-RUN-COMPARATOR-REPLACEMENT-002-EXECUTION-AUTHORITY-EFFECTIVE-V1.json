@@ -1,0 +1,147 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-EXECUTION-AUTHORITY-EFFECTIVE-V1",
+  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_AUTHORIZED",
+  "authority_class": "FINAL_FORMAL_CROSS_RUN_COMPARATOR_ONLY",
+  "evidence_class": "FINAL_FORMAL_CROSS_RUN_COMPARATOR_EVIDENCE_ELIGIBLE_AFTER_TERMINAL_SUCCESS",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_effectiveness_main_sha": "7614fa49a0e79bca582ecee4e240b8bbba0aa8d8",
+  "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+  "comparator_execution_id": "MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-20260804-REPLACEMENT-002",
+  "issued_at": "2026-08-04T09:35:00.000Z",
+  "effective_at": "2026-08-04T10:00:00.000Z",
+  "expires_at": "2026-08-08T10:00:00.000Z",
+  "candidate_authority_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-AUTHORITY-CANDIDATE-V1.json",
+    "blob_sha": "c9ddd552a1c9b7687639675ef7721e0e6ef5d067",
+    "preserved_semantic_digest": "sha256:931a4c474d4792cefae44ac314752342d38c87665225ff014bf9ebdab3beea03",
+    "required_record_status": "FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_002_AUTHORITY_CANDIDATE_NOT_EFFECTIVE"
+  },
+  "candidate_head_sha": "c732a139d101d7850e6400892b8c4ed044440ef8",
+  "candidate_merge_sha": "7614fa49a0e79bca582ecee4e240b8bbba0aa8d8",
+  "candidate_to_merge_file_delta": 0,
+  "candidate_to_merge_execution_object_delta": 0,
+  "candidate_qualification": {
+    "workflow_run_id": 30897919642,
+    "workflow_run_attempt": 1,
+    "conclusion": "success",
+    "artifact_id": 8887810823,
+    "artifact_digest": "sha256:2de540113b6ce1c548b97acbcaa73e9ecb2c55d3014dada087515b7967044d6a"
+  },
+  "supersession_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-AUTHORITY-SUPERSESSION-V1.json",
+    "blob_sha": "35e6be91faf8ade40e33e5824e582b78894fbbe1",
+    "semantic_digest": "sha256:59bc514a437bcbc1f99707ae5259049d39b9d249631d41e8b6ca9fa11112aa3a",
+    "predecessor_authority_consumed": true,
+    "predecessor_remaining_execution_count": 0,
+    "predecessor_rerun_authorized": false
+  },
+  "inputs": {
+    "run_a": {
+      "workflow_run_id": 30845476698,
+      "workflow_run_attempt": 1,
+      "workflow_head_sha": "191e363e1fd9fa4c77c8b5135fb9673c3a9286d1",
+      "artifact_id": 8868535301,
+      "artifact_digest": "sha256:4d59d3aa0373bee0c9eb33ab78dd427eb324d4d259e0786aa9c4dea9effdaf2f",
+      "formal_artifact_digest": "sha256:e592f00fb0b6c3234985f57e8d20955afc6246964d04aca7a56f9eea9b79e696",
+      "bundle_file": "MCFT_CAP_08_S6_RUN_A_FINAL_FORMAL_RUN_BUNDLE.json"
+    },
+    "run_b": {
+      "workflow_run_id": 30877450717,
+      "workflow_run_attempt": 1,
+      "workflow_head_sha": "a5039a07455e8b325db23880dd8e8c460fc6aa0d",
+      "artifact_id": 8880057024,
+      "artifact_digest": "sha256:33e8b0333e1cd22bcd3002540ef5c12b72a8c545e58eb8ca185bf49edc6ae9cc",
+      "formal_artifact_digest": "sha256:bacf1177784115836b2ebb2350ee2fbc4529af839202165699f540a657a8314e",
+      "bundle_file": "MCFT_CAP_08_S6_RUN_B_FINAL_FORMAL_RUN_BUNDLE.json"
+    }
+  },
+  "provenance_identity_model": {
+    "execution_subject_identity": "exact_subject_sha",
+    "control_plane_execution_identity": "workflow_head_sha",
+    "identities_are_distinct": true,
+    "workflow_head_must_equal_execution_subject": false
+  },
+  "implementation": {
+    "path": "scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_semantic_comparator_v1.cjs",
+    "blob_sha": "898fa85e2453add103671eac92ea792f0c600436",
+    "normalization_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_workflow/semantic_comparator_v1.cjs",
+    "normalization_blob_sha": "1a2f769aa8a305588eb169e43a4862e9f84db22f",
+    "implementation_merge_sha": "fd3e5662b8e80053365b4e9ca4e356233ff82194",
+    "qualification_workflow_run_id": 30881117123,
+    "qualification_artifact_id": 8881320548,
+    "qualification_artifact_digest": "sha256:1593ef3f5f7b7a1217f26fb3126899d31ff0cee1416306b43e48897b0480639a",
+    "qualified_semantic_digest": "sha256:32c93d4f5ecd1fc50ff94418407767b48b057d77c81bf93dfe3fccf58f0df2f8",
+    "qualified_difference_count": 0
+  },
+  "execution_workflow": {
+    "path": ".github/workflows/mcft-cap-08-s6-formal-cross-run-comparator-execution.yml",
+    "blob_sha": "247355dc2f0a3fcb782f1621503bd30713871a81",
+    "merge_sha": "aa58176ae061ff42eaa64069c10f88901669a671",
+    "qualification_workflow_run_id": 30896387338,
+    "qualification_workflow_run_attempt": 1,
+    "qualification_head_sha": "43103e7243e825216f1211f973483db569109290",
+    "qualification_artifact_id": 8887189421,
+    "qualification_artifact_digest": "sha256:a0e363f9d2cfcffce664bc6ff36d62291cc7241ea6a67a1309354abef4c008f7"
+  },
+  "execution_control": {
+    "path": "scripts/runtime_acceptance/mcft_cap08_s6_formal_comparator/formal_comparator_execution_control_v1.cjs",
+    "blob_sha": "2cdc4e903dacb00b87f175dea58d89d80c6f3108"
+  },
+  "object_set_manifest_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "cde589b07a1ff96c3de1428ccf1f8b2281938dc2",
+    "semantic_digest": "sha256:ec8e25218b3324ac7ea309180c19bdbf63185fb9a730ebab24b0f27302afba76",
+    "required_record_status": "FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_002_AUTHORITY_OBJECT_SET_FROZEN",
+    "object_count": 12
+  },
+  "authority_effective": true,
+  "comparator_execution_authorized": true,
+  "maximum_execution_count": 1,
+  "required_execution_attempt": 1,
+  "rerun_authorized": false,
+  "duplicate_execution_authorized": false,
+  "authority_reuse_authorized": false,
+  "single_use_contract": {
+    "maximum_execution_count": 1,
+    "github_run_attempt_required": 1,
+    "rerun_authorized": false,
+    "duplicate_execution_authorized": false,
+    "authority_reuse_authorized": false,
+    "same_execution_id_reuse_authorized": false,
+    "consumption_evidence_required": true
+  },
+  "execution_preconditions": {
+    "effectiveness_merge_required": true,
+    "explicit_one_shot_execution_approval_required": true,
+    "workflow_dispatch_event_required": true,
+    "authority_gate_before_artifact_transport": true,
+    "exact_input_audit_required": true
+  },
+  "dispatch_inputs": {
+    "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+    "comparator_execution_id": "MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-20260804-REPLACEMENT-002",
+    "execution_authority_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-EXECUTION-AUTHORITY-EFFECTIVE-V1.json"
+  },
+  "production_gate_eligible": true,
+  "formal_comparator_evidence_eligible_after_terminal_success": true,
+  "hard_acceptance_eligible": false,
+  "workflow_dispatch_performed": false,
+  "formal_comparator_executed": false,
+  "formal_comparator_evidence_created": false,
+  "s6_candidate_authorized": false,
+  "ledger_settlement_authorized": false,
+  "explicit_one_shot_execution_approval_required": true,
+  "next_legal_action": "REQUEST_EXPLICIT_ONE_SHOT_FORMAL_CROSS_RUN_COMPARATOR_EXECUTION_AUTHORIZATION",
+  "nonclaims": [
+    "NO_WORKFLOW_DISPATCH_IN_EFFECTIVENESS_PR",
+    "NO_FORMAL_COMPARATOR_EXECUTION_IN_EFFECTIVENESS_PR",
+    "NO_FORMAL_COMPARATOR_EVIDENCE",
+    "NO_S6_CANDIDATE",
+    "NO_LEDGER_SETTLEMENT",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:6b6975a8f724ee27ed3141a919d28c215277c0580cd2e9487a091f743e5890f9"
+}

@@ -1,0 +1,65 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_cross_run_comparator_replacement_002_authority_effectiveness_v1",
+  "record_status": "FORMAL_CROSS_RUN_COMPARATOR_REPLACEMENT_002_AUTHORITY_EFFECTIVENESS_ESTABLISHED",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "base_main_sha": "7614fa49a0e79bca582ecee4e240b8bbba0aa8d8",
+  "candidate_head_sha": "c732a139d101d7850e6400892b8c4ed044440ef8",
+  "candidate_merge_sha": "7614fa49a0e79bca582ecee4e240b8bbba0aa8d8",
+  "candidate_to_merge_file_delta": 0,
+  "candidate_to_merge_execution_object_delta": 0,
+  "candidate_authority_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-AUTHORITY-CANDIDATE-V1.json",
+    "blob_sha": "c9ddd552a1c9b7687639675ef7721e0e6ef5d067",
+    "semantic_digest": "sha256:931a4c474d4792cefae44ac314752342d38c87665225ff014bf9ebdab3beea03"
+  },
+  "candidate_qualification": {
+    "workflow_run_id": 30897919642,
+    "workflow_run_attempt": 1,
+    "conclusion": "success",
+    "artifact_id": 8887810823,
+    "artifact_digest": "sha256:2de540113b6ce1c548b97acbcaa73e9ecb2c55d3014dada087515b7967044d6a"
+  },
+  "object_set_manifest_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "cde589b07a1ff96c3de1428ccf1f8b2281938dc2",
+    "semantic_digest": "sha256:ec8e25218b3324ac7ea309180c19bdbf63185fb9a730ebab24b0f27302afba76",
+    "object_count": 12
+  },
+  "supersession_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-AUTHORITY-SUPERSESSION-V1.json",
+    "blob_sha": "35e6be91faf8ade40e33e5824e582b78894fbbe1",
+    "semantic_digest": "sha256:59bc514a437bcbc1f99707ae5259049d39b9d249631d41e8b6ca9fa11112aa3a",
+    "predecessor_authority_consumed": true,
+    "predecessor_remaining_execution_count": 0
+  },
+  "effective_authority": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "591ad3c6c188d19c9e6eff89382e147854f25b63",
+    "semantic_digest": "sha256:6b6975a8f724ee27ed3141a919d28c215277c0580cd2e9487a091f743e5890f9",
+    "record_status": "FORMAL_CROSS_RUN_COMPARATOR_AUTHORIZED",
+    "authority_id": "GEOX-MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-REPLACEMENT-002-EXECUTION-AUTHORITY-EFFECTIVE-V1",
+    "comparator_execution_id": "MCFT-CAP-08-S6-FORMAL-CROSS-RUN-COMPARATOR-20260804-REPLACEMENT-002",
+    "maximum_execution_count": 1,
+    "required_execution_attempt": 1,
+    "rerun_authorized": false
+  },
+  "production_gate_eligible": true,
+  "workflow_dispatch_performed": false,
+  "formal_comparator_execution_performed": false,
+  "formal_comparator_evidence_created": false,
+  "explicit_one_shot_execution_approval_required": true,
+  "s6_candidate_authorized": false,
+  "ledger_settlement_authorized": false,
+  "next_legal_action": "REQUEST_EXPLICIT_ONE_SHOT_FORMAL_CROSS_RUN_COMPARATOR_EXECUTION_AUTHORIZATION",
+  "nonclaims": [
+    "NO_WORKFLOW_DISPATCH_IN_EFFECTIVENESS_PR",
+    "NO_FORMAL_COMPARATOR_EXECUTION_IN_EFFECTIVENESS_PR",
+    "NO_FORMAL_COMPARATOR_EVIDENCE",
+    "NO_S6_CANDIDATE",
+    "NO_LEDGER_SETTLEMENT",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:2a9e369ca617a80f8249d1888ce10779d9f8bbd78a6957c570ad9b0af72aed97"
+}
