@@ -1,0 +1,111 @@
+{
+  "schema_version": "geox_mcft_cap08_s6_formal_run_b_authority_candidate_v1",
+  "authority_id": "GEOX-MCFT-CAP-08-S6-FORMAL-RUN-B-AUTHORITY-CANDIDATE-V1",
+  "record_status": "FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORITY_CANDIDATE_NOT_EFFECTIVE",
+  "authority_class": "FINAL_FORMAL_RUN_ONLY",
+  "evidence_class": "FINAL_FORMAL_EVIDENCE_ELIGIBLE_AFTER_AUTHORITY_EFFECTIVENESS_AND_TERMINAL_SUCCESS",
+  "capability_line_id": "MCFT-CAP-08",
+  "slice_id": "MCFT-CAP-08.S6",
+  "issuance_reason": "FORMAL_RUN_A_TERMINAL_SUCCESS_ESTABLISHED",
+  "base_governance_main_sha": "4639b12baa6f87fbb5ea093faf5e6936638693e0",
+  "exact_subject_sha": "ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59",
+  "authorized_run_label": "RUN_B",
+  "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-B-20260804-REPLACEMENT-001",
+  "logical_database_identity": {
+    "identity_id": "MCFT-CAP-08-S6-FORMAL-DB-B-20260804-REPLACEMENT-001",
+    "physical_name_template": "geox_mcft_cap08_s6_run_b_replacement_001_<github_run_id>",
+    "fresh_disposable_required": true,
+    "drop_after_run_required": true,
+    "identity_frozen": true,
+    "reusable": false
+  },
+  "issued_at": "2026-08-04T01:55:00.000Z",
+  "proposed_expires_at": "2026-08-08T01:55:00.000Z",
+  "formal_run_a_predecessor": {
+    "success_record_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-011-FORMAL-RUN-A-SUCCESS-V1.json",
+    "success_record_blob_sha": "aec6a5d6ad91687c7f404f1638eecb0600c25df4",
+    "success_record_semantic_digest": "sha256:b55cb21a7c477d7adef40a38fad2304ac5fc392c579d48f95ab1b70367f4fb9c",
+    "consumption_record_path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-011-RUN-A-AUTHORITY-CONSUMPTION-V1.json",
+    "consumption_record_blob_sha": "13480ddf62fafc9b408988d89c4f8038c7f16eff",
+    "consumption_record_semantic_digest": "sha256:88fdc32ed7d96d3f037d8ee9b64858e21d01fc8d0d92752dd74433452469f27f",
+    "settlement_merge_sha": "4639b12baa6f87fbb5ea093faf5e6936638693e0",
+    "workflow_run_id": 30845476698,
+    "workflow_run_attempt": 1,
+    "formal_run_id": "cap08_62f42f95591e40bfb3a0274f827628fe",
+    "terminal_success": true,
+    "database_drop_completed": true,
+    "hard_acceptance_eligible": true,
+    "authority_consumed": true,
+    "rerun_authorized": false
+  },
+  "retired_run_b_predecessor": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-RUN-B-EXECUTION-AUTHORITY-EFFECTIVE-V1.json",
+    "blob_sha": "8cbb319aa24c919cddb5a82f62c3fcdcb41e050f",
+    "operational_run_instance_id": "MCFT-CAP-08-S6-FORMAL-RUN-B-20260802-002",
+    "exact_subject_sha": "26d94d5c47ce640e80374124bb473d62003cc9a6",
+    "retired": true,
+    "reusable": false
+  },
+  "single_use_contract": {
+    "max_dispatch_count": 1,
+    "github_run_attempt_required": 1,
+    "rerun_authorized": false,
+    "duplicate_dispatch_authorized": false,
+    "authority_reuse_authorized": false,
+    "consumption_evidence_required": true
+  },
+  "sequence_contract": {
+    "max_parallel": 1,
+    "dispatch_precondition": "FORMAL_RUN_B_AUTHORITY_EFFECTIVENESS_MERGED_AND_EXPLICIT_ONE_SHOT_DISPATCH_APPROVAL",
+    "formal_run_a_terminal_success_required": true,
+    "parallel_run_a_and_run_b_authorized": false,
+    "run_a_authority_reuse_authorized": false
+  },
+  "object_set_manifest_ref": {
+    "path": "docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-FORMAL-RUN-B-AUTHORITY-OBJECT-SET-V1.json",
+    "blob_sha": "977e8742d3bc9a0a4259f9795b24266dbf944b97",
+    "semantic_digest": "sha256:083d8338f579957bd0fd01d131cb035d88058ed07ac0be2c3fb614c94cf2f85a",
+    "required_record_status": "FORMAL_RUN_B_AUTHORITY_OBJECT_SET_FROZEN",
+    "object_count": 56
+  },
+  "activation_contract": {
+    "separate_effectiveness_required": true,
+    "candidate_record_is_runtime_gate_eligible": false,
+    "effective_record_status_required": "SINGLE_FINAL_FORMAL_RUN_DATABASE_EXECUTION_AUTHORIZED",
+    "effective_authority_must_preserve_candidate_semantic_digest": true,
+    "candidate_to_merge_execution_object_delta_required": 0
+  },
+  "authorization_state": {
+    "authority_effective": false,
+    "single_run_database_execution_authorized": false,
+    "database_execution_workflow_authorized": false,
+    "workflow_dispatch_execution_authorized": false,
+    "final_formal_run_execution_authorized": false,
+    "hard_acceptance_eligible": false,
+    "s6_candidate_evidence_eligible": false,
+    "cross_run_comparison_eligible": false,
+    "ledger_settlement_eligible": false,
+    "database_execution_performed": false,
+    "workflow_dispatch_performed": false,
+    "formal_run_executed": false
+  },
+  "port_bundle_path": "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/index_v1.cjs",
+  "port_bundle_blob_sha": "900ed1a426158f9d27c0e8e5537432764356d8dc",
+  "workflow_path": ".github/workflows/mcft-cap-08-s6-single-run-database-execution.yml",
+  "workflow_blob_sha": "2371b3797999f61f55c58551b85c59279eb2f0a2",
+  "nonclaims": [
+    "NO_RUNTIME_GATE_ELIGIBILITY_BEFORE_EFFECTIVENESS",
+    "NO_DATABASE_EXECUTION_IN_AUTHORITY_CANDIDATE_PR",
+    "NO_WORKFLOW_DISPATCH_IN_AUTHORITY_CANDIDATE_PR",
+    "NO_AUTHORITY_IDENTITY_REUSE",
+    "NO_RUN_A_AUTHORITY_REUSE",
+    "NO_RUN_B_DISPATCH",
+    "NO_FORMAL_RUN_B_RESULT",
+    "NO_CROSS_RUN_COMPARATOR",
+    "NO_S6_CANDIDATE",
+    "NO_LEDGER_SETTLEMENT",
+    "NO_CAP08_COMPLETION",
+    "NO_CAP09_AUTHORITY"
+  ],
+  "semantic_digest": "sha256:ec0327beefb703b4990df8c682231af0b9d7456fad81ff9072d16af3e2a0ac67"
+}
