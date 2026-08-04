@@ -1,0 +1,86 @@
+name: mcft-cap-08-s6-replacement-001-run-b-success-settlement
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-08-s6-replacement-001-run-b-success-settlement.yml'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-001-FORMAL-RUN-B-SUCCESS-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-001-RUN-B-AUTHORITY-CONSUMPTION-V1.json'
+      - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S6-REPLACEMENT-001-RUN-B-SUCCESS-SETTLEMENT-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_REPLACEMENT_001_RUN_B_SUCCESS_SETTLEMENT_V1.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap08-s6-replacement-001-run-b-success-settlement-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  run-b-success-settlement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact settlement head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Download exact Formal RUN_B artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap-08-s6-RUN_B-ce9d6b4df8c708c0d4a99bb24846e1bc44b3cf59
+          path: acceptance-input/formal-run-b
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 30877450717
+      - name: Audit exact Actions runs, jobs, steps and artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-input
+          python - <<'PY'
+          import json, os, urllib.parse, urllib.request
+          repo=os.environ['GITHUB_REPOSITORY']; token=os.environ['GH_TOKEN']
+          headers={'Accept':'application/vnd.github+json','Authorization':f'Bearer {token}','X-GitHub-Api-Version':'2022-11-28','User-Agent':'mcft-cap08-s6-run-b-success-settlement'}
+          def get(path):
+            with urllib.request.urlopen(urllib.request.Request(f'https://api.github.com/repos/{repo}{path}',headers=headers),timeout=30) as r: return json.load(r)
+          def slim_run(run): return {k:run.get(k) for k in ['id','name','event','status','conclusion','head_sha','head_branch','run_number','run_attempt','created_at','updated_at']}
+          def slim_jobs(data):
+            return [{'id':j['id'],'name':j['name'],'status':j['status'],'conclusion':j.get('conclusion'),'steps':[{'name':s['name'],'status':s['status'],'conclusion':s.get('conclusion'),'number':s['number']} for s in j.get('steps',[])]} for j in data.get('jobs',[])]
+          formal=get('/actions/runs/30877450717'); broker=get('/actions/runs/30877442924')
+          formal_jobs=slim_jobs(get('/actions/runs/30877450717/jobs?per_page=100')); broker_jobs=slim_jobs(get('/actions/runs/30877442924/jobs?per_page=100'))
+          formal_artifacts={x['id']:x for x in get('/actions/runs/30877450717/artifacts?per_page=100').get('artifacts',[])}
+          broker_artifacts={x['id']:x for x in get('/actions/runs/30877442924/artifacts?per_page=100').get('artifacts',[])}
+          wf=urllib.parse.quote('mcft-cap-08-s6-single-run-database-execution.yml',safe=''); bwf=urllib.parse.quote('mcft-cap-08-s6-run-b-replacement-001-one-shot-dispatch-broker.yml',safe='')
+          formal_matches=[x for x in get(f'/actions/workflows/{wf}/runs?event=workflow_dispatch&branch=main&per_page=100').get('workflow_runs',[]) if x.get('head_sha')=='a5039a07455e8b325db23880dd8e8c460fc6aa0d']
+          broker_matches=[x for x in get(f'/actions/workflows/{bwf}/runs?event=push&branch=main&per_page=100').get('workflow_runs',[]) if x.get('head_sha')=='a5039a07455e8b325db23880dd8e8c460fc6aa0d']
+          result={'schema_version':'geox_mcft_cap08_s6_replacement_001_github_run_b_audit_v1','status':'PASS','formal_run':slim_run(formal),'broker_run':slim_run(broker),'matching_formal_run_count':len(formal_matches),'matching_broker_run_count':len(broker_matches),'duplicate_formal_run_detected':len(formal_matches)!=1,'duplicate_broker_run_detected':len(broker_matches)!=1,'formal_jobs':formal_jobs,'broker_jobs':broker_jobs,'artifacts':{'one_run':{'id':8880057024,'name':formal_artifacts[8880057024]['name'],'digest':formal_artifacts[8880057024]['digest']},'authority':{'id':8880031184,'name':formal_artifacts[8880031184]['name'],'digest':formal_artifacts[8880031184]['digest']},'broker_receipt':{'id':8880029518,'name':broker_artifacts[8880029518]['name'],'digest':broker_artifacts[8880029518]['digest']}}}
+          with open('acceptance-input/GITHUB_RUN_B_AUDIT.json','w') as f: json.dump(result,f,indent=2); f.write('\n')
+          print(json.dumps(result,indent=2))
+          PY
+      - name: Validate Formal RUN_B terminal success and authority consumption
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_RUN_B_ARTIFACT_DIR: acceptance-input/formal-run-b
+          MCFT_GITHUB_AUDIT_PATH: acceptance-input/GITHUB_RUN_B_AUDIT.json
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S6_REPLACEMENT_001_RUN_B_SUCCESS_SETTLEMENT_V1.cjs
+      - name: Upload RUN_B success settlement evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-08-s6-replacement-001-run-b-success-settlement-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_08_S6_REPLACEMENT_001_RUN_B_SUCCESS_SETTLEMENT_RESULT.json
+            acceptance-input/GITHUB_RUN_B_AUDIT.json
+          if-no-files-found: error
+          retention-days: 365
