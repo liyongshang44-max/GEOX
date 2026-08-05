@@ -21,6 +21,9 @@ concurrency:
   group: mcft-cap09-s1-exact-sha-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: false
 
+env:
+  MCFT_SEMANTIC_DIGEST_POLICY: CANONICAL_SORTED_KEYS_V1
+
 jobs:
   control-plane-candidate:
     if: github.event_name == 'pull_request'
@@ -35,7 +38,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Validate S1 exact-SHA R2 control-plane Candidate
+      - name: Validate S1 exact-SHA R2 control-plane Candidate or canonical-digest repair
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_EXACT_SHA_ATTESTATION_V1.cjs --control-plane-candidate
