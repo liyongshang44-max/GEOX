@@ -71,17 +71,24 @@ const bootstrap=[
 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOOTSTRAP-V1.json',
 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOUNDARY-V1.json',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs'];
-const isS2Candidate=files.length===10 &&
-files.includes('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DELIVERY-STATUS-V1.json') &&
+const s2StatusPath='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DELIVERY-STATUS-V1.json';
+const isS2CandidateBoundary=files.length===10 &&
+files.includes(s2StatusPath) &&
 files.includes('.github/workflows/mcft-cap-09-s2-database-evidence-ingress.yml') &&
 files.includes('apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.ts') &&
 files.includes('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs') &&
 !files.includes('docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json') &&
 files.some((p)=>p.endsWith('GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CANDIDATE-V1.json'));
+let baseS2CandidateImplemented=null;
+if(isS2CandidateBoundary){
+  const baseStatus=JSON.parse(run(['show',`${base}:${s2StatusPath}`]));
+  baseS2CandidateImplemented=baseStatus.s2_candidate_implemented;
+}
 let mode='unsupported';
 if(same(files,legacyS2CrossRepair)||same(files,s2RegistrationLifecycleRepair)) mode='s2-cross-lifecycle-repair';
 else if(same(files,s2Registration)) mode='s2-registry-registration';
-else if(isS2Candidate) mode='s2-candidate-signal';
+else if(isS2CandidateBoundary&&baseS2CandidateImplemented===true) mode='s2-postmerge-semantic-correction';
+else if(isS2CandidateBoundary) mode='s2-candidate-signal';
 else if(same(files,s1Cross)) mode='s1-cross-lifecycle-repair';
 else if(lane==='trusted-registry-bootstrap'&&same(files,trustedRepair)) mode='workflow-repair';
 else if(lane==='trusted-registry-bootstrap'&&same(files,correction)) mode='registry-existing-paths-correction';
@@ -90,4 +97,4 @@ else if(same(files,s1Candidate)) mode='s1-candidate-signal';
 else if(lane==='trusted-registry-bootstrap'&&same(files,s0Candidate)) mode='candidate-signal';
 else if(lane==='trusted-registry-bootstrap'&&same(files,bootstrap)) mode='bootstrap';
 fs.appendFileSync(process.env.GITHUB_OUTPUT,`mode=${mode}\n`);
-console.log(JSON.stringify({lane,mode,files},null,2));
+console.log(JSON.stringify({lane,mode,baseS2CandidateImplemented,files},null,2));

@@ -38,7 +38,7 @@ jobs:
           MCFT_REGISTRY_LANE: s2-registry-registration
         run: node scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs
       - name: Download S1 exact-SHA R2 authority
-        if: steps.lifecycle.outputs.mode == 's2-registry-registration' || steps.lifecycle.outputs.mode == 's2-candidate-signal'
+        if: steps.lifecycle.outputs.mode == 's2-registry-registration' || steps.lifecycle.outputs.mode == 's2-candidate-signal' || steps.lifecycle.outputs.mode == 's2-postmerge-semantic-correction'
         uses: actions/download-artifact@v4
         with:
           run-id: 31007579256
@@ -59,6 +59,7 @@ jobs:
             s2-cross-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs ;;
             s2-registry-registration) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_REGISTRATION.cjs ;;
             s2-candidate-signal) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs --registration-lifecycle ;;
+            s2-postmerge-semantic-correction) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs --postmerge-semantic-correction ;;
             *) echo "unsupported CAP-09 S2 Registry lifecycle: $MCFT_S2_REGISTRATION_MODE" >&2; exit 1 ;;
           esac
       - uses: actions/upload-artifact@v4
