@@ -108,11 +108,21 @@ jobs:
           path: acceptance-input/cap09-s0
           repository: liyongshang44-max/GEOX
           github-token: ${{ github.token }}
+      - name: Download CAP-09 S0 exact-SHA R2 authority
+        if: steps.lifecycle.outputs.mode == 's1-registry-registration'
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 30978738965
+          artifact-ids: 8919296741
+          path: acceptance-input/cap09-s0-effective
+          repository: liyongshang44-max/GEOX
+          github-token: ${{ github.token }}
       - name: Validate CAP-09 trusted Registry lifecycle
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           GITHUB_TOKEN: ${{ github.token }}
           MCFT_CAP09_S0_ARTIFACT_DIR: acceptance-input/cap09-s0
+          MCFT_CAP09_S0_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s0-effective
           MCFT_CAP09_REGISTRY_MODE: ${{ steps.lifecycle.outputs.mode }}
         shell: bash
         run: |
