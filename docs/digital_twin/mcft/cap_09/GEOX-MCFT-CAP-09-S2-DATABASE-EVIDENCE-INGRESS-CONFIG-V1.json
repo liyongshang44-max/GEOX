@@ -1,7 +1,7 @@
 {
-  "schema_version": "geox_mcft_cap09_s2_database_evidence_ingress_config_v1",
+  "schema_version": "geox_mcft_cap09_s2_database_evidence_ingress_config_v2",
   "config_id": "GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CONFIG-V1",
-  "record_status": "S2_CANDIDATE_CONFIGURATION_NOT_EFFECTIVE",
+  "record_status": "S2_POSTMERGE_SEMANTIC_CORRECTION_NOT_EFFECTIVE",
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S2",
   "runtime_mode": "SHADOW_ONLINE",
@@ -17,10 +17,12 @@
     "season_id",
     "zone_id"
   ],
-  "allowed_fact_types": [
+  "actual_observation_types": [
     "soil_moisture_observation_v1",
     "observed_rainfall_v1",
-    "historical_et0_estimate_v1",
+    "historical_et0_estimate_v1"
+  ],
+  "future_forcing_types": [
     "future_weather_assumption_v1",
     "future_et0_assumption_v1"
   ],
@@ -32,8 +34,9 @@
     "future_et0_assumption_v1": "issued_at"
   },
   "window_rule": "OPEN_START_CLOSED_END_PT1H_V1",
-  "lookback_seconds": 3600,
-  "forward_inspection_seconds": 3600,
+  "semantic_lookback_seconds": 3600,
+  "query_inspection_lookback_seconds": 7200,
+  "query_forward_inspection_seconds": 3600,
   "stale_after_seconds": 3600,
   "expected_observation_interval_seconds": 1800,
   "max_candidate_records": 1000,
@@ -46,19 +49,26 @@
     "PASS",
     "LIMITED"
   ],
-  "exclusion_reasons": [
-    "OBSERVED_AFTER_BOUNDARY",
-    "INGESTED_AFTER_BOUNDARY",
-    "AVAILABLE_AFTER_BOUNDARY",
-    "FUTURE_EVIDENCE",
-    "SCOPE_MISMATCH",
-    "QUALITY_INELIGIBLE",
-    "DUPLICATE_SUPERSEDED"
-  ],
+  "explicit_trust_fail_closed": {
+    "missing_quality_ineligible": true,
+    "actual_requires_observed_epistemic_class": true,
+    "future_forcing_requires_future_epistemic_class": true,
+    "formal_eligible_false_ineligible": true,
+    "is_simulated_true_ineligible": true,
+    "debug_evidence_level_ineligible": true,
+    "debug_or_simulated_source_lane_ineligible": true
+  },
+  "duplicate_policy": {
+    "same_source_record_ref_different_hash": "FAIL_CLOSED",
+    "shared_core_semantic_identity": "record_type+origin_source_id+role_event_time",
+    "same_semantic_identity_different_canonical_payload": "FAIL_CLOSED",
+    "exact_semantic_duplicate": "DETERMINISTIC_SUPERSEDE"
+  },
+  "coverage_policy": "ACTUAL_OBSERVATION_INTERVAL_BUCKETS_ONLY_V1",
+  "freshness_policy": "ACTUAL_OBSERVATIONS_ONLY_V1",
+  "future_forcing_policy": "ISSUED_INGESTED_AVAILABLE_BY_BOUNDARY_IS_ELIGIBLE_CONTEXT",
   "outside_window_classification": "OUTSIDE_OPEN_START_CLOSED_END_WINDOW_TRACE_ONLY",
   "out_of_order_classification": "ELIGIBLE_APPEND_FORWARD_TRACE_NOT_STATE_REWRITE",
-  "duplicate_policy": "SAME_REF_SAME_HASH_IDEMPOTENT_DEDUPE_DIFFERENT_HASH_FAIL_CLOSED",
-  "future_forcing_policy": "ISSUED_INGESTED_AVAILABLE_BY_BOUNDARY_IS_ELIGIBLE",
   "database_acceptance": "REAL_POSTGRESQL_ISOLATED_FACTS_READBACK",
   "database_write_allowed": false,
   "scheduler_loop_allowed": false,

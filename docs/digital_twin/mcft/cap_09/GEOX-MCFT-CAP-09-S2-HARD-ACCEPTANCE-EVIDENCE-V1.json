@@ -1,10 +1,10 @@
 {
-  "schema_version": "geox_mcft_cap09_s2_hard_acceptance_evidence_v1",
+  "schema_version": "geox_mcft_cap09_s2_hard_acceptance_evidence_v2",
   "evidence_id": "GEOX-MCFT-CAP-09-S2-HARD-ACCEPTANCE-EVIDENCE-V1",
-  "record_status": "S2_CANDIDATE_HARD_ACCEPTANCE_DECLARATION_NOT_EFFECTIVE",
+  "record_status": "S2_POSTMERGE_SEMANTIC_CORRECTION_DECLARATION_NOT_EFFECTIVE",
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S2",
-  "required_check_count": 16,
+  "required_check_count": 20,
   "checks": [
     {
       "id": "HA-S2-01",
@@ -18,7 +18,7 @@
     },
     {
       "id": "HA-S2-03",
-      "claim": "established facts {type,payload canonical Replay Evidence} envelope consumed",
+      "claim": "established facts type plus canonical Replay payload envelope consumed",
       "required": true
     },
     {
@@ -38,7 +38,7 @@
     },
     {
       "id": "HA-S2-07",
-      "claim": "future weather and ET0 issued and visible by boundary remain eligible",
+      "claim": "future weather and ET0 issued, ingested and available by boundary remain eligible context",
       "required": true
     },
     {
@@ -53,46 +53,67 @@
     },
     {
       "id": "HA-S2-10",
-      "claim": "same-ref same-hash duplicate is idempotent; conflicting hash fails closed",
+      "claim": "same source ref with different hash fails closed",
       "required": true
     },
     {
       "id": "HA-S2-11",
-      "claim": "coverage, freshness and maximum gap emitted deterministically",
+      "claim": "shared-core semantic duplicate identity uses type plus origin source plus role event time",
       "required": true
     },
     {
       "id": "HA-S2-12",
-      "claim": "adapter transaction is BEGIN TRANSACTION READ ONLY",
+      "claim": "same semantic identity with different canonical payload fails closed",
       "required": true
     },
     {
       "id": "HA-S2-13",
-      "claim": "repeated freeze is byte-equivalent",
+      "claim": "coverage uses actual-observation interval buckets rather than record count",
       "required": true
     },
     {
       "id": "HA-S2-14",
-      "claim": "zero database write, migration and ACL delta",
+      "claim": "freshness and maximum gap use actual observations only",
       "required": true
     },
     {
       "id": "HA-S2-15",
-      "claim": "zero scheduler, canonical write, route and production wiring",
+      "claim": "missing-quality, simulated, debug and non-formal Evidence fail closed",
       "required": true
     },
     {
       "id": "HA-S2-16",
+      "claim": "adapter transaction is BEGIN TRANSACTION READ ONLY",
+      "required": true
+    },
+    {
+      "id": "HA-S2-17",
+      "claim": "repeated freeze is byte-equivalent",
+      "required": true
+    },
+    {
+      "id": "HA-S2-18",
+      "claim": "zero adapter database write, migration and ACL delta",
+      "required": true
+    },
+    {
+      "id": "HA-S2-19",
+      "claim": "zero scheduler, canonical write, route and production wiring",
+      "required": true
+    },
+    {
+      "id": "HA-S2-20",
       "claim": "server Runtime surface typechecks",
       "required": true
     }
   ],
   "expected_postgresql_result": {
     "selected_count": 6,
-    "excluded_count": 5,
+    "excluded_count": 7,
     "outside_window_count": 1,
     "out_of_order_count": 1,
-    "eligible_future_forcing_count": 2
+    "eligible_future_forcing_count": 2,
+    "clustered_interval_coverage_ratio": "0.500000"
   },
   "future_evidence_leakage": false,
   "database_write_performed": false,
