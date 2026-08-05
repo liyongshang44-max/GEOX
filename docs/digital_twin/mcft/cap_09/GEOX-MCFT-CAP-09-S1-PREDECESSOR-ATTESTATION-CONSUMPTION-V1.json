@@ -1,0 +1,22 @@
+{
+  "schema_version": "geox_mcft_cap09_s1_predecessor_attestation_consumption_v1",
+  "record_id": "GEOX-MCFT-CAP-09-S1-PREDECESSOR-ATTESTATION-CONSUMPTION-V1",
+  "record_status": "S0_EFFECTIVE_AUTHORITY_CONSUMED_FOR_S1_CONTRACT_FREEZE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S1",
+  "source_slice_id": "MCFT-CAP-09.S0",
+  "subject_sha": "7381d0f8ac56fe9f75fd78ce189920cb9ed99bf4",
+  "exact_sha_r2_run_id": 30978738965,
+  "artifact_id": 8919296741,
+  "semantic_artifact_digest": "sha256:f2706d9cf3e001a1085d1c0b7db4f4200732605f9a6bad4a80d9ba3065346228",
+  "retention_level": "R2",
+  "retention_days": 730,
+  "readback_verified": true,
+  "locked_version_delete_denied": true,
+  "s0_authorization_effective": true,
+  "effective_next_slice": "S1",
+  "authorized_scope": "ADAPTER_CONTRACTS_AND_CONFIGURATION_FREEZE_ONLY",
+  "implementation_authorized": false,
+  "runtime_source_authorized": false,
+  "canonical_write_authorized": false
+}

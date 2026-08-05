@@ -1,0 +1,59 @@
+{
+  "schema_version": "geox_mcft_cap09_s1_hard_acceptance_evidence_v1",
+  "evidence_id": "GEOX-MCFT-CAP-09-S1-HARD-ACCEPTANCE-EVIDENCE-V1",
+  "record_status": "S1_CANDIDATE_ACCEPTANCE_REQUIREMENTS_FROZEN_NOT_EFFECTIVE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S1",
+  "base_main_sha": "1ec6f2dc0ae00716412b00c197f7f36a8be8b516",
+  "required_checks": [
+    {
+      "id": "S1-HA-01",
+      "requirement": "S0 exact-SHA/R2 authority consumed"
+    },
+    {
+      "id": "S1-HA-02",
+      "requirement": "five Shadow-online port interfaces frozen"
+    },
+    {
+      "id": "S1-HA-03",
+      "requirement": "24 exact O00-O23 PT1H slots frozen"
+    },
+    {
+      "id": "S1-HA-04",
+      "requirement": "scheduler-provided UTC wall-clock contract; accelerated clock forbidden"
+    },
+    {
+      "id": "S1-HA-05",
+      "requirement": "observed/ingested/available boundary and no future Evidence leakage"
+    },
+    {
+      "id": "S1-HA-06",
+      "requirement": "single-scope sequential scheduler lease/fencing contract"
+    },
+    {
+      "id": "S1-HA-07",
+      "requirement": "execution feedback is read-only existing Evidence"
+    },
+    {
+      "id": "S1-HA-08",
+      "requirement": "restart/backfill/stale/lag availability contract frozen"
+    },
+    {
+      "id": "S1-HA-09",
+      "requirement": "zero scheduler loop, database implementation, migration and canonical write"
+    },
+    {
+      "id": "S1-HA-10",
+      "requirement": "exactly one registered S1 Candidate signal and valid Declaration V2"
+    }
+  ],
+  "required_check_count": 10,
+  "candidate_preflight_status": "REQUIRED",
+  "server_typecheck_required": true,
+  "pure_contract_acceptance_required": true,
+  "database_acceptance_required": false,
+  "external_effectiveness": false,
+  "runtime_executable_delta": 0,
+  "migration_delta": 0,
+  "canonical_write_delta": 0
+}
