@@ -1,22 +1,39 @@
-# GEOX MCFT-CAP-09 S0 Continuation Handoff
+# GEOX MCFT-CAP-09 Continuation Handoff — S2 Database Evidence Candidate
 
-更新时间：2026-08-05 03:12（UTC+8）
+更新时间：2026-08-06 01:05（UTC+8）
 
-## 0. 文档定位
+## 0. 文档定位与合并顺序警告
 
-本文档交接当前 MCFT 后端 / 治理主线。
+本文档交接当前 `MCFT-CAP-09 / Stage 1B Shadow-online Closure` 后端、Runtime 与治理主线。
 
-本对话最初接手的是 `MCFT-CAP-08.S6` 最终关闭。该能力线已经完成正式双数据库运行、Cross-Run Comparator、24/24 Hard Acceptance、Candidate / merge tree equality 和 R2 / 730 天留存，并完成 post-closure 导航投影。
-
-当前实际任务已经切换为：
+当前准确阶段：
 
 ```text
-MCFT-CAP-09
-Stage 1B Shadow-online Closure
-当前阶段：S0 Authorization Candidate 前置治理
+S0 Authorization                    EFFECTIVE
+S1 Adapter Contracts / Config       EFFECTIVE
+S2 Database Evidence Ingress        CANDIDATE FULLY GREEN, NOT MERGED
+S2 external effectiveness           false
+S3 Registry registration            not authorized yet
 ```
 
-当前不是 Runtime 实现阶段。当前目标是从已经修正的 trusted Registry 基线，重建一个新的、单提交、非有效的 S0 Authorization Candidate；其 protected merge 和 exact merge-SHA / R2 effectiveness 通过后，才允许考虑 S1。
+**重要：本 handoff 文档更新必须保持独立 `1 commit / 1 file`，且不得先于 PR #2882 合并。**
+
+原因：
+
+```text
+#2882 exact base
+b3f095be7f808611f1388c3e31ecff29325a7f99
+```
+
+任何先进入 protected `main` 的提交——包括纯文档 handoff 提交——都会推进 `main`，使 #2882 的 exact-base Candidate 失效。正确顺序是：
+
+```text
+1. 先处理 #2882：最终核验并合并，或明确关闭
+2. 若 #2882 合并，再刷新本 handoff 的“当前停点”
+3. 最后合并 handoff 文档 PR
+```
+
+本 handoff PR 可以先创建，但应保持 Draft / blocked，禁止抢在 #2882 前合并。
 
 ---
 
@@ -26,109 +43,114 @@ Stage 1B Shadow-online Closure
 repository
 liyongshang44-max/GEOX
 
-current protected main
-d229cbff7d6d974a2dfdbebd4cc93ec1670a052d
+protected main
+b3f095be7f808611f1388c3e31ecff29325a7f99
 
-current main source PR
-#2843 MCFT-CAP-09: correct trusted Registry to existing status paths
+main source PR
+#2881 MCFT-CAP-09 S2: repair registration-to-Candidate routing
 
-#2843 exact head
-e2e073ac532854e25d0ba040eaddb719c07bdb2b
+#2881 head
+158f0c36468bfc869aa185e4cfe7d89fdbc1a35e
 
-#2843 exact tree
-3042e6f54cb563c48e3595767710798b0e8af04c
+#2881 tree
+9971f2f6923e84d902b6ed1dd5585d4bf07462bd
 
-#2843 merge SHA / current main
-d229cbff7d6d974a2dfdbebd4cc93ec1670a052d
+#2881 merge SHA / current main
+b3f095be7f808611f1388c3e31ecff29325a7f99
 
-candidate-to-merge file delta
-0
+#2881 boundary
+1 commit / 3 files
 ```
 
-不要从更早的 `0c49f528...`、`3968031d...` 或任何关闭未合并 Candidate head 继续开发。新的工作必须先核对远端 `main` 是否仍为上述 SHA；如已前移，应重新审计新 commits 后再冻结边界。
+当前 active Candidate：
+
+```text
+PR
+#2882 MCFT-CAP-09 S2: implement bounded Database Evidence ingress r2
+
+state
+OPEN
+
+mergeability
+MERGEABLE
+
+base
+b3f095be7f808611f1388c3e31ecff29325a7f99
+
+head
+a003770454e45bcb3ea08b39de57170348eca993
+
+tree
+7eb9187e2e74b03be7993117cf548998cdfebfa5
+
+compare
+ahead 1 / behind 0 / total commits 1
+
+boundary
+1 commit / 10 files
+```
+
+旧 PR #2880 已关闭且未合并。其 head 永久不可复用，不得 reopen、rebase 或追加提交后重新声明为有效 Candidate。
 
 ---
 
-## 2. 当前任务到底在做什么
+## 2. 我们正在做什么
 
-CAP-09 的目标不是复制一套新的数字孪生语义，而是把 CAP-08 已成立的 Stage 1A Replay-backed closure 推进为受治理的 Stage 1B Shadow-online closure。
+MCFT-CAP-09 的目标是把 CAP-08 已成立的 Replay-backed Twin closure 推进为受治理的 Stage 1B Shadow-online closure。
 
-冻结设计为：
-
-```text
-runtime mode
-SHADOW_ONLINE
-
-scope
-单一 six-key governed scope
-
-formal closure
-24 个真实 UTC 小时调度边界
-O00 ... O23
-
-formal accelerated clock
-禁止
-
-required operational cases
-至少一次 restart
-至少一次 missed-slot backfill，oldest-first
-至少一次 stale-Evidence degradation
-至少一次 late / out-of-order append-forward
-
-online readback
-State / Forecast / Health
-
-real-world action authority
-NONE
-```
-
-共享 Replay 语义必须保持不变，包括：
+当前 S2 的唯一目标是：
 
 ```text
-domain model
-canonical object contracts
-state-transition semantics
-forecast / scenario semantics
-transaction families
-resolve -> E -> H -> A -> B -> G -> C -> barrier
-append-only facts / rebuildable projections
-idempotency / fencing / checkpoint / revision rules
-read-only Operator Runtime API family
+从既有 governed PostgreSQL facts SSOT
+只读选择 Evidence
+在明确的 hourly logical boundary 冻结 eligible Evidence
+输出 selected / excluded / coverage / freshness / maximum gap
 ```
 
-Stage 1B 只允许替换或新增受控 adapter：
+S2 不是完整 Shadow-online Runtime。它不包含：
 
 ```text
-Clock
-EvidenceIngress
-PersistentSequentialScheduler
-ExecutionFeedback read path
-Availability / stale / restart / backfill behavior
-operational deployment adapter
+scheduler loop
+persistent cursor / lease implementation
+automatic slot execution
+canonical Runtime write
+production wiring
+public HTTP writer
+live device gateway
+Recommendation / Approval / AO-ACT write
+Model Activation
+controlled real-world action
 ```
 
-当前尚未授权任何上述实现。
+当前总体完成度估算：
+
+```text
+MCFT-CAP-09 overall
+约 49%
+
+remaining
+约 51%
+```
+
+该比例按治理与运行闭环复杂度估算，不按文件数估算。
 
 ---
 
-## 3. 已完成工作
+## 3. 已完成的 authoritative chain
 
-### 3.1 MCFT-CAP-08 已正式关闭
+### 3.1 MCFT-CAP-08 predecessor 已正式关闭
 
-CAP-08 已建立：
+CAP-08 仍是 CAP-09 的正式 predecessor authority：
 
 ```text
 completion subject
 67bd71560268046a7fa9a9433ee074ad3999cb71
 
-exact-SHA / R2 workflow
-30908130962 / attempt 1 / SUCCESS
+exact-SHA / R2 run
+30908130962
 
-exact artifact
+artifact
 8891897316
-
-GitHub artifact digest
-sha256:ceb2dc797d6a9a3c54a6476435f9b1cc5f7dd0f08993af3d8ced424c65afe497
 
 semantic artifact digest
 sha256:7e9d713631443641f17c06f71c494319c5f442424ba9ec9f426731940d2700f9
@@ -136,565 +158,896 @@ sha256:7e9d713631443641f17c06f71c494319c5f442424ba9ec9f426731940d2700f9
 Hard Acceptance
 24 / 24 EFFECTIVE
 
-R2 retention
-730 days
-retain until 2028-08-03T12:13:37.980Z
-readback verified true
-locked delete denied true
+retention
+R2 / 730 days
 ```
 
-CAP-08 只证明 `STAGE_1A_REPLAY_BACKED_CLOSURE_COMPLETE`，不自动授权 CAP-09 Runtime。
+CAP-08 只证明 Replay-backed closure；不自动授权 CAP-09 Shadow-online Runtime。
 
-### 3.2 CAP-09 S0 pre-candidate foundation 已合入
-
-PR #2828：
+### 3.2 CAP-09 S0 Authorization 已 effective
 
 ```text
+S0 subject / merge SHA
+7381d0f8ac56fe9f75fd78ce189920cb9ed99bf4
+
+S0 exact-SHA / R2 run
+30978738965
+
+S0 artifact
+8919296741
+
+S0 semantic artifact digest
+sha256:f2706d9cf3e001a1085d1c0b7db4f4200732605f9a6bad4a80d9ba3065346228
+
+candidate-to-merge tree delta
+0
+
+R2 readback
+PASS
+
+locked-version delete denial
+PASS
+```
+
+S0 effectiveness 只授权 S1 Candidate Declaration 的接口与配置冻结范围；没有授权 Runtime implementation。
+
+### 3.3 CAP-09 S1 Adapter Contracts / Configuration 已 effective
+
+S1 Candidate：
+
+```text
+PR
+#2874
+
+base
+1ec6f2dc0ae00716412b00c197f7f36a8be8b516
+
 head
-8a01b0a8a9d5ceeb9082200cf32712e1480160c0
+0e835d90f435f3bd0c50edcbae67e02187f0bbdc
 
-merge
-abadd19b2bd7460b397acbac6181253732b49fae
+tree
+af5a270d01f1f49af50f76db0eda8f79f031c35a
+
+merge subject
+843ed078d6d384e43e2c6bd2568d789dcd508934
+
+boundary
+1 commit / 11 files
 ```
 
-已建立：
+S1 冻结了五类纯接口：
 
 ```text
-CAP-09 Taskbook
-Stage 1B machine scope contract
-CAP-08 exact predecessor lock
-non-candidate Current Authority seed
-non-candidate S0 Delivery Status seed
-focused S0 foundation workflow / validator
+ClockPortV1
+EvidenceIngressPortV1
+SchedulerPortV1
+ExecutionFeedbackPortV1
+AvailabilityPortV1
 ```
 
-该阶段：
+同时冻结：
 
 ```text
-implementation authorized        false
-Runtime source authorized        false
-Candidate Declaration authorized false
-Registry rule present            false at foundation time
+O00 ... O23
+PT1H
+single governed six-key scope
+observed_at / ingested_at / available_to_runtime_at boundary
+single-scope sequential lease / fencing semantics
+read-only execution feedback
+restart / backfill / stale / lag contract
 ```
 
-### 3.3 Trusted Candidate Registry bootstrap 已完成
-
-PR #2832 合入了 CAP-09 Registry entry，但最初错误地预注册了尚不存在的 S1-S6 status 文件。该缺陷后来通过完整控制面修复链关闭。
-
-### 3.4 S0 Candidate lifecycle 已建立
-
-已合入：
+S1 effectiveness：
 
 ```text
-#2833 route S0 authorization Candidate lifecycle
-merge f238d9f0a6e1c361e31e5952b8c037b292c59554
+subject
+843ed078d6d384e43e2c6bd2568d789dcd508934
 
-#2834 remove self-referential Candidate head binding
-merge 0c49f5282c3c05c33caf06da93862afaecda760c
+R2 run
+31007579256
 
-#2837 route complete trusted Registry successor lifecycle
-merge d5e31c20c356816294b6a902b27ed8dcbe79c42d
+artifact
+8930987741
+
+GitHub artifact digest
+sha256:28e2fcbe5571799f06a960fd9c5ff676b5f808ecb48825b608810fa218f5d42d
+
+semantic artifact digest
+sha256:0f67da5732f43a427d2518e320a617f3ad3872c6c34065060e432d92128404ef
+
+retention
+R2 / 730 days
+
+retain until
+2028-08-04T12:53:03.321Z
+
+readback verified
+true
+
+locked version delete denied
+true
 ```
 
-Candidate head 的正确绑定方式已经冻结为：
+S1 effectiveness 的第一合法下一步是 S2 Registry registration；并未直接授权 S2 Candidate 或实现。
+
+### 3.4 S2 Registry registration 已完成
 
 ```text
-PR Declaration V2 candidate_head
-GitHub pull_request head SHA
-trusted Candidate integrity workflow
-exact semantic snapshot blob list
+PR
+#2879
+
+merge SHA
+508da08b2c5855e6391bc87e0d56042fc9232a97
 ```
 
-Candidate governance blobs禁止包含自己的 commit SHA：
+该步骤：
 
 ```text
-candidate_head_binding_mode = PR_DECLARATION_V2_AND_GITHUB_EVENT
-candidate_head_embedded     = false
-candidate_head_sha field     absent
-```
-
-### 3.5 完整 shared Registry trigger control plane 已修复
-
-在多次关闭未合并尝试之后，PR #2842 完成原子七文件修复：
-
-```text
-head
-0d3a4a78bd63e5f436867375f7faf2eb4f99665a
-
-merge
-3968031dbffbcf547c46e1cb038b97974bd7a937
-```
-
-该修复枚举并处理了中央 Registry 变更触发的历史 workflows，包括遗漏过的：
-
-```text
-mcft-cap-08-s2-pre-candidate-foundation
-```
-
-成熟 resolver 与历史 lifecycle validator 被保留为 CORE module；wrapper 只识别 exact non-candidate control-plane repair，其余场景继续委托原 CORE，保持普通 Candidate fail closed。
-
-### 3.6 Trusted Registry existing-path correction 已生效
-
-PR #2843 已合入当前 main：
-
-```text
-authority-set revision
-1.6 -> 1.7
-
-authority-set change id
-MCFT-CAP-09.S0-EXISTING-STATUS-PATHS-CORRECTION
-
-base Registry blob
-e92a5af9e422812b76b6b689b4a2d1b0263a41ab
-
-corrected Registry blob
-e066ad7e6ec57f8dae9d0c2a41a492434deec4e0
-```
-
-CAP-09 现在只登记 protected main 上实际存在的两个 status 文件：
-
-```text
-docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json
-docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json
-```
-
-当前唯一注册 transition：
-
-```text
-Current Authority.status
--> AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE
--> mcft-cap-09-s0-authorization
-```
-
-S1-S6 路径和 transition rule 必须 append-forward：只有对应 status 文件先存在于 protected main 后，才能单独追加到 Registry。
-
-当前状态仍是：
-
-```text
-Candidate transition                 false
-Candidate Declaration                absent
-implementation authorized            false
-Runtime source authorized            false
-canonical write authorized           false
-live ingestion authorized            false
-background scheduler authorized      false
-public HTTP writer authorized        false
-Model Activation authorized          false
-controlled action authorized         false
-```
-
----
-
-## 4. 当前停点 / blocker
-
-### 4.1 没有有效 S0 Authorization Candidate
-
-先前 PR #2835 已关闭且未合并，其 Candidate head：
-
-```text
-bda416384971595816f8ac2245149f85708e76d9
-```
-
-已永久失效，禁止：
-
-```text
-复用该 head
-在该 branch 上追加修复提交
-重新打开并声称有效
-复制旧 Declaration 作为新 Candidate Declaration
-```
-
-现在必须从 current main `d229cbff...` 重建新的单提交六文件 Candidate。
-
-### 4.2 当前 main 上存在一条历史 CAP-07 exact-SHA 失败状态
-
-```text
-context
-mcft-cap-07/exact-sha-attestation
-
-workflow run
-30941537913
-
-job
-92100852366
-
-failure stage
-Derive read-only exact-SHA delivery frontier artifact
-
-error
-DELIVERY_AUTHORITY_MARKER_MISSING
-
-transient artifact
-8905322012
-
-artifact digest
-sha256:2ee8203953904acc4cec999cedbb998308a73a303c6aa6e409a424f16081d511
-```
-
-这是 CAP-09 Registry merge 误触发历史 CAP-07 push / exact-SHA workflow 后，CAP-07 finalizer无法从该 CAP-09 merge message中解析 CAP-07 delivery authority marker。
-
-当前判断：
-
-```text
-不是 CAP-09 Registry correction 语义失败
-不是 CAP-09 Candidate transition
-不是 Runtime 或数据库失败
-是历史 post-merge workflow lifecycle / applicability 噪声
-```
-
-但在提交新的 S0 Candidate 前必须完成以下之一：
-
-```text
-A. 修复 CAP-07 exact-SHA workflow，使非 CAP-07 successor merge 正确 NOT_APPLICABLE；
-或
-B. 通过受信规则明确证明该 commit status 不属于 CAP-09 Candidate required contexts，且不会阻塞 protected merge / effectiveness。
-```
-
-禁止直接 rerun 该失败 workflow；同一逻辑重跑只会再次得到 `DELIVERY_AUTHORITY_MARKER_MISSING`。
-
-### 4.3 当前没有 Runtime 技术 blocker
-
-目前卡点在治理控制面：
-
-```text
-fresh Candidate identity
-complete trigger applicability
-historical workflow noise isolation
-protected merge + exact-SHA / R2 effectiveness
-```
-
-不是算法、数据库或 Shadow-online adapter 实现卡住。
-
----
-
-## 5. 下一步计划
-
-严格按以下顺序推进。
-
-### Step 1：重新核对 current main 与并行变更
-
-```text
-expected main
-d229cbff7d6d974a2dfdbebd4cc93ec1670a052d
-```
-
-如 `main` 已前移：
-
-1. 读取新增 commits / PR；
-2. 区分是否来自 PFE-14 前端并行线；
-3. 重新计算 backend governance base tree；
-4. 不得把旧六文件 Candidate 直接 rebase 后继续使用。
-
-### Step 2：裁决 CAP-07 exact-SHA post-merge 噪声
-
-先做完整触发与 required-context 审计，不直接改代码：
-
-```text
-mcft-cap-07 exact-SHA workflow trigger
-CAP-09 Candidate six-file path triggers
-branch protection required contexts
-pull_request / pull_request_target / push / merge_group ownership
-```
-
-只有确认真实 lifecycle 缺口后，才做独立、非 Candidate repair PR。
-
-### Step 3：从修正后的 protected main 重建 fresh S0 Candidate
-
-Exact 六文件边界：
-
-```text
-.github/workflows/mcft-cap-09-s0-authorization.yml
-docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json
-docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-BOUNDARY-V1.json
-docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-V1.json
-docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json
-scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_AUTHORIZATION.cjs
-```
-
-Candidate 要求：
-
-```text
-1 commit
-6 files
-behind main 0
-Registry byte delta 0
-Taskbook byte delta 0
-scope-contract delta 0
-predecessor-lock delta 0
+注册 S2 status path
+注册 s2_candidate_implemented transition
+绑定 S1 effective subject / R2 artifact
+Candidate transition false
 Runtime source delta 0
 migration delta 0
-canonical Runtime data delta 0
-database ACL delta 0
 ```
 
-PR body 必须写 exact Candidate Declaration V2，并绑定：
+S2 Candidate 只有在该 registration 进入 protected main 后才合法。
+
+### 3.5 S2 registration-to-Candidate lifecycle repair 已完成
+
+旧 #2880 证明：S2 Registry workflow 能处理 registration，但会把合法 10 文件 S2 Candidate 错误路由到 6 文件 registration validator。
+
+#2881 关闭了该缺口：
 
 ```text
-actual candidate head
-actual base main
-actual tree
-six semantic blob SHAs
-focused workflow
-standard ci
+PR
+#2881
+
+repair merge SHA
+b3f095be7f808611f1388c3e31ecff29325a7f99
+
+boundary
+1 commit / 3 files
 ```
 
-### Step 4：提交前做完整离线 trigger matrix
-
-必须先枚举六文件包会触发的所有 workflows，至少包括：
+修复后以下三条 Registry / lifecycle 路径都能正确区分：
 
 ```text
-mcft-cap-09-s0-authorization
-mcft-cap-09-s0-pre-candidate-governance
+S2 lifecycle repair
+S2 Registry registration
+S2 Candidate signal
+```
+
+修复语义：
+
+```text
+exact 3-file repair boundary
+exact 6-file registration boundary
+exact 10-file Candidate boundary
+unsupported boundary remains fail-closed
+trusted Registry lane preserved
+S1 Registry lane preserved
+S2 Registry lane corrected
+```
+
+---
+
+## 4. S2 Candidate #2882 已实现的内容
+
+### 4.1 Exact Candidate identity
+
+```text
+base
+b3f095be7f808611f1388c3e31ecff29325a7f99
+
+head
+a003770454e45bcb3ea08b39de57170348eca993
+
+tree
+7eb9187e2e74b03be7993117cf548998cdfebfa5
+
+commits
+1
+
+files
+10
+
+behind main
+0
+```
+
+### 4.2 Exact 10-file boundary
+
+```text
+.github/workflows/mcft-cap-09-s2-database-evidence-ingress.yml
+
+apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.ts
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CANDIDATE-BOUNDARY-V1.json
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CANDIDATE-V1.json
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CONFIG-V1.json
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DELIVERY-STATUS-V1.json
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-HARD-ACCEPTANCE-EVIDENCE-V1.json
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json
+
+scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs
+
+scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.ts
+```
+
+### 4.3 Adapter boundary
+
+S2 实现了一个只读 PostgreSQL `EvidenceIngressPortV1` adapter：
+
+```text
+source table
+facts
+
+query mode
+read-only PostgreSQL
+
+database writes
+none
+
+DDL / migration
+none
+
+scope
+exact tenant_id / project_id / group_id / field_id / season_id / zone_id
+
+boundary fields
+observed_at
+ingested_at
+available_to_runtime_at
+
+future Evidence
+excluded
+
+late / post-boundary Evidence
+excluded
+
+quality-ineligible Evidence
+excluded
+
+scope mismatch
+excluded
+
+duplicate Evidence
+deterministic supersession
+
+coverage ratio
+emitted
+
+freshness
+emitted
+
+maximum gap
+emitted
+```
+
+Duplicate deterministic winner policy：
+
+```text
+latest ingested_at
+then deterministic stable identity / ordering tie-break
+```
+
+S2 pure acceptance证明：
+
+```text
+selected Evidence
+2
+
+explicit exclusions
+7
+
+all configured exclusion classes
+covered
+
+repeated freeze
+deterministic
+
+future Evidence leakage
+0
+
+SQL write / DDL verbs
+absent
+```
+
+### 4.4 明确 nonclaims
+
+```text
+external effectiveness         false
+production activation          false
+production wiring              absent
+scheduler loop                 absent
+persistent cursor              absent
+lease implementation           absent
+canonical Runtime write        absent
+database migration             absent
+database ACL delta             0
+public HTTP writer             absent
+live device gateway            absent
+Recommendation write           absent
+Approval write                 absent
+AO-ACT write                   absent
+Model Activation               false
+controlled action              false
+frontend / PFE-14 delta         0
+```
+
+---
+
+## 5. #2882 已通过的完整检查
+
+截至本 handoff 更新时间，#2882 不再处于 acceptance 运行中；完整矩阵已经结束并全部成功。
+
+Workflow runs：
+
+```text
+mcft-candidate-declaration-selftest-v2
+run 31022992869
+SUCCESS
+
+ci
+run 31022990581
+SUCCESS
+
+mcft-cap-08-authority-reconciliation
+run 31022989088
+SUCCESS
+
+mcft-cap-09-s2-database-evidence-ingress
+run 31022989104
+SUCCESS
+
+mcft-main-ruleset-readiness-v1
+run 31022989047
+SUCCESS
+
 mcft-cap-09-trusted-registry-bootstrap
-shared Registry applicability workflows
-candidate integrity pull_request_target
-release lane pull_request_target
-standard ci
+run 31022989141
+SUCCESS
+
+mcft-cap-09-s1-registry-registration
+run 31022989502
+SUCCESS
+
+mcft-cap-09-s2-registry-registration
+run 31022989082
+SUCCESS
+
+mcft-release-lane-v1
+run 31022989119
+SUCCESS
+
+mcft-delivery-policy-v2
+run 31022989027
+SUCCESS
 ```
 
-每条 workflow 必须提前得到预期 disposition：
+Focused S2：
 
 ```text
-APPLICABLE
-NOT_APPLICABLE
-candidate-signal
-unsupported / expected fail closed
+focused governance
+PASS
+
+S1 exact-SHA / R2 authority consumption
+PASS
+
+pure Database Evidence acceptance
+PASS
+
+server Runtime typecheck
+PASS
+
+structured result validation
+PASS
+
+focused artifact upload
+PASS
 ```
 
-禁止再次依赖远端 CI 每轮只暴露第一个错误。
+Standard CI `build-test`：
 
-### Step 5：protected merge 后单独建立 effectiveness
+```text
+route dependency guard
+PASS
 
-S0 Candidate merged 不等于 effective。
+route response ownership guard
+PASS
 
-必须执行：
+PR-18I hotfix guard
+PASS
+
+typecheck
+PASS
+
+build
+PASS
+
+server selfcheck
+PASS
+```
+
+Standard CI `acceptance`：
+
+```text
+commercial compose rendering
+PASS
+
+runtime dependencies startup
+PASS
+
+service readiness
+PASS
+
+PR18I formal-chain preflight
+PASS
+
+controlled pilot seed
+PASS
+
+C8 formal chain backend P0
+PASS
+
+Playwright Chromium install
+PASS
+
+frontend runtime page audit
+PASS
+
+Controlled Pilot strict release gate
+PASS
+
+Stage-1 fixture raw-sample gate
+PASS
+
+P1 smoke idempotency gate
+PASS
+
+customer-report wiring gate
+PASS
+
+customer-report boundary suite
+PASS
+
+full acceptance suite
+PASS
+
+runtime evidence collection
+PASS
+
+COMMERCIAL MVP0 release gate
+PASS
+
+runtime hygiene / artifact collection
+PASS
+
+artifact upload
+PASS
+```
+
+---
+
+## 6. 当前准确停点 / blocker
+
+### 6.1 当前没有测试或技术 blocker
+
+#2882 当前状态：
+
+```text
+OPEN
+MERGEABLE
+all triggered workflows SUCCESS
+exact base unchanged
+ahead 1
+behind 0
+```
+
+当前剩余工作不是继续写 adapter，也不是修 CI。
+
+当前只差：
+
+```text
+1. 再次确认 protected main 仍为 b3f095be...
+2. 再次确认 PR head 仍为 a003770...
+3. 再次确认 10 个 workflow 全部 SUCCESS
+4. 使用 expected-head 保护合并 #2882
+```
+
+### 6.2 S2 尚未 effective
+
+即使 #2882 merge 成功，也只能证明 Candidate 进入 protected main。
+
+以下步骤完成前，禁止声称 S2 effective：
 
 ```text
 candidate tree == merge tree
-exact merge-SHA attestation
+exact merged subject identification
+focused artifact binding
+standard CI binding
+Declaration V2 semantic snapshot binding
+exact-SHA attestation
 R2 / minimum 730-day immutable retention
 readback verification
 locked-version delete denial
-Candidate authority effectiveness
+dedicated commit status success
 ```
 
-只有这些通过后，才可以把 S0 effective state 投影为：
+### 6.3 S3 尚未授权
+
+只有 S2 exact-SHA/R2 effectiveness 成立后，第一合法下一步才是：
 
 ```text
-status     IN_PROGRESS
-next slice S1
+MCFT-CAP-09.S3 Registry registration
 ```
 
-### Step 6：S1 只能在 S0 effectiveness 后开始
-
-S1 预计是 adapter contracts，但不得提前修改 Runtime。开始前还要先创建 S1 status seed，再 append-forward 更新 Registry，仅登记已经存在于 protected main 的 S1 status path。
+禁止直接开始 S3 implementation、scheduler loop 或 Candidate。
 
 ---
 
-## 6. 已踩过的坑，必须避免
+## 7. 下一步严格执行计划
 
-### 6.1 不要把远端 CI 当串行调试器
+### Step 1：合并前最终核验 #2882
 
-错误模式：
+重新读取：
 
 ```text
-提交
--> CI 暴露第一个 workflow
--> 修复
--> 再提交
--> CI 再暴露下一条触发路径
+current main
+PR state / mergeability
+PR base
+PR head
+compare base...head
+all workflow conclusions
 ```
 
-正确方式：先枚举完整 path-trigger matrix，在本地 / synthetic Git graph 一次性验证所有 applicability。
-
-### 6.2 不要预注册不存在的 status 文件
-
-Registry fail-closed resolver 会验证 trusted base 上每个 registered status path。S1-S6 文件不存在时提前登记，会直接产生：
+必须同时成立：
 
 ```text
-BASE_REGISTERED_STATUS_FILE_MISSING
+main == b3f095be7f808611f1388c3e31ecff29325a7f99
+base == b3f095be7f808611f1388c3e31ecff29325a7f99
+head == a003770454e45bcb3ea08b39de57170348eca993
+ahead == 1
+behind == 0
+files == 10
+all workflows == SUCCESS
 ```
 
-正确方式：文件先进入 protected main，Registry rule 后续 append-forward。
-
-### 6.3 不要遗漏间接触发的历史 workflows
-
-#2841 曾遗漏：
+若 main 被任何提交推进：
 
 ```text
-mcft-cap-08-s2-pre-candidate-foundation
+不要 merge
+不要 rebase 旧 Candidate
+不要向旧 head 追加提交
+关闭 #2882
+从新 main 原子重建新的单提交 Candidate
 ```
 
-中央 Registry、共享 resolver 或公共 validator 路径变更会触发跨 CAP 历史 workflow。必须仓库级枚举，不只看当前 CAP 文件夹。
+### Step 2：使用 expected-head 保护合并
 
-### 6.4 不要修改失败 Candidate head
-
-Candidate head 一旦失败或发现边界缺陷：
+合并目标：
 
 ```text
-关闭 PR
-不合并
-不追加调试提交
-从同一或更新后的 protected main 原子重建新 head
+PR
+#2882
+
+expected head
+a003770454e45bcb3ea08b39de57170348eca993
 ```
 
-### 6.5 Candidate blob 不得自引用自身 commit SHA
+不得使用管理员绕过 required checks。
 
-Git commit 无法包含自己的 SHA。head 绑定只能来自：
+### Step 3：验证 Candidate-to-merge identity
 
-```text
-PR Declaration
-GitHub event head
-trusted Candidate integrity
-semantic blob snapshot
-```
-
-### 6.6 区分 workflow head、execution subject、candidate head、merge SHA
-
-此前 CAP-08 Comparator 曾把 workflow head 与 execution subject 错当同一身份。CAP-09 也必须分别绑定：
+合并后记录：
 
 ```text
-trusted base main
-candidate head
-candidate tree
 merge SHA
 merge tree
-predecessor completion subject
+merge parents
 ```
 
-### 6.7 不要通过 PR 修改后的 Registry 给同一 PR 授权
-
-Candidate transition 必须由 protected main 上已经存在的 trusted Registry rule授权。Registry bootstrap / correction PR 不能同时成为 Candidate。
-
-### 6.8 避免 base64 文本运输损坏
-
-此前 Registry validator blob 曾因错误 base64 运输成为不可执行乱码。文本治理文件优先使用 UTF-8 blob，并在发布前做：
+必须证明：
 
 ```text
-node --check
-JSON parse
-YAML parse
-Git blob SHA readback
+candidate tree
+7eb9187e2e74b03be7993117cf548998cdfebfa5
+
+merge tree
+必须完全相同
+
+candidate-to-merge file delta
+必须为 0
 ```
 
-### 6.9 历史 push / exact-SHA workflow 必须有 successor applicability
+### Step 4：建立独立 S2 exact-SHA/R2 effectiveness control plane
 
-后续 capability merge不应被历史 capability finalizer当成自己的 delivery subject。出现 marker missing 时，先修 lifecycle / applicability，不要盲目 rerun。
+沿用 S0 / S1 已验证模式，但 subject、Candidate、文件边界和 S2 authority 必须重新绑定。
 
-### 6.10 不得复用一次性执行 authority
+Control plane 应保持独立、最小边界，不修改：
 
-CAP-08 Replacement-001 / 002 的经验继续适用：一次性 authority 无论 success 或 terminal failure，执行次数一旦消费即不可 rerun、不可复用 execution ID。
+```text
+S2 Candidate files
+Registry
+Taskbook
+Runtime adapter
+migration
+frontend
+```
+
+Canonical attestation 必须绑定：
+
+```text
+S2 merge subject
+#2882
+Candidate head a003770...
+Candidate tree 7eb9187e...
+focused run 31022989104
+standard CI run 31022990581
+Declaration V2 snapshot
+10-file boundary
+```
+
+R2 必须证明：
+
+```text
+730-day minimum retention
+upload
+readback
+locked-version delete denial
+semantic artifact digest
+GitHub convenience artifact
+dedicated commit status
+```
+
+### Step 5：只有 S2 effective 后注册 S3
+
+先重新读取 Taskbook、Scope Contract、Registry 和 S2 effective artifact。
+
+严格顺序：
+
+```text
+S2 effective
+-> S3 Registry registration
+-> S3 lifecycle routing audit / repair if needed
+-> fresh S3 Candidate
+-> protected merge
+-> S3 exact-SHA/R2 effectiveness
+```
+
+不得跳过 Registry registration。
 
 ---
 
-## 7. 并行前端任务线隔离说明
+## 8. 已踩过的坑与必须避免的事项
 
-当前有同事并行推进前端任务线：
+### 8.1 任何 main 变更都会使 exact-base Candidate 失效
 
-```text
-capability line
-PFE-14 Shadow-online Operator Console
-
-open PR
-#2844 PFE-14: establish Shadow-online Operator Console S0
-
-branch
-agent/pfe-14-shadow-online-operator-console
-```
-
-该任务线是独立的 frontend capability line，不属于本 handoff 的 MCFT-CAP-09 backend / control-plane 边界。
-
-本任务必须遵守：
+最容易忽略的包括：
 
 ```text
-不要修改其 branch
-不要替同事 rebase / force-push
-不要关闭或合并 #2844
-不要把 PFE-14 文件带入 CAP-09 Candidate
-不要因为 PFE-14 CI 状态改变 CAP-09 authority 判断
-不要让前端文案或 UI 假设反向定义 backend Runtime 已实现能力
+并行 PFE PR
+纯文档 PR
+handoff PR
+governance repair
+workflow repair
 ```
 
-PFE-14 可以提前冻结 UI contract，但必须继续明确：
+因此本 handoff PR 不得先于 #2882 合并。
+
+### 8.2 关闭未合并的 Candidate head 永久不可复用
+
+已关闭的 #2880 及此前失败 Candidate：
 
 ```text
-MCFT-CAP-09 尚未实现的字段，不得由前端伪造为 Runtime truth
-Scheduler / Evidence Freshness / Backfill / Recovery UI authority 尚未成立
+禁止 reopen 后宣称有效
+禁止追加提交
+禁止 rebase 后继续
+禁止复制旧 Declaration 而不重算 SHA / Blob
 ```
 
-若 PFE-14 合并导致 `main` 前移：
+每次 exact base 前移都必须原子重建 fresh Candidate。
+
+### 8.3 Candidate head 必须保持单提交冻结
+
+远端 CI 暴露新问题时：
 
 ```text
-只重新计算 CAP-09 governance base
-不吸收前端文件
-不把前端变化解释为 CAP-09 implementation authority
-不代替前端同事修其任务线
+不要向 Candidate head 添加 repair commit
+关闭旧 Candidate
+做独立 repair PR
+repair 合并后从新 exact base 重建
 ```
 
-两条线只在正式定义的 read contract 与 predecessor gate 上协同，不共享 Candidate boundary。
+### 8.4 Registry registration、Candidate 和 lifecycle repair 是三种不同边界
+
+必须分别识别：
+
+```text
+repair boundary
+registration boundary
+Candidate boundary
+unsupported boundary
+```
+
+不能让某一 workflow 把 10 文件 Candidate 路由到 6 文件 registration validator。
+
+### 8.5 Declaration V2 只能在 PR body
+
+完整 declaration marker 不得写入仓库文件。
+
+必须绑定真实：
+
+```text
+base head
+candidate head
+status file
+candidate field / value
+focused workflow
+standard workflow
+semantic snapshot files
+semantic snapshot blobs
+```
+
+### 8.6 Workflow 路径是间接控制面
+
+修改一个 status 或 Registry 文件可能触发：
+
+```text
+trusted Registry
+S1 Registry
+S2 Registry
+historical CAP-07 / CAP-08 compatibility
+delivery policy
+release lane
+ruleset readiness
+candidate integrity
+standard CI
+```
+
+提交前必须枚举完整 trigger matrix，不能只看 focused workflow。
+
+### 8.7 Git Blob 运输必须逐字节校验
+
+此前多次遇到：
+
+```text
+长 base64 内容损坏
+人工分块拼接偏差
+远端 Blob SHA 与本地 git hash-object 不一致
+```
+
+规则：
+
+```text
+先在本地计算 git hash-object
+create_blob 后比较远端 SHA
+不一致的 Blob 永不进入 Tree
+Tree / Commit 只能引用已核验 Blob
+```
+
+### 8.8 Semantic artifact digest 必须使用 canonical sorted-key JSON
+
+S1 第一次 exact-SHA/R2 run 曾因：
+
+```text
+SEMANTIC_ARTIFACT_DIGEST_MISMATCH
+```
+
+失败。
+
+原因是生成端使用普通 `JSON.stringify`，共享 R2 store 使用递归 key-sort canonical JSON。后续 effectiveness validator 必须复用共享 canonical digest policy。
+
+### 8.9 Candidate merge 不等于 effectiveness
+
+每个 slice 都必须单独完成：
+
+```text
+protected merge
+tree equality
+exact-SHA attestation
+R2 / 730-day retention
+readback
+locked delete denial
+dedicated success status
+```
+
+禁止在 merge 后直接推进下一 slice。
+
+### 8.10 S2 adapter 的只读边界不得被悄悄扩大
+
+禁止在后续 repair 中加入：
+
+```text
+INSERT / UPDATE / DELETE
+DDL
+migration
+production wiring
+scheduler
+cursor
+lease implementation
+canonical write
+public route
+device gateway
+```
+
+这些属于后续 slice 或未授权能力。
+
+### 8.11 不要因完整 acceptance 耗时而修改 head
+
+完整 CI 的 Docker、Playwright、主 acceptance suite耗时较长。只要 job 是 `in_progress`，不要因等待而：
+
+```text
+编辑 PR body
+修改 title
+追加 commit
+重触发 workflow
+```
+
+先读取 job steps，区分正常运行、排队和真实失败。
+
+### 8.12 PFE-14 / 前端边界继续隔离
+
+#2882 的 frontend / PFE-14 delta 为 0。
+
+后续 MCFT-09 backend / control-plane 工作不得：
+
+```text
+修改 PFE branch
+把前端文件带入 Candidate
+用 UI 假设替代 backend authority 判断
+让前端进度决定 Runtime authorization
+```
 
 ---
 
-## 8. 关键 PR / SHA 索引
+## 9. 剩余工作量估算
+
+当前总体约完成 49%，剩余约 51%。
+
+粗略拆分：
 
 ```text
-CAP-08 final completion Candidate     #2816
-CAP-08 post-closure navigation        #2825
-CAP-09 S0 foundation                  #2828 / merge abadd19b...
-CAP-09 trusted Registry bootstrap     #2832 / merge fa26f024...
-S0 Candidate lifecycle                #2833 / merge f238d9f0...
-non-self-reference correction         #2834 / merge 0c49f528...
-invalid first S0 Candidate            #2835 / closed unmerged
-complete Registry successor lifecycle #2837 / merge d5e31c20...
-complete trigger control plane        #2842 / merge 3968031d...
-existing-path Registry correction     #2843 / merge d229cbff...
-parallel frontend S0                  #2844 / separate line
+S2 merge + exact-SHA/R2 effectiveness     约 6%
+S3 Registry + scheduler/read integration  约 14%
+S4 bounded Shadow-online execution        约 12%
+S5 restart/backfill/stale/lag recovery     约 10%
+S6 closure/completion authority            约 9%
 ```
 
-关闭未合并的控制面探索 PR 还包括：
-
-```text
-#2836
-#2838
-#2839
-#2840
-#2841
-```
-
-这些 PR 可用于根因历史，不得复用其 heads 作为正式 Candidate。
+该估算可能随 Taskbook 的 S3-S6 exact boundary 审计调整。
 
 ---
 
-## 9. 当前明确 nonclaims
+## 10. 新接手者的第一组动作
 
-当前仓库没有建立：
+按以下顺序执行：
 
 ```text
-CAP-09 S0 effective authority
-CAP-09 S1 implementation authority
-production Shadow-online Runtime
-live Evidence ingestion
-persistent background scheduler
-24-hour formal online closure evidence
-automatic recommendation
-approval
-AO-ACT
-real-world dispatch
-Model Activation
-canonical production writer
-public HTTP writer
-CAP-09 completion
+1. 读取本 handoff
+2. fetch current main
+3. fetch PR #2882
+4. compare b3f095be... to a003770...
+5. fetch all workflow runs for a003770...
+6. 确认 all SUCCESS
+7. 确认 main 未前移
+8. expected-head merge #2882
+9. 证明 candidate tree == merge tree
+10. 建立 S2 exact-SHA/R2 control plane
 ```
+
+在第 8 步之前，不修改仓库任何文件。
 
 ---
 
-## 10. 接手者第一条操作指令
+## 11. 一句话准确状态
 
 ```text
-1. git / GitHub 核对 current main
-2. 审计 d229cbff... 上 CAP-07 exact-SHA failure 的 applicability
-3. 枚举 fresh S0 Candidate 六文件完整 trigger matrix
-4. 只在所有 disposition 离线成立后，原子重建一个新的 S0 Candidate
+MCFT-CAP-09 已完成 S0 与 S1 effectiveness；S2 只读 PostgreSQL Evidence ingress Candidate #2882 已 1 commit / 10 files 全矩阵通过且 mergeable，当前只差 exact-base 最终核验与 protected merge。S2 尚未 effective，S3 尚未授权。
 ```
-
-不要直接修改 Runtime，也不要直接从旧 `agent/mcft-cap09-s0-authorization-candidate` branch 继续。
