@@ -1,0 +1,30 @@
+name: mcft-cap-09-s1-trusted-lifecycle-builder
+on:
+  push:
+    branches: [agent/staging-mcft-cap09-s1-trusted-lifecycle-repair]
+    paths:
+      - '.github/workflows/mcft-cap-09-s1-trusted-lifecycle-builder.yml'
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/staging-mcft-cap09-s1-trusted-lifecycle-repair
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - run: node scripts/governance_acceptance/mcft_cap09_s1_trusted_lifecycle_builder.cjs
+      - run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'MCFT-CAP-09: generate S1 trusted lifecycle repair'
+          git push origin HEAD:agent/staging-mcft-cap09-s1-trusted-lifecycle-repair
