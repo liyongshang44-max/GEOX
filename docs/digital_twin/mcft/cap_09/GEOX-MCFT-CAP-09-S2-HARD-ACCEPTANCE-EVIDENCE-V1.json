@@ -1,0 +1,105 @@
+{
+  "schema_version": "geox_mcft_cap09_s2_hard_acceptance_evidence_v1",
+  "evidence_id": "GEOX-MCFT-CAP-09-S2-HARD-ACCEPTANCE-EVIDENCE-V1-R3",
+  "candidate_base_main_sha": "b3f095be7f808611f1388c3e31ecff29325a7f99",
+  "required_check_count": 18,
+  "checks": [
+    {
+      "id": "S2-HA-01",
+      "claim": "S1 exact-SHA/R2 authority consumed",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-02",
+      "claim": "existing facts Replay envelope bound",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-03",
+      "claim": "actual repository record types selected",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-04",
+      "claim": "real PostgreSQL 16 facts path exercised",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-05",
+      "claim": "read-only transaction enforced",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-06",
+      "claim": "open-start closed-end PT1H preserved",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-07",
+      "claim": "future event excluded",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-08",
+      "claim": "late ingested and unavailable excluded",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-09",
+      "claim": "wrong six-key scope excluded",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-10",
+      "claim": "missing/failing/debug/simulated trust excluded",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-11",
+      "claim": "conflicting duplicate rejected",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-12",
+      "claim": "exact semantic duplicate deterministic",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-13",
+      "claim": "interval coverage emitted",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-14",
+      "claim": "freshness and maximum gap emitted",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-15",
+      "claim": "raw/device observations without season-zone binding not consumed",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-16",
+      "claim": "repeated freeze deterministic",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-17",
+      "claim": "database fact count unchanged by adapter",
+      "expected": "PASS"
+    },
+    {
+      "id": "S2-HA-18",
+      "claim": "scheduler/canonical/public/live/model/action deltas zero",
+      "expected": "PASS"
+    }
+  ],
+  "future_evidence_leakage": false,
+  "database_write_performed": false,
+  "scheduler_loop_executed": false,
+  "canonical_write_performed": false,
+  "public_http_writer_present": false,
+  "live_ingestion_present": false,
+  "external_effectiveness": false
+}

@@ -1,0 +1,51 @@
+{
+  "schema_version": "geox_mcft_cap09_database_evidence_ingress_config_v1",
+  "config_id": "GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CONFIG-V1",
+  "source_table": "facts",
+  "envelope_contract": "FACT_RECORD_JSON_TYPE_PLUS_CANONICAL_REPLAY_PAYLOAD_V1",
+  "read_only": true,
+  "actual_record_types": [
+    "soil_moisture_observation_v1",
+    "observed_rainfall_v1",
+    "historical_et0_estimate_v1"
+  ],
+  "future_record_types_excluded": [
+    "future_weather_assumption_v1",
+    "future_et0_assumption_v1"
+  ],
+  "operational_record_types_not_consumed_without_six_key_binding": [
+    "raw_telemetry_v1",
+    "device_observation_v1"
+  ],
+  "semantic_window_rule": "OPEN_START_CLOSED_END_PT1H_V1",
+  "semantic_window_seconds": 3600,
+  "query_inspection_lookback_seconds": 7200,
+  "query_forward_inspection_seconds": 3600,
+  "expected_observation_interval_seconds": 1800,
+  "coverage_policy": "UNIQUE_INTERVAL_BUCKETS_OVER_PT1H",
+  "duplicate_policy": "CONFLICTING_CANONICAL_PAYLOAD_REJECT_EXACT_SEMANTIC_DUPLICATE_DETERMINISTIC_WINNER",
+  "trust_policy": {
+    "required_quality_status": [
+      "PASS",
+      "LIMITED"
+    ],
+    "actual_evidence_epistemic_class": "OBSERVED",
+    "reject_explicit_formal_eligible_false": true,
+    "reject_explicit_is_simulated_true": true,
+    "reject_debug_evidence_level": true,
+    "reject_debug_or_simulated_source_lane": true,
+    "missing_quality_defaults_to_eligible": false
+  },
+  "boundary_fields": [
+    "role_time event field",
+    "role_time.ingested_at",
+    "available_to_runtime_at"
+  ],
+  "outside_window_projection": "ADAPTER_DIAGNOSTICS_ONLY_BECAUSE_S1_PORT_REASON_ENUM_IS_FROZEN",
+  "future_evidence_leakage_allowed": false,
+  "database_write_allowed": false,
+  "scheduler_loop_allowed": false,
+  "canonical_write_allowed": false,
+  "public_http_writer_allowed": false,
+  "production_wiring_allowed": false
+}

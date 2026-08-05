@@ -1,0 +1,18 @@
+{
+  "schema_version": "geox_mcft_cap09_s2_predecessor_attestation_consumption_v1",
+  "consumption_id": "GEOX-MCFT-CAP-09-S2-PREDECESSOR-ATTESTATION-CONSUMPTION-V1",
+  "subject_sha": "843ed078d6d384e43e2c6bd2568d789dcd508934",
+  "exact_sha_r2_run_id": 31007579256,
+  "artifact_id": 8930987741,
+  "semantic_artifact_digest": "sha256:0f67da5732f43a427d2518e320a617f3ad3872c6c34065060e432d92128404ef",
+  "retention_level": "R2",
+  "minimum_retention_days": 730,
+  "required_effective_authority": "DATABASE_EVIDENCE_INGRESS_AND_BOUNDARY_FREEZE_ONLY",
+  "s2_registry_registration_merge_sha": "508da08b2c5855e6391bc87e0d56042fc9232a97",
+  "consumed": true,
+  "does_not_authorize_scheduler": true,
+  "does_not_authorize_canonical_write": true,
+  "does_not_authorize_live_gateway": true,
+  "does_not_authorize_model_activation": true,
+  "does_not_authorize_controlled_action": true
+}

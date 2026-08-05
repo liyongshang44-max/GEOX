@@ -1,0 +1,116 @@
+name: mcft-cap-09-s2-database-evidence-ingress
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-s2-database-evidence-ingress.yml'
+      - 'apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CONFIG-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CANDIDATE-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CANDIDATE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-HARD-ACCEPTANCE-EVIDENCE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-s2-database-evidence-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  s2-database-evidence-ingress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox_mcft_cap09_s2_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox_mcft_cap09_s2_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap09_s2_acceptance
+      MCFT_CAP_09_S2_DESTRUCTIVE_ACCEPTANCE: '1'
+    steps:
+      - name: Checkout exact Candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Download S1 exact-SHA R2 authority
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 31007579256
+          artifact-ids: 8930987741
+          path: acceptance-input/cap09-s1-effective
+          repository: liyongshang44-max/GEOX
+          github-token: ${{ github.token }}
+      - name: Validate S2 Candidate governance
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_CAP09_S1_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s1-effective
+          MCFT_EVENT_NAME: ${{ github.event_name }}
+          MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs
+      - name: Run real PostgreSQL Database Evidence acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.ts
+      - name: Typecheck server Runtime surface
+        run: pnpm --filter @geox/server typecheck
+      - name: Verify structured S2 result
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS_RESULT.json', 'utf8'));
+          const requiredTrue = [
+            'governance_proven',
+            'database_integration_proven',
+            'real_postgresql_facts_path',
+            'read_only_transaction_proven',
+            'established_replay_envelope_bound',
+            'conflicting_duplicate_rejected',
+            'exact_semantic_duplicate_deterministic',
+            'interval_coverage_proven',
+            'future_evidence_leakage_blocked',
+            'repeated_freeze_deterministic',
+          ];
+          if (result.status !== 'PASS') throw new Error(`S2_NOT_PASS:${result.error || 'UNKNOWN'}`);
+          if (result.exact_new_candidate_signal_count !== 1) throw new Error('S2_CANDIDATE_SIGNAL_INVALID');
+          for (const key of requiredTrue) if (result[key] !== true) throw new Error(`S2_REQUIRED_PROOF_MISSING:${key}`);
+          if (result.database_write_performed || result.scheduler_loop_executed || result.canonical_write_performed) {
+            throw new Error('S2_WRITE_OR_SCHEDULER_BOUNDARY_INVALID');
+          }
+          if (result.runtime_source_delta !== 1 || result.migration_delta !== 0) throw new Error('S2_DELTA_INVALID');
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-s2-database-evidence-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
