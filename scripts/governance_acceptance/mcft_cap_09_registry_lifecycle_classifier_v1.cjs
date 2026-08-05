@@ -5,16 +5,20 @@ const cp=require('node:child_process');
 const lane=process.env.MCFT_REGISTRY_LANE;
 const base=process.env.MCFT_BASE_SHA;
 if(!base) throw new Error('MCFT_BASE_SHA_REQUIRED');
-if(!['trusted-registry-bootstrap','s1-registry-registration'].includes(lane)) throw new Error('MCFT_REGISTRY_LANE_INVALID');
+if(!['trusted-registry-bootstrap','s1-registry-registration','s2-registry-registration'].includes(lane)) throw new Error('MCFT_REGISTRY_LANE_INVALID');
 const run=(args)=>cp.execFileSync('git',args,{encoding:'utf8'}).trim();
 const files=run(['diff','--name-only',`${base}...HEAD`]).split(/\r?\n/).filter(Boolean).sort();
 const same=(a,b)=>JSON.stringify([...a].sort())===JSON.stringify([...b].sort());
-const repair=[
+const legacyS2CrossRepair=[
 '.github/workflows/mcft-cap-09-s1-registry-registration.yml',
 '.github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs',
 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'];
+const s2RegistrationLifecycleRepair=[
+'.github/workflows/mcft-cap-09-s2-registry-registration.yml',
+'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
+'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs'];
 const s2Registration=[
 '.github/workflows/mcft-cap-09-s2-registry-registration.yml',
 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
@@ -67,13 +71,15 @@ const bootstrap=[
 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOOTSTRAP-V1.json',
 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOUNDARY-V1.json',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs'];
-const isS2Candidate=files.includes('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DELIVERY-STATUS-V1.json') &&
+const isS2Candidate=files.length===10 &&
+files.includes('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DELIVERY-STATUS-V1.json') &&
 files.includes('.github/workflows/mcft-cap-09-s2-database-evidence-ingress.yml') &&
+files.includes('apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.ts') &&
 files.includes('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs') &&
 !files.includes('docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json') &&
-files.some((p)=>p.includes('GEOX-MCFT-CAP-09-S2-')&&p.endsWith('CANDIDATE-V1.json'));
+files.some((p)=>p.endsWith('GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CANDIDATE-V1.json'));
 let mode='unsupported';
-if(same(files,repair)) mode='s2-cross-lifecycle-repair';
+if(same(files,legacyS2CrossRepair)||same(files,s2RegistrationLifecycleRepair)) mode='s2-cross-lifecycle-repair';
 else if(same(files,s2Registration)) mode='s2-registry-registration';
 else if(isS2Candidate) mode='s2-candidate-signal';
 else if(same(files,s1Cross)) mode='s1-cross-lifecycle-repair';
