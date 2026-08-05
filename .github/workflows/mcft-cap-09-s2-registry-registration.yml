@@ -78,3 +78,67 @@ jobs:
             acceptance-output/MCFT_CAP_09_S2_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json
           if-no-files-found: error
           retention-days: 90
+
+  temporary-s3-registry-materializer:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Materialize S3 Registry without predecessor drift
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const source = 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json';
+          const registry = JSON.parse(fs.readFileSync(source, 'utf8'));
+          const before = structuredClone(registry);
+          if (registry.authority_set_revision !== '1.9') throw new Error('BASE_REVISION');
+          if (registry.authority_set_change_id !== 'MCFT-CAP-09.S2-TRANSITION-REGISTRATION') throw new Error('BASE_CHANGE');
+          const cap09 = registry.capabilities.find((entry) => entry.capability_line === 'MCFT-CAP-09');
+          if (!cap09) throw new Error('CAP09_MISSING');
+          const s3Status = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-DELIVERY-STATUS-V1.json';
+          const s3Rule = {
+            status_file: s3Status,
+            field_path: 's3_candidate_implemented',
+            allowed_candidate_values: [true],
+            focused_workflow: 'mcft-cap-09-s3-persistent-sequential-scheduler',
+            standard_workflow: 'ci',
+            predecessor_effective_evidence_required: true,
+          };
+          if (cap09.authoritative_candidate_status_paths.includes(s3Status)) throw new Error('S3_ALREADY_REGISTERED');
+          cap09.authoritative_candidate_status_paths.push(s3Status);
+          cap09.candidate_transition_fields.push(s3Rule);
+          cap09.deferred_status_paths = cap09.deferred_status_paths.filter((value) => value !== s3Status);
+          registry.authority_set_revision = '1.10';
+          registry.authority_set_change_id = 'MCFT-CAP-09.S3-TRANSITION-REGISTRATION';
+          for (const id of ['MCFT-CAP-06', 'MCFT-CAP-07', 'MCFT-CAP-08']) {
+            if (JSON.stringify(before.capabilities.find((entry) => entry.capability_line === id)) !== JSON.stringify(registry.capabilities.find((entry) => entry.capability_line === id))) throw new Error(`PREDECESSOR_DRIFT:${id}`);
+          }
+          if (cap09.authoritative_candidate_status_paths.length !== 5) throw new Error('STATUS_PATH_COUNT');
+          if (cap09.candidate_transition_fields.length !== 4) throw new Error('TRANSITION_COUNT');
+          if (cap09.deferred_status_paths.length !== 3) throw new Error('DEFERRED_COUNT');
+          const output = JSON.stringify(registry) + '\n';
+          fs.mkdirSync('materialized', { recursive: true });
+          fs.writeFileSync('materialized/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json', output);
+          fs.writeFileSync('materialized/metadata.json', JSON.stringify({
+            source_sha256: crypto.createHash('sha256').update(fs.readFileSync(source)).digest('hex'),
+            output_sha256: crypto.createHash('sha256').update(output).digest('hex'),
+            source_revision: before.authority_set_revision,
+            output_revision: registry.authority_set_revision,
+            predecessor_entries_unchanged: true,
+          }, null, 2) + '\n');
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: temporary-s3-registry-materialized-${{ github.event.pull_request.head.sha }}
+          path: materialized
+          if-no-files-found: error
+          retention-days: 1
