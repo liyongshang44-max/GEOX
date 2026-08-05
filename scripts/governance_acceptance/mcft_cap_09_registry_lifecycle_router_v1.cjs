@@ -5,9 +5,11 @@ const lane=process.env.MCFT_REGISTRY_LANE;
 const mode=process.env.MCFT_REGISTRY_MODE;
 const routes={
 's2-cross-lifecycle-repair':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs'],
+'s3-registry-registration':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s3-registration-route-only'],
 's2-registry-registration':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_REGISTRATION.cjs'],
 's2-candidate-signal':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs',lane==='trusted-registry-bootstrap'?'--trusted-lifecycle':'--registration-lifecycle'],
 's2-postmerge-semantic-correction':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs','--postmerge-semantic-correction'],
+'s2-exact-sha-attestation':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--exact-sha-route-only'],
 's1-cross-lifecycle-repair':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_CANDIDATE_CROSS_LIFECYCLE_REPAIR.cjs'],
 's1-registry-registration':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_REGISTRY_REGISTRATION.cjs'],
 's1-candidate-signal':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_ADAPTER_CONTRACTS.cjs',lane==='trusted-registry-bootstrap'?'--trusted-lifecycle':'--registration-lifecycle'],
