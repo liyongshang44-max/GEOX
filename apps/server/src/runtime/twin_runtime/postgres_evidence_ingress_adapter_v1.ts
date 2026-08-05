@@ -5,7 +5,9 @@
 
 import type { Pool, PoolClient } from "pg";
 
+import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
 import type {
+  CanonicalReplayEvidenceRecordV1,
   EvidenceIngressPortV1,
   FrozenShadowOnlineEvidenceV1,
   ShadowOnlineBoundaryV1,
@@ -20,10 +22,12 @@ export const DATABASE_EVIDENCE_INGRESS_CONFIG_V1 = {
   source_table: "facts",
   repository_envelope: "FACTS_TYPE_PLUS_CANONICAL_REPLAY_PAYLOAD_V1",
   read_only_transaction: true,
-  allowed_fact_types: [
+  actual_observation_types: [
     "soil_moisture_observation_v1",
     "observed_rainfall_v1",
     "historical_et0_estimate_v1",
+  ],
+  future_forcing_types: [
     "future_weather_assumption_v1",
     "future_et0_assumption_v1",
   ],
@@ -35,8 +39,9 @@ export const DATABASE_EVIDENCE_INGRESS_CONFIG_V1 = {
     future_et0_assumption_v1: "issued_at",
   },
   window_rule: "OPEN_START_CLOSED_END_PT1H_V1",
-  lookback_seconds: 3600,
-  forward_inspection_seconds: 3600,
+  semantic_lookback_seconds: 3600,
+  query_inspection_lookback_seconds: 7200,
+  query_forward_inspection_seconds: 3600,
   stale_after_seconds: 3600,
   expected_observation_interval_seconds: 1800,
   max_candidate_records: 1000,
@@ -44,6 +49,11 @@ export const DATABASE_EVIDENCE_INGRESS_CONFIG_V1 = {
   boundary_fields: ["role_event_time", "ingested_at", "available_to_runtime_at"],
   future_forcing_known_at_boundary_allowed: true,
   future_evidence_leakage_allowed: false,
+  duplicate_identity_policy:
+    "TYPE_ORIGIN_SOURCE_ROLE_EVENT_TIME_PLUS_CANONICAL_PAYLOAD_V1",
+  coverage_policy: "ACTUAL_OBSERVATION_INTERVAL_BUCKETS_ONLY_V1",
+  freshness_policy: "ACTUAL_OBSERVATIONS_ONLY_V1",
+  explicit_trust_fail_closed: true,
   database_write_allowed: false,
   scheduler_loop_allowed: false,
   canonical_write_allowed: false,
@@ -56,6 +66,10 @@ export type FrozenDatabaseShadowOnlineEvidenceV1 = FrozenShadowOnlineEvidenceV1 
   window_rule: "OPEN_START_CLOSED_END_PT1H_V1";
   outside_window_evidence_refs: readonly string[];
   out_of_order_evidence_refs: readonly string[];
+  interval_bucket_count: number;
+  covered_interval_bucket_count: number;
+  actual_observation_count: number;
+  eligible_future_forcing_count: number;
   candidate_limit_reached: false;
 };
 
@@ -70,11 +84,18 @@ type ReadOnlyClientV1 = Pick<PoolClient, "query" | "release">;
 
 type NormalizedEvidenceV1 = {
   fact_id: string;
+  record: CanonicalReplayEvidenceRecordV1;
   candidate: ShadowOnlineEvidenceCandidateV1;
   scope: TwinScopeKeyV1;
+  record_type: string;
+  origin_source_id: string;
   event_time_ms: number;
   ingested_at_ms: number;
   available_at_ms: number;
+  canonical_payload_hash: string;
+  semantic_identity: string;
+  is_actual_observation: boolean;
+  is_future_forcing: boolean;
 };
 
 function object(value: unknown): Record<string, unknown> {
@@ -113,17 +134,40 @@ function sameScope(left: TwinScopeKeyV1, right: TwinScopeKeyV1): boolean {
   return (Object.keys(right) as (keyof TwinScopeKeyV1)[]).every((key) => left[key] === right[key]);
 }
 
+function explicitTrustFailure(record: CanonicalReplayEvidenceRecordV1): boolean {
+  const direct = record as CanonicalReplayEvidenceRecordV1 & {
+    formal_eligible?: unknown;
+    is_simulated?: unknown;
+    evidence_level?: unknown;
+    source_lane?: unknown;
+  };
+  const surfaces: Record<string, unknown>[] = [
+    direct as unknown as Record<string, unknown>,
+    object(record.source_payload),
+    object(record.canonical_payload),
+  ];
+  return surfaces.some((surface) => {
+    const evidenceLevel = text(surface.evidence_level).toUpperCase();
+    const sourceLane = text(surface.source_lane).toUpperCase();
+    return surface.formal_eligible === false
+      || surface.is_simulated === true
+      || evidenceLevel === "DEBUG"
+      || sourceLane === "DEBUG_ONLY"
+      || sourceLane === "SIMULATED_DEV_ONLY";
+  });
+}
+
 function normalizeRow(
   row: EvidenceFactRowV1,
   config: DatabaseEvidenceIngressConfigV1,
 ): NormalizedEvidenceV1 {
-  const record = typeof row.record_json === "string"
+  const envelope = typeof row.record_json === "string"
     ? object(JSON.parse(row.record_json))
     : object(row.record_json);
-  const payload = object(record.payload);
+  const payload = object(envelope.payload);
   const roleTime = object(payload.role_time);
   const quality = object(payload.quality);
-  const wrapperType = text(record.type);
+  const wrapperType = text(envelope.type);
   const payloadType = text(payload.record_type);
   if (!wrapperType || wrapperType !== payloadType) {
     throw new Error(`EVIDENCE_WRAPPER_RECORD_TYPE_MISMATCH:${row.fact_id}`);
@@ -141,11 +185,21 @@ function normalizeRow(
   );
   const evidenceRef = text(payload.source_record_id);
   const evidenceHash = text(payload.source_record_hash);
+  const originSourceId = text(payload.origin_source_id);
+  const bindingId = text(payload.binding_id);
   if (!evidenceRef) throw new Error(`EVIDENCE_SOURCE_RECORD_ID_REQUIRED:${row.fact_id}`);
   if (!evidenceHash) throw new Error(`EVIDENCE_SOURCE_RECORD_HASH_REQUIRED:${row.fact_id}`);
+  if (!originSourceId) throw new Error(`EVIDENCE_ORIGIN_SOURCE_ID_REQUIRED:${row.fact_id}`);
+  if (!bindingId) throw new Error(`EVIDENCE_BINDING_ID_REQUIRED:${row.fact_id}`);
 
+  const isActualObservation = (config.actual_observation_types as readonly string[])
+    .includes(wrapperType);
+  const isFutureForcing = (config.future_forcing_types as readonly string[])
+    .includes(wrapperType);
+  const canonicalPayloadHash = semanticHashV1(payload.canonical_payload);
   return {
     fact_id: row.fact_id,
+    record: payload as unknown as CanonicalReplayEvidenceRecordV1,
     candidate: {
       evidence_ref: evidenceRef,
       evidence_hash: evidenceHash,
@@ -154,12 +208,18 @@ function normalizeRow(
       observed_at: eventTime,
       ingested_at: ingestedAt,
       available_to_runtime_at: availableAt,
-      quality_status: (text(quality.status) || "UNKNOWN").toUpperCase(),
+      quality_status: text(quality.status).toUpperCase() || "UNKNOWN",
     },
     scope: scopeFromPayload(payload),
+    record_type: wrapperType,
+    origin_source_id: originSourceId,
     event_time_ms: Date.parse(eventTime),
     ingested_at_ms: Date.parse(ingestedAt),
     available_at_ms: Date.parse(availableAt),
+    canonical_payload_hash: canonicalPayloadHash,
+    semantic_identity: `${wrapperType}|${originSourceId}|${eventTime}`,
+    is_actual_observation: isActualObservation,
+    is_future_forcing: isFutureForcing,
   };
 }
 
@@ -173,19 +233,56 @@ function exclusion(
 function compareCandidate(a: ShadowOnlineEvidenceCandidateV1, b: ShadowOnlineEvidenceCandidateV1): number {
   return a.observed_at.localeCompare(b.observed_at)
     || a.ingested_at.localeCompare(b.ingested_at)
+    || a.evidence_kind.localeCompare(b.evidence_kind)
     || a.evidence_ref.localeCompare(b.evidence_ref)
     || a.evidence_hash.localeCompare(b.evidence_hash);
 }
 
-function compareNormalizedByIngestion(a: NormalizedEvidenceV1, b: NormalizedEvidenceV1): number {
+function compareNormalizedDeterministically(a: NormalizedEvidenceV1, b: NormalizedEvidenceV1): number {
   return a.ingested_at_ms - b.ingested_at_ms
     || a.available_at_ms - b.available_at_ms
+    || a.candidate.evidence_ref.localeCompare(b.candidate.evidence_ref)
     || a.fact_id.localeCompare(b.fact_id);
 }
 
-function decimalRatio(numerator: number, denominator: number): string {
-  if (denominator <= 0) return "0.000000";
-  return Math.min(1, numerator / denominator).toFixed(6);
+function trustEligible(
+  item: NormalizedEvidenceV1,
+  config: DatabaseEvidenceIngressConfigV1,
+): boolean {
+  if (!(config.eligible_quality_statuses as readonly string[])
+    .includes(item.candidate.quality_status)) return false;
+  if (explicitTrustFailure(item.record)) return false;
+  const epistemicClass = text(item.record.epistemic_class).toUpperCase();
+  if (item.is_actual_observation && epistemicClass !== "OBSERVED") return false;
+  if (item.is_future_forcing && !epistemicClass.includes("FUTURE")) return false;
+  return true;
+}
+
+function intervalBucketCoverage(input: {
+  eventTimes: readonly number[];
+  windowStartMs: number;
+  semanticLookbackSeconds: number;
+  expectedIntervalSeconds: number;
+}): { ratio: string; expected: number; covered: number } {
+  const expected = Math.max(
+    1,
+    Math.ceil(input.semanticLookbackSeconds / input.expectedIntervalSeconds),
+  );
+  const bucketMs = input.expectedIntervalSeconds * 1000;
+  const covered = new Set<number>();
+  for (const eventTime of input.eventTimes) {
+    if (eventTime <= input.windowStartMs) continue;
+    const bucket = Math.min(
+      expected - 1,
+      Math.floor((eventTime - input.windowStartMs - 1) / bucketMs),
+    );
+    if (bucket >= 0) covered.add(bucket);
+  }
+  return {
+    ratio: Math.min(1, covered.size / expected).toFixed(6),
+    expected,
+    covered: covered.size,
+  };
 }
 
 export class PostgresEvidenceIngressAdapterV1 implements EvidenceIngressPortV1 {
@@ -202,10 +299,12 @@ export class PostgresEvidenceIngressAdapterV1 implements EvidenceIngressPortV1 {
     if (input.boundary.interval_seconds !== 3600) throw new Error("SHADOW_ONLINE_INTERVAL_INVALID");
 
     const boundaryMs = boundaryTime.getTime();
-    const windowStartMs = boundaryMs - this.config.lookback_seconds * 1000;
-    const queryStart = new Date(windowStartMs).toISOString();
+    const windowStartMs = boundaryMs - this.config.semantic_lookback_seconds * 1000;
+    const queryStart = new Date(
+      boundaryMs - this.config.query_inspection_lookback_seconds * 1000,
+    ).toISOString();
     const queryEnd = new Date(
-      boundaryMs + this.config.forward_inspection_seconds * 1000,
+      boundaryMs + this.config.query_forward_inspection_seconds * 1000,
     ).toISOString();
     const scope = input.boundary.scope;
     const client = await this.pool.connect() as ReadOnlyClientV1;
@@ -234,7 +333,7 @@ export class PostgresEvidenceIngressAdapterV1 implements EvidenceIngressPortV1 {
           scope.field_id,
           scope.season_id,
           scope.zone_id,
-          [...this.config.allowed_fact_types],
+          [...this.config.actual_observation_types, ...this.config.future_forcing_types],
           queryStart,
           queryEnd,
           this.config.max_candidate_records + 1,
@@ -257,12 +356,11 @@ export class PostgresEvidenceIngressAdapterV1 implements EvidenceIngressPortV1 {
       throw new Error("EVIDENCE_CANDIDATE_LIMIT_REACHED");
     }
 
-    const normalized = rows.map((row) => normalizeRow(row, this.config));
     const eligible: NormalizedEvidenceV1[] = [];
     const excluded: ShadowOnlineEvidenceExclusionV1[] = [];
     const outsideWindow = new Set<string>();
 
-    for (const item of normalized) {
+    for (const item of rows.map((row) => normalizeRow(row, this.config))) {
       let reason: ShadowOnlineEvidenceExclusionReasonV1 | null = null;
       if (!sameScope(item.scope, scope)) reason = "SCOPE_MISMATCH";
       else if (item.event_time_ms > boundaryMs) reason = "OBSERVED_AFTER_BOUNDARY";
@@ -271,20 +369,19 @@ export class PostgresEvidenceIngressAdapterV1 implements EvidenceIngressPortV1 {
         continue;
       } else if (item.ingested_at_ms > boundaryMs) reason = "INGESTED_AFTER_BOUNDARY";
       else if (item.available_at_ms > boundaryMs) reason = "AVAILABLE_AFTER_BOUNDARY";
-      else if (!(this.config.eligible_quality_statuses as readonly string[]).includes(
-        item.candidate.quality_status,
-      )) reason = "QUALITY_INELIGIBLE";
+      else if (!trustEligible(item, this.config)) reason = "QUALITY_INELIGIBLE";
 
       if (reason) excluded.push(exclusion(item, reason));
       else eligible.push(item);
     }
 
-    eligible.sort(compareNormalizedByIngestion);
-    const selectedByRef = new Map<string, NormalizedEvidenceV1>();
+    eligible.sort(compareNormalizedDeterministically);
+
+    const uniqueByRef = new Map<string, NormalizedEvidenceV1>();
     for (const item of eligible) {
-      const previous = selectedByRef.get(item.candidate.evidence_ref);
+      const previous = uniqueByRef.get(item.candidate.evidence_ref);
       if (!previous) {
-        selectedByRef.set(item.candidate.evidence_ref, item);
+        uniqueByRef.set(item.candidate.evidence_ref, item);
         continue;
       }
       if (previous.candidate.evidence_hash !== item.candidate.evidence_hash) {
@@ -293,10 +390,29 @@ export class PostgresEvidenceIngressAdapterV1 implements EvidenceIngressPortV1 {
       excluded.push(exclusion(item, "DUPLICATE_SUPERSEDED"));
     }
 
-    const selectedNormalized = [...selectedByRef.values()];
+    const semanticGroups = new Map<string, NormalizedEvidenceV1[]>();
+    for (const item of uniqueByRef.values()) {
+      const group = semanticGroups.get(item.semantic_identity) ?? [];
+      group.push(item);
+      semanticGroups.set(item.semantic_identity, group);
+    }
+
+    const selectedNormalized: NormalizedEvidenceV1[] = [];
+    for (const [identity, group] of semanticGroups) {
+      const canonicalPayloads = new Set(group.map((item) => item.canonical_payload_hash));
+      if (canonicalPayloads.size > 1) {
+        throw new Error(`CONFLICTING_DUPLICATE_OBSERVATION:${identity}`);
+      }
+      group.sort(compareNormalizedDeterministically);
+      selectedNormalized.push(group[0]);
+      for (const duplicate of group.slice(1)) {
+        excluded.push(exclusion(duplicate, "DUPLICATE_SUPERSEDED"));
+      }
+    }
+
     const outOfOrder = new Set<string>();
     let greatestEventMs = Number.NEGATIVE_INFINITY;
-    for (const item of [...selectedNormalized].sort(compareNormalizedByIngestion)) {
+    for (const item of [...selectedNormalized].sort(compareNormalizedDeterministically)) {
       if (item.event_time_ms < greatestEventMs) outOfOrder.add(item.candidate.evidence_ref);
       greatestEventMs = Math.max(greatestEventMs, item.event_time_ms);
     }
@@ -309,9 +425,21 @@ export class PostgresEvidenceIngressAdapterV1 implements EvidenceIngressPortV1 {
       throw new Error("FUTURE_EVIDENCE_LEAKAGE_DETECTED");
     }
 
-    const observed = [...new Set(selected.map((item) => Date.parse(item.observed_at)))].sort((a, b) => a - b);
-    const gapPoints = [windowStartMs, ...observed, boundaryMs];
-    let maximumGapSeconds: number | null = selected.length > 0 ? 0 : null;
+    const actualObservationTimes = [...new Set(
+      selectedNormalized
+        .filter((item) => item.is_actual_observation)
+        .map((item) => item.event_time_ms),
+    )].sort((a, b) => a - b);
+    const coverage = intervalBucketCoverage({
+      eventTimes: actualObservationTimes,
+      windowStartMs,
+      semanticLookbackSeconds: this.config.semantic_lookback_seconds,
+      expectedIntervalSeconds: this.config.expected_observation_interval_seconds,
+    });
+    const gapPoints = actualObservationTimes.length > 0
+      ? [windowStartMs, ...actualObservationTimes, boundaryMs]
+      : [];
+    let maximumGapSeconds: number | null = actualObservationTimes.length > 0 ? 0 : null;
     if (maximumGapSeconds !== null) {
       for (let index = 1; index < gapPoints.length; index += 1) {
         maximumGapSeconds = Math.max(
@@ -320,22 +448,20 @@ export class PostgresEvidenceIngressAdapterV1 implements EvidenceIngressPortV1 {
         );
       }
     }
-    const freshestObservedAt = selected.length > 0 ? selected[selected.length - 1].observed_at : null;
+    const freshestObservedAt = actualObservationTimes.length > 0
+      ? new Date(actualObservationTimes[actualObservationTimes.length - 1]).toISOString()
+      : null;
     const freshnessStatus = freshestObservedAt === null
       ? "MISSING"
       : boundaryMs - Date.parse(freshestObservedAt) > this.config.stale_after_seconds * 1000
         ? "STALE"
         : "FRESH";
-    const expectedObservations = Math.max(
-      1,
-      Math.floor(this.config.lookback_seconds / this.config.expected_observation_interval_seconds),
-    );
 
     return {
-      boundary: input.boundary,
+      boundary: structuredClone(input.boundary),
       selected,
       excluded,
-      coverage_ratio_decimal: decimalRatio(observed.length, expectedObservations),
+      coverage_ratio_decimal: coverage.ratio,
       maximum_gap_seconds: maximumGapSeconds,
       freshest_observed_at: freshestObservedAt,
       freshness_status: freshnessStatus,
@@ -343,6 +469,10 @@ export class PostgresEvidenceIngressAdapterV1 implements EvidenceIngressPortV1 {
       window_rule: "OPEN_START_CLOSED_END_PT1H_V1",
       outside_window_evidence_refs: [...outsideWindow].sort(),
       out_of_order_evidence_refs: [...outOfOrder].sort(),
+      interval_bucket_count: coverage.expected,
+      covered_interval_bucket_count: coverage.covered,
+      actual_observation_count: selectedNormalized.filter((item) => item.is_actual_observation).length,
+      eligible_future_forcing_count: selectedNormalized.filter((item) => item.is_future_forcing).length,
       candidate_limit_reached: false,
     };
   }
