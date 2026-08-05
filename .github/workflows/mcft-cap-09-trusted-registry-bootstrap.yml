@@ -96,7 +96,7 @@ jobs:
           repository: liyongshang44-max/GEOX
           github-token: ${{ github.token }}
       - name: Download CAP-09 S1 exact-SHA R2 authority
-        if: steps.lifecycle.outputs.mode == 's2-registry-registration' || steps.lifecycle.outputs.mode == 's2-candidate-signal'
+        if: steps.lifecycle.outputs.mode == 's2-registry-registration' || steps.lifecycle.outputs.mode == 's2-candidate-signal' || steps.lifecycle.outputs.mode == 's2-postmerge-semantic-correction'
         uses: actions/download-artifact@v4
         with:
           run-id: 31007579256
