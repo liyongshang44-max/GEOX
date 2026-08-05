@@ -15,7 +15,13 @@ on:
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-BOUNDARY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_AUTHORIZATION.cjs'
+      - '.github/workflows/mcft-cap-09-s1-registry-registration.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-REGISTRY-REGISTRATION-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-REGISTRY-REGISTRATION-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_REGISTRY_REGISTRATION.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_S1_LIFECYCLE_REPAIR.cjs'
   merge_group:
     types: [checks_requested]
 
@@ -51,12 +57,19 @@ jobs:
           files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD | sort)"
           repair_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml' \
-            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs' | sort)"
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_S1_LIFECYCLE_REPAIR.cjs' | sort)"
           correction_files="$(printf '%s\n' \
             'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json' \
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-V1.json' \
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-BOUNDARY-V1.json' | sort)"
-          # Delivery Status is a non-authority tracking projection; Current Authority.status is the sole Registry transition.
+          s1_registration_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s1-registry-registration.yml' \
+            'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-REGISTRY-REGISTRATION-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-REGISTRY-REGISTRATION-BOUNDARY-V1.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_REGISTRY_REGISTRATION.cjs' | sort)"
+          # Delivery Status is a non-authority tracking projection; Current Authority.status is the sole S0 Registry transition.
           candidate_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-s0-authorization.yml' \
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json' \
@@ -76,6 +89,8 @@ jobs:
             mode='workflow-repair'
           elif [[ "$files" == "$correction_files" ]]; then
             mode='registry-existing-paths-correction'
+          elif [[ "$files" == "$s1_registration_files" ]]; then
+            mode='s1-registry-registration'
           elif [[ "$files" == "$candidate_files" ]]; then
             mode='candidate-signal'
           elif [[ "$files" == "$bootstrap_files" ]]; then
@@ -104,10 +119,13 @@ jobs:
           set -euo pipefail
           case "$MCFT_CAP09_REGISTRY_MODE" in
             workflow-repair)
-              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs --workflow-repair
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_S1_LIFECYCLE_REPAIR.cjs
               ;;
             registry-existing-paths-correction)
               node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs --registry-existing-paths-correction
+              ;;
+            s1-registry-registration)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_REGISTRY_REGISTRATION.cjs
               ;;
             candidate-signal)
               node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs --candidate-signal
@@ -124,6 +142,8 @@ jobs:
         if: always()
         with:
           name: mcft-cap-09-trusted-registry-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          path: acceptance-output/MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP_RESULT.json
+          path: |
+            acceptance-output/MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP_RESULT.json
+            acceptance-output/MCFT_CAP_09_S1_REGISTRY_REGISTRATION_RESULT.json
           if-no-files-found: error
           retention-days: 90
