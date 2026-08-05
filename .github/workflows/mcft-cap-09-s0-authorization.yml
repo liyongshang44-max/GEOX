@@ -1,0 +1,91 @@
+name: mcft-cap-09-s0-authorization
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-s0-authorization.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_AUTHORIZATION.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-s0-authorization-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  resolve-applicability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      disposition: ${{ steps.resolve.outputs.disposition }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - id: resolve
+        name: Resolve trusted Registry-owned S0 transition
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          MCFT_EXPECTED_FOCUSED_WORKFLOW: mcft-cap-09-s0-authorization
+        run: |
+          DISPOSITION="$(node scripts/governance_acceptance/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1.cjs --resolve)"
+          echo "disposition=${DISPOSITION}" >> "${GITHUB_OUTPUT}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-s0-applicability-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_REGISTRY_FOCUSED_WORKFLOW_APPLICABILITY_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 30
+
+  not-applicable:
+    needs: resolve-applicability
+    if: needs.resolve-applicability.outputs.disposition == 'NOT_APPLICABLE'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "mcft-cap-09-s0-authorization NOT_APPLICABLE for this registered transition"
+
+  s0-authorization-candidate:
+    needs: resolve-applicability
+    if: needs.resolve-applicability.outputs.disposition == 'APPLICABLE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact Candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate CAP-09 S0 authorization Candidate
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          MCFT_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_AUTHORIZATION.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-s0-authorization-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_S0_AUTHORIZATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
