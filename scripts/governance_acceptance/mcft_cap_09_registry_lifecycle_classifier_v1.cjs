@@ -19,6 +19,9 @@ const s2RegistrationLifecycleRepair=[
 '.github/workflows/mcft-cap-09-s2-registry-registration.yml',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs'];
+const s2ExactShaAttestation=[
+'.github/workflows/mcft-cap-09-s2-exact-sha-attestation.yml',
+'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION_V1.cjs'];
 const s2Registration=[
 '.github/workflows/mcft-cap-09-s2-registry-registration.yml',
 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
@@ -86,6 +89,7 @@ if(isS2CandidateBoundary){
 let mode='unsupported';
 if(same(files,historicalS2CrossLifecycleRepair)||same(files,s2RegistrationLifecycleRepair)) mode='s2-cross-lifecycle-repair';
 else if(same(files,s2Registration)) mode='s2-registry-registration';
+else if(same(files,s2ExactShaAttestation)) mode='s2-exact-sha-attestation';
 else if(isS2CandidateBoundary&&baseS2CandidateImplemented===true) mode='s2-postmerge-semantic-correction';
 else if(isS2CandidateBoundary) mode='s2-candidate-signal';
 else if(same(files,s1Cross)) mode='s1-cross-lifecycle-repair';
