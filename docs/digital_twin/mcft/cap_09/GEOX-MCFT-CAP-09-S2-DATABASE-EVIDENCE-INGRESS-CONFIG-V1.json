@@ -1,0 +1,47 @@
+{
+  "schema_version": "geox_mcft_cap09_database_evidence_ingress_config_v1",
+  "config_id": "GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CONFIG-V1",
+  "source_table": "facts",
+  "read_only": true,
+  "allowed_fact_types": [
+    "telemetry_observation_v1",
+    "raw_telemetry_v1",
+    "weather_observation_v1",
+    "soil_observation_v1",
+    "field_observation_v1",
+    "remote_sensing_observation_v1"
+  ],
+  "lookback_seconds": 3600,
+  "forward_inspection_seconds": 3600,
+  "stale_after_seconds": 3600,
+  "expected_observation_interval_seconds": 1800,
+  "minimum_expected_observations": 2,
+  "max_candidate_records": 1000,
+  "quality_ineligible_statuses": [
+    "INVALID",
+    "REJECTED",
+    "QUARANTINED"
+  ],
+  "boundary_fields": [
+    "observed_at",
+    "ingested_at",
+    "available_to_runtime_at"
+  ],
+  "exclusion_reasons": [
+    "OBSERVED_AFTER_BOUNDARY",
+    "INGESTED_AFTER_BOUNDARY",
+    "AVAILABLE_AFTER_BOUNDARY",
+    "FUTURE_EVIDENCE",
+    "SCOPE_MISMATCH",
+    "QUALITY_INELIGIBLE",
+    "DUPLICATE_SUPERSEDED"
+  ],
+  "duplicate_policy": "LATEST_INGESTED_AT_THEN_EVIDENCE_REF_WINS",
+  "stable_order": "OBSERVED_AT_INGESTED_AT_EVIDENCE_REF_ASC",
+  "coverage_ratio_scale": 6,
+  "future_evidence_leakage_allowed": false,
+  "database_write_allowed": false,
+  "scheduler_loop_allowed": false,
+  "canonical_write_allowed": false,
+  "production_wiring_allowed": false
+}

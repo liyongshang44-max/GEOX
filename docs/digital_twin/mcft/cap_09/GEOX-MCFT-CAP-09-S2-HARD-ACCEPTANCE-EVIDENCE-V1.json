@@ -1,0 +1,65 @@
+{
+  "schema_version": "geox_mcft_cap09_s2_hard_acceptance_evidence_v1",
+  "evidence_id": "GEOX-MCFT-CAP-09-S2-HARD-ACCEPTANCE-EVIDENCE-V1",
+  "record_status": "CANDIDATE_EVIDENCE_NOT_EFFECTIVE",
+  "required_check_count": 12,
+  "required_checks": [
+    {
+      "id": "S2-HA-01",
+      "claim": "S1 exact-SHA/R2 authority consumed"
+    },
+    {
+      "id": "S2-HA-02",
+      "claim": "exact six-key scope bound in SQL and rechecked in memory"
+    },
+    {
+      "id": "S2-HA-03",
+      "claim": "facts SSOT is the only database source"
+    },
+    {
+      "id": "S2-HA-04",
+      "claim": "observed_at, ingested_at and available_to_runtime_at all gate eligibility"
+    },
+    {
+      "id": "S2-HA-05",
+      "claim": "future and post-boundary Evidence is excluded"
+    },
+    {
+      "id": "S2-HA-06",
+      "claim": "scope mismatch, ineligible quality and duplicate supersession are explicit"
+    },
+    {
+      "id": "S2-HA-07",
+      "claim": "duplicate winner is deterministic and latest-ingested"
+    },
+    {
+      "id": "S2-HA-08",
+      "claim": "coverage, maximum gap, freshest observation and freshness status are emitted"
+    },
+    {
+      "id": "S2-HA-09",
+      "claim": "repeated freeze over identical rows is deterministic"
+    },
+    {
+      "id": "S2-HA-10",
+      "claim": "SQL contains no write or DDL verb"
+    },
+    {
+      "id": "S2-HA-11",
+      "claim": "no scheduler loop, canonical write, public route or production wiring"
+    },
+    {
+      "id": "S2-HA-12",
+      "claim": "server typecheck and focused pure acceptance pass"
+    }
+  ],
+  "pure_acceptance_selected_count": 2,
+  "pure_acceptance_excluded_count": 7,
+  "future_evidence_leakage": false,
+  "database_write_performed": false,
+  "scheduler_loop_executed": false,
+  "canonical_write_performed": false,
+  "runtime_source_delta": 1,
+  "migration_delta": 0,
+  "external_effectiveness": false
+}
