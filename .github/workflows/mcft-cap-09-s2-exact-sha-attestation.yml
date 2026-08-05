@@ -1,0 +1,181 @@
+name: mcft-cap-09-s2-exact-sha-attestation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-s2-exact-sha-attestation.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION_V1.cjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-s2-exact-sha-attestation.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION_V1.cjs'
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  statuses: write
+
+concurrency:
+  group: mcft-cap09-s2-exact-sha-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+env:
+  MCFT_SEMANTIC_DIGEST_POLICY: CANONICAL_SORTED_KEYS_V1
+
+jobs:
+  control-plane-candidate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact control-plane head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate corrected S2 exact-SHA R2 control-plane Candidate
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION_V1.cjs --control-plane-candidate
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-s2-exact-sha-control-plane-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_S2_EXACT_SHA_CONTROL_PLANE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
+
+  exact-sha-r2-attestation:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MCFT_SUBJECT_SHA: 126257e1a08d116089f5f28bd733e6abfd92f290
+      MCFT_ROUTE_REPAIR_SHA: f01dc179d145a026f7dbdc99a62b1bfa2c065420
+    steps:
+      - name: Checkout protected-main S2 attestation control plane
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate protected-main control plane and exact corrected S2 subject ancestry
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+          git cat-file -e "${MCFT_SUBJECT_SHA}^{commit}"
+          git cat-file -e "${MCFT_ROUTE_REPAIR_SHA}^{commit}"
+          git merge-base --is-ancestor "${MCFT_SUBJECT_SHA}" "${MCFT_ROUTE_REPAIR_SHA}"
+          git merge-base --is-ancestor "${MCFT_ROUTE_REPAIR_SHA}" "${GITHUB_SHA}"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Derive exact merge-SHA corrected S2 authority artifact
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION_V1.cjs --attest
+      - name: Build deterministic corrected S2 R2 transport archive
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output/archive-input
+          cp acceptance-output/MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION.json acceptance-output/archive-input/canonical-artifact.json
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+            -cf acceptance-output/mcft-cap-09-s2-exact-sha-attestation.tar \
+            -C acceptance-output/archive-input canonical-artifact.json
+          gzip -n -f acceptance-output/mcft-cap-09-s2-exact-sha-attestation.tar
+      - name: Upload and read back corrected S2 R2 730-day immutable authority
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_ATTESTATION_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_ATTESTATION_S3_SECRET_ACCESS_KEY }}
+          GEOX_MCFT_ATTESTATION_S3_ENDPOINT: ${{ vars.GEOX_MCFT_ATTESTATION_S3_ENDPOINT }}
+          GEOX_MCFT_ATTESTATION_S3_BUCKET: ${{ vars.GEOX_MCFT_ATTESTATION_S3_BUCKET }}
+          GEOX_MCFT_ATTESTATION_S3_REGION: ${{ vars.GEOX_MCFT_ATTESTATION_S3_REGION }}
+          GEOX_MCFT_ATTESTATION_S3_FORCE_PATH_STYLE: ${{ vars.GEOX_MCFT_ATTESTATION_S3_FORCE_PATH_STYLE }}
+          MCFT_CANONICAL_ARTIFACT_PATH: acceptance-output/MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION.json
+          MCFT_ARTIFACT_ARCHIVE_PATH: acceptance-output/mcft-cap-09-s2-exact-sha-attestation.tar.gz
+          MCFT_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          MCFT_REPOSITORY_NAME: GEOX
+          MCFT_ARTIFACT_NAME: mcft-cap-09-s2-exact-sha-${{ env.MCFT_SUBJECT_SHA }}
+          MCFT_RETENTION_LEVEL: R2
+          MCFT_RETENTION_DAYS: '730'
+        run: node scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs --upload-readback
+      - name: Verify and normalize corrected S2 R2 retention locator
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const source = 'acceptance-output/MCFT_CAP_07_ATTESTATION_RETENTION_LOCATOR.json';
+          const target = 'acceptance-output/MCFT_CAP_09_S2_ATTESTATION_RETENTION_LOCATOR.json';
+          const locator = JSON.parse(fs.readFileSync(source, 'utf8'));
+          if (locator.retention_level !== 'R2') throw new Error('R2_LEVEL_REQUIRED');
+          if (locator.readback_verified !== true) throw new Error('R2_READBACK_REQUIRED');
+          if (locator.locked_version_delete_denied !== true) throw new Error('R2_LOCKED_DELETE_DENIAL_REQUIRED');
+          if (Date.parse(locator.retain_until) < Date.now() + 729 * 86400000) {
+            throw new Error('R2_730_DAY_RETENTION_NOT_ESTABLISHED');
+          }
+          fs.writeFileSync(target, JSON.stringify(locator, null, 2) + '\n');
+          NODE
+      - name: Upload transient GitHub convenience copy
+        id: artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-09-s2-exact-sha-${{ env.MCFT_SUBJECT_SHA }}
+          path: |
+            acceptance-output/MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION.json
+            acceptance-output/MCFT_CAP_09_S2_ATTESTATION_RETENTION_LOCATOR.json
+            acceptance-output/mcft-cap-09-s2-exact-sha-attestation.tar.gz
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish corrected S2 exact-SHA R2 authority status
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          MCFT_JOB_STATUS: ${{ job.status }}
+          MCFT_ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const fs = require('node:fs');
+            let attestation = null;
+            let locator = null;
+            try {
+              attestation = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION.json', 'utf8'));
+            } catch {}
+            try {
+              locator = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_ATTESTATION_RETENTION_LOCATOR.json', 'utf8'));
+            } catch {}
+            const artifactId = String(process.env.MCFT_ARTIFACT_ID || '');
+            const ok = process.env.MCFT_JOB_STATUS === 'success'
+              && attestation?.status === 'PASS'
+              && attestation?.subject_sha === process.env.MCFT_SUBJECT_SHA
+              && attestation?.correction_to_merge_tree_delta === 0
+              && attestation?.effective_authority?.s2_database_evidence_ingress_effective === true
+              && attestation?.effective_authority?.effective_next_slice === 'S3'
+              && attestation?.effective_authority?.s3_registry_registration_authorized === true
+              && attestation?.effective_authority?.implementation_authorized === false
+              && attestation?.effective_authority?.runtime_source_authorized === false
+              && locator?.retention_level === 'R2'
+              && locator?.readback_verified === true
+              && locator?.locked_version_delete_denied === true
+              && artifactId.length > 0;
+            const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+            await github.rest.repos.createCommitStatus({
+              owner,
+              repo,
+              sha: process.env.MCFT_SUBJECT_SHA,
+              state: ok ? 'success' : 'failure',
+              context: 'mcft-cap-09/s2-exact-sha-attestation',
+              description: (ok
+                ? `PASS S2 EFFECTIVE R2/730 artifact=${artifactId}`
+                : `FAIL S2 corrected exact-SHA run=${process.env.GITHUB_RUN_ID}`).slice(0, 140),
+              target_url: `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+            });
