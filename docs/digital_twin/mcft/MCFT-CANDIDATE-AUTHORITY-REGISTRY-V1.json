@@ -2,8 +2,8 @@
   "schema_version": "geox_mcft_candidate_authority_registry_v1",
   "registry_id": "MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1",
   "registry_revision": "1.1",
-  "authority_set_revision": "1.7",
-  "authority_set_change_id": "MCFT-CAP-09.S0-EXISTING-STATUS-PATHS-CORRECTION",
+  "authority_set_revision": "1.8",
+  "authority_set_change_id": "MCFT-CAP-09.S1-TRANSITION-REGISTRATION",
   "record_status": "EFFECTIVE_REPOSITORY_AUTHORITY",
   "policy_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json",
   "delivery_candidate_signal_contract_ref": "docs/digital_twin/mcft/MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1.json",
@@ -257,7 +257,8 @@
       "candidate_authority_scope": "S0_AUTHORIZATION_THROUGH_S6_FINAL_SHADOW_ONLINE_CLOSURE",
       "authoritative_candidate_status_paths": [
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json",
-        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json"
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json"
       ],
       "candidate_transition_fields": [
         {
@@ -267,6 +268,16 @@
             "AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE"
           ],
           "focused_workflow": "mcft-cap-09-s0-authorization",
+          "standard_workflow": "ci",
+          "predecessor_effective_evidence_required": true
+        },
+        {
+          "status_file": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json",
+          "field_path": "s1_candidate_implemented",
+          "allowed_candidate_values": [
+            true
+          ],
+          "focused_workflow": "mcft-cap-09-s1-adapter-contracts",
           "standard_workflow": "ci",
           "predecessor_effective_evidence_required": true
         }
@@ -285,7 +296,6 @@
       "controlled_action_authorized": false,
       "registration_mode": "APPEND_STATUS_PATH_WHEN_FILE_EXISTS_ON_PROTECTED_MAIN",
       "deferred_status_paths": [
-        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DELIVERY-STATUS-V1.json",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-DELIVERY-STATUS-V1.json",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-DELIVERY-STATUS-V1.json",
