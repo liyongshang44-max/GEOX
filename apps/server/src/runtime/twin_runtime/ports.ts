@@ -1,6 +1,6 @@
 // apps/server/src/runtime/twin_runtime/ports.ts
-// Purpose: define Runtime Config, Replay Evidence, A0 bootstrap persistence, versioned continuation persistence, next-tick handoff, authority snapshot, and projection rebuild ports without binding orchestration to SQL or files.
-// Boundary: interfaces only; no implementation, equations, Fastify, filesystem, environment, or wall-clock reads.
+// Purpose: define Runtime Config, Replay Evidence, A0 bootstrap persistence, versioned continuation persistence, next-tick handoff, authority snapshot, projection rebuild, and Shadow-online adapter ports without binding orchestration to SQL or files.
+// Boundary: interfaces only; no implementation, equations, Fastify, filesystem, environment, timers, process lifecycle, or wall-clock reads.
 
 import type { PreviousStorageVarianceBasisV1 } from "../../domain/soil_water/additive_process_uncertainty_budget_v1.js";
 import type { AssimilatedContinuationRecordSetV1 } from "../../domain/twin_runtime/assimilated_continuation_record_set_identity_v1.js";
@@ -238,4 +238,140 @@ export interface AssimilatedContinuationPersistencePortV2 {
 
 export interface A0ProjectionRebuildPortV1 {
   rebuildA0Projections(recordSetId: string): Promise<{ rebuilt_projection_count: 6 }>;
+}
+
+// MCFT-CAP-09.S1 freezes Shadow-online adapter interfaces only. These types do not
+// select Evidence, claim a slot, read a clock, persist a cursor, or run a scheduler.
+export type ShadowOnlineSlotIdV1 =
+  | "O00" | "O01" | "O02" | "O03" | "O04" | "O05"
+  | "O06" | "O07" | "O08" | "O09" | "O10" | "O11"
+  | "O12" | "O13" | "O14" | "O15" | "O16" | "O17"
+  | "O18" | "O19" | "O20" | "O21" | "O22" | "O23";
+
+export type ShadowOnlineBoundaryV1 = {
+  scope: TwinScopeKeyV1;
+  slot_id: ShadowOnlineSlotIdV1;
+  logical_time: string;
+  scheduler_wall_clock_observed_at: string;
+  interval_seconds: 3600;
+};
+
+export type ShadowOnlineEvidenceCandidateV1 = {
+  evidence_ref: string;
+  evidence_hash: string;
+  evidence_kind: string;
+  observed_at: string;
+  ingested_at: string;
+  available_to_runtime_at: string;
+  quality_status: string;
+};
+
+export type ShadowOnlineEvidenceExclusionReasonV1 =
+  | "OBSERVED_AFTER_BOUNDARY"
+  | "INGESTED_AFTER_BOUNDARY"
+  | "AVAILABLE_AFTER_BOUNDARY"
+  | "FUTURE_EVIDENCE"
+  | "SCOPE_MISMATCH"
+  | "QUALITY_INELIGIBLE"
+  | "DUPLICATE_SUPERSEDED";
+
+export type ShadowOnlineEvidenceExclusionV1 = ShadowOnlineEvidenceCandidateV1 & {
+  reason: ShadowOnlineEvidenceExclusionReasonV1;
+};
+
+export type FrozenShadowOnlineEvidenceV1 = {
+  boundary: ShadowOnlineBoundaryV1;
+  selected: readonly ShadowOnlineEvidenceCandidateV1[];
+  excluded: readonly ShadowOnlineEvidenceExclusionV1[];
+  coverage_ratio_decimal: string;
+  maximum_gap_seconds: number | null;
+  freshest_observed_at: string | null;
+  freshness_status: "FRESH" | "STALE" | "MISSING";
+  future_evidence_leakage: false;
+};
+
+export type ShadowOnlineSlotStateV1 =
+  | "PENDING"
+  | "CLAIMED"
+  | "RUNNING"
+  | "COMPLETED"
+  | "DEGRADED"
+  | "FAILED";
+
+export type ShadowOnlineSlotClaimV1 = {
+  boundary: ShadowOnlineBoundaryV1;
+  lease_owner: string;
+  fencing_token: bigint;
+  state: "CLAIMED";
+  idempotency_key: string;
+};
+
+export type ShadowOnlineTerminalSlotResultV1 = {
+  boundary: ShadowOnlineBoundaryV1;
+  state: "COMPLETED" | "DEGRADED" | "FAILED";
+  tick_ref: string | null;
+  health_ref: string;
+  terminal_at: string;
+};
+
+export type ExistingExecutionEvidenceV1 = {
+  evidence_ref: string;
+  evidence_hash: string;
+  executed_at: string;
+  trustworthy: boolean;
+  source_kind: string;
+};
+
+export type ShadowOnlineAvailabilitySnapshotV1 = {
+  scope: TwinScopeKeyV1;
+  observed_at: string;
+  checkpoint_ref: string | null;
+  durable_cursor_slot_id: ShadowOnlineSlotIdV1 | null;
+  oldest_missed_slot_id: ShadowOnlineSlotIdV1 | null;
+  scheduler_lag_seconds: number;
+  evidence_freshness_status: "FRESH" | "STALE" | "MISSING";
+  runtime_health_status: "HEALTHY" | "DEGRADED" | "UNAVAILABLE";
+};
+
+export interface ClockPortV1 {
+  resolveBoundary(input: {
+    scope: TwinScopeKeyV1;
+    slot_id: ShadowOnlineSlotIdV1;
+  }): Promise<ShadowOnlineBoundaryV1>;
+}
+
+export interface EvidenceIngressPortV1 {
+  freezeEligibleEvidence(input: {
+    boundary: ShadowOnlineBoundaryV1;
+  }): Promise<FrozenShadowOnlineEvidenceV1>;
+}
+
+export interface SchedulerPortV1 {
+  claimDueSlot(input: {
+    boundary: ShadowOnlineBoundaryV1;
+    lease_owner: string;
+    lease_duration_seconds: number;
+  }): Promise<ShadowOnlineSlotClaimV1>;
+  listMissedSlots(input: {
+    scope: TwinScopeKeyV1;
+    through_logical_time: string;
+  }): Promise<readonly ShadowOnlineBoundaryV1[]>;
+  recordTerminalResult(input: {
+    claim: ShadowOnlineSlotClaimV1;
+    result: ShadowOnlineTerminalSlotResultV1;
+  }): Promise<void>;
+}
+
+export interface ExecutionFeedbackPortV1 {
+  readExistingExecutionEvidence(input: {
+    scope: TwinScopeKeyV1;
+    boundary: ShadowOnlineBoundaryV1;
+  }): Promise<readonly ExistingExecutionEvidenceV1[]>;
+}
+
+export interface AvailabilityPortV1 {
+  inspectAvailability(input: {
+    scope: TwinScopeKeyV1;
+    boundary: ShadowOnlineBoundaryV1;
+  }): Promise<ShadowOnlineAvailabilitySnapshotV1>;
 }

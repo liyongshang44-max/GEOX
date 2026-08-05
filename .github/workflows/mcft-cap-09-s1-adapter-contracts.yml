@@ -1,0 +1,86 @@
+name: mcft-cap-09-s1-adapter-contracts
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-s1-adapter-contracts.yml'
+      - 'apps/server/src/runtime/twin_runtime/ports.ts'
+      - 'apps/server/src/runtime/twin_runtime/shadow_online_adapter_config_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-ADAPTER-CONTRACTS-CONFIG-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-ADAPTER-CONTRACTS-CANDIDATE-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-ADAPTER-CONTRACTS-CANDIDATE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-HARD-ACCEPTANCE-EVIDENCE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_ADAPTER_CONTRACTS.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_ADAPTER_CONTRACTS.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-s1-adapter-contracts-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  s1-adapter-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact Candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Download S0 exact-SHA R2 authority
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 30978738965
+          artifact-ids: 8919296741
+          path: acceptance-input/cap09-s0-effective
+          repository: liyongshang44-max/GEOX
+          github-token: ${{ github.token }}
+      - name: Validate S1 Candidate governance
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_CAP09_S0_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s0-effective
+          MCFT_EVENT_NAME: ${{ github.event_name }}
+          MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_ADAPTER_CONTRACTS.cjs
+      - name: Run pure adapter-contract acceptance
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_ADAPTER_CONTRACTS.ts
+      - name: Typecheck server contract surface
+        run: pnpm --filter @geox/server typecheck
+      - name: Verify structured S1 result
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S1_ADAPTER_CONTRACTS_RESULT.json', 'utf8'));
+          if (result.status !== 'PASS') throw new Error(`S1_NOT_PASS:${result.error || 'UNKNOWN'}`);
+          if (result.adapter_port_count !== 5 || result.slot_count !== 24) throw new Error('S1_CONTRACT_INVENTORY_INVALID');
+          if (result.exact_new_candidate_signal_count !== 1) throw new Error('S1_CANDIDATE_SIGNAL_INVALID');
+          if (result.database_access_performed || result.scheduler_loop_executed || result.canonical_write_performed) throw new Error('S1_PURE_CONTRACT_BOUNDARY_VIOLATION');
+          if (result.runtime_executable_delta !== 0 || result.migration_delta !== 0) throw new Error('S1_ZERO_EXECUTABLE_DELTA_INVALID');
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-s1-adapter-contracts-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_S1_ADAPTER_CONTRACTS_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
