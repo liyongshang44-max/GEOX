@@ -56,6 +56,7 @@ jobs:
             'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json' \
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-V1.json' \
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-EXISTING-PATHS-CORRECTION-BOUNDARY-V1.json' | sort)"
+          # Delivery Status is a non-authority tracking projection; Current Authority.status is the sole Registry transition.
           candidate_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-s0-authorization.yml' \
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json' \
