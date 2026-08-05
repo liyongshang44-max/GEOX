@@ -1,0 +1,103 @@
+{
+  "schema_version": "geox_mcft_cap09_s2_hard_acceptance_evidence_v1",
+  "evidence_id": "GEOX-MCFT-CAP-09-S2-HARD-ACCEPTANCE-EVIDENCE-V1",
+  "record_status": "S2_CANDIDATE_HARD_ACCEPTANCE_DECLARATION_NOT_EFFECTIVE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S2",
+  "required_check_count": 16,
+  "checks": [
+    {
+      "id": "HA-S2-01",
+      "claim": "S1 exact-SHA/R2 authority consumed",
+      "required": true
+    },
+    {
+      "id": "HA-S2-02",
+      "claim": "one exact six-key scope enforced in PostgreSQL JSONB predicates",
+      "required": true
+    },
+    {
+      "id": "HA-S2-03",
+      "claim": "established facts {type,payload canonical Replay Evidence} envelope consumed",
+      "required": true
+    },
+    {
+      "id": "HA-S2-04",
+      "claim": "real PostgreSQL 16 isolated database acceptance executed",
+      "required": true
+    },
+    {
+      "id": "HA-S2-05",
+      "claim": "type-aware role event time mapping preserved",
+      "required": true
+    },
+    {
+      "id": "HA-S2-06",
+      "claim": "OPEN_START_CLOSED_END_PT1H_V1 boundary preserved",
+      "required": true
+    },
+    {
+      "id": "HA-S2-07",
+      "claim": "future weather and ET0 issued and visible by boundary remain eligible",
+      "required": true
+    },
+    {
+      "id": "HA-S2-08",
+      "claim": "post-boundary event, ingest and availability excluded without leakage",
+      "required": true
+    },
+    {
+      "id": "HA-S2-09",
+      "claim": "outside-window and out-of-order Evidence classified append-forward",
+      "required": true
+    },
+    {
+      "id": "HA-S2-10",
+      "claim": "same-ref same-hash duplicate is idempotent; conflicting hash fails closed",
+      "required": true
+    },
+    {
+      "id": "HA-S2-11",
+      "claim": "coverage, freshness and maximum gap emitted deterministically",
+      "required": true
+    },
+    {
+      "id": "HA-S2-12",
+      "claim": "adapter transaction is BEGIN TRANSACTION READ ONLY",
+      "required": true
+    },
+    {
+      "id": "HA-S2-13",
+      "claim": "repeated freeze is byte-equivalent",
+      "required": true
+    },
+    {
+      "id": "HA-S2-14",
+      "claim": "zero database write, migration and ACL delta",
+      "required": true
+    },
+    {
+      "id": "HA-S2-15",
+      "claim": "zero scheduler, canonical write, route and production wiring",
+      "required": true
+    },
+    {
+      "id": "HA-S2-16",
+      "claim": "server Runtime surface typechecks",
+      "required": true
+    }
+  ],
+  "expected_postgresql_result": {
+    "selected_count": 6,
+    "excluded_count": 5,
+    "outside_window_count": 1,
+    "out_of_order_count": 1,
+    "eligible_future_forcing_count": 2
+  },
+  "future_evidence_leakage": false,
+  "database_write_performed": false,
+  "scheduler_loop_executed": false,
+  "canonical_write_performed": false,
+  "production_wiring_present": false,
+  "external_effectiveness": false
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "geox_mcft_cap09_s2_predecessor_attestation_consumption_v1",
+  "consumption_id": "GEOX-MCFT-CAP-09-S2-PREDECESSOR-ATTESTATION-CONSUMPTION-V1",
+  "record_status": "VERIFIED_PREDECESSOR_AUTHORITY_CONSUMPTION",
+  "capability_line_id": "MCFT-CAP-09",
+  "predecessor_slice_id": "MCFT-CAP-09.S1",
+  "subject_sha": "843ed078d6d384e43e2c6bd2568d789dcd508934",
+  "exact_sha_r2_run_id": 31007579256,
+  "artifact_id": 8930987741,
+  "semantic_artifact_digest": "sha256:0f67da5732f43a427d2518e320a617f3ad3872c6c34065060e432d92128404ef",
+  "retention_level": "R2",
+  "retention_days": 730,
+  "readback_verified": true,
+  "locked_version_delete_denied": true,
+  "s2_registry_registration_authorized": true,
+  "s2_candidate_declaration_requires_registry_registration": true,
+  "s2_authorized_scope": "DATABASE_EVIDENCE_INGRESS_AND_BOUNDARY_FREEZE_ONLY",
+  "implementation_authorized_by_predecessor_alone": false,
+  "s2_registry_registration_merge_sha": "508da08b2c5855e6391bc87e0d56042fc9232a97",
+  "s2_candidate_routing_repair_merge_sha": "b3f095be7f808611f1388c3e31ecff29325a7f99",
+  "consumption_result": "S2_CANDIDATE_ENTRY_AUTHORIZED_AFTER_REGISTRY_REGISTRATION"
+}
