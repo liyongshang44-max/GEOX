@@ -1,0 +1,76 @@
+{
+  "schema_version": "geox_pfe14_prototype_authority_v1",
+  "authority_id": "PFE-14-PROTOTYPE-AUTHORITY-V1",
+  "taskbook_revision": "v0.2",
+  "artifact_classes": {
+    "CURRENT_IMPLEMENTATION_REFERENCE": {
+      "source": [
+        "current main code",
+        "browser render",
+        "accepted current-page fixture"
+      ],
+      "may_show_unimplemented_capability": false,
+      "may_use_design_sample_data": false,
+      "may_claim_runtime_truth": false
+    },
+    "TARGET_STATE_PRODUCT_PROTOTYPE": {
+      "source": [
+        "PFE-14 taskbook v0.2",
+        "GEOX Master Task Line V2",
+        "MCFT-CAP-09 taskbook"
+      ],
+      "required_badge_zh": "目标态原型 / 非当前运行数据",
+      "required_badge_en": "Target-state prototype / Not current runtime data",
+      "may_show_unimplemented_capability": true,
+      "may_use_design_sample_data": true,
+      "may_claim_repository_implementation": false,
+      "may_claim_runtime_truth": false
+    }
+  },
+  "frozen_sample_scope": {
+    "tenant_id": "tenant_sample",
+    "project_id": "project_sample",
+    "group_id": "group_sample",
+    "field_id": "field_sample",
+    "season_id": "season_sample",
+    "zone_id": "zone_sample",
+    "runtime_mode": "SHADOW_ONLINE_SAMPLE"
+  },
+  "scope_rule": "ONE_GOVERNED_SIX_KEY_SCOPE_ONLY",
+  "primary_navigation": [
+    "runtime_overview",
+    "fields"
+  ],
+  "field_runtime_primary_tabs": [
+    "overview",
+    "evidence",
+    "state",
+    "forecast",
+    "runtime_health",
+    "audit"
+  ],
+  "field_runtime_more_tabs": [
+    "scenario",
+    "action_lifecycle_read_only",
+    "residual",
+    "calibration"
+  ],
+  "static_nonclaims": [
+    "LIVE_DEVICE_NOT_CONNECTED",
+    "PRODUCTION_GATEWAY_NOT_ONLINE",
+    "FIELD_PILOT_NOT_STARTED",
+    "CONTROLLED_EXECUTION_DISABLED"
+  ],
+  "forbidden_prototype_claims": [
+    "MULTI_FIELD_CONCURRENT_SHADOW_RUNTIME",
+    "ALL_FIELDS_RUNTIME",
+    "AUTOMATIC_RECOMMENDATION",
+    "AUTOMATIC_APPROVAL",
+    "AO_ACT_CREATION",
+    "DISPATCH",
+    "PRODUCTION_GATEWAY_ONLINE",
+    "LIVE_DEVICE_CONNECTED",
+    "MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE",
+    "CURRENT_REPOSITORY_IMPLEMENTATION_COMPLETE"
+  ]
+}

@@ -5,6 +5,7 @@
   "phase_id": "PFE-14",
   "slice_id": "PFE-14.S4",
   "canonical_name": "Shadow-Online Operator Runtime Console Promotion",
+  "taskbook_revision": "v0.2",
   "record_status": "S4_BLOCKED_WAITING_MCFT09_SCHEDULER_AND_EVIDENCE_READ_CONTRACT",
   "status": "S4_BLOCKED_WAITING_MCFT09_SCHEDULER_AND_EVIDENCE_READ_CONTRACT",
   "base_main_sha": "75dc18991843d33389b4ec5e8e2fb6c86605ee16",
@@ -17,6 +18,9 @@
   "s2_effective": true,
   "s3_effective": true,
   "taskbook_ref": "docs/frontend-productization/PFE-14-SHADOW-ONLINE-OPERATOR-RUNTIME-CONSOLE-TASK.md",
+  "prototype_authority_ref": "docs/frontend-productization/PFE-14-PROTOTYPE-AUTHORITY-V1.json",
+  "prototype_default_class": "TARGET_STATE_PRODUCT_PROTOTYPE",
+  "prototype_scope_rule": "ONE_GOVERNED_SIX_KEY_SCOPE_ONLY",
   "frontend_read_contract_ref": "docs/frontend-productization/PFE-14-S1-FRONTEND-READ-CONTRACT.json",
   "state_matrix_ref": "docs/frontend-productization/PFE-14-S1-STATE-MATRIX.json",
   "copy_nonclaim_contract_ref": "docs/frontend-productization/PFE-14-S1-COPY-NONCLAIM-CONTRACT.json",
@@ -34,6 +38,14 @@
     "scheduler_read_contract_present": false,
     "evidence_availability_read_contract_present": false
   },
+  "primary_navigation": [
+    "runtime_overview",
+    "fields"
+  ],
+  "operator_pilot_route_claimed": false,
+  "multi_field_concurrent_shadow_claimed": false,
+  "device_gateway_status_source": "GOVERNED_STATIC_NONCLAIM",
+  "controlled_execution_status_source": "GOVERNED_STATIC_NONCLAIM",
   "s4_dependency_recheck_authorized": true,
   "s4_contract_mapping_authorized": false,
   "s4_page_source_authorized": false,
@@ -57,5 +69,5 @@
   "candidate_declaration_authorized": false,
   "s4_effective": false,
   "first_legal_next_action": "MCFT_CAP_09_PROVIDE_AUTHORIZED_SCHEDULER_AND_EVIDENCE_AVAILABILITY_READ_CONTRACT",
-  "frontend_next_action_after_dependency": "PFE_14_S4_SCOPE_AND_RUNTIME_OVERVIEW_AUTHORIZATION"
+  "frontend_next_action_after_dependency": "PFE_14_S4_SINGLE_SCOPE_RUNTIME_OVERVIEW_AUTHORIZATION"
 }
