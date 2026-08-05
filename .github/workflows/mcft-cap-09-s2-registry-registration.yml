@@ -60,6 +60,7 @@ jobs:
             s2-registry-registration) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_REGISTRATION.cjs ;;
             s2-candidate-signal) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs --registration-lifecycle ;;
             s2-postmerge-semantic-correction) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs --postmerge-semantic-correction ;;
+            s2-exact-sha-attestation) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --exact-sha-route-only ;;
             *) echo "unsupported CAP-09 S2 Registry lifecycle: $MCFT_S2_REGISTRATION_MODE" >&2; exit 1 ;;
           esac
       - uses: actions/upload-artifact@v4
@@ -70,5 +71,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json
             acceptance-output/MCFT_CAP_09_S2_REGISTRY_REGISTRATION_RESULT.json
             acceptance-output/MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS_RESULT.json
+            acceptance-output/MCFT_CAP_09_S2_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json
           if-no-files-found: error
           retention-days: 90
