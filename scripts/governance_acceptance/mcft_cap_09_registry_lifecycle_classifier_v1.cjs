@@ -9,7 +9,7 @@ if(!['trusted-registry-bootstrap','s1-registry-registration','s2-registry-regist
 const run=(args)=>cp.execFileSync('git',args,{encoding:'utf8'}).trim();
 const files=run(['diff','--name-only',`${base}...HEAD`]).split(/\r?\n/).filter(Boolean).sort();
 const same=(a,b)=>JSON.stringify([...a].sort())===JSON.stringify([...b].sort());
-const legacyS2CrossRepair=[
+const historicalS2CrossLifecycleRepair=[
 '.github/workflows/mcft-cap-09-s1-registry-registration.yml',
 '.github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
@@ -48,10 +48,9 @@ const s1Candidate=[
 '.github/workflows/mcft-cap-09-s1-adapter-contracts.yml',
 'apps/server/src/runtime/twin_runtime/ports.ts',
 'apps/server/src/runtime/twin_runtime/shadow_online_adapter_config_v1.ts',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-ADAPTER-CONTRACTS-CONFIG-V1.json',
 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-ADAPTER-CONTRACTS-CANDIDATE-BOUNDARY-V1.json',
 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-ADAPTER-CONTRACTS-CANDIDATE-V1.json',
-'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-ADAPTER-CONTRACTS-CONFIG-V1.json',
-'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json',
 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-HARD-ACCEPTANCE-EVIDENCE-V1.json',
 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_ADAPTER_CONTRACTS.cjs',
@@ -85,7 +84,7 @@ if(isS2CandidateBoundary){
   baseS2CandidateImplemented=baseStatus.s2_candidate_implemented;
 }
 let mode='unsupported';
-if(same(files,legacyS2CrossRepair)||same(files,s2RegistrationLifecycleRepair)) mode='s2-cross-lifecycle-repair';
+if(same(files,historicalS2CrossLifecycleRepair)||same(files,s2RegistrationLifecycleRepair)) mode='s2-cross-lifecycle-repair';
 else if(same(files,s2Registration)) mode='s2-registry-registration';
 else if(isS2CandidateBoundary&&baseS2CandidateImplemented===true) mode='s2-postmerge-semantic-correction';
 else if(isS2CandidateBoundary) mode='s2-candidate-signal';
