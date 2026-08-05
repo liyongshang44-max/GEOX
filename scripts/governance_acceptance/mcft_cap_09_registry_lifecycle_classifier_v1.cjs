@@ -19,9 +19,21 @@ const s2RegistrationLifecycleRepair=[
 '.github/workflows/mcft-cap-09-s2-registry-registration.yml',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs'];
+const s3RegistrationLifecycleRepair=[
+'.github/workflows/mcft-cap-09-s2-registry-registration.yml',
+'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
+'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs',
+'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'];
 const s2ExactShaAttestation=[
 '.github/workflows/mcft-cap-09-s2-exact-sha-attestation.yml',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION_V1.cjs'];
+const s3Registration=[
+'.github/workflows/mcft-cap-09-s3-registry-registration.yml',
+'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-DELIVERY-STATUS-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-REGISTRY-REGISTRATION-BOUNDARY-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-REGISTRY-REGISTRATION-V1.json',
+'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_REGISTRY_REGISTRATION.cjs'];
 const s2Registration=[
 '.github/workflows/mcft-cap-09-s2-registry-registration.yml',
 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
@@ -74,20 +86,17 @@ const bootstrap=[
 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOUNDARY-V1.json',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs'];
 const s2StatusPath='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-DELIVERY-STATUS-V1.json';
-const isS2CandidateBoundary=files.length===10 &&
-files.includes(s2StatusPath) &&
-files.includes('.github/workflows/mcft-cap-09-s2-database-evidence-ingress.yml') &&
-files.includes('apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.ts') &&
-files.includes('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs') &&
-!files.includes('docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json') &&
+const isS2CandidateBoundary=files.length===10&&files.includes(s2StatusPath)&&
+files.includes('.github/workflows/mcft-cap-09-s2-database-evidence-ingress.yml')&&
+files.includes('apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.ts')&&
+files.includes('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs')&&
+!files.includes('docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json')&&
 files.some((p)=>p.endsWith('GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CANDIDATE-V1.json'));
 let baseS2CandidateImplemented=null;
-if(isS2CandidateBoundary){
-  const baseStatus=JSON.parse(run(['show',`${base}:${s2StatusPath}`]));
-  baseS2CandidateImplemented=baseStatus.s2_candidate_implemented;
-}
+if(isS2CandidateBoundary){baseS2CandidateImplemented=JSON.parse(run(['show',`${base}:${s2StatusPath}`])).s2_candidate_implemented;}
 let mode='unsupported';
-if(same(files,historicalS2CrossLifecycleRepair)||same(files,s2RegistrationLifecycleRepair)) mode='s2-cross-lifecycle-repair';
+if(same(files,historicalS2CrossLifecycleRepair)||same(files,s2RegistrationLifecycleRepair)||same(files,s3RegistrationLifecycleRepair)) mode='s2-cross-lifecycle-repair';
+else if(same(files,s3Registration)) mode='s3-registry-registration';
 else if(same(files,s2Registration)) mode='s2-registry-registration';
 else if(same(files,s2ExactShaAttestation)) mode='s2-exact-sha-attestation';
 else if(isS2CandidateBoundary&&baseS2CandidateImplemented===true) mode='s2-postmerge-semantic-correction';
