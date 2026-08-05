@@ -3,18 +3,31 @@ name: mcft-cap-09-s1-registry-registration
 on:
   pull_request:
     paths:
+      - '.github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml'
       - '.github/workflows/mcft-cap-09-s1-registry-registration.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_CANDIDATE_CROSS_LIFECYCLE_REPAIR.cjs'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-REGISTRY-REGISTRATION-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-REGISTRY-REGISTRATION-BOUNDARY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_REGISTRY_REGISTRATION.cjs'
+      - '.github/workflows/mcft-cap-09-s1-adapter-contracts.yml'
+      - 'apps/server/src/runtime/twin_runtime/ports.ts'
+      - 'apps/server/src/runtime/twin_runtime/shadow_online_adapter_config_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-ADAPTER-CONTRACTS-CONFIG-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-ADAPTER-CONTRACTS-CANDIDATE-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-ADAPTER-CONTRACTS-CANDIDATE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-HARD-ACCEPTANCE-EVIDENCE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_ADAPTER_CONTRACTS.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_ADAPTER_CONTRACTS.ts'
   merge_group:
     types: [checks_requested]
 
 permissions:
   contents: read
   actions: read
+  pull-requests: read
 
 concurrency:
   group: mcft-cap09-s1-registry-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
@@ -23,7 +36,7 @@ concurrency:
 jobs:
   s1-registry-registration:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,7 +46,49 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
+      - name: Classify CAP-09 S1 registration lifecycle
+        id: lifecycle
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD | sort)"
+          cross_repair_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s1-registry-registration.yml' \
+            '.github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_CANDIDATE_CROSS_LIFECYCLE_REPAIR.cjs' | sort)"
+          registration_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s1-registry-registration.yml' \
+            'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-REGISTRY-REGISTRATION-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-REGISTRY-REGISTRATION-BOUNDARY-V1.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_REGISTRY_REGISTRATION.cjs' | sort)"
+          candidate_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s1-adapter-contracts.yml' \
+            'apps/server/src/runtime/twin_runtime/ports.ts' \
+            'apps/server/src/runtime/twin_runtime/shadow_online_adapter_config_v1.ts' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-ADAPTER-CONTRACTS-CONFIG-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-ADAPTER-CONTRACTS-CANDIDATE-BOUNDARY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-ADAPTER-CONTRACTS-CANDIDATE-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-HARD-ACCEPTANCE-EVIDENCE-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_ADAPTER_CONTRACTS.cjs' \
+            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_ADAPTER_CONTRACTS.ts' | sort)"
+          if [[ "$files" == "$cross_repair_files" ]]; then
+            mode='s1-cross-lifecycle-repair'
+          elif [[ "$files" == "$registration_files" ]]; then
+            mode='s1-registry-registration'
+          elif [[ "$files" == "$candidate_files" ]]; then
+            mode='s1-candidate-signal'
+          else
+            mode='unsupported'
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - name: Download S0 exact-SHA R2 authority
+        if: steps.lifecycle.outputs.mode == 's1-registry-registration' || steps.lifecycle.outputs.mode == 's1-candidate-signal'
         uses: actions/download-artifact@v4
         with:
           run-id: 30978738965
@@ -41,15 +96,38 @@ jobs:
           path: acceptance-input/cap09-s0-effective
           repository: liyongshang44-max/GEOX
           github-token: ${{ github.token }}
-      - name: Validate S1 trusted Registry transition registration
+      - name: Validate S1 registration lifecycle
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           MCFT_CAP09_S0_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s0-effective
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_REGISTRY_REGISTRATION.cjs
+          MCFT_S1_REGISTRATION_MODE: ${{ steps.lifecycle.outputs.mode }}
+          MCFT_EVENT_NAME: ${{ github.event_name }}
+          MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$MCFT_S1_REGISTRATION_MODE" in
+            s1-cross-lifecycle-repair)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_CANDIDATE_CROSS_LIFECYCLE_REPAIR.cjs
+              ;;
+            s1-registry-registration)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_REGISTRY_REGISTRATION.cjs
+              ;;
+            s1-candidate-signal)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_ADAPTER_CONTRACTS.cjs --registration-lifecycle
+              ;;
+            *)
+              echo "unsupported CAP-09 S1 registration lifecycle: $MCFT_S1_REGISTRATION_MODE" >&2
+              exit 1
+              ;;
+          esac
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mcft-cap-09-s1-registry-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          path: acceptance-output/MCFT_CAP_09_S1_REGISTRY_REGISTRATION_RESULT.json
+          path: |
+            acceptance-output/MCFT_CAP_09_S1_REGISTRY_REGISTRATION_RESULT.json
+            acceptance-output/MCFT_CAP_09_S1_ADAPTER_CONTRACTS_RESULT.json
           if-no-files-found: error
           retention-days: 90

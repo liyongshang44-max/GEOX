@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml'
+      - '.github/workflows/mcft-cap-09-s1-registry-registration.yml'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json'
@@ -15,7 +16,6 @@ on:
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-BOUNDARY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_AUTHORIZATION.cjs'
-      - '.github/workflows/mcft-cap-09-s1-registry-registration.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-DELIVERY-STATUS-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-REGISTRY-REGISTRATION-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S1-REGISTRY-REGISTRATION-BOUNDARY-V1.json'
@@ -32,6 +32,7 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_ADAPTER_CONTRACTS.ts'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_S1_LIFECYCLE_REPAIR.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_CANDIDATE_CROSS_LIFECYCLE_REPAIR.cjs'
   merge_group:
     types: [checks_requested]
 
@@ -47,7 +48,7 @@ concurrency:
 jobs:
   trusted-registry-bootstrap:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,6 +66,10 @@ jobs:
         run: |
           set -euo pipefail
           files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD | sort)"
+          cross_repair_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s1-registry-registration.yml' \
+            '.github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_CANDIDATE_CROSS_LIFECYCLE_REPAIR.cjs' | sort)"
           repair_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml' \
             'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_S1_LIFECYCLE_REPAIR.cjs' | sort)"
@@ -106,7 +111,9 @@ jobs:
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOOTSTRAP-V1.json' \
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TRUSTED-REGISTRY-BOUNDARY-V1.json' \
             'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs' | sort)"
-          if [[ "$files" == "$repair_files" ]]; then
+          if [[ "$files" == "$cross_repair_files" ]]; then
+            mode='s1-cross-lifecycle-repair'
+          elif [[ "$files" == "$repair_files" ]]; then
             mode='workflow-repair'
           elif [[ "$files" == "$correction_files" ]]; then
             mode='registry-existing-paths-correction'
@@ -153,6 +160,9 @@ jobs:
         run: |
           set -euo pipefail
           case "$MCFT_CAP09_REGISTRY_MODE" in
+            s1-cross-lifecycle-repair)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_CANDIDATE_CROSS_LIFECYCLE_REPAIR.cjs
+              ;;
             workflow-repair)
               node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_S1_LIFECYCLE_REPAIR.cjs
               ;;
