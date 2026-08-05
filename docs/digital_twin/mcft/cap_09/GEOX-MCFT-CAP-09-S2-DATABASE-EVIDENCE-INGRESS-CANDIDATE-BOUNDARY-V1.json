@@ -1,8 +1,10 @@
 {
-  "schema_version": "geox_mcft_cap09_s2_database_evidence_ingress_candidate_boundary_v1",
+  "schema_version": "geox_mcft_cap09_s2_database_evidence_ingress_candidate_boundary_v2",
   "boundary_id": "GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CANDIDATE-BOUNDARY-V1",
-  "change_class": "MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS_CANDIDATE",
-  "base_main_sha": "b3f095be7f808611f1388c3e31ecff29325a7f99",
+  "change_class": "MCFT_CAP_09_S2_POSTMERGE_PRE_EFFECTIVENESS_SEMANTIC_CORRECTION",
+  "base_main_sha": "3c55344f0463b3603ee92da150273b19b45137fa",
+  "corrects_merged_candidate_sha": "a2e23b47abaf571489458363de48f428262b5f31",
+  "postmerge_semantic_correction_routing_merge_sha": "3c55344f0463b3603ee92da150273b19b45137fa",
   "changed_file_count": 10,
   "changed_files": [
     ".github/workflows/mcft-cap-09-s2-database-evidence-ingress.yml",
@@ -16,8 +18,9 @@
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.ts"
   ],
-  "candidate_transition": true,
-  "candidate_declaration": true,
+  "candidate_transition": false,
+  "candidate_declaration": false,
+  "postmerge_semantic_correction": true,
   "external_effectiveness": false,
   "runtime_source_delta": 1,
   "runtime_executable_delta": 1,
