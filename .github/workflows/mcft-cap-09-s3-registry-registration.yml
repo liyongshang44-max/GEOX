@@ -71,5 +71,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_S3_REGISTRY_REGISTRATION_RESULT.json
             acceptance-output/MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json
             acceptance-output/MCFT_CAP_09_S3_CANDIDATE_LIFECYCLE_ROUTE_RESULT.json
+            acceptance-output/MCFT_CAP_09_S3_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json
           if-no-files-found: error
           retention-days: 90
