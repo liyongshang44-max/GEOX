@@ -19,6 +19,17 @@ const S2_EXACT=[
 const S3_EXACT=[
 '.github/workflows/mcft-cap-09-s3-exact-sha-attestation.yml',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_EXACT_SHA_ATTESTATION_V1.cjs'].sort();
+const S4_REG=[
+'.github/workflows/mcft-cap-09-s2-registry-registration.yml',
+'.github/workflows/mcft-cap-09-s4-registry-registration.yml',
+'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-DELIVERY-STATUS-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-REGISTRY-REGISTRATION-BOUNDARY-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-REGISTRY-REGISTRATION-V1.json',
+'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
+'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_REGISTRY_REGISTRATION.cjs',
+'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs',
+'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'].sort();
 const S3_REG=[
 '.github/workflows/mcft-cap-09-s3-registry-registration.yml',
 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
@@ -52,6 +63,16 @@ if(process.argv.includes('--exact-sha-route-only')){
  must(same(files,S2_EXACT),'EXACT_S2_EXACT_SHA_BOUNDARY_REQUIRED');
  must(run(['rev-list','--count',`${base}..HEAD`])==='1','ONE_COMMIT_REQUIRED');
  write('MCFT_CAP_09_S2_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json',{status:'PASS',lifecycle:'S2_EXACT_SHA_ATTESTATION_ROUTED',base_sha:base,head_sha:run(['rev-parse','HEAD']),changed_files:files,candidate_transition:false,registry_transition:false});
+ process.exit(0);
+}
+if(process.argv.includes('--s4-registration-route-only')){
+ must(same(files,S4_REG),'EXACT_S4_REGISTRATION_BOUNDARY_REQUIRED');
+ must(run(['rev-list','--count',`${base}..HEAD`])==='1','ONE_COMMIT_REQUIRED');
+ const status=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-DELIVERY-STATUS-V1.json','utf8'));
+ must(status.s4_registry_registration_implemented===true&&status.s4_candidate_implemented===false&&status.externally_effective===false,'S4_REGISTRATION_NON_CANDIDATE_REQUIRED');
+ must(status.authorized_s4_scope==='RESTART_BACKFILL_STALE_DETECTION_ONLY','S4_REGISTRATION_SCOPE_REQUIRED');
+ authorityFalse(status,'S4_REG_STATUS');
+ write('MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json',{status:'PASS',lifecycle:'S4_REGISTRATION_ROUTED',base_sha:base,head_sha:run(['rev-parse','HEAD']),changed_files:files,candidate_transition:false,registry_transition:true,runtime_source_delta:0});
  process.exit(0);
 }
 if(process.argv.includes('--s3-registration-route-only')){

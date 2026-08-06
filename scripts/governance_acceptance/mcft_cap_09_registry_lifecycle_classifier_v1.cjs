@@ -5,7 +5,7 @@ const cp=require('node:child_process');
 const lane=process.env.MCFT_REGISTRY_LANE;
 const base=process.env.MCFT_BASE_SHA;
 if(!base) throw new Error('MCFT_BASE_SHA_REQUIRED');
-if(!['trusted-registry-bootstrap','s1-registry-registration','s2-registry-registration','s3-registry-registration'].includes(lane)) throw new Error('MCFT_REGISTRY_LANE_INVALID');
+if(!['trusted-registry-bootstrap','s1-registry-registration','s2-registry-registration','s3-registry-registration','s4-registry-registration'].includes(lane)) throw new Error('MCFT_REGISTRY_LANE_INVALID');
 const run=(args)=>cp.execFileSync('git',args,{encoding:'utf8'}).trim();
 const files=run(['diff','--name-only',`${base}...HEAD`]).split(/\r?\n/).filter(Boolean).sort();
 const same=(a,b)=>JSON.stringify([...a].sort())===JSON.stringify([...b].sort());
@@ -37,6 +37,17 @@ const s2ExactShaAttestation=[
 const s3ExactShaAttestation=[
 '.github/workflows/mcft-cap-09-s3-exact-sha-attestation.yml',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_EXACT_SHA_ATTESTATION_V1.cjs'];
+const s4Registration=[
+'.github/workflows/mcft-cap-09-s2-registry-registration.yml',
+'.github/workflows/mcft-cap-09-s4-registry-registration.yml',
+'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-DELIVERY-STATUS-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-REGISTRY-REGISTRATION-BOUNDARY-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-REGISTRY-REGISTRATION-V1.json',
+'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
+'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_REGISTRY_REGISTRATION.cjs',
+'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs',
+'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'];
 const s3Registration=[
 '.github/workflows/mcft-cap-09-s3-registry-registration.yml',
 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
@@ -118,6 +129,7 @@ let baseS2CandidateImplemented=null;
 if(isS2CandidateBoundary) baseS2CandidateImplemented=JSON.parse(run(['show',`${base}:${s2StatusPath}`])).s2_candidate_implemented;
 let mode='unsupported';
 if(same(files,historicalS2CrossLifecycleRepair)||same(files,s2RegistrationLifecycleRepair)||same(files,s3RegistrationLifecycleRepair)||same(files,s3CandidateLifecycleRepair)||same(files,s3ExactShaLifecycleRepair)) mode='s2-cross-lifecycle-repair';
+else if(same(files,s4Registration)) mode='s4-registry-registration';
 else if(same(files,s3Registration)) mode='s3-registry-registration';
 else if(same(files,s3Candidate)) mode='s3-candidate-signal';
 else if(same(files,s3ExactShaAttestation)) mode='s3-exact-sha-attestation';
