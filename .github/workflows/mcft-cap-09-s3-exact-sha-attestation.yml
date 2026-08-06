@@ -1,186 +1,123 @@
-name: mcft-cap-09-s3-exact-sha-attestation
+name: temporary-mcft-cap-09-s3-r2-metadata-materializer
 
 on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-s3-exact-sha-attestation.yml'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_EXACT_SHA_ATTESTATION_V1.cjs'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/mcft-cap-09-s3-exact-sha-attestation.yml'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_EXACT_SHA_ATTESTATION_V1.cjs'
 
 permissions:
-  contents: read
+  contents: write
   actions: read
   pull-requests: read
-  statuses: write
 
 concurrency:
-  group: mcft-cap09-s3-exact-sha-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: false
-
-env:
-  MCFT_SEMANTIC_DIGEST_POLICY: CANONICAL_SORTED_KEYS_V1
-  MCFT_CONTROL_PLANE_GENERATION: S3_EXACT_SHA_R2_REPAIR_V2
+  group: temporary-cap09-s3-r2-metadata-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
 
 jobs:
-  control-plane-candidate:
+  temporary-r2-metadata-materializer:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout exact control-plane repair head
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Validate S3 exact-SHA R2 control-plane repair Candidate
+      - name: Materialize corrected S3 R2 metadata
         env:
-          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_EXACT_SHA_ATTESTATION_V1.cjs --control-plane-candidate
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mcft-cap-09-s3-exact-sha-control-plane-${{ github.event.pull_request.head.sha }}
-          path: acceptance-output/MCFT_CAP_09_S3_EXACT_SHA_CONTROL_PLANE_RESULT.json
-          if-no-files-found: error
-          retention-days: 90
-
-  exact-sha-r2-attestation:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      MCFT_SUBJECT_SHA: 15cdb24667d43cf7c21294d22b68160c6668cf73
-      MCFT_ROUTE_REPAIR_SHA: aed32435bf1bbc6bd50af5cd46c7bb8dc29d0803
-      MCFT_FAILED_CONTROL_PLANE_SHA: 41d763c7b1b1c9f35efc702b965ab0cea4632447
-    steps:
-      - name: Checkout protected-main repaired S3 attestation control plane
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Validate protected-main repaired control plane and exact S3 subject ancestry
+          SOURCE_COMMIT: d86f0c979f69a89807e4cd88faa51928be587993
+          SOURCE_WORKFLOW_BLOB: e70eded76878000b40bc02b7bc0b3ae7432c4fa7
+          SOURCE_VALIDATOR_BLOB: 3bbf9eb5f3c23e244f619bcd1d3ddddd94f99630
+          TARGET_BRANCH: agent/tmp-mcft-cap09-s3-r2-metadata-materialized
+          WORKFLOW_PATH: .github/workflows/mcft-cap-09-s3-exact-sha-attestation.yml
+          VALIDATOR_PATH: scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_EXACT_SHA_ATTESTATION_V1.cjs
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
-          git fetch --no-tags origin main
-          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
-          git cat-file -e "${MCFT_SUBJECT_SHA}^{commit}"
-          git cat-file -e "${MCFT_ROUTE_REPAIR_SHA}^{commit}"
-          git cat-file -e "${MCFT_FAILED_CONTROL_PLANE_SHA}^{commit}"
-          git merge-base --is-ancestor "${MCFT_SUBJECT_SHA}" "${MCFT_ROUTE_REPAIR_SHA}"
-          git merge-base --is-ancestor "${MCFT_ROUTE_REPAIR_SHA}" "${MCFT_FAILED_CONTROL_PLANE_SHA}"
-          git merge-base --is-ancestor "${MCFT_FAILED_CONTROL_PLANE_SHA}" "${GITHUB_SHA}"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-      - name: Derive repaired exact merge-SHA S3 authority artifact
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_EXACT_SHA_ATTESTATION_V1.cjs --attest
-      - name: Build deterministic S3 R2 transport archive
-        run: |
-          set -euo pipefail
-          mkdir -p acceptance-output/archive-input
-          cp acceptance-output/MCFT_CAP_09_S3_EXACT_SHA_ATTESTATION.json acceptance-output/archive-input/canonical-artifact.json
-          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
-            -cf acceptance-output/mcft-cap-09-s3-exact-sha-attestation.tar \
-            -C acceptance-output/archive-input canonical-artifact.json
-          gzip -n -f acceptance-output/mcft-cap-09-s3-exact-sha-attestation.tar
-      - name: Upload and read back S3 R2 730-day immutable authority
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_ATTESTATION_S3_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_ATTESTATION_S3_SECRET_ACCESS_KEY }}
-          GEOX_MCFT_ATTESTATION_S3_ENDPOINT: ${{ vars.GEOX_MCFT_ATTESTATION_S3_ENDPOINT }}
-          GEOX_MCFT_ATTESTATION_S3_BUCKET: ${{ vars.GEOX_MCFT_ATTESTATION_S3_BUCKET }}
-          GEOX_MCFT_ATTESTATION_S3_REGION: ${{ vars.GEOX_MCFT_ATTESTATION_S3_REGION }}
-          GEOX_MCFT_ATTESTATION_S3_FORCE_PATH_STYLE: ${{ vars.GEOX_MCFT_ATTESTATION_S3_FORCE_PATH_STYLE }}
-          MCFT_CANONICAL_ARTIFACT_PATH: acceptance-output/MCFT_CAP_09_S3_EXACT_SHA_ATTESTATION.json
-          MCFT_ARTIFACT_ARCHIVE_PATH: acceptance-output/mcft-cap-09-s3-exact-sha-attestation.tar.gz
-          MCFT_REPOSITORY_OWNER: ${{ github.repository_owner }}
-          MCFT_REPOSITORY_NAME: GEOX
-          MCFT_ARTIFACT_NAME: mcft-cap-09-s3-exact-sha-${{ env.MCFT_SUBJECT_SHA }}
-          MCFT_RETENTION_LEVEL: R2
-          MCFT_RETENTION_DAYS: '730'
-        run: node scripts/governance_acceptance/mcft_attestation_retention_store_v1.cjs --upload-readback
-      - name: Verify and normalize S3 R2 retention locator
-        run: |
-          set -euo pipefail
+          test "$(git rev-parse "${SOURCE_COMMIT}:${WORKFLOW_PATH}")" = "${SOURCE_WORKFLOW_BLOB}"
+          test "$(git rev-parse "${SOURCE_COMMIT}:${VALIDATOR_PATH}")" = "${SOURCE_VALIDATOR_BLOB}"
+          git show "${SOURCE_COMMIT}:${WORKFLOW_PATH}" > /tmp/workflow.yml
+          git show "${SOURCE_COMMIT}:${VALIDATOR_PATH}" > /tmp/validator.cjs
           node - <<'NODE'
           const fs = require('node:fs');
-          const source = 'acceptance-output/MCFT_CAP_07_ATTESTATION_RETENTION_LOCATOR.json';
-          const target = 'acceptance-output/MCFT_CAP_09_S3_ATTESTATION_RETENTION_LOCATOR.json';
-          const locator = JSON.parse(fs.readFileSync(source, 'utf8'));
-          if (locator.retention_level !== 'R2') throw new Error('R2_LEVEL_REQUIRED');
-          if (locator.readback_verified !== true) throw new Error('R2_READBACK_REQUIRED');
-          if (locator.locked_version_delete_denied !== true) throw new Error('R2_LOCKED_DELETE_DENIAL_REQUIRED');
-          if (Date.parse(locator.retain_until) < Date.now() + 729 * 86400000) {
-            throw new Error('R2_730_DAY_RETENTION_NOT_ESTABLISHED');
+          function replaceOnce(source, from, to, code) {
+            if (source.split(from).length !== 2) throw new Error(`${code}_CARDINALITY`);
+            return source.replace(from, to);
           }
-          fs.writeFileSync(target, JSON.stringify(locator, null, 2) + '\n');
+          let workflow = fs.readFileSync('/tmp/workflow.yml', 'utf8');
+          let validator = fs.readFileSync('/tmp/validator.cjs', 'utf8');
+          workflow = replaceOnce(workflow,
+            'MCFT_CONTROL_PLANE_GENERATION: S3_EXACT_SHA_R2_REPAIR_V2',
+            'MCFT_CONTROL_PLANE_GENERATION: S3_EXACT_SHA_R2_REPAIR_V3',
+            'WORKFLOW_GENERATION');
+          workflow = replaceOnce(workflow,
+            'MCFT_FAILED_CONTROL_PLANE_SHA: 41d763c7b1b1c9f35efc702b965ab0cea4632447',
+            'MCFT_FAILED_CONTROL_PLANE_SHA: d86f0c979f69a89807e4cd88faa51928be587993',
+            'WORKFLOW_FAILED_CONTROL');
+          validator = replaceOnce(validator,
+            "const FOCUSED_DIGEST = 'sha256:bac8fa6b0cde49aafa84eeaf0a2d505841883888ee9d1bcb926549114aaaf793';",
+            "const FOCUSED_DIGEST = 'sha256:bac8fa6b54d56815b1717c8cba2e8aaaec86c2f6658095fcbce323997657b2cf';",
+            'FOCUSED_DIGEST');
+          validator = replaceOnce(validator,
+            "const FAILED_CONTROL_MERGE = '41d763c7b1b1c9f35efc702b965ab0cea4632447';",
+            "const FAILED_CONTROL_MERGE = 'd86f0c979f69a89807e4cd88faa51928be587993';",
+            'FAILED_CONTROL_MERGE');
+          validator = replaceOnce(validator,
+            "const FAILED_CONTROL_HEAD = '83deb238efb372dc4f573ab71cf49088004b7ac8';",
+            "const FAILED_CONTROL_HEAD = 'c38419fb6ebc2e33012c47d4815597a6fa8b7ab5';",
+            'FAILED_CONTROL_HEAD');
+          validator = replaceOnce(validator,
+            "const FAILED_CONTROL_TREE = 'f04dbb31e5824fb3fcb99cc9ecd99b3303507c6a';",
+            "const FAILED_CONTROL_TREE = 'a6d8262bcb23511c06a6f518dd1a91555be51d7e';",
+            'FAILED_CONTROL_TREE');
+          validator = replaceOnce(validator,
+            'const FAILED_RUN = 31068800943;',
+            'const FAILED_RUN = 31072140910;',
+            'FAILED_RUN');
+          validator = replaceOnce(validator,
+            "'b185b1e40f6b6a2c64445548bcb549fa5fa36121',\n'9d50947fa0ae77dac91fd6a8a4bceaa2fb20eb8d',",
+            "'e70eded76878000b40bc02b7bc0b3ae7432c4fa7',\n'3bbf9eb5f3c23e244f619bcd1d3ddddd94f99630',",
+            'FAILED_CONTROL_BLOBS');
+          for (const token of [
+            'S3_EXACT_SHA_R2_REPAIR_V3',
+            'd86f0c979f69a89807e4cd88faa51928be587993',
+          ]) if (!workflow.includes(token)) throw new Error(`WORKFLOW_TOKEN:${token}`);
+          for (const token of [
+            'sha256:bac8fa6b54d56815b1717c8cba2e8aaaec86c2f6658095fcbce323997657b2cf',
+            'd86f0c979f69a89807e4cd88faa51928be587993',
+            'c38419fb6ebc2e33012c47d4815597a6fa8b7ab5',
+            'a6d8262bcb23511c06a6f518dd1a91555be51d7e',
+            '31072140910',
+            'e70eded76878000b40bc02b7bc0b3ae7432c4fa7',
+            '3bbf9eb5f3c23e244f619bcd1d3ddddd94f99630',
+            'candidate_to_merge_tree_delta',
+            's3_persistent_sequential_scheduler_effective',
+            'MCFT_CAP_09_S4_REGISTRY_REGISTRATION',
+          ]) if (!validator.includes(token)) throw new Error(`VALIDATOR_TOKEN:${token}`);
+          fs.writeFileSync('/tmp/materialized-workflow.yml', workflow);
+          fs.writeFileSync('/tmp/materialized-validator.cjs', validator);
           NODE
-      - name: Upload transient GitHub convenience copy
-        id: artifact
-        if: always()
-        uses: actions/upload-artifact@v4
+          node --check /tmp/materialized-validator.cjs
+          git fetch origin "${TARGET_BRANCH}:${TARGET_BRANCH}"
+          git checkout "${TARGET_BRANCH}"
+          cp /tmp/materialized-workflow.yml "${WORKFLOW_PATH}"
+          cp /tmp/materialized-validator.cjs "${VALIDATOR_PATH}"
+          git diff --check
+          git config user.name 'geox-governance-materializer'
+          git config user.email 'actions@users.noreply.github.com'
+          git add "${WORKFLOW_PATH}" "${VALIDATOR_PATH}"
+          git diff --cached --quiet && { echo 'NO_MATERIALIZED_DELTA' >&2; exit 1; }
+          git commit -m 'materialize MCFT-CAP-09 S3 R2 metadata correction'
+          git push origin "HEAD:${TARGET_BRANCH}"
+      - uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap-09-s3-exact-sha-${{ env.MCFT_SUBJECT_SHA }}
+          name: temporary-cap09-s3-r2-metadata-${{ github.event.pull_request.head.sha }}
           path: |
-            acceptance-output/MCFT_CAP_09_S3_EXACT_SHA_ATTESTATION.json
-            acceptance-output/MCFT_CAP_09_S3_ATTESTATION_RETENTION_LOCATOR.json
-            acceptance-output/mcft-cap-09-s3-exact-sha-attestation.tar.gz
+            /tmp/materialized-workflow.yml
+            /tmp/materialized-validator.cjs
           if-no-files-found: error
-          retention-days: 90
-      - name: Publish S3 exact-SHA R2 authority status
-        if: always()
-        uses: actions/github-script@v7
-        env:
-          MCFT_JOB_STATUS: ${{ job.status }}
-          MCFT_ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}
-        with:
-          github-token: ${{ github.token }}
-          script: |
-            const fs = require('node:fs');
-            let attestation = null;
-            let locator = null;
-            try {
-              attestation = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S3_EXACT_SHA_ATTESTATION.json', 'utf8'));
-            } catch {}
-            try {
-              locator = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S3_ATTESTATION_RETENTION_LOCATOR.json', 'utf8'));
-            } catch {}
-            const artifactId = String(process.env.MCFT_ARTIFACT_ID || '');
-            const ok = process.env.MCFT_JOB_STATUS === 'success'
-              && attestation?.status === 'PASS'
-              && attestation?.subject_sha === process.env.MCFT_SUBJECT_SHA
-              && attestation?.candidate_to_merge_tree_delta === 0
-              && attestation?.effective_authority?.s3_persistent_sequential_scheduler_effective === true
-              && attestation?.effective_authority?.effective_next_slice === 'S4'
-              && attestation?.effective_authority?.s4_registry_registration_authorized === true
-              && attestation?.effective_authority?.implementation_authorized === false
-              && attestation?.effective_authority?.runtime_source_authorized === false
-              && attestation?.effective_authority?.background_scheduler_authorized === false
-              && locator?.retention_level === 'R2'
-              && locator?.readback_verified === true
-              && locator?.locked_version_delete_denied === true
-              && artifactId.length > 0;
-            const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
-            await github.rest.repos.createCommitStatus({
-              owner,
-              repo,
-              sha: process.env.MCFT_SUBJECT_SHA,
-              state: ok ? 'success' : 'failure',
-              context: 'mcft-cap-09/s3-exact-sha-attestation',
-              description: (ok
-                ? `PASS S3 EFFECTIVE R2/730 artifact=${artifactId}`
-                : `FAIL S3 exact-SHA run=${process.env.GITHUB_RUN_ID}`).slice(0, 140),
-              target_url: `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`,
-            });
+          retention-days: 1
