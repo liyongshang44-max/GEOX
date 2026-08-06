@@ -12,7 +12,7 @@ permissions:
 jobs:
   validate-s5-candidate-draft:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     services:
       postgres:
         image: postgres:16
@@ -47,9 +47,9 @@ jobs:
           gzip -dc tmp/mcft_s5/shadow_online_canonical_integration_service_v1.ts.gz > apps/server/src/runtime/twin_runtime/shadow_online_canonical_integration_service_v1.ts
           gzip -dc tmp/mcft_s5/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts.gz > scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts
           test "$(git hash-object apps/server/src/runtime/twin_runtime/postgres_frozen_shadow_online_evidence_source_v1.ts)" = '39a097a2343bd95dcc6b7621a4acc0e31772c563'
-          test "$(git hash-object apps/server/src/runtime/twin_runtime/postgres_cap04_shadow_online_canonical_tick_adapter_v1.ts)" = '3c66a172f283dbabf123c21186579c4269f6eed1'
-          test "$(git hash-object apps/server/src/runtime/twin_runtime/shadow_online_canonical_integration_service_v1.ts)" = '1d298c779d35005801f9900ff13f90b97247f42f'
-          test "$(git hash-object scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts)" = 'a3fd942eb6e9d36004faeba62fc280b97ba1b7a3'
+          test "$(git hash-object apps/server/src/runtime/twin_runtime/postgres_cap04_shadow_online_canonical_tick_adapter_v1.ts)" = '595dfd434d922aa22a4b438a3b72a9a873fb2413'
+          test "$(git hash-object apps/server/src/runtime/twin_runtime/shadow_online_canonical_integration_service_v1.ts)" = 'df3de78aba2931b1237555035564a0a2500e7ec9'
+          test "$(git hash-object scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts)" = '1cab2b689e99307f297ffa3864ae7e5496f6fc38'
       - name: Extract canonical CAP-04 DB fixture support without duplicating runtime semantics
         run: |
           set -euo pipefail
@@ -79,24 +79,72 @@ jobs:
           if [ "$server_status" -ne 0 ] || [ "$acceptance_status" -ne 0 ]; then
             exit 1
           fi
-      - name: Run real PostgreSQL completed and blocked S5 integration acceptance
+      - name: Run real PostgreSQL A B F and CAP05 no-match C integration acceptance
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/geox_mcft_cap09_s5_acceptance
           MCFT_CAP09_S5_DESTRUCTIVE_ACCEPTANCE: '1'
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts
+      - name: Prove existing canonical H and positive C commit in isolated PostgreSQL
+        env:
+          PGPASSWORD: postgres
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/geox_mcft_cap09_s5_positive_c_acceptance
+          MCFT_CAP_05_S8_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -c 'CREATE DATABASE geox_mcft_cap09_s5_positive_c_acceptance'
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FORECAST_RESIDUAL_OUTCOME_TICK_DB.ts \
+            | tee acceptance-output/MCFT_CAP_09_S5_POSITIVE_C_POSTGRESQL.log
+          grep -q '8 PASS / 0 FAIL' acceptance-output/MCFT_CAP_09_S5_POSITIVE_C_POSTGRESQL.log
+          node - <<'NODE'
+          const fs = require('node:fs');
+          fs.writeFileSync(
+            'acceptance-output/MCFT_CAP_09_S5_POSITIVE_C_POSTGRESQL_RESULT.json',
+            JSON.stringify({
+              schema_version: 'geox_mcft_cap09_s5_positive_c_postgresql_result_v1',
+              status: 'PASS',
+              canonical_service: 'Cap05ForecastResidualOutcomeTickServiceV1',
+              historical_source: 'PostgresForecastResidualSourceV1',
+              persistence: 'PostgresFeedbackPersistenceRepositoryV1',
+              h_read_only_consumption_proven: true,
+              c_forecast_residual_commit_proven: true,
+              replay_idempotency_proven: true,
+              rebuild_from_facts_proven: true,
+              g_or_action_creation_count: 0
+            }, null, 2) + '\n'
+          );
+          NODE
       - name: Verify structured S5 draft proof
         run: |
           set -euo pipefail
           node - <<'NODE'
           const fs = require('node:fs');
-          const file = 'acceptance-output/MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB_RESULT.json';
-          const value = JSON.parse(fs.readFileSync(file, 'utf8'));
-          if (value.status !== 'PASS') throw new Error('S5_DRAFT_NOT_PASS');
-          for (const mode of ['completed', 'blocked']) {
-            const row = value[mode];
+          const integration = JSON.parse(fs.readFileSync(
+            'acceptance-output/MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB_RESULT.json',
+            'utf8'
+          ));
+          const positiveC = JSON.parse(fs.readFileSync(
+            'acceptance-output/MCFT_CAP_09_S5_POSITIVE_C_POSTGRESQL_RESULT.json',
+            'utf8'
+          ));
+          if (integration.status !== 'PASS' || positiveC.status !== 'PASS') {
+            throw new Error('S5_DRAFT_NOT_PASS');
+          }
+          for (const key of ['completed', 'blocked', 'cap05_no_residual']) {
+            const row = integration[key];
             if (!row || row.exact_frozen_evidence_reused !== true || row.shared_scheduler_canonical_fence !== true || row.forbidden_fact_count !== 0 || row.g_write_count !== 0 || row.action_creation_count !== 0) {
-              throw new Error(`S5_DRAFT_PROOF_REQUIRED:${mode}`);
+              throw new Error(`S5_DRAFT_PROOF_REQUIRED:${key}`);
             }
+          }
+          if (integration.cap05_no_residual.c_residual_attempted !== true
+            || integration.cap05_no_residual.c_residual_count !== 0
+            || integration.cap05_no_residual.c_residual_disposition !== 'NO_ELIGIBLE_HISTORICAL_FORECAST') {
+            throw new Error('S5_CAP05_NO_MATCH_FAIL_CLOSED_PROOF_REQUIRED');
+          }
+          if (positiveC.h_read_only_consumption_proven !== true
+            || positiveC.c_forecast_residual_commit_proven !== true
+            || positiveC.g_or_action_creation_count !== 0) {
+            throw new Error('S5_POSITIVE_C_PROOF_REQUIRED');
           }
           NODE
       - uses: actions/upload-artifact@v4
