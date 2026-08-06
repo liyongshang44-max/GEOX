@@ -23,7 +23,7 @@ concurrency:
 
 env:
   MCFT_SEMANTIC_DIGEST_POLICY: CANONICAL_SORTED_KEYS_V1
-  MCFT_CONTROL_PLANE_GENERATION: S3_EXACT_SHA_R2_REPAIR_V2
+  MCFT_CONTROL_PLANE_GENERATION: S3_EXACT_SHA_R2_REPAIR_V5
 
 jobs:
   control-plane-candidate:
@@ -59,7 +59,8 @@ jobs:
     env:
       MCFT_SUBJECT_SHA: 15cdb24667d43cf7c21294d22b68160c6668cf73
       MCFT_ROUTE_REPAIR_SHA: aed32435bf1bbc6bd50af5cd46c7bb8dc29d0803
-      MCFT_FAILED_CONTROL_PLANE_SHA: 41d763c7b1b1c9f35efc702b965ab0cea4632447
+      MCFT_FIRST_FAILED_CONTROL_PLANE_SHA: 41d763c7b1b1c9f35efc702b965ab0cea4632447
+      MCFT_FAILED_CONTROL_PLANE_SHA: d86f0c979f69a89807e4cd88faa51928be587993
     steps:
       - name: Checkout protected-main repaired S3 attestation control plane
         uses: actions/checkout@v4
@@ -75,9 +76,11 @@ jobs:
           git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
           git cat-file -e "${MCFT_SUBJECT_SHA}^{commit}"
           git cat-file -e "${MCFT_ROUTE_REPAIR_SHA}^{commit}"
+          git cat-file -e "${MCFT_FIRST_FAILED_CONTROL_PLANE_SHA}^{commit}"
           git cat-file -e "${MCFT_FAILED_CONTROL_PLANE_SHA}^{commit}"
           git merge-base --is-ancestor "${MCFT_SUBJECT_SHA}" "${MCFT_ROUTE_REPAIR_SHA}"
-          git merge-base --is-ancestor "${MCFT_ROUTE_REPAIR_SHA}" "${MCFT_FAILED_CONTROL_PLANE_SHA}"
+          git merge-base --is-ancestor "${MCFT_ROUTE_REPAIR_SHA}" "${MCFT_FIRST_FAILED_CONTROL_PLANE_SHA}"
+          git merge-base --is-ancestor "${MCFT_FIRST_FAILED_CONTROL_PLANE_SHA}" "${MCFT_FAILED_CONTROL_PLANE_SHA}"
           git merge-base --is-ancestor "${MCFT_FAILED_CONTROL_PLANE_SHA}" "${GITHUB_SHA}"
       - uses: actions/setup-node@v4
         with:
