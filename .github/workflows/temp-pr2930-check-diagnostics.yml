@@ -1,0 +1,72 @@
+name: temp-pr2930-check-diagnostics
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/temp-pr2930-check-diagnostics.yml'
+permissions:
+  actions: read
+  checks: read
+  contents: read
+  pull-requests: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const targetPr = 2930;
+            const targetSha = 'ca061957cb60e25c3ebcd8bb104db4262bc54f97';
+            const checks = await github.paginate(github.rest.checks.listForRef, {
+              owner, repo, ref: targetSha, per_page: 100,
+            });
+            core.info('CHECK_RUNS=' + JSON.stringify(checks.map((check) => ({
+              id: check.id,
+              name: check.name,
+              status: check.status,
+              conclusion: check.conclusion,
+              details_url: check.details_url,
+              started_at: check.started_at,
+              completed_at: check.completed_at,
+              app: check.app?.name,
+            })), null, 2));
+            const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
+              owner, repo, event: 'pull_request_target', per_page: 100,
+            });
+            const matching = runs.filter((run) =>
+              (run.pull_requests || []).some((pr) => pr.number === targetPr)
+              || (run.name || '').includes('mcft-candidate-declaration-integrity-v2')
+              || (run.name || '').includes('mcft-release-lane-v1')
+            ).slice(0, 30);
+            const output = [];
+            for (const run of matching) {
+              const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                owner, repo, run_id: run.id, per_page: 100,
+              });
+              output.push({
+                id: run.id,
+                name: run.name,
+                event: run.event,
+                status: run.status,
+                conclusion: run.conclusion,
+                head_sha: run.head_sha,
+                created_at: run.created_at,
+                updated_at: run.updated_at,
+                pull_requests: (run.pull_requests || []).map((pr) => pr.number),
+                jobs: jobs.map((job) => ({
+                  id: job.id,
+                  name: job.name,
+                  status: job.status,
+                  conclusion: job.conclusion,
+                  steps: (job.steps || []).map((step) => ({
+                    name: step.name,
+                    status: step.status,
+                    conclusion: step.conclusion,
+                  })),
+                })),
+              });
+            }
+            core.info('TARGET_RUNS=' + JSON.stringify(output, null, 2));
