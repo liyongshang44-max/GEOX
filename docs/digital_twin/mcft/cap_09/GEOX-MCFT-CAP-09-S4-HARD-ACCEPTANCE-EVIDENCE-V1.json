@@ -1,0 +1,28 @@
+{
+  "schema_version": "geox_mcft_cap09_s4_hard_acceptance_evidence_v1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S4",
+  "candidate_evidence_state": "FOCUSED_WORKFLOW_REQUIRED_ON_IMMUTABLE_HEAD",
+  "required_acceptance_mode": "REAL_POSTGRESQL_RESTART_BACKFILL_STALE_DETECTION",
+  "required_proofs": [
+    "PERSISTED_CHECKPOINT_READ",
+    "EXPIRED_ACTIVE_SLOT_RECOVERED_WITH_NEW_FENCE",
+    "SAME_IDEMPOTENCY_KEY_PRESERVED",
+    "OLD_FENCING_TOKEN_REJECTED",
+    "SAME_OWNER_RETRY_IDEMPOTENT",
+    "OLDEST_MISSED_SLOT_FIRST",
+    "RESTART_CURSOR_READBACK",
+    "STALE_DATABASE_EVIDENCE_DEGRADES_RUNTIME_HEALTH",
+    "SCHEDULER_LAG_REPORTED_AS_RUNTIME_HEALTH",
+    "NO_DUPLICATE_SLOT_ROWS",
+    "NO_CANONICAL_FACT_WRITE",
+    "NO_BACKGROUND_SCHEDULER",
+    "NO_PRODUCTION_WIRING"
+  ],
+  "required_workflows": [
+    "mcft-cap-09-s4-restart-backfill-stale-detection",
+    "ci"
+  ],
+  "external_effectiveness_claimed": false,
+  "exact_sha_r2_required_after_protected_merge": true
+}

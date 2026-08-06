@@ -1,0 +1,27 @@
+{
+  "schema_version": "geox_mcft_cap09_s4_restart_backfill_stale_detection_config_v1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S4",
+  "scope": "RESTART_BACKFILL_STALE_DETECTION_ONLY",
+  "restart_source": "PERSISTED_NEXT_TICK_CHECKPOINT",
+  "scheduler_contract": "SCHEDULER_PORT_V1",
+  "evidence_contract": "EVIDENCE_INGRESS_PORT_V1",
+  "availability_contract": "AVAILABILITY_PORT_V1",
+  "next_tick_read_contract": "NEXT_TICK_READ_PORT_V1",
+  "active_slot_recovery_policy": "EXPIRED_ACTIVE_SLOT_SAME_IDEMPOTENCY_NEW_FENCE_V1",
+  "missed_slot_policy": "OLDEST_ELIGIBLE_FIRST",
+  "scheduler_lag_basis": "DURABLE_CURSOR_NEXT_LOGICAL_TIME_TO_OBSERVED_WALL_CLOCK",
+  "evidence_degradation_statuses": ["STALE", "MISSING"],
+  "runtime_health_only": true,
+  "crop_health_claim_allowed": false,
+  "reused_operational_tables": [
+    "twin_shadow_online_scheduler_cursor_v1",
+    "twin_shadow_online_scheduler_slot_v1",
+    "twin_runtime_lease_v1"
+  ],
+  "new_operational_tables": [],
+  "migration_required": false,
+  "canonical_write_allowed": false,
+  "background_daemon_allowed": false,
+  "production_wiring_allowed": false
+}
