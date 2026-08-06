@@ -21,10 +21,10 @@ jobs:
       - name: Pack exact protected-main inputs
         run: |
           set -euo pipefail
-          mkdir -p export
+          mkdir -p export/workflows
+          cp .github/workflows/mcft-cap-09-s2-registry-registration.yml export/workflows/
+          cp .github/workflows/mcft-cap-09-s4-registry-registration.yml export/workflows/
           cp --parents \
-            .github/workflows/mcft-cap-09-s2-registry-registration.yml \
-            .github/workflows/mcft-cap-09-s4-registry-registration.yml \
             docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json \
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-DELIVERY-STATUS-V1.json \
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json \
