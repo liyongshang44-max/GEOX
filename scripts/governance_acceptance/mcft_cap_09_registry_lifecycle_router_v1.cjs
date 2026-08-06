@@ -1,34 +1,17 @@
 #!/usr/bin/env node
 'use strict';
 const cp=require('node:child_process');
-const lane=process.env.MCFT_REGISTRY_LANE;
-const mode=process.env.MCFT_REGISTRY_MODE;
-const routes={
-'s2-cross-lifecycle-repair':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs'],
-'s4-registry-registration':lane==='s4-registry-registration'
-  ? ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_REGISTRY_REGISTRATION.cjs']
-  : ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s4-registration-route-only'],
-'s3-registry-registration':lane==='s3-registry-registration'
-  ? ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_REGISTRY_REGISTRATION.cjs']
-  : ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s3-registration-route-only'],
-'s3-candidate-signal':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s3-candidate-route-only'],
-'s3-exact-sha-attestation':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s3-exact-sha-route-only'],
-'s2-registry-registration':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_REGISTRATION.cjs'],
-'s2-candidate-signal':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs',lane==='trusted-registry-bootstrap'?'--trusted-lifecycle':'--registration-lifecycle'],
-'s2-postmerge-semantic-correction':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs','--postmerge-semantic-correction'],
-'s2-exact-sha-attestation':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--exact-sha-route-only'],
-'s1-cross-lifecycle-repair':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_CANDIDATE_CROSS_LIFECYCLE_REPAIR.cjs'],
-'s1-registry-registration':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_REGISTRY_REGISTRATION.cjs'],
-'s1-candidate-signal':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S1_ADAPTER_CONTRACTS.cjs',lane==='trusted-registry-bootstrap'?'--trusted-lifecycle':'--registration-lifecycle'],
-};
-if(lane==='trusted-registry-bootstrap'){
-routes['workflow-repair']=['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_S1_LIFECYCLE_REPAIR.cjs'];
-routes['registry-existing-paths-correction']=['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs','--registry-existing-paths-correction'];
-routes['candidate-signal']=['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs','--candidate-signal'];
-routes.bootstrap=['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TRUSTED_REGISTRY_BOOTSTRAP.cjs','--bootstrap'];
-}
-const route=routes[mode];
-if(!route) throw new Error(`UNSUPPORTED_CAP09_REGISTRY_LIFECYCLE:${lane}:${mode}`);
-const result=cp.spawnSync(process.execPath,route,{stdio:'inherit',env:process.env});
-if(result.error) throw result.error;
-process.exit(result.status??1);
+const crypto=require('node:crypto');
+const fs=require('node:fs');
+const path=require('node:path');
+const ROOT=path.resolve(__dirname,'../..');
+const TARGET='scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs';
+const SOURCE_COMMIT='881dad9794895c4f50abea358338c440b0ca833e';
+const SOURCE_BLOB='1e63719e5d98c9f383360dd9c46da4b64b55c534';
+function blob(value){const b=Buffer.from(value);return crypto.createHash('sha1').update(Buffer.concat([Buffer.from(`blob ${b.length}\0`),b])).digest('hex');}
+function once(source,from,to,code){if(source.split(from).length!==2)throw new Error(`${code}_CARDINALITY`);return source.replace(from,to);}
+let source=cp.execFileSync('git',['show',`${SOURCE_COMMIT}:${TARGET}`],{cwd:ROOT,encoding:'utf8'});
+if(blob(source)!==SOURCE_BLOB)throw new Error('FROZEN_ROUTER_BLOB_MISMATCH');
+source=once(source,"const routes={", "const routes={\n's4-candidate-lifecycle-repair':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s4-candidate-lifecycle-repair'],\n's4-candidate-signal':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s4-candidate-route-only'],",'S4_ROUTES');
+const temp=path.join(__dirname,`.mcft-cap09-s4-router-${process.pid}.cjs`);
+try{fs.writeFileSync(temp,source);const r=cp.spawnSync(process.execPath,[temp,...process.argv.slice(2)],{cwd:ROOT,env:process.env,stdio:'inherit'});if(r.error)throw r.error;process.exitCode=r.status??1;}finally{try{fs.unlinkSync(temp);}catch{}}

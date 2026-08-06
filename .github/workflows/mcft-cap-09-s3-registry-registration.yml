@@ -4,16 +4,22 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-s3-*'
+      - '.github/workflows/mcft-cap-09-s4-*'
       - '.github/workflows/mcft-cap-09-s3-exact-sha-attestation.yml'
       - 'apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql'
       - 'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_expired_slot_recovery_adapter_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/restart_backfill_stale_detection_service_v1.ts'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-*'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-*'
       - 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs'
       - 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_*'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_*'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_*'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_*'
   merge_group:
     types: [checks_requested]
 
@@ -73,5 +79,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json
             acceptance-output/MCFT_CAP_09_S3_CANDIDATE_LIFECYCLE_ROUTE_RESULT.json
             acceptance-output/MCFT_CAP_09_S3_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json
+            acceptance-output/MCFT_CAP_09_S4_CANDIDATE_LIFECYCLE_ROUTE_RESULT.json
           if-no-files-found: error
           retention-days: 90
