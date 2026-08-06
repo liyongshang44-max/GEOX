@@ -30,9 +30,13 @@ const s3CandidateLifecycleRepair=[
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs',
 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'];
+const s3ExactShaLifecycleRepair=[...s3CandidateLifecycleRepair];
 const s2ExactShaAttestation=[
 '.github/workflows/mcft-cap-09-s2-exact-sha-attestation.yml',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION_V1.cjs'];
+const s3ExactShaAttestation=[
+'.github/workflows/mcft-cap-09-s3-exact-sha-attestation.yml',
+'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_EXACT_SHA_ATTESTATION_V1.cjs'];
 const s3Registration=[
 '.github/workflows/mcft-cap-09-s3-registry-registration.yml',
 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
@@ -111,11 +115,12 @@ files.includes('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE
 !files.includes('docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json')&&
 files.some((p)=>p.endsWith('GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CANDIDATE-V1.json'));
 let baseS2CandidateImplemented=null;
-if(isS2CandidateBoundary){baseS2CandidateImplemented=JSON.parse(run(['show',`${base}:${s2StatusPath}`])).s2_candidate_implemented;}
+if(isS2CandidateBoundary) baseS2CandidateImplemented=JSON.parse(run(['show',`${base}:${s2StatusPath}`])).s2_candidate_implemented;
 let mode='unsupported';
-if(same(files,historicalS2CrossLifecycleRepair)||same(files,s2RegistrationLifecycleRepair)||same(files,s3RegistrationLifecycleRepair)||same(files,s3CandidateLifecycleRepair)) mode='s2-cross-lifecycle-repair';
+if(same(files,historicalS2CrossLifecycleRepair)||same(files,s2RegistrationLifecycleRepair)||same(files,s3RegistrationLifecycleRepair)||same(files,s3CandidateLifecycleRepair)||same(files,s3ExactShaLifecycleRepair)) mode='s2-cross-lifecycle-repair';
 else if(same(files,s3Registration)) mode='s3-registry-registration';
 else if(same(files,s3Candidate)) mode='s3-candidate-signal';
+else if(same(files,s3ExactShaAttestation)) mode='s3-exact-sha-attestation';
 else if(same(files,s2Registration)) mode='s2-registry-registration';
 else if(same(files,s2ExactShaAttestation)) mode='s2-exact-sha-attestation';
 else if(isS2CandidateBoundary&&baseS2CandidateImplemented===true) mode='s2-postmerge-semantic-correction';
