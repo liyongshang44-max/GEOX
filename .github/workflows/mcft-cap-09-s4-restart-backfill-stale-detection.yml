@@ -1,0 +1,86 @@
+name: mcft-cap-09-s4-restart-backfill-stale-detection
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-s4-restart-backfill-stale-detection.yml'
+      - 'apps/server/src/runtime/twin_runtime/postgres_expired_slot_recovery_adapter_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/restart_backfill_stale_detection_service_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-*'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts'
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+concurrency:
+  group: mcft-cap09-s4-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+jobs:
+  s4-restart-backfill-stale-detection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox_mcft_cap09_s4_acceptance
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox_mcft_cap09_s4_acceptance"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Download effective S3 exact-SHA R2 authority
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 31080310315
+          artifact-ids: 8959189326
+          path: acceptance-input/cap09-s3-effective
+          repository: liyongshang44-max/GEOX
+          github-token: ${{ github.token }}
+      - name: Validate S4 Candidate governance
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MCFT_CAP09_S3_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s3-effective
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.cjs
+      - name: Run real PostgreSQL restart/backfill/stale acceptance
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/geox_mcft_cap09_s4_acceptance
+          MCFT_CAP_09_S4_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts
+      - name: Typecheck server
+        run: pnpm --filter @geox/server run typecheck
+      - name: Verify structured acceptance
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          for(const file of ['acceptance-output/MCFT_CAP_09_S4_GOVERNANCE_ACCEPTANCE_RESULT.json','acceptance-output/MCFT_CAP_09_S4_POSTGRESQL_ACCEPTANCE_RESULT.json']){
+            const value=JSON.parse(fs.readFileSync(file,'utf8'));
+            if(value.status!=='PASS')throw new Error(`NOT_PASS:${file}`);
+          }
+          const runtime=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S4_POSTGRESQL_ACCEPTANCE_RESULT.json','utf8'));
+          for(const key of ['expired_active_slot_recovered','old_claim_rejected','oldest_missed_slot_first_verified','restart_cursor_readback_verified','stale_database_evidence_degraded','scheduler_lag_runtime_health_verified'])if(runtime[key]!==true)throw new Error(`S4_PROOF_REQUIRED:${key}`);
+          if(runtime.canonical_fact_delta!==0||runtime.background_scheduler_started!==false)throw new Error('S4_BOUNDARY_VIOLATION');
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-s4-restart-backfill-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_S4_GOVERNANCE_ACCEPTANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_S4_POSTGRESQL_ACCEPTANCE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
