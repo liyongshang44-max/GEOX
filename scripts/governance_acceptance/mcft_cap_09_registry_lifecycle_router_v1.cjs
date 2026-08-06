@@ -5,6 +5,9 @@ const lane=process.env.MCFT_REGISTRY_LANE;
 const mode=process.env.MCFT_REGISTRY_MODE;
 const routes={
 's2-cross-lifecycle-repair':['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs'],
+'s4-registry-registration':lane==='s4-registry-registration'
+  ? ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_REGISTRY_REGISTRATION.cjs']
+  : ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s4-registration-route-only'],
 's3-registry-registration':lane==='s3-registry-registration'
   ? ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_REGISTRY_REGISTRATION.cjs']
   : ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s3-registration-route-only'],

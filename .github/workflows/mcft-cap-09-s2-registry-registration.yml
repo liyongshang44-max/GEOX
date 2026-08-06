@@ -4,15 +4,18 @@ on:
     paths:
       - '.github/workflows/mcft-cap-09-s2-*'
       - '.github/workflows/mcft-cap-09-s3-*'
+      - '.github/workflows/mcft-cap-09-s4-*'
       - 'apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql'
       - 'apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-*'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-*'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-*'
       - 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_*'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_*'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_*'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_*'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_*'
   merge_group:
@@ -63,6 +66,7 @@ jobs:
         run: |
           case "$MCFT_S2_REGISTRATION_MODE" in
             s2-cross-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs ;;
+            s4-registry-registration) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s4-registration-route-only ;;
             s3-registry-registration) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s3-registration-route-only ;;
             s3-candidate-signal) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s3-candidate-route-only ;;
             s3-exact-sha-attestation) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s3-exact-sha-route-only ;;
