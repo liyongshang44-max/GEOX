@@ -1,0 +1,25 @@
+{
+  "schema_version": "geox_mcft_cap09_s4_restart_backfill_stale_detection_candidate_boundary_v1",
+  "boundary_id": "GEOX-MCFT-CAP-09-S4-RESTART-BACKFILL-STALE-DETECTION-CANDIDATE-BOUNDARY-V1",
+  "base_main_sha": "48b9a1f86e0351cbaadf941956158095e512a3da",
+  "file_count": 11,
+  "files": [
+    ".github/workflows/mcft-cap-09-s4-restart-backfill-stale-detection.yml",
+    "apps/server/src/runtime/twin_runtime/postgres_expired_slot_recovery_adapter_v1.ts",
+    "apps/server/src/runtime/twin_runtime/restart_backfill_stale_detection_service_v1.ts",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-HARD-ACCEPTANCE-EVIDENCE-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-RESTART-BACKFILL-STALE-DETECTION-CANDIDATE-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-RESTART-BACKFILL-STALE-DETECTION-CANDIDATE-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-RESTART-BACKFILL-STALE-DETECTION-CONFIG-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts"
+  ],
+  "runtime_source_delta": 2,
+  "migration_delta": 0,
+  "registry_delta": 0,
+  "taskbook_delta": 0,
+  "scope_contract_delta": 0,
+  "production_wiring_delta": 0
+}
