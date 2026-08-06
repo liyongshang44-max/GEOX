@@ -1,0 +1,19 @@
+{
+  "schema_version": "geox_mcft_cap09_s4_predecessor_attestation_consumption_v1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S4",
+  "predecessor_slice_id": "MCFT-CAP-09.S3",
+  "predecessor_subject_sha": "15cdb24667d43cf7c21294d22b68160c6668cf73",
+  "predecessor_exact_sha_r2_run_id": 31080310315,
+  "predecessor_exact_sha_artifact_id": 8959189326,
+  "predecessor_semantic_artifact_digest": "sha256:f9e47c55cdfe2f2d17e290b68d7a4bcdbd46106e24cf6cc4d372907e902d17e8",
+  "required_authority_claim": "MCFT_CAP_09_S3_PERSISTENT_SEQUENTIAL_SCHEDULER_EFFECTIVE",
+  "required_next_slice": "S4",
+  "required_s4_registry_registration_authorized": true,
+  "required_retention_level": "R2",
+  "required_retention_days": 730,
+  "readback_required": true,
+  "locked_version_delete_denial_required": true,
+  "consumption_mode": "FOCUSED_WORKFLOW_DOWNLOAD_AND_FAIL_CLOSED_READBACK",
+  "predecessor_authority_consumed": true
+}
