@@ -3,15 +3,18 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-s2-*'
-      - '.github/workflows/mcft-cap-09-s3-registry-registration.yml'
+      - '.github/workflows/mcft-cap-09-s3-*'
+      - 'apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql'
       - 'apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-*'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-*'
       - 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_*'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_REGISTRY_REGISTRATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_*'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_*'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_*'
   merge_group:
     types: [checks_requested]
 permissions:
@@ -34,7 +37,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Classify CAP-09 S2 Registry lifecycle
+      - name: Classify CAP-09 Registry lifecycle
         id: lifecycle
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
@@ -49,7 +52,7 @@ jobs:
           path: acceptance-input/cap09-s1-effective
           repository: liyongshang44-max/GEOX
           github-token: ${{ github.token }}
-      - name: Validate CAP-09 S2 Registry lifecycle
+      - name: Validate CAP-09 Registry lifecycle
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           MCFT_CAP09_S1_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s1-effective
@@ -61,6 +64,7 @@ jobs:
           case "$MCFT_S2_REGISTRATION_MODE" in
             s2-cross-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs ;;
             s3-registry-registration) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s3-registration-route-only ;;
+            s3-candidate-signal) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s3-candidate-route-only ;;
             s2-registry-registration) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_REGISTRATION.cjs ;;
             s2-candidate-signal) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs --registration-lifecycle ;;
             s2-postmerge-semantic-correction) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs --postmerge-semantic-correction ;;
@@ -76,5 +80,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_S2_REGISTRY_REGISTRATION_RESULT.json
             acceptance-output/MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS_RESULT.json
             acceptance-output/MCFT_CAP_09_S2_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json
+            acceptance-output/MCFT_CAP_09_S3_CANDIDATE_LIFECYCLE_ROUTE_RESULT.json
           if-no-files-found: error
           retention-days: 90

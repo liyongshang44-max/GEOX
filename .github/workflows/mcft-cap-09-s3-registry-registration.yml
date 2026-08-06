@@ -3,12 +3,16 @@ name: mcft-cap-09-s3-registry-registration
 on:
   pull_request:
     paths:
-      - '.github/workflows/mcft-cap-09-s3-registry-registration.yml'
+      - '.github/workflows/mcft-cap-09-s3-*'
+      - 'apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql'
+      - 'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts'
       - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-DELIVERY-STATUS-V1.json'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-REGISTRY-REGISTRATION-BOUNDARY-V1.json'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-REGISTRY-REGISTRATION-V1.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_REGISTRY_REGISTRATION.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-*'
+      - 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs'
+      - 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_*'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_*'
   merge_group:
     types: [checks_requested]
 
@@ -24,7 +28,7 @@ concurrency:
 jobs:
   s3-registry-registration:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,7 +38,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
+      - name: Classify CAP-09 S3 Registry lifecycle
+        id: lifecycle
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_REGISTRY_LANE: s3-registry-registration
+        run: node scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs
       - name: Download effective S2 exact-SHA R2 authority
+        if: steps.lifecycle.outputs.mode == 's3-registry-registration'
         uses: actions/download-artifact@v4
         with:
           run-id: 31041512709
@@ -42,18 +53,23 @@ jobs:
           path: acceptance-input/cap09-s2-effective
           repository: liyongshang44-max/GEOX
           github-token: ${{ github.token }}
-      - name: Validate S3 Registry registration
+      - name: Validate CAP-09 S3 Registry lifecycle
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           MCFT_CAP09_S2_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s2-effective
           MCFT_EVENT_NAME: ${{ github.event_name }}
           MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_REGISTRY_REGISTRATION.cjs
+          MCFT_REGISTRY_LANE: s3-registry-registration
+          MCFT_REGISTRY_MODE: ${{ steps.lifecycle.outputs.mode }}
+        run: node scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mcft-cap-09-s3-registry-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          path: acceptance-output/MCFT_CAP_09_S3_REGISTRY_REGISTRATION_RESULT.json
+          path: |
+            acceptance-output/MCFT_CAP_09_S3_REGISTRY_REGISTRATION_RESULT.json
+            acceptance-output/MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json
+            acceptance-output/MCFT_CAP_09_S3_CANDIDATE_LIFECYCLE_ROUTE_RESULT.json
           if-no-files-found: error
           retention-days: 90

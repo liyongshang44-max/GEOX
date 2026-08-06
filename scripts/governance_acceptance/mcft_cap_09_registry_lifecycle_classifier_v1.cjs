@@ -5,7 +5,7 @@ const cp=require('node:child_process');
 const lane=process.env.MCFT_REGISTRY_LANE;
 const base=process.env.MCFT_BASE_SHA;
 if(!base) throw new Error('MCFT_BASE_SHA_REQUIRED');
-if(!['trusted-registry-bootstrap','s1-registry-registration','s2-registry-registration'].includes(lane)) throw new Error('MCFT_REGISTRY_LANE_INVALID');
+if(!['trusted-registry-bootstrap','s1-registry-registration','s2-registry-registration','s3-registry-registration'].includes(lane)) throw new Error('MCFT_REGISTRY_LANE_INVALID');
 const run=(args)=>cp.execFileSync('git',args,{encoding:'utf8'}).trim();
 const files=run(['diff','--name-only',`${base}...HEAD`]).split(/\r?\n/).filter(Boolean).sort();
 const same=(a,b)=>JSON.stringify([...a].sort())===JSON.stringify([...b].sort());
@@ -24,6 +24,12 @@ const s3RegistrationLifecycleRepair=[
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs',
 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'];
+const s3CandidateLifecycleRepair=[
+'.github/workflows/mcft-cap-09-s2-registry-registration.yml',
+'.github/workflows/mcft-cap-09-s3-registry-registration.yml',
+'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
+'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs',
+'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'];
 const s2ExactShaAttestation=[
 '.github/workflows/mcft-cap-09-s2-exact-sha-attestation.yml',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION_V1.cjs'];
@@ -34,6 +40,18 @@ const s3Registration=[
 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-REGISTRY-REGISTRATION-BOUNDARY-V1.json',
 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-REGISTRY-REGISTRATION-V1.json',
 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_REGISTRY_REGISTRATION.cjs'];
+const s3Candidate=[
+'.github/workflows/mcft-cap-09-s3-persistent-sequential-scheduler.yml',
+'apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql',
+'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-DELIVERY-STATUS-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-HARD-ACCEPTANCE-EVIDENCE-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-PERSISTENT-SEQUENTIAL-SCHEDULER-CANDIDATE-BOUNDARY-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-PERSISTENT-SEQUENTIAL-SCHEDULER-CANDIDATE-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-PERSISTENT-SEQUENTIAL-SCHEDULER-CONFIG-V1.json',
+'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json',
+'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_PERSISTENT_SEQUENTIAL_SCHEDULER.cjs',
+'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_PERSISTENT_SEQUENTIAL_SCHEDULER.ts'];
 const s2Registration=[
 '.github/workflows/mcft-cap-09-s2-registry-registration.yml',
 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
@@ -95,8 +113,9 @@ files.some((p)=>p.endsWith('GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CANDID
 let baseS2CandidateImplemented=null;
 if(isS2CandidateBoundary){baseS2CandidateImplemented=JSON.parse(run(['show',`${base}:${s2StatusPath}`])).s2_candidate_implemented;}
 let mode='unsupported';
-if(same(files,historicalS2CrossLifecycleRepair)||same(files,s2RegistrationLifecycleRepair)||same(files,s3RegistrationLifecycleRepair)) mode='s2-cross-lifecycle-repair';
+if(same(files,historicalS2CrossLifecycleRepair)||same(files,s2RegistrationLifecycleRepair)||same(files,s3RegistrationLifecycleRepair)||same(files,s3CandidateLifecycleRepair)) mode='s2-cross-lifecycle-repair';
 else if(same(files,s3Registration)) mode='s3-registry-registration';
+else if(same(files,s3Candidate)) mode='s3-candidate-signal';
 else if(same(files,s2Registration)) mode='s2-registry-registration';
 else if(same(files,s2ExactShaAttestation)) mode='s2-exact-sha-attestation';
 else if(isS2CandidateBoundary&&baseS2CandidateImplemented===true) mode='s2-postmerge-semantic-correction';
