@@ -50,6 +50,6 @@ jobs:
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add tmp/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json
+          git add -f tmp/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json
           git diff --cached --quiet || git commit -m 'chore(mcft-cap09): materialize exact S5 registry blob'
           git push origin HEAD:agent/mcft-cap09-s5-registry-input-export
