@@ -83,6 +83,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/geox_mcft_cap09_s5_acceptance
           MCFT_CAP09_S5_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP_04_SINGLE_TICK_DESTRUCTIVE_ACCEPTANCE: '1'
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts
       - name: Prove existing canonical H and positive C commit in isolated PostgreSQL
         env:
