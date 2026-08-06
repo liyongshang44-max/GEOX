@@ -31,7 +31,7 @@ jobs:
             const crypto = require('node:crypto');
             const fs = require('node:fs');
             const path = require('node:path');
-            const root = path.join(process.cwd(), 'transport', 'materialized');
+            const root = path.join(process.cwd(), 'transport', 'mcft-cap-09-s4-registry-materialized', 'materialized');
             const manifestPath = path.join(root, 'MATERIALIZATION-MANIFEST.json');
             const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
             if (manifest.base_sha !== 'd158e1277b4a9a9ba25b02e57f9b3d8294f89e9d') {
