@@ -73,6 +73,8 @@ jobs:
           MCFT_S2_REGISTRATION_MODE: ${{ steps.lifecycle.outputs.mode }}
         run: |
           case "$MCFT_S2_REGISTRATION_MODE" in
+            s5-candidate-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s5-candidate-lifecycle-repair ;;
+            s5-candidate-signal) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s5-candidate-route-only ;;
             s5-registry-registration) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s5-registration-route-only ;;
             s4-exact-sha-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s4-exact-sha-lifecycle-repair ;;
             s4-exact-sha-attestation) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s4-exact-sha-route-only ;;
