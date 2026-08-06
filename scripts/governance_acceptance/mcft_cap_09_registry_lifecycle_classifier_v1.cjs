@@ -16,6 +16,18 @@ const ROUTING_REPAIR_FILES = [
   'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs',
   'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs',
 ];
+const S5_REGISTRATION_FILES = [
+  '.github/workflows/mcft-cap-09-s2-registry-registration.yml',
+  '.github/workflows/mcft-cap-09-s5-registry-registration.yml',
+  'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
+  'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-DELIVERY-STATUS-V1.json',
+  'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-REGISTRY-REGISTRATION-BOUNDARY-V1.json',
+  'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-REGISTRY-REGISTRATION-V1.json',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_REGISTRY_REGISTRATION.cjs',
+  'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs',
+  'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs',
+];
 const EXACT_SHA_CONTROL_FILES = [
   '.github/workflows/mcft-cap-09-s4-exact-sha-attestation.yml',
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_EXACT_SHA_ATTESTATION_V1.cjs',
@@ -51,6 +63,10 @@ const files = git('diff', '--name-only', `${base}...HEAD`)
   .filter(Boolean)
   .sort();
 
+if (sameFiles(files, S5_REGISTRATION_FILES)) {
+  publish('s5-registry-registration', files);
+  process.exit(0);
+}
 if (sameFiles(files, ROUTING_REPAIR_FILES)) {
   publish('s4-exact-sha-lifecycle-repair', files);
   process.exit(0);

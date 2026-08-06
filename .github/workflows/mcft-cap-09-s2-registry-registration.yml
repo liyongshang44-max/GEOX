@@ -5,6 +5,7 @@ on:
       - '.github/workflows/mcft-cap-09-s2-*'
       - '.github/workflows/mcft-cap-09-s3-*'
       - '.github/workflows/mcft-cap-09-s4-*'
+      - '.github/workflows/mcft-cap-09-s5-*'
       - 'apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql'
       - 'apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts'
@@ -14,14 +15,17 @@ on:
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S2-*'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-*'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-*'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-*'
       - 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs'
       - 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_*'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_*'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_*'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_*'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_*'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_*'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_*'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_*'
   merge_group:
     types: [checks_requested]
 permissions:
@@ -69,6 +73,7 @@ jobs:
           MCFT_S2_REGISTRATION_MODE: ${{ steps.lifecycle.outputs.mode }}
         run: |
           case "$MCFT_S2_REGISTRATION_MODE" in
+            s5-registry-registration) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s5-registration-route-only ;;
             s4-exact-sha-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s4-exact-sha-lifecycle-repair ;;
             s4-exact-sha-attestation) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s4-exact-sha-route-only ;;
             s4-candidate-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s4-candidate-lifecycle-repair ;;
@@ -97,5 +102,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_S3_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json
             acceptance-output/MCFT_CAP_09_S4_CANDIDATE_LIFECYCLE_ROUTE_RESULT.json
             acceptance-output/MCFT_CAP_09_S4_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json
+            acceptance-output/MCFT_CAP_09_S5_REGISTRY_LIFECYCLE_ROUTE_RESULT.json
           if-no-files-found: error
           retention-days: 90
