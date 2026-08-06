@@ -1,9 +1,7 @@
 name: tmp-mcft-cap09-s5-candidate-validation
 
 on:
-  push:
-    branches:
-      - agent/mcft-cap09-s5-candidate-validation
+  pull_request:
     paths:
       - '.github/workflows/tmp-mcft-cap09-s5-candidate-validation.yml'
       - 'tmp/mcft_s5/**'
@@ -29,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: pnpm/action-setup@v4
@@ -104,7 +102,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: tmp-mcft-cap09-s5-candidate-validation-${{ github.sha }}
+          name: tmp-mcft-cap09-s5-candidate-validation-${{ github.event.pull_request.head.sha }}
           path: acceptance-output/
           if-no-files-found: warn
           retention-days: 7
