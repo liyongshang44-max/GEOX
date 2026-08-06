@@ -69,6 +69,8 @@ jobs:
           MCFT_S2_REGISTRATION_MODE: ${{ steps.lifecycle.outputs.mode }}
         run: |
           case "$MCFT_S2_REGISTRATION_MODE" in
+            s4-exact-sha-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s4-exact-sha-lifecycle-repair ;;
+            s4-exact-sha-attestation) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s4-exact-sha-route-only ;;
             s4-candidate-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s4-candidate-lifecycle-repair ;;
             s4-candidate-signal) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s4-candidate-route-only ;;
             s2-cross-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs ;;
@@ -94,5 +96,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_S3_CANDIDATE_LIFECYCLE_ROUTE_RESULT.json
             acceptance-output/MCFT_CAP_09_S3_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json
             acceptance-output/MCFT_CAP_09_S4_CANDIDATE_LIFECYCLE_ROUTE_RESULT.json
+            acceptance-output/MCFT_CAP_09_S4_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json
           if-no-files-found: error
           retention-days: 90
