@@ -6,38 +6,50 @@ on:
       - '.github/workflows/tmp-mcft-cap09-s5-registry-input-export.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  export-inputs:
+  materialize-registry-blob:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: agent/mcft-cap09-s5-registry-input-export
           fetch-depth: 0
-          persist-credentials: false
-      - name: Pack exact protected-main inputs
+      - name: Derive exact S5 Registry blob from protected main
         run: |
           set -euo pipefail
-          mkdir -p export/workflows
-          cp .github/workflows/mcft-cap-09-s2-registry-registration.yml export/workflows/
-          cp .github/workflows/mcft-cap-09-s4-registry-registration.yml export/workflows/
-          cp --parents \
-            docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json \
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-DELIVERY-STATUS-V1.json \
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json \
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md \
-            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs \
-            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_REGISTRY_REGISTRATION.cjs \
-            scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs \
-            scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs \
-            export/
-          git rev-parse HEAD > export/EXPORT_HEAD_SHA.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap09-s5-registry-inputs-${{ github.event.pull_request.head.sha }}
-          path: export
-          if-no-files-found: error
-          retention-days: 7
+          git show 3169b3cc3fc9b490bdf43e3ca9ebc41fab5ff80c:docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json > /tmp/base-registry.json
+          mkdir -p tmp
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const source = JSON.parse(fs.readFileSync('/tmp/base-registry.json', 'utf8'));
+          source.authority_set_revision = '1.12';
+          source.authority_set_change_id = 'MCFT-CAP-09.S5-TRANSITION-REGISTRATION';
+          const cap = source.capabilities.find((item) => item.capability_line === 'MCFT-CAP-09');
+          if (!cap) throw new Error('CAP09_REQUIRED');
+          const statusPath = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-DELIVERY-STATUS-V1.json';
+          if (!cap.authoritative_candidate_status_paths.includes(statusPath)) cap.authoritative_candidate_status_paths.push(statusPath);
+          if (!cap.candidate_transition_fields.some((item) => item.status_file === statusPath)) {
+            cap.candidate_transition_fields.push({
+              status_file: statusPath,
+              field_path: 's5_candidate_implemented',
+              allowed_candidate_values: [true],
+              focused_workflow: 'mcft-cap-09-s5-shadow-online-canonical-integration',
+              standard_workflow: 'ci',
+              predecessor_effective_evidence_required: true,
+            });
+          }
+          cap.deferred_status_paths = cap.deferred_status_paths.filter((item) => item !== statusPath);
+          fs.writeFileSync('tmp/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json', JSON.stringify(source) + '\n');
+          NODE
+          test "$(git hash-object tmp/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json)" = "767d7a8c2ab65e4bd6fb212bb2c38a4bbc40ff25"
+      - name: Commit temporary exact blob carrier
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tmp/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json
+          git diff --cached --quiet || git commit -m 'chore(mcft-cap09): materialize exact S5 registry blob'
+          git push origin HEAD:agent/mcft-cap09-s5-registry-input-export
