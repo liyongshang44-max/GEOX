@@ -379,18 +379,24 @@ async function waitForAcceptanceResolution(operationPlanId) {
     lastState = state;
     const status = String(state.finalStatus ?? "").toUpperCase();
     const successMappedBy = resolveSuccessFinalStatus(status);
+    const reportEvidenceRefs = Array.isArray(state?.item?.report_json?.evidence_refs)
+      ? state.item.report_json.evidence_refs
+      : [];
     if (successMappedBy === "PENDING_ACCEPTANCE") {
-      return { ...state, seenPendingAcceptance: true };
+      seenPendingAcceptance = true;
     }
-    if (successMappedBy) {
+    if (successMappedBy && reportEvidenceRefs.length > 0) {
       return { ...state, seenPendingAcceptance };
     }
-    if (status) {
+    if (status && !successMappedBy) {
       return { ...state, seenPendingAcceptance };
     }
     await sleep(500);
   }
   const acceptance = lastState?.item?.acceptance ?? {};
+  const reportEvidenceRefs = Array.isArray(lastState?.item?.report_json?.evidence_refs)
+    ? lastState.item.report_json.evidence_refs
+    : [];
   const timeoutSnapshot = {
     final_status: lastState?.finalStatus ?? null,
     acceptance: {
@@ -398,9 +404,10 @@ async function waitForAcceptanceResolution(operationPlanId) {
       status: acceptance?.status ?? null,
     },
     report_json_present: Boolean(lastState?.item?.report_json),
+    report_evidence_ref_count: reportEvidenceRefs.length,
   };
   throw new Error(
-    `operation ${operationPlanId} receipt 后未进入 success 态(${SUCCESS_LANE_FINAL_STATUSES.join("|")}); last_state=${JSON.stringify(timeoutSnapshot)}`,
+    `operation ${operationPlanId} receipt 后未同时满足 success 状态与报告证据就绪；last_state=${JSON.stringify(timeoutSnapshot)}`,
   );
 }
 
