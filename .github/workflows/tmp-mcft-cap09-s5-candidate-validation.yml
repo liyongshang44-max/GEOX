@@ -1,0 +1,99 @@
+name: tmp-mcft-cap09-s5-candidate-validation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/tmp-mcft-cap09-s5-candidate-validation.yml'
+      - 'tmp/mcft_s5/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-s5-candidate-draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox_mcft_cap09_s5_acceptance
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox_mcft_cap09_s5_acceptance"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Materialize exact S5 draft sources
+        run: |
+          set -euo pipefail
+          mkdir -p apps/server/src/runtime/twin_runtime scripts/runtime_acceptance
+          gzip -dc tmp/mcft_s5/postgres_frozen_shadow_online_evidence_source_v1.ts.gz > apps/server/src/runtime/twin_runtime/postgres_frozen_shadow_online_evidence_source_v1.ts
+          gzip -dc tmp/mcft_s5/postgres_cap04_shadow_online_canonical_tick_adapter_v1.ts.gz > apps/server/src/runtime/twin_runtime/postgres_cap04_shadow_online_canonical_tick_adapter_v1.ts
+          gzip -dc tmp/mcft_s5/shadow_online_canonical_integration_service_v1.ts.gz > apps/server/src/runtime/twin_runtime/shadow_online_canonical_integration_service_v1.ts
+          gzip -dc tmp/mcft_s5/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts.gz > scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts
+          test "$(git hash-object apps/server/src/runtime/twin_runtime/postgres_frozen_shadow_online_evidence_source_v1.ts)" = '39a097a2343bd95dcc6b7621a4acc0e31772c563'
+          test "$(git hash-object apps/server/src/runtime/twin_runtime/postgres_cap04_shadow_online_canonical_tick_adapter_v1.ts)" = '14e3867290246a181890a3e01a5aedbd511e0d8b'
+          test "$(git hash-object apps/server/src/runtime/twin_runtime/shadow_online_canonical_integration_service_v1.ts)" = '1d298c779d35005801f9900ff13f90b97247f42f'
+          test "$(git hash-object scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts)" = '8caa1d43b11f5f356da1e9ed7c40978d4dfe159f'
+      - name: Extract canonical CAP-04 DB fixture support without duplicating runtime semantics
+        run: |
+          set -euo pipefail
+          awk '/^async function deleteCap04GuardsV1\(/{exit} {print}' \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts \
+            > scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts
+          perl -0pi -e 's/const pool =/export const pool =/' scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts
+          perl -0pi -e 's/function persistenceAdapterV1/export function persistenceAdapterV1/' scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts
+          perl -0pi -e 's/async function resetSchemaV1/export async function resetSchemaV1/' scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts
+          perl -0pi -e 's/async function buildControlledAuthorityV1/export async function buildControlledAuthorityV1/' scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts
+          perl -0pi -e 's/async function seedControlledAuthorityV1/export async function seedControlledAuthorityV1/' scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts
+          test -s scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts
+          grep -q 'export async function seedControlledAuthorityV1' scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts
+      - name: Typecheck server and S5 acceptance
+        run: |
+          set -euo pipefail
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 --skipLibCheck \
+            scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts
+      - name: Run real PostgreSQL completed and blocked S5 integration acceptance
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/geox_mcft_cap09_s5_acceptance
+          MCFT_CAP09_S5_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts
+      - name: Verify structured S5 draft proof
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = 'acceptance-output/MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB_RESULT.json';
+          const value = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (value.status !== 'PASS') throw new Error('S5_DRAFT_NOT_PASS');
+          for (const mode of ['completed', 'blocked']) {
+            const row = value[mode];
+            if (!row || row.exact_frozen_evidence_reused !== true || row.shared_scheduler_canonical_fence !== true || row.forbidden_fact_count !== 0 || row.g_write_count !== 0 || row.action_creation_count !== 0) {
+              throw new Error(`S5_DRAFT_PROOF_REQUIRED:${mode}`);
+            }
+          }
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tmp-mcft-cap09-s5-candidate-validation-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB_RESULT.json
+          if-no-files-found: error
+          retention-days: 7
