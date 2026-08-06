@@ -1,0 +1,43 @@
+name: tmp-mcft-cap09-s5-registry-input-export
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/tmp-mcft-cap09-s5-registry-input-export.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export-inputs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Pack exact protected-main inputs
+        run: |
+          set -euo pipefail
+          mkdir -p export
+          cp --parents \
+            .github/workflows/mcft-cap-09-s2-registry-registration.yml \
+            .github/workflows/mcft-cap-09-s4-registry-registration.yml \
+            docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json \
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-DELIVERY-STATUS-V1.json \
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json \
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_REGISTRY_REGISTRATION.cjs \
+            scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs \
+            scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs \
+            export/
+          git rev-parse HEAD > export/EXPORT_HEAD_SHA.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-s5-registry-inputs-${{ github.event.pull_request.head.sha }}
+          path: export
+          if-no-files-found: error
+          retention-days: 7
