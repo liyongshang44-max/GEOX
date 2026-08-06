@@ -10,6 +10,18 @@ const ROOT = path.resolve(__dirname, '../..');
 const TARGET = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs';
 const S4_SUBJECT = '6a4138e77fe6b838bc0f552a0bc5e2ceb84c026f';
 const FROZEN_BLOB = '7b8c9d2917ed5cc384f5738f6c34d322bc18c9f2';
+const S5_REGISTRATION_FILES = [
+  '.github/workflows/mcft-cap-09-s2-registry-registration.yml',
+  '.github/workflows/mcft-cap-09-s5-registry-registration.yml',
+  'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json',
+  'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-DELIVERY-STATUS-V1.json',
+  'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-REGISTRY-REGISTRATION-BOUNDARY-V1.json',
+  'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-REGISTRY-REGISTRATION-V1.json',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_REGISTRY_REGISTRATION.cjs',
+  'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs',
+  'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs',
+];
 const ROUTING_REPAIR_FILES = [
   '.github/workflows/mcft-cap-09-s2-registry-registration.yml',
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
@@ -138,6 +150,33 @@ if (!base) throw new Error('MCFT_BASE_SHA_REQUIRED');
 const files = changedFiles(base);
 
 try {
+  if (process.argv.includes('--s5-registration-route-only')) {
+    must(base === '3169b3cc3fc9b490bdf43e3ca9ebc41fab5ff80c', 'EXACT_S5_REGISTRATION_BASE_REQUIRED');
+    assertOneCommit(base);
+    must(sameFiles(files, S5_REGISTRATION_FILES), 'EXACT_S5_REGISTRATION_BOUNDARY_REQUIRED');
+    assertSubjectAncestor(base);
+    assertNoCandidateDeclaration(files);
+    must(!files.some((file) => file.startsWith('apps/') || file.startsWith('packages/') || file.includes('/migrations/')), 'S5_REGISTRATION_RUNTIME_OR_MIGRATION_FORBIDDEN');
+    const status = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-DELIVERY-STATUS-V1.json'), 'utf8'));
+    must(status.status === 'REGISTRY_REGISTERED_NOT_CANDIDATE', 'S5_NON_CANDIDATE_STATUS_REQUIRED');
+    must(status.s5_registry_registration_implemented === true && status.s5_candidate_implemented === false, 'S5_REGISTRATION_FLAGS_REQUIRED');
+    must(status.candidate_declaration_present === false && status.externally_effective === false, 'S5_NON_EFFECTIVE_REQUIRED');
+    for (const field of AUTHORITY_FALSE_FIELDS) must(status[field] === false, `S5_AUTHORITY_MUST_REMAIN_FALSE:${field}`);
+    const classifier = fs.readFileSync(path.join(ROOT, 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs'), 'utf8');
+    const router = fs.readFileSync(path.join(ROOT, 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'), 'utf8');
+    const s2Workflow = fs.readFileSync(path.join(ROOT, '.github/workflows/mcft-cap-09-s2-registry-registration.yml'), 'utf8');
+    for (const token of ['s5-registry-registration', 'S5_REGISTRATION_FILES']) must(classifier.includes(token), `S5_CLASSIFIER_TOKEN_REQUIRED:${token}`);
+    for (const token of ['s5-registry-registration', '--s5-registration-route-only']) {
+      must(router.includes(token), `S5_ROUTER_TOKEN_REQUIRED:${token}`);
+      must(s2Workflow.includes(token), `S5_S2_WORKFLOW_TOKEN_REQUIRED:${token}`);
+    }
+    const result = { status:'PASS', lifecycle:'S5_REGISTRY_REGISTRATION_ROUTED', base_sha:base, head_sha:git('rev-parse','HEAD'), changed_files:files, s4_subject_sha:S4_SUBJECT, candidate_transition:false, candidate_declaration:false, runtime_source_delta:0, migration_delta:0, canonical_write_authorized:false, background_scheduler_authorized:false, external_effectiveness:false, first_legal_next_action:'MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_CANDIDATE' };
+    write('MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json', result);
+    write('MCFT_CAP_09_S5_REGISTRY_LIFECYCLE_ROUTE_RESULT.json', result);
+    console.log(JSON.stringify(result, null, 2));
+    process.exit(0);
+  }
+
   if (process.argv.includes('--s4-exact-sha-lifecycle-repair')) {
     must(base === S4_SUBJECT, 'EXACT_S4_EXACT_SHA_ROUTING_BASE_REQUIRED');
     assertOneCommit(base);
@@ -221,6 +260,9 @@ try {
 } catch (error) {
   const failure = { status: 'FAIL', error: String(error?.message ?? error) };
   write('MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json', failure);
+  if (process.argv.includes('--s5-registration-route-only')) {
+    write('MCFT_CAP_09_S5_REGISTRY_LIFECYCLE_ROUTE_RESULT.json', failure);
+  }
   if (process.argv.some((value) => value.startsWith('--s4-exact-sha-'))) {
     write('MCFT_CAP_09_S4_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json', failure);
   }

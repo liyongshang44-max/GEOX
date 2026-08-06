@@ -28,7 +28,15 @@ function runNode(argv) {
   return result.status ?? 1;
 }
 
-if (mode === 's4-exact-sha-lifecycle-repair') {
+if (mode === 's5-registry-registration') {
+  const lane = process.env.MCFT_REGISTRY_LANE;
+  process.exitCode = lane === 's5-registry-registration'
+    ? runNode(['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_REGISTRY_REGISTRATION.cjs'])
+    : runNode([
+        'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
+        '--s5-registration-route-only',
+      ]);
+} else if (mode === 's4-exact-sha-lifecycle-repair') {
   process.exitCode = runNode([
     'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',
     '--s4-exact-sha-lifecycle-repair',
