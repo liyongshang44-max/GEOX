@@ -47,9 +47,9 @@ jobs:
           gzip -dc tmp/mcft_s5/shadow_online_canonical_integration_service_v1.ts.gz > apps/server/src/runtime/twin_runtime/shadow_online_canonical_integration_service_v1.ts
           gzip -dc tmp/mcft_s5/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts.gz > scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts
           test "$(git hash-object apps/server/src/runtime/twin_runtime/postgres_frozen_shadow_online_evidence_source_v1.ts)" = '39a097a2343bd95dcc6b7621a4acc0e31772c563'
-          test "$(git hash-object apps/server/src/runtime/twin_runtime/postgres_cap04_shadow_online_canonical_tick_adapter_v1.ts)" = '14e3867290246a181890a3e01a5aedbd511e0d8b'
+          test "$(git hash-object apps/server/src/runtime/twin_runtime/postgres_cap04_shadow_online_canonical_tick_adapter_v1.ts)" = '3c66a172f283dbabf123c21186579c4269f6eed1'
           test "$(git hash-object apps/server/src/runtime/twin_runtime/shadow_online_canonical_integration_service_v1.ts)" = '1d298c779d35005801f9900ff13f90b97247f42f'
-          test "$(git hash-object scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts)" = '8caa1d43b11f5f356da1e9ed7c40978d4dfe159f'
+          test "$(git hash-object scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts)" = 'a3fd942eb6e9d36004faeba62fc280b97ba1b7a3'
       - name: Extract canonical CAP-04 DB fixture support without duplicating runtime semantics
         run: |
           set -euo pipefail
@@ -68,7 +68,7 @@ jobs:
           set +e
           pnpm --filter @geox/server run typecheck > acceptance-output/MCFT_CAP_09_S5_SERVER_TYPECHECK.log 2>&1
           server_status=$?
-          pnpm exec tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 --skipLibCheck \
+          pnpm exec tsc --noEmit --module ESNext --moduleResolution Bundler --target ES2022 --skipLibCheck \
             scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts \
             > acceptance-output/MCFT_CAP_09_S5_ACCEPTANCE_TSC.log 2>&1
