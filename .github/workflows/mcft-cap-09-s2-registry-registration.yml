@@ -65,6 +65,7 @@ jobs:
             s2-cross-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs ;;
             s3-registry-registration) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s3-registration-route-only ;;
             s3-candidate-signal) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s3-candidate-route-only ;;
+            s3-exact-sha-attestation) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s3-exact-sha-route-only ;;
             s2-registry-registration) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_REGISTRATION.cjs ;;
             s2-candidate-signal) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs --registration-lifecycle ;;
             s2-postmerge-semantic-correction) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs --postmerge-semantic-correction ;;
@@ -81,5 +82,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS_RESULT.json
             acceptance-output/MCFT_CAP_09_S2_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json
             acceptance-output/MCFT_CAP_09_S3_CANDIDATE_LIFECYCLE_ROUTE_RESULT.json
+            acceptance-output/MCFT_CAP_09_S3_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json
           if-no-files-found: error
           retention-days: 90
