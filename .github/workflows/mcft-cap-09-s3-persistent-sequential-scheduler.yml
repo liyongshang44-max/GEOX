@@ -1,0 +1,126 @@
+name: mcft-cap-09-s3-persistent-sequential-scheduler
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-s3-persistent-sequential-scheduler.yml'
+      - 'apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql'
+      - 'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-DELIVERY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-HARD-ACCEPTANCE-EVIDENCE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-PERSISTENT-SEQUENTIAL-SCHEDULER-CANDIDATE-BOUNDARY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-PERSISTENT-SEQUENTIAL-SCHEDULER-CANDIDATE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-PERSISTENT-SEQUENTIAL-SCHEDULER-CONFIG-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S3-PREDECESSOR-ATTESTATION-CONSUMPTION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_PERSISTENT_SEQUENTIAL_SCHEDULER.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_PERSISTENT_SEQUENTIAL_SCHEDULER.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-s3-scheduler-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432/mcft_cap09_s3_scheduler_acceptance
+
+jobs:
+  s3-persistent-sequential-scheduler:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_s3_scheduler_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_s3_scheduler_acceptance"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - name: Checkout exact Candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Download effective S2 exact-SHA R2 authority
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 31041512709
+          artifact-ids: 8944755739
+          path: acceptance-input/cap09-s2-effective
+          repository: liyongshang44-max/GEOX
+          github-token: ${{ github.token }}
+      - name: Validate S3 Candidate governance
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_CAP09_S2_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s2-effective
+          MCFT_EVENT_NAME: ${{ github.event_name }}
+          MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_PERSISTENT_SEQUENTIAL_SCHEDULER.cjs
+      - name: Run real PostgreSQL persistent scheduler acceptance
+        env:
+          MCFT_CAP_09_S3_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S3_PERSISTENT_SEQUENTIAL_SCHEDULER.ts
+      - name: Typecheck server Runtime surface
+        run: pnpm --filter @geox/server typecheck
+      - name: Verify structured S3 results
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const governance = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S3_PERSISTENT_SEQUENTIAL_SCHEDULER_RESULT.json', 'utf8'));
+          const database = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S3_POSTGRESQL_ACCEPTANCE_RESULT.json', 'utf8'));
+          if (governance.status !== 'PASS') throw new Error(`S3_GOVERNANCE_NOT_PASS:${governance.error || 'UNKNOWN'}`);
+          if (governance.exact_new_candidate_signal_count !== 1 || !governance.candidate_declaration_present) throw new Error('S3_CANDIDATE_SIGNAL_INVALID');
+          if (!governance.persistent_sequential_scheduler_implemented || !governance.scheduler_clock_implemented || !governance.durable_cursor_implemented) throw new Error('S3_IMPLEMENTATION_PROOF_MISSING');
+          if (governance.operational_table_delta !== 2 || governance.migration_delta !== 1 || governance.runtime_source_delta !== 1) throw new Error('S3_DELTA_INVALID');
+          if (governance.canonical_write_performed || governance.background_scheduler_started || governance.production_wiring_present) throw new Error('S3_NONCLAIM_BOUNDARY_INVALID');
+          if (database.status !== 'PASS' || database.acceptance_mode !== 'REAL_POSTGRESQL_ISOLATED_PERSISTENT_SEQUENTIAL_SCHEDULER') throw new Error('S3_POSTGRESQL_ACCEPTANCE_INVALID');
+          for (const key of [
+            'exact_six_key_scope_verified',
+            'strict_utc_hourly_clock_verified',
+            'future_boundary_rejected',
+            'durable_cursor_verified',
+            'restart_cursor_readback_verified',
+            'oldest_due_slot_first_verified',
+            'active_claim_idempotency_verified',
+            'terminal_success_implicit_retry_rejected',
+            'monotonically_increasing_fencing_token_verified',
+            'stale_fencing_token_rejected',
+            'maximum_one_active_slot_per_scope_verified',
+            'maximum_one_running_slot_per_scope_verified',
+          ]) {
+            if (database[key] !== true) throw new Error(`S3_DATABASE_PROOF_MISSING:${key}`);
+          }
+          if (database.operational_table_count !== 2 || database.canonical_fact_delta !== 0 || database.canonical_write_performed) throw new Error('S3_DATABASE_BOUNDARY_INVALID');
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-s3-persistent-sequential-scheduler-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_S3_PERSISTENT_SEQUENTIAL_SCHEDULER_RESULT.json
+            acceptance-output/MCFT_CAP_09_S3_POSTGRESQL_ACCEPTANCE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

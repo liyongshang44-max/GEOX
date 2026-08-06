@@ -1,0 +1,41 @@
+{
+  "schema_version": "geox_mcft_cap09_s3_hard_acceptance_evidence_v1",
+  "evidence_id": "GEOX-MCFT-CAP-09-S3-HARD-ACCEPTANCE-EVIDENCE-V1",
+  "record_status": "S3_CANDIDATE_ACCEPTANCE_DECLARATION_NOT_EFFECTIVE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S3",
+  "required_check_count": 20,
+  "checks": [
+    { "id": "HA-S3-01", "claim": "S2 exact-SHA/R2 authority consumed", "required": true },
+    { "id": "HA-S3-02", "claim": "S3 Registry registration and Candidate routing merge consumed", "required": true },
+    { "id": "HA-S3-03", "claim": "one exact six-key scope enforced", "required": true },
+    { "id": "HA-S3-04", "claim": "strict UTC hourly O00-O23 clock mapping implemented", "required": true },
+    { "id": "HA-S3-05", "claim": "future boundary claims rejected", "required": true },
+    { "id": "HA-S3-06", "claim": "durable scheduler cursor persists across adapter restart", "required": true },
+    { "id": "HA-S3-07", "claim": "existing twin_runtime_lease_v1 reused with monotonically increasing fencing", "required": true },
+    { "id": "HA-S3-08", "claim": "stale fencing token rejected", "required": true },
+    { "id": "HA-S3-09", "claim": "same active claim by same owner is idempotent", "required": true },
+    { "id": "HA-S3-10", "claim": "different owner cannot steal active slot", "required": true },
+    { "id": "HA-S3-11", "claim": "oldest eligible missed slot must be claimed first", "required": true },
+    { "id": "HA-S3-12", "claim": "maximum one active slot per scope enforced", "required": true },
+    { "id": "HA-S3-13", "claim": "maximum one RUNNING slot per scope enforced by PostgreSQL unique index", "required": true },
+    { "id": "HA-S3-14", "claim": "terminal result advances cursor by compare-and-set", "required": true },
+    { "id": "HA-S3-15", "claim": "implicit retry after terminal result rejected", "required": true },
+    { "id": "HA-S3-16", "claim": "COMPLETED, DEGRADED and FAILED terminal states persisted", "required": true },
+    { "id": "HA-S3-17", "claim": "real PostgreSQL 16 isolated acceptance executed", "required": true },
+    { "id": "HA-S3-18", "claim": "zero canonical facts and canonical Runtime transaction writes", "required": true },
+    { "id": "HA-S3-19", "claim": "zero daemon, cron, route and production startup wiring", "required": true },
+    { "id": "HA-S3-20", "claim": "server Runtime surface typechecks", "required": true }
+  ],
+  "expected_postgresql_result": {
+    "operational_table_count": 2,
+    "canonical_fact_delta": 0,
+    "final_cursor_slot_id": "O03",
+    "final_cursor_slot_index": 3,
+    "terminal_states": ["COMPLETED", "DEGRADED", "FAILED"]
+  },
+  "canonical_write_performed": false,
+  "background_scheduler_started": false,
+  "production_wiring_present": false,
+  "external_effectiveness": false
+}
