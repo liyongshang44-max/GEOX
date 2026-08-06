@@ -1,0 +1,22 @@
+{
+  "schema_version": "geox_mcft_cap09_s3_predecessor_attestation_consumption_v1",
+  "consumption_id": "GEOX-MCFT-CAP-09-S3-PREDECESSOR-ATTESTATION-CONSUMPTION-V1",
+  "record_status": "S3_CANDIDATE_PREDECESSOR_CONSUMED_NOT_EFFECTIVE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S3",
+  "s2_effective_subject_sha": "126257e1a08d116089f5f28bd733e6abfd92f290",
+  "s2_exact_sha_r2_run_id": 31041512709,
+  "s2_exact_sha_artifact_id": 8944755739,
+  "s2_semantic_artifact_digest": "sha256:fd122f4169e72d71211c80d1ced60e32bacbf3a305d46ca419f043a671d7f266",
+  "s2_retention_level": "R2",
+  "s2_retention_days": 730,
+  "s2_retain_until": "2028-08-04T19:53:55.714Z",
+  "s2_readback_verified": true,
+  "s2_locked_version_delete_denied": true,
+  "s3_registry_registration_merge_sha": "a50bb3f0035ccf2c60415f4f5345b9ced03f3110",
+  "s3_candidate_routing_merge_sha": "7bb23bae7951325257292cd6a494b11931f2168b",
+  "s3_registry_rule_present": true,
+  "authorized_scope": "PERSISTENT_SEQUENTIAL_SCHEDULER_ONLY",
+  "predecessor_consumption_verified_in_focused_workflow": true,
+  "external_effectiveness": false
+}
