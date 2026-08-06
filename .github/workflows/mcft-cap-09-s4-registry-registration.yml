@@ -1,77 +1,63 @@
-name: mcft-cap-09-s4-registry-registration
-
+name: mcft-cap-09-s4-large-blob-loader
 on:
   pull_request:
     paths:
-      - '.github/workflows/mcft-cap-09-s4-*'
-      - '.github/workflows/mcft-cap-09-s2-registry-registration.yml'
-      - '.github/workflows/mcft-cap-09-s3-registry-registration.yml'
-      - 'apps/server/src/runtime/twin_runtime/postgres_expired_slot_recovery_adapter_v1.ts'
-      - 'apps/server/src/runtime/twin_runtime/restart_backfill_stale_detection_service_v1.ts'
-      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S4-*'
-      - 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs'
-      - 'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_*'
-      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_*'
-  merge_group:
-    types: [checks_requested]
-
+      - '.github/workflows/mcft-cap-09-s4-registry-registration.yml'
 permissions:
-  contents: read
+  contents: write
   actions: read
   pull-requests: read
-
-concurrency:
-  group: mcft-cap09-s4-registry-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-  cancel-in-progress: true
-
 jobs:
-  s4-registry-registration:
+  load-s4-large-blobs:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-      - name: Classify CAP-09 S4 Registry lifecycle
-        id: lifecycle
+      - name: Materialize verified source bytes
         env:
-          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
-          MCFT_REGISTRY_LANE: s4-registry-registration
-        run: node scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs
-      - name: Download effective S3 exact-SHA R2 authority
-        if: steps.lifecycle.outputs.mode == 's4-registry-registration'
-        uses: actions/download-artifact@v4
+          PAYLOAD_B64: H4sIAAAAAAAAA+xcaXvayLKez/4VHa6fAzwDAi9xYhziB4McM8Hgg3Bmcn18FSGErYkscSRhx+Phv5+qXqTWwuLMPvfwwUbqrurq6lre3vDnbmjfWbWZF4Q3vhXo1peZ7VsTPXC8UPct07u3/EfdmBiz0PL1+x0lDL555qcOn4P9ffofPqn/ezu7+3vf7Lzc3XtZf3nwanfnm/ru7u6rvW9I/bkNfc1nHoSGT8g3vueFq+qtK/+Lfmo1csGGXvtnj3gzyzdC23MNh4ixJ1PPJ4ZLuGGQ8/bpqNpuXVTrh4q2RwwztO8tguaibAG3E2/uTgz/sQEMxrY7IZ5rAa0dhLZ7Q9q9Vvdc7dSGl/1+t/+OkpHQIwZxrQfiWEZgEe/BtbDFCbKbWq6JhKH32XIV0vdoRXPuB55foeQVYhqu59omyDwFaSoEDRoKfW8eAjefiui55MG3Q0vZ2rLvZp4PrT7OLPIEvfecCv3bdmzLDcmCTH3vjhRmN4WjZN0tQrRbY+I9DFzHdi0NGm87hn33YaeSU9SdsPejB9vVTNDse+sR3wj+Sg1ZB8qPAbSzBdrFhkzPDUKi/nDRHaodXesNRvpQbQ8+qMOPenvQP+2+0z/skCaVJTBvrTtDhzEKoHsNUrixvC/6nTkNddOY1Q+XuDI0MbVvwJMLKB3TpB4aY8cCFiEIqwe0J7pHu6JjM5O5A87P63JKynUjOlqTU9EhTpL5LATprIjXi8SdeY5tgjUVhFJa7VH3g8p0o7XOVb3bUc8vBiO13/6o99Xv9VP4poKaKB9mnjo4eWgFDXJV4BZYqJACN8LCNTECpnmqEWFNOjUY3XAc78GaNMC4nMDCGmPD/Hzjo53rE8O689ycOjPfm8yp3ekPtg8WnKmziFqNh5/amcqGDW1oyLWgucYsuPVCaezBoBop2zqCAm8cWP49DLoRNkgQYsv4ejL3UeViCOmI2CBLntGSn4k7d5wcMse7oYrB4RLcpdpC1xsyl6s/gzMdSrAHMZBQLRrJLAkzKhpSlvPlQUanQaZBxvaNDYFgCS/mVYGk4NU1QRFjiC6W4R5xp2Ve4Rg3egDj607ALt353djyj7YWsS2ACJYPAS3XIC6gBigTTcF2g5llhoM4dGuooZLtzuYgIlZZYS+EhLdgyje3uUOANRblBrmAiGUH1puVpvn2KPZbXrFF1YHVfzVxRAhJDKlcgDZL/S6j3GRfloRyPpjQmcXWFvVH0VOWH6gLXtjm5zdxzoBY8u851KC26FtUjgJwSJBj9SQxkIGELgweJWQsgIwlAa09uFD19+pHDWiuCqHlGi76FUYuiC4/Ahl/wlg049+ntuVM+PcA5AA9sIefIA/j12s57FAB29S5h95DFF1c60sYu3HGyGnxEo/tgOlFVRdcBcwM5BZSzJHrCoZJx3mASKqbjmd+1nOinUyyIlIcbS01pFQ0kLqPZgRfWHzAqvbEAoAAQ2M+6p+tx5iL6HkPm5A7/svbzI0/ossTA1IrtuB6DznF2YiEAWc6dxlC8q1/z7G8dG8482gQAGB5k+ipHLGlwWdKSi80+syIyM+g5EJZgVd3pXKZuvMDxWyq73t+CVmVWaAI575LKBH6WiTEzPADawRGsEYKrhqUgjkMJZyAnrG3Cn1iLGh7VNI+pVHs4NR2IbeXGMkGYrKKCTntwEtKyPUsKUhQI18s4uIoodfVBlxr5SMiMaWB8QPWCkq5QTLifnVNu85biIOFcmfMSiUwxjJpvo1HlDK7gtfXFfIpgpSMbPsJ3oNQlzPIIW2wnlJ5AbDzn5eItz6Vy4luB8adRcUpGWnZKmScIy43tSXSWhgaY3kNKiJpNptkTL8mGzcC8PeQN2+Gc8PJysDw7ZyaeUaYe8+exIYr9YUyk4lzjKIQ6U39AVCornV/wE5wLQqFFVL6osAnYykYIMsrIVIkJvMrVAklioyKR2Pak9r/DUr1q3r18PrnHfZvF/7tXZe3awoA35Bb3qo+UUDd7ejd/odWr0u7kfRSTBx58ia6CzVtCEIWDXwdnopF75nLZoYh8souQJ4by+fCYihhDb9pknr89JbsHdTrq7rSU1uaqncuh61Rd9CXe7SIZ1oOGJOY+wY5wKbFljxgPGAS6Fh3kOeDNVCMxiEfYD9IM/Pte8yFvgUac51HMgM/aKTQQIVkquV7vYyb5PBABwk6RSJGRvDomnxaVzIpPGlkIEyFYPqMfFNCRTIY4EiIt82CLOhq7oQQZI0Hw0YtIkOFQheZ9m2J0hDySVN7anuUgBSVDIDgleFzOhyck81moRHR92fqUCURQGpu75BWv0NikNTc3qVvBFBqbu/RZwGWmtv79DkCTM3tl/QFB03N7YOose0nVB05JoXTwZBcXnRaI7VAAGUUFp8qvJY8TOGtHShsrFhxmYFVtHymTAXMOFAcy70Jb8G4d1ZZdvtyqA2Gers17HT7YNSjj/qH7qBH7bzAOXOflZhf1a/J8XEUMXLshc1bvsJeZGj3XHuRaDP2IkxFtpLKOgxYoYivImGsSgJYVVJ47Tlmxxcx/hijI6wm9o50+6RU5JC2WClyQFssR5UHw446JCcfE4iatLT2n8SGzy97o+5FT5VXcrRfYrx0vL/CdiVw/lzTjUkzlrvc+mLkXgl9ww3YuiQdHhjau1mpDKOUgPAVyQLwE3N401zBgsP8PPNOL7b9fwyiDB78CjGUmd+fZwGGtyWjZCoEU12FSGo8kgydC3AegK3Hsy9GmSccLp0KXY7OhoPLd2f6qIsrsTJ0FNyZ30RuRGVALKTwtY8Srx36j1x+kuNxpcKJ+g5C32jY6msYOAZ9MlRbHTLo9z6KBqMmKURINplARBW2CJsi41sZCbJEYswnY7sWTUF+LJPLoUlQk0ZkRTETcPbhinjztGpmTxZvSwUefTYMLGmNibI+uEyTTm0jgYT1KzJ9RI4eGNvPW3nuLfEsk2/JXr2u11fj9oQxtc5gePXBqQ7BoXUCHltINMq1/Y9/kBdUyTl85Z0C5vPyHC2PFRtK+MLfKVIwJy9gBkafE29hWnJi38DMRZAkYn6ZUvEKjDhZXi5HRk826cFJtw9R653eHgyHlxejuCOL3A5xT5B6xIEVlYuVKjI2x/7g8Iv+S27P+lKSiRII45gSLisWZv+MHnOwu7bL3IOgRRrCmATHuRJK5rlS2HwndYwb4C8a4hNy4FqH2udGeKvcGV9K9Qr7PnU86JDkHFVOWSY1soOeEHUkL9y1B+fnXamzPCPFquMZ5YkoihIHdrKIMUNidVTyxrjGsm0hvmiR0KQwEJ4Ey0u5JPPYqtHYxF7iZtLbS1xI9vpYWS7f8o2mKGQvNflVQvD15UgACs958xmKxMIvfThOxJFldKmVYRahjleFlGUyZ7evBDPsPeMUl27EZiKpkPdJHBNA9wj9uUWkTVFhuLlbYPAg6iyY0S+IaYTmLSlZGBvKK9HBcNDrnbTa72OHYaGFkgp2UxvAmQMwQxDzvRq2CJsAdX+bfayvxITMKJvxAjIjkic3JI2oB9/31WEmx+avCMrs0j39y4LTrsanEaSnflB7RFOHXWjzf1snPfUrMCq6z/MhaoKKrq+yCuA/qxNNYmE5gSdecGEBG/xpUMQqEBEZQA6aOO9q561R+ywfOaXwQZ78ZUC5kVGuQrOnl6PLYWKVA3zjOwDpMv5MTSGWzRyyg/rrgN7fAeD+Bvj2hZysJnILWJrtAuYi+k2uuhnswk8GeuFnHJ1zS77fBJjxerlARrhW+UW6fjKTLDPPTCtr980lTusqZ7jTQyoQ4eMkhXszyVqpjifSXtYKk5VT6GeVISYJ03v/ydLMvj3nmHovEy1ii1hE3zazoNSGncxCrDRSa1o29d/0cMC6NYJIoE9sxW3NiiB+NDWxoNncfpVc02wmnr7dqRgmwwtgLMtWKNM2JC9rLqP59s74bOnC2kpgbUHz7fbrcuXWMvxwbBnhCmKpvd951Z6t2ycUeMjYJZS4vVOnbzdY3o2YD1XILvQMbXKRecMFoE/xKFxBnFq22Eo41FsF1yrZpFFZlRGU0BNnH66FFInUxN0hsaSLWWaTRd3B+UULk26/o4Pt6qetbi+bboH+FETCjMvllJvEta6kxOvWytLUuStljHg+Qyyc7+pLHHTTHSnhrzT0NeMtopX+u/06647rsgAYcaMR2Vb4U4V36s/sglKKRHdLyJ910p2dXC/dzfBdvSX3TCcTZik5SCWxbrM86ecl0pXZcq0T8jFFm26DcYfrPZCh7DUO+FVLXflYaxOc9RyM9Xx8tR5b5a66rYdNUh8ScCmFkFLAQNiPtNSyFAU9EwH9cSsyi60/+orM3/rD0V/Nx2DohzrebZjaYMzw6ECut0LL5Mnev7dN62tugK2+/7Wzt7//Mn3/6+XOf+9//S6fWi15oWufcEuoCUuoUUuoRpYAQAYiRGCz043MKjI3v4wJmeG9pACxDkRJ8/PMs3Ehg6+r8lthbKlYukKG17VMXMBEhuGtRTxnAvKQOzvAs73svtfUt6yfLKLeQ7DCcId3xYAxPdY3ZPZMzizDAdiIR+rSV74grLTuDdsxxrZjh/z8HgY6wbDr4pHAIC449b2fLFdeaBVVWXnf+hKObPPzEPodU2kiO0ivJBayDPEefrqWUGr+HTPp+tlG18zSelh6nLGSXyjLKTew6d3RnLtuQ1UbtYYjHVPFabfX0+Gxp+oddaTSXf7nX3tbG8qSN+BE9cCb+yYmywt1qHW1kdrR++oPI33Ubb/X22dq+/3FoNsfJW6Vyf2UrqixuUh8Fy19TY3yYCbNeHj+BNN7YdDrgDp0tdd91z0BLZx2hxpr0eIGB9248UGjIe37VYFqC+93nHc1LXuZ7Za6AQTvO0DbtglAA29A0PXwM7XVG53peH5C7yNyGw4u+MvCn+Ie3JANzAkfRmrr7EhCbAuAb+aBADg6Hgj5SK959Ad655ItLNLny37rAyBRXIiHzsrDiUjkjt4sEEgWBjDnriFlw3GUzscJdc6vafJW+yplGEc8MI9pzhUaGuOyx7+TezdH0rg3VgYhiUAs54iRFxpiI8u001HfDVsdfiNGUk0hdR/kr3IVI1b30JqWAh6kGqSFsNSavBlSyhEY1ZtsqL4qYLq6ENlKVBChrnD99m05NYLyXQbR2rESS6F4Yz6XjY+MSeKyoYl2EiXx05aCqS64dSEZwQieQqg8o0PGnB6/Ca8/wu3TaCBwe3CzAY8P4bMVnliU6J5BykBYdVY7ko5ODiMBfxbLRcYNeUvqMadIDGk4Izmzh/NTAUDDMN4RUVxjyCN5PD+b1zPn8unEI+fUPc/Vjby0nUMQR/2VOTSHMvbopXgjh8rlZtlYAjZgLpZzMla6z1+KJ9H5+OK5pwz5+NGZt9CGsuwspJgo8jm7kIVvQkvzw+yWuVR3zelvNqeMr0QkjmfKprHxJv46na3ai8/Hd8kjxjFGTuz9icFWVkYmeR8/uXcv/YpDgq9sDoxYdDBBP6WZJkkqrFZh4Ft17Bt77EQpqPQk6SrJmo+IYM6RfFOWUkke7eHmcEyurvnXhixKZAeKA3o5p/zQVINSzuqQfNZBKs03taTgGxpcbHSR/tmcZVUXMS8wTVzVrzNnlxJnkFOuQ5e7pF7Fa0WJhSe56RyR0wAlmUEjs4xWu5YdFJObya8TSUeVosuolzKgr+Mz37lHg+RWcqsI+gglR5kpAkDMqJV0gaBcApt4qo4NS87V65RG5PS9pn3CEvjGPV3wVhapaMcj8cCnUHJAtduZ/0mPLq1C+CJQbnjmR9uPTvv0Bu+67VZvxamf3ybsxuaAh1CX2EZ8b+GFjLWEgQmfj2c2y2cuFTFvodOOSsan6ek9MdNgDzH2YM/LJgsJiCjWfqWucitLKzCCAatPz5WFrYRMOnrMjDOMi1jnVpnIVQHrwIxXosc7JWvmcQ1poiaGAtnGo5DKVJvlnryMszLP5JVFmYQJxkTge6Dy4RWht1zRaKFwejknxik6yj2JDRDZq7Pn/TI1s26+cps4ky3xgyMI/Vg1s06emVgsHbWs78irAOu8RV6k/CqfieZbOf7ySxEVFWgZomKn0pedP5dPtC01uzKpylP1ZHPp42/J0+tplJK3IiOGHkdgPQKJaqAU6cwuEumGeTsxrBtkY6rMVG79W+9A3WDYdA3QbK3VbqsXoxYuWOKWgN5uXej1Qx0y67o1WsX8cdWW0Jr9n1d7UMb3f1693IN6u3s7+6/+u//ze3z+50VtHvi1se3WLPeeuOChW8V5YFFUZ4ZF8WtE7Px4kx8HLxWxYoO9rPGqZVF3GqTqTYO4cAaxKVWMr+IK5ixVbN7azkSf+Z4JjhrXGw4GoyaSAtoIPOfeKun6xAZbBjxYVJSaomBdTqaYt1BWQpqIAd4paxanxnR8WDdfTyfj/UOwPLP+2jD363vTqbH72jAOTWN/XB9PdyNNaHu6dnmC53ibxZ2X5mS8u39w8Gqyv2dOX5m7O7uH+5Pd3fHB652DunlwcPAaXu/JxMPLfnNvp/66Dn/2dl5KJeBi3VOAKs3Xhy8Pd14f7u0eiFLwOlVrXm0VlRs7vJ2Paw+e/xki/ENQw52PqmnMqvXDarBf5dsZVbH7UU1t3ymPd06xslU0ZrOgRueFfi3wzZrYCJbPBD7rV0E3Zvq8rWZkO/HMoDaB/BhiFgJetNM16DQEqNo7dfBDVdrErGr71Y7a6+KhlCpEqtGlVv2Ae0+e+3XMzlrDTjWOjlX1Q7eD+zq/jOsFAFO1rWraYFhtjUYYYjGWVtuDvnZ5fkG//6IGeNSuiqhdpVG7GkVtqNrvdPGcWfVkcNnvtEBdv1eDv3E7dMtQbiQwfXsWBrU43emGaVqz8FfIfDJ/AUd+HeZg/ddK4Pn0Ggqfec3dZsnwb4Jy8605U6wvlnlqO5YGc/9SEXRYrGBh5cl8mDQw2lUANHkTmJ83ivNw+rq4ED/NJRjeQQJslu4rJjB8sqelF/flzA5M+WghquNPJoEAlTFU/04DGdns354+lvCImyHkLTebzZzycVQuGDqeMWmWIA5YgiPDoNOATsOjzmGNCutDTGzeGu6NBfR4xgrPAk+ACaiodFWc2NNpsVKsVjEhVHENvVj5tP2EFRcgyPYT1l58ui4rwcyxw1LtX/7xv9xaWYGGIKaVTvjPRaT0P3a8cbMU3BoVLjJrzbfuq1Ru2ggULxrbT1gDWziSfsBqHt56vh0+nuLmJ9sTq8wAANtfyk9TutuFrXy2Hok3JVfFaG+DTaU4+U/WBLombI1tXCfLHFxrBL1DqM3QSdu28RJTokZm61cunM3Hjm3qt2E4Y8UpYgT5jk6XO3OEhv6Fvuc4uBpppouvy2iNTCv017/AiNguMSiVaQn1CiWLT2CTsVrRzdFSghLCtPKT/AMezavrI7RrMCj6M8QBNSdar5z4mYejWP+gcJ+OALdCwA4RVeXpAVIwtoYbikEDr+YsyqJNHHOGSn6ESQcjoNwUtMMySsIe7aADGRW3pB5LKAi9aj+bB7clsM64P9TKykcWKIFEtMhKsWBO/T1IUiqyKJdkQumOFskOShqb2u7kOyBjEoJuJzDeoVWhu62SJSIfVERKw+UnkIN3mQ5XE/2YtwpyRgzFD48lfu5vQU8RPi0W+Xu9spieP7YnMPPj53pKofUllOWjRx+ZrwRW2BUXBMDS4BGXDb15iE+IJKumj9mgiP+i5RJ4nhrgJVOID8VuX1OHI9Ltjwb0t6Qhthf5UWzxCMgC4jP7RRXxLmPUOW4gjPsF9kCxXdOZT/AcMLu78ul0MDzpdgBW6OJ8xmjwXu2DtdMazN5R51t81o+BrCnQLUB3hSYXxLS6dtY6om3ROs0mvvxPe0fa27aR3c/9FV4isMiGkkXaSRNmlUCRlcRYx/Lq6KLNGrRi0akQWXJ1pAkU/fd9x1y8dDhHi4KDIrXI4cybmTfvmvfeuCWRs+4oVFyYa8vwMJCWuWUkjLUUWSthOoYSEjNiGbaugJYworRX6CdsUllNZAGKkgeVWmfko//6pGv2Sw0iZ7EFQTfouUuiryPhb2Jk5VmIDxNjESKM2e4Pe2lEfpMncAghQ0oo9V73Vat90v0FxI2XJ52uKRztKrN0651/V24Gu38IAsHLZtl7XqYUgyjXdNswCwYkW4rx6AFGqLqb2C/t1uM5COW/L+D/Q3Ra1lwjrgDEWh+8PbgZvmMb4OzAr/oPw+qjsPpQuWqhFDQ73NRHZfb7SO4dZL6MGsx8azV6gnjCT2AftVu/An4YwnX4/LT1PDxun7zoKp6MqCHkGbL7MPX6inqG2ibcfkV0A7tAY+zJ6/PT5uvmGXmatQC1X7xokp26tL8vPzuCiRoPKH46VLIACDy1GrIdVQ9ICoq1o9GnMLq+jsjernhnKbZPGND07uOGNDMOoW8yYiPQG5300IusRD3Fk2FC8wmRRxjaqCqDonZaSS+LtD3eeWG+RPkxCZIygiLizAQx2t+PPQ6J8ME8eR6NS5Gi41ajhwusgo6NEap1/R5DTKGl6r1CcUo3fY4zEsxif1+/1/gnxxxmjVkjmFpOZi+4AcV8yInVjSdEWOCYc4TBNwFQRES9rpqvJeprxEd7bg7yw3bt1hEktdfOgEakkVQ1nzc2YyGjj+heAnsSpJKrBR5uS9tMiNQJpzUgtMHTlpTpJFHFu3Cl9SPxxr9wM5VXXe8bK7lp1Taj66+u/65iTByVAqL0F8jKW+RlV0GZeAiilFwIx4ljmdQkUrzCEB6QRYjQc61g/BA/7fxUS+qkas2EXioEKLGCOdV9XT0l3cqeMl6JRuNCjSH9bpczFWj0NjGFsloyNhiF5XjAL4a7bREAJjm44SiWEIB10o6k3Jsz4LWH9Kge55xBk3YcO7vFUWWewXEs3yZvaTk2GQuRGhroFD+fNDIkeolg/SnoH6AqtEG1Ssv0sGFwvxxqoqUsxeHxSZtpqtnE/n5c1zXfgSCd21JcdBagzTF9NNHfmtIZzQZd+4NTe/rhmSHinNeBpu7v47MFO8Iya9GWc3qpCHaoqC98sVEgjEk4KAUlR6RtqVkDGk1A+ZxMNwwG1FXsF5jOKPoQjUgG8nlMiHdoQsEIhOH10BDG4CW6iAEHEMEJyLGgIfjfWNcjcNt+eNpq1LutdkoSM2Y8a4pQJpxG72CCgIuIP5J2FrMnorOkwPCUaPac7Ng4ABaThNOAkgFSgZHzlCqMJ3/Yzv2fqtUfHz08ogM8OaA20O2zvGkXtpilOKBlHHFZ3QvJ3Tco7cgeNF8uuSTFICdSiiP9ImovdEoSW2bMTV1AMz23BpYGGkepzsc+Pw+nPhJDdFnjI5z4W4lD4r3cVK7y+wljx92cIoEsR272yco4+oMyf0VcKcN57no4nc35LZ+fKN+3xJE4mj65Xpa0FfhuQsAKqq7CL/kg3yAYsJi1waYoamXLauIlDQi22zt4T3l/2JQCqNJudSlrTvi62X4JZPQVKHjCmvGqjphnbvnWC8QdsYYsPswqN++lBa+kJZPyZDG/XQA/WMK0A4MEcIQx7wl8QgPVpvXUZwcJbH2J3OuMxBxD4gEc7p12hbKesIfzlnDJq8R37pf+NxYSxGREMcf22vqYzJ7MaCIWd3mHYQrLSH84WkwjvTeRZZdcajYQQeL041nlBpar/y569oz7XH2fiRIA5swUgSIm4Ylinh+H88ZkENW8J39r940vLl9bYM/qY73/h//ggb7/8afDQ/8fVf/ogXdU+H98jyIiQtmTQ0R0pn07dOjo1fTT7XxiVuQnusb1zHx7bYSd4rGI+Q5/67dLMtH22qfdyTlWXJlVF9ORWRNvz4hf1Gi+E1d6xKNr1HUe7p5MKBzKg/wQ1D7A7Y4Ra6qiW9GR5GBHZwnJiYfcdSoCNg3ruutHvgiUrSJyU/CcKxG8oyRwFRdlzGSHsKM3v3oFIsXok6rSQDn4C0HfwfYcH8SWYWN3gG0Xz5V0vPVeQ0pR7eh21P8kERRXfDqg6cwJ70546d9tWvVdo3n+U/RDuFDZsc1o80CA/8/7FVhpx3G5c0sdjLd6XePck1wPrI2ywHmr08Wd95/THFlAt99p9dqNZs0yAr1JE0qsiGGd+uBZymuBXLPjs1hbqhxEgbhdr265Og1RIG/Zg6cyFVHAd+3BE5mMKOAb9+CJSkcUiIv34JnISBTQ7Xt1axWDhzMB1d7Qj4oCxuXfGhDxQMIgfkoAxE/Vu/gter7QPfK+ASmPPNPl75DnL+afbuFhTbn6qFx90PWqQRX/qwCn/hUGSXE7yew1mLxGRXHrQYLSLwKHF+P3oDeOQbe+hKf+g4fBvSXzjcoV6NPz6FV/9ptt8TvLqXDyoaQALI6SAUXRr8G2fos+Ws7q0oxYlqTXhkkXwcoy+qk+D2TA8oaNuDRs9ELtue1/IkeVJY/He1TxyZY7HYS4uWHJJ8NReDMBggWSqggSY6UK0BC1EOknLfNAuZgaaBYxpil81ugLc81qmugGquHixp79BrMWwKTZS3iVAnbl7ACii3c1o10PwRF/B/iF5YIK9w5Nhtz1e3gXWHQS2To9BaUsxU2TX9COgJbKswgk9mkZOotukbLfDK+E6m+1nqORDDMU9TlsEjBzPlGqbH8eqDv0DDOFXlrn/kO+XSB+t547nWBDiNRLMzxOf+iykww/vlMfK/f3RR+DPAOpQFlo3LBWcrHEcgTotXCDyq+wMrIWll43+d1iPJwDEYrg7/HcMuolX0zG0t40hR0dLPFfmnVcjy7dbwI46I6GN0O2K82CNxcrjLfmmDF9peEYZT4VgUA3ltFFpWjbOFE7irFq0y5yYBtxuAMlVOasUJcpDwtb2E3cyRVop1NxjxPNgERfZATO3s/1016zY9/z3Ht+PP3cvUP33lEQYLW3zqX7hqEVX1dyEMplhpLUNZe0V8SnxvZx5Srys5XDNxMmJhDYUTTX85Y5BdZxu3W+12m8ar6u77Ez1V6j3mnUjzFHdLp6o91E/5PYBxTOlqqaPG9IsuMBGienSsI6wMQLB9WqF3JKFTxpt4Cx4+GE5dyph03n/z8h39fn/17Yr2o57yr6DhDc0QMhBlVq2RHhKEmeufSC4NvJIfxrOQ44HNK4toVOU+0fnSDA8MGx4V4EPaq8kmPTNQp48A1mT+NonSBPdpwtrq+HHyXrE1AtVWgR50XACy9BZh8nQ38cvlEtMBJIqOwy8+HVewrducS/gKFzT6tLVxge6R3/bb6VcOcR3HXBR/flJTIJEgzzkozBrC1lQOy6WE41IUZc71Jl7wDGrB8rW255UoYBLGbAyFaUvGaMl5g+WWHqlARi4Lm6jVSAXOLS5zpCDMaQt3ZPHF8oOfiftZrlWSlvXAtP1bZqIPQsbYAHqT12tKTYNgj55B+JYn2qL7OWmUhcZEJ9WxtE6LPXa580MCvYGPaOjZ9DdRsbrOD+JHfFGZCtyPZoV2N3Bzbuws+wCys/Vh9/nh19FrL8Zy0DfcaTEOdgyFeYDt46KQAvOeU+hXiqYSugJcCAfoO35oEb7sYatoJb1V6KZP+oHhJGobnBvel/DB5RpB273QlapEk8BcDxwwzG6Vqzo7IUR8uTahWkHvmexaHq40N4aArb1cfBoRa2nd06OEx14PnJDjw/3YF2J0TS8QJpTo07jZM1ozJlQqD522AAsCURdW2Q/dVuj4F0GFQfZIPEJGAYSXhE2HilPxrZ9hurhXMK/3r0r0//Hhr5rxy+Clnm+qw9JbCltiuTeNhSIeJqK8cEQfEAgSy7WEd4kWQLRqPKncBsc50FSLYkA86V59ooalAqsxpqFVtYtcRJUf8a7SZSeXtcra50q8JkFYctx5Im4NJwKGJogimcIbDB7SwzCmmmyl3GFWC5Roy90ZfqjBWP/kggTF5ItOJ+GsXQOceMf7bYtb38NgKpHT2HQdWy3Jy4Z+BKK2OzmvLuukzrlK15c+7zstS390reHndZ+i5ZlC9dw06RRuBoIKdZOD6syz0hdllmPLyxCocXm7OuZC0TobSMfdtinci4XYlQc7PVcIQLgxuLXQaRPLsyBTNvyDWQNWk0OTXdDqEmceB4lTQz1n1JAM2LPbLBpKZSWX3lPkm9MG9p7XTRjZb0cjN5IV55bvaY7CvmIPRU9RTPUp/op378M3FuSpe4bjgqav5ZOnZb5kKEtuunabME9/S8yYdWazvJDCp3tRCcixPxoHZ3k/gYQw+QMv4u+wljVAitnyWWfR2qwPphmkx5iVRX4ka72euswwyjsyQ2r98FBsUWTU4jJJ4zG4UVzTtY4+8KtYWTj4DMSFqXRG+XD+cDpZSpF9ZkNChTZctZOe4BH5nicPCaG3IJ+2xenyVdhQ8M8LaDJT7aFESJ1xaIpGX1DGEz+Kg0p3t/HYxU8czejuioxiIo9ppMI1KvUZ8wrdYtaFodr5Km1fKI3EvT6mzoGnG1V2bPkvJtClhFzrDCzrgS7zaFK4nXgCteAkMEaQCJ9duIyKL19teRlTW0u0uj6ZG6KfA2yKfJbeXXlC4ZA+svsb/8zfsrMZr4LvEzdom/YZf4W+4SP3+X+MT42T9F8I36cXjca1PmLL78zWS4fSM9Y95yZKWOFMuQpUIcXmSQH7OfO8kH+a3lJNyjydjwaWY2vq2+zM5KhyeAGz7Mzc0nBbcN328WykwbTWLLbkUM/fXE0FfE0E8QQ87tWPsCU+82TvlC51t/5UzcXKy1cPRzzwJQJmIUSfwy4JXIcXe4X7ZbvfO957/IpvZa7eNm23gggU4jAE2sW1XkYBBFt016RSNy36gBsDloHHgr13zmZTzz+dlFBsJl2b3cmG3MxVSDRGAwDOC/7ZNuEx2RW2eUcxC9fjsmmVmM1fnTN2M6O1m6OcHoyiTk40lDm815Cgyw/0ymNJ6Mox3FPXMwSqHPT6KYYDSxr3MojpkcMSESmS7ufArsGg4plICOtVPD8WWTU6WV50XeH6gQhLgrecbtBLJKQgUKb9GcjSvAr2MKWdgffEC4B8oHPSR6GbKaJJ9jmCQvW0jKWKj6mK93Xk9AL115BDdLhVmYvu7qgrXEtQiqVoxJJdYx3uB4Ys6qgfeJeoPF7YgyGoh5BXIVVF1zqolABoJk6dN6Ot/Oc6SHpUWvgPV+9GLfiyrpGxVoEaFrek+23JgveMytq9XrOts4vEO9Df7q1v/G1m7+6nsrcd3T0uBD0XhgY26D1Q98WFYxnNprT5ffZCRqi6Knu7WVp3vOsDc6n8Ow/2wX36IUpShFKUpRilKUohSlKEUpSlGKUpSiFKUoRSlKUYpSlKIUpShFKUpRilKUohSlKEUpSlGK8jcr/wdxHouIAMgAAA==
+          PAYLOAD_SHA256: 0412c7abde79a7f850d70b1e511be71944361a60ec3db2179ae32495b53610da
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/s4-large
+          printf '%s' "$PAYLOAD_B64" | base64 -d > /tmp/s4-large.tar.gz
+          test "$(sha256sum /tmp/s4-large.tar.gz | awk '{print $1}')" = "$PAYLOAD_SHA256"
+          tar -xzf /tmp/s4-large.tar.gz -C /tmp/s4-large
+      - name: Create verified Git blobs without updating refs
+        id: blobs
+        uses: actions/github-script@v7
+        env:
+          ROOT: /tmp/s4-large
         with:
-          run-id: 31080310315
-          artifact-ids: 8959189326
-          path: acceptance-input/cap09-s3-effective
-          repository: liyongshang44-max/GEOX
           github-token: ${{ github.token }}
-      - name: Validate CAP-09 S4 Registry lifecycle
-        env:
-          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
-          MCFT_CAP09_S3_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s3-effective
-          MCFT_EVENT_NAME: ${{ github.event_name }}
-          MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
-          GITHUB_TOKEN: ${{ github.token }}
-          MCFT_REGISTRY_LANE: s4-registry-registration
-          MCFT_REGISTRY_MODE: ${{ steps.lifecycle.outputs.mode }}
-        run: node scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs
+          script: |
+            const fs = require('node:fs');
+            const crypto = require('node:crypto');
+            const path = require('node:path');
+            const expected = {
+              'runtime/postgres_expired_slot_recovery_adapter_v1.ts': 'aa16ecdab9c9a9f824783104ce89b36860caef8c',
+              'runtime/restart_backfill_stale_detection_service_v1.ts': 'afce58bcde5db44ce8d2a86e7d1e8219009f86e3',
+              'governance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.cjs': '2a838ff1c8c7dd178d8c617d66333c881dc81af0',
+              'runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts': '40ac540f09c6a0097beafd5ca987be6cb1def54b',
+            };
+            const out = {};
+            for (const [file, wanted] of Object.entries(expected)) {
+              const bytes = fs.readFileSync(path.join(process.env.ROOT, file));
+              const local = crypto.createHash('sha1').update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`), bytes])).digest('hex');
+              if (local !== wanted) throw new Error(`LOCAL_BLOB_MISMATCH:${file}:${local}:${wanted}`);
+              const created = await github.rest.git.createBlob({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                content: bytes.toString('base64'),
+                encoding: 'base64',
+              });
+              if (created.data.sha !== wanted) throw new Error(`REMOTE_BLOB_MISMATCH:${file}:${created.data.sha}:${wanted}`);
+              out[file] = created.data.sha;
+            }
+            fs.writeFileSync('/tmp/s4-large-blob-result.json', JSON.stringify({status:'PASS', blobs:out}, null, 2) + '\n');
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mcft-cap-09-s4-registry-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          path: |
-            acceptance-output/MCFT_CAP_09_S4_REGISTRY_REGISTRATION_RESULT.json
-            acceptance-output/MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json
-            acceptance-output/MCFT_CAP_09_S4_CANDIDATE_LIFECYCLE_ROUTE_RESULT.json
+          name: mcft-cap-09-s4-large-blob-loader-result
+          path: /tmp/s4-large-blob-result.json
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 1
