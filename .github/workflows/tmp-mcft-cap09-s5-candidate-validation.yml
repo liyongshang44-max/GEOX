@@ -50,9 +50,9 @@ jobs:
           gzip -dc tmp/mcft_s5/shadow_online_canonical_integration_service_v1.ts.gz > apps/server/src/runtime/twin_runtime/shadow_online_canonical_integration_service_v1.ts
           gzip -dc tmp/mcft_s5/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts.gz > scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts
           test "$(git hash-object apps/server/src/runtime/twin_runtime/postgres_frozen_shadow_online_evidence_source_v1.ts)" = '39a097a2343bd95dcc6b7621a4acc0e31772c563'
-          test "$(git hash-object apps/server/src/runtime/twin_runtime/postgres_cap04_shadow_online_canonical_tick_adapter_v1.ts)" = '8dfb16886aa274c9c066b446540a88bd32aa2b8a'
+          test "$(git hash-object apps/server/src/runtime/twin_runtime/postgres_cap04_shadow_online_canonical_tick_adapter_v1.ts)" = '3a6ea45c8775526e37e0a52f6fc69f98bee89db3'
           test "$(git hash-object apps/server/src/runtime/twin_runtime/shadow_online_canonical_integration_service_v1.ts)" = 'df3de78aba2931b1237555035564a0a2500e7ec9'
-          test "$(git hash-object scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts)" = '137605feaf3567185d200f44d833df02bb323ebd'
+          test "$(git hash-object scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts)" = 'e8ecf12eb238c34b25770d9d8f841d63ae6345f7'
       - name: Extract canonical CAP-04 DB fixture support
         run: |
           set -euo pipefail
@@ -127,7 +127,7 @@ jobs:
           }
           if(integration.cap05_no_residual.c_residual_attempted!==true||integration.cap05_no_residual.c_residual_count!==0||integration.cap05_no_residual.c_residual_disposition!=='NO_ELIGIBLE_HISTORICAL_FORECAST')throw new Error('S5_C_NO_MATCH_PROOF_REQUIRED');
           const composed=integration.cap05_positive_residual;
-          if(composed.h_read_only_consumed!==true||composed.c_residual_attempted!==true||composed.c_residual_count!==1||composed.c_residual_disposition!=='COMMITTED'||composed.s5_adapter_positive_c_composition_proven!==true||!composed.canonical_transaction_families.includes('C'))throw new Error('S5_ADAPTER_POSITIVE_C_COMPOSITION_REQUIRED');
+          if(composed.h_read_only_consumed!==true||composed.c_residual_attempted!==true||composed.c_residual_count!==1||composed.c_residual_disposition!=='COMMITTED'||composed.s5_adapter_positive_c_composition_proven!==true||composed.residual_port_override_pair_guard_proven!==true||!composed.canonical_transaction_families.includes('C'))throw new Error('S5_ADAPTER_POSITIVE_C_COMPOSITION_REQUIRED');
           if(positiveC.h_read_only_consumption_proven!==true||positiveC.preexisting_h_fixture_count!==1||positiveC.s5_h_write_count!==0||positiveC.c_forecast_residual_commit_proven!==true||positiveC.c_forecast_residual_count!==1||positiveC.g_write_count!==0||positiveC.action_creation_count!==0||positiveC.forbidden_authority_fact_count!==0)throw new Error('S5_POSITIVE_C_PORT_PROOF_REQUIRED');
           NODE
       - uses: actions/upload-artifact@v4
