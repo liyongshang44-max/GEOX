@@ -23,7 +23,8 @@ concurrency:
 
 env:
   MCFT_SEMANTIC_DIGEST_POLICY: CANONICAL_SORTED_KEYS_V1
-  MCFT_CONTROL_PLANE_GENERATION: S3_EXACT_SHA_R2_REPAIR_V5
+  MCFT_SEMANTIC_DIGEST_SCOPE: ENTIRE_ATTESTATION_EXCLUDING_SEMANTIC_ARTIFACT_DIGEST
+  MCFT_CONTROL_PLANE_GENERATION: S3_EXACT_SHA_R2_REPAIR_V6
 
 jobs:
   control-plane-candidate:
@@ -60,7 +61,8 @@ jobs:
       MCFT_SUBJECT_SHA: 15cdb24667d43cf7c21294d22b68160c6668cf73
       MCFT_ROUTE_REPAIR_SHA: aed32435bf1bbc6bd50af5cd46c7bb8dc29d0803
       MCFT_FIRST_FAILED_CONTROL_PLANE_SHA: 41d763c7b1b1c9f35efc702b965ab0cea4632447
-      MCFT_FAILED_CONTROL_PLANE_SHA: d86f0c979f69a89807e4cd88faa51928be587993
+      MCFT_SECOND_FAILED_CONTROL_PLANE_SHA: d86f0c979f69a89807e4cd88faa51928be587993
+      MCFT_FAILED_CONTROL_PLANE_SHA: e1f8eeeb444672563bdddf60d6c4be4d9cc162b0
     steps:
       - name: Checkout protected-main repaired S3 attestation control plane
         uses: actions/checkout@v4
@@ -77,10 +79,12 @@ jobs:
           git cat-file -e "${MCFT_SUBJECT_SHA}^{commit}"
           git cat-file -e "${MCFT_ROUTE_REPAIR_SHA}^{commit}"
           git cat-file -e "${MCFT_FIRST_FAILED_CONTROL_PLANE_SHA}^{commit}"
+          git cat-file -e "${MCFT_SECOND_FAILED_CONTROL_PLANE_SHA}^{commit}"
           git cat-file -e "${MCFT_FAILED_CONTROL_PLANE_SHA}^{commit}"
           git merge-base --is-ancestor "${MCFT_SUBJECT_SHA}" "${MCFT_ROUTE_REPAIR_SHA}"
           git merge-base --is-ancestor "${MCFT_ROUTE_REPAIR_SHA}" "${MCFT_FIRST_FAILED_CONTROL_PLANE_SHA}"
-          git merge-base --is-ancestor "${MCFT_FIRST_FAILED_CONTROL_PLANE_SHA}" "${MCFT_FAILED_CONTROL_PLANE_SHA}"
+          git merge-base --is-ancestor "${MCFT_FIRST_FAILED_CONTROL_PLANE_SHA}" "${MCFT_SECOND_FAILED_CONTROL_PLANE_SHA}"
+          git merge-base --is-ancestor "${MCFT_SECOND_FAILED_CONTROL_PLANE_SHA}" "${MCFT_FAILED_CONTROL_PLANE_SHA}"
           git merge-base --is-ancestor "${MCFT_FAILED_CONTROL_PLANE_SHA}" "${GITHUB_SHA}"
       - uses: actions/setup-node@v4
         with:
@@ -165,12 +169,14 @@ jobs:
               && attestation?.status === 'PASS'
               && attestation?.subject_sha === process.env.MCFT_SUBJECT_SHA
               && attestation?.candidate_to_merge_tree_delta === 0
+              && attestation?.semantic_digest_scope === process.env.MCFT_SEMANTIC_DIGEST_SCOPE
               && attestation?.effective_authority?.s3_persistent_sequential_scheduler_effective === true
               && attestation?.effective_authority?.effective_next_slice === 'S4'
               && attestation?.effective_authority?.s4_registry_registration_authorized === true
               && attestation?.effective_authority?.implementation_authorized === false
               && attestation?.effective_authority?.runtime_source_authorized === false
               && attestation?.effective_authority?.background_scheduler_authorized === false
+              && locator?.semantic_artifact_digest === attestation?.semantic_artifact_digest
               && locator?.retention_level === 'R2'
               && locator?.readback_verified === true
               && locator?.locked_version_delete_denied === true
