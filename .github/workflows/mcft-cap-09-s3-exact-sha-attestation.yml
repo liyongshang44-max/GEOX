@@ -24,7 +24,7 @@ concurrency:
 env:
   MCFT_SEMANTIC_DIGEST_POLICY: CANONICAL_SORTED_KEYS_V1
   MCFT_SEMANTIC_DIGEST_SCOPE: ENTIRE_ATTESTATION_EXCLUDING_SEMANTIC_ARTIFACT_DIGEST
-  MCFT_CONTROL_PLANE_GENERATION: S3_EXACT_SHA_R2_REPAIR_V6
+  MCFT_CONTROL_PLANE_GENERATION: S3_EXACT_SHA_R2_REPAIR_V7
 
 jobs:
   control-plane-candidate:
@@ -62,7 +62,8 @@ jobs:
       MCFT_ROUTE_REPAIR_SHA: aed32435bf1bbc6bd50af5cd46c7bb8dc29d0803
       MCFT_FIRST_FAILED_CONTROL_PLANE_SHA: 41d763c7b1b1c9f35efc702b965ab0cea4632447
       MCFT_SECOND_FAILED_CONTROL_PLANE_SHA: d86f0c979f69a89807e4cd88faa51928be587993
-      MCFT_FAILED_CONTROL_PLANE_SHA: e1f8eeeb444672563bdddf60d6c4be4d9cc162b0
+      MCFT_THIRD_FAILED_CONTROL_PLANE_SHA: e1f8eeeb444672563bdddf60d6c4be4d9cc162b0
+      MCFT_FAILED_CONTROL_PLANE_SHA: f84abca38833638b7fce6d7c5bc08b35b360f6dd
     steps:
       - name: Checkout protected-main repaired S3 attestation control plane
         uses: actions/checkout@v4
@@ -80,11 +81,13 @@ jobs:
           git cat-file -e "${MCFT_ROUTE_REPAIR_SHA}^{commit}"
           git cat-file -e "${MCFT_FIRST_FAILED_CONTROL_PLANE_SHA}^{commit}"
           git cat-file -e "${MCFT_SECOND_FAILED_CONTROL_PLANE_SHA}^{commit}"
+          git cat-file -e "${MCFT_THIRD_FAILED_CONTROL_PLANE_SHA}^{commit}"
           git cat-file -e "${MCFT_FAILED_CONTROL_PLANE_SHA}^{commit}"
           git merge-base --is-ancestor "${MCFT_SUBJECT_SHA}" "${MCFT_ROUTE_REPAIR_SHA}"
           git merge-base --is-ancestor "${MCFT_ROUTE_REPAIR_SHA}" "${MCFT_FIRST_FAILED_CONTROL_PLANE_SHA}"
           git merge-base --is-ancestor "${MCFT_FIRST_FAILED_CONTROL_PLANE_SHA}" "${MCFT_SECOND_FAILED_CONTROL_PLANE_SHA}"
-          git merge-base --is-ancestor "${MCFT_SECOND_FAILED_CONTROL_PLANE_SHA}" "${MCFT_FAILED_CONTROL_PLANE_SHA}"
+          git merge-base --is-ancestor "${MCFT_SECOND_FAILED_CONTROL_PLANE_SHA}" "${MCFT_THIRD_FAILED_CONTROL_PLANE_SHA}"
+          git merge-base --is-ancestor "${MCFT_THIRD_FAILED_CONTROL_PLANE_SHA}" "${MCFT_FAILED_CONTROL_PLANE_SHA}"
           git merge-base --is-ancestor "${MCFT_FAILED_CONTROL_PLANE_SHA}" "${GITHUB_SHA}"
       - uses: actions/setup-node@v4
         with:
