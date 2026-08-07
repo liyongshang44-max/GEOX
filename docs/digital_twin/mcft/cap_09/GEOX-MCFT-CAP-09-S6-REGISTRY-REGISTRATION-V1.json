@@ -1,0 +1,18 @@
+{
+  "schema_version": "geox_mcft_cap09_s6_registry_registration_v1",
+  "base_main_sha": "d46cb3c81c102a57b10a8ff2f1721e7420a82922",
+  "base_registry_blob_sha": "767d7a8c2ab65e4bd6fb212bb2c38a4bbc40ff25",
+  "target_registry_blob_sha": "b161151a1cfaf67a742766aa8a2c93b0b2d89f48",
+  "target_authority_set_revision": "1.13",
+  "target_authority_set_change_id": "MCFT-CAP-09.S6-TRANSITION-REGISTRATION",
+  "s5_effective_subject_sha": "afc882c49d6ec0a475552686200c369eb819b6cd",
+  "s5_exact_sha_r2_run_id": 31165105531,
+  "s5_exact_sha_artifact_id": 8988635083,
+  "s5_semantic_artifact_digest": "sha256:bcb68915a3e01f5516da45d4e40271c5841eae23b3ce7c567357bed316e1ca43",
+  "candidate_transition_performed": false,
+  "candidate_declaration_present": false,
+  "same_pr_registry_registration_cannot_authorize_candidate": true,
+  "implementation_authorized": false,
+  "runtime_source_authorized": false,
+  "canonical_write_authorized": false
+}

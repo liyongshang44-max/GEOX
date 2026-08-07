@@ -1,0 +1,24 @@
+{
+  "schema_version": "geox_mcft_cap09_s6_registry_registration_boundary_v1",
+  "base_main_sha": "d46cb3c81c102a57b10a8ff2f1721e7420a82922",
+  "changed_file_count": 10,
+  "changed_files": [
+    ".github/workflows/mcft-cap-09-s2-registry-registration.yml",
+    ".github/workflows/mcft-cap-09-s6-registry-registration.yml",
+    "docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-REGISTRY-REGISTRATION-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-REGISTRY-REGISTRATION-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_REGISTRY_REGISTRATION.cjs",
+    "scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs",
+    "scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs"
+  ],
+  "candidate_transition": false,
+  "candidate_declaration": false,
+  "registry_delta": 1,
+  "runtime_source_delta": 0,
+  "migration_delta": 0,
+  "route_delta": 0,
+  "authorized_scope": "FORMAL_24_HOUR_STAGE_1B_CLOSURE_ONLY"
+}
