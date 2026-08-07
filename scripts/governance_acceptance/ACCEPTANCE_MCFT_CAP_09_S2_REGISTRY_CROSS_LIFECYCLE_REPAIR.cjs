@@ -9,6 +9,25 @@ const TARGET='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_C
 const FROZEN_SUBJECT='ecb23638cd35824db93b81c4c8bca27e7736696d'; const FROZEN_BLOB='8a2734ce3adfb82e7e432f2a89485b76c9b5e791';
 const S5_SUBJECT='afc882c49d6ec0a475552686200c369eb819b6cd';
 const S5_DESCENDANT_BASE='f421ab1f2d4ba1b07654fac8f465224f717cb18f';
+const S6_REGISTRATION_SUBJECT='4db259966fffb5f38ec6fbb8b41a86a95c6cb5d8';
+const S6_CANDIDATE_LIFECYCLE_REPAIR_FILES=[
+  ".github/workflows/mcft-cap-09-s2-registry-registration.yml",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs",
+  "scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs",
+  "scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs"
+];
+const S6_CANDIDATE_FILES=[
+  ".github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CANDIDATE-BOUNDARY-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CANDIDATE-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CONFIG-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-HARD-ACCEPTANCE-LEDGER-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-S5-ATTESTATION-CONSUMPTION-V1.json",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE.cjs",
+  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE_DB.ts",
+  "scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts"
+];
 const S6_REGISTRATION_FILES=[".github/workflows/mcft-cap-09-s2-registry-registration.yml",".github/workflows/mcft-cap-09-s6-registry-registration.yml","docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-REGISTRY-REGISTRATION-BOUNDARY-V1.json","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-REGISTRY-REGISTRATION-V1.json","scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs","scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_REGISTRY_REGISTRATION.cjs","scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs","scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs"];
 const S5_EXACT_SHA_REPAIR_FILES=[
   ".github/workflows/mcft-cap-09-s2-registry-registration.yml",
@@ -48,6 +67,21 @@ function noDeclaration(files){const marker=['<!--','MCFT_CANDIDATE_DECLARATION_V
 function delegate(){const frozen=cp.execFileSync('git',['show',`${FROZEN_SUBJECT}:${TARGET}`],{cwd:ROOT,encoding:'utf8'});must(blobSha(frozen)===FROZEN_BLOB,'FROZEN_S5_REGISTRATION_CROSS_VALIDATOR_BLOB_MISMATCH');const temp=path.join(__dirname,`.mcft-cap09-s5-registration-cross-${process.pid}.cjs`);try{fs.writeFileSync(temp,frozen);const r=cp.spawnSync(process.execPath,[temp,...process.argv.slice(2)],{cwd:ROOT,env:process.env,stdio:'inherit'});if(r.error)throw r.error;process.exitCode=r.status??1;}finally{try{fs.unlinkSync(temp);}catch{}}}
 const base=process.env.MCFT_BASE_SHA;if(!base)throw new Error('MCFT_BASE_SHA_REQUIRED');const files=changedFiles(base);
 try{
+ if(process.argv.includes('--s6-candidate-lifecycle-repair')){
+  must(base===S6_REGISTRATION_SUBJECT,'EXACT_S6_CANDIDATE_ROUTING_REPAIR_BASE_REQUIRED');oneCommit(base);must(sameFiles(files,S6_CANDIDATE_LIFECYCLE_REPAIR_FILES),'EXACT_FOUR_FILE_S6_CANDIDATE_ROUTING_REPAIR_BOUNDARY_REQUIRED');noDeclaration(files);
+  for(const file of ['docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json'])must(git('rev-parse',`${base}:${file}`)===git('rev-parse',`HEAD:${file}`),`FROZEN_S6_AUTHORITY_BLOB_DRIFT:${file}`);
+  const classifier=fs.readFileSync(path.join(ROOT,'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs'),'utf8');const router=fs.readFileSync(path.join(ROOT,'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'),'utf8');const workflow=fs.readFileSync(path.join(ROOT,'.github/workflows/mcft-cap-09-s2-registry-registration.yml'),'utf8');
+  for(const token of ['s6-candidate-lifecycle-repair','s6-candidate-signal','S6_CANDIDATE_FILES','S6_REGISTRATION_SUBJECT'])must(classifier.includes(token),`S6_CANDIDATE_CLASSIFIER_TOKEN_REQUIRED:${token}`);
+  for(const token of ['s6-candidate-lifecycle-repair','s6-candidate-signal','--s6-candidate-route-only']){must(router.includes(token),`S6_CANDIDATE_ROUTER_TOKEN_REQUIRED:${token}`);must(workflow.includes(token),`S6_CANDIDATE_WORKFLOW_TOKEN_REQUIRED:${token}`);}
+  const result={status:'PASS',lifecycle:'S6_CANDIDATE_LIFECYCLE_ROUTING_REPAIR',base_sha:base,head_sha:git('rev-parse','HEAD'),changed_files:files,candidate_transition:false,registry_transition:false,runtime_source_delta:0,migration_delta:0,external_effectiveness:false,first_legal_next_action:'MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE_CANDIDATE'};write('MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json',result);write('MCFT_CAP_09_S6_CANDIDATE_LIFECYCLE_ROUTE_RESULT.json',result);console.log(JSON.stringify(result,null,2));process.exit(0);
+ }
+ if(process.argv.includes('--s6-candidate-route-only')){
+  ancestor(S6_REGISTRATION_SUBJECT,base);oneCommit(base);must(sameFiles(files,S6_CANDIDATE_FILES),'EXACT_TEN_FILE_S6_CANDIDATE_BOUNDARY_REQUIRED');
+  for(const file of ['docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json','scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs','scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs','.github/workflows/mcft-cap-09-s2-registry-registration.yml'])must(git('rev-parse',`${base}:${file}`)===git('rev-parse',`HEAD:${file}`),`S6_CANDIDATE_CONTROL_PLANE_DRIFT:${file}`);
+  const status=JSON.parse(fs.readFileSync(path.join(ROOT,'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json'),'utf8'));must(status.status==='S6_FORMAL_24_HOUR_CANDIDATE_IMPLEMENTED_NOT_EFFECTIVE'&&status.s6_candidate_implemented===true&&status.s6_registry_registration_implemented===true&&status.externally_effective===false,'S6_CANDIDATE_SIGNAL_REQUIRED');for(const field of AUTHORITY_FALSE_FIELDS)must(status[field]===false,`S6_AUTHORITY_MUST_REMAIN_FALSE:${field}`);
+  const boundary=JSON.parse(fs.readFileSync(path.join(ROOT,'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CANDIDATE-BOUNDARY-V1.json'),'utf8'));must(boundary.file_count===10&&boundary.runtime_source_delta===0&&sameFiles(boundary.files,S6_CANDIDATE_FILES),'S6_TEN_FILE_BOUNDARY_DOCUMENT_REQUIRED');
+  const result={status:'PASS',lifecycle:'S6_CANDIDATE_SIGNAL_ROUTED',base_sha:base,head_sha:git('rev-parse','HEAD'),changed_files:files,candidate_transition:true,registry_transition:false,runtime_source_delta:0,migration_delta:0,external_effectiveness:false,first_legal_next_action:'RUN_FOCUSED_AND_STANDARD_CANDIDATE_ACCEPTANCE'};write('MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json',result);write('MCFT_CAP_09_S6_CANDIDATE_LIFECYCLE_ROUTE_RESULT.json',result);console.log(JSON.stringify(result,null,2));process.exit(0);
+ }
  if(process.argv.includes('--s6-registration-route-only')){
   oneCommit(base);must(sameFiles(files,S6_REGISTRATION_FILES),'EXACT_TEN_FILE_S6_REGISTRATION_BOUNDARY_REQUIRED');noDeclaration(files);
   const result={status:'PASS',lifecycle:'S6_REGISTRY_REGISTRATION_ROUTED',base_sha:base,head_sha:git('rev-parse','HEAD'),changed_files:files,candidate_transition:false,registry_transition:true,runtime_source_delta:0,migration_delta:0,external_effectiveness:false,first_legal_next_action:'MCFT_CAP_09_S6_REGISTRY_REGISTRATION_LANE'};write('MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json',result);console.log(JSON.stringify(result,null,2));return;
