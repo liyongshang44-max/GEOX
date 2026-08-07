@@ -1,119 +1,48 @@
 {
-  "schema_version": "geox_mcft_cap09_s2_hard_acceptance_evidence_v2",
+  "schema_version": "geox_mcft_cap09_s2_hard_acceptance_evidence_v3",
   "evidence_id": "GEOX-MCFT-CAP-09-S2-HARD-ACCEPTANCE-EVIDENCE-V1",
-  "record_status": "S2_POSTMERGE_SEMANTIC_CORRECTION_DECLARATION_NOT_EFFECTIVE",
+  "record_status": "S2_CANONICAL_EPISTEMIC_COMPATIBILITY_CORRECTION_NOT_EFFECTIVE",
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S2",
-  "required_check_count": 20,
+  "required_check_count": 22,
   "checks": [
-    {
-      "id": "HA-S2-01",
-      "claim": "S1 exact-SHA/R2 authority consumed",
-      "required": true
-    },
-    {
-      "id": "HA-S2-02",
-      "claim": "one exact six-key scope enforced in PostgreSQL JSONB predicates",
-      "required": true
-    },
-    {
-      "id": "HA-S2-03",
-      "claim": "established facts type plus canonical Replay payload envelope consumed",
-      "required": true
-    },
-    {
-      "id": "HA-S2-04",
-      "claim": "real PostgreSQL 16 isolated database acceptance executed",
-      "required": true
-    },
-    {
-      "id": "HA-S2-05",
-      "claim": "type-aware role event time mapping preserved",
-      "required": true
-    },
-    {
-      "id": "HA-S2-06",
-      "claim": "OPEN_START_CLOSED_END_PT1H_V1 boundary preserved",
-      "required": true
-    },
-    {
-      "id": "HA-S2-07",
-      "claim": "future weather and ET0 issued, ingested and available by boundary remain eligible context",
-      "required": true
-    },
-    {
-      "id": "HA-S2-08",
-      "claim": "post-boundary event, ingest and availability excluded without leakage",
-      "required": true
-    },
-    {
-      "id": "HA-S2-09",
-      "claim": "outside-window and out-of-order Evidence classified append-forward",
-      "required": true
-    },
-    {
-      "id": "HA-S2-10",
-      "claim": "same source ref with different hash fails closed",
-      "required": true
-    },
-    {
-      "id": "HA-S2-11",
-      "claim": "shared-core semantic duplicate identity uses type plus origin source plus role event time",
-      "required": true
-    },
-    {
-      "id": "HA-S2-12",
-      "claim": "same semantic identity with different canonical payload fails closed",
-      "required": true
-    },
-    {
-      "id": "HA-S2-13",
-      "claim": "coverage uses actual-observation interval buckets rather than record count",
-      "required": true
-    },
-    {
-      "id": "HA-S2-14",
-      "claim": "freshness and maximum gap use actual observations only",
-      "required": true
-    },
-    {
-      "id": "HA-S2-15",
-      "claim": "missing-quality, simulated, debug and non-formal Evidence fail closed",
-      "required": true
-    },
-    {
-      "id": "HA-S2-16",
-      "claim": "adapter transaction is BEGIN TRANSACTION READ ONLY",
-      "required": true
-    },
-    {
-      "id": "HA-S2-17",
-      "claim": "repeated freeze is byte-equivalent",
-      "required": true
-    },
-    {
-      "id": "HA-S2-18",
-      "claim": "zero adapter database write, migration and ACL delta",
-      "required": true
-    },
-    {
-      "id": "HA-S2-19",
-      "claim": "zero scheduler, canonical write, route and production wiring",
-      "required": true
-    },
-    {
-      "id": "HA-S2-20",
-      "claim": "server Runtime surface typechecks",
-      "required": true
-    }
+    {"id":"HA-S2-01","claim":"S1 exact-SHA/R2 authority consumed","required":true},
+    {"id":"HA-S2-02","claim":"one exact six-key scope enforced in PostgreSQL JSONB predicates","required":true},
+    {"id":"HA-S2-03","claim":"established facts type plus canonical Replay payload envelope consumed","required":true},
+    {"id":"HA-S2-04","claim":"real PostgreSQL 16 isolated database acceptance executed","required":true},
+    {"id":"HA-S2-05","claim":"type-aware role event time mapping preserved","required":true},
+    {"id":"HA-S2-06","claim":"OPEN_START_CLOSED_END_PT1H_V1 boundary preserved","required":true},
+    {"id":"HA-S2-07","claim":"future weather and ET0 issued ingested and available by boundary remain eligible context","required":true},
+    {"id":"HA-S2-08","claim":"post-boundary event ingest and availability excluded without leakage","required":true},
+    {"id":"HA-S2-09","claim":"outside-window and out-of-order Evidence classified append-forward","required":true},
+    {"id":"HA-S2-10","claim":"same source ref with different hash fails closed","required":true},
+    {"id":"HA-S2-11","claim":"shared-core semantic duplicate identity uses type plus origin source plus role event time","required":true},
+    {"id":"HA-S2-12","claim":"same semantic identity with different canonical payload fails closed","required":true},
+    {"id":"HA-S2-13","claim":"coverage uses actual-observation interval buckets rather than record count","required":true},
+    {"id":"HA-S2-14","claim":"freshness and maximum gap use actual observations only","required":true},
+    {"id":"HA-S2-15","claim":"missing-quality simulated debug and non-formal Evidence fail closed","required":true},
+    {"id":"HA-S2-16","claim":"adapter transaction is BEGIN TRANSACTION READ ONLY","required":true},
+    {"id":"HA-S2-17","claim":"repeated freeze is byte-equivalent","required":true},
+    {"id":"HA-S2-18","claim":"zero adapter database write migration and ACL delta","required":true},
+    {"id":"HA-S2-19","claim":"zero scheduler canonical write route and production wiring","required":true},
+    {"id":"HA-S2-20","claim":"server Runtime surface typechecks","required":true},
+    {"id":"HA-S2-21","claim":"MCFT-00 canonical epistemic mapping is exact by record type","required":true},
+    {"id":"HA-S2-22","claim":"canonical CAP04 ASSUMED future forcing and ESTIMATED historical ET0 are accepted while noncanonical aliases fail closed","required":true}
   ],
   "expected_postgresql_result": {
     "selected_count": 6,
-    "excluded_count": 7,
+    "excluded_count": 9,
     "outside_window_count": 1,
     "out_of_order_count": 1,
     "eligible_future_forcing_count": 2,
     "clustered_interval_coverage_ratio": "0.500000"
+  },
+  "canonical_epistemic_mapping": {
+    "soil_moisture_observation_v1": "OBSERVED",
+    "observed_rainfall_v1": "OBSERVED",
+    "historical_et0_estimate_v1": "ESTIMATED",
+    "future_weather_assumption_v1": "ASSUMED",
+    "future_et0_assumption_v1": "ASSUMED"
   },
   "future_evidence_leakage": false,
   "database_write_performed": false,
