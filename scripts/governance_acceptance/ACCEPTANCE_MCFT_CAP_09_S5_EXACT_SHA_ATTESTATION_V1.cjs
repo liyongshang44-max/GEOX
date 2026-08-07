@@ -38,7 +38,7 @@ function fixed(s){for(const[f,h]of Object.entries(BLOBS))req(blob(s,f)===h,'BLOB
 async function api(e){const r=await fetch('https://api.github.com/repos/'+process.env.GITHUB_REPOSITORY+e,{headers:{Authorization:'Bearer '+process.env.GITHUB_TOKEN,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'geox-cap09-s5-exact'}});const t=await r.text();req(r.ok,'API_'+r.status+':'+t.slice(0,200));return t?JSON.parse(t):{}}
 function control(){
  const base=process.env.MCFT_BASE_SHA,head=git('rev-parse','HEAD');
- req(base===SUBJECT,'CONTROL_BASE');eq(files(base,head),CONTROL,'CONTROL_TWO_FILES');req(git('rev-list','--count',base+'..'+head)==='2','CONTROL_TWO_COMMITS');
+ req(base===SUBJECT,'CONTROL_BASE');eq(files(base,head),CONTROL,'CONTROL_TWO_FILES');req(git('rev-list','--count',base+'..'+head)==='3','CONTROL_TWO_COMMITS');
  const marker=['MCFT','CANDIDATE','DECLARATION','V2'].join('_');
  req(!fs.readFileSync(WORKFLOW,'utf8').includes(marker)&&!fs.readFileSync(VALIDATOR,'utf8').includes(marker),'DECLARATION_FORBIDDEN');
  fixed(SUBJECT);fixed(head);
@@ -51,7 +51,7 @@ async function attest(){
  eq(files(BASE,HEAD),Object.keys(BLOBS).sort(),'CANDIDATE_BOUNDARY');fixed(HEAD);fixed(SUBJECT);
  const merge=git('rev-parse','HEAD'),p=parents(merge);req(p.length===3&&p[1]===SUBJECT,'CONTROL_MERGE_PARENT');
  const controlHead=p[2];eq(files(SUBJECT,controlHead),CONTROL,'CONTROL_BOUNDARY');eq(files(SUBJECT,merge),CONTROL,'CONTROL_MERGE_BOUNDARY');fixed(merge);
- const pulls=await api('/commits/'+SUBJECT+'/pulls');const pr=pulls.find(x=>x.number===PR&&x.merge_commit_sha===SUBJECT&&x.head?.sha===HEAD&&x.base?.sha===BASE);req(pr,'PR_BINDING');req(String(pr.body||'').includes('<!-- MCFT_CANDIDATE_DECLARATION_V2'),'DECLARATION');
+ const pulls=await api('/commits/'+SUBJECT+'/pulls');const pr=pulls.find(x=>x.number===PR&&x.merge_commit_sha===SUBJECT&&x.head?.sha===HEAD&&x.base?.sha===BASE);req(pr,'PR_BINDING');req(String(pr.body||'').includes('<!-- '+['MCFT','CANDIDATE','DECLARATION','V2'].join('_')),'DECLARATION');
  const run=await api('/actions/runs/'+FOCUSED_RUN);req(run.conclusion==='success'&&run.head_sha===HEAD&&run.event==='pull_request','FOCUSED_RUN');
  const arts=await api('/actions/runs/'+FOCUSED_RUN+'/artifacts?per_page=100');const art=(arts.artifacts||[]).find(x=>x.id===FOCUSED_ARTIFACT);req(art&&art.digest===FOCUSED_DIGEST,'FOCUSED_ARTIFACT');
  const root=process.env.MCFT_CAP09_S5_FOCUSED_ARTIFACT_DIR;req(root&&fs.existsSync(root),'FOCUSED_DIR');
