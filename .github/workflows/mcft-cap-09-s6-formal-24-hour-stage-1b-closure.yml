@@ -1,0 +1,121 @@
+name: mcft-cap-09-s6-formal-24-hour-stage-1b-closure
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-*'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE_DB.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts'
+  merge_group:
+    types: [checks_requested]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-s6-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  qualify-candidate:
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Download effective S5 exact-SHA R2 authority
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 31165105531
+          artifact-ids: 8988635083
+          path: acceptance-input/cap09-s5-effective
+          merge-multiple: true
+          repository: liyongshang44-max/GEOX
+          github-token: ${{ github.token }}
+      - name: Validate exact Candidate and predecessor authority
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_CAP09_S5_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s5-effective
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE.cjs
+      - name: Transpile formal operation programs
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'),ts=require('typescript');
+          const files=['scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts','scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE_DB.ts'];
+          for(const file of files){const result=ts.transpileModule(fs.readFileSync(file,'utf8'),{fileName:file,reportDiagnostics:true,compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,moduleResolution:ts.ModuleResolutionKind.Bundler,esModuleInterop:true}});const errors=(result.diagnostics||[]).filter((d)=>d.category===ts.DiagnosticCategory.Error);if(errors.length){for(const error of errors)console.error(ts.flattenDiagnosticMessageText(error.messageText,'\n'));throw new Error('FORMAL_PROGRAM_TRANSPILE_FAILED:'+file)}}
+          console.log(JSON.stringify({status:'PASS',files},null,2));
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-s6-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_S6_FORMAL_24_HOUR_CANDIDATE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
+
+  formal-hourly-observation:
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Require exact frozen formal subject
+        run: |
+          test -n '${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}'
+          test -n '${{ vars.GEOX_MCFT_CAP09_S6_WINDOW_START_UTC }}'
+          test -n '${{ vars.GEOX_MCFT_CAP09_S6_SCOPE_JSON }}'
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Execute one real-UTC oldest-due formal slot
+        env:
+          DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+          MCFT_CAP09_S6_CANONICAL_INPUT_JSON: ${{ secrets.GEOX_MCFT_CAP09_S6_CANONICAL_INPUT_JSON }}
+          MCFT_CAP09_S6_SUBJECT_SHA: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
+          MCFT_CAP09_S6_WINDOW_START_UTC: ${{ vars.GEOX_MCFT_CAP09_S6_WINDOW_START_UTC }}
+          MCFT_CAP09_S6_SCOPE_JSON: ${{ vars.GEOX_MCFT_CAP09_S6_SCOPE_JSON }}
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts
+      - name: Read back accumulated formal database state
+        env:
+          DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+          MCFT_CAP09_S6_SUBJECT_SHA: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
+          MCFT_CAP09_S6_WINDOW_START_UTC: ${{ vars.GEOX_MCFT_CAP09_S6_WINDOW_START_UTC }}
+          MCFT_CAP09_S6_SCOPE_JSON: ${{ vars.GEOX_MCFT_CAP09_S6_SCOPE_JSON }}
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE_DB.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-s6-formal-hour-${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}-${{ github.run_id }}
+          path: |
+            acceptance-output/MCFT_CAP_09_S6_FORMAL_WINDOW_OBSERVATION.json
+            acceptance-output/MCFT_CAP_09_S6_FORMAL_24_HOUR_DB_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
