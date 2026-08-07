@@ -1,0 +1,27 @@
+{
+  "schema_version": "geox_mcft_cap09_s5_shadow_online_canonical_integration_config_v1",
+  "record_status": "IMMUTABLE_CANDIDATE_CONFIG_NOT_EFFECTIVE",
+  "runtime_mode": "SHADOW_ONLINE",
+  "scope_cardinality": 1,
+  "execution_mode": "CALLER_INVOKED_ONE_CLAIMED_SLOT",
+  "canonical_core": "UNCHANGED_CAP08_S1_CAP04_CAP05_RUNTIME",
+  "canonical_families": [
+    "A",
+    "B",
+    "C",
+    "F"
+  ],
+  "evidence_policy": "EXACT_S2_SELECTED_REF_HASH_READBACK",
+  "lease_policy": "REUSE_SCHEDULER_CLAIM_OWNER_AND_FENCING_TOKEN",
+  "h_policy": "POSTGRES_EXECUTION_FEEDBACK_PORT_READ_ONLY_EXISTING_TRUSTWORTHY_EVIDENCE_ONLY",
+  "c_policy": "EXISTING_CAP05_SERVICE_FAIL_CLOSED_EXCEPT_EXACT_NO_MATCH",
+  "g_policy": "FORBIDDEN",
+  "action_creation_policy": "FORBIDDEN",
+  "background_scheduler": false,
+  "public_http_writer": false,
+  "migration_required": false,
+  "production_wiring": false,
+  "residual_port_policy": "PRODUCTION_POSTGRES_DEFAULT_ACCEPTANCE_OVERRIDE_BOTH_OR_NONE",
+  "positive_c_composition_policy": "S5_ADAPTER_MUST_RETURN_COMMITTED_WITH_READ_ONLY_H_PROOF",
+  "residual_port_override_guard": "SOURCE_AND_PERSISTENCE_MUST_BE_OVERRIDDEN_AS_A_PAIR"
+}
