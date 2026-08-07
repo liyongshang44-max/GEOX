@@ -1,0 +1,40 @@
+{
+  "schema_version": "geox_mcft_cap09_formal_bootstrap_evidence_authority_boundary_v1",
+  "record_status": "FORMAL_BOOTSTRAP_EVIDENCE_AUTHORITY_REPAIR_CANDIDATE_NOT_EFFECTIVE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "base_main_sha": "74c5572bf8a2b4ee7867491a052ae7dafa03be66",
+  "changed_file_count": 9,
+  "changed_files": [
+    ".github/workflows/mcft-cap-09-formal-bootstrap-evidence-authority.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-BOOTSTRAP-EVIDENCE-AUTHORITY-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-BOOTSTRAP-EVIDENCE-AUTHORITY-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_BOOTSTRAP_EVIDENCE_AUTHORITY.cjs",
+    "scripts/runtime_acceptance/BOOTSTRAP_MCFT_CAP_09_S6_FORMAL_AUTHORITY.ts",
+    "scripts/runtime_acceptance/INGEST_MCFT_CAP_09_S6_FORMAL_EVIDENCE.ts",
+    "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_S6_FORMAL_WINDOW.ts",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW_V2.ts",
+    "scripts/runtime_acceptance/mcft_cap09_s6_formal_authority_v1.ts"
+  ],
+  "runtime_source_file_count": 0,
+  "database_migration_file_count": 0,
+  "public_route_file_count": 0,
+  "formal_operation_program_count": 4,
+  "formal_authority_helper_count": 1,
+  "focused_workflow_count": 1,
+  "governance_acceptance_count": 1,
+  "formal_window_started": false,
+  "database_write_performed_in_candidate": false,
+  "synthetic_sensor_truth_allowed": false,
+  "old_s6_candidate_object_set_modified": false,
+  "nonclaims": [
+    "NO_DATABASE_WRITE_IN_CANDIDATE",
+    "NO_WORKFLOW_DISPATCH_IN_CANDIDATE",
+    "NO_FORMAL_WINDOW_STARTED",
+    "NO_SYNTHETIC_SENSOR_TRUTH",
+    "NO_PUBLIC_HTTP_WRITER",
+    "NO_RECOMMENDATION_APPROVAL_AO_ACT_DISPATCH",
+    "NO_MODEL_ACTIVATION",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}

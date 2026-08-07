@@ -1,0 +1,44 @@
+{
+  "schema_version": "geox_mcft_cap09_formal_bootstrap_evidence_authority_v1",
+  "record_status": "FORMAL_STARTUP_GAP_REPAIR_IMPLEMENTED_NOT_EFFECTIVE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "problem_statement": [
+    "the merged S6 runner required a persisted next-tick root but provided no formal root materializer",
+    "the merged S6 runner reused one Runtime Config across O00-O23 although the canonical core requires an exact effective_logical_time per tick",
+    "the merged S6 workflow had no isolated append-only ingress for the five governed Evidence types",
+    "the merged S6 enablement gate did not prove root, config-chain, Evidence, and clean-scheduler readiness"
+  ],
+  "repair": {
+    "authority_derivation": "CHECKED_IN_MCFT00_ARTIFACTS_LOCKED_BY_CAP08_EXACT_SHA_R2",
+    "cap08_effective_subject_sha": "67bd71560268046a7fa9a9433ee074ad3999cb71",
+    "cap08_exact_sha_workflow_run": 30908130962,
+    "cap08_exact_sha_artifact": 8891897316,
+    "cap08_semantic_artifact_digest": "sha256:7e9d713631443641f17c06f71c494319c5f442424ba9ec9f426731940d2700f9",
+    "formal_root_transaction": "SERIALIZABLE_OUTER_TRANSACTION_WITH_TRANSACTION_BOUND_REPOSITORIES",
+    "runtime_config_chain_length": 24,
+    "runtime_config_resolution": "EXACT_PERSISTED_CONFIG_BY_DUE_SLOT_LOGICAL_TIME",
+    "evidence_writer_boundary": "SELECT_AND_INSERT_FACTS_ONLY_WITH_NO_UPDATE_DELETE_OR_RUNTIME_PROJECTION_WRITES",
+    "required_evidence_types": [
+      "soil_moisture_observation_v1",
+      "observed_rainfall_v1",
+      "historical_et0_estimate_v1",
+      "future_weather_assumption_v1",
+      "future_et0_assumption_v1"
+    ],
+    "preflight": "FAIL_CLOSED_BEFORE_V2_ENABLEMENT",
+    "v2_enablement_variable": "GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_V2_ENABLED",
+    "legacy_enablement_required_value": "GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED_MUST_NOT_EQUAL_TRUE"
+  },
+  "formal_window_started": false,
+  "formal_window_completed": false,
+  "externally_effective": false,
+  "first_legal_next_action": "STATIC_ACCEPTANCE_THEN_PROTECTED_MERGE_THEN_CONFIGURE_REAL_EXTERNAL_EVIDENCE_WRITER",
+  "nonclaims": [
+    "NO_DATABASE_WRITE_IN_CANDIDATE",
+    "NO_REAL_EVIDENCE_SOURCE_CONFIGURED_BY_REPOSITORY",
+    "NO_FORMAL_WINDOW_STARTED",
+    "NO_EXTERNAL_EFFECTIVENESS",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
