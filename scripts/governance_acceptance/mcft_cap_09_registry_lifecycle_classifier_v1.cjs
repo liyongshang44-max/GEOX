@@ -8,11 +8,15 @@ const ROOT=path.resolve(__dirname,'../..');
 const TARGET='scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs';
 const FROZEN_SUBJECT='ecb23638cd35824db93b81c4c8bca27e7736696d';
 const FROZEN_BLOB='1c5746385f1c63a873d036a22ba9dbddb32d7354';
-const S5_CANDIDATE_LIFECYCLE_REPAIR_FILES=[
+const S5_EXACT_SHA_LIFECYCLE_REPAIR_FILES=[
   ".github/workflows/mcft-cap-09-s2-registry-registration.yml",
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs",
   "scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs",
   "scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs"
+];
+const S5_EXACT_SHA_ATTESTATION_FILES=[
+  ".github/workflows/mcft-cap-09-s5-exact-sha-attestation.yml",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_EXACT_SHA_ATTESTATION_V1.cjs"
 ];
 const S5_CANDIDATE_FILES=[
   ".github/workflows/mcft-cap-09-s5-shadow-online-canonical-integration.yml",
@@ -35,7 +39,8 @@ function sameFiles(a,b){return JSON.stringify([...a].sort())===JSON.stringify([.
 function publish(mode,files){if(!process.env.GITHUB_OUTPUT)throw new Error('GITHUB_OUTPUT_REQUIRED');fs.appendFileSync(process.env.GITHUB_OUTPUT,`mode=${mode}\n`);console.log(JSON.stringify({lane:process.env.MCFT_REGISTRY_LANE??null,mode,base_sha:process.env.MCFT_BASE_SHA??null,files},null,2));}
 const base=process.env.MCFT_BASE_SHA;if(!base)throw new Error('MCFT_BASE_SHA_REQUIRED');
 const files=git('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
-if(sameFiles(files,S5_CANDIDATE_LIFECYCLE_REPAIR_FILES)){publish('s5-candidate-lifecycle-repair',files);process.exit(0);}
+if(sameFiles(files,S5_EXACT_SHA_LIFECYCLE_REPAIR_FILES)){publish('s5-exact-sha-lifecycle-repair',files);process.exit(0);}
+if(sameFiles(files,S5_EXACT_SHA_ATTESTATION_FILES)){publish('s5-exact-sha-attestation',files);process.exit(0);}
 if(sameFiles(files,S5_CANDIDATE_FILES)){publish('s5-candidate-signal',files);process.exit(0);}
 const frozen=cp.execFileSync('git',['show',`${FROZEN_SUBJECT}:${TARGET}`],{cwd:ROOT,encoding:'utf8'});if(blobSha(frozen)!==FROZEN_BLOB)throw new Error('FROZEN_S5_REGISTRATION_CLASSIFIER_BLOB_MISMATCH');
 const temp=path.join(__dirname,`.mcft-cap09-s5-registration-classifier-${process.pid}.cjs`);
