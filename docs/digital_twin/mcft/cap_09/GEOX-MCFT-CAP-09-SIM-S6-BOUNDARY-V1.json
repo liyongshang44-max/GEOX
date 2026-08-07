@@ -1,0 +1,27 @@
+{
+  "schema_version": "geox_mcft_cap09_s6_sim_boundary_v1",
+  "base_dependency": "MCFT_CAP_09_S6_SIMULATION_LIFECYCLE_COMPATIBILITY_REPAIR",
+  "file_count": 8,
+  "files": [
+    ".github/workflows/mcft-cap-09-s6-production-equivalent-shadow-simulator.yml",
+    "apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.ts",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-SIM-S6-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-SIM-S6-CONFIG-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATOR.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATOR.ts",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATION.ts",
+    "scripts/runtime_acceptance/mcft_cap09_s6_production_equivalent_simulator_v1.ts"
+  ],
+  "physical_source_simulator_added": true,
+  "canonical_runtime_reimplementation": false,
+  "canonical_object_contract_delta": 0,
+  "transaction_family_delta": 0,
+  "database_migration_delta": 0,
+  "route_delta": 0,
+  "public_writer_delta": 0,
+  "action_authority_delta": 0,
+  "formal_authority_delta": 0,
+  "formal_window_started": false,
+  "simulation_database_created_by_candidate": false,
+  "database_execution_in_candidate_pr": false
+}

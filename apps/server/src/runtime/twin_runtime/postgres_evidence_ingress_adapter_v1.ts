@@ -62,13 +62,29 @@ export const DATABASE_EVIDENCE_INGRESS_CONFIG_V1 = {
   coverage_policy: "ACTUAL_OBSERVATION_INTERVAL_BUCKETS_ONLY_V1",
   freshness_policy: "ACTUAL_OBSERVATIONS_ONLY_V1",
   explicit_trust_fail_closed: true,
+  trust_mode: "GOVERNED_NON_SIMULATED" as const,
   database_write_allowed: false,
   scheduler_loop_allowed: false,
   canonical_write_allowed: false,
   production_wiring_allowed: false,
 } as const;
 
-export type DatabaseEvidenceIngressConfigV1 = typeof DATABASE_EVIDENCE_INGRESS_CONFIG_V1;
+export type EvidenceIngressTrustModeV1 =
+  | "GOVERNED_NON_SIMULATED"
+  | "PRODUCTION_EQUIVALENT_SIMULATION_ONLY";
+
+export type DatabaseEvidenceIngressConfigV1 = Omit<
+  typeof DATABASE_EVIDENCE_INGRESS_CONFIG_V1,
+  "trust_mode"
+> & {
+  trust_mode: EvidenceIngressTrustModeV1;
+};
+
+export const PRODUCTION_EQUIVALENT_SIMULATION_EVIDENCE_INGRESS_CONFIG_V1:
+DatabaseEvidenceIngressConfigV1 = {
+  ...DATABASE_EVIDENCE_INGRESS_CONFIG_V1,
+  trust_mode: "PRODUCTION_EQUIVALENT_SIMULATION_ONLY",
+};
 
 export type FrozenDatabaseShadowOnlineEvidenceV1 = FrozenShadowOnlineEvidenceV1 & {
   window_rule: "OPEN_START_CLOSED_END_PT1H_V1";
@@ -142,7 +158,10 @@ function sameScope(left: TwinScopeKeyV1, right: TwinScopeKeyV1): boolean {
   return (Object.keys(right) as (keyof TwinScopeKeyV1)[]).every((key) => left[key] === right[key]);
 }
 
-function explicitTrustFailure(record: CanonicalReplayEvidenceRecordV1): boolean {
+function explicitTrustFailure(
+  record: CanonicalReplayEvidenceRecordV1,
+  trustMode: EvidenceIngressTrustModeV1,
+): boolean {
   const direct = record as CanonicalReplayEvidenceRecordV1 & {
     formal_eligible?: unknown;
     is_simulated?: unknown;
@@ -154,6 +173,12 @@ function explicitTrustFailure(record: CanonicalReplayEvidenceRecordV1): boolean 
     object(record.source_payload),
     object(record.canonical_payload),
   ];
+  if (trustMode === "PRODUCTION_EQUIVALENT_SIMULATION_ONLY") {
+    return direct.formal_eligible !== false
+      || direct.is_simulated !== true
+      || text(direct.evidence_level).toUpperCase() !== "SIMULATION"
+      || text(direct.source_lane).toUpperCase() !== "PRODUCTION_EQUIVALENT_SHADOW_SIMULATION";
+  }
   return surfaces.some((surface) => {
     const evidenceLevel = text(surface.evidence_level).toUpperCase();
     const sourceLane = text(surface.source_lane).toUpperCase();
@@ -259,7 +284,7 @@ function trustEligible(
 ): boolean {
   if (!(config.eligible_quality_statuses as readonly string[])
     .includes(item.candidate.quality_status)) return false;
-  if (explicitTrustFailure(item.record)) return false;
+  if (explicitTrustFailure(item.record, config.trust_mode)) return false;
 
   const expectedEpistemicClass = config.epistemic_class_by_record_type[
     item.record_type as keyof typeof config.epistemic_class_by_record_type
