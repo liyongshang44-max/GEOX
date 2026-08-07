@@ -10,6 +10,24 @@ const FROZEN_SUBJECT='ecb23638cd35824db93b81c4c8bca27e7736696d'; const FROZEN_BL
 const S5_SUBJECT='afc882c49d6ec0a475552686200c369eb819b6cd';
 const S5_DESCENDANT_BASE='f421ab1f2d4ba1b07654fac8f465224f717cb18f';
 const S6_REGISTRATION_SUBJECT='4db259966fffb5f38ec6fbb8b41a86a95c6cb5d8';
+const S6_FORMAL_BOOTSTRAP_BASE_TREE='b013b89dda6ac31e9412d75af0ecc122b65a26f4';
+const S6_SIMULATION_LIFECYCLE_REPAIR_FILES=[
+  ".github/workflows/mcft-cap-09-s2-database-evidence-ingress.yml",
+  ".github/workflows/mcft-cap-09-s2-registry-registration.yml",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs",
+  "scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs",
+  "scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs"
+];
+const S6_SIMULATION_FILES=[
+  ".github/workflows/mcft-cap-09-s6-production-equivalent-shadow-simulator.yml",
+  "apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.ts",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-SIM-S6-BOUNDARY-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-SIM-S6-CONFIG-V1.json",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATOR.cjs",
+  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATOR.ts",
+  "scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATION.ts",
+  "scripts/runtime_acceptance/mcft_cap09_s6_production_equivalent_simulator_v1.ts"
+];
 const S6_CANDIDATE_LIFECYCLE_REPAIR_FILES=[
   ".github/workflows/mcft-cap-09-s2-registry-registration.yml",
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs",
@@ -63,10 +81,25 @@ function changedFiles(base){return git('diff','--name-only',`${base}...HEAD`).sp
 function write(name,value){fs.mkdirSync(path.join(ROOT,'acceptance-output'),{recursive:true});fs.writeFileSync(path.join(ROOT,'acceptance-output',name),JSON.stringify(value,null,2)+'\n');}
 function oneCommit(base){must(git('rev-list','--count',`${base}..HEAD`)==='1','ONE_COMMIT_REQUIRED');}
 function ancestor(a,b){const r=cp.spawnSync('git',['merge-base','--is-ancestor',a,b],{cwd:ROOT});must(r.status===0,`ANCESTOR_REQUIRED:${a}:${b}`);}
+function tree(ref){return git('rev-parse',`${ref}^{tree}`);}
 function noDeclaration(files){const marker=['<!--','MCFT_CANDIDATE_DECLARATION_V2'].join(' ');for(const file of files)must(!fs.readFileSync(path.join(ROOT,file),'utf8').includes(marker),`CANDIDATE_DECLARATION_FORBIDDEN_IN_FILE:${file}`);}
 function delegate(){const frozen=cp.execFileSync('git',['show',`${FROZEN_SUBJECT}:${TARGET}`],{cwd:ROOT,encoding:'utf8'});must(blobSha(frozen)===FROZEN_BLOB,'FROZEN_S5_REGISTRATION_CROSS_VALIDATOR_BLOB_MISMATCH');const temp=path.join(__dirname,`.mcft-cap09-s5-registration-cross-${process.pid}.cjs`);try{fs.writeFileSync(temp,frozen);const r=cp.spawnSync(process.execPath,[temp,...process.argv.slice(2)],{cwd:ROOT,env:process.env,stdio:'inherit'});if(r.error)throw r.error;process.exitCode=r.status??1;}finally{try{fs.unlinkSync(temp);}catch{}}}
 const base=process.env.MCFT_BASE_SHA;if(!base)throw new Error('MCFT_BASE_SHA_REQUIRED');const files=changedFiles(base);
 try{
+ if(process.argv.includes('--s6-simulation-lifecycle-repair')){
+  must(tree(base)===S6_FORMAL_BOOTSTRAP_BASE_TREE,'EXACT_S6_FORMAL_BOOTSTRAP_BASE_TREE_REQUIRED');oneCommit(base);must(sameFiles(files,S6_SIMULATION_LIFECYCLE_REPAIR_FILES),'EXACT_FIVE_FILE_S6_SIMULATION_LIFECYCLE_REPAIR_BOUNDARY_REQUIRED');noDeclaration(files);
+  for(const file of ['docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json'])must(git('rev-parse',`${base}:${file}`)===git('rev-parse',`HEAD:${file}`),`FROZEN_S6_AUTHORITY_BLOB_DRIFT:${file}`);
+  const classifier=fs.readFileSync(path.join(ROOT,'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs'),'utf8');const router=fs.readFileSync(path.join(ROOT,'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'),'utf8');const s2Workflow=fs.readFileSync(path.join(ROOT,'.github/workflows/mcft-cap-09-s2-registry-registration.yml'),'utf8');const ingressWorkflow=fs.readFileSync(path.join(ROOT,'.github/workflows/mcft-cap-09-s2-database-evidence-ingress.yml'),'utf8');
+  for(const token of ['s6-simulation-lifecycle-repair','s6-simulation-qualification','S6_SIMULATION_FILES','S6_FORMAL_BOOTSTRAP_BASE_TREE'])must(classifier.includes(token),`S6_SIMULATION_CLASSIFIER_TOKEN_REQUIRED:${token}`);
+  for(const token of ['s6-simulation-lifecycle-repair','s6-simulation-qualification','--s6-simulation-route-only','MCFT_REGISTRY_LANE_INVALID'])must(router.includes(token),`S6_SIMULATION_ROUTER_TOKEN_REQUIRED:${token}`);
+  for(const token of ['s6-simulation-lifecycle-repair','s6-simulation-qualification']){must(s2Workflow.includes(token),`S6_SIMULATION_S2_WORKFLOW_TOKEN_REQUIRED:${token}`);must(ingressWorkflow.includes(token),`S6_SIMULATION_INGRESS_WORKFLOW_TOKEN_REQUIRED:${token}`);}
+  const result={status:'PASS',lifecycle:'S6_SIMULATION_LIFECYCLE_COMPATIBILITY_REPAIR',base_sha:base,head_sha:git('rev-parse','HEAD'),changed_files:files,candidate_transition:false,registry_transition:false,runtime_source_delta:0,migration_delta:0,formal_authority_delta:0,external_effectiveness:false,first_legal_next_action:'MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATION_QUALIFICATION'};write('MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json',result);console.log(JSON.stringify(result,null,2));process.exit(0);
+ }
+ if(process.argv.includes('--s6-simulation-route-only')){
+  const parent=`${base}^`;must(tree(parent)===S6_FORMAL_BOOTSTRAP_BASE_TREE,'S6_SIMULATION_COMPATIBILITY_PARENT_TREE_REQUIRED');must(sameFiles(git('diff','--name-only',`${parent}...${base}`).split(/\r?\n/).filter(Boolean),S6_SIMULATION_LIFECYCLE_REPAIR_FILES),'S6_SIMULATION_COMPATIBILITY_BASE_REQUIRED');oneCommit(base);must(sameFiles(files,S6_SIMULATION_FILES),'EXACT_EIGHT_FILE_S6_SIMULATION_BOUNDARY_REQUIRED');noDeclaration(files);
+  for(const file of ['docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json'])must(git('rev-parse',`${base}:${file}`)===git('rev-parse',`HEAD:${file}`),`S6_SIMULATION_FORMAL_AUTHORITY_DRIFT:${file}`);
+  const result={status:'PASS',lifecycle:'S6_PRODUCTION_EQUIVALENT_SIMULATION_QUALIFICATION_ROUTED',base_sha:base,head_sha:git('rev-parse','HEAD'),changed_files:files,candidate_transition:false,registry_transition:false,runtime_source_delta:1,migration_delta:0,formal_authority_delta:0,external_effectiveness:false,first_legal_next_action:'RUN_SIMULATION_QUALIFICATION_AND_PRODUCTION_INGRESS_REGRESSION'};write('MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json',result);console.log(JSON.stringify(result,null,2));process.exit(0);
+ }
  if(process.argv.includes('--s6-candidate-lifecycle-repair')){
   must(base===S6_REGISTRATION_SUBJECT,'EXACT_S6_CANDIDATE_ROUTING_REPAIR_BASE_REQUIRED');oneCommit(base);must(sameFiles(files,S6_CANDIDATE_LIFECYCLE_REPAIR_FILES),'EXACT_FOUR_FILE_S6_CANDIDATE_ROUTING_REPAIR_BOUNDARY_REQUIRED');noDeclaration(files);
   for(const file of ['docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json'])must(git('rev-parse',`${base}:${file}`)===git('rev-parse',`HEAD:${file}`),`FROZEN_S6_AUTHORITY_BLOB_DRIFT:${file}`);

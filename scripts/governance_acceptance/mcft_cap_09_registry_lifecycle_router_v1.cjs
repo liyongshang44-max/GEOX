@@ -13,7 +13,12 @@ const S5_SUBJECT='afc882c49d6ec0a475552686200c369eb819b6cd';
 const S5_DESCENDANT_BASE=true;
 function blobSha(value){const bytes=Buffer.from(value,'utf8');return crypto.createHash('sha1').update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`),bytes])).digest('hex');}
 function runNode(argv){const r=cp.spawnSync(process.execPath,argv,{cwd:ROOT,env:process.env,stdio:'inherit'});if(r.error)throw r.error;return r.status??1;}
-if(mode==='s6-candidate-lifecycle-repair')process.exitCode=runNode(['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s6-candidate-lifecycle-repair']);
+if(mode==='s6-simulation-lifecycle-repair')process.exitCode=runNode(['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s6-simulation-lifecycle-repair']);
+else if(mode==='s6-simulation-qualification'){
+  if(!['s2-registry-registration','s6-registry-registration'].includes(process.env.MCFT_REGISTRY_LANE??''))throw new Error('MCFT_REGISTRY_LANE_INVALID');
+  process.exitCode=runNode(['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s6-simulation-route-only']);
+}
+else if(mode==='s6-candidate-lifecycle-repair')process.exitCode=runNode(['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s6-candidate-lifecycle-repair']);
 else if(mode==='s6-candidate-signal')process.exitCode=runNode(['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s6-candidate-route-only']);
 else if(mode==='s6-registry-registration')process.exitCode=runNode([process.env.MCFT_REGISTRY_LANE==='s6-registry-registration'?'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_REGISTRY_REGISTRATION.cjs':'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs',...(process.env.MCFT_REGISTRY_LANE==='s6-registry-registration'?[]:['--s6-registration-route-only'])]);
 else if(mode==='s5-exact-sha-lifecycle-repair')process.exitCode=runNode(['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s5-exact-sha-lifecycle-repair']);

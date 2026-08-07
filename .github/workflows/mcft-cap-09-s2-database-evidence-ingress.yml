@@ -53,16 +53,24 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-          cache: pnpm
+      - name: Classify shared Evidence Ingress lifecycle
+        id: lifecycle
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_REGISTRY_LANE: s2-database-evidence-ingress
+        run: node scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs
+      - uses: pnpm/action-setup@v4
+        if: steps.lifecycle.outputs.mode != 's6-simulation-lifecycle-repair'
+        with:
+          version: 9.15.4
       - name: Install locked workspace
+        if: steps.lifecycle.outputs.mode != 's6-simulation-lifecycle-repair'
         run: pnpm install --frozen-lockfile
       - name: Download S1 exact-SHA R2 authority
+        if: steps.lifecycle.outputs.mode == 's2-postmerge-semantic-correction'
         uses: actions/download-artifact@v4
         with:
           run-id: 31007579256
@@ -71,33 +79,55 @@ jobs:
           merge-multiple: true
           repository: liyongshang44-max/GEOX
           github-token: ${{ github.token }}
-      - name: Validate S2 canonical epistemic compatibility correction governance
+      - name: Validate shared Evidence Ingress lifecycle governance
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           MCFT_CAP09_S1_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s1-effective
           MCFT_EVENT_NAME: ${{ github.event_name }}
           MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs --postmerge-semantic-correction
-      - name: Run real PostgreSQL canonical epistemic compatibility acceptance
+          MCFT_SHARED_INGRESS_MODE: ${{ steps.lifecycle.outputs.mode }}
+        run: |
+          case "$MCFT_SHARED_INGRESS_MODE" in
+            s6-simulation-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s6-simulation-lifecycle-repair ;;
+            s6-simulation-qualification) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATOR.cjs ;;
+            s2-postmerge-semantic-correction) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs --postmerge-semantic-correction ;;
+            *) echo "unsupported shared Evidence Ingress lifecycle: $MCFT_SHARED_INGRESS_MODE" >&2; exit 1 ;;
+          esac
+      - name: Run real PostgreSQL production-ingress regression
+        if: steps.lifecycle.outputs.mode != 's6-simulation-lifecycle-repair'
         env:
           MCFT_CAP_09_S2_DESTRUCTIVE_ACCEPTANCE: '1'
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.ts
       - name: Typecheck server Runtime surface
+        if: steps.lifecycle.outputs.mode != 's6-simulation-lifecycle-repair'
         run: pnpm --filter @geox/server typecheck
-      - name: Verify structured S2 correction results
+      - name: Verify structured shared-ingress results
+        env:
+          MCFT_SHARED_INGRESS_MODE: ${{ steps.lifecycle.outputs.mode }}
         run: |
           node - <<'NODE'
           const fs=require('node:fs');
-          const g=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS_RESULT.json','utf8'));
+          const mode=process.env.MCFT_SHARED_INGRESS_MODE;
+          if(mode==='s6-simulation-lifecycle-repair'){
+            const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json','utf8'));
+            if(r.status!=='PASS'||r.lifecycle!=='S6_SIMULATION_LIFECYCLE_COMPATIBILITY_REPAIR'||r.formal_authority_delta!==0) throw new Error('S6_SIMULATION_LIFECYCLE_REPAIR_INVALID');
+            process.exit(0);
+          }
           const d=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_POSTGRESQL_ACCEPTANCE_RESULT.json','utf8'));
-          if(g.status!=='PASS'||g.lifecycle_mode!=='POSTMERGE_PRE_EFFECTIVENESS_CANONICAL_EPISTEMIC_COMPATIBILITY_CORRECTION') throw new Error('S2_GOVERNANCE_INVALID');
-          if(g.exact_new_candidate_signal_count!==0||g.candidate_declaration_present) throw new Error('S2_CORRECTION_MUST_NOT_CREATE_CANDIDATE_SIGNAL');
-          if(!g.canonical_epistemic_class_mapping_aligned||!g.canonical_cap04_future_forcing_compatible||!g.canonical_historical_et0_compatible) throw new Error('S2_EPISTEMIC_GOVERNANCE_PROOF_MISSING');
-          if(g.database_write_performed||g.scheduler_loop_executed||g.canonical_write_performed||g.runtime_source_delta!==1||g.migration_delta!==0) throw new Error('S2_RUNTIME_BOUNDARY_INVALID');
           if(d.status!=='PASS'||d.acceptance_mode!=='REAL_POSTGRESQL_ISOLATED_FACTS_READBACK') throw new Error('S2_POSTGRESQL_ACCEPTANCE_INVALID');
           for(const key of ['six_key_scope_sql_verified','open_start_closed_end_verified','read_only_transaction_verified','exact_duplicate_deduplicated','same_ref_conflict_rejected','semantic_duplicate_conflict_rejected','interval_bucket_coverage_proven','trust_flags_fail_closed','missing_quality_fail_closed','actual_observation_freshness_only','repeated_freeze_deterministic','cap04_canonical_future_forcing_epistemic_compatibility_proven','canonical_historical_et0_epistemic_compatibility_proven','noncanonical_epistemic_class_rejected']) if(d[key]!==true) throw new Error(`S2_DATABASE_PROOF_MISSING:${key}`);
           if(d.selected_count!==6||d.excluded_count!==9||d.eligible_future_forcing_count!==2||d.clustered_interval_coverage_ratio!=='0.500000'||d.future_evidence_leakage) throw new Error('S2_EXPECTED_RESULT_MISMATCH');
+          if(mode==='s6-simulation-qualification'){
+            const g=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATOR_GOVERNANCE.json','utf8'));
+            if(g.status!=='PASS'||g.formal_authority_delta!==0||g.database_write_performed||g.formal_window_started||g.formal_effectiveness) throw new Error('S6_SIMULATION_GOVERNANCE_INVALID');
+          }else if(mode==='s2-postmerge-semantic-correction'){
+            const g=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS_RESULT.json','utf8'));
+            if(g.status!=='PASS'||g.lifecycle_mode!=='POSTMERGE_PRE_EFFECTIVENESS_CANONICAL_EPISTEMIC_COMPATIBILITY_CORRECTION') throw new Error('S2_GOVERNANCE_INVALID');
+            if(g.exact_new_candidate_signal_count!==0||g.candidate_declaration_present) throw new Error('S2_CORRECTION_MUST_NOT_CREATE_CANDIDATE_SIGNAL');
+            if(!g.canonical_epistemic_class_mapping_aligned||!g.canonical_cap04_future_forcing_compatible||!g.canonical_historical_et0_compatible) throw new Error('S2_EPISTEMIC_GOVERNANCE_PROOF_MISSING');
+            if(g.database_write_performed||g.scheduler_loop_executed||g.canonical_write_performed||g.runtime_source_delta!==1||g.migration_delta!==0) throw new Error('S2_RUNTIME_BOUNDARY_INVALID');
+          }else throw new Error(`UNSUPPORTED_SHARED_INGRESS_MODE:${mode}`);
           NODE
       - uses: actions/upload-artifact@v4
         if: always()
@@ -106,5 +136,7 @@ jobs:
           path: |
             acceptance-output/MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS_RESULT.json
             acceptance-output/MCFT_CAP_09_S2_POSTGRESQL_ACCEPTANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json
+            acceptance-output/MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATOR_GOVERNANCE.json
           if-no-files-found: error
           retention-days: 90
