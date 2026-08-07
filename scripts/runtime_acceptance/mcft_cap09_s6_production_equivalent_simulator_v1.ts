@@ -8,6 +8,15 @@ import type { CanonicalReplayEvidenceRecordV1, TwinScopeKeyV1 } from "../../apps
 const HOUR_MS = 3_600_000;
 const MINUTE_MS = 60_000;
 export const SIMULATION_SOURCE_LANE_V1 = "PRODUCTION_EQUIVALENT_SHADOW_SIMULATION" as const;
+export type SimulationOperationV1 = "accelerated" | "bootstrap" | "hourly" | "preflight";
+
+export function simulationLeaseOwnerV1(input: {
+  operation: SimulationOperationV1;
+  subject_sha: string;
+}): string {
+  if (!/^[0-9a-f]{40}$/.test(input.subject_sha)) throw new Error("SIMULATION_LEASE_SUBJECT_SHA_INVALID");
+  return `mcft-cap09-sim-${input.operation}-${input.subject_sha.slice(0, 12)}`;
+}
 
 export type SimulationEvidenceRecordV1 = CanonicalReplayEvidenceRecordV1 & {
   formal_eligible: false;

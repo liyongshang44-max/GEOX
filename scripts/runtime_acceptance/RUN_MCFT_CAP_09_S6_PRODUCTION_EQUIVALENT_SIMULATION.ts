@@ -30,8 +30,10 @@ import { buildSimulationSourceSubstitutionAuthoritySeedV1, sameScopeV1 } from ".
 import {
   SIMULATION_SOURCE_LANE_V1,
   buildSimulationWindowV1,
+  simulationLeaseOwnerV1,
   type SimulationEvidenceRecordV1,
   type SimulationHourV1,
+  type SimulationOperationV1,
 } from "./mcft_cap09_s6_production_equivalent_simulator_v1.js";
 
 const HOUR_MS = 3_600_000;
@@ -46,7 +48,6 @@ const AUTHORIZED_FUTURE_FORCING_BINDINGS = [
   "weather_assumption_c8_replay_v1",
   "et0_future_assumption_c8_v1",
 ] as const;
-type OperationV1 = "accelerated" | "bootstrap" | "hourly" | "preflight";
 
 function required(name: string): string {
   const value = process.env[name]?.trim();
@@ -227,7 +228,7 @@ async function insertHour(pool: Pool, hour: SimulationHourV1): Promise<{ inserte
 }
 
 async function bootstrap(pool: Pool, input: {
-  subjectSha: string;
+  leaseOwner: string;
   scope: TwinScopeKeyV1;
   start: string;
   bootstrapEvidence: SimulationHourV1;
@@ -268,7 +269,7 @@ async function bootstrap(pool: Pool, input: {
       runtime_config: bundle.bootstrap_runtime_config,
       hydraulic: bundle.hydraulic,
       soil_hydraulic_config_ref: bundle.soil_hydraulic_config_ref,
-      lease_owner: `mcft-cap09-sim-bootstrap-${input.subjectSha.slice(0, 12)}`,
+      lease_owner: input.leaseOwner,
       lease_duration_seconds: 900,
     });
     for (const config of bundle.runtime_configs) await runtime.commitRuntimeConfig(config);
@@ -286,7 +287,7 @@ async function bootstrap(pool: Pool, input: {
 }
 
 async function executeOldestDue(pool: Pool, input: {
-  subjectSha: string;
+  leaseOwner: string;
   scope: TwinScopeKeyV1;
   start: string;
   throughLogicalTime: string;
@@ -317,7 +318,7 @@ async function executeOldestDue(pool: Pool, input: {
     runtime,
     persistence(runtime, repository),
   );
-  const owner = `mcft-cap09-sim-${input.subjectSha.slice(0, 12)}-${target.slot_id}`;
+  const owner = input.leaseOwner;
   const result = await new ShadowOnlineCanonicalIntegrationServiceV1(preparation, scheduler, canonical).executeOldestDueTick({
     scope: input.scope,
     through_logical_time: input.throughLogicalTime,
@@ -396,10 +397,11 @@ async function forbiddenCount(pool: Pool): Promise<number> {
 }
 
 async function main(): Promise<void> {
-  const operation = required("MCFT_CAP09_S6_SIMULATION_OPERATION") as OperationV1;
+  const operation = required("MCFT_CAP09_S6_SIMULATION_OPERATION") as SimulationOperationV1;
   assert(["accelerated", "bootstrap", "hourly", "preflight"].includes(operation), "SIMULATION_OPERATION_INVALID");
   const subjectSha = required("MCFT_CAP09_S6_SUBJECT_SHA");
   assert.match(subjectSha, /^[0-9a-f]{40}$/, "SIMULATION_EXACT_SUBJECT_SHA_REQUIRED");
+  const leaseOwner = simulationLeaseOwnerV1({ operation, subject_sha: subjectSha });
   const start = required("MCFT_CAP09_S6_WINDOW_START_UTC");
   assert.equal(new Date(Date.parse(start)).toISOString(), start, "SIMULATION_WINDOW_START_CANONICAL_REQUIRED");
   assert.equal(Date.parse(start) % HOUR_MS, 0, "SIMULATION_WINDOW_START_HOUR_REQUIRED");
@@ -422,7 +424,7 @@ async function main(): Promise<void> {
     const bootstrapWindow = buildSimulationWindowV1({
       scope, run_id: `${runId}_bootstrap`, seed, window_start_utc: new Date(Date.parse(start) - HOUR_MS).toISOString(),
     });
-    const root = await bootstrap(pool, { subjectSha, scope, start, bootstrapEvidence: bootstrapWindow[0] });
+    const root = await bootstrap(pool, { leaseOwner, scope, start, bootstrapEvidence: bootstrapWindow[0] });
     if (operation === "bootstrap" || operation === "preflight") {
       write({
         schema_version: "geox_mcft_cap09_s6_production_equivalent_simulation_result_v1",
@@ -459,7 +461,7 @@ async function main(): Promise<void> {
         if (hour.slot_id === "O11") continue;
         do {
           const result = await executeOldestDue(pool, {
-            subjectSha, scope, start, throughLogicalTime: hour.logical_time,
+            leaseOwner, scope, start, throughLogicalTime: hour.logical_time,
             terminalAt: new Date(Date.parse(hour.logical_time) + 5 * 60_000).toISOString(),
             schedulerObservedAt: new Date(Date.parse(hour.logical_time) + 5 * 60_000).toISOString(),
           });
@@ -469,7 +471,7 @@ async function main(): Promise<void> {
       }
       while (outputs.length < 24) {
         const result = await executeOldestDue(pool, {
-          subjectSha, scope, start,
+          leaseOwner, scope, start,
           throughLogicalTime: new Date(Date.parse(start) + 23 * HOUR_MS).toISOString(),
           terminalAt: new Date(Date.parse(start) + 24 * HOUR_MS).toISOString(),
           schedulerObservedAt: new Date(Date.parse(start) + 24 * HOUR_MS).toISOString(),
@@ -506,7 +508,7 @@ async function main(): Promise<void> {
         return;
       }
       outputs.push(await executeOldestDue(pool, {
-        subjectSha, scope, start,
+        leaseOwner, scope, start,
         throughLogicalTime: new Date(Date.parse(start) + Math.min(observedIndex, 23) * HOUR_MS).toISOString(),
         terminalAt: new Date().toISOString(), schedulerObservedAt: new Date().toISOString(),
       }));
