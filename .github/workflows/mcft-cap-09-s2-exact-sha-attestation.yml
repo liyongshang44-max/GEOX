@@ -39,7 +39,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Validate corrected S2 exact-SHA R2 control-plane Candidate
+      - name: Validate corrected S2 epistemic exact-SHA R2 control plane
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION_V1.cjs --control-plane-candidate
@@ -56,8 +56,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      MCFT_SUBJECT_SHA: 126257e1a08d116089f5f28bd733e6abfd92f290
-      MCFT_ROUTE_REPAIR_SHA: f01dc179d145a026f7dbdc99a62b1bfa2c065420
+      MCFT_SUBJECT_SHA: a4db631f5bab234d9a6f7c25607f4fd027d224a1
+      MCFT_CORRECTION_FOCUSED_RUN: '31150334462'
+      MCFT_CORRECTION_FOCUSED_ARTIFACT: '8983045619'
+      MCFT_CORRECTION_FOCUSED_DIGEST: sha256:61e4790bb865efdb24b49beb6ec132be24f3d99cbed8514c9ddcdc746b25f392
     steps:
       - name: Checkout protected-main S2 attestation control plane
         uses: actions/checkout@v4
@@ -65,20 +67,17 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Validate protected-main control plane and exact corrected S2 subject ancestry
+      - name: Validate protected-main control plane and corrected S2 subject ancestry
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           git fetch --no-tags origin main
+          git merge-base --is-ancestor "${MCFT_SUBJECT_SHA}" "${GITHUB_SHA}"
           git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
-          git cat-file -e "${MCFT_SUBJECT_SHA}^{commit}"
-          git cat-file -e "${MCFT_ROUTE_REPAIR_SHA}^{commit}"
-          git merge-base --is-ancestor "${MCFT_SUBJECT_SHA}" "${MCFT_ROUTE_REPAIR_SHA}"
-          git merge-base --is-ancestor "${MCFT_ROUTE_REPAIR_SHA}" "${GITHUB_SHA}"
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
-      - name: Derive exact merge-SHA corrected S2 authority artifact
+      - name: Derive exact corrected S2 canonical epistemic authority artifact
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION_V1.cjs --attest
@@ -111,17 +110,15 @@ jobs:
         run: |
           set -euo pipefail
           node - <<'NODE'
-          const fs = require('node:fs');
-          const source = 'acceptance-output/MCFT_CAP_07_ATTESTATION_RETENTION_LOCATOR.json';
-          const target = 'acceptance-output/MCFT_CAP_09_S2_ATTESTATION_RETENTION_LOCATOR.json';
-          const locator = JSON.parse(fs.readFileSync(source, 'utf8'));
-          if (locator.retention_level !== 'R2') throw new Error('R2_LEVEL_REQUIRED');
-          if (locator.readback_verified !== true) throw new Error('R2_READBACK_REQUIRED');
-          if (locator.locked_version_delete_denied !== true) throw new Error('R2_LOCKED_DELETE_DENIAL_REQUIRED');
-          if (Date.parse(locator.retain_until) < Date.now() + 729 * 86400000) {
-            throw new Error('R2_730_DAY_RETENTION_NOT_ESTABLISHED');
-          }
-          fs.writeFileSync(target, JSON.stringify(locator, null, 2) + '\n');
+          const fs=require('node:fs');
+          const source='acceptance-output/MCFT_CAP_07_ATTESTATION_RETENTION_LOCATOR.json';
+          const target='acceptance-output/MCFT_CAP_09_S2_ATTESTATION_RETENTION_LOCATOR.json';
+          const locator=JSON.parse(fs.readFileSync(source,'utf8'));
+          if(locator.retention_level!=='R2') throw new Error('R2_LEVEL_REQUIRED');
+          if(locator.readback_verified!==true) throw new Error('R2_READBACK_REQUIRED');
+          if(locator.locked_version_delete_denied!==true) throw new Error('R2_LOCKED_DELETE_DENIAL_REQUIRED');
+          if(Date.parse(locator.retain_until)<Date.now()+729*86400000) throw new Error('R2_730_DAY_RETENTION_NOT_ESTABLISHED');
+          fs.writeFileSync(target,JSON.stringify(locator,null,2)+'\n');
           NODE
       - name: Upload transient GitHub convenience copy
         id: artifact
@@ -144,38 +141,24 @@ jobs:
         with:
           github-token: ${{ github.token }}
           script: |
-            const fs = require('node:fs');
-            let attestation = null;
-            let locator = null;
-            try {
-              attestation = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION.json', 'utf8'));
-            } catch {}
-            try {
-              locator = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_ATTESTATION_RETENTION_LOCATOR.json', 'utf8'));
-            } catch {}
-            const artifactId = String(process.env.MCFT_ARTIFACT_ID || '');
-            const ok = process.env.MCFT_JOB_STATUS === 'success'
-              && attestation?.status === 'PASS'
-              && attestation?.subject_sha === process.env.MCFT_SUBJECT_SHA
-              && attestation?.correction_to_merge_tree_delta === 0
-              && attestation?.effective_authority?.s2_database_evidence_ingress_effective === true
-              && attestation?.effective_authority?.effective_next_slice === 'S3'
-              && attestation?.effective_authority?.s3_registry_registration_authorized === true
-              && attestation?.effective_authority?.implementation_authorized === false
-              && attestation?.effective_authority?.runtime_source_authorized === false
-              && locator?.retention_level === 'R2'
-              && locator?.readback_verified === true
-              && locator?.locked_version_delete_denied === true
-              && artifactId.length > 0;
-            const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
-            await github.rest.repos.createCommitStatus({
-              owner,
-              repo,
-              sha: process.env.MCFT_SUBJECT_SHA,
-              state: ok ? 'success' : 'failure',
-              context: 'mcft-cap-09/s2-exact-sha-attestation',
-              description: (ok
-                ? `PASS S2 EFFECTIVE R2/730 artifact=${artifactId}`
-                : `FAIL S2 corrected exact-SHA run=${process.env.GITHUB_RUN_ID}`).slice(0, 140),
-              target_url: `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`,
-            });
+            const fs=require('node:fs');
+            let attestation=null,locator=null;
+            try{attestation=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_EXACT_SHA_ATTESTATION.json','utf8'));}catch{}
+            try{locator=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_ATTESTATION_RETENTION_LOCATOR.json','utf8'));}catch{}
+            const artifactId=String(process.env.MCFT_ARTIFACT_ID||'');
+            const ok=process.env.MCFT_JOB_STATUS==='success'
+              && attestation?.status==='PASS'
+              && attestation?.subject_sha===process.env.MCFT_SUBJECT_SHA
+              && attestation?.correction_to_merge_tree_delta===0
+              && attestation?.effective_authority?.s2_database_evidence_ingress_effective===true
+              && attestation?.effective_authority?.s2_canonical_epistemic_compatibility_effective===true
+              && attestation?.effective_authority?.effective_frontier==='S5_REVALIDATION'
+              && attestation?.effective_authority?.s5_candidate_revalidation_authorized===true
+              && attestation?.effective_authority?.implementation_authorized===false
+              && attestation?.effective_authority?.runtime_source_authorized===false
+              && locator?.retention_level==='R2'
+              && locator?.readback_verified===true
+              && locator?.locked_version_delete_denied===true
+              && artifactId.length>0;
+            const [owner,repo]=process.env.GITHUB_REPOSITORY.split('/');
+            await github.rest.repos.createCommitStatus({owner,repo,sha:process.env.MCFT_SUBJECT_SHA,state:ok?'success':'failure',context:'mcft-cap-09/s2-exact-sha-attestation',description:(ok?`PASS corrected S2 epistemic R2/730 artifact=${artifactId}`:`FAIL corrected S2 exact-SHA run=${process.env.GITHUB_RUN_ID}`).slice(0,140),target_url:`${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`});
