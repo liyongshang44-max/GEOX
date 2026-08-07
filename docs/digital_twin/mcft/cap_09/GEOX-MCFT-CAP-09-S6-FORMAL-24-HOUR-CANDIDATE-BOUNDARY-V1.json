@@ -1,0 +1,26 @@
+{
+  "schema_version": "geox_mcft_cap09_s6_formal_24_hour_candidate_boundary_v1",
+  "base_main_sha": "ac2d30df301fa882cea9b98c03944bffca58b0c8",
+  "file_count": 10,
+  "files": [
+    ".github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CANDIDATE-BOUNDARY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CANDIDATE-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CONFIG-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-HARD-ACCEPTANCE-LEDGER-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-S5-ATTESTATION-CONSUMPTION-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE_DB.ts",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts"
+  ],
+  "runtime_source_delta": 0,
+  "migration_delta": 0,
+  "route_delta": 0,
+  "registry_delta": 0,
+  "taskbook_delta": 0,
+  "formal_database_execution_in_candidate_pr": false,
+  "formal_window_started_in_candidate_pr": false,
+  "candidate_transition": true,
+  "external_effectiveness": false
+}

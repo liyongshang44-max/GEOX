@@ -1,0 +1,22 @@
+{
+  "schema_version": "geox_mcft_cap09_s6_formal_24_hour_candidate_v1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "FORMAL_WINDOW_CONTROL_PLANE_AWAITING_PROTECTED_MERGE",
+  "candidate_base_sha": "ac2d30df301fa882cea9b98c03944bffca58b0c8",
+  "s5_effective_subject_sha": "afc882c49d6ec0a475552686200c369eb819b6cd",
+  "s5_exact_sha_r2_run_id": 31165105531,
+  "s5_exact_sha_artifact_id": 8988635083,
+  "s5_semantic_artifact_digest": "sha256:bcb68915a3e01f5516da45d4e40271c5841eae23b3ce7c567357bed316e1ca43",
+  "formal_window_slot_count": 24,
+  "formal_window_interval": "PT1H",
+  "actual_utc_boundaries_required": true,
+  "persistent_postgresql_required": true,
+  "candidate_pr_runs_static_and_non_destructive_validation_only": true,
+  "formal_execution_only_after_protected_merge": true,
+  "formal_window_started": false,
+  "hard_acceptance_effective_count": 0,
+  "external_effectiveness": false,
+  "completion_claim": false,
+  "next_legal_action": "PROTECTED_MERGE_THEN_START_FORMAL_WINDOW_ON_ONE_PERSISTENT_POSTGRESQL_STORE"
+}

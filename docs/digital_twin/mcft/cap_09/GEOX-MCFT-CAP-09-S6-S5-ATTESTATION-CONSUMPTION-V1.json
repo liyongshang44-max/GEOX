@@ -1,0 +1,15 @@
+{
+  "schema_version": "geox_mcft_cap09_s6_s5_attestation_consumption_v1",
+  "predecessor_slice": "MCFT-CAP-09.S5",
+  "subject_sha": "afc882c49d6ec0a475552686200c369eb819b6cd",
+  "exact_sha_r2_run_id": 31165105531,
+  "artifact_id": 8988635083,
+  "semantic_artifact_digest": "sha256:bcb68915a3e01f5516da45d4e40271c5841eae23b3ce7c567357bed316e1ca43",
+  "retention_level": "R2",
+  "retention_days": 730,
+  "readback_required": true,
+  "locked_version_delete_denial_required": true,
+  "authorized_successor_scope": "FORMAL_24_HOUR_STAGE_1B_CLOSURE_ONLY",
+  "consumed_by_candidate": true,
+  "does_not_start_formal_window": true
+}
