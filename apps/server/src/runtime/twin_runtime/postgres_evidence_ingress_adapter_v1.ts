@@ -1,5 +1,6 @@
 // PostgreSQL-backed MCFT-CAP-09.S2 Evidence ingress adapter.
 // Read-only boundary: selects existing governed Replay Evidence from facts only.
+// Canonical epistemic compatibility is pinned to the MCFT-00 frozen vocabulary.
 // It does not ingest devices, schedule ticks, persist a cursor, expose a route,
 // or commit canonical Runtime objects.
 
@@ -37,6 +38,13 @@ export const DATABASE_EVIDENCE_INGRESS_CONFIG_V1 = {
     historical_et0_estimate_v1: "interval_end",
     future_weather_assumption_v1: "issued_at",
     future_et0_assumption_v1: "issued_at",
+  },
+  epistemic_class_by_record_type: {
+    soil_moisture_observation_v1: "OBSERVED",
+    observed_rainfall_v1: "OBSERVED",
+    historical_et0_estimate_v1: "ESTIMATED",
+    future_weather_assumption_v1: "ASSUMED",
+    future_et0_assumption_v1: "ASSUMED",
   },
   window_rule: "OPEN_START_CLOSED_END_PT1H_V1",
   semantic_lookback_seconds: 3600,
@@ -252,9 +260,14 @@ function trustEligible(
   if (!(config.eligible_quality_statuses as readonly string[])
     .includes(item.candidate.quality_status)) return false;
   if (explicitTrustFailure(item.record)) return false;
+
+  const expectedEpistemicClass = config.epistemic_class_by_record_type[
+    item.record_type as keyof typeof config.epistemic_class_by_record_type
+  ];
+  if (!expectedEpistemicClass) return false;
   const epistemicClass = text(item.record.epistemic_class).toUpperCase();
-  if (item.is_actual_observation && epistemicClass !== "OBSERVED") return false;
-  if (item.is_future_forcing && !epistemicClass.includes("FUTURE")) return false;
+  if (epistemicClass !== expectedEpistemicClass) return false;
+
   return true;
 }
 

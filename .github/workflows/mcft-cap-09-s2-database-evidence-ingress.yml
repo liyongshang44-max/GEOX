@@ -68,9 +68,10 @@ jobs:
           run-id: 31007579256
           artifact-ids: 8930987741
           path: acceptance-input/cap09-s1-effective
+          merge-multiple: true
           repository: liyongshang44-max/GEOX
           github-token: ${{ github.token }}
-      - name: Validate S2 post-merge semantic correction governance
+      - name: Validate S2 canonical epistemic compatibility correction governance
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           MCFT_CAP09_S1_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s1-effective
@@ -78,7 +79,7 @@ jobs:
           MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs --postmerge-semantic-correction
-      - name: Run real PostgreSQL semantic correction acceptance
+      - name: Run real PostgreSQL canonical epistemic compatibility acceptance
         env:
           MCFT_CAP_09_S2_DESTRUCTIVE_ACCEPTANCE: '1'
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.ts
@@ -87,35 +88,16 @@ jobs:
       - name: Verify structured S2 correction results
         run: |
           node - <<'NODE'
-          const fs = require('node:fs');
-          const governance = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS_RESULT.json', 'utf8'));
-          const database = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_POSTGRESQL_ACCEPTANCE_RESULT.json', 'utf8'));
-          if (governance.status !== 'PASS') throw new Error(`S2_GOVERNANCE_NOT_PASS:${governance.error || 'UNKNOWN'}`);
-          if (governance.lifecycle_mode !== 'POSTMERGE_PRE_EFFECTIVENESS_SEMANTIC_CORRECTION') throw new Error('S2_CORRECTION_MODE_INVALID');
-          if (governance.exact_new_candidate_signal_count !== 0 || governance.candidate_declaration_present) throw new Error('S2_CORRECTION_MUST_NOT_CREATE_CANDIDATE_SIGNAL');
-          if (!governance.shared_core_duplicate_identity_aligned || !governance.interval_bucket_coverage_aligned) throw new Error('S2_SHARED_CORE_ALIGNMENT_MISSING');
-          if (!governance.explicit_trust_fail_closed || !governance.actual_observation_freshness_only) throw new Error('S2_TRUST_OR_FRESHNESS_ALIGNMENT_MISSING');
-          if (governance.database_write_performed || governance.scheduler_loop_executed || governance.canonical_write_performed) throw new Error('S2_RUNTIME_BOUNDARY_INVALID');
-          if (governance.runtime_source_delta !== 1 || governance.migration_delta !== 0) throw new Error('S2_DELTA_INVALID');
-          if (database.status !== 'PASS' || database.acceptance_mode !== 'REAL_POSTGRESQL_ISOLATED_FACTS_READBACK') throw new Error('S2_POSTGRESQL_ACCEPTANCE_INVALID');
-          for (const key of [
-            'six_key_scope_sql_verified',
-            'open_start_closed_end_verified',
-            'read_only_transaction_verified',
-            'exact_duplicate_deduplicated',
-            'same_ref_conflict_rejected',
-            'semantic_duplicate_conflict_rejected',
-            'interval_bucket_coverage_proven',
-            'trust_flags_fail_closed',
-            'missing_quality_fail_closed',
-            'actual_observation_freshness_only',
-            'repeated_freeze_deterministic',
-          ]) {
-            if (database[key] !== true) throw new Error(`S2_DATABASE_PROOF_MISSING:${key}`);
-          }
-          if (database.clustered_interval_coverage_ratio !== '0.500000' || database.future_evidence_leakage) {
-            throw new Error('S2_INTERVAL_OR_FUTURE_BOUNDARY_INVALID');
-          }
+          const fs=require('node:fs');
+          const g=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS_RESULT.json','utf8'));
+          const d=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S2_POSTGRESQL_ACCEPTANCE_RESULT.json','utf8'));
+          if(g.status!=='PASS'||g.lifecycle_mode!=='POSTMERGE_PRE_EFFECTIVENESS_CANONICAL_EPISTEMIC_COMPATIBILITY_CORRECTION') throw new Error('S2_GOVERNANCE_INVALID');
+          if(g.exact_new_candidate_signal_count!==0||g.candidate_declaration_present) throw new Error('S2_CORRECTION_MUST_NOT_CREATE_CANDIDATE_SIGNAL');
+          if(!g.canonical_epistemic_class_mapping_aligned||!g.canonical_cap04_future_forcing_compatible||!g.canonical_historical_et0_compatible) throw new Error('S2_EPISTEMIC_GOVERNANCE_PROOF_MISSING');
+          if(g.database_write_performed||g.scheduler_loop_executed||g.canonical_write_performed||g.runtime_source_delta!==1||g.migration_delta!==0) throw new Error('S2_RUNTIME_BOUNDARY_INVALID');
+          if(d.status!=='PASS'||d.acceptance_mode!=='REAL_POSTGRESQL_ISOLATED_FACTS_READBACK') throw new Error('S2_POSTGRESQL_ACCEPTANCE_INVALID');
+          for(const key of ['six_key_scope_sql_verified','open_start_closed_end_verified','read_only_transaction_verified','exact_duplicate_deduplicated','same_ref_conflict_rejected','semantic_duplicate_conflict_rejected','interval_bucket_coverage_proven','trust_flags_fail_closed','missing_quality_fail_closed','actual_observation_freshness_only','repeated_freeze_deterministic','cap04_canonical_future_forcing_epistemic_compatibility_proven','canonical_historical_et0_epistemic_compatibility_proven','noncanonical_epistemic_class_rejected']) if(d[key]!==true) throw new Error(`S2_DATABASE_PROOF_MISSING:${key}`);
+          if(d.selected_count!==6||d.excluded_count!==9||d.eligible_future_forcing_count!==2||d.clustered_interval_coverage_ratio!=='0.500000'||d.future_evidence_leakage) throw new Error('S2_EXPECTED_RESULT_MISMATCH');
           NODE
       - uses: actions/upload-artifact@v4
         if: always()

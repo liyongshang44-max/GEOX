@@ -1,7 +1,7 @@
 {
-  "schema_version": "geox_mcft_cap09_s2_database_evidence_ingress_config_v2",
+  "schema_version": "geox_mcft_cap09_s2_database_evidence_ingress_config_v3",
   "config_id": "GEOX-MCFT-CAP-09-S2-DATABASE-EVIDENCE-INGRESS-CONFIG-V1",
-  "record_status": "S2_POSTMERGE_SEMANTIC_CORRECTION_NOT_EFFECTIVE",
+  "record_status": "S2_CANONICAL_EPISTEMIC_COMPATIBILITY_CORRECTION_NOT_EFFECTIVE",
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S2",
   "runtime_mode": "SHADOW_ONLINE",
@@ -33,6 +33,15 @@
     "future_weather_assumption_v1": "issued_at",
     "future_et0_assumption_v1": "issued_at"
   },
+  "epistemic_class_by_record_type": {
+    "soil_moisture_observation_v1": "OBSERVED",
+    "observed_rainfall_v1": "OBSERVED",
+    "historical_et0_estimate_v1": "ESTIMATED",
+    "future_weather_assumption_v1": "ASSUMED",
+    "future_et0_assumption_v1": "ASSUMED"
+  },
+  "epistemic_authority_ref": "docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING-CONTRACT.md",
+  "epistemic_policy": "EXACT_FROZEN_CLASS_BY_RECORD_TYPE_FAIL_CLOSED",
   "window_rule": "OPEN_START_CLOSED_END_PT1H_V1",
   "semantic_lookback_seconds": 3600,
   "query_inspection_lookback_seconds": 7200,
@@ -51,8 +60,7 @@
   ],
   "explicit_trust_fail_closed": {
     "missing_quality_ineligible": true,
-    "actual_requires_observed_epistemic_class": true,
-    "future_forcing_requires_future_epistemic_class": true,
+    "record_type_epistemic_class_exact_match_required": true,
     "formal_eligible_false_ineligible": true,
     "is_simulated_true_ineligible": true,
     "debug_evidence_level_ineligible": true,

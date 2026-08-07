@@ -1,5 +1,5 @@
 {
-  "schema_version": "geox_mcft_cap09_s2_predecessor_attestation_consumption_v2",
+  "schema_version": "geox_mcft_cap09_s2_predecessor_attestation_consumption_v3",
   "consumption_id": "GEOX-MCFT-CAP-09-S2-PREDECESSOR-ATTESTATION-CONSUMPTION-V1",
   "record_status": "VERIFIED_PREDECESSOR_AUTHORITY_CONSUMPTION",
   "capability_line_id": "MCFT-CAP-09",
@@ -19,9 +19,8 @@
   "s2_authorized_scope": "DATABASE_EVIDENCE_INGRESS_AND_BOUNDARY_FREEZE_ONLY",
   "implementation_authorized_by_predecessor_alone": false,
   "s2_registry_registration_merge_sha": "508da08b2c5855e6391bc87e0d56042fc9232a97",
-  "s2_candidate_routing_repair_merge_sha": "b3f095be7f808611f1388c3e31ecff29325a7f99",
-  "s2_postmerge_semantic_correction_routing_merge_sha": "3c55344f0463b3603ee92da150273b19b45137fa",
-  "s2_postmerge_semantic_correction_historical_lane_compatibility_merge_sha": "f78f5b32c45348fdb48129c01790933644edc6f0",
+  "canonical_epistemic_compatibility_correction_base_main_sha": "56aacb93e9f97ed0fad43e6a001df28593341565",
+  "canonical_epistemic_compatibility_correction_reason": "S5 real PostgreSQL canonical integration exposed S2 mismatch against MCFT-00 frozen epistemic vocabulary",
   "historical_lane_compatibility_verified": true,
-  "consumption_result": "S2_POSTMERGE_PRE_EFFECTIVENESS_SEMANTIC_CORRECTION_AUTHORIZED_WITHIN_EXISTING_S2_SCOPE"
+  "consumption_result": "S2_POSTMERGE_PRE_EFFECTIVENESS_CANONICAL_EPISTEMIC_COMPATIBILITY_CORRECTION_AUTHORIZED_WITHIN_EXISTING_S2_SCOPE"
 }
