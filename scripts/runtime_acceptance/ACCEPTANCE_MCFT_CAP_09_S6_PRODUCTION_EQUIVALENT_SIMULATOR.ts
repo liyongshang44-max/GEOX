@@ -9,7 +9,11 @@ import {
   PostgresEvidenceIngressAdapterV1,
 } from "../../apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.js";
 import type { TwinScopeKeyV1 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
-import { buildSimulationWindowV1, SIMULATION_SOURCE_LANE_V1 } from "./mcft_cap09_s6_production_equivalent_simulator_v1.js";
+import {
+  buildSimulationWindowV1,
+  simulationLeaseOwnerV1,
+  SIMULATION_SOURCE_LANE_V1,
+} from "./mcft_cap09_s6_production_equivalent_simulator_v1.js";
 
 const OUT = path.resolve("acceptance-output/MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATOR_ACCEPTANCE.json");
 const scope: TwinScopeKeyV1 = {
@@ -24,6 +28,27 @@ const input = {
 };
 
 async function main(): Promise<void> {
+  const subjectSha = "d86448c816eb5af5c0809f4af6d8eec4ca20eb20";
+  const acceleratedLeaseOwner = simulationLeaseOwnerV1({ operation: "accelerated", subject_sha: subjectSha });
+  assert.equal(
+    simulationLeaseOwnerV1({ operation: "accelerated", subject_sha: subjectSha }),
+    acceleratedLeaseOwner,
+    "SIMULATION_LEASE_OWNER_MUST_BE_STABLE_WITHIN_OPERATION",
+  );
+  assert.notEqual(
+    simulationLeaseOwnerV1({ operation: "hourly", subject_sha: subjectSha }),
+    acceleratedLeaseOwner,
+    "SIMULATION_LEASE_OWNER_MUST_ISOLATE_OPERATIONS",
+  );
+  assert.notEqual(
+    simulationLeaseOwnerV1({ operation: "accelerated", subject_sha: `a${subjectSha.slice(1)}` }),
+    acceleratedLeaseOwner,
+    "SIMULATION_LEASE_OWNER_MUST_BIND_SUBJECT_SHA",
+  );
+  assert.throws(
+    () => simulationLeaseOwnerV1({ operation: "accelerated", subject_sha: "not-a-sha" }),
+    /SIMULATION_LEASE_SUBJECT_SHA_INVALID/,
+  );
   const first = buildSimulationWindowV1(input);
   const second = buildSimulationWindowV1(input);
   assert.deepEqual(second, first, "SIMULATION_SAME_SEED_REPLAY_MUST_BE_BYTE_DETERMINISTIC");
@@ -121,6 +146,9 @@ async function main(): Promise<void> {
     simulation_trust_mode_explicit: true,
     production_profile_rejects_simulation: true,
     simulation_profile_accepts_exact_lane: true,
+    lease_owner_stable_per_operation: true,
+    lease_owner_isolates_operations: true,
+    lease_owner_subject_sha_bound: true,
     formal_eligible: false,
     formal_window_started: false,
     field_validity_proven: false,
