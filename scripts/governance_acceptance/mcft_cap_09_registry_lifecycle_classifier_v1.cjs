@@ -10,6 +10,25 @@ const FROZEN_SUBJECT='ecb23638cd35824db93b81c4c8bca27e7736696d';
 const FROZEN_BLOB='1c5746385f1c63a873d036a22ba9dbddb32d7354';
 const S5_SUBJECT='afc882c49d6ec0a475552686200c369eb819b6cd';
 const S5_DESCENDANT_BASE=true;
+const S6_REGISTRATION_SUBJECT='4db259966fffb5f38ec6fbb8b41a86a95c6cb5d8';
+const S6_CANDIDATE_LIFECYCLE_REPAIR_FILES=[
+  ".github/workflows/mcft-cap-09-s2-registry-registration.yml",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs",
+  "scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs",
+  "scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs"
+];
+const S6_CANDIDATE_FILES=[
+  ".github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CANDIDATE-BOUNDARY-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CANDIDATE-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CONFIG-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-HARD-ACCEPTANCE-LEDGER-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-S5-ATTESTATION-CONSUMPTION-V1.json",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE.cjs",
+  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE_DB.ts",
+  "scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts"
+];
 const S6_REGISTRATION_FILES=[".github/workflows/mcft-cap-09-s2-registry-registration.yml",".github/workflows/mcft-cap-09-s6-registry-registration.yml","docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-REGISTRY-REGISTRATION-BOUNDARY-V1.json","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-REGISTRY-REGISTRATION-V1.json","scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs","scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_REGISTRY_REGISTRATION.cjs","scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs","scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs"];
 const S5_EXACT_SHA_LIFECYCLE_REPAIR_FILES=[
   ".github/workflows/mcft-cap-09-s2-registry-registration.yml",
@@ -44,6 +63,8 @@ function publish(mode,files){if(!process.env.GITHUB_OUTPUT)throw new Error('GITH
 const base=process.env.MCFT_BASE_SHA;if(!base)throw new Error('MCFT_BASE_SHA_REQUIRED');
 const files=git('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
 if(sameFiles(files,S6_REGISTRATION_FILES)){publish('s6-registry-registration',files);process.exit(0);}
+if(sameFiles(files,S6_CANDIDATE_LIFECYCLE_REPAIR_FILES)&&base===S6_REGISTRATION_SUBJECT){publish('s6-candidate-lifecycle-repair',files);process.exit(0);}
+if(sameFiles(files,S6_CANDIDATE_FILES)){ancestor(S6_REGISTRATION_SUBJECT,base);publish('s6-candidate-signal',files);process.exit(0);}
 if(sameFiles(files,S5_EXACT_SHA_LIFECYCLE_REPAIR_FILES)){publish('s5-exact-sha-lifecycle-repair',files);process.exit(0);}
 if(sameFiles(files,S5_EXACT_SHA_ATTESTATION_FILES)){if(!S5_DESCENDANT_BASE)throw new Error('S5_DESCENDANT_BASE_DISABLED');ancestor(S5_SUBJECT,base);publish('s5-exact-sha-attestation',files);process.exit(0);}
 if(sameFiles(files,S5_CANDIDATE_FILES)){publish('s5-candidate-signal',files);process.exit(0);}
