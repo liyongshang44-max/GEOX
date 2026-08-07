@@ -1,0 +1,188 @@
+name: mcft-cap-09-s5-shadow-online-canonical-integration
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-s5-shadow-online-canonical-integration.yml'
+      - 'apps/server/src/runtime/twin_runtime/postgres_cap04_shadow_online_canonical_tick_adapter_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_frozen_shadow_online_evidence_source_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_read_only_execution_evidence_adapter_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/shadow_online_canonical_integration_service_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-*'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-s5-canonical-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  shadow-online-canonical-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_s5_acceptance
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap09_s5_acceptance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install workspace dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Download effective S4 exact-SHA R2 authority
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 31108834682
+          artifact-ids: 8970768718
+          path: acceptance-input/cap09-s4-effective
+          merge-multiple: true
+          repository: liyongshang44-max/GEOX
+          github-token: ${{ github.token }}
+      - name: Download corrected S2 exact-SHA R2 authority
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 31151549954
+          artifact-ids: 8983485729
+          path: acceptance-input/cap09-s2-corrected-effective
+          merge-multiple: true
+          repository: liyongshang44-max/GEOX
+          github-token: ${{ github.token }}
+      - name: Validate S5 governance boundary and effective authorities
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          MCFT_CAP09_S4_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s4-effective
+          MCFT_CAP09_S2_CORRECTED_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s2-corrected-effective
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION.cjs
+      - name: Extract frozen CAP04 PostgreSQL acceptance support
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts').read_text()
+          marker = 'async function deleteCap04GuardsV1()'
+          if marker not in source:
+              raise SystemExit('CAP04_SUPPORT_EXTRACTION_MARKER_MISSING')
+          support = source.split(marker, 1)[0]
+          replacements = {
+              'const pool = new Pool({ connectionString: databaseUrl });': 'export const pool = new Pool({ connectionString: databaseUrl });',
+              'function persistenceAdapterV1(': 'export function persistenceAdapterV1(',
+              'async function buildControlledAuthorityV1()': 'export async function buildControlledAuthorityV1()',
+              'async function seedControlledAuthorityV1(': 'export async function seedControlledAuthorityV1(',
+              'async function resetSchemaV1()': 'export async function resetSchemaV1()',
+          }
+          for old, new in replacements.items():
+              if old not in support:
+                  raise SystemExit(f'CAP04_SUPPORT_EXPORT_MARKER_MISSING:{old}')
+              support = support.replace(old, new, 1)
+          Path('scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts').write_text(support)
+          PY
+      - name: Typecheck server source
+        run: pnpm --filter @geox/server run typecheck
+      - name: Transpile focused acceptance sources
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const ts = require('typescript');
+          const files = [
+            'scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts',
+            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts',
+          ];
+          for (const file of files) {
+            const result = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
+              fileName: file,
+              reportDiagnostics: true,
+              compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, esModuleInterop: true },
+            });
+            const errors = (result.diagnostics ?? []).filter((diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error);
+            if (errors.length) {
+              for (const diagnostic of errors) console.error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
+              throw new Error(`FOCUSED_ACCEPTANCE_TRANSPILE_FAILED:${file}`);
+            }
+          }
+          console.log(JSON.stringify({ status: 'PASS', files }, null, 2));
+          NODE
+      - name: Run S5 PostgreSQL canonical integration acceptance
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap09_s5_acceptance
+          MCFT_CAP_04_SINGLE_TICK_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP_09_S5_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts
+      - name: Create isolated CAP05 acceptance database
+        env:
+          PGPASSWORD: postgres
+        run: psql --host 127.0.0.1 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --command 'CREATE DATABASE mcft_cap05_s8_acceptance'
+      - name: Run independent production PostgreSQL C/H persistence acceptance
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap05_s8_acceptance
+          MCFT_CAP_05_S8_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: |
+          set -o pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FORECAST_RESIDUAL_OUTCOME_TICK_DB.ts | tee acceptance-output/MCFT_CAP_09_S5_PRODUCTION_C_H_POSTGRESQL.log
+          grep -q '0 FAIL' acceptance-output/MCFT_CAP_09_S5_PRODUCTION_C_H_POSTGRESQL.log
+      - name: Verify structured S5 proof
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const value=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB_RESULT.json','utf8'));
+          const governance=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_S5_GOVERNANCE_ACCEPTANCE_RESULT.json','utf8'));
+          const must=(condition,code)=>{if(!condition)throw new Error(code)};
+          must(governance.status==='PASS'&&governance.corrected_s2_r2_consumed===true,'S5_CORRECTED_S2_R2_GOVERNANCE_REQUIRED');
+          must(governance.corrected_s2_subject_sha==='a4db631f5bab234d9a6f7c25607f4fd027d224a1','S5_CORRECTED_S2_SUBJECT_REQUIRED');
+          must(value.status==='PASS','S5_DB_RESULT_PASS_REQUIRED');
+          for(const key of ['completed','blocked','cap05_no_residual','cap05_positive_residual']) {
+            const row=value[key];
+            must(row?.status==='PASS',`S5_PATH_PASS_REQUIRED:${key}`);
+            must(row.exact_frozen_evidence_reused===true,`S5_FROZEN_EVIDENCE_REQUIRED:${key}`);
+            must(row.shared_scheduler_canonical_fence===true,`S5_SHARED_FENCE_REQUIRED:${key}`);
+            must(row.forbidden_fact_count===0,`S5_FORBIDDEN_FACT_ZERO_REQUIRED:${key}`);
+            must(row.g_write_count===0,`S5_G_WRITE_ZERO_REQUIRED:${key}`);
+            must(row.action_creation_count===0,`S5_ACTION_ZERO_REQUIRED:${key}`);
+          }
+          must(value.completed.forecast_status==='COMPLETED','S5_COMPLETED_FORECAST_REQUIRED');
+          must(value.blocked.forecast_status==='BLOCKED','S5_BLOCKED_FORECAST_REQUIRED');
+          must(value.cap05_no_residual.c_residual_attempted===true&&value.cap05_no_residual.c_residual_count===0&&value.cap05_no_residual.c_residual_disposition==='NO_ELIGIBLE_HISTORICAL_FORECAST','S5_EXACT_NO_MATCH_REQUIRED');
+          must(value.cap05_no_residual.current_observation_exact_target_time===true,'S5_CAP05_NO_MATCH_TARGET_OBSERVATION_REQUIRED');
+          must(value.cap05_no_residual.postgres_forecast_projection_count_before_tick===0,'S5_CAP05_NO_MATCH_ZERO_HISTORICAL_FORECAST_REQUIRED');
+          const positive=value.cap05_positive_residual;
+          must(positive.c_residual_count===1&&positive.c_residual_disposition==='COMMITTED'&&positive.h_read_only_consumed===true&&positive.execution_feedback_port_read_only_proven===true&&positive.s5_h_write_count===0&&positive.residual_port_override_pair_guard===true,'S5_POSITIVE_C_H_REQUIRED');
+          must(JSON.stringify(value.canonical_families_proven)===JSON.stringify(['A','B','C','F']),'S5_FAMILY_SET_REQUIRED');
+          const structured={schema_version:'geox_mcft_cap09_s5_focused_acceptance_result_v3',status:'PASS',candidate_head_sha:process.env.GITHUB_SHA,corrected_s2_exact_sha_r2_consumed:true,corrected_s2_subject_sha:governance.corrected_s2_subject_sha,corrected_s2_semantic_artifact_digest:governance.corrected_s2_semantic_artifact_digest,exact_s2_frozen_evidence_reused:true,shared_scheduler_canonical_fence:true,canonical_a_b_f_completed_path:true,canonical_blocked_path:true,cap05_no_match_c_fail_closed:true,cap05_no_match_exact_target_observation_proven:true,cap05_no_match_zero_historical_forecast_projection_before_tick:true,s5_adapter_positive_c_composition:true,canonical_read_only_h_positive_c_postgresql:true,positive_c_production_postgresql_persistence_separate:true,residual_port_override_pair_guard:true,runtime_source_delta:4,migration_delta:0,g_write_count:0,action_creation_count:0,external_effectiveness:false};
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_S5_FOCUSED_ACCEPTANCE_RESULT.json',JSON.stringify(structured,null,2)+'\n');
+          console.log(JSON.stringify(structured,null,2));
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-s5-shadow-online-canonical-integration-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_S5_GOVERNANCE_ACCEPTANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB_RESULT.json
+            acceptance-output/MCFT_CAP_09_S5_FOCUSED_ACCEPTANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_S5_PRODUCTION_C_H_POSTGRESQL.log
+          if-no-files-found: error
+          retention-days: 90

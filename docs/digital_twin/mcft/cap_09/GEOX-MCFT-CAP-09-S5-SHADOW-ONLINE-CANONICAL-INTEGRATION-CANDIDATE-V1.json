@@ -1,0 +1,52 @@
+{
+  "schema_version": "geox_mcft_cap09_s5_shadow_online_canonical_integration_candidate_v2",
+  "record_status": "CANDIDATE_IMPLEMENTATION_NOT_EFFECTIVE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S5",
+  "candidate_base_main_sha": "9a7e61bc306161c256a43469ab37185c524d1cd8",
+  "s5_registry_registration_merge_sha": "ecb23638cd35824db93b81c4c8bca27e7736696d",
+  "s5_candidate_routing_merge_sha": "56aacb93e9f97ed0fad43e6a001df28593341565",
+  "supporting_corrected_s2_authority": {
+    "subject_sha": "a4db631f5bab234d9a6f7c25607f4fd027d224a1",
+    "exact_sha_r2_run_id": 31151549954,
+    "artifact_id": 8983485729,
+    "semantic_artifact_digest": "sha256:e99cbe0961e47a2b59261a8e16512bef2a10b8168bf5609907b95afcff387543"
+  },
+  "implementation": {
+    "execution_model": "CALLER_INVOKED_ONE_OLDEST_DUE_SLOT",
+    "scope_cardinality": 1,
+    "evidence_ingress": "EXACT_CORRECTED_S2_FROZEN_REF_HASH_READBACK",
+    "scheduler": "S3_PERSISTENT_SEQUENTIAL_CLAIM",
+    "restart_backfill_availability": "S4_RECOVER_OR_CLAIM_OLDEST_DUE_SLOT",
+    "canonical_runtime": "UNCHANGED_CAP04_CAP05_SERVICES",
+    "canonical_families": ["A", "B", "C", "F"],
+    "execution_feedback": "PRODUCTION_POSTGRES_READ_ONLY_EXECUTION_FEEDBACK_PORT_V1",
+    "terminal_states": ["COMPLETED", "DEGRADED"]
+  },
+  "fail_closed": {
+    "residual_no_match_exception": "CAP05_FORECAST_RESIDUAL_MATCH_NOT_FOUND",
+    "all_other_residual_errors_fail": true,
+    "residual_override_pair_required": true,
+    "exact_six_key_scope_required": true,
+    "scheduler_claim_fence_required": true,
+    "trustworthy_h_required_for_positive_c": true,
+    "canonical_epistemic_class_mapping_required": true
+  },
+  "forbidden": {
+    "g_decision_creation": true,
+    "recommendation": true,
+    "approval": true,
+    "ao_act": true,
+    "dispatch": true,
+    "action_creation": true,
+    "model_activation": true,
+    "live_ingestion": true,
+    "public_http_writer": true,
+    "background_daemon": true,
+    "cron": true,
+    "server_startup_wiring": true,
+    "database_migration": true
+  },
+  "external_effectiveness": false,
+  "first_legal_next_action": "RUN_FOCUSED_AND_STANDARD_CANDIDATE_ACCEPTANCE_THEN_PROTECTED_MERGE"
+}

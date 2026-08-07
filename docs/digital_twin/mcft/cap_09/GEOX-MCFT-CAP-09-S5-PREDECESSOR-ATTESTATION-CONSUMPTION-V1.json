@@ -1,0 +1,30 @@
+{
+  "schema_version": "geox_mcft_cap09_s5_predecessor_attestation_consumption_v2",
+  "record_status": "CANDIDATE_PREDECESSOR_CONSUMPTION_NOT_EFFECTIVE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S5",
+  "predecessor_slice_id": "MCFT-CAP-09.S4",
+  "predecessor_effective_subject_sha": "6a4138e77fe6b838bc0f552a0bc5e2ceb84c026f",
+  "predecessor_exact_sha_r2_run_id": 31108834682,
+  "predecessor_exact_sha_artifact_id": 8970768718,
+  "predecessor_semantic_artifact_digest": "sha256:64e14355edad6e2711cdde26cc3ac2bd6c7795c7e64439b194679350ce7cc80c",
+  "predecessor_retention_level": "R2",
+  "predecessor_retain_until": "2028-08-05T14:02:53.572Z",
+  "predecessor_readback_verified": true,
+  "predecessor_locked_delete_denied": true,
+  "supporting_corrected_s2_authority": {
+    "subject_sha": "a4db631f5bab234d9a6f7c25607f4fd027d224a1",
+    "exact_sha_r2_run_id": 31151549954,
+    "artifact_id": 8983485729,
+    "semantic_artifact_digest": "sha256:e99cbe0961e47a2b59261a8e16512bef2a10b8168bf5609907b95afcff387543",
+    "retention_level": "R2",
+    "readback_verified": true,
+    "locked_delete_denied": true,
+    "canonical_epistemic_compatibility_effective": true
+  },
+  "authorized_next_scope": "SHADOW_ONLINE_CANONICAL_INTEGRATION_ONLY",
+  "candidate_base_main_sha": "9a7e61bc306161c256a43469ab37185c524d1cd8",
+  "s5_registry_registration_merge_sha": "ecb23638cd35824db93b81c4c8bca27e7736696d",
+  "s5_candidate_routing_merge_sha": "56aacb93e9f97ed0fad43e6a001df28593341565",
+  "external_effectiveness": false
+}
