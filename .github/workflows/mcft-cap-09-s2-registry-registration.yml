@@ -38,6 +38,8 @@ concurrency:
 jobs:
   s2-registry-registration:
     runs-on: ubuntu-latest
+    env:
+      MCFT_S5_SUBJECT_SHA: afc882c49d6ec0a475552686200c369eb819b6cd
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4

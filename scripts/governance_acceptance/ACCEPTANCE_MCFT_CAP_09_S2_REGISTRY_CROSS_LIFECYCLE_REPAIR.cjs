@@ -7,6 +7,8 @@ const path=require('node:path');
 const ROOT=path.resolve(__dirname,'../..');
 const TARGET='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs';
 const FROZEN_SUBJECT='ecb23638cd35824db93b81c4c8bca27e7736696d'; const FROZEN_BLOB='8a2734ce3adfb82e7e432f2a89485b76c9b5e791';
+const S5_SUBJECT='afc882c49d6ec0a475552686200c369eb819b6cd';
+const S5_DESCENDANT_BASE='f421ab1f2d4ba1b07654fac8f465224f717cb18f';
 const S5_EXACT_SHA_REPAIR_FILES=[
   ".github/workflows/mcft-cap-09-s2-registry-registration.yml",
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs",
@@ -46,15 +48,15 @@ function delegate(){const frozen=cp.execFileSync('git',['show',`${FROZEN_SUBJECT
 const base=process.env.MCFT_BASE_SHA;if(!base)throw new Error('MCFT_BASE_SHA_REQUIRED');const files=changedFiles(base);
 try{
  if(process.argv.includes('--s5-exact-sha-lifecycle-repair')){
-  must(base==='afc882c49d6ec0a475552686200c369eb819b6cd','EXACT_S5_EXACT_SHA_ROUTING_REPAIR_BASE_REQUIRED');oneCommit(base);must(sameFiles(files,S5_EXACT_SHA_REPAIR_FILES),'EXACT_S5_EXACT_SHA_ROUTING_REPAIR_BOUNDARY_REQUIRED');noDeclaration(files);
+  must(base===S5_DESCENDANT_BASE,'EXACT_S5_EXACT_SHA_ROUTING_REPAIR_BASE_REQUIRED');oneCommit(base);must(sameFiles(files,S5_EXACT_SHA_REPAIR_FILES),'EXACT_S5_EXACT_SHA_ROUTING_REPAIR_BOUNDARY_REQUIRED');noDeclaration(files);
   for(const file of ['docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-DELIVERY-STATUS-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json'])must(git('rev-parse',`${base}:${file}`)===git('rev-parse',`HEAD:${file}`),`FROZEN_S5_AUTHORITY_BLOB_DRIFT:${file}`);
   const classifier=fs.readFileSync(path.join(ROOT,'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs'),'utf8');const router=fs.readFileSync(path.join(ROOT,'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs'),'utf8');const workflow=fs.readFileSync(path.join(ROOT,'.github/workflows/mcft-cap-09-s2-registry-registration.yml'),'utf8');
-  for(const token of ['s5-exact-sha-lifecycle-repair','s5-exact-sha-attestation','S5_EXACT_SHA_ATTESTATION_FILES'])must(classifier.includes(token),`S5_EXACT_SHA_CLASSIFIER_TOKEN_REQUIRED:${token}`);
-  for(const token of ['s5-exact-sha-lifecycle-repair','s5-exact-sha-attestation','--s5-exact-sha-route-only']){must(router.includes(token),`S5_EXACT_SHA_ROUTER_TOKEN_REQUIRED:${token}`);must(workflow.includes(token),`S5_EXACT_SHA_WORKFLOW_TOKEN_REQUIRED:${token}`);}
+  for(const token of ['s5-exact-sha-lifecycle-repair','s5-exact-sha-attestation','S5_EXACT_SHA_ATTESTATION_FILES','S5_DESCENDANT_BASE'])must(classifier.includes(token),`S5_EXACT_SHA_CLASSIFIER_TOKEN_REQUIRED:${token}`);
+  for(const token of ['s5-exact-sha-lifecycle-repair','s5-exact-sha-attestation','--s5-exact-sha-route-only','MCFT_S5_SUBJECT_SHA']){must(router.includes(token),`S5_EXACT_SHA_ROUTER_TOKEN_REQUIRED:${token}`);must(workflow.includes(token),`S5_EXACT_SHA_WORKFLOW_TOKEN_REQUIRED:${token}`);}
   const result={status:'PASS',lifecycle:'S5_EXACT_SHA_LIFECYCLE_ROUTING_REPAIR',base_sha:base,head_sha:git('rev-parse','HEAD'),changed_files:files,candidate_transition:false,registry_transition:false,runtime_source_delta:0,migration_delta:0,external_effectiveness:false,first_legal_next_action:'MCFT_CAP_09_S5_EXACT_SHA_R2_CONTROL_PLANE'};write('MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json',result);write('MCFT_CAP_09_S5_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json',result);console.log(JSON.stringify(result,null,2));process.exit(0);
  }
  if(process.argv.includes('--s5-exact-sha-route-only')){
-  must(base=== 'afc882c49d6ec0a475552686200c369eb819b6cd','EXACT_S5_SUBJECT_BASE_REQUIRED');oneCommit(base);must(sameFiles(files,S5_EXACT_SHA_ATTESTATION_FILES),'EXACT_S5_EXACT_SHA_CONTROL_PLANE_BOUNDARY_REQUIRED');noDeclaration(files);
+  must(process.env.MCFT_S5_SUBJECT_SHA===S5_SUBJECT,'EXACT_S5_SUBJECT_ENV_REQUIRED');ancestor(S5_SUBJECT,base);oneCommit(base);must(sameFiles(files,S5_EXACT_SHA_ATTESTATION_FILES),'EXACT_S5_EXACT_SHA_CONTROL_PLANE_BOUNDARY_REQUIRED');noDeclaration(files);
   for(const file of ['docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-DELIVERY-STATUS-V1.json','scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs','scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs','.github/workflows/mcft-cap-09-s2-registry-registration.yml'])must(git('rev-parse',`${base}:${file}`)===git('rev-parse',`HEAD:${file}`)||S5_EXACT_SHA_ATTESTATION_FILES.includes(file),`S5_EXACT_SHA_CONTROL_PLANE_DRIFT:${file}`);
   const result={status:'PASS',lifecycle:'S5_EXACT_SHA_ATTESTATION_ROUTED',base_sha:base,head_sha:git('rev-parse','HEAD'),changed_files:files,candidate_transition:false,registry_transition:false,runtime_source_delta:0,migration_delta:0,external_effectiveness:false,first_legal_next_action:'PROTECTED_MERGE_TRIGGERS_S5_EXACT_SHA_R2_ATTESTATION'};write('MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json',result);write('MCFT_CAP_09_S5_EXACT_SHA_LIFECYCLE_ROUTE_RESULT.json',result);console.log(JSON.stringify(result,null,2));process.exit(0);
  }
