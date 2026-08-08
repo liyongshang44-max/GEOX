@@ -46,9 +46,12 @@ function parseDelimitedLine(line, delimiter) {
   return output;
 }
 function parseProviderUtc(value) {
-  const raw = String(value || '').trim();
-  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?(?:\s*(?:\+0000|UTC|Z))?$/i);
+  const raw = String(value || '').replace(/\u00a0/g, ' ').trim();
+  if (!raw) return null;
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(?:\s*(Z|UTC|[+-]\d{2}:?\d{2}))?$/i);
   if (!match) return null;
+  const zone = (match[7] || 'Z').toUpperCase();
+  if (!['Z', 'UTC', '+0000', '+00:00'].includes(zone)) return null;
   const iso = `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6] || '00'}Z`;
   const millis = Date.parse(iso);
   return Number.isFinite(millis) ? millis : null;
@@ -109,7 +112,12 @@ function parseCsvBody(text) {
     rows.push(row);
   }
   if (!rows.length) throw new Error('EA1H_CSV_ROWS_REQUIRED');
-  return { headers, rows, delimiter: delimiter === '\t' ? 'TAB' : delimiter === ',' ? 'COMMA' : delimiter === ';' ? 'SEMICOLON' : 'PIPE', headerIndex };
+  return {
+    headers,
+    rows,
+    delimiter: delimiter === '\t' ? 'TAB' : delimiter === ',' ? 'COMMA' : delimiter === ';' ? 'SEMICOLON' : 'PIPE',
+    headerIndex,
+  };
 }
 
 let browser;
@@ -146,15 +154,15 @@ try {
 
   const apiResponse = await context.request.get(downloadUrl.toString(), {
     timeout: CONFIG.transport_limits.download_timeout_ms,
-    headers: { accept: 'text/csv,text/plain;q=0.9,*/*;q=0.5', 'user-agent': 'GEOX-MCFT-CAP09-EA1H-READ-ONLY/1.0' },
+    headers: { accept: 'text/csv,text/plain;q=0.9,*/*;q=0.5', 'user-agent': 'GEOX-MCFT-CAP09-EA1H-READ-ONLY/1.1' },
   });
   if (!apiResponse.ok()) throw new Error(`EA1H_DOWNLOAD_HTTP_${apiResponse.status()}`);
-  const headers = apiResponse.headers();
-  const contentLength = Number(headers['content-length'] || 0);
+  const responseHeaders = apiResponse.headers();
+  const contentLength = Number(responseHeaders['content-length'] || 0);
   if (Number.isFinite(contentLength) && contentLength > CONFIG.transport_limits.max_download_bytes) throw new Error(`EA1H_DOWNLOAD_CONTENT_LENGTH_TOO_LARGE:${contentLength}`);
   const body = await apiResponse.body();
   if (body.byteLength > CONFIG.transport_limits.max_download_bytes) throw new Error(`EA1H_DOWNLOAD_BODY_TOO_LARGE:${body.byteLength}`);
-  const contentType = String(headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+  const contentType = String(responseHeaders['content-type'] || '').split(';')[0].trim().toLowerCase();
   if (contentType.includes('text/html')) throw new Error('EA1H_DOWNLOAD_HTML_RESPONSE_FORBIDDEN');
 
   downloadEvidence = {
@@ -174,6 +182,7 @@ try {
   const completeEt0Times = [];
   const observedRainTimes = [];
   let timestampRows = 0;
+  let unparsedTimestampRows = 0;
   let physicalInvalidRows = 0;
   let futureRows = 0;
 
@@ -181,8 +190,12 @@ try {
   const futureCeiling = now + CONFIG.freshness_and_continuity.future_timestamp_tolerance_minutes * 60_000;
 
   for (const row of parsed.rows) {
-    const time = parseProviderUtc(row[columns.timestamp]);
-    if (time === null) continue;
+    const rawTimestamp = row[columns.timestamp];
+    const time = parseProviderUtc(rawTimestamp);
+    if (time === null) {
+      if (String(rawTimestamp || '').trim()) unparsedTimestampRows += 1;
+      continue;
+    }
     timestampRows += 1;
     if (time > futureCeiling) { futureRows += 1; continue; }
     allTimes.push(time);
@@ -203,19 +216,19 @@ try {
     ];
     const et0Complete = et0Values.every(([value, range]) => withinRange(value, range));
     if (et0Complete) completeEt0Times.push(time);
-    else if (et0Values.some(([value]) => value !== null)) physicalInvalidRows += et0Values.some(([value, range]) => value !== null && !withinRange(value, range)) ? 1 : 0;
+    else if (et0Values.some(([value, range]) => value !== null && !withinRange(value, range))) physicalInvalidRows += 1;
 
     if (withinRange(rain, ranges[columns.rainfall])) observedRainTimes.push(time);
     else if (rain !== null) physicalInvalidRows += 1;
   }
 
-  if (!allTimes.length) throw new Error('EA1H_TIMESTAMPED_ROWS_REQUIRED');
+  if (!allTimes.length) throw new Error(`EA1H_TIMESTAMPED_ROWS_REQUIRED:UNPARSED_NONEMPTY_${unparsedTimestampRows}`);
   if (futureRows > 0) throw new Error(`EA1H_FUTURE_TIMESTAMP_ROWS_FORBIDDEN:${futureRows}`);
   if (physicalInvalidRows > 0) throw new Error(`EA1H_PHYSICAL_SANITY_FAILURE_ROWS:${physicalInvalidRows}`);
 
   const latest = Math.max(...allTimes);
   const ageHours = (now - latest) / HOUR_MS;
-  if (ageHours > CONFIG.freshness_and_continuity.latest_record_max_age_hours) throw new Error(`EA1H_SOURCE_TOO_OLD:${ageHours.toFixed(2)}H`);
+  if (ageHours > CONFIG.freshness_and_continuity.latest_record_max_age_hours) throw new Error(`EA1H_SOURCE_TOO_OLD:${ageHours.toFixed(2)}H:LATEST_${new Date(latest).toISOString()}`);
   const floor = latest - CONFIG.freshness_and_continuity.recent_window_hours * HOUR_MS;
   const recentDistinct = distinctHours(allTimes, floor, latest);
   const recentEt0 = distinctHours(completeEt0Times, floor, latest);
@@ -237,6 +250,7 @@ try {
       header_field_names: parsed.headers,
       rows_scanned: parsed.rows.length,
       timestamped_rows: timestampRows,
+      unparsed_nonempty_timestamp_rows: unparsedTimestampRows,
       raw_numeric_values_emitted: false,
     },
     live_evidence: {
