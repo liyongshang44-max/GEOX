@@ -55,7 +55,7 @@ jobs:
             echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Validate exact EA1O-D no-write governance boundary
+      - name: Validate exact EA1O-D frozen-pass governance boundary
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_D_INSTANTANEOUS_SOLAR_LIVE_QUALIFICATION.cjs
@@ -75,54 +75,108 @@ jobs:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY.mjs
 
-      - name: Live-qualify instantaneous sflux endpoints temporal transform and native spatial authority
+      - name: Re-prove frozen instantaneous sflux solar qualification pass
         env:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1O_D_INSTANTANEOUS_SOLAR_LIVE_QUALIFICATION.py
 
-      - name: Verify completed fail-closed adjudication
+      - name: Verify frozen exact-head qualification pass
         shell: python
         run: |
           import json
           from pathlib import Path
 
+          authority = json.loads(Path('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-D-INSTANTANEOUS-SOLAR-LIVE-QUALIFICATION-V1.json').read_text())
           result = json.loads(Path('acceptance-output/MCFT_CAP_09_EA1O_D_INSTANTANEOUS_SOLAR_LIVE_QUALIFICATION_RESULT.json').read_text())
+          frozen = authority['frozen_discovery_observation']
+          success = 'QUALIFIED_AS_AMENDMENT04_INSTANTANEOUS_PIECEWISE_LINEAR_SOLAR_CANDIDATE'
+
+          assert authority['live_qualification']['current_result'] == success
           assert result['status'] == 'PASS'
-          assert result['same_cycle_binding']['canonical_target_interval_count'] == 72
-          assert result['same_cycle_binding']['required_endpoint_count'] == 73
-          assert result['source_transport']['required_endpoint_message_count'] == 73
-          assert result['source_transport']['exact_range_message_count'] == 73
-          assert result['grib_endpoint_identity']['instantaneous_record_used_as_direct_interval_average'] is False
+          assert result['adjudication']['decision'] == success
+          assert result['adjudication']['value_qualified'] is True
+          assert result['adjudication']['spatial_qualified'] is True
+          assert result['adjudication']['source_value_spatial_transformation_candidate_qualified'] is True
+
+          same = result['same_cycle_binding']
+          assert result['qualification_tick_boundary_utc'] == frozen['qualification_tick_boundary_utc']
+          assert same['ea1k_selected_cycle_utc'] == frozen['selected_cycle_utc']
+          assert same['sflux_selected_cycle_utc'] == frozen['selected_cycle_utc']
+          assert same['same_exact_gfs_cycle'] is True
+          assert same['canonical_lead_start'] == frozen['canonical_lead_start']
+          assert same['canonical_lead_end'] == frozen['canonical_lead_end']
+          assert same['support_lead'] == frozen['support_lead']
+          assert same['required_endpoint_count'] == frozen['required_endpoint_count'] == 73
+
+          transport = result['source_transport']
+          assert transport['available_before_tick_count'] == frozen['available_before_tick_count'] == 73
+          assert transport['exact_range_message_count'] == frozen['exact_range_message_count'] == 73
+          assert transport['idx_and_selected_record_chain_sha256'] == frozen['idx_and_selected_record_chain_sha256']
+          assert transport['exact_grib_message_chain_sha256'] == frozen['exact_grib_message_chain_sha256']
+          assert transport['full_global_grib_download_performed'] is False
+          assert transport['future_file_wait_performed'] is False
+          assert transport['valid_time_rewrite_performed'] is False
+
+          identity = result['grib_endpoint_identity']
+          assert identity['parameter_number_set'] == frozen['parameter_number_set'] == [192]
+          assert identity['param_id_set'] == frozen['param_id_set'] == [260087]
+          assert identity['short_name_set'] == frozen['short_name_set'] == ['sdswrf']
+          assert identity['step_type_set'] == frozen['step_type_set'] == ['instant']
+          assert identity['forecast_time_offset_set'] == frozen['forecast_time_offset_set'] == [0]
+          assert identity['start_step_offset_set'] == frozen['start_step_offset_set'] == [0]
+          assert identity['end_step_offset_set'] == frozen['end_step_offset_set'] == [0]
+          assert identity['instantaneous_record_used_as_direct_interval_average'] is False
+
           transform = result['temporal_transformation']
           assert transform['epistemic_class'] == 'MODEL_DERIVED_PIECEWISE_LINEAR_FORECAST_INTERPOLATION'
           assert transform['transformation_id'] == 'PIECEWISE_LINEAR_ENDPOINT_INTEGRATION_V1'
           assert transform['formal_quality_status'] == 'LIMITED'
           assert transform['direct_field_equivalence'] is False
           assert transform['model_grid_is_observation_truth'] is False
+          assert transform['endpoint_sequence_sha256'] == frozen['endpoint_sequence_sha256']
+          assert transform['hourly_mean_sequence_sha256'] == frozen['hourly_mean_sequence_sha256']
+          assert transform['solar_energy_sequence_sha256'] == frozen['solar_energy_sequence_sha256']
+
           value = result['value_qualification']
+          assert value['endpoint_finite_count'] == frozen['endpoint_finite_count'] == 73
+          assert value['endpoint_nonnegative_count'] == frozen['endpoint_nonnegative_count'] == 73
+          assert value['hourly_mean_finite_count'] == frozen['hourly_mean_finite_count'] == 72
+          assert value['hourly_mean_nonnegative_count'] == frozen['hourly_mean_nonnegative_count'] == 72
+          assert value['solar_energy_finite_count'] == frozen['solar_energy_finite_count'] == 72
+          assert value['solar_energy_nonnegative_count'] == frozen['solar_energy_nonnegative_count'] == 72
+          assert value['value_qualified'] is True
           assert value['negative_clipping_performed'] is False
           assert value['zero_thresholding_performed'] is False
           assert value['silent_imputation_performed'] is False
           assert value['pgrb2_fallback_used'] is False
+
           spatial = result['live_sflux_spatial_qualification']
+          assert spatial['grid_type'] == frozen['grid_type'] == 'regular_gg'
+          assert spatial['gaussian_n'] == frozen['gaussian_n'] == 768
+          assert spatial['grid_point_count'] == frozen['grid_point_count'] == 4718592
+          assert spatial['grid_definition_sha256'] == frozen['grid_definition_sha256']
+          assert spatial['selected_native_grid_index'] == frozen['selected_native_grid_index']
+          assert spatial['grid_definition_stable'] is True
+          assert spatial['selected_native_index_stable'] is True
+          assert spatial['selected_native_coordinate_stable'] is True
+          assert spatial['centroid_and_all_vertices_same_native_point_for_all_messages'] is True
+          assert spatial['spatial_qualified'] is True
           assert spatial['pgrb2_grid_coordinate_reused'] is False
           assert spatial['interpolation_performed'] is False
-          allowed = {
-              'QUALIFIED_AS_AMENDMENT04_INSTANTANEOUS_PIECEWISE_LINEAR_SOLAR_CANDIDATE',
-              'REJECTED_AS_AMENDMENT04_INSTANTANEOUS_SOLAR_VALUE_AUTHORITY',
-              'REJECTED_AS_AMENDMENT04_INSTANTANEOUS_SOLAR_SPATIAL_AUTHORITY',
-          }
-          assert result['adjudication']['decision'] in allowed
+
           assert result['database_write_count'] == 0
           assert result['formal_evidence_write_count'] == 0
           assert result['ea2_authorized'] is False
           assert result['formal_window_started'] is False
           print(json.dumps({
               'status': 'PASS',
-              'decision': result['adjudication']['decision'],
-              'value_qualified': result['adjudication']['value_qualified'],
-              'spatial_qualified': result['adjudication']['spatial_qualified'],
-              'support_lead': result['same_cycle_binding']['support_lead'],
+              'decision': success,
+              'tick': result['qualification_tick_boundary_utc'],
+              'cycle': same['ea1k_selected_cycle_utc'],
+              'support_lead': same['support_lead'],
+              'endpoint_count': same['required_endpoint_count'],
+              'spatial_qualified': True,
+              'value_qualified': True,
           }, sort_keys=True))
 
       - uses: actions/upload-artifact@v4
