@@ -6,7 +6,7 @@ const { execFileSync } = require('child_process');
 
 const ROOT = process.cwd();
 const BASE = process.env.MCFT_BASE_SHA || '';
-const EXPECTED_BASE = 'dd1d2e73afd4d6c707235f07b639a7cb11a899c9';
+const EXPECTED_BASE = '5550153edcc775452ba5ded8edbc371af4a86051';
 const TASK = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md';
 const A1 = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md';
 const A4 = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-04-GFS-SFLUX-INSTANTANEOUS-PIECEWISE-LINEAR-SOLAR-AUTHORITY.md';
@@ -51,10 +51,10 @@ const PINS = {
   model: 'c04c6805ab79c715781b99f8fbcf997fae3a8c48',
 };
 const NEW_BLOBS = {
-  site: '926265e46073c86cfcf711eba49a829517bf6edb',
-  reality: '8462233b755a9447bc15260c8b250c1c85d82d82',
-  source: '4e65c12bb59a99ec76283988fc251e82f1d19b9b',
-  crop: '6bd9de80643229ac7782c883823583630916d66a',
+  site: 'eb9eb1880e01eb16430c177be6e2ef2dc36b3ca8',
+  reality: 'dedc8db6e2e3c902066ed94b0d3322a69775b7b6',
+  source: '30b7910a1bd27882b80eb56041924d0f6252ae02',
+  crop: 'b5de9d29189cb654444b3f57d00df290eefe16d3',
 };
 
 const git = args => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
