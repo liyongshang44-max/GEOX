@@ -92,7 +92,7 @@ try {
   req(spatial.silent_pgrb2_grid_reuse_authorized === false && spatial.interpolation_authorized === false, 'EA1OC_SPATIAL_SHORTCUT_ENABLED');
   req(spatial.direct_field_equivalence === false && spatial.model_grid_is_observation_truth === false, 'EA1OC_FIELD_TRUTH_UPGRADE');
 
-  req(probe.includes('PROBE_MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY'), 'EA1OC_PROBE_MUST_CONSUME_EA1K_RESULT_NAME');
+  req(probe.includes('MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY_RESULT.json'), 'EA1OC_PROBE_MUST_CONSUME_EA1K_RESULT');
   req(probe.includes('block_start(lead)') && probe.includes('n * current["value"] - (n - 1) * predecessor["value"]'), 'EA1OC_PROBE_RECONSTRUCTION_FORMULA_MISSING');
   req(probe.includes('binaryScaleFactor') && probe.includes('decimalScaleFactor') && probe.includes('math.ldexp'), 'EA1OC_PACKING_QUANTUM_IMPLEMENTATION_MISSING');
   req(probe.includes('codes_grib_find_nearest'), 'EA1OC_NATIVE_NEAREST_IMPLEMENTATION_MISSING');
