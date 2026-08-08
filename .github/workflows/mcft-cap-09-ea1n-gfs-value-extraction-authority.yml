@@ -17,13 +17,13 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: mcft-cap09-ea1n-gfs-values-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  group: mcft-cap09-ea1n-adjudication-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
-  gfs-value-extraction-authority-probe:
+  ea1n-pgrb2-dswrf-fail-close:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,14 +36,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install pinned ecCodes decoder supply chain
-        run: |
-          python -m pip install --upgrade 'pip<26'
-          python -m pip install 'eccodes==2.47.0' 'eccodeslib==2.47.3.23'
-          python -m pip freeze | grep -E '^(eccodes|eccodeslib)=='
-      - name: Self-check ecCodes binary binding
-        run: python -m eccodes selfcheck
-      - name: Resolve exact probe base and subject
+      - name: Resolve exact adjudication base and subject
         id: authority
         shell: bash
         run: |
@@ -58,227 +51,22 @@ jobs:
             echo "base_sha=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
             echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           fi
-      - name: Validate exact EA1N no-write governance boundary
+      - name: Validate exact EA1N fail-close governance boundary
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.cjs
-      - name: Syntax-check pinned decoder probe
+      - name: Syntax-check adjudication probe
         run: python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.py
-      - name: Diagnose production DSWRF GRIB2 quantization without value disclosure
-        shell: bash
-        run: |
-          python - <<'PY'
-          import importlib.util
-          import json
-          import math
-          import os
-          import re
-          from datetime import datetime, timezone
-          from urllib.parse import urlparse
-
-          path = 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.py'
-          spec = importlib.util.spec_from_file_location('ea1n_probe', path)
-          m = importlib.util.module_from_spec(spec)
-          spec.loader.exec_module(m)
-
-          def bucket(x):
-              x = abs(float(x))
-              if x < 1e-6: return 'LT_1E_6'
-              if x < 1e-5: return 'LT_1E_5'
-              if x < 1e-4: return 'LT_1E_4'
-              if x < 1e-3: return 'LT_1E_3'
-              if x < 1e-2: return 'LT_1E_2'
-              if x < 1e-1: return 'LT_1E_1'
-              if x < 1: return 'LT_1'
-              if x < 10: return 'LT_10'
-              return 'GE_10'
-
-          def safe_get(gid, key):
-              try:
-                  return m.codes_get(gid, key)
-              except Exception:
-                  return None
-
-          tick = m.floor_utc_hour(datetime.now(timezone.utc))
-          selected = m.select_complete_cycle(tick)
-          cycle = selected['cycle']
-          if not (selected['lead_start'] <= 19 and 20 <= selected['lead_end']):
-              raise RuntimeError(f'DIAGNOSTIC_LEADS_OUTSIDE_SELECTED_WINDOW:{selected["lead_start"]}:{selected["lead_end"]}')
-
-          def validate_final(requested_url, final_url):
-              a, b = urlparse(requested_url), urlparse(final_url)
-              if b.scheme != 'https' or b.hostname != 'nomads.ncep.noaa.gov' or a.path != b.path or a.query != b.query:
-                  raise RuntimeError('PRODUCTION_OBJECT_IDENTITY_DRIFT')
-
-          def object_urls(lead, secondary=False):
-              family = 'pgrb2b.0p25' if secondary else 'pgrb2.0p25'
-              stem = f'gfs.t{cycle:%H}z.{family}.f{lead:03d}'
-              root = m.cycle_directory_url(cycle)
-              return root + stem, root + stem + '.idx'
-
-          def read_idx(lead, secondary=False):
-              grib_url, idx_url = object_urls(lead, secondary=secondary)
-              status, _headers, body, final_url = m.request_bytes(idx_url, timeout=60, attempts=3)
-              if status != 200:
-                  raise RuntimeError(f'IDX_HTTP_{status}:F{lead:03d}:SECONDARY={secondary}')
-              validate_final(idx_url, final_url)
-              rows = []
-              for raw in body.decode('utf-8', errors='strict').splitlines():
-                  match = re.match(r'^(\d+):(\d+):(.*)$', raw)
-                  if match:
-                      rows.append((int(match.group(1)), int(match.group(2)), match.group(3)))
-              if not rows or any(rows[i][1] >= rows[i+1][1] for i in range(len(rows)-1)):
-                  raise RuntimeError(f'IDX_STRUCTURE_INVALID:F{lead:03d}:SECONDARY={secondary}')
-              return grib_url, body, rows
-
-          def locate_primary_dswrf(lead):
-              grib_url, body, rows = read_idx(lead, secondary=False)
-              candidates = []
-              for i, (ordinal, start, tail) in enumerate(rows[:-1]):
-                  upper = ':' + tail.upper()
-                  if ':DSWRF:' in upper and ':SURFACE:' in upper:
-                      candidates.append((ordinal, start, rows[i+1][1]-1, m.sha256_bytes(tail.encode('utf-8'))))
-              if len(candidates) != 1:
-                  raise RuntimeError(f'PRIMARY_DSWRF_NOT_UNIQUE:F{lead:03d}:COUNT={len(candidates)}')
-              return grib_url, m.sha256_bytes(body), len(body), candidates[0]
-
-          def exact_range(url, start, end, lead):
-              expected = end - start + 1
-              if expected <= 0 or expected > 64 * 1024 * 1024:
-                  raise RuntimeError(f'PRODUCTION_RANGE_SIZE_REJECTED:F{lead:03d}:{expected}')
-              request = m.Request(url, method='GET', headers={
-                  'User-Agent': m.USER_AGENT,
-                  'Accept': 'application/octet-stream,*/*',
-                  'Range': f'bytes={start}-{end}',
-                  'Accept-Encoding': 'identity',
-              })
-              with m.urlopen(request, timeout=90) as response:
-                  validate_final(url, response.geturl())
-                  if int(response.status) != 206:
-                      raise RuntimeError(f'PRODUCTION_RANGE_HTTP_NOT_206:F{lead:03d}:{response.status}')
-                  content_range = response.headers.get('Content-Range') or ''
-                  if not content_range.startswith(f'bytes {start}-{end}/'):
-                      raise RuntimeError(f'CONTENT_RANGE_MISMATCH:F{lead:03d}')
-                  body = response.read(expected + 1)
-              if len(body) != expected or not body.startswith(b'GRIB') or not body.endswith(b'7777'):
-                  raise RuntimeError(f'RANGE_SINGLE_GRIB_FAIL:F{lead:03d}')
-              return body
-
-          def decode_dswrf(lead):
-              grib_url, idx_hash, idx_bytes, candidate = locate_primary_dswrf(lead)
-              ordinal, start, end, tail_hash = candidate
-              body = exact_range(grib_url, start, end, lead)
-              with m.tempfile.NamedTemporaryFile(prefix='ea1n-pack-', suffix='.grib2', delete=False) as tmp:
-                  tmp.write(body)
-                  tmp_path = tmp.name
-              try:
-                  with open(tmp_path, 'rb') as handle:
-                      gid = m.codes_grib_new_from_file(handle)
-                      if gid is None:
-                          raise RuntimeError(f'ECCODES_NO_MESSAGE:F{lead:03d}')
-                      try:
-                          role = m.role_for(str(m.codes_get(gid,'shortName')), str(m.codes_get(gid,'name')), str(m.codes_get(gid,'typeOfLevel')), float(m.codes_get(gid,'level')))
-                          if role != 'DOWNWARD_SHORTWAVE_SURFACE':
-                              raise RuntimeError(f'DSWRF_ROLE_MISMATCH:F{lead:03d}')
-                          nearest = m.eccodes.codes_grib_find_nearest(gid, m.GRID_LAT, m.GRID_LON_NATIVE, npoints=1)
-                          if len(nearest) != 1:
-                              raise RuntimeError(f'NEAREST_COUNT_FAIL:F{lead:03d}')
-                          point = nearest[0]
-                          if abs(float(point['lat'])-m.GRID_LAT)>1e-9 or abs(m.normalize_lon(float(point['lon']))-m.GRID_LON_NATIVE)>1e-9 or abs(float(point['distance']))>1e-9:
-                              raise RuntimeError(f'EXACT_NODE_FAIL:F{lead:03d}')
-                          value = float(point['value'])
-                          e = int(m.codes_get(gid, 'binaryScaleFactor'))
-                          d = int(m.codes_get(gid, 'decimalScaleFactor'))
-                          # WMO GRIB2 Regulation 92.9.4: Y*10^D = R + (X1+X2)*2^E.
-                          # Complex packing is lossless relative to the scaled simple-packed integers.
-                          # ECMWF documents packed spacing = 2*packingError, so half a scale quantum is the packing-error bound.
-                          quantum = math.ldexp(1.0, e) * (10.0 ** (-d))
-                          quantization_error = 0.5 * abs(quantum)
-                          if not math.isfinite(value) or not math.isfinite(quantization_error) or quantization_error <= 0:
-                              raise RuntimeError(f'QUANTIZATION_METADATA_INVALID:F{lead:03d}')
-                          message = bytes(m.codes_get_message(gid))
-                          section4 = m.grib2_section(message, 4)
-                          section5 = m.grib2_section(message, 5)
-                          record = {
-                              'lead': lead,
-                              'value': value,
-                              'quantization_error': quantization_error,
-                              'step_type': str(m.codes_get(gid,'stepType')),
-                              'start_step': int(m.codes_get(gid,'startStep')),
-                              'end_step': int(m.codes_get(gid,'endStep')),
-                              'step_range_hash': m.sha256_bytes(str(safe_get(gid,'stepRange')).encode('utf-8')),
-                              'type_of_statistical_processing': safe_get(gid,'typeOfStatisticalProcessing'),
-                              'type_of_time_increment': safe_get(gid,'typeOfTimeIncrement'),
-                              'number_of_time_range': safe_get(gid,'numberOfTimeRange'),
-                              'length_of_time_range': safe_get(gid,'lengthOfTimeRange'),
-                              'time_increment': safe_get(gid,'timeIncrement'),
-                              'packing_type': str(m.codes_get(gid,'packingType')),
-                              'bits_per_value': int(m.codes_get(gid,'bitsPerValue')),
-                              'binary_scale_factor': e,
-                              'decimal_scale_factor': d,
-                              'section4_sha256': m.sha256_bytes(section4),
-                              'section5_sha256': m.sha256_bytes(section5),
-                              'message_sha256': m.sha256_bytes(body),
-                              'message_bytes': len(body),
-                              'idx_sha256': idx_hash,
-                              'idx_bytes': idx_bytes,
-                              'idx_ordinal': ordinal,
-                              'idx_tail_sha256': tail_hash,
-                          }
-                          second = m.codes_grib_new_from_file(handle)
-                          if second is not None:
-                              m.codes_release(second)
-                              raise RuntimeError(f'MULTI_MESSAGE_RANGE:F{lead:03d}')
-                      finally:
-                          m.codes_release(gid)
-              finally:
-                  try: os.remove(tmp_path)
-                  except OSError: pass
-              return record
-
-          previous = decode_dswrf(19)
-          current = decode_dswrf(20)
-          if previous['step_type'] != 'avg' or current['step_type'] != 'avg' or previous['start_step'] != 18 or previous['end_step'] != 19 or current['start_step'] != 18 or current['end_step'] != 20:
-              raise RuntimeError('EXPECTED_18H_BLOCK_STATISTICAL_WINDOWS_NOT_PRESENT')
-
-          derived = 2.0 * current['value'] - previous['value']
-          propagated = 2.0 * current['quantization_error'] + previous['quantization_error']
-
-          _secondary_url, secondary_idx_body, secondary_rows = read_idx(20, secondary=True)
-          secondary_dswrf_count = sum(1 for _ordinal, _offset, tail in secondary_rows if ':DSWRF:' in (':' + tail.upper()) and ':SURFACE:' in (':' + tail.upper()))
-
-          def public_meta(record):
-              return {k:v for k,v in record.items() if k not in {'value','quantization_error'}} | {'quantization_error_bucket': bucket(record['quantization_error'])}
-
-          print('EA1N_DSWRF_QUANTIZATION_DIAGNOSTIC=' + json.dumps({
-              'status': 'PASS',
-              'tick_utc': m.iso(tick),
-              'selected_cycle': m.iso(cycle),
-              'failure_lead': 20,
-              'grib2_reconstruction_formula': 'Y_TIMES_10_POW_D_EQUALS_R_PLUS_X1_PLUS_X2_TIMES_2_POW_E',
-              'packing_error_rule': 'HALF_SCALE_QUANTUM_FROM_E_D',
-              'complex_packing_semantics': 'LOSSLESS_RELATIVE_TO_SCALED_SIMPLE_PACKED_INTEGERS',
-              'derived_sign': 'NEGATIVE' if derived < 0 else ('POSITIVE' if derived > 0 else 'ZERO'),
-              'derived_magnitude_bucket': bucket(derived),
-              'propagated_quantization_error_bucket': bucket(propagated),
-              'negative_magnitude_within_propagated_quantization_error': bool(derived < 0 and abs(derived) <= propagated),
-              'physical_zero_inside_quantization_interval': bool(derived - propagated <= 0 <= derived + propagated),
-              'previous': public_meta(previous),
-              'current': public_meta(current),
-              'secondary_pgrb2b_f020_idx_sha256': m.sha256_bytes(secondary_idx_body),
-              'secondary_pgrb2b_f020_idx_bytes': len(secondary_idx_body),
-              'secondary_pgrb2b_f020_dswrf_surface_count': secondary_dswrf_count,
-              'raw_values_emitted': False,
-              'raw_idx_emitted': False,
-              'raw_grib_emitted': False,
-              'negative_clipping_performed': False,
-              'authority_created': False,
-          }, sort_keys=True, separators=(',', ':')))
-          PY
+      - name: Materialize exact EA1N fail-close result
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mcft-cap-09-ea1n-gfs-values-${{ steps.authority.outputs.subject_sha }}
-          path: acceptance-output/MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY_GOVERNANCE_RESULT.json
+          name: mcft-cap-09-ea1n-adjudication-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY_RESULT.json
           if-no-files-found: error
           retention-days: 90
