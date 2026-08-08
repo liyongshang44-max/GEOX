@@ -1,0 +1,95 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1o_sflux_reconstruction_amendment_status_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1O-SFLUX-RECONSTRUCTION-AMENDMENT-STATUS-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA1O",
+  "record_status": "ARCHITECTURE_AMENDMENT_03_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "9c59d92c74738639429d636c92f854b5120382d0",
+  "predecessor_authority": {
+    "taskbook_v03_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "taskbook_v03_blob": "3e6bc630540108599771e5404c457eaee14946aa",
+    "amendment_02_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-02-GFS-SOLAR-RADIATION-SOURCE-AUTHORITY.md",
+    "amendment_02_blob": "3ec68f7a33274ff96c5f613154b4357d2b057fd1",
+    "ea1o_b_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-B-SFLUX-SOURCE-SPATIAL-QUALIFICATION-V1.json",
+    "ea1o_b_blob": "cd817199ed16ce429cf99743ffebcaf7fe562053",
+    "ea1o_b_merge_sha": "74ceaa530f362e84312c594524eaa4b72619ef81",
+    "ea1o_b_decision": "REJECTED_AS_AMENDMENT02_DIRECT_1H_SOURCE_AUTHORITY",
+    "ea1o_b_next_action_class": "S6_ARCHITECTURE_ADJUDICATION_REQUIRED"
+  },
+  "candidate_amendment": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-03-GFS-SFLUX-EXPANDING-AVERAGE-RECONSTRUCTION-AUTHORITY.md",
+    "blob": "44e2edbf7bf4a6ebbf863cd5b94f763b26d92850",
+    "taskbook_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "taskbook_candidate_version": "v0.4"
+  },
+  "temporal_reconstruction_candidate": {
+    "scope": "FUTURE_ET0_SOLAR_RADIATION_INPUT_ONLY",
+    "provider": "NOAA_NCEP",
+    "model": "GFS",
+    "candidate_product": "gfs.tCCz.sfluxgrbfFFF.grib2",
+    "candidate_parameter": "DSWRF_SURFACE_AVERAGE",
+    "block_size_hours": 6,
+    "block_start_formula": "b=6*floor((f-1)/6)",
+    "window_index_formula": "n=f-b",
+    "block_first_hour_formula": "H_f=A_f",
+    "within_block_formula": "H_f=n*A_f-(n-1)*A_(f-1)",
+    "cross_block_reconstruction_authorized": false,
+    "n_hour_fcst_as_interval_average_authorized": false,
+    "pgrb2_dswrf_fallback_authorized": false,
+    "negative_clipping_authorized": false,
+    "zero_thresholding_authorized": false,
+    "silent_imputation_authorized": false,
+    "same_exact_gfs_cycle_required": true
+  },
+  "support_lead_policy": {
+    "required_only_when_canonical_lead_start_is_not_first_hour_of_6h_block": true,
+    "support_lead_formula": "canonical_lead_start-1",
+    "same_cycle_required": true,
+    "available_before_same_tick_required": true,
+    "support_lead_is_canonical_output": false,
+    "valid_time_shift_authorized": false
+  },
+  "packing_quantization_policy": {
+    "live_grib_packing_metadata_required": true,
+    "half_quantum_diagnostic_required": true,
+    "reconstructed_propagated_quantization_bound_required": true,
+    "quantization_bound_may_repair_negative_value": false,
+    "any_nonfinite_reconstructed_value": "FAIL_CLOSED",
+    "any_negative_reconstructed_value": "FAIL_CLOSED"
+  },
+  "spatial_boundary": {
+    "sflux_grid_authority_qualified": false,
+    "live_native_grid_refreeze_required": true,
+    "silent_pgrb2_grid_reuse_authorized": false,
+    "interpolation_authorized": false,
+    "direct_field_equivalence": false,
+    "model_grid_is_observation_truth": false
+  },
+  "contract_impact": {
+    "domain_model_delta": false,
+    "canonical_object_contract_delta": false,
+    "runtime_forcing_selector_delta": false,
+    "transaction_family_delta": false,
+    "migration_delta": false,
+    "runtime_product_source_delta": false,
+    "reason": "AMENDMENT_03_AUTHORIZES_ONLY_A_PRE_FORMAL_SOURCE_NORMALIZATION_CANDIDATE_FOR_LATER_LIVE_QUALIFICATION"
+  },
+  "qualification_boundary": {
+    "reconstruction_algorithm_qualified": false,
+    "current_sflux_72h_reconstructed_values_proven": false,
+    "current_sflux_packing_quantization_proven": false,
+    "current_sflux_geometry_proven": false,
+    "decoded_values_emitted": false,
+    "database_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "canonical_evidence_write_count": 0,
+    "future_et0_execution_count": 0,
+    "formal_window_started": false
+  },
+  "effectiveness_condition": "PRESENT_ON_PROTECTED_MAIN_UNDER_DELIVERY_POLICY",
+  "effective_claim_when_merged": "S6_SFLUX_EXPANDING_AVERAGE_RECONSTRUCTION_ARCHITECTURE_AMENDMENT_EFFECTIVE_ONLY",
+  "first_legal_successor_action_when_effective": "EA1O_C_LIVE_SFLUX_RECONSTRUCTION_PACKING_AND_SPATIAL_QUALIFICATION",
+  "ea2_authorized": false,
+  "mcft_cap09_completed": false
+}
