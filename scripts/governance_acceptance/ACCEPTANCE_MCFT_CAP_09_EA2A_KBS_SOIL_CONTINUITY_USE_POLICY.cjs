@@ -33,16 +33,11 @@ try {
 
   const pins = {
     task: '39f6a09273c30088a7ea264cfa94ff930ea5518e',
-    a1: '443edcfc6cbaafcd4b94f93d7002ab40442be8c9',
-    ea1e: '808f4e33cc36a6788957851228213d04eee49e9c',
-    ea1od: 'cd165ef2de4618e399c1c5166b78ae19a88c69af',
+    a1: '41270b888e15e4d9a6c9a34e1fa3f70e957a275e',
+    ea1e: '69835c9877474f4d46980487f6e5789add803df2',
+    ea1od: 'b5cf28809af89315966d1e02322a34fab14810cd',
   };
-  const actual = {
-    task: blob(BASE,TASK),
-    a1: blob(BASE,A1),
-    ea1e: blob(BASE,EA1E),
-    ea1od: blob(BASE,EA1OD),
-  };
+  const actual = {task:blob(BASE,TASK),a1:blob(BASE,A1),ea1e:blob(BASE,EA1E),ea1od:blob(BASE,EA1OD)};
   result.actual_predecessor_blobs = actual;
   req(actual.task === pins.task, `EA2A_TASKBOOK_BASE_BLOB_DRIFT:actual=${actual.task}:expected=${pins.task}`);
   req(actual.a1 === pins.a1, `EA2A_AMENDMENT01_BASE_BLOB_DRIFT:actual=${actual.a1}:expected=${pins.a1}`);
