@@ -40,7 +40,6 @@ const result = {
 try {
   req(/^[0-9a-f]{40}$/.test(BASE), 'EA1OD_EXACT_BASE_SHA_REQUIRED');
   req(git(['merge-base', BASE, 'HEAD']) === BASE, 'EA1OD_BASE_MUST_BE_ANCESTOR_OF_HEAD');
-
   const changed = git(['diff', '--name-only', `${BASE}...HEAD`]).split(/\r?\n/).filter(Boolean).sort();
   result.changed_files = changed;
   result.exact_file_count = changed.length;
@@ -61,12 +60,12 @@ try {
   const authority = JSON.parse(read(AUTH));
   const probe = read(PROBE);
   const workflow = read(WF);
-
-  req(authority.record_status === 'EA1O_D_LIVE_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE', 'EA1OD_AUTHORITY_STATUS_DRIFT');
+  req(authority.record_status === 'EA1O_D_LIVE_QUALIFICATION_PASS_CANDIDATE_NOT_EFFECTIVE', 'EA1OD_AUTHORITY_STATUS_DRIFT');
   req(authority.base_main_binding === 'EXACT_PULL_REQUEST_BASE_SHA', 'EA1OD_BASE_BINDING_DRIFT');
   req(authority.predecessor_authorities.some(entry => entry.ref === TASK && entry.blob_sha === '39f6a09273c30088a7ea264cfa94ff930ea5518e'), 'EA1OD_AUTHORITY_TASKBOOK_PIN_DRIFT');
   req(authority.predecessor_authorities.some(entry => entry.ref === A4 && entry.blob_sha === '3cce5cb3f070404a2b7474ef61a009d87c7f809f'), 'EA1OD_AUTHORITY_AMENDMENT04_PIN_DRIFT');
   req(authority.predecessor_authorities.some(entry => entry.ref === EA1OC && entry.blob_sha === '743846307cc4d846b10e2409670a66512b4778b4'), 'EA1OD_AUTHORITY_EA1OC_PIN_DRIFT');
+
   const source = authority.source_candidate;
   req(source.product_family === 'sflux' && source.parameter === 'DSWRF' && source.level === 'surface', 'EA1OD_SOURCE_ROLE_DRIFT');
   req(source.temporal_role === 'INSTANTANEOUS_FORECAST_ENDPOINT', 'EA1OD_TEMPORAL_ROLE_DRIFT');
@@ -86,6 +85,21 @@ try {
   req(temporal.formal_quality_status === 'LIMITED', 'EA1OD_QUALITY_MUST_BE_LIMITED');
   req(temporal.direct_field_equivalence === false && temporal.model_grid_is_observation_truth === false, 'EA1OD_TRUTH_UPGRADE_FORBIDDEN');
 
+  const observed = authority.frozen_discovery_observation;
+  req(authority.live_qualification.current_result === authority.live_qualification.success_decision, 'EA1OD_FROZEN_PASS_RESULT_REQUIRED');
+  req(authority.live_qualification.final_head_must_reprove_frozen_pass === true, 'EA1OD_FINAL_HEAD_REPROOF_REQUIRED');
+  req(observed.discovery_subject_sha === 'e35e2fb5aed6c2fc7630c4e11c35b56c80b19f78', 'EA1OD_DISCOVERY_SHA_DRIFT');
+  req(observed.qualification_tick_boundary_utc === '2026-08-08T18:00:00Z' && observed.selected_cycle_utc === '2026-08-08T12:00:00Z', 'EA1OD_DISCOVERY_TIME_DRIFT');
+  req(observed.canonical_lead_start === 7 && observed.canonical_lead_end === 78 && observed.support_lead === 6, 'EA1OD_DISCOVERY_LEADS_DRIFT');
+  req(observed.required_endpoint_count === 73 && observed.available_before_tick_count === 73 && observed.exact_range_message_count === 73, 'EA1OD_DISCOVERY_TRANSPORT_DRIFT');
+  req(JSON.stringify(observed.parameter_number_set) === '[192]' && JSON.stringify(observed.param_id_set) === '[260087]' && JSON.stringify(observed.step_type_set) === '["instant"]', 'EA1OD_DISCOVERY_GRIB_IDENTITY_DRIFT');
+  req(observed.endpoint_finite_count === 73 && observed.endpoint_nonnegative_count === 73, 'EA1OD_DISCOVERY_ENDPOINT_VALUE_DRIFT');
+  req(observed.hourly_mean_finite_count === 72 && observed.hourly_mean_nonnegative_count === 72, 'EA1OD_DISCOVERY_HOURLY_VALUE_DRIFT');
+  req(observed.solar_energy_finite_count === 72 && observed.solar_energy_nonnegative_count === 72, 'EA1OD_DISCOVERY_SOLAR_VALUE_DRIFT');
+  req(observed.grid_type === 'regular_gg' && observed.gaussian_n === 768 && observed.grid_point_count === 4718592, 'EA1OD_DISCOVERY_GRID_DRIFT');
+  req(observed.grid_definition_stable === true && observed.selected_native_index_stable === true && observed.selected_native_coordinate_stable === true && observed.centroid_and_all_vertices_same_native_point_for_all_messages === true, 'EA1OD_DISCOVERY_SPATIAL_DRIFT');
+  req(observed.value_qualified === true && observed.spatial_qualified === true, 'EA1OD_DISCOVERY_PASS_DRIFT');
+
   const value = authority.value_policy;
   req(value.all_73_endpoint_values_finite_required === true && value.all_73_endpoint_values_nonnegative_required === true, 'EA1OD_ENDPOINT_VALUE_RULE_WEAKENED');
   req(value.all_72_hourly_mean_values_finite_required === true && value.all_72_hourly_mean_values_nonnegative_required === true, 'EA1OD_HOURLY_VALUE_RULE_WEAKENED');
@@ -98,6 +112,8 @@ try {
   req(spatial.silent_pgrb2_grid_reuse_authorized === false && spatial.interpolation_authorized === false, 'EA1OD_SPATIAL_SHORTCUT_ENABLED');
 
   const effect = authority.qualification_effect;
+  req(effect.candidate_qualified_by_frozen_live_result === true, 'EA1OD_FROZEN_CANDIDATE_PASS_REQUIRED');
+  req(effect.first_legal_successor_after_effective_merge === 'S6_EA2_EXTERNAL_FORMAL_AUTHORITIES_FREEZE', 'EA1OD_SUCCESSOR_DRIFT');
   req(effect.future_et0_execution_authorized === false && effect.ea2_authorized === false, 'EA1OD_FUTURE_ET0_OR_EA2_PREMATURE');
   req(effect.database_write_authorized === false && effect.formal_evidence_write_authorized === false && effect.runtime_source_authorized === false, 'EA1OD_WRITE_OR_RUNTIME_AUTHORITY_ENABLED');
   req(effect.formal_window_started === false && effect.mcft_cap09_completed === false, 'EA1OD_FORMAL_OR_COMPLETION_ENABLED');
@@ -114,6 +130,7 @@ try {
   req(workflow.includes('PROBE_MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY.mjs'), 'EA1OD_WORKFLOW_EA1K_REPROOF_MISSING');
   req(workflow.includes('eccodes==2.47.0') && workflow.includes('eccodeslib==2.47.3.23'), 'EA1OD_PINNED_DECODER_MISSING');
   req(workflow.includes('PROBE_MCFT_CAP_09_EA1O_D_INSTANTANEOUS_SOLAR_LIVE_QUALIFICATION.py'), 'EA1OD_WORKFLOW_LIVE_PROBE_MISSING');
+  req(workflow.includes('QUALIFIED_AS_AMENDMENT04_INSTANTANEOUS_PIECEWISE_LINEAR_SOLAR_CANDIDATE'), 'EA1OD_WORKFLOW_FROZEN_PASS_REQUIRED');
   req(workflow.includes('persist-credentials: false'), 'EA1OD_PERSIST_CREDENTIALS_FORBIDDEN');
   req(!/DATABASE_URL|POSTGRES|NEON|psql|public\.facts|INSERT\s+INTO/i.test(workflow + '\n' + probe), 'EA1OD_DATABASE_PATH_PRESENT');
 
@@ -124,6 +141,7 @@ try {
     ea1k_blob: blob(BASE, EA1K),
     authority_blob: blob('HEAD', AUTH),
     probe_blob: blob('HEAD', PROBE),
+    frozen_decision: authority.live_qualification.current_result,
     epistemic_class: temporal.epistemic_class,
     formal_quality_status: temporal.formal_quality_status,
     live_qualification_required: true,
