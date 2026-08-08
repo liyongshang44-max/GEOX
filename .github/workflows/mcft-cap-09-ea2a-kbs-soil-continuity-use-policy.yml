@@ -1,0 +1,99 @@
+name: mcft-cap-09-ea2a-kbs-soil-continuity-use-policy
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea2a-kbs-soil-continuity-use-policy.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA2A-KBS-SOIL-CONTINUITY-USE-POLICY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY.mjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea2a-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  live-kbs-soil-continuity-use-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Resolve exact EA2A base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate exact EA2A no-write governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY.cjs
+
+      - name: Syntax-check live qualification probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY.mjs
+
+      - name: Live-qualify KBS soil continuity and restricted use policy
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY.mjs
+
+      - name: Verify completed fail-closed adjudication
+        shell: node
+        run: |
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY_RESULT.json', 'utf8'));
+          if (result.status !== 'PASS') throw new Error('EA2A_RESULT_PASS_REQUIRED');
+          if (result.soil_source.endpoint_id !== 25) throw new Error('EA2A_ENDPOINT_25_REQUIRED');
+          if (result.raw_soil_values_emitted !== false || result.raw_json_body_emitted !== false || result.raw_terms_body_emitted !== false) throw new Error('EA2A_PUBLIC_RAW_DATA_FORBIDDEN');
+          if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0) throw new Error('EA2A_WRITE_FORBIDDEN');
+          if (result.formal_site_authority_created !== false || result.formal_external_evidence_package_created !== false) throw new Error('EA2A_PREMATURE_FORMAL_AUTHORITY');
+          const allowed = new Set([
+            'QUALIFIED_KBS_ENDPOINT25_24H_CONTINUITY_AND_RESTRICTED_USE_POLICY_FOR_EA2_FORMAL_SITE_FREEZE',
+            'REJECTED_KBS_ENDPOINT25_24H_CONTINUITY_FOR_EA2_FORMAL_SITE_FREEZE',
+            'REJECTED_KBS_USE_POLICY_FOR_EA2_FORMAL_SITE_FREEZE',
+          ]);
+          if (!allowed.has(result.adjudication.decision)) throw new Error('EA2A_DECISION_NOT_GOVERNED');
+          console.log(JSON.stringify({
+            status: 'PASS',
+            decision: result.adjudication.decision,
+            continuity_qualified: result.adjudication.continuity_qualified,
+            use_policy_qualified: result.adjudication.use_policy_qualified,
+            package_freeze_consideration_qualified: result.adjudication.ea2_formal_package_freeze_consideration_qualified,
+          }));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea2a-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
