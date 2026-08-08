@@ -20,7 +20,7 @@
     {
       "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1L-GFS-HOURLY-NORMALIZATION-AUTHORITY-V1.json",
       "blob_sha": "af5f23425e35dd21a949727f508934f1be14d8e9",
-      "consumed_ruling": "PRATE_AVERAGE_AND_DSWRF_AVERAGE_ROLLING_WINDOWS_REQUIRE_EXACT_ONE_HOUR_RECONSTRUCTION_WITH_DERIVATION_SUPPORT_LEAD"
+      "consumed_ruling": "DSWRF_ROLLING_AVERAGE_RECONSTRUCTION_RETAINED; PRATE_ROLLING_PRECIPITATION_CANDIDATE_SUBJECT_TO_VALUE_LEVEL_REJECTION_OR_CORRECTION"
     },
     {
       "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1M-GFS-SPATIAL-EXTRACTION-AUTHORITY-V1.json",
@@ -28,6 +28,25 @@
       "consumed_ruling": "ALL_FORECAST_INPUTS_USE_SINGLE_PUBLIC_GFS_GRID_NODE_42P5_N_274P75_E_WITH_NEAR_SITE_MODEL_GRID_SUPPORT"
     }
   ],
+  "value_level_precipitation_correction": {
+    "trigger_run_id": 31253728831,
+    "trigger_subject_sha": "f299085875d277c15d8ae38d382b25378104e881",
+    "trigger_artifact_id": 9020784545,
+    "trigger_artifact_digest": "sha256:de123ee0446dd2ab0e887e4410dce573e536097e0e25a3613a969dd965c90f47",
+    "trigger_result": "PRATE_ROLLING_VALUE_RECONSTRUCTION_REJECTED_FAIL_CLOSED_AT_F006",
+    "trigger_error": "DERIVED_PRECIP_SANITY_FAIL_NO_CLIP:F006",
+    "negative_value_clipping_performed": false,
+    "ea1l_prate_structural_graph_retracted": false,
+    "ea1l_prate_candidate_selected_for_canonical_precipitation": false,
+    "replacement_candidate": "APCP_EXACT_ONE_HOUR_ACCUMULATION",
+    "replacement_adoption_rule": "EVERY_ONE_OF_72_TARGET_LEADS_MUST_HAVE_EXACTLY_ONE_SURFACE_APCP_RECORD_WITH_STEP_TYPE_ACCUM_START_STEP_LEAD_MINUS_1_END_STEP_LEAD",
+    "missing_exact_hour_record": "FAIL_CLOSED",
+    "duplicate_exact_hour_record": "FAIL_CLOSED",
+    "fallback_to_prate": false,
+    "fallback_to_multi_hour_apcp_difference": false,
+    "epsilon_or_negative_clipping": false,
+    "correction_status_before_exact_head_pass": "CANDIDATE_PENDING_72_OF_72_VALUE_LEVEL_PROOF"
+  },
   "decoder_supply_chain": {
     "python_version": "3.12",
     "eccodes_python_package": "eccodes==2.47.0",
@@ -67,7 +86,7 @@
     {"role":"U_WIND_10M","filter_variable":"UGRD","filter_level":"10_m_above_ground","provider_unit":"m_per_s","normalized_unit":"m_per_s"},
     {"role":"V_WIND_10M","filter_variable":"VGRD","filter_level":"10_m_above_ground","provider_unit":"m_per_s","normalized_unit":"m_per_s"},
     {"role":"DOWNWARD_SHORTWAVE_SURFACE","filter_variable":"DSWRF","filter_level":"surface","provider_unit":"W_per_m2","normalized_unit":"MJ_per_m2_per_hour"},
-    {"role":"PRECIPITATION_RATE_SURFACE","filter_variable":"PRATE","filter_level":"surface","provider_unit":"kg_per_m2_per_s","normalized_unit":"mm_per_hour"}
+    {"role":"TOTAL_PRECIPITATION_SURFACE","filter_variable":"APCP","filter_level":"surface","provider_unit":"kg_per_m2","normalized_unit":"mm_per_hour","selection":"EXACT_ONE_HOUR_ACCUMULATION_ONLY"}
   ],
   "tick_cycle_and_lead_policy": {
     "tick_boundary": "FLOOR_EXACT_PROBE_START_TO_UTC_HOUR",
@@ -78,6 +97,7 @@
     "lead_start_rule": "lead_start=(T-cycle_time)+1h",
     "lead_end_rule": "lead_end=(T-cycle_time)+72h",
     "derivation_support_rule": "support_lead=lead_start-1",
+    "derivation_support_needed_for": ["DOWNWARD_SHORTWAVE_SURFACE"],
     "selected_cycle_requires_all_support_and_target_production_grib_and_idx_objects_last_modified_lte_tick": true,
     "missing_last_modified": "FAIL_CLOSED",
     "wait_for_future_files": false,
@@ -90,12 +110,17 @@
     "every_message_valid_time_must_equal_cycle_plus_end_step": true,
     "instantaneous_roles": ["AIR_TEMPERATURE_2M","RELATIVE_HUMIDITY_2M","U_WIND_10M","V_WIND_10M"],
     "instantaneous_step_type_required": "instant",
-    "rolling_average_roles": ["DOWNWARD_SHORTWAVE_SURFACE","PRECIPITATION_RATE_SURFACE"],
+    "rolling_average_roles": ["DOWNWARD_SHORTWAVE_SURFACE"],
     "rolling_average_step_type_required": "avg",
     "rolling_block_hours": 6,
     "rolling_start_rule": "S=6*floor((lead-1)/6)",
     "rolling_end_rule": "E=lead",
-    "exactly_one_matching_average_record_per_role_per_lead": true,
+    "exactly_one_matching_average_record_per_dswrf_lead": true,
+    "exact_hour_accumulation_role": "TOTAL_PRECIPITATION_SURFACE",
+    "exact_hour_accumulation_step_type_required": "accum",
+    "exact_hour_accumulation_start_rule": "startStep=lead-1",
+    "exact_hour_accumulation_end_rule": "endStep=lead",
+    "exact_hour_accumulation_required_target_count": 72,
     "unmatched_or_ambiguous_message": "FAIL_CLOSED"
   },
   "normalization": {
@@ -106,12 +131,12 @@
     "dswrf_when_L_eq_1": "hourly_mean_Wm2=A_S_E",
     "dswrf_when_L_gt_1": "hourly_mean_Wm2=L*A_S_E-(L-1)*A_S_Eminus1",
     "solar_for_future_et0": "Rs_MJ_m2_h=hourly_mean_Wm2*0.0036",
-    "prate_when_L_eq_1": "hourly_mean_rate=R_S_E",
-    "prate_when_L_gt_1": "hourly_mean_rate=L*R_S_E-(L-1)*R_S_Eminus1",
-    "precipitation_depth": "mm_per_hour=hourly_mean_rate_kg_m2_s*3600",
+    "precipitation_source": "APCP_EXACT_ONE_HOUR_ACCUMULATION",
+    "precipitation_depth": "mm_per_hour=APCP_kg_m2_using_water_equivalent_identity_1kg_m2_equals_1mm",
     "cross_block_differencing": false,
     "missing_predecessor_imputation": false,
-    "negative_derived_value_clipping": false
+    "negative_derived_value_clipping": false,
+    "prate_rolling_used_for_precipitation": false
   },
   "physical_sanity": {
     "temperature_k_min": 180,
@@ -121,8 +146,8 @@
     "u_v_component_abs_max_m_per_s": 100,
     "raw_dswrf_w_m2_min": 0,
     "raw_dswrf_w_m2_max": 1600,
-    "raw_prate_kg_m2_s_min": 0,
-    "raw_prate_kg_m2_s_max": 0.05,
+    "raw_apcp_exact_hour_kg_m2_min": 0,
+    "raw_apcp_exact_hour_kg_m2_max": 200,
     "derived_hourly_solar_w_m2_min": 0,
     "derived_hourly_solar_w_m2_max": 1600,
     "derived_hourly_precip_mm_min": 0,
@@ -145,6 +170,7 @@
       "decoded_message_metadata_hash_chain",
       "normalized_series_hashes",
       "complete_point_counts",
+      "apcp_exact_hour_coverage_count",
       "physical_sanity_booleans",
       "decoder_versions",
       "no_write_flags"
@@ -153,6 +179,7 @@
   },
   "qualification_effect": {
     "probe_may_establish": "GFS_72H_DECODED_AND_NORMALIZED_VALUE_PIPELINE_AUTHORITY_CANDIDATE_ONLY",
+    "passing_probe_may_correct_precipitation_source_to": "APCP_EXACT_ONE_HOUR_ACCUMULATION",
     "future_weather_canonical_evidence_created": false,
     "future_et0_calculated": false,
     "future_et0_canonical_evidence_created": false,
@@ -168,6 +195,9 @@
     "NO_KBS_GEOMETRY_READ_IN_EA1N",
     "NO_INTERPOLATION",
     "NO_FIELD_SCALE_FORECAST_TRUTH",
+    "NO_PRATE_NEGATIVE_VALUE_CLIPPING",
+    "NO_PRATE_FALLBACK_AFTER_VALUE_LEVEL_REJECTION",
+    "NO_MULTI_HOUR_APCP_DIFFERENCE_FALLBACK",
     "NO_RAW_GRIB_ARTIFACT",
     "NO_FORECAST_VALUE_OUTPUT",
     "NO_CANONICAL_EVIDENCE_WRITE",
