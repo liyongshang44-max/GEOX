@@ -1,0 +1,122 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1b_bcse_g1r1_live_source_probe_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1B-BCSE-G1R1-LIVE-SOURCE-PROBE-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION_CONTINUATION",
+  "record_status": "EA1B_LIVE_SOURCE_PROBE_NOT_FORMAL_AUTHORITY",
+  "base_main_sha": "96a505e959895ac1e2f980cc2887d74177dcae2b",
+  "ea1_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1-SITE-SOURCE-QUALIFICATION-V1.json",
+  "ea1_authority_blob_sha": "a4329330cfae941a033d65f55e91b8ae8e96d862",
+  "amendment_01_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md",
+  "amendment_01_blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
+  "candidate_site_id": "KBS_BCSE_G1R1",
+  "candidate_scope_class": "EXTERNAL_PUBLIC_RESEARCH_PLOT_PROXY",
+  "candidate_crop": "corn",
+  "candidate_treatment": "G1_CONTINUOUS_CORN",
+  "candidate_replicate": "R1",
+  "probe_mode": "READ_ONLY_EXTERNAL_HTTP_EXACT_HEAD",
+  "sources": {
+    "bcse_authority": {
+      "url": "https://lter.kbs.msu.edu/research/long-term-experiments/glbrc-intensive-experiment/",
+      "required_markers": [
+        "continuous corn with stover removal (G1)",
+        "30 x 40 m plots"
+      ]
+    },
+    "crop_2026_planting": {
+      "url": "https://aglog.kbs.msu.edu/observations/6930",
+      "fallback_index_url": "https://aglog.kbs.msu.edu/observations",
+      "required_markers": [
+        "2026-05-14",
+        "Planting",
+        "G1",
+        "corn"
+      ]
+    },
+    "soil_metadata": {
+      "url": "https://data.sustainability.glbrc.org/datatables/795",
+      "required_markers": [
+        "Campbell CS650",
+        "0 = 0-30",
+        "30 = 30-60",
+        "60 = 60 - 90",
+        "m^3/m^3"
+      ]
+    },
+    "soil_csv": {
+      "url": "https://data.sustainability.glbrc.org/datatables/795.csv",
+      "plot": "G1R1",
+      "required_depth_cm": [0, 30, 60],
+      "canonical_observation_depth_cm": 0,
+      "canonical_observation_depth_support": "0_TO_30_CM_PROFILE_AVERAGE",
+      "epistemic_class": "OBSERVED",
+      "quantity_kind": "VOLUMETRIC_WATER_CONTENT",
+      "canonical_unit": "fraction",
+      "spatial_support": "POINT_OR_WITHIN_PLOT_SENSOR_PROFILE",
+      "direct_state_equivalence": false,
+      "root_zone_representativeness": "PARTIAL"
+    },
+    "weather_metadata": {
+      "url": "https://lter.kbs.msu.edu/datatables/13",
+      "required_markers": [
+        "Raw hourly observations",
+        "solar radiation",
+        "wind speed",
+        "relative humidity",
+        "air temperature",
+        "barometer",
+        "rain"
+      ]
+    },
+    "weather_csv": {
+      "url": "https://lter.kbs.msu.edu/datatables/13.csv",
+      "required_columns": [
+        "datetime_utc",
+        "solrad_avg",
+        "wind_speed",
+        "rh",
+        "airtmp_107_avg",
+        "barometer_avg",
+        "rain_mm"
+      ],
+      "support_class": "NEAR_SITE_METEOROLOGICAL_SUPPORT",
+      "direct_field_equivalence": false
+    },
+    "glbrc_terms": {
+      "url": "https://data.sustainability.glbrc.org/sponsors/3",
+      "required_markers": [
+        "public presentation or publication requires written permission",
+        "Permission to download does not imply permission to publish"
+      ]
+    }
+  },
+  "live_thresholds": {
+    "source_max_age_hours": 6,
+    "continuity_window_hours": 30,
+    "minimum_distinct_hourly_points": 24,
+    "soil_vwc_min": 0,
+    "soil_vwc_max": 1,
+    "http_timeout_ms": 180000
+  },
+  "raw_payload_policy": {
+    "provider_payload_may_be_fetched_for_probe": true,
+    "provider_payload_may_be_committed": false,
+    "provider_payload_may_be_uploaded_as_ci_artifact": false,
+    "result_may_include_raw_values": false,
+    "result_must_include_response_sha256": true,
+    "result_may_include_only_metadata_counts_timestamps_hashes_and_boolean_checks": true,
+    "public_presentation_or_publication_without_written_permission": false
+  },
+  "hard_nonclaims": [
+    "NO_QUALIFIED_FORMAL_SITE_FROM_PROBE_CONFIG",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_DATABASE_WRITE",
+    "NO_RUNTIME_SOURCE_DELTA",
+    "NO_RAW_KBS_OR_GLBRC_PAYLOAD_IN_REPOSITORY",
+    "NO_RAW_KBS_OR_GLBRC_PAYLOAD_IN_CI_ARTIFACT",
+    "NO_FIELD_STATE_DIRECT_EQUIVALENCE",
+    "NO_FORMAL_WINDOW_START",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
