@@ -1,0 +1,61 @@
+name: mcft-cap-09-ea1f-enviroweather-api-discovery
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea1f-enviroweather-api-discovery.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1F-ENVIROWEATHER-API-DISCOVERY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1F_ENVIROWEATHER_API_DISCOVERY.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1F_ENVIROWEATHER_API_DISCOVERY.mjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea1f-enviroweather-api-discovery-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  api-discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium for Enviroweather network discovery
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Validate exact no-write EA1F boundary
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1F_ENVIROWEATHER_API_DISCOVERY.cjs
+      - name: Syntax-check safe API discovery probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1F_ENVIROWEATHER_API_DISCOVERY.mjs
+      - name: Discover official Enviroweather KBS JSON API surface without values
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1F_ENVIROWEATHER_API_DISCOVERY.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea1f-enviroweather-api-discovery-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA1F_ENVIROWEATHER_API_DISCOVERY_STATIC_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA1F_ENVIROWEATHER_API_DISCOVERY_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
