@@ -29,10 +29,11 @@
     "identity_search_tokens": ["hickory corners", "kbs"]
   },
   "discovery_request": {
-    "mode": "active",
+    "mode": "list",
     "product_id": "scqc60",
     "network": "enviro",
-    "format": "json"
+    "format_parameter_policy": "OMIT_FOR_LIST_INVENTORY_PER_PROVIDER_DOCUMENTATION",
+    "accepted_response_encodings": ["json", "csv", "text"]
   },
   "observation_request": {
     "lookback_hours": 48,
