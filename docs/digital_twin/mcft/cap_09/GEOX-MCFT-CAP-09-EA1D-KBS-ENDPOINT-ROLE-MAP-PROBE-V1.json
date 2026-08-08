@@ -1,0 +1,144 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1d_kbs_endpoint_role_map_probe_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1D-KBS-ENDPOINT-ROLE-MAP-PROBE-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION_CONTINUATION",
+  "record_status": "EA1D_CAUSAL_ENDPOINT_ROLE_MAP_NOT_FORMAL_AUTHORITY",
+  "base_main_sha": "2157fd9b27939b78c7096136fd20ae96d46dae09",
+  "ea1c_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1C-KBS-JSON-SOURCE-MAP-PROBE-V1.json",
+  "ea1c_authority_blob_sha": "ff935707b7b79ce94a7bf64b29bd3d96d08170ec",
+  "ea1c_probe_run_id": 31242861882,
+  "ea1c_probe_artifact_id": 9017569317,
+  "ea1c_probe_artifact_digest": "sha256:bab961c6b7ba7e9ed8517f265ad67038184dd544d3d381315ed09f307cc0a7f6",
+  "source_url": "https://lter.kbs.msu.edu/current-weather/",
+  "official_host": "lter.kbs.msu.edu",
+  "endpoint_path_prefix": "/weather/variates/",
+  "endpoint_ids": [4, 19, 21, 22, 23, 25, 52, 55, 57, 61],
+  "probe_method": "CAUSAL_NETWORK_ISOLATION_RENDER_ROLE_DELTA_V1",
+  "baseline_rule": "BLOCK_ALL_VARIATE_ENDPOINTS_AND_COUNT_POPULATED_FROZEN_ROLES",
+  "candidate_rule": "ALLOW_EXACTLY_ONE_VARIATE_ENDPOINT_AND_REQUIRE_ROLE_COUNT_DELTA_ABOVE_BASELINE",
+  "value_handling": "NUMERIC_OR_DIRECTION_VALUES_MAY_BE_USED_TRANSIENTLY_FOR_POPULATED_DETECTION_BUT_MUST_NOT_BE_PERSISTED_OR_PRINTED",
+  "roles": [
+    {
+      "role_id": "AIR_TEMPERATURE",
+      "label": "Air Temperature",
+      "unit": "F",
+      "pattern": "Air Temperature:\\s*[+-]?\\d+(?:\\.\\d+)?\\s*F"
+    },
+    {
+      "role_id": "PRECIPITATION_TODAY",
+      "label": "Precipitation (today)",
+      "unit": "in",
+      "pattern": "Precipitation \\(today\\):\\s*[+-]?\\d+(?:\\.\\d+)?\\s*in"
+    },
+    {
+      "role_id": "PRECIPITATION_YESTERDAY",
+      "label": "Precipitation (yesterday)",
+      "unit": "in",
+      "pattern": "Precipitation \\(yesterday\\):\\s*[+-]?\\d+(?:\\.\\d+)?\\s*in"
+    },
+    {
+      "role_id": "PRECIPITATION_3_DAYS",
+      "label": "Precipitation (3 days)",
+      "unit": "in",
+      "pattern": "Precipitation \\(3 days\\):\\s*[+-]?\\d+(?:\\.\\d+)?\\s*in"
+    },
+    {
+      "role_id": "PRECIPITATION_7_DAYS",
+      "label": "Precipitation (7 days)",
+      "unit": "in",
+      "pattern": "Precipitation \\(7 days\\):\\s*[+-]?\\d+(?:\\.\\d+)?\\s*in"
+    },
+    {
+      "role_id": "WIND_SPEED_3M",
+      "label": "Wind Speed 3m",
+      "unit": "mph",
+      "pattern": "Wind Speed 3m[^:]*:\\s*[+-]?\\d+(?:\\.\\d+)?\\s*mph"
+    },
+    {
+      "role_id": "WIND_SPEED_10M",
+      "label": "Wind Speed 10m",
+      "unit": "mph",
+      "pattern": "Wind Speed 10m[^:]*:\\s*[+-]?\\d+(?:\\.\\d+)?\\s*mph"
+    },
+    {
+      "role_id": "MAXIMUM_GUST_10M",
+      "label": "Maximum Gust 10m",
+      "unit": "mph",
+      "pattern": "Maximum Gust 10m[^:]*:\\s*[+-]?\\d+(?:\\.\\d+)?\\s*mph"
+    },
+    {
+      "role_id": "WIND_DIRECTION",
+      "label": "Wind Direction",
+      "unit": "display_direction",
+      "pattern": "Wind Direction:\\s*(?:[NSEW]{1,3}|\\d+(?:\\.\\d+)?)"
+    },
+    {
+      "role_id": "RELATIVE_HUMIDITY",
+      "label": "Relative Humidity",
+      "unit": "percent",
+      "pattern": "Relative Humidity:\\s*[+-]?\\d+(?:\\.\\d+)?\\s*%"
+    },
+    {
+      "role_id": "SOIL_TEMPERATURE_BARE_5CM",
+      "label": "Soil Temperature bare soil (5 cm/1.9 in)",
+      "unit": "F",
+      "pattern": "Soil Temperature bare soil \\(5 cm/1\\.9 in\\):\\s*[+-]?\\d+(?:\\.\\d+)?\\s*F"
+    },
+    {
+      "role_id": "SOIL_MOISTURE_10CM",
+      "label": "Soil Moisture (10 cm/3.9 in)",
+      "unit": "percent_vwc",
+      "depth_mm": 100,
+      "pattern": "Soil Moisture \\(10 cm/3\\.9 in\\):\\s*[+-]?\\d+(?:\\.\\d+)?\\s*%"
+    }
+  ],
+  "required_unique_bindings": [
+    "AIR_TEMPERATURE",
+    "WIND_SPEED_3M",
+    "WIND_SPEED_10M",
+    "MAXIMUM_GUST_10M",
+    "WIND_DIRECTION",
+    "RELATIVE_HUMIDITY",
+    "SOIL_TEMPERATURE_BARE_5CM",
+    "SOIL_MOISTURE_10CM"
+  ],
+  "soil_moisture_semantics": {
+    "epistemic_class": "OBSERVED",
+    "spatial_support": "NEAR_SITE_POINT_SUPPORT",
+    "measurement_depth_mm": 100,
+    "canonical_unit_after_conversion": "fraction",
+    "direct_field_equivalence": false,
+    "direct_root_zone_equivalence": false,
+    "root_zone_representativeness": "PARTIAL"
+  },
+  "output_policy": {
+    "endpoint_id_allowed": true,
+    "role_id_allowed": true,
+    "label_allowed": true,
+    "unit_allowed": true,
+    "baseline_match_count_allowed": true,
+    "isolated_match_count_allowed": true,
+    "role_delta_count_allowed": true,
+    "endpoint_response_sha256_allowed": true,
+    "endpoint_latest_timestamp_allowed": true,
+    "raw_numeric_sensor_value_allowed": false,
+    "rendered_dom_allowed": false,
+    "raw_json_body_allowed": false,
+    "unfiltered_rendered_text_allowed": false
+  },
+  "hard_nonclaims": [
+    "NO_FORMAL_SOURCE_AUTHORITY_FROM_ROLE_MAP_ALONE",
+    "NO_QUALIFIED_FORMAL_SITE",
+    "NO_FIELD_EQUIVALENCE",
+    "NO_ROOT_ZONE_EQUIVALENCE",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_RUNTIME_PRODUCT_SOURCE_DELTA",
+    "NO_RAW_KBS_PAYLOAD_PUBLICATION",
+    "NO_SENSOR_VALUE_PUBLICATION",
+    "NO_FORMAL_WINDOW_START",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
