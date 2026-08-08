@@ -1,0 +1,184 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1_source_qualification_matrix_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1-SOURCE-QUALIFICATION-MATRIX-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION",
+  "record_status": "EA1_SOURCE_MATRIX_WHEN_PRESENT_ON_PROTECTED_MAIN",
+  "research_checked_on": "2026-08-08",
+  "raw_provider_payloads_committed": false,
+  "source_records": [
+    {
+      "source_key": "KBS_MCSE_2026_PLOT_MAP",
+      "provider": "KBS_LTER",
+      "source_url": "https://lter.kbs.msu.edu/maps/images/current-kbs-lter-mcse-plot-map.pdf",
+      "authority_role": ["CURRENT_SEASON_CROP_IDENTITY", "SITE_LAYOUT", "WEATHER_STATION_LOCATION_CONTEXT"],
+      "facts_used": [
+        "2026 map labels T1 R1 as Corn",
+        "map identifies the LTER main-site weather station within the MCSE site"
+      ],
+      "qualification": "PASS_FOR_SITE_AND_CURRENT_CROP_METADATA",
+      "raw_content_redistributed": false
+    },
+    {
+      "source_key": "KBS_AGLOG_CURRENT",
+      "provider": "KBS_AGLOG",
+      "source_url": "https://aglog.kbs.msu.edu/observations",
+      "authority_role": ["CURRENT_SEASON_MANAGEMENT", "PLANTING_EVENT"],
+      "facts_used": [
+        "2026-05-11 planting observation records corn planted in Main Site T1",
+        "2026-05-12 planting observation records corn planted in Main Site T2"
+      ],
+      "qualification": "PASS_FOR_2026_CROP_CORROBORATION",
+      "raw_content_redistributed": false
+    },
+    {
+      "source_key": "KBS_MCSE_PLOT_POLYGONS",
+      "provider": "KBS_LTER",
+      "source_url": "https://lter.kbs.msu.edu/datatables/829",
+      "provider_table_id": "KBS039-006.40",
+      "authority_role": ["PLOT_GEOMETRY_SOURCE"],
+      "facts_used": [
+        "provider exposes treatment/replicate/subplot geometry as extended WKT",
+        "provider states submeter-accuracy GPS is used for plot and feature locations"
+      ],
+      "qualification": "PASS_SOURCE_LOCATOR_GEOMETRY_MATERIALIZATION_PENDING_USE_POLICY",
+      "raw_geometry_redistributed": false
+    },
+    {
+      "source_key": "KBS_MCSE_PLOT_CENTERS",
+      "provider": "KBS_LTER",
+      "source_url": "https://lter.kbs.msu.edu/datatables/644",
+      "provider_table_id": "KBS136-006.61",
+      "authority_role": ["PLOT_CENTROID", "SPATIAL_RELATIONSHIP_CHECK"],
+      "facts_used": [
+        "provider exposes computed centroid and area for MCSE plots",
+        "T1 R1 has an explicit provider record"
+      ],
+      "qualification": "PASS_SOURCE_LOCATOR_ONLY",
+      "raw_coordinates_redistributed": false
+    },
+    {
+      "source_key": "KBS_LTER_CURRENT_WEATHER",
+      "provider": "KBS_LTER",
+      "source_url": "https://lter.kbs.msu.edu/current-weather/",
+      "authority_role": ["CURRENT_METEOROLOGY_CAPABILITY", "SOIL_MOISTURE_CAPABILITY_DISCOVERY"],
+      "facts_used": [
+        "provider page describes five-minute weather station averages",
+        "provider page includes air temperature, precipitation, wind, relative humidity, soil temperature and soil moisture at 10 cm"
+      ],
+      "qualification": "CAPABILITY_DISCOVERY_PASS_MACHINE_RAW_FEED_NOT_YET_QUALIFIED",
+      "formal_observation_authority": false
+    },
+    {
+      "source_key": "KBS_LTER_RAW_HOURLY_WEATHER",
+      "provider": "KBS_LTER",
+      "source_url": "https://lter.kbs.msu.edu/datatables/13",
+      "provider_table_id": "KBS002-007.142",
+      "authority_role": ["RAINFALL_CANDIDATE", "OBSERVED_MET_CANDIDATE", "HISTORICAL_ET0_INPUT_CANDIDATE"],
+      "variables": ["solar_radiation", "wind_speed", "relative_humidity", "air_temperature", "barometric_pressure", "rainfall"],
+      "current_2026_records_visible_in_provider_excerpt": true,
+      "provider_metadata_temporal_coverage_inconsistent_with_visible_2026_excerpt": true,
+      "provider_labels_data_as_raw_and_unchecked": true,
+      "qualification": "SOURCE_CAPABILITY_PASS_LIVE_MACHINE_CONTINUITY_AND_QC_PENDING",
+      "formal_observation_authority": false
+    },
+    {
+      "source_key": "KBS_LTER_MET_STATION_DATASET",
+      "provider": "KBS_LTER",
+      "source_url": "https://lter.kbs.msu.edu/datasets/5",
+      "authority_role": ["WEATHER_STATION_CONTEXT", "SOIL_SENSOR_CONTEXT"],
+      "facts_used": [
+        "weather collection continues at the LTER main site",
+        "soil moisture and temperature are monitored near the base of the tower"
+      ],
+      "qualification": "PASS_FOR_SENSOR_CONTEXT_NOT_FOR_FIELD_EQUIVALENCE"
+    },
+    {
+      "source_key": "KBS_REX_HOURLY_VWC",
+      "provider": "KBS_LTER",
+      "source_url": "https://lter.kbs.msu.edu/datatables/680",
+      "authority_role": ["SOIL_MOISTURE_CANDIDATE_REJECTED_FOR_AMBIENT_FIELD_USE"],
+      "facts_used": [
+        "hourly VWC is measured by CS655 probes in REX footprints at 0-15 cm",
+        "visible provider excerpts include 2026 observations"
+      ],
+      "qualification": "NOT_ELIGIBLE_AS_AMBIENT_MCSE_FIELD_TRUTH",
+      "reason": "REX_IS_A_RAINFALL_MANIPULATION_EXPERIMENT",
+      "formal_observation_authority": false
+    },
+    {
+      "source_key": "KBS_REX_EXPERIMENT_AUTHORITY",
+      "provider": "KBS_LTER",
+      "source_url": "https://lter.kbs.msu.edu/research/rainfall-exclusion-experiment/",
+      "authority_role": ["REX_NON_EQUIVALENCE_PROOF"],
+      "facts_used": [
+        "REX uses temporary rainout shelters in T1, T2 and T7",
+        "rainfall regimes are intentionally manipulated within REX footprints"
+      ],
+      "qualification": "PASS_FOR_REJECTION_BOUNDARY"
+    },
+    {
+      "source_key": "ENVIROWEATHER_KBS_STATION",
+      "provider": "MSU_ENVIROWEATHER",
+      "source_url": "https://enviroweather.msu.edu/stations/kbs",
+      "authority_role": ["KBS_STATION_IDENTITY", "MACHINE_FEED_CANDIDATE"],
+      "station_name": "Hickory Corners - MSU",
+      "station_code": "kbs",
+      "qualification": "PASS_STATION_IDENTITY_MACHINE_VARIABLE_BINDING_PENDING"
+    },
+    {
+      "source_key": "HPRCC_AWDN_WEB_SERVICES",
+      "provider": "HPRCC_AWDN",
+      "source_url": "https://hprcc.unl.edu/awdn/",
+      "authority_role": ["MACHINE_ACCESS_CANDIDATE", "QC_POLICY_AUTHORITY"],
+      "network_identifier": "enviro",
+      "facts_used": [
+        "AWDN documents free Web Services and identifies Enviroweather as network enviro for Michigan",
+        "AWDN documents estimated-value flags E, R and e when observations fail QC or are missing"
+      ],
+      "formal_qc_ruling": {
+        "E": "FORBIDDEN_AS_OBSERVED_FORMAL_TRUTH",
+        "R": "FORBIDDEN_AS_OBSERVED_FORMAL_TRUTH",
+        "e": "FORBIDDEN_AS_OBSERVED_FORMAL_TRUTH"
+      },
+      "qualification": "WEB_SERVICE_CAPABILITY_PASS_EXACT_KBS_STATION_AND_VARIABLE_BINDING_PENDING"
+    },
+    {
+      "source_key": "NOAA_NCEP_GFS_0P25_HOURLY",
+      "provider": "NOAA_NCEP",
+      "source_url": "https://www.nco.ncep.noaa.gov/pmb/products/gfs/nomads/",
+      "authority_role": ["FUTURE_WEATHER_PRIMARY_PROVIDER"],
+      "model": "GFS",
+      "resolution": "0.25_degree",
+      "cycles_utc": ["00", "06", "12", "18"],
+      "hourly_output_through_forecast_hour": 120,
+      "required_formal_points": 72,
+      "qualification": "PASS_PROVIDER_CAPABILITY_COLLECTOR_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "source_key": "KBS_LTER_TERMS_OF_USE",
+      "provider": "KBS_LTER",
+      "source_url": "https://lter.kbs.msu.edu/data/terms-of-use/",
+      "authority_role": ["DATA_USE_POLICY"],
+      "facts_used": [
+        "KBS LTER core data may not be published without written permission of the lead investigator or project director",
+        "publications using KBS data and images must acknowledge KBS LTER support"
+      ],
+      "repository_policy": "NO_RAW_KBS_DATA_OR_FULL_PROVIDER_DATASETS_COMMITTED",
+      "formal_private_ingress_policy": "PENDING_USE_CLEARANCE_BEFORE_RAW_PAYLOAD_RETENTION",
+      "qualification": "RESTRICTION_IDENTIFIED_NOT_YET_CLEARED_FOR_FORMAL_RAW_RETENTION"
+    }
+  ],
+  "source_gates": {
+    "observed_values_must_be_raw_not_estimated": true,
+    "estimated_or_gap_filled_values_may_not_be_relabelled_observed": true,
+    "near_site_weather_station_is_not_field_truth": true,
+    "rex_manipulated_vwc_is_not_ambient_field_truth": true,
+    "kbs_raw_dataset_redistribution_in_public_repo": false,
+    "machine_endpoint_identity_must_be_frozen_before_ea2": true,
+    "24_hour_live_continuity_and_latency_probe_required_before_ea2": true
+  },
+  "overall_status": "INCOMPLETE_AUTHORITY",
+  "next_blocker": "QUALIFY_UNESTIMATED_CONTEMPORANEOUS_SOIL_MOISTURE_MACHINE_FEED_FOR_KBS_MCSE_T1R1_OR_REJECT_SITE"
+}

@@ -1,0 +1,110 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1_site_source_qualification_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1-SITE-SOURCE-QUALIFICATION-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION",
+  "record_status": "EA1_QUALIFICATION_AUTHORITY_WHEN_PRESENT_ON_PROTECTED_MAIN",
+  "base_main_sha": "5a7f2922bcf13c2cc4c76447862bc51d15c28c46",
+  "amendment_01_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md",
+  "amendment_01_blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
+  "research_checked_on": "2026-08-08",
+  "qualification_policy": "FAIL_CLOSED_NO_BEST_EFFORT_PROMOTION",
+  "qualified_formal_site": null,
+  "preferred_candidate": "KBS_MCSE_T1R1",
+  "overall_status": "INCOMPLETE_AUTHORITY",
+  "formal_window_started": false,
+  "formal_evidence_write_authorized": false,
+  "database_write_authorized": false,
+  "runtime_source_delta_authorized": false,
+  "mcft_cap_09_complete": false,
+  "candidate_sites": [
+    {
+      "site_candidate_id": "KBS_MCSE_T1R1",
+      "provider_site": "KBS_LTER_MAIN_CROPPING_SYSTEM_EXPERIMENT",
+      "treatment": "T1_CONVENTIONAL",
+      "replicate": "R1",
+      "qualification": "INCOMPLETE_AUTHORITY",
+      "preference_rank": 1,
+      "rationale": [
+        "current 2026 MCSE plot map explicitly identifies T1 R1 as Corn",
+        "current KBS Aglog records corn planting for T1 on 2026-05-11",
+        "KBS provides authoritative MCSE treatment/replicate geometry sources",
+        "KBS main-site weather station provides current meteorological context near the MCSE plots",
+        "candidate avoids treating the REX rain-manipulation sensor footprint as ordinary field truth"
+      ],
+      "gates": {
+        "stable_site_identity": "PASS",
+        "authoritative_site_coordinates": "PASS_SOURCE_EXISTS_NOT_REPUBLISHED",
+        "exact_2026_crop_identity": "PASS_CORN",
+        "current_phenology_authority": "PENDING",
+        "contemporaneous_observed_soil_moisture": "PENDING_MACHINE_FEED_AND_SPATIAL_AUTHORITY",
+        "observed_rainfall": "SOURCE_CAPABILITY_PASS_MACHINE_BINDING_PENDING",
+        "observed_met_for_hourly_et0": "SOURCE_CAPABILITY_PASS_MACHINE_BINDING_PENDING",
+        "forecast_72_hourly_points": "PASS_PROVIDER_CAPABILITY_GFS",
+        "formal_ingress_latency": "PENDING_24H_LIVE_QUALIFICATION",
+        "raw_payload_auditability": "PENDING_MACHINE_ENDPOINT_BINDING",
+        "spatial_support_governed": "PARTIAL_PASS_WITH_LIMITATIONS",
+        "use_policy": "PENDING_FORMAL_USE_CLEARANCE_NO_PUBLIC_RAW_REDISTRIBUTION"
+      },
+      "spatial_authority": {
+        "plot_geometry_source": "KBS039-006_MCSE_PLOT_POLYGONS",
+        "plot_centroid_source": "KBS136-006_PLOT_CENTER_LOCATIONS_AND_SIZE",
+        "geometry_truth_class": "PUBLIC_RESEARCH_PLOT_GEOMETRY",
+        "raw_geometry_embedded_in_repository": false,
+        "weather_station_relationship": "NEAR_SITE_METEOROLOGICAL_SUPPORT",
+        "weather_station_direct_field_equivalence": false,
+        "soil_station_direct_root_zone_equivalence": false,
+        "rex_footprints_present_within_t1_t2_systems": true,
+        "rex_observations_eligible_as_ambient_field_truth": false
+      }
+    },
+    {
+      "site_candidate_id": "US-KM1",
+      "provider_site": "AMERIFLUX_KBS_MARSHALL_FARMS_CORN",
+      "qualification": "INCOMPLETE_AUTHORITY",
+      "preference_rank": 2,
+      "gates": {
+        "stable_site_identity": "PASS",
+        "historical_continuous_corn_management": "PASS",
+        "exact_2026_crop_identity": "PENDING_CURRENT_SEASON_CORROBORATION",
+        "phenocam_identity": "PASS",
+        "contemporaneous_observed_soil_moisture": "PENDING",
+        "observed_rainfall_met": "PENDING"
+      },
+      "reason_not_preferred": "current MCSE sources provide stronger exact-2026 crop and plot-geometry authority while US-KM1 still lacks a qualified contemporaneous soil-moisture feed"
+    },
+    {
+      "site_candidate_id": "US-Ne1",
+      "provider_site": "AMERIFLUX_US_NE1",
+      "qualification": "NOT_QUALIFIED",
+      "preference_rank": null,
+      "reason": "AMENDMENT_01_REJECTED_2026_CROP_IDENTITY_SOYBEAN"
+    }
+  ],
+  "blocking_conditions": [
+    "SOIL_MOISTURE_MACHINE_FEED_NOT_QUALIFIED",
+    "SOIL_MOISTURE_SPATIAL_AUTHORITY_NOT_QUALIFIED",
+    "CURRENT_PHENOLOGY_AUTHORITY_NOT_QUALIFIED",
+    "KBS_FORMAL_DATA_USE_CLEARANCE_NOT_ESTABLISHED",
+    "LIVE_24H_SOURCE_CONTINUITY_AND_LATENCY_NOT_PROVEN",
+    "RAW_PROVIDER_PAYLOAD_HASH_CHAIN_NOT_PROVEN"
+  ],
+  "next_legal_work": [
+    "resolve exact KBS/Enviroweather/AWDN machine station binding and raw variable availability",
+    "prove unestimated soil-moisture observations or reject the KBS MCSE candidate",
+    "qualify current as-of crop-water-use stage authority without future observations",
+    "qualify source use policy and private raw-payload retention boundary",
+    "run a no-write exact-head live source probe before EA2 authority freeze"
+  ],
+  "nonclaims": [
+    "NO_QUALIFIED_FORMAL_SITE_YET",
+    "NO_FIELD_SOIL_MOISTURE_TRUTH_ESTABLISHED",
+    "NO_CURRENT_PHENOLOGY_AUTHORITY_ESTABLISHED",
+    "NO_RAW_KBS_DATA_REPUBLISHED_BY_THIS_ARTIFACT",
+    "NO_FORMAL_EVIDENCE_WRITE_AUTHORITY",
+    "NO_FORMAL_WINDOW_STARTED",
+    "NO_FIELD_VALIDITY_PROVEN",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
