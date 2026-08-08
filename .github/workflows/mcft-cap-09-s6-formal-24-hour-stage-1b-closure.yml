@@ -34,15 +34,84 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Classify S6 Formal lifecycle applicability
+        id: lifecycle
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD | sort)"
+          candidate_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CANDIDATE-BOUNDARY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CANDIDATE-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CONFIG-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-HARD-ACCEPTANCE-LEDGER-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-S5-ATTESTATION-CONSUMPTION-V1.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE.cjs' \
+            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE_DB.ts' \
+            'scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts' | sort)"
+          ea2_successor_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-ea2-formal-authority-freeze.yml' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-EXTERNAL-EVIDENCE-PACKAGE-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA2_FORMAL_AUTHORITY_FREEZE.cjs' | sort)"
+          routing_repair_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml' \
+            'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs' \
+            'scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs' | sort)"
+          if [[ "$files" == "$candidate_files" ]]; then
+            mode='historical-s6-formal-candidate'
+          elif [[ "$files" == "$ea2_successor_files" ]]; then
+            mode='not-applicable-ea2-successor-authority'
+          elif [[ "$files" == "$routing_repair_files" ]]; then
+            mode='successor-authority-routing-repair'
+          else
+            mode='unsupported-s6-formal-trigger'
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "mode=$mode" "files:" "$files"
+
+      - name: Record S6 Formal gate not applicable to EA2 successor authority freeze
+        if: steps.lifecycle.outputs.mode == 'not-applicable-ea2-successor-authority'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'Historical S6 Formal candidate gate is not applicable: exact EA2 successor authority boundary changed with no historical S6 Formal candidate-owned mutation.'
+
+      - name: Validate successor authority routing repair
+        if: steps.lifecycle.outputs.mode == 'successor-authority-routing-repair'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'Exact three-file successor authority routing repair recognized; historical S6 Formal candidate authority is not reopened.'
+
+      - name: Reject unsupported S6 Formal trigger
+        if: steps.lifecycle.outputs.mode == 'unsupported-s6-formal-trigger'
+        shell: bash
+        run: |
+          echo 'unsupported S6 Formal workflow trigger outside historical exact candidate, exact EA2 successor, or exact routing-repair boundary' >&2
+          exit 1
+
       - uses: pnpm/action-setup@v4
+        if: steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
         with:
           version: 9.15.4
       - uses: actions/setup-node@v4
+        if: steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
         with:
           node-version: 20.11.1
           cache: pnpm
-      - run: pnpm install --no-frozen-lockfile
+      - if: steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
+        run: pnpm install --no-frozen-lockfile
       - name: Download effective S5 exact-SHA R2 authority
+        if: steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
         uses: actions/download-artifact@v4
         with:
           run-id: 31165105531
@@ -52,11 +121,13 @@ jobs:
           repository: liyongshang44-max/GEOX
           github-token: ${{ github.token }}
       - name: Validate exact Candidate and predecessor authority
+        if: steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           MCFT_CAP09_S5_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s5-effective
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE.cjs
       - name: Transpile formal operation programs
+        if: steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
         run: |
           node <<'NODE'
           const fs=require('node:fs'),ts=require('typescript');
@@ -65,7 +136,7 @@ jobs:
           console.log(JSON.stringify({status:'PASS',files},null,2));
           NODE
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
         with:
           name: mcft-cap-09-s6-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: acceptance-output/MCFT_CAP_09_S6_FORMAL_24_HOUR_CANDIDATE_RESULT.json
