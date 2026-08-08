@@ -1,0 +1,185 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1i_kbs_et0_input_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1I-KBS-ET0-INPUT-AUTHORITY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION_CONTINUATION",
+  "record_status": "EA1I_KBS_ET0_INPUT_AUTHORITY_PROBE_NOT_FORMAL_AUTHORITY",
+  "base_main_sha": "06b5c61cfd8bb9a3c9fd5767a9a0be37b3aaebbd",
+  "predecessor_authorities": [
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md",
+      "blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
+      "consumed_ruling": "ASCE_STANDARDIZED_REFERENCE_ET_SHORT_HOURLY_V1_AND_PRESSURE_OR_ELEVATION_PATH"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1H-KBS-RAW-HOURLY-LIVE-PROBE-V1.json",
+      "blob_sha": "ea17427e2ac870664a2a9166761b907dfe807daa",
+      "consumed_ruling": "KBS_RAW_HOURLY_IS_CURRENT_AND_ROLE_CONTINUOUS_BUT_ET0_INPUT_AUTHORITY_REMAINS_INCOMPLETE"
+    }
+  ],
+  "algorithm_authority": {
+    "algorithm_id": "ASCE_STANDARDIZED_REFERENCE_ET_SHORT_HOURLY_V1",
+    "reference_surface": "SHORT_CROP_GRASS_REFERENCE",
+    "asce_report_url": "https://ascelibrary.org/doi/book/10.1061/9780784408056",
+    "hourly_required_units": {
+      "air_temperature": "C",
+      "actual_vapor_pressure": "kPa",
+      "solar_radiation": "MJ_per_m2_per_hour",
+      "wind_speed_reference_height": "m_per_s_at_2m",
+      "station_elevation": "m"
+    },
+    "pressure_from_elevation": {
+      "selected": true,
+      "measured_barometer_path_selected": false,
+      "equation_id": "ASCE_ELEVATION_TO_MEAN_ATMOSPHERIC_PRESSURE_V1",
+      "equation": "P_kPa=101.3*((293-0.0065*z_m)/293)^5.26"
+    },
+    "wind_height_adjustment": {
+      "selected": true,
+      "source_height_m": 10,
+      "target_height_m": 2,
+      "equation_id": "ASCE_FAO_LOG_WIND_HEIGHT_ADJUSTMENT_V1",
+      "equation": "u2=uz*4.87/ln(67.8*z-5.42)"
+    },
+    "solar_conversion": {
+      "selected": true,
+      "source_quantity": "HOURLY_MEAN_GLOBAL_SOLAR_IRRADIANCE",
+      "source_unit_candidate": "W_per_m2",
+      "target_unit": "MJ_per_m2_per_hour",
+      "equation": "Rs_MJ_m2_h=SolRad_AVG_W_m2*0.0036",
+      "source_unit_must_be_empirically_reconciled_before_authority": true
+    }
+  },
+  "kbs_sources": {
+    "raw_hourly": {
+      "provider": "KBS_LTER",
+      "official_page": "https://lter.kbs.msu.edu/datatables/13",
+      "download_path": "/datatables/13.csv",
+      "dataset": "KBS002",
+      "datatable_id": "KBS002-007.142",
+      "required_columns": ["datetime_utc", "solrad_avg", "wind_speed", "rh", "ah", "airtmp_107_avg"],
+      "wind_measurement_height_m": 10,
+      "air_temperature_provider_unit": "C",
+      "rh_provider_unit": "percent",
+      "raw_solar_provider_unit_explicit_on_page": false,
+      "raw_wind_provider_unit_explicit_on_page": false,
+      "raw_ah_provider_unit_explicit_on_page": false
+    },
+    "daily_climdb": {
+      "provider": "KBS_LTER",
+      "official_page": "https://lter.kbs.msu.edu/datatables/175",
+      "download_path": "/datatables/175.csv",
+      "same_station_identity": "KBS_LTERWS",
+      "unit_bearing_columns": {
+        "solar": "Daily_GlobalRad_Total_mjm2",
+        "wind": "Daily_WindSp_Mean_msec"
+      },
+      "role": "HISTORICAL_CROSS_TABLE_UNIT_RECONCILIATION_ONLY",
+      "current_freshness_authority": false
+    },
+    "daily_all_variates": {
+      "provider": "KBS_LTER",
+      "official_page": "https://lter.kbs.msu.edu/datatables/12",
+      "semantic_authority": {
+        "ah": "average daily absolute humidity, partial pressure",
+        "rh": "average daily relative humidity calculated at the datalogger from absolute humidity and temperature"
+      },
+      "role": "AH_PARTIAL_PRESSURE_SEMANTIC_AUTHORITY_ONLY",
+      "raw_hourly_ah_unit_still_requires_physical_reconciliation": true
+    },
+    "survey_elevation": {
+      "provider": "KBS_LTER",
+      "official_page": "https://lter.kbs.msu.edu/datatables/152",
+      "authority_description": "KBS_PRIMARY_SURVEY_MONUMENT_NEAR_LTER_WEATHER_STATION",
+      "survey_method": "SURVEY_GRADE_GPS",
+      "elevation_m": 286.43,
+      "height_datum": "NAVD88",
+      "height_model": "EGM96",
+      "exact_sensor_elevation_claimed": false,
+      "selected_as_asce_site_elevation_support": true,
+      "selection_limitation": "NEAR_STATION_SITE_ELEVATION_NOT_SENSOR_ORIFICE_SURVEY"
+    }
+  },
+  "reconciliation_gates": {
+    "solar_unit": {
+      "method": "RAW_HOURLY_DAILY_INTEGRAL_VS_CLIMDB_DAILY_GLOBAL_RADIATION",
+      "candidate_raw_unit": "W_per_m2",
+      "transform": "sum(raw_hourly_solrad_avg*0.0036)",
+      "reference_unit": "MJ_per_m2_per_day",
+      "minimum_matching_days": 30,
+      "maximum_median_absolute_error_mj_m2_day": 0.35,
+      "maximum_median_relative_error_fraction": 0.03
+    },
+    "wind_unit": {
+      "method": "RAW_HOURLY_ARITHMETIC_MEAN_VS_CLIMDB_DAILY_WIND_MEAN",
+      "candidate_raw_unit": "m_per_s",
+      "reference_unit": "m_per_s",
+      "minimum_matching_days": 30,
+      "maximum_median_absolute_error_m_per_s": 0.08,
+      "maximum_median_relative_error_fraction": 0.04
+    },
+    "ah_unit": {
+      "method": "KBS_PARTIAL_PRESSURE_SEMANTIC_PLUS_RH_T_PHYSICAL_IDENTITY",
+      "candidate_raw_unit": "kPa",
+      "equation": "ea_expected_kPa=(RH_percent/100)*0.6108*exp(17.27*T_C/(T_C+237.3))",
+      "minimum_recent_valid_comparison_hours": 16,
+      "maximum_median_absolute_error_kpa": 0.08,
+      "maximum_median_relative_error_fraction": 0.08,
+      "silent_unit_guessing_forbidden": true
+    },
+    "elevation": {
+      "selected_elevation_m": 286.43,
+      "maximum_difference_to_independent_nearby_kbs_station_elevation_m": 5,
+      "independent_expected_elevation_m": 286,
+      "independent_station_identity": "KBSM4_HICKORY_CORNERS_MSU_KELLOGG_BIOLOGICAL_STATION",
+      "independent_station_coordinate": {"latitude": 42.4081, "longitude": -85.3736},
+      "independent_authority_class": "NWS_RR2_STATION_METADATA_CORROBORATION"
+    }
+  },
+  "qualification_effect": {
+    "probe_may_establish": "KBS_ET0_INPUT_UNIT_AND_TRANSFORM_AUTHORITY_CANDIDATE_ONLY",
+    "if_all_gates_pass": {
+      "actual_vapor_pressure_source": "KBS_RAW_HOURLY_AH_AS_PARTIAL_PRESSURE_KPA",
+      "solar_radiation_source": "KBS_RAW_HOURLY_SOLRAD_AVG_W_M2_CONVERT_0_0036_TO_MJ_M2_H",
+      "wind_source": "KBS_RAW_HOURLY_WIND_SPEED_M_S_AT_10M_ADJUST_TO_2M_BY_FROZEN_LOG_EQUATION",
+      "pressure_source": "ASCE_DERIVED_FROM_KBS_SURVEY_SITE_ELEVATION_286_43M",
+      "air_temperature_source": "KBS_RAW_HOURLY_AIRTMP_107_AVG_C",
+      "historical_et0_input_bundle_candidate_complete": true
+    },
+    "formal_source_authority_created": false,
+    "historical_et0_derivation_implemented": false,
+    "qualified_formal_site": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "runtime_source_authorized": false,
+    "formal_window_started": false
+  },
+  "data_use_policy": {
+    "provider_payload_may_be_read_transiently_for_qualification": true,
+    "provider_payload_may_be_committed": false,
+    "provider_payload_may_be_uploaded_as_ci_artifact": false,
+    "raw_numeric_values_may_be_emitted": false,
+    "result_may_emit_only_hashes_counts_dates_error_metrics_and_boolean_findings": true,
+    "public_data_republication_right_claimed": false,
+    "formal_runtime_use_right_established_by_probe": false
+  },
+  "hard_nonclaims": [
+    "NO_UNIT_BINDING_BY_MAGNITUDE_GUESS_ALONE",
+    "NO_RAW_BAROMETER_USE_FOR_FORMAL_PRESSURE",
+    "NO_RH_CLIPPING_OR_SILENT_IMPUTATION",
+    "NO_SOLAR_CANONICALIZATION_UNLESS_CROSS_TABLE_GATE_PASSES",
+    "NO_WIND_CANONICALIZATION_UNLESS_CROSS_TABLE_GATE_PASSES",
+    "NO_AH_TO_VAPOR_PRESSURE_KPA_BINDING_UNLESS_PHYSICAL_RECONCILIATION_PASSES",
+    "NO_EXACT_SENSOR_ELEVATION_CLAIM",
+    "NO_HISTORICAL_ET0_OUTPUT_FROM_THIS_PROBE",
+    "NO_FORMAL_SOURCE_AUTHORITY_FROM_PROBE_ALONE",
+    "NO_QUALIFIED_FORMAL_SITE",
+    "NO_PUBLIC_KBS_RAW_DATA_REPUBLICATION",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_RUNTIME_PRODUCT_SOURCE_DELTA",
+    "NO_FORMAL_WINDOW_START",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
