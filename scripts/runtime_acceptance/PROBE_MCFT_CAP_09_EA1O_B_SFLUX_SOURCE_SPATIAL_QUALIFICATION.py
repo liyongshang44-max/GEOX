@@ -245,32 +245,62 @@ def haversine_m(a: tuple[float, float], b: tuple[float, float]) -> float:
     return 2 * EARTH_RADIUS_M * math.asin(min(1.0, math.sqrt(h)))
 
 
+def normalize_key(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", str(value or "").lstrip("\ufeff").strip().lower()).strip("_")
+
+
+def parse_kbs_table(text: str, required_columns: tuple[str, ...]) -> list[dict[str, str]]:
+    lines = text.splitlines()
+    delimiters = (",", "\t", ";", "|")
+    headers: list[str] | None = None
+    delimiter: str | None = None
+    header_index = -1
+    nonempty = 0
+    for index, line in enumerate(lines):
+        if not line.strip():
+            continue
+        nonempty += 1
+        if nonempty > 40:
+            break
+        for candidate in delimiters:
+            cells = next(csv.reader([line], delimiter=candidate))
+            normalized = [normalize_key(cell) for cell in cells]
+            if all(column in normalized for column in required_columns):
+                headers = normalized
+                delimiter = candidate
+                header_index = index
+                break
+        if headers is not None:
+            break
+    require(headers is not None and delimiter is not None and header_index >= 0, "EA1OB_KBS_REQUIRED_CSV_HEADER_NOT_FOUND")
+    rows: list[dict[str, str]] = []
+    for cells in csv.reader(lines[header_index + 1 :], delimiter=delimiter):
+        if not any(str(cell).strip() for cell in cells):
+            continue
+        if len(cells) < len(headers):
+            continue
+        rows.append({header: cells[index] if index < len(cells) else "" for index, header in enumerate(headers)})
+    require(bool(rows), "EA1OB_KBS_CSV_ROWS_REQUIRED")
+    return rows
+
+
 def load_current_kbs_geometry(authority: dict[str, Any]) -> tuple[list[tuple[float, float]], dict[str, Any]]:
     source = authority["site_geometry_source"]
     csv_bytes, _, status = fetch_bytes(source["download_url"], "EA1OB_KBS_GEOMETRY", 20 * 1024 * 1024, {"Accept": "text/csv,text/plain;q=0.9,*/*;q=0.5"})
     require(status == 200, f"EA1OB_KBS_CSV_HTTP_{status}")
     text = csv_bytes.decode("utf-8-sig")
     require(not re.match(r"^\s*<(?:!doctype|html)", text, re.I), "EA1OB_KBS_CSV_HTML_FORBIDDEN")
-    sample = text[:8192]
-    try:
-        dialect = csv.Sniffer().sniff(sample, delimiters=",\t;|")
-    except csv.Error:
-        dialect = csv.excel
-    reader = csv.DictReader(io.StringIO(text), dialect=dialect)
-    require(reader.fieldnames is not None, "EA1OB_KBS_HEADERS_REQUIRED")
-    normalized = {re.sub(r"[^a-z0-9]+", "_", name.strip().lower()).strip("_"): name for name in reader.fieldnames}
-    for required in ("treatment", "replicate", "subplot", "geometry"):
-        require(required in normalized, f"EA1OB_KBS_COLUMN_{required.upper()}_REQUIRED")
+    rows = parse_kbs_table(text, ("treatment", "replicate", "subplot", "geometry"))
     target = source["selected_row"]
     matches: list[dict[str, str]] = []
-    for row in reader:
-        treatment = str(row.get(normalized["treatment"], "")).strip().upper()
-        replicate = str(row.get(normalized["replicate"], "")).strip().upper()
-        subplot = str(row.get(normalized["subplot"], "")).strip().lower()
+    for row in rows:
+        treatment = str(row.get("treatment", "")).strip().upper()
+        replicate = str(row.get("replicate", "")).strip().upper()
+        subplot = str(row.get("subplot", "")).strip().lower()
         if treatment == target["treatment"] and replicate == target["replicate"] and subplot == target["subplot"]:
             matches.append(row)
     require(len(matches) == target["expected_match_count"], f"EA1OB_KBS_TARGET_ROW_MATCH_COUNT_{len(matches)}")
-    raw_geometry = str(matches[0].get(normalized["geometry"], "")).strip()
+    raw_geometry = str(matches[0].get("geometry", "")).strip()
     vertices = parse_polygon(raw_geometry, source["required_srid"])
     diameter = max(haversine_m(a, b) for i, a in enumerate(vertices) for b in vertices[i + 1 :])
     row_material = "|".join([target["treatment"], target["replicate"], target["subplot"], raw_geometry])
