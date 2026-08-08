@@ -73,6 +73,20 @@ const S5_CANDIDATE_FILES=[
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION.cjs",
   "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S5_SHADOW_ONLINE_CANONICAL_INTEGRATION_DB.ts"
 ];
+const S6_SUCCESSOR_AUTHORITY_ROUTING_REPAIR_FILES=[
+  ".github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml",
+  "scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs",
+  "scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs"
+];
+const S6_EA2_FORMAL_AUTHORITY_SUCCESSOR_FILES=[
+  ".github/workflows/mcft-cap-09-ea2-formal-authority-freeze.yml",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-EXTERNAL-EVIDENCE-PACKAGE-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA2_FORMAL_AUTHORITY_FREEZE.cjs"
+];
 function git(...args){return cp.execFileSync('git',args,{cwd:ROOT,encoding:'utf8'}).trim();}
 function blobSha(value){const bytes=Buffer.from(value,'utf8');return crypto.createHash('sha1').update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`),bytes])).digest('hex');}
 function sameFiles(a,b){return JSON.stringify([...a].sort())===JSON.stringify([...b].sort());}
@@ -87,6 +101,8 @@ function simulationCompatibilityBase(base){
 function publish(mode,files){if(!process.env.GITHUB_OUTPUT)throw new Error('GITHUB_OUTPUT_REQUIRED');fs.appendFileSync(process.env.GITHUB_OUTPUT,`mode=${mode}\n`);console.log(JSON.stringify({lane:process.env.MCFT_REGISTRY_LANE??null,mode,base_sha:process.env.MCFT_BASE_SHA??null,files},null,2));}
 const base=process.env.MCFT_BASE_SHA;if(!base)throw new Error('MCFT_BASE_SHA_REQUIRED');
 const files=git('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
+if(sameFiles(files,S6_SUCCESSOR_AUTHORITY_ROUTING_REPAIR_FILES)){publish('s6-successor-authority-routing-repair',files);process.exit(0);}
+if(sameFiles(files,S6_EA2_FORMAL_AUTHORITY_SUCCESSOR_FILES)){publish('s6-ea2-formal-authority-successor',files);process.exit(0);}
 if(sameFiles(files,S6_SIMULATION_LIFECYCLE_REPAIR_FILES)&&tree(base)===S6_FORMAL_BOOTSTRAP_BASE_TREE){publish('s6-simulation-lifecycle-repair',files);process.exit(0);}
 if(sameFiles(files,S6_SIMULATION_FILES)&&simulationCompatibilityBase(base)){publish('s6-simulation-qualification',files);process.exit(0);}
 if(sameFiles(files,S6_REGISTRATION_FILES)){publish('s6-registry-registration',files);process.exit(0);}
