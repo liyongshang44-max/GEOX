@@ -85,12 +85,30 @@ function parseTabular(text, requiredColumns, label) {
   if (!rows.length) throw new Error(`${label}_ROWS_REQUIRED`);
   return { headers, rows, delimiter: delimiter === ',' ? 'COMMA' : delimiter === '\t' ? 'TAB' : delimiter === ';' ? 'SEMICOLON' : 'PIPE', headerIndex };
 }
-function parseUtc(value) {
-  const raw = String(value || '').trim();
-  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?\s*(?:\+00:?00|\+0000|UTC|Z)?$/i);
-  if (!match) return null;
-  const timestamp = Date.parse(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6] || '00'}Z`);
-  return Number.isFinite(timestamp) ? timestamp : null;
+function utcMillis(year, month, day, hour, minute, second) {
+  const values = [year, month, day, hour, minute, second].map(Number);
+  if (!values.every(Number.isInteger)) return null;
+  const [y, m, d, h, min, s] = values;
+  if (y < 1980 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31 || h < 0 || h > 23 || min < 0 || min > 59 || s < 0 || s > 60) return null;
+  const millis = Date.UTC(y, m - 1, d, h, min, Math.min(s, 59));
+  const check = new Date(millis);
+  if (check.getUTCFullYear() !== y || check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d || check.getUTCHours() !== h || check.getUTCMinutes() !== min) return null;
+  return millis;
+}
+function parseProviderUtc(value) {
+  const raw = String(value || '').replace(/\u00a0/g, ' ').trim();
+  if (!raw) return null;
+  const cleaned = raw.replace(/\s+(?:UTC|GMT)$/i, '').replace(/\s+(?:\+0000|\+00:00|\+00)$/i, '').replace(/Z$/i, '').trim();
+  let match = cleaned.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?$/);
+  if (match) return utcMillis(match[1], match[2], match[3], match[4], match[5], match[6] || 0);
+  match = cleaned.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})[ T](\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?$/);
+  if (match) return utcMillis(match[3], match[1], match[2], match[4], match[5], match[6] || 0);
+  const explicitUtc = /(?:Z|UTC|GMT|\+0000|\+00:00|\+00)\s*$/i.test(raw);
+  if (explicitUtc) {
+    const parsed = Date.parse(raw);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
 }
 function localDateKey(timestamp) {
   const parts = LOCAL_DATE.formatToParts(new Date(timestamp));
@@ -190,7 +208,7 @@ try {
 
   const rawByTimestamp = new Map();
   for (const row of raw.rows) {
-    const timestamp = parseUtc(row.datetime_utc);
+    const timestamp = parseProviderUtc(row.datetime_utc);
     if (timestamp === null) continue;
     rawByTimestamp.set(timestamp, {
       timestamp,
