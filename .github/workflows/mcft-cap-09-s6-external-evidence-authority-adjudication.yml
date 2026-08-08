@@ -31,12 +31,77 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Classify EA0 lifecycle applicability
+        id: lifecycle
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD | sort)"
+          ea0_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml' \
+            '.github/workflows/mcft-cap-09-s6-external-evidence-authority-adjudication.yml' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EXTERNAL-EVIDENCE-AUTHORITY-STATUS-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_EXTERNAL_EVIDENCE_AUTHORITY_ADJUDICATION.cjs' | sort)"
+          routing_repair_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml' \
+            '.github/workflows/mcft-cap-09-s6-external-evidence-authority-adjudication.yml' | sort)"
+          if [[ "$files" == "$ea0_files" ]]; then
+            mode='ea0-adjudication'
+          elif [[ "$files" == "$routing_repair_files" ]]; then
+            mode='successor-routing-repair'
+          else
+            # This workflow is also triggered by the shared Taskbook path. A
+            # successor lifecycle may legitimately update the Taskbook without
+            # reopening EA0. In that case EA0 is not applicable. Any mutation
+            # of an EA0-owned file still fails closed as unsupported.
+            owned_mutation='false'
+            while IFS= read -r file; do
+              case "$file" in
+                '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml'|\
+                '.github/workflows/mcft-cap-09-s6-external-evidence-authority-adjudication.yml'|\
+                'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md'|\
+                'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EXTERNAL-EVIDENCE-AUTHORITY-STATUS-V1.json'|\
+                'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_EXTERNAL_EVIDENCE_AUTHORITY_ADJUDICATION.cjs')
+                  owned_mutation='true'
+                  ;;
+              esac
+            done <<< "$files"
+            if [[ "$owned_mutation" == 'true' ]]; then
+              mode='unsupported-owned-mutation'
+            else
+              mode='successor-taskbook-change'
+            fi
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - name: Validate S6-only external Evidence authority adjudication
+        if: steps.lifecycle.outputs.mode == 'ea0-adjudication'
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_EXTERNAL_EVIDENCE_AUTHORITY_ADJUDICATION.cjs
+      - name: Validate successor routing repair
+        if: steps.lifecycle.outputs.mode == 'successor-routing-repair'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'EA0 gate routing repair: exact two-workflow boundary recognized.'
+      - name: Record EA0 not applicable to successor Taskbook change
+        if: steps.lifecycle.outputs.mode == 'successor-taskbook-change'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'EA0 adjudication is not applicable: no EA0-owned authority file changed.'
+      - name: Reject unsupported EA0-owned mutation
+        if: steps.lifecycle.outputs.mode == 'unsupported-owned-mutation'
+        shell: bash
+        run: |
+          echo 'unsupported mutation of EA0-owned files outside a recognized EA0 lifecycle' >&2
+          exit 1
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.lifecycle.outputs.mode == 'ea0-adjudication'
         with:
           name: mcft-cap-09-s6-external-evidence-authority-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: acceptance-output/MCFT_CAP_09_S6_EXTERNAL_EVIDENCE_AUTHORITY_ADJUDICATION_RESULT.json
