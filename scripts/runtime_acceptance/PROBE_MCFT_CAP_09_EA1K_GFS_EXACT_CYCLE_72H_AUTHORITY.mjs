@@ -28,9 +28,6 @@ function safeError(error) {
 function pad(value, width = 2) {
   return String(value).padStart(width, '0');
 }
-function isoHour(timestamp) {
-  return new Date(timestamp).toISOString().replace(/:\d{2}\.\d{3}Z$/, ':00.000Z');
-}
 function floorUtcHour(timestamp) {
   return Math.floor(timestamp / HOUR_MS) * HOUR_MS;
 }
@@ -59,7 +56,7 @@ async function fetchIndex(url, code) {
     redirect: 'follow',
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     headers: {
-      'user-agent': 'GEOX-MCFT-CAP09-EA1K-METADATA-ONLY-PROBE/1.0',
+      'user-agent': 'GEOX-MCFT-CAP09-EA1K-METADATA-ONLY-PROBE/1.1',
       accept: 'text/plain,*/*;q=0.5',
     },
   });
@@ -82,7 +79,7 @@ async function headGrib(url, code) {
     method: 'HEAD',
     redirect: 'follow',
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    headers: { 'user-agent': 'GEOX-MCFT-CAP09-EA1K-METADATA-ONLY-PROBE/1.0' },
+    headers: { 'user-agent': 'GEOX-MCFT-CAP09-EA1K-METADATA-ONLY-PROBE/1.1' },
   });
   if (!response.ok) throw new Error(`${code}_GRIB_HEAD_HTTP_${response.status}`);
   const lastModified = parseHttpTime(response.headers.get('last-modified'), `${code}_GRIB`);
@@ -90,16 +87,18 @@ async function headGrib(url, code) {
   const contentLength = contentLengthRaw && /^\d+$/.test(contentLengthRaw) ? Number(contentLengthRaw) : null;
   return { lastModified, contentLength };
 }
-function extractInventoryLine(indexText, gribVar, level, code) {
+function extractInventoryRecords(indexText, gribVar, level, code, requireUnique) {
   const markerVar = `:${gribVar}:`;
   const markerLevel = `:${level}:`;
   const matches = indexText.split(/\r?\n/).filter((line) => line.includes(markerVar) && line.includes(markerLevel));
-  if (matches.length !== 1) throw new Error(`${code}_${gribVar}_AT_${level.replace(/[^a-z0-9]+/gi, '_')}_MATCH_COUNT_${matches.length}`);
-  const line = matches[0];
-  const levelIndex = line.indexOf(markerLevel);
-  const descriptor = levelIndex >= 0 ? line.slice(levelIndex + markerLevel.length).replace(/:+$/, '').trim() : '';
-  if (!descriptor) throw new Error(`${code}_${gribVar}_TEMPORAL_DESCRIPTOR_REQUIRED`);
-  return { descriptor, lineSha256: sha256(line) };
+  if (matches.length < 1) throw new Error(`${code}_${gribVar}_AT_${level.replace(/[^a-z0-9]+/gi, '_')}_MATCH_COUNT_0`);
+  if (requireUnique && matches.length !== 1) throw new Error(`${code}_${gribVar}_AT_${level.replace(/[^a-z0-9]+/gi, '_')}_MATCH_COUNT_${matches.length}`);
+  return matches.map((line) => {
+    const levelIndex = line.indexOf(markerLevel);
+    const descriptor = levelIndex >= 0 ? line.slice(levelIndex + markerLevel.length).replace(/:+$/, '').trim() : '';
+    if (!descriptor) throw new Error(`${code}_${gribVar}_TEMPORAL_DESCRIPTOR_REQUIRED`);
+    return { descriptor, lineSha256: sha256(line) };
+  });
 }
 function classifyDescriptor(descriptor) {
   const normalized = descriptor.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -129,25 +128,41 @@ function classifyDescriptor(descriptor) {
   if (normalized === 'anl') return { class: 'ANALYSIS', windowLengthHours: 0, exactOneHourWindow: false };
   return { class: 'UNPARSEABLE_OR_OTHER', windowLengthHours: null, exactOneHourWindow: false };
 }
-function summarizeFieldSemantics(fieldId, observations) {
-  const classes = [...new Set(observations.map((entry) => entry.class))].sort();
-  const windowLengths = [...new Set(observations.map((entry) => entry.windowLengthHours).filter(Number.isFinite))].sort((a, b) => a - b);
-  const oneHourCount = observations.filter((entry) => entry.exactOneHourWindow).length;
-  const instantaneousCount = observations.filter((entry) => entry.class === 'INSTANTANEOUS_FORECAST_POINT').length;
-  const unparseableCount = observations.filter((entry) => entry.class === 'UNPARSEABLE_OR_OTHER').length;
+function summarizeFieldSemantics(field, leadEntries) {
+  const allRecords = leadEntries.flatMap((entry) => entry.records);
+  const classes = [...new Set(allRecords.map((entry) => entry.class))].sort();
+  const windowLengths = [...new Set(allRecords.map((entry) => entry.windowLengthHours).filter(Number.isFinite))].sort((a, b) => a - b);
+  const recordCountSet = [...new Set(leadEntries.map((entry) => entry.matchingRecordCount))].sort((a, b) => a - b);
+  const exactOneHourCandidateCounts = leadEntries.map((entry) => entry.records.filter((record) => record.exactOneHourWindow).length);
+  const exactOneHourCandidateCountSet = [...new Set(exactOneHourCandidateCounts)].sort((a, b) => a - b);
+  const leadsWithUniqueExactOneHourCandidate = exactOneHourCandidateCounts.filter((count) => count === 1).length;
+  const isInstantaneousField = CONFIG.temporal_semantics_policy.instantaneous_state_fields.includes(field.grib_var);
+  const instantaneousCount = allRecords.filter((entry) => entry.class === 'INSTANTANEOUS_FORECAST_POINT').length;
+  const unparseableCount = allRecords.filter((entry) => entry.class === 'UNPARSEABLE_OR_OTHER').length;
+  const multiHourCount = allRecords.filter((entry) => Number.isFinite(entry.windowLengthHours) && entry.windowLengthHours > 1).length;
+  const extraNonOneHourRecordsPresent = leadEntries.some((entry) => entry.records.some((record) => !record.exactOneHourWindow));
+  const recordSelectionRequired = !isInstantaneousField && leadEntries.some((entry) => entry.matchingRecordCount > 1);
+  const allPointsHaveUniqueExactOneHourCandidate = !isInstantaneousField && leadsWithUniqueExactOneHourCandidate === leadEntries.length;
+  const temporalNormalizationRequired = !isInstantaneousField && !allPointsHaveUniqueExactOneHourCandidate;
   return {
-    field_id: fieldId,
-    point_count: observations.length,
+    field_id: field.field_id,
+    point_count: leadEntries.length,
+    total_matching_inventory_records: allRecords.length,
+    matching_record_count_per_lead_set: recordCountSet,
     temporal_statistic_classes: classes,
     window_length_hours_set: windowLengths,
-    exact_1h_window_count: oneHourCount,
-    instantaneous_point_count: instantaneousCount,
-    unparseable_or_other_count: unparseableCount,
-    normalization_required: observations.some((entry) => {
-      if (entry.class === 'INSTANTANEOUS_FORECAST_POINT') return false;
-      return !entry.exactOneHourWindow;
-    }) || unparseableCount > 0,
-    descriptor_chain_sha256: sha256(observations.map((entry) => entry.lineSha256).join('\n')),
+    exact_1h_candidate_count_per_lead_set: exactOneHourCandidateCountSet,
+    leads_with_unique_exact_1h_candidate: leadsWithUniqueExactOneHourCandidate,
+    all_points_have_unique_exact_1h_candidate: allPointsHaveUniqueExactOneHourCandidate,
+    instantaneous_point_record_count: instantaneousCount,
+    unparseable_or_other_record_count: unparseableCount,
+    multi_hour_record_count: multiHourCount,
+    extra_non_1h_records_present: extraNonOneHourRecordsPresent,
+    record_selection_required: recordSelectionRequired,
+    temporal_normalization_required: temporalNormalizationRequired,
+    normalization_required: temporalNormalizationRequired,
+    canonical_record_selected_by_this_probe: false,
+    descriptor_chain_sha256: sha256(allRecords.map((entry) => entry.lineSha256).join('\n')),
   };
 }
 async function mapLimit(items, limit, fn) {
@@ -186,8 +201,13 @@ async function probeLead(cycleTime, lead, tickBoundary, targetValidTime) {
 
   const semantics = {};
   for (const field of CONFIG.required_field_inventory) {
-    const inventory = extractInventoryLine(index.text, field.grib_var, field.level, code);
-    semantics[field.field_id] = { ...classifyDescriptor(inventory.descriptor), lineSha256: inventory.lineSha256 };
+    const requireUnique = CONFIG.temporal_semantics_policy.instantaneous_state_fields.includes(field.grib_var);
+    const records = extractInventoryRecords(index.text, field.grib_var, field.level, code, requireUnique)
+      .map((inventory) => ({ ...classifyDescriptor(inventory.descriptor), lineSha256: inventory.lineSha256 }));
+    if (requireUnique && (records.length !== 1 || records[0].class !== 'INSTANTANEOUS_FORECAST_POINT')) {
+      throw new Error(`${code}_${field.field_id}_INSTANTANEOUS_SEMANTICS_REQUIRED`);
+    }
+    semantics[field.field_id] = { matchingRecordCount: records.length, records };
   }
   return {
     lead,
@@ -227,7 +247,7 @@ async function probeCandidate(cycleTime, tickBoundary) {
     }
     for (const field of CONFIG.required_field_inventory.filter((entry) => CONFIG.temporal_semantics_policy.instantaneous_state_fields.includes(entry.grib_var))) {
       const observations = fieldObservations[field.field_id];
-      if (observations.some((entry) => entry.class !== 'INSTANTANEOUS_FORECAST_POINT')) {
+      if (observations.some((entry) => entry.matchingRecordCount !== 1 || entry.records.length !== 1 || entry.records[0].class !== 'INSTANTANEOUS_FORECAST_POINT')) {
         throw new Error(`EA1K_${field.field_id}_INSTANTANEOUS_SEMANTICS_REQUIRED`);
       }
     }
@@ -241,7 +261,10 @@ async function probeCandidate(cycleTime, tickBoundary) {
       entry.gribContentLength ?? 'unknown',
       entry.indexSha256,
     ].join('|')).join('\n');
-    const fieldSemantics = Object.fromEntries(CONFIG.required_field_inventory.map((field) => [field.field_id, summarizeFieldSemantics(field.field_id, fieldObservations[field.field_id])]));
+    const fieldSemantics = Object.fromEntries(CONFIG.required_field_inventory.map((field) => [
+      field.field_id,
+      summarizeFieldSemantics(field, fieldObservations[field.field_id]),
+    ]));
     return {
       pass: true,
       cycleTime,
@@ -284,6 +307,8 @@ try {
   const fieldSemantics = selected.fieldSemantics;
   const statisticalFields = ['DOWNWARD_SHORTWAVE_SURFACE','TOTAL_PRECIPITATION_SURFACE','PRECIPITATION_RATE_SURFACE'];
   const statisticalSummary = Object.fromEntries(statisticalFields.map((fieldId) => [fieldId, fieldSemantics[fieldId]]));
+  const statisticalRecordSelectionRequired = statisticalFields.some((fieldId) => fieldSemantics[fieldId].record_selection_required);
+  const statisticalTemporalNormalizationRequired = statisticalFields.some((fieldId) => fieldSemantics[fieldId].temporal_normalization_required);
 
   const result = {
     schema_version: 'geox_mcft_cap09_ea1k_gfs_exact_cycle_72h_authority_result_v1',
@@ -326,7 +351,10 @@ try {
       dswrf_direct_hourly_assumption_made: false,
       precipitation_canonical_source_selected: false,
       future_et0_solar_canonicalization_selected: false,
-      any_multi_hour_or_unknown_statistical_window_requires_separate_normalization: statisticalFields.some((fieldId) => fieldSemantics[fieldId].normalization_required),
+      canonical_statistical_record_selected: false,
+      statistical_record_selection_required: statisticalRecordSelectionRequired,
+      statistical_temporal_normalization_required: statisticalTemporalNormalizationRequired,
+      any_multi_hour_or_unknown_statistical_window_requires_separate_normalization: statisticalFields.some((fieldId) => fieldSemantics[fieldId].multi_hour_record_count > 0 || fieldSemantics[fieldId].unparseable_or_other_record_count > 0),
     },
     future_et0_boundary: {
       same_exact_gfs_cycle_required_for_future_weather_and_future_et0: true,
@@ -340,7 +368,8 @@ try {
       exact_72_valid_times_proven: true,
       exact_72_required_inventory_sets_proven: true,
       chronology_prior_availability_proven_by_http_last_modified: true,
-      statistical_window_normalization_still_required_if_flagged: true,
+      statistical_record_selection_still_required_if_multiple: statisticalRecordSelectionRequired,
+      statistical_window_normalization_still_required_if_flagged: statisticalTemporalNormalizationRequired,
       forecast_spatial_extraction_implemented: false,
       formal_future_weather_source_authority_created: false,
       formal_future_et0_source_authority_created: false,
