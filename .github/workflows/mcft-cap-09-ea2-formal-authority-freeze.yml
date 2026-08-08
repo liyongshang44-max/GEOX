@@ -1,0 +1,98 @@
+name: mcft-cap-09-ea2-formal-authority-freeze
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea2-formal-authority-freeze.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-EXTERNAL-EVIDENCE-PACKAGE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA2_FORMAL_AUTHORITY_FREEZE.cjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea2-formal-authority-freeze-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  formal-authority-freeze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Resolve exact EA2 base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Syntax-check EA2 governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA2_FORMAL_AUTHORITY_FREEZE.cjs
+
+      - name: Validate exact EA2 Formal authority freeze
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA2_FORMAL_AUTHORITY_FREEZE.cjs
+
+      - name: Verify EA2 adjudication result
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA2_FORMAL_AUTHORITY_FREEZE_RESULT.json', 'utf8'));
+          if (result.status !== 'PASS') throw new Error('EA2_RESULT_PASS_REQUIRED');
+          if (String(result.applicability || '').startsWith('NOT_APPLICABLE')) {
+            console.log(JSON.stringify({status:'PASS',applicability:result.applicability}));
+            process.exit(0);
+          }
+          if (result.applicability !== 'APPLICABLE_EXACT_EA2_BOUNDARY') throw new Error('EA2_APPLICABILITY_DRIFT');
+          if (result.formal_eligible !== false) throw new Error('EA2_FORMAL_ELIGIBILITY_MUST_REMAIN_FALSE');
+          if (result.ea3_candidate_development_authorized !== true) throw new Error('EA2_EA3_SUCCESSOR_NOT_AUTHORIZED');
+          if (result.collector_runtime_activation_authorized !== false) throw new Error('EA2_COLLECTOR_ACTIVATION_FORBIDDEN');
+          if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0) throw new Error('EA2_WRITE_FORBIDDEN');
+          if (result.formal_window_started !== false || result.mcft_cap09_completed !== false) throw new Error('EA2_FORMAL_OR_COMPLETION_FORBIDDEN');
+          if (result.crop_context_reproof?.derived_stage_code !== 'MID') throw new Error('EA2_CROP_CONTEXT_MID_REPROOF_REQUIRED');
+          if (!(result.crop_context_reproof.minimum_hours_to_next_model_stage_boundary >= 0)) throw new Error('EA2_CROP_CONTEXT_GUARD_REQUIRED');
+          console.log(JSON.stringify({
+            status:'PASS',
+            applicability:result.applicability,
+            formal_eligible:result.formal_eligible,
+            crop_stage:result.crop_context_reproof.derived_stage_code,
+            minimum_hours_to_next_model_stage_boundary:result.crop_context_reproof.minimum_hours_to_next_model_stage_boundary,
+            ea3_candidate_development_authorized:result.ea3_candidate_development_authorized
+          }));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea2-formal-authority-freeze-${{ steps.authority.outputs.subject_sha }}
+          path: acceptance-output/MCFT_CAP_09_EA2_FORMAL_AUTHORITY_FREEZE_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
