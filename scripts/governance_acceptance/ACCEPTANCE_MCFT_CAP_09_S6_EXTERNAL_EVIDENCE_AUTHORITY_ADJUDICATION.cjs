@@ -11,9 +11,10 @@ const OUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_09_S6_EXTERNAL_EVIDENCE_
 const BASE = process.env.MCFT_BASE_SHA || 'HEAD^';
 
 const FILES = [
+  '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml',
   '.github/workflows/mcft-cap-09-s6-external-evidence-authority-adjudication.yml',
   'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md',
-  'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-EXTERNAL-EVIDENCE-AUTHORITY-STATUS-V1.json',
+  'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EXTERNAL-EVIDENCE-AUTHORITY-STATUS-V1.json',
   'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md',
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_EXTERNAL_EVIDENCE_AUTHORITY_ADJUDICATION.cjs',
 ].sort();
@@ -34,16 +35,17 @@ function write(value) {
 
 try {
   const changed = git(['diff', '--name-only', `${BASE}...HEAD`]).split(/\r?\n/).filter(Boolean).sort();
-  assert.deepEqual(changed, FILES, 'S6_EA0_EXACT_FIVE_FILE_BOUNDARY_REQUIRED');
-  assert.equal(changed.length, 5, 'S6_EA0_EXACT_FILE_COUNT_REQUIRED');
+  assert.deepEqual(changed, FILES, 'S6_EA0_EXACT_SIX_FILE_BOUNDARY_REQUIRED');
+  assert.equal(changed.length, 6, 'S6_EA0_EXACT_FILE_COUNT_REQUIRED');
   assert(!changed.some((file) => /(^|\/)(apps|packages)\//.test(file)), 'S6_EA0_RUNTIME_SOURCE_DELTA_FORBIDDEN');
   assert(!changed.some((file) => /migration/i.test(file)), 'S6_EA0_MIGRATION_DELTA_FORBIDDEN');
   assert(!changed.some((file) => /MCFT-CANDIDATE-AUTHORITY-REGISTRY|MCFT-DELIVERY-POLICY/.test(file)), 'S6_EA0_DELIVERY_AUTHORITY_SELF_MODIFICATION_FORBIDDEN');
 
   const taskbook = read('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md');
   const amendment = read('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md');
-  const status = json('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-EXTERNAL-EVIDENCE-AUTHORITY-STATUS-V1.json');
+  const status = json('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EXTERNAL-EVIDENCE-AUTHORITY-STATUS-V1.json');
   const signal = json('docs/digital_twin/mcft/MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1.json');
+  const s0Workflow = read('.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml');
 
   for (const marker of [
     'Complete Taskbook v0.2',
@@ -64,6 +66,11 @@ try {
     'ASCE_STANDARDIZED_REFERENCE_ET_SHORT_HOURLY_V1',
     'NO_MCFT_CAP_09_COMPLETION_FROM_AMENDMENT',
   ]) assert(amendment.includes(marker), `S6_EA0_AMENDMENT_MARKER_MISSING:${marker}`);
+
+  for (const marker of [
+    "mode='s6-ea0-adjudication'",
+    'ACCEPTANCE_MCFT_CAP_09_S6_EXTERNAL_EVIDENCE_AUTHORITY_ADJUDICATION.cjs',
+  ]) assert(s0Workflow.includes(marker), `S6_EA0_S0_ROUTING_MARKER_MISSING:${marker}`);
 
   assert.equal(status.capability_line_id, 'MCFT-CAP-09');
   assert.equal(status.slice_id, 'MCFT-CAP-09.S6');
@@ -111,6 +118,8 @@ try {
     canonical_object_contract_delta: 0,
     transaction_family_delta: 0,
     database_write_delta: 0,
+    delivery_control_plane_routing_delta: 1,
+    routing_delta_scope: 'S0_WORKFLOW_ACCEPTS_S6_EA0_ONLY',
     formal_window_started: false,
     unregistered_delivery_candidate_signal: false,
     taskbook_version: 'v0.2',
