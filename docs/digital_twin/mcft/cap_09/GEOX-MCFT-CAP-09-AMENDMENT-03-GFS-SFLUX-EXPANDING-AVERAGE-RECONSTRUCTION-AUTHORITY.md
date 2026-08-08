@@ -16,7 +16,7 @@ sub_lifecycle:
 S6-EA1O
 
 base_protected_main_sha:
-74ceaa530f362e84312c594524eaa4b72619ef81
+9c59d92c74738639429d636c92f854b5120382d0
 
 amendment_01_blob:
 41270b888e15e4d9a6c9a34e1fa3f70e957a275e
