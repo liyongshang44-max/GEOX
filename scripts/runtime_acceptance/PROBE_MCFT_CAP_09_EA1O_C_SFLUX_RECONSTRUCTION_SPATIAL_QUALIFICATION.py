@@ -15,6 +15,7 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError
+from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
 
 from eccodes import (
@@ -29,10 +30,11 @@ ROOT = Path.cwd()
 AUTHORITY_PATH = ROOT / "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-C-SFLUX-RECONSTRUCTION-SPATIAL-QUALIFICATION-V1.json"
 EA1K_RESULT_PATH = ROOT / "acceptance-output/MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY_RESULT.json"
 OUTPUT_PATH = ROOT / "acceptance-output/MCFT_CAP_09_EA1O_C_SFLUX_RECONSTRUCTION_SPATIAL_QUALIFICATION_RESULT.json"
-USER_AGENT = "GEOX-MCFT-CAP09-EA1O-C-SFLUX-QUALIFICATION/1.0"
+USER_AGENT = "GEOX-MCFT-CAP09-EA1O-C-SFLUX-QUALIFICATION/1.1"
 REQUEST_TIMEOUT = 45
 MAX_IDX_BYTES = 2_000_000
 MAX_MESSAGE_BYTES = 12_000_000
+MAX_REDIRECTS = 5
 CONCURRENCY = 8
 EARTH_RADIUS_M = 6371008.8
 
@@ -75,36 +77,33 @@ def http_time(headers: Any, code: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
-def fetch_bytes(url: str, code: str, max_bytes: int, extra_headers: dict[str, str] | None = None) -> tuple[bytes, Any, int]:
+def fetch_bytes(
+    url: str,
+    code: str,
+    max_bytes: int,
+    extra_headers: dict[str, str] | None = None,
+    redirect_depth: int = 0,
+) -> tuple[bytes, Any, int]:
+    require(redirect_depth <= MAX_REDIRECTS, f"{code}_REDIRECT_LIMIT")
     headers = {"User-Agent": USER_AGENT, "Accept": "*/*"}
     if extra_headers:
         headers.update(extra_headers)
     request = Request(url, headers=headers, method="GET")
-    with urlopen(request, timeout=REQUEST_TIMEOUT) as response:
-        status = int(getattr(response, "status", 200))
-        data = response.read(max_bytes + 1)
-        require(len(data) <= max_bytes, f"{code}_BODY_TOO_LARGE")
-        return data, response.headers, status
-
-
-def object_metadata(url: str, code: str) -> tuple[datetime, int | None]:
-    request = Request(url, headers={"User-Agent": USER_AGENT}, method="HEAD")
     try:
         with urlopen(request, timeout=REQUEST_TIMEOUT) as response:
-            modified = http_time(response.headers, code)
-            length_raw = response.headers.get("Content-Length")
-            length = int(length_raw) if length_raw and length_raw.isdigit() else None
-            return modified, length
+            status = int(getattr(response, "status", 200))
+            data = response.read(max_bytes + 1)
+            require(len(data) <= max_bytes, f"{code}_BODY_TOO_LARGE")
+            return data, response.headers, status
     except HTTPError as exc:
-        if exc.code not in (403, 405):
-            raise
-    data, headers, status = fetch_bytes(url, code + "_RANGE0", 16, {"Range": "bytes=0-0"})
-    require(status == 206 and len(data) == 1, f"{code}_RANGE0_REQUIRED")
-    modified = http_time(headers, code)
-    content_range = headers.get("Content-Range", "")
-    match = re.match(r"bytes\s+0-0/(\d+)$", content_range)
-    length = int(match.group(1)) if match else None
-    return modified, length
+        if exc.code in (301, 302, 303, 307, 308):
+            location = exc.headers.get("Location")
+            require(bool(location), f"{code}_REDIRECT_LOCATION_REQUIRED")
+            redirected = urljoin(url, location)
+            parsed = urlparse(redirected)
+            require(parsed.scheme == "https" and bool(parsed.hostname), f"{code}_REDIRECT_HTTPS_REQUIRED")
+            return fetch_bytes(redirected, code, max_bytes, extra_headers, redirect_depth + 1)
+        raise RuntimeError(f"{code}_HTTP_{exc.code}") from exc
 
 
 def block_start(lead: int) -> int:
@@ -172,39 +171,55 @@ def parse_idx(text: str, lead: int) -> tuple[dict[str, Any], int]:
 
 def fetch_lead_inventory(authority: dict[str, Any], cycle: datetime, lead: int, tick: datetime) -> dict[str, Any]:
     grib_url, idx_url = sflux_urls(authority, cycle, lead)
-    idx_bytes, idx_headers, idx_status = fetch_bytes(idx_url, f"EA1OC_F{lead:03d}_IDX", MAX_IDX_BYTES, {"Accept": "text/plain,*/*;q=0.5"})
+    idx_bytes, idx_headers, idx_status = fetch_bytes(
+        idx_url,
+        f"EA1OC_F{lead:03d}_IDX",
+        MAX_IDX_BYTES,
+        {"Accept": "text/plain,*/*;q=0.5"},
+    )
     require(idx_status == 200, f"EA1OC_F{lead:03d}_IDX_HTTP_{idx_status}")
     idx_modified = http_time(idx_headers, f"EA1OC_F{lead:03d}_IDX")
-    grib_modified, grib_length = object_metadata(grib_url, f"EA1OC_F{lead:03d}_GRIB")
     require(idx_modified <= tick, f"EA1OC_F{lead:03d}_IDX_PUBLISHED_AFTER_TICK")
-    require(grib_modified <= tick, f"EA1OC_F{lead:03d}_GRIB_PUBLISHED_AFTER_TICK")
     text = idx_bytes.decode("utf-8")
     require(not re.match(r"^\s*<(?:!doctype|html)", text, re.I), f"EA1OC_F{lead:03d}_IDX_HTML_FORBIDDEN")
     selected, forbidden_count = parse_idx(text, lead)
-    if grib_length is not None:
-        require(selected["end_offset"] < grib_length, f"EA1OC_F{lead:03d}_RANGE_EXCEEDS_OBJECT")
     return {
         "lead": lead,
         "grib_url": grib_url,
         "idx_sha256": sha256_bytes(idx_bytes),
         "idx_modified": idx_modified,
-        "grib_modified": grib_modified,
         "selected": selected,
         "forbidden_fcst_count": forbidden_count,
     }
 
 
-def fetch_message(entry: dict[str, Any]) -> bytes:
+def fetch_message(entry: dict[str, Any], tick: datetime) -> dict[str, Any]:
     lead = entry["lead"]
     selected = entry["selected"]
     range_header = f"bytes={selected['offset']}-{selected['end_offset']}"
-    data, headers, status = fetch_bytes(entry["grib_url"], f"EA1OC_F{lead:03d}_MESSAGE", MAX_MESSAGE_BYTES, {"Range": range_header})
+    data, headers, status = fetch_bytes(
+        entry["grib_url"],
+        f"EA1OC_F{lead:03d}_MESSAGE",
+        MAX_MESSAGE_BYTES,
+        {"Range": range_header},
+    )
     require(status == 206, f"EA1OC_F{lead:03d}_RANGE_HTTP_{status}")
     require(len(data) == selected["length"], f"EA1OC_F{lead:03d}_RANGE_LENGTH_MISMATCH")
     content_range = headers.get("Content-Range", "")
-    require(content_range.startswith(f"bytes {selected['offset']}-{selected['end_offset']}/"), f"EA1OC_F{lead:03d}_CONTENT_RANGE_MISMATCH")
+    match = re.fullmatch(r"bytes\s+(\d+)-(\d+)/(\d+)", content_range)
+    require(bool(match), f"EA1OC_F{lead:03d}_CONTENT_RANGE_REQUIRED")
+    require(int(match.group(1)) == selected["offset"], f"EA1OC_F{lead:03d}_CONTENT_RANGE_START_MISMATCH")
+    require(int(match.group(2)) == selected["end_offset"], f"EA1OC_F{lead:03d}_CONTENT_RANGE_END_MISMATCH")
+    object_length = int(match.group(3))
+    require(selected["end_offset"] < object_length, f"EA1OC_F{lead:03d}_RANGE_EXCEEDS_OBJECT")
+    grib_modified = http_time(headers, f"EA1OC_F{lead:03d}_GRIB_RANGE")
+    require(grib_modified <= tick, f"EA1OC_F{lead:03d}_GRIB_PUBLISHED_AFTER_TICK")
     require(data.startswith(b"GRIB") and data.endswith(b"7777"), f"EA1OC_F{lead:03d}_EXACT_GRIB_MESSAGE_BOUNDARY_REQUIRED")
-    return data
+    return {
+        "data": data,
+        "grib_modified": grib_modified,
+        "object_length": object_length,
+    }
 
 
 def normalize_key(value: str) -> str:
@@ -289,13 +304,24 @@ def haversine_m(a: tuple[float, float], b: tuple[float, float]) -> float:
 
 def load_current_kbs_geometry(authority: dict[str, Any]) -> tuple[list[tuple[float, float]], dict[str, Any]]:
     source = authority["site_geometry_source"]
-    csv_bytes, _, status = fetch_bytes(source["download_url"], "EA1OC_KBS_GEOMETRY", 20 * 1024 * 1024, {"Accept": "text/csv,text/plain;q=0.9,*/*;q=0.5"})
+    csv_bytes, _, status = fetch_bytes(
+        source["download_url"],
+        "EA1OC_KBS_GEOMETRY",
+        20 * 1024 * 1024,
+        {"Accept": "text/csv,text/plain;q=0.9,*/*;q=0.5"},
+    )
     require(status == 200, f"EA1OC_KBS_CSV_HTTP_{status}")
     text = csv_bytes.decode("utf-8-sig")
     require(not re.match(r"^\s*<(?:!doctype|html)", text, re.I), "EA1OC_KBS_CSV_HTML_FORBIDDEN")
     rows = parse_kbs_table(text, ("treatment", "replicate", "subplot", "geometry"))
     target = source["selected_row"]
-    matches = [row for row in rows if str(row.get("treatment", "")).strip().upper() == target["treatment"] and str(row.get("replicate", "")).strip().upper() == target["replicate"] and str(row.get("subplot", "")).strip().lower() == target["subplot"]]
+    matches = [
+        row
+        for row in rows
+        if str(row.get("treatment", "")).strip().upper() == target["treatment"]
+        and str(row.get("replicate", "")).strip().upper() == target["replicate"]
+        and str(row.get("subplot", "")).strip().lower() == target["subplot"]
+    ]
     require(len(matches) == target["expected_match_count"], f"EA1OC_KBS_TARGET_ROW_MATCH_COUNT_{len(matches)}")
     raw_geometry = str(matches[0].get("geometry", "")).strip()
     vertices = parse_polygon(raw_geometry, source["required_srid"])
@@ -318,10 +344,19 @@ def get_optional(gid: int, key: str) -> Any:
 
 def grid_definition(gid: int) -> dict[str, Any]:
     keys = [
-        "gridType", "N", "Ni", "Nj", "numberOfDataPoints",
-        "latitudeOfFirstGridPointInDegrees", "longitudeOfFirstGridPointInDegrees",
-        "latitudeOfLastGridPointInDegrees", "longitudeOfLastGridPointInDegrees",
-        "iScansNegatively", "jScansPositively", "jPointsAreConsecutive", "alternativeRowScanning",
+        "gridType",
+        "N",
+        "Ni",
+        "Nj",
+        "numberOfDataPoints",
+        "latitudeOfFirstGridPointInDegrees",
+        "longitudeOfFirstGridPointInDegrees",
+        "latitudeOfLastGridPointInDegrees",
+        "longitudeOfLastGridPointInDegrees",
+        "iScansNegatively",
+        "jScansPositively",
+        "jPointsAreConsecutive",
+        "alternativeRowScanning",
     ]
     result = {key: get_optional(gid, key) for key in keys}
     try:
@@ -339,7 +374,12 @@ def signed_lon(value: float) -> float:
     return normalized - 360.0 if normalized > 180.0 else normalized
 
 
-def decode_message(message: bytes, lead: int, centroid: tuple[float, float], vertices: list[tuple[float, float]]) -> dict[str, Any]:
+def decode_message(
+    message: bytes,
+    lead: int,
+    centroid: tuple[float, float],
+    vertices: list[tuple[float, float]],
+) -> dict[str, Any]:
     with tempfile.TemporaryFile() as handle:
         handle.write(message)
         handle.seek(0)
@@ -355,7 +395,10 @@ def decode_message(message: bytes, lead: int, centroid: tuple[float, float], ver
             require(short_name == "dswrf", f"EA1OC_F{lead:03d}_SHORTNAME_DRIFT")
             require(type_of_level == "surface", f"EA1OC_F{lead:03d}_LEVEL_DRIFT")
             require(step_type == "avg", f"EA1OC_F{lead:03d}_STEPTYPE_NOT_AVG")
-            require(start_step == block_start(lead) and end_step == lead, f"EA1OC_F{lead:03d}_STEP_WINDOW_MISMATCH_{start_step}_{end_step}")
+            require(
+                start_step == block_start(lead) and end_step == lead,
+                f"EA1OC_F{lead:03d}_STEP_WINDOW_MISMATCH_{start_step}_{end_step}",
+            )
             require(units in ("W m**-2", "W/m^2", "W m-2"), f"EA1OC_F{lead:03d}_UNITS_DRIFT")
 
             packing_type = str(codes_get(gid, "packingType"))
@@ -376,12 +419,16 @@ def decode_message(message: bytes, lead: int, centroid: tuple[float, float], ver
             definition = grid_definition(gid)
             definition_digest = sha256_text(json.dumps(definition, sort_keys=True, separators=(",", ":")))
             max_vertex_distance_km = max(float(item.distance) for item in vertex_nearest)
-            packing_material = json.dumps({
-                "packingType": packing_type,
-                "bitsPerValue": bits_per_value,
-                "binaryScaleFactor": binary_scale_factor,
-                "decimalScaleFactor": decimal_scale_factor,
-            }, sort_keys=True, separators=(",", ":"))
+            packing_material = json.dumps(
+                {
+                    "packingType": packing_type,
+                    "bitsPerValue": bits_per_value,
+                    "binaryScaleFactor": binary_scale_factor,
+                    "decimalScaleFactor": decimal_scale_factor,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
             return {
                 "lead": lead,
                 "value": value,
@@ -462,9 +509,9 @@ def main() -> None:
     inventories.sort(key=lambda item: item["lead"])
     require([item["lead"] for item in inventories] == sorted(needed), "EA1OC_INVENTORY_LEAD_SET_MISMATCH")
 
-    messages: dict[int, bytes] = {}
+    messages: dict[int, dict[str, Any]] = {}
     with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
-        futures = {pool.submit(fetch_message, entry): entry["lead"] for entry in inventories}
+        futures = {pool.submit(fetch_message, entry, tick): entry["lead"] for entry in inventories}
         for future in as_completed(futures):
             messages[futures[future]] = future.result()
     require(sorted(messages) == sorted(needed), "EA1OC_MESSAGE_LEAD_SET_MISMATCH")
@@ -473,7 +520,10 @@ def main() -> None:
     message_hashes: list[str] = []
     for entry in inventories:
         lead = entry["lead"]
-        message = messages.pop(lead)
+        message_result = messages.pop(lead)
+        message = message_result["data"]
+        entry["grib_modified"] = message_result["grib_modified"]
+        entry["grib_object_length"] = message_result["object_length"]
         message_hashes.append(sha256_bytes(message))
         decoded[lead] = decode_message(message, lead, centroid, vertices)
 
@@ -485,7 +535,11 @@ def main() -> None:
     selected_lon = first["selected_native_lon"]
     grid_stable = all(item["grid_definition_digest"] == grid_digest for item in ordered_decoded)
     index_stable = all(item["selected_index"] == selected_index for item in ordered_decoded)
-    coordinate_stable = all(abs(item["selected_lat"] - selected_lat) < 1e-10 and abs(item["selected_native_lon"] - selected_lon) < 1e-10 for item in ordered_decoded)
+    coordinate_stable = all(
+        abs(item["selected_lat"] - selected_lat) < 1e-10
+        and abs(item["selected_native_lon"] - selected_lon) < 1e-10
+        for item in ordered_decoded
+    )
     polygon_consensus = all(item["polygon_consensus"] for item in ordered_decoded)
     spatial_qualified = grid_stable and index_stable and coordinate_stable and polygon_consensus
 
@@ -502,7 +556,10 @@ def main() -> None:
         else:
             predecessor = decoded.get(lead - 1)
             require(predecessor is not None, f"EA1OC_F{lead:03d}_SAME_BLOCK_PREDECESSOR_REQUIRED")
-            require(block_start(lead - 1) == block_start(lead), f"EA1OC_F{lead:03d}_CROSS_BLOCK_PREDECESSOR_FORBIDDEN")
+            require(
+                block_start(lead - 1) == block_start(lead),
+                f"EA1OC_F{lead:03d}_CROSS_BLOCK_PREDECESSOR_FORBIDDEN",
+            )
             value = n * current["value"] - (n - 1) * predecessor["value"]
             epsilon_h = n * current["epsilon"] + (n - 1) * predecessor["epsilon"]
         reconstructed.append(value)
@@ -525,12 +582,16 @@ def main() -> None:
         decision = authority["live_qualification"]["spatial_rejection_decision"]
         qualification_effect = "EA1O_C_FAIL_CLOSED_SPATIAL_REJECTION_CANDIDATE_PASS"
 
-    idx_chain = sha256_text("\n".join(item["idx_sha256"] + "|" + item["selected"]["line_sha256"] for item in inventories))
+    idx_chain = sha256_text(
+        "\n".join(item["idx_sha256"] + "|" + item["selected"]["line_sha256"] for item in inventories)
+    )
     message_chain = sha256_text("\n".join(message_hashes))
     packing_chain = sha256_text("\n".join(item["packing_digest"] for item in ordered_decoded))
     value_hash = sha256_text("\n".join(format(value, ".17g") for value in reconstructed))
     epsilon_hash = sha256_text("\n".join(format(value, ".17g") for value in reconstructed_eps))
-    last_modified_values = [item["idx_modified"] for item in inventories] + [item["grib_modified"] for item in inventories]
+    last_modified_values = [item["idx_modified"] for item in inventories] + [
+        item["grib_modified"] for item in inventories
+    ]
     max_centroid_distance = max(item["centroid_distance_km"] for item in ordered_decoded)
     max_vertex_distance = max(item["max_vertex_distance_km"] for item in ordered_decoded)
     negative_min = min((reconstructed[targets.index(lead)] for lead in negative_leads), default=0.0)
