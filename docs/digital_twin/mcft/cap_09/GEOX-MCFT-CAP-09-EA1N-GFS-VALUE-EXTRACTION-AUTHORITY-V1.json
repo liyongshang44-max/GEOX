@@ -1,0 +1,180 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1n_gfs_value_extraction_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1N-GFS-VALUE-EXTRACTION-AUTHORITY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION_CONTINUATION",
+  "record_status": "EA1N_GFS_VALUE_EXTRACTION_PROBE_NOT_FORMAL_AUTHORITY",
+  "base_main_sha": "58287db14bc0d6424219f6a91a08c3f12dfe4536",
+  "predecessor_authorities": [
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md",
+      "blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
+      "consumed_ruling": "GFS_FORECAST_MUST_PRESERVE_REAL_ISSUANCE_VALIDITY_AND_AVAILABILITY_CHRONOLOGY"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1K-GFS-EXACT-CYCLE-72H-AUTHORITY-V1.json",
+      "blob_sha": "f36955b2847d1a2b58052f0dec2fea465e7eaec2",
+      "consumed_ruling": "LATEST_COMPLETE_GFS_CYCLE_AND_REAL_LEAD_MAPPING_MUST_BE_REPROVED_AT_EXACT_PROBE_TICK"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1L-GFS-HOURLY-NORMALIZATION-AUTHORITY-V1.json",
+      "blob_sha": "af5f23425e35dd21a949727f508934f1be14d8e9",
+      "consumed_ruling": "PRATE_AVERAGE_AND_DSWRF_AVERAGE_ROLLING_WINDOWS_REQUIRE_EXACT_ONE_HOUR_RECONSTRUCTION_WITH_DERIVATION_SUPPORT_LEAD"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1M-GFS-SPATIAL-EXTRACTION-AUTHORITY-V1.json",
+      "blob_sha": "bb487c0c6a91dd37b0409b5d446aec4707f7b0a4",
+      "consumed_ruling": "ALL_FORECAST_INPUTS_USE_SINGLE_PUBLIC_GFS_GRID_NODE_42P5_N_274P75_E_WITH_NEAR_SITE_MODEL_GRID_SUPPORT"
+    }
+  ],
+  "decoder_supply_chain": {
+    "python_version": "3.12",
+    "eccodes_python_package": "eccodes==2.47.0",
+    "eccodes_binary_package": "eccodeslib==2.47.3.23",
+    "installation_mode": "PINNED_PYPI_BINARY_WHEELS",
+    "selfcheck_command": "python -m eccodes selfcheck",
+    "latest_unpinned_dependency_forbidden": true,
+    "decoder_version_must_be_emitted": true,
+    "decoder_selfcheck_must_pass_before_provider_probe": true
+  },
+  "provider_transport": {
+    "provider": "NOAA_NCEP_NOMADS",
+    "model": "GFS",
+    "grid": "0.25_degree_global_lat_lon",
+    "production_root": "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod",
+    "grib_filter_endpoint": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl",
+    "source_object_pattern": "gfs.YYYYMMDD/CC/atmos/gfs.tCCz.pgrb2.0p25.fFFF",
+    "source_availability_authority": "PRODUCTION_OBJECT_HTTP_LAST_MODIFIED",
+    "grib_filter_role": "TRANSIENT_VALUE_SUBSET_TRANSPORT_ONLY",
+    "grib_filter_response_may_not_replace_source_availability_chronology": true
+  },
+  "spatial_binding": {
+    "selected_public_gfs_grid_latitude": 42.5,
+    "selected_public_gfs_native_longitude": 274.75,
+    "selected_public_gfs_signed_longitude": -85.25,
+    "support_class": "NEAR_SITE_MODEL_GRID_POINT_SUPPORT",
+    "direct_field_equivalence": false,
+    "interpolation_method": "NONE_NEAREST_GRID_POINT",
+    "same_grid_point_required_for_all_variables": true,
+    "filter_bbox_half_width_degrees": 0.01,
+    "decoded_message_must_contain_exactly_one_grid_point": true,
+    "decoded_grid_point_must_equal_selected_public_node": true
+  },
+  "required_variables": [
+    {"role":"AIR_TEMPERATURE_2M","filter_variable":"TMP","filter_level":"2_m_above_ground","provider_unit":"K","normalized_unit":"degC"},
+    {"role":"RELATIVE_HUMIDITY_2M","filter_variable":"RH","filter_level":"2_m_above_ground","provider_unit":"percent","normalized_unit":"percent"},
+    {"role":"U_WIND_10M","filter_variable":"UGRD","filter_level":"10_m_above_ground","provider_unit":"m_per_s","normalized_unit":"m_per_s"},
+    {"role":"V_WIND_10M","filter_variable":"VGRD","filter_level":"10_m_above_ground","provider_unit":"m_per_s","normalized_unit":"m_per_s"},
+    {"role":"DOWNWARD_SHORTWAVE_SURFACE","filter_variable":"DSWRF","filter_level":"surface","provider_unit":"W_per_m2","normalized_unit":"MJ_per_m2_per_hour"},
+    {"role":"PRECIPITATION_RATE_SURFACE","filter_variable":"PRATE","filter_level":"surface","provider_unit":"kg_per_m2_per_s","normalized_unit":"mm_per_hour"}
+  ],
+  "tick_cycle_and_lead_policy": {
+    "tick_boundary": "FLOOR_EXACT_PROBE_START_TO_UTC_HOUR",
+    "canonical_point_count": 72,
+    "canonical_valid_time_rule": "point[i].valid_time=T+(i+1)h",
+    "candidate_cycle_hours_utc": [0, 6, 12, 18],
+    "candidate_order": "NEWEST_TO_OLDEST",
+    "lead_start_rule": "lead_start=(T-cycle_time)+1h",
+    "lead_end_rule": "lead_end=(T-cycle_time)+72h",
+    "derivation_support_rule": "support_lead=lead_start-1",
+    "selected_cycle_requires_all_support_and_target_production_grib_and_idx_objects_last_modified_lte_tick": true,
+    "missing_last_modified": "FAIL_CLOSED",
+    "wait_for_future_files": false,
+    "valid_time_rewrite": false,
+    "support_lead_is_canonical_point": false
+  },
+  "decoded_message_reconciliation": {
+    "every_message_must_match_selected_cycle_reference_time": true,
+    "every_message_must_match_requested_provider_lead": true,
+    "every_message_valid_time_must_equal_cycle_plus_end_step": true,
+    "instantaneous_roles": ["AIR_TEMPERATURE_2M","RELATIVE_HUMIDITY_2M","U_WIND_10M","V_WIND_10M"],
+    "instantaneous_step_type_required": "instant",
+    "rolling_average_roles": ["DOWNWARD_SHORTWAVE_SURFACE","PRECIPITATION_RATE_SURFACE"],
+    "rolling_average_step_type_required": "avg",
+    "rolling_block_hours": 6,
+    "rolling_start_rule": "S=6*floor((lead-1)/6)",
+    "rolling_end_rule": "E=lead",
+    "exactly_one_matching_average_record_per_role_per_lead": true,
+    "unmatched_or_ambiguous_message": "FAIL_CLOSED"
+  },
+  "normalization": {
+    "temperature": "degC=K-273.15",
+    "relative_humidity": "DIRECT_PERCENT_NO_CLIP",
+    "wind_10m": "speed10=sqrt(U10^2+V10^2)",
+    "wind_2m": "speed2=speed10*0.747951075",
+    "dswrf_when_L_eq_1": "hourly_mean_Wm2=A_S_E",
+    "dswrf_when_L_gt_1": "hourly_mean_Wm2=L*A_S_E-(L-1)*A_S_Eminus1",
+    "solar_for_future_et0": "Rs_MJ_m2_h=hourly_mean_Wm2*0.0036",
+    "prate_when_L_eq_1": "hourly_mean_rate=R_S_E",
+    "prate_when_L_gt_1": "hourly_mean_rate=L*R_S_E-(L-1)*R_S_Eminus1",
+    "precipitation_depth": "mm_per_hour=hourly_mean_rate_kg_m2_s*3600",
+    "cross_block_differencing": false,
+    "missing_predecessor_imputation": false,
+    "negative_derived_value_clipping": false
+  },
+  "physical_sanity": {
+    "temperature_k_min": 180,
+    "temperature_k_max": 330,
+    "relative_humidity_percent_min": 0,
+    "relative_humidity_percent_max": 100,
+    "u_v_component_abs_max_m_per_s": 100,
+    "raw_dswrf_w_m2_min": 0,
+    "raw_dswrf_w_m2_max": 1600,
+    "raw_prate_kg_m2_s_min": 0,
+    "raw_prate_kg_m2_s_max": 0.05,
+    "derived_hourly_solar_w_m2_min": 0,
+    "derived_hourly_solar_w_m2_max": 1600,
+    "derived_hourly_precip_mm_min": 0,
+    "derived_hourly_precip_mm_max": 200,
+    "nonfinite_value": "FAIL_CLOSED"
+  },
+  "output_and_retention_policy": {
+    "raw_grib_subset_persisted_or_uploaded": false,
+    "decoded_forecast_values_emitted": false,
+    "normalized_forecast_values_emitted": false,
+    "raw_provider_index_body_persisted_or_uploaded": false,
+    "safe_output_may_include": [
+      "subject_sha",
+      "tick",
+      "selected_cycle",
+      "lead_start_end_support",
+      "valid_time_start_end",
+      "production_last_modified_bounds",
+      "grib_filter_response_hash_chain",
+      "decoded_message_metadata_hash_chain",
+      "normalized_series_hashes",
+      "complete_point_counts",
+      "physical_sanity_booleans",
+      "decoder_versions",
+      "no_write_flags"
+    ],
+    "series_hash_is_not_formal_evidence": true
+  },
+  "qualification_effect": {
+    "probe_may_establish": "GFS_72H_DECODED_AND_NORMALIZED_VALUE_PIPELINE_AUTHORITY_CANDIDATE_ONLY",
+    "future_weather_canonical_evidence_created": false,
+    "future_et0_calculated": false,
+    "future_et0_canonical_evidence_created": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "runtime_source_authorized": false,
+    "formal_window_started": false
+  },
+  "hard_nonclaims": [
+    "NO_OPEN_DAP_DEPENDENCY",
+    "NO_UNPINNED_DECODER_DEPENDENCY",
+    "NO_GRIB_FILTER_RESPONSE_AS_SOURCE_AVAILABILITY_AUTHORITY",
+    "NO_KBS_GEOMETRY_READ_IN_EA1N",
+    "NO_INTERPOLATION",
+    "NO_FIELD_SCALE_FORECAST_TRUTH",
+    "NO_RAW_GRIB_ARTIFACT",
+    "NO_FORECAST_VALUE_OUTPUT",
+    "NO_CANONICAL_EVIDENCE_WRITE",
+    "NO_FUTURE_ET0_EXECUTION",
+    "NO_DATABASE_WRITE",
+    "NO_RUNTIME_PRODUCT_SOURCE_DELTA",
+    "NO_FORMAL_WINDOW_START",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
