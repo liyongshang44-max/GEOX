@@ -8,128 +8,15 @@
   "base_main_sha": "b378c836de78eb855cf5786a58786e573fc17d36",
   "purpose": "CLOSE_THE_LAST_UNPROVEN_KBS_FORMAL_SITE_GATE_BEFORE_FORMAL_AUTHORITY_PACKAGE_FREEZE",
   "predecessor_authorities": [
-    {
-      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
-      "blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
-      "consumed_ruling": "EA1O_D_EFFECTIVE_PASS_PERMITS_EA2_CONSIDERATION_BUT_DOES_NOT_ITSELF_CREATE_FORMAL_SITE_AUTHORITY"
-    },
-    {
-      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md",
-      "blob_sha": "443edcfc6cbaafcd4b94f93d7002ab40442be8c9",
-      "consumed_ruling": "FORMAL_SITE_REQUIRES_CONTEMPORANEOUS_SOIL_MOISTURE_TEMPORAL_RELEASE_USE_POLICY_AND_RAW_PROVENANCE_BEFORE_PACKAGE_ELIGIBILITY"
-    },
-    {
-      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1E-KBS-TRANSIENT-ROLE-MAP-PROBE-V1.json",
-      "blob_sha": "69835c9877474f4d46980487f6e5789add803df2",
-      "consumed_ruling": "SOIL_MOISTURE_10CM_IS_UNIQUELY_MAPPED_TO_KBS_CURRENT_WEATHER_ENDPOINT_25_BUT_EA1E_EXPLICITLY_LEFT_LIVE_CONTINUITY_AND_USE_RIGHTS_OPEN"
-    },
-    {
-      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-D-INSTANTANEOUS-SOLAR-LIVE-QUALIFICATION-V1.json",
-      "blob_sha": "b5cf28809af89315966d1e02322a34fab14810cd",
-      "consumed_ruling": "FUTURE_ET0_SOLAR_SOURCE_VALUE_SPATIAL_TRANSFORMATION_CANDIDATE_PASSED_UNDER_LIMITED_MODEL_DERIVED_SEMANTICS"
-    }
+    {"ref":"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md","blob_sha":"39f6a09273c30088a7ea264cfa94ff930ea5518e","consumed_ruling":"EA1O_D_EFFECTIVE_PASS_PERMITS_EA2_CONSIDERATION_BUT_DOES_NOT_ITSELF_CREATE_FORMAL_SITE_AUTHORITY"},
+    {"ref":"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md","blob_sha":"443edcfc6cbaafcd4b94f93d7002ab40442be8c9","consumed_ruling":"FORMAL_SITE_REQUIRES_CONTEMPORANEOUS_SOIL_MOISTURE_TEMPORAL_RELEASE_USE_POLICY_AND_RAW_PROVENANCE_BEFORE_PACKAGE_ELIGIBILITY"},
+    {"ref":"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1E-KBS-TRANSIENT-ROLE-MAP-PROBE-V1.json","blob_sha":"808f4e33cc36a6788957851228213d04eee49e9c","consumed_ruling":"SOIL_MOISTURE_10CM_IS_UNIQUELY_MAPPED_TO_KBS_CURRENT_WEATHER_ENDPOINT_25_BUT_EA1E_EXPLICITLY_LEFT_LIVE_CONTINUITY_AND_USE_RIGHTS_OPEN"},
+    {"ref":"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-D-INSTANTANEOUS-SOLAR-LIVE-QUALIFICATION-V1.json","blob_sha":"cd165ef2de4618e399c1c5166b78ae19a88c69af","consumed_ruling":"FUTURE_ET0_SOLAR_SOURCE_VALUE_SPATIAL_TRANSFORMATION_CANDIDATE_PASSED_UNDER_LIMITED_MODEL_DERIVED_SEMANTICS"}
   ],
-  "soil_source_candidate": {
-    "provider": "KBS_LTER",
-    "source_family": "CURRENT_WEATHER_VARIATE_JSON",
-    "endpoint_url": "https://lter.kbs.msu.edu/weather/variates/25",
-    "endpoint_id": 25,
-    "role_id": "SOIL_MOISTURE_10CM",
-    "epistemic_class": "OBSERVED",
-    "quantity_kind": "VOLUMETRIC_WATER_CONTENT",
-    "source_unit": "fraction",
-    "canonical_unit": "fraction",
-    "measurement_depth_mm": 100,
-    "spatial_support": "NEAR_SITE_POINT_SUPPORT",
-    "direct_field_equivalence": false,
-    "direct_root_zone_equivalence": false,
-    "root_zone_representativeness": "PARTIAL"
-  },
-  "continuity_policy": {
-    "qualification_window_hours": 24,
-    "window_anchor": "LATEST_FINITE_SOURCE_TIMESTAMP_AT_DISCOVERY_THEN_FROZEN_FOR_FINAL_HEAD_REPROOF",
-    "latest_source_max_age_minutes": 30,
-    "future_timestamp_tolerance_minutes": 5,
-    "maximum_allowed_gap_minutes": 30,
-    "minimum_distinct_hour_buckets": 24,
-    "minimum_window_span_minutes": 1430,
-    "duplicate_timestamp_policy": "IDENTICAL_TIMESTAMP_VALUES_MUST_NOT_CONFLICT",
-    "every_point_in_window_must_be_finite": true,
-    "every_point_in_window_must_be_vwc_fraction_range_0_to_1": true,
-    "silent_imputation_authorized": false,
-    "gap_fill_authorized": false,
-    "value_publication_authorized": false
-  },
-  "use_policy": {
-    "terms_url": "https://lter.kbs.msu.edu/data/terms-of-use/",
-    "catalog_url": "https://lter.kbs.msu.edu/datatables/",
-    "required_terms_semantics": "KBS_CORE_DATA_MAY_NOT_BE_PUBLISHED_WITHOUT_WRITTEN_PERMISSION_OF_LEAD_INVESTIGATOR_OR_PROJECT_DIRECTOR",
-    "public_raw_data_redistribution_authorized": false,
-    "public_reconstructable_raw_data_artifact_authorized": false,
-    "publication_without_written_permission_authorized": false,
-    "commercial_reuse_rights_established": false,
-    "private_stage1b_technical_processing_is_a_legal_opinion": false,
-    "governance_boundary": "PRIVATE_RESTRICTED_RAW_EVIDENCE_RETENTION_REQUIRED_FOR_FORMAL_INGRESS; PUBLIC_REPO_AND_PUBLIC_CI_ARTIFACTS_HASH_AND_METADATA_ONLY; ANY_PUBLICATION_OR_EXTERNAL_REDISTRIBUTION_REQUIRES_SEPARATE_PERMISSION_REVIEW",
-    "terms_live_reproof_required": true
-  },
-  "raw_provenance_policy": {
-    "exact_raw_endpoint_payload_must_be_retained_or_referencably_archived_before_canonicalization": true,
-    "required_private_metadata": [
-      "provider",
-      "endpoint_url",
-      "retrieved_at",
-      "source_latest_timestamp",
-      "content_sha256",
-      "content_bytes"
-    ],
-    "public_probe_output_may_include": [
-      "response_status",
-      "response_sha256",
-      "response_bytes",
-      "retrieved_at",
-      "latest_timestamp",
-      "window_timestamp_chain_sha256",
-      "continuity_counts_and_gap_statistics",
-      "terms_page_sha256",
-      "terms_semantic_match_boolean"
-    ],
-    "public_probe_output_may_not_include": [
-      "soil_moisture_values",
-      "raw_json_body",
-      "raw_terms_page_body",
-      "reconstructable_sensor_sequence"
-    ]
-  },
-  "qualification_effect": {
-    "success_decision": "QUALIFIED_KBS_ENDPOINT25_24H_CONTINUITY_AND_RESTRICTED_USE_POLICY_FOR_EA2_FORMAL_SITE_FREEZE",
-    "continuity_rejection_decision": "REJECTED_KBS_ENDPOINT25_24H_CONTINUITY_FOR_EA2_FORMAL_SITE_FREEZE",
-    "use_policy_rejection_decision": "REJECTED_KBS_USE_POLICY_FOR_EA2_FORMAL_SITE_FREEZE",
-    "success_authorizes": "EA2_FORMAL_SITE_SOURCE_CROP_REALITY_PACKAGE_FREEZE_CONSIDERATION_ONLY",
-    "formal_site_authority_created": false,
-    "formal_source_authority_created": false,
-    "formal_external_evidence_package_created": false,
-    "collector_authorized": false,
-    "database_write_authorized": false,
-    "formal_evidence_write_authorized": false,
-    "ea3_authorized": false,
-    "formal_window_started": false,
-    "mcft_cap09_completed": false
-  },
-  "hard_nonclaims": [
-    "NO_FORMAL_SITE_AUTHORITY_YET",
-    "NO_FORMAL_SOURCE_BINDING_MATRIX_YET",
-    "NO_FORMAL_CROP_CONTEXT_AUTHORITY_YET",
-    "NO_FORMAL_EXTERNAL_EVIDENCE_PACKAGE_YET",
-    "NO_PUBLIC_KBS_RAW_DATA_PUBLICATION",
-    "NO_PUBLIC_RECONSTRUCTABLE_KBS_SENSOR_SEQUENCE",
-    "NO_COMMERCIAL_REUSE_RIGHTS_CLAIM",
-    "NO_LEGAL_ADVICE_CLAIM",
-    "NO_FIELD_EQUIVALENCE",
-    "NO_ROOT_ZONE_EQUIVALENCE",
-    "NO_DATABASE_WRITE",
-    "NO_FORMAL_EVIDENCE_WRITE",
-    "NO_EA3_START",
-    "NO_FORMAL_O00_O23_START",
-    "NO_MCFT_CAP09_COMPLETION"
-  ]
+  "soil_source_candidate": {"provider":"KBS_LTER","source_family":"CURRENT_WEATHER_VARIATE_JSON","endpoint_url":"https://lter.kbs.msu.edu/weather/variates/25","endpoint_id":25,"role_id":"SOIL_MOISTURE_10CM","epistemic_class":"OBSERVED","quantity_kind":"VOLUMETRIC_WATER_CONTENT","source_unit":"fraction","canonical_unit":"fraction","measurement_depth_mm":100,"spatial_support":"NEAR_SITE_POINT_SUPPORT","direct_field_equivalence":false,"direct_root_zone_equivalence":false,"root_zone_representativeness":"PARTIAL"},
+  "continuity_policy": {"qualification_window_hours":24,"window_anchor":"LATEST_FINITE_SOURCE_TIMESTAMP_AT_DISCOVERY_THEN_FROZEN_FOR_FINAL_HEAD_REPROOF","latest_source_max_age_minutes":30,"future_timestamp_tolerance_minutes":5,"maximum_allowed_gap_minutes":30,"minimum_distinct_hour_buckets":24,"minimum_window_span_minutes":1430,"duplicate_timestamp_policy":"IDENTICAL_TIMESTAMP_VALUES_MUST_NOT_CONFLICT","every_point_in_window_must_be_finite":true,"every_point_in_window_must_be_vwc_fraction_range_0_to_1":true,"silent_imputation_authorized":false,"gap_fill_authorized":false,"value_publication_authorized":false},
+  "use_policy": {"terms_url":"https://lter.kbs.msu.edu/data/terms-of-use/","catalog_url":"https://lter.kbs.msu.edu/datatables/","required_terms_semantics":"KBS_CORE_DATA_MAY_NOT_BE_PUBLISHED_WITHOUT_WRITTEN_PERMISSION_OF_LEAD_INVESTIGATOR_OR_PROJECT_DIRECTOR","public_raw_data_redistribution_authorized":false,"public_reconstructable_raw_data_artifact_authorized":false,"publication_without_written_permission_authorized":false,"commercial_reuse_rights_established":false,"private_stage1b_technical_processing_is_a_legal_opinion":false,"governance_boundary":"PRIVATE_RESTRICTED_RAW_EVIDENCE_RETENTION_REQUIRED_FOR_FORMAL_INGRESS; PUBLIC_REPO_AND_PUBLIC_CI_ARTIFACTS_HASH_AND_METADATA_ONLY; ANY_PUBLICATION_OR_EXTERNAL_REDISTRIBUTION_REQUIRES_SEPARATE_PERMISSION_REVIEW","terms_live_reproof_required":true},
+  "raw_provenance_policy": {"exact_raw_endpoint_payload_must_be_retained_or_referencably_archived_before_canonicalization":true,"required_private_metadata":["provider","endpoint_url","retrieved_at","source_latest_timestamp","content_sha256","content_bytes"],"public_probe_output_may_include":["response_status","response_sha256","response_bytes","retrieved_at","latest_timestamp","window_timestamp_chain_sha256","continuity_counts_and_gap_statistics","terms_page_sha256","terms_semantic_match_boolean"],"public_probe_output_may_not_include":["soil_moisture_values","raw_json_body","raw_terms_page_body","reconstructable_sensor_sequence"]},
+  "qualification_effect": {"success_decision":"QUALIFIED_KBS_ENDPOINT25_24H_CONTINUITY_AND_RESTRICTED_USE_POLICY_FOR_EA2_FORMAL_SITE_FREEZE","continuity_rejection_decision":"REJECTED_KBS_ENDPOINT25_24H_CONTINUITY_FOR_EA2_FORMAL_SITE_FREEZE","use_policy_rejection_decision":"REJECTED_KBS_USE_POLICY_FOR_EA2_FORMAL_SITE_FREEZE","success_authorizes":"EA2_FORMAL_SITE_SOURCE_CROP_REALITY_PACKAGE_FREEZE_CONSIDERATION_ONLY","formal_site_authority_created":false,"formal_source_authority_created":false,"formal_external_evidence_package_created":false,"collector_authorized":false,"database_write_authorized":false,"formal_evidence_write_authorized":false,"ea3_authorized":false,"formal_window_started":false,"mcft_cap09_completed":false},
+  "hard_nonclaims":["NO_FORMAL_SITE_AUTHORITY_YET","NO_FORMAL_SOURCE_BINDING_MATRIX_YET","NO_FORMAL_CROP_CONTEXT_AUTHORITY_YET","NO_FORMAL_EXTERNAL_EVIDENCE_PACKAGE_YET","NO_PUBLIC_KBS_RAW_DATA_PUBLICATION","NO_PUBLIC_RECONSTRUCTABLE_KBS_SENSOR_SEQUENCE","NO_COMMERCIAL_REUSE_RIGHTS_CLAIM","NO_LEGAL_ADVICE_CLAIM","NO_FIELD_EQUIVALENCE","NO_ROOT_ZONE_EQUIVALENCE","NO_DATABASE_WRITE","NO_FORMAL_EVIDENCE_WRITE","NO_EA3_START","NO_FORMAL_O00_O23_START","NO_MCFT_CAP09_COMPLETION"]
 }
