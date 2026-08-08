@@ -46,8 +46,9 @@ try {
   result.exact_file_count = changed.length;
   req(JSON.stringify(changed) === JSON.stringify(EXPECT), `EA1OD_EXACT_FOUR_FILE_BOUNDARY_FAIL:${JSON.stringify(changed)}`);
 
-  req(blob(BASE, A4) === '846d43cece204095d422926bbd2490655321f619', 'EA1OD_AMENDMENT04_BASE_BLOB_DRIFT');
-  req(blob(BASE, EA1OC) === '9168122b61aff4bc05c05c0497a6e6150d86ac41', 'EA1OD_EA1OC_BASE_BLOB_DRIFT');
+  req(blob(BASE, TASK) === '39f6a09273c30088a7ea264cfa94ff930ea5518e', 'EA1OD_TASKBOOK_V05_BASE_BLOB_DRIFT');
+  req(blob(BASE, A4) === '3cce5cb3f070404a2b7474ef61a009d87c7f809f', 'EA1OD_AMENDMENT04_BASE_BLOB_DRIFT');
+  req(blob(BASE, EA1OC) === '743846307cc4d846b10e2409670a66512b4778b4', 'EA1OD_EA1OC_BASE_BLOB_DRIFT');
   req(blob(BASE, EA1K) === 'f36955b2847d1a2b58052f0dec2fea465e7eaec2', 'EA1OD_EA1K_BASE_BLOB_DRIFT');
 
   const task = readAt(BASE, TASK);
@@ -63,6 +64,9 @@ try {
 
   req(authority.record_status === 'EA1O_D_LIVE_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE', 'EA1OD_AUTHORITY_STATUS_DRIFT');
   req(authority.base_main_binding === 'EXACT_PULL_REQUEST_BASE_SHA', 'EA1OD_BASE_BINDING_DRIFT');
+  req(authority.predecessor_authorities.some(entry => entry.ref === TASK && entry.blob_sha === '39f6a09273c30088a7ea264cfa94ff930ea5518e'), 'EA1OD_AUTHORITY_TASKBOOK_PIN_DRIFT');
+  req(authority.predecessor_authorities.some(entry => entry.ref === A4 && entry.blob_sha === '3cce5cb3f070404a2b7474ef61a009d87c7f809f'), 'EA1OD_AUTHORITY_AMENDMENT04_PIN_DRIFT');
+  req(authority.predecessor_authorities.some(entry => entry.ref === EA1OC && entry.blob_sha === '743846307cc4d846b10e2409670a66512b4778b4'), 'EA1OD_AUTHORITY_EA1OC_PIN_DRIFT');
   const source = authority.source_candidate;
   req(source.product_family === 'sflux' && source.parameter === 'DSWRF' && source.level === 'surface', 'EA1OD_SOURCE_ROLE_DRIFT');
   req(source.temporal_role === 'INSTANTANEOUS_FORECAST_ENDPOINT', 'EA1OD_TEMPORAL_ROLE_DRIFT');
