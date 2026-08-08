@@ -53,6 +53,8 @@ function latestTimestampFromJson(json) {
 }
 
 let browser;
+let diagnosticBaselineRoleCounts = null;
+let diagnosticEndpoints = [];
 try {
   if (!SUBJECT_SHA || !/^[0-9a-f]{40}$/.test(SUBJECT_SHA)) throw new Error('EA1D_EXACT_SUBJECT_SHA_REQUIRED');
   browser = await chromium.launch({ headless: true });
@@ -117,7 +119,9 @@ try {
   }
 
   const baseline = await runIsolation(null);
+  diagnosticBaselineRoleCounts = baseline.roleCounts;
   const endpoints = [];
+  diagnosticEndpoints = endpoints;
   for (const endpointId of config.endpoint_ids) {
     const isolated = await runIsolation(endpointId);
     const roleDeltas = {};
@@ -204,6 +208,8 @@ try {
     source_url: config.source_url,
     probe_method: config.probe_method,
     error: safeError(error),
+    baseline_role_match_counts: diagnosticBaselineRoleCounts,
+    diagnostic_endpoints: diagnosticEndpoints,
     raw_numeric_sensor_values_emitted: false,
     raw_json_body_persisted: false,
     rendered_dom_persisted: false,
