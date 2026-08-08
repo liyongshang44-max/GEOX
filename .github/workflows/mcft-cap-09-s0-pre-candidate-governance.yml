@@ -64,8 +64,6 @@ jobs:
           repair_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml' \
             'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs' | sort)"
-          # Candidate head binding mode: PR_DECLARATION_V2_AND_GITHUB_EVENT; candidate blobs never embed their own commit SHA.
-          # Delivery Status is a non-authority tracking projection; Current Authority.status is the sole Registry transition.
           candidate_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-s0-authorization.yml' \
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json' \
@@ -73,7 +71,16 @@ jobs:
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-AUTHORIZATION-CANDIDATE-V1.json' \
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json' \
             'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_AUTHORIZATION.cjs' | sort)"
-          if [[ "$files" == "$repair_files" ]]; then
+          ea0_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml' \
+            '.github/workflows/mcft-cap-09-s6-external-evidence-authority-adjudication.yml' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EXTERNAL-EVIDENCE-AUTHORITY-STATUS-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_EXTERNAL_EVIDENCE_AUTHORITY_ADJUDICATION.cjs' | sort)"
+          if [[ "$files" == "$ea0_files" ]]; then
+            mode='s6-ea0-adjudication'
+          elif [[ "$files" == "$repair_files" ]]; then
             mode='workflow-repair'
           elif [[ "$files" == "$registry_files" ]]; then
             mode='registry-bootstrap'
@@ -104,6 +111,9 @@ jobs:
         run: |
           set -euo pipefail
           case "$MCFT_CAP09_S0_MODE" in
+            s6-ea0-adjudication)
+              node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_EXTERNAL_EVIDENCE_AUTHORITY_ADJUDICATION.cjs
+              ;;
             workflow-repair)
               node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs --workflow-repair
               ;;
@@ -125,6 +135,8 @@ jobs:
         if: always()
         with:
           name: mcft-cap-09-s0-pre-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          path: acceptance-output/MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE_RESULT.json
+          path: |
+            acceptance-output/MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_S6_EXTERNAL_EVIDENCE_AUTHORITY_ADJUDICATION_RESULT.json
           if-no-files-found: error
           retention-days: 90
