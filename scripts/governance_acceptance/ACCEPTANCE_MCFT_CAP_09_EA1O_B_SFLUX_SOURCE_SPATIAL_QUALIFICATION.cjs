@@ -85,7 +85,7 @@ try {
   req(effect.formal_window_started === false && effect.mcft_cap09_completed === false, 'EA1OB_FORMAL_OR_COMPLETION_CLAIM_ENABLED');
 
   req(probe.includes('MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY_RESULT.json'), 'EA1OB_EA1K_LIVE_RESULT_NOT_CONSUMED');
-  req(probe.includes('Range') && probe.includes('bytes=') && probe.includes('.idx'), 'EA1OB_EXACT_RANGE_TRANSPORT_MISSING');
+  req(probe.includes('Range') && probe.includes('bytes=') && probe.includes('index_object_suffix') && probe.includes('Content-Range'), 'EA1OB_EXACT_RANGE_TRANSPORT_MISSING');
   req(probe.includes('codes_grib_find_nearest') && probe.includes('grid_definition'), 'EA1OB_ECCODES_SPATIAL_PARSE_MISSING');
   req(probe.includes('DIRECT_PRECEDING_ONE_HOUR_AVERAGE') && probe.includes('hour ave fcst'), 'EA1OB_DIRECT_1H_RECORD_SELECTION_MISSING');
   req(probe.includes('NEGATIVE_DSWRF_FAIL_CLOSED'), 'EA1OB_NEGATIVE_FAIL_CLOSED_MISSING');
