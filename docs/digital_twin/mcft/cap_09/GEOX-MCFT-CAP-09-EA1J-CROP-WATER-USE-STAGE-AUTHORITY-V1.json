@@ -1,0 +1,130 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1j_crop_water_use_stage_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1J-CROP-WATER-USE-STAGE-AUTHORITY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION_CONTINUATION",
+  "record_status": "EA1J_DERIVED_CROP_WATER_USE_STAGE_PROBE_NOT_FORMAL_AUTHORITY",
+  "base_main_sha": "473d4529af0ee042bab9214d05f46bf8777428e1",
+  "predecessor_authorities": [
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md",
+      "blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
+      "consumed_ruling": "FORMAL_DERIVED_CROP_WATER_USE_STAGE_CONTEXT_V1_STRICT_AS_OF_AND_STAGE_TRANSITION_GUARD"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1-SITE-SOURCE-QUALIFICATION-V1.json",
+      "blob_sha": "a4329330cfae941a033d65f55e91b8ae8e96d862",
+      "consumed_ruling": "KBS_MCSE_T1R1_EXACT_2026_CROP_IDENTITY_PASS_CORN_WITH_PHENOLOGY_PENDING"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1I-KBS-ET0-INPUT-AUTHORITY-V1.json",
+      "blob_sha": "47d41c48027e84285e934e7cda8af52fae6aa47d",
+      "consumed_ruling": "EA1I_EFFECTIVE_ON_PROTECTED_MAIN_WITH_NO_FORMAL_WINDOW_START"
+    }
+  ],
+  "derived_context_authority": "FORMAL_DERIVED_CROP_WATER_USE_STAGE_CONTEXT_V1",
+  "scope_candidate": {
+    "site_candidate_id": "KBS_MCSE_T1R1",
+    "provider_site": "KBS_LTER_MAIN_CROPPING_SYSTEM_EXPERIMENT",
+    "treatment": "T1_CONVENTIONAL",
+    "replicate": "R1",
+    "crop": "corn",
+    "crop_identity_class": "CURRENT_SEASON_MANAGEMENT_METADATA",
+    "biological_stage_truth_claimed": false,
+    "field_phenology_observation_claimed": false
+  },
+  "planting_authority": {
+    "provider": "KBS_AGLOG",
+    "official_url": "https://aglog.kbs.msu.edu/observations/6931",
+    "observation_id": 6931,
+    "observation_type": "Planting",
+    "area": "T1",
+    "crop": "corn",
+    "planting_local_date": "2026-05-11",
+    "timezone": "America/Detroit",
+    "event_time_precision": "LOCAL_CALENDAR_DAY_ONLY",
+    "possible_event_window_utc": {
+      "start_inclusive": "2026-05-11T04:00:00.000Z",
+      "end_exclusive": "2026-05-12T04:00:00.000Z"
+    },
+    "false_precision_forbidden": true
+  },
+  "model_stage_prior": {
+    "provider": "FAO_IRRIGATION_AND_DRAINAGE_PAPER_56_TABLE_11",
+    "official_url": "https://www.fao.org/4/X0490E/x0490e0b.htm",
+    "crop_row_family": "MAIZE_GRAIN",
+    "use_class": "MODEL_WATER_USE_STAGE_PRIOR_NOT_SITE_PHENOLOGY_TRUTH",
+    "selection_policy": "ALL_PUBLISHED_MAIZE_GRAIN_STAGE_LENGTH_VARIANTS_MUST_AGREE",
+    "variants": [
+      {"variant_id":"FAO56_MAIZE_GRAIN_EAST_AFRICA_ALT_APRIL","initial_days":30,"development_days":50,"mid_days":60,"late_days":40,"total_days":180},
+      {"variant_id":"FAO56_MAIZE_GRAIN_ARID_DEC_JAN","initial_days":25,"development_days":40,"mid_days":45,"late_days":30,"total_days":140},
+      {"variant_id":"FAO56_MAIZE_GRAIN_NIGERIA_HUMID_JUNE","initial_days":20,"development_days":35,"mid_days":40,"late_days":30,"total_days":125},
+      {"variant_id":"FAO56_MAIZE_GRAIN_INDIA_DRY_COOL_OCTOBER","initial_days":20,"development_days":35,"mid_days":40,"late_days":30,"total_days":125},
+      {"variant_id":"FAO56_MAIZE_GRAIN_SPAIN_CALIFORNIA_APRIL","initial_days":30,"development_days":40,"mid_days":50,"late_days":30,"total_days":150},
+      {"variant_id":"FAO56_MAIZE_GRAIN_IDAHO_APRIL","initial_days":30,"development_days":40,"mid_days":50,"late_days":50,"total_days":170}
+    ],
+    "fao_limitation_consumed": "STAGE_LENGTHS_ARE_GENERAL_GUIDES_AND_MAY_VARY_WITH_REGION_CLIMATE_CROPPING_CONDITIONS_AND_VARIETY",
+    "single_region_best_fit_selection_forbidden": true,
+    "cap08_synthetic_schedule_dates_reuse_forbidden": true
+  },
+  "derivation_policy": {
+    "allowed_stage_codes": ["INITIAL","DEVELOPMENT","MID","LATE"],
+    "algorithm_id": "FAO56_MAIZE_GRAIN_CONSENSUS_ENVELOPE_FROM_PLANTING_DATE_V1",
+    "authority_time": "EXACT_PROBE_EVALUATION_TIME_UTC",
+    "all_observation_inputs_available_to_runtime_at_or_before_authority_time": true,
+    "future_observations_forbidden": true,
+    "future_phenocam_observations_forbidden": true,
+    "full_season_ex_post_normalization_forbidden": true,
+    "planting_time_uncertainty_must_be_carried": true,
+    "backward_stability_hours": 6,
+    "forward_transition_guard_hours": 30,
+    "forward_guard_class": "ASSUMED_STAGE_TRANSITION_GUARD",
+    "pass_rule": "EVERY_VARIANT_AND_EVERY_POSSIBLE_PLANTING_TIME_MUST_REMAIN_IN_ONE_IDENTICAL_STAGE_OVER_T_MINUS_6H_THROUGH_T_PLUS_30H",
+    "transition_risk_failure_code": "STAGE_TRANSITION_RISK",
+    "no_consensus_failure_code": "CROP_WATER_USE_STAGE_NO_CONSERVATIVE_CONSENSUS"
+  },
+  "gdd_policy": {
+    "stage_determinative": false,
+    "reason": "HYBRID_SPECIFIC_GDD_TO_STAGE_THRESHOLDS_NOT_YET_BOUND_FOR_KBS_T1",
+    "silent_hybrid_or_relative_maturity_assumption_forbidden": true,
+    "may_be_added_later_as_as_of_corroboration_only": true
+  },
+  "qualification_effect": {
+    "probe_may_establish": "CURRENT_DERIVED_CROP_WATER_USE_STAGE_AUTHORITY_CANDIDATE_ONLY",
+    "expected_current_stage_at_design_time": "MID",
+    "expected_stage_is_normative_without_exact_head_probe": false,
+    "formal_crop_context_authority_created": false,
+    "qualified_formal_site": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "runtime_source_authorized": false,
+    "formal_window_started": false
+  },
+  "output_policy": {
+    "source_page_hashes_allowed": true,
+    "authority_time_allowed": true,
+    "derived_stage_code_allowed": true,
+    "elapsed_time_envelope_allowed": true,
+    "per_variant_stage_allowed": true,
+    "nearest_transition_distance_hours_allowed": true,
+    "raw_provider_body_allowed": false,
+    "rendered_dom_allowed": false
+  },
+  "hard_nonclaims": [
+    "NO_OBSERVED_BIOLOGICAL_STAGE_CLAIM",
+    "NO_V_STAGE_OR_R_STAGE_GROUND_TRUTH",
+    "NO_SINGLE_FAO_REGION_PARAMETER_TREATED_AS_KBS_SITE_TRUTH",
+    "NO_CAP08_SYNTHETIC_STAGE_DATES_REUSED",
+    "NO_FUTURE_OBSERVATION_USE",
+    "NO_FULL_SEASON_EX_POST_NORMALIZATION",
+    "NO_HYBRID_SPECIFIC_GDD_STAGE_GUESS",
+    "NO_FORMAL_CROP_CONTEXT_AUTHORITY_FROM_PROBE_CONFIG_ALONE",
+    "NO_QUALIFIED_FORMAL_SITE",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_RUNTIME_PRODUCT_SOURCE_DELTA",
+    "NO_FORMAL_WINDOW_START",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
