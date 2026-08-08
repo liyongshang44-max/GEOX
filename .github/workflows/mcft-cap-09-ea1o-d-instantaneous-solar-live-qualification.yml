@@ -1,0 +1,191 @@
+name: mcft-cap-09-ea1o-d-instantaneous-solar-live-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea1o-d-instantaneous-solar-live-qualification.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-D-INSTANTANEOUS-SOLAR-LIVE-QUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_D_INSTANTANEOUS_SOLAR_LIVE_QUALIFICATION.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1O_D_INSTANTANEOUS_SOLAR_LIVE_QUALIFICATION.py'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea1o-d-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  live-instantaneous-solar-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Resolve exact EA1O-D base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate exact EA1O-D frozen-pass governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_D_INSTANTANEOUS_SOLAR_LIVE_QUALIFICATION.cjs
+
+      - name: Syntax-check live qualification probes
+        run: |
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY.mjs
+          python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1O_D_INSTANTANEOUS_SOLAR_LIVE_QUALIFICATION.py
+
+      - name: Install pinned ecCodes decoder
+        run: |
+          python -m pip install --disable-pip-version-check "eccodes==2.47.0" "eccodeslib==2.47.3.23"
+          python -m eccodes selfcheck
+
+      - name: Re-prove governed pgrb2 exact-cycle chronology at this exact head
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY.mjs
+
+      - name: Re-prove frozen instantaneous sflux solar qualification pass
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1O_D_INSTANTANEOUS_SOLAR_LIVE_QUALIFICATION.py
+
+      - name: Verify frozen exact-head qualification pass
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          authority = json.loads(Path('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-D-INSTANTANEOUS-SOLAR-LIVE-QUALIFICATION-V1.json').read_text())
+          result = json.loads(Path('acceptance-output/MCFT_CAP_09_EA1O_D_INSTANTANEOUS_SOLAR_LIVE_QUALIFICATION_RESULT.json').read_text())
+          frozen = authority['frozen_discovery_observation']
+          success = 'QUALIFIED_AS_AMENDMENT04_INSTANTANEOUS_PIECEWISE_LINEAR_SOLAR_CANDIDATE'
+
+          assert authority['live_qualification']['current_result'] == success
+          assert result['status'] == 'PASS'
+          assert result['adjudication']['decision'] == success
+          assert result['adjudication']['value_qualified'] is True
+          assert result['adjudication']['spatial_qualified'] is True
+          assert result['adjudication']['source_value_spatial_transformation_candidate_qualified'] is True
+
+          same = result['same_cycle_binding']
+          assert result['qualification_tick_boundary_utc'] == frozen['qualification_tick_boundary_utc']
+          assert same['ea1k_selected_cycle_utc'] == frozen['selected_cycle_utc']
+          assert same['sflux_selected_cycle_utc'] == frozen['selected_cycle_utc']
+          assert same['same_exact_gfs_cycle'] is True
+          assert same['canonical_lead_start'] == frozen['canonical_lead_start']
+          assert same['canonical_lead_end'] == frozen['canonical_lead_end']
+          assert same['support_lead'] == frozen['support_lead']
+          assert same['required_endpoint_count'] == frozen['required_endpoint_count'] == 73
+
+          transport = result['source_transport']
+          assert transport['available_before_tick_count'] == frozen['available_before_tick_count'] == 73
+          assert transport['exact_range_message_count'] == frozen['exact_range_message_count'] == 73
+          assert transport['idx_and_selected_record_chain_sha256'] == frozen['idx_and_selected_record_chain_sha256']
+          assert transport['exact_grib_message_chain_sha256'] == frozen['exact_grib_message_chain_sha256']
+          assert transport['full_global_grib_download_performed'] is False
+          assert transport['future_file_wait_performed'] is False
+          assert transport['valid_time_rewrite_performed'] is False
+
+          identity = result['grib_endpoint_identity']
+          assert identity['parameter_number_set'] == frozen['parameter_number_set'] == [192]
+          assert identity['param_id_set'] == frozen['param_id_set'] == [260087]
+          assert identity['short_name_set'] == frozen['short_name_set'] == ['sdswrf']
+          assert identity['step_type_set'] == frozen['step_type_set'] == ['instant']
+          assert identity['forecast_time_offset_set'] == frozen['forecast_time_offset_set'] == [0]
+          assert identity['start_step_offset_set'] == frozen['start_step_offset_set'] == [0]
+          assert identity['end_step_offset_set'] == frozen['end_step_offset_set'] == [0]
+          assert identity['instantaneous_record_used_as_direct_interval_average'] is False
+
+          transform = result['temporal_transformation']
+          assert transform['epistemic_class'] == 'MODEL_DERIVED_PIECEWISE_LINEAR_FORECAST_INTERPOLATION'
+          assert transform['transformation_id'] == 'PIECEWISE_LINEAR_ENDPOINT_INTEGRATION_V1'
+          assert transform['formal_quality_status'] == 'LIMITED'
+          assert transform['direct_field_equivalence'] is False
+          assert transform['model_grid_is_observation_truth'] is False
+          assert transform['endpoint_sequence_sha256'] == frozen['endpoint_sequence_sha256']
+          assert transform['hourly_mean_sequence_sha256'] == frozen['hourly_mean_sequence_sha256']
+          assert transform['solar_energy_sequence_sha256'] == frozen['solar_energy_sequence_sha256']
+
+          value = result['value_qualification']
+          assert value['endpoint_finite_count'] == frozen['endpoint_finite_count'] == 73
+          assert value['endpoint_nonnegative_count'] == frozen['endpoint_nonnegative_count'] == 73
+          assert value['hourly_mean_finite_count'] == frozen['hourly_mean_finite_count'] == 72
+          assert value['hourly_mean_nonnegative_count'] == frozen['hourly_mean_nonnegative_count'] == 72
+          assert value['solar_energy_finite_count'] == frozen['solar_energy_finite_count'] == 72
+          assert value['solar_energy_nonnegative_count'] == frozen['solar_energy_nonnegative_count'] == 72
+          assert value['value_qualified'] is True
+          assert value['negative_clipping_performed'] is False
+          assert value['zero_thresholding_performed'] is False
+          assert value['silent_imputation_performed'] is False
+          assert value['pgrb2_fallback_used'] is False
+
+          spatial = result['live_sflux_spatial_qualification']
+          assert spatial['grid_type'] == frozen['grid_type'] == 'regular_gg'
+          assert spatial['gaussian_n'] == frozen['gaussian_n'] == 768
+          assert spatial['grid_point_count'] == frozen['grid_point_count'] == 4718592
+          assert spatial['grid_definition_sha256'] == frozen['grid_definition_sha256']
+          assert spatial['selected_native_grid_index'] == frozen['selected_native_grid_index']
+          assert spatial['grid_definition_stable'] is True
+          assert spatial['selected_native_index_stable'] is True
+          assert spatial['selected_native_coordinate_stable'] is True
+          assert spatial['centroid_and_all_vertices_same_native_point_for_all_messages'] is True
+          assert spatial['spatial_qualified'] is True
+          assert spatial['pgrb2_grid_coordinate_reused'] is False
+          assert spatial['interpolation_performed'] is False
+
+          assert result['database_write_count'] == 0
+          assert result['formal_evidence_write_count'] == 0
+          assert result['ea2_authorized'] is False
+          assert result['formal_window_started'] is False
+          print(json.dumps({
+              'status': 'PASS',
+              'decision': success,
+              'tick': result['qualification_tick_boundary_utc'],
+              'cycle': same['ea1k_selected_cycle_utc'],
+              'support_lead': same['support_lead'],
+              'endpoint_count': same['required_endpoint_count'],
+              'spatial_qualified': True,
+              'value_qualified': True,
+          }, sort_keys=True))
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea1o-d-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA1O_D_INSTANTANEOUS_SOLAR_LIVE_QUALIFICATION_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA1O_D_INSTANTANEOUS_SOLAR_LIVE_QUALIFICATION_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
