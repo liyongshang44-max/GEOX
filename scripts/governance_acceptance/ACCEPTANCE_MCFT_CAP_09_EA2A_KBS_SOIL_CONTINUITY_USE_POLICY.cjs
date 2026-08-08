@@ -37,10 +37,17 @@ try {
     ea1e: '808f4e33cc36a6788957851228213d04eee49e9c',
     ea1od: 'cd165ef2de4618e399c1c5166b78ae19a88c69af',
   };
-  req(blob(BASE,TASK) === pins.task, 'EA2A_TASKBOOK_BASE_BLOB_DRIFT');
-  req(blob(BASE,A1) === pins.a1, 'EA2A_AMENDMENT01_BASE_BLOB_DRIFT');
-  req(blob(BASE,EA1E) === pins.ea1e, 'EA2A_EA1E_BASE_BLOB_DRIFT');
-  req(blob(BASE,EA1OD) === pins.ea1od, 'EA2A_EA1OD_BASE_BLOB_DRIFT');
+  const actual = {
+    task: blob(BASE,TASK),
+    a1: blob(BASE,A1),
+    ea1e: blob(BASE,EA1E),
+    ea1od: blob(BASE,EA1OD),
+  };
+  result.actual_predecessor_blobs = actual;
+  req(actual.task === pins.task, `EA2A_TASKBOOK_BASE_BLOB_DRIFT:actual=${actual.task}:expected=${pins.task}`);
+  req(actual.a1 === pins.a1, `EA2A_AMENDMENT01_BASE_BLOB_DRIFT:actual=${actual.a1}:expected=${pins.a1}`);
+  req(actual.ea1e === pins.ea1e, `EA2A_EA1E_BASE_BLOB_DRIFT:actual=${actual.ea1e}:expected=${pins.ea1e}`);
+  req(actual.ea1od === pins.ea1od, `EA2A_EA1OD_BASE_BLOB_DRIFT:actual=${actual.ea1od}:expected=${pins.ea1od}`);
 
   const authority = JSON.parse(read(AUTH)); const probe = read(PROBE); const workflow = read(WF);
   req(['EA2A_LIVE_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE','EA2A_LIVE_QUALIFICATION_PASS_CANDIDATE_NOT_EFFECTIVE'].includes(authority.record_status), 'EA2A_STATUS_DRIFT');
@@ -79,7 +86,7 @@ try {
   req(!/DATABASE_URL|POSTGRES|NEON|psql|public\.facts|INSERT\s+INTO/i.test(probe+'\n'+workflow), 'EA2A_DATABASE_PATH_PRESENT');
   req(workflow.includes('persist-credentials: false'), 'EA2A_PERSIST_CREDENTIALS_FORBIDDEN');
 
-  Object.assign(result,{taskbook_blob:blob(BASE,TASK),amendment01_blob:blob(BASE,A1),ea1e_blob:blob(BASE,EA1E),ea1od_blob:blob(BASE,EA1OD),authority_blob:blob('HEAD',AUTH),probe_blob:blob('HEAD',PROBE),live_qualification_required:true,taskbook_changed:false,runtime_source_changed:false,status:'PASS'});
+  Object.assign(result,{taskbook_blob:actual.task,amendment01_blob:actual.a1,ea1e_blob:actual.ea1e,ea1od_blob:actual.ea1od,authority_blob:blob('HEAD',AUTH),probe_blob:blob('HEAD',PROBE),live_qualification_required:true,taskbook_changed:false,runtime_source_changed:false,status:'PASS'});
 } catch (error) { result.error = `${error.name||'Error'}:${error.message||String(error)}`; process.exitCode=1; }
 fs.mkdirSync(path.dirname(OUT),{recursive:true}); fs.writeFileSync(OUT,JSON.stringify(result,null,2)+'\n');
 if(result.status==='PASS') console.log(JSON.stringify(result)); else console.error(result.error);
