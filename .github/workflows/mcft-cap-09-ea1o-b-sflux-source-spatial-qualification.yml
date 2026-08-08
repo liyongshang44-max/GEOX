@@ -75,7 +75,7 @@ jobs:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY.mjs
 
-      - name: Inspect safe sflux DSWRF temporal descriptors around F015
+      - name: Inspect safe sflux DSWRF descriptors at six-hour boundaries
         shell: python
         run: |
           import hashlib
@@ -89,7 +89,12 @@ jobs:
           cycle = datetime.fromisoformat(result['selected_cycle']['issued_at_utc'].replace('Z', '+00:00'))
           ymd = cycle.strftime('%Y%m%d')
           hh = cycle.strftime('%H')
-          for lead in (14, 15, 16):
+          selected = result['selected_cycle']
+          lead_start = int(selected['lead_start'])
+          lead_end = int(selected['lead_end'])
+          candidates = [lead_start, lead_start + 1, lead_start + 2, 5, 6, 7, 11, 12, 13, 17, 18, 19, 23, 24, 25]
+          leads = sorted({lead for lead in candidates if lead_start <= lead <= lead_end})
+          for lead in leads:
               idx_url = f'https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.{ymd}/{hh}/atmos/gfs.t{hh}z.sfluxgrbf{lead:03d}.grib2.idx'
               req = urllib.request.Request(idx_url, headers={'User-Agent': 'GEOX-MCFT-CAP09-EA1O-B-SAFE-DIAGNOSTIC/1.0'})
               with urllib.request.urlopen(req, timeout=30) as response:
@@ -105,7 +110,6 @@ jobs:
                   descriptor = parts[i + 2].strip()
                   rows.append({
                       'descriptor': descriptor,
-                      'first_token_is_digits': bool(parts and parts[0].isdigit()),
                       'first_token_shape': 'INTEGER' if parts and parts[0].isdigit() else ('DECIMAL_RECORD' if parts and re.fullmatch(r'\d+\.\d+', parts[0]) else 'OTHER'),
                       'second_token_is_digits': bool(len(parts) > 1 and parts[1].isdigit()),
                       'line_sha256': 'sha256:' + hashlib.sha256(line.encode()).hexdigest(),
