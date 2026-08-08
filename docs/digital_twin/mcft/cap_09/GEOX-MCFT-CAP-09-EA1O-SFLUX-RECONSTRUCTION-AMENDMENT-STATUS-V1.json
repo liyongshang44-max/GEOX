@@ -5,7 +5,7 @@
   "slice_id": "MCFT-CAP-09.S6",
   "sub_lifecycle": "S6-EA1O",
   "record_status": "ARCHITECTURE_AMENDMENT_03_CANDIDATE_NOT_EFFECTIVE",
-  "base_main_sha": "74ceaa530f362e84312c594524eaa4b72619ef81",
+  "base_main_sha": "9c59d92c74738639429d636c92f854b5120382d0",
   "predecessor_authority": {
     "taskbook_v03_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
     "taskbook_v03_blob": "3e6bc630540108599771e5404c457eaee14946aa",
@@ -19,7 +19,7 @@
   },
   "candidate_amendment": {
     "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-03-GFS-SFLUX-EXPANDING-AVERAGE-RECONSTRUCTION-AUTHORITY.md",
-    "blob": "0665ca5950e257a92bb65efd6658d459a8acf9eb",
+    "blob": "44e2edbf7bf4a6ebbf863cd5b94f763b26d92850",
     "taskbook_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
     "taskbook_candidate_version": "v0.4"
   },
