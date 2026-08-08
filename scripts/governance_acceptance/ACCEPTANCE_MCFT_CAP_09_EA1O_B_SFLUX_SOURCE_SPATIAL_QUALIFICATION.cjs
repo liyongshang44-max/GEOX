@@ -25,7 +25,7 @@ const req = (value, code) => { if (!value) throw new Error(code); };
 const read = file => fs.readFileSync(path.join(ROOT, file), 'utf8');
 
 const result = {
-  schema_version: 'geox_mcft_cap09_ea1o_b_sflux_source_spatial_governance_result_v1',
+  schema_version: 'geox_mcft_cap09_ea1o_b_sflux_rejection_governance_result_v2',
   status: 'FAIL',
   base_sha: BASE,
   exact_file_count: 0,
@@ -54,7 +54,8 @@ try {
   const authority = JSON.parse(read(AUTH));
   const probe = read(PROBE);
   const workflow = read(WF);
-  req(authority.record_status === 'EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE', 'EA1OB_STATUS_DRIFT');
+
+  req(authority.record_status === 'EA1O_B_SFLUX_DIRECT_1H_SOURCE_REJECTION_CANDIDATE_NOT_EFFECTIVE', 'EA1OB_STATUS_DRIFT');
   req(authority.base_main_sha === BASE, 'EA1OB_AUTHORITY_BASE_SHA_DRIFT');
   req(authority.source_candidate.product_family === 'sflux', 'EA1OB_PRODUCT_FAMILY_DRIFT');
   req(authority.source_candidate.candidate_parameter === 'DSWRF' && authority.source_candidate.candidate_level === 'surface', 'EA1OB_SOURCE_ROLE_DRIFT');
@@ -62,22 +63,24 @@ try {
   req(authority.source_candidate.canonical_point_count === 72, 'EA1OB_72_POINT_RULE_DRIFT');
   req(authority.source_candidate.same_exact_gfs_cycle_as_ea1k_required === true, 'EA1OB_SAME_CYCLE_RULE_WEAKENED');
   req(authority.source_candidate.future_file_waiting_forbidden === true && authority.source_candidate.valid_time_rewrite_forbidden === true, 'EA1OB_CHRONOLOGY_RULE_WEAKENED');
+  req(authority.source_candidate.n_hour_fcst_record_authorized === false, 'EA1OB_N_HOUR_FCST_ENABLED');
+  req(authority.source_candidate.expanding_window_weighted_difference_authorized === false, 'EA1OB_EXPANDING_WINDOW_RECONSTRUCTION_ENABLED');
+  req(authority.source_candidate.rolling_average_reconstruction_authorized === false, 'EA1OB_ROLLING_RECONSTRUCTION_ENABLED');
+  req(authority.source_candidate.alternative_source_substitution_authorized === false, 'EA1OB_ALTERNATIVE_SOURCE_ENABLED');
 
-  const transport = authority.transport_and_decoder;
-  req(transport.transport === 'PRODUCTION_HTTPS_IDX_PLUS_EXACT_GRIB_MESSAGE_BYTE_RANGE', 'EA1OB_TRANSPORT_DRIFT');
-  req(transport.full_global_grib_download_forbidden === true && transport.range_must_resolve_exact_idx_message === true, 'EA1OB_FULL_GRIB_DOWNLOAD_ENABLED');
-  req(transport.eccodes === '2.47.0' && transport.eccodeslib === '2.47.3.23', 'EA1OB_DECODER_PIN_DRIFT');
+  const adjudication = authority.adjudication;
+  req(adjudication.decision === 'REJECTED_AS_AMENDMENT02_DIRECT_1H_SOURCE_AUTHORITY', 'EA1OB_REJECTION_DECISION_DRIFT');
+  req(adjudication.amendment_02_required_direct_1h_count === 72, 'EA1OB_REQUIRED_DIRECT_COUNT_DRIFT');
+  req(adjudication.exact_head_reproof_expected_direct_1h_count === 12, 'EA1OB_EXPECTED_DIRECT_REPROOF_DRIFT');
+  req(adjudication.exact_head_reproof_expected_multi_hour_count === 60, 'EA1OB_EXPECTED_MULTI_HOUR_REPROOF_DRIFT');
+  req(adjudication.source_authority_qualified === false && adjudication.spatial_authority_qualified === false, 'EA1OB_FALSE_QUALIFICATION_REQUIRED');
+  req(adjudication.spatial_stage_disposition === 'NOT_REACHED_SOURCE_SEMANTICS_FAIL_CLOSED', 'EA1OB_SPATIAL_FAIL_CLOSED_DRIFT');
+  req(adjudication.value_stage_disposition === 'NOT_REACHED_SOURCE_SEMANTICS_FAIL_CLOSED', 'EA1OB_VALUE_FAIL_CLOSED_DRIFT');
 
-  const spatial = authority.sflux_spatial_policy;
-  req(spatial.grid_definition_source === 'LIVE_PRODUCTION_SFLUX_GRIB_MESSAGE_ONLY', 'EA1OB_LIVE_GRID_SOURCE_REQUIRED');
-  req(spatial.predeclared_numeric_grid_forbidden === true && spatial.silent_pgrb2_sflux_grid_equivalence_forbidden === true, 'EA1OB_SILENT_GRID_EQUIVALENCE_ENABLED');
-  req(spatial.interpolation_method === 'NONE_NEAREST_NATIVE_GRID_POINT' && spatial.interpolation_authorized === false, 'EA1OB_INTERPOLATION_ENABLED');
-  req(spatial.direct_field_equivalence === false && spatial.model_grid_is_observation_truth === false, 'EA1OB_FIELD_TRUTH_UPGRADE');
-
-  const valuePolicy = authority.value_sanity_policy;
-  req(valuePolicy.all_72_messages_must_decode && valuePolicy.all_72_selected_point_values_must_be_finite && valuePolicy.all_72_selected_point_values_must_be_nonnegative, 'EA1OB_VALUE_SANITY_WEAKENED');
-  req(valuePolicy.negative_clipping_forbidden && valuePolicy.zero_thresholding_forbidden && valuePolicy.silent_imputation_forbidden, 'EA1OB_VALUE_INFERENCE_RULE_ENABLED');
-  req(valuePolicy.decoded_values_may_be_emitted === false, 'EA1OB_VALUE_PUBLICATION_ENABLED');
+  const successor = authority.successor_governance;
+  req(successor.next_action_class_if_rejection_becomes_effective === 'S6_ARCHITECTURE_ADJUDICATION_REQUIRED', 'EA1OB_SUCCESSOR_CLASS_DRIFT');
+  req(successor.specific_successor_design_pre_authorized === false, 'EA1OB_SUCCESSOR_PREAUTHORIZED');
+  req(successor.ea2_may_start === false && successor.formal_o00_o23_may_start === false, 'EA1OB_SUCCESSOR_STARTED');
 
   const effect = authority.qualification_effect;
   req(effect.future_et0_execution_authorized === false, 'EA1OB_FUTURE_ET0_EXECUTION_ENABLED');
@@ -85,25 +88,26 @@ try {
   req(effect.formal_window_started === false && effect.mcft_cap09_completed === false, 'EA1OB_FORMAL_OR_COMPLETION_CLAIM_ENABLED');
 
   req(probe.includes('MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY_RESULT.json'), 'EA1OB_EA1K_LIVE_RESULT_NOT_CONSUMED');
-  req(probe.includes('Range') && probe.includes('bytes=') && probe.includes('index_object_suffix') && probe.includes('Content-Range'), 'EA1OB_EXACT_RANGE_TRANSPORT_MISSING');
-  req(probe.includes('codes_grib_find_nearest') && probe.includes('grid_definition'), 'EA1OB_ECCODES_SPATIAL_PARSE_MISSING');
-  req(probe.includes('DIRECT_PRECEDING_ONE_HOUR_AVERAGE') && probe.includes('hour ave fcst'), 'EA1OB_DIRECT_1H_RECORD_SELECTION_MISSING');
-  req(probe.includes('NEGATIVE_DSWRF_FAIL_CLOSED'), 'EA1OB_NEGATIVE_FAIL_CLOSED_MISSING');
-  req(!/max\s*\(\s*0\s*,|abs\s*\(.*value|value\s*=\s*0(?:\.0)?\b/.test(probe), 'EA1OB_CLIPPING_OR_ZERO_SUBSTITUTION_PATTERN');
-  req(probe.includes('decoded_values_emitted') && probe.includes('normalized_value_sequence_sha256'), 'EA1OB_HASH_ONLY_VALUE_BOUNDARY_MISSING');
+  req(probe.includes('DIRECT_PRECEDING_ONE_HOUR_AVERAGE'), 'EA1OB_DIRECT_1H_REQUIRED_SEMANTICS_MISSING');
+  req(probe.includes('REJECTED_AS_AMENDMENT02_DIRECT_1H_SOURCE_AUTHORITY'), 'EA1OB_REJECTION_VERDICT_MISSING');
+  req(probe.includes('observed_direct_1h_average_record_count') && probe.includes('observed_multi_hour_average_record_count'), 'EA1OB_COVERAGE_COUNTS_MISSING');
+  req(probe.includes('rolling_average_reconstruction_used') && probe.includes('n_hour_fcst_used_as_interval_average'), 'EA1OB_NON_USE_ATTESTATION_MISSING');
+  req(!/codes_grib|eccodes|decoded_entry|normalized_value_sequence_sha256/.test(probe), 'EA1OB_SPATIAL_OR_VALUE_STAGE_MUST_NOT_RUN_AFTER_SOURCE_REJECTION');
+  req(!/max\s*\(\s*0\s*,|value\s*=\s*0(?:\.0)?\b/.test(probe), 'EA1OB_CLIPPING_OR_ZERO_SUBSTITUTION_PATTERN');
 
   req(workflow.includes('PROBE_MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY.mjs'), 'EA1OB_EA1K_WORKFLOW_STEP_MISSING');
-  req(workflow.includes('eccodes==2.47.0') && workflow.includes('eccodeslib==2.47.3.23'), 'EA1OB_WORKFLOW_DECODER_PIN_MISSING');
-  req(workflow.includes('python -m eccodes selfcheck'), 'EA1OB_ECCODES_SELFCHECK_MISSING');
+  req(workflow.includes('Verify fail-closed sflux adjudication'), 'EA1OB_REJECTION_VERIFY_STEP_MISSING');
+  req(workflow.includes('REJECTED_AS_AMENDMENT02_DIRECT_1H_SOURCE_AUTHORITY'), 'EA1OB_WORKFLOW_REJECTION_ASSERTION_MISSING');
   req(workflow.includes('persist-credentials: false'), 'EA1OB_PERSIST_CREDENTIALS_FORBIDDEN');
-  req(!/DATABASE_URL|POSTGRES|NEON|psql|public\.facts|INSERT\s+INTO/i.test(workflow + '\n' + probe), 'EA1OB_DATABASE_OR_FORMAL_INGRESS_PRESENT');
+  req(!/eccodes|KBS|geometry|DATABASE_URL|POSTGRES|NEON|psql|public\.facts|INSERT\s+INTO/i.test(workflow + '\n' + probe), 'EA1OB_UNREACHED_STAGE_OR_DATABASE_PRESENT');
 
   Object.assign(result, {
     authority_blob: blob('HEAD', AUTH),
     probe_blob: blob('HEAD', PROBE),
     source_product: authority.source_candidate.product_family,
     source_parameter: authority.source_candidate.candidate_parameter,
-    live_qualification_required: true,
+    adjudication_decision: adjudication.decision,
+    exact_head_reproof_required: true,
     taskbook_changed: false,
     runtime_source_changed: false,
     database_write_count: 0,
