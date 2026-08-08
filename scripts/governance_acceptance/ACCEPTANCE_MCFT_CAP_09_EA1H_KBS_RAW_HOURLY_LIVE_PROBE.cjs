@@ -42,6 +42,7 @@ try {
 
   const config = json(CONFIG);
   const probe = read(PROBE);
+  const probeCompact = probe.replace(/\s+/g, '');
   const packageJson = json('package.json');
   const signal = json('docs/digital_twin/mcft/MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1.json');
 
@@ -89,23 +90,24 @@ try {
 
   assert.equal(packageJson.devDependencies['@playwright/test'], '^1.60.0', 'EA1H_PLAYWRIGHT_DEPENDENCY_REQUIRED');
   for (const marker of [
-    "import { chromium } from '@playwright/test'",
-    "getByRole('link', { name: CONFIG.source.download_locator.anchor_text })",
+    "import{chromium}from'@playwright/test'",
+    "getByRole('link',{name:CONFIG.source.download_locator.anchor_text})",
     'ensureOfficialDownload',
     'response_body_sha256',
     'EA1H_SOURCE_TOO_OLD:',
+    'EA1H_RECENT_PHYSICAL_SANITY_FAILURE_ROWS:',
     'EA1H_RECENT_ET0_INPUT_CONTINUITY_INSUFFICIENT:',
     'EA1H_RECENT_RAIN_CONTINUITY_INSUFFICIENT:',
-    'raw_numeric_values_emitted: false',
-    'raw_provider_payload_persisted: false',
-    'raw_provider_payload_uploaded: false',
-    'database_write_count: 0',
-    'formal_evidence_write_count: 0',
-    'formal_window_started: false',
-  ]) assert(probe.includes(marker), `EA1H_PROBE_MARKER_REQUIRED:${marker}`);
+    'raw_numeric_values_emitted:false',
+    'raw_provider_payload_persisted:false',
+    'raw_provider_payload_uploaded:false',
+    'database_write_count:0',
+    'formal_evidence_write_count:0',
+    'formal_window_started:false',
+  ]) assert(probeCompact.includes(marker), `EA1H_PROBE_MARKER_REQUIRED:${marker}`);
 
-  for (const forbidden of ['DATABASE_URL', 'INSERT INTO', 'public.facts', 'GEOX_MCFT_CAP09_S6_DATABASE_URL', "from 'pg'", 'from "pg"']) {
-    assert(!probe.includes(forbidden), `EA1H_DATABASE_OR_FORMAL_WRITE_FORBIDDEN:${forbidden}`);
+  for (const forbidden of ['DATABASE_URL', 'INSERT INTO', 'public.facts', 'GEOX_MCFT_CAP09_S6_DATABASE_URL', "from'pg'", 'from"pg"']) {
+    assert(!probeCompact.includes(forbidden.replace(/\s+/g, '')), `EA1H_DATABASE_OR_FORMAL_WRITE_FORBIDDEN:${forbidden}`);
   }
 
   assert(!signal.explicit_candidate_status_values.includes(config.record_status), 'EA1H_UNREGISTERED_CANDIDATE_STATUS_FORBIDDEN');
@@ -119,6 +121,7 @@ try {
     changed_files: changed,
     exact_file_count: changed.length,
     official_source: config.source.official_page,
+    source_guard_whitespace_insensitive: true,
     page_excerpt_not_live_authority: true,
     download_timestamp_controls_freshness: true,
     runtime_product_source_delta: 0,
