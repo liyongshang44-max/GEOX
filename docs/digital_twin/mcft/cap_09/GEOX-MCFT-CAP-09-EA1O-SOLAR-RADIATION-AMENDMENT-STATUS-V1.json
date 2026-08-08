@@ -1,0 +1,67 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1o_solar_radiation_amendment_status_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1O-SOLAR-RADIATION-AMENDMENT-STATUS-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA1O",
+  "record_status": "ARCHITECTURE_AMENDMENT_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "3d46d38206f27d5d7abe2ec24577979ab29c68f8",
+  "predecessor_authority": {
+    "amendment_01_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md",
+    "amendment_01_blob": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
+    "taskbook_v02_blob": "e427f64eaac3401130518defc046377088d00053",
+    "ea1n_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1N-GFS-VALUE-EXTRACTION-AUTHORITY-V1.json",
+    "ea1n_blob": "607af693cd2f7d8d80e18d5308c16e128d397e44",
+    "ea1n_merge_sha": "2c47df7d08d507b0f31f084cb047d2bd69210f73",
+    "ea1n_effect": "EA1N_FAIL_CLOSED_PGRB2_DSWRF_REJECTION_EA1O_AMENDMENT_REQUIRED",
+    "successor_routing_repair_merge_sha": "3d46d38206f27d5d7abe2ec24577979ab29c68f8"
+  },
+  "candidate_amendment": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-02-GFS-SOLAR-RADIATION-SOURCE-AUTHORITY.md",
+    "blob": "3ec68f7a33274ff96c5f613154b4357d2b057fd1",
+    "taskbook_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "taskbook_candidate_blob": "3e6bc630540108599771e5404c457eaee14946aa"
+  },
+  "source_exception": {
+    "scope": "FUTURE_ET0_SOLAR_RADIATION_INPUT_ONLY",
+    "provider": "NOAA_NCEP",
+    "model": "GFS",
+    "candidate_product": "gfs.tCCz.sfluxgrbfFFF.grib2",
+    "candidate_parameter": "DSWRF_SURFACE",
+    "required_statistical_semantics": "DIRECT_PRECEDING_ONE_HOUR_AVERAGE",
+    "source_unit": "W/m^2",
+    "static_inventory_record_fh001": 87,
+    "forbidden_interchange_record_fh001": 95,
+    "same_exact_gfs_cycle_required": true,
+    "pgrb2_primary_future_weather_preserved": true,
+    "sflux_source_authority_qualified": false,
+    "sflux_spatial_authority_qualified": false,
+    "direct_field_equivalence": false,
+    "interpolation_authorized": false
+  },
+  "contract_impact": {
+    "domain_model_delta": false,
+    "canonical_object_contract_delta": false,
+    "runtime_forcing_selector_delta": false,
+    "transaction_family_delta": false,
+    "migration_delta": false,
+    "runtime_product_source_delta": false,
+    "reason": "SOLAR_RADIATION_IS_A_DERIVATION_INPUT_TO_FUTURE_ET0_AND_EXISTING_CANONICAL_EVIDENCE_PROVENANCE_FIELDS_ARE_EXTENSIBLE"
+  },
+  "qualification_boundary": {
+    "static_ncep_inventory_is_live_authority": false,
+    "current_sflux_geometry_proven": false,
+    "current_sflux_72h_availability_proven": false,
+    "current_sflux_exact_record_uniqueness_proven": false,
+    "decoded_values_emitted": false,
+    "database_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "canonical_evidence_write_count": 0,
+    "future_et0_execution_count": 0,
+    "formal_window_started": false
+  },
+  "effectiveness_condition": "PRESENT_ON_PROTECTED_MAIN_UNDER_DELIVERY_POLICY",
+  "effective_claim_when_merged": "S6_SOLAR_RADIATION_SOURCE_ARCHITECTURE_AMENDMENT_EFFECTIVE_ONLY",
+  "first_legal_successor_action_when_effective": "EA1O_B_LIVE_SFLUX_SOURCE_AND_SPATIAL_QUALIFICATION",
+  "mcft_cap09_completed": false
+}
