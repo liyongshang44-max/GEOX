@@ -75,6 +75,8 @@ try {
   assert.equal(status.capability_line_id, 'MCFT-CAP-09');
   assert.equal(status.slice_id, 'MCFT-CAP-09.S6');
   assert.equal(status.scope_of_change, 'S6_ONLY');
+  assert.equal(status.record_status, 'S6_ARCHITECTURE_ADJUDICATION_AUTHORITY_WHEN_PRESENT_ON_PROTECTED_MAIN');
+  assert.equal(status.adjudication_effective_when_present_on_protected_main, true);
   assert.equal(status.s0_to_s5_reopened, false);
   assert.equal(status.canonical_kernel_change, false);
   assert.equal(status.canonical_object_contract_change, false);
@@ -85,7 +87,7 @@ try {
   assert.equal(status.formal_evidence_write_authorized, false);
   assert.equal(status.formal_window_started, false);
   assert.equal(status.formal_window_completed, false);
-  assert.equal(status.externally_effective, false);
+  assert.equal(status.s6_completion_externally_effective, false);
   assert.equal(status.mcft_cap_09_complete, false);
   assert.equal(status.architecture_rulings.cap08_kernel_authority_reused, true);
   assert.equal(status.architecture_rulings.cap08_replay_scope_identity_required, false);
@@ -120,6 +122,8 @@ try {
     database_write_delta: 0,
     delivery_control_plane_routing_delta: 1,
     routing_delta_scope: 'S0_WORKFLOW_ACCEPTS_S6_EA0_ONLY',
+    adjudication_effective_when_present_on_protected_main: true,
+    s6_completion_externally_effective: false,
     formal_window_started: false,
     unregistered_delivery_candidate_signal: false,
     taskbook_version: 'v0.2',
