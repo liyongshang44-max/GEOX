@@ -128,6 +128,8 @@ async function fetchPageAndOfficialCsv(context, source, requiredPageMarkers, req
   if (resolved.protocol !== 'https:' || resolved.hostname !== expected.hostname || resolved.pathname !== expected.pathname || resolved.search) {
     throw new Error(`${label}_DOWNLOAD_LOCATOR_MISMATCH`);
   }
+  const pageFinalUrl = response.url();
+  const pageBytes = await response.body();
   const downloadResponse = await context.request.get(resolved.href, { timeout: 120_000, headers: { accept: 'text/csv,text/plain;q=0.9,*/*;q=0.5' } });
   if (!downloadResponse.ok()) throw new Error(`${label}_CSV_HTTP_${downloadResponse.status()}`);
   const bytes = await downloadResponse.body();
@@ -137,7 +139,7 @@ async function fetchPageAndOfficialCsv(context, source, requiredPageMarkers, req
   const parsed = parseTabular(text, requiredCsvColumns, label);
   await page.close();
   return {
-    page: { final_url: response.url(), response_sha256: sha256(await response.body()), markers_verified: requiredPageMarkers.length },
+    page: { final_url: pageFinalUrl, response_sha256: sha256(pageBytes), markers_verified: requiredPageMarkers.length },
     csv: { final_url: resolved.href, response_sha256: sha256(bytes), response_bytes: bytes.byteLength, delimiter: parsed.delimiter, rows_scanned: parsed.rows.length, header_field_names: parsed.headers },
     rows: parsed.rows,
   };
