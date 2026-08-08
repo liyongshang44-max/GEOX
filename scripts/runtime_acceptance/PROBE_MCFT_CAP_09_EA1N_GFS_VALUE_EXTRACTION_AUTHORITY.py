@@ -5,11 +5,11 @@ import hashlib
 import json
 import math
 import os
+import re
 import sys
 import tempfile
 import time
 from datetime import datetime, timedelta, timezone
-from email.utils import parsedate_to_datetime
 from importlib.metadata import version as package_version
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -29,8 +29,15 @@ POINT_COUNT = 72
 MAX_LEAD = 120
 WIND_10M_TO_2M_FACTOR = 0.747951075
 SOLAR_WM2_TO_MJ_M2_H = 0.0036
+DIRECTORY_LISTING_TIME_BASIS = "UTC_OPERATIONAL_RECONCILED"
 OUTPUT = Path("acceptance-output/MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY_RESULT.json")
-USER_AGENT = "GEOX-MCFT-CAP-09-EA1N/1.4 (+exact-head qualification)"
+USER_AGENT = "GEOX-MCFT-CAP-09-EA1N/1.5 (+exact-head qualification)"
+LISTING_RE = re.compile(
+    r'href="(?P<name>gfs\.t\d{2}z\.pgrb2\.0p25\.f\d{3}(?:\.idx)?)"[^>]*>.*?</a>\s+'
+    r'(?P<stamp>\d{2}-[A-Za-z]{3}-\d{4}\s+\d{2}:\d{2})\s+'
+    r'(?P<size>[0-9.]+[KMGTP]?)',
+    re.IGNORECASE,
+)
 
 
 def iso(dt: datetime) -> str:
@@ -46,60 +53,18 @@ def sha256_json(value) -> str:
     return sha256_bytes(body)
 
 
-def request_bytes(url: str, method: str = "GET", timeout: int = 60, attempts: int = 3):
+def request_bytes(url: str, timeout: int = 60, attempts: int = 3):
     last = None
     for attempt in range(attempts):
         try:
-            req = Request(url, method=method, headers={"User-Agent": USER_AGENT, "Accept": "*/*"})
+            req = Request(url, method="GET", headers={"User-Agent": USER_AGENT, "Accept": "*/*"})
             with urlopen(req, timeout=timeout) as response:
-                body = b"" if method == "HEAD" else response.read()
-                return response.status, response.headers, body, response.geturl()
+                return int(response.status), response.headers, response.read(), response.geturl()
         except (HTTPError, URLError, TimeoutError) as exc:
             last = exc
             if attempt + 1 < attempts:
                 time.sleep(1.0 + attempt)
-    raise RuntimeError(f"HTTP_REQUEST_FAILED:{method}:{url}:{type(last).__name__}:{last}")
-
-
-def request_same_object_range_metadata(url: str, timeout: int = 30, attempts: int = 3):
-    requested = urlparse(url)
-    last = None
-    for attempt in range(attempts):
-        try:
-            req = Request(url, method="GET", headers={
-                "User-Agent": USER_AGENT,
-                "Accept": "*/*",
-                "Range": "bytes=0-0",
-            })
-            with urlopen(req, timeout=timeout) as response:
-                status = int(response.status)
-                if status not in (200, 206):
-                    raise RuntimeError(f"RANGE_METADATA_HTTP_{status}")
-                final_url = response.geturl()
-                final = urlparse(final_url)
-                if final.scheme != "https" or final.hostname != "nomads.ncep.noaa.gov":
-                    raise RuntimeError(f"RANGE_METADATA_FINAL_ORIGIN_REJECTED:{final.scheme}:{final.hostname}")
-                if final.path != requested.path or final.query != requested.query:
-                    raise RuntimeError(f"RANGE_METADATA_OBJECT_IDENTITY_DRIFT:{sha256_bytes(final_url.encode('utf-8'))}")
-                one_byte = response.read(1)
-                if len(one_byte) != 1:
-                    raise RuntimeError("RANGE_METADATA_FIRST_BYTE_MISSING")
-                return status, response.headers, final_url, final_url != url
-        except (HTTPError, URLError, TimeoutError, RuntimeError) as exc:
-            last = exc
-            if attempt + 1 < attempts:
-                time.sleep(1.0 + attempt)
-    raise RuntimeError(f"RANGE_METADATA_REQUEST_FAILED:{url}:{type(last).__name__}:{last}")
-
-
-def parse_last_modified(headers) -> datetime:
-    raw = headers.get("Last-Modified")
-    if not raw:
-        raise RuntimeError("MISSING_HTTP_LAST_MODIFIED")
-    dt = parsedate_to_datetime(raw)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+    raise RuntimeError(f"HTTP_REQUEST_FAILED:GET:{url}:{type(last).__name__}:{last}")
 
 
 def floor_utc_hour(dt: datetime) -> datetime:
@@ -111,33 +76,62 @@ def candidate_cycles(tick: datetime):
     return [base - timedelta(hours=back) for back in range(49) if (base - timedelta(hours=back)).hour in (0, 6, 12, 18)]
 
 
-def object_urls(cycle: datetime, lead: int):
-    date = cycle.strftime("%Y%m%d")
-    cc = cycle.strftime("%H")
-    stem = f"gfs.t{cc}z.pgrb2.0p25.f{lead:03d}"
-    root = f"{PRODUCTION_ROOT}/gfs.{date}/{cc}/atmos/{stem}"
-    return root, root + ".idx"
+def cycle_directory_url(cycle: datetime) -> str:
+    return f"{PRODUCTION_ROOT}/gfs.{cycle:%Y%m%d}/{cycle:%H}/atmos/"
 
 
-def prove_source_object_prior_available(url: str, tick: datetime):
-    status, headers, final_url, redirected = request_same_object_range_metadata(url, timeout=30, attempts=3)
-    last_modified = parse_last_modified(headers)
-    if last_modified > tick:
-        raise RuntimeError(f"SOURCE_OBJECT_AFTER_TICK:{url}:{iso(last_modified)}>{iso(tick)}")
-    content_range = headers.get("Content-Range") or ""
-    total_size = 0
-    if "/" in content_range:
-        tail = content_range.rsplit("/", 1)[1]
-        if tail.isdigit():
-            total_size = int(tail)
-    if total_size <= 0:
-        total_size = int(headers.get("Content-Length") or 0)
+def expected_object_names(cycle: datetime, lead: int):
+    stem = f"gfs.t{cycle:%H}z.pgrb2.0p25.f{lead:03d}"
+    return stem, stem + ".idx"
+
+
+def parse_size_token(token: str) -> float:
+    match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)([KMGTP]?)", token.strip(), re.IGNORECASE)
+    if not match:
+        raise RuntimeError(f"DIRECTORY_SIZE_TOKEN_UNPARSEABLE:{sha256_bytes(token.encode('utf-8'))}")
+    value = float(match.group(1))
+    factor = {"": 1, "K": 1024, "M": 1024**2, "G": 1024**3, "T": 1024**4, "P": 1024**5}[match.group(2).upper()]
+    return value * factor
+
+
+def parse_cycle_directory_listing(body: bytes):
+    text = body.decode("utf-8", errors="strict")
+    entries = {}
+    for match in LISTING_RE.finditer(text):
+        name = match.group("name")
+        stamp_text = match.group("stamp")
+        size_text = match.group("size")
+        minute_start = datetime.strptime(stamp_text, "%d-%b-%Y %H:%M").replace(tzinfo=timezone.utc)
+        upper_bound = minute_start + timedelta(seconds=59, microseconds=999999)
+        size_bytes_lower_bound = parse_size_token(size_text)
+        entries.setdefault(name, []).append({
+            "minute_start": minute_start,
+            "upper_bound": upper_bound,
+            "size_token": size_text,
+            "size_bytes_lower_bound": size_bytes_lower_bound,
+        })
+    return entries
+
+
+def fetch_cycle_directory_listing(cycle: datetime):
+    requested_url = cycle_directory_url(cycle)
+    status, headers, body, final_url = request_bytes(requested_url, timeout=60, attempts=3)
+    if status != 200:
+        raise RuntimeError(f"DIRECTORY_HTTP_{status}:{iso(cycle)}")
+    requested = urlparse(requested_url)
+    final = urlparse(final_url)
+    if final.scheme != "https" or final.hostname != "nomads.ncep.noaa.gov":
+        raise RuntimeError(f"DIRECTORY_FINAL_ORIGIN_REJECTED:{final.scheme}:{final.hostname}")
+    if final.path != requested.path or final.query != requested.query:
+        raise RuntimeError(f"DIRECTORY_OBJECT_IDENTITY_DRIFT:{sha256_bytes(final_url.encode('utf-8'))}")
+    content_type = (headers.get("Content-Type") or "").lower()
+    if "html" not in content_type:
+        raise RuntimeError(f"DIRECTORY_CONTENT_TYPE_NOT_HTML:{sha256_bytes(content_type.encode('utf-8'))}")
     return {
-        "last_modified": last_modified,
-        "content_length": total_size,
-        "final_host_path_hash": sha256_bytes(final_url.encode("utf-8")),
-        "metadata_http_status": status,
-        "same_object_redirect_followed": bool(redirected),
+        "url": requested_url,
+        "body_sha256": sha256_bytes(body),
+        "bytes": len(body),
+        "entries": parse_cycle_directory_listing(body),
     }
 
 
@@ -151,33 +145,48 @@ def select_complete_cycle(tick: datetime):
             rejections.append({"cycle": iso(cycle), "reason": "LEAD_RANGE_OUTSIDE_0_TO_120"})
             continue
         leads = list(range(support_lead, lead_end + 1))
-        last_modified_values = []
-        metadata_status_counts = {}
-        redirect_count = 0
         try:
+            listing = fetch_cycle_directory_listing(cycle)
+            required = []
+            upper_bounds = []
+            entry_identities = []
             for lead in leads:
-                grib_url, idx_url = object_urls(cycle, lead)
-                grib = prove_source_object_prior_available(grib_url, tick)
-                idx = prove_source_object_prior_available(idx_url, tick)
-                last_modified_values.extend([grib["last_modified"], idx["last_modified"]])
-                for item in (grib, idx):
-                    key = str(item["metadata_http_status"])
-                    metadata_status_counts[key] = metadata_status_counts.get(key, 0) + 1
-                    redirect_count += 1 if item["same_object_redirect_followed"] else 0
+                for name in expected_object_names(cycle, lead):
+                    matches = listing["entries"].get(name, [])
+                    if len(matches) != 1:
+                        raise RuntimeError(f"DIRECTORY_REQUIRED_ENTRY_NOT_UNIQUE:{name}:COUNT={len(matches)}")
+                    entry = matches[0]
+                    if entry["size_bytes_lower_bound"] <= 0:
+                        raise RuntimeError(f"DIRECTORY_REQUIRED_ENTRY_ZERO_SIZE:{name}")
+                    if entry["upper_bound"] > tick:
+                        raise RuntimeError(f"DIRECTORY_ENTRY_AFTER_TICK_UPPER_BOUND:{name}:{iso(entry['upper_bound'])}>{iso(tick)}")
+                    required.append(name)
+                    upper_bounds.append(entry["upper_bound"])
+                    entry_identities.append({
+                        "name": name,
+                        "minute_start": iso(entry["minute_start"]),
+                        "availability_upper_bound": iso(entry["upper_bound"]),
+                        "size_token": entry["size_token"],
+                    })
+            if len(required) != 146:
+                raise RuntimeError(f"DIRECTORY_REQUIRED_FILE_COUNT_FAIL:{len(required)}")
             return {
                 "cycle": cycle,
                 "lead_start": lead_start,
                 "lead_end": lead_end,
                 "support_lead": support_lead,
                 "leads": leads,
-                "last_modified_min": min(last_modified_values),
-                "last_modified_max": max(last_modified_values),
                 "candidate_rejections": rejections,
-                "metadata_status_counts": metadata_status_counts,
-                "same_object_redirect_count": redirect_count,
+                "directory_url_hash": sha256_bytes(listing["url"].encode("utf-8")),
+                "directory_listing_sha256": listing["body_sha256"],
+                "directory_listing_bytes": listing["bytes"],
+                "required_directory_entry_count": len(required),
+                "required_entry_identity_hash": sha256_json(entry_identities),
+                "availability_upper_bound_min": min(upper_bounds),
+                "availability_upper_bound_max": max(upper_bounds),
             }
         except Exception as exc:
-            rejections.append({"cycle": iso(cycle), "reason": str(exc)[:300]})
+            rejections.append({"cycle": iso(cycle), "reason": str(exc)[:400]})
     raise RuntimeError("NO_COMPLETE_GFS_CYCLE_BEFORE_TICK:" + json.dumps(rejections, separators=(",", ":")))
 
 
@@ -237,8 +246,7 @@ def role_for(short_name: str, name: str, type_of_level: str, level: float):
     if type_of_level == "surface":
         if short == "dswrf" or "downward short-wave radiation flux" in long_name or "downward shortwave radiation flux" in long_name:
             return "DOWNWARD_SHORTWAVE_SURFACE"
-        if short in {"tp", "apcp"} or long_name == "total precipitation":
-            return "TOTAL_PRECIPITATION_SURFACE"
+        if short in {"tp", "apcp"} or long_name == "total precipitation": return "TOTAL_PRECIPITATION_SURFACE"
     return None
 
 
@@ -285,8 +293,7 @@ def decode_subset(body: bytes, expected_cycle: datetime, requested_lead: int):
                         raise RuntimeError(f"DECODED_VALID_TIME_MISMATCH:{role}:{iso(valid_dt)}")
                     if not math.isfinite(value):
                         raise RuntimeError(f"NONFINITE_DECODED_VALUE:{role}:F{requested_lead:03d}")
-                    raw_message = bytes(codes_get_message(gid))
-                    section4 = grib2_section(raw_message, 4)
+                    section4 = grib2_section(bytes(codes_get_message(gid)), 4)
                     records.append({
                         "role":role,"short_name":short_name,"type_of_level":type_of_level,"level":level,
                         "step_type":step_type,"start_step":start_step,"end_step":end_step,"units":units,
@@ -326,16 +333,13 @@ def apcp_block_candidates(records, lead: int):
 def resolve_logical_apcp_block(records, lead: int):
     start = rolling_start(lead)
     candidates = apcp_block_candidates(records, lead)
-    if not candidates:
-        raise RuntimeError(f"APCP_BLOCK_LOGICAL_RECORD_MISSING:S{start}:E{lead}")
+    if not candidates: raise RuntimeError(f"APCP_BLOCK_LOGICAL_RECORD_MISSING:S{start}:E{lead}")
     section4_hashes = {r["section4_sha256"] for r in candidates}
     if len(section4_hashes) != 1:
         raise RuntimeError(f"APCP_BLOCK_DISTINCT_SECTION4_AMBIGUITY:S{start}:E{lead}:COUNT={len(candidates)}:SECTION4={len(section4_hashes)}")
-    value_hex = {float(r["value"]).hex() for r in candidates}
-    if len(value_hex) != 1:
+    if len({float(r["value"]).hex() for r in candidates}) != 1:
         raise RuntimeError(f"APCP_BLOCK_DUPLICATE_VALUE_MISMATCH:S{start}:E{lead}:COUNT={len(candidates)}")
-    units = {r["units"] for r in candidates}
-    if len(units) != 1:
+    if len({r["units"] for r in candidates}) != 1:
         raise RuntimeError(f"APCP_BLOCK_DUPLICATE_UNIT_MISMATCH:S{start}:E{lead}:COUNT={len(candidates)}")
     return candidates[0], len(candidates) - 1
 
@@ -368,15 +372,13 @@ def main():
     result = {
         "schema_version":"geox_mcft_cap09_ea1n_gfs_value_extraction_result_v1",
         "subject_sha":subject_sha,"base_main_sha":BASE_MAIN_SHA,"status":"FAIL","probe_started_at":iso(started),"tick_utc":iso(tick),
-        "production_metadata_probe_method":"RANGE_GET_BYTES_0_0_SAME_OBJECT_ONLY",
-        "head_302_transport_diagnostic":"REPEATED_ON_RUN_31254637254_ATTEMPTS_1_AND_2_BEFORE_VALUE_DECODING",
+        "production_chronology_transport":"OFFICIAL_NOMADS_PRODUCTION_CYCLE_DIRECTORY_INDEX",
+        "directory_listing_time_basis":DIRECTORY_LISTING_TIME_BASIS,
+        "directory_timestamp_upper_bound_policy":"LISTED_MINUTE_PLUS_59P999999_SECONDS",
         "precipitation_source_candidate":"APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE",
-        "rejected_precipitation_candidates":["PRATE_SIX_HOUR_ROLLING_AVERAGE_DIFFERENCE","APCP_EXACT_ONE_HOUR_ACCUMULATION_ONLY"],
         "provider_duplicate_semantics_commit":"58f99e14f2922d1ae3e05d2c41ea28c599a8c81d",
-        "provider_unmerge_source_blob":"df2be678da7d7855d38897592a18be154100fa92",
-        "provider_section_compare_source_blob":"2081a81dfe216604f614f82b48fa9af109a61039",
         "database_write_count":0,"formal_evidence_write_count":0,"future_et0_execution_count":0,"runtime_product_source_delta_count":0,
-        "raw_grib_subset_uploaded":False,"decoded_forecast_values_emitted":False,"normalized_forecast_values_emitted":False,"negative_value_clipping_performed":False,
+        "raw_directory_listing_uploaded":False,"raw_grib_subset_uploaded":False,"decoded_forecast_values_emitted":False,"normalized_forecast_values_emitted":False,"negative_value_clipping_performed":False,
         "physical_message_order_used_as_authority":False,"first_record_wins":False,
     }
     try:
@@ -385,15 +387,24 @@ def main():
         if result["decoder"]["eccodeslib"] != "2.47.3.23": raise RuntimeError("ECCODESLIB_VERSION_DRIFT")
 
         selected = select_complete_cycle(tick)
-        result.update({"selected_cycle":iso(selected["cycle"]),"lead_start":selected["lead_start"],"lead_end":selected["lead_end"],"support_lead":selected["support_lead"],"valid_time_start":iso(tick+timedelta(hours=1)),"valid_time_end":iso(tick+timedelta(hours=72)),"source_object_count":len(selected["leads"])*2,"production_last_modified_min":iso(selected["last_modified_min"]),"production_last_modified_max":iso(selected["last_modified_max"]),"candidate_cycle_rejection_count":len(selected["candidate_rejections"]),"production_metadata_status_counts":selected["metadata_status_counts"],"production_same_object_redirect_count":selected["same_object_redirect_count"]})
+        result.update({
+            "selected_cycle":iso(selected["cycle"]),"lead_start":selected["lead_start"],"lead_end":selected["lead_end"],"support_lead":selected["support_lead"],
+            "valid_time_start":iso(tick+timedelta(hours=1)),"valid_time_end":iso(tick+timedelta(hours=72)),"source_object_count":selected["required_directory_entry_count"],
+            "production_directory_listing_sha256":selected["directory_listing_sha256"],"production_directory_listing_bytes":selected["directory_listing_bytes"],
+            "production_required_directory_entry_count":selected["required_directory_entry_count"],"production_required_entry_identity_hash":selected["required_entry_identity_hash"],
+            "production_availability_upper_bound_min":iso(selected["availability_upper_bound_min"]),"production_availability_upper_bound_max":iso(selected["availability_upper_bound_max"]),
+            "candidate_cycle_rejection_count":len(selected["candidate_rejections"])
+        })
 
         by_lead, filter_hashes, metadata_for_hash, section4_identities = {}, [], [], []
         total_filter_bytes = extra_message_count = 0
         for lead in selected["leads"]:
             url = filter_url(selected["cycle"], lead)
-            status, _headers, body, final_url = request_bytes(url, method="GET", timeout=90, attempts=3)
+            status, _headers, body, final_url = request_bytes(url, timeout=90, attempts=3)
             if status != 200: raise RuntimeError(f"GRIB_FILTER_HTTP_{status}:F{lead:03d}")
-            if "nomads.ncep.noaa.gov" not in final_url: raise RuntimeError(f"GRIB_FILTER_FINAL_HOST_UNEXPECTED:F{lead:03d}")
+            final = urlparse(final_url)
+            if final.scheme != "https" or final.hostname != "nomads.ncep.noaa.gov" or final.path != "/cgi-bin/filter_gfs_0p25.pl":
+                raise RuntimeError(f"GRIB_FILTER_FINAL_IDENTITY_UNEXPECTED:F{lead:03d}")
             total_filter_bytes += len(body)
             filter_hashes.append({"lead":lead,"sha256":sha256_bytes(body),"bytes":len(body)})
             records, extras = decode_subset(body, selected["cycle"], lead)
@@ -406,18 +417,16 @@ def main():
 
         target_leads = list(range(selected["lead_start"], selected["lead_end"]+1))
         logical_apcp = {}
-        target_physical_count = target_semantic_duplicate_collapse_count = 0
+        target_physical_count = target_duplicate_collapses = 0
         for lead in target_leads:
-            candidates = apcp_block_candidates(by_lead[lead], lead)
-            target_physical_count += len(candidates)
+            target_physical_count += len(apcp_block_candidates(by_lead[lead], lead))
             rec, collapsed = resolve_logical_apcp_block(by_lead[lead], lead)
             logical_apcp[lead] = rec
-            target_semantic_duplicate_collapse_count += collapsed
+            target_duplicate_collapses += collapsed
         result["apcp_logical_target_count"] = len(logical_apcp)
         result["apcp_target_physical_message_count"] = target_physical_count
-        result["apcp_target_semantic_duplicate_collapse_count"] = target_semantic_duplicate_collapse_count
-        if len(logical_apcp) != POINT_COUNT:
-            raise RuntimeError(f"APCP_LOGICAL_BLOCK_72_OF_72_REQUIRED:COUNT={len(logical_apcp)}")
+        result["apcp_target_semantic_duplicate_collapse_count"] = target_duplicate_collapses
+        if len(logical_apcp) != POINT_COUNT: raise RuntimeError(f"APCP_LOGICAL_BLOCK_72_OF_72_REQUIRED:COUNT={len(logical_apcp)}")
 
         series = {name:[] for name in ["temperature_c","relative_humidity_percent","wind_2m_m_s","solar_mj_m2_h","precipitation_mm"]}
         ds_direct = ds_diff = apcp_direct = apcp_diff = support_duplicate_collapses = 0
@@ -428,7 +437,6 @@ def main():
             ds = find_dswrf_average(records,lead); apcp = logical_apcp[lead]
             assert_apcp_unit(apcp["units"],lead)
             for rec in (temp,rh,u,v,ds,apcp): assert_raw_sanity(rec,lead)
-
             start = rolling_start(lead); length = lead-start
             if length == 1:
                 hourly_ds = ds["value"]; precip_mm = apcp["value"]
@@ -439,16 +447,12 @@ def main():
                 ds_prev = find_dswrf_average(prev_records,lead-1)
                 apcp_prev, support_collapsed = resolve_logical_apcp_block(prev_records,lead-1)
                 support_duplicate_collapses += support_collapsed
-                if ds_prev["start_step"] != start or apcp_prev["start_step"] != start:
-                    raise RuntimeError(f"CROSS_BLOCK_DIFFERENCE_FORBIDDEN:F{lead:03d}")
+                if ds_prev["start_step"] != start or apcp_prev["start_step"] != start: raise RuntimeError(f"CROSS_BLOCK_DIFFERENCE_FORBIDDEN:F{lead:03d}")
                 hourly_ds = length*ds["value"] - (length-1)*ds_prev["value"]
                 precip_mm = apcp["value"] - apcp_prev["value"]
                 ds_diff += 1; apcp_diff += 1
-            if not math.isfinite(hourly_ds) or not 0 <= hourly_ds <= 1600:
-                raise RuntimeError(f"DERIVED_DSWRF_SANITY_FAIL_NO_CLIP:F{lead:03d}")
-            if not math.isfinite(precip_mm) or not 0 <= precip_mm <= 200:
-                raise RuntimeError(f"APCP_BLOCK_MONOTONICITY_OR_HOURLY_SANITY_FAIL_NO_CLIP:F{lead:03d}")
-
+            if not math.isfinite(hourly_ds) or not 0 <= hourly_ds <= 1600: raise RuntimeError(f"DERIVED_DSWRF_SANITY_FAIL_NO_CLIP:F{lead:03d}")
+            if not math.isfinite(precip_mm) or not 0 <= precip_mm <= 200: raise RuntimeError(f"APCP_BLOCK_MONOTONICITY_OR_HOURLY_SANITY_FAIL_NO_CLIP:F{lead:03d}")
             valid_time = selected["cycle"] + timedelta(hours=lead)
             series["temperature_c"].append((valid_time,temp["value"]-273.15))
             series["relative_humidity_percent"].append((valid_time,rh["value"]))
@@ -463,13 +467,10 @@ def main():
 
         result.update({
             "filter_response_count":len(filter_hashes),"filter_response_total_bytes":total_filter_bytes,
-            "filter_response_hash_chain_sha256":sha256_json(filter_hashes),"decoded_message_metadata_hash_chain_sha256":sha256_json(metadata_for_hash),
-            "section4_identity_hash_chain_sha256":sha256_json(section4_identities),
-            "decoded_recognized_message_count":len(metadata_for_hash),"decoded_extra_message_count":extra_message_count,
-            "apcp_support_semantic_duplicate_collapse_count":support_duplicate_collapses,
+            "filter_response_hash_chain_sha256":sha256_json(filter_hashes),"decoded_message_metadata_hash_chain_sha256":sha256_json(metadata_for_hash),"section4_identity_hash_chain_sha256":sha256_json(section4_identities),
+            "decoded_recognized_message_count":len(metadata_for_hash),"decoded_extra_message_count":extra_message_count,"apcp_support_semantic_duplicate_collapse_count":support_duplicate_collapses,
             "normalization_counts":{"dswrf_direct_1h":ds_direct,"dswrf_weighted_difference":ds_diff,"apcp_block_direct_1h":apcp_direct,"apcp_block_cumulative_difference":apcp_diff,"prate_used":0},
-            "normalized_series_point_counts":{name:len(points) for name,points in series.items()},
-            "normalized_series_hashes":{name:hash_series(points) for name,points in series.items()},
+            "normalized_series_point_counts":{name:len(points) for name,points in series.items()},"normalized_series_hashes":{name:hash_series(points) for name,points in series.items()},
             "physical_sanity_pass":True,"chronology_pass":True,"single_grid_point_pass":True,"message_semantics_reconciliation_pass":True,"provider_semantic_duplicate_rule_pass":True,"precipitation_source_correction_pass":True,
             "status":"PASS","qualification_effect":"GFS_72H_DECODED_AND_NORMALIZED_VALUE_PIPELINE_AUTHORITY_CANDIDATE_ONLY"
         })
@@ -478,9 +479,8 @@ def main():
         result["error"] = f"{type(exc).__name__}:{exc}"[:2000]
         OUTPUT.write_text(json.dumps(result,indent=2,sort_keys=True)+"\n",encoding="utf-8")
         raise
-
     OUTPUT.write_text(json.dumps(result,indent=2,sort_keys=True)+"\n",encoding="utf-8")
-    print(json.dumps({"status":result["status"],"subject_sha":subject_sha,"tick_utc":result["tick_utc"],"selected_cycle":result["selected_cycle"],"lead_start":result["lead_start"],"lead_end":result["lead_end"],"metadata_status_counts":result["production_metadata_status_counts"],"same_object_redirects":result["production_same_object_redirect_count"],"apcp_logical_target_count":result["apcp_logical_target_count"],"semantic_duplicate_collapses":result["apcp_target_semantic_duplicate_collapse_count"],"normalization_counts":result["normalization_counts"],"physical_sanity_pass":result["physical_sanity_pass"]},sort_keys=True))
+    print(json.dumps({"status":result["status"],"tick":result["tick_utc"],"cycle":result["selected_cycle"],"entries":result["production_required_directory_entry_count"],"availability_upper_max":result["production_availability_upper_bound_max"],"apcp_logical":result["apcp_logical_target_count"],"duplicate_collapses":result["apcp_target_semantic_duplicate_collapse_count"],"normalization":result["normalization_counts"]},sort_keys=True))
 
 
 if __name__ == "__main__":
