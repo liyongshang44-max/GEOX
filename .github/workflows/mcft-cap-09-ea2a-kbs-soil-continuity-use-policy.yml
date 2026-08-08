@@ -64,29 +64,34 @@ jobs:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY.mjs
 
-      - name: Verify completed fail-closed adjudication
-        shell: node
+      - name: Verify frozen final-head qualification pass
+        shell: node {0}
         run: |
           const fs = require('fs');
+          const authority = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA2A-KBS-SOIL-CONTINUITY-USE-POLICY-V1.json', 'utf8'));
           const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY_RESULT.json', 'utf8'));
+          const frozen = authority.frozen_discovery_observation;
+          if (authority.record_status !== 'EA2A_LIVE_QUALIFICATION_PASS_CANDIDATE_NOT_EFFECTIVE') throw new Error('EA2A_FROZEN_PASS_STATUS_REQUIRED');
+          if (!frozen || authority.live_qualification?.final_head_must_reprove_frozen_pass !== true) throw new Error('EA2A_FROZEN_REPROOF_AUTHORITY_REQUIRED');
           if (result.status !== 'PASS') throw new Error('EA2A_RESULT_PASS_REQUIRED');
           if (result.soil_source.endpoint_id !== 25) throw new Error('EA2A_ENDPOINT_25_REQUIRED');
           if (result.raw_soil_values_emitted !== false || result.raw_json_body_emitted !== false || result.raw_terms_body_emitted !== false) throw new Error('EA2A_PUBLIC_RAW_DATA_FORBIDDEN');
           if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0) throw new Error('EA2A_WRITE_FORBIDDEN');
           if (result.formal_site_authority_created !== false || result.formal_external_evidence_package_created !== false) throw new Error('EA2A_PREMATURE_FORMAL_AUTHORITY');
-          const allowed = new Set([
-            'QUALIFIED_KBS_ENDPOINT25_24H_CONTINUITY_AND_RESTRICTED_USE_POLICY_FOR_EA2_FORMAL_SITE_FREEZE',
-            'REJECTED_KBS_ENDPOINT25_24H_CONTINUITY_FOR_EA2_FORMAL_SITE_FREEZE',
-            'REJECTED_KBS_USE_POLICY_FOR_EA2_FORMAL_SITE_FREEZE',
-          ]);
-          if (!allowed.has(result.adjudication.decision)) throw new Error('EA2A_DECISION_NOT_GOVERNED');
-          console.log(JSON.stringify({
-            status: 'PASS',
-            decision: result.adjudication.decision,
-            continuity_qualified: result.adjudication.continuity_qualified,
-            use_policy_qualified: result.adjudication.use_policy_qualified,
-            package_freeze_consideration_qualified: result.adjudication.ea2_formal_package_freeze_consideration_qualified,
-          }));
+          if (result.adjudication.decision !== authority.qualification_effect.success_decision) throw new Error('EA2A_SUCCESS_DECISION_REQUIRED');
+          if (result.adjudication.continuity_qualified !== true || result.adjudication.use_policy_qualified !== true || result.adjudication.ea2_formal_package_freeze_consideration_qualified !== true) throw new Error('EA2A_QUALIFICATION_PASS_REQUIRED');
+          const c = result.continuity_qualification;
+          if (c.window_is_frozen_from_authority !== true) throw new Error('EA2A_FROZEN_WINDOW_REQUIRED');
+          if (c.window_start_utc !== frozen.window_start_utc || c.window_end_utc !== frozen.window_end_utc) throw new Error('EA2A_FROZEN_WINDOW_DRIFT');
+          if (c.distinct_point_count !== frozen.distinct_point_count || c.distinct_hour_bucket_count !== frozen.distinct_hour_bucket_count) throw new Error('EA2A_FROZEN_COVERAGE_COUNT_DRIFT');
+          if (c.span_minutes !== frozen.span_minutes || c.maximum_gap_minutes !== frozen.maximum_gap_minutes) throw new Error('EA2A_FROZEN_GAP_SPAN_DRIFT');
+          if (c.conflicting_duplicate_timestamp_count !== frozen.conflicting_duplicate_timestamp_count || c.invalid_vwc_fraction_count !== frozen.invalid_vwc_fraction_count) throw new Error('EA2A_FROZEN_VALIDITY_DRIFT');
+          if (c.timestamp_chain_sha256 !== frozen.timestamp_chain_sha256) throw new Error('EA2A_FROZEN_TIMESTAMP_CHAIN_DRIFT');
+          const u = result.use_policy_qualification;
+          if (u.terms_response_status !== frozen.terms_response_status || u.terms_page_sha256 !== frozen.terms_page_sha256 || u.terms_page_bytes !== frozen.terms_page_bytes) throw new Error('EA2A_FROZEN_TERMS_PAGE_DRIFT');
+          if (u.publication_restriction_phrase_present !== true || u.written_permission_phrase_present !== true || u.lead_investigator_and_project_director_phrase_present !== true || u.required_terms_semantics_matched !== true || u.use_policy_qualified !== true) throw new Error('EA2A_TERMS_SEMANTICS_REPROOF_FAIL');
+          if (u.public_raw_data_redistribution_authorized !== false || u.public_reconstructable_raw_data_artifact_authorized !== false || u.publication_without_written_permission_authorized !== false || u.commercial_reuse_rights_established !== false) throw new Error('EA2A_USE_RIGHTS_OVERCLAIM');
+          console.log(JSON.stringify({status:'PASS',decision:result.adjudication.decision,window_end_utc:c.window_end_utc,timestamp_chain_sha256:c.timestamp_chain_sha256,terms_page_sha256:u.terms_page_sha256}));
 
       - uses: actions/upload-artifact@v4
         if: always()
