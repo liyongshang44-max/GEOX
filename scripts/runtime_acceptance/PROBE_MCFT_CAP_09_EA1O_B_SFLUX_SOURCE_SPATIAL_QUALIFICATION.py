@@ -130,9 +130,9 @@ def parse_idx(text: str, lead: int) -> tuple[dict[str, Any], int]:
         if not line:
             continue
         parts = line.split(":")
-        if len(parts) < 5 or not parts[0].isdigit() or not parts[1].isdigit():
+        if len(parts) < 5 or not parts[1].isdigit():
             continue
-        rows.append({"record": int(parts[0]), "offset": int(parts[1]), "parts": parts, "line": line})
+        rows.append({"record_token": parts[0], "offset": int(parts[1]), "parts": parts, "line": line})
     require(len(rows) > 1, f"EA1OB_F{lead:03d}_IDX_RECORDS_REQUIRED")
     eligible: list[dict[str, Any]] = []
     forbidden_fcst_count = 0
