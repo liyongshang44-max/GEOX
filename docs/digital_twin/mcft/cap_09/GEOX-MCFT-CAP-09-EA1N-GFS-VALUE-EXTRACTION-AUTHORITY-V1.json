@@ -33,20 +33,53 @@
         "coverage": {"target_count":72,"unique_exact_1h_count":12,"missing_exact_1h_count":60,"ambiguous_exact_1h_count":0}
       }
     ],
-    "current_candidate": "APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE",
+    "current_candidate": "APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE",
     "block_start_rule": "S=6*floor((lead-1)/6)",
-    "selected_record_rule": "exactly_one surface APCP with stepType=accum,startStep=S,endStep=lead",
+    "logical_record_rule": "surface APCP with stepType=accum,startStep=S,endStep=lead; multiple physical messages are one logical record only when their raw GRIB Section 4 bytes are identical and their decoded selected-grid values are exactly identical",
     "when_L_eq_1": "hourly_mm=APCP(S,E)",
     "when_L_gt_1": "hourly_mm=APCP(S,E)-APCP(S,E-1)",
     "predecessor_rule": "same_start_step_S_required",
-    "required_target_coverage": 72,
+    "required_effective_target_coverage": 72,
     "cross_block_difference": false,
-    "missing_or_ambiguous_record": "FAIL_CLOSED",
+    "missing_logical_record": "FAIL_CLOSED",
+    "distinct_section4_ambiguity": "FAIL_CLOSED",
+    "duplicate_value_mismatch": "FAIL_CLOSED",
     "negative_difference": "FAIL_CLOSED_NO_CLIP",
     "fallback_to_prate": false,
     "fallback_to_exact_hour_only": false,
     "fallback_to_other_apcp_family": false,
     "status_before_exact_head_pass": "CANDIDATE_PENDING_VALUE_LEVEL_PROOF"
+  },
+  "run4_duplicate_diagnostic": {
+    "run_id": 31254245466,
+    "subject_sha": "f083aa97c2f8c43dc13a5950e8e29da65cc002ac",
+    "artifact_id": 9020918694,
+    "artifact_digest": "sha256:650bf1a4e61f388faf238f2036c8783c0ce73c6f5c4a373e4a237bb928aab596",
+    "result": "APCP_BLOCK_PHYSICAL_MESSAGE_UNIQUENESS_REJECTED_AT_F006_COUNT_2",
+    "coverage": {"target_count":72,"unique_physical_message_count":71,"missing_count":0,"ambiguous_physical_message_count":1},
+    "selected_cycle": "2026-08-08T06:00:00Z",
+    "tick": "2026-08-08T11:00:00Z",
+    "lead_start": 6,
+    "lead_end": 77,
+    "support_lead": 5,
+    "production_last_modified_max": "2026-08-08T09:51:48Z",
+    "interpretation": "PHYSICAL_DUPLICATION_REQUIRES_PROVIDER_SEMANTIC_ADJUDICATION_NOT_FIRST_RECORD_SELECTION"
+  },
+  "provider_duplicate_semantics_authority": {
+    "provider_code_repository": "NOAA-EMC/wgrib2",
+    "provider_code_commit": "58f99e14f2922d1ae3e05d2c41ea28c599a8c81d",
+    "unmerge_source_path": "src/Unmerge_fcst.c",
+    "unmerge_source_blob_sha": "df2be678da7d7855d38897592a18be154100fa92",
+    "section_compare_source_path": "src/test_sec.c",
+    "section_compare_source_blob_sha": "2081a81dfe216604f614f82b48fa9af109a61039",
+    "provider_ruling": "FV3_GFS_MAY_STORE_OLD_STYLE_AND_NEW_STYLE_ACCUMULATED_PRECIPITATION_TOGETHER_AND_RECORDS_CAN_HAVE_THE_SAME_NAME",
+    "provider_repeat_rule": "UNMERGE_FCST_IGNORES_A_REPEAT_WHEN_SAME_SEC4_RETURNS_BYTE_FOR_BYTE_SECTION4_EQUALITY",
+    "provider_series_rule": "SAME_SEC4_UNMERGE_FCST_REQUIRES_THE_STATISTICAL_PRODUCT_IDENTITY_TO_MATCH_WHILE_ALLOWING_VERIFICATION_TIME_AND_TIME_RANGE_LENGTH_TO_DIFFER",
+    "geox_stricter_duplicate_rule": "COLLAPSE_ONLY_IF_RAW_SECTION4_SHA256_IDENTICAL_AND_SELECTED_GRID_DECODED_VALUE_EXACTLY_IDENTICAL",
+    "physical_message_order_is_authority": false,
+    "first_record_wins": false,
+    "different_section4_messages_may_be_silently_collapsed": false,
+    "different_decoded_values_may_be_silently_collapsed": false
   },
   "decoder_supply_chain": {
     "python_version": "3.12",
@@ -82,7 +115,7 @@
     {"role":"U_WIND_10M","filter_variable":"UGRD","filter_level":"10_m_above_ground","provider_unit":"m_per_s","normalized_unit":"m_per_s"},
     {"role":"V_WIND_10M","filter_variable":"VGRD","filter_level":"10_m_above_ground","provider_unit":"m_per_s","normalized_unit":"m_per_s"},
     {"role":"DOWNWARD_SHORTWAVE_SURFACE","filter_variable":"DSWRF","filter_level":"surface","provider_unit":"W_per_m2","normalized_unit":"MJ_per_m2_per_hour"},
-    {"role":"TOTAL_PRECIPITATION_SURFACE","filter_variable":"APCP","filter_level":"surface","provider_unit":"kg_per_m2","normalized_unit":"mm_per_hour","selection":"SIX_HOUR_BLOCK_CUMULATIVE_FAMILY"}
+    {"role":"TOTAL_PRECIPITATION_SURFACE","filter_variable":"APCP","filter_level":"surface","provider_unit":"kg_per_m2","normalized_unit":"mm_per_hour","selection":"SIX_HOUR_BLOCK_CUMULATIVE_FAMILY_WITH_SECTION4_DUPLICATE_COLLAPSE"}
   ],
   "tick_cycle_and_lead_policy": {
     "tick_boundary": "FLOOR_EXACT_PROBE_START_TO_UTC_HOUR",
@@ -105,11 +138,12 @@
     "every_message_valid_time_must_equal_cycle_plus_end_step": true,
     "instantaneous_roles": ["AIR_TEMPERATURE_2M","RELATIVE_HUMIDITY_2M","U_WIND_10M","V_WIND_10M"],
     "dswrf_record_rule": "stepType=avg,startStep=S,endStep=lead",
-    "apcp_record_rule": "stepType=accum,startStep=S,endStep=lead",
+    "apcp_physical_message_rule": "stepType=accum,startStep=S,endStep=lead",
+    "apcp_logical_record_rule": "one physical message or a set of semantic duplicates satisfying identical raw Section4 SHA256 and exactly identical decoded selected-grid value",
     "rolling_block_hours": 6,
     "rolling_start_rule": "S=6*floor((lead-1)/6)",
-    "required_unique_target_count_per_statistical_role": 72,
-    "unmatched_or_ambiguous_message": "FAIL_CLOSED"
+    "required_effective_target_count_per_statistical_role": 72,
+    "unmatched_or_distinct_ambiguity": "FAIL_CLOSED"
   },
   "normalization": {
     "temperature": "degC=K-273.15",
@@ -119,9 +153,9 @@
     "dswrf_when_L_eq_1": "hourly_mean_Wm2=A(S,E)",
     "dswrf_when_L_gt_1": "hourly_mean_Wm2=L*A(S,E)-(L-1)*A(S,E-1)",
     "solar_for_future_et0": "Rs_MJ_m2_h=hourly_mean_Wm2*0.0036",
-    "precipitation_source": "APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE",
-    "precip_when_L_eq_1": "mm_per_hour=APCP(S,E)",
-    "precip_when_L_gt_1": "mm_per_hour=APCP(S,E)-APCP(S,E-1)",
+    "precipitation_source": "APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE",
+    "precip_when_L_eq_1": "mm_per_hour=logical_APCP(S,E)",
+    "precip_when_L_gt_1": "mm_per_hour=logical_APCP(S,E)-logical_APCP(S,E-1)",
     "water_equivalent_identity": "1_kg_m2_equals_1_mm",
     "cross_block_differencing": false,
     "missing_predecessor_imputation": false,
@@ -142,12 +176,12 @@
     "raw_grib_subset_persisted_or_uploaded": false,
     "decoded_forecast_values_emitted": false,
     "normalized_forecast_values_emitted": false,
-    "safe_output_may_include": ["subject_sha","tick","selected_cycle","lead_bounds","production_last_modified_bounds","filter_response_hash_chain","decoded_message_metadata_hash_chain","normalized_series_hashes","block_family_coverage_counts","physical_sanity_booleans","decoder_versions","no_write_flags"],
+    "safe_output_may_include": ["subject_sha","tick","selected_cycle","lead_bounds","production_last_modified_bounds","filter_response_hash_chain","decoded_message_metadata_hash_chain","section4_hash_chain","normalized_series_hashes","logical_record_coverage_counts","semantic_duplicate_collapse_count","physical_sanity_booleans","decoder_versions","no_write_flags"],
     "series_hash_is_not_formal_evidence": true
   },
   "qualification_effect": {
     "probe_may_establish": "GFS_72H_DECODED_AND_NORMALIZED_VALUE_PIPELINE_AUTHORITY_CANDIDATE_ONLY",
-    "passing_probe_may_correct_precipitation_source_to": "APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE",
+    "passing_probe_may_correct_precipitation_source_to": "APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE",
     "future_weather_canonical_evidence_created": false,
     "future_et0_calculated": false,
     "future_et0_canonical_evidence_created": false,
@@ -157,6 +191,6 @@
     "formal_window_started": false
   },
   "hard_nonclaims": [
-    "NO_OPEN_DAP_DEPENDENCY","NO_UNPINNED_DECODER_DEPENDENCY","NO_GRIB_FILTER_RESPONSE_AS_SOURCE_AVAILABILITY_AUTHORITY","NO_KBS_GEOMETRY_READ_IN_EA1N","NO_INTERPOLATION","NO_FIELD_SCALE_FORECAST_TRUTH","NO_PRATE_FALLBACK","NO_EXACT_HOUR_ONLY_APCP_FALLBACK","NO_CROSS_BLOCK_APCP_DIFFERENCE","NO_NEGATIVE_PRECIPITATION_CLIPPING","NO_RAW_GRIB_ARTIFACT","NO_FORECAST_VALUE_OUTPUT","NO_CANONICAL_EVIDENCE_WRITE","NO_FUTURE_ET0_EXECUTION","NO_DATABASE_WRITE","NO_RUNTIME_PRODUCT_SOURCE_DELTA","NO_FORMAL_WINDOW_START","NO_MCFT_CAP_09_COMPLETION"
+    "NO_OPEN_DAP_DEPENDENCY","NO_UNPINNED_DECODER_DEPENDENCY","NO_GRIB_FILTER_RESPONSE_AS_SOURCE_AVAILABILITY_AUTHORITY","NO_KBS_GEOMETRY_READ_IN_EA1N","NO_INTERPOLATION","NO_FIELD_SCALE_FORECAST_TRUTH","NO_FIRST_RECORD_WINS","NO_PHYSICAL_MESSAGE_ORDER_AUTHORITY","NO_DISTINCT_SECTION4_COLLAPSE","NO_DUPLICATE_VALUE_MISMATCH_COLLAPSE","NO_PRATE_FALLBACK","NO_EXACT_HOUR_ONLY_APCP_FALLBACK","NO_CROSS_BLOCK_APCP_DIFFERENCE","NO_NEGATIVE_PRECIPITATION_CLIPPING","NO_RAW_GRIB_ARTIFACT","NO_FORECAST_VALUE_OUTPUT","NO_CANONICAL_EVIDENCE_WRITE","NO_FUTURE_ET0_EXECUTION","NO_DATABASE_WRITE","NO_RUNTIME_PRODUCT_SOURCE_DELTA","NO_FORMAL_WINDOW_START","NO_MCFT_CAP_09_COMPLETION"
   ]
 }
