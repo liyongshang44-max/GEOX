@@ -3,10 +3,11 @@ name: mcft-cap-09-s6-external-evidence-authority-adjudication
 on:
   pull_request:
     paths:
+      - '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml'
       - '.github/workflows/mcft-cap-09-s6-external-evidence-authority-adjudication.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-EXTERNAL-EVIDENCE-AUTHORITY-STATUS-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EXTERNAL-EVIDENCE-AUTHORITY-STATUS-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_EXTERNAL_EVIDENCE_AUTHORITY_ADJUDICATION.cjs'
   merge_group:
     types: [checks_requested]
