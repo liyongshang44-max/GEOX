@@ -1,10 +1,10 @@
 {
-  "schema_version": "geox_mcft_cap09_ea1o_b_sflux_source_spatial_qualification_v1",
+  "schema_version": "geox_mcft_cap09_ea1o_b_sflux_direct_1h_source_adjudication_v2",
   "authority_id": "GEOX-MCFT-CAP-09-EA1O-B-SFLUX-SOURCE-SPATIAL-QUALIFICATION-V1",
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S6",
   "sub_lifecycle": "S6-EA1O",
-  "record_status": "EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE",
+  "record_status": "EA1O_B_SFLUX_DIRECT_1H_SOURCE_REJECTION_CANDIDATE_NOT_EFFECTIVE",
   "base_main_sha": "ce38bc250fb9ddb1aabd0475baafc85939046695",
   "predecessor_authorities": [
     {
@@ -15,7 +15,7 @@
     {
       "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-02-GFS-SOLAR-RADIATION-SOURCE-AUTHORITY.md",
       "blob_sha": "3ec68f7a33274ff96c5f613154b4357d2b057fd1",
-      "consumed_ruling": "SFLUX_EXCEPTION_IS_FUTURE_ET0_SOLAR_INPUT_ONLY_AND_REQUIRES_SAME_CYCLE_LIVE_SOURCE_AND_SPATIAL_REFREEZE"
+      "consumed_ruling": "EA1O_REQUIRES_EXACTLY_ONE_DIRECT_PRECEDING_ONE_HOUR_SURFACE_DSWRF_RECORD_PER_EACH_OF_72_TARGET_INTERVALS_AND_ANY_FAILED_ITEM_FAILS_CLOSED"
     },
     {
       "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1K-GFS-EXACT-CYCLE-72H-AUTHORITY-V1.json",
@@ -25,7 +25,7 @@
     {
       "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1M-GFS-SPATIAL-EXTRACTION-AUTHORITY-V1.json",
       "blob_sha": "bb487c0c6a91dd37b0409b5d446aec4707f7b0a4",
-      "consumed_ruling": "KBS_MCSE_T1R1_CURRENT_POLYGON_MAY_BE_READ_TRANSIENTLY_BUT_PGRB2_GRID_COORDINATES_MAY_NOT_BE_REUSED_FOR_SFLUX"
+      "consumed_ruling": "PGRB2_SPATIAL_AUTHORITY_CANNOT_BE_REUSED_FOR_SFLUX"
     },
     {
       "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1N-GFS-VALUE-EXTRACTION-AUTHORITY-V1.json",
@@ -51,57 +51,45 @@
     "missing_last_modified": "FAIL_CLOSED",
     "future_file_waiting_forbidden": true,
     "valid_time_rewrite_forbidden": true,
-    "wrong_record_semantics_forbidden": "N_HOUR_FCST_DSWRF_IS_NOT_INTERVAL_AVERAGE"
+    "n_hour_fcst_record_authorized": false,
+    "expanding_window_weighted_difference_authorized": false,
+    "rolling_average_reconstruction_authorized": false,
+    "alternative_source_substitution_authorized": false
   },
-  "transport_and_decoder": {
-    "transport": "PRODUCTION_HTTPS_IDX_PLUS_EXACT_GRIB_MESSAGE_BYTE_RANGE",
-    "full_global_grib_download_forbidden": true,
-    "nomads_grib_filter_assumed_available": false,
-    "range_must_resolve_exact_idx_message": true,
-    "python": "3.12",
-    "eccodes": "2.47.0",
-    "eccodeslib": "2.47.3.23",
-    "decoder_selfcheck": "python -m eccodes selfcheck"
+  "live_discovery_evidence": {
+    "authority_class": "NON_FINAL_DISCOVERY_EVIDENCE_REQUIRES_EXACT_HEAD_REPROOF",
+    "subject_sha": "fe516d333fd6eab93bb9536097318d30d10d2a81",
+    "workflow_run_id": 31266027190,
+    "qualification_tick_boundary_utc": "2026-08-08T16:00:00Z",
+    "selected_cycle_utc": "2026-08-08T12:00:00Z",
+    "lead_start": 5,
+    "lead_end": 76,
+    "observed_surface_dswrf_pattern": "SIX_HOUR_BLOCK_EXPANDING_AVERAGE_WINDOWS_PLUS_N_HOUR_FCST",
+    "representative_records": [
+      "F005:0-5 hour ave fcst",
+      "F006:0-6 hour ave fcst",
+      "F007:6-7 hour ave fcst",
+      "F011:6-11 hour ave fcst",
+      "F012:6-12 hour ave fcst",
+      "F013:12-13 hour ave fcst"
+    ],
+    "direct_preceding_1h_count_expected_on_reproof": 12,
+    "multi_hour_average_count_expected_on_reproof": 60,
+    "average_window_length_hours_set_expected_on_reproof": [1, 2, 3, 4, 5, 6]
   },
-  "site_geometry_source": {
-    "provider": "KBS_LTER",
-    "official_page": "https://lter.kbs.msu.edu/datatables/829",
-    "download_url": "https://lter.kbs.msu.edu/datatables/829.csv",
-    "datatable_id": "KBS039-006.40",
-    "selected_row": {
-      "treatment": "T1",
-      "replicate": "R1",
-      "subplot": "main",
-      "expected_match_count": 1
-    },
-    "required_srid": 4326,
-    "raw_geometry_may_be_committed": false,
-    "raw_geometry_may_be_uploaded_as_ci_artifact": false,
-    "centroid_coordinate_may_be_emitted": false
-  },
-  "sflux_spatial_policy": {
-    "grid_definition_source": "LIVE_PRODUCTION_SFLUX_GRIB_MESSAGE_ONLY",
-    "predeclared_numeric_grid_forbidden": true,
-    "silent_pgrb2_sflux_grid_equivalence_forbidden": true,
-    "selection_algorithm": "CURRENT_POLYGON_CENTROID_AND_ALL_UNIQUE_VERTICES_ECCODES_NEAREST_NATIVE_SFLUX_POINT_V1",
-    "interpolation_method": "NONE_NEAREST_NATIVE_GRID_POINT",
-    "interpolation_authorized": false,
-    "required_consensus": "POLYGON_CENTROID_AND_EVERY_UNIQUE_VERTEX_SELECT_IDENTICAL_NATIVE_SFLUX_POINT",
-    "direct_field_equivalence": false,
-    "model_grid_is_observation_truth": false,
-    "selected_native_point_may_be_emitted": true,
-    "raw_polygon_emitted": false,
-    "centroid_coordinate_emitted": false
-  },
-  "value_sanity_policy": {
-    "all_72_messages_must_decode": true,
-    "all_72_selected_point_values_must_be_finite": true,
-    "all_72_selected_point_values_must_be_nonnegative": true,
-    "negative_clipping_forbidden": true,
-    "zero_thresholding_forbidden": true,
-    "silent_imputation_forbidden": true,
-    "decoded_values_may_be_emitted": false,
-    "normalized_sequence_hash_may_be_emitted": true
+  "adjudication": {
+    "decision": "REJECTED_AS_AMENDMENT02_DIRECT_1H_SOURCE_AUTHORITY",
+    "reason": "SFLUX_DOES_NOT_EXPOSE_ONE_DIRECT_PRECEDING_ONE_HOUR_SURFACE_DSWRF_AVERAGE_FOR_EACH_OF_THE_72_REQUIRED_TARGET_INTERVALS",
+    "amendment_02_required_direct_1h_count": 72,
+    "exact_head_reproof_required": true,
+    "exact_head_reproof_expected_direct_1h_count": 12,
+    "exact_head_reproof_expected_multi_hour_count": 60,
+    "source_authority_qualified": false,
+    "spatial_authority_qualified": false,
+    "spatial_stage_disposition": "NOT_REACHED_SOURCE_SEMANTICS_FAIL_CLOSED",
+    "value_stage_disposition": "NOT_REACHED_SOURCE_SEMANTICS_FAIL_CLOSED",
+    "grib_message_download_required_after_source_rejection": false,
+    "kbs_geometry_read_required_after_source_rejection": false
   },
   "probe_output_policy": {
     "raw_directory_listing_emitted": false,
@@ -115,24 +103,19 @@
       "valid_time_start_end",
       "last_modified_bounds",
       "idx_hash_chain",
-      "grib_message_hash_chain",
-      "direct_1h_record_uniqueness_count",
-      "forbidden_fcst_record_presence_count",
-      "live_sflux_grid_type",
-      "live_sflux_grid_definition_digest",
-      "selected_native_grid_latitude",
-      "selected_native_grid_longitude",
-      "selected_native_grid_index",
-      "centroid_to_native_point_distance_km",
-      "maximum_vertex_to_native_point_distance_km",
-      "all_vertices_and_centroid_same_native_point_boolean",
-      "finite_value_count",
-      "nonnegative_value_count",
-      "normalized_value_sequence_sha256"
+      "surface_dswrf_descriptor_hash_chain",
+      "direct_1h_record_count",
+      "multi_hour_average_record_count",
+      "average_window_length_hours_set",
+      "forbidden_n_hour_fcst_presence_count",
+      "direct_1h_lead_set_hash",
+      "non_direct_1h_lead_set_hash",
+      "source_qualification_boolean",
+      "spatial_stage_disposition"
     ]
   },
   "qualification_effect": {
-    "probe_may_establish": "EA1O_B_LIVE_SFLUX_SOURCE_AND_SPATIAL_QUALIFICATION_CANDIDATE_ONLY",
+    "probe_may_establish": "EA1O_B_SFLUX_DIRECT_1H_SOURCE_REJECTION_CANDIDATE_ONLY",
     "sflux_source_authority_qualified_without_effective_merge": false,
     "sflux_spatial_authority_qualified_without_effective_merge": false,
     "future_et0_execution_authorized": false,
@@ -144,9 +127,20 @@
     "formal_window_started": false,
     "mcft_cap09_completed": false
   },
+  "successor_governance": {
+    "next_action_class_if_rejection_becomes_effective": "S6_ARCHITECTURE_ADJUDICATION_REQUIRED",
+    "specific_successor_design_pre_authorized": false,
+    "sflux_expanding_window_reconstruction_requires_separate_architecture_authority": true,
+    "another_provider_or_product_requires_separate_architecture_authority": true,
+    "ea2_may_start": false,
+    "formal_o00_o23_may_start": false
+  },
   "hard_nonclaims": [
+    "NO_SFLUX_SOURCE_QUALIFICATION",
+    "NO_SFLUX_SPATIAL_QUALIFICATION",
+    "NO_SFLUX_EXPANDING_WINDOW_RECONSTRUCTION",
     "NO_PGRB2_DSWRF_FALLBACK",
-    "NO_SILENT_PGRB2_SFLUX_GRID_EQUIVALENCE",
+    "NO_N_HOUR_FCST_AS_INTERVAL_AVERAGE",
     "NO_CROSS_CYCLE_SOLAR_SUBSTITUTION",
     "NO_FUTURE_FILE_WAIT",
     "NO_VALID_TIME_REWRITE",
@@ -154,7 +148,6 @@
     "NO_ZERO_THRESHOLDING",
     "NO_SILENT_IMPUTATION",
     "NO_INTERPOLATION",
-    "NO_RAW_KBS_GEOMETRY_PUBLICATION",
     "NO_RAW_SFLUX_IDX_PUBLICATION",
     "NO_RAW_SFLUX_GRIB_PUBLICATION",
     "NO_DECODED_FORECAST_VALUE_PUBLICATION",
