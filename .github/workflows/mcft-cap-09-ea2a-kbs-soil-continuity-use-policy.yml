@@ -51,6 +51,17 @@ jobs:
             echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Report exact predecessor Git blobs
+        shell: bash
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          EA1E='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1E-KBS-TRANSIENT-ROLE-MAP-PROBE-V1.json'
+          EA1OD='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-D-INSTANTANEOUS-SOLAR-LIVE-QUALIFICATION-V1.json'
+          echo "EA2A_EXACT_EA1E_BLOB=$(git rev-parse "${MCFT_BASE_SHA}:${EA1E}")"
+          echo "EA2A_EXACT_EA1OD_BLOB=$(git rev-parse "${MCFT_BASE_SHA}:${EA1OD}")"
+
       - name: Validate exact EA2A no-write governance boundary
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
