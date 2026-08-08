@@ -5,26 +5,26 @@
   "slice_id": "MCFT-CAP-09.S6",
   "sub_lifecycle": "S6-EA2",
   "record_status": "EA2_FORMAL_EXTERNAL_EVIDENCE_PACKAGE_FREEZE_WHEN_PRESENT_ON_PROTECTED_MAIN",
-  "base_main_sha": "dd1d2e73afd4d6c707235f07b639a7cb11a899c9",
+  "base_main_sha": "5550153edcc775452ba5ded8edbc371af4a86051",
   "effectiveness_rule": "PRESENT_ON_PROTECTED_MAIN_AND_EA2_EXACT_BOUNDARY_GATE_PASS",
   "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
   "amendment_01_blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
   "supporting_authorities": {
     "site_authority": {
       "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V1.json",
-      "blob_sha": "926265e46073c86cfcf711eba49a829517bf6edb"
+      "blob_sha": "eb9eb1880e01eb16430c177be6e2ef2dc36b3ca8"
     },
     "reality_binding": {
       "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V1.json",
-      "blob_sha": "8462233b755a9447bc15260c8b250c1c85d82d82"
+      "blob_sha": "dedc8db6e2e3c902066ed94b0d3322a69775b7b6"
     },
     "crop_context": {
       "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
-      "blob_sha": "6bd9de80643229ac7782c883823583630916d66a"
+      "blob_sha": "b5de9d29189cb654444b3f57d00df290eefe16d3"
     },
     "source_bindings": {
       "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json",
-      "blob_sha": "4e65c12bb59a99ec76283988fc251e82f1d19b9b"
+      "blob_sha": "30b7910a1bd27882b80eb56041924d0f6252ae02"
     },
     "model_prior": {
       "ref": "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
