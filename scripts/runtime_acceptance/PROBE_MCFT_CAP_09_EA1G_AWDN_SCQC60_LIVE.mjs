@@ -53,33 +53,17 @@ async function fetchJson(params, label) {
       attempts.push({ ...req, response_status: null, transport_error: safeError(error), failover_used: false });
       throw new Error(`${label}_TRANSPORT_FAILURE`);
     }
-
-    const basicAttempt = {
-      ...req,
-      response_status: response.status,
-      content_type: String(response.headers.get('content-type')||'').split(';')[0],
-      failover_used: false,
-    };
-
+    const basicAttempt = { ...req, response_status: response.status, content_type: String(response.headers.get('content-type')||'').split(';')[0], failover_used: false };
     if (!response.ok) {
       const mayFailover = CONFIG.transport_policy.http_403_or_404_may_failover === true && [403,404].includes(response.status) && index < CONFIG.web_service_base_urls.length - 1;
       attempts.push({ ...basicAttempt, failover_used: mayFailover });
       if (mayFailover) continue;
       throw new Error(`${label}_HTTP_${response.status}`);
     }
-
     const bytes = new Uint8Array(await response.arrayBuffer());
     let json;
     try { json = JSON.parse(new TextDecoder().decode(bytes)); } catch { throw new Error(`${label}_JSON_REQUIRED`); }
-    const evidence = {
-      request: req,
-      response_status: response.status,
-      content_type: basicAttempt.content_type,
-      response_body_sha256: sha256(bytes),
-      response_bytes: bytes.byteLength,
-      final_provider_host: req.host,
-      transport_attempts: [...attempts, { ...basicAttempt, response_body_sha256: sha256(bytes), response_bytes: bytes.byteLength }],
-    };
+    const evidence = { request: req, response_status: response.status, content_type: basicAttempt.content_type, response_body_sha256: sha256(bytes), response_bytes: bytes.byteLength, final_provider_host: req.host, transport_attempts: [...attempts, { ...basicAttempt, response_body_sha256: sha256(bytes), response_bytes: bytes.byteLength }] };
     return { json, evidence };
   }
   throw new Error(`${label}_OFFICIAL_HOSTS_EXHAUSTED`);
@@ -126,10 +110,7 @@ function findRecordArray(json) {
   arrays.sort((a,b)=>b.records.length-a.records.length);
   return arrays[0] || null;
 }
-function recordTime(record,timeKeys) {
-  for (const key of timeKeys) { const parsed=parseTime(record[key]); if (parsed!==null) return parsed; }
-  return null;
-}
+function recordTime(record,timeKeys) { for (const key of timeKeys) { const parsed=parseTime(record[key]); if (parsed!==null) return parsed; } return null; }
 function parseFlaggedNumber(raw) {
   if (typeof raw === 'number' && Number.isFinite(raw)) return { valid:true, flag:null };
   if (typeof raw !== 'string') return { valid:false, flag:null };
@@ -147,9 +128,7 @@ function companionFlag(record,field) {
   }
   return null;
 }
-function roleFieldCandidates(keys,role) {
-  return keys.filter((key)=>!/(flag|qc|quality)/i.test(key) && role.field_name_patterns.some((pattern)=>normalize(key).includes(normalize(pattern))));
-}
+function roleFieldCandidates(keys,role) { return keys.filter((key)=>!/(flag|qc|quality)/i.test(key) && role.field_name_patterns.some((pattern)=>normalize(key).includes(normalize(pattern)))); }
 function analyzeRole(records,timeKeys,fields,latestRecordTime) {
   const floor = latestRecordTime - CONFIG.freshness_and_continuity.recent_window_hours*HOUR_MS;
   return fields.map((field)=>{
@@ -172,7 +151,7 @@ let discoveryEvidence=null, observationEvidence=null, stationCandidates=[];
 try {
   if (!SUBJECT_SHA || !/^[0-9a-f]{40}$/.test(SUBJECT_SHA)) throw new Error('EA1G_EXACT_SUBJECT_SHA_REQUIRED');
   validateTransportConfig();
-  const discovery = await fetchJson({ active:CONFIG.discovery_request.product_id, network:CONFIG.discovery_request.network, format:CONFIG.discovery_request.format }, 'EA1G_ACTIVE');
+  const discovery = await fetchJson({ active:CONFIG.discovery_request.product_id, network:CONFIG.discovery_request.network }, 'EA1G_ACTIVE');
   discoveryEvidence=discovery.evidence;
   stationCandidates=discoverStationCandidates(discovery.json);
   if (!stationCandidates.length) throw new Error('EA1G_HICKORY_CORNERS_NOT_FOUND_IN_ACTIVE_ENVIRONET_SCQC60');
@@ -212,14 +191,7 @@ try {
   if (!solarQualified.length) throw new Error('EA1G_SCQC60_NO_SOLAR_FIELD_WITH_24_UNESTIMATED_RECENT_HOURS');
   if (!rainQualified.length) throw new Error('EA1G_SCQC60_NO_RAIN_FIELD_WITH_24_UNESTIMATED_RECENT_HOURS');
 
-  const result={
-    schema_version:'geox_mcft_cap09_ea1g_awdn_scqc60_live_probe_result_v1', status:'PASS', subject_sha:SUBJECT_SHA, provider:CONFIG.provider, network:CONFIG.network, product_id:CONFIG.product_id,
-    discovery:{...discoveryEvidence, matched_station_candidate_count:stationCandidates.length, station_candidates:stationCandidates},
-    observation:{...observationEvidence, selected_station_public_identifier:chosen.name, record_array_path:recordArray.path, record_field_names:recordArray.keys, time_field_names:recordArray.timeKeys, record_count:recordArray.records.length, earliest_timestamp:new Date(earliest).toISOString(), latest_timestamp:new Date(latest).toISOString(), source_age_hours:Number(ageHours.toFixed(3)), raw_values_emitted:false},
-    role_evidence:{ solar_radiation:{matched_fields:solar, qualified_unestimated_fields:solarQualified.map((x)=>x.field_name)}, rainfall:{matched_fields:rainfall, qualified_unestimated_fields:rainQualified.map((x)=>x.field_name)} },
-    estimated_value_policy_enforced:true, forbidden_observed_flags:CONFIG.estimated_value_policy.forbidden_as_observed_flags,
-    formal_source_authority_created:false, qualified_formal_site:false, raw_numeric_observation_values_emitted:false, raw_response_body_persisted:false, database_write_count:0, formal_evidence_write_count:0, formal_window_started:false
-  };
+  const result={schema_version:'geox_mcft_cap09_ea1g_awdn_scqc60_live_probe_result_v1',status:'PASS',subject_sha:SUBJECT_SHA,provider:CONFIG.provider,network:CONFIG.network,product_id:CONFIG.product_id,discovery:{...discoveryEvidence,matched_station_candidate_count:stationCandidates.length,station_candidates:stationCandidates},observation:{...observationEvidence,selected_station_public_identifier:chosen.name,record_array_path:recordArray.path,record_field_names:recordArray.keys,time_field_names:recordArray.timeKeys,record_count:recordArray.records.length,earliest_timestamp:new Date(earliest).toISOString(),latest_timestamp:new Date(latest).toISOString(),source_age_hours:Number(ageHours.toFixed(3)),raw_values_emitted:false},role_evidence:{solar_radiation:{matched_fields:solar,qualified_unestimated_fields:solarQualified.map((x)=>x.field_name)},rainfall:{matched_fields:rainfall,qualified_unestimated_fields:rainQualified.map((x)=>x.field_name)}},estimated_value_policy_enforced:true,forbidden_observed_flags:CONFIG.estimated_value_policy.forbidden_as_observed_flags,formal_source_authority_created:false,qualified_formal_site:false,raw_numeric_observation_values_emitted:false,raw_response_body_persisted:false,database_write_count:0,formal_evidence_write_count:0,formal_window_started:false};
   write(result); console.log(JSON.stringify(result,null,2));
 } catch (error) {
   const result={schema_version:'geox_mcft_cap09_ea1g_awdn_scqc60_live_probe_result_v1',status:'FAIL',subject_sha:SUBJECT_SHA,error:safeError(error),discovery_evidence:discoveryEvidence,observation_evidence:observationEvidence,matched_station_candidate_count:stationCandidates.length,raw_numeric_observation_values_emitted:false,raw_response_body_persisted:false,database_write_count:0,formal_evidence_write_count:0,qualified_formal_site:false,formal_window_started:false};
