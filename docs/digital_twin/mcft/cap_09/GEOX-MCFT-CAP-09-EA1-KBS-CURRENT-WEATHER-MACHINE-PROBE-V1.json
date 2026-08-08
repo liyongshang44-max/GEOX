@@ -1,0 +1,68 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1_kbs_current_weather_machine_probe_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1-KBS-CURRENT-WEATHER-MACHINE-PROBE-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION",
+  "record_status": "EA1_NO_WRITE_MACHINE_PROBE_WHEN_PRESENT_ON_PROTECTED_MAIN",
+  "base_main_sha": "96a505e959895ac1e2f980cc2887d74177dcae2b",
+  "site_candidate_id": "KBS_MCSE_T1R1",
+  "source_authority": {
+    "provider": "KBS_LTER",
+    "official_page": "https://lter.kbs.msu.edu/current-weather/",
+    "provider_claim": "FIVE_MINUTE_AVERAGES_FROM_LTER_WEATHER_STATION",
+    "metric_label": "Soil Moisture (10 cm/3.9 in)",
+    "source_unit": "percent_vwc",
+    "target_epistemic_class_if_later_qualified": "OBSERVED",
+    "spatial_support_if_later_qualified": "POINT_NEAR_SITE_WEATHER_TOWER",
+    "direct_field_equivalence": false,
+    "direct_root_zone_equivalence": false
+  },
+  "probe_method": {
+    "method_id": "OFFICIAL_WEB_UI_BROWSER_RENDER_V1",
+    "browser": "PLAYWRIGHT_CHROMIUM_HEADLESS",
+    "javascript_execution_required": true,
+    "parse_surface": "RENDERED_DOCUMENT_INNER_TEXT",
+    "network_capture_scope": "DOCUMENT_XHR_FETCH_OFFICIAL_KBS_HOST_ONLY",
+    "raw_response_body_persisted": false,
+    "raw_response_body_sha256_computed": true,
+    "rendered_dom_persisted": false,
+    "rendered_dom_sha256_computed": true,
+    "sensor_value_published_in_artifact": false,
+    "normalized_observation_sha256_computed": true
+  },
+  "qualification_effect": {
+    "pull_request_probe_may_establish": "MACHINE_ACCESS_CANDIDATE_ONLY",
+    "protected_main_exact_sha_probe_required": true,
+    "formal_source_authority_created": false,
+    "formal_eligible": false,
+    "qualified_formal_site": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "runtime_source_authorized": false,
+    "formal_window_started": false
+  },
+  "pass_conditions": [
+    "official KBS page returns successfully in a clean browser",
+    "rendered page contains a numeric Soil Moisture 10 cm observation",
+    "numeric observation lies within 0-100 percent VWC",
+    "rendered page contains a non-empty Last updated value",
+    "at least the official page document response is hashed",
+    "no raw KBS response body or rendered DOM is uploaded as an artifact",
+    "no database connection or write occurs"
+  ],
+  "failure_effect": "KBS_MCSE_T1R1_REMAINS_INCOMPLETE_AND_MACHINE_FEED_NOT_QUALIFIED",
+  "post_merge_requirement": "RUN_SAME_PROBE_ON_PROTECTED_MAIN_EXACT_MERGE_SHA_AND_RETAIN_HASH_ONLY_ARTIFACT",
+  "nonclaims": [
+    "NO_KBS_RAW_DATA_REPUBLISHED",
+    "NO_PUBLIC_KBS_API_CLAIM",
+    "NO_FIELD_SOIL_MOISTURE_EQUIVALENCE",
+    "NO_ROOT_ZONE_STATE_EQUIVALENCE",
+    "NO_FORMAL_SOURCE_AUTHORITY",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_FORMAL_WINDOW_STARTED",
+    "NO_QUALIFIED_FORMAL_SITE_FROM_PROBE_ALONE",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
