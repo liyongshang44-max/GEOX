@@ -11,9 +11,18 @@ const FROZEN_BLOB='f0478813da2b596fcb4b050fd8faef849666089e';
 const mode=process.env.MCFT_REGISTRY_MODE;
 const S5_SUBJECT='afc882c49d6ec0a475552686200c369eb819b6cd';
 const S5_DESCENDANT_BASE=true;
+const ROUTE_OUT=path.join(ROOT,'acceptance-output/MCFT_CAP_09_S6_REGISTRY_LIFECYCLE_ROUTE_RESULT.json');
 function blobSha(value){const bytes=Buffer.from(value,'utf8');return crypto.createHash('sha1').update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`),bytes])).digest('hex');}
 function runNode(argv){const r=cp.spawnSync(process.execPath,argv,{cwd:ROOT,env:process.env,stdio:'inherit'});if(r.error)throw r.error;return r.status??1;}
-if(mode==='s6-simulation-lifecycle-repair')process.exitCode=runNode(['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s6-simulation-lifecycle-repair']);
+function writeRoute(applicability){
+  fs.mkdirSync(path.dirname(ROUTE_OUT),{recursive:true});
+  const result={schema_version:'geox_mcft_cap09_s6_registry_lifecycle_route_result_v1',status:'PASS',lane:process.env.MCFT_REGISTRY_LANE??null,mode,applicability,base_sha:process.env.MCFT_BASE_SHA??null,database_write_count:0,formal_evidence_write_count:0,registry_mutation_count:0};
+  fs.writeFileSync(ROUTE_OUT,JSON.stringify(result,null,2)+'\n');
+  console.log(JSON.stringify(result));
+}
+if(mode==='s6-successor-authority-routing-repair')writeRoute('ROUTING_REPAIR_ONLY_NO_REGISTRY_LIFECYCLE_REOPEN');
+else if(mode==='s6-ea2-formal-authority-successor')writeRoute('NOT_APPLICABLE_EA2_SUCCESSOR_AUTHORITY_FREEZE_NO_REGISTRY_OWNED_MUTATION');
+else if(mode==='s6-simulation-lifecycle-repair')process.exitCode=runNode(['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s6-simulation-lifecycle-repair']);
 else if(mode==='s6-simulation-qualification'){
   if(!['s2-registry-registration','s6-registry-registration'].includes(process.env.MCFT_REGISTRY_LANE??''))throw new Error('MCFT_REGISTRY_LANE_INVALID');
   process.exitCode=runNode(['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs','--s6-simulation-route-only']);
