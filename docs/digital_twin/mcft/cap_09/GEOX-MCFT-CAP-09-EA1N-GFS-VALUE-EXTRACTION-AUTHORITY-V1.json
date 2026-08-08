@@ -7,55 +7,53 @@
   "record_status": "EA1N_GFS_VALUE_EXTRACTION_PROBE_NOT_FORMAL_AUTHORITY",
   "base_main_sha": "58287db14bc0d6424219f6a91a08c3f12dfe4536",
   "predecessor_authorities": [
-    {
-      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md",
-      "blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
-      "consumed_ruling": "GFS_FORECAST_MUST_PRESERVE_REAL_ISSUANCE_VALIDITY_AND_AVAILABILITY_CHRONOLOGY"
-    },
-    {
-      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1K-GFS-EXACT-CYCLE-72H-AUTHORITY-V1.json",
-      "blob_sha": "f36955b2847d1a2b58052f0dec2fea465e7eaec2",
-      "consumed_ruling": "LATEST_COMPLETE_GFS_CYCLE_AND_REAL_LEAD_MAPPING_MUST_BE_REPROVED_AT_EXACT_PROBE_TICK"
-    },
-    {
-      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1L-GFS-HOURLY-NORMALIZATION-AUTHORITY-V1.json",
-      "blob_sha": "af5f23425e35dd21a949727f508934f1be14d8e9",
-      "consumed_ruling": "DSWRF_ROLLING_AVERAGE_RECONSTRUCTION_RETAINED; PRATE_ROLLING_PRECIPITATION_CANDIDATE_SUBJECT_TO_VALUE_LEVEL_REJECTION_OR_CORRECTION"
-    },
-    {
-      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1M-GFS-SPATIAL-EXTRACTION-AUTHORITY-V1.json",
-      "blob_sha": "bb487c0c6a91dd37b0409b5d446aec4707f7b0a4",
-      "consumed_ruling": "ALL_FORECAST_INPUTS_USE_SINGLE_PUBLIC_GFS_GRID_NODE_42P5_N_274P75_E_WITH_NEAR_SITE_MODEL_GRID_SUPPORT"
-    }
+    {"ref":"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md","blob_sha":"41270b888e15e4d9a6c9a34e1fa3f70e957a275e"},
+    {"ref":"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1K-GFS-EXACT-CYCLE-72H-AUTHORITY-V1.json","blob_sha":"f36955b2847d1a2b58052f0dec2fea465e7eaec2"},
+    {"ref":"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1L-GFS-HOURLY-NORMALIZATION-AUTHORITY-V1.json","blob_sha":"af5f23425e35dd21a949727f508934f1be14d8e9"},
+    {"ref":"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1M-GFS-SPATIAL-EXTRACTION-AUTHORITY-V1.json","blob_sha":"bb487c0c6a91dd37b0409b5d446aec4707f7b0a4"}
   ],
-  "value_level_precipitation_correction": {
-    "trigger_run_id": 31253728831,
-    "trigger_subject_sha": "f299085875d277c15d8ae38d382b25378104e881",
-    "trigger_artifact_id": 9020784545,
-    "trigger_artifact_digest": "sha256:de123ee0446dd2ab0e887e4410dce573e536097e0e25a3613a969dd965c90f47",
-    "trigger_result": "PRATE_ROLLING_VALUE_RECONSTRUCTION_REJECTED_FAIL_CLOSED_AT_F006",
-    "trigger_error": "DERIVED_PRECIP_SANITY_FAIL_NO_CLIP:F006",
-    "negative_value_clipping_performed": false,
-    "ea1l_prate_structural_graph_retracted": false,
-    "ea1l_prate_candidate_selected_for_canonical_precipitation": false,
-    "replacement_candidate": "APCP_EXACT_ONE_HOUR_ACCUMULATION",
-    "replacement_adoption_rule": "EVERY_ONE_OF_72_TARGET_LEADS_MUST_HAVE_EXACTLY_ONE_SURFACE_APCP_RECORD_WITH_STEP_TYPE_ACCUM_START_STEP_LEAD_MINUS_1_END_STEP_LEAD",
-    "missing_exact_hour_record": "FAIL_CLOSED",
-    "duplicate_exact_hour_record": "FAIL_CLOSED",
+  "value_level_precipitation_adjudication": {
+    "rejected_candidates": [
+      {
+        "candidate": "PRATE_SIX_HOUR_ROLLING_AVERAGE_DIFFERENCE",
+        "run_id": 31253728831,
+        "subject_sha": "f299085875d277c15d8ae38d382b25378104e881",
+        "artifact_id": 9020784545,
+        "artifact_digest": "sha256:de123ee0446dd2ab0e887e4410dce573e536097e0e25a3613a969dd965c90f47",
+        "failure": "DERIVED_PRECIP_SANITY_FAIL_NO_CLIP:F006",
+        "negative_clipping_performed": false
+      },
+      {
+        "candidate": "APCP_EXACT_ONE_HOUR_ACCUMULATION_ONLY",
+        "run_id": 31254027979,
+        "subject_sha": "64e4f5a189d161398833e6c8126322fbc2ad390a",
+        "artifact_id": 9020861359,
+        "artifact_digest": "sha256:09b52cf61b4b53d41c0d1d4c1c10af6f4172cf437b92b61c6bb9574db37fc4c0",
+        "failure": "APCP_EXACT_1H_72_OF_72_REQUIRED:F006:COUNT=0",
+        "coverage": {"target_count":72,"unique_exact_1h_count":12,"missing_exact_1h_count":60,"ambiguous_exact_1h_count":0}
+      }
+    ],
+    "current_candidate": "APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE",
+    "block_start_rule": "S=6*floor((lead-1)/6)",
+    "selected_record_rule": "exactly_one surface APCP with stepType=accum,startStep=S,endStep=lead",
+    "when_L_eq_1": "hourly_mm=APCP(S,E)",
+    "when_L_gt_1": "hourly_mm=APCP(S,E)-APCP(S,E-1)",
+    "predecessor_rule": "same_start_step_S_required",
+    "required_target_coverage": 72,
+    "cross_block_difference": false,
+    "missing_or_ambiguous_record": "FAIL_CLOSED",
+    "negative_difference": "FAIL_CLOSED_NO_CLIP",
     "fallback_to_prate": false,
-    "fallback_to_multi_hour_apcp_difference": false,
-    "epsilon_or_negative_clipping": false,
-    "correction_status_before_exact_head_pass": "CANDIDATE_PENDING_72_OF_72_VALUE_LEVEL_PROOF"
+    "fallback_to_exact_hour_only": false,
+    "fallback_to_other_apcp_family": false,
+    "status_before_exact_head_pass": "CANDIDATE_PENDING_VALUE_LEVEL_PROOF"
   },
   "decoder_supply_chain": {
     "python_version": "3.12",
     "eccodes_python_package": "eccodes==2.47.0",
     "eccodes_binary_package": "eccodeslib==2.47.3.23",
-    "installation_mode": "PINNED_PYPI_BINARY_WHEELS",
     "selfcheck_command": "python -m eccodes selfcheck",
-    "latest_unpinned_dependency_forbidden": true,
-    "decoder_version_must_be_emitted": true,
-    "decoder_selfcheck_must_pass_before_provider_probe": true
+    "latest_unpinned_dependency_forbidden": true
   },
   "provider_transport": {
     "provider": "NOAA_NCEP_NOMADS",
@@ -63,7 +61,6 @@
     "grid": "0.25_degree_global_lat_lon",
     "production_root": "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod",
     "grib_filter_endpoint": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl",
-    "source_object_pattern": "gfs.YYYYMMDD/CC/atmos/gfs.tCCz.pgrb2.0p25.fFFF",
     "source_availability_authority": "PRODUCTION_OBJECT_HTTP_LAST_MODIFIED",
     "grib_filter_role": "TRANSIENT_VALUE_SUBSET_TRANSPORT_ONLY",
     "grib_filter_response_may_not_replace_source_availability_chronology": true
@@ -77,8 +74,7 @@
     "interpolation_method": "NONE_NEAREST_GRID_POINT",
     "same_grid_point_required_for_all_variables": true,
     "filter_bbox_half_width_degrees": 0.01,
-    "decoded_message_must_contain_exactly_one_grid_point": true,
-    "decoded_grid_point_must_equal_selected_public_node": true
+    "decoded_message_must_contain_exactly_one_grid_point": true
   },
   "required_variables": [
     {"role":"AIR_TEMPERATURE_2M","filter_variable":"TMP","filter_level":"2_m_above_ground","provider_unit":"K","normalized_unit":"degC"},
@@ -86,18 +82,18 @@
     {"role":"U_WIND_10M","filter_variable":"UGRD","filter_level":"10_m_above_ground","provider_unit":"m_per_s","normalized_unit":"m_per_s"},
     {"role":"V_WIND_10M","filter_variable":"VGRD","filter_level":"10_m_above_ground","provider_unit":"m_per_s","normalized_unit":"m_per_s"},
     {"role":"DOWNWARD_SHORTWAVE_SURFACE","filter_variable":"DSWRF","filter_level":"surface","provider_unit":"W_per_m2","normalized_unit":"MJ_per_m2_per_hour"},
-    {"role":"TOTAL_PRECIPITATION_SURFACE","filter_variable":"APCP","filter_level":"surface","provider_unit":"kg_per_m2","normalized_unit":"mm_per_hour","selection":"EXACT_ONE_HOUR_ACCUMULATION_ONLY"}
+    {"role":"TOTAL_PRECIPITATION_SURFACE","filter_variable":"APCP","filter_level":"surface","provider_unit":"kg_per_m2","normalized_unit":"mm_per_hour","selection":"SIX_HOUR_BLOCK_CUMULATIVE_FAMILY"}
   ],
   "tick_cycle_and_lead_policy": {
     "tick_boundary": "FLOOR_EXACT_PROBE_START_TO_UTC_HOUR",
     "canonical_point_count": 72,
     "canonical_valid_time_rule": "point[i].valid_time=T+(i+1)h",
-    "candidate_cycle_hours_utc": [0, 6, 12, 18],
+    "candidate_cycle_hours_utc": [0,6,12,18],
     "candidate_order": "NEWEST_TO_OLDEST",
     "lead_start_rule": "lead_start=(T-cycle_time)+1h",
     "lead_end_rule": "lead_end=(T-cycle_time)+72h",
-    "derivation_support_rule": "support_lead=lead_start-1",
-    "derivation_support_needed_for": ["DOWNWARD_SHORTWAVE_SURFACE"],
+    "support_lead_rule": "support_lead=lead_start-1",
+    "support_lead_needed_for": ["DSWRF_ROLLING_AVERAGE","APCP_BLOCK_CUMULATIVE_WHEN_FIRST_TARGET_L_GT_1"],
     "selected_cycle_requires_all_support_and_target_production_grib_and_idx_objects_last_modified_lte_tick": true,
     "missing_last_modified": "FAIL_CLOSED",
     "wait_for_future_files": false,
@@ -106,21 +102,13 @@
   },
   "decoded_message_reconciliation": {
     "every_message_must_match_selected_cycle_reference_time": true,
-    "every_message_must_match_requested_provider_lead": true,
     "every_message_valid_time_must_equal_cycle_plus_end_step": true,
     "instantaneous_roles": ["AIR_TEMPERATURE_2M","RELATIVE_HUMIDITY_2M","U_WIND_10M","V_WIND_10M"],
-    "instantaneous_step_type_required": "instant",
-    "rolling_average_roles": ["DOWNWARD_SHORTWAVE_SURFACE"],
-    "rolling_average_step_type_required": "avg",
+    "dswrf_record_rule": "stepType=avg,startStep=S,endStep=lead",
+    "apcp_record_rule": "stepType=accum,startStep=S,endStep=lead",
     "rolling_block_hours": 6,
     "rolling_start_rule": "S=6*floor((lead-1)/6)",
-    "rolling_end_rule": "E=lead",
-    "exactly_one_matching_average_record_per_dswrf_lead": true,
-    "exact_hour_accumulation_role": "TOTAL_PRECIPITATION_SURFACE",
-    "exact_hour_accumulation_step_type_required": "accum",
-    "exact_hour_accumulation_start_rule": "startStep=lead-1",
-    "exact_hour_accumulation_end_rule": "endStep=lead",
-    "exact_hour_accumulation_required_target_count": 72,
+    "required_unique_target_count_per_statistical_role": 72,
     "unmatched_or_ambiguous_message": "FAIL_CLOSED"
   },
   "normalization": {
@@ -128,58 +116,38 @@
     "relative_humidity": "DIRECT_PERCENT_NO_CLIP",
     "wind_10m": "speed10=sqrt(U10^2+V10^2)",
     "wind_2m": "speed2=speed10*0.747951075",
-    "dswrf_when_L_eq_1": "hourly_mean_Wm2=A_S_E",
-    "dswrf_when_L_gt_1": "hourly_mean_Wm2=L*A_S_E-(L-1)*A_S_Eminus1",
+    "dswrf_when_L_eq_1": "hourly_mean_Wm2=A(S,E)",
+    "dswrf_when_L_gt_1": "hourly_mean_Wm2=L*A(S,E)-(L-1)*A(S,E-1)",
     "solar_for_future_et0": "Rs_MJ_m2_h=hourly_mean_Wm2*0.0036",
-    "precipitation_source": "APCP_EXACT_ONE_HOUR_ACCUMULATION",
-    "precipitation_depth": "mm_per_hour=APCP_kg_m2_using_water_equivalent_identity_1kg_m2_equals_1mm",
+    "precipitation_source": "APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE",
+    "precip_when_L_eq_1": "mm_per_hour=APCP(S,E)",
+    "precip_when_L_gt_1": "mm_per_hour=APCP(S,E)-APCP(S,E-1)",
+    "water_equivalent_identity": "1_kg_m2_equals_1_mm",
     "cross_block_differencing": false,
     "missing_predecessor_imputation": false,
     "negative_derived_value_clipping": false,
-    "prate_rolling_used_for_precipitation": false
+    "prate_used_for_precipitation": false
   },
   "physical_sanity": {
-    "temperature_k_min": 180,
-    "temperature_k_max": 330,
-    "relative_humidity_percent_min": 0,
-    "relative_humidity_percent_max": 100,
-    "u_v_component_abs_max_m_per_s": 100,
-    "raw_dswrf_w_m2_min": 0,
-    "raw_dswrf_w_m2_max": 1600,
-    "raw_apcp_exact_hour_kg_m2_min": 0,
-    "raw_apcp_exact_hour_kg_m2_max": 200,
-    "derived_hourly_solar_w_m2_min": 0,
-    "derived_hourly_solar_w_m2_max": 1600,
-    "derived_hourly_precip_mm_min": 0,
-    "derived_hourly_precip_mm_max": 200,
-    "nonfinite_value": "FAIL_CLOSED"
+    "temperature_k_min":180,"temperature_k_max":330,
+    "relative_humidity_percent_min":0,"relative_humidity_percent_max":100,
+    "u_v_component_abs_max_m_per_s":100,
+    "raw_dswrf_w_m2_min":0,"raw_dswrf_w_m2_max":1600,
+    "raw_apcp_block_kg_m2_min":0,"raw_apcp_block_kg_m2_max":1200,
+    "derived_hourly_solar_w_m2_min":0,"derived_hourly_solar_w_m2_max":1600,
+    "derived_hourly_precip_mm_min":0,"derived_hourly_precip_mm_max":200,
+    "nonfinite_value":"FAIL_CLOSED"
   },
   "output_and_retention_policy": {
     "raw_grib_subset_persisted_or_uploaded": false,
     "decoded_forecast_values_emitted": false,
     "normalized_forecast_values_emitted": false,
-    "raw_provider_index_body_persisted_or_uploaded": false,
-    "safe_output_may_include": [
-      "subject_sha",
-      "tick",
-      "selected_cycle",
-      "lead_start_end_support",
-      "valid_time_start_end",
-      "production_last_modified_bounds",
-      "grib_filter_response_hash_chain",
-      "decoded_message_metadata_hash_chain",
-      "normalized_series_hashes",
-      "complete_point_counts",
-      "apcp_exact_hour_coverage_count",
-      "physical_sanity_booleans",
-      "decoder_versions",
-      "no_write_flags"
-    ],
+    "safe_output_may_include": ["subject_sha","tick","selected_cycle","lead_bounds","production_last_modified_bounds","filter_response_hash_chain","decoded_message_metadata_hash_chain","normalized_series_hashes","block_family_coverage_counts","physical_sanity_booleans","decoder_versions","no_write_flags"],
     "series_hash_is_not_formal_evidence": true
   },
   "qualification_effect": {
     "probe_may_establish": "GFS_72H_DECODED_AND_NORMALIZED_VALUE_PIPELINE_AUTHORITY_CANDIDATE_ONLY",
-    "passing_probe_may_correct_precipitation_source_to": "APCP_EXACT_ONE_HOUR_ACCUMULATION",
+    "passing_probe_may_correct_precipitation_source_to": "APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE",
     "future_weather_canonical_evidence_created": false,
     "future_et0_calculated": false,
     "future_et0_canonical_evidence_created": false,
@@ -189,22 +157,6 @@
     "formal_window_started": false
   },
   "hard_nonclaims": [
-    "NO_OPEN_DAP_DEPENDENCY",
-    "NO_UNPINNED_DECODER_DEPENDENCY",
-    "NO_GRIB_FILTER_RESPONSE_AS_SOURCE_AVAILABILITY_AUTHORITY",
-    "NO_KBS_GEOMETRY_READ_IN_EA1N",
-    "NO_INTERPOLATION",
-    "NO_FIELD_SCALE_FORECAST_TRUTH",
-    "NO_PRATE_NEGATIVE_VALUE_CLIPPING",
-    "NO_PRATE_FALLBACK_AFTER_VALUE_LEVEL_REJECTION",
-    "NO_MULTI_HOUR_APCP_DIFFERENCE_FALLBACK",
-    "NO_RAW_GRIB_ARTIFACT",
-    "NO_FORECAST_VALUE_OUTPUT",
-    "NO_CANONICAL_EVIDENCE_WRITE",
-    "NO_FUTURE_ET0_EXECUTION",
-    "NO_DATABASE_WRITE",
-    "NO_RUNTIME_PRODUCT_SOURCE_DELTA",
-    "NO_FORMAL_WINDOW_START",
-    "NO_MCFT_CAP_09_COMPLETION"
+    "NO_OPEN_DAP_DEPENDENCY","NO_UNPINNED_DECODER_DEPENDENCY","NO_GRIB_FILTER_RESPONSE_AS_SOURCE_AVAILABILITY_AUTHORITY","NO_KBS_GEOMETRY_READ_IN_EA1N","NO_INTERPOLATION","NO_FIELD_SCALE_FORECAST_TRUTH","NO_PRATE_FALLBACK","NO_EXACT_HOUR_ONLY_APCP_FALLBACK","NO_CROSS_BLOCK_APCP_DIFFERENCE","NO_NEGATIVE_PRECIPITATION_CLIPPING","NO_RAW_GRIB_ARTIFACT","NO_FORECAST_VALUE_OUTPUT","NO_CANONICAL_EVIDENCE_WRITE","NO_FUTURE_ET0_EXECUTION","NO_DATABASE_WRITE","NO_RUNTIME_PRODUCT_SOURCE_DELTA","NO_FORMAL_WINDOW_START","NO_MCFT_CAP_09_COMPLETION"
   ]
 }
