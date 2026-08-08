@@ -55,7 +55,7 @@ try {
   }
 
   requireTrue(authority.record_status === 'EA1N_PGRB2_DSWRF_EXACT_HOURLY_SCALAR_REJECTED', 'ADJUDICATION_STATUS_DRIFT');
-  requireTrue(authority.qualification_effect === 'EA1N_FAIL_CLOSED_PGRB2_DSWRF_REJECTION_EA1O_REQUIRED', 'QUALIFICATION_EFFECT_DRIFT');
+  requireTrue(authority.qualification_effect === 'EA1N_FAIL_CLOSED_PGRB2_DSWRF_REJECTION_EA1O_AMENDMENT_REQUIRED', 'QUALIFICATION_EFFECT_DRIFT');
   requireTrue(authority.gfs_72h_value_pipeline_qualified === false, 'FALSE_PIPELINE_QUALIFICATION_CLAIM');
 
   const chronology = authority.chronology_authority_preserved;
@@ -102,12 +102,18 @@ try {
   requireTrue(normative.complex_packing === 'LOSSLESS_RELATIVE_TO_SCALED_SIMPLE_PACKED_INTEGERS', 'COMPLEX_PACKING_BASIS_DRIFT');
   requireTrue(normative.quantization_bound === 'HALF_SCALE_QUANTUM_PROPAGATED_THROUGH_WEIGHTED_DIFFERENCE', 'QUANTIZATION_BOUND_RULE_DRIFT');
 
-  const next = authority.next_candidate;
-  requireTrue(next.stage === 'EA1O' && next.source === 'GFS_SFLUX_DIRECT_1H_DSWRF', 'NEXT_CANDIDATE_DRIFT');
-  requireTrue(next.provider_semantics === 'SURFACE_DSWRF_0_TO_1_HOUR_AVERAGE', 'SFLUX_DIRECT_HOURLY_SEMANTICS_DRIFT');
-  requireTrue(next.direct_hourly_reconstruction_required === false, 'SFLUX_RECONSTRUCTION_SHOULD_NOT_BE_REQUIRED');
-  requireTrue(next.spatial_authority_refreeze_required === true, 'SILENT_SFLUX_SPATIAL_EQUIVALENCE_ENABLED');
-  requireTrue(next.authority_created === false, 'EA1O_AUTHORITY_PREMATURELY_CREATED');
+  const successor = authority.successor_governance;
+  requireTrue(successor.stage === 'EA1O', 'NEXT_STAGE_DRIFT');
+  requireTrue(successor.purpose === 'SOLAR_RADIATION_SOURCE_ARCHITECTURE_AMENDMENT_AND_SPATIAL_REFREEZE', 'NEXT_PURPOSE_DRIFT');
+  requireTrue(successor.candidate_source === 'GFS_SFLUX_DIRECT_1H_DSWRF', 'NEXT_CANDIDATE_DRIFT');
+  requireTrue(successor.provider_semantics === 'SURFACE_DSWRF_0_TO_1_HOUR_AVERAGE', 'SFLUX_DIRECT_HOURLY_SEMANTICS_DRIFT');
+  requireTrue(successor.direct_hourly_reconstruction_required === false, 'SFLUX_RECONSTRUCTION_SHOULD_NOT_BE_REQUIRED');
+  requireTrue(successor.amendment_01_rule === 'PRIMARY_FUTURE_AUTHORITY_IS_NOAA_NCEP_GFS_0P25_DEGREE_HOURLY_OUTPUT', 'AMENDMENT_01_RULE_DRIFT');
+  requireTrue(successor.architecture_amendment_required === true, 'ARCHITECTURE_AMENDMENT_NOT_REQUIRED');
+  requireTrue(successor.amendment_target === 'S6_FUTURE_WEATHER_SOLAR_RADIATION_ROLE_ONLY', 'AMENDMENT_SCOPE_DRIFT');
+  requireTrue(successor.amendment_01_not_overridable_by_lower_authority === true, 'LOWER_AUTHORITY_OVERRIDE_ENABLED');
+  requireTrue(successor.spatial_authority_refreeze_required === true, 'SILENT_SFLUX_SPATIAL_EQUIVALENCE_ENABLED');
+  requireTrue(successor.authority_created === false, 'EA1O_AUTHORITY_PREMATURELY_CREATED');
 
   const boundary = authority.data_boundary;
   requireTrue(boundary.raw_directory_listing_uploaded === false && boundary.raw_idx_uploaded === false && boundary.raw_grib_uploaded === false, 'RAW_PROVIDER_DATA_PUBLICATION_ENABLED');
@@ -119,6 +125,8 @@ try {
   requireTrue(probe.includes('EA1N_PGRB2_DSWRF_EXACT_HOURLY_SCALAR_REJECTED'), 'PROBE_REJECTION_MARKER_MISSING');
   requireTrue(probe.includes('EVIDENCE_SUBJECT_NOT_ANCESTOR_OF_CURRENT_HEAD'), 'PROBE_EVIDENCE_ANCESTRY_GATE_MISSING');
   requireTrue(probe.includes('PGRB2B_DSWRF_ABSENCE_DRIFT'), 'PROBE_SAME_GRID_ALTERNATIVE_GATE_MISSING');
+  requireTrue(probe.includes('ARCHITECTURE_AMENDMENT_NOT_REQUIRED'), 'PROBE_AMENDMENT_REQUIREMENT_GATE_MISSING');
+  requireTrue(probe.includes('LOWER_AUTHORITY_OVERRIDE_ENABLED'), 'PROBE_AUTHORITY_HIERARCHY_GATE_MISSING');
   requireTrue(probe.includes('SILENT_SPATIAL_EQUIVALENCE_ENABLED'), 'PROBE_SPATIAL_REFREEZE_GATE_MISSING');
   requireTrue(!/urlopen|requests\.|urllib\.request|httpx|aiohttp/.test(probe), 'EA1N_ADJUDICATION_PROBE_FETCHES_PROVIDER');
   requireTrue(!/psycopg|postgresql:\/\/|PGHOST|DATABASE_URL/i.test(probe), 'DATABASE_SURFACE_DETECTED');
@@ -132,8 +140,10 @@ try {
   result.evidence_subject_sha = evidence.subject_sha;
   result.evidence_workflow_run_id = evidence.workflow_run_id;
   result.same_grid_alternative = alternative.result;
-  result.next_stage = next.stage;
-  result.next_source = next.source;
+  result.next_stage = successor.stage;
+  result.next_purpose = successor.purpose;
+  result.candidate_source = successor.candidate_source;
+  result.architecture_amendment_required = successor.architecture_amendment_required;
   result.status = 'PASS';
 } catch (err) {
   result.error = `${err.name || 'Error'}:${err.message || String(err)}`;
@@ -154,6 +164,8 @@ if (result.status === 'PASS') {
     evidence_subject_sha: result.evidence_subject_sha,
     same_grid_alternative: result.same_grid_alternative,
     next_stage: result.next_stage,
-    next_source: result.next_source,
+    next_purpose: result.next_purpose,
+    candidate_source: result.candidate_source,
+    architecture_amendment_required: result.architecture_amendment_required,
   }));
 }
