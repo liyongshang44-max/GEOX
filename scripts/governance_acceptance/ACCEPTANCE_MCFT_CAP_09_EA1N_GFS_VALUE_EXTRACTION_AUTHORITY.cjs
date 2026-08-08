@@ -36,110 +36,82 @@ try {
   result.exact_file_count = changed.length; result.changed_files = changed;
   requireTrue(JSON.stringify(changed) === JSON.stringify(EXPECTED_FILES), `EXACT_FOUR_FILE_BOUNDARY_FAIL:${JSON.stringify(changed)}`);
 
-  const expectedPredecessors = new Map([
-    ['docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md','41270b888e15e4d9a6c9a34e1fa3f70e957a275e'],
-    ['docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1K-GFS-EXACT-CYCLE-72H-AUTHORITY-V1.json','f36955b2847d1a2b58052f0dec2fea465e7eaec2'],
-    ['docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1L-GFS-HOURLY-NORMALIZATION-AUTHORITY-V1.json','af5f23425e35dd21a949727f508934f1be14d8e9'],
-    ['docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1M-GFS-SPATIAL-EXTRACTION-AUTHORITY-V1.json','bb487c0c6a91dd37b0409b5d446aec4707f7b0a4'],
-  ]);
-  for (const [file, expected] of expectedPredecessors) {
+  const predecessorFiles = {
+    amendment_01: 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md',
+    ea1k: 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1K-GFS-EXACT-CYCLE-72H-AUTHORITY-V1.json',
+    ea1l: 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1L-GFS-HOURLY-NORMALIZATION-AUTHORITY-V1.json',
+    ea1m: 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1M-GFS-SPATIAL-EXTRACTION-AUTHORITY-V1.json',
+  };
+  for (const [key, file] of Object.entries(predecessorFiles)) {
     const actual = blobAt(BASE, file);
-    requireTrue(actual === expected, `PREDECESSOR_BLOB_DRIFT:${file}:${actual}:${expected}`);
+    requireTrue(actual === authority.predecessor_blobs[key], `PREDECESSOR_BLOB_DRIFT:${key}:${actual}:${authority.predecessor_blobs[key]}`);
   }
 
   requireTrue(authority.record_status === 'EA1N_GFS_VALUE_EXTRACTION_PROBE_NOT_FORMAL_AUTHORITY', 'AUTHORITY_STATUS_DRIFT');
-  requireTrue(authority.decoder_supply_chain.python_version === '3.12', 'PYTHON_VERSION_NOT_PINNED');
-  requireTrue(authority.decoder_supply_chain.eccodes_python_package === 'eccodes==2.47.0', 'ECCODES_VERSION_NOT_PINNED');
-  requireTrue(authority.decoder_supply_chain.eccodes_binary_package === 'eccodeslib==2.47.3.23', 'ECCODESLIB_VERSION_NOT_PINNED');
-  requireTrue(authority.provider_transport.grib_filter_role === 'TRANSIENT_VALUE_SUBSET_TRANSPORT_ONLY', 'FILTER_ROLE_DRIFT');
-  requireTrue(authority.provider_transport.grib_filter_response_may_not_replace_source_availability_chronology === true, 'FILTER_ILLEGALLY_PROMOTED_TO_AVAILABILITY_AUTHORITY');
-  requireTrue(authority.spatial_binding.selected_public_gfs_grid_latitude === 42.5, 'GRID_LAT_DRIFT');
-  requireTrue(authority.spatial_binding.selected_public_gfs_native_longitude === 274.75, 'GRID_LON_DRIFT');
-  requireTrue(authority.spatial_binding.interpolation_method === 'NONE_NEAREST_GRID_POINT', 'INTERPOLATION_POLICY_DRIFT');
-  requireTrue(authority.tick_cycle_and_lead_policy.canonical_point_count === 72, 'POINT_COUNT_DRIFT');
-  requireTrue(authority.tick_cycle_and_lead_policy.wait_for_future_files === false, 'WAIT_FOR_FUTURE_FILES_ENABLED');
-  requireTrue(authority.tick_cycle_and_lead_policy.valid_time_rewrite === false, 'VALID_TIME_REWRITE_ENABLED');
+  requireTrue(authority.decoder.python === '3.12' && authority.decoder.eccodes === '2.47.0' && authority.decoder.eccodeslib === '2.47.3.23', 'DECODER_PIN_DRIFT');
+  requireTrue(authority.grid.lat === 42.5 && authority.grid.native_lon === 274.75 && authority.grid.interpolation === 'NONE_NEAREST_GRID_POINT', 'GRID_AUTHORITY_DRIFT');
 
-  const adjudication = authority.value_level_precipitation_adjudication;
-  requireTrue(Array.isArray(adjudication.rejected_candidates) && adjudication.rejected_candidates.length === 2, 'PRECIP_REJECTION_CHAIN_INCOMPLETE');
-  const prate = adjudication.rejected_candidates.find(x => x.candidate === 'PRATE_SIX_HOUR_ROLLING_AVERAGE_DIFFERENCE');
-  const exact = adjudication.rejected_candidates.find(x => x.candidate === 'APCP_EXACT_ONE_HOUR_ACCUMULATION_ONLY');
-  requireTrue(prate && prate.run_id === 31253728831 && prate.failure === 'DERIVED_PRECIP_SANITY_FAIL_NO_CLIP:F006', 'PRATE_VALUE_REJECTION_DRIFT');
-  requireTrue(exact && exact.run_id === 31254027979 && exact.failure === 'APCP_EXACT_1H_72_OF_72_REQUIRED:F006:COUNT=0', 'APCP_EXACT_HOUR_REJECTION_DRIFT');
-  requireTrue(exact.coverage.unique_exact_1h_count === 12 && exact.coverage.missing_exact_1h_count === 60 && exact.coverage.ambiguous_exact_1h_count === 0, 'APCP_EXACT_HOUR_COVERAGE_DRIFT');
-  requireTrue(adjudication.current_candidate === 'APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE', 'CURRENT_PRECIP_CANDIDATE_DRIFT');
-  requireTrue(adjudication.required_effective_target_coverage === 72, 'APCP_LOGICAL_COVERAGE_DRIFT');
-  requireTrue(adjudication.cross_block_difference === false, 'APCP_CROSS_BLOCK_DIFFERENCE_ENABLED');
-  requireTrue(adjudication.distinct_section4_ambiguity === 'FAIL_CLOSED', 'DISTINCT_SECTION4_AMBIGUITY_NOT_FAIL_CLOSED');
-  requireTrue(adjudication.duplicate_value_mismatch === 'FAIL_CLOSED', 'DUPLICATE_VALUE_MISMATCH_NOT_FAIL_CLOSED');
-  requireTrue(adjudication.negative_difference === 'FAIL_CLOSED_NO_CLIP', 'APCP_NEGATIVE_DIFFERENCE_NOT_FAIL_CLOSED');
-  requireTrue(adjudication.fallback_to_prate === false && adjudication.fallback_to_exact_hour_only === false && adjudication.fallback_to_other_apcp_family === false, 'PRECIP_FALLBACK_ENABLED');
+  const chronology = authority.chronology;
+  requireTrue(chronology.canonical_points === 72, 'POINT_COUNT_DRIFT');
+  requireTrue(chronology.wait_for_future_files === false && chronology.valid_time_rewrite === false, 'CHRONOLOGY_WEAKENED');
+  requireTrue(chronology.selected_transport === 'OFFICIAL_NOMADS_PRODUCTION_CYCLE_DIRECTORY_INDEX', 'DIRECTORY_TRANSPORT_NOT_SELECTED');
+  requireTrue(chronology.required_files === 146, 'DIRECTORY_REQUIRED_FILE_COUNT_DRIFT');
+  requireTrue(chronology.listing_time_basis === 'UTC_OPERATIONAL_RECONCILED', 'DIRECTORY_TIME_BASIS_DRIFT');
+  requireTrue(chronology.listing_time_resolution === 'MINUTE', 'DIRECTORY_TIME_RESOLUTION_DRIFT');
+  requireTrue(chronology.availability_upper_bound === 'listed_minute_UTC+59.999999s', 'DIRECTORY_UPPER_BOUND_RULE_DRIFT');
+  requireTrue(chronology.prior_availability === 'every required file upper bound <= frozen tick', 'DIRECTORY_PRIOR_AVAILABILITY_RULE_DRIFT');
+  requireTrue(chronology.listing_body_persisted === false && chronology.grib_filter_is_availability_authority === false, 'DIRECTORY_DATA_OR_FILTER_AUTHORITY_DRIFT');
 
-  const run4 = authority.run4_duplicate_diagnostic;
-  requireTrue(run4.run_id === 31254245466, 'RUN4_ID_DRIFT');
-  requireTrue(run4.subject_sha === 'f083aa97c2f8c43dc13a5950e8e29da65cc002ac', 'RUN4_SUBJECT_DRIFT');
-  requireTrue(run4.artifact_id === 9020918694, 'RUN4_ARTIFACT_DRIFT');
-  requireTrue(run4.artifact_digest === 'sha256:650bf1a4e61f388faf238f2036c8783c0ce73c6f5c4a373e4a237bb928aab596', 'RUN4_DIGEST_DRIFT');
-  requireTrue(run4.coverage.target_count === 72 && run4.coverage.unique_physical_message_count === 71 && run4.coverage.missing_count === 0 && run4.coverage.ambiguous_physical_message_count === 1, 'RUN4_COVERAGE_DRIFT');
+  requireTrue(Array.isArray(authority.chronology_transport_rejections) && authority.chronology_transport_rejections.length === 2, 'TRANSPORT_REJECTION_CHAIN_INCOMPLETE');
+  const headReject = authority.chronology_transport_rejections.find(x => x.method === 'PER_OBJECT_HEAD');
+  const rangeReject = authority.chronology_transport_rejections.find(x => x.method === 'PER_OBJECT_RANGE_0_0');
+  requireTrue(headReject && headReject.run === 31254637254 && Array.isArray(headReject.jobs) && headReject.jobs.includes(93096116778) && headReject.jobs.includes(93096358423), 'HEAD_REJECTION_DRIFT');
+  requireTrue(rangeReject && rangeReject.run === 31254970459 && rangeReject.job === 93096909240 && rangeReject.root_redirect_accepted === false, 'RANGE_REJECTION_DRIFT');
 
-  const provider = authority.provider_duplicate_semantics_authority;
-  requireTrue(provider.provider_code_repository === 'NOAA-EMC/wgrib2', 'PROVIDER_CODE_REPO_DRIFT');
-  requireTrue(provider.provider_code_commit === '58f99e14f2922d1ae3e05d2c41ea28c599a8c81d', 'PROVIDER_CODE_COMMIT_DRIFT');
-  requireTrue(provider.unmerge_source_blob_sha === 'df2be678da7d7855d38897592a18be154100fa92', 'UNMERGE_SOURCE_BLOB_DRIFT');
-  requireTrue(provider.section_compare_source_blob_sha === '2081a81dfe216604f614f82b48fa9af109a61039', 'SECTION_COMPARE_SOURCE_BLOB_DRIFT');
-  requireTrue(provider.geox_stricter_duplicate_rule === 'COLLAPSE_ONLY_IF_RAW_SECTION4_SHA256_IDENTICAL_AND_SELECTED_GRID_DECODED_VALUE_EXACTLY_IDENTICAL', 'GEOX_DUPLICATE_RULE_DRIFT');
-  requireTrue(provider.physical_message_order_is_authority === false && provider.first_record_wins === false, 'PHYSICAL_ORDER_AUTHORITY_ENABLED');
-  requireTrue(provider.different_section4_messages_may_be_silently_collapsed === false && provider.different_decoded_values_may_be_silently_collapsed === false, 'UNSAFE_DUPLICATE_COLLAPSE_ENABLED');
+  const p = authority.precipitation_adjudication;
+  requireTrue(p.rejected.length === 2, 'PRECIP_REJECTION_CHAIN_INCOMPLETE');
+  requireTrue(p.rejected[0].run === 31253728831 && p.rejected[0].failure === 'DERIVED_PRECIP_SANITY_FAIL_NO_CLIP:F006', 'PRATE_REJECTION_DRIFT');
+  requireTrue(p.rejected[1].run === 31254027979 && p.rejected[1].coverage.unique === 12 && p.rejected[1].coverage.missing === 60, 'APCP_EXACT_REJECTION_DRIFT');
+  requireTrue(p.run4.run === 31254245466 && p.run4.coverage.unique === 71 && p.run4.coverage.ambiguous === 1, 'RUN4_DUPLICATE_DIAGNOSTIC_DRIFT');
+  requireTrue(p.current === 'APCP_6H_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE', 'PRECIP_CURRENT_CANDIDATE_DRIFT');
+  requireTrue(p.cross_block === false && p.negative_clip === false && p.fallback === false, 'PRECIP_FAIL_CLOSED_POLICY_DRIFT');
 
-  requireTrue(authority.normalization.precipitation_source === 'APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE', 'NORMALIZATION_PRECIP_SOURCE_DRIFT');
-  requireTrue(authority.normalization.cross_block_differencing === false, 'NORMALIZATION_CROSS_BLOCK_ENABLED');
-  requireTrue(authority.normalization.missing_predecessor_imputation === false, 'MISSING_PREDECESSOR_IMPUTATION_ENABLED');
-  requireTrue(authority.normalization.negative_derived_value_clipping === false, 'NEGATIVE_CLIPPING_ENABLED');
-  requireTrue(authority.normalization.prate_used_for_precipitation === false, 'PRATE_STILL_SELECTED');
+  const d = authority.provider_duplicate_semantics;
+  requireTrue(d.repo === 'NOAA-EMC/wgrib2' && d.commit === '58f99e14f2922d1ae3e05d2c41ea28c599a8c81d', 'NCEP_DUPLICATE_AUTHORITY_DRIFT');
+  requireTrue(d.unmerge_blob === 'df2be678da7d7855d38897592a18be154100fa92' && d.section_compare_blob === '2081a81dfe216604f614f82b48fa9af109a61039', 'NCEP_DUPLICATE_SOURCE_BLOB_DRIFT');
+  requireTrue(d.first_record_wins === false && d.physical_order_authority === false, 'UNSAFE_DUPLICATE_SELECTION_ENABLED');
 
-  requireTrue(probe.includes('def request_same_object_range_metadata('), 'PROBE_RANGE_METADATA_TRANSPORT_MISSING');
-  requireTrue(probe.includes('"Range": "bytes=0-0"'), 'PROBE_RANGE_FIRST_BYTE_HEADER_MISSING');
-  requireTrue(probe.includes('RANGE_METADATA_FINAL_ORIGIN_REJECTED'), 'PROBE_RANGE_ORIGIN_GATE_MISSING');
-  requireTrue(probe.includes('RANGE_METADATA_OBJECT_IDENTITY_DRIFT'), 'PROBE_RANGE_OBJECT_IDENTITY_GATE_MISSING');
-  requireTrue(probe.includes('status, headers, final_url, redirected = request_same_object_range_metadata'), 'PROBE_PRIOR_AVAILABILITY_NOT_BOUND_TO_RANGE_METADATA');
-  requireTrue(probe.includes('production_metadata_probe_method":"RANGE_GET_BYTES_0_0_SAME_OBJECT_ONLY"'), 'PROBE_RANGE_METHOD_RESULT_MARKER_MISSING');
-  requireTrue(probe.includes('SOURCE_OBJECT_AFTER_TICK'), 'PROBE_PRIOR_AVAILABILITY_GATE_MISSING');
+  requireTrue(authority.normalization.missing_imputation === false && authority.normalization.negative_clipping === false, 'NORMALIZATION_WEAKENED');
+  requireTrue(authority.data_boundary.raw_directory_listing_uploaded === false && authority.data_boundary.raw_grib_uploaded === false, 'RAW_PROVIDER_ARTIFACT_ENABLED');
+  requireTrue(authority.data_boundary.decoded_values_emitted === false && authority.data_boundary.normalized_values_emitted === false, 'FORECAST_VALUES_EMITTED');
+  requireTrue(authority.data_boundary.database_writes === 0 && authority.data_boundary.formal_evidence_writes === 0 && authority.data_boundary.future_et0_executions === 0 && authority.data_boundary.runtime_source_delta === 0, 'WRITE_OR_RUNTIME_DELTA_ENABLED');
+  requireTrue(authority.formal_window_started === false && authority.mcft_cap09_completed === false, 'FORMAL_OR_COMPLETION_CLAIM_ENABLED');
 
-  requireTrue(probe.includes('codes_get_message'), 'PROBE_RAW_GRIB_MESSAGE_ACCESS_MISSING');
-  requireTrue(probe.includes('def grib2_section('), 'PROBE_SECTION4_EXTRACTOR_MISSING');
-  requireTrue(probe.includes('section4_sha256'), 'PROBE_SECTION4_HASH_MISSING');
-  requireTrue(probe.includes('APCP_BLOCK_DISTINCT_SECTION4_AMBIGUITY'), 'PROBE_DISTINCT_SECTION4_FAIL_GATE_MISSING');
-  requireTrue(probe.includes('APCP_BLOCK_DUPLICATE_VALUE_MISMATCH'), 'PROBE_DUPLICATE_VALUE_FAIL_GATE_MISSING');
-  requireTrue(probe.includes('float(r["value"]).hex()'), 'PROBE_EXACT_VALUE_IDENTITY_CHECK_MISSING');
-  requireTrue(probe.includes('physical_message_order_used_as_authority":False'), 'PROBE_ORDER_NONAUTHORITY_MARKER_MISSING');
-  requireTrue(probe.includes('first_record_wins":False'), 'PROBE_FIRST_RECORD_WINS_FALSE_MARKER_MISSING');
-  requireTrue(probe.includes('("var_APCP", "on")'), 'PROBE_APCP_FILTER_MISSING');
-  requireTrue(!probe.includes('("var_PRATE", "on")'), 'PROBE_PRATE_FILTER_PRESENT');
-  requireTrue(probe.includes('APCP_LOGICAL_BLOCK_72_OF_72_REQUIRED'), 'PROBE_APCP_LOGICAL_72_GATE_MISSING');
-  requireTrue(probe.includes('precip_mm = apcp["value"] - apcp_prev["value"]'), 'PROBE_APCP_CUMULATIVE_DIFFERENCE_MISSING');
-  requireTrue(probe.includes('APCP_BLOCK_MONOTONICITY_OR_HOURLY_SANITY_FAIL_NO_CLIP'), 'PROBE_APCP_MONOTONICITY_GATE_MISSING');
-  requireTrue(probe.includes('CROSS_BLOCK_DIFFERENCE_FORBIDDEN'), 'PROBE_CROSS_BLOCK_FAIL_GATE_MISSING');
-  requireTrue(probe.includes('DERIVED_DSWRF_SANITY_FAIL_NO_CLIP'), 'PROBE_DSWRF_NO_CLIP_GATE_MISSING');
-  requireTrue(probe.includes('FILTER_RESPONSE_NOT_GRIB'), 'PROBE_FILTER_GRIB_VALIDATION_MISSING');
-  requireTrue(!/psycopg|postgresql:\/\/|PGHOST|DATABASE_URL/i.test(probe), 'PROBE_DATABASE_SURFACE_DETECTED');
-  requireTrue(!/lter\.kbs\.msu\.edu|enviroweather\.msu\.edu/i.test(probe), 'EA1N_KBS_READ_DETECTED');
+  requireTrue(probe.includes('DIRECTORY_LISTING_TIME_BASIS = "UTC_OPERATIONAL_RECONCILED"'), 'PROBE_DIRECTORY_TIME_BASIS_MISSING');
+  requireTrue(probe.includes('def cycle_directory_url(') && probe.includes('def parse_cycle_directory_listing('), 'PROBE_DIRECTORY_PARSER_MISSING');
+  requireTrue(probe.includes('upper_bound = minute_start + timedelta(seconds=59, microseconds=999999)'), 'PROBE_MINUTE_UPPER_BOUND_MISSING');
+  requireTrue(probe.includes('DIRECTORY_REQUIRED_ENTRY_NOT_UNIQUE'), 'PROBE_DIRECTORY_UNIQUENESS_GATE_MISSING');
+  requireTrue(probe.includes('DIRECTORY_REQUIRED_ENTRY_ZERO_SIZE'), 'PROBE_DIRECTORY_SIZE_GATE_MISSING');
+  requireTrue(probe.includes('DIRECTORY_ENTRY_AFTER_TICK_UPPER_BOUND'), 'PROBE_DIRECTORY_CHRONOLOGY_GATE_MISSING');
+  requireTrue(probe.includes('DIRECTORY_REQUIRED_FILE_COUNT_FAIL'), 'PROBE_DIRECTORY_146_GATE_MISSING');
+  requireTrue(!probe.includes('request_same_object_range_metadata'), 'REJECTED_RANGE_TRANSPORT_STILL_PRESENT');
+  requireTrue(!probe.includes('method="HEAD"'), 'REJECTED_HEAD_TRANSPORT_STILL_PRESENT');
+
+  requireTrue(probe.includes('codes_get_message') && probe.includes('def grib2_section(') && probe.includes('section4_sha256'), 'SECTION4_DUPLICATE_PROOF_MISSING');
+  requireTrue(probe.includes('APCP_BLOCK_DISTINCT_SECTION4_AMBIGUITY') && probe.includes('APCP_BLOCK_DUPLICATE_VALUE_MISMATCH'), 'DUPLICATE_FAIL_CLOSED_GATES_MISSING');
+  requireTrue(probe.includes('float(r["value"]).hex()'), 'EXACT_DUPLICATE_VALUE_IDENTITY_MISSING');
+  requireTrue(probe.includes('APCP_BLOCK_MONOTONICITY_OR_HOURLY_SANITY_FAIL_NO_CLIP'), 'APCP_MONOTONICITY_GATE_MISSING');
+  requireTrue(probe.includes('DERIVED_DSWRF_SANITY_FAIL_NO_CLIP'), 'DSWRF_NO_CLIP_GATE_MISSING');
+  requireTrue(!/psycopg|postgresql:\/\/|PGHOST|DATABASE_URL/i.test(probe), 'DATABASE_SURFACE_DETECTED');
+  requireTrue(!/lter\.kbs\.msu\.edu|enviroweather\.msu\.edu/i.test(probe), 'KBS_READ_DETECTED');
   requireTrue(!/future_weather_assumption_v1|future_et0_assumption_v1/.test(probe), 'CANONICAL_EVIDENCE_SURFACE_DETECTED');
-  requireTrue(!/max\s*\(\s*0(?:\.0)?\s*,\s*precip/i.test(probe), 'PRECIP_CLIPPING_PATTERN_DETECTED');
 
-  requireTrue(workflow.includes("python-version: '3.12'"), 'WORKFLOW_PYTHON_NOT_PINNED');
-  requireTrue(workflow.includes('eccodes==2.47.0') && workflow.includes('eccodeslib==2.47.3.23'), 'WORKFLOW_DECODER_NOT_PINNED');
-  requireTrue(workflow.includes('python -m eccodes selfcheck'), 'WORKFLOW_SELFCHECK_MISSING');
-  requireTrue(workflow.includes('persist-credentials: false'), 'WORKFLOW_CREDENTIAL_PERSISTENCE_ENABLED');
+  requireTrue(workflow.includes("python-version: '3.12'") && workflow.includes('eccodes==2.47.0') && workflow.includes('eccodeslib==2.47.3.23'), 'WORKFLOW_DECODER_NOT_PINNED');
+  requireTrue(workflow.includes('python -m eccodes selfcheck') && workflow.includes('persist-credentials: false'), 'WORKFLOW_SELFCHECK_OR_CREDENTIAL_BOUNDARY_DRIFT');
 
-  const effect = authority.qualification_effect;
-  requireTrue(effect.future_weather_canonical_evidence_created === false && effect.future_et0_calculated === false && effect.future_et0_canonical_evidence_created === false, 'FORMAL_OUTPUT_CREATED_TOO_EARLY');
-  requireTrue(effect.database_write_authorized === false && effect.formal_evidence_write_authorized === false && effect.runtime_source_authorized === false && effect.formal_window_started === false, 'WRITE_OR_RUNTIME_AUTHORITY_ENABLED');
-
-  result.predecessor_blobs = Object.fromEntries(expectedPredecessors);
-  result.pinned_decoder = { python:'3.12', eccodes:'2.47.0', eccodeslib:'2.47.3.23' };
-  result.production_metadata_transport = { method:'RANGE_GET_BYTES_0_0', origin:'https://nomads.ncep.noaa.gov', same_object_path_required:true, last_modified_authority:true };
-  result.provider_duplicate_semantics = { repository:'NOAA-EMC/wgrib2', commit:provider.provider_code_commit, unmerge_blob:provider.unmerge_source_blob_sha, section_compare_blob:provider.section_compare_source_blob_sha, first_record_wins:false };
-  result.precipitation_adjudication = { rejected:['PRATE_ROLLING','APCP_EXACT_1H_ONLY'], candidate:'APCP_6H_BLOCK_CUMULATIVE_WITH_SECTION4_DUPLICATE_COLLAPSE', required_target_count:72, clipping:false, fallback:false };
+  result.predecessor_blobs = authority.predecessor_blobs;
+  result.production_chronology = { transport: chronology.selected_transport, required_files: chronology.required_files, conservative_upper_bound: chronology.availability_upper_bound };
+  result.precipitation_candidate = p.current;
   result.status = 'PASS';
 } catch (err) {
   result.error = `${err.name || 'Error'}:${err.message || String(err)}`;
@@ -151,4 +123,4 @@ try {
 
 fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
 fs.writeFileSync(OUTPUT_PATH, JSON.stringify(result, null, 2) + '\n');
-if (result.status === 'PASS') console.log(JSON.stringify({ status:result.status, base_sha:BASE, exact_file_count:result.exact_file_count, pinned_decoder:result.pinned_decoder, production_metadata_transport:result.production_metadata_transport, provider_duplicate_semantics:result.provider_duplicate_semantics, precipitation_adjudication:result.precipitation_adjudication }));
+if (result.status === 'PASS') console.log(JSON.stringify({ status:result.status, base_sha:BASE, exact_file_count:result.exact_file_count, production_chronology:result.production_chronology, precipitation_candidate:result.precipitation_candidate }));
