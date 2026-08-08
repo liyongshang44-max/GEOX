@@ -1,0 +1,90 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1g_awdn_scqc60_live_probe_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1G-AWDN-SCQC60-LIVE-PROBE-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION_CONTINUATION",
+  "record_status": "EA1G_AWDN_SCQC60_LIVE_PROBE_NOT_FORMAL_AUTHORITY",
+  "base_main_sha": "c01b61bcd688632ea4a8bcc355cc2e3efdf98dfb",
+  "ea1f_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1F-ENVIROWEATHER-API-DISCOVERY-V1.json",
+  "ea1f_authority_blob_sha": "2366f581f30bae465d6591d71c81a7ad2a25ace7",
+  "provider": "HPRCC_AWDN",
+  "provider_authority_url": "https://hprcc.unl.edu/awdn/",
+  "web_service_base_url": "https://awdn2.unl.edu/productdata/get",
+  "network": "enviro",
+  "product_id": "scqc60",
+  "target_station": {
+    "canonical_label": "Hickory Corners",
+    "enviroweather_slug": "kbs",
+    "state": "MI",
+    "identity_search_tokens": ["hickory corners", "kbs"]
+  },
+  "discovery_request": {
+    "mode": "active",
+    "product_id": "scqc60",
+    "network": "enviro",
+    "format": "json"
+  },
+  "observation_request": {
+    "lookback_hours": 48,
+    "timezone": "UTC",
+    "units": "si",
+    "format": "json"
+  },
+  "required_observation_roles": {
+    "solar_radiation": {
+      "field_name_patterns": ["solar", "solrad", "srad", "radiation", "irradiance"],
+      "epistemic_class": "OBSERVED_ONLY_WHEN_VALUE_NOT_ESTIMATED"
+    },
+    "rainfall": {
+      "field_name_patterns": ["precip", "pcpn", "rain", "rainfall"],
+      "epistemic_class": "OBSERVED_ONLY_WHEN_VALUE_NOT_ESTIMATED"
+    }
+  },
+  "estimated_value_policy": {
+    "forbidden_as_observed_flags": ["E", "R", "e"],
+    "E": "INVERSE_DISTANCE_WEIGHTING_ESTIMATE",
+    "R": "SPATIAL_REGRESSION_ESTIMATE",
+    "e": "PERSISTENCE_ESTIMATE",
+    "estimated_value_may_be_retained_as_observed": false,
+    "unflagged_or_explicit_observed_value_required_for_formal_observed_evidence": true
+  },
+  "freshness_and_continuity": {
+    "latest_record_max_age_hours": 6,
+    "recent_window_hours": 30,
+    "minimum_recent_distinct_hours": 24,
+    "minimum_recent_unestimated_solar_hours": 24,
+    "minimum_recent_unestimated_rain_hours": 24,
+    "future_timestamp_tolerance_minutes": 5
+  },
+  "output_policy": {
+    "station_public_identifier_allowed": true,
+    "station_label_allowed": true,
+    "station_identity_field_names_allowed": true,
+    "request_query_key_names_allowed": true,
+    "request_query_values_allowed": false,
+    "request_identity_sha256_allowed": true,
+    "response_body_sha256_allowed": true,
+    "response_bytes_allowed": true,
+    "record_field_names_allowed": true,
+    "matched_role_field_names_allowed": true,
+    "timestamp_coverage_allowed": true,
+    "record_counts_allowed": true,
+    "flag_counts_allowed": true,
+    "raw_numeric_observation_values_allowed": false,
+    "raw_response_body_allowed": false,
+    "unfiltered_string_values_allowed": false
+  },
+  "hard_nonclaims": [
+    "NO_FORMAL_SOURCE_AUTHORITY_FROM_PROBE_ALONE",
+    "NO_QUALIFIED_FORMAL_SITE",
+    "NO_ESTIMATED_E_OR_R_OR_e_VALUE_AS_OBSERVED_TRUTH",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_RUNTIME_PRODUCT_SOURCE_DELTA",
+    "NO_RAW_AWDN_PAYLOAD_PUBLICATION",
+    "NO_OBSERVATION_VALUE_PUBLICATION",
+    "NO_FORMAL_WINDOW_START",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
