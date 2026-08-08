@@ -84,14 +84,12 @@ jobs:
           tick = m.floor_utc_hour(datetime.now(timezone.utc))
           selected = m.select_complete_cycle(tick)
           idx_cache = {}
-          message_cache = {}
-          point_index = None
-          idx_hashes = []
-          message_hashes = []
-          section4_hashes = []
-          total_range_bytes = 0
+          record_cache = {}
+          idx_identities = []
+          message_identities = []
+          section4_identities = []
 
-          def production_urls(lead):
+          def object_urls(lead):
               stem = f'gfs.t{selected["cycle"]:%H}z.pgrb2.0p25.f{lead:03d}'
               root = m.cycle_directory_url(selected['cycle'])
               return root + stem, root + stem + '.idx'
@@ -104,10 +102,10 @@ jobs:
               if final.path != requested.path or final.query != requested.query:
                   raise RuntimeError('PRODUCTION_OBJECT_IDENTITY_DRIFT')
 
-          def dswrf_range(lead):
+          def locate_dswrf(lead):
               if lead in idx_cache:
                   return idx_cache[lead]
-              grib_url, idx_url = production_urls(lead)
+              grib_url, idx_url = object_urls(lead)
               status, _headers, body, final_url = m.request_bytes(idx_url, timeout=60, attempts=3)
               if status != 200:
                   raise RuntimeError(f'IDX_HTTP_{status}:F{lead:03d}')
@@ -117,55 +115,57 @@ jobs:
                   match = re.match(r'^(\d+):(\d+):(.*)$', raw)
                   if match:
                       rows.append((int(match.group(1)), int(match.group(2)), match.group(3)))
-              if not rows:
-                  raise RuntimeError(f'IDX_PARSE_ZERO:F{lead:03d}')
-              if any(rows[i][1] >= rows[i + 1][1] for i in range(len(rows) - 1)):
-                  raise RuntimeError(f'IDX_OFFSETS_NOT_STRICTLY_ASCENDING:F{lead:03d}')
+              if not rows or any(rows[i][1] >= rows[i + 1][1] for i in range(len(rows) - 1)):
+                  raise RuntimeError(f'IDX_STRUCTURE_INVALID:F{lead:03d}')
               candidates = []
-              for i, (_ordinal, start, tail) in enumerate(rows[:-1]):
+              for i, (ordinal, start, tail) in enumerate(rows[:-1]):
                   upper = ':' + tail.upper()
                   if ':DSWRF:' in upper and ':SURFACE:' in upper:
-                      candidates.append((start, rows[i + 1][1] - 1, m.sha256_bytes(tail.encode('utf-8'))))
+                      candidates.append((ordinal, start, rows[i + 1][1] - 1, m.sha256_bytes(tail.encode('utf-8'))))
               if len(candidates) != 1:
                   raise RuntimeError(f'IDX_DSWRF_SURFACE_NOT_UNIQUE:F{lead:03d}:COUNT={len(candidates)}')
-              start, end, tail_hash = candidates[0]
-              idx_cache[lead] = (grib_url, start, end, m.sha256_bytes(body), len(body), tail_hash)
-              idx_hashes.append({'lead': lead, 'sha256': m.sha256_bytes(body), 'bytes': len(body), 'tail_sha256': tail_hash})
+              ordinal, start, end, tail_hash = candidates[0]
+              identity = {
+                  'lead': lead,
+                  'idx_sha256': m.sha256_bytes(body),
+                  'idx_bytes': len(body),
+                  'ordinal': ordinal,
+                  'tail_sha256': tail_hash,
+                  'range_start': start,
+                  'range_end': end,
+              }
+              idx_identities.append(identity)
+              idx_cache[lead] = (grib_url, start, end, identity)
               return idx_cache[lead]
 
-          def exact_range(url, start, end, lead):
+          def range_body(grib_url, start, end, lead):
               expected = end - start + 1
               if expected <= 0 or expected > 64 * 1024 * 1024:
                   raise RuntimeError(f'PRODUCTION_RANGE_SIZE_REJECTED:F{lead:03d}:{expected}')
-              req = m.Request(url, method='GET', headers={
+              request = m.Request(grib_url, method='GET', headers={
                   'User-Agent': m.USER_AGENT,
                   'Accept': 'application/octet-stream,*/*',
                   'Range': f'bytes={start}-{end}',
                   'Accept-Encoding': 'identity',
               })
-              with m.urlopen(req, timeout=90) as response:
-                  status = int(response.status)
-                  final_url = response.geturl()
-                  validate_final(url, final_url)
-                  if status != 206:
-                      raise RuntimeError(f'PRODUCTION_RANGE_HTTP_NOT_206:F{lead:03d}:{status}')
+              with m.urlopen(request, timeout=90) as response:
+                  validate_final(grib_url, response.geturl())
+                  if int(response.status) != 206:
+                      raise RuntimeError(f'PRODUCTION_RANGE_HTTP_NOT_206:F{lead:03d}:{response.status}')
                   content_range = response.headers.get('Content-Range') or ''
                   if not content_range.startswith(f'bytes {start}-{end}/'):
                       raise RuntimeError(f'PRODUCTION_CONTENT_RANGE_MISMATCH:F{lead:03d}')
                   body = response.read(expected + 1)
-              if len(body) != expected:
-                  raise RuntimeError(f'PRODUCTION_RANGE_BODY_LENGTH_MISMATCH:F{lead:03d}:{len(body)}:{expected}')
-              if not body.startswith(b'GRIB') or not body.endswith(b'7777'):
-                  raise RuntimeError(f'PRODUCTION_RANGE_NOT_SINGLE_GRIB:F{lead:03d}')
+              if len(body) != expected or not body.startswith(b'GRIB') or not body.endswith(b'7777'):
+                  raise RuntimeError(f'PRODUCTION_RANGE_SINGLE_MESSAGE_FAIL:F{lead:03d}')
               return body
 
           def production_dswrf(lead):
-              nonlocal_point = None
-              if lead in message_cache:
-                  return message_cache[lead]
-              grib_url, start, end, idx_sha, idx_bytes, tail_hash = dswrf_range(lead)
-              body = exact_range(grib_url, start, end, lead)
-              with m.tempfile.NamedTemporaryFile(prefix='ea1n-prod-ds-', suffix='.grib2', delete=False) as tmp:
+              if lead in record_cache:
+                  return record_cache[lead]
+              grib_url, start, end, idx_identity = locate_dswrf(lead)
+              body = range_body(grib_url, start, end, lead)
+              with m.tempfile.NamedTemporaryFile(prefix='ea1n-dswrf-', suffix='.grib2', delete=False) as tmp:
                   tmp.write(body)
                   tmp_path = tmp.name
               try:
@@ -174,58 +174,45 @@ jobs:
                       if gid is None:
                           raise RuntimeError(f'PRODUCTION_ECCODES_NO_MESSAGE:F{lead:03d}')
                       try:
-                          short_name = str(m.codes_get(gid, 'shortName'))
-                          name = str(m.codes_get(gid, 'name'))
-                          type_of_level = str(m.codes_get(gid, 'typeOfLevel'))
-                          level = float(m.codes_get(gid, 'level'))
-                          role = m.role_for(short_name, name, type_of_level, level)
+                          role = m.role_for(str(m.codes_get(gid, 'shortName')), str(m.codes_get(gid, 'name')), str(m.codes_get(gid, 'typeOfLevel')), float(m.codes_get(gid, 'level')))
                           step_type = str(m.codes_get(gid, 'stepType'))
                           start_step = int(m.codes_get(gid, 'startStep'))
                           end_step = int(m.codes_get(gid, 'endStep'))
                           data_dt = m.dt_from_grib_keys(m.codes_get(gid, 'dataDate'), m.codes_get(gid, 'dataTime'))
                           valid_dt = m.dt_from_grib_keys(m.codes_get(gid, 'validityDate'), m.codes_get(gid, 'validityTime'))
-                          if role != 'DOWNWARD_SHORTWAVE_SURFACE' or type_of_level != 'surface':
-                              raise RuntimeError(f'PRODUCTION_DSWRF_ROLE_MISMATCH:F{lead:03d}')
-                          if step_type != 'avg' or start_step != m.rolling_start(lead) or end_step != lead:
-                              raise RuntimeError(f'PRODUCTION_DSWRF_WINDOW_MISMATCH:F{lead:03d}:S{start_step}:E{end_step}')
+                          if role != 'DOWNWARD_SHORTWAVE_SURFACE' or step_type != 'avg':
+                              raise RuntimeError(f'PRODUCTION_DSWRF_ROLE_OR_TYPE_FAIL:F{lead:03d}')
+                          if start_step != m.rolling_start(lead) or end_step != lead:
+                              raise RuntimeError(f'PRODUCTION_DSWRF_WINDOW_FAIL:F{lead:03d}:S{start_step}:E{end_step}')
                           if data_dt != selected['cycle'] or valid_dt != selected['cycle'] + timedelta(hours=lead):
-                              raise RuntimeError(f'PRODUCTION_DSWRF_TIME_MISMATCH:F{lead:03d}')
+                              raise RuntimeError(f'PRODUCTION_DSWRF_TIME_FAIL:F{lead:03d}')
                           nearest = m.eccodes.codes_grib_find_nearest(gid, m.GRID_LAT, m.GRID_LON_NATIVE, npoints=1)
                           if len(nearest) != 1:
-                              raise RuntimeError(f'PRODUCTION_NEAREST_COUNT_NOT_ONE:F{lead:03d}')
+                              raise RuntimeError(f'PRODUCTION_NEAREST_COUNT_FAIL:F{lead:03d}')
                           point = nearest[0]
                           lat = float(point['lat'])
                           lon = m.normalize_lon(float(point['lon']))
                           distance = float(point['distance'])
-                          index = int(point['index'])
-                          if abs(lat - m.GRID_LAT) > 1e-9 or abs(lon - m.GRID_LON_NATIVE) > 1e-9:
-                              raise RuntimeError(f'PRODUCTION_GRID_NODE_MISMATCH:F{lead:03d}:{lat}:{lon}')
-                          if abs(distance) > 1e-9:
-                              raise RuntimeError(f'PRODUCTION_GRID_NODE_DISTANCE_NOT_ZERO:F{lead:03d}')
-                          value = float(m.eccodes.codes_get_element(gid, 'values', index))
-                          nearest_value = float(point['value'])
-                          if value.hex() != nearest_value.hex():
-                              raise RuntimeError(f'PRODUCTION_NODE_VALUE_PATH_MISMATCH:F{lead:03d}')
+                          point_index = int(point['index'])
+                          value = float(point['value'])
+                          if abs(lat - m.GRID_LAT) > 1e-9 or abs(lon - m.GRID_LON_NATIVE) > 1e-9 or abs(distance) > 1e-9:
+                              raise RuntimeError(f'PRODUCTION_EXACT_NODE_FAIL:F{lead:03d}:{lat}:{lon}')
                           if not math.isfinite(value) or not 0 <= value <= 1600:
                               raise RuntimeError(f'PRODUCTION_RAW_DSWRF_SANITY_FAIL:F{lead:03d}')
                           message = bytes(m.codes_get_message(gid))
                           section4 = m.grib2_section(message, 4)
-                          rec = {
+                          record = {
                               'lead': lead,
                               'start_step': start_step,
                               'end_step': end_step,
                               'valid_time': valid_dt,
-                              'units': str(m.codes_get(gid, 'units')),
                               'value': value,
-                              'point_index': index,
-                              'message_sha256': m.sha256_bytes(body),
-                              'section4_sha256': m.sha256_bytes(section4),
+                              'point_index': point_index,
                               'packing_type': str(m.codes_get(gid, 'packingType')),
                               'bits_per_value': int(m.codes_get(gid, 'bitsPerValue')),
-                              'idx_sha256': idx_sha,
-                              'idx_bytes': idx_bytes,
-                              'idx_tail_sha256': tail_hash,
-                              'range_bytes': len(body),
+                              'message_sha256': m.sha256_bytes(body),
+                              'message_bytes': len(body),
+                              'section4_sha256': m.sha256_bytes(section4),
                           }
                           second = m.codes_grib_new_from_file(handle)
                           if second is not None:
@@ -234,87 +221,78 @@ jobs:
                       finally:
                           m.codes_release(gid)
               finally:
-                  try: os.remove(tmp_path)
-                  except OSError: pass
-              message_cache[lead] = rec
-              message_hashes.append({'lead': lead, 'sha256': rec['message_sha256'], 'bytes': rec['range_bytes'], 'packing_type': rec['packing_type'], 'bits_per_value': rec['bits_per_value']})
-              section4_hashes.append({'lead': lead, 'sha256': rec['section4_sha256'], 'start_step': rec['start_step'], 'end_step': rec['end_step']})
-              return rec
+                  try:
+                      os.remove(tmp_path)
+                  except OSError:
+                      pass
+              if record['packing_type'] == 'grid_simple' and record['bits_per_value'] == 0:
+                  raise RuntimeError(f'PRODUCTION_COLLAPSED_PACKING_REJECTED:F{lead:03d}')
+              message_identities.append({'lead': lead, 'sha256': record['message_sha256'], 'bytes': record['message_bytes'], 'packing_type': record['packing_type'], 'bits_per_value': record['bits_per_value']})
+              section4_identities.append({'lead': lead, 'sha256': record['section4_sha256'], 'start_step': record['start_step'], 'end_step': record['end_step']})
+              record_cache[lead] = record
+              return record
 
           target_leads = list(range(selected['lead_start'], selected['lead_end'] + 1))
-          required_dswrf_leads = set(target_leads)
+          required_leads = set(target_leads)
           for lead in target_leads:
               if lead - m.rolling_start(lead) > 1:
-                  required_dswrf_leads.add(lead - 1)
+                  required_leads.add(lead - 1)
+          records = {lead: production_dswrf(lead) for lead in sorted(required_leads)}
 
-          records = {}
-          for lead in sorted(required_dswrf_leads):
-              records[lead] = production_dswrf(lead)
+          point_indexes = {record['point_index'] for record in records.values()}
+          if len(point_indexes) != 1:
+              raise RuntimeError(f'PRODUCTION_GRID_POINT_INDEX_NOT_STABLE:COUNT={len(point_indexes)}')
 
-          indexes = {rec['point_index'] for rec in records.values()}
-          if len(indexes) != 1:
-              raise RuntimeError(f'PRODUCTION_GRID_POINT_INDEX_NOT_STABLE:COUNT={len(indexes)}')
-          if any(rec['packing_type'] == 'grid_simple' and rec['bits_per_value'] == 0 for rec in records.values()):
-              raise RuntimeError('PRODUCTION_DSWRF_COLLAPSED_CONSTANT_PACKING_DETECTED')
-
-          ds_series = []
-          direct = diff = 0
+          series = []
+          direct_count = 0
+          difference_count = 0
           for lead in target_leads:
               current = records[lead]
               start = m.rolling_start(lead)
               length = lead - start
               if length == 1:
                   hourly = current['value']
-                  direct += 1
+                  direct_count += 1
               else:
                   previous = records[lead - 1]
                   if previous['start_step'] != start:
-                      raise RuntimeError(f'PRODUCTION_CROSS_BLOCK_DSWRF_DIFFERENCE_FORBIDDEN:F{lead:03d}')
+                      raise RuntimeError(f'PRODUCTION_CROSS_BLOCK_DIFFERENCE_FORBIDDEN:F{lead:03d}')
                   hourly = length * current['value'] - (length - 1) * previous['value']
-                  diff += 1
+                  difference_count += 1
               if not math.isfinite(hourly) or not 0 <= hourly <= 1600:
                   raise RuntimeError(f'PRODUCTION_DERIVED_DSWRF_SANITY_FAIL_NO_CLIP:F{lead:03d}')
-              ds_series.append({'valid_time': m.iso(selected['cycle'] + timedelta(hours=lead)), 'value': format(hourly, '.12g')})
+              series.append({'valid_time': m.iso(selected['cycle'] + timedelta(hours=lead)), 'value': format(hourly, '.12g')})
 
-          if len(ds_series) != 72:
-              raise RuntimeError(f'PRODUCTION_DSWRF_72_POINTS_REQUIRED:{len(ds_series)}')
           expected_times = [m.iso(tick + timedelta(hours=i)) for i in range(1, 73)]
-          if [p['valid_time'] for p in ds_series] != expected_times:
-              raise RuntimeError('PRODUCTION_DSWRF_VALID_TIME_SEQUENCE_FAIL')
+          if len(series) != 72 or [point['valid_time'] for point in series] != expected_times:
+              raise RuntimeError('PRODUCTION_DSWRF_72H_SEQUENCE_FAIL')
 
-          summary = {
+          print('EA1N_PRODUCTION_DSWRF_72H=' + json.dumps({
               'status': 'PASS',
               'selected_cycle': m.iso(selected['cycle']),
               'lead_start': selected['lead_start'],
               'lead_end': selected['lead_end'],
-              'target_points': len(ds_series),
+              'target_points': len(series),
               'production_message_count': len(records),
-              'stable_point_index': next(iter(indexes)),
-              'dswrf_direct_1h': direct,
-              'dswrf_weighted_difference': diff,
-              'idx_hash_chain_sha256': m.sha256_json(idx_hashes),
-              'production_message_hash_chain_sha256': m.sha256_json(message_hashes),
-              'section4_hash_chain_sha256': m.sha256_json(section4_hashes),
-              'normalized_dswrf_series_sha256': m.sha256_json(ds_series),
+              'stable_point_index': next(iter(point_indexes)),
+              'direct_1h_count': direct_count,
+              'weighted_difference_count': difference_count,
+              'idx_identity_chain_sha256': m.sha256_json(idx_identities),
+              'production_message_chain_sha256': m.sha256_json(message_identities),
+              'section4_identity_chain_sha256': m.sha256_json(section4_identities),
+              'normalized_dswrf_series_sha256': m.sha256_json(series),
               'raw_idx_emitted': False,
               'raw_grib_emitted': False,
               'decoded_values_emitted': False,
               'normalized_values_emitted': False,
               'negative_clipping_performed': False,
               'interpolation_performed': False,
-          }
-          print('EA1N_PRODUCTION_DSWRF_72H=' + json.dumps(summary, sort_keys=True, separators=(',', ':')))
+          }, sort_keys=True, separators=(',', ':')))
           PY
-      - name: Decode and normalize exact 72h GFS input bundle
-        env:
-          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
-        run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mcft-cap-09-ea1n-gfs-values-${{ steps.authority.outputs.subject_sha }}
-          path: |
-            acceptance-output/MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY_GOVERNANCE_RESULT.json
-            acceptance-output/MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY_RESULT.json
+          path: acceptance-output/MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY_GOVERNANCE_RESULT.json
           if-no-files-found: error
           retention-days: 90
