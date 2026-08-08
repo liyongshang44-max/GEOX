@@ -64,6 +64,98 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.cjs
       - name: Syntax-check pinned decoder probe
         run: python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.py
+      - name: Diagnose DSWRF statistical family without forecast values
+        shell: bash
+        run: |
+          python - <<'PY'
+          import importlib.util
+          import json
+          import math
+          from datetime import datetime, timezone
+
+          path = 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.py'
+          spec = importlib.util.spec_from_file_location('ea1n_probe', path)
+          m = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+
+          def magnitude_bucket(value):
+              x = abs(float(value))
+              if x < 1e-6: return 'LT_1E_6_WM2'
+              if x < 1e-4: return 'LT_1E_4_WM2'
+              if x < 1e-2: return 'LT_1E_2_WM2'
+              if x < 1e-1: return 'LT_1E_1_WM2'
+              if x < 1: return 'LT_1_WM2'
+              if x < 10: return 'LT_10_WM2'
+              if x < 100: return 'LT_100_WM2'
+              return 'GE_100_WM2'
+
+          tick = m.floor_utc_hour(datetime.now(timezone.utc))
+          selected = m.select_complete_cycle(tick)
+          cache = {}
+
+          def records_for(lead):
+              if lead not in cache:
+                  status, _headers, body, final_url = m.request_bytes(m.filter_url(selected['cycle'], lead), timeout=90, attempts=3)
+                  if status != 200:
+                      raise RuntimeError(f'DIAG_FILTER_HTTP_{status}:F{lead:03d}')
+                  records, _extras = m.decode_subset(body, selected['cycle'], lead)
+                  cache[lead] = records
+              return cache[lead]
+
+          diagnostic = {
+              'schema_version': 'geox_mcft_cap09_ea1n_dswrf_no_value_diagnostic_v1',
+              'tick_utc': m.iso(tick),
+              'selected_cycle': m.iso(selected['cycle']),
+              'lead_start': selected['lead_start'],
+              'lead_end': selected['lead_end'],
+              'forecast_values_emitted': False,
+              'normalized_values_emitted': False,
+              'first_failure': None,
+          }
+
+          for lead in range(selected['lead_start'], selected['lead_end'] + 1):
+              records = records_for(lead)
+              candidates = [r for r in records if r['role'] == 'DOWNWARD_SHORTWAVE_SURFACE']
+              ds = m.find_dswrf_average(records, lead)
+              start = m.rolling_start(lead)
+              length = lead - start
+              if length == 1:
+                  hourly = ds['value']
+                  prev = None
+              else:
+                  prev_records = records_for(lead - 1)
+                  prev = m.find_dswrf_average(prev_records, lead - 1)
+                  hourly = length * ds['value'] - (length - 1) * prev['value']
+              if (not math.isfinite(hourly)) or not (0 <= hourly <= 1600):
+                  diagnostic['first_failure'] = {
+                      'lead': lead,
+                      'block_start': start,
+                      'window_length_hours': length,
+                      'derived_sign': 'NEGATIVE' if hourly < 0 else ('ABOVE_MAX' if hourly > 1600 else 'NONFINITE'),
+                      'derived_magnitude_bucket': magnitude_bucket(hourly) if math.isfinite(hourly) else 'NONFINITE',
+                      'current_average_is_zero': bool(ds['value'] == 0),
+                      'previous_average_is_zero': None if prev is None else bool(prev['value'] == 0),
+                      'current_vs_previous_average': None if prev is None else ('GT' if ds['value'] > prev['value'] else ('LT' if ds['value'] < prev['value'] else 'EQ')),
+                      'candidate_count': len(candidates),
+                      'candidate_metadata': [
+                          {
+                              'step_type': r['step_type'],
+                              'start_step': r['start_step'],
+                              'end_step': r['end_step'],
+                              'units': r['units'],
+                              'section4_sha256': r['section4_sha256'],
+                              'section4_bytes': r['section4_bytes'],
+                          }
+                          for r in candidates
+                      ],
+                      'instant_candidate_count': sum(1 for r in candidates if r['step_type'] == 'instant'),
+                      'average_candidate_count': sum(1 for r in candidates if r['step_type'] == 'avg'),
+                      'previous_section4_sha256': None if prev is None else prev['section4_sha256'],
+                  }
+                  break
+
+          print('EA1N_DSWRF_DIAGNOSTIC=' + json.dumps(diagnostic, sort_keys=True, separators=(',', ':')))
+          PY
       - name: Decode and normalize exact 72h GFS input bundle
         env:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
