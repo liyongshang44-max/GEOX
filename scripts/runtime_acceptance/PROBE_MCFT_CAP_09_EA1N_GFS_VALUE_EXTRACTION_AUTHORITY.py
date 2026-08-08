@@ -10,10 +10,11 @@ import sys
 import tempfile
 import time
 from datetime import datetime, timedelta, timezone
+from html import unescape
 from importlib.metadata import version as package_version
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlparse
+from urllib.parse import unquote, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 import eccodes
@@ -31,13 +32,13 @@ WIND_10M_TO_2M_FACTOR = 0.747951075
 SOLAR_WM2_TO_MJ_M2_H = 0.0036
 DIRECTORY_LISTING_TIME_BASIS = "UTC_OPERATIONAL_RECONCILED"
 OUTPUT = Path("acceptance-output/MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY_RESULT.json")
-USER_AGENT = "GEOX-MCFT-CAP-09-EA1N/1.5 (+exact-head qualification)"
-LISTING_RE = re.compile(
-    r'href="(?P<name>gfs\.t\d{2}z\.pgrb2\.0p25\.f\d{3}(?:\.idx)?)"[^>]*>.*?</a>\s+'
-    r'(?P<stamp>\d{2}-[A-Za-z]{3}-\d{4}\s+\d{2}:\d{2})\s+'
-    r'(?P<size>[0-9.]+[KMGTP]?)',
-    re.IGNORECASE,
-)
+USER_AGENT = "GEOX-MCFT-CAP-09-EA1N/1.6 (+exact-head qualification)"
+
+ANCHOR_RE = re.compile(r'<a\b[^>]*href\s*=\s*["\'](?P<href>[^"\']+)["\'][^>]*>.*?</a>', re.I | re.S)
+TARGET_NAME_RE = re.compile(r'gfs\.t\d{2}z\.pgrb2\.0p25\.f\d{3}(?:\.idx)?', re.I)
+STAMP_RE = re.compile(r'\b(?P<stamp>\d{2}-[A-Za-z]{3}-\d{4}\s+\d{2}:\d{2})\b')
+SIZE_RE = re.compile(r'\b(?P<size>[0-9]+(?:\.[0-9]+)?[KMGTP]?)\b', re.I)
+TAG_RE = re.compile(r'<[^>]+>', re.S)
 
 
 def iso(dt: datetime) -> str:
@@ -49,8 +50,7 @@ def sha256_bytes(body: bytes) -> str:
 
 
 def sha256_json(value) -> str:
-    body = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
-    return sha256_bytes(body)
+    return sha256_bytes(json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8"))
 
 
 def request_bytes(url: str, timeout: int = 60, attempts: int = 3):
@@ -86,31 +86,49 @@ def expected_object_names(cycle: datetime, lead: int):
 
 
 def parse_size_token(token: str) -> float:
-    match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)([KMGTP]?)", token.strip(), re.IGNORECASE)
+    match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)([KMGTP]?)", token.strip(), re.I)
     if not match:
         raise RuntimeError(f"DIRECTORY_SIZE_TOKEN_UNPARSEABLE:{sha256_bytes(token.encode('utf-8'))}")
-    value = float(match.group(1))
     factor = {"": 1, "K": 1024, "M": 1024**2, "G": 1024**3, "T": 1024**4, "P": 1024**5}[match.group(2).upper()]
-    return value * factor
+    return float(match.group(1)) * factor
 
 
 def parse_cycle_directory_listing(body: bytes):
     text = body.decode("utf-8", errors="strict")
+    anchors = list(ANCHOR_RE.finditer(text))
     entries = {}
-    for match in LISTING_RE.finditer(text):
-        name = match.group("name")
-        stamp_text = match.group("stamp")
-        size_text = match.group("size")
+    target_anchor_count = 0
+    for index, anchor in enumerate(anchors):
+        href = unescape(anchor.group("href"))
+        basename = unquote(urlparse(href).path.rsplit("/", 1)[-1])
+        if not TARGET_NAME_RE.fullmatch(basename):
+            continue
+        target_anchor_count += 1
+        next_anchor_start = anchors[index + 1].start() if index + 1 < len(anchors) else len(text)
+        tail_end = min(next_anchor_start, anchor.end() + 1200)
+        tail_html = text[anchor.end():tail_end]
+        tail_text = " ".join(unescape(TAG_RE.sub(" ", tail_html)).split())
+        stamp_match = STAMP_RE.search(tail_text)
+        if not stamp_match:
+            continue
+        size_match = SIZE_RE.search(tail_text, stamp_match.end())
+        if not size_match:
+            continue
+        stamp_text = stamp_match.group("stamp")
+        size_text = size_match.group("size")
         minute_start = datetime.strptime(stamp_text, "%d-%b-%Y %H:%M").replace(tzinfo=timezone.utc)
         upper_bound = minute_start + timedelta(seconds=59, microseconds=999999)
-        size_bytes_lower_bound = parse_size_token(size_text)
-        entries.setdefault(name, []).append({
+        entries.setdefault(basename, []).append({
             "minute_start": minute_start,
             "upper_bound": upper_bound,
             "size_token": size_text,
-            "size_bytes_lower_bound": size_bytes_lower_bound,
+            "size_bytes_lower_bound": parse_size_token(size_text),
         })
-    return entries
+    if target_anchor_count == 0:
+        raise RuntimeError("DIRECTORY_TARGET_ANCHOR_COUNT_ZERO")
+    if not entries:
+        raise RuntimeError(f"DIRECTORY_TARGET_ENTRY_PARSE_ZERO:ANCHORS={target_anchor_count}")
+    return entries, target_anchor_count
 
 
 def fetch_cycle_directory_listing(cycle: datetime):
@@ -118,8 +136,7 @@ def fetch_cycle_directory_listing(cycle: datetime):
     status, headers, body, final_url = request_bytes(requested_url, timeout=60, attempts=3)
     if status != 200:
         raise RuntimeError(f"DIRECTORY_HTTP_{status}:{iso(cycle)}")
-    requested = urlparse(requested_url)
-    final = urlparse(final_url)
+    requested, final = urlparse(requested_url), urlparse(final_url)
     if final.scheme != "https" or final.hostname != "nomads.ncep.noaa.gov":
         raise RuntimeError(f"DIRECTORY_FINAL_ORIGIN_REJECTED:{final.scheme}:{final.hostname}")
     if final.path != requested.path or final.query != requested.query:
@@ -127,11 +144,13 @@ def fetch_cycle_directory_listing(cycle: datetime):
     content_type = (headers.get("Content-Type") or "").lower()
     if "html" not in content_type:
         raise RuntimeError(f"DIRECTORY_CONTENT_TYPE_NOT_HTML:{sha256_bytes(content_type.encode('utf-8'))}")
+    entries, target_anchor_count = parse_cycle_directory_listing(body)
     return {
         "url": requested_url,
         "body_sha256": sha256_bytes(body),
         "bytes": len(body),
-        "entries": parse_cycle_directory_listing(body),
+        "target_anchor_count": target_anchor_count,
+        "entries": entries,
     }
 
 
@@ -147,9 +166,7 @@ def select_complete_cycle(tick: datetime):
         leads = list(range(support_lead, lead_end + 1))
         try:
             listing = fetch_cycle_directory_listing(cycle)
-            required = []
-            upper_bounds = []
-            entry_identities = []
+            required, upper_bounds, entry_identities = [], [], []
             for lead in leads:
                 for name in expected_object_names(cycle, lead):
                     matches = listing["entries"].get(name, [])
@@ -171,19 +188,13 @@ def select_complete_cycle(tick: datetime):
             if len(required) != 146:
                 raise RuntimeError(f"DIRECTORY_REQUIRED_FILE_COUNT_FAIL:{len(required)}")
             return {
-                "cycle": cycle,
-                "lead_start": lead_start,
-                "lead_end": lead_end,
-                "support_lead": support_lead,
-                "leads": leads,
+                "cycle": cycle, "lead_start": lead_start, "lead_end": lead_end, "support_lead": support_lead, "leads": leads,
                 "candidate_rejections": rejections,
                 "directory_url_hash": sha256_bytes(listing["url"].encode("utf-8")),
-                "directory_listing_sha256": listing["body_sha256"],
-                "directory_listing_bytes": listing["bytes"],
-                "required_directory_entry_count": len(required),
-                "required_entry_identity_hash": sha256_json(entry_identities),
-                "availability_upper_bound_min": min(upper_bounds),
-                "availability_upper_bound_max": max(upper_bounds),
+                "directory_listing_sha256": listing["body_sha256"], "directory_listing_bytes": listing["bytes"],
+                "directory_target_anchor_count": listing["target_anchor_count"],
+                "required_directory_entry_count": len(required), "required_entry_identity_hash": sha256_json(entry_identities),
+                "availability_upper_bound_min": min(upper_bounds), "availability_upper_bound_max": max(upper_bounds),
             }
         except Exception as exc:
             rejections.append({"cycle": iso(cycle), "reason": str(exc)[:400]})
@@ -191,19 +202,13 @@ def select_complete_cycle(tick: datetime):
 
 
 def filter_url(cycle: datetime, lead: int):
-    date = cycle.strftime("%Y%m%d")
-    cc = cycle.strftime("%H")
     params = [
-        ("file", f"gfs.t{cc}z.pgrb2.0p25.f{lead:03d}"),
-        ("var_TMP", "on"), ("var_RH", "on"), ("var_UGRD", "on"), ("var_VGRD", "on"),
-        ("var_DSWRF", "on"), ("var_APCP", "on"),
-        ("lev_2_m_above_ground", "on"), ("lev_10_m_above_ground", "on"), ("lev_surface", "on"),
-        ("subregion", ""),
-        ("leftlon", f"{GRID_LON_NATIVE - GRID_BBOX_HALF_WIDTH:.2f}"),
-        ("rightlon", f"{GRID_LON_NATIVE + GRID_BBOX_HALF_WIDTH:.2f}"),
-        ("toplat", f"{GRID_LAT + GRID_BBOX_HALF_WIDTH:.2f}"),
-        ("bottomlat", f"{GRID_LAT - GRID_BBOX_HALF_WIDTH:.2f}"),
-        ("dir", f"/gfs.{date}/{cc}/atmos"),
+        ("file", f"gfs.t{cycle:%H}z.pgrb2.0p25.f{lead:03d}"),
+        ("var_TMP", "on"), ("var_RH", "on"), ("var_UGRD", "on"), ("var_VGRD", "on"), ("var_DSWRF", "on"), ("var_APCP", "on"),
+        ("lev_2_m_above_ground", "on"), ("lev_10_m_above_ground", "on"), ("lev_surface", "on"), ("subregion", ""),
+        ("leftlon", f"{GRID_LON_NATIVE - GRID_BBOX_HALF_WIDTH:.2f}"), ("rightlon", f"{GRID_LON_NATIVE + GRID_BBOX_HALF_WIDTH:.2f}"),
+        ("toplat", f"{GRID_LAT + GRID_BBOX_HALF_WIDTH:.2f}"), ("bottomlat", f"{GRID_LAT - GRID_BBOX_HALF_WIDTH:.2f}"),
+        ("dir", f"/gfs.{cycle:%Y%m%d}/{cycle:%H}/atmos"),
     ]
     return FILTER_ENDPOINT + "?" + urlencode(params)
 
@@ -221,22 +226,18 @@ def grib2_section(message: bytes, wanted_section: int) -> bytes:
         raise RuntimeError("GRIB_MESSAGE_HEADER_INVALID")
     offset = 16
     while offset + 5 <= len(message):
-        if message[offset:offset + 4] == b"7777":
-            break
-        section_length = int.from_bytes(message[offset:offset + 4], byteorder="big", signed=False)
+        if message[offset:offset + 4] == b"7777": break
+        section_length = int.from_bytes(message[offset:offset + 4], "big", signed=False)
         if section_length < 5 or offset + section_length > len(message):
             raise RuntimeError(f"GRIB_SECTION_LENGTH_INVALID:OFFSET={offset}:LENGTH={section_length}")
-        section_number = int(message[offset + 4])
-        if section_number == wanted_section:
+        if int(message[offset + 4]) == wanted_section:
             return message[offset:offset + section_length]
         offset += section_length
     raise RuntimeError(f"GRIB_SECTION_NOT_FOUND:{wanted_section}")
 
 
 def role_for(short_name: str, name: str, type_of_level: str, level: float):
-    short = short_name.lower().strip()
-    long_name = name.lower().strip()
-    lev = float(level)
+    short, long_name, lev = short_name.lower().strip(), name.lower().strip(), float(level)
     if type_of_level == "heightAboveGround" and abs(lev - 2.0) < 1e-9:
         if short in {"2t", "t"} or long_name == "temperature": return "AIR_TEMPERATURE_2M"
         if short in {"2r", "r"} or "relative humidity" in long_name: return "RELATIVE_HUMIDITY_2M"
@@ -244,8 +245,7 @@ def role_for(short_name: str, name: str, type_of_level: str, level: float):
         if short in {"10u", "u"} or "u component of wind" in long_name: return "U_WIND_10M"
         if short in {"10v", "v"} or "v component of wind" in long_name: return "V_WIND_10M"
     if type_of_level == "surface":
-        if short == "dswrf" or "downward short-wave radiation flux" in long_name or "downward shortwave radiation flux" in long_name:
-            return "DOWNWARD_SHORTWAVE_SURFACE"
+        if short == "dswrf" or "downward short-wave radiation flux" in long_name or "downward shortwave radiation flux" in long_name: return "DOWNWARD_SHORTWAVE_SURFACE"
         if short in {"tp", "apcp"} or long_name == "total precipitation": return "TOTAL_PRECIPITATION_SURFACE"
     return None
 
@@ -255,50 +255,32 @@ def decode_subset(body: bytes, expected_cycle: datetime, requested_lead: int):
         raise RuntimeError(f"FILTER_RESPONSE_NOT_GRIB:{len(body)}:{sha256_bytes(body[:256])}")
     records, extras = [], 0
     with tempfile.NamedTemporaryFile(prefix="ea1n-", suffix=".grib2", delete=False) as tmp:
-        tmp.write(body)
-        tmp_path = tmp.name
+        tmp.write(body); tmp_path = tmp.name
     try:
         with open(tmp_path, "rb") as handle:
             while True:
                 gid = codes_grib_new_from_file(handle)
                 if gid is None: break
                 try:
-                    short_name = str(codes_get(gid, "shortName"))
-                    name = str(codes_get(gid, "name"))
-                    type_of_level = str(codes_get(gid, "typeOfLevel"))
-                    level = float(codes_get(gid, "level"))
+                    short_name, name = str(codes_get(gid, "shortName")), str(codes_get(gid, "name"))
+                    type_of_level, level = str(codes_get(gid, "typeOfLevel")), float(codes_get(gid, "level"))
                     role = role_for(short_name, name, type_of_level, level)
                     if role is None:
-                        extras += 1
-                        continue
-                    step_type = str(codes_get(gid, "stepType"))
-                    start_step = int(codes_get(gid, "startStep"))
-                    end_step = int(codes_get(gid, "endStep"))
+                        extras += 1; continue
+                    step_type, start_step, end_step = str(codes_get(gid, "stepType")), int(codes_get(gid, "startStep")), int(codes_get(gid, "endStep"))
                     data_dt = dt_from_grib_keys(codes_get(gid, "dataDate"), codes_get(gid, "dataTime"))
                     valid_dt = dt_from_grib_keys(codes_get(gid, "validityDate"), codes_get(gid, "validityTime"))
                     units = str(codes_get(gid, "units"))
-                    lats = codes_get_array(gid, "latitudes")
-                    lons = codes_get_array(gid, "longitudes")
-                    values = codes_get_array(gid, "values")
-                    if len(values) != 1 or len(lats) != 1 or len(lons) != 1:
-                        raise RuntimeError(f"DECODED_GRID_POINT_COUNT_NOT_ONE:{role}:{len(values)}")
+                    lats, lons, values = codes_get_array(gid, "latitudes"), codes_get_array(gid, "longitudes"), codes_get_array(gid, "values")
+                    if len(values) != 1 or len(lats) != 1 or len(lons) != 1: raise RuntimeError(f"DECODED_GRID_POINT_COUNT_NOT_ONE:{role}:{len(values)}")
                     lat, lon, value = float(lats[0]), normalize_lon(float(lons[0])), float(values[0])
-                    if abs(lat - GRID_LAT) > 1e-6 or abs(lon - GRID_LON_NATIVE) > 1e-6:
-                        raise RuntimeError(f"DECODED_GRID_NODE_MISMATCH:{role}:{lat}:{lon}")
-                    if data_dt != expected_cycle:
-                        raise RuntimeError(f"DECODED_REFERENCE_TIME_MISMATCH:{role}:{iso(data_dt)}:{iso(expected_cycle)}")
-                    if end_step != requested_lead:
-                        raise RuntimeError(f"DECODED_END_STEP_MISMATCH:{role}:{end_step}:{requested_lead}")
-                    if valid_dt != expected_cycle + timedelta(hours=requested_lead):
-                        raise RuntimeError(f"DECODED_VALID_TIME_MISMATCH:{role}:{iso(valid_dt)}")
-                    if not math.isfinite(value):
-                        raise RuntimeError(f"NONFINITE_DECODED_VALUE:{role}:F{requested_lead:03d}")
+                    if abs(lat - GRID_LAT) > 1e-6 or abs(lon - GRID_LON_NATIVE) > 1e-6: raise RuntimeError(f"DECODED_GRID_NODE_MISMATCH:{role}:{lat}:{lon}")
+                    if data_dt != expected_cycle: raise RuntimeError(f"DECODED_REFERENCE_TIME_MISMATCH:{role}:{iso(data_dt)}:{iso(expected_cycle)}")
+                    if end_step != requested_lead: raise RuntimeError(f"DECODED_END_STEP_MISMATCH:{role}:{end_step}:{requested_lead}")
+                    if valid_dt != expected_cycle + timedelta(hours=requested_lead): raise RuntimeError(f"DECODED_VALID_TIME_MISMATCH:{role}:{iso(valid_dt)}")
+                    if not math.isfinite(value): raise RuntimeError(f"NONFINITE_DECODED_VALUE:{role}:F{requested_lead:03d}")
                     section4 = grib2_section(bytes(codes_get_message(gid)), 4)
-                    records.append({
-                        "role":role,"short_name":short_name,"type_of_level":type_of_level,"level":level,
-                        "step_type":step_type,"start_step":start_step,"end_step":end_step,"units":units,
-                        "valid_time":valid_dt,"value":value,"section4_sha256":sha256_bytes(section4),"section4_bytes":len(section4)
-                    })
+                    records.append({"role":role,"short_name":short_name,"type_of_level":type_of_level,"level":level,"step_type":step_type,"start_step":start_step,"end_step":end_step,"units":units,"valid_time":valid_dt,"value":value,"section4_sha256":sha256_bytes(section4),"section4_bytes":len(section4)})
                 finally:
                     codes_release(gid)
     finally:
@@ -331,23 +313,17 @@ def apcp_block_candidates(records, lead: int):
 
 
 def resolve_logical_apcp_block(records, lead: int):
-    start = rolling_start(lead)
-    candidates = apcp_block_candidates(records, lead)
+    start, candidates = rolling_start(lead), apcp_block_candidates(records, lead)
     if not candidates: raise RuntimeError(f"APCP_BLOCK_LOGICAL_RECORD_MISSING:S{start}:E{lead}")
-    section4_hashes = {r["section4_sha256"] for r in candidates}
-    if len(section4_hashes) != 1:
-        raise RuntimeError(f"APCP_BLOCK_DISTINCT_SECTION4_AMBIGUITY:S{start}:E{lead}:COUNT={len(candidates)}:SECTION4={len(section4_hashes)}")
-    if len({float(r["value"]).hex() for r in candidates}) != 1:
-        raise RuntimeError(f"APCP_BLOCK_DUPLICATE_VALUE_MISMATCH:S{start}:E{lead}:COUNT={len(candidates)}")
-    if len({r["units"] for r in candidates}) != 1:
-        raise RuntimeError(f"APCP_BLOCK_DUPLICATE_UNIT_MISMATCH:S{start}:E{lead}:COUNT={len(candidates)}")
+    if len({r["section4_sha256"] for r in candidates}) != 1: raise RuntimeError(f"APCP_BLOCK_DISTINCT_SECTION4_AMBIGUITY:S{start}:E{lead}:COUNT={len(candidates)}")
+    if len({float(r["value"]).hex() for r in candidates}) != 1: raise RuntimeError(f"APCP_BLOCK_DUPLICATE_VALUE_MISMATCH:S{start}:E{lead}:COUNT={len(candidates)}")
+    if len({r["units"] for r in candidates}) != 1: raise RuntimeError(f"APCP_BLOCK_DUPLICATE_UNIT_MISMATCH:S{start}:E{lead}:COUNT={len(candidates)}")
     return candidates[0], len(candidates) - 1
 
 
 def assert_apcp_unit(units: str, lead: int):
     normalized = units.lower().replace(" ", "").replace("*", "").replace("^", "")
-    if normalized not in {"kgm-2", "kg/m2"}:
-        raise RuntimeError(f"APCP_UNIT_NOT_KG_M2:F{lead:03d}:{sha256_bytes(units.encode('utf-8'))}")
+    if normalized not in {"kgm-2", "kg/m2"}: raise RuntimeError(f"APCP_UNIT_NOT_KG_M2:F{lead:03d}:{sha256_bytes(units.encode('utf-8'))}")
 
 
 def assert_raw_sanity(rec, lead: int):
@@ -366,125 +342,72 @@ def hash_series(points):
 def main():
     subject_sha = os.environ.get("MCFT_SUBJECT_SHA", "").strip()
     if not subject_sha: raise RuntimeError("MCFT_SUBJECT_SHA_REQUIRED")
-    started = datetime.now(timezone.utc)
-    tick = floor_utc_hour(started)
+    started, tick = datetime.now(timezone.utc), floor_utc_hour(datetime.now(timezone.utc))
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     result = {
-        "schema_version":"geox_mcft_cap09_ea1n_gfs_value_extraction_result_v1",
-        "subject_sha":subject_sha,"base_main_sha":BASE_MAIN_SHA,"status":"FAIL","probe_started_at":iso(started),"tick_utc":iso(tick),
-        "production_chronology_transport":"OFFICIAL_NOMADS_PRODUCTION_CYCLE_DIRECTORY_INDEX",
-        "directory_listing_time_basis":DIRECTORY_LISTING_TIME_BASIS,
-        "directory_timestamp_upper_bound_policy":"LISTED_MINUTE_PLUS_59P999999_SECONDS",
-        "precipitation_source_candidate":"APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE",
-        "provider_duplicate_semantics_commit":"58f99e14f2922d1ae3e05d2c41ea28c599a8c81d",
-        "database_write_count":0,"formal_evidence_write_count":0,"future_et0_execution_count":0,"runtime_product_source_delta_count":0,
-        "raw_directory_listing_uploaded":False,"raw_grib_subset_uploaded":False,"decoded_forecast_values_emitted":False,"normalized_forecast_values_emitted":False,"negative_value_clipping_performed":False,
-        "physical_message_order_used_as_authority":False,"first_record_wins":False,
+        "schema_version":"geox_mcft_cap09_ea1n_gfs_value_extraction_result_v1","subject_sha":subject_sha,"base_main_sha":BASE_MAIN_SHA,"status":"FAIL","probe_started_at":iso(started),"tick_utc":iso(tick),
+        "production_chronology_transport":"OFFICIAL_NOMADS_PRODUCTION_CYCLE_DIRECTORY_INDEX","directory_listing_time_basis":DIRECTORY_LISTING_TIME_BASIS,"directory_timestamp_upper_bound_policy":"LISTED_MINUTE_PLUS_59P999999_SECONDS",
+        "precipitation_source_candidate":"APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE","provider_duplicate_semantics_commit":"58f99e14f2922d1ae3e05d2c41ea28c599a8c81d",
+        "database_write_count":0,"formal_evidence_write_count":0,"future_et0_execution_count":0,"runtime_product_source_delta_count":0,"raw_directory_listing_uploaded":False,"raw_grib_subset_uploaded":False,"decoded_forecast_values_emitted":False,"normalized_forecast_values_emitted":False,"negative_value_clipping_performed":False,"physical_message_order_used_as_authority":False,"first_record_wins":False,
     }
     try:
         result["decoder"] = {"eccodes_python":package_version("eccodes"),"eccodeslib":package_version("eccodeslib"),"module_version":getattr(eccodes,"__version__","unknown")}
         if result["decoder"]["eccodes_python"] != "2.47.0": raise RuntimeError("ECCODES_PYTHON_VERSION_DRIFT")
         if result["decoder"]["eccodeslib"] != "2.47.3.23": raise RuntimeError("ECCODESLIB_VERSION_DRIFT")
-
         selected = select_complete_cycle(tick)
-        result.update({
-            "selected_cycle":iso(selected["cycle"]),"lead_start":selected["lead_start"],"lead_end":selected["lead_end"],"support_lead":selected["support_lead"],
-            "valid_time_start":iso(tick+timedelta(hours=1)),"valid_time_end":iso(tick+timedelta(hours=72)),"source_object_count":selected["required_directory_entry_count"],
-            "production_directory_listing_sha256":selected["directory_listing_sha256"],"production_directory_listing_bytes":selected["directory_listing_bytes"],
-            "production_required_directory_entry_count":selected["required_directory_entry_count"],"production_required_entry_identity_hash":selected["required_entry_identity_hash"],
-            "production_availability_upper_bound_min":iso(selected["availability_upper_bound_min"]),"production_availability_upper_bound_max":iso(selected["availability_upper_bound_max"]),
-            "candidate_cycle_rejection_count":len(selected["candidate_rejections"])
-        })
+        result.update({"selected_cycle":iso(selected["cycle"]),"lead_start":selected["lead_start"],"lead_end":selected["lead_end"],"support_lead":selected["support_lead"],"valid_time_start":iso(tick+timedelta(hours=1)),"valid_time_end":iso(tick+timedelta(hours=72)),"source_object_count":selected["required_directory_entry_count"],"production_directory_listing_sha256":selected["directory_listing_sha256"],"production_directory_listing_bytes":selected["directory_listing_bytes"],"production_directory_target_anchor_count":selected["directory_target_anchor_count"],"production_required_directory_entry_count":selected["required_directory_entry_count"],"production_required_entry_identity_hash":selected["required_entry_identity_hash"],"production_availability_upper_bound_min":iso(selected["availability_upper_bound_min"]),"production_availability_upper_bound_max":iso(selected["availability_upper_bound_max"]),"candidate_cycle_rejection_count":len(selected["candidate_rejections"])})
 
         by_lead, filter_hashes, metadata_for_hash, section4_identities = {}, [], [], []
         total_filter_bytes = extra_message_count = 0
         for lead in selected["leads"]:
             url = filter_url(selected["cycle"], lead)
             status, _headers, body, final_url = request_bytes(url, timeout=90, attempts=3)
-            if status != 200: raise RuntimeError(f"GRIB_FILTER_HTTP_{status}:F{lead:03d}")
             final = urlparse(final_url)
-            if final.scheme != "https" or final.hostname != "nomads.ncep.noaa.gov" or final.path != "/cgi-bin/filter_gfs_0p25.pl":
-                raise RuntimeError(f"GRIB_FILTER_FINAL_IDENTITY_UNEXPECTED:F{lead:03d}")
-            total_filter_bytes += len(body)
-            filter_hashes.append({"lead":lead,"sha256":sha256_bytes(body),"bytes":len(body)})
-            records, extras = decode_subset(body, selected["cycle"], lead)
-            by_lead[lead] = records
-            extra_message_count += extras
+            if status != 200: raise RuntimeError(f"GRIB_FILTER_HTTP_{status}:F{lead:03d}")
+            if final.scheme != "https" or final.hostname != "nomads.ncep.noaa.gov" or final.path != "/cgi-bin/filter_gfs_0p25.pl": raise RuntimeError(f"GRIB_FILTER_FINAL_IDENTITY_UNEXPECTED:F{lead:03d}")
+            total_filter_bytes += len(body); filter_hashes.append({"lead":lead,"sha256":sha256_bytes(body),"bytes":len(body)})
+            records, extras = decode_subset(body, selected["cycle"], lead); by_lead[lead] = records; extra_message_count += extras
             for rec in records:
                 metadata_for_hash.append({k:(iso(rec[k]) if k=="valid_time" else rec[k]) for k in ["role","short_name","type_of_level","level","step_type","start_step","end_step","units","valid_time","section4_sha256","section4_bytes"]} | {"lead":lead})
                 section4_identities.append({"lead":lead,"role":rec["role"],"step_type":rec["step_type"],"start_step":rec["start_step"],"end_step":rec["end_step"],"section4_sha256":rec["section4_sha256"]})
             time.sleep(0.15)
 
-        target_leads = list(range(selected["lead_start"], selected["lead_end"]+1))
-        logical_apcp = {}
-        target_physical_count = target_duplicate_collapses = 0
+        target_leads = list(range(selected["lead_start"], selected["lead_end"]+1)); logical_apcp = {}; target_physical_count = target_duplicate_collapses = 0
         for lead in target_leads:
-            target_physical_count += len(apcp_block_candidates(by_lead[lead], lead))
-            rec, collapsed = resolve_logical_apcp_block(by_lead[lead], lead)
-            logical_apcp[lead] = rec
-            target_duplicate_collapses += collapsed
-        result["apcp_logical_target_count"] = len(logical_apcp)
-        result["apcp_target_physical_message_count"] = target_physical_count
-        result["apcp_target_semantic_duplicate_collapse_count"] = target_duplicate_collapses
+            target_physical_count += len(apcp_block_candidates(by_lead[lead], lead)); rec, collapsed = resolve_logical_apcp_block(by_lead[lead], lead); logical_apcp[lead] = rec; target_duplicate_collapses += collapsed
+        result.update({"apcp_logical_target_count":len(logical_apcp),"apcp_target_physical_message_count":target_physical_count,"apcp_target_semantic_duplicate_collapse_count":target_duplicate_collapses})
         if len(logical_apcp) != POINT_COUNT: raise RuntimeError(f"APCP_LOGICAL_BLOCK_72_OF_72_REQUIRED:COUNT={len(logical_apcp)}")
 
-        series = {name:[] for name in ["temperature_c","relative_humidity_percent","wind_2m_m_s","solar_mj_m2_h","precipitation_mm"]}
-        ds_direct = ds_diff = apcp_direct = apcp_diff = support_duplicate_collapses = 0
+        series = {name:[] for name in ["temperature_c","relative_humidity_percent","wind_2m_m_s","solar_mj_m2_h","precipitation_mm"]}; ds_direct = ds_diff = apcp_direct = apcp_diff = support_duplicate_collapses = 0
         for lead in target_leads:
-            records = by_lead[lead]
-            temp = find_instant(records,"AIR_TEMPERATURE_2M",lead); rh = find_instant(records,"RELATIVE_HUMIDITY_2M",lead)
-            u = find_instant(records,"U_WIND_10M",lead); v = find_instant(records,"V_WIND_10M",lead)
-            ds = find_dswrf_average(records,lead); apcp = logical_apcp[lead]
+            records = by_lead[lead]; temp = find_instant(records,"AIR_TEMPERATURE_2M",lead); rh = find_instant(records,"RELATIVE_HUMIDITY_2M",lead); u = find_instant(records,"U_WIND_10M",lead); v = find_instant(records,"V_WIND_10M",lead); ds = find_dswrf_average(records,lead); apcp = logical_apcp[lead]
             assert_apcp_unit(apcp["units"],lead)
             for rec in (temp,rh,u,v,ds,apcp): assert_raw_sanity(rec,lead)
-            start = rolling_start(lead); length = lead-start
+            start, length = rolling_start(lead), lead-rolling_start(lead)
             if length == 1:
-                hourly_ds = ds["value"]; precip_mm = apcp["value"]
-                ds_direct += 1; apcp_direct += 1
+                hourly_ds, precip_mm = ds["value"], apcp["value"]; ds_direct += 1; apcp_direct += 1
             else:
                 prev_records = by_lead.get(lead-1)
                 if prev_records is None: raise RuntimeError(f"MISSING_DERIVATION_PREDECESSOR:F{lead:03d}")
-                ds_prev = find_dswrf_average(prev_records,lead-1)
-                apcp_prev, support_collapsed = resolve_logical_apcp_block(prev_records,lead-1)
-                support_duplicate_collapses += support_collapsed
+                ds_prev = find_dswrf_average(prev_records,lead-1); apcp_prev, support_collapsed = resolve_logical_apcp_block(prev_records,lead-1); support_duplicate_collapses += support_collapsed
                 if ds_prev["start_step"] != start or apcp_prev["start_step"] != start: raise RuntimeError(f"CROSS_BLOCK_DIFFERENCE_FORBIDDEN:F{lead:03d}")
-                hourly_ds = length*ds["value"] - (length-1)*ds_prev["value"]
-                precip_mm = apcp["value"] - apcp_prev["value"]
-                ds_diff += 1; apcp_diff += 1
+                hourly_ds = length*ds["value"] - (length-1)*ds_prev["value"]; precip_mm = apcp["value"] - apcp_prev["value"]; ds_diff += 1; apcp_diff += 1
             if not math.isfinite(hourly_ds) or not 0 <= hourly_ds <= 1600: raise RuntimeError(f"DERIVED_DSWRF_SANITY_FAIL_NO_CLIP:F{lead:03d}")
             if not math.isfinite(precip_mm) or not 0 <= precip_mm <= 200: raise RuntimeError(f"APCP_BLOCK_MONOTONICITY_OR_HOURLY_SANITY_FAIL_NO_CLIP:F{lead:03d}")
-            valid_time = selected["cycle"] + timedelta(hours=lead)
-            series["temperature_c"].append((valid_time,temp["value"]-273.15))
-            series["relative_humidity_percent"].append((valid_time,rh["value"]))
-            series["wind_2m_m_s"].append((valid_time,math.hypot(u["value"],v["value"])*WIND_10M_TO_2M_FACTOR))
-            series["solar_mj_m2_h"].append((valid_time,hourly_ds*SOLAR_WM2_TO_MJ_M2_H))
-            series["precipitation_mm"].append((valid_time,precip_mm))
+            valid_time = selected["cycle"] + timedelta(hours=lead); series["temperature_c"].append((valid_time,temp["value"]-273.15)); series["relative_humidity_percent"].append((valid_time,rh["value"])); series["wind_2m_m_s"].append((valid_time,math.hypot(u["value"],v["value"])*WIND_10M_TO_2M_FACTOR)); series["solar_mj_m2_h"].append((valid_time,hourly_ds*SOLAR_WM2_TO_MJ_M2_H)); series["precipitation_mm"].append((valid_time,precip_mm))
 
         expected_times = [tick+timedelta(hours=i) for i in range(1,POINT_COUNT+1)]
         for name,points in series.items():
             if len(points) != POINT_COUNT: raise RuntimeError(f"NORMALIZED_SERIES_POINT_COUNT_FAIL:{name}:{len(points)}")
             if [p[0] for p in points] != expected_times: raise RuntimeError(f"NORMALIZED_SERIES_VALID_TIME_FAIL:{name}")
-
-        result.update({
-            "filter_response_count":len(filter_hashes),"filter_response_total_bytes":total_filter_bytes,
-            "filter_response_hash_chain_sha256":sha256_json(filter_hashes),"decoded_message_metadata_hash_chain_sha256":sha256_json(metadata_for_hash),"section4_identity_hash_chain_sha256":sha256_json(section4_identities),
-            "decoded_recognized_message_count":len(metadata_for_hash),"decoded_extra_message_count":extra_message_count,"apcp_support_semantic_duplicate_collapse_count":support_duplicate_collapses,
-            "normalization_counts":{"dswrf_direct_1h":ds_direct,"dswrf_weighted_difference":ds_diff,"apcp_block_direct_1h":apcp_direct,"apcp_block_cumulative_difference":apcp_diff,"prate_used":0},
-            "normalized_series_point_counts":{name:len(points) for name,points in series.items()},"normalized_series_hashes":{name:hash_series(points) for name,points in series.items()},
-            "physical_sanity_pass":True,"chronology_pass":True,"single_grid_point_pass":True,"message_semantics_reconciliation_pass":True,"provider_semantic_duplicate_rule_pass":True,"precipitation_source_correction_pass":True,
-            "status":"PASS","qualification_effect":"GFS_72H_DECODED_AND_NORMALIZED_VALUE_PIPELINE_AUTHORITY_CANDIDATE_ONLY"
-        })
-        result["normalized_bundle_sha256"] = sha256_json(result["normalized_series_hashes"])
+        result.update({"filter_response_count":len(filter_hashes),"filter_response_total_bytes":total_filter_bytes,"filter_response_hash_chain_sha256":sha256_json(filter_hashes),"decoded_message_metadata_hash_chain_sha256":sha256_json(metadata_for_hash),"section4_identity_hash_chain_sha256":sha256_json(section4_identities),"decoded_recognized_message_count":len(metadata_for_hash),"decoded_extra_message_count":extra_message_count,"apcp_support_semantic_duplicate_collapse_count":support_duplicate_collapses,"normalization_counts":{"dswrf_direct_1h":ds_direct,"dswrf_weighted_difference":ds_diff,"apcp_block_direct_1h":apcp_direct,"apcp_block_cumulative_difference":apcp_diff,"prate_used":0},"normalized_series_point_counts":{name:len(points) for name,points in series.items()},"normalized_series_hashes":{name:hash_series(points) for name,points in series.items()},"physical_sanity_pass":True,"chronology_pass":True,"single_grid_point_pass":True,"message_semantics_reconciliation_pass":True,"provider_semantic_duplicate_rule_pass":True,"precipitation_source_correction_pass":True,"status":"PASS","qualification_effect":"GFS_72H_DECODED_AND_NORMALIZED_VALUE_PIPELINE_AUTHORITY_CANDIDATE_ONLY"}); result["normalized_bundle_sha256"] = sha256_json(result["normalized_series_hashes"])
     except Exception as exc:
-        result["error"] = f"{type(exc).__name__}:{exc}"[:2000]
-        OUTPUT.write_text(json.dumps(result,indent=2,sort_keys=True)+"\n",encoding="utf-8")
-        raise
+        result["error"] = f"{type(exc).__name__}:{exc}"[:2000]; OUTPUT.write_text(json.dumps(result,indent=2,sort_keys=True)+"\n",encoding="utf-8"); raise
     OUTPUT.write_text(json.dumps(result,indent=2,sort_keys=True)+"\n",encoding="utf-8")
-    print(json.dumps({"status":result["status"],"tick":result["tick_utc"],"cycle":result["selected_cycle"],"entries":result["production_required_directory_entry_count"],"availability_upper_max":result["production_availability_upper_bound_max"],"apcp_logical":result["apcp_logical_target_count"],"duplicate_collapses":result["apcp_target_semantic_duplicate_collapse_count"],"normalization":result["normalization_counts"]},sort_keys=True))
+    print(json.dumps({"status":result["status"],"tick":result["tick_utc"],"cycle":result["selected_cycle"],"anchors":result["production_directory_target_anchor_count"],"entries":result["production_required_directory_entry_count"],"availability_upper_max":result["production_availability_upper_bound_max"],"apcp_logical":result["apcp_logical_target_count"],"duplicate_collapses":result["apcp_target_semantic_duplicate_collapse_count"],"normalization":result["normalization_counts"]},sort_keys=True))
 
 
 if __name__ == "__main__":
     try: main()
     except Exception as exc:
-        print(f"EA1N_FAIL:{type(exc).__name__}:{exc}",file=sys.stderr)
-        sys.exit(1)
+        print(f"EA1N_FAIL:{type(exc).__name__}:{exc}",file=sys.stderr); sys.exit(1)
