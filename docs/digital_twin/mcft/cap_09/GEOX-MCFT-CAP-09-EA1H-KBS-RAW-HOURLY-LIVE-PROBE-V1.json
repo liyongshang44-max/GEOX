@@ -33,6 +33,19 @@
       "query_string_forbidden": true
     },
     "spatial_support": "KBS_LTER_MAIN_SITE_WEATHER_STATION_NEAR_BCSE",
+    "station_coordinates_authority": {
+      "latitude": 42.408537,
+      "longitude": -85.373637,
+      "authority_url": "https://lter.kbs.msu.edu/datatables/155",
+      "authority_scope": "KBS_LTER_WEATHER_STATION"
+    },
+    "near_station_elevation_authority": {
+      "value_m": 286.43,
+      "authority_url": "https://lter.kbs.msu.edu/datatables/152",
+      "authority_description": "KBS_PRIMARY_SURVEY_MONUMENT_NEAR_LTER_WEATHER_STATION",
+      "exact_sensor_elevation_claimed": false,
+      "may_be_used_as_formal_et0_pressure_input_without_later_adjudication": false
+    },
     "direct_bcse_g1r1_field_equivalence": false,
     "direct_root_zone_equivalence": false
   },
@@ -41,36 +54,75 @@
     "solar_radiation": "solrad_avg",
     "wind_speed": "wind_speed",
     "relative_humidity": "rh",
+    "absolute_humidity_or_partial_pressure": "ah",
     "air_temperature": "airtmp_107_avg",
     "barometric_pressure": "barometer_avg",
     "rainfall": "rain_mm"
   },
-  "epistemic_semantics": {
-    "solar_radiation": "OBSERVED_RAW_STATION_MEASUREMENT_IF_ROW_VALID",
-    "rainfall": "OBSERVED_RAW_GAUGE_MEASUREMENT_IF_ROW_VALID",
-    "air_temperature": "OBSERVED_RAW_STATION_MEASUREMENT_IF_ROW_VALID",
-    "relative_humidity": "OBSERVED_RAW_STATION_MEASUREMENT_IF_ROW_VALID",
-    "wind_speed": "OBSERVED_RAW_STATION_MEASUREMENT_IF_ROW_VALID",
-    "barometric_pressure": "OBSERVED_RAW_STATION_MEASUREMENT_IF_ROW_VALID",
-    "blank_or_non_numeric_value": "MISSING_NOT_ZERO_NOT_OBSERVED",
-    "provider_raw_not_checked": true,
-    "provider_raw_not_checked_does_not_imply_estimated": true
+  "role_semantics": {
+    "rainfall": {
+      "status_target": "OBSERVED_ROLE_CONTINUITY",
+      "provider_unit": "mm",
+      "provider_unit_authority": "DATATABLE_13",
+      "missing_value_semantics": "MISSING_NOT_ZERO_NOT_OBSERVED"
+    },
+    "solar_radiation": {
+      "status_target": "OBSERVED_ROLE_CONTINUITY_WITH_UNIT_AUTHORITY_PENDING",
+      "provider_sensor_authority": "LI200X_OR_LI200S_PYRANOMETER_PER_KBS_PROTOCOL",
+      "provider_unit_authority": "PENDING",
+      "formal_canonicalization_allowed": false
+    },
+    "wind_speed": {
+      "status_target": "OBSERVED_ROLE_CONTINUITY_WITH_HEIGHT_AND_UNIT_BINDING_PENDING",
+      "provider_measurement_height_m": 10,
+      "formal_wind_height_adjustment_authority": "PENDING_EA1I"
+    },
+    "air_temperature": {
+      "status_target": "OBSERVED_ROLE_CONTINUITY",
+      "provider_unit": "C",
+      "provider_unit_authority": "DATATABLE_13"
+    },
+    "relative_humidity": {
+      "status_target": "DIAGNOSTIC_FOR_ET0_READINESS",
+      "provider_unit": "percent",
+      "provider_unit_authority": "DATATABLE_13",
+      "invalid_or_out_of_range_value_semantics": "MISSING_NOT_CLIPPED_NOT_IMPUTED"
+    },
+    "absolute_humidity_or_partial_pressure": {
+      "status_target": "DIAGNOSTIC_ONLY_PENDING_EXACT_SEMANTIC_AND_UNIT_AUTHORITY",
+      "formal_et0_use_allowed": false
+    },
+    "barometric_pressure": {
+      "status_target": "DIAGNOSTIC_ONLY_PENDING_EXACT_UNIT_OR_ELEVATION_PATH_ADJUDICATION",
+      "formal_et0_use_allowed": false
+    }
   },
-  "physical_sanity_ranges": {
-    "solrad_avg": {"min": -20, "max": 1600},
-    "wind_speed": {"min": 0, "max": 80},
-    "rh": {"min": 0, "max": 100},
-    "airtmp_107_avg": {"min": -50, "max": 60},
-    "barometer_avg": {"min": 800, "max": 1100},
-    "rain_mm": {"min": 0, "max": 100}
+  "et0_readiness": {
+    "algorithm_id": "ASCE_STANDARDIZED_REFERENCE_ET_SHORT_HOURLY_V1",
+    "status": "INCOMPLETE_PENDING_EA1I_HUMIDITY_AND_PRESSURE_OR_ELEVATION_AUTHORITY",
+    "ea1h_may_claim_complete_et0_input_bundle": false,
+    "pressure_or_elevation_path_per_amendment": true,
+    "pressure_path_selected": false,
+    "elevation_path_selected": false,
+    "rh_sentinel_or_invalid_value_may_be_clipped": false,
+    "rh_missing_interval_may_be_silently_imputed": false,
+    "ah_may_be_relabelled_vapor_pressure_without_authority": false,
+    "barometer_unit_may_be_guessed_from_values": false
   },
   "freshness_and_continuity": {
     "latest_record_max_age_hours": 6,
     "recent_window_hours": 30,
     "minimum_recent_distinct_hours": 24,
-    "minimum_recent_complete_et0_hours": 24,
-    "minimum_recent_observed_rain_hours": 24,
+    "minimum_recent_numeric_rain_hours": 24,
+    "minimum_recent_numeric_solar_hours": 24,
+    "minimum_recent_numeric_wind_hours": 24,
+    "minimum_recent_numeric_air_temperature_hours": 24,
     "future_timestamp_tolerance_minutes": 5
+  },
+  "diagnostic_sanity_ranges": {
+    "rh": {"min": 0, "max": 100},
+    "airtmp_107_avg": {"min": -50, "max": 60},
+    "rain_mm": {"min": 0, "max": 100}
   },
   "transport_limits": {
     "page_timeout_ms": 45000,
@@ -94,7 +146,14 @@
     "formal_runtime_use_right_established_by_probe": false
   },
   "qualification_effect": {
-    "probe_may_establish": "KBS_RAW_HOURLY_MACHINE_FRESHNESS_AND_ROLE_CONTINUITY_ONLY",
+    "probe_may_establish": "KBS_RAW_HOURLY_MACHINE_FRESHNESS_AND_NON_CANONICAL_ROLE_CONTINUITY_ONLY",
+    "positive_roles_if_live_gate_passes": [
+      "INTERVAL_RAIN_MACHINE_ROLE",
+      "SOLAR_RADIATION_MACHINE_ROLE_UNIT_PENDING",
+      "WIND_MACHINE_ROLE_HEIGHT_ADJUSTMENT_PENDING",
+      "AIR_TEMPERATURE_MACHINE_ROLE"
+    ],
+    "et0_bundle_must_remain_incomplete": true,
     "formal_source_authority_created": false,
     "qualified_formal_site": false,
     "database_write_authorized": false,
@@ -104,6 +163,12 @@
   },
   "hard_nonclaims": [
     "NO_FORMAL_SOURCE_AUTHORITY_FROM_PROBE_ALONE",
+    "NO_COMPLETE_ET0_INPUT_BUNDLE_FROM_EA1H",
+    "NO_SOLAR_CANONICALIZATION_WITHOUT_UNIT_AUTHORITY",
+    "NO_WIND_CANONICALIZATION_WITHOUT_HEIGHT_ADJUSTMENT_AUTHORITY",
+    "NO_RH_CLIPPING_OR_SILENT_IMPUTATION",
+    "NO_AH_TO_VAPOR_PRESSURE_RELABEL_WITHOUT_AUTHORITY",
+    "NO_BAROMETER_UNIT_GUESSING",
     "NO_QUALIFIED_FORMAL_SITE",
     "NO_BCSE_G1R1_FIELD_EQUIVALENCE",
     "NO_ROOT_ZONE_EQUIVALENCE",
