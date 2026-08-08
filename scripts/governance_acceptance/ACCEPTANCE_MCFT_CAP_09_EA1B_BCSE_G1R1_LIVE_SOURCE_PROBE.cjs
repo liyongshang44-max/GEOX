@@ -13,6 +13,8 @@ const EA1 = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1-SITE-SOURCE-QUAL
 const EA1_BLOB = 'a4329330cfae941a033d65f55e91b8ae8e96d862';
 const AMENDMENT = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md';
 const AMENDMENT_BLOB = '41270b888e15e4d9a6c9a34e1fa3f70e957a275e';
+const PRIOR_PROBE = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1-KBS-CURRENT-WEATHER-MACHINE-PROBE-V1.json';
+const PRIOR_PROBE_BLOB = '51adfc1a06f8015c60a64b5b7fc6f77e90830ec6';
 const CONFIG = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1B-BCSE-G1R1-LIVE-SOURCE-PROBE-V1.json';
 const PROBE = 'scripts/governance_acceptance/PROBE_MCFT_CAP_09_EA1B_BCSE_G1R1_SOURCES.mjs';
 
@@ -41,19 +43,30 @@ try {
 
   const ea1BlobAtBase = git(['rev-parse', `${BASE}:${EA1}`]);
   const amendmentBlobAtBase = git(['rev-parse', `${BASE}:${AMENDMENT}`]);
+  const priorProbeBlobAtBase = git(['rev-parse', `${BASE}:${PRIOR_PROBE}`]);
   assert.equal(ea1BlobAtBase, EA1_BLOB, 'EA1B_EXACT_EA1_BASE_AUTHORITY_REQUIRED');
   assert.equal(amendmentBlobAtBase, AMENDMENT_BLOB, 'EA1B_EXACT_AMENDMENT_BASE_AUTHORITY_REQUIRED');
+  assert.equal(priorProbeBlobAtBase, PRIOR_PROBE_BLOB, 'EA1B_EXACT_PRIOR_MACHINE_PROBE_AUTHORITY_REQUIRED');
 
   const config = json(CONFIG);
   const probe = read(PROBE);
+  const priorProbe = json(PRIOR_PROBE);
   const signal = json('docs/digital_twin/mcft/MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1.json');
 
   assert.equal(config.capability_line_id, 'MCFT-CAP-09');
   assert.equal(config.slice_id, 'MCFT-CAP-09.S6');
   assert.equal(config.internal_lifecycle, 'S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION_CONTINUATION');
-  assert.equal(config.base_main_sha, '96a505e959895ac1e2f980cc2887d74177dcae2b');
+  assert.equal(config.base_main_sha, '0ceb6b8b9c8205db4f4d4b0dec304c68af107c25');
   assert.equal(config.ea1_authority_blob_sha, EA1_BLOB);
   assert.equal(config.amendment_01_blob_sha, AMENDMENT_BLOB);
+  assert.equal(config.prior_machine_probe_blob_sha, PRIOR_PROBE_BLOB);
+  assert.equal(config.prior_machine_probe_ruling_consumed, 'KBS_MCSE_T1R1_TOWER_10CM_MACHINE_ACCESS_DOES_NOT_ESTABLISH_FIELD_OR_ROOT_ZONE_EQUIVALENCE');
+  assert.equal(priorProbe.site_candidate_id, 'KBS_MCSE_T1R1');
+  assert.equal(priorProbe.source_authority.direct_field_equivalence, false);
+  assert.equal(priorProbe.source_authority.direct_root_zone_equivalence, false);
+  assert.equal(priorProbe.qualification_effect.formal_source_authority_created, false);
+  assert.equal(priorProbe.qualification_effect.qualified_formal_site, false);
+
   assert.equal(config.candidate_site_id, 'KBS_BCSE_G1R1');
   assert.equal(config.candidate_crop, 'corn');
   assert.equal(config.candidate_treatment, 'G1_CONTINUOUS_CORN');
@@ -117,9 +130,11 @@ try {
     base_sha: BASE,
     ea1_blob_sha: ea1BlobAtBase,
     amendment_01_blob_sha: amendmentBlobAtBase,
+    prior_machine_probe_blob_sha: priorProbeBlobAtBase,
     changed_files: changed,
     exact_file_count: changed.length,
     candidate_site_id: config.candidate_site_id,
+    prior_mcse_tower_probe_consumed_without_equivalence_upgrade: true,
     runtime_source_delta: 0,
     migration_delta: 0,
     database_write_delta: 0,
