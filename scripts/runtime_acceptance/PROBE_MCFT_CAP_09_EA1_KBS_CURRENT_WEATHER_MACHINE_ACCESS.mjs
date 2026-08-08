@@ -10,6 +10,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const OUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_09_EA1_KBS_CURRENT_WEATHER_MACHINE_PROBE_RESULT.json');
 const SOURCE_URL = 'https://lter.kbs.msu.edu/current-weather/';
 const OFFICIAL_HOST = 'lter.kbs.msu.edu';
+const SUBJECT_SHA = process.env.MCFT_SUBJECT_SHA || null;
 const VALUE_RE = /Soil\s+Moisture\s*\(10\s*cm\s*\/\s*3\.9\s*in\)\s*:\s*([+-]?\d+(?:\.\d+)?)\s*%/i;
 const UPDATED_RE = /Last\s+updated\s*:\s*([^\n\r]+)/i;
 
@@ -37,11 +38,9 @@ const networkEvidence = [];
 let browser;
 
 try {
+  if (!SUBJECT_SHA || !/^[0-9a-f]{40}$/.test(SUBJECT_SHA)) throw new Error('KBS_PROBE_EXACT_SUBJECT_SHA_REQUIRED');
   browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({
-    locale: 'en-US',
-    timezoneId: 'UTC',
-  });
+  const context = await browser.newContext({ locale: 'en-US', timezoneId: 'UTC' });
   const page = await context.newPage();
 
   page.on('response', (response) => {
@@ -80,10 +79,7 @@ try {
     responsePromises.push(task);
   });
 
-  const mainResponse = await page.goto(SOURCE_URL, {
-    waitUntil: 'domcontentloaded',
-    timeout: 45_000,
-  });
+  const mainResponse = await page.goto(SOURCE_URL, { waitUntil: 'domcontentloaded', timeout: 45_000 });
   if (!mainResponse || mainResponse.status() < 200 || mainResponse.status() >= 400) {
     throw new Error(`KBS_CURRENT_WEATHER_DOCUMENT_FAILED:${mainResponse?.status() ?? 'NO_RESPONSE'}`);
   }
@@ -128,7 +124,7 @@ try {
   const result = {
     schema_version: 'geox_mcft_cap09_ea1_kbs_current_weather_machine_probe_result_v1',
     status: 'PASS',
-    subject_sha: process.env.GITHUB_SHA || null,
+    subject_sha: SUBJECT_SHA,
     source_url: SOURCE_URL,
     retrieved_at: retrievedAt,
     probe_method: 'OFFICIAL_WEB_UI_BROWSER_RENDER_V1',
@@ -158,7 +154,7 @@ try {
   const result = {
     schema_version: 'geox_mcft_cap09_ea1_kbs_current_weather_machine_probe_result_v1',
     status: 'FAIL',
-    subject_sha: process.env.GITHUB_SHA || null,
+    subject_sha: SUBJECT_SHA,
     source_url: SOURCE_URL,
     retrieved_at: retrievedAt,
     probe_method: 'OFFICIAL_WEB_UI_BROWSER_RENDER_V1',
