@@ -10,7 +10,7 @@ ROOT = Path.cwd()
 AUTHORITY = ROOT / "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1N-GFS-VALUE-EXTRACTION-AUTHORITY-V1.json"
 OUTPUT = ROOT / "acceptance-output/MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY_RESULT.json"
 EXPECTED_STATUS = "EA1N_PGRB2_DSWRF_EXACT_HOURLY_SCALAR_REJECTED"
-EXPECTED_EFFECT = "EA1N_FAIL_CLOSED_PGRB2_DSWRF_REJECTION_EA1O_REQUIRED"
+EXPECTED_EFFECT = "EA1N_FAIL_CLOSED_PGRB2_DSWRF_REJECTION_EA1O_AMENDMENT_REQUIRED"
 
 
 def git(*args: str) -> str:
@@ -59,12 +59,16 @@ def main() -> None:
     require(same_grid["f020_dswrf_surface_count"] == 0, "PGRB2B_DSWRF_ABSENCE_DRIFT")
     require(same_grid["result"] == "NO_DSWRF_SURFACE_ALTERNATIVE", "PGRB2B_ADJUDICATION_DRIFT")
 
-    next_candidate = authority["next_candidate"]
-    require(next_candidate["stage"] == "EA1O", "NEXT_STAGE_DRIFT")
-    require(next_candidate["source"] == "GFS_SFLUX_DIRECT_1H_DSWRF", "NEXT_SOURCE_DRIFT")
-    require(next_candidate["provider_semantics"] == "SURFACE_DSWRF_0_TO_1_HOUR_AVERAGE", "SFLUX_SEMANTICS_DRIFT")
-    require(next_candidate["spatial_authority_refreeze_required"] is True, "SILENT_SPATIAL_EQUIVALENCE_ENABLED")
-    require(next_candidate["authority_created"] is False, "EA1O_AUTHORITY_PREMATURELY_CREATED")
+    successor = authority["successor_governance"]
+    require(successor["stage"] == "EA1O", "NEXT_STAGE_DRIFT")
+    require(successor["purpose"] == "SOLAR_RADIATION_SOURCE_ARCHITECTURE_AMENDMENT_AND_SPATIAL_REFREEZE", "NEXT_PURPOSE_DRIFT")
+    require(successor["candidate_source"] == "GFS_SFLUX_DIRECT_1H_DSWRF", "NEXT_SOURCE_DRIFT")
+    require(successor["provider_semantics"] == "SURFACE_DSWRF_0_TO_1_HOUR_AVERAGE", "SFLUX_SEMANTICS_DRIFT")
+    require(successor["amendment_01_rule"] == "PRIMARY_FUTURE_AUTHORITY_IS_NOAA_NCEP_GFS_0P25_DEGREE_HOURLY_OUTPUT", "AMENDMENT_01_RULE_DRIFT")
+    require(successor["architecture_amendment_required"] is True, "ARCHITECTURE_AMENDMENT_NOT_REQUIRED")
+    require(successor["amendment_01_not_overridable_by_lower_authority"] is True, "LOWER_AUTHORITY_OVERRIDE_ENABLED")
+    require(successor["spatial_authority_refreeze_required"] is True, "SILENT_SPATIAL_EQUIVALENCE_ENABLED")
+    require(successor["authority_created"] is False, "EA1O_AUTHORITY_PREMATURELY_CREATED")
 
     boundary = authority["data_boundary"]
     require(boundary["database_writes"] == 0, "DATABASE_WRITE_ENABLED")
@@ -87,9 +91,11 @@ def main() -> None:
         "adjudication": dswrf["decision"],
         "reason": dswrf["reason"],
         "same_grid_alternative": same_grid["result"],
-        "next_stage": next_candidate["stage"],
-        "next_source": next_candidate["source"],
-        "spatial_authority_refreeze_required": next_candidate["spatial_authority_refreeze_required"],
+        "next_stage": successor["stage"],
+        "next_purpose": successor["purpose"],
+        "candidate_source": successor["candidate_source"],
+        "architecture_amendment_required": successor["architecture_amendment_required"],
+        "spatial_authority_refreeze_required": successor["spatial_authority_refreeze_required"],
         "negative_clipping_performed": False,
         "zero_thresholding_performed": False,
         "database_write_count": 0,
