@@ -35,17 +35,65 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Classify S6 Registry workflow applicability
+        id: applicability
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD | sort)"
+          ea2_successor_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-ea2-formal-authority-freeze.yml' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-EXTERNAL-EVIDENCE-PACKAGE-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA2_FORMAL_AUTHORITY_FREEZE.cjs' | sort)"
+          routing_repair_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml' \
+            '.github/workflows/mcft-cap-09-s6-registry-registration.yml' | sort)"
+          if [[ "$files" == "$ea2_successor_files" ]]; then
+            mode='not-applicable-ea2-successor-authority'
+          elif [[ "$files" == "$routing_repair_files" ]]; then
+            mode='successor-authority-routing-repair'
+          else
+            mode='historical-registry-routing'
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "mode=$mode" "files:" "$files"
+
+      - name: Record S6 Registry not applicable to EA2 successor authority freeze
+        if: steps.applicability.outputs.mode == 'not-applicable-ea2-successor-authority'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'S6 Registry lifecycle is not applicable: exact EA2 successor authority boundary changed with no Registry-owned mutation.'
+
+      - name: Validate successor authority routing repair
+        if: steps.applicability.outputs.mode == 'successor-authority-routing-repair'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'Exact two-workflow successor authority routing repair recognized; historical S6 Registry authority is not reopened.'
+
       - uses: actions/setup-node@v4
+        if: steps.applicability.outputs.mode == 'historical-registry-routing'
         with:
           node-version: 20.11.1
+
       - name: Classify CAP-09 S6 Registry lifecycle
+        if: steps.applicability.outputs.mode == 'historical-registry-routing'
         id: lifecycle
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           MCFT_REGISTRY_LANE: s6-registry-registration
         run: node scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs
+
       - name: Download effective S5 exact-SHA R2 authority
-        if: steps.lifecycle.outputs.mode == 's6-registry-registration'
+        if: steps.applicability.outputs.mode == 'historical-registry-routing' && steps.lifecycle.outputs.mode == 's6-registry-registration'
         uses: actions/download-artifact@v4
         with:
           run-id: 31165105531
@@ -53,7 +101,9 @@ jobs:
           path: acceptance-input/cap09-s5-effective
           repository: liyongshang44-max/GEOX
           github-token: ${{ github.token }}
+
       - name: Validate CAP-09 S6 Registry lifecycle
+        if: steps.applicability.outputs.mode == 'historical-registry-routing'
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           MCFT_CAP09_S5_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s5-effective
@@ -63,8 +113,9 @@ jobs:
           MCFT_REGISTRY_LANE: s6-registry-registration
           MCFT_REGISTRY_MODE: ${{ steps.lifecycle.outputs.mode }}
         run: node scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs
+
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.applicability.outputs.mode == 'historical-registry-routing'
         with:
           name: mcft-cap-09-s6-registry-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
