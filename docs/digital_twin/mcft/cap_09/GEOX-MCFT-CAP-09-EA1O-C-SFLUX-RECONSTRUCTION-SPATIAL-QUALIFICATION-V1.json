@@ -1,0 +1,196 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1o_c_sflux_reconstruction_spatial_qualification_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1O-C-SFLUX-RECONSTRUCTION-SPATIAL-QUALIFICATION-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA1O",
+  "record_status": "EA1O_C_LIVE_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "75db3b0d1baece194018e346f7d1756f1ee77e7f",
+  "predecessor_authorities": [
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+      "blob_sha": "d7ff8d7164d4f2a9f1c3edcaafcf30eeeb181f0d",
+      "consumed_ruling": "TASKBOOK_V0_4_REQUIRES_EA1O_C_BEFORE_EA2"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-03-GFS-SFLUX-EXPANDING-AVERAGE-RECONSTRUCTION-AUTHORITY.md",
+      "blob_sha": "44e2edbf7bf4a6ebbf863cd5b94f763b26d92850",
+      "consumed_ruling": "SIX_HOUR_BLOCK_EXPANDING_AVERAGE_WEIGHTED_DIFFERENCE_IS_AUTHORIZED_AS_A_LIVE_QUALIFICATION_CANDIDATE_ONLY"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-SFLUX-RECONSTRUCTION-AMENDMENT-STATUS-V1.json",
+      "blob_sha": "0693777ff6396a670309d7c1a10b4ee10c91e775",
+      "consumed_ruling": "EA1O_C_IS_THE_FIRST_LEGAL_SUCCESSOR_AFTER_AMENDMENT_03_EFFECTIVENESS"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-B-SFLUX-SOURCE-SPATIAL-QUALIFICATION-V1.json",
+      "blob_sha": "cd817199ed16ce429cf99743ffebcaf7fe562053",
+      "consumed_ruling": "DIRECT_ONE_HOUR_SFLUX_COVERAGE_IS_REJECTED_12_OF_72_AND_CANNOT_BE_REINTERPRETED_AS_PASS"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1K-GFS-EXACT-CYCLE-72H-AUTHORITY-V1.json",
+      "blob_sha": "f36955b2847d1a2b58052f0dec2fea465e7eaec2",
+      "consumed_ruling": "EXACT_LIVE_GFS_CYCLE_AND_T_PLUS_1_TO_T_PLUS_72_CHRONOLOGY_MUST_BE_REPROVED_AT_CURRENT_HEAD"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1M-GFS-SPATIAL-EXTRACTION-AUTHORITY-V1.json",
+      "blob_sha": "bb487c0c6a91dd37b0409b5d446aec4707f7b0a4",
+      "consumed_ruling": "KBS_T1_R1_MAIN_GEOMETRY_MAY_BE_READ_TRANSIENTLY_BUT_PGRB2_0P25_GRID_AUTHORITY_MAY_NOT_BE_REUSED_FOR_SFLUX"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1N-GFS-VALUE-EXTRACTION-AUTHORITY-V1.json",
+      "blob_sha": "607af693cd2f7d8d80e18d5308c16e128d397e44",
+      "consumed_ruling": "PACKING_QUANTIZATION_DIAGNOSTICS_CANNOT_AUTHORIZE_CLIPPING_THRESHOLDING_OR_ZERO_REPAIR"
+    }
+  ],
+  "decoder": {
+    "python": "3.12",
+    "eccodes": "2.47.0",
+    "eccodeslib": "2.47.3.23",
+    "selfcheck": "python -m eccodes selfcheck"
+  },
+  "source_candidate": {
+    "provider": "NOAA_NCEP_NOMADS",
+    "model": "GFS",
+    "product_family": "sflux",
+    "production_root": "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod",
+    "source_object_pattern": "gfs.YYYYMMDD/CC/atmos/gfs.tCCz.sfluxgrbfFFF.grib2",
+    "index_object_suffix": ".idx",
+    "parameter": "DSWRF",
+    "level": "surface",
+    "required_record_semantics": "SIX_HOUR_BLOCK_EXPANDING_AVERAGE",
+    "source_unit": "W/m^2",
+    "same_exact_gfs_cycle_as_ea1k_required": true,
+    "canonical_target_count": 72,
+    "support_lead_maximum_count": 1,
+    "availability_authority": "HTTP_LAST_MODIFIED",
+    "future_file_waiting_forbidden": true,
+    "valid_time_rewrite_forbidden": true,
+    "n_hour_fcst_record_authorized": false,
+    "full_global_grib_download_authorized": false,
+    "range_message_retrieval_required": true
+  },
+  "reconstruction_candidate": {
+    "block_size_hours": 6,
+    "block_start_formula": "b=6*floor((f-1)/6)",
+    "window_index_formula": "n=f-b",
+    "block_first_hour_formula": "H_f=A_f",
+    "within_block_formula": "H_f=n*A_f-(n-1)*A_(f-1)",
+    "support_lead_formula_when_needed": "canonical_lead_start-1",
+    "cross_block_reconstruction_authorized": false,
+    "cross_cycle_reconstruction_authorized": false,
+    "pgrb2_dswrf_fallback_authorized": false,
+    "negative_clipping_authorized": false,
+    "zero_thresholding_authorized": false,
+    "silent_imputation_authorized": false
+  },
+  "packing_quantization": {
+    "required_grib_keys": [
+      "packingType",
+      "bitsPerValue",
+      "binaryScaleFactor",
+      "decimalScaleFactor"
+    ],
+    "physical_quantum_formula": "q=2^binaryScaleFactor*10^(-decimalScaleFactor)",
+    "half_quantum_formula": "epsilon=q/2",
+    "reconstructed_bound_formula": "epsilon_H=n*epsilon_f+(n-1)*epsilon_(f-1)",
+    "bound_is_diagnostic_only": true,
+    "bound_may_repair_negative": false,
+    "nonfinite_reconstructed_value": "FAIL_CLOSED",
+    "negative_reconstructed_value": "FAIL_CLOSED"
+  },
+  "site_geometry_source": {
+    "provider": "KBS_LTER",
+    "download_url": "https://lter.kbs.msu.edu/datatables/829.csv",
+    "dataset": "KBS039",
+    "datatable_id": "KBS039-006.40",
+    "required_srid": 4326,
+    "selected_row": {
+      "treatment": "T1",
+      "replicate": "R1",
+      "subplot": "main",
+      "expected_match_count": 1
+    },
+    "raw_geometry_may_be_committed": false,
+    "raw_geometry_may_be_uploaded_as_ci_artifact": false,
+    "centroid_coordinate_may_be_emitted": false,
+    "selected_source_row_may_be_emitted": false
+  },
+  "spatial_candidate": {
+    "authority_source": "LIVE_SFLUX_GRIB_GEOMETRY",
+    "selection_method": "ECCODES_NEAREST_NATIVE_GRID_POINT",
+    "required_consensus": "POLYGON_CENTROID_AND_EVERY_UNIQUE_VERTEX_SELECT_IDENTICAL_NATIVE_POINT_FOR_EVERY_TARGET_AND_SUPPORT_MESSAGE",
+    "stable_grid_definition_required_across_messages": true,
+    "stable_selected_native_index_required_across_messages": true,
+    "stable_selected_native_coordinate_required_across_messages": true,
+    "silent_pgrb2_grid_reuse_authorized": false,
+    "interpolation_authorized": false,
+    "direct_field_equivalence": false,
+    "model_grid_is_observation_truth": false
+  },
+  "live_qualification": {
+    "required": true,
+    "exact_head_required": true,
+    "current_result": "NOT_YET_EXECUTED",
+    "success_decision": "QUALIFIED_AS_AMENDMENT03_SFLUX_RECONSTRUCTION_SOURCE_SPATIAL_CANDIDATE",
+    "value_rejection_decision": "REJECTED_AS_AMENDMENT03_SFLUX_RECONSTRUCTION_VALUE_AUTHORITY",
+    "spatial_rejection_decision": "REJECTED_AS_AMENDMENT03_SFLUX_SPATIAL_AUTHORITY",
+    "infrastructure_or_semantic_contract_failure": "HARD_FAIL",
+    "successor_not_authorized_until_result_frozen_and_effective": true
+  },
+  "probe_output_policy": {
+    "raw_idx_emitted": false,
+    "raw_grib_message_emitted": false,
+    "decoded_dswrf_values_emitted": false,
+    "reconstructed_dswrf_values_emitted": false,
+    "raw_kbs_geometry_emitted": false,
+    "kbs_centroid_emitted": false,
+    "safe_output_may_include": [
+      "cycle_and_tick",
+      "target_and_support_counts",
+      "source_hash_chains",
+      "packing_metadata_sets",
+      "quantization_bound_buckets",
+      "reconstructed_sequence_hash",
+      "finite_nonnegative_counts",
+      "native_grid_definition_hash",
+      "selected_public_native_grid_point",
+      "distance_metrics",
+      "qualification_decision"
+    ]
+  },
+  "qualification_effect": {
+    "probe_may_establish": "EA1O_C_LIVE_SOURCE_VALUE_SPATIAL_QUALIFICATION_CANDIDATE_ONLY",
+    "formal_source_authority_created_without_effective_merge": false,
+    "future_et0_execution_authorized": false,
+    "ea2_authorized": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "runtime_source_authorized": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false
+  },
+  "hard_nonclaims": [
+    "NO_TASKBOOK_DELTA",
+    "NO_RUNTIME_SOURCE_DELTA",
+    "NO_CANONICAL_CONTRACT_DELTA",
+    "NO_MIGRATION",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_FUTURE_ET0_EXECUTION",
+    "NO_N_HOUR_FCST_AS_INTERVAL_AVERAGE",
+    "NO_CROSS_BLOCK_RECONSTRUCTION",
+    "NO_CROSS_CYCLE_RECONSTRUCTION",
+    "NO_PGRB2_DSWRF_FALLBACK",
+    "NO_NEGATIVE_CLIPPING",
+    "NO_ZERO_THRESHOLDING",
+    "NO_SILENT_IMPUTATION",
+    "NO_SILENT_PGRB2_SFLUX_GRID_EQUIVALENCE",
+    "NO_INTERPOLATION",
+    "NO_RAW_PROVIDER_PAYLOAD_PUBLICATION",
+    "NO_RAW_KBS_GEOMETRY_PUBLICATION",
+    "NO_EA2_START",
+    "NO_FORMAL_O00_O23_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
