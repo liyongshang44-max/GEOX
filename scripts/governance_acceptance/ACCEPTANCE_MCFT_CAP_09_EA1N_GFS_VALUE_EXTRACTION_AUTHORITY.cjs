@@ -97,6 +97,14 @@ try {
   requireTrue(authority.normalization.negative_derived_value_clipping === false, 'NEGATIVE_CLIPPING_ENABLED');
   requireTrue(authority.normalization.prate_used_for_precipitation === false, 'PRATE_STILL_SELECTED');
 
+  requireTrue(probe.includes('def request_same_object_range_metadata('), 'PROBE_RANGE_METADATA_TRANSPORT_MISSING');
+  requireTrue(probe.includes('"Range": "bytes=0-0"'), 'PROBE_RANGE_FIRST_BYTE_HEADER_MISSING');
+  requireTrue(probe.includes('RANGE_METADATA_FINAL_ORIGIN_REJECTED'), 'PROBE_RANGE_ORIGIN_GATE_MISSING');
+  requireTrue(probe.includes('RANGE_METADATA_OBJECT_IDENTITY_DRIFT'), 'PROBE_RANGE_OBJECT_IDENTITY_GATE_MISSING');
+  requireTrue(probe.includes('status, headers, final_url, redirected = request_same_object_range_metadata'), 'PROBE_PRIOR_AVAILABILITY_NOT_BOUND_TO_RANGE_METADATA');
+  requireTrue(probe.includes('production_metadata_probe_method":"RANGE_GET_BYTES_0_0_SAME_OBJECT_ONLY"'), 'PROBE_RANGE_METHOD_RESULT_MARKER_MISSING');
+  requireTrue(probe.includes('SOURCE_OBJECT_AFTER_TICK'), 'PROBE_PRIOR_AVAILABILITY_GATE_MISSING');
+
   requireTrue(probe.includes('codes_get_message'), 'PROBE_RAW_GRIB_MESSAGE_ACCESS_MISSING');
   requireTrue(probe.includes('def grib2_section('), 'PROBE_SECTION4_EXTRACTOR_MISSING');
   requireTrue(probe.includes('section4_sha256'), 'PROBE_SECTION4_HASH_MISSING');
@@ -112,7 +120,6 @@ try {
   requireTrue(probe.includes('APCP_BLOCK_MONOTONICITY_OR_HOURLY_SANITY_FAIL_NO_CLIP'), 'PROBE_APCP_MONOTONICITY_GATE_MISSING');
   requireTrue(probe.includes('CROSS_BLOCK_DIFFERENCE_FORBIDDEN'), 'PROBE_CROSS_BLOCK_FAIL_GATE_MISSING');
   requireTrue(probe.includes('DERIVED_DSWRF_SANITY_FAIL_NO_CLIP'), 'PROBE_DSWRF_NO_CLIP_GATE_MISSING');
-  requireTrue(probe.includes('SOURCE_OBJECT_AFTER_TICK'), 'PROBE_PRIOR_AVAILABILITY_GATE_MISSING');
   requireTrue(probe.includes('FILTER_RESPONSE_NOT_GRIB'), 'PROBE_FILTER_GRIB_VALIDATION_MISSING');
   requireTrue(!/psycopg|postgresql:\/\/|PGHOST|DATABASE_URL/i.test(probe), 'PROBE_DATABASE_SURFACE_DETECTED');
   requireTrue(!/lter\.kbs\.msu\.edu|enviroweather\.msu\.edu/i.test(probe), 'EA1N_KBS_READ_DETECTED');
@@ -130,6 +137,7 @@ try {
 
   result.predecessor_blobs = Object.fromEntries(expectedPredecessors);
   result.pinned_decoder = { python:'3.12', eccodes:'2.47.0', eccodeslib:'2.47.3.23' };
+  result.production_metadata_transport = { method:'RANGE_GET_BYTES_0_0', origin:'https://nomads.ncep.noaa.gov', same_object_path_required:true, last_modified_authority:true };
   result.provider_duplicate_semantics = { repository:'NOAA-EMC/wgrib2', commit:provider.provider_code_commit, unmerge_blob:provider.unmerge_source_blob_sha, section_compare_blob:provider.section_compare_source_blob_sha, first_record_wins:false };
   result.precipitation_adjudication = { rejected:['PRATE_ROLLING','APCP_EXACT_1H_ONLY'], candidate:'APCP_6H_BLOCK_CUMULATIVE_WITH_SECTION4_DUPLICATE_COLLAPSE', required_target_count:72, clipping:false, fallback:false };
   result.status = 'PASS';
@@ -143,4 +151,4 @@ try {
 
 fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
 fs.writeFileSync(OUTPUT_PATH, JSON.stringify(result, null, 2) + '\n');
-if (result.status === 'PASS') console.log(JSON.stringify({ status:result.status, base_sha:BASE, exact_file_count:result.exact_file_count, pinned_decoder:result.pinned_decoder, provider_duplicate_semantics:result.provider_duplicate_semantics, precipitation_adjudication:result.precipitation_adjudication }));
+if (result.status === 'PASS') console.log(JSON.stringify({ status:result.status, base_sha:BASE, exact_file_count:result.exact_file_count, pinned_decoder:result.pinned_decoder, production_metadata_transport:result.production_metadata_transport, provider_duplicate_semantics:result.provider_duplicate_semantics, precipitation_adjudication:result.precipitation_adjudication }));
