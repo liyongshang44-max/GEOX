@@ -1,0 +1,169 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1l_gfs_hourly_normalization_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1L-GFS-HOURLY-NORMALIZATION-AUTHORITY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION_CONTINUATION",
+  "record_status": "EA1L_GFS_HOURLY_NORMALIZATION_PROBE_NOT_FORMAL_AUTHORITY",
+  "base_main_sha": "5a593fe9364e4593676e361af893d67e3cca7766",
+  "predecessor_authorities": [
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md",
+      "blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
+      "consumed_ruling": "GFS_FUTURE_WEATHER_AND_FUTURE_ET0_MUST_USE_REAL_CHRONOLOGY_AND_SAME_EXACT_CYCLE"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1I-KBS-ET0-INPUT-AUTHORITY-V1.json",
+      "blob_sha": "47d41c48027e84285e934e7cda8af52fae6aa47d",
+      "consumed_ruling": "SOLAR_W_M2_TO_MJ_M2_H_FACTOR_0_0036_AND_ASCE_INPUT_TRANSFORMS"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1K-GFS-EXACT-CYCLE-72H-AUTHORITY-V1.json",
+      "blob_sha": "f36955b2847d1a2b58052f0dec2fea465e7eaec2",
+      "consumed_ruling": "EXACT_CYCLE_72H_CHRONOLOGY_ESTABLISHED_WITH_STATISTICAL_WINDOW_NORMALIZATION_PENDING"
+    }
+  ],
+  "provider": {
+    "name": "NOAA_NCEP_NOMADS",
+    "model": "GFS",
+    "grid": "0.25_degree_global_lat_lon",
+    "production_root": "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod",
+    "dswrf_unit_authority_url": "https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/grib2_table4-2-0-4.shtml",
+    "moisture_unit_authority_url": "https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/grib2_table4-2-0-1.shtml"
+  },
+  "canonical_targets": {
+    "future_weather": {
+      "canonical_evidence_type": "future_weather_assumption_v1",
+      "epistemic_class": "ASSUMED",
+      "quantity_kind": "FORECAST_PRECIPITATION_DEPTH",
+      "canonical_unit": "mm",
+      "interval": "EXACT_1H_ENDING_AT_VALID_TIME",
+      "selected_provider_variable": "PRATE_AVERAGE_WINDOW_SURFACE",
+      "apcp_selected": false,
+      "prate_instantaneous_selected": false
+    },
+    "future_et0_solar_input": {
+      "provider_variable": "DSWRF_SURFACE",
+      "provider_unit": "W_per_m2",
+      "normalized_quantity": "EXACT_1H_MEAN_DOWNWARD_SHORTWAVE_RADIATION",
+      "normalized_unit": "W_per_m2",
+      "et0_input_unit": "MJ_per_m2_per_hour",
+      "conversion_factor_after_hourly_normalization": 0.0036
+    }
+  },
+  "exact_cycle_policy": {
+    "qualification_tick_boundary": "FLOOR_EXACT_PROBE_START_TO_UTC_HOUR",
+    "canonical_point_count": 72,
+    "candidate_cycle_hours_utc": [0, 6, 12, 18],
+    "candidate_cycle_order": "NEWEST_TO_OLDEST",
+    "lead_start_rule": "lead_start=(T-cycle_time)+1h",
+    "lead_end_rule": "lead_end=(T-cycle_time)+72h",
+    "support_lead_rule": "support_lead=lead_start-1",
+    "support_lead_is_derivation_only": true,
+    "support_lead_must_not_become_canonical_point": true,
+    "all_target_and_support_objects_last_modified_lte_tick": true,
+    "future_file_waiting_forbidden": true,
+    "valid_time_rewrite_forbidden": true,
+    "hourly_horizon_max_lead": 120
+  },
+  "rolling_window_family": {
+    "block_hours": 6,
+    "expected_window_start_rule": "S=6*floor((lead-1)/6)",
+    "expected_window_end_rule": "E=lead",
+    "allowed_window_length_hours": [1,2,3,4,5,6],
+    "same_start_predecessor_required_when_window_length_gt_1": true,
+    "cross_block_differencing_forbidden": true,
+    "missing_predecessor_imputation_forbidden": true
+  },
+  "dswrf_normalization": {
+    "source_variable": "DSWRF",
+    "source_level": "surface",
+    "source_unit": "W_per_m2",
+    "required_statistic": "AVERAGE_WINDOW",
+    "matching_record_policy": "EXACTLY_ONE_ROLLING_WINDOW_RECORD_PER_LEAD",
+    "direct_rule_when_L_eq_1": "hourly_mean_w_m2=A_S_E",
+    "difference_rule_when_L_gt_1": "hourly_mean_w_m2=L*A_S_E-(L-1)*A_S_Eminus1",
+    "predecessor_requirement": "previous_lead_record_has_same_S_and_end_Eminus1",
+    "negative_derived_value_policy": "FAIL_NO_CLIP",
+    "future_et0_conversion_after_normalization": "MJ_m2_h=hourly_mean_w_m2*0.0036"
+  },
+  "precipitation_normalization": {
+    "selected_source_variable": "PRATE",
+    "source_level": "surface",
+    "source_unit": "kg_per_m2_per_s",
+    "required_statistic": "AVERAGE_WINDOW",
+    "matching_record_policy": "EXACTLY_ONE_ROLLING_AVERAGE_RECORD_PER_LEAD",
+    "instantaneous_prate_record_policy": "NOT_SELECTED_FOR_INTERVAL_DEPTH",
+    "direct_rule_when_L_eq_1": "hourly_mean_rate_kg_m2_s=R_S_E",
+    "difference_rule_when_L_gt_1": "hourly_mean_rate_kg_m2_s=L*R_S_E-(L-1)*R_S_Eminus1",
+    "predecessor_requirement": "previous_lead_average_record_has_same_S_and_end_Eminus1",
+    "hourly_depth_conversion": "hourly_depth_mm=hourly_mean_rate_kg_m2_s*3600",
+    "water_equivalent_identity": "1_kg_per_m2_equals_1_mm_water_depth",
+    "negative_derived_value_policy": "FAIL_NO_CLIP",
+    "apcp_policy": "NOT_SELECTED_DUE_MULTI_RECORD_FAMILY_AMBIGUITY_IN_EA1K",
+    "apcp_may_be_used_later_only_as_cross_check": true
+  },
+  "structural_proof_requirements": {
+    "support_plus_target_lead_count": 73,
+    "every_dswrf_target_has_reconstructible_1h_graph": true,
+    "every_prate_target_has_reconstructible_1h_graph": true,
+    "direct_and_difference_counts_may_vary_by_selected_cycle": true,
+    "all_72_target_valid_times_remain_exactly_T_plus_1_through_T_plus_72": true,
+    "raw_forecast_values_required_for_this_probe": false,
+    "normalized_values_generated_by_this_probe": false
+  },
+  "future_et0_boundary": {
+    "same_selected_gfs_cycle_as_future_weather_required": true,
+    "temperature_humidity_wind_transforms_remain_from_ea1i_ea1k": true,
+    "hourly_dswrf_normalization_authority_candidate_may_be_established": true,
+    "future_et0_algorithm_execution_not_implemented_by_this_probe": true,
+    "spatial_extraction_not_selected_by_this_probe": true
+  },
+  "output_policy": {
+    "raw_index_lines_emitted": false,
+    "raw_index_bodies_persisted_or_uploaded": false,
+    "grib_bodies_downloaded": false,
+    "forecast_values_emitted": false,
+    "safe_output_may_include": [
+      "selected_cycle",
+      "lead_start_end_support",
+      "provider_last_modified_bounds",
+      "descriptor_hash_chains",
+      "window_length_sets",
+      "direct_vs_differenced_point_counts",
+      "reconstructibility_boolean",
+      "unit_authority_page_hashes"
+    ]
+  },
+  "qualification_effect": {
+    "probe_may_establish": "GFS_EXACT_1H_PRECIPITATION_AND_SOLAR_NORMALIZATION_AUTHORITY_CANDIDATE_ONLY",
+    "precipitation_source_selection_candidate": "PRATE_AVERAGE_WINDOW",
+    "dswrf_hourly_normalization_candidate": true,
+    "forecast_value_canonicalization_implemented": false,
+    "future_weather_formal_source_authority_created": false,
+    "future_et0_formal_source_authority_created": false,
+    "spatial_extraction_implemented": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "runtime_source_authorized": false,
+    "formal_window_started": false
+  },
+  "hard_nonclaims": [
+    "NO_APCP_CANONICAL_SELECTION",
+    "NO_PRATE_INSTANTANEOUS_TO_INTERVAL_DEPTH_SHORTCUT",
+    "NO_DSWRF_MULTI_HOUR_AVERAGE_USED_AS_ONE_HOUR_VALUE",
+    "NO_CROSS_BLOCK_DIFFERENCING",
+    "NO_MISSING_PREDECESSOR_IMPUTATION",
+    "NO_NEGATIVE_DERIVED_VALUE_CLIPPING",
+    "NO_SUPPORT_LEAD_AS_CANONICAL_FORECAST_POINT",
+    "NO_FORECAST_VALUE_OUTPUT",
+    "NO_SPATIAL_EXTRACTION_CLAIM",
+    "NO_FUTURE_ET0_OUTPUT",
+    "NO_FORMAL_SOURCE_AUTHORITY_FROM_PROBE_ALONE",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_RUNTIME_PRODUCT_SOURCE_DELTA",
+    "NO_FORMAL_WINDOW_START",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
