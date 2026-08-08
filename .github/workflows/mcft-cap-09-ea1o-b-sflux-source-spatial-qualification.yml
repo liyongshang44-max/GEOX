@@ -80,6 +80,7 @@ jobs:
         run: |
           import hashlib
           import json
+          import re
           import urllib.request
           from datetime import datetime
           from pathlib import Path
@@ -102,7 +103,13 @@ jobs:
                   if i + 2 >= len(parts) or parts[i + 1] != 'surface':
                       continue
                   descriptor = parts[i + 2].strip()
-                  rows.append({'descriptor': descriptor, 'line_sha256': 'sha256:' + hashlib.sha256(line.encode()).hexdigest()})
+                  rows.append({
+                      'descriptor': descriptor,
+                      'first_token_is_digits': bool(parts and parts[0].isdigit()),
+                      'first_token_shape': 'INTEGER' if parts and parts[0].isdigit() else ('DECIMAL_RECORD' if parts and re.fullmatch(r'\d+\.\d+', parts[0]) else 'OTHER'),
+                      'second_token_is_digits': bool(len(parts) > 1 and parts[1].isdigit()),
+                      'line_sha256': 'sha256:' + hashlib.sha256(line.encode()).hexdigest(),
+                  })
               print(json.dumps({'lead': lead, 'surface_dswrf_records': rows}, sort_keys=True))
 
       - name: Live-qualify same-cycle sflux source and native spatial authority
