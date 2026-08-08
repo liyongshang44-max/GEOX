@@ -45,16 +45,37 @@ function parseDelimitedLine(line, delimiter) {
   output.push(value);
   return output;
 }
+function utcMillis(year, month, day, hour, minute, second) {
+  const values = [year, month, day, hour, minute, second].map(Number);
+  if (!values.every(Number.isInteger)) return null;
+  const [y, m, d, h, min, s] = values;
+  if (y < 1980 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31 || h < 0 || h > 23 || min < 0 || min > 59 || s < 0 || s > 60) return null;
+  const millis = Date.UTC(y, m - 1, d, h, min, Math.min(s, 59));
+  const check = new Date(millis);
+  if (check.getUTCFullYear() !== y || check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d || check.getUTCHours() !== h || check.getUTCMinutes() !== min) return null;
+  return millis;
+}
 function parseProviderUtc(value) {
   const raw = String(value || '').replace(/\u00a0/g, ' ').trim();
   if (!raw) return null;
-  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(?:\s*(Z|UTC|[+-]\d{2}:?\d{2}))?$/i);
-  if (!match) return null;
-  const zone = (match[7] || 'Z').toUpperCase();
-  if (!['Z', 'UTC', '+0000', '+00:00'].includes(zone)) return null;
-  const iso = `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6] || '00'}Z`;
-  const millis = Date.parse(iso);
-  return Number.isFinite(millis) ? millis : null;
+  const cleaned = raw
+    .replace(/\s+(?:UTC|GMT)$/i, '')
+    .replace(/\s+(?:\+0000|\+00:00|\+00)$/i, '')
+    .replace(/Z$/i, '')
+    .trim();
+
+  let match = cleaned.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?$/);
+  if (match) return utcMillis(match[1], match[2], match[3], match[4], match[5], match[6] || 0);
+
+  match = cleaned.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})[ T](\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?$/);
+  if (match) return utcMillis(match[3], match[1], match[2], match[4], match[5], match[6] || 0);
+
+  const explicitUtc = /(?:Z|UTC|GMT|\+0000|\+00:00|\+00)\s*$/i.test(raw);
+  if (explicitUtc) {
+    const parsed = Date.parse(raw);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
 }
 function finiteNumber(value) {
   const raw = String(value ?? '').trim();
@@ -154,7 +175,7 @@ try {
 
   const apiResponse = await context.request.get(downloadUrl.toString(), {
     timeout: CONFIG.transport_limits.download_timeout_ms,
-    headers: { accept: 'text/csv,text/plain;q=0.9,*/*;q=0.5', 'user-agent': 'GEOX-MCFT-CAP09-EA1H-READ-ONLY/1.1' },
+    headers: { accept: 'text/csv,text/plain;q=0.9,*/*;q=0.5', 'user-agent': 'GEOX-MCFT-CAP09-EA1H-READ-ONLY/1.2' },
   });
   if (!apiResponse.ok()) throw new Error(`EA1H_DOWNLOAD_HTTP_${apiResponse.status()}`);
   const responseHeaders = apiResponse.headers();
@@ -181,6 +202,7 @@ try {
   const allTimes = [];
   const completeEt0Times = [];
   const observedRainTimes = [];
+  const unparsedTimestampShapes = new Map();
   let timestampRows = 0;
   let unparsedTimestampRows = 0;
   let physicalInvalidRows = 0;
@@ -193,7 +215,12 @@ try {
     const rawTimestamp = row[columns.timestamp];
     const time = parseProviderUtc(rawTimestamp);
     if (time === null) {
-      if (String(rawTimestamp || '').trim()) unparsedTimestampRows += 1;
+      const raw = String(rawTimestamp || '').trim();
+      if (raw) {
+        unparsedTimestampRows += 1;
+        const shape = raw.replace(/[0-9]/g, 'D').replace(/[A-Za-z]/g, 'A').slice(0, 80);
+        unparsedTimestampShapes.set(shape, (unparsedTimestampShapes.get(shape) || 0) + 1);
+      }
       continue;
     }
     timestampRows += 1;
@@ -222,7 +249,10 @@ try {
     else if (rain !== null) physicalInvalidRows += 1;
   }
 
-  if (!allTimes.length) throw new Error(`EA1H_TIMESTAMPED_ROWS_REQUIRED:UNPARSED_NONEMPTY_${unparsedTimestampRows}`);
+  if (!allTimes.length) {
+    const shapes = [...unparsedTimestampShapes.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([shape, count]) => `${shape}:${count}`).join('|');
+    throw new Error(`EA1H_TIMESTAMPED_ROWS_REQUIRED:UNPARSED_NONEMPTY_${unparsedTimestampRows}:SHAPES_${shapes}`);
+  }
   if (futureRows > 0) throw new Error(`EA1H_FUTURE_TIMESTAMP_ROWS_FORBIDDEN:${futureRows}`);
   if (physicalInvalidRows > 0) throw new Error(`EA1H_PHYSICAL_SANITY_FAILURE_ROWS:${physicalInvalidRows}`);
 
