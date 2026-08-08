@@ -55,7 +55,7 @@ jobs:
             echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Validate exact EA1O-C no-write governance boundary
+      - name: Validate exact EA1O-C value-rejection governance boundary
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_C_SFLUX_RECONSTRUCTION_SPATIAL_QUALIFICATION.cjs
@@ -75,34 +75,57 @@ jobs:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY.mjs
 
-      - name: Live-qualify sflux reconstruction packing values and native spatial authority
+      - name: Re-prove sflux reconstruction value rejection and native spatial pass
         env:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1O_C_SFLUX_RECONSTRUCTION_SPATIAL_QUALIFICATION.py
 
-      - name: Verify completed fail-closed adjudication
+      - name: Verify frozen fail-closed value rejection
         shell: python
         run: |
           import json
           from pathlib import Path
 
-          path = Path('acceptance-output/MCFT_CAP_09_EA1O_C_SFLUX_RECONSTRUCTION_SPATIAL_QUALIFICATION_RESULT.json')
-          result = json.loads(path.read_text())
+          result = json.loads(Path('acceptance-output/MCFT_CAP_09_EA1O_C_SFLUX_RECONSTRUCTION_SPATIAL_QUALIFICATION_RESULT.json').read_text())
           assert result['status'] == 'PASS'
+          assert result['qualification_tick_boundary_utc'] == '2026-08-08T17:00:00Z'
+          assert result['same_cycle_binding']['ea1k_selected_cycle_utc'] == '2026-08-08T12:00:00Z'
+          assert result['same_cycle_binding']['lead_start'] == 6
+          assert result['same_cycle_binding']['lead_end'] == 77
           assert result['same_cycle_binding']['canonical_target_count'] == 72
-          assert result['reconstruction_qualification']['canonical_reconstructed_count'] == 72
-          assert result['reconstruction_qualification']['negative_clipping_performed'] is False
-          assert result['reconstruction_qualification']['zero_thresholding_performed'] is False
-          assert result['reconstruction_qualification']['silent_imputation_performed'] is False
-          assert result['reconstruction_qualification']['pgrb2_fallback_used'] is False
-          assert result['live_sflux_spatial_qualification']['pgrb2_grid_coordinate_reused'] is False
-          assert result['live_sflux_spatial_qualification']['interpolation_performed'] is False
-          allowed = {
-              'QUALIFIED_AS_AMENDMENT03_SFLUX_RECONSTRUCTION_SOURCE_SPATIAL_CANDIDATE',
-              'REJECTED_AS_AMENDMENT03_SFLUX_RECONSTRUCTION_VALUE_AUTHORITY',
-              'REJECTED_AS_AMENDMENT03_SFLUX_SPATIAL_AUTHORITY',
-          }
-          assert result['adjudication']['decision'] in allowed
+          assert result['same_cycle_binding']['support_lead'] == 5
+          assert result['source_transport']['required_message_count'] == 73
+          assert result['source_transport']['exact_range_message_count'] == 73
+          assert result['grib_parameter_identity']['discipline_set'] == [0]
+          assert result['grib_parameter_identity']['parameter_category_set'] == [4]
+          assert result['grib_parameter_identity']['parameter_number_set'] == [192]
+          assert result['grib_parameter_identity']['param_id_set'] == [260087]
+          assert result['grib_parameter_identity']['short_name_set'] == ['sdswrf']
+          assert result['packing_quantization']['packing_type_set'] == ['grid_complex_spatial_differencing']
+          assert result['packing_quantization']['maximum_reconstructed_quantization_bound_bucket'] == 'LT_1E_1'
+          reconstruction = result['reconstruction_qualification']
+          assert reconstruction['canonical_reconstructed_count'] == 72
+          assert reconstruction['finite_count'] == 72
+          assert reconstruction['nonnegative_count'] == 67
+          assert reconstruction['negative_count'] == 5
+          assert reconstruction['nonfinite_count'] == 0
+          assert reconstruction['negative_lead_set_sha256'] == 'sha256:960a129168895e150beea315387f3d38f3b9db5ded656c4bfa2d28762c230a60'
+          assert reconstruction['negative_clipping_performed'] is False
+          assert reconstruction['zero_thresholding_performed'] is False
+          assert reconstruction['silent_imputation_performed'] is False
+          assert reconstruction['pgrb2_fallback_used'] is False
+          spatial = result['live_sflux_spatial_qualification']
+          assert spatial['spatial_qualified'] is True
+          assert spatial['grid_type'] == 'regular_gg'
+          assert spatial['gaussian_n'] == 768
+          assert spatial['grid_point_count'] == 4718592
+          assert spatial['centroid_and_all_vertices_same_native_point_for_all_messages'] is True
+          assert spatial['pgrb2_grid_coordinate_reused'] is False
+          assert spatial['interpolation_performed'] is False
+          assert result['adjudication']['decision'] == 'REJECTED_AS_AMENDMENT03_SFLUX_RECONSTRUCTION_VALUE_AUTHORITY'
+          assert result['adjudication']['value_qualified'] is False
+          assert result['adjudication']['spatial_qualified'] is True
+          assert result['adjudication']['source_spatial_candidate_qualified'] is False
           assert result['database_write_count'] == 0
           assert result['formal_evidence_write_count'] == 0
           assert result['ea2_authorized'] is False
@@ -110,8 +133,8 @@ jobs:
           print(json.dumps({
               'status': 'PASS',
               'decision': result['adjudication']['decision'],
-              'value_qualified': result['adjudication']['value_qualified'],
-              'spatial_qualified': result['adjudication']['spatial_qualified'],
+              'negative_count': reconstruction['negative_count'],
+              'spatial_qualified': spatial['spatial_qualified'],
               'support_lead': result['same_cycle_binding']['support_lead'],
           }, sort_keys=True))
 
