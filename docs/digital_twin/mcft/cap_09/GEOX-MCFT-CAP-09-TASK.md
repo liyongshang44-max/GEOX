@@ -1,10 +1,10 @@
 # GEOX MCFT-CAP-09 — Shadow-Online Promotion
 
-## Complete Taskbook v0.3 — Stage 1B Design Freeze / S6 Amendment-01 + Amendment-02 Bound
+## Complete Taskbook v0.4 — Stage 1B Design Freeze / S6 Amendment-01 + Amendment-02 + Amendment-03 Bound
 
 ```text
 document_id:
-GEOX-MCFT-CAP-09-TASK-V0.3-STAGE-1B-S6-AMENDMENT-01-02-BOUND
+GEOX-MCFT-CAP-09-TASK-V0.4-STAGE-1B-S6-AMENDMENT-01-02-03-BOUND
 
 capability_line_id:
 MCFT-CAP-09
@@ -37,13 +37,16 @@ predecessor_semantic_artifact_digest:
 sha256:7e9d713631443641f17c06f71c494319c5f442424ba9ec9f426731940d2700f9
 
 document_status:
-STAGE_1B_DESIGN_FROZEN_WITH_S6_AMENDMENT_01_AND_02
+STAGE_1B_DESIGN_FROZEN_WITH_S6_AMENDMENT_01_02_03
 
 s6_amendment_01_ref:
 docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md
 
 s6_amendment_02_ref:
 docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-02-GFS-SOLAR-RADIATION-SOURCE-AUTHORITY.md
+
+s6_amendment_03_ref:
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-03-GFS-SFLUX-EXPANDING-AVERAGE-RECONSTRUCTION-AUTHORITY.md
 
 minimum_complete_field_twin_complete:
 false
@@ -52,9 +55,13 @@ false
 > Repository-state and authorization booleans in the original v0.1 S0 preamble
 > were historical S0 snapshots. Current delivery/effectiveness is determined by
 > protected-main Registry/status plus exact-SHA/R2 evidence. v0.2 changed S6
-> External Reality/source/crop entry authority. v0.3 adds only the separately
+> External Reality/source/crop entry authority. v0.3 added only the separately
 > adjudicated solar-radiation source exception required after EA1N fail-closed
-> the pgrb2 hourly DSWRF reconstruction. Neither revision reopens S0–S5.
+> the pgrb2 hourly DSWRF reconstruction. v0.4 adds only the separately
+> adjudicated sflux six-hour-block expanding-average reconstruction candidate
+> required after effective EA1O-B proved the Amendment-02 direct-one-hour source
+> requirement is not satisfied by production sflux. None of these revisions
+> reopens S0–S5.
 
 ## 0. Decisive ruling
 
@@ -93,8 +100,23 @@ GFS surface-flux product to serve only the solar-radiation input role used to
 derive future ET0 after EA1N proved the pgrb2 rolling-average route cannot
 identify a unique exact hourly scalar under the no-clipping policy.
 
-Neither amendment changes the shared canonical kernel, Runtime forcing
-selector, transaction families, persistence semantics or action authority.
+EA1O-B then live-proved that production sflux provides only 12 direct
+preceding-one-hour surface DSWRF averages across the governed 72 target
+intervals and 60 multi-hour averages. Its effective decision is:
+
+```text
+REJECTED_AS_AMENDMENT02_DIRECT_1H_SOURCE_AUTHORITY
+```
+
+Amendment-03 is the third narrow S6 architecture correction. It does not
+reinterpret that rejection as a pass. It permits exactly one six-hour-block
+expanding-average weighted-difference algorithm to become a candidate for a
+new live packing/value/spatial qualification. The algorithm itself remains
+NOT_QUALIFIED until EA1O-C passes at an exact head.
+
+None of the three amendments changes the shared canonical kernel, Runtime
+forcing selector, transaction families, persistence semantics or action
+authority.
 
 ## 1. Stage 1B closure target
 
@@ -261,7 +283,7 @@ S6 contains the following entry-authority sub-lifecycles before O00:
 ```text
 S6-EA0   Taskbook Amendment / Architecture Adjudication
 S6-EA1   External Site and Source Qualification
-S6-EA1O  Solar-radiation source architecture amendment + source/spatial re-freeze
+S6-EA1O  Solar-radiation source/reconstruction architecture amendments + source/spatial re-freeze
 S6-EA2   Formal Reality / Source / Crop Authority Freeze
 S6-EA3   External Collector + Canonicalizer Candidate
 S6-EA4   Live Source Exact-Head Qualification
@@ -312,8 +334,10 @@ HA-24  exact-SHA artifact, semantic digest and R2 retention
 Amendment-01 adds entry proof for External Site, Reality, Source, Crop Context,
 raw provenance, spatial support, temporal release, hourly reference ET and
 72-point future forcing. Amendment-02 changes only the eligible source-product
-family for the future-ET0 solar-radiation derivation input after separate live
-qualification. Neither amendment deletes, replaces or weakens HA-01–HA-24.
+family for the future-ET0 solar-radiation derivation input. Amendment-03 changes
+only the eligible temporal-normalization candidate for that same solar role
+after EA1O-B rejected direct-one-hour coverage. None deletes, replaces or
+weakens HA-01–HA-24.
 
 ## 6. Governance entry sequence
 
@@ -323,8 +347,10 @@ protected-main/exact-SHA evidence. The remaining S6 sequence is:
 ```text
 S6-EA0 effective architecture adjudication
 → S6-EA1 fail-closed site/source qualification
-→ S6-EA1O solar-radiation architecture amendment effective
-→ S6-EA1O live sflux source/spatial qualification
+→ S6-EA1O Amendment-02 solar-radiation source exception effective
+→ S6-EA1O-B direct-one-hour sflux rejection effective
+→ S6-EA1O Amendment-03 expanding-average reconstruction candidate effective
+→ S6-EA1O-C live sflux reconstruction/packing/spatial qualification
 → S6-EA2 External Formal authorities frozen
 → S6-EA3 collector/canonicalizer qualification
 → S6-EA4 live source exact-head proof
@@ -334,6 +360,8 @@ S6-EA0 effective architecture adjudication
 ```
 
 No stage may infer authority from an unmerged or non-effective later stage.
+EA1O-C must pass before EA2. A failed EA1O-C does not route around the failure;
+it requires a new separately adjudicated architecture decision.
 
 ## 7. Frozen nonclaims
 
@@ -396,8 +424,10 @@ EA1N pgrb2 hourly DSWRF reconstruction rejection is authoritative
 only the future-ET0 solar-radiation input role may use the sflux exception
 candidate source = gfs.tCCz.sfluxgrbfFFF.grib2
 candidate parameter = surface DSWRF direct preceding-one-hour average
-surface DSWRF "1 hour fcst" is not interchangeable with the one-hour average
-sflux remains NOT_QUALIFIED until exact-head source/spatial proof passes
+surface DSWRF "N hour fcst" is not interchangeable with an interval average
+EA1O-B direct-one-hour sflux rejection is authoritative
+REJECTED_AS_AMENDMENT02_DIRECT_1H_SOURCE_AUTHORITY
+sflux remains NOT_QUALIFIED unless a later separately adjudicated temporal path passes exact-head source/spatial proof
 future weather and future ET0 must still share the same exact GFS cycle
 solar-radiation source-object and native-grid provenance must remain explicit
 silent pgrb2/sflux grid equivalence is forbidden
@@ -413,4 +443,61 @@ Normative detail is in:
 
 ```text
 docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-02-GFS-SOLAR-RADIATION-SOURCE-AUTHORITY.md
+```
+
+## 10. Amendment-03 binding rules
+
+When Amendment-03 is present on protected main, it supersedes only
+Amendment-02's **direct-one-hour-only temporal eligibility rule** for the same
+future-ET0 solar-radiation role. All Amendment-01/02 source-family, chronology,
+provenance, no-fallback and spatial re-freeze requirements remain in force.
+
+The only newly eligible temporal-normalization candidate is:
+
+```text
+b = 6 * floor((f - 1) / 6)
+n = f - b
+
+if n == 1:
+    H_f = A_f
+
+if n > 1:
+    H_f = n * A_f - (n - 1) * A_(f-1)
+```
+
+where `A_f` and `A_(f-1)` are unique live surface-DSWRF `avg` records from the
+same six-hour block, same exact GFS cycle, and same freeze boundary.
+
+Additional hard rules are:
+
+```text
+six-hour block size is exactly 6
+cross-block reconstruction is forbidden
+N-hour forecast DSWRF remains forbidden as interval-average input
+support lead = canonical_lead_start-1 only when the first target is inside a block
+support lead is provenance input, not a 73rd canonical forecast point
+support lead must share the exact cycle and freeze boundary
+live GRIB packing metadata is required
+packing half-quantum and propagated reconstruction error are diagnostics only
+quantization uncertainty may not repair a negative value
+any non-finite reconstructed value fails closed
+any negative reconstructed value fails closed
+negative clipping is forbidden
+zero-thresholding is forbidden
+silent imputation is forbidden
+pgrb2 DSWRF fallback is forbidden
+sflux native grid must still be live re-frozen
+silent pgrb2 grid-coordinate reuse is forbidden
+interpolation remains forbidden unless separately adjudicated
+reconstruction_algorithm_qualified=false until EA1O-C passes
+sflux_source_authority_qualified=false until EA1O-C passes
+sflux_spatial_authority_qualified=false until EA1O-C passes
+EA2 remains forbidden until EA1O-C passes
+Formal O00-O23 remains unstarted
+```
+
+Normative detail is in:
+
+```text
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-03-GFS-SFLUX-EXPANDING-AVERAGE-RECONSTRUCTION-AUTHORITY.md
 ```
