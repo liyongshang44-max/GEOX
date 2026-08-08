@@ -433,7 +433,7 @@ def main() -> None:
     require(bool(re.fullmatch(r"[0-9a-f]{40}", subject_sha)), "EA1OD_EXACT_SUBJECT_SHA_REQUIRED")
     require(git("rev-parse", "HEAD") == subject_sha, "EA1OD_SUBJECT_SHA_NOT_CHECKED_OUT_HEAD")
     authority = json.loads(AUTHORITY_PATH.read_text(encoding="utf-8"))
-    require(authority["record_status"] == "EA1O_D_LIVE_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE", "EA1OD_AUTHORITY_STATUS_DRIFT")
+    require(authority["record_status"] == "EA1O_D_LIVE_QUALIFICATION_PASS_CANDIDATE_NOT_EFFECTIVE", "EA1OD_AUTHORITY_STATUS_DRIFT")
 
     ea1k = json.loads(EA1K_RESULT_PATH.read_text(encoding="utf-8"))
     require(ea1k.get("status") == "PASS", "EA1OD_EA1K_LIVE_CHRONOLOGY_PASS_REQUIRED")
