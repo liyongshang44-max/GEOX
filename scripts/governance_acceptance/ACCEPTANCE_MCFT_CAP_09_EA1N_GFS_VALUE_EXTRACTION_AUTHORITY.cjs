@@ -68,9 +68,30 @@ try {
   requireTrue(authority.tick_cycle_and_lead_policy.canonical_point_count === 72, 'FORECAST_POINT_COUNT_DRIFT');
   requireTrue(authority.tick_cycle_and_lead_policy.wait_for_future_files === false, 'FUTURE_FILE_WAITING_ENABLED');
   requireTrue(authority.tick_cycle_and_lead_policy.valid_time_rewrite === false, 'VALID_TIME_REWRITE_ENABLED');
+
+  const correction = authority.value_level_precipitation_correction;
+  requireTrue(correction.trigger_run_id === 31253728831, 'PRATE_REJECTION_TRIGGER_RUN_DRIFT');
+  requireTrue(correction.trigger_subject_sha === 'f299085875d277c15d8ae38d382b25378104e881', 'PRATE_REJECTION_SUBJECT_DRIFT');
+  requireTrue(correction.trigger_error === 'DERIVED_PRECIP_SANITY_FAIL_NO_CLIP:F006', 'PRATE_REJECTION_ERROR_DRIFT');
+  requireTrue(correction.negative_value_clipping_performed === false, 'PRATE_NEGATIVE_VALUE_WAS_CLIPPED');
+  requireTrue(correction.replacement_candidate === 'APCP_EXACT_ONE_HOUR_ACCUMULATION', 'APCP_CORRECTION_CANDIDATE_DRIFT');
+  requireTrue(correction.missing_exact_hour_record === 'FAIL_CLOSED', 'APCP_MISSING_RECORD_NOT_FAIL_CLOSED');
+  requireTrue(correction.duplicate_exact_hour_record === 'FAIL_CLOSED', 'APCP_DUPLICATE_RECORD_NOT_FAIL_CLOSED');
+  requireTrue(correction.fallback_to_prate === false, 'PRATE_FALLBACK_ENABLED');
+  requireTrue(correction.fallback_to_multi_hour_apcp_difference === false, 'MULTIHOUR_APCP_FALLBACK_ENABLED');
+  requireTrue(correction.epsilon_or_negative_clipping === false, 'PRECIPITATION_EPSILON_CLIPPING_ENABLED');
+
+  requireTrue(authority.decoded_message_reconciliation.exact_hour_accumulation_role === 'TOTAL_PRECIPITATION_SURFACE', 'APCP_ROLE_DRIFT');
+  requireTrue(authority.decoded_message_reconciliation.exact_hour_accumulation_step_type_required === 'accum', 'APCP_STEP_TYPE_DRIFT');
+  requireTrue(authority.decoded_message_reconciliation.exact_hour_accumulation_start_rule === 'startStep=lead-1', 'APCP_START_RULE_DRIFT');
+  requireTrue(authority.decoded_message_reconciliation.exact_hour_accumulation_end_rule === 'endStep=lead', 'APCP_END_RULE_DRIFT');
+  requireTrue(authority.decoded_message_reconciliation.exact_hour_accumulation_required_target_count === 72, 'APCP_COVERAGE_COUNT_DRIFT');
+  requireTrue(authority.normalization.precipitation_source === 'APCP_EXACT_ONE_HOUR_ACCUMULATION', 'PRECIPITATION_SOURCE_NOT_APCP_EXACT_HOUR');
+  requireTrue(authority.normalization.prate_rolling_used_for_precipitation === false, 'PRATE_ROLLING_STILL_SELECTED');
   requireTrue(authority.normalization.cross_block_differencing === false, 'CROSS_BLOCK_DIFFERENCING_ENABLED');
   requireTrue(authority.normalization.missing_predecessor_imputation === false, 'MISSING_PREDECESSOR_IMPUTATION_ENABLED');
-  requireTrue(authority.normalization.negative_derived_value_clipping === false, 'NEGATIVE_VALUE_CLIPPING_ENABLED');
+  requireTrue(authority.normalization.negative_derived_value_clipping === false, 'NEGATIVE_DERIVED_VALUE_CLIPPING_ENABLED');
+
   requireTrue(authority.qualification_effect.future_weather_canonical_evidence_created === false, 'CANONICAL_FUTURE_WEATHER_CREATED_TOO_EARLY');
   requireTrue(authority.qualification_effect.future_et0_calculated === false, 'FUTURE_ET0_EXECUTED_TOO_EARLY');
   requireTrue(authority.qualification_effect.database_write_authorized === false, 'DATABASE_WRITE_AUTHORIZED');
@@ -80,15 +101,21 @@ try {
 
   requireTrue(probe.includes('GRID_LAT = 42.5'), 'PROBE_GRID_LAT_MARKER_MISSING');
   requireTrue(probe.includes('GRID_LON_NATIVE = 274.75'), 'PROBE_GRID_LON_MARKER_MISSING');
-  requireTrue(probe.includes('support_lead'), 'PROBE_SUPPORT_LEAD_MARKER_MISSING');
+  requireTrue(probe.includes('("var_APCP", "on")'), 'PROBE_APCP_FILTER_MISSING');
+  requireTrue(!probe.includes('("var_PRATE", "on")'), 'PROBE_PRATE_FILTER_MUST_BE_REMOVED_AFTER_VALUE_REJECTION');
+  requireTrue(probe.includes('APCP_EXACT_1H_RECORD_NOT_UNIQUE'), 'PROBE_APCP_EXACT_HOUR_UNIQUENESS_GATE_MISSING');
+  requireTrue(probe.includes('APCP_EXACT_1H_72_OF_72_REQUIRED'), 'PROBE_APCP_72_OF_72_GATE_MISSING');
+  requireTrue(probe.includes('r["start_step"] == lead - 1'), 'PROBE_APCP_START_STEP_GATE_MISSING');
+  requireTrue(probe.includes('r["end_step"] == lead'), 'PROBE_APCP_END_STEP_GATE_MISSING');
   requireTrue(probe.includes('SOURCE_OBJECT_AFTER_TICK'), 'PROBE_PRIOR_AVAILABILITY_GATE_MISSING');
   requireTrue(probe.includes('FILTER_RESPONSE_NOT_GRIB'), 'PROBE_GRIB_FILTER_VALIDATION_MISSING');
-  requireTrue(probe.includes('CROSS_BLOCK_DIFFERENCE_FORBIDDEN'), 'PROBE_CROSS_BLOCK_FAIL_CLOSED_MISSING');
+  requireTrue(probe.includes('CROSS_BLOCK_DIFFERENCE_FORBIDDEN'), 'PROBE_DSWRF_CROSS_BLOCK_FAIL_CLOSED_MISSING');
   requireTrue(probe.includes('DERIVED_PRECIP_SANITY_FAIL_NO_CLIP'), 'PROBE_NO_CLIP_PRECIP_GATE_MISSING');
   requireTrue(probe.includes('DERIVED_DSWRF_SANITY_FAIL_NO_CLIP'), 'PROBE_NO_CLIP_SOLAR_GATE_MISSING');
   requireTrue(!/psycopg|postgresql:\/\/|PGHOST|DATABASE_URL/i.test(probe), 'PROBE_DATABASE_ACCESS_SURFACE_DETECTED');
   requireTrue(!/lter\.kbs\.msu\.edu|enviroweather\.msu\.edu/i.test(probe), 'EA1N_MUST_NOT_READ_KBS_SOURCE');
   requireTrue(!/future_weather_assumption_v1|future_et0_assumption_v1/.test(probe), 'PROBE_CANONICAL_EVIDENCE_SURFACE_DETECTED');
+  requireTrue(!/max\s*\(\s*0(?:\.0)?\s*,\s*precip/i.test(probe), 'PROBE_PRECIPITATION_CLIPPING_PATTERN_DETECTED');
 
   requireTrue(workflow.includes('python-version: \'3.12\''), 'WORKFLOW_PYTHON_VERSION_NOT_PINNED');
   requireTrue(workflow.includes('eccodes==2.47.0'), 'WORKFLOW_ECCODES_VERSION_NOT_PINNED');
@@ -97,10 +124,12 @@ try {
   requireTrue(workflow.includes('persist-credentials: false'), 'WORKFLOW_CHECKOUT_CREDENTIALS_NOT_DISABLED');
 
   result.predecessor_blobs = Object.fromEntries(expectedPredecessors);
-  result.pinned_decoder = {
-    python: '3.12',
-    eccodes: '2.47.0',
-    eccodeslib: '2.47.3.23',
+  result.pinned_decoder = { python: '3.12', eccodes: '2.47.0', eccodeslib: '2.47.3.23' };
+  result.precipitation_correction = {
+    rejected: 'PRATE_ROLLING_AFTER_VALUE_LEVEL_NEGATIVE_F006',
+    candidate: 'APCP_EXACT_ONE_HOUR_ACCUMULATION',
+    required_target_count: 72,
+    no_fallback: true,
   };
   result.selected_public_gfs_grid = { latitude: 42.5, native_longitude: 274.75, signed_longitude: -85.25 };
   result.status = 'PASS';
@@ -115,5 +144,11 @@ try {
 fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
 fs.writeFileSync(OUTPUT_PATH, JSON.stringify(result, null, 2) + '\n');
 if (result.status === 'PASS') {
-  console.log(JSON.stringify({ status: result.status, base_sha: BASE, exact_file_count: result.exact_file_count, pinned_decoder: result.pinned_decoder }));
+  console.log(JSON.stringify({
+    status: result.status,
+    base_sha: BASE,
+    exact_file_count: result.exact_file_count,
+    pinned_decoder: result.pinned_decoder,
+    precipitation_correction: result.precipitation_correction,
+  }));
 }
