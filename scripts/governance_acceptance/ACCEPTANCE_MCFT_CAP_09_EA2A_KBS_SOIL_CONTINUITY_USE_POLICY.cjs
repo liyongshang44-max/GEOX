@@ -41,7 +41,7 @@ try {
   req(JSON.stringify(changed) === JSON.stringify(EXPECT), `EA2A_EXACT_FOUR_FILE_BOUNDARY_FAIL:${JSON.stringify(changed)}`);
 
   req(blob(BASE, TASK) === '39f6a09273c30088a7ea264cfa94ff930ea5518e', 'EA2A_TASKBOOK_BASE_BLOB_DRIFT');
-  req(blob(BASE, A1) === '41270b888e15e4d9a6c9a34e1fa3f70e957a275e', 'EA2A_AMENDMENT01_BASE_BLOB_DRIFT');
+  req(blob(BASE, A1) === '443edcfc6cbaafcd4b94f93d7002ab40442be8c9', 'EA2A_AMENDMENT01_BASE_BLOB_DRIFT');
   req(blob(BASE, EA1E) === '69835c9877474f4d46980487f6e5789add803df2', 'EA2A_EA1E_BASE_BLOB_DRIFT');
   req(blob(BASE, EA1OD) === 'b5cf28809af89315966d1e02322a34fab14810cd', 'EA2A_EA1OD_BASE_BLOB_DRIFT');
 
@@ -51,6 +51,7 @@ try {
 
   req(authority.record_status === 'EA2A_LIVE_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE' || authority.record_status === 'EA2A_LIVE_QUALIFICATION_PASS_CANDIDATE_NOT_EFFECTIVE', 'EA2A_STATUS_DRIFT');
   req(authority.base_main_sha === BASE, 'EA2A_AUTHORITY_BASE_DRIFT');
+  req(authority.predecessor_authorities.some(entry => entry.ref === A1 && entry.blob_sha === '443edcfc6cbaafcd4b94f93d7002ab40442be8c9'), 'EA2A_AUTHORITY_AMENDMENT01_PIN_DRIFT');
   req(authority.soil_source_candidate.endpoint_id === 25, 'EA2A_ENDPOINT_ID_DRIFT');
   req(authority.soil_source_candidate.role_id === 'SOIL_MOISTURE_10CM', 'EA2A_ROLE_DRIFT');
   req(authority.soil_source_candidate.epistemic_class === 'OBSERVED', 'EA2A_EPISTEMIC_CLASS_DRIFT');
@@ -88,7 +89,7 @@ try {
   req(effect.database_write_authorized === false && effect.formal_evidence_write_authorized === false, 'EA2A_WRITE_AUTHORITY_ENABLED');
   req(effect.formal_window_started === false && effect.mcft_cap09_completed === false, 'EA2A_FORMAL_OR_COMPLETION_ENABLED');
 
-  req(probe.includes('/weather/variates/25'), 'EA2A_PROBE_ENDPOINT_MISSING');
+  req(probe.includes('AUTH.soil_source_candidate.endpoint_url'), 'EA2A_PROBE_ENDPOINT_FROM_AUTHORITY_MISSING');
   req(probe.includes('maximum_allowed_gap_minutes'), 'EA2A_PROBE_GAP_RULE_MISSING');
   req(probe.includes('minimum_distinct_hour_buckets'), 'EA2A_PROBE_HOUR_BUCKET_RULE_MISSING');
   req(probe.includes('point.value < 0 || point.value > 1'), 'EA2A_PROBE_VWC_RANGE_RULE_MISSING');
