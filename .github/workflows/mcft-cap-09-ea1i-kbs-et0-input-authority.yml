@@ -1,0 +1,76 @@
+name: mcft-cap-09-ea1i-kbs-et0-input-authority
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea1i-kbs-et0-input-authority.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1I-KBS-ET0-INPUT-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1I_KBS_ET0_INPUT_AUTHORITY.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1I_KBS_ET0_INPUT_AUTHORITY.mjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea1i-kbs-et0-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  et0-input-authority-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium for KBS source reconciliation
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Resolve exact probe base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate exact EA1I no-write governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1I_KBS_ET0_INPUT_AUTHORITY.cjs
+      - name: Syntax-check ET0 input authority probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1I_KBS_ET0_INPUT_AUTHORITY.mjs
+      - name: Reconcile KBS ET0 input units and transforms
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1I_KBS_ET0_INPUT_AUTHORITY.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea1i-kbs-et0-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA1I_KBS_ET0_INPUT_AUTHORITY_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA1I_KBS_ET0_INPUT_AUTHORITY_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
