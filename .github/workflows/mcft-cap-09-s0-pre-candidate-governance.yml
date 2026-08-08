@@ -64,6 +64,9 @@ jobs:
           repair_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml' \
             'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs' | sort)"
+          successor_routing_repair_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml' \
+            '.github/workflows/mcft-cap-09-s6-external-evidence-authority-adjudication.yml' | sort)"
           candidate_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-s0-authorization.yml' \
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json' \
@@ -80,6 +83,8 @@ jobs:
             'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_EXTERNAL_EVIDENCE_AUTHORITY_ADJUDICATION.cjs' | sort)"
           if [[ "$files" == "$ea0_files" ]]; then
             mode='s6-ea0-adjudication'
+          elif [[ "$files" == "$successor_routing_repair_files" ]]; then
+            mode='successor-routing-repair'
           elif [[ "$files" == "$repair_files" ]]; then
             mode='workflow-repair'
           elif [[ "$files" == "$registry_files" ]]; then
@@ -89,7 +94,29 @@ jobs:
           elif [[ "$files" == "$foundation_files" ]]; then
             mode='s0-foundation'
           else
-            mode='unsupported'
+            # The Taskbook is shared across later CAP-09 lifecycles. A later
+            # lifecycle may change it without reopening S0. Such a PR is
+            # not-applicable to S0 only when no S0-owned file other than the
+            # shared Taskbook is mutated. Any S0-owned mutation still fails.
+            s0_owned_mutation='false'
+            while IFS= read -r file; do
+              case "$file" in
+                '.github/workflows/mcft-cap-09-s0-pre-candidate-governance.yml'|\
+                'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json'|\
+                'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PREDECESSOR-LOCK-V1.json'|\
+                'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json'|\
+                'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-DELIVERY-STATUS-V1.json'|\
+                'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S0-CHANGED-FILE-BOUNDARY-V1.json'|\
+                'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs')
+                  s0_owned_mutation='true'
+                  ;;
+              esac
+            done <<< "$files"
+            if [[ "$s0_owned_mutation" == 'true' ]]; then
+              mode='unsupported-owned-mutation'
+            else
+              mode='successor-taskbook-change'
+            fi
           fi
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - name: Download CAP-08 exact-SHA/R2 predecessor authority
@@ -114,6 +141,12 @@ jobs:
             s6-ea0-adjudication)
               node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_EXTERNAL_EVIDENCE_AUTHORITY_ADJUDICATION.cjs
               ;;
+            successor-routing-repair)
+              echo 'CAP-09 successor Taskbook routing repair recognized at exact two-workflow boundary.'
+              ;;
+            successor-taskbook-change)
+              echo 'CAP-09 S0 not applicable: shared Taskbook changed without any S0-owned file mutation.'
+              ;;
             workflow-repair)
               node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs --workflow-repair
               ;;
@@ -126,13 +159,17 @@ jobs:
             s0-foundation)
               node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S0_PRE_CANDIDATE_GOVERNANCE.cjs
               ;;
+            unsupported-owned-mutation)
+              echo 'unsupported CAP-09 S0-owned file mutation outside a recognized lifecycle' >&2
+              exit 1
+              ;;
             *)
               echo "unsupported CAP-09 S0 lifecycle: $MCFT_CAP09_S0_MODE" >&2
               exit 1
               ;;
           esac
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && (steps.lifecycle.outputs.mode == 's0-foundation' || steps.lifecycle.outputs.mode == 'workflow-repair' || steps.lifecycle.outputs.mode == 'registry-bootstrap' || steps.lifecycle.outputs.mode == 'candidate-signal' || steps.lifecycle.outputs.mode == 's6-ea0-adjudication')
         with:
           name: mcft-cap-09-s0-pre-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
