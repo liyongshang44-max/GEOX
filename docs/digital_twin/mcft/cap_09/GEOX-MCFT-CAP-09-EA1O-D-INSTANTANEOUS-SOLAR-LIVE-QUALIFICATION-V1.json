@@ -9,16 +9,17 @@
   "predecessor_authorities": [
     {
       "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+      "blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
       "consumed_ruling": "TASKBOOK_V0_5_REQUIRES_EA1O_D_BEFORE_EA2"
     },
     {
       "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-04-GFS-SFLUX-INSTANTANEOUS-PIECEWISE-LINEAR-SOLAR-AUTHORITY.md",
-      "blob_sha": "846d43cece204095d422926bbd2490655321f619",
+      "blob_sha": "3cce5cb3f070404a2b7474ef61a009d87c7f809f",
       "consumed_ruling": "INSTANTANEOUS_ENDPOINT_PIECEWISE_LINEAR_SOLAR_TRANSFORMATION_IS_AUTHORIZED_AS_A_LIVE_QUALIFICATION_CANDIDATE_ONLY"
     },
     {
       "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-C-SFLUX-RECONSTRUCTION-SPATIAL-QUALIFICATION-V1.json",
-      "blob_sha": "9168122b61aff4bc05c05c0497a6e6150d86ac41",
+      "blob_sha": "743846307cc4d846b10e2409670a66512b4778b4",
       "consumed_ruling": "WEIGHTED_DIFFERENCE_VALUE_AUTHORITY_REJECTED_WHILE_NATIVE_SFLUX_SPATIAL_PREDECESSOR_FACT_PASSED"
     },
     {
