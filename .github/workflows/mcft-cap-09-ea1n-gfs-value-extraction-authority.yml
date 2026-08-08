@@ -64,13 +64,14 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.cjs
       - name: Syntax-check pinned decoder probe
         run: python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.py
-      - name: Diagnose DSWRF statistical family without forecast values
+      - name: Diagnose DSWRF statistical family and packing without forecast values
         shell: bash
         run: |
           python - <<'PY'
           import importlib.util
           import json
           import math
+          import os
           from datetime import datetime, timezone
 
           path = 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.py'
@@ -91,25 +92,73 @@ jobs:
 
           tick = m.floor_utc_hour(datetime.now(timezone.utc))
           selected = m.select_complete_cycle(tick)
-          cache = {}
+          cache, body_cache = {}, {}
 
           def records_for(lead):
               if lead not in cache:
-                  status, _headers, body, final_url = m.request_bytes(m.filter_url(selected['cycle'], lead), timeout=90, attempts=3)
+                  status, _headers, body, _final_url = m.request_bytes(m.filter_url(selected['cycle'], lead), timeout=90, attempts=3)
                   if status != 200:
                       raise RuntimeError(f'DIAG_FILTER_HTTP_{status}:F{lead:03d}')
+                  body_cache[lead] = body
                   records, _extras = m.decode_subset(body, selected['cycle'], lead)
                   cache[lead] = records
               return cache[lead]
 
+          def dswrf_packing_for(lead):
+              records_for(lead)
+              body = body_cache[lead]
+              found = []
+              with m.tempfile.NamedTemporaryFile(prefix='ea1n-pack-', suffix='.grib2', delete=False) as tmp:
+                  tmp.write(body)
+                  tmp_path = tmp.name
+              try:
+                  with open(tmp_path, 'rb') as handle:
+                      while True:
+                          gid = m.codes_grib_new_from_file(handle)
+                          if gid is None:
+                              break
+                          try:
+                              short_name = str(m.codes_get(gid, 'shortName'))
+                              name = str(m.codes_get(gid, 'name'))
+                              type_of_level = str(m.codes_get(gid, 'typeOfLevel'))
+                              level = float(m.codes_get(gid, 'level'))
+                              role = m.role_for(short_name, name, type_of_level, level)
+                              if role != 'DOWNWARD_SHORTWAVE_SURFACE':
+                                  continue
+                              step_type = str(m.codes_get(gid, 'stepType'))
+                              start_step = int(m.codes_get(gid, 'startStep'))
+                              end_step = int(m.codes_get(gid, 'endStep'))
+                              if step_type != 'avg' or start_step != m.rolling_start(lead) or end_step != lead:
+                                  continue
+                              message = bytes(m.codes_get_message(gid))
+                              section5 = m.grib2_section(message, 5)
+                              found.append({
+                                  'packing_type': str(m.codes_get(gid, 'packingType')),
+                                  'data_representation_template_number': int(m.codes_get(gid, 'dataRepresentationTemplateNumber')),
+                                  'bits_per_value': int(m.codes_get(gid, 'bitsPerValue')),
+                                  'binary_scale_factor': int(m.codes_get(gid, 'binaryScaleFactor')),
+                                  'decimal_scale_factor': int(m.codes_get(gid, 'decimalScaleFactor')),
+                                  'section5_sha256': m.sha256_bytes(section5),
+                                  'section5_bytes': len(section5),
+                              })
+                          finally:
+                              m.codes_release(gid)
+              finally:
+                  try: os.remove(tmp_path)
+                  except OSError: pass
+              if len(found) != 1:
+                  raise RuntimeError(f'DIAG_DSWRF_PACKING_NOT_UNIQUE:F{lead:03d}:COUNT={len(found)}')
+              return found[0]
+
           diagnostic = {
-              'schema_version': 'geox_mcft_cap09_ea1n_dswrf_no_value_diagnostic_v1',
+              'schema_version': 'geox_mcft_cap09_ea1n_dswrf_no_value_diagnostic_v2',
               'tick_utc': m.iso(tick),
               'selected_cycle': m.iso(selected['cycle']),
               'lead_start': selected['lead_start'],
               'lead_end': selected['lead_end'],
               'forecast_values_emitted': False,
               'normalized_values_emitted': False,
+              'reference_value_emitted': False,
               'first_failure': None,
           }
 
@@ -151,6 +200,8 @@ jobs:
                       'instant_candidate_count': sum(1 for r in candidates if r['step_type'] == 'instant'),
                       'average_candidate_count': sum(1 for r in candidates if r['step_type'] == 'avg'),
                       'previous_section4_sha256': None if prev is None else prev['section4_sha256'],
+                      'current_packing': dswrf_packing_for(lead),
+                      'previous_packing': None if prev is None else dswrf_packing_for(lead - 1),
                   }
                   break
 
