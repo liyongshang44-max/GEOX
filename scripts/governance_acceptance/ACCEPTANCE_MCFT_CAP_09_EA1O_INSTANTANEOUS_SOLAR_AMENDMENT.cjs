@@ -43,7 +43,7 @@ try {
   req(JSON.stringify(changed) === JSON.stringify(EXPECT), `EA1O_A4_EXACT_FIVE_FILE_BOUNDARY_FAIL:${JSON.stringify(changed)}`);
 
   req(blob(BASE, TASK) === 'd7ff8d7164d4f2a9f1c3edcaafcf30eeeb181f0d', 'EA1O_A4_TASKBOOK_V04_BASE_BLOB_DRIFT');
-  req(blob(BASE, EA1OC) === '9168122b61aff4bc05c05c0497a6e6150d86ac41', 'EA1O_A4_EA1OC_BASE_BLOB_DRIFT');
+  req(blob(BASE, EA1OC) === '743846307cc4d846b10e2409670a66512b4778b4', 'EA1O_A4_EA1OC_BASE_BLOB_DRIFT');
 
   const task = read(TASK);
   const amendment = read(A4);
@@ -59,7 +59,7 @@ try {
   req(task.includes('quality.status = LIMITED'), 'EA1O_A4_TASKBOOK_LIMITED_QUALITY_MISSING');
 
   req(amendment.includes('base_protected_main_sha:\nf7ab20326dc78612f730225424aa23545a2ee258'), 'EA1O_A4_AMENDMENT_BASE_SHA_DRIFT');
-  req(amendment.includes('ea1o_c_value_rejection_blob:\n9168122b61aff4bc05c05c0497a6e6150d86ac41'), 'EA1O_A4_EA1OC_BLOB_MISSING');
+  req(amendment.includes('ea1o_c_value_rejection_blob:\n743846307cc4d846b10e2409670a66512b4778b4'), 'EA1O_A4_EA1OC_BLOB_MISSING');
   req(amendment.includes('MODEL_DERIVED_PIECEWISE_LINEAR_FORECAST_INTERPOLATION'), 'EA1O_A4_EPISTEMIC_CLASS_MISSING');
   req(amendment.includes('quality_status:\nLIMITED'), 'EA1O_A4_LIMITED_QUALITY_MISSING');
   req(amendment.includes('I_f(u) = (1-u) * I_(f-1) + u * I_f'), 'EA1O_A4_INTERPOLATION_MODEL_MISSING');
@@ -73,7 +73,7 @@ try {
 
   req(status.record_status === 'ARCHITECTURE_AMENDMENT_04_CANDIDATE_NOT_EFFECTIVE', 'EA1O_A4_STATUS_DRIFT');
   req(status.base_main_sha === BASE, 'EA1O_A4_STATUS_BASE_SHA_DRIFT');
-  req(status.predecessor_authority.ea1o_c_blob === '9168122b61aff4bc05c05c0497a6e6150d86ac41', 'EA1O_A4_STATUS_EA1OC_BLOB_DRIFT');
+  req(status.predecessor_authority.ea1o_c_blob === '743846307cc4d846b10e2409670a66512b4778b4', 'EA1O_A4_STATUS_EA1OC_BLOB_DRIFT');
   req(status.predecessor_authority.ea1o_c_decision === 'REJECTED_AS_AMENDMENT03_SFLUX_RECONSTRUCTION_VALUE_AUTHORITY', 'EA1O_A4_STATUS_REJECTION_DRIFT');
   req(status.predecessor_authority.ea1o_c_spatial_candidate_qualified === true, 'EA1O_A4_STATUS_SPATIAL_FACT_DRIFT');
   req(status.candidate_amendment.blob === blob('HEAD', A4), 'EA1O_A4_STATUS_AMENDMENT_BLOB_DRIFT');
