@@ -1,0 +1,138 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1m_gfs_spatial_extraction_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1M-GFS-SPATIAL-EXTRACTION-AUTHORITY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION_CONTINUATION",
+  "record_status": "EA1M_GFS_SPATIAL_EXTRACTION_PROBE_NOT_FORMAL_AUTHORITY",
+  "base_main_sha": "4612e616da11279fe70696176b1273e42927a907",
+  "predecessor_authorities": [
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md",
+      "blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
+      "consumed_ruling": "EXTERNAL_RESEARCH_SCOPE_MUST_HAVE_GOVERNED_SPATIAL_SUPPORT_WITHOUT_FIELD_TRUTH_UPGRADE"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1-SITE-SOURCE-QUALIFICATION-V1.json",
+      "blob_sha": "a4329330cfae941a033d65f55e91b8ae8e96d862",
+      "consumed_ruling": "KBS_MCSE_T1R1_IS_CURRENT_PREFERRED_EXTERNAL_SITE_CANDIDATE_WITH_FORMAL_QUALIFICATION_STILL_PENDING"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1L-GFS-HOURLY-NORMALIZATION-AUTHORITY-V1.json",
+      "blob_sha": "af5f23425e35dd21a949727f508934f1be14d8e9",
+      "consumed_ruling": "SAME_EXACT_GFS_CYCLE_AND_HOURLY_NORMALIZATION_GRAPH_ESTABLISHED_WITH_SPATIAL_EXTRACTION_PENDING"
+    }
+  ],
+  "site_geometry_source": {
+    "provider": "KBS_LTER",
+    "official_page": "https://lter.kbs.msu.edu/datatables/829",
+    "official_host": "lter.kbs.msu.edu",
+    "download_path": "/datatables/829.csv",
+    "dataset": "KBS039",
+    "datatable_id": "KBS039-006.40",
+    "description": "MCSE Plot polygons",
+    "provider_spatial_method": "SUBMETER_ACCURACY_GPS",
+    "required_srid": 4326,
+    "selected_row": {
+      "treatment": "T1",
+      "replicate": "R1",
+      "subplot": "main",
+      "expected_match_count": 1
+    },
+    "geometry_type": "SIMPLE_POLYGON",
+    "holes_allowed": false,
+    "raw_geometry_may_be_committed": false,
+    "raw_geometry_may_be_uploaded_as_ci_artifact": false,
+    "centroid_coordinate_may_be_emitted": false,
+    "selected_source_row_may_be_emitted": false
+  },
+  "gfs_grid_authority": {
+    "provider": "NOAA_NCEP_GFS",
+    "grid": "0.25_degree_global_lat_lon",
+    "latitude_spacing_degrees": 0.25,
+    "longitude_spacing_degrees": 0.25,
+    "longitude_native_domain": "0_TO_359_75",
+    "selected_point_representation": "PUBLIC_GFS_GRID_NODE_LAT_LON",
+    "interpolation_method": "NONE_NEAREST_GRID_POINT",
+    "bilinear_interpolation_forbidden": true,
+    "variable_specific_gridpoint_selection_forbidden": true,
+    "same_grid_point_required_for": ["TMP_2M","RH_2M","UGRD_10M","VGRD_10M","DSWRF_SURFACE","PRATE_SURFACE"]
+  },
+  "selection_algorithm": {
+    "algorithm_id": "CURRENT_POLYGON_ALL_VERTICES_AND_CENTROID_NEAREST_GFS_NODE_V1",
+    "centroid_method": "PLANAR_SHOELACE_ON_SMALL_WGS84_PLOT_FOR_SELECTION_ONLY",
+    "distance_method": "HAVERSINE_WGS84_MEAN_RADIUS",
+    "candidate_node_method": "FOUR_SURROUNDING_0P25_DEGREE_GFS_NODES",
+    "deterministic_tie_break": "DISTANCE_THEN_LATITUDE_THEN_NATIVE_LONGITUDE_ASC",
+    "required_consensus": "POLYGON_CENTROID_AND_EVERY_UNIQUE_VERTEX_SELECT_IDENTICAL_NEAREST_GFS_NODE",
+    "maximum_polygon_diameter_m": 500,
+    "maximum_centroid_to_selected_gridpoint_distance_m": 20000,
+    "maximum_any_vertex_to_selected_gridpoint_distance_m": 20000,
+    "centroid_not_persisted": true,
+    "raw_vertices_not_persisted": true
+  },
+  "spatial_semantics": {
+    "canonical_support_class": "NEAR_SITE_MODEL_GRID_POINT_SUPPORT",
+    "direct_field_equivalence": false,
+    "field_scale_forecast_truth_claimed": false,
+    "subgrid_variability_resolved": false,
+    "same_spatial_support_for_future_weather_and_future_et0": true,
+    "selected_gridpoint_may_be_frozen_after_exact_head_probe": true
+  },
+  "data_use_boundary": {
+    "provider_page_declares_publication_permission_requirement": true,
+    "provider_payload_may_be_read_transiently_for_qualification": true,
+    "provider_payload_may_be_committed": false,
+    "provider_payload_may_be_uploaded_as_ci_artifact": false,
+    "formal_runtime_use_right_established_by_this_probe": false,
+    "formal_runtime_use_right_status": "PENDING_SEPARATE_SOURCE_USE_IP_SETTLEMENT",
+    "public_raw_geometry_republication_right_claimed": false
+  },
+  "probe_output_policy": {
+    "safe_output_may_include": [
+      "official_page_hash",
+      "csv_hash",
+      "selected_row_hash",
+      "polygon_vertex_count",
+      "polygon_diameter_m",
+      "selected_public_gfs_grid_latitude",
+      "selected_public_gfs_native_longitude",
+      "selected_public_gfs_signed_longitude",
+      "centroid_to_gridpoint_distance_m",
+      "maximum_vertex_to_gridpoint_distance_m",
+      "all_vertices_and_centroid_same_gridpoint_boolean"
+    ],
+    "raw_polygon_emitted": false,
+    "centroid_coordinate_emitted": false,
+    "raw_kbs_row_emitted": false,
+    "forecast_values_emitted": false
+  },
+  "qualification_effect": {
+    "probe_may_establish": "KBS_MCSE_T1R1_TO_SINGLE_GFS_0P25_GRIDPOINT_SPATIAL_AUTHORITY_CANDIDATE_ONLY",
+    "selected_gridpoint_is_formal_authority_without_later_consolidation": false,
+    "forecast_value_canonicalization_implemented": false,
+    "future_weather_formal_source_authority_created": false,
+    "future_et0_formal_source_authority_created": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "runtime_source_authorized": false,
+    "formal_window_started": false
+  },
+  "hard_nonclaims": [
+    "NO_KBS_RAW_POLYGON_IN_REPOSITORY",
+    "NO_KBS_RAW_POLYGON_IN_CI_ARTIFACT",
+    "NO_KBS_CENTROID_COORDINATE_OUTPUT",
+    "NO_BILINEAR_INTERPOLATION",
+    "NO_VARIABLE_SPECIFIC_GFS_GRIDPOINTS",
+    "NO_FIELD_SCALE_FORECAST_TRUTH",
+    "NO_SUBGRID_VARIABILITY_RESOLUTION",
+    "NO_FORMAL_RUNTIME_USE_RIGHT_FROM_TECHNICAL_PROBE",
+    "NO_FORECAST_VALUE_OUTPUT",
+    "NO_FORMAL_SOURCE_AUTHORITY_FROM_PROBE_ALONE",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_RUNTIME_PRODUCT_SOURCE_DELTA",
+    "NO_FORMAL_WINDOW_START",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
