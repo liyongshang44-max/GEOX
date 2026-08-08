@@ -64,7 +64,7 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.cjs
       - name: Syntax-check pinned decoder probe
         run: python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.py
-      - name: Diagnose production DSWRF packing uncertainty without value disclosure
+      - name: Diagnose production DSWRF GRIB2 quantization without value disclosure
         shell: bash
         run: |
           python - <<'PY'
@@ -102,8 +102,7 @@ jobs:
           tick = m.floor_utc_hour(datetime.now(timezone.utc))
           selected = m.select_complete_cycle(tick)
           cycle = selected['cycle']
-          probe_leads = [19, 20]
-          if not all(selected['lead_start'] <= lead <= selected['lead_end'] for lead in probe_leads):
+          if not (selected['lead_start'] <= 19 and 20 <= selected['lead_end']):
               raise RuntimeError(f'DIAGNOSTIC_LEADS_OUTSIDE_SELECTED_WINDOW:{selected["lead_start"]}:{selected["lead_end"]}')
 
           def validate_final(requested_url, final_url):
@@ -145,6 +144,8 @@ jobs:
 
           def exact_range(url, start, end, lead):
               expected = end - start + 1
+              if expected <= 0 or expected > 64 * 1024 * 1024:
+                  raise RuntimeError(f'PRODUCTION_RANGE_SIZE_REJECTED:F{lead:03d}:{expected}')
               request = m.Request(url, method='GET', headers={
                   'User-Agent': m.USER_AGENT,
                   'Accept': 'application/octet-stream,*/*',
@@ -154,7 +155,7 @@ jobs:
               with m.urlopen(request, timeout=90) as response:
                   validate_final(url, response.geturl())
                   if int(response.status) != 206:
-                      raise RuntimeError(f'PRODUCTION_RANGE_HTTP_NOT_206:F{lead:03d}')
+                      raise RuntimeError(f'PRODUCTION_RANGE_HTTP_NOT_206:F{lead:03d}:{response.status}')
                   content_range = response.headers.get('Content-Range') or ''
                   if not content_range.startswith(f'bytes {start}-{end}/'):
                       raise RuntimeError(f'CONTENT_RANGE_MISMATCH:F{lead:03d}')
@@ -186,16 +187,22 @@ jobs:
                           if abs(float(point['lat'])-m.GRID_LAT)>1e-9 or abs(m.normalize_lon(float(point['lon']))-m.GRID_LON_NATIVE)>1e-9 or abs(float(point['distance']))>1e-9:
                               raise RuntimeError(f'EXACT_NODE_FAIL:F{lead:03d}')
                           value = float(point['value'])
-                          packing_error = float(m.codes_get(gid, 'packingError'))
-                          if not math.isfinite(value) or not math.isfinite(packing_error) or packing_error < 0:
-                              raise RuntimeError(f'PACKING_METADATA_NONFINITE:F{lead:03d}')
+                          e = int(m.codes_get(gid, 'binaryScaleFactor'))
+                          d = int(m.codes_get(gid, 'decimalScaleFactor'))
+                          # WMO GRIB2 Regulation 92.9.4: Y*10^D = R + (X1+X2)*2^E.
+                          # Complex packing is lossless relative to the scaled simple-packed integers.
+                          # ECMWF documents packed spacing = 2*packingError, so half a scale quantum is the packing-error bound.
+                          quantum = math.ldexp(1.0, e) * (10.0 ** (-d))
+                          quantization_error = 0.5 * abs(quantum)
+                          if not math.isfinite(value) or not math.isfinite(quantization_error) or quantization_error <= 0:
+                              raise RuntimeError(f'QUANTIZATION_METADATA_INVALID:F{lead:03d}')
                           message = bytes(m.codes_get_message(gid))
                           section4 = m.grib2_section(message, 4)
                           section5 = m.grib2_section(message, 5)
                           record = {
                               'lead': lead,
                               'value': value,
-                              'packing_error': packing_error,
+                              'quantization_error': quantization_error,
                               'step_type': str(m.codes_get(gid,'stepType')),
                               'start_step': int(m.codes_get(gid,'startStep')),
                               'end_step': int(m.codes_get(gid,'endStep')),
@@ -207,8 +214,8 @@ jobs:
                               'time_increment': safe_get(gid,'timeIncrement'),
                               'packing_type': str(m.codes_get(gid,'packingType')),
                               'bits_per_value': int(m.codes_get(gid,'bitsPerValue')),
-                              'binary_scale_factor': int(m.codes_get(gid,'binaryScaleFactor')),
-                              'decimal_scale_factor': int(m.codes_get(gid,'decimalScaleFactor')),
+                              'binary_scale_factor': e,
+                              'decimal_scale_factor': d,
                               'section4_sha256': m.sha256_bytes(section4),
                               'section5_sha256': m.sha256_bytes(section5),
                               'message_sha256': m.sha256_bytes(body),
@@ -233,25 +240,29 @@ jobs:
           current = decode_dswrf(20)
           if previous['step_type'] != 'avg' or current['step_type'] != 'avg' or previous['start_step'] != 18 or previous['end_step'] != 19 or current['start_step'] != 18 or current['end_step'] != 20:
               raise RuntimeError('EXPECTED_18H_BLOCK_STATISTICAL_WINDOWS_NOT_PRESENT')
+
           derived = 2.0 * current['value'] - previous['value']
-          propagated = 2.0 * current['packing_error'] + previous['packing_error']
+          propagated = 2.0 * current['quantization_error'] + previous['quantization_error']
 
           _secondary_url, secondary_idx_body, secondary_rows = read_idx(20, secondary=True)
           secondary_dswrf_count = sum(1 for _ordinal, _offset, tail in secondary_rows if ':DSWRF:' in (':' + tail.upper()) and ':SURFACE:' in (':' + tail.upper()))
 
           def public_meta(record):
-              return {k:v for k,v in record.items() if k not in {'value','packing_error'}} | {'packing_error_bucket': bucket(record['packing_error'])}
+              return {k:v for k,v in record.items() if k not in {'value','quantization_error'}} | {'quantization_error_bucket': bucket(record['quantization_error'])}
 
-          print('EA1N_DSWRF_PACKING_ERROR_DIAGNOSTIC=' + json.dumps({
+          print('EA1N_DSWRF_QUANTIZATION_DIAGNOSTIC=' + json.dumps({
               'status': 'PASS',
               'tick_utc': m.iso(tick),
               'selected_cycle': m.iso(cycle),
               'failure_lead': 20,
+              'grib2_reconstruction_formula': 'Y_TIMES_10_POW_D_EQUALS_R_PLUS_X1_PLUS_X2_TIMES_2_POW_E',
+              'packing_error_rule': 'HALF_SCALE_QUANTUM_FROM_E_D',
+              'complex_packing_semantics': 'LOSSLESS_RELATIVE_TO_SCALED_SIMPLE_PACKED_INTEGERS',
               'derived_sign': 'NEGATIVE' if derived < 0 else ('POSITIVE' if derived > 0 else 'ZERO'),
               'derived_magnitude_bucket': bucket(derived),
-              'propagated_packing_error_bucket': bucket(propagated),
-              'negative_magnitude_within_propagated_packing_error': bool(derived < 0 and abs(derived) <= propagated),
-              'physical_zero_inside_propagated_interval': bool(derived - propagated <= 0 <= derived + propagated),
+              'propagated_quantization_error_bucket': bucket(propagated),
+              'negative_magnitude_within_propagated_quantization_error': bool(derived < 0 and abs(derived) <= propagated),
+              'physical_zero_inside_quantization_interval': bool(derived - propagated <= 0 <= derived + propagated),
               'previous': public_meta(previous),
               'current': public_meta(current),
               'secondary_pgrb2b_f020_idx_sha256': m.sha256_bytes(secondary_idx_body),
