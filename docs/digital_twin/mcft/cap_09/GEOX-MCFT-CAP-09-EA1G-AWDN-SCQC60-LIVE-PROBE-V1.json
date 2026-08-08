@@ -10,7 +10,16 @@
   "ea1f_authority_blob_sha": "2366f581f30bae465d6591d71c81a7ad2a25ace7",
   "provider": "HPRCC_AWDN",
   "provider_authority_url": "https://hprcc.unl.edu/awdn/",
-  "web_service_base_url": "https://awdn2.unl.edu/productdata/get",
+  "web_service_base_urls": [
+    "https://awdn.unl.edu/productdata/get",
+    "https://awdn2.unl.edu/productdata/get"
+  ],
+  "transport_policy": {
+    "official_host_failover_only": true,
+    "allowed_hosts": ["awdn.unl.edu", "awdn2.unl.edu"],
+    "http_403_or_404_may_failover": true,
+    "qualification_thresholds_must_not_change_on_failover": true
+  },
   "network": "enviro",
   "product_id": "scqc60",
   "target_station": {
@@ -61,6 +70,8 @@
     "station_public_identifier_allowed": true,
     "station_label_allowed": true,
     "station_identity_field_names_allowed": true,
+    "transport_attempt_status_allowed": true,
+    "final_provider_host_allowed": true,
     "request_query_key_names_allowed": true,
     "request_query_values_allowed": false,
     "request_identity_sha256_allowed": true,
