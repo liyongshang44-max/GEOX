@@ -13,7 +13,7 @@ from email.utils import parsedate_to_datetime
 from importlib.metadata import version as package_version
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 import eccodes
@@ -30,7 +30,7 @@ MAX_LEAD = 120
 WIND_10M_TO_2M_FACTOR = 0.747951075
 SOLAR_WM2_TO_MJ_M2_H = 0.0036
 OUTPUT = Path("acceptance-output/MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY_RESULT.json")
-USER_AGENT = "GEOX-MCFT-CAP-09-EA1N/1.3 (+exact-head qualification)"
+USER_AGENT = "GEOX-MCFT-CAP-09-EA1N/1.4 (+exact-head qualification)"
 
 
 def iso(dt: datetime) -> str:
@@ -61,6 +61,37 @@ def request_bytes(url: str, method: str = "GET", timeout: int = 60, attempts: in
     raise RuntimeError(f"HTTP_REQUEST_FAILED:{method}:{url}:{type(last).__name__}:{last}")
 
 
+def request_same_object_range_metadata(url: str, timeout: int = 30, attempts: int = 3):
+    requested = urlparse(url)
+    last = None
+    for attempt in range(attempts):
+        try:
+            req = Request(url, method="GET", headers={
+                "User-Agent": USER_AGENT,
+                "Accept": "*/*",
+                "Range": "bytes=0-0",
+            })
+            with urlopen(req, timeout=timeout) as response:
+                status = int(response.status)
+                if status not in (200, 206):
+                    raise RuntimeError(f"RANGE_METADATA_HTTP_{status}")
+                final_url = response.geturl()
+                final = urlparse(final_url)
+                if final.scheme != "https" or final.hostname != "nomads.ncep.noaa.gov":
+                    raise RuntimeError(f"RANGE_METADATA_FINAL_ORIGIN_REJECTED:{final.scheme}:{final.hostname}")
+                if final.path != requested.path or final.query != requested.query:
+                    raise RuntimeError(f"RANGE_METADATA_OBJECT_IDENTITY_DRIFT:{sha256_bytes(final_url.encode('utf-8'))}")
+                one_byte = response.read(1)
+                if len(one_byte) != 1:
+                    raise RuntimeError("RANGE_METADATA_FIRST_BYTE_MISSING")
+                return status, response.headers, final_url, final_url != url
+        except (HTTPError, URLError, TimeoutError, RuntimeError) as exc:
+            last = exc
+            if attempt + 1 < attempts:
+                time.sleep(1.0 + attempt)
+    raise RuntimeError(f"RANGE_METADATA_REQUEST_FAILED:{url}:{type(last).__name__}:{last}")
+
+
 def parse_last_modified(headers) -> datetime:
     raw = headers.get("Last-Modified")
     if not raw:
@@ -89,16 +120,24 @@ def object_urls(cycle: datetime, lead: int):
 
 
 def prove_source_object_prior_available(url: str, tick: datetime):
-    status, headers, _, final_url = request_bytes(url, method="HEAD", timeout=30, attempts=2)
-    if status != 200:
-        raise RuntimeError(f"SOURCE_OBJECT_HTTP_{status}:{url}")
+    status, headers, final_url, redirected = request_same_object_range_metadata(url, timeout=30, attempts=3)
     last_modified = parse_last_modified(headers)
     if last_modified > tick:
         raise RuntimeError(f"SOURCE_OBJECT_AFTER_TICK:{url}:{iso(last_modified)}>{iso(tick)}")
+    content_range = headers.get("Content-Range") or ""
+    total_size = 0
+    if "/" in content_range:
+        tail = content_range.rsplit("/", 1)[1]
+        if tail.isdigit():
+            total_size = int(tail)
+    if total_size <= 0:
+        total_size = int(headers.get("Content-Length") or 0)
     return {
         "last_modified": last_modified,
-        "content_length": int(headers.get("Content-Length") or 0),
+        "content_length": total_size,
         "final_host_path_hash": sha256_bytes(final_url.encode("utf-8")),
+        "metadata_http_status": status,
+        "same_object_redirect_followed": bool(redirected),
     }
 
 
@@ -113,12 +152,18 @@ def select_complete_cycle(tick: datetime):
             continue
         leads = list(range(support_lead, lead_end + 1))
         last_modified_values = []
+        metadata_status_counts = {}
+        redirect_count = 0
         try:
             for lead in leads:
                 grib_url, idx_url = object_urls(cycle, lead)
                 grib = prove_source_object_prior_available(grib_url, tick)
                 idx = prove_source_object_prior_available(idx_url, tick)
                 last_modified_values.extend([grib["last_modified"], idx["last_modified"]])
+                for item in (grib, idx):
+                    key = str(item["metadata_http_status"])
+                    metadata_status_counts[key] = metadata_status_counts.get(key, 0) + 1
+                    redirect_count += 1 if item["same_object_redirect_followed"] else 0
             return {
                 "cycle": cycle,
                 "lead_start": lead_start,
@@ -128,6 +173,8 @@ def select_complete_cycle(tick: datetime):
                 "last_modified_min": min(last_modified_values),
                 "last_modified_max": max(last_modified_values),
                 "candidate_rejections": rejections,
+                "metadata_status_counts": metadata_status_counts,
+                "same_object_redirect_count": redirect_count,
             }
         except Exception as exc:
             rejections.append({"cycle": iso(cycle), "reason": str(exc)[:300]})
@@ -321,6 +368,8 @@ def main():
     result = {
         "schema_version":"geox_mcft_cap09_ea1n_gfs_value_extraction_result_v1",
         "subject_sha":subject_sha,"base_main_sha":BASE_MAIN_SHA,"status":"FAIL","probe_started_at":iso(started),"tick_utc":iso(tick),
+        "production_metadata_probe_method":"RANGE_GET_BYTES_0_0_SAME_OBJECT_ONLY",
+        "head_302_transport_diagnostic":"REPEATED_ON_RUN_31254637254_ATTEMPTS_1_AND_2_BEFORE_VALUE_DECODING",
         "precipitation_source_candidate":"APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE",
         "rejected_precipitation_candidates":["PRATE_SIX_HOUR_ROLLING_AVERAGE_DIFFERENCE","APCP_EXACT_ONE_HOUR_ACCUMULATION_ONLY"],
         "provider_duplicate_semantics_commit":"58f99e14f2922d1ae3e05d2c41ea28c599a8c81d",
@@ -336,7 +385,7 @@ def main():
         if result["decoder"]["eccodeslib"] != "2.47.3.23": raise RuntimeError("ECCODESLIB_VERSION_DRIFT")
 
         selected = select_complete_cycle(tick)
-        result.update({"selected_cycle":iso(selected["cycle"]),"lead_start":selected["lead_start"],"lead_end":selected["lead_end"],"support_lead":selected["support_lead"],"valid_time_start":iso(tick+timedelta(hours=1)),"valid_time_end":iso(tick+timedelta(hours=72)),"source_object_count":len(selected["leads"])*2,"production_last_modified_min":iso(selected["last_modified_min"]),"production_last_modified_max":iso(selected["last_modified_max"]),"candidate_cycle_rejection_count":len(selected["candidate_rejections"])})
+        result.update({"selected_cycle":iso(selected["cycle"]),"lead_start":selected["lead_start"],"lead_end":selected["lead_end"],"support_lead":selected["support_lead"],"valid_time_start":iso(tick+timedelta(hours=1)),"valid_time_end":iso(tick+timedelta(hours=72)),"source_object_count":len(selected["leads"])*2,"production_last_modified_min":iso(selected["last_modified_min"]),"production_last_modified_max":iso(selected["last_modified_max"]),"candidate_cycle_rejection_count":len(selected["candidate_rejections"]),"production_metadata_status_counts":selected["metadata_status_counts"],"production_same_object_redirect_count":selected["same_object_redirect_count"]})
 
         by_lead, filter_hashes, metadata_for_hash, section4_identities = {}, [], [], []
         total_filter_bytes = extra_message_count = 0
@@ -431,7 +480,7 @@ def main():
         raise
 
     OUTPUT.write_text(json.dumps(result,indent=2,sort_keys=True)+"\n",encoding="utf-8")
-    print(json.dumps({"status":result["status"],"subject_sha":subject_sha,"tick_utc":result["tick_utc"],"selected_cycle":result["selected_cycle"],"lead_start":result["lead_start"],"lead_end":result["lead_end"],"apcp_logical_target_count":result["apcp_logical_target_count"],"semantic_duplicate_collapses":result["apcp_target_semantic_duplicate_collapse_count"],"normalization_counts":result["normalization_counts"],"physical_sanity_pass":result["physical_sanity_pass"]},sort_keys=True))
+    print(json.dumps({"status":result["status"],"subject_sha":subject_sha,"tick_utc":result["tick_utc"],"selected_cycle":result["selected_cycle"],"lead_start":result["lead_start"],"lead_end":result["lead_end"],"metadata_status_counts":result["production_metadata_status_counts"],"same_object_redirects":result["production_same_object_redirect_count"],"apcp_logical_target_count":result["apcp_logical_target_count"],"semantic_duplicate_collapses":result["apcp_target_semantic_duplicate_collapse_count"],"normalization_counts":result["normalization_counts"],"physical_sanity_pass":result["physical_sanity_pass"]},sort_keys=True))
 
 
 if __name__ == "__main__":
