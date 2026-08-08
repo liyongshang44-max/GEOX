@@ -125,7 +125,13 @@ try {
     const task = read(TASK); const amendment = read(A1);
     req(task.includes('S6-EA2 External Formal authorities frozen'), 'EA2_TASKBOOK_FRONTIER_CONTRACT_MISSING');
     req(task.includes('S6-EA3 collector/canonicalizer qualification'), 'EA2_TASKBOOK_SUCCESSOR_CONTRACT_MISSING');
-    req(amendment.includes('formal_site_authority_v1') && amendment.includes('formal_reality_binding_v1') && amendment.includes('formal_source_binding_matrix_v1') && amendment.includes('formal_crop_context_authority_v1') && amendment.includes('formal_external_evidence_package_v1'), 'EA2_AMENDMENT_SUPPORTING_AUTHORITY_SET_DRIFT');
+    for (const requiredAuthorityFile of [
+      'GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V1.json',
+      'GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V1.json',
+      'GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json',
+      'GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json',
+      'GEOX-MCFT-CAP-09-S6-FORMAL-EXTERNAL-EVIDENCE-PACKAGE-V1.json',
+    ]) req(amendment.includes(requiredAuthorityFile), `EA2_AMENDMENT_SUPPORTING_AUTHORITY_MISSING:${requiredAuthorityFile}`);
     req(amendment.includes('No partial package may start the Formal window.'), 'EA2_AMENDMENT_NO_PARTIAL_PACKAGE_RULE_MISSING');
 
     const site = json(SITE); const reality = json(REALITY); const source = json(SOURCE); const crop = json(CROP); const pkg = json(PACKAGE);
