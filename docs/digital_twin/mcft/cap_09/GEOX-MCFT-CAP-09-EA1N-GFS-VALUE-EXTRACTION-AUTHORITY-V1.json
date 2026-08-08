@@ -96,14 +96,19 @@
       "quantization_bound": "HALF_SCALE_QUANTUM_PROPAGATED_THROUGH_WEIGHTED_DIFFERENCE"
     }
   },
-  "next_candidate": {
+  "successor_governance": {
     "stage": "EA1O",
-    "source": "GFS_SFLUX_DIRECT_1H_DSWRF",
+    "purpose": "SOLAR_RADIATION_SOURCE_ARCHITECTURE_AMENDMENT_AND_SPATIAL_REFREEZE",
+    "candidate_source": "GFS_SFLUX_DIRECT_1H_DSWRF",
     "official_inventory": "https://www.nco.ncep.noaa.gov/pmb/products/gfs/gfs.t00z.sfluxgrbf001.grib2.shtml",
     "provider_semantics": "SURFACE_DSWRF_0_TO_1_HOUR_AVERAGE",
     "direct_hourly_reconstruction_required": false,
+    "amendment_01_rule": "PRIMARY_FUTURE_AUTHORITY_IS_NOAA_NCEP_GFS_0P25_DEGREE_HOURLY_OUTPUT",
+    "architecture_amendment_required": true,
+    "amendment_target": "S6_FUTURE_WEATHER_SOLAR_RADIATION_ROLE_ONLY",
+    "amendment_01_not_overridable_by_lower_authority": true,
     "spatial_authority_refreeze_required": true,
-    "reason": "SFLUX_IS_T1534_SEMI_LAGRANGIAN_GAUSSIAN_GRID_AND_MUST_NOT_BE_SILENTLY_TREATED_AS_EA1M_0P25_NODE_EQUIVALENT",
+    "reason": "SFLUX_IS_NOT_THE_EA1M_0P25_LONGITUDE_LATITUDE_PRODUCT_AND_AMENDMENT_01_EXPLICITLY_FREEZES_GFS_0P25_AS_PRIMARY_FUTURE_AUTHORITY",
     "authority_created": false
   },
   "data_boundary": {
@@ -118,7 +123,7 @@
     "future_et0_executions": 0,
     "runtime_source_delta": 0
   },
-  "qualification_effect": "EA1N_FAIL_CLOSED_PGRB2_DSWRF_REJECTION_EA1O_REQUIRED",
+  "qualification_effect": "EA1N_FAIL_CLOSED_PGRB2_DSWRF_REJECTION_EA1O_AMENDMENT_REQUIRED",
   "gfs_72h_value_pipeline_qualified": false,
   "formal_window_started": false,
   "mcft_cap09_completed": false
