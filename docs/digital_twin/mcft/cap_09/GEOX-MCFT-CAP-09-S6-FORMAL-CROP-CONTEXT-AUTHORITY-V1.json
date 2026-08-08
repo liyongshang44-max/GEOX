@@ -1,0 +1,113 @@
+{
+  "schema_version": "geox_mcft_cap09_s6_formal_crop_context_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA2",
+  "record_status": "EA2_FORMAL_CROP_CONTEXT_AUTHORITY_WHEN_PRESENT_ON_PROTECTED_MAIN",
+  "base_main_sha": "dd1d2e73afd4d6c707235f07b639a7cb11a899c9",
+  "effectiveness_rule": "PRESENT_ON_PROTECTED_MAIN_AND_EA2_EXACT_BOUNDARY_GATE_PASS",
+  "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
+  "amendment_01_blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
+  "ea1j_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1J-CROP-WATER-USE-STAGE-AUTHORITY-V1.json",
+  "ea1j_blob_sha": "eeb7ab49ee3270421efe4d6674305426074d1541",
+  "derived_context_authority": "FORMAL_DERIVED_CROP_WATER_USE_STAGE_CONTEXT_V1",
+  "scope": {
+    "site_id": "KBS_MCSE_T1R1",
+    "field_id": "field_kbs_mcse_t1r1",
+    "season_id": "season_2026_corn",
+    "crop": "corn",
+    "crop_identity_class": "CURRENT_SEASON_MANAGEMENT_METADATA",
+    "observed_biological_stage_claimed": false,
+    "v_or_r_stage_truth_claimed": false
+  },
+  "planting_authority": {
+    "provider": "KBS_AGLOG",
+    "observation_id": 6931,
+    "observation_type": "Planting",
+    "area": "T1",
+    "crop": "corn",
+    "planting_local_date": "2026-05-11",
+    "timezone": "America/Detroit",
+    "event_time_precision": "LOCAL_CALENDAR_DAY_ONLY",
+    "possible_event_window_utc": {
+      "start_inclusive": "2026-05-11T04:00:00.000Z",
+      "end_exclusive": "2026-05-12T04:00:00.000Z"
+    },
+    "false_precision_forbidden": true,
+    "predecessor_response_sha256": "sha256:a9d7add16d7f71a3f264daf2c3f513af0ebc1e9666374b7ea2b63117c514e1d5"
+  },
+  "model_stage_prior": {
+    "provider": "FAO_IRRIGATION_AND_DRAINAGE_PAPER_56_TABLE_11",
+    "crop_row_family": "MAIZE_GRAIN",
+    "use_class": "MODEL_WATER_USE_STAGE_PRIOR_NOT_SITE_PHENOLOGY_TRUTH",
+    "algorithm_id": "FAO56_MAIZE_GRAIN_CONSENSUS_ENVELOPE_FROM_PLANTING_DATE_V1",
+    "variant_stage_lengths_days": [
+      [30,50,60,40],
+      [25,40,45,30],
+      [20,35,40,30],
+      [20,35,40,30],
+      [30,40,50,30],
+      [30,40,50,50]
+    ],
+    "single_region_best_fit_selection_authorized": false,
+    "cap08_synthetic_schedule_dates_reuse_authorized": false,
+    "predecessor_response_sha256": "sha256:cad0afe7873296b2a91c1a70b0d1fdf4cb37b5ee94a892521a478b2b1a4a2e3c"
+  },
+  "as_of_derivation_policy": {
+    "allowed_stage_codes": ["INITIAL","DEVELOPMENT","MID","LATE"],
+    "all_observation_inputs_available_at_or_before_authority_time_required": true,
+    "future_observations_authorized": false,
+    "future_phenocam_observations_authorized": false,
+    "full_season_ex_post_normalization_authorized": false,
+    "planting_time_uncertainty_must_be_carried": true,
+    "backward_stability_hours": 6,
+    "forward_transition_guard_hours": 30,
+    "forward_guard_class": "ASSUMED_STAGE_TRANSITION_GUARD",
+    "pass_rule": "EVERY_FROZEN_FAO_VARIANT_AND_EVERY_POSSIBLE_PLANTING_TIME_MUST_REMAIN_IN_ONE_IDENTICAL_STAGE_OVER_T_MINUS_6H_THROUGH_T_PLUS_30H",
+    "transition_risk_failure_code": "STAGE_TRANSITION_RISK",
+    "no_consensus_failure_code": "CROP_WATER_USE_STAGE_NO_CONSERVATIVE_CONSENSUS"
+  },
+  "predecessor_exact_head_proof": {
+    "subject_sha": "b030758fc926aa632e3996ea24152fc7f4879359",
+    "workflow_run_id": 31250643714,
+    "artifact_id": 9019894277,
+    "artifact_digest": "sha256:7e5de31e2707e8acd70c364d5fdd42b13dd0d4e6ce64814289bfc5417fa51867",
+    "authority_time_utc": "2026-08-08T09:29:02.886Z",
+    "derived_stage_code": "MID",
+    "all_fao_variants_agree": true,
+    "all_possible_planting_times_agree": true,
+    "backward_6h_and_forward_30h_guard_pass": true,
+    "minimum_hours_to_next_model_stage_boundary": 138.516,
+    "future_observations_used": false
+  },
+  "ea2_freeze_rule": {
+    "stage_candidate": "MID",
+    "ea2_exact_head_gate_must_rederive_stage_from_frozen_inputs_at_runner_utc": true,
+    "ea2_exact_head_gate_must_retain_6h_backward_and_30h_forward_guard": true,
+    "ea2_exact_head_gate_may_use_future_observations": false,
+    "formal_startup_must_rederive_as_of_fresh_boundary": true,
+    "formal_startup_reproof_lifecycle": "S6-EA5_AND_O00_ENTRY",
+    "stage_transition_after_ea2_does_not_authorize_time_rewrite": true
+  },
+  "authority_effect": {
+    "formal_crop_context_derivation_authority_frozen": true,
+    "observed_biological_stage_authority_created": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "runtime_source_authorized": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false
+  },
+  "hard_nonclaims": [
+    "NO_OBSERVED_BIOLOGICAL_STAGE_CLAIM",
+    "NO_V_STAGE_OR_R_STAGE_GROUND_TRUTH",
+    "NO_SINGLE_FAO_REGION_TREATED_AS_KBS_TRUTH",
+    "NO_CAP08_SYNTHETIC_STAGE_DATE_REUSE",
+    "NO_FUTURE_OBSERVATION_USE",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_FORMAL_O00_O23_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
