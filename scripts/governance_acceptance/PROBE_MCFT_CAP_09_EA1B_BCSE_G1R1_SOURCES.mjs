@@ -20,9 +20,9 @@ function safeError(error) {
   return text.replace(/([?&](?:token|key|secret|signature|sig|auth)=[^&\s]+)/gi, '[REDACTED_QUERY]');
 }
 function normalizeKey(value) {
-  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  return String(value || '').replace(/^\uFEFF/, '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
-function parseCsvLine(line) {
+function parseDelimitedLine(line, delimiter) {
   const output = [];
   let value = '';
   let quoted = false;
@@ -31,7 +31,7 @@ function parseCsvLine(line) {
     if (char === '"') {
       if (quoted && line[index + 1] === '"') { value += '"'; index += 1; }
       else quoted = !quoted;
-    } else if (char === ',' && !quoted) {
+    } else if (char === delimiter && !quoted) {
       output.push(value);
       value = '';
     } else value += char;
@@ -56,6 +56,20 @@ function numberOrNull(value) {
 function sha256Hex(bytes) {
   return crypto.createHash('sha256').update(bytes).digest('hex');
 }
+function sha256Text(value) {
+  return crypto.createHash('sha256').update(String(value), 'utf8').digest('hex');
+}
+function safeToken(value) {
+  return String(value || 'none').toLowerCase().replace(/[^a-z0-9._-]+/g, '_').slice(0, 120) || 'none';
+}
+function delimiterDiagnostics(line) {
+  return {
+    comma: (line.match(/,/g) || []).length,
+    tab: (line.match(/\t/g) || []).length,
+    semicolon: (line.match(/;/g) || []).length,
+    pipe: (line.match(/\|/g) || []).length,
+  };
+}
 function assertMarkers(text, markers, code) {
   const haystack = String(text).toLowerCase().replace(/\s+/g, ' ');
   for (const marker of markers) assert(haystack.includes(String(marker).toLowerCase()), `${code}:${normalizeKey(marker)}`);
@@ -64,7 +78,7 @@ async function fetchTextAuthority(source, label) {
   const response = await fetch(source.url, {
     redirect: 'follow',
     signal: AbortSignal.timeout(config.live_thresholds.http_timeout_ms),
-    headers: { 'user-agent': 'GEOX-MCFT-CAP09-EA1B-READ-ONLY-PROBE/1.0', accept: 'text/html,text/plain;q=0.9,*/*;q=0.5' },
+    headers: { 'user-agent': 'GEOX-MCFT-CAP09-EA1B-READ-ONLY-PROBE/1.1', accept: 'text/html,text/plain;q=0.9,*/*;q=0.5' },
   });
   assert(response.ok, `${label}_HTTP_STATUS_${response.status}`);
   const bytes = new Uint8Array(await response.arrayBuffer());
@@ -86,7 +100,7 @@ async function fetchCropAuthority(source) {
       const response = await fetch(url, {
         redirect: 'follow',
         signal: AbortSignal.timeout(config.live_thresholds.http_timeout_ms),
-        headers: { 'user-agent': 'GEOX-MCFT-CAP09-EA1B-READ-ONLY-PROBE/1.0', accept: 'text/html,text/plain;q=0.9,*/*;q=0.5' },
+        headers: { 'user-agent': 'GEOX-MCFT-CAP09-EA1B-READ-ONLY-PROBE/1.1', accept: 'text/html,text/plain;q=0.9,*/*;q=0.5' },
       });
       if (!response.ok) { failures.push(`HTTP_${response.status}`); continue; }
       const bytes = new Uint8Array(await response.arrayBuffer());
@@ -108,30 +122,79 @@ async function fetchCropAuthority(source) {
   }
   throw new Error(`CROP_2026_AUTHORITY_UNAVAILABLE:${failures.join('|').slice(0, 400)}`);
 }
-async function streamCsv(url, onRow, label) {
+
+async function streamTabular(url, requiredHeaderNames, onRow, label) {
   const response = await fetch(url, {
     redirect: 'follow',
     signal: AbortSignal.timeout(config.live_thresholds.http_timeout_ms),
-    headers: { 'user-agent': 'GEOX-MCFT-CAP09-EA1B-READ-ONLY-PROBE/1.0', accept: 'text/csv,text/plain;q=0.9,*/*;q=0.5' },
+    headers: { 'user-agent': 'GEOX-MCFT-CAP09-EA1B-READ-ONLY-PROBE/1.1', accept: 'text/csv,text/tab-separated-values,text/plain;q=0.9,*/*;q=0.5' },
   });
   assert(response.ok, `${label}_HTTP_STATUS_${response.status}`);
   assert(response.body, `${label}_BODY_REQUIRED`);
+
+  const contentType = String(response.headers.get('content-type') || 'unknown').split(';')[0].trim().toLowerCase();
+  const contentDisposition = String(response.headers.get('content-disposition') || 'none');
+  const finalHost = new URL(response.url).host;
   const hash = crypto.createHash('sha256');
   const decoder = new TextDecoder();
+  const delimiters = [
+    { name: 'COMMA', value: ',' },
+    { name: 'TAB', value: '\t' },
+    { name: 'SEMICOLON', value: ';' },
+    { name: 'PIPE', value: '|' },
+  ];
   let buffer = '';
   let headers = null;
+  let delimiter = null;
+  let delimiterName = null;
   let bytes = 0;
   let rows = 0;
+  let nonemptyLinesBeforeHeader = 0;
+  let firstNonempty = null;
+
+  const diagnoseAndThrow = (code, line) => {
+    const sample = String(line || firstNonempty || '');
+    const counts = delimiterDiagnostics(sample);
+    const looksHtml = /^\s*<(?:!doctype|html|head|body|form|div|script|meta|title)\b/i.test(sample) || contentType.includes('text/html');
+    throw new Error([
+      code,
+      `CONTENT_TYPE_${safeToken(contentType)}`,
+      `CONTENT_DISPOSITION_${safeToken(contentDisposition)}`,
+      `FINAL_HOST_${safeToken(finalHost)}`,
+      `FIRST_NONEMPTY_LEN_${sample.length}`,
+      `FIRST_NONEMPTY_SHA256_${sha256Text(sample)}`,
+      `COMMAS_${counts.comma}`,
+      `TABS_${counts.tab}`,
+      `SEMICOLONS_${counts.semicolon}`,
+      `PIPES_${counts.pipe}`,
+      `LOOKS_HTML_${looksHtml}`,
+    ].join(':'));
+  };
 
   const consume = (line) => {
     const trimmed = line.replace(/\r$/, '');
-    if (!trimmed) return;
-    const cells = parseCsvLine(trimmed);
+    if (!trimmed.trim()) return;
+    if (firstNonempty === null) firstNonempty = trimmed;
+
     if (!headers) {
-      headers = cells.map(normalizeKey);
-      assert(headers.length >= 2, `${label}_CSV_HEADER_INVALID`);
+      for (const candidate of delimiters) {
+        const cells = parseDelimitedLine(trimmed, candidate.value);
+        if (cells.length < 2) continue;
+        const normalized = cells.map(normalizeKey);
+        if (requiredHeaderNames.every((name) => normalized.includes(name))) {
+          headers = normalized;
+          delimiter = candidate.value;
+          delimiterName = candidate.name;
+          return;
+        }
+      }
+      nonemptyLinesBeforeHeader += 1;
+      if (nonemptyLinesBeforeHeader >= 40) diagnoseAndThrow(`${label}_TABULAR_HEADER_NOT_FOUND`, trimmed);
       return;
     }
+
+    const cells = parseDelimitedLine(trimmed, delimiter);
+    if (cells.length === 1 && headers.length > 1) return;
     const record = {};
     headers.forEach((key, index) => { record[key] = cells[index] ?? ''; });
     rows += 1;
@@ -152,13 +215,19 @@ async function streamCsv(url, onRow, label) {
   }
   buffer += decoder.decode();
   if (buffer) consume(buffer);
-  assert(headers, `${label}_CSV_HEADER_REQUIRED`);
+  if (!headers) diagnoseAndThrow(`${label}_TABULAR_HEADER_REQUIRED`, firstNonempty);
+
   return {
     final_url: response.url,
+    final_host: finalHost,
+    content_type: contentType,
+    content_disposition_present: contentDisposition !== 'none',
     response_sha256: `sha256:${hash.digest('hex')}`,
     response_bytes: bytes,
     rows_scanned: rows,
     headers,
+    delimiter: delimiterName,
+    preamble_nonempty_lines_skipped: nonemptyLinesBeforeHeader,
     retrieved_at: new Date().toISOString(),
   };
 }
@@ -176,13 +245,13 @@ function assertCurrent(latest, label) {
 }
 async function probeSoil() {
   const source = config.sources.soil_csv;
+  const requiredHeaders = ['plot', 'datetime', 'treatment', 'replicate', 'depth_cm', 'vwc'];
   const byDepth = new Map(source.required_depth_cm.map((depth) => [Number(depth), []]));
   let latest = -Infinity;
   let matchingRows = 0;
   let invalidVwcRows = 0;
   let rows2026 = 0;
-  const stream = await streamCsv(source.url, (record, headers) => {
-    for (const key of ['plot', 'datetime', 'treatment', 'replicate', 'depth_cm', 'vwc']) assert(headers.includes(key), `SOIL_REQUIRED_COLUMN_MISSING:${key}`);
+  const stream = await streamTabular(source.url, requiredHeaders, (record) => {
     if (String(record.plot).trim() !== source.plot) return;
     matchingRows += 1;
     const time = parseProviderUtc(record.datetime);
@@ -209,9 +278,14 @@ async function probeSoil() {
     status: 'PASS',
     source_url: source.url,
     final_url: stream.final_url,
+    final_host: stream.final_host,
+    content_type: stream.content_type,
+    content_disposition_present: stream.content_disposition_present,
     response_sha256: stream.response_sha256,
     response_bytes: stream.response_bytes,
     rows_scanned: stream.rows_scanned,
+    delimiter: stream.delimiter,
+    preamble_nonempty_lines_skipped: stream.preamble_nonempty_lines_skipped,
     matching_g1r1_rows: matchingRows,
     matching_2026_rows: rows2026,
     required_depth_cm: source.required_depth_cm,
@@ -231,8 +305,7 @@ async function probeWeather() {
   let latestComplete = -Infinity;
   let rows2026 = 0;
   let complete2026Rows = 0;
-  const stream = await streamCsv(source.url, (record, headers) => {
-    for (const key of required) assert(headers.includes(key), `WEATHER_REQUIRED_COLUMN_MISSING:${key}`);
+  const stream = await streamTabular(source.url, required, (record) => {
     const time = parseProviderUtc(record.datetime_utc);
     if (time === null || new Date(time).getUTCFullYear() !== 2026) return;
     rows2026 += 1;
@@ -251,9 +324,14 @@ async function probeWeather() {
     status: 'PASS',
     source_url: source.url,
     final_url: stream.final_url,
+    final_host: stream.final_host,
+    content_type: stream.content_type,
+    content_disposition_present: stream.content_disposition_present,
     response_sha256: stream.response_sha256,
     response_bytes: stream.response_bytes,
     rows_scanned: stream.rows_scanned,
+    delimiter: stream.delimiter,
+    preamble_nonempty_lines_skipped: stream.preamble_nonempty_lines_skipped,
     matching_2026_rows: rows2026,
     complete_2026_rows: complete2026Rows,
     latest_complete_observation_at: new Date(latestComplete).toISOString(),
