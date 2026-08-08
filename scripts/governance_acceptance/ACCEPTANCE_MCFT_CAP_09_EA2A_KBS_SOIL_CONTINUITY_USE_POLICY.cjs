@@ -17,6 +17,7 @@ const GATE = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA2A_KBS_SOIL
 const WF = '.github/workflows/mcft-cap-09-ea2a-kbs-soil-continuity-use-policy.yml';
 const OUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY_GOVERNANCE_RESULT.json');
 const EXPECT = [AUTH, PROBE, GATE, WF].sort();
+const TERMS_SEMANTIC_DIGEST = 'sha256:fa76a3a4482d7e207c08170ecd781b5f0cd69d2d333a7fa4465dbd582e4b474a';
 
 const git = args => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
 const blob = (ref, file) => git(['rev-parse', `${ref}:${file}`]);
@@ -62,10 +63,14 @@ try {
 
   const use = authority.use_policy;
   req(use.terms_url==='https://lter.kbs.msu.edu/data/terms-of-use/' && use.terms_live_reproof_required===true, 'EA2A_TERMS_BOUNDARY_DRIFT');
+  req(use.terms_raw_hash_role==='DISCOVERY_AND_LIVE_PROVENANCE_ONLY_NOT_SEMANTIC_AUTHORITY_IDENTITY', 'EA2A_TERMS_RAW_HASH_ROLE_DRIFT');
+  req(use.terms_semantic_authority_identity==='REQUIRED_TERMS_SEMANTICS_PLUS_FROZEN_RESTRICTION_BOOLEAN_VECTOR_SHA256', 'EA2A_TERMS_SEMANTIC_IDENTITY_POLICY_DRIFT');
+  req(use.terms_semantic_digest_sha256===TERMS_SEMANTIC_DIGEST, 'EA2A_TERMS_SEMANTIC_DIGEST_AUTHORITY_DRIFT');
   req(use.public_raw_data_redistribution_authorized===false && use.public_reconstructable_raw_data_artifact_authorized===false && use.publication_without_written_permission_authorized===false && use.commercial_reuse_rights_established===false && use.private_stage1b_technical_processing_is_a_legal_opinion===false, 'EA2A_USE_RIGHTS_OVERCLAIM');
 
   const raw = authority.raw_provenance_policy;
   req(raw.exact_raw_endpoint_payload_must_be_retained_or_referencably_archived_before_canonicalization===true, 'EA2A_RAW_RETENTION_WEAKENED');
+  req(raw.public_probe_output_may_include.includes('terms_page_sha256') && raw.public_probe_output_may_include.includes('terms_semantic_digest_sha256'), 'EA2A_TERMS_PROVENANCE_OR_SEMANTIC_DIGEST_OUTPUT_MISSING');
   req(raw.public_probe_output_may_not_include.includes('soil_moisture_values') && raw.public_probe_output_may_not_include.includes('raw_json_body'), 'EA2A_PUBLIC_RAW_BOUNDARY_MISSING');
 
   const live = authority.live_qualification;
@@ -77,7 +82,8 @@ try {
   req(frozen.distinct_point_count===289 && frozen.distinct_hour_bucket_count===25 && frozen.span_minutes===1440 && frozen.maximum_gap_minutes===5, 'EA2A_FROZEN_CONTINUITY_FACT_DRIFT');
   req(frozen.conflicting_duplicate_timestamp_count===0 && frozen.invalid_vwc_fraction_count===0, 'EA2A_FROZEN_VALIDITY_FACT_DRIFT');
   req(frozen.timestamp_chain_sha256==='sha256:caec4f010775c0195abfc4dba867be7420b87e339f7ee254be4ebb39fb7c45c6', 'EA2A_FROZEN_TIMESTAMP_CHAIN_DRIFT');
-  req(frozen.terms_response_status===200 && frozen.terms_page_sha256==='sha256:3eabbb2a2be8f9e8cd66e8a8a0660960082bbb30f9d0f209849e113b8912e55e' && frozen.terms_page_bytes===45260, 'EA2A_FROZEN_TERMS_FACT_DRIFT');
+  req(frozen.terms_response_status===200 && frozen.terms_page_sha256==='sha256:3eabbb2a2be8f9e8cd66e8a8a0660960082bbb30f9d0f209849e113b8912e55e' && frozen.terms_page_bytes===45260 && frozen.terms_page_sha_role==='DISCOVERY_PROVENANCE_ONLY', 'EA2A_FROZEN_TERMS_PROVENANCE_FACT_DRIFT');
+  req(frozen.terms_semantic_digest_sha256===TERMS_SEMANTIC_DIGEST, 'EA2A_FROZEN_TERMS_SEMANTIC_DIGEST_DRIFT');
   req(frozen.publication_restriction_phrase_present===true && frozen.written_permission_phrase_present===true && frozen.lead_investigator_and_project_director_phrase_present===true && frozen.required_terms_semantics_matched===true, 'EA2A_FROZEN_TERMS_SEMANTICS_DRIFT');
   req(frozen.continuity_qualified===true && frozen.use_policy_qualified===true, 'EA2A_FROZEN_PASS_FACT_REQUIRED');
 
@@ -92,12 +98,14 @@ try {
   req(probe.includes('maximum_allowed_gap_minutes') && probe.includes('minimum_distinct_hour_buckets'), 'EA2A_PROBE_CONTINUITY_RULE_MISSING');
   req(probe.includes('point.value < 0 || point.value > 1'), 'EA2A_PROBE_VWC_RANGE_RULE_MISSING');
   req(probe.includes('may not be published') && probe.includes('written permission'), 'EA2A_PROBE_TERMS_SEMANTICS_MISSING');
+  req(probe.includes('termsSemanticDigest') && probe.includes('terms_semantic_digest_sha256') && probe.includes('DISCOVERY_AND_LIVE_PROVENANCE_ONLY_NOT_SEMANTIC_AUTHORITY_IDENTITY'), 'EA2A_PROBE_TERMS_SEMANTIC_AUTHORITY_MISSING');
   req(probe.includes('raw_soil_values_emitted: false') && probe.includes('raw_json_body_emitted: false'), 'EA2A_PROBE_PRIVACY_ATTESTATION_MISSING');
   req(!/DATABASE_URL|POSTGRES|NEON|psql|public\.facts|INSERT\s+INTO/i.test(probe+'\n'+workflow), 'EA2A_DATABASE_PATH_PRESENT');
   req(workflow.includes('persist-credentials: false'), 'EA2A_PERSIST_CREDENTIALS_FORBIDDEN');
-  req(workflow.includes('shell: node {0}') && workflow.includes('EA2A_FROZEN_TIMESTAMP_CHAIN_DRIFT') && workflow.includes('EA2A_FROZEN_TERMS_PAGE_DRIFT'), 'EA2A_FINAL_HEAD_VERIFIER_NOT_STRICT');
+  req(workflow.includes('shell: node {0}') && workflow.includes('EA2A_FROZEN_TIMESTAMP_CHAIN_DRIFT') && workflow.includes('EA2A_TERMS_SEMANTIC_DIGEST_DRIFT') && workflow.includes('EA2A_TERMS_LIVE_PROVENANCE_REQUIRED'), 'EA2A_FINAL_HEAD_VERIFIER_NOT_STRICT');
+  req(!workflow.includes('EA2A_FROZEN_TERMS_PAGE_DRIFT'), 'EA2A_VOLATILE_RAW_TERMS_HASH_FORBIDDEN_AS_FINAL_AUTHORITY_IDENTITY');
 
-  Object.assign(result,{taskbook_blob:actual.task,amendment01_blob:actual.a1,ea1e_blob:actual.ea1e,ea1od_blob:actual.ea1od,authority_blob:blob('HEAD',AUTH),probe_blob:blob('HEAD',PROBE),frozen_discovery_subject_sha:frozen.discovery_subject_sha,frozen_window_end_utc:frozen.window_end_utc,live_qualification_required:true,final_head_reproof_required:true,taskbook_changed:false,runtime_source_changed:false,status:'PASS'});
+  Object.assign(result,{taskbook_blob:actual.task,amendment01_blob:actual.a1,ea1e_blob:actual.ea1e,ea1od_blob:actual.ea1od,authority_blob:blob('HEAD',AUTH),probe_blob:blob('HEAD',PROBE),frozen_discovery_subject_sha:frozen.discovery_subject_sha,frozen_window_end_utc:frozen.window_end_utc,terms_semantic_digest_sha256:TERMS_SEMANTIC_DIGEST,raw_terms_hash_authority_identity:false,live_qualification_required:true,final_head_reproof_required:true,taskbook_changed:false,runtime_source_changed:false,status:'PASS'});
 } catch (error) { result.error = `${error.name||'Error'}:${error.message||String(error)}`; process.exitCode=1; }
 fs.mkdirSync(path.dirname(OUT),{recursive:true}); fs.writeFileSync(OUT,JSON.stringify(result,null,2)+'\n');
 if(result.status==='PASS') console.log(JSON.stringify(result)); else console.error(result.error);
