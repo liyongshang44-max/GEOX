@@ -1,0 +1,164 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1i_et0_input_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1I-ET0-INPUT-AUTHORITY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION_CONTINUATION",
+  "record_status": "EA1I_ET0_INPUT_AUTHORITY_PROBE_NOT_FORMAL_AUTHORITY",
+  "base_main_sha": "06b5c61cfd8bb9a3c9fd5767a9a0be37b3aaebbd",
+  "predecessor_authority": {
+    "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1H-KBS-RAW-HOURLY-LIVE-PROBE-V1.json",
+    "blob_sha": "ea17427b7b95e18433cf3016fc4b48842786b14c",
+    "consumed_ruling": "KBS_RAW_HOURLY_MACHINE_FRESHNESS_AND_NON_CANONICAL_ROLE_CONTINUITY_ONLY_ET0_INCOMPLETE"
+  },
+  "architecture_amendment": {
+    "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md",
+    "blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e"
+  },
+  "algorithm": {
+    "algorithm_id": "ASCE_STANDARDIZED_REFERENCE_ET_SHORT_HOURLY_V1",
+    "output_unit": "mm_per_hour",
+    "required_input_roles": [
+      "air_temperature_c",
+      "actual_vapor_pressure_or_governed_humidity",
+      "solar_radiation_mj_m2_hour",
+      "wind_speed_2m_m_s",
+      "atmospheric_pressure_kpa"
+    ],
+    "missing_required_input_policy": "FAIL_CLOSED_NO_SILENT_IMPUTATION"
+  },
+  "kbs_primary_source": {
+    "provider": "KBS_LTER",
+    "official_page": "https://lter.kbs.msu.edu/datatables/13",
+    "download_path": "/datatables/13.csv",
+    "station_coordinates": {"latitude": 42.408537, "longitude": -85.373637},
+    "fields": {
+      "timestamp": "datetime_utc",
+      "solar_radiation": "solrad_avg",
+      "wind_speed": "wind_speed",
+      "relative_humidity": "rh",
+      "air_temperature": "airtmp_107_avg",
+      "rainfall": "rain_mm",
+      "excluded_absolute_humidity": "ah",
+      "excluded_barometer": "barometer_avg"
+    },
+    "raw_payload_publication_allowed": false
+  },
+  "solar_authority": {
+    "kbs_current_instrument_authority": "https://lter.kbs.msu.edu/protocols/10",
+    "instrument_model": "LI200X",
+    "manufacturer_authority": "https://s.campbellsci.com/documents/ca/manuals/li200x_man.pdf",
+    "source_field": "solrad_avg",
+    "source_quantity": "AVERAGE_SOLAR_IRRADIANCE",
+    "source_unit": "W_per_m2",
+    "hourly_energy_conversion": "MJ_per_m2_hour = W_per_m2 * 0.0036",
+    "negative_raw_policy": "NEGATIVE_IS_NOT_AUTOMATICALLY_ZEROED_BY_GEOX",
+    "canonicalization_requires_finite_numeric_value": true
+  },
+  "wind_authority": {
+    "kbs_height_authority": "https://lter.kbs.msu.edu/datatables/175",
+    "source_field": "wind_speed",
+    "source_unit": "m_per_s",
+    "measurement_height_m": 10,
+    "standard_authority": "https://www.fao.org/4/X0490E/x0490e07.htm",
+    "transform_id": "FAO56_WIND_PROFILE_EQ47_TO_2M_V1",
+    "transform": "u2 = uz * 4.87 / ln(67.8 * z - 5.42)",
+    "target_height_m": 2,
+    "raw_10m_value_may_be_relabelled_2m": false
+  },
+  "pressure_authority": {
+    "route": "ELEVATION_DERIVED_STANDARD_ATMOSPHERIC_PRESSURE",
+    "nws_station_id": "KBSM4",
+    "nws_product": "RR2_GRR",
+    "nws_station_identity": "HICKORY CORNERS - MSU KELLOGG BIOLOGICAL STATION",
+    "nws_station_coordinates": {"latitude": 42.4081, "longitude": -85.3736},
+    "station_elevation_m": 286,
+    "station_elevation_source": "NWS_RR2_KBSM4_HEADER",
+    "standard_authority": "https://www.fao.org/4/X0490E/x0490e07.htm",
+    "transform_id": "FAO56_ATMOSPHERIC_PRESSURE_FROM_ELEVATION_EQ7_V1",
+    "transform": "P_kPa = 101.3 * ((293 - 0.0065 * z_m) / 293) ^ 5.26",
+    "kbs_barometer_avg_used": false,
+    "barometer_unit_guessing_forbidden": true
+  },
+  "humidity_authority": {
+    "primary": {
+      "provider": "KBS_LTER",
+      "field": "rh",
+      "unit": "percent",
+      "valid_range": {"min": 0, "max": 100},
+      "invalid_value_policy": "MISSING_NOT_CLIPPED_NOT_IMPUTED"
+    },
+    "fallback": {
+      "provider": "NATIONAL_WEATHER_SERVICE",
+      "product": "RR2",
+      "issued_by": "GRR",
+      "station_id": "KBSM4",
+      "physical_element": "XR",
+      "physical_element_authority": "NWS_SHEF_CODE_MANUAL_XR_RELATIVE_HUMIDITY_PERCENT",
+      "unit": "percent",
+      "station_identity_and_elevation_must_match": true,
+      "only_same_hour_fallback_allowed": true
+    },
+    "resolution": "KBS_RH_IF_VALID_ELSE_SAME_HOUR_NWS_KBSM4_XR_ELSE_MISSING",
+    "kbs_ah_used": false,
+    "ah_relabelled_as_vapor_pressure": false,
+    "silent_interpolation_forbidden": true
+  },
+  "nws_rr2_live_probe": {
+    "url_template": "https://forecast.weather.gov/product.php?site=GRR&issuedby=GRR&product=RR2&format=CI&glossary=0&version={version}",
+    "versions_to_probe": 40,
+    "shel_timezone_code": "E",
+    "interpretation_timezone": "America/Detroit",
+    "required_station_marker": "HICKORY CORNERS - MSU KELLOGG BIOLOGICAL STATION",
+    "required_station_id": "KBSM4",
+    "required_elevation_m": 286,
+    "required_latitude": 42.4081,
+    "required_longitude": -85.3736,
+    "raw_product_body_may_be_persisted": false
+  },
+  "readiness_window": {
+    "source_max_age_hours": 6,
+    "lookback_hours": 30,
+    "required_contiguous_authorized_hours": 24,
+    "future_timestamp_tolerance_minutes": 5,
+    "each_authorized_hour_requires": [
+      "KBS_air_temperature_numeric",
+      "KBS_solar_radiation_numeric",
+      "KBS_wind_speed_numeric",
+      "governed_humidity_available",
+      "elevation_derived_pressure_available"
+    ]
+  },
+  "data_use_policy": {
+    "provider_payloads_may_be_read_transiently_for_qualification": true,
+    "provider_payloads_may_be_committed": false,
+    "provider_payloads_may_be_uploaded_as_ci_artifacts": false,
+    "raw_numeric_observation_values_may_be_emitted": false,
+    "hashes_counts_field_names_timestamps_and_derived_constants_may_be_emitted": true,
+    "kbs_publication_right_claimed": false,
+    "nws_raw_product_republication_needed": false
+  },
+  "qualification_effect": {
+    "probe_may_establish": "ET0_INPUT_AUTHORITY_READINESS_FOR_LATER_EA2_BINDING_ONLY",
+    "formal_source_authority_created": false,
+    "qualified_formal_site": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "runtime_source_authorized": false,
+    "formal_window_started": false
+  },
+  "hard_nonclaims": [
+    "NO_FORMAL_SOURCE_AUTHORITY_FROM_EA1I_ALONE",
+    "NO_KBS_AH_USE",
+    "NO_KBS_BAROMETER_USE",
+    "NO_RH_CLIPPING_OR_SILENT_IMPUTATION",
+    "NO_RAW_10M_WIND_RELABEL_AS_2M",
+    "NO_OTHER_NWS_STATION_SUBSTITUTION",
+    "NO_PUBLIC_KBS_RAW_DATA_REPUBLICATION",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_RUNTIME_PRODUCT_SOURCE_DELTA",
+    "NO_FORMAL_WINDOW_START",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
