@@ -25,18 +25,64 @@ function parseTime(value) {
   return null;
 }
 function requestEvidence(url) {
-  const parsed = new URL(url);
-  return { host: parsed.hostname, path: parsed.pathname, query_key_names: [...new Set(parsed.searchParams.keys())].sort(), query_values_emitted: false, request_identity_sha256: sha256(url) };
+  const parsed = url instanceof URL ? url : new URL(url);
+  return { host: parsed.hostname, path: parsed.pathname, query_key_names: [...new Set(parsed.searchParams.keys())].sort(), query_values_emitted: false, request_identity_sha256: sha256(parsed.toString()) };
+}
+function validateTransportConfig() {
+  if (!Array.isArray(CONFIG.web_service_base_urls) || CONFIG.web_service_base_urls.length < 1) throw new Error('EA1G_WEB_SERVICE_BASE_URLS_REQUIRED');
+  const allowed = new Set(CONFIG.transport_policy?.allowed_hosts || []);
+  if (!CONFIG.transport_policy?.official_host_failover_only || allowed.size < 1) throw new Error('EA1G_OFFICIAL_HOST_FAILOVER_POLICY_REQUIRED');
+  for (const base of CONFIG.web_service_base_urls) {
+    const parsed = new URL(base);
+    if (parsed.protocol !== 'https:') throw new Error('EA1G_HTTPS_PROVIDER_REQUIRED');
+    if (!allowed.has(parsed.hostname)) throw new Error(`EA1G_UNAPPROVED_PROVIDER_HOST:${parsed.hostname}`);
+  }
 }
 async function fetchJson(params, label) {
-  const url = new URL(CONFIG.web_service_base_url);
-  for (const [key,value] of Object.entries(params)) url.searchParams.set(key, String(value));
-  const response = await fetch(url, { signal: AbortSignal.timeout(45_000), headers: { accept: 'application/json,text/plain;q=0.8,*/*;q=0.5', 'user-agent': 'GEOX-MCFT-CAP09-EA1G-READ-ONLY/1.0' } });
-  if (!response.ok) throw new Error(`${label}_HTTP_${response.status}`);
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  let json;
-  try { json = JSON.parse(new TextDecoder().decode(bytes)); } catch { throw new Error(`${label}_JSON_REQUIRED`); }
-  return { json, evidence: { request: requestEvidence(url.toString()), response_status: response.status, content_type: String(response.headers.get('content-type')||'').split(';')[0], response_body_sha256: sha256(bytes), response_bytes: bytes.byteLength } };
+  validateTransportConfig();
+  const attempts = [];
+  for (let index = 0; index < CONFIG.web_service_base_urls.length; index += 1) {
+    const base = CONFIG.web_service_base_urls[index];
+    const url = new URL(base);
+    for (const [key,value] of Object.entries(params)) url.searchParams.set(key, String(value));
+    const req = requestEvidence(url);
+    let response;
+    try {
+      response = await fetch(url, { signal: AbortSignal.timeout(45_000), headers: { accept: 'application/json,text/plain;q=0.8,*/*;q=0.5', 'user-agent': 'GEOX-MCFT-CAP09-EA1G-READ-ONLY/1.1' } });
+    } catch (error) {
+      attempts.push({ ...req, response_status: null, transport_error: safeError(error), failover_used: false });
+      throw new Error(`${label}_TRANSPORT_FAILURE`);
+    }
+
+    const basicAttempt = {
+      ...req,
+      response_status: response.status,
+      content_type: String(response.headers.get('content-type')||'').split(';')[0],
+      failover_used: false,
+    };
+
+    if (!response.ok) {
+      const mayFailover = CONFIG.transport_policy.http_403_or_404_may_failover === true && [403,404].includes(response.status) && index < CONFIG.web_service_base_urls.length - 1;
+      attempts.push({ ...basicAttempt, failover_used: mayFailover });
+      if (mayFailover) continue;
+      throw new Error(`${label}_HTTP_${response.status}`);
+    }
+
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    let json;
+    try { json = JSON.parse(new TextDecoder().decode(bytes)); } catch { throw new Error(`${label}_JSON_REQUIRED`); }
+    const evidence = {
+      request: req,
+      response_status: response.status,
+      content_type: basicAttempt.content_type,
+      response_body_sha256: sha256(bytes),
+      response_bytes: bytes.byteLength,
+      final_provider_host: req.host,
+      transport_attempts: [...attempts, { ...basicAttempt, response_body_sha256: sha256(bytes), response_bytes: bytes.byteLength }],
+    };
+    return { json, evidence };
+  }
+  throw new Error(`${label}_OFFICIAL_HOSTS_EXHAUSTED`);
 }
 function discoverStationCandidates(value) {
   const candidates = [];
@@ -125,6 +171,7 @@ function analyzeRole(records,timeKeys,fields,latestRecordTime) {
 let discoveryEvidence=null, observationEvidence=null, stationCandidates=[];
 try {
   if (!SUBJECT_SHA || !/^[0-9a-f]{40}$/.test(SUBJECT_SHA)) throw new Error('EA1G_EXACT_SUBJECT_SHA_REQUIRED');
+  validateTransportConfig();
   const discovery = await fetchJson({ active:CONFIG.discovery_request.product_id, network:CONFIG.discovery_request.network, format:CONFIG.discovery_request.format }, 'EA1G_ACTIVE');
   discoveryEvidence=discovery.evidence;
   stationCandidates=discoverStationCandidates(discovery.json);
