@@ -88,10 +88,12 @@ jobs:
           if (c.conflicting_duplicate_timestamp_count !== frozen.conflicting_duplicate_timestamp_count || c.invalid_vwc_fraction_count !== frozen.invalid_vwc_fraction_count) throw new Error('EA2A_FROZEN_VALIDITY_DRIFT');
           if (c.timestamp_chain_sha256 !== frozen.timestamp_chain_sha256) throw new Error('EA2A_FROZEN_TIMESTAMP_CHAIN_DRIFT');
           const u = result.use_policy_qualification;
-          if (u.terms_response_status !== frozen.terms_response_status || u.terms_page_sha256 !== frozen.terms_page_sha256 || u.terms_page_bytes !== frozen.terms_page_bytes) throw new Error('EA2A_FROZEN_TERMS_PAGE_DRIFT');
+          if (u.terms_response_status !== 200 || !(u.terms_page_bytes > 0) || !/^sha256:[0-9a-f]{64}$/.test(u.terms_page_sha256)) throw new Error('EA2A_TERMS_LIVE_PROVENANCE_REQUIRED');
+          if (u.terms_raw_hash_role !== 'DISCOVERY_AND_LIVE_PROVENANCE_ONLY_NOT_SEMANTIC_AUTHORITY_IDENTITY') throw new Error('EA2A_TERMS_RAW_HASH_ROLE_DRIFT');
+          if (u.terms_semantic_digest_sha256 !== authority.use_policy.terms_semantic_digest_sha256 || u.terms_semantic_digest_sha256 !== frozen.terms_semantic_digest_sha256) throw new Error('EA2A_TERMS_SEMANTIC_DIGEST_DRIFT');
           if (u.publication_restriction_phrase_present !== true || u.written_permission_phrase_present !== true || u.lead_investigator_and_project_director_phrase_present !== true || u.required_terms_semantics_matched !== true || u.use_policy_qualified !== true) throw new Error('EA2A_TERMS_SEMANTICS_REPROOF_FAIL');
           if (u.public_raw_data_redistribution_authorized !== false || u.public_reconstructable_raw_data_artifact_authorized !== false || u.publication_without_written_permission_authorized !== false || u.commercial_reuse_rights_established !== false) throw new Error('EA2A_USE_RIGHTS_OVERCLAIM');
-          console.log(JSON.stringify({status:'PASS',decision:result.adjudication.decision,window_end_utc:c.window_end_utc,timestamp_chain_sha256:c.timestamp_chain_sha256,terms_page_sha256:u.terms_page_sha256}));
+          console.log(JSON.stringify({status:'PASS',decision:result.adjudication.decision,window_end_utc:c.window_end_utc,timestamp_chain_sha256:c.timestamp_chain_sha256,terms_semantic_digest_sha256:u.terms_semantic_digest_sha256,live_terms_page_sha256:u.terms_page_sha256}));
 
       - uses: actions/upload-artifact@v4
         if: always()
