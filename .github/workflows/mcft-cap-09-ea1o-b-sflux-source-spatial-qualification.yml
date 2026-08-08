@@ -1,0 +1,120 @@
+name: mcft-cap-09-ea1o-b-sflux-source-spatial-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea1o-b-sflux-source-spatial-qualification.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-B-SFLUX-SOURCE-SPATIAL-QUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION.py'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea1o-b-sflux-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  live-sflux-source-spatial-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Resolve exact EA1O-B base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate exact EA1O-B fail-closed governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION.cjs
+
+      - name: Syntax-check source adjudication probes
+        run: |
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY.mjs
+          python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION.py
+
+      - name: Re-prove governed pgrb2 exact-cycle chronology at this exact head
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY.mjs
+
+      - name: Live-adjudicate same-cycle sflux direct-one-hour source semantics
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION.py
+
+      - name: Verify fail-closed sflux adjudication
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          path = Path('acceptance-output/MCFT_CAP_09_EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION_RESULT.json')
+          result = json.loads(path.read_text())
+          assert result['status'] == 'PASS'
+          evidence = result['source_semantics_evidence']
+          adjudication = result['adjudication']
+          assert evidence['required_direct_1h_record_count'] == 72
+          assert evidence['observed_direct_1h_average_record_count'] == 12
+          assert evidence['observed_multi_hour_average_record_count'] == 60
+          assert evidence['average_window_length_hours_set'] == [1, 2, 3, 4, 5, 6]
+          assert evidence['n_hour_fcst_record_presence_count'] == 72
+          assert adjudication['decision'] == 'REJECTED_AS_AMENDMENT02_DIRECT_1H_SOURCE_AUTHORITY'
+          assert adjudication['sflux_source_authority_candidate_qualified'] is False
+          assert adjudication['sflux_spatial_authority_candidate_qualified'] is False
+          assert adjudication['spatial_stage_disposition'] == 'NOT_REACHED_SOURCE_SEMANTICS_FAIL_CLOSED'
+          assert adjudication['rolling_average_reconstruction_used'] is False
+          assert adjudication['n_hour_fcst_used_as_interval_average'] is False
+          assert result['database_write_count'] == 0
+          assert result['formal_evidence_write_count'] == 0
+          assert result['formal_window_started'] is False
+          print(json.dumps({
+              'status': 'PASS',
+              'decision': adjudication['decision'],
+              'direct_1h_count': evidence['observed_direct_1h_average_record_count'],
+              'multi_hour_count': evidence['observed_multi_hour_average_record_count'],
+              'spatial_stage_disposition': adjudication['spatial_stage_disposition'],
+          }, sort_keys=True))
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea1o-b-sflux-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90

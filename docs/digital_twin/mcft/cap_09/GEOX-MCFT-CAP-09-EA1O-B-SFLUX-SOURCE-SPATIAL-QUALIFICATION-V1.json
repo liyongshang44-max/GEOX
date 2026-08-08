@@ -1,0 +1,161 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1o_b_sflux_direct_1h_source_adjudication_v2",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1O-B-SFLUX-SOURCE-SPATIAL-QUALIFICATION-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA1O",
+  "record_status": "EA1O_B_SFLUX_DIRECT_1H_SOURCE_REJECTION_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "ce38bc250fb9ddb1aabd0475baafc85939046695",
+  "predecessor_authorities": [
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+      "blob_sha": "3e6bc630540108599771e5404c457eaee14946aa",
+      "consumed_ruling": "TASKBOOK_V0_3_BINDS_AMENDMENT_01_AND_02_AND_REQUIRES_LIVE_SFLUX_SOURCE_SPATIAL_QUALIFICATION_BEFORE_EA2"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-02-GFS-SOLAR-RADIATION-SOURCE-AUTHORITY.md",
+      "blob_sha": "3ec68f7a33274ff96c5f613154b4357d2b057fd1",
+      "consumed_ruling": "EA1O_REQUIRES_EXACTLY_ONE_DIRECT_PRECEDING_ONE_HOUR_SURFACE_DSWRF_RECORD_PER_EACH_OF_72_TARGET_INTERVALS_AND_ANY_FAILED_ITEM_FAILS_CLOSED"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1K-GFS-EXACT-CYCLE-72H-AUTHORITY-V1.json",
+      "blob_sha": "f36955b2847d1a2b58052f0dec2fea465e7eaec2",
+      "consumed_ruling": "LIVE_PGRB2_CHRONOLOGY_SELECTS_THE_LATEST_COMPLETE_GFS_CYCLE_FOR_EXACT_T_PLUS_1_TO_T_PLUS_72"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1M-GFS-SPATIAL-EXTRACTION-AUTHORITY-V1.json",
+      "blob_sha": "bb487c0c6a91dd37b0409b5d446aec4707f7b0a4",
+      "consumed_ruling": "PGRB2_SPATIAL_AUTHORITY_CANNOT_BE_REUSED_FOR_SFLUX"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1N-GFS-VALUE-EXTRACTION-AUTHORITY-V1.json",
+      "blob_sha": "607af693cd2f7d8d80e18d5308c16e128d397e44",
+      "consumed_ruling": "PGRB2_ROLLING_DSWRF_IS_REJECTED_AS_EXACT_HOURLY_SCALAR_AUTHORITY_WITH_NO_FALLBACK_OR_CLIPPING"
+    }
+  ],
+  "source_candidate": {
+    "provider": "NOAA_NCEP_NOMADS",
+    "model": "GFS",
+    "product_family": "sflux",
+    "production_root": "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod",
+    "source_object_pattern": "gfs.YYYYMMDD/CC/atmos/gfs.tCCz.sfluxgrbfFFF.grib2",
+    "index_object_suffix": ".idx",
+    "candidate_parameter": "DSWRF",
+    "candidate_level": "surface",
+    "required_statistical_semantics": "DIRECT_PRECEDING_ONE_HOUR_AVERAGE",
+    "source_unit": "W/m^2",
+    "canonical_point_count": 72,
+    "same_exact_gfs_cycle_as_ea1k_required": true,
+    "target_valid_time_rule": "point[i].valid_time=T+(i+1)h",
+    "availability_authority": "HTTP_LAST_MODIFIED",
+    "missing_last_modified": "FAIL_CLOSED",
+    "future_file_waiting_forbidden": true,
+    "valid_time_rewrite_forbidden": true,
+    "n_hour_fcst_record_authorized": false,
+    "expanding_window_weighted_difference_authorized": false,
+    "rolling_average_reconstruction_authorized": false,
+    "alternative_source_substitution_authorized": false
+  },
+  "live_discovery_evidence": {
+    "authority_class": "NON_FINAL_DISCOVERY_EVIDENCE_REQUIRES_EXACT_HEAD_REPROOF",
+    "subject_sha": "fe516d333fd6eab93bb9536097318d30d10d2a81",
+    "workflow_run_id": 31266027190,
+    "qualification_tick_boundary_utc": "2026-08-08T16:00:00Z",
+    "selected_cycle_utc": "2026-08-08T12:00:00Z",
+    "lead_start": 5,
+    "lead_end": 76,
+    "observed_surface_dswrf_pattern": "SIX_HOUR_BLOCK_EXPANDING_AVERAGE_WINDOWS_PLUS_N_HOUR_FCST",
+    "representative_records": [
+      "F005:0-5 hour ave fcst",
+      "F006:0-6 hour ave fcst",
+      "F007:6-7 hour ave fcst",
+      "F011:6-11 hour ave fcst",
+      "F012:6-12 hour ave fcst",
+      "F013:12-13 hour ave fcst"
+    ],
+    "direct_preceding_1h_count_expected_on_reproof": 12,
+    "multi_hour_average_count_expected_on_reproof": 60,
+    "average_window_length_hours_set_expected_on_reproof": [1, 2, 3, 4, 5, 6]
+  },
+  "adjudication": {
+    "decision": "REJECTED_AS_AMENDMENT02_DIRECT_1H_SOURCE_AUTHORITY",
+    "reason": "SFLUX_DOES_NOT_EXPOSE_ONE_DIRECT_PRECEDING_ONE_HOUR_SURFACE_DSWRF_AVERAGE_FOR_EACH_OF_THE_72_REQUIRED_TARGET_INTERVALS",
+    "amendment_02_required_direct_1h_count": 72,
+    "exact_head_reproof_required": true,
+    "exact_head_reproof_expected_direct_1h_count": 12,
+    "exact_head_reproof_expected_multi_hour_count": 60,
+    "source_authority_qualified": false,
+    "spatial_authority_qualified": false,
+    "spatial_stage_disposition": "NOT_REACHED_SOURCE_SEMANTICS_FAIL_CLOSED",
+    "value_stage_disposition": "NOT_REACHED_SOURCE_SEMANTICS_FAIL_CLOSED",
+    "grib_message_download_required_after_source_rejection": false,
+    "kbs_geometry_read_required_after_source_rejection": false
+  },
+  "probe_output_policy": {
+    "raw_directory_listing_emitted": false,
+    "raw_idx_emitted": false,
+    "raw_grib_message_emitted": false,
+    "decoded_values_emitted": false,
+    "safe_output_may_include": [
+      "tick_boundary",
+      "selected_cycle",
+      "lead_start_end",
+      "valid_time_start_end",
+      "last_modified_bounds",
+      "idx_hash_chain",
+      "surface_dswrf_descriptor_hash_chain",
+      "direct_1h_record_count",
+      "multi_hour_average_record_count",
+      "average_window_length_hours_set",
+      "forbidden_n_hour_fcst_presence_count",
+      "direct_1h_lead_set_hash",
+      "non_direct_1h_lead_set_hash",
+      "source_qualification_boolean",
+      "spatial_stage_disposition"
+    ]
+  },
+  "qualification_effect": {
+    "probe_may_establish": "EA1O_B_SFLUX_DIRECT_1H_SOURCE_REJECTION_CANDIDATE_ONLY",
+    "sflux_source_authority_qualified_without_effective_merge": false,
+    "sflux_spatial_authority_qualified_without_effective_merge": false,
+    "future_et0_execution_authorized": false,
+    "formal_external_evidence_package_created": false,
+    "collector_canonicalizer_implemented": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "runtime_source_authorized": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false
+  },
+  "successor_governance": {
+    "next_action_class_if_rejection_becomes_effective": "S6_ARCHITECTURE_ADJUDICATION_REQUIRED",
+    "specific_successor_design_pre_authorized": false,
+    "sflux_expanding_window_reconstruction_requires_separate_architecture_authority": true,
+    "another_provider_or_product_requires_separate_architecture_authority": true,
+    "ea2_may_start": false,
+    "formal_o00_o23_may_start": false
+  },
+  "hard_nonclaims": [
+    "NO_SFLUX_SOURCE_QUALIFICATION",
+    "NO_SFLUX_SPATIAL_QUALIFICATION",
+    "NO_SFLUX_EXPANDING_WINDOW_RECONSTRUCTION",
+    "NO_PGRB2_DSWRF_FALLBACK",
+    "NO_N_HOUR_FCST_AS_INTERVAL_AVERAGE",
+    "NO_CROSS_CYCLE_SOLAR_SUBSTITUTION",
+    "NO_FUTURE_FILE_WAIT",
+    "NO_VALID_TIME_REWRITE",
+    "NO_NEGATIVE_CLIPPING",
+    "NO_ZERO_THRESHOLDING",
+    "NO_SILENT_IMPUTATION",
+    "NO_INTERPOLATION",
+    "NO_RAW_SFLUX_IDX_PUBLICATION",
+    "NO_RAW_SFLUX_GRIB_PUBLICATION",
+    "NO_DECODED_FORECAST_VALUE_PUBLICATION",
+    "NO_FUTURE_ET0_EXECUTION",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_RUNTIME_PRODUCT_SOURCE_DELTA",
+    "NO_FORMAL_O00_O23_START",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
