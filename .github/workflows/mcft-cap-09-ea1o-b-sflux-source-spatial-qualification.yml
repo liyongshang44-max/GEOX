@@ -23,7 +23,7 @@ concurrency:
 jobs:
   live-sflux-source-spatial-qualification:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -55,71 +55,58 @@ jobs:
             echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Validate exact EA1O-B no-write governance boundary
+      - name: Validate exact EA1O-B fail-closed governance boundary
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION.cjs
 
-      - name: Syntax-check live qualification probes
+      - name: Syntax-check source adjudication probes
         run: |
           node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY.mjs
           python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION.py
-
-      - name: Install pinned ecCodes decoder
-        run: |
-          python -m pip install --disable-pip-version-check "eccodes==2.47.0" "eccodeslib==2.47.3.23"
-          python -m eccodes selfcheck
 
       - name: Re-prove governed pgrb2 exact-cycle chronology at this exact head
         env:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY.mjs
 
-      - name: Inspect safe sflux DSWRF descriptors at six-hour boundaries
-        shell: python
-        run: |
-          import hashlib
-          import json
-          import re
-          import urllib.request
-          from datetime import datetime
-          from pathlib import Path
-
-          result = json.loads(Path('acceptance-output/MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY_RESULT.json').read_text())
-          cycle = datetime.fromisoformat(result['selected_cycle']['issued_at_utc'].replace('Z', '+00:00'))
-          ymd = cycle.strftime('%Y%m%d')
-          hh = cycle.strftime('%H')
-          selected = result['selected_cycle']
-          lead_start = int(selected['lead_start'])
-          lead_end = int(selected['lead_end'])
-          candidates = [lead_start, lead_start + 1, lead_start + 2, 5, 6, 7, 11, 12, 13, 17, 18, 19, 23, 24, 25]
-          leads = sorted({lead for lead in candidates if lead_start <= lead <= lead_end})
-          for lead in leads:
-              idx_url = f'https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.{ymd}/{hh}/atmos/gfs.t{hh}z.sfluxgrbf{lead:03d}.grib2.idx'
-              req = urllib.request.Request(idx_url, headers={'User-Agent': 'GEOX-MCFT-CAP09-EA1O-B-SAFE-DIAGNOSTIC/1.0'})
-              with urllib.request.urlopen(req, timeout=30) as response:
-                  text = response.read(2_000_001).decode('utf-8')
-              rows = []
-              for line in text.splitlines():
-                  parts = line.strip().split(':')
-                  if 'DSWRF' not in parts:
-                      continue
-                  i = parts.index('DSWRF')
-                  if i + 2 >= len(parts) or parts[i + 1] != 'surface':
-                      continue
-                  descriptor = parts[i + 2].strip()
-                  rows.append({
-                      'descriptor': descriptor,
-                      'first_token_shape': 'INTEGER' if parts and parts[0].isdigit() else ('DECIMAL_RECORD' if parts and re.fullmatch(r'\d+\.\d+', parts[0]) else 'OTHER'),
-                      'second_token_is_digits': bool(len(parts) > 1 and parts[1].isdigit()),
-                      'line_sha256': 'sha256:' + hashlib.sha256(line.encode()).hexdigest(),
-                  })
-              print(json.dumps({'lead': lead, 'surface_dswrf_records': rows}, sort_keys=True))
-
-      - name: Live-qualify same-cycle sflux source and native spatial authority
+      - name: Live-adjudicate same-cycle sflux direct-one-hour source semantics
         env:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION.py
+
+      - name: Verify fail-closed sflux adjudication
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          path = Path('acceptance-output/MCFT_CAP_09_EA1O_B_SFLUX_SOURCE_SPATIAL_QUALIFICATION_RESULT.json')
+          result = json.loads(path.read_text())
+          assert result['status'] == 'PASS'
+          evidence = result['source_semantics_evidence']
+          adjudication = result['adjudication']
+          assert evidence['required_direct_1h_record_count'] == 72
+          assert evidence['observed_direct_1h_average_record_count'] == 12
+          assert evidence['observed_multi_hour_average_record_count'] == 60
+          assert evidence['average_window_length_hours_set'] == [1, 2, 3, 4, 5, 6]
+          assert evidence['n_hour_fcst_record_presence_count'] == 72
+          assert adjudication['decision'] == 'REJECTED_AS_AMENDMENT02_DIRECT_1H_SOURCE_AUTHORITY'
+          assert adjudication['sflux_source_authority_candidate_qualified'] is False
+          assert adjudication['sflux_spatial_authority_candidate_qualified'] is False
+          assert adjudication['spatial_stage_disposition'] == 'NOT_REACHED_SOURCE_SEMANTICS_FAIL_CLOSED'
+          assert adjudication['rolling_average_reconstruction_used'] is False
+          assert adjudication['n_hour_fcst_used_as_interval_average'] is False
+          assert result['database_write_count'] == 0
+          assert result['formal_evidence_write_count'] == 0
+          assert result['formal_window_started'] is False
+          print(json.dumps({
+              'status': 'PASS',
+              'decision': adjudication['decision'],
+              'direct_1h_count': evidence['observed_direct_1h_average_record_count'],
+              'multi_hour_count': evidence['observed_multi_hour_average_record_count'],
+              'spatial_stage_disposition': adjudication['spatial_stage_disposition'],
+          }, sort_keys=True))
 
       - uses: actions/upload-artifact@v4
         if: always()
