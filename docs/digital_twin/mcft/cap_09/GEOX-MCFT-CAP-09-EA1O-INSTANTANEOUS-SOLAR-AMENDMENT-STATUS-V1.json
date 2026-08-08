@@ -1,0 +1,114 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1o_instantaneous_solar_amendment_status_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1O-INSTANTANEOUS-SOLAR-AMENDMENT-STATUS-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA1O",
+  "record_status": "ARCHITECTURE_AMENDMENT_04_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "f7ab20326dc78612f730225424aa23545a2ee258",
+  "predecessor_authority": {
+    "taskbook_v04_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "taskbook_v04_blob": "d7ff8d7164d4f2a9f1c3edcaafcf30eeeb181f0d",
+    "ea1o_c_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-C-SFLUX-RECONSTRUCTION-SPATIAL-QUALIFICATION-V1.json",
+    "ea1o_c_blob": "743846307cc4d846b10e2409670a66512b4778b4",
+    "ea1o_c_merge_sha": "1551fff621b2e3a238b8530396b880a083f15f48",
+    "ea1o_c_decision": "REJECTED_AS_AMENDMENT03_SFLUX_RECONSTRUCTION_VALUE_AUTHORITY",
+    "ea1o_c_spatial_candidate_qualified": true,
+    "ea1o_c_next_action_class": "S6_ARCHITECTURE_ADJUDICATION_REQUIRED"
+  },
+  "candidate_amendment": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-04-GFS-SFLUX-INSTANTANEOUS-PIECEWISE-LINEAR-SOLAR-AUTHORITY.md",
+    "blob": "3cce5cb3f070404a2b7474ef61a009d87c7f809f",
+    "taskbook_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "taskbook_candidate_version": "v0.5"
+  },
+  "epistemic_candidate": {
+    "class": "MODEL_DERIVED_PIECEWISE_LINEAR_FORECAST_INTERPOLATION",
+    "formal_quality_status": "LIMITED",
+    "direct_field_equivalence": false,
+    "model_grid_is_observation_truth": false,
+    "provider_direct_hourly_average_claim": false,
+    "hidden_provider_truth_reconstruction_claim": false
+  },
+  "instantaneous_endpoint_candidate": {
+    "scope": "FUTURE_ET0_SOLAR_RADIATION_INPUT_ONLY",
+    "provider": "NOAA_NCEP",
+    "model": "GFS",
+    "product": "gfs.tCCz.sfluxgrbfFFF.grib2",
+    "parameter": "DSWRF_SURFACE_INSTANTANEOUS",
+    "idx_record_rule": "DSWRF:surface:<lead> hour fcst",
+    "same_exact_gfs_cycle_required": true,
+    "canonical_target_count": 72,
+    "support_endpoint_count": 1,
+    "support_lead_formula": "canonical_lead_start-1",
+    "required_endpoint_count": 73,
+    "cross_cycle_endpoint_pair_authorized": false,
+    "n_hour_fcst_as_direct_interval_average_authorized": false
+  },
+  "temporal_transformation_candidate": {
+    "transformation_id": "PIECEWISE_LINEAR_ENDPOINT_INTEGRATION_V1",
+    "interpolation_model": "I(u)=(1-u)*I_(f-1)+u*I_f for u in [0,1]",
+    "hourly_mean_formula": "H_f=(I_(f-1)+I_f)/2",
+    "solar_energy_formula": "Rs_f=H_f*0.0036",
+    "solar_energy_unit": "MJ/m^2/hour",
+    "midpoint_invention_authorized": false,
+    "spline_authorized": false,
+    "higher_order_fit_authorized": false,
+    "persistence_fill_authorized": false,
+    "weather_dependent_heuristic_authorized": false
+  },
+  "value_policy": {
+    "instantaneous_endpoint_must_be_finite": true,
+    "instantaneous_endpoint_must_be_nonnegative": true,
+    "derived_hourly_mean_must_be_finite": true,
+    "derived_hourly_mean_must_be_nonnegative": true,
+    "derived_solar_energy_must_be_finite": true,
+    "derived_solar_energy_must_be_nonnegative": true,
+    "negative_clipping_authorized": false,
+    "zero_thresholding_authorized": false,
+    "silent_imputation_authorized": false,
+    "pgrb2_dswrf_fallback_authorized": false
+  },
+  "spatial_policy": {
+    "predecessor_spatial_fact": "EA1O_C_NATIVE_SFLUX_SPATIAL_CANDIDATE_PASS",
+    "live_reproof_required": true,
+    "selection_method": "ECCODES_NEAREST_NATIVE_GRID_POINT",
+    "silent_pgrb2_grid_reuse_authorized": false,
+    "spatial_interpolation_authorized": false
+  },
+  "formal_metadata_policy": {
+    "quality_status": "LIMITED",
+    "quality_pass_authorized": false,
+    "source_role": "INSTANTANEOUS_SURFACE_DSWRF_ENDPOINT_SAMPLES",
+    "temporal_transformation_ref": "PIECEWISE_LINEAR_ENDPOINT_INTEGRATION_V1",
+    "limitations_required": true,
+    "runtime_contract_delta_required": false,
+    "canonical_schema_delta_required": false
+  },
+  "contract_impact": {
+    "domain_model_delta": false,
+    "canonical_object_contract_delta": false,
+    "runtime_forcing_selector_delta": false,
+    "transaction_family_delta": false,
+    "migration_delta": false,
+    "runtime_product_source_delta": false,
+    "reason": "RUNTIME_ALREADY_CONSUMES_FINAL_FUTURE_ET0_SERIES_AND_SUPPORTS_LIMITED_QUALITY_WITH_TRANSFORMATION_LIMITATIONS"
+  },
+  "qualification_boundary": {
+    "instantaneous_endpoint_source_qualified": false,
+    "piecewise_linear_temporal_transformation_qualified": false,
+    "current_73_endpoint_values_proven": false,
+    "current_72_hourly_solar_values_proven": false,
+    "current_native_sflux_spatial_reproof_proven": false,
+    "formal_future_et0_source_authority_created": false,
+    "database_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "future_et0_execution_count": 0,
+    "formal_window_started": false
+  },
+  "effectiveness_condition": "PRESENT_ON_PROTECTED_MAIN_UNDER_DELIVERY_POLICY",
+  "effective_claim_when_merged": "S6_INSTANTANEOUS_SFLUX_PIECEWISE_LINEAR_SOLAR_ARCHITECTURE_AMENDMENT_EFFECTIVE_ONLY",
+  "first_legal_successor_action_when_effective": "EA1O_D_LIVE_SFLUX_INSTANTANEOUS_PIECEWISE_LINEAR_SOLAR_QUALIFICATION",
+  "ea2_authorized": false,
+  "mcft_cap09_completed": false
+}
