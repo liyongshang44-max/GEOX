@@ -1,0 +1,134 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1e_kbs_transient_role_map_probe_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1E-KBS-TRANSIENT-ROLE-MAP-PROBE-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION_CONTINUATION",
+  "record_status": "EA1E_TRANSIENT_ROLE_MAP_NOT_FORMAL_AUTHORITY",
+  "base_main_sha": "2157fd9b27939b78c7096136fd20ae96d46dae09",
+  "ea1c_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1C-KBS-JSON-SOURCE-MAP-PROBE-V1.json",
+  "ea1c_authority_blob_sha": "ff935707b7b79ce94a7bf64b29bd3d96d08170ec",
+  "source_url": "https://lter.kbs.msu.edu/current-weather/",
+  "official_host": "lter.kbs.msu.edu",
+  "endpoint_path_prefix": "/weather/variates/",
+  "high_frequency_endpoint_ids": [19, 21, 22, 23, 25, 52, 55, 57],
+  "excluded_daily_endpoint_ids": [4, 61],
+  "probe_method": "NORMAL_PAGE_TRANSIENT_VALUE_MATCH_WITH_CAUSAL_AIR_TEMPERATURE_ANCHOR_V1",
+  "causal_anchor": {
+    "endpoint_id": 55,
+    "role_id": "AIR_TEMPERATURE",
+    "method": "EMPTY_ARRAY_BASELINE_THEN_ALLOW_ENDPOINT_55_ONLY",
+    "required_role_delta": 1
+  },
+  "freshness": {
+    "mapped_endpoint_max_age_minutes": 30,
+    "future_timestamp_tolerance_minutes": 5
+  },
+  "transforms": {
+    "DIRECT_V1": "x",
+    "CELSIUS_TO_FAHRENHEIT_V1": "x*9/5+32",
+    "MPS_TO_MPH_V1": "x*2.2369362920544",
+    "FRACTION_TO_PERCENT_V1": "x*100"
+  },
+  "roles": [
+    {
+      "role_id": "AIR_TEMPERATURE",
+      "label": "Air Temperature",
+      "display_unit": "F",
+      "pattern": "Air Temperature:\\s*([+-]?\\d+(?:\\.\\d+)?)\\s*F",
+      "allowed_transforms": ["CELSIUS_TO_FAHRENHEIT_V1", "DIRECT_V1"],
+      "causal_anchor_required": true
+    },
+    {
+      "role_id": "WIND_SPEED_3M",
+      "label": "Wind Speed 3m",
+      "display_unit": "mph",
+      "pattern": "Wind Speed 3m[^:]*:\\s*([+-]?\\d+(?:\\.\\d+)?)\\s*mph",
+      "allowed_transforms": ["MPS_TO_MPH_V1", "DIRECT_V1"]
+    },
+    {
+      "role_id": "WIND_SPEED_10M",
+      "label": "Wind Speed 10m",
+      "display_unit": "mph",
+      "pattern": "Wind Speed 10m[^:]*:\\s*([+-]?\\d+(?:\\.\\d+)?)\\s*mph",
+      "allowed_transforms": ["MPS_TO_MPH_V1", "DIRECT_V1"]
+    },
+    {
+      "role_id": "RELATIVE_HUMIDITY",
+      "label": "Relative Humidity",
+      "display_unit": "percent",
+      "pattern": "Relative Humidity:\\s*([+-]?\\d+(?:\\.\\d+)?)\\s*%",
+      "allowed_transforms": ["DIRECT_V1", "FRACTION_TO_PERCENT_V1"]
+    },
+    {
+      "role_id": "SOIL_TEMPERATURE_BARE_5CM",
+      "label": "Soil Temperature bare soil (5 cm/1.9 in)",
+      "display_unit": "F",
+      "pattern": "Soil Temperature bare soil \\(5 cm/1\\.9 in\\):\\s*([+-]?\\d+(?:\\.\\d+)?)\\s*F",
+      "allowed_transforms": ["CELSIUS_TO_FAHRENHEIT_V1", "DIRECT_V1"]
+    },
+    {
+      "role_id": "SOIL_MOISTURE_10CM",
+      "label": "Soil Moisture (10 cm/3.9 in)",
+      "display_unit": "percent_vwc",
+      "depth_mm": 100,
+      "pattern": "Soil Moisture \\(10 cm/3\\.9 in\\):\\s*([+-]?\\d+(?:\\.\\d+)?)\\s*%",
+      "allowed_transforms": ["DIRECT_V1", "FRACTION_TO_PERCENT_V1"]
+    }
+  ],
+  "matching_policy": {
+    "display_precision_drives_tolerance": true,
+    "tolerance_rule": "HALF_LAST_DISPLAYED_UNIT_PLUS_1E_6",
+    "require_all_roles_present_in_rendered_page": true,
+    "require_unique_endpoint_per_role": true,
+    "require_unique_global_one_to_one_assignment": true,
+    "require_unique_transform_per_assigned_role": true,
+    "sensor_values_may_exist_only_in_process_memory": true
+  },
+  "soil_moisture_semantics": {
+    "epistemic_class": "OBSERVED",
+    "quantity_kind": "VOLUMETRIC_WATER_CONTENT",
+    "source_display_unit": "percent_vwc",
+    "canonical_unit": "fraction",
+    "spatial_support": "NEAR_SITE_POINT_SUPPORT",
+    "measurement_depth_mm": 100,
+    "direct_field_equivalence": false,
+    "direct_root_zone_equivalence": false,
+    "root_zone_representativeness": "PARTIAL"
+  },
+  "output_policy": {
+    "endpoint_id_allowed": true,
+    "role_id_allowed": true,
+    "transform_id_allowed": true,
+    "display_precision_allowed": true,
+    "endpoint_response_sha256_allowed": true,
+    "endpoint_response_bytes_allowed": true,
+    "endpoint_latest_timestamp_allowed": true,
+    "endpoint_age_minutes_allowed": true,
+    "candidate_endpoint_ids_allowed": true,
+    "numeric_sensor_values_allowed": false,
+    "raw_json_body_allowed": false,
+    "rendered_dom_allowed": false,
+    "unfiltered_rendered_text_allowed": false
+  },
+  "known_remaining_gates": [
+    "OBSERVED_SOLAR_RADIATION_LIVE_SOURCE_AUTHORITY",
+    "OBSERVED_RAINFALL_INTERVAL_SOURCE_AUTHORITY",
+    "EXACT_SOURCE_INTELLECTUAL_RIGHTS_QUALIFICATION",
+    "CURRENT_2026_CROP_AND_AS_OF_CROP_STAGE_AUTHORITY",
+    "LIVE_CONTINUITY_AND_LATENCY_QUALIFICATION"
+  ],
+  "hard_nonclaims": [
+    "NO_FORMAL_SOURCE_AUTHORITY_FROM_TRANSIENT_MAP_ALONE",
+    "NO_QUALIFIED_FORMAL_SITE",
+    "NO_FIELD_EQUIVALENCE",
+    "NO_ROOT_ZONE_EQUIVALENCE",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_RUNTIME_PRODUCT_SOURCE_DELTA",
+    "NO_SENSOR_VALUE_PUBLICATION",
+    "NO_RAW_KBS_PAYLOAD_PUBLICATION",
+    "NO_FORMAL_WINDOW_START",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
