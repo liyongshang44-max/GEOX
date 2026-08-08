@@ -1,0 +1,72 @@
+name: mcft-cap-09-ea1n-gfs-value-extraction-authority
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea1n-gfs-value-extraction-authority.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1N-GFS-VALUE-EXTRACTION-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.py'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea1n-adjudication-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  ea1n-pgrb2-dswrf-fail-close:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Resolve exact adjudication base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate exact EA1N fail-close governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.cjs
+      - name: Syntax-check adjudication probe
+        run: python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.py
+      - name: Materialize exact EA1N fail-close result
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea1n-adjudication-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
