@@ -30,7 +30,7 @@ ROOT = Path.cwd()
 AUTHORITY_PATH = ROOT / "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-C-SFLUX-RECONSTRUCTION-SPATIAL-QUALIFICATION-V1.json"
 EA1K_RESULT_PATH = ROOT / "acceptance-output/MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY_RESULT.json"
 OUTPUT_PATH = ROOT / "acceptance-output/MCFT_CAP_09_EA1O_C_SFLUX_RECONSTRUCTION_SPATIAL_QUALIFICATION_RESULT.json"
-USER_AGENT = "GEOX-MCFT-CAP09-EA1O-C-SFLUX-QUALIFICATION/1.1"
+USER_AGENT = "GEOX-MCFT-CAP09-EA1O-C-SFLUX-QUALIFICATION/1.2"
 REQUEST_TIMEOUT = 45
 MAX_IDX_BYTES = 2_000_000
 MAX_MESSAGE_BYTES = 12_000_000
@@ -386,13 +386,22 @@ def decode_message(
         gid = codes_grib_new_from_file(handle)
         require(gid is not None, f"EA1OC_F{lead:03d}_ECCODES_MESSAGE_REQUIRED")
         try:
-            short_name = str(codes_get(gid, "shortName")).lower()
+            discipline = int(codes_get(gid, "discipline"))
+            parameter_category = int(codes_get(gid, "parameterCategory"))
+            parameter_number = int(codes_get(gid, "parameterNumber"))
+            short_name = str(get_optional(gid, "shortName") or "")
+            parameter_name = str(get_optional(gid, "name") or "")
+            param_id = get_optional(gid, "paramId")
+            require(
+                discipline == 0 and parameter_category == 4 and parameter_number in (7, 192),
+                f"EA1OC_F{lead:03d}_DSWRF_GRIB_IDENTITY_D{discipline}_C{parameter_category}_N{parameter_number}",
+            )
+
             type_of_level = str(codes_get(gid, "typeOfLevel")).lower()
             step_type = str(codes_get(gid, "stepType")).lower()
             start_step = int(codes_get(gid, "startStep"))
             end_step = int(codes_get(gid, "endStep"))
             units = str(codes_get(gid, "units"))
-            require(short_name == "dswrf", f"EA1OC_F{lead:03d}_SHORTNAME_DRIFT")
             require(type_of_level == "surface", f"EA1OC_F{lead:03d}_LEVEL_DRIFT")
             require(step_type == "avg", f"EA1OC_F{lead:03d}_STEPTYPE_NOT_AVG")
             require(
@@ -431,6 +440,12 @@ def decode_message(
             )
             return {
                 "lead": lead,
+                "discipline": discipline,
+                "parameter_category": parameter_category,
+                "parameter_number": parameter_number,
+                "short_name": short_name,
+                "parameter_name": parameter_name,
+                "param_id": param_id,
                 "value": value,
                 "epsilon": epsilon,
                 "packing_type": packing_type,
@@ -626,6 +641,16 @@ def main() -> None:
             "full_global_grib_download_performed": False,
             "future_file_wait_performed": False,
             "valid_time_rewrite_performed": False,
+        },
+        "grib_parameter_identity": {
+            "discipline_set": sorted({item["discipline"] for item in ordered_decoded}),
+            "parameter_category_set": sorted({item["parameter_category"] for item in ordered_decoded}),
+            "parameter_number_set": sorted({item["parameter_number"] for item in ordered_decoded}),
+            "param_id_set": sorted({item["param_id"] for item in ordered_decoded if isinstance(item["param_id"], int)}),
+            "short_name_set": sorted({item["short_name"] for item in ordered_decoded}),
+            "parameter_name_set": sorted({item["parameter_name"] for item in ordered_decoded}),
+            "idx_semantic_label": "DSWRF",
+            "short_name_used_as_sole_authority": False,
         },
         "packing_quantization": {
             "decoded_message_count": len(needed),
