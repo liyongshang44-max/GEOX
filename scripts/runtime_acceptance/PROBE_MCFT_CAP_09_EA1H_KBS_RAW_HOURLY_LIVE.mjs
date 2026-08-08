@@ -175,7 +175,7 @@ try {
 
   const apiResponse = await context.request.get(downloadUrl.toString(), {
     timeout: CONFIG.transport_limits.download_timeout_ms,
-    headers: { accept: 'text/csv,text/plain;q=0.9,*/*;q=0.5', 'user-agent': 'GEOX-MCFT-CAP09-EA1H-READ-ONLY/1.3' },
+    headers: { accept: 'text/csv,text/plain;q=0.9,*/*;q=0.5', 'user-agent': 'GEOX-MCFT-CAP09-EA1H-READ-ONLY/1.4' },
   });
   if (!apiResponse.ok()) throw new Error(`EA1H_DOWNLOAD_HTTP_${apiResponse.status()}`);
   const responseHeaders = apiResponse.headers();
@@ -260,7 +260,7 @@ try {
   }
   if (futureRows > 0) throw new Error(`EA1H_FUTURE_TIMESTAMP_ROWS_FORBIDDEN:${futureRows}`);
 
-  const latest = Math.max(...allTimes);
+  const latest = allTimes.reduce((maximum, time) => time > maximum ? time : maximum, Number.NEGATIVE_INFINITY);
   const ageHours = (now - latest) / HOUR_MS;
   if (ageHours > CONFIG.freshness_and_continuity.latest_record_max_age_hours) throw new Error(`EA1H_SOURCE_TOO_OLD:${ageHours.toFixed(2)}H:LATEST_${new Date(latest).toISOString()}`);
 
