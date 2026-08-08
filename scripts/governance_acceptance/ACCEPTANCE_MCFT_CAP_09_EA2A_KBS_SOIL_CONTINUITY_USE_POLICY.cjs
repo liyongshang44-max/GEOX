@@ -45,7 +45,7 @@ try {
   req(actual.ea1od === pins.ea1od, `EA2A_EA1OD_BASE_BLOB_DRIFT:actual=${actual.ea1od}:expected=${pins.ea1od}`);
 
   const authority = JSON.parse(read(AUTH)); const probe = read(PROBE); const workflow = read(WF);
-  req(['EA2A_LIVE_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE','EA2A_LIVE_QUALIFICATION_PASS_CANDIDATE_NOT_EFFECTIVE'].includes(authority.record_status), 'EA2A_STATUS_DRIFT');
+  req(authority.record_status === 'EA2A_LIVE_QUALIFICATION_PASS_CANDIDATE_NOT_EFFECTIVE', 'EA2A_FROZEN_PASS_STATUS_REQUIRED');
   req(authority.base_main_sha === BASE, 'EA2A_AUTHORITY_BASE_DRIFT');
   for (const [ref,pin,code] of [[A1,pins.a1,'A1'],[EA1E,pins.ea1e,'EA1E'],[EA1OD,pins.ea1od,'EA1OD']]) req(authority.predecessor_authorities.some(e=>e.ref===ref&&e.blob_sha===pin), `EA2A_AUTHORITY_${code}_PIN_DRIFT`);
 
@@ -62,26 +62,42 @@ try {
 
   const use = authority.use_policy;
   req(use.terms_url==='https://lter.kbs.msu.edu/data/terms-of-use/' && use.terms_live_reproof_required===true, 'EA2A_TERMS_BOUNDARY_DRIFT');
-  req(use.public_raw_data_redistribution_authorized===false && use.publication_without_written_permission_authorized===false && use.commercial_reuse_rights_established===false && use.private_stage1b_technical_processing_is_a_legal_opinion===false, 'EA2A_USE_RIGHTS_OVERCLAIM');
+  req(use.public_raw_data_redistribution_authorized===false && use.public_reconstructable_raw_data_artifact_authorized===false && use.publication_without_written_permission_authorized===false && use.commercial_reuse_rights_established===false && use.private_stage1b_technical_processing_is_a_legal_opinion===false, 'EA2A_USE_RIGHTS_OVERCLAIM');
 
   const raw = authority.raw_provenance_policy;
   req(raw.exact_raw_endpoint_payload_must_be_retained_or_referencably_archived_before_canonicalization===true, 'EA2A_RAW_RETENTION_WEAKENED');
   req(raw.public_probe_output_may_not_include.includes('soil_moisture_values') && raw.public_probe_output_may_not_include.includes('raw_json_body'), 'EA2A_PUBLIC_RAW_BOUNDARY_MISSING');
 
+  const live = authority.live_qualification;
+  req(live.required===true && live.exact_head_required===true && live.final_head_must_reprove_frozen_pass===true, 'EA2A_FINAL_HEAD_REPROOF_NOT_REQUIRED');
+  req(live.current_result===authority.qualification_effect.success_decision, 'EA2A_FROZEN_CURRENT_RESULT_DRIFT');
+  const frozen = authority.frozen_discovery_observation;
+  req(frozen && frozen.discovery_subject_sha==='76245044cc2a4f634392896a7067f269ace335cd', 'EA2A_DISCOVERY_SUBJECT_DRIFT');
+  req(frozen.window_start_utc==='2026-08-07T18:45:00.000Z' && frozen.window_end_utc==='2026-08-08T18:45:00.000Z', 'EA2A_FROZEN_WINDOW_DRIFT');
+  req(frozen.distinct_point_count===289 && frozen.distinct_hour_bucket_count===25 && frozen.span_minutes===1440 && frozen.maximum_gap_minutes===5, 'EA2A_FROZEN_CONTINUITY_FACT_DRIFT');
+  req(frozen.conflicting_duplicate_timestamp_count===0 && frozen.invalid_vwc_fraction_count===0, 'EA2A_FROZEN_VALIDITY_FACT_DRIFT');
+  req(frozen.timestamp_chain_sha256==='sha256:caec4f010775c0195abfc4dba867be7420b87e339f7ee254be4ebb39fb7c45c6', 'EA2A_FROZEN_TIMESTAMP_CHAIN_DRIFT');
+  req(frozen.terms_response_status===200 && frozen.terms_page_sha256==='sha256:3eabbb2a2be8f9e8cd66e8a8a0660960082bbb30f9d0f209849e113b8912e55e' && frozen.terms_page_bytes===45260, 'EA2A_FROZEN_TERMS_FACT_DRIFT');
+  req(frozen.publication_restriction_phrase_present===true && frozen.written_permission_phrase_present===true && frozen.lead_investigator_and_project_director_phrase_present===true && frozen.required_terms_semantics_matched===true, 'EA2A_FROZEN_TERMS_SEMANTICS_DRIFT');
+  req(frozen.continuity_qualified===true && frozen.use_policy_qualified===true, 'EA2A_FROZEN_PASS_FACT_REQUIRED');
+
   const effect = authority.qualification_effect;
+  req(effect.candidate_qualified_by_frozen_live_result===true, 'EA2A_FROZEN_CANDIDATE_QUALIFICATION_REQUIRED');
   req(effect.formal_site_authority_created===false && effect.formal_source_authority_created===false && effect.formal_external_evidence_package_created===false, 'EA2A_PREMATURE_FORMAL_AUTHORITY');
   req(effect.collector_authorized===false && effect.ea3_authorized===false && effect.database_write_authorized===false && effect.formal_evidence_write_authorized===false, 'EA2A_PREMATURE_SUCCESSOR_OR_WRITE');
   req(effect.formal_window_started===false && effect.mcft_cap09_completed===false, 'EA2A_FORMAL_OR_COMPLETION_ENABLED');
 
   req(probe.includes('AUTH.soil_source_candidate.endpoint_url'), 'EA2A_PROBE_ENDPOINT_FROM_AUTHORITY_MISSING');
+  req(probe.includes('AUTH.frozen_discovery_observation') && probe.includes('EA2A_FROZEN_WINDOW_END_POINT_REQUIRED'), 'EA2A_PROBE_FROZEN_WINDOW_REPROOF_MISSING');
   req(probe.includes('maximum_allowed_gap_minutes') && probe.includes('minimum_distinct_hour_buckets'), 'EA2A_PROBE_CONTINUITY_RULE_MISSING');
   req(probe.includes('point.value < 0 || point.value > 1'), 'EA2A_PROBE_VWC_RANGE_RULE_MISSING');
   req(probe.includes('may not be published') && probe.includes('written permission'), 'EA2A_PROBE_TERMS_SEMANTICS_MISSING');
   req(probe.includes('raw_soil_values_emitted: false') && probe.includes('raw_json_body_emitted: false'), 'EA2A_PROBE_PRIVACY_ATTESTATION_MISSING');
   req(!/DATABASE_URL|POSTGRES|NEON|psql|public\.facts|INSERT\s+INTO/i.test(probe+'\n'+workflow), 'EA2A_DATABASE_PATH_PRESENT');
   req(workflow.includes('persist-credentials: false'), 'EA2A_PERSIST_CREDENTIALS_FORBIDDEN');
+  req(workflow.includes('shell: node {0}') && workflow.includes('EA2A_FROZEN_TIMESTAMP_CHAIN_DRIFT') && workflow.includes('EA2A_FROZEN_TERMS_PAGE_DRIFT'), 'EA2A_FINAL_HEAD_VERIFIER_NOT_STRICT');
 
-  Object.assign(result,{taskbook_blob:actual.task,amendment01_blob:actual.a1,ea1e_blob:actual.ea1e,ea1od_blob:actual.ea1od,authority_blob:blob('HEAD',AUTH),probe_blob:blob('HEAD',PROBE),live_qualification_required:true,taskbook_changed:false,runtime_source_changed:false,status:'PASS'});
+  Object.assign(result,{taskbook_blob:actual.task,amendment01_blob:actual.a1,ea1e_blob:actual.ea1e,ea1od_blob:actual.ea1od,authority_blob:blob('HEAD',AUTH),probe_blob:blob('HEAD',PROBE),frozen_discovery_subject_sha:frozen.discovery_subject_sha,frozen_window_end_utc:frozen.window_end_utc,live_qualification_required:true,final_head_reproof_required:true,taskbook_changed:false,runtime_source_changed:false,status:'PASS'});
 } catch (error) { result.error = `${error.name||'Error'}:${error.message||String(error)}`; process.exitCode=1; }
 fs.mkdirSync(path.dirname(OUT),{recursive:true}); fs.writeFileSync(OUT,JSON.stringify(result,null,2)+'\n');
 if(result.status==='PASS') console.log(JSON.stringify(result)); else console.error(result.error);
