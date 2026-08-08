@@ -5,7 +5,7 @@
   "slice_id": "MCFT-CAP-09.S6",
   "sub_lifecycle": "S6-EA2",
   "record_status": "EA2_FORMAL_SOURCE_BINDING_MATRIX_WHEN_PRESENT_ON_PROTECTED_MAIN",
-  "base_main_sha": "dd1d2e73afd4d6c707235f07b639a7cb11a899c9",
+  "base_main_sha": "5550153edcc775452ba5ded8edbc371af4a86051",
   "effectiveness_rule": "PRESENT_ON_PROTECTED_MAIN_AND_EA2_EXACT_BOUNDARY_GATE_PASS",
   "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
   "amendment_01_blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
