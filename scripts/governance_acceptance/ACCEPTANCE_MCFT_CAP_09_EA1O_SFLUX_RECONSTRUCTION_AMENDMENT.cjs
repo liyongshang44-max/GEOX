@@ -6,7 +6,7 @@ const { execFileSync } = require('child_process');
 
 const ROOT = process.cwd();
 const BASE = process.env.MCFT_BASE_SHA || '';
-const EXPECTED_BASE = '74ceaa530f362e84312c594524eaa4b72619ef81';
+const EXPECTED_BASE = '9c59d92c74738639429d636c92f854b5120382d0';
 const TASK = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md';
 const A2 = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-02-GFS-SOLAR-RADIATION-SOURCE-AUTHORITY.md';
 const B = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-B-SFLUX-SOURCE-SPATIAL-QUALIFICATION-V1.json';
@@ -58,7 +58,7 @@ try {
   req(task.includes('H_f = n * A_f - (n - 1) * A_(f-1)'), 'EA1O_A3_TASKBOOK_FORMULA_MISSING');
   req(task.includes('REJECTED_AS_AMENDMENT02_DIRECT_1H_SOURCE_AUTHORITY'), 'EA1O_A3_TASKBOOK_PREDECESSOR_REJECTION_MISSING');
 
-  req(amendment.includes('base_protected_main_sha:\n74ceaa530f362e84312c594524eaa4b72619ef81'), 'EA1O_A3_AMENDMENT_BASE_SHA_DRIFT');
+  req(amendment.includes('base_protected_main_sha:\n9c59d92c74738639429d636c92f854b5120382d0'), 'EA1O_A3_AMENDMENT_BASE_SHA_DRIFT');
   req(amendment.includes('ea1o_b_fail_close_blob:\ncd817199ed16ce429cf99743ffebcaf7fe562053'), 'EA1O_A3_REJECTION_BLOB_MISSING');
   req(amendment.includes('b = 6 * floor((f - 1) / 6)'), 'EA1O_A3_BLOCK_FORMULA_MISSING');
   req(amendment.includes('H_f = n * A_f - (n - 1) * A_(f-1)'), 'EA1O_A3_RECONSTRUCTION_FORMULA_MISSING');
