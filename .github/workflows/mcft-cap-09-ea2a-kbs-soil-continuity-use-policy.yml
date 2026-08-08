@@ -1,0 +1,106 @@
+name: mcft-cap-09-ea2a-kbs-soil-continuity-use-policy
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea2a-kbs-soil-continuity-use-policy.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA2A-KBS-SOIL-CONTINUITY-USE-POLICY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY.mjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea2a-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  live-kbs-soil-continuity-use-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Resolve exact EA2A base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate exact EA2A no-write governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY.cjs
+
+      - name: Syntax-check live qualification probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY.mjs
+
+      - name: Live-qualify KBS soil continuity and restricted use policy
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY.mjs
+
+      - name: Verify frozen final-head qualification pass
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const authority = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA2A-KBS-SOIL-CONTINUITY-USE-POLICY-V1.json', 'utf8'));
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY_RESULT.json', 'utf8'));
+          const frozen = authority.frozen_discovery_observation;
+          if (authority.record_status !== 'EA2A_LIVE_QUALIFICATION_PASS_CANDIDATE_NOT_EFFECTIVE') throw new Error('EA2A_FROZEN_PASS_STATUS_REQUIRED');
+          if (!frozen || authority.live_qualification?.final_head_must_reprove_frozen_pass !== true) throw new Error('EA2A_FROZEN_REPROOF_AUTHORITY_REQUIRED');
+          if (result.status !== 'PASS') throw new Error('EA2A_RESULT_PASS_REQUIRED');
+          if (result.soil_source.endpoint_id !== 25) throw new Error('EA2A_ENDPOINT_25_REQUIRED');
+          if (result.raw_soil_values_emitted !== false || result.raw_json_body_emitted !== false || result.raw_terms_body_emitted !== false) throw new Error('EA2A_PUBLIC_RAW_DATA_FORBIDDEN');
+          if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0) throw new Error('EA2A_WRITE_FORBIDDEN');
+          if (result.formal_site_authority_created !== false || result.formal_external_evidence_package_created !== false) throw new Error('EA2A_PREMATURE_FORMAL_AUTHORITY');
+          if (result.adjudication.decision !== authority.qualification_effect.success_decision) throw new Error('EA2A_SUCCESS_DECISION_REQUIRED');
+          if (result.adjudication.continuity_qualified !== true || result.adjudication.use_policy_qualified !== true || result.adjudication.ea2_formal_package_freeze_consideration_qualified !== true) throw new Error('EA2A_QUALIFICATION_PASS_REQUIRED');
+          const c = result.continuity_qualification;
+          if (c.window_is_frozen_from_authority !== true) throw new Error('EA2A_FROZEN_WINDOW_REQUIRED');
+          if (c.window_start_utc !== frozen.window_start_utc || c.window_end_utc !== frozen.window_end_utc) throw new Error('EA2A_FROZEN_WINDOW_DRIFT');
+          if (c.distinct_point_count !== frozen.distinct_point_count || c.distinct_hour_bucket_count !== frozen.distinct_hour_bucket_count) throw new Error('EA2A_FROZEN_COVERAGE_COUNT_DRIFT');
+          if (c.span_minutes !== frozen.span_minutes || c.maximum_gap_minutes !== frozen.maximum_gap_minutes) throw new Error('EA2A_FROZEN_GAP_SPAN_DRIFT');
+          if (c.conflicting_duplicate_timestamp_count !== frozen.conflicting_duplicate_timestamp_count || c.invalid_vwc_fraction_count !== frozen.invalid_vwc_fraction_count) throw new Error('EA2A_FROZEN_VALIDITY_DRIFT');
+          if (c.timestamp_chain_sha256 !== frozen.timestamp_chain_sha256) throw new Error('EA2A_FROZEN_TIMESTAMP_CHAIN_DRIFT');
+          const u = result.use_policy_qualification;
+          if (u.terms_response_status !== 200 || !(u.terms_page_bytes > 0) || !/^sha256:[0-9a-f]{64}$/.test(u.terms_page_sha256)) throw new Error('EA2A_TERMS_LIVE_PROVENANCE_REQUIRED');
+          if (u.terms_raw_hash_role !== 'DISCOVERY_AND_LIVE_PROVENANCE_ONLY_NOT_SEMANTIC_AUTHORITY_IDENTITY') throw new Error('EA2A_TERMS_RAW_HASH_ROLE_DRIFT');
+          if (u.terms_semantic_digest_sha256 !== authority.use_policy.terms_semantic_digest_sha256 || u.terms_semantic_digest_sha256 !== frozen.terms_semantic_digest_sha256) throw new Error('EA2A_TERMS_SEMANTIC_DIGEST_DRIFT');
+          if (u.publication_restriction_phrase_present !== true || u.written_permission_phrase_present !== true || u.lead_investigator_and_project_director_phrase_present !== true || u.required_terms_semantics_matched !== true || u.use_policy_qualified !== true) throw new Error('EA2A_TERMS_SEMANTICS_REPROOF_FAIL');
+          if (u.public_raw_data_redistribution_authorized !== false || u.public_reconstructable_raw_data_artifact_authorized !== false || u.publication_without_written_permission_authorized !== false || u.commercial_reuse_rights_established !== false) throw new Error('EA2A_USE_RIGHTS_OVERCLAIM');
+          console.log(JSON.stringify({status:'PASS',decision:result.adjudication.decision,window_end_utc:c.window_end_utc,timestamp_chain_sha256:c.timestamp_chain_sha256,terms_semantic_digest_sha256:u.terms_semantic_digest_sha256,live_terms_page_sha256:u.terms_page_sha256}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea2a-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA2A_KBS_SOIL_CONTINUITY_USE_POLICY_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
