@@ -1,64 +1,125 @@
 {
-  "schema_version":"geox_mcft_cap09_ea1n_gfs_value_extraction_authority_v1",
-  "authority_id":"GEOX-MCFT-CAP-09-EA1N-GFS-VALUE-EXTRACTION-AUTHORITY-V1",
-  "capability_line_id":"MCFT-CAP-09",
-  "slice_id":"MCFT-CAP-09.S6",
-  "record_status":"EA1N_GFS_VALUE_EXTRACTION_PROBE_NOT_FORMAL_AUTHORITY",
-  "base_main_sha":"58287db14bc0d6424219f6a91a08c3f12dfe4536",
-  "predecessor_blobs":{
-    "amendment_01":"41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
-    "ea1k":"f36955b2847d1a2b58052f0dec2fea465e7eaec2",
-    "ea1l":"af5f23425e35dd21a949727f508934f1be14d8e9",
-    "ea1m":"bb487c0c6a91dd37b0409b5d446aec4707f7b0a4"
+  "schema_version": "geox_mcft_cap09_ea1n_gfs_value_extraction_adjudication_v2",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1N-GFS-VALUE-EXTRACTION-AUTHORITY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "EA1N_PGRB2_DSWRF_EXACT_HOURLY_SCALAR_REJECTED",
+  "base_main_sha": "58287db14bc0d6424219f6a91a08c3f12dfe4536",
+  "predecessor_blobs": {
+    "amendment_01": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
+    "ea1k": "f36955b2847d1a2b58052f0dec2fea465e7eaec2",
+    "ea1l": "af5f23425e35dd21a949727f508934f1be14d8e9",
+    "ea1m": "bb487c0c6a91dd37b0409b5d446aec4707f7b0a4"
   },
-  "decoder":{"python":"3.12","eccodes":"2.47.0","eccodeslib":"2.47.3.23","selfcheck":"python -m eccodes selfcheck"},
-  "grid":{"lat":42.5,"native_lon":274.75,"signed_lon":-85.25,"interpolation":"NONE_NEAREST_GRID_POINT","support":"NEAR_SITE_MODEL_GRID_POINT_SUPPORT","direct_field_equivalence":false},
-  "chronology":{
-    "candidate_cycle_hours_utc":[0,6,12,18],
-    "canonical_points":72,
-    "support_lead_rule":"lead_start-1",
-    "wait_for_future_files":false,
-    "valid_time_rewrite":false,
-    "selected_transport":"OFFICIAL_NOMADS_PRODUCTION_CYCLE_DIRECTORY_INDEX",
-    "directory_pattern":"https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.YYYYMMDD/CC/atmos/",
-    "required_files":146,
-    "required_file_rule":"73 pgrb2.0p25 support+target files plus 73 exact .idx companions, each listed exactly once with nonzero size",
-    "listing_time_basis":"UTC_OPERATIONAL_RECONCILED",
-    "listing_time_resolution":"MINUTE",
-    "availability_upper_bound":"listed_minute_UTC+59.999999s",
-    "prior_availability":"every required file upper bound <= frozen tick",
-    "listing_body_persisted":false,
-    "grib_filter_is_availability_authority":false
+  "decoder": {
+    "python": "3.12",
+    "eccodes": "2.47.0",
+    "eccodeslib": "2.47.3.23",
+    "selfcheck": "python -m eccodes selfcheck"
   },
-  "chronology_transport_rejections":[
-    {"method":"PER_OBJECT_HEAD","run":31254637254,"subject":"c61a3bfb3b5761380c379f1b317b07f07cc272b3","jobs":[93096116778,93096358423],"result":"REPEATED_HTTP_302_MOVED_TEMPORARILY"},
-    {"method":"PER_OBJECT_RANGE_0_0","run":31254970459,"subject":"045f67ef13cdc41837ffcc5c0dd3db5779160009","job":93096909240,"result":"OBJECT_IDENTITY_DRIFT_TO_NOMADS_ROOT","root_redirect_accepted":false}
-  ],
-  "precipitation_adjudication":{
-    "rejected":[
-      {"method":"PRATE_ROLLING_AVERAGE_DIFFERENCE","run":31253728831,"subject":"f299085875d277c15d8ae38d382b25378104e881","failure":"DERIVED_PRECIP_SANITY_FAIL_NO_CLIP:F006"},
-      {"method":"APCP_EXACT_1H_ONLY","run":31254027979,"subject":"64e4f5a189d161398833e6c8126322fbc2ad390a","failure":"APCP_EXACT_1H_72_OF_72_REQUIRED:F006:COUNT=0","coverage":{"unique":12,"missing":60,"ambiguous":0}}
-    ],
-    "run4":{"run":31254245466,"subject":"f083aa97c2f8c43dc13a5950e8e29da65cc002ac","failure":"APCP_BLOCK_PHYSICAL_MESSAGE_UNIQUENESS_REJECTED_AT_F006_COUNT_2","coverage":{"unique":71,"missing":0,"ambiguous":1},"last_modified_max":"2026-08-08T09:51:48Z"},
-    "current":"APCP_6H_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE",
-    "block_start":"S=6*floor((lead-1)/6)",
-    "hourly_when_L1":"APCP(S,E)",
-    "hourly_when_Lgt1":"APCP(S,E)-APCP(S,E-1)",
-    "cross_block":false,"negative_clip":false,"fallback":false
+  "frozen_pgrb2_grid": {
+    "lat": 42.5,
+    "native_lon": 274.75,
+    "signed_lon": -85.25,
+    "interpolation": "NONE_NEAREST_GRID_POINT",
+    "support": "NEAR_SITE_MODEL_GRID_POINT_SUPPORT",
+    "direct_field_equivalence": false
   },
-  "provider_duplicate_semantics":{
-    "repo":"NOAA-EMC/wgrib2","commit":"58f99e14f2922d1ae3e05d2c41ea28c599a8c81d",
-    "unmerge_blob":"df2be678da7d7855d38897592a18be154100fa92","section_compare_blob":"2081a81dfe216604f614f82b48fa9af109a61039",
-    "collapse_rule":"raw Section4 SHA256 identical AND selected-grid decoded value exactly identical",
-    "first_record_wins":false,"physical_order_authority":false
+  "chronology_authority_preserved": {
+    "transport": "OFFICIAL_NOMADS_PRODUCTION_CYCLE_DIRECTORY_INDEX",
+    "canonical_points": 72,
+    "required_files": 146,
+    "availability_upper_bound": "listed_minute_UTC+59.999999s",
+    "wait_for_future_files": false,
+    "valid_time_rewrite": false,
+    "grib_filter_is_availability_authority": false
   },
-  "normalization":{
-    "temperature":"K-273.15","rh":"DIRECT_PERCENT_NO_CLIP","wind2":"hypot(U10,V10)*0.747951075",
-    "dswrf":"L*A(S,E)-(L-1)*A(S,E-1), direct when L=1","solar":"hourly_Wm2*0.0036",
-    "precipitation":"logical_APCP block cumulative difference","missing_imputation":false,"negative_clipping":false
+  "precipitation_adjudication": {
+    "accepted_candidate_for_successor_work": "APCP_6H_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE",
+    "cross_block": false,
+    "negative_clip": false,
+    "fallback": false,
+    "first_record_wins": false
   },
-  "data_boundary":{"raw_directory_listing_uploaded":false,"raw_grib_uploaded":false,"decoded_values_emitted":false,"normalized_values_emitted":false,"database_writes":0,"formal_evidence_writes":0,"future_et0_executions":0,"runtime_source_delta":0},
-  "qualification_effect":"GFS_72H_DECODED_AND_NORMALIZED_VALUE_PIPELINE_AUTHORITY_CANDIDATE_ONLY",
-  "formal_window_started":false,
-  "mcft_cap09_completed":false
+  "dswrf_adjudication": {
+    "candidate": "PGRB2_0P25_ROLLING_AVERAGE_WEIGHTED_DIFFERENCE",
+    "decision": "REJECTED_AS_EXACT_HOURLY_SCALAR_AUTHORITY",
+    "reason": "PROVIDER_PACKED_ROLLING_AVERAGES_DO_NOT_IDENTIFY_A_UNIQUE_PHYSICALLY_VALID_HOURLY_SCALAR_UNDER_NO_CLIPPING_POLICY",
+    "no_negative_clipping": true,
+    "no_zero_thresholding": true,
+    "no_silent_imputation": true,
+    "exact_head_evidence": {
+      "subject_sha": "42faed8f246b19caf0a4140599bce09f92ec6d77",
+      "workflow_run_id": 31257010218,
+      "job_id": 93101818088,
+      "selected_cycle": "2026-08-08T06:00:00Z",
+      "failure_lead": 20,
+      "derived_sign": "NEGATIVE",
+      "derived_magnitude_bucket": "LT_1E_2",
+      "propagated_quantization_error_bucket": "LT_1E_1",
+      "negative_magnitude_within_propagated_quantization_error": true,
+      "physical_zero_inside_quantization_interval": true,
+      "f019": {
+        "step_type": "avg",
+        "start_step": 18,
+        "end_step": 19,
+        "packing_type": "grid_complex_spatial_differencing",
+        "bits_per_value": 17,
+        "binary_scale_factor": 1,
+        "decimal_scale_factor": 2,
+        "section4_sha256": "ec2b6c9b48a19ca4d07a455ae758bfbbce56698066249148bb36a9f3beb5f46f",
+        "section5_sha256": "cf845fdc57d3fa551a8ad68a95c29ee00dd8cca5117aa685b6296015ae27f23d",
+        "message_sha256": "b14719467113342cf42481b104127ac787280bacfc551bf1c8eab6078b61e71e"
+      },
+      "f020": {
+        "step_type": "avg",
+        "start_step": 18,
+        "end_step": 20,
+        "packing_type": "grid_complex_spatial_differencing",
+        "bits_per_value": 17,
+        "binary_scale_factor": 4,
+        "decimal_scale_factor": 3,
+        "section4_sha256": "ba1920201e3e0c528310126c84e6863fc594d81bc74d66401b03913684b4c03e",
+        "section5_sha256": "71ef44dcae8a3bcac10b9012680b54fc769976e405f31a00570d667c5ac61bf0",
+        "message_sha256": "0d48ed724215aa3e9f01c0d1ff77c344175b452d202ffb5ca72def8708bc7aa3"
+      }
+    },
+    "same_grid_alternative": {
+      "product": "pgrb2b.0p25",
+      "f020_dswrf_surface_count": 0,
+      "idx_sha256": "75c9cce94228b0e5af4d6a1cfb92f92fe10a4d4f0161984425b7a7f72b72cbfa",
+      "result": "NO_DSWRF_SURFACE_ALTERNATIVE"
+    },
+    "normative_basis": {
+      "grib2_reconstruction": "WMO_GRIB2_REGULATION_92_9_4_Y_TIMES_10_POW_D_EQUALS_R_PLUS_X1_PLUS_X2_TIMES_2_POW_E",
+      "complex_packing": "LOSSLESS_RELATIVE_TO_SCALED_SIMPLE_PACKED_INTEGERS",
+      "quantization_bound": "HALF_SCALE_QUANTUM_PROPAGATED_THROUGH_WEIGHTED_DIFFERENCE"
+    }
+  },
+  "next_candidate": {
+    "stage": "EA1O",
+    "source": "GFS_SFLUX_DIRECT_1H_DSWRF",
+    "official_inventory": "https://www.nco.ncep.noaa.gov/pmb/products/gfs/gfs.t00z.sfluxgrbf001.grib2.shtml",
+    "provider_semantics": "SURFACE_DSWRF_0_TO_1_HOUR_AVERAGE",
+    "direct_hourly_reconstruction_required": false,
+    "spatial_authority_refreeze_required": true,
+    "reason": "SFLUX_IS_T1534_SEMI_LAGRANGIAN_GAUSSIAN_GRID_AND_MUST_NOT_BE_SILENTLY_TREATED_AS_EA1M_0P25_NODE_EQUIVALENT",
+    "authority_created": false
+  },
+  "data_boundary": {
+    "raw_directory_listing_uploaded": false,
+    "raw_idx_uploaded": false,
+    "raw_grib_uploaded": false,
+    "decoded_values_emitted": false,
+    "normalized_values_emitted": false,
+    "database_writes": 0,
+    "formal_evidence_writes": 0,
+    "canonical_evidence_writes": 0,
+    "future_et0_executions": 0,
+    "runtime_source_delta": 0
+  },
+  "qualification_effect": "EA1N_FAIL_CLOSED_PGRB2_DSWRF_REJECTION_EA1O_REQUIRED",
+  "gfs_72h_value_pipeline_qualified": false,
+  "formal_window_started": false,
+  "mcft_cap09_completed": false
 }
