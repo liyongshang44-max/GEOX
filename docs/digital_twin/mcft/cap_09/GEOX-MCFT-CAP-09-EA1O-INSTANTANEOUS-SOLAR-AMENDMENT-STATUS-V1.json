@@ -10,7 +10,7 @@
     "taskbook_v04_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
     "taskbook_v04_blob": "d7ff8d7164d4f2a9f1c3edcaafcf30eeeb181f0d",
     "ea1o_c_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-C-SFLUX-RECONSTRUCTION-SPATIAL-QUALIFICATION-V1.json",
-    "ea1o_c_blob": "9168122b61aff4bc05c05c0497a6e6150d86ac41",
+    "ea1o_c_blob": "743846307cc4d846b10e2409670a66512b4778b4",
     "ea1o_c_merge_sha": "1551fff621b2e3a238b8530396b880a083f15f48",
     "ea1o_c_decision": "REJECTED_AS_AMENDMENT03_SFLUX_RECONSTRUCTION_VALUE_AUTHORITY",
     "ea1o_c_spatial_candidate_qualified": true,
@@ -18,7 +18,7 @@
   },
   "candidate_amendment": {
     "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-04-GFS-SFLUX-INSTANTANEOUS-PIECEWISE-LINEAR-SOLAR-AUTHORITY.md",
-    "blob": "846d43cece204095d422926bbd2490655321f619",
+    "blob": "3cce5cb3f070404a2b7474ef61a009d87c7f809f",
     "taskbook_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
     "taskbook_candidate_version": "v0.5"
   },
