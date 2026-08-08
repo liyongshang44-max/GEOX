@@ -31,9 +31,11 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
+
       - name: Resolve exact amendment base and subject
         id: authority
         shell: bash
@@ -49,14 +51,82 @@ jobs:
             echo "base_sha=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
             echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Classify Amendment-02 lifecycle applicability
+        id: lifecycle
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD | sort)"
+          amendment_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-ea1o-solar-radiation-amendment.yml' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-02-GFS-SOLAR-RADIATION-SOURCE-AUTHORITY.md' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-SOLAR-RADIATION-AMENDMENT-STATUS-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_SOLAR_RADIATION_AMENDMENT.cjs' | sort)"
+          workflow_only='.github/workflows/mcft-cap-09-ea1o-solar-radiation-amendment.yml'
+
+          if [[ "$files" == "$amendment_files" ]]; then
+            mode='amendment-02-candidate'
+          elif [[ "$files" == "$workflow_only" ]]; then
+            mode='workflow-lifecycle-repair'
+          else
+            owned_mutation='false'
+            while IFS= read -r file; do
+              case "$file" in
+                'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-02-GFS-SOLAR-RADIATION-SOURCE-AUTHORITY.md'|\
+                'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-SOLAR-RADIATION-AMENDMENT-STATUS-V1.json'|\
+                'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_SOLAR_RADIATION_AMENDMENT.cjs')
+                  owned_mutation='true'
+                  ;;
+              esac
+            done <<< "$files"
+            if [[ "$owned_mutation" == 'true' ]]; then
+              mode='unsupported-owned-mutation'
+            else
+              mode='successor-taskbook-change'
+            fi
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "Amendment-02 lifecycle mode: $mode"
+
       - name: Syntax-check governance acceptance
+        if: steps.lifecycle.outputs.mode == 'amendment-02-candidate'
         run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_SOLAR_RADIATION_AMENDMENT.cjs
+
       - name: Validate exact EA1O Amendment-02 boundary
+        if: steps.lifecycle.outputs.mode == 'amendment-02-candidate'
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_SOLAR_RADIATION_AMENDMENT.cjs
+
+      - name: Validate Amendment-02 workflow lifecycle repair
+        if: steps.lifecycle.outputs.mode == 'workflow-lifecycle-repair'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'Amendment-02 lifecycle repair recognized: workflow-only mutation.'
+          grep -Fq 'successor-taskbook-change' .github/workflows/mcft-cap-09-ea1o-solar-radiation-amendment.yml
+          grep -Fq 'unsupported-owned-mutation' .github/workflows/mcft-cap-09-ea1o-solar-radiation-amendment.yml
+
+      - name: Record Amendment-02 not applicable to successor Taskbook change
+        if: steps.lifecycle.outputs.mode == 'successor-taskbook-change'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'Amendment-02 adjudication is not applicable: no Amendment-02-owned authority file changed.'
+
+      - name: Reject unsupported Amendment-02-owned mutation
+        if: steps.lifecycle.outputs.mode == 'unsupported-owned-mutation'
+        shell: bash
+        run: |
+          echo 'unsupported mutation of Amendment-02-owned files outside its exact lifecycle' >&2
+          exit 1
+
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.lifecycle.outputs.mode == 'amendment-02-candidate'
         with:
           name: mcft-cap-09-ea1o-amendment-${{ steps.authority.outputs.subject_sha }}
           path: acceptance-output/MCFT_CAP_09_EA1O_SOLAR_RADIATION_AMENDMENT_RESULT.json
