@@ -1,0 +1,117 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1h_kbs_raw_hourly_live_probe_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1H-KBS-RAW-HOURLY-LIVE-PROBE-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "internal_lifecycle": "S6-EA1_EXTERNAL_SITE_AND_SOURCE_QUALIFICATION_CONTINUATION",
+  "record_status": "EA1H_KBS_RAW_HOURLY_LIVE_PROBE_NOT_FORMAL_AUTHORITY",
+  "base_main_sha": "c01b61bcd688632ea4a8bcc355cc2e3efdf98dfb",
+  "predecessor_authorities": [
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1E-KBS-TRANSIENT-ROLE-MAP-PROBE-V1.json",
+      "blob_sha": "69835c9877474f4d46980487f6e5789add803df2",
+      "consumed_ruling": "KBS_CURRENT_WEATHER_ESTABLISHES_NEAR_SITE_LIVE_ROLES_BUT_SOLAR_AND_INTERVAL_RAIN_REMAIN_OPEN"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1F-ENVIROWEATHER-API-DISCOVERY-V1.json",
+      "blob_sha": "2366f581f30bae465d6591d71c81a7ad2a25ace7",
+      "consumed_ruling": "GENERIC_ENVIROWEATHER_API_DISCOVERY_DOES_NOT_ESTABLISH_STATION_OBSERVATION_AUTHORITY"
+    }
+  ],
+  "source": {
+    "provider": "KBS_LTER",
+    "official_page": "https://lter.kbs.msu.edu/datatables/13",
+    "official_host": "lter.kbs.msu.edu",
+    "datatable_id": 13,
+    "dataset_label": "LTER Weather Station - Raw Hourly Weather",
+    "provider_description": "RAW_HOURLY_OBSERVATIONS_NOT_CHECKED",
+    "download_locator": {
+      "method": "OFFICIAL_PAGE_ANCHOR_TEXT",
+      "anchor_text": "Download complete data table",
+      "required_resolved_path": "/datatables/13.csv",
+      "same_official_host_required": true,
+      "query_string_forbidden": true
+    },
+    "spatial_support": "KBS_LTER_MAIN_SITE_WEATHER_STATION_NEAR_BCSE",
+    "direct_bcse_g1r1_field_equivalence": false,
+    "direct_root_zone_equivalence": false
+  },
+  "required_columns": {
+    "timestamp": "datetime_utc",
+    "solar_radiation": "solrad_avg",
+    "wind_speed": "wind_speed",
+    "relative_humidity": "rh",
+    "air_temperature": "airtmp_107_avg",
+    "barometric_pressure": "barometer_avg",
+    "rainfall": "rain_mm"
+  },
+  "epistemic_semantics": {
+    "solar_radiation": "OBSERVED_RAW_STATION_MEASUREMENT_IF_ROW_VALID",
+    "rainfall": "OBSERVED_RAW_GAUGE_MEASUREMENT_IF_ROW_VALID",
+    "air_temperature": "OBSERVED_RAW_STATION_MEASUREMENT_IF_ROW_VALID",
+    "relative_humidity": "OBSERVED_RAW_STATION_MEASUREMENT_IF_ROW_VALID",
+    "wind_speed": "OBSERVED_RAW_STATION_MEASUREMENT_IF_ROW_VALID",
+    "barometric_pressure": "OBSERVED_RAW_STATION_MEASUREMENT_IF_ROW_VALID",
+    "blank_or_non_numeric_value": "MISSING_NOT_ZERO_NOT_OBSERVED",
+    "provider_raw_not_checked": true,
+    "provider_raw_not_checked_does_not_imply_estimated": true
+  },
+  "physical_sanity_ranges": {
+    "solrad_avg": {"min": -20, "max": 1600},
+    "wind_speed": {"min": 0, "max": 80},
+    "rh": {"min": 0, "max": 100},
+    "airtmp_107_avg": {"min": -50, "max": 60},
+    "barometer_avg": {"min": 800, "max": 1100},
+    "rain_mm": {"min": 0, "max": 100}
+  },
+  "freshness_and_continuity": {
+    "latest_record_max_age_hours": 6,
+    "recent_window_hours": 30,
+    "minimum_recent_distinct_hours": 24,
+    "minimum_recent_complete_et0_hours": 24,
+    "minimum_recent_observed_rain_hours": 24,
+    "future_timestamp_tolerance_minutes": 5
+  },
+  "transport_limits": {
+    "page_timeout_ms": 45000,
+    "download_timeout_ms": 120000,
+    "max_download_bytes": 104857600,
+    "max_preamble_nonempty_lines": 40
+  },
+  "metadata_conflict_policy": {
+    "page_declared_data_availability_or_last_updated_may_be_stale": true,
+    "page_excerpt_timestamp_is_not_live_authority": true,
+    "download_latest_observation_timestamp_controls_live_freshness": true,
+    "metadata_conflict_must_not_be_silently_reconciled": true
+  },
+  "data_use_policy": {
+    "provider_payload_may_be_read_transiently_for_qualification": true,
+    "provider_payload_may_be_committed": false,
+    "provider_payload_may_be_uploaded_as_ci_artifact": false,
+    "raw_numeric_values_may_be_emitted": false,
+    "response_hashes_counts_field_names_and_timestamps_may_be_emitted": true,
+    "public_data_republication_right_claimed": false,
+    "formal_runtime_use_right_established_by_probe": false
+  },
+  "qualification_effect": {
+    "probe_may_establish": "KBS_RAW_HOURLY_MACHINE_FRESHNESS_AND_ROLE_CONTINUITY_ONLY",
+    "formal_source_authority_created": false,
+    "qualified_formal_site": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "runtime_source_authorized": false,
+    "formal_window_started": false
+  },
+  "hard_nonclaims": [
+    "NO_FORMAL_SOURCE_AUTHORITY_FROM_PROBE_ALONE",
+    "NO_QUALIFIED_FORMAL_SITE",
+    "NO_BCSE_G1R1_FIELD_EQUIVALENCE",
+    "NO_ROOT_ZONE_EQUIVALENCE",
+    "NO_PUBLIC_KBS_RAW_DATA_REPUBLICATION",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_RUNTIME_PRODUCT_SOURCE_DELTA",
+    "NO_FORMAL_WINDOW_START",
+    "NO_MCFT_CAP_09_COMPLETION"
+  ]
+}
