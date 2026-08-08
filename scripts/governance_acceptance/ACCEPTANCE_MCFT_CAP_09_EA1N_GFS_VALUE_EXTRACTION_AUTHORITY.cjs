@@ -67,24 +67,47 @@ try {
   requireTrue(prate && prate.run_id === 31253728831 && prate.failure === 'DERIVED_PRECIP_SANITY_FAIL_NO_CLIP:F006', 'PRATE_VALUE_REJECTION_DRIFT');
   requireTrue(exact && exact.run_id === 31254027979 && exact.failure === 'APCP_EXACT_1H_72_OF_72_REQUIRED:F006:COUNT=0', 'APCP_EXACT_HOUR_REJECTION_DRIFT');
   requireTrue(exact.coverage.unique_exact_1h_count === 12 && exact.coverage.missing_exact_1h_count === 60 && exact.coverage.ambiguous_exact_1h_count === 0, 'APCP_EXACT_HOUR_COVERAGE_DRIFT');
-  requireTrue(adjudication.current_candidate === 'APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE', 'CURRENT_PRECIP_CANDIDATE_DRIFT');
-  requireTrue(adjudication.block_start_rule === 'S=6*floor((lead-1)/6)', 'APCP_BLOCK_START_RULE_DRIFT');
-  requireTrue(adjudication.required_target_coverage === 72, 'APCP_BLOCK_COVERAGE_DRIFT');
+  requireTrue(adjudication.current_candidate === 'APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE', 'CURRENT_PRECIP_CANDIDATE_DRIFT');
+  requireTrue(adjudication.required_effective_target_coverage === 72, 'APCP_LOGICAL_COVERAGE_DRIFT');
   requireTrue(adjudication.cross_block_difference === false, 'APCP_CROSS_BLOCK_DIFFERENCE_ENABLED');
+  requireTrue(adjudication.distinct_section4_ambiguity === 'FAIL_CLOSED', 'DISTINCT_SECTION4_AMBIGUITY_NOT_FAIL_CLOSED');
+  requireTrue(adjudication.duplicate_value_mismatch === 'FAIL_CLOSED', 'DUPLICATE_VALUE_MISMATCH_NOT_FAIL_CLOSED');
   requireTrue(adjudication.negative_difference === 'FAIL_CLOSED_NO_CLIP', 'APCP_NEGATIVE_DIFFERENCE_NOT_FAIL_CLOSED');
   requireTrue(adjudication.fallback_to_prate === false && adjudication.fallback_to_exact_hour_only === false && adjudication.fallback_to_other_apcp_family === false, 'PRECIP_FALLBACK_ENABLED');
 
-  requireTrue(authority.normalization.precipitation_source === 'APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE', 'NORMALIZATION_PRECIP_SOURCE_DRIFT');
-  requireTrue(authority.normalization.precip_when_L_gt_1 === 'mm_per_hour=APCP(S,E)-APCP(S,E-1)', 'APCP_DIFFERENCE_FORMULA_DRIFT');
+  const run4 = authority.run4_duplicate_diagnostic;
+  requireTrue(run4.run_id === 31254245466, 'RUN4_ID_DRIFT');
+  requireTrue(run4.subject_sha === 'f083aa97c2f8c43dc13a5950e8e29da65cc002ac', 'RUN4_SUBJECT_DRIFT');
+  requireTrue(run4.artifact_id === 9020918694, 'RUN4_ARTIFACT_DRIFT');
+  requireTrue(run4.artifact_digest === 'sha256:650bf1a4e61f388faf238f2036c8783c0ce73c6f5c4a373e4a237bb928aab596', 'RUN4_DIGEST_DRIFT');
+  requireTrue(run4.coverage.target_count === 72 && run4.coverage.unique_physical_message_count === 71 && run4.coverage.missing_count === 0 && run4.coverage.ambiguous_physical_message_count === 1, 'RUN4_COVERAGE_DRIFT');
+
+  const provider = authority.provider_duplicate_semantics_authority;
+  requireTrue(provider.provider_code_repository === 'NOAA-EMC/wgrib2', 'PROVIDER_CODE_REPO_DRIFT');
+  requireTrue(provider.provider_code_commit === '58f99e14f2922d1ae3e05d2c41ea28c599a8c81d', 'PROVIDER_CODE_COMMIT_DRIFT');
+  requireTrue(provider.unmerge_source_blob_sha === 'df2be678da7d7855d38897592a18be154100fa92', 'UNMERGE_SOURCE_BLOB_DRIFT');
+  requireTrue(provider.section_compare_source_blob_sha === '2081a81dfe216604f614f82b48fa9af109a61039', 'SECTION_COMPARE_SOURCE_BLOB_DRIFT');
+  requireTrue(provider.geox_stricter_duplicate_rule === 'COLLAPSE_ONLY_IF_RAW_SECTION4_SHA256_IDENTICAL_AND_SELECTED_GRID_DECODED_VALUE_EXACTLY_IDENTICAL', 'GEOX_DUPLICATE_RULE_DRIFT');
+  requireTrue(provider.physical_message_order_is_authority === false && provider.first_record_wins === false, 'PHYSICAL_ORDER_AUTHORITY_ENABLED');
+  requireTrue(provider.different_section4_messages_may_be_silently_collapsed === false && provider.different_decoded_values_may_be_silently_collapsed === false, 'UNSAFE_DUPLICATE_COLLAPSE_ENABLED');
+
+  requireTrue(authority.normalization.precipitation_source === 'APCP_SIX_HOUR_BLOCK_CUMULATIVE_DIFFERENCE_WITH_NCEP_SEMANTIC_DUPLICATE_COLLAPSE', 'NORMALIZATION_PRECIP_SOURCE_DRIFT');
   requireTrue(authority.normalization.cross_block_differencing === false, 'NORMALIZATION_CROSS_BLOCK_ENABLED');
   requireTrue(authority.normalization.missing_predecessor_imputation === false, 'MISSING_PREDECESSOR_IMPUTATION_ENABLED');
   requireTrue(authority.normalization.negative_derived_value_clipping === false, 'NEGATIVE_CLIPPING_ENABLED');
   requireTrue(authority.normalization.prate_used_for_precipitation === false, 'PRATE_STILL_SELECTED');
 
+  requireTrue(probe.includes('codes_get_message'), 'PROBE_RAW_GRIB_MESSAGE_ACCESS_MISSING');
+  requireTrue(probe.includes('def grib2_section('), 'PROBE_SECTION4_EXTRACTOR_MISSING');
+  requireTrue(probe.includes('section4_sha256'), 'PROBE_SECTION4_HASH_MISSING');
+  requireTrue(probe.includes('APCP_BLOCK_DISTINCT_SECTION4_AMBIGUITY'), 'PROBE_DISTINCT_SECTION4_FAIL_GATE_MISSING');
+  requireTrue(probe.includes('APCP_BLOCK_DUPLICATE_VALUE_MISMATCH'), 'PROBE_DUPLICATE_VALUE_FAIL_GATE_MISSING');
+  requireTrue(probe.includes('float(r["value"]).hex()'), 'PROBE_EXACT_VALUE_IDENTITY_CHECK_MISSING');
+  requireTrue(probe.includes('physical_message_order_used_as_authority":False'), 'PROBE_ORDER_NONAUTHORITY_MARKER_MISSING');
+  requireTrue(probe.includes('first_record_wins":False'), 'PROBE_FIRST_RECORD_WINS_FALSE_MARKER_MISSING');
   requireTrue(probe.includes('("var_APCP", "on")'), 'PROBE_APCP_FILTER_MISSING');
   requireTrue(!probe.includes('("var_PRATE", "on")'), 'PROBE_PRATE_FILTER_PRESENT');
-  requireTrue(probe.includes('APCP_BLOCK_72_OF_72_REQUIRED'), 'PROBE_APCP_BLOCK_72_GATE_MISSING');
-  requireTrue(probe.includes('r["start_step"] == start'), 'PROBE_APCP_SAME_START_GATE_MISSING');
+  requireTrue(probe.includes('APCP_LOGICAL_BLOCK_72_OF_72_REQUIRED'), 'PROBE_APCP_LOGICAL_72_GATE_MISSING');
   requireTrue(probe.includes('precip_mm = apcp["value"] - apcp_prev["value"]'), 'PROBE_APCP_CUMULATIVE_DIFFERENCE_MISSING');
   requireTrue(probe.includes('APCP_BLOCK_MONOTONICITY_OR_HOURLY_SANITY_FAIL_NO_CLIP'), 'PROBE_APCP_MONOTONICITY_GATE_MISSING');
   requireTrue(probe.includes('CROSS_BLOCK_DIFFERENCE_FORBIDDEN'), 'PROBE_CROSS_BLOCK_FAIL_GATE_MISSING');
@@ -107,7 +130,8 @@ try {
 
   result.predecessor_blobs = Object.fromEntries(expectedPredecessors);
   result.pinned_decoder = { python:'3.12', eccodes:'2.47.0', eccodeslib:'2.47.3.23' };
-  result.precipitation_adjudication = { rejected:['PRATE_ROLLING','APCP_EXACT_1H_ONLY'], candidate:'APCP_6H_BLOCK_CUMULATIVE_DIFFERENCE', required_target_count:72, clipping:false, fallback:false };
+  result.provider_duplicate_semantics = { repository:'NOAA-EMC/wgrib2', commit:provider.provider_code_commit, unmerge_blob:provider.unmerge_source_blob_sha, section_compare_blob:provider.section_compare_source_blob_sha, first_record_wins:false };
+  result.precipitation_adjudication = { rejected:['PRATE_ROLLING','APCP_EXACT_1H_ONLY'], candidate:'APCP_6H_BLOCK_CUMULATIVE_WITH_SECTION4_DUPLICATE_COLLAPSE', required_target_count:72, clipping:false, fallback:false };
   result.status = 'PASS';
 } catch (err) {
   result.error = `${err.name || 'Error'}:${err.message || String(err)}`;
@@ -119,4 +143,4 @@ try {
 
 fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
 fs.writeFileSync(OUTPUT_PATH, JSON.stringify(result, null, 2) + '\n');
-if (result.status === 'PASS') console.log(JSON.stringify({ status:result.status, base_sha:BASE, exact_file_count:result.exact_file_count, pinned_decoder:result.pinned_decoder, precipitation_adjudication:result.precipitation_adjudication }));
+if (result.status === 'PASS') console.log(JSON.stringify({ status:result.status, base_sha:BASE, exact_file_count:result.exact_file_count, pinned_decoder:result.pinned_decoder, provider_duplicate_semantics:result.provider_duplicate_semantics, precipitation_adjudication:result.precipitation_adjudication }));
