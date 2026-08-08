@@ -75,6 +75,36 @@ jobs:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY.mjs
 
+      - name: Inspect safe sflux DSWRF temporal descriptors around F015
+        shell: python
+        run: |
+          import hashlib
+          import json
+          import urllib.request
+          from datetime import datetime
+          from pathlib import Path
+
+          result = json.loads(Path('acceptance-output/MCFT_CAP_09_EA1K_GFS_EXACT_CYCLE_72H_AUTHORITY_RESULT.json').read_text())
+          cycle = datetime.fromisoformat(result['selected_cycle']['issued_at_utc'].replace('Z', '+00:00'))
+          ymd = cycle.strftime('%Y%m%d')
+          hh = cycle.strftime('%H')
+          for lead in (14, 15, 16):
+              idx_url = f'https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.{ymd}/{hh}/atmos/gfs.t{hh}z.sfluxgrbf{lead:03d}.grib2.idx'
+              req = urllib.request.Request(idx_url, headers={'User-Agent': 'GEOX-MCFT-CAP09-EA1O-B-SAFE-DIAGNOSTIC/1.0'})
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  text = response.read(2_000_001).decode('utf-8')
+              rows = []
+              for line in text.splitlines():
+                  parts = line.strip().split(':')
+                  if 'DSWRF' not in parts:
+                      continue
+                  i = parts.index('DSWRF')
+                  if i + 2 >= len(parts) or parts[i + 1] != 'surface':
+                      continue
+                  descriptor = parts[i + 2].strip()
+                  rows.append({'descriptor': descriptor, 'line_sha256': 'sha256:' + hashlib.sha256(line.encode()).hexdigest()})
+              print(json.dumps({'lead': lead, 'surface_dswrf_records': rows}, sort_keys=True))
+
       - name: Live-qualify same-cycle sflux source and native spatial authority
         env:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
