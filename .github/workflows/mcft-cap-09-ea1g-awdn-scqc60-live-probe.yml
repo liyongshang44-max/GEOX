@@ -1,0 +1,54 @@
+name: mcft-cap-09-ea1g-awdn-scqc60-live-probe
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea1g-awdn-scqc60-live-probe.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1G-AWDN-SCQC60-LIVE-PROBE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1G_AWDN_SCQC60_LIVE_PROBE.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1G_AWDN_SCQC60_LIVE.mjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea1g-awdn-scqc60-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  live-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate exact no-write EA1G boundary
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1G_AWDN_SCQC60_LIVE_PROBE.cjs
+      - name: Syntax-check AWDN live probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1G_AWDN_SCQC60_LIVE.mjs
+      - name: Probe AWDN Enviroweather scqc60 without observation-value publication
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1G_AWDN_SCQC60_LIVE.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea1g-awdn-scqc60-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA1G_AWDN_SCQC60_LIVE_PROBE_STATIC_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA1G_AWDN_SCQC60_LIVE_PROBE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
