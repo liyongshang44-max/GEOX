@@ -48,7 +48,7 @@ async function fetchBytes(params, label) {
     const req = requestEvidence(url);
     let response;
     try {
-      response = await fetch(url, { signal: AbortSignal.timeout(45_000), headers: { accept: 'application/json,text/csv,text/plain;q=0.8,*/*;q=0.5', 'user-agent': 'GEOX-MCFT-CAP09-EA1G-READ-ONLY/1.2' } });
+      response = await fetch(url, { signal: AbortSignal.timeout(45_000), headers: { accept: 'application/json,text/csv,text/plain;q=0.8,*/*;q=0.5', 'user-agent': 'GEOX-MCFT-CAP09-EA1G-READ-ONLY/1.3' } });
     } catch (error) {
       attempts.push({ ...req, response_status: null, transport_error: safeError(error), failover_used: false });
       throw new Error(`${label}_TRANSPORT_FAILURE`);
@@ -94,12 +94,9 @@ function parseInventoryText(text) {
   if (/^\s*<(?:!doctype|html|head|body)\b/i.test(trimmed)) throw new Error('EA1G_LIST_HTML_RESPONSE_FORBIDDEN');
   try { return { structured: JSON.parse(trimmed), encoding: 'json' }; } catch {}
   const lines = trimmed.split(/\r?\n/).filter((line)=>line.trim());
-  const delimiters = [',','\t','|',';'];
-  for (const delimiter of delimiters) {
+  for (const delimiter of [',','\t','|',';']) {
     const headerCells = parseDelimitedLine(lines[0], delimiter).map(normalizeKey);
-    if (headerCells.length < 2) continue;
-    const headerLooksStructured = headerCells.some((key)=>/(name|station|code|id|uid)/.test(key));
-    if (!headerLooksStructured) continue;
+    if (headerCells.length < 2 || !headerCells.some((key)=>/(name|station|code|id|uid)/.test(key))) continue;
     const records=[];
     for (const line of lines.slice(1)) {
       const cells=parseDelimitedLine(line,delimiter);
@@ -160,11 +157,11 @@ let discoveryEvidence=null,observationEvidence=null,stationCandidates=[];
 try {
   if(!SUBJECT_SHA||!/^[0-9a-f]{40}$/.test(SUBJECT_SHA))throw new Error('EA1G_EXACT_SUBJECT_SHA_REQUIRED');
   validateTransportConfig();
-  if(CONFIG.discovery_request.mode!=='list')throw new Error('EA1G_LIST_DISCOVERY_MODE_REQUIRED');
-  const discovery=await fetchInventory({list:CONFIG.discovery_request.product_id,network:CONFIG.discovery_request.network},'EA1G_LIST');
+  if(CONFIG.discovery_request.mode!=='unfiltered_list_diagnostic')throw new Error('EA1G_UNFILTERED_LIST_DIAGNOSTIC_MODE_REQUIRED');
+  const discovery=await fetchInventory({list:CONFIG.discovery_request.product_id},'EA1G_UNFILTERED_LIST');
   discoveryEvidence=discovery.evidence;
   stationCandidates=discoverStationCandidates(discovery.structured);
-  if(!stationCandidates.length)throw new Error('EA1G_HICKORY_CORNERS_NOT_FOUND_IN_ENVIRONET_SCQC60_LIST');
+  if(!stationCandidates.length)throw new Error('EA1G_HICKORY_CORNERS_NOT_FOUND_IN_UNFILTERED_SCQC60_LIST');
 
   const now=Date.now(),begin=ymd(now-CONFIG.observation_request.lookback_hours*HOUR_MS),end=ymdh(now),queryCandidates=observationQueryCandidates(stationCandidates);
   let chosen=null,recordArray=null;const failures=[];
@@ -186,9 +183,9 @@ try {
   if(!solarQualified.length)throw new Error('EA1G_SCQC60_NO_SOLAR_FIELD_WITH_24_UNESTIMATED_RECENT_HOURS');
   if(!rainQualified.length)throw new Error('EA1G_SCQC60_NO_RAIN_FIELD_WITH_24_UNESTIMATED_RECENT_HOURS');
 
-  const result={schema_version:'geox_mcft_cap09_ea1g_awdn_scqc60_live_probe_result_v1',status:'PASS',subject_sha:SUBJECT_SHA,provider:CONFIG.provider,network:CONFIG.network,product_id:CONFIG.product_id,discovery:{...discoveryEvidence,matched_station_candidate_count:stationCandidates.length,station_candidates:stationCandidates},observation:{...observationEvidence,selected_station_public_identifier:chosen.name,record_array_path:recordArray.path,record_field_names:recordArray.keys,time_field_names:recordArray.timeKeys,record_count:recordArray.records.length,earliest_timestamp:new Date(earliest).toISOString(),latest_timestamp:new Date(latest).toISOString(),source_age_hours:Number(ageHours.toFixed(3)),raw_values_emitted:false},role_evidence:{solar_radiation:{matched_fields:solar,qualified_unestimated_fields:solarQualified.map((x)=>x.field_name)},rainfall:{matched_fields:rainfall,qualified_unestimated_fields:rainQualified.map((x)=>x.field_name)}},estimated_value_policy_enforced:true,forbidden_observed_flags:CONFIG.estimated_value_policy.forbidden_as_observed_flags,formal_source_authority_created:false,qualified_formal_site:false,raw_numeric_observation_values_emitted:false,raw_response_body_persisted:false,database_write_count:0,formal_evidence_write_count:0,formal_window_started:false};
+  const result={schema_version:'geox_mcft_cap09_ea1g_awdn_scqc60_live_probe_result_v1',status:'PASS',subject_sha:SUBJECT_SHA,provider:CONFIG.provider,network:CONFIG.network,product_id:CONFIG.product_id,discovery:{...discoveryEvidence,mode:CONFIG.discovery_request.mode,matched_station_candidate_count:stationCandidates.length,station_candidates:stationCandidates,other_network_substitution:false},observation:{...observationEvidence,network_filter_applied:true,selected_station_public_identifier:chosen.name,record_array_path:recordArray.path,record_field_names:recordArray.keys,time_field_names:recordArray.timeKeys,record_count:recordArray.records.length,earliest_timestamp:new Date(earliest).toISOString(),latest_timestamp:new Date(latest).toISOString(),source_age_hours:Number(ageHours.toFixed(3)),raw_values_emitted:false},role_evidence:{solar_radiation:{matched_fields:solar,qualified_unestimated_fields:solarQualified.map((x)=>x.field_name)},rainfall:{matched_fields:rainfall,qualified_unestimated_fields:rainQualified.map((x)=>x.field_name)}},estimated_value_policy_enforced:true,forbidden_observed_flags:CONFIG.estimated_value_policy.forbidden_as_observed_flags,formal_source_authority_created:false,qualified_formal_site:false,raw_numeric_observation_values_emitted:false,raw_response_body_persisted:false,database_write_count:0,formal_evidence_write_count:0,formal_window_started:false};
   write(result);console.log(JSON.stringify(result,null,2));
 } catch(error) {
-  const result={schema_version:'geox_mcft_cap09_ea1g_awdn_scqc60_live_probe_result_v1',status:'FAIL',subject_sha:SUBJECT_SHA,error:safeError(error),discovery_evidence:discoveryEvidence,observation_evidence:observationEvidence,matched_station_candidate_count:stationCandidates.length,raw_numeric_observation_values_emitted:false,raw_response_body_persisted:false,database_write_count:0,formal_evidence_write_count:0,qualified_formal_site:false,formal_window_started:false};
+  const result={schema_version:'geox_mcft_cap09_ea1g_awdn_scqc60_live_probe_result_v1',status:'FAIL',subject_sha:SUBJECT_SHA,error:safeError(error),discovery_evidence:discoveryEvidence,observation_evidence:observationEvidence,matched_station_candidate_count:stationCandidates.length,other_network_substitution:false,raw_numeric_observation_values_emitted:false,raw_response_body_persisted:false,database_write_count:0,formal_evidence_write_count:0,qualified_formal_site:false,formal_window_started:false};
   write(result);console.error(JSON.stringify(result,null,2));process.exitCode=1;
 }
