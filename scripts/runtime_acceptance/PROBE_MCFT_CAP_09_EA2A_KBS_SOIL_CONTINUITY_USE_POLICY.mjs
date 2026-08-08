@@ -86,6 +86,19 @@ function semanticTermsMatch(text) {
   const authority = normalized.includes('lead investigator') && normalized.includes('project director');
   return { publication, writtenPermission, authority, pass: publication && writtenPermission && authority };
 }
+function termsSemanticDigest(termsMatch) {
+  const canonical = {
+    required_terms_semantics: AUTH.use_policy.required_terms_semantics,
+    publication_restriction_phrase_present: termsMatch.publication,
+    written_permission_phrase_present: termsMatch.writtenPermission,
+    lead_investigator_and_project_director_phrase_present: termsMatch.authority,
+    public_raw_data_redistribution_authorized: false,
+    public_reconstructable_raw_data_artifact_authorized: false,
+    publication_without_written_permission_authorized: false,
+    commercial_reuse_rights_established: false,
+  };
+  return sha256(Buffer.from(JSON.stringify(canonical)));
+}
 
 const baseResult = {
   schema_version: 'geox_mcft_cap09_ea2a_kbs_soil_continuity_use_policy_result_v1',
@@ -171,6 +184,7 @@ try {
   const termsText = new TextDecoder().decode(termsResponse.bytes);
   const termsMatch = semanticTermsMatch(termsText);
   const usePolicyQualified = termsMatch.pass;
+  const semanticDigest = termsSemanticDigest(termsMatch);
 
   let decision;
   if (!continuityQualified) decision = AUTH.qualification_effect.continuity_rejection_decision;
@@ -213,6 +227,8 @@ try {
       terms_response_status: termsResponse.status,
       terms_page_sha256: sha256(termsResponse.bytes),
       terms_page_bytes: termsResponse.bytes.byteLength,
+      terms_raw_hash_role: 'DISCOVERY_AND_LIVE_PROVENANCE_ONLY_NOT_SEMANTIC_AUTHORITY_IDENTITY',
+      terms_semantic_digest_sha256: semanticDigest,
       publication_restriction_phrase_present: termsMatch.publication,
       written_permission_phrase_present: termsMatch.writtenPermission,
       lead_investigator_and_project_director_phrase_present: termsMatch.authority,
