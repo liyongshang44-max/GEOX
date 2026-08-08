@@ -1,0 +1,178 @@
+{
+  "schema_version": "geox_mcft_cap09_ea1o_d_instantaneous_solar_live_qualification_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA1O-D-INSTANTANEOUS-SOLAR-LIVE-QUALIFICATION-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA1O",
+  "record_status": "EA1O_D_LIVE_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_binding": "EXACT_PULL_REQUEST_BASE_SHA",
+  "predecessor_authorities": [
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+      "consumed_ruling": "TASKBOOK_V0_5_REQUIRES_EA1O_D_BEFORE_EA2"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-04-GFS-SFLUX-INSTANTANEOUS-PIECEWISE-LINEAR-SOLAR-AUTHORITY.md",
+      "blob_sha": "846d43cece204095d422926bbd2490655321f619",
+      "consumed_ruling": "INSTANTANEOUS_ENDPOINT_PIECEWISE_LINEAR_SOLAR_TRANSFORMATION_IS_AUTHORIZED_AS_A_LIVE_QUALIFICATION_CANDIDATE_ONLY"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-C-SFLUX-RECONSTRUCTION-SPATIAL-QUALIFICATION-V1.json",
+      "blob_sha": "9168122b61aff4bc05c05c0497a6e6150d86ac41",
+      "consumed_ruling": "WEIGHTED_DIFFERENCE_VALUE_AUTHORITY_REJECTED_WHILE_NATIVE_SFLUX_SPATIAL_PREDECESSOR_FACT_PASSED"
+    },
+    {
+      "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1K-GFS-EXACT-CYCLE-72H-AUTHORITY-V1.json",
+      "blob_sha": "f36955b2847d1a2b58052f0dec2fea465e7eaec2",
+      "consumed_ruling": "EXACT_LIVE_GFS_CYCLE_AND_T_PLUS_1_TO_T_PLUS_72_CHRONOLOGY_MUST_BE_REPROVED_AT_CURRENT_HEAD"
+    }
+  ],
+  "decoder": {
+    "python": "3.12",
+    "eccodes": "2.47.0",
+    "eccodeslib": "2.47.3.23",
+    "selfcheck": "python -m eccodes selfcheck"
+  },
+  "source_candidate": {
+    "provider": "NOAA_NCEP_NOMADS",
+    "model": "GFS",
+    "product_family": "sflux",
+    "production_root": "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod",
+    "source_object_pattern": "gfs.YYYYMMDD/CC/atmos/gfs.tCCz.sfluxgrbfFFF.grib2",
+    "index_object_suffix": ".idx",
+    "idx_record_rule": "DSWRF:surface:<lead> hour fcst",
+    "parameter": "DSWRF",
+    "level": "surface",
+    "temporal_role": "INSTANTANEOUS_FORECAST_ENDPOINT",
+    "same_exact_gfs_cycle_as_ea1k_required": true,
+    "canonical_target_interval_count": 72,
+    "support_endpoint_count": 1,
+    "required_endpoint_count": 73,
+    "support_lead_formula": "canonical_lead_start-1",
+    "availability_authority": "EXACT_RANGE_RESPONSE_LAST_MODIFIED_AND_CONTENT_RANGE",
+    "future_file_waiting_forbidden": true,
+    "valid_time_rewrite_forbidden": true,
+    "full_global_grib_download_authorized": false,
+    "range_message_retrieval_required": true,
+    "instantaneous_record_as_direct_interval_average_authorized": false
+  },
+  "temporal_transformation_candidate": {
+    "epistemic_class": "MODEL_DERIVED_PIECEWISE_LINEAR_FORECAST_INTERPOLATION",
+    "transformation_id": "PIECEWISE_LINEAR_ENDPOINT_INTEGRATION_V1",
+    "interpolation_model": "I(u)=(1-u)*I_(f-1)+u*I_f",
+    "hourly_mean_formula": "H_f=(I_(f-1)+I_f)/2",
+    "solar_energy_formula": "Rs_f=H_f*0.0036",
+    "source_flux_unit": "W/m^2",
+    "solar_energy_unit": "MJ/m^2/hour",
+    "formal_quality_status": "LIMITED",
+    "direct_field_equivalence": false,
+    "model_grid_is_observation_truth": false
+  },
+  "value_policy": {
+    "all_73_endpoint_values_finite_required": true,
+    "all_73_endpoint_values_nonnegative_required": true,
+    "all_72_hourly_mean_values_finite_required": true,
+    "all_72_hourly_mean_values_nonnegative_required": true,
+    "all_72_solar_energy_values_finite_required": true,
+    "all_72_solar_energy_values_nonnegative_required": true,
+    "negative_clipping_authorized": false,
+    "zero_thresholding_authorized": false,
+    "silent_imputation_authorized": false,
+    "pgrb2_dswrf_fallback_authorized": false
+  },
+  "site_geometry_source": {
+    "provider": "KBS_LTER",
+    "download_url": "https://lter.kbs.msu.edu/datatables/829.csv",
+    "dataset": "KBS039",
+    "datatable_id": "KBS039-006.40",
+    "required_srid": 4326,
+    "selected_row": {
+      "treatment": "T1",
+      "replicate": "R1",
+      "subplot": "main",
+      "expected_match_count": 1
+    },
+    "raw_geometry_may_be_committed": false,
+    "raw_geometry_may_be_uploaded_as_ci_artifact": false,
+    "centroid_coordinate_may_be_emitted": false
+  },
+  "spatial_candidate": {
+    "authority_source": "LIVE_SFLUX_INSTANTANEOUS_GRIB_GEOMETRY",
+    "selection_method": "ECCODES_NEAREST_NATIVE_GRID_POINT",
+    "required_consensus": "POLYGON_CENTROID_AND_EVERY_UNIQUE_VERTEX_SELECT_IDENTICAL_NATIVE_POINT_FOR_EVERY_ENDPOINT_MESSAGE",
+    "stable_grid_definition_required": true,
+    "stable_selected_native_index_required": true,
+    "stable_selected_native_coordinate_required": true,
+    "silent_pgrb2_grid_reuse_authorized": false,
+    "interpolation_authorized": false
+  },
+  "live_qualification": {
+    "required": true,
+    "exact_head_required": true,
+    "current_result": "NOT_YET_EXECUTED",
+    "success_decision": "QUALIFIED_AS_AMENDMENT04_INSTANTANEOUS_PIECEWISE_LINEAR_SOLAR_CANDIDATE",
+    "value_rejection_decision": "REJECTED_AS_AMENDMENT04_INSTANTANEOUS_SOLAR_VALUE_AUTHORITY",
+    "spatial_rejection_decision": "REJECTED_AS_AMENDMENT04_INSTANTANEOUS_SOLAR_SPATIAL_AUTHORITY",
+    "infrastructure_or_semantic_contract_failure": "HARD_FAIL",
+    "successor_not_authorized_until_result_frozen_and_effective": true
+  },
+  "probe_output_policy": {
+    "raw_idx_emitted": false,
+    "raw_grib_message_emitted": false,
+    "decoded_endpoint_values_emitted": false,
+    "derived_hourly_mean_values_emitted": false,
+    "derived_solar_energy_values_emitted": false,
+    "raw_kbs_geometry_emitted": false,
+    "kbs_centroid_emitted": false,
+    "safe_output_may_include": [
+      "cycle_tick_and_leads",
+      "source_hash_chains",
+      "grib_parameter_and_step_metadata_sets",
+      "packing_metadata_sets",
+      "endpoint_and_derived_value_counts",
+      "endpoint_hourly_mean_and_solar_sequence_hashes",
+      "native_grid_definition_hash",
+      "selected_public_native_grid_point",
+      "distance_metrics",
+      "quality_and_epistemic_class",
+      "qualification_decision"
+    ]
+  },
+  "qualification_effect": {
+    "probe_may_establish": "EA1O_D_INSTANTANEOUS_SOLAR_SOURCE_VALUE_SPATIAL_TRANSFORMATION_CANDIDATE_ONLY",
+    "formal_source_authority_created_without_effective_merge": false,
+    "future_et0_execution_authorized": false,
+    "ea2_authorized": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "runtime_source_authorized": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false
+  },
+  "hard_nonclaims": [
+    "NO_TASKBOOK_DELTA",
+    "NO_RUNTIME_SOURCE_DELTA",
+    "NO_CANONICAL_CONTRACT_DELTA",
+    "NO_MIGRATION",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_FUTURE_ET0_EXECUTION",
+    "NO_INSTANTANEOUS_RECORD_AS_DIRECT_INTERVAL_AVERAGE",
+    "NO_DIRECT_FIELD_EQUIVALENCE",
+    "NO_QUALITY_PASS",
+    "NO_CROSS_CYCLE_ENDPOINT_PAIR",
+    "NO_FUTURE_FILE_WAIT",
+    "NO_VALID_TIME_REWRITE",
+    "NO_NEGATIVE_CLIPPING",
+    "NO_ZERO_THRESHOLDING",
+    "NO_SILENT_IMPUTATION",
+    "NO_PGRB2_DSWRF_FALLBACK",
+    "NO_SILENT_PGRB2_SFLUX_GRID_EQUIVALENCE",
+    "NO_SPATIAL_INTERPOLATION",
+    "NO_RAW_PROVIDER_PAYLOAD_PUBLICATION",
+    "NO_RAW_KBS_GEOMETRY_PUBLICATION",
+    "NO_EA2_START",
+    "NO_FORMAL_O00_O23_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
