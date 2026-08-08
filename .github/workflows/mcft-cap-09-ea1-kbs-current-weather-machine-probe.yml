@@ -1,0 +1,86 @@
+name: mcft-cap-09-ea1-kbs-current-weather-machine-probe
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea1-kbs-current-weather-machine-probe.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1-KBS-CURRENT-WEATHER-MACHINE-PROBE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1_KBS_CURRENT_WEATHER_MACHINE_PROBE.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1_KBS_CURRENT_WEATHER_MACHINE_ACCESS.mjs'
+  merge_group:
+    types: [checks_requested]
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-ea1-kbs-current-weather-machine-probe.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1-KBS-CURRENT-WEATHER-MACHINE-PROBE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1_KBS_CURRENT_WEATHER_MACHINE_PROBE.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1_KBS_CURRENT_WEATHER_MACHINE_ACCESS.mjs'
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea1-kbs-machine-probe-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  machine-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium for public-source probe
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Resolve probe base SHA
+        id: base
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MG_BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ '${{ github.event_name }}' == 'pull_request' ]]; then
+            base="$PR_BASE_SHA"
+          elif [[ '${{ github.event_name }}' == 'merge_group' ]]; then
+            base="$MG_BASE_SHA"
+          elif [[ '${{ github.event_name }}' == 'push' ]]; then
+            base="$PUSH_BEFORE_SHA"
+          else
+            echo 'unsupported event' >&2
+            exit 1
+          fi
+          test -n "$base"
+          echo "sha=$base" >> "$GITHUB_OUTPUT"
+      - name: Validate no-write exact probe boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.base.outputs.sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1_KBS_CURRENT_WEATHER_MACHINE_PROBE.cjs
+      - name: Probe official KBS rendered current-weather source
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1_KBS_CURRENT_WEATHER_MACHINE_ACCESS.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea1-kbs-machine-probe-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA1_KBS_CURRENT_WEATHER_MACHINE_PROBE_STATIC_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA1_KBS_CURRENT_WEATHER_MACHINE_PROBE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
