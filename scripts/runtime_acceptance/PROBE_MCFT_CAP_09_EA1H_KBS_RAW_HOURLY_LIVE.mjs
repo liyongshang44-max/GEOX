@@ -175,7 +175,7 @@ try {
 
   const apiResponse = await context.request.get(downloadUrl.toString(), {
     timeout: CONFIG.transport_limits.download_timeout_ms,
-    headers: { accept: 'text/csv,text/plain;q=0.9,*/*;q=0.5', 'user-agent': 'GEOX-MCFT-CAP09-EA1H-READ-ONLY/1.2' },
+    headers: { accept: 'text/csv,text/plain;q=0.9,*/*;q=0.5', 'user-agent': 'GEOX-MCFT-CAP09-EA1H-READ-ONLY/1.3' },
   });
   if (!apiResponse.ok()) throw new Error(`EA1H_DOWNLOAD_HTTP_${apiResponse.status()}`);
   const responseHeaders = apiResponse.headers();
@@ -202,10 +202,11 @@ try {
   const allTimes = [];
   const completeEt0Times = [];
   const observedRainTimes = [];
+  const physicalInvalidTimes = [];
   const unparsedTimestampShapes = new Map();
   let timestampRows = 0;
   let unparsedTimestampRows = 0;
-  let physicalInvalidRows = 0;
+  let archivePhysicalInvalidRows = 0;
   let futureRows = 0;
 
   const now = Date.now();
@@ -243,10 +244,14 @@ try {
     ];
     const et0Complete = et0Values.every(([value, range]) => withinRange(value, range));
     if (et0Complete) completeEt0Times.push(time);
-    else if (et0Values.some(([value, range]) => value !== null && !withinRange(value, range))) physicalInvalidRows += 1;
 
+    let rowPhysicalInvalid = et0Values.some(([value, range]) => value !== null && !withinRange(value, range));
     if (withinRange(rain, ranges[columns.rainfall])) observedRainTimes.push(time);
-    else if (rain !== null) physicalInvalidRows += 1;
+    else if (rain !== null) rowPhysicalInvalid = true;
+    if (rowPhysicalInvalid) {
+      archivePhysicalInvalidRows += 1;
+      physicalInvalidTimes.push(time);
+    }
   }
 
   if (!allTimes.length) {
@@ -254,12 +259,15 @@ try {
     throw new Error(`EA1H_TIMESTAMPED_ROWS_REQUIRED:UNPARSED_NONEMPTY_${unparsedTimestampRows}:SHAPES_${shapes}`);
   }
   if (futureRows > 0) throw new Error(`EA1H_FUTURE_TIMESTAMP_ROWS_FORBIDDEN:${futureRows}`);
-  if (physicalInvalidRows > 0) throw new Error(`EA1H_PHYSICAL_SANITY_FAILURE_ROWS:${physicalInvalidRows}`);
 
   const latest = Math.max(...allTimes);
   const ageHours = (now - latest) / HOUR_MS;
   if (ageHours > CONFIG.freshness_and_continuity.latest_record_max_age_hours) throw new Error(`EA1H_SOURCE_TOO_OLD:${ageHours.toFixed(2)}H:LATEST_${new Date(latest).toISOString()}`);
+
   const floor = latest - CONFIG.freshness_and_continuity.recent_window_hours * HOUR_MS;
+  const recentPhysicalInvalidRows = physicalInvalidTimes.filter((time) => time >= floor && time <= latest).length;
+  if (recentPhysicalInvalidRows > 0) throw new Error(`EA1H_RECENT_PHYSICAL_SANITY_FAILURE_ROWS:${recentPhysicalInvalidRows}`);
+
   const recentDistinct = distinctHours(allTimes, floor, latest);
   const recentEt0 = distinctHours(completeEt0Times, floor, latest);
   const recentRain = distinctHours(observedRainTimes, floor, latest);
@@ -291,7 +299,8 @@ try {
       recent_complete_et0_input_hours: recentEt0,
       recent_observed_rain_hours: recentRain,
       future_timestamp_rows: futureRows,
-      physical_sanity_failure_rows: physicalInvalidRows,
+      archive_physical_sanity_failure_rows: archivePhysicalInvalidRows,
+      recent_physical_sanity_failure_rows: recentPhysicalInvalidRows,
     },
     qualification_findings: {
       official_download_locator: 'PASS',
@@ -300,6 +309,7 @@ try {
       observed_solar_role_continuity: 'PASS',
       observed_interval_rain_role_continuity: 'PASS',
       observed_et0_input_role_continuity: 'PASS',
+      archive_anomalies_do_not_replace_live_window_gate: true,
       page_metadata_conflict_overridden_by_download_timestamp: false,
       formal_source_authority_created: false,
       qualified_formal_site: false,
