@@ -207,6 +207,237 @@ jobs:
 
           print('EA1N_DSWRF_DIAGNOSTIC=' + json.dumps(diagnostic, sort_keys=True, separators=(',', ':')))
           PY
+      - name: Probe original production DSWRF byte-range transport
+        shell: bash
+        run: |
+          python - <<'PY'
+          import importlib.util
+          import json
+          import math
+          import os
+          import re
+          from datetime import datetime, timezone
+          from urllib.parse import urlparse
+
+          path = 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1N_GFS_VALUE_EXTRACTION_AUTHORITY.py'
+          spec = importlib.util.spec_from_file_location('ea1n_probe', path)
+          m = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+
+          tick = m.floor_utc_hour(datetime.now(timezone.utc))
+          selected = m.select_complete_cycle(tick)
+          filter_cache = {}
+
+          def filtered_records(lead):
+              if lead not in filter_cache:
+                  status, _headers, body, _final_url = m.request_bytes(m.filter_url(selected['cycle'], lead), timeout=90, attempts=3)
+                  if status != 200:
+                      raise RuntimeError(f'FILTER_HTTP_{status}:F{lead:03d}')
+                  records, _extras = m.decode_subset(body, selected['cycle'], lead)
+                  filter_cache[lead] = records
+              return filter_cache[lead]
+
+          failure_lead = None
+          for lead in range(selected['lead_start'], selected['lead_end'] + 1):
+              rec = m.find_dswrf_average(filtered_records(lead), lead)
+              start = m.rolling_start(lead)
+              length = lead - start
+              if length == 1:
+                  hourly = rec['value']
+              else:
+                  prev = m.find_dswrf_average(filtered_records(lead - 1), lead - 1)
+                  hourly = length * rec['value'] - (length - 1) * prev['value']
+              if (not math.isfinite(hourly)) or not (0 <= hourly <= 1600):
+                  failure_lead = lead
+                  break
+          if failure_lead is None:
+              raise RuntimeError('FILTER_DSWRF_FAILURE_NOT_REPRODUCED')
+
+          def object_urls(lead):
+              stem = f'gfs.t{selected["cycle"]:%H}z.pgrb2.0p25.f{lead:03d}'
+              root = m.cycle_directory_url(selected['cycle'])
+              return root + stem, root + stem + '.idx'
+
+          def validate_identity(requested_url, final_url):
+              a, b = urlparse(requested_url), urlparse(final_url)
+              if b.scheme != 'https' or b.hostname != 'nomads.ncep.noaa.gov':
+                  raise RuntimeError(f'PRODUCTION_FINAL_ORIGIN_REJECTED:{b.scheme}:{b.hostname}')
+              if a.path != b.path or a.query != b.query:
+                  raise RuntimeError('PRODUCTION_OBJECT_IDENTITY_DRIFT')
+
+          def fetch_idx(lead):
+              grib_url, idx_url = object_urls(lead)
+              status, headers, body, final_url = m.request_bytes(idx_url, timeout=60, attempts=3)
+              if status != 200:
+                  raise RuntimeError(f'IDX_HTTP_{status}:F{lead:03d}')
+              validate_identity(idx_url, final_url)
+              text = body.decode('utf-8', errors='strict')
+              rows = []
+              for raw in text.splitlines():
+                  match = re.match(r'^(\d+):(\d+):(.*)$', raw)
+                  if not match:
+                      continue
+                  rows.append({'ordinal': int(match.group(1)), 'offset': int(match.group(2)), 'tail': match.group(3)})
+              if not rows:
+                  raise RuntimeError(f'IDX_PARSE_ZERO:F{lead:03d}')
+              if any(rows[i]['offset'] >= rows[i+1]['offset'] for i in range(len(rows)-1)):
+                  raise RuntimeError(f'IDX_OFFSETS_NOT_STRICTLY_ASCENDING:F{lead:03d}')
+              candidates = []
+              for i, row in enumerate(rows):
+                  tail_upper = row['tail'].upper()
+                  if ':DSWRF:' not in ':' + tail_upper or ':SURFACE:' not in ':' + tail_upper:
+                      continue
+                  if i + 1 >= len(rows):
+                      candidates.append({'ordinal': row['ordinal'], 'start': row['offset'], 'end': None, 'tail_sha256': m.sha256_bytes(row['tail'].encode('utf-8'))})
+                  else:
+                      candidates.append({'ordinal': row['ordinal'], 'start': row['offset'], 'end': rows[i+1]['offset'] - 1, 'tail_sha256': m.sha256_bytes(row['tail'].encode('utf-8'))})
+              if not candidates:
+                  raise RuntimeError(f'IDX_DSWRF_SURFACE_ZERO:F{lead:03d}')
+              return grib_url, {
+                  'idx_sha256': m.sha256_bytes(body),
+                  'idx_bytes': len(body),
+                  'row_count': len(rows),
+                  'dswrf_surface_candidate_count': len(candidates),
+                  'candidates': candidates,
+              }
+
+          def range_get(grib_url, start, end):
+              if end is None or end < start:
+                  return {'status': 'NO_FINITE_RANGE'}
+              expected = end - start + 1
+              if expected <= 0 or expected > 64 * 1024 * 1024:
+                  return {'status': 'RANGE_SIZE_REJECTED', 'expected_bytes': expected}
+              req = m.Request(grib_url, method='GET', headers={
+                  'User-Agent': m.USER_AGENT,
+                  'Accept': 'application/octet-stream,*/*',
+                  'Range': f'bytes={start}-{end}',
+                  'Accept-Encoding': 'identity',
+              })
+              try:
+                  with m.urlopen(req, timeout=90) as response:
+                      status = int(response.status)
+                      final_url = response.geturl()
+                      validate_identity(grib_url, final_url)
+                      content_range = response.headers.get('Content-Range') or ''
+                      content_length = response.headers.get('Content-Length') or ''
+                      result = {
+                          'http_status': status,
+                          'requested_range_start': start,
+                          'requested_range_end': end,
+                          'expected_bytes': expected,
+                          'content_range_sha256': m.sha256_bytes(content_range.encode('utf-8')) if content_range else None,
+                          'content_length_token': content_length,
+                      }
+                      if status != 206:
+                          result['status'] = 'HTTP_NOT_206_BODY_NOT_READ'
+                          return result
+                      body = response.read(expected + 1)
+              except Exception as exc:
+                  return {'status': 'RANGE_REQUEST_EXCEPTION', 'error_type': type(exc).__name__, 'error_hash': m.sha256_bytes(str(exc).encode('utf-8'))}
+              if len(body) != expected:
+                  return {**result, 'status': 'PARTIAL_BODY_LENGTH_MISMATCH', 'actual_bytes': len(body)}
+              if not body.startswith(b'GRIB') or not body.endswith(b'7777'):
+                  return {**result, 'status': 'PARTIAL_BODY_NOT_SINGLE_GRIB', 'body_sha256': m.sha256_bytes(body), 'actual_bytes': len(body)}
+              with m.tempfile.NamedTemporaryFile(prefix='ea1n-prod-range-', suffix='.grib2', delete=False) as tmp:
+                  tmp.write(body)
+                  tmp_path = tmp.name
+              try:
+                  with open(tmp_path, 'rb') as handle:
+                      gid = m.codes_grib_new_from_file(handle)
+                      if gid is None:
+                          return {**result, 'status': 'ECCODES_NO_MESSAGE'}
+                      try:
+                          short_name = str(m.codes_get(gid, 'shortName'))
+                          name = str(m.codes_get(gid, 'name'))
+                          type_of_level = str(m.codes_get(gid, 'typeOfLevel'))
+                          level = float(m.codes_get(gid, 'level'))
+                          role = m.role_for(short_name, name, type_of_level, level)
+                          message = bytes(m.codes_get_message(gid))
+                          section4 = m.grib2_section(message, 4)
+                          section5 = m.grib2_section(message, 5)
+                          meta = {
+                              'status': 'DECODED_SINGLE_PRODUCTION_MESSAGE',
+                              'body_sha256': m.sha256_bytes(body),
+                              'actual_bytes': len(body),
+                              'role': role,
+                              'step_type': str(m.codes_get(gid, 'stepType')),
+                              'start_step': int(m.codes_get(gid, 'startStep')),
+                              'end_step': int(m.codes_get(gid, 'endStep')),
+                              'type_of_level': type_of_level,
+                              'level': level,
+                              'units': str(m.codes_get(gid, 'units')),
+                              'packing_type': str(m.codes_get(gid, 'packingType')),
+                              'data_representation_template_number': int(m.codes_get(gid, 'dataRepresentationTemplateNumber')),
+                              'bits_per_value': int(m.codes_get(gid, 'bitsPerValue')),
+                              'binary_scale_factor': int(m.codes_get(gid, 'binaryScaleFactor')),
+                              'decimal_scale_factor': int(m.codes_get(gid, 'decimalScaleFactor')),
+                              'number_of_data_points': int(m.codes_get(gid, 'numberOfDataPoints')),
+                              'section4_sha256': m.sha256_bytes(section4),
+                              'section5_sha256': m.sha256_bytes(section5),
+                          }
+                          second = m.codes_grib_new_from_file(handle)
+                          if second is not None:
+                              m.codes_release(second)
+                              meta['status'] = 'MORE_THAN_ONE_GRIB_MESSAGE'
+                          return {**result, **meta}
+                      finally:
+                          m.codes_release(gid)
+              finally:
+                  try: os.remove(tmp_path)
+                  except OSError: pass
+
+          def inspect_lead(lead):
+              grib_url, idx = fetch_idx(lead)
+              start = m.rolling_start(lead)
+              attempts = []
+              matches = []
+              for candidate in idx['candidates']:
+                  probe = range_get(grib_url, candidate['start'], candidate['end'])
+                  safe = {
+                      'ordinal': candidate['ordinal'],
+                      'tail_sha256': candidate['tail_sha256'],
+                      **probe,
+                  }
+                  attempts.append(safe)
+                  if (
+                      probe.get('status') == 'DECODED_SINGLE_PRODUCTION_MESSAGE'
+                      and probe.get('role') == 'DOWNWARD_SHORTWAVE_SURFACE'
+                      and probe.get('step_type') == 'avg'
+                      and probe.get('start_step') == start
+                      and probe.get('end_step') == lead
+                      and probe.get('type_of_level') == 'surface'
+                  ):
+                      matches.append(safe)
+              return {
+                  'lead': lead,
+                  'idx_sha256': idx['idx_sha256'],
+                  'idx_bytes': idx['idx_bytes'],
+                  'idx_row_count': idx['row_count'],
+                  'idx_dswrf_surface_candidate_count': idx['dswrf_surface_candidate_count'],
+                  'semantic_match_count': len(matches),
+                  'semantic_matches': matches,
+                  'attempts': attempts,
+              }
+
+          diagnostic = {
+              'schema_version': 'geox_mcft_cap09_ea1n_production_dswrf_range_transport_diagnostic_v1',
+              'tick_utc': m.iso(tick),
+              'selected_cycle': m.iso(selected['cycle']),
+              'filter_failure_lead': failure_lead,
+              'forecast_values_emitted': False,
+              'normalized_values_emitted': False,
+              'raw_idx_emitted': False,
+              'raw_grib_emitted': False,
+              'production_range_authority_created': False,
+              'leads': [],
+          }
+          for lead in [failure_lead - 1, failure_lead]:
+              try:
+                  diagnostic['leads'].append(inspect_lead(lead))
+              except Exception as exc:
+                  diagnostic['leads'].append({'lead': lead, 'status': 'INSPECTION_EXCEPTION', 'error_type': type(exc).__name__, 'error_hash': m.sha256_bytes(str(exc).encode('utf-8'))})
+          print('EA1N_PRODUCTION_DSWRF_RANGE_DIAGNOSTIC=' + json.dumps(diagnostic, sort_keys=True, separators=(',', ':')))
+          PY
       - name: Decode and normalize exact 72h GFS input bundle
         env:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
