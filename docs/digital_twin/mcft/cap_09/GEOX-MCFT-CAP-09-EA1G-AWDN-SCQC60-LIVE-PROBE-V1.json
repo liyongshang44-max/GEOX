@@ -26,20 +26,24 @@
     "canonical_label": "Hickory Corners",
     "enviroweather_slug": "kbs",
     "state": "MI",
-    "identity_search_tokens": ["hickory corners", "kbs"]
+    "identity_search_tokens": ["hickory corners", "kbs"],
+    "identity_predecessor": "EA1F_EXPECTED_STATION_LABEL_AND_SLUG"
   },
   "discovery_request": {
-    "mode": "list",
+    "mode": "unfiltered_list_diagnostic",
     "product_id": "scqc60",
-    "network": "enviro",
-    "format_parameter_policy": "OMIT_FOR_LIST_INVENTORY_PER_PROVIDER_DOCUMENTATION",
-    "accepted_response_encodings": ["json", "csv", "text"]
+    "network_filter_value": "enviro",
+    "network_parameter_policy": "OMIT_ONLY_FOR_DIAGNOSTIC_AFTER_DOCUMENTED_ENVIRONET_FILTER_RETURNED_HTTP_400",
+    "accepted_response_encodings": ["json", "csv", "text"],
+    "qualification_rule": "UNFILTERED_INVENTORY_MUST_ITSELF_CONTAIN_HICKORY_CORNERS_OR_KBS_IDENTITY; ABSENCE_MEANS_AWDN_ENVIRONET_DATA_PLANE_NOT_QUALIFIED",
+    "network_equivalence_rule": "UNFILTERED_DISCOVERY_DOES_NOT_RECLASSIFY_ANY_OTHER_NETWORK_AS_ENVIRONET"
   },
   "observation_request": {
     "lookback_hours": 48,
     "timezone": "UTC",
     "units": "si",
-    "format": "json"
+    "format": "json",
+    "network_filter_required_after_identity_resolution": true
   },
   "required_observation_roles": {
     "solar_radiation": {
@@ -90,6 +94,7 @@
   "hard_nonclaims": [
     "NO_FORMAL_SOURCE_AUTHORITY_FROM_PROBE_ALONE",
     "NO_QUALIFIED_FORMAL_SITE",
+    "NO_OTHER_AWDN_NETWORK_MAY_SUBSTITUTE_FOR_ENVIRONET",
     "NO_ESTIMATED_E_OR_R_OR_e_VALUE_AS_OBSERVED_TRUTH",
     "NO_DATABASE_WRITE",
     "NO_FORMAL_EVIDENCE_WRITE",
