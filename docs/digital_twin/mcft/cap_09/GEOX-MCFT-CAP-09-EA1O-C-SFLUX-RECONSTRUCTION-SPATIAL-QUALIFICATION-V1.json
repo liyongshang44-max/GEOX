@@ -4,7 +4,7 @@
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S6",
   "sub_lifecycle": "S6-EA1O",
-  "record_status": "EA1O_C_LIVE_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE",
+  "record_status": "EA1O_C_VALUE_REJECTION_CANDIDATE_NOT_EFFECTIVE",
   "base_main_sha": "75db3b0d1baece194018e346f7d1756f1ee77e7f",
   "predecessor_authorities": [
     {
@@ -60,10 +60,19 @@
     "level": "surface",
     "required_record_semantics": "SIX_HOUR_BLOCK_EXPANDING_AVERAGE",
     "source_unit": "W/m^2",
+    "observed_grib2_parameter_identity": {
+      "discipline": 0,
+      "parameter_category": 4,
+      "parameter_number": 192,
+      "param_id": 260087,
+      "short_name": "sdswrf",
+      "name": "Surface downward short-wave radiation flux",
+      "short_name_is_sole_authority": false
+    },
     "same_exact_gfs_cycle_as_ea1k_required": true,
     "canonical_target_count": 72,
     "support_lead_maximum_count": 1,
-    "availability_authority": "HTTP_LAST_MODIFIED",
+    "availability_authority": "EXACT_RANGE_RESPONSE_LAST_MODIFIED_AND_CONTENT_RANGE",
     "future_file_waiting_forbidden": true,
     "valid_time_rewrite_forbidden": true,
     "n_hour_fcst_record_authorized": false,
@@ -128,15 +137,80 @@
     "direct_field_equivalence": false,
     "model_grid_is_observation_truth": false
   },
+  "live_discovery_evidence": {
+    "authority_class": "NON_FINAL_DISCOVERY_EVIDENCE_REQUIRES_FINAL_EXACT_HEAD_REPROOF",
+    "subject_sha": "cadcfdb5834894594a9a291537e8b32f046fb78e",
+    "workflow_run_id": 31268927952,
+    "artifact_id": 9025007841,
+    "artifact_digest": "sha256:4f79adc59029db777411aec718669a95dd5b408cf57154530a509da01379d6ad",
+    "qualification_tick_boundary_utc": "2026-08-08T17:00:00Z",
+    "selected_cycle_utc": "2026-08-08T12:00:00Z",
+    "lead_start": 6,
+    "lead_end": 77,
+    "support_lead": 5,
+    "required_message_count": 73,
+    "exact_range_message_count": 73,
+    "parameter_identity": {
+      "discipline_set": [0],
+      "parameter_category_set": [4],
+      "parameter_number_set": [192],
+      "param_id_set": [260087],
+      "short_name_set": ["sdswrf"]
+    },
+    "packing": {
+      "packing_type_set": ["grid_complex_spatial_differencing"],
+      "bits_per_value_set": [16, 17],
+      "binary_scale_factor_set": [1, 4],
+      "decimal_scale_factor_set": [2, 3],
+      "maximum_reconstructed_quantization_bound_bucket": "LT_1E_1"
+    },
+    "reconstruction": {
+      "canonical_reconstructed_count": 72,
+      "finite_count": 72,
+      "nonnegative_count": 67,
+      "negative_count": 5,
+      "nonfinite_count": 0,
+      "negative_lead_set_sha256": "sha256:960a129168895e150beea315387f3d38f3b9db5ded656c4bfa2d28762c230a60",
+      "reconstructed_sequence_sha256": "sha256:7941d7d3980aaede08d06dc86a2bc5e8e87ae07be5c910e5301fea323c99e1cd",
+      "negative_clipping_performed": false,
+      "zero_thresholding_performed": false,
+      "silent_imputation_performed": false,
+      "pgrb2_fallback_used": false
+    },
+    "spatial": {
+      "qualified": true,
+      "grid_type": "regular_gg",
+      "gaussian_n": 768,
+      "grid_point_count": 4718592,
+      "grid_definition_sha256": "sha256:014f093c279b0927ad9adedc980b6fc29268f844a7f5317b9f823cf287afda06",
+      "selected_native_grid_index": 1246503,
+      "selected_signed_grid_longitude": -85.42968711854513,
+      "selected_native_grid_latitude": 42.46664219574727,
+      "centroid_and_all_vertices_same_native_point_for_all_messages": true,
+      "interpolation_performed": false,
+      "pgrb2_grid_coordinate_reused": false
+    }
+  },
   "live_qualification": {
     "required": true,
     "exact_head_required": true,
-    "current_result": "NOT_YET_EXECUTED",
+    "current_result": "REJECTED_AS_AMENDMENT03_SFLUX_RECONSTRUCTION_VALUE_AUTHORITY",
     "success_decision": "QUALIFIED_AS_AMENDMENT03_SFLUX_RECONSTRUCTION_SOURCE_SPATIAL_CANDIDATE",
     "value_rejection_decision": "REJECTED_AS_AMENDMENT03_SFLUX_RECONSTRUCTION_VALUE_AUTHORITY",
     "spatial_rejection_decision": "REJECTED_AS_AMENDMENT03_SFLUX_SPATIAL_AUTHORITY",
     "infrastructure_or_semantic_contract_failure": "HARD_FAIL",
-    "successor_not_authorized_until_result_frozen_and_effective": true
+    "final_exact_head_reproof_required": true
+  },
+  "adjudication": {
+    "decision": "REJECTED_AS_AMENDMENT03_SFLUX_RECONSTRUCTION_VALUE_AUTHORITY",
+    "reason": "FIVE_OF_72_RECONSTRUCTED_TARGET_VALUES_ARE_NEGATIVE_UNDER_THE_FROZEN_NO_CLIPPING_POLICY",
+    "reconstruction_value_authority_qualified": false,
+    "native_sflux_spatial_candidate_qualified": true,
+    "combined_source_value_spatial_authority_qualified": false,
+    "quantization_bound_used_for_repair": false,
+    "negative_clipping_authorized": false,
+    "zero_thresholding_authorized": false,
+    "pgrb2_fallback_authorized": false
   },
   "probe_output_policy": {
     "raw_idx_emitted": false,
@@ -144,23 +218,10 @@
     "decoded_dswrf_values_emitted": false,
     "reconstructed_dswrf_values_emitted": false,
     "raw_kbs_geometry_emitted": false,
-    "kbs_centroid_emitted": false,
-    "safe_output_may_include": [
-      "cycle_and_tick",
-      "target_and_support_counts",
-      "source_hash_chains",
-      "packing_metadata_sets",
-      "quantization_bound_buckets",
-      "reconstructed_sequence_hash",
-      "finite_nonnegative_counts",
-      "native_grid_definition_hash",
-      "selected_public_native_grid_point",
-      "distance_metrics",
-      "qualification_decision"
-    ]
+    "kbs_centroid_emitted": false
   },
   "qualification_effect": {
-    "probe_may_establish": "EA1O_C_LIVE_SOURCE_VALUE_SPATIAL_QUALIFICATION_CANDIDATE_ONLY",
+    "probe_may_establish": "EA1O_C_VALUE_REJECTION_CANDIDATE_ONLY",
     "formal_source_authority_created_without_effective_merge": false,
     "future_et0_execution_authorized": false,
     "ea2_authorized": false,
@@ -169,6 +230,12 @@
     "runtime_source_authorized": false,
     "formal_window_started": false,
     "mcft_cap09_completed": false
+  },
+  "successor_governance": {
+    "next_action_class_if_rejection_becomes_effective": "S6_ARCHITECTURE_ADJUDICATION_REQUIRED",
+    "specific_successor_design_pre_authorized": false,
+    "ea2_may_start": false,
+    "formal_o00_o23_may_start": false
   },
   "hard_nonclaims": [
     "NO_TASKBOOK_DELTA",
@@ -189,6 +256,7 @@
     "NO_INTERPOLATION",
     "NO_RAW_PROVIDER_PAYLOAD_PUBLICATION",
     "NO_RAW_KBS_GEOMETRY_PUBLICATION",
+    "NO_EA1O_C_QUALIFICATION_PASS",
     "NO_EA2_START",
     "NO_FORMAL_O00_O23_START",
     "NO_MCFT_CAP09_COMPLETION"
