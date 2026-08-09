@@ -214,6 +214,9 @@ export function buildExternalFormalBootstrapAuthorityBundleV1(
   if (Date.parse(derivationTime) > Date.parse(createdAt)) {
     throw new Error("EXTERNAL_FORMAL_CROP_STAGE_AUTHORITY_FROM_FUTURE_FORBIDDEN");
   }
+  if (Date.parse(derivationTime) > Date.parse(bootstrapTime)) {
+    throw new Error("EXTERNAL_FORMAL_CROP_STAGE_AUTHORITY_AFTER_BOOTSTRAP_FORBIDDEN");
+  }
 
   const cropHash = cropStageContextHashV1({ ...input, crop_stage_derivation_authority_time: derivationTime });
   const realityBinding = realityBindingSnapshotV1();
