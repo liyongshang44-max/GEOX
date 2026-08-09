@@ -51,7 +51,7 @@ const amendment = fs.readFileSync("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-0
 for (const required of [
   "raw authority retention must precede decode/canonicalization",
   "durable, private, hash-addressed retention receipt before the corresponding canonical Evidence record may be appended to Formal `facts`",
-  "EA5C** — durable raw retention + restricted canonical External Evidence ingress",
+  "durable raw retention + restricted canonical External Evidence ingress",
   "Only after EA5E is effective may O00 be enabled."
 ]) if (!amendment.includes(required)) fail(`EA5C1_AMENDMENT_REQUIREMENT_MISSING:${required}`);
 
