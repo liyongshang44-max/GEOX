@@ -1,53 +1,119 @@
 name: mcft-cap-09-ea5b5c-external-cap04-orchestration
+
 on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-ea5b5c-external-cap04-orchestration.yml'
       - 'apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5B5C-EXTERNAL-CAP04-ORCHESTRATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.cjs'
   merge_group:
     types: [checks_requested]
+
 permissions:
   contents: read
   actions: read
   pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5b5c-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
 jobs:
   external-cap04-orchestration:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+
       - uses: pnpm/action-setup@v4
-        with: { version: 9.15.4 }
+        with:
+          version: 9.15.4
+
       - uses: actions/setup-node@v4
-        with: { node-version: 20.11.1, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact EA5B5C base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check EA5B5C governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.cjs
+
+      - name: Validate exact EA5B5C governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.cjs
+
+      - name: Re-prove CAP08 G3 frozen-core successor compatibility
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_G3_BOUNDARY.cjs
+
       - name: Typecheck server
         shell: bash
         run: |
           set -o pipefail
           mkdir -p acceptance-output
           pnpm --filter @geox/server run typecheck 2>&1 | tee acceptance-output/EA5B5C_SERVER_TYPECHECK.log
+
       - name: Prove production External CAP04 orchestration
         shell: bash
         run: |
           set -o pipefail
           mkdir -p acceptance-output
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts 2>&1 | tee acceptance-output/EA5B5C_FOCUSED_ACCEPTANCE.log
-      - name: Re-prove EA5B5B
+
+      - name: Re-prove EA5B5B External Forecast and A1/A2 authority
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5B_EXTERNAL_FORECAST_A1A2.ts
-      - name: Re-prove EA5B5A
+
+      - name: Re-prove EA5B5A External State-source authority
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5A_EXTERNAL_CAP04_STATE_SOURCE.ts
+
+      - name: Re-prove historical CAP04 single-tick behavior
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts
+
+      - name: Re-prove historical CAP04 negative behavior
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_NEGATIVE.ts
+
+      - name: Verify EA5B5C remains pre-persistence and pre-closure
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION_GOVERNANCE_RESULT.json','utf8'));
+          if (result.status !== 'PASS') throw new Error('EA5B5C_GOVERNANCE_PASS_REQUIRED');
+          if (result.external_cap04_candidate_orchestration_qualified !== true) throw new Error('EA5B5C_ORCHESTRATION_REQUIRED');
+          if (result.selected_a1_path_qualified !== true || result.blocked_a2_path_qualified !== true || result.malformed_forcing_failed_path_qualified !== true) throw new Error('EA5B5C_THREE_OUTCOME_PATHS_REQUIRED');
+          if (result.canonical_persistence_authorized !== false || result.provider_fetch_authorized !== false || result.scheduler_authorized !== false) throw new Error('EA5B5C_SIDE_EFFECT_BOUNDARY_REQUIRED');
+          if (result.ea5b_completion_audit_required !== true || result.ea5b_complete !== false || result.ea5c_authorized !== false || result.formal_o00_start_authorized !== false) throw new Error('EA5B5C_PREMATURE_FRONTIER_EFFECT');
+          if (result.database_write_count !== 0 || result.provider_request_count !== 0) throw new Error('EA5B5C_ZERO_SIDE_EFFECT_NONCLAIM_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',orchestration:true,a1:true,a2:true,failed:true,persistence:false,ea5b_closure_pending:true,ea5c:false,o00:false}));
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mcft-cap-09-ea5b5c-wip-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          name: mcft-cap-09-ea5b5c-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
+            acceptance-output/MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json
             acceptance-output/EA5B5C_SERVER_TYPECHECK.log
             acceptance-output/EA5B5C_FOCUSED_ACCEPTANCE.log
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 90
