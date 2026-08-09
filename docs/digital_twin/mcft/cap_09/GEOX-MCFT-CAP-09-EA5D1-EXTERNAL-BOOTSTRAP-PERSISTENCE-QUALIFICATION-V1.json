@@ -1,0 +1,87 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5d1_external_bootstrap_persistence_qualification_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5D1-EXTERNAL-BOOTSTRAP-PERSISTENCE-QUALIFICATION-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "S6-EA5D1-EXTERNAL-BOOTSTRAP-PERSISTENCE-IMPLEMENTATION-QUALIFICATION",
+  "record_status": "EA5D1_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "8dca58a7c103619ce6d0238c8812a52e91581717",
+  "governing_authority": {
+    "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
+    "amendment_05_blob_sha": "7a92c17f7ba32aae52667de9c21db62bfd2ba70b",
+    "ea5c_closure_authority_blob_sha": "f795a295dc241f565a595589eb94706d096f26ca",
+    "ea5c_closure_merge_sha": "8dca58a7c103619ce6d0238c8812a52e91581717"
+  },
+  "effective_predecessor_contract_blobs": {
+    "external_runtime_config_compiler": "f7ea03a7f8387ce4de135dac61f0b063e91f0f25",
+    "external_a0_evidence_window_service": "1a02cd7c39da8a17ebd161f487c7d2c3c7c704e1",
+    "external_a0_record_set_builder": "516c141cbb971d55635b500d2a99962116159588",
+    "runtime_ports": "9f62818498a645d554925dcf8569cdd19c0f1c34",
+    "postgres_runtime_repository": "a0e7d0f997cbd46fc400453401fd79767178fafb",
+    "postgres_next_tick_repository": "b5f7834c2287aa6cbf30d8e0d6c54cc5ad9d3b5"
+  },
+  "candidate_implementation_blobs": {
+    "external_formal_bootstrap_authority_bundle": "c44bfca52f6d1b91de6289d9a9649a6114c7fc9a",
+    "external_formal_bootstrap_persistence_service": "6c94bef139f260ef61c87f751a2c627b83e58977"
+  },
+  "qualified_design": {
+    "exact_external_scope_only": true,
+    "reality_binding_snapshot_materialized_from_external_authority": true,
+    "geometry_authority_is_semantic_descriptor_not_republished_raw_geometry": true,
+    "model_hydraulic_values_reused_only_as_model_prior_from_cap08": true,
+    "field_calibration_status": "NOT_FIELD_CALIBRATED",
+    "bootstrap_runtime_config_role": "A0_BOOTSTRAP",
+    "bootstrap_runtime_config_parent": null,
+    "external_a0_nine_member_graph_required": true,
+    "hourly_runtime_config_count": 24,
+    "hourly_config_effective_time_equals_slot_logical_time": true,
+    "a0_config_is_exact_parent_of_o00_config": true,
+    "each_hourly_config_is_exact_parent_of_successor": true,
+    "implicit_latest_config_lookup_allowed": false,
+    "runtime_mode": "SHADOW_ONLINE_FORMAL_QUALIFICATION_ONLY",
+    "config_selection_mode": "EXPLICIT_REF_HASH_PIN_ONLY",
+    "historical_replay_scope_reuse_allowed": false,
+    "historical_200mm_operator_allowed_in_external_canonical_graph": false,
+    "controlled_synthetic_replay_proxy_allowed_in_external_canonical_graph": false
+  },
+  "qualification_proof_boundary": {
+    "database": "ISOLATED_CI_POSTGRES_ONLY",
+    "formal_neon_write_authorized": false,
+    "public_provider_request_count": 0,
+    "expected_first_runtime_config_writes": 25,
+    "expected_first_a0_member_writes": 9,
+    "expected_first_total_canonical_facts": 34,
+    "expected_retry_runtime_config_writes": 0,
+    "expected_retry_a0_member_writes": 0,
+    "scheduler_slot_write_count": 0,
+    "scheduler_cursor_write_count": 0,
+    "formal_window_started": false
+  },
+  "effect_if_exact_head_proof_passes_and_candidate_merges_to_protected_main": {
+    "ea5d1_external_bootstrap_persistence_implementation_qualified": true,
+    "ea5d_authorized": true,
+    "ea5d_complete": false,
+    "formal_neon_bootstrap_persisted": false,
+    "formal_24_config_chain_persisted": false,
+    "ea5e_authorized": false,
+    "external_package_formal_eligible": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "commercial_closed_loop_connected": false,
+    "mcft_cap09_completed": false
+  },
+  "next_legal_successor_if_effective": "S6-EA5D2-FORMAL-BOOTSTRAP-AND-24-CONFIG-CHAIN-LIVE-PERSISTENCE",
+  "hard_nonclaims": [
+    "NO_FORMAL_NEON_WRITE_FROM_EA5D1",
+    "NO_PUBLIC_PROVIDER_FETCH_FROM_EA5D1",
+    "NO_SCHEDULER_SLOT_OR_CURSOR_WRITE_FROM_EA5D1",
+    "NO_FORMAL_WINDOW_START",
+    "NO_EA5D_COMPLETION_FROM_IMPLEMENTATION_QUALIFICATION_ALONE",
+    "NO_EA5E_AUTHORIZATION",
+    "NO_FORMAL_O00_O23_START",
+    "NO_RECOMMENDATION_APPROVAL_AO_ACT_DISPATCH",
+    "NO_MODEL_ACTIVATION",
+    "NO_COMMERCIAL_CLOSED_LOOP_CONNECTION",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
