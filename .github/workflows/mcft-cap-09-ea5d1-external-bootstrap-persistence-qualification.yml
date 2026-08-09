@@ -1,0 +1,125 @@
+name: mcft-cap-09-ea5d1-external-bootstrap-persistence-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5d1-external-bootstrap-persistence-qualification.yml'
+      - 'apps/server/src/domain/twin_runtime/external_formal_bootstrap_authority_bundle_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_bootstrap_persistence_service_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5D1_EXTERNAL_BOOTSTRAP_PERSISTENCE.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5D1_EXTERNAL_BOOTSTRAP_PERSISTENCE.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5D1-EXTERNAL-BOOTSTRAP-PERSISTENCE-QUALIFICATION-V1.json'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5d1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  ea5d1-external-bootstrap-persistence-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5d1
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5d1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact EA5D1 base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check EA5D1 governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5D1_EXTERNAL_BOOTSTRAP_PERSISTENCE.cjs
+
+      - name: Validate exact EA5D1 six-file boundary and authority chain
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5D1_EXTERNAL_BOOTSTRAP_PERSISTENCE.cjs
+
+      - name: Typecheck server
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          pnpm --filter @geox/server run typecheck 2>&1 | tee acceptance-output/EA5D1_SERVER_TYPECHECK.log
+
+      - name: Prove External bootstrap persistence against isolated PostgreSQL
+        env:
+          EA5D1_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55432/ea5d1
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5D1_EXTERNAL_BOOTSTRAP_PERSISTENCE.ts 2>&1 | tee acceptance-output/EA5D1_FOCUSED_ACCEPTANCE.log
+
+      - name: Re-prove External A0 canonical provenance profile
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B4B_EXTERNAL_A0_PROVENANCE_PROFILE.ts
+
+      - name: Re-prove External Runtime Config compiler and resolver
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B3_EXTERNAL_RUNTIME_CONFIG_RESOLVER.ts
+
+      - name: Verify EA5D1 remains CI-only implementation qualification
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const g = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5D1_EXTERNAL_BOOTSTRAP_PERSISTENCE_GOVERNANCE_RESULT.json','utf8'));
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5D1_EXTERNAL_BOOTSTRAP_PERSISTENCE_RESULT.json','utf8'));
+          if (g.status !== 'PASS' || r.status !== 'PASS') throw new Error('EA5D1_PASS_REQUIRED');
+          if (r.ci_only_qualification !== true || r.formal_neon_write_performed !== false) throw new Error('EA5D1_FORMAL_WRITE_FORBIDDEN');
+          if (r.exact_hourly_runtime_config_count !== 24 || r.exact_total_runtime_config_count !== 25 || r.exact_total_canonical_fact_count !== 34) throw new Error('EA5D1_EXACT_BOOTSTRAP_COUNTS_REQUIRED');
+          if (r.idempotent_retry_zero_canonical_writes !== true || r.scheduler_slot_write_count !== 0 || r.provider_request_count !== 0) throw new Error('EA5D1_IDEMPOTENT_ZERO_SIDE_EFFECT_RETRY_REQUIRED');
+          if (g.ea5d_authorized !== true || g.ea5d_complete !== false || g.ea5e_authorized !== false || g.formal_o00_start_authorized !== false) throw new Error('EA5D1_SUCCESSOR_BOUNDARY_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',ea5d1:true,formal_neon_write:false,ea5d_authorized:true,ea5d_complete:false,ea5e:false,o00:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea5d1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5D1_EXTERNAL_BOOTSTRAP_PERSISTENCE_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA5D1_EXTERNAL_BOOTSTRAP_PERSISTENCE_RESULT.json
+            acceptance-output/EA5D1_SERVER_TYPECHECK.log
+            acceptance-output/EA5D1_FOCUSED_ACCEPTANCE.log
+          if-no-files-found: warn
+          retention-days: 90
