@@ -1,5 +1,5 @@
 // apps/server/src/runtime/twin_runtime/a0_bootstrap_runtime_service_v1.ts
-// Purpose: orchestrate one controlled Replay A0 bootstrap and provide an explicit read-only exact reconstruction path for completed-run replay.
+// Purpose: orchestrate one controlled Replay/External A0 bootstrap and provide an explicit read-only exact reconstruction path for completed-run replay.
 // Boundary: A0 integration only; no propagation, successful Forecast, Scenario, Recommendation, AO-ACT, routes, scheduler, restart/backfill, or wall-clock reads.
 
 import type { SoilHydraulicBoundsV1 } from "../../domain/twin_runtime/physical_bounds_v1.js";
@@ -20,6 +20,7 @@ export type ExecuteA0BootstrapInputV1 = {
   runtime_config: CanonicalObjectEnvelopeV1;
   hydraulic: SoilHydraulicBoundsV1;
   soil_hydraulic_config_ref: string;
+  authorized_soil_observation_binding_id?: string;
   lease_owner: string;
   lease_duration_seconds: number;
 };
@@ -42,6 +43,9 @@ function nextTickFromRecordSetV1(recordSet: A0RecordSetV1): string {
 
 function validateInputV1(input: ExecuteA0BootstrapInputV1): void {
   if (input.runtime_config.object_type !== "twin_runtime_config_v1") throw new Error("RUNTIME_CONFIG_OBJECT_TYPE_REQUIRED");
+  if (input.authorized_soil_observation_binding_id !== undefined && !input.authorized_soil_observation_binding_id.trim()) {
+    throw new Error("AUTHORIZED_SOIL_OBSERVATION_BINDING_ID_INVALID");
+  }
   if (!input.lease_owner) throw new Error("LEASE_OWNER_REQUIRED");
   if (!Number.isInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0) throw new Error("LEASE_DURATION_INVALID");
 }
@@ -63,6 +67,9 @@ export class A0BootstrapRuntimeServiceV1 {
       scope: input.scope,
       logical_time: input.logical_time,
       candidate_records: candidateRecords,
+      ...(input.authorized_soil_observation_binding_id !== undefined
+        ? { authorized_soil_binding_id: input.authorized_soil_observation_binding_id }
+        : {}),
     });
     const recordSet = buildA0RecordSetV1({
       scope: input.scope,
