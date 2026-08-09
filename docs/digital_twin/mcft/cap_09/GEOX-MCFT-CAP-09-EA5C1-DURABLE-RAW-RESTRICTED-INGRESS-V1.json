@@ -1,0 +1,125 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5c1_durable_raw_restricted_ingress_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5C1-DURABLE-RAW-RESTRICTED-INGRESS-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "S6-EA5C1-DURABLE-RAW-RESTRICTED-INGRESS-IMPLEMENTATION-QUALIFICATION",
+  "record_status": "EA5C1_IMPLEMENTATION_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "b9e212f98dd1d0c1e8fff5e9f93f369167e6f065",
+  "governing_authority": {
+    "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
+    "amendment_05_blob_sha": "7a92c17f7ba32aae52667de9c21db62bfd2ba70b",
+    "ea5b_closure_authority_blob_sha": "6377a4c5c9a587b24bfccea913bf9ebe7e8ddca2"
+  },
+  "frozen_predecessor_implementation_blobs": {
+    "ea3_collector_canonicalizer": "5b4e5133e51dfaf447c2de52caf1a9f50c8254d3",
+    "database_only_runtime_evidence_reader": "45cca8e03cf0641f2fbf45f3b3aca044f322989c",
+    "external_formal_binding_profile": "5fe20f988d2cd6ef038f54eec27e5a32ba6a396d"
+  },
+  "candidate_implementation_blobs": {
+    "private_s3_compatible_raw_retention_adapter": "dfa2c10266a5079842012426aed175851d30ca44",
+    "restricted_postgres_external_formal_evidence_ingress": "6f7b6450d4f671c75affc2c7aba45ed71cb518c5",
+    "postgres_minio_focused_acceptance": "1916143d1339d2d7e6bd3174d637f64d71ce9091"
+  },
+  "qualified_architecture": {
+    "collector_transport_precedes_retention": true,
+    "durable_private_hash_addressed_retention_precedes_decode": true,
+    "ea3_governed_decode_and_canonicalization_remains_authoritative": true,
+    "facts_writer_accepts_only_self_consistent_ea3_canonicalization_result": true,
+    "durable_raw_object_reverified_immediately_before_database_transaction": true,
+    "canonical_store": "public.facts",
+    "raw_store_class": "PRIVATE_S3_COMPATIBLE_CONTENT_ADDRESSED_OBJECT_STORE",
+    "raw_content_address_prefix": "mcft-cap09-formal-raw-v1/sha256",
+    "raw_payload_embedded_in_facts": false,
+    "raw_payload_publicly_publishable": false,
+    "parallel_canonical_evidence_store_created": false,
+    "database_schema_migration_required": false,
+    "runtime_provider_fetch_enabled": false
+  },
+  "restricted_ingress_authority": {
+    "scope": {
+      "tenant_id": "tenant_mcft_external",
+      "project_id": "project_mcft_cap09",
+      "group_id": "group_public_research",
+      "field_id": "field_kbs_mcse_t1r1",
+      "season_id": "season_2026_corn",
+      "zone_id": "zone_kbs_mcse_t1r1_formal_v1"
+    },
+    "record_type_binding_epistemic_profile": {
+      "soil_moisture_observation_v1": {
+        "binding_id": "kbs_lter_variate25_vwc_100mm_v1",
+        "epistemic_class": "OBSERVED"
+      },
+      "observed_rainfall_v1": {
+        "binding_id": "kbs_lter_raw_hourly_rain_mm_v1",
+        "epistemic_class": "OBSERVED"
+      },
+      "historical_et0_estimate_v1": {
+        "binding_id": "kbs_lter_asce_short_reference_et_hourly_v1",
+        "epistemic_class": "ESTIMATED"
+      },
+      "future_weather_assumption_v1": {
+        "binding_id": "noaa_ncep_gfs_pgrb2_kbs_nearest_72h_v1",
+        "epistemic_class": "ASSUMED"
+      },
+      "future_et0_assumption_v1": {
+        "binding_id": "noaa_ncep_gfs_asce_short_reference_et_same_cycle_72h_v1",
+        "epistemic_class": "ASSUMED"
+      }
+    },
+    "quality_status_allowed": ["PASS", "LIMITED"],
+    "historical_c8_scope_allowed": false,
+    "commercial_operation_evidence_allowed": false,
+    "replay_or_debug_truth_markers_allowed": false,
+    "raw_binary_in_canonical_fact_allowed": false
+  },
+  "integrity_barriers": {
+    "canonical_payload_sha256_recomputed": true,
+    "record_semantic_sha256_recomputed": true,
+    "ea3_source_record_hash_recomputed": true,
+    "raw_hash_ref_quality_binding_rechecked": true,
+    "raw_object_length_hash_retention_class_rechecked": true,
+    "same_source_identity_changed_semantics_fail_closed": true,
+    "exact_retry_idempotent": true
+  },
+  "focused_qualification": {
+    "postgresql_major": 18,
+    "s3_compatible_implementation": "MinIO",
+    "real_object_store_io_used": true,
+    "real_postgresql_io_used": true,
+    "private_bucket_anonymous_access_rejected": true,
+    "focused_case_count": 11,
+    "existing_runtime_database_reader_compatibility_proved": true,
+    "ea3_retention_before_decode_regression_proved": true,
+    "ea5b5c_runtime_orchestration_regression_proved": true
+  },
+  "effect_if_merged_to_protected_main": {
+    "ea5c1_implementation_qualified": true,
+    "ea5c_complete": false,
+    "persistent_formal_24h_raw_store_bound": false,
+    "formal_live_source_ingress_proved": false,
+    "formal_evidence_write_activation": false,
+    "formal_neon_write_performed_by_this_candidate": false,
+    "ea5d_authorized": false,
+    "ea5e_authorized": false,
+    "external_package_formal_eligible": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "commercial_closed_loop_connected": false,
+    "mcft_cap09_completed": false
+  },
+  "next_candidate_frontier_if_effective": "S6-EA5C2-FORMAL-DURABLE-STORE-BINDING-AND-LIVE-INGRESS-PROOF",
+  "hard_nonclaims": [
+    "CI_MINIO_IS_NOT_THE_FORMAL_24H_DURABLE_STORE",
+    "NO_FORMAL_NEON_WRITE_FROM_EA5C1_QUALIFICATION",
+    "NO_EA5C_COMPLETION_CLAIM",
+    "NO_EA5D_OR_EA5E_AUTHORIZATION",
+    "NO_A0_OR_RUNTIME_CONFIG_PERSISTENCE",
+    "NO_FORMAL_WINDOW_INPUT_MANIFEST",
+    "NO_FORMAL_O00_O23_START",
+    "NO_RECOMMENDATION_APPROVAL_AO_ACT_DISPATCH",
+    "NO_MODEL_ACTIVATION",
+    "NO_COMMERCIAL_CLOSED_LOOP_CONNECTION",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
