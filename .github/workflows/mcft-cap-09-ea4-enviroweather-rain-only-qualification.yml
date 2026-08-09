@@ -1,0 +1,78 @@
+name: mcft-cap-09-ea4-enviroweather-rain-only-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea4-enviroweather-rain-only-qualification.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-ENVIROWEATHER-RAIN-ONLY-QUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_ENVIROWEATHER_RAIN_ONLY_QUALIFICATION.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_ENVIROWEATHER_RAIN_ONLY_QUALIFICATION.mjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea4-rain-only-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  qualify-kbs-five-minute-rain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Validate exact rain-only qualification boundary
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_ENVIROWEATHER_RAIN_ONLY_QUALIFICATION.cjs
+      - name: Syntax-check rain-only probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_ENVIROWEATHER_RAIN_ONLY_QUALIFICATION.mjs
+      - name: Execute live rain-only qualification
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_ENVIROWEATHER_RAIN_ONLY_QUALIFICATION.mjs
+      - name: Verify governed rain adjudication
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const a=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-ENVIROWEATHER-RAIN-ONLY-QUALIFICATION-V1.json','utf8'));
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA4_ENVIROWEATHER_RAIN_ONLY_QUALIFICATION_RESULT.json','utf8'));
+          if(r.status!=='PASS')throw new Error('EA4RAIN_PROBE_EXECUTION_PASS_REQUIRED');
+          if(!['TECHNICALLY_QUALIFIED_PENDING_TIMEZONE_BINDING','REJECTED'].includes(r.qualification_status))throw new Error('EA4RAIN_QUALIFICATION_STATUS_REQUIRED');
+          const expected=r.qualification_status==='TECHNICALLY_QUALIFIED_PENDING_TIMEZONE_BINDING'?a.adjudication.pass_decision:a.adjudication.reject_decision;
+          if(r.decision!==expected)throw new Error('EA4RAIN_DECISION_MISMATCH');
+          if(r.raw_retention?.private_retention_verified!==true||r.raw_retention?.raw_body_uploaded!==false)throw new Error('EA4RAIN_RAW_RETENTION_REQUIRED');
+          if(r.station_identity_proven!==true||r.header_metadata?.name!=='pcpn_us')throw new Error('EA4RAIN_SOURCE_IDENTITY_OR_HEADER_REQUIRED');
+          if(r.timestamp_policy?.candidate_timezone_is_authority!==false||r.timestamp_policy?.explicit_timezone_binding_required!==true||r.timestamp_policy?.silent_utc_interpretation_performed!==false)throw new Error('EA4RAIN_TIMEZONE_AUTHORITY_OVERCLAIM');
+          if(r.rain_candidate?.missing_rain_treated_as_zero!==false||r.rain_candidate?.silent_imputation_performed!==false||r.rain_candidate?.negative_clipping_performed!==false)throw new Error('EA4RAIN_FAIL_CLOSED_RULE_DRIFT');
+          if(r.source_substitution_authorized!==false||r.timezone_authority_created!==false||r.source_architecture_amendment_required!==true||r.ea5_authorized!==false)throw new Error('EA4RAIN_PREMATURE_AUTHORITY');
+          if(r.terms?.public_raw_redistribution_authorized!==false||r.terms?.commercial_reuse_rights_established!==false||r.terms?.legal_opinion_claimed!==false)throw new Error('EA4RAIN_USE_RIGHTS_OVERCLAIM');
+          if(r.database_write_count!==0||r.formal_evidence_write_count!==0||r.public_raw_numeric_value_emission_count!==0||r.raw_body_uploaded!==false)throw new Error('EA4RAIN_WRITE_OR_RAW_PUBLICATION_FORBIDDEN');
+          console.log(JSON.stringify({status:'PASS',qualification_status:r.qualification_status,decision:r.decision,age_hours:r.rain_candidate?.latest_observed_age_hours,grid:r.rain_candidate?.grid,violations:r.violations,source_authority:false,ea5_authorized:false}));
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea4-enviroweather-rain-only-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA4_ENVIROWEATHER_RAIN_ONLY_QUALIFICATION_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA4_ENVIROWEATHER_RAIN_ONLY_QUALIFICATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
