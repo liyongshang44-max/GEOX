@@ -65,12 +65,7 @@ jobs:
           python -m eccodes selfcheck
           python - <<'PY'
           from importlib.metadata import version
-          expected = {
-            'eccodes': '2.47.0',
-            'eccodeslib': '2.47.3.23',
-            'numpy': '1.26.4',
-            'refet': '0.4.2',
-          }
+          expected = {'eccodes':'2.47.0','eccodeslib':'2.47.3.23','numpy':'1.26.4','refet':'0.4.2'}
           actual = {name: version(name) for name in expected}
           if actual != expected:
               raise SystemExit(f'EA4_DECODER_STACK_DRIFT:{actual}')
@@ -80,45 +75,41 @@ jobs:
       - name: Syntax-check EA4 live probe
         run: python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
 
-      - name: Validate exact EA4 governance boundary
+      - name: Validate exact EA4 rejection governance boundary
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.cjs
 
-      - name: Execute live KBS + GFS exact-head value qualification
+      - name: Re-prove live KBS raw-hourly freshness rejection
+        id: live
+        continue-on-error: true
         env:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
 
-      - name: Verify live qualification result
+      - name: Verify exact-head fail-closed freshness rejection
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+          MCFT_LIVE_STEP_OUTCOME: ${{ steps.live.outcome }}
         shell: node {0}
         run: |
           const fs = require('fs');
           const authority = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-LIVE-SOURCE-EXACT-HEAD-QUALIFICATION-V1.json','utf8'));
           const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_RESULT.json','utf8'));
-          if (result.status !== 'PASS') throw new Error('EA4_LIVE_RESULT_PASS_REQUIRED');
-          if (result.decision !== authority.live_qualification.success_decision) throw new Error('EA4_SUCCESS_DECISION_REQUIRED');
-          if (result.live_source_qualified !== true || result.gfs_72h_full_value_pipeline_qualified !== true || result.future_et0_72h_value_execution_qualified !== true) throw new Error('EA4_THREE_QUALIFICATIONS_REQUIRED');
-          if (result.future_weather?.point_count !== 72 || result.future_solar?.endpoint_count !== 73 || result.future_solar?.interval_count !== 72 || result.future_et0?.point_count !== 72 || result.future_et0?.finite_count !== 72) throw new Error('EA4_COMPLETE_72H_SERIES_REQUIRED');
-          if (result.future_weather?.precipitation_nonnegative !== true || result.future_solar?.quality_status !== 'LIMITED') throw new Error('EA4_VALUE_OR_SOLAR_QUALITY_DRIFT');
-          if (result.future_et0?.negative_clipping_performed !== false) throw new Error('EA4_ET0_CLIPPING_FORBIDDEN');
-          if (result.raw_retention?.ea5_durable_retention_still_required !== true || result.raw_retention?.raw_bytes_uploaded !== false || result.raw_retention?.private_root_publicly_emitted !== false) throw new Error('EA4_RAW_RETENTION_BOUNDARY_DRIFT');
-          if (!(result.raw_retention?.receipt_count > 0) || !/^sha256:[0-9a-f]{64}$/.test(result.raw_retention?.receipt_chain_sha256 || '')) throw new Error('EA4_RAW_RETENTION_RECEIPT_CHAIN_REQUIRED');
-          if (result.ea2_package_formal_eligible !== false || result.ea5_candidate_development_authorized !== true) throw new Error('EA4_SUCCESSOR_BOUNDARY_DRIFT');
-          if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0 || result.runtime_public_provider_fetch_count !== 0 || result.public_raw_value_emission_count !== 0 || result.formal_window_started !== false || result.mcft_cap09_completed !== false) throw new Error('EA4_WRITE_OR_FORMAL_START_FORBIDDEN');
-          for (const value of [
-            result.kbs?.soil_sequence_sha256,
-            result.kbs?.rain_sequence_sha256,
-            result.kbs?.historical_et0_sequence_sha256,
-            result.future_weather?.temperature_c_sha256,
-            result.future_weather?.relative_humidity_percent_sha256,
-            result.future_weather?.wind_2m_m_s_sha256,
-            result.future_weather?.precipitation_mm_sha256,
-            result.future_solar?.endpoint_sequence_sha256,
-            result.future_solar?.solar_energy_sequence_sha256,
-            result.future_et0?.sequence_sha256,
-          ]) if (!/^sha256:[0-9a-f]{64}$/.test(value || '')) throw new Error('EA4_SEQUENCE_HASH_REQUIRED');
-          console.log(JSON.stringify({status:'PASS',decision:result.decision,tick:result.tick_utc,cycle:result.gfs_chronology?.selected_cycle_utc,future_weather_points:72,future_et0_points:72,formal_eligible:false,ea5_candidate_development_authorized:true}));
+          if (authority.record_status !== 'EA4_LIVE_SOURCE_EXACT_HEAD_REJECTION_CANDIDATE_NOT_EFFECTIVE') throw new Error('EA4_REJECTION_STATUS_REQUIRED');
+          if (authority.live_qualification?.current_result !== 'REJECTED_EA4_KBS_RAW_HOURLY_FRESHNESS_AUTHORITY') throw new Error('EA4_FROZEN_REJECTION_RESULT_REQUIRED');
+          if (authority.live_qualification?.final_head_must_reprove_frozen_rejection !== true) throw new Error('EA4_FINAL_HEAD_REJECTION_REPROOF_REQUIRED');
+          if (process.env.MCFT_LIVE_STEP_OUTCOME !== 'failure') throw new Error('EA4_LIVE_STEP_MUST_FAIL_CLOSED');
+          if (result.subject_sha !== process.env.MCFT_SUBJECT_SHA) throw new Error('EA4_EXACT_SUBJECT_REPROOF_REQUIRED');
+          if (result.status !== 'FAIL') throw new Error('EA4_RESULT_FAIL_REQUIRED');
+          if (result.decision !== authority.live_qualification.failure_decision) throw new Error('EA4_REJECTION_DECISION_DRIFT');
+          const prefix = authority.live_qualification.rejection_reproof_error_prefix;
+          if (typeof result.error !== 'string' || !result.error.startsWith(prefix)) throw new Error(`EA4_REJECTION_REASON_DRIFT:${result.error}`);
+          if (result.gfs_chronology !== undefined || result.future_weather !== undefined || result.future_solar !== undefined || result.future_et0 !== undefined) throw new Error('EA4_GFS_OR_ET0_MUST_NOT_EXECUTE_AFTER_KBS_FRESHNESS_REJECTION');
+          if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0 || result.runtime_public_provider_fetch_count !== 0 || result.public_raw_value_emission_count !== 0 || result.formal_window_started !== false || result.mcft_cap09_completed !== false) throw new Error('EA4_REJECTION_WRITE_OR_FORMAL_START_FORBIDDEN');
+          if (authority.authority_effect?.live_source_qualified !== false || authority.authority_effect?.gfs_72h_full_value_pipeline_qualified !== false || authority.authority_effect?.future_et0_72h_value_execution_qualified !== false || authority.authority_effect?.ea2_package_formal_eligible !== false || authority.authority_effect?.ea5_candidate_development_authorized !== false) throw new Error('EA4_REJECTION_AUTHORITY_EFFECT_DRIFT');
+          if (authority.authority_effect?.new_source_architecture_adjudication_required_before_ea5 !== true) throw new Error('EA4_NEW_SOURCE_ADJUDICATION_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',adjudication:'REJECTED_EA4_KBS_RAW_HOURLY_FRESHNESS_AUTHORITY',subject:result.subject_sha,tick:result.tick_utc,error:result.error,gfs_executed:false,future_et0_executed:false,ea5_authorized:false}));
 
       - uses: actions/upload-artifact@v4
         if: always()
