@@ -1,0 +1,53 @@
+{
+  "schema_version": "geox_mcft_cap09_ea4_kbs_variate_hourly_role_alignment_v1",
+  "diagnostic_id": "GEOX-MCFT-CAP-09-EA4-KBS-VARIATE-HOURLY-ROLE-ALIGNMENT-V1",
+  "record_status": "DIAGNOSTIC_ONLY_NOT_SOURCE_AUTHORITY",
+  "base_main_sha": "b31b024c17b617f0e1c36010c8c3926682bd6533",
+  "ea1e_blob_sha": "69835c9877474f4d46980487f6e5789add803df2",
+  "ea1h_blob_sha": "ea17427e2ac870664a2a9166761b907dfe807daa",
+  "provider": "KBS_LTER",
+  "official_host": "lter.kbs.msu.edu",
+  "unmapped_endpoint_ids": [23, 52],
+  "endpoint_template": "https://lter.kbs.msu.edu/weather/variates/{id}",
+  "raw_hourly_csv": "https://lter.kbs.msu.edu/datatables/13.csv",
+  "reference_timestamp_column": "datetime_utc",
+  "reference_roles": {
+    "SOLAR_RADIATION": {"column":"solrad_avg","aggregation_methods":["MEAN","LATEST"]},
+    "RAINFALL": {"column":"rain_mm","aggregation_methods":["SUM"]},
+    "ABSOLUTE_HUMIDITY_OR_PARTIAL_PRESSURE": {"column":"ah","aggregation_methods":["MEAN","LATEST"]},
+    "BAROMETRIC_PRESSURE": {"column":"barometer_avg","aggregation_methods":["MEAN","LATEST"]}
+  },
+  "allowed_hour_alignment_offsets": [-1, 0, 1],
+  "identity_thresholds": {
+    "minimum_pair_count": 48,
+    "minimum_r_squared": 0.995,
+    "maximum_affine_nrmse": 0.08,
+    "minimum_runner_up_r_squared_gap": 0.05,
+    "rainfall_minimum_reference_nonzero_pairs": 3
+  },
+  "method_boundary": {
+    "arbitrary_transform_search_authorized": false,
+    "only_affine_fit_for_role_identity_metric": true,
+    "affine_fit_may_not_become_canonical_conversion_authority": true,
+    "stale_raw_hourly_may_be_used_as_role_identity_reference": true,
+    "stale_raw_hourly_may_be_promoted_as_live_source": false
+  },
+  "retention_policy": {
+    "private_raw_retention_before_parse_required": true,
+    "raw_payload_upload_authorized": false,
+    "raw_numeric_values_in_artifact_authorized": false,
+    "derived_fit_metrics_allowed": true
+  },
+  "authority_effect": {
+    "endpoint_role_authority_created": false,
+    "solar_source_authority_created": false,
+    "rainfall_source_authority_created": false,
+    "timezone_authority_created": false,
+    "source_substitution_authorized": false,
+    "ea5_authorized": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false
+  }
+}
