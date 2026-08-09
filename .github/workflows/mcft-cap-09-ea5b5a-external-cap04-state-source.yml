@@ -76,7 +76,11 @@ jobs:
           pnpm --filter @geox/server run typecheck 2>&1 | tee acceptance-output/EA5B5A_SERVER_TYPECHECK.log
 
       - name: Prove External CAP04 input and canonical State-source authority
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5A_EXTERNAL_CAP04_STATE_SOURCE.ts
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5A_EXTERNAL_CAP04_STATE_SOURCE.ts 2>&1 | tee acceptance-output/EA5B5A_FOCUSED_ACCEPTANCE.log
 
       - name: Re-prove EA5B2 CAP04 External soil binding threading
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B2_CAP04_EXTERNAL_BINDING_THREADING.ts
@@ -118,5 +122,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_EA5B5A_EXTERNAL_CAP04_STATE_SOURCE_GOVERNANCE_RESULT.json
             acceptance-output/MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json
             acceptance-output/EA5B5A_SERVER_TYPECHECK.log
+            acceptance-output/EA5B5A_FOCUSED_ACCEPTANCE.log
           if-no-files-found: warn
           retention-days: 90
