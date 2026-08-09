@@ -426,7 +426,6 @@ async function main(): Promise<void> {
     candidate_records: [...candidates, operationEvidence],
     crop_stage_context: crop,
   }), /EXTERNAL_CAP04_COMMERCIAL_OPERATION_EVIDENCE_FORBIDDEN/);
-  ok("External Formal CAP04 rejects commercial irrigation execution/plan evidence at the authority boundary");
 
   const badCrop = structuredClone(crop);
   badCrop.determinism_hash = "sha256:wrong-crop-context";
@@ -448,7 +447,7 @@ async function main(): Promise<void> {
     candidate_records: candidates,
     crop_stage_context: crop,
   }), /EXTERNAL_CAP04_INPUT_SCOPE_MISMATCH/);
-  ok("Crop hash drift and External six-key scope substitution both fail closed before any compatibility math");
+  ok("Commercial operation evidence, crop hash drift, and External six-key scope substitution all fail closed before any compatibility math");
 
   assert.equal(pass, 8);
   console.log(`MCFT-CAP-09 EA5B5A External CAP04 State Source: ${pass} PASS, 0 FAIL`);
