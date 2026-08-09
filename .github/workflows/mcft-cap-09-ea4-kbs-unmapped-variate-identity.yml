@@ -1,0 +1,72 @@
+name: mcft-cap-09-ea4-kbs-unmapped-variate-identity
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea4-kbs-unmapped-variate-identity.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-KBS-UNMAPPED-VARIATE-IDENTITY-DISCOVERY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_KBS_UNMAPPED_VARIATE_IDENTITY.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_KBS_UNMAPPED_VARIATE_IDENTITY.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+jobs:
+  discover-unmapped-variate-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Resolve exact discovery subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          echo "subject_sha=${{ github.event.pull_request.head.sha || github.sha }}" >> "$GITHUB_OUTPUT"
+      - name: Validate exact no-authority boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_KBS_UNMAPPED_VARIATE_IDENTITY.cjs
+      - name: Syntax-check safe residual-role probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_KBS_UNMAPPED_VARIATE_IDENTITY.mjs
+      - name: Discover endpoint 23/52 identities without values
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_KBS_UNMAPPED_VARIATE_IDENTITY.mjs
+      - name: Verify discovery nonclaims
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA4_KBS_UNMAPPED_VARIATE_IDENTITY_RESULT.json','utf8'));
+          if(r.status!=='PASS') throw new Error('EA4UV_PASS_REQUIRED');
+          if(!Array.isArray(r.endpoint_results)||r.endpoint_results.length!==2) throw new Error('EA4UV_TWO_ENDPOINT_RESULTS_REQUIRED');
+          if(r.endpoint_results.map(x=>x.endpoint_id).sort((a,b)=>a-b).join(',')!=='23,52') throw new Error('EA4UV_ENDPOINT_SET_REQUIRED');
+          if(r.source_authority_created!==false||r.solar_source_authority_created!==false||r.timezone_authority_created!==false||r.source_substitution_authorized!==false||r.ea5_authorized!==false) throw new Error('EA4UV_NONCLAIM_DRIFT');
+          if(r.raw_numeric_sensor_values_emitted!==false||r.rendered_numeric_values_emitted!==false||r.raw_json_body_persisted!==false||r.rendered_dom_persisted!==false) throw new Error('EA4UV_DATA_MINIMIZATION_DRIFT');
+          console.log(JSON.stringify({status:'PASS',decision:r.decision,endpoint_roles:r.endpoint_results.map(x=>({endpoint_id:x.endpoint_id,resolved_role_id:x.resolved_role_id,candidate_role_ids:x.candidate_role_ids})),solar_excluded:r.solar_excluded_from_current_high_frequency_endpoint_set}));
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea4-unmapped-variate-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA4_KBS_UNMAPPED_VARIATE_IDENTITY_STATIC_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA4_KBS_UNMAPPED_VARIATE_IDENTITY_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
