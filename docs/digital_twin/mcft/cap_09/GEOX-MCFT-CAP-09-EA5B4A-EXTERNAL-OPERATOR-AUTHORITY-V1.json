@@ -1,0 +1,102 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5b4a_external_operator_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5B4A-EXTERNAL-OPERATOR-AUTHORITY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA5B4A",
+  "record_status": "EA5B4A_EXTERNAL_OPERATOR_AUTHORITY_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "391b809b66943f079d90209641e1cae892713b37",
+  "predecessor_effectiveness": {
+    "ea5b3_merge_sha": "391b809b66943f079d90209641e1cae892713b37",
+    "ea5b3_candidate_head_sha": "02dc2004bbe75a23a2777d90cbc10136cde3409e",
+    "ea5b3_authority_blob_sha": "bdaf311cc23c78fb45079af65fcd30a7b794fec3",
+    "ea5b2_authority_blob_sha": "09963e6bc3a64fc16d54c5f27a2a00228e4b5e24",
+    "external_binding_profile_blob_sha": "5fe20f988d2cd6ef038f54eec27e5a32ba6a396d",
+    "historical_assimilation_posterior_blob_sha": "1031c2f534c47214f5a29326db9047e1c7c3566a",
+    "historical_cap04_single_tick_service_blob_sha": "5ca0fdbafe3cb244db92540e0cce4302506a965c",
+    "historical_a0_bootstrap_service_required_blob_sha": "7d2db571b421f1cbfe7fd1192398297def5307c2"
+  },
+  "implementation_blobs": {
+    "external_formal_assimilation_authority_view": "06c94f7778995e94ba6008c0a31f1273a5c620a2",
+    "focused_acceptance": "a997e49c1f6d142b0d8a4177388de2c8c59893e9"
+  },
+  "external_operator_authority": {
+    "soil_binding_id": "kbs_lter_variate25_vwc_100mm_v1",
+    "observation_operator_id": "POINT_100MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1",
+    "measurement_depth_mm": 100,
+    "h": 1,
+    "spatial_support": "NEAR_SITE_POINT_SUPPORT",
+    "root_zone_representativeness": "PARTIAL",
+    "direct_state_equivalence": false,
+    "direct_field_equivalence": false,
+    "direct_root_zone_equivalence": false,
+    "model_parameter_authority": "MODEL_PRIOR_FROM_CAP08",
+    "field_calibration_status": "NOT_FIELD_CALIBRATED"
+  },
+  "compatibility_math_boundary": {
+    "historical_operator_metadata_id": "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1",
+    "historical_h1_numerical_math_reused": true,
+    "historical_posterior_mutated": false,
+    "external_operator_changes_numerical_result": false,
+    "numerical_identity_digest_required": true,
+    "canonical_persistence_authorized": false
+  },
+  "qualification_requirements": {
+    "focused_seven_case_acceptance_passes": true,
+    "kbs_binding_maps_to_external_100mm_operator": true,
+    "numerical_posterior_identity_preserved": true,
+    "historical_compatibility_posterior_unchanged": true,
+    "c8_binding_cannot_claim_external_operator": true,
+    "blank_binding_fails_closed": true,
+    "selected_observation_ref_mismatch_fails_closed": true,
+    "no_observation_case_does_not_invent_observation": true,
+    "ea5b2_external_binding_regression_passes": true,
+    "historical_cap03_assimilation_regression_passes": true,
+    "server_typecheck_passes": true,
+    "cap08_g3_frozen_core_successor_regression_passes": true,
+    "database_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "public_provider_request_count": 0
+  },
+  "not_implemented_in_ea5b4a": {
+    "canonical_external_assimilation_persistence": true,
+    "external_cap04_state_source_builder": true,
+    "external_crop_context_canonical_execution_threading": true,
+    "external_a0_canonical_record_set_builder": true,
+    "external_a0_bootstrap_persistence": true,
+    "durable_private_raw_retention": true,
+    "restricted_formal_evidence_writer": true,
+    "external_24_config_chain_persistence": true,
+    "formal_window_input_manifest": true,
+    "formal_o00_start": true
+  },
+  "success_effect_if_merged": {
+    "external_assimilation_operator_authority_view_effective": true,
+    "external_100mm_operator_provenance_qualified": true,
+    "external_cap04_canonical_execution_effective": false,
+    "external_a0_profile_effective": false,
+    "ea5b4_complete": false,
+    "ea5b_external_runtime_profile_complete": false,
+    "external_package_formal_eligible": false,
+    "ea5c_authorized": false,
+    "formal_o00_start_authorized": false,
+    "mcft_cap09_completed": false
+  },
+  "next_legal_successor_if_effective": "S6-EA5B4B-EXTERNAL-A0-CANONICAL-PROVENANCE-PROFILE",
+  "hard_nonclaims": [
+    "NO_HISTORICAL_CAP03_MATH_MUTATION",
+    "NO_OPERATOR_METADATA_AS_NUMERICAL_MODEL_CHANGE",
+    "NO_CANONICAL_PERSISTENCE_FROM_EA5B4A",
+    "NO_EXTERNAL_CAP04_CANONICAL_EXECUTION_FROM_EA5B4A",
+    "NO_EXTERNAL_A0_CANONICAL_PROFILE_FROM_EA5B4A",
+    "NO_HISTORICAL_CAP08_A0_CORE_MUTATION",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_PUBLIC_PROVIDER_REQUEST",
+    "NO_EA5C_AUTHORIZATION",
+    "NO_FORMAL_PACKAGE_ELIGIBILITY",
+    "NO_FORMAL_O00_O23_START",
+    "NO_COMMERCIAL_CLOSED_LOOP_CONNECTION",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
