@@ -64,6 +64,15 @@ type MemberBuildInputV1 = {
   revision_id?: string;
 };
 
+type ScopeComparableV1 = {
+  tenant_id: string;
+  project_id: string;
+  group_id: string | null;
+  field_id: string;
+  season_id: string | null;
+  zone_id: string | null;
+};
+
 function requiredStringV1(value: unknown, code: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(code);
   return value;
@@ -80,7 +89,7 @@ function addOneHourIsoV1(logicalTime: string): string {
   return new Date(Date.parse(logicalTime) + 60 * 60 * 1000).toISOString();
 }
 
-function exactScopeV1(actual: TwinScopeKeyV1, expected: TwinScopeKeyV1, code: string): void {
+function exactScopeV1(actual: ScopeComparableV1, expected: TwinScopeKeyV1, code: string): void {
   for (const field of ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"] as const) {
     if (actual[field] !== expected[field]) throw new Error(`${code}:${field}`);
   }
