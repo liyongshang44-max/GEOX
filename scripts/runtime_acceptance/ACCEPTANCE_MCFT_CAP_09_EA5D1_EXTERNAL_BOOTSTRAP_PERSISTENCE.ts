@@ -30,6 +30,7 @@ import { buildMcftCap03R2V2FixtureV1 } from "./mcft_cap_03_r2_v2_revalidation_fi
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const DATABASE_URL = process.env.EA5D1_DATABASE_URL ?? "postgres://postgres:postgres@127.0.0.1:55432/ea5d1";
 const CREATED_AT = "2026-08-10T00:30:00.000Z";
+const LEASE_OWNER = "ea5d1-ci-bootstrap-writer";
 
 function externalizeSoilV1(record: CanonicalReplayEvidenceRecordV1, logicalTime: string): CanonicalReplayEvidenceRecordV1 {
   const observedAt = new Date(Date.parse(logicalTime) - 20 * 60_000).toISOString();
@@ -148,7 +149,7 @@ async function main(): Promise<void> {
     const first = await service.execute({
       bundle,
       created_at: CREATED_AT,
-      lease_owner: "ea5d1-ci-bootstrap-writer",
+      lease_owner: LEASE_OWNER,
       lease_duration_seconds: 300,
     });
     assert.equal(first.status, "INSERTED");
@@ -253,7 +254,7 @@ async function main(): Promise<void> {
     const second = await service.execute({
       bundle,
       created_at: new Date(Date.parse(CREATED_AT) + 60_000).toISOString(),
-      lease_owner: "ea5d1-ci-bootstrap-retry",
+      lease_owner: LEASE_OWNER,
       lease_duration_seconds: 300,
     });
     assert.equal(second.status, "EXISTING_IDEMPOTENT_SUCCESS");
