@@ -1,0 +1,116 @@
+name: mcft-cap-09-ea5c1-durable-raw-restricted-ingress
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml'
+      - 'apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+jobs:
+  ea5c1-durable-raw-restricted-ingress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5c1
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5c1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start private S3-compatible raw store
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name ea5c1-minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin123 \
+            minio/minio:latest server /data
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
+            if [ "$attempt" = 60 ]; then docker logs ea5c1-minio; exit 1; fi
+            sleep 1
+          done
+          docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -ceu '
+            mc alias set local http://127.0.0.1:9000 minioadmin minioadmin123
+            mc mb --ignore-existing local/geox-mcft-cap09-formal-raw-v1
+            mc anonymous set private local/geox-mcft-cap09-formal-raw-v1
+            mc stat local/geox-mcft-cap09-formal-raw-v1
+          '
+
+      - name: Typecheck server
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          pnpm --filter @geox/server run typecheck 2>&1 | tee acceptance-output/EA5C1_SERVER_TYPECHECK.log
+
+      - name: Prove durable raw retention and restricted canonical Evidence ingress
+        shell: bash
+        env:
+          EA5C1_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55432/ea5c1
+          EA5C1_S3_ENDPOINT: http://127.0.0.1:9000
+          EA5C1_S3_BUCKET: geox-mcft-cap09-formal-raw-v1
+          EA5C1_S3_ACCESS_KEY: minioadmin
+          EA5C1_S3_SECRET_KEY: minioadmin123
+        run: |
+          set -o pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts 2>&1 | tee acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
+
+      - name: Re-prove EA3 retention-before-decode collector boundary
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.ts
+
+      - name: Re-prove EA5B5C persistence-free production orchestration
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts
+
+      - name: Verify raw bucket stays private
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl -sS -o /tmp/ea5c1-anon-body -w '%{http_code}' http://127.0.0.1:9000/geox-mcft-cap09-formal-raw-v1/ || true)"
+          test "$status" = "403"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea5c1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/EA5C1_SERVER_TYPECHECK.log
+            acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
+          if-no-files-found: warn
+          retention-days: 30
