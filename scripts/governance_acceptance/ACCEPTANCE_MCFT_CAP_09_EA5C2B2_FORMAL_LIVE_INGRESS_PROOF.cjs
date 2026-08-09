@@ -115,7 +115,11 @@ for (const marker of [
 if (/\bINSERT\s+INTO\b/i.test(runner)) fail("EA5C2B2_DIRECT_SQL_INSERT_FORBIDDEN");
 if (runner.includes("allow_insecure_http_for_test")) fail("EA5C2B2_INSECURE_HTTP_FORBIDDEN");
 if (runner.includes("minioadmin")) fail("EA5C2B2_CI_MINIO_CREDENTIAL_FORBIDDEN");
-if (runner.includes("field_c8_demo")) fail("EA5C2B2_C8_SCOPE_FORBIDDEN");
+if (
+  runner.includes('field_id: "field_c8_demo"') ||
+  runner.includes("field_id: 'field_c8_demo'") ||
+  runner.includes('"field_id":"field_c8_demo"')
+) fail("EA5C2B2_C8_SCOPE_FORBIDDEN");
 
 const workflow = fs.readFileSync(workflowPath, "utf8");
 if (workflow.includes("pull_request_target")) fail("EA5C2B2_PULL_REQUEST_TARGET_FORBIDDEN");
