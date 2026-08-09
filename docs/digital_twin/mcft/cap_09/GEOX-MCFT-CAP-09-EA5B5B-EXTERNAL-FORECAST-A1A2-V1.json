@@ -1,0 +1,69 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5b5b_external_forecast_a1a2_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5B5B-EXTERNAL-FORECAST-A1A2-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "S6-EA5B5B-EXTERNAL-CAP04-FORECAST-AND-A1A2-CANONICALIZATION",
+  "base_main_sha": "f4c27c69b91f55494a390e247ceffe437795ee69",
+  "authority_predecessors": {
+    "ea5b5a_external_cap04_state_source_blob": "3f4713d52272eae3fce3b05f5ab21316b87b257f"
+  },
+  "implementation_blobs": {
+    "external_forecast_authority_v1": "cb334a55f7649a95de75a26ef30e4a5ee06fd53c",
+    "external_a_record_set_builder_v1": "436a74fe1395eb5123807c148b3b6229b120cf61",
+    "qualification_fixture": "ab47b2412e003921d1a94fa82017d405006e59f1",
+    "focused_acceptance": "3e1c4b5966524c33a144033510d97e200d6202ad"
+  },
+  "qualified_authority": {
+    "runtime_mode": "SHADOW_ONLINE_FORMAL_QUALIFICATION_ONLY",
+    "model_parameter_authority": "MODEL_PRIOR_FROM_CAP08",
+    "field_calibration_status": "NOT_FIELD_CALIBRATED",
+    "forecast_math_origin": "FROZEN_CAP04_COMPATIBILITY_KERNEL_NON_CANONICAL_PRODUCER",
+    "external_crop_authority_rebound_before_canonicalization": true,
+    "completed_forecast_numerical_identity_preserved": true,
+    "completed_forecast_horizon_hours": 72,
+    "a1_completed_record_set_candidate": true,
+    "a2_blocked_record_set_candidate": true,
+    "a1_a2_terminal_tick_uniqueness_domain_preserved": true,
+    "tick_checkpoint_health_external_authority": true,
+    "scenario_set_created": false,
+    "recommendation_created": false,
+    "action_created": false,
+    "replay_truth_markers_forbidden": true
+  },
+  "focused_qualification": {
+    "expected_pass_count": 8,
+    "completed_forecast_external_crop_authority": true,
+    "completed_forecast_72_point_numeric_trace_identity": true,
+    "a1_eight_member_graph_valid": true,
+    "a1_recovery_authority_external": true,
+    "a1_deterministic_identity": true,
+    "blocked_forecast_external_crop_authority": true,
+    "a2_blocked_recovery_semantics_valid": true,
+    "a1_a2_mutual_exclusion_domain_preserved": true,
+    "crop_replay_scope_drift_fail_closed": true
+  },
+  "effect_boundary": {
+    "external_cap04_forecast_authority_qualified": true,
+    "external_cap04_a1_a2_record_set_qualified": true,
+    "canonical_persistence_authorized": false,
+    "external_cap04_persistence_effective": false,
+    "ea5b_completion_audit_required": true,
+    "ea5b_external_runtime_profile_complete": false,
+    "ea5c_authorized": false,
+    "ea5d_authorized": false,
+    "ea5e_authorized": false,
+    "external_package_formal_eligible": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "database_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "public_provider_request_count": 0,
+    "scenario_write_count": 0,
+    "recommendation_write_count": 0,
+    "action_write_count": 0,
+    "mcft_cap09_completed": false
+  },
+  "qualification_only_fixture_notice": "The focused fixture uses explicit in-memory qualification refs/hashes and Externalized historical fixture structure. These values are never persisted and are not claims about EA2/EA5A Formal facts.",
+  "next_frontier": "S6-EA5B-CLOSURE-AUDIT-AND-EFFECTIVENESS"
+}
