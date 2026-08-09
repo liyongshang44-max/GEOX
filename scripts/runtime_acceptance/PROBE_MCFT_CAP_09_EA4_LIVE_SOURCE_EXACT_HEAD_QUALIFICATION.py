@@ -106,7 +106,7 @@ def request_bytes(url: str, code: str, max_bytes: int, headers: dict[str, str] |
                 body = response.read(max_bytes + 1)
                 require(len(body) <= max_bytes, f"{code}_BODY_TOO_LARGE")
                 final = urlparse(response.geturl())
-                require(final.scheme == "https:", f"{code}_FINAL_HTTPS_REQUIRED")
+                require(final.scheme == "https", f"{code}_FINAL_HTTPS_REQUIRED")
                 return int(response.status), response.headers, body, response.geturl()
         except (HTTPError, URLError, TimeoutError) as exc:
             last = exc
@@ -187,13 +187,11 @@ def select_cycle(tick: datetime):
             require(final.hostname == "nomads.ncep.noaa.gov" and final.path == urlparse(url).path, "EA4_DIRECTORY_IDENTITY_DRIFT")
             retain_raw("GFS_DIRECTORY_LISTING", iso(cycle), body)
             entries = parse_directory(body)
-            # EA1K authority selects latest complete pgrb2 cycle first.
             for lead in range(support, lead_end + 1):
                 for name in pgrb2_names(cycle, lead):
                     match = entries.get(name, [])
                     require(len(match) == 1 and match[0]["size"] > 0, f"EA4_PGRB2_DIRECTORY_ENTRY_MISSING:{name}")
                     require(match[0]["upper"] <= tick, f"EA4_PGRB2_DIRECTORY_ENTRY_AFTER_TICK:{name}")
-            # Same selected cycle must also have sflux support+targets before tick; no older-cycle substitution.
             for lead in range(support, lead_end + 1):
                 for name in sflux_names(cycle, lead):
                     match = entries.get(name, [])
@@ -202,7 +200,6 @@ def select_cycle(tick: datetime):
             return {"cycle": cycle, "lead_start": lead_start, "lead_end": lead_end, "support": support, "directory_sha256": sha256_bytes(body), "rejections": rejections}
         except Exception as exc:
             rejections.append({"cycle": iso(cycle), "reason": str(exc)[:240]})
-            # If pgrb2 was complete but sflux failed this is a same-cycle hard fail, not an older-cycle fallback.
             if "EA4_SFLUX_" in str(exc):
                 raise RuntimeError(f"EA4_SELECTED_PGRB2_CYCLE_SFLUX_NOT_READY:{iso(cycle)}:{str(exc)}")
     raise RuntimeError("EA4_NO_COMPLETE_GFS_CYCLE:" + json.dumps(rejections, separators=(",", ":")))
