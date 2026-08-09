@@ -70,7 +70,11 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_G3_BOUNDARY.cjs
 
       - name: Typecheck server
-        run: pnpm --filter @geox/server run typecheck
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          pnpm --filter @geox/server run typecheck 2>&1 | tee acceptance-output/EA5B3_SERVER_TYPECHECK.log
 
       - name: Prove External canonical Runtime Config and CAP04 compatibility resolver
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B3_EXTERNAL_RUNTIME_CONFIG_RESOLVER.ts
@@ -103,5 +107,6 @@ jobs:
           path: |
             acceptance-output/MCFT_CAP_09_EA5B3_EXTERNAL_RUNTIME_CONFIG_RESOLVER_GOVERNANCE_RESULT.json
             acceptance-output/MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json
+            acceptance-output/EA5B3_SERVER_TYPECHECK.log
           if-no-files-found: warn
           retention-days: 90
