@@ -1,7 +1,7 @@
 // MCFT-CAP-09 S6-EA5C1 restricted canonical External Evidence ingress.
 // Boundary: append-only public.facts writer for the exact Amendment-05 External scope/five-source profile.
-// A durable raw object verification MUST succeed before any facts transaction is opened.
-// This module never writes Runtime Config, State, Forecast, Scenario, Recommendation, Action, or scheduler state.
+// Only a self-consistent EA3 canonicalization result may enter this writer, and durable raw verification
+// MUST succeed before any facts transaction is opened.
 
 import crypto from "node:crypto";
 import type { Pool } from "pg";
@@ -15,14 +15,15 @@ import {
   MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
 } from "../../domain/twin_runtime/external_formal_evidence_binding_profile_v1.js";
 import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../domain/twin_runtime/external_formal_runtime_config_v1.js";
-import type {
-  CanonicalReplayEvidenceRecordV1,
-  TwinScopeKeyV1,
-} from "../../runtime/twin_runtime/ports.js";
+import {
+  MCFT_CAP09_EXTERNAL_EVIDENCE_PIPELINE_VERSION_V1,
+  type CanonicalizedExternalEvidenceResultV1,
+} from "../../external_evidence/mcft_cap09_external_collector_canonicalizer_v1.js";
 import type {
   RawEvidenceRetentionVerificationPortV1,
   VerifyRetainedRawEvidenceInputV1,
 } from "../../external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.js";
+import type { CanonicalReplayEvidenceRecordV1, TwinScopeKeyV1 } from "../../runtime/twin_runtime/ports.js";
 
 export const MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_INGRESS_ID_V1 =
   "MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_INGRESS_V1" as const;
@@ -49,31 +50,11 @@ type EvidenceAuthorityV1 = {
 };
 
 const AUTHORITY_BY_RECORD_TYPE_V1: Readonly<Record<string, EvidenceAuthorityV1>> = {
-  soil_moisture_observation_v1: {
-    binding_id: MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
-    epistemic_class: "OBSERVED",
-    event_time_field: "observed_at",
-  },
-  observed_rainfall_v1: {
-    binding_id: MCFT_CAP09_EXTERNAL_FORMAL_RAINFALL_BINDING_ID_V1,
-    epistemic_class: "OBSERVED",
-    event_time_field: "interval_end",
-  },
-  historical_et0_estimate_v1: {
-    binding_id: MCFT_CAP09_EXTERNAL_FORMAL_HISTORICAL_ET0_BINDING_ID_V1,
-    epistemic_class: "ESTIMATED",
-    event_time_field: "interval_end",
-  },
-  future_weather_assumption_v1: {
-    binding_id: MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1,
-    epistemic_class: "ASSUMED",
-    event_time_field: "issued_at",
-  },
-  future_et0_assumption_v1: {
-    binding_id: MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,
-    epistemic_class: "ASSUMED",
-    event_time_field: "issued_at",
-  },
+  soil_moisture_observation_v1: { binding_id: MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1, epistemic_class: "OBSERVED", event_time_field: "observed_at" },
+  observed_rainfall_v1: { binding_id: MCFT_CAP09_EXTERNAL_FORMAL_RAINFALL_BINDING_ID_V1, epistemic_class: "OBSERVED", event_time_field: "interval_end" },
+  historical_et0_estimate_v1: { binding_id: MCFT_CAP09_EXTERNAL_FORMAL_HISTORICAL_ET0_BINDING_ID_V1, epistemic_class: "ESTIMATED", event_time_field: "interval_end" },
+  future_weather_assumption_v1: { binding_id: MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1, epistemic_class: "ASSUMED", event_time_field: "issued_at" },
+  future_et0_assumption_v1: { binding_id: MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1, epistemic_class: "ASSUMED", event_time_field: "issued_at" },
 };
 
 function requiredTextV1(value: unknown, code: string): string {
@@ -114,115 +95,109 @@ function assertNoForbiddenMarkersV1(record: CanonicalReplayEvidenceRecordV1): vo
     canonical_payload: record.canonical_payload,
   });
   for (const marker of [
-    "CONTROLLED_SYNTHETIC_REPLAY_PROXY",
-    "CONTROLLED_REPLAY",
-    '"runtime_mode":"REPLAY"',
-    "field_c8_demo",
-    "SIMULATED_DEV_ONLY",
-    "DEBUG_ONLY",
+    "CONTROLLED_SYNTHETIC_REPLAY_PROXY", "CONTROLLED_REPLAY", '"runtime_mode":"REPLAY"',
+    "field_c8_demo", "SIMULATED_DEV_ONLY", "DEBUG_ONLY",
   ]) {
     if (text.includes(marker)) throw new Error(`EA5C1_REPLAY_OR_DEBUG_AUTHORITY_FORBIDDEN:${marker}`);
   }
 }
 
-function rawProofV1(record: CanonicalReplayEvidenceRecordV1): VerifyRetainedRawEvidenceInputV1 & { retained_at: string } {
-  const sourcePayload = record.source_payload;
-  if (!sourcePayload || typeof sourcePayload !== "object" || Array.isArray(sourcePayload)) {
-    throw new Error("EA5C1_SOURCE_PAYLOAD_REQUIRED");
-  }
-  const raw = (sourcePayload as Record<string, unknown>).raw_provenance;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("EA5C1_RAW_PROVENANCE_REQUIRED");
-  const provenance = raw as Record<string, unknown>;
-  const rawSha256 = requiredTextV1(provenance.raw_sha256, "EA5C1_RAW_SHA256_REQUIRED");
-  if (!/^sha256:[0-9a-f]{64}$/.test(rawSha256)) throw new Error("EA5C1_RAW_SHA256_INVALID");
-  const rawBytes = provenance.raw_bytes;
-  if (!Number.isSafeInteger(rawBytes) || Number(rawBytes) <= 0) throw new Error("EA5C1_RAW_BYTES_INVALID");
-  const retentionRef = requiredTextV1(provenance.retention_ref, "EA5C1_RETENTION_REF_REQUIRED");
-  if (!retentionRef.startsWith("s3-private://")) throw new Error("EA5C1_PRIVATE_S3_RETENTION_REF_REQUIRED");
-  const retainedAt = canonicalIsoV1(provenance.retained_at, "EA5C1_RETAINED_AT_INVALID");
-  if (provenance.raw_payload_embedded !== false) throw new Error("EA5C1_RAW_PAYLOAD_EMBEDDED_FORBIDDEN");
-
-  const quality = record.quality as Record<string, unknown> | undefined;
-  if (!quality || quality.raw_source_sha256 !== rawSha256 || quality.raw_retention_ref !== retentionRef || quality.raw_payload_embedded !== false) {
-    throw new Error("EA5C1_RAW_PROVENANCE_QUALITY_BINDING_MISMATCH");
-  }
-  return {
-    retention_ref: retentionRef,
-    retained_sha256: rawSha256,
-    retained_bytes: Number(rawBytes),
-    retained_at: retainedAt,
-  };
+function objectRecordV1(value: unknown, code: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(code);
+  return value as Record<string, unknown>;
 }
 
-function validateRecordV1(record: CanonicalReplayEvidenceRecordV1): {
+function validateCanonicalizedResultV1(result: CanonicalizedExternalEvidenceResultV1): {
+  record: CanonicalReplayEvidenceRecordV1;
   event_time: string;
-  raw_proof: ReturnType<typeof rawProofV1>;
+  raw_proof: VerifyRetainedRawEvidenceInputV1;
 } {
+  if (result.pipeline_version !== MCFT_CAP09_EXTERNAL_EVIDENCE_PIPELINE_VERSION_V1) throw new Error("EA5C1_EA3_PIPELINE_VERSION_REQUIRED");
+  const record = result.record;
   exactScopeV1(record, { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 });
   const authority = AUTHORITY_BY_RECORD_TYPE_V1[record.record_type];
   if (!authority) throw new Error(`EA5C1_RECORD_TYPE_NOT_AUTHORIZED:${record.record_type}`);
   if (record.binding_id !== authority.binding_id) throw new Error(`EA5C1_BINDING_NOT_AUTHORIZED:${record.record_type}`);
   if (record.epistemic_class !== authority.epistemic_class) throw new Error(`EA5C1_EPISTEMIC_CLASS_MISMATCH:${record.record_type}`);
-  if (record.quality?.status !== "PASS" && record.quality?.status !== "LIMITED") {
-    throw new Error(`EA5C1_QUALITY_NOT_FORMAL_INGRESS_ELIGIBLE:${record.record_type}`);
-  }
+  if (record.quality?.status !== "PASS" && record.quality?.status !== "LIMITED") throw new Error(`EA5C1_QUALITY_NOT_FORMAL_INGRESS_ELIGIBLE:${record.record_type}`);
   requiredTextV1(record.dataset_id, "EA5C1_DATASET_ID_REQUIRED");
   requiredTextV1(record.source_record_id, "EA5C1_SOURCE_RECORD_ID_REQUIRED");
-  const sourceHash = requiredTextV1(record.source_record_hash, "EA5C1_SOURCE_RECORD_HASH_REQUIRED");
-  if (!/^sha256:[0-9a-f]{64}$/.test(sourceHash)) throw new Error("EA5C1_SOURCE_RECORD_HASH_INVALID");
+  if (!Array.isArray(record.limitations) || record.limitations.length === 0 || !record.limitations.every((value) => typeof value === "string" && value.trim())) throw new Error("EA5C1_LIMITATIONS_REQUIRED");
+  if (containsBinaryV1(record)) throw new Error("EA5C1_RAW_BINARY_IN_CANONICAL_FACT_FORBIDDEN");
+  assertNoForbiddenMarkersV1(record);
+
   canonicalIsoV1(record.available_to_runtime_at, "EA5C1_AVAILABLE_TO_RUNTIME_AT_INVALID");
   const eventTime = canonicalIsoV1(record.role_time?.[authority.event_time_field], "EA5C1_EVENT_TIME_INVALID");
   if (Date.parse(eventTime) > Date.parse(record.available_to_runtime_at)) throw new Error("EA5C1_EVENT_AFTER_RUNTIME_AVAILABILITY");
-  if (!Array.isArray(record.limitations) || record.limitations.length === 0 || !record.limitations.every((value) => typeof value === "string" && value.trim())) {
-    throw new Error("EA5C1_LIMITATIONS_REQUIRED");
+
+  const sourcePayload = objectRecordV1(record.source_payload, "EA5C1_SOURCE_PAYLOAD_REQUIRED");
+  const raw = objectRecordV1(sourcePayload.raw_provenance, "EA5C1_RAW_PROVENANCE_REQUIRED");
+  const rawSha256 = requiredTextV1(raw.raw_sha256, "EA5C1_RAW_SHA256_REQUIRED");
+  if (!/^sha256:[0-9a-f]{64}$/.test(rawSha256)) throw new Error("EA5C1_RAW_SHA256_INVALID");
+  const rawBytes = raw.raw_bytes;
+  if (!Number.isSafeInteger(rawBytes) || Number(rawBytes) <= 0) throw new Error("EA5C1_RAW_BYTES_INVALID");
+  const retentionRef = requiredTextV1(raw.retention_ref, "EA5C1_RETENTION_REF_REQUIRED");
+  if (!retentionRef.startsWith("s3-private://")) throw new Error("EA5C1_PRIVATE_S3_RETENTION_REF_REQUIRED");
+  canonicalIsoV1(raw.retained_at, "EA5C1_RETAINED_AT_INVALID");
+  if (raw.raw_payload_embedded !== false) throw new Error("EA5C1_RAW_PAYLOAD_EMBEDDED_FORBIDDEN");
+
+  if (record.quality.raw_source_sha256 !== rawSha256 || record.quality.raw_retention_ref !== retentionRef || record.quality.raw_payload_embedded !== false) {
+    throw new Error("EA5C1_RAW_PROVENANCE_QUALITY_BINDING_MISMATCH");
   }
-  if (containsBinaryV1(record)) throw new Error("EA5C1_RAW_BINARY_IN_CANONICAL_FACT_FORBIDDEN");
-  assertNoForbiddenMarkersV1(record);
-  return { event_time: eventTime, raw_proof: rawProofV1(record) };
+  if (result.raw_provenance.raw_sha256 !== rawSha256 || result.raw_provenance.retention_ref !== retentionRef || result.raw_provenance.raw_bytes !== Number(rawBytes)) {
+    throw new Error("EA5C1_PIPELINE_RAW_PROVENANCE_MISMATCH");
+  }
+  if (result.decoder.decoder_id !== raw.decoder_id || result.decoder.decoder_version !== raw.decoder_version) {
+    throw new Error("EA5C1_PIPELINE_DECODER_PROVENANCE_MISMATCH");
+  }
+
+  const canonicalPayloadHash = semanticHashV1(record.canonical_payload);
+  if (result.canonical_payload_sha256 !== canonicalPayloadHash || record.quality.canonical_payload_sha256 !== canonicalPayloadHash) {
+    throw new Error("EA5C1_CANONICAL_PAYLOAD_DIGEST_MISMATCH");
+  }
+  if (result.record_semantic_sha256 !== semanticHashV1(record)) throw new Error("EA5C1_RECORD_SEMANTIC_DIGEST_MISMATCH");
+
+  const draftSourcePayload = structuredClone(sourcePayload);
+  delete draftSourcePayload.raw_provenance;
+  const expectedSourceRecordHash = semanticHashV1({
+    source_record_id: record.source_record_id,
+    raw_sha256: rawSha256,
+    retention_ref: retentionRef,
+    decoder_id: requiredTextV1(raw.decoder_id, "EA5C1_DECODER_ID_REQUIRED"),
+    decoder_version: requiredTextV1(raw.decoder_version, "EA5C1_DECODER_VERSION_REQUIRED"),
+    source_payload: draftSourcePayload,
+  });
+  if (record.source_record_hash !== expectedSourceRecordHash) throw new Error("EA5C1_SOURCE_RECORD_HASH_MISMATCH");
+
+  return {
+    record,
+    event_time: eventTime,
+    raw_proof: { retention_ref: retentionRef, retained_sha256: rawSha256, retained_bytes: Number(rawBytes) },
+  };
 }
 
 function identityV1(record: CanonicalReplayEvidenceRecordV1): string {
-  return [
-    record.tenant_id,
-    record.project_id,
-    record.group_id,
-    record.field_id,
-    record.season_id,
-    record.zone_id,
-    record.dataset_id,
-    record.record_type,
-    record.source_record_id,
-  ].join("|");
+  return [record.tenant_id, record.project_id, record.group_id, record.field_id, record.season_id, record.zone_id, record.dataset_id, record.record_type, record.source_record_id].join("|");
 }
 
 function factIdV1(record: CanonicalReplayEvidenceRecordV1): string {
-  const digest = crypto.createHash("sha256").update(identityV1(record), "utf8").digest("hex");
-  return `fact_external_evidence_${digest}`;
-}
-
-function recordJsonV1(record: CanonicalReplayEvidenceRecordV1): string {
-  return JSON.stringify({ type: record.record_type, payload: record });
+  return `fact_external_evidence_${crypto.createHash("sha256").update(identityV1(record), "utf8").digest("hex")}`;
 }
 
 function parseFactRecordV1(value: unknown): CanonicalReplayEvidenceRecordV1 {
   const parsed = typeof value === "string" ? JSON.parse(value) : value;
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("EA5C1_EXISTING_FACT_ENVELOPE_INVALID");
-  const payload = (parsed as Record<string, unknown>).payload;
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("EA5C1_EXISTING_FACT_PAYLOAD_INVALID");
-  return payload as CanonicalReplayEvidenceRecordV1;
+  const envelope = objectRecordV1(parsed, "EA5C1_EXISTING_FACT_ENVELOPE_INVALID");
+  return objectRecordV1(envelope.payload, "EA5C1_EXISTING_FACT_PAYLOAD_INVALID") as unknown as CanonicalReplayEvidenceRecordV1;
 }
 
 export class PostgresExternalFormalEvidenceIngressV1 {
-  constructor(
-    private readonly pool: Pool,
-    private readonly retentionVerifier: RawEvidenceRetentionVerificationPortV1,
-  ) {}
+  constructor(private readonly pool: Pool, private readonly retentionVerifier: RawEvidenceRetentionVerificationPortV1) {}
 
-  async appendCanonicalExternalEvidence(record: CanonicalReplayEvidenceRecordV1): Promise<ExternalFormalEvidenceIngressResultV1> {
-    const validated = validateRecordV1(record);
+  async appendCanonicalizedExternalEvidence(result: CanonicalizedExternalEvidenceResultV1): Promise<ExternalFormalEvidenceIngressResultV1> {
+    const validated = validateCanonicalizedResultV1(result);
+    const record = validated.record;
 
-    // Amendment-05 barrier: durable private object existence/hash/length is re-verified
-    // immediately before any canonical facts write is attempted.
+    // Amendment-05 barrier: the durable private object is re-verified immediately before DB ingress.
     await this.retentionVerifier.verifyRetainedRawEvidence(validated.raw_proof);
 
     const factId = factIdV1(record);
@@ -232,16 +207,11 @@ export class PostgresExternalFormalEvidenceIngressV1 {
     try {
       await client.query("BEGIN");
       await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [identity]);
-      const existing = await client.query(
-        "SELECT record_json FROM facts WHERE fact_id=$1 LIMIT 2",
-        [factId],
-      );
+      const existing = await client.query("SELECT record_json FROM facts WHERE fact_id=$1 LIMIT 2", [factId]);
       if (existing.rows.length > 1) throw new Error("EA5C1_FACT_ID_NOT_UNIQUE");
       if (existing.rows.length === 1) {
         const current = parseFactRecordV1(existing.rows[0].record_json);
-        if (current.source_record_hash !== record.source_record_hash || semanticHashV1(current) !== requestedSemanticHash) {
-          throw new Error("EA5C1_SOURCE_IDENTITY_CONFLICT");
-        }
+        if (current.source_record_hash !== record.source_record_hash || semanticHashV1(current) !== requestedSemanticHash) throw new Error("EA5C1_SOURCE_IDENTITY_CONFLICT");
         await client.query("COMMIT");
         return {
           ingress_id: MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_INGRESS_ID_V1,
@@ -259,7 +229,7 @@ export class PostgresExternalFormalEvidenceIngressV1 {
 
       await client.query(
         "INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,$3,$4::jsonb)",
-        [factId, validated.event_time, MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_FACT_SOURCE_V1, recordJsonV1(record)],
+        [factId, validated.event_time, MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_FACT_SOURCE_V1, JSON.stringify({ type: record.record_type, payload: record })],
       );
       await client.query("COMMIT");
       return {
