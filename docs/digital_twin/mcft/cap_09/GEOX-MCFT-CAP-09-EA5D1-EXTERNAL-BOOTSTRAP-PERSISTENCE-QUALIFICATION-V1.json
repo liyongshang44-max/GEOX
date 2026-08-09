@@ -21,7 +21,7 @@
     "postgres_next_tick_repository": "910e4852f2debd898fdd2ce8d5495a4cb364b6e4"
   },
   "candidate_implementation_blobs": {
-    "external_formal_bootstrap_authority_bundle": "c44bfca52f6d1b91de6289d9a9649a6114c7fc9a",
+    "external_formal_bootstrap_authority_bundle": "1671b13df81cba53f966a6f06765198d160601d7",
     "external_formal_bootstrap_persistence_service": "6c94bef139f260ef61c87f751a2c627b83e58977"
   },
   "qualified_design": {
@@ -33,6 +33,7 @@
     "bootstrap_runtime_config_role": "A0_BOOTSTRAP",
     "bootstrap_runtime_config_parent": null,
     "external_a0_nine_member_graph_required": true,
+    "crop_stage_derivation_authority_must_not_be_after_bootstrap_logical_time": true,
     "hourly_runtime_config_count": 24,
     "hourly_config_effective_time_equals_slot_logical_time": true,
     "a0_config_is_exact_parent_of_o00_config": true,
