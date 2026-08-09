@@ -73,10 +73,18 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B_EXTERNAL_EVIDENCE_BINDING_SEAM.ts
 
       - name: Re-prove historical CAP01 A0 default behavior
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_01_A0_RUNTIME.ts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_01_A0_RUNTIME.ts 2>&1 | tee acceptance-output/EA5B1_CAP01_A0_REGRESSION.log
 
       - name: Re-prove historical CAP03 R4-A default binding behavior
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_A_EVIDENCE_CLASSIFICATION.ts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_A_EVIDENCE_CLASSIFICATION.ts 2>&1 | tee acceptance-output/EA5B1_CAP03_R4A_REGRESSION.log
 
       - name: Verify EA5B1 remains implementation-only
         shell: node {0}
@@ -94,6 +102,9 @@ jobs:
         if: always()
         with:
           name: mcft-cap-09-ea5b1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          path: acceptance-output/MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM_GOVERNANCE_RESULT.json
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM_GOVERNANCE_RESULT.json
+            acceptance-output/EA5B1_CAP01_A0_REGRESSION.log
+            acceptance-output/EA5B1_CAP03_R4A_REGRESSION.log
           if-no-files-found: warn
           retention-days: 90
