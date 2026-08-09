@@ -98,7 +98,13 @@ try {
   req(assimilatedConfig.includes('soil_obs_c8_20cm_v1')&&assimilatedConfig.includes('POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1'),'AM05_SOIL_CONFIG_FINDING_NOT_REPRODUCED');
   req(selector.includes('ASSIMILATED_CONTINUATION_OBSERVATION_BINDING_ID_V1')&&selector.includes('REJECTED_UNAUTHORIZED_BINDING'),'AM05_SOIL_SELECTOR_FINDING_NOT_REPRODUCED');
   req(chain.includes('CAP04_STANDARD_CONFIG_CHAIN_LENGTH_V1 = 24')&&chain.includes('effective_logical_time'),'AM05_EXISTING_24_CONFIG_CHAIN_NOT_REPRODUCED');
-  req(formalRunner.includes('const template = json<ExecuteCap04SingleTickInputV1>("MCFT_CAP09_S6_CANONICAL_INPUT_JSON")')&&formalRunner.includes('runtime_config_ref'),'AM05_FIXED_FORMAL_INPUT_FINDING_NOT_REPRODUCED');
+  req(
+    formalRunner.includes('const template = json<ExecuteCap04SingleTickInputV1>("MCFT_CAP09_S6_CANONICAL_INPUT_JSON")') &&
+    formalRunner.includes('canonical_input: { ...template, scope, logical_time: target.logical_time, created_at: now.toISOString(), lease_owner: owner, lease_duration_seconds: 300 }') &&
+    !formalRunner.includes('runtime_config_by_slot') &&
+    !formalRunner.includes('runtime_config_manifest'),
+    'AM05_FIXED_FORMAL_INPUT_FINDING_NOT_REPRODUCED',
+  );
 
   const bindingIds=status.formal_binding_ids_v1;
   req(new Set(Object.values(bindingIds)).size===5,'AM05_BINDING_IDS_MUST_BE_UNIQUE');
