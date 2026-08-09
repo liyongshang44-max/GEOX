@@ -1,0 +1,123 @@
+{
+  "schema_version": "geox_mcft_cap09_ea4_recovery_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA4-RECOVERY-AUTHORITY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA4",
+  "record_status": "EA4_RECOVERY_AUTHORITY_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "b31b024c17b617f0e1c36010c8c3926682bd6533",
+  "taskbook": {
+    "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
+    "version": "v0.5",
+    "sequence_preserved": "S6-EA4 -> S6-EA5"
+  },
+  "historical_rejection": {
+    "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-LIVE-SOURCE-EXACT-HEAD-QUALIFICATION-V1.json",
+    "blob_sha": "791e3d24bdc862641c77ddd26778495cb8e6a7dd",
+    "decision": "REJECTED_EA4_KBS_RAW_HOURLY_FRESHNESS_AUTHORITY",
+    "historically_true": true,
+    "retroactive_erasure_authorized": false,
+    "interpretation": "POINT_IN_TIME_REJECTION_RETAINED_AS_PRIOR_AUTHORITY_FACT"
+  },
+  "recovery_proof": {
+    "same_source_identity": true,
+    "source_substitution_performed": false,
+    "freshness_threshold_changed": false,
+    "execution_probe_ref": "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py",
+    "execution_probe_blob_sha": "ff2ad210387402a74731968e14746210fd2440dd",
+    "recovery_subject_sha": "3f24d0f61331b6d2d0c2440e5adb1668d938e601",
+    "attempts": [
+      {
+        "run_id": 31297441611,
+        "job_id": 93204745040,
+        "artifact_id": 9033414323,
+        "artifact_digest": "sha256:5b9bb7acbfa8c65dbf5cf160160cc6e9182ffcd84f4e751a8ea4cf0c646fc93f",
+        "probe_started_at_utc": "2026-08-09T05:47:28.938254Z",
+        "status": "PASS"
+      },
+      {
+        "run_id": 31297441611,
+        "job_id": 93204896879,
+        "artifact_id": 9033435062,
+        "artifact_digest": "sha256:d469bcc6ab67683f747f768db10f56bb933ec6ef5dd3c8b3407a60592d3af245",
+        "probe_started_at_utc": "2026-08-09T05:49:16.882443Z",
+        "status": "PASS"
+      }
+    ],
+    "required_same_head_pass_count": 2,
+    "observed_same_head_pass_count": 2,
+    "final_authority_head_live_reproof_required": true
+  },
+  "recovered_kbs_facts": {
+    "raw_hourly_endpoint": "https://lter.kbs.msu.edu/datatables/13.csv",
+    "latest_record_utc": "2026-08-09T04:00:00Z",
+    "raw_hourly_response_sha256": "sha256:87288cdf18cf1b9d43c98ee4b8afd7fd6ff683134d3d7dd87b357d782543a1dd",
+    "raw_hourly_response_bytes": 19546770,
+    "rain_numeric_distinct_hours": 36,
+    "rain_sequence_sha256": "sha256:23dd486896938174c7c62163611ab60060be70f7c06885e43959d5d8dec43ea5",
+    "historical_et0_complete_distinct_hours": 37,
+    "historical_et0_sequence_sha256": "sha256:f3bebbc3a90861ed3248d6881e848f76626540e5227a40456f503a354acc1c58",
+    "historical_et0_negative_count": 12,
+    "soil_latest_utc": "2026-08-09T05:40:00Z",
+    "soil_24h_point_count": 289,
+    "soil_24h_max_gap_minutes": 5
+  },
+  "recovered_future_facts": {
+    "source_cycle_utc": "2026-08-09T00:00:00Z",
+    "valid_time_start_utc": "2026-08-09T06:00:00Z",
+    "valid_time_end_utc": "2026-08-12T05:00:00Z",
+    "future_weather_point_count": 72,
+    "temperature_sequence_sha256": "sha256:677519da5adec1807e7323ba63d6a810e6d2783aa3efdd6f08c48bc5c8d468a3",
+    "relative_humidity_sequence_sha256": "sha256:8da56c2914ca8bb18b7b81940f610b7ce3f71fde2f1d601c4358c9fdb0b7800d",
+    "wind_sequence_sha256": "sha256:d7fe7b4a116dea1a1fbe4a71234af70e63de0950be6f3956596853979bd1953f",
+    "precipitation_sequence_sha256": "sha256:6b957b0de76f06223fce4d07e7d2f42d47b4b5728ce94e09855ee5cce04ef944",
+    "sflux_endpoint_count": 73,
+    "solar_interval_count": 72,
+    "solar_quality_status": "LIMITED",
+    "solar_endpoint_sequence_sha256": "sha256:de23f057c3afd159dee70b7615944e0d04ab58b5cb95987334ffa123808a4ee9",
+    "solar_energy_sequence_sha256": "sha256:998ca0faf0b1bf48739ad309ae0e19975d578ed5b14a2321cc889805dab9240f",
+    "future_et0_point_count": 72,
+    "future_et0_finite_count": 72,
+    "future_et0_negative_count": 25,
+    "future_et0_negative_clipping_performed": false,
+    "future_et0_sequence_sha256": "sha256:154235a17b980642cdda7105e6e5c7600f90b6192d69f2f9853dc0141d668960"
+  },
+  "epistemic_and_quality_boundary": {
+    "kbs_raw_hourly_observations_remain_observed": true,
+    "kbs_source_recovery_does_not_upgrade_spatial_representativeness": true,
+    "future_weather_remains_assumed": true,
+    "future_solar_remains_model_derived_piecewise_linear_forecast_interpolation": true,
+    "future_solar_quality_status": "LIMITED",
+    "future_et0_remains_assumed": true,
+    "negative_future_et0_values_retained": true,
+    "negative_clipping_authorized": false,
+    "silent_imputation_authorized": false,
+    "cross_cycle_substitution_authorized": false
+  },
+  "current_authority_effect_if_merged": {
+    "original_kbs_source_recovered": true,
+    "live_source_qualified": true,
+    "gfs_72h_full_value_pipeline_qualified": true,
+    "future_et0_72h_value_execution_qualified": true,
+    "new_source_architecture_required_before_ea5": false,
+    "ea5_candidate_development_authorized": true,
+    "external_package_formal_eligible": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false
+  },
+  "next_legal_successor_if_effective": "S6-EA5_FORMAL_AUTHORITY_V3_AND_DATABASE_PREFLIGHT",
+  "hard_nonclaims": [
+    "NO_RETROACTIVE_ERASURE_OF_EA4_REJECTION",
+    "NO_SOURCE_SUBSTITUTION",
+    "NO_CONFIDENCE_OR_EPISTEMIC_UPGRADE",
+    "NO_SPATIAL_REPRESENTATIVENESS_UPGRADE",
+    "NO_EXTERNAL_PACKAGE_FORMAL_ELIGIBILITY_YET",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_FORMAL_O00_O23_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
