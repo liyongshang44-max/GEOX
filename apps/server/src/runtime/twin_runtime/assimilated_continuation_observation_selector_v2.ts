@@ -1,5 +1,5 @@
 // apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v2.ts
-// Purpose: deterministically classify, deduplicate, and select one supported soil-moisture observation under the remediated MCFT-CAP-03 V2 semantic order.
+// Purpose: deterministically classify, deduplicate, and select one supported soil-moisture observation under the remediated MCFT-CAP-03 V2 semantic order, with an optional caller-authorized binding profile.
 // Boundary: pure caller-supplied Evidence logic only; no database, persistence, filesystem, network, wall clock, Runtime tick execution, canonical write, or V1 mutation.
 
 import {
@@ -34,6 +34,7 @@ export type SelectedAssimilatedObservationV2 = {
   duplicate_winner_policy_id: typeof ASSIMILATED_OBSERVATION_DUPLICATE_WINNER_POLICY_V2;
   usable_sort_policy_id: typeof ASSIMILATED_OBSERVATION_USABLE_SORT_POLICY_V2;
   logical_time: string;
+  authorized_binding_id?: string;
   candidates: AssimilatedObservationCandidateV2[];
   selected_observation: AssimilatedObservationCandidateV2 | null;
   selected_observation_ref: string | null;
@@ -163,6 +164,7 @@ function classifyCandidateV2(input: {
   record: CanonicalReplayEvidenceRecordV1;
   scope: TwinScopeKeyV1;
   logical_time: string;
+  authorized_binding_id: string;
 }): CandidateWorkV2 {
   const { record } = input;
   const sourceRecordId = requiredStringV2(
@@ -267,10 +269,7 @@ function classifyCandidateV2(input: {
   if (ageMilliseconds > ASSIMILATED_OBSERVATION_MAX_AGE_MILLISECONDS_V2) {
     structuralReasons.push("REJECTED_TIME_STALE");
   }
-  if (
-    record.binding_id
-    !== ASSIMILATED_CONTINUATION_OBSERVATION_BINDING_ID_V1
-  ) {
+  if (record.binding_id !== input.authorized_binding_id) {
     structuralReasons.push("REJECTED_UNAUTHORIZED_BINDING");
   }
   if (
@@ -387,6 +386,7 @@ export function selectAssimilatedContinuationObservationV2(input: {
   logical_time: string;
   saturation_fraction: number;
   observation_records: readonly CanonicalReplayEvidenceRecordV1[];
+  authorized_binding_id?: string;
 }): SelectedAssimilatedObservationV2 {
   const logicalTime = canonicalIsoV2(
     input.logical_time,
@@ -399,12 +399,18 @@ export function selectAssimilatedContinuationObservationV2(input: {
   ) {
     throw new Error("INVALID_RUNTIME_CONFIG:SATURATION_FRACTION");
   }
+  const authorizedBindingId = input.authorized_binding_id
+    ?? ASSIMILATED_CONTINUATION_OBSERVATION_BINDING_ID_V1;
+  if (!authorizedBindingId.trim()) {
+    throw new Error("INVALID_RUNTIME_CONFIG:AUTHORIZED_SOIL_BINDING_ID");
+  }
 
   const classified = input.observation_records.map((record) =>
     classifyCandidateV2({
       record,
       scope: input.scope,
       logical_time: logicalTime,
+      authorized_binding_id: authorizedBindingId,
     })
   );
 
@@ -486,6 +492,9 @@ export function selectAssimilatedContinuationObservationV2(input: {
     usable_sort_policy_id:
       ASSIMILATED_OBSERVATION_USABLE_SORT_POLICY_V2,
     logical_time: logicalTime,
+    ...(input.authorized_binding_id !== undefined
+      ? { authorized_binding_id: authorizedBindingId }
+      : {}),
     candidates,
     selected_observation_ref: selectedRef,
     evaluated_observation_refs: evaluatedRefs,

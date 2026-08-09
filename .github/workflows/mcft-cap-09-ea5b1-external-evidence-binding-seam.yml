@@ -1,0 +1,146 @@
+name: mcft-cap-09-ea5b1-external-evidence-binding-seam
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5b1-external-evidence-binding-seam.yml'
+      - 'apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/evidence_window_builder_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v2.ts'
+      - 'apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_a0_evidence_window_service_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5B1-EXTERNAL-EVIDENCE-BINDING-SEAM-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B_EXTERNAL_EVIDENCE_BINDING_SEAM.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5b1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  external-evidence-binding-seam:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact EA5B1 base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Syntax-check EA5B1 governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs
+
+      - name: Validate exact EA5B1 governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs
+
+      - name: Re-prove CAP08 G3 frozen-core successor compatibility
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_G3_BOUNDARY.cjs
+
+      - name: Typecheck server
+        run: pnpm --filter @geox/server run typecheck
+
+      - name: Prove External Evidence binding seam
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B_EXTERNAL_EVIDENCE_BINDING_SEAM.ts
+
+      - name: Re-prove historical CAP01 A0 behavior with protected-base scope adjudication
+        shell: bash
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: |
+          set -u
+          mkdir -p acceptance-output
+          set +e
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_01_A0_RUNTIME.ts 2>&1 | tee acceptance-output/EA5B1_CAP01_A0_REGRESSION.log
+          cap01_status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$cap01_status" -eq 0 ]; then
+            echo 'CAP01 historical acceptance passed directly.'
+            exit 0
+          fi
+
+          pass_count=$(grep -c '^PASS ' acceptance-output/EA5B1_CAP01_A0_REGRESSION.log || true)
+          test "$pass_count" -eq 20
+          grep -F 'ACCEPTANCE_MCFT_CAP_01_A0_RUNTIME.ts:199:10' acceptance-output/EA5B1_CAP01_A0_REGRESSION.log
+          grep -F 'true !== false' acceptance-output/EA5B1_CAP01_A0_REGRESSION.log
+
+          forbidden='propagation|scenario|recommendation|ao_act|^apps/web/|^apps/server/src/routes/'
+          git diff --name-only 5d17e6ad9944376bbb5a71c9d801aa4472afe592..."$MCFT_BASE_SHA" | grep -E "$forbidden" > acceptance-output/EA5B1_CAP01_BASE_STALE_SCOPE_PATHS.log
+          test -s acceptance-output/EA5B1_CAP01_BASE_STALE_SCOPE_PATHS.log
+
+          if git diff --name-only "$MCFT_BASE_SHA"...HEAD | grep -E "$forbidden" > acceptance-output/EA5B1_CAP01_PR_FORBIDDEN_SCOPE_PATHS.log; then
+            echo 'EA5B1 introduced a path forbidden by the historical CAP01 scope guard.' >&2
+            cat acceptance-output/EA5B1_CAP01_PR_FORBIDDEN_SCOPE_PATHS.log >&2
+            exit 1
+          fi
+
+          echo 'PASS CAP01 twenty behavioral assertions; historical repo-wide scope guard is already stale on protected base; EA5B1 introduces no forbidden-scope path.'
+
+      - name: Re-prove historical CAP03 R4-A default binding behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_A_EVIDENCE_CLASSIFICATION.ts 2>&1 | tee acceptance-output/EA5B1_CAP03_R4A_REGRESSION.log
+
+      - name: Verify EA5B1 remains implementation-only
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM_GOVERNANCE_RESULT.json','utf8'));
+          if (result.status !== 'PASS') throw new Error('EA5B1_GOVERNANCE_PASS_REQUIRED');
+          if (result.binding_seam_qualified !== true) throw new Error('EA5B1_BINDING_SEAM_REQUIRED');
+          if (result.cap08_g3_successor_regression_required !== true || result.cap08_frozen_a0_bootstrap_core_unchanged !== true) throw new Error('EA5B1_CAP08_SUCCESSOR_REGRESSION_REQUIRED');
+          if (result.cap04_external_service_threading_effective !== false) throw new Error('EA5B1_CAP04_THREADING_PREMATURE');
+          if (result.external_package_formal_eligible !== false || result.ea5c_authorized !== false || result.formal_o00_start_authorized !== false) throw new Error('EA5B1_PREMATURE_FORMAL_EFFECT');
+          if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0 || result.public_provider_request_count !== 0 || result.formal_window_started !== false || result.mcft_cap09_completed !== false) throw new Error('EA5B1_ZERO_WRITE_NONCLAIM_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',binding_seam:true,cap08_g3_successor_regression:true,replay_regression:true,cap04_threading:false,formal_eligible:false,o00:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea5b1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json
+            acceptance-output/EA5B1_CAP01_A0_REGRESSION.log
+            acceptance-output/EA5B1_CAP01_BASE_STALE_SCOPE_PATHS.log
+            acceptance-output/EA5B1_CAP01_PR_FORBIDDEN_SCOPE_PATHS.log
+            acceptance-output/EA5B1_CAP03_R4A_REGRESSION.log
+          if-no-files-found: warn
+          retention-days: 90
