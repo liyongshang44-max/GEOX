@@ -156,7 +156,7 @@ async function main(): Promise<void> {
   }), /INVALID_RUNTIME_CONFIG:AUTHORIZED_SOIL_BINDING_ID/);
   ok("blank binding authority fails closed in both A0 and continuation selectors");
 
-  assert.equal(pass, 6);
+  assert.equal(pass, 7);
   console.log(`MCFT-CAP-09 EA5B External Evidence binding seam: ${pass} PASS, 0 FAIL`);
 }
 
