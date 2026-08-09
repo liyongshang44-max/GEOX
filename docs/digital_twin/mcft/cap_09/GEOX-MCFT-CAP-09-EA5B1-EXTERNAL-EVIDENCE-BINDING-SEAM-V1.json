@@ -19,8 +19,15 @@
     "a0_evidence_window": "4b626cc1069c83ba31963c31d0228382a4842bf7",
     "continuation_observation_selector": "c4ecf12c9830a82b4b5f5c001e51a483fc7ad2e0",
     "continuation_evidence_window": "0a7c02aae1e5ddbccadc303ae7977e4369dddcba",
-    "a0_bootstrap_service": "d686037944f07066f47df17e6d21d560b10fed57",
-    "focused_acceptance": "b882d42dd40ee8d4f2828d6be79fe58b5fb4e804"
+    "external_a0_evidence_window_service": "1a02cd7c39da8a17ebd161f487c7d2c3c7c704e1",
+    "focused_acceptance": "8f6176a518d31d494cbd24978c5e5834174efed7"
+  },
+  "cap08_frozen_core_compatibility": {
+    "historical_a0_bootstrap_runtime_service_modified": false,
+    "historical_a0_bootstrap_runtime_service_required_blob": "7d2db571b421f1cbfe7fd1192398297def5307c2",
+    "external_a0_binding_preparation_is_additive": true,
+    "external_a0_evidence_window_service_may_persist_bootstrap_state": false,
+    "external_a0_evidence_window_service_may_construct_external_a0_canonical_members": false
   },
   "formal_binding_ids": {
     "soil_moisture": "kbs_lter_variate25_vwc_100mm_v1",
@@ -43,7 +50,8 @@
   "implemented_boundary": {
     "external_binding_constants_frozen": true,
     "a0_evidence_window_accepts_explicit_soil_binding_authority": true,
-    "a0_bootstrap_service_threads_explicit_soil_binding_authority": true,
+    "external_a0_evidence_window_service_enforces_formal_soil_binding": true,
+    "historical_cap08_frozen_a0_bootstrap_service_unchanged": true,
     "continuation_selector_accepts_explicit_soil_binding_authority": true,
     "continuation_evidence_window_threads_explicit_soil_binding_authority": true,
     "historical_a0_default_behavior_preserved_when_profile_omitted": true,
@@ -51,6 +59,7 @@
     "unauthorized_same_scope_soil_must_be_rejected": true
   },
   "not_implemented_in_ea5b1": {
+    "external_a0_bootstrap_persistence_service": true,
     "cap04_single_tick_service_input_threading": true,
     "external_canonical_runtime_config_contract": true,
     "external_execution_config_resolver": true,
@@ -65,6 +74,8 @@
   "qualification_requirements": {
     "same_scope_c8_soil_rejected_under_external_binding_authority": true,
     "external_kbs_soil_selected_under_external_binding_authority": true,
+    "external_a0_evidence_service_uses_exact_formal_soil_binding": true,
+    "historical_cap08_g3_core_regression_passes": true,
     "historical_replay_default_binding_still_selected_without_override": true,
     "blank_binding_authority_fails_closed": true,
     "historical_cap01_first_20_behavioral_assertions_pass": true,
@@ -78,7 +89,8 @@
   },
   "success_effect_if_merged": {
     "external_evidence_binding_primitives_effective": true,
-    "external_a0_soil_binding_seam_effective": true,
+    "external_a0_evidence_preparation_binding_seam_effective": true,
+    "external_a0_bootstrap_persistence_effective": false,
     "external_continuation_window_soil_binding_seam_effective": true,
     "cap04_external_service_threading_effective": false,
     "external_package_formal_eligible": false,
@@ -88,6 +100,8 @@
   },
   "next_legal_successor_if_effective": "S6-EA5B2-CAP04-EXTERNAL-BINDING-SERVICE-THREADING",
   "hard_nonclaims": [
+    "NO_HISTORICAL_CAP08_G3_CORE_MUTATION",
+    "NO_EXTERNAL_A0_BOOTSTRAP_PERSISTENCE_FROM_EA5B1",
     "NO_CAP04_EXTERNAL_SERVICE_THREADING_FROM_EA5B1",
     "NO_DATABASE_WRITE",
     "NO_FORMAL_EVIDENCE_WRITE",
