@@ -1,0 +1,130 @@
+name: mcft-cap-09-ea5b-closure
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5b-closure.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5B-CLOSURE-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B_CLOSURE.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5b-closure-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  ea5b-closure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact EA5B closure base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check EA5B closure governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B_CLOSURE.cjs
+
+      - name: Validate exact EA5B closure boundary and authority chain
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B_CLOSURE.cjs
+
+      - name: Re-prove CAP08 G3 frozen-core successor compatibility
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_G3_BOUNDARY.cjs
+
+      - name: Typecheck server
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          pnpm --filter @geox/server run typecheck 2>&1 | tee acceptance-output/EA5B_CLOSURE_SERVER_TYPECHECK.log
+
+      - name: Re-prove EA5B1 External Evidence binding seam
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B_EXTERNAL_EVIDENCE_BINDING_SEAM.ts
+
+      - name: Re-prove EA5B2 CAP04 binding threading
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B2_CAP04_EXTERNAL_BINDING_THREADING.ts
+
+      - name: Re-prove EA5B3 External Runtime Config and compatibility resolver
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B3_EXTERNAL_RUNTIME_CONFIG_RESOLVER.ts
+
+      - name: Re-prove EA5B4A External 100-mm operator authority
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B4A_EXTERNAL_OPERATOR_AUTHORITY.ts
+
+      - name: Re-prove EA5B4B honest External A0 candidate
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B4B_EXTERNAL_A0_PROVENANCE_PROFILE.ts
+
+      - name: Re-prove EA5B5A External CAP04 State-source authority
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5A_EXTERNAL_CAP04_STATE_SOURCE.ts
+
+      - name: Re-prove EA5B5B External Forecast and A1/A2 authority
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5B_EXTERNAL_FORECAST_A1A2.ts
+
+      - name: Re-prove EA5B5C production External CAP04 orchestration
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts 2>&1 | tee acceptance-output/EA5B_CLOSURE_B5C_REPROOF.log
+
+      - name: Re-prove historical CAP04 positive behavior
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts
+
+      - name: Re-prove historical CAP04 negative behavior
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_NEGATIVE.ts
+
+      - name: Verify closure effect remains exactly EA5B to EA5C only
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5B_CLOSURE_GOVERNANCE_RESULT.json','utf8'));
+          if (r.status !== 'PASS') throw new Error('EA5B_CLOSURE_GOVERNANCE_PASS_REQUIRED');
+          if (r.ea5b_complete_after_effectiveness !== true || r.ea5c_authorized_after_effectiveness !== true) throw new Error('EA5B_CLOSURE_SUCCESSOR_EFFECT_REQUIRED');
+          if (r.canonical_persistence_authorized !== false) throw new Error('EA5B_CLOSURE_PERSISTENCE_MUST_REMAIN_UNAUTHORIZED');
+          if (r.ea5d_authorized !== false || r.ea5e_authorized !== false || r.formal_o00_start_authorized !== false) throw new Error('EA5B_CLOSURE_PREMATURE_SUCCESSOR_AUTHORITY');
+          if (r.mcft_cap09_completed !== false) throw new Error('EA5B_CLOSURE_PREMATURE_CAP09_COMPLETION');
+          console.log(JSON.stringify({status:'PASS',ea5b_complete_after_effectiveness:true,ea5c_authorized_after_effectiveness:true,ea5d:false,ea5e:false,o00:false,persistence:false,cap09:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea5b-closure-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5B_CLOSURE_GOVERNANCE_RESULT.json
+            acceptance-output/EA5B_CLOSURE_SERVER_TYPECHECK.log
+            acceptance-output/EA5B_CLOSURE_B5C_REPROOF.log
+            acceptance-output/MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
