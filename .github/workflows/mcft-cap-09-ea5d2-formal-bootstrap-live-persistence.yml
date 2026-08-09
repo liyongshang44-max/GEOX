@@ -96,7 +96,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p acceptance-output
-          pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE.ts 2>&1 | tee acceptance-output/EA5D2_FORMAL_BOOTSTRAP_LIVE.log
+          GITHUB_SHA="${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}" pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE.ts 2>&1 | tee acceptance-output/EA5D2_FORMAL_BOOTSTRAP_LIVE.log
 
       - name: Verify exact Formal bootstrap proof and successor nonclaims
         shell: node {0}
@@ -105,6 +105,7 @@ jobs:
           const g = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE_GOVERNANCE_RESULT.json','utf8'));
           const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE_RESULT.json','utf8'));
           if (g.status !== 'PASS' || r.status !== 'PASS') throw new Error('EA5D2_PASS_REQUIRED');
+          if (r.subject_head_sha !== '${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}') throw new Error('EA5D2_EXACT_HEAD_ARTIFACT_REQUIRED');
           if (r.bootstrap_logical_time !== '2026-08-09T21:00:00.000Z' || r.o00_logical_time !== '2026-08-09T22:00:00.000Z') throw new Error('EA5D2_FROZEN_BOUNDARIES_REQUIRED');
           if (r.crop_stage_rederived_at_bootstrap_boundary !== true || r.crop_stage_code !== 'MID') throw new Error('EA5D2_CROP_STAGE_AUTHORITY_REQUIRED');
           if (r.final_canonical_fact_count !== 34 || r.exact_runtime_config_count !== 25 || r.exact_hourly_runtime_config_count !== 24 || r.external_a0_member_count !== 9) throw new Error('EA5D2_EXACT_CANONICAL_COUNTS_REQUIRED');
