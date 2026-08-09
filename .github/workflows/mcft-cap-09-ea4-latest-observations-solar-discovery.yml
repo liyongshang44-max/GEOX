@@ -1,0 +1,69 @@
+name: mcft-cap-09-ea4-latest-observations-solar-discovery
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea4-latest-observations-solar-discovery.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-LATEST-OBSERVATIONS-SOLAR-DISCOVERY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_LATEST_OBSERVATIONS_SOLAR_DISCOVERY.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LATEST_OBSERVATIONS_SOLAR_DISCOVERY.mjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea4-latest-observations-solar-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  discover-kbs-latest-observations-solar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Validate exact Latest Observations discovery boundary
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_LATEST_OBSERVATIONS_SOLAR_DISCOVERY.cjs
+      - run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LATEST_OBSERVATIONS_SOLAR_DISCOVERY.mjs
+      - name: Discover Latest Observations KBS solar machine surface
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LATEST_OBSERVATIONS_SOLAR_DISCOVERY.mjs
+      - name: Verify discovery-only result
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA4_LATEST_OBSERVATIONS_SOLAR_DISCOVERY_RESULT.json','utf8'));
+          if(r.status!=='PASS'||r.target_station_slug!=='kbs'||!(r.api_response_count>0))throw new Error('EA4LO_DISCOVERY_RESULT_REQUIRED');
+          if(r.discovery_creates_solar_source_authority!==false||r.solar_qualified!==false||r.ea5_authorized!==false)throw new Error('EA4LO_DISCOVERY_OVERCLAIM');
+          if(r.query_values_emitted!==false||r.raw_numeric_observation_values_emitted!==false||r.raw_response_body_persisted!==false||r.rendered_dom_persisted!==false||r.download_clicked!==false)throw new Error('EA4LO_PRIVACY_BOUNDARY_DRIFT');
+          if(r.database_write_count!==0||r.formal_evidence_write_count!==0||r.formal_window_started!==false)throw new Error('EA4LO_WRITE_OR_FORMAL_START_FORBIDDEN');
+          console.log(JSON.stringify({status:'PASS',api:r.api_response_count,kbs_selection:r.kbs_selection,capabilities:r.capability_summary,solar_qualified:false,ea5_authorized:false}));
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea4-latest-observations-solar-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA4_LATEST_OBSERVATIONS_SOLAR_DISCOVERY_STATIC_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA4_LATEST_OBSERVATIONS_SOLAR_DISCOVERY_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
