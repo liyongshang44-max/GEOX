@@ -20,7 +20,7 @@
     "continuation_observation_selector": "c4ecf12c9830a82b4b5f5c001e51a483fc7ad2e0",
     "continuation_evidence_window": "0a7c02aae1e5ddbccadc303ae7977e4369dddcba",
     "a0_bootstrap_service": "d686037944f07066f47df17e6d21d560b10fed57",
-    "focused_acceptance": "1d662cc46f3ffb939901f65bb99897a04a37521e"
+    "focused_acceptance": "b882d42dd40ee8d4f2828d6be79fe58b5fb4e804"
   },
   "formal_binding_ids": {
     "soil_moisture": "kbs_lter_variate25_vwc_100mm_v1",
