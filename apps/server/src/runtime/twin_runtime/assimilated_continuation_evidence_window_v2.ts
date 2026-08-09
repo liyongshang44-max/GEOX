@@ -1,5 +1,5 @@
 // apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts
-// Purpose: compose the additive MCFT-CAP-03 V2 observation selection trace around the immutable CAP-02 Evidence Window.
+// Purpose: compose the additive MCFT-CAP-03 V2 observation selection trace around the immutable CAP-02 Evidence Window, with optional caller-authorized soil binding authority.
 // Boundary: pure application composition only; no database, persistence, filesystem, network, wall clock, Runtime tick execution, canonical write, or V1 reinterpretation.
 
 import type { AssimilatedContinuationPosteriorV1 } from "../../domain/soil_water/assimilated_continuation_posterior_v1.js";
@@ -56,6 +56,7 @@ export function buildAssimilatedContinuationEvidenceWindowV2(input: {
   crop_stage_context_ref: string;
   crop_stage_context_hash: string;
   crop_stage_context: ContinuationCropStageConfigurationContextV1;
+  authorized_soil_observation_binding_id?: string;
 }): AssimilatedContinuationEvidenceWindowV2 {
   const baseWindow = buildContinuationEvidenceWindowV1({
     scope: input.scope,
@@ -76,6 +77,9 @@ export function buildAssimilatedContinuationEvidenceWindowV2(input: {
     logical_time: input.logical_time,
     saturation_fraction: input.saturation_fraction,
     observation_records: observationRecords,
+    ...(input.authorized_soil_observation_binding_id !== undefined
+      ? { authorized_binding_id: input.authorized_soil_observation_binding_id }
+      : {}),
   });
 
   const dynamicsConsumed = uniqueSortedV2(
