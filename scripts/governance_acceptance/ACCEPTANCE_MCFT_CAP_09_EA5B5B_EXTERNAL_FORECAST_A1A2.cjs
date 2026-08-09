@@ -27,7 +27,7 @@ const EXPECTED_BLOBS = {
   acceptance: '3e1c4b5966524c33a144033510d97e200d6202ad',
   authority: '7568566297f3e917f297fd5cf30111c57e578977',
   predecessor: '3f4713d52272eae3fce3b05f5ab21316b87b257f',
-  historicalBuilder: 'e6807beaa680002e3498263950ac13e6025023dc',
+  historicalBuilder: 'fbb7f7ebfe4962f689733af698e2f7a1ce8796b9',
   pureForecastMath: '45033d19fe05af54cca6eb3c358535d22f0640bd',
 };
 
