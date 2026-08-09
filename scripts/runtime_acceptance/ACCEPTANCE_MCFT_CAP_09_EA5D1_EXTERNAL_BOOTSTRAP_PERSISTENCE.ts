@@ -30,7 +30,6 @@ import { buildMcftCap03R2V2FixtureV1 } from "./mcft_cap_03_r2_v2_revalidation_fi
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const DATABASE_URL = process.env.EA5D1_DATABASE_URL ?? "postgres://postgres:postgres@127.0.0.1:55432/ea5d1";
 const CREATED_AT = "2026-08-10T00:30:00.000Z";
-const CROP_STAGE_AUTHORITY_TIME = "2026-08-10T00:20:00.000Z";
 
 function externalizeSoilV1(record: CanonicalReplayEvidenceRecordV1, logicalTime: string): CanonicalReplayEvidenceRecordV1 {
   const observedAt = new Date(Date.parse(logicalTime) - 20 * 60_000).toISOString();
@@ -99,6 +98,7 @@ async function main(): Promise<void> {
 
     const fixture = await buildMcftCap03R2V2FixtureV1(1);
     const bootstrapLogicalTime = fixture.firstLogicalTime;
+    const cropStageAuthorityTime = new Date(Date.parse(bootstrapLogicalTime) - 10 * 60_000).toISOString();
     const sourceRecords = await fixture.runtime.loadCandidateRecords({
       scope: fixture.source.scope,
       logical_time: bootstrapLogicalTime,
@@ -107,11 +107,21 @@ async function main(): Promise<void> {
     assert.ok(soil, "EA5D1_SOIL_FIXTURE_REQUIRED");
     const externalSoil = externalizeSoilV1(soil, bootstrapLogicalTime);
 
+    assert.throws(
+      () => buildExternalFormalBootstrapAuthorityBundleV1({
+        bootstrap_logical_time: bootstrapLogicalTime,
+        created_at: CREATED_AT,
+        crop_stage_code: "MID",
+        crop_stage_derivation_authority_time: new Date(Date.parse(bootstrapLogicalTime) + 60_000).toISOString(),
+      }),
+      /EXTERNAL_FORMAL_CROP_STAGE_AUTHORITY_AFTER_BOOTSTRAP_FORBIDDEN/,
+    );
+
     const bundle = buildExternalFormalBootstrapAuthorityBundleV1({
       bootstrap_logical_time: bootstrapLogicalTime,
       created_at: CREATED_AT,
       crop_stage_code: "MID",
-      crop_stage_derivation_authority_time: CROP_STAGE_AUTHORITY_TIME,
+      crop_stage_derivation_authority_time: cropStageAuthorityTime,
     });
     assert.equal(bundle.runtime_configs.length, 24);
     assert.equal(bundle.bootstrap_runtime_config.payload.config_role, "A0_BOOTSTRAP");
@@ -141,6 +151,14 @@ async function main(): Promise<void> {
     assert.equal(first.scheduler_slot_write_count, 0);
     assert.equal(first.formal_window_started, false);
 
+    const scopeParams = [
+      MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1.tenant_id,
+      MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1.project_id,
+      MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1.group_id,
+      MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1.field_id,
+      MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1.season_id,
+      MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1.zone_id,
+    ];
     const canonical = await pool.query(`
       SELECT record_json->>'type' AS type,
              record_json->'payload'->>'object_id' AS object_id,
@@ -154,7 +172,7 @@ async function main(): Promise<void> {
          AND record_json->'payload'->>'season_id'=$5
          AND record_json->'payload'->>'zone_id'=$6
        ORDER BY record_json->>'type', record_json->'payload'->>'object_id'`,
-      Object.values(MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1),
+      scopeParams,
     );
     assert.equal(canonical.rows.length, 34, "EA5D1_25_CONFIG_PLUS_9_A0_FACTS_REQUIRED");
     const typeCounts = new Map<string, number>();
@@ -173,7 +191,7 @@ async function main(): Promise<void> {
          AND record_json->'payload'->>'season_id'=$5
          AND record_json->'payload'->>'zone_id'=$6
        ORDER BY (record_json->'payload'->>'logical_time')::timestamptz ASC`,
-      Object.values(MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1),
+      scopeParams,
     );
     assert.equal(configs.rows.length, 25);
     let parent: Record<string, unknown> | null = null;
@@ -247,6 +265,7 @@ async function main(): Promise<void> {
       ci_only_qualification: true,
       formal_neon_write_performed: false,
       exact_external_scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
+      crop_stage_authority_not_after_bootstrap_proved: true,
       reality_binding_snapshot_persisted: true,
       bootstrap_runtime_config_persisted: true,
       a0_nine_member_graph_persisted: true,
