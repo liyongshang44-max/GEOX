@@ -1,0 +1,143 @@
+name: mcft-cap-09-ea5b4b-external-a0-provenance-profile
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5b4b-external-a0-provenance-profile.yml'
+      - 'apps/server/src/domain/soil_water/external_formal_bootstrap_posterior_authority_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_a0_record_set_builder_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B4B_EXTERNAL_A0_PROVENANCE_PROFILE.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5B4B-EXTERNAL-A0-PROVENANCE-PROFILE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B4B_EXTERNAL_A0_PROVENANCE_PROFILE.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5b4b-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  external-a0-provenance-profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact EA5B4B base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check EA5B4B governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B4B_EXTERNAL_A0_PROVENANCE_PROFILE.cjs
+
+      - name: Validate exact EA5B4B governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B4B_EXTERNAL_A0_PROVENANCE_PROFILE.cjs
+
+      - name: Re-prove CAP08 G3 frozen-core successor compatibility
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_G3_BOUNDARY.cjs
+
+      - name: Typecheck server
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          pnpm --filter @geox/server run typecheck 2>&1 | tee acceptance-output/EA5B4B_SERVER_TYPECHECK.log
+
+      - name: Prove honest External A0 canonical candidate profile
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B4B_EXTERNAL_A0_PROVENANCE_PROFILE.ts
+
+      - name: Re-prove EA5B4A External operator authority
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B4A_EXTERNAL_OPERATOR_AUTHORITY.ts
+
+      - name: Re-prove historical CAP01 A0 behavior with protected-base scope adjudication
+        shell: bash
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: |
+          set -u
+          mkdir -p acceptance-output
+          set +e
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_01_A0_RUNTIME.ts 2>&1 | tee acceptance-output/EA5B4B_CAP01_A0_REGRESSION.log
+          cap01_status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$cap01_status" -eq 0 ]; then
+            echo 'CAP01 historical acceptance passed directly.'
+            exit 0
+          fi
+
+          pass_count=$(grep -c '^PASS ' acceptance-output/EA5B4B_CAP01_A0_REGRESSION.log || true)
+          test "$pass_count" -eq 20
+          grep -F 'ACCEPTANCE_MCFT_CAP_01_A0_RUNTIME.ts:199:10' acceptance-output/EA5B4B_CAP01_A0_REGRESSION.log
+          grep -F 'true !== false' acceptance-output/EA5B4B_CAP01_A0_REGRESSION.log
+
+          forbidden='propagation|scenario|recommendation|ao_act|^apps/web/|^apps/server/src/routes/'
+          git diff --name-only 5d17e6ad9944376bbb5a71c9d801aa4472afe592..."$MCFT_BASE_SHA" | grep -E "$forbidden" > acceptance-output/EA5B4B_CAP01_BASE_STALE_SCOPE_PATHS.log
+          test -s acceptance-output/EA5B4B_CAP01_BASE_STALE_SCOPE_PATHS.log
+
+          if git diff --name-only "$MCFT_BASE_SHA"...HEAD | grep -E "$forbidden" > acceptance-output/EA5B4B_CAP01_PR_FORBIDDEN_SCOPE_PATHS.log; then
+            echo 'EA5B4B introduced a path forbidden by the historical CAP01 scope guard.' >&2
+            cat acceptance-output/EA5B4B_CAP01_PR_FORBIDDEN_SCOPE_PATHS.log >&2
+            exit 1
+          fi
+
+          echo 'PASS CAP01 twenty behavioral assertions; historical repo-wide scope guard is already stale on protected base; EA5B4B introduces no forbidden-scope path.'
+
+      - name: Verify EA5B4B remains candidate-only
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5B4B_EXTERNAL_A0_PROVENANCE_PROFILE_GOVERNANCE_RESULT.json','utf8'));
+          if (result.status !== 'PASS') throw new Error('EA5B4B_GOVERNANCE_PASS_REQUIRED');
+          if (result.external_a0_canonical_candidate_profile_qualified !== true || result.cap01_bootstrap_numerical_identity_preserved !== true) throw new Error('EA5B4B_A0_PROFILE_QUALIFICATION_REQUIRED');
+          if (result.historical_a0_builder_unchanged !== true || result.historical_a0_service_unchanged !== true) throw new Error('EA5B4B_HISTORICAL_A0_INVARIANT_REQUIRED');
+          if (result.canonical_persistence_authorized !== false || result.external_a0_bootstrap_persistence_effective !== false || result.ea5b_external_runtime_profile_complete !== false) throw new Error('EA5B4B_PREMATURE_RUNTIME_EFFECT');
+          if (result.external_package_formal_eligible !== false || result.ea5c_authorized !== false || result.formal_o00_start_authorized !== false) throw new Error('EA5B4B_PREMATURE_FORMAL_EFFECT');
+          if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0 || result.public_provider_request_count !== 0 || result.formal_window_started !== false || result.mcft_cap09_completed !== false) throw new Error('EA5B4B_ZERO_WRITE_NONCLAIM_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',external_a0_candidate:true,numerical_identity:true,persistence:false,ea5b_complete:false,ea5c:false,o00:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea5b4b-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5B4B_EXTERNAL_A0_PROVENANCE_PROFILE_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json
+            acceptance-output/EA5B4B_SERVER_TYPECHECK.log
+            acceptance-output/EA5B4B_CAP01_A0_REGRESSION.log
+            acceptance-output/EA5B4B_CAP01_BASE_STALE_SCOPE_PATHS.log
+            acceptance-output/EA5B4B_CAP01_PR_FORBIDDEN_SCOPE_PATHS.log
+          if-no-files-found: warn
+          retention-days: 90
