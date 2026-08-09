@@ -44,9 +44,9 @@ const PINS = {
   historicalA0: '7d2db571b421f1cbfe7fd1192398297def5307c2',
   externalConfig: 'f7ea03a7f8387ce4de135dac61f0b063e91f0f25',
   executionView: 'cbb5f4d6ea0753825fe9f7d419cd3cbd89298895',
-  resolver: '24bdc2425b11f9ea8bd09294d9c9869f90278cff',
+  resolver: '7c542f62b6950739187948fa60f0d4c5b3c4e8e6',
   acceptance: 'aa114a4557be1d3d79bb0cd29b98e0ba1c86a88d',
-  authority: '854b6f9f35612cb09e3de5a52527b79e4c26430c',
+  authority: 'bdaf311cc23c78fb45079af65fcd30a7b794fec3',
 };
 const EXPECT = [F.externalConfig, F.executionView, F.resolver, F.acceptance, F.authority, F.gate, F.workflow].sort();
 const OUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_09_EA5B3_EXTERNAL_RUNTIME_CONFIG_RESOLVER_GOVERNANCE_RESULT.json');
@@ -129,6 +129,7 @@ try {
   req(resolver.includes('compileCap04RuntimeConfigV1') && resolver.includes('validateExternalFormalRuntimeConfigPayloadV1'), 'EA5B3_EXTERNAL_RESOLVER_REQUIRED');
   req(resolver.includes('source_config_ref: canonicalConfig.object_id') && resolver.includes('source_config_hash: canonicalConfig.determinism_hash'), 'EA5B3_EXTERNAL_SOURCE_IDENTITY_PRESERVATION_REQUIRED');
   req(resolver.includes('EXTERNAL_FORMAL_CAP04_HOURLY_CONFIG_REQUIRED'), 'EA5B3_A0_TO_CAP04_RESOLVER_FAIL_CLOSED_REQUIRED');
+  req(resolver.includes('exactRequiredScopeStringV1') && resolver.includes('MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1'), 'EA5B3_EXACT_EXTERNAL_SCOPE_NARROWING_REQUIRED');
 
   for (const text of [externalConfig, executionView, resolver]) {
     req(!/DATABASE_URL|POSTGRES(?:QL)?|NEON_DATABASE_URL|\bfetch\s*\(|https?:\/\//.test(text), 'EA5B3_NETWORK_OR_DATABASE_SURFACE_FORBIDDEN');
