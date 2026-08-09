@@ -1,0 +1,16 @@
+{
+  "schema_version":"geox_mcft_cap09_ea4_hads_bdlm4_solar_discovery_v1",
+  "discovery_id":"GEOX-MCFT-CAP-09-EA4-HADS-BDLM4-SOLAR-DISCOVERY-V1",
+  "capability_line_id":"MCFT-CAP-09",
+  "slice_id":"MCFT-CAP-09.S6",
+  "record_status":"SOURCE_DISCOVERY_ONLY_NOT_AUTHORITY",
+  "base_main_sha":"b31b024c17b617f0e1c36010c8c3926682bd6533",
+  "provider":"NOAA_NWS_HADS",
+  "metadata_page":"https://hads.ncep.noaa.gov/states/MI_dcps.shtml",
+  "decoded_data_url":"https://hads.ncep.noaa.gov/nexhads2/servlet/DecodedData?hsa=nil&nesdis_ids=080010B4&of=0&sinceday=-2&state=nil",
+  "station_candidate":{"nwsl_id":"BDLM4","nesdis_id":"080010B4","description":"PLAINWELL RAWS","owner":"MCHDNR","latitude_dms":"42°39'47\"N","longitude_dms":"85°38'49\"W","latitude_decimal":42.6630555556,"longitude_decimal":-85.6469444444,"rw_shef_code":"RW","rw_semantics":"RADIATION_TOTAL_INCOMING_SOLAR_RADIATION","rw_unit":"W_M2","rw_data_interval_minutes":60,"transmit_interval_minutes":60},
+  "kbs_reference":{"latitude":42.408537,"longitude":-85.373637,"distance_method":"WGS84_SPHERICAL_HAVERSINE_DIAGNOSTIC_ONLY","distance_authority_created":false},
+  "discovery_requirements":{"metadata_identity_match":true,"metadata_rw_60min_match":true,"decoded_raw_retention_before_parse":true,"decoded_rw_column_required":true,"decoded_numeric_rw_values_required":true,"decoded_time_zone_label_required_for_freshness_claim":true,"provisional_quality_label_must_be_recorded":true,"public_raw_numeric_value_emission_count":0,"database_write_count":0,"formal_evidence_write_count":0},
+  "quality_boundary":{"provider_declares_values_provisional":true,"provider_quality_checked_claimed":false,"field_or_kbs_equivalence_claimed":false,"near_site_spatial_support_claimed":false,"source_authority_created":false},
+  "discovery_effect":{"solar_source_authority_created":false,"source_substitution_authorized":false,"spatial_representativeness_authority_created":false,"ea5_authorized":false,"database_write_authorized":false,"formal_evidence_write_authorized":false,"formal_window_started":false,"mcft_cap09_completed":false}
+}
