@@ -55,8 +55,7 @@ function requiredStringV1(value: unknown, code: string): string {
 }
 
 function uniqueSortedV1(values: readonly string[]): string[] {
-  return [...new Set(values.filter((value) => typeof value === "string" && value.trim()))]
-    .sort((left, right) => left.localeCompare(right));
+  return [...new Set(values.filter((value) => typeof value === "string" && value.trim()))].sort();
 }
 
 function externalLimitationsV1(values: readonly string[], additions: readonly string[] = []): string[] {
