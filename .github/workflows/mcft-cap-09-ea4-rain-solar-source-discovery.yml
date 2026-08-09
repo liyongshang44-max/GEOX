@@ -1,0 +1,73 @@
+name: mcft-cap-09-ea4-rain-solar-source-discovery
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea4-rain-solar-source-discovery.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-RAIN-SOLAR-SOURCE-DISCOVERY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_RAIN_SOLAR_SOURCE_DISCOVERY.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_RAIN_SOLAR_SOURCE_DISCOVERY.mjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea4-rain-solar-source-discovery-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  discover-current-kbs-model-surface:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium for current Enviroweather model discovery
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Validate exact no-write rain/solar discovery boundary
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_RAIN_SOLAR_SOURCE_DISCOVERY.cjs
+      - name: Syntax-check safe current-model discovery probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_RAIN_SOLAR_SOURCE_DISCOVERY.mjs
+      - name: Discover KBS rain and solar machine surface without observation values
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_RAIN_SOLAR_SOURCE_DISCOVERY.mjs
+      - name: Verify discovery-only adjudication
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA4_RAIN_SOLAR_SOURCE_DISCOVERY_RESULT.json','utf8'));
+          if (result.status !== 'PASS') throw new Error('EA4RS_DISCOVERY_PASS_REQUIRED');
+          if (result.target_station_slug !== 'kbs' || result.station_selection?.selected_label_pattern_match !== true) throw new Error('EA4RS_KBS_STATION_SELECTION_REQUIRED');
+          if (!(result.submitted_machine_response_count > 0) || !(result.submitted_api_host_response_count > 0)) throw new Error('EA4RS_SUBMITTED_MACHINE_SURFACE_REQUIRED');
+          if (result.discovery_creates_formal_source_authority !== false || result.rainfall_qualified !== false || result.solar_radiation_qualified !== false) throw new Error('EA4RS_DISCOVERY_OVERCLAIM');
+          if (result.query_values_emitted !== false || result.raw_numeric_observation_values_emitted !== false || result.raw_response_body_persisted !== false || result.rendered_dom_persisted !== false || result.export_csv_clicked !== false) throw new Error('EA4RS_DISCOVERY_PRIVACY_BOUNDARY_DRIFT');
+          if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0 || result.formal_window_started !== false || result.ea5_authorized !== false) throw new Error('EA4RS_WRITE_OR_SUCCESSOR_AUTHORITY_FORBIDDEN');
+          console.log(JSON.stringify({status:'PASS',submitted_machine_response_count:result.submitted_machine_response_count,capability_summary:result.capability_summary,rainfall_qualified:false,solar_radiation_qualified:false,ea5_authorized:false}));
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea4-rain-solar-source-discovery-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA4_RAIN_SOLAR_SOURCE_DISCOVERY_STATIC_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA4_RAIN_SOLAR_SOURCE_DISCOVERY_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
