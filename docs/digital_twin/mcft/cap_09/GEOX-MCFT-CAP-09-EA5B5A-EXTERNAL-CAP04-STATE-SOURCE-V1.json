@@ -13,7 +13,7 @@
   "implementation_blobs": {
     "external_cap04_input_authority_v1": "b4b7448518628bcffe8eaf6a91d9967145f7647d",
     "external_cap04_state_source_builder_v1": "0d9857ea883f55a64261b58b8e56dffa1d388028",
-    "focused_acceptance": "826f9ec39c9a5a26f18d9411f0aa80a19a7fa0a0"
+    "focused_acceptance": "84334dd120c7714105df1f25861fefbee98677fd"
   },
   "qualified_authority": {
     "runtime_scope": {
