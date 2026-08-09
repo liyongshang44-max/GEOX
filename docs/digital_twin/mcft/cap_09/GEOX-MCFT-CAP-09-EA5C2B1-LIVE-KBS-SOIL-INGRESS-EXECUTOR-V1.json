@@ -1,0 +1,109 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5c2b1_live_kbs_soil_ingress_executor_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5C2B1-LIVE-KBS-SOIL-INGRESS-EXECUTOR-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "S6-EA5C2B1-LIVE-KBS-SOIL-INGRESS-EXECUTOR-QUALIFICATION",
+  "record_status": "EA5C2B1_EXECUTOR_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "d3e15cfd20ec565f419494287151dbaf385dfdb3",
+  "governing_authority": {
+    "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
+    "amendment_05_blob_sha": "7a92c17f7ba32aae52667de9c21db62bfd2ba70b",
+    "ea2a_kbs_soil_policy_blob_sha": "6c6e623ff96917d5ca6410d5fd5acc0f3372689c",
+    "ea4_recovery_authority_blob_sha": "1174940a6908e545e70d87cb65be5b3a41db33cf",
+    "ea5c1_authority_blob_sha": "110a75ea7e6d8357b4a9d26941dcf3f70a115276",
+    "ea5c2a_binding_contract_blob_sha": "ca6ee5ae9de135e21cb4e3b77a8fa170b5364812"
+  },
+  "frozen_runtime_blobs": {
+    "ea3_collector_canonicalizer": "5b4e5133e51dfaf447c2de52caf1a9f50c8254d3",
+    "ea5c1_s3_compatible_retention_adapter": "dfa2c10266a5079842012426aed175851d30ca44",
+    "ea5c1_restricted_postgres_ingress": "6f7b6450d4f671c75affc2c7aba45ed71cb518c5",
+    "external_formal_binding_profile": "5fe20f988d2cd6ef038f54eec27e5a32ba6a396d",
+    "external_formal_runtime_scope": "f7ea03a7f8387ce4de135dac61f0b063e91f0f25"
+  },
+  "candidate_implementation_blobs": {
+    "live_kbs_soil_ingress_executor": "1cc2726aace39524e84fda9762f86a3fc2e96408",
+    "live_acceptance": "211dc6dd7c891374b7fc50027611870b279f8156"
+  },
+  "live_source_contract": {
+    "provider": "KBS_LTER",
+    "endpoint": "https://lter.kbs.msu.edu/weather/variates/25",
+    "source_family": "CURRENT_WEATHER_VARIATE_JSON",
+    "binding_id": "kbs_lter_variate25_vwc_100mm_v1",
+    "record_type": "soil_moisture_observation_v1",
+    "epistemic_class": "OBSERVED",
+    "source_unit": "fraction",
+    "canonical_unit": "fraction",
+    "quantity_kind": "VOLUMETRIC_WATER_CONTENT",
+    "measurement_depth_mm": 100,
+    "spatial_support": "NEAR_SITE_POINT_SUPPORT",
+    "direct_field_equivalence": false,
+    "direct_root_zone_equivalence": false,
+    "root_zone_representativeness": "PARTIAL",
+    "observation_operator_id": "POINT_100MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1"
+  },
+  "continuity_and_use_policy": {
+    "latest_source_max_age_minutes": 30,
+    "future_timestamp_tolerance_minutes": 5,
+    "qualification_window_hours": 24,
+    "maximum_allowed_gap_minutes": 30,
+    "minimum_distinct_hour_buckets": 24,
+    "minimum_window_span_minutes": 1430,
+    "raw_value_publication_authorized": false,
+    "public_reconstructable_sensor_sequence_authorized": false,
+    "commercial_reuse_rights_established": false
+  },
+  "qualified_architecture": {
+    "public_source_fetch_location": "COLLECTOR_SIDE_ONLY_NOT_RUNTIME",
+    "raw_decode_before_durable_retention_allowed": false,
+    "frozen_ea3_retention_before_decode_pipeline_reused": true,
+    "frozen_ea5c1_restricted_fact_ingress_reused": true,
+    "runtime_public_provider_fetch_allowed": false,
+    "new_canonical_evidence_store_created": false,
+    "database_schema_migration_required": false,
+    "canonical_soil_value_is_private_formal_evidence": true,
+    "canonical_soil_value_may_enter_public_acceptance_artifact": false
+  },
+  "ci_live_qualification": {
+    "real_kbs_endpoint_required": true,
+    "ci_private_minio_may_reprove_pipeline": true,
+    "ci_private_postgres_may_reprove_restricted_ingress": true,
+    "ci_minio_is_formal_24h_durable_store": false,
+    "ci_postgres_is_formal_neon_database": false
+  },
+  "effect_if_merged_to_protected_main": {
+    "ea5c2b1_live_kbs_soil_executor_qualified": true,
+    "persistent_formal_24h_raw_store_bound": false,
+    "formal_neon_live_ingress_proved": false,
+    "ea5c2b_live_formal_proof_complete": false,
+    "ea5c_complete": false,
+    "ea5d_authorized": false,
+    "ea5e_authorized": false,
+    "external_package_formal_eligible": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false
+  },
+  "next_candidate_frontier_if_effective": "S6-EA5C2B2-PERSISTENT-FORMAL-RAW-STORE-AND-FORMAL-NEON-LIVE-INGRESS-PROOF",
+  "ea5c2b2_required_secret_bindings": [
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY",
+    "GEOX_MCFT_CAP09_S6_DATABASE_URL"
+  ],
+  "hard_nonclaims": [
+    "CI_MINIO_IS_NOT_THE_FORMAL_24H_DURABLE_STORE",
+    "CI_POSTGRES_IS_NOT_FORMAL_NEON",
+    "NO_PERSISTENT_FORMAL_BUCKET_BINDING_FROM_EA5C2B1",
+    "NO_FORMAL_NEON_WRITE_FROM_EA5C2B1",
+    "NO_EA5C_COMPLETION_CLAIM",
+    "NO_EA5D_OR_EA5E_AUTHORIZATION",
+    "NO_FORMAL_O00_O23_START",
+    "NO_PUBLIC_KBS_RAW_VALUE_OR_RECONSTRUCTABLE_SEQUENCE",
+    "NO_RUNTIME_PUBLIC_PROVIDER_FETCH",
+    "NO_RECOMMENDATION_APPROVAL_AO_ACT_DISPATCH",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
