@@ -41,13 +41,14 @@ for (const [file, expected] of Object.entries(predecessorPins)) {
   eq(blob("HEAD", file), expected, `EA5D1_PREDECESSOR_MUTATED:${file}`);
 }
 
-const stableCandidatePins = {
+const candidatePins = {
   [bundlePath]: "1671b13df81cba53f966a6f06765198d160601d7",
   [servicePath]: "6c94bef139f260ef61c87f751a2c627b83e58977",
+  [acceptancePath]: "c7e5cd00acaabd25c7dedfb3c0869988f70f8d8c",
   [authorityPath]: "8bf52b4a18874f9201340528b727d7f74742b638",
   [workflowPath]: "3f41beb187c64bd730465e09f55f9e05b6f79e46"
 };
-for (const [file, expected] of Object.entries(stableCandidatePins)) {
+for (const [file, expected] of Object.entries(candidatePins)) {
   eq(blob("HEAD", file), expected, `EA5D1_CANDIDATE_BLOB_PIN_MISMATCH:${file}`);
 }
 
@@ -70,8 +71,8 @@ falsy(closure.success_effect_if_merged_to_protected_main.formal_o00_start_author
 const authority = json(authorityPath);
 eq(authority.base_main_sha, base, "EA5D1_AUTHORITY_BASE_MISMATCH");
 eq(authority.frontier_id, "S6-EA5D1-EXTERNAL-BOOTSTRAP-PERSISTENCE-IMPLEMENTATION-QUALIFICATION", "EA5D1_FRONTIER_MISMATCH");
-eq(authority.candidate_implementation_blobs.external_formal_bootstrap_authority_bundle, stableCandidatePins[bundlePath], "EA5D1_AUTHORITY_BUNDLE_PIN_MISMATCH");
-eq(authority.candidate_implementation_blobs.external_formal_bootstrap_persistence_service, stableCandidatePins[servicePath], "EA5D1_AUTHORITY_SERVICE_PIN_MISMATCH");
+eq(authority.candidate_implementation_blobs.external_formal_bootstrap_authority_bundle, candidatePins[bundlePath], "EA5D1_AUTHORITY_BUNDLE_PIN_MISMATCH");
+eq(authority.candidate_implementation_blobs.external_formal_bootstrap_persistence_service, candidatePins[servicePath], "EA5D1_AUTHORITY_SERVICE_PIN_MISMATCH");
 for (const key of [
   "exact_external_scope_only",
   "reality_binding_snapshot_materialized_from_external_authority",
@@ -172,8 +173,7 @@ const result = {
   subject_head_sha: git("rev-parse", "HEAD"),
   exact_changed_file_count: changed.length,
   predecessor_blobs_verified_unchanged: true,
-  stable_candidate_blobs_verified: true,
-  focused_acceptance_blob_sha: blob("HEAD", acceptancePath),
+  candidate_blobs_verified: true,
   exact_external_scope_only: true,
   causal_crop_stage_authority_required: true,
   exact_runtime_config_count: 25,
