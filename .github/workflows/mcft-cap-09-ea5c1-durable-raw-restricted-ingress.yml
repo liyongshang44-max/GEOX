@@ -93,6 +93,8 @@ jobs:
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts 2>&1 | tee acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
 
       - name: Re-prove EA3 retention-before-decode collector boundary
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.ts
 
       - name: Re-prove EA5B5C persistence-free production orchestration
