@@ -1,0 +1,99 @@
+name: mcft-cap-09-ea5b1-external-evidence-binding-seam
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5b1-external-evidence-binding-seam.yml'
+      - 'apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/evidence_window_builder_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v2.ts'
+      - 'apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts'
+      - 'apps/server/src/runtime/twin_runtime/a0_bootstrap_runtime_service_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5B1-EXTERNAL-EVIDENCE-BINDING-SEAM-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B_EXTERNAL_EVIDENCE_BINDING_SEAM.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5b1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  external-evidence-binding-seam:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact EA5B1 base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Syntax-check EA5B1 governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs
+
+      - name: Validate exact EA5B1 governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs
+
+      - name: Typecheck server
+        run: pnpm --filter @geox/server run typecheck
+
+      - name: Prove External Evidence binding seam
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B_EXTERNAL_EVIDENCE_BINDING_SEAM.ts
+
+      - name: Re-prove historical CAP01 A0 default behavior
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_01_A0_RUNTIME.ts
+
+      - name: Re-prove historical CAP03 R4-A default binding behavior
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_A_EVIDENCE_CLASSIFICATION.ts
+
+      - name: Verify EA5B1 remains implementation-only
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM_GOVERNANCE_RESULT.json','utf8'));
+          if (result.status !== 'PASS') throw new Error('EA5B1_GOVERNANCE_PASS_REQUIRED');
+          if (result.binding_seam_qualified !== true) throw new Error('EA5B1_BINDING_SEAM_REQUIRED');
+          if (result.cap04_external_service_threading_effective !== false) throw new Error('EA5B1_CAP04_THREADING_PREMATURE');
+          if (result.external_package_formal_eligible !== false || result.ea5c_authorized !== false || result.formal_o00_start_authorized !== false) throw new Error('EA5B1_PREMATURE_FORMAL_EFFECT');
+          if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0 || result.public_provider_request_count !== 0 || result.formal_window_started !== false || result.mcft_cap09_completed !== false) throw new Error('EA5B1_ZERO_WRITE_NONCLAIM_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',binding_seam:true,replay_regression:true,cap04_threading:false,formal_eligible:false,o00:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea5b1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM_GOVERNANCE_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
