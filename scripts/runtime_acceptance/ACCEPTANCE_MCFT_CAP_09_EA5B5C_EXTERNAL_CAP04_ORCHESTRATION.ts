@@ -48,9 +48,15 @@ async function main(): Promise<void> {
   ok("production service returns A2 when complete forcing is unavailable without inventing Forecast points");
 
   const malformed = structuredClone(fixture.candidates) as CanonicalReplayEvidenceRecordV1[];
-  byTypeV1(malformed, "future_weather_assumption_v1").available_to_runtime_at = "not-an-iso-instant";
-  assert.throws(() => executeExternalFormalCap04CandidateV1({ ...rawInputV1(fixture), candidate_records: malformed }), /EXTERNAL_CAP04_SERVICE_FUTURE_FORCING_FAILED/);
-  ok("malformed future forcing fails closed rather than being converted into a success or ordinary blocked path");
+  const malformedWeather = byTypeV1(malformed, "future_weather_assumption_v1");
+  const originalAvailableAt = String(malformedWeather.available_to_runtime_at);
+  const semanticMismatchAvailableAt = new Date(Date.parse(originalAvailableAt) - 60_000).toISOString();
+  malformedWeather.role_time.available_to_runtime_at = semanticMismatchAvailableAt;
+  assert.throws(
+    () => executeExternalFormalCap04CandidateV1({ ...rawInputV1(fixture), candidate_records: malformed }),
+    /EXTERNAL_CAP04_SERVICE_FUTURE_FORCING_FAILED:MALFORMED_FORCING_RECORD:FORCING_AVAILABILITY_MISMATCH/,
+  );
+  ok("syntactically valid but semantically inconsistent future forcing fails at the Future Forcing classifier rather than an earlier timestamp parser");
 
   const badBinding = structuredClone(fixture.candidates) as CanonicalReplayEvidenceRecordV1[];
   byTypeV1(badBinding, "observed_rainfall_v1").binding_id = "rainfall_c8_hourly_v1";
