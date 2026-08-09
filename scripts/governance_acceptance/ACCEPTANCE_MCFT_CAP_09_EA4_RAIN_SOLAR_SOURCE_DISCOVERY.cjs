@@ -17,7 +17,7 @@ const OUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_09_EA4_RAIN_SOLAR_SOURCE
 const PINS = {
   ea4_rejection: '791e3d24bdc862641c77ddd26778495cb8e6a7dd',
   config: '44f07c223519e8e22531906733ff34c8614aaa79',
-  probe: 'b8a9c9704405fb33c42376d8c85fabe47ad0bf94',
+  probe: '98d39bc5ecabb119b7b114911f85e6e7e8631e7d',
 };
 const git = (...args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
 const blob = (ref, file) => git('rev-parse', `${ref}:${file}`);
@@ -29,8 +29,7 @@ const result = {schema_version:'geox_mcft_cap09_ea4_rain_solar_source_discovery_
 try {
   req(BASE === EXPECTED_BASE, `EA4RS_BASE_MAIN_DRIFT:${BASE}`);
   const changed = git('diff','--name-only',`${BASE}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
-  result.changed_files = changed;
-  result.exact_file_count = changed.length;
+  result.changed_files = changed; result.exact_file_count = changed.length;
   req(JSON.stringify(changed) === JSON.stringify(EXPECT), `EA4RS_EXACT_FOUR_FILE_BOUNDARY_FAIL:${JSON.stringify(changed)}`);
   req(blob(BASE,EA4) === PINS.ea4_rejection, 'EA4RS_EA4_REJECTION_AUTHORITY_DRIFT');
   req(blob('HEAD',CONFIG) === PINS.config, 'EA4RS_CONFIG_BLOB_DRIFT');
@@ -40,9 +39,7 @@ try {
   req(ea4.live_qualification?.current_result === 'REJECTED_EA4_KBS_RAW_HOURLY_FRESHNESS_AUTHORITY', 'EA4RS_REJECTION_PREDECESSOR_REQUIRED');
   req(ea4.authority_effect?.new_source_architecture_adjudication_required_before_ea5 === true, 'EA4RS_SOURCE_ARCHITECTURE_DISCOVERY_NOT_AUTHORIZED');
   req(ea4.authority_effect?.ea5_candidate_development_authorized === false, 'EA4RS_EA5_MUST_REMAIN_BLOCKED');
-
-  req(config.record_status === 'SOURCE_DISCOVERY_ONLY_NOT_AUTHORITY', 'EA4RS_CONFIG_STATUS_DRIFT');
-  req(config.base_main_sha === BASE, 'EA4RS_CONFIG_BASE_DRIFT');
+  req(config.record_status === 'SOURCE_DISCOVERY_ONLY_NOT_AUTHORITY' && config.base_main_sha === BASE, 'EA4RS_CONFIG_STATUS_OR_BASE_DRIFT');
   req(config.provider === 'MSU_ENVIROWEATHER' && config.target_station_slug === 'kbs', 'EA4RS_PROVIDER_OR_STATION_DRIFT');
   req(config.source_page === 'https://enviroweather.msu.edu/crops/potato/dailyheatandmoisture', 'EA4RS_SOURCE_PAGE_DRIFT');
   req(config.target_capabilities.interval_or_daily_rainfall === true && config.target_capabilities.observed_solar_radiation_or_solar_flux === true, 'EA4RS_TARGET_CAPABILITIES_DRIFT');
@@ -51,20 +48,16 @@ try {
   req(config.interaction_policy.query_values_may_be_emitted === false && config.interaction_policy.raw_numeric_observation_values_may_be_emitted === false && config.interaction_policy.raw_json_or_csv_body_may_be_persisted === false && config.interaction_policy.rendered_dom_may_be_persisted === false, 'EA4RS_DISCOVERY_PRIVACY_BOUNDARY_WEAKENED');
   for (const key of ['creates_formal_source_authority','creates_source_substitution_authority','qualifies_rainfall','qualifies_solar_radiation','database_write_authorized','formal_evidence_write_authorized','formal_window_started','ea5_authorized','mcft_cap09_completed']) req(config.discovery_effect[key] === false, `EA4RS_DISCOVERY_EFFECT_OVERCLAIM:${key}`);
 
-  for (const token of ['chromium.launch','selectTargetStation','getByRole(\'button\', { name: /submit/i })','query_values_emitted: false','raw_numeric_observation_values_emitted: false','raw_response_body_persisted: false','export_csv_clicked: false','rainfall_qualified: false','solar_radiation_qualified: false']) req(probe.includes(token), `EA4RS_PROBE_REQUIRED_TOKEN_MISSING:${token}`);
+  for (const token of ['chromium.launch','selectTargetStation','submitModel','station_form_request_submit','query_values_emitted:false','raw_numeric_observation_values_emitted:false','raw_response_body_persisted:false','export_csv_clicked:false','rainfall_qualified:false','solar_radiation_qualified:false']) req(probe.replace(/\s+/g,'' ).includes(token.replace(/\s+/g,'')), `EA4RS_PROBE_REQUIRED_TOKEN_MISSING:${token}`);
   req(!/DATABASE_URL|POSTGRES(?:QL)?|NEON_DATABASE_URL|psql\b|INSERT\s+INTO|public\.facts/.test(probe), 'EA4RS_DATABASE_OR_FACTS_WRITE_SURFACE_FORBIDDEN');
   req(!/page\.on\(['\"]download|saveAs\(|createWriteStream\(/.test(probe), 'EA4RS_DOWNLOAD_PERSISTENCE_FORBIDDEN');
-
-  req(workflow.includes('persist-credentials: false'), 'EA4RS_WORKFLOW_PERSIST_CREDENTIALS_FORBIDDEN');
-  req(workflow.includes('playwright install --with-deps chromium'), 'EA4RS_WORKFLOW_CHROMIUM_MISSING');
+  req(workflow.includes('persist-credentials: false') && workflow.includes('playwright install --with-deps chromium'), 'EA4RS_WORKFLOW_CREDENTIAL_OR_CHROMIUM_DRIFT');
   req(workflow.includes('MCFT_BASE_SHA') && workflow.includes('MCFT_SUBJECT_SHA'), 'EA4RS_WORKFLOW_EXACT_SHA_MISSING');
   req(!/DATABASE_URL|POSTGRES(?:QL)?|NEON_DATABASE_URL/.test(workflow), 'EA4RS_WORKFLOW_DATABASE_SECRET_FORBIDDEN');
 
   Object.assign(result,{status:'PASS',ea4_rejection_authority_blob:PINS.ea4_rejection,discovery_creates_formal_source_authority:false,rainfall_qualified:false,solar_radiation_qualified:false,ea5_authorized:false});
 } catch (error) {
-  result.error = `${error.name || 'Error'}:${error.message || String(error)}`;
-  process.exitCode = 1;
+  result.error = `${error.name || 'Error'}:${error.message || String(error)}`; process.exitCode = 1;
 }
-fs.mkdirSync(path.dirname(OUT),{recursive:true});
-fs.writeFileSync(OUT,JSON.stringify(result,null,2)+'\n');
+fs.mkdirSync(path.dirname(OUT),{recursive:true}); fs.writeFileSync(OUT,JSON.stringify(result,null,2)+'\n');
 if(result.status==='PASS') console.log(JSON.stringify(result)); else console.error(result.error);
