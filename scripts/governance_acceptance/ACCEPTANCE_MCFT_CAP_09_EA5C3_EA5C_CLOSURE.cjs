@@ -36,7 +36,7 @@ const predecessorPins = {
   "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts": "6f7b6450d4f671c75affc2c7aba45ed71cb518c5",
   "apps/server/src/external_evidence/formal_durable_raw_store_binding_v1.ts": "c2babdf8cee6b2e9702c6923eab8a739a40001a5",
   "apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts": "1cc2726aace39524e84fda9762f86a3fc2e96408",
-  "scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS.ts": "707d5e74b54d1e553302a2349c2c252b13811a19"
+  "scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS.ts": "43c4edba5a52c6fa92d41fc148244009b46909a1"
 };
 for (const [file, expected] of Object.entries(predecessorPins)) {
   eq(blob(base, file), expected, `EA5C3_BASE_BLOB_PIN_MISMATCH:${file}`);
@@ -44,7 +44,7 @@ for (const [file, expected] of Object.entries(predecessorPins)) {
 }
 
 const candidatePins = {
-  [authorityPath]: "d613f8056b26a3adf17601d6774d01ce26a897de",
+  [authorityPath]: "f795a295dc241f565a595589eb94706d096f26ca",
   [workflowPath]: "a82492460e0545caac228856ac009a2d35ed68a1"
 };
 for (const [file, expected] of Object.entries(candidatePins)) {
