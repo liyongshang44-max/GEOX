@@ -36,8 +36,8 @@ const PINS = {
   selector: 'c4ecf12c9830a82b4b5f5c001e51a483fc7ad2e0',
   contWindow: '0a7c02aae1e5ddbccadc303ae7977e4369dddcba',
   a0service: 'd686037944f07066f47df17e6d21d560b10fed57',
-  acceptance: '1d662cc46f3ffb939901f65bb99897a04a37521e',
-  authority: 'c3adee24c8f001f90c59ae53b91b751662e5a7fb',
+  acceptance: 'b882d42dd40ee8d4f2828d6be79fe58b5fb4e804',
+  authority: '51740f932e74595d8953d81ee0a46898cb9c60f9',
 };
 const EXPECT = [
   F.profile, F.a0window, F.selector, F.contWindow, F.a0service,
@@ -81,7 +81,7 @@ try {
   const acceptance = read(F.acceptance);
   const workflow = read(F.workflow);
 
-  req(amendment.includes('S6-EA5B') && amendment.includes('External Formal Runtime Authority Profile'), 'EA5B1_AMENDMENT05_EA5B_RULING_MISSING');
+  req(amendment.includes('**EA5B** — External Formal Runtime Authority Profile + binding/profile implementation qualification') && amendment.includes('External Formal Runtime Authority Profile'), 'EA5B1_AMENDMENT05_EA5B_RULING_MISSING');
   req(amendmentStatus.next_legal_successor_if_effective === 'S6-EA5B-EXTERNAL-FORMAL-RUNTIME-AUTHORITY-PROFILE-IMPLEMENTATION', 'EA5B1_AMENDMENT05_SUCCESSOR_DRIFT');
   req(amendmentStatus.implementation_authority_if_effective?.additive_external_runtime_profile_authorized === true, 'EA5B1_ADDITIVE_PROFILE_NOT_AUTHORIZED');
   req(amendmentStatus.implementation_authority_if_effective?.historical_replay_contract_mutation_authorized === false, 'EA5B1_REPLAY_MUTATION_FORBIDDEN');
@@ -126,7 +126,8 @@ try {
 
   req(a0window.includes('authorized_soil_binding_id?: string'), 'EA5B1_A0_AUTHORIZED_BINDING_INPUT_MISSING');
   req(a0window.includes('SOIL_BINDING_NOT_AUTHORIZED') && a0window.includes('UNAUTHORIZED_BINDING_EXCLUDED'), 'EA5B1_A0_UNAUTHORIZED_BINDING_FAIL_CLOSED_MISSING');
-  req(a0window.includes('...(authorizedSoilBindingId !== undefined ? { authorized_soil_binding_id: authorizedSoilBindingId } : {})'), 'EA5B1_A0_OPTIONAL_SEMANTIC_FIELD_MISSING');
+  const compactA0Window = a0window.replace(/\s+/g, '');
+  req(compactA0Window.includes('...(authorizedSoilBindingId!==undefined?{authorized_soil_binding_id:authorizedSoilBindingId}:{})'), 'EA5B1_A0_OPTIONAL_SEMANTIC_FIELD_MISSING');
   req(selector.includes('authorized_binding_id?: string'), 'EA5B1_SELECTOR_AUTHORIZED_BINDING_INPUT_MISSING');
   req(selector.includes('?? ASSIMILATED_CONTINUATION_OBSERVATION_BINDING_ID_V1'), 'EA5B1_SELECTOR_REPLAY_DEFAULT_MISSING');
   req(selector.includes('record.binding_id !== input.authorized_binding_id'), 'EA5B1_SELECTOR_CALLER_BINDING_ENFORCEMENT_MISSING');
@@ -145,6 +146,7 @@ try {
     'historical Replay binding behavior',
     'blank binding authority fails closed',
   ]) req(acceptance.includes(token), `EA5B1_ACCEPTANCE_CASE_MISSING:${token}`);
+  req(acceptance.includes('assert.equal(pass, 7)'), 'EA5B1_ACCEPTANCE_PASS_COUNT_DRIFT');
 
   req(workflow.includes('ACCEPTANCE_MCFT_CAP_09_EA5B_EXTERNAL_EVIDENCE_BINDING_SEAM.ts'), 'EA5B1_FOCUSED_ACCEPTANCE_WORKFLOW_MISSING');
   req(workflow.includes('ACCEPTANCE_MCFT_CAP_01_A0_RUNTIME.ts'), 'EA5B1_CAP01_REGRESSION_WORKFLOW_MISSING');
