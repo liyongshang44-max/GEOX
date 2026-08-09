@@ -109,7 +109,7 @@ try {
     'remains non-persistable',
     'cannot claim External operator provenance',
     'Evidence selection and posterior observation refs diverge',
-    'does not invent an observation',
+    'without inventing an observation',
   ]) req(acceptance.includes(token), `EA5B4A_ACCEPTANCE_CASE_MISSING:${token}`);
   req(acceptance.includes('assert.equal(pass, 7)'), 'EA5B4A_ACCEPTANCE_PASS_COUNT_DRIFT');
 
