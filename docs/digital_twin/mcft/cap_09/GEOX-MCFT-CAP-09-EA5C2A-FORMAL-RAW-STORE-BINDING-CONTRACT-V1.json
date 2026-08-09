@@ -1,0 +1,94 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5c2a_formal_raw_store_binding_contract_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5C2A-FORMAL-RAW-STORE-BINDING-CONTRACT-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "S6-EA5C2A-FORMAL-DURABLE-RAW-STORE-BINDING-CONTRACT-QUALIFICATION",
+  "record_status": "EA5C2A_BINDING_CONTRACT_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "4b9f3cfb16b8e49ad50b991465b553ac4d862af4",
+  "governing_authority": {
+    "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
+    "amendment_05_blob_sha": "7a92c17f7ba32aae52667de9c21db62bfd2ba70b",
+    "ea4_recovery_authority_blob_sha": "1174940a6908e545e70d87cb65be5b3a41db33cf",
+    "ea5c1_authority_blob_sha": "110a75ea7e6d8357b4a9d26941dcf3f70a115276"
+  },
+  "frozen_ea5c1_implementation_blobs": {
+    "private_s3_compatible_raw_retention_adapter": "dfa2c10266a5079842012426aed175851d30ca44",
+    "restricted_postgres_external_formal_evidence_ingress": "6f7b6450d4f671c75affc2c7aba45ed71cb518c5"
+  },
+  "binding_contract": {
+    "binding_id": "MCFT_CAP09_FORMAL_DURABLE_RAW_STORE_BINDING_V1",
+    "provider_contract": "S3_COMPATIBLE_PRIVATE_OBJECT_STORE",
+    "bucket": "geox-mcft-cap09-formal-raw-v1",
+    "object_prefix": "mcft-cap09-formal-raw-v1/sha256",
+    "retention_class": "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+    "endpoint_transport": "HTTPS_ONLY",
+    "endpoint_local_or_loopback_allowed": false,
+    "endpoint_embedded_credentials_allowed": false,
+    "endpoint_query_or_fragment_allowed": false,
+    "endpoint_path_indirection_allowed": false,
+    "known_ci_minio_credentials_allowed": false,
+    "credential_source": "PROCESS_ENVIRONMENT_SECRET_BINDING",
+    "credential_material_public_descriptor_allowed": false,
+    "public_or_presigned_raw_access_allowed": false,
+    "provider_specific_runtime_branching_required": false,
+    "local_or_ci_fallback_allowed": false,
+    "binding_fingerprint_uses_secret_material": false
+  },
+  "required_secret_bindings": [
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY"
+  ],
+  "qualified_architecture": {
+    "existing_ea5c1_s3_compatible_adapter_reused": true,
+    "new_object_store_sdk_dependency_added": false,
+    "runtime_provider_fetch_enabled": false,
+    "new_canonical_evidence_store_created": false,
+    "database_schema_migration_required": false,
+    "formal_store_identity_must_be_explicit_before_live_ingress": true,
+    "formal_store_credentials_must_fail_closed_when_missing": true,
+    "formal_store_binding_descriptor_is_non_secret": true,
+    "ci_minio_can_only_reprove_adapter_regression": true
+  },
+  "effect_if_merged_to_protected_main": {
+    "ea5c1_implementation_qualified": true,
+    "ea5c2a_binding_contract_qualified": true,
+    "persistent_formal_24h_raw_store_bound": false,
+    "formal_live_source_ingress_proved": false,
+    "formal_evidence_write_activation": false,
+    "formal_neon_write_performed_by_this_candidate": false,
+    "ea5c_complete": false,
+    "ea5d_authorized": false,
+    "ea5e_authorized": false,
+    "external_package_formal_eligible": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false
+  },
+  "next_candidate_frontier_if_effective": "S6-EA5C2B-PERSISTENT-FORMAL-RAW-STORE-LIVE-BINDING-AND-INGRESS-PROOF",
+  "ea5c2b_minimum_proof": {
+    "persistent_remote_bucket_identity_bound": true,
+    "private_authenticated_put_head_roundtrip": true,
+    "anonymous_raw_access_denied": true,
+    "live_external_source_raw_retained_before_decode": true,
+    "ea3_canonicalization_used": true,
+    "ea5c1_restricted_facts_ingress_used": true,
+    "formal_neon_exact_scope_write_proved": true,
+    "raw_bytes_absent_from_formal_facts": true
+  },
+  "hard_nonclaims": [
+    "CI_MINIO_IS_NOT_THE_FORMAL_24H_DURABLE_STORE",
+    "NO_PERSISTENT_FORMAL_BUCKET_BINDING_FROM_EA5C2A",
+    "NO_LIVE_FORMAL_SOURCE_INGRESS_PROOF_FROM_EA5C2A",
+    "NO_FORMAL_NEON_WRITE_FROM_EA5C2A",
+    "NO_EA5C_COMPLETION_CLAIM",
+    "NO_EA5D_OR_EA5E_AUTHORIZATION",
+    "NO_FORMAL_O00_O23_START",
+    "NO_RECOMMENDATION_APPROVAL_AO_ACT_DISPATCH",
+    "NO_COMMERCIAL_CLOSED_LOOP_CONNECTION",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
