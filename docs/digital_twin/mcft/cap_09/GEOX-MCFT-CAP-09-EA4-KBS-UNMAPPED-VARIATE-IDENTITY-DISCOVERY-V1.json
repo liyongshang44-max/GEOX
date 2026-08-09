@@ -1,0 +1,83 @@
+{
+  "schema_version": "geox_mcft_cap09_ea4_kbs_unmapped_variate_identity_discovery_v1",
+  "discovery_id": "GEOX-MCFT-CAP-09-EA4-KBS-UNMAPPED-VARIATE-IDENTITY-DISCOVERY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "DISCOVERY_ONLY_NOT_SOURCE_AUTHORITY",
+  "base_main_sha": "b31b024c17b617f0e1c36010c8c3926682bd6533",
+  "ea1e_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1E-KBS-TRANSIENT-ROLE-MAP-PROBE-V1.json",
+  "ea1e_authority_blob_sha": "69835c9877474f4d46980487f6e5789add803df2",
+  "source_page": "https://lter.kbs.msu.edu/current-weather/",
+  "official_host": "lter.kbs.msu.edu",
+  "endpoint_path_prefix": "/weather/variates/",
+  "resolved_endpoint_ids": [19, 21, 22, 25, 55, 57],
+  "unmapped_high_frequency_endpoint_ids": [23, 52],
+  "diagnostic_roles": [
+    "PRECIPITATION_AGGREGATES",
+    "MAX_GUST_10M_LAST_HOUR",
+    "WIND_DIRECTION_NUMERIC_IF_RENDERED"
+  ],
+  "allowed_identity_methods": [
+    "RAIN_SUM_LOCAL_CALENDAR_WINDOWS_DIRECT_INCH_V1",
+    "RAIN_SUM_LOCAL_CALENDAR_WINDOWS_MM_TO_INCH_V1",
+    "RAIN_SUM_ROLLING_WINDOWS_DIRECT_INCH_V1",
+    "RAIN_SUM_ROLLING_WINDOWS_MM_TO_INCH_V1",
+    "GUST_MAX_LAST_60M_DIRECT_MPH_V1",
+    "GUST_MAX_LAST_60M_MPS_TO_MPH_V1",
+    "WIND_DIRECTION_LATEST_DIRECT_DEG_V1"
+  ],
+  "diagnostic_timezone": {
+    "name": "America/Detroit",
+    "is_time_authority": false,
+    "purpose": "ONLY_FOR_CURRENT_PAGE_LOCAL_CALENDAR_AGGREGATE_MATCHING"
+  },
+  "matching_policy": {
+    "rendered_display_precision_drives_tolerance": true,
+    "tolerance_rule": "HALF_LAST_DISPLAYED_UNIT_PLUS_1E_6",
+    "require_endpoint_freshness_minutes_max": 30,
+    "future_timestamp_tolerance_minutes": 5,
+    "numeric_sensor_values_may_exist_only_in_process_memory": true,
+    "raw_json_body_may_not_be_persisted": true,
+    "rendered_dom_may_not_be_persisted": true,
+    "solar_excluded_from_current_high_frequency_set_only_if_all_unmapped_endpoints_uniquely_resolve_to_non_solar_roles": true
+  },
+  "output_policy": {
+    "endpoint_id_allowed": true,
+    "response_sha256_allowed": true,
+    "response_bytes_allowed": true,
+    "latest_timestamp_allowed": true,
+    "age_minutes_allowed": true,
+    "point_count_allowed": true,
+    "matched_role_id_allowed": true,
+    "matched_method_id_allowed": true,
+    "candidate_method_ids_allowed": true,
+    "raw_numeric_sensor_values_allowed": false,
+    "rendered_numeric_values_allowed": false,
+    "raw_json_body_allowed": false,
+    "rendered_dom_allowed": false,
+    "unfiltered_text_allowed": false
+  },
+  "authority_effect": {
+    "solar_source_authority_created": false,
+    "rainfall_source_authority_created": false,
+    "timezone_authority_created": false,
+    "source_substitution_authorized": false,
+    "ea5_authorized": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false
+  },
+  "hard_nonclaims": [
+    "NO_SOURCE_AUTHORITY_FROM_DISCOVERY",
+    "NO_SOLAR_AUTHORITY_FROM_ROLE_EXCLUSION_ALONE",
+    "NO_TIMEZONE_AUTHORITY",
+    "NO_SOURCE_SUBSTITUTION",
+    "NO_PUBLIC_SENSOR_VALUES",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_EA5_AUTHORIZATION",
+    "NO_FORMAL_O00_O23_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
