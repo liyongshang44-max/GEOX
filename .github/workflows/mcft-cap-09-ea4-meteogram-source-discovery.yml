@@ -1,0 +1,73 @@
+name: mcft-cap-09-ea4-meteogram-source-discovery
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea4-meteogram-source-discovery.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-METEOGRAM-SOURCE-DISCOVERY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_METEOGRAM_SOURCE_DISCOVERY.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_METEOGRAM_SOURCE_DISCOVERY.mjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea4-meteogram-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  discover-kbs-meteogram:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium for KBS Meteogram discovery
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Validate exact no-write Meteogram discovery boundary
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_METEOGRAM_SOURCE_DISCOVERY.cjs
+      - name: Syntax-check Meteogram discovery probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_METEOGRAM_SOURCE_DISCOVERY.mjs
+      - name: Discover current KBS Meteogram machine surface without values
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_METEOGRAM_SOURCE_DISCOVERY.mjs
+      - name: Verify discovery-only result
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA4_METEOGRAM_SOURCE_DISCOVERY_RESULT.json','utf8'));
+          if(r.status!=='PASS')throw new Error('EA4MG_DISCOVERY_PASS_REQUIRED');
+          if(r.target_station_slug!=='kbs'||r.duration_hours!==24)throw new Error('EA4MG_KBS_24H_REQUIRED');
+          if(!(r.api_host_json_response_count>0))throw new Error('EA4MG_API_SURFACE_REQUIRED');
+          if(r.discovery_creates_formal_source_authority!==false||r.rainfall_qualified!==false||r.solar_radiation_qualified!==false||r.ea5_authorized!==false)throw new Error('EA4MG_DISCOVERY_OVERCLAIM');
+          if(r.query_values_emitted!==false||r.raw_numeric_observation_values_emitted!==false||r.raw_json_body_persisted!==false||r.rendered_dom_persisted!==false||r.download_clicked!==false)throw new Error('EA4MG_PRIVACY_BOUNDARY_DRIFT');
+          if(r.database_write_count!==0||r.formal_evidence_write_count!==0||r.formal_window_started!==false)throw new Error('EA4MG_WRITE_OR_FORMAL_START_FORBIDDEN');
+          console.log(JSON.stringify({status:'PASS',api:r.api_host_json_response_count,capabilities:r.capability_summary,rainfall_qualified:false,solar_radiation_qualified:false,ea5_authorized:false}));
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea4-meteogram-source-discovery-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA4_METEOGRAM_SOURCE_DISCOVERY_STATIC_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA4_METEOGRAM_SOURCE_DISCOVERY_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
