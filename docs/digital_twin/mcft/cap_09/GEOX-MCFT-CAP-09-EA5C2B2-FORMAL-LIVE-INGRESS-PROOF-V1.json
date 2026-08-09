@@ -1,0 +1,119 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5c2b2_formal_live_ingress_proof_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5C2B2-FORMAL-LIVE-INGRESS-PROOF-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "S6-EA5C2B2-PERSISTENT-FORMAL-RAW-STORE-AND-FORMAL-NEON-LIVE-INGRESS-PROOF",
+  "record_status": "EA5C2B2_FORMAL_PROOF_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "0838046519258b93ee0c7161524f72a9bd54f68b",
+  "governing_authority": {
+    "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
+    "amendment_05_blob_sha": "7a92c17f7ba32aae52667de9c21db62bfd2ba70b",
+    "ea2a_kbs_soil_policy_blob_sha": "6c6e623ff96917d5ca6410d5fd5acc0f3372689c",
+    "ea5c1_authority_blob_sha": "110a75ea7e6d8357b4a9d26941dcf3f70a115276",
+    "ea5c2a_binding_contract_blob_sha": "ca6ee5ae9de135e21cb4e3b77a8fa170b5364812",
+    "ea5c2b1_live_executor_authority_blob_sha": "1c4eea0e8d3d8efeb2d6f6f3b606a17ae4abe701"
+  },
+  "frozen_implementation_blobs": {
+    "formal_durable_raw_store_binding": "c2babdf8cee6b2e9702c6923eab8a739a40001a5",
+    "ea5c1_s3_compatible_retention_adapter": "dfa2c10266a5079842012426aed175851d30ca44",
+    "ea5c1_restricted_postgres_ingress": "6f7b6450d4f671c75affc2c7aba45ed71cb518c5",
+    "ea5c2b1_live_kbs_soil_executor": "1cc2726aace39524e84fda9762f86a3fc2e96408"
+  },
+  "candidate_implementation_blobs": {
+    "formal_live_ingress_proof_runner": "707d5e74b54d1e553302a2349c2c252b13811a19"
+  },
+  "formal_database_authority": {
+    "project_id": "delicate-glade-62464340",
+    "branch_id": "br-cold-dust-a6j6aymz",
+    "database_name": "geox_mcft_cap09_s6_formal_24h",
+    "required_postgres_major_minimum": 18,
+    "facts_table": "public.facts",
+    "pre_candidate_read_only_preflight_observed_facts_count": 0,
+    "pre_candidate_read_only_preflight_exact_external_scope_count": 0,
+    "pre_candidate_read_only_preflight_status": "CLEAN"
+  },
+  "formal_raw_store_authority": {
+    "provider_contract": "S3_COMPATIBLE_PRIVATE_OBJECT_STORE",
+    "bucket": "geox-mcft-cap09-formal-raw-v1",
+    "object_prefix": "mcft-cap09-formal-raw-v1/sha256",
+    "retention_class": "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+    "transport": "HTTPS_ONLY",
+    "authenticated_put_head_required": true,
+    "anonymous_head_must_be_denied": true,
+    "local_or_ci_fallback_allowed": false,
+    "ci_minio_is_formal_store": false
+  },
+  "required_github_actions_secrets": [
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY",
+    "GEOX_MCFT_CAP09_S6_DATABASE_URL"
+  ],
+  "authorized_exact_head_live_effect": {
+    "maximum_new_facts": 1,
+    "allowed_record_type": "soil_moisture_observation_v1",
+    "allowed_binding_id": "kbs_lter_variate25_vwc_100mm_v1",
+    "allowed_epistemic_class": "OBSERVED",
+    "allowed_fact_source": "mcft_cap09_external_formal_evidence_v1",
+    "allowed_origin_source_id": "KBS_LTER_CURRENT_WEATHER_VARIATE_25",
+    "allowed_scope": {
+      "tenant_id": "tenant_mcft_external",
+      "project_id": "project_mcft_cap09",
+      "group_id": "group_public_research",
+      "field_id": "field_kbs_mcse_t1r1",
+      "season_id": "season_2026_corn",
+      "zone_id": "zone_kbs_mcse_t1r1_formal_v1"
+    },
+    "raw_value_publication_authorized": false,
+    "raw_payload_embedding_authorized": false,
+    "runtime_public_provider_fetch_authorized": false,
+    "runtime_config_write_authorized": false,
+    "a0_write_authorized": false,
+    "forecast_write_authorized": false,
+    "scenario_write_authorized": false,
+    "recommendation_action_write_authorized": false
+  },
+  "proof_requirements": {
+    "exact_formal_database_identity": true,
+    "postgres_18_or_newer": true,
+    "pre_state_must_be_zero_or_single_authorized_proof_fact": true,
+    "real_live_kbs_fetch_required_when_pre_state_is_zero": true,
+    "frozen_ea3_retention_before_decode_required": true,
+    "frozen_ea5c1_restricted_ingress_required": true,
+    "persistent_remote_raw_object_authenticated_reverification_required": true,
+    "persistent_remote_raw_object_anonymous_head_denial_required": true,
+    "final_total_facts_count": 1,
+    "final_exact_external_scope_fact_count": 1,
+    "public_artifact_may_contain_soil_value": false,
+    "public_artifact_may_contain_credentials_or_database_url": false
+  },
+  "effect_if_exact_head_proof_passes_and_candidate_merges_to_protected_main": {
+    "ea5c2b2_formal_live_ingress_proof_effective": true,
+    "persistent_formal_24h_raw_store_bound": true,
+    "formal_neon_live_ingress_proved": true,
+    "ea5c2b_live_formal_proof_complete": true,
+    "ea5c_complete": false,
+    "ea5d_authorized": false,
+    "ea5e_authorized": false,
+    "external_package_formal_eligible": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false
+  },
+  "next_candidate_frontier_if_effective": "S6-EA5C3-EA5C-CLOSURE-AND-EA5D-AUTHORIZATION",
+  "hard_nonclaims": [
+    "NO_EA5C_COMPLETION_FROM_EA5C2B2_ALONE",
+    "NO_EA5D_OR_EA5E_AUTHORIZATION",
+    "NO_FORMAL_O00_O23_START",
+    "NO_RUNTIME_CONFIG_OR_A0_PERSISTENCE",
+    "NO_FORECAST_OR_SCENARIO_PERSISTENCE",
+    "NO_RECOMMENDATION_APPROVAL_AO_ACT_DISPATCH",
+    "NO_PUBLIC_RAW_SOIL_VALUE_OR_RECONSTRUCTABLE_SEQUENCE",
+    "NO_RUNTIME_PUBLIC_PROVIDER_FETCH",
+    "NO_CI_MINIO_AS_FORMAL_STORE",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}

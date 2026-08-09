@@ -1,0 +1,123 @@
+name: mcft-cap-09-ea5c2b2-formal-live-ingress-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5c2b2-formal-live-ingress-proof.yml'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2B2-FORMAL-LIVE-INGRESS-PROOF-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS_PROOF.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5c2b2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+env:
+  GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+  GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+  GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+  GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+  GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+  GEOX_MCFT_CAP09_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+
+jobs:
+  ea5c2b2-formal-live-ingress-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact EA5C2B2 base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify required Formal secret bindings exist without exposing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in \
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT \
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET \
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION \
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID \
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY \
+            GEOX_MCFT_CAP09_S6_DATABASE_URL
+          do
+            if [ -z "${!name:-}" ]; then
+              echo "MISSING_REQUIRED_SECRET:$name"
+              missing=1
+            else
+              echo "PRESENT_REQUIRED_SECRET:$name"
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check EA5C2B2 governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS_PROOF.cjs
+
+      - name: Validate exact EA5C2B2 authority and four-file boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS_PROOF.cjs
+
+      - name: Typecheck server production dependencies
+        run: pnpm --filter @geox/server run typecheck
+
+      - name: Execute persistent Formal raw-store and Formal Neon live-ingress proof
+        run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS.ts
+
+      - name: Verify exact Formal proof and successor nonclaims
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS_RESULT.json','utf8'));
+          if (r.status !== 'PASS') throw new Error('EA5C2B2_PASS_REQUIRED');
+          if (r.formal_database_identity !== 'geox_mcft_cap09_s6_formal_24h' || r.formal_postgres_18_or_newer !== true) throw new Error('EA5C2B2_FORMAL_DATABASE_IDENTITY_REQUIRED');
+          if (r.final_fact_count !== 1 || r.exact_external_scope_fact_count !== 1) throw new Error('EA5C2B2_EXACT_ONE_FORMAL_EVIDENCE_FACT_REQUIRED');
+          if (r.persistent_formal_24h_raw_store_bound !== true || r.formal_neon_live_ingress_proved !== true || r.ea5c2b_live_formal_proof_complete !== true) throw new Error('EA5C2B2_FORMAL_LIVE_PROOF_REQUIRED');
+          if (r.authenticated_raw_head_reverification_passed !== true || r.anonymous_raw_head_denied !== true || r.raw_payload_embedded_in_fact !== false || r.public_raw_value_emission_count !== 0 || r.runtime_public_provider_fetch_count !== 0) throw new Error('EA5C2B2_RAW_OR_RUNTIME_BOUNDARY_VIOLATION');
+          if (r.ea5c_complete !== false || r.ea5d_authorized !== false || r.ea5e_authorized !== false || r.formal_o00_start_authorized !== false || r.formal_window_started !== false || r.mcft_cap09_completed !== false) throw new Error('EA5C2B2_PREMATURE_SUCCESSOR_EFFECT');
+          console.log(JSON.stringify({status:'PASS',formal_store:true,formal_neon:true,ea5c2b:true,ea5c:false,ea5d:false,ea5e:false,o00:false,cap09:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea5c2b2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS_PROOF_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
