@@ -1,0 +1,72 @@
+name: mcft-cap-09-ea4-enviroweather-daily-solar-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea4-enviroweather-daily-solar-qualification.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-ENVIROWEATHER-DAILY-SOLAR-QUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_ENVIROWEATHER_DAILY_SOLAR_QUALIFICATION.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_ENVIROWEATHER_DAILY_SOLAR_QUALIFICATION.mjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+concurrency:
+  group: mcft-cap09-ea4-daily-solar-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+jobs:
+  qualify-kbs-daily-solar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Validate exact daily-solar qualification boundary
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_ENVIROWEATHER_DAILY_SOLAR_QUALIFICATION.cjs
+      - run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_ENVIROWEATHER_DAILY_SOLAR_QUALIFICATION.mjs
+      - name: Execute live KBS daily-solar qualification
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_ENVIROWEATHER_DAILY_SOLAR_QUALIFICATION.mjs
+      - name: Verify governed daily-solar adjudication
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const a=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-ENVIROWEATHER-DAILY-SOLAR-QUALIFICATION-V1.json','utf8'));
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA4_ENVIROWEATHER_DAILY_SOLAR_QUALIFICATION_RESULT.json','utf8'));
+          if(r.status!=='PASS')throw new Error('EA4DS_PROBE_EXECUTION_PASS_REQUIRED');
+          if(!['TECHNICALLY_QUALIFIED_PENDING_TIMEZONE_AND_TEMPORAL_MODEL_AUTHORITY','REJECTED'].includes(r.qualification_status))throw new Error('EA4DS_QUALIFICATION_STATUS_REQUIRED');
+          const expected=r.qualification_status.startsWith('TECHNICALLY_QUALIFIED')?a.adjudication.pass_decision:a.adjudication.reject_decision;
+          if(r.decision!==expected)throw new Error('EA4DS_DECISION_MISMATCH');
+          if(r.raw_retention?.private_retention_verified!==true||r.raw_retention?.raw_body_uploaded!==false)throw new Error('EA4DS_RAW_RETENTION_REQUIRED');
+          if(r.station_identity_proven!==true||r.header_metadata?.name!=='srad')throw new Error('EA4DS_SOURCE_IDENTITY_OR_HEADER_REQUIRED');
+          if(r.daily_solar_candidate?.hourly_observed_truth_claimed!==false||r.daily_solar_candidate?.temporal_disaggregation_performed!==false)throw new Error('EA4DS_HOURLY_TRUTH_OVERCLAIM');
+          if(r.timestamp_boundary?.candidate_timezone_is_authority!==false)throw new Error('EA4DS_TIMEZONE_AUTHORITY_OVERCLAIM');
+          if(r.hourly_solar_source_authority_created!==false||r.temporal_disaggregation_authority_created!==false||r.source_substitution_authorized!==false||r.ea5_authorized!==false)throw new Error('EA4DS_PREMATURE_AUTHORITY');
+          if(r.database_write_count!==0||r.formal_evidence_write_count!==0||r.public_raw_numeric_value_emission_count!==0)throw new Error('EA4DS_WRITE_OR_RAW_PUBLICATION_FORBIDDEN');
+          console.log(JSON.stringify({status:'PASS',qualification_status:r.qualification_status,decision:r.decision,header:r.header_metadata,age_hours:r.daily_solar_candidate?.latest_complete_day_age_hours,violations:r.violations,hourly_authority:false,ea5_authorized:false}));
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea4-daily-solar-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA4_ENVIROWEATHER_DAILY_SOLAR_QUALIFICATION_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA4_ENVIROWEATHER_DAILY_SOLAR_QUALIFICATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
