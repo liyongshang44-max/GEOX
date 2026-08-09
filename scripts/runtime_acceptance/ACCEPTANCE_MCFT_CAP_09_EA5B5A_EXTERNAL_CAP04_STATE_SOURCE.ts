@@ -16,11 +16,11 @@ import {
 } from "../../apps/server/src/domain/soil_water/hourly_water_balance_v1.js";
 import { buildExternalFormalAssimilationAuthorityViewV1 } from "../../apps/server/src/domain/soil_water/external_formal_assimilation_authority_view_v1.js";
 import {
+  computeMemberDeterminismHashV1,
   semanticHashV1,
 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
-import {
-  validateCanonicalObjectV1,
-  type CanonicalObjectEnvelopeV1,
+import type {
+  CanonicalObjectEnvelopeV1,
 } from "../../apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.js";
 import { ExternalFormalCap04ExecutionConfigResolverV1 } from "../../apps/server/src/domain/twin_runtime/external_formal_cap04_execution_config_resolver_v1.js";
 import {
@@ -347,7 +347,12 @@ async function main(): Promise<void> {
     dynamics,
     compatibility_assimilation: assimilation,
   });
-  for (const member of Object.values(members)) validateCanonicalObjectV1(member);
+  for (const member of Object.values(members)) {
+    assert.equal(
+      computeMemberDeterminismHashV1(member as unknown as Record<string, unknown>),
+      member.determinism_hash,
+    );
+  }
   assert.equal(Object.values(members).length, 4);
   const canonicalText = JSON.stringify(members);
   assert.ok(!canonicalText.includes("CONTROLLED_REPLAY"));
