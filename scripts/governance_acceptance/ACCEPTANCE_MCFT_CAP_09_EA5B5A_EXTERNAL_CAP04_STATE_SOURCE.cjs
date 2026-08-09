@@ -33,8 +33,8 @@ const EXPECTED_CHANGED = [
 const EXPECTED_BLOBS = {
   inputAuthority: 'b4b7448518628bcffe8eaf6a91d9967145f7647d',
   stateSource: '0d9857ea883f55a64261b58b8e56dffa1d388028',
-  acceptance: '7eb6ba34f30523f8261ea2650bcef50ed12f245c',
-  authority: 'fd645ef52673f2b597019d5f852de247514f0ee9',
+  acceptance: '826f9ec39c9a5a26f18d9411f0aa80a19a7fa0a0',
+  authority: 'f688b21a33fc674d58fba01ae8be9d09647ce0cb',
   ea5b3: 'bdaf311cc23c78fb45079af65fcd30a7b794fec3',
   ea5b4a: '3192e3159bffce5a23913dc7299355e1a1e322c4',
   ea5b4b: '503842ef473e7ccf6a6fe46a21a36e678766851b',
@@ -116,6 +116,7 @@ function main() {
 
   requireToken(acceptanceText, 'assert.equal(pass, 8)', 'EA5B5A_ACCEPTANCE_PASS_COUNT_TOKEN_MISSING');
   requireToken(acceptanceText, 'mass_balance_trace.mass_balance_error_mm', 'EA5B5A_MASS_BALANCE_PROOF_MISSING');
+  requireToken(acceptanceText, 'computeMemberDeterminismHashV1', 'EA5B5A_CONTINUATION_MEMBER_HASH_PROOF_MISSING');
   requireToken(acceptanceText, 'CROP_STAGE_CONTEXT_HASH_MISMATCH', 'EA5B5A_CROP_DRIFT_NEGATIVE_CASE_MISSING');
   requireToken(acceptanceText, 'EXTERNAL_CAP04_COMMERCIAL_OPERATION_EVIDENCE_FORBIDDEN', 'EA5B5A_OPERATION_EVIDENCE_NEGATIVE_CASE_MISSING');
 
