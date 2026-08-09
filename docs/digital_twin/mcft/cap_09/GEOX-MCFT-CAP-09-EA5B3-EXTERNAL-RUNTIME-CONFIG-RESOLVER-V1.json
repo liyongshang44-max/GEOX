@@ -19,7 +19,7 @@
   "implementation_blobs": {
     "external_formal_runtime_config": "f7ea03a7f8387ce4de135dac61f0b063e91f0f25",
     "runtime_config_execution_view": "cbb5f4d6ea0753825fe9f7d419cd3cbd89298895",
-    "external_formal_cap04_execution_config_resolver": "24bdc2425b11f9ea8bd09294d9c9869f90278cff",
+    "external_formal_cap04_execution_config_resolver": "7c542f62b6950739187948fa60f0d4c5b3c4e8e6",
     "focused_acceptance": "aa114a4557be1d3d79bb0cd29b98e0ba1c86a88d"
   },
   "external_canonical_runtime_config_authority": {
