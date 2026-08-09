@@ -1,0 +1,72 @@
+{
+  "schema_version": "geox_mcft_cap09_ea4_kbs_raw_hourly_recovery_requalification_v1",
+  "qualification_id": "GEOX-MCFT-CAP-09-EA4-KBS-RAW-HOURLY-RECOVERY-REQUALIFICATION-V1",
+  "record_status": "RECOVERY_REQUALIFICATION_CANDIDATE_NOT_AUTHORITY",
+  "base_main_sha": "b31b024c17b617f0e1c36010c8c3926682bd6533",
+  "historical_rejection": {
+    "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-LIVE-SOURCE-EXACT-HEAD-QUALIFICATION-V1.json",
+    "authority_blob_sha": "791e3d24bdc862641c77ddd26778495cb8e6a7dd",
+    "rejection": "REJECTED_EA4_KBS_RAW_HOURLY_FRESHNESS_AUTHORITY",
+    "rejection_remains_historically_true": true,
+    "rejection_may_not_be_rewritten_or_deleted": true
+  },
+  "execution_probe": {
+    "ref": "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py",
+    "blob_sha": "ff2ad210387402a74731968e14746210fd2440dd",
+    "reuse_without_modification": true
+  },
+  "recovery_trigger_evidence": {
+    "source": "PR3001_EXACT_HEAD_ROLE_ALIGNMENT_RAW_HOURLY_REFERENCE",
+    "raw_hourly_response_sha256": "sha256:87288cdf18cf1b9d43c98ee4b8afd7fd6ff683134d3d7dd87b357d782543a1dd",
+    "reference_end_utc": "2026-08-09T04:00:00Z",
+    "interpretation": "POSSIBLE_SOURCE_RECOVERY_REQUIRING_NEW_EXACT_HEAD_REQUALIFICATION_NOT_RETROACTIVE_REVERSAL"
+  },
+  "qualification_requirements": {
+    "same_original_kbs_source_required": true,
+    "same_effective_6h_raw_hourly_freshness_limit_required": true,
+    "same_soil_freshness_and_24h_continuity_required": true,
+    "minimum_recent_numeric_rain_hours": 24,
+    "minimum_recent_complete_historical_et0_intervals": 24,
+    "full_gfs_72h_value_pipeline_required": true,
+    "same_cycle_73_sflux_endpoints_required": true,
+    "future_et0_exact_72_points_required": true,
+    "negative_et0_clipping_authorized": false,
+    "cross_cycle_substitution_authorized": false,
+    "silent_imputation_authorized": false,
+    "private_raw_retention_before_parse_decode_required": true,
+    "public_raw_value_emission_count": 0,
+    "database_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "same_exact_head_successful_attempts_required_before_successor_authority": 2
+  },
+  "success_boundary": {
+    "single_pass_creates_source_authority": false,
+    "single_pass_authorizes_ea5": false,
+    "two_exact_head_passes_may_authorize_successor_recovery_authority_draft": true,
+    "two_exact_head_passes_directly_make_external_package_formal_eligible": false,
+    "successor_authority_must_preserve_historical_rejection": true
+  },
+  "authority_effect": {
+    "kbs_raw_hourly_recovery_authority_created": false,
+    "live_source_qualified": false,
+    "gfs_72h_full_value_pipeline_qualified": false,
+    "future_et0_72h_value_execution_qualified": false,
+    "external_package_formal_eligible": false,
+    "ea5_authorized": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false
+  },
+  "hard_nonclaims": [
+    "NO_RETROACTIVE_ERASURE_OF_EA4_REJECTION",
+    "NO_SOURCE_SUBSTITUTION",
+    "NO_FRESHNESS_THRESHOLD_WEAKENING",
+    "NO_SINGLE_PASS_RECOVERY_AUTHORITY",
+    "NO_FORMAL_INGRESS_FROM_RECOVERY_PROBE_ALONE",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_FORMAL_O00_O23_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
