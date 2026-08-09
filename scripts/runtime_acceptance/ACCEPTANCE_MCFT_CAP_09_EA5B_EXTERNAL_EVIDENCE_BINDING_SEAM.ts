@@ -1,5 +1,5 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B_EXTERNAL_EVIDENCE_BINDING_SEAM.ts
-// Purpose: prove Amendment-05 External soil binding authority is explicit, fail-closed, and additive while historical Replay defaults remain available.
+// Purpose: prove Amendment-05 External soil binding authority is explicit, fail-closed, additive, and usable through a CAP08-safe External A0 Evidence service while historical Replay defaults remain available.
 // Boundary: deterministic in-memory acceptance only; no database, filesystem raw-source read, provider network, Runtime persistence, scheduler, Formal write, recommendation, action or O00 execution.
 
 import assert from "node:assert/strict";
@@ -17,10 +17,14 @@ import {
   buildFrozenEvidenceWindowV1,
 } from "../../apps/server/src/runtime/twin_runtime/evidence_window_builder_v1.js";
 import {
+  ExternalFormalA0EvidenceWindowServiceV1,
+} from "../../apps/server/src/runtime/twin_runtime/external_formal_a0_evidence_window_service_v1.js";
+import {
   selectAssimilatedContinuationObservationV2,
 } from "../../apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v2.js";
 import type {
   CanonicalReplayEvidenceRecordV1,
+  ReplayEvidenceSourcePortV1,
 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
 import {
   buildMcftCap03R2V2FixtureV1,
@@ -108,6 +112,21 @@ async function main(): Promise<void> {
   assert.ok(!externalA0.consumed_evidence_refs.includes(legacySoil.source_record_id));
   ok("A0 External binding whitelist consumes KBS soil and excludes same-scope historical C8 soil");
 
+  const externalEvidenceSource: ReplayEvidenceSourcePortV1 = {
+    async loadCandidateRecords() {
+      return mixedRecords;
+    },
+  };
+  const externalA0Service = new ExternalFormalA0EvidenceWindowServiceV1(externalEvidenceSource);
+  const preparedExternalA0 = await externalA0Service.prepare({
+    scope,
+    logical_time: logicalTime,
+  });
+  assert.equal(preparedExternalA0.authorized_soil_binding_id, MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1);
+  assert.equal(preparedExternalA0.evidence_window.assimilation_observation.source_record_id, externalSoil.source_record_id);
+  assert.equal(preparedExternalA0.evidence_window.excluded_records.find((record) => record.source_record_id === legacySoil.source_record_id)?.reason_code, "SOIL_BINDING_NOT_AUTHORIZED");
+  ok("CAP08-safe External A0 Evidence service enforces KBS binding without mutating historical A0 bootstrap core");
+
   const legacyA0 = buildFrozenEvidenceWindowV1({
     scope,
     logical_time: logicalTime,
@@ -156,7 +175,7 @@ async function main(): Promise<void> {
   }), /INVALID_RUNTIME_CONFIG:AUTHORIZED_SOIL_BINDING_ID/);
   ok("blank binding authority fails closed in both A0 and continuation selectors");
 
-  assert.equal(pass, 7);
+  assert.equal(pass, 8);
   console.log(`MCFT-CAP-09 EA5B External Evidence binding seam: ${pass} PASS, 0 FAIL`);
 }
 
