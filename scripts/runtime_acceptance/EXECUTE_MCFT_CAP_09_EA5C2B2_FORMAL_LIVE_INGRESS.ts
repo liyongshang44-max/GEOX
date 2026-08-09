@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { Pool } from "pg";
 
@@ -60,6 +61,12 @@ function exactIso(value: unknown, code: string): string {
 function positiveSafeInteger(value: unknown, code: string): number {
   if (!Number.isSafeInteger(value) || Number(value) <= 0) throw new Error(code);
   return Number(value);
+}
+
+function checkedOutHeadSha(): string {
+  const sha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  assert.match(sha, /^[0-9a-f]{40}$/, "EA5C2B2_CHECKED_OUT_HEAD_SHA_INVALID");
+  return sha;
 }
 
 function assertExactScope(record: Record<string, unknown>): void {
@@ -164,7 +171,7 @@ async function loadFacts(pool: Pool): Promise<FactRowV1[]> {
 async function main(): Promise<void> {
   const databaseUrl = process.env.GEOX_MCFT_CAP09_S6_DATABASE_URL;
   if (!databaseUrl?.trim()) throw new Error("EA5C2B2_FORMAL_DATABASE_URL_REQUIRED");
-  const githubSha = process.env.GITHUB_SHA?.trim() || "UNKNOWN";
+  const subjectHeadSha = checkedOutHeadSha();
   const binding = createFormalDurableRawEvidenceRetentionAdapterV1(process.env);
   const pool = new Pool({ connectionString: databaseUrl, max: 2 });
 
@@ -255,7 +262,7 @@ async function main(): Promise<void> {
     const result = {
       schema_version: "geox_mcft_cap09_ea5c2b2_formal_live_ingress_result_v1",
       status: "PASS",
-      subject_head_sha: githubSha,
+      subject_head_sha: subjectHeadSha,
       execution_mode: executionMode,
       formal_database_identity: EXPECTED_DATABASE,
       formal_postgres_18_or_newer: true,
