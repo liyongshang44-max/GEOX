@@ -1,0 +1,79 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5b5c_external_cap04_orchestration_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5B5C-EXTERNAL-CAP04-ORCHESTRATION-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "S6-EA5B5C-EXTERNAL-CAP04-ORCHESTRATION",
+  "base_main_sha": "5b911ad78fa1c66622368cb01d154d14fc3f8377",
+  "authority_predecessors": {
+    "ea5b5a_external_state_source_blob": "3f4713d52272eae3fce3b05f5ab21316b87b257f",
+    "ea5b5b_external_forecast_a1a2_blob": "7568566297f3e917f297fd5cf30111c57e578977"
+  },
+  "implementation_blobs": {
+    "external_cap04_candidate_execution_service_v1": "f627c89d59092621dd7a4523f09b2ce4ec78433b",
+    "focused_acceptance": "b67245380973b542b24a08d3a461fffea25a9b1c"
+  },
+  "qualified_runtime_orchestration": {
+    "runtime_mode": "SHADOW_ONLINE_FORMAL_QUALIFICATION_ONLY",
+    "input_authority": "EA5B5A_EXTERNAL_FIVE_SOURCE_AND_CROP_AUTHORITY",
+    "state_source_authority": "EA5B5A_EXTERNAL_CANONICAL_STATE_SOURCE",
+    "forecast_authority": "EA5B5B_EXTERNAL_FORECAST_AUTHORITY",
+    "a1_a2_authority": "EA5B5B_EXTERNAL_A1_A2_CANONICAL_CANDIDATE",
+    "completed_path": {
+      "forcing_outcome": "SELECTED",
+      "forecast_point_count": 72,
+      "operation_variant": "A1"
+    },
+    "unavailable_forcing_path": {
+      "forcing_outcome": "BLOCKED",
+      "forecast_point_count": 0,
+      "operation_variant": "A2"
+    },
+    "malformed_forcing_path": {
+      "forcing_outcome": "FAILED",
+      "required_error": "MALFORMED_FORCING_RECORD:FORCING_AVAILABILITY_MISMATCH",
+      "a1_a2_candidate_created": false
+    },
+    "compatibility_math_reused_without_authority_relabeling": true,
+    "runtime_config_authority_rebound_before_external_forecast_canonicalization": true,
+    "deterministic_across_created_at_changes": true,
+    "commercial_operation_evidence_forbidden": true,
+    "reality_authority_drift_fail_closed": true,
+    "crop_authority_drift_fail_closed": true,
+    "binding_authority_drift_fail_closed": true
+  },
+  "focused_qualification": {
+    "expected_pass_count": 8,
+    "server_typecheck": true,
+    "ea5b5a_regression": true,
+    "ea5b5b_regression": true
+  },
+  "effect_boundary": {
+    "production_external_cap04_candidate_orchestration_qualified": true,
+    "canonical_persistence_authorized": false,
+    "provider_fetch_authorized": false,
+    "scheduler_authorized": false,
+    "scenario_write_authorized": false,
+    "recommendation_write_authorized": false,
+    "approval_write_authorized": false,
+    "ao_act_write_authorized": false,
+    "dispatch_authorized": false,
+    "model_activation_authorized": false,
+    "ea5b_completion_audit_required": true,
+    "ea5b_complete": false,
+    "ea5c_authorized": false,
+    "ea5d_authorized": false,
+    "ea5e_authorized": false,
+    "external_package_formal_eligible": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "database_write_count": 0,
+    "provider_request_count": 0,
+    "scenario_write_count": 0,
+    "recommendation_write_count": 0,
+    "action_write_count": 0,
+    "mcft_cap09_completed": false
+  },
+  "closed_wip_non_authority": [3014, 3015, 3016],
+  "next_frontier": "S6-EA5B-CLOSURE-AUDIT"
+}
