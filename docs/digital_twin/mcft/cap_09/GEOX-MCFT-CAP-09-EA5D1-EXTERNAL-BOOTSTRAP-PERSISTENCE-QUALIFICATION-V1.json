@@ -17,8 +17,8 @@
     "external_a0_evidence_window_service": "1a02cd7c39da8a17ebd161f487c7d2c3c7c704e1",
     "external_a0_record_set_builder": "516c141cbb971d55635b500d2a99962116159588",
     "runtime_ports": "9f62818498a645d554925dcf8569cdd19c0f1c34",
-    "postgres_runtime_repository": "a0e7d0f997cbd46fc400453401fd79767178fafb",
-    "postgres_next_tick_repository": "b5f7834c2287aa6cbf30d8e0d6c54cc5ad9d3b5"
+    "postgres_runtime_repository": "9650d2875c6737714d22de7cc2b1d9229aea33a5",
+    "postgres_next_tick_repository": "910e4852f2debd898fdd2ce8d5495a4cb364b6e4"
   },
   "candidate_implementation_blobs": {
     "external_formal_bootstrap_authority_bundle": "c44bfca52f6d1b91de6289d9a9649a6114c7fc9a",
