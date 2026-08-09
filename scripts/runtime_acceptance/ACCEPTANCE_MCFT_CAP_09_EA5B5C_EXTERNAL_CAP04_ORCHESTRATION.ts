@@ -1,0 +1,79 @@
+// scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts
+import assert from "node:assert/strict";
+import { CAP04_A1_OPERATION_VARIANT_V1, CAP04_A2_OPERATION_VARIANT_V1 } from "../../apps/server/src/domain/twin_runtime/forecast_scenario_contracts_v1.js";
+import { validateCap04ARecordSetV1 } from "../../apps/server/src/domain/twin_runtime/forecast_scenario_record_set_validator_v1.js";
+import { executeExternalFormalCap04CandidateV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.js";
+import type { CanonicalReplayEvidenceRecordV1 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
+import { EA5B5B_CREATED_AT_V1, EA5B5B_LOGICAL_TIME_V1, buildEa5b5bExternalFixtureV1 } from "./mcft_cap09_ea5b5b_external_fixture_v1.js";
+
+let pass = 0;
+function ok(message: string): void { pass += 1; console.log(`PASS ${message}`); }
+function rawInputV1(f: Awaited<ReturnType<typeof buildEa5b5bExternalFixtureV1>>) {
+  return { scope: f.scope, logical_time: EA5B5B_LOGICAL_TIME_V1, created_at: EA5B5B_CREATED_AT_V1, handoff: f.handoff, runtime_config: f.hourly, candidate_records: f.candidates, crop_stage_context: f.crop };
+}
+function byTypeV1(records: CanonicalReplayEvidenceRecordV1[], type: string) {
+  const record = records.find((candidate) => candidate.record_type === type);
+  if (!record) throw new Error(`EA5B5C_RECORD_REQUIRED:${type}`);
+  return record;
+}
+
+async function main(): Promise<void> {
+  const fixture = await buildEa5b5bExternalFixtureV1();
+  const a1 = executeExternalFormalCap04CandidateV1(rawInputV1(fixture));
+  validateCap04ARecordSetV1(a1.record_set);
+  assert.equal(a1.operation_variant, "A1");
+  assert.equal(a1.record_set.operation_key.operation_variant, CAP04_A1_OPERATION_VARIANT_V1);
+  assert.equal(a1.forcing_outcome.status, "SELECTED");
+  assert.equal(a1.forecast_authority.forecast_candidate.status, "COMPLETED");
+  assert.equal(a1.forecast_authority.forecast_candidate.points.length, 72);
+  assert.equal(a1.record_set.members.length, 8);
+  assert.equal(a1.canonical_persistence_authorized, false);
+  assert.deepEqual([a1.provider_request_count, a1.database_write_count, a1.scenario_write_count, a1.recommendation_write_count, a1.action_write_count], [0, 0, 0, 0, 0]);
+  ok("production service owns raw External inputs through completed A1 candidate with 72h Forecast and zero side effects");
+
+  const a1Again = executeExternalFormalCap04CandidateV1({ ...rawInputV1(fixture), created_at: new Date(Date.parse(EA5B5B_CREATED_AT_V1) + 1800000).toISOString() });
+  assert.equal(a1Again.record_set.record_set_id, a1.record_set.record_set_id);
+  assert.equal(a1Again.record_set.aggregate_determinism_hash, a1.record_set.aggregate_determinism_hash);
+  ok("production orchestration is deterministic across audit created_at changes");
+
+  const blocked = structuredClone(fixture.candidates) as CanonicalReplayEvidenceRecordV1[];
+  byTypeV1(blocked, "future_et0_assumption_v1").quality.status = "FAIL";
+  const a2 = executeExternalFormalCap04CandidateV1({ ...rawInputV1(fixture), candidate_records: blocked });
+  validateCap04ARecordSetV1(a2.record_set);
+  assert.equal(a2.operation_variant, "A2");
+  assert.equal(a2.record_set.operation_key.operation_variant, CAP04_A2_OPERATION_VARIANT_V1);
+  assert.equal(a2.forcing_outcome.status, "BLOCKED");
+  assert.equal(a2.forecast_authority.forecast_candidate.status, "BLOCKED");
+  assert.equal(a2.forecast_authority.forecast_candidate.points.length, 0);
+  ok("production service returns A2 when complete forcing is unavailable without inventing Forecast points");
+
+  const malformed = structuredClone(fixture.candidates) as CanonicalReplayEvidenceRecordV1[];
+  byTypeV1(malformed, "future_weather_assumption_v1").available_to_runtime_at = "not-an-iso-instant";
+  assert.throws(() => executeExternalFormalCap04CandidateV1({ ...rawInputV1(fixture), candidate_records: malformed }), /EXTERNAL_CAP04_SERVICE_FUTURE_FORCING_FAILED/);
+  ok("malformed future forcing fails closed rather than being converted into a success or ordinary blocked path");
+
+  const badBinding = structuredClone(fixture.candidates) as CanonicalReplayEvidenceRecordV1[];
+  byTypeV1(badBinding, "observed_rainfall_v1").binding_id = "rainfall_c8_hourly_v1";
+  assert.throws(() => executeExternalFormalCap04CandidateV1({ ...rawInputV1(fixture), candidate_records: badBinding }), /EXTERNAL_CAP04_EVIDENCE_BINDING_MISMATCH:observed_rainfall_v1/);
+  ok("five-source binding drift is rejected before compatibility math");
+
+  const operationEvidence = structuredClone(fixture.candidates[0]) as CanonicalReplayEvidenceRecordV1;
+  operationEvidence.record_type = "irrigation_execution_evidence_v1";
+  operationEvidence.source_record_id = "ea5b5c_forbidden_operation_evidence";
+  assert.throws(() => executeExternalFormalCap04CandidateV1({ ...rawInputV1(fixture), candidate_records: [...fixture.candidates, operationEvidence] }), /EXTERNAL_CAP04_COMMERCIAL_OPERATION_EVIDENCE_FORBIDDEN/);
+  ok("commercial operation evidence is forbidden at the production External Formal boundary");
+
+  const badReality = structuredClone(fixture.handoff);
+  badReality.reality_binding_hash = "sha256:wrong-reality-binding";
+  assert.throws(() => executeExternalFormalCap04CandidateV1({ ...rawInputV1(fixture), handoff: badReality }), /EXTERNAL_CAP04_SERVICE_REALITY_BINDING_MISMATCH/);
+  ok("handoff/runtime Reality authority drift fails closed before State or Forecast construction");
+
+  const badCrop = structuredClone(fixture.crop);
+  badCrop.determinism_hash = "sha256:wrong-crop-context";
+  assert.throws(() => executeExternalFormalCap04CandidateV1({ ...rawInputV1(fixture), crop_stage_context: badCrop }), /CROP_STAGE_CONTEXT_HASH_MISMATCH/);
+  ok("External crop authority drift fails closed before compatibility execution");
+
+  assert.equal(pass, 8);
+  console.log(`MCFT-CAP-09 EA5B5C External CAP04 Orchestration: ${pass} PASS, 0 FAIL`);
+}
+main().catch((error) => { console.error(error); process.exitCode = 1; });
