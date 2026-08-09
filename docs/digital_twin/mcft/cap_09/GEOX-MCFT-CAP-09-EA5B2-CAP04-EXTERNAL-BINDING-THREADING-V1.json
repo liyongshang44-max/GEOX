@@ -1,0 +1,89 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5b2_cap04_external_binding_threading_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5B2-CAP04-EXTERNAL-BINDING-THREADING-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA5B2",
+  "record_status": "EA5B2_CAP04_EXTERNAL_BINDING_THREADING_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "9ceea4f44abac4160dfe2cfcb0af65d5d71ef215",
+  "predecessor_effectiveness": {
+    "ea5b1_merge_sha": "9ceea4f44abac4160dfe2cfcb0af65d5d71ef215",
+    "ea5b1_candidate_head_sha": "df30ee6a8948d469edef25a82e835f3a563e6ed0",
+    "ea5b1_authority_blob_sha": "94b8e891bb077753ef77fc7c55fc5c78f1c328e2",
+    "ea5b1_external_binding_profile_blob_sha": "5fe20f988d2cd6ef038f54eec27e5a32ba6a396d",
+    "historical_cap04_single_tick_service_blob_sha": "53ba9f0b3b8f054985d51613f359ad9eb154b089",
+    "historical_cap08_a0_bootstrap_service_required_blob_sha": "7d2db571b421f1cbfe7fd1192398297def5307c2"
+  },
+  "implementation_blobs": {
+    "cap04_single_tick_service": "5ca0fdbafe3cb244db92540e0cce4302506a965c",
+    "focused_acceptance": "a3ce22de4a8f5ebacb296f4e6878f1f27f595a56"
+  },
+  "implemented_boundary": {
+    "cap04_single_tick_accepts_optional_explicit_soil_binding_authority": true,
+    "cap04_threads_explicit_soil_binding_to_continuation_evidence_window": true,
+    "omitted_soil_binding_preserves_historical_replay_default": true,
+    "blank_soil_binding_fails_closed": true,
+    "persisted_evidence_window_freezes_explicit_soil_binding_authority": true,
+    "idempotent_retry_requires_exact_soil_binding_authority_match": true,
+    "external_to_historical_binding_retry_drift_rejected": true,
+    "explicit_to_omitted_retry_drift_rejected": true
+  },
+  "external_soil_authority": {
+    "binding_id": "kbs_lter_variate25_vwc_100mm_v1",
+    "measurement_depth_mm": 100,
+    "spatial_support": "NEAR_SITE_POINT_SUPPORT",
+    "root_zone_representativeness": "PARTIAL",
+    "direct_field_equivalence": false,
+    "direct_root_zone_equivalence": false,
+    "model_parameter_authority": "MODEL_PRIOR_FROM_CAP08",
+    "field_calibration_status": "NOT_FIELD_CALIBRATED"
+  },
+  "qualification_requirements": {
+    "focused_six_case_acceptance_passes": true,
+    "server_typecheck_passes": true,
+    "historical_cap04_single_tick_acceptance_passes": true,
+    "historical_cap04_negative_acceptance_passes": true,
+    "historical_cap03_default_binding_regression_passes": true,
+    "cap08_g3_frozen_core_successor_regression_passes": true,
+    "database_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "public_provider_request_count": 0
+  },
+  "not_implemented_in_ea5b2": {
+    "external_canonical_runtime_config_contract": true,
+    "external_execution_config_resolver": true,
+    "external_a0_provenance_runtime_mode_profile": true,
+    "external_a0_bootstrap_persistence": true,
+    "durable_private_raw_retention": true,
+    "restricted_formal_evidence_writer": true,
+    "external_24_config_chain_persistence": true,
+    "formal_window_input_manifest": true,
+    "collector_runtime_schedule_readiness": true,
+    "formal_o00_start": true
+  },
+  "success_effect_if_merged": {
+    "ea5b1_external_binding_seam_remains_effective": true,
+    "cap04_external_soil_binding_service_threading_effective": true,
+    "historical_replay_default_preserved": true,
+    "ea5b_external_runtime_profile_complete": false,
+    "external_package_formal_eligible": false,
+    "ea5c_authorized": false,
+    "formal_o00_start_authorized": false,
+    "mcft_cap09_completed": false
+  },
+  "next_legal_successor_if_effective": "S6-EA5B-REMAINING-EXTERNAL-RUNTIME-PROFILE-IMPLEMENTATION",
+  "hard_nonclaims": [
+    "NO_EXTERNAL_BINDING_AS_GLOBAL_DEFAULT",
+    "NO_HISTORICAL_CAP08_A0_CORE_MUTATION",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_PUBLIC_PROVIDER_REQUEST",
+    "NO_EXTERNAL_RUNTIME_CONFIG_AUTHORITY_YET",
+    "NO_EXTERNAL_A0_PROVENANCE_PROFILE_YET",
+    "NO_EA5C_AUTHORIZATION",
+    "NO_FORMAL_PACKAGE_ELIGIBILITY",
+    "NO_FORMAL_O00_O23_START",
+    "NO_COMMERCIAL_CLOSED_LOOP_CONNECTION",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
