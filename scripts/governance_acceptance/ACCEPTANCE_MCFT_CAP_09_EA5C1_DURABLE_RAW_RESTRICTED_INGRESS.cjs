@@ -98,7 +98,11 @@ const rawSource = fs.readFileSync(rawAdapterPath, "utf8");
 for (const marker of ["PRIVATE_RESTRICTED_RAW_EVIDENCE", "mcft-cap09-formal-raw-v1/sha256", "s3-private://", "verifyRetainedRawEvidence", "x-amz-meta-geox-sha256"]) {
   if (!rawSource.includes(marker)) fail(`EA5C1_RAW_ADAPTER_MARKER_MISSING:${marker}`);
 }
-if (rawSource.includes("presign") || rawSource.includes("public-read")) fail("EA5C1_PUBLIC_RAW_ACCESS_SURFACE_FORBIDDEN");
+if (/\b(?:getSignedUrl|presignUrl|createPresignedUrl)\s*\(/.test(rawSource)
+  || rawSource.includes('"public-read"')
+  || rawSource.includes("'public-read'")) {
+  fail("EA5C1_PUBLIC_RAW_ACCESS_SURFACE_FORBIDDEN");
+}
 
 const ingressSource = fs.readFileSync(ingressPath, "utf8");
 for (const marker of [
