@@ -1,0 +1,56 @@
+{
+  "schema_version": "geox_mcft_cap09_ea4_rain_solar_source_discovery_v1",
+  "discovery_id": "GEOX-MCFT-CAP-09-EA4-RAIN-SOLAR-SOURCE-DISCOVERY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "SOURCE_DISCOVERY_ONLY_NOT_AUTHORITY",
+  "base_main_sha": "b31b024c17b617f0e1c36010c8c3926682bd6533",
+  "source_page": "https://enviroweather.msu.edu/crops/potato/dailyheatandmoisture",
+  "provider": "MSU_ENVIROWEATHER",
+  "target_station_slug": "kbs",
+  "target_station_label_patterns": ["Hickory Corners", "Kellogg Biological Station", "KBS"],
+  "allowed_response_hosts": ["enviroweather.msu.edu", "api.enviroweather.msu.edu"],
+  "target_capabilities": {
+    "interval_or_daily_rainfall": true,
+    "observed_solar_radiation_or_solar_flux": true,
+    "station_identity": true,
+    "observation_forecast_discrimination": true,
+    "time_granularity_detection": true
+  },
+  "approved_metadata_lexicon": [
+    "station", "site", "kbs", "hickory corners", "kellogg", "rain", "rainfall", "precipitation", "precip",
+    "solar", "solar flux", "solar radiation", "solrad", "radiation", "w/m2", "w m-2", "mj/m2", "mj m-2",
+    "date", "time", "timestamp", "observed", "observation", "forecast", "prediction", "hour", "hourly", "day", "daily",
+    "unit", "quality", "qc", "source", "sensor", "weather"
+  ],
+  "capability_patterns": {
+    "rainfall": ["rain", "rainfall", "precipitation", "precip"],
+    "solar_radiation": ["solar", "solar flux", "solar radiation", "solrad", "radiation"],
+    "station_identity": ["station", "site", "kbs", "hickory corners", "kellogg"],
+    "forecast": ["forecast", "prediction", "predicted"],
+    "observed": ["observed", "observation", "measured"],
+    "hourly": ["hour", "hourly"],
+    "daily": ["day", "daily"]
+  },
+  "interaction_policy": {
+    "select_target_station": true,
+    "submit_model": true,
+    "export_csv_click_authorized": false,
+    "login_authorized": false,
+    "query_values_may_be_emitted": false,
+    "raw_numeric_observation_values_may_be_emitted": false,
+    "raw_json_or_csv_body_may_be_persisted": false,
+    "rendered_dom_may_be_persisted": false
+  },
+  "discovery_effect": {
+    "creates_formal_source_authority": false,
+    "creates_source_substitution_authority": false,
+    "qualifies_rainfall": false,
+    "qualifies_solar_radiation": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "formal_window_started": false,
+    "ea5_authorized": false,
+    "mcft_cap09_completed": false
+  }
+}
