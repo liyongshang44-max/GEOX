@@ -1,0 +1,16 @@
+{
+  "schema_version":"geox_mcft_cap09_ea4_latest_observations_solar_discovery_v1",
+  "discovery_id":"GEOX-MCFT-CAP-09-EA4-LATEST-OBSERVATIONS-SOLAR-DISCOVERY-V1",
+  "capability_line_id":"MCFT-CAP-09",
+  "slice_id":"MCFT-CAP-09.S6",
+  "record_status":"SOURCE_DISCOVERY_ONLY_NOT_AUTHORITY",
+  "base_main_sha":"b31b024c17b617f0e1c36010c8c3926682bd6533",
+  "provider":"MSU_ENVIROWEATHER",
+  "source_page":"https://enviroweather.msu.edu/weathermodels/latestobservations",
+  "target_station_slug":"kbs",
+  "allowed_response_hosts":["enviroweather.msu.edu","api.enviroweather.msu.edu"],
+  "approved_metadata_lexicon":["station","site","kbs","hickory corners","kellogg","solar","solar radiation","solar flux","srad","solrad","radiation","w/m2","mj/m2","rain","pcpn","temperature","humidity","rh","wind","date","time","timestamp","hour","hourly","minute","observed","observation","latest","estimated","invalid","quality","qc","unit","sensor"],
+  "capability_patterns":{"solar":["solar","solar radiation","solar flux","srad","solrad","radiation"],"hourly":["hour","hourly"],"subhourly":["minute","5 min","15 min","30 min"],"observed":["observed","observation","latest"],"estimated":["estimated","estimate"],"invalid":["invalid","quality","qc"]},
+  "discovery_policy":{"query_values_may_be_emitted":false,"raw_numeric_observation_values_may_be_emitted":false,"raw_response_body_may_be_persisted":false,"rendered_dom_may_be_persisted":false,"download_click_authorized":false,"login_authorized":false},
+  "discovery_effect":{"creates_solar_source_authority":false,"creates_source_substitution_authority":false,"solar_qualified":false,"ea5_authorized":false,"database_write_authorized":false,"formal_evidence_write_authorized":false,"formal_window_started":false,"mcft_cap09_completed":false}
+}
