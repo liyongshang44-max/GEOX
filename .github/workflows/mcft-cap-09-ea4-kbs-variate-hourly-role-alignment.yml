@@ -1,0 +1,77 @@
+name: mcft-cap-09-ea4-kbs-variate-hourly-role-alignment
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea4-kbs-variate-hourly-role-alignment.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-KBS-VARIATE-HOURLY-ROLE-ALIGNMENT-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_KBS_VARIATE_HOURLY_ROLE_ALIGNMENT.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_KBS_VARIATE_HOURLY_ROLE_ALIGNMENT.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+jobs:
+  align-unmapped-variates-to-hourly-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Resolve exact diagnostic subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          echo "subject_sha=${{ github.event.pull_request.head.sha || github.sha }}" >> "$GITHUB_OUTPUT"
+      - name: Validate exact diagnostic boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_KBS_VARIATE_HOURLY_ROLE_ALIGNMENT.cjs
+      - name: Syntax-check role alignment probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_KBS_VARIATE_HOURLY_ROLE_ALIGNMENT.mjs
+      - name: Align endpoint 23/52 to explicit-UTC hourly reference roles
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_KBS_VARIATE_HOURLY_ROLE_ALIGNMENT.mjs
+      - name: Verify diagnostic nonclaims and metrics
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA4_KBS_VARIATE_HOURLY_ROLE_ALIGNMENT_RESULT.json','utf8'));
+          if(r.status!=='PASS') throw new Error('EA4RA_PASS_REQUIRED');
+          if(!Array.isArray(r.endpoint_results)||r.endpoint_results.length!==2) throw new Error('EA4RA_TWO_ENDPOINT_RESULTS_REQUIRED');
+          if(r.endpoint_results.map(x=>x.endpoint_id).sort((a,b)=>a-b).join(',')!=='23,52') throw new Error('EA4RA_ENDPOINT_SET_REQUIRED');
+          for(const x of r.endpoint_results){
+            if(!Array.isArray(x.top_candidates)||x.top_candidates.length===0) throw new Error(`EA4RA_METRICS_REQUIRED:${x.endpoint_id}`);
+            for(const m of x.top_candidates){if(typeof m.pair_count!=='number'||typeof m.r_squared!=='number') throw new Error(`EA4RA_METRIC_SHAPE:${x.endpoint_id}`);}
+          }
+          if(r.raw_hourly_reference?.stale_reference_used_only_for_role_identity!==true||r.raw_hourly_reference?.live_source_claimed!==false) throw new Error('EA4RA_STALE_REFERENCE_BOUNDARY_DRIFT');
+          if(r.raw_retention?.all_retained_before_parse!==true||r.raw_payload_uploaded!==false||r.raw_numeric_values_emitted!==false) throw new Error('EA4RA_RAW_BOUNDARY_DRIFT');
+          for(const key of ['endpoint_role_authority_created','solar_source_authority_created','rainfall_source_authority_created','timezone_authority_created','source_substitution_authorized','ea5_authorized']) if(r[key]!==false) throw new Error(`EA4RA_AUTHORITY_OVERCLAIM:${key}`);
+          console.log(JSON.stringify({status:'PASS',decision:r.decision,solar_candidate_endpoint_ids:r.solar_candidate_endpoint_ids,rainfall_candidate_endpoint_ids:r.rainfall_candidate_endpoint_ids,endpoints:r.endpoint_results.map(x=>({endpoint_id:x.endpoint_id,resolved_role_id:x.resolved_role_id,role_gap:x.role_r_squared_gap,top:x.top_candidates[0]}))}));
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea4-role-alignment-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA4_KBS_VARIATE_HOURLY_ROLE_ALIGNMENT_STATIC_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA4_KBS_VARIATE_HOURLY_ROLE_ALIGNMENT_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
