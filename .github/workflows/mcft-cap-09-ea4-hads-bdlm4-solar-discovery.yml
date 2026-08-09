@@ -1,0 +1,65 @@
+name: mcft-cap-09-ea4-hads-bdlm4-solar-discovery
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea4-hads-bdlm4-solar-discovery.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-HADS-BDLM4-SOLAR-DISCOVERY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_HADS_BDLM4_SOLAR_DISCOVERY.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_HADS_BDLM4_SOLAR_DISCOVERY.mjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea4-hads-bdlm4-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  discover-hads-bdlm4-solar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Validate exact HADS discovery boundary
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_HADS_BDLM4_SOLAR_DISCOVERY.cjs
+      - run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_HADS_BDLM4_SOLAR_DISCOVERY.mjs
+      - name: Discover current HADS BDLM4 RW data without publishing values
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_HADS_BDLM4_SOLAR_DISCOVERY.mjs
+      - name: Verify discovery-only result
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA4_HADS_BDLM4_SOLAR_DISCOVERY_RESULT.json','utf8'));
+          if(r.status!=='PASS'||r.metadata?.station_identity_match!==true||r.metadata?.rw_60min_declared!==true)throw new Error('EA4HADS_METADATA_DISCOVERY_REQUIRED');
+          if(r.solar_candidate_present!==true||!(r.decoded?.numeric_rw_count>0))throw new Error('EA4HADS_LIVE_RW_VALUES_REQUIRED');
+          if(r.decoded?.provisional_label_present!==true||r.quality_boundary?.provider_values_provisional!==true||r.quality_boundary?.provider_quality_checked_claimed!==false)throw new Error('EA4HADS_PROVISIONAL_QUALITY_REQUIRED');
+          if(!(r.spatial_diagnostic?.haversine_distance_km>0)||r.spatial_diagnostic?.distance_authority_created!==false||r.spatial_diagnostic?.field_or_kbs_equivalence_claimed!==false)throw new Error('EA4HADS_SPATIAL_NONAUTHORITY_REQUIRED');
+          if(r.solar_qualified!==false||r.source_authority_created!==false||r.ea5_authorized!==false)throw new Error('EA4HADS_DISCOVERY_OVERCLAIM');
+          if(r.public_raw_numeric_value_emission_count!==0||r.raw_body_uploaded!==false||r.database_write_count!==0||r.formal_evidence_write_count!==0)throw new Error('EA4HADS_WRITE_OR_RAW_PUBLICATION_FORBIDDEN');
+          console.log(JSON.stringify({status:'PASS',rw_numeric_count:r.decoded.numeric_rw_count,parsed_timestamp_count:r.decoded.parsed_timestamp_count,latest_age_hours:r.decoded.latest_age_hours,distance_km:r.spatial_diagnostic.haversine_distance_km,provisional:true,source_authority:false,ea5_authorized:false}));
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea4-hads-bdlm4-solar-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA4_HADS_BDLM4_SOLAR_DISCOVERY_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA4_HADS_BDLM4_SOLAR_DISCOVERY_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
