@@ -71,7 +71,7 @@ try {
   const workflow = read(WF);
 
   req(task.includes('S6-EA3 collector/canonicalizer qualification'), 'EA3_TASKBOOK_FRONTIER_CONTRACT_MISSING');
-  req(task.includes('S6-EA4 live-source exact-head qualification'), 'EA3_TASKBOOK_SUCCESSOR_CONTRACT_MISSING');
+  req(task.includes('S6-EA4 live source exact-head proof'), 'EA3_TASKBOOK_SUCCESSOR_CONTRACT_MISSING');
   req(amendment.includes('Collectors/canonicalizers may retrieve public external data'), 'EA3_AMENDMENT_COLLECTOR_BOUNDARY_MISSING');
   req(amendment.includes('Runtime must never fetch public providers directly'), 'EA3_AMENDMENT_RUNTIME_PUBLIC_FETCH_PROHIBITION_MISSING');
   req(amendment.includes('Fetch-transform-discard is not allowed.'), 'EA3_AMENDMENT_RAW_RETENTION_RULE_MISSING');
@@ -150,7 +150,6 @@ try {
   req(runtimeAcceptance.includes('decoder_calls_after_retention_failure') && runtimeAcceptance.includes('EA3_DECODER_CALLED_AFTER_RETENTION_FAILURE'), 'EA3_ACCEPTANCE_RETENTION_BARRIER_NEGATIVE_CASE_MISSING');
   req(runtimeAcceptance.includes('EA3_EVENT_TIME_AFTER_RUNTIME_AVAILABILITY') && runtimeAcceptance.includes('EA3_EPISTEMIC_CLASS_MISMATCH') && runtimeAcceptance.includes('EA3_RAW_BINARY_IN_CANONICAL_RECORD_FORBIDDEN') && runtimeAcceptance.includes('EA3_UNSAFE_TRUST_SURFACE_FORBIDDEN'), 'EA3_ACCEPTANCE_NEGATIVE_CASE_SET_MISSING');
   req(runtimeAcceptance.includes('public_provider_live_request_count: 0') && runtimeAcceptance.includes('database_write_count: 0') && runtimeAcceptance.includes('formal_evidence_write_count: 0'), 'EA3_ACCEPTANCE_ZERO_IO_ATTESTATION_MISSING');
-  req(runtimeAcceptance.includes('same') === false || true, 'EA3_NOOP');
 
   req(workflow.includes('persist-credentials: false'), 'EA3_WORKFLOW_PERSIST_CREDENTIALS_FORBIDDEN');
   req(workflow.includes('MCFT_BASE_SHA') && workflow.includes('MCFT_SUBJECT_SHA'), 'EA3_WORKFLOW_EXACT_SHA_ENV_MISSING');
