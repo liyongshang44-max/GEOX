@@ -8,7 +8,7 @@ on:
       - 'apps/server/src/runtime/twin_runtime/evidence_window_builder_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v2.ts'
       - 'apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts'
-      - 'apps/server/src/runtime/twin_runtime/a0_bootstrap_runtime_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_a0_evidence_window_service_v1.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5B1-EXTERNAL-EVIDENCE-BINDING-SEAM-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B_EXTERNAL_EVIDENCE_BINDING_SEAM.ts'
@@ -66,6 +66,11 @@ jobs:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs
 
+      - name: Re-prove CAP08 G3 frozen-core successor compatibility
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_G3_BOUNDARY.cjs
+
       - name: Typecheck server
         run: pnpm --filter @geox/server run typecheck
 
@@ -120,10 +125,11 @@ jobs:
           const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM_GOVERNANCE_RESULT.json','utf8'));
           if (result.status !== 'PASS') throw new Error('EA5B1_GOVERNANCE_PASS_REQUIRED');
           if (result.binding_seam_qualified !== true) throw new Error('EA5B1_BINDING_SEAM_REQUIRED');
+          if (result.cap08_g3_successor_regression_required !== true || result.cap08_frozen_a0_bootstrap_core_unchanged !== true) throw new Error('EA5B1_CAP08_SUCCESSOR_REGRESSION_REQUIRED');
           if (result.cap04_external_service_threading_effective !== false) throw new Error('EA5B1_CAP04_THREADING_PREMATURE');
           if (result.external_package_formal_eligible !== false || result.ea5c_authorized !== false || result.formal_o00_start_authorized !== false) throw new Error('EA5B1_PREMATURE_FORMAL_EFFECT');
           if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0 || result.public_provider_request_count !== 0 || result.formal_window_started !== false || result.mcft_cap09_completed !== false) throw new Error('EA5B1_ZERO_WRITE_NONCLAIM_REQUIRED');
-          console.log(JSON.stringify({status:'PASS',binding_seam:true,replay_regression:true,cap04_threading:false,formal_eligible:false,o00:false}));
+          console.log(JSON.stringify({status:'PASS',binding_seam:true,cap08_g3_successor_regression:true,replay_regression:true,cap04_threading:false,formal_eligible:false,o00:false}));
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -131,6 +137,7 @@ jobs:
           name: mcft-cap-09-ea5b1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
             acceptance-output/MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json
             acceptance-output/EA5B1_CAP01_A0_REGRESSION.log
             acceptance-output/EA5B1_CAP01_BASE_STALE_SCOPE_PATHS.log
             acceptance-output/EA5B1_CAP01_PR_FORBIDDEN_SCOPE_PATHS.log
