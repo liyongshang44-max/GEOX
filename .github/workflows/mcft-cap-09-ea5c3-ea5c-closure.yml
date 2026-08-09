@@ -1,0 +1,173 @@
+name: mcft-cap-09-ea5c3-ea5c-closure
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5c3-ea5c-closure.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C3-EA5C-CLOSURE-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C3_EA5C_CLOSURE.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5c3-closure-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  ea5c3-ea5c-closure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Resolve exact EA5C3 closure base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Syntax-check EA5C3 closure governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C3_EA5C_CLOSURE.cjs
+
+      - name: Validate exact EA5C3 closure boundary and predecessor authority chain
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C3_EA5C_CLOSURE.cjs
+
+      - name: Verify merged EA5C2B2 PR and both immutable proof artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output /tmp/ea5c-first /tmp/ea5c-final
+
+          pr_json="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/3022")"
+          echo "$pr_json" | jq -e '
+            .merged_at != null and
+            .head.sha == "50daa06971ef4afc752bbd3fc9dc5c76d9e0222a" and
+            .merge_commit_sha == "aed820436de59d757e4665b92464346aae59af9e"
+          ' >/dev/null
+
+          first_run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/31329952830")"
+          echo "$first_run" | jq -e '
+            .name == "mcft-cap-09-ea5c2b2-formal-live-ingress-proof" and
+            .head_sha == "66ebfe393d233f1122cc9eb799cbc49d82efe3d6" and
+            .status == "completed" and
+            .conclusion == "success"
+          ' >/dev/null
+
+          first_artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9042626960")"
+          echo "$first_artifact" | jq -e '
+            .name == "mcft-cap-09-ea5c2b2-66ebfe393d233f1122cc9eb799cbc49d82efe3d6" and
+            .expired == false and
+            .digest == "sha256:64a0ce83f6fe9995a81eeb7e7fc57cbcb7b75e90759c87970ec8a799d00916ac"
+          ' >/dev/null
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9042626960/zip" > /tmp/ea5c-first.zip
+          unzip -q /tmp/ea5c-first.zip -d /tmp/ea5c-first
+
+          final_run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/31330168165")"
+          echo "$final_run" | jq -e '
+            .name == "mcft-cap-09-ea5c2b2-formal-live-ingress-proof" and
+            .head_sha == "50daa06971ef4afc752bbd3fc9dc5c76d9e0222a" and
+            .status == "completed" and
+            .conclusion == "success"
+          ' >/dev/null
+
+          final_artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9042689795")"
+          echo "$final_artifact" | jq -e '
+            .name == "mcft-cap-09-ea5c2b2-50daa06971ef4afc752bbd3fc9dc5c76d9e0222a" and
+            .expired == false and
+            .digest == "sha256:daa44a4cfc5705255fd0f6e0654dd7214abedb860459bc162778c52432604d23"
+          ' >/dev/null
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9042689795/zip" > /tmp/ea5c-final.zip
+          unzip -q /tmp/ea5c-final.zip -d /tmp/ea5c-final
+
+          node <<'NODE'
+          const fs = require('fs');
+          function read(path) { return JSON.parse(fs.readFileSync(path, 'utf8')); }
+          const firstGov = read('/tmp/ea5c-first/MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS_PROOF_GOVERNANCE_RESULT.json');
+          const first = read('/tmp/ea5c-first/MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS_RESULT.json');
+          const finalGov = read('/tmp/ea5c-final/MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS_PROOF_GOVERNANCE_RESULT.json');
+          const final = read('/tmp/ea5c-final/MCFT_CAP_09_EA5C2B2_FORMAL_LIVE_INGRESS_RESULT.json');
+
+          if (firstGov.status !== 'PASS' || firstGov.subject_head_sha !== '66ebfe393d233f1122cc9eb799cbc49d82efe3d6') throw new Error('EA5C3_FIRST_GOVERNANCE_PROOF_INVALID');
+          if (first.status !== 'PASS' || first.execution_mode !== 'FIRST_LIVE_INSERT' || first.live_public_source_fetch_count !== 1 || first.canonical_fact_write_count !== 1) throw new Error('EA5C3_FIRST_LIVE_INSERT_PROOF_INVALID');
+          if (first.final_fact_count !== 1 || first.exact_external_scope_fact_count !== 1 || first.persistent_formal_24h_raw_store_bound !== true || first.formal_neon_live_ingress_proved !== true) throw new Error('EA5C3_FIRST_FORMAL_STORE_OR_DB_PROOF_INVALID');
+          if (first.authenticated_raw_head_reverification_passed !== true || first.anonymous_raw_head_denied !== true || first.raw_payload_embedded_in_fact !== false || first.public_raw_value_emission_count !== 0 || first.runtime_public_provider_fetch_count !== 0) throw new Error('EA5C3_FIRST_RAW_BOUNDARY_INVALID');
+
+          if (finalGov.status !== 'PASS' || finalGov.subject_head_sha !== '50daa06971ef4afc752bbd3fc9dc5c76d9e0222a') throw new Error('EA5C3_FINAL_GOVERNANCE_PROOF_INVALID');
+          if (final.status !== 'PASS' || final.subject_head_sha !== '50daa06971ef4afc752bbd3fc9dc5c76d9e0222a' || final.execution_mode !== 'EXISTING_PROOF_REVERIFIED') throw new Error('EA5C3_FINAL_EXACT_HEAD_REVERIFICATION_INVALID');
+          if (final.canonical_fact_write_count !== 0 || final.live_public_source_fetch_count !== 0 || final.final_fact_count !== 1 || final.exact_external_scope_fact_count !== 1) throw new Error('EA5C3_FINAL_RETRY_IDEMPOTENCY_INVALID');
+          if (final.persistent_formal_24h_raw_store_bound !== true || final.formal_neon_live_ingress_proved !== true || final.authenticated_raw_head_reverification_passed !== true || final.anonymous_raw_head_denied !== true) throw new Error('EA5C3_FINAL_PERSISTENT_PROOF_INVALID');
+          if (final.raw_payload_embedded_in_fact !== false || final.public_raw_value_emission_count !== 0 || final.runtime_public_provider_fetch_count !== 0) throw new Error('EA5C3_FINAL_RAW_OR_RUNTIME_BOUNDARY_INVALID');
+          if (final.ea5c_complete !== false || final.ea5d_authorized !== false || final.ea5e_authorized !== false || final.formal_o00_start_authorized !== false || final.mcft_cap09_completed !== false) throw new Error('EA5C3_B2_PREDECESSOR_NONCLAIMS_INVALID');
+
+          const out = {
+            schema_version: 'geox_mcft_cap09_ea5c3_proof_chain_verification_v1',
+            status: 'PASS',
+            merged_pr_number: 3022,
+            merged_head_sha: '50daa06971ef4afc752bbd3fc9dc5c76d9e0222a',
+            merge_commit_sha: 'aed820436de59d757e4665b92464346aae59af9e',
+            first_live_insert_run_id: 31329952830,
+            first_live_insert_artifact_id: 9042626960,
+            first_live_insert_proved: true,
+            final_exact_head_run_id: 31330168165,
+            final_exact_head_artifact_id: 9042689795,
+            final_exact_head_reverification_proved: true,
+            persistent_formal_raw_store_proved: true,
+            formal_neon_live_ingress_proved: true,
+            exact_external_scope_fact_count: 1,
+            raw_payload_publication_count: 0,
+            closure_performed_database_write_count: 0,
+            closure_performed_raw_object_write_count: 0,
+            ea5c_complete_after_closure_effectiveness: true,
+            ea5d_authorized_after_closure_effectiveness: true,
+            ea5e_authorized: false,
+            formal_o00_start_authorized: false,
+            mcft_cap09_completed: false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5C3_PROOF_CHAIN_VERIFICATION_RESULT.json', JSON.stringify(out, null, 2) + '\n');
+          console.log(JSON.stringify(out, null, 2));
+          NODE
+
+      - name: Verify closure effect is exactly EA5C complete to EA5D authorization
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const g = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5C3_EA5C_CLOSURE_GOVERNANCE_RESULT.json','utf8'));
+          const p = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5C3_PROOF_CHAIN_VERIFICATION_RESULT.json','utf8'));
+          if (g.status !== 'PASS' || p.status !== 'PASS') throw new Error('EA5C3_PASS_REQUIRED');
+          if (g.ea5c_complete_after_effectiveness !== true || g.ea5d_authorized_after_effectiveness !== true) throw new Error('EA5C3_SUCCESSOR_EFFECT_REQUIRED');
+          if (p.first_live_insert_proved !== true || p.final_exact_head_reverification_proved !== true || p.persistent_formal_raw_store_proved !== true || p.formal_neon_live_ingress_proved !== true) throw new Error('EA5C3_PROOF_CHAIN_REQUIRED');
+          if (g.closure_database_write_count !== 0 || g.closure_raw_object_write_count !== 0) throw new Error('EA5C3_CLOSURE_SIDE_EFFECT_FORBIDDEN');
+          if (g.ea5e_authorized !== false || g.formal_o00_start_authorized !== false || g.mcft_cap09_completed !== false) throw new Error('EA5C3_PREMATURE_SUCCESSOR_AUTHORITY');
+          console.log(JSON.stringify({status:'PASS',ea5c:true,ea5d:true,ea5e:false,o00:false,cap09:false,closure_db_writes:0,closure_raw_writes:0}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea5c3-closure-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5C3_EA5C_CLOSURE_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA5C3_PROOF_CHAIN_VERIFICATION_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
