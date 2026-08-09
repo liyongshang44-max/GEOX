@@ -39,7 +39,7 @@ const PINS = {
   pkg: 'bca08b92c142be48b0b3ab82aff7d29a844d22c3',
   ea3: '0be64a250b75527d37d9cbb84fb2aa38a97b5208',
   auth: 'ec3ea3fb4218b854ec25adae7687884e5de92310',
-  probe: 'cd32d74d54b543d42ae297d688764ddd129dd420',
+  probe: 'ff2ad210387402a74731968e14746210fd2440dd',
 };
 const EXPECT = [F.auth, F.probe, F.gate, F.workflow].sort();
 const OUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_GOVERNANCE_RESULT.json');
