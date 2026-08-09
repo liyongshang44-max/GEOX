@@ -109,9 +109,21 @@ falsy(b5c.effect_boundary.ea5c_authorized, "EA5B_CLOSURE_PREDECESSOR_MUST_NOT_PR
 eq(b5c.next_frontier, "S6-EA5B-CLOSURE-AUDIT", "EA5B_CLOSURE_LEGAL_FRONTIER_REQUIRED");
 
 const bindingProfileText = fs.readFileSync("apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.ts", "utf8");
-for (const marker of ["OBSERVED", "ESTIMATED", "ASSUMED", "kbs_lter_variate25_vwc_100mm_v1", "noaa_ncep_gfs_asce_short_reference_et_same_cycle_72h_v1"]) {
-  if (!bindingProfileText.includes(marker)) fail(`EA5B_CLOSURE_EPISTEMIC_OR_BINDING_MARKER_MISSING:${marker}`);
+for (const marker of Object.values(expectedBindings)) {
+  if (!bindingProfileText.includes(marker)) fail(`EA5B_CLOSURE_BINDING_CONSTANT_MISSING:${marker}`);
 }
+const inputAuthorityText = fs.readFileSync("apps/server/src/runtime/twin_runtime/external_formal_cap04_input_authority_v1.ts", "utf8");
+for (const marker of [
+  "soil_moisture_observation_v1",
+  "observed_rainfall_v1",
+  "historical_et0_estimate_v1",
+  "future_weather_assumption_v1",
+  "future_et0_assumption_v1",
+  'epistemic_class: "OBSERVED"',
+  'epistemic_class: "ESTIMATED"',
+  'epistemic_class: "ASSUMED"',
+  "EXTERNAL_CAP04_EVIDENCE_EPISTEMIC_CLASS_MISMATCH"
+]) if (!inputAuthorityText.includes(marker)) fail(`EA5B_CLOSURE_EPISTEMIC_AUTHORITY_MARKER_MISSING:${marker}`);
 
 const authority = readJson(authorityPath);
 eq(authority.base_main_sha, base, "EA5B_CLOSURE_AUTHORITY_BASE_MISMATCH");
