@@ -1,0 +1,73 @@
+name: mcft-cap-09-amendment-05-external-formal-runtime-profile
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment-05-external-formal-runtime-profile.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-05-EXTERNAL-FORMAL-RUNTIME-AUTHORITY-PROFILE.md'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-05-STATUS.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_05_EXTERNAL_FORMAL_RUNTIME_PROFILE.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-am05-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  external-formal-runtime-profile-adjudication:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Resolve exact Amendment-05 base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Syntax-check Amendment-05 Gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_05_EXTERNAL_FORMAL_RUNTIME_PROFILE.cjs
+
+      - name: Reproduce repository wiring gap and adjudicate Amendment-05
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_05_EXTERNAL_FORMAL_RUNTIME_PROFILE.cjs
+
+      - name: Verify no implementation or write authority leaked into amendment
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_05_EXTERNAL_FORMAL_RUNTIME_PROFILE_RESULT.json','utf8'));
+          if (result.status !== 'PASS') throw new Error('AM05_PASS_REQUIRED');
+          if (result.architecture_gap_reproduced !== true) throw new Error('AM05_GAP_REPROOF_REQUIRED');
+          if (result.external_runtime_profile_implementation_authorized_after_effective_merge !== true) throw new Error('AM05_SUCCESSOR_AUTHORITY_REQUIRED');
+          if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0 || result.formal_window_started !== false || result.mcft_cap09_completed !== false) throw new Error('AM05_PREMATURE_EFFECT_FORBIDDEN');
+          console.log(JSON.stringify({status:'PASS',architecture_gap_reproduced:true,implementation_after_merge:true,database_writes:0,formal_writes:0,o00_started:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-amendment-05-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_AMENDMENT_05_EXTERNAL_FORMAL_RUNTIME_PROFILE_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
