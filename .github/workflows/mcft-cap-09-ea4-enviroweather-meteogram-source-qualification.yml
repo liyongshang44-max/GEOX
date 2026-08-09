@@ -1,0 +1,78 @@
+name: mcft-cap-09-ea4-enviroweather-meteogram-source-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea4-enviroweather-meteogram-source-qualification.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-ENVIROWEATHER-METEOGRAM-SOURCE-QUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_ENVIROWEATHER_METEOGRAM_SOURCE_QUALIFICATION.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_ENVIROWEATHER_METEOGRAM_SOURCE_QUALIFICATION.mjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea4-enviroweather-meteogram-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  qualify-kbs-meteogram-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Validate exact source-qualification boundary
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_ENVIROWEATHER_METEOGRAM_SOURCE_QUALIFICATION.cjs
+      - name: Syntax-check qualification probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_ENVIROWEATHER_METEOGRAM_SOURCE_QUALIFICATION.mjs
+      - name: Run live source qualification
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_ENVIROWEATHER_METEOGRAM_SOURCE_QUALIFICATION.mjs
+      - name: Verify governed qualification adjudication
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const a=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-ENVIROWEATHER-METEOGRAM-SOURCE-QUALIFICATION-V1.json','utf8'));
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA4_ENVIROWEATHER_METEOGRAM_SOURCE_QUALIFICATION_RESULT.json','utf8'));
+          if(r.status!=='PASS')throw new Error('EA4EW_PROBE_EXECUTION_PASS_REQUIRED');
+          if(!['QUALIFIED','REJECTED'].includes(r.qualification_status))throw new Error('EA4EW_QUALIFICATION_STATUS_REQUIRED');
+          const expected=r.qualification_status==='QUALIFIED'?a.live_qualification.success_decision:a.live_qualification.failure_decision;
+          if(r.decision!==expected)throw new Error('EA4EW_DECISION_MISMATCH');
+          if(r.raw_retention?.private_retention_verified!==true||r.raw_retention?.raw_body_uploaded!==false)throw new Error('EA4EW_RAW_RETENTION_REPROOF_REQUIRED');
+          if(r.station_identity_proven!==true)throw new Error('EA4EW_STATION_IDENTITY_REQUIRED');
+          if(!r.header_metadata?.rain||!r.header_metadata?.solar)throw new Error('EA4EW_UNIT_HEADER_METADATA_REQUIRED');
+          if(r.source_substitution_authorized!==false||r.source_architecture_amendment_required!==true||r.ea5_authorized!==false)throw new Error('EA4EW_PREMATURE_SOURCE_OR_EA5_AUTHORITY');
+          if(r.database_write_count!==0||r.formal_evidence_write_count!==0||r.public_raw_numeric_value_emission_count!==0||r.raw_body_uploaded!==false)throw new Error('EA4EW_WRITE_OR_PUBLIC_RAW_FORBIDDEN');
+          if(r.terms?.public_raw_redistribution_authorized!==false||r.terms?.commercial_reuse_rights_established!==false||r.terms?.legal_opinion_claimed!==false)throw new Error('EA4EW_USE_RIGHTS_OVERCLAIM');
+          console.log(JSON.stringify({status:'PASS',qualification_status:r.qualification_status,decision:r.decision,age_hours:r.observed_candidate?.latest_target_age_hours,violations:r.violations,source_substitution_authorized:false,ea5_authorized:false}));
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea4-enviroweather-meteogram-source-qualification-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA4_ENVIROWEATHER_METEOGRAM_SOURCE_QUALIFICATION_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA4_ENVIROWEATHER_METEOGRAM_SOURCE_QUALIFICATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
