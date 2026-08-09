@@ -1,0 +1,114 @@
+{
+  "schema_version": "geox_mcft_cap09_ea4_enviroweather_meteogram_source_qualification_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA4-ENVIROWEATHER-METEOGRAM-SOURCE-QUALIFICATION-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "SOURCE_QUALIFICATION_CANDIDATE_NOT_AUTHORITY",
+  "base_main_sha": "b31b024c17b617f0e1c36010c8c3926682bd6533",
+  "ea4_rejection_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-LIVE-SOURCE-EXACT-HEAD-QUALIFICATION-V1.json",
+  "ea4_rejection_blob_sha": "791e3d24bdc862641c77ddd26778495cb8e6a7dd",
+  "discovery_evidence": {
+    "daily_heat_moisture": {
+      "pr": 2992,
+      "head_sha": "c7bb232a5e840f01f2155921811a793ccf36f2d6",
+      "workflow_run_id": 31294955777,
+      "artifact_id": 9032644724,
+      "artifact_digest": "sha256:912f6ed7bb3fdf8783b1f089579217a7a96101f6e7806d1f6725098d2128040f",
+      "discovery_only": true
+    },
+    "meteogram": {
+      "pr": 2993,
+      "head_sha": "bda21af220f63fcc4753aa8d4681efaf891221f6",
+      "workflow_run_id": 31295148413,
+      "artifact_id": 9032703495,
+      "artifact_digest": "sha256:eb251ff2cf847ce64721767774aea5ab17cfc77402b9b59b575743cefe0b3408",
+      "discovery_only": true
+    }
+  },
+  "provider_binding_candidate": {
+    "provider": "MSU_ENVIROWEATHER",
+    "source_page": "https://enviroweather.msu.edu/weathermodels/meteogram",
+    "api_host": "api.enviroweather.msu.edu",
+    "api_path": "/rm-api/api/run",
+    "method": "GET",
+    "station_slug": "kbs",
+    "station_identity_patterns": ["Hickory Corners", "Kellogg Biological Station", "KBS"],
+    "duration_hours": 24,
+    "required_query_keys": ["duration", "resultModelCode", "resultModelId", "selectDate", "selectedStation", "stationCode", "stationId", "stationType", "units"],
+    "rain_field": "pcpn_us",
+    "rain_provider_granularity": "FIVEMIN_CANDIDATE",
+    "solar_field": "srad_hourly_standard",
+    "solar_provider_granularity": "HOURLY_CANDIDATE",
+    "timestamp_field": "datetime"
+  },
+  "raw_retention_barrier": {
+    "class": "RUNNER_PRIVATE_TRANSIENT_SOURCE_QUALIFICATION_NOT_FORMAL_DURABLE_RETENTION",
+    "raw_body_must_be_written_before_parse": true,
+    "raw_sha256_and_byte_count_reread_required": true,
+    "raw_body_may_be_uploaded": false,
+    "public_artifact_may_include_hash_counts_metadata_only": true,
+    "ea5_durable_private_retention_still_required": true
+  },
+  "technical_qualification_requirements": {
+    "station_identity_required": true,
+    "exact_api_identity_required": true,
+    "all_required_query_keys_nonempty": true,
+    "table_required": true,
+    "rain_field_required": true,
+    "solar_field_required": true,
+    "provider_header_metadata_for_units_required": true,
+    "target_fields_must_not_be_provider_estimated": true,
+    "invalid_data_metadata_must_be_recorded": true,
+    "observed_forecast_boundary_must_be_recorded": true,
+    "rain_grid_must_be_5min_or_fail": true,
+    "solar_nonnull_grid_must_be_hourly_or_fail": true,
+    "rain_values_must_be_finite_nonnegative": true,
+    "solar_values_must_be_finite_nonnegative": true,
+    "silent_imputation_authorized": false,
+    "negative_clipping_authorized": false,
+    "missing_rain_treated_as_zero": false,
+    "latest_observed_target_max_age_hours": 6,
+    "minimum_observed_window_hours": 24,
+    "public_raw_numeric_value_emission_count": 0,
+    "database_write_count": 0,
+    "formal_evidence_write_count": 0
+  },
+  "use_policy_boundary": {
+    "terms_link_must_be_discovered_from_provider_page": true,
+    "terms_page_hash_and_semantic_tokens_required": true,
+    "public_raw_redistribution_authorized": false,
+    "commercial_reuse_rights_established": false,
+    "legal_opinion_claimed": false,
+    "technical_source_qualification_may_not_upgrade_use_rights": true
+  },
+  "live_qualification": {
+    "required": true,
+    "exact_head_required": true,
+    "current_result": "UNEXECUTED",
+    "success_decision": "TECHNICALLY_QUALIFIED_ENVIROWEATHER_KBS_METEOGRAM_RAIN_SOLAR_SOURCE_CANDIDATE",
+    "failure_decision": "REJECTED_ENVIROWEATHER_KBS_METEOGRAM_RAIN_SOLAR_SOURCE_CANDIDATE",
+    "final_source_substitution_authority_created": false
+  },
+  "authority_effect": {
+    "rainfall_source_authority_created": false,
+    "solar_source_authority_created": false,
+    "source_substitution_authorized": false,
+    "source_architecture_amendment_required_after_technical_pass": true,
+    "ea5_authorized": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false
+  },
+  "hard_nonclaims": [
+    "NO_SOURCE_SUBSTITUTION_FROM_DISCOVERY_OR_TECHNICAL_QUALIFICATION_ALONE",
+    "NO_CONFIDENCE_UPGRADE_FROM_ENDPOINT_AVAILABILITY",
+    "NO_PUBLIC_RAW_OBSERVATION_PUBLICATION",
+    "NO_COMMERCIAL_REUSE_RIGHT_CLAIM",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_EA5_AUTHORIZATION_BEFORE_SOURCE_ARCHITECTURE_AMENDMENT",
+    "NO_FORMAL_O00_O23_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
