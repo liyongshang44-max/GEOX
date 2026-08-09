@@ -33,8 +33,8 @@ const EXPECTED_CHANGED = [
 const EXPECTED_BLOBS = {
   inputAuthority: 'b4b7448518628bcffe8eaf6a91d9967145f7647d',
   stateSource: '0d9857ea883f55a64261b58b8e56dffa1d388028',
-  acceptance: '826f9ec39c9a5a26f18d9411f0aa80a19a7fa0a0',
-  authority: 'f688b21a33fc674d58fba01ae8be9d09647ce0cb',
+  acceptance: '84334dd120c7714105df1f25861fefbee98677fd',
+  authority: '3f4713d52272eae3fce3b05f5ab21316b87b257f',
   ea5b3: 'bdaf311cc23c78fb45079af65fcd30a7b794fec3',
   ea5b4a: '3192e3159bffce5a23913dc7299355e1a1e322c4',
   ea5b4b: '503842ef473e7ccf6a6fe46a21a36e678766851b',
