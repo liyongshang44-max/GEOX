@@ -90,6 +90,7 @@ export type ExecuteCap04SingleTickInputV1 = {
   runtime_config_ref: string;
   runtime_config_hash: string;
   authorized_future_forcing_binding_ids: readonly string[];
+  authorized_soil_observation_binding_id?: string;
   crop_stage_context: ContinuationCropStageConfigurationContextV1;
   lease_owner: string;
   lease_duration_seconds: number;
@@ -161,6 +162,25 @@ function memberV1(recordSet: Cap04ARecordSetV1, objectType: string): CanonicalOb
   const matches = recordSet.members.filter((member) => member.object_type === objectType);
   if (matches.length !== 1) throw new Error(`CAP04_SINGLE_TICK_MEMBER_CARDINALITY:${objectType}`);
   return matches[0];
+}
+
+function assertExistingSoilBindingAuthorityV1(
+  recordSet: Cap04ARecordSetV1,
+  requestedAuthority: string | undefined,
+): void {
+  const evidence = memberV1(recordSet, "twin_evidence_window_v1");
+  const selection = evidence.payload.observation_selection;
+  if (!selection || typeof selection !== "object" || Array.isArray(selection)) {
+    throw new Error("CAP04_SINGLE_TICK_EXISTING_OBSERVATION_SELECTION_REQUIRED");
+  }
+  const raw = (selection as Record<string, unknown>).authorized_binding_id;
+  if (raw !== undefined && typeof raw !== "string") {
+    throw new Error("CAP04_SINGLE_TICK_EXISTING_SOIL_BINDING_AUTHORITY_INVALID");
+  }
+  const existingAuthority = raw as string | undefined;
+  if (existingAuthority !== requestedAuthority) {
+    throw new Error("CAP04_SINGLE_TICK_SOIL_BINDING_AUTHORITY_RETRY_MISMATCH");
+  }
 }
 
 function executionCandidatesV1(window: AssimilatedContinuationEvidenceWindowV2): ExecutedIrrigationCandidateV1[] {
@@ -379,6 +399,12 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
     canonicalIsoV1(input.created_at, "CAP04_SINGLE_TICK_CREATED_AT_INVALID");
     const runtimeConfigRef = requiredStringV1(input.runtime_config_ref, "CAP04_SINGLE_TICK_RUNTIME_CONFIG_REF_REQUIRED");
     const runtimeConfigHash = requiredStringV1(input.runtime_config_hash, "CAP04_SINGLE_TICK_RUNTIME_CONFIG_HASH_REQUIRED");
+    const authorizedSoilObservationBindingId = input.authorized_soil_observation_binding_id === undefined
+      ? undefined
+      : requiredStringV1(
+        input.authorized_soil_observation_binding_id,
+        "CAP04_SINGLE_TICK_SOIL_BINDING_AUTHORITY_INVALID",
+      );
     if (!input.lease_owner.trim()) throw new Error("CAP04_SINGLE_TICK_LEASE_OWNER_REQUIRED");
     if (!Number.isInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0) throw new Error("CAP04_SINGLE_TICK_LEASE_DURATION_INVALID");
     if (!Array.isArray(input.authorized_future_forcing_binding_ids) || input.authorized_future_forcing_binding_ids.length === 0) {
@@ -407,6 +433,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
       validateCap04ARecordSetV1(aRecordSet);
       if (aRecordSet.aggregate_identity_input.runtime_config_ref !== runtimeConfigRef) throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_REF_PIN_MISMATCH");
       if (aRecordSet.aggregate_identity_input.runtime_config_hash !== runtimeConfigHash) throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_HASH_PIN_MISMATCH");
+      assertExistingSoilBindingAuthorityV1(aRecordSet, authorizedSoilObservationBindingId);
       const existingForecast = memberV1(aRecordSet, "twin_forecast_run_v1");
       const existingPayload = existingForecast.payload as unknown as Cap04CanonicalForecastRunPayloadV1;
       if (existingPayload.status === "BLOCKED") {
@@ -483,6 +510,9 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
         crop_stage_context_ref: config.crop_stage_context.context_ref,
         crop_stage_context_hash: config.crop_stage_context.context_hash,
         crop_stage_context: input.crop_stage_context,
+        ...(authorizedSoilObservationBindingId !== undefined
+          ? { authorized_soil_observation_binding_id: authorizedSoilObservationBindingId }
+          : {}),
       });
       const base = preliminary.base_continuation_window;
       dynamics = executeHourlyWaterBalanceV1({
