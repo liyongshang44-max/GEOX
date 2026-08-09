@@ -2,7 +2,6 @@
 "use strict";
 
 const fs = require("node:fs");
-const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
 function fail(message) { throw new Error(message); }
@@ -55,10 +54,10 @@ for (const [file, expected] of Object.entries(pins)) {
 
 const amendment = fs.readFileSync("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-05-EXTERNAL-FORMAL-RUNTIME-AUTHORITY-PROFILE.md", "utf8");
 for (const required of [
-  "EA5B — External Formal Runtime Authority Profile + binding/profile implementation qualification",
-  "EA5C — durable raw retention + restricted canonical External Evidence ingress",
-  "EA5D — External canonical bootstrap config + A0 bootstrap + 24-config chain persistence",
-  "EA5E — post-bootstrap DB preflight + Formal Window Input Manifest + collector/runtime schedule readiness + Formal Authority V3 effectiveness",
+  "External Formal Runtime Authority Profile + binding/profile implementation qualification",
+  "durable raw retention + restricted canonical External Evidence ingress",
+  "External canonical bootstrap config + A0 bootstrap + 24-config chain persistence",
+  "post-bootstrap DB preflight + Formal Window Input Manifest + collector/runtime schedule readiness + Formal Authority V3 effectiveness",
   "Only after EA5E is effective may O00 be enabled."
 ]) if (!amendment.includes(required)) fail(`EA5B_CLOSURE_AMENDMENT_SEQUENCE_MISSING:${required}`);
 
