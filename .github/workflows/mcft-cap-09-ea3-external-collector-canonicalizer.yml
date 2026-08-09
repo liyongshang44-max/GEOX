@@ -1,0 +1,108 @@
+name: mcft-cap-09-ea3-external-collector-canonicalizer
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea3-external-collector-canonicalizer.yml'
+      - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA3-EXTERNAL-COLLECTOR-CANONICALIZER-CANDIDATE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.ts'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea3-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  qualify-external-collector-canonicalizer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact EA3 base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Syntax-check EA3 governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.cjs
+
+      - name: Validate exact EA3 governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.cjs
+
+      - name: Typecheck EA3 implementation and acceptance through server configuration
+        run: pnpm --filter @geox/server run typecheck
+
+      - name: Qualify injected collector retention canonicalizer contract
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.ts
+
+      - name: Verify completed EA3 adjudication
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const governance = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER_GOVERNANCE_RESULT.json','utf8'));
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER_RESULT.json','utf8'));
+          if (governance.status !== 'PASS') throw new Error('EA3_GOVERNANCE_PASS_REQUIRED');
+          if (result.status !== 'PASS') throw new Error('EA3_RUNTIME_ACCEPTANCE_PASS_REQUIRED');
+          if (result.role_count !== 5 || Object.keys(result.role_results || {}).length !== 5) throw new Error('EA3_FIVE_ROLE_COVERAGE_REQUIRED');
+          if (result.retention_barrier?.verified !== true || result.retention_barrier?.decoder_calls_after_retention_failure !== 0) throw new Error('EA3_RETENTION_BARRIER_REPROOF_REQUIRED');
+          for (const [role, item] of Object.entries(result.role_results || {})) {
+            if (item.retention_precedes_decoder !== true || item.deterministic_reproof !== true || item.raw_payload_embedded !== false) throw new Error(`EA3_ROLE_CONTRACT_REPROOF_FAIL:${role}`);
+            if (!/^sha256:[0-9a-f]{64}$/.test(item.canonical_payload_sha256 || '') || !/^sha256:[0-9a-f]{64}$/.test(item.record_semantic_sha256 || '')) throw new Error(`EA3_ROLE_HASH_REQUIRED:${role}`);
+          }
+          const io = result.io_counts || {};
+          if (io.public_provider_live_request_count !== 0 || io.database_write_count !== 0 || io.formal_evidence_write_count !== 0 || io.runtime_public_provider_fetch_count !== 0) throw new Error('EA3_ZERO_EXTERNAL_WRITE_AND_LIVE_IO_REQUIRED');
+          const nonclaims = result.authority_nonclaims || {};
+          if (nonclaims.live_source_qualified !== false || nonclaims.gfs_72h_full_value_pipeline_qualified !== false || nonclaims.future_et0_72h_value_execution_qualified !== false || nonclaims.formal_ingress_eligible !== false || nonclaims.formal_window_started !== false || nonclaims.mcft_cap09_completed !== false) throw new Error('EA3_NONCLAIM_DRIFT');
+          if (governance.formal_ingress_eligible !== false || governance.live_source_qualified !== false || governance.gfs_72h_full_value_pipeline_qualified !== false || governance.future_et0_72h_value_execution_qualified !== false) throw new Error('EA3_GOVERNANCE_NONCLAIM_DRIFT');
+          console.log(JSON.stringify({status:'PASS',roles:result.role_count,retention_barrier:true,formal_eligible:false,live_source_qualified:false,ea4_candidate_development_authorized:governance.ea4_candidate_development_authorized_after_effective_merge}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea3-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
