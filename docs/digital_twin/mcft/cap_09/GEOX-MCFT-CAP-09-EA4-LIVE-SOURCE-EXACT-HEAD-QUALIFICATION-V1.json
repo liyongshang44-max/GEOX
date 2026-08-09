@@ -4,7 +4,7 @@
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S6",
   "sub_lifecycle": "S6-EA4",
-  "record_status": "EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE",
+  "record_status": "EA4_LIVE_SOURCE_EXACT_HEAD_REJECTION_CANDIDATE_NOT_EFFECTIVE",
   "base_main_sha": "08310e5f50bf5df7580b27fd35285f560320b9df",
   "predecessor_authorities": {
     "taskbook": {"ref":"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md","blob_sha":"39f6a09273c30088a7ea264cfa94ff930ea5518e"},
@@ -40,6 +40,7 @@
     "elevation_m": 286.43,
     "soil_latest_max_age_minutes": 30,
     "raw_hourly_latest_max_age_hours": 6,
+    "raw_hourly_freshness_authority_source": "EA1H_PROTECTED_MAIN",
     "minimum_recent_complete_hourly_et0_intervals": 24,
     "minimum_recent_numeric_rain_hours": 24,
     "raw_values_may_be_emitted": false
@@ -93,13 +94,46 @@
     "database_write_count":0,
     "formal_evidence_write_count":0
   },
+  "frozen_discovery_rejection": {
+    "discovery_subject_sha": "a335911311b9e99a885367fc373542d19fad3552",
+    "workflow_run_id": 31291443357,
+    "attempts": [
+      {
+        "job_id": 93189211829,
+        "artifact_id": 9031524087,
+        "artifact_digest": "sha256:829d4f393c5e04e278caeccc7f7c6088001bf360b7374b610f88f04a18147cdd",
+        "probe_started_at_utc": "2026-08-09T02:00:00Z_APPROXIMATE_TICK_BOUNDARY",
+        "tick_utc": "2026-08-09T02:00:00Z",
+        "error": "RuntimeError:EA4_KBS_HOURLY_STALE"
+      },
+      {
+        "job_id": 93189468974,
+        "artifact_id": 9031550835,
+        "artifact_digest": "sha256:6646438bef63413ad72b693f6e0830e63bd496649856fc7f0ab9d0cb0f9bca9c",
+        "probe_started_at_utc": "2026-08-09T03:00:51.777535Z",
+        "tick_utc": "2026-08-09T03:00:00Z",
+        "error": "RuntimeError:EA4_KBS_HOURLY_STALE"
+      }
+    ],
+    "same_exact_head_reproduced": true,
+    "pinned_decoder_stack_passed_both_attempts": true,
+    "exact_governance_passed_both_attempts": true,
+    "soil_gate_reached_before_rejection": true,
+    "raw_hourly_freshness_gate": "REJECTED_UNDER_EFFECTIVE_EA1H_MAX_AGE_6H",
+    "gfs_value_execution_reached": false,
+    "future_et0_execution_reached": false,
+    "public_raw_values_emitted": false,
+    "database_writes": 0,
+    "formal_evidence_writes": 0
+  },
   "live_qualification": {
     "required":true,
     "exact_head_required":true,
-    "current_result":"UNEXECUTED",
+    "current_result":"REJECTED_EA4_KBS_RAW_HOURLY_FRESHNESS_AUTHORITY",
     "success_decision":"QUALIFIED_EA4_LIVE_EXTERNAL_EVIDENCE_AND_72H_VALUE_PIPELINE_CANDIDATE",
-    "failure_decision":"REJECTED_EA4_LIVE_EXTERNAL_EVIDENCE_OR_72H_VALUE_PIPELINE",
-    "final_head_must_reprove_frozen_pass":false
+    "failure_decision":"REJECTED_EA4_KBS_RAW_HOURLY_FRESHNESS_AUTHORITY",
+    "final_head_must_reprove_frozen_rejection":true,
+    "rejection_reproof_error_prefix":"RuntimeError:EA4_KBS_HOURLY_STALE"
   },
   "authority_effect": {
     "live_source_qualified":false,
@@ -107,10 +141,11 @@
     "future_et0_72h_value_execution_qualified":false,
     "ea2_package_formal_eligible":false,
     "ea5_candidate_development_authorized":false,
+    "new_source_architecture_adjudication_required_before_ea5":true,
     "database_write_authorized":false,
     "formal_evidence_write_authorized":false,
     "formal_window_started":false,
     "mcft_cap09_completed":false
   },
-  "hard_nonclaims":["NO_FORMAL_DURABLE_RAW_RETENTION_FROM_EA4","NO_FORMAL_INGRESS_ELIGIBILITY_FROM_EA4_ALONE","NO_DATABASE_WRITE","NO_FORMAL_EVIDENCE_WRITE","NO_RUNTIME_PUBLIC_PROVIDER_FETCH","NO_NEGATIVE_ET0_CLIPPING","NO_FORMAL_O00_O23_START","NO_MCFT_CAP09_COMPLETION"]
+  "hard_nonclaims":["NO_KBS_RAW_HOURLY_FRESHNESS_PASS","NO_GFS_72H_VALUE_EXECUTION_FROM_THIS_REJECTED_RUN","NO_FUTURE_ET0_72H_EXECUTION_FROM_THIS_REJECTED_RUN","NO_FORMAL_DURABLE_RAW_RETENTION_FROM_EA4","NO_FORMAL_INGRESS_ELIGIBILITY_FROM_EA4","NO_DATABASE_WRITE","NO_FORMAL_EVIDENCE_WRITE","NO_RUNTIME_PUBLIC_PROVIDER_FETCH","NO_FORMAL_O00_O23_START","NO_MCFT_CAP09_COMPLETION"]
 }
