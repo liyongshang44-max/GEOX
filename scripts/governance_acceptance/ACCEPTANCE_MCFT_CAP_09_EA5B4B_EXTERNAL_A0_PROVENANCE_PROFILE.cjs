@@ -33,9 +33,9 @@ const PINS = {
   historicalA0Service: '7d2db571b421f1cbfe7fd1192398297def5307c2',
   historicalBootstrapConfig: 'b682878b6bf8f714d4abcc57e32ee48ec02de617',
   posteriorAuthority: '10f00c9dc716bfd9f164c42f00701340a6b3d74b',
-  builder: 'ee6890b6c926d3ed7e7ebef8b503a86c02250af7',
+  builder: '516c141cbb971d55635b500d2a99962116159588',
   acceptance: 'aa9e6124887f9678f8f02dfa2e4279ade0c967c8',
-  authority: 'ecf80c8ca5c0e13e89230642997abe57a195a129',
+  authority: '503842ef473e7ccf6a6fe46a21a36e678766851b',
 };
 const EXPECT = [F.posteriorAuthority, F.builder, F.acceptance, F.authority, F.gate, F.workflow].sort();
 const OUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_09_EA5B4B_EXTERNAL_A0_PROVENANCE_PROFILE_GOVERNANCE_RESULT.json');
