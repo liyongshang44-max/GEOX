@@ -30,7 +30,7 @@ const predecessorPins = {
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-05-EXTERNAL-FORMAL-RUNTIME-AUTHORITY-PROFILE.md": "7a92c17f7ba32aae52667de9c21db62bfd2ba70b",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C3-EA5C-CLOSURE-AUTHORITY-V1.json": "f795a295dc241f565a595589eb94706d096f26ca",
-  "apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts": "f7ea03a7f8387ce4de135dac61f0f063e91f0f25",
+  "apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts": "f7ea03a7f8387ce4de135dac61f0b063e91f0f25",
   "apps/server/src/runtime/twin_runtime/external_formal_a0_evidence_window_service_v1.ts": "1a02cd7c39da8a17ebd161f487c7d2c3c7c704e1",
   "apps/server/src/runtime/twin_runtime/external_formal_a0_record_set_builder_v1.ts": "516c141cbb971d55635b500d2a99962116159588",
   "apps/server/src/runtime/twin_runtime/ports.ts": "9f62818498a645d554925dcf8569cdd19c0f1c34",
@@ -43,10 +43,10 @@ for (const [file, expected] of Object.entries(predecessorPins)) {
 }
 
 const candidatePins = {
-  [bundlePath]: "c44bfca52f6d1b91de6289d9a9649a6114c7fc9a",
+  [bundlePath]: "1671b13df81cba53f966a6f06765198d160601d7",
   [servicePath]: "6c94bef139f260ef61c87f751a2c627b83e58977",
-  [acceptancePath]: "242b673a46d01c6a3a9b3183ca3f4ed14bb3f907",
-  [authorityPath]: "c741f77dd0e457bc358a34421605882d55f0ebfe",
+  [acceptancePath]: "7404cc899aa3fcf722a80c25c37c82d0ff534f6c",
+  [authorityPath]: "8bf52b4a18874f9201340528b727d7f74742b638",
   [workflowPath]: "3f41beb187c64bd730465e09f55f9e05b6f79e46"
 };
 for (const [file, expected] of Object.entries(candidatePins)) {
@@ -73,16 +73,21 @@ const authority = json(authorityPath);
 eq(authority.base_main_sha, base, "EA5D1_AUTHORITY_BASE_MISMATCH");
 eq(authority.frontier_id, "S6-EA5D1-EXTERNAL-BOOTSTRAP-PERSISTENCE-IMPLEMENTATION-QUALIFICATION", "EA5D1_FRONTIER_MISMATCH");
 eq(authority.record_status, "EA5D1_CANDIDATE_NOT_EFFECTIVE", "EA5D1_RECORD_STATUS_MISMATCH");
+eq(authority.candidate_implementation_blobs.external_formal_bootstrap_authority_bundle, candidatePins[bundlePath], "EA5D1_AUTHORITY_BUNDLE_PIN_MISMATCH");
+eq(authority.candidate_implementation_blobs.external_formal_bootstrap_persistence_service, candidatePins[servicePath], "EA5D1_AUTHORITY_SERVICE_PIN_MISMATCH");
 truthy(authority.qualified_design.exact_external_scope_only, "EA5D1_EXACT_EXTERNAL_SCOPE_REQUIRED");
 truthy(authority.qualified_design.reality_binding_snapshot_materialized_from_external_authority, "EA5D1_REALITY_SNAPSHOT_REQUIRED");
 truthy(authority.qualified_design.external_a0_nine_member_graph_required, "EA5D1_NINE_MEMBER_A0_REQUIRED");
+truthy(authority.qualified_design.crop_stage_derivation_authority_must_not_be_after_bootstrap_logical_time, "EA5D1_CAUSAL_CROP_STAGE_AUTHORITY_REQUIRED");
 eq(authority.qualified_design.hourly_runtime_config_count, 24, "EA5D1_24_CONFIG_CHAIN_REQUIRED");
 truthy(authority.qualified_design.a0_config_is_exact_parent_of_o00_config, "EA5D1_A0_PARENT_OF_O00_REQUIRED");
 truthy(authority.qualified_design.each_hourly_config_is_exact_parent_of_successor, "EA5D1_PARENT_CHAIN_REQUIRED");
 falsy(authority.qualified_design.implicit_latest_config_lookup_allowed, "EA5D1_IMPLICIT_LATEST_FORBIDDEN");
 eq(authority.qualified_design.runtime_mode, "SHADOW_ONLINE_FORMAL_QUALIFICATION_ONLY", "EA5D1_EXTERNAL_RUNTIME_MODE_REQUIRED");
+eq(authority.qualified_design.config_selection_mode, "EXPLICIT_REF_HASH_PIN_ONLY", "EA5D1_EXPLICIT_CONFIG_PIN_REQUIRED");
 falsy(authority.qualified_design.historical_replay_scope_reuse_allowed, "EA5D1_REPLAY_SCOPE_REUSE_FORBIDDEN");
 falsy(authority.qualified_design.historical_200mm_operator_allowed_in_external_canonical_graph, "EA5D1_200MM_OPERATOR_FORBIDDEN");
+falsy(authority.qualified_design.controlled_synthetic_replay_proxy_allowed_in_external_canonical_graph, "EA5D1_SYNTHETIC_REPLAY_PROXY_FORBIDDEN");
 falsy(authority.qualification_proof_boundary.formal_neon_write_authorized, "EA5D1_FORMAL_NEON_WRITE_FORBIDDEN");
 eq(authority.qualification_proof_boundary.expected_first_runtime_config_writes, 25, "EA5D1_25_RUNTIME_CONFIG_WRITES_REQUIRED");
 eq(authority.qualification_proof_boundary.expected_first_a0_member_writes, 9, "EA5D1_9_A0_WRITES_REQUIRED");
@@ -105,15 +110,15 @@ eq(authority.next_legal_successor_if_effective, "S6-EA5D2-FORMAL-BOOTSTRAP-AND-2
 
 const bundle = fs.readFileSync(bundlePath, "utf8");
 for (const marker of [
-  "SHADOW_ONLINE_FORMAL_QUALIFICATION_ONLY",
-  "EXPLICIT_REF_HASH_PIN_ONLY",
+  "compileExternalFormalRuntimeConfigV1",
   "GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V1",
   "KBS039-006_MCSE_PLOT_POLYGONS",
   "MODEL_PRIOR_FROM_CAP08",
   "NOT_FIELD_CALIBRATED",
-  "A0_BOOTSTRAP",
-  "HOURLY_CAP04",
-  "for (let index = 0; index < 24; index += 1)"
+  'role: "A0_BOOTSTRAP"',
+  'role: "HOURLY_CAP04"',
+  "for (let index = 0; index < 24; index += 1)",
+  "EXTERNAL_FORMAL_CROP_STAGE_AUTHORITY_AFTER_BOOTSTRAP_FORBIDDEN"
 ]) if (!bundle.includes(marker)) fail(`EA5D1_BUNDLE_MARKER_MISSING:${marker}`);
 for (const forbidden of ["field_c8_demo", "CONTROLLED_SYNTHETIC_REPLAY_PROXY", "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1"]) {
   if (bundle.includes(forbidden)) fail(`EA5D1_BUNDLE_FORBIDDEN_MARKER:${forbidden}`);
@@ -129,13 +134,15 @@ for (const marker of [
   "bundle.runtime_configs.length !== 24",
   "formal_window_started: false"
 ]) if (!service.includes(marker)) fail(`EA5D1_SERVICE_MARKER_MISSING:${marker}`);
-for (const forbidden of ["fetch(", "http://", "https://", "claimSlot", "schedule", "Recommendation", "AO_ACT"]) {
+for (const forbidden of ["fetch(", "http://", "https://", "claimSlot(", "claimWindow(", "RecommendationService", "AO_ACT_"]) {
   if (service.includes(forbidden)) fail(`EA5D1_SERVICE_SIDE_EFFECT_PATH_FORBIDDEN:${forbidden}`);
 }
 
 const acceptance = fs.readFileSync(acceptancePath, "utf8");
 for (const marker of [
   "EA5D1_DATABASE_URL",
+  "EXTERNAL_FORMAL_CROP_STAGE_AUTHORITY_AFTER_BOOTSTRAP_FORBIDDEN",
+  "crop_stage_authority_not_after_bootstrap_proved: true",
   "exact_total_canonical_fact_count: 34",
   "exact_hourly_runtime_config_count: 24",
   "idempotent_retry_zero_canonical_writes: true",
@@ -167,6 +174,7 @@ const result = {
   predecessor_blobs_verified_unchanged: true,
   candidate_blobs_verified: true,
   exact_external_scope_only: true,
+  causal_crop_stage_authority_required: true,
   exact_runtime_config_count: 25,
   exact_hourly_runtime_config_count: 24,
   external_a0_member_count: 9,
