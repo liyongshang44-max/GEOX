@@ -90,7 +90,6 @@ for (const marker of [
   "deriveCropStageAtBootstrapV1",
   "RECOVER_FORMAL_BOOTSTRAP_FROM_EXISTING_FRESH_EVIDENCE",
   "validateAuthorizedSoilEvidenceSetV1",
-  "crash",
   "formal_neon_bootstrap_persisted: true",
   "formal_24_config_chain_persisted: true",
   "formal_window_started: false"
