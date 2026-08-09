@@ -1,0 +1,57 @@
+{
+  "schema_version": "geox_mcft_cap09_ea4_meteogram_source_discovery_v1",
+  "discovery_id": "GEOX-MCFT-CAP-09-EA4-METEOGRAM-SOURCE-DISCOVERY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "SOURCE_DISCOVERY_ONLY_NOT_AUTHORITY",
+  "base_main_sha": "b31b024c17b617f0e1c36010c8c3926682bd6533",
+  "provider": "MSU_ENVIROWEATHER",
+  "source_page": "https://enviroweather.msu.edu/weathermodels/meteogram",
+  "target_station_slug": "kbs",
+  "duration_hours": 24,
+  "units_mode": "us",
+  "allowed_response_hosts": ["enviroweather.msu.edu", "api.enviroweather.msu.edu"],
+  "target_capabilities": {
+    "hourly_or_subdaily_rainfall": true,
+    "hourly_or_subdaily_solar_radiation": true,
+    "station_identity": true,
+    "observation_forecast_discrimination": true,
+    "timestamp_granularity_detection": true
+  },
+  "approved_metadata_lexicon": [
+    "station", "site", "kbs", "hickory corners", "kellogg",
+    "rain", "rainfall", "precipitation", "precip", "pcpn",
+    "solar", "solar flux", "solar radiation", "solrad", "srad", "radiation",
+    "temperature", "temp", "humidity", "rh", "wind",
+    "date", "time", "timestamp", "observed", "observation", "forecast", "prediction",
+    "hour", "hourly", "minute", "daily", "unit", "quality", "qc", "source", "sensor", "weather"
+  ],
+  "capability_patterns": {
+    "rainfall": ["rain", "rainfall", "precipitation", "precip", "pcpn"],
+    "solar_radiation": ["solar", "solar flux", "solar radiation", "solrad", "srad", "radiation"],
+    "station_identity": ["station", "site", "kbs", "hickory corners", "kellogg"],
+    "forecast": ["forecast", "prediction", "predicted"],
+    "observed": ["observed", "observation", "measured"],
+    "hourly": ["hour", "hourly"],
+    "subhourly": ["minute", "5 min", "15 min", "30 min"]
+  },
+  "discovery_policy": {
+    "query_values_may_be_emitted": false,
+    "raw_numeric_observation_values_may_be_emitted": false,
+    "raw_json_body_may_be_persisted": false,
+    "rendered_dom_may_be_persisted": false,
+    "download_click_authorized": false,
+    "login_authorized": false
+  },
+  "discovery_effect": {
+    "creates_formal_source_authority": false,
+    "creates_source_substitution_authority": false,
+    "qualifies_rainfall": false,
+    "qualifies_solar_radiation": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "formal_window_started": false,
+    "ea5_authorized": false,
+    "mcft_cap09_completed": false
+  }
+}
