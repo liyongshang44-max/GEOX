@@ -8,6 +8,7 @@ import {
 } from "./canonical_object_contracts_v1.js";
 import {
   MCFT_CAP09_EXTERNAL_FORMAL_RUNTIME_CONFIG_PURPOSE_V1,
+  MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
   validateExternalFormalRuntimeConfigPayloadV1,
   type ExternalFormalRuntimeConfigPayloadV1,
 } from "./external_formal_runtime_config_v1.js";
@@ -21,6 +22,17 @@ import {
   type Cap04ExecutionConfigResolverPortV1,
   type ResolvedCap04ExecutionConfigV1,
 } from "./runtime_config_execution_view_v1.js";
+
+function exactRequiredScopeStringV1(
+  value: string | null,
+  expected: string,
+  code: string,
+): string {
+  if (typeof value !== "string" || !value.trim() || value !== expected) {
+    throw new Error(code);
+  }
+  return value;
+}
 
 export class ExternalFormalCap04ExecutionConfigResolverV1
 implements Cap04ExecutionConfigResolverPortV1 {
@@ -49,12 +61,36 @@ implements Cap04ExecutionConfigResolverPortV1 {
 
     const compatibility = compileCap04RuntimeConfigV1({
       scope: {
-        tenant_id: canonicalConfig.tenant_id,
-        project_id: canonicalConfig.project_id,
-        group_id: canonicalConfig.group_id,
-        field_id: canonicalConfig.field_id,
-        season_id: canonicalConfig.season_id,
-        zone_id: canonicalConfig.zone_id,
+        tenant_id: exactRequiredScopeStringV1(
+          canonicalConfig.tenant_id,
+          MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1.tenant_id,
+          "EXTERNAL_FORMAL_CAP04_TENANT_SCOPE_MISMATCH",
+        ),
+        project_id: exactRequiredScopeStringV1(
+          canonicalConfig.project_id,
+          MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1.project_id,
+          "EXTERNAL_FORMAL_CAP04_PROJECT_SCOPE_MISMATCH",
+        ),
+        group_id: exactRequiredScopeStringV1(
+          canonicalConfig.group_id,
+          MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1.group_id,
+          "EXTERNAL_FORMAL_CAP04_GROUP_SCOPE_MISMATCH",
+        ),
+        field_id: exactRequiredScopeStringV1(
+          canonicalConfig.field_id,
+          MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1.field_id,
+          "EXTERNAL_FORMAL_CAP04_FIELD_SCOPE_MISMATCH",
+        ),
+        season_id: exactRequiredScopeStringV1(
+          canonicalConfig.season_id,
+          MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1.season_id,
+          "EXTERNAL_FORMAL_CAP04_SEASON_SCOPE_MISMATCH",
+        ),
+        zone_id: exactRequiredScopeStringV1(
+          canonicalConfig.zone_id,
+          MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1.zone_id,
+          "EXTERNAL_FORMAL_CAP04_ZONE_SCOPE_MISMATCH",
+        ),
       },
       effective_logical_time: external.effective_logical_time,
       created_at: canonicalConfig.created_at,
