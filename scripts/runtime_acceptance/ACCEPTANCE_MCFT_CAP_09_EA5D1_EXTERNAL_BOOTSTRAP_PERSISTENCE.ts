@@ -89,6 +89,14 @@ class MemoryEvidenceSourceV1 implements ReplayEvidenceSourcePortV1 {
   }
 }
 
+async function optionalTableCountV1(pool: Pool, relation: string): Promise<number> {
+  const regclass = await pool.query("SELECT to_regclass($1)::text AS relation", [relation]);
+  if (!regclass.rows[0]?.relation) return 0;
+  if (!/^public\.[a-z0-9_]+$/.test(relation)) throw new Error("EA5D1_OPTIONAL_RELATION_NAME_INVALID");
+  const count = await pool.query(`SELECT count(*)::int AS n FROM ${relation}`);
+  return Number(count.rows[0]?.n ?? 0);
+}
+
 async function main(): Promise<void> {
   const pool = new Pool({ connectionString: DATABASE_URL, max: 8 });
   try {
@@ -228,12 +236,10 @@ async function main(): Promise<void> {
     assert.equal(nextTick.previous_posterior.runtime_config_ref, first.bootstrap_runtime_config_ref);
     assert.equal(nextTick.previous_forecast_result?.payload.status, "BLOCKED");
 
-    const scheduler = await pool.query(`
-      SELECT
-        (SELECT count(*)::int FROM twin_shadow_online_scheduler_slot_v1) AS slot_count,
-        (SELECT count(*)::int FROM twin_shadow_online_scheduler_cursor_v1) AS cursor_count`);
-    assert.equal(scheduler.rows[0].slot_count, 0);
-    assert.equal(scheduler.rows[0].cursor_count, 0);
+    const schedulerSlotCount = await optionalTableCountV1(pool, "public.twin_shadow_online_scheduler_slot_v1");
+    const schedulerCursorCount = await optionalTableCountV1(pool, "public.twin_shadow_online_scheduler_cursor_v1");
+    assert.equal(schedulerSlotCount, 0);
+    assert.equal(schedulerCursorCount, 0);
 
     const serialized = JSON.stringify(canonical.rows);
     for (const forbidden of [
@@ -278,6 +284,7 @@ async function main(): Promise<void> {
       first_execution_inserted: true,
       idempotent_retry_zero_canonical_writes: true,
       scheduler_slot_write_count: 0,
+      scheduler_cursor_write_count: 0,
       provider_request_count: 0,
       formal_window_started: false,
       ea5d_complete: false,
