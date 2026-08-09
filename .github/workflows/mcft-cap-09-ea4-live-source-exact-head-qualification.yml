@@ -1,0 +1,122 @@
+name: mcft-cap-09-ea4-live-source-exact-head-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea4-live-source-exact-head-qualification.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-LIVE-SOURCE-EXACT-HEAD-QUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea4-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  live-source-exact-head-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Resolve exact EA4 base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install pinned EA4 qualification decoder stack
+        run: |
+          python -m pip install --disable-pip-version-check \
+            'eccodes==2.47.0' \
+            'eccodeslib==2.47.3.23' \
+            'numpy==1.26.4' \
+            'refet==0.4.2'
+          python -m eccodes selfcheck
+          python - <<'PY'
+          from importlib.metadata import version
+          expected = {'eccodes':'2.47.0','eccodeslib':'2.47.3.23','numpy':'1.26.4','refet':'0.4.2'}
+          actual = {name: version(name) for name in expected}
+          if actual != expected:
+              raise SystemExit(f'EA4_DECODER_STACK_DRIFT:{actual}')
+          print(actual)
+          PY
+
+      - name: Syntax-check EA4 live probe
+        run: python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
+
+      - name: Validate exact EA4 rejection governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.cjs
+
+      - name: Re-prove live KBS raw-hourly freshness rejection
+        id: live
+        continue-on-error: true
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
+
+      - name: Verify exact-head fail-closed freshness rejection
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+          MCFT_LIVE_STEP_OUTCOME: ${{ steps.live.outcome }}
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const authority = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-LIVE-SOURCE-EXACT-HEAD-QUALIFICATION-V1.json','utf8'));
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_RESULT.json','utf8'));
+          if (authority.record_status !== 'EA4_LIVE_SOURCE_EXACT_HEAD_REJECTION_CANDIDATE_NOT_EFFECTIVE') throw new Error('EA4_REJECTION_STATUS_REQUIRED');
+          if (authority.live_qualification?.current_result !== 'REJECTED_EA4_KBS_RAW_HOURLY_FRESHNESS_AUTHORITY') throw new Error('EA4_FROZEN_REJECTION_RESULT_REQUIRED');
+          if (authority.live_qualification?.final_head_must_reprove_frozen_rejection !== true) throw new Error('EA4_FINAL_HEAD_REJECTION_REPROOF_REQUIRED');
+          if (process.env.MCFT_LIVE_STEP_OUTCOME !== 'failure') throw new Error('EA4_LIVE_STEP_MUST_FAIL_CLOSED');
+          if (result.subject_sha !== process.env.MCFT_SUBJECT_SHA) throw new Error('EA4_EXACT_SUBJECT_REPROOF_REQUIRED');
+          if (result.status !== 'FAIL') throw new Error('EA4_RESULT_FAIL_REQUIRED');
+          if (result.decision !== authority.live_qualification.failure_decision) throw new Error('EA4_REJECTION_DECISION_DRIFT');
+          const prefix = authority.live_qualification.rejection_reproof_error_prefix;
+          if (typeof result.error !== 'string' || !result.error.startsWith(prefix)) throw new Error(`EA4_REJECTION_REASON_DRIFT:${result.error}`);
+          if (result.gfs_chronology !== undefined || result.future_weather !== undefined || result.future_solar !== undefined || result.future_et0 !== undefined) throw new Error('EA4_GFS_OR_ET0_MUST_NOT_EXECUTE_AFTER_KBS_FRESHNESS_REJECTION');
+          if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0 || result.runtime_public_provider_fetch_count !== 0 || result.public_raw_value_emission_count !== 0 || result.formal_window_started !== false || result.mcft_cap09_completed !== false) throw new Error('EA4_REJECTION_WRITE_OR_FORMAL_START_FORBIDDEN');
+          if (authority.authority_effect?.live_source_qualified !== false || authority.authority_effect?.gfs_72h_full_value_pipeline_qualified !== false || authority.authority_effect?.future_et0_72h_value_execution_qualified !== false || authority.authority_effect?.ea2_package_formal_eligible !== false || authority.authority_effect?.ea5_candidate_development_authorized !== false) throw new Error('EA4_REJECTION_AUTHORITY_EFFECT_DRIFT');
+          if (authority.authority_effect?.new_source_architecture_adjudication_required_before_ea5 !== true) throw new Error('EA4_NEW_SOURCE_ADJUDICATION_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',adjudication:'REJECTED_EA4_KBS_RAW_HOURLY_FRESHNESS_AUTHORITY',subject:result.subject_sha,tick:result.tick_utc,error:result.error,gfs_executed:false,future_et0_executed:false,ea5_authorized:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea4-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
