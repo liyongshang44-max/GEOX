@@ -7,6 +7,8 @@ on:
       - 'apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts'
       - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C1-DURABLE-RAW-RESTRICTED-INGRESS-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs'
   merge_group:
     types: [checks_requested]
 
@@ -15,10 +17,14 @@ permissions:
   actions: read
   pull-requests: read
 
+concurrency:
+  group: mcft-cap09-ea5c1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
 jobs:
   ea5c1-durable-raw-restricted-ingress:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:18
@@ -49,8 +55,32 @@ jobs:
           node-version: 20.11.1
           cache: pnpm
 
+      - name: Resolve exact EA5C1 base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check EA5C1 governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs
+
+      - name: Validate exact EA5C1 authority and six-file boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs
+
+      - name: Re-prove CAP08 G3 frozen-core successor compatibility
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_G3_BOUNDARY.cjs
 
       - name: Start private S3-compatible raw store
         shell: bash
@@ -107,12 +137,25 @@ jobs:
           status="$(curl -sS -o /tmp/ea5c1-anon-body -w '%{http_code}' http://127.0.0.1:9000/geox-mcft-cap09-formal-raw-v1/ || true)"
           test "$status" = "403"
 
+      - name: Verify EA5C1 remains implementation qualification only
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_GOVERNANCE_RESULT.json','utf8'));
+          if (r.status !== 'PASS') throw new Error('EA5C1_GOVERNANCE_PASS_REQUIRED');
+          if (r.ea5c1_implementation_qualified_after_effectiveness !== true) throw new Error('EA5C1_IMPLEMENTATION_EFFECT_REQUIRED');
+          if (r.ea5c_complete !== false || r.ea5d_authorized !== false || r.ea5e_authorized !== false) throw new Error('EA5C1_PREMATURE_SUCCESSOR_EFFECT');
+          if (r.formal_neon_write_performed !== false || r.formal_o00_start_authorized !== false || r.mcft_cap09_completed !== false) throw new Error('EA5C1_NONCLAIM_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',ea5c1:true,ea5c_complete:false,formal_neon_write:false,ea5d:false,ea5e:false,o00:false,cap09:false}));
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mcft-cap-09-ea5c1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
+            acceptance-output/MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json
             acceptance-output/EA5C1_SERVER_TYPECHECK.log
             acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 90
