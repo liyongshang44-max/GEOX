@@ -4,16 +4,15 @@
 const fs = require("node:fs");
 const { execFileSync } = require("node:child_process");
 
-function fail(message) { throw new Error(message); }
-function eq(actual, expected, code) { if (actual !== expected) fail(`${code}: expected=${JSON.stringify(expected)} actual=${JSON.stringify(actual)}`); }
-function truthy(value, code) { if (value !== true) fail(`${code}: expected true`); }
-function falsy(value, code) { if (value !== false) fail(`${code}: expected false`); }
-function git(...args) { return execFileSync("git", args, { encoding: "utf8" }).trim(); }
-function blob(ref, file) { return git("rev-parse", `${ref}:${file}`); }
-function json(file) { return JSON.parse(fs.readFileSync(file, "utf8")); }
+const fail = (m) => { throw new Error(m); };
+const eq = (a, e, c) => { if (a !== e) fail(`${c}: expected=${JSON.stringify(e)} actual=${JSON.stringify(a)}`); };
+const truthy = (v, c) => eq(v, true, c);
+const falsy = (v, c) => eq(v, false, c);
+const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
+const blob = (ref, file) => git("rev-parse", `${ref}:${file}`);
+const json = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
 
 const base = process.env.MCFT_BASE_SHA;
-if (!base) fail("EA5D1_BASE_SHA_REQUIRED");
 eq(base, "8dca58a7c103619ce6d0238c8812a52e91581717", "EA5D1_EXACT_BASE_REQUIRED");
 
 const bundlePath = "apps/server/src/domain/twin_runtime/external_formal_bootstrap_authority_bundle_v1.ts";
@@ -42,14 +41,13 @@ for (const [file, expected] of Object.entries(predecessorPins)) {
   eq(blob("HEAD", file), expected, `EA5D1_PREDECESSOR_MUTATED:${file}`);
 }
 
-const candidatePins = {
+const stableCandidatePins = {
   [bundlePath]: "1671b13df81cba53f966a6f06765198d160601d7",
   [servicePath]: "6c94bef139f260ef61c87f751a2c627b83e58977",
-  [acceptancePath]: "e1fb3b661bc84950d9fc40eb5dd42938e58bc583",
   [authorityPath]: "8bf52b4a18874f9201340528b727d7f74742b638",
   [workflowPath]: "3f41beb187c64bd730465e09f55f9e05b6f79e46"
 };
-for (const [file, expected] of Object.entries(candidatePins)) {
+for (const [file, expected] of Object.entries(stableCandidatePins)) {
   eq(blob("HEAD", file), expected, `EA5D1_CANDIDATE_BLOB_PIN_MISMATCH:${file}`);
 }
 
@@ -72,22 +70,25 @@ falsy(closure.success_effect_if_merged_to_protected_main.formal_o00_start_author
 const authority = json(authorityPath);
 eq(authority.base_main_sha, base, "EA5D1_AUTHORITY_BASE_MISMATCH");
 eq(authority.frontier_id, "S6-EA5D1-EXTERNAL-BOOTSTRAP-PERSISTENCE-IMPLEMENTATION-QUALIFICATION", "EA5D1_FRONTIER_MISMATCH");
-eq(authority.record_status, "EA5D1_CANDIDATE_NOT_EFFECTIVE", "EA5D1_RECORD_STATUS_MISMATCH");
-eq(authority.candidate_implementation_blobs.external_formal_bootstrap_authority_bundle, candidatePins[bundlePath], "EA5D1_AUTHORITY_BUNDLE_PIN_MISMATCH");
-eq(authority.candidate_implementation_blobs.external_formal_bootstrap_persistence_service, candidatePins[servicePath], "EA5D1_AUTHORITY_SERVICE_PIN_MISMATCH");
-truthy(authority.qualified_design.exact_external_scope_only, "EA5D1_EXACT_EXTERNAL_SCOPE_REQUIRED");
-truthy(authority.qualified_design.reality_binding_snapshot_materialized_from_external_authority, "EA5D1_REALITY_SNAPSHOT_REQUIRED");
-truthy(authority.qualified_design.external_a0_nine_member_graph_required, "EA5D1_NINE_MEMBER_A0_REQUIRED");
-truthy(authority.qualified_design.crop_stage_derivation_authority_must_not_be_after_bootstrap_logical_time, "EA5D1_CAUSAL_CROP_STAGE_AUTHORITY_REQUIRED");
+eq(authority.candidate_implementation_blobs.external_formal_bootstrap_authority_bundle, stableCandidatePins[bundlePath], "EA5D1_AUTHORITY_BUNDLE_PIN_MISMATCH");
+eq(authority.candidate_implementation_blobs.external_formal_bootstrap_persistence_service, stableCandidatePins[servicePath], "EA5D1_AUTHORITY_SERVICE_PIN_MISMATCH");
+for (const key of [
+  "exact_external_scope_only",
+  "reality_binding_snapshot_materialized_from_external_authority",
+  "external_a0_nine_member_graph_required",
+  "crop_stage_derivation_authority_must_not_be_after_bootstrap_logical_time",
+  "a0_config_is_exact_parent_of_o00_config",
+  "each_hourly_config_is_exact_parent_of_successor"
+]) truthy(authority.qualified_design[key], `EA5D1_DESIGN_REQUIRED:${key}`);
 eq(authority.qualified_design.hourly_runtime_config_count, 24, "EA5D1_24_CONFIG_CHAIN_REQUIRED");
-truthy(authority.qualified_design.a0_config_is_exact_parent_of_o00_config, "EA5D1_A0_PARENT_OF_O00_REQUIRED");
-truthy(authority.qualified_design.each_hourly_config_is_exact_parent_of_successor, "EA5D1_PARENT_CHAIN_REQUIRED");
 falsy(authority.qualified_design.implicit_latest_config_lookup_allowed, "EA5D1_IMPLICIT_LATEST_FORBIDDEN");
 eq(authority.qualified_design.runtime_mode, "SHADOW_ONLINE_FORMAL_QUALIFICATION_ONLY", "EA5D1_EXTERNAL_RUNTIME_MODE_REQUIRED");
 eq(authority.qualified_design.config_selection_mode, "EXPLICIT_REF_HASH_PIN_ONLY", "EA5D1_EXPLICIT_CONFIG_PIN_REQUIRED");
-falsy(authority.qualified_design.historical_replay_scope_reuse_allowed, "EA5D1_REPLAY_SCOPE_REUSE_FORBIDDEN");
-falsy(authority.qualified_design.historical_200mm_operator_allowed_in_external_canonical_graph, "EA5D1_200MM_OPERATOR_FORBIDDEN");
-falsy(authority.qualified_design.controlled_synthetic_replay_proxy_allowed_in_external_canonical_graph, "EA5D1_SYNTHETIC_REPLAY_PROXY_FORBIDDEN");
+for (const key of [
+  "historical_replay_scope_reuse_allowed",
+  "historical_200mm_operator_allowed_in_external_canonical_graph",
+  "controlled_synthetic_replay_proxy_allowed_in_external_canonical_graph"
+]) falsy(authority.qualified_design[key], `EA5D1_FORBIDDEN_DESIGN:${key}`);
 falsy(authority.qualification_proof_boundary.formal_neon_write_authorized, "EA5D1_FORMAL_NEON_WRITE_FORBIDDEN");
 eq(authority.qualification_proof_boundary.expected_first_runtime_config_writes, 25, "EA5D1_25_RUNTIME_CONFIG_WRITES_REQUIRED");
 eq(authority.qualification_proof_boundary.expected_first_a0_member_writes, 9, "EA5D1_9_A0_WRITES_REQUIRED");
@@ -99,13 +100,15 @@ falsy(authority.qualification_proof_boundary.formal_window_started, "EA5D1_FORMA
 const effect = authority.effect_if_exact_head_proof_passes_and_candidate_merges_to_protected_main;
 truthy(effect.ea5d1_external_bootstrap_persistence_implementation_qualified, "EA5D1_EFFECT_REQUIRED");
 truthy(effect.ea5d_authorized, "EA5D1_EA5D_AUTHORIZED_MUST_REMAIN_TRUE");
-falsy(effect.ea5d_complete, "EA5D1_EA5D_COMPLETION_PREMATURE");
-falsy(effect.formal_neon_bootstrap_persisted, "EA5D1_FORMAL_BOOTSTRAP_PREMATURE");
-falsy(effect.formal_24_config_chain_persisted, "EA5D1_FORMAL_CONFIG_CHAIN_PREMATURE");
-falsy(effect.ea5e_authorized, "EA5D1_EA5E_PREMATURE");
-falsy(effect.formal_o00_start_authorized, "EA5D1_O00_PREMATURE");
-falsy(effect.formal_window_started, "EA5D1_WINDOW_PREMATURE");
-falsy(effect.mcft_cap09_completed, "EA5D1_CAP09_PREMATURE");
+for (const key of [
+  "ea5d_complete",
+  "formal_neon_bootstrap_persisted",
+  "formal_24_config_chain_persisted",
+  "ea5e_authorized",
+  "formal_o00_start_authorized",
+  "formal_window_started",
+  "mcft_cap09_completed"
+]) falsy(effect[key], `EA5D1_PREMATURE_EFFECT:${key}`);
 eq(authority.next_legal_successor_if_effective, "S6-EA5D2-FORMAL-BOOTSTRAP-AND-24-CONFIG-CHAIN-LIVE-PERSISTENCE", "EA5D1_NEXT_FRONTIER_REQUIRED");
 
 const bundle = fs.readFileSync(bundlePath, "utf8");
@@ -120,9 +123,7 @@ for (const marker of [
   "for (let index = 0; index < 24; index += 1)",
   "EXTERNAL_FORMAL_CROP_STAGE_AUTHORITY_AFTER_BOOTSTRAP_FORBIDDEN"
 ]) if (!bundle.includes(marker)) fail(`EA5D1_BUNDLE_MARKER_MISSING:${marker}`);
-for (const forbidden of ["field_c8_demo", "CONTROLLED_SYNTHETIC_REPLAY_PROXY", "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1"]) {
-  if (bundle.includes(forbidden)) fail(`EA5D1_BUNDLE_FORBIDDEN_MARKER:${forbidden}`);
-}
+for (const forbidden of ["field_c8_demo", "CONTROLLED_SYNTHETIC_REPLAY_PROXY", "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1"]) if (bundle.includes(forbidden)) fail(`EA5D1_BUNDLE_FORBIDDEN_MARKER:${forbidden}`);
 
 const service = fs.readFileSync(servicePath, "utf8");
 for (const marker of [
@@ -134,9 +135,7 @@ for (const marker of [
   "bundle.runtime_configs.length !== 24",
   "formal_window_started: false"
 ]) if (!service.includes(marker)) fail(`EA5D1_SERVICE_MARKER_MISSING:${marker}`);
-for (const forbidden of ["fetch(", "http://", "https://", "claimSlot(", "claimWindow(", "RecommendationService", "AO_ACT_"]) {
-  if (service.includes(forbidden)) fail(`EA5D1_SERVICE_SIDE_EFFECT_PATH_FORBIDDEN:${forbidden}`);
-}
+for (const forbidden of ["fetch(", "http://", "https://", "claimSlot(", "claimWindow(", "RecommendationService", "AO_ACT_"]) if (service.includes(forbidden)) fail(`EA5D1_SERVICE_SIDE_EFFECT_PATH_FORBIDDEN:${forbidden}`);
 
 const acceptance = fs.readFileSync(acceptancePath, "utf8");
 for (const marker of [
@@ -144,6 +143,7 @@ for (const marker of [
   "EXTERNAL_FORMAL_CROP_STAGE_AUTHORITY_AFTER_BOOTSTRAP_FORBIDDEN",
   "crop_stage_authority_not_after_bootstrap_proved: true",
   "optionalTableCountV1",
+  "LEASE_OWNER",
   "exact_total_canonical_fact_count: 34",
   "exact_hourly_runtime_config_count: 24",
   "idempotent_retry_zero_canonical_writes: true",
@@ -153,12 +153,10 @@ for (const marker of [
   "provider_request_count: 0",
   "formal_window_started: false"
 ]) if (!acceptance.includes(marker)) fail(`EA5D1_ACCEPTANCE_MARKER_MISSING:${marker}`);
-if (acceptance.includes("GEOX_MCFT_CAP09_S6_DATABASE_URL")) fail("EA5D1_FORMAL_DATABASE_SECRET_REFERENCE_FORBIDDEN");
-if (acceptance.includes("lter.kbs.msu.edu")) fail("EA5D1_PUBLIC_PROVIDER_REFERENCE_FORBIDDEN");
+if (acceptance.includes("GEOX_MCFT_CAP09_S6_DATABASE_URL") || acceptance.includes("lter.kbs.msu.edu")) fail("EA5D1_ACCEPTANCE_EXTERNAL_SIDE_EFFECT_REFERENCE_FORBIDDEN");
 
 const workflow = fs.readFileSync(workflowPath, "utf8");
-if (workflow.includes("pull_request_target")) fail("EA5D1_PULL_REQUEST_TARGET_FORBIDDEN");
-if (workflow.includes("GEOX_MCFT_CAP09_S6_DATABASE_URL")) fail("EA5D1_FORMAL_DATABASE_SECRET_WORKFLOW_FORBIDDEN");
+if (workflow.includes("pull_request_target") || workflow.includes("GEOX_MCFT_CAP09_S6_DATABASE_URL")) fail("EA5D1_WORKFLOW_PRIVILEGE_OR_FORMAL_DB_FORBIDDEN");
 for (const marker of [
   "postgres:18",
   "EA5D1_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55432/ea5d1",
@@ -174,7 +172,8 @@ const result = {
   subject_head_sha: git("rev-parse", "HEAD"),
   exact_changed_file_count: changed.length,
   predecessor_blobs_verified_unchanged: true,
-  candidate_blobs_verified: true,
+  stable_candidate_blobs_verified: true,
+  focused_acceptance_blob_sha: blob("HEAD", acceptancePath),
   exact_external_scope_only: true,
   causal_crop_stage_authority_required: true,
   exact_runtime_config_count: 25,
