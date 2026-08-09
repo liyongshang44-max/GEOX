@@ -1,0 +1,100 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5b1_external_evidence_binding_seam_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5B1-EXTERNAL-EVIDENCE-BINDING-SEAM-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA5B1",
+  "record_status": "EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "9dc8f99303e9d1efaec52afe5eac7ed816c5a8d2",
+  "predecessor_authorities": {
+    "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
+    "amendment_01_blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
+    "amendment_05_blob_sha": "7a92c17f7ba32aae52667de9c21db62bfd2ba70b",
+    "amendment_05_status_blob_sha": "be8a80345e004cf33d3993b0e26dcea01fc6644b",
+    "ea4_recovery_blob_sha": "1174940a6908e545e70d87cb65be5b3a41db33cf",
+    "ea5a_fresh_database_preflight_blob_sha": "f3a57413d78633685cbc5be7d94f39d9fdc5c62b"
+  },
+  "implementation_blobs": {
+    "external_binding_profile": "5fe20f988d2cd6ef038f54eec27e5a32ba6a396d",
+    "a0_evidence_window": "4b626cc1069c83ba31963c31d0228382a4842bf7",
+    "continuation_observation_selector": "c4ecf12c9830a82b4b5f5c001e51a483fc7ad2e0",
+    "continuation_evidence_window": "0a7c02aae1e5ddbccadc303ae7977e4369dddcba",
+    "a0_bootstrap_service": "d686037944f07066f47df17e6d21d560b10fed57",
+    "focused_acceptance": "1d662cc46f3ffb939901f65bb99897a04a37521e"
+  },
+  "formal_binding_ids": {
+    "soil_moisture": "kbs_lter_variate25_vwc_100mm_v1",
+    "observed_rainfall": "kbs_lter_raw_hourly_rain_mm_v1",
+    "historical_et0": "kbs_lter_asce_short_reference_et_hourly_v1",
+    "future_weather": "noaa_ncep_gfs_pgrb2_kbs_nearest_72h_v1",
+    "future_et0": "noaa_ncep_gfs_asce_short_reference_et_same_cycle_72h_v1"
+  },
+  "soil_authority": {
+    "measurement_depth_mm": 100,
+    "spatial_support": "NEAR_SITE_POINT_SUPPORT",
+    "observation_operator_id": "POINT_100MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1",
+    "direct_state_equivalence": false,
+    "direct_field_equivalence": false,
+    "direct_root_zone_equivalence": false,
+    "root_zone_representativeness": "PARTIAL",
+    "model_parameter_authority": "MODEL_PRIOR_FROM_CAP08",
+    "field_calibration_status": "NOT_FIELD_CALIBRATED"
+  },
+  "implemented_boundary": {
+    "external_binding_constants_frozen": true,
+    "a0_evidence_window_accepts_explicit_soil_binding_authority": true,
+    "a0_bootstrap_service_threads_explicit_soil_binding_authority": true,
+    "continuation_selector_accepts_explicit_soil_binding_authority": true,
+    "continuation_evidence_window_threads_explicit_soil_binding_authority": true,
+    "historical_a0_default_behavior_preserved_when_profile_omitted": true,
+    "historical_continuation_default_binding_preserved_when_profile_omitted": true,
+    "unauthorized_same_scope_soil_must_be_rejected": true
+  },
+  "not_implemented_in_ea5b1": {
+    "cap04_single_tick_service_input_threading": true,
+    "external_canonical_runtime_config_contract": true,
+    "external_execution_config_resolver": true,
+    "external_a0_provenance_profile": true,
+    "durable_private_raw_retention": true,
+    "restricted_formal_evidence_writer": true,
+    "external_a0_database_bootstrap": true,
+    "external_24_config_chain_persistence": true,
+    "formal_window_input_manifest_v2": true,
+    "formal_o00_start": true
+  },
+  "qualification_requirements": {
+    "same_scope_c8_soil_rejected_under_external_binding_authority": true,
+    "external_kbs_soil_selected_under_external_binding_authority": true,
+    "historical_replay_default_binding_still_selected_without_override": true,
+    "blank_binding_authority_fails_closed": true,
+    "historical_cap01_a0_acceptance_passes": true,
+    "historical_cap03_r4a_acceptance_passes": true,
+    "server_typecheck_passes": true,
+    "database_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "public_provider_request_count": 0
+  },
+  "success_effect_if_merged": {
+    "external_evidence_binding_primitives_effective": true,
+    "external_a0_soil_binding_seam_effective": true,
+    "external_continuation_window_soil_binding_seam_effective": true,
+    "cap04_external_service_threading_effective": false,
+    "external_package_formal_eligible": false,
+    "ea5c_authorized": false,
+    "formal_o00_start_authorized": false,
+    "mcft_cap09_completed": false
+  },
+  "next_legal_successor_if_effective": "S6-EA5B2-CAP04-EXTERNAL-BINDING-SERVICE-THREADING",
+  "hard_nonclaims": [
+    "NO_CAP04_EXTERNAL_SERVICE_THREADING_FROM_EA5B1",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_PUBLIC_PROVIDER_REQUEST",
+    "NO_EXTERNAL_RUNTIME_CONFIG_AUTHORITY_YET",
+    "NO_EXTERNAL_A0_PROVENANCE_PROFILE_YET",
+    "NO_FORMAL_PACKAGE_ELIGIBILITY",
+    "NO_FORMAL_O00_O23_START",
+    "NO_COMMERCIAL_CLOSED_LOOP_CONNECTION",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
