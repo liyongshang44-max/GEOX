@@ -21,7 +21,7 @@
     "restricted_postgres_external_formal_evidence_ingress": "6f7b6450d4f671c75affc2c7aba45ed71cb518c5",
     "formal_durable_raw_store_binding": "c2babdf8cee6b2e9702c6923eab8a739a40001a5",
     "live_kbs_soil_ingress_executor": "1cc2726aace39524e84fda9762f86a3fc2e96408",
-    "formal_live_ingress_proof_runner": "707d5e74b54d1e553302a2349c2c252b13811a19"
+    "formal_live_ingress_proof_runner": "43c4edba5a52c6fa92d41fc148244009b46909a1"
   },
   "formal_proof_chain": {
     "pr_number": 3022,
