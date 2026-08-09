@@ -3,7 +3,7 @@ const fs=require('node:fs'),path=require('node:path'),{execFileSync}=require('no
 const ROOT=process.cwd(),BASE=process.env.MCFT_BASE_SHA||'',EXPECTED_BASE='b31b024c17b617f0e1c36010c8c3926682bd6533';
 const EA4='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-LIVE-SOURCE-EXACT-HEAD-QUALIFICATION-V1.json',AUTH='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-ENVIROWEATHER-RAIN-ONLY-QUALIFICATION-V1.json',PROBE='scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_ENVIROWEATHER_RAIN_ONLY_QUALIFICATION.mjs',GATE='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_ENVIROWEATHER_RAIN_ONLY_QUALIFICATION.cjs',WF='.github/workflows/mcft-cap-09-ea4-enviroweather-rain-only-qualification.yml';
 const EXPECT=[AUTH,PROBE,GATE,WF].sort(),OUT=path.join(ROOT,'acceptance-output/MCFT_CAP_09_EA4_ENVIROWEATHER_RAIN_ONLY_QUALIFICATION_GOVERNANCE_RESULT.json');
-const PINS={ea4:'791e3d24bdc862641c77ddd26778495cb8e6a7dd',auth:'40addda99a331d325881558212352f5b26e4f6c0',probe:'2e605cb2854b813ebf32e6f08161b854ee133e8c'};
+const PINS={ea4:'791e3d24bdc862641c77ddd26778495cb8e6a7dd',auth:'40addda99a331d325881558212352f5b26e4f6c0',probe:'4a694708b6961b4dfbadfca977a3bd93f76f13fe'};
 const git=(...args)=>execFileSync('git',args,{cwd:ROOT,encoding:'utf8'}).trim(),blob=(ref,file)=>git('rev-parse',`${ref}:${file}`),read=(file)=>fs.readFileSync(path.join(ROOT,file),'utf8'),json=(file)=>JSON.parse(read(file)),req=(ok,code)=>{if(!ok)throw new Error(code)};
 const result={schema_version:'geox_mcft_cap09_ea4_enviroweather_rain_only_qualification_governance_v1',status:'FAIL',base_sha:BASE,database_write_count:0,formal_evidence_write_count:0,formal_window_started:false};
 try{
