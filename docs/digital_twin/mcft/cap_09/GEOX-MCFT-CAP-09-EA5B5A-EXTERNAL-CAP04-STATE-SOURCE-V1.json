@@ -1,0 +1,90 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5b5a_external_cap04_state_source_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5B5A-EXTERNAL-CAP04-STATE-SOURCE-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "S6-EA5B5A-EXTERNAL-CAP04-STATE-SOURCE",
+  "base_main_sha": "02b43f1c19c48d20cd21c0c529e74a19b166b724",
+  "authority_predecessors": {
+    "ea5b3_external_runtime_config_resolver_blob": "bdaf311cc23c78fb45079af65fcd30a7b794fec3",
+    "ea5b4a_external_operator_authority_blob": "3192e3159bffce5a23913dc7299355e1a1e322c4",
+    "ea5b4b_external_a0_provenance_profile_blob": "503842ef473e7ccf6a6fe46a21a36e678766851b"
+  },
+  "implementation_blobs": {
+    "external_cap04_input_authority_v1": "b4b7448518628bcffe8eaf6a91d9967145f7647d",
+    "external_cap04_state_source_builder_v1": "0d9857ea883f55a64261b58b8e56dffa1d388028",
+    "focused_acceptance": "7eb6ba34f30523f8261ea2650bcef50ed12f245c"
+  },
+  "qualified_authority": {
+    "runtime_scope": {
+      "tenant_id": "tenant_mcft_external",
+      "project_id": "project_mcft_cap09",
+      "group_id": "group_public_research",
+      "field_id": "field_kbs_mcse_t1r1",
+      "season_id": "season_2026_corn",
+      "zone_id": "zone_kbs_mcse_t1r1_formal_v1"
+    },
+    "runtime_mode": "SHADOW_ONLINE_FORMAL_QUALIFICATION_ONLY",
+    "evidence_binding_profile": {
+      "soil": "kbs_lter_variate25_vwc_100mm_v1",
+      "rainfall": "kbs_lter_raw_hourly_rain_mm_v1",
+      "historical_et0": "kbs_lter_asce_short_reference_et_hourly_v1",
+      "future_weather": "noaa_ncep_gfs_pgrb2_kbs_nearest_72h_v1",
+      "future_et0": "noaa_ncep_gfs_asce_short_reference_et_same_cycle_72h_v1"
+    },
+    "soil_observation_operator_id": "POINT_100MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1",
+    "model_parameter_authority": "MODEL_PRIOR_FROM_CAP08",
+    "field_calibration_status": "NOT_FIELD_CALIBRATED",
+    "commercial_operation_evidence_forbidden": true,
+    "external_crop_authority_required": true,
+    "compatibility_math_reused_without_relabeling": true,
+    "external_state_source_members": [
+      "twin_evidence_window_v1",
+      "twin_state_transition_v1",
+      "twin_assimilation_update_v1",
+      "twin_state_estimate_v1"
+    ],
+    "replay_truth_markers_forbidden_in_external_canonical_members": true,
+    "recommendation_input_eligible": false,
+    "action_input_eligible": false
+  },
+  "focused_qualification": {
+    "expected_pass_count": 8,
+    "exact_five_binding_profile": true,
+    "external_crop_context_authority": true,
+    "mass_balance_closed": true,
+    "external_100mm_assimilation_provenance": true,
+    "compatibility_posterior_numerical_identity_preserved": true,
+    "deterministic_member_identity": true,
+    "binding_drift_fail_closed": true,
+    "commercial_operation_evidence_fail_closed": true,
+    "scope_and_crop_drift_fail_closed": true
+  },
+  "frozen_predecessor_invariants": {
+    "historical_cap04_state_source_builder_blob": "14a5dc714e1629d230eb9493ba42882571cd85b1",
+    "historical_cap04_state_source_builder_modified": false,
+    "historical_cap03_cap04_math_modified": false,
+    "historical_replay_default_modified": false
+  },
+  "effect_boundary": {
+    "external_cap04_input_authority_qualified": true,
+    "external_cap04_canonical_state_source_candidate_qualified": true,
+    "external_cap04_forecast_authority_qualified": false,
+    "external_cap04_a1_a2_record_set_qualified": false,
+    "canonical_persistence_authorized": false,
+    "external_cap04_persistence_effective": false,
+    "ea5b_external_runtime_profile_complete": false,
+    "ea5c_authorized": false,
+    "ea5d_authorized": false,
+    "ea5e_authorized": false,
+    "external_package_formal_eligible": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "database_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "public_provider_request_count": 0,
+    "mcft_cap09_completed": false
+  },
+  "qualification_only_fixture_notice": "Focused acceptance may use explicit in-memory qualification refs/hashes and frozen historical fixture structure. These values are not persisted and are not claims about EA2/EA5A Formal authority artifacts.",
+  "next_frontier": "S6-EA5B5B-EXTERNAL-CAP04-FORECAST-AND-A1A2-CANONICALIZATION"
+}
