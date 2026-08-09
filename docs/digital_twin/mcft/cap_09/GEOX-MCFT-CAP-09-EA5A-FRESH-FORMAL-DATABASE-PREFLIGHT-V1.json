@@ -1,0 +1,97 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5a_fresh_formal_database_preflight_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA5A",
+  "record_status": "EA5A_FRESH_FORMAL_DATABASE_PREFLIGHT_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "e8f9b2cca62e04871124581408ca4f3951b3a4cb",
+  "taskbook_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+  "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
+  "amendment_01_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md",
+  "amendment_01_blob_sha": "41270b888e15e4d9a6c9a34e1fa3f70e957a275e",
+  "ea4_recovery_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-RECOVERY-AUTHORITY-V1.json",
+  "ea4_recovery_blob_sha": "1174940a6908e545e70d87cb65be5b3a41db33cf",
+  "ea4_required_effect": {
+    "original_kbs_source_recovered": true,
+    "live_source_qualified": true,
+    "gfs_72h_full_value_pipeline_qualified": true,
+    "future_et0_72h_value_execution_qualified": true,
+    "ea5_candidate_development_authorized": true,
+    "external_package_formal_eligible": false
+  },
+  "formal_database_identity": {
+    "provider": "NEON_POSTGRES",
+    "project_id": "delicate-glade-62464340",
+    "branch_id": "br-cold-dust-a6j6aymz",
+    "branch_role": "PRIMARY_DEFAULT_FORMAL_MAIN",
+    "database_name": "geox_mcft_cap09_s6_formal_24h",
+    "simulation_branch_id_forbidden": "br-falling-cake-a6lfsdak",
+    "simulation_branch_name_forbidden": "mcft-cap09-s6-simulation-24h",
+    "connection_secret_name": "GEOX_MCFT_CAP09_S6_DATABASE_URL"
+  },
+  "formal_scope": {
+    "tenant_id": "tenant_mcft_external",
+    "project_id": "project_mcft_cap09",
+    "group_id": "group_public_research",
+    "field_id": "field_kbs_mcse_t1r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t1r1_formal_v1"
+  },
+  "required_schema_tables": [
+    "facts",
+    "twin_object_idempotency_index_v1",
+    "twin_active_lineage_index_v1",
+    "twin_state_latest_index_v1",
+    "twin_forecast_result_latest_index_v1",
+    "twin_forecast_success_latest_index_v1",
+    "twin_runtime_checkpoint_latest_index_v1",
+    "twin_runtime_health_latest_index_v1",
+    "twin_runtime_lease_v1",
+    "twin_shadow_online_scheduler_cursor_v1",
+    "twin_shadow_online_scheduler_slot_v1",
+    "twin_terminal_tick_uniqueness_v1"
+  ],
+  "fresh_database_requirements": {
+    "facts_total": 0,
+    "external_scope_fact_count": 0,
+    "field_c8_demo_reference_count": 0,
+    "forbidden_action_fact_count_global": 0,
+    "external_scheduler_slot_count": 0,
+    "external_scheduler_cursor_count": 0,
+    "external_active_lineage_count": 0,
+    "external_state_latest_count": 0,
+    "external_forecast_latest_count": 0,
+    "external_checkpoint_count": 0,
+    "external_lease_count": 0
+  },
+  "read_only_preflight": {
+    "transaction_mode": "READ_ONLY",
+    "database_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "schema_write_count": 0,
+    "public_provider_request_count": 0,
+    "formal_window_started": false
+  },
+  "success_effect_if_merged": {
+    "fresh_formal_database_identity_qualified": true,
+    "fresh_external_scope_preflight_qualified": true,
+    "simulation_branch_reuse_authorized": false,
+    "ea5b_restricted_formal_ingress_candidate_authorized": true,
+    "external_package_formal_eligible": false,
+    "formal_o00_start_authorized": false,
+    "mcft_cap09_completed": false
+  },
+  "next_legal_successor_if_effective": "S6-EA5B_RESTRICTED_FORMAL_EVIDENCE_INGRESS_AND_AUTHORITY_V3",
+  "hard_nonclaims": [
+    "NO_DATABASE_WRITE_FROM_EA5A",
+    "NO_FORMAL_EVIDENCE_WRITE_FROM_EA5A",
+    "NO_SCHEMA_MUTATION_FROM_EA5A",
+    "NO_SIMULATION_BRANCH_REUSE",
+    "NO_REPLAY_SCOPE_REUSE",
+    "NO_FIELD_C8_DEMO_STITCHING",
+    "NO_EXTERNAL_PACKAGE_FORMAL_ELIGIBILITY_YET",
+    "NO_FORMAL_O00_O23_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
