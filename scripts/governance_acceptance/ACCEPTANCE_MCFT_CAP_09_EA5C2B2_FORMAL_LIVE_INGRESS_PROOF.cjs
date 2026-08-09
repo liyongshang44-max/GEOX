@@ -42,7 +42,7 @@ for (const [file, expected] of Object.entries(predecessorPins)) {
 }
 
 const candidatePins = {
-  [runnerPath]: "707d5e74b54d1e553302a2349c2c252b13811a19",
+  [runnerPath]: "43c4edba5a52c6fa92d41fc148244009b46909a1",
   [authorityPath]: "9d60303dfe46389aedadd4a63f7223da996c173d",
   [workflowPath]: "2f35ee488eef1fbde21b25ed597c160fcfebe4c8"
 };
@@ -106,12 +106,14 @@ for (const marker of [
   "FIRST_LIVE_INSERT",
   "EXISTING_PROOF_REVERIFIED",
   "verifyRetainedRawEvidence",
+  "checkedOutHeadSha",
   "anonymous_raw_head_denied: true",
   "persistent_formal_24h_raw_store_bound: true",
   "formal_neon_live_ingress_proved: true",
   "ea5c_complete: false",
   "public_raw_value_emission_count: 0"
 ]) if (!runner.includes(marker)) fail(`EA5C2B2_RUNNER_MARKER_MISSING:${marker}`);
+if (runner.includes("process.env.GITHUB_SHA")) fail("EA5C2B2_PR_SYNTHETIC_MERGE_SHA_BINDING_FORBIDDEN");
 if (/\bINSERT\s+INTO\b/i.test(runner)) fail("EA5C2B2_DIRECT_SQL_INSERT_FORBIDDEN");
 if (runner.includes("allow_insecure_http_for_test")) fail("EA5C2B2_INSECURE_HTTP_FORBIDDEN");
 if (runner.includes("minioadmin")) fail("EA5C2B2_CI_MINIO_CREDENTIAL_FORBIDDEN");
