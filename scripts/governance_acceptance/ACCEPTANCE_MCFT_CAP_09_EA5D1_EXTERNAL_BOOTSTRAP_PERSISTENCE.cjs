@@ -45,7 +45,7 @@ for (const [file, expected] of Object.entries(predecessorPins)) {
 const candidatePins = {
   [bundlePath]: "1671b13df81cba53f966a6f06765198d160601d7",
   [servicePath]: "6c94bef139f260ef61c87f751a2c627b83e58977",
-  [acceptancePath]: "7404cc899aa3fcf722a80c25c37c82d0ff534f6c",
+  [acceptancePath]: "e1fb3b661bc84950d9fc40eb5dd42938e58bc583",
   [authorityPath]: "8bf52b4a18874f9201340528b727d7f74742b638",
   [workflowPath]: "3f41beb187c64bd730465e09f55f9e05b6f79e46"
 };
@@ -143,11 +143,13 @@ for (const marker of [
   "EA5D1_DATABASE_URL",
   "EXTERNAL_FORMAL_CROP_STAGE_AUTHORITY_AFTER_BOOTSTRAP_FORBIDDEN",
   "crop_stage_authority_not_after_bootstrap_proved: true",
+  "optionalTableCountV1",
   "exact_total_canonical_fact_count: 34",
   "exact_hourly_runtime_config_count: 24",
   "idempotent_retry_zero_canonical_writes: true",
   "formal_neon_write_performed: false",
   "scheduler_slot_write_count: 0",
+  "scheduler_cursor_write_count: 0",
   "provider_request_count: 0",
   "formal_window_started: false"
 ]) if (!acceptance.includes(marker)) fail(`EA5D1_ACCEPTANCE_MARKER_MISSING:${marker}`);
