@@ -84,7 +84,7 @@ for (const marker of [
   "PostgresExternalFormalEvidenceIngressV1",
   "KbsVariate25SoilEvidenceDecoderV1",
   "VOLUMETRIC_WATER_CONTENT",
-  "POINT_100MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1",
+  "MCFT_CAP09_EXTERNAL_FORMAL_SOIL_OBSERVATION_OPERATOR_ID_V1",
   "NO_PUBLIC_RAW_VALUE_EMISSION",
   "runtime_public_provider_fetch_count: 0"
 ]) if (!executor.includes(marker)) fail(`EA5C2B1_EXECUTOR_MARKER_MISSING:${marker}`);
