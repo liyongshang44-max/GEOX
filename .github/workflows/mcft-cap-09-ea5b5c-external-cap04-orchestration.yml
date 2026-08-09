@@ -1,0 +1,64 @@
+name: mcft-cap-09-ea5b5c-external-cap04-orchestration
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5b5c-external-cap04-orchestration.yml'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5b5c-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  external-cap04-orchestration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck server
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          pnpm --filter @geox/server run typecheck 2>&1 | tee acceptance-output/EA5B5C_SERVER_TYPECHECK.log
+      - name: Prove production External CAP04 orchestration
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts 2>&1 | tee acceptance-output/EA5B5C_FOCUSED_ACCEPTANCE.log
+      - name: Re-prove EA5B5B External Forecast and A1/A2
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5B_EXTERNAL_FORECAST_A1A2.ts
+      - name: Re-prove EA5B5A External State-source
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5A_EXTERNAL_CAP04_STATE_SOURCE.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea5b5c-wip-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/EA5B5C_SERVER_TYPECHECK.log
+            acceptance-output/EA5B5C_FOCUSED_ACCEPTANCE.log
+          if-no-files-found: warn
+          retention-days: 30
