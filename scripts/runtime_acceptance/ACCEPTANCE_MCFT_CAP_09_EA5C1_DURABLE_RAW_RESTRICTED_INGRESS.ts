@@ -258,7 +258,7 @@ async function main(): Promise<void> {
   assert.equal(Number(nonEvidence.rows[0].n), 0);
   ok("EA5C1 writes no Runtime Config, A0, State, Forecast, Scenario, Recommendation, Action, or scheduler facts");
 
-  assert.equal(pass, 9);
+  assert.equal(pass, 10);
   console.log(`MCFT-CAP-09 EA5C1 Durable Raw + Restricted Evidence Ingress: ${pass} PASS, 0 FAIL`);
   await pool.end();
 }
