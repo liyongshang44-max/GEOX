@@ -37,7 +37,7 @@ const PINS = {
   contWindow: '0a7c02aae1e5ddbccadc303ae7977e4369dddcba',
   a0service: 'd686037944f07066f47df17e6d21d560b10fed57',
   acceptance: 'b882d42dd40ee8d4f2828d6be79fe58b5fb4e804',
-  authority: '51740f932e74595d8953d81ee0a46898cb9c60f9',
+  authority: 'd344bb977af49b311045a8b777609f3381842d85',
 };
 const EXPECT = [
   F.profile, F.a0window, F.selector, F.contWindow, F.a0service,
@@ -114,6 +114,12 @@ try {
   req(authority.success_effect_if_merged?.external_package_formal_eligible === false && authority.success_effect_if_merged?.ea5c_authorized === false && authority.success_effect_if_merged?.formal_o00_start_authorized === false, 'EA5B1_PREMATURE_FORMAL_EFFECT');
   req(authority.next_legal_successor_if_effective === 'S6-EA5B2-CAP04-EXTERNAL-BINDING-SERVICE-THREADING', 'EA5B1_SUCCESSOR_DRIFT');
 
+  const qualification = authority.qualification_requirements || {};
+  req(qualification.historical_cap01_first_20_behavioral_assertions_pass === true, 'EA5B1_CAP01_BEHAVIORAL_ASSERTIONS_REQUIRED');
+  req(qualification.historical_cap01_repo_wide_scope_guard_already_stale_on_protected_base === true, 'EA5B1_CAP01_STALE_BASE_GUARD_FINDING_REQUIRED');
+  req(qualification.ea5b1_introduces_no_historical_cap01_forbidden_scope_paths === true, 'EA5B1_CAP01_PR_SCOPE_NONREGRESSION_REQUIRED');
+  req(qualification.historical_cap03_r4a_acceptance_passes === true, 'EA5B1_CAP03_R4A_REGRESSION_REQUIRED');
+
   for (const token of [
     'kbs_lter_variate25_vwc_100mm_v1',
     'kbs_lter_raw_hourly_rain_mm_v1',
@@ -151,6 +157,11 @@ try {
   req(workflow.includes('ACCEPTANCE_MCFT_CAP_09_EA5B_EXTERNAL_EVIDENCE_BINDING_SEAM.ts'), 'EA5B1_FOCUSED_ACCEPTANCE_WORKFLOW_MISSING');
   req(workflow.includes('ACCEPTANCE_MCFT_CAP_01_A0_RUNTIME.ts'), 'EA5B1_CAP01_REGRESSION_WORKFLOW_MISSING');
   req(workflow.includes('ACCEPTANCE_MCFT_CAP_03_R4_A_EVIDENCE_CLASSIFICATION.ts'), 'EA5B1_CAP03_REGRESSION_WORKFLOW_MISSING');
+  req(workflow.includes("pass_count=$(grep -c '^PASS ' acceptance-output/EA5B1_CAP01_A0_REGRESSION.log || true)"), 'EA5B1_CAP01_PASS_COUNT_ADJUDICATION_MISSING');
+  req(workflow.includes("test \"$pass_count\" -eq 20"), 'EA5B1_CAP01_EXACT_20_BEHAVIORAL_PASSES_REQUIRED');
+  req(workflow.includes('ACCEPTANCE_MCFT_CAP_01_A0_RUNTIME.ts:199:10') && workflow.includes('true !== false'), 'EA5B1_CAP01_EXACT_STALE_FAILURE_SIGNATURE_REQUIRED');
+  req(workflow.includes('5d17e6ad9944376bbb5a71c9d801aa4472afe592..."$MCFT_BASE_SHA"'), 'EA5B1_CAP01_PROTECTED_BASE_STALE_GUARD_REPROOF_MISSING');
+  req(workflow.includes('git diff --name-only "$MCFT_BASE_SHA"...HEAD'), 'EA5B1_CAP01_PR_DELTA_SCOPE_GUARD_MISSING');
   req(workflow.includes('pnpm --filter @geox/server run typecheck'), 'EA5B1_TYPECHECK_WORKFLOW_MISSING');
   req(!/DATABASE_URL|POSTGRES(?:QL)?|NEON_DATABASE_URL/.test(workflow), 'EA5B1_DATABASE_SECRET_FORBIDDEN');
 
@@ -160,6 +171,7 @@ try {
     external_binding_profile_blob: blob('HEAD', F.profile),
     binding_seam_qualified: true,
     replay_default_regression_required: true,
+    cap01_behavioral_regression_mode: 'EXACT_20_BEHAVIORAL_ASSERTIONS_PLUS_PROTECTED_BASE_STALE_SCOPE_GUARD_ADJUDICATION',
     cap04_external_service_threading_effective: false,
     external_package_formal_eligible: false,
     ea5c_authorized: false,
