@@ -1,0 +1,110 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5b3_external_runtime_config_resolver_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5B3-EXTERNAL-RUNTIME-CONFIG-RESOLVER-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA5B3",
+  "record_status": "EA5B3_EXTERNAL_RUNTIME_CONFIG_RESOLVER_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "982ff8a3382e22a6fb3de01c83a9c98e22dbfb77",
+  "predecessor_effectiveness": {
+    "ea5b2_merge_sha": "982ff8a3382e22a6fb3de01c83a9c98e22dbfb77",
+    "ea5b2_candidate_head_sha": "258d1bf88ba2f5c37b44c7753fdcdc545f6c3e68",
+    "ea5b2_authority_blob_sha": "09963e6bc3a64fc16d54c5f27a2a00228e4b5e24",
+    "amendment_05_blob_sha": "7a92c17f7ba32aae52667de9c21db62bfd2ba70b",
+    "external_binding_profile_blob_sha": "5fe20f988d2cd6ef038f54eec27e5a32ba6a396d",
+    "historical_cap04_runtime_config_blob_sha": "2ceefc94aa82e619b1ef2398a1d7260b9607fa51",
+    "historical_execution_view_blob_sha": "9021a803454efe803662a4682dde915ceda5041e",
+    "historical_a0_bootstrap_service_required_blob_sha": "7d2db571b421f1cbfe7fd1192398297def5307c2"
+  },
+  "implementation_blobs": {
+    "external_formal_runtime_config": "f7ea03a7f8387ce4de135dac61f0b063e91f0f25",
+    "runtime_config_execution_view": "cbb5f4d6ea0753825fe9f7d419cd3cbd89298895",
+    "external_formal_cap04_execution_config_resolver": "7c542f62b6950739187948fa60f0d4c5b3c4e8e6",
+    "focused_acceptance": "aa114a4557be1d3d79bb0cd29b98e0ba1c86a88d"
+  },
+  "external_canonical_runtime_config_authority": {
+    "runtime_mode": "SHADOW_ONLINE_FORMAL_QUALIFICATION_ONLY",
+    "authority_scope_class": "EXTERNAL_PUBLIC_RESEARCH_SCOPE",
+    "config_selection_mode": "EXPLICIT_REF_HASH_PIN_ONLY",
+    "model_parameter_authority": "MODEL_PRIOR_FROM_CAP08",
+    "field_calibration_status": "NOT_FIELD_CALIBRATED",
+    "scope": {
+      "tenant_id": "tenant_mcft_external",
+      "project_id": "project_mcft_cap09",
+      "group_id": "group_public_research",
+      "field_id": "field_kbs_mcse_t1r1",
+      "season_id": "season_2026_corn",
+      "zone_id": "zone_kbs_mcse_t1r1_formal_v1"
+    },
+    "historical_replay_scope_allowed": false,
+    "controlled_synthetic_replay_proxy_allowed": false,
+    "runtime_mode_replay_allowed": false,
+    "explicit_geometry_hash_required_from_caller": true,
+    "geometry_hash_invented_by_compiler": false
+  },
+  "compatibility_execution_view": {
+    "resolution_policy_id": "EXTERNAL_FORMAL_CANONICAL_TO_CAP04_NONCANONICAL_COMPATIBILITY_VIEW_V1",
+    "source_canonical_config_ref_hash_preserved": true,
+    "historical_cap04_math_contract_reused": true,
+    "compatibility_view_canonical_persistence_authorized": false,
+    "compatibility_view_may_relabel_external_evidence": false,
+    "historical_controlled_synthetic_parameter_markers_allowed_in_view_only": true
+  },
+  "qualification_requirements": {
+    "focused_eight_case_acceptance_passes": true,
+    "external_a0_config_parent_is_null": true,
+    "external_hourly_config_parent_is_exact": true,
+    "deterministic_recompile_is_identical": true,
+    "parent_drift_changes_canonical_identity": true,
+    "resolver_preserves_external_source_ref_hash": true,
+    "replay_scope_rejected": true,
+    "blank_authority_rejected": true,
+    "crop_configuration_matrix_mismatch_rejected": true,
+    "historical_direct_cap04_resolver_regression_passes": true,
+    "server_typecheck_passes": true,
+    "cap08_g3_frozen_core_successor_regression_passes": true,
+    "database_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "public_provider_request_count": 0
+  },
+  "not_implemented_in_ea5b3": {
+    "formal_geometry_hash_binding_to_a_persisted_config": true,
+    "external_cap04_canonical_execution": true,
+    "external_crop_context_canonical_execution_threading": true,
+    "external_100mm_operator_metadata_in_canonical_assimilation": true,
+    "external_a0_canonical_provenance_profile": true,
+    "external_a0_bootstrap_persistence": true,
+    "external_24_config_chain_persistence": true,
+    "durable_private_raw_retention": true,
+    "restricted_formal_evidence_writer": true,
+    "formal_window_input_manifest": true,
+    "formal_o00_start": true
+  },
+  "success_effect_if_merged": {
+    "external_canonical_runtime_config_contract_effective": true,
+    "external_noncanonical_cap04_compatibility_resolver_effective": true,
+    "external_cap04_canonical_execution_effective": false,
+    "external_a0_profile_effective": false,
+    "ea5b_external_runtime_profile_complete": false,
+    "external_package_formal_eligible": false,
+    "ea5c_authorized": false,
+    "formal_o00_start_authorized": false,
+    "mcft_cap09_completed": false
+  },
+  "next_legal_successor_if_effective": "S6-EA5B4-EXTERNAL-A0-PROVENANCE-AND-OPERATOR-PROFILE",
+  "hard_nonclaims": [
+    "NO_FAKE_FORMAL_GEOMETRY_AUTHORITY",
+    "NO_COMPATIBILITY_VIEW_PERSISTENCE",
+    "NO_EXTERNAL_CAP04_CANONICAL_EXECUTION_FROM_EA5B3",
+    "NO_EXTERNAL_A0_CANONICAL_PROFILE_FROM_EA5B3",
+    "NO_HISTORICAL_CAP08_A0_CORE_MUTATION",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_PUBLIC_PROVIDER_REQUEST",
+    "NO_EA5C_AUTHORIZATION",
+    "NO_FORMAL_PACKAGE_ELIGIBILITY",
+    "NO_FORMAL_O00_O23_START",
+    "NO_COMMERCIAL_CLOSED_LOOP_CONNECTION",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
