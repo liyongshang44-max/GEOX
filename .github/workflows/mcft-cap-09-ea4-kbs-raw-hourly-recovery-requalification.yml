@@ -1,0 +1,105 @@
+name: mcft-cap-09-ea4-kbs-raw-hourly-recovery-requalification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea4-kbs-raw-hourly-recovery-requalification.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-KBS-RAW-HOURLY-RECOVERY-REQUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_KBS_RAW_HOURLY_RECOVERY_REQUALIFICATION.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea4-kbs-recovery-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  requalify-original-kbs-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Resolve exact recovery base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          echo "subject_sha=${{ github.event.pull_request.head.sha || github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Install pinned EA4 qualification decoder stack
+        run: |
+          python -m pip install --disable-pip-version-check \
+            'eccodes==2.47.0' \
+            'eccodeslib==2.47.3.23' \
+            'numpy==1.26.4' \
+            'refet==0.4.2'
+          python -m eccodes selfcheck
+          python - <<'PY'
+          from importlib.metadata import version
+          expected = {'eccodes':'2.47.0','eccodeslib':'2.47.3.23','numpy':'1.26.4','refet':'0.4.2'}
+          actual = {name: version(name) for name in expected}
+          if actual != expected:
+              raise SystemExit(f'EA4REC_DECODER_STACK_DRIFT:{actual}')
+          print(actual)
+          PY
+
+      - name: Validate exact recovery governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_KBS_RAW_HOURLY_RECOVERY_REQUALIFICATION.cjs
+
+      - name: Syntax-check reused EA4 live probe
+        run: python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
+
+      - name: Execute complete original-source recovery requalification
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
+
+      - name: Verify complete recovery pass without authority upgrade
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const cfg=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-KBS-RAW-HOURLY-RECOVERY-REQUALIFICATION-V1.json','utf8'));
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_RESULT.json','utf8'));
+          if(r.status!=='PASS') throw new Error('EA4REC_COMPLETE_PASS_REQUIRED');
+          if(r.subject_sha!==process.env.MCFT_SUBJECT_SHA) throw new Error('EA4REC_EXACT_SUBJECT_REQUIRED');
+          if(r.live_source_qualified!==true||r.gfs_72h_full_value_pipeline_qualified!==true||r.future_et0_72h_value_execution_qualified!==true) throw new Error('EA4REC_THREE_LIVE_QUALIFICATIONS_REQUIRED');
+          if(!(r.kbs?.rain_numeric_distinct_hours>=24)||!(r.kbs?.historical_et0_complete_distinct_hours>=24)) throw new Error('EA4REC_KBS_24H_INPUT_COMPLETENESS_REQUIRED');
+          if(r.future_weather?.point_count!==72||r.future_solar?.endpoint_count!==73||r.future_solar?.interval_count!==72||r.future_et0?.point_count!==72||r.future_et0?.finite_count!==72) throw new Error('EA4REC_COMPLETE_72H_EXECUTION_REQUIRED');
+          if(r.future_et0?.negative_clipping_performed!==false||r.future_solar?.quality_status!=='LIMITED') throw new Error('EA4REC_ET0_OR_SOLAR_QUALITY_DRIFT');
+          if(r.raw_retention?.raw_bytes_uploaded!==false||r.raw_retention?.private_root_publicly_emitted!==false||r.raw_retention?.ea5_durable_retention_still_required!==true) throw new Error('EA4REC_RAW_RETENTION_BOUNDARY_DRIFT');
+          if(r.ea2_package_formal_eligible!==false) throw new Error('EA4REC_FORMAL_ELIGIBILITY_FORBIDDEN');
+          if(r.database_write_count!==0||r.formal_evidence_write_count!==0||r.public_raw_value_emission_count!==0||r.formal_window_started!==false||r.mcft_cap09_completed!==false) throw new Error('EA4REC_WRITE_OR_FORMAL_START_FORBIDDEN');
+          if(cfg.success_boundary?.single_pass_creates_source_authority!==false||cfg.success_boundary?.single_pass_authorizes_ea5!==false) throw new Error('EA4REC_SINGLE_PASS_AUTHORITY_FORBIDDEN');
+          console.log(JSON.stringify({status:'PASS',subject:r.subject_sha,tick:r.tick_utc,kbs_latest:r.kbs?.raw_hourly_latest_timestamp,kbs_rain_hours:r.kbs?.rain_numeric_distinct_hours,kbs_hist_et0_hours:r.kbs?.historical_et0_complete_distinct_hours,gfs_cycle:r.gfs_chronology?.selected_cycle_utc,future_weather_points:72,future_solar_endpoints:73,future_et0_points:72,formal_eligible:false,single_pass_authority:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea4-kbs-recovery-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA4_KBS_RAW_HOURLY_RECOVERY_REQUALIFICATION_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
