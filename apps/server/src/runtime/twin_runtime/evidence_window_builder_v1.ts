@@ -1,5 +1,5 @@
 // apps/server/src/runtime/twin_runtime/evidence_window_builder_v1.ts
-// Purpose: freeze one explicit one-hour Replay Evidence Window, enforce no-future-leakage, reject conflicting duplicate observations, select the latest usable soil observation deterministically, and preserve complete model-consumption trace semantics.
+// Purpose: freeze one explicit one-hour Replay/External Evidence Window, enforce no-future-leakage, reject conflicting duplicate observations, select the latest usable authorized soil observation deterministically, and preserve complete model-consumption trace semantics.
 // Boundary: pure application logic over caller-supplied records and explicit logical time; no filesystem, database, environment, scheduler, network, or wall-clock reads.
 
 import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
@@ -8,7 +8,7 @@ import type { CanonicalReplayEvidenceRecordV1, ReplayEvidenceRoleV1, TwinScopeKe
 export const A0_EVIDENCE_WINDOW_RULE_V1 = "OPEN_START_CLOSED_END_PT1H_V1" as const;
 export const A0_EVIDENCE_SELECTION_POLICY_V1 = "LATEST_USABLE_SOIL_OBSERVATION_OBSERVED_DESC_INGESTED_DESC_ID_ASC_V1" as const;
 
-export type EvidenceDispositionV1 = "ON_TIME_INCLUDED" | "LATE_EXCLUDED" | "FUTURE_EXCLUDED" | "OUTSIDE_WINDOW_EXCLUDED" | "QUALITY_FAIL_EXCLUDED" | "SCOPE_MISMATCH_EXCLUDED";
+export type EvidenceDispositionV1 = "ON_TIME_INCLUDED" | "LATE_EXCLUDED" | "FUTURE_EXCLUDED" | "OUTSIDE_WINDOW_EXCLUDED" | "QUALITY_FAIL_EXCLUDED" | "SCOPE_MISMATCH_EXCLUDED" | "UNAUTHORIZED_BINDING_EXCLUDED";
 export type EvidenceModelConsumptionStatusV1 = "CONSUMED_BY_BOOTSTRAP_ESTIMATOR" | "CONTEXT_ONLY_NOT_CONSUMED_BY_BOOTSTRAP_ESTIMATOR" | "NOT_CONSUMED_EXCLUDED";
 
 export type EvidenceWindowRecordSummaryV1 = {
@@ -52,6 +52,7 @@ export type FrozenEvidenceWindowV1 = {
   context_only_evidence_refs: string[];
   selected_source_refs: string[];
   assimilation_observation: CanonicalReplayEvidenceRecordV1;
+  authorized_soil_binding_id?: string;
   coverage: {
     selected_record_count: number;
     consumed_record_count: number;
@@ -199,8 +200,11 @@ export function buildFrozenEvidenceWindowV1(input: {
   scope: TwinScopeKeyV1;
   logical_time: string;
   candidate_records: readonly CanonicalReplayEvidenceRecordV1[];
+  authorized_soil_binding_id?: string;
 }): FrozenEvidenceWindowV1 {
   const logicalTime = requireIsoInstantV1(input.logical_time, "LOGICAL_TIME_INVALID");
+  const authorizedSoilBindingId = input.authorized_soil_binding_id;
+  if (authorizedSoilBindingId !== undefined && !authorizedSoilBindingId.trim()) throw new Error("AUTHORIZED_SOIL_BINDING_ID_INVALID");
   const windowStart = previousHourIsoV1(logicalTime);
   const included: ClassifiedEvidenceV1[] = [];
   const excluded: ClassifiedEvidenceV1[] = [];
@@ -221,6 +225,8 @@ export function buildFrozenEvidenceWindowV1(input: {
       excluded.push({ ...base, disposition: "LATE_EXCLUDED", reason_code: "NOT_AVAILABLE_AT_LOGICAL_TICK" });
     } else if (record.quality?.status === "FAIL") {
       excluded.push({ ...base, disposition: "QUALITY_FAIL_EXCLUDED", reason_code: "QUALITY_FAIL_NOT_USABLE" });
+    } else if (role === "SOIL_MOISTURE_OBSERVATION" && authorizedSoilBindingId !== undefined && record.binding_id !== authorizedSoilBindingId) {
+      excluded.push({ ...base, disposition: "UNAUTHORIZED_BINDING_EXCLUDED", reason_code: "SOIL_BINDING_NOT_AUTHORIZED" });
     } else {
       included.push({ ...base, disposition: "ON_TIME_INCLUDED", reason_code: "ELIGIBLE_AT_LOGICAL_TICK" });
     }
@@ -253,6 +259,7 @@ export function buildFrozenEvidenceWindowV1(input: {
     selection_policy_id: A0_EVIDENCE_SELECTION_POLICY_V1,
     window_start_exclusive: windowStart,
     window_end_inclusive: logicalTime,
+    ...(authorizedSoilBindingId !== undefined ? { authorized_soil_binding_id: authorizedSoilBindingId } : {}),
     selected_records: selected,
     excluded_records: excludedSummaries,
     assimilation_observation_ref: assimilationObservation.source_record_id,
@@ -272,6 +279,7 @@ export function buildFrozenEvidenceWindowV1(input: {
     context_only_evidence_refs: contextOnlyEvidenceRefs,
     selected_source_refs: selectedSourceRefs,
     assimilation_observation: assimilationObservation,
+    ...(authorizedSoilBindingId !== undefined ? { authorized_soil_binding_id: authorizedSoilBindingId } : {}),
     coverage: {
       selected_record_count: selected.length,
       consumed_record_count: consumedEvidenceRefs.length,
