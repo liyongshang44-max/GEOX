@@ -52,16 +52,68 @@ jobs:
             echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Classify Amendment-04 lifecycle applicability
+        id: lifecycle
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD | sort)"
+          original="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-ea1o-instantaneous-solar-amendment.yml' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-04-GFS-SFLUX-INSTANTANEOUS-PIECEWISE-LINEAR-SOLAR-AUTHORITY.md' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-INSTANTANEOUS-SOLAR-AMENDMENT-STATUS-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_INSTANTANEOUS_SOLAR_AMENDMENT.cjs' | sort)"
+          repair=".github/workflows/mcft-cap-09-ea1o-instantaneous-solar-amendment.yml"
+          task='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md'
+          a4='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-04-GFS-SFLUX-INSTANTANEOUS-PIECEWISE-LINEAR-SOLAR-AUTHORITY.md'
+          status='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1O-INSTANTANEOUS-SOLAR-AMENDMENT-STATUS-V1.json'
+          gate='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_INSTANTANEOUS_SOLAR_AMENDMENT.cjs'
+          if [[ "$files" == "$repair" ]]; then
+            mode='routing-repair-selftest'
+          elif [[ "$files" == "$original" && "$MCFT_BASE_SHA" == 'f7ab20326dc78612f730225424aa23545a2ee258' ]]; then
+            mode='original-amendment-04-candidate'
+          elif grep -Fxq "$task" <<< "$files" \
+            && ! grep -Fxq "$a4" <<< "$files" \
+            && ! grep -Fxq "$status" <<< "$files" \
+            && ! grep -Fxq "$gate" <<< "$files" \
+            && ! grep -Fxq "$repair" <<< "$files"; then
+            mode='not-applicable-successor-taskbook-evolution'
+          else
+            mode='unsupported-amendment-04-owned-mutation'
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "mode=$mode" "files:" "$files"
+
+      - name: Validate Amendment-04 routing repair selftest
+        if: steps.lifecycle.outputs.mode == 'routing-repair-selftest'
+        run: echo 'Exact one-file Amendment-04 lifecycle routing repair recognized; historical Amendment-04 authority is not reopened.'
+
+      - name: Record Amendment-04 not applicable to successor Taskbook evolution
+        if: steps.lifecycle.outputs.mode == 'not-applicable-successor-taskbook-evolution'
+        run: echo 'Historical Amendment-04 exact gate is not applicable because only the shared Taskbook changed within Amendment-04 trigger ownership; Amendment-04-owned authority/status/gate/workflow files are unchanged.'
+
+      - name: Reject unsupported Amendment-04 lifecycle mutation
+        if: steps.lifecycle.outputs.mode == 'unsupported-amendment-04-owned-mutation'
+        shell: bash
+        run: |
+          echo 'unsupported Amendment-04-owned mutation outside the frozen original candidate or exact routing repair' >&2
+          exit 1
+
       - name: Syntax-check Amendment-04 governance acceptance
+        if: steps.lifecycle.outputs.mode == 'original-amendment-04-candidate'
         run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_INSTANTANEOUS_SOLAR_AMENDMENT.cjs
 
       - name: Validate exact Amendment-04 architecture boundary
+        if: steps.lifecycle.outputs.mode == 'original-amendment-04-candidate'
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1O_INSTANTANEOUS_SOLAR_AMENDMENT.cjs
 
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.lifecycle.outputs.mode == 'original-amendment-04-candidate'
         with:
           name: mcft-cap-09-ea1o-a4-${{ steps.authority.outputs.subject_sha }}
           path: acceptance-output/MCFT_CAP_09_EA1O_INSTANTANEOUS_SOLAR_AMENDMENT_RESULT.json
