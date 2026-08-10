@@ -1,0 +1,254 @@
+name: mcft-cap-09-ea5e0-formal-window-clock-viability-preflight
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e0-formal-window-clock-viability-preflight.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E0-FORMAL-WINDOW-CLOCK-VIABILITY-REJECTION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E0_FORMAL_WINDOW_CLOCK_VIABILITY.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5e0-clock-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  ea5e0-formal-window-clock-viability-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GEOX_MCFT_CAP09_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+      FORMAL_WINDOW_ENABLED: ${{ vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact EA5E0 base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify Formal DB binding exists and Formal window is not enabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GEOX_MCFT_CAP09_S6_DATABASE_URL:-}" || { echo 'MISSING GEOX_MCFT_CAP09_S6_DATABASE_URL'; exit 1; }
+          if [ "${FORMAL_WINDOW_ENABLED:-false}" = "true" ]; then
+            echo 'EA5E0_FORMAL_WINDOW_ENABLEMENT_MUST_REMAIN_FALSE' >&2
+            exit 1
+          fi
+          echo 'PRESENT GEOX_MCFT_CAP09_S6_DATABASE_URL'
+          echo 'FORMAL_WINDOW_ENABLED=false-or-unset'
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check EA5E0 governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E0_FORMAL_WINDOW_CLOCK_VIABILITY.cjs
+
+      - name: Validate exact EA5E0 negative-preflight boundary and authority chain
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E0_FORMAL_WINDOW_CLOCK_VIABILITY.cjs
+
+      - name: Verify EA5D3 effectiveness occurred only after O00-O05 boundaries had passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          pr_json="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/3026")"
+          echo "$pr_json" | jq -e '
+            .merged_at == "2026-08-10T03:04:23Z" and
+            .head.sha == "39f568a3501d71342d501c41c3f3ca730d22f5d1" and
+            .merge_commit_sha == "4f672f8ee68ca3fe17805956ae845c31a34bd897"
+          ' >/dev/null
+          node <<'NODE'
+          const fs = require('fs');
+          const o00 = Date.parse('2026-08-09T22:00:00.000Z');
+          const o05 = Date.parse('2026-08-10T03:00:00.000Z');
+          const merged = Date.parse('2026-08-10T03:04:23.000Z');
+          if (!(merged > o05 && merged > o00)) throw new Error('EA5E0_EA5D3_EFFECTIVENESS_CHRONOLOGY_INVALID');
+          const seconds = (merged - o00) / 1000;
+          if (seconds !== 18263) throw new Error(`EA5E0_EFFECTIVENESS_OFFSET_INVALID:${seconds}`);
+          const expired = ['O00','O01','O02','O03','O04','O05'];
+          const out = {
+            schema_version: 'geox_mcft_cap09_ea5e0_effectiveness_chronology_result_v1',
+            status: 'PASS',
+            ea5d3_merge_commit_sha: '4f672f8ee68ca3fe17805956ae845c31a34bd897',
+            ea5d3_effective_at_utc: '2026-08-10T03:04:23.000Z',
+            current_epoch_o00_logical_time: '2026-08-09T22:00:00.000Z',
+            current_epoch_o05_logical_time: '2026-08-10T03:00:00.000Z',
+            ea5d3_effectiveness_seconds_after_o00_boundary: 18263,
+            expired_required_slot_boundaries_before_ea5e_authorization: expired,
+            ea5e_authorized_at_o00_boundary: false,
+            retroactive_o00_authorized: false,
+            initial_multi_slot_backfill_authorized: false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5E0_EFFECTIVENESS_CHRONOLOGY_RESULT.json', JSON.stringify(out,null,2)+'\n');
+          console.log(JSON.stringify(out,null,2));
+          NODE
+
+      - name: Read-only prove current persisted epoch cannot start the actual-UTC Formal window
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/server
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { Pool } from 'pg';
+
+          const connectionString = process.env.GEOX_MCFT_CAP09_S6_DATABASE_URL;
+          if (!connectionString) throw new Error('EA5E0_FORMAL_DATABASE_URL_REQUIRED');
+          const pool = new Pool({ connectionString, max: 2 });
+          const scope = ['tenant_mcft_external','project_mcft_cap09','group_public_research','field_kbs_mcse_t1r1','season_2026_corn','zone_kbs_mcse_t1r1_formal_v1'];
+          const o00 = '2026-08-09T22:00:00.000Z';
+          try {
+            const client = await pool.connect();
+            try {
+              await client.query('BEGIN TRANSACTION READ ONLY');
+              const identity = await client.query("SELECT current_database() AS database_name, current_setting('server_version_num')::int AS server_version_num, transaction_timestamp() AS db_now");
+              if (identity.rows[0]?.database_name !== 'geox_mcft_cap09_s6_formal_24h') throw new Error('EA5E0_DATABASE_IDENTITY_MISMATCH');
+              if (Number(identity.rows[0]?.server_version_num) < 180000) throw new Error('EA5E0_POSTGRES_18_REQUIRED');
+              const dbNow = new Date(identity.rows[0].db_now).toISOString();
+              if (!(Date.parse(dbNow) > Date.parse(o00))) throw new Error('EA5E0_DATABASE_CLOCK_NOT_AFTER_O00');
+
+              const counts = await client.query(`
+                WITH scoped AS (
+                  SELECT fact_id, record_json FROM public.facts
+                  WHERE record_json#>>'{payload,tenant_id}'=$1
+                    AND record_json#>>'{payload,project_id}'=$2
+                    AND record_json#>>'{payload,group_id}'=$3
+                    AND record_json#>>'{payload,field_id}'=$4
+                    AND record_json#>>'{payload,season_id}'=$5
+                    AND record_json#>>'{payload,zone_id}'=$6
+                )
+                SELECT
+                  (SELECT count(*)::int FROM public.facts) AS total_facts,
+                  count(*)::int AS scope_facts,
+                  count(*) FILTER (WHERE record_json->>'type'='soil_moisture_observation_v1')::int AS soil_facts,
+                  count(*) FILTER (WHERE record_json->>'type' LIKE 'twin_%')::int AS canonical_twin_facts,
+                  count(*) FILTER (WHERE record_json->>'type'='twin_runtime_config_v1')::int AS runtime_configs,
+                  count(*) FILTER (WHERE record_json::text LIKE '%field_c8_demo%' OR record_json::text LIKE '%CONTROLLED_SYNTHETIC_REPLAY_PROXY%' OR record_json::text LIKE '%POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1%')::int AS forbidden_marker_facts
+                FROM scoped`, scope);
+              const c = counts.rows[0];
+              if (Number(c.total_facts)!==36 || Number(c.scope_facts)!==36 || Number(c.soil_facts)!==2 || Number(c.canonical_twin_facts)!==34 || Number(c.runtime_configs)!==25 || Number(c.forbidden_marker_facts)!==0) throw new Error('EA5E0_FORMAL_COUNTS_OR_MARKERS_INVALID');
+
+              const configs = await client.query(`SELECT record_json->'payload' AS object FROM public.facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6 ORDER BY (record_json#>>'{payload,logical_time}')::timestamptz ASC`, scope);
+              if (configs.rows.length !== 25) throw new Error('EA5E0_EXACT_25_CONFIGS_REQUIRED');
+              let parent = null;
+              for (let i=0;i<configs.rows.length;i+=1) {
+                const object = configs.rows[i].object;
+                const payload = object.payload;
+                const expected = new Date(Date.parse('2026-08-09T21:00:00.000Z') + i*3600000).toISOString();
+                if (object.logical_time !== expected) throw new Error(`EA5E0_CONFIG_LOGICAL_TIME_INVALID:${i}`);
+                if (payload.runtime_mode !== 'SHADOW_ONLINE_FORMAL_QUALIFICATION_ONLY' || payload.config_selection_mode !== 'EXPLICIT_REF_HASH_PIN_ONLY') throw new Error(`EA5E0_CONFIG_AUTHORITY_INVALID:${i}`);
+                if (i===0) {
+                  if (payload.config_role !== 'A0_BOOTSTRAP' || payload.parent_runtime_config_ref !== null || payload.parent_runtime_config_hash !== null) throw new Error('EA5E0_A0_PARENT_INVALID');
+                } else if (payload.config_role !== 'HOURLY_CAP04' || payload.parent_runtime_config_ref !== parent.object_id || payload.parent_runtime_config_hash !== parent.determinism_hash) {
+                  throw new Error(`EA5E0_CONFIG_PARENT_CHAIN_INVALID:${i}`);
+                }
+                parent = object;
+              }
+              if (configs.rows[1].object.logical_time !== '2026-08-09T22:00:00.000Z') throw new Error('EA5E0_O00_TIME_INVALID');
+              if (configs.rows[24].object.logical_time !== '2026-08-10T21:00:00.000Z') throw new Error('EA5E0_O23_TIME_INVALID');
+
+              const scheduler = await client.query(`SELECT (SELECT count(*)::int FROM public.twin_shadow_online_scheduler_slot_v1) AS slots, (SELECT count(*)::int FROM public.twin_shadow_online_scheduler_cursor_v1) AS cursors`);
+              if (Number(scheduler.rows[0]?.slots)!==0 || Number(scheduler.rows[0]?.cursors)!==0) throw new Error('EA5E0_FORMAL_WINDOW_ALREADY_STARTED');
+
+              const forbiddenActions = await client.query(`SELECT count(*)::int AS n FROM public.facts WHERE record_json->>'type'=ANY($1::text[])`, [[
+                'twin_decision_record_v1','twin_recommendation_v1','decision_recommendation_v1','approval_request_v1','ao_act_task_v1','ao_act_receipt_v1','dispatch_request_v1','model_activation_v1'
+              ]]);
+              if (Number(forbiddenActions.rows[0]?.n)!==0) throw new Error('EA5E0_FORBIDDEN_ACTION_FACTS_PRESENT');
+
+              await client.query('COMMIT');
+              const result = {
+                schema_version: 'geox_mcft_cap09_ea5e0_formal_window_clock_viability_result_v1',
+                status: 'PASS',
+                decision: 'REJECTED_AS_FORMAL_WINDOW_EPOCH_EXPIRED_BEFORE_EA5E_EFFECTIVENESS',
+                database_clock_utc: dbNow,
+                database_clock_after_o00: true,
+                exact_scope_fact_count: 36,
+                exact_external_soil_evidence_fact_count: 2,
+                exact_canonical_twin_fact_count: 34,
+                exact_runtime_config_count: 25,
+                exact_hourly_runtime_config_count: 24,
+                config_parent_chain_verified: true,
+                o00_logical_time: '2026-08-09T22:00:00.000Z',
+                o23_logical_time: '2026-08-10T21:00:00.000Z',
+                scheduler_slot_count: 0,
+                scheduler_cursor_count: 0,
+                forbidden_action_fact_count: 0,
+                database_write_count: 0,
+                provider_request_count: 0,
+                retroactive_slot_execution_authorized: false,
+                initial_multi_slot_backfill_authorized: false,
+                current_persisted_24_config_epoch_eligible_for_formal_window_start: false,
+                formal_o00_start_authorized: false,
+                formal_window_started: false,
+                external_package_formal_eligible: false,
+                mcft_cap09_completed: false
+              };
+              fs.mkdirSync('../../acceptance-output',{recursive:true});
+              fs.writeFileSync('../../acceptance-output/MCFT_CAP_09_EA5E0_FORMAL_WINDOW_CLOCK_VIABILITY_RESULT.json',JSON.stringify(result,null,2)+'\n');
+              console.log(JSON.stringify(result,null,2));
+            } catch (error) {
+              try { await client.query('ROLLBACK'); } catch {}
+              throw error;
+            } finally {
+              client.release();
+            }
+          } finally {
+            await pool.end();
+          }
+          NODE
+
+      - name: Require exact governed rejection and preserve all nonclaims
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const g = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E0_FORMAL_WINDOW_CLOCK_VIABILITY_GOVERNANCE_RESULT.json','utf8'));
+          const c = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E0_EFFECTIVENESS_CHRONOLOGY_RESULT.json','utf8'));
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E0_FORMAL_WINDOW_CLOCK_VIABILITY_RESULT.json','utf8'));
+          if (g.status!=='PASS' || c.status!=='PASS' || r.status!=='PASS') throw new Error('EA5E0_ALL_PROOFS_REQUIRED');
+          if (r.decision!=='REJECTED_AS_FORMAL_WINDOW_EPOCH_EXPIRED_BEFORE_EA5E_EFFECTIVENESS') throw new Error('EA5E0_EXACT_REJECTION_REQUIRED');
+          if (c.expired_required_slot_boundaries_before_ea5e_authorization.join(',')!=='O00,O01,O02,O03,O04,O05') throw new Error('EA5E0_EXPIRED_SLOT_SET_INVALID');
+          if (r.scheduler_slot_count!==0 || r.scheduler_cursor_count!==0 || r.database_write_count!==0 || r.provider_request_count!==0) throw new Error('EA5E0_ZERO_SIDE_EFFECT_BOUNDARY_REQUIRED');
+          if (r.retroactive_slot_execution_authorized!==false || r.initial_multi_slot_backfill_authorized!==false || r.formal_o00_start_authorized!==false || r.formal_window_started!==false || r.external_package_formal_eligible!==false || r.mcft_cap09_completed!==false) throw new Error('EA5E0_NONCLAIMS_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',decision:r.decision,expired_boundaries:6,slots:0,cursors:0,o00:false,window:false,formal_eligible:false,cap09:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea5e0-clock-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5E0_FORMAL_WINDOW_CLOCK_VIABILITY_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA5E0_EFFECTIVENESS_CHRONOLOGY_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA5E0_FORMAL_WINDOW_CLOCK_VIABILITY_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90

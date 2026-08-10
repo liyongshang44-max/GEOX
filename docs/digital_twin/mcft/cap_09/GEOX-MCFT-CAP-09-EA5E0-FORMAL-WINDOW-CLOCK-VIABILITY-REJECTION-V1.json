@@ -1,0 +1,82 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5e0_formal_window_clock_viability_rejection_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5E0-FORMAL-WINDOW-CLOCK-VIABILITY-REJECTION-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "S6-EA5E0-FORMAL-WINDOW-CLOCK-VIABILITY-PREFLIGHT",
+  "record_status": "EA5E0_REJECTION_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "4f672f8ee68ca3fe17805956ae845c31a34bd897",
+  "governing_authority": {
+    "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
+    "amendment_05_blob_sha": "7a92c17f7ba32aae52667de9c21db62bfd2ba70b",
+    "ea5d3_closure_authority_blob_sha": "ad6708fb4fa884a2c61c3401338a7a3eb5cb34d0"
+  },
+  "ea5d3_effectiveness_authority": {
+    "pr_number": 3026,
+    "merged_head_sha": "39f568a3501d71342d501c41c3f3ca730d22f5d1",
+    "merge_commit_sha": "4f672f8ee68ca3fe17805956ae845c31a34bd897",
+    "merged_at_utc": "2026-08-10T03:04:23.000Z",
+    "focused_workflow_run_id": 31351103543,
+    "focused_artifact_id": 9048984033,
+    "focused_artifact_digest": "sha256:153beadca3ba8e0bd8b7b81c5373730779e8eceaa93a04b3b8550a94946d3170",
+    "ea5e_authorized_only_after_this_effectiveness": true
+  },
+  "preflight_question": "CAN_THE_CURRENT_PERSISTED_O00_O23_CONFIG_EPOCH_STILL_BEGIN_AS_THE_REQUIRED_ACTUAL_UTC_FORMAL_WINDOW_AFTER_EA5E_EFFECTIVENESS",
+  "frozen_current_epoch": {
+    "bootstrap_logical_time": "2026-08-09T21:00:00.000Z",
+    "o00_logical_time": "2026-08-09T22:00:00.000Z",
+    "o23_logical_time": "2026-08-10T21:00:00.000Z",
+    "runtime_config_count": 25,
+    "hourly_runtime_config_count": 24,
+    "scheduler_slot_count_before_preflight": 0,
+    "scheduler_cursor_count_before_preflight": 0,
+    "ea5d3_effectiveness_seconds_after_o00_boundary": 18263,
+    "expired_required_slot_boundaries_before_ea5e_authorization": ["O00","O01","O02","O03","O04","O05"]
+  },
+  "controlling_rules": {
+    "ea5e_must_be_effective_before_o00_may_be_enabled": true,
+    "logical_tick_is_actual_exact_hourly_utc_boundary": true,
+    "accelerated_or_replay_formal_clock_allowed": false,
+    "runtime_config_effective_logical_time_must_equal_slot_logical_time": true,
+    "all_24_slot_config_ref_hashes_must_be_frozen_before_o00": true,
+    "initial_multi_slot_catchup_substitution_for_actual_hourly_window_allowed": false,
+    "only_governed_intentional_missed_slot": "O11"
+  },
+  "expected_exact_head_preflight_decision": "REJECTED_AS_FORMAL_WINDOW_EPOCH_EXPIRED_BEFORE_EA5E_EFFECTIVENESS",
+  "rejection_conditions": {
+    "database_clock_must_be_after_o00_logical_time": true,
+    "ea5d3_effectiveness_time_must_be_after_o05_boundary": true,
+    "ea5e_was_not_effective_at_o00_through_o05_boundaries": true,
+    "scheduler_slot_count_must_still_be_zero": true,
+    "scheduler_cursor_count_must_still_be_zero": true,
+    "formal_o00_must_still_be_unexecuted": true,
+    "formal_window_must_still_be_unstarted": true
+  },
+  "effect_if_exact_head_rejection_proof_passes_and_candidate_merges_to_protected_main": {
+    "ea5d_complete_remains_true": true,
+    "ea5e_authorized_remains_true": true,
+    "ea5e_complete": false,
+    "current_persisted_24_config_epoch_eligible_for_formal_window_start": false,
+    "current_persisted_24_config_epoch_status": "SUPERSEDED_FOR_WINDOW_START_REQUIRED_BEFORE_ANY_FORMAL_SLOT_EXECUTION",
+    "external_package_formal_eligible": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "database_cleanup_or_rewrite_authorized": false,
+    "retroactive_slot_execution_authorized": false,
+    "multi_slot_initial_backfill_authorized": false,
+    "mcft_cap09_completed": false
+  },
+  "required_correction_class": "SEPARATELY_ADJUDICATED_FORMAL_WINDOW_EPOCH_REBASE_WITH_APPEND_ONLY_AUDIT_PRESERVATION",
+  "next_legal_successor_if_effective": "S6-AMENDMENT-06-FORMAL-WINDOW-EPOCH-REBASE-AUTHORITY",
+  "hard_nonclaims": [
+    "NO_ERASURE_OF_EA5D2_OR_EA5D3_HISTORICAL_PROOF",
+    "NO_RETROACTIVE_O00_EXECUTION",
+    "NO_INITIAL_MULTI_SLOT_BACKFILL_AS_SUBSTITUTE_FOR_ACTUAL_24H_WINDOW",
+    "NO_DATABASE_TRUNCATION_OR_DELETION",
+    "NO_SCHEDULER_SLOT_OR_CURSOR_WRITE",
+    "NO_FORMAL_WINDOW_START",
+    "NO_EXTERNAL_PACKAGE_FORMAL_ELIGIBILITY",
+    "NO_RECOMMENDATION_APPROVAL_AO_ACT_DISPATCH",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
