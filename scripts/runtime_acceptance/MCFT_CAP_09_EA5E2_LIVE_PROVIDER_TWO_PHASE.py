@@ -506,7 +506,7 @@ def command_decode_kbs_late(args: argparse.Namespace) -> None:
             "available_to_runtime_at": iso(available_at),
             "role_time": {"interval_start": iso(interval_start), "interval_end": iso(target), "ingested_at": iso(decoded_at), "calculation_method": "ASCE_STANDARDIZED_REFERENCE_ET_SHORT_HOURLY_V1", "method_version": "refet-0.4.2"},
             "quality": {"status": "PASS", "provider_latest_age_hours": round(age_hours, 6), "negative_clipping_performed": False},
-            "source_payload": {"provider_table_id": "KBS002-007.142", "input_columns": ["airtmp_107_avg", "ah", "solrad_avg", "wind_speed"], "wind_10m_to_2m_factor": ea4.WIND_FACTOR, "solar_w_m2_to_mj_m2_h_factor": ea4.SOLAR_FACTOR, "station_elevation_m": float(ea4.AUTH["kbs"]["station_elevation_m"])},
+            "source_payload": {"provider_table_id": "KBS002-007.142", "input_columns": ["airtmp_107_avg", "ah", "solrad_avg", "wind_speed"], "wind_10m_to_2m_factor": ea4.WIND_FACTOR, "solar_w_m2_to_mj_m2_h_factor": ea4.SOLAR_FACTOR, "station_elevation_m": float(ea4.AUTH["kbs"]["elevation_m"])},
             "canonical_payload": {"value": et0, "unit": "mm", "rate_unit": "mm_per_hour", "calculation_method": "ASCE_STANDARDIZED_REFERENCE_ET_SHORT_HOURLY_V1", "method_version": "refet-0.4.2"},
             "source_unit": "KBS_HOURLY_METEOROLOGICAL_INPUTS",
             "canonical_unit": "mm",
