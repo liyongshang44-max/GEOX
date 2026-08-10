@@ -38,7 +38,7 @@ for (const [file, expected] of Object.entries(predecessorPins)) {
 const candidatePins = {
   [runnerPath]: "47082b3a9ce3df10e8186e62fa4d208ab76690a9",
   [authorityPath]: "53136ebc4d884f3e20de033bd0ae0ae413e9be2b",
-  [workflowPath]: "3e8bc9f24aea3944b84af45ceb958915d68e1873"
+  [workflowPath]: "2114fe87ce03d7e9e8864d9ac2fcf3b1d4ea79a7"
 };
 for (const [file, expected] of Object.entries(candidatePins)) eq(blob("HEAD", file), expected, `EA5D2_CANDIDATE_BLOB_PIN_MISMATCH:${file}`);
 
