@@ -111,6 +111,79 @@ jobs:
           python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
           node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs
 
+      - name: Diagnose KBS raw-hourly publication lag without changing authority
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import csv
+          import io
+          import json
+          import os
+          import pathlib
+          import urllib.request
+          from datetime import datetime, timezone, timedelta
+
+          authority_path = pathlib.Path('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-LIVE-SOURCE-EXACT-HEAD-QUALIFICATION-V1.json')
+          output_path = pathlib.Path('acceptance-output/EA5E2_KBS_RAW_HOURLY_FRESHNESS_DIAGNOSTIC.json')
+          output_path.parent.mkdir(parents=True, exist_ok=True)
+          observed = datetime.now(timezone.utc)
+          result = {
+              'schema_version': 'geox_mcft_cap09_ea5e2_kbs_raw_hourly_freshness_diagnostic_v1',
+              'status': 'DIAGNOSTIC_FAILED',
+              'subject_head_sha': os.environ.get('MCFT_SUBJECT_SHA'),
+              'observed_at_utc': observed.isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
+              'authority_changed': False,
+              'freshness_gate_changed': False,
+              'raw_values_emitted': False,
+          }
+          try:
+              authority = json.loads(authority_path.read_text(encoding='utf-8'))
+              url = authority['kbs']['raw_hourly_csv']
+              max_age = float(authority['kbs']['raw_hourly_latest_max_age_hours'])
+              req = urllib.request.Request(url, headers={'User-Agent': 'GEOX-MCFT-CAP09-EA5E2-DIAGNOSTIC/1.0'})
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  raw = response.read()
+              text = raw.decode('utf-8-sig')
+              reader = csv.DictReader(io.StringIO(text))
+              if not reader.fieldnames:
+                  raise RuntimeError('KBS_DIAGNOSTIC_HEADER_MISSING')
+              normalized = {str(name).strip().lower(): name for name in reader.fieldnames}
+              time_key = normalized.get('datetime_utc')
+              if time_key is None:
+                  raise RuntimeError('KBS_DIAGNOSTIC_DATETIME_UTC_MISSING')
+              timestamps = []
+              future_limit = observed + timedelta(minutes=5)
+              for row in reader:
+                  value = (row.get(time_key) or '').strip()
+                  if not value:
+                      continue
+                  parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                  if parsed.tzinfo is None:
+                      parsed = parsed.replace(tzinfo=timezone.utc)
+                  parsed = parsed.astimezone(timezone.utc)
+                  if parsed <= future_limit:
+                      timestamps.append(parsed)
+              if not timestamps:
+                  raise RuntimeError('KBS_DIAGNOSTIC_NO_ELIGIBLE_TIMESTAMP')
+              latest = max(timestamps)
+              age_hours = (observed - latest).total_seconds() / 3600.0
+              result.update({
+                  'status': 'PASS',
+                  'latest_raw_hourly_timestamp_utc': latest.isoformat(timespec='seconds').replace('+00:00', 'Z'),
+                  'latest_age_hours': round(age_hours, 6),
+                  'configured_max_age_hours': max_age,
+                  'within_existing_ea4_freshness_authority': age_hours <= max_age,
+                  'eligible_timestamp_count': len(timestamps),
+                  'response_byte_count': len(raw),
+              })
+          except Exception as exc:
+              result['diagnostic_error'] = f'{type(exc).__name__}:{exc}'
+          output_path.write_text(json.dumps(result, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
+
       - name: Exact-head live KBS and GFS readiness reproof
         env:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
@@ -130,6 +203,7 @@ jobs:
             acceptance-output/EA5E2_SERVER_TYPECHECK.log
             acceptance-output/EA5E2_FIXED_LAG_SCHEDULER_SEAM.log
             acceptance-output/EA5E2_EXACT_INTERVAL_LATE_CUTOFF_SEAM.log
+            acceptance-output/EA5E2_KBS_RAW_HOURLY_FRESHNESS_DIAGNOSTIC.json
             acceptance-output/MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_RESULT.json
             acceptance-output/MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS_GOVERNANCE_RESULT.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-FIXED-LAG-COLLECTOR-RUNTIME-SCHEDULE-V1.json
