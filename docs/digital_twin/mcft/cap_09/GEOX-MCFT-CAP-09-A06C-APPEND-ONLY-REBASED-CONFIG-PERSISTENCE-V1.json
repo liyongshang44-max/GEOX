@@ -33,7 +33,7 @@
   "candidate_implementation_blobs": {
     "qualified_rebase_builder": "43773178a6220f6d92c48a51da20f7d946bb84a4",
     "persistence_service": "a420ef34e4c0a58ba5507e46d623fcc12980b946",
-    "live_executor": "b96593a85d6c032e632ed36e0c191e7b4ea782c9",
+    "live_executor": "c1beab04cc6d680b3ce24d045e41257df687e343",
     "postgres_runtime_repository": "9650d2875c6737714d22de7cc2b1d9229aea33a5"
   },
   "prestate_authority": {
