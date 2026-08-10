@@ -11,6 +11,16 @@
     "amendment_05_blob_sha": "7a92c17f7ba32aae52667de9c21db62bfd2ba70b",
     "ea5d3_closure_authority_blob_sha": "ad6708fb4fa884a2c61c3401338a7a3eb5cb34d0"
   },
+  "ea5d3_effectiveness_authority": {
+    "pr_number": 3026,
+    "merged_head_sha": "39f568a3501d71342d501c41c3f3ca730d22f5d1",
+    "merge_commit_sha": "4f672f8ee68ca3fe17805956ae845c31a34bd897",
+    "merged_at_utc": "2026-08-10T03:04:23.000Z",
+    "focused_workflow_run_id": 31351103543,
+    "focused_artifact_id": 9048984033,
+    "focused_artifact_digest": "sha256:153beadca3ba8e0bd8b7b81c5373730779e8eceaa93a04b3b8550a94946d3170",
+    "ea5e_authorized_only_after_this_effectiveness": true
+  },
   "preflight_question": "CAN_THE_CURRENT_PERSISTED_O00_O23_CONFIG_EPOCH_STILL_BEGIN_AS_THE_REQUIRED_ACTUAL_UTC_FORMAL_WINDOW_AFTER_EA5E_EFFECTIVENESS",
   "frozen_current_epoch": {
     "bootstrap_logical_time": "2026-08-09T21:00:00.000Z",
@@ -19,7 +29,9 @@
     "runtime_config_count": 25,
     "hourly_runtime_config_count": 24,
     "scheduler_slot_count_before_preflight": 0,
-    "scheduler_cursor_count_before_preflight": 0
+    "scheduler_cursor_count_before_preflight": 0,
+    "ea5d3_effectiveness_seconds_after_o00_boundary": 18263,
+    "expired_required_slot_boundaries_before_ea5e_authorization": ["O00","O01","O02","O03","O04","O05"]
   },
   "controlling_rules": {
     "ea5e_must_be_effective_before_o00_may_be_enabled": true,
@@ -33,7 +45,8 @@
   "expected_exact_head_preflight_decision": "REJECTED_AS_FORMAL_WINDOW_EPOCH_EXPIRED_BEFORE_EA5E_EFFECTIVENESS",
   "rejection_conditions": {
     "database_clock_must_be_after_o00_logical_time": true,
-    "ea5e_was_not_effective_at_o00_boundary": true,
+    "ea5d3_effectiveness_time_must_be_after_o05_boundary": true,
+    "ea5e_was_not_effective_at_o00_through_o05_boundaries": true,
     "scheduler_slot_count_must_still_be_zero": true,
     "scheduler_cursor_count_must_still_be_zero": true,
     "formal_o00_must_still_be_unexecuted": true,
