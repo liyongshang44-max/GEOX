@@ -1,0 +1,292 @@
+name: mcft-cap-09-ea5d3-ea5d-closure
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5d3-ea5d-closure.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5D3-EA5D-CLOSURE-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5D3_EA5D_CLOSURE.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5d3-closure-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  ea5d3-ea5d-closure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GEOX_MCFT_CAP09_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact EA5D3 closure base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify Formal database secret exists without exposing value
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GEOX_MCFT_CAP09_S6_DATABASE_URL:-}" || { echo 'MISSING GEOX_MCFT_CAP09_S6_DATABASE_URL'; exit 1; }
+          echo 'PRESENT GEOX_MCFT_CAP09_S6_DATABASE_URL'
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check EA5D3 closure governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5D3_EA5D_CLOSURE.cjs
+
+      - name: Validate exact EA5D3 closure boundary and predecessor authority chain
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5D3_EA5D_CLOSURE.cjs
+
+      - name: Verify merged EA5D2 write proof and final exact-head re-verification artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output /tmp/ea5d2-first /tmp/ea5d2-final
+
+          pr_json="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/3025")"
+          echo "$pr_json" | jq -e '
+            .merged_at != null and
+            .head.sha == "214c1ff2b3f5f8b2dccc1073a87add477632a542" and
+            .merge_commit_sha == "92f22f74304443ca3a16417e76581e4605252a7f"
+          ' >/dev/null
+
+          first_run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/31334304326")"
+          echo "$first_run" | jq -e '
+            .name == "mcft-cap-09-ea5d2-formal-bootstrap-live-persistence" and
+            .head_sha == "df7e2bc2f128f58afe98db371236920c2f8ad403" and
+            .status == "completed" and .conclusion == "success"
+          ' >/dev/null
+          first_artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9044245246")"
+          echo "$first_artifact" | jq -e '
+            .name == "mcft-cap-09-ea5d2-df7e2bc2f128f58afe98db371236920c2f8ad403" and
+            .expired == false and
+            .digest == "sha256:f85b6c50ed1c675fcfa38af187f98fbf12da31a623bda44b96f59d60e5f69401"
+          ' >/dev/null
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9044245246/zip" > /tmp/ea5d2-first.zip
+          unzip -q /tmp/ea5d2-first.zip -d /tmp/ea5d2-first
+
+          final_run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/31350361419")"
+          echo "$final_run" | jq -e '
+            .name == "mcft-cap-09-ea5d2-formal-bootstrap-live-persistence" and
+            .head_sha == "214c1ff2b3f5f8b2dccc1073a87add477632a542" and
+            .status == "completed" and .conclusion == "success"
+          ' >/dev/null
+          final_artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9048721860")"
+          echo "$final_artifact" | jq -e '
+            .name == "mcft-cap-09-ea5d2-214c1ff2b3f5f8b2dccc1073a87add477632a542" and
+            .expired == false and
+            .digest == "sha256:6cf5eea24341fdcd515835eba49787576660860ef44fef6fe6c6d7ffdb3dbb3a"
+          ' >/dev/null
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9048721860/zip" > /tmp/ea5d2-final.zip
+          unzip -q /tmp/ea5d2-final.zip -d /tmp/ea5d2-final
+
+          node <<'NODE'
+          const fs = require('fs');
+          const read = (p) => JSON.parse(fs.readFileSync(p, 'utf8'));
+          const firstGov = read('/tmp/ea5d2-first/MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE_GOVERNANCE_RESULT.json');
+          const first = read('/tmp/ea5d2-first/MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE_RESULT.json');
+          const finalGov = read('/tmp/ea5d2-final/MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE_GOVERNANCE_RESULT.json');
+          const final = read('/tmp/ea5d2-final/MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE_RESULT.json');
+
+          if (firstGov.status !== 'PASS' || firstGov.subject_head_sha !== 'df7e2bc2f128f58afe98db371236920c2f8ad403') throw new Error('EA5D3_FIRST_GOVERNANCE_PROOF_INVALID');
+          if (first.status !== 'PASS' || first.execution_mode !== 'FIRST_FORMAL_BOOTSTRAP_AFTER_FRESH_COLLECTION') throw new Error('EA5D3_FIRST_LIVE_BOOTSTRAP_MODE_INVALID');
+          if (first.fresh_external_evidence_write_count !== 1 || first.canonical_bootstrap_write_count !== 34 || first.final_scope_fact_count !== 36) throw new Error('EA5D3_FIRST_LIVE_BOOTSTRAP_WRITE_COUNTS_INVALID');
+          if (first.final_canonical_fact_count !== 34 || first.exact_runtime_config_count !== 25 || first.exact_hourly_runtime_config_count !== 24 || first.external_a0_member_count !== 9) throw new Error('EA5D3_FIRST_LIVE_BOOTSTRAP_CANONICAL_COUNTS_INVALID');
+          if (first.config_parent_chain_verified !== true || first.explicit_ref_hash_pin_only !== true || first.persistent_formal_raw_store_bound !== true || first.formal_neon_bootstrap_persisted !== true || first.formal_24_config_chain_persisted !== true) throw new Error('EA5D3_FIRST_LIVE_BOOTSTRAP_AUTHORITY_INVALID');
+          if (first.scheduler_slot_write_count !== 0 || first.formal_window_started !== false || first.ea5d_complete !== false || first.ea5e_authorized !== false || first.formal_o00_start_authorized !== false) throw new Error('EA5D3_FIRST_LIVE_BOOTSTRAP_NONCLAIMS_INVALID');
+
+          if (finalGov.status !== 'PASS' || finalGov.subject_head_sha !== '214c1ff2b3f5f8b2dccc1073a87add477632a542') throw new Error('EA5D3_FINAL_GOVERNANCE_PROOF_INVALID');
+          if (final.status !== 'PASS' || final.subject_head_sha !== '214c1ff2b3f5f8b2dccc1073a87add477632a542' || final.execution_mode !== 'EXISTING_FORMAL_BOOTSTRAP_REVERIFIED') throw new Error('EA5D3_FINAL_EXACT_HEAD_REVERIFICATION_INVALID');
+          if (final.fresh_external_evidence_write_count !== 0 || final.canonical_bootstrap_write_count !== 0 || final.final_scope_fact_count !== 36) throw new Error('EA5D3_FINAL_ZERO_WRITE_REVERIFICATION_INVALID');
+          if (final.final_canonical_fact_count !== 34 || final.exact_runtime_config_count !== 25 || final.exact_hourly_runtime_config_count !== 24 || final.external_a0_member_count !== 9) throw new Error('EA5D3_FINAL_CANONICAL_COUNTS_INVALID');
+          if (final.config_parent_chain_verified !== true || final.explicit_ref_hash_pin_only !== true || final.formal_neon_bootstrap_persisted !== true || final.formal_24_config_chain_persisted !== true) throw new Error('EA5D3_FINAL_BOOTSTRAP_AUTHORITY_INVALID');
+          if (final.a0_runtime_config_ref !== first.a0_runtime_config_ref || final.a0_runtime_config_hash !== first.a0_runtime_config_hash || final.o00_runtime_config_ref !== first.o00_runtime_config_ref || final.o00_runtime_config_hash !== first.o00_runtime_config_hash) throw new Error('EA5D3_BOOTSTRAP_CONFIG_IDENTITY_DRIFT');
+          if (final.scheduler_slot_write_count !== 0 || final.formal_window_started !== false || final.ea5d_complete !== false || final.ea5e_authorized !== false || final.formal_o00_start_authorized !== false || final.mcft_cap09_completed !== false) throw new Error('EA5D3_FINAL_PREDECESSOR_NONCLAIMS_INVALID');
+
+          const out = {
+            schema_version: 'geox_mcft_cap09_ea5d3_proof_chain_verification_v1',
+            status: 'PASS',
+            merged_pr_number: 3025,
+            merged_head_sha: '214c1ff2b3f5f8b2dccc1073a87add477632a542',
+            merge_commit_sha: '92f22f74304443ca3a16417e76581e4605252a7f',
+            first_live_bootstrap_run_id: 31334304326,
+            first_live_bootstrap_artifact_id: 9044245246,
+            first_live_bootstrap_write_proved: true,
+            final_exact_head_run_id: 31350361419,
+            final_exact_head_artifact_id: 9048721860,
+            final_exact_head_zero_write_reverification_proved: true,
+            final_scope_fact_count: 36,
+            final_canonical_fact_count: 34,
+            exact_runtime_config_count: 25,
+            exact_hourly_runtime_config_count: 24,
+            external_a0_member_count: 9,
+            config_parent_chain_verified: true,
+            closure_performed_database_write_count: 0,
+            ea5d_complete_after_closure_effectiveness: true,
+            ea5e_authorized_after_closure_effectiveness: true,
+            formal_o00_start_authorized: false,
+            formal_window_started: false,
+            mcft_cap09_completed: false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5D3_PROOF_CHAIN_VERIFICATION_RESULT.json', JSON.stringify(out, null, 2) + '\n');
+          console.log(JSON.stringify(out, null, 2));
+          NODE
+
+      - name: Read-only verify exact post-bootstrap Formal database invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/server
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { Pool } from 'pg';
+
+          const connectionString = process.env.GEOX_MCFT_CAP09_S6_DATABASE_URL;
+          if (!connectionString) throw new Error('EA5D3_FORMAL_DATABASE_URL_REQUIRED');
+          const pool = new Pool({ connectionString, max: 2 });
+          const scope = ['tenant_mcft_external','project_mcft_cap09','group_public_research','field_kbs_mcse_t1r1','season_2026_corn','zone_kbs_mcse_t1r1_formal_v1'];
+          const bootstrap = '2026-08-09T21:00:00.000Z';
+          try {
+            const identity = await pool.query("SELECT current_database() AS database_name, current_setting('server_version_num')::int AS server_version_num");
+            if (identity.rows[0]?.database_name !== 'geox_mcft_cap09_s6_formal_24h') throw new Error('EA5D3_DATABASE_IDENTITY_MISMATCH');
+            if (Number(identity.rows[0]?.server_version_num) < 180000) throw new Error('EA5D3_POSTGRES_18_REQUIRED');
+
+            const counts = await pool.query(`
+              WITH scoped AS (
+                SELECT fact_id, record_json FROM public.facts
+                WHERE record_json#>>'{payload,tenant_id}'=$1
+                  AND record_json#>>'{payload,project_id}'=$2
+                  AND record_json#>>'{payload,group_id}'=$3
+                  AND record_json#>>'{payload,field_id}'=$4
+                  AND record_json#>>'{payload,season_id}'=$5
+                  AND record_json#>>'{payload,zone_id}'=$6
+              )
+              SELECT
+                (SELECT count(*)::int FROM public.facts) AS total_facts,
+                count(*)::int AS scope_facts,
+                count(*) FILTER (WHERE record_json->>'type'='soil_moisture_observation_v1')::int AS soil_facts,
+                count(*) FILTER (WHERE record_json->>'type' LIKE 'twin_%')::int AS canonical_twin_facts,
+                count(*) FILTER (WHERE record_json->>'type'='twin_runtime_config_v1')::int AS runtime_configs,
+                count(*) FILTER (WHERE record_json::text LIKE '%field_c8_demo%' OR record_json::text LIKE '%CONTROLLED_SYNTHETIC_REPLAY_PROXY%' OR record_json::text LIKE '%POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1%')::int AS forbidden_marker_facts
+              FROM scoped`, scope);
+            const c = counts.rows[0];
+            if (Number(c.total_facts) !== 36 || Number(c.scope_facts) !== 36 || Number(c.soil_facts) !== 2 || Number(c.canonical_twin_facts) !== 34 || Number(c.runtime_configs) !== 25 || Number(c.forbidden_marker_facts) !== 0) throw new Error('EA5D3_FORMAL_FACT_COUNTS_OR_MARKERS_INVALID');
+
+            const foreign = await pool.query(`SELECT count(*)::int AS n FROM public.facts WHERE (record_json->>'type' LIKE 'twin_%' OR record_json->>'type'='soil_moisture_observation_v1') AND NOT (record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6)`, scope);
+            if (Number(foreign.rows[0]?.n) !== 0) throw new Error('EA5D3_FOREIGN_SCOPE_RELEVANT_FACTS_FORBIDDEN');
+
+            const soil = await pool.query(`SELECT record_json->'payload' AS p FROM public.facts WHERE record_json->>'type'='soil_moisture_observation_v1' ORDER BY occurred_at ASC, fact_id ASC`);
+            if (soil.rows.length !== 2) throw new Error('EA5D3_EXACT_TWO_SOIL_FACTS_REQUIRED');
+            for (const row of soil.rows) {
+              const p = row.p;
+              if (p.binding_id !== 'kbs_lter_variate25_vwc_100mm_v1' || p.epistemic_class !== 'OBSERVED') throw new Error('EA5D3_SOIL_BINDING_OR_EPISTEMIC_INVALID');
+              const actualScope = [p.tenant_id,p.project_id,p.group_id,p.field_id,p.season_id,p.zone_id];
+              if (JSON.stringify(actualScope) !== JSON.stringify(scope)) throw new Error('EA5D3_SOIL_SCOPE_INVALID');
+            }
+
+            const configs = await pool.query(`SELECT record_json->'payload' AS object FROM public.facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6 ORDER BY (record_json#>>'{payload,logical_time}')::timestamptz ASC`, scope);
+            if (configs.rows.length !== 25) throw new Error('EA5D3_EXACT_25_CONFIGS_REQUIRED');
+            let parent = null;
+            for (let i = 0; i < configs.rows.length; i += 1) {
+              const object = configs.rows[i].object;
+              const p = object.payload;
+              const expectedLogical = new Date(Date.parse(bootstrap) + i * 3600000).toISOString();
+              if (object.logical_time !== expectedLogical) throw new Error(`EA5D3_CONFIG_LOGICAL_TIME_INVALID:${i}`);
+              if (p.runtime_mode !== 'SHADOW_ONLINE_FORMAL_QUALIFICATION_ONLY' || p.config_selection_mode !== 'EXPLICIT_REF_HASH_PIN_ONLY') throw new Error(`EA5D3_CONFIG_AUTHORITY_INVALID:${i}`);
+              if (i === 0) {
+                if (p.config_role !== 'A0_BOOTSTRAP' || p.parent_runtime_config_ref !== null || p.parent_runtime_config_hash !== null) throw new Error('EA5D3_A0_PARENT_INVALID');
+              } else {
+                if (p.config_role !== 'HOURLY_CAP04' || p.parent_runtime_config_ref !== parent.object_id || p.parent_runtime_config_hash !== parent.determinism_hash) throw new Error(`EA5D3_CONFIG_PARENT_CHAIN_INVALID:${i}`);
+              }
+              parent = object;
+            }
+            if (configs.rows[1].object.logical_time !== '2026-08-09T22:00:00.000Z') throw new Error('EA5D3_O00_CONFIG_LOGICAL_TIME_INVALID');
+
+            const scheduler = await pool.query(`SELECT (SELECT count(*)::int FROM public.twin_shadow_online_scheduler_slot_v1) AS slots, (SELECT count(*)::int FROM public.twin_shadow_online_scheduler_cursor_v1) AS cursors`);
+            if (Number(scheduler.rows[0]?.slots) !== 0 || Number(scheduler.rows[0]?.cursors) !== 0) throw new Error('EA5D3_FORMAL_WINDOW_ALREADY_STARTED');
+
+            const result = {
+              schema_version: 'geox_mcft_cap09_ea5d3_formal_database_readonly_verification_v1',
+              status: 'PASS',
+              formal_database_identity: 'geox_mcft_cap09_s6_formal_24h',
+              exact_scope_fact_count: 36,
+              exact_external_soil_evidence_fact_count: 2,
+              exact_canonical_twin_fact_count: 34,
+              exact_runtime_config_count: 25,
+              exact_hourly_runtime_config_count: 24,
+              external_a0_non_config_member_count: 9,
+              config_parent_chain_verified: true,
+              scheduler_slot_count: 0,
+              scheduler_cursor_count: 0,
+              forbidden_marker_fact_count: 0,
+              foreign_scope_relevant_fact_count: 0,
+              database_write_count: 0,
+              formal_window_started: false,
+              formal_o00_start_authorized: false
+            };
+            fs.mkdirSync('../../acceptance-output', { recursive: true });
+            fs.writeFileSync('../../acceptance-output/MCFT_CAP_09_EA5D3_FORMAL_DATABASE_READONLY_VERIFICATION_RESULT.json', JSON.stringify(result, null, 2) + '\n');
+            console.log(JSON.stringify(result, null, 2));
+          } finally {
+            await pool.end();
+          }
+          NODE
+
+      - name: Verify closure effect is exactly EA5D complete to EA5E authorization
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const g = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5D3_EA5D_CLOSURE_GOVERNANCE_RESULT.json','utf8'));
+          const p = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5D3_PROOF_CHAIN_VERIFICATION_RESULT.json','utf8'));
+          const d = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5D3_FORMAL_DATABASE_READONLY_VERIFICATION_RESULT.json','utf8'));
+          if (g.status !== 'PASS' || p.status !== 'PASS' || d.status !== 'PASS') throw new Error('EA5D3_ALL_PROOFS_REQUIRED');
+          if (g.ea5d_complete_after_effectiveness !== true || g.ea5e_authorized_after_effectiveness !== true) throw new Error('EA5D3_SUCCESSOR_EFFECT_REQUIRED');
+          if (p.first_live_bootstrap_write_proved !== true || p.final_exact_head_zero_write_reverification_proved !== true || d.config_parent_chain_verified !== true) throw new Error('EA5D3_PROOF_CHAIN_REQUIRED');
+          if (d.exact_scope_fact_count !== 36 || d.exact_runtime_config_count !== 25 || d.scheduler_slot_count !== 0 || d.scheduler_cursor_count !== 0 || d.database_write_count !== 0) throw new Error('EA5D3_DATABASE_CLOSURE_INVARIANTS_INVALID');
+          if (g.ea5e_complete !== false || g.external_package_formal_eligible !== false || g.formal_o00_start_authorized !== false || g.formal_window_started !== false || g.mcft_cap09_completed !== false) throw new Error('EA5D3_PREMATURE_SUCCESSOR_AUTHORITY');
+          console.log(JSON.stringify({status:'PASS',ea5d_complete:true,ea5e_authorized:true,ea5e_complete:false,o00:false,window:false,cap09:false,closure_db_writes:0}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea5d3-closure-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5D3_EA5D_CLOSURE_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA5D3_PROOF_CHAIN_VERIFICATION_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA5D3_FORMAL_DATABASE_READONLY_VERIFICATION_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
