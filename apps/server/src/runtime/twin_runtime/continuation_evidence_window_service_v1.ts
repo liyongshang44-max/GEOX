@@ -1,6 +1,6 @@
 // apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts
 // Purpose: build one deterministic continuation Evidence Window for an explicit Replay logical hour, select exact-hour rainfall and ET0, select eligible execution Evidence, resolve crop-stage configuration context, and preserve complete model-consumption trace semantics.
-// Boundary: pure application logic over caller-supplied records and configuration context; no filesystem, database, environment, scheduler, network, wall clock, persistence, checkpoint advancement, or Runtime tick execution.
+// Boundary: pure application logic over caller-supplied records and configuration context; optional exact-hour availability cutoff is caller-authorized and defaults to logical time; no filesystem, database, environment, scheduler, network, wall clock, persistence, checkpoint advancement, or Runtime tick execution.
 
 import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
 import type { CanonicalReplayEvidenceRecordV1, ReplayEvidenceRoleV1, TwinScopeKeyV1 } from "./ports.js";
@@ -320,6 +320,7 @@ function classifyRecordV1(input: {
   scope: TwinScopeKeyV1;
   logical_time: string;
   window_start: string;
+  exact_interval_availability_cutoff_time: string;
 }): ClassifiedContinuationEvidenceV1 {
   const role = roleForRecordV1(input.record);
   const eventTime = roleEventTimeV1(input.record, role);
@@ -328,6 +329,8 @@ function classifyRecordV1(input: {
   const availableAt = requireIsoInstantV1(input.record.available_to_runtime_at, "AVAILABLE_TO_RUNTIME_INVALID");
   const canonicalPayloadHash = semanticHashV1(input.record.canonical_payload);
   const identity = semanticIdentityV1(input.record, role, eventTime, interval.interval_start, interval.interval_end);
+  const exactIntervalRole = role === "RAINFALL_OBSERVATION" || role === "HISTORICAL_ET0_INPUT";
+  const availabilityCutoff = exactIntervalRole ? input.exact_interval_availability_cutoff_time : input.logical_time;
   const base = {
     record: input.record,
     role,
@@ -342,10 +345,17 @@ function classifyRecordV1(input: {
 
   if (!sameScopeV1(input.record, input.scope)) return { ...base, disposition: "EXCLUDED_SCOPE", consumption_status: "EXCLUDED_SCOPE", exclusion_reason: "EVIDENCE_SCOPE_MISMATCH" };
   if (eventTime > input.logical_time) return { ...base, disposition: "EXCLUDED_FUTURE", consumption_status: "EXCLUDED_FUTURE", exclusion_reason: "FUTURE_EVIDENCE_FORBIDDEN" };
-  if (availableAt > input.logical_time || ingestedAt > input.logical_time) return { ...base, disposition: "EXCLUDED_LATE", consumption_status: "EXCLUDED_LATE", exclusion_reason: "NOT_AVAILABLE_AT_LOGICAL_TICK" };
+  if (availableAt > availabilityCutoff || ingestedAt > availabilityCutoff) {
+    return {
+      ...base,
+      disposition: "EXCLUDED_LATE",
+      consumption_status: "EXCLUDED_LATE",
+      exclusion_reason: availabilityCutoff === input.logical_time ? "NOT_AVAILABLE_AT_LOGICAL_TICK" : "NOT_AVAILABLE_BY_EXACT_INTERVAL_CUTOFF",
+    };
+  }
   if (!qualityUsableV1(input.record)) return { ...base, disposition: "EXCLUDED_QUALITY", consumption_status: "EXCLUDED_QUALITY", exclusion_reason: "QUALITY_NOT_USABLE" };
 
-  if (role === "RAINFALL_OBSERVATION" || role === "HISTORICAL_ET0_INPUT") {
+  if (exactIntervalRole) {
     if (interval.interval_start !== input.window_start || interval.interval_end !== input.logical_time) {
       return { ...base, disposition: "EXCLUDED_INTERVAL_MISMATCH", consumption_status: "EXCLUDED_INTERVAL_MISMATCH", exclusion_reason: "EXACT_HOUR_INTERVAL_MISMATCH" };
     }
@@ -448,10 +458,21 @@ export function buildContinuationEvidenceWindowV1(input: {
   crop_stage_context_ref: string;
   crop_stage_context_hash: string;
   crop_stage_context: ContinuationCropStageConfigurationContextV1;
+  exact_interval_availability_cutoff_time?: string;
 }): ContinuationEvidenceWindowV1 {
   const logicalTime = requireIsoInstantV1(input.logical_time, "LOGICAL_TIME_INVALID");
+  const exactIntervalAvailabilityCutoff = input.exact_interval_availability_cutoff_time === undefined
+    ? logicalTime
+    : requireIsoInstantV1(input.exact_interval_availability_cutoff_time, "EXACT_INTERVAL_AVAILABILITY_CUTOFF_INVALID");
+  if (exactIntervalAvailabilityCutoff < logicalTime) throw new Error("EXACT_INTERVAL_AVAILABILITY_CUTOFF_PRECEDES_LOGICAL_TIME");
   const windowStart = previousHourIsoV1(logicalTime);
-  const classified = input.candidate_records.map((record) => classifyRecordV1({ record, scope: input.scope, logical_time: logicalTime, window_start: windowStart }));
+  const classified = input.candidate_records.map((record) => classifyRecordV1({
+    record,
+    scope: input.scope,
+    logical_time: logicalTime,
+    window_start: windowStart,
+    exact_interval_availability_cutoff_time: exactIntervalAvailabilityCutoff,
+  }));
   const included = classified.filter((item) => item.exclusion_reason === null);
   const excluded = classified.filter((item) => item.exclusion_reason !== null);
   const { winners, duplicates } = deduplicateIncludedV1(included);
