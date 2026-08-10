@@ -1,0 +1,157 @@
+name: mcft-cap-09-ea5e1-post-rebase-formal-db-preflight-window-input-manifest
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e1-post-rebase-formal-db-preflight-window-input-manifest.yml'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E1-POST-REBASE-FORMAL-DB-PREFLIGHT-AND-WINDOW-INPUT-MANIFEST-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-WINDOW-INPUT-MANIFEST-V1.json'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5e1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  ea5e1-post-rebase-formal-db-preflight-window-input-manifest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GEOX_MCFT_CAP09_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+      GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED: ${{ vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact EA5E1 base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify Formal DB secret binding and selected epoch deadline remain fail-closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GEOX_MCFT_CAP09_S6_DATABASE_URL:-}" || { echo 'MISSING GEOX_MCFT_CAP09_S6_DATABASE_URL'; exit 1; }
+          if [ "${GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED:-false}" = "true" ]; then
+            echo 'EA5E1_FORMAL_WINDOW_MUST_REMAIN_DISABLED' >&2
+            exit 1
+          fi
+          node <<'NODE'
+          const deadline=Date.parse('2026-08-11T05:00:00.000Z');
+          const o00=Date.parse('2026-08-11T17:00:00.000Z');
+          if (Date.now()>=deadline) throw new Error('EA5E1_SELECTED_EPOCH_READINESS_DEADLINE_ALREADY_PASSED');
+          if (Date.now()>=o00) throw new Error('EA5E1_SELECTED_O00_ALREADY_PASSED');
+          console.log(JSON.stringify({status:'PASS',formal_window_enabled:false,deadline:'2026-08-11T05:00:00.000Z',o00:'2026-08-11T17:00:00.000Z'}));
+          NODE
+
+      - name: Verify exact A06C effectiveness and download immutable persistence proof
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/3031")"
+          echo "$pr" | jq -e '
+            .merged_at == "2026-08-10T05:59:14Z" and
+            .head.sha == "cbd1f984c1e2201ccd150fe8db785e62ed3396c1" and
+            .merge_commit_sha == "4de72f6408a3326e364ebd3b9346437cdea9d744"
+          ' >/dev/null
+          run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/31359896349")"
+          echo "$run" | jq -e '.head_sha == "cbd1f984c1e2201ccd150fe8db785e62ed3396c1" and .status == "completed" and .conclusion == "success"' >/dev/null
+          artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9051972358")"
+          echo "$artifact" | jq -e '.expired == false and .digest == "sha256:8df1356d04c0a4018a6a39e2f2417be158f6855095c5affc53422e5f2505d8df"' >/dev/null
+          rm -rf /tmp/a06c-proof /tmp/a06c-proof.zip
+          mkdir -p /tmp/a06c-proof
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9051972358/zip" > /tmp/a06c-proof.zip
+          unzip -q /tmp/a06c-proof.zip -d /tmp/a06c-proof
+          for f in \
+            MCFT_CAP_09_A06C_GOVERNANCE_RESULT.json \
+            MCFT_CAP_09_A06C_APPEND_ONLY_REBASED_CONFIG_PERSISTENCE_RESULT.json \
+            MCFT_CAP_09_A06C_POSTWRITE_FORMAL_DB_VERIFICATION_RESULT.json
+          do
+            test -f "/tmp/a06c-proof/$f"
+          done
+          node <<'NODE'
+          const fs=require('fs');
+          const read=(n)=>JSON.parse(fs.readFileSync(`/tmp/a06c-proof/${n}`,'utf8'));
+          const g=read('MCFT_CAP_09_A06C_GOVERNANCE_RESULT.json');
+          const p=read('MCFT_CAP_09_A06C_APPEND_ONLY_REBASED_CONFIG_PERSISTENCE_RESULT.json');
+          const post=read('MCFT_CAP_09_A06C_POSTWRITE_FORMAL_DB_VERIFICATION_RESULT.json');
+          const m=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-WINDOW-INPUT-MANIFEST-V1.json','utf8'));
+          if(g.status!=='PASS'||g.subject_head_sha!=='cbd1f984c1e2201ccd150fe8db785e62ed3396c1'||g.ea5e1_authorized_after_merge!==true) throw new Error('EA5E1_A06C_GOVERNANCE_PROOF_INVALID');
+          if(p.status!=='PASS'||p.selected_epoch_id!=='mcft_cap09_external_formal_window_epoch_20260811t170000z_v1'||p.final_runtime_config_count!==24||p.second_pass_runtime_config_write_count!==0||p.formal_window_started!==false) throw new Error('EA5E1_A06C_PERSISTENCE_PROOF_INVALID');
+          if(post.status!=='PASS'||post.total_fact_count!==60||post.exact_scope_fact_count!==60||post.runtime_config_count!==49||post.rebased_future_hourly_runtime_config_count!==24||post.scheduler_slot_count!==0||post.scheduler_cursor_count!==0||post.existing_a0_state_anchor_preserved!==true||post.exact_parent_chain_verified!==true||post.slot_crop_context_hashes_verified!==true) throw new Error('EA5E1_A06C_POSTWRITE_PROOF_INVALID');
+          const refs=m.slots.map(s=>s.runtime_config_ref), hashes=m.slots.map(s=>s.runtime_config_hash);
+          if(JSON.stringify(refs)!==JSON.stringify(p.runtime_config_refs)||JSON.stringify(hashes)!==JSON.stringify(p.runtime_config_hashes)) throw new Error('EA5E1_MANIFEST_DOES_NOT_EQUAL_IMMUTABLE_A06C_CONFIG_CHAIN');
+          console.log(JSON.stringify({status:'PASS',a06c_subject:g.subject_head_sha,manifest_pins:refs.length}));
+          NODE
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check EA5E1 governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST.cjs
+
+      - name: Validate exact EA5E1 candidate boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST.cjs
+
+      - name: Typecheck server
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Execute read-only EA5E1 Formal DB preflight against exact manifest
+        run: pnpm -w exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT.ts
+
+      - name: Validate EA5E1 live result and zero-write boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT_RESULT.json','utf8'));
+          if(p.status!=='PASS') throw new Error('EA5E1_LIVE_RESULT_NOT_PASS');
+          if(p.manifest_content_sha256!=='sha256:060184569523aee985ea846aac5407cef1ef288367b748e1621297c03db8999d') throw new Error('EA5E1_MANIFEST_CONTENT_DIGEST_MISMATCH');
+          for(const [k,v] of Object.entries({total_fact_count:60,exact_scope_fact_count:60,external_soil_evidence_count:2,canonical_twin_fact_count:58,runtime_config_count:49,expired_historical_runtime_config_count:24,rebased_future_runtime_config_count:24,manifest_slot_count:24,scheduler_slot_count:0,scheduler_cursor_count:0,foreign_scope_relevant_fact_count:0,forbidden_c8_replay_200mm_marker_fact_count:0,database_write_count:0,provider_request_count:0,raw_object_write_count:0})) if(p[k]!==v) throw new Error(`EA5E1_LIVE_RESULT_MISMATCH:${k}`);
+          if(p.exact_manifest_ref_hash_parent_crop_chain_verified!==true||p.existing_a0_state_anchor_preserved!==true||p.formal_window_started!==false||p.formal_o00_start_authorized!==false||p.ea5e_complete!==false||p.formal_execution_count!=='0/24'||p.mcft_cap09_completed!==false) throw new Error('EA5E1_LIVE_NONCLAIM_OR_CHAIN_INVALID');
+          console.log(JSON.stringify({status:'PASS',manifest:p.manifest_id,branch:p.neon_branch_id,database:p.database_name}));
+          NODE
+
+      - name: Upload immutable EA5E1 proof artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e1-post-rebase-formal-db-preflight-window-input-manifest-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA5E1_GOVERNANCE_RESULT.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-WINDOW-INPUT-MANIFEST-V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E1-POST-REBASE-FORMAL-DB-PREFLIGHT-AND-WINDOW-INPUT-MANIFEST-V1.json
+          if-no-files-found: error
+          retention-days: 90
