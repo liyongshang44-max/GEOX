@@ -14,6 +14,7 @@ const has=(s,m,c)=>{if(!s.includes(m))throw new Error(`${c}:${m}`)};
 const base=process.env.MCFT_BASE_SHA;
 eq(base,'4fc792398bcc25243af7c63734fe59beec9b0dcc','EA5E2_EXACT_BASE_REQUIRED');
 const workflowPath='.github/workflows/mcft-cap-09-ea5e2-fixed-lag-collector-runtime-schedule-readiness.yml';
+const collectorPhaseWorkflowPath='.github/workflows/mcft-cap-09-ea5e2-collector-phase-orchestration.yml';
 const schedulePath='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-FIXED-LAG-COLLECTOR-RUNTIME-SCHEDULE-V1.json';
 const authorityPath='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-COLLECTOR-RUNTIME-SCHEDULE-READINESS-V1.json';
 const gatePath='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs';
@@ -21,11 +22,13 @@ const continuationPath='apps/server/src/runtime/twin_runtime/continuation_eviden
 const assimilationPath='apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts';
 const externalCandidatePath='apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts';
 const fixedLagSchedulerPath='apps/server/src/runtime/twin_runtime/fixed_lag_scheduler_adapter_v1.ts';
+const collectorPhaseOrchestratorPath='apps/server/src/external_evidence/mcft_cap09_external_formal_collector_phase_orchestrator_v1.ts';
+const collectorPhaseAcceptancePath='scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_COLLECTOR_PHASE_ORCHESTRATION.ts';
 const cutoffAcceptancePath='scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_EXACT_INTERVAL_LATE_CUTOFF_SEAM.ts';
 const schedulerAcceptancePath='scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_SCHEDULER_SEAM.ts';
 const changed=git('diff','--name-only',`${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
-const expected=[workflowPath,schedulePath,authorityPath,gatePath,continuationPath,assimilationPath,externalCandidatePath,fixedLagSchedulerPath,cutoffAcceptancePath,schedulerAcceptancePath].sort();
-eq(JSON.stringify(changed),JSON.stringify(expected),'EA5E2_EXACT_TEN_FILE_BOUNDARY_REQUIRED');
+const expected=[workflowPath,collectorPhaseWorkflowPath,schedulePath,authorityPath,gatePath,continuationPath,assimilationPath,externalCandidatePath,fixedLagSchedulerPath,collectorPhaseOrchestratorPath,collectorPhaseAcceptancePath,cutoffAcceptancePath,schedulerAcceptancePath].sort();
+eq(JSON.stringify(changed),JSON.stringify(expected),'EA5E2_EXACT_THIRTEEN_FILE_BOUNDARY_REQUIRED');
 
 const predecessors={
 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md':'39f6a09273c30088a7ea264cfa94ff930ea5518e',
@@ -44,12 +47,15 @@ const predecessors={
 for(const [p,s] of Object.entries(predecessors)){eq(blob(base,p),s,`EA5E2_BASE_PIN:${p}`);eq(blob('HEAD',p),s,`EA5E2_PREDECESSOR_MUTATED:${p}`)}
 
 const candidateBlobs={
+ [collectorPhaseWorkflowPath]:'caaf79f3e8b42b6780c54b67345b271f677790f2',
  [schedulePath]:'964fde5ad80dcf62a901184b0db3789858dfed85',
- [authorityPath]:'5996b809e448ccecab7f4387acd45c5292ed5ea9',
+ [authorityPath]:'5cb8aeac3e0ef2504ad6d6f645270c4152ff61e9',
  [continuationPath]:'a83437765f1c75860c5270b89446474787cde4c3',
  [assimilationPath]:'6699fb741cc0f61291f3d8c6e1e45ee0dcc79e36',
  [externalCandidatePath]:'71df4e47b0c62b7c6f2126e33896849af56273ca',
  [fixedLagSchedulerPath]:'7525c4748c8d758ba04a198b8a6c00f1a9ffceb4',
+ [collectorPhaseOrchestratorPath]:'4040983b8b5e0f1efc89c3bf6a15d038af5ae0fb',
+ [collectorPhaseAcceptancePath]:'473bb83f7d283e5d3cc37ddf3906b5dc8a1d71ac',
  [cutoffAcceptancePath]:'741fffeec8d976648e78a9f1cb2c888a1b423f01',
  [schedulerAcceptancePath]:'6be7604dc29940880d02f4bfc9722a13cc2af494'
 };
@@ -91,6 +97,8 @@ for(const [k,v] of Object.entries({
  external_collector_canonicalizer:'5b4e5133e51dfaf447c2de52caf1a9f50c8254d3',
  durable_raw_retention_adapter:'dfa2c10266a5079842012426aed175851d30ca44',
  restricted_formal_evidence_ingress:'6f7b6450d4f671c75affc2c7aba45ed71cb518c5',
+ fixed_lag_collector_phase_orchestrator:'4040983b8b5e0f1efc89c3bf6a15d038af5ae0fb',
+ collector_phase_orchestration_acceptance:'473bb83f7d283e5d3cc37ddf3906b5dc8a1d71ac',
  external_cap04_input_authority:'b4b7448518628bcffe8eaf6a91d9967145f7647d',
  continuation_evidence_window_late_cutoff_seam:'a83437765f1c75860c5270b89446474787cde4c3',
  assimilated_continuation_cutoff_threading:'6699fb741cc0f61291f3d8c6e1e45ee0dcc79e36',
@@ -100,7 +108,7 @@ for(const [k,v] of Object.entries({
  live_provider_probe:'ff2ad210387402a74731968e14746210fd2440dd'
 }))eq(ib[k],v,`EA5E2_IMPLEMENTATION_BLOB:${k}`);
 const rc=authority.readiness_proof_contract;
-for(const k of ['real_provider_gets_required','live_kbs_reproof_required','live_gfs_72h_same_cycle_reproof_required','raw_retention_before_decode_contract_required','restricted_append_only_formal_ingress_contract_required','runtime_provider_fetch_forbidden','exact_five_binding_families_required','exact_ea5e1_config_manifest_binding_required','scheduler_fixed_lag_implementation_required','scheduler_default_zero_lag_preserved','exact_interval_late_cutoff_implementation_required','non_exact_interval_evidence_cutoff_remains_logical_time'])yes(rc[k],`EA5E2_READINESS_REQUIRED:${k}`);
+for(const k of ['real_provider_gets_required','live_kbs_reproof_required','live_gfs_72h_same_cycle_reproof_required','raw_retention_before_decode_contract_required','restricted_append_only_formal_ingress_contract_required','runtime_provider_fetch_forbidden','exact_five_binding_families_required','exact_ea5e1_config_manifest_binding_required','two_phase_same_slot_composition_required','whole_phase_validation_before_ingress_required','collector_phase_family_partition_required','scheduler_fixed_lag_implementation_required','scheduler_default_zero_lag_preserved','exact_interval_late_cutoff_implementation_required','non_exact_interval_evidence_cutoff_remains_logical_time'])yes(rc[k],`EA5E2_READINESS_REQUIRED:${k}`);
 eq(rc.external_formal_scheduler_lag_hours,7,'EA5E2_AUTHORITY_LAG_REQUIRED');
 eq(rc.exact_interval_late_cutoff_offset_minutes,432,'EA5E2_AUTHORITY_CUTOFF_REQUIRED');
 eq(JSON.stringify(rc.exact_interval_late_cutoff_types),JSON.stringify(['observed_rainfall_v1','historical_et0_estimate_v1']),'EA5E2_AUTHORITY_LATE_TYPES_REQUIRED');
@@ -113,6 +121,13 @@ const continuation=read(continuationPath);
 for(const m of ['exact_interval_availability_cutoff_time?: string','exactIntervalRole ? input.exact_interval_availability_cutoff_time : input.logical_time','EXACT_INTERVAL_AVAILABILITY_CUTOFF_PRECEDES_LOGICAL_TIME','NOT_AVAILABLE_BY_EXACT_INTERVAL_CUTOFF'])has(continuation,m,'EA5E2_LATE_CUTOFF_IMPLEMENTATION_MISSING');
 const assimilation=read(assimilationPath);has(assimilation,'exact_interval_availability_cutoff_time?: string','EA5E2_ASSIMILATION_CUTOFF_INPUT_MISSING');has(assimilation,'exact_interval_availability_cutoff_time: input.exact_interval_availability_cutoff_time','EA5E2_ASSIMILATION_CUTOFF_THREAD_MISSING');
 const candidate=read(externalCandidatePath);has(candidate,'EXTERNAL_FORMAL_EXACT_INTERVAL_AVAILABILITY_CUTOFF_OFFSET_MINUTES_V1 = 432','EA5E2_EXTERNAL_CUTOFF_OFFSET_MISSING');has(candidate,'exact_interval_availability_cutoff_time: exactIntervalAvailabilityCutoffV1(logicalTime)','EA5E2_EXTERNAL_CUTOFF_BINDING_MISSING');
+const collectorOrchestrator=read(collectorPhaseOrchestratorPath);
+for(const m of ['collectRetainDecodeCanonicalizeExternalEvidenceV1','PRE_BOUNDARY_CAUSAL','LATE_EXACT_HOUR','Whole-phase validation is complete before the first canonical ingress call.','appendCanonicalizedExternalEvidence','EA5E2_COLLECTOR_EXACT_INTERVAL_MISMATCH','EA5E2_COLLECTOR_REQUIRED_PHASE_FAMILY_MISSING','EA5E2_COLLECTOR_RECORD_TYPE_WRONG_PHASE'])has(collectorOrchestrator,m,'EA5E2_COLLECTOR_PHASE_ORCHESTRATOR_MISSING');
+const collectorAcceptance=read(collectorPhaseAcceptancePath);
+for(const m of ['same_slot_key_both_phases','raw_retention_before_decode','whole_phase_validation_before_ingress','canonical_fact_write_count','EA5E2_COLLECTOR_PHASE_STARTED_BEFORE_AUTHORIZED_TARGET','EA5E2_COLLECTOR_RECORD_TYPE_WRONG_PHASE','EA5E2_COLLECTOR_REQUIRED_PHASE_FAMILY_MISSING'])has(collectorAcceptance,m,'EA5E2_COLLECTOR_PHASE_ACCEPTANCE_MISSING');
+const collectorWorkflow=read(collectorPhaseWorkflowPath);
+for(const m of ['ACCEPTANCE_MCFT_CAP_09_EA5E2_COLLECTOR_PHASE_ORCHESTRATION.ts','canonical_fact_write_count','same_slot_key_both_phases','whole_phase_validation_before_ingress','raw_retention_before_decode','persist-credentials: false'])has(collectorWorkflow,m,'EA5E2_COLLECTOR_PHASE_WORKFLOW_MISSING');
+if(/DATABASE_URL|POSTGRES(?:QL)?|NEON_DATABASE_URL|GEOX_MCFT_CAP09_S6_DATABASE_URL|AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|R2_ACCESS_KEY/.test(collectorWorkflow))throw new Error('EA5E2_COLLECTOR_PHASE_WORKFLOW_SECRET_OR_WRITE_SURFACE_FORBIDDEN');
 
 const livePath='acceptance-output/MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_RESULT.json';
 if(!fs.existsSync(livePath))throw new Error('EA5E2_LIVE_PROVIDER_REPROOF_RESULT_REQUIRED');
@@ -131,6 +146,6 @@ for(const k of ['ea5e3_effective','ea5e_complete','formal_o00_start_authorized',
 eq(authority.next_legal_successor_if_effective,'S6-EA5E3-FORMAL-AUTHORITY-V3-EFFECTIVENESS','EA5E2_NEXT_FRONTIER_REQUIRED');
 
 fs.mkdirSync('acceptance-output',{recursive:true});
-const out={schema_version:'geox_mcft_cap09_ea5e2_fixed_lag_schedule_readiness_governance_result_v1',status:'PASS',base_main_sha:base,subject_head_sha:git('rev-parse','HEAD'),exact_changed_file_count:changed.length,live_provider_reproof_pass:true,scheduler_default_lag_hours:0,scheduler_external_formal_lag_hours:7,exact_interval_late_cutoff_offset_minutes:432,slot_count:24,minimum_ingestion_margin_minutes:5,formal_database_write_count:0,formal_raw_object_write_count:0,scheduler_write_count:0,runtime_tick_count:0,formal_o00_start_authorized:false,formal_window_started:false,formal_execution_count:'0/24',ea5e2_effective_after_merge:true,ea5e3_authorized_after_merge:true,ea5e3_effective:false,ea5e_complete:false,mcft_cap09_completed:false};
+const out={schema_version:'geox_mcft_cap09_ea5e2_fixed_lag_schedule_readiness_governance_result_v1',status:'PASS',base_main_sha:base,subject_head_sha:git('rev-parse','HEAD'),exact_changed_file_count:changed.length,live_provider_reproof_pass:true,collector_phase_orchestration_required:true,scheduler_default_lag_hours:0,scheduler_external_formal_lag_hours:7,exact_interval_late_cutoff_offset_minutes:432,slot_count:24,minimum_ingestion_margin_minutes:5,formal_database_write_count:0,formal_raw_object_write_count:0,scheduler_write_count:0,runtime_tick_count:0,formal_o00_start_authorized:false,formal_window_started:false,formal_execution_count:'0/24',ea5e2_effective_after_merge:true,ea5e3_authorized_after_merge:true,ea5e3_effective:false,ea5e_complete:false,mcft_cap09_completed:false};
 fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS_GOVERNANCE_RESULT.json',JSON.stringify(out,null,2)+'\n');
 console.log(JSON.stringify(out,null,2));
