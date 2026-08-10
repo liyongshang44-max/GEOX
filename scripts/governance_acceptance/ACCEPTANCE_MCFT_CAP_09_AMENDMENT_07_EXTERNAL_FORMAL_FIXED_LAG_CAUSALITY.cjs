@@ -38,8 +38,8 @@ const predecessorPins = {
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-LIVE-SOURCE-EXACT-HEAD-QUALIFICATION-V1.json": "791e3d24bdc862641c77ddd26778495cb8e6a7dd",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-RECOVERY-AUTHORITY-V1.json": "1174940a6908e545e70d87cb65be5b3a41db33cf",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E1-POST-REBASE-FORMAL-DB-PREFLIGHT-AND-WINDOW-INPUT-MANIFEST-V1.json": "788d1f969aa335ee18db9186c5ec0578ee1a960a",
-  "apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts": "964dd0c499f271527626677b1f9f2fa4f550645a",
-  "apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts": "72acf59ca58d805726ad8bdd1c08f13fc58af18b",
+  "apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts": "ae7372e4611be821d801c1a0973acb05096b9780",
+  "apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts": "0a7c02aae1e5ddbccadc303ae7977e4369dddcba",
   "apps/server/src/runtime/twin_runtime/external_formal_cap04_input_authority_v1.ts": "b4b7448518628bcffe8eaf6a91d9967145f7647d",
   "apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts": "f627c89d59092621dd7a4523f09b2ce4ec78433b"
 };
@@ -68,7 +68,7 @@ for (const marker of [
 const originalEa4 = json("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-LIVE-SOURCE-EXACT-HEAD-QUALIFICATION-V1.json");
 eq(originalEa4.kbs.raw_hourly_latest_max_age_hours, 6, "AMENDMENT07_KBS_SIX_HOUR_FRESHNESS_AUTHORITY_REQUIRED");
 eq(originalEa4.kbs.raw_hourly_csv, "https://lter.kbs.msu.edu/datatables/13.csv", "AMENDMENT07_KBS_RAW_HOURLY_SOURCE_REQUIRED");
-no(originalEa4.gfs.future_file_waiting_forbidden === false, "AMENDMENT07_GFS_FUTURE_FILE_WAITING_MUST_REMAIN_FORBIDDEN");
+yes(originalEa4.gfs.future_file_waiting_forbidden, "AMENDMENT07_GFS_FUTURE_FILE_WAITING_MUST_REMAIN_FORBIDDEN");
 no(originalEa4.gfs.cross_cycle_substitution_authorized, "AMENDMENT07_GFS_CROSS_CYCLE_SUBSTITUTION_FORBIDDEN");
 
 const recovery = json("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-RECOVERY-AUTHORITY-V1.json");
@@ -82,7 +82,7 @@ yes(recovery.current_authority_effect_if_merged.live_source_qualified, "AMENDMEN
 
 const continuation = read("apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts");
 for (const marker of [
-  "if (availableAt > input.logical_time || ingestedAt > input.logical_time)",
+  "availableAt > input.logical_time || ingestedAt > input.logical_time",
   "interval.interval_start !== input.window_start || interval.interval_end !== input.logical_time",
   "MISSING_EXACT_HOURLY_RAINFALL_INTERVAL",
   "MISSING_EXACT_HOURLY_ET0_INTERVAL",
@@ -107,8 +107,8 @@ for (const marker of [
 
 const futureSelector = read("apps/server/src/runtime/twin_runtime/future_forcing_selector_v1.ts");
 for (const marker of [
-  "if (issuedAt > logicalTime)",
-  "if (availableAt > logicalTime)",
+  "issuedAt > logicalTime",
+  "availableAt > logicalTime",
   "validFrom !== logicalTime",
   "CAP04_FUTURE_FORCING_POINT_COUNT_V1",
 ]) contains(futureSelector, marker, "AMENDMENT07_FUTURE_CAUSALITY_MARKER_MISSING");
