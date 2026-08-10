@@ -344,6 +344,24 @@ jobs:
           name: mcft-cap09-ea5e2-live-provider-${{ github.event.pull_request.head.sha || github.sha }}
           path: acceptance-output/late
 
+      - name: Flatten metadata-only JSONs for exact-head cleanup discovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          copied=0
+          for dir in acceptance-output/pre acceptance-output/late; do
+            if [ ! -d "$dir" ]; then
+              continue
+            fi
+            while IFS= read -r -d '' file; do
+              digest="$(printf '%s' "$file" | sha256sum | awk '{print $1}')"
+              cp "$file" "acceptance-output/cleanup-${digest}.json"
+              copied=$((copied+1))
+            done < <(find "$dir" -type f -name '*.json' -print0)
+          done
+          echo "EA5E2_CLEANUP_METADATA_FILES_COPIED=$copied"
+
       - name: Delete every exact-head transient R2 object found in safe metadata
         env:
           MCFT_EA5E2_LIVE_PHASE: CLEANUP_TRANSIENT
