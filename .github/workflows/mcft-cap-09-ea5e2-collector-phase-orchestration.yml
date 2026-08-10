@@ -5,7 +5,9 @@ on:
     paths:
       - '.github/workflows/mcft-cap-09-ea5e2-collector-phase-orchestration.yml'
       - 'apps/server/src/external_evidence/mcft_cap09_external_formal_collector_phase_orchestrator_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_COLLECTOR_PHASE_ORCHESTRATION.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-COLLECTOR-RUNTIME-SCHEDULE-READINESS-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs'
   merge_group:
@@ -57,11 +59,26 @@ jobs:
           grep -q '"whole_phase_validation_before_ingress":true' acceptance-output/EA5E2_COLLECTOR_PHASE_ORCHESTRATION.log
           grep -q '"raw_retention_before_decode":true' acceptance-output/EA5E2_COLLECTOR_PHASE_ORCHESTRATION.log
 
-      - name: Upload collector phase proof
+      - name: Prove External Formal DB-only delayed Evidence source
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.ts \
+            2>&1 | tee acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
+          grep -q '"status":"PASS"' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
+          grep -q '"exact_interval_cutoff_minutes":432' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
+          grep -q '"future_forcing_post_logical_time_excluded":true' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
+          grep -q '"database_write_count":0' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
+          grep -q '"provider_request_count":0' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
+          grep -q '"historical_s2_s5_reader_modified":false' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
+
+      - name: Upload collector and DB-source proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-ea5e2-collector-phase-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          path: acceptance-output/EA5E2_COLLECTOR_PHASE_ORCHESTRATION.log
+          path: |
+            acceptance-output/EA5E2_COLLECTOR_PHASE_ORCHESTRATION.log
+            acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
           if-no-files-found: error
           retention-days: 90
