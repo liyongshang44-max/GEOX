@@ -1,0 +1,122 @@
+name: mcft-cap-09-a06b-rebased-config-builder-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-a06b-rebased-config-builder-qualification.yml'
+      - 'apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A06B_REBASED_CONFIG_BUILDER.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A06B_REBASED_CONFIG_BUILDER_QUALIFICATION.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A06B-REBASED-CONFIG-BUILDER-QUALIFICATION-V1.json'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-a06b-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  a06b-rebased-config-builder-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact A06B base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Require selected epoch still has readiness time remaining
+        shell: node {0}
+        run: |
+          const deadline=Date.parse('2026-08-11T05:00:00.000Z');
+          const o00=Date.parse('2026-08-11T17:00:00.000Z');
+          if (Date.now()>=deadline) throw new Error('A06B_SELECTED_EPOCH_READINESS_DEADLINE_ALREADY_PASSED');
+          if (Date.now()>=o00) throw new Error('A06B_SELECTED_O00_ALREADY_PASSED');
+          console.log(JSON.stringify({status:'PASS',readiness_deadline:'2026-08-11T05:00:00.000Z',o00:'2026-08-11T17:00:00.000Z'}));
+
+      - name: Verify exact A06A effectiveness and proof artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/3029")"
+          echo "$pr" | jq -e '
+            .merged_at == "2026-08-10T05:07:38Z" and
+            .head.sha == "8d42580074b5a5506833c2342f50444560a04998" and
+            .merge_commit_sha == "fb9b5eec6e8544ed11b65634060e7f7a076a1526"
+          ' >/dev/null
+          run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/31357144660")"
+          echo "$run" | jq -e '.head_sha == "8d42580074b5a5506833c2342f50444560a04998" and .status == "completed" and .conclusion == "success"' >/dev/null
+          artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9051032042")"
+          echo "$artifact" | jq -e '.expired == false and .digest == "sha256:3c759960425573d46a97c429c1d69d369c6eb43fa855504ba3f0a793d477a88a"' >/dev/null
+          echo 'A06A exact-head proof and protected-main merge verified.'
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check A06B governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A06B_REBASED_CONFIG_BUILDER_QUALIFICATION.cjs
+
+      - name: Validate exact A06B qualification boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A06B_REBASED_CONFIG_BUILDER_QUALIFICATION.cjs
+
+      - name: Typecheck server with pure rebase builder
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Run pure A06B rebased-config builder qualification
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A06B_REBASED_CONFIG_BUILDER.ts
+
+      - name: Verify A06B public qualification result
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A06B_REBASED_CONFIG_BUILDER_RESULT.json','utf8'));
+          if (r.status!=='PASS') throw new Error('A06B_PASS_REQUIRED');
+          if (r.selected_epoch_id!=='mcft_cap09_external_formal_window_epoch_20260811t170000z_v1') throw new Error('A06B_EPOCH_MISMATCH');
+          if (r.selected_o00!=='2026-08-11T17:00:00.000Z' || r.selected_o23!=='2026-08-12T16:00:00.000Z') throw new Error('A06B_WINDOW_MISMATCH');
+          if (r.exact_rebased_runtime_config_count!==24 || r.runtime_config_refs.length!==24 || r.runtime_config_hashes.length!==24 || r.slot_crop_stage_context_hashes.length!==24) throw new Error('A06B_EXACT_24_OUTPUTS_REQUIRED');
+          if (r.exact_parent_chain_verified!==true || r.expired_epoch_ref_hash_collision_count!==0 || r.stale_a0_crop_context_reuse_count!==0 || r.deterministic_double_build_verified!==true) throw new Error('A06B_BUILDER_PROOF_INVALID');
+          if (r.builder_database_write_count!==0 || r.builder_provider_request_count!==0 || r.builder_scheduler_slot_write_count!==0) throw new Error('A06B_SIDE_EFFECT_FORBIDDEN');
+          if (r.formal_window_started!==false || r.a06c_persistence_authorized!==false || r.formal_o00_start_authorized!==false || r.mcft_cap09_completed!==false) throw new Error('A06B_PREMATURE_CLAIM');
+          const text=JSON.stringify(r);
+          for (const forbidden of ['DATABASE_URL','SECRET_ACCESS_KEY','ACCESS_KEY_ID']) if (text.includes(forbidden)) throw new Error(`A06B_PUBLIC_RESULT_SECRET_MARKER:${forbidden}`);
+          console.log(JSON.stringify({status:'PASS',configs:24,parent_chain:true,crop_contexts:24,database_writes:0,o00:false,window:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-a06b-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_A06B_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_A06B_REBASED_CONFIG_BUILDER_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
