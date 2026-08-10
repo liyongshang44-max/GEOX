@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -392,7 +393,7 @@ async function main(): Promise<void> {
       const result = {
         schema_version: "geox_mcft_cap09_ea5e1_post_rebase_formal_db_preflight_result_v1",
         status: "PASS",
-        subject_head_sha: process.env.GITHUB_SHA ?? null,
+        subject_head_sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
         manifest_id: manifest.manifest_id,
         manifest_content_sha256: manifestContentSha256,
         selected_epoch_id: manifest.selected_epoch.epoch_id,
