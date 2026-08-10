@@ -4,11 +4,14 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-ea5e2-collector-phase-orchestration.yml'
+      - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_external_formal_collector_phase_orchestrator_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_COLLECTOR_PHASE_ORCHESTRATION.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.ts'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_LOCAL_DB.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-COLLECTOR-RUNTIME-SCHEDULE-READINESS-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs'
   merge_group:
@@ -41,11 +44,34 @@ jobs:
           node-version: 20.11.1
           cache: pnpm
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Syntax-check raw-first live provider helpers
+        run: |
+          python -m py_compile \
+            scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py \
+            scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
+
       - name: Typecheck server with collector phase composition
         run: pnpm --filter @geox/server run typecheck
+
+      - name: Typecheck isolated live provider phase runner
+        run: |
+          pnpm exec tsc --noEmit \
+            --target ES2022 \
+            --lib ES2022 \
+            --module NodeNext \
+            --moduleResolution NodeNext \
+            --strict \
+            --esModuleInterop \
+            --types node \
+            --skipLibCheck \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_LOCAL_DB.ts
 
       - name: Prove same-slot two-phase collector composition
         shell: bash
