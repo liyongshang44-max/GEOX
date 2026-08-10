@@ -38,7 +38,7 @@ const predecessorPins = {
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-06-FORMAL-WINDOW-EPOCH-REBASE-AUTHORITY.md": "e59e11e909bfd0a38c7298c5a6f909a6cd7afa49",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A06A-FUTURE-FORMAL-WINDOW-EPOCH-SELECTION-V1.json": "c7788d525c56ab83117afbeeec85f2b9f990534f",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A06B-REBASED-CONFIG-BUILDER-QUALIFICATION-V1.json": "89ca957829e632a21f6a4d42a9ff571d572f7302",
-  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A06C-APPEND-ONLY-REBASED-CONFIG-PERSISTENCE-V1.json": "2a4ffb9912ec27b360b099fe46036d34d4a5a9f3"
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A06C-APPEND-ONLY-REBASED-CONFIG-PERSISTENCE-V1.json": "2a4ffb9912ec27b360b099fe46036d34d4a5a9f3",
 };
 for (const [filePath, expectedSha] of Object.entries(predecessorPins)) {
   eq(blob(base, filePath), expectedSha, `EA5E1_BASE_PIN:${filePath}`);
@@ -46,9 +46,9 @@ for (const [filePath, expectedSha] of Object.entries(predecessorPins)) {
 }
 
 eq(blob("HEAD", manifestPath), "b47af64277330bb46a3fc1bb171dfcaaaf91abb1", "EA5E1_MANIFEST_BLOB_REQUIRED");
-eq(blob("HEAD", executorPath), "ff852ccec6d7d64bfbfa64161547fd1e419a4e3b", "EA5E1_EXECUTOR_BLOB_REQUIRED");
+eq(blob("HEAD", executorPath), "d3d7284632da52c1ea2e694eba49a8fdeb271f45", "EA5E1_EXECUTOR_BLOB_REQUIRED");
 eq(blob("HEAD", workflowPath), "1ffea689e2927946cf986201a8d757816d6a937c", "EA5E1_WORKFLOW_BLOB_REQUIRED");
-eq(blob("HEAD", authorityPath), "6f43f94212c43c1ee3f29f662cf78dfa8b983db5", "EA5E1_AUTHORITY_BLOB_REQUIRED");
+eq(blob("HEAD", authorityPath), "788d1f969aa335ee18db9186c5ec0578ee1a960a", "EA5E1_AUTHORITY_BLOB_REQUIRED");
 eq(fileSha256(manifestPath), "sha256:060184569523aee985ea846aac5407cef1ef288367b748e1621297c03db8999d", "EA5E1_MANIFEST_CONTENT_SHA256_REQUIRED");
 
 const a06a = json("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A06A-FUTURE-FORMAL-WINDOW-EPOCH-SELECTION-V1.json");
@@ -152,7 +152,7 @@ for (const key of [
   "verify_existing_a0_state_anchor",
   "verify_scheduler_slots_and_cursors_zero",
   "verify_foreign_scope_zero",
-  "verify_c8_replay_200mm_markers_zero"
+  "verify_c8_replay_200mm_markers_zero",
 ]) yes(live[key], `EA5E1_LIVE_CONTRACT_REQUIRED:${key}`);
 for (const key of [
   "database_write_count",
@@ -160,7 +160,7 @@ for (const key of [
   "raw_object_write_count",
   "scheduler_slot_write_count",
   "scheduler_cursor_write_count",
-  "runtime_tick_count"
+  "runtime_tick_count",
 ]) eq(live[key], 0, `EA5E1_ZERO_SIDE_EFFECT_REQUIRED:${key}`);
 
 const effect = authority.effect_if_exact_head_proof_passes_and_candidate_merges_to_protected_main;
@@ -175,7 +175,7 @@ for (const key of [
   "external_package_formal_eligible",
   "formal_o00_start_authorized",
   "formal_window_started",
-  "mcft_cap09_completed"
+  "mcft_cap09_completed",
 ]) no(effect[key], `EA5E1_PREMATURE_EFFECT:${key}`);
 eq(effect.formal_execution_count, "0/24", "EA5E1_EXECUTION_COUNT_REQUIRED");
 eq(authority.next_legal_successor_if_effective, "S6-EA5E2-COLLECTOR-RUNTIME-SCHEDULE-READINESS", "EA5E1_NEXT_FRONTIER_REQUIRED");
@@ -195,15 +195,17 @@ for (const marker of [
   "EA5E1_C8_REPLAY_200MM_MARKER_FORBIDDEN",
   "database_write_count: 0",
   "formal_o00_start_authorized: false",
-  "formal_execution_count: \"0/24\""
+  "formal_execution_count: \"0/24\"",
+  'execFileSync("git", ["rev-parse", "HEAD"]',
 ]) if (!executor.includes(marker)) fail(`EA5E1_EXECUTOR_MARKER_MISSING:${marker}`);
+if (executor.includes("subject_head_sha: process.env.GITHUB_SHA")) fail("EA5E1_SYNTHETIC_PR_MERGE_SHA_EVIDENCE_FORBIDDEN");
 for (const forbidden of [
   "fetch(",
   "FORMAL_RAW_S3_ACCESS_KEY_ID",
   "FORMAL_RAW_S3_SECRET_ACCESS_KEY",
   "CONTROLLED_SYNTHETIC_REPLAY_PROXY\"",
   "field_c8_demo\"",
-  "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1\""
+  "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1\"",
 ]) {
   if (executor.includes(forbidden)) fail(`EA5E1_EXECUTOR_FORBIDDEN:${forbidden}`);
 }
@@ -224,7 +226,7 @@ for (const marker of [
   "ACCEPTANCE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST.cjs",
   "EXECUTE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT.ts",
   "sha256:060184569523aee985ea846aac5407cef1ef288367b748e1621297c03db8999d",
-  "Upload immutable EA5E1 proof artifact"
+  "Upload immutable EA5E1 proof artifact",
 ]) if (!workflow.includes(marker)) fail(`EA5E1_WORKFLOW_MARKER_MISSING:${marker}`);
 if (/\b(INSERT\s+INTO|UPDATE\s+public\.|DELETE\s+FROM|TRUNCATE\s+|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE)\b/i.test(workflow)) {
   fail("EA5E1_WORKFLOW_DIRECT_DATABASE_WRITE_SQL_FORBIDDEN");
@@ -256,7 +258,7 @@ const out = {
   formal_o00_start_authorized: false,
   formal_window_started: false,
   formal_execution_count: "0/24",
-  mcft_cap09_completed: false
+  mcft_cap09_completed: false,
 };
 fs.writeFileSync("acceptance-output/MCFT_CAP_09_EA5E1_GOVERNANCE_RESULT.json", JSON.stringify(out, null, 2) + "\n");
 console.log(JSON.stringify(out, null, 2));
