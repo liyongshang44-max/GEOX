@@ -1,0 +1,272 @@
+{
+  "schema_version": "geox_mcft_cap09_formal_window_input_manifest_v1",
+  "manifest_id": "GEOX-MCFT-CAP-09-FORMAL-WINDOW-INPUT-MANIFEST-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "S6-EA5E1-POST-REBASE-FORMAL-DB-PREFLIGHT-AND-WINDOW-INPUT-MANIFEST",
+  "record_status": "EA5E1_FORMAL_WINDOW_INPUT_MANIFEST_CANDIDATE_NOT_EFFECTIVE",
+  "selection_mode": "EXPLICIT_REF_HASH_PIN_ONLY",
+  "immutable_for_formal_window": true,
+  "selected_epoch": {
+    "epoch_id": "mcft_cap09_external_formal_window_epoch_20260811t170000z_v1",
+    "o00": "2026-08-11T17:00:00.000Z",
+    "o23": "2026-08-12T16:00:00.000Z",
+    "ea5e_v3_readiness_deadline": "2026-08-11T05:00:00.000Z"
+  },
+  "existing_a0_predecessor_authority": {
+    "logical_time": "2026-08-09T21:00:00.000Z",
+    "runtime_config_ref": "external_formal_runtime_config_7284202e3b0bdae6d32f4814",
+    "runtime_config_hash": "sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8"
+  },
+  "slot_count": 24,
+  "slots": [
+    {
+      "slot_id": "O00",
+      "logical_time": "2026-08-11T17:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_6a5adbc2d3eb66982a9dc5bc",
+      "runtime_config_hash": "sha256:19329e4958e4b7c52c79644b02b48f8aafac12440ca89e3579221990a71530d1",
+      "parent_runtime_config_ref": "external_formal_runtime_config_7284202e3b0bdae6d32f4814",
+      "parent_runtime_config_hash": "sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8",
+      "crop_stage_context_hash": "sha256:d93ed33b41a3fe5c57dd127407049441a75c2857b39969cdc4b200c1db1c83f3"
+    },
+    {
+      "slot_id": "O01",
+      "logical_time": "2026-08-11T18:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_5a7037ca68c7c48e6743cb99",
+      "runtime_config_hash": "sha256:ac0ed4cf6962b436ffde6e254963fefbdaff3a3a84f71ff3ddb3e313d5241652",
+      "parent_runtime_config_ref": "external_formal_runtime_config_6a5adbc2d3eb66982a9dc5bc",
+      "parent_runtime_config_hash": "sha256:19329e4958e4b7c52c79644b02b48f8aafac12440ca89e3579221990a71530d1",
+      "crop_stage_context_hash": "sha256:e16a56bc336b48478d45ce3d571ba87a6713c4dcf4048c2529dc5d423a9ea722"
+    },
+    {
+      "slot_id": "O02",
+      "logical_time": "2026-08-11T19:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_082717fe8aae422dd483e67d",
+      "runtime_config_hash": "sha256:10305750e1ac72c19bdc97d40045ac090bdea90ee61314ee5ccff9937fea3050",
+      "parent_runtime_config_ref": "external_formal_runtime_config_5a7037ca68c7c48e6743cb99",
+      "parent_runtime_config_hash": "sha256:ac0ed4cf6962b436ffde6e254963fefbdaff3a3a84f71ff3ddb3e313d5241652",
+      "crop_stage_context_hash": "sha256:1ff9dba192360359e6c1f722081c483ffbbc7370a159195891b2128cfc5009b3"
+    },
+    {
+      "slot_id": "O03",
+      "logical_time": "2026-08-11T20:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_606d854d8b4e4e84df6eb676",
+      "runtime_config_hash": "sha256:dbaba206fa32102957358d341781c0384579ca1efcea10233138cdc8b975b2f4",
+      "parent_runtime_config_ref": "external_formal_runtime_config_082717fe8aae422dd483e67d",
+      "parent_runtime_config_hash": "sha256:10305750e1ac72c19bdc97d40045ac090bdea90ee61314ee5ccff9937fea3050",
+      "crop_stage_context_hash": "sha256:ff602a79cbfbb85d3becb4c0fb31e1e154a36ae9c0acd62a54079bf39699b43e"
+    },
+    {
+      "slot_id": "O04",
+      "logical_time": "2026-08-11T21:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_170bfa2225085e2288415878",
+      "runtime_config_hash": "sha256:e4d828e022215e74caede97c3b0be306f461ab0cca3a1127190fb3c7ebb315c0",
+      "parent_runtime_config_ref": "external_formal_runtime_config_606d854d8b4e4e84df6eb676",
+      "parent_runtime_config_hash": "sha256:dbaba206fa32102957358d341781c0384579ca1efcea10233138cdc8b975b2f4",
+      "crop_stage_context_hash": "sha256:893d0d40df2f39feb387184e13c4f9a639d8878c1913207fb58c63819256f32e"
+    },
+    {
+      "slot_id": "O05",
+      "logical_time": "2026-08-11T22:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_8d9feab8448d66281f226476",
+      "runtime_config_hash": "sha256:362e603c6f658a35f7b0999878abed53c0a22c222551444d060587343482fd07",
+      "parent_runtime_config_ref": "external_formal_runtime_config_170bfa2225085e2288415878",
+      "parent_runtime_config_hash": "sha256:e4d828e022215e74caede97c3b0be306f461ab0cca3a1127190fb3c7ebb315c0",
+      "crop_stage_context_hash": "sha256:08a80806f5b2e7953b7a127b9fa2e0e3a2365f7367454d2129d98661a5ebc69c"
+    },
+    {
+      "slot_id": "O06",
+      "logical_time": "2026-08-11T23:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_47b9f66f8403e03da951b5ee",
+      "runtime_config_hash": "sha256:a8a2d1cc68a54fe04451dff758172511a384e7e50350f62390c0026616e514a4",
+      "parent_runtime_config_ref": "external_formal_runtime_config_8d9feab8448d66281f226476",
+      "parent_runtime_config_hash": "sha256:362e603c6f658a35f7b0999878abed53c0a22c222551444d060587343482fd07",
+      "crop_stage_context_hash": "sha256:8af5c042d73bd8b73bd6ab5b0a12a37b65f6d1e8a7b127d5fcebcb25bfecbc12"
+    },
+    {
+      "slot_id": "O07",
+      "logical_time": "2026-08-12T00:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_2ab18c56197d5033ca7185ec",
+      "runtime_config_hash": "sha256:a723b8de5e5dc92547c06129b7b632c87569ea8b4ba11d79d2c61aefd997275f",
+      "parent_runtime_config_ref": "external_formal_runtime_config_47b9f66f8403e03da951b5ee",
+      "parent_runtime_config_hash": "sha256:a8a2d1cc68a54fe04451dff758172511a384e7e50350f62390c0026616e514a4",
+      "crop_stage_context_hash": "sha256:abad9bc025614597c102c468cb26580f01e81f48a7fab947ade123cde0ade28f"
+    },
+    {
+      "slot_id": "O08",
+      "logical_time": "2026-08-12T01:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_a48dcf570db13fce405a4d59",
+      "runtime_config_hash": "sha256:1dc1aba5003f5709f817dc0ee4983d33b7293930163211a01273a7f3ec3a4294",
+      "parent_runtime_config_ref": "external_formal_runtime_config_2ab18c56197d5033ca7185ec",
+      "parent_runtime_config_hash": "sha256:a723b8de5e5dc92547c06129b7b632c87569ea8b4ba11d79d2c61aefd997275f",
+      "crop_stage_context_hash": "sha256:a4ea3c03baf2814b8be685c9ded78dec023d5cde3e5511e4122cde8d25f7b9b1"
+    },
+    {
+      "slot_id": "O09",
+      "logical_time": "2026-08-12T02:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_1a9c6af378be5d6dcc2c731a",
+      "runtime_config_hash": "sha256:7513d851788978dabeb536fae5ab5823e89ad17ae51f89835a1c77ffc9f580a0",
+      "parent_runtime_config_ref": "external_formal_runtime_config_a48dcf570db13fce405a4d59",
+      "parent_runtime_config_hash": "sha256:1dc1aba5003f5709f817dc0ee4983d33b7293930163211a01273a7f3ec3a4294",
+      "crop_stage_context_hash": "sha256:ea71d54b7dce56704de6a401786aeb3863c8debd7daacc84ebeba16fda822a25"
+    },
+    {
+      "slot_id": "O10",
+      "logical_time": "2026-08-12T03:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_d3bbcd7b6c9a016a5ba15e65",
+      "runtime_config_hash": "sha256:11d3610d37a300497488d5398516737cd5ba3da56b842da86ed7e281e3857d5e",
+      "parent_runtime_config_ref": "external_formal_runtime_config_1a9c6af378be5d6dcc2c731a",
+      "parent_runtime_config_hash": "sha256:7513d851788978dabeb536fae5ab5823e89ad17ae51f89835a1c77ffc9f580a0",
+      "crop_stage_context_hash": "sha256:3fb1527bfd71c2fec2c95cbdac7f28744894337887f83b9d9def63c200ab04cf"
+    },
+    {
+      "slot_id": "O11",
+      "logical_time": "2026-08-12T04:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_a44909bb3e7f2574d6a35ba8",
+      "runtime_config_hash": "sha256:99349e5efbd90b46464ed1221188c2667745046e5f4d5e81e4e5b58134b728be",
+      "parent_runtime_config_ref": "external_formal_runtime_config_d3bbcd7b6c9a016a5ba15e65",
+      "parent_runtime_config_hash": "sha256:11d3610d37a300497488d5398516737cd5ba3da56b842da86ed7e281e3857d5e",
+      "crop_stage_context_hash": "sha256:c8427a5bedfee7f30d0e5c45fb088722a50826c647d166ecac088b3bec139a82"
+    },
+    {
+      "slot_id": "O12",
+      "logical_time": "2026-08-12T05:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_bc54b84fd23df88f20ac1fc3",
+      "runtime_config_hash": "sha256:a7ef82032d9721ad079b3ebfe7e7cd4560493e958c9a8a36366b48b1dd8353a5",
+      "parent_runtime_config_ref": "external_formal_runtime_config_a44909bb3e7f2574d6a35ba8",
+      "parent_runtime_config_hash": "sha256:99349e5efbd90b46464ed1221188c2667745046e5f4d5e81e4e5b58134b728be",
+      "crop_stage_context_hash": "sha256:8b33c6fa384be8cf0999eef437bef7b8670111b203122b347509eb9fcf7dbd49"
+    },
+    {
+      "slot_id": "O13",
+      "logical_time": "2026-08-12T06:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_80936c90ba46b0ee50eaa468",
+      "runtime_config_hash": "sha256:dd3ee574edbbefde9450e6a3c2d7c7c98bd8d47ac7cbb7abbff0ce8b93392f28",
+      "parent_runtime_config_ref": "external_formal_runtime_config_bc54b84fd23df88f20ac1fc3",
+      "parent_runtime_config_hash": "sha256:a7ef82032d9721ad079b3ebfe7e7cd4560493e958c9a8a36366b48b1dd8353a5",
+      "crop_stage_context_hash": "sha256:6f437353464ea4d1cef6432036e455e846ff29448c84b29c4882a9693ccf64ad"
+    },
+    {
+      "slot_id": "O14",
+      "logical_time": "2026-08-12T07:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_66c1ab1d59a7b622f2feeeef",
+      "runtime_config_hash": "sha256:4e454fe0af492a342d5423882c0fab3a57f242743c97b3b3fcfae3bc0f60b531",
+      "parent_runtime_config_ref": "external_formal_runtime_config_80936c90ba46b0ee50eaa468",
+      "parent_runtime_config_hash": "sha256:dd3ee574edbbefde9450e6a3c2d7c7c98bd8d47ac7cbb7abbff0ce8b93392f28",
+      "crop_stage_context_hash": "sha256:df513eb216f14504e4dfe05cecad8698405d27bee8cfebbf75c6519ab650464c"
+    },
+    {
+      "slot_id": "O15",
+      "logical_time": "2026-08-12T08:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_607151494be349a4ac312ede",
+      "runtime_config_hash": "sha256:65145155232ba7b267c80261d5d5ee9153ca6351d086ee5400ae08b0cf4e530c",
+      "parent_runtime_config_ref": "external_formal_runtime_config_66c1ab1d59a7b622f2feeeef",
+      "parent_runtime_config_hash": "sha256:4e454fe0af492a342d5423882c0fab3a57f242743c97b3b3fcfae3bc0f60b531",
+      "crop_stage_context_hash": "sha256:38ecd5fd9c6d63c393e8da767b154ef833c6a20c608115e1a63fd761b252c9bc"
+    },
+    {
+      "slot_id": "O16",
+      "logical_time": "2026-08-12T09:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_cfcf551f1921e6e262c8473a",
+      "runtime_config_hash": "sha256:7c89cb3aeddb21b129099cd461b8f620bcf531d547e90e3690c6badaf151333c",
+      "parent_runtime_config_ref": "external_formal_runtime_config_607151494be349a4ac312ede",
+      "parent_runtime_config_hash": "sha256:65145155232ba7b267c80261d5d5ee9153ca6351d086ee5400ae08b0cf4e530c",
+      "crop_stage_context_hash": "sha256:a2b8a34641129c299649c7785d69227587451df8b0cdab47dcf90c638ee5a7e0"
+    },
+    {
+      "slot_id": "O17",
+      "logical_time": "2026-08-12T10:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_e57a0a47c81c5b9be3723b60",
+      "runtime_config_hash": "sha256:20d3ced9f6682c236bb185755b98f7e5e86c40cb267e7b678f5cf12a7d715c75",
+      "parent_runtime_config_ref": "external_formal_runtime_config_cfcf551f1921e6e262c8473a",
+      "parent_runtime_config_hash": "sha256:7c89cb3aeddb21b129099cd461b8f620bcf531d547e90e3690c6badaf151333c",
+      "crop_stage_context_hash": "sha256:3beb3867a58c9c387adc08248007cffa0760a0c45a395debe149b1ce47cc66e2"
+    },
+    {
+      "slot_id": "O18",
+      "logical_time": "2026-08-12T11:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_12a32aae494af0c28f34ce5f",
+      "runtime_config_hash": "sha256:ca1b55b40b34f3271ead91f2397b55e1c95ee559a9074db9937fc449eed83913",
+      "parent_runtime_config_ref": "external_formal_runtime_config_e57a0a47c81c5b9be3723b60",
+      "parent_runtime_config_hash": "sha256:20d3ced9f6682c236bb185755b98f7e5e86c40cb267e7b678f5cf12a7d715c75",
+      "crop_stage_context_hash": "sha256:88f207b7ee7772c61d76aa736a7291e2d419ae6da854a4fe3e647334017c28f4"
+    },
+    {
+      "slot_id": "O19",
+      "logical_time": "2026-08-12T12:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_83755a02deb8c9253f8e0a69",
+      "runtime_config_hash": "sha256:f6b6102cb80d0e2b0c3c6241d63b590e58f719cdce9020978c944837c85095f8",
+      "parent_runtime_config_ref": "external_formal_runtime_config_12a32aae494af0c28f34ce5f",
+      "parent_runtime_config_hash": "sha256:ca1b55b40b34f3271ead91f2397b55e1c95ee559a9074db9937fc449eed83913",
+      "crop_stage_context_hash": "sha256:1bdac3920785164430417cfbca98f3cd932681068a615e2ac4fe7accc5a4bfb2"
+    },
+    {
+      "slot_id": "O20",
+      "logical_time": "2026-08-12T13:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_fd28b5e83e06753594ca6894",
+      "runtime_config_hash": "sha256:79c8bca1f38123b1f99b9b27ba1eeabd53786d0a1d158a9f249cb0d7638688e8",
+      "parent_runtime_config_ref": "external_formal_runtime_config_83755a02deb8c9253f8e0a69",
+      "parent_runtime_config_hash": "sha256:f6b6102cb80d0e2b0c3c6241d63b590e58f719cdce9020978c944837c85095f8",
+      "crop_stage_context_hash": "sha256:3c7c55f6c8d383c9628a65efbf30a5a859daf1b298b5874b5ac4dafaab89cf1c"
+    },
+    {
+      "slot_id": "O21",
+      "logical_time": "2026-08-12T14:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_2c16556ff1c07a46c2323429",
+      "runtime_config_hash": "sha256:1f3aa2d26a60eeedc64c990242e0cc31b82da5ffa48719c1cc0ac40a7bf06d9f",
+      "parent_runtime_config_ref": "external_formal_runtime_config_fd28b5e83e06753594ca6894",
+      "parent_runtime_config_hash": "sha256:79c8bca1f38123b1f99b9b27ba1eeabd53786d0a1d158a9f249cb0d7638688e8",
+      "crop_stage_context_hash": "sha256:80e46d5c2a9e3912ed5ac1e3adfe6c4751683cabe67ff5989e266e02d9a12d60"
+    },
+    {
+      "slot_id": "O22",
+      "logical_time": "2026-08-12T15:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_c7b64c4b3466b0b5b8945eff",
+      "runtime_config_hash": "sha256:5c84097b383fce3f5c4dcfd6db24dddff31ade98617fa300b348b0e62ea57932",
+      "parent_runtime_config_ref": "external_formal_runtime_config_2c16556ff1c07a46c2323429",
+      "parent_runtime_config_hash": "sha256:1f3aa2d26a60eeedc64c990242e0cc31b82da5ffa48719c1cc0ac40a7bf06d9f",
+      "crop_stage_context_hash": "sha256:4ea7643d5d73cd7a5411f9c6cbb0006c800cc6feebd0723070032424ab8ed093"
+    },
+    {
+      "slot_id": "O23",
+      "logical_time": "2026-08-12T16:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_201a1f48c5b989653825df37",
+      "runtime_config_hash": "sha256:250daa7c3fbc45d3ae14b9af0528493634640cbbdebcabc207ed4ae8cda6ee80",
+      "parent_runtime_config_ref": "external_formal_runtime_config_c7b64c4b3466b0b5b8945eff",
+      "parent_runtime_config_hash": "sha256:5c84097b383fce3f5c4dcfd6db24dddff31ade98617fa300b348b0e62ea57932",
+      "crop_stage_context_hash": "sha256:c7d96227c91c115ca75253e6a8c70bf745b9d6a842022c48e625f14e4f6ac6ec"
+    }
+  ],
+  "expired_epoch_exclusion": {
+    "expired_o00": "2026-08-09T22:00:00.000Z",
+    "expired_o23": "2026-08-10T21:00:00.000Z",
+    "expired_config_ref_hash_allowed": false,
+    "implicit_latest_config_selection_allowed": false
+  },
+  "formal_database_binding": {
+    "neon_project_id": "delicate-glade-62464340",
+    "neon_project_name": "geox-mcft-cap09-s6-formal-24h",
+    "neon_branch_id": "br-cold-dust-a6j6aymz",
+    "neon_branch_name": "main",
+    "neon_compute_endpoint_id": "ep-odd-poetry-a6peeo8g",
+    "allowed_database_hosts": [
+      "ep-odd-poetry-a6peeo8g.us-west-2.aws.neon.tech",
+      "ep-odd-poetry-a6peeo8g-pooler.us-west-2.aws.neon.tech",
+      "ep-odd-poetry-a6peeo8g-g4p.us-west-2.aws.neon.tech",
+      "ep-odd-poetry-a6peeo8g-g4p-pooler.us-west-2.aws.neon.tech"
+    ],
+    "database_name": "geox_mcft_cap09_s6_formal_24h",
+    "minimum_postgres_version_num": 180000
+  },
+  "hard_nonclaims": [
+    "NO_FORMAL_WINDOW_START",
+    "NO_O00_EXECUTION",
+    "NO_SCHEDULER_SLOT_OR_CURSOR_CREATION",
+    "NO_DATABASE_WRITE_FROM_EA5E1",
+    "NO_PROVIDER_OR_RAW_OBJECT_WRITE_FROM_EA5E1",
+    "NO_STATE_FORECAST_CHECKPOINT_LINEAGE_WRITE",
+    "NO_RECOMMENDATION_APPROVAL_AO_ACT_DISPATCH",
+    "NO_MODEL_ACTIVATION",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
