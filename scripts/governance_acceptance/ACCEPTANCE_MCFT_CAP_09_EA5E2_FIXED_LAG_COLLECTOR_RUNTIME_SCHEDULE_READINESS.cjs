@@ -49,13 +49,13 @@ for(const [p,s] of Object.entries(predecessors)){eq(blob(base,p),s,`EA5E2_BASE_P
 const candidateBlobs={
  [collectorPhaseWorkflowPath]:'caaf79f3e8b42b6780c54b67345b271f677790f2',
  [schedulePath]:'964fde5ad80dcf62a901184b0db3789858dfed85',
- [authorityPath]:'5cb8aeac3e0ef2504ad6d6f645270c4152ff61e9',
+ [authorityPath]:'a5393e233b62922ff1d8f61b1f9c343f254bd98b',
  [continuationPath]:'a83437765f1c75860c5270b89446474787cde4c3',
  [assimilationPath]:'6699fb741cc0f61291f3d8c6e1e45ee0dcc79e36',
  [externalCandidatePath]:'71df4e47b0c62b7c6f2126e33896849af56273ca',
  [fixedLagSchedulerPath]:'7525c4748c8d758ba04a198b8a6c00f1a9ffceb4',
  [collectorPhaseOrchestratorPath]:'4040983b8b5e0f1efc89c3bf6a15d038af5ae0fb',
- [collectorPhaseAcceptancePath]:'473bb83f7d283e5d3cc37ddf3906b5dc8a1d71ac',
+ [collectorPhaseAcceptancePath]:'e1859170cc89a2d8fa98562b9a06833784141032',
  [cutoffAcceptancePath]:'741fffeec8d976648e78a9f1cb2c888a1b423f01',
  [schedulerAcceptancePath]:'6be7604dc29940880d02f4bfc9722a13cc2af494'
 };
@@ -98,7 +98,7 @@ for(const [k,v] of Object.entries({
  durable_raw_retention_adapter:'dfa2c10266a5079842012426aed175851d30ca44',
  restricted_formal_evidence_ingress:'6f7b6450d4f671c75affc2c7aba45ed71cb518c5',
  fixed_lag_collector_phase_orchestrator:'4040983b8b5e0f1efc89c3bf6a15d038af5ae0fb',
- collector_phase_orchestration_acceptance:'473bb83f7d283e5d3cc37ddf3906b5dc8a1d71ac',
+ collector_phase_orchestration_acceptance:'e1859170cc89a2d8fa98562b9a06833784141032',
  external_cap04_input_authority:'b4b7448518628bcffe8eaf6a91d9967145f7647d',
  continuation_evidence_window_late_cutoff_seam:'a83437765f1c75860c5270b89446474787cde4c3',
  assimilated_continuation_cutoff_threading:'6699fb741cc0f61291f3d8c6e1e45ee0dcc79e36',
