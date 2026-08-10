@@ -1,0 +1,57 @@
+name: mcft-cap-09-amendment-07-external-formal-fixed-lag-causality
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment-07-external-formal-fixed-lag-causality.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_07_EXTERNAL_FORMAL_FIXED_LAG_CAUSALITY.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-07-EXTERNAL-FORMAL-FIXED-LAG-CAUSALITY-AUTHORITY.md'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-amendment07-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  amendment-07-external-formal-fixed-lag-causality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve exact Amendment-07 base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Syntax-check Amendment-07 governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_07_EXTERNAL_FORMAL_FIXED_LAG_CAUSALITY.cjs
+
+      - name: Validate exact Amendment-07 authority boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_07_EXTERNAL_FORMAL_FIXED_LAG_CAUSALITY.cjs
+
+      - name: Upload immutable Amendment-07 proof artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-amendment07-fixed-lag-causality-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_AMENDMENT_07_EXTERNAL_FORMAL_FIXED_LAG_CAUSALITY_GOVERNANCE_RESULT.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-07-EXTERNAL-FORMAL-FIXED-LAG-CAUSALITY-AUTHORITY.md
+          if-no-files-found: error
+          retention-days: 90
