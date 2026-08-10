@@ -1,0 +1,247 @@
+name: mcft-cap-09-a06c-append-only-rebased-config-persistence
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-a06c-append-only-rebased-config-persistence.yml'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_window_epoch_rebase_persistence_service_v1.ts'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_A06C_APPEND_ONLY_REBASED_CONFIG_PERSISTENCE.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A06C_APPEND_ONLY_REBASED_CONFIG_PERSISTENCE.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A06C-APPEND-ONLY-REBASED-CONFIG-PERSISTENCE-V1.json'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-a06c-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  a06c-append-only-rebased-config-persistence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GEOX_MCFT_CAP09_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+      GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED: ${{ vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact A06C base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify Formal DB binding and selected epoch readiness remain fail-closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GEOX_MCFT_CAP09_S6_DATABASE_URL:-}" || { echo 'MISSING GEOX_MCFT_CAP09_S6_DATABASE_URL'; exit 1; }
+          if [ "${GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED:-false}" = "true" ]; then
+            echo 'A06C_FORMAL_WINDOW_MUST_REMAIN_DISABLED' >&2
+            exit 1
+          fi
+          node <<'NODE'
+          const deadline=Date.parse('2026-08-11T05:00:00.000Z');
+          const o00=Date.parse('2026-08-11T17:00:00.000Z');
+          if (Date.now()>=deadline) throw new Error('A06C_SELECTED_EPOCH_READINESS_DEADLINE_ALREADY_PASSED');
+          if (Date.now()>=o00) throw new Error('A06C_SELECTED_O00_ALREADY_PASSED');
+          console.log(JSON.stringify({status:'PASS',formal_window_enabled:false,deadline:'2026-08-11T05:00:00.000Z',o00:'2026-08-11T17:00:00.000Z'}));
+          NODE
+
+      - name: Verify exact A06B effectiveness and download immutable proof
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/3030")"
+          echo "$pr" | jq -e '
+            .merged_at == "2026-08-10T05:25:18Z" and
+            .head.sha == "e64ffc6d49913188678d846b61a1f45dd5fcd35f" and
+            .merge_commit_sha == "bf4bf2e27fe51e71ace04b0b1c4fe00d6a45b900"
+          ' >/dev/null
+          run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/31357970152")"
+          echo "$run" | jq -e '.head_sha == "e64ffc6d49913188678d846b61a1f45dd5fcd35f" and .status == "completed" and .conclusion == "success"' >/dev/null
+          artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9051315518")"
+          echo "$artifact" | jq -e '.expired == false and .digest == "sha256:4e86bb7a92f5afb9d2ae6cc81b67112e41f2fa75e8317d9725a79e4621377583"' >/dev/null
+          rm -rf /tmp/a06b-proof /tmp/a06b-proof.zip
+          mkdir -p /tmp/a06b-proof
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9051315518/zip" > /tmp/a06b-proof.zip
+          unzip -q /tmp/a06b-proof.zip -d /tmp/a06b-proof
+          test -f /tmp/a06b-proof/MCFT_CAP_09_A06B_REBASED_CONFIG_BUILDER_RESULT.json
+          echo 'A06B_PROOF_RESULT_PATH=/tmp/a06b-proof/MCFT_CAP_09_A06B_REBASED_CONFIG_BUILDER_RESULT.json' >> "$GITHUB_ENV"
+          node <<'NODE'
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('/tmp/a06b-proof/MCFT_CAP_09_A06B_REBASED_CONFIG_BUILDER_RESULT.json','utf8'));
+          if (p.status!=='PASS' || p.selected_epoch_id!=='mcft_cap09_external_formal_window_epoch_20260811t170000z_v1' || p.exact_rebased_runtime_config_count!==24 || p.runtime_config_refs.length!==24 || p.runtime_config_hashes.length!==24 || p.exact_parent_chain_verified!==true) throw new Error('A06C_A06B_PROOF_INVALID');
+          console.log(JSON.stringify({status:'PASS',configs:p.exact_rebased_runtime_config_count,epoch:p.selected_epoch_id}));
+          NODE
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check A06C governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A06C_APPEND_ONLY_REBASED_CONFIG_PERSISTENCE.cjs
+
+      - name: Validate exact A06C candidate boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A06C_APPEND_ONLY_REBASED_CONFIG_PERSISTENCE.cjs
+
+      - name: Typecheck server and live A06C executor
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Read-only preflight exact Formal DB and crash-recovery prefix
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          cd apps/server
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { Pool } from 'pg';
+          const proof=JSON.parse(fs.readFileSync(process.env.A06B_PROOF_RESULT_PATH,'utf8'));
+          const refs=proof.runtime_config_refs;
+          const hashes=proof.runtime_config_hashes;
+          if (refs.length!==24 || hashes.length!==24) throw new Error('A06C_PREFLIGHT_EXACT_24_PROOF_OUTPUTS_REQUIRED');
+          const scope=['tenant_mcft_external','project_mcft_cap09','group_public_research','field_kbs_mcse_t1r1','season_2026_corn','zone_kbs_mcse_t1r1_formal_v1'];
+          const pool=new Pool({connectionString:process.env.GEOX_MCFT_CAP09_S6_DATABASE_URL,max:2});
+          try {
+            const client=await pool.connect();
+            try {
+              await client.query('BEGIN TRANSACTION READ ONLY');
+              const id=await client.query("SELECT current_database() AS d,current_setting('server_version_num')::int AS v");
+              if(id.rows[0]?.d!=='geox_mcft_cap09_s6_formal_24h'||Number(id.rows[0]?.v)<180000) throw new Error('A06C_PREFLIGHT_DATABASE_IDENTITY_INVALID');
+              const selected=await client.query(`SELECT record_json->'payload' AS o FROM public.facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6 AND record_json#>>'{payload,object_id}'=ANY($7::text[])`,[...scope,refs]);
+              const byRef=new Map(selected.rows.map(r=>[r.o.object_id,r.o]));
+              let prefix=0; let missing=false;
+              for(let i=0;i<24;i++){
+                const o=byRef.get(refs[i]);
+                if(!o){missing=true;continue;}
+                if(missing) throw new Error('A06C_PREFLIGHT_NONCONTIGUOUS_PREFIX_FORBIDDEN');
+                if(o.determinism_hash!==hashes[i]) throw new Error(`A06C_PREFLIGHT_REBASED_HASH_MISMATCH:${i}`);
+                prefix++;
+              }
+              if(byRef.size!==prefix) throw new Error('A06C_PREFLIGHT_SELECTED_REF_CARDINALITY_INVALID');
+              const counts=await client.query(`WITH s AS (SELECT record_json FROM public.facts WHERE record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6) SELECT (SELECT count(*)::int FROM public.facts) AS total,count(*)::int AS scoped,count(*) FILTER(WHERE record_json->>'type'='soil_moisture_observation_v1')::int AS soil,count(*) FILTER(WHERE record_json->>'type' LIKE 'twin_%')::int AS canonical,count(*) FILTER(WHERE record_json->>'type'='twin_runtime_config_v1')::int AS configs,count(*) FILTER(WHERE record_json->>'type'='twin_state_estimate_v1')::int AS states,count(*) FILTER(WHERE record_json::text LIKE '%field_c8_demo%' OR record_json::text LIKE '%CONTROLLED_SYNTHETIC_REPLAY_PROXY%' OR record_json::text LIKE '%POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1%')::int AS forbidden FROM s`,scope);
+              const c=counts.rows[0];
+              if(Number(c.total)!==36+prefix||Number(c.scoped)!==36+prefix||Number(c.soil)!==2||Number(c.canonical)!==34+prefix||Number(c.configs)!==25+prefix||Number(c.states)!==1||Number(c.forbidden)!==0) throw new Error('A06C_PREFLIGHT_COUNTS_INVALID');
+              const state=await client.query(`SELECT record_json->'payload' AS o FROM public.facts WHERE record_json->>'type'='twin_state_estimate_v1' AND record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6`,scope);
+              const s=state.rows[0]?.o;
+              if(!s||s.logical_time!=='2026-08-09T21:00:00.000Z'||s.runtime_config_ref!=='external_formal_runtime_config_7284202e3b0bdae6d32f4814'||s.runtime_config_hash!=='sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8') throw new Error('A06C_PREFLIGHT_A0_STATE_ANCHOR_INVALID');
+              const sched=await client.query(`SELECT (SELECT count(*)::int FROM public.twin_shadow_online_scheduler_slot_v1) AS slots,(SELECT count(*)::int FROM public.twin_shadow_online_scheduler_cursor_v1) AS cursors`);
+              if(Number(sched.rows[0]?.slots)!==0||Number(sched.rows[0]?.cursors)!==0) throw new Error('A06C_PREFLIGHT_WINDOW_ALREADY_STARTED');
+              const foreign=await client.query(`SELECT count(*)::int AS n FROM public.facts WHERE (record_json->>'type' LIKE 'twin_%' OR record_json->>'type'='soil_moisture_observation_v1') AND NOT(record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6)`,scope);
+              if(Number(foreign.rows[0]?.n)!==0) throw new Error('A06C_PREFLIGHT_FOREIGN_SCOPE_FORBIDDEN');
+              const range=await client.query(`SELECT record_json#>>'{payload,object_id}' AS id FROM public.facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6 AND (record_json#>>'{payload,logical_time}')::timestamptz BETWEEN '2026-08-11T17:00:00Z'::timestamptz AND '2026-08-12T16:00:00Z'::timestamptz`,scope);
+              if(range.rows.length!==prefix||range.rows.some(r=>!byRef.has(r.id))) throw new Error('A06C_PREFLIGHT_FOREIGN_SELECTED_EPOCH_CONFIG_FORBIDDEN');
+              await client.query('COMMIT');
+              const out={schema_version:'geox_mcft_cap09_a06c_prewrite_formal_db_preflight_v1',status:'PASS',preexisting_rebased_config_prefix_count:prefix,expected_first_pass_runtime_config_write_count:24-prefix,total_fact_count:Number(c.total),exact_scope_fact_count:Number(c.scoped),runtime_config_count:Number(c.configs),state_count:1,scheduler_slot_count:0,scheduler_cursor_count:0,foreign_scope_relevant_fact_count:0,forbidden_marker_fact_count:0,database_write_count:0,formal_window_started:false};
+              fs.mkdirSync('../../acceptance-output',{recursive:true});
+              fs.writeFileSync('../../acceptance-output/MCFT_CAP_09_A06C_PREWRITE_FORMAL_DB_PREFLIGHT_RESULT.json',JSON.stringify(out,null,2)+'\n');
+              console.log(JSON.stringify(out,null,2));
+            }catch(e){try{await client.query('ROLLBACK');}catch{}throw e;}finally{client.release();}
+          }finally{await pool.end();}
+          NODE
+
+      - name: Execute exact A06C append-only Formal persistence
+        run: pnpm -w exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_A06C_APPEND_ONLY_REBASED_CONFIG_PERSISTENCE.ts
+
+      - name: Read-only postflight exact Formal DB inventory and new chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/server
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { Pool } from 'pg';
+          const proof=JSON.parse(fs.readFileSync(process.env.A06B_PROOF_RESULT_PATH,'utf8'));
+          const a06a=JSON.parse(fs.readFileSync('../../docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A06A-FUTURE-FORMAL-WINDOW-EPOCH-SELECTION-V1.json','utf8'));
+          const refs=proof.runtime_config_refs, hashes=proof.runtime_config_hashes;
+          const scope=['tenant_mcft_external','project_mcft_cap09','group_public_research','field_kbs_mcse_t1r1','season_2026_corn','zone_kbs_mcse_t1r1_formal_v1'];
+          const pool=new Pool({connectionString:process.env.GEOX_MCFT_CAP09_S6_DATABASE_URL,max:2});
+          try{
+            const client=await pool.connect();
+            try{
+              await client.query('BEGIN TRANSACTION READ ONLY');
+              const counts=await client.query(`WITH s AS (SELECT record_json FROM public.facts WHERE record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6) SELECT (SELECT count(*)::int FROM public.facts) AS total,count(*)::int AS scoped,count(*) FILTER(WHERE record_json->>'type'='soil_moisture_observation_v1')::int AS soil,count(*) FILTER(WHERE record_json->>'type' LIKE 'twin_%')::int AS canonical,count(*) FILTER(WHERE record_json->>'type'='twin_runtime_config_v1')::int AS configs,count(*) FILTER(WHERE record_json->>'type'='twin_state_estimate_v1')::int AS states,count(*) FILTER(WHERE record_json::text LIKE '%field_c8_demo%' OR record_json::text LIKE '%CONTROLLED_SYNTHETIC_REPLAY_PROXY%' OR record_json::text LIKE '%POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1%')::int AS forbidden FROM s`,scope);
+              const c=counts.rows[0];
+              if(Number(c.total)!==60||Number(c.scoped)!==60||Number(c.soil)!==2||Number(c.canonical)!==58||Number(c.configs)!==49||Number(c.states)!==1||Number(c.forbidden)!==0) throw new Error('A06C_POSTFLIGHT_COUNTS_INVALID');
+              const rows=await client.query(`SELECT record_json->'payload' AS o FROM public.facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6 AND record_json#>>'{payload,object_id}'=ANY($7::text[])`,[...scope,refs]);
+              if(rows.rows.length!==24) throw new Error('A06C_POSTFLIGHT_EXACT_24_REBASED_CONFIGS_REQUIRED');
+              const byRef=new Map(rows.rows.map(r=>[r.o.object_id,r.o]));
+              let parentRef='external_formal_runtime_config_7284202e3b0bdae6d32f4814';
+              let parentHash='sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8';
+              for(let i=0;i<24;i++){
+                const o=byRef.get(refs[i]); const slot=a06a.slot_contexts[i];
+                if(!o||o.determinism_hash!==hashes[i]||o.logical_time!==slot.logical_time||o.payload?.effective_logical_time!==slot.logical_time||o.payload?.parent_runtime_config_ref!==parentRef||o.payload?.parent_runtime_config_hash!==parentHash||o.payload?.crop_stage_context_authority?.context_hash!==slot.crop_stage_context_hash||o.payload?.runtime_mode!=='SHADOW_ONLINE_FORMAL_QUALIFICATION_ONLY'||o.payload?.config_selection_mode!=='EXPLICIT_REF_HASH_PIN_ONLY') throw new Error(`A06C_POSTFLIGHT_REBASED_CONFIG_INVALID:${i}`);
+                parentRef=o.object_id; parentHash=o.determinism_hash;
+              }
+              const old=await client.query(`SELECT count(*)::int AS n FROM public.facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6 AND (record_json#>>'{payload,logical_time}')::timestamptz BETWEEN '2026-08-09T22:00:00Z'::timestamptz AND '2026-08-10T21:00:00Z'::timestamptz`,scope);
+              if(Number(old.rows[0]?.n)!==24) throw new Error('A06C_POSTFLIGHT_EXPIRED_24_CONFIGS_NOT_PRESERVED');
+              const state=await client.query(`SELECT record_json->'payload' AS o FROM public.facts WHERE record_json->>'type'='twin_state_estimate_v1' AND record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6`,scope);
+              const s=state.rows[0]?.o;
+              if(!s||s.runtime_config_ref!=='external_formal_runtime_config_7284202e3b0bdae6d32f4814'||s.runtime_config_hash!=='sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8') throw new Error('A06C_POSTFLIGHT_A0_STATE_ANCHOR_NOT_PRESERVED');
+              const sched=await client.query(`SELECT (SELECT count(*)::int FROM public.twin_shadow_online_scheduler_slot_v1) AS slots,(SELECT count(*)::int FROM public.twin_shadow_online_scheduler_cursor_v1) AS cursors`);
+              if(Number(sched.rows[0]?.slots)!==0||Number(sched.rows[0]?.cursors)!==0) throw new Error('A06C_POSTFLIGHT_SCHEDULER_WRITE_FORBIDDEN');
+              const foreign=await client.query(`SELECT count(*)::int AS n FROM public.facts WHERE (record_json->>'type' LIKE 'twin_%' OR record_json->>'type'='soil_moisture_observation_v1') AND NOT(record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6)`,scope);
+              if(Number(foreign.rows[0]?.n)!==0) throw new Error('A06C_POSTFLIGHT_FOREIGN_SCOPE_FORBIDDEN');
+              await client.query('COMMIT');
+              const out={schema_version:'geox_mcft_cap09_a06c_postwrite_formal_db_verification_v1',status:'PASS',total_fact_count:60,exact_scope_fact_count:60,external_soil_evidence_count:2,canonical_twin_fact_count:58,runtime_config_count:49,existing_a0_runtime_config_count:1,expired_historical_hourly_runtime_config_count:24,rebased_future_hourly_runtime_config_count:24,state_count:1,existing_a0_state_anchor_preserved:true,exact_parent_chain_verified:true,slot_crop_context_hashes_verified:true,scheduler_slot_count:0,scheduler_cursor_count:0,foreign_scope_relevant_fact_count:0,forbidden_marker_fact_count:0,database_write_count:0,formal_window_started:false};
+              fs.mkdirSync('../../acceptance-output',{recursive:true});
+              fs.writeFileSync('../../acceptance-output/MCFT_CAP_09_A06C_POSTWRITE_FORMAL_DB_VERIFICATION_RESULT.json',JSON.stringify(out,null,2)+'\n');
+              console.log(JSON.stringify(out,null,2));
+            }catch(e){try{await client.query('ROLLBACK');}catch{}throw e;}finally{client.release();}
+          }finally{await pool.end();}
+          NODE
+
+      - name: Require exact A06C live effect boundary
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const g=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A06C_GOVERNANCE_RESULT.json','utf8'));
+          const pre=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A06C_PREWRITE_FORMAL_DB_PREFLIGHT_RESULT.json','utf8'));
+          const live=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A06C_APPEND_ONLY_REBASED_CONFIG_PERSISTENCE_RESULT.json','utf8'));
+          const post=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A06C_POSTWRITE_FORMAL_DB_VERIFICATION_RESULT.json','utf8'));
+          if(g.status!=='PASS'||pre.status!=='PASS'||live.status!=='PASS'||post.status!=='PASS') throw new Error('A06C_ALL_PROOFS_REQUIRED');
+          if(live.first_pass_runtime_config_write_count!==pre.expected_first_pass_runtime_config_write_count) throw new Error('A06C_LIVE_WRITE_COUNT_DOES_NOT_MATCH_PREFLIGHT');
+          if(live.second_pass_runtime_config_write_count!==0||live.final_runtime_config_count!==24) throw new Error('A06C_IDEMPOTENT_REVERIFY_REQUIRED');
+          for(const k of ['evidence_write_count','a0_member_write_count','scheduler_slot_write_count','scheduler_cursor_write_count','provider_request_count','raw_object_write_count','state_lineage_checkpoint_forecast_write_count','recommendation_write_count','approval_write_count','ao_act_write_count','dispatch_count','model_activation_count']) if(live[k]!==0) throw new Error(`A06C_FORBIDDEN_WRITE_COUNT:${k}`);
+          if(post.runtime_config_count!==49||post.rebased_future_hourly_runtime_config_count!==24||post.expired_historical_hourly_runtime_config_count!==24||post.existing_a0_state_anchor_preserved!==true) throw new Error('A06C_POSTSTATE_REQUIRED');
+          if(live.formal_window_started!==false||live.formal_o00_start_authorized!==false||live.ea5e_complete!==false||live.mcft_cap09_completed!==false) throw new Error('A06C_PREMATURE_CLAIM');
+          console.log(JSON.stringify({status:'PASS',mode:live.execution_mode,first_pass_writes:live.first_pass_runtime_config_write_count,second_pass_writes:0,configs:49,rebased:24,o00:false,window:false,formal_execution_count:'0/24'}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-a06c-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_A06C_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_A06C_PREWRITE_FORMAL_DB_PREFLIGHT_RESULT.json
+            acceptance-output/MCFT_CAP_09_A06C_APPEND_ONLY_REBASED_CONFIG_PERSISTENCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_A06C_POSTWRITE_FORMAL_DB_VERIFICATION_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
