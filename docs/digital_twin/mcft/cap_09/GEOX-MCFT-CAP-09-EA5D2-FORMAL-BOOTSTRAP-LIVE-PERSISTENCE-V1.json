@@ -1,0 +1,112 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5d2_formal_bootstrap_live_persistence_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5D2-FORMAL-BOOTSTRAP-LIVE-PERSISTENCE-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "S6-EA5D2-FORMAL-BOOTSTRAP-AND-24-CONFIG-CHAIN-LIVE-PERSISTENCE",
+  "record_status": "EA5D2_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "11d5e78caa0f54541cc0d6d4daa4e3c98b473d24",
+  "governing_authority": {
+    "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
+    "amendment_05_blob_sha": "7a92c17f7ba32aae52667de9c21db62bfd2ba70b",
+    "ea5c_closure_authority_blob_sha": "f795a295dc241f565a595589eb94706d096f26ca",
+    "ea5d1_qualification_authority_blob_sha": "8bf52b4a18874f9201340528b727d7f74742b638"
+  },
+  "effective_implementation_blobs": {
+    "external_formal_bootstrap_authority_bundle": "1671b13df81cba53f966a6f06765198d160601d7",
+    "external_formal_bootstrap_persistence_service": "6c94bef139f260ef61c87f751a2c627b83e58977",
+    "live_kbs_soil_ingress_executor": "1cc2726aace39524e84fda9762f86a3fc2e96408",
+    "formal_durable_raw_store_binding": "c2babdf8cee6b2e9702c6923eab8a739a40001a5",
+    "postgres_runtime_repository": "9650d2875c6737714d22de7cc2b1d9229aea33a5",
+    "postgres_next_tick_repository": "910e4852f2debd898fdd2ce8d5495a4cb364b6e4"
+  },
+  "formal_database_authority": {
+    "project_id": "delicate-glade-62464340",
+    "branch_id": "br-cold-dust-a6j6aymz",
+    "database_name": "geox_mcft_cap09_s6_formal_24h",
+    "postgres_minimum_major": 18,
+    "pre_candidate_expected_canonical_twin_fact_count": 0,
+    "pre_candidate_expected_existing_b2_soil_evidence_count": 1,
+    "foreign_scope_facts_allowed": false
+  },
+  "frozen_time_authority": {
+    "bootstrap_logical_time": "2026-08-09T21:00:00.000Z",
+    "evidence_window_rule": "OPEN_START_CLOSED_END_PT1H_V1",
+    "evidence_window_start_exclusive": "2026-08-09T20:00:00.000Z",
+    "evidence_window_end_inclusive": "2026-08-09T21:00:00.000Z",
+    "collector_deadline": "2026-08-09T20:55:00.000Z",
+    "o00_logical_time": "2026-08-09T22:00:00.000Z",
+    "bootstrap_must_not_execute_before_wall_clock_boundary": true,
+    "future_boundary_claim_allowed": false,
+    "accelerated_or_replay_clock_allowed": false
+  },
+  "fresh_evidence_authority": {
+    "record_type": "soil_moisture_observation_v1",
+    "binding_id": "kbs_lter_variate25_vwc_100mm_v1",
+    "epistemic_class": "OBSERVED",
+    "maximum_new_evidence_facts": 1,
+    "fresh_observed_at_must_be_inside_a0_window": true,
+    "fresh_available_to_runtime_at_must_not_exceed_bootstrap_boundary": true,
+    "persistent_private_raw_retention_required": true,
+    "crash_recovery_may_reuse_existing_fresh_authorized_evidence": true,
+    "crash_recovery_may_append_second_fresh_evidence": false
+  },
+  "formal_bootstrap_persistence_authority": {
+    "reality_binding_snapshot_required": true,
+    "crop_stage_rederived_at_bootstrap_boundary": true,
+    "expected_crop_water_use_stage_code": "MID",
+    "a0_runtime_config_parent": null,
+    "a0_nine_member_graph_required": true,
+    "exact_hourly_runtime_config_count": 24,
+    "exact_total_runtime_config_count": 25,
+    "exact_canonical_twin_fact_count": 34,
+    "a0_config_is_exact_parent_of_o00_config": true,
+    "each_hourly_config_parent_ref_hash_must_match_predecessor": true,
+    "config_selection_mode": "EXPLICIT_REF_HASH_PIN_ONLY",
+    "runtime_mode": "SHADOW_ONLINE_FORMAL_QUALIFICATION_ONLY",
+    "scheduler_slot_write_count": 0,
+    "formal_window_started": false
+  },
+  "required_github_actions_secrets": [
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY",
+    "GEOX_MCFT_CAP09_S6_DATABASE_URL"
+  ],
+  "authorized_exact_head_live_effect": {
+    "maximum_new_external_evidence_facts": 1,
+    "maximum_new_canonical_twin_facts": 34,
+    "runtime_config_facts": 25,
+    "a0_non_config_canonical_facts": 9,
+    "scheduler_slot_write_authorized": false,
+    "formal_o00_execution_authorized": false,
+    "recommendation_action_write_authorized": false
+  },
+  "effect_if_exact_head_proof_passes_and_candidate_merges_to_protected_main": {
+    "ea5d2_formal_bootstrap_live_persistence_effective": true,
+    "formal_neon_bootstrap_persisted": true,
+    "formal_24_config_chain_persisted": true,
+    "ea5d_authorized": true,
+    "ea5d_complete": false,
+    "ea5e_authorized": false,
+    "external_package_formal_eligible": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "commercial_closed_loop_connected": false,
+    "mcft_cap09_completed": false
+  },
+  "next_legal_successor_if_effective": "S6-EA5D3-EA5D-CLOSURE-AND-EA5E-AUTHORIZATION",
+  "hard_nonclaims": [
+    "NO_O00_EXECUTION_FROM_EA5D2",
+    "NO_SCHEDULER_SLOT_OR_CURSOR_WRITE_FROM_EA5D2",
+    "NO_EA5D_COMPLETION_WITHOUT_CLOSURE",
+    "NO_EA5E_AUTHORIZATION_WITHOUT_EA5D_CLOSURE",
+    "NO_FORMAL_WINDOW_START",
+    "NO_RECOMMENDATION_APPROVAL_AO_ACT_DISPATCH",
+    "NO_MODEL_ACTIVATION",
+    "NO_COMMERCIAL_CLOSED_LOOP_CONNECTION",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}

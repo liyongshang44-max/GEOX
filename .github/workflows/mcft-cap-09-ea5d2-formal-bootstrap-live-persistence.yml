@@ -1,0 +1,127 @@
+name: mcft-cap-09-ea5d2-formal-bootstrap-live-persistence
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5d2-formal-bootstrap-live-persistence.yml'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5D2-FORMAL-BOOTSTRAP-LIVE-PERSISTENCE-V1.json'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5d2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  ea5d2-formal-bootstrap-live-persistence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+      GEOX_MCFT_CAP09_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact EA5D2 base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify required Formal secret bindings exist without exposing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY
+            GEOX_MCFT_CAP09_S6_DATABASE_URL
+          )
+          for name in "${required[@]}"; do
+            if [ -z "${!name:-}" ]; then
+              echo "MISSING_REQUIRED_SECRET:$name"
+              exit 1
+            fi
+            echo "PRESENT_REQUIRED_SECRET:$name"
+          done
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check EA5D2 governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE.cjs
+
+      - name: Validate exact EA5D2 authority and four-file boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE.cjs
+
+      - name: Typecheck server production dependencies
+        run: pnpm --filter @geox/server run typecheck
+
+      - name: Execute Formal fresh-evidence capture and bootstrap at actual UTC boundary
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          GITHUB_SHA="${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}" pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE.ts 2>&1 | tee acceptance-output/EA5D2_FORMAL_BOOTSTRAP_LIVE.log
+
+      - name: Verify exact Formal bootstrap proof and successor nonclaims
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const g = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE_GOVERNANCE_RESULT.json','utf8'));
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE_RESULT.json','utf8'));
+          if (g.status !== 'PASS' || r.status !== 'PASS') throw new Error('EA5D2_PASS_REQUIRED');
+          if (r.subject_head_sha !== '${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}') throw new Error('EA5D2_EXACT_HEAD_ARTIFACT_REQUIRED');
+          if (r.bootstrap_logical_time !== '2026-08-09T21:00:00.000Z' || r.o00_logical_time !== '2026-08-09T22:00:00.000Z') throw new Error('EA5D2_FROZEN_BOUNDARIES_REQUIRED');
+          if (r.crop_stage_rederived_at_bootstrap_boundary !== true || r.crop_stage_code !== 'MID') throw new Error('EA5D2_CROP_STAGE_AUTHORITY_REQUIRED');
+          if (r.final_canonical_fact_count !== 34 || r.exact_runtime_config_count !== 25 || r.exact_hourly_runtime_config_count !== 24 || r.external_a0_member_count !== 9) throw new Error('EA5D2_EXACT_CANONICAL_COUNTS_REQUIRED');
+          if (r.config_parent_chain_verified !== true || r.explicit_ref_hash_pin_only !== true) throw new Error('EA5D2_CONFIG_CHAIN_REQUIRED');
+          if (r.formal_neon_bootstrap_persisted !== true || r.formal_24_config_chain_persisted !== true) throw new Error('EA5D2_FORMAL_PERSISTENCE_REQUIRED');
+          if (r.scheduler_slot_write_count !== 0 || r.formal_window_started !== false) throw new Error('EA5D2_FORMAL_WINDOW_START_FORBIDDEN');
+          if (r.ea5d_complete !== false || r.ea5e_authorized !== false || r.formal_o00_start_authorized !== false || r.mcft_cap09_completed !== false) throw new Error('EA5D2_PREMATURE_SUCCESSOR_CLAIM');
+          console.log(JSON.stringify({status:'PASS',bootstrap:true,configs:25,a0_members:9,ea5d_complete:false,ea5e:false,o00:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea5d2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA5D2_FORMAL_BOOTSTRAP_LIVE_PERSISTENCE_RESULT.json
+            acceptance-output/EA5D2_FORMAL_BOOTSTRAP_LIVE.log
+          if-no-files-found: warn
+          retention-days: 90
