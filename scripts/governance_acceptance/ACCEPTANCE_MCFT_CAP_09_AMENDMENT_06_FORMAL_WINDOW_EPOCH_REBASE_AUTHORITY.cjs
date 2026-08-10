@@ -65,7 +65,7 @@ for (const marker of [
   "= 49 Runtime Config facts total",
   "Idempotent exact-head re-verification must produce zero additional writes.",
   "exclude every expired original O00–O23 config ref/hash",
-  "a missed readiness deadline is an epoch-selection failure, not a Runtime backfill case",
+  "A missed readiness deadline is an epoch-selection failure, not a Runtime backfill case.",
   "S6-A06A-FUTURE-FORMAL-WINDOW-EPOCH-SELECTION-FREEZE"
 ]) if (!amendment.includes(marker)) fail(`AMENDMENT06_AUTHORITY_MARKER_MISSING:${marker}`);
 
