@@ -289,15 +289,15 @@ async function main(): Promise<void> {
     jobs: [makeJob({
       request_id: "wrong_phase_rain",
       requested_at: "2026-08-11T16:30:00.000Z",
-      canonicalized_at: "2026-08-11T16:34:00.000Z",
+      canonicalized_at: T,
       events: wrongPhaseEvents,
       drafts: [draft({
         role: "RAINFALL_OBSERVATION",
         source_record_id: "wrong_phase_rain_o00",
         binding_id: MCFT_CAP09_EXTERNAL_FORMAL_RAINFALL_BINDING_ID_V1,
         epistemic_class: "OBSERVED",
-        available_to_runtime_at: "2026-08-11T16:32:00.000Z",
-        role_time: { interval_start: "2026-08-11T16:00:00.000Z", interval_end: T, ingested_at: "2026-08-11T16:33:00.000Z" },
+        available_to_runtime_at: T,
+        role_time: { interval_start: "2026-08-11T16:00:00.000Z", interval_end: T, ingested_at: T },
       })],
     })],
     ingress: wrongPhaseIngress.port,
