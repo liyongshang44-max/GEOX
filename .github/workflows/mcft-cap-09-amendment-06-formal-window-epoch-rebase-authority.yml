@@ -1,0 +1,194 @@
+name: mcft-cap-09-amendment-06-formal-window-epoch-rebase-authority
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment-06-formal-window-epoch-rebase-authority.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-06-FORMAL-WINDOW-EPOCH-REBASE-AUTHORITY.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_06_FORMAL_WINDOW_EPOCH_REBASE_AUTHORITY.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-amendment06-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  amendment-06-formal-window-epoch-rebase-authority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GEOX_MCFT_CAP09_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+      FORMAL_WINDOW_ENABLED: ${{ vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact Amendment-06 base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify Formal DB binding exists and Formal window remains disabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GEOX_MCFT_CAP09_S6_DATABASE_URL:-}" || { echo 'MISSING GEOX_MCFT_CAP09_S6_DATABASE_URL'; exit 1; }
+          if [ "${FORMAL_WINDOW_ENABLED:-false}" = "true" ]; then
+            echo 'AMENDMENT06_FORMAL_WINDOW_MUST_REMAIN_DISABLED' >&2
+            exit 1
+          fi
+          echo 'PRESENT GEOX_MCFT_CAP09_S6_DATABASE_URL'
+          echo 'FORMAL_WINDOW_ENABLED=false-or-unset'
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check Amendment-06 governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_06_FORMAL_WINDOW_EPOCH_REBASE_AUTHORITY.cjs
+
+      - name: Validate exact Amendment-06 authority boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_06_FORMAL_WINDOW_EPOCH_REBASE_AUTHORITY.cjs
+
+      - name: Read-only prove pre-rebase Formal database anchor is intact
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/server
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { Pool } from 'pg';
+
+          const connectionString = process.env.GEOX_MCFT_CAP09_S6_DATABASE_URL;
+          if (!connectionString) throw new Error('AMENDMENT06_FORMAL_DATABASE_URL_REQUIRED');
+          const pool = new Pool({ connectionString, max: 2 });
+          const scope = ['tenant_mcft_external','project_mcft_cap09','group_public_research','field_kbs_mcse_t1r1','season_2026_corn','zone_kbs_mcse_t1r1_formal_v1'];
+          const a0Time = '2026-08-09T21:00:00.000Z';
+          const expiredO00 = '2026-08-09T22:00:00.000Z';
+          const expiredO23 = '2026-08-10T21:00:00.000Z';
+          const a0Ref = 'external_formal_runtime_config_7284202e3b0bdae6d32f4814';
+          const a0Hash = 'sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8';
+          try {
+            const client = await pool.connect();
+            try {
+              await client.query('BEGIN TRANSACTION READ ONLY');
+              const identity = await client.query("SELECT current_database() AS database_name, current_setting('server_version_num')::int AS server_version_num, transaction_timestamp() AS db_now");
+              if (identity.rows[0]?.database_name !== 'geox_mcft_cap09_s6_formal_24h') throw new Error('AMENDMENT06_DATABASE_IDENTITY_MISMATCH');
+              if (Number(identity.rows[0]?.server_version_num) < 180000) throw new Error('AMENDMENT06_POSTGRES_18_REQUIRED');
+
+              const counts = await client.query(`
+                WITH scoped AS (
+                  SELECT record_json FROM public.facts
+                  WHERE record_json#>>'{payload,tenant_id}'=$1
+                    AND record_json#>>'{payload,project_id}'=$2
+                    AND record_json#>>'{payload,group_id}'=$3
+                    AND record_json#>>'{payload,field_id}'=$4
+                    AND record_json#>>'{payload,season_id}'=$5
+                    AND record_json#>>'{payload,zone_id}'=$6
+                )
+                SELECT
+                  (SELECT count(*)::int FROM public.facts) AS total_facts,
+                  count(*)::int AS scope_facts,
+                  count(*) FILTER (WHERE record_json->>'type'='soil_moisture_observation_v1')::int AS soil_facts,
+                  count(*) FILTER (WHERE record_json->>'type' LIKE 'twin_%')::int AS canonical_twin_facts,
+                  count(*) FILTER (WHERE record_json->>'type'='twin_runtime_config_v1')::int AS runtime_configs,
+                  count(*) FILTER (WHERE record_json::text LIKE '%field_c8_demo%' OR record_json::text LIKE '%CONTROLLED_SYNTHETIC_REPLAY_PROXY%' OR record_json::text LIKE '%POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1%')::int AS forbidden_marker_facts
+                FROM scoped`, scope);
+              const c = counts.rows[0];
+              if (Number(c.total_facts)!==36 || Number(c.scope_facts)!==36 || Number(c.soil_facts)!==2 || Number(c.canonical_twin_facts)!==34 || Number(c.runtime_configs)!==25 || Number(c.forbidden_marker_facts)!==0) throw new Error('AMENDMENT06_PRE_REBASE_COUNTS_INVALID');
+
+              const a0 = await client.query(`SELECT record_json->'payload' AS p FROM public.facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json#>>'{payload,logical_time}'=$1 AND record_json#>>'{payload,tenant_id}'=$2 AND record_json#>>'{payload,project_id}'=$3 AND record_json#>>'{payload,group_id}'=$4 AND record_json#>>'{payload,field_id}'=$5 AND record_json#>>'{payload,season_id}'=$6 AND record_json#>>'{payload,zone_id}'=$7`, [a0Time,...scope]);
+              if (a0.rows.length!==1) throw new Error('AMENDMENT06_EXACT_ONE_A0_CONFIG_REQUIRED');
+              const a0p = a0.rows[0].p;
+              if (a0p.object_id!==a0Ref || a0p.determinism_hash!==a0Hash || a0p.payload?.config_role!=='A0_BOOTSTRAP') throw new Error('AMENDMENT06_A0_CONFIG_IDENTITY_MISMATCH');
+
+              const states = await client.query(`SELECT record_json->'payload' AS p FROM public.facts WHERE record_json->>'type'='twin_state_estimate_v1' AND record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6 ORDER BY occurred_at DESC`, scope);
+              if (states.rows.length!==1) throw new Error('AMENDMENT06_EXACT_ONE_PREWINDOW_STATE_REQUIRED');
+              const state = states.rows[0].p;
+              if (state.logical_time!==a0Time || state.runtime_config_ref!==a0Ref || state.runtime_config_hash!==a0Hash) throw new Error('AMENDMENT06_CURRENT_STATE_A0_AUTHORITY_MISMATCH');
+
+              const configs = await client.query(`SELECT record_json#>>'{payload,logical_time}' AS logical_time FROM public.facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6 ORDER BY (record_json#>>'{payload,logical_time}')::timestamptz ASC`, scope);
+              if (configs.rows.length!==25 || configs.rows[0].logical_time!==a0Time || configs.rows[1].logical_time!==expiredO00 || configs.rows[24].logical_time!==expiredO23) throw new Error('AMENDMENT06_EXPIRED_CONFIG_EPOCH_INVENTORY_MISMATCH');
+
+              const scheduler = await client.query(`SELECT (SELECT count(*)::int FROM public.twin_shadow_online_scheduler_slot_v1) AS slots, (SELECT count(*)::int FROM public.twin_shadow_online_scheduler_cursor_v1) AS cursors`);
+              if (Number(scheduler.rows[0]?.slots)!==0 || Number(scheduler.rows[0]?.cursors)!==0) throw new Error('AMENDMENT06_FORMAL_WINDOW_ALREADY_STARTED');
+
+              await client.query('COMMIT');
+              const out = {
+                schema_version:'geox_mcft_cap09_amendment06_pre_rebase_database_anchor_result_v1',
+                status:'PASS',
+                database_identity:'geox_mcft_cap09_s6_formal_24h',
+                exact_scope_fact_count:36,
+                exact_external_soil_evidence_fact_count:2,
+                exact_canonical_twin_fact_count:34,
+                exact_runtime_config_count:25,
+                a0_runtime_config_ref:a0Ref,
+                a0_runtime_config_hash:a0Hash,
+                a0_current_state_anchor_verified:true,
+                expired_original_o00:expiredO00,
+                expired_original_o23:expiredO23,
+                scheduler_slot_count:0,
+                scheduler_cursor_count:0,
+                database_write_count:0,
+                provider_request_count:0,
+                formal_window_started:false,
+                formal_o00_start_authorized:false
+              };
+              fs.mkdirSync('../../acceptance-output',{recursive:true});
+              fs.writeFileSync('../../acceptance-output/MCFT_CAP_09_AMENDMENT06_PRE_REBASE_DATABASE_ANCHOR_RESULT.json',JSON.stringify(out,null,2)+'\n');
+              console.log(JSON.stringify(out,null,2));
+            } catch (error) {
+              try { await client.query('ROLLBACK'); } catch {}
+              throw error;
+            } finally {
+              client.release();
+            }
+          } finally {
+            await pool.end();
+          }
+          NODE
+
+      - name: Require Amendment-06 effect boundary and nonclaims
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const g = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT06_GOVERNANCE_RESULT.json','utf8'));
+          const d = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT06_PRE_REBASE_DATABASE_ANCHOR_RESULT.json','utf8'));
+          if (g.status!=='PASS' || d.status!=='PASS') throw new Error('AMENDMENT06_ALL_PROOFS_REQUIRED');
+          if (d.exact_runtime_config_count!==25 || d.scheduler_slot_count!==0 || d.scheduler_cursor_count!==0 || d.database_write_count!==0) throw new Error('AMENDMENT06_PRE_REBASE_DB_BOUNDARY_INVALID');
+          if (g.amendment_06_effective_after_merge!==true || g.a06a_future_epoch_selection_authorized_after_merge!==true) throw new Error('AMENDMENT06_SUCCESSOR_EFFECT_REQUIRED');
+          if (g.ea5e_complete!==false || g.formal_o00_start_authorized!==false || g.formal_window_started!==false || g.mcft_cap09_completed!==false) throw new Error('AMENDMENT06_PREMATURE_CLAIM');
+          console.log(JSON.stringify({status:'PASS',amendment06:true,a06a:true,ea5e_complete:false,o00:false,window:false,formal_execution_count:'0/24'}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-amendment06-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_AMENDMENT06_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT06_PRE_REBASE_DATABASE_ANCHOR_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
