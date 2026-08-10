@@ -8,33 +8,17 @@ const { execFileSync } = require("node:child_process");
 const OUT = "acceptance-output/MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS_GOVERNANCE_RESULT.json";
 const BASE = "4fc792398bcc25243af7c63734fe59beec9b0dcc";
 
-function git(...args) {
-  return execFileSync("git", args, { encoding: "utf8" }).trim();
-}
-function eq(actual, expected, code) {
-  if (actual !== expected) throw new Error(`${code}: expected=${JSON.stringify(expected)} actual=${JSON.stringify(actual)}`);
-}
+function git(...args) { return execFileSync("git", args, { encoding: "utf8" }).trim(); }
+function eq(actual, expected, code) { if (actual !== expected) throw new Error(`${code}: expected=${JSON.stringify(expected)} actual=${JSON.stringify(actual)}`); }
 function yes(value, code) { eq(value, true, code); }
 function no(value, code) { eq(value, false, code); }
 function blob(ref, file) { return git("rev-parse", `${ref}:${file}`); }
 function read(file) { return fs.readFileSync(file, "utf8"); }
 function json(file) { return JSON.parse(read(file)); }
-function has(source, needle, code) {
-  if (!source.includes(needle)) throw new Error(`${code}:${needle}`);
-}
-function lacks(source, needle, code) {
-  if (source.includes(needle)) throw new Error(`${code}:${needle}`);
-}
-function before(source, left, right, code) {
-  const a = source.indexOf(left);
-  const b = source.indexOf(right);
-  if (a < 0 || b < 0 || a >= b) throw new Error(`${code}:${left} !< ${right}`);
-}
-function writeResult(value) {
-  fs.mkdirSync(path.dirname(OUT), { recursive: true });
-  fs.writeFileSync(OUT, JSON.stringify(value, null, 2) + "\n", "utf8");
-  console.log(JSON.stringify(value));
-}
+function has(source, needle, code) { if (!source.includes(needle)) throw new Error(`${code}:${needle}`); }
+function lacks(source, needle, code) { if (source.includes(needle)) throw new Error(`${code}:${needle}`); }
+function before(source, left, right, code) { const a=source.indexOf(left), b=source.indexOf(right); if (a<0 || b<0 || a>=b) throw new Error(`${code}:${left} !< ${right}`); }
+function writeResult(value) { fs.mkdirSync(path.dirname(OUT), { recursive: true }); fs.writeFileSync(OUT, JSON.stringify(value, null, 2) + "\n", "utf8"); console.log(JSON.stringify(value)); }
 
 const P = {
   workflow: ".github/workflows/mcft-cap-09-ea5e2-fixed-lag-collector-runtime-schedule-readiness.yml",
@@ -105,10 +89,8 @@ function main() {
   const base = process.env.MCFT_BASE_SHA;
   eq(base, BASE, "EA5E2_EXACT_BASE_REQUIRED");
   const subject = git("rev-parse", "HEAD");
-
   const changed = git("diff", "--name-only", `${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
-  const expected = Object.values(P).sort();
-  eq(JSON.stringify(changed), JSON.stringify(expected), "EA5E2_EXACT_TWENTY_ONE_FILE_BOUNDARY_REQUIRED");
+  eq(JSON.stringify(changed), JSON.stringify(Object.values(P).sort()), "EA5E2_EXACT_TWENTY_ONE_FILE_BOUNDARY_REQUIRED");
 
   for (const [file, sha] of Object.entries(IMMUTABLE)) {
     eq(blob(base, file), sha, `EA5E2_BASE_PIN:${file}`);
@@ -131,8 +113,7 @@ function main() {
   eq(sp.minimum_ingestion_margin_minutes, 5, "EA5E2_MARGIN_REQUIRED");
   const o00 = Date.parse("2026-08-11T17:00:00.000Z");
   for (let i = 0; i < 24; i += 1) {
-    const s = schedule.slots[i];
-    const t = o00 + i * 3600000;
+    const s = schedule.slots[i], t = o00 + i * 3600000;
     eq(s.slot_id, `O${String(i).padStart(2, "0")}`, `EA5E2_SLOT_ID:${i}`);
     eq(Date.parse(s.logical_time), t, `EA5E2_SLOT_TIME:${i}`);
     eq(Date.parse(s.pre_boundary_causal_collector_target), t - 30 * 60000, `EA5E2_PRE_TIME:${i}`);
@@ -150,7 +131,6 @@ function main() {
   eq(authority.base_main_sha, base, "EA5E2_AUTHORITY_BASE_REQUIRED");
   eq(authority.schedule_authority.schedule_blob_sha, CANDIDATE[P.schedule], "EA5E2_AUTHORITY_SCHEDULE_BLOB_REQUIRED");
   eq(authority.governing_authority.ea2a_kbs_use_policy_blob_sha, IMMUTABLE["docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA2A-KBS-SOIL-CONTINUITY-USE-POLICY-V1.json"], "EA5E2_EA2A_PIN_REQUIRED");
-
   const ib = authority.implementation_path_exact_blobs;
   const ibExpected = {
     external_collector_canonicalizer: CANDIDATE[P.canonicalizer],
@@ -176,26 +156,7 @@ function main() {
   for (const [key, value] of Object.entries(ibExpected)) eq(ib[key], value, `EA5E2_IMPLEMENTATION_BLOB:${key}`);
 
   const rc = authority.readiness_proof_contract;
-  for (const key of [
-    "real_provider_gets_required", "provider_specific_same_t_two_phase_live_path_required",
-    "live_kbs_reproof_required", "live_gfs_72h_same_cycle_reproof_required",
-    "raw_retention_before_decode_contract_required", "restricted_append_only_formal_ingress_contract_required",
-    "actual_postgres_restricted_ingress_adapter_required", "runtime_provider_fetch_forbidden",
-    "runtime_database_evidence_only_required", "external_formal_database_source_read_only_required",
-    "database_source_to_external_cap04_candidate_path_required", "exact_five_binding_families_required",
-    "exact_ea5e1_config_manifest_binding_required", "two_phase_same_slot_composition_required",
-    "whole_phase_validation_before_ingress_required", "collector_phase_family_partition_required",
-    "pre_boundary_soil_must_be_inside_t_minus_15m_to_t", "future_weather_and_et0_same_gfs_cycle_required",
-    "exact_late_kbs_target_row_required", "minimum_ingestion_margin_fail_closed",
-    "isolated_readiness_database_localhost_only", "private_transient_r2_required",
-    "existing_private_r2_account_binding_may_be_reused_for_transient_prefix",
-    "formal_database_credentials_forbidden_in_provider_readiness", "public_ci_artifacts_hash_and_metadata_only",
-    "retained_raw_semantic_rehydration_required", "transient_private_r2_put_get_delete_smoke_required",
-    "transient_private_r2_cleanup_required", "transient_cleanup_must_cover_nested_downloaded_metadata",
-    "scheduler_fixed_lag_implementation_required", "scheduler_default_zero_lag_preserved",
-    "exact_interval_late_cutoff_implementation_required", "delayed_database_evidence_must_reach_completed_a1_candidate",
-    "non_exact_interval_evidence_cutoff_remains_logical_time"
-  ]) yes(rc[key], `EA5E2_CONTRACT_REQUIRED:${key}`);
+  for (const key of ["real_provider_gets_required","provider_specific_same_t_two_phase_live_path_required","live_kbs_reproof_required","live_gfs_72h_same_cycle_reproof_required","raw_retention_before_decode_contract_required","restricted_append_only_formal_ingress_contract_required","actual_postgres_restricted_ingress_adapter_required","runtime_provider_fetch_forbidden","runtime_database_evidence_only_required","external_formal_database_source_read_only_required","database_source_to_external_cap04_candidate_path_required","exact_five_binding_families_required","exact_ea5e1_config_manifest_binding_required","two_phase_same_slot_composition_required","whole_phase_validation_before_ingress_required","collector_phase_family_partition_required","pre_boundary_soil_must_be_inside_t_minus_15m_to_t","future_weather_and_et0_same_gfs_cycle_required","exact_late_kbs_target_row_required","minimum_ingestion_margin_fail_closed","isolated_readiness_database_localhost_only","private_transient_r2_required","existing_private_r2_account_binding_may_be_reused_for_transient_prefix","formal_database_credentials_forbidden_in_provider_readiness","public_ci_artifacts_hash_and_metadata_only","retained_raw_semantic_rehydration_required","transient_private_r2_put_get_delete_smoke_required","transient_private_r2_cleanup_required","transient_cleanup_must_cover_nested_downloaded_metadata","scheduler_fixed_lag_implementation_required","scheduler_default_zero_lag_preserved","exact_interval_late_cutoff_implementation_required","delayed_database_evidence_must_reach_completed_a1_candidate","non_exact_interval_evidence_cutoff_remains_logical_time"]) yes(rc[key], `EA5E2_CONTRACT_REQUIRED:${key}`);
   no(rc.historical_s2_s5_database_readers_mutated, "EA5E2_HISTORICAL_READER_MUTATION_FORBIDDEN");
   no(rc.canonical_persistence_authorized_in_ea5e2, "EA5E2_CANONICAL_PERSISTENCE_FORBIDDEN");
   no(rc.future_forcing_post_logical_time_availability_allowed, "EA5E2_POST_T_FUTURE_FORCING_FORBIDDEN_AUTHORITY");
@@ -212,111 +173,37 @@ function main() {
   eq(rc.public_value_bearing_artifact_count, 0, "EA5E2_PUBLIC_VALUE_ARTIFACT_ZERO_REQUIRED");
   eq(rc.public_raw_value_emission_count, 0, "EA5E2_PUBLIC_RAW_VALUE_ZERO_REQUIRED");
   eq(rc.pre_rehydration_provider_refetch_count, 0, "EA5E2_REHYDRATION_PROVIDER_REFETCH_ZERO_REQUIRED");
-  for (const key of ["formal_database_write_count", "formal_raw_object_write_count", "scheduler_write_count", "runtime_tick_count"]) eq(rc[key], 0, `EA5E2_ZERO_SIDE_EFFECT:${key}`);
+  for (const key of ["formal_database_write_count","formal_raw_object_write_count","scheduler_write_count","runtime_tick_count"]) eq(rc[key], 0, `EA5E2_ZERO_SIDE_EFFECT:${key}`);
 
-  const canonicalizer = read(P.canonicalizer);
-  const orchestrator = read(P.orchestrator);
-  const scheduler = read(P.fixedLagScheduler);
-  const dbSource = read(P.dbSource);
-  const privateRunner = read(P.privateRunner);
-  const liveWorkflow = read(P.liveWorkflow);
-  const collectorWorkflow = read(P.collectorWorkflow);
-  const fixedWorkflow = read(P.workflow);
-
+  const canonicalizer = read(P.canonicalizer), orchestrator = read(P.orchestrator), scheduler = read(P.fixedLagScheduler), dbSource = read(P.dbSource), privateRunner = read(P.privateRunner), liveWorkflow = read(P.liveWorkflow), collectorWorkflow = read(P.collectorWorkflow), fixedWorkflow = read(P.workflow);
   has(canonicalizer, "collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1", "EA5E2_COMPLETION_CLOCK_REQUIRED");
   has(canonicalizer, "retainRawEvidence", "EA5E2_RETENTION_BEFORE_DECODE_REQUIRED");
   has(orchestrator, "ingestCanonicalizedPhase", "EA5E2_PRECANONICAL_PHASE_INGRESS_REQUIRED");
   has(orchestrator, "Whole-phase validation is complete before the first canonical ingress call.", "EA5E2_WHOLE_PHASE_BARRIER_REQUIRED");
-  has(scheduler, "createExternalFormalFixedLagSchedulerAdapterV1", "EA5E2_FIXED_LAG_FACTORY_REQUIRED");
-  has(scheduler, "7 * 60 * 60 * 1000", "EA5E2_SEVEN_HOUR_LAG_REQUIRED");
+  has(scheduler, "external_formal_eligibility_lag_hours: 7", "EA5E2_EXTERNAL_PROFILE_SEVEN_HOUR_LAG_REQUIRED");
+  has(scheduler, "eligibility_lag_hours: FIXED_LAG_SCHEDULER_PROFILE_V1.external_formal_eligibility_lag_hours", "EA5E2_EXTERNAL_FACTORY_PROFILE_BINDING_REQUIRED");
+  has(scheduler, "const HOUR_MS = 3_600_000", "EA5E2_HOUR_MS_REQUIRED");
+  has(scheduler, "eligibleAtMs = logicalMs + this.eligibilityLagHours * HOUR_MS", "EA5E2_ELIGIBILITY_ARITHMETIC_REQUIRED");
   has(dbSource, "provider_request_count: 0", "EA5E2_DB_PROVIDER_ZERO_REQUIRED");
-  lacks(dbSource, "node:http", "EA5E2_DB_HTTP_FORBIDDEN");
-  lacks(dbSource, "node:https", "EA5E2_DB_HTTPS_FORBIDDEN");
-  lacks(dbSource, "fetch(", "EA5E2_DB_FETCH_FORBIDDEN");
-
+  lacks(dbSource, "node:http", "EA5E2_DB_HTTP_FORBIDDEN"); lacks(dbSource, "node:https", "EA5E2_DB_HTTPS_FORBIDDEN"); lacks(dbSource, "fetch(", "EA5E2_DB_FETCH_FORBIDDEN");
   has(privateRunner, "mcft-cap09-ea5e2-readiness-transient-v1", "EA5E2_TRANSIENT_IMPLEMENTATION_REQUIRED");
   has(privateRunner, "mcft-cap09-formal-raw-v1/sha256", "EA5E2_FORMAL_PREFIX_GUARD_REQUIRED");
   has(privateRunner, "EA5E2_FORMAL_RAW_PREFIX_WRITE_FORBIDDEN", "EA5E2_FORMAL_PREFIX_FAIL_CLOSED_REQUIRED");
-  has(privateRunner, "TRANSIENT_STORE_SMOKE", "EA5E2_SMOKE_REQUIRED");
-  has(privateRunner, "CLEANUP_TRANSIENT", "EA5E2_CLEANUP_REQUIRED");
-  has(privateRunner, "readRetainedRawEvidence", "EA5E2_PRIVATE_READBACK_REQUIRED");
-  has(privateRunner, "EA5E2_REHYDRATION_SEMANTIC_HASH_MISMATCH", "EA5E2_REHYDRATION_HASH_REQUIRED");
-  has(privateRunner, "pre_rehydration_provider_request_count: 0", "EA5E2_REHYDRATION_PROVIDER_ZERO_REQUIRED");
-  has(privateRunner, "EA5E2_READINESS_DATABASE_MUST_BE_LOCALHOST", "EA5E2_LOCAL_DB_GUARD_REQUIRED");
-  lacks(privateRunner, "GEOX_MCFT_CAP09_S6_DATABASE_URL", "EA5E2_FORMAL_DB_SECRET_FORBIDDEN");
-  lacks(privateRunner, "pg_dump", "EA5E2_PGDUMP_FORBIDDEN");
-
-  has(liveWorkflow, "Upload metadata-only inter-phase proof", "EA5E2_METADATA_ONLY_INTERPHASE_REQUIRED");
-  has(liveWorkflow, "Flatten metadata-only JSONs for exact-head cleanup discovery", "EA5E2_NESTED_CLEANUP_REQUIRED");
-  lacks(liveWorkflow, "pg_dump", "EA5E2_WORKFLOW_PGDUMP_FORBIDDEN");
-  lacks(liveWorkflow, ".dump", "EA5E2_WORKFLOW_DUMP_FORBIDDEN");
-  lacks(liveWorkflow, "gfs-raw-bundle.tar", "EA5E2_PUBLIC_RAW_ARTIFACT_FORBIDDEN");
-  before(liveWorkflow, "Prove private transient R2 round trip and cleanup with non-provider random bytes", "Fail fast unless KBS Raw Hourly is currently within unchanged authority", "EA5E2_SMOKE_BEFORE_KBS_REQUIRED");
-  before(liveWorkflow, "Fail fast unless KBS Raw Hourly is currently within unchanged authority", "Select one real future target T with EA5E3 completion margin", "EA5E2_KBS_BEFORE_TARGET_REQUIRED");
-  before(liveWorkflow, "Flatten metadata-only JSONs for exact-head cleanup discovery", "Delete every exact-head transient R2 object found in safe metadata", "EA5E2_CLEANUP_BEFORE_DELETE_REQUIRED");
-  has(collectorWorkflow, P.privateRunner, "EA5E2_PRIVATE_RUNNER_TRIGGER_REQUIRED");
-  has(collectorWorkflow, "Typecheck both isolated live provider phase runners", "EA5E2_BOTH_RUNNERS_TYPECHECK_REQUIRED");
-  has(fixedWorkflow, "Validate EA5E2 fixed-lag schedule and implementation readiness before live source gate", "EA5E2_GOVERNANCE_PRELIVE_REQUIRED");
-  has(fixedWorkflow, "Exact-head live KBS and GFS readiness reproof", "EA5E2_LIVE_REPROOF_REQUIRED");
-  before(fixedWorkflow, "Validate EA5E2 fixed-lag schedule and implementation readiness before live source gate", "Exact-head live KBS and GFS readiness reproof", "EA5E2_GOVERNANCE_MUST_PRECEDE_LIVE");
+  has(privateRunner, "TRANSIENT_STORE_SMOKE", "EA5E2_SMOKE_REQUIRED"); has(privateRunner, "CLEANUP_TRANSIENT", "EA5E2_CLEANUP_REQUIRED"); has(privateRunner, "readRetainedRawEvidence", "EA5E2_PRIVATE_READBACK_REQUIRED"); has(privateRunner, "EA5E2_REHYDRATION_SEMANTIC_HASH_MISMATCH", "EA5E2_REHYDRATION_HASH_REQUIRED"); has(privateRunner, "pre_rehydration_provider_request_count: 0", "EA5E2_REHYDRATION_PROVIDER_ZERO_REQUIRED"); has(privateRunner, "EA5E2_READINESS_DATABASE_MUST_BE_LOCALHOST", "EA5E2_LOCAL_DB_GUARD_REQUIRED"); lacks(privateRunner, "GEOX_MCFT_CAP09_S6_DATABASE_URL", "EA5E2_FORMAL_DB_SECRET_FORBIDDEN"); lacks(privateRunner, "pg_dump", "EA5E2_PGDUMP_FORBIDDEN");
+  has(liveWorkflow, "Upload metadata-only inter-phase proof", "EA5E2_METADATA_ONLY_INTERPHASE_REQUIRED"); has(liveWorkflow, "Flatten metadata-only JSONs for exact-head cleanup discovery", "EA5E2_NESTED_CLEANUP_REQUIRED"); lacks(liveWorkflow, "pg_dump", "EA5E2_WORKFLOW_PGDUMP_FORBIDDEN"); lacks(liveWorkflow, ".dump", "EA5E2_WORKFLOW_DUMP_FORBIDDEN"); lacks(liveWorkflow, "gfs-raw-bundle.tar", "EA5E2_PUBLIC_RAW_ARTIFACT_FORBIDDEN"); before(liveWorkflow, "Prove private transient R2 round trip and cleanup with non-provider random bytes", "Fail fast unless KBS Raw Hourly is currently within unchanged authority", "EA5E2_SMOKE_BEFORE_KBS_REQUIRED"); before(liveWorkflow, "Fail fast unless KBS Raw Hourly is currently within unchanged authority", "Select one real future target T with EA5E3 completion margin", "EA5E2_KBS_BEFORE_TARGET_REQUIRED"); before(liveWorkflow, "Flatten metadata-only JSONs for exact-head cleanup discovery", "Delete every exact-head transient R2 object found in safe metadata", "EA5E2_CLEANUP_BEFORE_DELETE_REQUIRED");
+  has(collectorWorkflow, P.privateRunner, "EA5E2_PRIVATE_RUNNER_TRIGGER_REQUIRED"); has(collectorWorkflow, "Typecheck both isolated live provider phase runners", "EA5E2_BOTH_RUNNERS_TYPECHECK_REQUIRED");
+  has(fixedWorkflow, "Validate EA5E2 fixed-lag schedule and implementation readiness before live source gate", "EA5E2_GOVERNANCE_PRELIVE_REQUIRED"); has(fixedWorkflow, "Exact-head live KBS and GFS readiness reproof", "EA5E2_LIVE_REPROOF_REQUIRED"); before(fixedWorkflow, "Validate EA5E2 fixed-lag schedule and implementation readiness before live source gate", "Exact-head live KBS and GFS readiness reproof", "EA5E2_GOVERNANCE_MUST_PRECEDE_LIVE");
 
   const effect = authority.effect_if_exact_head_proof_passes_and_candidate_merges_to_protected_main;
-  yes(effect.ea5e2_collector_runtime_schedule_readiness_effective, "EA5E2_EFFECTIVE_REQUIRED");
-  yes(effect.private_transient_readiness_carrier_effective, "EA5E2_PRIVATE_CARRIER_REQUIRED");
-  yes(effect.ea5e3_formal_authority_v3_authorized, "EA5E2_SUCCESSOR_AUTH_REQUIRED");
-  no(effect.ea5e3_effective, "EA5E3_PREMATURE_EFFECT");
-  no(effect.ea5e_complete, "EA5E_PREMATURE_COMPLETE");
-  no(effect.formal_o00_start_authorized, "EA5E2_O00_FORBIDDEN");
-  no(effect.formal_window_started, "EA5E2_WINDOW_FORBIDDEN");
-  eq(effect.formal_execution_count, "0/24", "EA5E2_ZERO_EXECUTION");
-  no(effect.mcft_cap09_completed, "EA5E2_CAP09_COMPLETE_FORBIDDEN");
+  yes(effect.ea5e2_collector_runtime_schedule_readiness_effective, "EA5E2_EFFECTIVE_REQUIRED"); yes(effect.private_transient_readiness_carrier_effective, "EA5E2_PRIVATE_CARRIER_REQUIRED"); yes(effect.ea5e3_formal_authority_v3_authorized, "EA5E2_SUCCESSOR_AUTH_REQUIRED"); no(effect.ea5e3_effective, "EA5E3_PREMATURE_EFFECT"); no(effect.ea5e_complete, "EA5E_PREMATURE_COMPLETE"); no(effect.formal_o00_start_authorized, "EA5E2_O00_FORBIDDEN"); no(effect.formal_window_started, "EA5E2_WINDOW_FORBIDDEN"); eq(effect.formal_execution_count, "0/24", "EA5E2_ZERO_EXECUTION"); no(effect.mcft_cap09_completed, "EA5E2_CAP09_COMPLETE_FORBIDDEN");
 
-  writeResult({
-    schema_version: "geox_mcft_cap09_ea5e2_fixed_lag_collector_runtime_schedule_readiness_governance_result_v1",
-    status: "PASS",
-    base_sha: base,
-    subject_sha: subject,
-    exact_changed_file_count: changed.length,
-    exact_boundary: "TWENTY_ONE_FILES",
-    governance_proved_before_live_source_gate: true,
-    scheduler_lag_hours: 7,
-    exact_interval_cutoff_minutes: 432,
-    runtime_observer_offset_minutes: 437,
-    private_transient_r2_prefix: "mcft-cap09-ea5e2-readiness-transient-v1",
-    formal_raw_prefix_write_count: 0,
-    public_value_bearing_artifact_count: 0,
-    pre_rehydration_provider_refetch_count: 0,
-    transient_cleanup_required: true,
-    formal_database_write_count: 0,
-    scheduler_write_count: 0,
-    canonical_runtime_write_count: 0,
-    formal_window_started: false,
-    ea5e3_effective: false,
-    mcft_cap09_completed: false
-  });
+  writeResult({schema_version:"geox_mcft_cap09_ea5e2_fixed_lag_collector_runtime_schedule_readiness_governance_result_v1",status:"PASS",base_sha:base,subject_sha:subject,exact_changed_file_count:changed.length,exact_boundary:"TWENTY_ONE_FILES",governance_proved_before_live_source_gate:true,scheduler_lag_hours:7,exact_interval_cutoff_minutes:432,runtime_observer_offset_minutes:437,private_transient_r2_prefix:"mcft-cap09-ea5e2-readiness-transient-v1",formal_raw_prefix_write_count:0,public_value_bearing_artifact_count:0,pre_rehydration_provider_refetch_count:0,transient_cleanup_required:true,formal_database_write_count:0,scheduler_write_count:0,canonical_runtime_write_count:0,formal_window_started:false,ea5e3_effective:false,mcft_cap09_completed:false});
 }
 
-try {
-  main();
-} catch (error) {
+try { main(); }
+catch (error) {
   const message = error instanceof Error ? error.message : String(error);
-  let subject = null;
-  try { subject = git("rev-parse", "HEAD"); } catch { /* diagnostic only */ }
-  writeResult({
-    schema_version: "geox_mcft_cap09_ea5e2_fixed_lag_collector_runtime_schedule_readiness_governance_result_v1",
-    status: "FAIL",
-    base_sha: process.env.MCFT_BASE_SHA ?? null,
-    subject_sha: subject,
-    error: message,
-    fail_closed: true,
-    formal_database_write_count: 0,
-    formal_raw_prefix_write_count: 0,
-    public_value_bearing_artifact_count: 0,
-    scheduler_write_count: 0,
-    canonical_runtime_write_count: 0,
-    formal_window_started: false,
-    ea5e3_effective: false,
-    mcft_cap09_completed: false
-  });
+  let subject = null; try { subject = git("rev-parse", "HEAD"); } catch {}
+  writeResult({schema_version:"geox_mcft_cap09_ea5e2_fixed_lag_collector_runtime_schedule_readiness_governance_result_v1",status:"FAIL",base_sha:process.env.MCFT_BASE_SHA??null,subject_sha:subject,error:message,fail_closed:true,formal_database_write_count:0,formal_raw_prefix_write_count:0,public_value_bearing_artifact_count:0,scheduler_write_count:0,canonical_runtime_write_count:0,formal_window_started:false,ea5e3_effective:false,mcft_cap09_completed:false});
   process.exitCode = 1;
 }
