@@ -21,7 +21,7 @@
     "merged_at_utc": "2026-08-10T05:59:14.000Z",
     "focused_workflow_run_id": 31359896349,
     "focused_artifact_id": 9051972358,
-    "focused_artifact_digest": "sha256:8df1356d04c0a4018a6a39e2f2417be158f6855095c5affc53422e5f2505d8df",
+    "focused_artifact_digest": "sha256:8df1356d8909f93b76cd7d24a4d467427d3a2f5f98cffd7f7fc38b124379ece6",
     "artifact_exact_24_runtime_config_refs_hashes_required": true,
     "artifact_postwrite_60_fact_49_config_prestate_required": true
   },
@@ -79,7 +79,7 @@
   "candidate_implementation_blobs": {
     "formal_window_input_manifest": "b47af64277330bb46a3fc1bb171dfcaaaf91abb1",
     "read_only_formal_db_preflight_executor": "ff852ccec6d7d64bfbfa64161547fd1e419a4e3b",
-    "focused_workflow": "fa0852942c9d8f0d598e5993ba971b53d5d53640"
+    "focused_workflow": "1ffea689e2927946cf986201a8d757816d6a937c"
   },
   "live_preflight_contract": {
     "transaction_mode": "READ_ONLY",
