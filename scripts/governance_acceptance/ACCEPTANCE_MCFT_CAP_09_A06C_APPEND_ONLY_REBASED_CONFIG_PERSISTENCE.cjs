@@ -31,8 +31,8 @@ const predecessorPins={
 };
 for(const [p,s] of Object.entries(predecessorPins)){eq(blob(base,p),s,`A06C_BASE_PIN:${p}`);eq(blob("HEAD",p),s,`A06C_PREDECESSOR_MUTATED:${p}`);}
 eq(blob("HEAD",servicePath),"a420ef34e4c0a58ba5507e46d623fcc12980b946","A06C_SERVICE_BLOB_REQUIRED");
-eq(blob("HEAD",executorPath),"b96593a85d6c032e632ed36e0c191e7b4ea782c9","A06C_EXECUTOR_BLOB_REQUIRED");
-eq(blob("HEAD",authorityPath),"60bdbb0bda35c582ec50e2e2b9b9c2925c34daa2","A06C_AUTHORITY_BLOB_REQUIRED");
+eq(blob("HEAD",executorPath),"c1beab04cc6d680b3ce24d045e41257df687e343","A06C_EXECUTOR_BLOB_REQUIRED");
+eq(blob("HEAD",authorityPath),"2a4ffb9912ec27b360b099fe46036d34d4a5a9f3","A06C_AUTHORITY_BLOB_REQUIRED");
 eq(blob("HEAD",workflowPath),"75ba8d2db107f4b1a0fcdad480a9cd3a4dc02c9b","A06C_WORKFLOW_BLOB_REQUIRED");
 
 const a06b=json("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A06B-REBASED-CONFIG-BUILDER-QUALIFICATION-V1.json");
@@ -111,7 +111,7 @@ for(const marker of ["ExternalFormalWindowEpochRebasePersistenceServiceV1","inpu
 for(const forbidden of ["fetch(","node:fs","node:http","node:https","process.env","twin_shadow_online_scheduler_slot_v1","CONTROLLED_SYNTHETIC_REPLAY_PROXY","field_c8_demo"]) if(service.includes(forbidden)) fail(`A06C_SERVICE_FORBIDDEN:${forbidden}`);
 
 const executor=fs.readFileSync(executorPath,"utf8");
-for(const marker of ["GEOX_MCFT_CAP09_S6_DATABASE_URL","GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED","A06B_PROOF_RESULT_PATH","A06C_SELECTED_EPOCH_READINESS_DEADLINE_ALREADY_PASSED","PostgresRuntimeRepositoryV1","ExternalFormalWindowEpochRebasePersistenceServiceV1","A06C_BUILDER_OUTPUT_DOES_NOT_MATCH_FROZEN_A06B_PROOF","formal_o00_start_authorized: false","ea5e_complete: false"]) if(!executor.includes(marker)) fail(`A06C_EXECUTOR_MARKER_MISSING:${marker}`);
+for(const marker of ["GEOX_MCFT_CAP09_S6_DATABASE_URL","GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED","A06B_PROOF_RESULT_PATH","A06C_SELECTED_EPOCH_READINESS_DEADLINE_ALREADY_PASSED","PostgresRuntimeRepositoryV1","ExternalFormalWindowEpochRebasePersistenceServiceV1","A06C_BUILDER_OUTPUT_DOES_NOT_MATCH_FROZEN_A06B_PROOF","void main().catch","formal_o00_start_authorized: false","ea5e_complete: false"]) if(!executor.includes(marker)) fail(`A06C_EXECUTOR_MARKER_MISSING:${marker}`);
 for(const forbidden of ["fetch(","FORMAL_RAW_S3_ACCESS_KEY_ID","FORMAL_RAW_S3_SECRET_ACCESS_KEY","CONTROLLED_SYNTHETIC_REPLAY_PROXY","field_c8_demo","POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1"]) if(executor.includes(forbidden)) fail(`A06C_EXECUTOR_FORBIDDEN:${forbidden}`);
 
 const workflow=fs.readFileSync(workflowPath,"utf8");
