@@ -1,0 +1,239 @@
+name: mcft-cap-09-a06a-future-formal-window-epoch-selection
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-a06a-future-formal-window-epoch-selection.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A06A-FUTURE-FORMAL-WINDOW-EPOCH-SELECTION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A06A_FUTURE_FORMAL_WINDOW_EPOCH_SELECTION.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-a06a-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  a06a-future-formal-window-epoch-selection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GEOX_MCFT_CAP09_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+      FORMAL_WINDOW_ENABLED: ${{ vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact A06A base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify Formal bindings remain fail-closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GEOX_MCFT_CAP09_S6_DATABASE_URL:-}" || { echo 'MISSING GEOX_MCFT_CAP09_S6_DATABASE_URL'; exit 1; }
+          if [ "${FORMAL_WINDOW_ENABLED:-false}" = "true" ]; then
+            echo 'A06A_FORMAL_WINDOW_MUST_REMAIN_DISABLED' >&2
+            exit 1
+          fi
+          echo 'PRESENT GEOX_MCFT_CAP09_S6_DATABASE_URL'
+          echo 'FORMAL_WINDOW_ENABLED=false-or-unset'
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check A06A governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A06A_FUTURE_FORMAL_WINDOW_EPOCH_SELECTION.cjs
+
+      - name: Validate exact A06A authority boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A06A_FUTURE_FORMAL_WINDOW_EPOCH_SELECTION.cjs
+
+      - name: Verify Amendment-06 exact effectiveness chain
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/3028")"
+          echo "$pr" | jq -e '
+            .merged_at == "2026-08-10T04:51:14Z" and
+            .head.sha == "72e5a86ca3b52f214537e762456d9e59bf8401ba" and
+            .merge_commit_sha == "0481d2e0d77a7818c16a2c3baf102d2d265e8957"
+          ' >/dev/null
+          run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/31356234656")"
+          echo "$run" | jq -e '.head_sha == "72e5a86ca3b52f214537e762456d9e59bf8401ba" and .status == "completed" and .conclusion == "success"' >/dev/null
+          artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9050722266")"
+          echo "$artifact" | jq -e '.expired == false and .digest == "sha256:53e846ad86fe85d671a68b2670108238cd784d8db656eb1808eaff5b4054541b"' >/dev/null
+          printf '%s\n' '{"schema_version":"geox_mcft_cap09_a06a_amendment06_effectiveness_result_v1","status":"PASS","amendment06_merged_at":"2026-08-10T04:51:14.000Z","amendment06_merge_sha":"0481d2e0d77a7818c16a2c3baf102d2d265e8957","exact_head_proof_verified":true}' > acceptance-output/MCFT_CAP_09_A06A_AMENDMENT06_EFFECTIVENESS_RESULT.json
+
+      - name: Independently derive exact epoch and all 24 crop-context hashes
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const crypto = require('crypto');
+          const authority = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A06A-FUTURE-FORMAL-WINDOW-EPOCH-SELECTION-V1.json','utf8'));
+          const crop = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json','utf8'));
+          const amendmentMerged = Date.parse('2026-08-10T04:51:14.000Z');
+          const plus36 = amendmentMerged + 36*3600000;
+          const o00ms = Math.ceil(plus36/3600000)*3600000;
+          const iso = (ms) => new Date(ms).toISOString();
+          if (iso(o00ms)!=='2026-08-11T17:00:00.000Z') throw new Error('A06A_O00_SELECTION_MISMATCH');
+          if (iso(o00ms+23*3600000)!=='2026-08-12T16:00:00.000Z') throw new Error('A06A_O23_SELECTION_MISMATCH');
+          if (iso(o00ms-12*3600000)!=='2026-08-11T05:00:00.000Z') throw new Error('A06A_READINESS_DEADLINE_MISMATCH');
+          if (o00ms-amendmentMerged!==130126000) throw new Error('A06A_LEAD_SECONDS_MISMATCH');
+          if (Date.now()>=o00ms) throw new Error('A06A_SELECTED_O00_ALREADY_PASSED');
+          if (Date.now()>=o00ms-12*3600000) throw new Error('A06A_SELECTION_AFTER_READINESS_DEADLINE');
+
+          function canonicalJson(value) {
+            if (value===undefined) throw new Error('UNDEFINED_FORBIDDEN');
+            if (typeof value==='number') {
+              if (!Number.isFinite(value)) throw new Error('NON_FINITE_NUMBER');
+              return Object.is(value,-0) ? '0' : JSON.stringify(value);
+            }
+            if (value===null || typeof value==='string' || typeof value==='boolean') return JSON.stringify(value);
+            if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+            if (typeof value==='object') return `{${Object.keys(value).sort().map(k=>`${JSON.stringify(k)}:${canonicalJson(value[k])}`).join(',')}}`;
+            throw new Error('UNSUPPORTED_CANONICAL_TYPE');
+          }
+          const semhash = (value) => `sha256:${crypto.createHash('sha256').update(canonicalJson(value),'utf8').digest('hex')}`;
+          const stageAt = (elapsedHours, variant) => {
+            const [initial,development,mid,late] = variant;
+            if (elapsedHours<0) return 'PRE_PLANTING';
+            if (elapsedHours<initial*24) return 'INITIAL';
+            if (elapsedHours<(initial+development)*24) return 'DEVELOPMENT';
+            if (elapsedHours<(initial+development+mid)*24) return 'MID';
+            if (elapsedHours<(initial+development+mid+late)*24) return 'LATE';
+            return 'POST_MODEL_SEASON';
+          };
+          const plantingStart = Date.parse(crop.planting_authority.possible_event_window_utc.start_inclusive);
+          const plantingEnd = Date.parse(crop.planting_authority.possible_event_window_utc.end_exclusive);
+          const backward = crop.as_of_derivation_policy.backward_stability_hours;
+          const forward = crop.as_of_derivation_policy.forward_transition_guard_hours;
+          const variants = crop.model_stage_prior.variant_stage_lengths_days;
+          const allowed = new Set(crop.as_of_derivation_policy.allowed_stage_codes);
+          let minimumClearance = Number.POSITIVE_INFINITY;
+          const derived = [];
+          for (let index=0; index<24; index+=1) {
+            const t = o00ms + index*3600000;
+            const currentMin=(t-plantingEnd)/3600000;
+            const currentMax=(t-plantingStart)/3600000;
+            const guardMin=(t-backward*3600000-plantingEnd)/3600000;
+            const guardMax=(t+forward*3600000-plantingStart)/3600000;
+            const variantStages=[];
+            let slotClearance=Number.POSITIVE_INFINITY;
+            for (const variant of variants) {
+              const stages=[currentMin,currentMax,guardMin,guardMax].map(x=>stageAt(x,variant));
+              if (new Set(stages).size!==1) throw new Error(`A06A_STAGE_TRANSITION_RISK:${index}`);
+              variantStages.push(stages[0]);
+              const midEnd=(variant[0]+variant[1]+variant[2])*24;
+              slotClearance=Math.min(slotClearance,midEnd-guardMax);
+            }
+            if (new Set(variantStages).size!==1 || !allowed.has(variantStages[0])) throw new Error(`A06A_CROP_STAGE_NO_CONSERVATIVE_CONSENSUS:${index}`);
+            const stage=variantStages[0];
+            if (stage!=='MID') throw new Error(`A06A_EXPECTED_MID_STAGE_REQUIRED:${index}:${stage}`);
+            minimumClearance=Math.min(minimumClearance,slotClearance);
+            const logicalTime=iso(t);
+            const contextHash=semhash({
+              authority_ref:'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json',
+              authority_blob_sha:'b5de9d29189cb654444b3f57d00df290eefe16d3',
+              derived_context_authority:'FORMAL_DERIVED_CROP_WATER_USE_STAGE_CONTEXT_V1',
+              crop_stage_code:stage,
+              derivation_authority_time:logicalTime,
+              observed_biological_stage_claimed:false,
+              field_calibration_status:'NOT_FIELD_CALIBRATED'
+            });
+            const expected=authority.slot_contexts[index];
+            if (expected.slot_id!==`O${String(index).padStart(2,'0')}` || expected.logical_time!==logicalTime || expected.crop_stage_code!==stage || expected.crop_stage_context_hash!==contextHash || expected.minimum_hours_to_next_stage_after_forward_guard!==slotClearance) throw new Error(`A06A_SLOT_CONTEXT_MISMATCH:${index}`);
+            derived.push({slot_id:expected.slot_id,logical_time:logicalTime,crop_stage_code:stage,crop_stage_context_hash:contextHash,minimum_hours_to_next_stage_after_forward_guard:slotClearance});
+          }
+          if (minimumClearance!==6) throw new Error(`A06A_MINIMUM_FORWARD_GUARD_CLEARANCE_MISMATCH:${minimumClearance}`);
+          const out={schema_version:'geox_mcft_cap09_a06a_epoch_and_crop_context_derivation_result_v1',status:'PASS',selected_epoch_id:authority.selection_rule.selected_epoch_id,selected_o00:iso(o00ms),selected_o23:iso(o00ms+23*3600000),readiness_deadline:iso(o00ms-12*3600000),actual_lead_seconds:(o00ms-amendmentMerged)/1000,slot_count:derived.length,all_slots_stage_code:'MID',minimum_forward_guard_clearance_hours:minimumClearance,all_slot_context_hashes_verified:true,future_observations_used:false,formal_window_started:false};
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_A06A_EPOCH_AND_CROP_CONTEXT_DERIVATION_RESULT.json',JSON.stringify(out,null,2)+'\n');
+          console.log(JSON.stringify(out,null,2));
+
+      - name: Read-only verify Formal pre-window anchor remains unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/server
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { Pool } from 'pg';
+          const pool = new Pool({connectionString:process.env.GEOX_MCFT_CAP09_S6_DATABASE_URL,max:2});
+          const scope=['tenant_mcft_external','project_mcft_cap09','group_public_research','field_kbs_mcse_t1r1','season_2026_corn','zone_kbs_mcse_t1r1_formal_v1'];
+          try {
+            const client=await pool.connect();
+            try {
+              await client.query('BEGIN TRANSACTION READ ONLY');
+              const id=await client.query("SELECT current_database() AS d, current_setting('server_version_num')::int AS v");
+              if (id.rows[0]?.d!=='geox_mcft_cap09_s6_formal_24h' || Number(id.rows[0]?.v)<180000) throw new Error('A06A_FORMAL_DATABASE_IDENTITY_INVALID');
+              const counts=await client.query(`WITH s AS (SELECT record_json FROM public.facts WHERE record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6) SELECT (SELECT count(*)::int FROM public.facts) AS total,count(*)::int AS scoped,count(*) FILTER (WHERE record_json->>'type'='twin_runtime_config_v1')::int AS configs,count(*) FILTER (WHERE record_json->>'type'='twin_state_estimate_v1')::int AS states FROM s`,scope);
+              const c=counts.rows[0];
+              if (Number(c.total)!==36 || Number(c.scoped)!==36 || Number(c.configs)!==25 || Number(c.states)!==1) throw new Error('A06A_PREWINDOW_FACT_COUNTS_INVALID');
+              const state=await client.query(`SELECT record_json->'payload' AS p FROM public.facts WHERE record_json->>'type'='twin_state_estimate_v1' AND record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6`,scope);
+              const p=state.rows[0].p;
+              if (p.logical_time!=='2026-08-09T21:00:00.000Z' || p.runtime_config_ref!=='external_formal_runtime_config_7284202e3b0bdae6d32f4814' || p.runtime_config_hash!=='sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8') throw new Error('A06A_A0_STATE_ANCHOR_INVALID');
+              const sched=await client.query(`SELECT (SELECT count(*)::int FROM public.twin_shadow_online_scheduler_slot_v1) AS slots,(SELECT count(*)::int FROM public.twin_shadow_online_scheduler_cursor_v1) AS cursors`);
+              if (Number(sched.rows[0]?.slots)!==0 || Number(sched.rows[0]?.cursors)!==0) throw new Error('A06A_FORMAL_WINDOW_ALREADY_STARTED');
+              await client.query('COMMIT');
+              const out={schema_version:'geox_mcft_cap09_a06a_formal_database_readonly_result_v1',status:'PASS',exact_scope_fact_count:36,exact_runtime_config_count:25,exact_state_count:1,a0_state_anchor_verified:true,scheduler_slot_count:0,scheduler_cursor_count:0,database_write_count:0,formal_window_started:false};
+              fs.mkdirSync('../../acceptance-output',{recursive:true});
+              fs.writeFileSync('../../acceptance-output/MCFT_CAP_09_A06A_FORMAL_DATABASE_READONLY_RESULT.json',JSON.stringify(out,null,2)+'\n');
+              console.log(JSON.stringify(out,null,2));
+            } catch(e) { try { await client.query('ROLLBACK'); } catch {} throw e; } finally { client.release(); }
+          } finally { await pool.end(); }
+          NODE
+
+      - name: Require exact A06A effect and nonclaims
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const g=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A06A_GOVERNANCE_RESULT.json','utf8'));
+          const e=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A06A_EPOCH_AND_CROP_CONTEXT_DERIVATION_RESULT.json','utf8'));
+          const d=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A06A_FORMAL_DATABASE_READONLY_RESULT.json','utf8'));
+          if (g.status!=='PASS'||e.status!=='PASS'||d.status!=='PASS') throw new Error('A06A_ALL_PROOFS_REQUIRED');
+          if (e.slot_count!==24 || e.all_slots_stage_code!=='MID' || e.minimum_forward_guard_clearance_hours!==6 || e.all_slot_context_hashes_verified!==true) throw new Error('A06A_SLOT_CONTEXT_PROOF_INVALID');
+          if (d.exact_runtime_config_count!==25 || d.scheduler_slot_count!==0 || d.scheduler_cursor_count!==0 || d.database_write_count!==0) throw new Error('A06A_DB_BOUNDARY_INVALID');
+          if (g.a06a_effective_after_merge!==true || g.a06b_authorized_after_merge!==true || g.formal_o00_start_authorized!==false || g.formal_window_started!==false || g.mcft_cap09_completed!==false) throw new Error('A06A_EFFECT_BOUNDARY_INVALID');
+          console.log(JSON.stringify({status:'PASS',epoch:e.selected_epoch_id,o00:e.selected_o00,o23:e.selected_o23,deadline:e.readiness_deadline,a06b:true,o00_authorized:false,window:false,formal_execution_count:'0/24'}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-a06a-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_A06A_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_A06A_AMENDMENT06_EFFECTIVENESS_RESULT.json
+            acceptance-output/MCFT_CAP_09_A06A_EPOCH_AND_CROP_CONTEXT_DERIVATION_RESULT.json
+            acceptance-output/MCFT_CAP_09_A06A_FORMAL_DATABASE_READONLY_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
