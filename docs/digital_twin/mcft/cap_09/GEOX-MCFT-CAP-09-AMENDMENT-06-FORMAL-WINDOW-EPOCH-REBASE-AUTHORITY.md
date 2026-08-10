@@ -21,6 +21,8 @@ EA5E0 correctly rejected the original persisted O00–O23 config epoch as a Form
 
 The correction must therefore be append-only and narrower than a new bootstrap.
 
+A second timing constraint is also material. The effective EA2 Formal Crop Context Authority requires fresh startup re-derivation from the frozen planting-day uncertainty and all frozen FAO-56 maize variants, carrying the 6-hour backward stability and 30-hour forward transition guard. A rebased epoch must therefore be selected early enough that every one of its O00–O23 slot contexts remains conservatively derivable. A stale A0 crop-context hash may not be silently reused merely because A0 remains the Runtime-state parent.
+
 ## 2. Core ruling
 
 The existing External A0 canonical bootstrap remains the authoritative pre-window Runtime state.
@@ -35,9 +37,12 @@ A new Formal window epoch MAY be created by appending exactly 24 new External ho
 4. every rebased config `effective_logical_time` equals its exact target slot logical time;
 5. every rebased ref/hash is frozen and persisted before O00;
 6. runner selection remains explicit ref/hash pin only; implicit `latest` selection remains forbidden;
-7. old expired configs remain queryable historical evidence but are ineligible for Formal execution.
+7. old expired configs remain queryable historical evidence but are ineligible for Formal execution;
+8. every rebased slot carries a crop-water-use stage context freshly rederived for that slot from the frozen EA2 authority, with no future observation use and with the EA2 6-hour backward / 30-hour forward transition guard intact.
 
 This is a narrow exception to Amendment-05 Section 8 only in one respect: the persisted A0 bootstrap Runtime Config does **not** need an effective logical time exactly one hour before the rebased O00. It remains the semantic parent because no Formal scheduler tick has occurred since A0 and no later canonical Runtime state has superseded it.
+
+It is **not** an exception to EA2 crop-context freshness. The parent A0 config may retain its historical crop-context hash, while the rebased hourly child configs may carry newly derived slot-specific context hashes under the same frozen Formal Crop Context Authority.
 
 ## 3. Existing A0 authority that must remain unchanged
 
@@ -73,21 +78,27 @@ The exact rebased O00 time is **not** frozen by this architecture amendment.
 After Amendment-06 becomes effective, a separate exact-head epoch-selection authority SHALL choose:
 
 ```text
-O00 = first exact UTC hourly boundary at or after
-      Amendment-06 effectiveness time + 48 hours
+candidate O00 = first exact UTC hourly boundary at or after
+                Amendment-06 effectiveness time + 36 hours
 
 O23 = O00 + 23 hours
 ```
 
-The selected epoch must also satisfy:
+The candidate becomes the selected epoch only if it also satisfies every rule below:
 
 - O00 is still in the future when the selection authority becomes effective;
 - all 24 target logical times are exact UTC hours;
 - no selected slot overlaps the expired original epoch;
 - the epoch ID is unique and deterministic from the selected O00;
-- the exact selected O00/O23 times are frozen in protected-main authority before any rebased config is persisted.
+- the exact selected O00/O23 times are frozen in protected-main authority before any rebased config is persisted;
+- for **every** slot O00–O23, the frozen EA2 crop-context algorithm is re-evaluated at that slot logical time;
+- for every slot, every frozen FAO-56 maize variant and every possible planting time must agree on one identical allowed stage throughout `slot_time - 6h` through `slot_time + 30h`;
+- future observations, future phenocam observations, ex-post season normalization, single-region best-fit substitution, and CAP08 synthetic stage dates remain forbidden;
+- if any slot fails the EA2 conservative consensus or transition guard, that candidate epoch is ineligible and must not be frozen.
 
-The 48-hour minimum is a governance safety lead, not a simulated clock. It exists to leave enough wall-clock time for config-chain persistence, EA5E Manifest construction, collector/runtime schedule readiness, Authority V3 effectiveness, and pre-O00 verification.
+The 36-hour minimum is a governance safety lead, not a simulated clock. It leaves at least 24 hours between Amendment-06 effectiveness and the `O00 - 12h` Authority-V3 deadline when the first candidate is selected on the next exact UTC boundary, while still requiring an independent whole-window crop-context viability proof before the epoch can be frozen.
+
+The lead must not be increased blindly if doing so would cross an EA2 crop-stage consensus/transition boundary. Crop-context viability is a hard eligibility condition, not a reason to relax the actual-UTC clock.
 
 ## 5. Readiness deadline and automatic fail-closed expiry
 
@@ -103,9 +114,11 @@ If EA5E Formal Authority V3 is not effective by that deadline:
 - O00 remains disabled;
 - no retroactive execution or initial multi-slot catch-up is permitted;
 - no existing canonical fact is deleted or rewritten;
-- a later epoch-selection authority may select another future O00 under the same 48-hour rule.
+- a later epoch-selection authority may select another future O00 only if it independently satisfies the same minimum-lead and whole-window EA2 crop-context rules.
 
 A missed readiness deadline is an epoch-selection failure, not a Runtime backfill case.
+
+If no later candidate can satisfy the frozen EA2 crop-context consensus, the lifecycle must fail closed for further adjudication rather than fabricate a crop stage.
 
 ## 6. Rebased Runtime Config chain
 
@@ -125,6 +138,8 @@ For rebased O01–O23:
 parent = immediately preceding rebased hourly config
 effective_logical_time = exact target slot logical time
 ```
+
+For every rebased slot, the config must carry the stage context freshly derived for that slot under the protected-main EA2 Formal Crop Context Authority. The builder must not copy the A0 `crop_stage_context_hash` merely as an inheritance shortcut. If the 24 slots do not all pass the frozen EA2 derivation policy, A06A must not have frozen that epoch and A06B must fail closed.
 
 All other External Formal authority fields remain governed by Amendment-05 and the already-frozen EA2/EA4/EA5 authority profile:
 
@@ -177,9 +192,10 @@ The Formal Window Input Manifest SHALL:
 
 - identify the exact rebase epoch ID and selected O00/O23;
 - contain exactly 24 rebased slot-to-config ref/hash pins;
+- bind each slot to its exact EA2-derived crop-context hash;
 - exclude every expired original O00–O23 config ref/hash;
 - bind the existing A0 Runtime Config ref/hash as the predecessor authority of rebased O00;
-- fail closed if any rebased config is missing, duplicated, has the wrong logical time, or has the wrong parent ref/hash;
+- fail closed if any rebased config is missing, duplicated, has the wrong logical time, wrong parent ref/hash, or wrong crop-context hash;
 - remain immutable for the Formal window.
 
 Manual hourly Secret mutation remains forbidden.
@@ -190,6 +206,7 @@ Before O00 may be enabled, EA5E Authority V3 SHALL prove all of the following ag
 
 - protected-main Amendment-06 and epoch-selection authority are effective;
 - the 24 rebased config refs/hashes are persisted and exact-head proved;
+- the 24 slot-specific crop contexts still match the frozen A06A whole-window EA2 derivation proof;
 - current persisted Runtime state still references the existing External A0 config authority;
 - scheduler slot count is still zero;
 - scheduler cursor is still absent/unstarted;
@@ -219,9 +236,9 @@ The following are explicitly **not** backfill:
 The legal successor sequence after Amendment-06 effectiveness is:
 
 1. **A06A — Future Epoch Selection Freeze**  
-   Select exact future O00/O23 using the 48-hour rule and freeze the unique epoch ID.
+   Select exact future O00/O23 using the 36-hour minimum lead, prove whole-window EA2 crop-context viability, and freeze the unique epoch ID plus all 24 slot context hashes.
 2. **A06B — Rebased Config Builder Qualification**  
-   Prove a deterministic 24-config builder whose O00 parent is the existing A0 config and whose remaining parent chain is exact.
+   Prove a deterministic 24-config builder whose O00 parent is the existing A0 config, whose remaining parent chain is exact, and whose slot crop-context hashes equal A06A.
 3. **A06C — Append-only Rebased Config Persistence**  
    Append exactly 24 new Runtime Config facts; exact-head retry writes zero.
 4. **EA5E1 — Post-rebase Formal DB Preflight + Formal Window Input Manifest**
@@ -238,6 +255,8 @@ This amendment does not authorize:
 - deletion, truncation, rewriting, or hiding of the expired config epoch;
 - a new A0 bootstrap;
 - a new A0 State/lineage/checkpoint/forecast package;
+- stale A0 crop-context reuse as a substitute for fresh slot derivation;
+- fabricated crop-stage consensus when EA2 transition guards fail;
 - retroactive O00 execution;
 - accelerated/replay Formal clock;
 - initial multi-slot catch-up as a replacement for the 24-hour run;
