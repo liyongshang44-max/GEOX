@@ -8,6 +8,7 @@ on:
       - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_COLLECTOR_PHASE_ORCHESTRATION.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-COLLECTOR-RUNTIME-SCHEDULE-READINESS-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs'
   merge_group:
@@ -72,6 +73,21 @@ jobs:
           grep -q '"provider_request_count":0' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
           grep -q '"historical_s2_s5_reader_modified":false' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
 
+      - name: Prove DB-only Evidence feeds External CAP04 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.ts \
+            2>&1 | tee acceptance-output/EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.log
+          grep -q '"status":"PASS"' acceptance-output/EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.log
+          grep -q '"delayed_rainfall_to_external_cap04":true' acceptance-output/EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.log
+          grep -q '"delayed_historical_et0_to_external_cap04":true' acceptance-output/EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.log
+          grep -q '"external_cap04_forecast_status":"COMPLETED"' acceptance-output/EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.log
+          grep -q '"external_cap04_forecast_point_count":72' acceptance-output/EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.log
+          grep -q '"canonical_persistence_authorized":false' acceptance-output/EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.log
+          grep -q '"database_write_count":0' acceptance-output/EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.log
+          grep -q '"provider_request_count":0' acceptance-output/EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.log
+
       - name: Upload collector and DB-source proof
         if: always()
         uses: actions/upload-artifact@v4
@@ -80,5 +96,6 @@ jobs:
           path: |
             acceptance-output/EA5E2_COLLECTOR_PHASE_ORCHESTRATION.log
             acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
+            acceptance-output/EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.log
           if-no-files-found: error
           retention-days: 90
