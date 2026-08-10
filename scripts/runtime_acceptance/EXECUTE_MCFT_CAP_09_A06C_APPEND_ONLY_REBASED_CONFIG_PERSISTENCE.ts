@@ -110,4 +110,8 @@ async function main(): Promise<void> {
   }
 }
 
-await main();
+void main().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`A06C_EXECUTOR_FAILED:${message}`);
+  process.exitCode = 1;
+});
