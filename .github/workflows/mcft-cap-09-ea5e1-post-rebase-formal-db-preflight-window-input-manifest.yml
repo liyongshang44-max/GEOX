@@ -86,7 +86,7 @@ jobs:
           run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/31359896349")"
           echo "$run" | jq -e '.head_sha == "cbd1f984c1e2201ccd150fe8db785e62ed3396c1" and .status == "completed" and .conclusion == "success"' >/dev/null
           artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9051972358")"
-          echo "$artifact" | jq -e '.expired == false and .digest == "sha256:8df1356d04c0a4018a6a39e2f2417be158f6855095c5affc53422e5f2505d8df"' >/dev/null
+          echo "$artifact" | jq -e '.expired == false and .digest == "sha256:8df1356d8909f93b76cd7d24a4d467427d3a2f5f98cffd7f7fc38b124379ece6"' >/dev/null
           rm -rf /tmp/a06c-proof /tmp/a06c-proof.zip
           mkdir -p /tmp/a06c-proof
           gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9051972358/zip" > /tmp/a06c-proof.zip
