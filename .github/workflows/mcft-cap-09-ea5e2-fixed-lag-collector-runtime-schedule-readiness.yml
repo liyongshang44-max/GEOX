@@ -111,6 +111,11 @@ jobs:
           python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
           node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs
 
+      - name: Validate EA5E2 fixed-lag schedule and implementation readiness before live source gate
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs
+
       - name: Diagnose KBS raw-hourly publication lag without changing authority
         env:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
@@ -118,7 +123,6 @@ jobs:
         run: |
           python - <<'PY'
           import csv
-          import io
           import json
           import os
           import pathlib
@@ -181,7 +185,7 @@ jobs:
               url = authority['kbs']['raw_hourly_csv']
               max_age = float(authority['kbs']['raw_hourly_latest_max_age_hours'])
               request = urllib.request.Request(url, headers={
-                  'User-Agent': 'GEOX-MCFT-CAP09-EA5E2-DIAGNOSTIC/1.1',
+                  'User-Agent': 'GEOX-MCFT-CAP09-EA5E2-DIAGNOSTIC/1.2',
                   'Accept': 'text/csv,text/plain;q=0.9,*/*;q=0.5',
                   'Cache-Control': 'no-cache',
               })
@@ -222,11 +226,6 @@ jobs:
         env:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
-
-      - name: Validate EA5E2 fixed-lag schedule and implementation readiness
-        env:
-          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs
 
       - name: Upload immutable EA5E2 readiness proof
         if: always()
