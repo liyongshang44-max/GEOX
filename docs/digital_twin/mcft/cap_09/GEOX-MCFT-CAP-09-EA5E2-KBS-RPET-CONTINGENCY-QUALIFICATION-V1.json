@@ -1,0 +1,74 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5e2_kbs_rpet_contingency_qualification_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5E2-KBS-RPET-CONTINGENCY-QUALIFICATION-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "CONTINGENCY_SOURCE_QUALIFICATION_CANDIDATE_NOT_AUTHORITY",
+  "base_main_sha": "4fc792398bcc25243af7c63734fe59beec9b0dcc",
+  "purpose": "TIME_CRITICAL_NO_WRITE_DIAGNOSTIC_OF_FIRST_PARTY_KBS_HOURLY_RPET_AS_A_POSSIBLE_HISTORICAL_ET0_SOURCE_ARCHITECTURE_CANDIDATE_ONLY",
+  "current_effective_source_binding_unchanged": "kbs_lter_asce_short_reference_et_hourly_v1",
+  "provider_binding_candidate": {
+    "provider": "MSU_ENVIROWEATHER",
+    "source_page": "https://enviroweather.msu.edu/weathermodels/meteogram",
+    "api_host": "api.enviroweather.msu.edu",
+    "api_path": "/rm-api/api/run",
+    "method": "GET",
+    "station_slug": "kbs",
+    "station_identity_patterns": ["Hickory Corners", "Kellogg Biological Station", "KBS"],
+    "duration_hours": 24,
+    "required_query_keys": ["duration", "resultModelCode", "resultModelId", "selectDate", "selectedStation", "stationCode", "stationId", "stationType", "units"],
+    "rpet_field": "rpet_hourly_us",
+    "timestamp_field": "datetime"
+  },
+  "technical_qualification_requirements": {
+    "station_identity_required": true,
+    "rpet_header_metadata_required": true,
+    "rpet_numeric_values_required": true,
+    "rpet_hourly_grid_required": true,
+    "minimum_numeric_hours_in_latest_24h": 24,
+    "latest_observed_max_age_hours": 6,
+    "target_field_must_not_be_provider_estimated": true,
+    "invalid_data_metadata_must_be_recorded": true,
+    "provider_timestamp_timezone_must_not_be_silently_relabelled": true,
+    "asce_short_reference_hourly_method_equivalence_must_be_explicitly_proven_before_any_substitution": true,
+    "public_raw_numeric_value_emission_count": 0,
+    "database_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "r2_formal_write_count": 0
+  },
+  "raw_retention_boundary": {
+    "class": "RUNNER_PRIVATE_TRANSIENT_SOURCE_QUALIFICATION_NOT_FORMAL_DURABLE_RETENTION",
+    "raw_body_must_be_written_before_parse": true,
+    "raw_sha256_and_byte_count_reread_required": true,
+    "raw_body_may_be_uploaded": false
+  },
+  "live_qualification": {
+    "required": true,
+    "exact_head_required": true,
+    "current_result": "UNEXECUTED",
+    "success_decision": "VALUE_BEARING_KBS_RPET_CANDIDATE_REQUIRES_SEPARATE_SOURCE_ARCHITECTURE_ADJUDICATION",
+    "failure_decision": "REJECTED_OR_INCOMPLETE_KBS_RPET_FOR_FORMAL_HISTORICAL_ET0_SUBSTITUTION"
+  },
+  "authority_effect": {
+    "source_substitution_authorized": false,
+    "historical_et0_binding_changed": false,
+    "ea5e2_effectiveness_changed": false,
+    "formal_o00_start_authorized": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "r2_formal_write_authorized": false,
+    "mcft_cap09_completed": false
+  },
+  "hard_nonclaims": [
+    "NO_SOURCE_SUBSTITUTION_FROM_THIS_DIAGNOSTIC",
+    "NO_RPET_TO_ASCE_SHORT_REFERENCE_ET0_EQUIVALENCE_WITHOUT_EXPLICIT_METHOD_PROOF",
+    "NO_TIMESTAMP_TIMEZONE_RELABEL",
+    "NO_PUBLIC_RAW_NUMERIC_VALUES",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_R2_FORMAL_WRITE",
+    "NO_EA5E2_EFFECTIVENESS_CHANGE",
+    "NO_FORMAL_O00_AUTHORIZATION",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
