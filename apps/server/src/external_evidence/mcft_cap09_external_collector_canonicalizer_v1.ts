@@ -164,6 +164,9 @@ export type ExternalEvidencePipelineInputV1 = {
   canonicalized_at: string;
 };
 
+export type ExternalEvidenceLivePipelineInputV1 = Omit<ExternalEvidencePipelineInputV1, "canonicalized_at">;
+export type ExternalEvidenceCompletionClockV1 = () => string;
+
 export type CanonicalizedExternalEvidenceResultV1 = {
   pipeline_version: typeof MCFT_CAP09_EXTERNAL_EVIDENCE_PIPELINE_VERSION_V1;
   raw_provenance: VerifiedRawEvidenceProvenanceV1;
@@ -343,17 +346,9 @@ function canonicalizeDraft(input: {
   };
 }
 
-export async function collectRetainDecodeCanonicalizeExternalEvidenceV1(
-  input: ExternalEvidencePipelineInputV1,
-  ports: {
-    transport: ExternalEvidenceTransportPortV1;
-    retention: RawEvidenceRetentionPortV1;
-    decoder: ExternalEvidenceDecoderPortV1;
-  },
-): Promise<readonly CanonicalizedExternalEvidenceResultV1[]> {
+function validatePipelineRequestV1(input: ExternalEvidenceLivePipelineInputV1): void {
   validateScope(input.scope);
   canonicalIso(input.request.requested_at, "EA3_REQUESTED_AT_INVALID");
-  canonicalIso(input.canonicalized_at, "EA3_CANONICALIZED_AT_INVALID");
   requireCondition(text(input.request.request_id), "EA3_REQUEST_ID_REQUIRED");
   requireCondition(text(input.request.provider_id), "EA3_PROVIDER_ID_REQUIRED");
   requireCondition(text(input.request.source_family), "EA3_SOURCE_FAMILY_REQUIRED");
@@ -362,7 +357,20 @@ export async function collectRetainDecodeCanonicalizeExternalEvidenceV1(
   requireCondition(input.request.expected_content_type_prefixes.length > 0, "EA3_EXPECTED_CONTENT_TYPE_REQUIRED");
   requireCondition(input.request.limitations.length > 0, "EA3_REQUEST_LIMITATIONS_REQUIRED");
   assertHttpsAllowedHost(input.request.locator, input.request.allowed_final_hosts, "EA3_REQUEST_LOCATOR");
+}
 
+async function collectRetainDecodeV1(
+  input: ExternalEvidenceLivePipelineInputV1,
+  ports: {
+    transport: ExternalEvidenceTransportPortV1;
+    retention: RawEvidenceRetentionPortV1;
+    decoder: ExternalEvidenceDecoderPortV1;
+  },
+): Promise<{
+  provenance: VerifiedRawEvidenceProvenanceV1;
+  decoded: readonly GovernedDecodedEvidenceDraftV1[];
+}> {
+  validatePipelineRequestV1(input);
   const response = await ports.transport.fetchRawEvidence(input.request);
   requireCondition(Number.isInteger(response.status) && response.status >= 200 && response.status < 300, `EA3_SOURCE_HTTP_STATUS_NOT_SUCCESS:${response.status}`);
   assertHttpsAllowedHost(response.final_locator, input.request.allowed_final_hosts, "EA3_FINAL_LOCATOR");
@@ -424,16 +432,26 @@ export async function collectRetainDecodeCanonicalizeExternalEvidenceV1(
   // Decoder invocation is intentionally after the verified retention receipt barrier.
   const decoded = await ports.decoder.decodeRetainedEvidence({ raw_bytes: response.bytes, provenance });
   requireCondition(decoded.length > 0, "EA3_DECODER_EMPTY_RESULT_FORBIDDEN");
+  return { provenance, decoded };
+}
+
+function canonicalizeDecodedV1(input: {
+  pipeline: ExternalEvidenceLivePipelineInputV1;
+  canonicalized_at: string;
+  provenance: VerifiedRawEvidenceProvenanceV1;
+  decoded: readonly GovernedDecodedEvidenceDraftV1[];
+  decoder: ExternalEvidenceDecoderPortV1;
+}): readonly CanonicalizedExternalEvidenceResultV1[] {
   const ids = new Set<string>();
-  const results = decoded.map((draft) => {
+  const results = input.decoded.map((draft) => {
     requireCondition(!ids.has(draft.source_record_id), `EA3_DUPLICATE_SOURCE_RECORD_ID:${draft.source_record_id}`);
     ids.add(draft.source_record_id);
     return canonicalizeDraft({
-      dataset_id: input.dataset_id,
-      scope: input.scope,
+      dataset_id: input.pipeline.dataset_id,
+      scope: input.pipeline.scope,
       canonicalized_at: input.canonicalized_at,
-      provenance,
-      decoder: ports.decoder,
+      provenance: input.provenance,
+      decoder: input.decoder,
       draft,
     });
   });
@@ -441,4 +459,47 @@ export async function collectRetainDecodeCanonicalizeExternalEvidenceV1(
     left.record.record_type.localeCompare(right.record.record_type)
     || left.record.source_record_id.localeCompare(right.record.source_record_id),
   );
+}
+
+export async function collectRetainDecodeCanonicalizeExternalEvidenceV1(
+  input: ExternalEvidencePipelineInputV1,
+  ports: {
+    transport: ExternalEvidenceTransportPortV1;
+    retention: RawEvidenceRetentionPortV1;
+    decoder: ExternalEvidenceDecoderPortV1;
+  },
+): Promise<readonly CanonicalizedExternalEvidenceResultV1[]> {
+  const canonicalizedAt = canonicalIso(input.canonicalized_at, "EA3_CANONICALIZED_AT_INVALID");
+  const collected = await collectRetainDecodeV1(input, ports);
+  return canonicalizeDecodedV1({
+    pipeline: input,
+    canonicalized_at: canonicalizedAt,
+    provenance: collected.provenance,
+    decoded: collected.decoded,
+    decoder: ports.decoder,
+  });
+}
+
+export async function collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1(
+  input: ExternalEvidenceLivePipelineInputV1,
+  ports: {
+    transport: ExternalEvidenceTransportPortV1;
+    retention: RawEvidenceRetentionPortV1;
+    decoder: ExternalEvidenceDecoderPortV1;
+  },
+  completionClock: ExternalEvidenceCompletionClockV1 = () => new Date().toISOString(),
+): Promise<readonly CanonicalizedExternalEvidenceResultV1[]> {
+  const collected = await collectRetainDecodeV1(input, ports);
+  const canonicalizedAt = canonicalIso(completionClock(), "EA3_COMPLETION_CLOCK_INVALID");
+  requireCondition(
+    Date.parse(collected.provenance.retained_at) <= Date.parse(canonicalizedAt),
+    "EA3_CANONICALIZED_BEFORE_RAW_RETENTION",
+  );
+  return canonicalizeDecodedV1({
+    pipeline: input,
+    canonicalized_at: canonicalizedAt,
+    provenance: collected.provenance,
+    decoded: collected.decoded,
+    decoder: ports.decoder,
+  });
 }
