@@ -47,8 +47,8 @@ for (const [filePath, expectedSha] of Object.entries(predecessorPins)) {
 
 eq(blob("HEAD", manifestPath), "b47af64277330bb46a3fc1bb171dfcaaaf91abb1", "EA5E1_MANIFEST_BLOB_REQUIRED");
 eq(blob("HEAD", executorPath), "ff852ccec6d7d64bfbfa64161547fd1e419a4e3b", "EA5E1_EXECUTOR_BLOB_REQUIRED");
-eq(blob("HEAD", workflowPath), "fa0852942c9d8f0d598e5993ba971b53d5d53640", "EA5E1_WORKFLOW_BLOB_REQUIRED");
-eq(blob("HEAD", authorityPath), "243d435f6860ce656430d516742b97404a49aa8d", "EA5E1_AUTHORITY_BLOB_REQUIRED");
+eq(blob("HEAD", workflowPath), "1ffea689e2927946cf986201a8d757816d6a937c", "EA5E1_WORKFLOW_BLOB_REQUIRED");
+eq(blob("HEAD", authorityPath), "6f43f94212c43c1ee3f29f662cf78dfa8b983db5", "EA5E1_AUTHORITY_BLOB_REQUIRED");
 eq(fileSha256(manifestPath), "sha256:060184569523aee985ea846aac5407cef1ef288367b748e1621297c03db8999d", "EA5E1_MANIFEST_CONTENT_SHA256_REQUIRED");
 
 const a06a = json("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A06A-FUTURE-FORMAL-WINDOW-EPOCH-SELECTION-V1.json");
@@ -109,7 +109,7 @@ eq(authority.a06c_effectiveness.merge_commit_sha, "4de72f6408a3326e364ebd3b93464
 eq(authority.a06c_effectiveness.merged_at_utc, "2026-08-10T05:59:14.000Z", "EA5E1_A06C_MERGE_TIME_REQUIRED");
 eq(authority.a06c_effectiveness.focused_workflow_run_id, 31359896349, "EA5E1_A06C_RUN_REQUIRED");
 eq(authority.a06c_effectiveness.focused_artifact_id, 9051972358, "EA5E1_A06C_ARTIFACT_REQUIRED");
-eq(authority.a06c_effectiveness.focused_artifact_digest, "sha256:8df1356d04c0a4018a6a39e2f2417be158f6855095c5affc53422e5f2505d8df", "EA5E1_A06C_ARTIFACT_DIGEST_REQUIRED");
+eq(authority.a06c_effectiveness.focused_artifact_digest, "sha256:8df1356d8909f93b76cd7d24a4d467427d3a2f5f98cffd7f7fc38b124379ece6", "EA5E1_A06C_ARTIFACT_DIGEST_REQUIRED");
 eq(authority.formal_window_input_manifest_authority.manifest_blob_sha, "b47af64277330bb46a3fc1bb171dfcaaaf91abb1", "EA5E1_AUTHORITY_MANIFEST_BLOB_REQUIRED");
 eq(authority.formal_window_input_manifest_authority.manifest_content_sha256, "sha256:060184569523aee985ea846aac5407cef1ef288367b748e1621297c03db8999d", "EA5E1_AUTHORITY_MANIFEST_DIGEST_REQUIRED");
 eq(authority.formal_window_input_manifest_authority.exact_slot_pin_count, 24, "EA5E1_AUTHORITY_24_PINS_REQUIRED");
@@ -219,7 +219,7 @@ for (const marker of [
   "3031",
   "31359896349",
   "9051972358",
-  "sha256:8df1356d04c0a4018a6a39e2f2417be158f6855095c5affc53422e5f2505d8df",
+  "sha256:8df1356d8909f93b76cd7d24a4d467427d3a2f5f98cffd7f7fc38b124379ece6",
   "EA5E1_MANIFEST_DOES_NOT_EQUAL_IMMUTABLE_A06C_CONFIG_CHAIN",
   "ACCEPTANCE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST.cjs",
   "EXECUTE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT.ts",
