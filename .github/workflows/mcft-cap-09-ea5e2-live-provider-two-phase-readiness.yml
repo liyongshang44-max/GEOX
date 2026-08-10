@@ -12,6 +12,7 @@ on:
       - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_LOCAL_DB.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
       - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-COLLECTOR-RUNTIME-SCHEDULE-READINESS-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs'
@@ -31,12 +32,13 @@ env:
   PNPM_VERSION: '9.15.4'
   PYTHON_VERSION: '3.12'
   READINESS_DB_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
-  READINESS_S3_ENDPOINT: http://127.0.0.1:9100
-  READINESS_S3_BUCKET: geox-mcft-cap09-ea5e2-readiness
-  READINESS_S3_REGION: us-east-1
-  READINESS_S3_ACCESS_KEY: minioadmin
-  READINESS_S3_SECRET_KEY: minioadmin123
   EA5E3_HARD_DEADLINE_UTC: '2026-08-11T05:00:00.000Z'
+  MCFT_EA5E2_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+  MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+  MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+  MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+  MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
 
 jobs:
   pre-boundary:
@@ -89,6 +91,32 @@ jobs:
             numpy==1.26.4 \
             refet==0.4.2
 
+      - name: Require existing private R2 secret bindings without exposing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in \
+            MCFT_EA5E2_TRANSIENT_S3_ENDPOINT \
+            MCFT_EA5E2_TRANSIENT_S3_BUCKET \
+            MCFT_EA5E2_TRANSIENT_S3_REGION \
+            MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID \
+            MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY
+          do
+            if [ -z "${!name:-}" ]; then
+              echo "MISSING_REQUIRED_PRIVATE_BINDING:$name"
+              missing=1
+            else
+              echo "PRESENT_REQUIRED_PRIVATE_BINDING:$name"
+            fi
+          done
+          test "$missing" -eq 0
+
+      - name: Prove private transient R2 round trip and cleanup with non-provider random bytes
+        env:
+          MCFT_EA5E2_LIVE_PHASE: TRANSIENT_STORE_SMOKE
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+
       - name: Fail fast unless KBS Raw Hourly is currently within unchanged authority
         run: python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py precheck-kbs
 
@@ -112,77 +140,38 @@ jobs:
           fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json',JSON.stringify({schema_version:'geox_mcft_cap09_ea5e2_live_target_v1',subject_sha:subject,selected_at:now.toISOString(),target_t:target.toISOString(),expected_observer_time:observer.toISOString(),ea5e3_deadline:deadline.toISOString(),minimum_post_proof_ea5e3_margin_minutes:60,formal_effectiveness:false},null,2)+'\n');
           console.log(`target_t=${target.toISOString()}`);
           console.log(`subject_sha=${subject}`);
-          require('fs').appendFileSync(process.env.GITHUB_OUTPUT,`target_t=${target.toISOString()}\nsubject_sha=${subject}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`target_t=${target.toISOString()}\nsubject_sha=${subject}\n`);
 
-      - name: Start isolated private MinIO readiness store
-        run: |
-          set -euo pipefail
-          docker run -d --name ea5e2-readiness-minio \
-            -p 9100:9000 \
-            -e MINIO_ROOT_USER="$READINESS_S3_ACCESS_KEY" \
-            -e MINIO_ROOT_PASSWORD="$READINESS_S3_SECRET_KEY" \
-            minio/minio:latest server /data
-          for attempt in $(seq 1 60); do
-            if curl -fsS "$READINESS_S3_ENDPOINT/minio/health/live" >/dev/null; then break; fi
-            if [ "$attempt" = 60 ]; then docker logs ea5e2-readiness-minio; exit 1; fi
-            sleep 1
-          done
-          docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -ceu "
-            mc alias set local $READINESS_S3_ENDPOINT $READINESS_S3_ACCESS_KEY $READINESS_S3_SECRET_KEY
-            mc mb --ignore-existing local/$READINESS_S3_BUCKET
-            mc anonymous set private local/$READINESS_S3_BUCKET
-            mc stat local/$READINESS_S3_BUCKET
-          "
-
-      - name: Execute real pre-boundary provider phase against isolated readiness stores
+      - name: Execute real pre-boundary provider phase with private transient R2 and isolated DB
         env:
           MCFT_EA5E2_ISOLATED_READINESS_ACK: 'true'
           MCFT_EA5E2_LIVE_PHASE: PRE_BOUNDARY_CAUSAL
           MCFT_EA5E2_TARGET_T: ${{ steps.target.outputs.target_t }}
           DATABASE_URL: ${{ env.READINESS_DB_URL }}
-          MCFT_EA5E2_S3_ENDPOINT: ${{ env.READINESS_S3_ENDPOINT }}
-          MCFT_EA5E2_S3_BUCKET: ${{ env.READINESS_S3_BUCKET }}
-          MCFT_EA5E2_S3_REGION: ${{ env.READINESS_S3_REGION }}
-          MCFT_EA5E2_S3_ACCESS_KEY: ${{ env.READINESS_S3_ACCESS_KEY }}
-          MCFT_EA5E2_S3_SECRET_KEY: ${{ env.READINESS_S3_SECRET_KEY }}
           PYTHON: python
-        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_LOCAL_DB.ts
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
 
-      - name: Verify pre-boundary private/raw and three-family safe proof
+      - name: Verify pre-boundary proof is public-safe metadata only
         shell: node {0}
         run: |
           const fs=require('fs');
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json','utf8'));
           if(p.status!=='PASS'||p.canonical_fact_write_count!==3) throw new Error('EA5E2_PREBOUNDARY_THREE_FACTS_REQUIRED');
           if(p.soil_observation_inside_t_minus_15_to_t!==true||p.gfs_same_cycle_pair!==true) throw new Error('EA5E2_PREBOUNDARY_CAUSAL_FAMILY_PROOF_REQUIRED');
-          if(p.raw_values_emitted!==false||p.formal_database_write_count!==0||p.formal_r2_write_count!==0||p.formal_window_started!==false) throw new Error('EA5E2_PREBOUNDARY_NONCLAIM_REQUIRED');
+          if(p.transient_root_prefix!=='mcft-cap09-ea5e2-readiness-transient-v1'||p.formal_raw_prefix_write_count!==0) throw new Error('EA5E2_PRIVATE_TRANSIENT_PREFIX_REQUIRED');
+          if(p.public_value_artifact_count!==0||p.raw_values_emitted!==false) throw new Error('EA5E2_PUBLIC_VALUE_ARTIFACT_FORBIDDEN');
+          if(p.formal_database_write_count!==0||p.formal_r2_write_count!==0||p.formal_window_started!==false) throw new Error('EA5E2_PREBOUNDARY_NONCLAIM_REQUIRED');
+          if(!p.rehydration_manifest||!Array.isArray(p.rehydration_manifest.expected_records)||p.rehydration_manifest.expected_records.length!==3) throw new Error('EA5E2_SAFE_REHYDRATION_METADATA_REQUIRED');
 
-      - name: Verify readiness raw bucket remains private
-        run: |
-          set -euo pipefail
-          status="$(curl -sS -o /tmp/ea5e2-anon -w '%{http_code}' "$READINESS_S3_ENDPOINT/$READINESS_S3_BUCKET/" || true)"
-          test "$status" = "403"
-
-      - name: Snapshot isolated canonical readiness database only
-        run: |
-          set -euo pipefail
-          docker run --rm --network host \
-            -e PGPASSWORD=postgres \
-            postgres:18 \
-            pg_dump -h127.0.0.1 -p55433 -Upostgres -d ea5e2_readiness -Fc \
-            > acceptance-output/ea5e2-readiness.dump
-          test -s acceptance-output/ea5e2-readiness.dump
-          test ! -e acceptance-output/gfs-raw-bundle.tar
-          test ! -e acceptance-output/kbs-raw-hourly.csv
-
-      - name: Upload one-day inter-phase canonical state only
+      - name: Upload metadata-only inter-phase proof
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-ea5e2-interphase-${{ steps.target.outputs.subject_sha }}
           path: |
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json
-            acceptance-output/ea5e2-readiness.dump
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_SMOKE.json
           if-no-files-found: error
           retention-days: 1
 
@@ -268,58 +257,20 @@ jobs:
             numpy==1.26.4 \
             refet==0.4.2
 
-      - name: Download exact inter-phase canonical state
+      - name: Download metadata-only inter-phase proof
         uses: actions/download-artifact@v4
         with:
           name: mcft-cap09-ea5e2-interphase-${{ needs.pre-boundary.outputs.subject_sha }}
           path: acceptance-output
 
-      - name: Restore isolated canonical readiness database
-        run: |
-          set -euo pipefail
-          docker run --rm --network host \
-            -e PGPASSWORD=postgres \
-            -v "$PWD/acceptance-output:/work:ro" \
-            postgres:18 \
-            pg_restore -h127.0.0.1 -p55433 -Upostgres -d ea5e2_readiness \
-              --no-owner --no-privileges /work/ea5e2-readiness.dump
-          count="$(docker run --rm --network host -e PGPASSWORD=postgres postgres:18 \
-            psql -h127.0.0.1 -p55433 -Upostgres -d ea5e2_readiness -Atc 'select count(*) from facts')"
-          test "$count" = "3"
-
-      - name: Start isolated private MinIO readiness store
-        run: |
-          set -euo pipefail
-          docker run -d --name ea5e2-readiness-minio-late \
-            -p 9100:9000 \
-            -e MINIO_ROOT_USER="$READINESS_S3_ACCESS_KEY" \
-            -e MINIO_ROOT_PASSWORD="$READINESS_S3_SECRET_KEY" \
-            minio/minio:latest server /data
-          for attempt in $(seq 1 60); do
-            if curl -fsS "$READINESS_S3_ENDPOINT/minio/health/live" >/dev/null; then break; fi
-            if [ "$attempt" = 60 ]; then docker logs ea5e2-readiness-minio-late; exit 1; fi
-            sleep 1
-          done
-          docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -ceu "
-            mc alias set local $READINESS_S3_ENDPOINT $READINESS_S3_ACCESS_KEY $READINESS_S3_SECRET_KEY
-            mc mb --ignore-existing local/$READINESS_S3_BUCKET
-            mc anonymous set private local/$READINESS_S3_BUCKET
-            mc stat local/$READINESS_S3_BUCKET
-          "
-
-      - name: Execute real delayed exact-hour phase and DB-only handoff
+      - name: Execute retained-raw semantic rehydration then real delayed exact-hour phase
         env:
           MCFT_EA5E2_ISOLATED_READINESS_ACK: 'true'
           MCFT_EA5E2_LIVE_PHASE: LATE_EXACT_HOUR
           MCFT_EA5E2_TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
           DATABASE_URL: ${{ env.READINESS_DB_URL }}
-          MCFT_EA5E2_S3_ENDPOINT: ${{ env.READINESS_S3_ENDPOINT }}
-          MCFT_EA5E2_S3_BUCKET: ${{ env.READINESS_S3_BUCKET }}
-          MCFT_EA5E2_S3_REGION: ${{ env.READINESS_S3_REGION }}
-          MCFT_EA5E2_S3_ACCESS_KEY: ${{ env.READINESS_S3_ACCESS_KEY }}
-          MCFT_EA5E2_S3_SECRET_KEY: ${{ env.READINESS_S3_SECRET_KEY }}
           PYTHON: python
-        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_LOCAL_DB.ts
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
 
       - name: Verify complete same-T two-phase readiness proof
         shell: node {0}
@@ -333,20 +284,17 @@ jobs:
           const late=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json','utf8'));
           if(target.subject_sha!==process.env.SUBJECT_SHA||target.target_t!==process.env.TARGET_T) throw new Error('EA5E2_LIVE_TARGET_IDENTITY_MISMATCH');
           if(pre.status!=='PASS'||late.status!=='PASS'||pre.target_logical_time!==late.target_logical_time||late.target_logical_time!==process.env.TARGET_T) throw new Error('EA5E2_LIVE_SAME_TARGET_TWO_PHASE_REQUIRED');
-          if(pre.canonical_fact_write_count!==3||late.late_canonical_fact_write_count!==2||late.database_exact_fact_count!==5||late.db_only_selected_record_count!==5) throw new Error('EA5E2_LIVE_EXACT_FIVE_FAMILY_DB_REQUIRED');
+          if(pre.canonical_fact_write_count!==3||late.pre_rehydrated_fact_count!==3||late.late_canonical_fact_write_count!==2||late.database_exact_fact_count!==5||late.db_only_selected_record_count!==5) throw new Error('EA5E2_LIVE_EXACT_FIVE_FAMILY_DB_REQUIRED');
+          if(late.pre_rehydration_semantic_hash_match!==true||late.pre_raw_retention_reverified!==true||late.pre_rehydration_provider_request_count!==0) throw new Error('EA5E2_PRIVATE_REHYDRATION_PROOF_REQUIRED');
           if(pre.gfs_same_cycle_pair!==true||late.same_gfs_cycle_future_weather_et0!==true||late.exact_rain_et0_interval_t_minus_1_to_t!==true||late.post_t_future_forcing_excluded!==true) throw new Error('EA5E2_LIVE_CAUSALITY_PROOF_REQUIRED');
+          if(pre.formal_raw_prefix_write_count!==0||late.formal_raw_prefix_write_count!==0||pre.public_value_artifact_count!==0||late.public_value_artifact_count!==0) throw new Error('EA5E2_FORMAL_PREFIX_OR_PUBLIC_VALUE_WRITE_FORBIDDEN');
           if(pre.raw_values_emitted!==false||late.raw_values_emitted!==false) throw new Error('EA5E2_LIVE_RAW_VALUE_PUBLICATION_FORBIDDEN');
           for(const value of [pre.formal_database_write_count,pre.formal_r2_write_count,late.formal_database_write_count,late.formal_r2_write_count,late.scheduler_write_count,late.canonical_runtime_write_count]) if(value!==0) throw new Error('EA5E2_LIVE_FORMAL_SIDE_EFFECT_FORBIDDEN');
           if(pre.formal_window_started!==false||late.formal_window_started!==false) throw new Error('EA5E2_LIVE_FORMAL_WINDOW_START_FORBIDDEN');
-          console.log(JSON.stringify({status:'PASS',subject_sha:process.env.SUBJECT_SHA,target_t:process.env.TARGET_T,real_provider_get:true,private_retention_before_decode:true,pre_boundary_fact_count:3,late_fact_count:2,db_only_selected_count:5,same_gfs_cycle:true,exact_late_interval:true,formal_writes:0}));
+          console.log(JSON.stringify({status:'PASS',subject_sha:process.env.SUBJECT_SHA,target_t:process.env.TARGET_T,real_provider_get:true,private_transient_r2:true,public_value_artifacts:0,pre_boundary_fact_count:3,pre_rehydrated_fact_count:3,late_fact_count:2,db_only_selected_count:5,same_gfs_cycle:true,exact_late_interval:true,formal_writes:0}));
 
-      - name: Verify late readiness raw bucket remains private
-        run: |
-          set -euo pipefail
-          status="$(curl -sS -o /tmp/ea5e2-anon-late -w '%{http_code}' "$READINESS_S3_ENDPOINT/$READINESS_S3_BUCKET/" || true)"
-          test "$status" = "403"
-
-      - name: Upload immutable safe final provider readiness proof
+      - name: Upload immutable safe final provider readiness proof and cleanup refs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-ea5e2-live-provider-${{ needs.pre-boundary.outputs.subject_sha }}
@@ -354,5 +302,58 @@ jobs:
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json
-          if-no-files-found: error
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  cleanup-transient:
+    needs: [pre-boundary, wait-one, wait-two, late-exact-hour]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download pre-boundary safe metadata when present
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-interphase-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/pre
+
+      - name: Download late safe metadata when present
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-live-provider-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/late
+
+      - name: Delete every exact-head transient R2 object found in safe metadata
+        env:
+          MCFT_EA5E2_LIVE_PHASE: CLEANUP_TRANSIENT
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+
+      - name: Upload metadata-only cleanup proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-transient-cleanup-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_CLEANUP.json
+          if-no-files-found: warn
           retention-days: 90
