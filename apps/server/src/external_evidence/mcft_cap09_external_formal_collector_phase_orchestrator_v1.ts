@@ -52,6 +52,15 @@ export type ExternalFormalCollectorPipelineJobV1 = {
   };
 };
 
+export type ExternalFormalCanonicalizedPhaseInputV1 = {
+  phase: ExternalFormalCollectorPhaseV1;
+  requested_at: string;
+  canonicalized_at: string;
+  provider_request_count: number;
+  canonical_results: readonly CanonicalizedExternalEvidenceResultV1[];
+  ingress: ExternalFormalEvidenceIngressPortV1;
+};
+
 export type ExternalFormalEvidenceIngressReceiptV1 = {
   record_type: string;
   source_record_id: string;
@@ -176,22 +185,53 @@ function phaseDeadlineV1(slot: ExternalFormalCollectorSlotAuthorityV1, phase: Ex
   return phase === "PRE_BOUNDARY_CAUSAL" ? slot.logical_time : slot.late_exact_hour_evidence_cutoff;
 }
 
+function phaseStartV1(slot: ExternalFormalCollectorSlotAuthorityV1, phase: ExternalFormalCollectorPhaseV1): string {
+  return phase === "PRE_BOUNDARY_CAUSAL"
+    ? slot.pre_boundary_causal_collector_target
+    : slot.late_exact_hour_collector_scheduled;
+}
+
+function validatePhaseClockV1(input: {
+  slot: ExternalFormalCollectorSlotAuthorityV1;
+  phase: ExternalFormalCollectorPhaseV1;
+  requested_at: string;
+  canonicalized_at: string;
+}): void {
+  const requestedAt = canonicalIsoV1(input.requested_at, "EA5E2_COLLECTOR_REQUESTED_AT_INVALID");
+  const canonicalizedAt = canonicalIsoV1(input.canonicalized_at, "EA5E2_COLLECTOR_CANONICALIZED_AT_INVALID");
+  const start = phaseStartV1(input.slot, input.phase);
+  const deadline = phaseDeadlineV1(input.slot, input.phase);
+  if (Date.parse(requestedAt) < Date.parse(start)) throw new Error("EA5E2_COLLECTOR_PHASE_STARTED_BEFORE_AUTHORIZED_TARGET");
+  if (Date.parse(requestedAt) > Date.parse(deadline)) throw new Error("EA5E2_COLLECTOR_PHASE_REQUEST_AFTER_DEADLINE");
+  if (Date.parse(canonicalizedAt) < Date.parse(requestedAt)) throw new Error("EA5E2_COLLECTOR_CANONICALIZED_BEFORE_REQUEST");
+  if (Date.parse(canonicalizedAt) > Date.parse(deadline)) throw new Error("EA5E2_COLLECTOR_CANONICALIZED_AFTER_DEADLINE");
+}
+
 function validateJobClockV1(
   slot: ExternalFormalCollectorSlotAuthorityV1,
   phase: ExternalFormalCollectorPhaseV1,
   input: ExternalEvidencePipelineInputV1,
 ): void {
   exactScopeV1(input.scope, slot.scope, "EA5E2_COLLECTOR_JOB_SCOPE_MISMATCH");
-  const requestedAt = canonicalIsoV1(input.request.requested_at, "EA5E2_COLLECTOR_REQUESTED_AT_INVALID");
-  const canonicalizedAt = canonicalIsoV1(input.canonicalized_at, "EA5E2_COLLECTOR_CANONICALIZED_AT_INVALID");
-  const start = phase === "PRE_BOUNDARY_CAUSAL"
-    ? slot.pre_boundary_causal_collector_target
-    : slot.late_exact_hour_collector_scheduled;
-  const deadline = phaseDeadlineV1(slot, phase);
-  if (Date.parse(requestedAt) < Date.parse(start)) throw new Error("EA5E2_COLLECTOR_PHASE_STARTED_BEFORE_AUTHORIZED_TARGET");
-  if (Date.parse(requestedAt) > Date.parse(deadline)) throw new Error("EA5E2_COLLECTOR_PHASE_REQUEST_AFTER_DEADLINE");
-  if (Date.parse(canonicalizedAt) < Date.parse(requestedAt)) throw new Error("EA5E2_COLLECTOR_CANONICALIZED_BEFORE_REQUEST");
-  if (Date.parse(canonicalizedAt) > Date.parse(deadline)) throw new Error("EA5E2_COLLECTOR_CANONICALIZED_AFTER_DEADLINE");
+  validatePhaseClockV1({
+    slot,
+    phase,
+    requested_at: input.request.requested_at,
+    canonicalized_at: input.canonicalized_at,
+  });
+}
+
+function validateRawRetentionV1(result: CanonicalizedExternalEvidenceResultV1): void {
+  if (!result.raw_provenance.retention_ref.startsWith("s3-private://")) {
+    throw new Error("EA5E2_COLLECTOR_PRIVATE_RAW_RETENTION_REQUIRED");
+  }
+  if (!/^sha256:[0-9a-f]{64}$/.test(result.raw_provenance.raw_sha256)) {
+    throw new Error("EA5E2_COLLECTOR_RAW_SHA256_INVALID");
+  }
+  if (!Number.isSafeInteger(result.raw_provenance.raw_bytes) || result.raw_provenance.raw_bytes <= 0) {
+    throw new Error("EA5E2_COLLECTOR_RAW_BYTES_INVALID");
+  }
+  canonicalIsoV1(result.raw_provenance.retained_at, "EA5E2_COLLECTOR_RETAINED_AT_INVALID");
 }
 
 function validateRecordAuthorityV1(
@@ -199,6 +239,7 @@ function validateRecordAuthorityV1(
   phase: ExternalFormalCollectorPhaseV1,
   result: CanonicalizedExternalEvidenceResultV1,
 ): void {
+  validateRawRetentionV1(result);
   const record = result.record;
   exactScopeV1(record, slot.scope, "EA5E2_COLLECTOR_RECORD_SCOPE_MISMATCH");
   const authority = AUTHORITY_BY_RECORD_TYPE_V1[record.record_type];
@@ -241,6 +282,61 @@ function validatePhaseFamilyCompletenessV1(
   }
 }
 
+async function validateAndIngressPhaseV1(input: {
+  slot: ExternalFormalCollectorSlotAuthorityV1;
+  slot_key: string;
+  phase: ExternalFormalCollectorPhaseV1;
+  canonical: readonly CanonicalizedExternalEvidenceResultV1[];
+  provider_request_count: number;
+  ingress: ExternalFormalEvidenceIngressPortV1;
+}): Promise<ExternalFormalCollectorPhaseExecutionResultV1> {
+  if (!Number.isSafeInteger(input.provider_request_count) || input.provider_request_count <= 0) {
+    throw new Error("EA5E2_COLLECTOR_PROVIDER_REQUEST_COUNT_REQUIRED");
+  }
+  if (input.canonical.length === 0) throw new Error("EA5E2_COLLECTOR_CANONICAL_RESULT_REQUIRED");
+  const sourceIds = new Set<string>();
+  for (const result of input.canonical) {
+    validateRecordAuthorityV1(input.slot, input.phase, result);
+    if (sourceIds.has(result.record.source_record_id)) {
+      throw new Error(`EA5E2_COLLECTOR_DUPLICATE_SOURCE_RECORD_ID:${result.record.source_record_id}`);
+    }
+    sourceIds.add(result.record.source_record_id);
+  }
+  validatePhaseFamilyCompletenessV1(input.phase, input.canonical);
+
+  // Whole-phase validation is complete before the first canonical ingress call.
+  const ordered = [...input.canonical].sort((left, right) =>
+    left.record.record_type.localeCompare(right.record.record_type)
+    || left.record.source_record_id.localeCompare(right.record.source_record_id),
+  );
+  const receipts: ExternalFormalEvidenceIngressReceiptV1[] = [];
+  for (const result of ordered) {
+    const receipt = await input.ingress.appendCanonicalizedExternalEvidence(result);
+    if (receipt.record_type !== result.record.record_type || receipt.source_record_id !== result.record.source_record_id) {
+      throw new Error("EA5E2_COLLECTOR_INGRESS_RECEIPT_IDENTITY_MISMATCH");
+    }
+    if (receipt.canonical_fact_write_count !== 0 && receipt.canonical_fact_write_count !== 1) {
+      throw new Error("EA5E2_COLLECTOR_INGRESS_WRITE_COUNT_INVALID");
+    }
+    receipts.push(receipt);
+  }
+
+  return {
+    orchestrator_id: MCFT_CAP09_EXTERNAL_FORMAL_COLLECTOR_PHASE_ORCHESTRATOR_ID_V1,
+    slot_key: input.slot_key,
+    phase: input.phase,
+    logical_time: input.slot.logical_time,
+    canonical_record_count: ordered.length,
+    record_types: ordered.map((item) => item.record.record_type),
+    source_record_ids: ordered.map((item) => item.record.source_record_id),
+    raw_retention_refs: [...new Set(ordered.map((item) => item.raw_provenance.retention_ref))].sort(),
+    provider_request_count: input.provider_request_count,
+    ingress_attempt_count: receipts.length,
+    canonical_fact_write_count: receipts.reduce((sum, item) => sum + item.canonical_fact_write_count, 0),
+    ingress_receipts: receipts,
+  };
+}
+
 export class McftCap09ExternalFormalCollectorPhaseOrchestratorV1 {
   readonly slot: ExternalFormalCollectorSlotAuthorityV1;
   readonly slot_key: string;
@@ -262,47 +358,37 @@ export class McftCap09ExternalFormalCollectorPhaseOrchestratorV1 {
       const results = await collectRetainDecodeCanonicalizeExternalEvidenceV1(job.pipeline_input, job.ports);
       canonical.push(...results);
     }
-
-    const sourceIds = new Set<string>();
-    for (const result of canonical) {
-      validateRecordAuthorityV1(this.slot, input.phase, result);
-      if (sourceIds.has(result.record.source_record_id)) {
-        throw new Error(`EA5E2_COLLECTOR_DUPLICATE_SOURCE_RECORD_ID:${result.record.source_record_id}`);
-      }
-      sourceIds.add(result.record.source_record_id);
-    }
-    validatePhaseFamilyCompletenessV1(input.phase, canonical);
-
-    // Whole-phase validation is complete before the first canonical ingress call.
-    const ordered = [...canonical].sort((left, right) =>
-      left.record.record_type.localeCompare(right.record.record_type)
-      || left.record.source_record_id.localeCompare(right.record.source_record_id),
-    );
-    const receipts: ExternalFormalEvidenceIngressReceiptV1[] = [];
-    for (const result of ordered) {
-      const receipt = await input.ingress.appendCanonicalizedExternalEvidence(result);
-      if (receipt.record_type !== result.record.record_type || receipt.source_record_id !== result.record.source_record_id) {
-        throw new Error("EA5E2_COLLECTOR_INGRESS_RECEIPT_IDENTITY_MISMATCH");
-      }
-      if (receipt.canonical_fact_write_count !== 0 && receipt.canonical_fact_write_count !== 1) {
-        throw new Error("EA5E2_COLLECTOR_INGRESS_WRITE_COUNT_INVALID");
-      }
-      receipts.push(receipt);
-    }
-
-    return {
-      orchestrator_id: MCFT_CAP09_EXTERNAL_FORMAL_COLLECTOR_PHASE_ORCHESTRATOR_ID_V1,
+    return validateAndIngressPhaseV1({
+      slot: this.slot,
       slot_key: this.slot_key,
       phase: input.phase,
-      logical_time: this.slot.logical_time,
-      canonical_record_count: ordered.length,
-      record_types: ordered.map((item) => item.record.record_type),
-      source_record_ids: ordered.map((item) => item.record.source_record_id),
-      raw_retention_refs: [...new Set(ordered.map((item) => item.raw_provenance.retention_ref))].sort(),
+      canonical,
       provider_request_count: input.jobs.length,
-      ingress_attempt_count: receipts.length,
-      canonical_fact_write_count: receipts.reduce((sum, item) => sum + item.canonical_fact_write_count, 0),
-      ingress_receipts: receipts,
-    };
+      ingress: input.ingress,
+    });
+  }
+
+  async ingestCanonicalizedPhase(
+    input: ExternalFormalCanonicalizedPhaseInputV1,
+  ): Promise<ExternalFormalCollectorPhaseExecutionResultV1> {
+    validatePhaseClockV1({
+      slot: this.slot,
+      phase: input.phase,
+      requested_at: input.requested_at,
+      canonicalized_at: input.canonicalized_at,
+    });
+    for (const result of input.canonical_results) {
+      if (Date.parse(result.raw_provenance.retained_at) > Date.parse(input.canonicalized_at)) {
+        throw new Error("EA5E2_COLLECTOR_CANONICALIZED_BEFORE_RAW_RETENTION");
+      }
+    }
+    return validateAndIngressPhaseV1({
+      slot: this.slot,
+      slot_key: this.slot_key,
+      phase: input.phase,
+      canonical: input.canonical_results,
+      provider_request_count: input.provider_request_count,
+      ingress: input.ingress,
+    });
   }
 }
