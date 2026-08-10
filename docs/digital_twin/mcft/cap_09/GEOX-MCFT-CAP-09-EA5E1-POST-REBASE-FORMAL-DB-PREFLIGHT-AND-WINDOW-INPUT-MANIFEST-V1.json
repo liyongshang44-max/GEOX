@@ -78,7 +78,7 @@
   },
   "candidate_implementation_blobs": {
     "formal_window_input_manifest": "b47af64277330bb46a3fc1bb171dfcaaaf91abb1",
-    "read_only_formal_db_preflight_executor": "ff852ccec6d7d64bfbfa64161547fd1e419a4e3b",
+    "read_only_formal_db_preflight_executor": "d3d7284632da52c1ea2e694eba49a8fdeb271f45",
     "focused_workflow": "1ffea689e2927946cf986201a8d757816d6a937c"
   },
   "live_preflight_contract": {
