@@ -29,8 +29,11 @@
     "durable_raw_retention_adapter": "dfa2c10266a5079842012426aed175851d30ca44",
     "restricted_formal_evidence_ingress": "6f7b6450d4f671c75affc2c7aba45ed71cb518c5",
     "external_cap04_input_authority": "b4b7448518628bcffe8eaf6a91d9967145f7647d",
-    "external_cap04_candidate_execution_service": "f627c89d59092621dd7a4523f09b2ce4ec78433b",
-    "persistent_sequential_scheduler_adapter": "6133dcc182a3fab145a846b1f7015a4e1fa1518b",
+    "continuation_evidence_window_late_cutoff_seam": "a83437765f1c75860c5270b89446474787cde4c3",
+    "assimilated_continuation_cutoff_threading": "6699fb741cc0f61291f3d8c6e1e45ee0dcc79e36",
+    "external_cap04_candidate_execution_service": "71df4e47b0c62b7c6f2126e33896849af56273ca",
+    "persistent_sequential_scheduler_adapter": "6133206095ca3a98ab5e8ae514ee4610404d2edd",
+    "fixed_lag_scheduler_adapter": "7525c4748c8d758ba04a198b8a6c00f1a9ffceb4",
     "live_provider_probe": "ff2ad210387402a74731968e14746210fd2440dd"
   },
   "readiness_proof_contract": {
@@ -42,6 +45,16 @@
     "runtime_provider_fetch_forbidden": true,
     "exact_five_binding_families_required": true,
     "exact_ea5e1_config_manifest_binding_required": true,
+    "scheduler_fixed_lag_implementation_required": true,
+    "scheduler_default_zero_lag_preserved": true,
+    "external_formal_scheduler_lag_hours": 7,
+    "exact_interval_late_cutoff_implementation_required": true,
+    "exact_interval_late_cutoff_types": [
+      "observed_rainfall_v1",
+      "historical_et0_estimate_v1"
+    ],
+    "exact_interval_late_cutoff_offset_minutes": 432,
+    "non_exact_interval_evidence_cutoff_remains_logical_time": true,
     "future_forcing_post_logical_time_availability_allowed": false,
     "time_relabeling_allowed": false,
     "source_substitution_allowed": false,
@@ -53,6 +66,8 @@
   "effect_if_exact_head_proof_passes_and_candidate_merges_to_protected_main": {
     "ea5e2_collector_runtime_schedule_readiness_effective": true,
     "fixed_lag_schedule_frozen": true,
+    "scheduler_fixed_lag_seam_effective": true,
+    "exact_interval_late_cutoff_seam_effective": true,
     "collector_runtime_ordering_executable": true,
     "required_ingestion_margin_frozen": true,
     "ea5e3_formal_authority_v3_authorized": true,
