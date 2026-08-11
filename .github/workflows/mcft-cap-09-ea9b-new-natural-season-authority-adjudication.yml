@@ -1,0 +1,80 @@
+name: mcft-cap-09-ea9b-new-natural-season-authority-adjudication
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea9b-new-natural-season-authority-adjudication.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9B-NEW-NATURAL-SEASON-AUTHORITY-ADJUDICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA9B_NEW_NATURAL_SEASON_AUTHORITY_ADJUDICATION.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA9B_NEW_NATURAL_SEASON_AUTHORITY_ADJUDICATION.mjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-ea9b-natural-season-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  ea9b-new-natural-season-authority-adjudication:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for EA9B KBS Aglog probe
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Resolve exact EA9B base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate exact EA9B natural-season adjudication boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA9B_NEW_NATURAL_SEASON_AUTHORITY_ADJUDICATION.cjs
+
+      - name: Syntax-check EA9B natural-season probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA9B_NEW_NATURAL_SEASON_AUTHORITY_ADJUDICATION.mjs
+
+      - name: Run fail-closed EA9B natural-season evidence adjudication
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA9B_NEW_NATURAL_SEASON_AUTHORITY_ADJUDICATION.mjs
+
+      - name: Upload immutable EA9B adjudication proof
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-ea9b-natural-season-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA9B_NEW_NATURAL_SEASON_AUTHORITY_ADJUDICATION_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA9B_NEW_NATURAL_SEASON_AUTHORITY_ADJUDICATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
