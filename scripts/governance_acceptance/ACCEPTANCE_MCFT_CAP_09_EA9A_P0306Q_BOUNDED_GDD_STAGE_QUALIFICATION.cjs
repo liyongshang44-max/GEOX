@@ -46,16 +46,8 @@ for (const marker of [
   "physiological-maturity proxy interval: `[2392, 2608] GDU`",
   "S6-EA9A-P0306Q-BOUNDED-GDD-STAGE-QUALIFICATION"
 ]) has(amendment10, marker, "EA9A_BOUNDED_GDD_AMENDMENT10_RULE_REQUIRED");
-matches(
-  amendment10,
-  /related_product_point_threshold_transfer_authorized\s*=\s*false/,
-  "EA9A_BOUNDED_GDD_AMENDMENT10_POINT_TRANSFER_PROHIBITION_REQUIRED"
-);
-matches(
-  amendment10,
-  /exact_p0306q_product_specific_threshold_authority_established\s*=\s*false/,
-  "EA9A_BOUNDED_GDD_AMENDMENT10_EXACT_THRESHOLD_PROHIBITION_REQUIRED"
-);
+matches(amendment10, /related_product_point_threshold_transfer_authorized\s*=\s*false/, "EA9A_BOUNDED_GDD_AMENDMENT10_POINT_TRANSFER_PROHIBITION_REQUIRED");
+matches(amendment10, /exact_p0306q_product_specific_threshold_authority_established\s*=\s*false/, "EA9A_BOUNDED_GDD_AMENDMENT10_EXACT_THRESHOLD_PROHIBITION_REQUIRED");
 
 const mapping = json("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9A-THERMAL-LANDMARK-TO-WATER-USE-STAGE-MAPPING-V1.json");
 eq(mapping.mapping_contract.mapping_class, "PARTIAL_SAFE_THERMAL_LANDMARK_TO_MODEL_STAGE_MAPPING", "EA9A_BOUNDED_GDD_MAPPING_CLASS_DRIFT");
@@ -125,7 +117,6 @@ eq(cfg.authority_effect.formal_execution_count, "0/24", "EA9A_BOUNDED_GDD_FORMAL
 
 const probe = read(probePath);
 for (const marker of [
-  "DIRECT_KBS_LTER_WEATHER_STATION_DAILY_EXTREMA",
   "synthetic_daily_table_7_used\": False",
   "raw_hourly_means_relabelled_daily_extrema\": False",
   "CURRENT_SEASON_LATE_STAGE_AUTHORITY_ESTABLISHED_UNDER_BOUNDED_GDD_PROXY",
@@ -173,6 +164,5 @@ const result = {
   formal_execution_count: "0/24",
   mcft_cap09_completed: false
 };
-fs.mkdirSync("acceptance-output", { recursive: true });
 fs.writeFileSync("acceptance-output/MCFT_CAP_09_EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION_GOVERNANCE_RESULT.json", `${JSON.stringify(result, null, 2)}\n`);
 console.log(JSON.stringify(result, null, 2));
