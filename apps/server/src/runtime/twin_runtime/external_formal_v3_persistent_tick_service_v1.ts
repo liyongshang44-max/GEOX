@@ -395,6 +395,7 @@ export class ExternalFormalV3PersistentTickServiceV1 {
       created_at: timing.observer_started_at,
     });
     let bRecord = await this.persistence.lookupScenarioSet(scenarioCandidate.idempotency_key);
+    const bExistedInitially = bRecord !== null;
     if (bRecord) {
       validateCap04ScenarioSetRecordV1(bRecord, forecast);
       if (bRecord.aggregate_determinism_hash !== scenarioCandidate.aggregate_determinism_hash) throw new Error("EXTERNAL_FORMAL_V3_SCENARIO_IDEMPOTENCY_CONFLICT");
@@ -416,7 +417,9 @@ export class ExternalFormalV3PersistentTickServiceV1 {
     if (next.next_logical_tick_time !== addOneHourV1(timing.logical_time)) throw new Error("EXTERNAL_FORMAL_V3_NEXT_HANDOFF_TIME_MISMATCH");
     return {
       service_id: EXTERNAL_FORMAL_V3_PERSISTENT_TICK_SERVICE_ID_V1,
-      status: aExistedInitially ? "RECOVERED_PENDING_SCENARIO" : insertedA ? "INSERTED_A1_WITH_SCENARIO" : "EXISTING_A1_WITH_SCENARIO",
+      status: aExistedInitially
+        ? bExistedInitially ? "EXISTING_A1_WITH_SCENARIO" : "RECOVERED_PENDING_SCENARIO"
+        : insertedA ? "INSERTED_A1_WITH_SCENARIO" : "EXISTING_A1_WITH_SCENARIO",
       manifest_ref: input.manifest_slot.manifest_ref,
       manifest_hash: input.manifest_slot.manifest_hash,
       epoch_id: input.manifest_slot.epoch_id,
