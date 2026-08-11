@@ -1,0 +1,109 @@
+{
+  "schema_version": "geox_mcft_cap09_kbs_publication_cadence_observer_v1",
+  "status": "READ_ONLY_OBSERVABILITY_CANDIDATE",
+  "capability_line": "MCFT-CAP-09",
+  "base_protected_main_sha": "0da26233e8787f6e014e21f701e3837506ba6c15",
+  "source": {
+    "authority_role": "AVAILABILITY_OBSERVER_ONLY_NOT_FORMAL_EVIDENCE",
+    "url": "https://lter.kbs.msu.edu/datatables/13.csv",
+    "required_final_host": "lter.kbs.msu.edu",
+    "required_final_path": "/datatables/13.csv",
+    "event_time_field": "datetime_utc",
+    "required_columns": [
+      "datetime_utc",
+      "solrad_avg",
+      "wind_speed",
+      "ah",
+      "airtmp_107_avg",
+      "rain_mm"
+    ],
+    "provider_event_resolution": "PT1H",
+    "provider_publication_cadence_assumed": false
+  },
+  "polling": {
+    "schedule": "HOURLY_AT_MINUTE_17_UTC",
+    "actual_poll_time_is_authoritative": true,
+    "recent_event_index_hours": 240,
+    "future_clock_skew_allowance_minutes": 5,
+    "max_response_bytes": 110000000,
+    "minimum_publication_transitions_before_candidate_classification": 3
+  },
+  "state_chain": {
+    "storage": "GITHUB_ACTIONS_METADATA_ONLY_ARTIFACT",
+    "artifact_name_prefix": "mcft-cap09-kbs-publication-cadence-state-",
+    "state_filename": "KBS_PUBLICATION_CADENCE_STATE.json",
+    "default_branch_only_chain": true,
+    "first_run_behavior": "BASELINE_ONLY_NO_AVAILABILITY_BRACKET",
+    "source_availability_without_provider_timestamp": "OPEN_CLOSED_BRACKET_LAST_NOT_SEEN_FIRST_SEEN",
+    "exact_source_availability_time_claimed_from_polling_alone": false,
+    "raw_provider_body_published": false,
+    "raw_provider_values_published": false
+  },
+  "snapshot_metadata": [
+    "polled_at",
+    "snapshot_sha256",
+    "response_bytes",
+    "http_last_modified_if_present",
+    "etag_if_present",
+    "parsed_row_count",
+    "valid_event_time_count",
+    "latest_event_time",
+    "recent_event_time_plus_row_identity_hash"
+  ],
+  "transition_metadata": [
+    "previous_polled_at",
+    "previous_latest_event_time",
+    "new_row_count",
+    "forward_new_row_count",
+    "backfill_row_count",
+    "provider_revision_count",
+    "disappeared_event_count",
+    "new_event_min",
+    "new_event_max",
+    "latest_advanced_by_hours",
+    "last_not_seen_at",
+    "first_seen_at",
+    "publication_lag_lower_exclusive_seconds",
+    "publication_lag_upper_inclusive_seconds",
+    "batch_id"
+  ],
+  "transition_shapes": [
+    "BASELINE_SNAPSHOT",
+    "NO_CHANGE",
+    "SINGLE_NEW_EVENT_HOUR",
+    "MULTI_HOUR_FORWARD_BATCH",
+    "BACKFILL_OR_REVISION_ONLY",
+    "MIXED_FORWARD_AND_BACKFILL_OR_REVISION"
+  ],
+  "candidate_cadence_classes": [
+    "INSUFFICIENT_TRANSITIONS",
+    "HOURLY_INCREMENTAL_OBSERVED",
+    "BATCHED_OR_BURSTY_OBSERVED",
+    "VARIABLE_PUBLICATION_OBSERVED"
+  ],
+  "semantics": {
+    "batch_ingestion_future_design_preserves_individual_hour_records": true,
+    "daily_aggregate_substitution_for_raw_hourly_authorized": false,
+    "datatable_561_role_changed": false,
+    "enviroweather_or_nws_formal_substitution_authorized": false,
+    "current_kbs_6h_freshness_authority_changed": false,
+    "amendment_07_fixed_lag_changed": false,
+    "formal_slot_retroactive_rescue_authorized": false,
+    "publication_observer_result_is_authority": false
+  },
+  "writes": {
+    "formal_database": false,
+    "formal_raw_prefix": false,
+    "scheduler": false,
+    "canonical_runtime": false,
+    "repository_from_scheduled_run": false,
+    "provider": false
+  },
+  "activation_effect": {
+    "ea5e2_operational_activation_qualified": false,
+    "ea5e3_effective": false,
+    "formal_window_started": false,
+    "formal_execution_count": "0/24",
+    "mcft_cap09_completed": false
+  }
+}
