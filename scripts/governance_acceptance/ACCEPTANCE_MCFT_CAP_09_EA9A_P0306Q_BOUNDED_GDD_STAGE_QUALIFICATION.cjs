@@ -7,6 +7,7 @@ const { execFileSync } = require("node:child_process");
 const fail = (message) => { throw new Error(message); };
 const eq = (actual, expected, code) => { if (actual !== expected) fail(`${code}: expected=${JSON.stringify(expected)} actual=${JSON.stringify(actual)}`); };
 const has = (text, marker, code) => { if (!text.includes(marker)) fail(`${code}:${marker}`); };
+const matches = (text, pattern, code) => { if (!pattern.test(text)) fail(code); };
 const lacks = (text, marker, code) => { if (text.includes(marker)) fail(`${code}:${marker}`); };
 const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
 const blob = (ref, filePath) => git("rev-parse", `${ref}:${filePath}`);
@@ -43,9 +44,18 @@ for (const marker of [
   "ASSUMED_P0306Q_BOUNDED_THERMAL_PROXY_V1",
   "silk proxy interval: `[1222, 1438] GDU`",
   "physiological-maturity proxy interval: `[2392, 2608] GDU`",
-  "related_product_point_threshold_transfer_authorized = false",
   "S6-EA9A-P0306Q-BOUNDED-GDD-STAGE-QUALIFICATION"
 ]) has(amendment10, marker, "EA9A_BOUNDED_GDD_AMENDMENT10_RULE_REQUIRED");
+matches(
+  amendment10,
+  /related_product_point_threshold_transfer_authorized\s*=\s*false/,
+  "EA9A_BOUNDED_GDD_AMENDMENT10_POINT_TRANSFER_PROHIBITION_REQUIRED"
+);
+matches(
+  amendment10,
+  /exact_p0306q_product_specific_threshold_authority_established\s*=\s*false/,
+  "EA9A_BOUNDED_GDD_AMENDMENT10_EXACT_THRESHOLD_PROHIBITION_REQUIRED"
+);
 
 const mapping = json("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9A-THERMAL-LANDMARK-TO-WATER-USE-STAGE-MAPPING-V1.json");
 eq(mapping.mapping_contract.mapping_class, "PARTIAL_SAFE_THERMAL_LANDMARK_TO_MODEL_STAGE_MAPPING", "EA9A_BOUNDED_GDD_MAPPING_CLASS_DRIFT");
@@ -64,7 +74,6 @@ eq(cfg.formal_scope_anchor.planting_local_calendar_date, "2026-05-11", "EA9A_BOU
 eq(cfg.formal_scope_anchor.planting_timezone, "America/Detroit", "EA9A_BOUNDED_GDD_PLANTING_TZ_DRIFT");
 eq(cfg.formal_scope_anchor.planting_timestamp_uncertainty_utc.start_inclusive, "2026-05-11T04:00:00Z", "EA9A_BOUNDED_GDD_PLANTING_START_DRIFT");
 eq(cfg.formal_scope_anchor.planting_timestamp_uncertainty_utc.end_exclusive, "2026-05-12T04:00:00Z", "EA9A_BOUNDED_GDD_PLANTING_END_DRIFT");
-
 eq(cfg.temperature_source.metadata_path, "/datatables/561", "EA9A_BOUNDED_GDD_DAILY_EXTREMA_METADATA_IDENTITY_DRIFT");
 eq(cfg.temperature_source.csv_path, "/datatables/561.csv", "EA9A_BOUNDED_GDD_DAILY_EXTREMA_CSV_IDENTITY_DRIFT");
 eq(cfg.temperature_source.datatable_id, "KBS002-014.142", "EA9A_BOUNDED_GDD_DATATABLE_ID_DRIFT");
@@ -72,14 +81,12 @@ eq(cfg.temperature_source.source_class, "DIRECT_KBS_LTER_WEATHER_STATION_DAILY_E
 eq(cfg.temperature_source.synthetic_daily_table_7_may_be_used, false, "EA9A_BOUNDED_GDD_SYNTHETIC_DAILY_SOURCE_FORBIDDEN");
 eq(cfg.temperature_source.raw_hourly_means_may_be_relabelled_daily_extrema, false, "EA9A_BOUNDED_GDD_HOURLY_MEAN_EXTREMA_SUBSTITUTION_FORBIDDEN");
 eq(cfg.temperature_source.spatial_confidence_upgrade_authorized, false, "EA9A_BOUNDED_GDD_SPATIAL_UPGRADE_FORBIDDEN");
-
 eq(cfg.base50_method.daily_max_f_upper_cap, 86, "EA9A_BOUNDED_GDD_MAX_CAP_DRIFT");
 eq(cfg.base50_method.daily_min_f_lower_floor, 50, "EA9A_BOUNDED_GDD_MIN_FLOOR_DRIFT");
 eq(cfg.base50_method.maximum_allowed_daily_gdu, 36, "EA9A_BOUNDED_GDD_DAILY_MAX_DRIFT");
 eq(cfg.base50_method.rm_to_gdu_conversion_authorized, false, "EA9A_BOUNDED_GDD_RM_CONVERSION_FORBIDDEN");
 eq(cfg.base50_method.canadian_heat_unit_conversion_authorized, false, "EA9A_BOUNDED_GDD_CHU_CONVERSION_FORBIDDEN");
 eq(cfg.base50_method.hourly_mean_extrema_substitution_authorized, false, "EA9A_BOUNDED_GDD_HOURLY_MEAN_SUBSTITUTION_FORBIDDEN");
-
 eq(cfg.uncertainty_policy.planting_day_lower_gdu, 0, "EA9A_BOUNDED_GDD_PLANTING_DAY_LOWER_DRIFT");
 eq(cfg.uncertainty_policy.planting_day_upper_uses_valid_full_day_gdu_else, 36, "EA9A_BOUNDED_GDD_PLANTING_DAY_UPPER_DRIFT");
 eq(cfg.uncertainty_policy.missing_or_invalid_complete_day_lower_gdu, 0, "EA9A_BOUNDED_GDD_MISSING_DAY_LOWER_DRIFT");
@@ -87,12 +94,10 @@ eq(cfg.uncertainty_policy.missing_or_invalid_complete_day_upper_gdu, 36, "EA9A_B
 eq(cfg.uncertainty_policy.current_incomplete_local_day_used, false, "EA9A_BOUNDED_GDD_CURRENT_PARTIAL_DAY_FORBIDDEN");
 eq(cfg.uncertainty_policy.future_observations_used, false, "EA9A_BOUNDED_GDD_FUTURE_OBSERVATION_FORBIDDEN");
 eq(cfg.uncertainty_policy.silent_imputation_authorized, false, "EA9A_BOUNDED_GDD_SILENT_IMPUTATION_FORBIDDEN");
-
 eq(JSON.stringify(cfg.bounded_proxy.silk_interval_gdu), JSON.stringify([1222,1438]), "EA9A_BOUNDED_GDD_SILK_INTERVAL_DRIFT");
 eq(JSON.stringify(cfg.bounded_proxy.physiological_maturity_interval_gdu), JSON.stringify([2392,2608]), "EA9A_BOUNDED_GDD_PHYS_INTERVAL_DRIFT");
 eq(cfg.bounded_proxy.late_stage_deterministic_minimum_rule_gdu, 2608, "EA9A_BOUNDED_GDD_LATE_RULE_DRIFT");
 eq(cfg.bounded_proxy.epistemic_class, "ASSUMED_BOUNDED_PROXY", "EA9A_BOUNDED_GDD_PROXY_EPISTEMIC_DRIFT");
-
 eq(cfg.harvest_guard.scan_required_only_if_thermal_late_candidate, true, "EA9A_BOUNDED_GDD_HARVEST_GUARD_TRIGGER_DRIFT");
 eq(cfg.harvest_guard.global_absence_claim_authorized, false, "EA9A_BOUNDED_GDD_GLOBAL_HARVEST_ABSENCE_FORBIDDEN");
 eq(cfg.stage_decision_policy.positive_stage_code, "LATE", "EA9A_BOUNDED_GDD_POSITIVE_STAGE_DRIFT");
@@ -168,5 +173,6 @@ const result = {
   formal_execution_count: "0/24",
   mcft_cap09_completed: false
 };
+fs.mkdirSync("acceptance-output", { recursive: true });
 fs.writeFileSync("acceptance-output/MCFT_CAP_09_EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION_GOVERNANCE_RESULT.json", `${JSON.stringify(result, null, 2)}\n`);
 console.log(JSON.stringify(result, null, 2));
