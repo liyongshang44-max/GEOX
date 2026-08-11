@@ -297,7 +297,6 @@ export class ExternalFormalV3PersistentTickServiceV1 {
     const resolvedConfig = new ExternalFormalCap04ExecutionConfigResolverV1().resolveExecutionConfig(runtimeConfig);
 
     let insertedA = false;
-    let evidenceProviderCount = 0;
     if (!aRecordSet) {
       if (resolvedConfig.payload.parent_runtime_config_ref !== handoff.previous_state_runtime_config_ref
         || resolvedConfig.payload.parent_runtime_config_hash !== handoff.previous_state_runtime_config_hash) {
@@ -314,7 +313,6 @@ export class ExternalFormalV3PersistentTickServiceV1 {
       });
       if (evidence.database_write_count !== 0) throw new Error("EXTERNAL_FORMAL_V3_EVIDENCE_SOURCE_WRITE_FORBIDDEN");
       if (evidence.provider_request_count !== 0) throw new Error("EXTERNAL_FORMAL_V3_RUNTIME_PROVIDER_FETCH_FORBIDDEN");
-      evidenceProviderCount = evidence.provider_request_count;
       const candidate = executeExternalFormalCap04CandidateV1({
         scope,
         logical_time: timing.logical_time,
@@ -370,7 +368,7 @@ export class ExternalFormalV3PersistentTickServiceV1 {
         next_logical_tick_time: next.next_logical_tick_time,
         scheduler_claim_reused_as_runtime_lease: true,
         second_runtime_write_lease_acquired: false,
-        runtime_provider_request_count: evidenceProviderCount,
+        runtime_provider_request_count: 0,
         runtime_r2_head_count: 0,
         recommendation_write_count: 0,
         approval_write_count: 0,
@@ -434,7 +432,7 @@ export class ExternalFormalV3PersistentTickServiceV1 {
       next_logical_tick_time: next.next_logical_tick_time,
       scheduler_claim_reused_as_runtime_lease: true,
       second_runtime_write_lease_acquired: false,
-      runtime_provider_request_count: evidenceProviderCount,
+      runtime_provider_request_count: 0,
       runtime_r2_head_count: 0,
       recommendation_write_count: 0,
       approval_write_count: 0,
