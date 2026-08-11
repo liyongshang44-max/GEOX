@@ -1,30 +1,29 @@
-name: mcft-cap-09-ea5e2-live-provider-two-phase-readiness
+name: mcft-cap-09-ea5e2-operational-activation-live
 
 on:
-  pull_request:
+  push:
+    branches: [main]
     paths:
       - '.github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'
       - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_external_formal_collector_phase_orchestrator_v1.ts'
-      - 'apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts'
-      - 'apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts'
-      - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts'
-      - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'
-      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_LOCAL_DB.ts'
-      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
-      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-COLLECTOR-RUNTIME-SCHEDULE-READINESS-V1.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/fixed_lag_scheduler_adapter_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json'
   workflow_dispatch:
 
 permissions:
   contents: read
   actions: read
-  pull-requests: read
 
 concurrency:
-  group: mcft-cap09-ea5e2-live-provider-${{ github.event.pull_request.head.sha || github.sha }}
+  group: mcft-cap09-ea5e2-operational-activation-${{ github.sha }}
   cancel-in-progress: false
 
 env:
@@ -32,13 +31,13 @@ env:
   PNPM_VERSION: '9.15.4'
   PYTHON_VERSION: '3.12'
   READINESS_DB_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
-  EA5E3_HARD_DEADLINE_UTC: '2026-08-11T05:00:00.000Z'
-  MCFT_EA5E2_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
   MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
   MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
   MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
   MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
   MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+  FORMAL_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
 
 jobs:
   pre-boundary:
@@ -64,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -91,7 +90,35 @@ jobs:
             numpy==1.26.4 \
             refet==0.4.2
 
-      - name: Require existing private R2 secret bindings without exposing values
+      - name: Require protected-main subject and unchanged activation boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          critical=(
+            .github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+            scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py
+            apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts
+            apps/server/src/external_evidence/mcft_cap09_external_formal_collector_phase_orchestrator_v1.ts
+            apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts
+            apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts
+            apps/server/src/runtime/twin_runtime/fixed_lag_scheduler_adapter_v1.ts
+            apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts
+            apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json
+          )
+          for path in "${critical[@]}"; do
+            test "$(git rev-parse "$GITHUB_SHA:$path")" = "$(git rev-parse "origin/main:$path")" || {
+              echo "EA5E2_ACTIVATION_SUBJECT_SUPERSEDED:$path" >&2
+              exit 1
+            }
+          done
+          echo "EA5E2_ACTIVATION_EXACT_PROTECTED_MAIN_SUBJECT=$GITHUB_SHA"
+
+      - name: Require existing private R2 and Formal read-only bindings without exposing values
         shell: bash
         run: |
           set -euo pipefail
@@ -101,7 +128,8 @@ jobs:
             MCFT_EA5E2_TRANSIENT_S3_BUCKET \
             MCFT_EA5E2_TRANSIENT_S3_REGION \
             MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID \
-            MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY
+            MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY \
+            FORMAL_DATABASE_URL
           do
             if [ -z "${!name:-}" ]; then
               echo "MISSING_REQUIRED_PRIVATE_BINDING:$name"
@@ -117,27 +145,38 @@ jobs:
           MCFT_EA5E2_LIVE_PHASE: TRANSIENT_STORE_SMOKE
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
 
-      - name: Fail fast unless KBS Raw Hourly is currently within unchanged authority
-        run: python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py precheck-kbs
+      - name: Fail fast unless KBS Raw Hourly is currently within unchanged 6h authority
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py precheck-kbs \
+            | tee acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
 
-      - name: Select one real future target T with EA5E3 completion margin
+      - name: Select one real future target T independent of any Formal epoch
         id: target
         shell: node {0}
         env:
-          SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SUBJECT_SHA: ${{ github.sha }}
         run: |
           const fs=require('fs');
           const now=new Date();
           const base=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),now.getUTCHours()+1,0,0,0);
           const target=new Date(base + (now.getUTCMinutes()>20 ? 3600000 : 0));
           const observer=new Date(target.getTime()+437*60000);
-          const deadline=new Date(process.env.EA5E3_HARD_DEADLINE_UTC);
-          const requiredProofFinish=new Date(deadline.getTime()-60*60000);
-          if(observer>requiredProofFinish) throw new Error(`EA5E2_LIVE_PROOF_CANNOT_COMPLETE_WITH_EA5E3_MARGIN:${observer.toISOString()}`);
           const subject=process.env.SUBJECT_SHA;
-          if(!/^[0-9a-f]{40}$/.test(subject)) throw new Error('EA5E2_EXACT_SUBJECT_SHA_REQUIRED');
+          if(!/^[0-9a-f]{40}$/.test(subject)) throw new Error('EA5E2_ACTIVATION_EXACT_SUBJECT_SHA_REQUIRED');
           fs.mkdirSync('acceptance-output',{recursive:true});
-          fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json',JSON.stringify({schema_version:'geox_mcft_cap09_ea5e2_live_target_v1',subject_sha:subject,selected_at:now.toISOString(),target_t:target.toISOString(),expected_observer_time:observer.toISOString(),ea5e3_deadline:deadline.toISOString(),minimum_post_proof_ea5e3_margin_minutes:60,formal_effectiveness:false},null,2)+'\n');
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json',JSON.stringify({
+            schema_version:'geox_mcft_cap09_ea5e2_operational_activation_target_v1',
+            subject_sha:subject,
+            selected_at:now.toISOString(),
+            target_t:target.toISOString(),
+            expected_observer_time:observer.toISOString(),
+            epoch_independent:true,
+            qualification_only:true,
+            formal_effectiveness:false
+          },null,2)+'\n');
           console.log(`target_t=${target.toISOString()}`);
           console.log(`subject_sha=${subject}`);
           fs.appendFileSync(process.env.GITHUB_OUTPUT,`target_t=${target.toISOString()}\nsubject_sha=${subject}\n`);
@@ -168,6 +207,7 @@ jobs:
         with:
           name: mcft-cap09-ea5e2-interphase-${{ steps.target.outputs.subject_sha }}
           path: |
+            acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json
             acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
@@ -272,7 +312,7 @@ jobs:
           PYTHON: python
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
 
-      - name: Verify complete same-T two-phase readiness proof
+      - name: Verify complete same-T two-phase provider and DB-only handoff proof
         shell: node {0}
         env:
           SUBJECT_SHA: ${{ needs.pre-boundary.outputs.subject_sha }}
@@ -282,26 +322,105 @@ jobs:
           const target=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json','utf8'));
           const pre=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json','utf8'));
           const late=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json','utf8'));
-          if(target.subject_sha!==process.env.SUBJECT_SHA||target.target_t!==process.env.TARGET_T) throw new Error('EA5E2_LIVE_TARGET_IDENTITY_MISMATCH');
-          if(pre.status!=='PASS'||late.status!=='PASS'||pre.target_logical_time!==late.target_logical_time||late.target_logical_time!==process.env.TARGET_T) throw new Error('EA5E2_LIVE_SAME_TARGET_TWO_PHASE_REQUIRED');
-          if(pre.canonical_fact_write_count!==3||late.pre_rehydrated_fact_count!==3||late.late_canonical_fact_write_count!==2||late.database_exact_fact_count!==5||late.db_only_selected_record_count!==5) throw new Error('EA5E2_LIVE_EXACT_FIVE_FAMILY_DB_REQUIRED');
-          if(late.pre_rehydration_semantic_hash_match!==true||late.pre_raw_retention_reverified!==true||late.pre_rehydration_provider_request_count!==0) throw new Error('EA5E2_PRIVATE_REHYDRATION_PROOF_REQUIRED');
-          if(pre.gfs_same_cycle_pair!==true||late.same_gfs_cycle_future_weather_et0!==true||late.exact_rain_et0_interval_t_minus_1_to_t!==true||late.post_t_future_forcing_excluded!==true) throw new Error('EA5E2_LIVE_CAUSALITY_PROOF_REQUIRED');
-          if(pre.formal_raw_prefix_write_count!==0||late.formal_raw_prefix_write_count!==0||pre.public_value_artifact_count!==0||late.public_value_artifact_count!==0) throw new Error('EA5E2_FORMAL_PREFIX_OR_PUBLIC_VALUE_WRITE_FORBIDDEN');
-          if(pre.raw_values_emitted!==false||late.raw_values_emitted!==false) throw new Error('EA5E2_LIVE_RAW_VALUE_PUBLICATION_FORBIDDEN');
-          for(const value of [pre.formal_database_write_count,pre.formal_r2_write_count,late.formal_database_write_count,late.formal_r2_write_count,late.scheduler_write_count,late.canonical_runtime_write_count]) if(value!==0) throw new Error('EA5E2_LIVE_FORMAL_SIDE_EFFECT_FORBIDDEN');
-          if(pre.formal_window_started!==false||late.formal_window_started!==false) throw new Error('EA5E2_LIVE_FORMAL_WINDOW_START_FORBIDDEN');
-          console.log(JSON.stringify({status:'PASS',subject_sha:process.env.SUBJECT_SHA,target_t:process.env.TARGET_T,real_provider_get:true,private_transient_r2:true,public_value_artifacts:0,pre_boundary_fact_count:3,pre_rehydrated_fact_count:3,late_fact_count:2,db_only_selected_count:5,same_gfs_cycle:true,exact_late_interval:true,formal_writes:0}));
+          if(target.subject_sha!==process.env.SUBJECT_SHA||target.target_t!==process.env.TARGET_T||target.epoch_independent!==true) throw new Error('EA5E2_ACTIVATION_TARGET_IDENTITY_MISMATCH');
+          if(pre.status!=='PASS'||late.status!=='PASS'||pre.target_logical_time!==late.target_logical_time||late.target_logical_time!==process.env.TARGET_T) throw new Error('EA5E2_ACTIVATION_SAME_TARGET_TWO_PHASE_REQUIRED');
+          if(pre.canonical_fact_write_count!==3||late.pre_rehydrated_fact_count!==3||late.late_canonical_fact_write_count!==2||late.database_exact_fact_count!==5||late.db_only_selected_record_count!==5) throw new Error('EA5E2_ACTIVATION_EXACT_FIVE_FAMILY_DB_REQUIRED');
+          if(late.pre_rehydration_semantic_hash_match!==true||late.pre_raw_retention_reverified!==true||late.pre_rehydration_provider_request_count!==0) throw new Error('EA5E2_ACTIVATION_PRIVATE_REHYDRATION_PROOF_REQUIRED');
+          if(pre.gfs_same_cycle_pair!==true||late.same_gfs_cycle_future_weather_et0!==true||late.exact_rain_et0_interval_t_minus_1_to_t!==true||late.post_t_future_forcing_excluded!==true) throw new Error('EA5E2_ACTIVATION_CAUSALITY_PROOF_REQUIRED');
+          if(pre.formal_raw_prefix_write_count!==0||late.formal_raw_prefix_write_count!==0||pre.public_value_artifact_count!==0||late.public_value_artifact_count!==0) throw new Error('EA5E2_ACTIVATION_FORMAL_PREFIX_OR_PUBLIC_VALUE_WRITE_FORBIDDEN');
+          if(pre.raw_values_emitted!==false||late.raw_values_emitted!==false) throw new Error('EA5E2_ACTIVATION_RAW_VALUE_PUBLICATION_FORBIDDEN');
+          for(const value of [pre.formal_database_write_count,pre.formal_r2_write_count,late.formal_database_write_count,late.formal_r2_write_count,late.scheduler_write_count,late.canonical_runtime_write_count]) if(value!==0) throw new Error('EA5E2_ACTIVATION_FORMAL_SIDE_EFFECT_FORBIDDEN');
 
-      - name: Upload immutable safe final provider readiness proof and cleanup refs
+      - name: Wait until actual Runtime observer T plus 7h17m
+        shell: node {0}
+        env:
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        run: |
+          const observer=Date.parse(process.env.TARGET_T)+437*60000;
+          if(!Number.isFinite(observer)) throw new Error('EA5E2_ACTIVATION_OBSERVER_TARGET_INVALID');
+          const remaining=Math.max(0,observer-Date.now());
+          if(remaining>70*60000) throw new Error(`EA5E2_ACTIVATION_OBSERVER_WAIT_TOO_LONG:${remaining}`);
+          console.log(JSON.stringify({wait_until:new Date(observer).toISOString(),remaining_minutes:remaining/60000}));
+          await new Promise(r=>setTimeout(r,remaining));
+
+      - name: Execute actual T plus 7h17m DB-only External CAP04 observer
+        env:
+          MCFT_EA5E2_TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+          MCFT_EA5E2_SUBJECT_SHA: ${{ needs.pre-boundary.outputs.subject_sha }}
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          FORMAL_DATABASE_URL: ${{ env.FORMAL_DATABASE_URL }}
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts
+
+      - name: Freeze metadata-only operational activation live proof candidate
+        shell: node {0}
+        env:
+          SUBJECT_SHA: ${{ needs.pre-boundary.outputs.subject_sha }}
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        run: |
+          const fs=require('fs');
+          const kbs=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json','utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));
+          const target=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json','utf8'));
+          const pre=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json','utf8'));
+          const late=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json','utf8'));
+          const observer=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json','utf8'));
+          if(kbs.status!=='PASS'||Number(kbs.latest_age_hours)>6||Number(kbs.configured_max_age_hours)!==6) throw new Error('EA5E2_ACTIVATION_KBS_FRESHNESS_AUTHORITY_REQUIRED');
+          if(target.subject_sha!==process.env.SUBJECT_SHA||target.target_t!==process.env.TARGET_T||observer.subject_sha!==process.env.SUBJECT_SHA||observer.target_t!==process.env.TARGET_T) throw new Error('EA5E2_ACTIVATION_PROOF_IDENTITY_MISMATCH');
+          if(pre.status!=='PASS'||late.status!=='PASS'||observer.status!=='PASS') throw new Error('EA5E2_ACTIVATION_ALL_PHASES_PASS_REQUIRED');
+          if(observer.db_only_runtime!==true||observer.provider_request_count!==0||observer.selected_record_count!==5||observer.disposition!=='A1'||observer.forecast_status!=='COMPLETED'||observer.forecast_point_count!==72) throw new Error('EA5E2_ACTIVATION_EXTERNAL_CAP04_A1_COMPLETED_72_REQUIRED');
+          if(observer.formal_database_access_mode!=='READ_ONLY_A0_HANDOFF_ONLY'||observer.formal_database_write_count!==0||observer.scheduler_slot_count!==0||observer.scheduler_cursor_count!==0) throw new Error('EA5E2_ACTIVATION_FORMAL_READ_ONLY_BOUNDARY_REQUIRED');
+          const proof={
+            schema_version:'geox_mcft_cap09_ea5e2_operational_activation_live_proof_v1',
+            status:'PASS',
+            subject_sha:process.env.SUBJECT_SHA,
+            target_t:process.env.TARGET_T,
+            kbs_latest_raw_hourly_timestamp:kbs.latest_raw_hourly_timestamp,
+            kbs_latest_age_hours:kbs.latest_age_hours,
+            kbs_max_age_hours:6,
+            pre_boundary_collector_offset_minutes:-30,
+            late_exact_hour_collector_offset_minutes:390,
+            scheduler_eligibility_lag_hours:7,
+            late_exact_hour_cutoff_offset_minutes:432,
+            runtime_observer_offset_minutes:437,
+            observer_actual_at:observer.observed_at,
+            observer_start_skew_minutes:observer.observer_start_skew_minutes,
+            crop_stage_code:observer.crop_stage_code,
+            crop_context_hash:observer.crop_context_hash,
+            same_gfs_cycle:true,
+            exact_five_family_db:true,
+            db_only_runtime:true,
+            external_cap04_disposition:'A1',
+            forecast_status:'COMPLETED',
+            forecast_point_count:72,
+            public_value_bearing_artifact_count:0,
+            public_raw_value_emission_count:0,
+            formal_database_write_count:0,
+            formal_raw_prefix_write_count:0,
+            scheduler_write_count:0,
+            canonical_runtime_write_count:0,
+            source_substitution_count:0,
+            timestamp_relabel_count:0,
+            accelerated_clock:false,
+            operational_activation_live_proof_pass:true,
+            ea5e2_operational_activation_qualified:false,
+            effectiveness_pending_evidence_freeze:true,
+            formal_window_started:false,
+            ea5e3_authorized:false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_LIVE_PROOF.json',JSON.stringify(proof,null,2)+'\n');
+          console.log(JSON.stringify(proof));
+
+      - name: Upload immutable metadata-only operational activation candidate proof and cleanup refs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-ea5e2-live-provider-${{ needs.pre-boundary.outputs.subject_sha }}
+          name: mcft-cap09-ea5e2-operational-activation-${{ needs.pre-boundary.outputs.subject_sha }}
           path: |
+            acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json
+            acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json
+            acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_LIVE_PROOF.json
             acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
           if-no-files-found: warn
           retention-days: 90
@@ -314,7 +433,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -334,14 +453,14 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          name: mcft-cap09-ea5e2-interphase-${{ github.event.pull_request.head.sha || github.sha }}
+          name: mcft-cap09-ea5e2-interphase-${{ github.sha }}
           path: acceptance-output/pre
 
-      - name: Download late safe metadata when present
+      - name: Download activation metadata when present
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          name: mcft-cap09-ea5e2-live-provider-${{ github.event.pull_request.head.sha || github.sha }}
+          name: mcft-cap09-ea5e2-operational-activation-${{ github.sha }}
           path: acceptance-output/late
 
       - name: Flatten metadata-only JSONs for exact-head cleanup discovery
@@ -351,9 +470,7 @@ jobs:
           mkdir -p acceptance-output
           copied=0
           for dir in acceptance-output/pre acceptance-output/late; do
-            if [ ! -d "$dir" ]; then
-              continue
-            fi
+            if [ ! -d "$dir" ]; then continue; fi
             while IFS= read -r -d '' file; do
               digest="$(printf '%s' "$file" | sha256sum | awk '{print $1}')"
               cp "$file" "acceptance-output/cleanup-${digest}.json"
@@ -371,7 +488,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-ea5e2-transient-cleanup-${{ github.event.pull_request.head.sha || github.sha }}
+          name: mcft-cap09-ea5e2-transient-cleanup-${{ github.sha }}
           path: acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_CLEANUP.json
           if-no-files-found: warn
           retention-days: 90
