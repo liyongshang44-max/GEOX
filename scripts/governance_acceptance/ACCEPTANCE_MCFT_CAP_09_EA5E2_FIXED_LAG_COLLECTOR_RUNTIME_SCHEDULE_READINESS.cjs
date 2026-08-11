@@ -68,7 +68,7 @@ const IMMUTABLE = {
 };
 
 const CANDIDATE = {
-  [P.workflow]: "4a656ae124ecb601a5453910185a31e878533322",
+  [P.workflow]: "64aa2d965ae4dab615f6ed8b8be0688e88f845cc",
   [P.collectorWorkflow]: "73e8a4d63f628e292b39895ce76db7ef63b7854a",
   [P.liveWorkflow]: "f003dde9ff2f9319cb09be4809092f437215427c",
   [P.canonicalizer]: "3fad324baecd395b6511f5102e905127f50eda4a",
@@ -221,6 +221,7 @@ function main() {
   lacks(privateRunner, "GEOX_MCFT_CAP09_S6_DATABASE_URL", "EA5E2_FORMAL_DB_SECRET_FORBIDDEN");
   lacks(privateRunner, "pg_dump", "EA5E2_PGDUMP_FORBIDDEN");
 
+  has(focusedWorkflow, "Bind exact effective Amendment-08 protected-main authority", "EA5E2_EXACT_AMENDMENT08_BASE_STEP_REQUIRED");
   has(focusedWorkflow, "Validate EA5E2 implementation qualification under Amendment-08", "EA5E2_IMPLEMENTATION_GATE_STEP_REQUIRED");
   has(focusedWorkflow, "Upload immutable EA5E2 implementation qualification proof", "EA5E2_IMPLEMENTATION_ARTIFACT_REQUIRED");
   lacks(focusedWorkflow, "EA5E2_READINESS_DEADLINE_ALREADY_PASSED", "EA5E2_EXPIRED_EPOCH_MERGE_GATE_FORBIDDEN");
