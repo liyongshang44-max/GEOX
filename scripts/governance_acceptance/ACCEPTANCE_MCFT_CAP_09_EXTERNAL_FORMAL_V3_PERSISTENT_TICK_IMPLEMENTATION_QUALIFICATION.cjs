@@ -46,8 +46,8 @@ function main() {
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-POST-ACTIVATION-READINESS-AUDIT-V1.json": "df8b60cdcd21ad6b92665d8fc92e45f95836cffe",
     "apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts": "71df4e47b0c62b7c6f2126e33896849af56273ca",
     "apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts": "e5ed3c677bf55e4eee3cbb67a52e3b6886b8f259",
-    "apps/server/src/runtime/twin_runtime/forecast_scenario_persistence_ports_v1.ts": "b8ef889de8d846e6ae74e3235f25944a38ccaa1f",
-    "apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts": "efc3bcdf06dc236af28226c76458dd8633adfd82",
+    "apps/server/src/runtime/twin_runtime/forecast_scenario_persistence_ports_v1.ts": "188a191dd81d15f7b003d5a445ad619590f2f78b",
+    "apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts": "16827ec64532b9313f5446c065c04a42270e2e22",
   };
   for (const [file, sha] of Object.entries(immutable)) {
     eq(blob(base, file), sha, `EXTERNAL_FORMAL_V3_BASE_PIN:${file}`);
