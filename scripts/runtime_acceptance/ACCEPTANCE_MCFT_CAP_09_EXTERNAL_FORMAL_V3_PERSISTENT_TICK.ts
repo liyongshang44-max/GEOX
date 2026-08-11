@@ -198,7 +198,8 @@ async function main(): Promise<void> {
   const inserted = await positive.service.executeClaimedTick(positive.input);
   assert.equal(inserted.status, "INSERTED_A1_WITH_SCENARIO");
   assert.equal(inserted.a_record_set.operation_key.operation_variant, "A1");
-  assert.equal(inserted.b_record?.scenario_set.payload.points.length, 216);
+  assert.equal(inserted.b_record?.scenario_set.payload.options.length, 3);
+  assert.equal(inserted.b_record?.scenario_set.payload.options.reduce((sum, option) => sum + option.trajectory_points.length, 0), 216);
   assert.equal(inserted.exact_interval_availability_cutoff_time, addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 432));
   assert.equal(inserted.observer_start_skew_minutes, 0);
   assert.equal(inserted.next_logical_tick_time, addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 60));
@@ -222,6 +223,7 @@ async function main(): Promise<void> {
   assert.equal(positive.persistence.bLease?.fencing_token, positive.input.claim.fencing_token);
 
   const replay = await positive.service.executeClaimedTick(positive.input);
+  assert.equal(replay.status, "EXISTING_A1_WITH_SCENARIO");
   assert.equal(replay.a_record_set.aggregate_determinism_hash, inserted.a_record_set.aggregate_determinism_hash);
   assert.equal(replay.b_record?.aggregate_determinism_hash, inserted.b_record?.aggregate_determinism_hash);
   assert.equal(positive.persistence.aWrites, 1);
