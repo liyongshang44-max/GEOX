@@ -46,14 +46,14 @@
   },
   "enumerated_public_source_candidates": [
     {
-      "candidate_id": "KBS_AGLOG_AREA_REGISTRY_T1R1",
+      "candidate_id": "KBS_AGLOG_2026_T1R1_AREA_IDENTITY_6881",
       "provider": "KBS_AGLOG",
-      "official_url": "https://aglog.kbs.msu.edu/areas",
-      "required_markers": ["areas", "T1", "T1R1"],
+      "official_url": "https://aglog.kbs.msu.edu/observations/6881",
+      "required_markers": ["Observation Date", "2026-04-22", "Areas", "T1R1", "Observation Type", "Fertilizer Application"],
       "formal_scope_relationship": "EXACT_PROVIDER_AREA_IDENTITY_DISCOVERY",
       "evidence_role": "SPATIAL_IDENTITY_DISCOVERY_ONLY",
       "stage_determinative": false,
-      "reason": "AREA_REGISTRY_CONTAINS_NO_CONTEMPORANEOUS_BIOLOGICAL_STAGE_OBSERVATION"
+      "reason": "CURRENT_YEAR_T1R1_MANAGEMENT_RECORD_PROVES_PROVIDER_AREA_IDENTITY_BUT_NOT_PHENOLOGY"
     },
     {
       "candidate_id": "KBS_AGLOG_2026_T1_PLANTING_6931",
