@@ -1,0 +1,31 @@
+import { strict as assert } from "node:assert";
+import { MCFT_CAP09_SUCCESSOR_VIABILITY_PROFILE_V1 as P, evaluateSuccessorSlotV1, scanSuccessorWholeWindowV1 } from "../../apps/server/src/domain/twin_runtime/external_formal_successor_whole_window_viability_v1.js";
+
+const result=scanSuccessorWholeWindowV1();
+assert.equal(P.planting_window_start_inclusive,"2026-05-11T04:00:00.000Z");
+assert.equal(P.planting_window_end_exclusive,"2026-05-12T04:00:00.000Z");
+assert.equal(P.variant_stage_lengths_days.length,6);
+assert.deepEqual(P.variant_stage_lengths_days,[[30,50,60,40],[25,40,45,30],[20,35,40,30],[20,35,40,30],[30,40,50,30],[30,40,50,50]]);
+assert.equal(P.backward_stability_hours,6);
+assert.equal(P.forward_transition_guard_hours,30);
+assert.equal(P.exact_slot_count,24);
+assert.equal(P.minimum_lead_hours,36);
+assert.equal(P.ea5e3_readiness_offset_hours,-12);
+assert.equal(P.future_observations_authorized,false);
+assert.equal(P.amendment08_effective_at,"2026-08-11T02:33:13.000Z");
+const latest=result.latest_complete_current_season_candidate;
+assert(latest);
+assert.equal(latest.o00,"2026-08-11T22:00:00.000Z");
+assert.equal(latest.o23,"2026-08-12T21:00:00.000Z");
+assert.equal(latest.stage,"MID");
+assert.equal(latest.latest_selection_effectiveness_time,"2026-08-10T10:00:00.000Z");
+for(let i=0;i<24;i+=1){const t=new Date(Date.parse(latest.o00)+i*3600000).toISOString();const s=evaluateSuccessorSlotV1(t);assert.equal(s.status,"PASS");assert.equal(s.stage,"MID");}
+assert.equal(evaluateSuccessorSlotV1("2026-08-12T22:00:00.000Z").status,"FAIL");
+assert.equal(result.amendment08_after_latest_selection_deadline,true);
+assert.equal(result.current_season_successor_epoch_eligible_after_amendment08,false);
+assert.equal(result.expected_result,"NO_CURRENT_SEASON_SUCCESSOR_EPOCH");
+assert.equal(result.future_observations_used,false);
+const readiness=new Date(Date.parse(latest.o00)-12*3600000).toISOString();
+assert.equal(readiness,"2026-08-11T10:00:00.000Z");
+assert(Date.parse(P.amendment08_effective_at)>Date.parse(latest.latest_selection_effectiveness_time));
+console.log(JSON.stringify({status:"PASS",result,ea5e3_latest_readiness_for_latest_candidate:readiness,database_write_count:0,r2_write_count:0,scheduler_write_count:0,canonical_runtime_write_count:0,successor_epoch_selected:false,ea5e3_authorized:false,formal_window_started:false},null,2));
