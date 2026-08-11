@@ -1,0 +1,83 @@
+name: mcft-cap-09-external-formal-v3-persistent-tick-qualification
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/runtime/twin_runtime/external_formal_v3_persistent_tick_service_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EXTERNAL-FORMAL-V3-PERSISTENT-TICK-IMPLEMENTATION-QUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK_IMPLEMENTATION_QUALIFICATION.cjs'
+      - '.github/workflows/mcft-cap-09-external-formal-v3-persistent-tick-qualification.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-external-formal-v3-persistent-tick-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  external-formal-v3-persistent-tick-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact V3 implementation-qualification base
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}'
+          test "$base" = 'c31a5533521a671d6059cadfe4209182ce3b1926' || {
+            echo "EXTERNAL_FORMAL_V3_BASE_DRIFT:$base" >&2
+            exit 1
+          }
+          echo "MCFT_BASE_SHA=$base" >> "$GITHUB_ENV"
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Re-prove server typecheck
+        run: pnpm --filter @geox/server run typecheck
+
+      - name: Typecheck V3 focused acceptance as standalone NodeNext entrypoint
+        run: >-
+          pnpm exec tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022
+          --types node --skipLibCheck
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK.ts
+
+      - name: Run External Formal V3 persistent tick deterministic qualification
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK.ts
+
+      - name: Re-prove DB-only External Evidence to CAP04 seam
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.ts
+
+      - name: Syntax-check V3 implementation governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK_IMPLEMENTATION_QUALIFICATION.cjs
+
+      - name: Validate exact V3 implementation qualification boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK_IMPLEMENTATION_QUALIFICATION.cjs
+
+      - name: Upload immutable V3 implementation proof artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-external-formal-v3-persistent-tick-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK_IMPLEMENTATION_QUALIFICATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
