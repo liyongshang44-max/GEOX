@@ -1,0 +1,150 @@
+{
+  "schema_version": "geox_mcft_cap09_ea9a_p0306q_bounded_gdd_stage_qualification_v1",
+  "record_status": "EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION_CANDIDATE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier": "S6-EA9A-P0306Q-BOUNDED-GDD-STAGE-QUALIFICATION",
+  "base_main_sha": "b39fe14b491d9155b8c12ba73763a9cc8e6d8428",
+  "authority_predecessors": {
+    "amendment_09": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-09-CROP-CONTEXT-SEASON-ARCHITECTURE-ADJUDICATION-AUTHORITY.md",
+      "blob_sha": "422f60257039e0f674171c218a7ff0a2fd7dc1b2"
+    },
+    "amendment_10": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-10-P0306-BOUNDED-THERMAL-PROXY-AUTHORITY.md",
+      "blob_sha": "964efa8acc95bf1aeed692c7662754afd3ac6db5"
+    },
+    "thermal_stage_mapping": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9A-THERMAL-LANDMARK-TO-WATER-USE-STAGE-MAPPING-V1.json",
+      "blob_sha": "4e555183e2b69d3b7f39a7341acd89815ad871dd"
+    },
+    "ea1j": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1J-CROP-WATER-USE-STAGE-AUTHORITY-V1.json",
+      "blob_sha": "eeb7ab49ee3270421efe4d6674305426074d1541"
+    },
+    "ea9a_source_hybrid": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9A-CURRENT-SEASON-CONTEMPORANEOUS-PHENOLOGY-QUALIFICATION-V1.json",
+      "blob_sha": "0e1f809c4bf63b09f4e44431ce507e3b74a966af"
+    },
+    "ea4_recovery": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-RECOVERY-AUTHORITY-V1.json",
+      "blob_sha": "1174940a6908e545e70d87cb65be5b3a41db33cf"
+    },
+    "ea9b": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9B-NEW-NATURAL-SEASON-AUTHORITY-ADJUDICATION-V1.json",
+      "blob_sha": "0e5752ff903663037b6399d68aca1290b2828e7f"
+    }
+  },
+  "formal_scope_anchor": {
+    "site_id": "KBS_MCSE_T1R1",
+    "field_id": "field_kbs_mcse_t1r1",
+    "season_id": "season_2026_corn",
+    "crop": "corn",
+    "hybrid_product_code": "P0306Q",
+    "relative_maturity_days": 103,
+    "planting_observation_id": 6931,
+    "planting_local_calendar_date": "2026-05-11",
+    "planting_timezone": "America/Detroit",
+    "planting_timestamp_uncertainty_utc": {
+      "start_inclusive": "2026-05-11T04:00:00Z",
+      "end_exclusive": "2026-05-12T04:00:00Z"
+    }
+  },
+  "temperature_source": {
+    "metadata_url": "https://lter.kbs.msu.edu/datatables/561",
+    "csv_url": "https://lter.kbs.msu.edu/datatables/561.csv",
+    "allowed_host": "lter.kbs.msu.edu",
+    "metadata_path": "/datatables/561",
+    "csv_path": "/datatables/561.csv",
+    "datatable_id": "KBS002-014.142",
+    "dataset": "KBS002",
+    "source_class": "DIRECT_KBS_LTER_WEATHER_STATION_DAILY_EXTREMA",
+    "sensor": "Campbell 107 probe at 3 meters",
+    "required_metadata_markers": [
+      "Air Temperature and Wind speed maximums and minimums",
+      "Daily maximum and minimum temperatures",
+      "Campbell 107 probe at 3 meters",
+      "air temp 107 max",
+      "air temp 107 min"
+    ],
+    "required_csv_columns": ["date", "air_temp_107_max", "air_temp_107_min"],
+    "temperature_unit": "C",
+    "static_catalog_end_date_may_not_be_used_as_live_row_end_authority": true,
+    "synthetic_daily_table_7_may_be_used": false,
+    "raw_hourly_means_may_be_relabelled_daily_extrema": false,
+    "spatial_confidence_upgrade_authorized": false
+  },
+  "base50_method": {
+    "method_id": "PIONEER_BASE50_DAILY_GDU_WITH_DAILY_EXTREMA_V1",
+    "daily_max_f_upper_cap": 86,
+    "daily_min_f_lower_floor": 50,
+    "formula": "max(0, ((min(max_temp_f,86) + max(min_temp_f,50))/2) - 50)",
+    "maximum_allowed_daily_gdu": 36,
+    "rm_to_gdu_conversion_authorized": false,
+    "canadian_heat_unit_conversion_authorized": false,
+    "hourly_mean_extrema_substitution_authorized": false
+  },
+  "uncertainty_policy": {
+    "planting_day_lower_gdu": 0,
+    "planting_day_upper_uses_valid_full_day_gdu_else": 36,
+    "missing_or_invalid_complete_day_lower_gdu": 0,
+    "missing_or_invalid_complete_day_upper_gdu": 36,
+    "current_incomplete_local_day_used": false,
+    "future_observations_used": false,
+    "silent_imputation_authorized": false,
+    "full_season_ex_post_normalization_authorized": false
+  },
+  "bounded_proxy": {
+    "epistemic_class": "ASSUMED_BOUNDED_PROXY",
+    "silk_interval_gdu": [1222, 1438],
+    "physiological_maturity_interval_gdu": [2392, 2608],
+    "late_stage_deterministic_minimum_rule_gdu": 2608
+  },
+  "harvest_guard": {
+    "index_url": "https://aglog.kbs.msu.edu/observations",
+    "allowed_host": "aglog.kbs.msu.edu",
+    "maximum_pages": 8,
+    "area_regex": "\\bT1(?:R[1-6])?\\b",
+    "termination_observation_type_tokens": ["harvest", "termination", "terminate", "mowing"],
+    "scan_required_only_if_thermal_late_candidate": true,
+    "absence_claim_scope": "NO_RETRIEVABLE_T1_HARVEST_OR_TERMINATION_EVENT_OBSERVED_FROM_PLANTING_DATE_THROUGH_AUTHORITY_TIME_IN_SCANNED_AGLOG_INDEX",
+    "global_absence_claim_authorized": false
+  },
+  "stage_decision_policy": {
+    "algorithm_id": "EA9A_P0306Q_BOUNDED_BASE50_GDD_STAGE_QUALIFIER_V1",
+    "allowed_results": [
+      "CURRENT_SEASON_LATE_STAGE_AUTHORITY_ESTABLISHED_UNDER_BOUNDED_GDD_PROXY",
+      "CURRENT_SEASON_FOUR_STAGE_AUTHORITY_NOT_ESTABLISHED_UNDER_BOUNDED_GDD_PROXY"
+    ],
+    "positive_requires_all": [
+      "temperature_source_live_qualified",
+      "minimum_accumulated_base50_gdd_gte_2608",
+      "minimum_accumulated_base50_gdd_was_already_gte_2608_by_previous_complete_local_day",
+      "at_least_6h_elapsed_since_start_of_current_local_day",
+      "no_retrievable_t1_harvest_or_termination_event_as_of_authority_time",
+      "no_future_observations_used",
+      "all_write_counts_zero"
+    ],
+    "positive_stage_code": "LATE",
+    "positive_stage_is_observed_biological_stage": false,
+    "positive_stage_epistemic_class": "DERIVED_MODEL_STAGE_FROM_OBSERVED_TEMPERATURE_AND_ASSUMED_BOUNDED_PROXY",
+    "negative_successor": "S6-EA9B-NATURAL-SEASON-EVIDENCE-REQUALIFICATION",
+    "positive_successor": "S6-EA9A-CURRENT-SEASON-SUCCESSOR-EPOCH-VIABILITY-ADJUDICATION",
+    "parallel_operational_successor": "S6-EA5E2-OPERATIONAL-ACTIVATION-QUALIFICATION-UNDER-AMENDMENT-08"
+  },
+  "authority_effect": {
+    "current_season_stage_authority_established_before_exact_head_proof_and_merge": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "raw_object_write_authorized": false,
+    "runtime_config_write_authorized": false,
+    "scheduler_write_authorized": false,
+    "canonical_runtime_write_authorized": false,
+    "new_natural_season_created": false,
+    "successor_epoch_selected": false,
+    "ea5e2_operational_activation_qualified": false,
+    "ea5e3_effective": false,
+    "formal_execution_count": "0/24",
+    "mcft_cap09_completed": false
+  }
+}
