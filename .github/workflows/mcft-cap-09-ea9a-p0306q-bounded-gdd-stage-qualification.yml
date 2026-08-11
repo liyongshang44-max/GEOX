@@ -68,11 +68,13 @@ jobs:
         if: failure()
         shell: bash
         run: |
+          mkdir -p acceptance-output
           python - <<'PY'
           import csv
           import hashlib
           import io
           import json
+          import pathlib
           import re
           from urllib.request import Request, urlopen
 
@@ -88,7 +90,12 @@ jobs:
               final_url = response.geturl()
           text = body.decode("utf-8-sig", errors="replace")
           reader = csv.reader(io.StringIO(text))
-          first_row = next(reader, [])
+          first_rows = []
+          for _ in range(5):
+              row = next(reader, None)
+              if row is None:
+                  break
+              first_rows.append(row)
           normalize = lambda value: re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
           result = {
               "schema_version": "geox_mcft_cap09_ea9a_kbs561_export_schema_diagnostic_v1",
@@ -96,10 +103,12 @@ jobs:
               "content_type": content_type,
               "response_bytes": len(body),
               "response_sha256": "sha256:" + hashlib.sha256(body).hexdigest(),
-              "first_row_field_count": len(first_row),
-              "normalized_first_row_fields": [normalize(value) for value in first_row],
-              "raw_data_rows_emitted": False,
+              "first_five_row_field_counts": [len(row) for row in first_rows],
+              "normalized_first_five_rows": [[normalize(value) for value in row] for row in first_rows],
+              "raw_data_values_emitted": False,
           }
+          out = pathlib.Path("acceptance-output/MCFT_CAP_09_EA9A_KBS561_EXPORT_SCHEMA_DIAGNOSTIC.json")
+          out.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
           print(json.dumps(result, sort_keys=True))
           PY
 
@@ -111,6 +120,7 @@ jobs:
           path: |
             acceptance-output/MCFT_CAP_09_EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION_GOVERNANCE_RESULT.json
             acceptance-output/MCFT_CAP_09_EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA9A_KBS561_EXPORT_SCHEMA_DIAGNOSTIC.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9A-P0306Q-BOUNDED-GDD-STAGE-QUALIFICATION-V1.json
           if-no-files-found: error
           retention-days: 90
