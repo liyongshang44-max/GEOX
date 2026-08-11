@@ -65,6 +65,7 @@ jobs:
         run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION.py
 
       - name: Upload immutable bounded GDD proof artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-ea9a-p0306q-bounded-gdd-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
