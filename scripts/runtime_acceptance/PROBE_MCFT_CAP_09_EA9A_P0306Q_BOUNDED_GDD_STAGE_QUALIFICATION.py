@@ -135,8 +135,7 @@ def html_text(body: bytes) -> str:
 
 
 def parse_date(value: str) -> date | None:
-    raw = normalize_space(value)
-    match = re.search(r"\b(\d{4}-\d{2}-\d{2})\b", raw)
+    match = re.search(r"\b(\d{4}-\d{2}-\d{2})\b", normalize_space(value))
     if not match:
         return None
     try:
@@ -178,13 +177,28 @@ class DailyTemperature:
     gdu: float
 
 
+def locate_governed_csv_header(text: str, source: dict) -> tuple[int, list[str]]:
+    required = list(source["required_csv_columns"])
+    max_rows = int(source["maximum_csv_preamble_rows_before_header"])
+    require(source["csv_export_format"] == "KBS_METADATA_PREAMBLE_THEN_COMMA_SEPARATED_TABLE", "EA9A_GDD_KBS561_EXPORT_FORMAT_DRIFT")
+    require(source["csv_header_must_contain_all_required_columns"] is True, "EA9A_GDD_KBS561_HEADER_POLICY_DRIFT")
+    candidates: list[tuple[int, list[str]]] = []
+    for row_index, row in enumerate(csv.reader(io.StringIO(text))):
+        if row_index >= max_rows:
+            break
+        normalized = [normalize_key(value) for value in row]
+        if all(required_col in normalized for required_col in required):
+            candidates.append((row_index, normalized))
+    require(len(candidates) == 1, f"EA9A_GDD_KBS561_UNIQUE_HEADER_REQUIRED:found={len(candidates)}")
+    return candidates[0]
+
+
 def qualify_temperature_source() -> tuple[dict, dict[date, DailyTemperature]]:
     source = CONFIG["temperature_source"]
     metadata_body, metadata_headers, metadata_final = request_bytes(
         source["metadata_url"], source["allowed_host"], source["metadata_path"], "EA9A_GDD_KBS561_METADATA", 5_000_000
     )
-    metadata_text = html_text(metadata_body)
-    lower_meta = metadata_text.lower()
+    lower_meta = html_text(metadata_body).lower()
     marker_results = []
     for marker in source["required_metadata_markers"]:
         present = marker.lower() in lower_meta
@@ -195,11 +209,16 @@ def qualify_temperature_source() -> tuple[dict, dict[date, DailyTemperature]]:
         source["csv_url"], source["allowed_host"], source["csv_path"], "EA9A_GDD_KBS561_CSV", 30_000_000
     )
     text = csv_body.decode("utf-8-sig", errors="strict")
-    reader = csv.DictReader(io.StringIO(text))
+    header_row_index, normalized_headers = locate_governed_csv_header(text, source)
+    lines = text.splitlines()
+    require(header_row_index < len(lines), "EA9A_GDD_KBS561_HEADER_ROW_OUT_OF_RANGE")
+    table_text = "\n".join(lines[header_row_index:])
+    reader = csv.DictReader(io.StringIO(table_text))
     require(reader.fieldnames is not None, "EA9A_GDD_KBS561_CSV_HEADER_REQUIRED")
-    normalized_headers = [normalize_key(name) for name in reader.fieldnames]
+    actual_headers = [normalize_key(name) for name in reader.fieldnames]
+    require(actual_headers == normalized_headers, "EA9A_GDD_KBS561_HEADER_REPARSE_DRIFT")
     for required_col in source["required_csv_columns"]:
-        require(required_col in normalized_headers, f"EA9A_GDD_KBS561_COLUMN_REQUIRED:{required_col}")
+        require(required_col in actual_headers, f"EA9A_GDD_KBS561_COLUMN_REQUIRED:{required_col}")
 
     key_map = {raw: normalize_key(raw) for raw in reader.fieldnames}
     records: dict[date, DailyTemperature] = {}
@@ -223,14 +242,14 @@ def qualify_temperature_source() -> tuple[dict, dict[date, DailyTemperature]]:
             continue
         if day in records:
             duplicate_date_count += 1
-            del records[day]
             continue
         records[day] = DailyTemperature(day=day, max_c=max_c, min_c=min_c, gdu=gdu)
 
     require(parsed_date_count > 0, "EA9A_GDD_KBS561_NO_DATED_ROWS")
     require(duplicate_date_count == 0, "EA9A_GDD_KBS561_DUPLICATE_DATE")
-    latest_valid = max(records) if records else None
-    earliest_valid = min(records) if records else None
+    require(bool(records), "EA9A_GDD_KBS561_NO_VALID_DAILY_EXTREMA")
+    latest_valid = max(records)
+    earliest_valid = min(records)
     proof = {
         "source_id": "KBS_LTER_DATATABLE_561_DAILY_EXTREMA",
         "source_class": source["source_class"],
@@ -244,11 +263,15 @@ def qualify_temperature_source() -> tuple[dict, dict[date, DailyTemperature]]:
         "csv_final_url": csv_final,
         "csv_response_sha256": sha256_bytes(csv_body),
         "csv_response_bytes": len(csv_body),
+        "csv_export_format": source["csv_export_format"],
+        "csv_header_row_index_zero_based": header_row_index,
+        "csv_preamble_row_count": header_row_index,
+        "csv_required_columns_exactly_located": True,
         "csv_parsed_date_row_count": parsed_date_count,
         "csv_valid_daily_extrema_row_count": len(records),
         "csv_invalid_or_missing_daily_extrema_row_count": invalid_temperature_row_count,
-        "csv_earliest_valid_date": earliest_valid.isoformat() if earliest_valid else None,
-        "csv_latest_valid_date": latest_valid.isoformat() if latest_valid else None,
+        "csv_earliest_valid_date": earliest_valid.isoformat(),
+        "csv_latest_valid_date": latest_valid.isoformat(),
         "metadata_last_modified": metadata_headers.get("last-modified"),
         "csv_last_modified": csv_headers.get("last-modified"),
         "raw_provider_body_emitted": False,
@@ -336,13 +359,12 @@ def scan_harvest_guard(observed_at: datetime) -> dict:
     authority_local_date = observed_at.astimezone(ZoneInfo(scope["planting_timezone"])).date()
     area_re = re.compile(guard["area_regex"], re.I)
     tokens = [str(value).lower() for value in guard["termination_observation_type_tokens"]]
-    pages = []
-    matches = []
+    pages: list[dict] = []
+    matches: list[dict] = []
     reached_anchor_or_earlier = False
     for page_number in range(1, int(guard["maximum_pages"]) + 1):
         url = guard["index_url"] if page_number == 1 else f"{guard['index_url']}?page={page_number}"
-        parsed = urlparse(url)
-        body, _, final_url = request_bytes(url, guard["allowed_host"], parsed.path, f"EA9A_GDD_AGLOG_PAGE_{page_number}", 8_000_000)
+        body, _, final_url = request_bytes(url, guard["allowed_host"], urlparse(url).path, f"EA9A_GDD_AGLOG_PAGE_{page_number}", 8_000_000)
         rows = parse_aglog_rows(body)
         dated_rows = 0
         min_day: date | None = None
@@ -363,12 +385,7 @@ def scan_harvest_guard(observed_at: datetime) -> dict:
             obs_type = normalize_space(cells[2]).lower()
             areas = normalize_space(cells[4])
             if area_re.search(areas) and any(token in obs_type for token in tokens):
-                matches.append({
-                    "observation_date": row_day.isoformat(),
-                    "observation_type": normalize_space(cells[2]),
-                    "areas": areas,
-                    "provider_body_emitted": False,
-                })
+                matches.append({"observation_date": row_day.isoformat(), "observation_type": normalize_space(cells[2]), "areas": areas, "provider_body_emitted": False})
         pages.append({
             "page_number": page_number,
             "dated_row_count": dated_rows,
@@ -411,7 +428,6 @@ def main() -> None:
     observed_at = datetime.now(timezone.utc)
     source_proof, records = qualify_temperature_source()
     accumulation = accumulate_bounded_gdd(records, observed_at)
-
     thermal_late_candidate = bool(accumulation["minimum_gdd_gte_2608"] and accumulation["backward_6h_stability_possible_from_previous_complete_day"])
     harvest_guard = {
         "scan_performed": False,
@@ -439,11 +455,7 @@ def main() -> None:
         and accumulation["backward_6h_stability_possible_from_previous_complete_day"]
         and harvest_guard.get("no_retrievable_t1_harvest_or_termination_event_as_of_authority_time") is True
     )
-    result_code = (
-        "CURRENT_SEASON_LATE_STAGE_AUTHORITY_ESTABLISHED_UNDER_BOUNDED_GDD_PROXY"
-        if positive
-        else "CURRENT_SEASON_FOUR_STAGE_AUTHORITY_NOT_ESTABLISHED_UNDER_BOUNDED_GDD_PROXY"
-    )
+    result_code = "CURRENT_SEASON_LATE_STAGE_AUTHORITY_ESTABLISHED_UNDER_BOUNDED_GDD_PROXY" if positive else "CURRENT_SEASON_FOUR_STAGE_AUTHORITY_NOT_ESTABLISHED_UNDER_BOUNDED_GDD_PROXY"
 
     negative_reason = None
     if not positive:
