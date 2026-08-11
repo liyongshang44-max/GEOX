@@ -1,5 +1,5 @@
 {
-  "schema_version": "geox_mcft_cap09_ea9a_current_season_contemporaneous_phenology_qualification_v1",
+  "schema_version": "geox_mcft_cap09_ea9a_current_season_contemporaneous_phenology_qualification_v2",
   "record_status": "EA9A_CURRENT_SEASON_PHENOLOGY_QUALIFICATION_CANDIDATE",
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S6",
@@ -11,7 +11,11 @@
     "ea1j_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1J-CROP-WATER-USE-STAGE-AUTHORITY-V1.json",
     "ea1j_blob_sha": "eeb7ab49ee3270421efe4d6674305426074d1541",
     "ea2_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
-    "ea2_blob_sha": "b5de9d29189cb654444b3f57d00df290eefe16d3"
+    "ea2_blob_sha": "b5de9d29189cb654444b3f57d00df290eefe16d3",
+    "ea1_source_matrix_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1-SOURCE-QUALIFICATION-MATRIX-V1.json",
+    "ea1_source_matrix_blob_sha": "c6a2394bc0d97ad2df159a8af95c7e1997ba9aed",
+    "formal_source_binding_matrix_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json",
+    "formal_source_binding_matrix_blob_sha": "30b7910a1bd27882b80eb56041924d0f6252ae02"
   },
   "formal_scope": {
     "site_id": "KBS_MCSE_T1R1",
@@ -29,13 +33,13 @@
       "CURRENT_SEASON_CONTEMPORANEOUS_STAGE_AUTHORITY_ESTABLISHED",
       "CURRENT_SEASON_PHENOLOGY_AUTHORITY_NOT_ESTABLISHED"
     ],
-    "this_candidate_expected_terminal_result": "CURRENT_SEASON_PHENOLOGY_AUTHORITY_NOT_ESTABLISHED",
+    "allowed_nonterminal_progress_result": "CURRENT_SEASON_HYBRID_GDD_QUALIFICATION_REQUIRED",
     "global_source_absence_claimed": false,
     "future_exact_provider_stage_record_may_be_requalified": true,
     "source_identity_alone_stage_determinative": false,
     "management_event_alone_stage_determinative": false,
     "nearby_or_other_experiment_phenology_stage_determinative": false,
-    "gdd_stage_determinative": false,
+    "gdd_stage_determinative_under_current_ea1j": false,
     "future_observations_authorized": false,
     "future_phenocam_observations_authorized": false,
     "full_season_ex_post_normalization_authorized": false,
@@ -44,24 +48,32 @@
     "minimum_backward_stability_hours": 6,
     "minimum_forward_transition_guard_hours": 30
   },
-  "preterminal_gdd_escape_probe": {
+  "protected_main_image_authority_audit": {
+    "scope": "EXISTING_PROTECTED_MAIN_MCFT_CAP09_SOURCE_AUTHORITIES_ONLY",
+    "ea1_source_matrix_blob_sha": "c6a2394bc0d97ad2df159a8af95c7e1997ba9aed",
+    "formal_source_binding_matrix_blob_sha": "30b7910a1bd27882b80eb56041924d0f6252ae02",
+    "forbidden_existing_image_source_key_tokens": ["PHENO", "SENTINEL", "LANDSAT", "HLS", "SATELLITE", "IMAGERY", "NDVI", "EVI", "GCC"],
+    "existing_exact_t1r1_image_stage_authority_established": false,
+    "global_image_source_absence_claimed": false,
+    "future_new_image_source_qualification_authorized": true,
+    "ruling": "NO_EXISTING_PROTECTED_MAIN_IMAGE_AUTHORITY_CAN_BE_REUSED_AS_T1R1_STAGE_TRUTH"
+  },
+  "hybrid_discovery_probe": {
     "source_candidate_id": "KBS_AGLOG_2026_T1_PLANTING_6931",
-    "purpose": "Before EA9A may terminate as CURRENT_SEASON_PHENOLOGY_AUTHORITY_NOT_ESTABLISHED, prove that the exact 2026 T1 planting record does not itself disclose a separately qualifiable hybrid/material identity through provider material links, an explicit variety label, an explicit relative-maturity label, or a recognizable corn-hybrid product code.",
+    "purpose": "Resolve whether the exact 2026 T1 planting record itself discloses one unambiguous hybrid product code and relative-maturity value that requires a separate Hybrid/GDD stage qualification before EA9A may terminate fail-closed.",
     "recognized_product_code_patterns": [
       "P\\d{4}[A-Z0-9-]*",
       "DKC\\d{2,3}-?\\d{2,3}[A-Z0-9-]*",
       "PR\\d{3}-\\d{2}[A-Z0-9-]*",
       "BR\\d{2,4}-?\\d{2}[A-Z0-9-]*"
     ],
-    "provider_material_link_disclosure_blocks_terminal": true,
-    "explicit_variety_label_blocks_terminal": true,
-    "explicit_relative_maturity_label_blocks_terminal": true,
-    "recognizable_product_code_blocks_terminal": true,
-    "on_any_disclosure": "FAIL_CURRENT_TERMINAL_AND_CONTINUE_EA9A_HYBRID_GDD_QUALIFICATION",
-    "on_no_disclosure": "ALLOW_EXPECTED_EA9A_FAIL_CLOSED_TERMINAL_TO_PROCEED",
-    "derived_product_code_text_may_be_emitted": false,
-    "derived_boolean_count_and_hash_diagnostics_may_be_emitted": true,
-    "historical_or_other_treatment_hybrid_inference_authorized": false
+    "exact_product_code_may_be_emitted_as_derived_authority_candidate": true,
+    "exact_relative_maturity_days_may_be_emitted_as_derived_authority_candidate": true,
+    "provider_body_text_may_be_emitted": false,
+    "historical_or_other_treatment_hybrid_inference_authorized": false,
+    "on_exact_unambiguous_hybrid_and_rm": "CURRENT_SEASON_HYBRID_GDD_QUALIFICATION_REQUIRED",
+    "on_no_hybrid_disclosure": "CURRENT_SEASON_PHENOLOGY_AUTHORITY_NOT_ESTABLISHED",
+    "on_ambiguous_hybrid_disclosure": "FAIL_CLOSED_AMBIGUOUS_HYBRID_DISCLOSURE"
   },
   "enumerated_public_source_candidates": [
     {
@@ -71,8 +83,7 @@
       "required_markers": ["Observation Date", "2026-04-22", "Areas", "T1R1", "Observation Type", "Fertilizer Application"],
       "formal_scope_relationship": "EXACT_PROVIDER_AREA_IDENTITY_DISCOVERY",
       "evidence_role": "SPATIAL_IDENTITY_DISCOVERY_ONLY",
-      "stage_determinative": false,
-      "reason": "CURRENT_YEAR_T1R1_MANAGEMENT_RECORD_PROVES_PROVIDER_AREA_IDENTITY_BUT_NOT_PHENOLOGY"
+      "stage_determinative": false
     },
     {
       "candidate_id": "KBS_AGLOG_2026_T1_PLANTING_6931",
@@ -80,9 +91,8 @@
       "official_url": "https://aglog.kbs.msu.edu/observations/6931",
       "required_markers": ["Observation Date", "2026-05-11", "Areas", "T1", "Observation Type", "Planting", "corn"],
       "formal_scope_relationship": "CURRENT_SEASON_T1_MANAGEMENT_METADATA",
-      "evidence_role": "CROP_IDENTITY_AND_PLANTING_TIMING_ONLY_PENDING_PRETERMINAL_HYBRID_DISCLOSURE_PROBE",
-      "stage_determinative": false,
-      "reason": "PLANTING_MANAGEMENT_EVENT_IS_NOT_A_BIOLOGICAL_STAGE_OBSERVATION_AND_ANY_EXACT_HYBRID_DISCLOSURE_REQUIRES_SEPARATE_GDD_QUALIFICATION"
+      "evidence_role": "CROP_PLANTING_AND_HYBRID_DISCOVERY_ONLY",
+      "stage_determinative": false
     },
     {
       "candidate_id": "KBS_MCSE_AGRONOMIC_PRACTICES_CATALOG",
@@ -91,8 +101,7 @@
       "required_markers": ["Agronomic Practices of the Main Cropping System Experiment", "Main Cropping System Experiment", "T1", "R1"],
       "formal_scope_relationship": "SAME_EXPERIMENT_CATALOG_DISCOVERY",
       "evidence_role": "SOURCE_DISCOVERY_METADATA_ONLY",
-      "stage_determinative": false,
-      "reason": "CATALOG_IDENTITY_DOES_NOT_ESTABLISH_AN_EXACT_2026_T1R1_PHENOLOGY_OBSERVATION"
+      "stage_determinative": false
     },
     {
       "candidate_id": "KBS_GLBRC_PHENOCAM_NETWORK_IMAGES",
@@ -101,8 +110,7 @@
       "required_markers": ["Phenocam Network Images", "GLBRC Biofuel Cropping System Experiment", "replicate 1"],
       "formal_scope_relationship": "DIFFERENT_EXPERIMENT_GLBRC_BCSE",
       "evidence_role": "PHENOLOGY_CAPABLE_BUT_WRONG_FORMAL_EXPERIMENT",
-      "stage_determinative": false,
-      "reason": "GLBRC_BCSE_CAMERA_SCOPE_IS_NOT_MCSE_T1R1"
+      "stage_determinative": false
     },
     {
       "candidate_id": "KBS_GLBRC_PHENOLOGY_2013_PRESENT",
@@ -111,17 +119,15 @@
       "required_markers": ["Phenology 2013-Present", "GLBRC Biofuel Cropping System Experiment", "Data available from", "2017"],
       "formal_scope_relationship": "DIFFERENT_EXPERIMENT_AND_NONCURRENT_PUBLIC_TABLE_WINDOW",
       "evidence_role": "DIRECT_PHENOLOGY_BUT_WRONG_FORMAL_EXPERIMENT",
-      "stage_determinative": false,
-      "reason": "GLBRC_BCSE_PHENOLOGY_IS_NOT_2026_MCSE_T1R1_STAGE_TRUTH"
+      "stage_determinative": false
     }
   ],
   "decision_policy": {
-    "algorithm_id": "EA9A_ENUMERATED_PUBLIC_SOURCE_STAGE_AUTHORITY_QUALIFIER_V1",
-    "required_for_established_authority": [
+    "algorithm_id": "EA9A_ENUMERATED_PUBLIC_SOURCE_AND_HYBRID_DISCOVERY_QUALIFIER_V2",
+    "direct_stage_authority_required_fields": [
       "EXACT_PROVIDER_SOURCE_IDENTITY",
       "EXPLICIT_OBSERVATION_TIME",
       "AVAILABLE_TO_RUNTIME_AT_OR_BEFORE_AUTHORITY_TIME",
-      "IMMUTABLE_PROVIDER_OBJECT_DIGEST_OR_REQUIRED_RAW_RETENTION",
       "GOVERNED_SPATIAL_RELATIONSHIP_TO_KBS_MCSE_T1R1",
       "EXACT_RELATIONSHIP_TO_SEASON_2026_CORN",
       "EXPLICIT_PHENOLOGY_SEMANTICS",
@@ -130,12 +136,11 @@
       "T_MINUS_6H_BACKWARD_STABILITY",
       "T_PLUS_30H_FORWARD_TRANSITION_GUARD",
       "NO_FUTURE_OBSERVATIONS",
-      "NO_EX_POST_FULL_SEASON_NORMALIZATION",
-      "NO_HIDDEN_HYBRID_OR_RELATIVE_MATURITY_ASSUMPTION"
+      "NO_EX_POST_FULL_SEASON_NORMALIZATION"
     ],
-    "established_only_if_at_least_one_candidate_satisfies_all_requirements": true,
-    "otherwise_terminal_result": "CURRENT_SEASON_PHENOLOGY_AUTHORITY_NOT_ESTABLISHED",
-    "not_established_does_not_claim_impossibility_or_global_absence": true
+    "hybrid_identity_is_not_stage_authority": true,
+    "hybrid_identity_requires_separate_thermal_stage_threshold_qualification": true,
+    "relative_maturity_days_alone_is_not_stage_threshold_authority": true
   },
   "data_use_policy": {
     "provider_payload_may_be_committed": false,
@@ -143,8 +148,8 @@
     "provider_body_text_may_be_emitted": false,
     "provider_response_digest_may_be_emitted": true,
     "provider_response_byte_count_may_be_emitted": true,
-    "derived_provider_boolean_count_hash_diagnostics_may_be_emitted": true,
-    "derived_provider_product_code_text_may_be_emitted": false,
+    "derived_exact_hybrid_product_code_may_be_emitted": true,
+    "derived_exact_relative_maturity_days_may_be_emitted": true,
     "database_write_authorized": false,
     "formal_evidence_write_authorized": false,
     "raw_object_write_authorized": false,
@@ -152,17 +157,17 @@
     "scheduler_write_authorized": false,
     "canonical_runtime_write_authorized": false
   },
-  "qualification_effect_if_expected_result_is_proved_and_merged": {
-    "ea9a_effective": true,
-    "terminal_result": "CURRENT_SEASON_PHENOLOGY_AUTHORITY_NOT_ESTABLISHED",
-    "preterminal_gdd_escape_disclosure_proved_absent": true,
+  "qualification_effect_if_expected_nonterminal_progress_is_proved_and_merged": {
+    "ea9a_terminal_reached": false,
+    "progress_result": "CURRENT_SEASON_HYBRID_GDD_QUALIFICATION_REQUIRED",
     "current_season_contingent_stage_authority_established": false,
     "current_season_stage_extended": false,
     "current_season_late_stage_created": false,
     "existing_ea2_mutated": false,
     "successor_epoch_selected": false,
     "new_natural_season_created": false,
-    "next_primary_successor": "S6-EA9B-NEW-NATURAL-SEASON-AUTHORITY-ADJUDICATION",
+    "next_primary_successor": "S6-EA9A-HYBRID-GDD-STAGE-QUALIFICATION",
+    "fallback_if_hybrid_gdd_cannot_establish_stage": "S6-EA9B-NEW-NATURAL-SEASON-AUTHORITY-ADJUDICATION",
     "parallel_operational_successor": "S6-EA5E2-OPERATIONAL-ACTIVATION-QUALIFICATION-UNDER-AMENDMENT-08",
     "ea5e2_operational_activation_qualified": false,
     "ea5e3_effective": false,
