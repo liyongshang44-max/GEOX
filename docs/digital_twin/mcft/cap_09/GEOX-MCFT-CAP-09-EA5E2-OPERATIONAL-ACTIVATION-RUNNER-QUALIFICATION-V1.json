@@ -1,0 +1,142 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5e2_operational_activation_runner_qualification_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1",
+  "frontier_id": "S6-EA5E2-OPERATIONAL-ACTIVATION-QUALIFICATION-UNDER-AMENDMENT-08",
+  "record_status": "RUNNER_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE",
+  "base_main_sha": "4e41858478bdca5989fb3388c3660105f7350559",
+  "governing_authority": {
+    "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
+    "amendment_06_blob_sha": "e59e11e909bfd0a38c7298c5a6f909a6cd7afa49",
+    "amendment_07_blob_sha": "c5a98ca789027e1bf051ec56bf1b7e76b98a0891",
+    "amendment_08_blob_sha": "ef1e4344e5915e2c591cf7cfc9b6c2bf27f8bc3b",
+    "ea5e2_implementation_authority_blob_sha": "60c00a9719436ff82980499813551ba9fa6ecf19",
+    "s6_formal_crop_context_authority_blob_sha": "b5de9d29189cb654444b3f57d00df290eefe16d3",
+    "configuration_binding_matrix_blob_sha": "c04c6805ab79c715781b99f8fbcf997fae3a8c48"
+  },
+  "qualification_boundary": {
+    "exact_changed_file_count": 5,
+    "live_workflow_path": ".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml",
+    "observer_path": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts",
+    "authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json",
+    "governance_gate_path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_RUNNER_QUALIFICATION.cjs",
+    "focused_workflow_path": ".github/workflows/mcft-cap-09-ea5e2-operational-activation-runner-qualification.yml",
+    "runtime_implementation_source_change_count": 0
+  },
+  "protected_main_live_contract": {
+    "live_run_subject_must_be_protected_main": true,
+    "critical_activation_boundary_must_match_current_main": true,
+    "pull_request_live_run_forbidden": true,
+    "workflow_dispatch_retry_on_same_exact_main_sha_allowed": true,
+    "target_epoch_independent": true,
+    "target_must_be_future_exact_utc_hour": true,
+    "formal_epoch_selection_before_activation_forbidden": true
+  },
+  "provider_and_clock_contract": {
+    "kbs_raw_hourly_max_age_hours": 6,
+    "pre_boundary_collector_offset_minutes": -30,
+    "late_exact_hour_collector_offset_minutes": 390,
+    "scheduler_eligibility_lag_hours": 7,
+    "late_exact_hour_evidence_cutoff_offset_minutes": 432,
+    "runtime_observer_offset_minutes": 437,
+    "runtime_observer_max_start_skew_minutes": 10,
+    "minimum_ingestion_margin_minutes": 5,
+    "exact_same_cycle_gfs_required": true,
+    "source_substitution_authorized": false,
+    "time_relabeling_authorized": false,
+    "cross_cycle_substitution_authorized": false,
+    "accelerated_formal_clock_authorized": false
+  },
+  "real_provider_path": {
+    "sequence": [
+      "REAL_KBS_GFS_GET",
+      "PRIVATE_RAW_RETENTION_BEFORE_DECODE",
+      "EXACT_FIVE_FAMILY_CANONICALIZATION",
+      "WHOLE_PHASE_VALIDATION",
+      "ISOLATED_POSTGRES_INGRESS",
+      "DB_ONLY_EXTERNAL_EVIDENCE_SOURCE",
+      "ACTUAL_T_PLUS_7H17_OBSERVER",
+      "EXTERNAL_CAP04_A1_COMPLETED_72"
+    ],
+    "exact_five_families": [
+      "SOIL",
+      "FUTURE_WEATHER",
+      "FUTURE_ET0",
+      "RAINFALL",
+      "HISTORICAL_ET0"
+    ],
+    "private_transient_r2_prefix": "mcft-cap09-ea5e2-readiness-transient-v1",
+    "formal_raw_prefix": "mcft-cap09-formal-raw-v1/sha256",
+    "public_value_bearing_artifact_count": 0,
+    "public_raw_value_emission_count": 0
+  },
+  "observer_authority": {
+    "formal_database_access_mode": "READ_ONLY_A0_HANDOFF_ONLY",
+    "formal_database_name": "geox_mcft_cap09_s6_formal_24h",
+    "formal_a0_runtime_config_ref": "external_formal_runtime_config_7284202e3b0bdae6d32f4814",
+    "formal_a0_runtime_config_hash": "sha256:d6b5bf0fcd385aa3657b7c97c72cc82093a45088463466436671857116bb6fc8",
+    "qualification_runtime_config_persisted": false,
+    "qualification_runtime_config_formal_authority": false,
+    "qualification_crop_context_persisted": false,
+    "qualification_crop_context_formal_epoch_reusable": false,
+    "single_t_crop_context_rederivation_required": true,
+    "crop_backward_stability_hours": 6,
+    "crop_forward_transition_guard_hours": 30,
+    "all_six_fao_variants_required": true,
+    "planting_time_uncertainty_carried": true,
+    "future_crop_observations_authorized": false,
+    "external_cap04_required_disposition": "A1",
+    "external_cap04_required_forecast_status": "COMPLETED",
+    "external_cap04_required_forecast_point_count": 72,
+    "runtime_provider_request_count": 0,
+    "canonical_persistence_authorized": false,
+    "scenario_authorized": false
+  },
+  "side_effect_boundary": {
+    "formal_database_write_count": 0,
+    "formal_raw_prefix_write_count": 0,
+    "formal_scheduler_write_count": 0,
+    "formal_canonical_runtime_write_count": 0,
+    "formal_window_started": false,
+    "ea5e3_authorized": false
+  },
+  "historical_epoch_rule": {
+    "expired_epoch_id": "mcft_cap09_external_formal_window_epoch_20260811t170000z_v1",
+    "expired_epoch_o00": "2026-08-11T17:00:00.000Z",
+    "expired_epoch_readiness_deadline": "2026-08-11T05:00:00.000Z",
+    "expired_epoch_extended": false,
+    "expired_epoch_rescued": false,
+    "retroactive_execution_authorized": false,
+    "initial_multi_slot_catchup_authorized": false
+  },
+  "live_proof_effectiveness_rule": {
+    "successful_live_workflow_run_is_candidate_evidence_only": true,
+    "live_proof_must_be_frozen_by_separate_exact_head_authority": true,
+    "runner_merge_does_not_make_operational_activation_effective": true
+  },
+  "effect_if_exact_head_runner_qualification_passes_and_candidate_merges": {
+    "ea5e2_operational_activation_runner_qualified": true,
+    "protected_main_live_run_authorized": true,
+    "ea5e2_operational_activation_qualified": false,
+    "ea5e3_authorized": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "formal_execution_count": "0/24",
+    "mcft_cap09_completed": false
+  },
+  "next_legal_successor_if_live_proof_passes": "S6-EA5E2-OPERATIONAL-ACTIVATION-EVIDENCE-FREEZE-UNDER-AMENDMENT-08",
+  "hard_nonclaims": [
+    "NO_OPERATIONAL_ACTIVATION_EFFECTIVENESS_FROM_RUNNER_MERGE",
+    "NO_FORMAL_EPOCH_SELECTION_FROM_RUNNER_MERGE",
+    "NO_EXPIRED_EPOCH_RESCUE",
+    "NO_FORMAL_DATABASE_WRITE",
+    "NO_FORMAL_RAW_PREFIX_WRITE",
+    "NO_FORMAL_SCHEDULER_WRITE",
+    "NO_CANONICAL_RUNTIME_PERSISTENCE",
+    "NO_SOURCE_SUBSTITUTION",
+    "NO_TIME_RELABELING",
+    "NO_ACCELERATED_CLOCK",
+    "NO_EA5E3_AUTHORIZATION",
+    "NO_FORMAL_WINDOW_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
