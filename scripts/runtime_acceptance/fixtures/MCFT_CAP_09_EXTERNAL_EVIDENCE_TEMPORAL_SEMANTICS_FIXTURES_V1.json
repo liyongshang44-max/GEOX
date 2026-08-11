@@ -1,0 +1,324 @@
+{
+  "schema_version": "geox_mcft_cap09_external_evidence_temporal_semantics_fixture_v1",
+  "scenarios": [
+    {
+      "id": "hourly_low_latency",
+      "records": [
+        {
+          "source_record_id": "r10",
+          "source_id": "provider-a",
+          "record_type": "observed_rainfall_v1",
+          "payload_hash": "h10",
+          "event_time": "2026-08-12T10:00:00.000Z",
+          "availability_observation": {
+            "last_not_seen_at": "2026-08-12T10:01:00.000Z",
+            "first_seen_at": "2026-08-12T10:05:00.000Z"
+          },
+          "ingested_at": "2026-08-12T10:06:00.000Z",
+          "available_to_runtime_at": "2026-08-12T10:06:00.000Z",
+          "causal_cutoff_at": "2026-08-12T11:00:00.000Z",
+          "first_affected_logical_tick": "2026-08-12T11:00:00.000Z"
+        }
+      ],
+      "cadence_samples": [
+        {"event_time": "2026-08-12T08:00:00.000Z", "first_seen_at": "2026-08-12T08:05:00.000Z"},
+        {"event_time": "2026-08-12T09:00:00.000Z", "first_seen_at": "2026-08-12T09:05:00.000Z"},
+        {"event_time": "2026-08-12T10:00:00.000Z", "first_seen_at": "2026-08-12T10:05:00.000Z"}
+      ],
+      "expected": {
+        "replay_required": false,
+        "earliest_affected_tick": null,
+        "delayed_record_count": 0,
+        "provider_revision_count": 0,
+        "publication_pattern": "HOURLY_LOW_LATENCY"
+      }
+    },
+    {
+      "id": "hourly_fixed_latency_within_authorized_cutoff",
+      "records": [
+        {
+          "source_record_id": "r11",
+          "source_id": "provider-a",
+          "record_type": "observed_rainfall_v1",
+          "payload_hash": "h11",
+          "event_time": "2026-08-12T11:00:00.000Z",
+          "availability_observation": {
+            "last_not_seen_at": "2026-08-12T16:20:00.000Z",
+            "first_seen_at": "2026-08-12T16:30:00.000Z"
+          },
+          "ingested_at": "2026-08-12T16:31:00.000Z",
+          "available_to_runtime_at": "2026-08-12T16:31:00.000Z",
+          "causal_cutoff_at": "2026-08-12T18:12:00.000Z",
+          "first_affected_logical_tick": "2026-08-12T11:00:00.000Z"
+        }
+      ],
+      "cadence_samples": [
+        {"event_time": "2026-08-12T08:00:00.000Z", "first_seen_at": "2026-08-12T13:30:00.000Z"},
+        {"event_time": "2026-08-12T09:00:00.000Z", "first_seen_at": "2026-08-12T14:30:00.000Z"},
+        {"event_time": "2026-08-12T10:00:00.000Z", "first_seen_at": "2026-08-12T15:30:00.000Z"}
+      ],
+      "expected": {
+        "replay_required": false,
+        "earliest_affected_tick": null,
+        "delayed_record_count": 0,
+        "provider_revision_count": 0,
+        "publication_pattern": "HOURLY_FIXED_LATENCY"
+      }
+    },
+    {
+      "id": "delayed_hourly_beyond_cutoff",
+      "records": [
+        {
+          "source_record_id": "r12",
+          "source_id": "provider-a",
+          "record_type": "observed_rainfall_v1",
+          "payload_hash": "h12",
+          "event_time": "2026-08-12T12:00:00.000Z",
+          "availability_observation": {
+            "last_not_seen_at": "2026-08-12T19:10:00.000Z",
+            "first_seen_at": "2026-08-12T19:20:00.000Z"
+          },
+          "ingested_at": "2026-08-12T19:21:00.000Z",
+          "available_to_runtime_at": "2026-08-12T19:21:00.000Z",
+          "causal_cutoff_at": "2026-08-12T19:12:00.000Z",
+          "first_affected_logical_tick": "2026-08-12T12:00:00.000Z"
+        }
+      ],
+      "cadence_samples": [
+        {"event_time": "2026-08-12T08:00:00.000Z", "first_seen_at": "2026-08-12T16:15:00.000Z"},
+        {"event_time": "2026-08-12T09:00:00.000Z", "first_seen_at": "2026-08-12T17:15:00.000Z"},
+        {"event_time": "2026-08-12T10:00:00.000Z", "first_seen_at": "2026-08-12T18:15:00.000Z"}
+      ],
+      "expected": {
+        "replay_required": true,
+        "earliest_affected_tick": "2026-08-12T12:00:00.000Z",
+        "delayed_record_count": 1,
+        "provider_revision_count": 0,
+        "publication_pattern": "HOURLY_DELAYED_HIGH_LATENCY"
+      }
+    },
+    {
+      "id": "daily_batch",
+      "records": [
+        {
+          "source_record_id": "b08",
+          "source_id": "provider-a",
+          "record_type": "observed_rainfall_v1",
+          "payload_hash": "hb08",
+          "event_time": "2026-08-12T08:00:00.000Z",
+          "availability_observation": {
+            "last_not_seen_at": "2026-08-12T19:50:00.000Z",
+            "first_seen_at": "2026-08-12T20:00:00.000Z"
+          },
+          "ingested_at": "2026-08-12T20:02:00.000Z",
+          "available_to_runtime_at": "2026-08-12T20:02:00.000Z",
+          "causal_cutoff_at": "2026-08-12T15:12:00.000Z",
+          "first_affected_logical_tick": "2026-08-12T08:00:00.000Z"
+        },
+        {
+          "source_record_id": "b09",
+          "source_id": "provider-a",
+          "record_type": "observed_rainfall_v1",
+          "payload_hash": "hb09",
+          "event_time": "2026-08-12T09:00:00.000Z",
+          "availability_observation": {
+            "last_not_seen_at": "2026-08-12T19:50:00.000Z",
+            "first_seen_at": "2026-08-12T20:00:00.000Z"
+          },
+          "ingested_at": "2026-08-12T20:02:00.000Z",
+          "available_to_runtime_at": "2026-08-12T20:02:00.000Z",
+          "causal_cutoff_at": "2026-08-12T16:12:00.000Z",
+          "first_affected_logical_tick": "2026-08-12T09:00:00.000Z"
+        },
+        {
+          "source_record_id": "b10",
+          "source_id": "provider-a",
+          "record_type": "observed_rainfall_v1",
+          "payload_hash": "hb10",
+          "event_time": "2026-08-12T10:00:00.000Z",
+          "availability_observation": {
+            "last_not_seen_at": "2026-08-12T19:50:00.000Z",
+            "first_seen_at": "2026-08-12T20:00:00.000Z"
+          },
+          "ingested_at": "2026-08-12T20:02:00.000Z",
+          "available_to_runtime_at": "2026-08-12T20:02:00.000Z",
+          "causal_cutoff_at": "2026-08-12T17:12:00.000Z",
+          "first_affected_logical_tick": "2026-08-12T10:00:00.000Z"
+        }
+      ],
+      "cadence_samples": [
+        {"event_time": "2026-08-12T08:00:00.000Z", "first_seen_at": "2026-08-12T20:00:00.000Z"},
+        {"event_time": "2026-08-12T09:00:00.000Z", "first_seen_at": "2026-08-12T20:00:00.000Z"},
+        {"event_time": "2026-08-12T10:00:00.000Z", "first_seen_at": "2026-08-12T20:00:00.000Z"}
+      ],
+      "expected": {
+        "replay_required": true,
+        "earliest_affected_tick": "2026-08-12T08:00:00.000Z",
+        "delayed_record_count": 3,
+        "provider_revision_count": 0,
+        "publication_pattern": "BATCHED_PUBLICATION"
+      }
+    },
+    {
+      "id": "out_of_order_arrival",
+      "records": [
+        {
+          "source_record_id": "o11",
+          "source_id": "provider-a",
+          "record_type": "soil_moisture_observation_v1",
+          "payload_hash": "ho11",
+          "event_time": "2026-08-12T11:00:00.000Z",
+          "availability_observation": {
+            "last_not_seen_at": "2026-08-12T11:01:00.000Z",
+            "first_seen_at": "2026-08-12T11:05:00.000Z"
+          },
+          "ingested_at": "2026-08-12T11:06:00.000Z",
+          "available_to_runtime_at": "2026-08-12T11:06:00.000Z",
+          "causal_cutoff_at": "2026-08-12T12:00:00.000Z",
+          "first_affected_logical_tick": "2026-08-12T12:00:00.000Z"
+        },
+        {
+          "source_record_id": "o10",
+          "source_id": "provider-a",
+          "record_type": "soil_moisture_observation_v1",
+          "payload_hash": "ho10",
+          "event_time": "2026-08-12T10:00:00.000Z",
+          "availability_observation": {
+            "last_not_seen_at": "2026-08-12T12:30:00.000Z",
+            "first_seen_at": "2026-08-12T12:40:00.000Z"
+          },
+          "ingested_at": "2026-08-12T12:41:00.000Z",
+          "available_to_runtime_at": "2026-08-12T12:41:00.000Z",
+          "causal_cutoff_at": "2026-08-12T11:00:00.000Z",
+          "first_affected_logical_tick": "2026-08-12T11:00:00.000Z"
+        }
+      ],
+      "cadence_samples": [],
+      "expected": {
+        "replay_required": true,
+        "earliest_affected_tick": "2026-08-12T11:00:00.000Z",
+        "delayed_record_count": 1,
+        "provider_revision_count": 0,
+        "publication_pattern": "INSUFFICIENT_SAMPLES"
+      }
+    },
+    {
+      "id": "provider_revision",
+      "records": [
+        {
+          "source_record_id": "rev1",
+          "source_id": "provider-a",
+          "record_type": "observed_rainfall_v1",
+          "payload_hash": "ha",
+          "event_time": "2026-08-12T10:00:00.000Z",
+          "availability_observation": {
+            "last_not_seen_at": "2026-08-12T10:01:00.000Z",
+            "first_seen_at": "2026-08-12T10:05:00.000Z"
+          },
+          "ingested_at": "2026-08-12T10:06:00.000Z",
+          "available_to_runtime_at": "2026-08-12T10:06:00.000Z",
+          "causal_cutoff_at": "2026-08-12T11:00:00.000Z",
+          "first_affected_logical_tick": "2026-08-12T11:00:00.000Z"
+        },
+        {
+          "source_record_id": "rev2",
+          "source_id": "provider-a",
+          "record_type": "observed_rainfall_v1",
+          "payload_hash": "hb",
+          "event_time": "2026-08-12T10:00:00.000Z",
+          "supersedes_source_record_ref": "rev1",
+          "provider_revision_id": "provider-r2",
+          "availability_observation": {
+            "last_not_seen_at": "2026-08-12T13:00:00.000Z",
+            "first_seen_at": "2026-08-12T13:05:00.000Z"
+          },
+          "ingested_at": "2026-08-12T13:06:00.000Z",
+          "available_to_runtime_at": "2026-08-12T13:06:00.000Z",
+          "causal_cutoff_at": "2026-08-12T11:00:00.000Z",
+          "first_affected_logical_tick": "2026-08-12T11:00:00.000Z"
+        }
+      ],
+      "cadence_samples": [],
+      "expected": {
+        "replay_required": true,
+        "earliest_affected_tick": "2026-08-12T11:00:00.000Z",
+        "delayed_record_count": 1,
+        "provider_revision_count": 1,
+        "publication_pattern": "INSUFFICIENT_SAMPLES"
+      }
+    },
+    {
+      "id": "duplicate_delivery",
+      "preexisting_refs": ["dup1"],
+      "records": [
+        {
+          "source_record_id": "dup1",
+          "source_id": "provider-a",
+          "record_type": "historical_et0_estimate_v1",
+          "payload_hash": "hd",
+          "event_time": "2026-08-12T10:00:00.000Z",
+          "availability_observation": {
+            "last_not_seen_at": "2026-08-12T10:01:00.000Z",
+            "first_seen_at": "2026-08-12T10:05:00.000Z"
+          },
+          "ingested_at": "2026-08-12T10:06:00.000Z",
+          "available_to_runtime_at": "2026-08-12T10:06:00.000Z",
+          "causal_cutoff_at": "2026-08-12T17:12:00.000Z",
+          "first_affected_logical_tick": "2026-08-12T10:00:00.000Z"
+        },
+        {
+          "source_record_id": "dup1",
+          "source_id": "provider-a",
+          "record_type": "historical_et0_estimate_v1",
+          "payload_hash": "hd",
+          "event_time": "2026-08-12T10:00:00.000Z",
+          "availability_observation": {
+            "last_not_seen_at": "2026-08-12T11:00:00.000Z",
+            "first_seen_at": "2026-08-12T11:05:00.000Z"
+          },
+          "ingested_at": "2026-08-12T11:06:00.000Z",
+          "available_to_runtime_at": "2026-08-12T11:06:00.000Z",
+          "causal_cutoff_at": "2026-08-12T17:12:00.000Z",
+          "first_affected_logical_tick": "2026-08-12T10:00:00.000Z"
+        }
+      ],
+      "cadence_samples": [],
+      "expected": {
+        "replay_required": false,
+        "earliest_affected_tick": null,
+        "delayed_record_count": 0,
+        "provider_revision_count": 0,
+        "duplicate_count": 1,
+        "publication_pattern": "INSUFFICIENT_SAMPLES"
+      }
+    },
+    {
+      "id": "missing_interval_backfill",
+      "records": [
+        {
+          "source_record_id": "back10",
+          "source_id": "provider-a",
+          "record_type": "observed_rainfall_v1",
+          "payload_hash": "hback",
+          "event_time": "2026-08-12T10:00:00.000Z",
+          "availability_observation": {
+            "last_not_seen_at": "2026-08-12T15:00:00.000Z",
+            "first_seen_at": "2026-08-12T15:10:00.000Z"
+          },
+          "ingested_at": "2026-08-12T15:11:00.000Z",
+          "available_to_runtime_at": "2026-08-12T15:11:00.000Z",
+          "causal_cutoff_at": "2026-08-12T11:00:00.000Z",
+          "first_affected_logical_tick": "2026-08-12T11:00:00.000Z"
+        }
+      ],
+      "cadence_samples": [],
+      "expected": {
+        "replay_required": true,
+        "earliest_affected_tick": "2026-08-12T11:00:00.000Z",
+        "delayed_record_count": 1,
+        "provider_revision_count": 0,
+        "publication_pattern": "INSUFFICIENT_SAMPLES"
+      }
+    }
+  ]
+}
