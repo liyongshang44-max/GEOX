@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import type { CanonicalObjectEnvelopeV1 } from "../../apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.js";
+import { CAP04_A1_OPERATION_VARIANT_V1 } from "../../apps/server/src/domain/twin_runtime/forecast_scenario_contracts_v1.js";
 import type { Cap04ARecordSetV1, Cap04ScenarioSetRecordV1 } from "../../apps/server/src/domain/twin_runtime/forecast_scenario_record_set_identity_v1.js";
 import { buildExternalFormalCap04BlockedA2RecordSetV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_cap04_a_record_set_builder_v1.js";
 import {
@@ -49,7 +50,7 @@ function nextHandoffV1(base: PreparedNextTickInputV1, a: Cap04ARecordSetV1): Pre
     previous_checkpoint_hash: checkpoint.determinism_hash,
     previous_forecast_result_ref: forecast.object_id,
     previous_forecast_result_hash: forecast.determinism_hash,
-    latest_successful_forecast_ref: a.operation_key.operation_variant === "A1" ? forecast.object_id : base.latest_successful_forecast_ref,
+    latest_successful_forecast_ref: a.operation_key.operation_variant === CAP04_A1_OPERATION_VARIANT_V1 ? forecast.object_id : base.latest_successful_forecast_ref,
     previous_tick_sequence: base.previous_tick_sequence + 1,
     next_logical_tick_time: addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 60),
     previous_state_runtime_config_ref: state.runtime_config_ref,
@@ -197,7 +198,7 @@ async function main(): Promise<void> {
   const positive = await buildHarnessV1();
   const inserted = await positive.service.executeClaimedTick(positive.input);
   assert.equal(inserted.status, "INSERTED_A1_WITH_SCENARIO");
-  assert.equal(inserted.a_record_set.operation_key.operation_variant, "A1");
+  assert.equal(inserted.a_record_set.operation_key.operation_variant, CAP04_A1_OPERATION_VARIANT_V1);
   assert.equal(inserted.b_record?.scenario_set.payload.options.length, 3);
   assert.equal(inserted.b_record?.scenario_set.payload.options.reduce((sum, option) => sum + option.trajectory_points.length, 0), 216);
   assert.equal(inserted.exact_interval_availability_cutoff_time, addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 432));
