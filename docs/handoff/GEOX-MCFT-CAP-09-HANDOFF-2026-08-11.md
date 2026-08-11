@@ -1,16 +1,16 @@
 # GEOX MCFT-CAP-09 Continuation Handoff — 2026-08-11
 
-更新时间：2026-08-11 17:01（UTC+8）
+更新时间：2026-08-11 22:30（UTC+8）
 
 ```text
 repository:
 liyongshang44-max/GEOX
 
 protected_main_at_handoff:
-e220baa72415d8d95580a153e2a0acba7f9b7cad
+1d72c9d49050c01544d21f8cb1791245d8eb31d3
 
 protected_main_merge:
-PR #3045 — MCFT-CAP-09: qualify successor whole-window viability scanner
+PR #3054 — MCFT-CAP-09 EA9A: qualify bounded P0306Q Base-50 GDD stage
 
 current_taskbook:
 docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md
@@ -23,21 +23,32 @@ Amendment-05 — External Formal Runtime Authority Profile
 Amendment-06 — Formal Window Epoch Rebase Authority
 Amendment-07 — Fixed-lag External Formal Causality
 Amendment-08 — Implementation / Operational Activation Qualification Separation Authority
+Amendment-09 — Crop Context / Season Architecture Adjudication Authority
+Amendment-10 — P0306 Bounded Thermal Proxy Authority
 
-current_primary_formal_planning_frontier:
-S6-CROP-CONTEXT-SEASON-ARCHITECTURE-ADJUDICATION-UNDER-AMENDMENT-08
+current_primary_frontier:
+S6-EA9B-NATURAL-SEASON-EVIDENCE-REQUALIFICATION
+
+primary_requalification_trigger:
+A_NEW_KBS_AGLOG_T1_OR_T1R1_PLANTING_OBSERVATION_WITH_OBSERVATION_DATE_AFTER_2026_05_11_BECOMES_PUBLICLY_RETRIEVABLE
 
 parallel_operational_frontier:
 S6-EA5E2-OPERATIONAL-ACTIVATION-QUALIFICATION-UNDER-AMENDMENT-08
 
-operational_activation_qualified:
+ea5e2_implementation_qualified:
+true
+
+ea5e2_operational_activation_qualified:
+false
+
+current_season_stage_authority_established:
+false
+
+current_season_recovery_reopened:
 false
 
 current_season_successor_epoch_available:
 false
-
-current_season_successor_result:
-NO_CURRENT_SEASON_SUCCESSOR_EPOCH
 
 successor_epoch_selected:
 false
@@ -60,44 +71,30 @@ CONTINUATION_CONTEXT_ONLY
 
 ---
 
-## 0. 这份 handoff 的定位与权威顺序
+## 0. 权威顺序
 
-这份文件只用于下一对话恢复 MCFT-CAP-09 的工程上下文，不制造任何新的 effectiveness、activation、epoch、crop/season authority 或 Formal write authority。
+本 handoff 只用于恢复工程上下文，不制造 effectiveness、activation、crop/season authority、stage authority、epoch 或 Formal write authority。
 
-下一对话必须按以下顺序认定事实：
+必须按以下顺序认定事实：
 
 ```text
-1. 当前 Taskbook + protected-main 已 effective Amendment / Delivery Policy
+1. 当前 Taskbook + protected-main effective Amendments + Delivery Policy
 2. protected main repository fact
-3. live PR / exact-head workflow run / immutable artifact / Formal DB read-only proof
+3. exact PR head / workflow run / immutable artifact / live read-only proof
 4. 本 handoff
 ```
 
 如果本 handoff 与 protected main 冲突，以 protected main 为准。
 
-本 handoff 的准确 base 是：
+本 handoff 的准确 repository base：
 
 ```text
-main@e220baa72415d8d95580a153e2a0acba7f9b7cad
+main@1d72c9d49050c01544d21f8cb1791245d8eb31d3
 ```
-
-这是 PR #3045 的 merge commit。
-
-### 严禁误读的旧状态
-
-以下 PR / handoff / epoch 都已经过期、被 supersede 或仅是历史证据，下一对话不得当成当前 frontier：
-
-- PR #3007：旧 EA5B1 handoff，未合并；
-- `docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-10.md`：历史 A06C→EA5E1 handoff；
-- PR #3035：pre-Amendment-08 EA5E2 implementation PR，已关闭且被 #3039 supersede；
-- PR #3040：重复 EA5E2 PR，已关闭；
-- PR #3044：successor scanner 早期版本，被 #3045 supersede；
-- PR #2958：早期 EA1 machine-source binding PR，仍是旧生命周期，不代表当前 S6 frontier；
-- 原 A06A selected epoch `2026-08-11T17:00Z .. 2026-08-12T16:00Z`：不可 rescue、shift、backfill、relabel。
 
 ---
 
-# 1. 我们正在做什么任务
+## 1. 当前任务定位
 
 仍然是：
 
@@ -107,75 +104,27 @@ MCFT-CAP-09 — Shadow-Online Promotion
 当前大阶段：S6 Formal 24-hour closure
 ```
 
-目标不是 Recommendation / Approval / AO-ACT / Dispatch，也不是商业闭环。
+Formal 24h 尚未开始。当前不是 O00–O23 execution 阶段。
 
-S6 最终仍必须形成：
-
-```text
-External Reality / Evidence
-→ private durable raw retention
-→ governed canonical Evidence
-→ External Runtime Config authority
-→ honest A0 handoff
-→ exact successor 24-config chain + Window Manifest
-→ protected-main Operational Activation evidence
-→ EA5E3 Formal Authority V3
-→ actual UTC O00 ... O23
-→ scheduler / State / Forecast / Scenario / Checkpoint / Health / lineage
-→ restart / intentional miss / oldest-first backfill / stale / late-evidence behavior
-→ final exact-SHA / R2 closure
-```
-
-但 Amendment-08 后，生命周期已经被拆成两条互不替代的线：
+在进入新 Formal epoch 之前，至少还必须同时成立：
 
 ```text
-A. Implementation Qualification / preparatory engineering
-B. Operational Activation Qualification / real-provider actual-UTC proof
+A. 一个合法的 crop / season / four-stage authority + successor epoch
+B. EA5E2 operational activation effectiveness
+C. EA5E3 Formal Authority V3 effectiveness
 ```
 
-第三方 provider outage 可以阻塞 B，但不再自动阻塞已经满足 repository-controlled acceptance 的 A。
-
-当前真正的 Formal 规划主线已经不是“等 KBS 然后继续旧 epoch”，而是：
+当前 A 与 B 都尚未成立，所以：
 
 ```text
-S6-CROP-CONTEXT-SEASON-ARCHITECTURE-ADJUDICATION-UNDER-AMENDMENT-08
+Formal = 0/24
 ```
-
-原因：#3045 已机器证明，在现有冻结 EA2 crop authority + Amendment-06/08 timing 下，当前 season 已不存在任何可合法新选的完整 24-slot successor epoch。
 
 ---
 
-# 2. 当前 authority
+## 2. Amendment-08 后的两条独立线
 
-## 2.1 Taskbook
-
-文件：
-
-```text
-docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md
-```
-
-当前仍是：
-
-```text
-Complete Taskbook v0.5
-GEOX-MCFT-CAP-09-TASK-V0.5-STAGE-1B-S6-AMENDMENT-01-02-03-04-BOUND
-```
-
-Taskbook 文件标题只显示 Amendment-01~04，不代表后续 overlays 未生效。
-
-## 2.2 后续 effective overlays
-
-必须同时读取：
-
-```text
-docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-05-EXTERNAL-FORMAL-RUNTIME-AUTHORITY-PROFILE.md
-docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-06-FORMAL-WINDOW-EPOCH-REBASE-AUTHORITY.md
-docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-07-FIXED-LAG-EXTERNAL-FORMAL-CAUSALITY.md
-docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-08-IMPLEMENTATION-ACTIVATION-QUALIFICATION-SEPARATION-AUTHORITY.md
-```
-
-其中 Amendment-08 是当前生命周期判断的关键：
+Amendment-08 已冻结：
 
 ```text
 IMPLEMENTATION_QUALIFIED
@@ -183,656 +132,488 @@ IMPLEMENTATION_QUALIFIED
 OPERATIONAL_ACTIVATION_QUALIFIED
 ```
 
-它没有降低任何 live threshold，只改变“provider outage 阻塞什么”。
+### 2.1 EA5E2 implementation
+
+已 qualified。
+
+EA5E2 runner / fixed-lag implementation 已通过 repository-controlled qualification；不得因为 operational activation 尚未发生而把 implementation 重新写成未完成。
+
+### 2.2 EA5E2 operational activation
+
+仍未 qualified：
+
+```text
+ea5e2_operational_activation_qualified = false
+```
+
+当前可执行 workflow：
+
+```text
+.github/workflows/mcft-cap-09-ea5e2-operational-activation-live.yml
+workflow name:
+mcft-cap-09-ea5e2-operational-activation-live
+```
+
+它要求真实 provider / R2 / Formal DB 环境并走真实 wall-clock fixed-lag phases。
+
+不得通过修改 critical activation workflow 来伪造 push 触发；应使用 `workflow_dispatch` 在 protected `main` 上执行。成功 run 也不能直接把 operational activation 标为 true，仍需按 Amendment-08 冻结并合并 activation evidence/effectiveness。
 
 ---
 
-# 3. 自上一份 handoff 后已经完成并进入 protected main 的工作
+## 3. Crop / season / stage authority：从 Amendment-09 到最终 bounded-GDD terminal
 
-## 3.1 EA5E1 — Formal DB preflight + immutable Window Input Manifest
+### 3.1 PR #3047 — Amendment-09
 
-PR：
-
-```text
-#3033 — MCFT-CAP-09 EA5E1: freeze post-rebase Formal input manifest
-```
-
-完成：
-
-- 24 个明确 `Runtime Config ref/hash/parent/crop-context` pin；
-- exact A06C artifact equality；
-- Formal Neon READ ONLY preflight；
-- live DB identity / inventory / A0 / scheduler 0/0 / forbidden-marker checks；
-- zero-write proof。
-
-这份 EA5E1 manifest 现在是 **旧 A06A epoch 历史 authority**，不得直接拿来作为未来 successor epoch manifest。
-
-## 3.2 Amendment-07 — fixed-lag External Formal causality
-
-PR：
+Merge main：
 
 ```text
-#3034 — MCFT-CAP-09 Amendment-07: fixed-lag External Formal causality
+c5a0110e1cff3fd91d3a205315b73d16ac7d6bd7
 ```
 
-它解决了一个真实因果矛盾：exact-hour Rain / Historical ET0 的 `(T-1h,T]` 最终小时观测不可能在 provider 正发布延迟下同时满足 `available<=T`。
-
-冻结的 External Formal profile：
+裁决：
 
 ```text
-pre-boundary collector target   = T-00:30
-late exact-hour collector       = T+06:30
-scheduler eligibility           = T+07:00
-late evidence cutoff            = T+07:12
-Runtime observer                = T+07:17
-minimum ingestion margin        = 5m
-KBS Raw Hourly max age          = <=6h
+Branch A = current-season contemporaneous phenology reproof
+Branch B = new natural season fallback
 ```
 
-只允许 Rain / Historical ET0 使用 late cutoff。
+Current-season 允许的 stage authority 角色包括：
 
-Soil / Future Weather / Future ET0 仍保持 pre-T causal cutoff；Future Weather / Future ET0 必须是同一完整 GFS cycle。
+- exact direct provider stage；
+- qualified exact-spatial image phenology；
+- GDD，但只有 exact hybrid/material + governed thermal method/threshold authority 同时成立时；
+- management operations 只能辅助，不能单独确定 stage。
 
 禁止：
 
-- source substitution；
-- timestamp relabel；
-- 旧小时平移到目标小时；
-- interpolation / persistence fill；
-- post-T Future Forcing；
-- cross-cycle substitution；
-- accelerated Formal clock。
+- future observations；
+- full-season hindsight normalization；
+- invented LATE；
+- cross-season stitching。
 
-## 3.3 Amendment-08 — implementation 与 operational activation 解耦
+Branch B 如成立，必须创建新的 immutable season_id，并重新建立真实 crop/planting/emergence authority、field/source binding 与 bootstrap；不得自动 rollover。
 
-PR：
+### 3.2 PR #3048 — exact current-season hybrid qualification
 
-```text
-#3038
-merge SHA: f150b18a2ab9691fec64eaecb00105911857994c
-```
-
-触发原因：#3035 已证明主要软件链可正确 fail-closed，但 KBS provider 长时间 stale 使“软件 merge”被第三方 availability 无限阻塞。
-
-A08 的正确裁决：
+Merge main：
 
 ```text
-provider outage
-→ may block Operational Activation
-→ must NOT by itself block already-qualified software merge
+565e2a59cfd34b18185998744b8380c1101ea45b
 ```
 
-但 live activation 仍保留所有原始安全约束，不能为了方便降低 freshness / lag / source / clock / crop-context 标准。
-
-## 3.4 EA5E2 Implementation Qualification 已进入 main
-
-PR：
+KBS Aglog planting observation #6931 建立：
 
 ```text
-#3039 — MCFT-CAP-09 EA5E2: implementation qualification under Amendment-08
+season = season_2026_corn
+planting date = 2026-05-11
+hybrid = P0306Q
+RM = 103
 ```
 
-#3035 已被它 supersede。
-
-已经进入 protected main 的 EA5E2 implementation 包括：
-
-- 7h fixed-lag scheduler seam；
-- exact-hour late-cutoff seam；
-- provider-specific two-phase collector composition；
-- private raw retention before decode；
-- restricted append-only External Evidence ingress；
-- External-only read-only DB Evidence source；
-- DB source → External CAP04 candidate；
-- A1 / COMPLETED / 72-point deterministic compatibility；
-- Runtime provider request = 0；
-- Runtime R2 HEAD = 0；
-- Formal DB / Formal R2 / scheduler / canonical Runtime write = 0 during qualification。
-
-状态：
+但：
 
 ```text
-EA5E2_IMPLEMENTATION_QUALIFIED = true
-EA5E2_OPERATIONAL_ACTIVATION_QUALIFIED = false
+direct stage authority = false
+hybrid identity != stage authority
+RM alone != thermal threshold authority
 ```
 
-## 3.5 Protected-main Operational Activation runner 已 qualified 并进入 main
+因此进入 Hybrid/GDD 最终 current-season salvage。
 
-PR：
+### 3.3 PR #3049 — P0306Q thermal threshold authority
+
+Merge main：
 
 ```text
-#3041 — MCFT-CAP-09 EA5E2: protected-main operational activation runner
-merge SHA: 5229598e1222defd2aa3a2dab73649678e2300d8
+87eab32bfade35f2d2e9ab945031a61288e20adf
 ```
 
-runner 只允许 protected-main live proof，不再允许 feature-branch live proof冒充 activation。
-
-真实时钟必须走：
+结论：
 
 ```text
-T-00:30
-→ T+06:30
-→ T+07:00
-→ T+07:12
-→ actual T+07:17 observer
+Pioneer Base-50 thermal method semantics = qualified
+exact P0306Q GDU-to-silk threshold authority = false
+exact P0306Q GDU-to-physiological-maturity threshold authority = false
 ```
 
-observer 已在 qualification 中修掉两处真实接线错误：
-
-1. 不能实例化不存在的 `ExternalFormalCap04CandidateExecutionServiceV1`；正确接口是：
-   `PostgresExternalFormalEvidenceSourceV1.loadCandidateRecords()` + `executeExternalFormalCap04CandidateV1()`；
-2. scheduler 表名必须使用真实：
-   `twin_shadow_online_scheduler_slot_v1` / `twin_shadow_online_scheduler_cursor_v1`。
-
-即使 live workflow PASS，也只能得到 candidate operational evidence；仍需独立 exact-head **activation evidence freeze** merge 后，`OPERATIONAL_ACTIVATION_QUALIFIED` 才能 effective。
-
-截至本 handoff：
+明确禁止：
 
 ```text
-EA5E2_OPERATIONAL_ACTIVATION_QUALIFIED = false
+RM -> GDU conversion
+related-product point threshold transfer
 ```
 
-不要把“runner qualified”误写成“activation qualified”。
+原始 EA9A 在 exact-threshold 路径下 terminal。
 
-## 3.6 Post-activation readiness audit 已进入 main
+### 3.4 PR #3050 — EA9B new natural season adjudication
 
-PR：
+Merge main：
 
 ```text
-#3042
-merge SHA: c31a5533521a671d6059cadfe4209182ce3b1926
+f54fd1c235898041aff50ac342d3ee6ad5a87b00
 ```
 
-这个 audit 提前查清了 KBS 等待结束后可能踩的结构性问题。
-
-最重要结论：
-
-### 历史 Formal runner 不可直接复用
-
-旧 scheduled S6 Formal workflow / legacy runner：
-
-- 使用静态 `GEOX_MCFT_CAP09_S6_CANONICAL_INPUT_JSON`；
-- 仍走 Replay-oriented path；
-- 不使用 External DB-only Evidence；
-- V2 runner 仍委托旧 runner；
-- helper 仍带 MCFT-00 Replay authority / C8 soil-hydraulic identity。
-
-因此 successor Formal 必须使用新的 External Formal V3 entrypoint。
-
-### 旧 epoch 资产不可直接复用
-
-历史-only：
-
-- A06A old epoch selection；
-- A06B old 24-config builder（硬编码 epoch/MID）；
-- A06C old persistence result；
-- EA5E1 old manifest + old fixed inventory checks；
-- legacy/V2 Formal runner。
-
-### EA5E1 的 `60 facts / 49 configs` 不是永久 global invariant
-
-如果未来合法 append 第三条 24-config chain，规划 inventory 将变为：
+Live KBS Aglog snapshot：
 
 ```text
-Runtime Configs = 73
-facts = 84
+pages scanned = 6
+rows scanned = 180
+scan reached 2026-05-11 anchor or earlier = true
+post-anchor T1 planting candidates = 0
 ```
 
-这只是 append-only planning consequence；真正 live assert 前必须重新 READ ONLY preflight。
-
-## 3.7 External Formal V3 persistent tick core 已 implementation-qualified
-
-PR：
+裁决：
 
 ```text
-#3043
-merge SHA: 6ae90765b1ec90f96d9f07895d4570bfa53382e0
+NO_NEW_NATURAL_SEASON_CANDIDATE_EVIDENCE_CURRENTLY_OBSERVED
 ```
 
-新增 V3 persistent tick core，核心 contract：
+这只是 time-gated snapshot，不是 global absence claim。
 
-- 消费一个 already-claimed fixed-lag scheduler slot；
-- 消费 exact manifest slot pin；
-- exact persisted next-tick handoff；
-- exact Runtime Config ref/hash；
-- DB-only External Evidence；
-- exact `T+07:12` cutoff；
-- actual observer `T+07:17`，max skew 10m；
-- scheduler claim 的 lease owner/fencing token同时用于 canonical A / Scenario B；
-- 不获取第二套 Runtime write lease；
-- A1 COMPLETED 才允许 Scenario；
-- A2 BLOCKED 禁止 Scenario；
-- existing A+B retry 0 write；
-- pending-B crash recovery从 canonical Forecast重建 B，不重读 provider Evidence；
-- Runtime provider/R2能力 = 0。
-
-状态：
+因此 primary frontier 被定义为：
 
 ```text
-EXTERNAL_FORMAL_V3_PERSISTENT_TICK_IMPLEMENTATION_QUALIFIED = true
-EXTERNAL_FORMAL_V3_FORMAL_EXECUTION_AUTHORIZED = false
+S6-EA9B-NATURAL-SEASON-EVIDENCE-REQUALIFICATION
 ```
 
-## 3.8 Successor whole-window viability scanner 已进入 main
-
-PR：
+触发条件：
 
 ```text
-#3045
-merge SHA / current protected main:
-e220baa72415d8d95580a153e2a0acba7f9b7cad
+A_NEW_KBS_AGLOG_T1_OR_T1R1_PLANTING_OBSERVATION_WITH_OBSERVATION_DATE_AFTER_2026_05_11_BECOMES_PUBLICLY_RETRIEVABLE
 ```
 
-它使用完全冻结的 EA2 crop authority：
+严禁：
 
-```text
-planting possible UTC window:
-[2026-05-11T04:00:00Z, 2026-05-12T04:00:00Z)
-
-six frozen FAO-56 maize stage variants
-no future observations
-T-6h backward stability
-inclusive T+30h forward transition guard
-exact 24 hourly slots
-minimum successor lead = 36h
-EA5E3 readiness = O00-12h
-```
-
-独立 deterministic 结果：
-
-```text
-latest complete current-season O00:
-2026-08-11T22:00:00Z
-
-corresponding O23:
-2026-08-12T21:00:00Z
-
-all 24 slots:
-MID
-
-next hour 2026-08-12T22:00Z:
-fails transition guard
-
-latest possible successor epoch-selection effectiveness time:
-2026-08-10T10:00:00Z
-
-Amendment-08 effective time:
-2026-08-11T02:33:13Z
-
-required result:
-NO_CURRENT_SEASON_SUCCESSOR_EPOCH
-```
-
-关键含义：
-
-**KBS 即使现在恢复，也不能 rescue current-season Formal O00–O23。**
-
-KBS recovery 仍然有价值，因为它可以完成 protected-main software Operational Activation Qualification / evidence freeze；但它不再能自动产生 current-season successor epoch。
+- 根据 rotation 推断下一季 crop；
+- 仅因为日历进入未来年份就创建 season；
+- 复用旧 season authority 自动 rollover；
+- cross-season stitching。
 
 ---
 
-# 4. 当前到底卡在哪里
+## 4. Bounded thermal salvage：#3051–#3054
 
-现在不是单一 blocker，而是两个独立状态：
+这一组 PR 只是在 Amendment-09 约束下，验证“related P0306 evidence 是否足够支持一个保守 bounded proxy”。它没有恢复 exact P0306Q point threshold authority。
 
-## 4.1 Operational Activation 尚未 effective
+### 4.1 PR #3051 — thermal equivalence evidence adjudication
 
-当前：
-
-```text
-EA5E2_OPERATIONAL_ACTIVATION_QUALIFIED = false
-```
-
-要变成 true，必须在 protected main 上完成真实 KBS/GFS actual-UTC qualification：
-
-- KBS Raw Hourly freshness `<=6h`；
-- exact source identity；
-- same-cycle GFS；
-- private retention before decode；
-- five-family canonicalization；
-- isolated qualification PostgreSQL；
-- DB-only Runtime；
-- actual `T+07:17` observer；
-- A1 / COMPLETED / 72；
-- all Formal side-effect counters = 0；
-- 然后另做 exact-head activation evidence freeze。
-
-禁止通过以下方式“让它过”：
-
-- 放宽 6h；
-- 把 7h 改成更大值；
-- 修改 KBS timestamp；
-- 用旧小时冒充目标小时；
-- 换 provider；
-- 用 model ET / rPET 冒充 frozen Historical ET0；
-- cross-cycle GFS；
-- accelerated clock。
-
-### KBS 历史经验
-
-本轮 KBS Raw Hourly 曾持续 stale 超过 13h，且官方没有我们可以依赖的发布 SLA。
-
-因此：
+Merge main：
 
 ```text
-KBS stale != implementation defect
-KBS stale = activation fail-closed
+9e9f358bc57799c7ec1a29d177076b7256bf163f
 ```
 
-不要再因为 provider stale 把已经 qualified 的 implementation 留在 feature branch。
+裁决：新证据足以支持进入 bounded-policy review，但不足以把 secondary `1330 / 2500` 直接升级成 P0306Q truth。
 
-## 4.2 当前 season 已无合法 successor 24h epoch
+### 4.2 PR #3052 — Amendment-10
 
-这是当前 **Formal 规划主线** 的真正 blocker。
-
-#3045 已机器证明：
+Merge main：
 
 ```text
-NO_CURRENT_SEASON_SUCCESSOR_EPOCH
+23304a08fe37ee35258654a2520aa293ce328b2b
 ```
-
-原因不是 KBS，而是时间顺序与 crop-context authority：
-
-- latest complete current-season O00 = `2026-08-11T22:00Z`；
-- 为满足 36h minimum lead，selection authority最晚必须在 `2026-08-10T10:00Z` effective；
-- A08 自己直到 `2026-08-11T02:33:13Z` 才 effective；
-- A08 又要求 successor selection 必须发生在 operational activation effectiveness之后；
-- 因此 current-season successor lifecycle已经在时间上不可能成立。
-
-不能通过以下方式修：
-
-- 人工延长 MID；
-- fabricated LATE；
-- 缩短 Formal window；
-- rescue旧 A06A epoch；
-- initial multi-slot catch-up；
-- future observation rewrite；
-- 把 selection timestamp倒签。
-
----
-
-# 5. 当前 Formal DB / raw-store 状态应如何理解
-
-Formal Neon：
-
-```text
-project:
-delicate-glade-62464340
-
-branch:
-br-cold-dust-a6j6aymz (main / primary / default)
-
-database:
-geox_mcft_cap09_s6_formal_24h
-```
-
-Simulation branch仍然不是 Formal authority：
-
-```text
-br-falling-cake-a6lfsdak
-```
-
-最后一次 live pre-window authority建立的是：
-
-```text
-facts = 60
-Runtime Configs = 49
-  1 A0
-  24 first expired epoch
-  24 second expired/rebased epoch
-State = 1 anchored to A0
-scheduler slots = 0
-scheduler cursors = 0
-Formal execution = 0/24
-```
-
-#3038–#3045 所有后续 merged slices 都明确不授权新的 Formal DB/R2/scheduler/canonical Runtime writes，所以不存在“后面偷偷开始了 Formal window”的 authority。
-
-但是下一次需要 live DB inventory 时，**不要把 60/49 永久硬编码成新 global authority**。先重新做 READ ONLY inspection。
-
-Formal raw store仍然是 private S3-compatible / Cloudflare R2 responsibility layer；不要把 raw evidence 放进 public GitHub artifact。
-
----
-
-# 6. 下一步计划
-
-## Primary：S6 crop-context / season architecture adjudication
-
-下一对话的第一正式设计任务应当是：
-
-```text
-S6-CROP-CONTEXT-SEASON-ARCHITECTURE-ADJUDICATION-UNDER-AMENDMENT-08
-```
-
-目标不是立即选新 O00，而是先裁决：
-
-1. 在 current frozen crop authority 已无完整 24h conservative window 的事实下，MCFT-CAP-09 如何合法获得下一套 crop/season authority；
-2. 是进入新的自然 season / crop context，还是存在可以被独立、真实、as-of 证据支持的新阶段 authority；
-3. 新 authority 允许消费哪些事实，禁止消费哪些 future observations；
-4. 新 authority 如何保持 FAO variant / planting uncertainty / transition guard 的 conservative semantics；
-5. 新 authority effective 后，如何重新运行 whole-window scan，并且只有 scan PASS 才允许 successor epoch selection。
-
-**不得先选 epoch 再反推 crop authority。**
-
-建议先写 architecture adjudication / amendment candidate，不先写 Runtime code。
-
-## Parallel：继续 Operational Activation Qualification
-
-KBS 恢复到 `<=6h` 时，可以独立继续 main-only live activation runner。
-
-如果 live PASS：
-
-```text
-live run PASS
-→ collect exact protected-main SHA + run/artifact/digest + KBS timestamp/age + T/phase times + GFS cycle + private-retention hashes + isolated DB evidence hashes + T+07:17 observer result + zero-side-effect counters
-→ separate exact-head activation evidence freeze
-→ only after freeze: EA5E2_OPERATIONAL_ACTIVATION_QUALIFIED=true
-```
-
-即便 operational activation PASS，也 **不能** 绕过 crop/season adjudication直接选 current-season epoch。
-
-## New crop/season authority + activation 都满足之后
-
-后续顺序必须重新建立：
-
-```text
-1. new crop/season authority effective
-2. whole-window viability scan PASS
-3. successor epoch-selection authority
-4. successor 24-config builder qualification
-5. append-only successor config persistence
-6. successor Formal DB preflight + new immutable Window Input Manifest
-7. External Formal V3 runner exact-binding qualification
-8. EA5E3 Formal Authority V3 effective by O00-12h
-9. actual UTC O00 ... O23
-10. final exact-SHA / R2 effectiveness
-```
-
-#3043 已经准备了 V3 persistent tick core，但它不能替代 1–8 的 authority 链。
-
----
-
-# 7. 踩过的坑，下一对话必须避开
-
-## 7.1 先实现、再重读 authority，导致 scope 不断扩张
-
-#3035 初期最大的工作方式问题：
-
-```text
-先实现
-→ 再重新解释 Amendment-07 §9
-→ 再发现 provider-specific real GET/retention/ingress path漏项
-→ 再扩 PR
-```
-
-以后强制使用：
-
-```text
-Authority docs
-→ Acceptance Matrix
-→ Implementation Checklist
-→ deterministic implementation
-→ full offline acceptance
-→ FREEZE SHA
-→ live qualification
-```
-
-## 7.2 exact-head live proof 与高频 commit 天然冲突
-
-一旦进入 live qualification：
-
-- 冻结 exact SHA；
-- 不做顺手重构；
-- 不因为“等数据看起来没进展”继续塞代码；
-- 任何代码变更都会让旧 live artifact失去 exact-head authority。
-
-## 7.3 Provider outage 不能再等同于 implementation failure
-
-A08 已经裁决：
-
-```text
-Implementation Qualification
-!= Operational Activation Qualification
-```
-
-不要回退到 pre-A08 逻辑。
-
-## 7.4 KBS freshness 不能为了推进临时放宽
 
 冻结：
 
 ```text
-KBS <= 6h
-7h scheduler eligibility
-T+07:12 cutoff
-T+07:17 observer
+epistemic_class = ASSUMED_BOUNDED_PROXY
+silk interval = [1222, 1438] GDU
+physiological maturity interval = [2392, 2608] GDU
 ```
 
-曾出现 KBS >13h stale；这说明 source operational reliability有风险，不说明可以改 threshold。
-
-## 7.5 public Actions artifact 不能携带 value-bearing raw/canonical evidence
-
-曾经设计过跨 job 上传 `pg_dump`；这违反 EA2A public artifact boundary。
-
-正确模式：
-
-- private transient R2 carrier；
-- public artifact只保留 hash / ref / timing / count / metadata；
-- live proof后清理 transient objects；
-- Formal raw prefix与qualification transient prefix严格隔离。
-
-## 7.6 Authority 改变后不要继续硬修旧 PR base
-
-#3035 在 A08 merge 后仍保留 pre-A08 PR base snapshot，导致 GitHub把 A08三文件重新算进 changed-file set并触发错误 lifecycle Gate。
-
-正确处理：
-
-- 保留旧 PR为历史；
-- fresh PR against current protected main；
-- 不 force-rewrite历史；
-- 不通过改 Gate绕 branch ruleset。
-
-#3039 就是正确 replacement。
-
-## 7.7 Operational Activation 只能在 protected main 上做
-
-feature-branch live proof只能是 implementation/readiness证据，不能成为 Operational Activation effectiveness。
-
-main-only workflow必须绑定 critical activation blobs；critical blob改变后，旧 main SHA live proof不能继续作为新实现 authority。
-
-## 7.8 live PASS 仍不等于 activation effective
-
-需要：
+仍然：
 
 ```text
-live workflow PASS
-→ separate exact-head activation evidence freeze merge
-→ activation effective
+exact_p0306q_product_specific_threshold_authority_established = false
+related_product_point_threshold_transfer_authorized = false
 ```
 
-不要跳过 evidence freeze。
+Amendment-10 只授权 bounded qualification，不授权 stage 结论。
 
-## 7.9 旧 Formal runner / V2 runner / Replay helper 不可用于 External V3
+### 4.3 PR #3053 — thermal landmark → water-use-stage partial mapping
 
-不要复用：
+Merge main：
 
-- static canonical-input secret；
-- legacy Stage-1B runner；
-- V2→legacy delegation；
-- Replay crop fixture；
-- C8 soil-hydraulic identity。
+```text
+b39fe14b491d9155b8c12ba73763a9cc8e6d8428
+```
 
-#3043 V3 core是正确 future execution core。
+冻结的安全映射不是一条完整 GDD→四阶段曲线：
 
-## 7.10 旧 A06 epoch资产只是历史，不是 successor template authority
+```text
+R1 / silking point is within MID
+R6 / physiological maturity is within LATE-safe territory
+post-silking and pre-R6 interval remains {MID, LATE}
+```
 
-特别是：
+因此：
 
-- A06B builder硬编码旧 epoch + MID；
-- EA5E1 preflight硬编码 60/49 inventory；
-- A06C result只证明旧 chain；
-- old Window Manifest只证明旧 chain。
+```text
+full_continuous_gdd_to_four_stage_mapping = forbidden
+silking threshold as MID/LATE boundary = forbidden
+physiological maturity threshold as MID/LATE-start boundary = forbidden
+```
 
-未来 successor必须 separate qualify。
+唯一允许的 deterministic positive thermal implication：
 
-## 7.11 不要 rescue expired epoch
+```text
+conservative accumulated Base-50 GDD lower bound >= 2608
+```
 
-禁止：
+并且还必须满足 backward-6h stability 与 harvest/termination guard。
 
-- shift旧 O00/O23；
-- retroactive initial execution；
-- initial multi-slot catch-up；
-- backdate selection；
-- relabel config logical time。
+### 4.4 PR #3054 — final bounded P0306Q Base-50 GDD qualification
 
-## 7.12 crop-stage authority不能因为窗口消失而“延长”
+Exact head：
 
-#3045 已证明 current frozen authority下没有未来合法 24h successor。
+```text
+80e30cca53072949aec6be2845dac004de053e9e
+```
 
-下一步只能 architecture adjudication；不能把 MID延长一天，也不能虚构 LATE。
+Merge main：
 
-## 7.13 exact-boundary Gate不要写脆弱 prose ABI / self-referential deny-list
+```text
+1d72c9d49050c01544d21f8cb1791245d8eb31d3
+```
 
-本轮 Gate 曾因为：
+Focused run：
 
-- 把长 prose句子当 ABI；
-- stale predecessor blob pin；
-- 自己的 deny-list匹配到 Gate自身文本；
+```text
+31501053847
+```
 
-产生过假失败。
+Artifact：
 
-后续 Gate应优先：
+```text
+9105035816
+sha256:4f623fa25124a399288b2ad847d34d6d6bb72279a773de8caab0049ff21ed287
+```
 
-- exact structured JSON fields；
-- exact blob identities；
-- semantic tokens / machine structure；
-- 避免依赖自然语言整句；
-- 避免 self-referential text deny-list。
+#### KBS 561 source qualification
+
+Source：
+
+```text
+KBS002-014.142
+Campbell 107 probe at 3m
+direct daily maximum / minimum air temperature
+```
+
+Live export 不是 header-first CSV，而是：
+
+```text
+metadata preamble + CSV table
+```
+
+Governed parser 只允许：
+
+```text
+search first 64 rows
+find exactly one header containing exact columns:
+date
+air_temp_107_max
+air_temp_107_min
+```
+
+Live header：
+
+```text
+zero-based row index = 21
+```
+
+Duplicate date 处理：
+
+```text
+identical extrema -> deduplicate
+conflicting extrema -> entire day becomes uncertain [0,36] GDU
+never select one conflicting row
+```
+
+#### Final 2026 current-season bounded GDD result
+
+Authority snapshot：
+
+```text
+latest valid daily extrema date = 2026-08-10
+planting date = 2026-05-11
+complete local days = 92
+valid exact days = 89
+missing / invalid / uncertain days = 3
+```
+
+Conservative accumulated Base-50 GDD：
+
+```text
+lower = 1714.626
+upper = 1828.917
+bounded LATE minimum = 2608
+```
+
+关键事实：
+
+```text
+maximum accumulated GDD < 2608 = true
+```
+
+所以甚至最乐观的保守上界也未达到允许的 deterministic LATE threshold；harvest guard 不需要执行。
+
+Final adjudication：
+
+```text
+CURRENT_SEASON_FOUR_STAGE_AUTHORITY_NOT_ESTABLISHED_UNDER_BOUNDED_GDD_PROXY
+```
+
+Negative reason：
+
+```text
+CONSERVATIVE_ACCUMULATED_GDD_LOWER_BOUND_BELOW_2608
+```
+
+Authority effect：
+
+```text
+current_season_stage_authority_established = false
+current_season_2026_recovery_reopened = false
+new_natural_season_created = false
+successor_epoch_selected = false
+all write counts = 0
+Formal = 0/24
+```
+
+这条 Amendment-10 bounded-GDD current-season salvage 已 terminal。不得继续添加新的 related-product / RM / point-threshold 假设来绕过 #3054；若要重开必须有新的独立 qualifying authority 或新的正式 Amendment。
 
 ---
 
-# 8. 下一对话接手时的第一轮检查
+## 5. 当前唯一正确 primary frontier
 
-不要直接开始写代码。先做以下只读对齐：
+现在 primary crop/season line 是真实的外部时间门：
 
 ```text
-1. git / GitHub protected main identity
-2. 确认 main >= e220baa72415d8d95580a153e2a0acba7f9b7cad
-3. 读取 Taskbook v0.5 + Amendment-05/06/07/08
-4. 读取 #3042 post-activation readiness audit authority
-5. 读取 #3043 External Formal V3 persistent tick qualification
-6. 读取 #3045 successor whole-window viability scanner authority
-7. 确认 EA5E2_OPERATIONAL_ACTIVATION_QUALIFIED 仍未被新的 evidence-freeze authority改变
-8. 确认没有新的 crop/season architecture amendment已进入 main
-9. 如要推进 activation，再查 KBS live freshness；不要用旧 8/10 probe当当前 source状态
-10. 如要推进 Formal planning，先做 crop-context / season architecture adjudication，不先选 epoch
+S6-EA9B-NATURAL-SEASON-EVIDENCE-REQUALIFICATION
 ```
 
-如果 repository facts在本 handoff之后已经前进，则以新 protected main为准。
+当前没有可合法创建的新 natural season，也没有可合法选择的 successor Formal epoch。
+
+下一次只有在以下条件出现时才重跑 EA9B：
+
+```text
+KBS Aglog 出现 observation_date > 2026-05-11
+且 area 属于 T1 / T1R1 范围
+且 observation 类型为新的 planting authority candidate
+且公开可机器检索
+```
+
+新 candidate 出现后仍必须重新做：
+
+```text
+new immutable season_id
+actual crop authority
+actual planting/emergence authority
+fresh field/source binding
+fresh bootstrap
+fresh whole-window viability scan
+```
+
+不能把 `season_2026_corn` 自动搬到下一季。
 
 ---
 
-# 9. 当前一句话状态
+## 6. 当前唯一立即可推进的 parallel frontier
+
+Primary line 目前被现实时间门阻塞，所以 repository 内当前唯一立即可执行的实质线是：
 
 ```text
-MCFT-CAP-09 的 External fixed-lag implementation、protected-main activation runner、post-activation readiness audit、External Formal V3 persistent tick core 和 successor whole-window scanner均已进入 main；Operational Activation 尚未 effective，Formal execution仍为0/24；#3045 已机器证明现有冻结 crop authority 下 NO_CURRENT_SEASON_SUCCESSOR_EPOCH，因此当前 Formal 规划主线必须进入 crop-context / season architecture adjudication，KBS recovery只作为独立 operational activation gate继续推进，不能再 rescue current-season epoch。
+S6-EA5E2-OPERATIONAL-ACTIVATION-QUALIFICATION-UNDER-AMENDMENT-08
+```
+
+workflow：
+
+```text
+mcft-cap-09-ea5e2-operational-activation-live
+```
+
+需要在 GitHub Actions 对 protected `main` 使用 `workflow_dispatch`。
+
+Activation run 必须证明：
+
+- exact protected-main subject；
+- critical activation boundary unchanged；
+- required R2 / Neon secrets present；
+- private transient R2 smoke + cleanup；
+- KBS raw-hourly freshness；
+- 真实 future T；
+- pre-boundary provider phase；
+- metadata-only interphase proof；
+- real wall-clock delayed exact-hour phases；
+- zero Formal writes during qualification。
+
+如果 provider freshness 不满足，应 fail closed，不得替换来源、重标时间或伪造 observation。
+
+成功 workflow run 之后还需要新的 evidence-freeze/effectiveness PR；只有那一层合并后，才能把：
+
+```text
+ea5e2_operational_activation_qualified = true
+```
+
+---
+
+## 7. Formal 24h 仍未开始
+
+当前必须保持：
+
+```text
+successor_epoch_selected = false
+ea5e3_effective = false
+Formal O00–O23 started = false
+Formal execution = 0/24
+MCFT-CAP-09 complete = false
+```
+
+不得：
+
+- rescue 旧 A06A epoch；
+- shift/relabel 旧 24h window；
+- 对缺失小时 backfill 后声称 Formal 完成；
+- 在没有新 crop/season authority 时选择 epoch；
+- 因 EA5E2 implementation qualified 就声称 operational activation effective。
+
+---
+
+## 8. 下一对话接手时必须先确认的事实
+
+按顺序确认：
+
+```text
+1. protected main 是否仍 >= 1d72c9d49050c01544d21f8cb1791245d8eb31d3
+2. 本 handoff 是否已 merge 到 protected main
+3. 是否有新的 KBS Aglog T1/T1R1 post-2026-05-11 planting candidate
+4. EA5E2 operational activation workflow 是否已被人工 dispatch
+5. 若已 dispatch，读取 exact run / job / artifact；不得只看 workflow 颜色
+6. 若 activation PASS，冻结 evidence/effectiveness；若未 PASS，保持 false
+7. 只有 crop/season authority + activation effectiveness 都满足后，才重新进入 successor epoch / EA5E3 / Formal 24h
+```
+
+---
+
+## 9. 不得误读的历史状态
+
+以下都不能被当成当前 frontier：
+
+- PR #3035 pre-Amendment-08 EA5E2；
+- PR #3040 duplicate EA5E2；
+- PR #3044 early successor scanner；
+- 旧 A06A epoch `2026-08-11T17:00Z .. 2026-08-12T16:00Z`；
+- #3049 的 exact-threshold terminal 不能单独覆盖 Amendment-10 后的 bounded adjudication；
+- #3051 的 `SUPPORTED` 只表示允许进入 bounded-policy review，不是 stage authority；
+- #3052 的 bounded intervals 不是 exact P0306Q thresholds；
+- #3053 的 partial mapping 不是完整 GDD→四阶段模型；
+- #3054 是 current-season bounded-GDD 最终裁决，结果为 negative terminal；
+- 旧 handoff 中 `S6-CROP-CONTEXT-SEASON-ARCHITECTURE-ADJUDICATION-UNDER-AMENDMENT-08` 已被 Amendment-09/EA9A/EA9B 后续 adjudication supersede。
+
+---
+
+## 10. 一句话恢复状态
+
+```text
+MCFT-CAP-09 Formal 仍为 0/24；2026 current-season direct-stage、exact-threshold 和 Amendment-10 bounded-GDD salvage 均已在 protected main 上走完且未建立 four-stage authority，EA9B 也尚未观察到 post-2026-05-11 的新 T1/T1R1 planting candidate，因此 primary frontier 真实地 time-gated 在 S6-EA9B-NATURAL-SEASON-EVIDENCE-REQUALIFICATION；唯一立即可执行的 parallel frontier 是 EA5E2 operational activation workflow_dispatch，且在 activation evidence/effectiveness 合并前 operational activation 必须保持 false。
 ```
