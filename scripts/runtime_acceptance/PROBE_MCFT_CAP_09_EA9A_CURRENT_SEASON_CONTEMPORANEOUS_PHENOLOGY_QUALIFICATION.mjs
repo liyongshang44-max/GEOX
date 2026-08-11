@@ -110,15 +110,15 @@ try {
   }
 
   const byId = new Map(findings.map((finding) => [finding.candidate_id, finding]));
-  const area = byId.get('KBS_AGLOG_AREA_REGISTRY_T1R1');
+  const areaIdentity = byId.get('KBS_AGLOG_2026_T1R1_AREA_IDENTITY_6881');
   const planting = byId.get('KBS_AGLOG_2026_T1_PLANTING_6931');
   const mcseCatalog = byId.get('KBS_MCSE_AGRONOMIC_PRACTICES_CATALOG');
   const phenocam = byId.get('KBS_GLBRC_PHENOCAM_NETWORK_IMAGES');
   const glbrcPhenology = byId.get('KBS_GLBRC_PHENOLOGY_2013_PRESENT');
-  assert(area && planting && mcseCatalog && phenocam && glbrcPhenology, 'EA9A_REQUIRED_SOURCE_CANDIDATE_SET_INCOMPLETE');
+  assert(areaIdentity && planting && mcseCatalog && phenocam && glbrcPhenology, 'EA9A_REQUIRED_SOURCE_CANDIDATE_SET_INCOMPLETE');
 
-  assertExact(area.formal_scope_relationship, 'EXACT_PROVIDER_AREA_IDENTITY_DISCOVERY', 'EA9A_T1R1_AREA_RELATIONSHIP_REQUIRED');
-  assertExact(area.stage_determinative, false, 'EA9A_AREA_REGISTRY_MUST_NOT_BE_STAGE_TRUTH');
+  assertExact(areaIdentity.formal_scope_relationship, 'EXACT_PROVIDER_AREA_IDENTITY_DISCOVERY', 'EA9A_T1R1_AREA_RELATIONSHIP_REQUIRED');
+  assertExact(areaIdentity.stage_determinative, false, 'EA9A_T1R1_MANAGEMENT_RECORD_MUST_NOT_BE_STAGE_TRUTH');
   assertExact(planting.formal_scope_relationship, 'CURRENT_SEASON_T1_MANAGEMENT_METADATA', 'EA9A_CURRENT_SEASON_PLANTING_RELATIONSHIP_REQUIRED');
   assertExact(planting.stage_determinative, false, 'EA9A_PLANTING_MUST_NOT_BECOME_STAGE_TRUTH');
   assertExact(mcseCatalog.formal_scope_relationship, 'SAME_EXPERIMENT_CATALOG_DISCOVERY', 'EA9A_MCSE_CATALOG_RELATIONSHIP_REQUIRED');
