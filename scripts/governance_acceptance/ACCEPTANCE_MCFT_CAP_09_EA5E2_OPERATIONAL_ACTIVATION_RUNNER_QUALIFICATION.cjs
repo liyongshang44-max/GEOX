@@ -24,7 +24,7 @@ function yes(value, code) { eq(value, true, code); }
 function no(value, code) { eq(value, false, code); }
 function has(text, marker, code) { if (!text.includes(marker)) throw new Error(`${code}:${marker}`); }
 function lacks(text, marker, code) { if (text.includes(marker)) throw new Error(`${code}:${marker}`); }
-function result(value) {
+function writeResult(value) {
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify(value, null, 2) + "\n");
   console.log(JSON.stringify(value));
@@ -59,7 +59,8 @@ function main() {
   }
 
   eq(blob("HEAD", P.liveWorkflow), "9c918152cc57d556770ed33d836a4fda75b4d10b", "EA5E2_OA_LIVE_WORKFLOW_BLOB_REQUIRED");
-  eq(blob("HEAD", P.observer), "eb4001e5b218030435c2a712f78c9d4d64938568", "EA5E2_OA_OBSERVER_BLOB_REQUIRED");
+  eq(blob("HEAD", P.focusedWorkflow), "df6c2cf37a87fdbd8715181dea5667ebb6ad479f", "EA5E2_OA_FOCUSED_WORKFLOW_BLOB_REQUIRED");
+  eq(blob("HEAD", P.observer), "ec18b215f10bedd66fa2a6a1efef0e41cf57ce38", "EA5E2_OA_OBSERVER_BLOB_REQUIRED");
   eq(blob("HEAD", P.authority), "4f0df5f9fe896bf26eda3d673e3153941f59c2e7", "EA5E2_OA_AUTHORITY_BLOB_REQUIRED");
 
   const authority = json(P.authority);
@@ -67,11 +68,15 @@ function main() {
   eq(authority.base_main_sha, base, "EA5E2_OA_AUTHORITY_BASE_REQUIRED");
   eq(authority.qualification_boundary.exact_changed_file_count, 5, "EA5E2_OA_FIVE_FILE_AUTHORITY_REQUIRED");
   eq(authority.qualification_boundary.runtime_implementation_source_change_count, 0, "EA5E2_OA_RUNTIME_SOURCE_CHANGE_ZERO_REQUIRED");
-  yes(authority.protected_main_live_contract.live_run_subject_must_be_protected_main, "EA5E2_OA_PROTECTED_MAIN_SUBJECT_REQUIRED");
-  yes(authority.protected_main_live_contract.critical_activation_boundary_must_match_current_main, "EA5E2_OA_CRITICAL_BOUNDARY_CURRENT_MAIN_REQUIRED");
-  yes(authority.protected_main_live_contract.pull_request_live_run_forbidden, "EA5E2_OA_PR_LIVE_RUN_FORBIDDEN");
-  yes(authority.protected_main_live_contract.target_epoch_independent, "EA5E2_OA_EPOCH_INDEPENDENT_REQUIRED");
-  yes(authority.protected_main_live_contract.formal_epoch_selection_before_activation_forbidden, "EA5E2_OA_EPOCH_SELECTION_BEFORE_ACTIVATION_FORBIDDEN");
+
+  const protectedMain = authority.protected_main_live_contract;
+  yes(protectedMain.live_run_subject_must_be_protected_main, "EA5E2_OA_PROTECTED_MAIN_SUBJECT_REQUIRED");
+  yes(protectedMain.critical_activation_boundary_must_match_current_main, "EA5E2_OA_CRITICAL_BOUNDARY_CURRENT_MAIN_REQUIRED");
+  yes(protectedMain.pull_request_live_run_forbidden, "EA5E2_OA_PR_LIVE_RUN_FORBIDDEN");
+  yes(protectedMain.workflow_dispatch_retry_on_same_exact_main_sha_allowed, "EA5E2_OA_MAIN_RETRY_REQUIRED");
+  yes(protectedMain.target_epoch_independent, "EA5E2_OA_EPOCH_INDEPENDENT_REQUIRED");
+  yes(protectedMain.target_must_be_future_exact_utc_hour, "EA5E2_OA_FUTURE_EXACT_T_REQUIRED");
+  yes(protectedMain.formal_epoch_selection_before_activation_forbidden, "EA5E2_OA_EPOCH_SELECTION_BEFORE_ACTIVATION_FORBIDDEN");
 
   const clock = authority.provider_and_clock_contract;
   eq(clock.kbs_raw_hourly_max_age_hours, 6, "EA5E2_OA_KBS_SIX_HOUR_REQUIRED");
@@ -82,6 +87,7 @@ function main() {
   eq(clock.runtime_observer_offset_minutes, 437, "EA5E2_OA_OBSERVER_REQUIRED");
   eq(clock.runtime_observer_max_start_skew_minutes, 10, "EA5E2_OA_OBSERVER_SKEW_REQUIRED");
   eq(clock.minimum_ingestion_margin_minutes, 5, "EA5E2_OA_MARGIN_REQUIRED");
+  yes(clock.exact_same_cycle_gfs_required, "EA5E2_OA_EXACT_SAME_CYCLE_REQUIRED");
   no(clock.source_substitution_authorized, "EA5E2_OA_SOURCE_SUBSTITUTION_FORBIDDEN");
   no(clock.time_relabeling_authorized, "EA5E2_OA_TIME_RELABELING_FORBIDDEN");
   no(clock.cross_cycle_substitution_authorized, "EA5E2_OA_CROSS_CYCLE_FORBIDDEN");
@@ -140,16 +146,22 @@ function main() {
   for (const marker of [
     "OBSERVER_OFFSET_MINUTES = 437",
     "MAX_OBSERVER_START_SKEW_MINUTES = 10",
+    "EXACT_INTERVAL_CUTOFF_OFFSET_MINUTES = 432",
+    "BEGIN TRANSACTION READ ONLY",
+    "twin_shadow_online_scheduler_slot_v1",
+    "twin_shadow_online_scheduler_cursor_v1",
     "READ_ONLY_A0_HANDOFF_ONLY",
     "QUALIFICATION_ONLY_NOT_FORMAL_EPOCH_CONFIG",
     "EA5E2_ACTIVATION_CROP_STAGE_NO_CONSERVATIVE_CONSENSUS",
     "compileExternalFormalRuntimeConfigV1",
     "PostgresExternalFormalEvidenceSourceV1",
-    "ExternalFormalCap04CandidateExecutionServiceV1",
-    "candidate.disposition !== \"A1\"",
-    "candidate.forecast_status !== \"COMPLETED\"",
-    "candidate.forecast_point_count !== 72",
-    "candidate.execution_authority.provider_request_count !== 0",
+    "loadCandidateRecords",
+    "executeExternalFormalCap04CandidateV1",
+    "loaded.selected_record_count !== 5",
+    "candidate.operation_variant !== \"A1\"",
+    "forecastCandidate.status !== \"COMPLETED\"",
+    "forecastCandidate.points.length !== 72",
+    "candidate.provider_request_count !== 0",
     "formal_database_write_count: 0",
     "scheduler_slot_count: 0",
     "scheduler_cursor_count: 0",
@@ -159,6 +171,7 @@ function main() {
     "INSERT INTO",
     "UPDATE ",
     "DELETE FROM",
+    "TRUNCATE ",
     "commitContinuationState",
     "commitAssimilatedContinuationState",
     "commitRuntimeConfig(",
@@ -171,7 +184,7 @@ function main() {
   lacks(focused, "GEOX_MCFT_CAP09_S6_DATABASE_URL", "EA5E2_OA_FOCUSED_FORMAL_SECRET_FORBIDDEN");
   lacks(focused, "MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY", "EA5E2_OA_FOCUSED_R2_SECRET_FORBIDDEN");
 
-  result({
+  writeResult({
     schema_version: "geox_mcft_cap09_ea5e2_operational_activation_runner_qualification_governance_result_v1",
     status: "PASS",
     base_sha: base,
@@ -205,7 +218,7 @@ catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   let subject = null;
   try { subject = git("rev-parse", "HEAD"); } catch {}
-  result({
+  writeResult({
     schema_version: "geox_mcft_cap09_ea5e2_operational_activation_runner_qualification_governance_result_v1",
     status: "FAIL",
     base_sha: process.env.MCFT_BASE_SHA ?? null,
