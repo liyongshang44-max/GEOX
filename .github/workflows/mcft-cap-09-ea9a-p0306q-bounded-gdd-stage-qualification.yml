@@ -1,0 +1,126 @@
+name: mcft-cap-09-ea9a-p0306q-bounded-gdd-stage-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea9a-p0306q-bounded-gdd-stage-qualification.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9A-P0306Q-BOUNDED-GDD-STAGE-QUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION.py'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-ea9a-bounded-gdd-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  p0306q-bounded-gdd-stage-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node 20.11.1
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Resolve exact bounded GDD base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Syntax-check bounded GDD proof code
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION.cjs
+          python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION.py
+
+      - name: Validate exact bounded GDD governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION.cjs
+
+      - name: Execute live bounded P0306Q Base-50 GDD stage qualification
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION.py
+
+      - name: Diagnose KBS 561 export schema without raw values
+        if: failure()
+        shell: bash
+        run: |
+          mkdir -p acceptance-output
+          python - <<'PY'
+          import csv
+          import hashlib
+          import io
+          import json
+          import pathlib
+          import re
+          from urllib.request import Request, urlopen
+
+          url = "https://lter.kbs.msu.edu/datatables/561.csv"
+          req = Request(url, headers={
+              "User-Agent": "GEOX-MCFT-CAP09-EA9A-P0306Q-SCHEMA-DIAGNOSTIC/1.0",
+              "Accept": "text/csv,text/plain;q=0.9,*/*;q=0.5",
+              "Cache-Control": "no-cache",
+          })
+          with urlopen(req, timeout=90) as response:
+              body = response.read(30_000_001)
+              content_type = response.headers.get("Content-Type")
+              final_url = response.geturl()
+          text = body.decode("utf-8-sig", errors="replace")
+          reader = csv.reader(io.StringIO(text))
+          first_rows = []
+          for _ in range(5):
+              row = next(reader, None)
+              if row is None:
+                  break
+              first_rows.append(row)
+          normalize = lambda value: re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
+          result = {
+              "schema_version": "geox_mcft_cap09_ea9a_kbs561_export_schema_diagnostic_v1",
+              "final_url": final_url,
+              "content_type": content_type,
+              "response_bytes": len(body),
+              "response_sha256": "sha256:" + hashlib.sha256(body).hexdigest(),
+              "first_five_row_field_counts": [len(row) for row in first_rows],
+              "normalized_first_five_rows": [[normalize(value) for value in row] for row in first_rows],
+              "raw_data_values_emitted": False,
+          }
+          out = pathlib.Path("acceptance-output/MCFT_CAP_09_EA9A_KBS561_EXPORT_SCHEMA_DIAGNOSTIC.json")
+          out.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print(json.dumps(result, sort_keys=True))
+          PY
+
+      - name: Upload immutable bounded GDD proof artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea9a-p0306q-bounded-gdd-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA9A_P0306Q_BOUNDED_GDD_STAGE_QUALIFICATION_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA9A_KBS561_EXPORT_SCHEMA_DIAGNOSTIC.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9A-P0306Q-BOUNDED-GDD-STAGE-QUALIFICATION-V1.json
+          if-no-files-found: error
+          retention-days: 90
