@@ -144,12 +144,10 @@ try {
   const probe = read(PROBE);
   for (const marker of [
     'P0306Q',
-    'P0306Q_THERMAL_THRESHOLD_AUTHORITY_ESTABLISHED',
-    'CURRENT_SEASON_PHENOLOGY_AUTHORITY_NOT_ESTABLISHED',
-    'S6-EA9A-ASOF-GDD-STAGE-ADJUDICATION',
-    'S6-EA9B-NEW-NATURAL-SEASON-AUTHORITY-ADJUDICATION',
+    'exact_p0306q_product_specific_threshold_authority_established',
     'relative_maturity_to_gdu_conversion_used: false',
     'related_product_point_threshold_transfer_used: false',
+    'provider_body_text_emitted: false',
     'database_write_count: 0',
     'successor_epoch_selected: false'
   ]) has(probe, marker, 'EA9A_THERMAL_PROBE_MARKER_REQUIRED');
