@@ -10,7 +10,7 @@ import {
   type ExternalFormalRuntimeConfigPayloadV1,
 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";
 import { PostgresNextTickRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.js";
-import { ExternalFormalCap04CandidateExecutionServiceV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.js";
+import { executeExternalFormalCap04CandidateV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.js";
 import { PostgresExternalFormalEvidenceSourceV1 } from "../../apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.js";
 import type {
   ContinuationCropStageConfigurationContextV1,
@@ -21,6 +21,7 @@ const HOUR_MS = 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 const OBSERVER_OFFSET_MINUTES = 437;
 const MAX_OBSERVER_START_SKEW_MINUTES = 10;
+const EXACT_INTERVAL_CUTOFF_OFFSET_MINUTES = 432;
 const CONFIG_MATRIX_REF = "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json";
 const CONFIG_MATRIX_HASH = "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5";
 const CROP_AUTHORITY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json";
@@ -62,7 +63,11 @@ function six(value: number): string {
 }
 
 function stageAtV1(ageDays: number, lengths: readonly number[]): string | null {
-  const [initial, development, mid, late] = lengths;
+  if (lengths.length !== 4) throw new Error("EA5E2_ACTIVATION_EXACT_FOUR_STAGE_LENGTHS_REQUIRED");
+  const initial = lengths[0]!;
+  const development = lengths[1]!;
+  const mid = lengths[2]!;
+  const late = lengths[3]!;
   const b1 = initial;
   const b2 = b1 + development;
   const b3 = b2 + mid;
@@ -84,7 +89,11 @@ function deriveSingleTargetCropContextV1(targetT: string): {
   const window = record(planting.possible_event_window_utc, "EA5E2_ACTIVATION_PLANTING_WINDOW_REQUIRED");
   const model = record(authority.model_stage_prior, "EA5E2_ACTIVATION_MODEL_STAGE_PRIOR_REQUIRED");
   const policy = record(authority.as_of_derivation_policy, "EA5E2_ACTIVATION_DERIVATION_POLICY_REQUIRED");
-  const starts = [Date.parse(str(window.start_inclusive, "EA5E2_ACTIVATION_PLANTING_START_REQUIRED")), Date.parse(str(window.end_exclusive, "EA5E2_ACTIVATION_PLANTING_END_REQUIRED")) - 1];
+  const starts = [
+    Date.parse(str(window.start_inclusive, "EA5E2_ACTIVATION_PLANTING_START_REQUIRED")),
+    Date.parse(str(window.end_exclusive, "EA5E2_ACTIVATION_PLANTING_END_REQUIRED")) - 1,
+  ];
+  if (starts.some((value) => !Number.isFinite(value))) throw new Error("EA5E2_ACTIVATION_PLANTING_WINDOW_INVALID");
   const variants = model.variant_stage_lengths_days;
   if (!Array.isArray(variants) || variants.length !== 6) throw new Error("EA5E2_ACTIVATION_EXACT_SIX_FAO_VARIANTS_REQUIRED");
   const backwardHours = num(policy.backward_stability_hours, "EA5E2_ACTIVATION_BACKWARD_GUARD_REQUIRED");
@@ -98,15 +107,18 @@ function deriveSingleTargetCropContextV1(targetT: string): {
     if (!Array.isArray(variantRaw) || variantRaw.length !== 4 || variantRaw.some((x) => typeof x !== "number" || !Number.isFinite(x))) {
       throw new Error("EA5E2_ACTIVATION_FAO_VARIANT_INVALID");
     }
+    const lengths = variantRaw as number[];
     for (const plantingMs of starts) {
       for (const timeMs of guardTimes) {
-        const stage = stageAtV1((timeMs - plantingMs) / (24 * HOUR_MS), variantRaw as number[]);
+        const stage = stageAtV1((timeMs - plantingMs) / (24 * HOUR_MS), lengths);
         if (!stage) throw new Error("EA5E2_ACTIVATION_CROP_STAGE_OUTSIDE_FROZEN_MODEL_WINDOW");
         stages.add(stage);
       }
     }
   }
-  if (stages.size !== 1) throw new Error(`EA5E2_ACTIVATION_CROP_STAGE_NO_CONSERVATIVE_CONSENSUS:${[...stages].sort().join(",")}`);
+  if (stages.size !== 1) {
+    throw new Error(`EA5E2_ACTIVATION_CROP_STAGE_NO_CONSERVATIVE_CONSENSUS:${[...stages].sort().join(",")}`);
+  }
   const stage = [...stages][0]!;
   const parameterByStage: Record<string, { kc: number; cropRootDepthMm: number; effectiveModelRootDepthMm: number }> = {
     INITIAL: { kc: 0.3, cropRootDepthMm: 150, effectiveModelRootDepthMm: 150 },
@@ -161,11 +173,15 @@ function deriveSingleTargetCropContextV1(targetT: string): {
   return { stage, contextHash, context };
 }
 
-function buildHandoffV1(snapshot: Awaited<ReturnType<PostgresNextTickRepositoryV1["readPersistedNextTickSnapshot"]>>, targetT: string): PreparedNextTickInputV1 {
+function buildHandoffV1(
+  snapshot: Awaited<ReturnType<PostgresNextTickRepositoryV1["readPersistedNextTickSnapshot"]>>,
+  targetT: string,
+): PreparedNextTickInputV1 {
   if (!snapshot) throw new Error("EA5E2_ACTIVATION_FORMAL_A0_SNAPSHOT_REQUIRED");
   const state = snapshot.previous_posterior;
   const checkpoint = snapshot.checkpoint;
   const forecast = snapshot.previous_forecast_result;
+  if (!forecast) throw new Error("EA5E2_ACTIVATION_A0_FORECAST_REQUIRED");
   const statePayload = record(state.payload, "EA5E2_ACTIVATION_A0_STATE_PAYLOAD_REQUIRED");
   const posterior = record(statePayload.posterior, "EA5E2_ACTIVATION_A0_POSTERIOR_REQUIRED");
   const derived = record(statePayload.derived_state, "EA5E2_ACTIVATION_A0_DERIVED_STATE_REQUIRED");
@@ -206,6 +222,32 @@ function buildHandoffV1(snapshot: Awaited<ReturnType<PostgresNextTickRepositoryV
   };
 }
 
+async function assertFormalDatabaseReadOnlyPreconditionsV1(formalPool: Pool): Promise<void> {
+  const identity = await formalPool.query("SELECT current_database() AS db, current_setting('server_version_num')::int AS version_num");
+  if (identity.rows.length !== 1 || identity.rows[0].db !== "geox_mcft_cap09_s6_formal_24h" || Number(identity.rows[0].version_num) < 160000) {
+    throw new Error("EA5E2_ACTIVATION_FORMAL_DATABASE_IDENTITY_MISMATCH");
+  }
+  const client = await formalPool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SET TRANSACTION READ ONLY");
+    const schedulerState = await client.query(
+      "SELECT (SELECT count(*)::int FROM twin_scheduler_slot_v1) AS slots, (SELECT count(*)::int FROM twin_scheduler_cursor_v1) AS cursors",
+    );
+    if (schedulerState.rows.length !== 1) throw new Error("EA5E2_ACTIVATION_FORMAL_SCHEDULER_CARDINALITY");
+    const schedulerRow = schedulerState.rows[0];
+    if (Number(schedulerRow.slots) !== 0 || Number(schedulerRow.cursors) !== 0) {
+      throw new Error("EA5E2_ACTIVATION_FORMAL_SCHEDULER_MUST_REMAIN_UNSTARTED");
+    }
+    await client.query("ROLLBACK");
+  } catch (error) {
+    try { await client.query("ROLLBACK"); } catch { /* preserve original read failure */ }
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function main(): Promise<void> {
   const targetT = exactHour(env("MCFT_EA5E2_TARGET_T"));
   const subjectSha = env("MCFT_EA5E2_SUBJECT_SHA");
@@ -217,30 +259,35 @@ async function main(): Promise<void> {
   if (observerSkewMinutes > MAX_OBSERVER_START_SKEW_MINUTES) {
     throw new Error(`EA5E2_ACTIVATION_OBSERVER_START_TOO_LATE:${observerSkewMinutes}`);
   }
+  const observerCreatedAt = new Date(observedAtMs).toISOString();
+  const exactIntervalAvailabilityCutoffTime = new Date(
+    Date.parse(targetT) + EXACT_INTERVAL_CUTOFF_OFFSET_MINUTES * MINUTE_MS,
+  ).toISOString();
 
-  const isolatedPool = new Pool({ connectionString: env("DATABASE_URL"), max: 2, application_name: "mcft_cap09_ea5e2_operational_activation_observer" });
-  const formalPool = new Pool({ connectionString: env("FORMAL_DATABASE_URL"), max: 1, application_name: "mcft_cap09_ea5e2_operational_activation_formal_readonly" });
+  const isolatedPool = new Pool({
+    connectionString: env("DATABASE_URL"),
+    max: 2,
+    application_name: "mcft_cap09_ea5e2_operational_activation_observer",
+  });
+  const formalPool = new Pool({
+    connectionString: env("FORMAL_DATABASE_URL"),
+    max: 2,
+    application_name: "mcft_cap09_ea5e2_operational_activation_formal_readonly",
+  });
   try {
-    const formalIdentity = await formalPool.query("SELECT current_database() AS db, current_setting('server_version_num')::int AS version_num");
-    if (formalIdentity.rows.length !== 1 || formalIdentity.rows[0].db !== "geox_mcft_cap09_s6_formal_24h" || Number(formalIdentity.rows[0].version_num) < 160000) {
-      throw new Error("EA5E2_ACTIVATION_FORMAL_DATABASE_IDENTITY_MISMATCH");
-    }
-    const schedulerState = await formalPool.query("BEGIN TRANSACTION READ ONLY; SELECT (SELECT count(*)::int FROM twin_scheduler_slot_v1) AS slots, (SELECT count(*)::int FROM twin_scheduler_cursor_v1) AS cursors; ROLLBACK;");
-    const schedulerRow = schedulerState.find((r) => Array.isArray(r.rows) && r.rows.length === 1)?.rows[0];
-    if (!schedulerRow || Number(schedulerRow.slots) !== 0 || Number(schedulerRow.cursors) !== 0) {
-      throw new Error("EA5E2_ACTIVATION_FORMAL_SCHEDULER_MUST_REMAIN_UNSTARTED");
-    }
-
-    const formalSnapshot = await new PostgresNextTickRepositoryV1(formalPool).readPersistedNextTickSnapshot({ ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 });
-    const handoff = buildHandoffV1(formalSnapshot, targetT);
+    await assertFormalDatabaseReadOnlyPreconditionsV1(formalPool);
+    const formalSnapshot = await new PostgresNextTickRepositoryV1(formalPool).readPersistedNextTickSnapshot({
+      ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
+    });
     if (!formalSnapshot) throw new Error("EA5E2_ACTIVATION_FORMAL_A0_SNAPSHOT_REQUIRED");
+    const handoff = buildHandoffV1(formalSnapshot, targetT);
     const parent = formalSnapshot.runtime_config.payload as unknown as ExternalFormalRuntimeConfigPayloadV1;
     const crop = deriveSingleTargetCropContextV1(targetT);
     const runtimeConfig = compileExternalFormalRuntimeConfigV1({
       scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
       config_role: "HOURLY_CAP04",
       effective_logical_time: targetT,
-      created_at: targetT,
+      created_at: observerCreatedAt,
       parent_runtime_config_ref: formalSnapshot.runtime_config.object_id,
       parent_runtime_config_hash: formalSnapshot.runtime_config.determinism_hash,
       reality_binding_ref: parent.reality_binding_ref,
@@ -257,28 +304,44 @@ async function main(): Promise<void> {
         configuration_matrix_ref: parent.crop_stage_context_authority.configuration_matrix_ref,
         configuration_matrix_hash: parent.crop_stage_context_authority.configuration_matrix_hash,
       },
-      model_prior: structuredClone(parent.model_prior),
+      model_prior: {
+        source_ref: parent.model_prior.source_ref,
+        source_hash: parent.model_prior.source_hash,
+      },
     });
 
     const evidenceSource = new PostgresExternalFormalEvidenceSourceV1(isolatedPool);
-    const service = new ExternalFormalCap04CandidateExecutionServiceV1(evidenceSource);
-    const candidate = await service.executeCandidate({
+    const loaded = await evidenceSource.loadCandidateRecords({
       scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
       logical_time: targetT,
-      created_at: targetT,
+      exact_interval_availability_cutoff_time: exactIntervalAvailabilityCutoffTime,
+    });
+    if (loaded.selected_record_count !== 5 || loaded.provider_request_count !== 0 || loaded.database_write_count !== 0) {
+      throw new Error(`EA5E2_ACTIVATION_EXACT_FIVE_DB_ONLY_RECORDS_REQUIRED:${loaded.selected_record_count}`);
+    }
+
+    const candidate = executeExternalFormalCap04CandidateV1({
+      scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
+      logical_time: targetT,
+      created_at: observerCreatedAt,
       runtime_config: runtimeConfig,
       handoff,
+      candidate_records: loaded.records,
       crop_stage_context: crop.context,
-      exact_interval_availability_cutoff_time: new Date(Date.parse(targetT) + 432 * MINUTE_MS).toISOString(),
     });
-    if (candidate.disposition !== "A1" || candidate.forecast_status !== "COMPLETED" || candidate.forecast_point_count !== 72) {
-      throw new Error(`EA5E2_ACTIVATION_EXTERNAL_CAP04_A1_COMPLETED_72_REQUIRED:${candidate.disposition}:${candidate.forecast_status}:${candidate.forecast_point_count}`);
+    const forecastCandidate = candidate.forecast_authority.forecast_candidate;
+    if (candidate.operation_variant !== "A1" || forecastCandidate.status !== "COMPLETED" || forecastCandidate.points.length !== 72) {
+      throw new Error(
+        `EA5E2_ACTIVATION_EXTERNAL_CAP04_A1_COMPLETED_72_REQUIRED:${candidate.operation_variant}:${forecastCandidate.status}:${forecastCandidate.points.length}`,
+      );
     }
-    if (candidate.persistence_performed || candidate.canonical_persistence_authorized || candidate.scenario_authorized) {
-      throw new Error("EA5E2_ACTIVATION_PERSISTENCE_OR_SCENARIO_FORBIDDEN");
-    }
-    if (candidate.execution_authority.database_evidence_only !== true || candidate.execution_authority.provider_request_count !== 0) {
-      throw new Error("EA5E2_ACTIVATION_DB_ONLY_RUNTIME_REQUIRED");
+    if (candidate.canonical_persistence_authorized !== false
+      || candidate.database_write_count !== 0
+      || candidate.scenario_write_count !== 0
+      || candidate.recommendation_write_count !== 0
+      || candidate.action_write_count !== 0
+      || candidate.provider_request_count !== 0) {
+      throw new Error("EA5E2_ACTIVATION_CAP04_SIDE_EFFECT_OR_PROVIDER_FETCH_FORBIDDEN");
     }
 
     fs.mkdirSync("acceptance-output", { recursive: true });
@@ -288,7 +351,7 @@ async function main(): Promise<void> {
       subject_sha: subjectSha,
       target_t: targetT,
       expected_observer_at: new Date(expectedObserverMs).toISOString(),
-      observed_at: new Date(observedAtMs).toISOString(),
+      observed_at: observerCreatedAt,
       observer_start_skew_minutes: observerSkewMinutes,
       observer_start_skew_max_minutes: MAX_OBSERVER_START_SKEW_MINUTES,
       crop_stage_code: crop.stage,
@@ -298,13 +361,13 @@ async function main(): Promise<void> {
       formal_a0_runtime_config_hash: formalSnapshot.runtime_config.determinism_hash,
       qualification_runtime_config_ref: runtimeConfig.object_id,
       qualification_runtime_config_hash: runtimeConfig.determinism_hash,
-      exact_interval_availability_cutoff_time: new Date(Date.parse(targetT) + 432 * MINUTE_MS).toISOString(),
+      exact_interval_availability_cutoff_time: exactIntervalAvailabilityCutoffTime,
       db_only_runtime: true,
-      provider_request_count: 0,
-      selected_record_count: candidate.execution_authority.selected_record_count,
-      disposition: candidate.disposition,
-      forecast_status: candidate.forecast_status,
-      forecast_point_count: candidate.forecast_point_count,
+      provider_request_count: loaded.provider_request_count + candidate.provider_request_count,
+      selected_record_count: loaded.selected_record_count,
+      disposition: candidate.operation_variant,
+      forecast_status: forecastCandidate.status,
+      forecast_point_count: forecastCandidate.points.length,
       persistence_performed: false,
       scenario_authorized: false,
       formal_database_access_mode: "READ_ONLY_A0_HANDOFF_ONLY",
@@ -315,7 +378,10 @@ async function main(): Promise<void> {
       ea5e3_authorized: false,
       raw_values_emitted: false,
     };
-    fs.writeFileSync("acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json", JSON.stringify(proof, null, 2) + "\n");
+    fs.writeFileSync(
+      "acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json",
+      JSON.stringify(proof, null, 2) + "\n",
+    );
     console.log(JSON.stringify(proof));
   } finally {
     await isolatedPool.end();
