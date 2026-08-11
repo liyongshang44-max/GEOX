@@ -37,6 +37,17 @@ function normalizeHtml(html) {
     .trim();
 }
 
+function anyProductContextMatches(text, productPattern, evidencePattern, radiusChars = 2500) {
+  const productRegex = new RegExp(productPattern, 'ig');
+  let match;
+  while ((match = productRegex.exec(text)) !== null) {
+    const context = text.slice(match.index, Math.min(text.length, match.index + radiusChars));
+    if (evidencePattern.test(context)) return true;
+    evidencePattern.lastIndex = 0;
+  }
+  return false;
+}
+
 async function fetchSource(source) {
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -88,6 +99,25 @@ const pioneerMaturity = byId.get('PIONEER_CURRENT_SAME_FAMILY_MATURITY_VARIANCE'
 const guide = byId.get('PIONEER_2020_PRODUCT_GUIDE_MIRROR_P0306_PROFILE').text;
 const langfritz = byId.get('LANGFRITZ_P0306AM_GDU_VALUES').text;
 
+const p0306amGuideAssociation = anyProductContextMatches(
+  guide,
+  '\\bP0306AM\\b',
+  /\b3100\b[\s\S]{0,400}\b103\b[\s\S]{0,250}\b101\b[\s\S]{0,250}\b104\b/i,
+  3500,
+);
+const p0306amxtGuideAssociation = anyProductContextMatches(
+  guide,
+  '\\bP0306AMXT\\b',
+  /\b3125\b[\s\S]{0,400}\b103\b[\s\S]{0,250}\b101\b[\s\S]{0,250}\b104\b/i,
+  3500,
+);
+const p0306amSecondaryAssociation = anyProductContextMatches(
+  langfritz,
+  '\\bP0306AM\\b',
+  /103\s*day\s*crm[\s\S]{0,500}\b2500\b[\s\S]{0,500}\b1330\b/i,
+  2500,
+);
+
 const facts = {
   pioneer_hybrid_family_same_base_genetics_semantics: /hybrid family[^.]{0,160}same base genetics/i.test(pioneerLegal),
   pioneer_amxt_and_q_technology_segment_semantics_present: /\bamxt\b/i.test(pioneerLegal) && /qrome/i.test(pioneerLegal),
@@ -96,8 +126,8 @@ const facts = {
   pioneer_same_family_different_technology_trait_rule_present: /same genetic family[^.]{0,220}different technology traits[^.]{0,220}same maturity/i.test(pioneerMaturity),
   pioneer_same_family_maturity_variance_two_to_three_days_present: /differ by two to three days in maturity/i.test(pioneerMaturity),
   pioneer_base50_50f_86f_method_present: /base 50/i.test(pioneerMaturity) && /86\s*°?\s*f/i.test(pioneerMaturity) && /50\s*°?\s*f/i.test(pioneerMaturity),
-  p0306am_profile_103_101_104_present: /p0306am\s+3100\s+103\s+101\s+104/i.test(guide),
-  p0306amxt_profile_103_101_104_present: /p0306amxt\s+3125\s+103\s+101\s+104/i.test(guide),
+  p0306am_profile_103_101_104_present: p0306amGuideAssociation,
+  p0306amxt_profile_103_101_104_present: p0306amxtGuideAssociation,
   p0306am_p0306amxt_exact_same_genetic_background_explicit: false,
   p0306am_canadian_heat_units: 3100,
   p0306amxt_canadian_heat_units: 3125,
@@ -106,7 +136,7 @@ const facts = {
   p0306am_p0306amxt_same_silk_crm: 101,
   p0306am_p0306amxt_same_physiological_crm: 104,
   langfritz_independent_pioneer_sales_representative_identity_present: /independent sales representative for pioneer/i.test(langfritz),
-  p0306am_secondary_103_crm_2500_phys_1330_silk_present: /p0306am[\s\S]{0,500}103 day crm[\s\S]{0,220}2500[^.]{0,220}1330/i.test(langfritz),
+  p0306am_secondary_103_crm_2500_phys_1330_silk_present: p0306amSecondaryAssociation,
   p0306am_secondary_gdu_to_silk: 1330,
   p0306am_secondary_gdu_to_physiological_maturity: 2500,
   exact_p0306q_gdu_threshold_observed_in_enumerated_sources: false,
