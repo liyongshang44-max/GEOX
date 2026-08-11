@@ -131,7 +131,6 @@ try {
   const probe = read(PROBE);
   for (const marker of [
     'EXACT_UNAMBIGUOUS_HYBRID_AND_RELATIVE_MATURITY_DISCLOSED',
-    'CURRENT_SEASON_HYBRID_GDD_QUALIFICATION_REQUIRED',
     'S6-EA9A-HYBRID-GDD-STAGE-QUALIFICATION',
     'hybrid_product_code',
     'relative_maturity_days',
