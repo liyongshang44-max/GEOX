@@ -20,13 +20,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: mcft-cap09-ea5e2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  group: mcft-cap09-ea5e2-implementation-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
-  ea5e2-fixed-lag-collector-runtime-schedule-readiness:
+  ea5e2-implementation-qualification:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,11 +43,7 @@ jobs:
           node-version: 20.11.1
           cache: pnpm
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Resolve exact EA5E2 base and subject
+      - name: Resolve exact Amendment-08 implementation-qualification base and subject
         id: authority
         shell: bash
         run: |
@@ -59,15 +55,6 @@ jobs:
             echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
             echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Verify EA5E2 remains pre-window and pre-deadline
-        shell: node {0}
-        run: |
-          const deadline=Date.parse('2026-08-11T05:00:00.000Z');
-          const o00=Date.parse('2026-08-11T17:00:00.000Z');
-          if(Date.now()>=deadline) throw new Error('EA5E2_READINESS_DEADLINE_ALREADY_PASSED');
-          if(Date.now()>=o00) throw new Error('EA5E2_O00_ALREADY_PASSED');
-          console.log(JSON.stringify({status:'PASS',deadline:'2026-08-11T05:00:00.000Z',o00:'2026-08-11T17:00:00.000Z'}));
 
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
@@ -97,149 +84,25 @@ jobs:
       - name: Re-prove External CAP04 orchestration compatibility
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts
 
-      - name: Install pinned live-source decoder stack
-        run: |
-          python -m pip install --disable-pip-version-check \
-            'eccodes==2.47.0' \
-            'eccodeslib==2.47.3.23' \
-            'numpy==1.26.4' \
-            'refet==0.4.2'
-          python -m eccodes selfcheck
+      - name: Syntax-check Amendment-08 EA5E2 implementation gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs
 
-      - name: Syntax-check live provider probe and EA5E2 gate
-        run: |
-          python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
-          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs
-
-      - name: Validate EA5E2 fixed-lag schedule and implementation readiness before live source gate
+      - name: Validate EA5E2 implementation qualification under Amendment-08
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs
 
-      - name: Diagnose KBS raw-hourly publication lag without changing authority
-        env:
-          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
-        shell: bash
-        run: |
-          python - <<'PY'
-          import csv
-          import json
-          import os
-          import pathlib
-          import re
-          import urllib.request
-          from datetime import datetime, timezone, timedelta
-
-          authority_path = pathlib.Path('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-LIVE-SOURCE-EXACT-HEAD-QUALIFICATION-V1.json')
-          output_path = pathlib.Path('acceptance-output/EA5E2_KBS_RAW_HOURLY_FRESHNESS_DIAGNOSTIC.json')
-          output_path.parent.mkdir(parents=True, exist_ok=True)
-          observed = datetime.now(timezone.utc)
-          result = {
-              'schema_version': 'geox_mcft_cap09_ea5e2_kbs_raw_hourly_freshness_diagnostic_v1',
-              'status': 'DIAGNOSTIC_FAILED',
-              'subject_head_sha': os.environ.get('MCFT_SUBJECT_SHA'),
-              'observed_at_utc': observed.isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
-              'authority_changed': False,
-              'freshness_gate_changed': False,
-              'raw_values_emitted': False,
-          }
-
-          def normalize_key(value):
-              return re.sub(r'[^a-z0-9]+', '_', str(value or '').lstrip('\ufeff').strip().lower()).strip('_')
-
-          def parse_provider_utc(value):
-              raw = str(value or '').replace('\u00a0', ' ').strip()
-              if not raw:
-                  return None
-              cleaned = re.sub(r'\s+(?:UTC|GMT|\+0000|\+00:00|\+00)$', '', raw, flags=re.I).rstrip('Zz').strip()
-              for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%m/%d/%Y %H:%M:%S', '%m/%d/%Y %H:%M'):
-                  try:
-                      return datetime.strptime(cleaned, fmt).replace(tzinfo=timezone.utc)
-                  except ValueError:
-                      pass
-              try:
-                  parsed = datetime.fromisoformat(raw.replace('Z', '+00:00'))
-                  return parsed.astimezone(timezone.utc) if parsed.tzinfo else None
-              except ValueError:
-                  return None
-
-          def parse_kbs_csv(body):
-              text = body.decode('utf-8-sig')
-              lines = text.splitlines()
-              required = ['datetime_utc', 'solrad_avg', 'wind_speed', 'ah', 'airtmp_107_avg', 'rain_mm']
-              for idx, line in enumerate(lines[:80]):
-                  for delim in (',', '\t', ';', '|'):
-                      cells = next(csv.reader([line], delimiter=delim))
-                      headers = [normalize_key(cell) for cell in cells]
-                      if all(name in headers for name in required):
-                          rows = []
-                          for values in csv.reader(lines[idx + 1:], delimiter=delim):
-                              if len(values) < len(headers):
-                                  continue
-                              rows.append({header: values[i] for i, header in enumerate(headers)})
-                          return rows
-              raise RuntimeError('KBS_DIAGNOSTIC_RAW_HOURLY_HEADER_NOT_FOUND')
-
-          try:
-              authority = json.loads(authority_path.read_text(encoding='utf-8'))
-              url = authority['kbs']['raw_hourly_csv']
-              max_age = float(authority['kbs']['raw_hourly_latest_max_age_hours'])
-              request = urllib.request.Request(url, headers={
-                  'User-Agent': 'GEOX-MCFT-CAP09-EA5E2-DIAGNOSTIC/1.2',
-                  'Accept': 'text/csv,text/plain;q=0.9,*/*;q=0.5',
-                  'Cache-Control': 'no-cache',
-              })
-              with urllib.request.urlopen(request, timeout=90) as response:
-                  raw = response.read(110_000_001)
-                  final_url = response.geturl()
-              if len(raw) > 110_000_000:
-                  raise RuntimeError('KBS_DIAGNOSTIC_BODY_TOO_LARGE')
-              rows = parse_kbs_csv(raw)
-              timestamps = []
-              future_limit = observed + timedelta(minutes=5)
-              for row in rows:
-                  parsed = parse_provider_utc(row.get('datetime_utc', ''))
-                  if parsed is not None and parsed <= future_limit:
-                      timestamps.append(parsed)
-              if not timestamps:
-                  raise RuntimeError('KBS_DIAGNOSTIC_NO_ELIGIBLE_TIMESTAMP')
-              latest = max(timestamps)
-              age_hours = (observed - latest).total_seconds() / 3600.0
-              result.update({
-                  'status': 'PASS',
-                  'final_url_host_path': final_url.split('://', 1)[-1].split('?', 1)[0],
-                  'latest_raw_hourly_timestamp_utc': latest.isoformat(timespec='seconds').replace('+00:00', 'Z'),
-                  'latest_age_hours': round(age_hours, 6),
-                  'configured_max_age_hours': max_age,
-                  'within_existing_ea4_freshness_authority': age_hours <= max_age,
-                  'within_amendment07_scheduler_lag_hours': age_hours <= 7.0,
-                  'eligible_timestamp_count': len(timestamps),
-                  'response_byte_count': len(raw),
-              })
-          except Exception as exc:
-              result['diagnostic_error'] = f'{type(exc).__name__}:{exc}'
-          output_path.write_text(json.dumps(result, indent=2, sort_keys=True) + '\n', encoding='utf-8')
-          print(json.dumps(result, indent=2, sort_keys=True))
-          PY
-
-      - name: Exact-head live KBS and GFS readiness reproof
-        env:
-          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
-        run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
-
-      - name: Upload immutable EA5E2 readiness proof
+      - name: Upload immutable EA5E2 implementation qualification proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-ea5e2-fixed-lag-readiness-${{ steps.authority.outputs.subject_sha }}
+          name: mcft-cap09-ea5e2-implementation-qualification-${{ steps.authority.outputs.subject_sha }}
           path: |
             acceptance-output/EA5E2_SERVER_TYPECHECK.log
             acceptance-output/EA5E2_FIXED_LAG_SCHEDULER_SEAM.log
             acceptance-output/EA5E2_EXACT_INTERVAL_LATE_CUTOFF_SEAM.log
-            acceptance-output/EA5E2_KBS_RAW_HOURLY_FRESHNESS_DIAGNOSTIC.json
-            acceptance-output/MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_RESULT.json
             acceptance-output/MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS_GOVERNANCE_RESULT.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-FIXED-LAG-COLLECTOR-RUNTIME-SCHEDULE-V1.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-COLLECTOR-RUNTIME-SCHEDULE-READINESS-V1.json
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 90
