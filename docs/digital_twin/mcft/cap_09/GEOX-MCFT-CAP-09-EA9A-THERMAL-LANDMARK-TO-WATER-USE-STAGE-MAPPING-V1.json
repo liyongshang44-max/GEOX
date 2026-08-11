@@ -1,0 +1,119 @@
+{
+  "schema_version": "geox_mcft_cap09_ea9a_thermal_landmark_to_water_use_stage_mapping_v1",
+  "record_status": "EA9A_THERMAL_LANDMARK_TO_WATER_USE_STAGE_MAPPING_CANDIDATE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier": "S6-EA9A-THERMAL-LANDMARK-TO-WATER-USE-STAGE-MAPPING",
+  "base_main_sha": "23304a08fe37ee35258654a2520aa293ce328b2b",
+  "authority_predecessors": {
+    "amendment_09": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-09-CROP-CONTEXT-SEASON-ARCHITECTURE-ADJUDICATION-AUTHORITY.md",
+      "blob_sha": "422f60257039e0f674171c218a7ff0a2fd7dc1b2"
+    },
+    "amendment_10": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-10-P0306-BOUNDED-THERMAL-PROXY-AUTHORITY.md",
+      "blob_sha": "964efa8acc95bf1aeed692c7662754afd3ac6db5"
+    },
+    "ea1j": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1J-CROP-WATER-USE-STAGE-AUTHORITY-V1.json",
+      "blob_sha": "eeb7ab49ee3270421efe4d6674305426074d1541"
+    }
+  },
+  "target_model_stage_codes": ["INITIAL", "DEVELOPMENT", "MID", "LATE"],
+  "public_sources": [
+    {
+      "source_id": "FAO56_CROP_GROWTH_STAGE_SEMANTICS",
+      "url": "https://www.fao.org/4/X0490E/x0490e0a.htm",
+      "provider_class": "FIRST_PARTY_FAO",
+      "required_markers": [
+        "initial stage",
+        "crop development",
+        "mid-season",
+        "late season",
+        "start of maturity",
+        "harvest or full senescence"
+      ]
+    },
+    {
+      "source_id": "FAO_CROP_WATER_NEEDS_STAGE_SEMANTICS",
+      "url": "https://www.fao.org/4/S2022E/s2022e07.htm",
+      "provider_class": "FIRST_PARTY_FAO",
+      "required_markers": [
+        "mid - season stage",
+        "includes flowering and grain-setting",
+        "late season stage",
+        "includes ripening"
+      ]
+    },
+    {
+      "source_id": "PIONEER_CORN_GROWTH_STAGE_SEMANTICS",
+      "url": "https://www.pioneer.com/ca-en/agronomy/staging-corn-growth.html",
+      "provider_class": "FIRST_PARTY_PIONEER",
+      "required_markers": [
+        "Silking (R1)",
+        "silks visible outside the husks",
+        "Physiological Maturity (R6)",
+        "Maximum dry weight is attained"
+      ]
+    }
+  ],
+  "mapping_contract": {
+    "mapping_class": "PARTIAL_SAFE_THERMAL_LANDMARK_TO_MODEL_STAGE_MAPPING",
+    "full_continuous_gdd_to_four_stage_mapping_claimed": false,
+    "silking_point_semantics": {
+      "biological_landmark": "R1_SILKING",
+      "safe_model_stage_at_exact_landmark": "MID",
+      "basis": "FAO_MID_INCLUDES_FLOWERING_AND_GRAIN_SETTING_AND_PIONEER_R1_IS_SILKING",
+      "post_landmark_stage_persistence_claimed": false
+    },
+    "physiological_maturity_point_semantics": {
+      "biological_landmark": "R6_PHYSIOLOGICAL_MATURITY",
+      "safe_model_stage_at_or_after_landmark_before_harvest": "LATE",
+      "basis": "FAO_LATE_RUNS_FROM_START_OF_MATURITY_TO_HARVEST_OR_FULL_SENESCENCE_AND_R6_IS_PHYSIOLOGICAL_MATURITY",
+      "landmark_equals_late_stage_start_claimed": false
+    },
+    "pre_silking_interval_candidate_stages": ["INITIAL", "DEVELOPMENT", "MID"],
+    "post_silking_pre_physiological_maturity_candidate_stages": ["MID", "LATE"],
+    "post_physiological_maturity_before_harvest_candidate_stages": ["LATE"],
+    "silking_threshold_may_be_used_as_mid_late_boundary": false,
+    "physiological_maturity_threshold_may_be_used_as_mid_late_boundary": false,
+    "only_single_stage_thermal_implication": "ACCUMULATED_GDD_CONSERVATIVE_LOWER_BOUND_AT_OR_ABOVE_PROXY_PHYSIOLOGICAL_MATURITY_UPPER_BOUND_AND_NO_HARVEST_OR_TERMINATION_EVIDENCE_IMPLIES_LATE_CANDIDATE",
+    "all_other_thermal_ranges_fail_closed_for_four_stage_determination": true
+  },
+  "bounded_proxy_consumption": {
+    "proxy_class": "ASSUMED_P0306Q_BOUNDED_THERMAL_PROXY_V1",
+    "epistemic_class": "ASSUMED_BOUNDED_PROXY",
+    "silk_interval_gdu": [1222, 1438],
+    "physiological_maturity_interval_gdu": [2392, 2608],
+    "late_candidate_minimum_rule": "minimum_accumulated_base50_gdd_across_all_permitted_uncertainty >= 2608",
+    "harvest_or_crop_termination_must_be_absent_as_of_authority_time": true,
+    "late_candidate_is_observed_biological_stage": false,
+    "late_candidate_requires_separate_exact_head_gdd_qualification": true
+  },
+  "decision_policy": {
+    "algorithm_id": "EA9A_THERMAL_LANDMARK_TO_WATER_USE_STAGE_PARTIAL_MAPPING_ADJUDICATOR_V1",
+    "allowed_results": [
+      "PARTIAL_SAFE_THERMAL_TO_WATER_USE_STAGE_MAPPING_ESTABLISHED",
+      "THERMAL_TO_WATER_USE_STAGE_MAPPING_NOT_ESTABLISHED"
+    ],
+    "pass_if": "All enumerated first-party sources reproduce the required semantics and the resulting mapping preserves MID/LATE ambiguity between R1 and R6 instead of inventing a boundary.",
+    "on_pass": "S6-EA9A-P0306Q-BOUNDED-GDD-STAGE-QUALIFICATION",
+    "on_fail": "S6-EA9B-NATURAL-SEASON-EVIDENCE-REQUALIFICATION"
+  },
+  "authority_effect": {
+    "mapping_effective_before_merge": false,
+    "full_gdd_four_stage_mapping_established": false,
+    "current_season_stage_authority_established": false,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "raw_object_write_authorized": false,
+    "runtime_config_write_authorized": false,
+    "scheduler_write_authorized": false,
+    "canonical_runtime_write_authorized": false,
+    "successor_epoch_selected": false,
+    "ea5e2_operational_activation_qualified": false,
+    "ea5e3_effective": false,
+    "formal_execution_count": "0/24",
+    "mcft_cap09_completed": false
+  }
+}
