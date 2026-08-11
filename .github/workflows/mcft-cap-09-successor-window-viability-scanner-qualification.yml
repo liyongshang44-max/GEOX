@@ -1,0 +1,80 @@
+name: mcft-cap-09-successor-window-viability-scanner-qualification
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/domain/twin_runtime/external_formal_successor_window_viability_scanner_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_WINDOW_VIABILITY_SCANNER.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-SUCCESSOR-WINDOW-VIABILITY-SCANNER-QUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_WINDOW_VIABILITY_SCANNER_QUALIFICATION.cjs'
+      - '.github/workflows/mcft-cap-09-successor-window-viability-scanner-qualification.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-successor-window-viability-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  successor-window-viability-scanner-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact scanner-qualification base
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}'
+          test "$base" = '6ae90765b1ec90f96d9f07895d4570bfa53382e0' || {
+            echo "SUCCESSOR_SCAN_BASE_DRIFT:$base" >&2
+            exit 1
+          }
+          echo "MCFT_BASE_SHA=$base" >> "$GITHUB_ENV"
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Re-prove server typecheck
+        run: pnpm --filter @geox/server run typecheck
+
+      - name: Typecheck scanner acceptance as standalone NodeNext entrypoint
+        run: >-
+          pnpm exec tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022
+          --types node --skipLibCheck
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_WINDOW_VIABILITY_SCANNER.ts
+
+      - name: Run deterministic successor whole-window viability scanner
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_WINDOW_VIABILITY_SCANNER.ts
+
+      - name: Syntax-check scanner governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_WINDOW_VIABILITY_SCANNER_QUALIFICATION.cjs
+
+      - name: Validate exact scanner qualification boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_WINDOW_VIABILITY_SCANNER_QUALIFICATION.cjs
+
+      - name: Upload immutable scanner proof artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-successor-window-viability-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_SUCCESSOR_WINDOW_VIABILITY_SCANNER_QUALIFICATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
