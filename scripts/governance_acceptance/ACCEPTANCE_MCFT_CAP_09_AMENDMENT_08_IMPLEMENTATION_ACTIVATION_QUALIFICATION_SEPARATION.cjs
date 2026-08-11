@@ -43,6 +43,8 @@ for (const [filePath, expectedSha] of Object.entries(predecessorPins)) {
   eq(blob(base, filePath), expectedSha, `AMENDMENT08_BASE_PIN:${filePath}`);
   eq(blob("HEAD", filePath), expectedSha, `AMENDMENT08_PREDECESSOR_MUTATED:${filePath}`);
 }
+eq(blob("HEAD", amendmentPath), "ef1e4344e5915e2c591cf7cfc9b6c2bf27f8bc3b", "AMENDMENT08_AUTHORITY_BLOB_REQUIRED");
+eq(blob("HEAD", workflowPath), "02146903ad0e34ab551c0fd4d2058d1b978f205c", "AMENDMENT08_WORKFLOW_BLOB_REQUIRED");
 
 const taskbook = read("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md");
 for (const marker of [
@@ -102,7 +104,7 @@ for (const marker of [
   "OPERATIONAL_ACTIVATION_QUALIFIED",
   "A provider outage may prevent the External Formal path from becoming operationally eligible",
   "A temporary external-provider freshness failure is not, by itself, an implementation defect",
-  "Operational Activation Qualification is a protected-main, real-world qualification",
+  "`OPERATIONAL_ACTIVATION_QUALIFIED` is a protected-main, real-world qualification",
   "latest KBS Raw Hourly age <= 6 hours",
   "pre-boundary collector target     = T - 00:30",
   "late exact-hour collector         = T + 06:30",
@@ -158,6 +160,8 @@ const result = {
   subject_head_sha: git("rev-parse", "HEAD"),
   exact_changed_file_count: changed.length,
   predecessor_blobs_verified_unchanged: true,
+  authority_blob_pinned: true,
+  workflow_blob_pinned: true,
   implementation_and_operational_activation_qualification_separated: true,
   implementation_qualification_may_authorize_merge: true,
   operational_activation_qualification_requires_protected_main: true,
