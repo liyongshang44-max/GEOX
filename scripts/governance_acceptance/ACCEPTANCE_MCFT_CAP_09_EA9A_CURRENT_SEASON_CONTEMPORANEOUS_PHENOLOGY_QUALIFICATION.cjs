@@ -92,15 +92,19 @@ try {
   assert.equal(c.enumerated_public_source_candidates.length, 5, 'EA9A_EXACT_FIVE_PUBLIC_CANDIDATES_REQUIRED');
   const ids = c.enumerated_public_source_candidates.map((x) => x.candidate_id);
   assert.deepEqual(ids, [
-    'KBS_AGLOG_AREA_REGISTRY_T1R1',
+    'KBS_AGLOG_2026_T1R1_AREA_IDENTITY_6881',
     'KBS_AGLOG_2026_T1_PLANTING_6931',
     'KBS_MCSE_AGRONOMIC_PRACTICES_CATALOG',
     'KBS_GLBRC_PHENOCAM_NETWORK_IMAGES',
     'KBS_GLBRC_PHENOLOGY_2013_PRESENT'
   ]);
   assert(c.enumerated_public_source_candidates.every((x) => x.stage_determinative === false), 'EA9A_STATIC_CANDIDATE_MUST_NOT_PREDECLARE_STAGE_TRUTH');
+  const t1r1 = c.enumerated_public_source_candidates.find((x) => x.candidate_id === 'KBS_AGLOG_2026_T1R1_AREA_IDENTITY_6881');
   const phenocam = c.enumerated_public_source_candidates.find((x) => x.candidate_id === 'KBS_GLBRC_PHENOCAM_NETWORK_IMAGES');
   const glbrc = c.enumerated_public_source_candidates.find((x) => x.candidate_id === 'KBS_GLBRC_PHENOLOGY_2013_PRESENT');
+  assert.equal(t1r1.formal_scope_relationship, 'EXACT_PROVIDER_AREA_IDENTITY_DISCOVERY');
+  assert.equal(t1r1.evidence_role, 'SPATIAL_IDENTITY_DISCOVERY_ONLY');
+  assert.equal(t1r1.stage_determinative, false);
   assert.equal(phenocam.formal_scope_relationship, 'DIFFERENT_EXPERIMENT_GLBRC_BCSE');
   assert.equal(glbrc.formal_scope_relationship, 'DIFFERENT_EXPERIMENT_AND_NONCURRENT_PUBLIC_TABLE_WINDOW');
 
@@ -143,6 +147,7 @@ try {
   const p = read(PROBE);
   for (const marker of [
     "ALLOWED_HOSTS = new Set(['aglog.kbs.msu.edu', 'lter.kbs.msu.edu'])",
+    'KBS_AGLOG_2026_T1R1_AREA_IDENTITY_6881',
     'EA9A_PROVIDER_MARKER_MISSING',
     'CURRENT_SEASON_PHENOLOGY_AUTHORITY_NOT_ESTABLISHED',
     'stage_determinative_candidate_count',
