@@ -81,6 +81,7 @@ function stageAtV1(ageDays: number, lengths: readonly number[]): string | null {
 
 function deriveSingleTargetCropContextV1(targetT: string): {
   stage: string;
+  contextRef: string;
   contextHash: string;
   context: ContinuationCropStageConfigurationContextV1;
 } {
@@ -128,17 +129,26 @@ function deriveSingleTargetCropContextV1(targetT: string): {
   };
   const parameter = parameterByStage[stage];
   if (!parameter) throw new Error(`EA5E2_ACTIVATION_UNSUPPORTED_STAGE:${stage}`);
+  const coverageStart = new Date(base - backwardHours * HOUR_MS).toISOString();
+  const coverageEnd = new Date(base + forwardHours * HOUR_MS).toISOString();
+  const contextRef = `ea5e2_operational_activation_crop_context_${targetT.replace(/[^0-9]/g, "").toLowerCase()}`;
   const contextHash = semanticHashV1({
+    context_ref: contextRef,
     authority_ref: CROP_AUTHORITY_PATH,
     authority_blob_sha: CROP_AUTHORITY_BLOB,
+    configuration_matrix_ref: CONFIG_MATRIX_REF,
+    configuration_matrix_hash: CONFIG_MATRIX_HASH,
     derived_context_authority: authority.derived_context_authority,
     crop_stage_code: stage,
+    kc: parameter.kc,
+    crop_root_depth_mm: parameter.cropRootDepthMm,
+    effective_model_root_depth_mm: parameter.effectiveModelRootDepthMm,
+    coverage_start: coverageStart,
+    coverage_end_exclusive: coverageEnd,
     derivation_authority_time: targetT,
     observed_biological_stage_claimed: false,
     field_calibration_status: "NOT_FIELD_CALIBRATED",
   });
-  const coverageStart = new Date(base - backwardHours * HOUR_MS).toISOString();
-  const coverageEnd = new Date(base + forwardHours * HOUR_MS).toISOString();
   const context: ContinuationCropStageConfigurationContextV1 = {
     schema_version: "geox_mcft_cap09_ea5e2_operational_activation_crop_context_v1",
     dataset_id: "mcft_cap09_ea5e2_operational_activation_single_t_v1",
@@ -170,7 +180,7 @@ function deriveSingleTargetCropContextV1(targetT: string): {
     ],
     determinism_hash: contextHash,
   };
-  return { stage, contextHash, context };
+  return { stage, contextRef, contextHash, context };
 }
 
 function buildHandoffV1(
@@ -229,17 +239,16 @@ async function assertFormalDatabaseReadOnlyPreconditionsV1(formalPool: Pool): Pr
   }
   const client = await formalPool.connect();
   try {
-    await client.query("BEGIN");
-    await client.query("SET TRANSACTION READ ONLY");
+    await client.query("BEGIN TRANSACTION READ ONLY");
     const schedulerState = await client.query(
-      "SELECT (SELECT count(*)::int FROM twin_scheduler_slot_v1) AS slots, (SELECT count(*)::int FROM twin_scheduler_cursor_v1) AS cursors",
+      "SELECT (SELECT count(*)::int FROM twin_shadow_online_scheduler_slot_v1) AS slots, (SELECT count(*)::int FROM twin_shadow_online_scheduler_cursor_v1) AS cursors",
     );
     if (schedulerState.rows.length !== 1) throw new Error("EA5E2_ACTIVATION_FORMAL_SCHEDULER_CARDINALITY");
     const schedulerRow = schedulerState.rows[0];
     if (Number(schedulerRow.slots) !== 0 || Number(schedulerRow.cursors) !== 0) {
       throw new Error("EA5E2_ACTIVATION_FORMAL_SCHEDULER_MUST_REMAIN_UNSTARTED");
     }
-    await client.query("ROLLBACK");
+    await client.query("COMMIT");
   } catch (error) {
     try { await client.query("ROLLBACK"); } catch { /* preserve original read failure */ }
     throw error;
@@ -299,7 +308,7 @@ async function main(): Promise<void> {
       geometry_semantic_hash: parent.geometry_semantic_hash,
       formal_authorities: structuredClone(parent.formal_authorities),
       crop_stage_context_authority: {
-        context_ref: parent.crop_stage_context_authority.context_ref,
+        context_ref: crop.contextRef,
         context_hash: crop.contextHash,
         configuration_matrix_ref: parent.crop_stage_context_authority.configuration_matrix_ref,
         configuration_matrix_hash: parent.crop_stage_context_authority.configuration_matrix_hash,
@@ -355,6 +364,7 @@ async function main(): Promise<void> {
       observer_start_skew_minutes: observerSkewMinutes,
       observer_start_skew_max_minutes: MAX_OBSERVER_START_SKEW_MINUTES,
       crop_stage_code: crop.stage,
+      crop_context_ref: crop.contextRef,
       crop_context_hash: crop.contextHash,
       crop_context_class: "QUALIFICATION_ONLY_NOT_FORMAL_EPOCH_CONFIG",
       formal_a0_runtime_config_ref: formalSnapshot.runtime_config.object_id,
