@@ -1,0 +1,71 @@
+name: mcft-cap-09-ea9a-thermal-landmark-to-water-use-stage-mapping
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea9a-thermal-landmark-to-water-use-stage-mapping.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9A-THERMAL-LANDMARK-TO-WATER-USE-STAGE-MAPPING-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA9A_THERMAL_LANDMARK_TO_WATER_USE_STAGE_MAPPING.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA9A_THERMAL_LANDMARK_TO_WATER_USE_STAGE_MAPPING.mjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-ea9a-thermal-mapping-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  thermal-landmark-to-water-use-stage-mapping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node 20.11.1
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Resolve exact thermal mapping base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Syntax-check thermal mapping proof code
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA9A_THERMAL_LANDMARK_TO_WATER_USE_STAGE_MAPPING.cjs
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA9A_THERMAL_LANDMARK_TO_WATER_USE_STAGE_MAPPING.mjs
+
+      - name: Validate exact thermal mapping governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA9A_THERMAL_LANDMARK_TO_WATER_USE_STAGE_MAPPING.cjs
+
+      - name: Execute live thermal landmark to water-use-stage mapping adjudication
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA9A_THERMAL_LANDMARK_TO_WATER_USE_STAGE_MAPPING.mjs
+
+      - name: Upload immutable thermal mapping proof artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea9a-thermal-mapping-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA9A_THERMAL_LANDMARK_TO_WATER_USE_STAGE_MAPPING_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA9A_THERMAL_LANDMARK_TO_WATER_USE_STAGE_MAPPING_RESULT.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9A-THERMAL-LANDMARK-TO-WATER-USE-STAGE-MAPPING-V1.json
+          if-no-files-found: error
+          retention-days: 90
