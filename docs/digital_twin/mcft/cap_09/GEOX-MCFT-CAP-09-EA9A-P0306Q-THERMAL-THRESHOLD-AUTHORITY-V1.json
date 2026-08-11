@@ -10,6 +10,16 @@
     "amendment_09_blob_sha": "422f60257039e0f674171c218a7ff0a2fd7dc1b2",
     "ea9a_source_hybrid_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9A-CURRENT-SEASON-CONTEMPORANEOUS-PHENOLOGY-QUALIFICATION-V1.json",
     "ea9a_source_hybrid_blob_sha": "0e1f809c4bf63b09f4e44431ce507e3b74a966af",
+    "ea9a_exact_head_proof": {
+      "subject_sha": "fc0cbe0de6e56833be037d336d8f076fb6822d39",
+      "workflow_run_id": 31485817317,
+      "artifact_id": 9099063234,
+      "artifact_digest": "sha256:2811047e008f3ecdff868bea5cecc4024aca09c37abcc97c8f0a0541a48a22a6",
+      "proved_hybrid_product_code": "P0306Q",
+      "proved_relative_maturity_days": 103,
+      "proved_progress_result": "CURRENT_SEASON_HYBRID_GDD_QUALIFICATION_REQUIRED",
+      "provider_body_emitted": false
+    },
     "ea1j_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1J-CROP-WATER-USE-STAGE-AUTHORITY-V1.json",
     "ea1j_blob_sha": "eeb7ab49ee3270421efe4d6674305426074d1541",
     "ea2_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
@@ -22,7 +32,7 @@
     "crop": "corn",
     "hybrid_product_code": "P0306Q",
     "relative_maturity_days": 103,
-    "hybrid_identity_authority": "MERGED_EA9A_EXACT_2026_T1_PLANTING_DISCLOSURE"
+    "hybrid_identity_authority": "MERGED_EA9A_EXACT_HEAD_PROOF"
   },
   "qualification_contract": {
     "purpose": "Determine whether an auditable product-specific thermal threshold authority exists for exact 2026 T1 hybrid P0306Q before any GDD calculation may become stage-determinative.",
@@ -47,13 +57,7 @@
     "provider": "PIONEER_CORTEVA",
     "official_url": "https://www.pioneer.com/us/agronomy/maturity-pioneer-corn-products.html",
     "method_role": "THERMAL_METHOD_SEMANTICS_ONLY_NOT_PRODUCT_THRESHOLD",
-    "required_markers": [
-      "Comparative Relative Maturity",
-      "Growing Degree Units",
-      "50°F",
-      "86°F",
-      "physiological maturity"
-    ],
+    "required_markers": ["Comparative Relative Maturity", "Growing Degree Units", "50°F", "86°F", "physiological maturity"],
     "required_semantics": {
       "crm_is_actual_days_from_planting": false,
       "gdu_reference_min_f": 50,
@@ -75,10 +79,10 @@
     {
       "candidate_id": "PIONEER_OFFICIAL_CURRENT_CORN_CATALOG",
       "provider": "PIONEER_CORTEVA",
-      "official_url": "https://www.pioneer.com/us/ecommerce/product-catalog/corn.html",
+      "official_url": "https://www.pioneer.com/us/products/corn.html",
       "allowed_hosts": ["www.pioneer.com", "pioneer.com"],
-      "required_markers": ["CRM", "GDUs TO PHYSIOLOGICAL MATURITY"],
-      "evidence_role": "FIRST_PARTY_PRODUCT_THRESHOLD_DISCOVERY",
+      "required_markers": ["Pioneer", "Find Local Products"],
+      "evidence_role": "FIRST_PARTY_CURRENT_PORTFOLIO_PRODUCT_THRESHOLD_DISCOVERY",
       "may_establish_exact_p0306q_threshold": true
     },
     {
