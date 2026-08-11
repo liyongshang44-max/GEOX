@@ -1,0 +1,46 @@
+name: mcft-cap-09-external-evidence-temporal-semantics-candidate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/mcft-cap-09-external-evidence-temporal-semantics-candidate.yml"
+      - "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EXTERNAL-EVIDENCE-TEMPORAL-SEMANTICS-CANDIDATE-V1.json"
+      - "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EXTERNAL-EVIDENCE-TEMPORAL-SEMANTICS-CANDIDATE-V1.md"
+      - "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_TEMPORAL_SEMANTICS_CANDIDATE.cjs"
+      - "scripts/runtime_acceptance/fixtures/MCFT_CAP_09_EXTERNAL_EVIDENCE_TEMPORAL_SEMANTICS_FIXTURES_V1.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-external-evidence-temporal-semantics-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deterministic-candidate-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.11.1"
+
+      - name: Prove non-effective temporal semantics candidate
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_TEMPORAL_SEMANTICS_CANDIDATE.cjs
+
+      - name: Upload deterministic metadata-only proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-external-evidence-temporal-semantics-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EXTERNAL_EVIDENCE_TEMPORAL_SEMANTICS_CANDIDATE_RESULT.json
+          if-no-files-found: error
+          retention-days: 30
