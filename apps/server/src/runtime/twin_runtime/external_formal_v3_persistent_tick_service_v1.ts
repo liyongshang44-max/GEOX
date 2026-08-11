@@ -31,7 +31,11 @@ import type { Cap04ForecastForcingWindowV1 } from "../../domain/twin_runtime/fut
 import { executeCap04PureThreeScenarioMathV1 } from "../../domain/twin_runtime/pure_three_scenario_math_v1.js";
 import type { Cap04PureThreeScenarioMathResultV1 } from "../../domain/twin_runtime/scenario_math_contracts_v1.js";
 import { ExternalFormalCap04ExecutionConfigResolverV1 } from "../../domain/twin_runtime/external_formal_cap04_execution_config_resolver_v1.js";
-import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../domain/twin_runtime/external_formal_runtime_config_v1.js";
+import {
+  MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
+  validateExternalFormalRuntimeConfigPayloadV1,
+  type ExternalFormalRuntimeConfigPayloadV1,
+} from "../../domain/twin_runtime/external_formal_runtime_config_v1.js";
 import type { ContinuationCropStageConfigurationContextV1 } from "./continuation_evidence_window_service_v1.js";
 import { executeExternalFormalCap04CandidateV1 } from "./external_formal_cap04_candidate_execution_service_v1.js";
 import type { Cap04ForecastScenarioPersistencePortV1 } from "./forecast_scenario_persistence_ports_v1.js";
@@ -294,16 +298,18 @@ export class ExternalFormalV3PersistentTickServiceV1 {
     if (runtimeConfig.object_id !== input.manifest_slot.runtime_config_ref) throw new Error("EXTERNAL_FORMAL_V3_RUNTIME_CONFIG_REF_MISMATCH");
     if (runtimeConfig.determinism_hash !== input.manifest_slot.runtime_config_hash) throw new Error("EXTERNAL_FORMAL_V3_RUNTIME_CONFIG_HASH_MISMATCH");
     if (runtimeConfig.logical_time !== timing.logical_time || runtimeConfig.as_of !== timing.logical_time) throw new Error("EXTERNAL_FORMAL_V3_RUNTIME_CONFIG_TIME_MISMATCH");
+    validateExternalFormalRuntimeConfigPayloadV1(runtimeConfig.payload);
+    const externalRuntime = runtimeConfig.payload as unknown as ExternalFormalRuntimeConfigPayloadV1;
     const resolvedConfig = new ExternalFormalCap04ExecutionConfigResolverV1().resolveExecutionConfig(runtimeConfig);
 
     let insertedA = false;
     if (!aRecordSet) {
-      if (resolvedConfig.payload.parent_runtime_config_ref !== handoff.previous_state_runtime_config_ref
-        || resolvedConfig.payload.parent_runtime_config_hash !== handoff.previous_state_runtime_config_hash) {
+      if (externalRuntime.parent_runtime_config_ref !== handoff.previous_state_runtime_config_ref
+        || externalRuntime.parent_runtime_config_hash !== handoff.previous_state_runtime_config_hash) {
         throw new Error("EXTERNAL_FORMAL_V3_PARENT_RUNTIME_CONFIG_MISMATCH");
       }
-      if (resolvedConfig.payload.crop_stage_context.context_ref !== input.manifest_slot.crop_stage_context_ref
-        || resolvedConfig.payload.crop_stage_context.context_hash !== input.manifest_slot.crop_stage_context_hash) {
+      if (externalRuntime.crop_stage_context_authority.context_ref !== input.manifest_slot.crop_stage_context_ref
+        || externalRuntime.crop_stage_context_authority.context_hash !== input.manifest_slot.crop_stage_context_hash) {
         throw new Error("EXTERNAL_FORMAL_V3_MANIFEST_CROP_CONTEXT_MISMATCH");
       }
       const evidence = await this.evidenceSource.loadCandidateRecords({
