@@ -33,6 +33,41 @@ function assert(condition, code) {
 function assertExact(value, expected, code) {
   if (value !== expected) throw new Error(`${code}:expected=${JSON.stringify(expected)}:actual=${JSON.stringify(value)}`);
 }
+function sortedUnique(values) {
+  return [...new Set(values)].sort();
+}
+
+async function inspectPreterminalGddDisclosure(page, text) {
+  const configured = CONFIG.preterminal_gdd_escape_probe;
+  const codeRegex = new RegExp(`\\b(?:${configured.recognized_product_code_patterns.join('|')})\\b`, 'gi');
+  const recognizedCodes = sortedUnique((text.match(codeRegex) || []).map((value) => value.toUpperCase()));
+  const materialIds = sortedUnique(await page.locator('a[href*="/materials/"]').evaluateAll((anchors) => anchors.flatMap((anchor) => {
+    try {
+      const pathname = new URL(anchor.href).pathname;
+      const match = pathname.match(/\/materials\/(\d+)\/?$/i);
+      return match ? [match[1]] : [];
+    } catch {
+      return [];
+    }
+  })));
+  const diagnostics = {
+    source_candidate_id: configured.source_candidate_id,
+    explicit_variety_label_present: /\bvariety\s+planted\b/i.test(text),
+    explicit_relative_maturity_label_present: /\brelative\s+maturity\b/i.test(text),
+    recognizable_hybrid_code_count: recognizedCodes.length,
+    recognizable_hybrid_code_set_sha256: sha256(recognizedCodes.join('|')),
+    provider_material_link_count: materialIds.length,
+    provider_material_link_id_set_sha256: sha256(materialIds.join('|')),
+    derived_product_code_text_emitted: false,
+    provider_body_emitted: false,
+  };
+  diagnostics.any_hybrid_or_material_disclosure_present =
+    diagnostics.explicit_variety_label_present ||
+    diagnostics.explicit_relative_maturity_label_present ||
+    diagnostics.recognizable_hybrid_code_count > 0 ||
+    diagnostics.provider_material_link_count > 0;
+  return diagnostics;
+}
 
 async function fetchCandidate(context, candidate) {
   const configured = new URL(candidate.official_url);
@@ -63,7 +98,7 @@ async function fetchCandidate(context, candidate) {
       }
     }
     const bytes = await response.body();
-    return {
+    const finding = {
       candidate_id: candidate.candidate_id,
       provider: candidate.provider,
       final_origin: finalUrl.origin,
@@ -77,12 +112,17 @@ async function fetchCandidate(context, candidate) {
       required_markers_verified: true,
       provider_body_emitted: false,
     };
+    if (candidate.candidate_id === CONFIG.preterminal_gdd_escape_probe.source_candidate_id) {
+      finding.preterminal_gdd_escape_diagnostics = await inspectPreterminalGddDisclosure(page, text);
+    }
+    return finding;
   } finally {
     await page.close();
   }
 }
 
 let browser;
+let gddEscapeDiagnostics = null;
 try {
   assert(SUBJECT_SHA && /^[0-9a-f]{40}$/.test(SUBJECT_SHA), 'EA9A_EXACT_SUBJECT_SHA_REQUIRED');
   assertExact(CONFIG.frontier, 'S6-EA9A-CURRENT-SEASON-CONTEMPORANEOUS-PHENOLOGY-QUALIFICATION', 'EA9A_FRONTIER_REQUIRED');
@@ -98,6 +138,8 @@ try {
   assertExact(CONFIG.qualification_contract.gdd_stage_determinative, false, 'EA9A_GDD_MUST_REMAIN_NONDETERMINATIVE');
   assertExact(CONFIG.qualification_contract.minimum_backward_stability_hours, 6, 'EA9A_BACKWARD_STABILITY_MUST_BE_6H');
   assertExact(CONFIG.qualification_contract.minimum_forward_transition_guard_hours, 30, 'EA9A_FORWARD_GUARD_MUST_BE_30H');
+  assertExact(CONFIG.preterminal_gdd_escape_probe.derived_product_code_text_may_be_emitted, false, 'EA9A_GDD_PRODUCT_CODE_TEXT_EMISSION_FORBIDDEN');
+  assertExact(CONFIG.preterminal_gdd_escape_probe.historical_or_other_treatment_hybrid_inference_authorized, false, 'EA9A_GDD_CROSS_YEAR_TREATMENT_INFERENCE_FORBIDDEN');
 
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
@@ -128,6 +170,16 @@ try {
   assertExact(glbrcPhenology.formal_scope_relationship, 'DIFFERENT_EXPERIMENT_AND_NONCURRENT_PUBLIC_TABLE_WINDOW', 'EA9A_DIRECT_PHENOLOGY_EXPERIMENT_MISMATCH_REQUIRED');
   assertExact(glbrcPhenology.stage_determinative, false, 'EA9A_GLBRC_DIRECT_PHENOLOGY_MUST_NOT_BE_MCSE_STAGE_TRUTH');
 
+  gddEscapeDiagnostics = planting.preterminal_gdd_escape_diagnostics;
+  assert(gddEscapeDiagnostics, 'EA9A_PRETERMINAL_GDD_ESCAPE_DIAGNOSTICS_REQUIRED');
+  assertExact(gddEscapeDiagnostics.derived_product_code_text_emitted, false, 'EA9A_DERIVED_PRODUCT_CODE_TEXT_MUST_NOT_BE_EMITTED');
+  assertExact(gddEscapeDiagnostics.provider_body_emitted, false, 'EA9A_PROVIDER_BODY_MUST_NOT_BE_EMITTED');
+  assertExact(
+    gddEscapeDiagnostics.any_hybrid_or_material_disclosure_present,
+    false,
+    'EA9A_GDD_ESCAPE_DISCLOSURE_REQUIRES_FURTHER_QUALIFICATION_BEFORE_TERMINAL',
+  );
+
   const stageDeterminative = findings.filter((finding) => finding.stage_determinative === true);
   assertExact(stageDeterminative.length, 0, 'EA9A_NO_ENUMERATED_STAGE_DETERMINATIVE_SOURCE_REQUIRED');
 
@@ -145,6 +197,8 @@ try {
     algorithm_id: CONFIG.decision_policy.algorithm_id,
     enumerated_candidate_count: findings.length,
     enumerated_candidate_findings: findings,
+    preterminal_gdd_escape_diagnostics: gddEscapeDiagnostics,
+    preterminal_gdd_escape_disclosure_proved_absent: true,
     stage_determinative_candidate_count: stageDeterminative.length,
     terminal_result: terminalResult,
     current_season_contemporaneous_stage_authority_established: false,
@@ -160,6 +214,7 @@ try {
     hidden_hybrid_or_relative_maturity_assumption_used: false,
     provider_payload_persisted_or_uploaded: false,
     provider_body_text_emitted: false,
+    derived_provider_product_code_text_emitted: false,
     database_write_count: 0,
     formal_evidence_write_count: 0,
     raw_object_write_count: 0,
@@ -186,10 +241,13 @@ try {
     observed_at_utc: new Date().toISOString(),
     terminal_result: null,
     current_season_contemporaneous_stage_authority_established: false,
+    preterminal_gdd_escape_diagnostics: gddEscapeDiagnostics,
+    preterminal_gdd_escape_disclosure_proved_absent: false,
     global_source_absence_claimed: false,
     future_observations_used: false,
     provider_payload_persisted_or_uploaded: false,
     provider_body_text_emitted: false,
+    derived_provider_product_code_text_emitted: false,
     database_write_count: 0,
     formal_evidence_write_count: 0,
     raw_object_write_count: 0,
