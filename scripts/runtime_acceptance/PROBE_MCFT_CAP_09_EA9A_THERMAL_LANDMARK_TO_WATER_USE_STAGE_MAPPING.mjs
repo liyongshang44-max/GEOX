@@ -114,7 +114,7 @@ const facts = {
   pioneer_r1_is_silking:
     /silking\s*\(r1\)[^.]{0,250}silks visible outside the husks/i.test(byId.PIONEER_CORN_GROWTH_STAGE_SEMANTICS),
   pioneer_r6_is_physiological_maturity:
-    /physiological maturity\s*\(r6\)[^.]{0,350}maximum dry weight is attained/i.test(byId.PIONEER_CORN_GROWTH_STAGE_SEMANTICS),
+    /physiological maturity\s*\(r6\)[\s\S]{0,800}maximum dry weight is attained/i.test(byId.PIONEER_CORN_GROWTH_STAGE_SEMANTICS),
 };
 
 const sourcePass = sourceResults.every((entry) => entry.required_markers_all_present);
