@@ -1,0 +1,377 @@
+name: mcft-cap-09-ea5e2-live-provider-two-phase-readiness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml'
+      - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_external_formal_collector_phase_orchestrator_v1.ts'
+      - 'apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts'
+      - 'apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_LOCAL_DB.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-COLLECTOR-RUNTIME-SCHEDULE-READINESS-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea5e2-live-provider-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  READINESS_DB_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+  EA5E3_HARD_DEADLINE_UTC: '2026-08-11T05:00:00.000Z'
+  MCFT_EA5E2_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+  MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+  MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+  MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+  MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+
+jobs:
+  pre-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    outputs:
+      target_t: ${{ steps.target.outputs.target_t }}
+      subject_sha: ${{ steps.target.outputs.subject_sha }}
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+
+      - name: Require existing private R2 secret bindings without exposing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in \
+            MCFT_EA5E2_TRANSIENT_S3_ENDPOINT \
+            MCFT_EA5E2_TRANSIENT_S3_BUCKET \
+            MCFT_EA5E2_TRANSIENT_S3_REGION \
+            MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID \
+            MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY
+          do
+            if [ -z "${!name:-}" ]; then
+              echo "MISSING_REQUIRED_PRIVATE_BINDING:$name"
+              missing=1
+            else
+              echo "PRESENT_REQUIRED_PRIVATE_BINDING:$name"
+            fi
+          done
+          test "$missing" -eq 0
+
+      - name: Prove private transient R2 round trip and cleanup with non-provider random bytes
+        env:
+          MCFT_EA5E2_LIVE_PHASE: TRANSIENT_STORE_SMOKE
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+
+      - name: Fail fast unless KBS Raw Hourly is currently within unchanged authority
+        run: python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py precheck-kbs
+
+      - name: Select one real future target T with EA5E3 completion margin
+        id: target
+        shell: node {0}
+        env:
+          SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          const fs=require('fs');
+          const now=new Date();
+          const base=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),now.getUTCHours()+1,0,0,0);
+          const target=new Date(base + (now.getUTCMinutes()>20 ? 3600000 : 0));
+          const observer=new Date(target.getTime()+437*60000);
+          const deadline=new Date(process.env.EA5E3_HARD_DEADLINE_UTC);
+          const requiredProofFinish=new Date(deadline.getTime()-60*60000);
+          if(observer>requiredProofFinish) throw new Error(`EA5E2_LIVE_PROOF_CANNOT_COMPLETE_WITH_EA5E3_MARGIN:${observer.toISOString()}`);
+          const subject=process.env.SUBJECT_SHA;
+          if(!/^[0-9a-f]{40}$/.test(subject)) throw new Error('EA5E2_EXACT_SUBJECT_SHA_REQUIRED');
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json',JSON.stringify({schema_version:'geox_mcft_cap09_ea5e2_live_target_v1',subject_sha:subject,selected_at:now.toISOString(),target_t:target.toISOString(),expected_observer_time:observer.toISOString(),ea5e3_deadline:deadline.toISOString(),minimum_post_proof_ea5e3_margin_minutes:60,formal_effectiveness:false},null,2)+'\n');
+          console.log(`target_t=${target.toISOString()}`);
+          console.log(`subject_sha=${subject}`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`target_t=${target.toISOString()}\nsubject_sha=${subject}\n`);
+
+      - name: Execute real pre-boundary provider phase with private transient R2 and isolated DB
+        env:
+          MCFT_EA5E2_ISOLATED_READINESS_ACK: 'true'
+          MCFT_EA5E2_LIVE_PHASE: PRE_BOUNDARY_CAUSAL
+          MCFT_EA5E2_TARGET_T: ${{ steps.target.outputs.target_t }}
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+
+      - name: Verify pre-boundary proof is public-safe metadata only
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json','utf8'));
+          if(p.status!=='PASS'||p.canonical_fact_write_count!==3) throw new Error('EA5E2_PREBOUNDARY_THREE_FACTS_REQUIRED');
+          if(p.soil_observation_inside_t_minus_15_to_t!==true||p.gfs_same_cycle_pair!==true) throw new Error('EA5E2_PREBOUNDARY_CAUSAL_FAMILY_PROOF_REQUIRED');
+          if(p.transient_root_prefix!=='mcft-cap09-ea5e2-readiness-transient-v1'||p.formal_raw_prefix_write_count!==0) throw new Error('EA5E2_PRIVATE_TRANSIENT_PREFIX_REQUIRED');
+          if(p.public_value_artifact_count!==0||p.raw_values_emitted!==false) throw new Error('EA5E2_PUBLIC_VALUE_ARTIFACT_FORBIDDEN');
+          if(p.formal_database_write_count!==0||p.formal_r2_write_count!==0||p.formal_window_started!==false) throw new Error('EA5E2_PREBOUNDARY_NONCLAIM_REQUIRED');
+          if(!p.rehydration_manifest||!Array.isArray(p.rehydration_manifest.expected_records)||p.rehydration_manifest.expected_records.length!==3) throw new Error('EA5E2_SAFE_REHYDRATION_METADATA_REQUIRED');
+
+      - name: Upload metadata-only inter-phase proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-interphase-${{ steps.target.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json
+            acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_SMOKE.json
+          if-no-files-found: error
+          retention-days: 1
+
+  wait-one:
+    needs: pre-boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 190
+    steps:
+      - name: Wait only until T plus 2h45m
+        shell: node {0}
+        env:
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        run: |
+          const target=Date.parse(process.env.TARGET_T)+165*60000;
+          if(!Number.isFinite(target)) throw new Error('EA5E2_WAIT_ONE_TARGET_INVALID');
+          const remaining=Math.max(0,target-Date.now());
+          if(remaining>185*60000) throw new Error(`EA5E2_WAIT_ONE_TOO_LONG:${remaining}`);
+          console.log(JSON.stringify({wait_until:new Date(target).toISOString(),remaining_minutes:remaining/60000}));
+          await new Promise(r=>setTimeout(r,remaining));
+
+  wait-two:
+    needs: [pre-boundary, wait-one]
+    runs-on: ubuntu-latest
+    timeout-minutes: 190
+    steps:
+      - name: Wait only until T plus 5h30m
+        shell: node {0}
+        env:
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        run: |
+          const target=Date.parse(process.env.TARGET_T)+330*60000;
+          if(!Number.isFinite(target)) throw new Error('EA5E2_WAIT_TWO_TARGET_INVALID');
+          const remaining=Math.max(0,target-Date.now());
+          if(remaining>185*60000) throw new Error(`EA5E2_WAIT_TWO_TOO_LONG:${remaining}`);
+          console.log(JSON.stringify({wait_until:new Date(target).toISOString(),remaining_minutes:remaining/60000}));
+          await new Promise(r=>setTimeout(r,remaining));
+
+  late-exact-hour:
+    needs: [pre-boundary, wait-two]
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.pre-boundary.outputs.subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+
+      - name: Download metadata-only inter-phase proof
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-interphase-${{ needs.pre-boundary.outputs.subject_sha }}
+          path: acceptance-output
+
+      - name: Execute retained-raw semantic rehydration then real delayed exact-hour phase
+        env:
+          MCFT_EA5E2_ISOLATED_READINESS_ACK: 'true'
+          MCFT_EA5E2_LIVE_PHASE: LATE_EXACT_HOUR
+          MCFT_EA5E2_TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+
+      - name: Verify complete same-T two-phase readiness proof
+        shell: node {0}
+        env:
+          SUBJECT_SHA: ${{ needs.pre-boundary.outputs.subject_sha }}
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        run: |
+          const fs=require('fs');
+          const target=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json','utf8'));
+          const pre=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json','utf8'));
+          const late=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json','utf8'));
+          if(target.subject_sha!==process.env.SUBJECT_SHA||target.target_t!==process.env.TARGET_T) throw new Error('EA5E2_LIVE_TARGET_IDENTITY_MISMATCH');
+          if(pre.status!=='PASS'||late.status!=='PASS'||pre.target_logical_time!==late.target_logical_time||late.target_logical_time!==process.env.TARGET_T) throw new Error('EA5E2_LIVE_SAME_TARGET_TWO_PHASE_REQUIRED');
+          if(pre.canonical_fact_write_count!==3||late.pre_rehydrated_fact_count!==3||late.late_canonical_fact_write_count!==2||late.database_exact_fact_count!==5||late.db_only_selected_record_count!==5) throw new Error('EA5E2_LIVE_EXACT_FIVE_FAMILY_DB_REQUIRED');
+          if(late.pre_rehydration_semantic_hash_match!==true||late.pre_raw_retention_reverified!==true||late.pre_rehydration_provider_request_count!==0) throw new Error('EA5E2_PRIVATE_REHYDRATION_PROOF_REQUIRED');
+          if(pre.gfs_same_cycle_pair!==true||late.same_gfs_cycle_future_weather_et0!==true||late.exact_rain_et0_interval_t_minus_1_to_t!==true||late.post_t_future_forcing_excluded!==true) throw new Error('EA5E2_LIVE_CAUSALITY_PROOF_REQUIRED');
+          if(pre.formal_raw_prefix_write_count!==0||late.formal_raw_prefix_write_count!==0||pre.public_value_artifact_count!==0||late.public_value_artifact_count!==0) throw new Error('EA5E2_FORMAL_PREFIX_OR_PUBLIC_VALUE_WRITE_FORBIDDEN');
+          if(pre.raw_values_emitted!==false||late.raw_values_emitted!==false) throw new Error('EA5E2_LIVE_RAW_VALUE_PUBLICATION_FORBIDDEN');
+          for(const value of [pre.formal_database_write_count,pre.formal_r2_write_count,late.formal_database_write_count,late.formal_r2_write_count,late.scheduler_write_count,late.canonical_runtime_write_count]) if(value!==0) throw new Error('EA5E2_LIVE_FORMAL_SIDE_EFFECT_FORBIDDEN');
+          if(pre.formal_window_started!==false||late.formal_window_started!==false) throw new Error('EA5E2_LIVE_FORMAL_WINDOW_START_FORBIDDEN');
+          console.log(JSON.stringify({status:'PASS',subject_sha:process.env.SUBJECT_SHA,target_t:process.env.TARGET_T,real_provider_get:true,private_transient_r2:true,public_value_artifacts:0,pre_boundary_fact_count:3,pre_rehydrated_fact_count:3,late_fact_count:2,db_only_selected_count:5,same_gfs_cycle:true,exact_late_interval:true,formal_writes:0}));
+
+      - name: Upload immutable safe final provider readiness proof and cleanup refs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-live-provider-${{ needs.pre-boundary.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json
+            acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json
+            acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  cleanup-transient:
+    needs: [pre-boundary, wait-one, wait-two, late-exact-hour]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download pre-boundary safe metadata when present
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-interphase-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/pre
+
+      - name: Download late safe metadata when present
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-live-provider-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/late
+
+      - name: Flatten metadata-only JSONs for exact-head cleanup discovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          copied=0
+          for dir in acceptance-output/pre acceptance-output/late; do
+            if [ ! -d "$dir" ]; then
+              continue
+            fi
+            while IFS= read -r -d '' file; do
+              digest="$(printf '%s' "$file" | sha256sum | awk '{print $1}')"
+              cp "$file" "acceptance-output/cleanup-${digest}.json"
+              copied=$((copied+1))
+            done < <(find "$dir" -type f -name '*.json' -print0)
+          done
+          echo "EA5E2_CLEANUP_METADATA_FILES_COPIED=$copied"
+
+      - name: Delete every exact-head transient R2 object found in safe metadata
+        env:
+          MCFT_EA5E2_LIVE_PHASE: CLEANUP_TRANSIENT
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+
+      - name: Upload metadata-only cleanup proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-transient-cleanup-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_CLEANUP.json
+          if-no-files-found: warn
+          retention-days: 90
