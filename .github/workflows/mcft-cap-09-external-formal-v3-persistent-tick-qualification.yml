@@ -91,7 +91,23 @@ jobs:
           retention-days: 7
 
       - name: Run External Formal V3 persistent tick deterministic qualification
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK.ts
+        shell: bash
+        run: |
+          set +e
+          mkdir -p acceptance-output
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK.ts > acceptance-output/external-formal-v3-deterministic.log 2>&1
+          code=$?
+          cat acceptance-output/external-formal-v3-deterministic.log
+          exit "$code"
+
+      - name: Upload deterministic qualification diagnostic on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-external-formal-v3-deterministic-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/external-formal-v3-deterministic.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Re-prove DB-only External Evidence to CAP04 seam
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_DATABASE_SOURCE_TO_EXTERNAL_CAP04.ts
