@@ -1,0 +1,61 @@
+name: mcft-cap-09-kbs-publication-cadence-observer
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-kbs-publication-cadence-observer.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLICATION-CADENCE-OBSERVER-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLICATION-CADENCE-OBSERVER-V1.md'
+      - 'scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE.py'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_OBSERVER.cjs'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-kbs-publication-cadence-observer-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Prove observer governance and deterministic semantics
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_OBSERVER.cjs
+
+      - name: Observe exact KBS Raw Hourly publication state
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MCFT_SUBJECT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--output acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json)
+          if [[ "${GITHUB_REF}" == "refs/heads/main" && ( "${GITHUB_EVENT_NAME}" == "schedule" || "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ) ]]; then
+            args+=(--restore-github-state)
+          fi
+          python scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE.py "${args[@]}"
+
+      - name: Validate metadata-only live artifact
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_OBSERVER.cjs --live acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json
+
+      - name: Upload metadata-only cadence state
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-kbs-publication-cadence-state-${{ github.run_id }}
+          path: acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json
+          if-no-files-found: error
+          retention-days: 30
