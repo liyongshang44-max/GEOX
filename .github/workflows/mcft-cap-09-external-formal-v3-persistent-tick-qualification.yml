@@ -53,13 +53,42 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Re-prove server typecheck
-        run: pnpm --filter @geox/server run typecheck
+        shell: bash
+        run: |
+          set +e
+          mkdir -p acceptance-output
+          pnpm --filter @geox/server run typecheck > acceptance-output/external-formal-v3-server-typecheck.log 2>&1
+          code=$?
+          cat acceptance-output/external-formal-v3-server-typecheck.log
+          exit "$code"
+
+      - name: Upload server typecheck diagnostic on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-external-formal-v3-server-typecheck-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/external-formal-v3-server-typecheck.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Typecheck V3 focused acceptance as standalone NodeNext entrypoint
-        run: >-
-          pnpm exec tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022
-          --types node --skipLibCheck
-          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK.ts
+        shell: bash
+        run: |
+          set +e
+          mkdir -p acceptance-output
+          pnpm exec tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 --types node --skipLibCheck scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK.ts > acceptance-output/external-formal-v3-focused-typecheck.log 2>&1
+          code=$?
+          cat acceptance-output/external-formal-v3-focused-typecheck.log
+          exit "$code"
+
+      - name: Upload focused typecheck diagnostic on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-external-formal-v3-focused-typecheck-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/external-formal-v3-focused-typecheck.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Run External Formal V3 persistent tick deterministic qualification
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK.ts
