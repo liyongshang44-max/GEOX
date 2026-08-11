@@ -53,7 +53,7 @@ function main() {
     eq(blob(base, file), sha, `EXTERNAL_FORMAL_V3_BASE_PIN:${file}`);
     eq(blob("HEAD", file), sha, `EXTERNAL_FORMAL_V3_PREDECESSOR_MUTATED:${file}`);
   }
-  eq(blob("HEAD", P.service), "32a7084b5fff1b801f4491cdb46fc60ceed82d90", "EXTERNAL_FORMAL_V3_SERVICE_BLOB_REQUIRED");
+  eq(blob("HEAD", P.service), "7c5b08dac7449cdaabe1b16f833347bd0cbc9161", "EXTERNAL_FORMAL_V3_SERVICE_BLOB_REQUIRED");
   eq(blob("HEAD", P.acceptance), "b798a188189376510d6a0f1b8be488af120e589c", "EXTERNAL_FORMAL_V3_ACCEPTANCE_BLOB_REQUIRED");
   eq(blob("HEAD", P.authority), "961294d5ac9b37d9f8147260a4606e1a9f2ffaef", "EXTERNAL_FORMAL_V3_AUTHORITY_BLOB_REQUIRED");
 
@@ -102,6 +102,8 @@ function main() {
     "runtime_config_hash",
     "crop_stage_context_ref",
     "crop_stage_context_hash",
+    "validateExternalFormalRuntimeConfigPayloadV1",
+    "crop_stage_context_authority.context_ref",
     "executeExternalFormalCap04CandidateV1",
     "commitARecordSet",
     "readARecordSet",
