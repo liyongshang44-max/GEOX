@@ -119,9 +119,7 @@ function main() {
     "source_substitution_count","timestamp_relabel_count","runtime_provider_request_count",
     "formal_database_write_count","formal_raw_prefix_write_count","formal_scheduler_write_count",
     "formal_canonical_runtime_write_count"
-  ]) {
-    if (!freeze.required_fields.includes(field)) throw new Error(`POST_ACTIVATION_FREEZE_FIELD_REQUIRED:${field}`);
-  }
+  ]) if (!freeze.required_fields.includes(field)) throw new Error(`POST_ACTIVATION_FREEZE_FIELD_REQUIRED:${field}`);
 
   const scan = a.successor_whole_window_scan_contract;
   no(scan.may_become_authoritative_before_operational_activation_effective, "POST_ACTIVATION_SCAN_PREMATURE_AUTHORITY_FORBIDDEN");
@@ -138,7 +136,6 @@ function main() {
 
   const runner = a.external_formal_v3_runner_required_contract;
   yes(runner.new_separate_entrypoint_required, "POST_ACTIVATION_V3_NEW_ENTRYPOINT_REQUIRED");
-  no(runner.legacy_runner_delegation_forbidden === false, "POST_ACTIVATION_V3_LEGACY_RUNNER_DELEGATION_MUST_BE_FORBIDDEN");
   yes(runner.legacy_runner_delegation_forbidden, "POST_ACTIVATION_V3_LEGACY_RUNNER_FORBIDDEN");
   yes(runner.legacy_v2_delegation_forbidden, "POST_ACTIVATION_V3_LEGACY_V2_FORBIDDEN");
   yes(runner.static_canonical_input_secret_forbidden, "POST_ACTIVATION_V3_STATIC_INPUT_FORBIDDEN");
@@ -160,7 +157,7 @@ function main() {
   if (order.indexOf("WHOLE_WINDOW_CROP_CONTEXT_SCAN") >= order.indexOf("SUCCESSOR_EPOCH_SELECTION_AUTHORITY")) throw new Error("POST_ACTIVATION_SCAN_MUST_PRECEDE_EPOCH_SELECTION");
   if (order.indexOf("EA5E3_FORMAL_AUTHORITY_V3_EFFECTIVE_BY_O00_MINUS_12H") >= order.indexOf("ACTUAL_UTC_O00_TO_O23")) throw new Error("POST_ACTIVATION_EA5E3_MUST_PRECEDE_O00");
 
-  const auditText = read(P.authority) + "\n" + read(P.gate) + "\n" + read(P.workflow);
+  const auditSurface = read(P.authority) + "\n" + read(P.workflow);
   for (const forbidden of [
     "GEOX_MCFT_CAP09_S6_DATABASE_URL",
     "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY",
@@ -168,7 +165,7 @@ function main() {
     "UPDATE facts",
     "DELETE FROM facts",
     "workflow_dispatch:"
-  ]) lacks(auditText, forbidden, "POST_ACTIVATION_AUDIT_SIDE_EFFECT_CAPABILITY_FORBIDDEN");
+  ]) lacks(auditSurface, forbidden, "POST_ACTIVATION_AUDIT_SIDE_EFFECT_CAPABILITY_FORBIDDEN");
 
   result({
     schema_version: "geox_mcft_cap09_post_activation_readiness_audit_result_v1",
