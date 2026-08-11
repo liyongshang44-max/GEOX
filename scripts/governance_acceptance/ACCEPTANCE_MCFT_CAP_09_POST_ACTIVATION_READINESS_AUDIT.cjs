@@ -44,7 +44,10 @@ function main() {
     ".github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml": "64bc77026628efa5cc75907d9c01eddc87a639e4",
     "scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts": "1f19fa1e65352eba58e7de79dd124844defc901f",
     "scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW_V2.ts": "e4e64e843213c7e7587165c8ecfccf6f0a3c8095",
-    "scripts/runtime_acceptance/mcft_cap09_s6_formal_authority_v1.ts": "955e081231a9e7190383d77496ff2baedf7adb5a"
+    "scripts/runtime_acceptance/mcft_cap09_s6_formal_authority_v1.ts": "955e081231a9e7190383d77496ff2baedf7adb5a",
+    "apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.ts": "43773178a6220f6d92c48a51da20f7d946bb84a4",
+    "apps/server/src/runtime/twin_runtime/external_formal_window_epoch_rebase_persistence_service_v1.ts": "a420ef34e4c0a58ba5507e46d623fcc12980b946",
+    "scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT.ts": "d3d7284632da52c1ea2e694eba49a8fdeb271f45"
   };
   for (const [file, sha] of Object.entries(immutable)) {
     eq(blob(base, file), sha, `POST_ACTIVATION_AUDIT_BASE_PIN:${file}`);
@@ -65,8 +68,10 @@ function main() {
   for (const key of [
     "a06a_epoch_selection_authority_reusable",
     "a06b_old_epoch_runtime_config_chain_reusable",
+    "a06b_hardcoded_builder_reusable",
     "a06c_old_epoch_append_persistence_result_reusable",
     "ea5e1_old_epoch_window_input_manifest_reusable",
+    "ea5e1_hardcoded_preflight_reusable",
     "legacy_stage_1b_runner_reusable",
     "legacy_stage_1b_v2_runner_reusable",
     "legacy_formal_authority_helper_reusable"
@@ -77,7 +82,6 @@ function main() {
   has(legacyWorkflow, "cron: '17 * * * *'", "POST_ACTIVATION_LEGACY_CRON_FACT_REQUIRED");
   has(legacyWorkflow, "GEOX_MCFT_CAP09_S6_CANONICAL_INPUT_JSON", "POST_ACTIVATION_LEGACY_STATIC_INPUT_FACT_REQUIRED");
   has(legacyWorkflow, "RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts", "POST_ACTIVATION_LEGACY_ENTRYPOINT_FACT_REQUIRED");
-  lacks(legacyWorkflow, "RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts", "POST_ACTIVATION_LEGACY_WORKFLOW_MUST_NOT_BE_MISCLASSIFIED_AS_NEW_RUNNER");
 
   const legacyRunner = read("scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts");
   has(legacyRunner, 'json<ExecuteCap04SingleTickInputV1>("MCFT_CAP09_S6_CANONICAL_INPUT_JSON")', "POST_ACTIVATION_LEGACY_STATIC_TEMPLATE_FACT_REQUIRED");
@@ -96,6 +100,39 @@ function main() {
     "fixtures/mcft/water_state/replay_v1/configuration_context.json",
     "mcft_soil_hydraulic_config_c8_v1"
   ]) has(helper, marker, "POST_ACTIVATION_LEGACY_REPLAY_AUTHORITY_FACT_REQUIRED");
+
+  const builder = read("apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.ts");
+  for (const marker of [
+    "mcft_cap09_external_formal_window_epoch_20260811t170000z_v1",
+    "2026-08-11T17:00:00.000Z",
+    "2026-08-12T16:00:00.000Z",
+    "2026-08-10T05:07:38.000Z",
+    'slot.crop_stage_code !== "MID"'
+  ]) has(builder, marker, "POST_ACTIVATION_A06B_HARDCODED_SUCCESSOR_BLOCKER_REQUIRED");
+
+  const persistence = read("apps/server/src/runtime/twin_runtime/external_formal_window_epoch_rebase_persistence_service_v1.ts");
+  has(persistence, "input.runtime_configs.length !== 24", "POST_ACTIVATION_PERSISTENCE_EXACT_24_REQUIRED");
+  has(persistence, "A06C_CRASH_RECOVERY_MUST_BE_CONTIGUOUS_PREFIX", "POST_ACTIVATION_PERSISTENCE_PREFIX_RECOVERY_REQUIRED");
+  has(persistence, "A06C_SECOND_PASS_MUST_BE_ZERO_WRITE_IDEMPOTENT", "POST_ACTIVATION_PERSISTENCE_IDEMPOTENCY_REQUIRED");
+  lacks(persistence, "mcft_cap09_external_formal_window_epoch_20260811t170000z_v1", "POST_ACTIVATION_PERSISTENCE_CORE_MUST_NOT_HARDCODE_OLD_EPOCH");
+
+  const oldPreflight = read("scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT.ts");
+  for (const marker of [
+    "Number(c?.total) === 60",
+    "Number(c?.configs) === 49",
+    "Number(c?.expired_configs) === 24",
+    "Number(c?.rebased_configs) === 24",
+    "EA5E1_A06A_EPOCH_BINDING_MISMATCH"
+  ]) has(oldPreflight, marker, "POST_ACTIVATION_EA5E1_HARDCODED_SUCCESSOR_BLOCKER_REQUIRED");
+
+  const findings = a.repository_fact_findings;
+  yes(findings.a06b_rebased_config_builder.hardcoded_expired_epoch_id, "POST_ACTIVATION_A06B_EPOCH_HARDCODE_FINDING_REQUIRED");
+  yes(findings.a06b_rebased_config_builder.requires_every_slot_stage_mid, "POST_ACTIVATION_A06B_MID_HARDCODE_FINDING_REQUIRED");
+  no(findings.a06b_rebased_config_builder.successor_builder_ready, "POST_ACTIVATION_A06B_SUCCESSOR_READY_FORBIDDEN");
+  yes(findings.a06c_persistence_service.implementation_core_candidate_for_successor_requalification, "POST_ACTIVATION_A06C_CORE_REUSE_CANDIDATE_REQUIRED");
+  no(findings.a06c_persistence_service.historical_a06c_execution_result_reusable, "POST_ACTIVATION_A06C_OLD_RESULT_REUSE_FORBIDDEN");
+  yes(findings.ea5e1_historical_preflight.hardcodes_runtime_config_count_49, "POST_ACTIVATION_EA5E1_49_HARDCODE_FINDING_REQUIRED");
+  no(findings.ea5e1_historical_preflight.successor_preflight_ready, "POST_ACTIVATION_EA5E1_SUCCESSOR_READY_FORBIDDEN");
 
   const baseline = a.formal_history_inventory_planning_baseline;
   eq(baseline.facts_before_successor_epoch_persistence_expected, 60, "POST_ACTIVATION_HISTORICAL_FACT_BASELINE_REQUIRED");
@@ -151,6 +188,26 @@ function main() {
   yes(runner.second_runtime_write_lease_forbidden, "POST_ACTIVATION_V3_SECOND_LEASE_FORBIDDEN");
   no(runner.a2_blocked_may_create_scenario, "POST_ACTIVATION_V3_A2_SCENARIO_FORBIDDEN");
 
+  const reuse = a.successor_implementation_reuse_matrix;
+  for (const name of [
+    "compileExternalFormalRuntimeConfigV1",
+    "ExternalFormalWindowEpochRebasePersistenceServiceV1",
+    "PostgresPersistentSequentialSchedulerAdapterV1",
+    "PostgresExternalFormalEvidenceSourceV1",
+    "PostgresForecastScenarioRecoveryRepositoryV1",
+    "PostgresRuntimeRepositoryV1",
+    "PostgresNextTickRepositoryV1"
+  ]) if (!reuse.reuse_after_new_exact_qualification.includes(name)) throw new Error(`POST_ACTIVATION_REUSE_CANDIDATE_REQUIRED:${name}`);
+  for (const name of [
+    "external_formal_window_epoch_rebase_bundle_v1",
+    "EXECUTE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT",
+    "GEOX-MCFT-CAP-09-FORMAL-WINDOW-INPUT-MANIFEST-V1",
+    "RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW",
+    "RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW_V2",
+    "mcft_cap09_s6_formal_authority_v1"
+  ]) if (!reuse.replace_or_version.includes(name)) throw new Error(`POST_ACTIVATION_REPLACE_OR_VERSION_REQUIRED:${name}`);
+  yes(reuse.historical_effectiveness_records_remain_immutable, "POST_ACTIVATION_HISTORICAL_RECORDS_IMMUTABLE_REQUIRED");
+
   const order = a.post_activation_ordering_matrix;
   eq(order[0], "OPERATIONAL_ACTIVATION_LIVE_PASS", "POST_ACTIVATION_ORDER_LIVE_FIRST_REQUIRED");
   eq(order[1], "OPERATIONAL_ACTIVATION_EVIDENCE_FREEZE_EFFECTIVE", "POST_ACTIVATION_ORDER_FREEZE_SECOND_REQUIRED");
@@ -176,6 +233,9 @@ function main() {
     exact_boundary: "THREE_FILES",
     legacy_formal_runner_reusable: false,
     legacy_formal_v2_runner_reusable: false,
+    a06b_builder_reusable: false,
+    a06c_persistence_core_candidate_for_requalification: true,
+    old_ea5e1_preflight_reusable: false,
     successor_epoch_selected: false,
     operational_activation_qualified: false,
     ea5e3_authorized: false,
