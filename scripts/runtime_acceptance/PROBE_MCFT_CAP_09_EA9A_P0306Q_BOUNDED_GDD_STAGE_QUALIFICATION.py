@@ -193,6 +193,43 @@ def locate_governed_csv_header(text: str, source: dict) -> tuple[int, list[str]]
     return candidates[0]
 
 
+def resolve_daily_duplicates(rows_by_day: dict[date, list[DailyTemperature | None]], source: dict) -> tuple[dict[date, DailyTemperature], dict]:
+    require(source["duplicate_date_policy"] == "IDENTICAL_EXTREMA_DEDUPLICATE_CONFLICTING_EXTREMA_BECOME_UNCERTAIN_DAY", "EA9A_GDD_KBS561_DUPLICATE_POLICY_DRIFT")
+    require(source["conflicting_duplicate_date_may_select_one_row"] is False, "EA9A_GDD_KBS561_CONFLICT_SELECTION_FORBIDDEN")
+    records: dict[date, DailyTemperature] = {}
+    duplicate_date_count = 0
+    identical_duplicate_date_count = 0
+    conflicting_duplicate_date_count = 0
+    invalid_singleton_date_count = 0
+    for day, candidates in rows_by_day.items():
+        if len(candidates) == 1:
+            if candidates[0] is not None:
+                records[day] = candidates[0]
+            else:
+                invalid_singleton_date_count += 1
+            continue
+        duplicate_date_count += 1
+        if any(candidate is None for candidate in candidates):
+            conflicting_duplicate_date_count += 1
+            continue
+        assert all(candidate is not None for candidate in candidates)
+        valid_candidates = [candidate for candidate in candidates if candidate is not None]
+        signatures = {(candidate.max_c, candidate.min_c, round(candidate.gdu, 12)) for candidate in valid_candidates}
+        if len(signatures) == 1:
+            records[day] = valid_candidates[0]
+            identical_duplicate_date_count += 1
+        else:
+            conflicting_duplicate_date_count += 1
+    return records, {
+        "duplicate_date_policy": source["duplicate_date_policy"],
+        "duplicate_date_count": duplicate_date_count,
+        "identical_duplicate_date_count_deduplicated": identical_duplicate_date_count,
+        "conflicting_duplicate_date_count_became_uncertain": conflicting_duplicate_date_count,
+        "invalid_singleton_date_count": invalid_singleton_date_count,
+        "conflicting_duplicate_date_row_selected": False,
+    }
+
+
 def qualify_temperature_source() -> tuple[dict, dict[date, DailyTemperature]]:
     source = CONFIG["temperature_source"]
     metadata_body, metadata_headers, metadata_final = request_bytes(
@@ -221,32 +258,28 @@ def qualify_temperature_source() -> tuple[dict, dict[date, DailyTemperature]]:
         require(required_col in actual_headers, f"EA9A_GDD_KBS561_COLUMN_REQUIRED:{required_col}")
 
     key_map = {raw: normalize_key(raw) for raw in reader.fieldnames}
-    records: dict[date, DailyTemperature] = {}
-    parsed_date_count = 0
+    rows_by_day: dict[date, list[DailyTemperature | None]] = {}
+    parsed_date_row_count = 0
     invalid_temperature_row_count = 0
-    duplicate_date_count = 0
     for raw_row in reader:
         row = {key_map[k]: v for k, v in raw_row.items() if k is not None}
         day = parse_date(row.get("date", ""))
         if day is None:
             continue
-        parsed_date_count += 1
+        parsed_date_row_count += 1
         max_c = finite_float(row.get("air_temp_107_max"))
         min_c = finite_float(row.get("air_temp_107_min"))
-        if max_c is None or min_c is None:
+        candidate: DailyTemperature | None = None
+        if max_c is not None and min_c is not None:
+            gdu = pioneer_base50_daily_gdu(max_c, min_c)
+            if gdu is not None:
+                candidate = DailyTemperature(day=day, max_c=max_c, min_c=min_c, gdu=gdu)
+        if candidate is None:
             invalid_temperature_row_count += 1
-            continue
-        gdu = pioneer_base50_daily_gdu(max_c, min_c)
-        if gdu is None:
-            invalid_temperature_row_count += 1
-            continue
-        if day in records:
-            duplicate_date_count += 1
-            continue
-        records[day] = DailyTemperature(day=day, max_c=max_c, min_c=min_c, gdu=gdu)
+        rows_by_day.setdefault(day, []).append(candidate)
 
-    require(parsed_date_count > 0, "EA9A_GDD_KBS561_NO_DATED_ROWS")
-    require(duplicate_date_count == 0, "EA9A_GDD_KBS561_DUPLICATE_DATE")
+    require(parsed_date_row_count > 0, "EA9A_GDD_KBS561_NO_DATED_ROWS")
+    records, duplicate_proof = resolve_daily_duplicates(rows_by_day, source)
     require(bool(records), "EA9A_GDD_KBS561_NO_VALID_DAILY_EXTREMA")
     latest_valid = max(records)
     earliest_valid = min(records)
@@ -267,11 +300,13 @@ def qualify_temperature_source() -> tuple[dict, dict[date, DailyTemperature]]:
         "csv_header_row_index_zero_based": header_row_index,
         "csv_preamble_row_count": header_row_index,
         "csv_required_columns_exactly_located": True,
-        "csv_parsed_date_row_count": parsed_date_count,
-        "csv_valid_daily_extrema_row_count": len(records),
+        "csv_parsed_date_row_count": parsed_date_row_count,
+        "csv_unique_parsed_date_count": len(rows_by_day),
+        "csv_valid_unambiguous_daily_extrema_date_count": len(records),
         "csv_invalid_or_missing_daily_extrema_row_count": invalid_temperature_row_count,
         "csv_earliest_valid_date": earliest_valid.isoformat(),
         "csv_latest_valid_date": latest_valid.isoformat(),
+        "duplicate_resolution": duplicate_proof,
         "metadata_last_modified": metadata_headers.get("last-modified"),
         "csv_last_modified": csv_headers.get("last-modified"),
         "raw_provider_body_emitted": False,
