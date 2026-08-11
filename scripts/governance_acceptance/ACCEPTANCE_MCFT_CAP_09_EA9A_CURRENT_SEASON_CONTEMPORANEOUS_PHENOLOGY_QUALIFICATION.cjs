@@ -53,7 +53,7 @@ try {
     'CURRENT_SEASON_PHENOLOGY_AUTHORITY_NOT_ESTABLISHED',
     'A source identity alone is insufficient.',
     'GDD remains corroborative',
-    'future observations are forbidden',
+    'Future observations are forbidden.',
     'S6-EA9B-NEW-NATURAL-SEASON-AUTHORITY-ADJUDICATION'
   ]) has(amendment09, marker, 'EA9A_AMENDMENT09_RULE_MISSING');
 
