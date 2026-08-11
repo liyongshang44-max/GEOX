@@ -30,6 +30,8 @@
     "csv_export_format": "KBS_METADATA_PREAMBLE_THEN_COMMA_SEPARATED_TABLE",
     "maximum_csv_preamble_rows_before_header": 64,
     "csv_header_must_contain_all_required_columns": true,
+    "duplicate_date_policy": "IDENTICAL_EXTREMA_DEDUPLICATE_CONFLICTING_EXTREMA_BECOME_UNCERTAIN_DAY",
+    "conflicting_duplicate_date_may_select_one_row": false,
     "static_catalog_end_date_may_not_be_used_as_live_row_end_authority": true, "synthetic_daily_table_7_may_be_used": false,
     "raw_hourly_means_may_be_relabelled_daily_extrema": false, "spatial_confidence_upgrade_authorized": false
   },
