@@ -1,0 +1,54 @@
+name: mcft-cap-09-post-activation-readiness-audit
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-post-activation-readiness-audit.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-POST-ACTIVATION-READINESS-AUDIT-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_POST_ACTIVATION_READINESS_AUDIT.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-post-activation-readiness-audit-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  post-activation-readiness-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve exact protected-main audit base
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}'
+          test "$base" = '5229598e1222defd2aa3a2dab73649678e2300d8' || {
+            echo "POST_ACTIVATION_AUDIT_BASE_DRIFT:$base" >&2
+            exit 1
+          }
+          echo "MCFT_BASE_SHA=$base" >> "$GITHUB_ENV"
+
+      - name: Syntax-check read-only audit gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_POST_ACTIVATION_READINESS_AUDIT.cjs
+
+      - name: Validate exact post-activation readiness audit
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_POST_ACTIVATION_READINESS_AUDIT.cjs
+
+      - name: Upload immutable audit proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-post-activation-readiness-audit-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_POST_ACTIVATION_READINESS_AUDIT_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
