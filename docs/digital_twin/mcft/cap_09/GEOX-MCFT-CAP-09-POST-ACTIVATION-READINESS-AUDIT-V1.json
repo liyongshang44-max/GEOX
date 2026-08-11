@@ -31,8 +31,10 @@
     "expired_ea5e3_readiness_deadline": "2026-08-11T05:00:00.000Z",
     "a06a_epoch_selection_authority_reusable": false,
     "a06b_old_epoch_runtime_config_chain_reusable": false,
+    "a06b_hardcoded_builder_reusable": false,
     "a06c_old_epoch_append_persistence_result_reusable": false,
     "ea5e1_old_epoch_window_input_manifest_reusable": false,
+    "ea5e1_hardcoded_preflight_reusable": false,
     "legacy_stage_1b_runner_reusable": false,
     "legacy_stage_1b_v2_runner_reusable": false,
     "legacy_formal_authority_helper_reusable": false,
@@ -42,6 +44,8 @@
       "SUCCESSOR_24_SLOT_CROP_CONTEXT_MUST_BE_FRESHLY_DERIVED",
       "SUCCESSOR_RUNTIME_CONFIG_CHAIN_REQUIRES_NEW_EXACT_SLOT_REFS_HASHES",
       "SUCCESSOR_WINDOW_MANIFEST_REQUIRES_NEW_EXACT_SLOT_REFS_HASHES",
+      "A06B_BUILDER_HARD_CODES_EXPIRED_A06A_EPOCH_AND_MID_STAGE",
+      "EA5E1_PREFLIGHT_HARD_CODES_OLD_60_FACT_49_CONFIG_INVENTORY",
       "LEGACY_RUNNER_REUSES_ONE_STATIC_CANONICAL_INPUT_TEMPLATE",
       "LEGACY_V2_REBUILDS_REPLAY_MCFT00_C8_FIXTURE_AUTHORITY",
       "RUNTIME_MUST_USE_EXTERNAL_DB_ONLY_EVIDENCE"
@@ -81,6 +85,35 @@
       "reads_replay_crop_fixture": true,
       "uses_c8_soil_hydraulic_config": true,
       "external_formal_v3_ready": false
+    },
+    "a06b_rebased_config_builder": {
+      "path": "apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.ts",
+      "historical_blob_sha": "43773178a6220f6d92c48a51da20f7d946bb84a4",
+      "hardcoded_expired_epoch_id": true,
+      "hardcoded_expired_o00_o23": true,
+      "hardcoded_a06a_effective_created_at": true,
+      "requires_every_slot_stage_mid": true,
+      "successor_builder_ready": false
+    },
+    "a06c_persistence_service": {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_window_epoch_rebase_persistence_service_v1.ts",
+      "historical_blob_sha": "a420ef34e4c0a58ba5507e46d623fcc12980b946",
+      "hardcoded_epoch_identity": false,
+      "requires_exact_24_runtime_configs": true,
+      "contiguous_prefix_crash_recovery": true,
+      "second_pass_zero_write_idempotency": true,
+      "implementation_core_candidate_for_successor_requalification": true,
+      "historical_a06c_execution_result_reusable": false
+    },
+    "ea5e1_historical_preflight": {
+      "path": "scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT.ts",
+      "historical_blob_sha": "d3d7284632da52c1ea2e694eba49a8fdeb271f45",
+      "binds_expired_a06a_authority": true,
+      "hardcodes_total_fact_count_60": true,
+      "hardcodes_runtime_config_count_49": true,
+      "hardcodes_expired_config_count_24": true,
+      "hardcodes_rebased_config_count_24": true,
+      "successor_preflight_ready": false
     }
   },
   "formal_history_inventory_planning_baseline": {
@@ -181,6 +214,26 @@
     "ao_act_write_authorized": false,
     "dispatch_write_authorized": false,
     "model_activation_authorized": false
+  },
+  "successor_implementation_reuse_matrix": {
+    "reuse_after_new_exact_qualification": [
+      "compileExternalFormalRuntimeConfigV1",
+      "ExternalFormalWindowEpochRebasePersistenceServiceV1",
+      "PostgresPersistentSequentialSchedulerAdapterV1",
+      "PostgresExternalFormalEvidenceSourceV1",
+      "PostgresForecastScenarioRecoveryRepositoryV1",
+      "PostgresRuntimeRepositoryV1",
+      "PostgresNextTickRepositoryV1"
+    ],
+    "replace_or_version": [
+      "external_formal_window_epoch_rebase_bundle_v1",
+      "EXECUTE_MCFT_CAP_09_EA5E1_POST_REBASE_FORMAL_DB_PREFLIGHT",
+      "GEOX-MCFT-CAP-09-FORMAL-WINDOW-INPUT-MANIFEST-V1",
+      "RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW",
+      "RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW_V2",
+      "mcft_cap09_s6_formal_authority_v1"
+    ],
+    "historical_effectiveness_records_remain_immutable": true
   },
   "post_activation_ordering_matrix": [
     "OPERATIONAL_ACTIVATION_LIVE_PASS",
