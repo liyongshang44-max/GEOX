@@ -44,6 +44,7 @@ import type { CanonicalReplayEvidenceRecordV1, PreparedNextTickInputV1, TwinScop
 
 export const EXTERNAL_FORMAL_CAP04_CANDIDATE_EXECUTION_SERVICE_ID_V1 =
   "MCFT_CAP09_EXTERNAL_FORMAL_CAP04_CANDIDATE_EXECUTION_SERVICE_V1" as const;
+export const EXTERNAL_FORMAL_EXACT_INTERVAL_AVAILABILITY_CUTOFF_OFFSET_MINUTES_V1 = 432 as const;
 
 export type ExecuteExternalFormalCap04CandidateInputV1 = {
   scope: TwinScopeKeyV1;
@@ -100,6 +101,9 @@ function exactScopeV1(actual: ScopeLikeV1, expected: TwinScopeKeyV1, code: strin
 function finiteNumberV1(value: unknown, code: string): number {
   if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(code);
   return value;
+}
+function exactIntervalAvailabilityCutoffV1(logicalTime: string): string {
+  return new Date(Date.parse(logicalTime) + EXTERNAL_FORMAL_EXACT_INTERVAL_AVAILABILITY_CUTOFF_OFFSET_MINUTES_V1 * 60_000).toISOString();
 }
 
 function dynamicsConfigV1(payload: ReturnType<ExternalFormalCap04ExecutionConfigResolverV1["resolveExecutionConfig"]>["payload"]): HourlyWaterBalanceConfigV1 {
@@ -242,6 +246,7 @@ export function executeExternalFormalCap04CandidateV1(input: ExecuteExternalForm
     crop_stage_context_hash: externalRuntime.crop_stage_context_authority.context_hash,
     crop_stage_context: input.crop_stage_context,
     authorized_soil_observation_binding_id: MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
+    exact_interval_availability_cutoff_time: exactIntervalAvailabilityCutoffV1(logicalTime),
   });
   const base = preliminary.base_continuation_window;
   const dynamics = executeHourlyWaterBalanceV1({

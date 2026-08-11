@@ -1,0 +1,108 @@
+name: mcft-cap-09-ea5e2-fixed-lag-collector-runtime-schedule-readiness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e2-fixed-lag-collector-runtime-schedule-readiness.yml'
+      - 'apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts'
+      - 'apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/fixed_lag_scheduler_adapter_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_EXACT_INTERVAL_LATE_CUTOFF_SEAM.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_SCHEDULER_SEAM.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-FIXED-LAG-COLLECTOR-RUNTIME-SCHEDULE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-COLLECTOR-RUNTIME-SCHEDULE-READINESS-V1.json'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-ea5e2-implementation-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  ea5e2-implementation-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Bind exact effective Amendment-08 protected-main authority
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "base_sha=f150b18a2ab9691fec64eaecb00105911857994c" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+          test "$(git rev-parse 'f150b18a2ab9691fec64eaecb00105911857994c^{commit}')" = "f150b18a2ab9691fec64eaecb00105911857994c"
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck server after additive fixed-lag seams
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          pnpm --filter @geox/server run typecheck 2>&1 | tee acceptance-output/EA5E2_SERVER_TYPECHECK.log
+
+      - name: Prove default-zero and External-7h scheduler eligibility
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_SCHEDULER_SEAM.ts 2>&1 | tee acceptance-output/EA5E2_FIXED_LAG_SCHEDULER_SEAM.log
+
+      - name: Prove rain ET0 late cutoff without weakening pre-T evidence
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_EXACT_INTERVAL_LATE_CUTOFF_SEAM.ts 2>&1 | tee acceptance-output/EA5E2_EXACT_INTERVAL_LATE_CUTOFF_SEAM.log
+
+      - name: Re-prove historical CAP02 Evidence Window defaults
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_EVIDENCE_WINDOW.ts
+
+      - name: Re-prove External CAP04 orchestration compatibility
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts
+
+      - name: Syntax-check Amendment-08 EA5E2 implementation gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs
+
+      - name: Validate EA5E2 implementation qualification under Amendment-08
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs
+
+      - name: Upload immutable EA5E2 implementation qualification proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-implementation-qualification-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/EA5E2_SERVER_TYPECHECK.log
+            acceptance-output/EA5E2_FIXED_LAG_SCHEDULER_SEAM.log
+            acceptance-output/EA5E2_EXACT_INTERVAL_LATE_CUTOFF_SEAM.log
+            acceptance-output/MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS_GOVERNANCE_RESULT.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-FIXED-LAG-COLLECTOR-RUNTIME-SCHEDULE-V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-COLLECTOR-RUNTIME-SCHEDULE-READINESS-V1.json
+          if-no-files-found: error
+          retention-days: 90

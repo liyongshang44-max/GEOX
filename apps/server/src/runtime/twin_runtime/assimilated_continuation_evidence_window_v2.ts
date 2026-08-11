@@ -1,5 +1,5 @@
 // apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts
-// Purpose: compose the additive MCFT-CAP-03 V2 observation selection trace around the immutable CAP-02 Evidence Window, with optional caller-authorized soil binding authority.
+// Purpose: compose the additive MCFT-CAP-03 V2 observation selection trace around the immutable CAP-02 Evidence Window, with optional caller-authorized soil binding and exact-hour availability cutoff authority.
 // Boundary: pure application composition only; no database, persistence, filesystem, network, wall clock, Runtime tick execution, canonical write, or V1 reinterpretation.
 
 import type { AssimilatedContinuationPosteriorV1 } from "../../domain/soil_water/assimilated_continuation_posterior_v1.js";
@@ -57,6 +57,7 @@ export function buildAssimilatedContinuationEvidenceWindowV2(input: {
   crop_stage_context_hash: string;
   crop_stage_context: ContinuationCropStageConfigurationContextV1;
   authorized_soil_observation_binding_id?: string;
+  exact_interval_availability_cutoff_time?: string;
 }): AssimilatedContinuationEvidenceWindowV2 {
   const baseWindow = buildContinuationEvidenceWindowV1({
     scope: input.scope,
@@ -65,6 +66,9 @@ export function buildAssimilatedContinuationEvidenceWindowV2(input: {
     crop_stage_context_ref: input.crop_stage_context_ref,
     crop_stage_context_hash: input.crop_stage_context_hash,
     crop_stage_context: input.crop_stage_context,
+    ...(input.exact_interval_availability_cutoff_time !== undefined
+      ? { exact_interval_availability_cutoff_time: input.exact_interval_availability_cutoff_time }
+      : {}),
   });
 
   const observationRecords = input.observation_candidate_records
