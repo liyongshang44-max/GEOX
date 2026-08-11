@@ -10,6 +10,7 @@ const ROOT = process.cwd();
 const CONFIG = path.join(ROOT, 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLICATION-CADENCE-OBSERVER-V1.json');
 const DOC = path.join(ROOT, 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLICATION-CADENCE-OBSERVER-V1.md');
 const SCRIPT = path.join(ROOT, 'scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE.py');
+const RESTORE = path.join(ROOT, 'scripts/runtime_acceptance/RESTORE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_STATE.py');
 const WORKFLOW = path.join(ROOT, '.github/workflows/mcft-cap-09-kbs-publication-cadence-observer.yml');
 
 function readJson(file) {
@@ -24,6 +25,7 @@ function validateStatic() {
   const config = readJson(CONFIG);
   const doc = fs.readFileSync(DOC, 'utf8');
   const script = fs.readFileSync(SCRIPT, 'utf8');
+  const restore = fs.readFileSync(RESTORE, 'utf8');
   const workflow = fs.readFileSync(WORKFLOW, 'utf8');
 
   assert.equal(config.schema_version, 'geox_mcft_cap09_kbs_publication_cadence_observer_v1');
@@ -66,15 +68,22 @@ function validateStatic() {
   requireText(script, 'INSUFFICIENT_TRANSITIONS');
   requireText(script, 'raw_provider_body_published');
   requireText(script, 'raw_provider_values_published');
-  requireText(script, 'restore_github_state');
-  requireText(script, 'branch": "main"');
+
+  requireText(restore, 'StripCrossHostAuthorizationRedirect');
+  requireText(restore, 'redirected.remove_header("Authorization")');
+  requireText(restore, 'branch": "main"');
+  requireText(restore, 'status": "success"');
+  requireText(restore, 'authorization_forwarded_cross_host');
+  requireText(restore, 'archive_download_url');
 
   requireText(workflow, "cron: '17 * * * *'");
   requireText(workflow, 'actions: read');
   requireText(workflow, 'contents: read');
   requireText(workflow, 'cancel-in-progress: false');
   requireText(workflow, 'refs/heads/main');
-  requireText(workflow, '--restore-github-state');
+  requireText(workflow, 'RESTORE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_STATE.py');
+  requireText(workflow, '--previous-state');
+  assert(!workflow.includes('--restore-github-state'), 'BROKEN_IN_PROCESS_ARTIFACT_RESTORE_MUST_NOT_BE_USED_BY_WORKFLOW');
   requireText(workflow, 'retention-days: 30');
 
   const python = process.env.PYTHON || 'python3';
@@ -96,7 +105,21 @@ function validateStatic() {
   assert.equal(result.raw_provider_values_emitted, false);
   assert.equal(result.write_count, 0);
 
-  return result;
+  const restoreSelftest = spawnSync(python, [RESTORE, '--selftest'], { cwd: ROOT, encoding: 'utf8' });
+  if (restoreSelftest.status !== 0) {
+    process.stderr.write(restoreSelftest.stdout || '');
+    process.stderr.write(restoreSelftest.stderr || '');
+    throw new Error(`RESTORE_SELFTEST_FAILED:${restoreSelftest.status}`);
+  }
+  const restoreLines = restoreSelftest.stdout.trim().split(/\r?\n/).filter(Boolean);
+  const restoreResult = JSON.parse(restoreLines[restoreLines.length - 1]);
+  assert.equal(restoreResult.status, 'PASS');
+  assert.equal(restoreResult.cross_host_authorization_stripped, true);
+  assert.equal(restoreResult.same_host_authorization_preserved, true);
+  assert.equal(restoreResult.raw_provider_values_emitted, false);
+  assert.equal(restoreResult.write_count, 0);
+
+  return { observer: result, restore: restoreResult };
 }
 
 function validateLive(file) {
@@ -162,7 +185,8 @@ const liveIndex = process.argv.indexOf('--live');
 const output = liveIndex >= 0 ? validateLive(process.argv[liveIndex + 1]) : {
   status: 'PASS',
   static_contract_validated: true,
-  deterministic_selftest: selftest,
+  deterministic_selftest: selftest.observer,
+  safe_restore_selftest: selftest.restore,
   raw_values_emitted: false,
   write_count: 0,
 };
