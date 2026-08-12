@@ -1,0 +1,111 @@
+name: mcft-cap-09-soil-publication-lag-diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-soil-publication-lag-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  observe-endpoint25:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Observe KBS Current Weather endpoint 25 without publishing values
+        shell: node {0}
+        run: |
+          const crypto = require('node:crypto');
+          const fs = require('node:fs');
+          const endpoint = 'https://lter.kbs.msu.edu/weather/variates/25';
+          const rows = [];
+          const sleep = ms => new Promise(r => setTimeout(r, ms));
+          for (let i = 0; i < 12; i++) {
+            const requestedAt = new Date();
+            const response = await fetch(endpoint, {
+              method: 'GET',
+              redirect: 'follow',
+              headers: {
+                Accept: 'application/json,*/*;q=0.5',
+                'User-Agent': 'GEOX-MCFT-CAP09-SOIL-PUBLICATION-LAG-DIAGNOSTIC/1',
+                'Cache-Control': 'no-cache',
+                Pragma: 'no-cache'
+              },
+              signal: AbortSignal.timeout(30000)
+            });
+            const bytes = Buffer.from(await response.arrayBuffer());
+            const retrievedAt = new Date();
+            if (!response.ok) throw new Error(`KBS_SOIL_DIAGNOSTIC_HTTP:${response.status}`);
+            let parsed;
+            try { parsed = JSON.parse(bytes.toString('utf8')); } catch { throw new Error('KBS_SOIL_DIAGNOSTIC_JSON_INVALID'); }
+            if (!Array.isArray(parsed)) throw new Error('KBS_SOIL_DIAGNOSTIC_ARRAY_REQUIRED');
+            const timestamps = parsed
+              .map(v => v && typeof v === 'object' && typeof v.time === 'string' && Number.isFinite(Date.parse(v.time)) ? Date.parse(v.time) : NaN)
+              .filter(Number.isFinite)
+              .sort((a,b) => a-b);
+            if (!timestamps.length) throw new Error('KBS_SOIL_DIAGNOSTIC_TIMESTAMP_REQUIRED');
+            const latestMs = timestamps[timestamps.length - 1];
+            const latestTimestamp = new Date(latestMs).toISOString();
+            const lagMinutes = (retrievedAt.getTime() - latestMs) / 60000;
+            const sample = {
+              sample_index: i + 1,
+              requested_at: requestedAt.toISOString(),
+              retrieved_at: retrievedAt.toISOString(),
+              latest_timestamp: latestTimestamp,
+              latest_age_minutes: Number(lagMinutes.toFixed(3)),
+              response_sha256: `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`,
+              response_bytes: bytes.length,
+              response_status: response.status,
+              response_date_header: response.headers.get('date'),
+              cache_control: response.headers.get('cache-control'),
+              age_header: response.headers.get('age'),
+              etag: response.headers.get('etag'),
+              last_modified: response.headers.get('last-modified'),
+              expires: response.headers.get('expires'),
+              raw_values_emitted: false
+            };
+            rows.push(sample);
+            console.log(JSON.stringify(sample));
+            if (i < 11) await sleep(60000);
+          }
+          const transitions = [];
+          for (let i=1; i<rows.length; i++) {
+            if (rows[i].latest_timestamp !== rows[i-1].latest_timestamp) {
+              transitions.push({
+                from_latest_timestamp: rows[i-1].latest_timestamp,
+                to_latest_timestamp: rows[i].latest_timestamp,
+                last_not_seen_at: rows[i-1].retrieved_at,
+                first_seen_at: rows[i].retrieved_at,
+                first_seen_age_minutes: rows[i].latest_age_minutes
+              });
+            }
+          }
+          const proof = {
+            schema_version: 'geox_mcft_cap09_soil_publication_lag_diagnostic_v1',
+            status: 'PASS',
+            endpoint_id: 25,
+            source_family: 'CURRENT_WEATHER_VARIATE_JSON',
+            sample_interval_seconds: 60,
+            sample_count: rows.length,
+            operational_bound_required_for_ea5e2_minutes: 10,
+            samples: rows,
+            transitions,
+            minimum_latest_age_minutes: Math.min(...rows.map(r=>r.latest_age_minutes)),
+            maximum_latest_age_minutes: Math.max(...rows.map(r=>r.latest_age_minutes)),
+            sample_count_at_or_below_10m: rows.filter(r=>r.latest_age_minutes <= 10).length,
+            public_value_artifact_count: 0,
+            raw_values_emitted: false
+          };
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_SOIL_PUBLICATION_LAG_DIAGNOSTIC.json', JSON.stringify(proof,null,2)+'\n');
+          console.log(JSON.stringify({summary:true,...proof,samples:undefined}));
+
+      - name: Upload metadata-only diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-soil-publication-lag-diagnostic
+          path: acceptance-output/MCFT_CAP_09_SOIL_PUBLICATION_LAG_DIAGNOSTIC.json
+          if-no-files-found: error
+          retention-days: 1
