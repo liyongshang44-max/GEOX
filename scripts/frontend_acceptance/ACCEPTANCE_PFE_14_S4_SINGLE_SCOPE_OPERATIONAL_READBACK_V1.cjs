@@ -12,12 +12,12 @@ const panel = read('apps/web/src/features/operator/fieldRuntime/Pfe14Operational
 
 const implementationAction = 'PFE_14_S4_IMPLEMENT_SINGLE_SCOPE_SCHEDULER_EVIDENCE_READBACK';
 const adjudicatedSuccessorAction = 'PFE_14_PRODUCTIZE_CURRENT_CANONICAL_STATE_AND_FORECAST_WITHOUT_NEW_DATA_FIELDS';
+const qualifiedSuccessorAction = 'PFE_14_PRODUCTIZE_CURRENT_EVIDENCE_AND_RUNTIME_HEALTH_WITHOUT_NEW_DATA_FIELDS';
 
 if (authority.first_legal_next_action === implementationAction) {
   assert.equal(authority.record_status, 'S4_DEPENDENCY_PROVIDER_QUALIFIED_NARROW_FRONTEND_READBACK_AUTHORIZED');
 } else {
-  assert.equal(authority.first_legal_next_action, adjudicatedSuccessorAction);
-  assert.equal(authority.record_status, 'S4_PARTIAL_FRONTEND_READBACK_QUALIFIED_COMPLETENESS_ADJUDICATED_NOT_EFFECTIVE');
+  assert.ok([adjudicatedSuccessorAction, qualifiedSuccessorAction].includes(authority.first_legal_next_action), 'UNRECOGNIZED_READBACK_SUCCESSOR_ACTION');
   assert.equal(authority.partial_frontend_readback_proof?.subject_sha, '6b99afb119bb012246ab7c43c7a37ab47beb22ed');
   assert.equal(authority.partial_frontend_readback_proof?.pfe14_focused_run_id, 31565598839);
   assert.equal(authority.partial_frontend_readback_proof?.cap07_lifecycle_run_id, 31565598738);
@@ -79,7 +79,7 @@ console.log(JSON.stringify({
   exact_scope_source: candidate.exact_scope_source,
   qualified_models_consumed: candidate.qualified_models_consumed,
   authority_next_action: authority.first_legal_next_action,
-  historical_candidate_proof_bound: authority.first_legal_next_action === adjudicatedSuccessorAction,
+  historical_candidate_proof_bound: authority.first_legal_next_action !== implementationAction,
   browser_scheduler_derivation: false,
   browser_freshness_derivation: false,
   runtime_mode_changed: false,

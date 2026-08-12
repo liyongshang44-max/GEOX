@@ -7,8 +7,14 @@ const json = (p) => JSON.parse(read(p));
 const authority = json('docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json');
 const adjudication = json('docs/frontend-productization/PFE-14-S4-PRODUCT-COMPLETENESS-ADJUDICATION-V1.json');
 const candidate = json('docs/frontend-productization/PFE-14-STATE-FORECAST-PRODUCTIZATION-CANDIDATE-V1.json');
+const qualification = fs.existsSync('docs/frontend-productization/PFE-14-STATE-FORECAST-PRODUCTIZATION-QUALIFICATION-V1.json')
+  ? json('docs/frontend-productization/PFE-14-STATE-FORECAST-PRODUCTIZATION-QUALIFICATION-V1.json')
+  : null;
 const page = read('apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx');
 const panels = read('apps/web/src/features/operator/fieldRuntime/Pfe14StateForecastProductPanels.tsx');
+
+const candidateAction = 'PFE_14_PRODUCTIZE_CURRENT_CANONICAL_STATE_AND_FORECAST_WITHOUT_NEW_DATA_FIELDS';
+const qualifiedSuccessorAction = 'PFE_14_PRODUCTIZE_CURRENT_EVIDENCE_AND_RUNTIME_HEALTH_WITHOUT_NEW_DATA_FIELDS';
 
 assert.equal(authority.state_forecast_current_canonical_productization_authorized, true);
 assert.equal(authority.state_forecast_new_backend_fields_authorized, false);
@@ -16,7 +22,20 @@ assert.equal(authority.state_forecast_payload_inference_authorized, false);
 assert.equal(authority.shadow_online_label_authorized, false);
 assert.equal(authority.authoritative_runtime_context_authorized, false);
 assert.equal(authority.s4_effective, false);
-assert.equal(authority.first_legal_next_action, 'PFE_14_PRODUCTIZE_CURRENT_CANONICAL_STATE_AND_FORECAST_WITHOUT_NEW_DATA_FIELDS');
+if (authority.first_legal_next_action === candidateAction) {
+  assert.equal(authority.record_status, 'S4_PARTIAL_FRONTEND_READBACK_QUALIFIED_COMPLETENESS_ADJUDICATED_NOT_EFFECTIVE');
+} else {
+  assert.equal(authority.first_legal_next_action, qualifiedSuccessorAction);
+  assert(qualification, 'STATE_FORECAST_QUALIFICATION_REQUIRED_AFTER_AUTHORITY_ADVANCEMENT');
+  assert.equal(qualification.qualified_subject_sha, 'dfa68752d41bfcd6be9d5da763370dc78d9f4f38');
+  assert.equal(qualification.focused_run_id, 31600089263);
+  assert.equal(qualification.cap07_lifecycle_run_id, 31600089325);
+  assert.equal(qualification.standard_ci_run_id, 31600089223);
+  assert.equal(qualification.protected_main_merge_claimed, false);
+  assert.equal(authority.state_forecast_productization_proof?.subject_sha, qualification.qualified_subject_sha);
+  assert.equal(authority.state_forecast_productization_proof?.all_pass, true);
+  assert.equal(authority.state_forecast_productization_proof?.merged_to_protected_main, false);
+}
 assert.equal(adjudication.state_forecast_productization.authorized_next_candidate, true);
 assert.equal(adjudication.state_forecast_productization.existing_get_only_data_only, true);
 assert.equal(adjudication.state_forecast_productization.new_backend_fields_authorized, false);
@@ -86,6 +105,7 @@ console.log(JSON.stringify({
   synthetic_values: false,
   scenario_eligibility_inferred: false,
   forecast_wiring: 'CANONICAL_PAGE_WRAPPER_TO_PRODUCT_PANEL',
+  historical_candidate_proof_bound: authority.first_legal_next_action === qualifiedSuccessorAction,
   pfe14_s4_effective: false,
-  next_action: candidate.next_action_on_exact_head_pass
+  next_action: authority.first_legal_next_action
 }, null, 2));
