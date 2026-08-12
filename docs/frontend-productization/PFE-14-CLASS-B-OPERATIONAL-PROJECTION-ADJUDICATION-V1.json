@@ -25,6 +25,14 @@
       "candidate_type": "BOOLEAN_OR_NULL",
       "source_semantics": "VALIDATED_SCENARIO_SOURCE_FORECAST_ATTACHMENT_AND_PAYLOAD",
       "attachment_presence_inference_authorized": false
+    },
+    "slot_window": {
+      "entry_count": 24,
+      "schedule_identity_source": "PERSISTED_SCHEDULE_START_LOGICAL_TIME_PLUS_ORDERED_O00_O23",
+      "persisted_states": ["CLAIMED", "RUNNING", "COMPLETED", "DEGRADED", "FAILED"],
+      "absent_row_state": "NOT_MATERIALIZED",
+      "absent_row_failure_inference_authorized": false,
+      "browser_derivation_authorized": false
     }
   },
   "blocked_class_b_fields": {
@@ -32,13 +40,12 @@
     "missed_slot_count": "CURRENT_LIST_MISSED_SLOTS_SUPPRESSED_WHILE_ACTIVE_DEDICATED_COUNT_SEMANTIC_REQUIRED",
     "backfill_status": "DURABLE_BACKFILL_PROVENANCE_NOT_PRESENT",
     "state_status": "NORMALIZED_PRODUCT_STATE_VOCABULARY_NOT_FROZEN",
-    "o00_o23_product_status": "EXACT_LOGICAL_TIME_WINDOW_IDENTITY_REQUIRED",
     "refresh_after_seconds": "SCHEDULER_INTERVAL_IS_NOT_PRODUCT_REFRESH_POLICY"
   },
   "class_c_fields_unchanged": ["runtime_stage", "latest_tick_started_at", "restart_detected", "recovery_status"],
   "class_b_implementation_authorized": false,
   "class_c_implementation_authorized": false,
-  "proposed_next_candidate": "PFE_14_IMPLEMENT_NARROW_CLASS_B_DEGRADATION_FORECAST_PROVIDER",
-  "proposed_next_candidate_fields": ["runtime_degradation_status", "degradation_reason_codes", "forecast_status", "scenario_source_eligible"],
+  "proposed_next_candidate": "PFE_14_IMPLEMENT_NARROW_CLASS_B_DEGRADATION_FORECAST_SLOT_PROVIDER",
+  "proposed_next_candidate_fields": ["runtime_degradation_status", "degradation_reason_codes", "forecast_status", "scenario_source_eligible", "slot_window"],
   "pfe14_s4_effective": false
 }
