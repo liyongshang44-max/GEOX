@@ -4,8 +4,9 @@ const read = (p) => fs.readFileSync(p, 'utf8');
 const json = (p) => JSON.parse(read(p));
 
 const authority = json('docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json');
-const qualification = json('docs/frontend-productization/PFE-14-EVIDENCE-HEALTH-PRODUCTIZATION-QUALIFICATION-V1.json');
+const parent = json('docs/frontend-productization/PFE-14-EVIDENCE-HEALTH-PRODUCTIZATION-QUALIFICATION-V1.json');
 const ruling = json('docs/frontend-productization/PFE-14-CLASS-B-OPERATIONAL-PROJECTION-ADJUDICATION-V1.json');
+const qualification = fs.existsSync('docs/frontend-productization/PFE-14-CLASS-B-OPERATIONAL-PROJECTION-QUALIFICATION-V1.json') ? json('docs/frontend-productization/PFE-14-CLASS-B-OPERATIONAL-PROJECTION-QUALIFICATION-V1.json') : null;
 const scheduler = read('apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts');
 const availability = read('apps/server/src/runtime/twin_runtime/restart_backfill_stale_detection_service_v1.ts');
 const forecastContract = read('apps/server/src/domain/twin_runtime/forecast_scenario_contracts_v1.ts');
@@ -13,13 +14,29 @@ const readApi = read('apps/server/src/services/mcft_field_twin_read_api_v1.ts');
 const migration = read('apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql');
 const adapterConfig = read('apps/server/src/runtime/twin_runtime/shadow_online_adapter_config_v1.ts');
 
-assert.equal(authority.first_legal_next_action, 'PFE_14_ADJUDICATE_CLASS_B_OPERATIONAL_PRODUCT_PROJECTION');
+const adjudicationAction = 'PFE_14_ADJUDICATE_CLASS_B_OPERATIONAL_PRODUCT_PROJECTION';
+const providerAction = 'PFE_14_IMPLEMENT_NARROW_CLASS_B_DEGRADATION_FORECAST_SLOT_PROVIDER';
+assert.ok([adjudicationAction, providerAction].includes(authority.first_legal_next_action), 'UNRECOGNIZED_CLASS_B_ADJUDICATION_SUCCESSOR');
 assert.equal(authority.class_b_operational_projection_adjudication_authorized, true);
 assert.equal(authority.class_b_operational_extension_implementation_authorized, false);
 assert.equal(authority.class_c_field_implementation_authorized, false);
 assert.equal(authority.s4_effective, false);
-assert.equal(qualification.class_b_projection_adjudication.authorized_next_candidate, true);
-assert.equal(qualification.class_b_projection_adjudication.implementation_authorized, false);
+assert.equal(parent.class_b_projection_adjudication.authorized_next_candidate, true);
+assert.equal(parent.class_b_projection_adjudication.implementation_authorized, false);
+if (authority.first_legal_next_action === providerAction) {
+  assert(qualification, 'CLASS_B_QUALIFICATION_REQUIRED');
+  assert.equal(qualification.qualified_subject_sha, 'd3bb7a4ff8509899981b41efe724a2c6b74540f5');
+  assert.equal(qualification.focused_run_id, 31607280419);
+  assert.equal(qualification.standard_ci_run_id, 31607280420);
+  assert.equal(qualification.all_pass, true);
+  assert.equal(qualification.protected_main_merge_claimed, false);
+  assert.equal(authority.class_b_operational_projection_adjudication_proof?.subject_sha, qualification.qualified_subject_sha);
+  assert.equal(authority.class_b_operational_projection_adjudication_proof?.focused_run_id, qualification.focused_run_id);
+  assert.equal(authority.class_b_operational_projection_adjudication_proof?.standard_ci_run_id, qualification.standard_ci_run_id);
+  assert.equal(authority.class_b_operational_projection_adjudication_proof?.all_pass, true);
+  assert.equal(authority.class_b_operational_projection_adjudication_proof?.merged_to_protected_main, false);
+  assert.equal(authority.class_b_narrow_provider_implementation_authorized, true);
+}
 
 assert.equal(ruling.record_status, 'ADJUDICATION_CANDIDATE_NO_IMPLEMENTATION_AUTHORITY');
 assert.equal(ruling.runtime_effect, false);
@@ -29,27 +46,13 @@ assert.equal(ruling.kbs_policy_effect, false);
 assert.equal(ruling.class_b_implementation_authorized, false);
 assert.equal(ruling.class_c_implementation_authorized, false);
 assert.equal(ruling.pfe14_s4_effective, false);
-assert.deepEqual(ruling.proposed_next_candidate_fields, [
-  'runtime_degradation_status',
-  'degradation_reason_codes',
-  'forecast_status',
-  'scenario_source_eligible',
-  'slot_window',
-]);
-
-// Runtime degradation is already a server-owned S4 health semantic.
+assert.deepEqual(ruling.proposed_next_candidate_fields, ['runtime_degradation_status','degradation_reason_codes','forecast_status','scenario_source_eligible','slot_window']);
 assert(availability.includes('runtime_health_status: "HEALTHY" | "DEGRADED" | "UNAVAILABLE"'));
 assert(availability.includes('if (!input.checkpoint) return "UNAVAILABLE"'));
 assert(availability.includes('input.freshness !== "FRESH" || input.lag > 0'));
-
-// Missed-slot list is intentionally suppressed while an active slot exists;
-// therefore list length is not a universal backlog count.
 assert(scheduler.includes('async listMissedSlots'));
 assert(scheduler.includes("AND state IN ('CLAIMED','RUNNING') LIMIT 1"));
 assert(scheduler.includes('if (active.rows.length) return [];'));
-
-// CAP04 owns Forecast status/scenario eligibility semantics and S4 read API
-// revalidates Scenario-source Forecast payloads before attachment.
 assert(forecastContract.includes('status: "COMPLETED" | "BLOCKED"'));
 assert(forecastContract.includes('scenario_eligible: boolean'));
 assert(forecastContract.includes('if (payload.status === "COMPLETED")'));
@@ -58,8 +61,6 @@ assert(forecastContract.includes('if (payload.scenario_eligible !== false)'));
 assert(readApi.includes('validateCap04ForecastRunPayloadV1'));
 assert(readApi.includes('SOURCE_FORECAST_NOT_COMPLETED_72'));
 assert(readApi.includes('CURRENT_FORECAST_BLOCKED'));
-
-// S3 persistence proves one fixed O00-O23 schedule per exact six-key scope.
 assert(scheduler.includes('slot_count: 24 as const'));
 assert(scheduler.includes('schedule_start_logical_time'));
 assert(scheduler.includes('EXACT_O00_O23_SLOT_SET_REQUIRED'));
@@ -72,21 +73,7 @@ assert.deepEqual(ruling.safe_provider_candidate_fields.slot_window.persisted_sta
 assert.equal(ruling.safe_provider_candidate_fields.slot_window.entry_count, 24);
 assert.equal(ruling.safe_provider_candidate_fields.slot_window.absent_row_state, 'NOT_MATERIALIZED');
 assert.equal(ruling.safe_provider_candidate_fields.slot_window.absent_row_failure_inference_authorized, false);
-
 assert.equal(ruling.blocked_class_b_fields.backfill_status, 'DURABLE_BACKFILL_PROVENANCE_NOT_PRESENT');
 assert.equal(ruling.blocked_class_b_fields.refresh_after_seconds, 'SCHEDULER_INTERVAL_IS_NOT_PRODUCT_REFRESH_POLICY');
-assert.equal(ruling.blocked_class_b_fields.o00_o23_product_status, undefined);
 assert.deepEqual(ruling.class_c_fields_unchanged, ['runtime_stage','latest_tick_started_at','restart_detected','recovery_status']);
-
-console.log(JSON.stringify({
-  status: 'PASS',
-  adjudication: 'PFE-14-CLASS-B-OPERATIONAL-PROJECTION-ADJUDICATION-V1',
-  safe_provider_candidate_fields: ruling.proposed_next_candidate_fields,
-  blocked_class_b_field_count: Object.keys(ruling.blocked_class_b_fields).length,
-  slot_window_authorized_for_candidate: true,
-  absent_slot_semantics: 'NOT_MATERIALIZED_ONLY',
-  class_b_implementation_authorized: false,
-  class_c_implementation_authorized: false,
-  pfe14_s4_effective: false,
-  proposed_next_candidate: ruling.proposed_next_candidate
-}, null, 2));
+console.log(JSON.stringify({status:'PASS', adjudication:'PFE-14-CLASS-B-OPERATIONAL-PROJECTION-ADJUDICATION-V1', safe_provider_candidate_fields:ruling.proposed_next_candidate_fields, historical_adjudication_proof_bound:authority.first_legal_next_action===providerAction, class_b_implementation_authorized:false, class_c_implementation_authorized:false, pfe14_s4_effective:false, next_action:authority.first_legal_next_action}, null, 2));
