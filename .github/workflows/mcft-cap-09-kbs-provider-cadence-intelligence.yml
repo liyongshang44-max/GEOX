@@ -7,6 +7,7 @@ on:
       - 'scripts/runtime_acceptance/MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs'
       - 'scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_KBS_CURRENT_FRESHNESS_METADATA.py'
       - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE.cjs'
+      - 'scripts/runtime_acceptance/VALIDATE_MCFT_CAP_09_KBS_ENGINEERING_WINDOW.py'
       - 'scripts/runtime_acceptance/RESTORE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_STATE.py'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PROVIDER-CADENCE-INTELLIGENCE-DESIGN-V1.md'
   workflow_dispatch:
@@ -52,6 +53,34 @@ jobs:
       - name: Evaluate PASS DEFER FAIL without changing authority
         run: node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE.cjs
 
+      - name: Exercise non-authoritative KBS engineering window when age is within 24h
+        shell: bash
+        run: |
+          set -euo pipefail
+          age="$(python -c 'import json; print(json.load(open("acceptance-output/KBS_CURRENT_FRESHNESS_METADATA.json"))["latest_age_hours"])')"
+          if python -c 'import sys; sys.exit(0 if float(sys.argv[1]) <= 24 else 1)' "$age"; then
+            python scripts/runtime_acceptance/VALIDATE_MCFT_CAP_09_KBS_ENGINEERING_WINDOW.py \
+              > acceptance-output/KBS_ENGINEERING_WINDOW.json
+          else
+            python - <<'PY'
+          import json
+          proof = {
+            "schema_version": "geox_mcft_cap09_kbs_engineering_window_v1",
+            "status": "NOT_AVAILABLE",
+            "qualification_mode": "ENGINEERING_VALIDATION",
+            "engineering_max_age_hours": 24,
+            "engineering_window_pass": False,
+            "authority_effect": False,
+            "formal_effect": False,
+            "ea5e3_authorized": False,
+            "formal_window_started": False,
+            "database_write_count": 0,
+            "canonical_write_count": 0,
+          }
+          open("acceptance-output/KBS_ENGINEERING_WINDOW.json", "w").write(json.dumps(proof, sort_keys=True) + "\n")
+          PY
+          fi
+
       - name: Upload metadata-only cadence intelligence proof
         if: always()
         uses: actions/upload-artifact@v4
@@ -60,5 +89,6 @@ jobs:
           path: |
             acceptance-output/KBS_CURRENT_FRESHNESS_METADATA.json
             acceptance-output/KBS_PROVIDER_CADENCE_INTELLIGENCE.json
+            acceptance-output/KBS_ENGINEERING_WINDOW.json
           if-no-files-found: warn
           retention-days: 30
