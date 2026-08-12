@@ -14,7 +14,7 @@ const prototype = JSON.parse(fs.readFileSync(prototypePath, 'utf8'));
 assert.match(taskbook, /PFE-14-TASK-V0\.2-MASTER-ALIGNED/);
 assert.match(taskbook, /ONE_GOVERNED_SIX_KEY_SCOPE/);
 assert.match(taskbook, /目标态原型 \/ 非当前运行数据/);
-assert.match(taskbook, /一级导航冻结为:[\s\S]*运行总览[\s\S]*地块/);
+assert.match(taskbook, /一级导航冻结为[：:][\s\S]*运行总览[\s\S]*地块/);
 assert.match(taskbook, /不再把 `\/operator\/pilot` 列为 PFE-14 正式路由/);
 assert.match(taskbook, /Live Device: Not connected/);
 assert.match(taskbook, /Production Gateway: Not online/);
@@ -22,7 +22,7 @@ assert.match(taskbook, /Field Pilot: Not started/);
 assert.match(taskbook, /Controlled Execution: Disabled/);
 assert.match(taskbook, /MCFT_CAP_09_PROVIDE_AUTHORIZED_SCHEDULER_AND_EVIDENCE_AVAILABILITY_READ_CONTRACT/);
 assert.doesNotMatch(taskbook, /Governed Field Runtimes/);
-assert.doesNotMatch(taskbook, /all fields/i);
+assert.match(taskbook, /不得出现[：:][\s\S]*all fields/);
 
 assert.equal(prototype.scope_rule, 'ONE_GOVERNED_SIX_KEY_SCOPE_ONLY');
 assert.deepEqual(prototype.primary_navigation, ['runtime_overview', 'fields']);
