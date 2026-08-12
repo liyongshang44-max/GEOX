@@ -1,0 +1,33 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5e2_soil_first_seen_evidence_v1",
+  "status": "PARTIAL",
+  "authority_effect": false,
+  "scheduler_viability_only": true,
+  "source_family": "KBS_CURRENT_WEATHER_VARIATE_25",
+  "endpoint": "https://lter.kbs.msu.edu/weather/variates/25",
+  "observed_source_cadence_minutes": 5,
+  "required_max_first_seen_lag_minutes": 10,
+  "minimum_transition_count_for_viability": 12,
+  "transition_count": 1,
+  "transitions": [
+    {
+      "diagnostic_run_id": 31591585976,
+      "diagnostic_job_id": 94097571833,
+      "artifact_id": 9139667873,
+      "from_latest_timestamp": "2026-08-12T11:15:00.000Z",
+      "to_latest_timestamp": "2026-08-12T11:25:00.000Z",
+      "last_not_seen_at": "2026-08-12T11:29:34.210Z",
+      "first_seen_at": "2026-08-12T11:30:34.510Z",
+      "first_seen_lag_minutes": 5.575,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    }
+  ],
+  "limitations": [
+    "ONE_REAL_FIRST_SEEN_TRANSITION_ONLY",
+    "INSUFFICIENT_FOR_P95_OR_PROVIDER_COMPATIBLE_LIVE_WINDOW_CLAIM",
+    "NO_CROP_AUTHORITY_CREATED",
+    "NO_FRESHNESS_AUTHORITY_CHANGED",
+    "NO_LIVE_ACTIVATION_EFFECT"
+  ]
+}
