@@ -17,11 +17,31 @@ const AUTHORITY = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIO
 const HISTORICAL_OA_GATE = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_RUNNER_QUALIFICATION.cjs";
 const AMENDMENT07 = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-07-EXTERNAL-FORMAL-FIXED-LAG-CAUSALITY-AUTHORITY.md";
 const CROP_AUTHORITY = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json";
+const CONFIG_MATRIX = "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json";
 const PROVIDER_HELPER = "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py";
+const EA4_HELPER = "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py";
 const OBSERVER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts";
 const DB_SOURCE = "apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts";
 const INGRESS = "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts";
+const NEXT_TICK = "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts";
 const SOIL_INGRESS = "apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts";
+const RAW_RETENTION = "apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts";
+const CANONICAL_IDENTITY = "apps/server/src/domain/twin_runtime/canonical_identity_v1.ts";
+const RUNTIME_CONFIG = "apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts";
+const BINDING_PROFILE = "apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.ts";
+
+const LIVE_DEPENDENCY_BINDINGS = [
+  EA4_HELPER,
+  SOIL_INGRESS,
+  RAW_RETENTION,
+  INGRESS,
+  NEXT_TICK,
+  CANONICAL_IDENTITY,
+  RUNTIME_CONFIG,
+  BINDING_PROFILE,
+  CONFIG_MATRIX,
+  CROP_AUTHORITY,
+];
 
 function git(...args) { return execFileSync("git", args, { encoding: "utf8" }).trim(); }
 function read(path) { return fs.readFileSync(path, "utf8"); }
@@ -33,6 +53,7 @@ function yes(value, code) { eq(value, true, code); }
 function no(value, code) { eq(value, false, code); }
 function blob(ref, file) { return git("rev-parse", `${ref}:${file}`); }
 function unchanged(file, code) { eq(blob(BASE, file), blob("HEAD", file), code); }
+function occurrences(text, marker) { return text.split(marker).length - 1; }
 function before(text, first, second, code) {
   const a = text.indexOf(first);
   const b = text.indexOf(second);
@@ -45,18 +66,24 @@ function main() {
   const changed = git("diff", "--name-only", `${BASE}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
   eq(JSON.stringify(changed), JSON.stringify(expectedChanged), "EA5E2_LIVE_HARDENING_EXACT_SIX_FILE_BOUNDARY_REQUIRED");
 
-  // Historical authority and production/runtime semantics must remain byte-identical to the protected-main base.
   for (const [file, code] of [
     [SELECTOR, "EA5E2_LIVE_HARDENING_RUNTIME_SELECTOR_MUTATION_FORBIDDEN"],
     [AUTHORITY, "EA5E2_LIVE_HARDENING_OA_AUTHORITY_MUTATION_FORBIDDEN"],
     [HISTORICAL_OA_GATE, "EA5E2_LIVE_HARDENING_HISTORICAL_OA_GATE_MUTATION_FORBIDDEN"],
     [AMENDMENT07, "EA5E2_LIVE_HARDENING_AMENDMENT07_MUTATION_FORBIDDEN"],
     [CROP_AUTHORITY, "EA5E2_LIVE_HARDENING_CROP_AUTHORITY_MUTATION_FORBIDDEN"],
+    [CONFIG_MATRIX, "EA5E2_LIVE_HARDENING_CONFIG_MATRIX_MUTATION_FORBIDDEN"],
     [PROVIDER_HELPER, "EA5E2_LIVE_HARDENING_PROVIDER_DECODER_MUTATION_FORBIDDEN"],
+    [EA4_HELPER, "EA5E2_LIVE_HARDENING_EA4_HELPER_MUTATION_FORBIDDEN"],
     [OBSERVER, "EA5E2_LIVE_HARDENING_OBSERVER_MUTATION_FORBIDDEN"],
     [DB_SOURCE, "EA5E2_LIVE_HARDENING_DB_SOURCE_MUTATION_FORBIDDEN"],
     [INGRESS, "EA5E2_LIVE_HARDENING_INGRESS_MUTATION_FORBIDDEN"],
+    [NEXT_TICK, "EA5E2_LIVE_HARDENING_NEXT_TICK_MUTATION_FORBIDDEN"],
     [SOIL_INGRESS, "EA5E2_LIVE_HARDENING_SOIL_INGRESS_MUTATION_FORBIDDEN"],
+    [RAW_RETENTION, "EA5E2_LIVE_HARDENING_RAW_RETENTION_MUTATION_FORBIDDEN"],
+    [CANONICAL_IDENTITY, "EA5E2_LIVE_HARDENING_CANONICAL_IDENTITY_MUTATION_FORBIDDEN"],
+    [RUNTIME_CONFIG, "EA5E2_LIVE_HARDENING_RUNTIME_CONFIG_MUTATION_FORBIDDEN"],
+    [BINDING_PROFILE, "EA5E2_LIVE_HARDENING_BINDING_PROFILE_MUTATION_FORBIDDEN"],
   ]) unchanged(file, code);
 
   eq(blob(BASE, HISTORICAL_OA_WORKFLOW), "df6c2cf37a87fdbd8715181dea5667ebb6ad479f", "EA5E2_LIVE_HARDENING_HISTORICAL_OA_WORKFLOW_BASE_PIN_REQUIRED");
@@ -110,7 +137,6 @@ function main() {
   has(runner, "Promise.allSettled([gfsPromise, soilPromise])", "EA5E2_LIVE_HARDENING_PARALLEL_JOIN_REQUIRED");
   has(runner, "gfs_soil_acquisition_parallel: true", "EA5E2_LIVE_HARDENING_PARALLEL_PROOF_REQUIRED");
   has(runner, "soil_polling_begins_at_authorized_window_open: true", "EA5E2_LIVE_HARDENING_SOIL_WINDOW_PROOF_REQUIRED");
-
   has(runner, "private writeRefLedger(): void", "EA5E2_LIVE_HARDENING_REF_LEDGER_REQUIRED");
   has(runner, "async deleteTrackedRetainedRawEvidence(): Promise<string[]>", "EA5E2_LIVE_HARDENING_LOCAL_FAILURE_CLEANUP_REQUIRED");
   has(runner, "EA5E2_PHASE_FAILURE_TRANSIENT_CLEANUP_FAILED", "EA5E2_LIVE_HARDENING_CLEANUP_FAILURE_MUST_FAIL_CLOSED");
@@ -120,18 +146,26 @@ function main() {
   if (retainStart < 0 || retainEnd < 0) throw new Error("EA5E2_LIVE_HARDENING_RETAIN_FUNCTION_REQUIRED");
   const retain = runner.slice(retainStart, retainEnd);
   before(retain, "this.recordRef(ref, input.raw_sha256, raw.byteLength);", "const probe = await this.request", "EA5E2_LIVE_HARDENING_LEDGER_BEFORE_REMOTE_MUTATION_REQUIRED");
-
   has(runner, "const KBS_RAW_HOURLY_TRANSPORT_MAX_ATTEMPTS = 3;", "EA5E2_LIVE_HARDENING_BOUNDED_KBS_RETRY_REQUIRED");
   has(runner, "response.status === 429 || response.status >= 500", "EA5E2_LIVE_HARDENING_TRANSIENT_HTTP_ONLY_RETRY_REQUIRED");
   has(runner, 'late_transport_retry_scope: "SAME_SOURCE_TRANSIENT_ONLY"', "EA5E2_LIVE_HARDENING_SAME_SOURCE_RETRY_PROOF_REQUIRED");
   lacks(runner, "EA5E2_LIVE_KBS_EXACT_TARGET_ROW_REQUIRED", "EA5E2_LIVE_HARDENING_DECODER_SEMANTIC_RETRY_MUST_NOT_MOVE_INTO_RUNNER");
   has(runner, "const latestIngressStartMs = Date.parse(addMinutes(slot.late_exact_hour_evidence_cutoff, -MIN_INGRESS_MARGIN_MINUTES));", "EA5E2_LIVE_HARDENING_LATE_MARGIN_REQUIRED");
 
+  const providerHelper = read(PROVIDER_HELPER);
+  has(providerHelper, 'EA4_PATH = ROOT / "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py"', "EA5E2_LIVE_HARDENING_DYNAMIC_EA4_DEPENDENCY_REQUIRED");
+
   const live = read(LIVE);
   has(live, "group: mcft-cap09-ea5e2-operational-activation-live-v1", "EA5E2_LIVE_HARDENING_GLOBAL_SERIALIZATION_REQUIRED");
   has(live, "cancel-in-progress: false", "EA5E2_LIVE_HARDENING_RUNNING_WINDOW_CANCELLATION_FORBIDDEN");
   lacks(live, "pull_request:", "EA5E2_LIVE_HARDENING_LIVE_PR_TRIGGER_FORBIDDEN");
   has(live, "Fail fast unless KBS Raw Hourly is currently within unchanged 6h authority", "EA5E2_LIVE_HARDENING_KBS_FAIL_FAST_REQUIRED");
+  has(live, "Select one real future target T with explicit pre-boundary lead guard", "EA5E2_LIVE_HARDENING_TARGET_LEAD_GUARD_STEP_REQUIRED");
+  has(live, "const MIN_PRE_BOUNDARY_LEAD_MINUTES=20;", "EA5E2_LIVE_HARDENING_MIN_TARGET_LEAD_REQUIRED");
+  has(live, "const PRE_BOUNDARY_OFFSET_MINUTES=30;", "EA5E2_LIVE_HARDENING_T_MINUS_30_TARGET_GUARD_REQUIRED");
+  has(live, "while((targetMs-PRE_BOUNDARY_OFFSET_MINUTES*60000)-now.getTime()<MIN_PRE_BOUNDARY_LEAD_MINUTES*60000) targetMs+=3600000;", "EA5E2_LIVE_HARDENING_TARGET_MUST_ROLL_FORWARD_REQUIRED");
+  has(live, "EA5E2_ACTIVATION_PREBOUNDARY_LEAD_GUARD_FAILED", "EA5E2_LIVE_HARDENING_TARGET_LEAD_FAIL_CLOSED_REQUIRED");
+  has(live, "minimum_pre_boundary_lead_minutes:MIN_PRE_BOUNDARY_LEAD_MINUTES", "EA5E2_LIVE_HARDENING_TARGET_LEAD_METADATA_REQUIRED");
   has(live, "Fail fast unless selected T has one conservative frozen crop stage", "EA5E2_LIVE_HARDENING_CROP_FAIL_FAST_REQUIRED");
   before(live, "Fail fast unless selected T has one conservative frozen crop stage", "Execute real pre-boundary provider phase with private transient R2 and isolated DB", "EA5E2_LIVE_HARDENING_CROP_PREFLIGHT_BEFORE_PROVIDER_REQUIRED");
   has(live, "Upload PRE attempt cleanup ledger even when provider phase fails", "EA5E2_LIVE_HARDENING_PRE_FAILURE_LEDGER_REQUIRED");
@@ -143,6 +177,12 @@ function main() {
   has(live, "late.late_transport_max_attempts!==3", "EA5E2_LIVE_HARDENING_LATE_RETRY_VERIFICATION_REQUIRED");
   has(live, "crop.crop_stage_code!==observer.crop_stage_code", "EA5E2_LIVE_HARDENING_CROP_PREFLIGHT_OBSERVER_MATCH_REQUIRED");
   has(live, "Wait until actual Runtime observer T plus 7h17m", "EA5E2_LIVE_HARDENING_REAL_OBSERVER_CLOCK_REQUIRED");
+  has(live, "timeout-minutes: 150", "EA5E2_LIVE_HARDENING_LATE_JOB_TIMEOUT_REQUIRED");
+  has(live, "EA5E2_ACTIVATION_OBSERVER_WAIT_TOO_LONG", "EA5E2_LIVE_HARDENING_OBSERVER_WAIT_BOUND_REQUIRED");
+
+  for (const dependency of LIVE_DEPENDENCY_BINDINGS) {
+    if (occurrences(live, dependency) < 2) throw new Error(`EA5E2_LIVE_HARDENING_DEPENDENCY_NOT_BOUND_TWICE:${dependency}`);
+  }
 
   const crop = read(CROP_PREFLIGHT);
   has(crop, "variants.length !== 6", "EA5E2_LIVE_HARDENING_CROP_SIX_VARIANTS_REQUIRED");
@@ -171,6 +211,10 @@ function main() {
     final_cleanup_discovered_equals_deleted_required: true,
     late_same_source_transient_retry_max_attempts: 3,
     target_crop_consensus_fail_fast: true,
+    live_dependency_binding_count: LIVE_DEPENDENCY_BINDINGS.length,
+    dependency_trigger_and_critical_binding_required: true,
+    minimum_pre_boundary_lead_minutes: 20,
+    target_rolls_forward_when_lead_insufficient: true,
     formal_authority_effect: false,
   }));
 }
