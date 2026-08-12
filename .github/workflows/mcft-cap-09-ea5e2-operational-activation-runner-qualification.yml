@@ -111,7 +111,7 @@ jobs:
           };
           const expected={
             authority:'4f0df5f9fe896bf26eda3d673e3153941f59c2e7',
-            gate:'5293801a6480521a23fd91748ea6f6c73be3b4f8',
+            gate:'af6d0fbc208ad37f7fd00084ac4636fd2c08fac6',
             observer:'ec18b215f10bedd66fa2a6a1efef0e41cf57ce38'
           };
           const git=(...args)=>cp.execFileSync('git',args,{encoding:'utf8'}).trim();
