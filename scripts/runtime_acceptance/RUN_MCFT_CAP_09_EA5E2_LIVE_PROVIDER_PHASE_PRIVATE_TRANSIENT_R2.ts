@@ -301,13 +301,17 @@ class Ea5e2PrivateTransientR2StoreV1 implements RawEvidenceRetentionPortV1, RawE
     if (input.retention_class !== "PRIVATE_RESTRICTED_RAW_EVIDENCE") throw new Error("EA5E2_TRANSIENT_RETENTION_CLASS_REQUIRED");
     const raw = Buffer.from(input.bytes);
     if (!raw.byteLength || raw.byteLength !== input.raw_bytes || sha256(raw) !== input.raw_sha256) throw new Error("EA5E2_TRANSIENT_RAW_DIGEST_OR_LENGTH_MISMATCH");
+    const retrievedAt = canonicalIso(input.retrieved_at, "EA5E2_TRANSIENT_RETRIEVED_AT_INVALID");
     const key = this.keyForDigest(input.raw_sha256);
     const ref = this.refForKey(key);
     const probe = await this.request({ method: "HEAD", key, allowed_statuses: [200, 404] });
     if (probe.status === 200) {
       const retainedAt = this.validateHead({ retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength }, key, probe);
-      this.recordRef(ref, input.raw_sha256, raw.byteLength);
-      return { retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength, retained_at: retainedAt, externally_publishable: false };
+      if (Date.parse(retainedAt) >= Date.parse(retrievedAt)) {
+        this.recordRef(ref, input.raw_sha256, raw.byteLength);
+        return { retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength, retained_at: retainedAt, externally_publishable: false };
+      }
+      await this.deleteRetainedRawEvidence(ref);
     }
     const retainedAt = new Date().toISOString();
     await this.request({
