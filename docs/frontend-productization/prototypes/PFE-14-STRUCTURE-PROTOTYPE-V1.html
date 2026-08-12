@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PFE-14 Structure Prototype v1</title>
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --panel: #ffffff;
+      --text: #1d1d1f;
+      --muted: #6e6e73;
+      --line: rgba(60,60,67,.16);
+      --accent: #176b45;
+      --accent-soft: rgba(23,107,69,.10);
+      --radius-control: 12px;
+      --radius-card: 16px;
+      --radius-container: 20px;
+      --shadow: 0 1px 2px rgba(0,0,0,.04);
+      --font: -apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); }
+    .page { max-width: 1540px; margin: 0 auto; padding: 28px; }
+    .review-banner { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 18px; padding: 18px 20px; border: 1px solid var(--line); border-radius: var(--radius-container); background: var(--panel); box-shadow: var(--shadow); }
+    .review-banner h1 { margin: 0 0 6px; font-size: 24px; font-weight: 600; }
+    .review-banner p { margin: 0; color: var(--muted); line-height: 1.5; }
+    .prototype-badge { display: inline-flex; white-space: nowrap; padding: 8px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 600; }
+    .shell { display: grid; grid-template-columns: 230px 1fr; gap: 18px; margin-bottom: 22px; }
+    .sidebar, .shell-main { border: 1px solid var(--line); border-radius: var(--radius-container); background: var(--panel); box-shadow: var(--shadow); }
+    .sidebar { padding: 18px; }
+    .brand { font-size: 18px; font-weight: 600; margin-bottom: 18px; }
+    .nav { display: grid; gap: 8px; }
+    .nav-item { padding: 10px 12px; border-radius: var(--radius-control); color: var(--muted); font-size: 14px; font-weight: 500; }
+    .nav-item.active { color: var(--text); background: var(--accent-soft); }
+    .locale { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+    .shell-main { padding: 18px 20px; }
+    .context { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .pill { padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; }
+    .pill.primary { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+    .nonclaims { margin-top: 12px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .matrix-title { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin: 0 0 12px; }
+    .matrix-title h2 { margin: 0; font-size: 20px; font-weight: 600; }
+    .matrix-title p { margin: 0; color: var(--muted); font-size: 13px; }
+    .matrix { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+    .screen { min-width: 0; border: 1px solid var(--line); border-radius: var(--radius-container); background: var(--panel); box-shadow: var(--shadow); overflow: hidden; }
+    .screen-head { padding: 16px 16px 12px; border-bottom: 1px solid var(--line); }
+    .screen-kicker { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 11px; }
+    .screen h3 { margin: 8px 0 3px; font-size: 17px; font-weight: 600; }
+    .screen-subtitle { color: var(--muted); font-size: 12px; }
+    .screen-body { padding: 14px 16px; display: grid; gap: 10px; }
+    .row { display: grid; grid-template-columns: minmax(110px,.72fr) minmax(0,1fr); gap: 12px; align-items: start; padding: 9px 0; border-bottom: 1px solid var(--line); }
+    .row:last-child { border-bottom: 0; }
+    .label { color: var(--muted); font-size: 12px; font-weight: 500; }
+    .value { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+    .value.unavailable { color: var(--muted); font-style: italic; }
+    .value.boundary { color: var(--accent); font-weight: 500; }
+    .slot-strip { display: flex; justify-content: space-between; gap: 3px; padding: 9px; border: 1px dashed var(--line); border-radius: var(--radius-control); color: var(--muted); font-size: 10px; }
+    .review-note { padding: 10px 16px 12px; border-top: 1px solid var(--line); background: rgba(118,118,128,.035); color: var(--muted); font-size: 10px; line-height: 1.45; }
+    .legend { margin-top: 18px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius-container); background: var(--panel); }
+    .legend h2 { margin: 0 0 10px; font-size: 16px; }
+    .legend-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
+    .legend-item { padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-control); font-size: 11px; line-height: 1.45; }
+    .legend-item strong { display: block; margin-bottom: 4px; }
+    @media (max-width: 1100px) { .matrix { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+    @media (max-width: 760px) { .page { padding: 14px; } .shell { grid-template-columns: 1fr; } .matrix { grid-template-columns: 1fr; } .legend-grid { grid-template-columns: 1fr; } .review-banner { display: grid; } }
+  </style>
+</head>
+<body>
+  <main class="page" data-prototype-class="TARGET_STATE_STRUCTURE_ONLY">
+    <section class="review-banner">
+      <div>
+        <h1>PFE-14 Operator Runtime Console — 结构原型 v1</h1>
+        <p>评审原型，不是运行界面。页面结构与当前仓库 route / GET capability 对齐；没有权威值的位置明确显示未建立状态。</p>
+      </div>
+      <span class="prototype-badge">目标态结构 / 当前无权威运行值</span>
+    </section>
+
+    <section class="shell" aria-label="Operator shell structure">
+      <aside class="sidebar">
+        <div class="brand">GEOX</div>
+        <div class="nav">
+          <div class="nav-item active">运行总览</div>
+          <div class="nav-item">地块</div>
+        </div>
+        <div class="locale">中文 / English</div>
+      </aside>
+      <div class="shell-main">
+        <div class="context">
+          <span class="pill primary" data-runtime-value="true" data-value-class="CURRENT_STATIC_NONCLAIM">Replay-backed Demo</span>
+          <span class="pill" data-runtime-value="true" data-value-class="CURRENT_STATIC_NONCLAIM">Read-only</span>
+        </div>
+        <div class="nonclaims">
+          <span data-runtime-value="true" data-value-class="CURRENT_STATIC_NONCLAIM">Live Device: Not connected</span> ·
+          <span data-runtime-value="true" data-value-class="CURRENT_STATIC_NONCLAIM">Production Gateway: Not online</span> ·
+          <span data-runtime-value="true" data-value-class="CURRENT_STATIC_NONCLAIM">Field Pilot: Not started</span> ·
+          <span data-runtime-value="true" data-value-class="CURRENT_STATIC_NONCLAIM">Controlled Execution: Disabled</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="matrix-title">
+      <h2>12 个产品面结构矩阵</h2>
+      <p>Source annotation 属于评审说明，不属于正式产品 UI。</p>
+    </div>
+
+    <section class="matrix">
+      <article class="screen" data-screen-id="P01" data-route="/operator/twin">
+        <div class="screen-head"><div class="screen-kicker"><span>P01</span><span>/operator/twin</span></div><h3>运行总览</h3><div class="screen-subtitle">Runtime Overview</div></div>
+        <div class="screen-body">
+          <div class="row"><span class="label">当前 Scope</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">未选择</span></div>
+          <div class="row"><span class="label">最近完成时隙</span><span class="value unavailable" data-runtime-value="true" data-value-class="UNAVAILABLE_AUTHORITY">等待 MCFT-9 权威读合同</span></div>
+          <div class="row"><span class="label">下一目标时隙</span><span class="value unavailable" data-runtime-value="true" data-value-class="UNAVAILABLE_AUTHORITY">等待 MCFT-9 权威读合同</span></div>
+          <div class="row"><span class="label">Evidence 资格</span><span class="value unavailable" data-runtime-value="true" data-value-class="UNAVAILABLE_AUTHORITY">等待 MCFT-9 权威读合同</span></div>
+          <div class="slot-strip" data-runtime-value="true" data-value-class="LABEL_ONLY"><span>O00</span><span>…</span><span>O23</span></div>
+        </div>
+        <div class="review-note">当前来源：OperatorTwinOverview + SourceIndexInventory；Scheduler / Evidence Availability 仍为 S4 dependency。</div>
+      </article>
+
+      <article class="screen" data-screen-id="P02" data-route="/operator/fields">
+        <div class="screen-head"><div class="screen-kicker"><span>P02</span><span>/operator/fields</span></div><h3>地块与 Scope</h3><div class="screen-subtitle">Exact Scope Navigator</div></div>
+        <div class="screen-body">
+          <div class="row"><span class="label">Field</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">未选择</span></div>
+          <div class="row"><span class="label">Season</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">未选择</span></div>
+          <div class="row"><span class="label">Zone</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">未选择；无权威目录时保持显式输入</span></div>
+          <div class="row"><span class="label">六键 Scope</span><span class="value boundary" data-runtime-value="true" data-value-class="LABEL_ONLY">必须完整后才打开 Runtime</span></div>
+        </div>
+        <div class="review-note">不自动填 demo zone；不使用设计样例 Scope。</div>
+      </article>
+
+      <article class="screen" data-screen-id="P03" data-route="/operator/fields/:fieldId">
+        <div class="screen-head"><div class="screen-kicker"><span>P03</span><span>/operator/fields/:fieldId</span></div><h3>地块运行总览</h3><div class="screen-subtitle">Field Runtime Overview</div></div>
+        <div class="screen-body">
+          <div class="row"><span class="label">Active Lineage</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后由 current GET 返回</span></div>
+          <div class="row"><span class="label">Checkpoint / Tick</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后由 current GET 返回</span></div>
+          <div class="row"><span class="label">Evidence Window</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后由 current GET 返回</span></div>
+          <div class="row"><span class="label">State / Forecast</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">仅显示 canonical attachment / collection 事实</span></div>
+        </div>
+        <div class="review-note">来源：readMcftRuntime；对象存在不等于 Shadow-online 或 freshness 已成立。</div>
+      </article>
+
+      <article class="screen" data-screen-id="P04" data-route="/operator/fields/:fieldId/evidence">
+        <div class="screen-head"><div class="screen-kicker"><span>P04</span><span>/operator/fields/:fieldId/evidence</span></div><h3>证据</h3><div class="screen-subtitle">Evidence / Trace</div></div>
+        <div class="screen-body">
+          <div class="row"><span class="label">Trace</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取 current GET</span></div>
+          <div class="row"><span class="label">Timeline</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取 current GET</span></div>
+          <div class="row"><span class="label">Freshness</span><span class="value unavailable" data-runtime-value="true" data-value-class="UNAVAILABLE_AUTHORITY">等待 Evidence Availability 权威读合同</span></div>
+          <div class="row"><span class="label">Coverage / Gap</span><span class="value unavailable" data-runtime-value="true" data-value-class="UNAVAILABLE_AUTHORITY">等待 Evidence Availability 权威读合同</span></div>
+        </div>
+        <div class="review-note">当前 route 是 evidence-trace alias；浏览器不得自行计算 freshness。</div>
+      </article>
+
+      <article class="screen" data-screen-id="P05" data-route="/operator/fields/:fieldId/state">
+        <div class="screen-head"><div class="screen-kicker"><span>P05</span><span>/operator/fields/:fieldId/state</span></div><h3>状态</h3><div class="screen-subtitle">State</div></div>
+        <div class="screen-body">
+          <div class="row"><span class="label">状态项</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取 State collection</span></div>
+          <div class="row"><span class="label">Value / Unit</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">仅渲染 returned object 中实际存在字段</span></div>
+          <div class="row"><span class="label">Confidence</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">无返回字段则不补写</span></div>
+          <div class="row"><span class="label">边界</span><span class="value boundary" data-runtime-value="true" data-value-class="LABEL_ONLY">State 不是 Sensor Reading</span></div>
+        </div>
+        <div class="review-note">来源：readMcftStates；不发明状态数值、单位或置信等级。</div>
+      </article>
+
+      <article class="screen" data-screen-id="P06" data-route="/operator/fields/:fieldId/forecast">
+        <div class="screen-head"><div class="screen-kicker"><span>P06</span><span>/operator/fields/:fieldId/forecast</span></div><h3>预测</h3><div class="screen-subtitle">Forecast</div></div>
+        <div class="screen-body">
+          <div class="row"><span class="label">Current Forecast</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取 canonical pointer</span></div>
+          <div class="row"><span class="label">Forecast 集合</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取 current GET</span></div>
+          <div class="row"><span class="label">Scenario eligibility</span><span class="value unavailable" data-runtime-value="true" data-value-class="UNAVAILABLE_AUTHORITY">仅接受服务器权威 verdict</span></div>
+          <div class="row"><span class="label">边界</span><span class="value boundary" data-runtime-value="true" data-value-class="LABEL_ONLY">Forecast ≠ Fact ≠ Recommendation ≠ Action</span></div>
+        </div>
+        <div class="review-note">来源：readMcftRuntime + readMcftForecasts；不得由 forecast presence 推导可用性。</div>
+      </article>
+
+      <article class="screen" data-screen-id="P07" data-route="/operator/fields/:fieldId/health">
+        <div class="screen-head"><div class="screen-kicker"><span>P07</span><span>/operator/fields/:fieldId/health</span></div><h3>运行健康</h3><div class="screen-subtitle">Runtime Health</div></div>
+        <div class="screen-body">
+          <div class="row"><span class="label">Record-set Health</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取 current Health GET</span></div>
+          <div class="row"><span class="label">Operational Health</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取 current Health GET</span></div>
+          <div class="row"><span class="label">Scheduler / Missed</span><span class="value unavailable" data-runtime-value="true" data-value-class="UNAVAILABLE_AUTHORITY">等待 Scheduler Summary 权威读合同</span></div>
+          <div class="row"><span class="label">Backfill / Recovery</span><span class="value unavailable" data-runtime-value="true" data-value-class="UNAVAILABLE_AUTHORITY">等待受治理产品读模型</span></div>
+        </div>
+        <div class="review-note">当前 Health API 不等于 PFE-14 S6 所需完整 scheduler/recovery 产品模型。</div>
+      </article>
+
+      <article class="screen" data-screen-id="P08" data-route="/operator/fields/:fieldId/audit">
+        <div class="screen-head"><div class="screen-kicker"><span>P08</span><span>/operator/fields/:fieldId/audit</span></div><h3>审计</h3><div class="screen-subtitle">Audit / Evidence Trace</div></div>
+        <div class="screen-body">
+          <div class="row"><span class="label">Canonical refs</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取</span></div>
+          <div class="row"><span class="label">Trace / Timeline</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取 current GET</span></div>
+          <div class="row"><span class="label">Validation</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">仅展示 API 实际返回内容</span></div>
+          <div class="row"><span class="label">技术详情</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">ID / hash / refs 默认折叠</span></div>
+        </div>
+        <div class="review-note">当前 route 是 evidence-trace alias；prototype 不嵌入 raw payload。</div>
+      </article>
+
+      <article class="screen" data-screen-id="P09" data-route="/operator/fields/:fieldId/scenario">
+        <div class="screen-head"><div class="screen-kicker"><span>P09</span><span>/operator/fields/:fieldId/scenario</span></div><h3>情景</h3><div class="screen-subtitle">Scenario</div></div>
+        <div class="screen-body">
+          <div class="row"><span class="label">Scenario 集合</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取 current GET</span></div>
+          <div class="row"><span class="label">Attachment</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">只使用 canonical reason / attachment semantics</span></div>
+          <div class="row"><span class="label">推荐</span><span class="value boundary" data-runtime-value="true" data-value-class="LABEL_ONLY">不提供；Scenario 不是 Recommendation</span></div>
+          <div class="row"><span class="label">执行</span><span class="value boundary" data-runtime-value="true" data-value-class="LABEL_ONLY">不提供 approval / dispatch / AO-ACT</span></div>
+        </div>
+        <div class="review-note">来源：readMcftRuntime + readMcftScenarios；canonical surface 只读。</div>
+      </article>
+
+      <article class="screen" data-screen-id="P10" data-route="/operator/fields/:fieldId/action-lifecycle">
+        <div class="screen-head"><div class="screen-kicker"><span>P10</span><span>/operator/fields/:fieldId/action-lifecycle</span></div><h3>行动生命周期</h3><div class="screen-subtitle">Action Lifecycle Readback</div></div>
+        <div class="screen-body">
+          <div class="row"><span class="label">Human Decision</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">存在时由 current Runtime GET 返回</span></div>
+          <div class="row"><span class="label">Approved Plan</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">存在时由 current Runtime GET 返回</span></div>
+          <div class="row"><span class="label">Action Feedback</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取 collection</span></div>
+          <div class="row"><span class="label">写操作</span><span class="value boundary" data-runtime-value="true" data-value-class="LABEL_ONLY">不创建 Decision / Approval / Task / Dispatch</span></div>
+        </div>
+        <div class="review-note">来源：readMcftRuntime + readMcftActionLifecycle；只读可信执行 Evidence。</div>
+      </article>
+
+      <article class="screen" data-screen-id="P11" data-route="/operator/fields/:fieldId/residual">
+        <div class="screen-head"><div class="screen-kicker"><span>P11</span><span>/operator/fields/:fieldId/residual</span></div><h3>残差验证</h3><div class="screen-subtitle">Residual / Verification</div></div>
+        <div class="screen-body">
+          <div class="row"><span class="label">Residual 集合</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取 current GET</span></div>
+          <div class="row"><span class="label">Predicted / Observed</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">仅在 returned object 存在时展示</span></div>
+          <div class="row"><span class="label">Delta</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">无 canonical 字段时不计算、不补写</span></div>
+          <div class="row"><span class="label">边界</span><span class="value boundary" data-runtime-value="true" data-value-class="LABEL_ONLY">Residual 不是因果证明，不写 ROI / Field Memory</span></div>
+        </div>
+        <div class="review-note">来源：readMcftResiduals；prototype 不填任何样例残差数值。</div>
+      </article>
+
+      <article class="screen" data-screen-id="P12" data-route="/operator/fields/:fieldId/calibration">
+        <div class="screen-head"><div class="screen-kicker"><span>P12</span><span>/operator/fields/:fieldId/calibration</span></div><h3>校准</h3><div class="screen-subtitle">Calibration / Model Governance Readback</div></div>
+        <div class="screen-body">
+          <div class="row"><span class="label">Calibration Candidate</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取 current GET</span></div>
+          <div class="row"><span class="label">Shadow Evaluation</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">选定 Scope 后读取 current GET</span></div>
+          <div class="row"><span class="label">Model Activation</span><span class="value" data-runtime-value="true" data-value-class="LABEL_ONLY">仅只读 readback；不提供激活动作</span></div>
+          <div class="row"><span class="label">边界</span><span class="value boundary" data-runtime-value="true" data-value-class="LABEL_ONLY">Candidate ≠ Active Model</span></div>
+        </div>
+        <div class="review-note">来源：readMcftModelGovernance；可见性不授予 Model Activation authority。</div>
+      </article>
+    </section>
+
+    <section class="legend">
+      <h2>评审 Source Class</h2>
+      <div class="legend-grid">
+        <div class="legend-item"><strong>CURRENT_STATIC_NONCLAIM</strong>当前仓库冻结的产品边界。</div>
+        <div class="legend-item"><strong>CURRENT_API_VALUE</strong>仅在实际 GET response/capture 中出现后可填值。</div>
+        <div class="legend-item"><strong>ACCEPTED_ARTIFACT_VALUE</strong>仅可引用具备 run / artifact 身份的不可变验收值。</div>
+        <div class="legend-item"><strong>UNAVAILABLE_AUTHORITY</strong>没有权威值，必须明确显示未建立/等待。</div>
+        <div class="legend-item"><strong>LABEL_ONLY</strong>结构、标签、边界说明，不是运行数据。</div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

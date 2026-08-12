@@ -1,0 +1,52 @@
+{
+  "schema_version": "geox_pfe14_structure_prototype_v1",
+  "record_status": "REVIEW_PROTOTYPE_STRUCTURE_ONLY_NON_EFFECTIVE",
+  "truth_matrix_ref": "docs/frontend-productization/PFE-14-PROTOTYPE-TRUTH-MATRIX-V1.json",
+  "prototype_authority_ref": "docs/frontend-productization/PFE-14-PROTOTYPE-AUTHORITY-V1.json",
+  "html_ref": "docs/frontend-productization/prototypes/PFE-14-STRUCTURE-PROTOTYPE-V1.html",
+  "runtime_effect": false,
+  "route_effect": false,
+  "api_effect": false,
+  "javascript_present": false,
+  "network_request_present": false,
+  "selected_scope_present": false,
+  "current_operational_value_present": false,
+  "visible_value_classes": [
+    "CURRENT_STATIC_NONCLAIM",
+    "UNAVAILABLE_AUTHORITY",
+    "LABEL_ONLY"
+  ],
+  "current_static_nonclaims": [
+    "Replay-backed Demo",
+    "Read-only",
+    "Live Device: Not connected",
+    "Production Gateway: Not online",
+    "Field Pilot: Not started",
+    "Controlled Execution: Disabled"
+  ],
+  "surfaces": [
+    {"id":"P01","route":"/operator/twin","current_sources":["fetchOperatorTwinOverview","fetchOperatorTwinSourceIndexInventory"],"unavailable_sources":["scheduler_summary","evidence_availability"]},
+    {"id":"P02","route":"/operator/fields","current_sources":["current_scope_navigator"],"unavailable_sources":[]},
+    {"id":"P03","route":"/operator/fields/:fieldId","current_sources":["readMcftRuntime"],"unavailable_sources":["scheduler_summary"]},
+    {"id":"P04","route":"/operator/fields/:fieldId/evidence","current_sources":["readMcftTrace","readMcftTimeline"],"unavailable_sources":["evidence_availability"]},
+    {"id":"P05","route":"/operator/fields/:fieldId/state","current_sources":["readMcftStates"],"unavailable_sources":[]},
+    {"id":"P06","route":"/operator/fields/:fieldId/forecast","current_sources":["readMcftRuntime","readMcftForecasts"],"unavailable_sources":["authoritative_scenario_eligibility"]},
+    {"id":"P07","route":"/operator/fields/:fieldId/health","current_sources":["readMcftHealth"],"unavailable_sources":["scheduler_summary","persistence_and_recovery"]},
+    {"id":"P08","route":"/operator/fields/:fieldId/audit","current_sources":["readMcftTrace","readMcftTimeline"],"unavailable_sources":[]},
+    {"id":"P09","route":"/operator/fields/:fieldId/scenario","current_sources":["readMcftRuntime","readMcftScenarios"],"unavailable_sources":[]},
+    {"id":"P10","route":"/operator/fields/:fieldId/action-lifecycle","current_sources":["readMcftRuntime","readMcftActionLifecycle"],"unavailable_sources":[]},
+    {"id":"P11","route":"/operator/fields/:fieldId/residual","current_sources":["readMcftResiduals"],"unavailable_sources":[]},
+    {"id":"P12","route":"/operator/fields/:fieldId/calibration","current_sources":["readMcftModelGovernance"],"unavailable_sources":[]}
+  ],
+  "forbidden_in_this_artifact": [
+    "DESIGN_SAMPLE_VALUE",
+    "INVENTED_SCOPE_ID",
+    "INVENTED_TIMESTAMP",
+    "INVENTED_COUNT",
+    "INVENTED_PERCENTAGE",
+    "INVENTED_SCHEDULER_RESULT",
+    "INVENTED_FRESHNESS_VERDICT",
+    "INVENTED_HEALTH_VERDICT",
+    "INVENTED_AGRONOMIC_VALUE"
+  ]
+}
