@@ -1,0 +1,64 @@
+name: pfe-14-class-b-narrow-provider-v1
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/services/pfe14_mcft09_operational_read_api_v1.ts'
+      - 'apps/server/src/routes/openapi_pfe14_mcft09_operational_read_v1.ts'
+      - 'docs/frontend-productization/PFE-14-CLASS-B-NARROW-PROVIDER-CANDIDATE-V1.json'
+      - 'docs/frontend-productization/PFE-14-CLASS-B-NARROW-PROVIDER-CANDIDATE-V1.md'
+      - 'scripts/frontend_acceptance/ACCEPTANCE_PFE_14_CLASS_B_NARROW_PROVIDER_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_PFE_14_CLASS_B_NARROW_PROVIDER_DB.ts'
+      - '.github/workflows/pfe-14-class-b-narrow-provider-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432/pfe14_class_b_narrow_provider_acceptance
+
+jobs:
+  class-b-narrow-provider:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pfe14_class_b_narrow_provider_acceptance
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres -d pfe14_class_b_narrow_provider_acceptance"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Revalidate Class-B provider implementation authority
+        run: node scripts/frontend_acceptance/ACCEPTANCE_PFE_14_CLASS_B_OPERATIONAL_PROJECTION_QUALIFICATION_V1.cjs
+      - name: Validate narrow provider governance
+        run: node scripts/frontend_acceptance/ACCEPTANCE_PFE_14_CLASS_B_NARROW_PROVIDER_V1.cjs
+      - name: Run real PostgreSQL narrow provider acceptance
+        env:
+          PFE14_CLASS_B_NARROW_PROVIDER_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_PFE_14_CLASS_B_NARROW_PROVIDER_DB.ts
+      - name: Typecheck server
+        run: pnpm --filter @geox/server typecheck
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pfe14-class-b-narrow-provider-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/PFE14_CLASS_B_NARROW_PROVIDER_DB_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
