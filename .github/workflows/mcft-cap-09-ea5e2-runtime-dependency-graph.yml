@@ -5,7 +5,7 @@ on:
     paths:
       - '.github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml'
       - '.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V2.cjs'
       - 'scripts/runtime_acceptance/**'
       - 'apps/server/src/external_evidence/**'
       - 'apps/server/src/persistence/twin_runtime/**'
@@ -34,7 +34,7 @@ jobs:
           persist-credentials: false
 
       - name: Prove complete EA5E2 repository runtime dependency binding
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.cjs
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V2.cjs
 
       - name: Upload metadata-only dependency graph proof
         if: always()
