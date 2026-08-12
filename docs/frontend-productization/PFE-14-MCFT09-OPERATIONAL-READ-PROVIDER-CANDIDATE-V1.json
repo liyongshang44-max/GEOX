@@ -1,0 +1,22 @@
+{
+  "schema_version": "geox_pfe14_mcft09_operational_read_provider_candidate_v1",
+  "record_status": "IMPLEMENTED_CANDIDATE_NOT_EFFECTIVE",
+  "parent_authority": "docs/frontend-productization/PFE-14-MCFT09-READ-DEPENDENCY-READJUDICATION-V1.json",
+  "method": "GET",
+  "route": "/api/v1/operator/twin/fields/:field_id/runtime/operational-summary",
+  "exact_six_key_scope_required": true,
+  "server_clock_source": "POSTGRESQL_TRANSACTION_TIMESTAMP",
+  "canonical_twin_truth": false,
+  "read_only": true,
+  "source_relations": ["twin_shadow_online_scheduler_cursor_v1", "twin_shadow_online_scheduler_slot_v1", "facts"],
+  "source_adapters": ["PostgresEvidenceIngressAdapterV1.freezeEligibleEvidence"],
+  "models": ["scheduler_summary", "evidence_availability"],
+  "runtime_mode_claimed": false,
+  "restart_history_claimed": false,
+  "recovery_history_claimed": false,
+  "frontend_consumption_authorized": false,
+  "write_methods_called": [],
+  "database_migration_delta": 0,
+  "package_delta": 0,
+  "next_action_on_exact_head_pass": "PFE14_OPERATIONAL_READ_PROVIDER_QUALIFICATION_ADJUDICATION"
+}
