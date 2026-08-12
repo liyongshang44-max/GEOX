@@ -1,0 +1,52 @@
+name: mcft-cap-09-ea9b-current-main-window-observer
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '10 5,6,7 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-ea9b-current-main-window-observer-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for KBS Aglog observer
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run current-main EA9B window observer
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.sha }}
+        run: node scripts/runtime_acceptance/OBSERVER_MCFT_CAP_09_EA9B_CURRENT_MAIN_WINDOW_READINESS.mjs
+
+      - name: Upload metadata-only readiness proof
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-ea9b-current-main-window-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA9B_CURRENT_MAIN_WINDOW_READINESS.json
+          if-no-files-found: error
+          retention-days: 30
