@@ -160,10 +160,30 @@ function main() {
     && has(viability, "authority_changed: false");
   blocker(blockers, !viabilityImplemented, "LIVE_WINDOW_VIABILITY_PREFLIGHT_NOT_FAIL_CLOSED");
   blocker(blockers, soilFirstSeen.scheduler_viability_only !== true || soilFirstSeen.authority_effect !== false || Number(soilFirstSeen.observed_source_cadence_minutes) !== 5 || Number(soilFirstSeen.required_max_first_seen_lag_minutes) !== 10, "SOIL_FIRST_SEEN_EVIDENCE_BOUNDARY_DRIFT");
-  warning(warnings, Number(soilFirstSeen.transition_count) < Number(soilFirstSeen.minimum_transition_count_for_viability), "SOIL_FIRST_SEEN_EVIDENCE_CURRENTLY_INSUFFICIENT_FOR_LIVE", {
-    transition_count: Number(soilFirstSeen.transition_count),
-    minimum_transition_count_for_viability: Number(soilFirstSeen.minimum_transition_count_for_viability),
+
+  const soilTransitionCount = Number(soilFirstSeen.transition_count);
+  const soilMinimumTransitionCount = Number(soilFirstSeen.minimum_transition_count_for_viability);
+  const soilLagLimitMinutes = Number(soilFirstSeen.required_max_first_seen_lag_minutes);
+  const soilLagP50Minutes = Number(soilFirstSeen.first_seen_lag_p50_minutes);
+  const soilLagP95Minutes = Number(soilFirstSeen.first_seen_lag_p95_minutes);
+  const soilLagMaxMinutes = Number(soilFirstSeen.first_seen_lag_max_minutes);
+  const soilEvidenceSufficient = soilTransitionCount >= soilMinimumTransitionCount;
+
+  warning(warnings, !soilEvidenceSufficient, "SOIL_FIRST_SEEN_EVIDENCE_CURRENTLY_INSUFFICIENT_FOR_LIVE", {
+    transition_count: soilTransitionCount,
+    minimum_transition_count_for_viability: soilMinimumTransitionCount,
     implication: "LIVE_WINDOW_PREFLIGHT_MUST_RETURN_NO_VIABLE_LIVE_WINDOW_UNTIL_MORE_REAL_TRANSITIONS_EXIST",
+  });
+  warning(warnings, soilEvidenceSufficient && (soilLagP95Minutes > soilLagLimitMinutes || soilLagMaxMinutes > soilLagLimitMinutes), "SOIL_PROVIDER_VIABILITY_CURRENTLY_FAILS_FROZEN_ADMISSION", {
+    transition_count: soilTransitionCount,
+    minimum_transition_count_for_viability: soilMinimumTransitionCount,
+    first_seen_lag_p50_minutes: soilLagP50Minutes,
+    first_seen_lag_p95_minutes: soilLagP95Minutes,
+    first_seen_lag_max_minutes: soilLagMaxMinutes,
+    required_max_first_seen_lag_minutes: soilLagLimitMinutes,
+    provider_compatibility_status: soilFirstSeen.provider_compatibility_status ?? null,
+    provider_compatibility_reasons: Array.isArray(soilFirstSeen.provider_compatibility_reasons) ? soilFirstSeen.provider_compatibility_reasons : [],
+    implication: "LIVE_WINDOW_PREFLIGHT_MUST_RETURN_NO_VIABLE_LIVE_WINDOW;_DO_NOT_DISPATCH_EA5E2_LIVE",
   });
 
   blocker(blockers, !has(runner, "const SOIL_WINDOW_MINUTES = 15;") || !has(runner, "const SOIL_FIRST_FETCH_BEFORE_T_MINUTES = 15;") || !has(runner, "observedAt >= soilWindowStart && observedAt <= Date.parse(target)"), "SOIL_SELECTOR_WINDOW_CONFORMANCE_MISSING");
@@ -232,8 +252,13 @@ function main() {
     dependency_graph_count: dependencyGate.runtime_dependency_graph_count ?? null,
     crop_viability: crop,
     live_window_viability_preflight_implemented: viabilityImplemented,
-    soil_first_seen_transition_count: Number(soilFirstSeen.transition_count),
-    soil_first_seen_minimum_transition_count: Number(soilFirstSeen.minimum_transition_count_for_viability),
+    soil_first_seen_transition_count: soilTransitionCount,
+    soil_first_seen_minimum_transition_count: soilMinimumTransitionCount,
+    soil_first_seen_lag_p50_minutes: soilLagP50Minutes,
+    soil_first_seen_lag_p95_minutes: soilLagP95Minutes,
+    soil_first_seen_lag_max_minutes: soilLagMaxMinutes,
+    soil_first_seen_required_max_lag_minutes: soilLagLimitMinutes,
+    soil_provider_compatibility_status: soilFirstSeen.provider_compatibility_status ?? null,
     late_exact_hour_semantic_polling_implemented: latePollImplemented,
     expensive_live_auto_push_trigger_present: autoPush,
     live_dispatch_mode: autoPush ? "INVALID_AUTO_PUSH" : "EXPLICIT_WORKFLOW_DISPATCH",
