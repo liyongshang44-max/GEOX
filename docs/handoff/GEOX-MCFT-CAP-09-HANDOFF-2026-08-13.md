@@ -1,16 +1,16 @@
 # GEOX MCFT-CAP-09 Continuation Handoff — 2026-08-13
 
-更新时间：2026-08-13 02:05（UTC+8）
+更新时间：2026-08-13 02:12（UTC+8）
 
 ```text
 repository:
 liyongshang44-max/GEOX
 
 protected_main_at_handoff:
-edd8a005702dee309e72b21384c8de5f8f3bd4fa
+1c27cf70f62503e89e37602a6f267141e0546bcf
 
 protected_main_merge:
-PR #3069 — docs(mcft-cap09): add 2026-08-12 continuation handoff
+PR #3070 — MCFT-CAP-09: complete EA5E2 preflight before next live window
 
 current_taskbook:
 docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md
@@ -24,14 +24,17 @@ S6-EA9B-NATURAL-SEASON-EVIDENCE-REQUALIFICATION
 parallel_operational_frontier:
 S6-EA5E2-OPERATIONAL-ACTIVATION-QUALIFICATION-UNDER-AMENDMENT-08
 
-active_implementation_pr:
-PR #3070 — complete EA5E2 preflight before next live window
+latest_completed_implementation_pr:
+PR #3070
 
-active_implementation_pr_head:
+latest_completed_implementation_pr_head:
 a03d2bac28a518cc3d722ea7c3e9c208441ab676
 
-active_implementation_pr_state:
-READY / OPEN / UP-TO-DATE / ordinary CI still running at snapshot
+latest_completed_implementation_pr_merge:
+1c27cf70f62503e89e37602a6f267141e0546bcf
+
+latest_completed_implementation_pr_ci:
+ALL SAME-HEAD WORKFLOW FAMILIES SUCCESS
 
 ea5e2_implementation_qualified:
 true
@@ -138,7 +141,7 @@ T = 2026-08-12T11:00:00Z
 
 真实 provider phase 在 T-5 前没有取得合法 `[T-15m,T]` soil observation，因此 fail closed。
 
-已证明失败后无 authority side effect：
+失败后无 authority side effect：
 
 ```text
 private transient R2 refs cleaned = 4
@@ -189,18 +192,16 @@ T-10 / :50 = PROVEN_INCOMPATIBLE against 5m budget
 T-5  / :55 = PROVEN_INCOMPATIBLE against 0m budget
 ```
 
-该结论：
+该结论只用于下一次 live-window admission：
 
 ```text
 authority_effect = false
 formal_effect = false
 ```
 
-只用于下一次 live-window admission。
-
 ---
 
-## 4. PR #3070：当前 exact-head 状态
+## 4. PR #3070 已完成并进入 protected main
 
 PR：
 
@@ -208,27 +209,23 @@ PR：
 #3070 — MCFT-CAP-09: complete EA5E2 preflight before next live window
 ```
 
-第二条 soil :45 evidence 冻结后旧 head：
-
-```text
-b6fc016a3156ceef703a22aa4fd41eb0ca00d312
-```
-
-旧 head 全部主要 workflow 已绿，但 PR 当时：
-
-```text
-mergeable_state = behind
-```
-
-GitHub ruleset 因 strict up-to-date 拒绝 merge。
-
-已执行非 force Update branch，当前真正 up-to-date head：
+最终 up-to-date exact head：
 
 ```text
 a03d2bac28a518cc3d722ea7c3e9c208441ab676
 ```
 
-Snapshot 时以下 workflow 已 SUCCESS：
+Final ordinary CI：
+
+```text
+run 31625369374 = SUCCESS
+build-test = SUCCESS
+acceptance = SUCCESS
+artifact = 9153130728
+digest = sha256:39e8c9e34c1fee8cebaaacaff9d959ba9b2b4f5f66eb6d972fdb2f5f3e9f9929
+```
+
+同一 exact head 的主要 workflow 全部 SUCCESS：
 
 ```text
 runtime dependency graph
@@ -239,17 +236,18 @@ Main Ruleset readiness
 EA5E2 live-window preflight hardening
 release lane
 EA5E2 runner qualification
+ordinary ci
 ```
 
-Ordinary CI：
+Exact-SHA merge 已完成：
 
 ```text
-run 31625369374 = IN_PROGRESS at snapshot
+merge main = 1c27cf70f62503e89e37602a6f267141e0546bcf
 ```
 
-下一对话必须核 `a03d2bac...` exact-head，不得用旧 `b6fc...` 绿灯代替。
+Protected main 已复核为同一 SHA。
 
-#3070 已实现：
+#3070 现在正式提供：
 
 ```text
 expensive live = workflow_dispatch only
@@ -262,6 +260,8 @@ T+437 observer unchanged
 same-source / same-cycle / real wall clock unchanged
 NO_VIABLE_LIVE_WINDOW before expensive live when admission not proven
 ```
+
+#3070 merge 不制造 operational activation effectiveness，不自动启动 live。
 
 ---
 
@@ -283,11 +283,11 @@ shape = MIXED_FORWARD_AND_BACKFILL_OR_REVISION
 first seen = 2026-08-12T05:03:31Z
 ```
 
-之后 observer 多次 NO_CHANGE，latest 仍为 `2026-08-12T04:00Z`，所以当前已超过 frozen `<=6h` freshness gate，不能启动 live。
+之后 observer 多次 NO_CHANGE，latest 仍停在 `2026-08-12T04:00Z`。当前 freshness 已超过 frozen `<=6h` gate，因此不能启动 live。
 
-Repository transition evidence 仍不足以把 `DAILY_BATCH` 写成 formal cadence authority。
+Repository chained-transition evidence 仍不足以把 `DAILY_BATCH` 写成 formal cadence authority。
 
-但下一次测试的工程 planning 从现在起必须按：
+但下一次测试的工程 planning 必须按：
 
 ```text
 ONE_DAILY_HIGH_VALUE_PUBLICATION_WINDOW
@@ -300,26 +300,35 @@ authority_effect = false
 provider_SLA_claim = false
 ```
 
-含义是：所有 repository-controlled preparation 必须在 KBS 发布前完成，不能把当天唯一机会浪费在临时修代码、临时跑 CI 或机械选择 next whole-hour T。
+所有 repository-controlled preparation 必须在 KBS 发布前完成，不能把当天唯一机会浪费在临时修代码、临时跑 CI 或机械选 next whole-hour T。
 
 ---
 
 ## 6. 下一次 daily window 前必须完成的准备
 
+#3070 merge 后，前 3 项已完成：
+
 ```text
-1. #3070 up-to-date exact head all required checks green
-2. #3070 merge into protected main
-3. post-merge protected main SHA verified
-4. crop successor / lawful future target authority ready if old window expired
+1. #3070 exact head all required checks green = DONE
+2. #3070 merged into protected main = DONE
+3. protected main post-merge SHA verified = DONE
+```
+
+剩余准备：
+
+```text
+4. crop successor / lawful future target authority ready
 5. private R2 bindings verified without exposing secrets
 6. readiness DB binding verified
 7. GFS exact same-cycle path qualified
 8. soil T-15/:45 phase evidence frozen + SSOT green
 9. cleanup ledger / stale transient cleanup qualified
 10. dependency graph exact digest green
-11. no auto-push expensive live
-12. candidate-T search/precompute ready before KBS publication
+11. candidate-T search/precompute ready before KBS publication
+12. publication-triggered read-only admission path ready
 ```
+
+其中 5–10 已有实现/qualification 基础，但在下一次 live 前仍应做 protected-main read-only/preflight 复核。
 
 KBS 发布后只允许分钟级 admission：
 
@@ -335,17 +344,9 @@ publication transition
 
 只有 `READY` 才 workflow_dispatch。
 
-禁止再出现：
-
-```text
-mechanically choose next whole hour
--> start live
--> later discover provider timing impossible
-```
-
 ---
 
-## 7. Crop / season authority 仍是独立 blocker
+## 7. Crop / season authority 是下一关键 blocker
 
 Primary authority frontier：
 
@@ -355,15 +356,17 @@ S6-EA9B-NATURAL-SEASON-EVIDENCE-REQUALIFICATION
 
 旧 current-season thermal salvage 已 terminal。
 
-#3070 当前 PR body 记录旧 crop context terminal legal T：
+旧 crop context terminal legal T：
 
 ```text
 2026-08-12T21:00:00Z
 ```
 
-如果下一次 KBS publication 已晚于合法 target window，不能沿用旧 T；必须先取得 lawful successor / requalified crop context authority。
+下一次 KBS publication 已晚于旧合法 target window，因此不能沿用旧 T。
 
-禁止 automatic stage rollover、future hindsight、cross-season stitching、invented successor epoch。
+必须在下一次 daily window 前取得 lawful successor / requalified crop context authority，或者得到其它被 Taskbook/Amendment 明确允许的 future target authority。禁止 automatic stage rollover、future hindsight、cross-season stitching、invented successor epoch。
+
+这是现在最应优先解决的准备项。
 
 ---
 
@@ -439,16 +442,15 @@ MCFT-CAP-09 complete = false
 
 ```text
 1. 读取 docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-13.md
-2. 核 protected main 当前 SHA
-3. 核 #3070 exact head / mergeable_state / required checks
-4. 若 a03d2bac... 全绿且 up-to-date，按 exact SHA merge
-5. merge 后重新核 protected main，不自动 dispatch live
-6. 核最新 KBS cadence observer / Raw Hourly latest event
-7. 核 crop successor / future target authority
-8. 只有 admission 全 PASS 才考虑下一次 live
+2. 核 protected main 是否仍 >= 1c27cf70f62503e89e37602a6f267141e0546bcf
+3. 核最新 KBS cadence observer / Raw Hourly latest event
+4. 优先推进 lawful crop successor / future target-T authority
+5. 完成 provider-compatible candidate-T precompute
+6. publication 后跑 read-only admission
+7. 只有 READY 才 workflow_dispatch 下一次 live
 ```
 
-若 #3070 已合并，下一工程任务：
+当前工程任务：
 
 ```text
 NEXT-DAILY-WINDOW-PREPARATION
@@ -463,5 +465,5 @@ NEXT-DAILY-WINDOW-PREPARATION
 ## 12. 一句话接手摘要
 
 ```text
-MCFT-CAP-09 仍在 S6，Formal 0/24。EA5E2 implementation 已 qualified、operational activation 未 qualified。run 31584908899 因真实 soil pre-boundary availability fail closed，且无 Formal side effects。#3071 已补出第二条独立 T-15/:45 exact-row first-seen evidence，使 soil scheduler phase 达到 2-repeat PROVEN_COMPATIBLE。#3070 已完成 fail-closed live-window admission、soil phase SSOT、dependency binding 和 manual-only expensive live orchestration，并 Update branch 到 up-to-date head a03d2bac...；snapshot 时仅 ordinary CI 仍在跑。KBS Raw Hourly 当前已超过 6h freshness；formal cadence authority 仍不足，但下一次工程调度必须按每天一次高价值 publication window 做全部前置准备。下一步是 #3070 exact-head 全绿后合入 main，然后提前准备 crop successor + candidate-T precompute；KBS 发布后只做分钟级 admission，READY 才消耗当天唯一 live 窗口。
+MCFT-CAP-09 仍在 S6，Formal 0/24。EA5E2 implementation 已 qualified、operational activation 未 qualified。run 31584908899 因真实 soil pre-boundary availability fail closed，且无 Formal side effects。#3071 已补出第二条独立 T-15/:45 exact-row first-seen evidence，使 soil scheduler phase 达到 2-repeat PROVEN_COMPATIBLE。#3070 已在 exact up-to-date head a03d2bac... 全部 CI/required workflows 通过后合入 protected main，merge SHA 1c27cf70...；现在 repository-controlled live-window admission hardening 已正式落 main。KBS Raw Hourly 当前仍超过 6h freshness；formal cadence authority 仍不足，但下一次工程调度必须按每天一次高价值 publication window 做全部前置准备。当前最高价值工作是先解决旧 crop target window 已过期的问题，并把 lawful future target + candidate-T precompute 准备好；KBS 发布后只做分钟级 admission，READY 才消耗当天唯一 live 窗口。
 ```
