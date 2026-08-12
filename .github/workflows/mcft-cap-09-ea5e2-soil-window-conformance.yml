@@ -6,6 +6,7 @@ on:
       - "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts"
       - "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs"
       - ".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml"
+      - ".github/workflows/mcft-cap-09-ea5e2-operational-activation-runner-qualification.yml"
       - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SOIL_WINDOW_CONFORMANCE.cjs"
       - ".github/workflows/mcft-cap-09-ea5e2-soil-window-conformance.yml"
   workflow_dispatch:
@@ -21,7 +22,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prove exact five-file EA5E2 live-window hardening boundary
+      - name: Prove exact six-file EA5E2 live-window hardening boundary
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SOIL_WINDOW_CONFORMANCE.cjs
 
       - name: Syntax-check target crop consensus preflight
