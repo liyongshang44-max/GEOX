@@ -18,6 +18,7 @@ import {
   type McftTabBundleV1,
 } from "../../../api/mcftFieldTwinRuntime";
 import { useLocale } from "../../../lib/locale";
+import Pfe14OperationalReadbackPanel from "./Pfe14OperationalReadbackPanel";
 import "../../../styles/operatorFieldRuntime.css";
 
 export type McftCanonicalFieldRuntimeRouteKey = McftCanonicalTabKey | "fields" | "evidence" | "audit";
@@ -165,6 +166,7 @@ function CollectionPanel({ title, page }: { title: string; page: McftCollectionP
 function Overview({ runtime }: { runtime: McftRuntimeReadModelV1 }): React.ReactElement {
   return (
     <div className="operatorFieldRuntime__contentGrid">
+      <Pfe14OperationalReadbackPanel scope={runtime.request_scope} />
       <Panel title="Current Runtime Root" subtitle={`root_graph_status=${runtime.root_graph_status}`}>
         <div className="operatorFieldRuntime__summaryGrid">
           {MANDATORY_ROOTS.map(([label, key]) => <RefCard key={String(key)} label={label} value={runtime[key] as McftCanonicalRefV1 | null | undefined} />)}

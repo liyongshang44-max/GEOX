@@ -1,0 +1,42 @@
+name: pfe-14-s4-single-scope-operational-readback-v1
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/src/api/mcftFieldTwinRuntime.ts'
+      - 'apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx'
+      - 'apps/web/src/features/operator/fieldRuntime/Pfe14OperationalReadbackPanel.tsx'
+      - 'apps/web/src/styles/pfe14OperationalReadback.css'
+      - 'docs/frontend-productization/PFE-14-S4-SINGLE-SCOPE-OPERATIONAL-READBACK-CANDIDATE-V1.json'
+      - 'docs/frontend-productization/PFE-14-S4-SINGLE-SCOPE-OPERATIONAL-READBACK-CANDIDATE-V1.md'
+      - 'scripts/frontend_acceptance/ACCEPTANCE_PFE_14_S4_SINGLE_SCOPE_OPERATIONAL_READBACK_V1.cjs'
+      - '.github/workflows/pfe-14-s4-single-scope-operational-readback-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  single-scope-operational-readback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Revalidate provider qualification authority
+        run: node scripts/frontend_acceptance/ACCEPTANCE_PFE_14_MCFT09_OPERATIONAL_READ_PROVIDER_QUALIFICATION_V1.cjs
+      - name: Validate single-scope operational readback boundary
+        run: node scripts/frontend_acceptance/ACCEPTANCE_PFE_14_S4_SINGLE_SCOPE_OPERATIONAL_READBACK_V1.cjs
+      - name: Typecheck web
+        run: pnpm --filter @geox/web typecheck
+      - name: Build web
+        run: pnpm --filter @geox/web build
