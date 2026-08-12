@@ -5,6 +5,8 @@ const assert = require('assert');
 const ROOT = process.cwd();
 const DOC = path.join(ROOT, 'docs/frontend-productization/PFE-14-PROTOTYPE-TRUTH-MATRIX-V1.md');
 const MATRIX = path.join(ROOT, 'docs/frontend-productization/PFE-14-PROTOTYPE-TRUTH-MATRIX-V1.json');
+const AMENDMENT = path.join(ROOT, 'docs/frontend-productization/PFE-14-PROTOTYPE-NO-FABRICATION-AMENDMENT-01.md');
+const PROTOTYPE_AUTHORITY = path.join(ROOT, 'docs/frontend-productization/PFE-14-PROTOTYPE-AUTHORITY-V1.json');
 const AUTHORITY = path.join(ROOT, 'docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json');
 const READ_CONTRACT = path.join(ROOT, 'docs/frontend-productization/PFE-14-S1-FRONTEND-READ-CONTRACT.json');
 const ROUTES = path.join(ROOT, 'apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx');
@@ -24,7 +26,9 @@ function has(text, token, code) {
 }
 
 const doc = read(DOC);
+const amendment = read(AMENDMENT);
 const matrix = json(MATRIX);
+const prototypeAuthority = json(PROTOTYPE_AUTHORITY);
 const authority = json(AUTHORITY);
 const readContract = json(READ_CONTRACT);
 const routes = read(ROUTES);
@@ -38,6 +42,14 @@ assert.equal(matrix.prototype_policy.invented_runtime_values_allowed, false);
 assert.equal(matrix.prototype_policy.invented_numeric_values_allowed, false);
 assert.equal(matrix.prototype_policy.invented_timestamps_allowed, false);
 assert.equal(matrix.prototype_policy.invented_server_verdicts_allowed, false);
+
+assert.equal(prototypeAuthority.prototype_policy_revision, 'v1.1_no_fabrication');
+assert.equal(prototypeAuthority.artifact_classes.TARGET_STATE_PRODUCT_PROTOTYPE.may_use_design_sample_data, false);
+assert.equal(prototypeAuthority.scope_value_policy.may_use_design_sample_scope, false);
+assert.equal(prototypeAuthority.scope_value_policy.may_use_invented_scope_identifiers, false);
+assert.equal(prototypeAuthority.truth_matrix_ref, 'docs/frontend-productization/PFE-14-PROTOTYPE-TRUTH-MATRIX-V1.json');
+assert.equal(prototypeAuthority.policy_amendment_ref, 'docs/frontend-productization/PFE-14-PROTOTYPE-NO-FABRICATION-AMENDMENT-01.md');
+assert(!Object.prototype.hasOwnProperty.call(prototypeAuthority, 'frozen_sample_scope'), 'FROZEN_SAMPLE_SCOPE_MUST_BE_REMOVED');
 
 assert.equal(authority.status, matrix.pfe14_authority_expected_status, 'PFE14_S4_DEPENDENCY_HOLD_DRIFT');
 assert.equal(readContract.implementation_state.api_implemented, false, 'S1_API_MUST_STILL_BE_MARKED_NOT_IMPLEMENTED');
@@ -125,9 +137,14 @@ const docRequired = [
 ];
 for (const token of docRequired) has(doc, token, `DOC_RULE_MISSING:${token}`);
 
+for (const token of ['No sixth class exists', 'may not use invented six-key Scope identifiers', 'PFE-14 S4 remains blocked']) {
+  has(amendment, token, `AMENDMENT_RULE_MISSING:${token}`);
+}
+
 console.log(JSON.stringify({
   status: 'PASS',
   matrix: 'PFE-14-PROTOTYPE-TRUTH-MATRIX-V1',
+  prototype_policy_revision: prototypeAuthority.prototype_policy_revision,
   repo_basis_main_sha: matrix.repo_basis_main_sha,
   surface_count: matrix.prototype_surfaces.length,
   sample_scope_values_allowed: false,
