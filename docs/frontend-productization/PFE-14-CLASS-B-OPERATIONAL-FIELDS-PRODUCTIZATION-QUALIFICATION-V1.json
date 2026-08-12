@@ -1,0 +1,32 @@
+{
+  "schema_version": "geox_pfe14_class_b_operational_fields_productization_qualification_v1",
+  "record_status": "CLASS_B_OPERATIONAL_FIELDS_PRODUCTIZATION_QUALIFIED_S4_SLICE_BOUNDARY_READJUDICATION_AUTHORIZED_NOT_EFFECTIVE",
+  "qualified_subject_sha": "fd9a5c093c59d04ce5715e35952eb8dc71b99083",
+  "focused_run_id": 31613116967,
+  "cap07_lifecycle_run_id": 31613117071,
+  "standard_ci_run_id": 31613117068,
+  "frontend_runtime_page_audit_pass": true,
+  "full_acceptance_pass": true,
+  "commercial_mvp0_release_gate_pass": true,
+  "all_pass": true,
+  "protected_main_merge_claimed": false,
+  "qualified_server_fields_consumed": [
+    "runtime_degradation_status",
+    "degradation_reason_codes",
+    "forecast_status",
+    "scenario_source_eligible",
+    "slot_window"
+  ],
+  "browser_status_derivation_added": false,
+  "canonical_payload_parsing_added": false,
+  "not_materialized_failure_inference_added": false,
+  "runtime_mode_claimed": false,
+  "missed_backfill_restart_recovery_inferred": false,
+  "kbs_policy_effect": false,
+  "s4_effective": false,
+  "s5_effective_claimed": false,
+  "s6_effective_claimed": false,
+  "s7_effective_claimed": false,
+  "taskbook_amendment_authorized": false,
+  "next_action": "PFE_14_S4_SLICE_BOUNDARY_READJUDICATION"
+}
