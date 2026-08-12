@@ -1,9 +1,11 @@
-name: mcft-cap-09-ea5e2-soil-window-conformance
+name: mcft-cap-09-ea5e2-live-window-preflight-hardening
 
 on:
   pull_request:
     paths:
       - "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts"
+      - "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs"
+      - ".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml"
       - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SOIL_WINDOW_CONFORMANCE.cjs"
       - ".github/workflows/mcft-cap-09-ea5e2-soil-window-conformance.yml"
   workflow_dispatch:
@@ -12,11 +14,39 @@ permissions:
   contents: read
 
 jobs:
-  soil-window-conformance:
+  live-window-preflight-hardening:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Prove EA5E2 soil polling matches frozen CAP-03 15m selector
+
+      - name: Prove exact five-file EA5E2 live-window hardening boundary
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SOIL_WINDOW_CONFORMANCE.cjs
+
+      - name: Syntax-check target crop consensus preflight
+        run: node --check scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs
+
+      - name: Prove current frozen crop authority still has a viable last-hour boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf acceptance-output
+          TARGET_T=2026-08-12T21:00:00.000Z \
+            node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs \
+            > /tmp/crop-pass.json
+          node -e '
+            const fs=require("fs");
+            const p=JSON.parse(fs.readFileSync("acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json","utf8"));
+            if(p.status!=="PASS"||p.crop_stage_code!=="MID"||p.exact_fao_variant_count!==6||p.backward_stability_hours!==6||p.forward_transition_guard_hours!==30) process.exit(1);
+          '
+          rm -rf acceptance-output
+          set +e
+          TARGET_T=2026-08-12T22:00:00.000Z \
+            node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs \
+            > /tmp/crop-fail.out 2>&1
+          rc=$?
+          set -e
+          test "$rc" -ne 0
+          grep -F 'EA5E2_TARGET_CROP_CONSENSUS_NOT_SINGLE_STAGE:MID,LATE' /tmp/crop-fail.out
+          echo 'EA5E2_TARGET_CROP_CONSENSUS_BOUNDARY_REGRESSION=PASS'
