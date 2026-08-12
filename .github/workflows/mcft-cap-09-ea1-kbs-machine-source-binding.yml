@@ -1,0 +1,88 @@
+name: mcft-cap-09-ea1-kbs-machine-source-binding
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea1-kbs-machine-source-binding.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1-KBS-MACHINE-SOURCE-BINDING-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1_KBS_MACHINE_SOURCE_BINDING.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-ea1-kbs-machine-binding-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  exact-main-machine-binding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve exact protected-main subject
+        id: subject
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MG_BASE_SHA: ${{ github.event.merge_group.base_sha }}
+        run: |
+          set -euo pipefail
+          if [[ '${{ github.event_name }}' == 'pull_request' ]]; then
+            subject="$PR_BASE_SHA"
+          elif [[ '${{ github.event_name }}' == 'merge_group' ]]; then
+            subject="$MG_BASE_SHA"
+          else
+            echo 'unsupported event' >&2
+            exit 1
+          fi
+          test -n "$subject"
+          echo "sha=$subject" >> "$GITHUB_OUTPUT"
+      - name: Validate candidate boundary and exact-base locks
+        env:
+          MCFT_BASE_SHA: ${{ steps.subject.outputs.sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA1_KBS_MACHINE_SOURCE_BINDING.cjs
+      - name: Checkout exact protected-main subject separately
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.subject.outputs.sha }}
+          path: subject
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+          cache-dependency-path: subject/pnpm-lock.yaml
+      - name: Install exact-subject dependencies
+        working-directory: subject
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium for exact-subject probe
+        working-directory: subject
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Probe KBS with exact protected-main code
+        working-directory: subject
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.subject.outputs.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA1_KBS_CURRENT_WEATHER_MACHINE_ACCESS.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea1-kbs-machine-binding-${{ steps.subject.outputs.sha }}-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA1_KBS_MACHINE_SOURCE_BINDING_STATIC_RESULT.json
+            subject/acceptance-output/MCFT_CAP_09_EA1_KBS_CURRENT_WEATHER_MACHINE_PROBE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
