@@ -1,0 +1,22 @@
+name: mcft-cap-09-ea5e2-soil-window-conformance
+
+on:
+  pull_request:
+    paths:
+      - "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts"
+      - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SOIL_WINDOW_CONFORMANCE.cjs"
+      - ".github/workflows/mcft-cap-09-ea5e2-soil-window-conformance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  soil-window-conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prove EA5E2 soil polling matches frozen CAP-03 15m selector
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SOIL_WINDOW_CONFORMANCE.cjs
