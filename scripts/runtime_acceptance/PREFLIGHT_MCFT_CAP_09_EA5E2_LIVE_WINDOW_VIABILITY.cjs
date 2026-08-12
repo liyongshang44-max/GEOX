@@ -4,6 +4,10 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
+const {
+  EXACT_HOUR_PHASE_OFFSETS: PHASE_ADMISSION_OFFSETS,
+  evaluateExactHourPhaseAdmission,
+} = require("./MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1.cjs");
 
 const OUTPUT = "acceptance-output/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json";
 const EVIDENCE = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SOIL-FIRST-SEEN-EVIDENCE-V1.json";
@@ -21,6 +25,10 @@ const REQUIRED_GLOBAL_TRANSITION_COUNT = 12;
 const MIN_REPEAT_SAMPLES_PER_PHASE = 2;
 const EXACT_HOUR_PHASE_OFFSETS = [15, 10, 5];
 const EXACT_ROW_PHASE_EVIDENCE_BASIS = "EXACT_SOURCE_ROW_FIRST_SEEN";
+
+if (JSON.stringify(EXACT_HOUR_PHASE_OFFSETS) !== JSON.stringify(PHASE_ADMISSION_OFFSETS)) {
+  throw new Error("EA5E2_PHASE_ADMISSION_OFFSET_CONTRACT_DRIFT");
+}
 
 function object(value, code) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(code);
@@ -77,7 +85,7 @@ async function fetchSoilMetadata() {
     redirect: "follow",
     headers: {
       Accept: "application/json,*/*;q=0.5",
-      "User-Agent": "GEOX-MCFT-CAP09-EA5E2-LIVE-WINDOW-VIABILITY/3",
+      "User-Agent": "GEOX-MCFT-CAP09-EA5E2-LIVE-WINDOW-VIABILITY/4",
       "Cache-Control": "no-cache",
       Pragma: "no-cache",
     },
@@ -142,33 +150,6 @@ function validateExactRowPhaseEvidence(evidence) {
   });
 }
 
-function buildExactHourPhaseProfiles(rows) {
-  return EXACT_HOUR_PHASE_OFFSETS.map((sourceOffsetBeforeTargetMinutes) => {
-    const sourceMinuteUtc = (60 - sourceOffsetBeforeTargetMinutes) % 60;
-    const derivedMaxFirstSeenLagMinutes = sourceOffsetBeforeTargetMinutes - MIN_INGRESS_MARGIN_MINUTES;
-    const samples = rows
-      .filter((row) => row.source_minute_utc === sourceMinuteUtc)
-      .map((row) => row.first_seen_lag_minutes);
-    const evidenceSufficient = samples.length >= MIN_REPEAT_SAMPLES_PER_PHASE;
-    const allSamplesVisibleByIngressDeadline = samples.length > 0 && samples.every((lag) => lag <= derivedMaxFirstSeenLagMinutes);
-    return {
-      source_offset_before_target_minutes: sourceOffsetBeforeTargetMinutes,
-      source_minute_utc: sourceMinuteUtc,
-      ingress_deadline_offset_before_target_minutes: MIN_INGRESS_MARGIN_MINUTES,
-      derived_max_first_seen_lag_minutes: derivedMaxFirstSeenLagMinutes,
-      sample_count: samples.length,
-      minimum_repeat_sample_count: MIN_REPEAT_SAMPLES_PER_PHASE,
-      first_seen_lag_upper_bounds_minutes: samples,
-      first_seen_lag_max_minutes: samples.length ? Math.max(...samples) : null,
-      evidence_sufficient: evidenceSufficient,
-      all_samples_visible_by_ingress_deadline: allSamplesVisibleByIngressDeadline,
-      status: evidenceSufficient
-        ? (allSamplesVisibleByIngressDeadline ? "PROVEN_COMPATIBLE" : "PROVEN_INCOMPATIBLE")
-        : "INSUFFICIENT_REPEAT_EVIDENCE",
-    };
-  });
-}
-
 function soilEvidenceSummary() {
   const evidence = JSON.parse(fs.readFileSync(EVIDENCE, "utf8"));
   if (evidence.schema_version !== "geox_mcft_cap09_ea5e2_soil_first_seen_evidence_v1" || evidence.scheduler_viability_only !== true || evidence.authority_effect !== false) {
@@ -195,7 +176,11 @@ function soilEvidenceSummary() {
 
   const { transitions, lags } = validateGlobalTransitions(evidence);
   const exactRows = validateExactRowPhaseEvidence(evidence);
-  const phaseProfiles = buildExactHourPhaseProfiles(exactRows);
+  const phaseAdmission = evaluateExactHourPhaseAdmission(exactRows, {
+    soil_window_minutes: SOIL_WINDOW_MINUTES,
+    minimum_ingress_margin_minutes: MIN_INGRESS_MARGIN_MINUTES,
+    minimum_repeat_samples_per_phase: MIN_REPEAT_SAMPLES_PER_PHASE,
+  });
   return {
     transition_count: transitions.length,
     minimum_global_transition_count: REQUIRED_GLOBAL_TRANSITION_COUNT,
@@ -210,8 +195,8 @@ function soilEvidenceSummary() {
       exact_row_phase_sample_count: exactRows.length,
       scheduler_heuristic_only: true,
       minimum_repeat_samples_per_phase: MIN_REPEAT_SAMPLES_PER_PHASE,
-      phase_profiles: phaseProfiles,
-      proven_compatible_phase_count: phaseProfiles.filter((profile) => profile.status === "PROVEN_COMPATIBLE").length,
+      phase_profiles: phaseAdmission.phase_profiles,
+      proven_compatible_phase_count: phaseAdmission.proven_compatible_phase_count,
     },
   };
 }
@@ -310,7 +295,7 @@ async function main() {
 
   const candidate = reasons.length === 0 ? crop.candidate_t : null;
   const proof = {
-    schema_version: "geox_mcft_cap09_ea5e2_live_window_viability_preflight_v3",
+    schema_version: "geox_mcft_cap09_ea5e2_live_window_viability_preflight_v4",
     status: reasons.length ? "NO_VIABLE_LIVE_WINDOW" : "PASS",
     evaluated_at: evaluatedAt.toISOString(),
     subject_sha: process.env.GITHUB_SHA || process.env.SUBJECT_SHA || null,
@@ -337,6 +322,7 @@ async function main() {
       global_p95_max_used_as_candidate_t_authority: false,
       phase_conditioned_scheduler_heuristic_only: true,
       phase_evidence_basis: EXACT_ROW_PHASE_EVIDENCE_BASIS,
+      phase_algorithm_ssot: "MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1",
       minimum_repeat_samples_per_phase: MIN_REPEAT_SAMPLES_PER_PHASE,
       minimum_repeat_samples_is_authority: false,
     },
@@ -366,7 +352,7 @@ async function main() {
 
 main().catch((error) => {
   writeProof({
-    schema_version: "geox_mcft_cap09_ea5e2_live_window_viability_preflight_v3",
+    schema_version: "geox_mcft_cap09_ea5e2_live_window_viability_preflight_v4",
     status: "NO_VIABLE_LIVE_WINDOW",
     evaluated_at: new Date().toISOString(),
     candidate_T: null,
