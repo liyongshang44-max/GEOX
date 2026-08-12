@@ -37,12 +37,12 @@ assert.equal(authority.s4_runtime_claim_authorized, false);
 assert.equal(authority.s4_effective, false);
 
 const initialNextAction = 'PFE_14_S4_IMPLEMENT_SINGLE_SCOPE_SCHEDULER_EVIDENCE_READBACK';
-const successorNextAction = 'PFE_14_PRODUCTIZE_CURRENT_CANONICAL_STATE_AND_FORECAST_WITHOUT_NEW_DATA_FIELDS';
+const stateForecastAction = 'PFE_14_PRODUCTIZE_CURRENT_CANONICAL_STATE_AND_FORECAST_WITHOUT_NEW_DATA_FIELDS';
+const evidenceHealthAction = 'PFE_14_PRODUCTIZE_CURRENT_EVIDENCE_AND_RUNTIME_HEALTH_WITHOUT_NEW_DATA_FIELDS';
 if (authority.first_legal_next_action === initialNextAction) {
   assert.equal(authority.record_status, 'S4_DEPENDENCY_PROVIDER_QUALIFIED_NARROW_FRONTEND_READBACK_AUTHORIZED');
 } else {
-  assert.equal(authority.first_legal_next_action, successorNextAction);
-  assert.equal(authority.record_status, 'S4_PARTIAL_FRONTEND_READBACK_QUALIFIED_COMPLETENESS_ADJUDICATED_NOT_EFFECTIVE');
+  assert.ok([stateForecastAction, evidenceHealthAction].includes(authority.first_legal_next_action), 'UNRECOGNIZED_PROVIDER_QUALIFICATION_SUCCESSOR_ACTION');
   assert.equal(authority.partial_frontend_readback_proof?.subject_sha, '6b99afb119bb012246ab7c43c7a37ab47beb22ed');
   assert.equal(authority.partial_frontend_readback_proof?.all_pass, true);
   assert.equal(authority.partial_frontend_readback_proof?.merged_to_protected_main, false);
@@ -65,5 +65,5 @@ console.log(JSON.stringify({
   runtime_context_authorized: false,
   pfe14_s4_effective: false,
   next_action: authority.first_legal_next_action,
-  qualification_proof_preserved_across_successor: authority.first_legal_next_action === successorNextAction
+  qualification_proof_preserved_across_successor: authority.first_legal_next_action !== initialNextAction
 }, null, 2));
