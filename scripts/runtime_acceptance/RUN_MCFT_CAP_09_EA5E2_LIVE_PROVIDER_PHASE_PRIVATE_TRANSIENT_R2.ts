@@ -55,7 +55,7 @@ const LATE_OFFSET_MINUTES = 390;
 const CUTOFF_OFFSET_MINUTES = 432;
 const MIN_INGRESS_MARGIN_MINUTES = 5;
 const SOIL_WINDOW_MINUTES = 15;
-const SOIL_FIRST_FETCH_BEFORE_T_MINUTES = 10;
+const SOIL_FIRST_FETCH_BEFORE_T_MINUTES = 15;
 const KBS_RAW_HOURLY_URL = "https://lter.kbs.msu.edu/datatables/13.csv";
 const GFS_ROOT = "https://nomads.ncep.noaa.gov/";
 const FORMAL_RAW_BUCKET = "geox-mcft-cap09-formal-raw-v1";
@@ -638,7 +638,7 @@ async function main(): Promise<void> {
         const results = await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1({ dataset_id: `mcft_cap09_ea5e2_live_soil_${target}`, scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 }, request: prefetched.request }, { transport: new OneShotSoilTransportV1(prefetched), retention: store, decoder: new KbsVariate25SoilEvidenceDecoderV1() });
         if (results.length !== 1 || results[0].record.record_type !== "soil_moisture_observation_v1") throw new Error("EA5E2_PREBOUNDARY_SOIL_RESULT_REQUIRED");
         const observedAt = Date.parse(String(results[0].record.role_time.observed_at));
-        if (observedAt > soilWindowStart && observedAt <= Date.parse(target)) { soilResult = results[0]; break; }
+        if (observedAt >= soilWindowStart && observedAt <= Date.parse(target)) { soilResult = results[0]; break; }
         if (Date.now() + MINUTE >= latestIngressStartMs) break;
         await sleep(MINUTE);
       }
