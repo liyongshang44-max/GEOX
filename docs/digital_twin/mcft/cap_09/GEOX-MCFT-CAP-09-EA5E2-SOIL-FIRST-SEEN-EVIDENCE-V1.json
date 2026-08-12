@@ -1,6 +1,6 @@
 {
   "schema_version": "geox_mcft_cap09_ea5e2_soil_first_seen_evidence_v1",
-  "status": "PARTIAL",
+  "status": "SUFFICIENT_NONVIABLE",
   "authority_effect": false,
   "scheduler_viability_only": true,
   "source_family": "KBS_CURRENT_WEATHER_VARIATE_25",
@@ -8,7 +8,34 @@
   "observed_source_cadence_minutes": 5,
   "required_max_first_seen_lag_minutes": 10,
   "minimum_transition_count_for_viability": 12,
-  "transition_count": 1,
+  "transition_count": 12,
+  "first_seen_lag_p50_minutes": 5.589,
+  "first_seen_lag_p95_minutes": 10.938,
+  "first_seen_lag_max_minutes": 10.938,
+  "provider_compatibility_status": "FAIL",
+  "provider_compatibility_reasons": [
+    "SOIL_PUBLICATION_LAG_P95_EXCEEDS_10_MIN",
+    "SOIL_PUBLICATION_LAG_MAX_EXCEEDS_10_MIN"
+  ],
+  "evidence_sources": [
+    {
+      "diagnostic_run_id": 31591585976,
+      "diagnostic_job_id": 94097571833,
+      "artifact_id": 9139667873,
+      "transition_count": 1
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "diagnostic_job_id": 94119341516,
+      "artifact_id": 9144712589,
+      "artifact_digest": "sha256:377220d0c5d58298e13f6dd7c1f15f134deac8d32224b8ae239160c7cb4de275",
+      "subject_sha": "2170ace67a849f15aaf2217504393a9c6bd6031b",
+      "observation_duration_minutes": 75,
+      "sampling_interval_seconds": 60,
+      "sample_count": 76,
+      "transition_count": 11
+    }
+  ],
   "transitions": [
     {
       "diagnostic_run_id": 31591585976,
@@ -21,11 +48,156 @@
       "first_seen_lag_minutes": 5.575,
       "sampling_interval_seconds": 60,
       "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "diagnostic_job_id": 94119341516,
+      "artifact_id": 9144712589,
+      "from_latest_timestamp": "2026-08-12T12:45:00.000Z",
+      "to_latest_timestamp": "2026-08-12T12:50:00.000Z",
+      "source_advance_minutes": 5,
+      "last_not_seen_at": "2026-08-12T12:59:17.279Z",
+      "first_seen_at": "2026-08-12T13:00:21.514Z",
+      "first_seen_lag_minutes": 10.359,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "diagnostic_job_id": 94119341516,
+      "artifact_id": 9144712589,
+      "from_latest_timestamp": "2026-08-12T12:50:00.000Z",
+      "to_latest_timestamp": "2026-08-12T13:00:00.000Z",
+      "source_advance_minutes": 10,
+      "last_not_seen_at": "2026-08-12T13:04:26.272Z",
+      "first_seen_at": "2026-08-12T13:05:29.800Z",
+      "first_seen_lag_minutes": 5.497,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "diagnostic_job_id": 94119341516,
+      "artifact_id": 9144712589,
+      "from_latest_timestamp": "2026-08-12T13:00:00.000Z",
+      "to_latest_timestamp": "2026-08-12T13:05:00.000Z",
+      "source_advance_minutes": 5,
+      "last_not_seen_at": "2026-08-12T13:09:31.010Z",
+      "first_seen_at": "2026-08-12T13:10:35.345Z",
+      "first_seen_lag_minutes": 5.589,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "diagnostic_job_id": 94119341516,
+      "artifact_id": 9144712589,
+      "from_latest_timestamp": "2026-08-12T13:05:00.000Z",
+      "to_latest_timestamp": "2026-08-12T13:10:00.000Z",
+      "source_advance_minutes": 5,
+      "last_not_seen_at": "2026-08-12T13:14:41.339Z",
+      "first_seen_at": "2026-08-12T13:15:41.606Z",
+      "first_seen_lag_minutes": 5.693,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "diagnostic_job_id": 94119341516,
+      "artifact_id": 9144712589,
+      "from_latest_timestamp": "2026-08-12T13:10:00.000Z",
+      "to_latest_timestamp": "2026-08-12T13:15:00.000Z",
+      "source_advance_minutes": 5,
+      "last_not_seen_at": "2026-08-12T13:19:51.861Z",
+      "first_seen_at": "2026-08-12T13:20:57.319Z",
+      "first_seen_lag_minutes": 5.955,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "diagnostic_job_id": 94119341516,
+      "artifact_id": 9144712589,
+      "from_latest_timestamp": "2026-08-12T13:15:00.000Z",
+      "to_latest_timestamp": "2026-08-12T13:25:00.000Z",
+      "source_advance_minutes": 10,
+      "last_not_seen_at": "2026-08-12T13:30:04.782Z",
+      "first_seen_at": "2026-08-12T13:31:05.149Z",
+      "first_seen_lag_minutes": 6.086,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "diagnostic_job_id": 94119341516,
+      "artifact_id": 9144712589,
+      "from_latest_timestamp": "2026-08-12T13:25:00.000Z",
+      "to_latest_timestamp": "2026-08-12T13:30:00.000Z",
+      "source_advance_minutes": 5,
+      "last_not_seen_at": "2026-08-12T13:39:19.534Z",
+      "first_seen_at": "2026-08-12T13:40:19.802Z",
+      "first_seen_lag_minutes": 10.33,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "diagnostic_job_id": 94119341516,
+      "artifact_id": 9144712589,
+      "from_latest_timestamp": "2026-08-12T13:30:00.000Z",
+      "to_latest_timestamp": "2026-08-12T13:40:00.000Z",
+      "source_advance_minutes": 10,
+      "last_not_seen_at": "2026-08-12T13:44:22.396Z",
+      "first_seen_at": "2026-08-12T13:45:22.744Z",
+      "first_seen_lag_minutes": 5.379,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "diagnostic_job_id": 94119341516,
+      "artifact_id": 9144712589,
+      "from_latest_timestamp": "2026-08-12T13:40:00.000Z",
+      "to_latest_timestamp": "2026-08-12T13:45:00.000Z",
+      "source_advance_minutes": 5,
+      "last_not_seen_at": "2026-08-12T13:49:27.558Z",
+      "first_seen_at": "2026-08-12T13:50:27.933Z",
+      "first_seen_lag_minutes": 5.466,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "diagnostic_job_id": 94119341516,
+      "artifact_id": 9144712589,
+      "from_latest_timestamp": "2026-08-12T13:45:00.000Z",
+      "to_latest_timestamp": "2026-08-12T13:50:00.000Z",
+      "source_advance_minutes": 5,
+      "last_not_seen_at": "2026-08-12T13:59:51.245Z",
+      "first_seen_at": "2026-08-12T14:00:56.304Z",
+      "first_seen_lag_minutes": 10.938,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "diagnostic_job_id": 94119341516,
+      "artifact_id": 9144712589,
+      "from_latest_timestamp": "2026-08-12T13:50:00.000Z",
+      "to_latest_timestamp": "2026-08-12T14:00:00.000Z",
+      "source_advance_minutes": 10,
+      "last_not_seen_at": "2026-08-12T14:04:02.341Z",
+      "first_seen_at": "2026-08-12T14:05:02.516Z",
+      "first_seen_lag_minutes": 5.042,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
     }
   ],
   "limitations": [
-    "ONE_REAL_FIRST_SEEN_TRANSITION_ONLY",
-    "INSUFFICIENT_FOR_P95_OR_PROVIDER_COMPATIBLE_LIVE_WINDOW_CLAIM",
+    "FIRST_SEEN_TIMES_ARE_60_SECOND_SAMPLING_UPPER_BOUNDS",
+    "SCHEDULER_VIABILITY_EVIDENCE_ONLY",
+    "DOES_NOT_CHANGE_SOIL_OBSERVATION_AUTHORITY_WINDOW",
+    "DOES_NOT_CHANGE_T_MINUS_5_MINIMUM_INGRESS_MARGIN",
     "NO_CROP_AUTHORITY_CREATED",
     "NO_FRESHNESS_AUTHORITY_CHANGED",
     "NO_LIVE_ACTIVATION_EFFECT"
