@@ -20,7 +20,8 @@
     "authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json",
     "governance_gate_path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_RUNNER_QUALIFICATION.cjs",
     "focused_workflow_path": ".github/workflows/mcft-cap-09-ea5e2-operational-activation-runner-qualification.yml",
-    "runtime_implementation_source_change_count": 0
+    "runtime_implementation_source_change_count": 0,
+    "runtime_dependency_graph_sha256": "sha256:29e076475eb19bf0211ef508a4c225ba998c1dc4a798431d0691934aed3401b5"
   },
   "protected_main_live_contract": {
     "live_run_subject_must_be_protected_main": true,
