@@ -8,11 +8,13 @@ const BASE = "e1d9b6a160e7d8c897c010cfb6efe420119cbb87";
 const RUNNER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts";
 const LIVE = ".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml";
 const CROP_PREFLIGHT = "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs";
+const HISTORICAL_OA_WORKFLOW = ".github/workflows/mcft-cap-09-ea5e2-operational-activation-runner-qualification.yml";
 const GATE = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SOIL_WINDOW_CONFORMANCE.cjs";
 const WORKFLOW = ".github/workflows/mcft-cap-09-ea5e2-soil-window-conformance.yml";
 
 const SELECTOR = "apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v2.ts";
 const AUTHORITY = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json";
+const HISTORICAL_OA_GATE = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_RUNNER_QUALIFICATION.cjs";
 const AMENDMENT07 = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-07-EXTERNAL-FORMAL-FIXED-LAG-CAUSALITY-AUTHORITY.md";
 const CROP_AUTHORITY = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json";
 const PROVIDER_HELPER = "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py";
@@ -39,14 +41,15 @@ function before(text, first, second, code) {
 
 function main() {
   const subject = git("rev-parse", "HEAD");
-  const expectedChanged = [RUNNER, LIVE, CROP_PREFLIGHT, GATE, WORKFLOW].sort();
+  const expectedChanged = [RUNNER, LIVE, CROP_PREFLIGHT, HISTORICAL_OA_WORKFLOW, GATE, WORKFLOW].sort();
   const changed = git("diff", "--name-only", `${BASE}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
-  eq(JSON.stringify(changed), JSON.stringify(expectedChanged), "EA5E2_LIVE_HARDENING_EXACT_FIVE_FILE_BOUNDARY_REQUIRED");
+  eq(JSON.stringify(changed), JSON.stringify(expectedChanged), "EA5E2_LIVE_HARDENING_EXACT_SIX_FILE_BOUNDARY_REQUIRED");
 
   // Historical authority and production/runtime semantics must remain byte-identical to the protected-main base.
   for (const [file, code] of [
     [SELECTOR, "EA5E2_LIVE_HARDENING_RUNTIME_SELECTOR_MUTATION_FORBIDDEN"],
     [AUTHORITY, "EA5E2_LIVE_HARDENING_OA_AUTHORITY_MUTATION_FORBIDDEN"],
+    [HISTORICAL_OA_GATE, "EA5E2_LIVE_HARDENING_HISTORICAL_OA_GATE_MUTATION_FORBIDDEN"],
     [AMENDMENT07, "EA5E2_LIVE_HARDENING_AMENDMENT07_MUTATION_FORBIDDEN"],
     [CROP_AUTHORITY, "EA5E2_LIVE_HARDENING_CROP_AUTHORITY_MUTATION_FORBIDDEN"],
     [PROVIDER_HELPER, "EA5E2_LIVE_HARDENING_PROVIDER_DECODER_MUTATION_FORBIDDEN"],
@@ -55,6 +58,11 @@ function main() {
     [INGRESS, "EA5E2_LIVE_HARDENING_INGRESS_MUTATION_FORBIDDEN"],
     [SOIL_INGRESS, "EA5E2_LIVE_HARDENING_SOIL_INGRESS_MUTATION_FORBIDDEN"],
   ]) unchanged(file, code);
+
+  eq(blob(BASE, HISTORICAL_OA_WORKFLOW), "df6c2cf37a87fdbd8715181dea5667ebb6ad479f", "EA5E2_LIVE_HARDENING_HISTORICAL_OA_WORKFLOW_BASE_PIN_REQUIRED");
+  eq(blob(BASE, AUTHORITY), "4f0df5f9fe896bf26eda3d673e3153941f59c2e7", "EA5E2_LIVE_HARDENING_HISTORICAL_AUTHORITY_BASE_PIN_REQUIRED");
+  eq(blob(BASE, HISTORICAL_OA_GATE), "af6d0fbc208ad37f7fd00084ac4636fd2c08fac6", "EA5E2_LIVE_HARDENING_HISTORICAL_GATE_BASE_PIN_REQUIRED");
+  eq(blob(BASE, OBSERVER), "ec18b215f10bedd66fa2a6a1efef0e41cf57ce38", "EA5E2_LIVE_HARDENING_HISTORICAL_OBSERVER_BASE_PIN_REQUIRED");
 
   const selector = read(SELECTOR);
   matches(selector, /ASSIMILATED_OBSERVATION_SELECTOR_ID_V2\s*=\s*\"LATEST_USABLE_AUTHORIZED_OBSERVATION_WITHIN_15M_BEFORE_TICK_V2\"\s+as const;/, "EA5E2_LIVE_HARDENING_SELECTOR_ID_FROZEN");
@@ -76,6 +84,20 @@ function main() {
   no(clock.time_relabeling_authorized, "EA5E2_LIVE_HARDENING_TIME_RELABEL_FORBIDDEN");
   no(clock.cross_cycle_substitution_authorized, "EA5E2_LIVE_HARDENING_CROSS_CYCLE_FORBIDDEN");
   no(clock.accelerated_formal_clock_authorized, "EA5E2_LIVE_HARDENING_ACCELERATED_CLOCK_FORBIDDEN");
+
+  const historicalWorkflow = read(HISTORICAL_OA_WORKFLOW);
+  has(historicalWorkflow, "EA5E2_OA_RUNNER_QUALIFICATION_CREATION_BASE: 4e41858478bdca5989fb3388c3660105f7350559", "EA5E2_LIVE_HARDENING_HISTORICAL_CREATION_BASE_REQUIRED");
+  has(historicalWorkflow, 'if [ "$MCFT_BASE_SHA" = "$EA5E2_OA_RUNNER_QUALIFICATION_CREATION_BASE" ]; then', "EA5E2_LIVE_HARDENING_HISTORICAL_CREATION_GATE_BRANCH_REQUIRED");
+  has(historicalWorkflow, "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_RUNNER_QUALIFICATION.cjs", "EA5E2_LIVE_HARDENING_HISTORICAL_CREATION_GATE_STILL_EXECUTED_REQUIRED");
+  has(historicalWorkflow, "POST_QUALIFICATION_HISTORICAL_PRESERVATION_ONLY", "EA5E2_LIVE_HARDENING_POST_QUALIFICATION_APPLICABILITY_REQUIRED");
+  has(historicalWorkflow, "qualification_reexecuted:false", "EA5E2_LIVE_HARDENING_NO_FALSE_REQUALIFICATION_REQUIRED");
+  has(historicalWorkflow, "historical_authority_preserved:true", "EA5E2_LIVE_HARDENING_HISTORICAL_AUTHORITY_PRESERVATION_REQUIRED");
+  has(historicalWorkflow, "historical_gate_preserved:true", "EA5E2_LIVE_HARDENING_HISTORICAL_GATE_PRESERVATION_REQUIRED");
+  has(historicalWorkflow, "historical_observer_preserved:true", "EA5E2_LIVE_HARDENING_HISTORICAL_OBSERVER_PRESERVATION_REQUIRED");
+  has(historicalWorkflow, "live_workflow_successor_hardening_must_be_proved_separately:true", "EA5E2_LIVE_HARDENING_SUCCESSOR_PROOF_SEPARATION_REQUIRED");
+  has(historicalWorkflow, "gate:'af6d0fbc208ad37f7fd00084ac4636fd2c08fac6'", "EA5E2_LIVE_HARDENING_HISTORICAL_GATE_PIN_REQUIRED");
+  has(historicalWorkflow, "authority:'4f0df5f9fe896bf26eda3d673e3153941f59c2e7'", "EA5E2_LIVE_HARDENING_HISTORICAL_AUTHORITY_PIN_REQUIRED");
+  has(historicalWorkflow, "observer:'ec18b215f10bedd66fa2a6a1efef0e41cf57ce38'", "EA5E2_LIVE_HARDENING_HISTORICAL_OBSERVER_PIN_REQUIRED");
 
   const runner = read(RUNNER);
   has(runner, "const MIN_INGRESS_MARGIN_MINUTES = 5;", "EA5E2_LIVE_HARDENING_RUNNER_MARGIN_REQUIRED");
@@ -138,6 +160,8 @@ function main() {
     exact_changed_file_count: changed.length,
     authority_changed: false,
     production_runtime_changed: false,
+    historical_qualification_rewritten: false,
+    historical_qualification_applicability_repaired: true,
     selector_max_age_ms: 900000,
     soil_lower_bound_inclusive: true,
     soil_polling_begins_at_window_open_minutes_before_t: 15,
