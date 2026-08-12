@@ -1,22 +1,77 @@
 {
   "schema_version": "geox_mcft_cap09_ea5e2_soil_first_seen_evidence_v1",
-  "status": "SUFFICIENT_NONVIABLE",
+  "status": "GLOBAL_DIAGNOSTIC_SUFFICIENT_PHASE_ADMISSION_INSUFFICIENT",
   "authority_effect": false,
   "scheduler_viability_only": true,
   "source_family": "KBS_CURRENT_WEATHER_VARIATE_25",
   "endpoint": "https://lter.kbs.msu.edu/weather/variates/25",
   "observed_source_cadence_minutes": 5,
-  "required_max_first_seen_lag_minutes": 10,
-  "minimum_transition_count_for_viability": 12,
-  "transition_count": 12,
-  "first_seen_lag_p50_minutes": 5.589,
-  "first_seen_lag_p95_minutes": 10.938,
-  "first_seen_lag_max_minutes": 10.938,
-  "provider_compatibility_status": "FAIL",
-  "provider_compatibility_reasons": [
-    "SOIL_PUBLICATION_LAG_P95_EXCEEDS_10_MIN",
-    "SOIL_PUBLICATION_LAG_MAX_EXCEEDS_10_MIN"
-  ],
+  "global_first_seen_diagnostic": {
+    "transition_count": 12,
+    "minimum_transition_count": 12,
+    "first_seen_lag_p50_minutes": 5.589,
+    "first_seen_lag_p95_minutes": 10.938,
+    "first_seen_lag_max_minutes": 10.938,
+    "derived_reference_lag_minutes": 10,
+    "derived_reference_lag_basis": "SOIL_WINDOW_15_MIN_MINUS_MINIMUM_INGRESS_MARGIN_5_MIN",
+    "diagnostic_only": true,
+    "candidate_t_admission_authority": false
+  },
+  "exact_hour_phase_admission": {
+    "scheduler_heuristic_only": true,
+    "authority_effect": false,
+    "soil_observation_window_minutes": 15,
+    "minimum_ingress_margin_minutes": 5,
+    "minimum_repeat_samples_per_phase": 2,
+    "candidate_target_alignment": "EXACT_UTC_HOUR",
+    "phase_profiles": [
+      {
+        "source_offset_before_target_minutes": 15,
+        "source_minute_utc": 45,
+        "ingress_deadline_offset_before_target_minutes": 5,
+        "derived_max_first_seen_lag_minutes": 10,
+        "sample_count": 1,
+        "minimum_repeat_sample_count": 2,
+        "first_seen_lag_upper_bounds_minutes": [5.466],
+        "first_seen_lag_max_minutes": 5.466,
+        "evidence_sufficient": false,
+        "all_samples_visible_by_ingress_deadline": true,
+        "status": "INSUFFICIENT_REPEAT_EVIDENCE"
+      },
+      {
+        "source_offset_before_target_minutes": 10,
+        "source_minute_utc": 50,
+        "ingress_deadline_offset_before_target_minutes": 5,
+        "derived_max_first_seen_lag_minutes": 5,
+        "sample_count": 2,
+        "minimum_repeat_sample_count": 2,
+        "first_seen_lag_upper_bounds_minutes": [10.359, 10.938],
+        "first_seen_lag_max_minutes": 10.938,
+        "evidence_sufficient": true,
+        "all_samples_visible_by_ingress_deadline": false,
+        "status": "PROVEN_INCOMPATIBLE"
+      },
+      {
+        "source_offset_before_target_minutes": 5,
+        "source_minute_utc": 55,
+        "ingress_deadline_offset_before_target_minutes": 5,
+        "derived_max_first_seen_lag_minutes": 0,
+        "sample_count": 0,
+        "minimum_repeat_sample_count": 2,
+        "first_seen_lag_upper_bounds_minutes": [],
+        "first_seen_lag_max_minutes": null,
+        "evidence_sufficient": false,
+        "all_samples_visible_by_ingress_deadline": false,
+        "status": "INSUFFICIENT_REPEAT_EVIDENCE"
+      }
+    ],
+    "proven_compatible_phase_count": 0,
+    "status": "NO_PROVEN_COMPATIBLE_PHASE",
+    "reasons": [
+      "SOIL_EXACT_HOUR_PHASE_REPEAT_EVIDENCE_INSUFFICIENT",
+      "SOIL_PROVEN_PHASES_MISS_INGRESS_CUTOFF"
+    ]
+  },
   "evidence_sources": [
     {
       "diagnostic_run_id": 31591585976,
@@ -195,6 +250,9 @@
   ],
   "limitations": [
     "FIRST_SEEN_TIMES_ARE_60_SECOND_SAMPLING_UPPER_BOUNDS",
+    "GLOBAL_P50_P95_MAX_ARE_PROVIDER_DIAGNOSTICS_NOT_CANDIDATE_T_AUTHORITY",
+    "PHASE_ADMISSION_IS_SCHEDULER_HEURISTIC_ONLY",
+    "MINIMUM_TWO_REPEAT_SAMPLES_PER_PHASE_IS_NOT_AUTHORITY",
     "SCHEDULER_VIABILITY_EVIDENCE_ONLY",
     "DOES_NOT_CHANGE_SOIL_OBSERVATION_AUTHORITY_WINDOW",
     "DOES_NOT_CHANGE_T_MINUS_5_MINIMUM_INGRESS_MARGIN",
