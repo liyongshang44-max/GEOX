@@ -151,39 +151,70 @@ function main() {
   const viabilityImplemented = has(viability, "SOIL_WINDOW_MINUTES = 15")
     && has(viability, "MIN_INGRESS_MARGIN_MINUTES = 5")
     && has(viability, "REQUIRED_SOIL_CADENCE_MINUTES = 5")
-    && has(viability, "REQUIRED_TRANSITION_COUNT = 12")
+    && has(viability, "REQUIRED_GLOBAL_TRANSITION_COUNT = 12")
+    && has(viability, "MIN_REPEAT_SAMPLES_PER_PHASE = 2")
+    && has(viability, "EXACT_HOUR_PHASE_OFFSETS = [15, 10, 5]")
     && has(viability, "SOIL_FIRST_SEEN_SAMPLE_COUNT_INSUFFICIENT")
+    && has(viability, "SOIL_EXACT_HOUR_PHASE_REPEAT_EVIDENCE_INSUFFICIENT")
+    && has(viability, "SOIL_PROVEN_PHASES_MISS_INGRESS_CUTOFF")
+    && has(viability, "global_p95_max_used_as_candidate_t_authority: false")
+    && has(viability, "phase_conditioned_scheduler_heuristic_only: true")
     && has(viability, "formal_database_access_count: 0")
     && has(viability, "raw_retention_count: 0")
     && has(viability, "canonical_write_count: 0")
     && has(viability, "live_activation_started: false")
     && has(viability, "authority_changed: false");
   blocker(blockers, !viabilityImplemented, "LIVE_WINDOW_VIABILITY_PREFLIGHT_NOT_FAIL_CLOSED");
-  blocker(blockers, soilFirstSeen.scheduler_viability_only !== true || soilFirstSeen.authority_effect !== false || Number(soilFirstSeen.observed_source_cadence_minutes) !== 5 || Number(soilFirstSeen.required_max_first_seen_lag_minutes) !== 10, "SOIL_FIRST_SEEN_EVIDENCE_BOUNDARY_DRIFT");
 
-  const soilTransitionCount = Number(soilFirstSeen.transition_count);
-  const soilMinimumTransitionCount = Number(soilFirstSeen.minimum_transition_count_for_viability);
-  const soilLagLimitMinutes = Number(soilFirstSeen.required_max_first_seen_lag_minutes);
-  const soilLagP50Minutes = Number(soilFirstSeen.first_seen_lag_p50_minutes);
-  const soilLagP95Minutes = Number(soilFirstSeen.first_seen_lag_p95_minutes);
-  const soilLagMaxMinutes = Number(soilFirstSeen.first_seen_lag_max_minutes);
+  const globalDiagnostic = object(soilFirstSeen.global_first_seen_diagnostic, "SOIL_GLOBAL_FIRST_SEEN_DIAGNOSTIC_REQUIRED");
+  const phaseAdmission = object(soilFirstSeen.exact_hour_phase_admission, "SOIL_EXACT_HOUR_PHASE_ADMISSION_REQUIRED");
+  const phaseProfiles = Array.isArray(phaseAdmission.phase_profiles) ? phaseAdmission.phase_profiles : [];
+  blocker(blockers,
+    soilFirstSeen.scheduler_viability_only !== true
+      || soilFirstSeen.authority_effect !== false
+      || Number(soilFirstSeen.observed_source_cadence_minutes) !== 5
+      || globalDiagnostic.diagnostic_only !== true
+      || globalDiagnostic.candidate_t_admission_authority !== false
+      || phaseAdmission.scheduler_heuristic_only !== true
+      || phaseAdmission.authority_effect !== false
+      || Number(phaseAdmission.soil_observation_window_minutes) !== 15
+      || Number(phaseAdmission.minimum_ingress_margin_minutes) !== 5
+      || Number(phaseAdmission.minimum_repeat_samples_per_phase) !== 2
+      || phaseProfiles.length !== 3,
+    "SOIL_FIRST_SEEN_EVIDENCE_BOUNDARY_DRIFT"
+  );
+
+  const soilTransitionCount = Number(globalDiagnostic.transition_count);
+  const soilMinimumTransitionCount = Number(globalDiagnostic.minimum_transition_count);
+  const soilLagP50Minutes = Number(globalDiagnostic.first_seen_lag_p50_minutes);
+  const soilLagP95Minutes = Number(globalDiagnostic.first_seen_lag_p95_minutes);
+  const soilLagMaxMinutes = Number(globalDiagnostic.first_seen_lag_max_minutes);
   const soilEvidenceSufficient = soilTransitionCount >= soilMinimumTransitionCount;
+  const provenCompatiblePhases = phaseProfiles.filter((profile) => profile.status === "PROVEN_COMPATIBLE");
+  const insufficientPhaseProfiles = phaseProfiles.filter((profile) => profile.status === "INSUFFICIENT_REPEAT_EVIDENCE");
+  const incompatiblePhaseProfiles = phaseProfiles.filter((profile) => profile.status === "PROVEN_INCOMPATIBLE");
 
   warning(warnings, !soilEvidenceSufficient, "SOIL_FIRST_SEEN_EVIDENCE_CURRENTLY_INSUFFICIENT_FOR_LIVE", {
-    transition_count: soilTransitionCount,
-    minimum_transition_count_for_viability: soilMinimumTransitionCount,
-    implication: "LIVE_WINDOW_PREFLIGHT_MUST_RETURN_NO_VIABLE_LIVE_WINDOW_UNTIL_MORE_REAL_TRANSITIONS_EXIST",
+    global_transition_count: soilTransitionCount,
+    minimum_global_transition_count: soilMinimumTransitionCount,
+    implication: "LIVE_WINDOW_PREFLIGHT_MUST_RETURN_NO_VIABLE_LIVE_WINDOW_UNTIL_GLOBAL_DIAGNOSTIC_MINIMUM_EXISTS",
   });
-  warning(warnings, soilEvidenceSufficient && (soilLagP95Minutes > soilLagLimitMinutes || soilLagMaxMinutes > soilLagLimitMinutes), "SOIL_PROVIDER_VIABILITY_CURRENTLY_FAILS_FROZEN_ADMISSION", {
-    transition_count: soilTransitionCount,
-    minimum_transition_count_for_viability: soilMinimumTransitionCount,
-    first_seen_lag_p50_minutes: soilLagP50Minutes,
-    first_seen_lag_p95_minutes: soilLagP95Minutes,
-    first_seen_lag_max_minutes: soilLagMaxMinutes,
-    required_max_first_seen_lag_minutes: soilLagLimitMinutes,
-    provider_compatibility_status: soilFirstSeen.provider_compatibility_status ?? null,
-    provider_compatibility_reasons: Array.isArray(soilFirstSeen.provider_compatibility_reasons) ? soilFirstSeen.provider_compatibility_reasons : [],
-    implication: "LIVE_WINDOW_PREFLIGHT_MUST_RETURN_NO_VIABLE_LIVE_WINDOW;_DO_NOT_DISPATCH_EA5E2_LIVE",
+  warning(warnings, soilEvidenceSufficient && provenCompatiblePhases.length === 0, "SOIL_EXACT_HOUR_PHASE_ADMISSION_CURRENTLY_UNPROVEN", {
+    global_diagnostic: {
+      transition_count: soilTransitionCount,
+      first_seen_lag_p50_minutes: soilLagP50Minutes,
+      first_seen_lag_p95_minutes: soilLagP95Minutes,
+      first_seen_lag_max_minutes: soilLagMaxMinutes,
+      candidate_t_admission_authority: false,
+    },
+    phase_profiles: phaseProfiles,
+    insufficient_repeat_phase_count: insufficientPhaseProfiles.length,
+    proven_incompatible_phase_count: incompatiblePhaseProfiles.length,
+    proven_compatible_phase_count: provenCompatiblePhases.length,
+    scheduler_heuristic_only: true,
+    minimum_repeat_samples_per_phase: Number(phaseAdmission.minimum_repeat_samples_per_phase),
+    minimum_repeat_samples_is_authority: false,
+    implication: "DO_NOT_DISPATCH_EA5E2_LIVE_UNTIL_ONE_EXACT_HOUR_PHASE_HAS_REPEAT_EVIDENCE_AND_MEETS_ITS_DERIVED_INGRESS_BUDGET",
   });
 
   blocker(blockers, !has(runner, "const SOIL_WINDOW_MINUTES = 15;") || !has(runner, "const SOIL_FIRST_FETCH_BEFORE_T_MINUTES = 15;") || !has(runner, "observedAt >= soilWindowStart && observedAt <= Date.parse(target)"), "SOIL_SELECTOR_WINDOW_CONFORMANCE_MISSING");
@@ -240,7 +271,7 @@ function main() {
   });
 
   const proof = {
-    schema_version: "geox_mcft_cap09_ea5e2_full_chain_static_preflight_v2",
+    schema_version: "geox_mcft_cap09_ea5e2_full_chain_static_preflight_v3",
     status: blockers.length ? "FAIL" : "PASS",
     subject_sha: process.env.GITHUB_SHA ?? null,
     blocker_count: blockers.length,
@@ -252,13 +283,19 @@ function main() {
     dependency_graph_count: dependencyGate.runtime_dependency_graph_count ?? null,
     crop_viability: crop,
     live_window_viability_preflight_implemented: viabilityImplemented,
-    soil_first_seen_transition_count: soilTransitionCount,
-    soil_first_seen_minimum_transition_count: soilMinimumTransitionCount,
-    soil_first_seen_lag_p50_minutes: soilLagP50Minutes,
-    soil_first_seen_lag_p95_minutes: soilLagP95Minutes,
-    soil_first_seen_lag_max_minutes: soilLagMaxMinutes,
-    soil_first_seen_required_max_lag_minutes: soilLagLimitMinutes,
-    soil_provider_compatibility_status: soilFirstSeen.provider_compatibility_status ?? null,
+    soil_global_first_seen_transition_count: soilTransitionCount,
+    soil_global_first_seen_minimum_transition_count: soilMinimumTransitionCount,
+    soil_global_first_seen_lag_p50_minutes: soilLagP50Minutes,
+    soil_global_first_seen_lag_p95_minutes: soilLagP95Minutes,
+    soil_global_first_seen_lag_max_minutes: soilLagMaxMinutes,
+    soil_global_diagnostic_candidate_t_authority: false,
+    soil_phase_admission_scheduler_heuristic_only: true,
+    soil_phase_minimum_repeat_samples: Number(phaseAdmission.minimum_repeat_samples_per_phase),
+    soil_phase_minimum_repeat_samples_is_authority: false,
+    soil_phase_profiles: phaseProfiles,
+    soil_phase_proven_compatible_count: provenCompatiblePhases.length,
+    soil_phase_insufficient_repeat_count: insufficientPhaseProfiles.length,
+    soil_phase_proven_incompatible_count: incompatiblePhaseProfiles.length,
     late_exact_hour_semantic_polling_implemented: latePollImplemented,
     expensive_live_auto_push_trigger_present: autoPush,
     live_dispatch_mode: autoPush ? "INVALID_AUTO_PUSH" : "EXPLICIT_WORKFLOW_DISPATCH",
