@@ -12,6 +12,10 @@ import {
   type McftFieldTwinReadRequestV1,
 } from "../../services/mcft_field_twin_read_api_v1.js";
 import { decodeUntrustedFieldTwinCursorEnvelopeV1 } from "../../services/mcft_field_twin_cursor_transport_v1.js";
+import {
+  PostgresPfe14Mcft09OperationalReadApiV1,
+  type Pfe14Mcft09OperationalReadApiV1,
+} from "../../services/pfe14_mcft09_operational_read_api_v1.js";
 
 export const MCFT_FIELD_TWIN_CANONICAL_BASE_V1 = "/api/v1/operator/twin/fields/:field_id/runtime" as const;
 const SCOPE_QUERY_KEYS_V1 = ["tenant_id", "project_id", "group_id", "season_id", "zone_id"] as const;
@@ -34,6 +38,7 @@ type EndpointV1 =
 
 export type RegisterMcftFieldTwinReadRoutesOptionsV1 = {
   readApi?: McftFieldTwinReadApiV1;
+  operationalReadApi?: Pfe14Mcft09OperationalReadApiV1;
   authorizeScope?: (request: FastifyRequest, scope: FieldTwinScopeV1) => McftFieldTwinReadAuthContextV1 | null;
 };
 
@@ -163,7 +168,7 @@ function responseHashV1(body: Record<string, unknown>): string | null {
 }
 
 function contentHashV1(body: Record<string, unknown>): string | null {
-  for (const key of ["root_graph_content_hash", "timeline_page_content_hash", "trace_graph_content_hash", "collection_page_content_hash", "health_content_hash"]) {
+  for (const key of ["root_graph_content_hash", "timeline_page_content_hash", "trace_graph_content_hash", "collection_page_content_hash", "health_content_hash", "operational_content_hash"]) {
     const value = body[key];
     if (typeof value === "string" && value.startsWith("sha256:")) return value;
   }
@@ -247,12 +252,30 @@ function handlerV1(
   };
 }
 
+function operationalHandlerV1(
+  readApi: Pfe14Mcft09OperationalReadApiV1,
+  authorizeScope: NonNullable<RegisterMcftFieldTwinReadRoutesOptionsV1["authorizeScope"]>,
+): (request: FastifyRequest, reply: FastifyReply) => Promise<void> {
+  return async (request, reply) => {
+    try {
+      // Operational summary owns the same exact Scope-only query surface as the Runtime root.
+      const readRequest = buildReadRequestV1(request, "runtime");
+      const auth = authorizeScope(request, readRequest.scope);
+      if (!auth) throw new McftFieldTwinReadApiErrorV1("MCFT_SCOPE_FORBIDDEN", 403);
+      sendSuccessV1(reply, await readApi.readOperationalSummary({ scope: readRequest.scope }));
+    } catch (error) {
+      sendErrorV1(request, reply, error);
+    }
+  };
+}
+
 export function registerMcftFieldTwinReadRoutesV1(
   app: FastifyInstance,
   pool: Pool,
   options: RegisterMcftFieldTwinReadRoutesOptionsV1 = {},
 ): void {
   const readApi = options.readApi ?? new PostgresMcftFieldTwinReadApiV1(pool);
+  const operationalReadApi = options.operationalReadApi ?? new PostgresPfe14Mcft09OperationalReadApiV1(pool);
   const authorizeScope = options.authorizeScope ?? authorizeExactScopeV1;
   app.get(MCFT_FIELD_TWIN_CANONICAL_BASE_V1, handlerV1("runtime", readApi, authorizeScope));
   app.get(`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/timeline`, handlerV1("timeline", readApi, authorizeScope));
@@ -264,4 +287,5 @@ export function registerMcftFieldTwinReadRoutesV1(
   app.get(`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/action-lifecycle`, handlerV1("action-lifecycle", readApi, authorizeScope));
   app.get(`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/model-governance`, handlerV1("model-governance", readApi, authorizeScope));
   app.get(`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/health`, handlerV1("health", readApi, authorizeScope));
+  app.get(`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/operational-summary`, operationalHandlerV1(operationalReadApi, authorizeScope));
 }

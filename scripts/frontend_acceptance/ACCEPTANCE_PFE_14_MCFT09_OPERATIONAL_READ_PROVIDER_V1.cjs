@@ -6,8 +6,9 @@ const json = (p) => JSON.parse(read(p));
 const authority = json('docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json');
 const ruling = json('docs/frontend-productization/PFE-14-MCFT09-READ-DEPENDENCY-READJUDICATION-V1.json');
 const candidate = json('docs/frontend-productization/PFE-14-MCFT09-OPERATIONAL-READ-PROVIDER-CANDIDATE-V1.json');
+const routeLock = json('docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-ROUTE-OWNERSHIP-LOCK-V1.json');
 const service = read('apps/server/src/services/pfe14_mcft09_operational_read_api_v1.ts');
-const route = read('apps/server/src/routes/v1/pfe14_mcft09_operational_read_v1.ts');
+const canonicalRoute = read('apps/server/src/routes/v1/mcft_field_twin_read_v1.ts');
 const openapi = read('apps/server/src/routes/openapi_pfe14_mcft09_operational_read_v1.ts');
 const moduleFile = read('apps/server/src/modules/operator/registerOperatorModule.ts');
 
@@ -20,6 +21,8 @@ assert.equal(candidate.runtime_mode_claimed, false);
 assert.equal(candidate.frontend_consumption_authorized, false);
 assert.equal(candidate.database_migration_delta, 0);
 assert.equal(candidate.package_delta, 0);
+assert.equal(candidate.route_owner, 'apps/server/src/routes/v1/mcft_field_twin_read_v1.ts#registerMcftFieldTwinReadRoutesV1');
+assert.equal(routeLock.physical_split_target.canonical_read, 'apps/server/src/routes/v1/mcft_field_twin_read_v1.ts');
 
 assert(service.includes('BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY'));
 assert(service.includes('PostgresEvidenceIngressAdapterV1'));
@@ -31,14 +34,13 @@ for (const forbidden of [/\bINSERT\b/i,/\bUPDATE\b/i,/\bDELETE\b/i,/\bALTER\b/i,
   assert(!forbidden.test(service), `WRITE_OR_MUTATION_PATTERN_FORBIDDEN:${forbidden}`);
 }
 
-assert(route.includes('app.get(PFE14_MCFT09_OPERATIONAL_SUMMARY_ROUTE_V1'));
-assert(!/app\.(post|put|patch|delete)\s*\(/i.test(route));
-assert(route.includes('authorizeMcftFieldTwinReadV1'));
-assert(route.includes('MCFT_FIELD_TWIN_CANONICAL_BASE_V1'));
-assert(!route.includes('/operator/shadow/'));
-assert(!route.includes('/operator/mcft9/'));
+assert(canonicalRoute.includes('app.get(`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/operational-summary`'));
+assert(canonicalRoute.includes('operationalHandlerV1'));
+assert(canonicalRoute.includes('PostgresPfe14Mcft09OperationalReadApiV1'));
+assert(!/app\.(post|put|patch|delete)\s*\([^)]*operational-summary/i.test(canonicalRoute));
+assert.equal(fs.existsSync('apps/server/src/routes/v1/pfe14_mcft09_operational_read_v1.ts'), false, 'SECOND_CANONICAL_RUNTIME_ROUTE_OWNER_FORBIDDEN');
 assert(openapi.includes('/api/v1/operator/twin/fields/{field_id}/runtime/operational-summary'));
-assert(moduleFile.includes('registerPfe14Mcft09OperationalReadRoutesV1(app, pool)'));
+assert(!moduleFile.includes('registerPfe14Mcft09OperationalReadRoutesV1'));
 assert(moduleFile.includes('installPfe14Mcft09OperationalReadOpenApiV1()'));
 
 assert.equal(authority.s4_effective, false);
@@ -50,6 +52,7 @@ console.log(JSON.stringify({
   status: 'PASS',
   candidate: 'PFE-14-MCFT09-OPERATIONAL-READ-PROVIDER-CANDIDATE-V1',
   route: candidate.route,
+  route_owner: candidate.route_owner,
   read_only: true,
   frontend_consumption_authorized: false,
   pfe14_s4_effective: false

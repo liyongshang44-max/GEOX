@@ -11,7 +11,6 @@ import { registerOperatorDeviceOfflineActionRoutes } from "../../routes/v1/opera
 import { registerOperatorTwinReadLegacyRoutesV1 } from "../../routes/v1/operator_twin_read_legacy_v1.js";
 import { registerOperatorTwinWriteLegacyRoutesV1 } from "../../routes/v1/operator_twin_write_legacy_v1.js";
 import { registerMcftFieldTwinReadRoutesV1 } from "../../routes/v1/mcft_field_twin_read_v1.js";
-import { registerPfe14Mcft09OperationalReadRoutesV1 } from "../../routes/v1/pfe14_mcft09_operational_read_v1.js";
 import { installMcftFieldTwinReadOpenApiV1 } from "../../routes/openapi_mcft_field_twin_read_v1.js";
 import { installPfe14Mcft09OperationalReadOpenApiV1 } from "../../routes/openapi_pfe14_mcft09_operational_read_v1.js";
 import { PostgresMcftFieldTwinS4ReadApiV1 } from "../../services/mcft_field_twin_s4_read_api_v1.js";
@@ -32,7 +31,6 @@ export function registerOperatorModule(app: FastifyInstance, pool: Pool): void {
   registerOperatorTwinReadLegacyRoutesV1(app, pool);
   registerOperatorTwinWriteLegacyRoutesV1(app, pool);
   registerMcftFieldTwinReadRoutesV1(app, pool, { readApi: new PostgresMcftFieldTwinS4ReadApiV1(pool) });
-  registerPfe14Mcft09OperationalReadRoutesV1(app, pool);
   registerOperatorEvidenceTwinReadRoutes(app, pool);
   registerOperatorTwinH31H45ClosureRoutes(app, pool);
   registerOperationPlanV1Routes(app, pool);
