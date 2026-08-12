@@ -1,0 +1,24 @@
+name: mcft-cap-09-ea5e2-transient-retention-causal-reuse
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_TRANSIENT_RETENTION_CAUSAL_REUSE.cjs'
+      - '.github/workflows/mcft-cap-09-ea5e2-transient-retention-causal-reuse.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  causal-reuse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Prove stale transient reuse cannot violate EA3 retention causality
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_TRANSIENT_RETENTION_CAUSAL_REUSE.cjs
