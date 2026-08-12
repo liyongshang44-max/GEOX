@@ -39,7 +39,8 @@ assert.equal(candidate.pfe14_s4_effective, false);
 assert(page.includes('Pfe14StateProductPanel'));
 assert(page.includes('Pfe14ForecastProductPanel'));
 assert(page.includes('<Pfe14StateProductPanel page={bundle.collection} />'));
-assert(page.includes('<Pfe14ForecastProductPanel runtime={bundle.runtime} page={bundle.collection} />'));
+assert(page.includes('return <Pfe14ForecastProductPanel runtime={runtime} page={collection} />'));
+assert(page.includes('<Forecast runtime={bundle.runtime} collection={bundle.collection} />'));
 assert(page.includes('<dd>READ_ONLY_DETERMINISTIC_REPLAY</dd>'));
 
 for (const required of [
@@ -84,6 +85,7 @@ console.log(JSON.stringify({
   payload_inference: false,
   synthetic_values: false,
   scenario_eligibility_inferred: false,
+  forecast_wiring: 'CANONICAL_PAGE_WRAPPER_TO_PRODUCT_PANEL',
   pfe14_s4_effective: false,
   next_action: candidate.next_action_on_exact_head_pass
 }, null, 2));
