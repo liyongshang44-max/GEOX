@@ -18,6 +18,9 @@ concurrency:
   group: mcft-cap09-ea5e2-oa-runner-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
   cancel-in-progress: false
 
+env:
+  EA5E2_OA_RUNNER_QUALIFICATION_CREATION_BASE: 4e41858478bdca5989fb3388c3660105f7350559
+
 jobs:
   operational-activation-runner-qualification:
     runs-on: ubuntu-latest
@@ -82,12 +85,65 @@ jobs:
       - name: Syntax-check operational activation runner governance gate
         run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_RUNNER_QUALIFICATION.cjs
 
-      - name: Validate exact operational activation runner qualification boundary
+      - name: Validate historical creation qualification or post-qualification preservation
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_RUNNER_QUALIFICATION.cjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$MCFT_BASE_SHA" = "$EA5E2_OA_RUNNER_QUALIFICATION_CREATION_BASE" ]; then
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_RUNNER_QUALIFICATION.cjs
+            exit 0
+          fi
 
-      - name: Upload immutable runner qualification proof artifact
+          # The exact-five-file gate is a creation-time proof. On later bases, preserve it
+          # byte-for-byte and prove that this PR is not rewriting its authority or observer.
+          node <<'NODE'
+          const fs=require('fs');
+          const cp=require('child_process');
+          const path=require('path');
+          const base=process.env.MCFT_BASE_SHA;
+          const creation=process.env.EA5E2_OA_RUNNER_QUALIFICATION_CREATION_BASE;
+          const files={
+            authority:'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json',
+            gate:'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_RUNNER_QUALIFICATION.cjs',
+            observer:'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts'
+          };
+          const expected={
+            authority:'4f0df5f9fe896bf26eda3d673e3153941f59c2e7',
+            gate:'5293801a6480521a23fd91748ea6f6c73be3b4f8',
+            observer:'ec18b215f10bedd66fa2a6a1efef0e41cf57ce38'
+          };
+          const git=(...args)=>cp.execFileSync('git',args,{encoding:'utf8'}).trim();
+          for(const [key,file] of Object.entries(files)){
+            const baseBlob=git('rev-parse',`${base}:${file}`);
+            const headBlob=git('rev-parse',`HEAD:${file}`);
+            if(baseBlob!==expected[key]||headBlob!==expected[key]) throw new Error(`EA5E2_OA_HISTORICAL_${key.toUpperCase()}_MUTATED`);
+          }
+          const authority=JSON.parse(fs.readFileSync(files.authority,'utf8'));
+          if(authority.effect_if_exact_head_runner_qualification_passes_and_candidate_merges?.ea5e2_operational_activation_runner_qualified!==true) throw new Error('EA5E2_OA_HISTORICAL_RUNNER_QUALIFIED_EFFECT_REQUIRED');
+          if(authority.effect_if_exact_head_runner_qualification_passes_and_candidate_merges?.ea5e2_operational_activation_qualified!==false) throw new Error('EA5E2_OA_HISTORICAL_OPERATIONAL_ACTIVATION_MUST_REMAIN_FALSE');
+          const out='acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_RUNNER_QUALIFICATION_GOVERNANCE_RESULT.json';
+          fs.mkdirSync(path.dirname(out),{recursive:true});
+          const proof={
+            status:'PASS',
+            applicability:'POST_QUALIFICATION_HISTORICAL_PRESERVATION_ONLY',
+            subject_sha:git('rev-parse','HEAD'),
+            pr_base_sha:base,
+            creation_base_sha:creation,
+            qualification_reexecuted:false,
+            historical_authority_preserved:true,
+            historical_gate_preserved:true,
+            historical_observer_preserved:true,
+            live_workflow_successor_hardening_must_be_proved_separately:true,
+            ea5e2_operational_activation_qualified:false,
+            formal_effectiveness:false
+          };
+          fs.writeFileSync(out,JSON.stringify(proof,null,2)+'\n');
+          console.log(JSON.stringify(proof));
+          NODE
+
+      - name: Upload immutable runner qualification or preservation proof artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
