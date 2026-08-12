@@ -5,10 +5,26 @@ on:
     paths:
       - "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts"
       - "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py"
+      - "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts"
       - ".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml"
       - ".github/workflows/mcft-cap-09-ea5e2-operational-activation-runner-qualification.yml"
       - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SOIL_WINDOW_CONFORMANCE.cjs"
+      - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs"
+      - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V2.cjs"
       - ".github/workflows/mcft-cap-09-ea5e2-soil-window-conformance.yml"
+      - ".github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml"
+      - "apps/server/src/runtime/twin_runtime/**"
+      - "apps/server/src/persistence/twin_runtime/**"
+      - "apps/server/src/domain/twin_runtime/**"
+      - "apps/server/src/domain/soil_water/**"
+      - "apps/server/src/external_evidence/**"
+      - "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json"
+      - "docs/digital_twin/mcft/cap_09/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "apps/server/package.json"
   workflow_dispatch:
 
 permissions:
@@ -17,37 +33,63 @@ permissions:
 jobs:
   live-window-preflight-hardening:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Prove exact six-file EA5E2 live-window hardening boundary
+      - name: Classify historical creation proof versus successor preflight
+        id: mode
+        shell: bash
+        env:
+          CREATION_BASE_SHA: e1d9b6a160e7d8c897c010cfb6efe420119cbb87
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "$PR_BASE_SHA" = "$CREATION_BASE_SHA" ]; then
+            echo "mode=CREATION_EXACT_SIX_FILE_PROOF" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=SUCCESSOR_FULL_CHAIN_PREFLIGHT" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Re-run original exact six-file creation proof only on its creation base
+        if: steps.mode.outputs.mode == 'CREATION_EXACT_SIX_FILE_PROOF'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SOIL_WINDOW_CONFORMANCE.cjs
 
-      - name: Syntax-check target crop consensus preflight
-        run: node --check scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs
-
-      - name: Prove current frozen crop authority still has a viable last-hour boundary
+      - name: Preserve merged historical hardening proof before successor checks
+        if: steps.mode.outputs.mode == 'SUCCESSOR_FULL_CHAIN_PREFLIGHT'
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf acceptance-output
-          TARGET_T=2026-08-12T21:00:00.000Z \
-            node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs \
-            > /tmp/crop-pass.json
-          node -e '
-            const fs=require("fs");
-            const p=JSON.parse(fs.readFileSync("acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json","utf8"));
-            if(p.status!=="PASS"||p.crop_stage_code!=="MID"||p.exact_fao_variant_count!==6||p.backward_stability_hours!==6||p.forward_transition_guard_hours!==30) process.exit(1);
-          '
-          rm -rf acceptance-output
-          set +e
-          TARGET_T=2026-08-12T22:00:00.000Z \
-            node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs \
-            > /tmp/crop-fail.out 2>&1
-          rc=$?
-          set -e
-          test "$rc" -ne 0
-          grep -F 'EA5E2_TARGET_CROP_CONSENSUS_NOT_SINGLE_STAGE:LATE,MID' /tmp/crop-fail.out
-          echo 'EA5E2_TARGET_CROP_CONSENSUS_BOUNDARY_REGRESSION=PASS'
+          HISTORICAL_MERGE=dc9b03a0197e94f64d0d06447999290057e722f2
+          preserved=(
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SOIL_WINDOW_CONFORMANCE.cjs
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_RUNNER_QUALIFICATION.cjs
+          )
+          for file in "${preserved[@]}"; do
+            historical="$(git rev-parse "$HISTORICAL_MERGE:$file")"
+            current="$(git rev-parse "HEAD:$file")"
+            if [ "$historical" != "$current" ]; then
+              echo "EA5E2_SUCCESSOR_HISTORICAL_PROOF_MUTATION_FORBIDDEN:$file" >&2
+              exit 1
+            fi
+          done
+          echo 'EA5E2_HISTORICAL_CREATION_PROOF_PRESERVATION=PASS'
+
+      - name: Run zero-provider zero-database full-chain successor preflight
+        if: steps.mode.outputs.mode == 'SUCCESSOR_FULL_CHAIN_PREFLIGHT'
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs
+
+      - name: Upload metadata-only full-chain preflight proof
+        if: always() && steps.mode.outputs.mode == 'SUCCESSOR_FULL_CHAIN_PREFLIGHT'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-full-chain-preflight-${{ github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT.json
+            acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.json
+          if-no-files-found: warn
+          retention-days: 7
