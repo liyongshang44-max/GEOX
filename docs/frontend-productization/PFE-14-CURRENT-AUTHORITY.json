@@ -6,8 +6,8 @@
   "slice_id": "PFE-14.S4",
   "canonical_name": "Shadow-Online Operator Runtime Console Promotion",
   "taskbook_revision": "v0.2",
-  "record_status": "S4_CLASS_B_OPERATIONAL_PROJECTION_QUALIFIED_NARROW_PROVIDER_IMPLEMENTATION_AUTHORIZED_NOT_EFFECTIVE",
-  "status": "S4_CLASS_B_OPERATIONAL_PROJECTION_QUALIFIED_NARROW_PROVIDER_IMPLEMENTATION_AUTHORIZED_NOT_EFFECTIVE",
+  "record_status": "S4_CLASS_B_NARROW_PROVIDER_QUALIFIED_FRONTEND_PRODUCTIZATION_AUTHORIZED_NOT_EFFECTIVE",
+  "status": "S4_CLASS_B_NARROW_PROVIDER_QUALIFIED_FRONTEND_PRODUCTIZATION_AUTHORIZED_NOT_EFFECTIVE",
   "base_main_sha": "6df2241f1470e1df930498782b42c6ba9e813b41",
   "s0_merge_sha": "dce309c7ea1045fc7a35e973fed09e1a0ab5f39c",
   "s1_merge_sha": "41e41d30dd36755beee9edac7262882dbba2c48c",
@@ -34,6 +34,7 @@
   "state_forecast_productization_qualification_ref": "docs/frontend-productization/PFE-14-STATE-FORECAST-PRODUCTIZATION-QUALIFICATION-V1.json",
   "evidence_health_productization_qualification_ref": "docs/frontend-productization/PFE-14-EVIDENCE-HEALTH-PRODUCTIZATION-QUALIFICATION-V1.json",
   "class_b_operational_projection_qualification_ref": "docs/frontend-productization/PFE-14-CLASS-B-OPERATIONAL-PROJECTION-QUALIFICATION-V1.json",
+  "class_b_narrow_provider_qualification_ref": "docs/frontend-productization/PFE-14-CLASS-B-NARROW-PROVIDER-QUALIFICATION-V1.json",
   "dependency_snapshot": {
     "mcft09_s4_effective": true,
     "mcft09_s4_effective_subject_sha": "6a4138e77fe6b838bc0f552a0bc5e2ceb84c026f",
@@ -90,6 +91,21 @@
     "all_pass": true,
     "merged_to_protected_main": false
   },
+  "class_b_narrow_provider_proof": {
+    "subject_sha": "6b60ebd30192af212139a2fae0906f07cc5bbb5c",
+    "focused_run_id": 31610213981,
+    "historical_provider_run_id": 31610214284,
+    "standard_ci_run_id": 31610213882,
+    "artifact_id": 9146859396,
+    "artifact_digest": "sha256:bac4b91dd6982f5548cf79633f70c2fe8d9ac61d17ca9b14de9788d06b1f1268",
+    "real_postgresql_projection_pass": true,
+    "historical_provider_regression_pass": true,
+    "frontend_runtime_page_audit_pass": true,
+    "full_acceptance_pass": true,
+    "commercial_mvp0_release_gate_pass": true,
+    "all_pass": true,
+    "merged_to_protected_main": false
+  },
   "primary_navigation": ["runtime_overview", "fields"],
   "operator_pilot_route_claimed": false,
   "multi_field_concurrent_shadow_claimed": false,
@@ -140,7 +156,9 @@
   "class_b_narrow_provider_new_route_authorized": false,
   "class_b_narrow_provider_new_http_method_authorized": false,
   "class_b_narrow_provider_database_schema_change_authorized": false,
-  "class_b_narrow_provider_frontend_consumption_authorized": false,
+  "class_b_narrow_provider_qualified": true,
+  "class_b_narrow_provider_frontend_consumption_authorized": true,
+  "class_b_narrow_frontend_productization_authorized": true,
   "class_b_operational_extension_implementation_authorized": false,
   "class_c_field_implementation_authorized": false,
   "backend_source_authorized": true,
@@ -166,6 +184,6 @@
     "O00_O23_PRODUCT_STATUS_AUTHORITY_OR_EXPLICIT_NONDATA_TREATMENT",
     "S4_FINAL_EXACT_HEAD_ACCEPTANCE"
   ],
-  "first_legal_next_action": "PFE_14_IMPLEMENT_NARROW_CLASS_B_DEGRADATION_FORECAST_SLOT_PROVIDER",
-  "frontend_next_action_after_dependency": "PFE_14_IMPLEMENT_NARROW_CLASS_B_DEGRADATION_FORECAST_SLOT_PROVIDER"
+  "first_legal_next_action": "PFE_14_PRODUCTIZE_NARROW_CLASS_B_OPERATIONAL_FIELDS",
+  "frontend_next_action_after_dependency": "PFE_14_PRODUCTIZE_NARROW_CLASS_B_OPERATIONAL_FIELDS"
 }
