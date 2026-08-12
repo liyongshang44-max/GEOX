@@ -8,7 +8,8 @@ const path = require("node:path");
 const ROOT = process.cwd();
 const LIVE = ".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml";
 const STATIC_GATE_WORKFLOW = ".github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml";
-const BINDING_CARRIER = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json";
+const HISTORICAL_QUALIFICATION = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json";
+const BINDING_CARRIER = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-RUNTIME-DEPENDENCY-GRAPH-BINDING-V1.json";
 const BINDING_PLACEHOLDER = "__EA5E2_RUNTIME_DEPENDENCY_GRAPH_SHA256__";
 const ENTRYPOINTS = [
   "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
@@ -20,6 +21,7 @@ const STATIC_BINDING_ROOTS = [
   LIVE,
   "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
+  HISTORICAL_QUALIFICATION,
   BINDING_CARRIER,
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-FIXED-LAG-COLLECTOR-RUNTIME-SCHEDULE-V1.json",
 ];
@@ -201,10 +203,10 @@ function digestBytes(rel) {
   const raw = fs.readFileSync(path.resolve(ROOT, rel));
   if (rel !== BINDING_CARRIER) return raw;
   const parsed = JSON.parse(raw.toString("utf8"));
-  if (!parsed.qualification_boundary || typeof parsed.qualification_boundary !== "object") {
-    throw new Error("EA5E2_DEPENDENCY_BINDING_CARRIER_QUALIFICATION_BOUNDARY_REQUIRED");
+  if (!parsed.binding || typeof parsed.binding !== "object") {
+    throw new Error("EA5E2_DEPENDENCY_BINDING_CARRIER_OBJECT_REQUIRED");
   }
-  parsed.qualification_boundary.runtime_dependency_graph_sha256 = BINDING_PLACEHOLDER;
+  parsed.binding.runtime_dependency_graph_sha256 = BINDING_PLACEHOLDER;
   return Buffer.from(JSON.stringify(parsed));
 }
 
@@ -221,7 +223,7 @@ function digest(paths) {
 
 function readCarrierDigest() {
   const parsed = JSON.parse(fs.readFileSync(path.resolve(ROOT, BINDING_CARRIER), "utf8"));
-  return parsed?.qualification_boundary?.runtime_dependency_graph_sha256 ?? null;
+  return parsed?.binding?.runtime_dependency_graph_sha256 ?? null;
 }
 
 function writeProof(proof) {
@@ -251,7 +253,7 @@ function main() {
   const carrierInExactMainCritical = critical.has(BINDING_CARRIER);
 
   const proof = {
-    schema_version: "geox_mcft_cap09_ea5e2_runtime_dependency_graph_v2",
+    schema_version: "geox_mcft_cap09_ea5e2_runtime_dependency_graph_v3",
     status:
       discoveryRegression.length ||
       staticGateUncovered.length ||
@@ -260,7 +262,7 @@ function main() {
       actualDigest !== expectedDigest
         ? "FAIL"
         : "PASS",
-    binding_model: "STATIC_PR_CLOSURE_DIGEST_TO_EXISTING_LIVE_CRITICAL_CARRIER",
+    binding_model: "STATIC_PR_CLOSURE_DIGEST_TO_DEDICATED_NON_EFFECTIVE_LIVE_CRITICAL_CARRIER",
     entrypoints: ENTRYPOINTS,
     static_binding_roots: STATIC_BINDING_ROOTS,
     toolchain_files: TOOLCHAIN_FILES,
@@ -271,6 +273,7 @@ function main() {
     expected_dependency_graph_sha256: expectedDigest,
     carrier_dependency_graph_sha256: actualDigest,
     binding_carrier_path: BINDING_CARRIER,
+    historical_runner_qualification_path: HISTORICAL_QUALIFICATION,
     binding_carrier_in_live_push_paths: carrierInLivePush,
     binding_carrier_in_exact_main_critical_paths: carrierInExactMainCritical,
     runtime_discovery_regressions: discoveryRegression,
