@@ -1,0 +1,19 @@
+.pfe14EvidenceHealth { display: grid; gap: 18px; }
+.pfe14EvidenceHealth__eyebrow { margin: 0 0 4px; color: #176b45; font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+.pfe14EvidenceHealth__grid, .pfe14EvidenceHealth__canonicalGrid, .pfe14EvidenceHealth__unavailableGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.pfe14EvidenceHealth__metric, .pfe14EvidenceHealth__canonical, .pfe14EvidenceHealth__unavailable, .pfe14EvidenceHealth__operationalError { border: 1px solid rgba(60,60,67,.16); border-radius: 16px; background: #fff; padding: 14px; }
+.pfe14EvidenceHealth__metric, .pfe14EvidenceHealth__canonical, .pfe14EvidenceHealth__unavailable { display: grid; align-content: start; gap: 6px; min-height: 108px; }
+.pfe14EvidenceHealth__metric > span, .pfe14EvidenceHealth__canonical > span { color: #6e6e73; font-size: 12px; font-weight: 500; }
+.pfe14EvidenceHealth__metric strong, .pfe14EvidenceHealth__canonical strong { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.pfe14EvidenceHealth__metric small, .pfe14EvidenceHealth__unavailable span, .pfe14EvidenceHealth__operationalError span, .pfe14EvidenceHealth__operationalError small, .pfe14EvidenceHealth__loading { color: #6e6e73; font-size: 12px; line-height: 1.5; }
+.pfe14EvidenceHealth__unavailable { background: rgba(118,118,128,.035); }
+.pfe14EvidenceHealth__unavailable strong, .pfe14EvidenceHealth__operationalError strong { font-size: 13px; font-weight: 600; }
+.pfe14EvidenceHealth__operationalError { display: grid; gap: 6px; background: rgba(118,118,128,.035); }
+.pfe14EvidenceHealth details { color: #6e6e73; font-size: 11px; }
+.pfe14EvidenceHealth details summary { cursor: pointer; color: #176b45; font-weight: 600; }
+.pfe14EvidenceHealth details dl { display: grid; gap: 6px; margin: 10px 0 0; }
+.pfe14EvidenceHealth details dl > div { display: grid; grid-template-columns: minmax(150px,.35fr) minmax(0,1fr); gap: 10px; }
+.pfe14EvidenceHealth details dt { font-weight: 600; }
+.pfe14EvidenceHealth details dd { margin: 0; overflow-wrap: anywhere; }
+.pfe14EvidenceHealth__technical { border-top: 1px solid rgba(60,60,67,.16); padding-top: 12px; }
+@media (max-width: 980px) { .pfe14EvidenceHealth__grid, .pfe14EvidenceHealth__canonicalGrid, .pfe14EvidenceHealth__unavailableGrid { grid-template-columns: 1fr; } }
