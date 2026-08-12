@@ -19,6 +19,7 @@ import {
 } from "../../../api/mcftFieldTwinRuntime";
 import { useLocale } from "../../../lib/locale";
 import Pfe14OperationalReadbackPanel from "./Pfe14OperationalReadbackPanel";
+import { Pfe14ForecastProductPanel, Pfe14StateProductPanel } from "./Pfe14StateForecastProductPanels";
 import "../../../styles/operatorFieldRuntime.css";
 
 export type McftCanonicalFieldRuntimeRouteKey = McftCanonicalTabKey | "fields" | "evidence" | "audit";
@@ -205,18 +206,7 @@ function Overview({ runtime }: { runtime: McftRuntimeReadModelV1 }): React.React
 }
 
 function Forecast({ runtime, collection }: { runtime: McftRuntimeReadModelV1; collection: McftCollectionPageV1 | undefined }): React.ReactElement {
-  return (
-    <div className="operatorFieldRuntime__contentGrid">
-      <Panel title="Forecast Pointer Semantics" subtitle="These pointers are not interchangeable">
-        <div className="operatorFieldRuntime__summaryGrid">
-          <RefCard label="Current Tick Forecast Result" value={runtime.current_tick_forecast_result} />
-          <AttachmentCard label="Latest Successful Forecast" attachment={runtime.latest_successful_forecast} />
-          <AttachmentCard label="Scenario Source Forecast" attachment={runtime.scenario_source_forecast} />
-        </div>
-      </Panel>
-      <CollectionPanel title="Forecast Collection" page={collection} />
-    </div>
-  );
+  return <Pfe14ForecastProductPanel runtime={runtime} page={collection} />;
 }
 
 function Scenario({ runtime, collection }: { runtime: McftRuntimeReadModelV1; collection: McftCollectionPageV1 | undefined }): React.ReactElement {
@@ -341,7 +331,7 @@ function ErrorPanel({ error, english }: { error: McftApiErrorV1; english: boolea
 
 function renderBundle(bundle: McftTabBundleV1): React.ReactElement {
   if (bundle.tab === "overview" && bundle.runtime) return <Overview runtime={bundle.runtime} />;
-  if (bundle.tab === "state") return <CollectionPanel title="State Collection" page={bundle.collection} />;
+  if (bundle.tab === "state") return <Pfe14StateProductPanel page={bundle.collection} />;
   if (bundle.tab === "forecast" && bundle.runtime) return <Forecast runtime={bundle.runtime} collection={bundle.collection} />;
   if (bundle.tab === "scenario" && bundle.runtime) return <Scenario runtime={bundle.runtime} collection={bundle.collection} />;
   if (bundle.tab === "action-lifecycle" && bundle.runtime) return <ActionLifecycle runtime={bundle.runtime} collection={bundle.collection} />;

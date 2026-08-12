@@ -1,0 +1,189 @@
+.pfe14StateForecast {
+  display: grid;
+  gap: 18px;
+}
+
+.pfe14StateForecast__eyebrow {
+  margin: 0 0 4px;
+  color: #176b45;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+.pfe14StateForecast__boundaryBadge {
+  align-self: flex-start;
+  border: 1px solid rgba(23, 107, 69, .18);
+  border-radius: 999px;
+  background: rgba(23, 107, 69, .08);
+  color: #176b45;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pfe14StateForecast__summaryGrid,
+.pfe14StateForecast__contractGrid,
+.pfe14StateForecast__forecastGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pfe14StateForecast__summaryGrid > div,
+.pfe14StateForecast__unavailable,
+.pfe14StateForecast__attachment,
+.pfe14StateForecast__record {
+  border: 1px solid rgba(60, 60, 67, .16);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.pfe14StateForecast__summaryGrid > div {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.pfe14StateForecast__summaryGrid span,
+.pfe14StateForecast__attachment > span,
+.pfe14StateForecast__recordType {
+  color: #6e6e73;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.pfe14StateForecast__summaryGrid strong,
+.pfe14StateForecast__attachment strong {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pfe14StateForecast__unavailable {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  background: rgba(118, 118, 128, .035);
+}
+
+.pfe14StateForecast__unavailable strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pfe14StateForecast__unavailable span,
+.pfe14StateForecast__attachment small,
+.pfe14StateForecast__empty {
+  color: #6e6e73;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.pfe14StateForecast__records {
+  display: grid;
+  gap: 10px;
+}
+
+.pfe14StateForecast__record {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 14px;
+}
+
+.pfe14StateForecast__recordMain {
+  display: grid;
+  grid-template-columns: minmax(120px, .8fr) minmax(180px, 1fr) minmax(130px, .8fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.pfe14StateForecast__recordMain strong,
+.pfe14StateForecast__recordMain span {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.pfe14StateForecast__attachment {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-height: 126px;
+  padding: 14px;
+}
+
+.pfe14StateForecast__technical,
+.pfe14StateForecast__pageDetails {
+  color: #6e6e73;
+  font-size: 11px;
+}
+
+.pfe14StateForecast__technical summary,
+.pfe14StateForecast__pageDetails summary {
+  cursor: pointer;
+  color: #176b45;
+  font-weight: 600;
+}
+
+.pfe14StateForecast__technical dl,
+.pfe14StateForecast__pageDetails dl {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+
+.pfe14StateForecast__technical dl > div,
+.pfe14StateForecast__pageDetails dl > div {
+  display: grid;
+  grid-template-columns: minmax(120px, .35fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.pfe14StateForecast__technical dt,
+.pfe14StateForecast__pageDetails dt {
+  font-weight: 600;
+}
+
+.pfe14StateForecast__technical dd,
+.pfe14StateForecast__pageDetails dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pfe14StateForecast__pageDetails {
+  border-top: 1px solid rgba(60, 60, 67, .16);
+  padding-top: 12px;
+}
+
+.pfe14StateForecast__nonclaims {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pfe14StateForecast__nonclaims strong {
+  border-radius: 999px;
+  background: rgba(23, 107, 69, .08);
+  color: #176b45;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 980px) {
+  .pfe14StateForecast__summaryGrid,
+  .pfe14StateForecast__contractGrid,
+  .pfe14StateForecast__forecastGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .pfe14StateForecast__record {
+    grid-template-columns: 1fr;
+  }
+
+  .pfe14StateForecast__recordMain {
+    grid-template-columns: 1fr;
+  }
+}
