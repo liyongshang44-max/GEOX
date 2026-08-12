@@ -12,9 +12,12 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 SOURCE = "https://lter.kbs.msu.edu/datatables/13.csv"
-USER_AGENT = "GEOX-MCFT-CAP09-KBS-ENGINEERING-WINDOW/1.0"
+USER_AGENT = "GEOX-MCFT-CAP09-KBS-ENGINEERING-WINDOW/2.0"
 MAX_BYTES = 110_000_000
 ENGINEERING_MAX_AGE_HOURS = 24
+RECENT_COVERAGE_HOURS = 36
+MIN_RECENT_NUMERIC_RAIN_HOURS = 24
+MIN_RECENT_COMPLETE_ET0_INPUT_HOURS = 24
 REQUIRED_FIELDS = ["datetime_utc", "rain_mm", "airtmp_107_avg", "ah", "solrad_avg", "wind_speed"]
 
 
@@ -75,10 +78,10 @@ def main() -> None:
     require(final.scheme == "https" and final.hostname == "lter.kbs.msu.edu" and final.path == "/datatables/13.csv", "KBS_ENGINEERING_IDENTITY_DRIFT")
 
     text = body.decode("utf-8-sig")
-    latest_pair = None
+    parsed = []
     header_index = None
     delimiter_name = None
-    parsed_row_count = 0
+    positions = None
     for delim, name in ((",", "COMMA"), ("\t", "TAB"), (";", "SEMICOLON"), ("|", "PIPE")):
         rows = list(csv.reader(io.StringIO(text), delimiter=delim))
         headers = None
@@ -101,28 +104,52 @@ def main() -> None:
             timestamp = parse_provider_utc(values[positions["datetime_utc"]])
             if timestamp is None or timestamp > future_limit:
                 continue
-            parsed_row_count += 1
-            if latest_pair is None or timestamp > latest_pair[0]:
-                latest_pair = (timestamp, values, positions)
+            parsed.append((timestamp, values))
         break
 
-    require(latest_pair is not None, "KBS_ENGINEERING_LATEST_ROW_REQUIRED")
-    latest, values, positions = latest_pair
+    require(parsed and positions is not None, "KBS_ENGINEERING_TIMESTAMPED_ROWS_REQUIRED")
+    parsed.sort(key=lambda item: item[0])
+    latest = parsed[-1][0]
     age_hours = (retrieved_at - latest).total_seconds() / 3600.0
     require(age_hours <= ENGINEERING_MAX_AGE_HOURS, f"KBS_ENGINEERING_WINDOW_STALE:{age_hours:.6f}")
 
-    rain = finite(values[positions["rain_mm"]])
-    air = finite(values[positions["airtmp_107_avg"]])
-    ah = finite(values[positions["ah"]])
-    solar = finite(values[positions["solrad_avg"]])
-    wind = finite(values[positions["wind_speed"]])
-    require(rain is not None and 0 <= rain <= 100, "KBS_ENGINEERING_RAIN_FIELD_INVALID")
-    require(air is not None and -50 <= air <= 60, "KBS_ENGINEERING_AIR_FIELD_INVALID")
-    require(ah is not None and 0 < ah <= 10, "KBS_ENGINEERING_AH_FIELD_INVALID")
-    require(solar is not None and 0 <= solar <= 1600, "KBS_ENGINEERING_SOLAR_FIELD_INVALID")
-    require(wind is not None and 0 <= wind <= 100, "KBS_ENGINEERING_WIND_FIELD_INVALID")
+    recent_start = latest - timedelta(hours=RECENT_COVERAGE_HOURS)
+    recent = [(timestamp, values) for timestamp, values in parsed if recent_start <= timestamp <= latest]
+    rain_hours = set()
+    et0_hours = set()
+    invalid_numeric_rain_rows = 0
+    invalid_complete_et0_rows = 0
 
-    row_identity = "|".join(str(values[positions[field]]) for field in REQUIRED_FIELDS)
+    for timestamp, values in recent:
+        hour_key = int(timestamp.timestamp() // 3600)
+        rain = finite(values[positions["rain_mm"]])
+        if rain is not None:
+            if 0 <= rain <= 100:
+                rain_hours.add(hour_key)
+            else:
+                invalid_numeric_rain_rows += 1
+
+        air = finite(values[positions["airtmp_107_avg"]])
+        ah = finite(values[positions["ah"]])
+        solar = finite(values[positions["solrad_avg"]])
+        wind = finite(values[positions["wind_speed"]])
+        complete = None not in (air, ah, solar, wind)
+        if complete:
+            if -50 <= air <= 60 and 0 < ah <= 10 and 0 <= solar <= 1600 and 0 <= wind <= 100:
+                et0_hours.add(hour_key)
+            else:
+                invalid_complete_et0_rows += 1
+
+    require(len(rain_hours) >= MIN_RECENT_NUMERIC_RAIN_HOURS, f"KBS_ENGINEERING_RAIN_HOURS:{len(rain_hours)}")
+    require(len(et0_hours) >= MIN_RECENT_COMPLETE_ET0_INPUT_HOURS, f"KBS_ENGINEERING_ET0_INPUT_HOURS:{len(et0_hours)}")
+
+    metadata_identity = {
+        "latest_timestamp": iso(latest),
+        "rain_numeric_distinct_hours": len(rain_hours),
+        "et0_input_complete_distinct_hours": len(et0_hours),
+        "header_row_index": header_index,
+        "delimiter": delimiter_name,
+    }
     proof = {
         "schema_version": "geox_mcft_cap09_kbs_engineering_window_v1",
         "status": "PASS",
@@ -135,12 +162,22 @@ def main() -> None:
         "production_authority_pass": age_hours <= 6,
         "engineering_max_age_hours": ENGINEERING_MAX_AGE_HOURS,
         "engineering_window_pass": True,
+        "coverage_window_hours": RECENT_COVERAGE_HOURS,
+        "minimum_recent_numeric_rain_hours": MIN_RECENT_NUMERIC_RAIN_HOURS,
+        "rain_numeric_distinct_hours": len(rain_hours),
+        "minimum_recent_complete_et0_input_hours": MIN_RECENT_COMPLETE_ET0_INPUT_HOURS,
+        "historical_et0_input_complete_distinct_hours": len(et0_hours),
+        "invalid_numeric_rain_row_count": invalid_numeric_rain_rows,
+        "invalid_complete_et0_input_row_count": invalid_complete_et0_rows,
         "required_field_count": len(REQUIRED_FIELDS),
         "required_field_contract_pass": True,
-        "latest_row_identity_sha256": "sha256:" + hashlib.sha256(row_identity.encode("utf-8")).hexdigest(),
-        "parsed_row_count": parsed_row_count,
+        "metadata_identity_sha256": "sha256:" + hashlib.sha256(json.dumps(metadata_identity, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest(),
+        "parsed_row_count": len(parsed),
+        "recent_row_count": len(recent),
         "csv_header_row_index": header_index,
         "csv_delimiter": delimiter_name,
+        "ea4_coverage_semantics_reused": True,
+        "freshness_only_engineering_override": True,
         "authority_effect": False,
         "formal_effect": False,
         "ea5e3_authorized": False,
