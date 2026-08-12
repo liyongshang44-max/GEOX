@@ -48,5 +48,5 @@ jobs:
           rc=$?
           set -e
           test "$rc" -ne 0
-          grep -F 'EA5E2_TARGET_CROP_CONSENSUS_NOT_SINGLE_STAGE:MID,LATE' /tmp/crop-fail.out
+          grep -F 'EA5E2_TARGET_CROP_CONSENSUS_NOT_SINGLE_STAGE:LATE,MID' /tmp/crop-fail.out
           echo 'EA5E2_TARGET_CROP_CONSENSUS_BOUNDARY_REGRESSION=PASS'
