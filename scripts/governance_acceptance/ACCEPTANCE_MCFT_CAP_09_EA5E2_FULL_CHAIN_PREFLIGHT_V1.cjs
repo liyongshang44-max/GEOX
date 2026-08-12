@@ -6,6 +6,9 @@ const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
 const LIVE = ".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml";
+const VIABILITY = "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs";
+const LATE_POLL = "scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py";
+const SOIL_FIRST_SEEN = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SOIL-FIRST-SEEN-EVIDENCE-V1.json";
 const RUNNER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts";
 const PROVIDER = "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py";
 const DB_SOURCE = "apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts";
@@ -110,6 +113,9 @@ function main() {
   const blockers = [];
   const warnings = [];
   const live = read(LIVE);
+  const viability = read(VIABILITY);
+  const latePoll = read(LATE_POLL);
+  const soilFirstSeen = JSON.parse(read(SOIL_FIRST_SEEN));
   const runner = read(RUNNER);
   const provider = read(PROVIDER);
   const db = read(DB_SOURCE);
@@ -134,23 +140,49 @@ function main() {
   blocker(blockers, clock.source_substitution_authorized !== false || clock.time_relabeling_authorized !== false || clock.cross_cycle_substitution_authorized !== false || clock.accelerated_formal_clock_authorized !== false, "FROZEN_NON_SUBSTITUTION_AUTHORITY_DRIFT");
 
   const autoPush = /^\s{2}push:\s*$/m.test(live);
-  blocker(blockers, autoPush, "EXPENSIVE_LIVE_AUTO_PUSH_TRIGGER_STILL_ENABLED", { required_future_mode: "WORKFLOW_DISPATCH_ONLY_AFTER_STATIC_PREFLIGHT" });
+  blocker(blockers, autoPush, "EXPENSIVE_LIVE_AUTO_PUSH_TRIGGER_STILL_ENABLED", { required_mode: "WORKFLOW_DISPATCH_ONLY_AFTER_VIABILITY_PREFLIGHT" });
   blocker(blockers, !has(live, "workflow_dispatch:"), "LIVE_MANUAL_DISPATCH_ENTRY_REQUIRED");
+  blocker(blockers, !has(live, "live-window-viability:") || !has(live, "needs: live-window-viability") || !has(live, "PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs"), "LIVE_WINDOW_VIABILITY_JOB_NOT_BOUND");
   blocker(blockers, !has(live, "cancel-in-progress: false"), "IN_PROGRESS_LIVE_CANCELLATION_POLICY_DRIFT");
   blocker(blockers, !has(live, "const MIN_PRE_BOUNDARY_LEAD_MINUTES=20;") || !has(live, "const PRE_BOUNDARY_OFFSET_MINUTES=30;"), "TARGET_MINIMUM_LEAD_GUARD_MISSING");
   blocker(blockers, !has(live, "timeout-minutes: 180") || count(live, "timeout-minutes: 190") < 2 || !has(live, "timeout-minutes: 150") || !has(live, "timeout-minutes: 30"), "LIVE_JOB_TIMEOUT_ENVELOPE_DRIFT");
   blocker(blockers, !has(live, "for dir in acceptance-output/pre-attempt acceptance-output/pre acceptance-output/late") || !has(live, "p.discovered_ref_count!==p.deleted_ref_count"), "FAIL_CLOSED_TRANSIENT_CLEANUP_CARDINALITY_MISSING");
 
+  const viabilityImplemented = has(viability, "SOIL_WINDOW_MINUTES = 15")
+    && has(viability, "MIN_INGRESS_MARGIN_MINUTES = 5")
+    && has(viability, "REQUIRED_SOIL_CADENCE_MINUTES = 5")
+    && has(viability, "REQUIRED_TRANSITION_COUNT = 12")
+    && has(viability, "SOIL_FIRST_SEEN_SAMPLE_COUNT_INSUFFICIENT")
+    && has(viability, "formal_database_access_count: 0")
+    && has(viability, "raw_retention_count: 0")
+    && has(viability, "canonical_write_count: 0")
+    && has(viability, "live_activation_started: false")
+    && has(viability, "authority_changed: false");
+  blocker(blockers, !viabilityImplemented, "LIVE_WINDOW_VIABILITY_PREFLIGHT_NOT_FAIL_CLOSED");
+  blocker(blockers, soilFirstSeen.scheduler_viability_only !== true || soilFirstSeen.authority_effect !== false || Number(soilFirstSeen.observed_source_cadence_minutes) !== 5 || Number(soilFirstSeen.required_max_first_seen_lag_minutes) !== 10, "SOIL_FIRST_SEEN_EVIDENCE_BOUNDARY_DRIFT");
+  warning(warnings, Number(soilFirstSeen.transition_count) < Number(soilFirstSeen.minimum_transition_count_for_viability), "SOIL_FIRST_SEEN_EVIDENCE_CURRENTLY_INSUFFICIENT_FOR_LIVE", {
+    transition_count: Number(soilFirstSeen.transition_count),
+    minimum_transition_count_for_viability: Number(soilFirstSeen.minimum_transition_count_for_viability),
+    implication: "LIVE_WINDOW_PREFLIGHT_MUST_RETURN_NO_VIABLE_LIVE_WINDOW_UNTIL_MORE_REAL_TRANSITIONS_EXIST",
+  });
+
   blocker(blockers, !has(runner, "const SOIL_WINDOW_MINUTES = 15;") || !has(runner, "const SOIL_FIRST_FETCH_BEFORE_T_MINUTES = 15;") || !has(runner, "observedAt >= soilWindowStart && observedAt <= Date.parse(target)"), "SOIL_SELECTOR_WINDOW_CONFORMANCE_MISSING");
   blocker(blockers, !has(runner, "Promise.allSettled([gfsPromise, soilPromise])"), "GFS_SOIL_PARALLEL_ACQUISITION_MISSING");
   blocker(blockers, !has(runner, "EA5E2_PHASE_FAILURE_TRANSIENT_CLEANUP_FAILED") || !has(runner, "deleteTrackedRetainedRawEvidence"), "ORDINARY_FAILURE_TRANSIENT_CLEANUP_MISSING");
 
-  const latePollImplemented = has(runner, "LATE_EXACT_HOUR_SEMANTIC_POLL_INTERVAL")
-    && has(runner, "late_semantic_availability_polling: true")
-    && has(runner, "EA5E2_LATE_EXACT_HOUR_AVAILABILITY_DEADLINE_EXCEEDED");
+  const latePollImplemented = has(live, "POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py")
+    && has(latePoll, "POLL_INTERVAL_SECONDS = 60")
+    && has(latePoll, "START_OFFSET_MINUTES = 390")
+    && has(latePoll, "CUTOFF_OFFSET_MINUTES = 432")
+    && has(latePoll, "MIN_INGRESS_MARGIN_MINUTES = 5")
+    && has(latePoll, "DEADLINE_OFFSET_MINUTES = CUTOFF_OFFSET_MINUTES - MIN_INGRESS_MARGIN_MINUTES")
+    && has(latePoll, '"same_source_exact_t_only": True')
+    && has(latePoll, '"late_semantic_availability_polling": True')
+    && has(latePoll, "EA5E2_LATE_EXACT_HOUR_AVAILABILITY_DEADLINE_EXCEEDED")
+    && has(latePoll, '"raw_retention_count": 0')
+    && has(latePoll, '"canonical_write_count": 0');
   blocker(blockers, !latePollImplemented, "LATE_EXACT_HOUR_SEMANTIC_AVAILABILITY_POLLING_NOT_IMPLEMENTED", {
-    current_behavior: "ONE_SEMANTIC_SNAPSHOT_AFTER_T_PLUS_390; EXACT_TARGET_ROW_ABSENCE_FAILS_IMMEDIATELY",
-    frozen_allowed_envelope_if_later_authorized_for_hardening: "SAME_SOURCE_EXACT_T_ONLY; START_GTE_T_PLUS_390; STOP_LTE_T_PLUS_427",
+    required_envelope: "SAME_SOURCE_EXACT_T_ONLY; START_GTE_T_PLUS_390; STOP_LTE_T_PLUS_427; T_PLUS_432_CUTOFF_UNCHANGED",
   });
   blocker(blockers, !has(runner, "response.status === 429 || response.status >= 500") || !has(runner, 'late_transport_retry_scope: "SAME_SOURCE_TRANSIENT_ONLY"'), "LATE_TRANSPORT_RETRY_SCOPE_DRIFT");
   blocker(blockers, !has(provider, "EA5E2_LIVE_KBS_EXACT_TARGET_ROW_REQUIRED"), "EXACT_TARGET_ROW_FAIL_CLOSED_DECODER_REQUIRED");
@@ -188,7 +220,7 @@ function main() {
   });
 
   const proof = {
-    schema_version: "geox_mcft_cap09_ea5e2_full_chain_static_preflight_v1",
+    schema_version: "geox_mcft_cap09_ea5e2_full_chain_static_preflight_v2",
     status: blockers.length ? "FAIL" : "PASS",
     subject_sha: process.env.GITHUB_SHA ?? null,
     blocker_count: blockers.length,
@@ -199,8 +231,12 @@ function main() {
     dependency_graph_status: dependencyGate.status,
     dependency_graph_count: dependencyGate.runtime_dependency_graph_count ?? null,
     crop_viability: crop,
+    live_window_viability_preflight_implemented: viabilityImplemented,
+    soil_first_seen_transition_count: Number(soilFirstSeen.transition_count),
+    soil_first_seen_minimum_transition_count: Number(soilFirstSeen.minimum_transition_count_for_viability),
     late_exact_hour_semantic_polling_implemented: latePollImplemented,
     expensive_live_auto_push_trigger_present: autoPush,
+    live_dispatch_mode: autoPush ? "INVALID_AUTO_PUSH" : "EXPLICIT_WORKFLOW_DISPATCH",
     db_only_five_family_static_audit_pass: !blockers.some((x) => x.code.startsWith("DB_ONLY_")),
     observer_static_audit_pass: !blockers.some((x) => x.code.includes("OBSERVER") || x.code.includes("FORMAL_SCHEDULER") || x.code.includes("EXTERNAL_CAP04")),
     provider_request_count: 0,
