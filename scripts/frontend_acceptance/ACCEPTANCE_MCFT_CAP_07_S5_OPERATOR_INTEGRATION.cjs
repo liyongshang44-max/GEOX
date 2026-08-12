@@ -12,6 +12,12 @@ const RESULT = path.join(ROOT, 'acceptance-output/MCFT_CAP_07_S5_OPERATOR_INTEGR
 const HELPER = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_POST_CLOSURE_SUCCESSOR_BOUNDARY.cjs';
 const LEGACY_ACCEPTANCE_SOURCE_SHA = 'ade35875ff6f5ef92ec76f04ab9fc302c57f700e';
 const SELF_PATH = 'scripts/frontend_acceptance/ACCEPTANCE_MCFT_CAP_07_S5_OPERATOR_INTEGRATION.cjs';
+const ALLOWED_SUCCESSOR_MODES = new Set([
+  'POST_CLOSURE_SUCCESSOR_GATE_REMEDIATION_MODE',
+  'POST_CLOSURE_STEADY_STATE_REGRESSION_MODE',
+  'POST_CLOSURE_SUCCESSOR_AUTHORITY_MODE',
+  'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE',
+]);
 
 function git(args) {
   return cp.execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
@@ -43,7 +49,7 @@ function runSuccessorBoundary() {
     env: process.env,
     encoding: 'utf8',
   }).trim();
-  assert.notEqual(mode, 'LEGACY_S5_ACCEPTANCE_MODE', 'SUCCESSOR_WRAPPER_MODE_NOT_APPLICABLE');
+  assert.ok(ALLOWED_SUCCESSOR_MODES.has(mode), `SUCCESSOR_WRAPPER_MODE_NOT_ALLOWED:${mode}`);
   cp.execFileSync(process.execPath, [helper, '--accept-mode', mode], {
     cwd: ROOT,
     env: process.env,

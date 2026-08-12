@@ -15,8 +15,11 @@ const HELPER = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_07_POST_CLOSUR
 const S5_STATUS = 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S5-DELIVERY-STATUS-V1.json';
 const S6_STATUS = 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-DELIVERY-STATUS-V1.json';
 const LEGACY_ACCEPTANCE_SOURCE_SHA = 'ade35875ff6f5ef92ec76f04ab9fc302c57f700e';
+const PFE14_AUTHORITY = 'docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json';
+const PFE14_PROVIDER_QUALIFICATION = 'docs/frontend-productization/PFE-14-MCFT09-OPERATIONAL-READ-PROVIDER-QUALIFICATION-V1.json';
 
-const REMEDIATION_FILES = [S5_ACCEPTANCE, S6_WORKFLOW, HELPER].sort();
+const LEGACY_REMEDIATION_FILES = [S5_ACCEPTANCE, S6_WORKFLOW, HELPER].sort();
+const PFE14_GATE_REMEDIATION_FILES = [S5_ACCEPTANCE, HELPER].sort();
 const HISTORICAL_BOOTSTRAP_FILES = [S6_WORKFLOW, REGISTRY, S5_ACCEPTANCE].sort();
 const PROTECTED_CAP07_FILES = [
   'apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx',
@@ -24,6 +27,20 @@ const PROTECTED_CAP07_FILES = [
   'apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx',
   S5_STATUS,
   S6_STATUS,
+].sort();
+const PFE14_ALLOWED_CAP07_PRODUCT_FILES = [
+  'apps/web/src/api/mcftFieldTwinRuntime.ts',
+  'apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx',
+].sort();
+const PFE14_S4_PRODUCT_CONSUMER_FILES = [
+  '.github/workflows/pfe-14-s4-single-scope-operational-readback-v1.yml',
+  'apps/web/src/api/mcftFieldTwinRuntime.ts',
+  'apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx',
+  'apps/web/src/features/operator/fieldRuntime/Pfe14OperationalReadbackPanel.tsx',
+  'apps/web/src/styles/pfe14OperationalReadback.css',
+  'docs/frontend-productization/PFE-14-S4-SINGLE-SCOPE-OPERATIONAL-READBACK-CANDIDATE-V1.json',
+  'docs/frontend-productization/PFE-14-S4-SINGLE-SCOPE-OPERATIONAL-READBACK-CANDIDATE-V1.md',
+  'scripts/frontend_acceptance/ACCEPTANCE_PFE_14_S4_SINGLE_SCOPE_OPERATIONAL_READBACK_V1.cjs',
 ].sort();
 
 function git(args) {
@@ -88,15 +105,44 @@ function successorAuthorityShape(actual) {
   return true;
 }
 
+function pfe14AuthorityAllowsProductConsumer() {
+  if (!fs.existsSync(path.join(ROOT, PFE14_AUTHORITY)) || !fs.existsSync(path.join(ROOT, PFE14_PROVIDER_QUALIFICATION))) return false;
+  const authority = readJson(PFE14_AUTHORITY);
+  const qualification = readJson(PFE14_PROVIDER_QUALIFICATION);
+  return authority.phase_id === 'PFE-14'
+    && authority.slice_id === 'PFE-14.S4'
+    && authority.dependency_provider_frontend_consumption_authorized === true
+    && authority.s4_page_source_authorized === true
+    && authority.s4_api_client_source_authorized === true
+    && authority.s4_route_source_authorized === false
+    && authority.shadow_online_label_authorized === false
+    && authority.authoritative_runtime_context_authorized === false
+    && authority.s4_effective === false
+    && authority.first_legal_next_action === 'PFE_14_S4_IMPLEMENT_SINGLE_SCOPE_SCHEDULER_EVIDENCE_READBACK'
+    && qualification.frontend_consumption_authorized === true
+    && qualification.frontend_api_client_change_authorized === true
+    && qualification.existing_field_runtime_page_change_authorized === true
+    && qualification.new_frontend_route_authorized === false
+    && qualification.runtime_context_authorized === false
+    && qualification.shadow_online_label_authorized === false
+    && qualification.pfe14_s4_effective === false;
+}
+
+function pfe14S4ProductConsumerShape(actual) {
+  return sameFiles(actual, PFE14_S4_PRODUCT_CONSUMER_FILES) && pfe14AuthorityAllowsProductConsumer();
+}
+
 function resolveS5Mode(actual) {
-  if (sameFiles(actual, REMEDIATION_FILES)) return 'POST_CLOSURE_SUCCESSOR_GATE_REMEDIATION_MODE';
+  if (sameFiles(actual, LEGACY_REMEDIATION_FILES) || sameFiles(actual, PFE14_GATE_REMEDIATION_FILES)) return 'POST_CLOSURE_SUCCESSOR_GATE_REMEDIATION_MODE';
+  if (s6Committed() && pfe14S4ProductConsumerShape(actual)) return 'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE';
   if (s6Committed() && actual.length === 0) return 'POST_CLOSURE_STEADY_STATE_REGRESSION_MODE';
   if (s6Committed() && successorAuthorityShape(actual)) return 'POST_CLOSURE_SUCCESSOR_AUTHORITY_MODE';
   return 'LEGACY_S5_ACCEPTANCE_MODE';
 }
 
 function resolveS6Mode(actual) {
-  if (sameFiles(actual, REMEDIATION_FILES)) return 'POST_CLOSURE_SUCCESSOR_GATE_REMEDIATION_MODE';
+  if (sameFiles(actual, LEGACY_REMEDIATION_FILES) || sameFiles(actual, PFE14_GATE_REMEDIATION_FILES)) return 'POST_CLOSURE_SUCCESSOR_GATE_REMEDIATION_MODE';
+  if (pfe14S4ProductConsumerShape(actual)) return 'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE';
   if (actual.length === 0) return 'POST_CLOSURE_STEADY_STATE_REGRESSION_MODE';
   if (sameFiles(actual, HISTORICAL_BOOTSTRAP_FILES)) return 'CAP08_REGISTRY_BOOTSTRAP_MODE';
   if (successorAuthorityShape(actual)) return 'POST_CLOSURE_SUCCESSOR_AUTHORITY_MODE';
@@ -109,8 +155,10 @@ function assertCap07RegistryPreserved(base) {
   assert.deepEqual(after, before, 'CAP07_REGISTRY_ENTRY_CHANGED');
 }
 
-function assertProtectedCap07Unchanged(base) {
+function assertProtectedCap07Unchanged(base, allowed = []) {
+  const allowedSet = new Set(allowed);
   for (const file of PROTECTED_CAP07_FILES) {
+    if (allowedSet.has(file)) continue;
     const changed = cp.spawnSync('git', ['diff', '--quiet', `${base}...HEAD`, '--', file], { cwd: ROOT });
     assert.equal(changed.status, 0, `CAP07_PROTECTED_FILE_CHANGED:${file}`);
   }
@@ -142,7 +190,13 @@ function selfTestClassifier() {
   assert.equal(successorAuthorityShape([...successor, S6_STATUS].sort()), false);
   assert.equal(successorAuthorityShape([...successor, PROTECTED_CAP07_FILES[0]].sort()), false);
   assert.equal(successorAuthorityShape([REGISTRY, 'docs/digital_twin/mcft/cap_07/ILLEGAL.json']), false);
-  assert.equal(resolveS6Mode(REMEDIATION_FILES), 'POST_CLOSURE_SUCCESSOR_GATE_REMEDIATION_MODE');
+  assert.equal(resolveS6Mode(LEGACY_REMEDIATION_FILES), 'POST_CLOSURE_SUCCESSOR_GATE_REMEDIATION_MODE');
+  assert.equal(resolveS6Mode(PFE14_GATE_REMEDIATION_FILES), 'POST_CLOSURE_SUCCESSOR_GATE_REMEDIATION_MODE');
+  if (pfe14AuthorityAllowsProductConsumer()) {
+    assert.equal(pfe14S4ProductConsumerShape(PFE14_S4_PRODUCT_CONSUMER_FILES), true);
+    assert.equal(resolveS5Mode(PFE14_S4_PRODUCT_CONSUMER_FILES), 'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE');
+    assert.equal(pfe14S4ProductConsumerShape([...PFE14_S4_PRODUCT_CONSUMER_FILES, 'apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx']), false);
+  }
 }
 
 function accept(mode) {
@@ -153,32 +207,56 @@ function accept(mode) {
     fn();
     checks.push({ name, status: 'PASS' });
   };
+  const protectedExceptions = mode === 'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE'
+    ? PFE14_ALLOWED_CAP07_PRODUCT_FILES
+    : [];
 
   check('CAP07_S6_REMAINS_COMMITTED_AND_NON_AUTHORIZING', () => assert.equal(s6Committed(), true));
   check('CAP07_REGISTRY_CONTRACT_REMAINS_FAIL_CLOSED', checkCurrentCap07RegistryContract);
-  check('CAP07_PROTECTED_PRODUCT_AND_STATUS_FILES_ARE_UNCHANGED', () => assertProtectedCap07Unchanged(base));
+  check('CAP07_PROTECTED_PRODUCT_AND_STATUS_FILES_RESPECT_SUCCESSOR_AUTHORITY', () => assertProtectedCap07Unchanged(base, protectedExceptions));
   check('CAP07_RUNTIME_SOURCE_REMAINS_UNAUTHORIZED', () => assert.equal(readJson(S6_STATUS).runtime_source_authorized, false));
   check('CAP07_CANONICAL_WRITE_REMAINS_UNAUTHORIZED', () => assert.equal(readJson(S6_STATUS).canonical_write_authorized, false));
   check('CAP08_REMAINS_UNAUTHORIZED_BY_CAP07', () => assert.equal(readJson(S6_STATUS).mcft_cap_08_authorized, false));
 
   if (mode === 'POST_CLOSURE_SUCCESSOR_GATE_REMEDIATION_MODE') {
-    check('SUCCESSOR_GATE_REMEDIATION_BOUNDARY_IS_EXACT', () => assert.deepEqual(actual, REMEDIATION_FILES));
+    check('SUCCESSOR_GATE_REMEDIATION_BOUNDARY_IS_EXACT', () => assert.ok(
+      sameFiles(actual, LEGACY_REMEDIATION_FILES) || sameFiles(actual, PFE14_GATE_REMEDIATION_FILES),
+      `SUCCESSOR_GATE_REMEDIATION_FILES_INVALID:${JSON.stringify(actual)}`,
+    ));
     check('SUCCESSOR_GATE_REMEDIATION_DOES_NOT_CHANGE_REGISTRY', () => assert.equal(actual.includes(REGISTRY), false));
     check('SUCCESSOR_GATE_REMEDIATION_DOES_NOT_CHANGE_CAP07_STATUS', () => {
       assert.equal(actual.includes(S5_STATUS), false);
       assert.equal(actual.includes(S6_STATUS), false);
     });
     check('SUCCESSOR_GATE_CLASSIFIER_SELFTEST', selfTestClassifier);
-    check('S6_WORKFLOW_CALLS_SHARED_HELPER', () => {
-      const workflow = fs.readFileSync(path.join(ROOT, S6_WORKFLOW), 'utf8');
-      assert.ok(workflow.includes(HELPER), 'S6_HELPER_REFERENCE_MISSING');
-      assert.ok(workflow.includes('--resolve-s6-mode'), 'S6_RESOLVER_CALL_MISSING');
-      assert.ok(workflow.includes('--accept-mode'), 'S6_ACCEPTANCE_CALL_MISSING');
-    });
+    if (actual.includes(S6_WORKFLOW)) {
+      check('S6_WORKFLOW_CALLS_SHARED_HELPER', () => {
+        const workflow = fs.readFileSync(path.join(ROOT, S6_WORKFLOW), 'utf8');
+        assert.ok(workflow.includes(HELPER), 'S6_HELPER_REFERENCE_MISSING');
+        assert.ok(workflow.includes('--resolve-s6-mode'), 'S6_RESOLVER_CALL_MISSING');
+        assert.ok(workflow.includes('--accept-mode'), 'S6_ACCEPTANCE_CALL_MISSING');
+      });
+    }
     check('S5_ACCEPTANCE_WRAPPER_CALLS_SHARED_HELPER', () => {
       const wrapper = fs.readFileSync(path.join(ROOT, S5_ACCEPTANCE), 'utf8');
       assert.ok(wrapper.includes(HELPER), 'S5_HELPER_REFERENCE_MISSING');
       assert.ok(wrapper.includes(LEGACY_ACCEPTANCE_SOURCE_SHA), 'S5_LEGACY_SOURCE_SHA_MISSING');
+      assert.ok(wrapper.includes('PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE'), 'PFE14_SUCCESSOR_MODE_NOT_EXPLICITLY_ALLOWED');
+    });
+  } else if (mode === 'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE') {
+    check('PFE14_S4_PRODUCT_CONSUMER_BOUNDARY_IS_EXACT', () => assert.deepEqual(actual, PFE14_S4_PRODUCT_CONSUMER_FILES));
+    check('PFE14_S4_PRODUCT_CONSUMER_AUTHORITY_IS_CURRENT', () => assert.equal(pfe14AuthorityAllowsProductConsumer(), true));
+    check('PFE14_S4_PRODUCT_CONSUMER_PRESERVES_CAP07_REGISTRY_ENTRY', () => assertCap07RegistryPreserved(base));
+    check('PFE14_S4_PRODUCT_CONSUMER_PRESERVES_CAP07_STATUS', () => {
+      assert.equal(actual.includes(S5_STATUS), false);
+      assert.equal(actual.includes(S6_STATUS), false);
+    });
+    check('PFE14_S4_PRODUCT_CONSUMER_DOES_NOT_CHANGE_ROUTE_OWNER', () => {
+      assert.equal(actual.includes('apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx'), false);
+    });
+    check('PFE14_S4_PRODUCT_CONSUMER_EXCEPTIONS_ARE_EXACT', () => {
+      const changedProtected = actual.filter((file) => PROTECTED_CAP07_FILES.includes(file)).sort();
+      assert.deepEqual(changedProtected, PFE14_ALLOWED_CAP07_PRODUCT_FILES);
     });
   } else if (mode === 'POST_CLOSURE_SUCCESSOR_AUTHORITY_MODE') {
     check('SUCCESSOR_AUTHORITY_FILE_SHAPE_IS_FAIL_CLOSED', () => assert.equal(successorAuthorityShape(actual), true));
@@ -218,6 +296,8 @@ function accept(mode) {
     write_authority_delta: 'ZERO',
     cap07_runtime_source_authorized: false,
     cap07_canonical_write_authorized: false,
+    protected_cap07_product_file_exceptions: protectedExceptions,
+    pfe14_s4_authorized_product_consumer: mode === 'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE',
     repository_write_performed: false,
   };
   fs.mkdirSync(path.dirname(RESULT), { recursive: true });
