@@ -8,13 +8,24 @@ on:
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'
+      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs'
       - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_external_formal_collector_phase_orchestrator_v1.ts'
+      - 'apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts'
+      - 'apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts'
+      - 'apps/server/src/domain/twin_runtime/canonical_identity_v1.ts'
+      - 'apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts'
+      - 'apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/fixed_lag_scheduler_adapter_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts'
+      - 'docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json'
   workflow_dispatch:
 
@@ -23,7 +34,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: mcft-cap09-ea5e2-operational-activation-${{ github.sha }}
+  group: mcft-cap09-ea5e2-operational-activation-live-v1
   cancel-in-progress: false
 
 env:
@@ -101,13 +112,24 @@ jobs:
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
             scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py
+            scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
+            scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs
             apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts
             apps/server/src/external_evidence/mcft_cap09_external_formal_collector_phase_orchestrator_v1.ts
+            apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts
+            apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts
+            apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts
+            apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts
+            apps/server/src/domain/twin_runtime/canonical_identity_v1.ts
+            apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts
+            apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.ts
             apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts
             apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts
             apps/server/src/runtime/twin_runtime/fixed_lag_scheduler_adapter_v1.ts
             apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts
             apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts
+            docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json
           )
           for path in "${critical[@]}"; do
@@ -145,6 +167,10 @@ jobs:
           MCFT_EA5E2_LIVE_PHASE: TRANSIENT_STORE_SMOKE
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
 
+      - name: Remove smoke-only cleanup ledger before real provider phase
+        shell: bash
+        run: rm -f acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
+
       - name: Fail fast unless KBS Raw Hourly is currently within unchanged 6h authority
         shell: bash
         run: |
@@ -153,7 +179,7 @@ jobs:
           python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py precheck-kbs \
             | tee acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
 
-      - name: Select one real future target T independent of any Formal epoch
+      - name: Select one real future target T with explicit pre-boundary lead guard
         id: target
         shell: node {0}
         env:
@@ -161,8 +187,13 @@ jobs:
         run: |
           const fs=require('fs');
           const now=new Date();
-          const base=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),now.getUTCHours()+1,0,0,0);
-          const target=new Date(base + (now.getUTCMinutes()>20 ? 3600000 : 0));
+          const MIN_PRE_BOUNDARY_LEAD_MINUTES=20;
+          const PRE_BOUNDARY_OFFSET_MINUTES=30;
+          let targetMs=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),now.getUTCHours()+1,0,0,0);
+          while((targetMs-PRE_BOUNDARY_OFFSET_MINUTES*60000)-now.getTime()<MIN_PRE_BOUNDARY_LEAD_MINUTES*60000) targetMs+=3600000;
+          const target=new Date(targetMs);
+          const preBoundaryLeadMinutes=((targetMs-PRE_BOUNDARY_OFFSET_MINUTES*60000)-now.getTime())/60000;
+          if(preBoundaryLeadMinutes<MIN_PRE_BOUNDARY_LEAD_MINUTES) throw new Error('EA5E2_ACTIVATION_PREBOUNDARY_LEAD_GUARD_FAILED');
           const observer=new Date(target.getTime()+437*60000);
           const subject=process.env.SUBJECT_SHA;
           if(!/^[0-9a-f]{40}$/.test(subject)) throw new Error('EA5E2_ACTIVATION_EXACT_SUBJECT_SHA_REQUIRED');
@@ -173,13 +204,22 @@ jobs:
             selected_at:now.toISOString(),
             target_t:target.toISOString(),
             expected_observer_time:observer.toISOString(),
+            pre_boundary_offset_minutes:-30,
+            minimum_pre_boundary_lead_minutes:MIN_PRE_BOUNDARY_LEAD_MINUTES,
+            pre_boundary_lead_minutes:preBoundaryLeadMinutes,
             epoch_independent:true,
             qualification_only:true,
             formal_effectiveness:false
           },null,2)+'\n');
           console.log(`target_t=${target.toISOString()}`);
+          console.log(`pre_boundary_lead_minutes=${preBoundaryLeadMinutes}`);
           console.log(`subject_sha=${subject}`);
           fs.appendFileSync(process.env.GITHUB_OUTPUT,`target_t=${target.toISOString()}\nsubject_sha=${subject}\n`);
+
+      - name: Fail fast unless selected T has one conservative frozen crop stage
+        env:
+          TARGET_T: ${{ steps.target.outputs.target_t }}
+        run: node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs
 
       - name: Execute real pre-boundary provider phase with private transient R2 and isolated DB
         env:
@@ -190,13 +230,25 @@ jobs:
           PYTHON: python
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
 
+      - name: Upload PRE attempt cleanup ledger even when provider phase fails
+        if: ${{ always() && steps.target.outputs.target_t != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-pre-cleanup-refs-${{ steps.target.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_PHASE_FAILURE_CLEANUP.json
+          if-no-files-found: warn
+          retention-days: 1
+
       - name: Verify pre-boundary proof is public-safe metadata only
         shell: node {0}
         run: |
           const fs=require('fs');
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json','utf8'));
           if(p.status!=='PASS'||p.canonical_fact_write_count!==3) throw new Error('EA5E2_PREBOUNDARY_THREE_FACTS_REQUIRED');
-          if(p.soil_observation_inside_t_minus_15_to_t!==true||p.gfs_same_cycle_pair!==true) throw new Error('EA5E2_PREBOUNDARY_CAUSAL_FAMILY_PROOF_REQUIRED');
+          if(p.soil_observation_inside_t_minus_15_to_t!==true||p.soil_polling_begins_at_authorized_window_open!==true||p.gfs_soil_acquisition_parallel!==true||p.gfs_same_cycle_pair!==true) throw new Error('EA5E2_PREBOUNDARY_CAUSAL_FAMILY_PROOF_REQUIRED');
+          if(p.failure_cleanup_local_tracking_enabled!==true) throw new Error('EA5E2_PREBOUNDARY_LOCAL_FAILURE_CLEANUP_REQUIRED');
           if(p.transient_root_prefix!=='mcft-cap09-ea5e2-readiness-transient-v1'||p.formal_raw_prefix_write_count!==0) throw new Error('EA5E2_PRIVATE_TRANSIENT_PREFIX_REQUIRED');
           if(p.public_value_artifact_count!==0||p.raw_values_emitted!==false) throw new Error('EA5E2_PUBLIC_VALUE_ARTIFACT_FORBIDDEN');
           if(p.formal_database_write_count!==0||p.formal_r2_write_count!==0||p.formal_window_started!==false) throw new Error('EA5E2_PREBOUNDARY_NONCLAIM_REQUIRED');
@@ -209,6 +261,7 @@ jobs:
           path: |
             acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json
             acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
             acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_SMOKE.json
@@ -326,6 +379,7 @@ jobs:
           if(pre.status!=='PASS'||late.status!=='PASS'||pre.target_logical_time!==late.target_logical_time||late.target_logical_time!==process.env.TARGET_T) throw new Error('EA5E2_ACTIVATION_SAME_TARGET_TWO_PHASE_REQUIRED');
           if(pre.canonical_fact_write_count!==3||late.pre_rehydrated_fact_count!==3||late.late_canonical_fact_write_count!==2||late.database_exact_fact_count!==5||late.db_only_selected_record_count!==5) throw new Error('EA5E2_ACTIVATION_EXACT_FIVE_FAMILY_DB_REQUIRED');
           if(late.pre_rehydration_semantic_hash_match!==true||late.pre_raw_retention_reverified!==true||late.pre_rehydration_provider_request_count!==0) throw new Error('EA5E2_ACTIVATION_PRIVATE_REHYDRATION_PROOF_REQUIRED');
+          if(late.late_transport_max_attempts!==3||late.late_transport_retry_scope!=='SAME_SOURCE_TRANSIENT_ONLY') throw new Error('EA5E2_ACTIVATION_BOUNDED_SAME_SOURCE_TRANSPORT_RETRY_REQUIRED');
           if(pre.gfs_same_cycle_pair!==true||late.same_gfs_cycle_future_weather_et0!==true||late.exact_rain_et0_interval_t_minus_1_to_t!==true||late.post_t_future_forcing_excluded!==true) throw new Error('EA5E2_ACTIVATION_CAUSALITY_PROOF_REQUIRED');
           if(pre.formal_raw_prefix_write_count!==0||late.formal_raw_prefix_write_count!==0||pre.public_value_artifact_count!==0||late.public_value_artifact_count!==0) throw new Error('EA5E2_ACTIVATION_FORMAL_PREFIX_OR_PUBLIC_VALUE_WRITE_FORBIDDEN');
           if(pre.raw_values_emitted!==false||late.raw_values_emitted!==false) throw new Error('EA5E2_ACTIVATION_RAW_VALUE_PUBLICATION_FORBIDDEN');
@@ -360,11 +414,14 @@ jobs:
           const fs=require('fs');
           const kbs=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json','utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));
           const target=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json','utf8'));
+          const crop=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json','utf8'));
           const pre=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json','utf8'));
           const late=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json','utf8'));
           const observer=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json','utf8'));
           if(kbs.status!=='PASS'||Number(kbs.latest_age_hours)>6||Number(kbs.configured_max_age_hours)!==6) throw new Error('EA5E2_ACTIVATION_KBS_FRESHNESS_AUTHORITY_REQUIRED');
-          if(target.subject_sha!==process.env.SUBJECT_SHA||target.target_t!==process.env.TARGET_T||observer.subject_sha!==process.env.SUBJECT_SHA||observer.target_t!==process.env.TARGET_T) throw new Error('EA5E2_ACTIVATION_PROOF_IDENTITY_MISMATCH');
+          if(target.subject_sha!==process.env.SUBJECT_SHA||target.target_t!==process.env.TARGET_T||crop.target_t!==process.env.TARGET_T||observer.subject_sha!==process.env.SUBJECT_SHA||observer.target_t!==process.env.TARGET_T) throw new Error('EA5E2_ACTIVATION_PROOF_IDENTITY_MISMATCH');
+          if(target.pre_boundary_offset_minutes!==-30||target.minimum_pre_boundary_lead_minutes!==20||Number(target.pre_boundary_lead_minutes)<20) throw new Error('EA5E2_ACTIVATION_TARGET_PREBOUNDARY_LEAD_REQUIRED');
+          if(crop.status!=='PASS'||crop.provider_request_count!==0||crop.database_write_count!==0||crop.crop_stage_code!==observer.crop_stage_code) throw new Error('EA5E2_ACTIVATION_TARGET_CROP_PREFLIGHT_MUST_MATCH_OBSERVER');
           if(pre.status!=='PASS'||late.status!=='PASS'||observer.status!=='PASS') throw new Error('EA5E2_ACTIVATION_ALL_PHASES_PASS_REQUIRED');
           if(observer.db_only_runtime!==true||observer.provider_request_count!==0||observer.selected_record_count!==5||observer.disposition!=='A1'||observer.forecast_status!=='COMPLETED'||observer.forecast_point_count!==72) throw new Error('EA5E2_ACTIVATION_EXTERNAL_CAP04_A1_COMPLETED_72_REQUIRED');
           if(observer.formal_database_access_mode!=='READ_ONLY_A0_HANDOFF_ONLY'||observer.formal_database_write_count!==0||observer.scheduler_slot_count!==0||observer.scheduler_cursor_count!==0) throw new Error('EA5E2_ACTIVATION_FORMAL_READ_ONLY_BOUNDARY_REQUIRED');
@@ -377,6 +434,8 @@ jobs:
             kbs_latest_age_hours:kbs.latest_age_hours,
             kbs_max_age_hours:6,
             pre_boundary_collector_offset_minutes:-30,
+            minimum_pre_boundary_lead_minutes:20,
+            selected_pre_boundary_lead_minutes:target.pre_boundary_lead_minutes,
             late_exact_hour_collector_offset_minutes:390,
             scheduler_eligibility_lag_hours:7,
             late_exact_hour_cutoff_offset_minutes:432,
@@ -385,7 +444,10 @@ jobs:
             observer_start_skew_minutes:observer.observer_start_skew_minutes,
             crop_stage_code:observer.crop_stage_code,
             crop_context_hash:observer.crop_context_hash,
+            target_crop_consensus_preflight_pass:true,
             same_gfs_cycle:true,
+            gfs_soil_acquisition_parallel:true,
+            bounded_same_source_transport_retry:true,
             exact_five_family_db:true,
             db_only_runtime:true,
             external_cap04_disposition:'A1',
@@ -417,11 +479,13 @@ jobs:
           path: |
             acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json
             acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json
             acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_LIVE_PROOF.json
             acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_PHASE_FAILURE_CLEANUP.json
           if-no-files-found: warn
           retention-days: 90
 
@@ -449,6 +513,13 @@ jobs:
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Download PRE attempt cleanup ledger when present
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-pre-cleanup-refs-${{ github.sha }}
+          path: acceptance-output/pre-attempt
+
       - name: Download pre-boundary safe metadata when present
         continue-on-error: true
         uses: actions/download-artifact@v4
@@ -469,7 +540,7 @@ jobs:
           set -euo pipefail
           mkdir -p acceptance-output
           copied=0
-          for dir in acceptance-output/pre acceptance-output/late; do
+          for dir in acceptance-output/pre-attempt acceptance-output/pre acceptance-output/late; do
             if [ ! -d "$dir" ]; then continue; fi
             while IFS= read -r -d '' file; do
               digest="$(printf '%s' "$file" | sha256sum | awk '{print $1}')"
@@ -483,6 +554,14 @@ jobs:
         env:
           MCFT_EA5E2_LIVE_PHASE: CLEANUP_TRANSIENT
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+
+      - name: Verify cleanup deletes every discovered exact-head transient ref
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_CLEANUP.json','utf8'));
+          if(p.status!=='PASS'||p.discovered_ref_count!==p.deleted_ref_count) throw new Error('EA5E2_TRANSIENT_CLEANUP_DISCOVERED_DELETED_MISMATCH');
+          if(p.formal_raw_prefix_delete_count!==0||p.raw_values_emitted!==false||p.public_value_artifact_count!==0) throw new Error('EA5E2_TRANSIENT_CLEANUP_BOUNDARY_DRIFT');
 
       - name: Upload metadata-only cleanup proof
         if: always()

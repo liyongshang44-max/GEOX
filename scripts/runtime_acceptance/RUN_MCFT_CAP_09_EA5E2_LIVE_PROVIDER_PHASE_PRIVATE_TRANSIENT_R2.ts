@@ -48,6 +48,7 @@ const LATE_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_P
 const TRANSIENT_REF_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json");
 const TRANSIENT_SMOKE_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_EA5E2_TRANSIENT_R2_SMOKE.json");
 const TRANSIENT_CLEANUP_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_EA5E2_TRANSIENT_R2_CLEANUP.json");
+const TRANSIENT_PHASE_FAILURE_CLEANUP_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_EA5E2_TRANSIENT_R2_PHASE_FAILURE_CLEANUP.json");
 
 const MINUTE = 60_000;
 const PRE_OFFSET_MINUTES = -30;
@@ -55,7 +56,9 @@ const LATE_OFFSET_MINUTES = 390;
 const CUTOFF_OFFSET_MINUTES = 432;
 const MIN_INGRESS_MARGIN_MINUTES = 5;
 const SOIL_WINDOW_MINUTES = 15;
-const SOIL_FIRST_FETCH_BEFORE_T_MINUTES = 10;
+const SOIL_FIRST_FETCH_BEFORE_T_MINUTES = 15;
+const KBS_RAW_HOURLY_TRANSPORT_MAX_ATTEMPTS = 3;
+const KBS_RAW_HOURLY_TRANSPORT_RETRY_DELAY_MS = 5_000;
 const KBS_RAW_HOURLY_URL = "https://lter.kbs.msu.edu/datatables/13.csv";
 const GFS_ROOT = "https://nomads.ncep.noaa.gov/";
 const FORMAL_RAW_BUCKET = "geox-mcft-cap09-formal-raw-v1";
@@ -180,6 +183,7 @@ class Ea5e2PrivateTransientR2StoreV1 implements RawEvidenceRetentionPortV1, RawE
     this.accessKey = required("MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID");
     this.secretKey = required("MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY");
     if (this.accessKey === "minioadmin" || this.secretKey === "minioadmin123") throw new Error("EA5E2_TRANSIENT_CI_CREDENTIAL_FORBIDDEN");
+    this.writeRefLedger();
   }
 
   private scopePrefix(): string {
@@ -207,17 +211,22 @@ class Ea5e2PrivateTransientR2StoreV1 implements RawEvidenceRetentionPortV1, RawE
     return key;
   }
 
-  private recordRef(ref: string, digest: string, bytes: number): void {
-    this.refs.set(ref, { retention_ref: ref, retained_sha256: digest, retained_bytes: bytes });
+  private writeRefLedger(): void {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
     fs.writeFileSync(TRANSIENT_REF_OUTPUT, JSON.stringify({
       schema_version: "geox_mcft_cap09_ea5e2_transient_r2_refs_v1",
       subject_sha: this.subjectSha,
       transient_root_prefix: TRANSIENT_ROOT_PREFIX,
+      namespace: this.namespace,
       formal_raw_prefix_write_count: 0,
       refs: [...this.refs.values()].sort((a, b) => a.retention_ref.localeCompare(b.retention_ref)),
       raw_values_emitted: false,
     }, null, 2) + "\n");
+  }
+
+  private recordRef(ref: string, digest: string, bytes: number): void {
+    this.refs.set(ref, { retention_ref: ref, retained_sha256: digest, retained_bytes: bytes });
+    this.writeRefLedger();
   }
 
   private async request(input: {
@@ -304,11 +313,11 @@ class Ea5e2PrivateTransientR2StoreV1 implements RawEvidenceRetentionPortV1, RawE
     const retrievedAt = canonicalIso(input.retrieved_at, "EA5E2_TRANSIENT_RETRIEVED_AT_INVALID");
     const key = this.keyForDigest(input.raw_sha256);
     const ref = this.refForKey(key);
+    this.recordRef(ref, input.raw_sha256, raw.byteLength);
     const probe = await this.request({ method: "HEAD", key, allowed_statuses: [200, 404] });
     if (probe.status === 200) {
       const retainedAt = this.validateHead({ retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength }, key, probe);
       if (Date.parse(retainedAt) >= Date.parse(retrievedAt)) {
-        this.recordRef(ref, input.raw_sha256, raw.byteLength);
         return { retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength, retained_at: retainedAt, externally_publishable: false };
       }
       await this.deleteRetainedRawEvidence(ref);
@@ -330,7 +339,6 @@ class Ea5e2PrivateTransientR2StoreV1 implements RawEvidenceRetentionPortV1, RawE
     this.put_count += 1;
     const head = await this.request({ method: "HEAD", key, allowed_statuses: [200] });
     const verifiedAt = this.validateHead({ retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength }, key, head);
-    this.recordRef(ref, input.raw_sha256, raw.byteLength);
     return { retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength, retained_at: verifiedAt, externally_publishable: false };
   }
 
@@ -351,6 +359,15 @@ class Ea5e2PrivateTransientR2StoreV1 implements RawEvidenceRetentionPortV1, RawE
     this.delete_count += 1;
     const probe = await this.request({ method: "HEAD", key, allowed_statuses: [404] });
     if (probe.status !== 404) throw new Error("EA5E2_TRANSIENT_DELETE_NOT_CONFIRMED");
+  }
+
+  async deleteTrackedRetainedRawEvidence(): Promise<string[]> {
+    const deleted: string[] = [];
+    for (const ref of [...this.refs.keys()].sort()) {
+      await this.deleteRetainedRawEvidence(ref);
+      deleted.push(ref);
+    }
+    return deleted;
   }
 }
 
@@ -376,21 +393,27 @@ function slotAuthority(target: string): ExternalFormalCollectorSlotAuthorityV1 {
   };
 }
 
-async function runPython(args: string[]): Promise<{ stdout: string; stderr: string }> {
-  const result = await execFileAsync(PYTHON, [PROVIDER_SCRIPT, ...args], { cwd: process.cwd(), maxBuffer: 32 * 1024 * 1024, timeout: 20 * 60_000 });
+async function runPython(args: string[], deadlineMs?: number): Promise<{ stdout: string; stderr: string }> {
+  let timeoutMs = 20 * 60_000;
+  if (deadlineMs !== undefined) {
+    const remaining = deadlineMs - Date.now();
+    if (remaining <= 0) throw new Error("EA5E2_PROVIDER_EXECUTION_DEADLINE_EXCEEDED");
+    timeoutMs = Math.max(1_000, Math.min(timeoutMs, Math.floor(remaining)));
+  }
+  const result = await execFileAsync(PYTHON, [PROVIDER_SCRIPT, ...args], { cwd: process.cwd(), maxBuffer: 32 * 1024 * 1024, timeout: timeoutMs });
   return { stdout: String(result.stdout), stderr: String(result.stderr) };
 }
 
 class PythonGfsRawBundleTransportV1 implements ExternalEvidenceTransportPortV1 {
   provider_request_count = 0;
   safe_meta: Record<string, unknown> | null = null;
-  constructor(private readonly target: string) {}
+  constructor(private readonly target: string, private readonly deadlineMs?: number) {}
   async fetchRawEvidence(_: ExternalEvidenceFetchRequestV1): Promise<ExternalEvidenceFetchResponseV1> {
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-ea5e2-gfs-"));
     const bundle = path.join(temp, "gfs-raw-bundle.tar");
     const meta = path.join(temp, "gfs-safe-meta.json");
     try {
-      await runPython(["fetch-gfs", "--target", this.target, "--output", bundle, "--meta", meta]);
+      await runPython(["fetch-gfs", "--target", this.target, "--output", bundle, "--meta", meta], this.deadlineMs);
       const safe = JSON.parse(fs.readFileSync(meta, "utf8")) as Record<string, unknown>;
       this.safe_meta = safe;
       this.provider_request_count = Number(safe.provider_request_count);
@@ -405,14 +428,14 @@ class PythonGfsRawBundleTransportV1 implements ExternalEvidenceTransportPortV1 {
 class PythonGfsRawBundleDecoderV1 implements ExternalEvidenceDecoderPortV1 {
   readonly decoder_id = "MCFT_CAP09_EA5E2_GFS_RAW_BUNDLE_DECODER_V1";
   readonly decoder_version = "1";
-  constructor(private readonly target: string, private readonly restoredIngestedAt?: string) {}
+  constructor(private readonly target: string, private readonly restoredIngestedAt?: string, private readonly deadlineMs?: number) {}
   async decodeRetainedEvidence(input: ExternalEvidenceDecoderInputV1): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-ea5e2-gfs-decode-"));
     const bundle = path.join(temp, "gfs-raw-bundle.tar");
     const output = path.join(temp, "gfs-drafts.json");
     try {
       fs.writeFileSync(bundle, Buffer.from(input.raw_bytes));
-      await runPython(["decode-gfs", "--target", this.target, "--available-at", input.provenance.available_at, "--input", bundle, "--output", output]);
+      await runPython(["decode-gfs", "--target", this.target, "--available-at", input.provenance.available_at, "--input", bundle, "--output", output], this.deadlineMs);
       const parsed = JSON.parse(fs.readFileSync(output, "utf8")) as { drafts?: GovernedDecodedEvidenceDraftV1[] };
       if (!Array.isArray(parsed.drafts) || parsed.drafts.length !== 2) throw new Error("EA5E2_GFS_DRAFT_PAIR_REQUIRED");
       if (!this.restoredIngestedAt) return parsed.drafts;
@@ -435,30 +458,63 @@ class OneShotSoilTransportV1 implements ExternalEvidenceTransportPortV1 {
 
 class KbsRawHourlyTransportV1 implements ExternalEvidenceTransportPortV1 {
   provider_request_count = 0;
+  constructor(private readonly deadlineMs: number) {}
+
+  private async retryDelay(attempt: number): Promise<void> {
+    if (attempt >= KBS_RAW_HOURLY_TRANSPORT_MAX_ATTEMPTS) return;
+    if (Date.now() + KBS_RAW_HOURLY_TRANSPORT_RETRY_DELAY_MS >= this.deadlineMs) return;
+    await sleep(KBS_RAW_HOURLY_TRANSPORT_RETRY_DELAY_MS);
+  }
+
   async fetchRawEvidence(_: ExternalEvidenceFetchRequestV1): Promise<ExternalEvidenceFetchResponseV1> {
-    this.provider_request_count += 1;
-    const response = await fetch(KBS_RAW_HOURLY_URL, { method: "GET", redirect: "follow", headers: { Accept: "text/csv,text/plain;q=0.9,*/*;q=0.5", "User-Agent": "GEOX-MCFT-CAP09-EA5E2-LIVE/1" }, signal: AbortSignal.timeout(90_000) });
-    if (response.status < 200 || response.status >= 300) throw new Error(`EA5E2_KBS_RAW_HOURLY_HTTP:${response.status}`);
-    const finalUrl = new URL(response.url || KBS_RAW_HOURLY_URL);
-    if (finalUrl.protocol !== "https:" || finalUrl.hostname !== "lter.kbs.msu.edu" || finalUrl.pathname !== "/datatables/13.csv") throw new Error("EA5E2_KBS_RAW_HOURLY_IDENTITY_DRIFT");
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength <= 0 || bytes.byteLength > 110_000_000) throw new Error(`EA5E2_KBS_RAW_HOURLY_BYTES:${bytes.byteLength}`);
-    const retrievedAt = new Date().toISOString();
-    return { status: response.status, final_locator: finalUrl.toString(), content_type: response.headers.get("content-type")?.trim() || "text/csv", retrieved_at: retrievedAt, available_at: retrievedAt, bytes };
+    let lastTransportError: unknown = null;
+    for (let attempt = 1; attempt <= KBS_RAW_HOURLY_TRANSPORT_MAX_ATTEMPTS; attempt += 1) {
+      const remaining = this.deadlineMs - Date.now();
+      if (remaining <= 0) throw new Error("EA5E2_KBS_RAW_HOURLY_TRANSPORT_DEADLINE_EXCEEDED");
+      this.provider_request_count += 1;
+      let response: Response;
+      try {
+        response = await fetch(KBS_RAW_HOURLY_URL, {
+          method: "GET",
+          redirect: "follow",
+          headers: { Accept: "text/csv,text/plain;q=0.9,*/*;q=0.5", "User-Agent": "GEOX-MCFT-CAP09-EA5E2-LIVE/1" },
+          signal: AbortSignal.timeout(Math.max(1_000, Math.min(90_000, remaining))),
+        });
+      } catch (error) {
+        lastTransportError = error;
+        if (attempt >= KBS_RAW_HOURLY_TRANSPORT_MAX_ATTEMPTS || Date.now() + KBS_RAW_HOURLY_TRANSPORT_RETRY_DELAY_MS >= this.deadlineMs) throw error;
+        await this.retryDelay(attempt);
+        continue;
+      }
+      if (response.status === 429 || response.status >= 500) {
+        lastTransportError = new Error(`EA5E2_KBS_RAW_HOURLY_TRANSIENT_HTTP:${response.status}`);
+        if (attempt >= KBS_RAW_HOURLY_TRANSPORT_MAX_ATTEMPTS || Date.now() + KBS_RAW_HOURLY_TRANSPORT_RETRY_DELAY_MS >= this.deadlineMs) throw lastTransportError;
+        await this.retryDelay(attempt);
+        continue;
+      }
+      if (response.status < 200 || response.status >= 300) throw new Error(`EA5E2_KBS_RAW_HOURLY_HTTP:${response.status}`);
+      const finalUrl = new URL(response.url || KBS_RAW_HOURLY_URL);
+      if (finalUrl.protocol !== "https:" || finalUrl.hostname !== "lter.kbs.msu.edu" || finalUrl.pathname !== "/datatables/13.csv") throw new Error("EA5E2_KBS_RAW_HOURLY_IDENTITY_DRIFT");
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes.byteLength <= 0 || bytes.byteLength > 110_000_000) throw new Error(`EA5E2_KBS_RAW_HOURLY_BYTES:${bytes.byteLength}`);
+      const retrievedAt = new Date().toISOString();
+      return { status: response.status, final_locator: finalUrl.toString(), content_type: response.headers.get("content-type")?.trim() || "text/csv", retrieved_at: retrievedAt, available_at: retrievedAt, bytes };
+    }
+    throw lastTransportError instanceof Error ? lastTransportError : new Error("EA5E2_KBS_RAW_HOURLY_TRANSPORT_EXHAUSTED");
   }
 }
 
 class PythonKbsLateDecoderV1 implements ExternalEvidenceDecoderPortV1 {
   readonly decoder_id = "MCFT_CAP09_EA5E2_KBS_RAW_HOURLY_EXACT_INTERVAL_DECODER_V1";
   readonly decoder_version = "1";
-  constructor(private readonly target: string) {}
+  constructor(private readonly target: string, private readonly deadlineMs?: number) {}
   async decodeRetainedEvidence(input: ExternalEvidenceDecoderInputV1): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-ea5e2-kbs-late-"));
     const raw = path.join(temp, "kbs-raw-hourly.csv");
     const output = path.join(temp, "kbs-late-drafts.json");
     try {
       fs.writeFileSync(raw, Buffer.from(input.raw_bytes));
-      await runPython(["decode-kbs-late", "--target", this.target, "--available-at", input.provenance.available_at, "--input", raw, "--output", output]);
+      await runPython(["decode-kbs-late", "--target", this.target, "--available-at", input.provenance.available_at, "--input", raw, "--output", output], this.deadlineMs);
       const parsed = JSON.parse(fs.readFileSync(output, "utf8")) as { drafts?: GovernedDecodedEvidenceDraftV1[] };
       if (!Array.isArray(parsed.drafts) || parsed.drafts.length !== 2) throw new Error("EA5E2_KBS_LATE_DRAFT_PAIR_REQUIRED");
       return parsed.drafts;
@@ -593,7 +649,7 @@ async function cleanupTransientStore(): Promise<void> {
     await store.deleteRetainedRawEvidence(ref);
     deleted.push(ref);
   }
-  writeSafe(TRANSIENT_CLEANUP_OUTPUT, { schema_version: "geox_mcft_cap09_ea5e2_transient_r2_cleanup_v1", status: "PASS", subject_sha: subject, transient_root_prefix: TRANSIENT_ROOT_PREFIX, deleted_ref_count: deleted.length, deleted_refs: deleted, formal_raw_prefix_delete_count: 0, raw_values_emitted: false, public_value_artifact_count: 0 });
+  writeSafe(TRANSIENT_CLEANUP_OUTPUT, { schema_version: "geox_mcft_cap09_ea5e2_transient_r2_cleanup_v1", status: "PASS", subject_sha: subject, transient_root_prefix: TRANSIENT_ROOT_PREFIX, discovered_ref_count: refs.size, deleted_ref_count: deleted.length, deleted_refs: deleted, formal_raw_prefix_delete_count: 0, raw_values_emitted: false, public_value_artifact_count: 0 });
 }
 
 async function main(): Promise<void> {
@@ -617,32 +673,43 @@ async function main(): Promise<void> {
     if (mode === "PRE_BOUNDARY_CAUSAL") {
       await sleepUntil(slot.pre_boundary_causal_collector_target);
       const phaseRequestedAt = new Date().toISOString();
-      if (Date.parse(phaseRequestedAt) > Date.parse(addMinutes(target, -MIN_INGRESS_MARGIN_MINUTES))) throw new Error("EA5E2_PREBOUNDARY_MINIMUM_INGRESS_MARGIN_LOST_BEFORE_GFS");
+      const latestIngressStartMs = Date.parse(addMinutes(target, -MIN_INGRESS_MARGIN_MINUTES));
+      if (Date.parse(phaseRequestedAt) > latestIngressStartMs) throw new Error("EA5E2_PREBOUNDARY_MINIMUM_INGRESS_MARGIN_LOST_BEFORE_GFS");
 
-      const gfsTransport = new PythonGfsRawBundleTransportV1(target);
-      const gfsResults = await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1({
+      const gfsTransport = new PythonGfsRawBundleTransportV1(target, latestIngressStartMs);
+      const gfsPromise = collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1({
         dataset_id: `mcft_cap09_ea5e2_live_gfs_${target}`,
         scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
         request: { request_id: `ea5e2-live-gfs-${crypto.randomUUID()}`, provider_id: "NOAA_NCEP_NOMADS_GFS", source_family: "GFS_PGRB2_SFLUX_RAW_BUNDLE", locator: GFS_ROOT, allowed_final_hosts: ["nomads.ncep.noaa.gov"], use_policy_ref: "GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1", requested_at: phaseRequestedAt, expected_content_type_prefixes: ["application/x-tar"], limitations: ["EA5E2_PRIVATE_TRANSIENT_RAW_BUNDLE", "NO_FORMAL_RAW_PREFIX_WRITE", "NO_PUBLIC_VALUE_ARTIFACT"] },
-      }, { transport: gfsTransport, retention: store, decoder: new PythonGfsRawBundleDecoderV1(target) });
+      }, { transport: gfsTransport, retention: store, decoder: new PythonGfsRawBundleDecoderV1(target, undefined, latestIngressStartMs) });
+
+      const soilPromise = (async (): Promise<{ result: CanonicalizedExternalEvidenceResultV1; request_count: number }> => {
+        await sleepUntil(addMinutes(target, -SOIL_FIRST_FETCH_BEFORE_T_MINUTES));
+        let soilResult: CanonicalizedExternalEvidenceResultV1 | null = null;
+        let soilRequestCount = 0;
+        const soilWindowStart = Date.parse(addMinutes(target, -SOIL_WINDOW_MINUTES));
+        while (Date.now() < latestIngressStartMs) {
+          const prefetched = await prefetchLiveKbsVariate25RawV1();
+          soilRequestCount += 1;
+          const results = await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1({ dataset_id: `mcft_cap09_ea5e2_live_soil_${target}`, scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 }, request: prefetched.request }, { transport: new OneShotSoilTransportV1(prefetched), retention: store, decoder: new KbsVariate25SoilEvidenceDecoderV1() });
+          if (results.length !== 1 || results[0].record.record_type !== "soil_moisture_observation_v1") throw new Error("EA5E2_PREBOUNDARY_SOIL_RESULT_REQUIRED");
+          const observedAt = Date.parse(String(results[0].record.role_time.observed_at));
+          if (observedAt >= soilWindowStart && observedAt <= Date.parse(target)) { soilResult = results[0]; break; }
+          if (Date.now() + MINUTE >= latestIngressStartMs) break;
+          await sleep(MINUTE);
+        }
+        if (!soilResult) throw new Error("EA5E2_PREBOUNDARY_SOIL_OBSERVATION_NOT_IN_AUTHORIZED_T_WINDOW");
+        return { result: soilResult, request_count: soilRequestCount };
+      })();
+
+      const [gfsSettled, soilSettled] = await Promise.allSettled([gfsPromise, soilPromise]);
+      if (gfsSettled.status === "rejected") throw gfsSettled.reason;
+      if (soilSettled.status === "rejected") throw soilSettled.reason;
+      const gfsResults = gfsSettled.value;
+      const soilResult = soilSettled.value.result;
+      const soilRequestCount = soilSettled.value.request_count;
       if (gfsResults.length !== 2) throw new Error("EA5E2_PREBOUNDARY_GFS_PAIR_REQUIRED");
 
-      await sleepUntil(addMinutes(target, -SOIL_FIRST_FETCH_BEFORE_T_MINUTES));
-      let soilResult: CanonicalizedExternalEvidenceResultV1 | null = null;
-      let soilRequestCount = 0;
-      const soilWindowStart = Date.parse(addMinutes(target, -SOIL_WINDOW_MINUTES));
-      const latestIngressStartMs = Date.parse(addMinutes(target, -MIN_INGRESS_MARGIN_MINUTES));
-      while (Date.now() < latestIngressStartMs) {
-        const prefetched = await prefetchLiveKbsVariate25RawV1();
-        soilRequestCount += 1;
-        const results = await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1({ dataset_id: `mcft_cap09_ea5e2_live_soil_${target}`, scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 }, request: prefetched.request }, { transport: new OneShotSoilTransportV1(prefetched), retention: store, decoder: new KbsVariate25SoilEvidenceDecoderV1() });
-        if (results.length !== 1 || results[0].record.record_type !== "soil_moisture_observation_v1") throw new Error("EA5E2_PREBOUNDARY_SOIL_RESULT_REQUIRED");
-        const observedAt = Date.parse(String(results[0].record.role_time.observed_at));
-        if (observedAt > soilWindowStart && observedAt <= Date.parse(target)) { soilResult = results[0]; break; }
-        if (Date.now() + MINUTE >= latestIngressStartMs) break;
-        await sleep(MINUTE);
-      }
-      if (!soilResult) throw new Error("EA5E2_PREBOUNDARY_SOIL_OBSERVATION_NOT_IN_AUTHORIZED_T_WINDOW");
       const canonicalizedAt = new Date().toISOString();
       if (Date.parse(canonicalizedAt) > latestIngressStartMs) throw new Error("EA5E2_PREBOUNDARY_MINIMUM_INGRESS_MARGIN_LOST");
       const allPre = [...gfsResults, soilResult];
@@ -651,7 +718,7 @@ async function main(): Promise<void> {
       const gfsIngestedAt = String(gfsResults[0].record.role_time.ingested_at);
       if (gfsResults.some((item) => String(item.record.role_time.ingested_at) !== gfsIngestedAt)) throw new Error("EA5E2_PREBOUNDARY_GFS_INGESTED_AT_PAIR_MISMATCH");
       writeSafe(PRE_OUTPUT, {
-        schema_version: "geox_mcft_cap09_ea5e2_live_provider_preboundary_safe_proof_v2",
+        schema_version: "geox_mcft_cap09_ea5e2_live_provider_preboundary_safe_proof_v3",
         status: "PASS",
         subject_sha: subject,
         target_logical_time: target,
@@ -665,6 +732,8 @@ async function main(): Promise<void> {
         source_record_ids: result.source_record_ids,
         canonical_fact_write_count: result.canonical_fact_write_count,
         soil_observation_inside_t_minus_15_to_t: true,
+        soil_polling_begins_at_authorized_window_open: true,
+        gfs_soil_acquisition_parallel: true,
         gfs_same_cycle_pair: true,
         rehydration_manifest: {
           expected_records: semanticRows(allPre),
@@ -673,6 +742,7 @@ async function main(): Promise<void> {
         },
         transient_root_prefix: TRANSIENT_ROOT_PREFIX,
         transient_private_r2_put_count: store.put_count,
+        failure_cleanup_local_tracking_enabled: true,
         formal_raw_prefix_write_count: 0,
         public_value_artifact_count: 0,
         raw_values_emitted: false,
@@ -692,12 +762,12 @@ async function main(): Promise<void> {
     const phaseRequestedAt = new Date().toISOString();
     const latestIngressStartMs = Date.parse(addMinutes(slot.late_exact_hour_evidence_cutoff, -MIN_INGRESS_MARGIN_MINUTES));
     if (Date.parse(phaseRequestedAt) > latestIngressStartMs) throw new Error("EA5E2_LATE_MINIMUM_INGRESS_MARGIN_LOST_BEFORE_FETCH");
-    const transport = new KbsRawHourlyTransportV1();
+    const transport = new KbsRawHourlyTransportV1(latestIngressStartMs);
     const lateResults = await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1({
       dataset_id: `mcft_cap09_ea5e2_live_kbs_exact_${target}`,
       scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
       request: { request_id: `ea5e2-live-kbs-late-${crypto.randomUUID()}`, provider_id: "KBS_LTER", source_family: "RAW_HOURLY_WEATHER", locator: KBS_RAW_HOURLY_URL, allowed_final_hosts: ["lter.kbs.msu.edu"], use_policy_ref: "GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1", requested_at: phaseRequestedAt, source_event_time: target, expected_content_type_prefixes: ["text/csv", "text/plain", "application/octet-stream"], limitations: ["EA5E2_PRIVATE_TRANSIENT_RAW_HOURLY", "NO_FORMAL_RAW_PREFIX_WRITE", "NO_PUBLIC_VALUE_ARTIFACT"] },
-    }, { transport, retention: store, decoder: new PythonKbsLateDecoderV1(target) });
+    }, { transport, retention: store, decoder: new PythonKbsLateDecoderV1(target, latestIngressStartMs) });
     const canonicalizedAt = new Date().toISOString();
     if (Date.parse(canonicalizedAt) > latestIngressStartMs) throw new Error("EA5E2_LATE_MINIMUM_INGRESS_MARGIN_LOST");
     const result = await orchestrator.ingestCanonicalizedPhase({ phase: "LATE_EXACT_HOUR", requested_at: phaseRequestedAt, canonicalized_at: canonicalizedAt, provider_request_count: transport.provider_request_count, canonical_results: lateResults, ingress });
@@ -713,7 +783,7 @@ async function main(): Promise<void> {
     if (exactFactCount !== 5) throw new Error(`EA5E2_LIVE_EXACT_FIVE_FACTS_REQUIRED:${exactFactCount}`);
 
     writeSafe(LATE_OUTPUT, {
-      schema_version: "geox_mcft_cap09_ea5e2_live_provider_two_phase_safe_proof_v2",
+      schema_version: "geox_mcft_cap09_ea5e2_live_provider_two_phase_safe_proof_v3",
       status: "PASS",
       subject_sha: subject,
       target_logical_time: target,
@@ -731,6 +801,8 @@ async function main(): Promise<void> {
       formal_raw_prefix_write_count: 0,
       public_value_artifact_count: 0,
       late_provider_request_count: result.provider_request_count,
+      late_transport_max_attempts: KBS_RAW_HOURLY_TRANSPORT_MAX_ATTEMPTS,
+      late_transport_retry_scope: "SAME_SOURCE_TRANSIENT_ONLY",
       late_raw_retention_refs: result.raw_retention_refs,
       late_record_types: result.record_types,
       late_source_record_ids: result.source_record_ids,
@@ -750,6 +822,25 @@ async function main(): Promise<void> {
       canonical_runtime_write_count: 0,
       formal_window_started: false,
     });
+  } catch (error) {
+    try {
+      const deleted = await store.deleteTrackedRetainedRawEvidence();
+      writeSafe(TRANSIENT_PHASE_FAILURE_CLEANUP_OUTPUT, {
+        schema_version: "geox_mcft_cap09_ea5e2_transient_r2_phase_failure_cleanup_v1",
+        status: "PASS",
+        subject_sha: subject,
+        target_logical_time: target,
+        phase: mode,
+        deleted_ref_count: deleted.length,
+        deleted_refs: deleted,
+        formal_raw_prefix_delete_count: 0,
+        raw_values_emitted: false,
+        public_value_artifact_count: 0,
+      });
+    } catch (cleanupError) {
+      throw new AggregateError([error, cleanupError], "EA5E2_PHASE_FAILURE_TRANSIENT_CLEANUP_FAILED");
+    }
+    throw error;
   } finally {
     await pool.end();
   }
