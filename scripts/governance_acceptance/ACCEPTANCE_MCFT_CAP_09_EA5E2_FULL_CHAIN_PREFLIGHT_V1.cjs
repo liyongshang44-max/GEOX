@@ -4,6 +4,10 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
+const {
+  evaluateExactHourPhaseAdmission,
+  runDeterministicSelftest,
+} = require("../runtime_acceptance/MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1.cjs");
 
 const LIVE = ".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml";
 const VIABILITY = "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs";
@@ -154,6 +158,8 @@ function main() {
     && has(viability, "REQUIRED_GLOBAL_TRANSITION_COUNT = 12")
     && has(viability, "MIN_REPEAT_SAMPLES_PER_PHASE = 2")
     && has(viability, "EXACT_HOUR_PHASE_OFFSETS = [15, 10, 5]")
+    && has(viability, "evaluateExactHourPhaseAdmission")
+    && has(viability, 'phase_algorithm_ssot: "MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1"')
     && has(viability, "SOIL_FIRST_SEEN_SAMPLE_COUNT_INSUFFICIENT")
     && has(viability, "SOIL_EXACT_HOUR_PHASE_REPEAT_EVIDENCE_INSUFFICIENT")
     && has(viability, "SOIL_PROVEN_PHASES_MISS_INGRESS_CUTOFF")
@@ -166,23 +172,44 @@ function main() {
     && has(viability, "authority_changed: false");
   blocker(blockers, !viabilityImplemented, "LIVE_WINDOW_VIABILITY_PREFLIGHT_NOT_FAIL_CLOSED");
 
+  const phaseAdmissionSelftest = runDeterministicSelftest();
+  blocker(blockers, phaseAdmissionSelftest.status !== "PASS", "SOIL_PHASE_ADMISSION_DETERMINISTIC_SELFTEST_FAILED", phaseAdmissionSelftest);
+
   const globalDiagnostic = object(soilFirstSeen.global_first_seen_diagnostic, "SOIL_GLOBAL_FIRST_SEEN_DIAGNOSTIC_REQUIRED");
   const phaseAdmission = object(soilFirstSeen.exact_hour_phase_admission, "SOIL_EXACT_HOUR_PHASE_ADMISSION_REQUIRED");
-  const phaseProfiles = Array.isArray(phaseAdmission.phase_profiles) ? phaseAdmission.phase_profiles : [];
+  const declaredPhaseProfiles = Array.isArray(phaseAdmission.phase_profiles) ? phaseAdmission.phase_profiles : [];
+  const exactRowPhaseEvidence = Array.isArray(soilFirstSeen.exact_row_phase_first_seen) ? soilFirstSeen.exact_row_phase_first_seen : [];
+  const recomputedPhaseAdmission = evaluateExactHourPhaseAdmission(
+    exactRowPhaseEvidence.map((row) => ({
+      source_minute_utc: Number(row.source_minute_utc),
+      first_seen_lag_minutes: Number(row.first_seen_lag_minutes),
+    })),
+    {
+      soil_window_minutes: 15,
+      minimum_ingress_margin_minutes: 5,
+      minimum_repeat_samples_per_phase: 2,
+    },
+  );
+  const phaseProfiles = recomputedPhaseAdmission.phase_profiles;
   blocker(blockers,
     soilFirstSeen.scheduler_viability_only !== true
       || soilFirstSeen.authority_effect !== false
       || Number(soilFirstSeen.observed_source_cadence_minutes) !== 5
       || globalDiagnostic.diagnostic_only !== true
       || globalDiagnostic.candidate_t_admission_authority !== false
+      || phaseAdmission.phase_evidence_basis !== "EXACT_SOURCE_ROW_FIRST_SEEN"
       || phaseAdmission.scheduler_heuristic_only !== true
       || phaseAdmission.authority_effect !== false
       || Number(phaseAdmission.soil_observation_window_minutes) !== 15
       || Number(phaseAdmission.minimum_ingress_margin_minutes) !== 5
       || Number(phaseAdmission.minimum_repeat_samples_per_phase) !== 2
-      || phaseProfiles.length !== 3,
+      || declaredPhaseProfiles.length !== 3,
     "SOIL_FIRST_SEEN_EVIDENCE_BOUNDARY_DRIFT"
   );
+  blocker(blockers, JSON.stringify(declaredPhaseProfiles) !== JSON.stringify(phaseProfiles), "SOIL_PHASE_PROFILE_EVIDENCE_RECOMPUTE_MISMATCH", {
+    declared: declaredPhaseProfiles,
+    recomputed: phaseProfiles,
+  });
 
   const soilTransitionCount = Number(globalDiagnostic.transition_count);
   const soilMinimumTransitionCount = Number(globalDiagnostic.minimum_transition_count);
@@ -271,7 +298,7 @@ function main() {
   });
 
   const proof = {
-    schema_version: "geox_mcft_cap09_ea5e2_full_chain_static_preflight_v3",
+    schema_version: "geox_mcft_cap09_ea5e2_full_chain_static_preflight_v4",
     status: blockers.length ? "FAIL" : "PASS",
     subject_sha: process.env.GITHUB_SHA ?? null,
     blocker_count: blockers.length,
@@ -283,6 +310,9 @@ function main() {
     dependency_graph_count: dependencyGate.runtime_dependency_graph_count ?? null,
     crop_viability: crop,
     live_window_viability_preflight_implemented: viabilityImplemented,
+    soil_phase_admission_algorithm_ssot: "MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1",
+    soil_phase_admission_deterministic_selftest: phaseAdmissionSelftest,
+    soil_phase_profile_evidence_recomputed_from_exact_rows: true,
     soil_global_first_seen_transition_count: soilTransitionCount,
     soil_global_first_seen_minimum_transition_count: soilMinimumTransitionCount,
     soil_global_first_seen_lag_p50_minutes: soilLagP50Minutes,
