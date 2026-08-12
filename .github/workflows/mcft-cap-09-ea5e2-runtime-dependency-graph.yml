@@ -1,0 +1,46 @@
+name: mcft-cap-09-ea5e2-runtime-dependency-graph
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml'
+      - '.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.cjs'
+      - 'scripts/runtime_acceptance/**'
+      - 'apps/server/src/external_evidence/**'
+      - 'apps/server/src/persistence/twin_runtime/**'
+      - 'apps/server/src/runtime/twin_runtime/**'
+      - 'apps/server/src/domain/twin_runtime/**'
+      - 'apps/server/src/domain/soil_water/**'
+      - 'docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json'
+      - 'docs/digital_twin/mcft/cap_09/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'apps/server/package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-closure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prove complete EA5E2 repository runtime dependency binding
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.cjs
+
+      - name: Upload metadata-only dependency graph proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-runtime-dependency-graph-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.json
+          if-no-files-found: warn
+          retention-days: 7
