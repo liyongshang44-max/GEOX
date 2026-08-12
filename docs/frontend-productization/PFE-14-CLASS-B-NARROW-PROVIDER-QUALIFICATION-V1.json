@@ -1,0 +1,43 @@
+{
+  "schema_version": "geox_pfe14_class_b_narrow_provider_qualification_v1",
+  "record_status": "CLASS_B_NARROW_PROVIDER_QUALIFIED_FRONTEND_PRODUCTIZATION_AUTHORIZED_S4_NOT_EFFECTIVE",
+  "qualified_subject_sha": "6b60ebd30192af212139a2fae0906f07cc5bbb5c",
+  "focused_run_id": 31610213981,
+  "historical_provider_run_id": 31610214284,
+  "standard_ci_run_id": 31610213882,
+  "artifact_id": 9146859396,
+  "artifact_digest": "sha256:bac4b91dd6982f5548cf79633f70c2fe8d9ac61d17ca9b14de9788d06b1f1268",
+  "real_postgresql_projection_pass": true,
+  "historical_provider_regression_pass": true,
+  "frontend_runtime_page_audit_pass": true,
+  "full_acceptance_pass": true,
+  "commercial_mvp0_release_gate_pass": true,
+  "all_pass": true,
+  "protected_main_merge_claimed": false,
+  "qualified_provider_fields": [
+    "runtime_degradation_status",
+    "degradation_reason_codes",
+    "forecast_status",
+    "scenario_source_eligible",
+    "slot_window"
+  ],
+  "frontend_productization": {
+    "authorized": true,
+    "existing_api_client_type_change_authorized": true,
+    "existing_operational_panel_change_authorized": true,
+    "existing_css_change_authorized": true,
+    "new_frontend_route_authorized": false,
+    "new_api_method_authorized": false,
+    "backend_change_authorized": false,
+    "browser_status_derivation_authorized": false,
+    "canonical_payload_parsing_authorized": false,
+    "not_materialized_failure_inference_authorized": false
+  },
+  "generic_class_b_implementation_authorized": false,
+  "class_c_implementation_authorized": false,
+  "runtime_context_authorized": false,
+  "shadow_online_label_authorized": false,
+  "kbs_policy_change_authorized": false,
+  "pfe14_s4_effective": false,
+  "next_action": "PFE_14_PRODUCTIZE_NARROW_CLASS_B_OPERATIONAL_FIELDS"
+}
