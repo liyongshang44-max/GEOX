@@ -17,6 +17,7 @@ const S6_STATUS = 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-S6-DELIVERY-ST
 const LEGACY_ACCEPTANCE_SOURCE_SHA = 'ade35875ff6f5ef92ec76f04ab9fc302c57f700e';
 const PFE14_AUTHORITY = 'docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json';
 const PFE14_PROVIDER_QUALIFICATION = 'docs/frontend-productization/PFE-14-MCFT09-OPERATIONAL-READ-PROVIDER-QUALIFICATION-V1.json';
+const PFE14_COMPLETENESS_ADJUDICATION = 'docs/frontend-productization/PFE-14-S4-PRODUCT-COMPLETENESS-ADJUDICATION-V1.json';
 
 const LEGACY_REMEDIATION_FILES = [S5_ACCEPTANCE, S6_WORKFLOW, HELPER].sort();
 const PFE14_GATE_REMEDIATION_FILES = [S5_ACCEPTANCE, HELPER].sort();
@@ -32,6 +33,9 @@ const PFE14_ALLOWED_CAP07_PRODUCT_FILES = [
   'apps/web/src/api/mcftFieldTwinRuntime.ts',
   'apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx',
 ].sort();
+const PFE14_STATE_FORECAST_ALLOWED_CAP07_PRODUCT_FILES = [
+  'apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx',
+].sort();
 const PFE14_S4_PRODUCT_CONSUMER_FILES = [
   '.github/workflows/pfe-14-s4-single-scope-operational-readback-v1.yml',
   'apps/web/src/api/mcftFieldTwinRuntime.ts',
@@ -41,6 +45,15 @@ const PFE14_S4_PRODUCT_CONSUMER_FILES = [
   'docs/frontend-productization/PFE-14-S4-SINGLE-SCOPE-OPERATIONAL-READBACK-CANDIDATE-V1.json',
   'docs/frontend-productization/PFE-14-S4-SINGLE-SCOPE-OPERATIONAL-READBACK-CANDIDATE-V1.md',
   'scripts/frontend_acceptance/ACCEPTANCE_PFE_14_S4_SINGLE_SCOPE_OPERATIONAL_READBACK_V1.cjs',
+].sort();
+const PFE14_STATE_FORECAST_PRODUCTIZATION_FILES = [
+  '.github/workflows/pfe-14-state-forecast-productization-v1.yml',
+  'apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx',
+  'apps/web/src/features/operator/fieldRuntime/Pfe14StateForecastProductPanels.tsx',
+  'apps/web/src/styles/pfe14StateForecastProductization.css',
+  'docs/frontend-productization/PFE-14-STATE-FORECAST-PRODUCTIZATION-CANDIDATE-V1.json',
+  'docs/frontend-productization/PFE-14-STATE-FORECAST-PRODUCTIZATION-CANDIDATE-V1.md',
+  'scripts/frontend_acceptance/ACCEPTANCE_PFE_14_STATE_FORECAST_PRODUCTIZATION_V1.cjs',
 ].sort();
 
 function git(args) {
@@ -105,10 +118,22 @@ function successorAuthorityShape(actual) {
   return true;
 }
 
+function pfe14HistoricalReadbackProofBound(authority) {
+  const proof = authority.partial_frontend_readback_proof;
+  return proof?.subject_sha === '6b99afb119bb012246ab7c43c7a37ab47beb22ed'
+    && proof?.pfe14_focused_run_id === 31565598839
+    && proof?.cap07_lifecycle_run_id === 31565598738
+    && proof?.standard_ci_run_id === 31565598703
+    && proof?.all_pass === true
+    && proof?.merged_to_protected_main === false;
+}
+
 function pfe14AuthorityAllowsProductConsumer() {
   if (!fs.existsSync(path.join(ROOT, PFE14_AUTHORITY)) || !fs.existsSync(path.join(ROOT, PFE14_PROVIDER_QUALIFICATION))) return false;
   const authority = readJson(PFE14_AUTHORITY);
   const qualification = readJson(PFE14_PROVIDER_QUALIFICATION);
+  const phaseAllowsHistoricalCandidate = authority.first_legal_next_action === 'PFE_14_S4_IMPLEMENT_SINGLE_SCOPE_SCHEDULER_EVIDENCE_READBACK'
+    || pfe14HistoricalReadbackProofBound(authority);
   return authority.phase_id === 'PFE-14'
     && authority.slice_id === 'PFE-14.S4'
     && authority.dependency_provider_frontend_consumption_authorized === true
@@ -118,7 +143,7 @@ function pfe14AuthorityAllowsProductConsumer() {
     && authority.shadow_online_label_authorized === false
     && authority.authoritative_runtime_context_authorized === false
     && authority.s4_effective === false
-    && authority.first_legal_next_action === 'PFE_14_S4_IMPLEMENT_SINGLE_SCOPE_SCHEDULER_EVIDENCE_READBACK'
+    && phaseAllowsHistoricalCandidate
     && qualification.frontend_consumption_authorized === true
     && qualification.frontend_api_client_change_authorized === true
     && qualification.existing_field_runtime_page_change_authorized === true
@@ -128,12 +153,43 @@ function pfe14AuthorityAllowsProductConsumer() {
     && qualification.pfe14_s4_effective === false;
 }
 
+function pfe14AuthorityAllowsStateForecastProductization() {
+  if (!fs.existsSync(path.join(ROOT, PFE14_AUTHORITY)) || !fs.existsSync(path.join(ROOT, PFE14_COMPLETENESS_ADJUDICATION))) return false;
+  const authority = readJson(PFE14_AUTHORITY);
+  const adjudication = readJson(PFE14_COMPLETENESS_ADJUDICATION);
+  return authority.phase_id === 'PFE-14'
+    && authority.slice_id === 'PFE-14.S4'
+    && authority.record_status === 'S4_PARTIAL_FRONTEND_READBACK_QUALIFIED_COMPLETENESS_ADJUDICATED_NOT_EFFECTIVE'
+    && authority.state_forecast_current_canonical_productization_authorized === true
+    && authority.state_forecast_new_backend_fields_authorized === false
+    && authority.state_forecast_payload_inference_authorized === false
+    && authority.s4_route_source_authorized === false
+    && authority.shadow_online_label_authorized === false
+    && authority.authoritative_runtime_context_authorized === false
+    && authority.s4_effective === false
+    && authority.first_legal_next_action === 'PFE_14_PRODUCTIZE_CURRENT_CANONICAL_STATE_AND_FORECAST_WITHOUT_NEW_DATA_FIELDS'
+    && pfe14HistoricalReadbackProofBound(authority)
+    && adjudication.record_status === 'S4_PARTIAL_READBACK_QUALIFIED_COMPLETENESS_ADJUDICATED_NOT_EFFECTIVE'
+    && adjudication.state_forecast_productization?.authorized_next_candidate === true
+    && adjudication.state_forecast_productization?.existing_get_only_data_only === true
+    && adjudication.state_forecast_productization?.new_backend_fields_authorized === false
+    && adjudication.state_forecast_productization?.payload_inference_authorized === false
+    && adjudication.state_forecast_productization?.synthetic_values_authorized === false
+    && adjudication.pfe14_s4_effective === false
+    && adjudication.next_action === 'PFE_14_PRODUCTIZE_CURRENT_CANONICAL_STATE_AND_FORECAST_WITHOUT_NEW_DATA_FIELDS';
+}
+
 function pfe14S4ProductConsumerShape(actual) {
   return sameFiles(actual, PFE14_S4_PRODUCT_CONSUMER_FILES) && pfe14AuthorityAllowsProductConsumer();
 }
 
+function pfe14StateForecastProductizationShape(actual) {
+  return sameFiles(actual, PFE14_STATE_FORECAST_PRODUCTIZATION_FILES) && pfe14AuthorityAllowsStateForecastProductization();
+}
+
 function resolveS5Mode(actual) {
   if (sameFiles(actual, LEGACY_REMEDIATION_FILES) || sameFiles(actual, PFE14_GATE_REMEDIATION_FILES)) return 'POST_CLOSURE_SUCCESSOR_GATE_REMEDIATION_MODE';
+  if (s6Committed() && pfe14StateForecastProductizationShape(actual)) return 'PFE14_STATE_FORECAST_AUTHORIZED_PRODUCTIZATION_MODE';
   if (s6Committed() && pfe14S4ProductConsumerShape(actual)) return 'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE';
   if (s6Committed() && actual.length === 0) return 'POST_CLOSURE_STEADY_STATE_REGRESSION_MODE';
   if (s6Committed() && successorAuthorityShape(actual)) return 'POST_CLOSURE_SUCCESSOR_AUTHORITY_MODE';
@@ -142,6 +198,7 @@ function resolveS5Mode(actual) {
 
 function resolveS6Mode(actual) {
   if (sameFiles(actual, LEGACY_REMEDIATION_FILES) || sameFiles(actual, PFE14_GATE_REMEDIATION_FILES)) return 'POST_CLOSURE_SUCCESSOR_GATE_REMEDIATION_MODE';
+  if (pfe14StateForecastProductizationShape(actual)) return 'PFE14_STATE_FORECAST_AUTHORIZED_PRODUCTIZATION_MODE';
   if (pfe14S4ProductConsumerShape(actual)) return 'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE';
   if (actual.length === 0) return 'POST_CLOSURE_STEADY_STATE_REGRESSION_MODE';
   if (sameFiles(actual, HISTORICAL_BOOTSTRAP_FILES)) return 'CAP08_REGISTRY_BOOTSTRAP_MODE';
@@ -197,6 +254,11 @@ function selfTestClassifier() {
     assert.equal(resolveS5Mode(PFE14_S4_PRODUCT_CONSUMER_FILES), 'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE');
     assert.equal(pfe14S4ProductConsumerShape([...PFE14_S4_PRODUCT_CONSUMER_FILES, 'apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx']), false);
   }
+  if (pfe14AuthorityAllowsStateForecastProductization()) {
+    assert.equal(pfe14StateForecastProductizationShape(PFE14_STATE_FORECAST_PRODUCTIZATION_FILES), true);
+    assert.equal(resolveS5Mode(PFE14_STATE_FORECAST_PRODUCTIZATION_FILES), 'PFE14_STATE_FORECAST_AUTHORIZED_PRODUCTIZATION_MODE');
+    assert.equal(pfe14StateForecastProductizationShape([...PFE14_STATE_FORECAST_PRODUCTIZATION_FILES, 'apps/web/src/api/mcftFieldTwinRuntime.ts']), false);
+  }
 }
 
 function accept(mode) {
@@ -209,7 +271,9 @@ function accept(mode) {
   };
   const protectedExceptions = mode === 'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE'
     ? PFE14_ALLOWED_CAP07_PRODUCT_FILES
-    : [];
+    : mode === 'PFE14_STATE_FORECAST_AUTHORIZED_PRODUCTIZATION_MODE'
+      ? PFE14_STATE_FORECAST_ALLOWED_CAP07_PRODUCT_FILES
+      : [];
 
   check('CAP07_S6_REMAINS_COMMITTED_AND_NON_AUTHORIZING', () => assert.equal(s6Committed(), true));
   check('CAP07_REGISTRY_CONTRACT_REMAINS_FAIL_CLOSED', checkCurrentCap07RegistryContract);
@@ -241,11 +305,12 @@ function accept(mode) {
       const wrapper = fs.readFileSync(path.join(ROOT, S5_ACCEPTANCE), 'utf8');
       assert.ok(wrapper.includes(HELPER), 'S5_HELPER_REFERENCE_MISSING');
       assert.ok(wrapper.includes(LEGACY_ACCEPTANCE_SOURCE_SHA), 'S5_LEGACY_SOURCE_SHA_MISSING');
-      assert.ok(wrapper.includes('PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE'), 'PFE14_SUCCESSOR_MODE_NOT_EXPLICITLY_ALLOWED');
+      assert.ok(wrapper.includes('PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE'), 'PFE14_S4_SUCCESSOR_MODE_NOT_EXPLICITLY_ALLOWED');
+      assert.ok(wrapper.includes('PFE14_STATE_FORECAST_AUTHORIZED_PRODUCTIZATION_MODE'), 'PFE14_STATE_FORECAST_MODE_NOT_EXPLICITLY_ALLOWED');
     });
   } else if (mode === 'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE') {
     check('PFE14_S4_PRODUCT_CONSUMER_BOUNDARY_IS_EXACT', () => assert.deepEqual(actual, PFE14_S4_PRODUCT_CONSUMER_FILES));
-    check('PFE14_S4_PRODUCT_CONSUMER_AUTHORITY_IS_CURRENT', () => assert.equal(pfe14AuthorityAllowsProductConsumer(), true));
+    check('PFE14_S4_PRODUCT_CONSUMER_AUTHORITY_IS_CURRENT_OR_PROOF_BOUND', () => assert.equal(pfe14AuthorityAllowsProductConsumer(), true));
     check('PFE14_S4_PRODUCT_CONSUMER_PRESERVES_CAP07_REGISTRY_ENTRY', () => assertCap07RegistryPreserved(base));
     check('PFE14_S4_PRODUCT_CONSUMER_PRESERVES_CAP07_STATUS', () => {
       assert.equal(actual.includes(S5_STATUS), false);
@@ -257,6 +322,22 @@ function accept(mode) {
     check('PFE14_S4_PRODUCT_CONSUMER_EXCEPTIONS_ARE_EXACT', () => {
       const changedProtected = actual.filter((file) => PROTECTED_CAP07_FILES.includes(file)).sort();
       assert.deepEqual(changedProtected, PFE14_ALLOWED_CAP07_PRODUCT_FILES);
+    });
+  } else if (mode === 'PFE14_STATE_FORECAST_AUTHORIZED_PRODUCTIZATION_MODE') {
+    check('PFE14_STATE_FORECAST_BOUNDARY_IS_EXACT', () => assert.deepEqual(actual, PFE14_STATE_FORECAST_PRODUCTIZATION_FILES));
+    check('PFE14_STATE_FORECAST_AUTHORITY_IS_CURRENT', () => assert.equal(pfe14AuthorityAllowsStateForecastProductization(), true));
+    check('PFE14_STATE_FORECAST_PRESERVES_CAP07_REGISTRY_ENTRY', () => assertCap07RegistryPreserved(base));
+    check('PFE14_STATE_FORECAST_PRESERVES_CAP07_STATUS', () => {
+      assert.equal(actual.includes(S5_STATUS), false);
+      assert.equal(actual.includes(S6_STATUS), false);
+    });
+    check('PFE14_STATE_FORECAST_DOES_NOT_CHANGE_ROUTE_OR_API_OWNER', () => {
+      assert.equal(actual.includes('apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx'), false);
+      assert.equal(actual.includes('apps/web/src/api/mcftFieldTwinRuntime.ts'), false);
+    });
+    check('PFE14_STATE_FORECAST_PROTECTED_EXCEPTION_IS_EXACT', () => {
+      const changedProtected = actual.filter((file) => PROTECTED_CAP07_FILES.includes(file)).sort();
+      assert.deepEqual(changedProtected, PFE14_STATE_FORECAST_ALLOWED_CAP07_PRODUCT_FILES);
     });
   } else if (mode === 'POST_CLOSURE_SUCCESSOR_AUTHORITY_MODE') {
     check('SUCCESSOR_AUTHORITY_FILE_SHAPE_IS_FAIL_CLOSED', () => assert.equal(successorAuthorityShape(actual), true));
@@ -298,6 +379,7 @@ function accept(mode) {
     cap07_canonical_write_authorized: false,
     protected_cap07_product_file_exceptions: protectedExceptions,
     pfe14_s4_authorized_product_consumer: mode === 'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE',
+    pfe14_state_forecast_authorized_productization: mode === 'PFE14_STATE_FORECAST_AUTHORIZED_PRODUCTIZATION_MODE',
     repository_write_performed: false,
   };
   fs.mkdirSync(path.dirname(RESULT), { recursive: true });
