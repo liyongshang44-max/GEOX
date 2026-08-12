@@ -1,0 +1,51 @@
+{
+  "schema_version": "geox_pfe14_class_b_operational_projection_adjudication_v1",
+  "record_status": "ADJUDICATION_CANDIDATE_NO_IMPLEMENTATION_AUTHORITY",
+  "parent_qualification_ref": "docs/frontend-productization/PFE-14-EVIDENCE-HEALTH-PRODUCTIZATION-QUALIFICATION-V1.json",
+  "runtime_effect": false,
+  "backend_effect": false,
+  "database_effect": false,
+  "kbs_policy_effect": false,
+  "safe_provider_candidate_fields": {
+    "runtime_degradation_status": {
+      "candidate_enum": ["HEALTHY", "DEGRADED", "UNAVAILABLE"],
+      "source_semantics": "MCFT_CAP09_S4_RUNTIME_HEALTH",
+      "browser_derivation_authorized": false
+    },
+    "degradation_reason_codes": {
+      "candidate_ordered_vocabulary": ["CHECKPOINT_NOT_ESTABLISHED", "EVIDENCE_BOUNDARY_NOT_ESTABLISHED", "EVIDENCE_STALE", "EVIDENCE_MISSING", "SCHEDULER_LAG"],
+      "browser_derivation_authorized": false
+    },
+    "forecast_status": {
+      "candidate_enum": ["COMPLETED", "BLOCKED"],
+      "source_semantics": "VALIDATED_CAP04_FORECAST_PAYLOAD_STATUS",
+      "presence_inference_authorized": false
+    },
+    "scenario_source_eligible": {
+      "candidate_type": "BOOLEAN_OR_NULL",
+      "source_semantics": "VALIDATED_SCENARIO_SOURCE_FORECAST_ATTACHMENT_AND_PAYLOAD",
+      "attachment_presence_inference_authorized": false
+    },
+    "slot_window": {
+      "entry_count": 24,
+      "schedule_identity_source": "PERSISTED_SCHEDULE_START_LOGICAL_TIME_PLUS_ORDERED_O00_O23",
+      "persisted_states": ["CLAIMED", "RUNNING", "COMPLETED", "DEGRADED", "FAILED"],
+      "absent_row_state": "NOT_MATERIALIZED",
+      "absent_row_failure_inference_authorized": false,
+      "browser_derivation_authorized": false
+    }
+  },
+  "blocked_class_b_fields": {
+    "runtime_mode": "SCOPE_PRODUCT_BINDING_AUTHORITY_MISSING",
+    "missed_slot_count": "CURRENT_LIST_MISSED_SLOTS_SUPPRESSED_WHILE_ACTIVE_DEDICATED_COUNT_SEMANTIC_REQUIRED",
+    "backfill_status": "DURABLE_BACKFILL_PROVENANCE_NOT_PRESENT",
+    "state_status": "NORMALIZED_PRODUCT_STATE_VOCABULARY_NOT_FROZEN",
+    "refresh_after_seconds": "SCHEDULER_INTERVAL_IS_NOT_PRODUCT_REFRESH_POLICY"
+  },
+  "class_c_fields_unchanged": ["runtime_stage", "latest_tick_started_at", "restart_detected", "recovery_status"],
+  "class_b_implementation_authorized": false,
+  "class_c_implementation_authorized": false,
+  "proposed_next_candidate": "PFE_14_IMPLEMENT_NARROW_CLASS_B_DEGRADATION_FORECAST_SLOT_PROVIDER",
+  "proposed_next_candidate_fields": ["runtime_degradation_status", "degradation_reason_codes", "forecast_status", "scenario_source_eligible", "slot_window"],
+  "pfe14_s4_effective": false
+}
