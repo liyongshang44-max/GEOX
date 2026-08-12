@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
+// EA5E2_RUNTIME_DEPENDENCY_GRAPH_SHA256=__EA5E2_RUNTIME_DEPENDENCY_GRAPH_SHA256__
+
 const fs = require("node:fs");
 const path = require("node:path");
 
