@@ -8,7 +8,7 @@ Runtime/backend/database change: NONE
 
 A Class-B field may advance to a server-provider candidate only when its product meaning can be defined from existing persisted/server-validated facts without browser inference, hidden historical assumptions, or KBS-policy duplication.
 
-This adjudication deliberately separates **available inputs** from **authorized product semantics**.
+This adjudication separates **available inputs** from **authorized product semantics**.
 
 ## 2. Safe narrow provider candidates
 
@@ -18,17 +18,17 @@ Candidate product enum:
 
 `HEALTHY | DEGRADED | UNAVAILABLE`
 
-It must be server-owned and reuse the already-frozen MCFT-CAP-09 S4 Runtime Health semantics:
+It must be server-owned and reuse MCFT-CAP-09 S4 Runtime Health semantics:
 
 - missing persisted checkpoint -> `UNAVAILABLE`;
 - established checkpoint plus `STALE`/`MISSING` Evidence or positive scheduler lag -> `DEGRADED`;
 - established checkpoint plus `FRESH` Evidence and zero scheduler lag -> `HEALTHY`.
 
-If the operational product projection has no eligibility boundary, product status is `UNAVAILABLE`; the frontend must not turn `UNKNOWN` Evidence into a health conclusion.
+If the product projection has no eligibility boundary, status is `UNAVAILABLE`; the frontend must not turn `UNKNOWN` Evidence into a health conclusion.
 
 ### 2.2 `degradation_reason_codes`
 
-Candidate server vocabulary, deterministic order:
+Candidate deterministic server vocabulary:
 
 1. `CHECKPOINT_NOT_ESTABLISHED`
 2. `EVIDENCE_BOUNDARY_NOT_ESTABLISHED`
@@ -38,13 +38,13 @@ Candidate server vocabulary, deterministic order:
 
 Rules:
 
-- `UNAVAILABLE` due to missing checkpoint or boundary returns only the missing-prerequisite reason(s);
+- missing prerequisite -> `UNAVAILABLE` with only missing-prerequisite reason(s);
 - with prerequisites established, `STALE` and `MISSING` are mutually exclusive Evidence reasons;
 - `SCHEDULER_LAG` may coexist with an Evidence degradation reason;
 - `HEALTHY` returns an empty reason list;
 - browser reconstruction is forbidden.
 
-This vocabulary is a product read projection over existing inputs; it is not a crop-health claim.
+This is Runtime Health only, not crop health.
 
 ### 2.3 `forecast_status`
 
@@ -56,49 +56,59 @@ The provider may expose that exact validated payload status when a current forec
 
 ### 2.4 `scenario_source_eligible`
 
-The server already validates Scenario-source Forecast semantics. A provider may expose a nullable server verdict from the validated Scenario-source attachment:
+The server already validates Scenario-source Forecast semantics. A provider may expose a nullable server verdict:
 
 - `true` only when the selected Scenario-source Forecast is attached and its validated payload is Scenario-eligible;
-- `false` only when the server has an explicit allowed-missing reason establishing that no successful eligible Forecast exists in the exact Scope;
-- `null` when the product projection cannot establish either condition without adding a new assumption.
+- `false` only when the server has an explicit allowed-missing condition establishing no eligible successful Forecast in the exact Scope;
+- `null` when neither condition can be established without a new assumption.
 
 The browser must not derive this field from attachment presence.
+
+### 2.5 `slot_window`
+
+The S3 scheduler persistence contract is a **fixed 24-slot schedule**, not an unbounded recurring O00–O23 namespace:
+
+- cursor persists `schedule_start_logical_time`;
+- cursor persists `next_slot_index` with range `0..24`;
+- slot ledger persists exact `logical_time`, `slot_id`, and scheduler `state`;
+- exact Scope has a UNIQUE constraint on `slot_id`;
+- slot states are `CLAIMED | RUNNING | COMPLETED | DEGRADED | FAILED`.
+
+Therefore a server read projection may safely expose exactly 24 entries, each carrying:
+
+- `slot_id`;
+- exact logical time for this fixed schedule;
+- `materialization_status = MATERIALIZED | NOT_MATERIALIZED`;
+- `scheduler_state = CLAIMED | RUNNING | COMPLETED | DEGRADED | FAILED | null`;
+- existing `tick_ref`, `health_ref`, `terminal_at` when a row is materialized.
+
+`NOT_MATERIALIZED` means only “no persisted slot row”. It must never be relabeled by the frontend as `FAILED`, `MISSED`, `FUTURE`, or `BLOCKED`.
 
 ## 3. Fields that remain blocked
 
 ### 3.1 `runtime_mode`
 
-The immutable adapter config contains `SHADOW_ONLINE`, but product binding to the active exact Scope remains unauthorized. Config presence is not Runtime Context authority.
+Blocked. Adapter config contains `SHADOW_ONLINE`, but config presence is not exact-Scope Runtime Context authority.
 
 ### 3.2 `missed_slot_count`
 
 Blocked.
 
-Current `SchedulerPortV1.listMissedSlots()` intentionally returns an empty list whenever an active slot exists to preserve sequential execution. Therefore its list length is not a universal backlog count. A dedicated server semantic must be designed before this field can be implemented.
+`SchedulerPortV1.listMissedSlots()` intentionally returns `[]` whenever an active slot exists to preserve sequential execution. Its list length therefore cannot be reused as a universal backlog metric. A dedicated count semantic is required.
 
 ### 3.3 `backfill_status`
 
 Blocked.
 
-The recovery service can return `CLAIMED_OLDEST_MISSED_SLOT` or `RECOVERED_EXPIRED_ACTIVE_SLOT` during an operation, but that mode is not durably persisted as product history. Current cursor/slot/lease state cannot prove whether an active slot originated from normal claim or backfill.
+Recovery can return `CLAIMED_OLDEST_MISSED_SLOT` or `RECOVERED_EXPIRED_ACTIVE_SLOT` during an operation, but that mode is not durably persisted as product history. Current cursor/slot/lease state cannot prove origin provenance.
 
 ### 3.4 `state_status`
 
-Blocked.
+Blocked. Canonical State visibility exists, but no normalized product-state vocabulary is frozen. Object presence alone is not a normalized State status.
 
-Canonical `posterior_state` / State collection visibility exists, but no normalized product-state vocabulary is frozen. Object presence alone is not a normalized State status.
+### 3.5 `refresh_after_seconds`
 
-### 3.5 O00–O23 product slot state
-
-Blocked pending explicit logical-time window identity.
-
-Persisted slot rows have exact `logical_time`, `slot_id`, and state, but `slot_id` is only O00–O23 and recurs across logical time. A 24-slot product strip must first define which exact logical-time window it represents. An absent row may be shown only as data absence after a window contract exists; it must not be labeled FAILED/MISSED by inference.
-
-### 3.6 `refresh_after_seconds`
-
-Blocked.
-
-The scheduler interval is 3600 seconds, but execution interval is not automatically a frontend refresh recommendation. Product refresh policy requires a separate contract; current safe behavior remains manual/user-triggered refresh.
+Blocked. Scheduler interval `3600s` is an execution cadence, not automatically a frontend refresh recommendation. Current safe behavior remains manual/user-triggered refresh until a product refresh contract exists.
 
 ## 4. Class-C fields remain Class-C
 
@@ -115,19 +125,20 @@ Lease/fencing/cursor state is still not accepted as restart/recovery history.
 
 This adjudication does not change KBS source, freshness threshold, publication cadence, or publication-profile authority.
 
-`runtime_degradation_status` consumes the server Evidence freshness verdict as an input. If MCFT-CAP-09 later lawfully changes how that verdict is produced, the PFE product contract remains unchanged.
+`runtime_degradation_status` consumes the server Evidence freshness verdict as an input. A future lawful MCFT-CAP-09 change to that verdict algorithm remains upstream of PFE.
 
 ## 6. Proposed next candidate
 
-If this adjudication is separately qualified, the only proposed implementation successor is:
+If separately qualified, the only proposed implementation successor is:
 
-`PFE_14_IMPLEMENT_NARROW_CLASS_B_DEGRADATION_FORECAST_PROVIDER`
+`PFE_14_IMPLEMENT_NARROW_CLASS_B_DEGRADATION_FORECAST_SLOT_PROVIDER`
 
 Allowed fields only:
 
 - `runtime_degradation_status`;
 - `degradation_reason_codes`;
 - `forecast_status`;
-- `scenario_source_eligible`.
+- `scenario_source_eligible`;
+- `slot_window`.
 
 All other Class-B and all Class-C fields remain implementation-forbidden.
