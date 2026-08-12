@@ -18,6 +18,7 @@
     "candidate_t_admission_authority": false
   },
   "exact_hour_phase_admission": {
+    "phase_evidence_basis": "EXACT_SOURCE_ROW_FIRST_SEEN",
     "scheduler_heuristic_only": true,
     "authority_effect": false,
     "soil_observation_window_minutes": 15,
@@ -56,13 +57,13 @@
         "source_minute_utc": 55,
         "ingress_deadline_offset_before_target_minutes": 5,
         "derived_max_first_seen_lag_minutes": 0,
-        "sample_count": 0,
+        "sample_count": 2,
         "minimum_repeat_sample_count": 2,
-        "first_seen_lag_upper_bounds_minutes": [],
-        "first_seen_lag_max_minutes": null,
-        "evidence_sufficient": false,
+        "first_seen_lag_upper_bounds_minutes": [10.497, 10.042],
+        "first_seen_lag_max_minutes": 10.497,
+        "evidence_sufficient": true,
         "all_samples_visible_by_ingress_deadline": false,
-        "status": "INSUFFICIENT_REPEAT_EVIDENCE"
+        "status": "PROVEN_INCOMPATIBLE"
       }
     ],
     "proven_compatible_phase_count": 0,
@@ -88,7 +89,65 @@
       "observation_duration_minutes": 75,
       "sampling_interval_seconds": 60,
       "sample_count": 76,
-      "transition_count": 11
+      "transition_count": 11,
+      "timestamp_tail_replay_used_for_exact_row_phase_evidence": true
+    }
+  ],
+  "exact_row_phase_first_seen": [
+    {
+      "diagnostic_run_id": 31598365942,
+      "artifact_id": 9144712589,
+      "source_timestamp": "2026-08-12T12:50:00.000Z",
+      "source_minute_utc": 50,
+      "last_not_seen_at": "2026-08-12T12:59:17.279Z",
+      "first_seen_at": "2026-08-12T13:00:21.514Z",
+      "first_seen_lag_minutes": 10.359,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "artifact_id": 9144712589,
+      "source_timestamp": "2026-08-12T12:55:00.000Z",
+      "source_minute_utc": 55,
+      "last_not_seen_at": "2026-08-12T13:04:26.272Z",
+      "first_seen_at": "2026-08-12T13:05:29.800Z",
+      "first_seen_lag_minutes": 10.497,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "artifact_id": 9144712589,
+      "source_timestamp": "2026-08-12T13:45:00.000Z",
+      "source_minute_utc": 45,
+      "last_not_seen_at": "2026-08-12T13:49:27.558Z",
+      "first_seen_at": "2026-08-12T13:50:27.933Z",
+      "first_seen_lag_minutes": 5.466,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "artifact_id": 9144712589,
+      "source_timestamp": "2026-08-12T13:50:00.000Z",
+      "source_minute_utc": 50,
+      "last_not_seen_at": "2026-08-12T13:59:51.245Z",
+      "first_seen_at": "2026-08-12T14:00:56.304Z",
+      "first_seen_lag_minutes": 10.938,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
+    },
+    {
+      "diagnostic_run_id": 31598365942,
+      "artifact_id": 9144712589,
+      "source_timestamp": "2026-08-12T13:55:00.000Z",
+      "source_minute_utc": 55,
+      "last_not_seen_at": "2026-08-12T14:04:02.341Z",
+      "first_seen_at": "2026-08-12T14:05:02.516Z",
+      "first_seen_lag_minutes": 10.042,
+      "sampling_interval_seconds": 60,
+      "first_seen_is_upper_bound": true
     }
   ],
   "transitions": [
@@ -251,6 +310,7 @@
   "limitations": [
     "FIRST_SEEN_TIMES_ARE_60_SECOND_SAMPLING_UPPER_BOUNDS",
     "GLOBAL_P50_P95_MAX_ARE_PROVIDER_DIAGNOSTICS_NOT_CANDIDATE_T_AUTHORITY",
+    "EXACT_HOUR_PHASE_ADMISSION_USES_EXACT_SOURCE_ROW_FIRST_SEEN_NOT_LATEST_ONLY_TRANSITIONS",
     "PHASE_ADMISSION_IS_SCHEDULER_HEURISTIC_ONLY",
     "MINIMUM_TWO_REPEAT_SAMPLES_PER_PHASE_IS_NOT_AUTHORITY",
     "SCHEDULER_VIABILITY_EVIDENCE_ONLY",
