@@ -1,0 +1,41 @@
+name: pfe-14-state-forecast-productization-v1
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx'
+      - 'apps/web/src/features/operator/fieldRuntime/Pfe14StateForecastProductPanels.tsx'
+      - 'apps/web/src/styles/pfe14StateForecastProductization.css'
+      - 'docs/frontend-productization/PFE-14-STATE-FORECAST-PRODUCTIZATION-CANDIDATE-V1.json'
+      - 'docs/frontend-productization/PFE-14-STATE-FORECAST-PRODUCTIZATION-CANDIDATE-V1.md'
+      - 'scripts/frontend_acceptance/ACCEPTANCE_PFE_14_STATE_FORECAST_PRODUCTIZATION_V1.cjs'
+      - '.github/workflows/pfe-14-state-forecast-productization-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  state-forecast-productization:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Revalidate S4 completeness authority
+        run: node scripts/frontend_acceptance/ACCEPTANCE_PFE_14_S4_PRODUCT_COMPLETENESS_ADJUDICATION_V1.cjs
+      - name: Validate State and Forecast productization boundary
+        run: node scripts/frontend_acceptance/ACCEPTANCE_PFE_14_STATE_FORECAST_PRODUCTIZATION_V1.cjs
+      - name: Typecheck web
+        run: pnpm --filter @geox/web typecheck
+      - name: Build web
+        run: pnpm --filter @geox/web build
