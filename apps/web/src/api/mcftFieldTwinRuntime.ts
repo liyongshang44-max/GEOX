@@ -163,12 +163,42 @@ export type McftEvidenceAvailabilityV1 = {
   out_of_order_count: number | null;
 };
 
+export type McftRuntimeDegradationStatusV1 = "HEALTHY" | "DEGRADED" | "UNAVAILABLE";
+export type McftDegradationReasonCodeV1 =
+  | "CHECKPOINT_NOT_ESTABLISHED"
+  | "EVIDENCE_BOUNDARY_NOT_ESTABLISHED"
+  | "EVIDENCE_STALE"
+  | "EVIDENCE_MISSING"
+  | "SCHEDULER_LAG";
+export type McftOperationalStatusV1 = {
+  runtime_degradation_status: McftRuntimeDegradationStatusV1;
+  degradation_reason_codes: McftDegradationReasonCodeV1[];
+  forecast_status: "COMPLETED" | "BLOCKED" | null;
+  scenario_source_eligible: boolean | null;
+};
+export type McftOperationalSlotStateV1 = "CLAIMED" | "RUNNING" | "COMPLETED" | "DEGRADED" | "FAILED" | "NOT_MATERIALIZED";
+export type McftOperationalSlotEntryV1 = {
+  slot_id: string;
+  logical_time: string;
+  state: McftOperationalSlotStateV1;
+  tick_ref: string | null;
+  health_ref: string | null;
+  terminal_at: string | null;
+};
+export type McftOperationalSlotWindowV1 = {
+  schedule_start_logical_time: string;
+  interval_seconds: 3600;
+  entries: McftOperationalSlotEntryV1[];
+};
+
 export type McftOperationalSummaryV1 = {
   schema_version: "pfe14_mcft09_operational_summary_v1";
   request_scope: McftFieldTwinScopeV1;
   response_started_at: string;
   scheduler_summary: McftSchedulerSummaryV1;
   evidence_availability: McftEvidenceAvailabilityV1;
+  operational_status: McftOperationalStatusV1;
+  slot_window: McftOperationalSlotWindowV1 | null;
   limitations: string[];
   validation_summary: string[];
   operational_content_hash: string;
