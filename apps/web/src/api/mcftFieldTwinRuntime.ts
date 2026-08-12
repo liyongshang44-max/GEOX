@@ -137,6 +137,44 @@ export type McftRuntimeHealthV1 = {
   [key: string]: unknown;
 };
 
+export type McftSchedulerSummaryV1 = {
+  scheduler_status: "WAITING" | "RUNNING" | "COMPLETED" | "NOT_ESTABLISHED";
+  latest_completed_slot: string | null;
+  latest_tick_ref: string | null;
+  latest_tick_status: "COMPLETED" | "DEGRADED" | "FAILED" | null;
+  latest_tick_started_at: null;
+  latest_tick_completed_at: string | null;
+  next_target_slot: string | null;
+  next_target_at: string | null;
+  scheduler_lag_ms: number | null;
+};
+
+export type McftEvidenceAvailabilityV1 = {
+  eligibility_boundary: { slot_id: string; logical_time: string } | null;
+  latest_evidence_observed_at: string | null;
+  latest_evidence_ingested_at: string | null;
+  evidence_age_ms: number | null;
+  freshness_status: "FRESH" | "STALE" | "MISSING" | "UNKNOWN";
+  freshness_threshold_ms: number;
+  coverage_ratio: number | null;
+  maximum_gap_ms: number | null;
+  future_excluded_count: number | null;
+  late_evidence_count: number | null;
+  out_of_order_count: number | null;
+};
+
+export type McftOperationalSummaryV1 = {
+  schema_version: "pfe14_mcft09_operational_summary_v1";
+  request_scope: McftFieldTwinScopeV1;
+  response_started_at: string;
+  scheduler_summary: McftSchedulerSummaryV1;
+  evidence_availability: McftEvidenceAvailabilityV1;
+  limitations: string[];
+  validation_summary: string[];
+  operational_content_hash: string;
+  response_instance_hash: string;
+};
+
 export type McftApiErrorV1 = {
   schema_version: string;
   status: number;
@@ -250,6 +288,7 @@ export function isMcftApiError(value: unknown): value is McftApiErrorV1 {
 }
 
 export const readMcftRuntime = (scope: McftFieldTwinScopeV1) => getMcft<McftRuntimeReadModelV1>(scope);
+export const readMcftOperationalSummary = (scope: McftFieldTwinScopeV1) => getMcft<McftOperationalSummaryV1>(scope, "/operational-summary");
 export const readMcftStates = (scope: McftFieldTwinScopeV1) => getMcft<McftCollectionPageV1>(scope, "/states", { limit: 50 });
 export const readMcftForecasts = (scope: McftFieldTwinScopeV1) => getMcft<McftCollectionPageV1>(scope, "/forecasts", { limit: 50 });
 export const readMcftScenarios = (scope: McftFieldTwinScopeV1) => getMcft<McftCollectionPageV1>(scope, "/scenarios", { limit: 50 });
