@@ -1,0 +1,26 @@
+name: pfe-14-mcft09-operational-read-provider-qualification-v1
+
+on:
+  pull_request:
+    paths:
+      - 'docs/frontend-productization/PFE-14-MCFT09-OPERATIONAL-READ-PROVIDER-QUALIFICATION-V1.md'
+      - 'docs/frontend-productization/PFE-14-MCFT09-OPERATIONAL-READ-PROVIDER-QUALIFICATION-V1.json'
+      - 'docs/frontend-productization/PFE-14-CURRENT-AUTHORITY.json'
+      - 'docs/frontend-productization/PFE-14-MCFT-09-DEPENDENCY-MAP.json'
+      - 'scripts/frontend_acceptance/ACCEPTANCE_PFE_14_MCFT09_OPERATIONAL_READ_PROVIDER_QUALIFICATION_V1.cjs'
+      - '.github/workflows/pfe-14-mcft09-operational-read-provider-qualification-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provider-qualification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate provider qualification authority against immutable exact-head proof
+        run: node scripts/frontend_acceptance/ACCEPTANCE_PFE_14_MCFT09_OPERATIONAL_READ_PROVIDER_QUALIFICATION_V1.cjs

@@ -5,6 +5,7 @@
   "frontend_phase": "PFE-14",
   "runtime_capability_line": "MCFT-CAP-09",
   "read_dependency_readjudication_ref": "docs/frontend-productization/PFE-14-MCFT09-READ-DEPENDENCY-READJUDICATION-V1.json",
+  "provider_qualification_ref": "docs/frontend-productization/PFE-14-MCFT09-OPERATIONAL-READ-PROVIDER-QUALIFICATION-V1.json",
   "runtime_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json",
   "dependency_evidence": {
     "s4_effective": true,
@@ -13,8 +14,12 @@
     "s4_exact_sha_artifact_id": 8970768718,
     "scheduler_source_present": true,
     "evidence_ingress_source_present": true,
-    "product_read_provider_present": false,
-    "product_read_provider_qualified": false
+    "product_read_provider_present": true,
+    "product_read_provider_qualified": true,
+    "product_read_provider_subject_sha": "8841cb8adbbc6829bac773bd8252fa4d675da031",
+    "product_read_provider_run_id": 31563462731,
+    "product_read_provider_artifact_id": 9128580507,
+    "product_read_provider_artifact_digest": "sha256:f1ccde58651a14af46674d67440fdb234abb561617bb3542361cc92caaa2c05a"
   },
   "global_rules": {
     "frontend_may_not_authorize_runtime": true,
@@ -31,14 +36,14 @@
     {"pfe_slice":"PFE-14.S1","name":"Frontend Read Contract and State Matrix","dependency_satisfied":true,"runtime_claim_allowed":false},
     {"pfe_slice":"PFE-14.S2","name":"Apple Visual Foundation","dependency_satisfied":true,"runtime_claim_allowed":false},
     {"pfe_slice":"PFE-14.S3","name":"Operator Shell Consolidation","dependency_satisfied":false,"partial_work_allowed":true,"runtime_claim_allowed":false},
-    {"pfe_slice":"PFE-14.S4","name":"Scope and Runtime Overview","mcft09_minimum_dependency":"SCHEDULER_AND_EVIDENCE_AVAILABILITY_READ_CONTRACT","dependency_satisfied":false,"provider_candidate_authorized":true,"missing_dependency":"QUALIFIED_GET_ONLY_OPERATIONAL_READ_PROVIDER","runtime_claim_allowed":false},
+    {"pfe_slice":"PFE-14.S4","name":"Scope and Runtime Overview","mcft09_minimum_dependency":"SCHEDULER_AND_EVIDENCE_AVAILABILITY_READ_CONTRACT","dependency_satisfied":true,"provider_qualified":true,"remaining_slice_obligation":"RUNTIME_CONTEXT_AND_PRODUCT_ACCEPTANCE","runtime_claim_allowed":false},
     {"pfe_slice":"PFE-14.S5","name":"Field Runtime Core Promotion","mcft09_minimum_dependency":"FORMAL_SHADOW_STATE_AND_FORECAST_READBACK","dependency_satisfied":false,"runtime_claim_allowed":false},
     {"pfe_slice":"PFE-14.S6","name":"Scheduler and Health Product Surface","mcft09_minimum_dependency":"CURSOR_LEASE_FENCING_BACKFILL_RECOVERY_HEALTH_READ_MODELS","dependency_satisfied":false,"runtime_claim_allowed":false},
     {"pfe_slice":"PFE-14.S7","name":"Trace and Qualification Readback","mcft09_minimum_dependency":"FORMAL_CONTROLLED_O00_O23_RUN_EVIDENCE","dependency_satisfied":false,"runtime_claim_allowed":false},
     {"pfe_slice":"PFE-14.S8","name":"Product Quality Closure","mcft09_minimum_dependency":"STABLE_FORMAL_READ_CONTRACTS_AND_CONTROLLED_DATASET","dependency_satisfied":false,"runtime_claim_allowed":false},
     {"pfe_slice":"PFE-14.S9","name":"Candidate and Exact Frontend Freeze","mcft09_minimum_dependency":"EXACT_FRONTEND_DEPENDENCY_CONTRACTS_FROZEN","dependency_satisfied":false,"runtime_claim_allowed":false}
   ],
-  "s4_provider_candidate_fields": {
+  "s4_provider_fields": {
     "scheduler_summary": ["scheduler_status","latest_completed_slot","latest_tick_ref","latest_tick_status","latest_tick_started_at","latest_tick_completed_at","next_target_slot","next_target_at","scheduler_lag_ms"],
     "evidence_availability": ["eligibility_boundary","latest_evidence_observed_at","latest_evidence_ingested_at","evidence_age_ms","freshness_status","freshness_threshold_ms","coverage_ratio","maximum_gap_ms","future_excluded_count","late_evidence_count","out_of_order_count"]
   },
@@ -46,7 +51,8 @@
     "dynamic_runtime_context",
     "persistence_and_recovery_history",
     "full_runtime_health_product_surface",
-    "formal_shadow_state_and_forecast_readback"
+    "formal_shadow_state_and_forecast_readback",
+    "per_slot_o00_o23_status"
   ],
-  "first_runtime_dependent_frontend_gate": "PFE_14_S4_OPERATIONAL_READ_PROVIDER_QUALIFICATION"
+  "first_runtime_dependent_frontend_gate": "PFE_14_S4_SINGLE_SCOPE_SCHEDULER_EVIDENCE_READBACK"
 }
