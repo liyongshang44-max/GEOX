@@ -18,6 +18,7 @@ const ALLOWED_SUCCESSOR_MODES = new Set([
   'POST_CLOSURE_SUCCESSOR_AUTHORITY_MODE',
   'PFE14_S4_AUTHORIZED_PRODUCT_CONSUMER_MODE',
   'PFE14_STATE_FORECAST_AUTHORIZED_PRODUCTIZATION_MODE',
+  'PFE14_EVIDENCE_HEALTH_AUTHORIZED_PRODUCTIZATION_MODE',
 ]);
 
 function git(args) {
@@ -31,11 +32,7 @@ function runLegacy() {
   const file = path.join(directory, 'ACCEPTANCE_MCFT_CAP_07_S5_OPERATOR_INTEGRATION.cjs');
   fs.writeFileSync(file, `${source}\n`);
   try {
-    cp.execFileSync(process.execPath, [file], {
-      cwd: ROOT,
-      env: process.env,
-      stdio: 'inherit',
-    });
+    cp.execFileSync(process.execPath, [file], { cwd: ROOT, env: process.env, stdio: 'inherit' });
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }
@@ -45,17 +42,9 @@ function runSuccessorBoundary() {
   const base = String(process.env.MCFT_BASE_SHA || '').trim();
   assert.match(base, /^[0-9a-f]{40}$/, 'MCFT_BASE_SHA_INVALID');
   const helper = path.join(ROOT, HELPER);
-  const mode = cp.execFileSync(process.execPath, [helper, '--resolve-s5-mode'], {
-    cwd: ROOT,
-    env: process.env,
-    encoding: 'utf8',
-  }).trim();
+  const mode = cp.execFileSync(process.execPath, [helper, '--resolve-s5-mode'], { cwd: ROOT, env: process.env, encoding: 'utf8' }).trim();
   assert.ok(ALLOWED_SUCCESSOR_MODES.has(mode), `SUCCESSOR_WRAPPER_MODE_NOT_ALLOWED:${mode}`);
-  cp.execFileSync(process.execPath, [helper, '--accept-mode', mode], {
-    cwd: ROOT,
-    env: process.env,
-    stdio: 'inherit',
-  });
+  cp.execFileSync(process.execPath, [helper, '--accept-mode', mode], { cwd: ROOT, env: process.env, stdio: 'inherit' });
   const boundaryPath = path.join(ROOT, 'acceptance-output/MCFT_CAP_07_POST_CLOSURE_SUCCESSOR_BOUNDARY_RESULT.json');
   const boundary = JSON.parse(fs.readFileSync(boundaryPath, 'utf8'));
   assert.equal(boundary.status, 'PASS');
