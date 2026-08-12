@@ -39,13 +39,22 @@ assert.equal(authority.s4_effective, false);
 const initialNextAction = 'PFE_14_S4_IMPLEMENT_SINGLE_SCOPE_SCHEDULER_EVIDENCE_READBACK';
 const stateForecastAction = 'PFE_14_PRODUCTIZE_CURRENT_CANONICAL_STATE_AND_FORECAST_WITHOUT_NEW_DATA_FIELDS';
 const evidenceHealthAction = 'PFE_14_PRODUCTIZE_CURRENT_EVIDENCE_AND_RUNTIME_HEALTH_WITHOUT_NEW_DATA_FIELDS';
+const classBAdjudicationAction = 'PFE_14_ADJUDICATE_CLASS_B_OPERATIONAL_PRODUCT_PROJECTION';
 if (authority.first_legal_next_action === initialNextAction) {
   assert.equal(authority.record_status, 'S4_DEPENDENCY_PROVIDER_QUALIFIED_NARROW_FRONTEND_READBACK_AUTHORIZED');
 } else {
-  assert.ok([stateForecastAction, evidenceHealthAction].includes(authority.first_legal_next_action), 'UNRECOGNIZED_PROVIDER_QUALIFICATION_SUCCESSOR_ACTION');
+  assert.ok([stateForecastAction, evidenceHealthAction, classBAdjudicationAction].includes(authority.first_legal_next_action), 'UNRECOGNIZED_PROVIDER_QUALIFICATION_SUCCESSOR_ACTION');
   assert.equal(authority.partial_frontend_readback_proof?.subject_sha, '6b99afb119bb012246ab7c43c7a37ab47beb22ed');
   assert.equal(authority.partial_frontend_readback_proof?.all_pass, true);
   assert.equal(authority.partial_frontend_readback_proof?.merged_to_protected_main, false);
+  if (authority.first_legal_next_action === classBAdjudicationAction) {
+    assert.equal(authority.evidence_health_productization_proof?.subject_sha, '9e6a60db8885d1d9e4ce73cb9b2cfe84b4970e5e');
+    assert.equal(authority.evidence_health_productization_proof?.focused_run_id, 31602800157);
+    assert.equal(authority.evidence_health_productization_proof?.cap07_lifecycle_run_id, 31602800202);
+    assert.equal(authority.evidence_health_productization_proof?.standard_ci_run_id, 31602800138);
+    assert.equal(authority.evidence_health_productization_proof?.all_pass, true);
+    assert.equal(authority.evidence_health_productization_proof?.merged_to_protected_main, false);
+  }
 }
 
 const s4 = dependency.slice_dependencies.find((item) => item.pfe_slice === 'PFE-14.S4');
@@ -55,15 +64,4 @@ assert.equal(s4.runtime_claim_allowed, false);
 assert.equal(dependency.dependency_evidence.product_read_provider_qualified, true);
 assert.equal(dependency.dependency_evidence.product_read_provider_subject_sha, qualification.qualified_subject_sha);
 
-console.log(JSON.stringify({
-  status: 'PASS',
-  qualification: 'PFE-14-MCFT09-OPERATIONAL-READ-PROVIDER-QUALIFICATION-V1',
-  qualified_subject_sha: qualification.qualified_subject_sha,
-  focused_run_id: qualification.focused_run_id,
-  artifact_id: qualification.artifact_id,
-  frontend_consumption_authorized: true,
-  runtime_context_authorized: false,
-  pfe14_s4_effective: false,
-  next_action: authority.first_legal_next_action,
-  qualification_proof_preserved_across_successor: authority.first_legal_next_action !== initialNextAction
-}, null, 2));
+console.log(JSON.stringify({ status:'PASS', qualification:'PFE-14-MCFT09-OPERATIONAL-READ-PROVIDER-QUALIFICATION-V1', qualified_subject_sha:qualification.qualified_subject_sha, focused_run_id:qualification.focused_run_id, artifact_id:qualification.artifact_id, frontend_consumption_authorized:true, runtime_context_authorized:false, pfe14_s4_effective:false, next_action:authority.first_legal_next_action, qualification_proof_preserved_across_successor:authority.first_legal_next_action!==initialNextAction }, null, 2));

@@ -6,8 +6,8 @@
   "slice_id": "PFE-14.S4",
   "canonical_name": "Shadow-Online Operator Runtime Console Promotion",
   "taskbook_revision": "v0.2",
-  "record_status": "S4_STATE_FORECAST_PRODUCTIZATION_QUALIFIED_EVIDENCE_HEALTH_PRODUCTIZATION_AUTHORIZED_NOT_EFFECTIVE",
-  "status": "S4_STATE_FORECAST_PRODUCTIZATION_QUALIFIED_EVIDENCE_HEALTH_PRODUCTIZATION_AUTHORIZED_NOT_EFFECTIVE",
+  "record_status": "S4_EVIDENCE_HEALTH_PRODUCTIZATION_QUALIFIED_CLASS_B_ADJUDICATION_AUTHORIZED_NOT_EFFECTIVE",
+  "status": "S4_EVIDENCE_HEALTH_PRODUCTIZATION_QUALIFIED_CLASS_B_ADJUDICATION_AUTHORIZED_NOT_EFFECTIVE",
   "base_main_sha": "6df2241f1470e1df930498782b42c6ba9e813b41",
   "s0_merge_sha": "dce309c7ea1045fc7a35e973fed09e1a0ab5f39c",
   "s1_merge_sha": "41e41d30dd36755beee9edac7262882dbba2c48c",
@@ -32,6 +32,7 @@
   "operational_provider_qualification_ref": "docs/frontend-productization/PFE-14-MCFT09-OPERATIONAL-READ-PROVIDER-QUALIFICATION-V1.json",
   "s4_product_completeness_adjudication_ref": "docs/frontend-productization/PFE-14-S4-PRODUCT-COMPLETENESS-ADJUDICATION-V1.json",
   "state_forecast_productization_qualification_ref": "docs/frontend-productization/PFE-14-STATE-FORECAST-PRODUCTIZATION-QUALIFICATION-V1.json",
+  "evidence_health_productization_qualification_ref": "docs/frontend-productization/PFE-14-EVIDENCE-HEALTH-PRODUCTIZATION-QUALIFICATION-V1.json",
   "dependency_snapshot": {
     "mcft09_s4_effective": true,
     "mcft09_s4_effective_subject_sha": "6a4138e77fe6b838bc0f552a0bc5e2ceb84c026f",
@@ -67,6 +68,17 @@
     "all_pass": true,
     "merged_to_protected_main": false
   },
+  "evidence_health_productization_proof": {
+    "subject_sha": "9e6a60db8885d1d9e4ce73cb9b2cfe84b4970e5e",
+    "focused_run_id": 31602800157,
+    "cap07_lifecycle_run_id": 31602800202,
+    "standard_ci_run_id": 31602800138,
+    "frontend_runtime_page_audit_pass": true,
+    "full_acceptance_pass": true,
+    "commercial_mvp0_release_gate_pass": true,
+    "all_pass": true,
+    "merged_to_protected_main": false
+  },
   "primary_navigation": ["runtime_overview", "fields"],
   "operator_pilot_route_claimed": false,
   "multi_field_concurrent_shadow_claimed": false,
@@ -94,6 +106,7 @@
   "state_forecast_new_backend_fields_authorized": false,
   "state_forecast_payload_inference_authorized": false,
   "evidence_health_current_productization_authorized": true,
+  "evidence_health_productization_qualified": true,
   "evidence_health_existing_operational_summary_reuse_authorized": true,
   "evidence_health_existing_runtime_health_get_reuse_authorized": true,
   "evidence_health_existing_trace_timeline_reuse_authorized": true,
@@ -102,6 +115,7 @@
   "evidence_health_new_backend_fields_authorized": false,
   "evidence_health_browser_derivation_authorized": false,
   "class_b_operational_extension_design_authorized": true,
+  "class_b_operational_projection_adjudication_authorized": true,
   "class_b_operational_extension_implementation_authorized": false,
   "class_c_field_implementation_authorized": false,
   "backend_source_authorized": true,
@@ -127,6 +141,6 @@
     "O00_O23_PRODUCT_STATUS_AUTHORITY_OR_EXPLICIT_NONDATA_TREATMENT",
     "S4_FINAL_EXACT_HEAD_ACCEPTANCE"
   ],
-  "first_legal_next_action": "PFE_14_PRODUCTIZE_CURRENT_EVIDENCE_AND_RUNTIME_HEALTH_WITHOUT_NEW_DATA_FIELDS",
-  "frontend_next_action_after_dependency": "PFE_14_PRODUCTIZE_CURRENT_EVIDENCE_AND_RUNTIME_HEALTH_WITHOUT_NEW_DATA_FIELDS"
+  "first_legal_next_action": "PFE_14_ADJUDICATE_CLASS_B_OPERATIONAL_PRODUCT_PROJECTION",
+  "frontend_next_action_after_dependency": "PFE_14_ADJUDICATE_CLASS_B_OPERATIONAL_PRODUCT_PROJECTION"
 }
