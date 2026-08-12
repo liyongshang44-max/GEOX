@@ -85,7 +85,8 @@ function resolveLocal(fromRel, specifier) {
 function importSpecifiers(text) {
   const values = [];
   const patterns = [
-    /\bimport\s+(?!type\b)(?:[^;\n]*?\sfrom\s*)?["']([^"']+)["']/g,
+    /\bimport\s+(?!type\b)[^;]*?\sfrom\s*["']([^"']+)["']/g,
+    /\bimport\s*["']([^"']+)["']/g,
     /\bimport\(\s*["']([^"']+)["']\s*\)/g,
     /\brequire\(\s*["']([^"']+)["']\s*\)/g,
   ];
