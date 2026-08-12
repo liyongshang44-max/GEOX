@@ -1,0 +1,99 @@
+name: mcft-cap-09-ea5e2-live-supersession-dispatch-guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml'
+      - '.github/workflows/mcft-cap-09-ea5e2-live-supersession-dispatch-guard.yml'
+      - 'scripts/runtime_acceptance/**'
+      - 'apps/server/src/external_evidence/**'
+      - 'apps/server/src/persistence/twin_runtime/**'
+      - 'apps/server/src/runtime/twin_runtime/**'
+      - 'apps/server/src/domain/twin_runtime/**'
+      - 'docs/digital_twin/mcft/cap_09/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+# This group is intentionally identical to the long-running EA5E2 live workflow.
+# Any semantic dependency push supersedes/cancels an older live subject before
+# dispatching one exact-current-main run. This closes dependency-graph gaps in
+# the legacy hand-maintained path/critical lists without relaxing authority.
+concurrency:
+  group: mcft-cap09-ea5e2-operational-activation-live-v1
+  cancel-in-progress: true
+
+jobs:
+  exact-main-supersession-dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact current protected-main subject before timing wait
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          current="$(git rev-parse origin/main)"
+          test "$GITHUB_SHA" = "$current" || {
+            echo "EA5E2_GUARD_SUBJECT_SUPERSEDED_BEFORE_WAIT:$GITHUB_SHA:$current" >&2
+            exit 1
+          }
+          echo "EA5E2_GUARD_EXACT_MAIN_SUBJECT=$GITHUB_SHA"
+
+      - name: Wait for a conservative dispatch minute with explicit T-minus-30 lead
+        shell: node {0}
+        run: |
+          // The existing live selector chooses the second following UTC hour when
+          // selection occurs after minute 20. Dispatch only in minute 21..45 so
+          // normal setup jitter cannot hit the minute<=20 discontinuity and the
+          // selected T retains at least 45 minutes of wall-clock lead to T-30.
+          const now = new Date();
+          const minute = now.getUTCMinutes();
+          let waitMs = 0;
+          if (minute <= 20) {
+            waitMs = (21 - minute) * 60_000 - now.getUTCSeconds() * 1000 - now.getUTCMilliseconds();
+          } else if (minute > 45) {
+            waitMs = (60 - minute + 21) * 60_000 - now.getUTCSeconds() * 1000 - now.getUTCMilliseconds();
+          }
+          waitMs = Math.max(0, waitMs);
+          if (waitMs > 36 * 60_000) throw new Error(`EA5E2_GUARD_WAIT_TOO_LONG:${waitMs}`);
+          console.log(JSON.stringify({
+            observed_at: now.toISOString(),
+            dispatch_window_utc_minute_min: 21,
+            dispatch_window_utc_minute_max: 45,
+            minimum_nominal_lead_to_t_minus_30_minutes: 45,
+            wait_minutes: waitMs / 60_000
+          }));
+          await new Promise(resolve => setTimeout(resolve, waitMs));
+
+      - name: Re-require exact current protected-main subject after timing wait
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          current="$(git rev-parse origin/main)"
+          test "$GITHUB_SHA" = "$current" || {
+            echo "EA5E2_GUARD_SUBJECT_SUPERSEDED_DURING_WAIT:$GITHUB_SHA:$current" >&2
+            exit 1
+          }
+          echo "EA5E2_GUARD_EXACT_MAIN_SUBJECT_AFTER_WAIT=$GITHUB_SHA"
+
+      - name: Dispatch exactly one current-main EA5E2 live workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main
+          echo "EA5E2_GUARD_LIVE_DISPATCHED_FOR_CURRENT_MAIN=$GITHUB_SHA"
