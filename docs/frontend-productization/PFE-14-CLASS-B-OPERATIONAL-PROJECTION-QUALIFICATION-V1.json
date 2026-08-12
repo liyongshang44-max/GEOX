@@ -1,0 +1,38 @@
+{
+  "schema_version": "geox_pfe14_class_b_operational_projection_qualification_v1",
+  "record_status": "CLASS_B_OPERATIONAL_PROJECTION_QUALIFIED_NARROW_PROVIDER_IMPLEMENTATION_AUTHORIZED_S4_NOT_EFFECTIVE",
+  "qualified_subject_sha": "d3bb7a4ff8509899981b41efe724a2c6b74540f5",
+  "focused_run_id": 31607280419,
+  "standard_ci_run_id": 31607280420,
+  "frontend_runtime_page_audit_pass": true,
+  "full_acceptance_pass": true,
+  "commercial_mvp0_release_gate_pass": true,
+  "all_pass": true,
+  "protected_main_merge_claimed": false,
+  "adjudication_ref": "docs/frontend-productization/PFE-14-CLASS-B-OPERATIONAL-PROJECTION-ADJUDICATION-V1.json",
+  "qualified_provider_fields": [
+    "runtime_degradation_status",
+    "degradation_reason_codes",
+    "forecast_status",
+    "scenario_source_eligible",
+    "slot_window"
+  ],
+  "provider_implementation": {
+    "authorized": true,
+    "existing_endpoint": "GET /api/v1/operator/twin/fields/:field_id/runtime/operational-summary",
+    "additive_response_extension_only": true,
+    "new_route_authorized": false,
+    "new_http_method_authorized": false,
+    "database_schema_change_authorized": false,
+    "canonical_write_authorized": false,
+    "scheduler_claim_or_recovery_authorized": false,
+    "frontend_consumption_authorized": false,
+    "kbs_policy_change_authorized": false
+  },
+  "generic_class_b_implementation_authorized": false,
+  "class_c_implementation_authorized": false,
+  "runtime_context_authorized": false,
+  "shadow_online_label_authorized": false,
+  "pfe14_s4_effective": false,
+  "next_action": "PFE_14_IMPLEMENT_NARROW_CLASS_B_DEGRADATION_FORECAST_SLOT_PROVIDER"
+}
