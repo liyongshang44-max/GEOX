@@ -15,6 +15,7 @@ function git(...args) { return execFileSync("git", args, { encoding: "utf8" }).t
 function read(path) { return fs.readFileSync(path, "utf8"); }
 function has(text, marker, code) { if (!text.includes(marker)) throw new Error(`${code}:${marker}`); }
 function lacks(text, marker, code) { if (text.includes(marker)) throw new Error(`${code}:${marker}`); }
+function matches(text, pattern, code) { if (!pattern.test(text)) throw new Error(`${code}:${pattern}`); }
 function eq(actual, expected, code) { if (actual !== expected) throw new Error(`${code}: expected=${JSON.stringify(expected)} actual=${JSON.stringify(actual)}`); }
 
 function main() {
@@ -26,8 +27,8 @@ function main() {
   const selector = read(SELECTOR);
   const authority = JSON.parse(read(AUTHORITY));
 
-  has(selector, 'ASSIMILATED_OBSERVATION_SELECTOR_ID_V2 =\n  "LATEST_USABLE_AUTHORIZED_OBSERVATION_WITHIN_15M_BEFORE_TICK_V2"', "EA5E2_SOIL_WINDOW_SELECTOR_ID_FROZEN");
-  has(selector, "ASSIMILATED_OBSERVATION_MAX_AGE_MILLISECONDS_V2 = 900_000", "EA5E2_SOIL_WINDOW_15M_MAX_AGE_FROZEN");
+  matches(selector, /ASSIMILATED_OBSERVATION_SELECTOR_ID_V2\s*=\s*\"LATEST_USABLE_AUTHORIZED_OBSERVATION_WITHIN_15M_BEFORE_TICK_V2\"\s+as const;/, "EA5E2_SOIL_WINDOW_SELECTOR_ID_FROZEN");
+  matches(selector, /ASSIMILATED_OBSERVATION_MAX_AGE_MILLISECONDS_V2\s*=\s*900_000\s+as const;/, "EA5E2_SOIL_WINDOW_15M_MAX_AGE_FROZEN");
   has(selector, "ageMilliseconds > ASSIMILATED_OBSERVATION_MAX_AGE_MILLISECONDS_V2", "EA5E2_SOIL_WINDOW_EXACT_15M_MUST_REMAIN_USABLE");
 
   eq(authority.provider_and_clock_contract.minimum_ingestion_margin_minutes, 5, "EA5E2_SOIL_WINDOW_INGESTION_MARGIN_FROZEN");
