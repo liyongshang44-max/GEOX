@@ -7,6 +7,9 @@ const path = require("node:path");
 
 const ROOT = process.cwd();
 const LIVE = ".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml";
+const STATIC_GATE_WORKFLOW = ".github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml";
+const BINDING_CARRIER = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json";
+const BINDING_PLACEHOLDER = "__EA5E2_RUNTIME_DEPENDENCY_GRAPH_SHA256__";
 const ENTRYPOINTS = [
   "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
   "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts",
@@ -17,7 +20,7 @@ const STATIC_BINDING_ROOTS = [
   LIVE,
   "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
-  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json",
+  BINDING_CARRIER,
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-FIXED-LAG-COLLECTOR-RUNTIME-SCHEDULE-V1.json",
 ];
 const TOOLCHAIN_FILES = [
@@ -144,31 +147,65 @@ function buildBoundGraph(runtimeClosure) {
   return [...all].sort();
 }
 
-function parseWorkflowBindings(text) {
-  const pushStart = text.indexOf("\n    paths:\n");
-  const pushEnd = text.indexOf("\n  workflow_dispatch:", pushStart);
-  if (pushStart < 0 || pushEnd < 0) {
-    throw new Error("EA5E2_DEPENDENCY_PUSH_PATH_BLOCK_REQUIRED");
-  }
-  const push = new Set();
-  for (const line of text.slice(pushStart, pushEnd).split(/\r?\n/)) {
+function parsePathListBlock(text, startNeedle, endNeedle) {
+  const start = text.indexOf(startNeedle);
+  const end = text.indexOf(endNeedle, start + Math.max(1, startNeedle.length));
+  if (start < 0 || end < 0) return null;
+  const values = [];
+  for (const line of text.slice(start, end).split(/\r?\n/)) {
     const match = /^\s+-\s+["']?([^"']+?)["']?\s*$/.exec(line);
-    if (match) push.add(match[1]);
+    if (match) values.push(match[1]);
   }
+  return values;
+}
 
+function parseLiveBindings(text) {
+  const push = parsePathListBlock(text, "\n    paths:\n", "\n  workflow_dispatch:");
+  if (!push || !push.length) throw new Error("EA5E2_DEPENDENCY_LIVE_PUSH_PATH_BLOCK_REQUIRED");
   const criticalStart = text.indexOf("critical=(");
   const criticalEnd = text.indexOf("\n          )", criticalStart);
-  if (criticalStart < 0 || criticalEnd < 0) {
-    throw new Error("EA5E2_DEPENDENCY_CRITICAL_BLOCK_REQUIRED");
-  }
-  const critical = new Set();
+  if (criticalStart < 0 || criticalEnd < 0) throw new Error("EA5E2_DEPENDENCY_CRITICAL_BLOCK_REQUIRED");
+  const critical = [];
   for (const line of text.slice(criticalStart, criticalEnd).split(/\r?\n/)) {
     const match = /^\s+([^\s()]+)\s*$/.exec(line);
-    if (match && match[1] !== "critical=(") {
-      critical.add(match[1].replace(/^['"]|['"]$/g, ""));
+    if (match && match[1] !== "critical=(") critical.push(match[1].replace(/^['"]|['"]$/g, ""));
+  }
+  return { push: new Set(push), critical: new Set(critical) };
+}
+
+function parseStaticGatePatterns(text) {
+  const paths = parsePathListBlock(text, "\n    paths:\n", "\n  workflow_dispatch:");
+  if (!paths || !paths.length) throw new Error("EA5E2_DEPENDENCY_STATIC_GATE_PATH_BLOCK_REQUIRED");
+  return paths;
+}
+
+function globRegex(pattern) {
+  let source = "";
+  for (let i = 0; i < pattern.length; i += 1) {
+    const ch = pattern[i];
+    if (ch === "*" && pattern[i + 1] === "*") {
+      source += ".*";
+      i += 1;
+    } else if (ch === "*") {
+      source += "[^/]*";
+    } else if (ch === "?") {
+      source += "[^/]";
+    } else {
+      source += ch.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
     }
   }
-  return { push, critical };
+  return new RegExp(`^${source}$`);
+}
+
+function digestBytes(rel) {
+  const raw = fs.readFileSync(path.resolve(ROOT, rel));
+  if (rel !== BINDING_CARRIER) return raw;
+  const parsed = JSON.parse(raw.toString("utf8"));
+  if (!parsed.qualification_boundary || typeof parsed.qualification_boundary !== "object") {
+    throw new Error("EA5E2_DEPENDENCY_BINDING_CARRIER_QUALIFICATION_BOUNDARY_REQUIRED");
+  }
+  parsed.qualification_boundary.runtime_dependency_graph_sha256 = BINDING_PLACEHOLDER;
+  return Buffer.from(JSON.stringify(parsed));
 }
 
 function digest(paths) {
@@ -176,10 +213,15 @@ function digest(paths) {
   for (const rel of paths) {
     hash.update(rel);
     hash.update("\0");
-    hash.update(fs.readFileSync(path.resolve(ROOT, rel)));
+    hash.update(digestBytes(rel));
     hash.update("\0");
   }
   return `sha256:${hash.digest("hex")}`;
+}
+
+function readCarrierDigest() {
+  const parsed = JSON.parse(fs.readFileSync(path.resolve(ROOT, BINDING_CARRIER), "utf8"));
+  return parsed?.qualification_boundary?.runtime_dependency_graph_sha256 ?? null;
 }
 
 function writeProof(proof) {
@@ -194,21 +236,31 @@ function writeProof(proof) {
 function main() {
   const runtimeClosure = discoverRuntimeClosure();
   const dependencies = buildBoundGraph(runtimeClosure);
-  const discoveryRegression = REQUIRED_RUNTIME_DISCOVERY.filter(
-    (rel) => !runtimeClosure.includes(rel),
-  );
+  const discoveryRegression = REQUIRED_RUNTIME_DISCOVERY.filter((rel) => !runtimeClosure.includes(rel));
 
   const liveText = fs.readFileSync(path.resolve(ROOT, LIVE), "utf8");
-  const { push, critical } = parseWorkflowBindings(liveText);
-  const missingPush = dependencies.filter((rel) => !push.has(rel));
-  const missingCritical = dependencies.filter((rel) => !critical.has(rel));
+  const { push, critical } = parseLiveBindings(liveText);
+  const staticGateText = fs.readFileSync(path.resolve(ROOT, STATIC_GATE_WORKFLOW), "utf8");
+  const staticPatterns = parseStaticGatePatterns(staticGateText);
+  const staticRegexes = staticPatterns.map(globRegex);
+  const staticGateUncovered = dependencies.filter((rel) => !staticRegexes.some((re) => re.test(rel)));
+
+  const expectedDigest = digest(dependencies);
+  const actualDigest = readCarrierDigest();
+  const carrierInLivePush = push.has(BINDING_CARRIER);
+  const carrierInExactMainCritical = critical.has(BINDING_CARRIER);
 
   const proof = {
-    schema_version: "geox_mcft_cap09_ea5e2_runtime_dependency_graph_v1",
+    schema_version: "geox_mcft_cap09_ea5e2_runtime_dependency_graph_v2",
     status:
-      discoveryRegression.length || missingPush.length || missingCritical.length
+      discoveryRegression.length ||
+      staticGateUncovered.length ||
+      !carrierInLivePush ||
+      !carrierInExactMainCritical ||
+      actualDigest !== expectedDigest
         ? "FAIL"
         : "PASS",
+    binding_model: "STATIC_PR_CLOSURE_DIGEST_TO_EXISTING_LIVE_CRITICAL_CARRIER",
     entrypoints: ENTRYPOINTS,
     static_binding_roots: STATIC_BINDING_ROOTS,
     toolchain_files: TOOLCHAIN_FILES,
@@ -216,10 +268,13 @@ function main() {
     runtime_dependency_paths: runtimeClosure,
     bound_graph_count: dependencies.length,
     bound_graph_paths: dependencies,
-    dependency_graph_sha256: digest(dependencies),
+    expected_dependency_graph_sha256: expectedDigest,
+    carrier_dependency_graph_sha256: actualDigest,
+    binding_carrier_path: BINDING_CARRIER,
+    binding_carrier_in_live_push_paths: carrierInLivePush,
+    binding_carrier_in_exact_main_critical_paths: carrierInExactMainCritical,
     runtime_discovery_regressions: discoveryRegression,
-    missing_live_push_paths: missingPush,
-    missing_exact_main_critical_paths: missingCritical,
+    static_preflight_uncovered_dependency_paths: staticGateUncovered,
     provider_request_count: 0,
     database_read_count: 0,
     database_write_count: 0,
@@ -230,7 +285,7 @@ function main() {
   writeProof(proof);
   if (proof.status !== "PASS") {
     throw new Error(
-      `EA5E2_RUNTIME_DEPENDENCY_GRAPH_UNBOUND:discovery=${discoveryRegression.length}:push=${missingPush.length}:critical=${missingCritical.length}`,
+      `EA5E2_RUNTIME_DEPENDENCY_GRAPH_UNBOUND:discovery=${discoveryRegression.length}:static_trigger=${staticGateUncovered.length}:carrier_push=${carrierInLivePush}:carrier_critical=${carrierInExactMainCritical}:digest_match=${actualDigest === expectedDigest}`,
     );
   }
 }
