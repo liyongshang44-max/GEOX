@@ -137,7 +137,7 @@ const docRequired = [
 ];
 for (const token of docRequired) has(doc, token, `DOC_RULE_MISSING:${token}`);
 
-for (const token of ['No sixth class exists', 'may not use invented six-key Scope identifiers', 'PFE-14 S4 remains blocked']) {
+for (const token of ['No sixth class exists', 'must not use invented six-key Scope identifiers', 'PFE-14 S4 remains blocked']) {
   has(amendment, token, `AMENDMENT_RULE_MISSING:${token}`);
 }
 
