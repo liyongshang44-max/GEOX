@@ -1,6 +1,12 @@
 name: mcft-cap-09-ea9b-current-main-window-observer
 
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea9b-current-main-window-observer.yml'
+      - 'scripts/runtime_acceptance/OBSERVER_MCFT_CAP_09_EA9B_CURRENT_MAIN_WINDOW_READINESS.mjs'
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
   schedule:
     - cron: '10 5,6,7 * * *'
@@ -9,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mcft-cap09-ea9b-current-main-window-observer-${{ github.ref_name }}
+  group: mcft-cap09-ea9b-current-main-window-observer-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
@@ -19,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || 'main' }}
           fetch-depth: 1
           persist-credentials: false
 
@@ -39,14 +45,14 @@ jobs:
 
       - name: Run current-main EA9B window observer
         env:
-          MCFT_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
         run: node scripts/runtime_acceptance/OBSERVER_MCFT_CAP_09_EA9B_CURRENT_MAIN_WINDOW_READINESS.mjs
 
       - name: Upload metadata-only readiness proof
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mcft-cap09-ea9b-current-main-window-${{ github.sha }}
+          name: mcft-cap09-ea9b-current-main-window-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: acceptance-output/MCFT_CAP_09_EA9B_CURRENT_MAIN_WINDOW_READINESS.json
           if-no-files-found: error
           retention-days: 30
