@@ -1,5 +1,5 @@
-// Purpose: render the qualified PFE-14 S4 Scheduler Summary and Evidence Availability readback.
-// Boundary: server-returned operational values only; no browser freshness, scheduler, Runtime-mode, or recovery inference.
+// Purpose: render the qualified PFE-14 Scheduler, Evidence and narrow Class-B operational readback.
+// Boundary: server-returned operational values only; no browser freshness, degradation, slot-state, Runtime-mode, or recovery inference.
 
 import React from "react";
 import {
@@ -19,17 +19,15 @@ type OperationalLoadState =
   | { status: "ready"; value: McftOperationalSummaryV1 }
   | { status: "error"; error: McftApiErrorV1 };
 
-const SLOT_LABELS = Array.from({ length: 24 }, (_, index) => `O${String(index).padStart(2, "0")}`);
-
 function scopeKey(scope: McftFieldTwinScopeV1): string {
   return `${scope.tenant_id}|${scope.project_id}|${scope.group_id}|${scope.field_id}|${scope.season_id}|${scope.zone_id}`;
 }
 
-function valueText(value: string | number | null | undefined): string {
+function valueText(value: string | number | boolean | null | undefined): string {
   return value === null || value === undefined || value === "" ? "—" : String(value);
 }
 
-function Metric({ label, value, note }: { label: string; value: string | number | null | undefined; note?: string }): React.ReactElement {
+function Metric({ label, value, note }: { label: string; value: string | number | boolean | null | undefined; note?: string }): React.ReactElement {
   return (
     <article className="operatorFieldRuntime__metricCard pfe14OperationalReadback__metric">
       <span>{label}</span>
@@ -92,7 +90,7 @@ export default function Pfe14OperationalReadbackPanel({ scope }: Props): React.R
       <section className="operatorFieldRuntime__panel pfe14OperationalReadback" data-pfe14-operational-state="loading">
         <header className="operatorFieldRuntime__panelHeader">
           <div>
-            <h2 className="operatorFieldRuntime__panelTitle">{english ? "Scheduler & Evidence" : "调度与证据"}</h2>
+            <h2 className="operatorFieldRuntime__panelTitle">{english ? "Runtime operations" : "运行状态"}</h2>
             <p className="operatorFieldRuntime__panelMeta">{english ? "Loading the qualified GET-only operational projection." : "正在读取已资格化的 GET-only 运行投影。"}</p>
           </div>
         </header>
@@ -105,21 +103,34 @@ export default function Pfe14OperationalReadbackPanel({ scope }: Props): React.R
   const operational = state.value;
   const scheduler = operational.scheduler_summary;
   const evidence = operational.evidence_availability;
+  const status = operational.operational_status;
+  const slotWindow = operational.slot_window;
   const boundarySlot = evidence.eligibility_boundary?.slot_id ?? null;
+  const degradationReasons = status.degradation_reason_codes.length ? status.degradation_reason_codes.join(" | ") : "NONE";
 
   return (
-    <section className="operatorFieldRuntime__panel pfe14OperationalReadback" data-pfe14-operational-state="ready">
+    <section className="operatorFieldRuntime__panel pfe14OperationalReadback" data-pfe14-operational-state="ready" data-runtime-degradation={status.runtime_degradation_status}>
       <header className="operatorFieldRuntime__panelHeader">
         <div>
-          <h2 className="operatorFieldRuntime__panelTitle">{english ? "Scheduler & Evidence" : "调度与证据"}</h2>
+          <h2 className="operatorFieldRuntime__panelTitle">{english ? "Runtime operations" : "运行状态"}</h2>
           <p className="operatorFieldRuntime__panelMeta">
             {english
-              ? "Server-owned operational projection. This does not change the current Runtime context or create canonical Twin truth."
-              : "服务器权威运行投影；它不改变当前 Runtime context，也不生成新的规范 Twin truth。"}
+              ? "Server-owned operational projection. Statuses below are read verdicts; the browser does not reconstruct Runtime truth."
+              : "服务器权威运行投影。下列状态均为服务器 verdict；浏览器不重建 Runtime truth。"}
           </p>
         </div>
         <span className="pfe14OperationalReadback__sourceBadge">GET /runtime/operational-summary</span>
       </header>
+
+      <div className="pfe14OperationalReadback__section">
+        <h3>{english ? "Operational status" : "运行判定"}</h3>
+        <div className="operatorFieldRuntime__summaryGrid">
+          <Metric label={english ? "Runtime degradation" : "Runtime 降级状态"} value={status.runtime_degradation_status} note={english ? "Server verdict" : "服务器 verdict"} />
+          <Metric label={english ? "Degradation reasons" : "降级原因"} value={degradationReasons} note={english ? "Ordered server reason codes" : "服务器有序 reason codes"} />
+          <Metric label={english ? "Forecast status" : "Forecast 状态"} value={status.forecast_status} note={english ? "Validated server projection" : "服务器已验证投影"} />
+          <Metric label={english ? "Scenario-source eligible" : "Scenario-source 可用"} value={status.scenario_source_eligible} note={english ? "Null means the server did not establish a verdict." : "null 表示服务器未建立该 verdict。"} />
+        </div>
+      </div>
 
       <div className="pfe14OperationalReadback__section">
         <h3>{english ? "Scheduler Summary" : "调度摘要"}</h3>
@@ -152,14 +163,33 @@ export default function Pfe14OperationalReadbackPanel({ scope }: Props): React.R
 
       <div className="pfe14OperationalReadback__section">
         <div className="pfe14OperationalReadback__stripHeader">
-          <h3>{english ? "O00–O23 structure" : "O00–O23 结构条"}</h3>
-          <small>{english ? "Only the exact server-returned Evidence boundary is marked. No per-slot state is inferred." : "只标记服务器明确返回的 Evidence boundary；不推断其他时隙状态。"}</small>
+          <h3>{english ? "O00–O23 persisted slot window" : "O00–O23 持久化时隙窗口"}</h3>
+          <small>{english ? "States are copied from the server. NOT_MATERIALIZED is data absence only, never a missed/backfill verdict." : "状态直接来自服务器。NOT_MATERIALIZED 只表示尚未物化，绝不等同于 missed/backfill。"}</small>
         </div>
-        <div className="pfe14OperationalReadback__slotStrip" aria-label="O00 to O23 structural strip">
-          {SLOT_LABELS.map((slot) => (
-            <span key={slot} data-evidence-boundary={boundarySlot === slot ? "true" : "false"}>{slot}</span>
-          ))}
-        </div>
+        {slotWindow ? (
+          <>
+            <div className="pfe14OperationalReadback__slotStrip" aria-label="O00 to O23 persisted slot window" data-slot-window="established">
+              {slotWindow.entries.map((entry) => (
+                <span
+                  key={entry.slot_id}
+                  data-slot-state={entry.state}
+                  data-evidence-boundary={boundarySlot === entry.slot_id ? "true" : "false"}
+                  title={`${entry.logical_time} / ${entry.state}`}
+                >
+                  <b>{entry.slot_id}</b>
+                  <small>{entry.state}</small>
+                </span>
+              ))}
+            </div>
+            <p className="pfe14OperationalReadback__slotMeta">
+              {english ? "Schedule start" : "Schedule 起点"}: {slotWindow.schedule_start_logical_time} · interval_seconds={slotWindow.interval_seconds}
+            </p>
+          </>
+        ) : (
+          <p className="pfe14OperationalReadback__unavailable" data-slot-window="not-established">
+            {english ? "The server has not established a persisted 24-slot window. No per-slot state is inferred." : "服务器尚未建立持久化 24-slot 窗口；不推断任何时隙状态。"}
+          </p>
+        )}
       </div>
 
       <details className="pfe14OperationalReadback__technical">
