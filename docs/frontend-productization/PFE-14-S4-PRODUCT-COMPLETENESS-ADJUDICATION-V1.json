@@ -1,0 +1,77 @@
+{
+  "schema_version": "geox_pfe14_s4_product_completeness_adjudication_v1",
+  "record_status": "S4_PARTIAL_READBACK_QUALIFIED_COMPLETENESS_ADJUDICATED_NOT_EFFECTIVE",
+  "stacked_subject_sha": "6b99afb119bb012246ab7c43c7a37ab47beb22ed",
+  "protected_main_observation_sha": "edd8a005702dee309e72b21384c8de5f8f3bd4fa",
+  "proof": {
+    "pfe14_focused_run_id": 31565598839,
+    "cap07_lifecycle_run_id": 31565598738,
+    "standard_ci_run_id": 31565598703,
+    "all_pass": true,
+    "protected_main_merge_claimed": false
+  },
+  "classification_policy": {
+    "A": "CURRENT_PRODUCT_CONSUMABLE",
+    "B": "EXISTING_BACKEND_FACTS_NEED_PRODUCT_CONTRACT",
+    "C": "NO_AUTHORITATIVE_CURRENT_SOURCE"
+  },
+  "fields": [
+    {"field":"runtime_mode","class":"B","current_source":"SHADOW_ONLINE_ADAPTER_CONFIG_V1.runtime_mode","reason":"CONFIG_EXISTS_SCOPE_PRODUCT_BINDING_NOT_AUTHORIZED"},
+    {"field":"runtime_stage","class":"C","current_source":null,"reason":"NO_STABLE_PRODUCT_SEMANTIC_SOURCE"},
+    {"field":"request_scope","class":"A","current_source":"McftOperationalSummaryV1.request_scope","reason":"EXACT_SIX_KEY_SERVER_RETURNED"},
+    {"field":"latest_completed_slot","class":"A","current_source":"McftSchedulerSummaryV1.latest_completed_slot","reason":"SERVER_RETURNED"},
+    {"field":"latest_tick_status","class":"A","current_source":"McftSchedulerSummaryV1.latest_tick_status","reason":"SERVER_RETURNED_TERMINAL_STATUS"},
+    {"field":"latest_tick_started_at","class":"C","current_source":null,"reason":"SCHEDULER_CLAIM_TIME_IS_NOT_RUNTIME_TICK_START"},
+    {"field":"latest_tick_completed_at","class":"A","current_source":"McftSchedulerSummaryV1.latest_tick_completed_at","reason":"SERVER_RETURNED"},
+    {"field":"next_target_slot","class":"A","current_source":"McftSchedulerSummaryV1.next_target_slot","reason":"SERVER_RETURNED"},
+    {"field":"next_target_at","class":"A","current_source":"McftSchedulerSummaryV1.next_target_at","reason":"SERVER_RETURNED"},
+    {"field":"scheduler_lag_ms","class":"A","current_source":"McftSchedulerSummaryV1.scheduler_lag_ms","reason":"SERVER_POSTGRES_CLOCK_COMPUTED"},
+    {"field":"missed_slot_count","class":"B","current_source":"SchedulerPortV1.listMissedSlots","reason":"READ_SEMANTIC_EXISTS_PRODUCT_FIELD_MISSING"},
+    {"field":"backfill_status","class":"B","current_source":"scheduler missed-slot + active-slot state","reason":"INPUTS_EXIST_STATUS_VOCABULARY_NOT_FROZEN"},
+    {"field":"restart_detected","class":"C","current_source":null,"reason":"CURRENT_CURSOR_LEASE_STATE_DOES_NOT_PROVE_PROCESS_RESTART"},
+    {"field":"recovery_status","class":"C","current_source":null,"reason":"RECOVERY_HISTORY_NOT_DURABLY_EXPOSED"},
+    {"field":"latest_evidence_observed_at","class":"A","current_source":"McftEvidenceAvailabilityV1.latest_evidence_observed_at","reason":"SERVER_RETURNED"},
+    {"field":"latest_evidence_ingested_at","class":"A","current_source":"McftEvidenceAvailabilityV1.latest_evidence_ingested_at","reason":"SERVER_RETURNED"},
+    {"field":"evidence_age_ms","class":"A","current_source":"McftEvidenceAvailabilityV1.evidence_age_ms","reason":"SERVER_BOUNDARY_RELATIVE"},
+    {"field":"freshness_status","class":"A","current_source":"McftEvidenceAvailabilityV1.freshness_status","reason":"SERVER_VERDICT_FRONTEND_POLICY_AGNOSTIC"},
+    {"field":"coverage_ratio","class":"A","current_source":"McftEvidenceAvailabilityV1.coverage_ratio","reason":"SERVER_RETURNED"},
+    {"field":"maximum_gap_ms","class":"A","current_source":"McftEvidenceAvailabilityV1.maximum_gap_ms","reason":"SERVER_RETURNED"},
+    {"field":"future_excluded_count","class":"A","current_source":"McftEvidenceAvailabilityV1.future_excluded_count","reason":"SERVER_RETURNED"},
+    {"field":"late_evidence_count","class":"A","current_source":"McftEvidenceAvailabilityV1.late_evidence_count","reason":"SERVER_RETURNED"},
+    {"field":"out_of_order_count","class":"A","current_source":"McftEvidenceAvailabilityV1.out_of_order_count","reason":"SERVER_RETURNED"},
+    {"field":"runtime_degradation_status","class":"B","current_source":"RestartBackfillStaleDetectionServiceV1.runtime_health_status","reason":"SERVER_SEMANTIC_EXISTS_PRODUCT_FIELD_MISSING"},
+    {"field":"degradation_reason_codes","class":"B","current_source":"S4 health inputs checkpoint/freshness/scheduler_lag","reason":"INPUTS_EXIST_REASON_VOCABULARY_NOT_FROZEN"},
+    {"field":"state_status","class":"B","current_source":"canonical Runtime posterior_state + STATE collection","reason":"CANONICAL_RELATION_EXISTS_NORMALIZED_PRODUCT_STATUS_MISSING"},
+    {"field":"forecast_status","class":"B","current_source":"validated current twin_forecast_run_v1 payload","reason":"SERVER_VALIDATES_STATUS_PUBLIC_PRODUCT_FIELD_MISSING"},
+    {"field":"scenario_source_eligible","class":"B","current_source":"server scenario-source forecast validation","reason":"SERVER_VALIDATION_EXISTS_PRODUCT_VERDICT_MISSING"},
+    {"field":"response_started_at","class":"A","current_source":"McftOperationalSummaryV1.response_started_at","reason":"SERVER_RETURNED"},
+    {"field":"refresh_after_seconds","class":"B","current_source":"SHADOW_ONLINE_ADAPTER_CONFIG_V1.clock.slot_interval_seconds","reason":"POLLING_RECOMMENDATION_NOT_YET_AUTHORIZED"}
+  ],
+  "o00_o23_product_status": {
+    "class": "B",
+    "current_source": "twin_shadow_online_scheduler_slot_v1 persisted slot state",
+    "current_frontend_treatment": "STRUCTURE_ONLY_EXACT_ELIGIBILITY_BOUNDARY_HIGHLIGHT",
+    "per_slot_status_authorized": false
+  },
+  "state_forecast_productization": {
+    "authorized_next_candidate": true,
+    "existing_get_only_data_only": true,
+    "new_backend_fields_authorized": false,
+    "payload_inference_authorized": false,
+    "synthetic_values_authorized": false
+  },
+  "class_b_operational_extension": {
+    "candidate_design_authorized": true,
+    "implementation_authorized": false,
+    "freshness_policy_change_authorized": false,
+    "kbs_source_change_authorized": false,
+    "canonical_write_authorized": false
+  },
+  "class_c": {
+    "implementation_authorized": false,
+    "requires_upstream_authority_or_taskbook_amendment": true
+  },
+  "kbs_dependency_ruling": "FRONTEND_CONTRACT_REMAINS_SERVER_VERDICT_DRIVEN_NO_WAIT_REQUIRED_FOR_CURRENT_PRODUCTIZATION",
+  "pfe14_s4_effective": false,
+  "next_action": "PFE_14_PRODUCTIZE_CURRENT_CANONICAL_STATE_AND_FORECAST_WITHOUT_NEW_DATA_FIELDS"
+}

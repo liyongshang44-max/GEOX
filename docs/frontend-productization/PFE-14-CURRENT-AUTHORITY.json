@@ -6,8 +6,8 @@
   "slice_id": "PFE-14.S4",
   "canonical_name": "Shadow-Online Operator Runtime Console Promotion",
   "taskbook_revision": "v0.2",
-  "record_status": "S4_DEPENDENCY_PROVIDER_QUALIFIED_NARROW_FRONTEND_READBACK_AUTHORIZED",
-  "status": "S4_DEPENDENCY_PROVIDER_QUALIFIED_NARROW_FRONTEND_READBACK_AUTHORIZED",
+  "record_status": "S4_PARTIAL_FRONTEND_READBACK_QUALIFIED_COMPLETENESS_ADJUDICATED_NOT_EFFECTIVE",
+  "status": "S4_PARTIAL_FRONTEND_READBACK_QUALIFIED_COMPLETENESS_ADJUDICATED_NOT_EFFECTIVE",
   "base_main_sha": "6df2241f1470e1df930498782b42c6ba9e813b41",
   "s0_merge_sha": "dce309c7ea1045fc7a35e973fed09e1a0ab5f39c",
   "s1_merge_sha": "41e41d30dd36755beee9edac7262882dbba2c48c",
@@ -30,6 +30,7 @@
   "runtime_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json",
   "read_dependency_readjudication_ref": "docs/frontend-productization/PFE-14-MCFT09-READ-DEPENDENCY-READJUDICATION-V1.json",
   "operational_provider_qualification_ref": "docs/frontend-productization/PFE-14-MCFT09-OPERATIONAL-READ-PROVIDER-QUALIFICATION-V1.json",
+  "s4_product_completeness_adjudication_ref": "docs/frontend-productization/PFE-14-S4-PRODUCT-COMPLETENESS-ADJUDICATION-V1.json",
   "dependency_snapshot": {
     "mcft09_s4_effective": true,
     "mcft09_s4_effective_subject_sha": "6a4138e77fe6b838bc0f552a0bc5e2ceb84c026f",
@@ -45,6 +46,14 @@
     "dependency_provider_run_id": 31563462731,
     "dependency_provider_artifact_id": 9128580507,
     "dependency_provider_artifact_digest": "sha256:f1ccde58651a14af46674d67440fdb234abb561617bb3542361cc92caaa2c05a"
+  },
+  "partial_frontend_readback_proof": {
+    "subject_sha": "6b99afb119bb012246ab7c43c7a37ab47beb22ed",
+    "pfe14_focused_run_id": 31565598839,
+    "cap07_lifecycle_run_id": 31565598738,
+    "standard_ci_run_id": 31565598703,
+    "all_pass": true,
+    "merged_to_protected_main": false
   },
   "primary_navigation": ["runtime_overview", "fields"],
   "operator_pilot_route_claimed": false,
@@ -68,6 +77,12 @@
   "authoritative_runtime_context_authorized": false,
   "scheduler_ui_authorized": true,
   "evidence_freshness_ui_authorized": true,
+  "state_forecast_current_canonical_productization_authorized": true,
+  "state_forecast_new_backend_fields_authorized": false,
+  "state_forecast_payload_inference_authorized": false,
+  "class_b_operational_extension_design_authorized": true,
+  "class_b_operational_extension_implementation_authorized": false,
+  "class_c_field_implementation_authorized": false,
   "backend_source_authorized": true,
   "database_delta_authorized": false,
   "package_delta_authorized": false,
@@ -80,7 +95,17 @@
   "commercial_launch_authorized": false,
   "candidate_declaration_authorized": false,
   "s4_effective": false,
-  "s4_remaining_obligations": ["RUNTIME_CONTEXT_BINDING_AUTHORITY", "O00_O23_PRODUCT_STATUS_AUTHORITY_OR_EXPLICIT_NONDATA_TREATMENT", "S4_FRONTEND_EXACT_HEAD_ACCEPTANCE"],
-  "first_legal_next_action": "PFE_14_S4_IMPLEMENT_SINGLE_SCOPE_SCHEDULER_EVIDENCE_READBACK",
-  "frontend_next_action_after_dependency": "PFE_14_S4_IMPLEMENT_SINGLE_SCOPE_SCHEDULER_EVIDENCE_READBACK"
+  "s4_remaining_obligations": [
+    "RUNTIME_MODE_SCOPE_BINDING_AUTHORITY",
+    "RUNTIME_STAGE_SOURCE_OR_TASKBOOK_AMENDMENT",
+    "LATEST_TICK_STARTED_AT_AUTHORITY_OR_EXPLICIT_UNAVAILABLE_TREATMENT",
+    "MISSED_BACKFILL_DEGRADATION_PRODUCT_PROJECTION",
+    "RESTART_RECOVERY_DURABLE_SOURCE_OR_TASKBOOK_AMENDMENT",
+    "STATE_FORECAST_SCENARIO_STATUS_PRODUCT_PROJECTION",
+    "REFRESH_POLICY_PRODUCT_CONTRACT",
+    "O00_O23_PRODUCT_STATUS_AUTHORITY_OR_EXPLICIT_NONDATA_TREATMENT",
+    "S4_FINAL_EXACT_HEAD_ACCEPTANCE"
+  ],
+  "first_legal_next_action": "PFE_14_PRODUCTIZE_CURRENT_CANONICAL_STATE_AND_FORECAST_WITHOUT_NEW_DATA_FIELDS",
+  "frontend_next_action_after_dependency": "PFE_14_PRODUCTIZE_CURRENT_CANONICAL_STATE_AND_FORECAST_WITHOUT_NEW_DATA_FIELDS"
 }
