@@ -90,7 +90,7 @@ def load_tar(path: Path) -> tuple[dict, dict[str, bytes]]:
 
 
 def command_precheck(args: argparse.Namespace) -> None:
-    observed = datetime.now(timezone.utc)
+    requested_at = datetime.now(timezone.utc)
     status, _, body, final = ea4.request_bytes(
         ea4.AUTH["kbs"]["raw_hourly_csv"],
         "EA5E2_LIVE_PRECHECK_KBS_HOURLY",
@@ -98,17 +98,18 @@ def command_precheck(args: argparse.Namespace) -> None:
         {"Accept": "text/csv,text/plain;q=0.9,*/*;q=0.5"},
     )
     require(status == 200, "EA5E2_LIVE_PRECHECK_KBS_HTTP")
+    retrieved_at = datetime.now(timezone.utc)
     parsed_final = urlparse(final)
     require(parsed_final.hostname == "lter.kbs.msu.edu" and parsed_final.path == "/datatables/13.csv", "EA5E2_LIVE_PRECHECK_KBS_IDENTITY")
     rows = ea4.parse_kbs_csv(body)
     timestamps = []
     for row in rows:
         timestamp = ea4.parse_provider_utc(row.get("datetime_utc", ""))
-        if timestamp is not None and timestamp <= observed + timedelta(minutes=5):
+        if timestamp is not None and timestamp <= retrieved_at + timedelta(minutes=5):
             timestamps.append(timestamp)
     require(timestamps, "EA5E2_LIVE_PRECHECK_KBS_TIMESTAMP_REQUIRED")
     latest = max(timestamps)
-    age_hours = (observed - latest).total_seconds() / 3600.0
+    age_hours = (retrieved_at - latest).total_seconds() / 3600.0
     maximum = float(ea4.AUTH["kbs"]["raw_hourly_latest_max_age_hours"])
     minimum_headroom_minutes = max(0.0, float(args.minimum_operational_headroom_minutes))
     remaining_headroom_minutes = (maximum - age_hours) * 60.0
@@ -119,7 +120,9 @@ def command_precheck(args: argparse.Namespace) -> None:
     )
     print(json.dumps({
         "status": "PASS",
-        "observed_at": iso(observed),
+        "requested_at": iso(requested_at),
+        "retrieved_at": iso(retrieved_at),
+        "freshness_evaluated_at": iso(retrieved_at),
         "latest_raw_hourly_timestamp": iso(latest),
         "latest_age_hours": round(age_hours, 6),
         "configured_max_age_hours": maximum,
@@ -272,6 +275,53 @@ def command_fetch_gfs(args: argparse.Namespace) -> None:
     }
     Path(args.meta).write_text(json.dumps(safe, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(safe, sort_keys=True))
+
+
+def command_probe_gfs(args: argparse.Namespace) -> None:
+    """Read-only directory probe for one complete PGRB2+SFLUX cycle."""
+    target = canonical_hour(args.target, "EA5E2_GFS_READINESS_TARGET_INVALID")
+    requested_at = datetime.now(timezone.utc)
+    retained: list[dict] = []
+
+    def metadata_only_retention(kind: str, identity: str, body: bytes) -> dict:
+        item = {
+            "kind": kind,
+            "identity_sha256": sha256_bytes(identity.encode("utf-8")),
+            "sha256": sha256_bytes(body),
+            "bytes": len(body),
+        }
+        retained.append(item)
+        return item
+
+    original_retention = ea4.retain_raw
+    ea4.retain_raw = metadata_only_retention
+    try:
+        selected = ea4.select_cycle(target)
+    finally:
+        ea4.retain_raw = original_retention
+    retrieved_at = datetime.now(timezone.utc)
+    proof = {
+        "schema_version": "geox_mcft_cap09_ea5e2_gfs_same_cycle_readiness_v1",
+        "status": "PASS",
+        "target_logical_time": iso(target),
+        "requested_at": iso(requested_at),
+        "retrieved_at": iso(retrieved_at),
+        "selected_cycle": iso(selected["cycle"]),
+        "lead_start": selected["lead_start"],
+        "lead_end": selected["lead_end"],
+        "support_lead": selected["support"],
+        "same_cycle_pgrb2_sflux_complete": True,
+        "newer_incomplete_cycle_rejection_count": len(selected["rejections"]),
+        "selection_directory_count": len(retained),
+        "selection_directory_chain_sha256": sha256_json(retained),
+        "raw_provider_body_retained": False,
+        "raw_values_emitted": False,
+        "database_write_count": 0,
+        "canonical_write_count": 0,
+    }
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.output).write_text(json.dumps(proof, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(json.dumps(proof, sort_keys=True))
 
 
 def command_decode_gfs(args: argparse.Namespace) -> None:
@@ -547,6 +597,10 @@ def build_parser() -> argparse.ArgumentParser:
     fetch_gfs.add_argument("--output", required=True)
     fetch_gfs.add_argument("--meta", required=True)
     fetch_gfs.set_defaults(handler=command_fetch_gfs)
+    probe_gfs = sub.add_parser("probe-gfs")
+    probe_gfs.add_argument("--target", required=True)
+    probe_gfs.add_argument("--output", required=True)
+    probe_gfs.set_defaults(handler=command_probe_gfs)
     decode_gfs = sub.add_parser("decode-gfs")
     decode_gfs.add_argument("--target", required=True)
     decode_gfs.add_argument("--available-at", required=True)

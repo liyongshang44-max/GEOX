@@ -33,22 +33,31 @@ function assessEa5e2ProtocolCompatibility({
   sameSourceExactTOnly = true,
   exactTPollDeadlineOffsetMinutes = AMENDMENT_07_EXACT_T_POLL_DEADLINE_OFFSET_MINUTES,
   exactTCutoffOffsetMinutes = AMENDMENT_07_EXACT_T_CUTOFF_OFFSET_MINUTES,
+  targetSchedulingMode = "FIRST_FUTURE_T_AFTER_READINESS",
 } = {}) {
+  if (!["FIRST_FUTURE_T_AFTER_READINESS", "PHASE_AWARE_LONG_HORIZON"].includes(targetSchedulingMode)) {
+    throw new Error("EA5E2_TARGET_SCHEDULING_MODE_INVALID");
+  }
   const dailyBatch = providerExpectedUpdateBehavior === "DAILY_BATCH";
   const frozenExactTEnvelope = sameSourceExactTOnly === true
     && Number(exactTPollDeadlineOffsetMinutes) === AMENDMENT_07_EXACT_T_POLL_DEADLINE_OFFSET_MINUTES
     && Number(exactTCutoffOffsetMinutes) === AMENDMENT_07_EXACT_T_CUTOFF_OFFSET_MINUTES;
-  const compatible = !(dailyBatch && frozenExactTEnvelope);
+  const currentOrchestration = targetSchedulingMode === "FIRST_FUTURE_T_AFTER_READINESS";
+  const compatible = !(dailyBatch && frozenExactTEnvelope && currentOrchestration);
   return {
-    status: compatible ? "COMPATIBLE" : "INCOMPATIBLE",
+    status: compatible ? "COMPATIBLE" : "CURRENT_ORCHESTRATION_INCOMPATIBLE",
     compatible,
-    reason: compatible ? null : "KBS_DAILY_BATCH_INCOMPATIBLE_WITH_AMENDMENT_07_EXACT_T_CUTOFF",
+    reason: compatible ? null : "CURRENT_FIRST_FUTURE_T_ORCHESTRATION_INCOMPATIBLE_WITH_KBS_DAILY_BATCH",
     provider_expected_update_behavior: providerExpectedUpdateBehavior,
     same_source_exact_t_only: sameSourceExactTOnly === true,
     exact_t_poll_deadline_offset_minutes: Number(exactTPollDeadlineOffsetMinutes),
     exact_t_cutoff_offset_minutes: Number(exactTCutoffOffsetMinutes),
-    retry_or_headroom_can_resolve: false,
-    required_resolution: compatible ? null : "NEW_AUTHORITY_PROTOCOL_OR_QUALIFIED_REPLACEMENT_SOURCE",
+    target_scheduling_mode: targetSchedulingMode,
+    retry_or_headroom_can_resolve_current_orchestration: false,
+    globally_impossible_for_every_single_t: false,
+    phase_aware_long_horizon_target_scheduling_not_implemented: dailyBatch && frozenExactTEnvelope && currentOrchestration,
+    target_specific_temporal_feasibility_proof_still_required: !currentOrchestration,
+    required_resolution: compatible ? null : "PHASE_AWARE_LONG_HORIZON_SCHEDULING_OR_NEW_AUTHORITY_PROTOCOL_OR_QUALIFIED_REPLACEMENT_SOURCE",
     authority_effect: false,
   };
 }
@@ -99,6 +108,12 @@ function evaluateCadenceState(state, evaluatedAt = new Date()) {
   };
 
   if (authorityPass) {
+    if (!protocol.compatible) {
+      return { ...common, decision: "AUTHORITY_PASS_BUT_ACTIVATION_BLOCKED", provider_state: "DAILY_BATCH_NORMAL", reason: protocol.reason };
+    }
+    if (!headroom.operational_headroom_pass) {
+      return { ...common, decision: "AUTHORITY_PASS_BUT_ACTIVATION_BLOCKED", provider_state: "DAILY_BATCH_NORMAL", reason: "KBS_RAW_HOURLY_OPERATIONAL_HEADROOM_INSUFFICIENT" };
+    }
     return { ...common, decision: "RUN", provider_state: "DAILY_BATCH_NORMAL", reason: "KBS_RAW_HOURLY_WITHIN_FROZEN_6H_AUTHORITY" };
   }
   if (lateClassificationAvailable && now > nextBatchDeadline) {
@@ -129,19 +144,21 @@ function selftest() {
   }, "2026-08-12T15:00:00.000Z");
   const headroom = evaluateOperationalHeadroom(4.5);
   const protocol = assessEa5e2ProtocolCompatibility();
+  const phaseAwareProtocol = assessEa5e2ProtocolCompatibility({ targetSchedulingMode: "PHASE_AWARE_LONG_HORIZON" });
 
-  if (run.decision !== "RUN" || !run.authority_pass || !run.operational_headroom.operational_headroom_pass) throw new Error("SELFTEST_RUN");
+  if (run.decision !== "AUTHORITY_PASS_BUT_ACTIVATION_BLOCKED" || !run.authority_pass || !run.operational_headroom.operational_headroom_pass) throw new Error("SELFTEST_RUN");
   if (run.scheduler_may_dispatch || run.activation_readiness !== "BLOCKED_PROTOCOL") throw new Error("SELFTEST_RUN_PROTOCOL_GUARD");
-  if (lowHeadroom.decision !== "RUN" || !lowHeadroom.authority_pass || lowHeadroom.operational_headroom.operational_headroom_pass) throw new Error("SELFTEST_HEADROOM_BLOCK");
+  if (lowHeadroom.decision !== "AUTHORITY_PASS_BUT_ACTIVATION_BLOCKED" || !lowHeadroom.authority_pass || lowHeadroom.operational_headroom.operational_headroom_pass) throw new Error("SELFTEST_HEADROOM_BLOCK");
   if (wait.decision !== "WAIT_NEXT_BATCH" || wait.authority_pass || !wait.engineering_validation_available) throw new Error("SELFTEST_WAIT");
   if (defer.decision !== "DEFER" || defer.engineering_validation_available) throw new Error("SELFTEST_DEFER");
   if (fail.decision !== "FAIL" || fail.provider_state !== "BATCH_LATE_OR_MISSING") throw new Error("SELFTEST_FAIL");
   if (!headroom.operational_headroom_pass || headroom.remaining_authority_headroom_minutes !== 90) throw new Error("SELFTEST_HEADROOM");
-  if (protocol.compatible || protocol.retry_or_headroom_can_resolve !== false) throw new Error("SELFTEST_PROTOCOL_INCOMPATIBILITY");
+  if (protocol.compatible || protocol.retry_or_headroom_can_resolve_current_orchestration !== false || protocol.globally_impossible_for_every_single_t !== false) throw new Error("SELFTEST_PROTOCOL_INCOMPATIBILITY");
+  if (!phaseAwareProtocol.compatible || phaseAwareProtocol.target_specific_temporal_feasibility_proof_still_required !== true) throw new Error("SELFTEST_PHASE_AWARE_PROTOCOL_PATH");
 
   return {
     status: "PASS",
-    cases: 8,
+    cases: 9,
     provider_expected_update_behavior: PROVIDER_EXPECTED_UPDATE_BEHAVIOR,
     authority_max_age_hours: AUTHORITY_MAX_AGE_HOURS,
     engineering_max_age_hours: ENGINEERING_MAX_AGE_HOURS,

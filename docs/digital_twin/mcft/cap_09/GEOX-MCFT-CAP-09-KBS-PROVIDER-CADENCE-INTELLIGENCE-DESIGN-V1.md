@@ -34,8 +34,9 @@ No provider-health classification can convert production freshness failure into 
 ## Scheduler decisions
 
 ```text
-RUN
-  only when frozen production freshness <=6h passes
+AUTHORITY_PASS_BUT_ACTIVATION_BLOCKED
+  frozen production freshness <=6h passes, but the current EA5E2
+  orchestration/protocol or another pre-dispatch gate forbids dispatch
 
 WAIT_NEXT_BATCH
   provider behavior is daily batch;
@@ -87,16 +88,18 @@ It may validate transport, exact source identity, CSV schema, rainfall decoding,
 
 ## Static conformance versus activation readiness
 
-The zero-provider/zero-database full-chain gate now reports two independent results:
+The zero-provider/zero-database full-chain gate reports two independent results:
 
 - `status`: static implementation and governance conformance;
 - `activation_readiness`: whether a lawful crop context currently supplies a future legal target.
 
 `CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET` therefore remains an explicit readiness blocker and forbids live dispatch, while a correctly fail-closed engineering PR can still pass static conformance. This does not create or extend crop authority.
 
-## P0: Amendment-07 exact-T incompatibility
+It also enumerates every known temporal and runtime pre-dispatch requirement. A small blocker count is never a claim that unexecuted Formal, GFS, soil-decoder, exact-head qualification, or long-window drift checks passed.
 
-The confirmed daily-batch mechanism invalidates the premise used by the frozen Amendment-07 late exact-hour schedule.
+## P0: current first-future-T orchestration incompatibility
+
+The confirmed daily-batch mechanism is incompatible with the current first-future-T orchestration used with the frozen Amendment-07 late exact-hour schedule.
 
 The current authority requires the same KBS Raw Hourly source to contain the exact target row by `T+427m`, with a `T+432m` cutoff. A daily batch published at approximately 05:xxZ with observations only through approximately 04:00Z cannot contain a newly selected future target such as 06:00Z. That target is expected in the next daily batch, roughly `T+23h`, not inside the frozen seven-hour envelope.
 
@@ -106,27 +109,30 @@ Therefore:
 - freshness headroom cannot resolve the mismatch;
 - relabeling or copying an older hour remains forbidden;
 - the full EA5E2 live workflow must fail closed before any live activation side effect;
-- resolution requires either a new authority protocol aligned with delayed daily-batch observation or a separately qualified authoritative source that can publish exact `T` inside the frozen envelope.
+- the current orchestration can be resolved by phase-aware long-horizon target scheduling, a new authority protocol aligned with delayed daily-batch observation, or a separately qualified authoritative source that can publish exact `T` inside the frozen envelope.
+
+This is not a claim that every possible single `T` is mathematically impossible under the existing source and authority. A sufficiently early target before the next daily release could fit `T+427m`; the repository does not currently implement the durable, phase-aware scheduling needed to select and carry such a target across the long pre-boundary horizon. The 24-slot Formal objective remains a separate, stronger constraint.
 
 This implementation does not invent a replacement cutoff. The publication observer must accumulate enough real batches to support a later authority adjudication.
 
 ## Pre-dispatch operational headroom
 
-The unchanged six-hour freshness threshold remains the production authority. Separately, the live scheduler requires at least 60 minutes of remaining freshness headroom before starting expensive work:
+The unchanged six-hour freshness threshold remains the production authority. Separately, the live scheduler requires at least 60 minutes of remaining freshness headroom before starting expensive work. Target selection also reserves 120 minutes for dependency installation, Formal verification, private-store smoke, source probes, and target binding. These are independent budgets:
 
 ```text
 50 minutes = 30-minute pre-boundary offset + 20-minute minimum lead
 10 minutes = orchestration/jitter allowance
 60 minutes = scheduler-only minimum operational headroom
+120 minutes = target setup budget, evaluated independently of source freshness
 ```
 
 A source can therefore still pass the frozen six-hour authority while the full-live scheduler correctly refuses dispatch. This headroom is not source authority and cannot cure the exact-T protocol incompatibility.
 
 ## Bounded release-window capture
 
-The hourly observer remains the long-term state chain. A separate daily watcher begins nominally at `04:40Z`, polls the same exact source every five minutes for at most 24 attempts, and stops on the first fresh complete batch window. It then runs the cadence/readiness evaluators read-only and uploads metadata only. It cannot dispatch EA5E2 and has no actions-write permission.
+The hourly observer remains the long-term state chain. A separate daily watcher begins nominally at `04:40Z`, polls the same exact source every five minutes for at most 24 attempts, and stops only on a fresh, 24-hour-complete, contiguous, duplicate-free batch window. Timestamp advance with incomplete or duplicate coverage continues polling through the bounded grace window. It then runs the cadence/readiness evaluators read-only and uploads metadata only. It cannot dispatch EA5E2 and has no actions-write permission.
 
-This watcher improves first-seen evidence and production-window capture despite GitHub cron delay. It does not make the frozen exact-T protocol compatible and does not create crop authority.
+The first retrieval-completed watcher attempt that observes the advance is carried into the cadence state as the publication first-seen upper bound; the immediately preceding non-advanced attempt supplies the lower bound when available. This improves first-seen evidence and production-window capture despite GitHub cron delay. It does not make the frozen exact-T protocol compatible and does not create crop authority.
 
 ## Components
 

@@ -118,7 +118,10 @@ jobs:
           MCFT_SUBJECT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          args=(--output acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json)
+          args=(
+            --output acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json
+            --watch-proof acceptance-output/KBS_BATCH_QUALIFICATION_WINDOW.json
+          )
           if [[ -f acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json ]]; then
             args+=(--previous-state acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json)
           fi

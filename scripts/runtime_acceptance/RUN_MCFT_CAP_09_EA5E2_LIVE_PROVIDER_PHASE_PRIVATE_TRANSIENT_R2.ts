@@ -772,6 +772,7 @@ async function main(): Promise<void> {
     if (Date.parse(canonicalizedAt) > latestIngressStartMs) throw new Error("EA5E2_LATE_MINIMUM_INGRESS_MARGIN_LOST");
     const result = await orchestrator.ingestCanonicalizedPhase({ phase: "LATE_EXACT_HOUR", requested_at: phaseRequestedAt, canonicalized_at: canonicalizedAt, provider_request_count: transport.provider_request_count, canonical_results: lateResults, ingress });
     if (result.canonical_record_count !== 2 || result.canonical_fact_write_count !== 2) throw new Error("EA5E2_LATE_TWO_FACTS_REQUIRED");
+    const ingressCompletedAt = new Date().toISOString();
 
     const dbSource = await new PostgresExternalFormalEvidenceSourceV1(pool).loadCandidateRecords({ scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 }, logical_time: target, exact_interval_availability_cutoff_time: slot.late_exact_hour_evidence_cutoff });
     if (dbSource.selected_record_count !== 5 || dbSource.database_write_count !== 0 || dbSource.provider_request_count !== 0) throw new Error("EA5E2_LIVE_DB_ONLY_FIVE_FAMILY_HANDOFF_REQUIRED");
@@ -789,6 +790,10 @@ async function main(): Promise<void> {
       target_logical_time: target,
       phase_requested_at: phaseRequestedAt,
       phase_canonicalized_at: canonicalizedAt,
+      phase_ingress_completed_at: ingressCompletedAt,
+      collection_to_canonicalization_elapsed_ms: Date.parse(canonicalizedAt) - Date.parse(phaseRequestedAt),
+      collection_to_ingress_completion_elapsed_ms: Date.parse(ingressCompletedAt) - Date.parse(phaseRequestedAt),
+      ingress_completion_offset_minutes_from_target: (Date.parse(ingressCompletedAt) - Date.parse(target)) / MINUTE,
       late_exact_hour_scheduled: slot.late_exact_hour_collector_scheduled,
       late_exact_hour_cutoff: slot.late_exact_hour_evidence_cutoff,
       minimum_ingress_margin_minutes: MIN_INGRESS_MARGIN_MINUTES,

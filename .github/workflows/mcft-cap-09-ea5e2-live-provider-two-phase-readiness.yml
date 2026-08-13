@@ -51,6 +51,20 @@ jobs:
         shell: bash
         run: echo "subject_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
 
+      - name: Require successful successor runner qualification for this exact head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml/runs?head_sha=${GITHUB_SHA}&status=completed&per_page=100"
+          successes="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "$api" | jq '[.workflow_runs[] | select(.head_sha==env.GITHUB_SHA and .conclusion=="success")] | length')"
+          test "$successes" -ge 1 || { echo 'SUCCESSOR_RUNNER_EXACT_HEAD_QUALIFICATION_REQUIRED' >&2; exit 1; }
+
       - name: Evaluate read-only EA5E2 live-window viability before any live activation side effect
         id: viability
         env:
@@ -67,8 +81,41 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
-  pre-boundary:
+  formal-snapshot-readiness:
     needs: live-window-viability
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.live-window-viability.outputs.subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Prove primary Formal Neon identity, A0 and pointer graph read-only
+        env:
+          MCFT_EA5E2_SUBJECT_SHA: ${{ needs.live-window-viability.outputs.subject_sha }}
+          FORMAL_DATABASE_URL: ${{ env.FORMAL_DATABASE_URL }}
+        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts
+      - name: Upload Formal snapshot readiness proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-formal-snapshot-readiness-${{ needs.live-window-viability.outputs.subject_sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  pre-boundary:
+    needs: [live-window-viability, formal-snapshot-readiness]
     runs-on: ubuntu-latest
     timeout-minutes: 180
     outputs:
@@ -123,42 +170,7 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --no-tags origin main
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
-          critical=(
-            .github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml
-            scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs
-            scripts/runtime_acceptance/MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs
-            scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py
-            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts
-            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
-            scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py
-            scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
-            scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs
-            apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts
-            apps/server/src/external_evidence/mcft_cap09_external_formal_collector_phase_orchestrator_v1.ts
-            apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts
-            apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts
-            apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts
-            apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts
-            apps/server/src/domain/twin_runtime/canonical_identity_v1.ts
-            apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts
-            apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.ts
-            apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts
-            apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts
-            apps/server/src/runtime/twin_runtime/fixed_lag_scheduler_adapter_v1.ts
-            apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts
-            apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts
-            docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SOIL-FIRST-SEEN-EVIDENCE-V1.json
-          )
-          for path in "${critical[@]}"; do
-            test "$(git rev-parse "$GITHUB_SHA:$path")" = "$(git rev-parse "origin/main:$path")" || {
-              echo "EA5E2_ACTIVATION_SUBJECT_SUPERSEDED:$path" >&2
-              exit 1
-            }
-          done
+          node scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs
           echo "EA5E2_ACTIVATION_EXACT_PROTECTED_MAIN_SUBJECT=$GITHUB_SHA"
 
       - name: Require existing private R2 and Formal read-only bindings without exposing values
@@ -188,6 +200,12 @@ jobs:
         with:
           name: mcft-cap09-ea5e2-live-window-viability-${{ needs.live-window-viability.outputs.subject_sha }}
           path: acceptance-output/viability
+
+      - name: Download Formal snapshot readiness proof
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-formal-snapshot-readiness-${{ needs.live-window-viability.outputs.subject_sha }}
+          path: acceptance-output/formal-readiness
 
       - name: Prove private transient R2 round trip and cleanup with non-provider random bytes
         env:
@@ -227,6 +245,7 @@ jobs:
           if(!/^[0-9a-f]{40}$/.test(subject)) throw new Error('EA5E2_ACTIVATION_EXACT_SUBJECT_SHA_REQUIRED');
           const viability=JSON.parse(fs.readFileSync('acceptance-output/viability/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json','utf8'));
           if(viability.status!=='PASS'||viability.candidate_T!==targetText||viability.live_activation_started!==false||viability.authority_changed!==false) throw new Error('EA5E2_ACTIVATION_VIABILITY_PASS_REQUIRED');
+          if(viability.crop_candidate?.target_setup_budget_minutes!==120||viability.authority_audit?.target_setup_budget_is_separate_from_kbs_freshness_headroom!==true) throw new Error('EA5E2_ACTIVATION_SEPARATE_TARGET_SETUP_BUDGET_REQUIRED');
           const observer=new Date(targetMs+437*60000);
           fs.mkdirSync('acceptance-output',{recursive:true});
           fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json',JSON.stringify({
@@ -237,6 +256,7 @@ jobs:
             expected_observer_time:observer.toISOString(),
             pre_boundary_offset_minutes:-30,
             minimum_pre_boundary_lead_minutes:MIN_PRE_BOUNDARY_LEAD_MINUTES,
+            minimum_target_setup_budget_minutes:120,
             pre_boundary_lead_minutes:preBoundaryLeadMinutes,
             live_window_viability_preflight_pass:true,
             live_window_viability_schema:viability.schema_version,
@@ -248,6 +268,14 @@ jobs:
           console.log(`pre_boundary_lead_minutes=${preBoundaryLeadMinutes}`);
           console.log(`subject_sha=${subject}`);
           fs.appendFileSync(process.env.GITHUB_OUTPUT,`target_t=${targetText}\nsubject_sha=${subject}\n`);
+
+      - name: Prove one complete same-cycle GFS PGRB2 plus SFLUX set before provider execution
+        env:
+          TARGET_T: ${{ steps.target.outputs.target_t }}
+        run: |
+          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py probe-gfs \
+            --target "$TARGET_T" \
+            --output acceptance-output/MCFT_CAP_09_EA5E2_GFS_SAME_CYCLE_READINESS.json
 
       - name: Fail fast unless selected T has one conservative frozen crop stage
         env:
@@ -294,6 +322,8 @@ jobs:
           path: |
             acceptance-output/viability/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json
             acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
+            acceptance-output/formal-readiness/MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.json
+            acceptance-output/MCFT_CAP_09_EA5E2_GFS_SAME_CYCLE_READINESS.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json
             acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json
@@ -390,7 +420,12 @@ jobs:
           name: mcft-cap09-ea5e2-interphase-${{ needs.pre-boundary.outputs.subject_sha }}
           path: acceptance-output
 
-      - name: Poll same-source exact-T semantic availability within frozen T+390 to T+427 envelope
+      - name: Recheck protected-main activation boundary before late phase
+        run: |
+          git fetch --no-tags origin main
+          node scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs
+
+      - name: Poll same-source exact-T availability by T+407 while preserving frozen T+432 cutoff
         env:
           TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
         run: |
@@ -407,6 +442,14 @@ jobs:
           PYTHON: python
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
 
+      - name: Require real late collector completion before frozen evidence cutoff
+        shell: node {0}
+        env:
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        run: |
+          const cutoff=Date.parse(process.env.TARGET_T)+432*60000;
+          if(Date.now()>cutoff) throw new Error(`EA5E2_ACTIVATION_REAL_COLLECTOR_MISSED_FROZEN_CUTOFF:${new Date().toISOString()}`);
+
       - name: Verify complete same-T two-phase provider and DB-only handoff proof
         shell: node {0}
         env:
@@ -421,7 +464,7 @@ jobs:
           if(target.subject_sha!==process.env.SUBJECT_SHA||target.target_t!==process.env.TARGET_T||target.epoch_independent!==true||target.live_window_viability_preflight_pass!==true) throw new Error('EA5E2_ACTIVATION_TARGET_IDENTITY_MISMATCH');
           if(availability.status!=='PASS'||availability.target_t!==process.env.TARGET_T||availability.same_source_exact_t_only!==true||availability.late_semantic_availability_polling!==true||availability.exact_target_row_count!==1) throw new Error('EA5E2_ACTIVATION_LATE_SEMANTIC_AVAILABILITY_POLL_REQUIRED');
           if(availability.raw_retention_count!==0||availability.canonical_write_count!==0||availability.formal_database_write_count!==0||availability.raw_values_emitted!==false) throw new Error('EA5E2_ACTIVATION_LATE_POLL_READ_ONLY_BOUNDARY_REQUIRED');
-          if(Date.parse(availability.semantic_poll_deadline)!==Date.parse(process.env.TARGET_T)+427*60000||Date.parse(availability.late_exact_hour_cutoff)!==Date.parse(process.env.TARGET_T)+432*60000) throw new Error('EA5E2_ACTIVATION_LATE_POLL_CLOCK_DRIFT');
+          if(Date.parse(availability.semantic_poll_deadline)!==Date.parse(process.env.TARGET_T)+407*60000||Date.parse(availability.late_exact_hour_cutoff)!==Date.parse(process.env.TARGET_T)+432*60000||availability.collector_processing_budget_minutes!==25||availability.discovery_deadline_is_collector_deadline!==false) throw new Error('EA5E2_ACTIVATION_LATE_POLL_CLOCK_DRIFT');
           if(pre.status!=='PASS'||late.status!=='PASS'||pre.target_logical_time!==late.target_logical_time||late.target_logical_time!==process.env.TARGET_T) throw new Error('EA5E2_ACTIVATION_SAME_TARGET_TWO_PHASE_REQUIRED');
           if(pre.canonical_fact_write_count!==3||late.pre_rehydrated_fact_count!==3||late.late_canonical_fact_write_count!==2||late.database_exact_fact_count!==5||late.db_only_selected_record_count!==5) throw new Error('EA5E2_ACTIVATION_EXACT_FIVE_FAMILY_DB_REQUIRED');
           if(late.pre_rehydration_semantic_hash_match!==true||late.pre_raw_retention_reverified!==true||late.pre_rehydration_provider_request_count!==0) throw new Error('EA5E2_ACTIVATION_PRIVATE_REHYDRATION_PROOF_REQUIRED');
@@ -443,6 +486,15 @@ jobs:
           console.log(JSON.stringify({wait_until:new Date(observer).toISOString(),remaining_minutes:remaining/60000}));
           await new Promise(r=>setTimeout(r,remaining));
 
+      - name: Recheck protected-main boundary and Formal snapshot before observer
+        env:
+          MCFT_EA5E2_SUBJECT_SHA: ${{ needs.pre-boundary.outputs.subject_sha }}
+          FORMAL_DATABASE_URL: ${{ env.FORMAL_DATABASE_URL }}
+        run: |
+          git fetch --no-tags origin main
+          node scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs
+          pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts
+
       - name: Execute actual T plus 7h17m DB-only External CAP04 observer
         env:
           MCFT_EA5E2_TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
@@ -458,6 +510,8 @@ jobs:
           TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
         run: |
           const fs=require('fs');
+          require('child_process').execFileSync('git',['fetch','--no-tags','origin','main'],{stdio:'inherit'});
+          require('child_process').execFileSync('node',['scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs'],{stdio:'inherit'});
           const kbs=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json','utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));
           const target=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json','utf8'));
           const viability=JSON.parse(fs.readFileSync('acceptance-output/viability/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json','utf8'));
@@ -495,6 +549,8 @@ jobs:
             minimum_pre_boundary_lead_minutes:20,
             selected_pre_boundary_lead_minutes:target.pre_boundary_lead_minutes,
             late_exact_hour_collector_offset_minutes:390,
+            late_exact_t_discovery_deadline_offset_minutes:407,
+            late_collector_processing_reservation_minutes:25,
             scheduler_eligibility_lag_hours:7,
             late_exact_hour_cutoff_offset_minutes:432,
             runtime_observer_offset_minutes:437,
@@ -537,6 +593,8 @@ jobs:
           path: |
             acceptance-output/viability/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json
             acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
+            acceptance-output/formal-readiness/MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.json
+            acceptance-output/MCFT_CAP_09_EA5E2_GFS_SAME_CYCLE_READINESS.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json
             acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json
             acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json

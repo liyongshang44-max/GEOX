@@ -200,8 +200,8 @@ def select_cycle(tick: datetime):
             return {"cycle": cycle, "lead_start": lead_start, "lead_end": lead_end, "support": support, "directory_sha256": sha256_bytes(body), "rejections": rejections}
         except Exception as exc:
             rejections.append({"cycle": iso(cycle), "reason": str(exc)[:240]})
-            if "EA4_SFLUX_" in str(exc):
-                raise RuntimeError(f"EA4_SELECTED_PGRB2_CYCLE_SFLUX_NOT_READY:{iso(cycle)}:{str(exc)}")
+            # A partially published newest cycle is not a terminal selection. Continue
+            # backwards until one complete same-cycle PGRB2+SFLUX set is proved.
     raise RuntimeError("EA4_NO_COMPLETE_GFS_CYCLE:" + json.dumps(rejections, separators=(",", ":")))
 
 

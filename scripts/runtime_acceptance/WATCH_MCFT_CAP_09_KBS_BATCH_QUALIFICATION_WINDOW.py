@@ -51,6 +51,7 @@ def evaluate_snapshot(snapshot: dict, previous_latest: str | None) -> dict:
         and snapshot.get("latest_24h_expected_hour_count") == 24
         and snapshot.get("latest_24h_observed_hour_count") == 24
         and snapshot.get("latest_24h_missing_event_times") == []
+        and snapshot.get("latest_24h_duplicate_event_time_row_count") == 0
     )
     captured = fresh and complete
     if captured and advanced:
@@ -58,18 +59,19 @@ def evaluate_snapshot(snapshot: dict, previous_latest: str | None) -> dict:
     elif captured:
         classification = "FRESH_DAILY_BATCH_WINDOW_ALREADY_VISIBLE"
     elif advanced:
-        classification = "BATCH_ADVANCE_DETECTED_OUTSIDE_QUALIFICATION_WINDOW"
+        classification = "BATCH_ADVANCED_BUT_WINDOW_INCOMPLETE_CONTINUE_POLLING"
     else:
         classification = "WAITING_FOR_FRESH_COMPLETE_DAILY_BATCH"
     return {
         "captured": captured,
-        "stop": captured or advanced,
+        "stop": captured,
         "classification": classification,
         "latest_event_time": latest,
         "latest_age_hours": snapshot.get("latest_age_hours"),
         "latest_advanced_from_previous_state": advanced,
         "within_frozen_6h_authority": fresh,
         "latest_24h_complete_and_contiguous": complete,
+        "latest_24h_duplicate_event_time_row_count": snapshot.get("latest_24h_duplicate_event_time_row_count"),
     }
 
 
@@ -83,6 +85,7 @@ def selftest() -> dict:
         "latest_24h_expected_hour_count": 24,
         "latest_24h_observed_hour_count": 24,
         "latest_24h_missing_event_times": [],
+        "latest_24h_duplicate_event_time_row_count": 0,
     }
     waiting = evaluate_snapshot(base, "2026-08-12T04:00:00.000Z")
     advanced = evaluate_snapshot({
@@ -97,12 +100,30 @@ def selftest() -> dict:
         "latest_age_hours": 1.2,
         "within_frozen_6h_authority": True,
     }, "2026-08-13T04:00:00.000Z")
+    staged = evaluate_snapshot({
+        **base,
+        "latest_raw_hourly_timestamp": "2026-08-13T04:00:00.000Z",
+        "latest_age_hours": 1.0,
+        "within_frozen_6h_authority": True,
+        "latest_24h_observed_hour_count": 23,
+        "latest_24h_missing_event_times": ["2026-08-12T20:00:00.000Z"],
+        "latest_24h_contiguous": False,
+    }, "2026-08-12T04:00:00.000Z")
+    duplicate = evaluate_snapshot({
+        **base,
+        "latest_raw_hourly_timestamp": "2026-08-13T04:00:00.000Z",
+        "latest_age_hours": 1.0,
+        "within_frozen_6h_authority": True,
+        "latest_24h_duplicate_event_time_row_count": 1,
+    }, "2026-08-12T04:00:00.000Z")
     require(waiting["captured"] is False and waiting["stop"] is False, "SELFTEST_WAIT")
     require(advanced["captured"] is True and advanced["latest_advanced_from_previous_state"] is True, "SELFTEST_ADVANCE")
     require(already_visible["captured"] is True and already_visible["classification"] == "FRESH_DAILY_BATCH_WINDOW_ALREADY_VISIBLE", "SELFTEST_ALREADY_VISIBLE")
+    require(staged["captured"] is False and staged["stop"] is False and staged["latest_advanced_from_previous_state"] is True, "SELFTEST_STAGED_CONTINUES")
+    require(duplicate["captured"] is False and duplicate["stop"] is False, "SELFTEST_DUPLICATE_CONTINUES")
     return {
         "status": "PASS",
-        "case_count": 3,
+        "case_count": 5,
         "provider_operating_profile": "CONFIRMED_DAILY_BATCH",
         "poll_interval_seconds": DEFAULT_INTERVAL_SECONDS,
         "maximum_attempts": DEFAULT_MAX_ATTEMPTS,
@@ -122,7 +143,7 @@ def run(args: argparse.Namespace) -> int:
     final_evaluation = None
 
     for attempt_number in range(1, args.max_attempts + 1):
-        polled_at = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        requested_at = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
         try:
             snapshot = observe_current_freshness_metadata()
             write_json(current_output, snapshot)
@@ -130,7 +151,8 @@ def run(args: argparse.Namespace) -> int:
             final_evaluation = evaluation
             attempts.append({
                 "attempt": attempt_number,
-                "polled_at": polled_at,
+                "requested_at": requested_at,
+                "polled_at": snapshot["retrieved_at"],
                 **evaluation,
                 "raw_values_emitted": False,
             })
@@ -142,7 +164,8 @@ def run(args: argparse.Namespace) -> int:
         except Exception as exc:
             attempts.append({
                 "attempt": attempt_number,
-                "polled_at": polled_at,
+                "requested_at": requested_at,
+                "polled_at": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
                 "classification": "TRANSIENT_POLL_ERROR",
                 "error_code": safe_error(exc),
                 "raw_values_emitted": False,

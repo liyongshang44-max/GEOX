@@ -1,0 +1,63 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5e2_successor_runner_qualification_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5E2-SUCCESSOR-RUNNER-QUALIFICATION-V1",
+  "record_status": "SUCCESSOR_RUNNER_QUALIFICATION_CANDIDATE_NOT_OPERATIONAL_ACTIVATION",
+  "historical_runner_qualification_preserved": true,
+  "historical_qualification_reused_as_successor_proof": false,
+  "successor_qualification_reexecution_required_per_exact_head": true,
+  "formal_snapshot_binding": {
+    "database_name": "geox_mcft_cap09_s6_formal_24h",
+    "neon_project_id": "delicate-glade-62464340",
+    "neon_branch_id": "br-cold-dust-a6j6aymz",
+    "simulation_branch_id_forbidden": "br-falling-cake-a6lfsdak",
+    "canonical_a0_binding_source": "apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.ts",
+    "a0_runtime_config_ref": "external_formal_runtime_config_7284202e3b0bdae6d32f4814",
+    "a0_runtime_config_hash": "sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8",
+    "pointer_graph_read_only_preflight_required": true,
+    "scheduler_must_remain_unstarted": true
+  },
+  "crop_season_bundle_rule": {
+    "current_scope_season_id": "season_2026_corn",
+    "current_crop_authority_blob_sha": "b5de9d29189cb654444b3f57d00df290eefe16d3",
+    "new_crop_authority_may_patch_existing_a0": false,
+    "new_natural_season_requires_new_immutable_season_id": true,
+    "new_natural_season_requires_fresh_a0_bootstrap": true,
+    "cross_season_state_forecast_checkpoint_lineage_stitching_authorized": false
+  },
+  "temporal_safety": {
+    "frozen_exact_t_cutoff_offset_minutes": 432,
+    "operational_discovery_deadline_offset_minutes": 407,
+    "conservative_collector_processing_reservation_minutes": 25,
+    "processing_reservation_exact_head_performance_qualified": false,
+    "observer_end_to_end_budget_exact_head_performance_qualified": false,
+    "target_setup_budget_minutes": 120,
+    "target_setup_budget_is_authority": false
+  },
+  "current_orchestration_adjudication": {
+    "result": "CURRENT_FIRST_FUTURE_T_ORCHESTRATION_INCOMPATIBLE_WITH_KBS_DAILY_BATCH",
+    "authority_globally_impossible_for_every_single_t": false,
+    "phase_aware_long_horizon_target_scheduling_implemented": false
+  },
+  "exact_head_qualification_proof": {
+    "historical_authority_and_gate_blob_preservation_required": true,
+    "successor_observer_and_formal_preflight_typecheck_required": true,
+    "scheduler_and_watcher_deterministic_selftests_required": true,
+    "zero_provider_zero_database_full_chain_static_preflight_required": true,
+    "transitive_runtime_dependency_graph_digest_required": true,
+    "qualification_workflow_success_required_for_same_head_sha": true
+  },
+  "exact_head_effect": {
+    "successor_runner_implementation_qualified": true,
+    "protected_main_live_dispatch_authorized": false,
+    "ea5e2_operational_activation_qualified": false,
+    "ea5e3_authorized": false,
+    "formal_window_started": false,
+    "formal_execution_count": "0/24"
+  },
+  "live_dispatch_blockers": [
+    "CURRENT_FIRST_FUTURE_T_ORCHESTRATION_INCOMPATIBLE_WITH_KBS_DAILY_BATCH",
+    "CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET",
+    "LATE_EXACT_T_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED",
+    "OBSERVER_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED"
+  ]
+}

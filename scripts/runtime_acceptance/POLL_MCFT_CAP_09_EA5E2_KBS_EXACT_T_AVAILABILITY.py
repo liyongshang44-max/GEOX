@@ -25,7 +25,11 @@ POLL_INTERVAL_SECONDS = 60
 START_OFFSET_MINUTES = 390
 CUTOFF_OFFSET_MINUTES = 432
 MIN_INGRESS_MARGIN_MINUTES = 5
-DEADLINE_OFFSET_MINUTES = CUTOFF_OFFSET_MINUTES - MIN_INGRESS_MARGIN_MINUTES
+# Scheduler-only end-to-end reservation. The frozen evidence cutoff remains T+432.
+# Discovery must finish earlier so the real collector, retention, decode,
+# canonicalization and DB ingress do not race the same deadline.
+COLLECTOR_PROCESSING_BUDGET_MINUTES = 25
+DEADLINE_OFFSET_MINUTES = CUTOFF_OFFSET_MINUTES - COLLECTOR_PROCESSING_BUDGET_MINUTES
 MAX_BYTES = 110_000_000
 KBS_URL = ea4.AUTH["kbs"]["raw_hourly_csv"]
 
@@ -106,6 +110,7 @@ def main() -> int:
             "semantic_poll_deadline": iso(deadline),
             "late_exact_hour_cutoff": iso(cutoff),
             "poll_interval_seconds": POLL_INTERVAL_SECONDS,
+            "collector_processing_budget_minutes": COLLECTOR_PROCESSING_BUDGET_MINUTES,
             "provider_request_count": 0,
             "raw_retention_count": 0,
             "canonical_write_count": 0,
@@ -165,6 +170,8 @@ def main() -> int:
                     "semantic_poll_deadline": iso(deadline),
                     "late_exact_hour_cutoff": iso(cutoff),
                     "minimum_ingress_margin_minutes": MIN_INGRESS_MARGIN_MINUTES,
+                    "collector_processing_budget_minutes": COLLECTOR_PROCESSING_BUDGET_MINUTES,
+                    "discovery_deadline_is_collector_deadline": False,
                     "poll_interval_seconds": POLL_INTERVAL_SECONDS,
                     "attempt_count": len(attempts),
                     "provider_request_count": provider_request_count,
@@ -205,6 +212,8 @@ def main() -> int:
         "semantic_poll_deadline": iso(deadline),
         "late_exact_hour_cutoff": iso(cutoff),
         "minimum_ingress_margin_minutes": MIN_INGRESS_MARGIN_MINUTES,
+        "collector_processing_budget_minutes": COLLECTOR_PROCESSING_BUDGET_MINUTES,
+        "discovery_deadline_is_collector_deadline": False,
         "poll_interval_seconds": POLL_INTERVAL_SECONDS,
         "attempt_count": len(attempts),
         "provider_request_count": provider_request_count,
