@@ -1,8 +1,8 @@
-// MCFT-CAP-09 S6-EA5E2: External-only read-only database Evidence source for Amendment-07.
+// MCFT-CAP-09 S6-EA5E2 / Amendment-11: External-only read-only database Evidence source.
 // Boundary: reads canonical External Formal Evidence from facts only. It does not fetch providers,
 // select Runtime Config, claim scheduler work, mutate Replay semantics, or write DB/R2/canonical Runtime.
-// Only the current exact-hour Rainfall/Historical ET0 pair may use the T+07:12 availability cutoff;
-// Soil and both Future Forcing families remain causally frozen at logical T.
+// Soil and both Future Forcing families remain causally frozen at logical T. Only the exact-hour
+// Rainfall/Historical ET0 pair may use the actual execution evidence snapshot time.
 
 import type { Pool, PoolClient } from "pg";
 
@@ -18,8 +18,7 @@ import type { CanonicalReplayEvidenceRecordV1, TwinScopeKeyV1 } from "./ports.js
 
 export const MCFT_CAP09_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE_ID_V1 =
   "MCFT_CAP09_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE_V1" as const;
-export const MCFT_CAP09_EXTERNAL_FORMAL_DATABASE_LOOKBACK_HOURS_V1 = 24 as const;
-export const MCFT_CAP09_EXTERNAL_FORMAL_EXACT_INTERVAL_CUTOFF_OFFSET_MINUTES_V1 = 432 as const;
+export const MCFT_CAP09_EXTERNAL_FORMAL_DATABASE_LOOKBACK_HOURS_V1 = 36 as const;
 
 const ALLOWED_RECORD_TYPES_V1 = [
   "soil_moisture_observation_v1",
@@ -74,6 +73,8 @@ export type ExternalFormalDatabaseEvidenceLoadResultV1 = {
   source_id: typeof MCFT_CAP09_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE_ID_V1;
   scope: TwinScopeKeyV1;
   logical_time: string;
+  evidence_snapshot_time: string;
+  /** @deprecated Amendment-11: transport compatibility only; value equals evidence_snapshot_time. */
   exact_interval_availability_cutoff_time: string;
   records: readonly CanonicalReplayEvidenceRecordV1[];
   selected_record_count: number;
@@ -199,13 +200,22 @@ export class PostgresExternalFormalEvidenceSourceV1 {
   async loadCandidateRecords(input: {
     scope: TwinScopeKeyV1;
     logical_time: string;
-    exact_interval_availability_cutoff_time: string;
+    evidence_snapshot_time?: string;
+    /** @deprecated Amendment-11: accepted only as a transport alias for evidence_snapshot_time. */
+    exact_interval_availability_cutoff_time?: string;
   }): Promise<ExternalFormalDatabaseEvidenceLoadResultV1> {
     const logicalTime = canonicalHourV1(input.logical_time, "EA5E2_EXTERNAL_DB_LOGICAL_TIME_INVALID");
     exactScopeV1(input.scope, { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 }, "EA5E2_EXTERNAL_DB_FORMAL_SCOPE_REQUIRED");
-    const cutoff = canonicalIsoV1(input.exact_interval_availability_cutoff_time, "EA5E2_EXTERNAL_DB_CUTOFF_INVALID");
-    const requiredCutoff = addMinutesV1(logicalTime, MCFT_CAP09_EXTERNAL_FORMAL_EXACT_INTERVAL_CUTOFF_OFFSET_MINUTES_V1);
-    if (cutoff !== requiredCutoff) throw new Error("EA5E2_EXTERNAL_DB_EXACT_INTERVAL_CUTOFF_MISMATCH");
+
+    const snapshotInput = input.evidence_snapshot_time ?? input.exact_interval_availability_cutoff_time;
+    const evidenceSnapshotTime = canonicalIsoV1(snapshotInput, "EA5E2_EXTERNAL_DB_EVIDENCE_SNAPSHOT_TIME_REQUIRED");
+    if (input.evidence_snapshot_time !== undefined && input.exact_interval_availability_cutoff_time !== undefined) {
+      const legacy = canonicalIsoV1(input.exact_interval_availability_cutoff_time, "EA5E2_EXTERNAL_DB_LEGACY_CUTOFF_INVALID");
+      if (legacy !== evidenceSnapshotTime) throw new Error("EA5E2_EXTERNAL_DB_EVIDENCE_SNAPSHOT_ALIAS_MISMATCH");
+    }
+    if (Date.parse(evidenceSnapshotTime) < Date.parse(logicalTime)) {
+      throw new Error("EA5E2_EXTERNAL_DB_EVIDENCE_SNAPSHOT_BEFORE_LOGICAL_TIME");
+    }
 
     const queryStart = addMinutesV1(logicalTime, -MCFT_CAP09_EXTERNAL_FORMAL_DATABASE_LOOKBACK_HOURS_V1 * 60);
     const client = await this.pool.connect() as ReadOnlyClientV1;
@@ -274,7 +284,10 @@ export class PostgresExternalFormalEvidenceSourceV1 {
         excludedNonTargetExactInterval += 1;
         continue;
       }
-      const availabilityCutoff = exactIntervalRole ? cutoff : logicalTime;
+
+      // Amendment-11 role-specific availability watermark:
+      // pre-boundary causal families remain <= T; only delayed exact interval families use the actual snapshot.
+      const availabilityCutoff = exactIntervalRole ? evidenceSnapshotTime : logicalTime;
       if (Date.parse(availableAt) > Date.parse(availabilityCutoff)
         || Date.parse(ingestedAt) > Date.parse(availabilityCutoff)) {
         excludedAfterCutoff += 1;
@@ -303,7 +316,8 @@ export class PostgresExternalFormalEvidenceSourceV1 {
       source_id: MCFT_CAP09_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE_ID_V1,
       scope: structuredClone(input.scope),
       logical_time: logicalTime,
-      exact_interval_availability_cutoff_time: cutoff,
+      evidence_snapshot_time: evidenceSnapshotTime,
+      exact_interval_availability_cutoff_time: evidenceSnapshotTime,
       records: selected.map((record) => structuredClone(record)),
       selected_record_count: selected.length,
       family_cardinality: family,

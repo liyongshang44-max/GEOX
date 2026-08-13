@@ -16,7 +16,7 @@ import {
 import type { CanonicalReplayEvidenceRecordV1 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
 
 const T = "2026-08-11T17:00:00.000Z";
-const CUTOFF = "2026-08-12T00:12:00.000Z";
+const SNAPSHOT = "2026-08-12T13:00:00.000Z"; // T+20h: deliberately outside historical <=6h diagnostic.
 const SCOPE = { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 };
 
 type RowV1 = { fact_id: string; occurred_at: string; record_json: unknown };
@@ -81,16 +81,16 @@ function validRows(): RowV1[] {
       source_record_id: "rain_o00",
       binding_id: MCFT_CAP09_EXTERNAL_FORMAL_RAINFALL_BINDING_ID_V1,
       epistemic_class: "OBSERVED",
-      available_to_runtime_at: "2026-08-11T23:40:00.000Z",
-      role_time: { interval_start: "2026-08-11T16:00:00.000Z", interval_end: T, ingested_at: "2026-08-11T23:41:00.000Z" },
+      available_to_runtime_at: "2026-08-12T12:20:00.000Z",
+      role_time: { interval_start: "2026-08-11T16:00:00.000Z", interval_end: T, ingested_at: "2026-08-12T12:21:00.000Z" },
     })),
     row(record({
       record_type: "historical_et0_estimate_v1",
       source_record_id: "hist_et0_o00",
       binding_id: MCFT_CAP09_EXTERNAL_FORMAL_HISTORICAL_ET0_BINDING_ID_V1,
       epistemic_class: "ESTIMATED",
-      available_to_runtime_at: "2026-08-11T23:42:00.000Z",
-      role_time: { interval_start: "2026-08-11T16:00:00.000Z", interval_end: T, ingested_at: "2026-08-11T23:43:00.000Z" },
+      available_to_runtime_at: "2026-08-12T12:22:00.000Z",
+      role_time: { interval_start: "2026-08-11T16:00:00.000Z", interval_end: T, ingested_at: "2026-08-12T12:23:00.000Z" },
     })),
     row(record({
       record_type: "future_weather_assumption_v1",
@@ -108,16 +108,15 @@ function validRows(): RowV1[] {
       available_to_runtime_at: "2026-08-11T16:37:00.000Z",
       role_time: { issued_at: "2026-08-11T12:00:00.000Z", ingested_at: "2026-08-11T16:38:00.000Z" },
     })),
-    // Prior exact interval is not the target interval for T and must not enter this tick.
     row(record({
       record_type: "observed_rainfall_v1",
       source_record_id: "rain_prior_interval",
       binding_id: MCFT_CAP09_EXTERNAL_FORMAL_RAINFALL_BINDING_ID_V1,
       epistemic_class: "OBSERVED",
-      available_to_runtime_at: "2026-08-11T22:40:00.000Z",
-      role_time: { interval_start: "2026-08-11T15:00:00.000Z", interval_end: "2026-08-11T16:00:00.000Z", ingested_at: "2026-08-11T22:41:00.000Z" },
+      available_to_runtime_at: "2026-08-12T11:40:00.000Z",
+      role_time: { interval_start: "2026-08-11T15:00:00.000Z", interval_end: "2026-08-11T16:00:00.000Z", ingested_at: "2026-08-12T11:41:00.000Z" },
     })),
-    // Post-T future forcing remains unavailable even though the wall clock is later.
+    // Future forcing captured after T remains ineligible even when snapshot is T+20h.
     row(record({
       record_type: "future_weather_assumption_v1",
       source_record_id: "future_weather_post_t",
@@ -164,7 +163,8 @@ function assertNoWriteSql(sql: readonly string[]): void {
 function assertValidResult(result: ExternalFormalDatabaseEvidenceLoadResultV1): void {
   assert.equal(result.source_id, "MCFT_CAP09_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE_V1");
   assert.equal(result.logical_time, T);
-  assert.equal(result.exact_interval_availability_cutoff_time, CUTOFF);
+  assert.equal(result.evidence_snapshot_time, SNAPSHOT);
+  assert.equal(result.exact_interval_availability_cutoff_time, SNAPSHOT); // deprecated alias only
   assert.equal(result.database_read_transaction_count, 1);
   assert.equal(result.database_write_count, 0);
   assert.equal(result.provider_request_count, 0);
@@ -179,8 +179,8 @@ function assertValidResult(result: ExternalFormalDatabaseEvidenceLoadResultV1): 
   assert.equal(result.excluded_non_target_exact_interval_count, 1);
   assert.equal(result.excluded_after_causal_cutoff_count, 1);
   const byType = new Map(result.records.map((item) => [item.record_type, item]));
-  assert.equal(byType.get("observed_rainfall_v1")?.available_to_runtime_at, "2026-08-11T23:40:00.000Z");
-  assert.equal(byType.get("historical_et0_estimate_v1")?.available_to_runtime_at, "2026-08-11T23:42:00.000Z");
+  assert.ok(Date.parse(String(byType.get("observed_rainfall_v1")?.available_to_runtime_at)) - Date.parse(T) > 6 * 3600_000);
+  assert.ok(Date.parse(String(byType.get("historical_et0_estimate_v1")?.available_to_runtime_at)) - Date.parse(T) > 6 * 3600_000);
   assert.ok(Date.parse(String(byType.get("future_weather_assumption_v1")?.available_to_runtime_at)) <= Date.parse(T));
   assert.ok(Date.parse(String(byType.get("future_et0_assumption_v1")?.available_to_runtime_at)) <= Date.parse(T));
 }
@@ -191,36 +191,49 @@ async function main(): Promise<void> {
   const result = await source.loadCandidateRecords({
     scope: SCOPE,
     logical_time: T,
-    exact_interval_availability_cutoff_time: CUTOFF,
+    evidence_snapshot_time: SNAPSHOT,
   });
   assertValidResult(result);
   assert.equal(good.connectCount(), 1);
   assert.equal(good.releaseCount(), 1);
   assertNoWriteSql(good.sql);
 
-  const lateRows = validRows().map((item) => structuredClone(item));
-  const lateRain = lateRows.find((item) => (item.record_json as { payload?: { source_record_id?: string } }).payload?.source_record_id === "rain_o00");
+  // A delayed exact interval after the actual snapshot is excluded, not admitted by age/fixed lag.
+  const afterSnapshotRows = validRows().map((item) => structuredClone(item));
+  const lateRain = afterSnapshotRows.find((item) => (item.record_json as { payload?: { source_record_id?: string } }).payload?.source_record_id === "rain_o00");
   assert.ok(lateRain);
   const latePayload = (lateRain.record_json as { payload: CanonicalReplayEvidenceRecordV1 }).payload;
-  latePayload.available_to_runtime_at = "2026-08-12T00:13:00.000Z";
-  latePayload.role_time.ingested_at = "2026-08-12T00:14:00.000Z";
-  const late = fakePool(lateRows);
-  await expectReject(() => new PostgresExternalFormalEvidenceSourceV1(late.pool).loadCandidateRecords({
+  latePayload.available_to_runtime_at = "2026-08-12T13:01:00.000Z";
+  latePayload.role_time.ingested_at = "2026-08-12T13:02:00.000Z";
+  const afterSnapshot = fakePool(afterSnapshotRows);
+  await expectReject(() => new PostgresExternalFormalEvidenceSourceV1(afterSnapshot.pool).loadCandidateRecords({
     scope: SCOPE,
     logical_time: T,
-    exact_interval_availability_cutoff_time: CUTOFF,
+    evidence_snapshot_time: SNAPSHOT,
   }), "EA5E2_EXTERNAL_DB_REQUIRED_FAMILY_MISSING:rainfall");
-  assertNoWriteSql(late.sql);
+  assertNoWriteSql(afterSnapshot.sql);
 
-  const cutoff = fakePool(validRows());
-  await expectReject(() => new PostgresExternalFormalEvidenceSourceV1(cutoff.pool).loadCandidateRecords({
+  // Snapshot cannot precede phenomenon boundary; reject before any DB read.
+  const beforeT = fakePool(validRows());
+  await expectReject(() => new PostgresExternalFormalEvidenceSourceV1(beforeT.pool).loadCandidateRecords({
     scope: SCOPE,
     logical_time: T,
-    exact_interval_availability_cutoff_time: "2026-08-12T00:13:00.000Z",
-  }), "EA5E2_EXTERNAL_DB_EXACT_INTERVAL_CUTOFF_MISMATCH");
-  assert.equal(cutoff.connectCount(), 0);
-  assert.equal(cutoff.sql.length, 0);
+    evidence_snapshot_time: "2026-08-11T16:59:59.000Z",
+  }), "EA5E2_EXTERNAL_DB_EVIDENCE_SNAPSHOT_BEFORE_LOGICAL_TIME");
+  assert.equal(beforeT.connectCount(), 0);
+  assert.equal(beforeT.sql.length, 0);
 
+  // Legacy field is transport compatibility only: arbitrary snapshot accepted; no T+432 equality exists.
+  const alias = fakePool(validRows());
+  const aliasResult = await new PostgresExternalFormalEvidenceSourceV1(alias.pool).loadCandidateRecords({
+    scope: SCOPE,
+    logical_time: T,
+    exact_interval_availability_cutoff_time: SNAPSHOT,
+  });
+  assert.equal(aliasResult.evidence_snapshot_time, SNAPSHOT);
+  assertNoWriteSql(alias.sql);
+
+  // Post-T future forcing remains forbidden even though delayed exact observations are admitted at snapshot.
   const futureRows = validRows().filter((item) => {
     const payload = (item.record_json as { payload?: CanonicalReplayEvidenceRecordV1 }).payload;
     return payload?.source_record_id !== "future_weather_valid_o00";
@@ -229,7 +242,7 @@ async function main(): Promise<void> {
   await expectReject(() => new PostgresExternalFormalEvidenceSourceV1(future.pool).loadCandidateRecords({
     scope: SCOPE,
     logical_time: T,
-    exact_interval_availability_cutoff_time: CUTOFF,
+    evidence_snapshot_time: SNAPSHOT,
   }), "EA5E2_EXTERNAL_DB_REQUIRED_FAMILY_MISSING:future_weather");
   assertNoWriteSql(future.sql);
 
@@ -237,11 +250,14 @@ async function main(): Promise<void> {
     status: "PASS",
     selected_record_count: result.selected_record_count,
     family_cardinality: result.family_cardinality,
+    evidence_snapshot_time: result.evidence_snapshot_time,
+    delayed_exact_age_greater_than_6h_accepted: true,
     delayed_rainfall_available_after_logical_time: true,
     delayed_historical_et0_available_after_logical_time: true,
     future_forcing_post_logical_time_excluded: true,
     non_target_exact_interval_excluded: true,
-    exact_interval_cutoff_minutes: 432,
+    fixed_t_plus_432_equality_required: false,
+    legacy_cutoff_field_authority_effect: false,
     database_read_transaction_count: result.database_read_transaction_count,
     database_write_count: result.database_write_count,
     provider_request_count: result.provider_request_count,

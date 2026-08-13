@@ -88,14 +88,15 @@ jobs:
           grep -q '"whole_phase_validation_before_ingress":true' acceptance-output/EA5E2_COLLECTOR_PHASE_ORCHESTRATION.log
           grep -q '"raw_retention_before_decode":true' acceptance-output/EA5E2_COLLECTOR_PHASE_ORCHESTRATION.log
 
-      - name: Prove External Formal DB-only delayed Evidence source
+      - name: Prove External Formal DB-only delayed Evidence source under Amendment-11
         shell: bash
         run: |
           set -euo pipefail
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.ts \
             2>&1 | tee acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
           grep -q '"status":"PASS"' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
-          grep -q '"exact_interval_cutoff_minutes":432' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
+          grep -q '"delayed_exact_age_greater_than_6h_accepted":true' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
+          grep -q '"fixed_t_plus_432_equality_required":false' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
           grep -q '"future_forcing_post_logical_time_excluded":true' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
           grep -q '"database_write_count":0' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
           grep -q '"provider_request_count":0' acceptance-output/EA5E2_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE.log
