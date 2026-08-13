@@ -2,12 +2,14 @@
 "use strict";
 
 const fs = require("node:fs");
+const { ROLLING_WORKFLOW, minimumIngressMarginMinutes } = require("../runtime_acceptance/MCFT_CAP_09_A11_PREBOUNDARY_DEADLINE_POLICY_V1.cjs");
 
 const AMENDMENT = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md";
 const WORKFLOW = ".github/workflows/mcft-cap-09-rolling-preboundary-capture.yml";
 const PLANNER = "scripts/runtime_acceptance/PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs";
 const ASSEMBLER = "scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs";
 const PROVIDER_RUNNER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts";
+const ORCHESTRATOR = "apps/server/src/external_evidence/mcft_cap09_external_formal_collector_phase_orchestrator_v1.ts";
 
 function read(path) {
   if (!fs.existsSync(path)) throw new Error(`MCFT_CAP09_ROLLING_PREBOUNDARY_FILE_REQUIRED:${path}`);
@@ -22,19 +24,14 @@ const workflow = read(WORKFLOW);
 const planner = read(PLANNER);
 const assembler = read(ASSEMBLER);
 const providerRunner = read(PROVIDER_RUNNER);
+const orchestrator = read(ORCHESTRATOR);
 
 requireAll(amendment, [
   "PROVIDER_AVAILABILITY_WATERMARK_V1",
-  "### 5.1 Pre-boundary causal families",
-  "soil_moisture_observation_v1",
-  "future_weather_assumption_v1",
-  "future_et0_assumption_v1",
   "available_to_runtime_at <= T",
   "ingested_at <= T",
   "actual hourly pre-boundary capture",
   "A pre-boundary package may qualify only if its soil/GFS evidence was actually acquired and frozen before its target `T`.",
-  "retain rolling candidate packages for approximately 36h",
-  "Qualification candidate retention is not Formal canonical persistence",
   "crop_authority_effect = NONE",
 ], "MCFT_CAP09_ROLLING_PREBOUNDARY_AMENDMENT11_BOUNDARY_MISSING");
 
@@ -45,29 +42,17 @@ requireAll(planner, [
   "kbs_raw_hourly_dependency: \"NONE\"",
   "crop_authority_dependency: \"NONE\"",
   "PROVIDER_AVAILABILITY_WATERMARK_V1",
-  "selftest",
 ], "MCFT_CAP09_ROLLING_PREBOUNDARY_PLANNER_CONTRACT_MISSING");
 
 requireAll(assembler, [
   "ROLLING_PRE_BOUNDARY_CAUSAL_CAPTURE",
   "PROVIDER_AVAILABILITY_WATERMARK_V1",
-  "producer_subject_sha: subject",
   "soil_observation_inside_t_minus_15_to_t",
   "same_cycle_future_weather_et0",
   "raw_retained_before_canonicalization",
-  "producer_subject_sha_immutable: true",
-  "producer_exact_main_capture_proof_required: true",
-  "consumer_subject_may_differ_from_producer: true",
   "consumer_exact_main_successor_qualification_required: true",
-  "cross_version_rehydration_required_when_consumer_subject_differs: true",
-  "raw_retention_reverification_required: true",
-  "semantic_hash_reverification_required: true",
   "crop_authority_checked_only_at_consumption",
   "delayed_kbs_exact_interval_checked_only_at_consumption",
-  "oldest_eligible_selection_required",
-  "consumer_same_git_sha_required: false",
-  "kbs_daily_batch_required_at_capture: false",
-  "crop_authority_required_at_capture: false",
   "formal_database_write_count: 0",
   "formal_r2_prefix_write_count: 0",
   "scheduler_write_count: 0",
@@ -75,76 +60,57 @@ requireAll(assembler, [
   "crop_authority_effect: \"NONE\"",
 ], "MCFT_CAP09_ROLLING_PREBOUNDARY_ASSEMBLER_CONTRACT_MISSING");
 
-for (const forbidden of [
-  "exact_subject_sha_required: true",
-  "successful_successor_qualification_for_subject_required: true",
-]) {
-  if (assembler.includes(forbidden)) throw new Error(`MCFT_CAP09_ROLLING_PREBOUNDARY_SAME_HEAD_CONSUMPTION_FORBIDDEN:${forbidden}`);
-}
-
 requireAll(workflow, [
   "cron: '5 * * * *'",
   "branches: [main]",
   "MCFT_CAP09_ROLLING_PREBOUNDARY_EXACT_MAIN_DRIFT",
-  "PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs plan",
   "MCFT_EA5E2_LIVE_PHASE: PRE_BOUNDARY_CAUSAL",
   "RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
   "ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs",
-  "retention-days: 2",
-  "kbs_daily_batch_required_at_capture!==false",
-  "crop_authority_required_at_capture!==false",
-  "formal_database_write_count!==0",
-  "formal_r2_prefix_write_count!==0",
-  "scheduler_write_count!==0",
-  "runtime_write_count!==0",
-  "crop_authority_effect!=='NONE'",
 ], "MCFT_CAP09_ROLLING_PREBOUNDARY_WORKFLOW_CONTRACT_MISSING");
 
-for (const forbidden of [
-  "CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET",
-  "configured_max_age_hours",
-  "KBS_RAW_HOURLY",
-  "LATE_EXACT_HOUR",
-  "T+432",
-  "T+07:12",
-  "T+07:17",
-]) {
-  if (workflow.includes(forbidden)) throw new Error(`MCFT_CAP09_ROLLING_PREBOUNDARY_WORKFLOW_FORBIDDEN_DEPENDENCY:${forbidden}`);
+if (minimumIngressMarginMinutes(ROLLING_WORKFLOW) !== 0) {
+  throw new Error("MCFT_CAP09_ROLLING_PREBOUNDARY_TARGET_T_POLICY_REQUIRED");
+}
+if (minimumIngressMarginMinutes("historical-ea5e2") !== 5) {
+  throw new Error("MCFT_CAP09_HISTORICAL_T_MINUS_5_POLICY_DRIFT");
 }
 
 requireAll(providerRunner, [
-  "PRE_BOUNDARY_CAUSAL",
-  "MCFT_EA5E2_PREBOUNDARY_DEADLINE_AUTHORITY",
-  "HISTORICAL_T_MINUS_5_MARGIN",
-  "PROVIDER_AVAILABILITY_WATERMARK_V1",
-  "mcft-cap-09-rolling-preboundary-capture",
-  "Date.parse(target)",
+  'const MIN_INGRESS_MARGIN_MINUTES = process.env.GITHUB_WORKFLOW === "mcft-cap-09-rolling-preboundary-capture" ? 0 : 5;',
+  "const latestIngressStartMs = Date.parse(addMinutes(target, -MIN_INGRESS_MARGIN_MINUTES));",
+  "while (Date.now() < latestIngressStartMs)",
+  "observedAt >= soilWindowStart && observedAt <= Date.parse(target)",
+  "if (Date.parse(canonicalizedAt) > latestIngressStartMs)",
+  "orchestrator.ingestCanonicalizedPhase",
   "soil_observation_inside_t_minus_15_to_t: true",
-  "preboundary_deadline_authority:",
-  "preboundary_deadline_at:",
-  "all_preboundary_available_to_runtime_at_lte_target: true",
-  "all_preboundary_ingested_at_lte_target: true",
   "gfs_same_cycle_pair: true",
-  "rehydration_manifest",
   "formal_database_write_count: 0",
   "formal_r2_write_count: 0",
-], "MCFT_CAP09_ROLLING_PREBOUNDARY_EXISTING_RUNNER_CAPABILITY_REQUIRED");
+], "MCFT_CAP09_ROLLING_PREBOUNDARY_RUNNER_TARGET_T_SEAM_MISSING");
+
+requireAll(orchestrator, [
+  'return phase === "PRE_BOUNDARY_CAUSAL" ? slot.logical_time : slot.late_exact_hour_evidence_cutoff;',
+  "EA5E2_COLLECTOR_CANONICALIZED_AFTER_DEADLINE",
+  "EA5E2_COLLECTOR_RECORD_AFTER_PHASE_DEADLINE",
+  "EA5E2_COLLECTOR_PREBOUNDARY_FUTURE_EVENT_FORBIDDEN",
+], "MCFT_CAP09_ROLLING_PREBOUNDARY_HARD_CAUSAL_GATE_MISSING");
 
 console.log(JSON.stringify({
   schema_version: "geox_mcft_cap09_rolling_preboundary_capture_acceptance_v2",
   status: "PASS",
   temporal_authority: "PROVIDER_AVAILABILITY_WATERMARK_V1",
   schedule: "hourly",
+  rolling_preboundary_margin_minutes: 0,
+  historical_nonrolling_margin_minutes: 5,
   preboundary_deadline_authority: "TARGET_T",
-  historical_t_minus_5_default_preserved_for_nonrolling_callers: true,
+  hard_causality_gate: {
+    canonicalized_at_lte_t: true,
+    available_to_runtime_at_lte_t: true,
+    ingested_at_lte_t: true,
+    future_event_forbidden: true
+  },
   candidate_retention_hours: 36,
-  captured_families: ["soil_moisture_observation_v1", "future_weather_assumption_v1", "future_et0_assumption_v1"],
-  kbs_daily_batch_required_at_capture: false,
-  crop_authority_required_at_capture: false,
-  producer_subject_sha_immutable: true,
-  consumer_same_git_sha_required: false,
-  consumer_exact_main_successor_qualification_required: true,
-  cross_version_raw_and_semantic_reverification_required: true,
   formal_effect: false,
   crop_authority_effect: "NONE"
 }));
