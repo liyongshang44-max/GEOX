@@ -93,6 +93,41 @@ function rehashQualificationRecord<T extends {
   return record;
 }
 
+function bindLateExactIntervalAvailability<T extends {
+  record_type: string;
+  available_to_runtime_at: string;
+  role_time: Record<string, unknown>;
+}>(record: T): T {
+  if (record.record_type === "observed_rainfall_v1" || record.record_type === "historical_et0_estimate_v1") {
+    record.available_to_runtime_at = new Date(Date.parse(EA5E2_OBSERVER_TIMING_TARGET_V1) + 390 * 60_000).toISOString();
+    record.role_time.ingested_at = new Date(Date.parse(EA5E2_OBSERVER_TIMING_TARGET_V1) + 391 * 60_000).toISOString();
+  }
+  return record;
+}
+
+function assertQualificationCandidateTiming(record: {
+  record_type: string;
+  available_to_runtime_at: string;
+  role_time: Record<string, unknown>;
+}): void {
+  const event = Date.parse(occurredAt(record as unknown as Record<string, unknown>));
+  const available = Date.parse(record.available_to_runtime_at);
+  const ingested = Date.parse(String(record.role_time.ingested_at));
+  if (![event, available, ingested].every(Number.isFinite) || event > available || available > ingested) {
+    throw new Error(`EA5E2_OBSERVER_TIMING_SEED_CAUSAL_ORDER_INVALID:${record.record_type}`);
+  }
+  if (record.record_type === "observed_rainfall_v1" || record.record_type === "historical_et0_estimate_v1") {
+    const expectedStart = new Date(Date.parse(EA5E2_OBSERVER_TIMING_TARGET_V1) - 60 * 60_000).toISOString();
+    if (record.role_time.interval_start !== expectedStart
+        || record.role_time.interval_end !== EA5E2_OBSERVER_TIMING_TARGET_V1
+        || available > Date.parse(EA5E2_OBSERVER_TIMING_TARGET_V1) + 432 * 60_000) {
+      throw new Error(`EA5E2_OBSERVER_TIMING_SEED_EXACT_INTERVAL_INVALID:${record.record_type}`);
+    }
+  } else if (available > Date.parse(EA5E2_OBSERVER_TIMING_TARGET_V1)) {
+    throw new Error(`EA5E2_OBSERVER_TIMING_SEED_PRE_BOUNDARY_AVAILABILITY_INVALID:${record.record_type}`);
+  }
+}
+
 async function main(): Promise<void> {
   const subject = required("MCFT_EA5E2_SUBJECT_SHA");
   const databaseUrl = required("DATABASE_URL");
@@ -101,8 +136,9 @@ async function main(): Promise<void> {
   const fixture = await buildEa5b5bExternalFixtureV1();
   if (fixture.candidates.length !== 5) throw new Error("EA5E2_OBSERVER_TIMING_SEED_EXACT_FIVE_REQUIRED");
   const candidates = fixture.candidates.map((candidate) => rehashQualificationRecord(
-    shiftQualificationTimestamp(candidate) as typeof candidate,
+    bindLateExactIntervalAvailability(shiftQualificationTimestamp(candidate) as typeof candidate),
   ));
+  for (const candidate of candidates) assertQualificationCandidateTiming(candidate);
   const pool = new Pool({ connectionString: databaseUrl, application_name: "mcft-ea5e2-observer-timing-seed" });
   try {
     await pool.query("CREATE TABLE IF NOT EXISTS facts (fact_id text PRIMARY KEY, occurred_at timestamptz NOT NULL, source text NOT NULL, record_json jsonb NOT NULL, ingested_at timestamptz NOT NULL DEFAULT transaction_timestamp())");
@@ -127,6 +163,8 @@ async function main(): Promise<void> {
       target_t: EA5E2_OBSERVER_TIMING_TARGET_V1,
       source_fixture_target_t: EA5B5B_LOGICAL_TIME_V1,
       qualification_timestamp_shift_hours: QUALIFICATION_SHIFT_MS / 3_600_000,
+      exact_interval_available_offset_minutes: 390,
+      exact_interval_ingested_offset_minutes: 391,
       target_selected_from_current_crop_authority_consensus_window: true,
       canonical_fact_count: count,
       fixture_class: "DETERMINISTIC_QUALIFICATION_ONLY",
