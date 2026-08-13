@@ -1,0 +1,161 @@
+name: mcft-cap-09-rolling-preboundary-rehydration-live-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-rolling-preboundary-rehydration-live-proof.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-rolling-preboundary-rehydration-live-proof.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-rolling-rehydrate-live-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  FROZEN_ROLLING_ARTIFACT_ID: '9185700449'
+  FROZEN_ROLLING_PRODUCER_SHA: '37a36ba52d7ef7891d72cc1385314ec453511296'
+  FROZEN_ROLLING_TARGET_T: '2026-08-13T15:00:00.000Z'
+  READINESS_DB_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck producer-bound rehydration runner
+        run: pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+      - name: Prove producer-prefix selftest
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts selftest
+      - name: Prove Amendment-11 rehydration boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.cjs
+
+  live-rehydrate:
+    if: github.event_name != 'pull_request'
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+      MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+      MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+      MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+      MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main" || { echo 'MCFT_CAP09_REHYDRATE_LIVE_MAIN_REQUIRED' >&2; exit 1; }
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || { echo 'MCFT_CAP09_REHYDRATE_LIVE_EXACT_MAIN_DRIFT' >&2; exit 1; }
+
+      - name: Require private transient R2 bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
+            test -n "${!name:-}" || { echo "MCFT_CAP09_REHYDRATE_LIVE_SECRET_REQUIRED:${name}" >&2; exit 1; }
+          done
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+
+      - name: Download immutable rolling candidate artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rolling-candidate acceptance-output
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${FROZEN_ROLLING_ARTIFACT_ID}/zip" > /tmp/rolling-candidate.zip
+          unzip -q /tmp/rolling-candidate.zip -d /tmp/rolling-candidate
+          test -s /tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          node - <<'NODE'
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('/tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json','utf8'));
+          if(p.status!=='PASS'||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.producer_subject_sha!==process.env.FROZEN_ROLLING_PRODUCER_SHA||p.target_t!==process.env.FROZEN_ROLLING_TARGET_T) throw new Error('MCFT_CAP09_REHYDRATE_LIVE_FROZEN_CANDIDATE_IDENTITY_REQUIRED');
+          NODE
+
+      - name: Rehydrate original causal raw under current consumer code
+        env:
+          MCFT_CAP09_CONSUMER_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_CAP09_ROLLING_CANDIDATE_PATH: /tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          MCFT_CAP09_ROLLING_REHYDRATION_ISOLATED_DB_ACK: 'true'
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts run
+
+      - name: Require safe live rehydration proof
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json','utf8'));
+          if(p.status!=='PASS'||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.consumer_subject_sha!==process.env.GITHUB_SHA||p.producer_subject_sha!==process.env.FROZEN_ROLLING_PRODUCER_SHA||p.target_t!==process.env.FROZEN_ROLLING_TARGET_T||p.semantic_manifest_match!==true||p.producer_bound_raw_reverification!==true||p.provider_refetch_count!==0||p.private_r2_put_count!==0||p.private_r2_delete_count!==0||p.isolated_database_fact_count!==3||p.formal_database_write_count!==0||p.formal_r2_prefix_write_count!==0||p.scheduler_write_count!==0||p.runtime_write_count!==0||p.crop_authority_effect!=='NONE'||p.formal_effect!==false||p.raw_values_emitted!==false) throw new Error('MCFT_CAP09_REHYDRATE_LIVE_SAFE_PROOF_REQUIRED');
+
+      - name: Upload metadata-only live rehydration proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-rolling-rehydration-live-${{ github.sha }}-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json
+          if-no-files-found: error
+          retention-days: 30
