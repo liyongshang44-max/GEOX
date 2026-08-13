@@ -50,15 +50,21 @@ requireAll(planner, [
 requireAll(assembler, [
   "ROLLING_PRE_BOUNDARY_CAUSAL_CAPTURE",
   "PROVIDER_AVAILABILITY_WATERMARK_V1",
+  "producer_subject_sha: subject",
   "soil_observation_inside_t_minus_15_to_t",
   "same_cycle_future_weather_et0",
   "raw_retained_before_canonicalization",
-  "successful_successor_qualification_for_subject_required",
-  "raw_retention_reverification_required",
-  "semantic_hash_reverification_required",
+  "producer_subject_sha_immutable: true",
+  "producer_exact_main_capture_proof_required: true",
+  "consumer_subject_may_differ_from_producer: true",
+  "consumer_exact_main_successor_qualification_required: true",
+  "cross_version_rehydration_required_when_consumer_subject_differs: true",
+  "raw_retention_reverification_required: true",
+  "semantic_hash_reverification_required: true",
   "crop_authority_checked_only_at_consumption",
   "delayed_kbs_exact_interval_checked_only_at_consumption",
   "oldest_eligible_selection_required",
+  "consumer_same_git_sha_required: false",
   "kbs_daily_batch_required_at_capture: false",
   "crop_authority_required_at_capture: false",
   "formal_database_write_count: 0",
@@ -67,6 +73,13 @@ requireAll(assembler, [
   "runtime_write_count: 0",
   "crop_authority_effect: \"NONE\"",
 ], "MCFT_CAP09_ROLLING_PREBOUNDARY_ASSEMBLER_CONTRACT_MISSING");
+
+for (const forbidden of [
+  "exact_subject_sha_required: true",
+  "successful_successor_qualification_for_subject_required: true",
+]) {
+  if (assembler.includes(forbidden)) throw new Error(`MCFT_CAP09_ROLLING_PREBOUNDARY_SAME_HEAD_CONSUMPTION_FORBIDDEN:${forbidden}`);
+}
 
 requireAll(workflow, [
   "cron: '5 * * * *'",
@@ -116,8 +129,10 @@ console.log(JSON.stringify({
   captured_families: ["soil_moisture_observation_v1", "future_weather_assumption_v1", "future_et0_assumption_v1"],
   kbs_daily_batch_required_at_capture: false,
   crop_authority_required_at_capture: false,
-  exact_subject_sha_required_at_consumption: true,
-  raw_reverification_required_at_consumption: true,
+  producer_subject_sha_immutable: true,
+  consumer_same_git_sha_required: false,
+  consumer_exact_main_successor_qualification_required: true,
+  cross_version_raw_and_semantic_reverification_required: true,
   formal_effect: false,
   crop_authority_effect: "NONE"
 }));
