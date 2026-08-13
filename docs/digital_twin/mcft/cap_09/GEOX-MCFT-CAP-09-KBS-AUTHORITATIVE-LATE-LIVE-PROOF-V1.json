@@ -1,0 +1,78 @@
+{
+  "schema_version": "geox_mcft_cap09_kbs_authoritative_late_live_proof_v1",
+  "capability_line_id": "MCFT-CAP-09",
+  "status": "PASS",
+  "proof_class": "EXACT_PROTECTED_MAIN_REAL_PROVIDER_QUALIFICATION",
+  "temporal_authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+  "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md",
+  "subject_sha": "4b391476b2f3a4cf77ddbd8756253ef19bc99813",
+  "workflow_run_id": 31695778044,
+  "workflow_job_id": 94433110135,
+  "artifact_id": 9179259809,
+  "artifact_name": "mcft-cap09-kbs-authoritative-late-4b391476b2f3a4cf77ddbd8756253ef19bc99813",
+  "artifact_digest": "sha256:7168040e3757e6b945cbb2732f8c317ecc5bdcc5a77563aa03f46f2cc2e9d39d",
+  "artifact_created_at": "2026-08-13T11:31:10Z",
+  "provider": {
+    "identity": "KBS_LTER",
+    "publication_cadence": "DAILY_BATCH",
+    "observation_resolution": "HOURLY",
+    "provider_request_count": 1,
+    "provider_latest_timestamp": "2026-08-13T04:00:00.000Z",
+    "provider_latest_age_hours": 7.368161,
+    "historical_online_freshness_diagnostic_le_6h": false,
+    "freshness_is_late_authoritative_admission_gate": false
+  },
+  "selected_exact_interval": {
+    "interval_start": "2026-08-13T03:00:00.000Z",
+    "interval_end": "2026-08-13T04:00:00.000Z",
+    "event_time": "2026-08-13T04:00:00.000Z",
+    "delayed_authoritative_evidence_eligible": true
+  },
+  "chronology": [
+    {
+      "record_type": "observed_rainfall_v1",
+      "event_time": "2026-08-13T04:00:00.000Z",
+      "available_to_runtime_at": "2026-08-13T11:22:05.380Z",
+      "retained_at": "2026-08-13T11:22:05.493Z",
+      "ingested_at": "2026-08-13T11:22:06.099Z"
+    },
+    {
+      "record_type": "historical_et0_estimate_v1",
+      "event_time": "2026-08-13T04:00:00.000Z",
+      "available_to_runtime_at": "2026-08-13T11:22:05.380Z",
+      "retained_at": "2026-08-13T11:22:05.493Z",
+      "ingested_at": "2026-08-13T11:22:06.099Z"
+    }
+  ],
+  "evidence_contract": {
+    "exact_source_identity": true,
+    "exact_interval_identity": true,
+    "raw_retained_before_decode": true,
+    "real_chronology_retained": true,
+    "valid_quality_required": true,
+    "identity_conflict_allowed": false,
+    "interpolation_allowed": false,
+    "persistence_fill_allowed": false,
+    "source_substitution_allowed": false
+  },
+  "qualification_side_effects": {
+    "isolated_database_fact_count": 2,
+    "isolated_database_write_count": 2,
+    "private_transient_r2_put_count": 1,
+    "private_transient_r2_head_count": 3,
+    "private_transient_r2_cleanup_count": 1,
+    "private_transient_cleanup_confirmed": true,
+    "formal_database_write_count": 0,
+    "formal_r2_prefix_write_count": 0,
+    "scheduler_write_count": 0
+  },
+  "nonclaims": {
+    "crop_authority_effect": "NONE",
+    "authority_effect": false,
+    "formal_effect": false,
+    "live_dispatch_authorized": false,
+    "formal_window_started": false,
+    "raw_values_emitted": false
+  },
+  "decisive_ruling": "A real KBS DAILY_BATCH observation with provider latest age 7.368161h (>6h) remained exact authoritative-late Evidence under Amendment-11; <=6h is diagnostic only and was not used as delayed Evidence admission authority."
+}

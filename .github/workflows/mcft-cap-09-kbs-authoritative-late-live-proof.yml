@@ -1,0 +1,32 @@
+name: mcft-cap-09-kbs-authoritative-late-live-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-kbs-authoritative-late-live-proof.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-AUTHORITATIVE-LATE-LIVE-PROOF-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_LIVE_PROOF_V1.cjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-kbs-authoritative-late-live-proof.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-AUTHORITATIVE-LATE-LIVE-PROOF-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_LIVE_PROOF_V1.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  immutable-live-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: Validate frozen KBS authoritative-late live proof
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_LIVE_PROOF_V1.cjs
