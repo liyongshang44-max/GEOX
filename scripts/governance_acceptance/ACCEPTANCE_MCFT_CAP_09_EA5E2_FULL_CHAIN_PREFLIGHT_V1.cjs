@@ -313,7 +313,11 @@ function main() {
   blocker(blockers, !has(live, "SUCCESSOR_RUNNER_EXACT_HEAD_QUALIFICATION_REQUIRED") || !has(live, "PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts"), "LIVE_SUCCESSOR_AND_FORMAL_PREDISPATCH_GATE_MISSING");
   blocker(blockers, count(live, "ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs") < 4, "LONG_WINDOW_MULTIPHASE_PROTECTED_MAIN_DRIFT_GUARD_MISSING");
   blocker(blockers, !has(provider, "freshness_evaluated_at") || !has(provider, "def command_probe_gfs") || !has(live, "probe-gfs"), "FETCH_COMPLETION_FRESHNESS_OR_GFS_READINESS_MISSING");
-  blocker(blockers, !has(ea4, "A partially published newest cycle is not a terminal selection"), "GFS_OLDER_COMPLETE_SAME_CYCLE_FALLBACK_MISSING");
+  blocker(blockers,
+    !has(provider, "def select_complete_gfs_cycle")
+      || !has(provider, "A partially published newest cycle is not a terminal selection")
+      || !has(provider, "def command_selftest_gfs_selection"),
+    "GFS_OLDER_COMPLETE_SAME_CYCLE_FALLBACK_MISSING");
   blocker(blockers, !has(watcher, '"stop": captured') || !has(watcher, "latest_24h_duplicate_event_time_row_count") || !has(watcher, "SELFTEST_STAGED_CONTINUES"), "KBS_WATCHER_STAGED_OR_DUPLICATE_FAIL_CLOSED_MISSING");
 
   let dependencyGate = { status: "NOT_RUN" };

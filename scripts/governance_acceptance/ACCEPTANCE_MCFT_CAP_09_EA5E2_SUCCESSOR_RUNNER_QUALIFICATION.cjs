@@ -65,7 +65,7 @@ try {
   for (const marker of ["latest_24h_duplicate_event_time_row_count", '"stop": captured', "SELFTEST_STAGED_CONTINUES", "SELFTEST_DUPLICATE_CONTINUES", '"polled_at": snapshot["retrieved_at"]']) has(watcher, marker, "WATCHER_FAIL_CLOSED_RULE_MISSING");
   const provider = read(PROVIDER);
   for (const marker of ["freshness_evaluated_at", "def command_probe_gfs", "same_cycle_pgrb2_sflux_complete"]) has(provider, marker, "PROVIDER_READINESS_RULE_MISSING");
-  has(read(EA4), "A partially published newest cycle is not a terminal selection", "GFS_OLDER_COMPLETE_CYCLE_FALLBACK_MISSING");
+  for (const marker of ["def select_complete_gfs_cycle", "A partially published newest cycle is not a terminal selection", "def command_selftest_gfs_selection"]) has(provider, marker, "GFS_OLDER_COMPLETE_CYCLE_FALLBACK_MISSING");
 
   const live = read(LIVE);
   assert(!/^\s{2}push:/m.test(live), "LIVE_AUTO_PUSH_FORBIDDEN");

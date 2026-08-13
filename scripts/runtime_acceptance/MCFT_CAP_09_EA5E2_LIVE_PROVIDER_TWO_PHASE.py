@@ -63,6 +63,48 @@ def sha256_json(value) -> str:
     return sha256_bytes(json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8"))
 
 
+def select_complete_gfs_cycle(tick: datetime):
+    """Select the newest cycle whose PGRB2 and SFLUX inventories are both complete."""
+    rejections = []
+    for cycle in ea4.candidate_cycles(tick):
+        lead_start = int((tick - cycle).total_seconds() // 3600) + 1
+        lead_end = lead_start + ea4.POINT_COUNT - 1
+        support = lead_start - 1
+        if support < 0 or lead_end > ea4.MAX_LEAD:
+            continue
+        try:
+            url = ea4.directory_url(cycle)
+            status, _, body, final_url = ea4.request_bytes(url, "EA5E2_GFS_DIRECTORY", 20_000_000)
+            require(status == 200, f"EA5E2_GFS_DIRECTORY_HTTP_{status}")
+            final = urlparse(final_url)
+            require(final.hostname == "nomads.ncep.noaa.gov" and final.path == urlparse(url).path, "EA5E2_GFS_DIRECTORY_IDENTITY_DRIFT")
+            ea4.retain_raw("GFS_DIRECTORY_LISTING", iso(cycle), body)
+            entries = ea4.parse_directory(body)
+            for lead in range(support, lead_end + 1):
+                for name in ea4.pgrb2_names(cycle, lead):
+                    match = entries.get(name, [])
+                    require(len(match) == 1 and match[0]["size"] > 0, f"EA5E2_PGRB2_DIRECTORY_ENTRY_MISSING:{name}")
+                    require(match[0]["upper"] <= tick, f"EA5E2_PGRB2_DIRECTORY_ENTRY_AFTER_TARGET:{name}")
+            for lead in range(support, lead_end + 1):
+                for name in ea4.sflux_names(cycle, lead):
+                    match = entries.get(name, [])
+                    require(len(match) == 1 and match[0]["size"] > 0, f"EA5E2_SFLUX_DIRECTORY_ENTRY_MISSING:{name}")
+                    require(match[0]["upper"] <= tick, f"EA5E2_SFLUX_DIRECTORY_ENTRY_AFTER_TARGET:{name}")
+            return {
+                "cycle": cycle,
+                "lead_start": lead_start,
+                "lead_end": lead_end,
+                "support": support,
+                "directory_sha256": sha256_bytes(body),
+                "rejections": rejections,
+            }
+        except Exception as exc:
+            # A partially published newest cycle is not a terminal selection.
+            # Keep searching for an older complete same-cycle PGRB2+SFLUX set.
+            rejections.append({"cycle": iso(cycle), "reason": str(exc)[:240]})
+    raise RuntimeError("EA5E2_NO_COMPLETE_GFS_CYCLE:" + json.dumps(rejections, separators=(",", ":")))
+
+
 def safe_name(value: str) -> str:
     return re.sub(r"[^0-9A-Za-z]+", "_", value).strip("_").lower()
 
@@ -159,7 +201,7 @@ def command_fetch_gfs(args: argparse.Namespace) -> None:
 
     ea4.request_bytes = counted_request
     ea4.retain_raw = capture_retention
-    selected = ea4.select_cycle(target)
+    selected = select_complete_gfs_cycle(target)
     cycle = selected["cycle"]
     leads = list(range(selected["support"], selected["lead_end"] + 1))
     raw_members: list[dict] = []
@@ -296,7 +338,7 @@ def command_probe_gfs(args: argparse.Namespace) -> None:
     original_retention = ea4.retain_raw
     ea4.retain_raw = metadata_only_retention
     try:
-        selected = ea4.select_cycle(target)
+        selected = select_complete_gfs_cycle(target)
     finally:
         ea4.retain_raw = original_retention
     retrieved_at = datetime.now(timezone.utc)
@@ -322,6 +364,59 @@ def command_probe_gfs(args: argparse.Namespace) -> None:
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     Path(args.output).write_text(json.dumps(proof, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(proof, sort_keys=True))
+
+
+def command_selftest_gfs_selection(_args: argparse.Namespace) -> None:
+    target = datetime(2026, 8, 13, 12, tzinfo=timezone.utc)
+    newest = datetime(2026, 8, 13, 6, tzinfo=timezone.utc)
+    older = datetime(2026, 8, 13, 0, tzinfo=timezone.utc)
+    originals = {
+        "candidate_cycles": ea4.candidate_cycles,
+        "request_bytes": ea4.request_bytes,
+        "parse_directory": ea4.parse_directory,
+        "retain_raw": ea4.retain_raw,
+    }
+
+    def inventory(cycle: datetime, complete: bool) -> dict:
+        lead_start = int((target - cycle).total_seconds() // 3600) + 1
+        lead_end = lead_start + ea4.POINT_COUNT - 1
+        support = lead_start - 1
+        entry = {"upper": target - timedelta(minutes=1), "size": 1024}
+        values = {}
+        for lead in range(support, lead_end + 1):
+            for name in (*ea4.pgrb2_names(cycle, lead), *ea4.sflux_names(cycle, lead)):
+                values[name] = [entry]
+        if not complete:
+            values.pop(ea4.sflux_names(cycle, support)[0])
+        return values
+
+    inventories = {b"newest": inventory(newest, False), b"older": inventory(older, True)}
+    try:
+        ea4.candidate_cycles = lambda _tick: [newest, older]
+
+        def fake_request(url, *_pos, **_kw):
+            body = b"newest" if "/06/" in url else b"older"
+            return 200, {}, body, url
+
+        ea4.request_bytes = fake_request
+        ea4.parse_directory = lambda body: inventories[body]
+        ea4.retain_raw = lambda *_pos, **_kw: {"metadata_only": True}
+        selected = select_complete_gfs_cycle(target)
+    finally:
+        for name, value in originals.items():
+            setattr(ea4, name, value)
+
+    require(selected["cycle"] == older, "EA5E2_GFS_SELFTEST_OLDER_COMPLETE_CYCLE_REQUIRED")
+    require(len(selected["rejections"]) == 1, "EA5E2_GFS_SELFTEST_NEWEST_PARTIAL_REJECTION_REQUIRED")
+    require("EA5E2_SFLUX_DIRECTORY_ENTRY_MISSING" in selected["rejections"][0]["reason"], "EA5E2_GFS_SELFTEST_PARTIAL_REASON_DRIFT")
+    print(json.dumps({
+        "status": "PASS",
+        "cases": 1,
+        "newest_partial_cycle_rejected": True,
+        "older_complete_same_cycle_selected": True,
+        "provider_request_count": 0,
+        "database_write_count": 0,
+    }, sort_keys=True))
 
 
 def command_decode_gfs(args: argparse.Namespace) -> None:
@@ -601,6 +696,8 @@ def build_parser() -> argparse.ArgumentParser:
     probe_gfs.add_argument("--target", required=True)
     probe_gfs.add_argument("--output", required=True)
     probe_gfs.set_defaults(handler=command_probe_gfs)
+    selftest_gfs = sub.add_parser("selftest-gfs-selection")
+    selftest_gfs.set_defaults(handler=command_selftest_gfs_selection)
     decode_gfs = sub.add_parser("decode-gfs")
     decode_gfs.add_argument("--target", required=True)
     decode_gfs.add_argument("--available-at", required=True)

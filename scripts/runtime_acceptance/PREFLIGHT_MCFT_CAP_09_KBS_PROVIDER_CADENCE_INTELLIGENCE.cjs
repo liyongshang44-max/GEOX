@@ -36,7 +36,7 @@ function currentSnapshotProfile(current) {
 }
 function main() {
   const test = selftest();
-  if (test.status !== "PASS" || test.cases !== 8 || test.authority_changed !== false || test.provider_expected_update_behavior !== "DAILY_BATCH" || test.ea5e2_live_protocol_compatible !== false) {
+  if (test.status !== "PASS" || test.cases !== 9 || test.authority_changed !== false || test.provider_expected_update_behavior !== "DAILY_BATCH" || test.ea5e2_live_protocol_compatible !== false) {
     throw new Error("KBS_CADENCE_INTELLIGENCE_SELFTEST_FAILED");
   }
   const current = readJson(CURRENT, "KBS_CURRENT_FRESHNESS_METADATA_REQUIRED");
