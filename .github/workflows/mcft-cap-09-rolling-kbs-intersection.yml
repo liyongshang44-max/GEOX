@@ -46,7 +46,12 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install exact KBS decoder dependencies
-        run: python -m pip install --disable-pip-version-check numpy==1.26.4 refet==0.4.2
+        run: |
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
       - name: Prove exact-target KBS decoder seam
         run: python scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py selftest
       - name: Prove oldest exact candidate intersection
@@ -80,7 +85,12 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install exact KBS decoder dependencies
-        run: python -m pip install --disable-pip-version-check numpy==1.26.4 refet==0.4.2
+        run: |
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
 
       - name: Discover recent successful rolling capture artifacts
         shell: bash
