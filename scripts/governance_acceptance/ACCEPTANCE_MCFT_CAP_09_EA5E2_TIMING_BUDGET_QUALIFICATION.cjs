@@ -8,6 +8,8 @@ const COLLECTOR = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDE
 const OBSERVER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts";
 const SEED = "scripts/runtime_acceptance/SEED_MCFT_CAP_09_EA5E2_OBSERVER_TIMING_QUALIFICATION.ts";
 const AGGREGATE = "scripts/runtime_acceptance/QUALIFY_MCFT_CAP_09_EA5E2_TIMING_BUDGETS.ts";
+const EVIDENCE = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-TIMING-BUDGET-QUALIFICATION-V1.json";
+const VALIDATOR = "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_TIMING_BUDGET_EVIDENCE_V1.cjs";
 
 function read(path) {
   if (!fs.existsSync(path)) throw new Error(`EA5E2_TIMING_QUALIFICATION_FILE_REQUIRED:${path}`);
@@ -23,6 +25,8 @@ const collector = read(COLLECTOR);
 const observer = read(OBSERVER);
 const seed = read(SEED);
 const aggregate = read(AGGREGATE);
+const evidence = read(EVIDENCE);
+const validator = read(VALIDATOR);
 
 requireAll(workflow, [
   "workflow_dispatch:",
@@ -88,6 +92,23 @@ requireAll(aggregate, [
   "crop_or_season_authority_changed: false",
   "live_dispatch_authorized: false",
 ], "EA5E2_TIMING_AGGREGATION_CONTRACT_MISSING");
+requireAll(evidence, [
+  "eb21a3e5c51a471d7eecd6118bd27a53201d49fc",
+  "31680898174",
+  "9173467650",
+  "sha256:3d1fc6316f2195c4ab8ddbab17b52d018d17b1c196cf471c538944f8ef59dbd6",
+  "\"safety_adjusted_max_elapsed_ms\": 36596",
+  "\"safety_adjusted_max_elapsed_ms\": 3670",
+  "\"live_dispatch_authorized\": false",
+], "EA5E2_TIMING_FROZEN_EVIDENCE_MISSING");
+requireAll(validator, [
+  "EA5E2_TIMING_EVIDENCE_EXACT_MAIN_BINDING_DRIFT",
+  "EA5E2_TIMING_EVIDENCE_MEASURED_BLOB_DRIFT",
+  "EA5E2_COLLECTOR_TIMING_BUDGET_NOT_QUALIFIED",
+  "EA5E2_OBSERVER_TIMING_BUDGET_NOT_QUALIFIED",
+  "observer_operational_start_deadline_offset_minutes: 442",
+  "frozen_observer_max_start_offset_minutes: 447",
+], "EA5E2_TIMING_FROZEN_EVIDENCE_VALIDATOR_MISSING");
 
 console.log(JSON.stringify({
   schema_version: "geox_mcft_cap09_ea5e2_timing_budget_qualification_static_acceptance_v1",
@@ -98,6 +119,7 @@ console.log(JSON.stringify({
   observer_budget_minutes: 5,
   safety_factor: 2,
   exact_main_action_run_required: true,
+  exact_main_frozen_evidence_bound: true,
   formal_effect: false,
   authority_effect: false,
   live_dispatch_authorized: false,

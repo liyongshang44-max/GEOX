@@ -28,8 +28,15 @@
     "frozen_exact_t_cutoff_offset_minutes": 432,
     "operational_discovery_deadline_offset_minutes": 407,
     "conservative_collector_processing_reservation_minutes": 25,
-    "processing_reservation_exact_head_performance_qualified": false,
-    "observer_end_to_end_budget_exact_head_performance_qualified": false,
+    "processing_reservation_exact_head_performance_qualified": true,
+    "observer_end_to_end_budget_exact_head_performance_qualified": true,
+    "timing_budget_qualification_evidence": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-TIMING-BUDGET-QUALIFICATION-V1.json",
+    "timing_budget_qualification_subject_sha": "eb21a3e5c51a471d7eecd6118bd27a53201d49fc",
+    "timing_budget_qualification_workflow_run_id": 31680898174,
+    "collector_safety_adjusted_max_elapsed_ms": 36596,
+    "observer_safety_adjusted_max_elapsed_ms": 3670,
+    "observer_operational_start_deadline_offset_minutes": 442,
+    "observer_processing_reservation_minutes": 5,
     "target_setup_budget_minutes": 120,
     "target_setup_budget_is_authority": false
   },
@@ -61,8 +68,6 @@
     "formal_execution_count": "0/24"
   },
   "live_dispatch_blockers": [
-    "CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET",
-    "LATE_EXACT_T_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED",
-    "OBSERVER_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED"
+    "CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET"
   ]
 }

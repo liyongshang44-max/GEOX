@@ -8,6 +8,9 @@ const {
   evaluateExactHourPhaseAdmission,
   runDeterministicSelftest,
 } = require("../runtime_acceptance/MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1.cjs");
+const {
+  validateTimingBudgetEvidence,
+} = require("../runtime_acceptance/MCFT_CAP_09_EA5E2_TIMING_BUDGET_EVIDENCE_V1.cjs");
 
 const LIVE = ".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml";
 const VIABILITY = "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs";
@@ -181,6 +184,8 @@ function main() {
     && has(viability, "canonical_write_count: 0")
     && has(viability, "live_activation_started: false")
     && has(viability, "KBS_RAW_HOURLY_PHASE_AWARE_PLANNING_METADATA_UNAVAILABLE")
+    && has(viability, "validateTimingBudgetEvidence")
+    && has(viability, "QUALIFIED_EXACT_MAIN_2X_SAFETY")
     && has(viability, "protocolCompatibility.reason")
     && has(viability, "authority_changed: false");
   blocker(blockers, !viabilityImplemented, "LIVE_WINDOW_VIABILITY_PREFLIGHT_NOT_FAIL_CLOSED");
@@ -302,6 +307,11 @@ function main() {
   blocker(blockers, !has(db, "EA5E2_EXTERNAL_DB_REQUIRED_FAMILY_MISSING"), "DB_ONLY_FIVE_FAMILY_CARDINALITY_REQUIRED");
 
   blocker(blockers, !has(observer, "const OBSERVER_OFFSET_MINUTES = 437;") || !has(observer, "const MAX_OBSERVER_START_SKEW_MINUTES = 10;") || !has(observer, "const EXACT_INTERVAL_CUTOFF_OFFSET_MINUTES = 432;"), "T_PLUS_437_OBSERVER_CLOCK_DRIFT");
+  blocker(blockers,
+    !has(live, "EA5E2_ACTIVATION_OBSERVER_OPERATIONAL_START_DEADLINE_MISSED")
+      || !has(live, "EA5E2_ACTIVATION_OBSERVER_FROZEN_MAX_START_SKEW_MISSED")
+      || !has(live, "EA5E2_ACTIVATION_OBSERVER_PROCESSING_RESERVATION_MISSED"),
+    "OBSERVER_OPERATIONAL_START_AND_PROCESSING_GUARDS_MISSING");
   blocker(blockers, !has(observer, "BEGIN TRANSACTION READ ONLY"), "FORMAL_A0_OBSERVER_READ_ONLY_REQUIRED");
   blocker(blockers, !has(observer, "EA5E2_ACTIVATION_FORMAL_SCHEDULER_MUST_REMAIN_UNSTARTED"), "FORMAL_SCHEDULER_ZERO_PRECONDITION_REQUIRED");
   blocker(blockers, !has(observer, "A1") || !has(observer, "COMPLETED") || !has(observer, "72"), "EXTERNAL_CAP04_A1_COMPLETED_72_OBSERVER_REQUIRED");
@@ -332,18 +342,24 @@ function main() {
   blocker(blockers, dependencyGate.status !== "PASS", "RUNTIME_DEPENDENCY_GRAPH_NOT_BOUND");
 
   const crop = cropProfile(cropAuthority);
+  let timingBudget = null;
+  try {
+    timingBudget = validateTimingBudgetEvidence();
+  } catch (error) {
+    blocker(blockers, true, "EXACT_MAIN_TIMING_BUDGET_EVIDENCE_INVALID", { message: String(error?.message ?? error) });
+  }
   blocker(blockers, !dailyBatchProtocolGuardImplemented, "PHASE_AWARE_LONG_HORIZON_TARGET_SCHEDULING_NOT_BOUND");
   blocker(readinessBlockers, crop.legal_future_target_count === 0, "CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET", {
     implication: "EA5E2_LIVE_DISPATCH_FORBIDDEN_UNTIL_SUCCESSOR_OR_REQUALIFIED_CROP_CONTEXT_AUTHORITY_EXISTS",
     authority_effect: false,
   });
-  blocker(readinessBlockers, true, "LATE_EXACT_T_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED", {
+  blocker(readinessBlockers, !timingBudget?.collector, "LATE_EXACT_T_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED", {
     discovery_deadline_offset_minutes: 407,
     frozen_cutoff_offset_minutes: 432,
     conservative_reserved_minutes: 25,
     implication: "POLL_PASS_MUST_NOT_RACE_REAL_COLLECTOR_CANONICALIZATION",
   });
-  blocker(readinessBlockers, true, "OBSERVER_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED", {
+  blocker(readinessBlockers, !timingBudget?.observer, "OBSERVER_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED", {
     observer_offset_minutes: 437,
     maximum_start_skew_minutes: 10,
     implication: "COLLECTOR_TO_OBSERVER_PROCESSING_BUDGET_REQUIRES_EXACT_HEAD_MEASUREMENT",
@@ -379,6 +395,7 @@ function main() {
     frozen_clock_contract: frozenClock,
     dependency_graph_status: dependencyGate.status,
     dependency_graph_count: dependencyGate.runtime_dependency_graph_count ?? null,
+    exact_main_timing_budget_qualification: timingBudget,
     crop_viability: crop,
     live_window_viability_preflight_implemented: viabilityImplemented,
     daily_batch_protocol_guard_implemented: dailyBatchProtocolGuardImplemented,
