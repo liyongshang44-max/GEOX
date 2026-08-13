@@ -26,7 +26,7 @@ for (const marker of [
   "retain rolling candidate packages for approximately 36h",
   "oldest(\n  T where",
   "oldest-first backfill",
-  "crop authority effect = NONE",
+  "crop_authority_effect = NONE",
 ]) has(a11, marker, "MCFT_CAP09_ROLLING_INTERSECTION_AMENDMENT11_MARKER_REQUIRED");
 
 for (const marker of [
