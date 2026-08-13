@@ -26,6 +26,7 @@ const aggregate = read(AGGREGATE);
 
 requireAll(workflow, [
   "workflow_dispatch:",
+  "github.event_name == 'workflow_dispatch' || github.event_name == 'push'",
   "QUALIFY_EXACT_MAIN_NO_FORMAL_WRITE",
   "EA5E2_TIMING_QUALIFICATION_PROTECTED_MAIN_REQUIRED",
   "git rev-parse origin/main",
@@ -38,7 +39,7 @@ requireAll(workflow, [
 ], "EA5E2_TIMING_QUALIFICATION_WORKFLOW_CONTRACT_MISSING");
 requireAll(collector, [
   "TIMING_QUALIFICATION_LATE_EXACT_HOUR",
-  "EA5E2_TIMING_QUALIFICATION_EXACT_MAIN_WORKFLOW_DISPATCH_REQUIRED",
+  "EA5E2_TIMING_QUALIFICATION_EXACT_MAIN_ACTION_RUN_REQUIRED",
   "KbsRawHourlyTransportV1",
   "PythonKbsLateDecoderV1",
   "PostgresExternalFormalEvidenceIngressV1",
@@ -50,7 +51,7 @@ requireAll(collector, [
 ], "EA5E2_COLLECTOR_TIMING_PATH_MISSING");
 requireAll(observer, [
   "MCFT_EA5E2_OBSERVER_TIMING_QUALIFICATION_ACK",
-  "EA5E2_OBSERVER_TIMING_QUALIFICATION_EXACT_MAIN_WORKFLOW_DISPATCH_REQUIRED",
+  "EA5E2_OBSERVER_TIMING_QUALIFICATION_EXACT_MAIN_ACTION_RUN_REQUIRED",
   "scheduling_clock_bypassed_for_historical_fixture",
   "timing_qualification_actual_execution_started_at",
   "authority_effect: false",
@@ -58,7 +59,7 @@ requireAll(observer, [
 ], "EA5E2_OBSERVER_TIMING_PATH_MISSING");
 requireAll(seed, [
   "buildEa5b5bExternalFixtureV1",
-  "EA5E2_OBSERVER_TIMING_SEED_EXACT_MAIN_WORKFLOW_DISPATCH_REQUIRED",
+  "EA5E2_OBSERVER_TIMING_SEED_EXACT_MAIN_ACTION_RUN_REQUIRED",
   "TRUNCATE TABLE facts",
   "canonical_fact_count: count",
   "formal_database_write_count: 0",
@@ -82,7 +83,7 @@ console.log(JSON.stringify({
   collector_budget_minutes: 25,
   observer_budget_minutes: 5,
   safety_factor: 2,
-  exact_main_workflow_dispatch_required: true,
+  exact_main_action_run_required: true,
   formal_effect: false,
   authority_effect: false,
   live_dispatch_authorized: false,
