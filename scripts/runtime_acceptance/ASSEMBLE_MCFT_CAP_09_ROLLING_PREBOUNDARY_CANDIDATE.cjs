@@ -51,6 +51,7 @@ const candidate = {
   status: "PASS",
   qualification_mode: "ROLLING_PRE_BOUNDARY_CAUSAL_CAPTURE",
   temporal_authority: "PROVIDER_AVAILABILITY_WATERMARK_V1",
+  producer_subject_sha: subject,
   subject_sha: subject,
   target_t: plan.target_t,
   target_key: plan.target_key,
@@ -74,11 +75,14 @@ const candidate = {
     raw_retained_before_canonicalization: true
   },
   consumption_contract: {
-    exact_subject_sha_required: true,
-    successful_successor_qualification_for_subject_required: true,
+    producer_subject_sha_immutable: true,
+    producer_exact_main_capture_proof_required: true,
+    consumer_subject_may_differ_from_producer: true,
+    consumer_exact_main_successor_qualification_required: true,
     exact_target_t_required: true,
     raw_retention_reverification_required: true,
     semantic_hash_reverification_required: true,
+    cross_version_rehydration_required_when_consumer_subject_differs: true,
     crop_authority_checked_only_at_consumption: true,
     delayed_kbs_exact_interval_checked_only_at_consumption: true,
     oldest_eligible_selection_required: true
@@ -87,7 +91,8 @@ const candidate = {
     kbs_daily_batch_required_at_capture: false,
     kbs_raw_hourly_required_at_capture: false,
     crop_authority_required_at_capture: false,
-    formal_database_required_at_capture: false
+    formal_database_required_at_capture: false,
+    consumer_same_git_sha_required: false
   },
   side_effects: {
     isolated_database_fact_count: 3,
@@ -105,7 +110,7 @@ fs.writeFileSync(OUTPUT, JSON.stringify(candidate, null, 2) + "\n");
 console.log(JSON.stringify({
   schema_version: candidate.schema_version,
   status: candidate.status,
-  subject_sha: candidate.subject_sha,
+  producer_subject_sha: candidate.producer_subject_sha,
   target_t: candidate.target_t,
   candidate_expires_at: candidate.candidate_expires_at,
   family_count: candidate.record_types.length,
@@ -113,5 +118,6 @@ console.log(JSON.stringify({
   semantic_manifest_digest: candidate.semantic_manifest_digest,
   kbs_required_at_capture: false,
   crop_required_at_capture: false,
+  consumer_same_git_sha_required: false,
   formal_effect: false
 }));
