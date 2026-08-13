@@ -31,7 +31,7 @@ eq(JSON.stringify(changed), JSON.stringify([amendmentPath, gatePath, workflowPat
 const predecessorPins = {
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-07-EXTERNAL-FORMAL-FIXED-LAG-CAUSALITY-AUTHORITY.md": "c5a98ca789027e1bf051ec56bf1b7e76b98a0891",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-09-CROP-CONTEXT-SEASON-ARCHITECTURE-ADJUDICATION-AUTHORITY.md": "422f60257039e0f674171c218a7ff0a2fd7dc1b2",
-  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-10-P0306-BOUNDED-THERMAL-PROXY-AUTHORITY.md": "8beb73a941d90c354e015dc5276a66f9354db7c2"
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-10-P0306-BOUNDED-THERMAL-PROXY-AUTHORITY.md": "964efa8acc95bf1aeed692c7662754afd3ac6db5"
 };
 for (const [filePath, expectedSha] of Object.entries(predecessorPins)) {
   eq(blob(base, filePath), expectedSha, `AMENDMENT11_BASE_PIN:${filePath}`);
