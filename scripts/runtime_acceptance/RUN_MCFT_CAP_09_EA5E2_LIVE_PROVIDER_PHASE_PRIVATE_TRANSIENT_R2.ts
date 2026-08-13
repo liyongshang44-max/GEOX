@@ -49,6 +49,7 @@ const TRANSIENT_REF_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_EA5E2_TRANSIENT_
 const TRANSIENT_SMOKE_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_EA5E2_TRANSIENT_R2_SMOKE.json");
 const TRANSIENT_CLEANUP_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_EA5E2_TRANSIENT_R2_CLEANUP.json");
 const TRANSIENT_PHASE_FAILURE_CLEANUP_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_EA5E2_TRANSIENT_R2_PHASE_FAILURE_CLEANUP.json");
+const TIMING_QUALIFICATION_BUDGET_MINUTES = 25;
 
 const MINUTE = 60_000;
 const PRE_OFFSET_MINUTES = -30;
@@ -652,10 +653,99 @@ async function cleanupTransientStore(): Promise<void> {
   writeSafe(TRANSIENT_CLEANUP_OUTPUT, { schema_version: "geox_mcft_cap09_ea5e2_transient_r2_cleanup_v1", status: "PASS", subject_sha: subject, transient_root_prefix: TRANSIENT_ROOT_PREFIX, discovered_ref_count: refs.size, deleted_ref_count: deleted.length, deleted_refs: deleted, formal_raw_prefix_delete_count: 0, raw_values_emitted: false, public_value_artifact_count: 0 });
 }
 
+async function qualifyLateExactHourTiming(): Promise<void> {
+  const subject = subjectSha();
+  const target = canonicalHour(required("MCFT_EA5E2_TARGET_T"), "EA5E2_TARGET_T_INVALID");
+  const trial = required("MCFT_EA5E2_TIMING_TRIAL");
+  if (!/^[123]$/.test(trial)) throw new Error("EA5E2_TIMING_QUALIFICATION_TRIAL_INVALID");
+  if (process.env.GITHUB_EVENT_NAME !== "workflow_dispatch" || process.env.GITHUB_REF !== "refs/heads/main" || process.env.GITHUB_SHA !== subject) {
+    throw new Error("EA5E2_TIMING_QUALIFICATION_EXACT_MAIN_WORKFLOW_DISPATCH_REQUIRED");
+  }
+  const databaseUrl = required("DATABASE_URL");
+  assertIsolatedDatabase(databaseUrl);
+  const store = new Ea5e2PrivateTransientR2StoreV1({
+    subject_sha: subject,
+    namespace: `timing-${required("GITHUB_RUN_ID")}-${trial}`,
+  });
+  const pool = new Pool({ connectionString: databaseUrl, application_name: `mcft-ea5e2-late-timing-${trial}` });
+  let cleaned = false;
+  try {
+    await ensureFactsSchema(pool);
+    await pool.query("TRUNCATE TABLE facts");
+    const startedAt = new Date().toISOString();
+    const deadlineMs = Date.parse(startedAt) + TIMING_QUALIFICATION_BUDGET_MINUTES * MINUTE;
+    const transport = new KbsRawHourlyTransportV1(deadlineMs);
+    const results = await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1({
+      dataset_id: `mcft_cap09_ea5e2_timing_kbs_exact_${target}`,
+      scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
+      request: {
+        request_id: `ea5e2-timing-kbs-late-${crypto.randomUUID()}`,
+        provider_id: "KBS_LTER",
+        source_family: "RAW_HOURLY_WEATHER",
+        locator: KBS_RAW_HOURLY_URL,
+        allowed_final_hosts: ["lter.kbs.msu.edu"],
+        use_policy_ref: "GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1",
+        requested_at: startedAt,
+        source_event_time: target,
+        expected_content_type_prefixes: ["text/csv", "text/plain", "application/octet-stream"],
+        limitations: ["EA5E2_TIMING_QUALIFICATION_ONLY", "NO_FORMAL_EFFECT", "NO_PUBLIC_VALUE_ARTIFACT"],
+      },
+    }, { transport, retention: store, decoder: new PythonKbsLateDecoderV1(target, deadlineMs) });
+    const canonicalizedAt = new Date().toISOString();
+    if (results.length !== 2) throw new Error("EA5E2_TIMING_QUALIFICATION_TWO_LATE_RECORDS_REQUIRED");
+    const ingress = new PostgresExternalFormalEvidenceIngressV1(pool, store);
+    let writes = 0;
+    for (const result of [...results].sort((a, b) => a.record.record_type.localeCompare(b.record.record_type))) {
+      writes += (await ingress.appendCanonicalizedExternalEvidence(result)).canonical_fact_write_count;
+    }
+    const ingressCompletedAt = new Date().toISOString();
+    if (writes !== 2 || Number((await pool.query("SELECT count(*)::int AS n FROM facts")).rows[0].n) !== 2) {
+      throw new Error("EA5E2_TIMING_QUALIFICATION_TWO_DB_FACTS_REQUIRED");
+    }
+    const deleted = await store.deleteTrackedRetainedRawEvidence();
+    cleaned = true;
+    const elapsedMs = Date.parse(ingressCompletedAt) - Date.parse(startedAt);
+    writeSafe(path.join(OUTPUT_DIR, `MCFT_CAP_09_EA5E2_LATE_TIMING_TRIAL_${trial}.json`), {
+      schema_version: "geox_mcft_cap09_ea5e2_late_timing_trial_v1",
+      status: "PASS",
+      subject_sha: subject,
+      trial: Number(trial),
+      target_t: target,
+      source_family: "KBS_RAW_HOURLY",
+      same_source_exact_t_required: true,
+      production_freshness_reproved_by_decoder: true,
+      phase_requested_at: startedAt,
+      phase_canonicalized_at: canonicalizedAt,
+      phase_ingress_completed_at: ingressCompletedAt,
+      collection_to_canonicalization_elapsed_ms: Date.parse(canonicalizedAt) - Date.parse(startedAt),
+      collection_to_ingress_completion_elapsed_ms: elapsedMs,
+      qualification_budget_minutes: TIMING_QUALIFICATION_BUDGET_MINUTES,
+      provider_request_count: transport.provider_request_count,
+      canonical_record_count: results.length,
+      canonical_fact_write_count: writes,
+      transient_private_r2_put_count: store.put_count,
+      transient_private_r2_delete_count: store.delete_count,
+      transient_cleanup_confirmed: deleted.length === store.put_count,
+      formal_database_write_count: 0,
+      formal_r2_write_count: 0,
+      scheduler_write_count: 0,
+      authority_effect: false,
+      live_dispatch_authorized: false,
+      raw_values_emitted: false,
+    });
+  } catch (error) {
+    if (!cleaned) await store.deleteTrackedRetainedRawEvidence();
+    throw error;
+  } finally {
+    await pool.end();
+  }
+}
+
 async function main(): Promise<void> {
   const mode = required("MCFT_EA5E2_LIVE_PHASE");
   if (mode === "TRANSIENT_STORE_SMOKE") return smokeTransientStore();
   if (mode === "CLEANUP_TRANSIENT") return cleanupTransientStore();
+  if (mode === "TIMING_QUALIFICATION_LATE_EXACT_HOUR") return qualifyLateExactHourTiming();
   if (mode !== "PRE_BOUNDARY_CAUSAL" && mode !== "LATE_EXACT_HOUR") throw new Error("MCFT_EA5E2_LIVE_PHASE_INVALID");
 
   const subject = subjectSha();
