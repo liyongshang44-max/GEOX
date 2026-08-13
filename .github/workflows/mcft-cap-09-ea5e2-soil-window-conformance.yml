@@ -7,13 +7,12 @@ on:
       - "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs"
       - "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1.cjs"
-      - "scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py"
       - "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py"
       - "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts"
       - ".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml"
       - ".github/workflows/mcft-cap-09-ea5e2-operational-activation-runner-qualification.yml"
       - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SOIL_WINDOW_CONFORMANCE.cjs"
-      - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs"
+      - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_PREFLIGHT.cjs"
       - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V2.cjs"
       - ".github/workflows/mcft-cap-09-ea5e2-soil-window-conformance.yml"
       - ".github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml"
@@ -40,10 +39,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Classify historical creation proof versus successor preflight
+      - name: Classify historical creation proof versus Amendment-11 successor preflight
         id: mode
         shell: bash
         env:
@@ -54,15 +54,15 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ] && [ "$PR_BASE_SHA" = "$CREATION_BASE_SHA" ]; then
             echo "mode=CREATION_EXACT_SIX_FILE_PROOF" >> "$GITHUB_OUTPUT"
           else
-            echo "mode=SUCCESSOR_FULL_CHAIN_PREFLIGHT" >> "$GITHUB_OUTPUT"
+            echo "mode=AMENDMENT11_SUCCESSOR_PREFLIGHT" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Re-run original exact six-file creation proof only on its creation base
         if: steps.mode.outputs.mode == 'CREATION_EXACT_SIX_FILE_PROOF'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SOIL_WINDOW_CONFORMANCE.cjs
 
-      - name: Preserve merged historical hardening proof before successor checks
-        if: steps.mode.outputs.mode == 'SUCCESSOR_FULL_CHAIN_PREFLIGHT'
+      - name: Preserve merged historical hardening proof before Amendment-11 checks
+        if: steps.mode.outputs.mode == 'AMENDMENT11_SUCCESSOR_PREFLIGHT'
         shell: bash
         run: |
           set -euo pipefail
@@ -82,19 +82,15 @@ jobs:
           done
           echo 'EA5E2_HISTORICAL_CREATION_PROOF_PRESERVATION=PASS'
 
-      - name: Run zero-provider zero-database full-chain successor preflight
-        if: steps.mode.outputs.mode == 'SUCCESSOR_FULL_CHAIN_PREFLIGHT'
-        env:
-          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs
+      - name: Run Amendment-11 zero-provider zero-database successor preflight
+        if: steps.mode.outputs.mode == 'AMENDMENT11_SUCCESSOR_PREFLIGHT'
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_PREFLIGHT.cjs
 
-      - name: Upload metadata-only full-chain preflight proof
-        if: always() && steps.mode.outputs.mode == 'SUCCESSOR_FULL_CHAIN_PREFLIGHT'
+      - name: Upload metadata-only Amendment-11 successor preflight proof
+        if: always() && steps.mode.outputs.mode == 'AMENDMENT11_SUCCESSOR_PREFLIGHT'
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-ea5e2-full-chain-preflight-${{ github.event.pull_request.head.sha || github.sha }}
-          path: |
-            acceptance-output/MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT.json
-            acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.json
-          if-no-files-found: warn
+          name: mcft-cap09-ea5e2-amendment11-preflight-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_PREFLIGHT.json
+          if-no-files-found: error
           retention-days: 7
