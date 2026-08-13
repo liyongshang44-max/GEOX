@@ -6,6 +6,7 @@ on:
       - '.github/workflows/mcft-cap-09-ea4-live-source-exact-head-qualification.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-LIVE-SOURCE-EXACT-HEAD-QUALIFICATION-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_HISTORICAL_REJECTION_PRESERVATION.cjs'
       - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'
   merge_group:
     types: [checks_requested]
@@ -54,8 +55,14 @@ jobs:
             echo "base_sha=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
             echo "subject_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           fi
+          if [ "$(git rev-parse HEAD^)" = "08310e5f50bf5df7580b27fd35285f560320b9df" ] || [ "${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}" = "08310e5f50bf5df7580b27fd35285f560320b9df" ]; then
+            echo "historical_boundary=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "historical_boundary=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Install pinned EA4 qualification decoder stack
+        if: steps.authority.outputs.historical_boundary == 'true'
         run: |
           python -m pip install --disable-pip-version-check \
             'eccodes==2.47.0' \
@@ -76,11 +83,13 @@ jobs:
         run: python -m py_compile scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
 
       - name: Validate exact EA4 rejection governance boundary
+        if: steps.authority.outputs.historical_boundary == 'true'
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.cjs
 
       - name: Re-prove live KBS raw-hourly freshness rejection
+        if: steps.authority.outputs.historical_boundary == 'true'
         id: live
         continue-on-error: true
         env:
@@ -88,6 +97,7 @@ jobs:
         run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
 
       - name: Verify exact-head fail-closed freshness rejection
+        if: steps.authority.outputs.historical_boundary == 'true'
         env:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
           MCFT_LIVE_STEP_OUTCOME: ${{ steps.live.outcome }}
@@ -111,6 +121,13 @@ jobs:
           if (authority.authority_effect?.new_source_architecture_adjudication_required_before_ea5 !== true) throw new Error('EA4_NEW_SOURCE_ADJUDICATION_REQUIRED');
           console.log(JSON.stringify({status:'PASS',adjudication:'REJECTED_EA4_KBS_RAW_HOURLY_FRESHNESS_AUTHORITY',subject:result.subject_sha,tick:result.tick_utc,error:result.error,gfs_executed:false,future_et0_executed:false,ea5_authorized:false}));
 
+      - name: Verify historical EA4 rejection preservation on successor head
+        if: steps.authority.outputs.historical_boundary != 'true'
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA4_HISTORICAL_REJECTION_PRESERVATION.cjs
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -118,5 +135,6 @@ jobs:
           path: |
             acceptance-output/MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_GOVERNANCE_RESULT.json
             acceptance-output/MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA4_HISTORICAL_REJECTION_PRESERVATION.json
           if-no-files-found: warn
           retention-days: 90

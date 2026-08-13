@@ -1,6 +1,6 @@
 # GEOX MCFT-CAP-09 KBS Daily-Batch Cadence Intelligence Design V1
 
-Status: Draft implementation design  
+Status: Draft implementation design
 Authority effect: false
 
 ## Frozen fact and boundary
