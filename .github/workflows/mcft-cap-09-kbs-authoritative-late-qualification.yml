@@ -1,0 +1,156 @@
+name: mcft-cap-09-kbs-authoritative-late-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-kbs-authoritative-late-qualification.yml'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_QUALIFICATION.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_QUALIFICATION.cjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-kbs-authoritative-late-qualification.yml'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_QUALIFICATION.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_QUALIFICATION.cjs'
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type QUALIFY_AMENDMENT11_KBS_LATE_NO_FORMAL_WRITE'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-kbs-authoritative-late-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  READINESS_DB_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+  MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+  MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+  MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+  MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+  MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check numpy==1.26.4 refet==0.4.2 eccodes==2.47.0 eccodeslib==2.47.3.23
+      - name: Prove stale daily-batch selection remains legal under Amendment-11
+        run: python scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py selftest
+      - name: Typecheck authoritative-late qualification runner
+        run: pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_QUALIFICATION.ts
+      - name: Prove Amendment-11 qualification boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_QUALIFICATION.cjs
+
+  exact-main-live-kbs:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require exact protected-main qualification run
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.confirm }}" != "QUALIFY_AMENDMENT11_KBS_LATE_NO_FORMAL_WRITE" ]]; then
+            echo "MCFT_CAP09_KBS_LATE_CONFIRMATION_REQUIRED" >&2
+            exit 1
+          fi
+          if [[ "${{ github.ref }}" != "refs/heads/main" ]]; then
+            echo "MCFT_CAP09_KBS_LATE_PROTECTED_MAIN_REQUIRED" >&2
+            exit 1
+          fi
+          git fetch --no-tags origin main
+          if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]]; then
+            echo "MCFT_CAP09_KBS_LATE_EXACT_MAIN_DRIFT" >&2
+            exit 1
+          fi
+      - name: Require private transient R2 secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
+            if [[ -z "${!name:-}" ]]; then echo "MCFT_CAP09_KBS_LATE_SECRET_REQUIRED:${name}" >&2; exit 1; fi
+          done
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check numpy==1.26.4 refet==0.4.2 eccodes==2.47.0 eccodeslib==2.47.3.23
+      - name: Execute real KBS authoritative-late qualification
+        env:
+          MCFT_CAP09_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_CAP09_KBS_LATE_ISOLATED_DB_ACK: 'true'
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_QUALIFICATION.ts
+      - name: Require safe Amendment-11 result
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_QUALIFICATION.json','utf8'));
+          if(p.status!=='PASS'||p.subject_sha!==process.env.GITHUB_SHA||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.provider_publication_cadence!=='DAILY_BATCH'||p.freshness_is_late_authoritative_admission_gate!==false||p.delayed_authoritative_evidence_eligible!==true||p.raw_retained_before_decode!==true||p.private_transient_cleanup_confirmed!==true||p.formal_database_write_count!==0||p.formal_r2_prefix_write_count!==0||p.scheduler_write_count!==0||p.crop_authority_effect!=='NONE'||p.live_dispatch_authorized!==false||p.raw_values_emitted!==false) throw new Error('MCFT_CAP09_KBS_LATE_SAFE_PROOF_REQUIRED');
+      - name: Upload metadata-only KBS authoritative-late proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-kbs-authoritative-late-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_QUALIFICATION.json
+          if-no-files-found: error
+          retention-days: 90
