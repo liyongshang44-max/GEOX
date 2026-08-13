@@ -25,11 +25,16 @@ const providerRunner = read(PROVIDER_RUNNER);
 
 requireAll(amendment, [
   "PROVIDER_AVAILABILITY_WATERMARK_V1",
-  "Soil, Future Weather, and Future ET0 remain pre-boundary causal Evidence.",
+  "### 5.1 Pre-boundary causal families",
+  "soil_moisture_observation_v1",
+  "future_weather_assumption_v1",
+  "future_et0_assumption_v1",
   "available_to_runtime_at <= T",
   "ingested_at <= T",
-  "Rolling qualification capture is authorized as a qualification strategy",
-  "crop authority effect = NONE",
+  "actual hourly pre-boundary capture",
+  "retain rolling candidate packages for approximately 36h",
+  "Qualification candidate retention is not Formal canonical persistence",
+  "crop_authority_effect = NONE",
 ], "MCFT_CAP09_ROLLING_PREBOUNDARY_AMENDMENT11_BOUNDARY_MISSING");
 
 requireAll(planner, [
