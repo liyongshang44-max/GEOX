@@ -34,6 +34,7 @@ requireAll(workflow, [
   "select-kbs-timing-target",
   "selftest-kbs-timing-target",
   "QUALIFICATION_TIMING_ONLY_NOT_LIVE_TARGET_ADMISSION",
+  "2026-06-15T02:00:00.000Z",
   "for trial in 1 2 3",
   "MCFT_EA5E2_OBSERVER_TIMING_QUALIFICATION_ACK: 'true'",
   "QUALIFY_MCFT_CAP_09_EA5E2_TIMING_BUDGETS.ts",
@@ -62,6 +63,11 @@ requireAll(observer, [
 ], "EA5E2_OBSERVER_TIMING_PATH_MISSING");
 requireAll(seed, [
   "buildEa5b5bExternalFixtureV1",
+  "EA5E2_OBSERVER_TIMING_TARGET_V1",
+  "2026-06-15T02:00:00.000Z",
+  "shiftQualificationTimestamp",
+  "rehashQualificationRecord",
+  "JSON.stringify({ type: candidate.record_type, payload: candidate })",
   "EA5E2_OBSERVER_TIMING_SEED_EXACT_MAIN_ACTION_RUN_REQUIRED",
   "TRUNCATE TABLE facts",
   "canonical_fact_count: count",
