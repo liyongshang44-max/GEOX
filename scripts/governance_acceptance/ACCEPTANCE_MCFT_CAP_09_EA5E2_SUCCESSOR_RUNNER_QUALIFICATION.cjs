@@ -6,6 +6,7 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
+const { validateTimingBudgetEvidence } = require("../runtime_acceptance/MCFT_CAP_09_EA5E2_TIMING_BUDGET_EVIDENCE_V1.cjs");
 
 const OUT = "acceptance-output/MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.json";
 const FULL_CHAIN_PROOF = "acceptance-output/MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT.json";
@@ -25,7 +26,9 @@ const EA4 = "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_
 const DRIFT = "scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs";
 const A0_CANONICAL = "apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.ts";
 const WORKFLOW = ".github/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml";
-const CRITICAL = [AUTH, HISTORICAL_AUTH, HISTORICAL_GATE, OBSERVER, FORMAL, VIABILITY, POLL, LIVE, WATCHER, CADENCE, PROVIDER, EA4, DRIFT, A0_CANONICAL, WORKFLOW].sort();
+const TIMING_EVIDENCE = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-TIMING-BUDGET-QUALIFICATION-V1.json";
+const TIMING_VALIDATOR = "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_TIMING_BUDGET_EVIDENCE_V1.cjs";
+const CRITICAL = [AUTH, HISTORICAL_AUTH, HISTORICAL_GATE, OBSERVER, FORMAL, VIABILITY, POLL, LIVE, WATCHER, CADENCE, PROVIDER, EA4, DRIFT, A0_CANONICAL, WORKFLOW, TIMING_EVIDENCE, TIMING_VALIDATOR].sort();
 
 function git(...args) { return execFileSync("git", args, { encoding: "utf8" }).trim(); }
 function read(file) { return fs.readFileSync(file, "utf8"); }
@@ -49,6 +52,14 @@ try {
   assert.equal(authority.current_orchestration_adjudication.planning_profile_is_provider_authority, false);
   assert.equal(authority.current_orchestration_adjudication.actual_same_source_exact_t_and_max_6h_reproof_required, true);
   assert.equal(authority.current_orchestration_adjudication.formal_24_slot_objective_compatibility_claimed, false);
+  assert.equal(authority.temporal_safety.processing_reservation_exact_head_performance_qualified, true);
+  assert.equal(authority.temporal_safety.observer_end_to_end_budget_exact_head_performance_qualified, true);
+  assert.equal(authority.temporal_safety.timing_budget_qualification_evidence, TIMING_EVIDENCE);
+  const timingBudget = validateTimingBudgetEvidence();
+  assert.equal(timingBudget.status, "PASS");
+  assert.equal(timingBudget.workflow_run_id, authority.temporal_safety.timing_budget_qualification_workflow_run_id);
+  assert.equal(timingBudget.collector.safety_adjusted_max_elapsed_ms, authority.temporal_safety.collector_safety_adjusted_max_elapsed_ms);
+  assert.equal(timingBudget.observer.safety_adjusted_max_elapsed_ms, authority.temporal_safety.observer_safety_adjusted_max_elapsed_ms);
 
   const canonicalA0 = read(A0_CANONICAL);
   has(canonicalA0, authority.formal_snapshot_binding.a0_runtime_config_ref, "CANONICAL_A0_REF_MISSING");
@@ -106,6 +117,9 @@ try {
     historical_observer_preserved_in_git_history: true,
     successor_observer_requalified: true,
     successor_runner_implementation_qualified: true,
+    exact_main_timing_budget_qualified: true,
+    timing_budget_qualification_subject_sha: timingBudget.subject_sha,
+    timing_budget_qualification_workflow_run_id: timingBudget.workflow_run_id,
     protected_main_live_dispatch_authorized: false,
     readiness_blockers: authority.live_dispatch_blockers,
     database_write_count: 0,

@@ -15,6 +15,9 @@ const {
   assessEa5e2ProtocolCompatibility,
   assessPhaseAwareTargetTemporalFeasibility,
 } = require("./MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs");
+const {
+  validateTimingBudgetEvidence,
+} = require("./MCFT_CAP_09_EA5E2_TIMING_BUDGET_EVIDENCE_V1.cjs");
 
 const OUTPUT = "acceptance-output/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json";
 const EVIDENCE = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SOIL-FIRST-SEEN-EVIDENCE-V1.json";
@@ -314,6 +317,14 @@ async function main() {
   let soil = null;
   let soilEvidence = null;
   let crop = null;
+  let timingBudget = null;
+
+  try {
+    timingBudget = validateTimingBudgetEvidence();
+  } catch {
+    reasons.push("LATE_EXACT_T_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED");
+    reasons.push("OBSERVER_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED");
+  }
 
   try {
     kbs = inspectKbsForPhaseAwarePlanning();
@@ -322,8 +333,6 @@ async function main() {
     reasons.push("KBS_RAW_HOURLY_PHASE_AWARE_PLANNING_METADATA_UNAVAILABLE");
   }
   if (!protocolCompatibility.compatible) reasons.push(protocolCompatibility.reason);
-  reasons.push("LATE_EXACT_T_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED");
-  reasons.push("OBSERVER_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED");
 
   try {
     soil = await fetchSoilMetadata();
@@ -363,7 +372,7 @@ async function main() {
 
   const candidate = reasons.length === 0 ? crop.candidate_t : null;
   const proof = {
-    schema_version: "geox_mcft_cap09_ea5e2_live_window_viability_preflight_v4",
+    schema_version: "geox_mcft_cap09_ea5e2_live_window_viability_preflight_v5",
     status: reasons.length ? "NO_VIABLE_LIVE_WINDOW" : "PASS",
     evaluated_at: evaluatedAt.toISOString(),
     subject_sha: process.env.GITHUB_SHA || process.env.SUBJECT_SHA || null,
@@ -387,15 +396,24 @@ async function main() {
       discovery_deadline_offset_minutes: 407,
       frozen_cutoff_offset_minutes: 432,
       conservative_reserved_minutes: 25,
-      qualification_status: "UNQUALIFIED_CONSERVATIVE_GUARD",
-      dispatch_allowed: false,
+      qualification_status: timingBudget?.collector ? "QUALIFIED_EXACT_MAIN_2X_SAFETY" : "UNQUALIFIED",
+      measured_max_elapsed_ms: timingBudget?.collector?.max_elapsed_ms ?? null,
+      safety_adjusted_max_elapsed_ms: timingBudget?.collector?.safety_adjusted_max_elapsed_ms ?? null,
+      qualified_budget_ms: timingBudget?.collector?.qualified_budget_ms ?? null,
+      dispatch_allowed: timingBudget?.collector ? true : false,
     },
     observer_end_to_end_budget: {
       observer_offset_minutes: 437,
       maximum_start_skew_minutes: 10,
-      qualification_status: "UNQUALIFIED",
-      dispatch_allowed: false,
+      operational_start_deadline_offset_minutes: 442,
+      processing_reservation_minutes: 5,
+      qualification_status: timingBudget?.observer ? "QUALIFIED_EXACT_MAIN_2X_SAFETY" : "UNQUALIFIED",
+      measured_max_elapsed_ms: timingBudget?.observer?.max_elapsed_ms ?? null,
+      safety_adjusted_max_elapsed_ms: timingBudget?.observer?.safety_adjusted_max_elapsed_ms ?? null,
+      qualified_budget_ms: timingBudget?.observer?.qualified_budget_ms ?? null,
+      dispatch_allowed: timingBudget?.observer ? true : false,
     },
+    timing_budget_qualification: timingBudget,
     provider_expected_update_behavior: PROVIDER_EXPECTED_UPDATE_BEHAVIOR,
     soil_endpoint25: soil,
     soil_first_seen_evidence: soilEvidence,
@@ -415,6 +433,8 @@ async function main() {
       daily_batch_protocol_compatibility_used_as_safety_gate_only: true,
       target_setup_budget_is_separate_from_kbs_freshness_headroom: true,
       target_setup_budget_is_authority: false,
+      exact_main_timing_budget_is_engineering_evidence_only: true,
+      exact_main_timing_budget_authority_effect: false,
     },
     frozen_boundaries: {
       soil_window_minutes: SOIL_WINDOW_MINUTES,
@@ -448,7 +468,7 @@ async function main() {
 
 main().catch((error) => {
   writeProof({
-    schema_version: "geox_mcft_cap09_ea5e2_live_window_viability_preflight_v4",
+    schema_version: "geox_mcft_cap09_ea5e2_live_window_viability_preflight_v5",
     status: "NO_VIABLE_LIVE_WINDOW",
     evaluated_at: new Date().toISOString(),
     candidate_T: null,

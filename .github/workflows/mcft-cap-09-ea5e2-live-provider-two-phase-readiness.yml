@@ -245,6 +245,7 @@ jobs:
           const viability=JSON.parse(fs.readFileSync('acceptance-output/viability/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json','utf8'));
           if(viability.status!=='PASS'||viability.candidate_T!==targetText||viability.live_activation_started!==false||viability.authority_changed!==false) throw new Error('EA5E2_ACTIVATION_VIABILITY_PASS_REQUIRED');
           if(viability.crop_candidate?.target_setup_budget_minutes!==120||viability.authority_audit?.target_setup_budget_is_separate_from_kbs_freshness_headroom!==true) throw new Error('EA5E2_ACTIVATION_SEPARATE_TARGET_SETUP_BUDGET_REQUIRED');
+          if(viability.timing_budget_qualification?.status!=='PASS'||viability.late_exact_t_processing_budget?.dispatch_allowed!==true||viability.observer_end_to_end_budget?.dispatch_allowed!==true) throw new Error('EA5E2_ACTIVATION_EXACT_MAIN_TIMING_BUDGET_QUALIFICATION_REQUIRED');
           if(viability.ea5e2_live_protocol_compatibility?.target_scheduling_mode!=='PHASE_AWARE_LONG_HORIZON'||viability.ea5e2_live_protocol_compatibility?.compatible!==true) throw new Error('EA5E2_ACTIVATION_PHASE_AWARE_PROTOCOL_REQUIRED');
           if(viability.crop_candidate?.target_temporal_feasibility?.feasible!==true||viability.crop_candidate?.target_temporal_feasibility?.actual_same_source_exact_t_poll_still_required!==true) throw new Error('EA5E2_ACTIVATION_TARGET_SPECIFIC_TEMPORAL_FEASIBILITY_REQUIRED');
           const kbsPlanning=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json','utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));
@@ -500,6 +501,18 @@ jobs:
           node scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs
           pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts
 
+      - name: Require observer operational start by T plus 7h22m
+        env:
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        shell: node {0}
+        run: |
+          const target=Date.parse(process.env.TARGET_T);
+          if(!Number.isFinite(target)) throw new Error('EA5E2_ACTIVATION_OBSERVER_TARGET_INVALID');
+          const operationalStartDeadline=target+442*60000;
+          const frozenMaximumStart=target+447*60000;
+          if(Date.now()>frozenMaximumStart) throw new Error('EA5E2_ACTIVATION_OBSERVER_FROZEN_MAX_START_SKEW_MISSED');
+          if(Date.now()>operationalStartDeadline) throw new Error('EA5E2_ACTIVATION_OBSERVER_OPERATIONAL_START_DEADLINE_MISSED');
+
       - name: Execute actual T plus 7h17m DB-only External CAP04 observer
         env:
           MCFT_EA5E2_TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
@@ -507,6 +520,15 @@ jobs:
           DATABASE_URL: ${{ env.READINESS_DB_URL }}
           FORMAL_DATABASE_URL: ${{ env.FORMAL_DATABASE_URL }}
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts
+
+      - name: Require observer completion inside reserved five-minute processing budget
+        env:
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        shell: node {0}
+        run: |
+          const deadline=Date.parse(process.env.TARGET_T)+447*60000;
+          if(!Number.isFinite(deadline)) throw new Error('EA5E2_ACTIVATION_OBSERVER_TARGET_INVALID');
+          if(Date.now()>deadline) throw new Error('EA5E2_ACTIVATION_OBSERVER_PROCESSING_RESERVATION_MISSED');
 
       - name: Freeze metadata-only operational activation live proof candidate
         shell: node {0}
@@ -529,6 +551,7 @@ jobs:
           if(!Number.isFinite(soilP95)) throw new Error('EA5E2_ACTIVATION_SOIL_GLOBAL_P95_PRODUCER_REQUIRED');
           if(kbs.status!=='OBSERVED'||kbs.phase_aware_planning_only!==true||kbs.late_actual_retrieval_must_reprove_authority!==true||Number(kbs.configured_max_age_hours)!==6) throw new Error('EA5E2_ACTIVATION_KBS_PHASE_AWARE_PLANNING_BOUNDARY_REQUIRED');
           if(viability.status!=='PASS'||viability.candidate_T!==process.env.TARGET_T||viability.authority_changed!==false||viability.live_activation_started!==false) throw new Error('EA5E2_ACTIVATION_LIVE_WINDOW_VIABILITY_REQUIRED');
+          if(viability.timing_budget_qualification?.status!=='PASS'||viability.late_exact_t_processing_budget?.qualification_status!=='QUALIFIED_EXACT_MAIN_2X_SAFETY'||viability.observer_end_to_end_budget?.qualification_status!=='QUALIFIED_EXACT_MAIN_2X_SAFETY') throw new Error('EA5E2_ACTIVATION_EXACT_MAIN_TIMING_BUDGET_QUALIFICATION_REQUIRED');
           if(availability.status!=='PASS'||availability.target_t!==process.env.TARGET_T||availability.same_source_exact_t_only!==true||Number(availability.latest_age_hours)>6) throw new Error('EA5E2_ACTIVATION_LATE_AVAILABILITY_AND_FRESHNESS_AUTHORITY_REQUIRED');
           if(target.subject_sha!==process.env.SUBJECT_SHA||target.target_t!==process.env.TARGET_T||crop.target_t!==process.env.TARGET_T||observer.subject_sha!==process.env.SUBJECT_SHA||observer.target_t!==process.env.TARGET_T) throw new Error('EA5E2_ACTIVATION_PROOF_IDENTITY_MISMATCH');
           if(target.pre_boundary_offset_minutes!==-30||target.minimum_pre_boundary_lead_minutes!==20||Number(target.pre_boundary_lead_minutes)<20) throw new Error('EA5E2_ACTIVATION_TARGET_PREBOUNDARY_LEAD_REQUIRED');
@@ -558,9 +581,13 @@ jobs:
             late_exact_hour_collector_offset_minutes:390,
             late_exact_t_discovery_deadline_offset_minutes:407,
             late_collector_processing_reservation_minutes:25,
+            late_collector_timing_safety_adjusted_max_elapsed_ms:viability.late_exact_t_processing_budget.safety_adjusted_max_elapsed_ms,
             scheduler_eligibility_lag_hours:7,
             late_exact_hour_cutoff_offset_minutes:432,
             runtime_observer_offset_minutes:437,
+            observer_operational_start_deadline_offset_minutes:442,
+            observer_processing_reservation_minutes:5,
+            observer_timing_safety_adjusted_max_elapsed_ms:viability.observer_end_to_end_budget.safety_adjusted_max_elapsed_ms,
             observer_actual_at:observer.observed_at,
             observer_start_skew_minutes:observer.observer_start_skew_minutes,
             crop_stage_code:observer.crop_stage_code,
