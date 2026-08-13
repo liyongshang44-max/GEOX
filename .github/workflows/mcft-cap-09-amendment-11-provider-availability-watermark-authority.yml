@@ -1,0 +1,40 @@
+name: MCFT-CAP-09 Amendment-11 Provider Availability Watermark Authority
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_11_PROVIDER_AVAILABILITY_WATERMARK_AUTHORITY.cjs'
+      - '.github/workflows/mcft-cap-09-amendment-11-provider-availability-watermark-authority.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-head-governance-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve exact Amendment-11 base
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "a2224d597e523ca1060f2172c7f9052c5fd0bdbe"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "MCFT_BASE_SHA=a2224d597e523ca1060f2172c7f9052c5fd0bdbe" >> "$GITHUB_ENV"
+
+      - name: Run Amendment-11 governance acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_11_PROVIDER_AVAILABILITY_WATERMARK_AUTHORITY.cjs
+
+      - name: Upload immutable Amendment-11 proof artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-amendment11-provider-availability-watermark-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_AMENDMENT_11_PROVIDER_AVAILABILITY_WATERMARK_GOVERNANCE_RESULT.json
+          if-no-files-found: error
+          retention-days: 30
