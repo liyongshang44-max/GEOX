@@ -18,10 +18,10 @@ function required(name: string): string {
 
 function assertExactMainDispatch(subject: string): void {
   if (!/^[0-9a-f]{40}$/.test(subject)
-      || process.env.GITHUB_EVENT_NAME !== "workflow_dispatch"
+      || !["workflow_dispatch", "push"].includes(process.env.GITHUB_EVENT_NAME ?? "")
       || process.env.GITHUB_REF !== "refs/heads/main"
       || process.env.GITHUB_SHA !== subject) {
-    throw new Error("EA5E2_OBSERVER_TIMING_SEED_EXACT_MAIN_WORKFLOW_DISPATCH_REQUIRED");
+    throw new Error("EA5E2_OBSERVER_TIMING_SEED_EXACT_MAIN_ACTION_RUN_REQUIRED");
   }
 }
 

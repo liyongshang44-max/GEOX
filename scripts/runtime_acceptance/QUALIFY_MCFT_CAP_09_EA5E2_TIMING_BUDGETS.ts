@@ -39,10 +39,10 @@ function nearestRank95(values: readonly number[]): number {
 
 function assertExactMainDispatch(subject: string): void {
   if (!/^[0-9a-f]{40}$/.test(subject)
-      || process.env.GITHUB_EVENT_NAME !== "workflow_dispatch"
+      || !["workflow_dispatch", "push"].includes(process.env.GITHUB_EVENT_NAME ?? "")
       || process.env.GITHUB_REF !== "refs/heads/main"
       || process.env.GITHUB_SHA !== subject) {
-    throw new Error("EA5E2_TIMING_QUALIFICATION_EXACT_MAIN_WORKFLOW_DISPATCH_REQUIRED");
+    throw new Error("EA5E2_TIMING_QUALIFICATION_EXACT_MAIN_ACTION_RUN_REQUIRED");
   }
 }
 
@@ -92,7 +92,7 @@ function main(): void {
     schema_version: "geox_mcft_cap09_ea5e2_timing_budget_qualification_v1",
     status: "PASS",
     subject_sha: subject,
-    exact_main_workflow_dispatch: true,
+    exact_main_action_run: true,
     trial_count: TRIAL_COUNT,
     safety_factor: SAFETY_FACTOR,
     collector: {

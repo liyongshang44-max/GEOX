@@ -274,10 +274,10 @@ async function main(): Promise<void> {
   const expectedObserverMs = Date.parse(targetT) + OBSERVER_OFFSET_MINUTES * MINUTE_MS;
   const timingQualification = process.env.MCFT_EA5E2_OBSERVER_TIMING_QUALIFICATION_ACK === "true";
   if (timingQualification
-      && (process.env.GITHUB_EVENT_NAME !== "workflow_dispatch"
+      && (!['workflow_dispatch', 'push'].includes(process.env.GITHUB_EVENT_NAME ?? '')
         || process.env.GITHUB_REF !== "refs/heads/main"
         || process.env.GITHUB_SHA !== subjectSha)) {
-    throw new Error("EA5E2_OBSERVER_TIMING_QUALIFICATION_EXACT_MAIN_WORKFLOW_DISPATCH_REQUIRED");
+    throw new Error("EA5E2_OBSERVER_TIMING_QUALIFICATION_EXACT_MAIN_ACTION_RUN_REQUIRED");
   }
   const observedAtMs = timingQualification ? expectedObserverMs : Date.now();
   if (observedAtMs < expectedObserverMs) throw new Error("EA5E2_ACTIVATION_OBSERVER_EARLY_FORBIDDEN");

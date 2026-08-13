@@ -74,7 +74,7 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_TIMING_BUDGET_QUALIFICATION.cjs
 
   exact-main-live-timing:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     services:
@@ -97,11 +97,11 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Require explicit exact protected-main qualification dispatch
+      - name: Require exact protected-main qualification run
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${{ github.event.inputs.confirm }}" != "QUALIFY_EXACT_MAIN_NO_FORMAL_WRITE" ]]; then
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.confirm }}" != "QUALIFY_EXACT_MAIN_NO_FORMAL_WRITE" ]]; then
             echo "EA5E2_TIMING_QUALIFICATION_CONFIRMATION_REQUIRED" >&2
             exit 1
           fi

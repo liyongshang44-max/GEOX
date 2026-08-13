@@ -658,8 +658,8 @@ async function qualifyLateExactHourTiming(): Promise<void> {
   const target = canonicalHour(required("MCFT_EA5E2_TARGET_T"), "EA5E2_TARGET_T_INVALID");
   const trial = required("MCFT_EA5E2_TIMING_TRIAL");
   if (!/^[123]$/.test(trial)) throw new Error("EA5E2_TIMING_QUALIFICATION_TRIAL_INVALID");
-  if (process.env.GITHUB_EVENT_NAME !== "workflow_dispatch" || process.env.GITHUB_REF !== "refs/heads/main" || process.env.GITHUB_SHA !== subject) {
-    throw new Error("EA5E2_TIMING_QUALIFICATION_EXACT_MAIN_WORKFLOW_DISPATCH_REQUIRED");
+  if (!["workflow_dispatch", "push"].includes(process.env.GITHUB_EVENT_NAME ?? "") || process.env.GITHUB_REF !== "refs/heads/main" || process.env.GITHUB_SHA !== subject) {
+    throw new Error("EA5E2_TIMING_QUALIFICATION_EXACT_MAIN_ACTION_RUN_REQUIRED");
   }
   const databaseUrl = required("DATABASE_URL");
   assertIsolatedDatabase(databaseUrl);
