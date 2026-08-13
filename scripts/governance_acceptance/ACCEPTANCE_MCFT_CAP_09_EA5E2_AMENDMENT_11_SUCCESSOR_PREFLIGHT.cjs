@@ -14,7 +14,7 @@ const ROLLING_PROOF = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ROLLING-PR
 const HOUR = 3600_000;
 
 function read(file) { return fs.readFileSync(file, "utf8"); }
-function git(...args) { return execFileSync("git", args, { encoding: "utf8" }).trim(); }
+function git(...args) { return execFileSync("git", args, { encoding:"utf8" }).trim(); }
 function requireMarker(text, marker, code, staticBlockers) { if (!text.includes(marker)) staticBlockers.push({ code, marker }); }
 function forbidMarker(text, marker, code, staticBlockers) { if (text.includes(marker)) staticBlockers.push({ code, marker }); }
 function obj(value, code) { if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(code); return value; }

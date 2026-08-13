@@ -41,14 +41,57 @@ def parse_iso(value: str, code: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
-def select_complete_exact_row(rows: list[dict], available_at: datetime) -> tuple[datetime, datetime, dict, int]:
+def require_exact_hour(value: datetime, code: str) -> datetime:
+    require(value.minute == 0 and value.second == 0 and value.microsecond == 0, code)
+    return value
+
+
+def row_is_complete(row: dict, timestamp: datetime) -> bool:
+    rain = ea4.finite(row.get("rain_mm"))
+    air = ea4.finite(row.get("airtmp_107_avg"))
+    vapor = ea4.finite(row.get("ah"))
+    solar = ea4.finite(row.get("solrad_avg"))
+    wind = ea4.finite(row.get("wind_speed"))
+    valid = (
+        rain is not None and 0 <= rain <= 100
+        and air is not None and -50 <= air <= 60
+        and vapor is not None and 0 < vapor <= 10
+        and solar is not None and 0 <= solar <= 1600
+        and wind is not None and 0 <= wind <= 100
+    )
+    if not valid:
+        return False
+    et0 = ea4.scalar_eto(air, vapor, solar * ea4.SOLAR_FACTOR, wind * ea4.WIND_FACTOR, timestamp)
+    return math.isfinite(et0)
+
+
+def index_rows(rows: list[dict], available_at: datetime) -> dict[datetime, list[dict]]:
     by_timestamp: dict[datetime, list[dict]] = {}
     for row in rows:
         timestamp = ea4.parse_provider_utc(row.get("datetime_utc", ""))
         if timestamp is not None and timestamp <= available_at + timedelta(minutes=5):
             by_timestamp.setdefault(timestamp, []).append(row)
     require(by_timestamp, "MCFT_CAP09_KBS_LATE_TIMESTAMP_REQUIRED")
+    return by_timestamp
+
+
+def select_complete_exact_row(
+    rows: list[dict],
+    available_at: datetime,
+    requested_target: datetime | None = None,
+) -> tuple[datetime, datetime, dict, int, str]:
+    by_timestamp = index_rows(rows, available_at)
     latest = max(by_timestamp)
+
+    if requested_target is not None:
+        target = require_exact_hour(requested_target, "MCFT_CAP09_KBS_LATE_REQUESTED_TARGET_EXACT_HOUR_REQUIRED")
+        require(target <= available_at + timedelta(minutes=5), "MCFT_CAP09_KBS_LATE_REQUESTED_TARGET_AFTER_AVAILABILITY")
+        candidates = by_timestamp.get(target, [])
+        require(len(candidates) > 0, "MCFT_CAP09_KBS_LATE_REQUESTED_TARGET_MISSING")
+        require(len(candidates) == 1, "MCFT_CAP09_KBS_LATE_REQUESTED_TARGET_DUPLICATE")
+        require(row_is_complete(candidates[0], target), "MCFT_CAP09_KBS_LATE_REQUESTED_TARGET_INCOMPLETE")
+        return latest, target, candidates[0], 0, "EXACT_REQUESTED_TARGET"
+
     skipped = 0
     for timestamp in sorted(by_timestamp, reverse=True):
         if timestamp < latest - timedelta(hours=23):
@@ -60,31 +103,21 @@ def select_complete_exact_row(rows: list[dict], available_at: datetime) -> tuple
         if len(candidates) != 1:
             skipped += 1
             continue
-        row = candidates[0]
-        rain = ea4.finite(row.get("rain_mm"))
-        air = ea4.finite(row.get("airtmp_107_avg"))
-        vapor = ea4.finite(row.get("ah"))
-        solar = ea4.finite(row.get("solrad_avg"))
-        wind = ea4.finite(row.get("wind_speed"))
-        valid = (
-            rain is not None and 0 <= rain <= 100
-            and air is not None and -50 <= air <= 60
-            and vapor is not None and 0 < vapor <= 10
-            and solar is not None and 0 <= solar <= 1600
-            and wind is not None and 0 <= wind <= 100
-        )
-        if valid:
-            et0 = ea4.scalar_eto(air, vapor, solar * ea4.SOLAR_FACTOR, wind * ea4.WIND_FACTOR, timestamp)
-            valid = math.isfinite(et0)
-        if valid:
-            return latest, timestamp, row, skipped
+        if row_is_complete(candidates[0], timestamp):
+            return latest, timestamp, candidates[0], skipped, "LATEST_COMPLETE"
         skipped += 1
     raise RuntimeError("MCFT_CAP09_KBS_LATE_NO_COMPLETE_UNIQUE_EXACT_ROW")
 
 
-def decode(input_path: Path, output_path: Path, meta_path: Path, available_at: datetime) -> None:
+def decode(
+    input_path: Path,
+    output_path: Path,
+    meta_path: Path,
+    available_at: datetime,
+    requested_target: datetime | None = None,
+) -> None:
     rows = ea4.parse_kbs_csv(input_path.read_bytes())
-    latest, target, row, skipped = select_complete_exact_row(rows, available_at)
+    latest, target, row, skipped, selection_mode = select_complete_exact_row(rows, available_at, requested_target)
     latest_age_hours = (available_at - latest).total_seconds() / 3600.0
     freshness_le_6h = latest_age_hours <= HISTORICAL_FRESHNESS_HOURS
 
@@ -187,6 +220,8 @@ def decode(input_path: Path, output_path: Path, meta_path: Path, available_at: d
     meta_path.write_text(json.dumps({
         "schema_version": "geox_mcft_cap09_kbs_authoritative_late_decoder_v1",
         "status": "PASS",
+        "selection_mode": selection_mode,
+        "requested_target_t": iso(requested_target) if requested_target is not None else None,
         "provider_latest_timestamp": iso(latest),
         "provider_latest_age_hours": round(latest_age_hours, 6),
         "historical_online_freshness_diagnostic_le_6h": freshness_le_6h,
@@ -212,12 +247,35 @@ def selftest() -> None:
             "solrad_avg": "150.0",
             "wind_speed": "2.5",
         }
-    latest, selected, _, skipped = select_complete_exact_row([row(4, ""), row(3)], observed)
-    require(latest.hour == 4 and selected.hour == 3 and skipped == 1, "MCFT_CAP09_KBS_LATE_SELFTEST_SELECTION")
+
+    rows = [row(4, ""), row(3), row(2)]
+    latest, selected, _, skipped, mode = select_complete_exact_row(rows, observed)
+    require(latest.hour == 4 and selected.hour == 3 and skipped == 1 and mode == "LATEST_COMPLETE", "MCFT_CAP09_KBS_LATE_SELFTEST_SELECTION")
     require((observed - latest).total_seconds() / 3600.0 > HISTORICAL_FRESHNESS_HOURS, "MCFT_CAP09_KBS_LATE_SELFTEST_STALE_CASE_REQUIRED")
+
+    requested = datetime(2026, 8, 13, 2, 0, tzinfo=timezone.utc)
+    latest2, selected2, _, skipped2, mode2 = select_complete_exact_row(rows, observed, requested)
+    require(latest2.hour == 4 and selected2 == requested and skipped2 == 0 and mode2 == "EXACT_REQUESTED_TARGET", "MCFT_CAP09_KBS_LATE_SELFTEST_EXACT_TARGET")
+
+    try:
+        select_complete_exact_row(rows, observed, datetime(2026, 8, 13, 1, 0, tzinfo=timezone.utc))
+        raise RuntimeError("MCFT_CAP09_KBS_LATE_SELFTEST_MISSING_TARGET_NOT_REJECTED")
+    except RuntimeError as exc:
+        require(str(exc) == "MCFT_CAP09_KBS_LATE_REQUESTED_TARGET_MISSING", "MCFT_CAP09_KBS_LATE_SELFTEST_MISSING_TARGET_CODE")
+
+    duplicate_rows = [row(2), row(2), row(4)]
+    try:
+        select_complete_exact_row(duplicate_rows, observed, requested)
+        raise RuntimeError("MCFT_CAP09_KBS_LATE_SELFTEST_DUPLICATE_TARGET_NOT_REJECTED")
+    except RuntimeError as exc:
+        require(str(exc) == "MCFT_CAP09_KBS_LATE_REQUESTED_TARGET_DUPLICATE", "MCFT_CAP09_KBS_LATE_SELFTEST_DUPLICATE_TARGET_CODE")
+
     print(json.dumps({
         "status": "PASS",
         "stale_daily_batch_remains_selectable": True,
+        "exact_requested_target_supported": True,
+        "missing_requested_target_fails_closed": True,
+        "duplicate_requested_target_fails_closed": True,
         "historical_freshness_is_diagnostic_only": True,
         "provider_request_count": 0,
         "database_write_count": 0,
@@ -229,6 +287,7 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
     decode_parser = sub.add_parser("decode")
     decode_parser.add_argument("--available-at", required=True)
+    decode_parser.add_argument("--target-t")
     decode_parser.add_argument("--input", required=True)
     decode_parser.add_argument("--output", required=True)
     decode_parser.add_argument("--meta", required=True)
@@ -237,7 +296,14 @@ def main() -> None:
     if args.command == "selftest":
         selftest()
         return
-    decode(Path(args.input), Path(args.output), Path(args.meta), parse_iso(args.available_at, "MCFT_CAP09_KBS_LATE_AVAILABLE_AT_INVALID"))
+    requested_target = parse_iso(args.target_t, "MCFT_CAP09_KBS_LATE_REQUESTED_TARGET_INVALID") if args.target_t else None
+    decode(
+        Path(args.input),
+        Path(args.output),
+        Path(args.meta),
+        parse_iso(args.available_at, "MCFT_CAP09_KBS_LATE_AVAILABLE_AT_INVALID"),
+        requested_target,
+    )
 
 
 if __name__ == "__main__":
