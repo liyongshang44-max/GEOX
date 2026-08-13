@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -49,14 +49,25 @@ def exact_hour(value: str, code: str) -> datetime:
 
 
 def candidate_profile(path: Path, now: datetime) -> dict[str, Any] | None:
+    metadata_path = path.parent / "ARTIFACT_METADATA.json"
     try:
         candidate = json.loads(path.read_text(encoding="utf-8"))
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     except Exception:
         return None
     if candidate.get("status") != "PASS" or candidate.get("temporal_authority") != "PROVIDER_AVAILABILITY_WATERMARK_V1":
         return None
     producer = str(candidate.get("producer_subject_sha") or candidate.get("subject_sha") or "")
     if len(producer) != 40 or any(ch not in "0123456789abcdef" for ch in producer):
+        return None
+    if metadata.get("run_conclusion") != "success" or metadata.get("head_branch") != "main" or metadata.get("head_sha") != producer:
+        return None
+    if not isinstance(metadata.get("workflow_run_id"), int) or metadata["workflow_run_id"] <= 0:
+        return None
+    if not isinstance(metadata.get("artifact_id"), int) or metadata["artifact_id"] <= 0:
+        return None
+    digest = str(metadata.get("artifact_digest") or "")
+    if not digest.startswith("sha256:") or len(digest) != 71:
         return None
     try:
         target = exact_hour(str(candidate.get("target_t") or ""), "MCFT_CAP09_ROLLING_INTERSECTION_TARGET_INVALID")
@@ -83,6 +94,9 @@ def candidate_profile(path: Path, now: datetime) -> dict[str, Any] | None:
     return {
         "candidate_file": str(path),
         "producer_subject_sha": producer,
+        "producer_workflow_run_id": metadata["workflow_run_id"],
+        "artifact_id": metadata["artifact_id"],
+        "artifact_digest": digest,
         "target_t": iso(target),
         "target_dt": target,
         "candidate_expires_at": iso(expires),
@@ -140,17 +154,19 @@ def selftest() -> None:
             "wind_speed": "2.5",
         }
     candidates = [
-        {"candidate_file": "b.json", "producer_subject_sha": "b" * 40, "target_t": "2026-08-13T13:00:00.000Z", "target_dt": datetime(2026, 8, 13, 13, tzinfo=timezone.utc), "candidate_expires_at": "2026-08-15T01:00:00.000Z", "raw_ref_count": 2, "semantic_manifest_digest": "sha256:b"},
-        {"candidate_file": "a.json", "producer_subject_sha": "a" * 40, "target_t": "2026-08-13T12:00:00.000Z", "target_dt": datetime(2026, 8, 13, 12, tzinfo=timezone.utc), "candidate_expires_at": "2026-08-15T00:00:00.000Z", "raw_ref_count": 2, "semantic_manifest_digest": "sha256:a"},
+        {"candidate_file": "b.json", "producer_subject_sha": "b" * 40, "producer_workflow_run_id": 2, "artifact_id": 20, "artifact_digest": "sha256:" + "b" * 64, "target_t": "2026-08-13T13:00:00.000Z", "target_dt": datetime(2026, 8, 13, 13, tzinfo=timezone.utc), "candidate_expires_at": "2026-08-15T01:00:00.000Z", "raw_ref_count": 2, "semantic_manifest_digest": "sha256:b"},
+        {"candidate_file": "a.json", "producer_subject_sha": "a" * 40, "producer_workflow_run_id": 1, "artifact_id": 10, "artifact_digest": "sha256:" + "a" * 64, "target_t": "2026-08-13T12:00:00.000Z", "target_dt": datetime(2026, 8, 13, 12, tzinfo=timezone.utc), "candidate_expires_at": "2026-08-15T00:00:00.000Z", "raw_ref_count": 2, "semantic_manifest_digest": "sha256:a"},
     ]
     result = choose([row(13), row(12)], candidates, available)
     require(result["selected"] is not None, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_SELECTION_REQUIRED")
     require(result["selected"]["target_t"] == "2026-08-13T12:00:00.000Z", "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_OLDEST_FIRST")
+    require(result["selected"]["artifact_id"] == 10, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_ARTIFACT_ID")
     require(result["historical_online_freshness_diagnostic_le_6h"] is False, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_STALE_DIAGNOSTIC_REQUIRED")
     require(result["freshness_is_late_authoritative_admission_gate"] is False, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_FRESHNESS_GATE_FORBIDDEN")
     print(json.dumps({
         "status": "PASS",
         "oldest_exact_target_first": True,
+        "producer_run_provenance_required": True,
         "stale_daily_batch_can_intersect": True,
         "freshness_is_admission_gate": False,
         "database_write_count": 0,
