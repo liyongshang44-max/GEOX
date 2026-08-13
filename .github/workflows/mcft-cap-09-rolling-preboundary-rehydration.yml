@@ -1,0 +1,42 @@
+name: mcft-cap-09-rolling-preboundary-rehydration
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-rolling-preboundary-rehydration.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.cjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-rolling-preboundary-rehydration.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck producer-bound rehydration runner
+        run: pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+      - name: Prove producer-prefix selftest
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts selftest
+      - name: Prove Amendment-11 rehydration boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.cjs
