@@ -213,7 +213,7 @@ def baseline_transition():
     }
 
 
-def compare_state(config: dict, previous: dict | None, current: dict, polled_at: str):
+def compare_state(config: dict, previous: dict | None, current: dict, polled_at: str, first_seen_window: dict | None = None):
     if previous is None:
         return baseline_transition()
     require(previous.get("schema_version") == STATE_SCHEMA, "KBS_CADENCE_PREVIOUS_SCHEMA_INVALID")
@@ -232,7 +232,17 @@ def compare_state(config: dict, previous: dict | None, current: dict, polled_at:
     backfill = [event for event in new_events if parse_iso(event, "KBS_CADENCE_BACKFILL_EVENT_INVALID") <= prev_latest_dt]
     revisions = sorted(event for event in cur_index if event in prev_index and cur_index[event]["row_identity_hash"] != prev_index[event]["row_identity_hash"])
     disappeared = sorted(event for event in prev_index if event not in cur_index and parse_iso(event, "KBS_CADENCE_DISAPPEARED_EVENT_INVALID") >= current_window_start)
-    brackets = [publication_bracket(event, previous_polled_at, polled_at) for event in new_events]
+    if first_seen_window:
+        require(first_seen_window.get("baseline_latest_event_time") == prev_latest, "KBS_CADENCE_WATCH_BASELINE_DRIFT")
+        watch_lower = first_seen_window["last_not_seen_at"]
+        watch_upper = first_seen_window["first_seen_at"]
+        require(parse_iso(previous_polled_at, "KBS_CADENCE_WATCH_LOWER_BOUND_INVALID") <= parse_iso(watch_lower, "KBS_CADENCE_WATCH_LOWER_INVALID"), "KBS_CADENCE_WATCH_LOWER_PRECEDES_STATE")
+        require(parse_iso(watch_lower, "KBS_CADENCE_WATCH_ORDER_LOWER_INVALID") < parse_iso(watch_upper, "KBS_CADENCE_WATCH_ORDER_UPPER_INVALID") <= parse_iso(polled_at, "KBS_CADENCE_WATCH_AFTER_CURRENT_POLL"), "KBS_CADENCE_WATCH_ORDER_INVALID")
+    brackets = [publication_bracket(
+        event,
+        first_seen_window["last_not_seen_at"] if first_seen_window and parse_iso(event, "KBS_CADENCE_WATCH_EVENT_INVALID") > prev_latest_dt else previous_polled_at,
+        first_seen_window["first_seen_at"] if first_seen_window and parse_iso(event, "KBS_CADENCE_WATCH_EVENT_INVALID") > prev_latest_dt else polled_at,
+    ) for event in new_events]
     revision_observations = [{
         "event_time": event,
         "previous_row_identity_hash": prev_index[event]["row_identity_hash"],
@@ -275,6 +285,7 @@ def compare_state(config: dict, previous: dict | None, current: dict, polled_at:
         "new_row_count": new_row_count,
         "forward_new_event_count": len(forward),
         "forward_new_row_count": forward_row_count,
+        "forward_event_times": forward,
         "backfill_event_count": len(backfill),
         "backfill_row_count": backfill_row_count,
         "provider_revision_count": len(revisions),
@@ -287,7 +298,39 @@ def compare_state(config: dict, previous: dict | None, current: dict, polled_at:
         "first_seen_observations": brackets,
         "provider_revision_observations": revision_observations,
         "availability_brackets_established": len(brackets),
+        "bounded_watcher_bracket_used": bool(first_seen_window and forward),
     }
+
+
+def load_bounded_watcher_window(path: str | None, previous: dict | None):
+    if not path:
+        return None
+    if previous is None:
+        return None
+    proof = json.loads(Path(path).read_text(encoding="utf-8"))
+    require(proof.get("schema_version") == "geox_mcft_cap09_kbs_batch_qualification_window_v1", "KBS_CADENCE_WATCH_SCHEMA_INVALID")
+    previous_latest = previous.get("latest_event_time")
+    require(proof.get("baseline_latest_event_time") == previous_latest, "KBS_CADENCE_WATCH_BASELINE_DRIFT")
+    attempts = [item for item in proof.get("attempts", []) if item.get("latest_event_time") and item.get("polled_at")]
+    require(attempts, "KBS_CADENCE_WATCH_ATTEMPTS_REQUIRED")
+    prior_not_seen_at = previous["polled_at"]
+    prior_time = parse_iso(prior_not_seen_at, "KBS_CADENCE_WATCH_PREVIOUS_POLL_INVALID")
+    for attempt in attempts:
+        attempt_time = parse_iso(attempt["polled_at"], "KBS_CADENCE_WATCH_ATTEMPT_POLL_INVALID")
+        require(attempt_time > prior_time, "KBS_CADENCE_WATCH_ATTEMPT_ORDER_INVALID")
+        latest = parse_iso(attempt["latest_event_time"], "KBS_CADENCE_WATCH_ATTEMPT_LATEST_INVALID")
+        if latest > parse_iso(previous_latest, "KBS_CADENCE_WATCH_BASELINE_LATEST_INVALID"):
+            return {
+                "baseline_latest_event_time": previous_latest,
+                "last_not_seen_at": prior_not_seen_at,
+                "first_seen_at": attempt["polled_at"],
+                "first_seen_attempt": attempt.get("attempt"),
+                "capture_may_have_completed_later": attempt.get("captured") is not True,
+                "source": "BOUNDED_QUALIFICATION_WATCHER",
+            }
+        prior_not_seen_at = attempt["polled_at"]
+        prior_time = attempt_time
+    return None
 
 
 def github_json(url: str, token: str):
@@ -328,8 +371,72 @@ def restore_github_state(config: dict):
     return None, None
 
 
-def make_state(config: dict, snapshot: dict, polled_at: str, previous: dict | None, predecessor: dict | None):
-    transition = compare_state(config, previous, snapshot, polled_at)
+
+def build_publication_batch_profile(transition: dict):
+    forward = sorted(transition.get("forward_event_times", []))
+    if not forward:
+        return None
+    start = parse_iso(forward[0], "KBS_CADENCE_BATCH_START_INVALID")
+    end = parse_iso(forward[-1], "KBS_CADENCE_BATCH_END_INVALID")
+    expected = []
+    cursor = start
+    while cursor <= end:
+        expected.append(iso(cursor))
+        cursor += timedelta(hours=1)
+    observed = set(forward)
+    missing = [event for event in expected if event not in observed]
+    brackets = [item for item in transition.get("first_seen_observations", []) if item.get("event_time") in observed]
+    return {
+        "batch_id": transition.get("batch_id"),
+        "first_seen_at": brackets[0].get("first_seen_at") if brackets else None,
+        "last_not_seen_at": brackets[0].get("last_not_seen_at") if brackets else None,
+        "observation_time_start": forward[0],
+        "observation_time_end": forward[-1],
+        "forward_hour_count": len(forward),
+        "expected_span_hour_count": len(expected),
+        "missing_hour_count": len(missing),
+        "missing_event_times": missing,
+        "contiguous_hourly_coverage": len(missing) == 0 and len(forward) == len(expected),
+        "expected_approximately_24_hours": 23 <= len(forward) <= 25,
+        "provider_revision_count": int(transition.get("provider_revision_count", 0)),
+        "backfill_event_count": int(transition.get("backfill_event_count", 0)),
+        "shape": transition.get("shape"),
+        "metadata_only": True,
+    }
+
+
+
+def nearest_rank(values: list[float], percentile: float):
+    if not values:
+        return None
+    ordered = sorted(values)
+    index = max(0, int((percentile * len(ordered) + 0.999999999)) - 1)
+    return ordered[index]
+
+
+def build_provider_cadence_profile(history: list[dict]):
+    batches = [item.get("batch_profile") for item in history if item.get("batch_profile")]
+    first_seen = sorted(parse_iso(item["first_seen_at"], "KBS_CADENCE_BATCH_FIRST_SEEN_INVALID") for item in batches if item.get("first_seen_at"))
+    intervals = [(first_seen[index] - first_seen[index - 1]).total_seconds() / 3600.0 for index in range(1, len(first_seen))]
+    publish_minutes = [value.hour * 60 + value.minute + value.second / 60.0 for value in first_seen]
+    median_publish = nearest_rank(publish_minutes, 0.5)
+    p95_publish = nearest_rank(publish_minutes, 0.95)
+    jitter = (max(publish_minutes) - min(publish_minutes)) if len(publish_minutes) >= 2 else None
+    return {
+        "provider_expected_update_behavior": "DAILY_BATCH",
+        "observed_batch_count": len(batches),
+        "median_publish_minute_utc": median_publish,
+        "p95_publish_minute_utc": p95_publish,
+        "publish_time_jitter_minutes": jitter,
+        "median_inter_batch_interval_hours": nearest_rank(intervals, 0.5),
+        "p95_inter_batch_interval_hours": nearest_rank(intervals, 0.95),
+        "machine_auditable_profile_only": True,
+        "freshness_authority_effect": False,
+    }
+
+
+def make_state(config: dict, snapshot: dict, polled_at: str, previous: dict | None, predecessor: dict | None, first_seen_window: dict | None = None, requested_at: str | None = None):
+    transition = compare_state(config, previous, snapshot, polled_at, first_seen_window)
     history = list(previous.get("publication_transition_history", [])) if previous else []
     if transition["shape"] not in {"BASELINE_SNAPSHOT", "NO_CHANGE"}:
         history.append({
@@ -341,21 +448,36 @@ def make_state(config: dict, snapshot: dict, polled_at: str, previous: dict | No
             "provider_revision_count": transition["provider_revision_count"],
             "latest_advanced_by_hours": transition["latest_advanced_by_hours"],
             "batch_id": transition["batch_id"],
+            "new_event_min": transition["new_event_min"],
+            "new_event_max": transition["new_event_max"],
+            "forward_event_times": transition["forward_event_times"],
+            "batch_profile": build_publication_batch_profile(transition),
         })
     history = history[-50:]
     publication_transitions = len([item for item in history if int(item.get("forward_new_event_count", 0)) > 0])
+    current_batch_profile = build_publication_batch_profile(transition)
+    latest_batch_profile = current_batch_profile or (previous.get("latest_publication_batch_profile") if previous else None)
+    provider_cadence_profile = build_provider_cadence_profile(history)
     return {
         "schema_version": STATE_SCHEMA,
         "status": "PASS",
         "subject_sha": os.environ.get("MCFT_SUBJECT_SHA") or os.environ.get("GITHUB_SHA"),
         "source_url": config["source"]["url"],
         "source_authority_role": config["source"]["authority_role"],
+        "requested_at": requested_at or polled_at,
         "polled_at": polled_at,
         "predecessor_state": predecessor,
         **snapshot,
         "transition": transition,
         "publication_transition_history": history,
         "publication_transition_count": publication_transitions,
+        "provider_expected_update_behavior": "DAILY_BATCH",
+        "provider_operating_profile": config["operating_profile"]["provider_operating_profile"],
+        "provider_operating_profile_authority_effect": False,
+        "provider_operating_behavior_confirmation_is_freshness_authority": False,
+        "latest_publication_batch_profile": latest_batch_profile,
+        "provider_cadence_profile": provider_cadence_profile,
+        "bounded_watcher_first_seen_window": first_seen_window,
         "candidate_publication_class": cadence_candidate(history, int(config["polling"]["minimum_publication_transitions_before_candidate_classification"])),
         "candidate_publication_class_is_authority": False,
         "exact_source_availability_time_claimed_from_polling_alone": False,
@@ -374,8 +496,9 @@ def make_state(config: dict, snapshot: dict, polled_at: str, previous: dict | No
 
 def run_poll(args):
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    polled_at = datetime.now(timezone.utc)
+    requested_at = datetime.now(timezone.utc)
     status, headers, body, final_url = request_bytes(config["source"]["url"], int(config["polling"]["max_response_bytes"]))
+    polled_at = datetime.now(timezone.utc)
     require(status == 200, f"KBS_CADENCE_HTTP_STATUS:{status}")
     snapshot = build_snapshot(config, body, headers, final_url, polled_at)
     previous = None
@@ -385,7 +508,8 @@ def run_poll(args):
         predecessor = {"mode": "LOCAL_FILE"}
     elif args.restore_github_state:
         previous, predecessor = restore_github_state(config)
-    state = make_state(config, snapshot, iso(polled_at), previous, predecessor)
+    first_seen_window = load_bounded_watcher_window(args.watch_proof, previous)
+    state = make_state(config, snapshot, iso(polled_at), previous, predecessor, first_seen_window, iso(requested_at))
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -423,11 +547,23 @@ def run_selftest():
     require(one_transition["snapshot_changed"] and one_transition["parsed_row_count_delta"] == 1, "SELFTEST_SINGLE_SNAPSHOT")
     require(one_transition["first_seen_observations"][0]["last_not_seen_at"] == previous["polled_at"], "SELFTEST_LAST_NOT_SEEN")
 
+    watcher_window = {
+        "baseline_latest_event_time": previous["latest_event_time"],
+        "last_not_seen_at": "2026-08-11T12:40:00.000Z",
+        "first_seen_at": "2026-08-11T12:45:00.000Z",
+    }
+    watched_transition = compare_state(config, previous, one, one["polled_at"], watcher_window)
+    require(watched_transition["bounded_watcher_bracket_used"] is True, "SELFTEST_WATCH_BRACKET_NOT_USED")
+    require(watched_transition["first_seen_observations"][0]["last_not_seen_at"] == watcher_window["last_not_seen_at"], "SELFTEST_WATCH_LOWER")
+    require(watched_transition["first_seen_observations"][0]["first_seen_at"] == watcher_window["first_seen_at"], "SELFTEST_WATCH_UPPER")
+
     batch_events = [("2026-08-11T05:00:00.000Z", "h5")] + [(f"2026-08-11T{hour:02d}:00:00.000Z", f"h{hour}") for hour in range(6, 18)]
     batch = fake_state("2026-08-11T17:00:00.000Z", batch_events, "2026-08-11T20:00:00.000Z", "sha256:c", 112)
     batch_transition = compare_state(config, previous, batch, batch["polled_at"])
     require(batch_transition["shape"] == "MULTI_HOUR_FORWARD_BATCH", "SELFTEST_BATCH_SHAPE")
     require(batch_transition["new_event_count"] == 12 and batch_transition["availability_brackets_established"] == 12, "SELFTEST_BATCH_COUNTS")
+    batch_profile = build_publication_batch_profile(batch_transition)
+    require(batch_profile["contiguous_hourly_coverage"] and batch_profile["forward_hour_count"] == 12 and batch_profile["missing_hour_count"] == 0, "SELFTEST_BATCH_PROFILE")
 
     revised_events = [("2026-08-11T05:00:00.000Z", "h5-revised"), ("2026-08-11T06:00:00.000Z", "h6")]
     revision = fake_state("2026-08-11T06:00:00.000Z", revised_events, "2026-08-11T14:00:00.000Z", "sha256:d", 101)
@@ -452,10 +588,12 @@ def run_selftest():
         "baseline_bracket_fabrication_forbidden": True,
         "single_hour_first_seen_bracket_verified": True,
         "multi_hour_batch_first_seen_brackets_verified": True,
+        "batch_completeness_and_continuity_profile_verified": True,
         "provider_revision_metadata_verified": True,
         "snapshot_only_change_visible": True,
         "row_and_event_counts_separated": True,
         "minimum_three_transition_classification_verified": True,
+        "bounded_watcher_first_seen_bracket_verified": True,
         "daily_batch_authority_claimed": False,
         "raw_provider_values_emitted": False,
         "write_count": 0,
@@ -467,6 +605,7 @@ def main():
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
     parser.add_argument("--previous-state")
     parser.add_argument("--restore-github-state", action="store_true")
+    parser.add_argument("--watch-proof")
     parser.add_argument("--selftest", action="store_true")
     args = parser.parse_args()
     if args.selftest:

@@ -6,14 +6,20 @@ const LIVE=".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readines
 const SELF="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V2.cjs";
 const STATIC_WF=".github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml";
 const CARRIER="scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs";
+const DRIFT="scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs";
 const MARK="EA5E2_RUNTIME_DEPENDENCY_GRAPH_SHA256", PH="__EA5E2_RUNTIME_DEPENDENCY_GRAPH_SHA256__";
 const ENTRY=[
  "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs",
  "scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py",
+ "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts",
+ DRIFT,
  "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
  "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts",
  "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py",CARRIER];
 const STATIC=[LIVE,SELF,STATIC_WF,
+ ".github/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml",
+ "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.cjs",
+ "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SUCCESSOR-RUNNER-QUALIFICATION-V1.json",
  "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json",
@@ -23,6 +29,8 @@ const STATIC=[LIVE,SELF,STATIC_WF,
 const MUST=[
  "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs",
  "scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py",
+ "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts",
+ DRIFT,
  "apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts",
  "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
  "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py",
@@ -39,7 +47,7 @@ function resolve(from,s){if(!s.startsWith("."))return null;const b=path.resolve(
 function children(rel){if(!/\.(?:ts|tsx|js|cjs|mjs|py)$/.test(rel))return[];const t=fs.readFileSync(rel,"utf8"),o=new Set();for(const m of t.matchAll(PATH_RE)){const x=file(m[0]);if(x)o.add(x);}if(!rel.endsWith(".py")){for(const re of [/\bimport\s+(?!type\b)[^;]*?\sfrom\s*["']([^"']+)["']/g,/\bimport\s*["']([^"']+)["']/g,/\bimport\(\s*["']([^"']+)["']\s*\)/g,/\brequire\(\s*["']([^"']+)["']\s*\)/g])for(const m of t.matchAll(re)){const x=resolve(rel,m[1]);if(x)o.add(x);}}return[...o];}
 function closure(){const s=new Set(),q=[];for(const e of ENTRY){const x=req(e);s.add(x);q.push(x);}while(q.length){for(const x of children(q.shift()))if(!s.has(x)){s.add(x);q.push(x);}}for(const x of STATIC)s.add(req(x));return[...s].sort();}
 function listBlock(t,a,b){const i=t.indexOf(a),j=t.indexOf(b,i+a.length);if(i<0||j<0)return[];return t.slice(i,j).split(/\r?\n/).map(x=>/^\s+-\s+["']?([^"']+?)["']?\s*$/.exec(x)?.[1]).filter(Boolean);}
-function liveSets(){const t=fs.readFileSync(LIVE,"utf8"),autoPush=/^\s{2}push:\s*$/m.test(t),manualDispatch=/^\s{2}workflow_dispatch:\s*$/m.test(t),i=t.indexOf("critical=("),j=t.indexOf("\n          )",i),critical=new Set();if(i<0||j<0)throw Error("EA5E2_DEP_LIVE_CRITICAL_BLOCK_REQUIRED");for(const l of t.slice(i,j).split(/\r?\n/)){const m=/^\s+([^\s()]+)\s*$/.exec(l);if(m&&m[1]!=="critical=(")critical.add(m[1].replace(/^['"]|['"]$/g,""));}return{autoPush,manualDispatch,critical};}
+function liveSets(){const t=fs.readFileSync(LIVE,"utf8"),autoPush=/^\s{2}push:\s*$/m.test(t),manualDispatch=/^\s{2}workflow_dispatch:\s*$/m.test(t),d=fs.readFileSync(DRIFT,"utf8"),i=d.indexOf("const critical = ["),j=d.indexOf("\n];",i),critical=new Set();if(i<0||j<0)throw Error("EA5E2_DEP_LIVE_CRITICAL_BLOCK_REQUIRED");for(const m of d.slice(i,j).matchAll(/"([^"]+)"/g))critical.add(m[1]);return{autoPush,manualDispatch,critical};}
 function glob(p){let s="";for(let i=0;i<p.length;i++){const c=p[i];if(c==="*"&&p[i+1]==="*"){s+=".*";i++;}else if(c==="*")s+="[^/]*";else if(c==="?")s+="[^/]";else s+=c.replace(/[\\^$.*+?()[\]{}|]/g,"\\$&");}return new RegExp(`^${s}$`);}
 function bytes(rel){const b=fs.readFileSync(rel);if(rel!==CARRIER)return b;const t=b.toString("utf8");if(!MARK_RE.test(t))throw Error("EA5E2_DEP_BINDING_MARKER_REQUIRED");return Buffer.from(t.replace(MARK_RE,`// ${MARK}=${PH}\n`));}
 function digest(g){const h=crypto.createHash("sha256");for(const x of g){h.update(x);h.update("\0");h.update(bytes(x));h.update("\0");}return`sha256:${h.digest("hex")}`;}

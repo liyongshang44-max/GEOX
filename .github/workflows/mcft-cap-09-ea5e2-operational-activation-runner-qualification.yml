@@ -96,18 +96,23 @@ jobs:
             exit 0
           fi
 
-          # The exact-five-file gate is a creation-time proof. On later bases, preserve it
-          # byte-for-byte and prove that this PR is not rewriting its authority or observer.
+          # The exact-five-file gate is a creation-time proof. On later bases, preserve
+          # its authority/gate byte-for-byte. A successor observer is legal only when
+          # the separate exact-head successor qualification boundary is present.
           node <<'NODE'
           const fs=require('fs');
           const cp=require('child_process');
           const path=require('path');
           const base=process.env.MCFT_BASE_SHA;
           const creation=process.env.EA5E2_OA_RUNNER_QUALIFICATION_CREATION_BASE;
+          const historicalMerge='dc9b03a0197e94f64d0d06447999290057e722f2';
           const files={
             authority:'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json',
             gate:'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_RUNNER_QUALIFICATION.cjs',
-            observer:'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts'
+            observer:'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts',
+            successorAuthority:'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SUCCESSOR-RUNNER-QUALIFICATION-V1.json',
+            successorGate:'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.cjs',
+            successorWorkflow:'.github/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml'
           };
           const expected={
             authority:'4f0df5f9fe896bf26eda3d673e3153941f59c2e7',
@@ -115,10 +120,17 @@ jobs:
             observer:'ec18b215f10bedd66fa2a6a1efef0e41cf57ce38'
           };
           const git=(...args)=>cp.execFileSync('git',args,{encoding:'utf8'}).trim();
-          for(const [key,file] of Object.entries(files)){
+          for(const [key,file] of Object.entries({authority:files.authority,gate:files.gate})){
             const baseBlob=git('rev-parse',`${base}:${file}`);
             const headBlob=git('rev-parse',`HEAD:${file}`);
             if(baseBlob!==expected[key]||headBlob!==expected[key]) throw new Error(`EA5E2_OA_HISTORICAL_${key.toUpperCase()}_MUTATED`);
+          }
+          const historicalObserverBlob=git('rev-parse',`${historicalMerge}:${files.observer}`);
+          if(historicalObserverBlob!==expected.observer) throw new Error('EA5E2_OA_HISTORICAL_OBSERVER_NOT_PRESERVED_IN_GIT_HISTORY');
+          const headObserverBlob=git('rev-parse',`HEAD:${files.observer}`);
+          const successorRequired=headObserverBlob!==expected.observer;
+          if(successorRequired){
+            for(const file of [files.successorAuthority,files.successorGate,files.successorWorkflow]) git('rev-parse',`HEAD:${file}`);
           }
           const authority=JSON.parse(fs.readFileSync(files.authority,'utf8'));
           if(authority.effect_if_exact_head_runner_qualification_passes_and_candidate_merges?.ea5e2_operational_activation_runner_qualified!==true) throw new Error('EA5E2_OA_HISTORICAL_RUNNER_QUALIFIED_EFFECT_REQUIRED');
@@ -134,7 +146,9 @@ jobs:
             qualification_reexecuted:false,
             historical_authority_preserved:true,
             historical_gate_preserved:true,
-            historical_observer_preserved:true,
+            historical_observer_preserved_in_git_history:true,
+            historical_observer_is_current_successor_observer:!successorRequired,
+            successor_qualification_required:successorRequired,
             live_workflow_successor_hardening_must_be_proved_separately:true,
             ea5e2_operational_activation_qualified:false,
             formal_effectiveness:false

@@ -5,6 +5,15 @@ import fs from "node:fs";
 import { Pool } from "pg";
 import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
 import {
+  MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1,
+  MCFT_CAP09_EXTERNAL_FORMAL_CONFIGURATION_MATRIX_HASH_V1,
+  MCFT_CAP09_EXTERNAL_FORMAL_CONFIGURATION_MATRIX_REF_V1,
+} from "../../apps/server/src/domain/twin_runtime/external_formal_bootstrap_authority_bundle_v1.js";
+import {
+  MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1,
+  MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_REF_V1,
+} from "../../apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.js";
+import {
   MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
   compileExternalFormalRuntimeConfigV1,
   type ExternalFormalRuntimeConfigPayloadV1,
@@ -22,12 +31,12 @@ const MINUTE_MS = 60 * 1000;
 const OBSERVER_OFFSET_MINUTES = 437;
 const MAX_OBSERVER_START_SKEW_MINUTES = 10;
 const EXACT_INTERVAL_CUTOFF_OFFSET_MINUTES = 432;
-const CONFIG_MATRIX_REF = "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json";
-const CONFIG_MATRIX_HASH = "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5";
-const CROP_AUTHORITY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json";
-const CROP_AUTHORITY_BLOB = "b5de9d29189cb654444b3f57d00df290eefe16d3";
-const A0_CONFIG_REF = "external_formal_runtime_config_7284202e3b0bdae6d32f4814";
-const A0_CONFIG_HASH = "sha256:d6b5bf0fcd385aa3657b7c97c72cc82093a45088463466436671857116bb6fc8";
+const CONFIG_MATRIX_REF = MCFT_CAP09_EXTERNAL_FORMAL_CONFIGURATION_MATRIX_REF_V1;
+const CONFIG_MATRIX_HASH = MCFT_CAP09_EXTERNAL_FORMAL_CONFIGURATION_MATRIX_HASH_V1;
+const CROP_AUTHORITY_PATH = MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.crop_context.ref;
+const CROP_AUTHORITY_BLOB = MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.crop_context.hash;
+const A0_CONFIG_REF = MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_REF_V1;
+const A0_CONFIG_HASH = MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1;
 
 function env(name: string): string {
   const value = process.env[name];
@@ -258,6 +267,7 @@ async function assertFormalDatabaseReadOnlyPreconditionsV1(formalPool: Pool): Pr
 }
 
 async function main(): Promise<void> {
+  const observerExecutionStartedAt = new Date().toISOString();
   const targetT = exactHour(env("MCFT_EA5E2_TARGET_T"));
   const subjectSha = env("MCFT_EA5E2_SUBJECT_SHA");
   if (!/^[0-9a-f]{40}$/.test(subjectSha)) throw new Error("EA5E2_ACTIVATION_EXACT_SUBJECT_SHA_REQUIRED");
@@ -354,6 +364,7 @@ async function main(): Promise<void> {
     }
 
     fs.mkdirSync("acceptance-output", { recursive: true });
+    const observerExecutionCompletedAt = new Date().toISOString();
     const proof = {
       schema_version: "geox_mcft_cap09_ea5e2_operational_activation_observer_proof_v1",
       status: "PASS",
@@ -361,6 +372,9 @@ async function main(): Promise<void> {
       target_t: targetT,
       expected_observer_at: new Date(expectedObserverMs).toISOString(),
       observed_at: observerCreatedAt,
+      observer_execution_started_at: observerExecutionStartedAt,
+      observer_execution_completed_at: observerExecutionCompletedAt,
+      observer_execution_elapsed_ms: Date.parse(observerExecutionCompletedAt) - Date.parse(observerExecutionStartedAt),
       observer_start_skew_minutes: observerSkewMinutes,
       observer_start_skew_max_minutes: MAX_OBSERVER_START_SKEW_MINUTES,
       crop_stage_code: crop.stage,

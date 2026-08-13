@@ -63,6 +63,48 @@ def sha256_json(value) -> str:
     return sha256_bytes(json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8"))
 
 
+def select_complete_gfs_cycle(tick: datetime):
+    """Select the newest cycle whose PGRB2 and SFLUX inventories are both complete."""
+    rejections = []
+    for cycle in ea4.candidate_cycles(tick):
+        lead_start = int((tick - cycle).total_seconds() // 3600) + 1
+        lead_end = lead_start + ea4.POINT_COUNT - 1
+        support = lead_start - 1
+        if support < 0 or lead_end > ea4.MAX_LEAD:
+            continue
+        try:
+            url = ea4.directory_url(cycle)
+            status, _, body, final_url = ea4.request_bytes(url, "EA5E2_GFS_DIRECTORY", 20_000_000)
+            require(status == 200, f"EA5E2_GFS_DIRECTORY_HTTP_{status}")
+            final = urlparse(final_url)
+            require(final.hostname == "nomads.ncep.noaa.gov" and final.path == urlparse(url).path, "EA5E2_GFS_DIRECTORY_IDENTITY_DRIFT")
+            ea4.retain_raw("GFS_DIRECTORY_LISTING", iso(cycle), body)
+            entries = ea4.parse_directory(body)
+            for lead in range(support, lead_end + 1):
+                for name in ea4.pgrb2_names(cycle, lead):
+                    match = entries.get(name, [])
+                    require(len(match) == 1 and match[0]["size"] > 0, f"EA5E2_PGRB2_DIRECTORY_ENTRY_MISSING:{name}")
+                    require(match[0]["upper"] <= tick, f"EA5E2_PGRB2_DIRECTORY_ENTRY_AFTER_TARGET:{name}")
+            for lead in range(support, lead_end + 1):
+                for name in ea4.sflux_names(cycle, lead):
+                    match = entries.get(name, [])
+                    require(len(match) == 1 and match[0]["size"] > 0, f"EA5E2_SFLUX_DIRECTORY_ENTRY_MISSING:{name}")
+                    require(match[0]["upper"] <= tick, f"EA5E2_SFLUX_DIRECTORY_ENTRY_AFTER_TARGET:{name}")
+            return {
+                "cycle": cycle,
+                "lead_start": lead_start,
+                "lead_end": lead_end,
+                "support": support,
+                "directory_sha256": sha256_bytes(body),
+                "rejections": rejections,
+            }
+        except Exception as exc:
+            # A partially published newest cycle is not a terminal selection.
+            # Keep searching for an older complete same-cycle PGRB2+SFLUX set.
+            rejections.append({"cycle": iso(cycle), "reason": str(exc)[:240]})
+    raise RuntimeError("EA5E2_NO_COMPLETE_GFS_CYCLE:" + json.dumps(rejections, separators=(",", ":")))
+
+
 def safe_name(value: str) -> str:
     return re.sub(r"[^0-9A-Za-z]+", "_", value).strip("_").lower()
 
@@ -89,8 +131,8 @@ def load_tar(path: Path) -> tuple[dict, dict[str, bytes]]:
     return manifest, members
 
 
-def command_precheck(_: argparse.Namespace) -> None:
-    observed = datetime.now(timezone.utc)
+def command_precheck(args: argparse.Namespace) -> None:
+    requested_at = datetime.now(timezone.utc)
     status, _, body, final = ea4.request_bytes(
         ea4.AUTH["kbs"]["raw_hourly_csv"],
         "EA5E2_LIVE_PRECHECK_KBS_HOURLY",
@@ -98,25 +140,38 @@ def command_precheck(_: argparse.Namespace) -> None:
         {"Accept": "text/csv,text/plain;q=0.9,*/*;q=0.5"},
     )
     require(status == 200, "EA5E2_LIVE_PRECHECK_KBS_HTTP")
+    retrieved_at = datetime.now(timezone.utc)
     parsed_final = urlparse(final)
     require(parsed_final.hostname == "lter.kbs.msu.edu" and parsed_final.path == "/datatables/13.csv", "EA5E2_LIVE_PRECHECK_KBS_IDENTITY")
     rows = ea4.parse_kbs_csv(body)
     timestamps = []
     for row in rows:
         timestamp = ea4.parse_provider_utc(row.get("datetime_utc", ""))
-        if timestamp is not None and timestamp <= observed + timedelta(minutes=5):
+        if timestamp is not None and timestamp <= retrieved_at + timedelta(minutes=5):
             timestamps.append(timestamp)
     require(timestamps, "EA5E2_LIVE_PRECHECK_KBS_TIMESTAMP_REQUIRED")
     latest = max(timestamps)
-    age_hours = (observed - latest).total_seconds() / 3600.0
+    age_hours = (retrieved_at - latest).total_seconds() / 3600.0
     maximum = float(ea4.AUTH["kbs"]["raw_hourly_latest_max_age_hours"])
+    minimum_headroom_minutes = max(0.0, float(args.minimum_operational_headroom_minutes))
+    remaining_headroom_minutes = (maximum - age_hours) * 60.0
     require(age_hours <= maximum, f"EA5E2_LIVE_PRECHECK_KBS_STALE:{age_hours:.6f}")
+    require(
+        remaining_headroom_minutes >= minimum_headroom_minutes,
+        f"EA5E2_LIVE_PRECHECK_KBS_OPERATIONAL_HEADROOM_INSUFFICIENT:{remaining_headroom_minutes:.3f}:{minimum_headroom_minutes:.3f}",
+    )
     print(json.dumps({
         "status": "PASS",
-        "observed_at": iso(observed),
+        "requested_at": iso(requested_at),
+        "retrieved_at": iso(retrieved_at),
+        "freshness_evaluated_at": iso(retrieved_at),
         "latest_raw_hourly_timestamp": iso(latest),
         "latest_age_hours": round(age_hours, 6),
         "configured_max_age_hours": maximum,
+        "remaining_authority_headroom_minutes": round(remaining_headroom_minutes, 3),
+        "minimum_operational_headroom_minutes": minimum_headroom_minutes,
+        "operational_headroom_pass": True,
+        "operational_headroom_is_authority": False,
         "raw_values_emitted": False,
     }, sort_keys=True))
 
@@ -146,7 +201,7 @@ def command_fetch_gfs(args: argparse.Namespace) -> None:
 
     ea4.request_bytes = counted_request
     ea4.retain_raw = capture_retention
-    selected = ea4.select_cycle(target)
+    selected = select_complete_gfs_cycle(target)
     cycle = selected["cycle"]
     leads = list(range(selected["support"], selected["lead_end"] + 1))
     raw_members: list[dict] = []
@@ -262,6 +317,106 @@ def command_fetch_gfs(args: argparse.Namespace) -> None:
     }
     Path(args.meta).write_text(json.dumps(safe, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(safe, sort_keys=True))
+
+
+def command_probe_gfs(args: argparse.Namespace) -> None:
+    """Read-only directory probe for one complete PGRB2+SFLUX cycle."""
+    target = canonical_hour(args.target, "EA5E2_GFS_READINESS_TARGET_INVALID")
+    requested_at = datetime.now(timezone.utc)
+    retained: list[dict] = []
+
+    def metadata_only_retention(kind: str, identity: str, body: bytes) -> dict:
+        item = {
+            "kind": kind,
+            "identity_sha256": sha256_bytes(identity.encode("utf-8")),
+            "sha256": sha256_bytes(body),
+            "bytes": len(body),
+        }
+        retained.append(item)
+        return item
+
+    original_retention = ea4.retain_raw
+    ea4.retain_raw = metadata_only_retention
+    try:
+        selected = select_complete_gfs_cycle(target)
+    finally:
+        ea4.retain_raw = original_retention
+    retrieved_at = datetime.now(timezone.utc)
+    proof = {
+        "schema_version": "geox_mcft_cap09_ea5e2_gfs_same_cycle_readiness_v1",
+        "status": "PASS",
+        "target_logical_time": iso(target),
+        "requested_at": iso(requested_at),
+        "retrieved_at": iso(retrieved_at),
+        "selected_cycle": iso(selected["cycle"]),
+        "lead_start": selected["lead_start"],
+        "lead_end": selected["lead_end"],
+        "support_lead": selected["support"],
+        "same_cycle_pgrb2_sflux_complete": True,
+        "newer_incomplete_cycle_rejection_count": len(selected["rejections"]),
+        "selection_directory_count": len(retained),
+        "selection_directory_chain_sha256": sha256_json(retained),
+        "raw_provider_body_retained": False,
+        "raw_values_emitted": False,
+        "database_write_count": 0,
+        "canonical_write_count": 0,
+    }
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.output).write_text(json.dumps(proof, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(json.dumps(proof, sort_keys=True))
+
+
+def command_selftest_gfs_selection(_args: argparse.Namespace) -> None:
+    target = datetime(2026, 8, 13, 12, tzinfo=timezone.utc)
+    newest = datetime(2026, 8, 13, 6, tzinfo=timezone.utc)
+    older = datetime(2026, 8, 13, 0, tzinfo=timezone.utc)
+    originals = {
+        "candidate_cycles": ea4.candidate_cycles,
+        "request_bytes": ea4.request_bytes,
+        "parse_directory": ea4.parse_directory,
+        "retain_raw": ea4.retain_raw,
+    }
+
+    def inventory(cycle: datetime, complete: bool) -> dict:
+        lead_start = int((target - cycle).total_seconds() // 3600) + 1
+        lead_end = lead_start + ea4.POINT_COUNT - 1
+        support = lead_start - 1
+        entry = {"upper": target - timedelta(minutes=1), "size": 1024}
+        values = {}
+        for lead in range(support, lead_end + 1):
+            for name in (*ea4.pgrb2_names(cycle, lead), *ea4.sflux_names(cycle, lead)):
+                values[name] = [entry]
+        if not complete:
+            values.pop(ea4.sflux_names(cycle, support)[0])
+        return values
+
+    inventories = {b"newest": inventory(newest, False), b"older": inventory(older, True)}
+    try:
+        ea4.candidate_cycles = lambda _tick: [newest, older]
+
+        def fake_request(url, *_pos, **_kw):
+            body = b"newest" if "/06/" in url else b"older"
+            return 200, {}, body, url
+
+        ea4.request_bytes = fake_request
+        ea4.parse_directory = lambda body: inventories[body]
+        ea4.retain_raw = lambda *_pos, **_kw: {"metadata_only": True}
+        selected = select_complete_gfs_cycle(target)
+    finally:
+        for name, value in originals.items():
+            setattr(ea4, name, value)
+
+    require(selected["cycle"] == older, "EA5E2_GFS_SELFTEST_OLDER_COMPLETE_CYCLE_REQUIRED")
+    require(len(selected["rejections"]) == 1, "EA5E2_GFS_SELFTEST_NEWEST_PARTIAL_REJECTION_REQUIRED")
+    require("EA5E2_SFLUX_DIRECTORY_ENTRY_MISSING" in selected["rejections"][0]["reason"], "EA5E2_GFS_SELFTEST_PARTIAL_REASON_DRIFT")
+    print(json.dumps({
+        "status": "PASS",
+        "cases": 1,
+        "newest_partial_cycle_rejected": True,
+        "older_complete_same_cycle_selected": True,
+        "provider_request_count": 0,
+        "database_write_count": 0,
+    }, sort_keys=True))
 
 
 def command_decode_gfs(args: argparse.Namespace) -> None:
@@ -530,12 +685,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
     precheck = sub.add_parser("precheck-kbs")
+    precheck.add_argument("--minimum-operational-headroom-minutes", type=float, default=0.0)
     precheck.set_defaults(handler=command_precheck)
     fetch_gfs = sub.add_parser("fetch-gfs")
     fetch_gfs.add_argument("--target", required=True)
     fetch_gfs.add_argument("--output", required=True)
     fetch_gfs.add_argument("--meta", required=True)
     fetch_gfs.set_defaults(handler=command_fetch_gfs)
+    probe_gfs = sub.add_parser("probe-gfs")
+    probe_gfs.add_argument("--target", required=True)
+    probe_gfs.add_argument("--output", required=True)
+    probe_gfs.set_defaults(handler=command_probe_gfs)
+    selftest_gfs = sub.add_parser("selftest-gfs-selection")
+    selftest_gfs.set_defaults(handler=command_selftest_gfs_selection)
     decode_gfs = sub.add_parser("decode-gfs")
     decode_gfs.add_argument("--target", required=True)
     decode_gfs.add_argument("--available-at", required=True)

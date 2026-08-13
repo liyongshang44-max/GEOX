@@ -17,6 +17,12 @@ const RUNNER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_P
 const PROVIDER = "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py";
 const DB_SOURCE = "apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts";
 const OBSERVER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts";
+const FORMAL_READINESS = "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts";
+const SUCCESSOR_RUNNER = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.cjs";
+const CADENCE = "scripts/runtime_acceptance/MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs";
+const WATCHER = "scripts/runtime_acceptance/WATCH_MCFT_CAP_09_KBS_BATCH_QUALIFICATION_WINDOW.py";
+const EA4 = "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py";
+const A0_CANONICAL = "apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.ts";
 const CROP = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json";
 const OA = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json";
 const DEP_GATE = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V2.cjs";
@@ -115,6 +121,7 @@ function cropProfile(authority) {
 function main() {
   fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
   const blockers = [];
+  const readinessBlockers = [];
   const warnings = [];
   const live = read(LIVE);
   const viability = read(VIABILITY);
@@ -124,6 +131,10 @@ function main() {
   const provider = read(PROVIDER);
   const db = read(DB_SOURCE);
   const observer = read(OBSERVER);
+  const formalReadiness = read(FORMAL_READINESS);
+  const successorRunner = read(SUCCESSOR_RUNNER);
+  const watcher = read(WATCHER);
+  const ea4 = read(EA4);
   const cropAuthority = JSON.parse(read(CROP));
   const oa = JSON.parse(read(OA));
   const clock = object(oa.provider_and_clock_contract, "EA5E2_PREFLIGHT_CLOCK_AUTHORITY_REQUIRED");
@@ -169,8 +180,23 @@ function main() {
     && has(viability, "raw_retention_count: 0")
     && has(viability, "canonical_write_count: 0")
     && has(viability, "live_activation_started: false")
+    && has(viability, "KBS_RAW_HOURLY_OPERATIONAL_HEADROOM_INSUFFICIENT")
+    && has(viability, "protocolCompatibility.reason")
     && has(viability, "authority_changed: false");
   blocker(blockers, !viabilityImplemented, "LIVE_WINDOW_VIABILITY_PREFLIGHT_NOT_FAIL_CLOSED");
+
+  const dailyBatchProtocolGuardImplemented = has(viability, "assessEa5e2ProtocolCompatibility")
+    && has(viability, "KBS_RAW_HOURLY_OPERATIONAL_HEADROOM_INSUFFICIENT")
+    && has(provider, "--minimum-operational-headroom-minutes")
+    && has(provider, "EA5E2_LIVE_PRECHECK_KBS_OPERATIONAL_HEADROOM_INSUFFICIENT")
+    && has(live, "--minimum-operational-headroom-minutes 60")
+    && has(read(CADENCE), "CURRENT_FIRST_FUTURE_T_ORCHESTRATION_INCOMPATIBLE_WITH_KBS_DAILY_BATCH");
+  blocker(blockers, !dailyBatchProtocolGuardImplemented, "DAILY_BATCH_PROTOCOL_AND_HEADROOM_FAIL_CLOSED_GUARD_MISSING");
+
+  const soilLiveProofSchemaWired = has(live, "const soilP95=Number(viability.soil_global_publication_lag_diagnostic?.p95_minutes);")
+    && has(live, "EA5E2_ACTIVATION_SOIL_GLOBAL_P95_PRODUCER_REQUIRED")
+    && has(live, "soil_publication_lag_observed_p95_minutes:soilP95");
+  blocker(blockers, !soilLiveProofSchemaWired, "LIVE_PROOF_SOIL_P95_SCHEMA_WIRING_DRIFT");
 
   const phaseAdmissionSelftest = runDeterministicSelftest();
   blocker(blockers, phaseAdmissionSelftest.status !== "PASS", "SOIL_PHASE_ADMISSION_DETERMINISTIC_SELFTEST_FAILED", phaseAdmissionSelftest);
@@ -253,14 +279,16 @@ function main() {
     && has(latePoll, "START_OFFSET_MINUTES = 390")
     && has(latePoll, "CUTOFF_OFFSET_MINUTES = 432")
     && has(latePoll, "MIN_INGRESS_MARGIN_MINUTES = 5")
-    && has(latePoll, "DEADLINE_OFFSET_MINUTES = CUTOFF_OFFSET_MINUTES - MIN_INGRESS_MARGIN_MINUTES")
+    && has(latePoll, "COLLECTOR_PROCESSING_BUDGET_MINUTES = 25")
+    && has(latePoll, "DEADLINE_OFFSET_MINUTES = CUTOFF_OFFSET_MINUTES - COLLECTOR_PROCESSING_BUDGET_MINUTES")
+    && has(latePoll, '"discovery_deadline_is_collector_deadline": False')
     && has(latePoll, '"same_source_exact_t_only": True')
     && has(latePoll, '"late_semantic_availability_polling": True')
     && has(latePoll, "EA5E2_LATE_EXACT_HOUR_AVAILABILITY_DEADLINE_EXCEEDED")
     && has(latePoll, '"raw_retention_count": 0')
     && has(latePoll, '"canonical_write_count": 0');
   blocker(blockers, !latePollImplemented, "LATE_EXACT_HOUR_SEMANTIC_AVAILABILITY_POLLING_NOT_IMPLEMENTED", {
-    required_envelope: "SAME_SOURCE_EXACT_T_ONLY; START_GTE_T_PLUS_390; STOP_LTE_T_PLUS_427; T_PLUS_432_CUTOFF_UNCHANGED",
+    required_envelope: "SAME_SOURCE_EXACT_T_ONLY; START_GTE_T_PLUS_390; DISCOVERY_STOP_LTE_T_PLUS_407; REAL_COLLECTOR_STOP_LTE_T_PLUS_432",
   });
   blocker(blockers, !has(runner, "response.status === 429 || response.status >= 500") || !has(runner, 'late_transport_retry_scope: "SAME_SOURCE_TRANSIENT_ONLY"'), "LATE_TRANSPORT_RETRY_SCOPE_DRIFT");
   blocker(blockers, !has(provider, "EA5E2_LIVE_KBS_EXACT_TARGET_ROW_REQUIRED"), "EXACT_TARGET_ROW_FAIL_CLOSED_DECODER_REQUIRED");
@@ -275,6 +303,22 @@ function main() {
   blocker(blockers, !has(observer, "BEGIN TRANSACTION READ ONLY"), "FORMAL_A0_OBSERVER_READ_ONLY_REQUIRED");
   blocker(blockers, !has(observer, "EA5E2_ACTIVATION_FORMAL_SCHEDULER_MUST_REMAIN_UNSTARTED"), "FORMAL_SCHEDULER_ZERO_PRECONDITION_REQUIRED");
   blocker(blockers, !has(observer, "A1") || !has(observer, "COMPLETED") || !has(observer, "72"), "EXTERNAL_CAP04_A1_COMPLETED_72_OBSERVER_REQUIRED");
+  blocker(blockers,
+    !has(read(A0_CANONICAL), "sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8")
+      || !has(observer, "MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1")
+      || !has(formalReadiness, "MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1"),
+    "FORMAL_A0_CANONICAL_HASH_DRIFT");
+  blocker(blockers, !has(formalReadiness, "br-cold-dust-a6j6aymz") || !has(formalReadiness, "br-falling-cake-a6lfsdak") || !has(formalReadiness, "EA5E2_FORMAL_READINESS_CROP_A0_AUTHORITY_MISMATCH") || !has(formalReadiness, "pointer_graph_validated"), "FORMAL_BRANCH_A0_POINTER_CROP_PREFLIGHT_MISSING");
+  blocker(blockers, !has(successorRunner, "qualification_reexecuted: true") || !has(successorRunner, "protected_main_live_dispatch_authorized: false"), "SUCCESSOR_RUNNER_EXACT_HEAD_REQUALIFICATION_MISSING");
+  blocker(blockers, !has(live, "SUCCESSOR_RUNNER_EXACT_HEAD_QUALIFICATION_REQUIRED") || !has(live, "PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts"), "LIVE_SUCCESSOR_AND_FORMAL_PREDISPATCH_GATE_MISSING");
+  blocker(blockers, count(live, "ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs") < 4, "LONG_WINDOW_MULTIPHASE_PROTECTED_MAIN_DRIFT_GUARD_MISSING");
+  blocker(blockers, !has(provider, "freshness_evaluated_at") || !has(provider, "def command_probe_gfs") || !has(live, "probe-gfs"), "FETCH_COMPLETION_FRESHNESS_OR_GFS_READINESS_MISSING");
+  blocker(blockers,
+    !has(provider, "def select_complete_gfs_cycle")
+      || !has(provider, "A partially published newest cycle is not a terminal selection")
+      || !has(provider, "def command_selftest_gfs_selection"),
+    "GFS_OLDER_COMPLETE_SAME_CYCLE_FALLBACK_MISSING");
+  blocker(blockers, !has(watcher, '"stop": captured') || !has(watcher, "latest_24h_duplicate_event_time_row_count") || !has(watcher, "SELFTEST_STAGED_CONTINUES"), "KBS_WATCHER_STAGED_OR_DUPLICATE_FAIL_CLOSED_MISSING");
 
   let dependencyGate = { status: "NOT_RUN" };
   try {
@@ -286,7 +330,31 @@ function main() {
   blocker(blockers, dependencyGate.status !== "PASS", "RUNTIME_DEPENDENCY_GRAPH_NOT_BOUND");
 
   const crop = cropProfile(cropAuthority);
-  blocker(blockers, crop.legal_future_target_count === 0, "CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET");
+  blocker(readinessBlockers, true, "CURRENT_FIRST_FUTURE_T_ORCHESTRATION_INCOMPATIBLE_WITH_KBS_DAILY_BATCH", {
+    frozen_protocol: "SAME_SOURCE_EXACT_T_REQUIRED_BY_T_PLUS_427_WITH_T_PLUS_432_CUTOFF",
+    confirmed_provider_behavior: "DAILY_BATCH_APPROXIMATELY_24_FORWARD_HOURLY_OBSERVATIONS",
+    retry_or_headroom_can_resolve: false,
+    globally_impossible_for_every_single_t: false,
+    phase_aware_long_horizon_target_scheduling_currently_implemented: false,
+    required_resolution: "PHASE_AWARE_LONG_HORIZON_SCHEDULING_OR_NEW_AUTHORITY_PROTOCOL_OR_QUALIFIED_REPLACEMENT_SOURCE",
+    implication: "EA5E2_LIVE_DISPATCH_FORBIDDEN",
+    authority_effect: false,
+  });
+  blocker(readinessBlockers, crop.legal_future_target_count === 0, "CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET", {
+    implication: "EA5E2_LIVE_DISPATCH_FORBIDDEN_UNTIL_SUCCESSOR_OR_REQUALIFIED_CROP_CONTEXT_AUTHORITY_EXISTS",
+    authority_effect: false,
+  });
+  blocker(readinessBlockers, true, "LATE_EXACT_T_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED", {
+    discovery_deadline_offset_minutes: 407,
+    frozen_cutoff_offset_minutes: 432,
+    conservative_reserved_minutes: 25,
+    implication: "POLL_PASS_MUST_NOT_RACE_REAL_COLLECTOR_CANONICALIZATION",
+  });
+  blocker(readinessBlockers, true, "OBSERVER_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED", {
+    observer_offset_minutes: 437,
+    maximum_start_skew_minutes: 10,
+    implication: "COLLECTOR_TO_OBSERVER_PROCESSING_BUDGET_REQUIRES_EXACT_HEAD_MEASUREMENT",
+  });
   warning(warnings, crop.last_legal_future_target !== null, "CURRENT_CROP_AUTHORITY_HAS_TERMINAL_TARGET_CLIFF", {
     last_legal_target: crop.last_legal_future_target,
     latest_dispatch_time_for_last_legal_target: crop.latest_dispatch_time_for_last_legal_target,
@@ -300,9 +368,19 @@ function main() {
   const proof = {
     schema_version: "geox_mcft_cap09_ea5e2_full_chain_static_preflight_v4",
     status: blockers.length ? "FAIL" : "PASS",
-    subject_sha: process.env.GITHUB_SHA ?? null,
+    subject_sha: process.env.MCFT_SUBJECT_SHA ?? process.env.GITHUB_SHA ?? null,
     blocker_count: blockers.length,
     blockers,
+    activation_readiness: readinessBlockers.length ? "BLOCKED" : "READY",
+    readiness_blocker_count: readinessBlockers.length,
+    readiness_blockers: readinessBlockers,
+    pre_dispatch_runtime_checks: [
+      { code: "SUCCESSOR_RUNNER_EXACT_HEAD_QUALIFICATION_CURRENCY", status: "REQUIRED_AT_LIVE_DISPATCH" },
+      { code: "FORMAL_PRIMARY_NEON_BRANCH_A0_POINTER_GRAPH", status: "REQUIRED_AT_LIVE_DISPATCH" },
+      { code: "REAL_GFS_COMPLETE_SAME_CYCLE_PGRB2_SFLUX", status: "REQUIRED_AFTER_TARGET_BIND_BEFORE_PROVIDER_EXECUTION" },
+      { code: "REAL_SOIL_PAYLOAD_DECODER", status: "REQUIRED_IN_PRE_BOUNDARY_PROVIDER_PHASE" },
+      { code: "PROTECTED_MAIN_CRITICAL_BOUNDARY_RECHECK", status: "REQUIRED_BEFORE_PRE_LATE_OBSERVER_AND_FREEZE" }
+    ],
     warning_count: warnings.length,
     warnings,
     frozen_clock_contract: frozenClock,
@@ -310,6 +388,9 @@ function main() {
     dependency_graph_count: dependencyGate.runtime_dependency_graph_count ?? null,
     crop_viability: crop,
     live_window_viability_preflight_implemented: viabilityImplemented,
+    daily_batch_protocol_guard_implemented: dailyBatchProtocolGuardImplemented,
+    minimum_operational_headroom_minutes: 60,
+    operational_headroom_is_authority: false,
     soil_phase_admission_algorithm_ssot: "MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1",
     soil_phase_admission_deterministic_selftest: phaseAdmissionSelftest,
     soil_phase_profile_evidence_recomputed_from_exact_rows: true,

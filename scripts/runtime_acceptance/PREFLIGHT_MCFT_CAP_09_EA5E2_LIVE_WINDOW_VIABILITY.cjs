@@ -8,6 +8,12 @@ const {
   EXACT_HOUR_PHASE_OFFSETS: PHASE_ADMISSION_OFFSETS,
   evaluateExactHourPhaseAdmission,
 } = require("./MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1.cjs");
+const {
+  PROVIDER_EXPECTED_UPDATE_BEHAVIOR,
+  MIN_OPERATIONAL_HEADROOM_MINUTES,
+  evaluateOperationalHeadroom,
+  assessEa5e2ProtocolCompatibility,
+} = require("./MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs");
 
 const OUTPUT = "acceptance-output/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json";
 const EVIDENCE = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SOIL-FIRST-SEEN-EVIDENCE-V1.json";
@@ -18,6 +24,7 @@ const HOUR = 3_600_000;
 const MINUTE = 60_000;
 const MIN_PRE_BOUNDARY_LEAD_MINUTES = 20;
 const PRE_BOUNDARY_OFFSET_MINUTES = 30;
+const MIN_TARGET_SETUP_BUDGET_MINUTES = 120;
 const SOIL_WINDOW_MINUTES = 15;
 const MIN_INGRESS_MARGIN_MINUTES = 5;
 const REQUIRED_SOIL_CADENCE_MINUTES = 5;
@@ -221,7 +228,7 @@ function cropTargetProfile(now) {
     throw new Error("EA5E2_VIABILITY_CROP_AUTHORITY_DRIFT");
   }
 
-  let target = Math.ceil((now.getTime() + (PRE_BOUNDARY_OFFSET_MINUTES + MIN_PRE_BOUNDARY_LEAD_MINUTES) * MINUTE) / HOUR) * HOUR;
+  let target = Math.ceil((now.getTime() + (PRE_BOUNDARY_OFFSET_MINUTES + MIN_PRE_BOUNDARY_LEAD_MINUTES + MIN_TARGET_SETUP_BUDGET_MINUTES) * MINUTE) / HOUR) * HOUR;
   const maxEndDays = Math.max(...variants.map((variant) => variant.reduce((a, b) => a + Number(b), 0)));
   const scanEnd = Math.max(...starts) + (maxEndDays + 2) * 24 * HOUR;
   const rejected = [];
@@ -242,6 +249,7 @@ function cropTargetProfile(now) {
         candidate_t: new Date(target).toISOString(),
         crop_stage_code: [...stages][0],
         pre_boundary_lead_minutes: ((target - PRE_BOUNDARY_OFFSET_MINUTES * MINUTE) - now.getTime()) / MINUTE,
+        target_setup_budget_minutes: MIN_TARGET_SETUP_BUDGET_MINUTES,
         rejected_before_candidate: rejected,
       };
     }
@@ -254,12 +262,22 @@ async function main() {
   const evaluatedAt = new Date();
   const reasons = [];
   let kbs = null;
+  let kbsHeadroom = null;
+  const protocolCompatibility = assessEa5e2ProtocolCompatibility();
   let soil = null;
   let soilEvidence = null;
   let crop = null;
 
-  try { kbs = runKbsFreshness(); }
-  catch { reasons.push("KBS_RAW_HOURLY_CURRENT_AUTHORITY_NOT_AVAILABLE"); }
+  try {
+    kbs = runKbsFreshness();
+    kbsHeadroom = evaluateOperationalHeadroom(kbs.latest_age_hours, MIN_OPERATIONAL_HEADROOM_MINUTES);
+    if (!kbsHeadroom.operational_headroom_pass) reasons.push("KBS_RAW_HOURLY_OPERATIONAL_HEADROOM_INSUFFICIENT");
+  } catch {
+    reasons.push("KBS_RAW_HOURLY_CURRENT_AUTHORITY_NOT_AVAILABLE");
+  }
+  if (!protocolCompatibility.compatible) reasons.push(protocolCompatibility.reason);
+  reasons.push("LATE_EXACT_T_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED");
+  reasons.push("OBSERVER_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED");
 
   try {
     soil = await fetchSoilMetadata();
@@ -300,7 +318,7 @@ async function main() {
     evaluated_at: evaluatedAt.toISOString(),
     subject_sha: process.env.GITHUB_SHA || process.env.SUBJECT_SHA || null,
     candidate_T: candidate,
-    candidate_selection_basis: candidate ? "FIRST_CROP_LEGAL_EXACT_UTC_HOUR_AFTER_PHASE_CONDITIONED_PROVIDER_ADMISSION" : null,
+    candidate_selection_basis: candidate ? "FIRST_CROP_LEGAL_EXACT_UTC_HOUR_AFTER_PHASE_CONDITIONED_PROVIDER_ADMISSION_AND_SEPARATE_SETUP_BUDGET" : null,
     soil_window_expected: candidate ? `[${new Date(Date.parse(candidate) - SOIL_WINDOW_MINUTES * MINUTE).toISOString()},${candidate}]` : null,
     soil_required_latest_available_by: candidate ? new Date(Date.parse(candidate) - MIN_INGRESS_MARGIN_MINUTES * MINUTE).toISOString() : null,
     soil_required_observation_min: candidate ? new Date(Date.parse(candidate) - SOIL_WINDOW_MINUTES * MINUTE).toISOString() : null,
@@ -309,8 +327,24 @@ async function main() {
       current_age_hours: kbs.latest_age_hours,
       authority_max_age_hours: 6,
       current_authority_status: "PASS",
+      operational_headroom: kbsHeadroom,
       future_publication_prediction_used: false,
     } : null,
+    ea5e2_live_protocol_compatibility: protocolCompatibility,
+    late_exact_t_processing_budget: {
+      discovery_deadline_offset_minutes: 407,
+      frozen_cutoff_offset_minutes: 432,
+      conservative_reserved_minutes: 25,
+      qualification_status: "UNQUALIFIED_CONSERVATIVE_GUARD",
+      dispatch_allowed: false,
+    },
+    observer_end_to_end_budget: {
+      observer_offset_minutes: 437,
+      maximum_start_skew_minutes: 10,
+      qualification_status: "UNQUALIFIED",
+      dispatch_allowed: false,
+    },
+    provider_expected_update_behavior: PROVIDER_EXPECTED_UPDATE_BEHAVIOR,
     soil_endpoint25: soil,
     soil_first_seen_evidence: soilEvidence,
     soil_global_publication_lag_diagnostic: soilEvidence?.global_diagnostic ?? null,
@@ -325,11 +359,19 @@ async function main() {
       phase_algorithm_ssot: "MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1",
       minimum_repeat_samples_per_phase: MIN_REPEAT_SAMPLES_PER_PHASE,
       minimum_repeat_samples_is_authority: false,
+      kbs_operational_headroom_is_authority: false,
+      daily_batch_protocol_compatibility_used_as_safety_gate_only: true,
+      target_setup_budget_is_separate_from_kbs_freshness_headroom: true,
+      target_setup_budget_is_authority: false,
     },
     frozen_boundaries: {
       soil_window_minutes: SOIL_WINDOW_MINUTES,
       minimum_ingress_margin_minutes: MIN_INGRESS_MARGIN_MINUTES,
       kbs_raw_hourly_max_age_hours: 6,
+      kbs_minimum_operational_headroom_minutes: MIN_OPERATIONAL_HEADROOM_MINUTES,
+      kbs_operational_headroom_is_authority: false,
+      minimum_target_setup_budget_minutes: MIN_TARGET_SETUP_BUDGET_MINUTES,
+      target_setup_budget_is_authority: false,
       late_exact_hour_collector_offset_minutes: 390,
       late_exact_hour_cutoff_offset_minutes: 432,
       runtime_observer_offset_minutes: 437,

@@ -1,0 +1,122 @@
+name: mcft-cap-09-ea5e2-successor-runner-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e2-**'
+      - 'scripts/runtime_acceptance/*MCFT_CAP_09_EA5E2*'
+      - 'scripts/runtime_acceptance/*MCFT_CAP_09_KBS*'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2*'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2*'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json'
+      - 'apps/server/src/domain/twin_runtime/**'
+      - 'apps/server/src/runtime/twin_runtime/**'
+      - 'apps/server/src/persistence/twin_runtime/**'
+      - 'apps/server/src/external_evidence/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'apps/server/package.json'
+  merge_group:
+    types: [checks_requested]
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e2-**'
+      - 'scripts/runtime_acceptance/*MCFT_CAP_09_EA5E2*'
+      - 'scripts/runtime_acceptance/*MCFT_CAP_09_KBS*'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2*'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2*'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json'
+      - 'apps/server/src/domain/twin_runtime/**'
+      - 'apps/server/src/runtime/twin_runtime/**'
+      - 'apps/server/src/persistence/twin_runtime/**'
+      - 'apps/server/src/external_evidence/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'apps/server/package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-ea5e2-successor-runner-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  exact-head-successor-runner-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install pinned live-provider decoder stack
+        run: |
+          python -m pip install --disable-pip-version-check \
+            'eccodes==2.47.0' \
+            'eccodeslib==2.47.3.23' \
+            'numpy==1.26.4' \
+            'refet==0.4.2'
+          python -m eccodes selfcheck
+          python - <<'PY'
+          from importlib.metadata import version
+          expected = {'eccodes':'2.47.0','eccodeslib':'2.47.3.23','numpy':'1.26.4','refet':'0.4.2'}
+          actual = {name: version(name) for name in expected}
+          if actual != expected:
+              raise SystemExit(f'EA5E2_SUCCESSOR_DECODER_STACK_DRIFT:{actual}')
+          print(actual)
+          PY
+      - name: Re-prove server and successor observer/preflight types
+        run: |
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts \
+            scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts
+      - name: Re-prove deterministic scheduler and watcher semantics
+        run: |
+          node scripts/runtime_acceptance/MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs
+          python scripts/runtime_acceptance/WATCH_MCFT_CAP_09_KBS_BATCH_QUALIFICATION_WINDOW.py --selftest
+          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py selftest-gfs-selection
+          python -m py_compile \
+            scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py \
+            scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py \
+            scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
+      - name: Re-prove zero-provider zero-database full-chain fail-closed readiness
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs
+      - name: Reexecute exact-head successor runner qualification
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.cjs
+      - name: Upload exact-head successor qualification proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-successor-runner-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.json
+            acceptance-output/MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT.json
+            acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.json
+          if-no-files-found: error
+          retention-days: 90

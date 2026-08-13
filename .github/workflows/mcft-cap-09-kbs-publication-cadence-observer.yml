@@ -28,6 +28,9 @@ jobs:
     steps:
       - name: Checkout exact subject
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -51,7 +54,7 @@ jobs:
       - name: Observe exact KBS Raw Hourly publication state
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          MCFT_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         shell: bash
         run: |
           set -euo pipefail
