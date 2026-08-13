@@ -24,7 +24,8 @@ for (const marker of [
   "provider_publication_cadence = daily_batch",
   "PROVIDER_AVAILABILITY_WATERMARK_V1",
   "retain rolling candidate packages for approximately 36h",
-  "oldest eligible unexecuted logical slot",
+  "oldest(\n  T where",
+  "oldest-first backfill",
   "crop authority effect = NONE",
 ]) has(a11, marker, "MCFT_CAP09_ROLLING_INTERSECTION_AMENDMENT11_MARKER_REQUIRED");
 
