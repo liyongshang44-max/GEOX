@@ -23,23 +23,6 @@ on:
     types: [checks_requested]
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/mcft-cap-09-ea5e2-**'
-      - 'scripts/runtime_acceptance/*MCFT_CAP_09_EA5E2*'
-      - 'scripts/runtime_acceptance/*MCFT_CAP_09_KBS*'
-      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2*'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2*'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json'
-      - 'docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json'
-      - 'apps/server/src/domain/twin_runtime/**'
-      - 'apps/server/src/runtime/twin_runtime/**'
-      - 'apps/server/src/persistence/twin_runtime/**'
-      - 'apps/server/src/external_evidence/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'apps/server/package.json'
   workflow_dispatch:
 
 permissions:
