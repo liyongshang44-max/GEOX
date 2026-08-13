@@ -14,7 +14,7 @@ const ROLLING_PROOF = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ROLLING-PR
 const HOUR = 3600_000;
 
 function read(file) { return fs.readFileSync(file, "utf8"); }
-function git(...args) { return execFileSync("git", args, { encoding: "utf8" }).trim(); }
+function git(...args) { return execFileSync("git", args, { encoding:"utf8" }).trim(); }
 function requireMarker(text, marker, code, staticBlockers) { if (!text.includes(marker)) staticBlockers.push({ code, marker }); }
 function forbidMarker(text, marker, code, staticBlockers) { if (text.includes(marker)) staticBlockers.push({ code, marker }); }
 function obj(value, code) { if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(code); return value; }
@@ -160,7 +160,7 @@ try {
 
   if (db.includes("exact_interval_availability_cutoff_time?: string")) readinessBlockers.push({
     code:"EVIDENCE_SNAPSHOT_CALLSITE_MIGRATION_NOT_COMPLETE",
-    implication:"DEPRECATED_TRANSPORT_ALIAS_HAS_ZERO_AUTHORITY_EFFECT_AND_MUST_REMAIN_NON_AUTHORITATIVE_WHILE AMENDMENT11 CALLERS_MOVE_TO evidence_snapshot_time"
+    implication:"DEPRECATED_TRANSPORT_ALIAS_HAS_ZERO_AUTHORITY_EFFECT_AND_MUST_REMAIN_NON_AUTHORITATIVE_WHILE AMENDMENT11 CALLERS MOVE TO evidence_snapshot_time"
   });
 
   const result = {
