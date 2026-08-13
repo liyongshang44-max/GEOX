@@ -54,6 +54,8 @@ export type ExecuteExternalFormalCap04CandidateInputV1 = {
   runtime_config: CanonicalObjectEnvelopeV1;
   candidate_records: readonly CanonicalReplayEvidenceRecordV1[];
   crop_stage_context: ContinuationCropStageConfigurationContextV1;
+  /** Amendment-11 successor seam. Historical callers may omit this and retain the frozen T+432 behavior. */
+  evidence_snapshot_time?: string;
 };
 
 export type ExternalFormalCap04CandidateExecutionResultV1 = {
@@ -67,6 +69,8 @@ export type ExternalFormalCap04CandidateExecutionResultV1 = {
   record_set: Cap04ARecordSetV1;
   runtime_mode: typeof MCFT_CAP09_EXTERNAL_FORMAL_RUNTIME_MODE_V1;
   model_parameter_authority: typeof MCFT_CAP09_EXTERNAL_FORMAL_MODEL_PARAMETER_AUTHORITY_V1;
+  evidence_snapshot_time: string;
+  evidence_snapshot_source: "CALLER_SUPPLIED" | "HISTORICAL_FIXED_432_DEFAULT";
   canonical_persistence_authorized: false;
   provider_request_count: 0;
   database_write_count: 0;
@@ -76,6 +80,7 @@ export type ExternalFormalCap04CandidateExecutionResultV1 = {
 };
 
 type ScopeLikeV1 = { tenant_id: string; project_id: string; group_id: string | null; field_id: string; season_id: string | null; zone_id: string | null };
+type EvidenceSnapshotV1 = { time: string; source: "CALLER_SUPPLIED" | "HISTORICAL_FIXED_432_DEFAULT" };
 
 function requiredStringV1(value: unknown, code: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(code);
@@ -104,6 +109,15 @@ function finiteNumberV1(value: unknown, code: string): number {
 }
 function exactIntervalAvailabilityCutoffV1(logicalTime: string): string {
   return new Date(Date.parse(logicalTime) + EXTERNAL_FORMAL_EXACT_INTERVAL_AVAILABILITY_CUTOFF_OFFSET_MINUTES_V1 * 60_000).toISOString();
+}
+function resolveEvidenceSnapshotV1(logicalTime: string, createdAt: string, supplied: string | undefined): EvidenceSnapshotV1 {
+  if (supplied === undefined) {
+    return { time: exactIntervalAvailabilityCutoffV1(logicalTime), source: "HISTORICAL_FIXED_432_DEFAULT" };
+  }
+  const snapshot = canonicalIsoV1(supplied, "EXTERNAL_CAP04_SERVICE_EVIDENCE_SNAPSHOT_TIME_INVALID");
+  if (Date.parse(snapshot) < Date.parse(logicalTime)) throw new Error("EXTERNAL_CAP04_SERVICE_EVIDENCE_SNAPSHOT_BEFORE_LOGICAL_TIME");
+  if (Date.parse(snapshot) > Date.parse(createdAt)) throw new Error("EXTERNAL_CAP04_SERVICE_EVIDENCE_SNAPSHOT_AFTER_CREATED_AT");
+  return { time: snapshot, source: "CALLER_SUPPLIED" };
 }
 
 function dynamicsConfigV1(payload: ReturnType<ExternalFormalCap04ExecutionConfigResolverV1["resolveExecutionConfig"]>["payload"]): HourlyWaterBalanceConfigV1 {
@@ -197,6 +211,7 @@ function resultV1(input: {
   forcing_outcome: Cap04FutureForcingOutcomeV1;
   forecast_authority: ExternalFormalCompletedForecastAuthorityViewV1 | ExternalFormalBlockedForecastAuthorityViewV1;
   record_set_candidate: ExternalFormalCap04ARecordSetCandidateV1;
+  evidence_snapshot: EvidenceSnapshotV1;
 }): ExternalFormalCap04CandidateExecutionResultV1 {
   return {
     service_id: EXTERNAL_FORMAL_CAP04_CANDIDATE_EXECUTION_SERVICE_ID_V1,
@@ -209,6 +224,8 @@ function resultV1(input: {
     record_set: input.record_set_candidate.record_set,
     runtime_mode: MCFT_CAP09_EXTERNAL_FORMAL_RUNTIME_MODE_V1,
     model_parameter_authority: MCFT_CAP09_EXTERNAL_FORMAL_MODEL_PARAMETER_AUTHORITY_V1,
+    evidence_snapshot_time: input.evidence_snapshot.time,
+    evidence_snapshot_source: input.evidence_snapshot.source,
     canonical_persistence_authorized: false,
     provider_request_count: 0,
     database_write_count: 0,
@@ -220,7 +237,8 @@ function resultV1(input: {
 
 export function executeExternalFormalCap04CandidateV1(input: ExecuteExternalFormalCap04CandidateInputV1): ExternalFormalCap04CandidateExecutionResultV1 {
   const logicalTime = canonicalHourV1(input.logical_time, "EXTERNAL_CAP04_SERVICE_LOGICAL_TIME_INVALID");
-  canonicalIsoV1(input.created_at, "EXTERNAL_CAP04_SERVICE_CREATED_AT_INVALID");
+  const createdAt = canonicalIsoV1(input.created_at, "EXTERNAL_CAP04_SERVICE_CREATED_AT_INVALID");
+  const evidenceSnapshot = resolveEvidenceSnapshotV1(logicalTime, createdAt, input.evidence_snapshot_time);
   exactScopeV1(input.scope, { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 }, "EXTERNAL_CAP04_SERVICE_SCOPE_MISMATCH");
   exactScopeV1(input.handoff, input.scope, "EXTERNAL_CAP04_SERVICE_HANDOFF_SCOPE_MISMATCH");
   if (input.handoff.next_logical_tick_time !== logicalTime) throw new Error("EXTERNAL_CAP04_SERVICE_HANDOFF_TIME_MISMATCH");
@@ -246,7 +264,7 @@ export function executeExternalFormalCap04CandidateV1(input: ExecuteExternalForm
     crop_stage_context_hash: externalRuntime.crop_stage_context_authority.context_hash,
     crop_stage_context: input.crop_stage_context,
     authorized_soil_observation_binding_id: MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
-    exact_interval_availability_cutoff_time: exactIntervalAvailabilityCutoffV1(logicalTime),
+    exact_interval_availability_cutoff_time: evidenceSnapshot.time,
   });
   const base = preliminary.base_continuation_window;
   const dynamics = executeHourlyWaterBalanceV1({
@@ -313,7 +331,7 @@ export function executeExternalFormalCap04CandidateV1(input: ExecuteExternalForm
     });
     const forecastAuthority = buildExternalFormalBlockedForecastAuthorityV1({ compatibility_forecast: compatibilityBlocked, runtime_config: input.runtime_config });
     const candidate = buildExternalFormalCap04BlockedA2RecordSetV1({ ...commonRecordSetInputV1(input, sourceMembers), forecast_payload: forecastAuthority.forecast_candidate });
-    return resultV1({ operation_variant: "A2", input_authority: inputAuthority, source_members: sourceMembers, forcing_outcome: forcingOutcome, forecast_authority: forecastAuthority, record_set_candidate: candidate });
+    return resultV1({ operation_variant: "A2", input_authority: inputAuthority, source_members: sourceMembers, forcing_outcome: forcingOutcome, forecast_authority: forecastAuthority, record_set_candidate: candidate, evidence_snapshot: evidenceSnapshot });
   }
 
   const compatibilityForecastMath = executeCap04Pure72hForecastMathV1({
@@ -324,5 +342,5 @@ export function executeExternalFormalCap04CandidateV1(input: ExecuteExternalForm
   const normalizedCompatibilityForecastMath = normalizeCompatibilityForecastRuntimeAuthorityV1(compatibilityForecastMath, input.runtime_config);
   const forecastAuthority = buildExternalFormalCompletedForecastAuthorityV1({ compatibility_result: normalizedCompatibilityForecastMath, runtime_config: input.runtime_config });
   const candidate = buildExternalFormalCap04CompletedA1RecordSetV1({ ...commonRecordSetInputV1(input, sourceMembers), forecast_payload: forecastAuthority.forecast_candidate });
-  return resultV1({ operation_variant: "A1", input_authority: inputAuthority, source_members: sourceMembers, forcing_outcome: forcingOutcome, forecast_authority: forecastAuthority, record_set_candidate: candidate });
+  return resultV1({ operation_variant: "A1", input_authority: inputAuthority, source_members: sourceMembers, forcing_outcome: forcingOutcome, forecast_authority: forecastAuthority, record_set_candidate: candidate, evidence_snapshot: evidenceSnapshot });
 }
