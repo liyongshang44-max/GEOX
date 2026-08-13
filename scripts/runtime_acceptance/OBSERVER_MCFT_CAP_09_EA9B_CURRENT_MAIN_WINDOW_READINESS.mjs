@@ -13,6 +13,21 @@ const INDEX_URL = 'https://aglog.kbs.msu.edu/observations';
 const ANCHOR_URL = 'https://aglog.kbs.msu.edu/observations/6931';
 const ANCHOR_DATE = '2026-05-11';
 const MAX_PAGES = 20;
+const DETAIL_CANDIDATE_LIMIT = 60;
+const PHENOLOGY_EVENT = /\b(observation|scouting|sampling)\b/i;
+const TERMINATION_EVENT = /\b(harvest|mowing|termination|terminate)\b/i;
+const PHENOLOGY_SEMANTICS = [
+  { code: 'EMERGENCE', pattern: /\bemerg(?:e|ed|ence|ing)\b/i },
+  { code: 'TASSELING', pattern: /\btassel(?:ed|ing|s)?\b/i },
+  { code: 'SILKING', pattern: /\bsilk(?:ed|ing|s)?\b/i },
+  { code: 'BLISTER', pattern: /\bblister(?:ed|ing)?\b/i },
+  { code: 'MILK_STAGE', pattern: /\bmilk\s+stage\b/i },
+  { code: 'DOUGH_STAGE', pattern: /\bdough\s+stage\b/i },
+  { code: 'DENT_STAGE', pattern: /\bdent(?:ed|ing)?(?:\s+stage)?\b/i },
+  { code: 'PHYSIOLOGICAL_MATURITY', pattern: /\bphysiological\s+maturity\b/i },
+  { code: 'BLACK_LAYER', pattern: /\bblack\s+layer\b/i },
+  { code: 'SENESCENCE', pattern: /\bsenesc(?:ence|ent|ing)\b/i }
+];
 
 function sha256(bytes) {
   return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
@@ -68,6 +83,8 @@ async function main() {
 
     const pageProofs = [];
     const candidates = [];
+    const phenologyLeads = [];
+    const terminationLeads = [];
     let reachedAnchor = false;
     let totalRows = 0;
 
@@ -99,16 +116,36 @@ async function main() {
         const postAnchor = observationDate > ANCHOR_DATE;
         const planting = observationType.toLowerCase().includes('planting');
         const t1 = /\bT1(?:R[1-6])?\b/i.test(areas);
-        if (!(postAnchor && planting && t1)) continue;
-
-        const links = rows.nth(i).locator('a[href*="/observations/"]');
+        const phenologyEvent = PHENOLOGY_EVENT.test(observationType);
+        const terminationEvent = TERMINATION_EVENT.test(observationType);
+        const needsObservationId = postAnchor && t1 && (planting || phenologyEvent || terminationEvent);
         let observationId = null;
-        for (let l = 0; l < await links.count(); l += 1) {
-          const href = await links.nth(l).getAttribute('href');
-          const match = String(href || '').match(/\/observations\/(\d+)/);
-          if (match) { observationId = Number(match[1]); break; }
+        if (needsObservationId) {
+          const links = rows.nth(i).locator('a[href*="/observations/"]');
+          for (let l = 0; l < await links.count(); l += 1) {
+            const href = await links.nth(l).getAttribute('href');
+            const match = String(href || '').match(/\/observations\/(\d+)/);
+            if (match) { observationId = Number(match[1]); break; }
+          }
+          assert(Number.isInteger(observationId), 'EA9B_WINDOW_OBSERVER_CANDIDATE_MISSING_OBSERVATION_ID');
         }
-        assert(Number.isInteger(observationId), 'EA9B_WINDOW_OBSERVER_CANDIDATE_MISSING_OBSERVATION_ID');
+        if (postAnchor && t1 && phenologyEvent) {
+          phenologyLeads.push({
+            provider_observation_id: observationId,
+            observation_date: observationDate,
+            observation_type: observationType,
+            provider_area_identity: areas
+          });
+        }
+        if (postAnchor && t1 && terminationEvent) {
+          terminationLeads.push({
+            provider_observation_id: observationId,
+            observation_date: observationDate,
+            observation_type: observationType,
+            provider_area_identity: areas
+          });
+        }
+        if (!(postAnchor && planting && t1)) continue;
 
         const rowText = values.join(' ').toLowerCase();
         const cropTokens = ['corn', 'soybean', 'wheat', 'barley', 'rye', 'canola', 'sorghum']
@@ -142,6 +179,43 @@ async function main() {
     const unique = [...new Map(candidates.map((candidate) => [candidate.provider_observation_id, candidate])).values()]
       .sort((a, b) => a.provider_observation_id - b.provider_observation_id);
 
+    const uniquePhenologyLeads = [...new Map(phenologyLeads.map((candidate) => [candidate.provider_observation_id, candidate])).values()]
+      .sort((a, b) => a.provider_observation_id - b.provider_observation_id);
+    const uniqueTerminationLeads = [...new Map(terminationLeads.map((candidate) => [candidate.provider_observation_id, candidate])).values()]
+      .sort((a, b) => a.provider_observation_id - b.provider_observation_id);
+    assert(uniquePhenologyLeads.length + uniqueTerminationLeads.length <= DETAIL_CANDIDATE_LIMIT, 'EA9B_WINDOW_OBSERVER_DETAIL_CANDIDATE_LIMIT_EXCEEDED');
+
+    const detailInspections = [];
+    const combinedLeads = [...new Map(
+      [...uniquePhenologyLeads, ...uniqueTerminationLeads]
+        .map((candidate) => [candidate.provider_observation_id, candidate])
+    ).values()];
+    for (const lead of combinedLeads) {
+      const detailDigest = await digestPage(page, `${INDEX_URL}/${lead.provider_observation_id}`);
+      const detailText = normalize(await page.locator('body').innerText());
+      const lowerDetail = detailText.toLowerCase();
+      assert(lowerDetail.includes(lead.observation_date), 'EA9B_WINDOW_OBSERVER_DETAIL_DATE_MISMATCH');
+      assert(/\bt1(?:r[1-6])?\b/i.test(detailText), 'EA9B_WINDOW_OBSERVER_DETAIL_T1_SCOPE_MISSING');
+      const semanticTokens = PHENOLOGY_SEMANTICS
+        .filter(({ pattern }) => pattern.test(detailText))
+        .map(({ code }) => code);
+      detailInspections.push({
+        provider_observation_id: lead.provider_observation_id,
+        observation_date: lead.observation_date,
+        observation_type: lead.observation_type,
+        provider_area_identity: lead.provider_area_identity,
+        phenology_semantic_tokens: semanticTokens,
+        phenology_semantic_candidate: semanticTokens.length > 0,
+        termination_event_candidate: TERMINATION_EVENT.test(lead.observation_type),
+        candidate_only_not_authority: true,
+        requires_separate_spatial_temporal_mapping_and_exact_head_requalification: true,
+        provider_body_emitted: false,
+        ...detailDigest
+      });
+    }
+    const phenologySemanticCandidates = detailInspections.filter((candidate) => candidate.phenology_semantic_candidate);
+    const terminationCandidates = detailInspections.filter((candidate) => candidate.termination_event_candidate);
+
     const result = {
       schema_version: 'geox_mcft_cap09_ea9b_current_main_window_readiness_v1',
       status: 'PASS',
@@ -157,6 +231,17 @@ async function main() {
       candidates: unique,
       readiness: unique.length > 0 ? 'CANDIDATE_DETECTED' : 'NO_NEW_CANDIDATE_CURRENTLY_OBSERVED',
       time_gated_snapshot: unique.length === 0,
+      current_season_phenology_lead_count: uniquePhenologyLeads.length,
+      current_season_termination_lead_count: uniqueTerminationLeads.length,
+      inspected_current_season_detail_count: detailInspections.length,
+      phenology_semantic_candidate_count: phenologySemanticCandidates.length,
+      phenology_semantic_candidates: phenologySemanticCandidates,
+      termination_candidate_count: terminationCandidates.length,
+      termination_candidates: terminationCandidates,
+      crop_authority_input_readiness: phenologySemanticCandidates.length > 0
+        ? 'CURRENT_SEASON_PHENOLOGY_INPUT_CANDIDATE_DETECTED_REQUALIFICATION_REQUIRED'
+        : 'NO_DIRECT_CURRENT_SEASON_PHENOLOGY_INPUT_DETECTED_IN_SCANNED_WINDOW',
+      direct_current_season_stage_authority_established: false,
       global_absence_claimed: false,
       new_season_created: false,
       new_season_id: null,
