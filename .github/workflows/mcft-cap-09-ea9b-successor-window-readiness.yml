@@ -1,0 +1,37 @@
+name: mcft-cap-09-ea9b-successor-window-readiness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea9b-successor-window-readiness.yml'
+      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA9B_SUCCESSOR_WINDOW_READINESS.mjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9B-NEW-NATURAL-SEASON-AUTHORITY-ADJUDICATION-V1.json'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Run fail-closed successor-window readiness preflight
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA9B_SUCCESSOR_WINDOW_READINESS.mjs
+      - name: Upload immutable readiness proof
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-ea9b-successor-window-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA9B_SUCCESSOR_WINDOW_READINESS.json
+          if-no-files-found: error
+          retention-days: 30
