@@ -33,6 +33,7 @@ function has(text, marker, code) { assert(text.includes(marker), `${code}:${mark
 function write(value) { fs.mkdirSync(path.dirname(OUT), { recursive: true }); fs.writeFileSync(OUT, `${JSON.stringify(value, null, 2)}\n`); console.log(JSON.stringify(value)); }
 
 try {
+  const exactHead = git("rev-parse", "HEAD");
   assert.equal(git("rev-parse", `HEAD:${HISTORICAL_AUTH}`), "4f0df5f9fe896bf26eda3d673e3153941f59c2e7", "HISTORICAL_AUTHORITY_MUTATED");
   assert.equal(git("rev-parse", `HEAD:${HISTORICAL_GATE}`), "af6d0fbc208ad37f7fd00084ac4636fd2c08fac6", "HISTORICAL_GATE_MUTATED");
   assert.equal(git("rev-parse", `dc9b03a0197e94f64d0d06447999290057e722f2:${OBSERVER}`), "ec18b215f10bedd66fa2a6a1efef0e41cf57ce38", "HISTORICAL_OBSERVER_NOT_PRESERVED_IN_GIT_HISTORY");
@@ -77,6 +78,7 @@ try {
   const fullChainProof = JSON.parse(read(FULL_CHAIN_PROOF));
   const dependencyProof = JSON.parse(read(DEPENDENCY_PROOF));
   assert.equal(fullChainProof.status, "PASS", "FULL_CHAIN_STATIC_PREFLIGHT_REQUIRED");
+  assert.equal(fullChainProof.subject_sha, exactHead, "FULL_CHAIN_EXACT_HEAD_SUBJECT_REQUIRED");
   assert.equal(fullChainProof.activation_readiness, "BLOCKED", "UNQUALIFIED_LIVE_DISPATCH_MUST_REMAIN_BLOCKED");
   assert.deepEqual(fullChainProof.readiness_blockers.map((item) => item.code).sort(), [...authority.live_dispatch_blockers].sort(), "FULL_CHAIN_READINESS_BLOCKER_SET_DRIFT");
   assert.equal(dependencyProof.status, "PASS", "RUNTIME_DEPENDENCY_GRAPH_REQUIRED");
@@ -86,7 +88,7 @@ try {
   write({
     schema_version: "geox_mcft_cap09_ea5e2_successor_runner_qualification_result_v1",
     status: "PASS",
-    subject_sha: git("rev-parse", "HEAD"),
+    subject_sha: exactHead,
     qualification_reexecuted: true,
     exact_head_critical_blob_digest: criticalDigest,
     runtime_dependency_graph_sha256: dependencyProof.expected_dependency_graph_sha256,
