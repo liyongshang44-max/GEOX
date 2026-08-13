@@ -1,0 +1,211 @@
+name: mcft-cap-09-ea5e2-timing-budget-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e2-timing-budget-qualification.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts'
+      - 'scripts/runtime_acceptance/SEED_MCFT_CAP_09_EA5E2_OBSERVER_TIMING_QUALIFICATION.ts'
+      - 'scripts/runtime_acceptance/QUALIFY_MCFT_CAP_09_EA5E2_TIMING_BUDGETS.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_TIMING_BUDGET_QUALIFICATION.cjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e2-timing-budget-qualification.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts'
+      - 'scripts/runtime_acceptance/SEED_MCFT_CAP_09_EA5E2_OBSERVER_TIMING_QUALIFICATION.ts'
+      - 'scripts/runtime_acceptance/QUALIFY_MCFT_CAP_09_EA5E2_TIMING_BUDGETS.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_TIMING_BUDGET_QUALIFICATION.cjs'
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type QUALIFY_EXACT_MAIN_NO_FORMAL_WRITE'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-ea5e2-timing-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  READINESS_DB_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+  MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+  MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+  MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+  MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+  MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+  FORMAL_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck timing qualification entrypoints
+        run: |
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts \
+            scripts/runtime_acceptance/SEED_MCFT_CAP_09_EA5E2_OBSERVER_TIMING_QUALIFICATION.ts \
+            scripts/runtime_acceptance/QUALIFY_MCFT_CAP_09_EA5E2_TIMING_BUDGETS.ts
+      - name: Prove fail-closed timing qualification contract
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_TIMING_BUDGET_QUALIFICATION.cjs
+
+  exact-main-live-timing:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require explicit exact protected-main qualification dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event.inputs.confirm }}" != "QUALIFY_EXACT_MAIN_NO_FORMAL_WRITE" ]]; then
+            echo "EA5E2_TIMING_QUALIFICATION_CONFIRMATION_REQUIRED" >&2
+            exit 1
+          fi
+          if [[ "${{ github.ref }}" != "refs/heads/main" ]]; then
+            echo "EA5E2_TIMING_QUALIFICATION_PROTECTED_MAIN_REQUIRED" >&2
+            exit 1
+          fi
+          git fetch --no-tags origin main
+          if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]]; then
+            echo "EA5E2_TIMING_QUALIFICATION_EXACT_MAIN_DRIFT" >&2
+            exit 1
+          fi
+      - name: Require all qualification-only secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY FORMAL_DATABASE_URL; do
+            if [[ -z "${!name:-}" ]]; then echo "EA5E2_TIMING_QUALIFICATION_SECRET_REQUIRED:${name}" >&2; exit 1; fi
+          done
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+      - name: Reprove Formal primary branch A0 and pointer graph read only
+        env:
+          MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts
+      - name: Select current exact KBS row with unchanged six-hour freshness
+        id: target
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py precheck-kbs > /tmp/mcft-kbs-timing-target.json
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs=require('fs');
+          const value=JSON.parse(fs.readFileSync('/tmp/mcft-kbs-timing-target.json','utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));
+          if(value.status!=='PASS'||Number(value.latest_age_hours)>6||!String(value.latest_raw_hourly_timestamp).endsWith(':00:00.000Z')) throw new Error('EA5E2_TIMING_QUALIFICATION_FRESH_EXACT_TARGET_REQUIRED');
+          process.stdout.write(`target_t=${value.latest_raw_hourly_timestamp}\n`);
+          NODE
+      - name: Execute three real KBS collector timing trials
+        shell: bash
+        env:
+          MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_EA5E2_TARGET_T: ${{ steps.target.outputs.target_t }}
+          MCFT_EA5E2_LIVE_PHASE: TIMING_QUALIFICATION_LATE_EXACT_HOUR
+          MCFT_EA5E2_ISOLATED_READINESS_ACK: 'true'
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          PYTHON: python
+        run: |
+          set -euo pipefail
+          for trial in 1 2 3; do
+            MCFT_EA5E2_TIMING_TRIAL="$trial" pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+          done
+      - name: Seed isolated exact-five observer timing fixture
+        env:
+          MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+        run: pnpm exec tsx scripts/runtime_acceptance/SEED_MCFT_CAP_09_EA5E2_OBSERVER_TIMING_QUALIFICATION.ts
+      - name: Execute three real Formal-read-only DB-only observer timing trials
+        shell: bash
+        env:
+          MCFT_EA5E2_TARGET_T: '2026-06-03T02:00:00.000Z'
+          MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_EA5E2_OBSERVER_TIMING_QUALIFICATION_ACK: 'true'
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+        run: |
+          set -euo pipefail
+          for trial in 1 2 3; do
+            pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts
+            cp acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json "acceptance-output/MCFT_CAP_09_EA5E2_OBSERVER_TIMING_TRIAL_${trial}.json"
+          done
+      - name: Qualify collector and observer processing budgets
+        env:
+          MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/QUALIFY_MCFT_CAP_09_EA5E2_TIMING_BUDGETS.ts
+      - name: Require metadata-only zero-Formal-effect qualification result
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_TIMING_BUDGET_QUALIFICATION.json','utf8'));
+          if(p.status!=='PASS'||p.subject_sha!==process.env.GITHUB_SHA||p.formal_database_write_count!==0||p.formal_r2_write_count!==0||p.scheduler_write_count!==0||p.live_dispatch_authorized!==false||p.raw_values_emitted!==false) throw new Error('EA5E2_TIMING_QUALIFICATION_SAFE_PROOF_REQUIRED');
+      - name: Upload metadata-only timing qualification proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-timing-budget-${{ github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5E2_LATE_TIMING_TRIAL_*.json
+            acceptance-output/MCFT_CAP_09_EA5E2_OBSERVER_TIMING_SEED.json
+            acceptance-output/MCFT_CAP_09_EA5E2_OBSERVER_TIMING_TRIAL_*.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TIMING_BUDGET_QUALIFICATION.json
+          if-no-files-found: error
+          retention-days: 90

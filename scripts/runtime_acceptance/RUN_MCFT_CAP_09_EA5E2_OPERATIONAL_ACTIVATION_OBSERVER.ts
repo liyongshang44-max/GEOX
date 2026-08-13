@@ -272,7 +272,14 @@ async function main(): Promise<void> {
   const subjectSha = env("MCFT_EA5E2_SUBJECT_SHA");
   if (!/^[0-9a-f]{40}$/.test(subjectSha)) throw new Error("EA5E2_ACTIVATION_EXACT_SUBJECT_SHA_REQUIRED");
   const expectedObserverMs = Date.parse(targetT) + OBSERVER_OFFSET_MINUTES * MINUTE_MS;
-  const observedAtMs = Date.now();
+  const timingQualification = process.env.MCFT_EA5E2_OBSERVER_TIMING_QUALIFICATION_ACK === "true";
+  if (timingQualification
+      && (process.env.GITHUB_EVENT_NAME !== "workflow_dispatch"
+        || process.env.GITHUB_REF !== "refs/heads/main"
+        || process.env.GITHUB_SHA !== subjectSha)) {
+    throw new Error("EA5E2_OBSERVER_TIMING_QUALIFICATION_EXACT_MAIN_WORKFLOW_DISPATCH_REQUIRED");
+  }
+  const observedAtMs = timingQualification ? expectedObserverMs : Date.now();
   if (observedAtMs < expectedObserverMs) throw new Error("EA5E2_ACTIVATION_OBSERVER_EARLY_FORBIDDEN");
   const observerSkewMinutes = (observedAtMs - expectedObserverMs) / MINUTE_MS;
   if (observerSkewMinutes > MAX_OBSERVER_START_SKEW_MINUTES) {
@@ -401,6 +408,11 @@ async function main(): Promise<void> {
       formal_window_started: false,
       ea5e3_authorized: false,
       raw_values_emitted: false,
+      timing_qualification_only: timingQualification,
+      scheduling_clock_bypassed_for_historical_fixture: timingQualification,
+      timing_qualification_actual_execution_started_at: observerExecutionStartedAt,
+      authority_effect: false,
+      live_dispatch_authorized: false,
     };
     fs.writeFileSync(
       "acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json",
