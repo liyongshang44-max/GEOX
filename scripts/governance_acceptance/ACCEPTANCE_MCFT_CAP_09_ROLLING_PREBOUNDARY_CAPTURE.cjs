@@ -32,6 +32,7 @@ requireAll(amendment, [
   "available_to_runtime_at <= T",
   "ingested_at <= T",
   "actual hourly pre-boundary capture",
+  "A pre-boundary package may qualify only if its soil/GFS evidence was actually acquired and frozen before its target `T`.",
   "retain rolling candidate packages for approximately 36h",
   "Qualification candidate retention is not Formal canonical persistence",
   "crop_authority_effect = NONE",
@@ -113,7 +114,16 @@ for (const forbidden of [
 
 requireAll(providerRunner, [
   "PRE_BOUNDARY_CAUSAL",
+  "MCFT_EA5E2_PREBOUNDARY_DEADLINE_AUTHORITY",
+  "HISTORICAL_T_MINUS_5_MARGIN",
+  "PROVIDER_AVAILABILITY_WATERMARK_V1",
+  "mcft-cap-09-rolling-preboundary-capture",
+  "Date.parse(target)",
   "soil_observation_inside_t_minus_15_to_t: true",
+  "preboundary_deadline_authority:",
+  "preboundary_deadline_at:",
+  "all_preboundary_available_to_runtime_at_lte_target: true",
+  "all_preboundary_ingested_at_lte_target: true",
   "gfs_same_cycle_pair: true",
   "rehydration_manifest",
   "formal_database_write_count: 0",
@@ -121,10 +131,12 @@ requireAll(providerRunner, [
 ], "MCFT_CAP09_ROLLING_PREBOUNDARY_EXISTING_RUNNER_CAPABILITY_REQUIRED");
 
 console.log(JSON.stringify({
-  schema_version: "geox_mcft_cap09_rolling_preboundary_capture_acceptance_v1",
+  schema_version: "geox_mcft_cap09_rolling_preboundary_capture_acceptance_v2",
   status: "PASS",
   temporal_authority: "PROVIDER_AVAILABILITY_WATERMARK_V1",
   schedule: "hourly",
+  preboundary_deadline_authority: "TARGET_T",
+  historical_t_minus_5_default_preserved_for_nonrolling_callers: true,
   candidate_retention_hours: 36,
   captured_families: ["soil_moisture_observation_v1", "future_weather_assumption_v1", "future_et0_assumption_v1"],
   kbs_daily_batch_required_at_capture: false,
