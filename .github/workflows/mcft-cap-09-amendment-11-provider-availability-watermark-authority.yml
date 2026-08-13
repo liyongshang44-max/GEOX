@@ -18,6 +18,7 @@ jobs:
       - name: Checkout exact candidate head
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Resolve exact Amendment-11 base
