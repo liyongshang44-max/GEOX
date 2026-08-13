@@ -59,7 +59,7 @@ type CandidateV1 = {
   rehydration_manifest: {
     expected_records: Array<{ record_type: string; source_record_id: string; record_semantic_sha256: string }>;
     gfs: { provenance: VerifiedRawEvidenceProvenanceV1; ingested_at: string };
-    soil: { provenance: VerifiedRawEvidenceProvenanceV1; ingested_at: string };
+    soil: { provenance: VerifiedRawEvidenceProvenanceV1; ingested_at?: string };
   };
   raw_retention_refs: string[];
   side_effects: {
@@ -69,6 +69,7 @@ type CandidateV1 = {
     runtime_write_count: number;
     crop_authority_effect: string;
   };
+  captured_at?: string;
 };
 
 function required(name: string): string {
@@ -289,7 +290,7 @@ class RetainedRawReplayTransportV1 implements ExternalEvidenceTransportPortV1 {
 }
 
 class PythonGfsRawBundleDecoderV1 implements ExternalEvidenceDecoderPortV1 {
-  readonly decoder_id = "MCFT_CAP09_ROLLING_REHYDRATION_GFS_DECODER_V1";
+  readonly decoder_id = "MCFT_CAP09_EA5E2_GFS_RAW_BUNDLE_DECODER_V1";
   readonly decoder_version = "1";
   constructor(private readonly target: string, private readonly restoredIngestedAt: string) {}
   async decodeRetainedEvidence(input: ExternalEvidenceDecoderInputV1): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
@@ -379,9 +380,9 @@ async function rehydrate(candidate: CandidateV1, pool: Pool): Promise<{ results:
   const soilRaw = await store.readRetainedRawEvidence({ retention_ref: soilProvenance.retention_ref, retained_sha256: soilProvenance.raw_sha256, retained_bytes: soilProvenance.raw_bytes });
   if (gfsRaw.retained_at !== gfsProvenance.retained_at || soilRaw.retained_at !== soilProvenance.retained_at) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_RETAINED_AT_DRIFT");
 
-  const canonicalizedAt = canonicalIso(String((candidate as unknown as { captured_at?: string }).captured_at ?? candidate.target_t), "MCFT_CAP09_ROLLING_REHYDRATION_CANONICALIZED_AT_INVALID");
+  const canonicalizedAt = canonicalIso(String(candidate.captured_at ?? candidate.target_t), "MCFT_CAP09_ROLLING_REHYDRATION_CANONICALIZED_AT_INVALID");
   const gfsResults = await collectRetainDecodeCanonicalizeExternalEvidenceV1({
-    dataset_id: `mcft_cap09_rolling_rehydrate_gfs_${candidate.target_t}`,
+    dataset_id: `mcft_cap09_ea5e2_live_gfs_${candidate.target_t}`,
     scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
     request: requestFromProvenance(gfsProvenance, ["application/x-tar"]),
     canonicalized_at: canonicalizedAt,
@@ -391,7 +392,7 @@ async function rehydrate(candidate: CandidateV1, pool: Pool): Promise<{ results:
     decoder: new PythonGfsRawBundleDecoderV1(candidate.target_t, manifest.gfs.ingested_at),
   });
   const soilResults = await collectRetainDecodeCanonicalizeExternalEvidenceV1({
-    dataset_id: `mcft_cap09_rolling_rehydrate_soil_${candidate.target_t}`,
+    dataset_id: `mcft_cap09_ea5e2_live_soil_${candidate.target_t}`,
     scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
     request: requestFromProvenance(soilProvenance, [soilProvenance.content_type.split(";", 1)[0]]),
     canonicalized_at: canonicalizedAt,
@@ -423,6 +424,8 @@ function selftest(): void {
   console.log(JSON.stringify({
     status: "PASS",
     producer_subject_sha_bound: true,
+    producer_dataset_identity_preserved: true,
+    producer_decoder_identity_preserved: true,
     formal_raw_prefix_forbidden: true,
     read_only_r2: true,
     s3_put_count: 0,
@@ -462,6 +465,8 @@ async function main(): Promise<void> {
       record_types: results.map((x) => x.record.record_type).sort(),
       semantic_manifest_match: true,
       producer_bound_raw_reverification: true,
+      producer_dataset_identity_preserved: true,
+      producer_decoder_identity_preserved: true,
       provider_refetch_count: 0,
       private_r2_head_count: store.head_count,
       private_r2_get_count: store.get_count,
