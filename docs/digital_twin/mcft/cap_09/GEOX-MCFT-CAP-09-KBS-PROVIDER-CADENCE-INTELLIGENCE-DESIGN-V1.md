@@ -97,27 +97,28 @@ The zero-provider/zero-database full-chain gate reports two independent results:
 
 It also enumerates every known temporal and runtime pre-dispatch requirement. A small blocker count is never a claim that unexecuted Formal, GFS, soil-decoder, exact-head qualification, or long-window drift checks passed.
 
-## P0: current first-future-T orchestration incompatibility
+## Phase-aware single-T orchestration
 
 The confirmed daily-batch mechanism is incompatible with the current first-future-T orchestration used with the frozen Amendment-07 late exact-hour schedule.
 
 The current authority requires the same KBS Raw Hourly source to contain the exact target row by `T+427m`, with a `T+432m` cutoff. A daily batch published at approximately 05:xxZ with observations only through approximately 04:00Z cannot contain a newly selected future target such as 06:00Z. That target is expected in the next daily batch, roughly `T+23h`, not inside the frozen seven-hour envelope.
 
-Therefore:
+Therefore the first-future-T mode remains incompatible:
 
 - retry cannot resolve the mismatch;
 - freshness headroom cannot resolve the mismatch;
 - relabeling or copying an older hour remains forbidden;
-- the full EA5E2 live workflow must fail closed before any live activation side effect;
 - the current orchestration can be resolved by phase-aware long-horizon target scheduling, a new authority protocol aligned with delayed daily-batch observation, or a separately qualified authoritative source that can publish exact `T` inside the frozen envelope.
 
-This is not a claim that every possible single `T` is mathematically impossible under the existing source and authority. A sufficiently early target before the next daily release could fit `T+427m`; the repository does not currently implement the durable, phase-aware scheduling needed to select and carry such a target across the long pre-boundary horizon. The 24-slot Formal objective remains a separate, stronger constraint.
+The live viability path now implements the single-T phase-aware option. Its non-authoritative planning profile uses a conservative `05:30Z` daily first-seen upper bound and projected batch coverage from previous-day `05:00Z` through batch-day `04:00Z`. It scans only crop-legal exact hours inside a bounded 180-minute dispatch horizon and requires a target-specific proof that projected first-seen precedes the operational `T+407m` discovery deadline. Under that profile, `22:00Z` is rejected and `23:00Z` is the first feasible evening hour; the latter retains 17 minutes of planning slack before discovery closes.
+
+The planning profile does not admit Evidence. At the late phase, the same-source exact-T poll still must find exactly one row, the retrieval-completed freshness must still be at most six hours, the real collector still must finish before the frozen `T+432m` cutoff, and every failure remains fail-closed. The 24-slot Formal objective remains a separate, stronger constraint and is not claimed compatible by this single-T scheduler.
 
 This implementation does not invent a replacement cutoff. The publication observer must accumulate enough real batches to support a later authority adjudication.
 
 ## Pre-dispatch operational headroom
 
-The unchanged six-hour freshness threshold remains the production authority. Separately, the live scheduler requires at least 60 minutes of remaining freshness headroom before starting expensive work. Target selection also reserves 120 minutes for dependency installation, Formal verification, private-store smoke, source probes, and target binding. These are independent budgets:
+The unchanged six-hour freshness threshold remains the production authority. Legacy first-future scheduling requires at least 60 minutes of remaining current-snapshot freshness headroom. Phase-aware scheduling does not use a stale pre-boundary Raw Hourly snapshot as late-phase admission; it observes metadata for source identity and defers the unchanged freshness authority to the actual late retrieval. Target selection reserves 120 minutes for dependency installation, Formal verification, private-store smoke, source probes, and target binding, and is bounded to a 180-minute target horizon.
 
 ```text
 50 minutes = 30-minute pre-boundary offset + 20-minute minimum lead
@@ -126,7 +127,7 @@ The unchanged six-hour freshness threshold remains the production authority. Sep
 120 minutes = target setup budget, evaluated independently of source freshness
 ```
 
-A source can therefore still pass the frozen six-hour authority while the full-live scheduler correctly refuses dispatch. This headroom is not source authority and cannot cure the exact-T protocol incompatibility.
+A source can therefore pass or fail the frozen six-hour authority at pre-boundary time without that snapshot being relabeled as late Evidence. Only the actual late exact-T retrieval can pass the production freshness gate. Scheduler headroom and the planning profile are not source authority.
 
 ## Bounded release-window capture
 

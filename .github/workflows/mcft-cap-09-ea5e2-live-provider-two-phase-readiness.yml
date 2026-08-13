@@ -216,13 +216,12 @@ jobs:
         shell: bash
         run: rm -f acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
 
-      - name: Fail fast unless KBS Raw Hourly is currently within unchanged 6h authority
+      - name: Reobserve KBS metadata for phase-aware planning without weakening late retrieval authority
         shell: bash
         run: |
           set -o pipefail
           mkdir -p acceptance-output
-          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py precheck-kbs \
-            --minimum-operational-headroom-minutes 60 \
+          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py inspect-kbs \
             | tee acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
 
       - name: Bind provider-compatible target T selected by read-only viability preflight
@@ -246,6 +245,10 @@ jobs:
           const viability=JSON.parse(fs.readFileSync('acceptance-output/viability/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json','utf8'));
           if(viability.status!=='PASS'||viability.candidate_T!==targetText||viability.live_activation_started!==false||viability.authority_changed!==false) throw new Error('EA5E2_ACTIVATION_VIABILITY_PASS_REQUIRED');
           if(viability.crop_candidate?.target_setup_budget_minutes!==120||viability.authority_audit?.target_setup_budget_is_separate_from_kbs_freshness_headroom!==true) throw new Error('EA5E2_ACTIVATION_SEPARATE_TARGET_SETUP_BUDGET_REQUIRED');
+          if(viability.ea5e2_live_protocol_compatibility?.target_scheduling_mode!=='PHASE_AWARE_LONG_HORIZON'||viability.ea5e2_live_protocol_compatibility?.compatible!==true) throw new Error('EA5E2_ACTIVATION_PHASE_AWARE_PROTOCOL_REQUIRED');
+          if(viability.crop_candidate?.target_temporal_feasibility?.feasible!==true||viability.crop_candidate?.target_temporal_feasibility?.actual_same_source_exact_t_poll_still_required!==true) throw new Error('EA5E2_ACTIVATION_TARGET_SPECIFIC_TEMPORAL_FEASIBILITY_REQUIRED');
+          const kbsPlanning=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json','utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));
+          if(kbsPlanning.status!=='OBSERVED'||kbsPlanning.phase_aware_planning_only!==true||kbsPlanning.late_actual_retrieval_must_reprove_authority!==true||kbsPlanning.configured_max_age_hours!==6) throw new Error('EA5E2_ACTIVATION_KBS_PHASE_AWARE_PLANNING_BOUNDARY_REQUIRED');
           const observer=new Date(targetMs+437*60000);
           fs.mkdirSync('acceptance-output',{recursive:true});
           fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json',JSON.stringify({
@@ -257,6 +260,8 @@ jobs:
             pre_boundary_offset_minutes:-30,
             minimum_pre_boundary_lead_minutes:MIN_PRE_BOUNDARY_LEAD_MINUTES,
             minimum_target_setup_budget_minutes:120,
+            target_scheduling_mode:'PHASE_AWARE_LONG_HORIZON',
+            target_specific_temporal_feasibility:viability.crop_candidate.target_temporal_feasibility,
             pre_boundary_lead_minutes:preBoundaryLeadMinutes,
             live_window_viability_preflight_pass:true,
             live_window_viability_schema:viability.schema_version,
@@ -522,9 +527,9 @@ jobs:
           const observer=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json','utf8'));
           const soilP95=Number(viability.soil_global_publication_lag_diagnostic?.p95_minutes);
           if(!Number.isFinite(soilP95)) throw new Error('EA5E2_ACTIVATION_SOIL_GLOBAL_P95_PRODUCER_REQUIRED');
-          if(kbs.status!=='PASS'||Number(kbs.latest_age_hours)>6||Number(kbs.configured_max_age_hours)!==6) throw new Error('EA5E2_ACTIVATION_KBS_FRESHNESS_AUTHORITY_REQUIRED');
+          if(kbs.status!=='OBSERVED'||kbs.phase_aware_planning_only!==true||kbs.late_actual_retrieval_must_reprove_authority!==true||Number(kbs.configured_max_age_hours)!==6) throw new Error('EA5E2_ACTIVATION_KBS_PHASE_AWARE_PLANNING_BOUNDARY_REQUIRED');
           if(viability.status!=='PASS'||viability.candidate_T!==process.env.TARGET_T||viability.authority_changed!==false||viability.live_activation_started!==false) throw new Error('EA5E2_ACTIVATION_LIVE_WINDOW_VIABILITY_REQUIRED');
-          if(availability.status!=='PASS'||availability.target_t!==process.env.TARGET_T||availability.same_source_exact_t_only!==true) throw new Error('EA5E2_ACTIVATION_LATE_AVAILABILITY_PROOF_REQUIRED');
+          if(availability.status!=='PASS'||availability.target_t!==process.env.TARGET_T||availability.same_source_exact_t_only!==true||Number(availability.latest_age_hours)>6) throw new Error('EA5E2_ACTIVATION_LATE_AVAILABILITY_AND_FRESHNESS_AUTHORITY_REQUIRED');
           if(target.subject_sha!==process.env.SUBJECT_SHA||target.target_t!==process.env.TARGET_T||crop.target_t!==process.env.TARGET_T||observer.subject_sha!==process.env.SUBJECT_SHA||observer.target_t!==process.env.TARGET_T) throw new Error('EA5E2_ACTIVATION_PROOF_IDENTITY_MISMATCH');
           if(target.pre_boundary_offset_minutes!==-30||target.minimum_pre_boundary_lead_minutes!==20||Number(target.pre_boundary_lead_minutes)<20) throw new Error('EA5E2_ACTIVATION_TARGET_PREBOUNDARY_LEAD_REQUIRED');
           if(crop.status!=='PASS'||crop.provider_request_count!==0||crop.database_write_count!==0||crop.crop_stage_code!==observer.crop_stage_code) throw new Error('EA5E2_ACTIVATION_TARGET_CROP_PREFLIGHT_MUST_MATCH_OBSERVER');
@@ -542,8 +547,10 @@ jobs:
             late_semantic_availability_polling:true,
             late_semantic_first_available_at:availability.first_semantically_available_at,
             late_semantic_poll_attempt_count:availability.attempt_count,
-            kbs_latest_raw_hourly_timestamp:kbs.latest_raw_hourly_timestamp,
-            kbs_latest_age_hours:kbs.latest_age_hours,
+            kbs_preboundary_planning_latest_raw_hourly_timestamp:kbs.latest_raw_hourly_timestamp,
+            kbs_preboundary_planning_latest_age_hours:kbs.latest_age_hours,
+            kbs_late_authority_latest_raw_hourly_timestamp:availability.latest_timestamp,
+            kbs_late_authority_latest_age_hours:availability.latest_age_hours,
             kbs_max_age_hours:6,
             pre_boundary_collector_offset_minutes:-30,
             minimum_pre_boundary_lead_minutes:20,
