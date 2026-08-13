@@ -4,10 +4,12 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-rolling-preboundary-rehydration-live-proof.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'
   push:
     branches: [main]
     paths:
       - '.github/workflows/mcft-cap-09-rolling-preboundary-rehydration-live-proof.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'
   workflow_dispatch:
 
 permissions:
