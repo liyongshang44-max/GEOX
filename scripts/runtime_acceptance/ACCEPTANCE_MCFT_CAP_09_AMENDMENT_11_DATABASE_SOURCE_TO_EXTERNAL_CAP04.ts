@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { Pool } from "pg";
 
-import { executeExternalFormalCap04CandidateV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_cap04_amendment11_candidate_execution_service_v1.js";
+import { executeExternalFormalCap04Amendment11CandidateV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_cap04_amendment11_candidate_execution_service_v1.js";
 import { PostgresExternalFormalEvidenceSourceV1 } from "../../apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.js";
 import type { CanonicalReplayEvidenceRecordV1 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
 import {
@@ -94,18 +94,12 @@ async function main(): Promise<void> {
   assertReadOnlyV1(fake.sql);
 
   const byType = new Map(loaded.records.map((record) => [record.record_type, record]));
-  assert.equal(
-    byType.get("observed_rainfall_v1")?.available_to_runtime_at,
-    addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 1198),
-  );
-  assert.equal(
-    byType.get("historical_et0_estimate_v1")?.available_to_runtime_at,
-    addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 1198),
-  );
+  assert.equal(byType.get("observed_rainfall_v1")?.available_to_runtime_at, addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 1198));
+  assert.equal(byType.get("historical_et0_estimate_v1")?.available_to_runtime_at, addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 1198));
   assert.ok(Date.parse(String(byType.get("future_weather_assumption_v1")?.available_to_runtime_at)) <= Date.parse(EA5B5B_LOGICAL_TIME_V1));
   assert.ok(Date.parse(String(byType.get("future_et0_assumption_v1")?.available_to_runtime_at)) <= Date.parse(EA5B5B_LOGICAL_TIME_V1));
 
-  const candidate = executeExternalFormalCap04CandidateV1({
+  const candidate = executeExternalFormalCap04Amendment11CandidateV1({
     scope: fixture.scope,
     logical_time: EA5B5B_LOGICAL_TIME_V1,
     created_at: observerCreatedAt,
@@ -116,6 +110,7 @@ async function main(): Promise<void> {
     crop_stage_context: fixture.crop,
   });
 
+  assert.equal(candidate.service_id, "MCFT_CAP09_EXTERNAL_FORMAL_CAP04_AMENDMENT11_CANDIDATE_EXECUTION_SERVICE_V1");
   assert.equal(candidate.evidence_snapshot_time, evidenceSnapshot);
   assert.equal(candidate.evidence_snapshot_source, "CALLER_SUPPLIED");
   assert.equal(candidate.operation_variant, "A1");
@@ -125,18 +120,12 @@ async function main(): Promise<void> {
   assert.equal(candidate.record_set.members.length, 8);
   assert.equal(candidate.canonical_persistence_authorized, false);
   assert.deepEqual(
-    [
-      candidate.provider_request_count,
-      candidate.database_write_count,
-      candidate.scenario_write_count,
-      candidate.recommendation_write_count,
-      candidate.action_write_count,
-    ],
+    [candidate.provider_request_count, candidate.database_write_count, candidate.scenario_write_count, candidate.recommendation_write_count, candidate.action_write_count],
     [0, 0, 0, 0, 0],
   );
 
   assert.throws(
-    () => executeExternalFormalCap04CandidateV1({
+    () => executeExternalFormalCap04Amendment11CandidateV1({
       scope: fixture.scope,
       logical_time: EA5B5B_LOGICAL_TIME_V1,
       created_at: observerCreatedAt,
@@ -146,10 +135,10 @@ async function main(): Promise<void> {
       candidate_records: loaded.records,
       crop_stage_context: fixture.crop,
     }),
-    /EXTERNAL_CAP04_SERVICE_EVIDENCE_SNAPSHOT_BEFORE_LOGICAL_TIME/,
+    /EXTERNAL_CAP04_AMENDMENT11_EVIDENCE_SNAPSHOT_BEFORE_LOGICAL_TIME/,
   );
   assert.throws(
-    () => executeExternalFormalCap04CandidateV1({
+    () => executeExternalFormalCap04Amendment11CandidateV1({
       scope: fixture.scope,
       logical_time: EA5B5B_LOGICAL_TIME_V1,
       created_at: observerCreatedAt,
@@ -159,27 +148,18 @@ async function main(): Promise<void> {
       candidate_records: loaded.records,
       crop_stage_context: fixture.crop,
     }),
-    /EXTERNAL_CAP04_SERVICE_EVIDENCE_SNAPSHOT_AFTER_CREATED_AT/,
+    /EXTERNAL_CAP04_AMENDMENT11_EVIDENCE_SNAPSHOT_AFTER_CREATED_AT/,
   );
-
-  const historicalDefault = executeExternalFormalCap04CandidateV1({
-    scope: fixture.scope,
-    logical_time: EA5B5B_LOGICAL_TIME_V1,
-    created_at: addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 437),
-    handoff: fixture.handoff,
-    runtime_config: fixture.hourly,
-    candidate_records: fixture.candidates,
-    crop_stage_context: fixture.crop,
-  });
-  assert.equal(historicalDefault.evidence_snapshot_time, addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 432));
-  assert.equal(historicalDefault.evidence_snapshot_source, "HISTORICAL_FIXED_432_DEFAULT");
 
   console.log(JSON.stringify({
     status: "PASS",
     temporal_authority: "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    service_id: candidate.service_id,
     logical_time: EA5B5B_LOGICAL_TIME_V1,
     evidence_snapshot_time: evidenceSnapshot,
     evidence_snapshot_offset_minutes: 1200,
+    evidence_snapshot_required_at_public_seam: true,
+    fixed_432_fallback_exposed_at_public_seam: false,
     delayed_rainfall_to_external_cap04: true,
     delayed_historical_et0_to_external_cap04: true,
     future_forcing_pre_logical_time_preserved: true,
@@ -188,7 +168,7 @@ async function main(): Promise<void> {
     external_cap04_forecast_point_count: candidate.forecast_authority.forecast_candidate.points.length,
     snapshot_before_t_rejected: true,
     snapshot_after_created_at_rejected: true,
-    historical_fixed_432_default_preserved: true,
+    historical_service_modified: false,
     canonical_persistence_authorized: candidate.canonical_persistence_authorized,
     database_write_count: loaded.database_write_count + candidate.database_write_count,
     provider_request_count: loaded.provider_request_count + candidate.provider_request_count,
