@@ -24,10 +24,11 @@ const workflow = read(WORKFLOW);
 
 requireAll(amendment, [
   "PROVIDER_AVAILABILITY_WATERMARK_V1",
-  "historical/online-freshness diagnostic",
-  "not a delayed authoritative-Evidence admission gate",
-  "DAILY_BATCH",
-  "crop authority effect = NONE",
+  "historical / online-freshness diagnostic",
+  "It is **not** authoritative delayed-evidence eligibility.",
+  "provider_publication_cadence = daily_batch",
+  "Age alone MUST NOT invalidate an otherwise exact authoritative-late observation.",
+  "Amendment-11 creates no crop authority and modifies no crop authority.",
 ], "MCFT_CAP09_KBS_LATE_AMENDMENT11_AUTHORITY_MISSING");
 
 requireAll(decoder, [
