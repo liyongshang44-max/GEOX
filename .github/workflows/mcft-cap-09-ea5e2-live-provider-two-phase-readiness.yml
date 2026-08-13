@@ -127,6 +127,7 @@ jobs:
           critical=(
             .github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml
             scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs
+            scripts/runtime_acceptance/MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs
             scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
@@ -203,6 +204,7 @@ jobs:
           set -o pipefail
           mkdir -p acceptance-output
           python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py precheck-kbs \
+            --minimum-operational-headroom-minutes 60 \
             | tee acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
 
       - name: Bind provider-compatible target T selected by read-only viability preflight
@@ -464,6 +466,8 @@ jobs:
           const pre=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json','utf8'));
           const late=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json','utf8'));
           const observer=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json','utf8'));
+          const soilP95=Number(viability.soil_global_publication_lag_diagnostic?.p95_minutes);
+          if(!Number.isFinite(soilP95)) throw new Error('EA5E2_ACTIVATION_SOIL_GLOBAL_P95_PRODUCER_REQUIRED');
           if(kbs.status!=='PASS'||Number(kbs.latest_age_hours)>6||Number(kbs.configured_max_age_hours)!==6) throw new Error('EA5E2_ACTIVATION_KBS_FRESHNESS_AUTHORITY_REQUIRED');
           if(viability.status!=='PASS'||viability.candidate_T!==process.env.TARGET_T||viability.authority_changed!==false||viability.live_activation_started!==false) throw new Error('EA5E2_ACTIVATION_LIVE_WINDOW_VIABILITY_REQUIRED');
           if(availability.status!=='PASS'||availability.target_t!==process.env.TARGET_T||availability.same_source_exact_t_only!==true) throw new Error('EA5E2_ACTIVATION_LATE_AVAILABILITY_PROOF_REQUIRED');
@@ -480,7 +484,7 @@ jobs:
             target_t:process.env.TARGET_T,
             live_window_viability_preflight_pass:true,
             soil_first_seen_transition_count:viability.soil_first_seen_evidence.transition_count,
-            soil_publication_lag_observed_p95_minutes:viability.soil_publication_lag_observed_p95_minutes,
+            soil_publication_lag_observed_p95_minutes:soilP95,
             late_semantic_availability_polling:true,
             late_semantic_first_available_at:availability.first_semantically_available_at,
             late_semantic_poll_attempt_count:availability.attempt_count,

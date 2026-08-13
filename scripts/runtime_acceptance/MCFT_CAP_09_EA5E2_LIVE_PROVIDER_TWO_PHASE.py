@@ -89,7 +89,7 @@ def load_tar(path: Path) -> tuple[dict, dict[str, bytes]]:
     return manifest, members
 
 
-def command_precheck(_: argparse.Namespace) -> None:
+def command_precheck(args: argparse.Namespace) -> None:
     observed = datetime.now(timezone.utc)
     status, _, body, final = ea4.request_bytes(
         ea4.AUTH["kbs"]["raw_hourly_csv"],
@@ -110,13 +110,23 @@ def command_precheck(_: argparse.Namespace) -> None:
     latest = max(timestamps)
     age_hours = (observed - latest).total_seconds() / 3600.0
     maximum = float(ea4.AUTH["kbs"]["raw_hourly_latest_max_age_hours"])
+    minimum_headroom_minutes = max(0.0, float(args.minimum_operational_headroom_minutes))
+    remaining_headroom_minutes = (maximum - age_hours) * 60.0
     require(age_hours <= maximum, f"EA5E2_LIVE_PRECHECK_KBS_STALE:{age_hours:.6f}")
+    require(
+        remaining_headroom_minutes >= minimum_headroom_minutes,
+        f"EA5E2_LIVE_PRECHECK_KBS_OPERATIONAL_HEADROOM_INSUFFICIENT:{remaining_headroom_minutes:.3f}:{minimum_headroom_minutes:.3f}",
+    )
     print(json.dumps({
         "status": "PASS",
         "observed_at": iso(observed),
         "latest_raw_hourly_timestamp": iso(latest),
         "latest_age_hours": round(age_hours, 6),
         "configured_max_age_hours": maximum,
+        "remaining_authority_headroom_minutes": round(remaining_headroom_minutes, 3),
+        "minimum_operational_headroom_minutes": minimum_headroom_minutes,
+        "operational_headroom_pass": True,
+        "operational_headroom_is_authority": False,
         "raw_values_emitted": False,
     }, sort_keys=True))
 
@@ -530,6 +540,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
     precheck = sub.add_parser("precheck-kbs")
+    precheck.add_argument("--minimum-operational-headroom-minutes", type=float, default=0.0)
     precheck.set_defaults(handler=command_precheck)
     fetch_gfs = sub.add_parser("fetch-gfs")
     fetch_gfs.add_argument("--target", required=True)

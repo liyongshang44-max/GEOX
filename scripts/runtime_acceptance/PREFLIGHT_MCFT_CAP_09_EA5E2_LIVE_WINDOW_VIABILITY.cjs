@@ -8,6 +8,12 @@ const {
   EXACT_HOUR_PHASE_OFFSETS: PHASE_ADMISSION_OFFSETS,
   evaluateExactHourPhaseAdmission,
 } = require("./MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1.cjs");
+const {
+  PROVIDER_EXPECTED_UPDATE_BEHAVIOR,
+  MIN_OPERATIONAL_HEADROOM_MINUTES,
+  evaluateOperationalHeadroom,
+  assessEa5e2ProtocolCompatibility,
+} = require("./MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs");
 
 const OUTPUT = "acceptance-output/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json";
 const EVIDENCE = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SOIL-FIRST-SEEN-EVIDENCE-V1.json";
@@ -254,12 +260,20 @@ async function main() {
   const evaluatedAt = new Date();
   const reasons = [];
   let kbs = null;
+  let kbsHeadroom = null;
+  const protocolCompatibility = assessEa5e2ProtocolCompatibility();
   let soil = null;
   let soilEvidence = null;
   let crop = null;
 
-  try { kbs = runKbsFreshness(); }
-  catch { reasons.push("KBS_RAW_HOURLY_CURRENT_AUTHORITY_NOT_AVAILABLE"); }
+  try {
+    kbs = runKbsFreshness();
+    kbsHeadroom = evaluateOperationalHeadroom(kbs.latest_age_hours, MIN_OPERATIONAL_HEADROOM_MINUTES);
+    if (!kbsHeadroom.operational_headroom_pass) reasons.push("KBS_RAW_HOURLY_OPERATIONAL_HEADROOM_INSUFFICIENT");
+  } catch {
+    reasons.push("KBS_RAW_HOURLY_CURRENT_AUTHORITY_NOT_AVAILABLE");
+  }
+  if (!protocolCompatibility.compatible) reasons.push(protocolCompatibility.reason);
 
   try {
     soil = await fetchSoilMetadata();
@@ -309,8 +323,11 @@ async function main() {
       current_age_hours: kbs.latest_age_hours,
       authority_max_age_hours: 6,
       current_authority_status: "PASS",
+      operational_headroom: kbsHeadroom,
       future_publication_prediction_used: false,
     } : null,
+    ea5e2_live_protocol_compatibility: protocolCompatibility,
+    provider_expected_update_behavior: PROVIDER_EXPECTED_UPDATE_BEHAVIOR,
     soil_endpoint25: soil,
     soil_first_seen_evidence: soilEvidence,
     soil_global_publication_lag_diagnostic: soilEvidence?.global_diagnostic ?? null,
@@ -325,11 +342,15 @@ async function main() {
       phase_algorithm_ssot: "MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1",
       minimum_repeat_samples_per_phase: MIN_REPEAT_SAMPLES_PER_PHASE,
       minimum_repeat_samples_is_authority: false,
+      kbs_operational_headroom_is_authority: false,
+      daily_batch_protocol_compatibility_used_as_safety_gate_only: true,
     },
     frozen_boundaries: {
       soil_window_minutes: SOIL_WINDOW_MINUTES,
       minimum_ingress_margin_minutes: MIN_INGRESS_MARGIN_MINUTES,
       kbs_raw_hourly_max_age_hours: 6,
+      kbs_minimum_operational_headroom_minutes: MIN_OPERATIONAL_HEADROOM_MINUTES,
+      kbs_operational_headroom_is_authority: false,
       late_exact_hour_collector_offset_minutes: 390,
       late_exact_hour_cutoff_offset_minutes: 432,
       runtime_observer_offset_minutes: 437,

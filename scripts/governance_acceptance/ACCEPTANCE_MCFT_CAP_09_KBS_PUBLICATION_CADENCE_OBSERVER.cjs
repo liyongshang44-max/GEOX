@@ -36,6 +36,13 @@ function validateStatic() {
   assert.equal(config.source.required_final_path, '/datatables/13.csv');
   assert.equal(config.source.event_time_field, 'datetime_utc');
   assert.equal(config.source.provider_publication_cadence_assumed, false);
+  assert.equal(config.operating_profile.provider_operating_profile, 'CONFIRMED_DAILY_BATCH');
+  assert.equal(config.operating_profile.observer_machine_evidence_remains_separate, true);
+  assert.equal(config.operating_profile.minimum_machine_evidence_transitions, 3);
+  assert.equal(config.operating_profile.authority_effect, false);
+  assert.equal(config.polling.qualification_window_watcher.poll_interval_minutes, 5);
+  assert.equal(config.polling.qualification_window_watcher.maximum_attempts, 24);
+  assert.equal(config.polling.qualification_window_watcher.dispatches_ea5e2_live, false);
   assert.equal(config.polling.schedule, 'HOURLY_AT_MINUTE_17_UTC');
   assert.equal(config.polling.minimum_publication_transitions_before_candidate_classification, 3);
   assert.equal(config.state_chain.first_run_behavior, 'BASELINE_ONLY_NO_AVAILABILITY_BRACKET');
@@ -58,6 +65,8 @@ function validateStatic() {
   requireText(doc, 'The first observer run is baseline-only');
   requireText(doc, 'N hourly Evidence records');
   requireText(doc, 'does not emit `DAILY_BATCH` as an authority conclusion');
+  requireText(doc, '`CONFIRMED_DAILY_BATCH`');
+  requireText(doc, 'polls every five minutes for at most 24 attempts');
   requireText(doc, '#3056 separately prototypes E/A/I/K semantics and remains Draft');
 
   requireText(script, 'BASELINE_SNAPSHOT');
@@ -129,6 +138,10 @@ function validateLive(file) {
   assert.equal(state.source_url, 'https://lter.kbs.msu.edu/datatables/13.csv');
   assert.equal(state.source_authority_role, 'AVAILABILITY_OBSERVER_ONLY_NOT_FORMAL_EVIDENCE');
   assert.equal(state.candidate_publication_class_is_authority, false);
+  assert.equal(state.provider_expected_update_behavior, 'DAILY_BATCH');
+  assert.equal(state.provider_operating_profile, 'CONFIRMED_DAILY_BATCH');
+  assert.equal(state.provider_operating_profile_authority_effect, false);
+  assert.equal(state.provider_operating_behavior_confirmation_is_freshness_authority, false);
   assert.equal(state.exact_source_availability_time_claimed_from_polling_alone, false);
   assert.equal(state.raw_provider_body_published, false);
   assert.equal(state.raw_provider_values_published, false);

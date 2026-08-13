@@ -84,13 +84,15 @@ jobs:
 
       - name: Run zero-provider zero-database full-chain successor preflight
         if: steps.mode.outputs.mode == 'SUCCESSOR_FULL_CHAIN_PREFLIGHT'
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs
 
       - name: Upload metadata-only full-chain preflight proof
         if: always() && steps.mode.outputs.mode == 'SUCCESSOR_FULL_CHAIN_PREFLIGHT'
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-ea5e2-full-chain-preflight-${{ github.sha }}
+          name: mcft-cap09-ea5e2-full-chain-preflight-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             acceptance-output/MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT.json
             acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.json

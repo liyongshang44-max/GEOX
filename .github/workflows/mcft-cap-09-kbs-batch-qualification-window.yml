@@ -1,0 +1,148 @@
+name: mcft-cap-09-kbs-batch-qualification-window
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '40 4 * * *'
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-kbs-batch-qualification-window.yml'
+      - 'scripts/runtime_acceptance/WATCH_MCFT_CAP_09_KBS_BATCH_QUALIFICATION_WINDOW.py'
+      - 'scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_KBS_CURRENT_FRESHNESS_METADATA.py'
+      - 'scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE.py'
+      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLICATION-CADENCE-OBSERVER-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLICATION-CADENCE-OBSERVER-V1.md'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-kbs-batch-qualification-window-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deterministic-selftest:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prove bounded metadata-only watcher semantics
+        run: python scripts/runtime_acceptance/WATCH_MCFT_CAP_09_KBS_BATCH_QUALIFICATION_WINDOW.py --selftest
+
+      - name: Exercise one real metadata-only poll without dispatch
+        run: |
+          python scripts/runtime_acceptance/WATCH_MCFT_CAP_09_KBS_BATCH_QUALIFICATION_WINDOW.py \
+            --output acceptance-output/KBS_BATCH_QUALIFICATION_WINDOW.json \
+            --current-output acceptance-output/KBS_CURRENT_FRESHNESS_METADATA.json \
+            --poll-interval-seconds 60 \
+            --max-attempts 1
+
+      - name: Validate one-poll public-safe boundary
+        shell: python
+        run: |
+          import json
+          proof = json.load(open("acceptance-output/KBS_BATCH_QUALIFICATION_WINDOW.json", encoding="utf-8"))
+          assert proof["provider_operating_profile"] == "CONFIRMED_DAILY_BATCH"
+          assert proof["metadata_only"] is True
+          assert proof["raw_provider_values_emitted"] is False
+          assert proof["actions_write_count"] == 0
+          assert proof["live_dispatch_requested"] is False
+          assert proof["authority_effect"] is False
+
+      - name: Upload exact-head metadata-only watcher proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-kbs-batch-qualification-window-pr-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/KBS_BATCH_QUALIFICATION_WINDOW.json
+            acceptance-output/KBS_CURRENT_FRESHNESS_METADATA.json
+          if-no-files-found: error
+          retention-days: 7
+
+  qualification-window:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 140
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'main' || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+
+      - name: Restore latest successful protected-main cadence state
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/runtime_acceptance/RESTORE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_STATE.py \
+            --output acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json
+
+      - name: Poll expected KBS daily-batch window every five minutes
+        id: watch
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(
+            --output acceptance-output/KBS_BATCH_QUALIFICATION_WINDOW.json
+            --current-output acceptance-output/KBS_CURRENT_FRESHNESS_METADATA.json
+            --poll-interval-seconds 300
+            --max-attempts 24
+            --fail-on-timeout
+          )
+          if [[ -f acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json ]]; then
+            args+=(--previous-state acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json)
+          fi
+          python scripts/runtime_acceptance/WATCH_MCFT_CAP_09_KBS_BATCH_QUALIFICATION_WINDOW.py "${args[@]}"
+
+      - name: Recompute precise publication transition after capture
+        if: steps.watch.outcome == 'success'
+        shell: bash
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          args=(--output acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json)
+          if [[ -f acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json ]]; then
+            args+=(--previous-state acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json)
+          fi
+          python scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE.py "${args[@]}"
+
+      - name: Validate captured metadata and evaluate readiness without dispatch
+        if: steps.watch.outcome == 'success'
+        env:
+          KBS_CADENCE_STATE: acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json
+          KBS_CURRENT_FRESHNESS: acceptance-output/KBS_CURRENT_FRESHNESS_METADATA.json
+        run: |
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_OBSERVER.cjs \
+            --live acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json
+          node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE.cjs
+
+      - name: Upload bounded metadata-only qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-kbs-batch-qualification-window-${{ github.run_id }}
+          path: |
+            acceptance-output/KBS_BATCH_QUALIFICATION_WINDOW.json
+            acceptance-output/KBS_CURRENT_FRESHNESS_METADATA.json
+            acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json
+            acceptance-output/KBS_PROVIDER_CADENCE_INTELLIGENCE.json
+          if-no-files-found: warn
+          retention-days: 30

@@ -115,6 +115,7 @@ function cropProfile(authority) {
 function main() {
   fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
   const blockers = [];
+  const readinessBlockers = [];
   const warnings = [];
   const live = read(LIVE);
   const viability = read(VIABILITY);
@@ -169,8 +170,23 @@ function main() {
     && has(viability, "raw_retention_count: 0")
     && has(viability, "canonical_write_count: 0")
     && has(viability, "live_activation_started: false")
+    && has(viability, "KBS_RAW_HOURLY_OPERATIONAL_HEADROOM_INSUFFICIENT")
+    && has(viability, "protocolCompatibility.reason")
     && has(viability, "authority_changed: false");
   blocker(blockers, !viabilityImplemented, "LIVE_WINDOW_VIABILITY_PREFLIGHT_NOT_FAIL_CLOSED");
+
+  const dailyBatchProtocolGuardImplemented = has(viability, "assessEa5e2ProtocolCompatibility")
+    && has(viability, "KBS_RAW_HOURLY_OPERATIONAL_HEADROOM_INSUFFICIENT")
+    && has(provider, "--minimum-operational-headroom-minutes")
+    && has(provider, "EA5E2_LIVE_PRECHECK_KBS_OPERATIONAL_HEADROOM_INSUFFICIENT")
+    && has(live, "--minimum-operational-headroom-minutes 60")
+    && has(live, "MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs");
+  blocker(blockers, !dailyBatchProtocolGuardImplemented, "DAILY_BATCH_PROTOCOL_AND_HEADROOM_FAIL_CLOSED_GUARD_MISSING");
+
+  const soilLiveProofSchemaWired = has(live, "const soilP95=Number(viability.soil_global_publication_lag_diagnostic?.p95_minutes);")
+    && has(live, "EA5E2_ACTIVATION_SOIL_GLOBAL_P95_PRODUCER_REQUIRED")
+    && has(live, "soil_publication_lag_observed_p95_minutes:soilP95");
+  blocker(blockers, !soilLiveProofSchemaWired, "LIVE_PROOF_SOIL_P95_SCHEMA_WIRING_DRIFT");
 
   const phaseAdmissionSelftest = runDeterministicSelftest();
   blocker(blockers, phaseAdmissionSelftest.status !== "PASS", "SOIL_PHASE_ADMISSION_DETERMINISTIC_SELFTEST_FAILED", phaseAdmissionSelftest);
@@ -286,7 +302,18 @@ function main() {
   blocker(blockers, dependencyGate.status !== "PASS", "RUNTIME_DEPENDENCY_GRAPH_NOT_BOUND");
 
   const crop = cropProfile(cropAuthority);
-  blocker(blockers, crop.legal_future_target_count === 0, "CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET");
+  blocker(readinessBlockers, true, "KBS_DAILY_BATCH_INCOMPATIBLE_WITH_AMENDMENT_07_EXACT_T_CUTOFF", {
+    frozen_protocol: "SAME_SOURCE_EXACT_T_REQUIRED_BY_T_PLUS_427_WITH_T_PLUS_432_CUTOFF",
+    confirmed_provider_behavior: "DAILY_BATCH_APPROXIMATELY_24_FORWARD_HOURLY_OBSERVATIONS",
+    retry_or_headroom_can_resolve: false,
+    required_resolution: "NEW_AUTHORITY_PROTOCOL_OR_QUALIFIED_REPLACEMENT_SOURCE",
+    implication: "EA5E2_LIVE_DISPATCH_FORBIDDEN",
+    authority_effect: false,
+  });
+  blocker(readinessBlockers, crop.legal_future_target_count === 0, "CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET", {
+    implication: "EA5E2_LIVE_DISPATCH_FORBIDDEN_UNTIL_SUCCESSOR_OR_REQUALIFIED_CROP_CONTEXT_AUTHORITY_EXISTS",
+    authority_effect: false,
+  });
   warning(warnings, crop.last_legal_future_target !== null, "CURRENT_CROP_AUTHORITY_HAS_TERMINAL_TARGET_CLIFF", {
     last_legal_target: crop.last_legal_future_target,
     latest_dispatch_time_for_last_legal_target: crop.latest_dispatch_time_for_last_legal_target,
@@ -300,9 +327,12 @@ function main() {
   const proof = {
     schema_version: "geox_mcft_cap09_ea5e2_full_chain_static_preflight_v4",
     status: blockers.length ? "FAIL" : "PASS",
-    subject_sha: process.env.GITHUB_SHA ?? null,
+    subject_sha: process.env.MCFT_SUBJECT_SHA ?? process.env.GITHUB_SHA ?? null,
     blocker_count: blockers.length,
     blockers,
+    activation_readiness: readinessBlockers.length ? "BLOCKED" : "READY",
+    readiness_blocker_count: readinessBlockers.length,
+    readiness_blockers: readinessBlockers,
     warning_count: warnings.length,
     warnings,
     frozen_clock_contract: frozenClock,
@@ -310,6 +340,9 @@ function main() {
     dependency_graph_count: dependencyGate.runtime_dependency_graph_count ?? null,
     crop_viability: crop,
     live_window_viability_preflight_implemented: viabilityImplemented,
+    daily_batch_protocol_guard_implemented: dailyBatchProtocolGuardImplemented,
+    minimum_operational_headroom_minutes: 60,
+    operational_headroom_is_authority: false,
     soil_phase_admission_algorithm_ssot: "MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1",
     soil_phase_admission_deterministic_selftest: phaseAdmissionSelftest,
     soil_phase_profile_evidence_recomputed_from_exact_rows: true,

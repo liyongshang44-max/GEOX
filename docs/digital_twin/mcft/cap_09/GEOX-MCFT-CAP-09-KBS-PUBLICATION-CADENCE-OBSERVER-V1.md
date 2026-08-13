@@ -17,7 +17,7 @@ final path = /datatables/13.csv
 event field = datetime_utc
 ```
 
-The observer treats KBS as hourly-resolution event data whose publication cadence is initially unknown. It does not assume hourly publication and does not claim daily batch publication.
+The observer treats KBS as hourly-resolution event data. The provider operating profile is `CONFIRMED_DAILY_BATCH`, based on the observed operating mechanism used by scheduler engineering. That profile has `authority_effect=false`: it does not amend the `<=6h` freshness rule, Amendment-07, or Formal evidence semantics. The observer's own machine-evidence classification remains separate and still requires at least three real publication transitions.
 
 ## First-seen availability semantics
 
@@ -89,7 +89,7 @@ BATCHED_OR_BURSTY_OBSERVED
 VARIABLE_PUBLICATION_OBSERVED
 ```
 
-It deliberately does not emit `DAILY_BATCH` as an authority conclusion.
+It deliberately does not emit `DAILY_BATCH` as an authority conclusion. `CONFIRMED_DAILY_BATCH` is the non-authoritative provider operating profile; `candidate_cadence_class` remains the observer's transition-derived machine evidence.
 
 ## Revision/backfill observation
 
@@ -104,6 +104,12 @@ The state chain is only continued on protected/default `main`. Pull-request runs
 ## Schedule
 
 The workflow is scheduled hourly at minute 17 UTC. GitHub scheduler delay is acceptable because `polled_at` records actual execution time; the cron time itself is not treated as availability evidence.
+
+## Bounded qualification-window watcher
+
+The long-term hourly observer remains evidence-oriented and may start late because GitHub scheduling is best-effort. A separate bounded watcher starts nominally at `04:40Z`, polls every five minutes for at most 24 attempts, and stops as soon as a fresh complete daily batch window is captured. It uploads metadata-only poll attempts plus a read-only cadence/readiness evaluation.
+
+The bounded watcher has no `actions:write`, does not dispatch the live workflow, and cannot override either the exact-T protocol blocker or crop-context blocker. A missed bounded window is an operational monitoring failure, not an authority amendment.
 
 ## Nonclaims
 
