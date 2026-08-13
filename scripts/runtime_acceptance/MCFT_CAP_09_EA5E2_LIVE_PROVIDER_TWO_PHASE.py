@@ -131,7 +131,7 @@ def load_tar(path: Path) -> tuple[dict, dict[str, bytes]]:
     return manifest, members
 
 
-def command_precheck(args: argparse.Namespace) -> None:
+def observe_kbs_raw_hourly(minimum_operational_headroom_minutes: float, enforce_current_authority: bool) -> dict:
     requested_at = datetime.now(timezone.utc)
     status, _, body, final = ea4.request_bytes(
         ea4.AUTH["kbs"]["raw_hourly_csv"],
@@ -153,15 +153,18 @@ def command_precheck(args: argparse.Namespace) -> None:
     latest = max(timestamps)
     age_hours = (retrieved_at - latest).total_seconds() / 3600.0
     maximum = float(ea4.AUTH["kbs"]["raw_hourly_latest_max_age_hours"])
-    minimum_headroom_minutes = max(0.0, float(args.minimum_operational_headroom_minutes))
+    minimum_headroom_minutes = max(0.0, float(minimum_operational_headroom_minutes))
     remaining_headroom_minutes = (maximum - age_hours) * 60.0
-    require(age_hours <= maximum, f"EA5E2_LIVE_PRECHECK_KBS_STALE:{age_hours:.6f}")
-    require(
-        remaining_headroom_minutes >= minimum_headroom_minutes,
-        f"EA5E2_LIVE_PRECHECK_KBS_OPERATIONAL_HEADROOM_INSUFFICIENT:{remaining_headroom_minutes:.3f}:{minimum_headroom_minutes:.3f}",
-    )
-    print(json.dumps({
-        "status": "PASS",
+    authority_pass = age_hours <= maximum
+    headroom_pass = authority_pass and remaining_headroom_minutes >= minimum_headroom_minutes
+    if enforce_current_authority:
+        require(authority_pass, f"EA5E2_LIVE_PRECHECK_KBS_STALE:{age_hours:.6f}")
+        require(
+            headroom_pass,
+            f"EA5E2_LIVE_PRECHECK_KBS_OPERATIONAL_HEADROOM_INSUFFICIENT:{remaining_headroom_minutes:.3f}:{minimum_headroom_minutes:.3f}",
+        )
+    return {
+        "status": "PASS" if enforce_current_authority else "OBSERVED",
         "requested_at": iso(requested_at),
         "retrieved_at": iso(retrieved_at),
         "freshness_evaluated_at": iso(retrieved_at),
@@ -170,10 +173,21 @@ def command_precheck(args: argparse.Namespace) -> None:
         "configured_max_age_hours": maximum,
         "remaining_authority_headroom_minutes": round(remaining_headroom_minutes, 3),
         "minimum_operational_headroom_minutes": minimum_headroom_minutes,
-        "operational_headroom_pass": True,
+        "production_authority_pass": authority_pass,
+        "operational_headroom_pass": headroom_pass,
         "operational_headroom_is_authority": False,
+        "phase_aware_planning_only": not enforce_current_authority,
+        "late_actual_retrieval_must_reprove_authority": not enforce_current_authority,
         "raw_values_emitted": False,
-    }, sort_keys=True))
+    }
+
+
+def command_precheck(args: argparse.Namespace) -> None:
+    print(json.dumps(observe_kbs_raw_hourly(args.minimum_operational_headroom_minutes, True), sort_keys=True))
+
+
+def command_inspect_kbs(_args: argparse.Namespace) -> None:
+    print(json.dumps(observe_kbs_raw_hourly(0.0, False), sort_keys=True))
 
 
 def command_fetch_gfs(args: argparse.Namespace) -> None:
@@ -687,6 +701,8 @@ def build_parser() -> argparse.ArgumentParser:
     precheck = sub.add_parser("precheck-kbs")
     precheck.add_argument("--minimum-operational-headroom-minutes", type=float, default=0.0)
     precheck.set_defaults(handler=command_precheck)
+    inspect_kbs = sub.add_parser("inspect-kbs")
+    inspect_kbs.set_defaults(handler=command_inspect_kbs)
     fetch_gfs = sub.add_parser("fetch-gfs")
     fetch_gfs.add_argument("--target", required=True)
     fetch_gfs.add_argument("--output", required=True)

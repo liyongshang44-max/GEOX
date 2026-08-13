@@ -180,17 +180,19 @@ function main() {
     && has(viability, "raw_retention_count: 0")
     && has(viability, "canonical_write_count: 0")
     && has(viability, "live_activation_started: false")
-    && has(viability, "KBS_RAW_HOURLY_OPERATIONAL_HEADROOM_INSUFFICIENT")
+    && has(viability, "KBS_RAW_HOURLY_PHASE_AWARE_PLANNING_METADATA_UNAVAILABLE")
     && has(viability, "protocolCompatibility.reason")
     && has(viability, "authority_changed: false");
   blocker(blockers, !viabilityImplemented, "LIVE_WINDOW_VIABILITY_PREFLIGHT_NOT_FAIL_CLOSED");
 
-  const dailyBatchProtocolGuardImplemented = has(viability, "assessEa5e2ProtocolCompatibility")
-    && has(viability, "KBS_RAW_HOURLY_OPERATIONAL_HEADROOM_INSUFFICIENT")
-    && has(provider, "--minimum-operational-headroom-minutes")
-    && has(provider, "EA5E2_LIVE_PRECHECK_KBS_OPERATIONAL_HEADROOM_INSUFFICIENT")
-    && has(live, "--minimum-operational-headroom-minutes 60")
-    && has(read(CADENCE), "CURRENT_FIRST_FUTURE_T_ORCHESTRATION_INCOMPATIBLE_WITH_KBS_DAILY_BATCH");
+  const dailyBatchProtocolGuardImplemented = has(viability, 'TARGET_SCHEDULING_MODE = "PHASE_AWARE_LONG_HORIZON"')
+    && has(viability, "assessPhaseAwareTargetTemporalFeasibility")
+    && has(viability, "MAX_TARGET_SELECTION_HORIZON_MINUTES = 180")
+    && has(provider, "def command_inspect_kbs")
+    && has(provider, '"late_actual_retrieval_must_reprove_authority"')
+    && has(live, "EA5E2_ACTIVATION_TARGET_SPECIFIC_TEMPORAL_FEASIBILITY_REQUIRED")
+    && has(live, "EA5E2_ACTIVATION_LATE_AVAILABILITY_AND_FRESHNESS_AUTHORITY_REQUIRED")
+    && has(read(CADENCE), "assessPhaseAwareTargetTemporalFeasibility");
   blocker(blockers, !dailyBatchProtocolGuardImplemented, "DAILY_BATCH_PROTOCOL_AND_HEADROOM_FAIL_CLOSED_GUARD_MISSING");
 
   const soilLiveProofSchemaWired = has(live, "const soilP95=Number(viability.soil_global_publication_lag_diagnostic?.p95_minutes);")
@@ -330,16 +332,7 @@ function main() {
   blocker(blockers, dependencyGate.status !== "PASS", "RUNTIME_DEPENDENCY_GRAPH_NOT_BOUND");
 
   const crop = cropProfile(cropAuthority);
-  blocker(readinessBlockers, true, "CURRENT_FIRST_FUTURE_T_ORCHESTRATION_INCOMPATIBLE_WITH_KBS_DAILY_BATCH", {
-    frozen_protocol: "SAME_SOURCE_EXACT_T_REQUIRED_BY_T_PLUS_427_WITH_T_PLUS_432_CUTOFF",
-    confirmed_provider_behavior: "DAILY_BATCH_APPROXIMATELY_24_FORWARD_HOURLY_OBSERVATIONS",
-    retry_or_headroom_can_resolve: false,
-    globally_impossible_for_every_single_t: false,
-    phase_aware_long_horizon_target_scheduling_currently_implemented: false,
-    required_resolution: "PHASE_AWARE_LONG_HORIZON_SCHEDULING_OR_NEW_AUTHORITY_PROTOCOL_OR_QUALIFIED_REPLACEMENT_SOURCE",
-    implication: "EA5E2_LIVE_DISPATCH_FORBIDDEN",
-    authority_effect: false,
-  });
+  blocker(blockers, !dailyBatchProtocolGuardImplemented, "PHASE_AWARE_LONG_HORIZON_TARGET_SCHEDULING_NOT_BOUND");
   blocker(readinessBlockers, crop.legal_future_target_count === 0, "CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET", {
     implication: "EA5E2_LIVE_DISPATCH_FORBIDDEN_UNTIL_SUCCESSOR_OR_REQUALIFIED_CROP_CONTEXT_AUTHORITY_EXISTS",
     authority_effect: false,

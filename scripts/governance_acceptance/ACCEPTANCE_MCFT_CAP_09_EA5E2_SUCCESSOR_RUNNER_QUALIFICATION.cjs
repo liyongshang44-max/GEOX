@@ -45,6 +45,10 @@ try {
   assert.equal(authority.formal_snapshot_binding.canonical_a0_binding_source, A0_CANONICAL);
   assert.equal(authority.formal_snapshot_binding.a0_runtime_config_hash, "sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8");
   assert.equal(authority.exact_head_effect.protected_main_live_dispatch_authorized, false);
+  assert.equal(authority.current_orchestration_adjudication.phase_aware_long_horizon_target_scheduling_implemented, true);
+  assert.equal(authority.current_orchestration_adjudication.planning_profile_is_provider_authority, false);
+  assert.equal(authority.current_orchestration_adjudication.actual_same_source_exact_t_and_max_6h_reproof_required, true);
+  assert.equal(authority.current_orchestration_adjudication.formal_24_slot_objective_compatibility_claimed, false);
 
   const canonicalA0 = read(A0_CANONICAL);
   has(canonicalA0, authority.formal_snapshot_binding.a0_runtime_config_ref, "CANONICAL_A0_REF_MISSING");
@@ -57,10 +61,11 @@ try {
 
   const viability = read(VIABILITY);
   for (const marker of ["MIN_TARGET_SETUP_BUDGET_MINUTES = 120", ...authority.live_dispatch_blockers]) has(`${viability}\n${read(CADENCE)}`, marker, "VIABILITY_BLOCKER_MISSING");
+  for (const marker of ['TARGET_SCHEDULING_MODE = "PHASE_AWARE_LONG_HORIZON"', "assessPhaseAwareTargetTemporalFeasibility", "MAX_TARGET_SELECTION_HORIZON_MINUTES = 180"]) has(viability, marker, "PHASE_AWARE_VIABILITY_RULE_MISSING");
   const poll = read(POLL);
   for (const marker of ["COLLECTOR_PROCESSING_BUDGET_MINUTES = 25", "discovery_deadline_is_collector_deadline\": False"]) has(poll, marker, "POLL_PROCESSING_MARGIN_MISSING");
   const cadence = read(CADENCE);
-  for (const marker of ["CURRENT_ORCHESTRATION_INCOMPATIBLE", "globally_impossible_for_every_single_t: false", "AUTHORITY_PASS_BUT_ACTIVATION_BLOCKED"]) has(cadence, marker, "CADENCE_DECISION_SEMANTICS_MISSING");
+  for (const marker of ["CURRENT_ORCHESTRATION_INCOMPATIBLE", "globally_impossible_for_every_single_t: false", "AUTHORITY_PASS_BUT_ACTIVATION_BLOCKED", "TARGET_SPECIFIC_TEMPORALLY_FEASIBLE", "actual_same_source_exact_t_poll_still_required: true"]) has(cadence, marker, "CADENCE_DECISION_SEMANTICS_MISSING");
   const watcher = read(WATCHER);
   for (const marker of ["latest_24h_duplicate_event_time_row_count", '"stop": captured', "SELFTEST_STAGED_CONTINUES", "SELFTEST_DUPLICATE_CONTINUES", '"polled_at": snapshot["retrieved_at"]']) has(watcher, marker, "WATCHER_FAIL_CLOSED_RULE_MISSING");
   const provider = read(PROVIDER);
@@ -74,6 +79,7 @@ try {
   has(live, "probe-gfs", "LIVE_GFS_PREFLIGHT_MISSING");
   assert((live.match(/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN\.cjs/g) || []).length >= 4, "MULTIPHASE_MAIN_DRIFT_RECHECKS_REQUIRED");
   has(live, "SUCCESSOR_RUNNER_EXACT_HEAD_QUALIFICATION_REQUIRED", "LIVE_SUCCESSOR_QUALIFICATION_CURRENCY_MISSING");
+  has(live, "EA5E2_ACTIVATION_LATE_AVAILABILITY_AND_FRESHNESS_AUTHORITY_REQUIRED", "LIVE_LATE_ACTUAL_AUTHORITY_REPROOF_MISSING");
 
   const fullChainProof = JSON.parse(read(FULL_CHAIN_PROOF));
   const dependencyProof = JSON.parse(read(DEPENDENCY_PROOF));

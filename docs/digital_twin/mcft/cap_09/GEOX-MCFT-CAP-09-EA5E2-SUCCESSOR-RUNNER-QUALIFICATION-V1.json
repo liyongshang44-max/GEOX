@@ -34,9 +34,15 @@
     "target_setup_budget_is_authority": false
   },
   "current_orchestration_adjudication": {
-    "result": "CURRENT_FIRST_FUTURE_T_ORCHESTRATION_INCOMPATIBLE_WITH_KBS_DAILY_BATCH",
+    "result": "PHASE_AWARE_LONG_HORIZON_SINGLE_T_ORCHESTRATION_IMPLEMENTED_NOT_YET_LIVE_DISPATCHABLE",
     "authority_globally_impossible_for_every_single_t": false,
-    "phase_aware_long_horizon_target_scheduling_implemented": false
+    "phase_aware_long_horizon_target_scheduling_implemented": true,
+    "daily_batch_planning_first_seen_not_after_utc": "05:30",
+    "daily_batch_projected_coverage_utc": "previous-day 05:00 through batch-day 04:00 inclusive",
+    "planning_profile_is_provider_authority": false,
+    "actual_same_source_exact_t_and_max_6h_reproof_required": true,
+    "bounded_target_selection_horizon_minutes": 180,
+    "formal_24_slot_objective_compatibility_claimed": false
   },
   "exact_head_qualification_proof": {
     "historical_authority_and_gate_blob_preservation_required": true,
@@ -55,7 +61,6 @@
     "formal_execution_count": "0/24"
   },
   "live_dispatch_blockers": [
-    "CURRENT_FIRST_FUTURE_T_ORCHESTRATION_INCOMPATIBLE_WITH_KBS_DAILY_BATCH",
     "CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET",
     "LATE_EXACT_T_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED",
     "OBSERVER_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED"
