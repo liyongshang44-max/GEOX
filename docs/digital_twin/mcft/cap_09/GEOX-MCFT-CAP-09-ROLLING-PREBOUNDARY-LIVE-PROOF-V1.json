@@ -1,0 +1,40 @@
+{
+  "schema_version": "geox_mcft_cap09_rolling_preboundary_live_proof_v1",
+  "status": "PASS",
+  "proof_class": "EXACT_PROTECTED_MAIN_REAL_PREBOUNDARY_CAUSAL_CAPTURE",
+  "temporal_authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+  "producer_subject_sha": "37a36ba52d7ef7891d72cc1385314ec453511296",
+  "workflow_run_id": 31705733712,
+  "artifact_id": 9185700449,
+  "artifact_digest": "sha256:8312c4ff063627964344b5c3f34ecc46e4e0901a1e4bc4478b291af13f297a51",
+  "target_t": "2026-08-13T15:00:00.000Z",
+  "captured_at": "2026-08-13T14:50:16.149Z",
+  "candidate_expires_at": "2026-08-15T03:00:00.000Z",
+  "record_types": [
+    "future_et0_assumption_v1",
+    "future_weather_assumption_v1",
+    "soil_moisture_observation_v1"
+  ],
+  "raw_retention_refs": [
+    "s3-private://geox-mcft-cap09-formal-raw-v1/mcft-cap09-ea5e2-readiness-transient-v1/37a36ba52d7ef7891d72cc1385314ec453511296/20260813150000000/sha256/1780aa7e56526a450bca86412b49c61bd798db5fc27117f3e1ef2e712a24fe56",
+    "s3-private://geox-mcft-cap09-formal-raw-v1/mcft-cap09-ea5e2-readiness-transient-v1/37a36ba52d7ef7891d72cc1385314ec453511296/20260813150000000/sha256/70b2742cf764ff6209c5ec411524f63198da976654214c2b36493ca14501ff0d"
+  ],
+  "semantic_manifest_digest": "sha256:6f2c6e782f8f5f622f4e4a9baf90117a2026400e5802dd6ff04ee212ab62a409",
+  "soil_observation_inside_t_minus_15_to_t": true,
+  "same_cycle_future_weather_et0": true,
+  "raw_retained_before_canonicalization": true,
+  "formal_database_write_count": 0,
+  "formal_r2_prefix_write_count": 0,
+  "scheduler_write_count": 0,
+  "runtime_write_count": 0,
+  "crop_authority_effect": "NONE",
+  "formal_effect": false,
+  "raw_values_emitted": false,
+  "nonclaims": [
+    "NO_CROP_AUTHORITY_EFFECT",
+    "NO_FORMAL_ACTIVATION",
+    "NO_FORMAL_O00_START",
+    "NO_KBS_DAILY_BATCH_INTERSECTION_CLAIM",
+    "NO_FIVE_FAMILY_RUNTIME_OBSERVER_CLAIM"
+  ]
+}
