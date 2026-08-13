@@ -10,6 +10,7 @@ const A11 = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDE
 const A07 = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-07-EXTERNAL-FORMAL-FIXED-LAG-CAUSALITY-AUTHORITY.md";
 const DB = "apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts";
 const CROP = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json";
+const ROLLING_PROOF = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ROLLING-PREBOUNDARY-LIVE-PROOF-V1.json";
 const HOUR = 3600_000;
 
 function read(file) { return fs.readFileSync(file, "utf8"); }
@@ -56,6 +57,62 @@ function cropProfile(authority) {
   }
   return { legal_future_target_count:count, first_legal_future_target:firstLegal, last_legal_future_target:lastLegal };
 }
+function rollingProofProfile(staticBlockers, readinessBlockers) {
+  if (!fs.existsSync(ROLLING_PROOF)) {
+    readinessBlockers.push({
+      code:"ROLLING_PREBOUNDARY_QUALIFICATION_CAPTURE_NOT_PROVEN",
+      implication:"WAIT_FOR_EXACT_MAIN_REAL_SOIL_GFS_CAUSAL_CAPTURE_AND_IMMUTABLE_PROOF"
+    });
+    return { present:false, qualified:false };
+  }
+  let proof;
+  try { proof = JSON.parse(read(ROLLING_PROOF)); }
+  catch (error) {
+    staticBlockers.push({ code:"ROLLING_PREBOUNDARY_LIVE_PROOF_INVALID_JSON", error:String(error?.message||error) });
+    return { present:true, qualified:false };
+  }
+  const expectedTypes = ["future_et0_assumption_v1","future_weather_assumption_v1","soil_moisture_observation_v1"];
+  const types = Array.isArray(proof.record_types) ? [...proof.record_types].sort() : [];
+  const rawRefs = Array.isArray(proof.raw_retention_refs) ? proof.raw_retention_refs : [];
+  const producerSha = String(proof.producer_subject_sha || proof.subject_sha || "");
+  const target = Date.parse(String(proof.target_t || ""));
+  const captured = Date.parse(String(proof.captured_at || ""));
+  const expires = Date.parse(String(proof.candidate_expires_at || ""));
+  const checks = [
+    [proof.status === "PASS", "ROLLING_PREBOUNDARY_LIVE_PROOF_STATUS"],
+    [proof.proof_class === "EXACT_PROTECTED_MAIN_REAL_PREBOUNDARY_CAUSAL_CAPTURE", "ROLLING_PREBOUNDARY_LIVE_PROOF_CLASS"],
+    [proof.temporal_authority === "PROVIDER_AVAILABILITY_WATERMARK_V1", "ROLLING_PREBOUNDARY_LIVE_PROOF_AUTHORITY"],
+    [/^[0-9a-f]{40}$/.test(producerSha), "ROLLING_PREBOUNDARY_LIVE_PROOF_PRODUCER_SHA"],
+    [Number.isInteger(proof.workflow_run_id) && proof.workflow_run_id > 0, "ROLLING_PREBOUNDARY_LIVE_PROOF_RUN_ID"],
+    [Number.isInteger(proof.artifact_id) && proof.artifact_id > 0, "ROLLING_PREBOUNDARY_LIVE_PROOF_ARTIFACT_ID"],
+    [typeof proof.artifact_digest === "string" && /^sha256:[0-9a-f]{64}$/.test(proof.artifact_digest), "ROLLING_PREBOUNDARY_LIVE_PROOF_ARTIFACT_DIGEST"],
+    [JSON.stringify(types) === JSON.stringify(expectedTypes), "ROLLING_PREBOUNDARY_LIVE_PROOF_FAMILY_SET"],
+    [rawRefs.length >= 2 && rawRefs.every((x) => typeof x === "string" && x.startsWith("s3-private://")), "ROLLING_PREBOUNDARY_LIVE_PROOF_RAW_REFS"],
+    [Number.isFinite(target) && Number.isFinite(captured) && captured <= target, "ROLLING_PREBOUNDARY_LIVE_PROOF_CAUSAL_TIME"],
+    [Number.isFinite(expires) && expires >= target + 36*HOUR, "ROLLING_PREBOUNDARY_LIVE_PROOF_RETENTION"],
+    [proof.soil_observation_inside_t_minus_15_to_t === true, "ROLLING_PREBOUNDARY_LIVE_PROOF_SOIL_WINDOW"],
+    [proof.same_cycle_future_weather_et0 === true, "ROLLING_PREBOUNDARY_LIVE_PROOF_GFS_PAIR"],
+    [proof.raw_retained_before_canonicalization === true, "ROLLING_PREBOUNDARY_LIVE_PROOF_RAW_FIRST"],
+    [proof.formal_database_write_count === 0, "ROLLING_PREBOUNDARY_LIVE_PROOF_FORMAL_DB_ZERO"],
+    [proof.formal_r2_prefix_write_count === 0, "ROLLING_PREBOUNDARY_LIVE_PROOF_FORMAL_R2_ZERO"],
+    [proof.scheduler_write_count === 0, "ROLLING_PREBOUNDARY_LIVE_PROOF_SCHEDULER_ZERO"],
+    [proof.runtime_write_count === 0, "ROLLING_PREBOUNDARY_LIVE_PROOF_RUNTIME_ZERO"],
+    [proof.crop_authority_effect === "NONE", "ROLLING_PREBOUNDARY_LIVE_PROOF_CROP_NONE"]
+  ];
+  for (const [ok, code] of checks) if (!ok) staticBlockers.push({ code });
+  return {
+    present:true,
+    qualified:checks.every(([ok]) => ok),
+    producer_subject_sha:producerSha,
+    workflow_run_id:proof.workflow_run_id,
+    artifact_id:proof.artifact_id,
+    target_t:proof.target_t,
+    captured_at:proof.captured_at,
+    candidate_expires_at:proof.candidate_expires_at,
+    record_types:types,
+    raw_ref_count:rawRefs.length
+  };
+}
 
 try {
   fs.mkdirSync(path.dirname(OUT), { recursive:true });
@@ -76,7 +133,6 @@ try {
     "Batch arrival MUST NOT authorize retroactive post-T acquisition"
   ]) requireMarker(a11, marker, "AMENDMENT11_AUTHORITY_MARKER_MISSING", staticBlockers);
 
-  // Historical A07 stays immutable evidence; it is not the active temporal contract.
   const a07Blob = git("rev-parse", `HEAD:${A07}`);
   if (a07Blob !== "c5a98ca789027e1bf051ec56bf1b7e76b98a0891") staticBlockers.push({ code:"HISTORICAL_AMENDMENT07_MUTATED", actual:a07Blob });
 
@@ -100,18 +156,15 @@ try {
     implication:"CROP_AUTHORITY_REMAINS_INDEPENDENT; AMENDMENT_11_IS_NOT_A_CROP_BYPASS"
   });
 
-  // PR B deliberately lands the adapter before PR C rolls out operational capture/callsite migration.
-  readinessBlockers.push({
-    code:"ROLLING_PREBOUNDARY_QUALIFICATION_CAPTURE_NOT_IMPLEMENTED",
-    implication:"REAL_EA5E2_BATCH_INTERSECTION_MUST_WAIT_FOR_CAUSAL_PREBOUNDARY_PACKAGE_CAPTURE"
-  });
+  const rolling = rollingProofProfile(staticBlockers, readinessBlockers);
+
   if (db.includes("exact_interval_availability_cutoff_time?: string")) readinessBlockers.push({
     code:"EVIDENCE_SNAPSHOT_CALLSITE_MIGRATION_NOT_COMPLETE",
-    implication:"DEPRECATED_TRANSPORT_ALIAS_HAS_ZERO_AUTHORITY_EFFECT_AND_MUST_BE_REMOVED_AFTER CALLERS MIGRATE"
+    implication:"DEPRECATED_TRANSPORT_ALIAS_HAS_ZERO_AUTHORITY_EFFECT_AND_MUST_REMAIN_NON_AUTHORITATIVE_WHILE AMENDMENT11 CALLERS MOVE TO evidence_snapshot_time"
   });
 
   const result = {
-    schema_version:"geox_mcft_cap09_ea5e2_amendment_11_successor_preflight_v1",
+    schema_version:"geox_mcft_cap09_ea5e2_amendment_11_successor_preflight_v2",
     status: staticBlockers.length ? "FAIL" : "PASS",
     subject_sha:subject,
     amendment_11_effective_on_subject:true,
@@ -125,6 +178,7 @@ try {
     evidence_snapshot_time_external_adapter:true,
     preboundary_cutoff_remains_logical_t:true,
     delayed_exact_interval_uses_actual_snapshot:true,
+    rolling_preboundary_capture:rolling,
     crop_authority_effect:"NONE",
     crop_profile:crop,
     static_blockers:staticBlockers,
@@ -141,6 +195,6 @@ try {
   if (staticBlockers.length) process.exitCode=1;
 } catch (error) {
   fs.mkdirSync(path.dirname(OUT), { recursive:true });
-  const result={schema_version:"geox_mcft_cap09_ea5e2_amendment_11_successor_preflight_v1",status:"FAIL",error:String(error?.message||error),protected_main_live_dispatch_authorized:false,database_write_count:0,formal_window_started:false};
+  const result={schema_version:"geox_mcft_cap09_ea5e2_amendment_11_successor_preflight_v2",status:"FAIL",error:String(error?.message||error),protected_main_live_dispatch_authorized:false,database_write_count:0,formal_window_started:false};
   fs.writeFileSync(OUT,`${JSON.stringify(result,null,2)}\n`); console.log(JSON.stringify(result)); process.exitCode=1;
 }
