@@ -190,6 +190,124 @@ def command_inspect_kbs(_args: argparse.Namespace) -> None:
     print(json.dumps(observe_kbs_raw_hourly(0.0, False), sort_keys=True))
 
 
+def select_complete_kbs_timing_target(rows: list[dict], observed_at: datetime) -> dict:
+    by_timestamp: dict[datetime, list[dict]] = {}
+    for row in rows:
+        timestamp = ea4.parse_provider_utc(row.get("datetime_utc", ""))
+        if timestamp is not None and timestamp <= observed_at + timedelta(minutes=5):
+            by_timestamp.setdefault(timestamp, []).append(row)
+    require(by_timestamp, "EA5E2_TIMING_TARGET_KBS_TIMESTAMP_REQUIRED")
+    latest = max(by_timestamp)
+    selected = None
+    skipped = 0
+    for timestamp in sorted(by_timestamp, reverse=True):
+        if timestamp < latest - timedelta(hours=23) or timestamp.minute != 0 or timestamp.second != 0 or timestamp.microsecond != 0:
+            continue
+        timestamp_rows = by_timestamp[timestamp]
+        if len(timestamp_rows) != 1:
+            skipped += 1
+            continue
+        row = timestamp_rows[0]
+        rain = ea4.finite(row.get("rain_mm"))
+        air = ea4.finite(row.get("airtmp_107_avg"))
+        actual_vapor_pressure = ea4.finite(row.get("ah"))
+        solar = ea4.finite(row.get("solrad_avg"))
+        wind = ea4.finite(row.get("wind_speed"))
+        valid = (
+            rain is not None and 0 <= rain <= 100
+            and air is not None and -50 <= air <= 60
+            and actual_vapor_pressure is not None and 0 < actual_vapor_pressure <= 10
+            and solar is not None and 0 <= solar <= 1600
+            and wind is not None and 0 <= wind <= 100
+        )
+        if valid:
+            et0 = ea4.scalar_eto(air, actual_vapor_pressure, solar * ea4.SOLAR_FACTOR, wind * ea4.WIND_FACTOR, timestamp)
+            valid = math.isfinite(et0)
+        if valid:
+            selected = timestamp
+            break
+        skipped += 1
+    require(selected is not None, "EA5E2_TIMING_TARGET_NO_COMPLETE_EXACT_ROW_IN_LATEST_BATCH")
+    return {"latest": latest, "selected": selected, "skipped": skipped}
+
+
+def command_select_kbs_timing_target(_args: argparse.Namespace) -> None:
+    requested_at = datetime.now(timezone.utc)
+    status, _, body, final = ea4.request_bytes(
+        ea4.AUTH["kbs"]["raw_hourly_csv"],
+        "EA5E2_TIMING_TARGET_KBS_HOURLY",
+        110_000_000,
+        {"Accept": "text/csv,text/plain;q=0.9,*/*;q=0.5"},
+    )
+    require(status == 200, "EA5E2_TIMING_TARGET_KBS_HTTP")
+    retrieved_at = datetime.now(timezone.utc)
+    parsed_final = urlparse(final)
+    require(parsed_final.hostname == "lter.kbs.msu.edu" and parsed_final.path == "/datatables/13.csv", "EA5E2_TIMING_TARGET_KBS_IDENTITY")
+    selection = select_complete_kbs_timing_target(ea4.parse_kbs_csv(body), retrieved_at)
+    latest = selection["latest"]
+    selected = selection["selected"]
+    age_hours = (retrieved_at - latest).total_seconds() / 3600.0
+    maximum = float(ea4.AUTH["kbs"]["raw_hourly_latest_max_age_hours"])
+    require(age_hours <= maximum, f"EA5E2_TIMING_TARGET_KBS_STALE:{age_hours:.6f}")
+    print(json.dumps({
+        "schema_version": "geox_mcft_cap09_ea5e2_timing_target_selection_v1",
+        "status": "PASS",
+        "requested_at": iso(requested_at),
+        "retrieved_at": iso(retrieved_at),
+        "latest_raw_hourly_timestamp": iso(latest),
+        "latest_age_hours": round(age_hours, 6),
+        "configured_max_age_hours": maximum,
+        "selected_target_t": iso(selected),
+        "selected_target_lag_hours_from_latest": (latest - selected).total_seconds() / 3600.0,
+        "skipped_newer_incomplete_or_duplicate_row_count": selection["skipped"],
+        "selection_scope": "QUALIFICATION_TIMING_ONLY_NOT_LIVE_TARGET_ADMISSION",
+        "same_source_exact_t_decoder_still_required": True,
+        "authority_effect": False,
+        "raw_values_emitted": False,
+    }, sort_keys=True))
+
+
+def command_selftest_kbs_timing_target(_args: argparse.Namespace) -> None:
+    observed_at = datetime(2026, 8, 13, 7, 30, tzinfo=timezone.utc)
+
+    def row(hour: int, rain: str = "0.2") -> dict:
+        return {
+            "datetime_utc": f"2026-08-13 {hour:02d}:00:00",
+            "rain_mm": rain,
+            "airtmp_107_avg": "24.0",
+            "ah": "1.8",
+            "solrad_avg": "150.0",
+            "wind_speed": "2.5",
+        }
+
+    newest_incomplete = select_complete_kbs_timing_target([row(4, ""), row(3)], observed_at)
+    require(newest_incomplete["latest"].hour == 4, "EA5E2_TIMING_TARGET_SELFTEST_LATEST_SOURCE_REQUIRED")
+    require(newest_incomplete["selected"].hour == 3, "EA5E2_TIMING_TARGET_SELFTEST_PREVIOUS_COMPLETE_REQUIRED")
+    require(newest_incomplete["skipped"] == 1, "EA5E2_TIMING_TARGET_SELFTEST_INCOMPLETE_SKIP_REQUIRED")
+
+    newest_duplicate = select_complete_kbs_timing_target([row(4), row(4), row(3)], observed_at)
+    require(newest_duplicate["selected"].hour == 3, "EA5E2_TIMING_TARGET_SELFTEST_DUPLICATE_SKIP_REQUIRED")
+    require(newest_duplicate["skipped"] == 1, "EA5E2_TIMING_TARGET_SELFTEST_DUPLICATE_COUNT_REQUIRED")
+
+    fail_closed = False
+    try:
+        select_complete_kbs_timing_target([row(4, ""), row(3, "invalid")], observed_at)
+    except RuntimeError as exc:
+        fail_closed = str(exc) == "EA5E2_TIMING_TARGET_NO_COMPLETE_EXACT_ROW_IN_LATEST_BATCH"
+    require(fail_closed, "EA5E2_TIMING_TARGET_SELFTEST_NO_COMPLETE_ROW_MUST_FAIL")
+
+    print(json.dumps({
+        "status": "PASS",
+        "cases": 3,
+        "newest_incomplete_row_skipped": True,
+        "duplicate_exact_timestamp_skipped": True,
+        "no_complete_row_failed_closed": True,
+        "live_target_admission_changed": False,
+        "provider_request_count": 0,
+        "database_write_count": 0,
+    }, sort_keys=True))
+
+
 def command_fetch_gfs(args: argparse.Namespace) -> None:
     target = canonical_hour(args.target, "EA5E2_LIVE_GFS_TARGET_INVALID")
     requested_at = datetime.now(timezone.utc)
@@ -703,6 +821,10 @@ def build_parser() -> argparse.ArgumentParser:
     precheck.set_defaults(handler=command_precheck)
     inspect_kbs = sub.add_parser("inspect-kbs")
     inspect_kbs.set_defaults(handler=command_inspect_kbs)
+    timing_target = sub.add_parser("select-kbs-timing-target")
+    timing_target.set_defaults(handler=command_select_kbs_timing_target)
+    selftest_timing_target = sub.add_parser("selftest-kbs-timing-target")
+    selftest_timing_target.set_defaults(handler=command_selftest_kbs_timing_target)
     fetch_gfs = sub.add_parser("fetch-gfs")
     fetch_gfs.add_argument("--target", required=True)
     fetch_gfs.add_argument("--output", required=True)
