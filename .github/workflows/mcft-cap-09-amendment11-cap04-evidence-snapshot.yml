@@ -4,13 +4,15 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-amendment11-cap04-evidence-snapshot.yml'
-      - 'apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_cap04_amendment11_candidate_execution_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_cap04_amendment11_candidate_execution_internal_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_11_DATABASE_SOURCE_TO_EXTERNAL_CAP04.ts'
   push:
     branches: [main]
     paths:
       - '.github/workflows/mcft-cap-09-amendment11-cap04-evidence-snapshot.yml'
-      - 'apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_cap04_amendment11_candidate_execution_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_cap04_amendment11_candidate_execution_internal_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_11_DATABASE_SOURCE_TO_EXTERNAL_CAP04.ts'
 
 permissions:
