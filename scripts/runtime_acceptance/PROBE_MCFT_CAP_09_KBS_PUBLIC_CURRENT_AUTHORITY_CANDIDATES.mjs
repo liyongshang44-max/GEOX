@@ -146,7 +146,6 @@ async function main() {
   ]);
 
   const record6931 = findReviewedRecord(aglog, 6931);
-  const record7076 = findReviewedRecord(aglog, 7076);
   const record7095 = findReviewedRecord(aglog, 7095);
   assert(record6931, 'KBS_AUTHORITY_SCREEN_OBS6931_REQUIRED');
   assert(record7095, 'KBS_AUTHORITY_SCREEN_OBS7095_REQUIRED');
@@ -190,16 +189,7 @@ async function main() {
     provider_direct_phenology_candidate_found: hasDirectPhenologyCandidate,
     retained_as_authority_candidate_source_family: true,
     retained_role: 'ONLY_KBS_PUBLIC_SOURCE_FAMILY_CAPABLE_OF_FORMING_FORMAL_SCOPE_LIFECYCLE_OR_DIRECT_PHENOLOGY_AUTHORITY_CANDIDATES',
-    best_existing_candidate: {
-      provider_observation_id: 7095,
-      observation_date: record7095.observation_date,
-      fact_class: 'DIRECT_T1R1_PLANT_HEIGHT_BIOLOGICAL_OBSERVATION',
-      requires_p0306q_composite_binding_to_6931: true,
-      can_form_historical_positive_biological_lifecycle_anchor_candidate: true,
-      historical_candidate_only: true,
-      establishes_current_runtime_lifecycle_as_of_screen: false,
-      establishes_direct_phenology: false
-    },
+    current_qualifying_authority_candidate: null,
     mirror_note: 'KBS004 /16 and /150 are derived public mirrors of the same underlying AgLog facts, not independent authorities.',
     response_digests: {
       field_log_html: fieldLog.response_sha256,
@@ -318,7 +308,7 @@ async function main() {
     retained_authority_candidate_sources: retained.map((surface) => ({
       source_id: surface.source_id,
       retained_role: surface.retained_role,
-      best_existing_candidate: surface.best_existing_candidate || null
+      current_qualifying_authority_candidate: surface.current_qualifying_authority_candidate || null
     })),
     supporting_identity_or_spatial_sources: supportOnly.map((surface) => surface.source_id),
     adjudication: {
@@ -326,8 +316,9 @@ async function main() {
       sole_retained_kbs_source_family: retained.length === 1 ? retained[0].source_id : null,
       latest_t1r1_observation_id: latestT1r1Id,
       latest_t1r1_observation_date: latestT1r1Date,
-      observation_7095_is_historical_positive_biological_anchor_candidate: obs7095DirectBiological,
+      observation_7095_direct_biological_fact_verified: obs7095DirectBiological,
       observation_7095_is_direct_phenology: false,
+      current_qualifying_authority_candidate_count: hasCurrentDirectCandidate || hasDirectPhenologyCandidate ? 1 : 0,
       current_as_of_screen_direct_positive_candidate_found: hasCurrentDirectCandidate,
       direct_t1r1_provider_phenology_candidate_found: hasDirectPhenologyCandidate,
       current_runtime_lifecycle_authority_closed_by_this_screen: false,
