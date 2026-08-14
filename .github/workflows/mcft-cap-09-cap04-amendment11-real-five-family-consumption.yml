@@ -53,9 +53,60 @@ jobs:
       - name: Prove independent CAP04 live-consumption boundary
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CAP04_AMENDMENT11_REAL_FIVE_FAMILY_CONSUMPTION.cjs
 
+  qualification-harness:
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run complete isolated CAP04 qualification harness
+        env:
+          MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_ISOLATED_DB_ACK: 'true'
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_CAP04_AMENDMENT11_REAL_FIVE_FAMILY_CONSUMPTION_V1.ts qualification-harness
+      - name: Require DB source through CAP04 A1 SELECTED COMPLETED 72h PASS
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CAP04_AMENDMENT11_QUALIFICATION_HARNESS.json','utf8'));
+          if(p.status!=='PASS'||p.qualification_mode!=='ISOLATED_DETERMINISTIC_FIVE_FAMILY_PREMERGE'||p.target_t!=='2026-08-13T15:00:00.000Z'||p.delayed_exact_family_availability_offset_hours!==20||p.isolated_database_selected_record_count!==5||p.external_cap04_operation_variant!=='A1'||p.external_cap04_forcing_status!=='SELECTED'||p.external_cap04_forecast_status!=='COMPLETED'||p.external_cap04_forecast_point_count!==72||p.qualification_crop_context_covers_target!==true||p.qualification_crop_context_only!==true||p.crop_authority_effect!=='NONE'||p.provider_request_count_inside_cap04!==0||p.database_write_count_inside_cap04!==0||p.canonical_persistence_authorized!==false||p.ea5e2_operational_activation_qualified!==false||p.full_operational_go!==false||p.formal_effect!==false||p.raw_values_emitted!==false) throw new Error('MCFT_CAP09_CAP04_A11_QUALIFICATION_HARNESS_SAFE_PASS_REQUIRED');
+      - name: Upload metadata-only qualification harness proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-cap04-a11-qualification-harness-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_09_CAP04_AMENDMENT11_QUALIFICATION_HARNESS.json
+          if-no-files-found: error
+          retention-days: 30
+
   live-five-family-cap04:
     if: github.event_name != 'pull_request'
-    needs: static-contract
+    needs: qualification-harness
     runs-on: ubuntu-latest
     timeout-minutes: 75
     services:
@@ -205,7 +256,7 @@ jobs:
         run: |
           const fs=require('fs');
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CAP04_AMENDMENT11_REAL_FIVE_FAMILY_CONSUMPTION.json','utf8'));
-          if(p.status!=='PASS'||p.subject_sha!==process.env.GITHUB_SHA||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.upstream_kbs_external_five_family_data_path_qualified!==true||p.isolated_database_selected_record_count!==5||p.external_cap04_service_id!=='MCFT_CAP09_EXTERNAL_FORMAL_CAP04_AMENDMENT11_CANDIDATE_EXECUTION_SERVICE_V1'||p.external_cap04_operation_variant!=='A1'||p.external_cap04_forcing_status!=='SELECTED'||p.external_cap04_forecast_status!=='COMPLETED'||p.external_cap04_forecast_point_count!==72||p.caller_supplied_evidence_snapshot_honored!==true||p.fixed_432_fallback_exposed_at_public_seam!==false||p.provider_request_count_inside_cap04!==0||p.database_write_count_inside_cap04!==0||p.canonical_persistence_authorized!==false||p.qualification_crop_context_only!==true||p.crop_authority_effect!=='NONE'||p.cap04_runtime_successor_qualified!==true||p.formal_effect!==false||p.ea5e2_operational_activation_qualified!==false||p.full_operational_go!==false||p.raw_values_emitted!==false) throw new Error('MCFT_CAP09_CAP04_A11_REAL_FIVE_SAFE_PASS_REQUIRED');
+          if(p.status!=='PASS'||p.subject_sha!==process.env.GITHUB_SHA||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.upstream_kbs_external_five_family_data_path_qualified!==true||p.isolated_database_selected_record_count!==5||p.external_cap04_service_id!=='MCFT_CAP09_EXTERNAL_FORMAL_CAP04_AMENDMENT11_CANDIDATE_EXECUTION_SERVICE_V1'||p.external_cap04_operation_variant!=='A1'||p.external_cap04_forcing_status!=='SELECTED'||p.external_cap04_forecast_status!=='COMPLETED'||p.external_cap04_forecast_point_count!==72||p.caller_supplied_evidence_snapshot_honored!==true||p.fixed_432_fallback_exposed_at_public_seam!==false||p.provider_request_count_inside_cap04!==0||p.database_write_count_inside_cap04!==0||p.canonical_persistence_authorized!==false||p.qualification_crop_context_covers_target!==true||p.qualification_crop_context_only!==true||p.crop_authority_effect!=='NONE'||p.cap04_runtime_successor_qualified!==true||p.formal_effect!==false||p.ea5e2_operational_activation_qualified!==false||p.full_operational_go!==false||p.raw_values_emitted!==false) throw new Error('MCFT_CAP09_CAP04_A11_REAL_FIVE_SAFE_PASS_REQUIRED');
 
       - name: Upload metadata-only CAP04 consumption proof
         uses: actions/upload-artifact@v4

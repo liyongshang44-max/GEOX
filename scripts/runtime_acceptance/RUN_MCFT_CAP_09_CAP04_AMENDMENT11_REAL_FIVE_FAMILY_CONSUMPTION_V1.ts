@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { Pool } from "pg";
 
+import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
 import type { CanonicalObjectEnvelopeV1 } from "../../apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.js";
 import {
   MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
@@ -10,12 +11,12 @@ import {
 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";
 import { executeExternalFormalCap04Amendment11CandidateV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_cap04_amendment11_candidate_execution_service_v1.js";
 import { PostgresExternalFormalEvidenceSourceV1 } from "../../apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.js";
-import type { PreparedNextTickInputV1 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
+import type { ContinuationCropStageConfigurationContextV1 } from "../../apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.js";
+import type { CanonicalReplayEvidenceRecordV1, PreparedNextTickInputV1 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
 import {
   EA5B5B_CONFIG_MATRIX_HASH_V1,
   EA5B5B_CONFIG_MATRIX_REF_V1,
-  EA5B5B_CROP_CONTEXT_HASH_V1,
-  EA5B5B_CROP_CONTEXT_REF_V1,
+  EA5B5B_LOGICAL_TIME_V1,
   EA5B5B_REALITY_HASH_V1,
   EA5B5B_REALITY_REF_V1,
   buildEa5b5bExternalFixtureV1,
@@ -23,6 +24,8 @@ import {
 
 const OUTPUT_DIR = path.resolve("acceptance-output");
 const OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_CAP04_AMENDMENT11_REAL_FIVE_FAMILY_CONSUMPTION.json");
+const HARNESS_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_CAP04_AMENDMENT11_QUALIFICATION_HARNESS.json");
+const QUALIFICATION_HARNESS_TARGET = "2026-08-13T15:00:00.000Z";
 const EXPECTED_TYPES = [
   "future_et0_assumption_v1",
   "future_weather_assumption_v1",
@@ -48,6 +51,12 @@ type FiveFamilyProofV1 = {
   cap04_runtime_successor_qualified: boolean;
   crop_authority_effect: string;
   formal_effect: boolean;
+};
+
+type QualificationCropContextV1 = {
+  context_ref: string;
+  context_hash: string;
+  context: ContinuationCropStageConfigurationContextV1;
 };
 
 function required(name: string): string {
@@ -100,8 +109,8 @@ const formalAuthorities: CompileExternalFormalRuntimeConfigInputV1["formal_autho
     hash: "ea5b5b-qualification-source-authority",
   },
   crop_context: {
-    ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
-    hash: "ea5b5b-qualification-crop-authority",
+    ref: "qualification://cap04-a11/crop-context",
+    hash: "sha256:qualification-crop-context-bound-at-runtime",
   },
   recovery: {
     ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-RECOVERY-AUTHORITY-V1.json",
@@ -113,7 +122,64 @@ const formalAuthorities: CompileExternalFormalRuntimeConfigInputV1["formal_autho
   },
 };
 
-function runtimeInput(role: "A0_BOOTSTRAP" | "HOURLY_CAP04", target: string, createdAt: string): CompileExternalFormalRuntimeConfigInputV1 {
+function buildQualificationCropContext(
+  target: string,
+  source: ContinuationCropStageConfigurationContextV1,
+): QualificationCropContextV1 {
+  exactHour(target, "MCFT_CAP09_CAP04_A11_QUALIFICATION_CROP_TARGET_INVALID");
+  if (source.context_class !== "CONFIGURATION_DERIVED_CONTEXT" || source.evidence_record !== false || source.timezone !== "UTC") {
+    throw new Error("MCFT_CAP09_CAP04_A11_QUALIFICATION_CROP_SOURCE_INVALID");
+  }
+  if (source.crop_stage_schedule.length !== 1) throw new Error("MCFT_CAP09_CAP04_A11_QUALIFICATION_CROP_SINGLE_STAGE_REQUIRED");
+  const sourceStage = source.crop_stage_schedule[0]!;
+  const coverageStart = addHours(target, -24);
+  const coverageEnd = addHours(target, 96);
+  const contextRef = `qualification://cap04-a11-real-five-family/crop/${target.replace(/[^0-9]/g, "").toLowerCase()}`;
+  const contextWithoutHash: Omit<ContinuationCropStageConfigurationContextV1, "determinism_hash"> = {
+    ...structuredClone(source),
+    schema_version: "geox_mcft_cap09_cap04_a11_qualification_crop_context_v1",
+    dataset_id: "mcft_cap09_cap04_a11_qualification_crop_context_v1",
+    configuration_matrix_ref: EA5B5B_CONFIG_MATRIX_REF_V1,
+    configuration_matrix_hash: EA5B5B_CONFIG_MATRIX_HASH_V1,
+    crop_water_use_binding_ref: "external_public_research_crop_water_use_v1",
+    crop_water_use_configuration_source_id: "external_public_research_crop_config_qualification_v1",
+    crop_stage_mapping_source: "EXTERNAL_PUBLIC_RESEARCH_CONFIGURATION",
+    coverage_start: coverageStart,
+    coverage_end_exclusive: coverageEnd,
+    crop_stage_schedule: [{
+      ...structuredClone(sourceStage),
+      effective_from: coverageStart,
+      effective_to: coverageEnd,
+    }],
+    limitations: [
+      "QUALIFICATION_ONLY_NOT_OPERATIONAL_CROP_AUTHORITY",
+      "NO_CROP_AUTHORITY_EFFECT",
+      "NO_OBSERVED_BIOLOGICAL_STAGE_CLAIM",
+      "MODEL_PRIOR_FROM_CAP08",
+      "NOT_FIELD_CALIBRATED",
+    ],
+  };
+  const contextHash = semanticHashV1({
+    context_ref: contextRef,
+    qualification_scope: "CAP04_RUNTIME_SUCCESSOR_ONLY",
+    crop_authority_effect: "NONE",
+    context: contextWithoutHash,
+  });
+  return {
+    context_ref: contextRef,
+    context_hash: contextHash,
+    context: { ...contextWithoutHash, determinism_hash: contextHash },
+  };
+}
+
+function runtimeInput(
+  role: "A0_BOOTSTRAP" | "HOURLY_CAP04",
+  target: string,
+  createdAt: string,
+  crop: QualificationCropContextV1,
+): CompileExternalFormalRuntimeConfigInputV1 {
+  const authorities = structuredClone(formalAuthorities);
+  authorities.crop_context = { ref: crop.context_ref, hash: crop.context_hash };
   return {
     scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
     config_role: role,
@@ -128,10 +194,10 @@ function runtimeInput(role: "A0_BOOTSTRAP" | "HOURLY_CAP04", target: string, cre
     configuration_matrix_ref: EA5B5B_CONFIG_MATRIX_REF_V1,
     configuration_matrix_hash: EA5B5B_CONFIG_MATRIX_HASH_V1,
     geometry_semantic_hash: "sha256:ea5b5b-qualification-explicit-geometry-input",
-    formal_authorities: structuredClone(formalAuthorities),
+    formal_authorities: authorities,
     crop_stage_context_authority: {
-      context_ref: EA5B5B_CROP_CONTEXT_REF_V1,
-      context_hash: EA5B5B_CROP_CONTEXT_HASH_V1,
+      context_ref: crop.context_ref,
+      context_hash: crop.context_hash,
       configuration_matrix_ref: EA5B5B_CONFIG_MATRIX_REF_V1,
       configuration_matrix_hash: EA5B5B_CONFIG_MATRIX_HASH_V1,
     },
@@ -142,9 +208,9 @@ function runtimeInput(role: "A0_BOOTSTRAP" | "HOURLY_CAP04", target: string, cre
   };
 }
 
-function buildRuntimePair(target: string, createdAt: string) {
-  const a0 = compileExternalFormalRuntimeConfigV1(runtimeInput("A0_BOOTSTRAP", target, createdAt));
-  const hourlyInput = runtimeInput("HOURLY_CAP04", target, createdAt);
+function buildRuntimePair(target: string, createdAt: string, crop: QualificationCropContextV1) {
+  const a0 = compileExternalFormalRuntimeConfigV1(runtimeInput("A0_BOOTSTRAP", target, createdAt, crop));
+  const hourlyInput = runtimeInput("HOURLY_CAP04", target, createdAt, crop);
   hourlyInput.parent_runtime_config_ref = a0.object_id;
   hourlyInput.parent_runtime_config_hash = a0.determinism_hash;
   const hourly = compileExternalFormalRuntimeConfigV1(hourlyInput);
@@ -198,10 +264,113 @@ function readFiveFamilyProof(file: string, subject: string, target: string): Fiv
   return proof;
 }
 
+function canonicalEventTime(record: CanonicalReplayEvidenceRecordV1): string {
+  const field = record.record_type === "soil_moisture_observation_v1"
+    ? "observed_at"
+    : record.record_type === "future_weather_assumption_v1" || record.record_type === "future_et0_assumption_v1"
+      ? "issued_at"
+      : "interval_end";
+  return canonicalIso(String(record.role_time[field]), `MCFT_CAP09_CAP04_A11_QUALIFICATION_EVENT_TIME_INVALID:${record.record_type}`);
+}
+
+function shiftCanonicalInstants(value: unknown, deltaMs: number): unknown {
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed) && new Date(parsed).toISOString() === value) return new Date(parsed + deltaMs).toISOString();
+    return value;
+  }
+  if (Array.isArray(value)) return value.map((item) => shiftCanonicalInstants(item, deltaMs));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, shiftCanonicalInstants(item, deltaMs)]));
+  }
+  return value;
+}
+
+function rebaseQualificationRecords(
+  records: readonly CanonicalReplayEvidenceRecordV1[],
+  sourceTarget: string,
+  target: string,
+  evidenceSnapshot: string,
+): CanonicalReplayEvidenceRecordV1[] {
+  const deltaMs = Date.parse(target) - Date.parse(sourceTarget);
+  return records.map((source) => {
+    const record = shiftCanonicalInstants(structuredClone(source), deltaMs) as CanonicalReplayEvidenceRecordV1;
+    Object.assign(record, MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1);
+    const delayed = record.record_type === "observed_rainfall_v1" || record.record_type === "historical_et0_estimate_v1";
+    if (delayed) {
+      record.available_to_runtime_at = evidenceSnapshot;
+      record.role_time = { ...record.role_time, ingested_at: evidenceSnapshot };
+    }
+    record.source_record_hash = semanticHashV1({
+      scope: MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
+      record_type: record.record_type,
+      source_record_id: record.source_record_id,
+      binding_id: record.binding_id,
+      origin_source_id: record.origin_source_id,
+      role_time: record.role_time,
+      canonical_payload: record.canonical_payload,
+    });
+    return record;
+  });
+}
+
+async function ensureFactsSchema(pool: Pool): Promise<void> {
+  await pool.query("CREATE TABLE IF NOT EXISTS facts (fact_id text PRIMARY KEY, occurred_at timestamptz NOT NULL, source text NOT NULL, record_json jsonb NOT NULL, ingested_at timestamptz NOT NULL DEFAULT transaction_timestamp())");
+}
+
+async function seedQualificationFacts(pool: Pool, records: readonly CanonicalReplayEvidenceRecordV1[]): Promise<void> {
+  await ensureFactsSchema(pool);
+  await pool.query("TRUNCATE TABLE facts");
+  for (let index = 0; index < records.length; index += 1) {
+    const record = records[index]!;
+    await pool.query(
+      "INSERT INTO facts (fact_id,occurred_at,source,record_json,ingested_at) VALUES ($1,$2::timestamptz,$3,$4::jsonb,$5::timestamptz)",
+      [
+        `fact_cap04_a11_qualification_${index}_${record.record_type}`,
+        canonicalEventTime(record),
+        "mcft_cap09_cap04_a11_qualification_harness_v1",
+        JSON.stringify({ type: record.record_type, payload: record }),
+        String(record.role_time.ingested_at),
+      ],
+    );
+  }
+}
+
+function assertLoadedFiveFamily(loaded: Awaited<ReturnType<PostgresExternalFormalEvidenceSourceV1["loadCandidateRecords"]>>): string[] {
+  if (loaded.selected_record_count !== 5 || loaded.database_write_count !== 0 || loaded.provider_request_count !== 0) throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_DB_SOURCE_INVALID");
+  if (JSON.stringify(loaded.family_cardinality) !== JSON.stringify({ soil: 1, rainfall: 1, historical_et0: 1, future_weather: 1, future_et0: 1 })) throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_CARDINALITY_INVALID");
+  const loadedTypes = loaded.records.map((record) => record.record_type).sort();
+  if (JSON.stringify(loadedTypes) !== JSON.stringify([...EXPECTED_TYPES])) throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_RECORD_SET_INVALID");
+  return loadedTypes;
+}
+
+function executeQualificationCap04(input: {
+  target: string;
+  evidenceSnapshot: string;
+  records: readonly CanonicalReplayEvidenceRecordV1[];
+  crop: QualificationCropContextV1;
+}) {
+  const { a0, hourly } = buildRuntimePair(input.target, input.evidenceSnapshot, input.crop);
+  const candidate = executeExternalFormalCap04Amendment11CandidateV1({
+    scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
+    logical_time: input.target,
+    created_at: input.evidenceSnapshot,
+    evidence_snapshot_time: input.evidenceSnapshot,
+    handoff: handoff(input.target, a0, hourly),
+    runtime_config: hourly,
+    candidate_records: input.records,
+    crop_stage_context: input.crop.context,
+  });
+  if (candidate.service_id !== "MCFT_CAP09_EXTERNAL_FORMAL_CAP04_AMENDMENT11_CANDIDATE_EXECUTION_SERVICE_V1" || candidate.evidence_snapshot_time !== input.evidenceSnapshot || candidate.evidence_snapshot_source !== "CALLER_SUPPLIED") throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_SUCCESSOR_IDENTITY_INVALID");
+  if (candidate.operation_variant !== "A1" || candidate.forcing_outcome.status !== "SELECTED" || candidate.forecast_authority.forecast_candidate.status !== "COMPLETED" || candidate.forecast_authority.forecast_candidate.points.length !== 72) throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_FORECAST_INVALID");
+  if (candidate.canonical_persistence_authorized !== false || candidate.provider_request_count !== 0 || candidate.database_write_count !== 0 || candidate.scenario_write_count !== 0 || candidate.recommendation_write_count !== 0 || candidate.action_write_count !== 0) throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_SIDE_EFFECT_INVALID");
+  return candidate;
+}
+
 function selftest(): void {
-  exactHour("2026-08-13T15:00:00.000Z", "MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_SELFTEST_TARGET");
-  canonicalIso("2026-08-14T05:00:00.000Z", "MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_SELFTEST_SNAPSHOT");
-  if (EXPECTED_TYPES.length !== 5 || addHours("2026-08-13T15:00:00.000Z", -1) !== "2026-08-13T14:00:00.000Z") throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_SELFTEST_DRIFT");
+  exactHour(QUALIFICATION_HARNESS_TARGET, "MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_SELFTEST_TARGET");
+  canonicalIso("2026-08-14T11:00:00.000Z", "MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_SELFTEST_SNAPSHOT");
+  if (EXPECTED_TYPES.length !== 5 || addHours(QUALIFICATION_HARNESS_TARGET, -1) !== "2026-08-13T14:00:00.000Z") throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_SELFTEST_DRIFT");
   console.log(JSON.stringify({
     status: "PASS",
     temporal_authority: "PROVIDER_AVAILABILITY_WATERMARK_V1",
@@ -210,15 +379,66 @@ function selftest(): void {
     provider_fetch_inside_cap04: false,
     database_write_inside_cap04: false,
     qualification_crop_context_only: true,
+    qualification_harness_premerge_required: true,
     crop_authority_effect: "NONE",
     operational_activation_effect: false,
   }));
 }
 
-async function main(): Promise<void> {
-  if (process.argv[2] === "selftest") return selftest();
-  if (process.argv[2] !== "run") throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_MODE_REQUIRED");
+async function qualificationHarness(): Promise<void> {
+  const target = QUALIFICATION_HARNESS_TARGET;
+  const evidenceSnapshot = addHours(target, 20);
+  const databaseUrl = required("DATABASE_URL");
+  assertIsolatedDb(databaseUrl);
+  const pool = new Pool({ connectionString: databaseUrl, application_name: "mcft-cap09-cap04-a11-qualification-harness" });
+  try {
+    const fixture = await buildEa5b5bExternalFixtureV1();
+    const crop = buildQualificationCropContext(target, fixture.crop);
+    if (!(crop.context.coverage_start <= target && target < crop.context.coverage_end_exclusive)) throw new Error("MCFT_CAP09_CAP04_A11_QUALIFICATION_CROP_TARGET_NOT_COVERED");
+    const records = rebaseQualificationRecords(fixture.candidates, EA5B5B_LOGICAL_TIME_V1, target, evidenceSnapshot);
+    await seedQualificationFacts(pool, records);
+    const loaded = await new PostgresExternalFormalEvidenceSourceV1(pool).loadCandidateRecords({
+      scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
+      logical_time: target,
+      evidence_snapshot_time: evidenceSnapshot,
+    });
+    const loadedTypes = assertLoadedFiveFamily(loaded);
+    const candidate = executeQualificationCap04({ target, evidenceSnapshot, records: loaded.records, crop });
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+    const proof = {
+      schema_version: "geox_mcft_cap09_cap04_amendment11_qualification_harness_v1",
+      status: "PASS",
+      qualification_mode: "ISOLATED_DETERMINISTIC_FIVE_FAMILY_PREMERGE",
+      target_t: target,
+      evidence_snapshot_time: evidenceSnapshot,
+      delayed_exact_family_availability_offset_hours: 20,
+      isolated_database_selected_record_count: loaded.selected_record_count,
+      isolated_database_record_types: loadedTypes,
+      external_cap04_operation_variant: candidate.operation_variant,
+      external_cap04_forcing_status: candidate.forcing_outcome.status,
+      external_cap04_forecast_status: candidate.forecast_authority.forecast_candidate.status,
+      external_cap04_forecast_point_count: candidate.forecast_authority.forecast_candidate.points.length,
+      qualification_crop_context_ref: crop.context_ref,
+      qualification_crop_context_hash: crop.context_hash,
+      qualification_crop_context_covers_target: true,
+      qualification_crop_context_only: true,
+      crop_authority_effect: "NONE",
+      provider_request_count_inside_cap04: candidate.provider_request_count,
+      database_write_count_inside_cap04: candidate.database_write_count,
+      canonical_persistence_authorized: candidate.canonical_persistence_authorized,
+      ea5e2_operational_activation_qualified: false,
+      full_operational_go: false,
+      formal_effect: false,
+      raw_values_emitted: false,
+    };
+    fs.writeFileSync(HARNESS_OUTPUT, JSON.stringify(proof, null, 2) + "\n");
+    console.log(JSON.stringify(proof));
+  } finally {
+    await pool.end();
+  }
+}
 
+async function liveRun(): Promise<void> {
   const subject = required("MCFT_CAP09_SUBJECT_SHA");
   if (!/^[0-9a-f]{40}$/.test(subject)) throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_SUBJECT_SHA_INVALID");
   assertExactMain(subject);
@@ -235,28 +455,12 @@ async function main(): Promise<void> {
       logical_time: target,
       evidence_snapshot_time: evidenceSnapshot,
     });
-    if (loaded.selected_record_count !== 5 || loaded.database_write_count !== 0 || loaded.provider_request_count !== 0) throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_DB_SOURCE_INVALID");
-    if (JSON.stringify(loaded.family_cardinality) !== JSON.stringify({ soil: 1, rainfall: 1, historical_et0: 1, future_weather: 1, future_et0: 1 })) throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_CARDINALITY_INVALID");
-    const loadedTypes = loaded.records.map((record) => record.record_type).sort();
-    if (JSON.stringify(loadedTypes) !== JSON.stringify([...EXPECTED_TYPES])) throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_RECORD_SET_INVALID");
+    const loadedTypes = assertLoadedFiveFamily(loaded);
 
     const fixture = await buildEa5b5bExternalFixtureV1();
-    if (fixture.crop.determinism_hash !== EA5B5B_CROP_CONTEXT_HASH_V1) throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_QUALIFICATION_CROP_DRIFT");
-    const { a0, hourly } = buildRuntimePair(target, evidenceSnapshot);
-    const candidate = executeExternalFormalCap04Amendment11CandidateV1({
-      scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
-      logical_time: target,
-      created_at: evidenceSnapshot,
-      evidence_snapshot_time: evidenceSnapshot,
-      handoff: handoff(target, a0, hourly),
-      runtime_config: hourly,
-      candidate_records: loaded.records,
-      crop_stage_context: fixture.crop,
-    });
-
-    if (candidate.service_id !== "MCFT_CAP09_EXTERNAL_FORMAL_CAP04_AMENDMENT11_CANDIDATE_EXECUTION_SERVICE_V1" || candidate.evidence_snapshot_time !== evidenceSnapshot || candidate.evidence_snapshot_source !== "CALLER_SUPPLIED") throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_SUCCESSOR_IDENTITY_INVALID");
-    if (candidate.operation_variant !== "A1" || candidate.forcing_outcome.status !== "SELECTED" || candidate.forecast_authority.forecast_candidate.status !== "COMPLETED" || candidate.forecast_authority.forecast_candidate.points.length !== 72) throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_FORECAST_INVALID");
-    if (candidate.canonical_persistence_authorized !== false || candidate.provider_request_count !== 0 || candidate.database_write_count !== 0 || candidate.scenario_write_count !== 0 || candidate.recommendation_write_count !== 0 || candidate.action_write_count !== 0) throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_SIDE_EFFECT_INVALID");
+    const crop = buildQualificationCropContext(target, fixture.crop);
+    if (!(crop.context.coverage_start <= target && target < crop.context.coverage_end_exclusive)) throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_QUALIFICATION_CROP_OUTSIDE_TARGET");
+    const candidate = executeQualificationCap04({ target, evidenceSnapshot, records: loaded.records, crop });
 
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
     const proof = {
@@ -281,6 +485,9 @@ async function main(): Promise<void> {
       provider_request_count_inside_cap04: candidate.provider_request_count,
       database_write_count_inside_cap04: loaded.database_write_count + candidate.database_write_count,
       canonical_persistence_authorized: candidate.canonical_persistence_authorized,
+      qualification_crop_context_ref: crop.context_ref,
+      qualification_crop_context_hash: crop.context_hash,
+      qualification_crop_context_covers_target: true,
       qualification_crop_context_only: true,
       crop_authority_effect: "NONE",
       cap04_runtime_successor_qualified: true,
@@ -299,6 +506,13 @@ async function main(): Promise<void> {
   } finally {
     await pool.end();
   }
+}
+
+async function main(): Promise<void> {
+  if (process.argv[2] === "selftest") return selftest();
+  if (process.argv[2] === "qualification-harness") return qualificationHarness();
+  if (process.argv[2] === "run") return liveRun();
+  throw new Error("MCFT_CAP09_CAP04_A11_REAL_FIVE_FAMILY_MODE_REQUIRED");
 }
 
 main().catch((error) => {
