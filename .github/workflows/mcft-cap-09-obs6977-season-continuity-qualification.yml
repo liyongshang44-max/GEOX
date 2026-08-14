@@ -1,0 +1,74 @@
+name: mcft-cap-09-obs6977-season-continuity-qualification
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-obs6977-season-continuity-qualification
+    paths:
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_OBS6977_SEASON_CONTINUITY_QUALIFICATION.mjs'
+      - '.github/workflows/mcft-cap-09-obs6977-season-continuity-qualification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-6931-to-6977-season-continuity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Syntax-check continuity probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_OBS6977_SEASON_CONTINUITY_QUALIFICATION.mjs
+      - name: Execute bounded 6931-to-6977 continuity qualification
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_OBS6977_SEASON_CONTINUITY_QUALIFICATION.mjs
+      - name: Verify Layer-1 role separation and no authority effect
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='acceptance-output/MCFT_CAP_09_OBS6977_SEASON_CONTINUITY_QUALIFICATION.json';
+          const x=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(x.status!=='PASS') throw new Error('OBS6977_CONTINUITY_PASS_REQUIRED');
+          const a=x.composite_adjudication;
+          if(a.planting_supplies_season_origin_and_crop_identity!==true) throw new Error('PLANTING_ROLE_REQUIRED');
+          if(a.management_event_supplies_positive_managed_activity!==true) throw new Error('POSITIVE_MANAGEMENT_ROLE_REQUIRED');
+          if(a.bounded_event_log_supplies_only_identity_continuity!==true) throw new Error('CONTINUITY_ROLE_REQUIRED');
+          if(a.composite_binding_6931_to_6977_qualified!==true) throw new Error('COMPOSITE_BINDING_REQUIRED');
+          if(a.positive_active_lifecycle_anchor_candidate_qualified!==true) throw new Error('ACTIVE_ANCHOR_CANDIDATE_REQUIRED');
+          if(a.positive_active_lifecycle_authority_established!==false) throw new Error('AUTHORITY_MUST_AWAIT_VERSIONING');
+          if(a.absence_of_harvest_used_to_create_active!==false) throw new Error('ABSENCE_MAY_NOT_CREATE_ACTIVE');
+          if(a.thermal_evidence_used!==false) throw new Error('THERMAL_MAY_NOT_CREATE_LAYER1');
+          if(x.bounded_identity_continuity.absence_used_only_to_preserve_identity_between_two_positive_events!==true) throw new Error('ABSENCE_ROLE_MUST_BE_CONTINUITY_ONLY');
+          if(x.bounded_identity_continuity.intervening_reset_candidate_count!==0) throw new Error('INTERVENING_RESET_FORBIDDEN');
+          if(x.phenology_stage_authority.status!=='UNRESOLVED') throw new Error('PHENOLOGY_MUST_REMAIN_UNRESOLVED');
+          if(x.crop_model_parameter_authority.status!=='UNRESOLVED' || x.crop_model_parameter_authority.kc!==null) throw new Error('KC_MUST_REMAIN_UNRESOLVED');
+          if(a.next_frontier!=='OBS6977_POSITIVE_ACTIVE_LIFECYCLE_AUTHORITY_VERSIONING') throw new Error('UNEXPECTED_NEXT_FRONTIER');
+          for(const k of ['database_write_count','formal_evidence_write_count','raw_object_write_count','runtime_config_write_count','scheduler_write_count']) if(x[k]!==0) throw new Error(`WRITE_FORBIDDEN:${k}`);
+          if(x.formal_execution_count!=='0/24') throw new Error('FORMAL_MUST_REMAIN_ZERO');
+          console.log(JSON.stringify({status:x.status,binding:a.composite_binding_6931_to_6977_qualified,active_anchor_candidate:a.positive_active_lifecycle_anchor_candidate_qualified,active_authority:a.positive_active_lifecycle_authority_established,anchor_window:a.active_anchor_observation_window_utc,authority_available_to_runtime_at:a.authority_available_to_runtime_at,next_frontier:a.next_frontier}));
+          NODE
+      - name: Upload immutable continuity qualification proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-obs6977-season-continuity-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_OBS6977_SEASON_CONTINUITY_QUALIFICATION.json
+          if-no-files-found: error
+          retention-days: 90
