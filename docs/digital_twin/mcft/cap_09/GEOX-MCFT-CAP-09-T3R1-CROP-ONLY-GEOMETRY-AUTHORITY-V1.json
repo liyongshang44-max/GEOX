@@ -52,7 +52,9 @@
     "aglog_areas": {
       "url": "https://aglog.kbs.msu.edu/areas",
       "allowed_host": "aglog.kbs.msu.edu",
-      "required_markers": ["T3R1", "T3PrairieStrips", "T3R1P"]
+      "required_markers": [],
+      "authority_effect": "NONE_IDENTITY_IS_PROVEN_BY_PROVIDER_GEOMETRY_SELECTOR_AND_FAST_PATH_PLANTING_PROOF",
+      "note": "The current AgLog areas index is retained only as a source digest. Static body rendering is not a geometry or crop-only authority gate."
     },
     "plot_geometry": {
       "page_url": "https://lter.kbs.msu.edu/datatables/829",
