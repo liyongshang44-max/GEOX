@@ -1,0 +1,154 @@
+{
+  "schema_version": "geox_mcft_cap09_current_crop_authority_requalification_v1",
+  "record_status": "CURRENT_CROP_AUTHORITY_REQUALIFICATION_CANDIDATE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier": "S6-CURRENT-CROP-AUTHORITY-REQUALIFICATION",
+  "exact_base_protected_main": "ff707ce624c7300a3e80fbb629d3e76aef790748",
+  "authority_predecessors": {
+    "amendment_13": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-13-CURRENT-CROP-AUTHORITY-REQUALIFICATION-SEPARATION.md",
+      "blob_sha": "5210001b387993cea502aac9480834400b3b8ef3"
+    },
+    "formal_crop_context": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
+      "blob_sha": "b5de9d29189cb654444b3f57d00df290eefe16d3"
+    },
+    "current_season_source_hybrid": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9A-CURRENT-SEASON-CONTEMPORANEOUS-PHENOLOGY-QUALIFICATION-V1.json",
+      "blob_sha": "0e1f809c4bf63b09f4e44431ce507e3b74a966af"
+    },
+    "thermal_landmark_mapping": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9A-THERMAL-LANDMARK-TO-WATER-USE-STAGE-MAPPING-V1.json",
+      "blob_sha": "4e555183e2b69d3b7f39a7341acd89815ad871dd"
+    },
+    "bounded_gdd_terminal": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA9A-P0306Q-BOUNDED-GDD-STAGE-QUALIFICATION-V1.json",
+      "blob_sha": "f50a171ea408e89857ca6c859a19e096e34457e8"
+    },
+    "existing_current_window_observer": {
+      "path": "scripts/runtime_acceptance/OBSERVER_MCFT_CAP_09_EA9B_CURRENT_MAIN_WINDOW_READINESS.mjs",
+      "blob_sha": "42d2d8447401aae7531336f937f77b4f966c44ed"
+    }
+  },
+  "formal_scope": {
+    "site_id": "KBS_MCSE_T1R1",
+    "field_id": "field_kbs_mcse_t1r1",
+    "season_id": "season_2026_corn",
+    "crop": "corn",
+    "hybrid_product_code": "P0306Q",
+    "provider_area_identity": "T1R1",
+    "planting_observation_id": 6931,
+    "planting_local_date": "2026-05-11",
+    "timezone": "America/Detroit"
+  },
+  "provider_scan": {
+    "source": "KBS_AGLOG",
+    "index_url": "https://aglog.kbs.msu.edu/observations",
+    "anchor_url": "https://aglog.kbs.msu.edu/observations/6931",
+    "allowed_host": "aglog.kbs.msu.edu",
+    "maximum_pages": 20,
+    "maximum_detail_candidates": 60,
+    "must_reach_anchor_or_earlier": true,
+    "provider_body_may_be_emitted": false,
+    "provider_payload_may_be_persisted_or_uploaded": false,
+    "safe_metadata_may_be_emitted": [
+      "provider_observation_id",
+      "observation_date",
+      "observation_type",
+      "provider_area_identity",
+      "explicit_crop_tokens",
+      "explicit_hybrid_tokens",
+      "phenology_semantic_tokens",
+      "response_sha256",
+      "response_bytes",
+      "retrieved_at"
+    ]
+  },
+  "season_lifecycle_policy": {
+    "allowed_statuses": ["ACTIVE", "TERMINATED", "UNRESOLVED"],
+    "management_lifecycle_not_biological_vitality": true,
+    "positive_termination_requires_all": [
+      "post_planting_observation",
+      "exact_t1_or_t1r1_scope",
+      "harvest_or_termination_semantics",
+      "explicit_corn_or_p0306q_binding",
+      "provider_detail_available_to_runtime_at_requalification_time"
+    ],
+    "positive_termination_result": "TERMINATED",
+    "absence_of_termination_row_proves_active": false,
+    "active_status_authorized_by_this_v1_probe": false,
+    "fallback_without_positive_termination": "UNRESOLVED",
+    "fallback_reason": "ACTIVE_LIFECYCLE_NOT_PROVEN_BY_PROVIDER_SILENCE"
+  },
+  "phenology_stage_policy": {
+    "allowed_statuses": ["RESOLVED", "UNRESOLVED"],
+    "allowed_stage_codes": ["INITIAL", "DEVELOPMENT", "MID", "LATE"],
+    "recognized_semantics": [
+      "EMERGENCE",
+      "TASSELING",
+      "SILKING",
+      "BLISTER",
+      "MILK_STAGE",
+      "DOUGH_STAGE",
+      "DENT_STAGE",
+      "PHYSIOLOGICAL_MATURITY",
+      "BLACK_LAYER",
+      "SENESCENCE"
+    ],
+    "existing_mapping_reuse": {
+      "exact_silking_r1_point_may_support": "MID",
+      "physiological_maturity_r6_or_later_before_harvest_may_support": "LATE",
+      "silking_persistence_after_event_claimed": false,
+      "tasseling_or_dent_direct_four_stage_mapping_authorized": false,
+      "post_silking_pre_r6_single_stage_authorized": false
+    },
+    "current_as_of_stage_requires": [
+      "exact_current_season_crop_binding",
+      "governed_event_time_and_availability_chronology",
+      "governed_spatial_relationship",
+      "deterministic_existing_or_separately_versioned_stage_mapping",
+      "backward_stability_and_forward_transition_guard",
+      "no_future_observation",
+      "no_ex_post_full_season_normalization"
+    ],
+    "semantic_candidate_alone_resolves_current_stage": false,
+    "fallback": "UNRESOLVED",
+    "fallback_reason": "REQUIRED_PHENOLOGY_STAGE_UNRESOLVED"
+  },
+  "crop_model_parameter_policy": {
+    "allowed_statuses": ["RESOLVED", "UNRESOLVED"],
+    "required_parameter": "Kc",
+    "kc_may_be_invented_from_lifecycle": false,
+    "kc_may_be_invented_from_unmapped_phenology": false,
+    "resolved_requires_separate_legal_crop_context": true,
+    "fallback": "UNRESOLVED",
+    "fallback_reason": "REQUIRED_CROP_MODEL_PARAMETER_AUTHORITY_UNRESOLVED"
+  },
+  "readiness_interpretation": {
+    "legacy_blocker": "CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET",
+    "legacy_blocker_may_not_be_emitted_by_this_requalification": true,
+    "terminated_blocker": "CURRENT_SEASON_LIFECYCLE_TERMINATED",
+    "lifecycle_unresolved_blocker": "CURRENT_SEASON_LIFECYCLE_UNRESOLVED",
+    "model_parameter_unresolved_blocker": "REQUIRED_CROP_MODEL_PARAMETER_AUTHORITY_UNRESOLVED",
+    "phenology_diagnostic": "REQUIRED_PHENOLOGY_STAGE_UNRESOLVED",
+    "ea5e2_go_requires_lifecycle_active_and_required_model_parameter_resolved": true
+  },
+  "hard_nonclaims": [
+    "NO_ACTIVE_LIFECYCLE_FROM_PROVIDER_SILENCE",
+    "NO_STAGE_FROM_PHENOLOGY_TOKEN_ALONE",
+    "NO_KC_INVENTION",
+    "NO_REWRITE_OF_SIX_FAO_MODEL_AUTHORITY",
+    "NO_REWRITE_OF_BOUNDED_GDD_TERMINAL_PROOF",
+    "NO_NEW_NATURAL_SEASON",
+    "NO_SUCCESSOR_EPOCH_SELECTION",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_RAW_OBJECT_WRITE",
+    "NO_RUNTIME_CONFIG_WRITE",
+    "NO_SCHEDULER_WRITE",
+    "NO_CANONICAL_RUNTIME_WRITE",
+    "NO_EA5E2_OPERATIONAL_ACTIVATION",
+    "NO_FORMAL_WINDOW_START"
+  ]
+}
