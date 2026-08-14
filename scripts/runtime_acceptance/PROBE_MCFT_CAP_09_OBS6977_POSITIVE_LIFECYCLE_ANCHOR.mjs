@@ -13,7 +13,8 @@ const HOST = 'aglog.kbs.msu.edu';
 const KBS_HOST = 'lter.kbs.msu.edu';
 const PLANTING_URL = `https://${HOST}/observations/6931`;
 const ANCHOR_URL = `https://${HOST}/observations/6977`;
-const AREA_INDEX_URL = `https://${HOST}/areas`;
+const AREA_T1_URL = `https://${HOST}/areas/623`;
+const AREA_T1R1_URL = `https://${HOST}/areas/1`;
 const PRACTICES_URL = `https://${KBS_HOST}/datasets/7`;
 const TREATMENT_URL = `https://${KBS_HOST}/datatables/20`;
 const PLANTING_DATE = '2026-05-11';
@@ -67,8 +68,10 @@ async function main() {
     assert(anchorHasCorn === false, 'OBS6977_DIRECT_CROP_BINDING_UNEXPECTEDLY_PRESENT_REVIEW_REQUIRED');
     assert(anchorHasP0306Q === false, 'OBS6977_DIRECT_HYBRID_BINDING_UNEXPECTEDLY_PRESENT_REVIEW_REQUIRED');
 
-    const areas = await fetchProof(page, AREA_INDEX_URL, HOST);
-    for (const marker of ['LTER', 'T1', 'T1R1', 'T1R2', 'T1R3', 'T1R4', 'T1R5', 'T1R6']) assert(has(areas.text, marker), `OBS6977_AREA_MARKER_MISSING:${marker}`);
+    const areaT1 = await fetchProof(page, AREA_T1_URL, HOST);
+    assert(/\bT1\b/i.test(areaT1.text), 'OBS6977_T1_AREA_IDENTITY_NOT_REPRODUCED');
+    const areaT1R1 = await fetchProof(page, AREA_T1R1_URL, HOST);
+    assert(/\bT1R1\b/i.test(areaT1R1.text), 'OBS6977_T1R1_AREA_IDENTITY_NOT_REPRODUCED');
 
     const practices = await fetchProof(page, PRACTICES_URL, KBS_HOST);
     for (const marker of ['Agronomic Field Log', 'agronomic activities or observations made on MCSE Treatments', 'Herbicide Application Log', 'all Replicate Blocks (1-6)']) assert(has(practices.text, marker), `OBS6977_PRACTICES_MARKER_MISSING:${marker}`);
@@ -119,7 +122,8 @@ async function main() {
         provider_area_hierarchy_t1_contains_t1r1:true,
         ...practices.proof,
         treatment_response_sha256:treatment.proof.response_sha256,
-        area_index_response_sha256:areas.proof.response_sha256
+        t1_area_response_sha256:areaT1.proof.response_sha256,
+        t1r1_area_response_sha256:areaT1R1.proof.response_sha256
       },
       layer1_adjudication:{
         positive_management_fact_established:true,
