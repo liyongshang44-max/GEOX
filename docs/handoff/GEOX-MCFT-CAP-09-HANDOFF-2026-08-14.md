@@ -1,8 +1,8 @@
 # GEOX MCFT-CAP-09 Continuation Handoff — 2026-08-14
 
-更新时间：2026-08-14 16:02（UTC+8）
+更新时间：2026-08-14 17:45（UTC+8）
 
-> 本 handoff 只用于恢复工程上下文，不制造新的 authority、effectiveness、activation、crop-stage、season、Formal write 或 operational GO 权限。若本文与 current Master Task Line、MCFT-CAP-09 Taskbook、effective Amendments、protected `main`、exact workflow run、immutable artifact 或后续 merged evidence 冲突，以更高权威事实为准。
+> 本 handoff 只恢复工程上下文，不制造新的 authority、effectiveness、activation、crop-stage、season、Formal write 或 operational GO 权限。若本文与 current Master Task Line、MCFT-CAP-09 Taskbook、effective Amendments、protected `main`、exact workflow run、immutable artifact 或后续 merged evidence 冲突，以更高权威事实为准。
 
 ## 0. 当前快照
 
@@ -11,34 +11,39 @@ repository:
 liyongshang44-max/GEOX
 
 protected_main:
-353f642019c5f581d0b578847ee586dffba1f22c
+839d320b118d37a51b659730d0a9e2a1058e433b
 
-protected_main_latest_merge:
-PR #3126 — MCFT-CAP-09: bind qualification crop context before final CAP04 live
+latest_controlled_merges:
+PR #3128 -> e1952de27773fad50b3430b52f2dafb912d9003b
+  MCFT-CAP-09: authorize signed ET0 model-consumption projection
 
-protected_main_drift_since_handoff_branch_created:
-NONE OBSERVED
+PR #3129 -> 839d320b118d37a51b659730d0a9e2a1058e433b
+  MCFT-CAP-09: adapt signed ET0 at model-consumption seam
 
 docs_handoff_pr:
 #3127 — DRAFT / UNMERGED
 
-current_exact_main_witness:
+last_pre_fix_exact_main_live_witness:
 workflow = mcft-cap-09-cap04-amendment11-real-five-family-consumption
 run      = 31776769088
-job      = 94693921170
+subject  = 353f642019c5f581d0b578847ee586dffba1f22c
+result   = FAILURE
 
-actual_first_substantive_live_failure:
+first_substantive_failure_of_31776769088:
 EXTERNAL_CAP04_SERVICE_FUTURE_FORCING_FAILED:
 MALFORMED_FORCING_RECORD:FORCING_POINTS_NOT_EXACT_72_HOURLY
 
-previous_handoff_failure_classification:
-EXTERNAL_CAP04_LATE_RECORD_AFTER_SNAPSHOT:observed_rainfall_v1
+root_cause_after_code/evidence adjudication:
+SIGNED CANONICAL ET0 VS NONNEGATIVE SOIL-WATER MODEL-CONSUMPTION CONTRACT
 
-previous_handoff_failure_classification_status:
-SUPERSEDED_BY_COMPLETE_ACTIONS_JOB_LOG
+signed_et0_authority:
+MERGED / EFFECTIVE AS AMENDMENT-12
+
+signed_et0_consumption_adapter:
+MERGED TO PROTECTED MAIN
 
 current_engineering_frontier:
-SIGNED CANONICAL ET0 -> NONNEGATIVE SOIL-WATER MODEL CONSUMPTION AUTHORITY/ADAPTER
+ONE NEW EXACT-PROTECTED-MAIN REAL FIVE-FAMILY CAP04 WITNESS
 
 kbs provider/cadence:
 CLOSED FOR CURRENT FRONTIER — DO NOT REOPEN
@@ -56,7 +61,7 @@ qualification-only crop-context binding:
 PROVEN / OLD CROP COVERAGE BLOCKER CLOSED
 
 cap04_runtime_successor_qualified:
-false
+NOT YET — REQUIRES NEW EXACT-MAIN LIVE WITNESS
 
 ea5e2_operational_activation_qualified:
 false
@@ -72,51 +77,39 @@ false
 
 ## 1. Authority order already re-verified
 
-Current takeover must use this order:
+Use this order on takeover:
 
 ```text
 1. docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md
-   → current master authority
-
 2. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md
-   → MCFT-CAP-09 design / Stage-1B authority
-
 3. effective Amendments + protected main
-
 4. exact workflow run / immutable artifact / exact code blob
-
 5. handoff
 ```
 
-This handoff was corrected precisely because exact run evidence outranks the earlier handoff interpretation.
+Master V2 self-declares current authority. MCFT-CAP-09 remains Stage-1B / Shadow-online authority. Formal O00-O23 has not started.
 
 ---
 
-## 2. What remains closed
+## 2. What remains closed and must not be re-audited without new contradictory evidence
 
-### 2.1 KBS provider semantics
-
-Do not reopen:
+### 2.1 KBS semantics
 
 ```text
-KBS Raw Hourly observation resolution = HOURLY
-provider publication cadence = DAILY_BATCH
+observation resolution = HOURLY
+publication cadence     = DAILY_BATCH
 raw retention before canonicalization = required
-same-source exact record identity = required
+same-source exact record identity      = required
 no source substitution
 no event-time rewrite
 no future leakage
 ```
 
-Amendment-11 remains the temporal authority for delayed exact rainfall/historical-ET0 admission through `PROVIDER_AVAILABILITY_WATERMARK_V1`.
+Amendment-11 remains temporal authority for delayed exact rainfall / historical-ET0 admission through `PROVIDER_AVAILABILITY_WATERMARK_V1`.
 
-### 2.2 Rolling pre-boundary capture / intersection
+### 2.2 Rolling producer / intersection / rehydration
 
-The real causal producer candidate already exists and has been selected successfully. The current failure does not invalidate that producer proof.
-
-### 2.3 Cross-head rehydration
-
-Run `31776769088` proved:
+Run `31776769088` already proved the real pre-boundary producer and cross-head rehydration chain:
 
 ```text
 producer-SHA-bound candidate accepted
@@ -128,11 +121,21 @@ provider refetch count = 0
 rehydrated types = 3
 ```
 
-Therefore current consumer-head decoding reproduced the producer candidate semantics; this is not an old-producer/new-decoder schema-drift hypothesis.
+The current live witness is designed to reuse the latest successful rolling-KBS intersection and immutable producer artifact, then rehydrate them under the current consumer SHA.
 
-### 2.4 Five-family real data path
+Latest successful rolling-KBS intersection observed before this handoff refresh:
 
-The same run proved the isolated DB contained exactly:
+```text
+run = 31784847954
+status = PASS
+head branch = main
+```
+
+Do not reopen rolling capture merely because its producer SHA predates the current consumer SHA; cross-head rehydration exists specifically to prove semantic identity.
+
+### 2.3 Five-family data path
+
+The real isolated DB path already proved the exact five families:
 
 ```text
 future_weather_assumption_v1
@@ -144,26 +147,26 @@ historical_et0_estimate_v1
 
 The KBS exact-T pair and retained pre-T three-family package both succeeded before CAP04 consumer execution.
 
-### 2.5 Crop coverage
+### 2.4 Crop context
 
-The old `CROP_STAGE_CONTEXT_OUTSIDE_COVERAGE` failure exposed by #3125 was a qualification-harness wiring defect and was closed by #3126.
+The old `CROP_STAGE_CONTEXT_OUTSIDE_COVERAGE` qualification-harness wiring defect was closed by #3126.
 
-Continue to preserve:
+Preserve:
 
 ```text
 qualification-only crop context
 crop_authority_effect = NONE
 ```
 
-Do not reinterpret that context as operational crop authority.
+Do not reinterpret the qualification context as operational crop authority.
 
 ---
 
 ## 3. Correct interpretation of run 31776769088
 
-The complete job log, not the prior handoff summary, is decisive.
+The complete Actions job log superseded the earlier handoff classification `EXTERNAL_CAP04_LATE_RECORD_AFTER_SNAPSHOT:observed_rainfall_v1`.
 
-Successful layers before the failure:
+Successful layers before the real failure:
 
 ```text
 static contract                           PASS
@@ -186,63 +189,13 @@ EXTERNAL_CAP04_SERVICE_FUTURE_FORCING_FAILED:
 MALFORMED_FORCING_RECORD:FORCING_POINTS_NOT_EXACT_72_HOURLY
 ```
 
-The stack reaches:
-
-```text
-external_formal_cap04_amendment11_candidate_execution_internal_v1.ts
-→ selectCap04FutureForcingOutcomeV1
-→ future_forcing_selector_v1.ts
-```
-
-There is no later exact-main run that supersedes `31776769088` at the time of this correction.
-
-Therefore the old handoff plan to reproduce `EXTERNAL_CAP04_LATE_RECORD_AFTER_SNAPSHOT` is no longer the current frontier.
+The error string was broader than the actual defect. The live decoder already produced exact 72-point weather and ET0 horizons; negative signed ET0 values caused the old selector to reject the future ET0 snapshot as malformed.
 
 ---
 
-## 4. Why this is not actually a 72-point shape problem
+## 4. Signed-ET0 evidence and Amendment-12 ruling
 
-The governed GFS live decoder already constructs:
-
-```text
-future weather points = exactly 72
-future ET0 points      = exactly 72
-horizon                = 1..72
-valid_from/valid_to    = exact T+0..T+72 hourly intervals
-weather snapshot kind  = FUTURE_WEATHER_ASSUMPTION
-ET0 snapshot kind      = FUTURE_ET0_ASSUMPTION
-precipitation          = finite and nonnegative
-future ET0             = finite, signed value retained
-```
-
-Cross-head rehydration performs an exact semantic-manifest match after decoding under current consumer code. Thus the producer candidate and current decoder agree semantically.
-
-The CAP04 Future Forcing selector, however, currently treats the selected point value as requiring:
-
-```text
-finite AND >= 0
-```
-
-for both rainfall and ET0. Any negative ET0 point is collapsed into the generic exclusion code:
-
-```text
-FORCING_POINTS_NOT_EXACT_72_HOURLY
-```
-
-So the error code is broader than the actual failing condition.
-
----
-
-## 5. Existing authority proves signed ET0 is real
-
-The decisive predecessor is:
-
-```text
-docs/digital_twin/mcft/cap_09/
-GEOX-MCFT-CAP-09-EA4-RECOVERY-AUTHORITY-V1.json
-```
-
-It already records from qualified live evidence:
+Existing EA4 Recovery Authority had already recorded:
 
 ```text
 historical_et0_complete_distinct_hours = 37
@@ -257,193 +210,134 @@ negative_future_et0_values_retained = true
 negative_clipping_authorized = false
 ```
 
-The Formal Source Binding Matrix also freezes source/canonical negative clipping as unauthorized.
+Therefore source/canonical clipping was not authorized.
 
-Therefore the correct fix is NOT:
-
-```text
-change raw/source ET0
-clip canonical ET0
-rewrite negative values to zero during canonicalization
-relax provenance
-change event time
-change availability chronology
-pretend negative values are malformed source records
-```
-
----
-
-## 6. The actual cross-capability seam
-
-The source/Evidence side is signed:
-
-```text
-historical_et0_estimate_v1 canonical value: signed finite
-future_et0_assumption_v1 canonical points: signed finite
-```
-
-The current soil-water Runtime side is nonnegative-demand math:
-
-```text
-CAP04 Future Forcing DTO requires et0_assumption_mm >= 0
-CAP04 72h Forecast math consumes nonnegative ET-loss amount
-CAP02/CAP03 hourly water-balance path likewise expects ET-loss demand, not a condensation/dew state
-```
-
-Amendment-11 explicitly preserves CAP-02/CAP-03/CAP-04 math. It does not authorize a hidden sign transformation.
-
-Therefore this seam requires an explicit authority before Runtime code is changed.
-
----
-
-## 7. Current candidate authority: Amendment-12
-
-A new authority-only branch was created from exact protected main:
-
-```text
-branch:
-agent/mcft-cap09-et0-consumption-sign-authority
-
-base:
-353f642019c5f581d0b578847ee586dffba1f22c
-
-Draft PR:
-#3128 — MCFT-CAP-09: authorize signed ET0 model-consumption projection
-
-protected-main effect:
-NONE — DRAFT / UNMERGED
-```
-
-The candidate ruling is:
+Amendment-12, merged by PR #3128, authorizes only the model-consumption projection:
 
 ```text
 canonical signed ET0 remains unchanged
 
-model-consumption policy:
+policy:
 MCFT_CAP09_SIGNED_ET0_TO_NONNEGATIVE_WATER_LOSS_DEMAND_V1
 
 model_water_loss_demand_mm = max(canonical_signed_et0_mm, 0)
 ```
 
-When a negative canonical ET0 is projected to zero, the Runtime/model-consumption trace must explicitly carry:
+When a negative canonical ET0 is projected to zero, the consumption trace carries:
 
 ```text
 NEGATIVE_REFERENCE_ET0_CONDENSATION_NOT_MODELED
 ```
 
-This is a bounded model-consumption projection, not source/canonical clipping and not a claim that physical negative ET0 is invalid.
-
-Amendment-12 intentionally covers BOTH:
-
-```text
-historical ET0 consumption
-future ET0 / CAP04 forcing consumption
-```
-
-because the existing live evidence already proves negatives on both paths. Fixing only the current future-forcing failure would likely move the next blocker to a later nighttime historical-ET0 Runtime tick during the required 24-hour Stage-1B proof.
+This is not a claim that negative ET0 is invalid and does not model condensation/dew water gain.
 
 ---
 
-## 8. Frozen boundaries for Amendment-12 and its implementation successor
+## 5. Implementation now merged
 
-Must preserve:
+PR #3129 implements Amendment-12 at the consumption seam only.
 
-```text
-canonical signed ET0
-raw/source/canonical identity
-raw retention
-actual chronology
-no source substitution
-no canonical negative clipping
-no silent imputation
-no time rewrite
-no future leakage
-same-cycle forcing authority
-crop_authority_effect = NONE
-```
-
-Must NOT change scientific equations inside:
+Important compatibility invariant discovered during full CI:
 
 ```text
-CAP-02 hourly water balance
-CAP-03 continuation/assimilation
-CAP-04 72-hour Forecast propagation
-Scenario math
-uncertainty propagation
+positive/nonnegative ET0 path must remain provenance/hash stable
+only actually transformed negative ET0 points may carry Amendment-12 policy/limitation
 ```
 
-The only authorized candidate change is the explicit External Formal model-consumption adapter before signed ET0 reaches a nonnegative ET-loss-demand input seam.
+An earlier implementation version attached the new policy ref to all future ET0 points. Although positive numeric values were unchanged, this changed CAP04 forcing/scenario determinism hashes and caused downstream CAP05 to fail with:
+
+```text
+CAP05_DECISION_REQUEST_NON_CURRENT_SCENARIO
+```
+
+That defect was fixed before merge. Positive points now remain semantic/hash no-ops; negative points alone carry the projection provenance.
+
+### 5.1 Final implementation exact-head proof before merge
+
+Implementation head:
+
+```text
+7d581f14e144a7b72440c27dfedc629f5d6f3157
+```
+
+Focused proof after the final fix:
+
+```text
+run 31787547458 = PASS
+
+positive_historical_et0_preserved = true
+positive_future_et0_noop_provenance_stable = true
+negative_historical_et0_canonical_preserved = true
+negative_historical_et0_model_demand_zero = true
+signed_future_et0_canonical_preserved = true
+signed_future_et0_projection_count = 2
+signed_future_et0_full_72h_completed = true
+external_cap04_operation_variant = A1
+external_cap04_forecast_status = COMPLETED
+external_cap04_forecast_point_count = 72
+source_binding_mismatch_fail_closed = true
+forcing_cycle_mismatch_fail_closed = true
+forcing_time_mismatch_fail_closed = true
+canonical_persistence_authorized = false
+database_write_count = 0
+provider_request_count = 0
+```
+
+Other exact-head gates:
+
+```text
+runtime dependency graph       31787547419 PASS
+successor-runner qualification 31787547564 PASS
+live-window preflight          31787547512 PASS
+repository CI                  31787547461 PASS
+```
+
+The first full repository CI initially exposed the CAP05 currentness regression above. After the positive-path provenance fix, full acceptance, CAP05 G/H, Commercial MVP0 release gate and final hygiene all passed.
+
+### 5.2 Revalidation after authority was merged to main
+
+After PR #3128 moved protected main to `e1952de27773fad50b3430b52f2dafb912d9003b`, #3129 was retargeted from the stacked authority branch to `main`.
+
+Retarget diff remained exactly five files; all MCFT-9 gates were green again, and new-base repository CI also passed:
+
+```text
+runtime dependency graph       31788232256 PASS
+focused DB -> External CAP04    31788232296 PASS
+successor-runner qualification 31788232289 PASS
+live-window preflight          31788232346 PASS
+repository CI                  31788232288 PASS
+```
+
+PR #3129 then merged to protected main as:
+
+```text
+839d320b118d37a51b659730d0a9e2a1058e433b
+```
 
 ---
 
-## 9. Next engineering sequence
+## 6. Current only correct frontier
 
-### Step 1 — keep protected main fixed
+Do not do more static signed-ET0 testing. Do not reopen timing cadence. Do not reopen KBS provider semantics. Do not start Formal O00-O23.
 
-Do NOT merge #3127 merely to refresh documentation.
-
-Do NOT merge #3128 while protected-main exact-head debugging still requires a stable base.
-
-Both can remain Draft.
-
-### Step 2 — exact-head governance proof for #3128
-
-Require:
+Run exactly one new protected-main witness:
 
 ```text
-exact base = 353f642019c5f581d0b578847ee586dffba1f22c
-exact three-file authority boundary
-predecessor blob pins unchanged
-EA4 negative-count facts pinned
-no Runtime/DB/R2/Formal side-effect capability
+workflow:
+mcft-cap-09-cap04-amendment11-real-five-family-consumption
+
+ref:
+main
+
+required exact subject at dispatch time:
+839d320b118d37a51b659730d0a9e2a1058e433b
 ```
 
-### Step 3 — stacked implementation branch, no main merge
-
-After the authority candidate itself is internally green, develop the implementation successor stacked on #3128 rather than merging authority to `main` early.
-
-Implementation frontier:
-
-```text
-S6-EA5E2-ET0-CONSUMPTION-SIGN-ADAPTER
-```
-
-It must cover the complete consumer path in one branch before protected-main changes.
-
-### Step 4 — historical + future regression together
-
-Required cases:
-
-```text
-positive historical ET0 -> unchanged model demand
-negative historical ET0 -> canonical value preserved, model demand 0
-72-point future ET0 with negatives -> SELECTED -> COMPLETED -> exactly 72 points
-nonfinite ET0 -> fail closed
-source/cycle/time mismatch -> fail closed
-chronology/snapshot fail-closed tests remain intact
-```
-
-Do not fix only the current future point and defer the historical path.
-
-### Step 5 — one controlled merge sequence only after full stacked proof
-
-Do not return to:
-
-```text
-one seam -> one merge -> exact main -> discover next seam
-```
-
-The stacked implementation branch should expose the complete five-family consumer chain before protected-main mutation.
-
-### Step 6 — one new exact-main real five-family witness
-
-Only after authority + implementation are ready for the controlled protected-main sequence should a new real witness be run.
-
-Pass target remains:
+Expected pass target:
 
 ```text
 five-family selected = 5
-A1
+operation variant = A1
 Future Forcing = SELECTED
 Forecast = COMPLETED
 Forecast points = 72
@@ -454,19 +348,34 @@ crop_authority_effect = NONE
 Formal effect = false
 ```
 
-### Step 7 — then reread readiness blockers
+The workflow itself must continue to enforce exact protected-main, private transient R2 bindings, latest successful rolling intersection, cross-head immutable producer rehydration, exact-T KBS pair, and isolated DB consumption.
 
-Only after CAP04 real witness PASS:
+### Tooling note
 
-```text
-re-read exact-head full readiness blocker set
-```
+At this handoff refresh, the connected GitHub tool available to the agent exposes Actions reads and reruns but does **not** expose the REST `workflow_dispatch` write operation. Do not rerun `31776769088` as a substitute: GitHub rerun preserves the old subject SHA `353f642...` and would not qualify the new main.
 
-If hard blockers = 0, stop expanding audit scope and make the next GO/NO-GO decision.
+If working through a UI/CLI that has dispatch permission, trigger the workflow above on `main`; no inputs are required.
 
 ---
 
-## 10. Hard nonclaims / state that remains false
+## 7. After the new exact-main witness
+
+If it passes the target above:
+
+```text
+1. immediately reread the exact-head full readiness blocker set;
+2. do not broaden audit scope;
+3. if hard blockers = 0, make the next GO/NO-GO decision;
+4. only after GO may the next operational/Formal transition be considered under its own authority.
+```
+
+If it fails, classify only the first substantive failure from the complete job log. Do not infer the blocker from the workflow summary or from an old handoff.
+
+---
+
+## 8. Hard nonclaims / state still false
+
+Until the new live witness and readiness adjudication prove otherwise:
 
 ```text
 CAP04_RUNTIME_SUCCESSOR_QUALIFIED = false
@@ -477,27 +386,30 @@ FULL_OPERATIONAL_GO = false
 MCFT-CAP-09 completed = false
 ```
 
-Amendment-12 candidate does not establish any of these.
+The merged Amendment-12 authority and adapter do not establish any of these by themselves.
 
 ---
 
-## 11. Takeover warning
+## 9. Takeover warning
 
-Do not resume from the earlier statement:
+Do not resume from either obsolete frontier:
 
 ```text
-current frontier = canonical chronology / caller snapshot alignment
-failure = EXTERNAL_CAP04_LATE_RECORD_AFTER_SNAPSHOT:observed_rainfall_v1
-```
+obsolete #1:
+canonical chronology / caller snapshot alignment
+EXTERNAL_CAP04_LATE_RECORD_AFTER_SNAPSHOT
 
-That statement was superseded by the complete exact-main Actions log for run `31776769088`.
+obsolete #2:
+signed-ET0 authority/adapter implementation still pending
+```
 
 Resume from:
 
 ```text
-real five-family input path = proven
-current blocker = signed ET0 Evidence vs nonnegative soil-water model-consumption seam
-current protected main = 353f642019c5f581d0b578847ee586dffba1f22c
-current authority candidate = Amendment-12 / Draft PR #3128
-next implementation = stacked signed-ET0 consumption adapter, before any new exact-main witness
+real five-family upstream path = proven
+signed ET0 authority = merged
+signed ET0 model-consumption adapter = merged
+protected main = 839d320b118d37a51b659730d0a9e2a1058e433b
+current frontier = one new exact-main real-five-family CAP04 witness
+then = exact-head full readiness blocker set -> GO/NO-GO
 ```
