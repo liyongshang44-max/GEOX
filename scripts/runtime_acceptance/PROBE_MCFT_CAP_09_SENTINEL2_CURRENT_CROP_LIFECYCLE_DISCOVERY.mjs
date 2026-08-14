@@ -75,9 +75,7 @@ function write(value) {
 function canonicalIso(value, code) {
   const parsed = Date.parse(value);
   assert(Number.isFinite(parsed), code);
-  const iso = new Date(parsed).toISOString();
-  assert(iso === value, code);
-  return iso;
+  return new Date(parsed).toISOString();
 }
 function approvedUrl(url, host, pathname, code) {
   const parsed = new URL(url);
@@ -197,9 +195,9 @@ async function catalogScenes(token, geometry, endUtc) {
   assert(features.length < 100, 'SENTINEL2_CATALOG_PAGINATION_NOT_IMPLEMENTED');
   const scenes = features.map((feature) => {
     const id = String(feature?.id || '').trim();
-    const sensingTime = String(feature?.properties?.datetime || '').trim();
+    const rawSensingTime = String(feature?.properties?.datetime || '').trim();
     assert(id, 'SENTINEL2_CATALOG_SCENE_ID_REQUIRED');
-    canonicalIso(sensingTime, 'SENTINEL2_CATALOG_SENSING_TIME_INVALID');
+    const sensingTime = canonicalIso(rawSensingTime, 'SENTINEL2_CATALOG_SENSING_TIME_INVALID');
     const cloud = Number(feature?.properties?.['eo:cloud_cover']);
     return {
       scene_id: id,
@@ -226,7 +224,11 @@ async function plotStatisticsForDay(token, geometry, day) {
   const fetched = await postJson(SH_STATISTICS_URL, token, {
     input: {
       bounds: { geometry, properties: { crs: CRS_URI } },
-      data: [{ type: COLLECTION, dataFilter: { mosaickingOrder: 'leastCC' } }]
+      data: [{
+        type: COLLECTION,
+        dataFilter: { mosaickingOrder: 'leastCC' },
+        processing: { upsampling: 'NEAREST', downsampling: 'NEAREST' }
+      }]
     },
     aggregation: {
       timeRange: { from: `${day}T00:00:00.000Z`, to: `${nextUtcDay(day)}T00:00:00.000Z` },
