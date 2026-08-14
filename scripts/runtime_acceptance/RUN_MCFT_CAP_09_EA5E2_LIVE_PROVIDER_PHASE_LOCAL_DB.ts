@@ -406,7 +406,7 @@ async function main(): Promise<void> {
     const dbSource = await new PostgresExternalFormalEvidenceSourceV1(pool).loadCandidateRecords({
       scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
       logical_time: target,
-      exact_interval_availability_cutoff_time: slot.late_exact_hour_evidence_cutoff,
+      evidence_snapshot_time: slot.late_exact_hour_evidence_cutoff,
     });
     if (dbSource.selected_record_count !== 5 || dbSource.database_write_count !== 0 || dbSource.provider_request_count !== 0) {
       throw new Error("EA5E2_LIVE_DB_ONLY_FIVE_FAMILY_HANDOFF_REQUIRED");

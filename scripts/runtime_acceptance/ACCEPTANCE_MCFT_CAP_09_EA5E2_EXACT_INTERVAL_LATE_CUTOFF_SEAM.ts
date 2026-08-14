@@ -108,7 +108,7 @@ const external = buildContinuationEvidenceWindowV1({
   crop_stage_context_ref: "crop",
   crop_stage_context_hash: "crop-hash",
   crop_stage_context: crop,
-  exact_interval_availability_cutoff_time: CUTOFF,
+  evidence_snapshot_time: CUTOFF,
 });
 assert.equal(external.rainfall_record.source_record_id, "rain");
 assert.equal(external.historical_et0_record.source_record_id, "et0");
@@ -128,7 +128,7 @@ assert.throws(
     crop_stage_context_ref: "crop",
     crop_stage_context_hash: "crop-hash",
     crop_stage_context: crop,
-    exact_interval_availability_cutoff_time: CUTOFF,
+    evidence_snapshot_time: CUTOFF,
   }),
   /MISSING_EXACT_HOURLY_RAINFALL_INTERVAL/,
   "EXACT_INTERVAL_AFTER_T_PLUS_7H12_MUST_FAIL_CLOSED",

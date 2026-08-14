@@ -67,7 +67,7 @@ export interface ExternalFormalV3DatabaseEvidenceSourcePortV1 {
   loadCandidateRecords(input: {
     scope: TwinScopeKeyV1;
     logical_time: string;
-    exact_interval_availability_cutoff_time: string;
+    evidence_snapshot_time: string;
   }): Promise<ExternalFormalDatabaseEvidenceLoadResultV1>;
 }
 
@@ -92,7 +92,7 @@ export type ExecuteExternalFormalV3PersistentTickResultV1 = {
   epoch_id: string;
   slot_id: ShadowOnlineSlotIdV1;
   logical_time: string;
-  exact_interval_availability_cutoff_time: string;
+  evidence_snapshot_time: string;
   observer_started_at: string;
   observer_start_skew_minutes: number;
   a_record_set: Cap04ARecordSetV1;
@@ -158,7 +158,7 @@ function memberV1(recordSet: Cap04ARecordSetV1, objectType: string): CanonicalOb
 function validateManifestAndClaimV1(input: ExecuteExternalFormalV3PersistentTickInputV1): {
   logical_time: string;
   observer_started_at: string;
-  exact_interval_availability_cutoff_time: string;
+  evidence_snapshot_time: string;
   observer_start_skew_minutes: number;
 } {
   const scope = externalScopeV1();
@@ -198,7 +198,7 @@ function validateManifestAndClaimV1(input: ExecuteExternalFormalV3PersistentTick
   return {
     logical_time: logicalTime,
     observer_started_at: observerStartedAt,
-    exact_interval_availability_cutoff_time: addMinutesV1(logicalTime, EXTERNAL_FORMAL_V3_EXACT_INTERVAL_CUTOFF_OFFSET_MINUTES_V1),
+    evidence_snapshot_time: addMinutesV1(logicalTime, EXTERNAL_FORMAL_V3_EXACT_INTERVAL_CUTOFF_OFFSET_MINUTES_V1),
     observer_start_skew_minutes: skewMinutes,
   };
 }
@@ -315,7 +315,7 @@ export class ExternalFormalV3PersistentTickServiceV1 {
       const evidence = await this.evidenceSource.loadCandidateRecords({
         scope,
         logical_time: timing.logical_time,
-        exact_interval_availability_cutoff_time: timing.exact_interval_availability_cutoff_time,
+        evidence_snapshot_time: timing.evidence_snapshot_time,
       });
       if (evidence.database_write_count !== 0) throw new Error("EXTERNAL_FORMAL_V3_EVIDENCE_SOURCE_WRITE_FORBIDDEN");
       if (evidence.provider_request_count !== 0) throw new Error("EXTERNAL_FORMAL_V3_RUNTIME_PROVIDER_FETCH_FORBIDDEN");
@@ -365,7 +365,7 @@ export class ExternalFormalV3PersistentTickServiceV1 {
         epoch_id: input.manifest_slot.epoch_id,
         slot_id: input.manifest_slot.slot_id,
         logical_time: timing.logical_time,
-        exact_interval_availability_cutoff_time: timing.exact_interval_availability_cutoff_time,
+        evidence_snapshot_time: timing.evidence_snapshot_time,
         observer_started_at: timing.observer_started_at,
         observer_start_skew_minutes: timing.observer_start_skew_minutes,
         a_record_set: aRecordSet,
@@ -429,7 +429,7 @@ export class ExternalFormalV3PersistentTickServiceV1 {
       epoch_id: input.manifest_slot.epoch_id,
       slot_id: input.manifest_slot.slot_id,
       logical_time: timing.logical_time,
-      exact_interval_availability_cutoff_time: timing.exact_interval_availability_cutoff_time,
+      evidence_snapshot_time: timing.evidence_snapshot_time,
       observer_started_at: timing.observer_started_at,
       observer_start_skew_minutes: timing.observer_start_skew_minutes,
       a_record_set: aRecordSet,

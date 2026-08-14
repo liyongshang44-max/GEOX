@@ -75,7 +75,7 @@ async function main(): Promise<void> {
   const loaded = await source.loadCandidateRecords({
     scope: fixture.scope,
     logical_time: EA5B5B_LOGICAL_TIME_V1,
-    exact_interval_availability_cutoff_time: cutoff,
+    evidence_snapshot_time: cutoff,
   });
 
   assert.equal(loaded.database_write_count, 0);

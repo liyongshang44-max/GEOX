@@ -340,7 +340,7 @@ async function main(): Promise<void> {
     const loaded = await evidenceSource.loadCandidateRecords({
       scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
       logical_time: targetT,
-      exact_interval_availability_cutoff_time: exactIntervalAvailabilityCutoffTime,
+      evidence_snapshot_time: exactIntervalAvailabilityCutoffTime,
     });
     if (loaded.selected_record_count !== 5 || loaded.provider_request_count !== 0 || loaded.database_write_count !== 0) {
       throw new Error(`EA5E2_ACTIVATION_EXACT_FIVE_DB_ONLY_RECORDS_REQUIRED:${loaded.selected_record_count}`);
@@ -392,7 +392,7 @@ async function main(): Promise<void> {
       formal_a0_runtime_config_hash: formalSnapshot.runtime_config.determinism_hash,
       qualification_runtime_config_ref: runtimeConfig.object_id,
       qualification_runtime_config_hash: runtimeConfig.determinism_hash,
-      exact_interval_availability_cutoff_time: exactIntervalAvailabilityCutoffTime,
+      evidence_snapshot_time: exactIntervalAvailabilityCutoffTime,
       db_only_runtime: true,
       provider_request_count: loaded.provider_request_count + candidate.provider_request_count,
       selected_record_count: loaded.selected_record_count,

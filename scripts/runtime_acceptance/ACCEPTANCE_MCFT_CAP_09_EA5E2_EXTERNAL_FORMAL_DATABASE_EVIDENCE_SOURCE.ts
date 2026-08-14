@@ -164,7 +164,7 @@ function assertValidResult(result: ExternalFormalDatabaseEvidenceLoadResultV1): 
   assert.equal(result.source_id, "MCFT_CAP09_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE_V1");
   assert.equal(result.logical_time, T);
   assert.equal(result.evidence_snapshot_time, SNAPSHOT);
-  assert.equal(result.exact_interval_availability_cutoff_time, SNAPSHOT); // deprecated alias only
+  assert.equal(result.evidence_snapshot_time, SNAPSHOT); // deprecated alias only
   assert.equal(result.database_read_transaction_count, 1);
   assert.equal(result.database_write_count, 0);
   assert.equal(result.provider_request_count, 0);
@@ -228,7 +228,7 @@ async function main(): Promise<void> {
   const aliasResult = await new PostgresExternalFormalEvidenceSourceV1(alias.pool).loadCandidateRecords({
     scope: SCOPE,
     logical_time: T,
-    exact_interval_availability_cutoff_time: SNAPSHOT,
+    evidence_snapshot_time: SNAPSHOT,
   });
   assert.equal(aliasResult.evidence_snapshot_time, SNAPSHOT);
   assertNoWriteSql(alias.sql);

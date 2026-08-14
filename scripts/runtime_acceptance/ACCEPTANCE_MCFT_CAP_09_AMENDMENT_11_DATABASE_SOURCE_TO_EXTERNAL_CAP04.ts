@@ -141,7 +141,7 @@ async function main(): Promise<void> {
   assert.equal(positive.loaded.provider_request_count, 0);
   assert.equal(positive.loaded.selected_record_count, 5);
   assert.equal(positive.loaded.evidence_snapshot_time, positive.evidenceSnapshot);
-  assert.equal(positive.loaded.exact_interval_availability_cutoff_time, positive.evidenceSnapshot);
+  assert.equal(positive.loaded.evidence_snapshot_time, positive.evidenceSnapshot);
   assert.deepEqual(positive.loaded.family_cardinality, {
     soil: 1,
     rainfall: 1,
