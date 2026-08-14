@@ -51,6 +51,7 @@ async function fetchProof(page, url) {
       response_sha256: sha256(bytes),
       response_bytes: bytes.byteLength,
       retrieved_at: new Date().toISOString(),
+      final_pathname: finalUrl.pathname,
       provider_body_emitted: false
     }
   };
@@ -131,7 +132,10 @@ async function extractLabeledValue(page, labelPattern) {
 
 async function fetchObservationDetail(page, row) {
   const fetched = await fetchProof(page, DETAIL_URL(row.provider_observation_id));
-  assert(new RegExp(`\\b${row.provider_observation_id}\\b`).test(fetched.text), `T1R1_DETAIL_IDENTITY_MISSING:${row.provider_observation_id}`);
+  assert(
+    fetched.proof.final_pathname === `/observations/${row.provider_observation_id}`,
+    `T1R1_DETAIL_PATH_IDENTITY_MISMATCH:${row.provider_observation_id}`
+  );
 
   const comment = await extractLabeledValue(page, /^comment$/i);
   const detailType = await extractLabeledValue(page, /^observation\s*type$/i);
