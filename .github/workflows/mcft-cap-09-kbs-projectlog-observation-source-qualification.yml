@@ -1,0 +1,118 @@
+name: mcft-cap-09-kbs-projectlog-observation-source-qualification
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-kbs-projectlog-observation-source-qualification
+    paths:
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_KBS_PROJECTLOG_OBSERVATION_SOURCE_QUALIFICATION.mjs'
+      - '.github/workflows/mcft-cap-09-kbs-projectlog-observation-source-qualification.yml'
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_KBS_PROJECTLOG_OBSERVATION_SOURCE_QUALIFICATION.mjs'
+      - '.github/workflows/mcft-cap-09-kbs-projectlog-observation-source-qualification.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-kbs-projectlog-observation-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact protected-main base and two-file boundary
+        env:
+          MCFT_BASE_SHA: 23f224c701dbe0b8bd56eceff3741cb1c3dc1f78
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$MCFT_SUBJECT_SHA"
+          test "$(git merge-base "$MCFT_BASE_SHA" HEAD)" = "$MCFT_BASE_SHA"
+          mapfile -t changed < <(git diff --name-only "$MCFT_BASE_SHA...$MCFT_SUBJECT_SHA" | sort)
+          expected=(
+            '.github/workflows/mcft-cap-09-kbs-projectlog-observation-source-qualification.yml'
+            'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_KBS_PROJECTLOG_OBSERVATION_SOURCE_QUALIFICATION.mjs'
+          )
+          test "${#changed[@]}" -eq 2
+          test "${changed[0]}" = "${expected[0]}"
+          test "${changed[1]}" = "${expected[1]}"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Syntax-check Projectlog source qualification probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_KBS_PROJECTLOG_OBSERVATION_SOURCE_QUALIFICATION.mjs
+
+      - name: Execute live KBS Projectlog source qualification
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_KBS_PROJECTLOG_OBSERVATION_SOURCE_QUALIFICATION.mjs
+
+      - name: Verify candidate-only fail-closed boundary
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = 'acceptance-output/MCFT_CAP_09_KBS_PROJECTLOG_OBSERVATION_SOURCE_QUALIFICATION.json';
+          const x = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (x.status !== 'PASS') throw new Error('PROJECTLOG_QUALIFICATION_PASS_REQUIRED');
+          const s = x.source_qualification;
+          if (s.provider !== 'KBS_PROJECTLOG') throw new Error('PROJECTLOG_PROVIDER_REQUIRED');
+          if (s.provider_host_under_kbs_msu_edu !== true) throw new Error('PROJECTLOG_KBS_HOST_REQUIRED');
+          if (s.current_2026_rows_present !== true || s.row_author_identity_present !== true) throw new Error('PROJECTLOG_CURRENT_AUTHORED_ROWS_REQUIRED');
+          if (s.exact_provider_response_hash_recorded !== true || s.provider_body_emitted !== false) throw new Error('PROJECTLOG_HASH_ONLY_AUDIT_BOUNDARY_REQUIRED');
+          if (s.source_authority_established_by_this_probe !== false || s.source_use_rights_expanded_by_this_probe !== false) throw new Error('PROJECTLOG_SOURCE_AUTHORITY_EFFECT_FORBIDDEN');
+
+          const t = x.temporal_semantics;
+          if (t.event_time_precision !== 'DAY' || t.provider_intraday_event_time_present !== false) throw new Error('PROJECTLOG_DAY_PRECISION_REQUIRED');
+          if (t.retrieval_time_used_as_event_time !== false || t.available_to_runtime_at_backdated !== false || t.future_observation_consumed !== false) throw new Error('PROJECTLOG_CHRONOLOGY_GUARD_FAILED');
+
+          const sp = x.spatial_semantics;
+          if (!(sp.exact_t1r1_row_count > 0)) throw new Error('PROJECTLOG_EXACT_T1R1_ROW_REQUIRED');
+          if (sp.parent_t1_only_treated_as_t1r1 !== false || sp.other_replicate_substituted_for_t1r1 !== false || sp.geographic_proximity_used_as_field_truth !== false) throw new Error('PROJECTLOG_SPATIAL_SUBSTITUTION_FORBIDDEN');
+
+          const c = x.candidate_observation;
+          if (c.known_2026_06_26_t1r1_anchor_signature_present !== true) throw new Error('PROJECTLOG_2026_06_26_T1R1_POSITIVE_CONTROL_REQUIRED');
+          if (c.positive_lifecycle_anchor_candidate_qualified !== true) throw new Error('PROJECTLOG_LIFECYCLE_ANCHOR_CANDIDATE_REQUIRED');
+          if (c.best_candidate_exact_t1r1_scope !== true || c.best_candidate_explicit_corn_semantic !== true || c.best_candidate_direct_physical_field_corn_activity !== true || c.best_candidate_crop_reset_semantic !== false) throw new Error('PROJECTLOG_BEST_CANDIDATE_SEMANTICS_INVALID');
+          if (c.direct_p0306q_semantic_present !== false || c.p0306q_season_identity_continuity_established_by_this_probe !== false) throw new Error('PROJECTLOG_P0306Q_OVERCLAIM_FORBIDDEN');
+          if (c.phenology_stage_candidate_qualified !== false || c.crop_model_parameter_candidate_qualified !== false) throw new Error('PROJECTLOG_PHENOLOGY_OR_KC_OVERCLAIM_FORBIDDEN');
+
+          const a = x.authority_effect;
+          if (a.current_runtime_lifecycle_authority_established !== false || a.phenology_authority_established !== false || a.crop_model_parameter_authority_established !== false || a.kc !== null) throw new Error('PROJECTLOG_AUTHORITY_EFFECT_FORBIDDEN');
+          if (a.future_legal_t_established !== false || a.ea5e2_operational_activation_qualified !== false || a.formal_window_started !== false || a.formal_execution_count !== '0/24') throw new Error('PROJECTLOG_ACTIVATION_EFFECT_FORBIDDEN');
+          for (const k of ['database_write_count','runtime_write_count','scheduler_write_count','formal_evidence_write_count']) if (x[k] !== 0) throw new Error(`PROJECTLOG_WRITE_FORBIDDEN:${k}`);
+          if (x.next_frontier !== 'PROJECTLOG_T1R1_SEASON_IDENTITY_CONTINUITY_AND_LIFECYCLE_ANCHOR_QUALIFICATION') throw new Error('PROJECTLOG_NEXT_FRONTIER_REQUIRED');
+          console.log(JSON.stringify({status:x.status,best_candidate_event_date:c.best_candidate_event_date,next_frontier:x.next_frontier,formal:a.formal_execution_count}));
+          NODE
+
+      - name: Upload immutable Projectlog qualification artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-kbs-projectlog-source-qualification-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_KBS_PROJECTLOG_OBSERVATION_SOURCE_QUALIFICATION.json
+          if-no-files-found: error
+          retention-days: 90
