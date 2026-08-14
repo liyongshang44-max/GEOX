@@ -87,9 +87,6 @@ no geometry buffer expansion for authority
 Discovery uses official Copernicus Data Space Ecosystem Sentinel Hub endpoints:
 
 ```text
-OAuth token:
-https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token
-
 Catalog API:
 https://sh.dataspace.copernicus.eu/catalog/v1/search
 
@@ -100,14 +97,15 @@ collection:
 sentinel-2-l2a
 ```
 
-OAuth uses Client Credentials. Credentials and access tokens are secrets and MUST NOT be written to repository files, workflow logs, artifacts, or acceptance output.
+The repository probe does **not** read or exchange long-lived OAuth client credentials. An operator obtains a short-lived Copernicus access token outside this repository code path and injects only that ephemeral bearer token at execution time. The token MUST NOT be written to repository files, workflow logs, artifacts, or acceptance output.
 
-Repository/CI secret names are only references:
+The only CI secret reference is:
 
 ```text
-CDSE_SENTINEL_HUB_CLIENT_ID
-CDSE_SENTINEL_HUB_CLIENT_SECRET
+CDSE_SENTINEL_HUB_ACCESS_TOKEN
 ```
+
+This is intentionally a least-privilege split: OAuth client ID/secret handling remains outside the committed probe.
 
 ## 5. Discovery time window and chronology
 
@@ -258,7 +256,7 @@ A live run is valid discovery evidence only when:
 ```text
 exact subject SHA is recorded
 KBS restricted geometry is fetched live
-Copernicus OAuth succeeds
+an externally obtained short-lived Copernicus bearer token is injected and accepted
 Catalog returns intersecting sentinel-2-l2a scenes
 Statistical API returns plot-level outputs
 sanitized artifact is uploaded
