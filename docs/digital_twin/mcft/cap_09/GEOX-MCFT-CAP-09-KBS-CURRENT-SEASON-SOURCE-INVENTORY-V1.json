@@ -1,0 +1,213 @@
+{
+  "schema_version": "geox_mcft_cap09_kbs_current_season_source_inventory_v1",
+  "record_status": "SOURCE_INVENTORY_ONLY_NOT_AUTHORITY",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier": "CURRENT_SEASON_POSITIVE_LIFECYCLE_OR_STAGE_SOURCE_QUALIFICATION",
+  "exact_base_protected_main": "3aee8450e9afc140296b13be666617ef69bf2e11",
+  "inventory_as_of_date": "2026-08-14",
+  "formal_scope": {
+    "site_id": "KBS_MCSE_T1R1",
+    "field_id": "field_kbs_mcse_t1r1",
+    "season_id": "season_2026_corn",
+    "crop": "corn",
+    "hybrid_product_code": "P0306Q",
+    "provider_area_identity": "T1R1",
+    "planting_observation_id": 6931,
+    "planting_local_date": "2026-05-11",
+    "timezone": "America/Detroit"
+  },
+  "required_proof_layers": [
+    "POSITIVE_LIFECYCLE_ANCHOR",
+    "BOUNDED_LIFECYCLE_CARRY_FORWARD",
+    "PHENOLOGY_TO_WATER_USE_STAGE",
+    "STAGE_TO_KC_TO_LEGAL_T"
+  ],
+  "source_surfaces": [
+    {
+      "source_id": "KBS_AGLOG_MCSE_LIVE",
+      "provider": "KBS",
+      "source_class": "PUBLIC_CURRENT_AGRONOMIC_EVENT_LOG",
+      "urls": [
+        "https://aglog.kbs.msu.edu/observations",
+        "https://aglog.kbs.msu.edu/areas",
+        "https://lter.kbs.msu.edu/datatables/16",
+        "https://lter.kbs.msu.edu/datatables/150"
+      ],
+      "current_2026_rows_observed": true,
+      "t1_t1r1_spatial_identity_available": true,
+      "event_type_available": true,
+      "event_date_available": true,
+      "detail_created_or_availability_metadata_candidate": true,
+      "direct_crop_or_hybrid_binding_possible_in_provider_detail": true,
+      "direct_phenology_semantics_possible_in_provider_detail": true,
+      "formal_scope_current_positive_crop_bound_anchor_established": false,
+      "formal_scope_current_phenology_established": false,
+      "qualification": "HIGHEST_PRIORITY_CURRENT_SOURCE"
+    },
+    {
+      "source_id": "KBS004_SEEDS_AND_PLANTING_DATE",
+      "provider": "KBS_LTER",
+      "source_class": "PUBLIC_PLANTING_ORIGIN_TABLE",
+      "url": "https://lter.kbs.msu.edu/datatables/17",
+      "public_temporal_label": "1988_TO_PRESENT",
+      "provides_crop_identity": true,
+      "provides_planting_origin": true,
+      "proves_managed_active_at_later_observation_time": false,
+      "proves_current_phenology": false,
+      "qualification": "SEASON_ORIGIN_ONLY"
+    },
+    {
+      "source_id": "KBS019_ANNUAL_CROP_BIOMASS",
+      "provider": "KBS_LTER",
+      "source_class": "DIRECT_SPECIES_AND_BIOMASS_OBSERVATION",
+      "url": "https://lter.kbs.msu.edu/datatables/39",
+      "spatial_fields": ["treatment", "replicate", "station"],
+      "crop_identity_field": "species",
+      "sample_date_field": "date",
+      "public_data_available_through": "2025-09",
+      "current_2026_formal_scope_observation_identified": false,
+      "qualification": "DIRECT_CROP_OBSERVATION_CLASS_BUT_NOT_CURRENT_2026"
+    },
+    {
+      "source_id": "KBS030_ANNUAL_CROP_STAND_COUNTS",
+      "provider": "KBS_LTER",
+      "source_class": "DIRECT_SPECIES_AND_STAND_OBSERVATION",
+      "url": "https://lter.kbs.msu.edu/datatables/172",
+      "spatial_fields": ["treatment", "replicate", "station"],
+      "crop_identity_field": "species",
+      "sample_date_field": "date",
+      "current_2026_formal_scope_observation_identified": false,
+      "qualification": "DIRECT_CROP_OBSERVATION_CLASS_BUT_NO_CURRENT_2026_ROW_IDENTIFIED"
+    },
+    {
+      "source_id": "KBS020_AGRONOMIC_YIELDS",
+      "provider": "KBS_LTER",
+      "source_class": "DIRECT_CROP_HARVEST_OBSERVATION",
+      "url": "https://lter.kbs.msu.edu/datatables/51",
+      "spatial_fields": ["treatment", "replicate"],
+      "crop_identity_field": "crop",
+      "event_time_field": "date",
+      "public_data_available_through": "2025-07",
+      "current_2026_formal_scope_harvest_identified": false,
+      "qualification": "FUTURE_TERMINATION_SOURCE_WHEN_CURRENT_ROWS_APPEAR"
+    },
+    {
+      "source_id": "KBS092_GLBRC_PHENOLOGY",
+      "provider": "KBS_LTER",
+      "source_class": "DIRECT_PHENOLOGY_TABLE",
+      "url": "https://lter.kbs.msu.edu/datatables/514",
+      "experiment": "GLBRC_BIOFUEL_CROPPING_SYSTEM_EXPERIMENT",
+      "formal_scope_experiment_match": false,
+      "public_data_available_through": "2017-10",
+      "qualification": "REJECT_FOR_MCSE_T1R1_CURRENT_AUTHORITY"
+    },
+    {
+      "source_id": "KBS_GIS_SATELLITE_AND_PUBLIC_IMAGE_SURFACES",
+      "provider": "KBS_LTER",
+      "source_class": "GENERIC_GIS_OR_IMAGERY",
+      "urls": [
+        "https://lter.kbs.msu.edu/data/gis-data/"
+      ],
+      "current_2026_t1r1_crop_bound_direct_phenology_product_identified": false,
+      "qualification": "NO_CURRENT_FORMAL_SCOPE_AUTHORITY_PRODUCT_IDENTIFIED"
+    }
+  ],
+  "formal_scope_observation_candidates": [
+    {
+      "provider_observation_id": 6931,
+      "observation_date": "2026-05-11",
+      "observation_type": "Planting",
+      "provider_area_identity": "T1/T1R1",
+      "explicit_crop_binding": "corn",
+      "explicit_hybrid_binding": "P0306Q",
+      "can_prove": ["SEASON_ORIGIN"],
+      "cannot_prove": ["ACTIVE_AT_LATER_TIME", "CURRENT_PHENOLOGY", "KC"]
+    },
+    {
+      "provider_observation_id": 6977,
+      "observation_date": "2026-05-27",
+      "observation_type": "Herbicide Application",
+      "provider_scope": "LTER_T1_ALL_REPLICATES_INCLUDING_T1R1",
+      "provider_local_operation_time": {
+        "start": "14:35",
+        "end": "16:40",
+        "timezone": "America/Detroit",
+        "utc_conversion_not_yet_authoritative": true
+      },
+      "explicit_crop_token_in_event_detail": false,
+      "explicit_hybrid_token_in_event_detail": false,
+      "positive_management_activity": true,
+      "candidate_layer": "POSITIVE_LIFECYCLE_ANCHOR",
+      "candidate_requires_composite_binding_to_planting_6931": true,
+      "candidate_requires_intervening_season_identity_continuity_qualification": true,
+      "phenology_support": false,
+      "kc_support": false,
+      "authority_effect": "NONE"
+    },
+    {
+      "provider_observation_id": 7076,
+      "observation_date": "2026-06-16",
+      "observation_type": "Fertilizer Application",
+      "provider_scope": "T1R1",
+      "explicit_crop_token_in_event_detail": false,
+      "explicit_hybrid_token_in_event_detail": false,
+      "candidate_layer": "POSITIVE_LIFECYCLE_ANCHOR",
+      "phenology_support": false,
+      "authority_effect": "NONE"
+    },
+    {
+      "provider_observation_id": 7095,
+      "observation_date": "2026-06-25",
+      "observation_type": "Observation",
+      "provider_scope": "T1R1",
+      "explicit_crop_token_in_event_detail": false,
+      "explicit_hybrid_token_in_event_detail": false,
+      "direct_phenology_semantic_token_identified": false,
+      "candidate_layer": "SOURCE_DISCOVERY_ONLY",
+      "authority_effect": "NONE"
+    }
+  ],
+  "out_of_scope_positive_control": {
+    "provider_observation_id": 7109,
+    "observation_date": "2026-07-08",
+    "provider_scope": "T4_ALL_REPLICATES",
+    "provider_semantics": "ROW_CULTIVATED_THE_CORN_IN_LTER_T4",
+    "demonstrates_kbs_aglog_can_express_direct_current_crop_management": true,
+    "may_substitute_for_t1r1": false,
+    "reason": "FORMAL_SCOPE_MISMATCH"
+  },
+  "inventory_adjudication": {
+    "kbs_public_current_season_evidence_globally_empty": false,
+    "kbs_public_source_class_can_express_positive_crop_bound_current_management": true,
+    "direct_positive_t1r1_p0306q_active_anchor_established": false,
+    "direct_t1r1_current_phenology_established": false,
+    "formal_conclusion": "KBS_PUBLIC_CURRENT_SEASON_EVIDENCE_DOES_NOT_YET_ESTABLISH_REQUIRED_POSITIVE_T1R1_P0306Q_CROP_AUTHORITY",
+    "first_targeted_candidate": "KBS_AGLOG_OBSERVATION_6977",
+    "next_frontier": "T1R1_OBSERVATION_6977_POSITIVE_LIFECYCLE_ANCHOR_QUALIFICATION"
+  },
+  "hard_nonclaims": [
+    "NO_ACTIVE_LIFECYCLE_AUTHORITY_CREATED",
+    "NO_ABSENCE_OF_HARVEST_USED_TO_CREATE_ACTIVE",
+    "NO_PHENOLOGY_STAGE_AUTHORITY_CREATED",
+    "NO_KC_AUTHORITY_CREATED",
+    "NO_T4_TO_T1_SOURCE_SUBSTITUTION",
+    "NO_THERMAL_MODEL_USED_AS_ACTIVE_LIFECYCLE_PROOF",
+    "NO_DATABASE_WRITE",
+    "NO_RUNTIME_CONFIG_WRITE",
+    "NO_SCHEDULER_WRITE",
+    "NO_EA5E2_GO",
+    "NO_FORMAL_WINDOW_START"
+  ],
+  "authority_effect": {
+    "season_lifecycle_active_established": false,
+    "phenology_stage_resolved": false,
+    "crop_model_parameter_resolved": false,
+    "ea5e2_operational_activation_qualified": false,
+    "database_write_authorized": false,
+    "runtime_config_write_authorized": false,
+    "scheduler_write_authorized": false,
+    "formal_window_started": false,
+    "formal_execution_count": "0/24"
+  }
+}
