@@ -1,0 +1,141 @@
+name: mcft-cap-09-kbs-public-current-crop-source-gap-adjudication
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-kbs-public-source-gap-adjudication
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLIC-CURRENT-CROP-SOURCE-GAP-ADJUDICATION.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLIC_CURRENT_CROP_SOURCE_GAP_ADJUDICATION.cjs'
+      - '.github/workflows/mcft-cap-09-kbs-public-current-crop-source-gap-adjudication.yml'
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLIC-CURRENT-CROP-SOURCE-GAP-ADJUDICATION.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLIC_CURRENT_CROP_SOURCE_GAP_ADJUDICATION.cjs'
+      - '.github/workflows/mcft-cap-09-kbs-public-current-crop-source-gap-adjudication.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-kbs-public-source-gap-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  adjudicate-kbs-public-current-crop-source-gap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Resolve exact base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=5977e9c46e86ced14ef03fe072dc868f9b5f8a7a" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify predecessor source inventory remains fail-closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          inventory='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-CURRENT-SEASON-SOURCE-INVENTORY-V1.json'
+          test -f "$inventory"
+          grep -Fq '"source_id": "KBS019_ANNUAL_CROP_BIOMASS"' "$inventory"
+          grep -Fq '"source_id": "KBS030_ANNUAL_CROP_STAND_COUNTS"' "$inventory"
+          grep -Fq '"source_id": "KBS020_AGRONOMIC_YIELDS"' "$inventory"
+          grep -Fq '"source_id": "KBS092_GLBRC_PHENOLOGY"' "$inventory"
+          grep -Fq '"direct_positive_t1r1_p0306q_active_anchor_established": false' "$inventory"
+          grep -Fq '"direct_t1r1_current_phenology_established": false' "$inventory"
+
+      - name: Verify reviewed public KBS source surfaces remain reachable and bounded
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+
+          fetch() {
+            local url="$1"
+            local out="$2"
+            curl --fail --silent --show-error --location --retry 3 --retry-delay 2 "$url" > "$out"
+          }
+
+          fetch 'https://aglog.kbs.msu.edu/materials/392' "$tmp/p0306q.html"
+          fetch 'https://lter.kbs.msu.edu/datatables/39' "$tmp/biomass.html"
+          fetch 'https://lter.kbs.msu.edu/datatables/51' "$tmp/yield.html"
+          fetch 'https://lter.kbs.msu.edu/datatables/828' "$tmp/precision-yield.html"
+          fetch 'https://lter.kbs.msu.edu/datatables/514' "$tmp/glbrc-phenology.html"
+          fetch 'https://lter.kbs.msu.edu/datatables/794' "$tmp/rex-anpp.html"
+
+          grep -Fq '2026-05-20' "$tmp/p0306q.html"
+          grep -Fqi 'P0306Q' "$tmp/p0306q.html"
+          grep -Fqi 'LTER T3' "$tmp/p0306q.html"
+
+          grep -Fqi 'May 1990 to September 2025' "$tmp/biomass.html"
+          grep -Fqi 'July 1989 to July 2025' "$tmp/yield.html"
+          grep -Fqi 'July 2012 to October 2025' "$tmp/precision-yield.html"
+
+          grep -Fqi 'GLBRC Biofuel Cropping System Experiment' "$tmp/glbrc-phenology.html"
+          grep -Fqi 'April 2013 to October 2017' "$tmp/glbrc-phenology.html"
+
+          grep -Fqi 'continuous no-till (T2)' "$tmp/rex-anpp.html"
+          grep -Fqi 'September 2024' "$tmp/rex-anpp.html"
+
+      - name: Syntax-check source-gap adjudication gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLIC_CURRENT_CROP_SOURCE_GAP_ADJUDICATION.cjs
+
+      - name: Execute exact-boundary source-gap adjudication gate
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLIC_CURRENT_CROP_SOURCE_GAP_ADJUDICATION.cjs
+
+      - name: Verify fail-closed successor frontier
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = 'acceptance-output/MCFT_CAP_09_KBS_PUBLIC_CURRENT_CROP_SOURCE_GAP_ADJUDICATION.json';
+          const x = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (x.status !== 'PASS') throw new Error('KBS_PUBLIC_SOURCE_GAP_PASS_REQUIRED');
+          if (x.reviewed_public_kbs_current_2026_data_exists !== true) throw new Error('KBS_CURRENT_2026_POSITIVE_CONTROL_REQUIRED');
+          if (x.reviewed_public_kbs_p0306q_2026_data_exists !== true) throw new Error('KBS_P0306Q_2026_POSITIVE_CONTROL_REQUIRED');
+          if (x.reviewed_public_kbs_t1r1_direct_current_crop_authority_established !== false) throw new Error('T1R1_DIRECT_CURRENT_CROP_AUTHORITY_MUST_REMAIN_FALSE');
+          if (x.reviewed_public_kbs_t1r1_direct_phenology_authority_established !== false) throw new Error('T1R1_DIRECT_PHENOLOGY_AUTHORITY_MUST_REMAIN_FALSE');
+          if (x.reviewed_public_kbs_t1r1_current_crop_model_parameter_authority_established !== false) throw new Error('T1R1_MODEL_PARAMETER_AUTHORITY_MUST_REMAIN_FALSE');
+          if (x.t3_to_t1r1_source_substitution_authorized !== false) throw new Error('T3_TO_T1R1_SUBSTITUTION_FORBIDDEN');
+          if (x.runtime_write_count !== 0 || x.database_write_count !== 0 || x.scheduler_write_count !== 0) throw new Error('SOURCE_GAP_WRITES_FORBIDDEN');
+          if (x.ea5e2_operational_activation_qualified !== false || x.formal_execution_count !== '0/24') throw new Error('SOURCE_GAP_ACTIVATION_EFFECT_FORBIDDEN');
+          if (x.next_frontier !== 'CURRENT_CROP_ALTERNATIVE_SOURCE_AUTHORITY_DESIGN_REVIEW') throw new Error('ALTERNATIVE_SOURCE_DESIGN_REVIEW_FRONTIER_REQUIRED');
+          console.log(JSON.stringify({status:x.status,next_frontier:x.next_frontier,formal:x.formal_execution_count}));
+          NODE
+
+      - name: Upload immutable source-gap adjudication artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-kbs-public-source-gap-${{ steps.authority.outputs.subject_sha }}
+          path: acceptance-output/MCFT_CAP_09_KBS_PUBLIC_CURRENT_CROP_SOURCE_GAP_ADJUDICATION.json
+          if-no-files-found: error
+          retention-days: 90
