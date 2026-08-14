@@ -334,8 +334,12 @@ function buildWindowV1(
       kc: input.crop_stage_context.kc,
       runtime_config_ref: input.runtime_config.ref,
       runtime_config_hash: input.runtime_config.hash,
-      transformation_refs: sortedUniqueStringsV1([...transformationRefs, et0Projection.transformation_ref]),
-      limitations: sortedUniqueStringsV1([...limitations, ...et0Projection.limitations]),
+      transformation_refs: et0Projection.transformation_applied
+        ? sortedUniqueStringsV1([...transformationRefs, et0Projection.transformation_ref])
+        : [...transformationRefs],
+      limitations: et0Projection.transformation_applied
+        ? sortedUniqueStringsV1([...limitations, ...et0Projection.limitations])
+        : [...limitations],
     };
   });
   const window: Cap04ForecastForcingWindowV1 = {
