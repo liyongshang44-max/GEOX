@@ -54,6 +54,7 @@ source_id = KBS039-006.40
 provider surface = https://lter.kbs.msu.edu/datatables/829.csv
 selection = treatment T1 / replicate R1 / subplot main
 CRS = EPSG:4326
+frozen canonical GeoJSON semantic SHA-256 = sha256:c50671e0bad6dcfe13796d93f35cd4c7939c22c1635c09dd8c9182b0e29ff1ae
 ```
 
 KBS states that data from its core database may not be published without written permission. Therefore the probe MUST NOT commit, print, upload, or otherwise emit the raw T1R1 polygon coordinates.
@@ -62,14 +63,16 @@ The probe may emit only non-reconstructive provenance such as:
 
 ```text
 KBS response SHA-256
-selected geometry semantic SHA-256
+selected geometry source-text SHA-256
+selected canonical GeoJSON semantic SHA-256
+frozen expected semantic SHA-256
 CRS
 vertex count
 selection identity T1/R1/main
 retrieved_at
 ```
 
-The exact polygon is held only in process memory for the Copernicus requests.
+The exact polygon is held only in process memory for the Copernicus requests. After parsing numeric coordinates, the probe canonicalizes the selected polygon as `JSON.stringify({type:'Polygon',coordinates:[ring]})` and MUST match the frozen semantic digest above before any Copernicus request is allowed. A provider geometry change therefore fails closed rather than silently changing the formal spatial subject.
 
 Forbidden spatial substitutions:
 
@@ -256,6 +259,7 @@ A live run is valid discovery evidence only when:
 ```text
 exact subject SHA is recorded
 KBS restricted geometry is fetched live
+frozen T1R1 semantic geometry digest matches
 an externally obtained short-lived Copernicus bearer token is injected and accepted
 Catalog returns intersecting sentinel-2-l2a scenes
 Statistical API returns plot-level outputs
