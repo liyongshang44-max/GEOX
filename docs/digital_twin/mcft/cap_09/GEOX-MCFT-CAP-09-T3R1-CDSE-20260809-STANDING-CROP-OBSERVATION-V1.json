@@ -91,8 +91,12 @@
   "scene_binding_policy": {
     "require_at_least_one_catalog_item": true,
     "allow_multiple_processing_items_only_if_same_acquisition_event": true,
-    "maximum_sensing_time_spread_seconds": 2,
+    "same_acquisition_event_identity": "SENTINEL2_COMPACT_PRODUCT_MISSION_PLUS_DATATAKE_START_PLUS_RELATIVE_ORBIT",
+    "require_every_catalog_item_id_to_parse": true,
+    "require_single_datatake_identity": true,
     "require_single_platform": true,
+    "tile_datetime_is_tile_average_sensing_time_not_datatake_identity": true,
+    "tile_datetime_spread_is_recorded_not_used_as_same_datatake_threshold": true,
     "daily_statistics_mosaicking_order": "leastCC"
   },
   "resolution_policy": {
