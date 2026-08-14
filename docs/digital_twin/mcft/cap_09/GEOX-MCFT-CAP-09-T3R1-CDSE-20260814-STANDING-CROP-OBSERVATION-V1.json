@@ -1,0 +1,127 @@
+{
+  "schema_version": "geox_mcft_cap09_t3r1_cdse_20260814_standing_crop_observation_v1",
+  "record_status": "QUALIFICATION_CANDIDATE_ONLY",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier": "T3R1_CURRENT_LIFECYCLE_AUTHORITY",
+  "exact_base_protected_main": "23f224c701dbe0b8bd56eceff3741cb1c3dc1f78",
+  "purpose": "ADJUDICATE_WHETHER_2026_08_14_SENTINEL_2_L2A_ESTABLISHES_DIRECT_STANDING_CROP_OBSERVATION_INSIDE_CONSERVATIVE_T3R1_CROP_ONLY_SUBZONE",
+  "candidate_scope": {
+    "site_id": "KBS_MCSE_T3R1_CANDIDATE",
+    "provider_site": "KBS_LTER_MAIN_CROPPING_SYSTEM_EXPERIMENT",
+    "treatment": "T3",
+    "replicate": "R1",
+    "crop": "corn",
+    "hybrid": "Pioneer P0306Q",
+    "planting_date": "2026-05-20"
+  },
+  "provider_sources": {
+    "plot_geometry_csv": {
+      "url": "https://lter.kbs.msu.edu/datatables/829.csv",
+      "allowed_host": "lter.kbs.msu.edu"
+    },
+    "planting_identity": {
+      "url": "https://aglog.kbs.msu.edu/materials/392",
+      "allowed_host": "aglog.kbs.msu.edu",
+      "required_markers": [
+        "2026-05-20",
+        "LTER T3",
+        "Pioneer P0306Q",
+        "replications (3, 1, 2, 4, 5, and 6)"
+      ]
+    },
+    "cdse_catalog": {
+      "url": "https://sh.dataspace.copernicus.eu/catalog/v1/search",
+      "allowed_host": "sh.dataspace.copernicus.eu",
+      "collection": "sentinel-2-l2a"
+    },
+    "cdse_statistics": {
+      "url": "https://sh.dataspace.copernicus.eu/statistics/v1",
+      "allowed_host": "sh.dataspace.copernicus.eu"
+    }
+  },
+  "provider_geometry_selector": {
+    "treatment": "T3",
+    "replicate": "R1",
+    "subplot": "main",
+    "expected_match_count": 1,
+    "required_srid": 4326,
+    "required_distinct_vertex_count": 4
+  },
+  "conservative_crop_only_subzone_policy": {
+    "construction": "BILINEAR_INTERIOR_RECTANGLE_FROM_PROVIDER_MAIN_QUADRILATERAL_V1",
+    "short_axis_fraction_start": 0.15,
+    "short_axis_fraction_end": 0.30,
+    "long_axis_fraction_start": 0.25,
+    "long_axis_fraction_end": 0.75,
+    "expected_geometry_semantic_hash": "sha256:4672b5f28484a05e00d93de8c53b9c7b2bdbcc250f48959a4b85b768d2ed3f3a",
+    "minimum_outer_boundary_margin_m": 10,
+    "minimum_center_prairie_strip_clearance_m": 10,
+    "minimum_end_boundary_margin_m": 20,
+    "provider_raw_geometry_may_be_emitted": false,
+    "derived_geometry_coordinates_may_be_emitted": false
+  },
+  "target_acquisition": {
+    "day_utc": "2026-08-14",
+    "window_start_utc": "2026-08-14T00:00:00.000Z",
+    "window_end_utc": "2026-08-15T00:00:00.000Z",
+    "sensing_time_is_observation_time": true,
+    "retrieval_time_is_availability_time": true,
+    "catalog_product_presence_is_not_standing_crop_evidence": true,
+    "scene_level_cloud_cover_is_not_plot_clear_fraction": true
+  },
+  "observation_rule": {
+    "source_class": "COPERNICUS_SENTINEL_2_L2A",
+    "pixel_resolution_m": 10,
+    "required_bands": ["B04", "B08", "SCL", "dataMask"],
+    "scl_clear_land_classes": [4, 5],
+    "scl_vegetation_class": 4,
+    "minimum_plot_clear_land_fraction": 0.80,
+    "minimum_vegetated_fraction_of_clear_land": 0.80,
+    "minimum_mean_ndvi_over_clear_land": 0.50,
+    "threshold_semantics": "STRICT_DIRECT_STANDING_VEGETATION_OBSERVATION_ONLY",
+    "ndvi_to_phenology_mapping_authorized": false,
+    "satellite_to_kc_mapping_authorized": false
+  },
+  "scene_binding_policy": {
+    "require_at_least_one_catalog_item": true,
+    "allow_multiple_tiles_only_if_same_datatake_identity": true,
+    "datatake_identity_components": ["mission", "datatake_start_utc", "relative_orbit"],
+    "tile_datetime_spread_is_diagnostic_only": true,
+    "require_single_platform": true,
+    "daily_statistics_mosaicking_order": "leastCC"
+  },
+  "resolution_policy": {
+    "pass_status": "RESOLVED_DIRECT_STANDING_CROP_OBSERVATION_CANDIDATE",
+    "requires_crop_only_geometry_hash_match": true,
+    "requires_2026_t3r1_p0306q_planting_identity": true,
+    "requires_target_day_catalog_scene": true,
+    "requires_unique_datatake_identity": true,
+    "requires_plot_level_scl_and_ndvi_thresholds": true,
+    "current_management_season_lifecycle_authorized_by_this_probe": false,
+    "bounded_carry_forward_authorized_by_this_probe": false,
+    "formal_site_rebind_authorized_by_this_probe": false,
+    "ea5e2_authorized_by_this_probe": false
+  },
+  "next_frontier_on_pass": "T3R1_BOUNDED_POSITIVE_LIFECYCLE_CARRY_FORWARD_AUTHORITY",
+  "hard_nonclaims": [
+    "NO_CATALOG_ONLY_STANDING_CROP_CLAIM",
+    "NO_SCENE_CLOUD_COVER_AS_PLOT_CLEARNESS",
+    "NO_SCL7_AS_CLEAR_LAND",
+    "NO_NDVI_TO_PHENOLOGY_STAGE",
+    "NO_SATELLITE_TO_KC_MAPPING",
+    "NO_PROVIDER_SILENCE_AS_ACTIVE",
+    "NO_CURRENT_ACTIVE_LIFECYCLE_FROM_THIS_PROBE_ALONE",
+    "NO_CARRY_FORWARD_FROM_THIS_PROBE_ALONE",
+    "NO_RAW_KBS_GEOMETRY_PUBLICATION",
+    "NO_DERIVED_GEOMETRY_COORDINATE_PUBLICATION",
+    "NO_T1R1_AUTHORITY_MUTATION",
+    "NO_FORMAL_SITE_REBIND",
+    "NO_RUNTIME_CONFIG_WRITE",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_SCHEDULER_WRITE",
+    "NO_EA5E2_OPERATIONAL_ACTIVATION",
+    "NO_FORMAL_WINDOW_START"
+  ]
+}
