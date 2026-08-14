@@ -1,0 +1,96 @@
+{
+  "schema_version": "geox_mcft_cap09_kbs_external_five_family_data_path_live_proof_v1",
+  "capability_line_id": "MCFT-CAP-09",
+  "status": "PASS",
+  "proof_class": "EXACT_PROTECTED_MAIN_REAL_FIVE_FAMILY_DATA_PATH_QUALIFICATION",
+  "temporal_authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+  "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md",
+  "subject_sha": "21f3bb783cb80a826743f77ff2b707233e9d0068",
+  "workflow_run_id": 31772432163,
+  "workflow_job_id": 94680993352,
+  "artifact_id": 9208639624,
+  "artifact_name": "mcft-cap09-kbs-five-family-data-path-21f3bb783cb80a826743f77ff2b707233e9d0068-31772432163",
+  "artifact_digest": "sha256:02c65d68839437dee9d7e61540bbe6cde1e55c7c2d9bcdc5a6f7aa588a4435db",
+  "artifact_created_at": "2026-08-14T05:17:23Z",
+  "target_t": "2026-08-13T15:00:00.000Z",
+  "producer": {
+    "subject_sha": "37a36ba52d7ef7891d72cc1385314ec453511296",
+    "workflow_run_id": 31705733712,
+    "artifact_id": 9185700449,
+    "artifact_digest": "sha256:8312c4ff063627964344b5c3f34ecc46e4e0901a1e4bc4478b291af13f297a51"
+  },
+  "qualification_state": {
+    "kbs_authoritative_late_path": "PASS",
+    "kbs_causal_intersection": "PASS",
+    "cross_head_rehydration": "PASS",
+    "kbs_external_five_family_data_path_qualified": true,
+    "cap04_runtime_successor_qualified": false,
+    "crop_authority_effect": "NONE",
+    "ea5e2_operational_activation_qualified": false,
+    "full_operational_go": false
+  },
+  "provider_contract": {
+    "provider_identity": "KBS_LTER",
+    "provider_publication_cadence": "DAILY_BATCH",
+    "observation_resolution": "HOURLY",
+    "exact_kbs_target": true,
+    "freshness_is_late_authoritative_admission_gate": false,
+    "kbs_provider_request_count": 1,
+    "kbs_provider_retry_count": 0,
+    "kbs_source_substitution_allowed": false,
+    "kbs_raw_retained_before_decode": true
+  },
+  "cross_head_rehydration_proof": {
+    "consumer_subject_sha": "21f3bb783cb80a826743f77ff2b707233e9d0068",
+    "producer_subject_sha": "37a36ba52d7ef7891d72cc1385314ec453511296",
+    "cross_head_rehydration": true,
+    "semantic_manifest_match": true,
+    "producer_bound_raw_reverification": true,
+    "producer_dataset_identity_preserved": true,
+    "producer_decoder_identity_preserved": true,
+    "provider_refetch_count": 0,
+    "private_r2_head_count": 7,
+    "private_r2_get_count": 2,
+    "private_r2_put_count": 0,
+    "private_r2_delete_count": 0,
+    "isolated_database_fact_count": 3,
+    "isolated_database_write_count": 3
+  },
+  "five_family_package": {
+    "preboundary_family_count": 3,
+    "kbs_family_count": 2,
+    "isolated_database_fact_count": 5,
+    "isolated_database_new_kbs_fact_count": 2,
+    "record_types": [
+      "future_et0_assumption_v1",
+      "future_weather_assumption_v1",
+      "historical_et0_estimate_v1",
+      "observed_rainfall_v1",
+      "soil_moisture_observation_v1"
+    ],
+    "exact_kbs_interval_end_equals_target_t": true
+  },
+  "private_transient_retention": {
+    "kbs_raw_put_count": 1,
+    "kbs_raw_head_count": 3,
+    "kbs_raw_cleanup_count": 1,
+    "kbs_raw_cleanup_confirmed": true
+  },
+  "qualification_side_effects": {
+    "formal_database_write_count": 0,
+    "formal_r2_prefix_write_count": 0,
+    "scheduler_write_count": 0,
+    "runtime_write_count": 0,
+    "formal_effect": false,
+    "raw_values_emitted": false
+  },
+  "nonclaims": {
+    "cap04_runtime_successor_qualified": false,
+    "crop_authority_effect": "NONE",
+    "ea5e2_operational_activation_qualified": false,
+    "full_operational_go": false,
+    "formal_window_started": false,
+    "batch_to_hourly_injector_qualified": false
+  },
+  "decisive_ruling": "The KBS external five-family data path is independently qualified: a retained pre-T soil/GFS producer candidate was producer-SHA-bound rehydrated under exact protected main into an isolated database, then one real KBS DAILY_BATCH GET was retained before decode and supplied exact-T observed_rainfall_v1 plus historical_et0_estimate_v1, yielding exactly five required evidence families for the same target T. This qualification does not qualify CAP04 Runtime consumption, crop authority, EA5E2 operational activation, or full operational GO."
+}
