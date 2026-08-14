@@ -180,6 +180,11 @@ async function main(): Promise<void> {
     candidate.historical_et0_consumption_projection.model_water_loss_demand_mm,
     candidate.historical_et0_consumption_projection.canonical_signed_et0_mm,
   );
+  if (candidate.forcing_outcome.status !== "SELECTED") throw new Error("AMENDMENT12_POSITIVE_FUTURE_FORCING_MUST_SELECT");
+  for (const point of candidate.forcing_outcome.window.points) {
+    assert.ok(!point.transformation_refs.includes(MCFT_CAP09_SIGNED_ET0_TO_NONNEGATIVE_WATER_LOSS_DEMAND_POLICY_ID_V1));
+    assert.ok(!point.limitations.includes(MCFT_CAP09_NEGATIVE_ET0_CONDENSATION_NOT_MODELED_LIMITATION_V1));
+  }
   assert.equal(candidate.canonical_persistence_authorized, false);
   assert.deepEqual(
     [candidate.provider_request_count, candidate.database_write_count, candidate.scenario_write_count, candidate.recommendation_write_count, candidate.action_write_count],
@@ -223,16 +228,31 @@ async function main(): Promise<void> {
   assert.equal(projectedFuturePoints.length, 2);
   assert.equal(signedCandidate.forcing_outcome.window.points[0].et0_assumption_mm, 0);
   assert.equal(signedCandidate.forcing_outcome.window.points[17].et0_assumption_mm, 0);
-  for (const point of signedCandidate.forcing_outcome.window.points) {
-    assert.ok(point.transformation_refs.includes(MCFT_CAP09_SIGNED_ET0_TO_NONNEGATIVE_WATER_LOSS_DEMAND_POLICY_ID_V1));
-    assert.ok(point.et0_assumption_mm >= 0);
-  }
 
   const signedHistorical = signed.loaded.records.find((record) => record.record_type === "historical_et0_estimate_v1");
   const signedFuture = signed.loaded.records.find((record) => record.record_type === "future_et0_assumption_v1");
   assert.equal(signedHistorical?.canonical_payload.value, -0.125);
   assert.equal((signedFuture?.canonical_payload.points as Array<Record<string, unknown>>)[0]?.et0_mm_per_hour, -0.25);
   assert.equal((signedFuture?.canonical_payload.points as Array<Record<string, unknown>>)[17]?.et0_mm_per_hour, -0.05);
+  const signedFutureCanonicalPoints = signedFuture?.canonical_payload.points;
+  if (!Array.isArray(signedFutureCanonicalPoints) || signedFutureCanonicalPoints.length !== 72) throw new Error("AMENDMENT12_SIGNED_FUTURE_CANONICAL_POINTS_REQUIRED");
+  for (const [index, point] of signedCandidate.forcing_outcome.window.points.entries()) {
+    const rawPoint = signedFutureCanonicalPoints[index];
+    if (!rawPoint || typeof rawPoint !== "object" || Array.isArray(rawPoint)) throw new Error(`AMENDMENT12_SIGNED_FUTURE_CANONICAL_POINT_REQUIRED:H${index + 1}`);
+    const canonicalSignedEt0 = (rawPoint as Record<string, unknown>).et0_mm_per_hour;
+    if (typeof canonicalSignedEt0 !== "number" || !Number.isFinite(canonicalSignedEt0)) throw new Error(`AMENDMENT12_SIGNED_FUTURE_CANONICAL_ET0_REQUIRED:H${index + 1}`);
+    const transformed = canonicalSignedEt0 < 0;
+    assert.equal(point.et0_assumption_mm, transformed ? 0 : canonicalSignedEt0);
+    assert.equal(
+      point.transformation_refs.includes(MCFT_CAP09_SIGNED_ET0_TO_NONNEGATIVE_WATER_LOSS_DEMAND_POLICY_ID_V1),
+      transformed,
+    );
+    assert.equal(
+      point.limitations.includes(MCFT_CAP09_NEGATIVE_ET0_CONDENSATION_NOT_MODELED_LIMITATION_V1),
+      transformed,
+    );
+    assert.ok(point.et0_assumption_mm >= 0);
+  }
 
   assert.throws(
     () => projectSignedEt0ToNonnegativeWaterLossDemandV1(Number.NaN, "AMENDMENT12_NONFINITE_ET0_REJECTED"),
@@ -326,6 +346,7 @@ async function main(): Promise<void> {
     delayed_historical_et0_to_external_cap04: true,
     future_forcing_pre_logical_time_preserved: true,
     positive_historical_et0_preserved: true,
+    positive_future_et0_noop_provenance_stable: true,
     negative_historical_et0_canonical_preserved: true,
     negative_historical_et0_model_demand_zero: true,
     signed_future_et0_canonical_preserved: true,
