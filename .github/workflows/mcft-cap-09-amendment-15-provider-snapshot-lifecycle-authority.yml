@@ -1,0 +1,42 @@
+name: mcft-cap-09-amendment-15-provider-snapshot-lifecycle-authority
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-amendment15-snapshot-lifecycle-authority
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-15-PROVIDER-SNAPSHOT-LIFECYCLE-AUTHORITY.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_15_PROVIDER_SNAPSHOT_LIFECYCLE_AUTHORITY.cjs'
+      - '.github/workflows/mcft-cap-09-amendment-15-provider-snapshot-lifecycle-authority.yml'
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-15-PROVIDER-SNAPSHOT-LIFECYCLE-AUTHORITY.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_15_PROVIDER_SNAPSHOT_LIFECYCLE_AUTHORITY.cjs'
+      - '.github/workflows/mcft-cap-09-amendment-15-provider-snapshot-lifecycle-authority.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  amendment15-provider-snapshot-lifecycle-authority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Prove Amendment-15 exact authority boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_15_PROVIDER_SNAPSHOT_LIFECYCLE_AUTHORITY.cjs
+      - name: Upload Amendment-15 authority proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-amendment15-provider-snapshot-lifecycle-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_AMENDMENT_15_PROVIDER_SNAPSHOT_LIFECYCLE_AUTHORITY.json
+          if-no-files-found: error
+          retention-days: 90
