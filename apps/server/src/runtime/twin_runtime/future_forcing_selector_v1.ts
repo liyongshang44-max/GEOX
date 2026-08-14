@@ -22,6 +22,9 @@ import {
   CAP04_FUTURE_FORCING_PAIR_POLICY_ID_V1,
   CAP04_FUTURE_FORCING_POLICY_ID_V1,
 } from "../../domain/twin_runtime/forecast_scenario_runtime_config_v1.js";
+import {
+  projectSignedEt0ToNonnegativeWaterLossDemandV1,
+} from "./external_formal_et0_consumption_projection_v1.js";
 import type {
   CanonicalReplayEvidenceRecordV1,
   TwinScopeKeyV1,
@@ -159,7 +162,8 @@ function parseSnapshotPointsV1(
     const intervalEnd = addHoursV1(logicalTime, horizon);
     if (point.valid_from !== intervalStart || point.valid_to !== intervalEnd) return null;
     const value = kind === "FUTURE_WEATHER_ASSUMPTION" ? point.precipitation_mm : point.et0_mm_per_hour;
-    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
+    if (typeof value !== "number" || !Number.isFinite(value)) return null;
+    if (kind === "FUTURE_WEATHER_ASSUMPTION" && value < 0) return null;
     result.push({
       horizon_hour: horizon,
       interval_start: intervalStart,
@@ -302,6 +306,10 @@ function buildWindowV1(
   const points: Cap04ForecastForcingPointV1[] = pair.weather.points.map((weatherPoint, index) => {
     const et0Point = pair.et0.points[index];
     if (!et0Point || et0Point.horizon_hour !== weatherPoint.horizon_hour || et0Point.interval_start !== weatherPoint.interval_start || et0Point.interval_end !== weatherPoint.interval_end) throw new Error("FORCING_PAIR_POINT_ALIGNMENT_MISMATCH");
+    const et0Projection = projectSignedEt0ToNonnegativeWaterLossDemandV1(
+      et0Point.value_mm,
+      `CAP04_FUTURE_ET0_POINT_NONFINITE:H${et0Point.horizon_hour}`,
+    );
     return {
       horizon_hour: weatherPoint.horizon_hour,
       interval_start: weatherPoint.interval_start,
@@ -314,7 +322,7 @@ function buildWindowV1(
       precipitation_issued_at: pair.weather.issued_at,
       precipitation_available_to_runtime_at: pair.weather.available_to_runtime_at,
       precipitation_epistemic_status: "ASSUMED",
-      et0_assumption_mm: et0Point.value_mm,
+      et0_assumption_mm: et0Projection.model_water_loss_demand_mm,
       et0_snapshot_ref: pair.et0.snapshot_ref,
       et0_snapshot_hash: pair.et0.snapshot_hash,
       et0_issued_at: pair.et0.issued_at,
@@ -326,8 +334,8 @@ function buildWindowV1(
       kc: input.crop_stage_context.kc,
       runtime_config_ref: input.runtime_config.ref,
       runtime_config_hash: input.runtime_config.hash,
-      transformation_refs: [...transformationRefs],
-      limitations: [...limitations],
+      transformation_refs: sortedUniqueStringsV1([...transformationRefs, et0Projection.transformation_ref]),
+      limitations: sortedUniqueStringsV1([...limitations, ...et0Projection.limitations]),
     };
   });
   const window: Cap04ForecastForcingWindowV1 = {
