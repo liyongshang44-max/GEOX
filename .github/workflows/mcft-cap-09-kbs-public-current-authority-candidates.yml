@@ -98,8 +98,8 @@ jobs:
           if (!x.adjudication.kbs_public_search_space_reduced_to_aglog_family) {
             throw new Error('KBS_AUTHORITY_SCREEN_EXPECTED_AGLOG_ONLY_RETAINED_SOURCE_FAMILY');
           }
-          if (x.adjudication.observation_7095_is_historical_positive_biological_anchor_candidate !== true) {
-            throw new Error('KBS_AUTHORITY_SCREEN_7095_PLANT_HEIGHT_BIOLOGICAL_FACT_REQUIRED');
+          if (x.adjudication.current_qualifying_authority_candidate_count !== 0) {
+            throw new Error('KBS_AUTHORITY_SCREEN_CURRENT_QUALIFYING_CANDIDATE_MUST_BE_ZERO');
           }
           if (x.adjudication.observation_7095_is_direct_phenology !== false) {
             throw new Error('KBS_AUTHORITY_SCREEN_7095_PHENOLOGY_OVERCLAIM_FORBIDDEN');
