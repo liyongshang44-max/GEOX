@@ -77,7 +77,7 @@ async function main() {
     for (const marker of ['Agronomic Field Log', 'agronomic activities or observations made on MCSE Treatments', 'Herbicide Application Log', 'all Replicate Blocks (1-6)']) assert(has(practices.text, marker), `OBS6977_PRACTICES_MARKER_MISSING:${marker}`);
 
     const treatment = await fetchProof(page, TREATMENT_URL, KBS_HOST);
-    for (const marker of ['Conventional (T1)', 'corn/soybean/wheat rotation', 'standard chemical input']) assert(has(treatment.text, marker), `OBS6977_TREATMENT_MARKER_MISSING:${marker}`);
+    for (const marker of ['T1', 'corn/soybean/wheat rotation', 'standard chemical input', 'conventionally tilled']) assert(has(treatment.text, marker), `OBS6977_TREATMENT_MARKER_MISSING:${marker}`);
 
     const eventWindow = localWindowToUtc(ANCHOR_DATE,14,35,16,40);
     const conservativeAvailability = anchor.proof.retrieved_at;
