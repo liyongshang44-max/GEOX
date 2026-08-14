@@ -1,0 +1,41 @@
+name: MCFT-CAP-09 Amendment-12 Signed ET0 Consumption Authority
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-12-SIGNED-ET0-CONSUMPTION-AUTHORITY.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_12_SIGNED_ET0_CONSUMPTION_AUTHORITY.cjs'
+      - '.github/workflows/mcft-cap-09-amendment-12-signed-et0-consumption-authority.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-head-governance-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Resolve exact Amendment-12 base
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "353f642019c5f581d0b578847ee586dffba1f22c"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "MCFT_BASE_SHA=353f642019c5f581d0b578847ee586dffba1f22c" >> "$GITHUB_ENV"
+
+      - name: Run Amendment-12 governance acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_12_SIGNED_ET0_CONSUMPTION_AUTHORITY.cjs
+
+      - name: Upload immutable Amendment-12 proof artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-amendment12-signed-et0-consumption-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_AMENDMENT_12_SIGNED_ET0_CONSUMPTION_GOVERNANCE_RESULT.json
+          if-no-files-found: error
+          retention-days: 30
