@@ -1,0 +1,209 @@
+name: mcft-cap-09-kbs-five-family-data-path
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-kbs-five-family-data-path.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH_V1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH.cjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-kbs-five-family-data-path.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH_V1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-kbs-five-family-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  READINESS_DB_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck five-family qualifier
+        run: pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH_V1.ts
+      - name: Prove five-family qualifier selftest
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH_V1.ts selftest
+      - name: Prove independent KBS data-path boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH.cjs
+
+  live-five-family:
+    if: github.event_name != 'pull_request'
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+      MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+      MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+      MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+      MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main" || { echo 'MCFT_CAP09_FIVE_FAMILY_MAIN_REQUIRED' >&2; exit 1; }
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || { echo 'MCFT_CAP09_FIVE_FAMILY_EXACT_MAIN_DRIFT' >&2; exit 1; }
+
+      - name: Require private transient R2 bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
+            test -n "${!name:-}" || { echo "MCFT_CAP09_FIVE_FAMILY_SECRET_REQUIRED:${name}" >&2; exit 1; }
+          done
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+
+      - name: Discover latest successful exact KBS intersection proof
+        id: intersection
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/intersection-candidates /tmp/selected-intersection acceptance-output
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/mcft-cap-09-rolling-kbs-intersection.yml/runs?branch=main&status=success&per_page=30" > /tmp/intersection-runs.json
+          found=''
+          while read -r run_id; do
+            test -n "$run_id" || continue
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" > "/tmp/intersection-artifacts-${run_id}.json"
+            while read -r artifact_id; do
+              test -n "$artifact_id" || continue
+              dir="/tmp/intersection-candidates/${run_id}-${artifact_id}"
+              mkdir -p "$dir"
+              gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "/tmp/intersection-${artifact_id}.zip"
+              unzip -q "/tmp/intersection-${artifact_id}.zip" -d "$dir"
+              proof="$dir/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json"
+              if test -s "$proof" && jq -e '.status=="PASS" and .temporal_authority=="PROVIDER_AVAILABILITY_WATERMARK_V1" and .selected!=null and .freshness_is_late_authoritative_admission_gate==false and .database_write_count==0 and .formal_effect==false and .crop_authority_effect=="NONE"' "$proof" >/dev/null; then
+                cp "$proof" /tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json
+                found="$artifact_id"
+                break 2
+              fi
+            done < <(jq -r '.artifacts[] | select(.expired==false and (.name|startswith("mcft-cap09-rolling-kbs-intersection-"))) | .id' "/tmp/intersection-artifacts-${run_id}.json")
+          done < <(jq -r '.workflow_runs[] | .id' /tmp/intersection-runs.json)
+          test -n "$found" || { echo 'MCFT_CAP09_FIVE_FAMILY_EXACT_INTERSECTION_PROOF_REQUIRED' >&2; exit 1; }
+          target="$(jq -r '.selected.target_t' /tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json)"
+          producer_artifact="$(jq -r '.selected.artifact_id' /tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json)"
+          producer_sha="$(jq -r '.selected.producer_subject_sha' /tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json)"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "producer_artifact=$producer_artifact" >> "$GITHUB_OUTPUT"
+          echo "producer_sha=$producer_sha" >> "$GITHUB_OUTPUT"
+          echo "intersection_artifact=$found" >> "$GITHUB_OUTPUT"
+
+      - name: Download selected immutable rolling producer candidate
+        shell: bash
+        env:
+          PRODUCER_ARTIFACT_ID: ${{ steps.intersection.outputs.producer_artifact }}
+          EXPECTED_TARGET: ${{ steps.intersection.outputs.target }}
+          EXPECTED_PRODUCER_SHA: ${{ steps.intersection.outputs.producer_sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rolling-candidate
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${PRODUCER_ARTIFACT_ID}/zip" > /tmp/rolling-candidate.zip
+          unzip -q /tmp/rolling-candidate.zip -d /tmp/rolling-candidate
+          test -s /tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          jq -e --arg target "$EXPECTED_TARGET" --arg producer "$EXPECTED_PRODUCER_SHA" '.status=="PASS" and .temporal_authority=="PROVIDER_AVAILABILITY_WATERMARK_V1" and .target_t==$target and .producer_subject_sha==$producer' /tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json >/dev/null
+
+      - name: Rehydrate three original pre-T evidence families into isolated DB
+        env:
+          MCFT_CAP09_CONSUMER_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_CAP09_ROLLING_CANDIDATE_PATH: /tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          MCFT_CAP09_ROLLING_REHYDRATION_ISOLATED_DB_ACK: 'true'
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts run
+
+      - name: Add exact-T KBS rainfall and historical ET0 and qualify five-family package
+        env:
+          MCFT_CAP09_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_CAP09_FIVE_FAMILY_TARGET_T: ${{ steps.intersection.outputs.target }}
+          MCFT_CAP09_INTERSECTION_PROOF_PATH: /tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json
+          MCFT_CAP09_REHYDRATION_PROOF_PATH: acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json
+          MCFT_CAP09_FIVE_FAMILY_ISOLATED_DB_ACK: 'true'
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH_V1.ts run
+
+      - name: Require independent five-family KBS data-path PASS
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH.json','utf8'));
+          if(p.status!=='PASS'||p.subject_sha!==process.env.GITHUB_SHA||p.kbs_authoritative_late_path!=='PASS'||p.kbs_causal_intersection!=='PASS'||p.cross_head_rehydration!=='PASS'||p.kbs_external_five_family_data_path_qualified!==true||p.isolated_database_fact_count!==5||p.kbs_raw_retained_before_decode!==true||p.kbs_provider_request_count!==1||p.kbs_provider_retry_count!==0||p.kbs_source_substitution_allowed!==false||p.private_transient_cleanup_confirmed!==true||p.cap04_runtime_successor_qualified!==false||p.crop_authority_effect!=='NONE'||p.formal_effect!==false||p.ea5e2_operational_activation_qualified!==false||p.full_operational_go!==false||p.raw_values_emitted!==false) throw new Error('MCFT_CAP09_FIVE_FAMILY_SAFE_PASS_REQUIRED');
+
+      - name: Upload metadata-only five-family qualification proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-kbs-five-family-data-path-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json
+            acceptance-output/MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH.json
+            /tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json
+          if-no-files-found: error
+          retention-days: 30
