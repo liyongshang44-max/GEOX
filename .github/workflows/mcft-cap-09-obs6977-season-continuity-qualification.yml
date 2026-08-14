@@ -7,6 +7,12 @@ on:
     paths:
       - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_OBS6977_SEASON_CONTINUITY_QUALIFICATION.mjs'
       - '.github/workflows/mcft-cap-09-obs6977-season-continuity-qualification.yml'
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_OBS6977_SEASON_CONTINUITY_QUALIFICATION.mjs'
+      - '.github/workflows/mcft-cap-09-obs6977-season-continuity-qualification.yml'
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 permissions:
@@ -19,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: pnpm/action-setup@v4
@@ -37,7 +43,7 @@ jobs:
         run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_OBS6977_SEASON_CONTINUITY_QUALIFICATION.mjs
       - name: Execute bounded 6931-to-6977 continuity qualification
         env:
-          MCFT_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
         run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_OBS6977_SEASON_CONTINUITY_QUALIFICATION.mjs
       - name: Verify Layer-1 role separation and no authority effect
         run: |
@@ -68,7 +74,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-obs6977-season-continuity-${{ github.sha }}
+          name: mcft-cap09-obs6977-season-continuity-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: acceptance-output/MCFT_CAP_09_OBS6977_SEASON_CONTINUITY_QUALIFICATION.json
           if-no-files-found: error
           retention-days: 90
