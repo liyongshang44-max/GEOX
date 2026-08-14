@@ -1,0 +1,66 @@
+name: mcft-cap-09-current-season-positive-source-discovery
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-positive-lifecycle-stage-source-discovery
+    paths:
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_CURRENT_SEASON_POSITIVE_SOURCE_DISCOVERY.mjs'
+      - '.github/workflows/mcft-cap-09-current-season-positive-source-discovery.yml'
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_CURRENT_SEASON_POSITIVE_SOURCE_DISCOVERY.mjs'
+      - '.github/workflows/mcft-cap-09-current-season-positive-source-discovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover-positive-current-season-sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Syntax-check discovery probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_CURRENT_SEASON_POSITIVE_SOURCE_DISCOVERY.mjs
+      - name: Execute live positive lifecycle/stage source discovery
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_CURRENT_SEASON_POSITIVE_SOURCE_DISCOVERY.mjs
+      - name: Verify discovery remains non-authoritative and write-free
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='acceptance-output/MCFT_CAP_09_CURRENT_SEASON_POSITIVE_SOURCE_DISCOVERY.json';
+          const x=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(x.status!=='PASS') throw new Error('POSITIVE_SOURCE_DISCOVERY_PASS_REQUIRED');
+          if(x.discovery_only_not_authority!==true) throw new Error('DISCOVERY_MUST_REMAIN_NON_AUTHORITY');
+          if(x.lifecycle_active_established!==false || x.phenology_stage_established!==false || x.crop_model_parameter_established!==false) throw new Error('DISCOVERY_MUST_NOT_ESTABLISH_CROP_AUTHORITY');
+          for(const k of ['database_write_count','formal_evidence_write_count','raw_object_write_count','runtime_config_write_count','scheduler_write_count','canonical_runtime_write_count']) if(x[k]!==0) throw new Error(`WRITE_FORBIDDEN:${k}`);
+          if(x.formal_execution_count!=='0/24') throw new Error('FORMAL_EXECUTION_MUST_REMAIN_ZERO');
+          console.log(JSON.stringify({status:x.status,post_planting_event_count:x.post_planting_event_count,positive_management_event_candidate_count:x.positive_management_event_candidate_count,explicit_current_crop_positive_management_candidate_count:x.explicit_current_crop_positive_management_candidate_count,termination_event_candidate_count:x.termination_event_candidate_count,phenology_semantic_candidate_count:x.phenology_semantic_candidate_count,latest_post_planting_event:x.latest_post_planting_event?.provider_observation_id||null,latest_positive_management_event:x.latest_positive_management_event_candidate?.provider_observation_id||null,latest_explicit_crop_positive_management_event:x.latest_explicit_current_crop_positive_management_candidate?.provider_observation_id||null}));
+          NODE
+      - name: Upload immutable discovery proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-current-season-positive-source-discovery-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_CURRENT_SEASON_POSITIVE_SOURCE_DISCOVERY.json
+          if-no-files-found: error
+          retention-days: 90
