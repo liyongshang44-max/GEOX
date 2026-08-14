@@ -20,6 +20,7 @@ const SH_STATISTICS_URL = 'https://sh.dataspace.copernicus.eu/statistics/v1';
 const SH_HOST = 'sh.dataspace.copernicus.eu';
 const COLLECTION = 'sentinel-2-l2a';
 const GEOMETRY_SOURCE_ID = 'KBS039-006.40';
+const EXPECTED_T1R1_MAIN_GEOMETRY_SEMANTIC_SHA256 = 'sha256:c50671e0bad6dcfe13796d93f35cd4c7939c22c1635c09dd8c9182b0e29ff1ae';
 const FORMAL_SITE_ID = 'KBS_MCSE_T1R1';
 const CRS_URI = 'http://www.opengis.net/def/crs/EPSG/0/4326';
 
@@ -102,7 +103,7 @@ async function fetchRestrictedKbsGeometry() {
   return {
     ewkt: geometry,
     response_sha256: sha256(bytes),
-    geometry_sha256: sha256(geometry),
+    geometry_source_text_sha256: sha256(geometry),
     retrieved_at: new Date().toISOString()
   };
 }
@@ -279,6 +280,8 @@ async function main() {
 
   const kbs = await fetchRestrictedKbsGeometry();
   const geometry = ewktToGeoJson(kbs.ewkt);
+  const geometrySemanticSha256 = sha256(JSON.stringify(geometry));
+  assert(geometrySemanticSha256 === EXPECTED_T1R1_MAIN_GEOMETRY_SEMANTIC_SHA256, 'SENTINEL2_T1R1_GEOMETRY_SEMANTIC_DIGEST_MISMATCH');
   assert(ACCESS_TOKEN.length > 40, 'SENTINEL2_EPHEMERAL_ACCESS_TOKEN_REQUIRED');
   const catalog = await catalogScenes(ACCESS_TOKEN, geometry, endUtc);
   const acquisitionGroups = [];
@@ -303,7 +306,10 @@ async function main() {
       source_id: GEOMETRY_SOURCE_ID,
       source_response_sha256: kbs.response_sha256,
       source_retrieved_at: kbs.retrieved_at,
-      geometry_semantic_sha256: kbs.geometry_sha256,
+      geometry_source_text_sha256: kbs.geometry_source_text_sha256,
+      geometry_semantic_sha256: geometrySemanticSha256,
+      expected_geometry_semantic_sha256: EXPECTED_T1R1_MAIN_GEOMETRY_SEMANTIC_SHA256,
+      geometry_digest_match: true,
       geometry_crs: 'EPSG:4326',
       polygon_vertex_count: geometry.coordinates[0].length,
       treatment: 'T1',
