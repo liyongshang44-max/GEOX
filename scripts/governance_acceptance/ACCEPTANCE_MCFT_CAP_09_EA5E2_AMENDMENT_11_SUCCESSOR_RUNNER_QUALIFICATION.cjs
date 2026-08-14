@@ -49,7 +49,13 @@ try {
   assert(!blockerCodes.includes("ROLLING_PREBOUNDARY_QUALIFICATION_CAPTURE_NOT_IMPLEMENTED"),"STALE_ROLLING_NOT_IMPLEMENTED_BLOCKER_FORBIDDEN");
   assert(!blockerCodes.includes("ROLLING_PREBOUNDARY_QUALIFICATION_CAPTURE_NOT_PROVEN"),"QUALIFIED_ROLLING_PROOF_MUST_CLOSE_CAPTURE_BLOCKER");
   assert(blockerCodes.includes("CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET"),"CROP_AUTHORITY_BLOCKER_MUST_REMAIN_INDEPENDENT");
-  assert(blockerCodes.includes("EVIDENCE_SNAPSHOT_CALLSITE_MIGRATION_NOT_COMPLETE"),"EVIDENCE_SNAPSHOT_CALLSITE_BLOCKER_MUST_REMAIN_UNTIL_MIGRATED");
+  const dbSource=fs.readFileSync(DB,"utf8");
+  const snapshotMigrationComplete=dbSource.includes("evidence_snapshot_time: string") && !dbSource.includes("exact_interval_availability_cutoff_time");
+  if(snapshotMigrationComplete){
+    assert(!blockerCodes.includes("EVIDENCE_SNAPSHOT_CALLSITE_MIGRATION_NOT_COMPLETE"),"MIGRATED_EVIDENCE_SNAPSHOT_BLOCKER_MUST_CLOSE");
+  }else{
+    assert(blockerCodes.includes("EVIDENCE_SNAPSHOT_CALLSITE_MIGRATION_NOT_COMPLETE"),"UNMIGRATED_EVIDENCE_SNAPSHOT_BLOCKER_MUST_REMAIN");
+  }
 
   const dep=JSON.parse(fs.readFileSync(DEP,"utf8"));
   assert.equal(dep.status,"PASS","RUNTIME_DEPENDENCY_GRAPH_REQUIRED");
@@ -62,6 +68,7 @@ try {
     historical_fixed_lag_proof_preserved:true,
     amendment_11_static_conformance:true,
     rolling_preboundary_capture_proven:true,
+    evidence_snapshot_callsite_migration_complete:snapshotMigrationComplete,
     rolling_preboundary_producer_subject_sha:rolling.producer_subject_sha,
     rolling_preboundary_workflow_run_id:rolling.workflow_run_id,
     rolling_preboundary_artifact_id:rolling.artifact_id,
