@@ -1,0 +1,123 @@
+name: mcft-cap-09-kbs-public-current-authority-candidates
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-kbs-public-authority-candidate-screen
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLIC-CURRENT-AUTHORITY-CANDIDATE-SCREEN.md'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_KBS_PUBLIC_CURRENT_AUTHORITY_CANDIDATES.mjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLIC_CURRENT_AUTHORITY_CANDIDATES.cjs'
+      - '.github/workflows/mcft-cap-09-kbs-public-current-authority-candidates.yml'
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLIC-CURRENT-AUTHORITY-CANDIDATE-SCREEN.md'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_KBS_PUBLIC_CURRENT_AUTHORITY_CANDIDATES.mjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLIC_CURRENT_AUTHORITY_CANDIDATES.cjs'
+      - '.github/workflows/mcft-cap-09-kbs-public-current-authority-candidates.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-kbs-authority-candidate-screen-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  screen-kbs-public-current-authority-candidates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=23f224c701dbe0b8bd56eceff3741cb1c3dc1f78" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install chromium
+
+      - name: Syntax-check focused screen
+        run: |
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_KBS_PUBLIC_CURRENT_AUTHORITY_CANDIDATES.mjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLIC_CURRENT_AUTHORITY_CANDIDATES.cjs
+
+      - name: Execute exact-boundary governance gate
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLIC_CURRENT_AUTHORITY_CANDIDATES.cjs
+
+      - name: Execute live KBS public authority-candidate screen
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_KBS_PUBLIC_CURRENT_AUTHORITY_CANDIDATES.mjs
+
+      - name: Verify narrowed fail-closed result
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = 'acceptance-output/MCFT_CAP_09_KBS_PUBLIC_CURRENT_AUTHORITY_CANDIDATE_SCREEN.json';
+          const x = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (x.status !== 'PASS') throw new Error('KBS_AUTHORITY_SCREEN_PASS_REQUIRED');
+          if (x.authority_effect !== 'NONE') throw new Error('KBS_AUTHORITY_SCREEN_ZERO_AUTHORITY_EFFECT_REQUIRED');
+          if (x.ea5e2_operational_activation_qualified !== false) throw new Error('KBS_AUTHORITY_SCREEN_EA5E2_MUST_REMAIN_FALSE');
+          if (x.formal_execution_count !== '0/24') throw new Error('KBS_AUTHORITY_SCREEN_FORMAL_MUST_REMAIN_ZERO');
+          if (!x.adjudication.kbs_public_search_space_reduced_to_aglog_family) {
+            throw new Error('KBS_AUTHORITY_SCREEN_EXPECTED_AGLOG_ONLY_RETAINED_SOURCE_FAMILY');
+          }
+          if (x.adjudication.observation_7095_is_direct_phenology !== false) {
+            throw new Error('KBS_AUTHORITY_SCREEN_7095_PHENOLOGY_OVERCLAIM_FORBIDDEN');
+          }
+          console.log(JSON.stringify({
+            status: x.status,
+            retained: x.retained_authority_candidate_sources,
+            latest_t1r1: [x.adjudication.latest_t1r1_observation_id, x.adjudication.latest_t1r1_observation_date],
+            next: x.next_legal_frontier,
+            formal: x.formal_execution_count
+          }));
+          NODE
+
+      - name: Upload immutable KBS authority-candidate screen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-kbs-authority-candidate-screen-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_KBS_PUBLIC_CURRENT_AUTHORITY_CANDIDATE_SCREEN_BOUNDARY.json
+            acceptance-output/MCFT_CAP_09_KBS_PUBLIC_CURRENT_AUTHORITY_CANDIDATE_SCREEN.json
+            acceptance-output/MCFT_CAP_09_DIRECT_CURRENT_ANCHOR_REFRESH_DISCOVERY.json
+          if-no-files-found: error
+          retention-days: 90
