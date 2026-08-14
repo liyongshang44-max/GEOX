@@ -12,6 +12,7 @@ const ACCEPTANCE = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SENTINE
 const WORKFLOW = '.github/workflows/mcft-cap-09-sentinel2-current-crop-lifecycle-discovery.yml';
 const OUT = path.join(ROOT, 'acceptance-output/MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY_BOUNDARY.json');
 const EXPECTED_BASE = '23f224c701dbe0b8bd56eceff3741cb1c3dc1f78';
+const EXPECTED_GEOMETRY_SEMANTIC_SHA256 = 'sha256:c50671e0bad6dcfe13796d93f35cd4c7939c22c1635c09dd8c9182b0e29ff1ae';
 const BASE = String(process.env.MCFT_BASE_SHA || EXPECTED_BASE).trim();
 const SUBJECT = String(process.env.MCFT_SUBJECT_SHA || 'HEAD').trim();
 
@@ -47,6 +48,7 @@ try {
     'CURRENT_CROP_ALTERNATIVE_SOURCE_AUTHORITY_DESIGN_REVIEW',
     'SATELLITE_CURRENT_CROP_LIFECYCLE_EVIDENCE_CANDIDATE',
     'KBS039-006.40',
+    EXPECTED_GEOMETRY_SEMANTIC_SHA256,
     'treatment T1 / replicate R1 / subplot main',
     'sentinel-2-l2a',
     'scene_binding_ambiguity',
@@ -65,6 +67,8 @@ try {
     "const SH_CATALOG_URL = 'https://sh.dataspace.copernicus.eu/catalog/v1/search'",
     "const SH_STATISTICS_URL = 'https://sh.dataspace.copernicus.eu/statistics/v1'",
     "const COLLECTION = 'sentinel-2-l2a'",
+    `const EXPECTED_T1R1_MAIN_GEOMETRY_SEMANTIC_SHA256 = '${EXPECTED_GEOMETRY_SEMANTIC_SHA256}'`,
+    "geometry_digest_match: true",
     "raw_geometry_emitted: false",
     "geometry_coordinates_emitted: false",
     "access_token_emitted: false",
@@ -91,6 +95,8 @@ try {
     exact_base_protected_main: EXPECTED_BASE,
     subject_sha: resolvedSubject,
     exact_four_file_boundary: true,
+    expected_geometry_semantic_sha256: EXPECTED_GEOMETRY_SEMANTIC_SHA256,
+    geometry_digest_contract_pinned: true,
     restricted_kbs_geometry_committed: false,
     copernicus_secret_values_committed: false,
     runtime_write_count: 0,
