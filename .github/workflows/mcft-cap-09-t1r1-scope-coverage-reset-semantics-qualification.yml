@@ -1,0 +1,92 @@
+name: mcft-cap-09-t1r1-scope-coverage-reset-semantics-qualification
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-t1r1-coverage-reset-semantics-qualification
+    paths:
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T1R1_SCOPE_COVERAGE_RESET_SEMANTICS.mjs'
+      - '.github/workflows/mcft-cap-09-t1r1-scope-coverage-reset-semantics-qualification.yml'
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T1R1_SCOPE_COVERAGE_RESET_SEMANTICS.mjs'
+      - '.github/workflows/mcft-cap-09-t1r1-scope-coverage-reset-semantics-qualification.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-t1r1-coverage-reset-semantics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Syntax-check T1R1 coverage/reset semantics probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T1R1_SCOPE_COVERAGE_RESET_SEMANTICS.mjs
+      - name: Execute live T1R1 coverage/reset semantics qualification
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T1R1_SCOPE_COVERAGE_RESET_SEMANTICS.mjs
+      - name: Verify corrected Layer-2 boundary
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='acceptance-output/MCFT_CAP_09_T1R1_SCOPE_COVERAGE_RESET_SEMANTICS.json';
+          const x=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(x.status!=='PASS') throw new Error('T1R1_COVERAGE_RESET_PASS_REQUIRED');
+          const s=x.t1r1_snapshot;
+          if(s.retrieval_timestamp_is_scope_coverage_watermark!==false) throw new Error('RETRIEVAL_TIME_MUST_NOT_BE_COVERAGE_WATERMARK');
+          if(s.scope_specific_coverage_completeness_established!==false) throw new Error('SCOPE_COMPLETENESS_MUST_REMAIN_UNRESOLVED');
+          if(s.publication_lag_upper_bound_established!==false) throw new Error('PUBLICATION_LAG_BOUND_MUST_REMAIN_UNRESOLVED');
+          const g=x.global_index_context;
+          if(g.global_freshness_is_t1r1_scope_coverage_proof!==false) throw new Error('GLOBAL_FRESHNESS_MUST_NOT_PROVE_T1R1_COVERAGE');
+          const c=x.chronology;
+          if(c.observation_id_order_used_as_event_time_order!==false) throw new Error('OBSERVATION_ID_MUST_NOT_BE_EVENT_CHRONOLOGY');
+          if(c.same_day_event_chronology_resolved!==true) throw new Error('SAME_DAY_CHRONOLOGY_MUST_BE_RESOLVED_OR_FAIL_CLOSED');
+          const r=x.reset_semantics;
+          if(r.every_post_anchor_row_detail_comment_classified!==true) throw new Error('EVERY_POST_ANCHOR_DETAIL_COMMENT_REQUIRED');
+          if(r.reset_semantic_classification_complete_for_retrieved_post_anchor_rows!==true) throw new Error('RESET_SEMANTIC_CLASSIFICATION_REQUIRED');
+          const l=x.lifecycle_adjudication;
+          if(l.current_runtime_lifecycle_authority_established!==false) throw new Error('CURRENT_LIFECYCLE_AUTHORITY_FORBIDDEN');
+          if(l.bounded_active_validity_interval_beyond_anchor_established!==false) throw new Error('BOUNDED_ACTIVE_VALIDITY_FORBIDDEN');
+          if(l.active_valid_through_retrieval_time_established!==false) throw new Error('ACTIVE_THROUGH_RETRIEVAL_FORBIDDEN');
+          if(l.future_forward_validity_hours!==0 || l.future_forward_validity_established!==false) throw new Error('FUTURE_VALIDITY_MUST_REMAIN_ZERO');
+          if(l.future_target_wholly_inside_lifecycle_validity_established!==false) throw new Error('FUTURE_TARGET_VALIDITY_MUST_REMAIN_FALSE');
+          if(l.exact_remaining_layer2_blocker!=='T1R1_SCOPE_COVERAGE_COMPLETENESS_UNRESOLVED') throw new Error('UNEXPECTED_LAYER2_BLOCKER');
+          for(const k of ['database_write_count','formal_evidence_write_count','raw_object_write_count','runtime_config_write_count','scheduler_write_count']) if(x[k]!==0) throw new Error(`WRITE_FORBIDDEN:${k}`);
+          if(x.formal_execution_count!=='0/24') throw new Error('FORMAL_MUST_REMAIN_ZERO');
+          console.log(JSON.stringify({
+            status:x.status,
+            t1r1_latest_published_date:s.latest_published_observation_date,
+            area_retrieved_at:s.area_retrieved_at,
+            post_anchor_detail_count:r.post_anchor_detail_count,
+            no_published_reset_observed_as_of_retrieval:r.no_published_reset_observed_as_of_retrieval,
+            exact_remaining_layer2_blocker:l.exact_remaining_layer2_blocker
+          }));
+          NODE
+      - name: Upload immutable corrected Layer-2 qualification proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t1r1-scope-coverage-reset-semantics-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_T1R1_SCOPE_COVERAGE_RESET_SEMANTICS.json
+          if-no-files-found: error
+          retention-days: 90
