@@ -1,0 +1,67 @@
+name: mcft-cap-09-obs6977-positive-lifecycle-anchor
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-obs6977-lifecycle-anchor-qualification
+    paths:
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_OBS6977_POSITIVE_LIFECYCLE_ANCHOR.mjs'
+      - '.github/workflows/mcft-cap-09-obs6977-positive-lifecycle-anchor.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  obs6977-positive-lifecycle-anchor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Syntax-check targeted probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_OBS6977_POSITIVE_LIFECYCLE_ANCHOR.mjs
+      - name: Execute observation 6977 targeted Layer-1 probe
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_OBS6977_POSITIVE_LIFECYCLE_ANCHOR.mjs
+      - name: Verify no premature authority effect
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='acceptance-output/MCFT_CAP_09_OBS6977_POSITIVE_LIFECYCLE_ANCHOR.json';
+          const x=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(x.status!=='PASS') throw new Error('OBS6977_TARGETED_PROBE_PASS_REQUIRED');
+          const a=x.layer1_adjudication;
+          if(a.positive_management_fact_established!==true) throw new Error('POSITIVE_MANAGEMENT_FACT_REQUIRED');
+          if(a.spatial_binding_to_t1r1_established!==true) throw new Error('T1R1_SPATIAL_BINDING_REQUIRED');
+          if(a.event_time_chronology_established!==true || a.current_runtime_availability_established!==true) throw new Error('CHRONOLOGY_REQUIRED');
+          if(a.direct_crop_or_hybrid_binding_on_6977_established!==false) throw new Error('DIRECT_CROP_BINDING_MUST_NOT_BE_INVENTED');
+          if(a.positive_active_lifecycle_authority_established!==false) throw new Error('ACTIVE_AUTHORITY_MUST_REMAIN_UNESTABLISHED');
+          if(a.next_frontier!=='OBS6977_TO_PLANTING6931_COMPOSITE_SEASON_CONTINUITY_QUALIFICATION') throw new Error('UNEXPECTED_NEXT_FRONTIER');
+          for(const k of ['database_write_count','formal_evidence_write_count','raw_object_write_count','runtime_config_write_count','scheduler_write_count']) if(x[k]!==0) throw new Error(`WRITE_FORBIDDEN:${k}`);
+          if(x.formal_execution_count!=='0/24') throw new Error('FORMAL_MUST_REMAIN_ZERO');
+          console.log(JSON.stringify({status:x.status,anchor:x.candidate_anchor.provider_observation_id,event_window:x.candidate_anchor.event_time_window_utc,available_to_runtime_at:x.candidate_anchor.available_to_runtime_at_conservative,direct_crop_binding:a.direct_crop_or_hybrid_binding_on_6977_established,active_authority:a.positive_active_lifecycle_authority_established,next_frontier:a.next_frontier}));
+          NODE
+      - name: Upload immutable targeted probe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-obs6977-lifecycle-anchor-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_OBS6977_POSITIVE_LIFECYCLE_ANCHOR.json
+          if-no-files-found: error
+          retention-days: 90
