@@ -118,7 +118,6 @@ async function postJson(url, token, body, code) {
     headers: {
       authorization: `Bearer ${token}`,
       'content-type': 'application/json',
-      accept: 'application/json',
     },
     body: JSON.stringify(body),
   });
