@@ -5,6 +5,7 @@
 import { composeAssimilatedContinuationPosteriorV1 } from "../../domain/soil_water/assimilated_continuation_posterior_v1.js";
 import { normalizeFixedDecimalV1, WATER_AMOUNT_SCALE_V1 } from "../../domain/soil_water/fixed_point_water_decimal_v1.js";
 import { executeHourlyWaterBalanceV1, type HourlyWaterBalanceConfigV1 } from "../../domain/soil_water/hourly_water_balance_v1.js";
+import { computeMemberDeterminismHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
 import { executeCap04Pure72hForecastMathV1 } from "../../domain/twin_runtime/pure_72h_forecast_math_v1.js";
 import type { Cap04Pure72hForecastMathResultV1 } from "../../domain/twin_runtime/forecast_math_contracts_v1.js";
 import type { Cap04ForecastForcingWindowV1 } from "../../domain/twin_runtime/future_forcing_contracts_v1.js";
@@ -31,6 +32,10 @@ import type { Cap04ARecordSetV1 } from "../../domain/twin_runtime/forecast_scena
 import { buildAssimilatedContinuationEvidenceWindowV2, finalizeAssimilatedContinuationEvidenceWindowV2 } from "./assimilated_continuation_evidence_window_v2.js";
 import type { ContinuationCropStageConfigurationContextV1 } from "./continuation_evidence_window_service_v1.js";
 import { buildExternalFormalCap04StateSourceMembersV1 } from "./external_formal_cap04_state_source_builder_v1.js";
+import {
+  projectSignedEt0ToNonnegativeWaterLossDemandV1,
+  type ExternalFormalEt0ConsumptionProjectionV1,
+} from "./external_formal_et0_consumption_projection_v1.js";
 import { validateExternalFormalCap04InputAuthorityV1, type ExternalFormalCap04InputAuthorityV1 } from "./external_formal_cap04_input_authority_v1.js";
 import { selectCap04FutureForcingOutcomeV1, type Cap04FutureForcingOutcomeV1 } from "./future_forcing_outcome_classifier_v1.js";
 import { buildCap04BlockedForecastPayloadV1 } from "./blocked_forecast_payload_builder_v1.js";
@@ -69,6 +74,7 @@ export type ExternalFormalCap04CandidateExecutionResultV1 = {
   record_set: Cap04ARecordSetV1;
   runtime_mode: typeof MCFT_CAP09_EXTERNAL_FORMAL_RUNTIME_MODE_V1;
   model_parameter_authority: typeof MCFT_CAP09_EXTERNAL_FORMAL_MODEL_PARAMETER_AUTHORITY_V1;
+  historical_et0_consumption_projection: ExternalFormalEt0ConsumptionProjectionV1;
   evidence_snapshot_time: string;
   evidence_snapshot_source: "CALLER_SUPPLIED" | "HISTORICAL_FIXED_432_DEFAULT";
   canonical_persistence_authorized: false;
@@ -106,6 +112,9 @@ function exactScopeV1(actual: ScopeLikeV1, expected: TwinScopeKeyV1, code: strin
 function finiteNumberV1(value: unknown, code: string): number {
   if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(code);
   return value;
+}
+function sortedUniqueStringsV1(values: readonly string[]): string[] {
+  return [...new Set(values.filter((value) => value.trim()))].sort();
 }
 function exactIntervalAvailabilityCutoffV1(logicalTime: string): string {
   return new Date(Date.parse(logicalTime) + EXTERNAL_FORMAL_EXACT_INTERVAL_AVAILABILITY_CUTOFF_OFFSET_MINUTES_V1 * 60_000).toISOString();
@@ -183,6 +192,27 @@ function normalizeCompatibilityForecastRuntimeAuthorityV1(
   };
 }
 
+function addHistoricalEt0ProjectionTraceV1(
+  sourceMembers: Cap04ARecordSetBuilderSourceMembersV1,
+  projection: ExternalFormalEt0ConsumptionProjectionV1,
+): Cap04ARecordSetBuilderSourceMembersV1 {
+  const traced = structuredClone(sourceMembers);
+  const transition = traced.twin_state_transition_v1;
+  transition.payload.historical_et0_consumption_projection = {
+    policy_id: projection.transformation_ref,
+    canonical_signed_et0_mm: projection.canonical_signed_et0_mm,
+    model_water_loss_demand_mm: projection.model_water_loss_demand_mm,
+    transformation_applied: projection.transformation_applied,
+    limitations: [...projection.limitations],
+  };
+  transition.limitations = sortedUniqueStringsV1([
+    ...transition.limitations,
+    ...projection.limitations,
+  ]);
+  transition.determinism_hash = computeMemberDeterminismHashV1(transition as unknown as Record<string, unknown>);
+  return traced;
+}
+
 function commonRecordSetInputV1(input: ExecuteExternalFormalCap04CandidateInputV1, sourceMembers: Cap04ARecordSetBuilderSourceMembersV1) {
   return {
     scope: input.scope,
@@ -211,6 +241,7 @@ function resultV1(input: {
   forcing_outcome: Cap04FutureForcingOutcomeV1;
   forecast_authority: ExternalFormalCompletedForecastAuthorityViewV1 | ExternalFormalBlockedForecastAuthorityViewV1;
   record_set_candidate: ExternalFormalCap04ARecordSetCandidateV1;
+  historical_et0_consumption_projection: ExternalFormalEt0ConsumptionProjectionV1;
   evidence_snapshot: EvidenceSnapshotV1;
 }): ExternalFormalCap04CandidateExecutionResultV1 {
   return {
@@ -224,6 +255,7 @@ function resultV1(input: {
     record_set: input.record_set_candidate.record_set,
     runtime_mode: MCFT_CAP09_EXTERNAL_FORMAL_RUNTIME_MODE_V1,
     model_parameter_authority: MCFT_CAP09_EXTERNAL_FORMAL_MODEL_PARAMETER_AUTHORITY_V1,
+    historical_et0_consumption_projection: structuredClone(input.historical_et0_consumption_projection),
     evidence_snapshot_time: input.evidence_snapshot.time,
     evidence_snapshot_source: input.evidence_snapshot.source,
     canonical_persistence_authorized: false,
@@ -267,13 +299,17 @@ export function executeExternalFormalCap04CandidateV1(input: ExecuteExternalForm
     exact_interval_availability_cutoff_time: evidenceSnapshot.time,
   });
   const base = preliminary.base_continuation_window;
+  const historicalEt0Projection = projectSignedEt0ToNonnegativeWaterLossDemandV1(
+    finiteNumberV1(base.historical_et0_record.canonical_payload.value, "EXTERNAL_CAP04_SERVICE_HISTORICAL_ET0_REQUIRED"),
+    "EXTERNAL_CAP04_SERVICE_HISTORICAL_ET0_REQUIRED",
+  );
   const dynamics = executeHourlyWaterBalanceV1({
     interval_start_exclusive: base.window_start_exclusive,
     interval_end_inclusive: base.window_end_inclusive,
     previous_storage_mm_decimal: input.handoff.previous_storage_mm_decimal,
     previous_variance_basis: input.handoff.previous_variance_basis,
     gross_rainfall_mm_decimal: normalizeFixedDecimalV1(String(finiteNumberV1(base.rainfall_record.canonical_payload.value, "EXTERNAL_CAP04_SERVICE_RAINFALL_REQUIRED")), WATER_AMOUNT_SCALE_V1),
-    historical_et0_mm_decimal: normalizeFixedDecimalV1(String(finiteNumberV1(base.historical_et0_record.canonical_payload.value, "EXTERNAL_CAP04_SERVICE_HISTORICAL_ET0_REQUIRED")), WATER_AMOUNT_SCALE_V1),
+    historical_et0_mm_decimal: normalizeFixedDecimalV1(String(historicalEt0Projection.model_water_loss_demand_mm), WATER_AMOUNT_SCALE_V1),
     crop_stage_code: base.crop_stage_context.stage_code,
     kc_decimal: normalizeFixedDecimalV1(String(base.crop_stage_context.kc), WATER_AMOUNT_SCALE_V1),
     executed_irrigation_candidates: [],
@@ -290,7 +326,7 @@ export function executeExternalFormalCap04CandidateV1(input: ExecuteExternalForm
     quality_weights: compatibility.observation_assimilation.quality_weights,
   });
   const evidence = finalizeAssimilatedContinuationEvidenceWindowV2({ window: preliminary, assimilation });
-  const sourceMembers = buildExternalFormalCap04StateSourceMembersV1({
+  const sourceMembers = addHistoricalEt0ProjectionTraceV1(buildExternalFormalCap04StateSourceMembersV1({
     scope: input.scope,
     logical_time: logicalTime,
     created_at: input.created_at,
@@ -300,7 +336,7 @@ export function executeExternalFormalCap04CandidateV1(input: ExecuteExternalForm
     evidence_window: evidence,
     dynamics,
     compatibility_assimilation: assimilation,
-  });
+  }), historicalEt0Projection);
   const sourceState = sourceMembers.twin_state_estimate_v1;
   const forcingOutcome = selectCap04FutureForcingOutcomeV1({
     scope: input.scope,
@@ -331,7 +367,7 @@ export function executeExternalFormalCap04CandidateV1(input: ExecuteExternalForm
     });
     const forecastAuthority = buildExternalFormalBlockedForecastAuthorityV1({ compatibility_forecast: compatibilityBlocked, runtime_config: input.runtime_config });
     const candidate = buildExternalFormalCap04BlockedA2RecordSetV1({ ...commonRecordSetInputV1(input, sourceMembers), forecast_payload: forecastAuthority.forecast_candidate });
-    return resultV1({ operation_variant: "A2", input_authority: inputAuthority, source_members: sourceMembers, forcing_outcome: forcingOutcome, forecast_authority: forecastAuthority, record_set_candidate: candidate, evidence_snapshot: evidenceSnapshot });
+    return resultV1({ operation_variant: "A2", input_authority: inputAuthority, source_members: sourceMembers, forcing_outcome: forcingOutcome, forecast_authority: forecastAuthority, record_set_candidate: candidate, historical_et0_consumption_projection: historicalEt0Projection, evidence_snapshot: evidenceSnapshot });
   }
 
   const compatibilityForecastMath = executeCap04Pure72hForecastMathV1({
@@ -342,5 +378,5 @@ export function executeExternalFormalCap04CandidateV1(input: ExecuteExternalForm
   const normalizedCompatibilityForecastMath = normalizeCompatibilityForecastRuntimeAuthorityV1(compatibilityForecastMath, input.runtime_config);
   const forecastAuthority = buildExternalFormalCompletedForecastAuthorityV1({ compatibility_result: normalizedCompatibilityForecastMath, runtime_config: input.runtime_config });
   const candidate = buildExternalFormalCap04CompletedA1RecordSetV1({ ...commonRecordSetInputV1(input, sourceMembers), forecast_payload: forecastAuthority.forecast_candidate });
-  return resultV1({ operation_variant: "A1", input_authority: inputAuthority, source_members: sourceMembers, forcing_outcome: forcingOutcome, forecast_authority: forecastAuthority, record_set_candidate: candidate, evidence_snapshot: evidenceSnapshot });
+  return resultV1({ operation_variant: "A1", input_authority: inputAuthority, source_members: sourceMembers, forcing_outcome: forcingOutcome, forecast_authority: forecastAuthority, record_set_candidate: candidate, historical_et0_consumption_projection: historicalEt0Projection, evidence_snapshot: evidenceSnapshot });
 }
