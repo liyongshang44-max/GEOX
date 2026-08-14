@@ -53,7 +53,7 @@ try {
     'KBS092_GLBRC_PHENOLOGY',
     'KBS140_REX_ANPP',
     'observation `7095`',
-    'historical positive biological lifecycle-anchor candidate',
+    'current qualifying authority candidates = []',
     'current_runtime_lifecycle_authority_established = false',
     'phenology_authority_established = false',
     'EA5E2_OPERATIONAL_ACTIVATION_QUALIFIED = false',
