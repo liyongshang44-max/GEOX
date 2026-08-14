@@ -1,0 +1,34 @@
+name: mcft-cap-09-kbs-current-season-source-inventory
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-kbs-current-season-source-inventory
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-CURRENT-SEASON-SOURCE-INVENTORY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_CURRENT_SEASON_SOURCE_INVENTORY.cjs'
+      - '.github/workflows/mcft-cap-09-kbs-current-season-source-inventory.yml'
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-CURRENT-SEASON-SOURCE-INVENTORY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_CURRENT_SEASON_SOURCE_INVENTORY.cjs'
+      - '.github/workflows/mcft-cap-09-kbs-current-season-source-inventory.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate exact current-season KBS source inventory
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_CURRENT_SEASON_SOURCE_INVENTORY.cjs
