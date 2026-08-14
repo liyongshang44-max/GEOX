@@ -28,6 +28,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify exact protected-main ancestry and subject checkout
+        env:
+          MCFT_BASE_SHA: 91d54af63a838151938a6f336e8ea8b6035d8d40
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$MCFT_SUBJECT_SHA"
+          test "$(git merge-base "$MCFT_BASE_SHA" HEAD)" = "$MCFT_BASE_SHA"
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
