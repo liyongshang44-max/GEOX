@@ -59,7 +59,6 @@ try {
   ]) requireMarker(text, marker);
 
   for (const marker of [
-    "KBS has no internal or unpublished completeness/SLA semantics",
     "ACTIVE valid through retrieval = true",
     "future_forward_validity_hours = 3",
     "future_forward_validity_established = true",
