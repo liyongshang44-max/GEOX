@@ -1,0 +1,115 @@
+name: mcft-cap-09-current-crop-authority-live-requalification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-current-crop-authority-live-requalification.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-CROP-AUTHORITY-REQUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_CROP_AUTHORITY_REQUALIFICATION.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_CURRENT_CROP_AUTHORITY_REQUALIFICATION.mjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-current-crop-authority-live-requalification-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  current-crop-authority-live-requalification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact current-crop requalification base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for KBS AgLog requalification
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Syntax-check current-crop requalification proof code
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_CROP_AUTHORITY_REQUALIFICATION.cjs
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_CURRENT_CROP_AUTHORITY_REQUALIFICATION.mjs
+
+      - name: Validate exact current-crop requalification governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_CROP_AUTHORITY_REQUALIFICATION.cjs
+
+      - name: Execute live current-crop authority requalification
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_CURRENT_CROP_AUTHORITY_REQUALIFICATION.mjs
+
+      - name: Verify fail-closed three-axis result contract
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CURRENT_CROP_AUTHORITY_REQUALIFICATION_RESULT.json','utf8'));
+          const subject = '${{ steps.authority.outputs.subject_sha }}';
+          if (result.status !== 'PASS') throw new Error('CURRENT_CROP_REQUAL_LIVE_PASS_REQUIRED');
+          if (result.subject_sha !== subject) throw new Error('CURRENT_CROP_REQUAL_EXACT_HEAD_RESULT_REQUIRED');
+          if (!['ACTIVE','TERMINATED','UNRESOLVED'].includes(result.season_lifecycle_authority?.status)) throw new Error('CURRENT_CROP_REQUAL_LIFECYCLE_STATUS_INVALID');
+          if (!['RESOLVED','UNRESOLVED'].includes(result.phenology_stage_authority?.status)) throw new Error('CURRENT_CROP_REQUAL_PHENOLOGY_STATUS_INVALID');
+          if (!['RESOLVED','UNRESOLVED'].includes(result.crop_model_parameter_authority?.status)) throw new Error('CURRENT_CROP_REQUAL_MODEL_PARAMETER_STATUS_INVALID');
+          if (result.season_lifecycle_authority?.active_established === true) throw new Error('CURRENT_CROP_REQUAL_V1_ACTIVE_AUTHORITY_FORBIDDEN');
+          if (result.season_lifecycle_authority?.absence_of_termination_used_to_prove_active !== false) throw new Error('CURRENT_CROP_REQUAL_ACTIVE_FROM_SILENCE_FORBIDDEN');
+          if (result.phenology_stage_authority?.semantic_candidate_alone_used_as_stage !== false) throw new Error('CURRENT_CROP_REQUAL_STAGE_FROM_TOKEN_FORBIDDEN');
+          if (result.crop_model_parameter_authority?.invented_from_lifecycle !== false || result.crop_model_parameter_authority?.invented_from_unmapped_phenology !== false) throw new Error('CURRENT_CROP_REQUAL_KC_INVENTION_FORBIDDEN');
+          if (result.ea5e2_readiness?.legacy_no_future_legal_target_blocker_emitted !== false) throw new Error('CURRENT_CROP_REQUAL_LEGACY_BLOCKER_FORBIDDEN');
+          if (result.ea5e2_readiness?.protected_main_live_dispatch_authorized !== false || result.ea5e2_readiness?.ea5e2_operational_activation_qualified !== false) throw new Error('CURRENT_CROP_REQUAL_PREMATURE_ACTIVATION');
+          for (const field of ['database_write_count','formal_evidence_write_count','raw_object_write_count','runtime_config_write_count','scheduler_write_count','canonical_runtime_write_count']) {
+            if (result[field] !== 0) throw new Error(`CURRENT_CROP_REQUAL_ZERO_WRITE_REQUIRED:${field}`);
+          }
+          if (result.formal_window_started !== false || result.formal_execution_count !== '0/24') throw new Error('CURRENT_CROP_REQUAL_FORMAL_NONCLAIM_REQUIRED');
+          console.log(JSON.stringify({
+            status:'PASS',
+            lifecycle:result.season_lifecycle_authority.status,
+            phenology:result.phenology_stage_authority.status,
+            crop_model_parameter:result.crop_model_parameter_authority.status,
+            blocker:result.ea5e2_readiness.blocker,
+            diagnostics:result.ea5e2_readiness.diagnostic_causes
+          }));
+
+      - name: Upload immutable current-crop requalification proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-current-crop-requalification-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_CURRENT_CROP_AUTHORITY_REQUALIFICATION_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_CURRENT_CROP_AUTHORITY_REQUALIFICATION_RESULT.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-CROP-AUTHORITY-REQUALIFICATION-V1.json
+          if-no-files-found: error
+          retention-days: 90
