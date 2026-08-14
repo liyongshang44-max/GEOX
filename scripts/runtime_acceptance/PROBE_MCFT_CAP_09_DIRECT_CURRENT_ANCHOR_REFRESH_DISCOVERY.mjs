@@ -23,7 +23,8 @@ const LAST_REVIEWED_T1R1_ROW_DATE = '2026-06-25';
 const RECENT_WINDOW_DAYS = 21;
 const MAX_GLOBAL_PAGES = 20;
 
-const RESET_SEMANTIC = /\b(harvest(?:ed|ing)?|termination|terminate(?:d|s|ing)?|crop\s+removed|removed\s+crop|killed\s+crop|crop\s+killed)\b/i;
+const RESET_TYPE_SEMANTIC = /\b(harvest|termination|terminate(?:d|s|ing)?)\b/i;
+const RESET_COMMENT_SEMANTIC = /\b(harvested|harvesting|(?:corn|crop)\s+harvest|harvest(?:ed|ing)?\s+(?:corn|crop)|termination|terminate(?:d|s|ing)?|crop\s+removed|removed\s+crop|killed\s+crop|crop\s+killed)\b/i;
 const POSITIVE_MANAGEMENT_SEMANTIC = /\b(plant(?:ed|ing)?|fertiliz(?:e|ed|er|ing)|herbicide|irrigat(?:e|ed|ion|ing)|cultivat(?:e|ed|ion|ing)|mechanical\s+weed|fungicide|side\s*dress|spray(?:ed|ing)?)\b/i;
 const POSITIVE_BIOLOGICAL_SEMANTIC = /\b(plant\s+height|crop\s+height|corn\s+plants?|standing\s+corn|canopy|leaf\s+area|tassel(?:ed|ing)?|silk(?:ed|ing)?|physiological\s+maturity|black\s+layer)\b/i;
 const CORN_SEMANTIC = /\b(corn|maize|zea\s+mays)\b/i;
@@ -136,7 +137,7 @@ function parseDetail(rawText, proof, fallback) {
   const scopeText = normalize(`${areas} ${fallback.row_text || ''}`);
   const tokens = areaTokens(scopeText);
   const phenology = phenologyTokens(semanticText);
-  const reset = RESET_SEMANTIC.test(semanticText);
+  const reset = RESET_TYPE_SEMANTIC.test(observationType) || RESET_COMMENT_SEMANTIC.test(comment);
   const positiveManagement = POSITIVE_MANAGEMENT_SEMANTIC.test(semanticText);
   const positiveBiological = POSITIVE_BIOLOGICAL_SEMANTIC.test(semanticText);
   const corn = CORN_SEMANTIC.test(semanticText);
@@ -229,6 +230,11 @@ async function main() {
       const fetched = await fetchPage(page, DETAIL_URL(row.provider_observation_id));
       details.push(parseDetail(fetched.raw_text, fetched.proof, row));
     }
+
+    const seasonOriginDetail = details.find((detail) => detail.provider_observation_id === SEASON_ORIGIN_ID);
+    assert(seasonOriginDetail, 'DIRECT_CURRENT_ANCHOR_SEASON_ORIGIN_DETAIL_REQUIRED');
+    assert(/\bPlanting\b/i.test(seasonOriginDetail.observation_type || ''), 'DIRECT_CURRENT_ANCHOR_SEASON_ORIGIN_PLANTING_TYPE_REQUIRED');
+    assert(seasonOriginDetail.reset_or_termination_semantic_present === false, 'DIRECT_CURRENT_ANCHOR_SEASON_ORIGIN_FALSE_RESET_FORBIDDEN');
 
     const snapshotAt = new Date().toISOString();
     const ranked = details.map((detail) => rankCandidate(detail, snapshotAt)).sort((a, b) => b.discovery_score - a.discovery_score || b.observation_date.localeCompare(a.observation_date));
