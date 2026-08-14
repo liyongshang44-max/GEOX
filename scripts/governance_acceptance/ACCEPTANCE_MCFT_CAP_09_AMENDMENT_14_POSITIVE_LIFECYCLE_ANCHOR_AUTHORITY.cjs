@@ -72,7 +72,8 @@ try {
     "phenology_stage.status = UNRESOLVED",
     "crop_model_parameter.status = UNRESOLVED",
     "Kc = null",
-    "absence used only to preserve identity between two positive events",
+    "located **between two positive facts** and is used only to reject an intervening season reset",
+    "Amendment-14 authorizes no statement of the form",
     "No historical Formal tick or historical runtime decision before",
     "current_lifecycle_active_as_of_amendment14_time = false",
     "bounded_lifecycle_carry_forward_established = false",
@@ -84,8 +85,6 @@ try {
   ]) requireMarker(text, marker);
 
   for (const marker of [
-    "no harvest row observed\n=> ACTIVE",
-    "planting + thermal accumulation\n=> ACTIVE today",
     "current_lifecycle_as_of_now.status = ACTIVE",
     "bounded_lifecycle_carry_forward_established = true",
     "current_phenology_stage_resolved = true",
