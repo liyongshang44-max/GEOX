@@ -1,0 +1,95 @@
+name: mcft-cap-09-bounded-lifecycle-carry-forward-qualification
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-bounded-lifecycle-carry-forward-qualification
+    paths:
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_BOUNDED_LIFECYCLE_CARRY_FORWARD.mjs'
+      - '.github/workflows/mcft-cap-09-bounded-lifecycle-carry-forward-qualification.yml'
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_BOUNDED_LIFECYCLE_CARRY_FORWARD.mjs'
+      - '.github/workflows/mcft-cap-09-bounded-lifecycle-carry-forward-qualification.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-bounded-lifecycle-carry-forward:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Syntax-check bounded lifecycle carry-forward probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_BOUNDED_LIFECYCLE_CARRY_FORWARD.mjs
+      - name: Execute live bounded lifecycle carry-forward qualification
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_BOUNDED_LIFECYCLE_CARRY_FORWARD.mjs
+      - name: Verify bounded absence role and future fail-closed boundary
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='acceptance-output/MCFT_CAP_09_BOUNDED_LIFECYCLE_CARRY_FORWARD.json';
+          const x=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(x.status!=='PASS') throw new Error('LIFECYCLE_CARRY_FORWARD_PASS_REQUIRED');
+          const s=x.provider_semantics;
+          if(s.actual_field_operations_recorded_in_aglog!==true) throw new Error('AGLOG_ACTUAL_FIELD_OPERATION_SEMANTICS_REQUIRED');
+          if(s.exact_t1r1_area_view_qualified!==true) throw new Error('EXACT_T1R1_AREA_VIEW_REQUIRED');
+          if(!(Number(s.historical_t1r1_harvest_observability_count)>0)) throw new Error('T1R1_HARVEST_OBSERVABILITY_POSITIVE_CONTROL_REQUIRED');
+          const a=x.bounded_absence_evidence;
+          if(a.absence_used_to_create_active!==false) throw new Error('ABSENCE_MAY_NOT_CREATE_ACTIVE');
+          if(a.absence_used_only_to_carry_forward_preexisting_positive_active_anchor!==true) throw new Error('ABSENCE_ROLE_MUST_BE_CARRY_FORWARD_ONLY');
+          if(a.published_harvest_or_termination_after_anchor_count!==0) throw new Error('PUBLISHED_RESET_AFTER_ANCHOR_FORBIDDEN');
+          if(a.published_successor_planting_after_anchor_count!==0) throw new Error('SUCCESSOR_PLANTING_AFTER_ANCHOR_FORBIDDEN');
+          if(a.unpublished_physical_operation_lag_upper_bound_established!==false) throw new Error('UNPUBLISHED_OPERATION_LAG_BOUND_MUST_NOT_BE_INVENTED');
+          const l=x.lifecycle_adjudication;
+          if(l.provider_recorded_management_lifecycle_as_of_snapshot!=='ACTIVE') throw new Error('PROVIDER_RECORDED_ACTIVE_SNAPSHOT_REQUIRED');
+          if(l.bounded_carry_forward_to_provider_snapshot_candidate_qualified!==true) throw new Error('BOUNDED_SNAPSHOT_CARRY_FORWARD_CANDIDATE_REQUIRED');
+          if(l.current_runtime_lifecycle_authority_established_by_this_probe!==false) throw new Error('QUALIFICATION_MUST_NOT_CREATE_AUTHORITY');
+          if(l.future_forward_validity_hours!==0) throw new Error('FUTURE_FORWARD_VALIDITY_MUST_REMAIN_ZERO');
+          if(l.future_forward_validity_established!==false) throw new Error('FUTURE_FORWARD_VALIDITY_MUST_REMAIN_UNRESOLVED');
+          if(l.future_target_wholly_inside_lifecycle_validity_established!==false) throw new Error('FUTURE_TARGET_VALIDITY_MUST_REMAIN_FALSE');
+          if(l.reason_future_forward_validity_unresolved!=='NO_QUALIFIED_FORWARD_MANAGEMENT_LIFECYCLE_GUARD_BEYOND_PROVIDER_SNAPSHOT') throw new Error('UNEXPECTED_FORWARD_VALIDITY_REASON');
+          if(x.phenology_stage_authority.status!=='UNRESOLVED') throw new Error('PHENOLOGY_MUST_REMAIN_UNRESOLVED');
+          if(x.crop_model_parameter_authority.status!=='UNRESOLVED' || x.crop_model_parameter_authority.kc!==null) throw new Error('KC_MUST_REMAIN_UNRESOLVED');
+          for(const k of ['database_write_count','formal_evidence_write_count','raw_object_write_count','runtime_config_write_count','scheduler_write_count']) if(x[k]!==0) throw new Error(`WRITE_FORBIDDEN:${k}`);
+          if(x.formal_execution_count!=='0/24') throw new Error('FORMAL_MUST_REMAIN_ZERO');
+          console.log(JSON.stringify({
+            status:x.status,
+            provider_recorded_state:l.provider_recorded_management_lifecycle_as_of_snapshot,
+            valid_through:l.provider_recorded_state_valid_through_utc,
+            historical_harvest_observability_count:s.historical_t1r1_harvest_observability_count,
+            post_anchor_event_count:a.post_anchor_area_event_count,
+            reset_after_anchor:a.published_harvest_or_termination_after_anchor_count,
+            future_forward_validity_hours:l.future_forward_validity_hours,
+            next_frontier:l.next_frontier
+          }));
+          NODE
+      - name: Upload immutable Layer-2 qualification proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-bounded-lifecycle-carry-forward-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_BOUNDED_LIFECYCLE_CARRY_FORWARD.json
+          if-no-files-found: error
+          retention-days: 90
