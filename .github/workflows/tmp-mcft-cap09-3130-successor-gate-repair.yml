@@ -1,0 +1,209 @@
+name: tmp-mcft-cap09-3130-successor-gate-repair
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-evidence-snapshot-callsite-migration
+    paths:
+      - '.github/workflows/tmp-mcft-cap09-3130-successor-gate-repair.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap09-evidence-snapshot-callsite-migration
+          fetch-depth: 0
+
+      - name: Apply successor-only workflow routing
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          ROOT = Path('.')
+          WRAPPER = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs'
+
+          def read(p): return (ROOT / p).read_text(encoding='utf-8')
+          def write(p, s): (ROOT / p).write_text(s, encoding='utf-8')
+          def replace_step(text, name, block):
+              pattern = rf'(?ms)^      - name: {re.escape(name)}\n.*?(?=^      - (?:name:|uses:)|\Z)'
+              new, n = re.subn(pattern, block.rstrip() + '\n\n', text)
+              if n != 1:
+                  raise SystemExit(f'STEP_REPLACE_COUNT:{name}:{n}')
+              return new
+          def add_path(text, anchor):
+              line = f"      - '{WRAPPER}'"
+              if line in text: return text
+              target = f"      - '{anchor}'"
+              if target not in text: raise SystemExit(f'PATH_ANCHOR_MISSING:{anchor}')
+              return text.replace(target, target + '\n' + line, 1)
+
+          # Fixed-lag: historical exact gate remains exact; descendant PRs use preservation gate.
+          p = '.github/workflows/mcft-cap-09-ea5e2-fixed-lag-collector-runtime-schedule-readiness.yml'
+          s = read(p)
+          s = add_path(s, 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs')
+          s = replace_step(s, 'Bind exact effective Amendment-08 protected-main authority', '''      - name: Bind historical Amendment-08 authority and current protected base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          historical='f150b18a2ab9691fec64eaecb00105911857994c'
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            current='${{ github.event.pull_request.base.sha }}'
+            subject='${{ github.event.pull_request.head.sha }}'
+          else
+            current='${{ github.event.merge_group.base_sha }}'
+            subject='${{ github.event.merge_group.head_sha }}'
+          fi
+          git merge-base --is-ancestor "$historical" "$current"
+          echo "historical_base_sha=$historical" >> "$GITHUB_OUTPUT"
+          echo "current_base_sha=$current" >> "$GITHUB_OUTPUT"
+          echo "subject_sha=$subject" >> "$GITHUB_OUTPUT"''')
+          s = replace_step(s, 'Validate EA5E2 implementation qualification under Amendment-08', '''      - name: Validate EA5E2 implementation qualification under Amendment-08
+        shell: bash
+        env:
+          CURRENT_BASE_SHA: ${{ steps.authority.outputs.current_base_sha }}
+          HISTORICAL_BASE_SHA: ${{ steps.authority.outputs.historical_base_sha }}
+        run: |
+          set -euo pipefail
+          if [ "$CURRENT_BASE_SHA" = "$HISTORICAL_BASE_SHA" ]; then
+            MCFT_BASE_SHA="$HISTORICAL_BASE_SHA" node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FIXED_LAG_COLLECTOR_RUNTIME_SCHEDULE_READINESS.cjs
+          else
+            MCFT_SUCCESSOR_GATE_ID=EA5E2_FIXED_LAG \
+            MCFT_CURRENT_BASE_SHA="$CURRENT_BASE_SHA" \
+            MCFT_HISTORICAL_BASE_SHA="$HISTORICAL_BASE_SHA" \
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs
+          fi''')
+          write(p, s)
+
+          # EA5B1
+          p = '.github/workflows/mcft-cap-09-ea5b1-external-evidence-binding-seam.yml'
+          s = read(p)
+          s = add_path(s, 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs')
+          s = replace_step(s, 'Validate exact EA5B1 governance boundary', '''      - name: Validate EA5B1 governance boundary or successor preservation
+        shell: bash
+        env:
+          CURRENT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          historical='9dc8f99303e9d1efaec52afe5eac7ed816c5a8d2'
+          if [ "$CURRENT_BASE_SHA" = "$historical" ]; then
+            MCFT_BASE_SHA="$CURRENT_BASE_SHA" node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs
+          else
+            MCFT_SUCCESSOR_GATE_ID=EA5B1 \
+            MCFT_CURRENT_BASE_SHA="$CURRENT_BASE_SHA" \
+            MCFT_HISTORICAL_BASE_SHA="$historical" \
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs
+          fi''')
+          write(p, s)
+
+          # EA5B5C
+          p = '.github/workflows/mcft-cap-09-ea5b5c-external-cap04-orchestration.yml'
+          s = read(p)
+          s = add_path(s, 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.cjs')
+          s = replace_step(s, 'Validate exact EA5B5C governance boundary', '''      - name: Validate EA5B5C governance boundary or successor preservation
+        shell: bash
+        env:
+          CURRENT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          historical='5b911ad78fa1c66622368cb01d154d14fc3f8377'
+          if [ "$CURRENT_BASE_SHA" = "$historical" ]; then
+            MCFT_BASE_SHA="$CURRENT_BASE_SHA" node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.cjs
+          else
+            MCFT_SUCCESSOR_GATE_ID=EA5B5C \
+            MCFT_CURRENT_BASE_SHA="$CURRENT_BASE_SHA" \
+            MCFT_HISTORICAL_BASE_SHA="$historical" \
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs
+          fi''')
+          write(p, s)
+
+          # V3 persistent tick
+          p = '.github/workflows/mcft-cap-09-external-formal-v3-persistent-tick-qualification.yml'
+          s = read(p)
+          s = add_path(s, 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK_IMPLEMENTATION_QUALIFICATION.cjs')
+          s = replace_step(s, 'Resolve exact V3 implementation-qualification base', '''      - name: Resolve historical V3 qualification base and current protected base
+        shell: bash
+        run: |
+          set -euo pipefail
+          current='${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}'
+          historical='c31a5533521a671d6059cadfe4209182ce3b1926'
+          git merge-base --is-ancestor "$historical" "$current"
+          echo "MCFT_CURRENT_BASE_SHA=$current" >> "$GITHUB_ENV"
+          echo "MCFT_HISTORICAL_BASE_SHA=$historical" >> "$GITHUB_ENV"''')
+          s = replace_step(s, 'Validate exact V3 implementation qualification boundary', '''      - name: Validate V3 historical qualification or successor preservation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$MCFT_CURRENT_BASE_SHA" = "$MCFT_HISTORICAL_BASE_SHA" ]; then
+            MCFT_BASE_SHA="$MCFT_HISTORICAL_BASE_SHA" node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_PERSISTENT_TICK_IMPLEMENTATION_QUALIFICATION.cjs
+          else
+            MCFT_SUCCESSOR_GATE_ID=EXTERNAL_FORMAL_V3 \
+            MCFT_CURRENT_BASE_SHA="$MCFT_CURRENT_BASE_SHA" \
+            MCFT_HISTORICAL_BASE_SHA="$MCFT_HISTORICAL_BASE_SHA" \
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs
+          fi''')
+          write(p, s)
+
+          # Amendment-11 successor gate: migration blocker follows actual public seam state.
+          p = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_RUNNER_QUALIFICATION.cjs'
+          s = read(p)
+          old = '  assert(blockerCodes.includes("EVIDENCE_SNAPSHOT_CALLSITE_MIGRATION_NOT_COMPLETE"),"EVIDENCE_SNAPSHOT_CALLSITE_BLOCKER_MUST_REMAIN_UNTIL_MIGRATED");'
+          new = '''  const dbSource=fs.readFileSync(DB,"utf8");
+          const snapshotMigrationComplete=dbSource.includes("evidence_snapshot_time: string") && !dbSource.includes("exact_interval_availability_cutoff_time");
+          if(snapshotMigrationComplete){
+            assert(!blockerCodes.includes("EVIDENCE_SNAPSHOT_CALLSITE_MIGRATION_NOT_COMPLETE"),"MIGRATED_EVIDENCE_SNAPSHOT_BLOCKER_MUST_CLOSE");
+          }else{
+            assert(blockerCodes.includes("EVIDENCE_SNAPSHOT_CALLSITE_MIGRATION_NOT_COMPLETE"),"UNMIGRATED_EVIDENCE_SNAPSHOT_BLOCKER_MUST_REMAIN");
+          }'''
+          if old not in s: raise SystemExit('SUCCESSOR_STALE_ASSERTION_NOT_FOUND')
+          s = s.replace(old, new, 1)
+          marker = '    rolling_preboundary_capture_proven:true,'
+          if marker not in s: raise SystemExit('SUCCESSOR_RESULT_MARKER_NOT_FOUND')
+          s = s.replace(marker, marker + '\n    evidence_snapshot_callsite_migration_complete:snapshotMigrationComplete,', 1)
+          write(p, s)
+
+      - name: Validate repaired governance syntax and preservation contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_RUNNER_QUALIFICATION.cjs
+          current='839d320b118d37a51b659730d0a9e2a1058e433b'
+          MCFT_SUCCESSOR_GATE_ID=EA5E2_FIXED_LAG MCFT_CURRENT_BASE_SHA="$current" MCFT_HISTORICAL_BASE_SHA='f150b18a2ab9691fec64eaecb00105911857994c' node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs
+          MCFT_SUCCESSOR_GATE_ID=EA5B1 MCFT_CURRENT_BASE_SHA="$current" MCFT_HISTORICAL_BASE_SHA='9dc8f99303e9d1efaec52afe5eac7ed816c5a8d2' node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs
+          MCFT_SUCCESSOR_GATE_ID=EA5B5C MCFT_CURRENT_BASE_SHA="$current" MCFT_HISTORICAL_BASE_SHA='5b911ad78fa1c66622368cb01d154d14fc3f8377' node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs
+          MCFT_SUCCESSOR_GATE_ID=EXTERNAL_FORMAL_V3 MCFT_CURRENT_BASE_SHA="$current" MCFT_HISTORICAL_BASE_SHA='c31a5533521a671d6059cadfe4209182ce3b1926' node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_PREFLIGHT.cjs
+          node - <<'NODE'
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_PREFLIGHT.json','utf8'));
+          if(p.status!=='PASS') throw new Error('PREFLIGHT_PASS_REQUIRED');
+          const codes=p.readiness_blockers.map(x=>x.code);
+          if(codes.includes('EVIDENCE_SNAPSHOT_CALLSITE_MIGRATION_NOT_COMPLETE')) throw new Error('SNAPSHOT_MIGRATION_BLOCKER_STILL_PRESENT');
+          if(JSON.stringify(codes)!==JSON.stringify(['CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET'])) throw new Error('READINESS_MUST_BE_CROP_ONLY:'+JSON.stringify(codes));
+          console.log(JSON.stringify({status:'PASS',readiness_blockers:codes}));
+          NODE
+          rm -rf acceptance-output
+
+      - name: Commit repaired successor gate routing and self-delete
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/tmp-mcft-cap09-3130-successor-gate-repair.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/mcft-cap-09-ea5e2-fixed-lag-collector-runtime-schedule-readiness.yml \
+                  .github/workflows/mcft-cap-09-ea5b1-external-evidence-binding-seam.yml \
+                  .github/workflows/mcft-cap-09-ea5b5c-external-cap04-orchestration.yml \
+                  .github/workflows/mcft-cap-09-external-formal-v3-persistent-tick-qualification.yml \
+                  scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_RUNNER_QUALIFICATION.cjs \
+                  .github/workflows/tmp-mcft-cap09-3130-successor-gate-repair.yml
+          git diff --cached --check
+          git commit -m 'test(mcft-cap09): separate historical exact gates from successor regression'
+          git push origin HEAD:agent/mcft-cap09-evidence-snapshot-callsite-migration
