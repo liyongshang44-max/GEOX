@@ -52,7 +52,7 @@ try {
     'KBS037_PROCESSED_GEOREFERENCED_YIELD',
     'KBS092_GLBRC_PHENOLOGY',
     'KBS140_REX_ANPP',
-    'observation `7095`',
+    'latest T1R1 observation remains `7095`',
     'current qualifying authority candidates = []',
     'current_runtime_lifecycle_authority_established = false',
     'phenology_authority_established = false',
