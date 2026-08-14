@@ -8,6 +8,7 @@ import {
   MCFT_CAP09_SIGNED_ET0_TO_NONNEGATIVE_WATER_LOSS_DEMAND_POLICY_ID_V1,
   projectSignedEt0ToNonnegativeWaterLossDemandV1,
 } from "../../apps/server/src/runtime/twin_runtime/external_formal_et0_consumption_projection_v1.js";
+import { selectCap04FutureForcingWindowV1 } from "../../apps/server/src/runtime/twin_runtime/future_forcing_selector_v1.js";
 import { PostgresExternalFormalEvidenceSourceV1 } from "../../apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.js";
 import type { CanonicalReplayEvidenceRecordV1 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
 import {
@@ -238,6 +239,52 @@ async function main(): Promise<void> {
     /AMENDMENT12_NONFINITE_ET0_REJECTED/,
   );
 
+  const futureRecords = signed.loaded.records.filter((record) =>
+    record.record_type === "future_weather_assumption_v1" || record.record_type === "future_et0_assumption_v1");
+  assert.equal(futureRecords.length, 2);
+  const authorizedBindingIds = [...new Set(futureRecords.map((record) => record.binding_id))];
+  const selectorBase = {
+    scope: fixture.scope,
+    logical_time: EA5B5B_LOGICAL_TIME_V1,
+    authorized_binding_ids: authorizedBindingIds,
+    crop_stage_context: {
+      ref: "amendment12_fail_closed_crop_context",
+      hash: "sha256:amendment12_fail_closed_crop_context",
+      crop_stage_code: "MID",
+      kc: 1,
+    },
+    runtime_config: {
+      ref: fixture.hourly.object_id,
+      hash: fixture.hourly.determinism_hash,
+    },
+  };
+
+  const unauthorizedRecords = structuredClone(futureRecords) as CanonicalReplayEvidenceRecordV1[];
+  const unauthorizedWeather = unauthorizedRecords.find((record) => record.record_type === "future_weather_assumption_v1");
+  if (!unauthorizedWeather) throw new Error("AMENDMENT12_UNAUTHORIZED_WEATHER_REQUIRED");
+  unauthorizedWeather.binding_id = "binding_unauthorized_amendment12";
+  const unauthorized = selectCap04FutureForcingWindowV1({ ...selectorBase, candidate_records: unauthorizedRecords });
+  assert.equal(unauthorized.status, "BLOCKED");
+  assert.equal(unauthorized.trace.excluded_reason_counts.FORCING_BINDING_NOT_AUTHORIZED, 1);
+
+  const crossCycleRecords = structuredClone(futureRecords) as CanonicalReplayEvidenceRecordV1[];
+  const crossCycleEt0 = crossCycleRecords.find((record) => record.record_type === "future_et0_assumption_v1");
+  if (!crossCycleEt0 || typeof crossCycleEt0.role_time.issued_at !== "string") throw new Error("AMENDMENT12_CROSS_CYCLE_ET0_REQUIRED");
+  crossCycleEt0.role_time.issued_at = addMinutesV1(crossCycleEt0.role_time.issued_at, -1);
+  const crossCycle = selectCap04FutureForcingWindowV1({ ...selectorBase, candidate_records: crossCycleRecords });
+  assert.equal(crossCycle.status, "BLOCKED");
+  assert.equal(crossCycle.trace.matching_pair_count, 0);
+
+  const futureAvailabilityRecords = structuredClone(futureRecords) as CanonicalReplayEvidenceRecordV1[];
+  const futureWeather = futureAvailabilityRecords.find((record) => record.record_type === "future_weather_assumption_v1");
+  if (!futureWeather) throw new Error("AMENDMENT12_FUTURE_AVAILABLE_WEATHER_REQUIRED");
+  const futureAvailableAt = addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 1);
+  futureWeather.available_to_runtime_at = futureAvailableAt;
+  futureWeather.role_time.available_to_runtime_at = futureAvailableAt;
+  const futureAvailability = selectCap04FutureForcingWindowV1({ ...selectorBase, candidate_records: futureAvailabilityRecords });
+  assert.equal(futureAvailability.status, "BLOCKED");
+  assert.equal(futureAvailability.trace.excluded_reason_counts.FORCING_AVAILABLE_AFTER_LOGICAL_TIME, 1);
+
   assert.throws(
     () => executeExternalFormalCap04Amendment11CandidateV1({
       scope: fixture.scope,
@@ -286,6 +333,9 @@ async function main(): Promise<void> {
     signed_future_et0_full_72h_completed: true,
     negative_et0_condensation_not_modeled_explicit: true,
     nonfinite_et0_fail_closed: true,
+    source_binding_mismatch_fail_closed: true,
+    forcing_cycle_mismatch_fail_closed: true,
+    forcing_time_mismatch_fail_closed: true,
     external_cap04_operation_variant: signedCandidate.operation_variant,
     external_cap04_forecast_status: signedCandidate.forecast_authority.forecast_candidate.status,
     external_cap04_forecast_point_count: signedCandidate.forecast_authority.forecast_candidate.points.length,
