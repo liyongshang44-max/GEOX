@@ -68,6 +68,9 @@ try {
     "const SH_STATISTICS_URL = 'https://sh.dataspace.copernicus.eu/statistics/v1'",
     "const COLLECTION = 'sentinel-2-l2a'",
     `const EXPECTED_T1R1_MAIN_GEOMETRY_SEMANTIC_SHA256 = '${EXPECTED_GEOMETRY_SEMANTIC_SHA256}'`,
+    "return new Date(parsed).toISOString();",
+    "const sensingTime = canonicalIso(rawSensingTime, 'SENTINEL2_CATALOG_SENSING_TIME_INVALID');",
+    "processing: { upsampling: 'NEAREST', downsampling: 'NEAREST' }",
     "geometry_digest_match: true",
     "raw_geometry_emitted: false",
     "geometry_coordinates_emitted: false",
@@ -84,6 +87,7 @@ try {
     'ACCEPTANCE_MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY.cjs'
   ]) requireMarker(workflow, marker, `SENTINEL2_DISCOVERY_WORKFLOW_MARKER_MISSING:${marker}`);
 
+  forbidMarker(probe, 'assert(iso === value', 'SENTINEL2_DISCOVERY_FIXED_MILLISECOND_TIME_FORMAT_FORBIDDEN');
   forbidMarker(combined, 'SRID=4326;POLYGON((-85.', 'SENTINEL2_DISCOVERY_RESTRICTED_GEOMETRY_LITERAL_FORBIDDEN');
   forbidMarker(combined, 'CDSE_SENTINEL_HUB_CLIENT_SECRET', 'SENTINEL2_DISCOVERY_LONG_LIVED_CLIENT_SECRET_REFERENCE_FORBIDDEN');
   forbidMarker(combined, 'EA5E2_OPERATIONAL_ACTIVATION_QUALIFIED = true', 'SENTINEL2_DISCOVERY_ACTIVATION_CLAIM_FORBIDDEN');
@@ -97,6 +101,8 @@ try {
     exact_four_file_boundary: true,
     expected_geometry_semantic_sha256: EXPECTED_GEOMETRY_SEMANTIC_SHA256,
     geometry_digest_contract_pinned: true,
+    catalog_time_normalization_contract_pinned: true,
+    scl_nearest_resampling_pinned: true,
     restricted_kbs_geometry_committed: false,
     copernicus_secret_values_committed: false,
     runtime_write_count: 0,
