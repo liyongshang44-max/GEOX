@@ -83,7 +83,7 @@ P0306Q token in the row itself = false
 provider-direct phenology stage token = false
 ```
 
-Therefore `7095` may be considered only for a **newer positive biological lifecycle anchor candidate** through a separately qualified composite binding to planting observation `6931`. It does not prove the crop is still active on 2026-08-15 and it does not establish phenology.
+Therefore `7095` is only a **historical positive biological lifecycle-anchor candidate** through a separately qualified composite binding to planting observation `6931`. It does not prove the crop is still active on 2026-08-15, it does not establish phenology, and this screen does not recommend reopening the already-failed carry-forward/completeness line merely to move the historical anchor from May 27 to June 25.
 
 ## Explicit eliminations
 
@@ -142,4 +142,4 @@ Formal = 0/24
 authority_effect = NONE
 ```
 
-This screen does not convert `7095` into authority. It only decides whether it is worth a separate positive-anchor qualification after all other KBS public surfaces are removed from the candidate set.
+This screen does not convert `7095` into authority. After the KBS-native public search space is reduced, the practical result is: keep the AgLog family as the only KBS source family worth watching for a new direct T1R1 crop/phenology fact; do not treat the older `7095` observation as current authority.
