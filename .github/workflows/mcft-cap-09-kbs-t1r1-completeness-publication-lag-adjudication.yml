@@ -1,0 +1,76 @@
+name: mcft-cap-09-kbs-t1r1-completeness-publication-lag-adjudication
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-kbs-t1r1-completeness-adjudication
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-T1R1-COMPLETENESS-PUBLICATION-LAG-ADJUDICATION.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_T1R1_COMPLETENESS_PUBLICATION_LAG_ADJUDICATION.cjs'
+      - '.github/workflows/mcft-cap-09-kbs-t1r1-completeness-publication-lag-adjudication.yml'
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-T1R1-COMPLETENESS-PUBLICATION-LAG-ADJUDICATION.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_T1R1_COMPLETENESS_PUBLICATION_LAG_ADJUDICATION.cjs'
+      - '.github/workflows/mcft-cap-09-kbs-t1r1-completeness-publication-lag-adjudication.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  adjudicate-kbs-t1r1-completeness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify reviewed KBS public source semantics remain reachable
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 2 \
+            https://lter.kbs.msu.edu/datatables/16 > "$tmp/field-log.html"
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 2 \
+            https://lter.kbs.msu.edu/datatables/150 > "$tmp/expanded.html"
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 2 \
+            https://lter.kbs.msu.edu/data/data-submission-guidelines/ > "$tmp/submission.html"
+          grep -Fqi 'usually the date on which the observation was authored' "$tmp/field-log.html"
+          grep -Fqi 'type of activity recorded' "$tmp/expanded.html"
+          grep -Fqi 'a description of the activity performed' "$tmp/expanded.html"
+          grep -Fqi 'submitted in a timely manner' "$tmp/submission.html"
+          grep -Fqi 'subsequently made available to the public' "$tmp/submission.html"
+      - name: Execute exact-boundary source adjudication gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_T1R1_COMPLETENESS_PUBLICATION_LAG_ADJUDICATION.cjs
+      - name: Verify fail-closed frontier
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='acceptance-output/MCFT_CAP_09_KBS_T1R1_COMPLETENESS_PUBLICATION_LAG_ADJUDICATION.json';
+          const x=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(x.status!=='PASS') throw new Error('KBS_T1R1_ADJ_PASS_REQUIRED');
+          if(x.reviewed_public_authority_set_establishes_t1r1_scope_completeness!==false) throw new Error('T1R1_COMPLETENESS_MUST_NOT_BE_ESTABLISHED');
+          if(x.reviewed_public_authority_set_establishes_publication_lag_upper_bound!==false) throw new Error('PUBLICATION_LAG_BOUND_MUST_NOT_BE_ESTABLISHED');
+          if(x.reviewed_public_authority_set_establishes_complete_through_event_time_watermark!==false) throw new Error('COMPLETE_THROUGH_WATERMARK_MUST_NOT_BE_ESTABLISHED');
+          if(x.bounded_lifecycle_carry_forward_from_kbs_public_aglog_absence_authorized!==false) throw new Error('ABSENCE_CARRY_FORWARD_MUST_NOT_BE_AUTHORIZED');
+          if(x.current_runtime_lifecycle_authority_established!==false) throw new Error('CURRENT_LIFECYCLE_AUTHORITY_FORBIDDEN');
+          if(x.future_forward_validity_hours!==0 || x.future_forward_validity_established!==false) throw new Error('FUTURE_VALIDITY_MUST_REMAIN_ZERO');
+          if(x.next_frontier!=='DIRECT_CURRENT_ANCHOR_REFRESH') throw new Error('DIRECT_CURRENT_ANCHOR_REFRESH_REQUIRED');
+          if(x.ea5e2_operational_activation_qualified!==false || x.formal_execution_count!=='0/24') throw new Error('EA5E2_FORMAL_EFFECT_FORBIDDEN');
+          console.log(JSON.stringify({status:x.status,next_frontier:x.next_frontier,formal:x.formal_execution_count}));
+          NODE
+      - name: Upload immutable source-adjudication artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-kbs-t1r1-completeness-adjudication-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_KBS_T1R1_COMPLETENESS_PUBLICATION_LAG_ADJUDICATION.json
+          if-no-files-found: error
+          retention-days: 90
