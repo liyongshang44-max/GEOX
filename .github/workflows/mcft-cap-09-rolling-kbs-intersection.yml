@@ -135,6 +135,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # One authoritative source GET only: the 180s budget is transport tolerance, not retry/backoff/substitution authority.
           curl --fail --location --silent --show-error \
             --max-time 180 \
             -H 'Accept: text/csv,text/plain;q=0.9,*/*;q=0.5' \
