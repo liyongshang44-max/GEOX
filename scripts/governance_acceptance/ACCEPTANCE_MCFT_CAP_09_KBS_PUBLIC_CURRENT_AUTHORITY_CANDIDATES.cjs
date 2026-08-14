@@ -53,7 +53,7 @@ try {
     'KBS092_GLBRC_PHENOLOGY',
     'KBS140_REX_ANPP',
     'observation `7095`',
-    'newer positive biological lifecycle anchor candidate',
+    'historical positive biological lifecycle-anchor candidate',
     'current_runtime_lifecycle_authority_established = false',
     'phenology_authority_established = false',
     'EA5E2_OPERATIONAL_ACTIVATION_QUALIFIED = false',
@@ -71,7 +71,7 @@ try {
     "'KBS037_PROCESSED_GEOREFERENCED_YIELD'",
     "'KBS092_GLBRC_PHENOLOGY'",
     "'KBS140_REX_ANPP'",
-    "'OBS7095_POSITIVE_BIOLOGICAL_LIFECYCLE_ANCHOR_QUALIFICATION'",
+    "'WAIT_FOR_NEW_DIRECT_KBS_T1R1_CROP_OR_PHENOLOGY_FACT'",
     "authority_effect: 'NONE'",
     "formal_execution_count: '0/24'"
   ]) requireMarker(probe, marker, `KBS_AUTHORITY_SCREEN_PROBE_MARKER_MISSING:${marker}`);
