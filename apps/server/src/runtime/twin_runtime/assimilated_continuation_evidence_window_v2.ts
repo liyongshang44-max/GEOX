@@ -57,7 +57,7 @@ export function buildAssimilatedContinuationEvidenceWindowV2(input: {
   crop_stage_context_hash: string;
   crop_stage_context: ContinuationCropStageConfigurationContextV1;
   authorized_soil_observation_binding_id?: string;
-  exact_interval_availability_cutoff_time?: string;
+  evidence_snapshot_time?: string;
 }): AssimilatedContinuationEvidenceWindowV2 {
   const baseWindow = buildContinuationEvidenceWindowV1({
     scope: input.scope,
@@ -66,8 +66,8 @@ export function buildAssimilatedContinuationEvidenceWindowV2(input: {
     crop_stage_context_ref: input.crop_stage_context_ref,
     crop_stage_context_hash: input.crop_stage_context_hash,
     crop_stage_context: input.crop_stage_context,
-    ...(input.exact_interval_availability_cutoff_time !== undefined
-      ? { exact_interval_availability_cutoff_time: input.exact_interval_availability_cutoff_time }
+    ...(input.evidence_snapshot_time !== undefined
+      ? { evidence_snapshot_time: input.evidence_snapshot_time }
       : {}),
   });
 

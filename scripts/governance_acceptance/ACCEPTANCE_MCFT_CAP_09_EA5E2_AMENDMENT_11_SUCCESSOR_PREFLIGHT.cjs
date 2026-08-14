@@ -137,7 +137,7 @@ try {
   if (a07Blob !== "c5a98ca789027e1bf051ec56bf1b7e76b98a0891") staticBlockers.push({ code:"HISTORICAL_AMENDMENT07_MUTATED", actual:a07Blob });
 
   for (const marker of [
-    "evidence_snapshot_time?: string",
+    "evidence_snapshot_time: string",
     "EA5E2_EXTERNAL_DB_EVIDENCE_SNAPSHOT_BEFORE_LOGICAL_TIME",
     "const availabilityCutoff = exactIntervalRole ? evidenceSnapshotTime : logicalTime",
     "EA5E2_EXTERNAL_DB_SOURCE_IDENTITY_CONFLICT",

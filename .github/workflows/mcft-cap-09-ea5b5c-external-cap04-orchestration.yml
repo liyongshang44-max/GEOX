@@ -8,6 +8,7 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5B5C-EXTERNAL-CAP04-ORCHESTRATION-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs'
   merge_group:
     types: [checks_requested]
 
@@ -57,10 +58,21 @@ jobs:
       - name: Syntax-check EA5B5C governance gate
         run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.cjs
 
-      - name: Validate exact EA5B5C governance boundary
+      - name: Validate EA5B5C governance boundary or successor preservation
+        shell: bash
         env:
-          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.cjs
+          CURRENT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          historical='5b911ad78fa1c66622368cb01d154d14fc3f8377'
+          if [ "$CURRENT_BASE_SHA" = "$historical" ]; then
+            MCFT_BASE_SHA="$CURRENT_BASE_SHA" node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.cjs
+          else
+            MCFT_SUCCESSOR_GATE_ID=EA5B5C \
+            MCFT_CURRENT_BASE_SHA="$CURRENT_BASE_SHA" \
+            MCFT_HISTORICAL_BASE_SHA="$historical" \
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs
+          fi
 
       - name: Re-prove CAP08 G3 frozen-core successor compatibility
         env:

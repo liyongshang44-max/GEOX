@@ -320,7 +320,7 @@ function classifyRecordV1(input: {
   scope: TwinScopeKeyV1;
   logical_time: string;
   window_start: string;
-  exact_interval_availability_cutoff_time: string;
+  evidence_snapshot_time: string;
 }): ClassifiedContinuationEvidenceV1 {
   const role = roleForRecordV1(input.record);
   const eventTime = roleEventTimeV1(input.record, role);
@@ -330,7 +330,7 @@ function classifyRecordV1(input: {
   const canonicalPayloadHash = semanticHashV1(input.record.canonical_payload);
   const identity = semanticIdentityV1(input.record, role, eventTime, interval.interval_start, interval.interval_end);
   const exactIntervalRole = role === "RAINFALL_OBSERVATION" || role === "HISTORICAL_ET0_INPUT";
-  const availabilityCutoff = exactIntervalRole ? input.exact_interval_availability_cutoff_time : input.logical_time;
+  const availabilityCutoff = exactIntervalRole ? input.evidence_snapshot_time : input.logical_time;
   const base = {
     record: input.record,
     role,
@@ -458,12 +458,12 @@ export function buildContinuationEvidenceWindowV1(input: {
   crop_stage_context_ref: string;
   crop_stage_context_hash: string;
   crop_stage_context: ContinuationCropStageConfigurationContextV1;
-  exact_interval_availability_cutoff_time?: string;
+  evidence_snapshot_time?: string;
 }): ContinuationEvidenceWindowV1 {
   const logicalTime = requireIsoInstantV1(input.logical_time, "LOGICAL_TIME_INVALID");
-  const exactIntervalAvailabilityCutoff = input.exact_interval_availability_cutoff_time === undefined
+  const exactIntervalAvailabilityCutoff = input.evidence_snapshot_time === undefined
     ? logicalTime
-    : requireIsoInstantV1(input.exact_interval_availability_cutoff_time, "EXACT_INTERVAL_AVAILABILITY_CUTOFF_INVALID");
+    : requireIsoInstantV1(input.evidence_snapshot_time, "EXACT_INTERVAL_AVAILABILITY_CUTOFF_INVALID");
   if (exactIntervalAvailabilityCutoff < logicalTime) throw new Error("EXACT_INTERVAL_AVAILABILITY_CUTOFF_PRECEDES_LOGICAL_TIME");
   const windowStart = previousHourIsoV1(logicalTime);
   const classified = input.candidate_records.map((record) => classifyRecordV1({
@@ -471,7 +471,7 @@ export function buildContinuationEvidenceWindowV1(input: {
     scope: input.scope,
     logical_time: logicalTime,
     window_start: windowStart,
-    exact_interval_availability_cutoff_time: exactIntervalAvailabilityCutoff,
+    evidence_snapshot_time: exactIntervalAvailabilityCutoff,
   }));
   const included = classified.filter((item) => item.exclusion_reason === null);
   const excluded = classified.filter((item) => item.exclusion_reason !== null);

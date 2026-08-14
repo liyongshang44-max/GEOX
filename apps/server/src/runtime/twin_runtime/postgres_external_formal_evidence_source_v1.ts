@@ -74,8 +74,6 @@ export type ExternalFormalDatabaseEvidenceLoadResultV1 = {
   scope: TwinScopeKeyV1;
   logical_time: string;
   evidence_snapshot_time: string;
-  /** @deprecated Amendment-11: transport compatibility only; value equals evidence_snapshot_time. */
-  exact_interval_availability_cutoff_time: string;
   records: readonly CanonicalReplayEvidenceRecordV1[];
   selected_record_count: number;
   family_cardinality: {
@@ -200,19 +198,12 @@ export class PostgresExternalFormalEvidenceSourceV1 {
   async loadCandidateRecords(input: {
     scope: TwinScopeKeyV1;
     logical_time: string;
-    evidence_snapshot_time?: string;
-    /** @deprecated Amendment-11: accepted only as a transport alias for evidence_snapshot_time. */
-    exact_interval_availability_cutoff_time?: string;
+    evidence_snapshot_time: string;
   }): Promise<ExternalFormalDatabaseEvidenceLoadResultV1> {
     const logicalTime = canonicalHourV1(input.logical_time, "EA5E2_EXTERNAL_DB_LOGICAL_TIME_INVALID");
     exactScopeV1(input.scope, { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 }, "EA5E2_EXTERNAL_DB_FORMAL_SCOPE_REQUIRED");
 
-    const snapshotInput = input.evidence_snapshot_time ?? input.exact_interval_availability_cutoff_time;
-    const evidenceSnapshotTime = canonicalIsoV1(snapshotInput, "EA5E2_EXTERNAL_DB_EVIDENCE_SNAPSHOT_TIME_REQUIRED");
-    if (input.evidence_snapshot_time !== undefined && input.exact_interval_availability_cutoff_time !== undefined) {
-      const legacy = canonicalIsoV1(input.exact_interval_availability_cutoff_time, "EA5E2_EXTERNAL_DB_LEGACY_CUTOFF_INVALID");
-      if (legacy !== evidenceSnapshotTime) throw new Error("EA5E2_EXTERNAL_DB_EVIDENCE_SNAPSHOT_ALIAS_MISMATCH");
-    }
+    const evidenceSnapshotTime = canonicalIsoV1(input.evidence_snapshot_time, "EA5E2_EXTERNAL_DB_EVIDENCE_SNAPSHOT_TIME_REQUIRED");
     if (Date.parse(evidenceSnapshotTime) < Date.parse(logicalTime)) {
       throw new Error("EA5E2_EXTERNAL_DB_EVIDENCE_SNAPSHOT_BEFORE_LOGICAL_TIME");
     }
@@ -317,7 +308,6 @@ export class PostgresExternalFormalEvidenceSourceV1 {
       scope: structuredClone(input.scope),
       logical_time: logicalTime,
       evidence_snapshot_time: evidenceSnapshotTime,
-      exact_interval_availability_cutoff_time: evidenceSnapshotTime,
       records: selected.map((record) => structuredClone(record)),
       selected_record_count: selected.length,
       family_cardinality: family,

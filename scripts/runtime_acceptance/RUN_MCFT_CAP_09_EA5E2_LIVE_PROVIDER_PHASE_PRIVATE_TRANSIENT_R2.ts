@@ -864,7 +864,7 @@ async function main(): Promise<void> {
     if (result.canonical_record_count !== 2 || result.canonical_fact_write_count !== 2) throw new Error("EA5E2_LATE_TWO_FACTS_REQUIRED");
     const ingressCompletedAt = new Date().toISOString();
 
-    const dbSource = await new PostgresExternalFormalEvidenceSourceV1(pool).loadCandidateRecords({ scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 }, logical_time: target, exact_interval_availability_cutoff_time: slot.late_exact_hour_evidence_cutoff });
+    const dbSource = await new PostgresExternalFormalEvidenceSourceV1(pool).loadCandidateRecords({ scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 }, logical_time: target, evidence_snapshot_time: slot.late_exact_hour_evidence_cutoff });
     if (dbSource.selected_record_count !== 5 || dbSource.database_write_count !== 0 || dbSource.provider_request_count !== 0) throw new Error("EA5E2_LIVE_DB_ONLY_FIVE_FAMILY_HANDOFF_REQUIRED");
     const byType = new Map(dbSource.records.map((record) => [record.record_type, record]));
     const weather = byType.get("future_weather_assumption_v1");

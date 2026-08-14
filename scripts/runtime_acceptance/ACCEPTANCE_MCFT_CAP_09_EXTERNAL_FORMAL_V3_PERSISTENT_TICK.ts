@@ -130,12 +130,12 @@ async function buildHarnessV1() {
       evidenceCalls += 1;
       assert.deepEqual(input.scope, fixture.scope);
       assert.equal(input.logical_time, EA5B5B_LOGICAL_TIME_V1);
-      assert.equal(input.exact_interval_availability_cutoff_time, addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 432));
+      assert.equal(input.evidence_snapshot_time, addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 432));
       const result: ExternalFormalDatabaseEvidenceLoadResultV1 = {
         source_id: "MCFT_CAP09_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE_V1",
         scope: structuredClone(fixture.scope),
         logical_time: EA5B5B_LOGICAL_TIME_V1,
-        exact_interval_availability_cutoff_time: input.exact_interval_availability_cutoff_time,
+        evidence_snapshot_time: input.evidence_snapshot_time,
         records,
         selected_record_count: records.length,
         family_cardinality: { soil: 1, rainfall: 1, historical_et0: 1, future_weather: 1, future_et0: 1 },
@@ -201,7 +201,7 @@ async function main(): Promise<void> {
   assert.equal(inserted.a_record_set.operation_key.operation_variant, CAP04_A1_OPERATION_VARIANT_V1);
   assert.equal(inserted.b_record?.scenario_set.payload.options.length, 3);
   assert.equal(inserted.b_record?.scenario_set.payload.options.reduce((sum, option) => sum + option.trajectory_points.length, 0), 216);
-  assert.equal(inserted.exact_interval_availability_cutoff_time, addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 432));
+  assert.equal(inserted.evidence_snapshot_time, addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 432));
   assert.equal(inserted.observer_start_skew_minutes, 0);
   assert.equal(inserted.next_logical_tick_time, addMinutesV1(EA5B5B_LOGICAL_TIME_V1, 60));
   assert.equal(inserted.scheduler_claim_reused_as_runtime_lease, true);

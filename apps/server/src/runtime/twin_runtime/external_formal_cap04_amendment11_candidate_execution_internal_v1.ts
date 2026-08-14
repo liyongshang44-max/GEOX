@@ -296,7 +296,7 @@ export function executeExternalFormalCap04CandidateV1(input: ExecuteExternalForm
     crop_stage_context_hash: externalRuntime.crop_stage_context_authority.context_hash,
     crop_stage_context: input.crop_stage_context,
     authorized_soil_observation_binding_id: MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
-    exact_interval_availability_cutoff_time: evidenceSnapshot.time,
+    evidence_snapshot_time: evidenceSnapshot.time,
   });
   const base = preliminary.base_continuation_window;
   const historicalEt0Projection = projectSignedEt0ToNonnegativeWaterLossDemandV1(

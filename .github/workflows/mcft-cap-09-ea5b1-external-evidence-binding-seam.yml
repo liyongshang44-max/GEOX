@@ -11,6 +11,7 @@ on:
       - 'apps/server/src/runtime/twin_runtime/external_formal_a0_evidence_window_service_v1.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5B1-EXTERNAL-EVIDENCE-BINDING-SEAM-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B_EXTERNAL_EVIDENCE_BINDING_SEAM.ts'
   merge_group:
     types: [checks_requested]
@@ -61,10 +62,21 @@ jobs:
       - name: Syntax-check EA5B1 governance gate
         run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs
 
-      - name: Validate exact EA5B1 governance boundary
+      - name: Validate EA5B1 governance boundary or successor preservation
+        shell: bash
         env:
-          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs
+          CURRENT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          historical='9dc8f99303e9d1efaec52afe5eac7ed816c5a8d2'
+          if [ "$CURRENT_BASE_SHA" = "$historical" ]; then
+            MCFT_BASE_SHA="$CURRENT_BASE_SHA" node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B1_EXTERNAL_EVIDENCE_BINDING_SEAM.cjs
+          else
+            MCFT_SUCCESSOR_GATE_ID=EA5B1 \
+            MCFT_CURRENT_BASE_SHA="$CURRENT_BASE_SHA" \
+            MCFT_HISTORICAL_BASE_SHA="$historical" \
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SUCCESSOR_HISTORICAL_QUALIFICATION_COMPATIBILITY.cjs
+          fi
 
       - name: Re-prove CAP08 G3 frozen-core successor compatibility
         env:
