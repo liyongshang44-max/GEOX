@@ -1,0 +1,91 @@
+name: mcft-cap-09-direct-current-anchor-refresh-discovery
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-direct-current-anchor-discovery
+    paths:
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_DIRECT_CURRENT_ANCHOR_REFRESH_DISCOVERY.mjs'
+      - '.github/workflows/mcft-cap-09-direct-current-anchor-refresh-discovery.yml'
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_DIRECT_CURRENT_ANCHOR_REFRESH_DISCOVERY.mjs'
+      - '.github/workflows/mcft-cap-09-direct-current-anchor-refresh-discovery.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover-direct-current-anchor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Syntax-check direct current anchor discovery probe
+        run: node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_DIRECT_CURRENT_ANCHOR_REFRESH_DISCOVERY.mjs
+      - name: Execute live direct current anchor discovery
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_DIRECT_CURRENT_ANCHOR_REFRESH_DISCOVERY.mjs
+      - name: Verify discovery-only fail-closed boundary
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='acceptance-output/MCFT_CAP_09_DIRECT_CURRENT_ANCHOR_REFRESH_DISCOVERY.json';
+          const x=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(x.status!=='PASS') throw new Error('DIRECT_CURRENT_ANCHOR_DISCOVERY_PASS_REQUIRED');
+          const s=x.source_scan;
+          if(s.source_class!=='KBS_AGLOG_DIRECT_CURRENT_ANCHOR_DISCOVERY') throw new Error('DIRECT_CURRENT_ANCHOR_SOURCE_CLASS_REQUIRED');
+          if(!(s.t1r1_row_count>0)) throw new Error('DIRECT_CURRENT_ANCHOR_T1R1_ROWS_REQUIRED');
+          if(!(s.global_pages_scanned>0)) throw new Error('DIRECT_CURRENT_ANCHOR_GLOBAL_SCAN_REQUIRED');
+          if(s.every_relevant_row_detail_fetched!==true) throw new Error('DIRECT_CURRENT_ANCHOR_DETAIL_FETCH_REQUIRED');
+          const d=x.discovery_semantics;
+          if(d.absence_used_as_positive_evidence!==false) throw new Error('DIRECT_CURRENT_ANCHOR_ABSENCE_FORBIDDEN');
+          if(d.retrieval_timestamp_used_as_scope_coverage_watermark!==false) throw new Error('DIRECT_CURRENT_ANCHOR_RETRIEVAL_WATERMARK_FORBIDDEN');
+          if(d.observation_id_used_as_event_time_chronology!==false) throw new Error('DIRECT_CURRENT_ANCHOR_ID_CHRONOLOGY_FORBIDDEN');
+          if(d.thermal_or_gdd_evidence_used_to_create_lifecycle!==false) throw new Error('DIRECT_CURRENT_ANCHOR_THERMAL_LIFECYCLE_FORBIDDEN');
+          if(d.model_inference_used_to_create_phenology!==false) throw new Error('DIRECT_CURRENT_ANCHOR_MODEL_PHENOLOGY_FORBIDDEN');
+          const a=x.authority_effect;
+          if(a.current_runtime_lifecycle_authority_established!==false) throw new Error('DIRECT_CURRENT_ANCHOR_AUTHORITY_FORBIDDEN');
+          if(a.phenology_authority_established!==false) throw new Error('DIRECT_CURRENT_ANCHOR_PHENOLOGY_AUTHORITY_FORBIDDEN');
+          if(a.crop_model_parameter_authority_established!==false || a.kc!==null) throw new Error('DIRECT_CURRENT_ANCHOR_KC_FORBIDDEN');
+          if(a.future_legal_t_established!==false || a.ea5e2_operational_activation_qualified!==false) throw new Error('DIRECT_CURRENT_ANCHOR_EA5E2_GO_FORBIDDEN');
+          if(a.formal_window_started!==false || a.formal_execution_count!=='0/24') throw new Error('DIRECT_CURRENT_ANCHOR_FORMAL_FORBIDDEN');
+          for(const k of ['database_write_count','runtime_write_count','scheduler_write_count','formal_evidence_write_count']) if(x[k]!==0) throw new Error(`DIRECT_CURRENT_ANCHOR_WRITE_FORBIDDEN:${k}`);
+          console.log(JSON.stringify({
+            status:x.status,
+            latest_t1r1_observation_id:s.latest_t1r1_observation_id,
+            latest_t1r1_observation_date:s.latest_t1r1_observation_date,
+            latest_global_observation_id:s.latest_global_observation_id,
+            latest_global_observation_date:s.latest_global_observation_date,
+            direct_candidate_count:d.direct_positive_current_season_candidate_count,
+            phenology_candidate_count:d.direct_candidate_with_provider_phenology_token_count,
+            next_frontier:x.next_frontier
+          }));
+          NODE
+      - name: Upload immutable direct-current-anchor discovery artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-direct-current-anchor-discovery-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_DIRECT_CURRENT_ANCHOR_REFRESH_DISCOVERY.json
+          if-no-files-found: error
+          retention-days: 90
