@@ -95,7 +95,7 @@ async function parseObservationRows(page) {
     rows.push({
       provider_observation_id: observationId,
       observation_date: observationDate,
-      observation_type: normalize(typeKey ? byHeader[typeKey] : ''),
+      observation_type: normalize((typeKey ? byHeader[typeKey] : '') || values[1] || values[2] || ''),
       list_comment: normalize(commentKey ? byHeader[commentKey] : ''),
     });
   }
