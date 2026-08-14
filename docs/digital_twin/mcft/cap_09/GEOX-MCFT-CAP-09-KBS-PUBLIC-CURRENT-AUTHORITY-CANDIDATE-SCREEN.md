@@ -51,7 +51,7 @@ CDSE/Sentinel-2 is intentionally outside this KBS-native screen.
 
 ## Retention rule
 
-A source remains in the current authority candidate set only if it can support a formal-scope positive lifecycle/current-crop biological fact or provider-direct phenology fact, including a bounded composite binding to already-qualified `P0306Q` season identity.
+A source remains in the candidate-capable source-family set only if its provider semantics can support a formal-scope positive lifecycle/current-crop biological fact or provider-direct phenology fact, including a bounded composite binding to already-qualified `P0306Q` season identity.
 
 The following do not qualify by themselves:
 
@@ -65,25 +65,24 @@ The following do not qualify by themselves:
 - model/GDD inference;
 - provider silence.
 
-## Expected narrowed result
+## Narrowed result
 
-The only KBS public source family expected to remain structurally eligible is:
+The only KBS public source family that remains structurally capable of producing a future formal-scope authority candidate is:
 
 `KBS_AGLOG_MCSE_LIVE_FAMILY`
 
-because it provides the exact event/area/detail semantics needed to bind T1/T1R1 observations to current-season crop identity.
+because it provides the event/area/detail semantics needed to bind T1/T1R1 observations to current-season crop identity.
 
-Within that source family, the best existing repository-known biological candidate is observation `7095`:
+The latest T1R1 observation remains `7095` on `2026-06-25`. The current live screen does **not** validate it as a qualifying positive biological/current-crop fact and finds no provider-direct phenology token. It therefore stays descriptive history only for this screen.
+
+The KBS-native result is deliberately split into two statements:
 
 ```text
-date = 2026-06-25
-scope = T1R1
-observation = direct plant-height measurement
-P0306Q token in the row itself = false
-provider-direct phenology stage token = false
+candidate-capable KBS source families = [KBS_AGLOG_MCSE_LIVE_FAMILY]
+current qualifying authority candidates = []
 ```
 
-Therefore `7095` is only a **historical positive biological lifecycle-anchor candidate** through a separately qualified composite binding to planting observation `6931`. It does not prove the crop is still active on 2026-08-15, it does not establish phenology, and this screen does not recommend reopening the already-failed carry-forward/completeness line merely to move the historical anchor from May 27 to June 25.
+This preserves the one KBS source family that can legally produce a future exact-scope candidate without pretending that its present rows already solve current lifecycle or phenology.
 
 ## Explicit eliminations
 
@@ -142,4 +141,4 @@ Formal = 0/24
 authority_effect = NONE
 ```
 
-This screen does not convert `7095` into authority. After the KBS-native public search space is reduced, the practical result is: keep the AgLog family as the only KBS source family worth watching for a new direct T1R1 crop/phenology fact; do not treat the older `7095` observation as current authority.
+The practical result is: keep the AgLog family as the only KBS source family worth watching for a new direct T1R1 crop/phenology fact; there is no qualifying current KBS-native public authority candidate in the live screen.
