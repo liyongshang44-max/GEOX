@@ -16,6 +16,7 @@ const URLS = Object.freeze({
   aglog_index: 'https://aglog.kbs.msu.edu/observations',
   aglog_t1r1: 'https://aglog.kbs.msu.edu/areas/1',
   aglog_material_p0306q: 'https://aglog.kbs.msu.edu/materials/392',
+  aglog_observation_7095: 'https://aglog.kbs.msu.edu/observations/7095',
   kbs004_field_log: 'https://lter.kbs.msu.edu/datatables/16',
   kbs004_field_log_expanded: 'https://lter.kbs.msu.edu/datatables/150',
   kbs004_seeds: 'https://lter.kbs.msu.edu/datatables/17',
@@ -124,7 +125,8 @@ async function main() {
     polygons,
     centers,
     gis,
-    plotMap
+    plotMap,
+    observation7095Detail
   ] = await Promise.all([
     fetchText(URLS.aglog_material_p0306q, 'KBS_AUTHORITY_SCREEN_P0306Q'),
     fetchText(URLS.kbs004_field_log, 'KBS_AUTHORITY_SCREEN_FIELD_LOG'),
@@ -139,7 +141,8 @@ async function main() {
     fetchText(URLS.kbs039_plot_polygons, 'KBS_AUTHORITY_SCREEN_POLYGONS'),
     fetchText(URLS.kbs136_plot_centers, 'KBS_AUTHORITY_SCREEN_CENTERS'),
     fetchText(URLS.kbs_gis, 'KBS_AUTHORITY_SCREEN_GIS'),
-    fetchBytes(URLS.kbs_2026_plot_map, 'KBS_AUTHORITY_SCREEN_PLOT_MAP', 4_000_000)
+    fetchBytes(URLS.kbs_2026_plot_map, 'KBS_AUTHORITY_SCREEN_PLOT_MAP', 4_000_000),
+    fetchText(URLS.aglog_observation_7095, 'KBS_AUTHORITY_SCREEN_OBS7095_DETAIL')
   ]);
 
   const record6931 = findReviewedRecord(aglog, 6931);
@@ -158,8 +161,10 @@ async function main() {
   const hasCurrentDirectCandidate = aglog.discovery_semantics.direct_positive_current_season_candidate_found === true;
   const hasDirectPhenologyCandidate = aglog.discovery_semantics.direct_candidate_with_provider_phenology_token_found === true;
 
-  const obs7095DirectBiological = record7095.positive_biological_semantic_present === true
-    && record7095.exact_t1r1_scope_token_present === true
+  const obs7095PlantHeightBodyFact = /Plant\s+height(?:\s*\(ft\))?/i.test(normalize(observation7095Detail.text));
+  const obs7095T1r1AreaMembership = latestT1r1Id === 7095 && latestT1r1Date === '2026-06-25';
+  const obs7095DirectBiological = obs7095PlantHeightBodyFact
+    && obs7095T1r1AreaMembership
     && Array.isArray(record7095.direct_phenology_tokens)
     && record7095.direct_phenology_tokens.length === 0;
 
@@ -177,6 +182,9 @@ async function main() {
     latest_t1r1_observation_id: latestT1r1Id,
     latest_t1r1_observation_date: latestT1r1Date,
     observation_7095_direct_biological_fact: obs7095DirectBiological,
+    observation_7095_detail_body_plant_height_semantic: obs7095PlantHeightBodyFact,
+    observation_7095_t1r1_area_membership: obs7095T1r1AreaMembership,
+    observation_7095_detail_response_sha256: observation7095Detail.response_sha256,
     observation_7095_direct_phenology_token: false,
     current_as_of_screen_direct_positive_candidate_found: hasCurrentDirectCandidate,
     provider_direct_phenology_candidate_found: hasDirectPhenologyCandidate,
@@ -187,7 +195,8 @@ async function main() {
       observation_date: record7095.observation_date,
       fact_class: 'DIRECT_T1R1_PLANT_HEIGHT_BIOLOGICAL_OBSERVATION',
       requires_p0306q_composite_binding_to_6931: true,
-      can_refresh_positive_lifecycle_anchor: true,
+      can_form_historical_positive_biological_lifecycle_anchor_candidate: true,
+      historical_candidate_only: true,
       establishes_current_runtime_lifecycle_as_of_screen: false,
       establishes_direct_phenology: false
     },
@@ -228,7 +237,7 @@ async function main() {
     current_2026_t1r1_corn_identity_previously_qualified_on_protected_main: true,
     direct_biological_fact: false,
     direct_phenology_fact: false,
-    reason_not_retained: 'Supporting current-season crop identity only; does not observe current plant state or phenology.',
+    reason_not_retained: 'Supporting current-season crop identity only; does not observe living crop state or phenology.',
     response_sha256: plotMap.response_sha256
   });
   surfaces.push(plotMapSurface);
@@ -317,7 +326,7 @@ async function main() {
       sole_retained_kbs_source_family: retained.length === 1 ? retained[0].source_id : null,
       latest_t1r1_observation_id: latestT1r1Id,
       latest_t1r1_observation_date: latestT1r1Date,
-      observation_7095_is_newer_positive_biological_anchor_candidate: obs7095DirectBiological,
+      observation_7095_is_historical_positive_biological_anchor_candidate: obs7095DirectBiological,
       observation_7095_is_direct_phenology: false,
       current_as_of_screen_direct_positive_candidate_found: hasCurrentDirectCandidate,
       direct_t1r1_provider_phenology_candidate_found: hasDirectPhenologyCandidate,
@@ -326,9 +335,7 @@ async function main() {
       crop_model_parameter_authority_closed_by_this_screen: false,
       kbs_public_search_space_reduced_to_aglog_family: retained.length === 1 && retained[0].source_id === 'KBS_AGLOG_MCSE_LIVE_FAMILY'
     },
-    next_legal_frontier: obs7095DirectBiological
-      ? 'OBS7095_POSITIVE_BIOLOGICAL_LIFECYCLE_ANCHOR_QUALIFICATION'
-      : 'WAIT_FOR_NEW_DIRECT_KBS_T1R1_CROP_OR_PHENOLOGY_FACT',
+    next_legal_frontier: 'WAIT_FOR_NEW_DIRECT_KBS_T1R1_CROP_OR_PHENOLOGY_FACT',
     authority_effect: 'NONE',
     database_write_count: 0,
     runtime_write_count: 0,
