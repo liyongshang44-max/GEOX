@@ -136,7 +136,7 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail --location --silent --show-error \
-            --max-time 30 \
+            --max-time 180 \
             -H 'Accept: text/csv,text/plain;q=0.9,*/*;q=0.5' \
             -H 'User-Agent: GEOX-MCFT-CAP09-Rolling-KBS-Intersection/1.0' \
             'https://lter.kbs.msu.edu/datatables/13.csv' \
