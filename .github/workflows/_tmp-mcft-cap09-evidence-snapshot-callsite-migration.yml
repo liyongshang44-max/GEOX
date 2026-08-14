@@ -59,6 +59,17 @@ jobs:
             raise SystemExit('DB_ALIAS_REMAINS_AFTER_MIGRATION')
           db_path.write_text(db, encoding='utf-8')
 
+          # The successor preflight must recognize the end-state public seam: snapshot is required,
+          # while the legacy alias remains a readiness blocker if it ever reappears.
+          preflight_path = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_PREFLIGHT.cjs')
+          preflight = preflight_path.read_text(encoding='utf-8')
+          old_marker = '    "evidence_snapshot_time?: string",\n'
+          new_marker = '    "evidence_snapshot_time: string",\n'
+          if old_marker not in preflight:
+            raise SystemExit('PREFLIGHT_OPTIONAL_SNAPSHOT_MARKER_MISSING')
+          preflight = preflight.replace(old_marker, new_marker, 1)
+          preflight_path.write_text(preflight, encoding='utf-8')
+
           preserve = {
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-07-EXTERNAL-FORMAL-FIXED-LAG-CAUSALITY-AUTHORITY.md',
             'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_07_EXTERNAL_FORMAL_FIXED_LAG_CAUSALITY.cjs',
