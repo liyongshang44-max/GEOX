@@ -1,0 +1,42 @@
+name: mcft-cap-09-amendment-14-positive-lifecycle-anchor-authority
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-amendment14-positive-lifecycle-anchor
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-14-POSITIVE-LIFECYCLE-ANCHOR-AUTHORITY.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_14_POSITIVE_LIFECYCLE_ANCHOR_AUTHORITY.cjs'
+      - '.github/workflows/mcft-cap-09-amendment-14-positive-lifecycle-anchor-authority.yml'
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-14-POSITIVE-LIFECYCLE-ANCHOR-AUTHORITY.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_14_POSITIVE_LIFECYCLE_ANCHOR_AUTHORITY.cjs'
+      - '.github/workflows/mcft-cap-09-amendment-14-positive-lifecycle-anchor-authority.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  amendment14-positive-lifecycle-anchor-authority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Prove Amendment-14 exact authority boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_14_POSITIVE_LIFECYCLE_ANCHOR_AUTHORITY.cjs
+      - name: Upload Amendment-14 authority proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-amendment14-positive-lifecycle-anchor-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_AMENDMENT_14_POSITIVE_LIFECYCLE_ANCHOR_AUTHORITY.json
+          if-no-files-found: error
+          retention-days: 90
