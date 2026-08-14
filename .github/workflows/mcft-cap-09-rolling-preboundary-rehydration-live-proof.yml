@@ -138,21 +138,6 @@ jobs:
           if(p.status!=='PASS'||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.producer_subject_sha!==process.env.FROZEN_ROLLING_PRODUCER_SHA||p.target_t!==process.env.FROZEN_ROLLING_TARGET_T) throw new Error('MCFT_CAP09_REHYDRATE_LIVE_FROZEN_CANDIDATE_IDENTITY_REQUIRED');
           NODE
 
-      - name: Add family-only semantic mismatch diagnostic to ephemeral checkout
-        shell: python
-        run: |
-          from pathlib import Path
-          p = Path('scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts')
-          s = p.read_text(encoding='utf-8')
-          old = '  if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");'
-          new = '''  if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) {
-            console.error(JSON.stringify({ code: "MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH", expected, actual: semanticRows(actual) }));
-            throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");
-          }'''
-          if s.count(old) != 1:
-              raise SystemExit('MCFT_CAP09_REHYDRATE_DIAGNOSTIC_PATCH_TARGET_REQUIRED')
-          p.write_text(s.replace(old, new), encoding='utf-8')
-
       - name: Rehydrate original causal raw under current consumer code
         env:
           MCFT_CAP09_CONSUMER_SUBJECT_SHA: ${{ github.sha }}
