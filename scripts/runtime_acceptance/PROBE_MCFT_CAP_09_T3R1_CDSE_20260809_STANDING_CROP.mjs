@@ -231,6 +231,29 @@ function statsBandMean(entry, index) {
   const value = entry?.outputs?.metrics?.bands?.[`B${index}`]?.stats?.mean;
   return Number.isFinite(Number(value)) ? Number(value) : null;
 }
+function compactTimestampToIso(value) {
+  const match = String(value).match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/);
+  assert(match, `T3R1_CDSE_DATATAKE_TIMESTAMP_INVALID:${value}`);
+  return `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}.000Z`;
+}
+function parseSentinel2CompactItemId(id) {
+  const match = String(id || '').trim().match(/^(S2[ABC])_MSIL2A_(\d{8}T\d{6})_N\d{4}_R(\d{3})_T([0-9A-Z]{5})_(\d{8}T\d{6})(?:\.SAFE)?$/);
+  assert(match, `T3R1_CDSE_SCENE_ID_COMPACT_PRODUCT_PARSE_REQUIRED:${String(id || '').slice(0, 96)}`);
+  const mission = match[1];
+  const datatakeStartUtc = compactTimestampToIso(match[2]);
+  const relativeOrbit = `R${match[3]}`;
+  return {
+    mission,
+    datatake_start_utc: datatakeStartUtc,
+    relative_orbit: relativeOrbit,
+    tile_code: match[4],
+    product_discriminator_utc: compactTimestampToIso(match[5]),
+    datatake_key: `${mission}|${datatakeStartUtc}|${relativeOrbit}`,
+  };
+}
+function expectedPlatformForMission(mission) {
+  return ({ S2A: 'sentinel-2a', S2B: 'sentinel-2b', S2C: 'sentinel-2c' })[mission] || null;
+}
 
 async function fetchCropOnlyGeometry() {
   const source = CONFIG.provider_sources.plot_geometry_csv;
@@ -302,23 +325,38 @@ async function fetchCatalogScenes(geometry) {
     const id = String(feature?.id || '').trim();
     const sensingMs = Date.parse(String(feature?.properties?.datetime || ''));
     assert(id && Number.isFinite(sensingMs), 'T3R1_CDSE_SCENE_ID_AND_TIME_REQUIRED');
+    const identity = parseSentinel2CompactItemId(id);
+    const platform = String(feature?.properties?.platform || '').trim().toLowerCase() || null;
+    const expectedPlatform = expectedPlatformForMission(identity.mission);
+    assert(platform === expectedPlatform, `T3R1_CDSE_SCENE_PLATFORM_IDENTITY_MISMATCH:${identity.mission}:${platform}`);
     return {
       scene_id: id,
       sensing_time_utc: new Date(sensingMs).toISOString(),
       scene_cloud_cover_percent: Number.isFinite(Number(feature?.properties?.['eo:cloud_cover']))
         ? Number(feature.properties['eo:cloud_cover']) : null,
-      platform: String(feature?.properties?.platform || '').trim() || null,
+      platform,
       constellation: String(feature?.properties?.constellation || '').trim() || null,
+      ...identity,
     };
   }).sort((a, b) => a.sensing_time_utc.localeCompare(b.sensing_time_utc) || a.scene_id.localeCompare(b.scene_id));
 
-  const times = scenes.map((scene) => Date.parse(scene.sensing_time_utc));
-  const spreadSeconds = (Math.max(...times) - Math.min(...times)) / 1000;
-  const platforms = [...new Set(scenes.map((scene) => scene.platform).filter(Boolean))];
-  assert(spreadSeconds <= CONFIG.scene_binding_policy.maximum_sensing_time_spread_seconds,
-    `T3R1_CDSE_SCENE_ACQUISITION_SPREAD_${spreadSeconds}`);
+  const datatakeKeys = [...new Set(scenes.map((scene) => scene.datatake_key))];
+  assert(datatakeKeys.length === 1, `T3R1_CDSE_DATATAKE_IDENTITY_CARDINALITY_${datatakeKeys.length}`);
+  const platforms = [...new Set(scenes.map((scene) => scene.platform))];
   assert(platforms.length === 1, `T3R1_CDSE_SCENE_PLATFORM_CARDINALITY_${platforms.length}`);
-  return { ...fetched, scenes, spreadSeconds, platform: platforms[0] };
+  const datatakeStartUtc = scenes[0].datatake_start_utc;
+  assert(datatakeStartUtc.slice(0, 10) === target.day_utc, `T3R1_CDSE_DATATAKE_DAY_MISMATCH:${datatakeStartUtc}`);
+  const times = scenes.map((scene) => Date.parse(scene.sensing_time_utc));
+  const tileSensingSpreadSeconds = (Math.max(...times) - Math.min(...times)) / 1000;
+  return {
+    ...fetched,
+    scenes,
+    datatake_key: datatakeKeys[0],
+    datatake_start_utc: datatakeStartUtc,
+    relative_orbit: scenes[0].relative_orbit,
+    platform: platforms[0],
+    tile_sensing_time_spread_seconds: tileSensingSpreadSeconds,
+  };
 }
 
 async function fetchPlotStatistics(geometry) {
@@ -384,6 +422,10 @@ async function main() {
     'T3R1_CDSE_PREMATURE_LIFECYCLE_AUTHORITY_FORBIDDEN');
   assert(CONFIG.resolution_policy.bounded_carry_forward_authorized_by_this_probe === false,
     'T3R1_CDSE_PREMATURE_CARRY_FORWARD_FORBIDDEN');
+  assert(CONFIG.scene_binding_policy.require_single_datatake_identity === true,
+    'T3R1_CDSE_SINGLE_DATATAKE_IDENTITY_REQUIRED');
+  assert(CONFIG.scene_binding_policy.tile_datetime_spread_is_recorded_not_used_as_same_datatake_threshold === true,
+    'T3R1_CDSE_TILE_TIME_SEMANTICS_REQUIRED');
   assert(ACCESS_TOKEN.length > 40, 'T3R1_CDSE_EPHEMERAL_ACCESS_TOKEN_REQUIRED');
 
   const geometry = await fetchCropOnlyGeometry();
@@ -428,8 +470,12 @@ async function main() {
       response_sha256: catalog.response_sha256,
       retrieved_at: catalog.retrieved_at,
       scene_count: catalog.scenes.length,
-      acquisition_event_sensing_time_utc: catalog.scenes[0].sensing_time_utc,
-      acquisition_sensing_time_spread_seconds: catalog.spreadSeconds,
+      acquisition_event_identity_method: CONFIG.scene_binding_policy.same_acquisition_event_identity,
+      acquisition_event_datatake_key: catalog.datatake_key,
+      acquisition_event_sensing_time_utc: catalog.datatake_start_utc,
+      relative_orbit: catalog.relative_orbit,
+      tile_sensing_time_spread_seconds: catalog.tile_sensing_time_spread_seconds,
+      tile_sensing_time_spread_used_as_same_datatake_threshold: false,
       platform: catalog.platform,
       scenes: catalog.scenes,
     },
