@@ -12,6 +12,7 @@ const critical = [
   "scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs",
   "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts",
   "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs",
+  "scripts/runtime_acceptance/PLAN_MCFT_CAP_09_EA5E2_LONG_HORIZON_WINDOW.cjs",
   "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_TIMING_BUDGET_EVIDENCE_V1.cjs",
   "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_TIMING_BUDGET_EVIDENCE_V2.cjs",
   "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V3_BINDING.cjs",
@@ -59,4 +60,4 @@ for (const file of critical) {
   const current = git("rev-parse", `origin/main:${file}`);
   if (exact !== current) throw new Error(`EA5E2_ACTIVATION_SUBJECT_SUPERSEDED:${file}`);
 }
-console.log(JSON.stringify({ status: "PASS", subject_sha: subject, current_main_sha: git("rev-parse", "origin/main"), critical_file_count: critical.length, successor_authority_version: "V2", timing_evidence_version: "V2", formal_database_route: "T3R1" }));
+console.log(JSON.stringify({ status: "PASS", subject_sha: subject, current_main_sha: git("rev-parse", "origin/main"), critical_file_count: critical.length, successor_authority_version: "V2", timing_evidence_version: "V2", formal_database_route: "T3R1", long_horizon_planner: "BOUND" }));
