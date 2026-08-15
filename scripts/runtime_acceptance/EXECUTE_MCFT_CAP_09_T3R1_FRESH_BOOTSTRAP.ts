@@ -396,12 +396,19 @@ async function main(): Promise<void> {
     max: 4,
   });
   const retention = createFormalDurableRawEvidenceRetentionAdapterV1(process.env);
+  let beforeForAudit: CountSnapshot | null = null;
+  let providerRequestCount = 0;
+  let freshEvidenceWriteCount = 0;
+  let canonicalBootstrapWriteCount = 0;
   let result: Record<string, unknown> = {
     schema_version: "geox_mcft_cap09_t3r1_fresh_bootstrap_result_v1",
     status: "FAIL",
     subject_sha: subjectSha,
     database_write_count: 0,
     provider_request_count: 0,
+    fresh_external_evidence_write_count: 0,
+    canonical_bootstrap_write_count: 0,
+    total_fact_write_count_this_execution: 0,
     scheduler_slot_write_count: 0,
     scheduler_cursor_write_count: 0,
     formal_window_started: false,
@@ -425,10 +432,8 @@ async function main(): Promise<void> {
     assert(Number(identity.server_version_num) >= 180000, "T3R1_FRESH_BOOTSTRAP_POSTGRES18_REQUIRED");
 
     const before = await counts(pool);
+    beforeForAudit = before;
     let executionMode: "FIRST_FRESH_BOOTSTRAP" | "EXISTING_FRESH_BOOTSTRAP_REVERIFIED";
-    let providerRequestCount = 0;
-    let freshEvidenceWriteCount = 0;
-    let canonicalBootstrapWriteCount = 0;
     let pins: PersistedConfigPins;
 
     if (before.twinFacts === 0) {
@@ -437,8 +442,8 @@ async function main(): Promise<void> {
       const bootstrapLogicalTime = chooseBootstrapBoundary(Date.now());
       const soilCollectionTime = new Date(Date.parse(bootstrapLogicalTime) + SOIL_COLLECTION_OFFSET_MINUTES * MINUTE_MS).toISOString();
       await waitUntil(soilCollectionTime, "WAIT_FOR_AUTHORIZED_SOIL_COLLECTION_POINT");
-      const soil = await executeFormalLiveKbsSoilIngressV1({ pool, retention: retention.adapter });
       providerRequestCount = 1;
+      const soil = await executeFormalLiveKbsSoilIngressV1({ pool, retention: retention.adapter });
       freshEvidenceWriteCount = soil.canonical_fact_write_count;
       assert.equal(soil.binding_id, MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1, "T3R1_FRESH_BOOTSTRAP_LIVE_SOIL_BINDING_DRIFT");
       assert.equal(freshEvidenceWriteCount, 1, "T3R1_FRESH_BOOTSTRAP_EXACT_ONE_FRESH_EVIDENCE_WRITE_REQUIRED");
@@ -478,7 +483,7 @@ async function main(): Promise<void> {
       assert.equal(persisted.a0_member_write_count, 9, "T3R1_FRESH_BOOTSTRAP_A0_MEMBER_WRITE_COUNT");
       assert.equal(persisted.hourly_runtime_config_count, 24, "T3R1_FRESH_BOOTSTRAP_HOURLY_CONFIG_COUNT");
       assert.equal(persisted.formal_window_started, false, "T3R1_FRESH_BOOTSTRAP_FORMAL_WINDOW_START_FORBIDDEN");
-      canonicalBootstrapWriteCount = 34;
+      canonicalBootstrapWriteCount = persisted.runtime_config_write_count + persisted.a0_member_write_count;
       pins = await verifyPersistedBootstrap(pool);
       assert.equal(pins.bootstrapLogicalTime, bootstrapLogicalTime, "T3R1_FRESH_BOOTSTRAP_PERSISTED_BOUNDARY_DRIFT");
       await verifyOneFreshSoilFact(pool, bootstrapLogicalTime);
@@ -510,6 +515,9 @@ async function main(): Promise<void> {
       t1r1ScopeRows: 0,
     }, `T3R1_FRESH_BOOTSTRAP_FINAL_STATE_INVALID:${JSON.stringify(after)}`);
     const soil = await verifyOneFreshSoilFact(pool, pins.bootstrapLogicalTime);
+    const totalFactWrites = Math.max(0, after.totalFacts - before.totalFacts);
+    freshEvidenceWriteCount = Math.max(0, after.nonTwinFacts - before.nonTwinFacts);
+    canonicalBootstrapWriteCount = Math.max(0, after.twinFacts - before.twinFacts);
     result = {
       ...result,
       status: "PASS",
@@ -531,7 +539,8 @@ async function main(): Promise<void> {
       provider_request_count: providerRequestCount,
       fresh_external_evidence_write_count: freshEvidenceWriteCount,
       canonical_bootstrap_write_count: canonicalBootstrapWriteCount,
-      total_fact_write_count_this_execution: freshEvidenceWriteCount + canonicalBootstrapWriteCount,
+      total_fact_write_count_this_execution: totalFactWrites,
+      database_write_count: totalFactWrites,
       final_fact_count: after.totalFacts,
       final_canonical_twin_fact_count: after.twinFacts,
       exact_runtime_config_count: after.runtimeConfigs,
@@ -558,6 +567,35 @@ async function main(): Promise<void> {
     assert.equal(publicText.includes('"value"'), false, "T3R1_FRESH_BOOTSTRAP_PUBLIC_VALUE_LEAK");
     assert.equal(publicText.includes("GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL"), false, "T3R1_FRESH_BOOTSTRAP_SECRET_NAME_LEAK");
   } catch (error) {
+    let observed: CountSnapshot | null = null;
+    if (beforeForAudit) {
+      try { observed = await counts(pool); } catch {}
+    }
+    if (observed && beforeForAudit) {
+      freshEvidenceWriteCount = Math.max(0, observed.nonTwinFacts - beforeForAudit.nonTwinFacts);
+      canonicalBootstrapWriteCount = Math.max(0, observed.twinFacts - beforeForAudit.twinFacts);
+      const totalFactWrites = Math.max(0, observed.totalFacts - beforeForAudit.totalFacts);
+      result = {
+        ...result,
+        provider_request_count: providerRequestCount,
+        fresh_external_evidence_write_count: freshEvidenceWriteCount,
+        canonical_bootstrap_write_count: canonicalBootstrapWriteCount,
+        total_fact_write_count_this_execution: totalFactWrites,
+        database_write_count: totalFactWrites,
+        observed_final_fact_count: observed.totalFacts,
+        observed_final_canonical_twin_fact_count: observed.twinFacts,
+        observed_scheduler_slot_count: observed.schedulerSlots,
+        observed_scheduler_cursor_count: observed.schedulerCursors,
+        observed_t1r1_scope_row_count: observed.t1r1ScopeRows,
+      };
+    } else {
+      result = {
+        ...result,
+        provider_request_count: providerRequestCount,
+        fresh_external_evidence_write_count: freshEvidenceWriteCount,
+        canonical_bootstrap_write_count: canonicalBootstrapWriteCount,
+      };
+    }
     result = {
       ...result,
       error_code: error instanceof Error ? error.message.slice(0, 300) : String(error).slice(0, 300),
