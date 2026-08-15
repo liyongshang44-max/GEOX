@@ -30,7 +30,7 @@ const CRITICAL = [AUTH,HIST_V2,HIST_TIMING_V2,PERSISTED_A0,CROP,AMENDMENT11,LIVE
 
 function git(...args) { return execFileSync("git", args, { encoding: "utf8" }).trim(); }
 function read(file) { return fs.readFileSync(file, "utf8"); }
-function run(file) { return execFileSync("node", [file], { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] }).trim(); }
+function run(file, ...args) { return execFileSync("node", [file, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] }).trim(); }
 function write(value) { fs.mkdirSync(path.dirname(OUT), { recursive: true }); fs.writeFileSync(OUT, `${JSON.stringify(value, null, 2)}\n`); console.log(JSON.stringify(value)); }
 
 try {
@@ -80,7 +80,7 @@ try {
   assert.equal(poller.includes('"evidence_eligibility_has_fixed_t_plus_432_cutoff": False'), true, "POLLER_NO_FIXED_EVIDENCE_CUTOFF_REQUIRED");
 
   run("scripts/runtime_acceptance/MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs");
-  run("scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs");
+  run("scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs", "selftest");
   run("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CAPTURE.cjs");
   run("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs");
   run("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs");
