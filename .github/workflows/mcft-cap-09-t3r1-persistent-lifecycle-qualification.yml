@@ -87,7 +87,12 @@ jobs:
           if (result.status !== 'PASS') throw new Error('T3R1_PERSISTENT_LIVE_PASS_REQUIRED');
           if (result.subject_sha !== subject) throw new Error('T3R1_PERSISTENT_EXACT_HEAD_RESULT_REQUIRED');
           if (result.lifecycle_establishment?.status !== 'RESOLVED_CANDIDATE') throw new Error('T3R1_PERSISTENT_ESTABLISHMENT_REQUIRED');
-          if (result.lifecycle_establishment?.crop !== 'corn' || result.lifecycle_establishment?.hybrid_product_code !== 'P0306Q' || result.lifecycle_establishment?.replicate_1_explicitly_included !== true) throw new Error('T3R1_PERSISTENT_ESTABLISHMENT_SCOPE_REQUIRED');
+          const allowedScopeBasis = new Set(['EXACT_T3R1_DETAIL_AREA','PARENT_T3_AREA_PLUS_EXPLICIT_R1_COMMENT','EXPLICIT_LTER_T3_PLUS_EXPLICIT_R1_COMMENT']);
+          if (result.lifecycle_establishment?.crop !== 'corn' || result.lifecycle_establishment?.hybrid_product_code !== 'P0306Q' || !allowedScopeBasis.has(result.lifecycle_establishment?.t3r1_scope_basis)) throw new Error('T3R1_PERSISTENT_ESTABLISHMENT_SCOPE_REQUIRED');
+          const plantingDetail = result.transition_sweep?.detail_inspections?.find((x) => x.provider_observation_id === result.lifecycle_establishment.provider_observation_id);
+          if (!plantingDetail || plantingDetail.detail_field_contract_verified !== true || plantingDetail.t3r1_applicable !== true || plantingDetail.termination_semantic !== false || plantingDetail.planting_semantic !== true) throw new Error('T3R1_PERSISTENT_STRUCTURED_PLANTING_DETAIL_REQUIRED');
+          if (JSON.stringify(result.transition_sweep?.structured_detail_fields_consumed) !== JSON.stringify(['Comment','Areas','Observation Type'])) throw new Error('T3R1_PERSISTENT_STRUCTURED_DETAIL_FIELDS_REQUIRED');
+          if (result.transition_sweep?.whole_page_body_semantic_classification_used !== false) throw new Error('T3R1_PERSISTENT_WHOLE_PAGE_SEMANTICS_FORBIDDEN');
           if (result.transition_sweep?.provider_coverage_completeness_proven !== false) throw new Error('T3R1_PERSISTENT_COMPLETENESS_CLAIM_FORBIDDEN');
           if (result.transition_sweep?.proved_no_termination_occurred !== false) throw new Error('T3R1_PERSISTENT_PROVED_NO_TERMINATION_FORBIDDEN');
           if (result.transition_sweep?.provider_silence_used_as_evidence !== false) throw new Error('T3R1_PERSISTENT_SILENCE_EVIDENCE_FORBIDDEN');
@@ -119,6 +124,7 @@ jobs:
             status:'PASS',
             outcome,
             establishment_observation_id:result.lifecycle_establishment.provider_observation_id,
+            establishment_scope_basis:result.lifecycle_establishment.t3r1_scope_basis,
             known_termination:result.transition_sweep.known_termination_result,
             known_contradiction:result.transition_sweep.known_contradiction_result,
             last_support:result.continuity_support,
