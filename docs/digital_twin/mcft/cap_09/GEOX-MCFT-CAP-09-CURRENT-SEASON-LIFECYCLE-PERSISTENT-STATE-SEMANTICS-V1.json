@@ -1,0 +1,222 @@
+{
+  "schema_version": "geox_mcft_cap09_current_season_lifecycle_persistent_state_semantics_v1",
+  "record_status": "AMENDMENT_16_CANDIDATE_NOT_EFFECTIVE_UNTIL_PROTECTED_MAIN_MERGE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier": "S6-CURRENT-SEASON-LIFECYCLE-PERSISTENT-STATE-SEMANTICS-ADJUDICATION",
+  "exact_base_protected_main": "23f224c701dbe0b8bd56eceff3741cb1c3dc1f78",
+  "authority_predecessors": {
+    "amendment_13_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-13-CURRENT-CROP-AUTHORITY-REQUALIFICATION-SEPARATION.md",
+    "amendment_13_blob_sha": "5210001b387993cea502aac9480834400b3b8ef3",
+    "amendment_15_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-15-PROVIDER-SNAPSHOT-LIFECYCLE-AUTHORITY.md",
+    "amendment_15_blob_sha": "73eb7600bd607c871ff4af60907a0053d15dfe41",
+    "ea1j_formal_crop_context_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
+    "ea1j_formal_crop_context_blob_sha": "b5de9d29189cb654444b3f57d00df290eefe16d3"
+  },
+  "normative_principles": {
+    "season_lifecycle_is_persistent_state": true,
+    "fresh_positive_observation_required_every_evaluation": false,
+    "authoritative_establishment_required": true,
+    "governed_termination_model_required": true,
+    "bounded_lifecycle_horizon_required": true,
+    "provider_silence_is_lifecycle_evidence": false,
+    "provider_silence_refreshes_observation": false,
+    "provider_silence_terminates_lifecycle": false,
+    "authoritatively_established_active_state_may_persist": true,
+    "persistence_requires_governed_transition_semantics": true,
+    "persistence_refreshes_observation_time": false,
+    "phenology_model_may_establish_lifecycle": false,
+    "current_lifecycle_may_be_resolved_by_state_machine": true
+  },
+  "state_contract": {
+    "domain_state": ["NOT_ESTABLISHED", "ACTIVE", "TERMINATED"],
+    "authority_status": ["RESOLVED", "UNRESOLVED", "CONFLICTED"],
+    "authority_validity": ["VALID", "EXPIRED"],
+    "active_consumption_requires": {
+      "domain_state": "ACTIVE",
+      "authority_status": "RESOLVED",
+      "authority_validity": "VALID"
+    },
+    "expired_is_real_world_transition": false,
+    "conflicted_is_real_world_transition": false
+  },
+  "time_contract": {
+    "source_fact_fields": ["event_time", "available_to_runtime_at", "ingested_at"],
+    "evaluation_fields": ["state_evaluation_time", "authority_evaluated_at"],
+    "evaluation_time_may_be_emitted_as_observation_time": false,
+    "late_fact_may_rewrite_prior_append_only_decision": false,
+    "future_observation_use_authorized": false
+  },
+  "establishment_policy": {
+    "primary_current_maize_establishment_class": "PLANTING",
+    "requires": [
+      "exact_crop_season_identity",
+      "governed_scope_binding",
+      "provider_origin_fact",
+      "real_event_time",
+      "real_availability_chronology",
+      "event_inside_governed_season_scope",
+      "no_cross_season_stitching",
+      "no_cross_field_or_plot_stitching"
+    ],
+    "support_event_without_establishment_may_create_active": false
+  },
+  "persistent_active_policy": {
+    "authority_mode": "GOVERNED_PERSISTENT_STATE",
+    "known_transition_set_only": true,
+    "requires_establishment_available_by_authority_evaluated_at": true,
+    "requires_establishment_event_time_at_or_before_state_evaluation_time": true,
+    "known_termination_available_by_evaluation_forbids_active": true,
+    "known_contradiction_available_by_evaluation_forbids_active": true,
+    "scope_identity_must_remain_valid": true,
+    "horizon_must_remain_valid": true,
+    "none_found_wording_allowed": true,
+    "proved_no_termination_occurred_wording_without_completeness_authority_allowed": false
+  },
+  "support_event_policy": {
+    "role": "IN_SEASON_CONTINUITY_SUPPORT",
+    "may_update_last_support_provenance": true,
+    "may_establish_lifecycle_without_establishment": false,
+    "may_refresh_direct_biological_observation": false,
+    "may_renew_lifecycle_horizon": false,
+    "may_prove_current_active_by_itself": false
+  },
+  "termination_policy": {
+    "evidence_driven_classes": [
+      "HARVEST",
+      "CROP_DESTRUCTION",
+      "CROP_FAILURE",
+      "ABANDONMENT",
+      "EXPLICIT_SEASON_TERMINATION"
+    ],
+    "requires_separate_source_scope_time_and_semantic_qualification": true,
+    "formal_season_close_fabricates_termination_event": false,
+    "horizon_expiry_fabricates_termination_event": false
+  },
+  "contradiction_policy": {
+    "authoritative_conflict_result": "CONFLICTED",
+    "runtime_consumption_allowed_when_conflicted": false,
+    "silent_scope_relabel_authorized": false,
+    "automatic_successor_selection_authorized": false
+  },
+  "horizon_policy": {
+    "required": true,
+    "source_precedence": [
+      "EXPLICIT_FORMAL_SEASON_CLOSE_AUTHORITY",
+      "GOVERNED_CROP_SEASON_HARD_STOP_AT",
+      "SEPARATELY_GOVERNED_CONSERVATIVE_AGRONOMIC_MAXIMUM_ENVELOPE",
+      "UNRESOLVED"
+    ],
+    "horizon_may_only_truncate_persistence": true,
+    "horizon_may_create_active": false,
+    "support_event_may_renew_horizon": false,
+    "ea1j_maize_grain_maximum_envelope_candidate": {
+      "eligible_as_truncation_guard": true,
+      "eligible_as_positive_active_evidence": false,
+      "requires_exact_ea1j_authority_pin": true,
+      "requires_complete_planting_time_uncertainty": true,
+      "variant_stage_lengths_days": [
+        [30, 50, 60, 40],
+        [25, 40, 45, 30],
+        [20, 35, 40, 30],
+        [20, 35, 40, 30],
+        [30, 40, 50, 30],
+        [30, 40, 50, 50]
+      ],
+      "maximum_total_days": 180,
+      "horizon_algorithm": "LATEST_POSSIBLE_PLANTING_INSTANT_PLUS_MAXIMUM_TOTAL_DAYS",
+      "biological_survival_claimed": false,
+      "harvest_prediction_claimed": false,
+      "phenology_truth_claimed": false
+    }
+  },
+  "downstream_authority_order": [
+    "REALITY_TRANSITIONS",
+    "SEASON_LIFECYCLE_AUTHORITY",
+    "PHENOLOGY_STAGE_AUTHORITY",
+    "CROP_MODEL_PARAMETER_AUTHORITY",
+    "CAP04"
+  ],
+  "downstream_policy": {
+    "stage_may_establish_lifecycle": false,
+    "lifecycle_may_remain_active_when_stage_unresolved": true,
+    "singleton_stage_may_resolve_under_existing_governed_stage_authority": true,
+    "kc_requires_resolved_governed_stage_mapping": true,
+    "mid_kc": 1.15,
+    "fresh_biological_observation_may_remain_an_independent_action_gate": true
+  },
+  "authority_mode_vocabulary": [
+    "DIRECT_EVENT",
+    "GOVERNED_PERSISTENT_STATE",
+    "MODEL_DERIVED",
+    "OBSERVED"
+  ],
+  "required_runtime_provenance": [
+    "season_lifecycle_domain_state",
+    "season_lifecycle_authority_status",
+    "season_lifecycle_authority_validity",
+    "season_lifecycle_authority_mode",
+    "season_lifecycle_authority_ref",
+    "season_lifecycle_establishment_event_id",
+    "season_lifecycle_establishment_event_time",
+    "season_lifecycle_establishment_available_to_runtime_at",
+    "season_lifecycle_last_support_event_id",
+    "season_lifecycle_last_support_event_time",
+    "season_lifecycle_evaluated_at",
+    "season_lifecycle_authority_evaluated_at",
+    "season_lifecycle_termination_event_id",
+    "season_lifecycle_termination_event_time",
+    "season_lifecycle_termination_available_to_runtime_at",
+    "season_lifecycle_horizon_end",
+    "season_lifecycle_horizon_authority_ref",
+    "latest_direct_biological_observation_at"
+  ],
+  "hard_nonclaims": [
+    "NO_ACTIVE_FROM_HTTP_200",
+    "NO_ACTIVE_FROM_PROVIDER_SILENCE",
+    "NO_OBSERVATION_FROM_PROVIDER_SILENCE",
+    "NO_EVENT_TIME_REWRITE",
+    "NO_MANAGEMENT_EVENT_AUTO_BIOLOGICAL_OBSERVATION",
+    "NO_LIFECYCLE_ESTABLISHMENT_FROM_GDD_OR_FAO_STAGE",
+    "NO_LIFECYCLE_FROM_PLANNED_SATELLITE_ACQUISITION",
+    "NO_PROVED_NO_HARVEST_FROM_MISSING_HARVEST_ROW",
+    "NO_UNBOUNDED_ACTIVE_PERSISTENCE",
+    "NO_CROSS_SEASON_PERSISTENCE",
+    "NO_CROSS_SCOPE_STITCHING",
+    "NO_T1R1_TO_T3R1_LIFECYCLE_REUSE",
+    "NO_EVALUATED_AT_AS_OBSERVED_AT",
+    "NO_SUPPORT_EVENT_HORIZON_RENEWAL",
+    "NO_PRIOR_APPEND_ONLY_DECISION_REWRITE"
+  ],
+  "required_acceptance_cases": [
+    "A01_AUTHORITATIVE_ESTABLISHMENT",
+    "A02_PROVIDER_SILENCE",
+    "A03_NO_ESTABLISHMENT",
+    "A04_HARVEST_TERMINATION",
+    "A05_DESTRUCTION_FAILURE_TERMINATION",
+    "A06_FORMAL_SEASON_CLOSE",
+    "A07_MAXIMUM_HORIZON_EXCEEDED",
+    "A08_CONTRADICTORY_FACT",
+    "A09_STAGE_CANNOT_ESTABLISH_LIFECYCLE",
+    "A10_LIFECYCLE_INDEPENDENT_FROM_STAGE_AMBIGUITY",
+    "A11_LIFECYCLE_PLUS_SINGLETON_STAGE",
+    "A12_LIFECYCLE_PLUS_SINGLETON_KC",
+    "A13_LATE_ESTABLISHMENT_AVAILABILITY",
+    "A14_LATE_TERMINATION_ARRIVAL",
+    "A15_SUPPORT_DOES_NOT_RENEW_HORIZON",
+    "A16_HORIZON_EXPIRY_IS_NOT_TERMINATION",
+    "A17_HTTP_200_NO_NEW_ROWS_CHANGES_NOTHING"
+  ],
+  "t3r1_successor_boundary": {
+    "this_amendment_creates_t3r1_active_authority": false,
+    "first_real_qualification_target": "KBS_MCSE_T3R1_CANDIDATE",
+    "next_frontier_after_effectiveness": "T3R1_CURRENT_SEASON_PERSISTENT_LIFECYCLE_QUALIFICATION",
+    "formal_rebind_authorized": false,
+    "ea5e2_operational_activation_qualified": false,
+    "runtime_write_count": 0,
+    "database_write_count": 0,
+    "scheduler_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "formal_execution_count": "0/24"
+  }
+}
