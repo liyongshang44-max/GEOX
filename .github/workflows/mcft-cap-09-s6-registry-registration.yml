@@ -52,11 +52,21 @@ jobs:
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V1.json' \
             'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json' \
             'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA2_FORMAL_AUTHORITY_FREEZE.cjs' | sort)"
+          t3r1_successor_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-t3r1-formal-successor-authority.yml' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-17-T3R1-FORMAL-SUCCESSOR-SCOPE-AUTHORITY.md' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V2.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V2.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_FORMAL_SUCCESSOR_AUTHORITY.cjs' \
+            'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_FORMAL_SUCCESSOR_AUTHORITY.mjs' | sort)"
           routing_repair_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml' \
             '.github/workflows/mcft-cap-09-s6-registry-registration.yml' | sort)"
           if [[ "$files" == "$ea2_successor_files" ]]; then
             mode='not-applicable-ea2-successor-authority'
+          elif [[ "$files" == "$t3r1_successor_files" ]]; then
+            mode='not-applicable-t3r1-formal-successor-authority'
           elif [[ "$files" == "$routing_repair_files" ]]; then
             mode='successor-authority-routing-repair'
           else
@@ -71,6 +81,13 @@ jobs:
         run: |
           set -euo pipefail
           echo 'S6 Registry lifecycle is not applicable: exact EA2 successor authority boundary changed with no Registry-owned mutation.'
+
+      - name: Record S6 Registry not applicable to T3R1 Formal successor authority
+        if: steps.applicability.outputs.mode == 'not-applicable-t3r1-formal-successor-authority'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'S6 Registry lifecycle is not applicable: exact T3R1 Formal successor authority boundary changes no Registry-owned state and does not reopen historical registration authority.'
 
       - name: Validate successor authority routing repair
         if: steps.applicability.outputs.mode == 'successor-authority-routing-repair'
