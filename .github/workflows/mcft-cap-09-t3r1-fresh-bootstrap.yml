@@ -1,0 +1,181 @@
+name: mcft-cap-09-t3r1-fresh-bootstrap
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t3r1-fresh-bootstrap.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-FRESH-BOOTSTRAP-EXECUTION-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_FRESH_BOOTSTRAP.cjs'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_FRESH_BOOTSTRAP.ts'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+    inputs:
+      execution_token:
+        description: 'Exact token required to execute the one-shot T3R1 fresh bootstrap'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-t3r1-fresh-bootstrap-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  static-governance-and-typecheck:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact protected-main base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check bounded bootstrap governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_FRESH_BOOTSTRAP.cjs
+
+      - name: Validate exact four-file T3R1 bootstrap boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_FRESH_BOOTSTRAP.cjs
+
+      - name: Typecheck server and bounded live runner
+        run: |
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_FRESH_BOOTSTRAP.ts
+
+      - name: Upload static governance proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t3r1-fresh-bootstrap-static-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          path: acceptance-output/MCFT_CAP_09_T3R1_FRESH_BOOTSTRAP_GOVERNANCE_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  protected-main-live-bootstrap:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+      MCFT_CAP09_T3R1_BOOTSTRAP_EXECUTION_TOKEN: ${{ inputs.execution_token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Require exact protected main and explicit execution token
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.ref != 'refs/heads/main' }}" = "true" ]; then
+            echo 'T3R1_FRESH_BOOTSTRAP_PROTECTED_MAIN_ONLY' >&2
+            exit 1
+          fi
+          test "$MCFT_CAP09_T3R1_BOOTSTRAP_EXECUTION_TOKEN" = 'EXECUTE_T3R1_FRESH_BOOTSTRAP' || { echo 'T3R1_FRESH_BOOTSTRAP_EXECUTION_TOKEN_MISMATCH' >&2; exit 1; }
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA" || { echo 'T3R1_FRESH_BOOTSTRAP_HEAD_SHA_MISMATCH' >&2; exit 1; }
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo 'T3R1_FRESH_BOOTSTRAP_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
+
+      - name: Require private bindings without exposing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID
+            GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY
+          )
+          for name in "${required[@]}"; do
+            if [ -z "${!name:-}" ]; then
+              echo "MISSING_REQUIRED_PRIVATE_BINDING:$name" >&2
+              exit 1
+            fi
+            echo "PRESENT_REQUIRED_PRIVATE_BINDING:$name"
+          done
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Re-prove runner types before live mutation
+        run: |
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_FRESH_BOOTSTRAP.ts
+
+      - name: Execute bounded fresh T3R1 bootstrap on protected main
+        run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_FRESH_BOOTSTRAP.ts
+
+      - name: Verify bootstrap-only effect and exact persisted counts
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T3R1_FRESH_BOOTSTRAP_RESULT.json','utf8'));
+          if(r.status!=='PASS'||r.fresh_t3r1_bootstrap_complete!==true) throw new Error('T3R1_FRESH_BOOTSTRAP_PASS_REQUIRED');
+          if(r.database_identity?.database_name!=='geox_mcft_cap09_s6_formal_t3r1_24h'||r.database_identity?.neon_branch_id!=='br-cold-dust-a6j6aymz'||r.database_identity?.t1r1_database_reused!==false) throw new Error('T3R1_FRESH_BOOTSTRAP_DATABASE_IDENTITY_REQUIRED');
+          if(r.final_fact_count!==35||r.final_canonical_twin_fact_count!==34||r.exact_runtime_config_count!==25||r.exact_hourly_runtime_config_count!==24||r.external_a0_member_count!==9) throw new Error('T3R1_FRESH_BOOTSTRAP_EXACT_COUNTS_REQUIRED');
+          if(r.t1r1_scope_row_count!==0||r.scheduler_slot_write_count!==0||r.scheduler_cursor_write_count!==0||r.formal_window_started!==false) throw new Error('T3R1_FRESH_BOOTSTRAP_ZERO_STITCH_OR_SCHEDULER_REQUIRED');
+          if(!['FIRST_FRESH_BOOTSTRAP','EXISTING_FRESH_BOOTSTRAP_REVERIFIED'].includes(r.execution_mode)) throw new Error('T3R1_FRESH_BOOTSTRAP_EXECUTION_MODE_REQUIRED');
+          if(r.execution_mode==='FIRST_FRESH_BOOTSTRAP'&&(r.provider_request_count!==1||r.fresh_external_evidence_write_count!==1||r.canonical_bootstrap_write_count!==34||r.total_fact_write_count_this_execution!==35)) throw new Error('T3R1_FRESH_BOOTSTRAP_FIRST_EXECUTION_BOUNDS_REQUIRED');
+          if(r.execution_mode==='EXISTING_FRESH_BOOTSTRAP_REVERIFIED'&&(r.provider_request_count!==0||r.fresh_external_evidence_write_count!==0||r.canonical_bootstrap_write_count!==0||r.total_fact_write_count_this_execution!==0)) throw new Error('T3R1_FRESH_BOOTSTRAP_REVERIFY_ZERO_WRITE_REQUIRED');
+          if(r.a0_binding_mode!=='DYNAMIC_FRESH_T3R1_PERSISTED_A0_SEMANTIC_BINDING'||r.config_parent_chain_verified!==true||r.explicit_ref_hash_pin_only!==true) throw new Error('T3R1_FRESH_BOOTSTRAP_DYNAMIC_A0_CHAIN_REQUIRED');
+          if(r.ea5e2_operational_activation_authorized!==false||r.formal_o00_start_authorized!==false||r.mcft_cap09_completed!==false) throw new Error('T3R1_FRESH_BOOTSTRAP_PREMATURE_ACTIVATION_FORBIDDEN');
+          console.log(JSON.stringify({status:'PASS',mode:r.execution_mode,bootstrap_logical_time:r.bootstrap_logical_time,a0_ref:r.a0_runtime_config_ref,configs:r.exact_runtime_config_count,formal_window_started:false,ea5e2:false,o00:false}));
+
+      - name: Upload metadata-only fresh bootstrap proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t3r1-fresh-bootstrap-live-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_T3R1_FRESH_BOOTSTRAP_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
