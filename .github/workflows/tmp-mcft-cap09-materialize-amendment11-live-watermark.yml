@@ -8,18 +8,20 @@ on:
       - '.github/workflows/tmp-mcft-cap09-materialize-amendment11-live-watermark.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  export-generated-workflow:
-    if: "${{ github.event.head_commit.message == 'chore(mcft-cap09): export generated live watermark workflow' }}"
+  commit-generated-workflow:
+    if: "${{ github.event.head_commit.message == 'chore(mcft-cap09): commit live watermark workflow via git data' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: fix/mcft-cap09-amendment11-live-watermark
           fetch-depth: 0
-      - name: Generate exact amended workflow transport file
+      - name: Generate and commit exact amended workflow using Git Data API
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -34,15 +36,20 @@ jobs:
           old2='            kbs_max_age_hours:6,\n'
           new2="            kbs_historical_online_freshness_diagnostic_hours:6,\n            kbs_freshness_is_late_authoritative_admission_gate:false,\n            kbs_late_temporal_authority:'PROVIDER_AVAILABILITY_WATERMARK_V1',\n"
           if s.count(old2)!=1: raise SystemExit(f'LIVE_WATERMARK_PROOF_REPLACE_COUNT:{s.count(old2)}')
-          s=s.replace(old2,new2)
-          Path('tmp/mcft-cap09-generated-live-provider-two-phase-readiness.yml').write_text(s)
-          source.write_text(s)
+          source.write_text(s.replace(old2,new2))
           PY
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT11_LIVE_WATERMARK.cjs
-      - name: Upload generated workflow transport
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap09-generated-live-watermark-workflow-${{ github.sha }}
-          path: tmp/mcft-cap09-generated-live-provider-two-phase-readiness.yml
-          if-no-files-found: error
-          retention-days: 1
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          auth=(-H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28')
+          base_commit="$(git rev-parse HEAD)"
+          base_tree="$(git rev-parse HEAD^{tree})"
+          content="$(base64 -w0 .github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml)"
+          blob_payload="$(jq -n --arg content "$content" '{content:$content,encoding:"base64"}')"
+          blob_sha="$(curl --fail --silent --show-error -X POST "${auth[@]}" "$api/git/blobs" -d "$blob_payload" | jq -r .sha)"
+          tree_payload="$(jq -n --arg base "$base_tree" --arg blob "$blob_sha" '{base_tree:$base,tree:[{path:".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml",mode:"100644",type:"blob",sha:$blob}]}')"
+          tree_sha="$(curl --fail --silent --show-error -X POST "${auth[@]}" "$api/git/trees" -d "$tree_payload" | jq -r .sha)"
+          commit_payload="$(jq -n --arg msg 'MCFT-CAP-09: align live KBS availability with Amendment-11' --arg tree "$tree_sha" --arg parent "$base_commit" '{message:$msg,tree:$tree,parents:[$parent]}')"
+          commit_sha="$(curl --fail --silent --show-error -X POST "${auth[@]}" "$api/git/commits" -d "$commit_payload" | jq -r .sha)"
+          ref_payload="$(jq -n --arg sha "$commit_sha" '{sha:$sha,force:false}')"
+          curl --fail --silent --show-error -X PATCH "${auth[@]}" "$api/git/refs/heads/fix/mcft-cap09-amendment11-live-watermark" -d "$ref_payload" >/dev/null
+          echo "EA5E2_LIVE_WATERMARK_COMMIT=$commit_sha"
