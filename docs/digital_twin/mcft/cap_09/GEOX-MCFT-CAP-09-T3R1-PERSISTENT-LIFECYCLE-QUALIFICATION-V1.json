@@ -1,161 +1,40 @@
 {
-  "schema_version": "geox_mcft_cap09_t3r1_persistent_lifecycle_qualification_v1",
-  "record_status": "STACKED_QUALIFICATION_CANDIDATE_PENDING_AMENDMENT_16_EFFECTIVENESS",
-  "capability_line_id": "MCFT-CAP-09",
-  "slice_id": "MCFT-CAP-09.S6",
-  "frontier": "T3R1_CURRENT_SEASON_PERSISTENT_LIFECYCLE_QUALIFICATION",
-  "exact_predecessor_sha": "e556e8c4a3ba601bc73af42077afc557a9715781",
-  "effectiveness_rule": "AMENDMENT_16_MUST_FIRST_BECOME_EFFECTIVE_ON_PROTECTED_MAIN_AND_THIS_QUALIFICATION_MUST_THEN_BE_REBASED_OR_RERUN_ON_EXACT_PROTECTED_MAIN",
-  "authority_predecessors": {
-    "amendment_16_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-16-CURRENT-SEASON-LIFECYCLE-PERSISTENT-STATE-SEMANTICS.md",
-    "amendment_16_blob_sha": "4d0f4449847aa865aec5b23b87c180ee5799051a",
-    "persistent_semantics_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-SEASON-LIFECYCLE-PERSISTENT-STATE-SEMANTICS-V1.json",
-    "persistent_semantics_blob_sha": "51377abe2f296c697d6b40b7e9108fcdeef675f1",
-    "ea1j_formal_crop_context_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
-    "ea1j_formal_crop_context_blob_sha": "b5de9d29189cb654444b3f57d00df290eefe16d3"
+  "schema_version":"geox_mcft_cap09_t3r1_persistent_lifecycle_qualification_v1",
+  "record_status":"EXACT_PROTECTED_MAIN_ADOPTION_CANDIDATE",
+  "capability_line_id":"MCFT-CAP-09",
+  "slice_id":"MCFT-CAP-09.S6",
+  "frontier":"T3R1_CURRENT_SEASON_PERSISTENT_LIFECYCLE_EXACT_MAIN_ADOPTION",
+  "exact_predecessor_sha":"80c45add8ae96d58ac2b4f090cae8229752efdb7",
+  "effectiveness_rule":"AMENDMENT_16_IS_EFFECTIVE_ON_EXACT_PROTECTED_MAIN_BASE; LIVE_RESULT_IS_ADOPTABLE_ONLY_BY_MERGING_THIS_EXACT_BASE_PR",
+  "authority_predecessors":{
+    "amendment_16_path":"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-16-CURRENT-SEASON-LIFECYCLE-PERSISTENT-STATE-SEMANTICS.md",
+    "amendment_16_blob_sha":"4d0f4449847aa865aec5b23b87c180ee5799051a",
+    "persistent_semantics_path":"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-SEASON-LIFECYCLE-PERSISTENT-STATE-SEMANTICS-V1.json",
+    "persistent_semantics_blob_sha":"51377abe2f296c697d6b40b7e9108fcdeef675f1",
+    "ea1j_formal_crop_context_path":"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
+    "ea1j_formal_crop_context_blob_sha":"b5de9d29189cb654444b3f57d00df290eefe16d3"
   },
-  "candidate_scope": {
-    "site_id": "KBS_MCSE_T3R1_CANDIDATE",
-    "treatment": "T3",
-    "replicate": "R1",
-    "prospective_field_id": "field_kbs_mcse_t3r1",
-    "season_id": "season_2026_corn",
-    "crop": "corn",
-    "hybrid_product_code": "P0306Q",
-    "provider_area_identity": "T3R1",
-    "planting_local_date": "2026-05-20",
-    "timezone": "America/Detroit",
-    "planting_event_time_precision": "LOCAL_CALENDAR_DAY_ONLY",
-    "possible_planting_window_utc": {
-      "start_inclusive": "2026-05-20T04:00:00.000Z",
-      "end_exclusive": "2026-05-21T04:00:00.000Z"
-    }
+  "candidate_scope":{
+    "site_id":"KBS_MCSE_T3R1_CANDIDATE","treatment":"T3","replicate":"R1","prospective_field_id":"field_kbs_mcse_t3r1","season_id":"season_2026_corn","crop":"corn","hybrid_product_code":"P0306Q","provider_area_identity":"T3R1","planting_local_date":"2026-05-20","timezone":"America/Detroit","planting_event_time_precision":"LOCAL_CALENDAR_DAY_ONLY",
+    "possible_planting_window_utc":{"start_inclusive":"2026-05-20T04:00:00.000Z","end_exclusive":"2026-05-21T04:00:00.000Z"}
   },
-  "establishment_source": {
-    "provider": "KBS_AGLOG",
-    "url": "https://aglog.kbs.msu.edu/materials/392",
-    "allowed_host": "aglog.kbs.msu.edu",
-    "expected_observation_id": 6966,
-    "required_normalized_markers": [
-      "2026-05-20",
-      "Planting",
-      "Main Site LTER T3 replications (3, 1, 2, 4, 5, and 6)",
-      "Pioneer P0306Q",
-      "34,000 seeds/acre"
-    ],
-    "provider_body_may_be_emitted": false,
-    "provider_payload_may_be_persisted_or_uploaded": false,
-    "availability_rule": "ACTUAL_QUALIFICATION_RETRIEVAL_TIME_IS_CONSERVATIVE_AVAILABLE_TO_RUNTIME_AT"
+  "establishment_source":{
+    "provider":"KBS_AGLOG","url":"https://aglog.kbs.msu.edu/materials/392","allowed_host":"aglog.kbs.msu.edu","expected_observation_id":6966,
+    "required_normalized_markers":["2026-05-20","Planting","Main Site LTER T3 replications (3, 1, 2, 4, 5, and 6)","Pioneer P0306Q","34,000 seeds/acre"],
+    "provider_body_may_be_emitted":false,"provider_payload_may_be_persisted_or_uploaded":false,"availability_rule":"ACTUAL_QUALIFICATION_RETRIEVAL_TIME_IS_CONSERVATIVE_AVAILABLE_TO_RUNTIME_AT"
   },
-  "transition_sweep": {
-    "provider": "KBS_AGLOG_CURRENT_OBSERVATION_INDEX_AND_DETAIL",
-    "index_url": "https://aglog.kbs.msu.edu/observations",
-    "allowed_host": "aglog.kbs.msu.edu",
-    "maximum_pages": 20,
-    "maximum_detail_candidates": 100,
-    "must_reach_planting_date_or_earlier": true,
-    "index_candidate_scope_rule": "AREAS_HAS_STANDALONE_T3_OR_EXACT_T3R1_OR_COMMENT_EXPLICITLY_HAS_LTER_T3",
-    "detail_field_contract": {
-      "comment_label": "Comment:",
-      "areas_label": "Areas:",
-      "observation_type_label": "Observation Type:",
-      "activities_label": "Activities:",
-      "full_comment_semantics_required": true,
-      "whole_page_body_semantic_classification_forbidden": true,
-      "index_detail_date_agreement_required": true,
-      "index_detail_observation_type_agreement_required": true
-    },
-    "t3r1_applicability_rule": {
-      "exact_t3r1_in_detail_areas_is_sufficient": true,
-      "parent_t3_in_detail_areas_requires_explicit_r1_in_comment": true,
-      "lter_t3_in_comment_requires_explicit_r1_in_comment": true,
-      "generic_t3_reference_in_comment_without_t3_area_binding_forbidden": true
-    },
-    "termination_classes": [
-      "HARVEST",
-      "CROP_DESTRUCTION",
-      "CROP_FAILURE",
-      "ABANDONMENT",
-      "EXPLICIT_SEASON_TERMINATION"
-    ],
-    "termination_semantic_patterns": [
-      "harvest",
-      "termination",
-      "terminate",
-      "crop destruction",
-      "destroyed crop",
-      "crop failure",
-      "failed crop",
-      "abandonment",
-      "abandoned crop"
-    ],
-    "contradiction_rules": [
-      "POST_ESTABLISHMENT_PLANTING_ON_T3R1_WITHOUT_SEPARATELY_GOVERNED_REPLANT_SEMANTICS",
-      "SAME_DAY_ADDITIONAL_PLANTING_OR_TERMINATION_WITH_UNRESOLVED_INTRADAY_CHRONOLOGY",
-      "EXPLICIT_DIFFERENT_CROP_TERMINATION_OR_PLANTING_ON_T3R1",
-      "AMBIGUOUS_TERMINATION_ON_T3R1",
-      "AUTHORITATIVE_SCOPE_IDENTITY_CONFLICT"
-    ],
-    "support_observation_types": [
-      "Herbicide Application",
-      "Fertilizer Application",
-      "Fungicide Application",
-      "Insecticide Application",
-      "Mechanical Weed Control",
-      "Irrigation",
-      "Cultivation"
-    ],
-    "provider_coverage_completeness_required_for_persistent_state": false,
-    "provider_coverage_completeness_claimed": false,
-    "none_found_may_be_emitted": true,
-    "proved_no_termination_occurred_may_be_emitted": false,
-    "provider_body_may_be_emitted": false,
-    "provider_payload_may_be_persisted_or_uploaded": false
+  "transition_sweep":{
+    "provider":"KBS_AGLOG_CURRENT_OBSERVATION_INDEX_AND_DETAIL","index_url":"https://aglog.kbs.msu.edu/observations","allowed_host":"aglog.kbs.msu.edu","maximum_pages":20,"maximum_detail_candidates":100,"must_reach_planting_date_or_earlier":true,
+    "detail_field_contract":{"comment_label":"Comment:","areas_label":"Areas:","observation_type_label":"Observation Type:","activities_label":"Activities:","full_comment_semantics_required":true,"whole_page_body_semantic_classification_forbidden":true,"index_detail_date_agreement_required":true,"index_detail_observation_type_agreement_required":true},
+    "t3r1_applicability_rule":{"exact_t3r1_in_detail_areas_is_sufficient":true,"parent_t3_in_detail_areas_requires_explicit_r1_in_comment":true,"lter_t3_in_comment_requires_explicit_r1_in_comment":true,"generic_t3_reference_in_comment_without_t3_area_binding_forbidden":true},
+    "support_observation_types":["Herbicide Application","Fertilizer Application","Fungicide Application","Insecticide Application","Mechanical Weed Control","Irrigation","Cultivation"],
+    "provider_coverage_completeness_required_for_persistent_state":false,"provider_coverage_completeness_claimed":false,"none_found_may_be_emitted":true,"proved_no_termination_occurred_may_be_emitted":false,"provider_body_may_be_emitted":false,"provider_payload_may_be_persisted_or_uploaded":false
   },
-  "horizon_policy": {
-    "authority_source": "AMENDMENT_16_EA1J_MAIZE_GRAIN_MAXIMUM_ENVELOPE_TRUNCATION_GUARD",
-    "ea1j_authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
-    "maximum_total_days": 180,
-    "algorithm": "LATEST_POSSIBLE_PLANTING_INSTANT_PLUS_MAXIMUM_TOTAL_DAYS",
-    "horizon_may_create_active": false,
-    "horizon_may_only_truncate_persistence": true,
-    "support_event_may_renew_horizon": false,
-    "expected_horizon_end_utc": "2026-11-17T03:59:59.999Z"
-  },
-  "persistent_state_policy": {
-    "authority_mode": "GOVERNED_PERSISTENT_STATE",
-    "domain_state_on_valid_establishment_without_known_transition": "ACTIVE",
-    "authority_status_on_valid_establishment_without_known_transition": "RESOLVED",
-    "authority_validity_inside_horizon": "VALID",
-    "provider_silence_used_as_evidence": false,
-    "provider_retrieval_time_used_as_coverage_watermark": false,
-    "evaluation_time_emitted_as_observation_time": false,
-    "fresh_biological_observation_required_for_lifecycle_evaluation": false,
-    "phenology_may_establish_lifecycle": false,
-    "latest_direct_biological_observation_at": null
-  },
-  "expected_live_result_if_current_public_evidence_remains_compatible": {
-    "domain_state": "ACTIVE",
-    "authority_status": "RESOLVED",
-    "authority_validity": "VALID",
-    "authority_mode": "GOVERNED_PERSISTENT_STATE",
-    "known_termination_result": "NONE_FOUND",
-    "known_contradiction_result": "NONE_FOUND",
-    "provider_completeness_proven": false,
-    "observation_freshness_refreshed": false
-  },
-  "authority_boundary": {
-    "stacked_candidate_may_become_effective_before_amendment_16_protected_main_merge": false,
-    "formal_site_rebind_authorized": false,
-    "ea5e2_operational_activation_qualified": false,
-    "runtime_write_count": 0,
-    "database_write_count": 0,
-    "scheduler_write_count": 0,
-    "formal_evidence_write_count": 0,
-    "formal_execution_count": "0/24"
-  },
-  "next_frontier_on_candidate_active": "AMENDMENT_16_EFFECTIVENESS_THEN_EXACT_MAIN_T3R1_LIFECYCLE_ADOPTION",
-  "next_frontier_on_termination": "T3R1_CURRENT_SEASON_TERMINATED",
-  "next_frontier_on_conflict": "T3R1_LIFECYCLE_CONFLICT_ADJUDICATION",
-  "next_frontier_on_horizon_expiry": "T3R1_LIFECYCLE_HORIZON_EXPIRED"
+  "horizon_policy":{"authority_source":"AMENDMENT_16_EA1J_MAIZE_GRAIN_MAXIMUM_ENVELOPE_TRUNCATION_GUARD","maximum_total_days":180,"algorithm":"LATEST_POSSIBLE_PLANTING_INSTANT_PLUS_MAXIMUM_TOTAL_DAYS","horizon_may_create_active":false,"horizon_may_only_truncate_persistence":true,"support_event_may_renew_horizon":false,"expected_horizon_end_utc":"2026-11-17T03:59:59.999Z"},
+  "persistent_state_policy":{"authority_mode":"GOVERNED_PERSISTENT_STATE","domain_state_on_valid_establishment_without_known_transition":"ACTIVE","authority_status_on_valid_establishment_without_known_transition":"RESOLVED","authority_validity_inside_horizon":"VALID","provider_silence_used_as_evidence":false,"provider_retrieval_time_used_as_coverage_watermark":false,"evaluation_time_emitted_as_observation_time":false,"fresh_biological_observation_required_for_lifecycle_evaluation":false,"phenology_may_establish_lifecycle":false,"latest_direct_biological_observation_at":null},
+  "authority_boundary":{"amendment_16_effective_on_exact_protected_main_base":true,"truthful_live_result_may_be_adopted_only_by_this_pr_merge":true,"formal_site_rebind_authorized_before_this_pr_merge":false,"ea5e2_operational_activation_qualified":false,"runtime_write_count":0,"database_write_count":0,"scheduler_write_count":0,"formal_evidence_write_count":0,"formal_execution_count":"0/24"},
+  "next_frontier_on_candidate_active":"T3R1_FORMAL_SITE_REBIND_AND_FRESH_BOOTSTRAP_PREPARATION",
+  "next_frontier_on_termination":"T3R1_CURRENT_SEASON_TERMINATED",
+  "next_frontier_on_conflict":"T3R1_LIFECYCLE_CONFLICT_ADJUDICATION",
+  "next_frontier_on_horizon_expiry":"T3R1_LIFECYCLE_HORIZON_EXPIRED"
 }
