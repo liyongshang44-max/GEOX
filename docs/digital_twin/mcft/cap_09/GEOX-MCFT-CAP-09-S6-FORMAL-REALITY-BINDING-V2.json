@@ -4,7 +4,7 @@
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S6",
   "record_status": "T3R1_FORMAL_SUCCESSOR_REALITY_BINDING_CANDIDATE",
-  "exact_predecessor_protected_main": "868d3e6b6bcc9af12f7a1866a39061ea92d5c190",
+  "exact_predecessor_protected_main": "6081a363a665b7882bbca7592213ee49395872d7",
   "reality_class": "EXTERNAL_PUBLIC_RESEARCH_SCOPE",
   "represented_site_id": "KBS_MCSE_T3R1",
   "successor_of": {
