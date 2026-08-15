@@ -1,0 +1,725 @@
+name: mcft-cap-09-ea5e2-operational-activation-live
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-ea5e2-operational-activation-live-v1
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  READINESS_DB_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+  MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
+  MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+  MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+  MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+  MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+  MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+  FORMAL_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+
+jobs:
+  live-window-viability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      target_t: ${{ steps.viability.outputs.target_t }}
+      subject_sha: ${{ steps.subject.outputs.subject_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Bind exact candidate subject
+        id: subject
+        shell: bash
+        run: echo "subject_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Require successful successor runner qualification for this exact head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml/runs?head_sha=${GITHUB_SHA}&status=completed&per_page=100"
+          successes="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "$api" | jq '[.workflow_runs[] | select(.head_sha==env.GITHUB_SHA and .conclusion=="success")] | length')"
+          test "$successes" -ge 1 || { echo 'SUCCESSOR_RUNNER_EXACT_HEAD_QUALIFICATION_REQUIRED' >&2; exit 1; }
+
+      - name: Evaluate read-only EA5E2 live-window viability before any live activation side effect
+        id: viability
+        env:
+          SUBJECT_SHA: ${{ github.sha }}
+          PYTHON: python
+        run: node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs
+
+      - name: Upload metadata-only live-window viability proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-live-window-viability-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  formal-snapshot-readiness:
+    needs: live-window-viability
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.live-window-viability.outputs.subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Prove primary Formal Neon identity, A0 and pointer graph read-only
+        env:
+          MCFT_EA5E2_SUBJECT_SHA: ${{ needs.live-window-viability.outputs.subject_sha }}
+          FORMAL_DATABASE_URL: ${{ env.FORMAL_DATABASE_URL }}
+        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts
+      - name: Upload Formal snapshot readiness proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-formal-snapshot-readiness-${{ needs.live-window-viability.outputs.subject_sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  pre-boundary:
+    needs: [live-window-viability, formal-snapshot-readiness]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    outputs:
+      target_t: ${{ steps.target.outputs.target_t }}
+      subject_sha: ${{ steps.target.outputs.subject_sha }}
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.live-window-viability.outputs.subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+
+      - name: Require protected-main subject and unchanged activation boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          node scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs
+          echo "EA5E2_ACTIVATION_EXACT_PROTECTED_MAIN_SUBJECT=$GITHUB_SHA"
+
+      - name: Require existing private R2 and Formal read-only bindings without exposing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in \
+            MCFT_EA5E2_TRANSIENT_S3_ENDPOINT \
+            MCFT_EA5E2_TRANSIENT_S3_BUCKET \
+            MCFT_EA5E2_TRANSIENT_S3_REGION \
+            MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID \
+            MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY \
+            FORMAL_DATABASE_URL
+          do
+            if [ -z "${!name:-}" ]; then
+              echo "MISSING_REQUIRED_PRIVATE_BINDING:$name"
+              missing=1
+            else
+              echo "PRESENT_REQUIRED_PRIVATE_BINDING:$name"
+            fi
+          done
+          test "$missing" -eq 0
+
+      - name: Download metadata-only live-window viability proof
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-live-window-viability-${{ needs.live-window-viability.outputs.subject_sha }}
+          path: acceptance-output/viability
+
+      - name: Download Formal snapshot readiness proof
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-formal-snapshot-readiness-${{ needs.live-window-viability.outputs.subject_sha }}
+          path: acceptance-output/formal-readiness
+
+      - name: Prove private transient R2 round trip and cleanup with non-provider random bytes
+        env:
+          MCFT_EA5E2_LIVE_PHASE: TRANSIENT_STORE_SMOKE
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+
+      - name: Remove smoke-only cleanup ledger before real provider phase
+        shell: bash
+        run: rm -f acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
+
+      - name: Reobserve KBS metadata for phase-aware planning without weakening late retrieval authority
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py inspect-kbs \
+            | tee acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
+
+      - name: Bind provider-compatible target T selected by read-only viability preflight
+        id: target
+        shell: node {0}
+        env:
+          SUBJECT_SHA: ${{ needs.live-window-viability.outputs.subject_sha }}
+          CANDIDATE_T: ${{ needs.live-window-viability.outputs.target_t }}
+        run: |
+          const fs=require('fs');
+          const now=new Date();
+          const MIN_PRE_BOUNDARY_LEAD_MINUTES=20;
+          const PRE_BOUNDARY_OFFSET_MINUTES=30;
+          const targetText=process.env.CANDIDATE_T;
+          const targetMs=Date.parse(targetText);
+          if(!Number.isFinite(targetMs)||new Date(targetMs).toISOString()!==targetText||!targetText.endsWith(':00:00.000Z')) throw new Error('EA5E2_ACTIVATION_PROVIDER_COMPATIBLE_TARGET_REQUIRED');
+          const preBoundaryLeadMinutes=((targetMs-PRE_BOUNDARY_OFFSET_MINUTES*60000)-now.getTime())/60000;
+          if(preBoundaryLeadMinutes<MIN_PRE_BOUNDARY_LEAD_MINUTES) throw new Error('EA5E2_ACTIVATION_PREBOUNDARY_LEAD_GUARD_FAILED');
+          const subject=process.env.SUBJECT_SHA;
+          if(!/^[0-9a-f]{40}$/.test(subject)) throw new Error('EA5E2_ACTIVATION_EXACT_SUBJECT_SHA_REQUIRED');
+          const viability=JSON.parse(fs.readFileSync('acceptance-output/viability/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json','utf8'));
+          if(viability.status!=='PASS'||viability.candidate_T!==targetText||viability.live_activation_started!==false||viability.authority_changed!==false) throw new Error('EA5E2_ACTIVATION_VIABILITY_PASS_REQUIRED');
+          if(viability.crop_candidate?.target_setup_budget_minutes!==120||viability.authority_audit?.target_setup_budget_is_separate_from_kbs_freshness_headroom!==true) throw new Error('EA5E2_ACTIVATION_SEPARATE_TARGET_SETUP_BUDGET_REQUIRED');
+          if(viability.timing_budget_qualification?.status!=='PASS'||viability.late_exact_t_processing_budget?.dispatch_allowed!==true||viability.observer_end_to_end_budget?.dispatch_allowed!==true) throw new Error('EA5E2_ACTIVATION_EXACT_MAIN_TIMING_BUDGET_QUALIFICATION_REQUIRED');
+          if(viability.ea5e2_live_protocol_compatibility?.target_scheduling_mode!=='PHASE_AWARE_LONG_HORIZON'||viability.ea5e2_live_protocol_compatibility?.compatible!==true) throw new Error('EA5E2_ACTIVATION_PHASE_AWARE_PROTOCOL_REQUIRED');
+          if(viability.crop_candidate?.target_temporal_feasibility?.feasible!==true||viability.crop_candidate?.target_temporal_feasibility?.actual_same_source_exact_t_poll_still_required!==true) throw new Error('EA5E2_ACTIVATION_TARGET_SPECIFIC_TEMPORAL_FEASIBILITY_REQUIRED');
+          const kbsPlanning=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json','utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));
+          if(kbsPlanning.status!=='OBSERVED'||kbsPlanning.phase_aware_planning_only!==true||kbsPlanning.late_actual_retrieval_must_reprove_authority!==true||kbsPlanning.configured_max_age_hours!==6) throw new Error('EA5E2_ACTIVATION_KBS_PHASE_AWARE_PLANNING_BOUNDARY_REQUIRED');
+          const observer=new Date(targetMs+437*60000);
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json',JSON.stringify({
+            schema_version:'geox_mcft_cap09_ea5e2_operational_activation_target_v2',
+            subject_sha:subject,
+            selected_at:now.toISOString(),
+            target_t:targetText,
+            expected_observer_time:observer.toISOString(),
+            pre_boundary_offset_minutes:-30,
+            minimum_pre_boundary_lead_minutes:MIN_PRE_BOUNDARY_LEAD_MINUTES,
+            minimum_target_setup_budget_minutes:120,
+            target_scheduling_mode:'PHASE_AWARE_LONG_HORIZON',
+            target_specific_temporal_feasibility:viability.crop_candidate.target_temporal_feasibility,
+            pre_boundary_lead_minutes:preBoundaryLeadMinutes,
+            live_window_viability_preflight_pass:true,
+            live_window_viability_schema:viability.schema_version,
+            epoch_independent:true,
+            qualification_only:true,
+            formal_effectiveness:false
+          },null,2)+'\n');
+          console.log(`target_t=${targetText}`);
+          console.log(`pre_boundary_lead_minutes=${preBoundaryLeadMinutes}`);
+          console.log(`subject_sha=${subject}`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`target_t=${targetText}\nsubject_sha=${subject}\n`);
+
+      - name: Prove one complete same-cycle GFS PGRB2 plus SFLUX set before provider execution
+        env:
+          TARGET_T: ${{ steps.target.outputs.target_t }}
+        run: |
+          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py probe-gfs \
+            --target "$TARGET_T" \
+            --output acceptance-output/MCFT_CAP_09_EA5E2_GFS_SAME_CYCLE_READINESS.json
+
+      - name: Fail fast unless selected T has one conservative frozen crop stage
+        env:
+          TARGET_T: ${{ steps.target.outputs.target_t }}
+        run: node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs
+
+      - name: Execute real pre-boundary provider phase with private transient R2 and isolated DB
+        env:
+          MCFT_EA5E2_ISOLATED_READINESS_ACK: 'true'
+          MCFT_EA5E2_LIVE_PHASE: PRE_BOUNDARY_CAUSAL
+          MCFT_EA5E2_TARGET_T: ${{ steps.target.outputs.target_t }}
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+
+      - name: Upload PRE attempt cleanup ledger even when provider phase fails
+        if: ${{ always() && steps.target.outputs.target_t != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-pre-cleanup-refs-${{ steps.target.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_PHASE_FAILURE_CLEANUP.json
+          if-no-files-found: warn
+          retention-days: 1
+
+      - name: Verify pre-boundary proof is public-safe metadata only
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json','utf8'));
+          if(p.status!=='PASS'||p.canonical_fact_write_count!==3) throw new Error('EA5E2_PREBOUNDARY_THREE_FACTS_REQUIRED');
+          if(p.soil_observation_inside_t_minus_15_to_t!==true||p.soil_polling_begins_at_authorized_window_open!==true||p.gfs_soil_acquisition_parallel!==true||p.gfs_same_cycle_pair!==true) throw new Error('EA5E2_PREBOUNDARY_CAUSAL_FAMILY_PROOF_REQUIRED');
+          if(p.failure_cleanup_local_tracking_enabled!==true) throw new Error('EA5E2_PREBOUNDARY_LOCAL_FAILURE_CLEANUP_REQUIRED');
+          if(p.transient_root_prefix!=='mcft-cap09-ea5e2-readiness-transient-v1'||p.formal_raw_prefix_write_count!==0) throw new Error('EA5E2_PRIVATE_TRANSIENT_PREFIX_REQUIRED');
+          if(p.public_value_artifact_count!==0||p.raw_values_emitted!==false) throw new Error('EA5E2_PUBLIC_VALUE_ARTIFACT_FORBIDDEN');
+          if(p.formal_database_write_count!==0||p.formal_r2_write_count!==0||p.formal_window_started!==false) throw new Error('EA5E2_PREBOUNDARY_NONCLAIM_REQUIRED');
+          if(!p.rehydration_manifest||!Array.isArray(p.rehydration_manifest.expected_records)||p.rehydration_manifest.expected_records.length!==3) throw new Error('EA5E2_SAFE_REHYDRATION_METADATA_REQUIRED');
+
+      - name: Upload metadata-only inter-phase proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-interphase-${{ steps.target.outputs.subject_sha }}
+          path: |
+            acceptance-output/viability/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json
+            acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
+            acceptance-output/formal-readiness/MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.json
+            acceptance-output/MCFT_CAP_09_EA5E2_GFS_SAME_CYCLE_READINESS.json
+            acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json
+            acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_SMOKE.json
+          if-no-files-found: error
+          retention-days: 1
+
+  wait-one:
+    needs: pre-boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 190
+    steps:
+      - name: Wait only until T plus 2h45m
+        shell: node {0}
+        env:
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        run: |
+          const target=Date.parse(process.env.TARGET_T)+165*60000;
+          if(!Number.isFinite(target)) throw new Error('EA5E2_WAIT_ONE_TARGET_INVALID');
+          const remaining=Math.max(0,target-Date.now());
+          if(remaining>185*60000) throw new Error(`EA5E2_WAIT_ONE_TOO_LONG:${remaining}`);
+          console.log(JSON.stringify({wait_until:new Date(target).toISOString(),remaining_minutes:remaining/60000}));
+          await new Promise(r=>setTimeout(r,remaining));
+
+  wait-two:
+    needs: [pre-boundary, wait-one]
+    runs-on: ubuntu-latest
+    timeout-minutes: 190
+    steps:
+      - name: Wait only until T plus 5h30m
+        shell: node {0}
+        env:
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        run: |
+          const target=Date.parse(process.env.TARGET_T)+330*60000;
+          if(!Number.isFinite(target)) throw new Error('EA5E2_WAIT_TWO_TARGET_INVALID');
+          const remaining=Math.max(0,target-Date.now());
+          if(remaining>185*60000) throw new Error(`EA5E2_WAIT_TWO_TOO_LONG:${remaining}`);
+          console.log(JSON.stringify({wait_until:new Date(target).toISOString(),remaining_minutes:remaining/60000}));
+          await new Promise(r=>setTimeout(r,remaining));
+
+  late-exact-hour:
+    needs: [pre-boundary, wait-two]
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.pre-boundary.outputs.subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+
+      - name: Download metadata-only inter-phase proof
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-interphase-${{ needs.pre-boundary.outputs.subject_sha }}
+          path: acceptance-output
+
+      - name: Recheck protected-main activation boundary before late phase
+        run: |
+          git fetch --no-tags origin main
+          node scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs
+
+      - name: Poll same-source exact-T availability by T+407 while preserving frozen T+432 cutoff
+        env:
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        run: |
+          python scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py \
+            --target "$TARGET_T" \
+            --output acceptance-output/MCFT_CAP_09_EA5E2_LATE_EXACT_T_AVAILABILITY_POLL.json
+
+      - name: Execute retained-raw semantic rehydration then real delayed exact-hour phase
+        env:
+          MCFT_EA5E2_ISOLATED_READINESS_ACK: 'true'
+          MCFT_EA5E2_LIVE_PHASE: LATE_EXACT_HOUR
+          MCFT_EA5E2_TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+
+      - name: Require real late collector completion before frozen evidence cutoff
+        shell: node {0}
+        env:
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        run: |
+          const cutoff=Date.parse(process.env.TARGET_T)+432*60000;
+          if(Date.now()>cutoff) throw new Error(`EA5E2_ACTIVATION_REAL_COLLECTOR_MISSED_FROZEN_CUTOFF:${new Date().toISOString()}`);
+
+      - name: Verify complete same-T two-phase provider and DB-only handoff proof
+        shell: node {0}
+        env:
+          SUBJECT_SHA: ${{ needs.pre-boundary.outputs.subject_sha }}
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        run: |
+          const fs=require('fs');
+          const target=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json','utf8'));
+          const availability=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LATE_EXACT_T_AVAILABILITY_POLL.json','utf8'));
+          const pre=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json','utf8'));
+          const late=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json','utf8'));
+          if(target.subject_sha!==process.env.SUBJECT_SHA||target.target_t!==process.env.TARGET_T||target.epoch_independent!==true||target.live_window_viability_preflight_pass!==true) throw new Error('EA5E2_ACTIVATION_TARGET_IDENTITY_MISMATCH');
+          if(availability.status!=='PASS'||availability.target_t!==process.env.TARGET_T||availability.same_source_exact_t_only!==true||availability.late_semantic_availability_polling!==true||availability.exact_target_row_count!==1) throw new Error('EA5E2_ACTIVATION_LATE_SEMANTIC_AVAILABILITY_POLL_REQUIRED');
+          if(availability.raw_retention_count!==0||availability.canonical_write_count!==0||availability.formal_database_write_count!==0||availability.raw_values_emitted!==false) throw new Error('EA5E2_ACTIVATION_LATE_POLL_READ_ONLY_BOUNDARY_REQUIRED');
+          if(Date.parse(availability.semantic_poll_deadline)!==Date.parse(process.env.TARGET_T)+407*60000||Date.parse(availability.late_exact_hour_cutoff)!==Date.parse(process.env.TARGET_T)+432*60000||availability.collector_processing_budget_minutes!==25||availability.discovery_deadline_is_collector_deadline!==false) throw new Error('EA5E2_ACTIVATION_LATE_POLL_CLOCK_DRIFT');
+          if(pre.status!=='PASS'||late.status!=='PASS'||pre.target_logical_time!==late.target_logical_time||late.target_logical_time!==process.env.TARGET_T) throw new Error('EA5E2_ACTIVATION_SAME_TARGET_TWO_PHASE_REQUIRED');
+          if(pre.canonical_fact_write_count!==3||late.pre_rehydrated_fact_count!==3||late.late_canonical_fact_write_count!==2||late.database_exact_fact_count!==5||late.db_only_selected_record_count!==5) throw new Error('EA5E2_ACTIVATION_EXACT_FIVE_FAMILY_DB_REQUIRED');
+          if(late.pre_rehydration_semantic_hash_match!==true||late.pre_raw_retention_reverified!==true||late.pre_rehydration_provider_request_count!==0) throw new Error('EA5E2_ACTIVATION_PRIVATE_REHYDRATION_PROOF_REQUIRED');
+          if(late.late_transport_max_attempts!==3||late.late_transport_retry_scope!=='SAME_SOURCE_TRANSIENT_ONLY') throw new Error('EA5E2_ACTIVATION_BOUNDED_SAME_SOURCE_TRANSPORT_RETRY_REQUIRED');
+          if(pre.gfs_same_cycle_pair!==true||late.same_gfs_cycle_future_weather_et0!==true||late.exact_rain_et0_interval_t_minus_1_to_t!==true||late.post_t_future_forcing_excluded!==true) throw new Error('EA5E2_ACTIVATION_CAUSALITY_PROOF_REQUIRED');
+          if(pre.formal_raw_prefix_write_count!==0||late.formal_raw_prefix_write_count!==0||pre.public_value_artifact_count!==0||late.public_value_artifact_count!==0) throw new Error('EA5E2_ACTIVATION_FORMAL_PREFIX_OR_PUBLIC_VALUE_WRITE_FORBIDDEN');
+          if(pre.raw_values_emitted!==false||late.raw_values_emitted!==false) throw new Error('EA5E2_ACTIVATION_RAW_VALUE_PUBLICATION_FORBIDDEN');
+          for(const value of [pre.formal_database_write_count,pre.formal_r2_write_count,late.formal_database_write_count,late.formal_r2_write_count,late.scheduler_write_count,late.canonical_runtime_write_count]) if(value!==0) throw new Error('EA5E2_ACTIVATION_FORMAL_SIDE_EFFECT_FORBIDDEN');
+
+      - name: Wait until actual Runtime observer T plus 7h17m
+        shell: node {0}
+        env:
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        run: |
+          const observer=Date.parse(process.env.TARGET_T)+437*60000;
+          if(!Number.isFinite(observer)) throw new Error('EA5E2_ACTIVATION_OBSERVER_TARGET_INVALID');
+          const remaining=Math.max(0,observer-Date.now());
+          if(remaining>70*60000) throw new Error(`EA5E2_ACTIVATION_OBSERVER_WAIT_TOO_LONG:${remaining}`);
+          console.log(JSON.stringify({wait_until:new Date(observer).toISOString(),remaining_minutes:remaining/60000}));
+          await new Promise(r=>setTimeout(r,remaining));
+
+      - name: Recheck protected-main boundary and Formal snapshot before observer
+        env:
+          MCFT_EA5E2_SUBJECT_SHA: ${{ needs.pre-boundary.outputs.subject_sha }}
+          FORMAL_DATABASE_URL: ${{ env.FORMAL_DATABASE_URL }}
+        run: |
+          git fetch --no-tags origin main
+          node scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs
+          pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts
+
+      - name: Require observer operational start by T plus 7h22m
+        env:
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        shell: node {0}
+        run: |
+          const target=Date.parse(process.env.TARGET_T);
+          if(!Number.isFinite(target)) throw new Error('EA5E2_ACTIVATION_OBSERVER_TARGET_INVALID');
+          const operationalStartDeadline=target+442*60000;
+          const frozenMaximumStart=target+447*60000;
+          if(Date.now()>frozenMaximumStart) throw new Error('EA5E2_ACTIVATION_OBSERVER_FROZEN_MAX_START_SKEW_MISSED');
+          if(Date.now()>operationalStartDeadline) throw new Error('EA5E2_ACTIVATION_OBSERVER_OPERATIONAL_START_DEADLINE_MISSED');
+
+      - name: Execute actual T plus 7h17m DB-only External CAP04 observer
+        env:
+          MCFT_EA5E2_TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+          MCFT_EA5E2_SUBJECT_SHA: ${{ needs.pre-boundary.outputs.subject_sha }}
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          FORMAL_DATABASE_URL: ${{ env.FORMAL_DATABASE_URL }}
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts
+
+      - name: Require observer completion inside reserved five-minute processing budget
+        env:
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        shell: node {0}
+        run: |
+          const deadline=Date.parse(process.env.TARGET_T)+447*60000;
+          if(!Number.isFinite(deadline)) throw new Error('EA5E2_ACTIVATION_OBSERVER_TARGET_INVALID');
+          if(Date.now()>deadline) throw new Error('EA5E2_ACTIVATION_OBSERVER_PROCESSING_RESERVATION_MISSED');
+
+      - name: Freeze metadata-only operational activation live proof candidate
+        shell: node {0}
+        env:
+          SUBJECT_SHA: ${{ needs.pre-boundary.outputs.subject_sha }}
+          TARGET_T: ${{ needs.pre-boundary.outputs.target_t }}
+        run: |
+          const fs=require('fs');
+          require('child_process').execFileSync('git',['fetch','--no-tags','origin','main'],{stdio:'inherit'});
+          require('child_process').execFileSync('node',['scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs'],{stdio:'inherit'});
+          const kbs=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json','utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));
+          const target=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json','utf8'));
+          const viability=JSON.parse(fs.readFileSync('acceptance-output/viability/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json','utf8'));
+          const availability=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LATE_EXACT_T_AVAILABILITY_POLL.json','utf8'));
+          const crop=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json','utf8'));
+          const pre=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json','utf8'));
+          const late=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json','utf8'));
+          const observer=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json','utf8'));
+          const soilP95=Number(viability.soil_global_publication_lag_diagnostic?.p95_minutes);
+          if(!Number.isFinite(soilP95)) throw new Error('EA5E2_ACTIVATION_SOIL_GLOBAL_P95_PRODUCER_REQUIRED');
+          if(kbs.status!=='OBSERVED'||kbs.phase_aware_planning_only!==true||kbs.late_actual_retrieval_must_reprove_authority!==true||Number(kbs.configured_max_age_hours)!==6) throw new Error('EA5E2_ACTIVATION_KBS_PHASE_AWARE_PLANNING_BOUNDARY_REQUIRED');
+          if(viability.status!=='PASS'||viability.candidate_T!==process.env.TARGET_T||viability.authority_changed!==false||viability.live_activation_started!==false) throw new Error('EA5E2_ACTIVATION_LIVE_WINDOW_VIABILITY_REQUIRED');
+          if(viability.timing_budget_qualification?.status!=='PASS'||viability.late_exact_t_processing_budget?.qualification_status!=='QUALIFIED_EXACT_MAIN_2X_SAFETY'||viability.observer_end_to_end_budget?.qualification_status!=='QUALIFIED_EXACT_MAIN_2X_SAFETY') throw new Error('EA5E2_ACTIVATION_EXACT_MAIN_TIMING_BUDGET_QUALIFICATION_REQUIRED');
+          if(availability.status!=='PASS'||availability.target_t!==process.env.TARGET_T||availability.same_source_exact_t_only!==true||Number(availability.latest_age_hours)>6) throw new Error('EA5E2_ACTIVATION_LATE_AVAILABILITY_AND_FRESHNESS_AUTHORITY_REQUIRED');
+          if(target.subject_sha!==process.env.SUBJECT_SHA||target.target_t!==process.env.TARGET_T||crop.target_t!==process.env.TARGET_T||observer.subject_sha!==process.env.SUBJECT_SHA||observer.target_t!==process.env.TARGET_T) throw new Error('EA5E2_ACTIVATION_PROOF_IDENTITY_MISMATCH');
+          if(target.pre_boundary_offset_minutes!==-30||target.minimum_pre_boundary_lead_minutes!==20||Number(target.pre_boundary_lead_minutes)<20) throw new Error('EA5E2_ACTIVATION_TARGET_PREBOUNDARY_LEAD_REQUIRED');
+          if(crop.status!=='PASS'||crop.provider_request_count!==0||crop.database_write_count!==0||crop.crop_stage_code!==observer.crop_stage_code) throw new Error('EA5E2_ACTIVATION_TARGET_CROP_PREFLIGHT_MUST_MATCH_OBSERVER');
+          if(pre.status!=='PASS'||late.status!=='PASS'||observer.status!=='PASS') throw new Error('EA5E2_ACTIVATION_ALL_PHASES_PASS_REQUIRED');
+          if(observer.db_only_runtime!==true||observer.provider_request_count!==0||observer.selected_record_count!==5||observer.disposition!=='A1'||observer.forecast_status!=='COMPLETED'||observer.forecast_point_count!==72) throw new Error('EA5E2_ACTIVATION_EXTERNAL_CAP04_A1_COMPLETED_72_REQUIRED');
+          if(observer.formal_database_access_mode!=='READ_ONLY_A0_HANDOFF_ONLY'||observer.formal_database_write_count!==0||observer.scheduler_slot_count!==0||observer.scheduler_cursor_count!==0) throw new Error('EA5E2_ACTIVATION_FORMAL_READ_ONLY_BOUNDARY_REQUIRED');
+          const proof={
+            schema_version:'geox_mcft_cap09_ea5e2_operational_activation_live_proof_v2',
+            status:'PASS',
+            subject_sha:process.env.SUBJECT_SHA,
+            target_t:process.env.TARGET_T,
+            live_window_viability_preflight_pass:true,
+            soil_first_seen_transition_count:viability.soil_first_seen_evidence.transition_count,
+            soil_publication_lag_observed_p95_minutes:soilP95,
+            late_semantic_availability_polling:true,
+            late_semantic_first_available_at:availability.first_semantically_available_at,
+            late_semantic_poll_attempt_count:availability.attempt_count,
+            kbs_preboundary_planning_latest_raw_hourly_timestamp:kbs.latest_raw_hourly_timestamp,
+            kbs_preboundary_planning_latest_age_hours:kbs.latest_age_hours,
+            kbs_late_authority_latest_raw_hourly_timestamp:availability.latest_timestamp,
+            kbs_late_authority_latest_age_hours:availability.latest_age_hours,
+            kbs_max_age_hours:6,
+            pre_boundary_collector_offset_minutes:-30,
+            minimum_pre_boundary_lead_minutes:20,
+            selected_pre_boundary_lead_minutes:target.pre_boundary_lead_minutes,
+            late_exact_hour_collector_offset_minutes:390,
+            late_exact_t_discovery_deadline_offset_minutes:407,
+            late_collector_processing_reservation_minutes:25,
+            late_collector_timing_safety_adjusted_max_elapsed_ms:viability.late_exact_t_processing_budget.safety_adjusted_max_elapsed_ms,
+            scheduler_eligibility_lag_hours:7,
+            late_exact_hour_cutoff_offset_minutes:432,
+            runtime_observer_offset_minutes:437,
+            observer_operational_start_deadline_offset_minutes:442,
+            observer_processing_reservation_minutes:5,
+            observer_timing_safety_adjusted_max_elapsed_ms:viability.observer_end_to_end_budget.safety_adjusted_max_elapsed_ms,
+            observer_actual_at:observer.observed_at,
+            observer_start_skew_minutes:observer.observer_start_skew_minutes,
+            crop_stage_code:observer.crop_stage_code,
+            crop_context_hash:observer.crop_context_hash,
+            target_crop_consensus_preflight_pass:true,
+            same_gfs_cycle:true,
+            gfs_soil_acquisition_parallel:true,
+            bounded_same_source_transport_retry:true,
+            exact_five_family_db:true,
+            db_only_runtime:true,
+            external_cap04_disposition:'A1',
+            forecast_status:'COMPLETED',
+            forecast_point_count:72,
+            public_value_bearing_artifact_count:0,
+            public_raw_value_emission_count:0,
+            formal_database_write_count:0,
+            formal_raw_prefix_write_count:0,
+            scheduler_write_count:0,
+            canonical_runtime_write_count:0,
+            source_substitution_count:0,
+            timestamp_relabel_count:0,
+            accelerated_clock:false,
+            operational_activation_live_proof_pass:true,
+            ea5e2_operational_activation_qualified:false,
+            effectiveness_pending_evidence_freeze:true,
+            formal_window_started:false,
+            ea5e3_authorized:false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_LIVE_PROOF.json',JSON.stringify(proof,null,2)+'\n');
+          console.log(JSON.stringify(proof));
+
+      - name: Upload immutable metadata-only operational activation candidate proof and cleanup refs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-operational-activation-${{ needs.pre-boundary.outputs.subject_sha }}
+          path: |
+            acceptance-output/viability/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json
+            acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
+            acceptance-output/formal-readiness/MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.json
+            acceptance-output/MCFT_CAP_09_EA5E2_GFS_SAME_CYCLE_READINESS.json
+            acceptance-output/MCFT_CAP_09_EA5E2_LIVE_TARGET.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json
+            acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json
+            acceptance-output/MCFT_CAP_09_EA5E2_LATE_EXACT_T_AVAILABILITY_POLL.json
+            acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json
+            acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json
+            acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_LIVE_PROOF.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_PHASE_FAILURE_CLEANUP.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  cleanup-transient:
+    needs: [pre-boundary, wait-one, wait-two, late-exact-hour]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download PRE attempt cleanup ledger when present
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-pre-cleanup-refs-${{ github.sha }}
+          path: acceptance-output/pre-attempt
+
+      - name: Download pre-boundary safe metadata when present
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-interphase-${{ github.sha }}
+          path: acceptance-output/pre
+
+      - name: Download activation metadata when present
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-operational-activation-${{ github.sha }}
+          path: acceptance-output/late
+
+      - name: Flatten metadata-only JSONs for exact-head cleanup discovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          copied=0
+          for dir in acceptance-output/pre-attempt acceptance-output/pre acceptance-output/late; do
+            if [ ! -d "$dir" ]; then continue; fi
+            while IFS= read -r -d '' file; do
+              digest="$(printf '%s' "$file" | sha256sum | awk '{print $1}')"
+              cp "$file" "acceptance-output/cleanup-${digest}.json"
+              copied=$((copied+1))
+            done < <(find "$dir" -type f -name '*.json' -print0)
+          done
+          echo "EA5E2_CLEANUP_METADATA_FILES_COPIED=$copied"
+
+      - name: Delete every exact-head transient R2 object found in safe metadata
+        env:
+          MCFT_EA5E2_LIVE_PHASE: CLEANUP_TRANSIENT
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+
+      - name: Verify cleanup deletes every discovered exact-head transient ref
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_CLEANUP.json','utf8'));
+          if(p.status!=='PASS'||p.discovered_ref_count!==p.deleted_ref_count) throw new Error('EA5E2_TRANSIENT_CLEANUP_DISCOVERED_DELETED_MISMATCH');
+          if(p.formal_raw_prefix_delete_count!==0||p.raw_values_emitted!==false||p.public_value_artifact_count!==0) throw new Error('EA5E2_TRANSIENT_CLEANUP_BOUNDARY_DRIFT');
+
+      - name: Upload metadata-only cleanup proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-transient-cleanup-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_CLEANUP.json
+          if-no-files-found: warn
+          retention-days: 90
