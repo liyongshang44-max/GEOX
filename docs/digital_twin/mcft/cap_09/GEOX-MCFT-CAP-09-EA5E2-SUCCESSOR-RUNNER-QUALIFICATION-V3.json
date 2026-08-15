@@ -1,0 +1,119 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5e2_successor_runner_qualification_v3",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5E2-SUCCESSOR-RUNNER-QUALIFICATION-V3",
+  "record_status": "CURRENT_T3R1_ROLLING_SUCCESSOR_QUALIFICATION_CANDIDATE_NOT_OPERATIONAL_ACTIVATION",
+  "exact_predecessor_protected_main": "d1590e1ab61bb942077aacf638a0a7c88ed6db5f",
+  "supersedes_current_orchestration_role_of": "GEOX-MCFT-CAP-09-EA5E2-SUCCESSOR-RUNNER-QUALIFICATION-V2",
+  "historical_v1_v2_authorities_preserved": true,
+  "historical_long_horizon_qualification_reused_as_activation_authority": false,
+  "successor_qualification_reexecution_required_per_exact_head": true,
+  "final_activation_orchestration": {
+    "mode": "ROLLING_PREBOUNDARY_BATCH_INTERSECTION",
+    "live_workflow": ".github/workflows/mcft-cap-09-ea5e2-rolling-operational-activation-live.yml",
+    "rolling_capture_workflow": ".github/workflows/mcft-cap-09-rolling-preboundary-capture.yml",
+    "rolling_intersection_workflow": ".github/workflows/mcft-cap-09-rolling-kbs-intersection.yml",
+    "future_t_long_horizon_wait_activation_authority": false,
+    "historical_long_horizon_workflow_path": ".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml",
+    "historical_long_horizon_workflow_classification": "ENGINEERING_PROBE_ONLY_NOT_CURRENT_ACTIVATION_AUTHORITY"
+  },
+  "provider_temporal_semantics": {
+    "authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "publication_cadence": "DAILY_BATCH",
+    "observation_resolution": "HOURLY",
+    "same_source_exact_t_required": true,
+    "historical_online_freshness_diagnostic_hours": 6,
+    "six_hour_freshness_is_late_authoritative_admission_gate": false,
+    "fixed_t_plus_432_normative_evidence_cutoff": false,
+    "fixed_t_plus_437_normative_observer_time": false,
+    "source_substitution_authorized": false,
+    "interpolation_authorized": false,
+    "persistence_fill_authorized": false,
+    "timestamp_relabel_authorized": false
+  },
+  "rolling_candidate_contract": {
+    "preboundary_capture_period": "HOURLY",
+    "candidate_retention_hours": 36,
+    "kbs_daily_batch_required_at_capture": false,
+    "crop_authority_required_at_capture": false,
+    "raw_retention_before_canonicalization_required": true,
+    "actual_first_seen_retrieved_available_ingested_chronology_required": true,
+    "selection_policy": "OLDEST_CROP_LEGAL_EXACT_TARGET_FIRST",
+    "crop_authority_intersection_required_before_kbs_selection": true,
+    "future_crop_observations_authorized": false
+  },
+  "qualification_attempt_budget_semantics": {
+    "historical_future_t_probe_poll_start_offset_minutes": 390,
+    "historical_future_t_probe_discovery_deadline_offset_minutes": 407,
+    "historical_future_t_probe_attempt_end_offset_minutes": 432,
+    "historical_future_t_probe_processing_reservation_minutes": 25,
+    "these_offsets_are_normative_evidence_authority": false,
+    "evidence_eligibility_has_fixed_t_plus_432_cutoff": false,
+    "timing_evidence_v2_role": "HISTORICAL_ENGINEERING_PERFORMANCE_EVIDENCE_ONLY",
+    "timing_evidence_v2_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-TIMING-BUDGET-QUALIFICATION-V2.json"
+  },
+  "formal_snapshot_binding": {
+    "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h",
+    "neon_project_id": "delicate-glade-62464340",
+    "neon_branch_id": "br-cold-dust-a6lfsdak",
+    "persisted_a0_authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-PERSISTED-A0-AUTHORITY-V1.json",
+    "persisted_a0_authority_blob_sha": "e44b43d71d339c39e017737d44c7c9a17a67f5be",
+    "a0_runtime_config_ref": "external_formal_runtime_config_49959a28cfc9eb357bf18f9d",
+    "a0_runtime_config_hash": "sha256:5f11788fd049a3eae190d566e6faa28f428637e11f2c90b4e0aaea67e6f14e48",
+    "pointer_graph_read_only_preflight_required": true,
+    "scheduler_must_remain_unstarted": true,
+    "formal_write_authorized": false,
+    "cross_scope_stitching_authorized": false
+  },
+  "scope_binding": {
+    "tenant_id": "tenant_mcft_external",
+    "project_id": "project_mcft_cap09",
+    "group_id": "group_public_research",
+    "field_id": "field_kbs_mcse_t3r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t3r1_crop_formal_v1"
+  },
+  "observer_semantics": {
+    "runner": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts",
+    "execution_clock": "ACTUAL_WALL_CLOCK",
+    "evidence_snapshot_time": "ACTUAL_OBSERVER_EXECUTION_SNAPSHOT",
+    "fixed_t_plus_437_required": false,
+    "fixed_t_plus_432_evidence_snapshot_required": false,
+    "db_only_exact_five_required": true,
+    "formal_a0_access": "READ_ONLY",
+    "external_cap04_expected_disposition": "A1",
+    "forecast_expected_status": "COMPLETED",
+    "forecast_expected_point_count": 72
+  },
+  "exact_head_qualification_proof": {
+    "rolling_capture_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CAPTURE.cjs",
+    "rolling_intersection_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs",
+    "rolling_activation_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs",
+    "runtime_dependency_graph_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs",
+    "successor_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V3.cjs",
+    "zero_static_blockers_required": true,
+    "qualification_workflow_success_required_for_same_head_sha": true
+  },
+  "dispatch_effect_boundary": {
+    "successful_exact_head_successor_workflow_may_unlock_manual_rolling_ea5e2_live_dispatch": true,
+    "ea5e2_operational_activation_qualified_by_this_record": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "formal_execution_count": "0/24",
+    "scheduler_started": false,
+    "mcft_cap09_completed": false
+  },
+  "expected_live_dispatch_blockers_after_exact_head_successor_pass": [],
+  "hard_nonclaims": [
+    "NO_EA5E2_OPERATIONAL_ACTIVATION_RESULT",
+    "NO_FORMAL_O00_START",
+    "NO_SCHEDULER_START",
+    "NO_T1R1_REUSE_OR_RELABEL",
+    "NO_CROSS_SCOPE_STITCHING",
+    "NO_SOURCE_SUBSTITUTION",
+    "NO_INTERPOLATION",
+    "NO_PERSISTENCE_FILL",
+    "NO_TIMESTAMP_RELABEL",
+    "NO_RAW_VALUES_PUBLISHED",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
