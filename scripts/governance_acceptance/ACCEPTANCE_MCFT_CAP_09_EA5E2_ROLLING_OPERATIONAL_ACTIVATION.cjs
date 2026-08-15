@@ -25,8 +25,8 @@ const observer = read(OBSERVER);
 const drift = read(DRIFT);
 
 for (const marker of [
-  "EA5E2 qualification SHALL stop using the following workflow shape",
-  "choose future `T`",
+  "EA5E2 qualification SHALL stop using the workflow shape:",
+  "-> choose future T",
   "retain rolling candidate packages for approximately 36h",
   "PROVIDER_AVAILABILITY_WATERMARK_V1",
   "intersect crop-legal T values",
