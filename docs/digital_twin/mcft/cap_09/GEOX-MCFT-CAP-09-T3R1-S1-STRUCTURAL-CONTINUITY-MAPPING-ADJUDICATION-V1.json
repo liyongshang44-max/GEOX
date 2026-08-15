@@ -1,0 +1,146 @@
+{
+  "schema_version": "geox_mcft_cap09_t3r1_s1_structural_continuity_mapping_adjudication_v1",
+  "record_status": "ADJUDICATED_NO_LIFECYCLE_AUTHORITY",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier": "T3R1_S1_STRUCTURAL_CONTINUITY_MAPPING_ADJUDICATION",
+  "exact_base_protected_main": "23f224c701dbe0b8bd56eceff3741cb1c3dc1f78",
+  "represented_scope": {
+    "site_id": "KBS_MCSE_T3R1_CANDIDATE",
+    "treatment": "T3",
+    "replicate": "R1",
+    "crop": "corn",
+    "hybrid": "Pioneer P0306Q",
+    "planting_date": "2026-05-20",
+    "crop_only_geometry_semantic_hash": "sha256:4672b5f28484a05e00d93de8c53b9c7b2bdbcc250f48959a4b85b768d2ed3f3a"
+  },
+  "positive_optical_reference": {
+    "acquisition_day_utc": "2026-07-30",
+    "provider": "CDSE_SENTINEL_2_L2A",
+    "plot_clear_land_fraction": 1.0,
+    "plot_vegetated_fraction_of_clear_land": 1.0,
+    "plot_mean_ndvi_over_clear_land": 0.8226154446601868,
+    "statistics_response_sha256": "sha256:87714289626a46a9c511120439bbac14f774e801dd5ac4c29aa58b3f7e2498ee",
+    "interpretation": "STRICT_DIRECT_STANDING_CROP_OBSERVATION_CANDIDATE_AT_OBSERVATION_TIME_ONLY"
+  },
+  "sar_live_evidence": {
+    "discovery_subject_sha": "2d926a5bfe45f5332ada6a50febfd580f2d9a85b",
+    "collection": "sentinel-1-grd",
+    "processing": {
+      "acquisition_mode": "IW",
+      "polarization": "DV",
+      "resolution": "HIGH",
+      "pixel_spacing_m": 10,
+      "orthorectify": true,
+      "backscatter_coefficient": "GAMMA0_ELLIPSOID"
+    },
+    "observations": [
+      {
+        "acquisition_day_utc": "2026-07-31",
+        "mission": "S1C",
+        "orbit_state": "ASCENDING",
+        "sensing_start_utc": "2026-07-31T23:39:57.000Z",
+        "absolute_orbit": 8794,
+        "plot_valid_fraction": 1.0,
+        "mean_vv_db": -11.15295124053955,
+        "mean_vh_db": -15.67238712310791,
+        "mean_vh_vv_linear_ratio": 0.3532290756702423,
+        "statistics_response_sha256": "sha256:114df5471110e65c7487cf10596b0e4f8a3fa30080f6816d39f9665576dfbfd2"
+      },
+      {
+        "acquisition_day_utc": "2026-08-12",
+        "mission": "S1C",
+        "orbit_state": "ASCENDING",
+        "sensing_start_utc": "2026-08-12T23:39:57.000Z",
+        "absolute_orbit": 8969,
+        "plot_valid_fraction": 1.0,
+        "mean_vv_db": -10.6204833984375,
+        "mean_vh_db": -14.27214241027832,
+        "mean_vh_vv_linear_ratio": 0.43135425448417664,
+        "statistics_response_sha256": "sha256:fc89ac766a8ee1e6234a907ea6250947ffa4811419e37462130fb8398bf35f30"
+      },
+      {
+        "acquisition_day_utc": "2026-08-13",
+        "mission": "S1D",
+        "orbit_state": "ASCENDING",
+        "sensing_start_utc": "2026-08-13T23:31:59.000Z",
+        "absolute_orbit": 4114,
+        "plot_valid_fraction": 1.0,
+        "mean_vv_db": -8.517674446105957,
+        "mean_vh_db": -15.440363883972168,
+        "mean_vh_vv_linear_ratio": 0.20310986042022705,
+        "statistics_response_sha256": "sha256:a5971d74f5bda2cdabeacfef2b81e2ed9c4184c881a34b8c3b8178bf7bfc21e2"
+      }
+    ]
+  },
+  "same_repeat_track_adjudication": {
+    "pair": ["2026-07-31T23:39:57.000Z", "2026-08-12T23:39:57.000Z"],
+    "mission": "S1C",
+    "orbit_state": "ASCENDING",
+    "absolute_orbit_difference": 175,
+    "elapsed_days": 12,
+    "esa_repeat_cycle_orbits": 175,
+    "esa_repeat_cycle_days": 12,
+    "same_repeat_viewing_geometry_candidate": true,
+    "delta_vv_db": 0.5324678421020508,
+    "delta_vh_db": 1.4002447128295898,
+    "delta_vh_vv_linear_ratio": 0.07812517881393433,
+    "relative_vh_vv_ratio_change": 0.221171417636926,
+    "structural_collapse_signature_observed": false,
+    "structural_continuity_candidate_resolved": true
+  },
+  "cross_mission_2026_08_13": {
+    "usable_as_exact_scope_structural_observation": true,
+    "direct_numeric_differencing_against_s1c_authorized": false,
+    "crop_presence_from_absolute_backscatter_authorized": false,
+    "lifecycle_mapping_authorized": false
+  },
+  "scientific_boundary": {
+    "sentinel_1_repeat_cycle_source": "ESA_SENTINEL_1_OPERATIONS_12_DAY_175_ORBIT_REPEAT",
+    "crop_monitoring_sources": [
+      "doi:10.1016/j.compag.2021.106118",
+      "doi:10.3390/rs11161887",
+      "doi:10.1016/j.jag.2022.102720"
+    ],
+    "accepted_interpretation": "MULTITEMPORAL_VV_VH_AND_VH_VV_ARE_SENSITIVE_TO_CROP_STRUCTURE_AND_CAN_SUPPORT_HARVEST_OR_PHENOLOGY_ANALYSIS",
+    "confounders_retained": [
+      "SOIL_MOISTURE",
+      "SURFACE_ROUGHNESS",
+      "INCIDENCE_GEOMETRY",
+      "CROP_WATER_CONTENT",
+      "CROP_ARCHITECTURE"
+    ],
+    "single_uncalibrated_backscatter_series_may_exclude_harvest": false,
+    "site_crop_specific_negative_control_available": false
+  },
+  "authority_adjudication": {
+    "same_track_structural_continuity_candidate": "RESOLVED",
+    "direct_standing_crop_observation_from_sar": "UNRESOLVED",
+    "harvest_exclusion_from_sar": "UNRESOLVED",
+    "season_lifecycle_authority": "UNRESOLVED",
+    "bounded_carry_forward_authorized": false,
+    "reason_codes": [
+      "SAR_STRUCTURAL_CONTINUITY_IS_NOT_MANAGEMENT_LIFECYCLE_SEMANTICS",
+      "HARVEST_SIGNATURE_NOT_SITE_CROP_CALIBRATED",
+      "SOIL_MOISTURE_AND_SURFACE_STATE_CAN_MASK_OR_SHIFT_BACKSCATTER",
+      "S1D_CROSS_MISSION_ABSOLUTE_SIGNAL_NOT_A_DIRECT_S1C_DIFFERENCE",
+      "NO_ARBITRARY_LIFECYCLE_TTL"
+    ]
+  },
+  "preserved_authority": {
+    "phenology_stage_authority": "RESOLVED_MID_CANDIDATE_ON_T3R1_FAST_PATH",
+    "crop_model_parameter_authority": "RESOLVED_KC_1_15_CANDIDATE_ON_T3R1_FAST_PATH",
+    "geometry_authority": "RESOLVED_CONSERVATIVE_CROP_ONLY_SUBZONE_CANDIDATE",
+    "lifecycle_remains_independent": true
+  },
+  "authority_boundary": {
+    "formal_site_rebind_authorized": false,
+    "ea5e2_operational_activation_qualified": false,
+    "runtime_write_count": 0,
+    "database_write_count": 0,
+    "scheduler_write_count": 0,
+    "formal_evidence_write_count": 0,
+    "formal_execution_count": "0/24"
+  },
+  "next_frontier": "T3R1_DIRECT_CURRENT_POSITIVE_LIFECYCLE_ANCHOR_OR_SCOPE_COMPLETE_LIFECYCLE_POLICY_REQUIRED"
+}
