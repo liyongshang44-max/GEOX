@@ -36,9 +36,9 @@ export const MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 = Object.freeze({
   tenant_id: "tenant_mcft_external",
   project_id: "project_mcft_cap09",
   group_id: "group_public_research",
-  field_id: "field_kbs_mcse_t1r1",
+  field_id: "field_kbs_mcse_t3r1",
   season_id: "season_2026_corn",
-  zone_id: "zone_kbs_mcse_t1r1_formal_v1",
+  zone_id: "zone_kbs_mcse_t3r1_crop_formal_v1",
 });
 
 export type ExternalFormalRuntimeConfigRoleV1 =
