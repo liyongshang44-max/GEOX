@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,7 @@ kbs = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(kbs)
 
 HISTORICAL_FRESHNESS_HOURS = 6.0
+T3R1_SCOPE_REBIND_ACTIVATION_SHA = "b6f2883789d48aeed717263f8fb43152fd34c57e"
 EXPECTED_TYPES = [
     "future_et0_assumption_v1",
     "future_weather_assumption_v1",
@@ -48,6 +50,30 @@ def exact_hour(value: str, code: str) -> datetime:
     return parsed
 
 
+def producer_is_active_t3r1_scope(producer: str) -> bool:
+    """Only protected-main producer commits at/after the T3R1 scope rebind may feed T3R1 consumption."""
+    try:
+        present = subprocess.run(
+            ["git", "cat-file", "-e", f"{producer}^{{commit}}"],
+            cwd=ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if present.returncode != 0:
+            return False
+        ancestry = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", T3R1_SCOPE_REBIND_ACTIVATION_SHA, producer],
+            cwd=ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return ancestry.returncode == 0
+    except OSError:
+        return False
+
+
 def candidate_profile(path: Path, now: datetime) -> dict[str, Any] | None:
     metadata_path = path.parent / "ARTIFACT_METADATA.json"
     try:
@@ -61,6 +87,12 @@ def candidate_profile(path: Path, now: datetime) -> dict[str, Any] | None:
     if len(producer) != 40 or any(ch not in "0123456789abcdef" for ch in producer):
         return None
     if metadata.get("run_conclusion") != "success" or metadata.get("head_branch") != "main" or metadata.get("head_sha") != producer:
+        return None
+    # PR #3158 changed canonical field/zone scope from T1R1 to T3R1 and explicitly forbids
+    # cross-scope canonical stitching. A pre-rebind candidate can be valid historical evidence,
+    # but it is not an eligible T3R1 consumption candidate because scope is part of the
+    # canonical record semantic hash.
+    if not producer_is_active_t3r1_scope(producer):
         return None
     if not isinstance(metadata.get("workflow_run_id"), int) or metadata["workflow_run_id"] <= 0:
         return None
@@ -102,6 +134,7 @@ def candidate_profile(path: Path, now: datetime) -> dict[str, Any] | None:
         "candidate_expires_at": iso(expires),
         "raw_ref_count": len(candidate["raw_retention_refs"]),
         "semantic_manifest_digest": candidate.get("semantic_manifest_digest"),
+        "active_scope_lineage": "T3R1_POST_REBIND",
     }
 
 
@@ -129,9 +162,12 @@ def choose(rows: list[dict], candidate_profiles: list[dict[str, Any]], available
         "provider_latest_age_hours": round(latest_age_hours, 6),
         "historical_online_freshness_diagnostic_le_6h": latest_age_hours <= HISTORICAL_FRESHNESS_HOURS,
         "freshness_is_late_authoritative_admission_gate": False,
+        "active_scope_lineage_gate": "T3R1_POST_REBIND_ONLY",
+        "active_scope_rebind_activation_sha": T3R1_SCOPE_REBIND_ACTIVATION_SHA,
+        "cross_scope_canonical_stitching_authorized": False,
         "eligible_candidate_count": len(candidate_profiles),
         "exact_kbs_intersection_count": len(exact_matches),
-        "selection_policy": "OLDEST_EXACT_TARGET_FIRST",
+        "selection_policy": "OLDEST_EXACT_TARGET_FIRST_WITHIN_ACTIVE_SCOPE_LINEAGE",
         "selected": None if selected is None else {
             key: value for key, value in selected.items() if key != "target_dt"
         },
@@ -154,8 +190,8 @@ def selftest() -> None:
             "wind_speed": "2.5",
         }
     candidates = [
-        {"candidate_file": "b.json", "producer_subject_sha": "b" * 40, "producer_workflow_run_id": 2, "artifact_id": 20, "artifact_digest": "sha256:" + "b" * 64, "target_t": "2026-08-13T13:00:00.000Z", "target_dt": datetime(2026, 8, 13, 13, tzinfo=timezone.utc), "candidate_expires_at": "2026-08-15T01:00:00.000Z", "raw_ref_count": 2, "semantic_manifest_digest": "sha256:b"},
-        {"candidate_file": "a.json", "producer_subject_sha": "a" * 40, "producer_workflow_run_id": 1, "artifact_id": 10, "artifact_digest": "sha256:" + "a" * 64, "target_t": "2026-08-13T12:00:00.000Z", "target_dt": datetime(2026, 8, 13, 12, tzinfo=timezone.utc), "candidate_expires_at": "2026-08-15T00:00:00.000Z", "raw_ref_count": 2, "semantic_manifest_digest": "sha256:a"},
+        {"candidate_file": "b.json", "producer_subject_sha": "b" * 40, "producer_workflow_run_id": 2, "artifact_id": 20, "artifact_digest": "sha256:" + "b" * 64, "target_t": "2026-08-13T13:00:00.000Z", "target_dt": datetime(2026, 8, 13, 13, tzinfo=timezone.utc), "candidate_expires_at": "2026-08-15T01:00:00.000Z", "raw_ref_count": 2, "semantic_manifest_digest": "sha256:b", "active_scope_lineage": "T3R1_POST_REBIND"},
+        {"candidate_file": "a.json", "producer_subject_sha": "a" * 40, "producer_workflow_run_id": 1, "artifact_id": 10, "artifact_digest": "sha256:" + "a" * 64, "target_t": "2026-08-13T12:00:00.000Z", "target_dt": datetime(2026, 8, 13, 12, tzinfo=timezone.utc), "candidate_expires_at": "2026-08-15T00:00:00.000Z", "raw_ref_count": 2, "semantic_manifest_digest": "sha256:a", "active_scope_lineage": "T3R1_POST_REBIND"},
     ]
     result = choose([row(13), row(12)], candidates, available)
     require(result["selected"] is not None, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_SELECTION_REQUIRED")
@@ -163,10 +199,13 @@ def selftest() -> None:
     require(result["selected"]["artifact_id"] == 10, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_ARTIFACT_ID")
     require(result["historical_online_freshness_diagnostic_le_6h"] is False, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_STALE_DIAGNOSTIC_REQUIRED")
     require(result["freshness_is_late_authoritative_admission_gate"] is False, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_FRESHNESS_GATE_FORBIDDEN")
+    require(result["cross_scope_canonical_stitching_authorized"] is False, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_CROSS_SCOPE_STITCH_FORBIDDEN")
     print(json.dumps({
         "status": "PASS",
-        "oldest_exact_target_first": True,
+        "oldest_exact_target_first_within_active_scope_lineage": True,
         "producer_run_provenance_required": True,
+        "t3r1_scope_lineage_gate": True,
+        "cross_scope_canonical_stitching_authorized": False,
         "stale_daily_batch_can_intersect": True,
         "freshness_is_admission_gate": False,
         "database_write_count": 0,
