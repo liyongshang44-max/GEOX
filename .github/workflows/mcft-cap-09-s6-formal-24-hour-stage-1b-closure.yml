@@ -106,7 +106,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo 'Exact two-workflow successor authority routing repair recognized; historical S6 Formal candidate authority is not reopened.'
+          echo 'Exact two-workflow successor authority/database routing repair recognized; historical S6 Formal candidate authority is not reopened.'
 
       - name: Reject unsupported S6 Formal trigger
         if: steps.lifecycle.outputs.mode == 'unsupported-s6-formal-trigger'
@@ -184,7 +184,7 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - name: Execute one real-UTC oldest-due formal slot
         env:
-          DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
           MCFT_CAP09_S6_CANONICAL_INPUT_JSON: ${{ secrets.GEOX_MCFT_CAP09_S6_CANONICAL_INPUT_JSON }}
           MCFT_CAP09_S6_SUBJECT_SHA: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
           MCFT_CAP09_S6_WINDOW_START_UTC: ${{ vars.GEOX_MCFT_CAP09_S6_WINDOW_START_UTC }}
@@ -192,7 +192,7 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts
       - name: Read back accumulated formal database state
         env:
-          DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
           MCFT_CAP09_S6_SUBJECT_SHA: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
           MCFT_CAP09_S6_WINDOW_START_UTC: ${{ vars.GEOX_MCFT_CAP09_S6_WINDOW_START_UTC }}
           MCFT_CAP09_S6_SCOPE_JSON: ${{ vars.GEOX_MCFT_CAP09_S6_SCOPE_JSON }}
