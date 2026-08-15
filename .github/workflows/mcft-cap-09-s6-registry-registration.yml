@@ -94,7 +94,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo 'Exact two-workflow successor authority routing repair recognized; historical S6 Registry authority is not reopened.'
+          echo 'Exact two-workflow successor authority/database routing repair recognized; historical S6 Registry authority is not reopened.'
 
       - uses: actions/setup-node@v4
         if: steps.applicability.outputs.mode == 'historical-registry-routing'
