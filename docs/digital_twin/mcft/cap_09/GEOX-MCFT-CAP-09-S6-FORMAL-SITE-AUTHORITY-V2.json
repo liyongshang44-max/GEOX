@@ -4,7 +4,7 @@
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S6",
   "record_status": "T3R1_FORMAL_SUCCESSOR_SITE_AUTHORITY_CANDIDATE",
-  "exact_predecessor_protected_main": "868d3e6b6bcc9af12f7a1866a39061ea92d5c190",
+  "exact_predecessor_protected_main": "6081a363a665b7882bbca7592213ee49395872d7",
   "effectiveness_rule": "PRESENT_ON_PROTECTED_MAIN_WITH_AMENDMENT_17_AND_FOCUSED_EXACT_BOUNDARY_GATE_PASS",
   "successor_of": {
     "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V1.json",
