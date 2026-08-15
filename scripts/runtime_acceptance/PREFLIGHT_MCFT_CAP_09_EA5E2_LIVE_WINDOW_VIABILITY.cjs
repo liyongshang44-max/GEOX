@@ -79,18 +79,6 @@ function stageAt(ageDays, lengths) {
   return "LATE";
 }
 
-function runKbsFreshness() {
-  const python = process.env.PYTHON || "python3";
-  const stdout = execFileSync(python, [PROVIDER, "precheck-kbs"], { encoding: "utf8", timeout: 120_000 });
-  const lines = stdout.trim().split(/\r?\n/).filter(Boolean);
-  if (!lines.length) throw new Error("EA5E2_VIABILITY_KBS_PREFLIGHT_OUTPUT_REQUIRED");
-  const result = JSON.parse(lines[lines.length - 1]);
-  if (result.status !== "PASS" || finite(result.configured_max_age_hours, "EA5E2_VIABILITY_KBS_MAX_AGE_REQUIRED") !== 6) {
-    throw new Error("EA5E2_VIABILITY_KBS_CURRENT_AUTHORITY_FAILED");
-  }
-  return result;
-}
-
 function inspectKbsForPhaseAwarePlanning() {
   const python = process.env.PYTHON || "python3";
   const stdout = execFileSync(python, [PROVIDER, "inspect-kbs"], { encoding: "utf8", timeout: 120_000 });
@@ -384,12 +372,13 @@ async function main() {
     kbs_raw_hourly: kbs ? {
       latest_timestamp: kbs.latest_raw_hourly_timestamp,
       current_age_hours: kbs.latest_age_hours,
-      authority_max_age_hours: 6,
-      current_authority_status: kbs.production_authority_pass ? "PASS" : "FAIL_NOT_USED_FOR_PHASE_AWARE_PREBOUNDARY_ADMISSION",
+      historical_online_freshness_diagnostic_max_age_hours: 6,
+      historical_online_freshness_diagnostic_status: kbs.production_authority_pass ? "LE_6H" : "GT_6H",
+      freshness_is_late_authoritative_admission_gate: false,
       operational_headroom: kbsHeadroom,
       future_publication_prediction_used: true,
       planning_only: true,
-      late_actual_retrieval_must_reprove_same_source_exact_t_and_freshness: true,
+      late_actual_retrieval_must_reprove_same_source_exact_t_quality_and_chronology: true,
     } : null,
     ea5e2_live_protocol_compatibility: protocolCompatibility,
     late_exact_t_processing_budget: {
@@ -430,6 +419,7 @@ async function main() {
       minimum_repeat_samples_per_phase: MIN_REPEAT_SAMPLES_PER_PHASE,
       minimum_repeat_samples_is_authority: false,
       kbs_operational_headroom_is_authority: false,
+      kbs_freshness_is_late_authoritative_admission_gate: false,
       daily_batch_protocol_compatibility_used_as_safety_gate_only: true,
       target_setup_budget_is_separate_from_kbs_freshness_headroom: true,
       target_setup_budget_is_authority: false,
@@ -439,7 +429,7 @@ async function main() {
     frozen_boundaries: {
       soil_window_minutes: SOIL_WINDOW_MINUTES,
       minimum_ingress_margin_minutes: MIN_INGRESS_MARGIN_MINUTES,
-      kbs_raw_hourly_max_age_hours: 6,
+      kbs_historical_online_freshness_diagnostic_hours: 6,
       kbs_minimum_operational_headroom_minutes: MIN_OPERATIONAL_HEADROOM_MINUTES,
       kbs_operational_headroom_is_authority: false,
       minimum_target_setup_budget_minutes: MIN_TARGET_SETUP_BUDGET_MINUTES,

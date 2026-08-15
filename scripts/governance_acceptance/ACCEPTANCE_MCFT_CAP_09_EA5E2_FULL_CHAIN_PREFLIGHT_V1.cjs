@@ -196,7 +196,7 @@ function main() {
     && has(provider, "def command_inspect_kbs")
     && has(provider, '"late_actual_retrieval_must_reprove_authority"')
     && has(live, "EA5E2_ACTIVATION_TARGET_SPECIFIC_TEMPORAL_FEASIBILITY_REQUIRED")
-    && has(live, "EA5E2_ACTIVATION_LATE_AVAILABILITY_AND_FRESHNESS_AUTHORITY_REQUIRED")
+    && has(live, "EA5E2_ACTIVATION_LATE_AVAILABILITY_WATERMARK_REQUIRED")
     && has(read(CADENCE), "assessPhaseAwareTargetTemporalFeasibility");
   blocker(blockers, !dailyBatchProtocolGuardImplemented, "DAILY_BATCH_PROTOCOL_AND_HEADROOM_FAIL_CLOSED_GUARD_MISSING");
 

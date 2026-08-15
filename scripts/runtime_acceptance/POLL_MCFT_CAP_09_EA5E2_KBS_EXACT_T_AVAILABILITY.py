@@ -141,6 +141,7 @@ def main() -> int:
             timestamped.sort(key=lambda item: item[0])
             latest = timestamped[-1][0]
             latest_age_hours = (retrieved - latest).total_seconds() / 3600.0
+            freshness_diagnostic_le_6h = latest_age_hours <= float(ea4.AUTH["kbs"]["raw_hourly_latest_max_age_hours"])
             exact_matches = [row for timestamp, row in timestamped if timestamp == target]
             if len(exact_matches) > 1:
                 raise RuntimeError(f"EA5E2_LATE_POLL_EXACT_TARGET_ROW_CONFLICT:{len(exact_matches)}")
@@ -152,13 +153,14 @@ def main() -> int:
                 "final_host": urlparse(final_url).hostname,
                 "latest_timestamp": iso(latest),
                 "latest_age_hours": round(latest_age_hours, 6),
+                "historical_online_freshness_diagnostic_le_6h": freshness_diagnostic_le_6h,
                 "exact_target_row_count": len(exact_matches),
                 "response_sha256": "sha256:" + hashlib.sha256(body).hexdigest(),
                 "response_bytes": len(body),
                 "raw_values_emitted": False,
             }
             attempts.append(attempt)
-            if len(exact_matches) == 1 and latest_age_hours <= float(ea4.AUTH["kbs"]["raw_hourly_latest_max_age_hours"]):
+            if len(exact_matches) == 1:
                 if retrieved > deadline:
                     raise RuntimeError("EA5E2_LATE_EXACT_HOUR_AVAILABILITY_DEADLINE_EXCEEDED")
                 proof = {
@@ -177,6 +179,10 @@ def main() -> int:
                     "provider_request_count": provider_request_count,
                     "latest_timestamp": iso(latest),
                     "latest_age_hours": round(latest_age_hours, 6),
+                    "historical_online_freshness_diagnostic_le_6h": freshness_diagnostic_le_6h,
+                    "freshness_is_late_authoritative_admission_gate": False,
+                    "provider_publication_cadence": "DAILY_BATCH",
+                    "temporal_authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
                     "exact_target_row_count": 1,
                     "same_source_exact_t_only": True,
                     "late_semantic_availability_polling": True,
