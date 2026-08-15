@@ -105,22 +105,41 @@ def candidate_profile(path: Path, now: datetime) -> dict[str, Any] | None:
     }
 
 
-def choose(rows: list[dict], candidate_profiles: list[dict[str, Any]], available_at: datetime) -> dict[str, Any]:
+def crop_legality(path: Path) -> dict[str, str]:
+    proof = json.loads(path.read_text(encoding="utf-8"))
+    require(proof.get("schema_version") == "geox_mcft_cap09_rolling_crop_legality_v1", "MCFT_CAP09_ROLLING_INTERSECTION_CROP_LEGALITY_SCHEMA_REQUIRED")
+    require(proof.get("status") == "PASS", "MCFT_CAP09_ROLLING_INTERSECTION_CROP_LEGALITY_PASS_REQUIRED")
+    require(proof.get("selection_role") == "PRE_KBS_CROP_AUTHORITY_INTERSECTION", "MCFT_CAP09_ROLLING_INTERSECTION_CROP_LEGALITY_ROLE_REQUIRED")
+    require(proof.get("temporal_authority") == "PROVIDER_AVAILABILITY_WATERMARK_V1", "MCFT_CAP09_ROLLING_INTERSECTION_CROP_TEMPORAL_AUTHORITY_REQUIRED")
+    require(proof.get("crop_authority_effect") == "NONE", "MCFT_CAP09_ROLLING_INTERSECTION_CROP_EFFECT_FORBIDDEN")
+    require(proof.get("future_observations_used") is False, "MCFT_CAP09_ROLLING_INTERSECTION_FUTURE_CROP_OBSERVATION_FORBIDDEN")
+    require(proof.get("provider_request_count") == 0 and proof.get("database_write_count") == 0, "MCFT_CAP09_ROLLING_INTERSECTION_CROP_SIDE_EFFECT_FORBIDDEN")
+    result: dict[str, str] = {}
+    for item in proof.get("legal_targets") or []:
+        target = iso(exact_hour(str(item.get("target_t") or ""), "MCFT_CAP09_ROLLING_INTERSECTION_CROP_TARGET_INVALID"))
+        stage = str(item.get("crop_stage_code") or "")
+        require(stage in {"INITIAL", "DEVELOPMENT", "MID", "LATE"}, "MCFT_CAP09_ROLLING_INTERSECTION_CROP_STAGE_INVALID")
+        result[target] = stage
+    return result
+
+
+def choose(rows: list[dict], candidate_profiles: list[dict[str, Any]], crop_legal: dict[str, str], available_at: datetime) -> dict[str, Any]:
     by_timestamp = kbs.index_rows(rows, available_at)
     latest = max(by_timestamp)
     latest_age_hours = (available_at - latest).total_seconds() / 3600.0
+    crop_legal_profiles = [candidate for candidate in candidate_profiles if candidate["target_t"] in crop_legal]
     exact_matches: list[dict[str, Any]] = []
-    for candidate in sorted(candidate_profiles, key=lambda item: item["target_dt"]):
+    for candidate in sorted(crop_legal_profiles, key=lambda item: item["target_dt"]):
         target = candidate["target_dt"]
         provider_rows = by_timestamp.get(target, [])
         if len(provider_rows) != 1:
             continue
         if not kbs.row_is_complete(provider_rows[0], target):
             continue
-        exact_matches.append(candidate)
+        exact_matches.append({**candidate, "crop_stage_code": crop_legal[candidate["target_t"]]})
     selected = exact_matches[0] if exact_matches else None
     return {
-        "schema_version": "geox_mcft_cap09_rolling_kbs_intersection_v1",
+        "schema_version": "geox_mcft_cap09_rolling_kbs_intersection_v2",
         "status": "PASS",
         "temporal_authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
         "provider_publication_cadence": "DAILY_BATCH",
@@ -129,16 +148,20 @@ def choose(rows: list[dict], candidate_profiles: list[dict[str, Any]], available
         "provider_latest_age_hours": round(latest_age_hours, 6),
         "historical_online_freshness_diagnostic_le_6h": latest_age_hours <= HISTORICAL_FRESHNESS_HOURS,
         "freshness_is_late_authoritative_admission_gate": False,
-        "eligible_candidate_count": len(candidate_profiles),
+        "candidate_provenance_valid_count": len(candidate_profiles),
+        "crop_legal_candidate_count": len(crop_legal_profiles),
+        "crop_rejected_candidate_count": len(candidate_profiles) - len(crop_legal_profiles),
+        "crop_authority_intersection_applied": True,
+        "crop_authority_effect": "NONE",
+        "future_crop_observations_used": False,
         "exact_kbs_intersection_count": len(exact_matches),
-        "selection_policy": "OLDEST_EXACT_TARGET_FIRST",
+        "selection_policy": "OLDEST_CROP_LEGAL_EXACT_TARGET_FIRST",
         "selected": None if selected is None else {
             key: value for key, value in selected.items() if key != "target_dt"
         },
         "raw_values_emitted": False,
         "database_write_count": 0,
         "formal_effect": False,
-        "crop_authority_effect": "NONE",
     }
 
 
@@ -154,20 +177,26 @@ def selftest() -> None:
             "wind_speed": "2.5",
         }
     candidates = [
-        {"candidate_file": "b.json", "producer_subject_sha": "b" * 40, "producer_workflow_run_id": 2, "artifact_id": 20, "artifact_digest": "sha256:" + "b" * 64, "target_t": "2026-08-13T13:00:00.000Z", "target_dt": datetime(2026, 8, 13, 13, tzinfo=timezone.utc), "candidate_expires_at": "2026-08-15T01:00:00.000Z", "raw_ref_count": 2, "semantic_manifest_digest": "sha256:b"},
         {"candidate_file": "a.json", "producer_subject_sha": "a" * 40, "producer_workflow_run_id": 1, "artifact_id": 10, "artifact_digest": "sha256:" + "a" * 64, "target_t": "2026-08-13T12:00:00.000Z", "target_dt": datetime(2026, 8, 13, 12, tzinfo=timezone.utc), "candidate_expires_at": "2026-08-15T00:00:00.000Z", "raw_ref_count": 2, "semantic_manifest_digest": "sha256:a"},
+        {"candidate_file": "b.json", "producer_subject_sha": "b" * 40, "producer_workflow_run_id": 2, "artifact_id": 20, "artifact_digest": "sha256:" + "b" * 64, "target_t": "2026-08-13T13:00:00.000Z", "target_dt": datetime(2026, 8, 13, 13, tzinfo=timezone.utc), "candidate_expires_at": "2026-08-15T01:00:00.000Z", "raw_ref_count": 2, "semantic_manifest_digest": "sha256:b"},
     ]
-    result = choose([row(13), row(12)], candidates, available)
+    # Deliberately mark the older exact candidate crop-illegal. The selector must
+    # skip it and choose the oldest candidate in the exact KBS x crop-legal intersection.
+    result = choose([row(13), row(12)], candidates, {"2026-08-13T13:00:00.000Z": "MID"}, available)
     require(result["selected"] is not None, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_SELECTION_REQUIRED")
-    require(result["selected"]["target_t"] == "2026-08-13T12:00:00.000Z", "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_OLDEST_FIRST")
-    require(result["selected"]["artifact_id"] == 10, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_ARTIFACT_ID")
+    require(result["selected"]["target_t"] == "2026-08-13T13:00:00.000Z", "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_OLDEST_CROP_LEGAL_FIRST")
+    require(result["selected"]["artifact_id"] == 20, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_ARTIFACT_ID")
+    require(result["selected"]["crop_stage_code"] == "MID", "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_CROP_STAGE")
+    require(result["crop_rejected_candidate_count"] == 1, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_CROP_REJECTION_REQUIRED")
     require(result["historical_online_freshness_diagnostic_le_6h"] is False, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_STALE_DIAGNOSTIC_REQUIRED")
     require(result["freshness_is_late_authoritative_admission_gate"] is False, "MCFT_CAP09_ROLLING_INTERSECTION_SELFTEST_FRESHNESS_GATE_FORBIDDEN")
     print(json.dumps({
         "status": "PASS",
-        "oldest_exact_target_first": True,
+        "oldest_crop_legal_exact_target_first": True,
         "producer_run_provenance_required": True,
         "stale_daily_batch_can_intersect": True,
+        "crop_authority_intersection_applied": True,
+        "crop_authority_effect": "NONE",
         "freshness_is_admission_gate": False,
         "database_write_count": 0,
     }, sort_keys=True))
@@ -181,6 +210,7 @@ def main() -> None:
     select.add_argument("--available-at", required=True)
     select.add_argument("--kbs-input", required=True)
     select.add_argument("--candidate-root", required=True)
+    select.add_argument("--crop-legality", required=True)
     select.add_argument("--output", required=True)
     args = parser.parse_args()
     if args.command == "selftest":
@@ -193,8 +223,9 @@ def main() -> None:
         profile = candidate_profile(path, available)
         if profile is not None:
             profiles.append(profile)
+    crop_legal = crop_legality(Path(args.crop_legality))
     rows = kbs.ea4.parse_kbs_csv(Path(args.kbs_input).read_bytes())
-    result = choose(rows, profiles, available)
+    result = choose(rows, profiles, crop_legal, available)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
