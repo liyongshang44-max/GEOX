@@ -1,0 +1,84 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5e2_timing_budget_qualification_evidence_v2",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5E2-TIMING-BUDGET-QUALIFICATION-V2",
+  "record_status": "EXACT_MAIN_T3R1_ENGINEERING_TIMING_QUALIFICATION_NOT_ACTIVATION_AUTHORITY",
+  "supersedes_for_current_successor_qualification": "GEOX-MCFT-CAP-09-EA5E2-TIMING-BUDGET-QUALIFICATION-V1",
+  "qualification_binding": {
+    "subject_sha": "2ef765a3c39ed761a4d6d628277a88ef2d7a08d6",
+    "workflow_run_id": 31890174183,
+    "workflow_job_id": 95025163616,
+    "artifact_id": 9248353312,
+    "artifact_name": "mcft-cap09-ea5e2-timing-budget-2ef765a3c39ed761a4d6d628277a88ef2d7a08d6",
+    "artifact_digest": "sha256:607516f605c9da52227745c8692213a816edd92db6646bc0be5baab90b761675",
+    "aggregate_proof_sha256": "sha256:271ef6452a38e12ef233c5ddc83b36d7b1bc486be6207a1bd230b2d793533902",
+    "exact_main_action_run": true,
+    "workflow_conclusion": "success"
+  },
+  "measured_implementation_blobs": {
+    ".github/workflows/mcft-cap-09-ea5e2-timing-budget-qualification.yml": "158e10aa9d53c720825844aa6364237e4f791647",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts": "de856122575998dc6281f3225f35c315fce09b0b",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts": "418d1baaef95377a7a9bf8fa512fc2ed2ca9833b",
+    "scripts/runtime_acceptance/SEED_MCFT_CAP_09_EA5E2_OBSERVER_TIMING_QUALIFICATION.ts": "aa9d3023352d15c40f1a16d184f160bcf09ebd80",
+    "scripts/runtime_acceptance/QUALIFY_MCFT_CAP_09_EA5E2_TIMING_BUDGETS.ts": "ea0fe0a3b492b78c5f3daa195d8c075f1789fad0"
+  },
+  "provider_temporal_semantics": {
+    "authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "publication_cadence": "DAILY_BATCH",
+    "six_hour_freshness_role": "HISTORICAL_ONLINE_DIAGNOSTIC_ONLY",
+    "six_hour_freshness_is_late_authoritative_admission_gate": false,
+    "qualification_target_t": "2026-08-15T03:00:00.000Z",
+    "qualification_target_selected_by_semantic_availability": true
+  },
+  "formal_snapshot_binding": {
+    "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h",
+    "neon_project_id": "delicate-glade-62464340",
+    "neon_branch_id": "br-cold-dust-a6j6aymz",
+    "formal_access_mode": "READ_ONLY",
+    "persisted_a0_authority": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-PERSISTED-A0-AUTHORITY-V1.json"
+  },
+  "qualification_result": {
+    "status": "PASS",
+    "trial_count": 3,
+    "safety_factor": 2,
+    "collector": {
+      "path": "REAL_KBS_GET_PRIVATE_R2_RETAIN_DECODE_ET0_CANONICALIZE_ISOLATED_DB_INGRESS",
+      "elapsed_ms": [19242, 22290, 18938],
+      "p95_elapsed_ms": 22290,
+      "max_elapsed_ms": 22290,
+      "safety_adjusted_max_elapsed_ms": 44580,
+      "qualified_budget_ms": 1500000,
+      "status": "QUALIFIED"
+    },
+    "observer": {
+      "path": "FORMAL_A0_READ_ONLY_PLUS_ISOLATED_DB_EXACT_FIVE_PLUS_REAL_EXTERNAL_CAP04_A1_72",
+      "elapsed_ms": [1329, 1338, 1368],
+      "p95_elapsed_ms": 1368,
+      "max_elapsed_ms": 1368,
+      "safety_adjusted_max_elapsed_ms": 2736,
+      "qualified_budget_ms": 300000,
+      "status": "QUALIFIED"
+    }
+  },
+  "operational_engineering_guards": {
+    "late_exact_t_discovery_deadline_offset_minutes": 407,
+    "frozen_late_collector_cutoff_offset_minutes": 432,
+    "collector_processing_reservation_minutes": 25,
+    "runtime_observer_offset_minutes": 437,
+    "observer_operational_start_deadline_offset_minutes": 442,
+    "frozen_observer_max_start_offset_minutes": 447,
+    "observer_processing_reservation_minutes": 5,
+    "tighter_engineering_guards_change_frozen_authority": false
+  },
+  "non_effects": {
+    "frozen_authority_changed": false,
+    "provider_authority_changed": false,
+    "crop_or_season_authority_changed": false,
+    "formal_database_write_count": 0,
+    "formal_r2_write_count": 0,
+    "scheduler_write_count": 0,
+    "live_dispatch_authorized": false,
+    "raw_values_emitted": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false
+  }
+}
