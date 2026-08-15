@@ -22,6 +22,10 @@ function assert(condition, code) {
   if (!condition) throw new Error(code);
 }
 
+function near(actual, expected, tolerance, code) {
+  assert(Number.isFinite(actual) && Math.abs(actual - expected) <= tolerance, `${code}:${actual}:${expected}`);
+}
+
 function git(args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
 }
@@ -66,6 +70,11 @@ try {
 
   const same = x.same_repeat_track_adjudication;
   assert(same?.absolute_orbit_difference === 175 && same?.elapsed_days === 12, 'T3R1_S1_MAPPING_ESA_REPEAT_IDENTITY_REQUIRED');
+  near(same.delta_vv_db, a12.mean_vv_db - j31.mean_vv_db, 1e-12, 'T3R1_S1_MAPPING_DELTA_VV_REDERIVATION_REQUIRED');
+  near(same.delta_vh_db, a12.mean_vh_db - j31.mean_vh_db, 1e-12, 'T3R1_S1_MAPPING_DELTA_VH_REDERIVATION_REQUIRED');
+  const ratioDelta = a12.mean_vh_vv_linear_ratio - j31.mean_vh_vv_linear_ratio;
+  near(same.delta_vh_vv_linear_ratio, ratioDelta, 1e-12, 'T3R1_S1_MAPPING_DELTA_RATIO_REDERIVATION_REQUIRED');
+  near(same.relative_vh_vv_ratio_change, ratioDelta / j31.mean_vh_vv_linear_ratio, 1e-12, 'T3R1_S1_MAPPING_RELATIVE_RATIO_REDERIVATION_REQUIRED');
   assert(same?.structural_collapse_signature_observed === false, 'T3R1_S1_MAPPING_STRUCTURAL_COLLAPSE_MUST_BE_FALSE');
   assert(same?.structural_continuity_candidate_resolved === true, 'T3R1_S1_MAPPING_STRUCTURAL_CONTINUITY_REQUIRED');
 
@@ -92,6 +101,7 @@ try {
     base_sha: BASE_SHA,
     subject_sha: SUBJECT_SHA,
     exact_four_file_boundary: true,
+    arithmetic_rederived_from_live_observations: true,
     structural_continuity_candidate_resolved: true,
     direct_standing_crop_observation_from_sar_resolved: false,
     harvest_exclusion_from_sar_resolved: false,
