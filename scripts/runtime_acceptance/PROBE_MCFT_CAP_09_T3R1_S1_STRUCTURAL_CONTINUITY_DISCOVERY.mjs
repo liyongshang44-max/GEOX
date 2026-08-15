@@ -152,7 +152,7 @@ function parseS1ItemId(id) {
   const parts = String(id || '').replace(/\.SAFE$/i, '').split('_');
   assert(parts.length >= 9, `T3R1_S1_DISCOVERY_SCENE_ID_PARSE_REQUIRED:${String(id || '').slice(0, 96)}`);
   const [mission, mode, product, levelPol, start, end, absoluteOrbit, datatake] = parts;
-  assert(/^S1[ABC]$/.test(mission), `T3R1_S1_DISCOVERY_MISSION_INVALID:${mission}`);
+  assert(/^S1[CD]$/.test(mission), `T3R1_S1_DISCOVERY_MISSION_INVALID:${mission}`);
   assert(mode === CONFIG.s1_policy.required_acquisition_mode, `T3R1_S1_DISCOVERY_MODE_INVALID:${mode}`);
   assert(/^GRD/.test(product), `T3R1_S1_DISCOVERY_PRODUCT_INVALID:${product}`);
   assert(levelPol.endsWith(CONFIG.s1_policy.required_polarization), `T3R1_S1_DISCOVERY_POLARIZATION_INVALID:${levelPol}`);
