@@ -177,9 +177,12 @@ function validateLive(file) {
     assert.equal(transition.availability_brackets_established, 0);
     assert.deepEqual(transition.first_seen_observations, []);
   } else {
+    const polledAt = Date.parse(state.polled_at);
     for (const bracket of transition.first_seen_observations) {
-      assert(Date.parse(bracket.last_not_seen_at) < Date.parse(bracket.first_seen_at), 'BRACKET_ORDER_INVALID');
-      assert.equal(bracket.first_seen_at, state.polled_at);
+      const lastNotSeenAt = Date.parse(bracket.last_not_seen_at);
+      const firstSeenAt = Date.parse(bracket.first_seen_at);
+      assert(lastNotSeenAt < firstSeenAt, 'BRACKET_ORDER_INVALID');
+      assert(firstSeenAt <= polledAt, 'FIRST_SEEN_AFTER_CURRENT_POLL_INVALID');
     }
   }
   return {

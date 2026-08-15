@@ -4,7 +4,7 @@
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S6",
   "record_status": "PERSISTED_T3R1_A0_EFFECTIVE_NOT_EA5E2_ACTIVATION",
-  "exact_predecessor_protected_main": "481f46358056abc592c9e5691d3463487261dafa",
+  "exact_predecessor_protected_main": "aa0e71e8da4ab203a742cae7aa5ae408594d8a86",
   "source_effectiveness": {
     "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-T3R1-FRESH-BOOTSTRAP-EFFECTIVENESS-V1.json",
     "blob_sha": "15ca30e69e18f9f41c7000d6bc1395deebac7211",
