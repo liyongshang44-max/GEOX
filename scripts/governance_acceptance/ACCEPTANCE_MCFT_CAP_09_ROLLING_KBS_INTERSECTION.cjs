@@ -30,12 +30,17 @@ for (const marker of [
 ]) has(a11, marker, "MCFT_CAP09_ROLLING_INTERSECTION_AMENDMENT11_MARKER_REQUIRED");
 
 for (const marker of [
-  "OLDEST_EXACT_TARGET_FIRST",
+  "OLDEST_EXACT_TARGET_FIRST_WITHIN_ACTIVE_SCOPE_LINEAGE",
   "ARTIFACT_METADATA.json",
   "run_conclusion",
   "head_branch",
   "head_sha",
   "artifact_digest",
+  "T3R1_SCOPE_REBIND_ACTIVATION_SHA",
+  "b6f2883789d48aeed717263f8fb43152fd34c57e",
+  "git\", \"merge-base\", \"--is-ancestor",
+  "T3R1_POST_REBIND_ONLY",
+  "cross_scope_canonical_stitching_authorized\": False",
   "historical_online_freshness_diagnostic_le_6h",
   "freshness_is_late_authoritative_admission_gate\": False",
   "row_is_complete",
@@ -43,6 +48,7 @@ for (const marker of [
   "raw_values_emitted\": False",
   "crop_authority_effect\": \"NONE\"",
   "producer_run_provenance_required",
+  "t3r1_scope_lineage_gate",
   "stale_daily_batch_can_intersect",
 ]) has(selector, marker, "MCFT_CAP09_ROLLING_INTERSECTION_SELECTOR_MARKER_REQUIRED");
 
@@ -81,8 +87,11 @@ console.log(JSON.stringify({
   status: "PASS",
   temporal_authority: "PROVIDER_AVAILABILITY_WATERMARK_V1",
   provider_publication_cadence: "DAILY_BATCH",
-  selection_policy: "OLDEST_EXACT_TARGET_FIRST",
+  selection_policy: "OLDEST_EXACT_TARGET_FIRST_WITHIN_ACTIVE_SCOPE_LINEAGE",
+  t3r1_scope_rebind_activation_sha: "b6f2883789d48aeed717263f8fb43152fd34c57e",
   producer_run_provenance_required: true,
+  active_scope_lineage_required: true,
+  cross_scope_canonical_stitching_authorized: false,
   exact_target_required: true,
   freshness_is_late_authoritative_admission_gate: false,
   database_write_count: 0,
