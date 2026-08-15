@@ -1,0 +1,94 @@
+name: mcft-cap-09-amendment-16-current-season-lifecycle-persistent-state-semantics
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-amendment16-persistent-state-semantics
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment-16-current-season-lifecycle-persistent-state-semantics.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-16-CURRENT-SEASON-LIFECYCLE-PERSISTENT-STATE-SEMANTICS.md'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-SEASON-LIFECYCLE-PERSISTENT-STATE-SEMANTICS-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_16_CURRENT_SEASON_LIFECYCLE_PERSISTENT_STATE_SEMANTICS.cjs'
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment-16-current-season-lifecycle-persistent-state-semantics.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-16-CURRENT-SEASON-LIFECYCLE-PERSISTENT-STATE-SEMANTICS.md'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-SEASON-LIFECYCLE-PERSISTENT-STATE-SEMANTICS-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_16_CURRENT_SEASON_LIFECYCLE_PERSISTENT_STATE_SEMANTICS.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-amendment16-persistent-state-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  exact-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Resolve exact base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=23f224c701dbe0b8bd56eceff3741cb1c3dc1f78" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Syntax-check Amendment-16 acceptance
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_16_CURRENT_SEASON_LIFECYCLE_PERSISTENT_STATE_SEMANTICS.cjs
+
+      - name: Execute exact-head Amendment-16 acceptance
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_16_CURRENT_SEASON_LIFECYCLE_PERSISTENT_STATE_SEMANTICS.cjs
+
+      - name: Verify A01-A17 and no operational effect
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = 'acceptance-output/MCFT_CAP_09_AMENDMENT_16_CURRENT_SEASON_LIFECYCLE_PERSISTENT_STATE_SEMANTICS.json';
+          const x = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (x.status !== 'PASS') throw new Error('AMENDMENT16_PASS_REQUIRED');
+          if (x.exact_four_file_boundary !== true) throw new Error('AMENDMENT16_EXACT_BOUNDARY_REQUIRED');
+          if (x.acceptance_cases?.length !== 17 || x.acceptance_cases.some((c) => c.status !== 'PASS')) throw new Error('AMENDMENT16_A01_A17_REQUIRED');
+          if (x.provider_silence_inference_forbidden !== true) throw new Error('AMENDMENT16_PROVIDER_SILENCE_INFERENCE_FORBIDDEN_REQUIRED');
+          if (x.observation_refresh_from_persistence_forbidden !== true) throw new Error('AMENDMENT16_OBSERVATION_REFRESH_FORBIDDEN_REQUIRED');
+          if (x.horizon_is_truncation_only !== true || x.ea1j_maximum_envelope_days_rederived !== 180) throw new Error('AMENDMENT16_HORIZON_GUARD_REQUIRED');
+          if (x.current_management_season_lifecycle_resolved_by_this_amendment !== false) throw new Error('AMENDMENT16_NO_DIRECT_LIFECYCLE_AUTHORITY_REQUIRED');
+          if (x.t3r1_active_authority_created_by_this_amendment !== false) throw new Error('AMENDMENT16_NO_T3R1_SPECIAL_CASE_REQUIRED');
+          if (x.ea5e2_operational_activation_qualified !== false || x.formal_execution_count !== '0/24') throw new Error('AMENDMENT16_OPERATIONAL_EFFECT_FORBIDDEN');
+          NODE
+
+      - name: Upload Amendment-16 acceptance artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-amendment16-persistent-state-${{ steps.authority.outputs.subject_sha }}
+          path: acceptance-output/MCFT_CAP_09_AMENDMENT_16_CURRENT_SEASON_LIFECYCLE_PERSISTENT_STATE_SEMANTICS.json
+          if-no-files-found: error
+          retention-days: 90
