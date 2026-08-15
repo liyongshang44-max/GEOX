@@ -1,0 +1,43 @@
+name: tmp-mcft-cap09-apply-amendment11-freshness-patch
+
+on:
+  push:
+    branches:
+      - fix/mcft-cap09-amendment11-freshness-diagnostic
+    paths:
+      - 'tmp/mcft-cap09-amendment11-freshness.patch'
+      - '.github/workflows/tmp-mcft-cap09-apply-amendment11-freshness-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.head_commit.message == 'chore(mcft-cap09): stage amendment11 freshness patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/mcft-cap09-amendment11-freshness-diagnostic
+          fetch-depth: 0
+      - name: Apply bounded Amendment-11 freshness patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply --check tmp/mcft-cap09-amendment11-freshness.patch
+          git apply tmp/mcft-cap09-amendment11-freshness.patch
+          python -m py_compile scripts/runtime_acceptance/SELECT_MCFT_CAP_09_EA5E2_TIMING_TARGET_AMENDMENT11.py
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_TIMING_BUDGET_QUALIFICATION.cjs
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .github/workflows/mcft-cap-09-ea5e2-timing-budget-qualification.yml \
+            .github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts \
+            scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py \
+            scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs \
+            scripts/runtime_acceptance/SELECT_MCFT_CAP_09_EA5E2_TIMING_TARGET_AMENDMENT11.py \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.cjs \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_TIMING_BUDGET_QUALIFICATION.cjs
+          git commit -m 'MCFT-CAP-09: make 6h freshness diagnostic under Amendment-11'
+          git push origin HEAD:fix/mcft-cap09-amendment11-freshness-diagnostic
