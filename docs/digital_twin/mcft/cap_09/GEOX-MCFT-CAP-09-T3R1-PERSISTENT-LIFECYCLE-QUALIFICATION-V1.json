@@ -48,21 +48,29 @@
     "availability_rule": "ACTUAL_QUALIFICATION_RETRIEVAL_TIME_IS_CONSERVATIVE_AVAILABLE_TO_RUNTIME_AT"
   },
   "transition_sweep": {
-    "provider": "KBS_LTER_CORE_EXPANDED_AGRONOMIC_LOG",
-    "source_page_url": "https://lter.kbs.msu.edu/datatables/694",
-    "download_url": "https://lter.kbs.msu.edu/datatables/694.csv",
-    "allowed_host": "lter.kbs.msu.edu",
-    "datatable_id": "694",
-    "required_columns": [
-      "obs_date",
-      "treatment",
-      "observation_type",
-      "comment",
-      "name",
-      "observation_id"
-    ],
-    "exact_treatment": "T3",
-    "exact_plot_name": "T3R1",
+    "provider": "KBS_AGLOG_CURRENT_OBSERVATION_INDEX_AND_DETAIL",
+    "index_url": "https://aglog.kbs.msu.edu/observations",
+    "allowed_host": "aglog.kbs.msu.edu",
+    "maximum_pages": 20,
+    "maximum_detail_candidates": 100,
+    "must_reach_planting_date_or_earlier": true,
+    "index_candidate_scope_rule": "AREAS_HAS_STANDALONE_T3_OR_EXACT_T3R1_OR_COMMENT_EXPLICITLY_HAS_LTER_T3",
+    "detail_field_contract": {
+      "comment_label": "Comment:",
+      "areas_label": "Areas:",
+      "observation_type_label": "Observation Type:",
+      "activities_label": "Activities:",
+      "full_comment_semantics_required": true,
+      "whole_page_body_semantic_classification_forbidden": true,
+      "index_detail_date_agreement_required": true,
+      "index_detail_observation_type_agreement_required": true
+    },
+    "t3r1_applicability_rule": {
+      "exact_t3r1_in_detail_areas_is_sufficient": true,
+      "parent_t3_in_detail_areas_requires_explicit_r1_in_comment": true,
+      "lter_t3_in_comment_requires_explicit_r1_in_comment": true,
+      "generic_t3_reference_in_comment_without_t3_area_binding_forbidden": true
+    },
     "termination_classes": [
       "HARVEST",
       "CROP_DESTRUCTION",
@@ -82,9 +90,10 @@
       "abandoned crop"
     ],
     "contradiction_rules": [
-      "POST_ESTABLISHMENT_PLANTING_ON_EXACT_T3R1_WITHOUT_SEPARATELY_GOVERNED_REPLANT_SEMANTICS",
-      "EXPLICIT_DIFFERENT_CROP_OR_SEASON_REALITY_ON_EXACT_T3R1",
-      "AMBIGUOUS_TERMINATION_ON_EXACT_T3R1",
+      "POST_ESTABLISHMENT_PLANTING_ON_T3R1_WITHOUT_SEPARATELY_GOVERNED_REPLANT_SEMANTICS",
+      "SAME_DAY_ADDITIONAL_PLANTING_OR_TERMINATION_WITH_UNRESOLVED_INTRADAY_CHRONOLOGY",
+      "EXPLICIT_DIFFERENT_CROP_TERMINATION_OR_PLANTING_ON_T3R1",
+      "AMBIGUOUS_TERMINATION_ON_T3R1",
       "AUTHORITATIVE_SCOPE_IDENTITY_CONFLICT"
     ],
     "support_observation_types": [
@@ -96,8 +105,6 @@
       "Irrigation",
       "Cultivation"
     ],
-    "full_comment_semantics_required": true,
-    "exact_plot_scope_required": true,
     "provider_coverage_completeness_required_for_persistent_state": false,
     "provider_coverage_completeness_claimed": false,
     "none_found_may_be_emitted": true,
