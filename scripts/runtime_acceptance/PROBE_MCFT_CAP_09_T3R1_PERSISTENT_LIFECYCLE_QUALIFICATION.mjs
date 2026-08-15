@@ -54,6 +54,14 @@ async function digestPage(page, url, expectedHost) {
     retrieved_at: new Date().toISOString(),
   };
 }
+async function eventSemanticText(page) {
+  const text = await page.evaluate(() => {
+    const clone = document.body.cloneNode(true);
+    for (const node of clone.querySelectorAll('nav,header,footer,form,select,option,script,style,noscript')) node.remove();
+    return clone.innerText || clone.textContent || '';
+  });
+  return normalize(text);
+}
 async function observationIdFromRow(row) {
   const hrefs = row.locator('a[href*="/observations/"]');
   for (let i = 0; i < await hrefs.count(); i += 1) {
@@ -116,7 +124,7 @@ async function main() {
     const page = await context.newPage();
 
     const establishmentPageProof = await digestPage(page, CONFIG.establishment_source.url, CONFIG.establishment_source.allowed_host);
-    const establishmentText = normalize(await page.locator('body').innerText());
+    const establishmentText = await eventSemanticText(page);
     for (const marker of CONFIG.establishment_source.required_normalized_markers) {
       assert(establishmentText.toLowerCase().includes(marker.toLowerCase()), `T3R1_PERSISTENT_ESTABLISHMENT_MARKER_MISSING:${marker}`);
     }
@@ -189,7 +197,7 @@ async function main() {
     for (const lead of uniqueLeads) {
       const detailUrl = `${CONFIG.transition_sweep.index_url}/${lead.provider_observation_id}`;
       const proof = await digestPage(page, detailUrl, CONFIG.transition_sweep.allowed_host);
-      const detailText = normalize(await page.locator('body').innerText());
+      const detailText = await eventSemanticText(page);
       const appliesToT3R1 = detailAppliesToT3R1(lead, detailText);
       const currentCropBound = CURRENT_CROP.test(detailText);
       const otherCropMention = OTHER_CROP.test(detailText);
@@ -205,6 +213,8 @@ async function main() {
         current_crop_bound: currentCropBound,
         other_crop_mentioned: otherCropMention,
         termination_semantic: terminationSemantic,
+        event_semantic_text_sha256: sha256(detailText),
+        event_semantic_text_emitted: false,
         post_establishment: postEstablishment,
         planting_semantic: plantingSemantic,
         support_semantic: supportSemantic,
@@ -220,6 +230,7 @@ async function main() {
       && item.explicit_replicate_1_inclusion);
     assert(plantingMatches.length === 1, `T3R1_PERSISTENT_EXACT_PLANTING_MATCH_COUNT_${plantingMatches.length}`);
     const planting = plantingMatches[0];
+    assert(planting.termination_semantic === false, 'T3R1_PERSISTENT_ESTABLISHMENT_TERMINATION_SEMANTIC_CONTAMINATION');
 
     const postPlanting = inspections.filter((item) => item.post_establishment && item.applies_to_t3r1);
     const knownTerminations = postPlanting.filter((item) => item.termination_semantic && item.current_crop_bound);
@@ -301,6 +312,7 @@ async function main() {
         proved_no_termination_occurred: false,
         provider_silence_used_as_evidence: false,
         provider_retrieval_time_used_as_coverage_watermark: false,
+        event_semantics_page_chrome_excluded: true,
         page_proofs: indexProofs,
         detail_inspections: inspections,
         provider_body_emitted: false,
