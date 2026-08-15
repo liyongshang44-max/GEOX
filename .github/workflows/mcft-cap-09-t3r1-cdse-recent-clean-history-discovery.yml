@@ -1,0 +1,139 @@
+name: mcft-cap-09-t3r1-cdse-recent-clean-history-discovery
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-t3r1-cdse-recent-clean-history
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-CDSE-RECENT-CLEAN-HISTORY-DISCOVERY-V1.json'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_CDSE_RECENT_CLEAN_HISTORY_DISCOVERY.mjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_CDSE_RECENT_CLEAN_HISTORY_DISCOVERY.cjs'
+      - '.github/workflows/mcft-cap-09-t3r1-cdse-recent-clean-history-discovery.yml'
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-CDSE-RECENT-CLEAN-HISTORY-DISCOVERY-V1.json'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_CDSE_RECENT_CLEAN_HISTORY_DISCOVERY.mjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_CDSE_RECENT_CLEAN_HISTORY_DISCOVERY.cjs'
+      - '.github/workflows/mcft-cap-09-t3r1-cdse-recent-clean-history-discovery.yml'
+  workflow_dispatch:
+    inputs:
+      run_live:
+        description: 'Run credentialed recent-clean Sentinel-2 history discovery'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-t3r1-cdse-recent-clean-history-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  static-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Resolve exact base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=23f224c701dbe0b8bd56eceff3741cb1c3dc1f78" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Syntax-check discovery code
+        run: |
+          set -euo pipefail
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_CDSE_RECENT_CLEAN_HISTORY_DISCOVERY.mjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_CDSE_RECENT_CLEAN_HISTORY_DISCOVERY.cjs
+
+      - name: Execute exact-boundary governance gate
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_CDSE_RECENT_CLEAN_HISTORY_DISCOVERY.cjs
+
+      - name: Verify static discovery remains authority-free
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const x = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T3R1_CDSE_RECENT_CLEAN_HISTORY_DISCOVERY_BOUNDARY.json','utf8'));
+          if (x.status !== 'PASS' || x.exact_four_file_boundary !== true || x.strict_scl_45 !== true) throw new Error('T3R1_CDSE_DISCOVERY_STATIC_PASS_REQUIRED');
+          if (x.current_management_season_lifecycle_authority_established !== false || x.bounded_carry_forward_authorized !== false) throw new Error('T3R1_CDSE_DISCOVERY_AUTHORITY_FORBIDDEN');
+          if (x.ea5e2_operational_activation_qualified !== false || x.formal_execution_count !== '0/24') throw new Error('T3R1_CDSE_DISCOVERY_ACTIVATION_FORBIDDEN');
+          console.log(JSON.stringify({status:x.status,boundary:x.exact_four_file_boundary,formal:x.formal_execution_count}));
+          NODE
+
+      - name: Upload static boundary artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t3r1-cdse-recent-clean-history-boundary-${{ steps.authority.outputs.subject_sha }}
+          path: acceptance-output/MCFT_CAP_09_T3R1_CDSE_RECENT_CLEAN_HISTORY_DISCOVERY_BOUNDARY.json
+          if-no-files-found: error
+          retention-days: 90
+
+  live-discovery:
+    needs: static-boundary
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Execute credentialed recent-clean history discovery
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.sha }}
+          CDSE_SENTINEL_HUB_ACCESS_TOKEN: ${{ secrets.CDSE_SENTINEL_HUB_ACCESS_TOKEN }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_CDSE_RECENT_CLEAN_HISTORY_DISCOVERY.mjs
+
+      - name: Verify live result remains discovery-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const p='acceptance-output/MCFT_CAP_09_T3R1_CDSE_RECENT_CLEAN_HISTORY_DISCOVERY.json';
+          const x=JSON.parse(fs.readFileSync(p,'utf8'));
+          if (x.status !== 'PASS') throw new Error('T3R1_CDSE_DISCOVERY_LIVE_PASS_REQUIRED');
+          if (x.authority_effect !== 'NONE_DISCOVERY_ONLY') throw new Error('T3R1_CDSE_DISCOVERY_NO_AUTHORITY_REQUIRED');
+          if (x.current_management_season_lifecycle_resolved !== false || x.bounded_carry_forward_authorized !== false) throw new Error('T3R1_CDSE_DISCOVERY_LIFECYCLE_FORBIDDEN');
+          if (x.ea5e2_operational_activation_qualified !== false || x.formal_execution_count !== '0/24') throw new Error('T3R1_CDSE_DISCOVERY_ACTIVATION_FORBIDDEN');
+          console.log(JSON.stringify({status:x.status,latest:x.latest_passing_observation?.acquisition_day_utc||null,passes:x.passing_acquisition_days_utc,formal:x.formal_execution_count}));
+          NODE
+
+      - name: Upload sanitized live discovery artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t3r1-cdse-recent-clean-history-live-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_T3R1_CDSE_RECENT_CLEAN_HISTORY_DISCOVERY.json
+          if-no-files-found: error
+          retention-days: 90
