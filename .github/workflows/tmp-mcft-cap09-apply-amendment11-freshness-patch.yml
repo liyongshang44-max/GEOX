@@ -13,14 +13,14 @@ permissions:
 
 jobs:
   apply:
-    if: "${{ github.event.head_commit.message == 'chore(mcft-cap09): stage amendment11 freshness edit v2' }}"
+    if: "${{ github.event.head_commit.message == 'chore(mcft-cap09): materialize amendment11 non-workflow files' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: fix/mcft-cap09-amendment11-freshness-diagnostic
           fetch-depth: 0
-      - name: Apply bounded Amendment-11 freshness edit
+      - name: Materialize bounded Amendment-11 non-workflow files
         shell: bash
         run: |
           set -euo pipefail
@@ -30,9 +30,8 @@ jobs:
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_TIMING_BUDGET_QUALIFICATION.cjs
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add .github/workflows/mcft-cap-09-ea5e2-timing-budget-qualification.yml \
-            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts \
+          git add scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts \
             scripts/runtime_acceptance/SELECT_MCFT_CAP_09_EA5E2_TIMING_TARGET_AMENDMENT11.py \
             scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_TIMING_BUDGET_QUALIFICATION.cjs
-          git commit -m 'MCFT-CAP-09: honor Amendment-11 in timing qualification'
+          git commit -m 'MCFT-CAP-09: bind timing collector to Amendment-11 watermark'
           git push origin HEAD:fix/mcft-cap09-amendment11-freshness-diagnostic
