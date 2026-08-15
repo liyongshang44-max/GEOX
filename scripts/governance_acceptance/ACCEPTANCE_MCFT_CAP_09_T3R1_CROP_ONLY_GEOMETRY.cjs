@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
-const EXPECTED_BASE = '23f224c701dbe0b8bd56eceff3741cb1c3dc1f78';
+const EXPECTED_BASE = '4e84011e380333b2c0c56f2481661d44284a2f4e';
 const CONFIG = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-CROP-ONLY-GEOMETRY-AUTHORITY-V1.json';
 const PROBE = 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_CROP_ONLY_GEOMETRY.mjs';
 const GATE = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_CROP_ONLY_GEOMETRY.cjs';
