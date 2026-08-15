@@ -14,9 +14,9 @@ const SUBJECT_SHA = String(process.env.MCFT_SUBJECT_SHA || '').trim();
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const CURRENT_CROP = /\b(corn|maize|P0306Q)\b/i;
-const OTHER_CROP = /\b(soybean|soybeans|wheat|barley|sorghum|bean|beans|alfalfa)\b/i;
+const HYBRID = /\bP0306Q\b/i;
+const OTHER_CROP = /\b(soybean|soybeans|wheat|barley|sorghum|bean|beans|alfalfa|canola|rye)\b/i;
 const TERMINATION = /\b(harvest(?:ed|ing)?|termination|terminate(?:d|s|ing)?|crop destruction|destroyed crop|crop failure|failed crop|abandonment|abandoned crop)\b/i;
-const SUPPORT_TYPES = new Set(CONFIG.transition_sweep.support_observation_types.map((x) => x.toLowerCase()));
 
 function assert(condition, code) {
   if (!condition) throw new Error(code);
@@ -25,7 +25,10 @@ function sha256(value) {
   return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
 }
 function normalize(value) {
-  return String(value || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+  return String(value || '').replace(/^\uFEFF/, '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function normalizeKey(value) {
+  return normalize(value).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
 function dateOnly(value) {
   const match = String(value || '').match(/\b(\d{4}-\d{2}-\d{2})\b/);
@@ -40,13 +43,53 @@ function write(value) {
   fs.writeFileSync(OUT, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
   console.log(JSON.stringify(value));
 }
+function parseDelimitedLine(line, delimiter) {
+  const out = [];
+  let value = '';
+  let quoted = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (quoted && line[i + 1] === '"') {
+        value += '"';
+        i += 1;
+      } else quoted = !quoted;
+    } else if (ch === delimiter && !quoted) {
+      out.push(value);
+      value = '';
+    } else value += ch;
+  }
+  out.push(value);
+  return out;
+}
+function parseTable(text, requiredColumns) {
+  const lines = String(text).split(/\r?\n/);
+  for (let i = 0; i < Math.min(lines.length, 40); i += 1) {
+    if (!lines[i].trim()) continue;
+    for (const delimiter of [',', '\t', ';', '|']) {
+      const headers = parseDelimitedLine(lines[i], delimiter).map(normalizeKey);
+      if (!requiredColumns.every((column) => headers.includes(column))) continue;
+      const rows = [];
+      for (const line of lines.slice(i + 1)) {
+        if (!line.trim() || line.trim().startsWith('#')) continue;
+        const cells = parseDelimitedLine(line, delimiter);
+        if (cells.length < headers.length) continue;
+        const row = {};
+        headers.forEach((header, index) => { row[header] = cells[index] ?? ''; });
+        rows.push(row);
+      }
+      return rows;
+    }
+  }
+  throw new Error('T3R1_PERSISTENT_EXPANDED_LOG_HEADER_REQUIRED');
+}
 async function digestPage(page, url, expectedHost) {
   const requested = new URL(url);
-  assert(requested.protocol === 'https:' && requested.hostname === expectedHost, 'T3R1_PERSISTENT_UNAPPROVED_HOST');
+  assert(requested.protocol === 'https:' && requested.hostname === expectedHost, 'T3R1_PERSISTENT_UNAPPROVED_ESTABLISHMENT_HOST');
   const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 75_000 });
-  assert(response?.ok(), `T3R1_PERSISTENT_HTTP_${response?.status() ?? 'NO_RESPONSE'}`);
+  assert(response?.ok(), `T3R1_PERSISTENT_ESTABLISHMENT_HTTP_${response?.status() ?? 'NO_RESPONSE'}`);
   const finalUrl = new URL(response.url());
-  assert(finalUrl.protocol === 'https:' && finalUrl.hostname === expectedHost, 'T3R1_PERSISTENT_REDIRECT_HOST_FORBIDDEN');
+  assert(finalUrl.protocol === 'https:' && finalUrl.hostname === expectedHost, 'T3R1_PERSISTENT_ESTABLISHMENT_REDIRECT_HOST_FORBIDDEN');
   const bytes = await response.body();
   return {
     response_sha256: sha256(bytes),
@@ -54,26 +97,20 @@ async function digestPage(page, url, expectedHost) {
     retrieved_at: new Date().toISOString(),
   };
 }
-async function eventSemanticText(page) {
-  const text = await page.evaluate(() => {
-    const clone = document.body.cloneNode(true);
-    for (const node of clone.querySelectorAll('nav,header,footer,form,select,option,script,style,noscript')) node.remove();
-    return clone.innerText || clone.textContent || '';
+async function fetchBytes(url, expectedHost, expectedPath, code) {
+  const requested = new URL(url);
+  assert(requested.protocol === 'https:' && requested.hostname === expectedHost && requested.pathname === expectedPath, `${code}_URL_FORBIDDEN`);
+  const response = await fetch(url, {
+    method: 'GET',
+    redirect: 'follow',
+    headers: { 'user-agent': 'GEOX-MCFT-CAP09-T3R1-Persistent-Lifecycle/1.0' },
   });
-  return normalize(text);
-}
-async function observationIdFromRow(row) {
-  const hrefs = row.locator('a[href*="/observations/"]');
-  for (let i = 0; i < await hrefs.count(); i += 1) {
-    const href = await hrefs.nth(i).getAttribute('href');
-    const match = String(href || '').match(/\/observations\/(\d+)/);
-    if (match) return Number(match[1]);
-  }
-  return null;
-}
-function uniqueById(items) {
-  return [...new Map(items.map((item) => [item.provider_observation_id, item])).values()]
-    .sort((a, b) => a.observation_date.localeCompare(b.observation_date) || a.provider_observation_id - b.provider_observation_id);
+  assert(response.ok, `${code}_HTTP_${response.status}`);
+  const finalUrl = new URL(response.url);
+  assert(finalUrl.protocol === 'https:' && finalUrl.hostname === expectedHost && finalUrl.pathname === expectedPath, `${code}_REDIRECT_FORBIDDEN`);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  assert(bytes.byteLength > 0 && bytes.byteLength < 50_000_000, `${code}_BYTE_SIZE_INVALID`);
+  return { bytes, response_sha256: sha256(bytes), response_bytes: bytes.byteLength, retrieved_at: new Date().toISOString() };
 }
 function latestPossiblePlantingMs() {
   const endExclusive = Date.parse(CONFIG.candidate_scope.possible_planting_window_utc.end_exclusive);
@@ -83,28 +120,48 @@ function latestPossiblePlantingMs() {
 function horizonEndIso() {
   return new Date(latestPossiblePlantingMs() + CONFIG.horizon_policy.maximum_total_days * DAY_MS).toISOString();
 }
-function hasStandaloneT3(value) {
-  return /(?:^|[\s,;/()])T3(?:$|[\s,;/()])/i.test(normalize(value));
+function laterIso(a, b) {
+  const aMs = Date.parse(a);
+  const bMs = Date.parse(b);
+  assert(Number.isFinite(aMs) && Number.isFinite(bMs), 'T3R1_PERSISTENT_AVAILABILITY_TIME_INVALID');
+  return new Date(Math.max(aMs, bMs)).toISOString();
 }
-function hasExactT3R1(value) {
-  return /\bT3R1\b/i.test(normalize(value));
+function observationTypeSupports(type) {
+  const normalized = normalize(type).toLowerCase();
+  return CONFIG.transition_sweep.support_observation_types.some((candidate) => normalized.includes(candidate.toLowerCase()));
 }
-function hasLterT3(value) {
-  return /\bLTER\s+T3\b/i.test(normalize(value));
-}
-function r1Explicit(value) {
-  const text = normalize(value);
-  return /replications?\s*\([^)]*\b1\b[^)]*\)/i.test(text)
-    || /\breps?\b[^.]{0,180}\b1\b/i.test(text)
-    || /\bT3R1\b/i.test(text);
-}
-function indexT3LeadScope(areas, comment) {
-  return hasStandaloneT3(areas) || hasExactT3R1(areas) || hasLterT3(comment);
-}
-function detailAppliesToT3R1(lead, detailText) {
-  if (hasStandaloneT3(lead.provider_area_identity) || hasExactT3R1(lead.provider_area_identity)) return true;
-  if (hasExactT3R1(detailText)) return true;
-  return (lead.index_comment_lter_t3_scope === true || hasLterT3(detailText)) && r1Explicit(detailText);
+function buildExactT3R1Events(rows) {
+  const scoped = rows.filter((row) => normalize(row.treatment).toUpperCase() === CONFIG.transition_sweep.exact_treatment
+    && normalize(row.name).toUpperCase() === CONFIG.transition_sweep.exact_plot_name
+    && dateOnly(row.obs_date));
+  const grouped = new Map();
+  for (const row of scoped) {
+    const observationId = Number.parseInt(normalize(row.observation_id), 10);
+    assert(Number.isInteger(observationId) && observationId > 0, 'T3R1_PERSISTENT_EXPANDED_LOG_OBSERVATION_ID_REQUIRED');
+    const observationDate = dateOnly(row.obs_date);
+    const observationType = normalize(row.observation_type);
+    const comment = normalize(row.comment);
+    assert(observationDate && observationType, `T3R1_PERSISTENT_EXPANDED_LOG_EVENT_FIELDS_REQUIRED:${observationId}`);
+    const existing = grouped.get(observationId);
+    if (!existing) {
+      grouped.set(observationId, {
+        provider_observation_id: observationId,
+        observation_date: observationDate,
+        observation_type: observationType,
+        treatment: normalize(row.treatment),
+        plot_name: normalize(row.name),
+        comment,
+        comment_sha256: sha256(comment),
+        source_row_count: 1,
+      });
+      continue;
+    }
+    assert(existing.observation_date === observationDate, `T3R1_PERSISTENT_DUPLICATE_DATE_CONFLICT:${observationId}`);
+    assert(existing.observation_type === observationType, `T3R1_PERSISTENT_DUPLICATE_TYPE_CONFLICT:${observationId}`);
+    assert(existing.comment === comment, `T3R1_PERSISTENT_DUPLICATE_COMMENT_CONFLICT:${observationId}`);
+    existing.source_row_count += 1;
+  }
+  return [...grouped.values()].sort((a, b) => a.observation_date.localeCompare(b.observation_date) || a.provider_observation_id - b.provider_observation_id);
 }
 
 async function main() {
@@ -124,125 +181,67 @@ async function main() {
     const page = await context.newPage();
 
     const establishmentPageProof = await digestPage(page, CONFIG.establishment_source.url, CONFIG.establishment_source.allowed_host);
-    const establishmentText = await eventSemanticText(page);
+    const establishmentText = normalize(await page.locator('body').innerText());
     for (const marker of CONFIG.establishment_source.required_normalized_markers) {
       assert(establishmentText.toLowerCase().includes(marker.toLowerCase()), `T3R1_PERSISTENT_ESTABLISHMENT_MARKER_MISSING:${marker}`);
     }
 
+    const transitionSource = CONFIG.transition_sweep;
+    const expandedLog = await fetchBytes(
+      transitionSource.download_url,
+      transitionSource.allowed_host,
+      `/datatables/${transitionSource.datatable_id}.csv`,
+      'T3R1_PERSISTENT_EXPANDED_LOG',
+    );
+    const rows = parseTable(expandedLog.bytes.toString('utf8'), transitionSource.required_columns);
+    assert(rows.length > 0, 'T3R1_PERSISTENT_EXPANDED_LOG_ROWS_REQUIRED');
+    const exactEvents = buildExactT3R1Events(rows);
+    assert(exactEvents.length > 0, 'T3R1_PERSISTENT_EXACT_T3R1_EVENTS_REQUIRED');
+
     const targetDate = CONFIG.candidate_scope.planting_local_date;
-    const indexProofs = [];
-    const leads = [];
-    let reachedPlantingDate = false;
-    let scannedRows = 0;
-
-    for (let pageNumber = 1; pageNumber <= CONFIG.transition_sweep.maximum_pages; pageNumber += 1) {
-      const url = pageNumber === 1 ? CONFIG.transition_sweep.index_url : `${CONFIG.transition_sweep.index_url}?page=${pageNumber}`;
-      const proof = await digestPage(page, url, CONFIG.transition_sweep.allowed_host);
-      const rows = page.locator('table tr');
-      const rowCount = await rows.count();
-      let parsedRows = 0;
-      let minimumDate = null;
-      let maximumDate = null;
-
-      for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
-        const row = rows.nth(rowIndex);
-        const cells = row.locator('td');
-        const cellCount = await cells.count();
-        if (cellCount < 6) continue;
-        const values = [];
-        for (let c = 0; c < cellCount; c += 1) values.push(normalize(await cells.nth(c).innerText()));
-        const observationDate = dateOnly(values[0]);
-        if (!observationDate) continue;
-        parsedRows += 1;
-        scannedRows += 1;
-        minimumDate = !minimumDate || observationDate < minimumDate ? observationDate : minimumDate;
-        maximumDate = !maximumDate || observationDate > maximumDate ? observationDate : maximumDate;
-        if (observationDate <= targetDate) reachedPlantingDate = true;
-        if (observationDate < targetDate) continue;
-
-        const observationType = values[2] || '';
-        const comment = values[3] || '';
-        const areas = values[4] || '';
-        if (!indexT3LeadScope(areas, comment)) continue;
-        const observationId = await observationIdFromRow(row);
-        assert(Number.isInteger(observationId), 'T3R1_PERSISTENT_OBSERVATION_ID_REQUIRED');
-        leads.push({
-          provider_observation_id: observationId,
-          observation_date: observationDate,
-          observation_type: observationType,
-          provider_area_identity: areas,
-          index_area_standalone_t3: hasStandaloneT3(areas),
-          index_area_exact_t3r1: hasExactT3R1(areas),
-          index_comment_lter_t3_scope: hasLterT3(comment),
-        });
-      }
-
-      indexProofs.push({
-        page_number: pageNumber,
-        parsed_observation_row_count: parsedRows,
-        minimum_observation_date: minimumDate,
-        maximum_observation_date: maximumDate,
-        provider_body_emitted: false,
-        ...proof,
-      });
-      if (reachedPlantingDate) break;
-      assert(parsedRows > 0, `T3R1_PERSISTENT_EMPTY_PAGE_BEFORE_PLANTING:${pageNumber}`);
-    }
-
-    assert(reachedPlantingDate, 'T3R1_PERSISTENT_SCAN_DID_NOT_REACH_PLANTING_DATE');
-    const uniqueLeads = uniqueById(leads);
-    assert(uniqueLeads.length > 0 && uniqueLeads.length <= CONFIG.transition_sweep.maximum_detail_candidates, `T3R1_PERSISTENT_DETAIL_COUNT_${uniqueLeads.length}`);
-
-    const inspections = [];
-    for (const lead of uniqueLeads) {
-      const detailUrl = `${CONFIG.transition_sweep.index_url}/${lead.provider_observation_id}`;
-      const proof = await digestPage(page, detailUrl, CONFIG.transition_sweep.allowed_host);
-      const detailText = await eventSemanticText(page);
-      const appliesToT3R1 = detailAppliesToT3R1(lead, detailText);
-      const currentCropBound = CURRENT_CROP.test(detailText);
-      const otherCropMention = OTHER_CROP.test(detailText);
-      const terminationSemantic = TERMINATION.test(`${lead.observation_type} ${detailText}`);
-      const postEstablishment = lead.observation_date > targetDate;
-      const plantingSemantic = /\bPlanting\b/i.test(lead.observation_type);
-      const supportSemantic = SUPPORT_TYPES.has(lead.observation_type.toLowerCase());
-
-      inspections.push({
-        ...lead,
-        applies_to_t3r1: appliesToT3R1,
-        explicit_replicate_1_inclusion: r1Explicit(detailText) || lead.index_area_standalone_t3 || lead.index_area_exact_t3r1,
-        current_crop_bound: currentCropBound,
-        other_crop_mentioned: otherCropMention,
-        termination_semantic: terminationSemantic,
-        event_semantic_text_sha256: sha256(detailText),
-        event_semantic_text_emitted: false,
-        post_establishment: postEstablishment,
-        planting_semantic: plantingSemantic,
-        support_semantic: supportSemantic,
-        provider_body_emitted: false,
-        ...proof,
-      });
-    }
-
-    const plantingMatches = inspections.filter((item) => item.observation_date === targetDate
-      && item.planting_semantic
-      && item.applies_to_t3r1
-      && item.current_crop_bound
-      && item.explicit_replicate_1_inclusion);
+    const plantingMatches = exactEvents.filter((event) => event.provider_observation_id === CONFIG.establishment_source.expected_observation_id
+      && event.observation_date === targetDate
+      && /\bPlanting\b/i.test(event.observation_type)
+      && CURRENT_CROP.test(event.comment)
+      && HYBRID.test(event.comment));
     assert(plantingMatches.length === 1, `T3R1_PERSISTENT_EXACT_PLANTING_MATCH_COUNT_${plantingMatches.length}`);
     const planting = plantingMatches[0];
-    assert(planting.termination_semantic === false, 'T3R1_PERSISTENT_ESTABLISHMENT_TERMINATION_SEMANTIC_CONTAMINATION');
+    assert(!TERMINATION.test(`${planting.observation_type} ${planting.comment}`), 'T3R1_PERSISTENT_ESTABLISHMENT_TERMINATION_SEMANTIC_CONTAMINATION');
 
-    const postPlanting = inspections.filter((item) => item.post_establishment && item.applies_to_t3r1);
-    const knownTerminations = postPlanting.filter((item) => item.termination_semantic && item.current_crop_bound);
-    const ambiguousTerminationCandidates = postPlanting.filter((item) => item.termination_semantic && !item.current_crop_bound);
-    const plantingConflicts = postPlanting.filter((item) => item.planting_semantic);
-    const explicitCropConflicts = postPlanting.filter((item) => item.other_crop_mentioned && (item.planting_semantic || item.termination_semantic));
+    const onOrAfterPlanting = exactEvents.filter((event) => event.observation_date >= targetDate);
+    const classified = onOrAfterPlanting.map((event) => {
+      const semanticText = `${event.observation_type} ${event.comment}`;
+      return {
+        ...event,
+        current_crop_bound: CURRENT_CROP.test(event.comment),
+        hybrid_bound: HYBRID.test(event.comment),
+        other_crop_mentioned: OTHER_CROP.test(event.comment),
+        termination_semantic: TERMINATION.test(semanticText),
+        planting_semantic: /\bPlanting\b/i.test(event.observation_type),
+        support_semantic: observationTypeSupports(event.observation_type),
+        post_establishment_date: event.observation_date > targetDate,
+        same_establishment_date: event.observation_date === targetDate,
+      };
+    });
+
+    const postPlanting = classified.filter((event) => event.post_establishment_date);
+    const sameDayOtherTransitions = classified.filter((event) => event.same_establishment_date
+      && event.provider_observation_id !== planting.provider_observation_id
+      && (event.termination_semantic || event.planting_semantic));
+    const knownTerminations = postPlanting.filter((event) => event.termination_semantic
+      && event.current_crop_bound
+      && !event.other_crop_mentioned);
+    const ambiguousTerminationCandidates = postPlanting.filter((event) => event.termination_semantic
+      && (!event.current_crop_bound || event.other_crop_mentioned));
+    const plantingConflicts = postPlanting.filter((event) => event.planting_semantic);
+    const explicitCropConflicts = postPlanting.filter((event) => event.other_crop_mentioned
+      && (event.planting_semantic || event.termination_semantic));
     const conflictMap = new Map();
-    for (const item of [...plantingConflicts, ...explicitCropConflicts, ...ambiguousTerminationCandidates]) {
-      conflictMap.set(item.provider_observation_id, item);
+    for (const event of [...sameDayOtherTransitions, ...plantingConflicts, ...explicitCropConflicts, ...ambiguousTerminationCandidates]) {
+      conflictMap.set(event.provider_observation_id, event);
     }
     const contradictions = [...conflictMap.values()].sort((a, b) => a.observation_date.localeCompare(b.observation_date) || a.provider_observation_id - b.provider_observation_id);
-    const supportEvents = postPlanting.filter((item) => item.support_semantic && !item.termination_semantic);
+    const supportEvents = postPlanting.filter((event) => event.support_semantic && !event.termination_semantic);
     const lastSupport = supportEvents.length ? supportEvents.at(-1) : null;
 
     const stateEvaluationTime = new Date();
@@ -275,8 +274,26 @@ async function main() {
     const activeConsumableCandidate = domainState === 'ACTIVE'
       && authorityStatus === 'RESOLVED'
       && authorityValidity === 'VALID';
+    const establishmentAvailableAt = laterIso(establishmentPageProof.retrieved_at, expandedLog.retrieved_at);
 
-    const result = {
+    const sanitizedEvents = classified.map((event) => ({
+      provider_observation_id: event.provider_observation_id,
+      observation_date: event.observation_date,
+      observation_type: event.observation_type,
+      treatment: event.treatment,
+      plot_name: event.plot_name,
+      comment_sha256: event.comment_sha256,
+      source_row_count: event.source_row_count,
+      current_crop_bound: event.current_crop_bound,
+      hybrid_bound: event.hybrid_bound,
+      other_crop_mentioned: event.other_crop_mentioned,
+      termination_semantic: event.termination_semantic,
+      planting_semantic: event.planting_semantic,
+      support_semantic: event.support_semantic,
+      comment_emitted: false,
+    }));
+
+    write({
       schema_version: 'geox_mcft_cap09_t3r1_persistent_lifecycle_qualification_result_v1',
       status: 'PASS',
       subject_sha: SUBJECT_SHA,
@@ -287,34 +304,40 @@ async function main() {
       authority_evaluated_at: authorityEvaluatedAt.toISOString(),
       lifecycle_establishment: {
         status: 'RESOLVED_CANDIDATE',
-        provider: 'KBS_AGLOG',
+        provider: 'KBS_AGLOG_AND_KBS_LTER_CORE_EXPANDED_AGRONOMIC_LOG',
         provider_observation_id: planting.provider_observation_id,
         event_time_precision: CONFIG.candidate_scope.planting_event_time_precision,
         possible_event_window_utc: CONFIG.candidate_scope.possible_planting_window_utc,
-        available_to_runtime_at: planting.retrieved_at,
+        available_to_runtime_at: establishmentAvailableAt,
         materials_page_available_to_runtime_at: establishmentPageProof.retrieved_at,
+        expanded_log_available_to_runtime_at: expandedLog.retrieved_at,
         crop: CONFIG.candidate_scope.crop,
         hybrid_product_code: CONFIG.candidate_scope.hybrid_product_code,
-        replicate_1_explicitly_included: true,
+        exact_plot_name: planting.plot_name,
         provider_body_emitted: false,
       },
       transition_sweep: {
-        scanned_index_page_count: indexProofs.length,
-        scanned_observation_row_count: scannedRows,
-        scan_reached_planting_date: reachedPlantingDate,
-        t3_detail_candidate_count: uniqueLeads.length,
+        provider: transitionSource.provider,
+        datatable_id: transitionSource.datatable_id,
+        response_sha256: expandedLog.response_sha256,
+        response_bytes: expandedLog.response_bytes,
+        retrieved_at: expandedLog.retrieved_at,
+        total_source_row_count: rows.length,
+        exact_t3r1_event_count: exactEvents.length,
+        exact_t3r1_on_or_after_planting_event_count: classified.length,
+        full_comment_semantics_consumed: true,
+        exact_plot_scope_consumed: true,
         known_termination_result: knownTerminations.length === 0 ? 'NONE_FOUND' : 'FOUND',
         known_termination_count: knownTerminations.length,
         ambiguous_termination_candidate_count: ambiguousTerminationCandidates.length,
+        same_day_transition_ambiguity_count: sameDayOtherTransitions.length,
         known_contradiction_result: contradictions.length === 0 ? 'NONE_FOUND' : 'FOUND',
         known_contradiction_count: contradictions.length,
         provider_coverage_completeness_proven: false,
         proved_no_termination_occurred: false,
         provider_silence_used_as_evidence: false,
         provider_retrieval_time_used_as_coverage_watermark: false,
-        event_semantics_page_chrome_excluded: true,
-        page_proofs: indexProofs,
-        detail_inspections: inspections,
+        events: sanitizedEvents,
         provider_body_emitted: false,
         provider_payload_persisted_or_uploaded: false,
       },
@@ -323,7 +346,7 @@ async function main() {
         provider_observation_id: lastSupport.provider_observation_id,
         observation_date: lastSupport.observation_date,
         observation_type: lastSupport.observation_type,
-        available_to_runtime_at: lastSupport.retrieved_at,
+        available_to_runtime_at: expandedLog.retrieved_at,
         refreshes_direct_biological_observation: false,
         renews_lifecycle_horizon: false,
       } : null,
@@ -346,7 +369,7 @@ async function main() {
         active_consumable_candidate: activeConsumableCandidate,
         termination_event_id: terminationEvent?.provider_observation_id ?? null,
         termination_event_date: terminationEvent?.observation_date ?? null,
-        termination_available_to_runtime_at: terminationEvent?.retrieved_at ?? null,
+        termination_available_to_runtime_at: terminationEvent ? expandedLog.retrieved_at : null,
         latest_direct_biological_observation_at: null,
         observation_freshness_refreshed_by_persistence: false,
         evaluated_at_emitted_as_observed_at: false,
@@ -371,9 +394,7 @@ async function main() {
           : qualificationOutcome === 'CONFLICTED'
             ? CONFIG.next_frontier_on_conflict
             : CONFIG.next_frontier_on_horizon_expiry,
-    };
-
-    write(result);
+    });
   } finally {
     await browser.close();
   }
