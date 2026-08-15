@@ -10,8 +10,8 @@ const {
 } = require("./MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1.cjs");
 const {
   PROVIDER_EXPECTED_UPDATE_BEHAVIOR,
-  MIN_OPERATIONAL_HEADROOM_MINUTES,
-  evaluateOperationalHeadroom,
+  MIN_DIAGNOSTIC_HEADROOM_MINUTES,
+  evaluateFreshnessDiagnosticHeadroom,
   assessEa5e2ProtocolCompatibility,
   assessPhaseAwareTargetTemporalFeasibility,
 } = require("./MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs");
@@ -31,6 +31,7 @@ const PRE_BOUNDARY_OFFSET_MINUTES = 30;
 const MIN_TARGET_SETUP_BUDGET_MINUTES = 120;
 const MAX_TARGET_SELECTION_HORIZON_MINUTES = 180;
 const TARGET_SCHEDULING_MODE = "PHASE_AWARE_LONG_HORIZON";
+const CURRENT_ACTIVATION_ORCHESTRATION = "ROLLING_PREBOUNDARY_BATCH_INTERSECTION";
 const SOIL_WINDOW_MINUTES = 15;
 const MIN_INGRESS_MARGIN_MINUTES = 5;
 const REQUIRED_SOIL_CADENCE_MINUTES = 5;
@@ -38,6 +39,7 @@ const REQUIRED_GLOBAL_TRANSITION_COUNT = 12;
 const MIN_REPEAT_SAMPLES_PER_PHASE = 2;
 const EXACT_HOUR_PHASE_OFFSETS = [15, 10, 5];
 const EXACT_ROW_PHASE_EVIDENCE_BASIS = "EXACT_SOURCE_ROW_FIRST_SEEN";
+const HISTORICAL_ONLINE_FRESHNESS_DIAGNOSTIC_HOURS = 6;
 
 if (JSON.stringify(EXACT_HOUR_PHASE_OFFSETS) !== JSON.stringify(PHASE_ADMISSION_OFFSETS)) {
   throw new Error("EA5E2_PHASE_ADMISSION_OFFSET_CONTRACT_DRIFT");
@@ -79,18 +81,6 @@ function stageAt(ageDays, lengths) {
   return "LATE";
 }
 
-function runKbsFreshness() {
-  const python = process.env.PYTHON || "python3";
-  const stdout = execFileSync(python, [PROVIDER, "precheck-kbs"], { encoding: "utf8", timeout: 120_000 });
-  const lines = stdout.trim().split(/\r?\n/).filter(Boolean);
-  if (!lines.length) throw new Error("EA5E2_VIABILITY_KBS_PREFLIGHT_OUTPUT_REQUIRED");
-  const result = JSON.parse(lines[lines.length - 1]);
-  if (result.status !== "PASS" || finite(result.configured_max_age_hours, "EA5E2_VIABILITY_KBS_MAX_AGE_REQUIRED") !== 6) {
-    throw new Error("EA5E2_VIABILITY_KBS_CURRENT_AUTHORITY_FAILED");
-  }
-  return result;
-}
-
 function inspectKbsForPhaseAwarePlanning() {
   const python = process.env.PYTHON || "python3";
   const stdout = execFileSync(python, [PROVIDER, "inspect-kbs"], { encoding: "utf8", timeout: 120_000 });
@@ -99,9 +89,8 @@ function inspectKbsForPhaseAwarePlanning() {
   const result = JSON.parse(lines[lines.length - 1]);
   if (result.status !== "OBSERVED"
       || result.phase_aware_planning_only !== true
-      || result.late_actual_retrieval_must_reprove_authority !== true
-      || finite(result.configured_max_age_hours, "EA5E2_VIABILITY_KBS_MAX_AGE_REQUIRED") !== 6) {
-    throw new Error("EA5E2_VIABILITY_KBS_PLANNING_CONTRACT_FAILED");
+      || finite(result.configured_max_age_hours, "EA5E2_VIABILITY_KBS_DIAGNOSTIC_HOURS_REQUIRED") !== HISTORICAL_ONLINE_FRESHNESS_DIAGNOSTIC_HOURS) {
+    throw new Error("EA5E2_VIABILITY_KBS_PLANNING_DIAGNOSTIC_CONTRACT_FAILED");
   }
   return result;
 }
@@ -113,7 +102,7 @@ async function fetchSoilMetadata() {
     redirect: "follow",
     headers: {
       Accept: "application/json,*/*;q=0.5",
-      "User-Agent": "GEOX-MCFT-CAP09-EA5E2-LIVE-WINDOW-VIABILITY/4",
+      "User-Agent": "GEOX-MCFT-CAP09-EA5E2-LIVE-WINDOW-VIABILITY/6",
       "Cache-Control": "no-cache",
       Pragma: "no-cache",
     },
@@ -312,7 +301,7 @@ async function main() {
   const evaluatedAt = new Date();
   const reasons = [];
   let kbs = null;
-  let kbsHeadroom = null;
+  let kbsDiagnosticHeadroom = null;
   const protocolCompatibility = assessEa5e2ProtocolCompatibility({ targetSchedulingMode: TARGET_SCHEDULING_MODE });
   let soil = null;
   let soilEvidence = null;
@@ -322,13 +311,13 @@ async function main() {
   try {
     timingBudget = validateTimingBudgetEvidence();
   } catch {
-    reasons.push("LATE_EXACT_T_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED");
-    reasons.push("OBSERVER_END_TO_END_PROCESSING_BUDGET_NOT_QUALIFIED");
+    reasons.push("HISTORICAL_PROBE_LATE_EXACT_T_PROCESSING_BUDGET_NOT_QUALIFIED");
+    reasons.push("HISTORICAL_PROBE_OBSERVER_PROCESSING_BUDGET_NOT_QUALIFIED");
   }
 
   try {
     kbs = inspectKbsForPhaseAwarePlanning();
-    kbsHeadroom = evaluateOperationalHeadroom(kbs.latest_age_hours, MIN_OPERATIONAL_HEADROOM_MINUTES);
+    kbsDiagnosticHeadroom = evaluateFreshnessDiagnosticHeadroom(kbs.latest_age_hours, MIN_DIAGNOSTIC_HEADROOM_MINUTES);
   } catch {
     reasons.push("KBS_RAW_HOURLY_PHASE_AWARE_PLANNING_METADATA_UNAVAILABLE");
   }
@@ -372,46 +361,51 @@ async function main() {
 
   const candidate = reasons.length === 0 ? crop.candidate_t : null;
   const proof = {
-    schema_version: "geox_mcft_cap09_ea5e2_live_window_viability_preflight_v5",
-    status: reasons.length ? "NO_VIABLE_LIVE_WINDOW" : "PASS",
+    schema_version: "geox_mcft_cap09_ea5e2_live_window_viability_engineering_probe_v6",
+    status: reasons.length ? "NO_VIABLE_ENGINEERING_PROBE_WINDOW" : "PASS",
+    record_role: "HISTORICAL_LONG_HORIZON_ENGINEERING_PROBE_ONLY_NOT_CURRENT_ACTIVATION_AUTHORITY",
     evaluated_at: evaluatedAt.toISOString(),
     subject_sha: process.env.GITHUB_SHA || process.env.SUBJECT_SHA || null,
     candidate_T: candidate,
-    candidate_selection_basis: candidate ? "FIRST_CROP_LEGAL_PHASE_AWARE_DAILY_BATCH_FEASIBLE_EXACT_UTC_HOUR_INSIDE_BOUNDED_DISPATCH_HORIZON" : null,
+    candidate_selection_basis: candidate ? "FIRST_CROP_LEGAL_PHASE_AWARE_DAILY_BATCH_FEASIBLE_EXACT_UTC_HOUR_INSIDE_BOUNDED_ENGINEERING_PROBE_HORIZON" : null,
     soil_window_expected: candidate ? `[${new Date(Date.parse(candidate) - SOIL_WINDOW_MINUTES * MINUTE).toISOString()},${candidate}]` : null,
     soil_required_latest_available_by: candidate ? new Date(Date.parse(candidate) - MIN_INGRESS_MARGIN_MINUTES * MINUTE).toISOString() : null,
     soil_required_observation_min: candidate ? new Date(Date.parse(candidate) - SOIL_WINDOW_MINUTES * MINUTE).toISOString() : null,
     kbs_raw_hourly: kbs ? {
       latest_timestamp: kbs.latest_raw_hourly_timestamp,
       current_age_hours: kbs.latest_age_hours,
-      authority_max_age_hours: 6,
-      current_authority_status: kbs.production_authority_pass ? "PASS" : "FAIL_NOT_USED_FOR_PHASE_AWARE_PREBOUNDARY_ADMISSION",
-      operational_headroom: kbsHeadroom,
+      historical_online_freshness_diagnostic_hours: HISTORICAL_ONLINE_FRESHNESS_DIAGNOSTIC_HOURS,
+      historical_online_freshness_diagnostic_status: Number(kbs.latest_age_hours) <= HISTORICAL_ONLINE_FRESHNESS_DIAGNOSTIC_HOURS ? "PASS_DIAGNOSTIC" : "STALE_DIAGNOSTIC",
+      diagnostic_headroom: kbsDiagnosticHeadroom,
       future_publication_prediction_used: true,
       planning_only: true,
-      late_actual_retrieval_must_reprove_same_source_exact_t_and_freshness: true,
+      late_actual_retrieval_must_reprove_same_source_exact_t_watermark: true,
+      freshness_is_late_authoritative_admission_gate: false,
     } : null,
     ea5e2_live_protocol_compatibility: protocolCompatibility,
     late_exact_t_processing_budget: {
-      discovery_deadline_offset_minutes: 407,
-      frozen_cutoff_offset_minutes: 432,
-      conservative_reserved_minutes: 25,
+      qualification_attempt_discovery_deadline_offset_minutes: 407,
+      qualification_attempt_end_offset_minutes: 432,
+      engineering_processing_reservation_minutes: 25,
+      normative_evidence_authority: false,
+      evidence_eligibility_has_fixed_t_plus_432_cutoff: false,
       qualification_status: timingBudget?.collector ? "QUALIFIED_EXACT_MAIN_2X_SAFETY" : "UNQUALIFIED",
       measured_max_elapsed_ms: timingBudget?.collector?.max_elapsed_ms ?? null,
       safety_adjusted_max_elapsed_ms: timingBudget?.collector?.safety_adjusted_max_elapsed_ms ?? null,
       qualified_budget_ms: timingBudget?.collector?.qualified_budget_ms ?? null,
-      dispatch_allowed: timingBudget?.collector ? true : false,
+      engineering_probe_dispatch_allowed: timingBudget?.collector ? true : false,
     },
     observer_end_to_end_budget: {
-      observer_offset_minutes: 437,
-      maximum_start_skew_minutes: 10,
-      operational_start_deadline_offset_minutes: 442,
-      processing_reservation_minutes: 5,
+      historical_probe_observer_offset_minutes: 437,
+      historical_probe_maximum_start_skew_minutes: 10,
+      historical_probe_operational_start_deadline_offset_minutes: 442,
+      engineering_processing_reservation_minutes: 5,
+      normative_observer_authority: false,
       qualification_status: timingBudget?.observer ? "QUALIFIED_EXACT_MAIN_2X_SAFETY" : "UNQUALIFIED",
       measured_max_elapsed_ms: timingBudget?.observer?.max_elapsed_ms ?? null,
       safety_adjusted_max_elapsed_ms: timingBudget?.observer?.safety_adjusted_max_elapsed_ms ?? null,
       qualified_budget_ms: timingBudget?.observer?.qualified_budget_ms ?? null,
-      dispatch_allowed: timingBudget?.observer ? true : false,
+      engineering_probe_dispatch_allowed: timingBudget?.observer ? true : false,
     },
     timing_budget_qualification: timingBudget,
     provider_expected_update_behavior: PROVIDER_EXPECTED_UPDATE_BEHAVIOR,
@@ -420,35 +414,41 @@ async function main() {
     soil_global_publication_lag_diagnostic: soilEvidence?.global_diagnostic ?? null,
     soil_exact_hour_phase_admission: soilEvidence?.exact_hour_phase_admission ?? null,
     crop_candidate: crop,
-    window_reason: reasons.length ? null : "PROVIDER_COMPATIBLE_EXACT_HOUR_PHASE_EVIDENCE",
+    window_reason: reasons.length ? null : "ENGINEERING_PROBE_PROVIDER_COMPATIBLE_EXACT_HOUR_PHASE_EVIDENCE",
     reason: [...new Set(reasons)],
     authority_audit: {
+      current_activation_orchestration: CURRENT_ACTIVATION_ORCHESTRATION,
+      this_long_horizon_probe_is_current_activation_authority: false,
       global_p95_max_used_as_candidate_t_authority: false,
       phase_conditioned_scheduler_heuristic_only: true,
       phase_evidence_basis: EXACT_ROW_PHASE_EVIDENCE_BASIS,
       phase_algorithm_ssot: "MCFT_CAP_09_EA5E2_SOIL_PHASE_ADMISSION_V1",
       minimum_repeat_samples_per_phase: MIN_REPEAT_SAMPLES_PER_PHASE,
       minimum_repeat_samples_is_authority: false,
-      kbs_operational_headroom_is_authority: false,
-      daily_batch_protocol_compatibility_used_as_safety_gate_only: true,
-      target_setup_budget_is_separate_from_kbs_freshness_headroom: true,
+      kbs_diagnostic_headroom_is_authority: false,
+      kbs_six_hour_diagnostic_is_late_admission_authority: false,
+      daily_batch_protocol_compatibility_used_for_probe_planning_only: true,
       target_setup_budget_is_authority: false,
       exact_main_timing_budget_is_engineering_evidence_only: true,
       exact_main_timing_budget_authority_effect: false,
+      fixed_t_plus_432_normative_evidence_cutoff: false,
+      fixed_t_plus_437_normative_observer_time: false,
     },
-    frozen_boundaries: {
+    engineering_probe_boundaries: {
       soil_window_minutes: SOIL_WINDOW_MINUTES,
       minimum_ingress_margin_minutes: MIN_INGRESS_MARGIN_MINUTES,
-      kbs_raw_hourly_max_age_hours: 6,
-      kbs_minimum_operational_headroom_minutes: MIN_OPERATIONAL_HEADROOM_MINUTES,
-      kbs_operational_headroom_is_authority: false,
+      historical_online_freshness_diagnostic_hours: HISTORICAL_ONLINE_FRESHNESS_DIAGNOSTIC_HOURS,
+      kbs_minimum_diagnostic_headroom_minutes: MIN_DIAGNOSTIC_HEADROOM_MINUTES,
+      kbs_diagnostic_headroom_is_authority: false,
       minimum_target_setup_budget_minutes: MIN_TARGET_SETUP_BUDGET_MINUTES,
       maximum_target_selection_horizon_minutes: MAX_TARGET_SELECTION_HORIZON_MINUTES,
       target_setup_budget_is_authority: false,
       target_scheduling_mode: TARGET_SCHEDULING_MODE,
-      late_exact_hour_collector_offset_minutes: 390,
-      late_exact_hour_cutoff_offset_minutes: 432,
-      runtime_observer_offset_minutes: 437,
+      qualification_attempt_poll_start_offset_minutes: 390,
+      qualification_attempt_discovery_deadline_offset_minutes: 407,
+      qualification_attempt_end_offset_minutes: 432,
+      historical_probe_observer_offset_minutes: 437,
+      attempt_offsets_are_normative_evidence_authority: false,
       accelerated_clock: false,
     },
     provider_request_count: (kbs ? 1 : 0) + (soil ? 1 : 0),
@@ -458,6 +458,7 @@ async function main() {
     canonical_write_count: 0,
     scheduler_write_count: 0,
     live_activation_started: false,
+    current_activation_authority: false,
     authority_changed: false,
     raw_values_emitted: false,
   };
@@ -468,8 +469,9 @@ async function main() {
 
 main().catch((error) => {
   writeProof({
-    schema_version: "geox_mcft_cap09_ea5e2_live_window_viability_preflight_v5",
-    status: "NO_VIABLE_LIVE_WINDOW",
+    schema_version: "geox_mcft_cap09_ea5e2_live_window_viability_engineering_probe_v6",
+    status: "NO_VIABLE_ENGINEERING_PROBE_WINDOW",
+    record_role: "HISTORICAL_LONG_HORIZON_ENGINEERING_PROBE_ONLY_NOT_CURRENT_ACTIVATION_AUTHORITY",
     evaluated_at: new Date().toISOString(),
     candidate_T: null,
     reason: ["PREFLIGHT_INTERNAL_FAIL_CLOSED"],
@@ -479,6 +481,7 @@ main().catch((error) => {
     raw_retention_count: 0,
     canonical_write_count: 0,
     live_activation_started: false,
+    current_activation_authority: false,
     authority_changed: false,
     raw_values_emitted: false,
   });
