@@ -4,7 +4,7 @@
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S6",
   "record_status": "T3R1_FORMAL_SUCCESSOR_CROP_CONTEXT_AUTHORITY_CANDIDATE",
-  "exact_predecessor_protected_main": "868d3e6b6bcc9af12f7a1866a39061ea92d5c190",
+  "exact_predecessor_protected_main": "6081a363a665b7882bbca7592213ee49395872d7",
   "successor_of": {
     "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json",
     "blob_sha": "b5de9d29189cb654444b3f57d00df290eefe16d3",
