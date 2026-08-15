@@ -50,7 +50,7 @@
     "provider": "KBS_LTER",
     "endpoint_id": 25,
     "source_family": "CURRENT_WEATHER_VARIATE_JSON",
-    "binding_id": "external_public_research_soil_moisture_v1",
+    "binding_id": "kbs_lter_variate25_vwc_100mm_v1",
     "maximum_provider_request_count": 1,
     "maximum_new_canonical_evidence_fact_count": 1,
     "raw_retention_before_decode_required": true,
