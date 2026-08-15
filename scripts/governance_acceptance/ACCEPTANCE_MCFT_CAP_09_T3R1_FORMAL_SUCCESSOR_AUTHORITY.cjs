@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
-const EXPECTED_BASE = '868d3e6b6bcc9af12f7a1866a39061ea92d5c190';
+const EXPECTED_BASE = '6081a363a665b7882bbca7592213ee49395872d7';
 const FILES = [
   '.github/workflows/mcft-cap-09-t3r1-formal-successor-authority.yml',
   'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-17-T3R1-FORMAL-SUCCESSOR-SCOPE-AUTHORITY.md',
