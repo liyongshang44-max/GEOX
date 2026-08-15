@@ -4,7 +4,7 @@
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S6",
   "record_status": "T3R1_FRESH_FORMAL_DATABASE_REQUIRED_NOT_YET_QUALIFIED",
-  "exact_predecessor_protected_main": "52885f0353ab0258388cd518aa9e27e3189a7826",
+  "exact_predecessor_protected_main": "0498a9529b6cb79ba0ab8e55d1b9a8b7d479a3ba",
   "successor_of": {
     "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V1.json",
     "blob_sha": "f3a57413d78633685cbc5be7d94f39d9fdc5c62b",
