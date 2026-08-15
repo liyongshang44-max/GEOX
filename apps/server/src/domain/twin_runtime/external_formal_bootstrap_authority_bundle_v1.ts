@@ -53,7 +53,7 @@ export const MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1 = Object.freeze({
   },
   fresh_database: {
     ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V2.json",
-    hash: "77806284bb52f67deac127335a25f28f7b830250",
+    hash: "302f4ff3451c393cd1712ec87bc0941b2a6dc8d6",
   },
 });
 
