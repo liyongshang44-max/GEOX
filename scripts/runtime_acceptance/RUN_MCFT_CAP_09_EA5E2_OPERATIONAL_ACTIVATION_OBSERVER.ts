@@ -10,10 +10,6 @@ import {
   MCFT_CAP09_EXTERNAL_FORMAL_CONFIGURATION_MATRIX_REF_V1,
 } from "../../apps/server/src/domain/twin_runtime/external_formal_bootstrap_authority_bundle_v1.js";
 import {
-  MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1,
-  MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_REF_V1,
-} from "../../apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.js";
-import {
   MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
   compileExternalFormalRuntimeConfigV1,
   type ExternalFormalRuntimeConfigPayloadV1,
@@ -35,8 +31,13 @@ const CONFIG_MATRIX_REF = MCFT_CAP09_EXTERNAL_FORMAL_CONFIGURATION_MATRIX_REF_V1
 const CONFIG_MATRIX_HASH = MCFT_CAP09_EXTERNAL_FORMAL_CONFIGURATION_MATRIX_HASH_V1;
 const CROP_AUTHORITY_PATH = MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.crop_context.ref;
 const CROP_AUTHORITY_BLOB = MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.crop_context.hash;
-const A0_CONFIG_REF = MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_REF_V1;
-const A0_CONFIG_HASH = MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1;
+const FRESH_BOOTSTRAP_EFFECTIVENESS_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-T3R1-FRESH-BOOTSTRAP-EFFECTIVENESS-V1.json";
+const freshBootstrapEffectiveness = JSON.parse(fs.readFileSync(FRESH_BOOTSTRAP_EFFECTIVENESS_PATH, "utf8")) as Record<string, any>;
+const A0_CONFIG_REF = String(freshBootstrapEffectiveness.persisted_a0?.runtime_config_ref ?? "");
+const A0_CONFIG_HASH = String(freshBootstrapEffectiveness.persisted_a0?.runtime_config_hash ?? "");
+const EXPECTED_FORMAL_DATABASE = String(freshBootstrapEffectiveness.database_identity?.database_name ?? "");
+const EXPECTED_FORMAL_PROJECT = "delicate-glade-62464340";
+const EXPECTED_FORMAL_BRANCH = "br-cold-dust-a6j6aymz";
 
 function env(name: string): string {
   const value = process.env[name];
@@ -242,8 +243,11 @@ function buildHandoffV1(
 }
 
 async function assertFormalDatabaseReadOnlyPreconditionsV1(formalPool: Pool): Promise<void> {
-  const identity = await formalPool.query("SELECT current_database() AS db, current_setting('server_version_num')::int AS version_num");
-  if (identity.rows.length !== 1 || identity.rows[0].db !== "geox_mcft_cap09_s6_formal_24h" || Number(identity.rows[0].version_num) < 160000) {
+  const identity = await formalPool.query("SELECT current_database() AS db, current_setting('server_version_num')::int AS version_num, current_setting('neon.project_id', true) AS neon_project_id, current_setting('neon.branch_id', true) AS neon_branch_id");
+  if (identity.rows.length !== 1 || identity.rows[0].db !== EXPECTED_FORMAL_DATABASE
+    || identity.rows[0].neon_project_id !== EXPECTED_FORMAL_PROJECT
+    || identity.rows[0].neon_branch_id !== EXPECTED_FORMAL_BRANCH
+    || Number(identity.rows[0].version_num) < 160000) {
     throw new Error("EA5E2_ACTIVATION_FORMAL_DATABASE_IDENTITY_MISMATCH");
   }
   const client = await formalPool.connect();

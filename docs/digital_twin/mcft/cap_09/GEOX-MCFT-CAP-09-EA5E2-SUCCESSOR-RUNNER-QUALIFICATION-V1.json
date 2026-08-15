@@ -1,24 +1,26 @@
 {
   "schema_version": "geox_mcft_cap09_ea5e2_successor_runner_qualification_v1",
   "authority_id": "GEOX-MCFT-CAP-09-EA5E2-SUCCESSOR-RUNNER-QUALIFICATION-V1",
-  "record_status": "SUCCESSOR_RUNNER_QUALIFICATION_CANDIDATE_NOT_OPERATIONAL_ACTIVATION",
+  "record_status": "SUCCESSOR_RUNNER_QUALIFIED_LIVE_DISPATCH_AUTHORIZED_NOT_OPERATIONAL_ACTIVATION",
   "historical_runner_qualification_preserved": true,
   "historical_qualification_reused_as_successor_proof": false,
   "successor_qualification_reexecution_required_per_exact_head": true,
   "formal_snapshot_binding": {
-    "database_name": "geox_mcft_cap09_s6_formal_24h",
+    "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h",
     "neon_project_id": "delicate-glade-62464340",
     "neon_branch_id": "br-cold-dust-a6j6aymz",
     "simulation_branch_id_forbidden": "br-falling-cake-a6lfsdak",
-    "canonical_a0_binding_source": "apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.ts",
-    "a0_runtime_config_ref": "external_formal_runtime_config_7284202e3b0bdae6d32f4814",
-    "a0_runtime_config_hash": "sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8",
+    "canonical_a0_binding_source": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-T3R1-FRESH-BOOTSTRAP-EFFECTIVENESS-V1.json",
+    "a0_runtime_config_ref": "external_formal_runtime_config_49959a28cfc9eb357bf18f9d",
+    "a0_runtime_config_hash": "sha256:5f11788fd049a3eae190d566e6faa28f428637e11f2c90b4e0aaea67e6f14e48",
     "pointer_graph_read_only_preflight_required": true,
-    "scheduler_must_remain_unstarted": true
+    "scheduler_must_remain_unstarted": true,
+    "bootstrap_logical_time": "2026-08-15T10:00:00.000Z",
+    "bootstrap_workflow_run_id": 31875578873
   },
   "crop_season_bundle_rule": {
     "current_scope_season_id": "season_2026_corn",
-    "current_crop_authority_blob_sha": "b5de9d29189cb654444b3f57d00df290eefe16d3",
+    "current_crop_authority_blob_sha": "757e4b9f4fdcd631eea97fca85614a1b61ef0c4a",
     "new_crop_authority_may_patch_existing_a0": false,
     "new_natural_season_requires_new_immutable_season_id": true,
     "new_natural_season_requires_fresh_a0_bootstrap": true,
@@ -41,7 +43,7 @@
     "target_setup_budget_is_authority": false
   },
   "current_orchestration_adjudication": {
-    "result": "PHASE_AWARE_LONG_HORIZON_SINGLE_T_ORCHESTRATION_IMPLEMENTED_NOT_YET_LIVE_DISPATCHABLE",
+    "result": "PHASE_AWARE_LONG_HORIZON_SINGLE_T_ORCHESTRATION_IMPLEMENTED_LIVE_DISPATCHABLE_AFTER_EXACT_HEAD_REQUALIFICATION",
     "authority_globally_impossible_for_every_single_t": false,
     "phase_aware_long_horizon_target_scheduling_implemented": true,
     "daily_batch_planning_first_seen_not_after_utc": "05:30",
@@ -61,13 +63,17 @@
   },
   "exact_head_effect": {
     "successor_runner_implementation_qualified": true,
-    "protected_main_live_dispatch_authorized": false,
+    "protected_main_live_dispatch_authorized": true,
     "ea5e2_operational_activation_qualified": false,
     "ea5e3_authorized": false,
     "formal_window_started": false,
     "formal_execution_count": "0/24"
   },
-  "live_dispatch_blockers": [
-    "CURRENT_CROP_AUTHORITY_HAS_NO_FUTURE_LEGAL_TARGET"
-  ]
+  "live_dispatch_blockers": [],
+  "fresh_bootstrap_effectiveness": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-T3R1-FRESH-BOOTSTRAP-EFFECTIVENESS-V1.json",
+    "bootstrap_workflow_run_id": 31875578873,
+    "bootstrap_subject_sha": "30d403ba409393ce48ae142b8fb9dc7f902a5ee1",
+    "fresh_t3r1_bootstrap_complete": true
+  }
 }

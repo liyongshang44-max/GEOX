@@ -25,7 +25,7 @@ const SUCCESSOR_RUNNER = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_E
 const CADENCE = "scripts/runtime_acceptance/MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs";
 const WATCHER = "scripts/runtime_acceptance/WATCH_MCFT_CAP_09_KBS_BATCH_QUALIFICATION_WINDOW.py";
 const EA4 = "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py";
-const A0_CANONICAL = "apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.ts";
+const A0_CANONICAL = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-T3R1-FRESH-BOOTSTRAP-EFFECTIVENESS-V1.json";
 const CROP = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json";
 const OA = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json";
 const DEP_GATE = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V2.cjs";
@@ -316,9 +316,9 @@ function main() {
   blocker(blockers, !has(observer, "EA5E2_ACTIVATION_FORMAL_SCHEDULER_MUST_REMAIN_UNSTARTED"), "FORMAL_SCHEDULER_ZERO_PRECONDITION_REQUIRED");
   blocker(blockers, !has(observer, "A1") || !has(observer, "COMPLETED") || !has(observer, "72"), "EXTERNAL_CAP04_A1_COMPLETED_72_OBSERVER_REQUIRED");
   blocker(blockers,
-    !has(read(A0_CANONICAL), "sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8")
-      || !has(observer, "MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1")
-      || !has(formalReadiness, "MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1"),
+    !has(read(A0_CANONICAL), "sha256:5f11788fd049a3eae190d566e6faa28f428637e11f2c90b4e0aaea67e6f14e48")
+      || !has(observer, "FRESH_BOOTSTRAP_EFFECTIVENESS_PATH")
+      || !has(formalReadiness, "FRESH_BOOTSTRAP_EFFECTIVENESS_PATH"),
     "FORMAL_A0_CANONICAL_HASH_DRIFT");
   blocker(blockers, !has(formalReadiness, "br-cold-dust-a6j6aymz") || !has(formalReadiness, "br-falling-cake-a6lfsdak") || !has(formalReadiness, "EA5E2_FORMAL_READINESS_CROP_A0_AUTHORITY_MISMATCH") || !has(formalReadiness, "pointer_graph_validated"), "FORMAL_BRANCH_A0_POINTER_CROP_PREFLIGHT_MISSING");
   blocker(blockers, !has(successorRunner, "qualification_reexecuted: true") || !has(successorRunner, "protected_main_live_dispatch_authorized: false"), "SUCCESSOR_RUNNER_EXACT_HEAD_REQUALIFICATION_MISSING");

@@ -24,7 +24,7 @@ const CADENCE = "scripts/runtime_acceptance/MCFT_CAP_09_KBS_PROVIDER_CADENCE_INT
 const PROVIDER = "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py";
 const EA4 = "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py";
 const DRIFT = "scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs";
-const A0_CANONICAL = "apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.ts";
+const A0_CANONICAL = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-T3R1-FRESH-BOOTSTRAP-EFFECTIVENESS-V1.json";
 const WORKFLOW = ".github/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml";
 const TIMING_EVIDENCE = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-TIMING-BUDGET-QUALIFICATION-V1.json";
 const TIMING_VALIDATOR = "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_TIMING_BUDGET_EVIDENCE_V1.cjs";
@@ -46,7 +46,7 @@ try {
   assert.equal(authority.historical_qualification_reused_as_successor_proof, false);
   assert.equal(authority.successor_qualification_reexecution_required_per_exact_head, true);
   assert.equal(authority.formal_snapshot_binding.canonical_a0_binding_source, A0_CANONICAL);
-  assert.equal(authority.formal_snapshot_binding.a0_runtime_config_hash, "sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8");
+  assert.equal(authority.formal_snapshot_binding.a0_runtime_config_hash, "sha256:5f11788fd049a3eae190d566e6faa28f428637e11f2c90b4e0aaea67e6f14e48");
   assert.equal(authority.exact_head_effect.protected_main_live_dispatch_authorized, false);
   assert.equal(authority.current_orchestration_adjudication.phase_aware_long_horizon_target_scheduling_implemented, true);
   assert.equal(authority.current_orchestration_adjudication.planning_profile_is_provider_authority, false);
@@ -65,10 +65,9 @@ try {
   has(canonicalA0, authority.formal_snapshot_binding.a0_runtime_config_ref, "CANONICAL_A0_REF_MISSING");
   has(canonicalA0, authority.formal_snapshot_binding.a0_runtime_config_hash, "CANONICAL_A0_HASH_MISSING");
   const observer = read(OBSERVER);
-  has(observer, "MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_REF_V1", "SUCCESSOR_A0_REF_BINDING_MISSING");
-  has(observer, "MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1", "SUCCESSOR_A0_HASH_BINDING_MISSING");
+  has(observer, "FRESH_BOOTSTRAP_EFFECTIVENESS_PATH", "SUCCESSOR_A0_EFFECTIVENESS_BINDING_MISSING");
   const formal = read(FORMAL);
-  for (const marker of [authority.formal_snapshot_binding.neon_branch_id, authority.formal_snapshot_binding.simulation_branch_id_forbidden, "MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1", "BEGIN TRANSACTION READ ONLY", "pointer_graph_validated", "CROP_A0_AUTHORITY_MISMATCH"]) has(formal, marker, "FORMAL_READINESS_RULE_MISSING");
+  for (const marker of [authority.formal_snapshot_binding.neon_branch_id, authority.formal_snapshot_binding.simulation_branch_id_forbidden, "FRESH_BOOTSTRAP_EFFECTIVENESS_PATH", "BEGIN TRANSACTION READ ONLY", "pointer_graph_validated", "CROP_A0_AUTHORITY_MISMATCH"]) has(formal, marker, "FORMAL_READINESS_RULE_MISSING");
 
   const viability = read(VIABILITY);
   for (const marker of ["MIN_TARGET_SETUP_BUDGET_MINUTES = 120", ...authority.live_dispatch_blockers]) has(`${viability}\n${read(CADENCE)}`, marker, "VIABILITY_BLOCKER_MISSING");
@@ -96,8 +95,10 @@ try {
   const dependencyProof = JSON.parse(read(DEPENDENCY_PROOF));
   assert.equal(fullChainProof.status, "PASS", "FULL_CHAIN_STATIC_PREFLIGHT_REQUIRED");
   assert.equal(fullChainProof.subject_sha, exactHead, "FULL_CHAIN_EXACT_HEAD_SUBJECT_REQUIRED");
-  assert.equal(fullChainProof.activation_readiness, "BLOCKED", "UNQUALIFIED_LIVE_DISPATCH_MUST_REMAIN_BLOCKED");
+  const expectedActivationReadiness = authority.live_dispatch_blockers.length === 0 ? "READY" : "BLOCKED";
+  assert.equal(fullChainProof.activation_readiness, expectedActivationReadiness, "FULL_CHAIN_ACTIVATION_READINESS_MISMATCH");
   assert.deepEqual(fullChainProof.readiness_blockers.map((item) => item.code).sort(), [...authority.live_dispatch_blockers].sort(), "FULL_CHAIN_READINESS_BLOCKER_SET_DRIFT");
+  assert.equal(authority.exact_head_effect.protected_main_live_dispatch_authorized, authority.live_dispatch_blockers.length === 0, "LIVE_DISPATCH_AUTHORIZATION_MUST_MATCH_ZERO_BLOCKERS");
   assert.equal(dependencyProof.status, "PASS", "RUNTIME_DEPENDENCY_GRAPH_REQUIRED");
 
   const blobs = Object.fromEntries(CRITICAL.map((file) => [file, git("rev-parse", `HEAD:${file}`)]));
@@ -120,7 +121,7 @@ try {
     exact_main_timing_budget_qualified: true,
     timing_budget_qualification_subject_sha: timingBudget.subject_sha,
     timing_budget_qualification_workflow_run_id: timingBudget.workflow_run_id,
-    protected_main_live_dispatch_authorized: false,
+    protected_main_live_dispatch_authorized: authority.exact_head_effect.protected_main_live_dispatch_authorized,
     readiness_blockers: authority.live_dispatch_blockers,
     database_write_count: 0,
     provider_request_count: 0,
