@@ -71,14 +71,21 @@ try {
   assert(x.establishment_source?.required_normalized_markers?.some((v) => v.includes('Pioneer P0306Q')), 'T3R1_PERSISTENT_ESTABLISHMENT_HYBRID_MARKER_REQUIRED');
 
   const sweep = x.transition_sweep;
-  assert(sweep?.provider === 'KBS_LTER_CORE_EXPANDED_AGRONOMIC_LOG', 'T3R1_PERSISTENT_EXPANDED_LOG_PROVIDER_REQUIRED');
-  assert(sweep?.download_url === 'https://lter.kbs.msu.edu/datatables/694.csv', 'T3R1_PERSISTENT_EXPANDED_LOG_URL_REQUIRED');
-  assert(sweep?.allowed_host === 'lter.kbs.msu.edu' && sweep?.datatable_id === '694', 'T3R1_PERSISTENT_EXPANDED_LOG_IDENTITY_REQUIRED');
-  assert(sweep?.exact_treatment === 'T3' && sweep?.exact_plot_name === 'T3R1', 'T3R1_PERSISTENT_EXACT_PLOT_SWEEP_REQUIRED');
-  assert(sweep?.full_comment_semantics_required === true && sweep?.exact_plot_scope_required === true, 'T3R1_PERSISTENT_FULL_COMMENT_EXACT_SCOPE_REQUIRED');
-  for (const column of ['obs_date','treatment','observation_type','comment','name','observation_id']) {
-    assert(sweep.required_columns?.includes(column), `T3R1_PERSISTENT_EXPANDED_LOG_COLUMN_REQUIRED:${column}`);
-  }
+  assert(sweep?.provider === 'KBS_AGLOG_CURRENT_OBSERVATION_INDEX_AND_DETAIL', 'T3R1_PERSISTENT_CURRENT_AGLOG_PROVIDER_REQUIRED');
+  assert(sweep?.index_url === 'https://aglog.kbs.msu.edu/observations', 'T3R1_PERSISTENT_CURRENT_AGLOG_INDEX_REQUIRED');
+  assert(sweep?.allowed_host === 'aglog.kbs.msu.edu', 'T3R1_PERSISTENT_CURRENT_AGLOG_HOST_REQUIRED');
+  assert(sweep?.maximum_pages === 20 && sweep?.maximum_detail_candidates === 100, 'T3R1_PERSISTENT_BOUNDED_SCAN_REQUIRED');
+  assert(sweep?.detail_field_contract?.comment_label === 'Comment:', 'T3R1_PERSISTENT_COMMENT_FIELD_REQUIRED');
+  assert(sweep?.detail_field_contract?.areas_label === 'Areas:', 'T3R1_PERSISTENT_AREAS_FIELD_REQUIRED');
+  assert(sweep?.detail_field_contract?.observation_type_label === 'Observation Type:', 'T3R1_PERSISTENT_OBSERVATION_TYPE_FIELD_REQUIRED');
+  assert(sweep?.detail_field_contract?.activities_label === 'Activities:', 'T3R1_PERSISTENT_ACTIVITIES_BOUNDARY_REQUIRED');
+  assert(sweep?.detail_field_contract?.full_comment_semantics_required === true, 'T3R1_PERSISTENT_FULL_COMMENT_REQUIRED');
+  assert(sweep?.detail_field_contract?.whole_page_body_semantic_classification_forbidden === true, 'T3R1_PERSISTENT_WHOLE_PAGE_SEMANTICS_FORBIDDEN');
+  assert(sweep?.detail_field_contract?.index_detail_date_agreement_required === true, 'T3R1_PERSISTENT_DATE_CROSSCHECK_REQUIRED');
+  assert(sweep?.detail_field_contract?.index_detail_observation_type_agreement_required === true, 'T3R1_PERSISTENT_TYPE_CROSSCHECK_REQUIRED');
+  assert(sweep?.t3r1_applicability_rule?.exact_t3r1_in_detail_areas_is_sufficient === true, 'T3R1_PERSISTENT_EXACT_AREA_SCOPE_REQUIRED');
+  assert(sweep?.t3r1_applicability_rule?.parent_t3_in_detail_areas_requires_explicit_r1_in_comment === true, 'T3R1_PERSISTENT_PARENT_T3_R1_PROOF_REQUIRED');
+  assert(sweep?.t3r1_applicability_rule?.generic_t3_reference_in_comment_without_t3_area_binding_forbidden === true, 'T3R1_PERSISTENT_GENERIC_T3_COMMENT_FORBIDDEN');
   assert(sweep?.provider_coverage_completeness_required_for_persistent_state === false, 'T3R1_PERSISTENT_COMPLETENESS_NOT_REQUIRED_BY_FSM');
   assert(sweep?.provider_coverage_completeness_claimed === false, 'T3R1_PERSISTENT_COMPLETENESS_CLAIM_FORBIDDEN');
   assert(sweep?.none_found_may_be_emitted === true, 'T3R1_PERSISTENT_NONE_FOUND_REQUIRED');
@@ -101,13 +108,15 @@ try {
   assert(s.phenology_may_establish_lifecycle === false, 'T3R1_PERSISTENT_PHENOLOGY_ESTABLISHMENT_FORBIDDEN');
 
   const source = fs.readFileSync(PROBE_PATH, 'utf8');
-  assert(source.includes('buildExactT3R1Events') && source.includes("normalize(row.name).toUpperCase() === CONFIG.transition_sweep.exact_plot_name"), 'T3R1_PERSISTENT_EXACT_PLOT_CLASSIFIER_REQUIRED');
-  assert(source.includes('full_comment_semantics_consumed: true'), 'T3R1_PERSISTENT_FULL_COMMENT_CONSUMPTION_REQUIRED');
-  assert(source.includes('exact_plot_scope_consumed: true'), 'T3R1_PERSISTENT_EXACT_PLOT_CONSUMPTION_REQUIRED');
+  assert(source.includes('extractObservationDetail') && source.includes('extractSection'), 'T3R1_PERSISTENT_STRUCTURED_DETAIL_PARSER_REQUIRED');
+  assert(source.includes("const comment = extractSection(raw, labels.comment_label") && source.includes("const areas = extractSection(raw, labels.areas_label") && source.includes("const observationType = extractSection(raw, labels.observation_type_label"), 'T3R1_PERSISTENT_THREE_EVENT_FIELDS_REQUIRED');
+  assert(source.includes('t3r1Applicability') && source.includes("'EXACT_T3R1_DETAIL_AREA'") && source.includes("'PARENT_T3_AREA_PLUS_EXPLICIT_R1_COMMENT'"), 'T3R1_PERSISTENT_SCOPE_CLASSIFIER_REQUIRED');
+  assert(source.includes('whole_page_body_semantic_classification_used: false'), 'T3R1_PERSISTENT_WHOLE_PAGE_NONUSE_PROOF_REQUIRED');
   assert(source.includes("proved_no_termination_occurred: false"), 'T3R1_PERSISTENT_NO_TERMINATION_NONCLAIM_REQUIRED');
   assert(source.includes("provider_coverage_completeness_proven: false"), 'T3R1_PERSISTENT_COMPLETENESS_NONCLAIM_REQUIRED');
   assert(source.includes("observation_freshness_refreshed_by_persistence: false"), 'T3R1_PERSISTENT_OBSERVATION_REFRESH_NONCLAIM_REQUIRED');
-  assert(!source.includes('detailAppliesToT3R1') && !source.includes('eventSemanticText(page)'), 'T3R1_PERSISTENT_PAGE_BODY_TRANSITION_CLASSIFICATION_FORBIDDEN');
+  assert(!source.includes('lter.kbs.msu.edu/datatables/694'), 'T3R1_PERSISTENT_LTAR_694_FORBIDDEN');
+  assert(!JSON.stringify(x).includes('KBS_LTER_CORE_EXPANDED_AGRONOMIC_LOG'), 'T3R1_PERSISTENT_LTAR_PROVIDER_FORBIDDEN');
 
   const b = x.authority_boundary;
   assert(b.stacked_candidate_may_become_effective_before_amendment_16_protected_main_merge === false, 'T3R1_PERSISTENT_STACKED_ADOPTION_FORBIDDEN');
@@ -125,10 +134,10 @@ try {
     amendment_16_persistent_state_semantics_verified: true,
     provider_silence_inference_forbidden: true,
     provider_completeness_claimed: false,
-    transition_source: 'KBS_LTER_CORE_EXPANDED_AGRONOMIC_LOG_694',
-    exact_t3r1_plot_scope_required: true,
-    full_comment_semantics_required: true,
-    page_body_transition_classification_forbidden: true,
+    transition_source: 'KBS_AGLOG_CURRENT_OBSERVATION_INDEX_AND_STRUCTURED_DETAIL',
+    structured_detail_field_contract_verified: true,
+    whole_page_semantic_classification_forbidden: true,
+    t3r1_scope_classifier_fail_closed: true,
     maximum_lifecycle_horizon_end_utc: expectedHorizon,
     horizon_is_truncation_only: true,
     stacked_authority_effect: 'NONE_UNTIL_AMENDMENT_16_EFFECTIVE_AND_EXACT_MAIN_RERUN',
