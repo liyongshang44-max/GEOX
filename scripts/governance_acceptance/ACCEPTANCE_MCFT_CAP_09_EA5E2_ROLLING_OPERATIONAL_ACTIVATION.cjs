@@ -16,6 +16,7 @@ function read(file) {
 }
 function has(text, marker, code) { if (!text.includes(marker)) throw new Error(`${code}:${marker}`); }
 function lacks(text, marker, code) { if (text.includes(marker)) throw new Error(`${code}:${marker}`); }
+function matches(text, pattern, code) { if (!pattern.test(text)) throw new Error(code); }
 
 const a11 = read(A11);
 const workflow = read(WORKFLOW);
@@ -83,9 +84,9 @@ for (const marker of [
   "PROVIDER_AVAILABILITY_WATERMARK_V1",
   "fixed_t_plus_432_cutoff_normative_authority: false",
   "fixed_t_plus_437_observer_normative_authority: false",
-  "future_t_preselection_used: false",
   "FORMAL_DATABASE_IDENTITY_MISMATCH",
 ]) has(observer, marker, "EA5E2_ROLLING_ACTIVATION_OBSERVER_BOUNDARY_REQUIRED");
+matches(observer, /future_t_preselection_used\s*:\s*false\s*,?/, "EA5E2_ROLLING_ACTIVATION_OBSERVER_FUTURE_T_PRESELECTION_MUST_BE_FALSE");
 
 for (const forbidden of [
   "OBSERVER_OFFSET_MINUTES",
