@@ -9,6 +9,8 @@ on:
       - 'scripts/runtime_acceptance/SEED_MCFT_CAP_09_EA5E2_OBSERVER_TIMING_QUALIFICATION.ts'
       - 'scripts/runtime_acceptance/QUALIFY_MCFT_CAP_09_EA5E2_TIMING_BUDGETS.ts'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py'
+      - 'scripts/runtime_acceptance/SELECT_MCFT_CAP_09_EA5E2_TIMING_TARGET_AMENDMENT11.py'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_TIMING_BUDGET_QUALIFICATION.cjs'
   push:
     branches: [main]
@@ -19,6 +21,8 @@ on:
       - 'scripts/runtime_acceptance/SEED_MCFT_CAP_09_EA5E2_OBSERVER_TIMING_QUALIFICATION.ts'
       - 'scripts/runtime_acceptance/QUALIFY_MCFT_CAP_09_EA5E2_TIMING_BUDGETS.ts'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py'
+      - 'scripts/runtime_acceptance/SELECT_MCFT_CAP_09_EA5E2_TIMING_TARGET_AMENDMENT11.py'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_TIMING_BUDGET_QUALIFICATION.cjs'
   workflow_dispatch:
     inputs:
@@ -142,22 +146,24 @@ jobs:
             eccodeslib==2.47.3.23 \
             numpy==1.26.4 \
             refet==0.4.2
-      - name: Prove timing-only KBS target selection fails closed
-        run: python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py selftest-kbs-timing-target
+      - name: Prove Amendment-11 authoritative-late target selection fails closed
+        run: |
+          python scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py selftest
+          python -m py_compile scripts/runtime_acceptance/SELECT_MCFT_CAP_09_EA5E2_TIMING_TARGET_AMENDMENT11.py
       - name: Reprove Formal primary branch A0 and pointer graph read only
         env:
           MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
         run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts
-      - name: Select complete exact KBS timing row with unchanged source freshness
+      - name: Select complete exact KBS timing row under Amendment-11 watermark
         id: target
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py select-kbs-timing-target > /tmp/mcft-kbs-timing-target.json
+          python scripts/runtime_acceptance/SELECT_MCFT_CAP_09_EA5E2_TIMING_TARGET_AMENDMENT11.py > /tmp/mcft-kbs-timing-target.json
           node - <<'NODE' >> "$GITHUB_OUTPUT"
           const fs=require('fs');
           const value=JSON.parse(fs.readFileSync('/tmp/mcft-kbs-timing-target.json','utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));
-          if(value.status!=='PASS'||Number(value.latest_age_hours)>6||value.selection_scope!=='QUALIFICATION_TIMING_ONLY_NOT_LIVE_TARGET_ADMISSION'||!String(value.selected_target_t).endsWith(':00:00.000Z')) throw new Error('EA5E2_TIMING_QUALIFICATION_FRESH_COMPLETE_EXACT_TARGET_REQUIRED');
+          if(value.status!=='PASS'||value.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||value.provider_publication_cadence!=='DAILY_BATCH'||value.freshness_is_late_authoritative_admission_gate!==false||value.selection_scope!=='QUALIFICATION_TIMING_ONLY_NOT_LIVE_TARGET_ADMISSION'||!String(value.selected_target_t).endsWith(':00:00.000Z')) throw new Error('EA5E2_TIMING_QUALIFICATION_AMENDMENT11_COMPLETE_EXACT_TARGET_REQUIRED');
           process.stdout.write(`target_t=${value.selected_target_t}\n`);
           NODE
       - name: Execute three real KBS collector timing trials
