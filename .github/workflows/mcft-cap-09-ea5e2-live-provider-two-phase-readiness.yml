@@ -25,11 +25,11 @@ env:
   FORMAL_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
 
 jobs:
-  live-window-viability:
+  long_horizon_plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     outputs:
-      target_t: ${{ steps.viability.outputs.target_t }}
+      planned_target_t: ${{ steps.plan.outputs.planned_target_t }}
       subject_sha: ${{ steps.subject.outputs.subject_sha }}
     steps:
       - uses: actions/checkout@v4
@@ -42,16 +42,12 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
       - name: Bind exact candidate subject
         id: subject
         shell: bash
         run: echo "subject_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
 
-      - name: Require successful successor runner qualification for this exact head
+      - name: Require successful successor runner qualification for this exact head before any long wait
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -65,19 +61,184 @@ jobs:
             "$api" | jq '[.workflow_runs[] | select(.head_sha==env.GITHUB_SHA and .conclusion=="success")] | length')"
           test "$successes" -ge 1 || { echo 'SUCCESSOR_RUNNER_EXACT_HEAD_QUALIFICATION_REQUIRED' >&2; exit 1; }
 
+      - name: Plan first crop-legal daily-batch-feasible target inside bounded 24h engineering horizon
+        id: plan
+        run: node scripts/runtime_acceptance/PLAN_MCFT_CAP_09_EA5E2_LONG_HORIZON_WINDOW.cjs
+
+      - name: Upload metadata-only long-horizon plan
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-long-horizon-plan-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5E2_LONG_HORIZON_WINDOW_PLAN.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  wait_pre_t20:
+    needs: long_horizon_plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 250
+    steps:
+      - name: Wait at most four hours until planned T minus 20h
+        shell: node {0}
+        env:
+          TARGET_T: ${{ needs.long_horizon_plan.outputs.planned_target_t }}
+        run: |
+          const wake=Date.parse(process.env.TARGET_T)-20*60*60000;
+          if(!Number.isFinite(wake)) throw new Error('EA5E2_LONG_HORIZON_T20_TARGET_INVALID');
+          const remaining=Math.max(0,wake-Date.now());
+          if(remaining>245*60000) throw new Error(`EA5E2_LONG_HORIZON_T20_WAIT_TOO_LONG:${remaining}`);
+          console.log(JSON.stringify({checkpoint:'T-20h',wait_until:new Date(wake).toISOString(),remaining_minutes:remaining/60000}));
+          await new Promise(r=>setTimeout(r,remaining));
+
+  wait_pre_t15:
+    needs: [long_horizon_plan, wait_pre_t20]
+    runs-on: ubuntu-latest
+    timeout-minutes: 315
+    steps:
+      - name: Wait bounded segment until planned T minus 15h
+        shell: node {0}
+        env:
+          TARGET_T: ${{ needs.long_horizon_plan.outputs.planned_target_t }}
+        run: |
+          const wake=Date.parse(process.env.TARGET_T)-15*60*60000;
+          if(!Number.isFinite(wake)) throw new Error('EA5E2_LONG_HORIZON_T15_TARGET_INVALID');
+          const remaining=Math.max(0,wake-Date.now());
+          if(remaining>305*60000) throw new Error(`EA5E2_LONG_HORIZON_T15_WAIT_TOO_LONG:${remaining}`);
+          console.log(JSON.stringify({checkpoint:'T-15h',wait_until:new Date(wake).toISOString(),remaining_minutes:remaining/60000}));
+          await new Promise(r=>setTimeout(r,remaining));
+
+  wait_pre_t10:
+    needs: [long_horizon_plan, wait_pre_t15]
+    runs-on: ubuntu-latest
+    timeout-minutes: 315
+    steps:
+      - name: Wait bounded segment until planned T minus 10h
+        shell: node {0}
+        env:
+          TARGET_T: ${{ needs.long_horizon_plan.outputs.planned_target_t }}
+        run: |
+          const wake=Date.parse(process.env.TARGET_T)-10*60*60000;
+          if(!Number.isFinite(wake)) throw new Error('EA5E2_LONG_HORIZON_T10_TARGET_INVALID');
+          const remaining=Math.max(0,wake-Date.now());
+          if(remaining>305*60000) throw new Error(`EA5E2_LONG_HORIZON_T10_WAIT_TOO_LONG:${remaining}`);
+          console.log(JSON.stringify({checkpoint:'T-10h',wait_until:new Date(wake).toISOString(),remaining_minutes:remaining/60000}));
+          await new Promise(r=>setTimeout(r,remaining));
+
+  wait_pre_t5:
+    needs: [long_horizon_plan, wait_pre_t10]
+    runs-on: ubuntu-latest
+    timeout-minutes: 315
+    steps:
+      - name: Wait bounded segment until planned T minus 5h
+        shell: node {0}
+        env:
+          TARGET_T: ${{ needs.long_horizon_plan.outputs.planned_target_t }}
+        run: |
+          const wake=Date.parse(process.env.TARGET_T)-5*60*60000;
+          if(!Number.isFinite(wake)) throw new Error('EA5E2_LONG_HORIZON_T5_TARGET_INVALID');
+          const remaining=Math.max(0,wake-Date.now());
+          if(remaining>305*60000) throw new Error(`EA5E2_LONG_HORIZON_T5_WAIT_TOO_LONG:${remaining}`);
+          console.log(JSON.stringify({checkpoint:'T-5h',wait_until:new Date(wake).toISOString(),remaining_minutes:remaining/60000}));
+          await new Promise(r=>setTimeout(r,remaining));
+
+  wait_pre_viability:
+    needs: [long_horizon_plan, wait_pre_t5]
+    runs-on: ubuntu-latest
+    timeout-minutes: 140
+    steps:
+      - name: Enter existing bounded 180m viability horizon at planned T minus 175m
+        shell: node {0}
+        env:
+          TARGET_T: ${{ needs.long_horizon_plan.outputs.planned_target_t }}
+        run: |
+          const wake=Date.parse(process.env.TARGET_T)-175*60000;
+          if(!Number.isFinite(wake)) throw new Error('EA5E2_LONG_HORIZON_VIABILITY_ENTRY_TARGET_INVALID');
+          const remaining=Math.max(0,wake-Date.now());
+          if(remaining>130*60000) throw new Error(`EA5E2_LONG_HORIZON_VIABILITY_ENTRY_WAIT_TOO_LONG:${remaining}`);
+          console.log(JSON.stringify({checkpoint:'T-175m',wait_until:new Date(wake).toISOString(),remaining_minutes:remaining/60000}));
+          await new Promise(r=>setTimeout(r,remaining));
+
+  live-window-viability:
+    needs: [long_horizon_plan, wait_pre_viability]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      target_t: ${{ steps.viability.outputs.target_t }}
+      subject_sha: ${{ needs.long_horizon_plan.outputs.subject_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.long_horizon_plan.outputs.subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install pinned provider decoder stack required by read-only KBS planning import
+        run: |
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+          python -m eccodes selfcheck
+
+      - name: Download immutable metadata-only long-horizon plan
+        uses: actions/download-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-long-horizon-plan-${{ needs.long_horizon_plan.outputs.subject_sha }}
+          path: acceptance-output/plan
+
+      - name: Recheck exact-head successor qualification immediately before viability
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SUBJECT_SHA: ${{ needs.long_horizon_plan.outputs.subject_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml/runs?head_sha=${SUBJECT_SHA}&status=completed&per_page=100"
+          successes="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "$api" | jq --arg sha "$SUBJECT_SHA" '[.workflow_runs[] | select(.head_sha==$sha and .conclusion=="success")] | length')"
+          test "$successes" -ge 1 || { echo 'SUCCESSOR_RUNNER_EXACT_HEAD_QUALIFICATION_REQUIRED' >&2; exit 1; }
+
       - name: Evaluate read-only EA5E2 live-window viability before any live activation side effect
         id: viability
         env:
-          SUBJECT_SHA: ${{ github.sha }}
+          SUBJECT_SHA: ${{ needs.long_horizon_plan.outputs.subject_sha }}
           PYTHON: python
         run: node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs
+
+      - name: Require bounded viability to select the exact long-horizon planned target
+        shell: node {0}
+        env:
+          PLANNED_TARGET_T: ${{ needs.long_horizon_plan.outputs.planned_target_t }}
+        run: |
+          const fs=require('fs');
+          const plan=JSON.parse(fs.readFileSync('acceptance-output/plan/MCFT_CAP_09_EA5E2_LONG_HORIZON_WINDOW_PLAN.json','utf8'));
+          const viability=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json','utf8'));
+          if(plan.status!=='PASS'||plan.planned_target_t!==process.env.PLANNED_TARGET_T||plan.max_long_horizon_is_authority!==false||plan.provider_request_count!==0||plan.database_write_count!==0) throw new Error('EA5E2_LONG_HORIZON_PLAN_PROOF_REQUIRED');
+          if(viability.status!=='PASS'||viability.candidate_T!==process.env.PLANNED_TARGET_T||viability.live_activation_started!==false||viability.authority_changed!==false) throw new Error('EA5E2_LONG_HORIZON_PLANNED_TARGET_REVALIDATION_REQUIRED');
+          if(viability.crop_candidate?.maximum_target_selection_horizon_minutes!==180) throw new Error('EA5E2_BOUNDED_FINAL_VIABILITY_HORIZON_DRIFT');
+          console.log(JSON.stringify({status:'PASS',planned_target_t:plan.planned_target_t,final_candidate_t:viability.candidate_T,long_horizon_plan_authority_effect:false}));
 
       - name: Upload metadata-only live-window viability proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-ea5e2-live-window-viability-${{ github.sha }}
-          path: acceptance-output/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json
+          name: mcft-cap09-ea5e2-live-window-viability-${{ needs.long_horizon_plan.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json
+            acceptance-output/plan/MCFT_CAP_09_EA5E2_LONG_HORIZON_WINDOW_PLAN.json
           if-no-files-found: warn
           retention-days: 90
 
@@ -327,6 +488,7 @@ jobs:
           name: mcft-cap09-ea5e2-interphase-${{ steps.target.outputs.subject_sha }}
           path: |
             acceptance-output/viability/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json
+            acceptance-output/viability/plan/MCFT_CAP_09_EA5E2_LONG_HORIZON_WINDOW_PLAN.json
             acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
             acceptance-output/formal-readiness/MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.json
             acceptance-output/MCFT_CAP_09_EA5E2_GFS_SAME_CYCLE_READINESS.json
@@ -629,6 +791,7 @@ jobs:
           name: mcft-cap09-ea5e2-operational-activation-${{ needs.pre-boundary.outputs.subject_sha }}
           path: |
             acceptance-output/viability/MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.json
+            acceptance-output/viability/plan/MCFT_CAP_09_EA5E2_LONG_HORIZON_WINDOW_PLAN.json
             acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_KBS_FRESHNESS.json
             acceptance-output/formal-readiness/MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.json
             acceptance-output/MCFT_CAP_09_EA5E2_GFS_SAME_CYCLE_READINESS.json
