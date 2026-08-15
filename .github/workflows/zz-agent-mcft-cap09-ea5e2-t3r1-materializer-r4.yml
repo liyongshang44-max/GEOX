@@ -1,0 +1,77 @@
+name: agent-mcft-cap09-ea5e2-t3r1-materializer-r4
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-ea5e2-t3r1-live-dispatch-settlement
+    paths:
+      - '.github/workflows/zz-agent-mcft-cap09-ea5e2-t3r1-materializer-r4.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  stage-workflow-blobs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Stage exact desired workflow contents outside workflow namespace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 30d403ba409393ce48ae142b8fb9dc7f902a5ee1 HEAD
+          python - <<'PY'
+          from pathlib import Path
+
+          out = Path('tmp/mcft-cap09-ea5e2-t3r1-settlement')
+          out.mkdir(parents=True, exist_ok=True)
+
+          active_path = Path('.github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml')
+          active = active_path.read_text()
+          old = 'FORMAL_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}'
+          new = 'FORMAL_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}'
+          if active.count(old) != 1:
+              raise SystemExit(f'ACTIVE_SECRET_PATCH_CARDINALITY:{active.count(old)}')
+          active = active.replace(old, new, 1)
+          (out / 'mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml').write_text(active)
+
+          succ_path = Path('.github/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml')
+          succ = succ_path.read_text()
+
+          old = "      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json'\n"
+          new = old + "      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json'\n"
+          if succ.count(old) != 1:
+              raise SystemExit(f'SUCCESSOR_PATH_PATCH_CARDINALITY:{succ.count(old)}')
+          succ = succ.replace(old, new, 1)
+
+          old = "      - name: Reexecute exact-head Amendment-11 successor runner qualification\n        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_RUNNER_QUALIFICATION.cjs\n"
+          new = old + "      - name: Reexecute current full-chain static preflight\n        env:\n          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}\n        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs\n      - name: Reexecute current exact-head successor runner qualification\n        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.cjs\n"
+          if succ.count(old) != 1:
+              raise SystemExit(f'SUCCESSOR_STEP_PATCH_CARDINALITY:{succ.count(old)}')
+          succ = succ.replace(old, new, 1)
+
+          old = "            acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.json\n"
+          new = old + "            acceptance-output/MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT.json\n            acceptance-output/MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.json\n"
+          if succ.count(old) != 1:
+              raise SystemExit(f'SUCCESSOR_ARTIFACT_PATCH_CARDINALITY:{succ.count(old)}')
+          succ = succ.replace(old, new, 1)
+          (out / 'mcft-cap-09-ea5e2-successor-runner-qualification.yml').write_text(succ)
+          PY
+          git diff --check
+          grep -q 'GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL' tmp/mcft-cap09-ea5e2-t3r1-settlement/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml
+          grep -q 'Reexecute current exact-head successor runner qualification' tmp/mcft-cap09-ea5e2-t3r1-settlement/mcft-cap-09-ea5e2-successor-runner-qualification.yml
+      - name: Commit staged workflow blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tmp/mcft-cap09-ea5e2-t3r1-settlement
+          git commit -m 'chore(mcft-cap09): stage final workflow blobs'
+          git push origin HEAD:agent/mcft-cap09-ea5e2-t3r1-live-dispatch-settlement
