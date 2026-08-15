@@ -4,7 +4,7 @@
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S6",
   "frontier": "T3R1_CROP_ONLY_GEOMETRY_AUTHORITY",
-  "exact_base_protected_main": "23f224c701dbe0b8bd56eceff3741cb1c3dc1f78",
+  "exact_base_protected_main": "4e84011e380333b2c0c56f2481661d44284a2f4e",
   "purpose": "DERIVE_A_CONSERVATIVE_CROP_ONLY_POLYGON_INSIDE_PROVIDER_T3R1_MAIN_WITHOUT_INVENTING_PRAIRIE_STRIP_GEOMETRY",
   "authority_predecessors": {
     "geometry_contract": {
