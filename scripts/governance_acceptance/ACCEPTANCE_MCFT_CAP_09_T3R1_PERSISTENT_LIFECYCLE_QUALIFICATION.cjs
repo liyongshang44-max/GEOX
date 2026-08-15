@@ -63,15 +63,26 @@ try {
   assert(semantics.horizon_policy?.support_event_may_renew_horizon === false, 'T3R1_PERSISTENT_SUPPORT_RENEWAL_FORBIDDEN');
 
   assert(x.candidate_scope?.treatment === 'T3' && x.candidate_scope?.replicate === 'R1', 'T3R1_PERSISTENT_SCOPE_REQUIRED');
+  assert(x.candidate_scope?.provider_area_identity === 'T3R1', 'T3R1_PERSISTENT_EXACT_PROVIDER_SCOPE_REQUIRED');
   assert(x.candidate_scope?.crop === 'corn' && x.candidate_scope?.hybrid_product_code === 'P0306Q', 'T3R1_PERSISTENT_CROP_HYBRID_REQUIRED');
   assert(x.candidate_scope?.planting_local_date === '2026-05-20', 'T3R1_PERSISTENT_PLANTING_DATE_REQUIRED');
   assert(x.establishment_source?.provider === 'KBS_AGLOG', 'T3R1_PERSISTENT_ESTABLISHMENT_PROVIDER_REQUIRED');
+  assert(x.establishment_source?.expected_observation_id === 6966, 'T3R1_PERSISTENT_ESTABLISHMENT_OBSERVATION_6966_REQUIRED');
   assert(x.establishment_source?.required_normalized_markers?.some((v) => v.includes('Pioneer P0306Q')), 'T3R1_PERSISTENT_ESTABLISHMENT_HYBRID_MARKER_REQUIRED');
 
-  assert(x.transition_sweep?.provider_coverage_completeness_required_for_persistent_state === false, 'T3R1_PERSISTENT_COMPLETENESS_NOT_REQUIRED_BY_FSM');
-  assert(x.transition_sweep?.provider_coverage_completeness_claimed === false, 'T3R1_PERSISTENT_COMPLETENESS_CLAIM_FORBIDDEN');
-  assert(x.transition_sweep?.none_found_may_be_emitted === true, 'T3R1_PERSISTENT_NONE_FOUND_REQUIRED');
-  assert(x.transition_sweep?.proved_no_termination_occurred_may_be_emitted === false, 'T3R1_PERSISTENT_PROVED_NO_TERMINATION_FORBIDDEN');
+  const sweep = x.transition_sweep;
+  assert(sweep?.provider === 'KBS_LTER_CORE_EXPANDED_AGRONOMIC_LOG', 'T3R1_PERSISTENT_EXPANDED_LOG_PROVIDER_REQUIRED');
+  assert(sweep?.download_url === 'https://lter.kbs.msu.edu/datatables/694.csv', 'T3R1_PERSISTENT_EXPANDED_LOG_URL_REQUIRED');
+  assert(sweep?.allowed_host === 'lter.kbs.msu.edu' && sweep?.datatable_id === '694', 'T3R1_PERSISTENT_EXPANDED_LOG_IDENTITY_REQUIRED');
+  assert(sweep?.exact_treatment === 'T3' && sweep?.exact_plot_name === 'T3R1', 'T3R1_PERSISTENT_EXACT_PLOT_SWEEP_REQUIRED');
+  assert(sweep?.full_comment_semantics_required === true && sweep?.exact_plot_scope_required === true, 'T3R1_PERSISTENT_FULL_COMMENT_EXACT_SCOPE_REQUIRED');
+  for (const column of ['obs_date','treatment','observation_type','comment','name','observation_id']) {
+    assert(sweep.required_columns?.includes(column), `T3R1_PERSISTENT_EXPANDED_LOG_COLUMN_REQUIRED:${column}`);
+  }
+  assert(sweep?.provider_coverage_completeness_required_for_persistent_state === false, 'T3R1_PERSISTENT_COMPLETENESS_NOT_REQUIRED_BY_FSM');
+  assert(sweep?.provider_coverage_completeness_claimed === false, 'T3R1_PERSISTENT_COMPLETENESS_CLAIM_FORBIDDEN');
+  assert(sweep?.none_found_may_be_emitted === true, 'T3R1_PERSISTENT_NONE_FOUND_REQUIRED');
+  assert(sweep?.proved_no_termination_occurred_may_be_emitted === false, 'T3R1_PERSISTENT_PROVED_NO_TERMINATION_FORBIDDEN');
 
   const endExclusive = Date.parse(x.candidate_scope.possible_planting_window_utc.end_exclusive);
   assert(Number.isFinite(endExclusive), 'T3R1_PERSISTENT_PLANTING_WINDOW_INVALID');
@@ -90,11 +101,13 @@ try {
   assert(s.phenology_may_establish_lifecycle === false, 'T3R1_PERSISTENT_PHENOLOGY_ESTABLISHMENT_FORBIDDEN');
 
   const source = fs.readFileSync(PROBE_PATH, 'utf8');
-  assert(source.includes('indexT3LeadScope') && source.includes('detailAppliesToT3R1'), 'T3R1_PERSISTENT_SCOPE_CLASSIFIER_REQUIRED');
-  assert(source.includes('hasLterT3(comment)') && !source.includes('`${areas} ${comment}`'), 'T3R1_PERSISTENT_GENERIC_COMMENT_T3_SCOPE_FORBIDDEN');
+  assert(source.includes('buildExactT3R1Events') && source.includes("normalize(row.name).toUpperCase() === CONFIG.transition_sweep.exact_plot_name"), 'T3R1_PERSISTENT_EXACT_PLOT_CLASSIFIER_REQUIRED');
+  assert(source.includes('full_comment_semantics_consumed: true'), 'T3R1_PERSISTENT_FULL_COMMENT_CONSUMPTION_REQUIRED');
+  assert(source.includes('exact_plot_scope_consumed: true'), 'T3R1_PERSISTENT_EXACT_PLOT_CONSUMPTION_REQUIRED');
   assert(source.includes("proved_no_termination_occurred: false"), 'T3R1_PERSISTENT_NO_TERMINATION_NONCLAIM_REQUIRED');
   assert(source.includes("provider_coverage_completeness_proven: false"), 'T3R1_PERSISTENT_COMPLETENESS_NONCLAIM_REQUIRED');
   assert(source.includes("observation_freshness_refreshed_by_persistence: false"), 'T3R1_PERSISTENT_OBSERVATION_REFRESH_NONCLAIM_REQUIRED');
+  assert(!source.includes('detailAppliesToT3R1') && !source.includes('eventSemanticText(page)'), 'T3R1_PERSISTENT_PAGE_BODY_TRANSITION_CLASSIFICATION_FORBIDDEN');
 
   const b = x.authority_boundary;
   assert(b.stacked_candidate_may_become_effective_before_amendment_16_protected_main_merge === false, 'T3R1_PERSISTENT_STACKED_ADOPTION_FORBIDDEN');
@@ -112,7 +125,10 @@ try {
     amendment_16_persistent_state_semantics_verified: true,
     provider_silence_inference_forbidden: true,
     provider_completeness_claimed: false,
-    t3r1_scope_classifier_fail_closed: true,
+    transition_source: 'KBS_LTER_CORE_EXPANDED_AGRONOMIC_LOG_694',
+    exact_t3r1_plot_scope_required: true,
+    full_comment_semantics_required: true,
+    page_body_transition_classification_forbidden: true,
     maximum_lifecycle_horizon_end_utc: expectedHorizon,
     horizon_is_truncation_only: true,
     stacked_authority_effect: 'NONE_UNTIL_AMENDMENT_16_EFFECTIVE_AND_EXACT_MAIN_RERUN',
