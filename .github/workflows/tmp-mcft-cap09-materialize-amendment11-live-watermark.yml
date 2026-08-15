@@ -5,36 +5,48 @@ on:
     branches:
       - fix/mcft-cap09-amendment11-live-watermark
     paths:
-      - 'tmp/mcft-cap09-amendment11-live-watermark-edit.py'
       - '.github/workflows/tmp-mcft-cap09-materialize-amendment11-live-watermark.yml'
 
 permissions:
   contents: write
 
 jobs:
-  apply:
-    if: "${{ github.event.head_commit.message == 'chore(mcft-cap09): materialize live watermark non-workflow files' }}"
+  build-workflow-blob:
+    if: "${{ github.event.head_commit.message == 'chore(mcft-cap09): build live watermark workflow blob' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: fix/mcft-cap09-amendment11-live-watermark
           fetch-depth: 0
-      - name: Apply bounded Amendment-11 live watermark edit
+      - name: Build exact amended workflow blob without moving branch ref
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile tmp/mcft-cap09-amendment11-live-watermark-edit.py
-          python tmp/mcft-cap09-amendment11-live-watermark-edit.py
-          python -m py_compile scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml')
+          s=p.read_text()
+          old="if(availability.status!=='PASS'||availability.target_t!==process.env.TARGET_T||availability.same_source_exact_t_only!==true||Number(availability.latest_age_hours)>6) throw new Error('EA5E2_ACTIVATION_LATE_AVAILABILITY_AND_FRESHNESS_AUTHORITY_REQUIRED');"
+          new="if(availability.status!=='PASS'||availability.target_t!==process.env.TARGET_T||availability.same_source_exact_t_only!==true||availability.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||availability.provider_publication_cadence!=='DAILY_BATCH'||availability.freshness_is_late_authoritative_admission_gate!==false) throw new Error('EA5E2_ACTIVATION_LATE_AVAILABILITY_WATERMARK_REQUIRED');"
+          if s.count(old)!=1: raise SystemExit(f'LIVE_WATERMARK_GUARD_REPLACE_COUNT:{s.count(old)}')
+          s=s.replace(old,new)
+          old2='            kbs_max_age_hours:6,\n'
+          new2="            kbs_historical_online_freshness_diagnostic_hours:6,\n            kbs_freshness_is_late_authoritative_admission_gate:false,\n            kbs_late_temporal_authority:'PROVIDER_AVAILABILITY_WATERMARK_V1',\n"
+          if s.count(old2)!=1: raise SystemExit(f'LIVE_WATERMARK_PROOF_REPLACE_COUNT:{s.count(old2)}')
+          p.write_text(s.replace(old2,new2))
+          PY
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT11_LIVE_WATERMARK.cjs
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add \
-            scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py \
-            scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs \
-            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs \
-            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.cjs \
-            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT11_LIVE_WATERMARK.cjs
-          git commit -m 'MCFT-CAP-09: honor Amendment-11 live availability watermark'
-          git push origin HEAD:fix/mcft-cap09-amendment11-live-watermark
+          encoded="$(base64 -w0 .github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml)"
+          payload="$(jq -n --arg content "$encoded" '{content:$content,encoding:"base64"}')"
+          sha="$(curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/blobs" \
+            -d "$payload" | jq -r '.sha')"
+          test -n "$sha" && test "$sha" != null
+          echo "MCFT_CAP09_LIVE_WATERMARK_WORKFLOW_BLOB_SHA=$sha"
