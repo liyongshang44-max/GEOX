@@ -8,18 +8,18 @@ on:
       - '.github/workflows/tmp-mcft-cap09-materialize-amendment11-live-watermark.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  stage-generated-workflow:
-    if: "${{ github.event.head_commit.message == 'chore(mcft-cap09): stage generated live watermark workflow' }}"
+  export-generated-workflow:
+    if: "${{ github.event.head_commit.message == 'chore(mcft-cap09): export generated live watermark workflow' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: fix/mcft-cap09-amendment11-live-watermark
           fetch-depth: 0
-      - name: Generate amended workflow as non-workflow transport file
+      - name: Generate exact amended workflow transport file
         shell: bash
         run: |
           set -euo pipefail
@@ -39,8 +39,10 @@ jobs:
           source.write_text(s)
           PY
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT11_LIVE_WATERMARK.cjs
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add tmp/mcft-cap09-generated-live-provider-two-phase-readiness.yml
-          git commit -m 'chore(mcft-cap09): transport generated live watermark workflow'
-          git push origin HEAD:fix/mcft-cap09-amendment11-live-watermark
+      - name: Upload generated workflow transport
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-generated-live-watermark-workflow-${{ github.sha }}
+          path: tmp/mcft-cap09-generated-live-provider-two-phase-readiness.yml
+          if-no-files-found: error
+          retention-days: 1
