@@ -1,0 +1,62 @@
+name: agent-mcft-cap09-ea5e2-t3r1-materializer-r2
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-ea5e2-t3r1-live-dispatch-settlement
+    paths:
+      - '.github/workflows/zz-agent-mcft-cap09-ea5e2-t3r1-materializer-r2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require exact settlement ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 30d403ba409393ce48ae142b8fb9dc7f902a5ee1 HEAD
+          test "$(git rev-list --count 30d403ba409393ce48ae142b8fb9dc7f902a5ee1..HEAD)" -eq 2
+      - name: Execute materializer source as repository data
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          source_path = Path('.github/workflows/zz-agent-mcft-cap09-ea5e2-t3r1-live-dispatch-settlement.yml')
+          text = source_path.read_text()
+          start_marker = "          python - <<'PY'\n"
+          end_marker = "          PY\n\n          git diff --check"
+          start = text.index(start_marker) + len(start_marker)
+          end = text.index(end_marker, start)
+          script = textwrap.dedent(text[start:end])
+          compile(script, str(source_path) + ':embedded-python', 'exec')
+          exec(script, {'__name__': '__main__'})
+          Path('.github/workflows/zz-agent-mcft-cap09-ea5e2-t3r1-materializer-r2.yml').unlink()
+          PY
+          git diff --check
+          test ! -f .github/workflows/zz-agent-mcft-cap09-ea5e2-t3r1-live-dispatch-settlement.yml
+          test ! -f .github/workflows/zz-agent-mcft-cap09-ea5e2-t3r1-materializer-r2.yml
+          test -f docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-T3R1-FRESH-BOOTSTRAP-EFFECTIVENESS-V1.json
+          git status --short
+      - name: Commit bounded settlement candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'MCFT-CAP-09: settle T3R1 EA5E2 live dispatch binding'
+          git push origin HEAD:agent/mcft-cap09-ea5e2-t3r1-live-dispatch-settlement
