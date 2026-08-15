@@ -1,0 +1,41 @@
+name: tmp-mcft-cap09-materialize-amendment11-live-watermark
+
+on:
+  push:
+    branches:
+      - fix/mcft-cap09-amendment11-live-watermark
+    paths:
+      - 'tmp/mcft-cap09-amendment11-live-watermark-edit.py'
+      - '.github/workflows/tmp-mcft-cap09-materialize-amendment11-live-watermark.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: "${{ github.event.head_commit.message == 'chore(mcft-cap09): materialize live watermark alignment' }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/mcft-cap09-amendment11-live-watermark
+          fetch-depth: 0
+      - name: Apply bounded Amendment-11 live watermark edit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile tmp/mcft-cap09-amendment11-live-watermark-edit.py
+          python tmp/mcft-cap09-amendment11-live-watermark-edit.py
+          python -m py_compile scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT11_LIVE_WATERMARK.cjs
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add \
+            .github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml \
+            scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py \
+            scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.cjs \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT11_LIVE_WATERMARK.cjs
+          git commit -m 'MCFT-CAP-09: honor Amendment-11 live availability watermark'
+          git push origin HEAD:fix/mcft-cap09-amendment11-live-watermark
