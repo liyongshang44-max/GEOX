@@ -49,13 +49,13 @@ function stageAt(ageDays, lengths) {
   return "LATE";
 }
 
-function main() {
-  const targetT = exactHour(process.env.TARGET_T);
-  const authority = JSON.parse(fs.readFileSync(AUTHORITY_PATH, "utf8"));
-  const planting = object(authority.planting_authority, "EA5E2_TARGET_CROP_CONSENSUS_PLANTING_AUTHORITY_REQUIRED");
-  const window = object(planting.possible_event_window_utc, "EA5E2_TARGET_CROP_CONSENSUS_PLANTING_WINDOW_REQUIRED");
-  const model = object(authority.model_stage_prior, "EA5E2_TARGET_CROP_CONSENSUS_MODEL_REQUIRED");
-  const policy = object(authority.as_of_derivation_policy, "EA5E2_TARGET_CROP_CONSENSUS_POLICY_REQUIRED");
+function evaluateTargetCropConsensus(targetInput, authority = null) {
+  const targetT = exactHour(targetInput);
+  const resolvedAuthority = authority ?? JSON.parse(fs.readFileSync(AUTHORITY_PATH, "utf8"));
+  const planting = object(resolvedAuthority.planting_authority, "EA5E2_TARGET_CROP_CONSENSUS_PLANTING_AUTHORITY_REQUIRED");
+  const window = object(planting.possible_event_window_utc, "EA5E2_TARGET_CROP_CONSENSUS_WINDOW_REQUIRED");
+  const model = object(resolvedAuthority.model_stage_prior, "EA5E2_TARGET_CROP_CONSENSUS_MODEL_REQUIRED");
+  const policy = object(resolvedAuthority.as_of_derivation_policy, "EA5E2_TARGET_CROP_CONSENSUS_POLICY_REQUIRED");
   const variants = model.variant_stage_lengths_days;
   if (!Array.isArray(variants) || variants.length !== 6) throw new Error("EA5E2_TARGET_CROP_CONSENSUS_EXACT_SIX_VARIANTS_REQUIRED");
   const backwardHours = number(policy.backward_stability_hours, "EA5E2_TARGET_CROP_CONSENSUS_BACKWARD_GUARD_REQUIRED");
@@ -87,12 +87,11 @@ function main() {
     throw new Error(`EA5E2_TARGET_CROP_CONSENSUS_NOT_SINGLE_STAGE:${[...stages].sort().join(",")}`);
   }
 
-  const stage = [...stages][0];
-  const proof = {
-    schema_version: "geox_mcft_cap09_ea5e2_target_crop_consensus_preflight_v1",
+  return {
+    schema_version: "geox_mcft_cap09_ea5e2_target_crop_consensus_preflight_v2",
     status: "PASS",
     target_t: targetT,
-    crop_stage_code: stage,
+    crop_stage_code: [...stages][0],
     exact_fao_variant_count: variants.length,
     exact_planting_boundary_count: plantingTimes.length,
     backward_stability_hours: backwardHours,
@@ -101,11 +100,21 @@ function main() {
     future_observations_used: false,
     provider_request_count: 0,
     database_write_count: 0,
+    crop_authority_effect: "NONE",
     formal_effectiveness: false,
   };
+}
+
+function main() {
+  const proof = evaluateTargetCropConsensus(process.env.TARGET_T);
   fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
   fs.writeFileSync(OUTPUT, JSON.stringify(proof, null, 2) + "\n");
   console.log(JSON.stringify(proof));
 }
 
-main();
+module.exports = {
+  AUTHORITY_PATH,
+  evaluateTargetCropConsensus,
+};
+
+if (require.main === module) main();
