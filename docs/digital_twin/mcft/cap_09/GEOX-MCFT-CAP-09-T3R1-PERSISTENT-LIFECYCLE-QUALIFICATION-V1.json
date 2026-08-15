@@ -35,6 +35,7 @@
     "provider": "KBS_AGLOG",
     "url": "https://aglog.kbs.msu.edu/materials/392",
     "allowed_host": "aglog.kbs.msu.edu",
+    "expected_observation_id": 6966,
     "required_normalized_markers": [
       "2026-05-20",
       "Planting",
@@ -47,13 +48,21 @@
     "availability_rule": "ACTUAL_QUALIFICATION_RETRIEVAL_TIME_IS_CONSERVATIVE_AVAILABLE_TO_RUNTIME_AT"
   },
   "transition_sweep": {
-    "provider": "KBS_AGLOG",
-    "index_url": "https://aglog.kbs.msu.edu/observations",
-    "allowed_host": "aglog.kbs.msu.edu",
-    "maximum_pages": 20,
-    "maximum_detail_candidates": 100,
-    "must_reach_planting_date_or_earlier": true,
-    "t3_scope_markers": ["T3", "LTER T3"],
+    "provider": "KBS_LTER_CORE_EXPANDED_AGRONOMIC_LOG",
+    "source_page_url": "https://lter.kbs.msu.edu/datatables/694",
+    "download_url": "https://lter.kbs.msu.edu/datatables/694.csv",
+    "allowed_host": "lter.kbs.msu.edu",
+    "datatable_id": "694",
+    "required_columns": [
+      "obs_date",
+      "treatment",
+      "observation_type",
+      "comment",
+      "name",
+      "observation_id"
+    ],
+    "exact_treatment": "T3",
+    "exact_plot_name": "T3R1",
     "termination_classes": [
       "HARVEST",
       "CROP_DESTRUCTION",
@@ -73,8 +82,9 @@
       "abandoned crop"
     ],
     "contradiction_rules": [
-      "POST_ESTABLISHMENT_PLANTING_ON_T3_SCOPE_WITHOUT_SEPARATELY_GOVERNED_REPLANT_SEMANTICS",
-      "EXPLICIT_DIFFERENT_CROP_OR_SEASON_REALITY_ON_T3_SCOPE",
+      "POST_ESTABLISHMENT_PLANTING_ON_EXACT_T3R1_WITHOUT_SEPARATELY_GOVERNED_REPLANT_SEMANTICS",
+      "EXPLICIT_DIFFERENT_CROP_OR_SEASON_REALITY_ON_EXACT_T3R1",
+      "AMBIGUOUS_TERMINATION_ON_EXACT_T3R1",
       "AUTHORITATIVE_SCOPE_IDENTITY_CONFLICT"
     ],
     "support_observation_types": [
@@ -86,6 +96,8 @@
       "Irrigation",
       "Cultivation"
     ],
+    "full_comment_semantics_required": true,
+    "exact_plot_scope_required": true,
     "provider_coverage_completeness_required_for_persistent_state": false,
     "provider_coverage_completeness_claimed": false,
     "none_found_may_be_emitted": true,
