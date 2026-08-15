@@ -1,0 +1,96 @@
+{
+  "schema_version": "geox_mcft_cap09_s6_formal_site_authority_v2",
+  "authority_id": "GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V2",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "T3R1_FORMAL_SUCCESSOR_SITE_AUTHORITY_CANDIDATE",
+  "exact_predecessor_protected_main": "6081a363a665b7882bbca7592213ee49395872d7",
+  "effectiveness_rule": "PRESENT_ON_PROTECTED_MAIN_WITH_AMENDMENT_17_AND_FOCUSED_EXACT_BOUNDARY_GATE_PASS",
+  "successor_of": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V1.json",
+    "blob_sha": "eb9eb1880e01eb16430c177be6e2ef2dc36b3ca8",
+    "historical_scope": "KBS_MCSE_T1R1",
+    "historical_authority_rewritten": false
+  },
+  "site": {
+    "qualified_formal_site_id": "KBS_MCSE_T3R1",
+    "provider_site": "KBS_LTER_MAIN_CROPPING_SYSTEM_EXPERIMENT",
+    "treatment": "T3_REDUCED_INPUT",
+    "provider_treatment_code": "T3",
+    "replicate": "R1",
+    "current_season": "2026",
+    "crop": "corn",
+    "hybrid_product_code": "P0306Q",
+    "qualification": "QUALIFIED_FORMAL_SUCCESSOR_SITE_CANDIDATE",
+    "field_validity_proven": false,
+    "production_site_claimed": false
+  },
+  "formal_scope_identity": {
+    "tenant_id": "tenant_mcft_external",
+    "project_id": "project_mcft_cap09",
+    "group_id": "group_public_research",
+    "field_id": "field_kbs_mcse_t3r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t3r1_crop_formal_v1",
+    "fresh_bootstrap_required": true,
+    "replay_scope_identity_reused": false,
+    "t1r1_canonical_state_reused": false,
+    "cross_scope_canonical_stitching_authorized": false
+  },
+  "geometry_authority": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-CROP-ONLY-GEOMETRY-AUTHORITY-V1.json",
+    "blob_sha": "87b1c8fa37939085be68abb66bfa8e0918f65e95",
+    "geometry_type": "Polygon",
+    "crs": "EPSG:4326",
+    "semantic_hash": "sha256:4672b5f28484a05e00d93de8c53b9c7b2bdbcc250f48959a4b85b768d2ed3f3a",
+    "whole_t3r1_plot_assumed_crop_only": false,
+    "prairie_strip_excluded": true,
+    "prairie_strip_wkt_invented": false
+  },
+  "lifecycle_authority": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-PERSISTENT-LIFECYCLE-QUALIFICATION-V1.json",
+    "blob_sha": "073247dd9527246e423beedcccba832162ad0ff9",
+    "required_domain_state": "ACTIVE",
+    "required_authority_status": "RESOLVED",
+    "required_validity": "VALID",
+    "authority_mode": "GOVERNED_PERSISTENT_STATE",
+    "biological_freshness_claimed": false
+  },
+  "source_authority": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json",
+    "blob_sha": "30b7910a1bd27882b80eb56041924d0f6252ae02",
+    "reused_without_field_equivalence_upgrade": true,
+    "weather_support": "NEAR_SITE_METEOROLOGICAL_SUPPORT",
+    "soil_support": "NEAR_SITE_POINT_SUPPORT",
+    "future_weather_support": "MODEL_GRID_SUPPORT"
+  },
+  "model_prior": {
+    "configuration_matrix_path": "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+    "configuration_matrix_blob_sha": "c04c6805ab79c715781b99f8fbcf997fae3a8c48",
+    "classification": "MODEL_PRIOR_NOT_FIELD_CALIBRATED"
+  },
+  "activation_boundary": {
+    "successor_authority_candidate_created": true,
+    "active_runtime_scope_changed_by_this_file": false,
+    "runtime_rebind_authorized_by_this_file_alone": false,
+    "fresh_database_bootstrap_authorized_by_this_file_alone": false,
+    "ea5e2_operational_activation_authorized": false,
+    "formal_window_started": false,
+    "formal_execution_count": "0/24"
+  },
+  "hard_nonclaims": [
+    "NO_T1R1_AUTHORITY_REWRITE",
+    "NO_T1R1_TO_T3R1_CANONICAL_STITCHING",
+    "NO_WHOLE_T3R1_PLOT_AS_CROP_ONLY",
+    "NO_PRAIRIE_STRIP_RELABELLING_AS_CORN",
+    "NO_FIELD_SOIL_MOISTURE_TRUTH",
+    "NO_ROOT_ZONE_OBSERVED_TRUTH",
+    "NO_MODEL_GRID_OBSERVATION_TRUTH",
+    "NO_FIELD_CALIBRATION",
+    "NO_RUNTIME_SCOPE_SWITCH_FROM_THIS_FILE_ALONE",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_EA5E2_ACTIVATION",
+    "NO_FORMAL_O00_O23_START"
+  ]
+}
