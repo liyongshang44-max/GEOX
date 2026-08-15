@@ -1,0 +1,239 @@
+name: agent-mcft-cap09-ea5e2-t3r1-live-dispatch-settlement
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-ea5e2-t3r1-live-dispatch-settlement
+    paths:
+      - '.github/workflows/zz-agent-mcft-cap09-ea5e2-t3r1-live-dispatch-settlement.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require exact settlement base
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 30d403ba409393ce48ae142b8fb9dc7f902a5ee1 HEAD
+          test "$(git rev-list --count 30d403ba409393ce48ae142b8fb9dc7f902a5ee1..HEAD)" -eq 1
+      - name: Materialize bounded T3R1 EA5E2 control-plane settlement
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          NEW_A0_REF = 'external_formal_runtime_config_49959a28cfc9eb357bf18f9d'
+          NEW_A0_HASH = 'sha256:5f11788fd049a3eae190d566e6faa28f428637e11f2c90b4e0aaea67e6f14e48'
+          NEW_DB = 'geox_mcft_cap09_s6_formal_t3r1_24h'
+          EFFECT = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-T3R1-FRESH-BOOTSTRAP-EFFECTIVENESS-V1.json'
+
+          def replace_one(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'PATCH_CARDINALITY:{path}:{count}:{old[:80]}')
+              p.write_text(text.replace(old, new, 1))
+
+          # 1. Active live workflow must bind the dedicated T3R1 Formal secret.
+          replace_one(
+              '.github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml',
+              'FORMAL_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}',
+              'FORMAL_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}',
+          )
+
+          # 2. Freeze the successful fresh-bootstrap result as the successor A0 binding authority.
+          effect = {
+              'schema_version': 'geox_mcft_cap09_ea5e2_t3r1_fresh_bootstrap_effectiveness_v1',
+              'authority_id': 'GEOX-MCFT-CAP-09-EA5E2-T3R1-FRESH-BOOTSTRAP-EFFECTIVENESS-V1',
+              'record_status': 'FRESH_T3R1_BOOTSTRAP_EFFECTIVE_NOT_EA5E2_ACTIVATION',
+              'bootstrap_workflow_run_id': 31875578873,
+              'bootstrap_subject_sha': '30d403ba409393ce48ae142b8fb9dc7f902a5ee1',
+              'bootstrap_artifact_id': 9245360615,
+              'bootstrap_artifact_zip_sha256': 'sha256:4f408bcc12c7507720fadea5ea7e3483c4dfe7c1163f4fa8ba844475cc52199d',
+              'status': 'PASS',
+              'execution_mode': 'FIRST_FRESH_BOOTSTRAP',
+              'database_identity': {
+                  'database_name': NEW_DB,
+                  'neon_project_id': 'delicate-glade-62464340',
+                  'neon_branch_id': 'br-cold-dust-a6j6aymz',
+                  'forbidden_simulation_branch_id': 'br-falling-cake-a6lfsdak',
+                  't1r1_database_reused': False,
+                  'simulation_branch_reused': False,
+              },
+              'formal_scope': {
+                  'tenant_id': 'tenant_mcft_external',
+                  'project_id': 'project_mcft_cap09',
+                  'group_id': 'group_public_research',
+                  'field_id': 'field_kbs_mcse_t3r1',
+                  'season_id': 'season_2026_corn',
+                  'zone_id': 'zone_kbs_mcse_t3r1_crop_formal_v1',
+              },
+              'bootstrap_logical_time': '2026-08-15T10:00:00.000Z',
+              'o00_candidate_logical_time': '2026-08-15T11:00:00.000Z',
+              'crop_stage_code': 'MID',
+              'crop_authority_path': 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json',
+              'crop_authority_blob_sha': '757e4b9f4fdcd631eea97fca85614a1b61ef0c4a',
+              'fresh_soil_observed_at': '2026-08-15T09:45:00.000Z',
+              'fresh_soil_available_to_runtime_at': '2026-08-15T09:52:02.632Z',
+              'persisted_counts': {
+                  'facts_total': 35,
+                  'canonical_twin_facts_total': 34,
+                  'runtime_config_total': 25,
+                  'hourly_runtime_config_total': 24,
+                  'external_a0_member_count': 9,
+                  't1r1_scope_row_count': 0,
+                  'scheduler_slot_write_count': 0,
+                  'scheduler_cursor_write_count': 0,
+              },
+              'persisted_a0': {
+                  'runtime_config_ref': NEW_A0_REF,
+                  'runtime_config_hash': NEW_A0_HASH,
+                  'binding_mode': 'DYNAMIC_FRESH_T3R1_PERSISTED_A0_SEMANTIC_BINDING',
+                  'config_parent_chain_verified': True,
+                  'explicit_ref_hash_pin_only': True,
+              },
+              'o00_candidate_runtime_config': {
+                  'runtime_config_ref': 'external_formal_runtime_config_e0fbad32beeb26c343536876',
+                  'runtime_config_hash': 'sha256:ef39c493ea0877da4157400ee54c78a67bfb54b927d6afdd4700b9d143338d5a',
+              },
+              'effect_boundary': {
+                  'fresh_t3r1_bootstrap_complete': True,
+                  'formal_window_started': False,
+                  'ea5e2_operational_activation_authorized_by_bootstrap_alone': False,
+                  'formal_o00_start_authorized_by_bootstrap_alone': False,
+                  'mcft_cap09_completed': False,
+                  'cross_scope_stitching_authorized': False,
+              },
+          }
+          Path(EFFECT).write_text(json.dumps(effect, indent=2) + '\n')
+
+          # 3. Snapshot readiness must consume the fresh persisted A0, not historical T1 A0 constants.
+          snapshot = 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts'
+          replace_one(snapshot,
+              'import {\n  MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1,\n  MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_REF_V1,\n} from "../../apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.js";\n',
+              '')
+          replace_one(snapshot,
+              'const CROP_PATH = MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.crop_context.ref;\nconst EXPECTED_PROJECT = "delicate-glade-62464340";\nconst EXPECTED_BRANCH = "br-cold-dust-a6j6aymz";\nconst FORBIDDEN_SIMULATION_BRANCH = "br-falling-cake-a6lfsdak";\nconst EXPECTED_DATABASE = "geox_mcft_cap09_s6_formal_t3r1_24h";\nconst EXPECTED_A0_REF = MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_REF_V1;\nconst EXPECTED_A0_HASH = MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1;\n',
+              'const CROP_PATH = MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.crop_context.ref;\nconst FRESH_BOOTSTRAP_EFFECTIVENESS_PATH = "' + EFFECT + '";\nconst freshBootstrapEffectiveness = JSON.parse(fs.readFileSync(FRESH_BOOTSTRAP_EFFECTIVENESS_PATH, "utf8")) as Record<string, any>;\nconst EXPECTED_PROJECT = "delicate-glade-62464340";\nconst EXPECTED_BRANCH = "br-cold-dust-a6j6aymz";\nconst FORBIDDEN_SIMULATION_BRANCH = "br-falling-cake-a6lfsdak";\nconst EXPECTED_DATABASE = String(freshBootstrapEffectiveness.database_identity?.database_name ?? "");\nconst EXPECTED_A0_REF = String(freshBootstrapEffectiveness.persisted_a0?.runtime_config_ref ?? "");\nconst EXPECTED_A0_HASH = String(freshBootstrapEffectiveness.persisted_a0?.runtime_config_hash ?? "");\n')
+          replace_one(snapshot,
+              '  const subject = requiredEnv("MCFT_EA5E2_SUBJECT_SHA");\n  if (!/^[0-9a-f]{40}$/.test(subject)) throw new Error("EA5E2_FORMAL_READINESS_EXACT_SUBJECT_SHA_REQUIRED");\n',
+              '  const subject = requiredEnv("MCFT_EA5E2_SUBJECT_SHA");\n  if (!/^[0-9a-f]{40}$/.test(subject)) throw new Error("EA5E2_FORMAL_READINESS_EXACT_SUBJECT_SHA_REQUIRED");\n  const bootstrapSubject = String(freshBootstrapEffectiveness.bootstrap_subject_sha ?? "");\n  if (freshBootstrapEffectiveness.status !== "PASS" || freshBootstrapEffectiveness.effect_boundary?.fresh_t3r1_bootstrap_complete !== true\n    || freshBootstrapEffectiveness.database_identity?.neon_project_id !== EXPECTED_PROJECT\n    || freshBootstrapEffectiveness.database_identity?.neon_branch_id !== EXPECTED_BRANCH\n    || freshBootstrapEffectiveness.persisted_counts?.t1r1_scope_row_count !== 0) {\n    throw new Error("EA5E2_FORMAL_READINESS_FRESH_BOOTSTRAP_EFFECTIVENESS_REQUIRED");\n  }\n  execFileSync("git", ["merge-base", "--is-ancestor", bootstrapSubject, "HEAD"]);\n')
+          replace_one(snapshot,
+              '      crop_authority_path: CROP_PATH,\n',
+              '      fresh_bootstrap_effectiveness_path: FRESH_BOOTSTRAP_EFFECTIVENESS_PATH,\n      fresh_bootstrap_subject_sha: freshBootstrapEffectiveness.bootstrap_subject_sha,\n      crop_authority_path: CROP_PATH,\n')
+
+          # 4. Observer reads the same fresh A0 and exact T3R1 database identity.
+          observer = 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts'
+          replace_one(observer,
+              'import {\n  MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1,\n  MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_REF_V1,\n} from "../../apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.js";\n',
+              '')
+          replace_one(observer,
+              'const CROP_AUTHORITY_BLOB = MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.crop_context.hash;\nconst A0_CONFIG_REF = MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_REF_V1;\nconst A0_CONFIG_HASH = MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1;\n',
+              'const CROP_AUTHORITY_BLOB = MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.crop_context.hash;\nconst FRESH_BOOTSTRAP_EFFECTIVENESS_PATH = "' + EFFECT + '";\nconst freshBootstrapEffectiveness = JSON.parse(fs.readFileSync(FRESH_BOOTSTRAP_EFFECTIVENESS_PATH, "utf8")) as Record<string, any>;\nconst A0_CONFIG_REF = String(freshBootstrapEffectiveness.persisted_a0?.runtime_config_ref ?? "");\nconst A0_CONFIG_HASH = String(freshBootstrapEffectiveness.persisted_a0?.runtime_config_hash ?? "");\nconst EXPECTED_FORMAL_DATABASE = String(freshBootstrapEffectiveness.database_identity?.database_name ?? "");\nconst EXPECTED_FORMAL_PROJECT = "delicate-glade-62464340";\nconst EXPECTED_FORMAL_BRANCH = "br-cold-dust-a6j6aymz";\n')
+          replace_one(observer,
+              '  const identity = await formalPool.query("SELECT current_database() AS db, current_setting(\'server_version_num\')::int AS version_num");\n  if (identity.rows.length !== 1 || identity.rows[0].db !== "geox_mcft_cap09_s6_formal_24h" || Number(identity.rows[0].version_num) < 160000) {\n    throw new Error("EA5E2_ACTIVATION_FORMAL_DATABASE_IDENTITY_MISMATCH");\n  }\n',
+              '  const identity = await formalPool.query("SELECT current_database() AS db, current_setting(\'server_version_num\')::int AS version_num, current_setting(\'neon.project_id\', true) AS neon_project_id, current_setting(\'neon.branch_id\', true) AS neon_branch_id");\n  if (identity.rows.length !== 1 || identity.rows[0].db !== EXPECTED_FORMAL_DATABASE\n    || identity.rows[0].neon_project_id !== EXPECTED_FORMAL_PROJECT\n    || identity.rows[0].neon_branch_id !== EXPECTED_FORMAL_BRANCH\n    || Number(identity.rows[0].version_num) < 160000) {\n    throw new Error("EA5E2_ACTIVATION_FORMAL_DATABASE_IDENTITY_MISMATCH");\n  }\n')
+
+          # 5. Full-chain static preflight follows the successor fresh-bootstrap authority.
+          full = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs'
+          replace_one(full,
+              'const A0_CANONICAL = "apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.ts";',
+              'const A0_CANONICAL = "' + EFFECT + '";')
+          replace_one(full,
+              '!has(read(A0_CANONICAL), "sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8")\n      || !has(observer, "MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1")\n      || !has(formalReadiness, "MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1")',
+              '!has(read(A0_CANONICAL), "' + NEW_A0_HASH + '")\n      || !has(observer, "FRESH_BOOTSTRAP_EFFECTIVENESS_PATH")\n      || !has(formalReadiness, "FRESH_BOOTSTRAP_EFFECTIVENESS_PATH")')
+
+          # 6. Exact-main drift guard protects the new bootstrap-effectiveness binding too.
+          drift = 'scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs'
+          replace_one(drift,
+              '  "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts",\n',
+              '  "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts",\n  "' + EFFECT + '",\n')
+
+          # 7. Successor authority now reflects the actually persisted T3R1 A0 and zero blocker set.
+          auth_path = Path('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SUCCESSOR-RUNNER-QUALIFICATION-V1.json')
+          auth = json.loads(auth_path.read_text())
+          auth['record_status'] = 'SUCCESSOR_RUNNER_QUALIFIED_LIVE_DISPATCH_AUTHORIZED_NOT_OPERATIONAL_ACTIVATION'
+          auth['formal_snapshot_binding'].update({
+              'database_name': NEW_DB,
+              'canonical_a0_binding_source': EFFECT,
+              'a0_runtime_config_ref': NEW_A0_REF,
+              'a0_runtime_config_hash': NEW_A0_HASH,
+              'bootstrap_logical_time': '2026-08-15T10:00:00.000Z',
+              'bootstrap_workflow_run_id': 31875578873,
+          })
+          auth['crop_season_bundle_rule']['current_crop_authority_blob_sha'] = '757e4b9f4fdcd631eea97fca85614a1b61ef0c4a'
+          auth['current_orchestration_adjudication']['result'] = 'PHASE_AWARE_LONG_HORIZON_SINGLE_T_ORCHESTRATION_IMPLEMENTED_LIVE_DISPATCHABLE_AFTER_EXACT_HEAD_REQUALIFICATION'
+          auth['exact_head_effect']['protected_main_live_dispatch_authorized'] = True
+          auth['live_dispatch_blockers'] = []
+          auth['fresh_bootstrap_effectiveness'] = {
+              'path': EFFECT,
+              'bootstrap_workflow_run_id': 31875578873,
+              'bootstrap_subject_sha': '30d403ba409393ce48ae142b8fb9dc7f902a5ee1',
+              'fresh_t3r1_bootstrap_complete': True,
+          }
+          auth_path.write_text(json.dumps(auth, indent=2) + '\n')
+
+          # 8. Successor qualification gate accepts READY only when blocker set is exactly empty.
+          succ = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.cjs'
+          replace_one(succ,
+              'const A0_CANONICAL = "apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.ts";',
+              'const A0_CANONICAL = "' + EFFECT + '";')
+          replace_one(succ,
+              'assert.equal(authority.formal_snapshot_binding.a0_runtime_config_hash, "sha256:d6b721b0eb74b1fbd4168d0bc1d551c0c95bf60fef67c8fe4cd9b77ad60930f8");',
+              'assert.equal(authority.formal_snapshot_binding.a0_runtime_config_hash, "' + NEW_A0_HASH + '");')
+          replace_one(succ,
+              '  has(observer, "MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_REF_V1", "SUCCESSOR_A0_REF_BINDING_MISSING");\n  has(observer, "MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1", "SUCCESSOR_A0_HASH_BINDING_MISSING");\n',
+              '  has(observer, "FRESH_BOOTSTRAP_EFFECTIVENESS_PATH", "SUCCESSOR_A0_EFFECTIVENESS_BINDING_MISSING");\n')
+          replace_one(succ,
+              '"MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1", "BEGIN TRANSACTION READ ONLY"',
+              '"FRESH_BOOTSTRAP_EFFECTIVENESS_PATH", "BEGIN TRANSACTION READ ONLY"')
+          replace_one(succ,
+              '  assert.equal(fullChainProof.activation_readiness, "BLOCKED", "UNQUALIFIED_LIVE_DISPATCH_MUST_REMAIN_BLOCKED");\n  assert.deepEqual(fullChainProof.readiness_blockers.map((item) => item.code).sort(), [...authority.live_dispatch_blockers].sort(), "FULL_CHAIN_READINESS_BLOCKER_SET_DRIFT");\n',
+              '  const expectedActivationReadiness = authority.live_dispatch_blockers.length === 0 ? "READY" : "BLOCKED";\n  assert.equal(fullChainProof.activation_readiness, expectedActivationReadiness, "FULL_CHAIN_ACTIVATION_READINESS_MISMATCH");\n  assert.deepEqual(fullChainProof.readiness_blockers.map((item) => item.code).sort(), [...authority.live_dispatch_blockers].sort(), "FULL_CHAIN_READINESS_BLOCKER_SET_DRIFT");\n  assert.equal(authority.exact_head_effect.protected_main_live_dispatch_authorized, authority.live_dispatch_blockers.length === 0, "LIVE_DISPATCH_AUTHORIZATION_MUST_MATCH_ZERO_BLOCKERS");\n')
+          replace_one(succ,
+              '    protected_main_live_dispatch_authorized: false,\n    readiness_blockers: authority.live_dispatch_blockers,',
+              '    protected_main_live_dispatch_authorized: authority.exact_head_effect.protected_main_live_dispatch_authorized,\n    readiness_blockers: authority.live_dispatch_blockers,')
+
+          # 9. The successor workflow must execute the current full-chain + current qualification, not only Amendment-11 layers.
+          sw = '.github/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml'
+          replace_one(sw,
+              "      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json'\n",
+              "      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json'\n      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json'\n")
+          replace_one(sw,
+              '      - name: Reexecute exact-head Amendment-11 successor runner qualification\n        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_RUNNER_QUALIFICATION.cjs\n',
+              '      - name: Reexecute exact-head Amendment-11 successor runner qualification\n        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_RUNNER_QUALIFICATION.cjs\n      - name: Reexecute current full-chain static preflight\n        env:\n          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}\n        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs\n      - name: Reexecute current exact-head successor runner qualification\n        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.cjs\n')
+          replace_one(sw,
+              '            acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.json\n',
+              '            acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.json\n            acceptance-output/MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT.json\n            acceptance-output/MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.json\n')
+
+          # Remove this materializer from the final candidate diff.
+          Path('.github/workflows/zz-agent-mcft-cap09-ea5e2-t3r1-live-dispatch-settlement.yml').unlink()
+          PY
+
+          git diff --check
+          git status --short
+          test -f docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-T3R1-FRESH-BOOTSTRAP-EFFECTIVENESS-V1.json
+          test ! -f .github/workflows/zz-agent-mcft-cap09-ea5e2-t3r1-live-dispatch-settlement.yml
+      - name: Commit bounded settlement candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'MCFT-CAP-09: settle T3R1 EA5E2 live dispatch binding'
+          git push origin HEAD:agent/mcft-cap09-ea5e2-t3r1-live-dispatch-settlement
