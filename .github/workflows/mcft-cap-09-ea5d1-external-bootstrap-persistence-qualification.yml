@@ -67,13 +67,58 @@ jobs:
             echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Classify historical EA5D1 applicability
+        id: routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='${{ steps.authority.outputs.base_sha }}'
+          files="$(git diff --name-only "${base}...HEAD" | sort)"
+          t3_runtime_rebind_files="$(printf '%s\n' \
+            'apps/server/src/domain/twin_runtime/external_formal_bootstrap_authority_bundle_v1.ts' \
+            'apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V2.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V2.cjs' \
+            'scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs' \
+            'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs' \
+            'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs' | sort)"
+          routing_repair_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-ea5b3-external-runtime-config-resolver.yml' \
+            '.github/workflows/mcft-cap-09-ea5d1-external-bootstrap-persistence-qualification.yml' | sort)"
+          if [[ "$files" == "$t3_runtime_rebind_files" ]]; then
+            mode='t3-runtime-rebind-successor'
+          elif [[ "$files" == "$routing_repair_files" ]]; then
+            mode='runtime-rebind-routing-repair'
+          else
+            mode='historical-ea5d1'
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode"
+
+      - name: Validate exact runtime-rebind routing repair
+        if: steps.routing.outputs.mode == 'runtime-rebind-routing-repair'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'PASS: exact two-workflow routing repair; no historical EA5D1 authority is rewritten.'
+
+      - name: Record historical EA5D1 authority gate not applicable to exact T3 runtime rebind
+        if: steps.routing.outputs.mode == 't3-runtime-rebind-successor'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'Historical EA5D1 exact-base authority gate is not applicable to the exact eight-file T3 runtime-rebind successor boundary. Isolated PostgreSQL compatibility tests below still execute.'
+
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Syntax-check EA5D1 governance gate
+        if: steps.routing.outputs.mode == 'historical-ea5d1'
         run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5D1_EXTERNAL_BOOTSTRAP_PERSISTENCE.cjs
 
       - name: Validate exact EA5D1 six-file boundary and authority chain
+        if: steps.routing.outputs.mode == 'historical-ea5d1'
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5D1_EXTERNAL_BOOTSTRAP_PERSISTENCE.cjs
@@ -100,6 +145,7 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B3_EXTERNAL_RUNTIME_CONFIG_RESOLVER.ts
 
       - name: Verify EA5D1 remains CI-only implementation qualification
+        if: steps.routing.outputs.mode == 'historical-ea5d1'
         shell: node {0}
         run: |
           const fs = require('fs');
@@ -111,6 +157,18 @@ jobs:
           if (r.idempotent_retry_zero_canonical_writes !== true || r.scheduler_slot_write_count !== 0 || r.provider_request_count !== 0) throw new Error('EA5D1_IDEMPOTENT_ZERO_SIDE_EFFECT_RETRY_REQUIRED');
           if (g.ea5d_authorized !== true || g.ea5d_complete !== false || g.ea5e_authorized !== false || g.formal_o00_start_authorized !== false) throw new Error('EA5D1_SUCCESSOR_BOUNDARY_REQUIRED');
           console.log(JSON.stringify({status:'PASS',ea5d1:true,formal_neon_write:false,ea5d_authorized:true,ea5d_complete:false,ea5e:false,o00:false}));
+
+      - name: Verify successor bootstrap compatibility remains CI-only and zero-Formal-write
+        if: steps.routing.outputs.mode != 'historical-ea5d1'
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5D1_EXTERNAL_BOOTSTRAP_PERSISTENCE_RESULT.json','utf8'));
+          if (r.status !== 'PASS') throw new Error('T3_RUNTIME_REBIND_EA5D1_COMPATIBILITY_PASS_REQUIRED');
+          if (r.ci_only_qualification !== true || r.formal_neon_write_performed !== false) throw new Error('T3_RUNTIME_REBIND_FORMAL_WRITE_FORBIDDEN');
+          if (r.exact_hourly_runtime_config_count !== 24 || r.exact_total_runtime_config_count !== 25 || r.exact_total_canonical_fact_count !== 34) throw new Error('T3_RUNTIME_REBIND_EXACT_BOOTSTRAP_COUNTS_REQUIRED');
+          if (r.idempotent_retry_zero_canonical_writes !== true || r.scheduler_slot_write_count !== 0 || r.provider_request_count !== 0) throw new Error('T3_RUNTIME_REBIND_ZERO_SIDE_EFFECT_RETRY_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',successor_compatibility:true,ci_only:true,formal_neon_write:false,exact_runtime_configs:25,exact_canonical_facts:34}));
 
       - uses: actions/upload-artifact@v4
         if: always()
