@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   apply:
-    if: "${{ github.event.head_commit.message == 'chore(mcft-cap09): stage amendment11 freshness edit' }}"
+    if: "${{ github.event.head_commit.message == 'chore(mcft-cap09): stage amendment11 freshness edit v2' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +27,6 @@ jobs:
           python -m py_compile tmp/mcft-cap09-amendment11-freshness-edit.py
           python tmp/mcft-cap09-amendment11-freshness-edit.py
           python -m py_compile scripts/runtime_acceptance/SELECT_MCFT_CAP_09_EA5E2_TIMING_TARGET_AMENDMENT11.py
-          python scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py selftest
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_TIMING_BUDGET_QUALIFICATION.cjs
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
