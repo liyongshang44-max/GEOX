@@ -1,0 +1,63 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5e2_t3r1_fresh_bootstrap_effectiveness_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5E2-T3R1-FRESH-BOOTSTRAP-EFFECTIVENESS-V1",
+  "record_status": "FRESH_T3R1_BOOTSTRAP_EFFECTIVE_NOT_EA5E2_ACTIVATION",
+  "bootstrap_workflow_run_id": 31875578873,
+  "bootstrap_subject_sha": "30d403ba409393ce48ae142b8fb9dc7f902a5ee1",
+  "bootstrap_artifact_id": 9245360615,
+  "bootstrap_artifact_zip_sha256": "sha256:4f408bcc12c7507720fadea5ea7e3483c4dfe7c1163f4fa8ba844475cc52199d",
+  "status": "PASS",
+  "execution_mode": "FIRST_FRESH_BOOTSTRAP",
+  "database_identity": {
+    "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h",
+    "neon_project_id": "delicate-glade-62464340",
+    "neon_branch_id": "br-cold-dust-a6j6aymz",
+    "forbidden_simulation_branch_id": "br-falling-cake-a6lfsdak",
+    "t1r1_database_reused": false,
+    "simulation_branch_reused": false
+  },
+  "formal_scope": {
+    "tenant_id": "tenant_mcft_external",
+    "project_id": "project_mcft_cap09",
+    "group_id": "group_public_research",
+    "field_id": "field_kbs_mcse_t3r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t3r1_crop_formal_v1"
+  },
+  "bootstrap_logical_time": "2026-08-15T10:00:00.000Z",
+  "o00_candidate_logical_time": "2026-08-15T11:00:00.000Z",
+  "crop_stage_code": "MID",
+  "crop_authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json",
+  "crop_authority_blob_sha": "757e4b9f4fdcd631eea97fca85614a1b61ef0c4a",
+  "fresh_soil_observed_at": "2026-08-15T09:45:00.000Z",
+  "fresh_soil_available_to_runtime_at": "2026-08-15T09:52:02.632Z",
+  "persisted_counts": {
+    "facts_total": 35,
+    "canonical_twin_facts_total": 34,
+    "runtime_config_total": 25,
+    "hourly_runtime_config_total": 24,
+    "external_a0_member_count": 9,
+    "t1r1_scope_row_count": 0,
+    "scheduler_slot_write_count": 0,
+    "scheduler_cursor_write_count": 0
+  },
+  "persisted_a0": {
+    "runtime_config_ref": "external_formal_runtime_config_49959a28cfc9eb357bf18f9d",
+    "runtime_config_hash": "sha256:5f11788fd049a3eae190d566e6faa28f428637e11f2c90b4e0aaea67e6f14e48",
+    "binding_mode": "DYNAMIC_FRESH_T3R1_PERSISTED_A0_SEMANTIC_BINDING",
+    "config_parent_chain_verified": true,
+    "explicit_ref_hash_pin_only": true
+  },
+  "o00_candidate_runtime_config": {
+    "runtime_config_ref": "external_formal_runtime_config_e0fbad32beeb26c343536876",
+    "runtime_config_hash": "sha256:ef39c493ea0877da4157400ee54c78a67bfb54b927d6afdd4700b9d143338d5a"
+  },
+  "effect_boundary": {
+    "fresh_t3r1_bootstrap_complete": true,
+    "formal_window_started": false,
+    "ea5e2_operational_activation_authorized_by_bootstrap_alone": false,
+    "formal_o00_start_authorized_by_bootstrap_alone": false,
+    "mcft_cap09_completed": false,
+    "cross_scope_stitching_authorized": false
+  }
+}

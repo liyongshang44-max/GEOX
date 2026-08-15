@@ -11,20 +11,18 @@ import {
 import {
   MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";
-import {
-  MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1,
-  MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_REF_V1,
-} from "../../apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v1.js";
 import { PostgresNextTickRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.js";
 
 const OUTPUT = path.resolve("acceptance-output/MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.json");
 const CROP_PATH = MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.crop_context.ref;
+const FRESH_BOOTSTRAP_EFFECTIVENESS_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-T3R1-FRESH-BOOTSTRAP-EFFECTIVENESS-V1.json";
+const freshBootstrapEffectiveness = JSON.parse(fs.readFileSync(FRESH_BOOTSTRAP_EFFECTIVENESS_PATH, "utf8")) as Record<string, any>;
 const EXPECTED_PROJECT = "delicate-glade-62464340";
 const EXPECTED_BRANCH = "br-cold-dust-a6j6aymz";
 const FORBIDDEN_SIMULATION_BRANCH = "br-falling-cake-a6lfsdak";
-const EXPECTED_DATABASE = "geox_mcft_cap09_s6_formal_t3r1_24h";
-const EXPECTED_A0_REF = MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_REF_V1;
-const EXPECTED_A0_HASH = MCFT_CAP09_EXISTING_EXTERNAL_A0_RUNTIME_CONFIG_HASH_V1;
+const EXPECTED_DATABASE = String(freshBootstrapEffectiveness.database_identity?.database_name ?? "");
+const EXPECTED_A0_REF = String(freshBootstrapEffectiveness.persisted_a0?.runtime_config_ref ?? "");
+const EXPECTED_A0_HASH = String(freshBootstrapEffectiveness.persisted_a0?.runtime_config_hash ?? "");
 
 function requiredEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -53,6 +51,14 @@ function safeErrorCode(error: unknown): string {
 async function main(): Promise<void> {
   const subject = requiredEnv("MCFT_EA5E2_SUBJECT_SHA");
   if (!/^[0-9a-f]{40}$/.test(subject)) throw new Error("EA5E2_FORMAL_READINESS_EXACT_SUBJECT_SHA_REQUIRED");
+  const bootstrapSubject = String(freshBootstrapEffectiveness.bootstrap_subject_sha ?? "");
+  if (freshBootstrapEffectiveness.status !== "PASS" || freshBootstrapEffectiveness.effect_boundary?.fresh_t3r1_bootstrap_complete !== true
+    || freshBootstrapEffectiveness.database_identity?.neon_project_id !== EXPECTED_PROJECT
+    || freshBootstrapEffectiveness.database_identity?.neon_branch_id !== EXPECTED_BRANCH
+    || freshBootstrapEffectiveness.persisted_counts?.t1r1_scope_row_count !== 0) {
+    throw new Error("EA5E2_FORMAL_READINESS_FRESH_BOOTSTRAP_EFFECTIVENESS_REQUIRED");
+  }
+  execFileSync("git", ["merge-base", "--is-ancestor", bootstrapSubject, "HEAD"]);
   if (execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim() !== subject) {
     throw new Error("EA5E2_FORMAL_READINESS_EXACT_HEAD_MISMATCH");
   }
@@ -140,6 +146,8 @@ async function main(): Promise<void> {
       neon_branch_id: EXPECTED_BRANCH,
       simulation_branch_reused: false,
       formal_scope: MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
+      fresh_bootstrap_effectiveness_path: FRESH_BOOTSTRAP_EFFECTIVENESS_PATH,
+      fresh_bootstrap_subject_sha: freshBootstrapEffectiveness.bootstrap_subject_sha,
       crop_authority_path: CROP_PATH,
       crop_authority_blob_sha: cropBlob,
       formal_a0_runtime_config_ref: EXPECTED_A0_REF,
