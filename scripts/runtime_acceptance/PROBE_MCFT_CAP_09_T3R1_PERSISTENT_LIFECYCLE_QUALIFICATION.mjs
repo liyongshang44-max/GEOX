@@ -75,13 +75,28 @@ function latestPossiblePlantingMs() {
 function horizonEndIso() {
   return new Date(latestPossiblePlantingMs() + CONFIG.horizon_policy.maximum_total_days * DAY_MS).toISOString();
 }
-function t3Scope(text) {
-  return /\bT3(?:R[1-6])?\b/i.test(text) || /\bLTER\s+T3\b/i.test(text);
+function hasStandaloneT3(value) {
+  return /(?:^|[\s,;/()])T3(?:$|[\s,;/()])/i.test(normalize(value));
 }
-function r1Explicit(text) {
+function hasExactT3R1(value) {
+  return /\bT3R1\b/i.test(normalize(value));
+}
+function hasLterT3(value) {
+  return /\bLTER\s+T3\b/i.test(normalize(value));
+}
+function r1Explicit(value) {
+  const text = normalize(value);
   return /replications?\s*\([^)]*\b1\b[^)]*\)/i.test(text)
-    || /\breps?\b[^.]{0,160}\b1\b/i.test(text)
+    || /\breps?\b[^.]{0,180}\b1\b/i.test(text)
     || /\bT3R1\b/i.test(text);
+}
+function indexT3LeadScope(areas, comment) {
+  return hasStandaloneT3(areas) || hasExactT3R1(areas) || hasLterT3(comment);
+}
+function detailAppliesToT3R1(lead, detailText) {
+  if (hasStandaloneT3(lead.provider_area_identity) || hasExactT3R1(lead.provider_area_identity)) return true;
+  if (hasExactT3R1(detailText)) return true;
+  return (lead.index_comment_lter_t3_scope === true || hasLterT3(detailText)) && r1Explicit(detailText);
 }
 
 async function main() {
@@ -140,8 +155,7 @@ async function main() {
         const observationType = values[2] || '';
         const comment = values[3] || '';
         const areas = values[4] || '';
-        const scopeText = `${areas} ${comment}`;
-        if (!t3Scope(scopeText)) continue;
+        if (!indexT3LeadScope(areas, comment)) continue;
         const observationId = await observationIdFromRow(row);
         assert(Number.isInteger(observationId), 'T3R1_PERSISTENT_OBSERVATION_ID_REQUIRED');
         leads.push({
@@ -149,7 +163,9 @@ async function main() {
           observation_date: observationDate,
           observation_type: observationType,
           provider_area_identity: areas,
-          index_comment_t3_scope: t3Scope(comment),
+          index_area_standalone_t3: hasStandaloneT3(areas),
+          index_area_exact_t3r1: hasExactT3R1(areas),
+          index_comment_lter_t3_scope: hasLterT3(comment),
         });
       }
 
@@ -174,19 +190,18 @@ async function main() {
       const detailUrl = `${CONFIG.transition_sweep.index_url}/${lead.provider_observation_id}`;
       const proof = await digestPage(page, detailUrl, CONFIG.transition_sweep.allowed_host);
       const detailText = normalize(await page.locator('body').innerText());
-      const combined = `${lead.observation_type} ${lead.provider_area_identity} ${detailText}`;
-      const exactT3 = t3Scope(combined);
+      const appliesToT3R1 = detailAppliesToT3R1(lead, detailText);
       const currentCropBound = CURRENT_CROP.test(detailText);
       const otherCropMention = OTHER_CROP.test(detailText);
-      const terminationSemantic = TERMINATION.test(combined);
+      const terminationSemantic = TERMINATION.test(`${lead.observation_type} ${detailText}`);
       const postEstablishment = lead.observation_date > targetDate;
       const plantingSemantic = /\bPlanting\b/i.test(lead.observation_type);
       const supportSemantic = SUPPORT_TYPES.has(lead.observation_type.toLowerCase());
 
       inspections.push({
         ...lead,
-        detail_t3_scope_present: exactT3,
-        explicit_replicate_1_inclusion: r1Explicit(detailText),
+        applies_to_t3r1: appliesToT3R1,
+        explicit_replicate_1_inclusion: r1Explicit(detailText) || lead.index_area_standalone_t3 || lead.index_area_exact_t3r1,
         current_crop_bound: currentCropBound,
         other_crop_mentioned: otherCropMention,
         termination_semantic: terminationSemantic,
@@ -200,13 +215,13 @@ async function main() {
 
     const plantingMatches = inspections.filter((item) => item.observation_date === targetDate
       && item.planting_semantic
-      && item.detail_t3_scope_present
+      && item.applies_to_t3r1
       && item.current_crop_bound
       && item.explicit_replicate_1_inclusion);
     assert(plantingMatches.length === 1, `T3R1_PERSISTENT_EXACT_PLANTING_MATCH_COUNT_${plantingMatches.length}`);
     const planting = plantingMatches[0];
 
-    const postPlanting = inspections.filter((item) => item.post_establishment && item.detail_t3_scope_present);
+    const postPlanting = inspections.filter((item) => item.post_establishment && item.applies_to_t3r1);
     const knownTerminations = postPlanting.filter((item) => item.termination_semantic && item.current_crop_bound);
     const ambiguousTerminationCandidates = postPlanting.filter((item) => item.termination_semantic && !item.current_crop_bound);
     const plantingConflicts = postPlanting.filter((item) => item.planting_semantic);
