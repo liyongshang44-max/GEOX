@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 "use strict";
 
-// EA5E2_RUNTIME_DEPENDENCY_GRAPH_SHA256=sha256:9804ccbb02a235f6f21c684eea4e27e7bdb2f5f110d93dd5768590c891890d98
+// EA5E2_RUNTIME_DEPENDENCY_GRAPH_SHA256=sha256:aa27fe1a009b498ad5ff8917713efd1e83ab53e9ef9dfcd5baccae485d8275b8
 
 const fs = require("node:fs");
 const path = require("node:path");
 
-const AUTHORITY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json";
+const AUTHORITY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json";
 const OUTPUT = "acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json";
 const HOUR_MS = 60 * 60 * 1000;
 

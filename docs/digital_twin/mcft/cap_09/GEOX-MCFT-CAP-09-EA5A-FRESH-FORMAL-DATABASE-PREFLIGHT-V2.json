@@ -1,0 +1,69 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5a_fresh_formal_database_preflight_v2",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V2",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "T3R1_FRESH_FORMAL_DATABASE_REQUIRED_NOT_YET_QUALIFIED",
+  "exact_predecessor_protected_main": "0498a9529b6cb79ba0ab8e55d1b9a8b7d479a3ba",
+  "successor_of": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V1.json",
+    "blob_sha": "f3a57413d78633685cbc5be7d94f39d9fdc5c62b",
+    "historical_database_rewritten": false,
+    "historical_t1r1_rows_reused": false
+  },
+  "formal_database_identity": {
+    "provider": "NEON_POSTGRES",
+    "project_id": "delicate-glade-62464340",
+    "branch_id": "br-cold-dust-a6j6aymz",
+    "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h",
+    "connection_secret_name": "GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL",
+    "simulation_branch_id_forbidden": "br-falling-cake-a6lfsdak",
+    "existing_t1r1_database_name_forbidden_as_t3r1_storage": "geox_mcft_cap09_s6_formal_24h"
+  },
+  "formal_scope": {
+    "tenant_id": "tenant_mcft_external",
+    "project_id": "project_mcft_cap09",
+    "group_id": "group_public_research",
+    "field_id": "field_kbs_mcse_t3r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t3r1_crop_formal_v1"
+  },
+  "fresh_database_requirements": {
+    "schema_must_match_formal_runtime_requirements": true,
+    "facts_total": 0,
+    "twin_lineage_v1_total": 0,
+    "twin_state_estimate_v1_total": 0,
+    "twin_forecast_v1_total": 0,
+    "twin_runtime_checkpoint_latest_index_v1_total": 0,
+    "twin_shadow_online_scheduler_slot_v1_total": 0,
+    "t1r1_scope_row_count": 0,
+    "t3r1_scope_row_count_before_bootstrap": 0,
+    "cross_scope_canonical_stitching_authorized": false
+  },
+  "qualification_sequence": [
+    "CREATE_DISTINCT_EMPTY_DATABASE_WITHOUT_COPYING_T1R1_CANONICAL_ROWS",
+    "APPLY_REQUIRED_SCHEMA_ONLY",
+    "RUN_READ_ONLY_ZERO_STATE_PREFLIGHT",
+    "BIND_SECRET_TO_EXACT_DATABASE_IDENTITY",
+    "ONLY_THEN_AUTHORIZE_T3R1_FRESH_BOOTSTRAP"
+  ],
+  "activation_boundary": {
+    "database_exists_and_is_zero_state_proven": false,
+    "fresh_bootstrap_authorized": false,
+    "runtime_scope_rebind_may_reference_this_required_identity": true,
+    "ea5e2_operational_activation_authorized": false,
+    "formal_window_started": false,
+    "formal_execution_count": "0/24",
+    "database_write_authorized_by_this_file_alone": false
+  },
+  "hard_nonclaims": [
+    "NO_T1R1_DATABASE_REUSE_AS_T3R1",
+    "NO_T1R1_CANONICAL_ROW_COPY",
+    "NO_SIMULATION_BRANCH_REUSE",
+    "NO_DATABASE_CREATION_FROM_THIS_AUTHORITY_FILE_ALONE",
+    "NO_SCHEMA_WRITE_FROM_THIS_AUTHORITY_FILE_ALONE",
+    "NO_FRESH_BOOTSTRAP_YET",
+    "NO_EA5E2_ACTIVATION",
+    "NO_FORMAL_O00_O23_START"
+  ]
+}
