@@ -32,6 +32,9 @@ COLLECTOR_PROCESSING_BUDGET_MINUTES = 25
 DEADLINE_OFFSET_MINUTES = CUTOFF_OFFSET_MINUTES - COLLECTOR_PROCESSING_BUDGET_MINUTES
 MAX_BYTES = 110_000_000
 KBS_URL = ea4.AUTH["kbs"]["raw_hourly_csv"]
+TEMPORAL_AUTHORITY = "PROVIDER_AVAILABILITY_WATERMARK_V1"
+PROVIDER_PUBLICATION_CADENCE = "DAILY_BATCH"
+FRESHNESS_ROLE = "HISTORICAL_ONLINE_DIAGNOSTIC_ONLY"
 
 
 def iso(value: datetime) -> str:
@@ -52,6 +55,16 @@ def write(path: Path, proof: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(proof, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(proof, sort_keys=True))
+
+
+def common_semantics() -> dict:
+    return {
+        "temporal_authority": TEMPORAL_AUTHORITY,
+        "provider_publication_cadence": PROVIDER_PUBLICATION_CADENCE,
+        "freshness_role": FRESHNESS_ROLE,
+        "freshness_is_late_authoritative_admission_gate": False,
+        "historical_online_freshness_diagnostic_hours": float(ea4.AUTH["kbs"]["raw_hourly_latest_max_age_hours"]),
+    }
 
 
 def fetch_once(deadline: datetime) -> tuple[bytes, str, int, datetime]:
@@ -102,7 +115,7 @@ def main() -> int:
 
     if now > deadline:
         proof = {
-            "schema_version": "geox_mcft_cap09_ea5e2_late_exact_t_availability_poll_v1",
+            "schema_version": "geox_mcft_cap09_ea5e2_late_exact_t_availability_poll_v2",
             "status": "FAIL",
             "reason": "EA5E2_LATE_EXACT_HOUR_AVAILABILITY_DEADLINE_EXCEEDED",
             "target_t": iso(target),
@@ -116,6 +129,7 @@ def main() -> int:
             "canonical_write_count": 0,
             "formal_database_write_count": 0,
             "raw_values_emitted": False,
+            **common_semantics(),
         }
         write(output, proof)
         return 2
@@ -158,11 +172,14 @@ def main() -> int:
                 "raw_values_emitted": False,
             }
             attempts.append(attempt)
-            if len(exact_matches) == 1 and latest_age_hours <= float(ea4.AUTH["kbs"]["raw_hourly_latest_max_age_hours"]):
+            # Amendment-11: late authority is semantic availability of the exact T row
+            # from the same provider source. Latest-row age remains diagnostic only for
+            # the established KBS daily-batch publication mode and is not an admission gate.
+            if len(exact_matches) == 1:
                 if retrieved > deadline:
                     raise RuntimeError("EA5E2_LATE_EXACT_HOUR_AVAILABILITY_DEADLINE_EXCEEDED")
                 proof = {
-                    "schema_version": "geox_mcft_cap09_ea5e2_late_exact_t_availability_poll_v1",
+                    "schema_version": "geox_mcft_cap09_ea5e2_late_exact_t_availability_poll_v2",
                     "status": "PASS",
                     "target_t": iso(target),
                     "scheduled_start": iso(scheduled),
@@ -185,6 +202,7 @@ def main() -> int:
                     "formal_database_write_count": 0,
                     "raw_values_emitted": False,
                     "attempts": attempts,
+                    **common_semantics(),
                 }
                 write(output, proof)
                 return 0
@@ -204,7 +222,7 @@ def main() -> int:
         time.sleep(min(POLL_INTERVAL_SECONDS, remaining))
 
     proof = {
-        "schema_version": "geox_mcft_cap09_ea5e2_late_exact_t_availability_poll_v1",
+        "schema_version": "geox_mcft_cap09_ea5e2_late_exact_t_availability_poll_v2",
         "status": "FAIL",
         "reason": "EA5E2_LATE_EXACT_HOUR_AVAILABILITY_DEADLINE_EXCEEDED",
         "target_t": iso(target),
@@ -224,6 +242,7 @@ def main() -> int:
         "formal_database_write_count": 0,
         "raw_values_emitted": False,
         "attempts": attempts,
+        **common_semantics(),
     }
     write(output, proof)
     return 3

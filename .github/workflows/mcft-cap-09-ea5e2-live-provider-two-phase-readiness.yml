@@ -22,7 +22,7 @@ env:
   MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
   MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
   MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
-  FORMAL_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+  FORMAL_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
 
 jobs:
   live-window-viability:
@@ -552,7 +552,7 @@ jobs:
           if(kbs.status!=='OBSERVED'||kbs.phase_aware_planning_only!==true||kbs.late_actual_retrieval_must_reprove_authority!==true||Number(kbs.configured_max_age_hours)!==6) throw new Error('EA5E2_ACTIVATION_KBS_PHASE_AWARE_PLANNING_BOUNDARY_REQUIRED');
           if(viability.status!=='PASS'||viability.candidate_T!==process.env.TARGET_T||viability.authority_changed!==false||viability.live_activation_started!==false) throw new Error('EA5E2_ACTIVATION_LIVE_WINDOW_VIABILITY_REQUIRED');
           if(viability.timing_budget_qualification?.status!=='PASS'||viability.late_exact_t_processing_budget?.qualification_status!=='QUALIFIED_EXACT_MAIN_2X_SAFETY'||viability.observer_end_to_end_budget?.qualification_status!=='QUALIFIED_EXACT_MAIN_2X_SAFETY') throw new Error('EA5E2_ACTIVATION_EXACT_MAIN_TIMING_BUDGET_QUALIFICATION_REQUIRED');
-          if(availability.status!=='PASS'||availability.target_t!==process.env.TARGET_T||availability.same_source_exact_t_only!==true||Number(availability.latest_age_hours)>6) throw new Error('EA5E2_ACTIVATION_LATE_AVAILABILITY_AND_FRESHNESS_AUTHORITY_REQUIRED');
+          if(availability.status!=='PASS'||availability.target_t!==process.env.TARGET_T||availability.same_source_exact_t_only!==true||availability.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||availability.provider_publication_cadence!=='DAILY_BATCH'||availability.freshness_is_late_authoritative_admission_gate!==false) throw new Error('EA5E2_ACTIVATION_LATE_AVAILABILITY_WATERMARK_REQUIRED');
           if(target.subject_sha!==process.env.SUBJECT_SHA||target.target_t!==process.env.TARGET_T||crop.target_t!==process.env.TARGET_T||observer.subject_sha!==process.env.SUBJECT_SHA||observer.target_t!==process.env.TARGET_T) throw new Error('EA5E2_ACTIVATION_PROOF_IDENTITY_MISMATCH');
           if(target.pre_boundary_offset_minutes!==-30||target.minimum_pre_boundary_lead_minutes!==20||Number(target.pre_boundary_lead_minutes)<20) throw new Error('EA5E2_ACTIVATION_TARGET_PREBOUNDARY_LEAD_REQUIRED');
           if(crop.status!=='PASS'||crop.provider_request_count!==0||crop.database_write_count!==0||crop.crop_stage_code!==observer.crop_stage_code) throw new Error('EA5E2_ACTIVATION_TARGET_CROP_PREFLIGHT_MUST_MATCH_OBSERVER');
@@ -560,7 +560,7 @@ jobs:
           if(observer.db_only_runtime!==true||observer.provider_request_count!==0||observer.selected_record_count!==5||observer.disposition!=='A1'||observer.forecast_status!=='COMPLETED'||observer.forecast_point_count!==72) throw new Error('EA5E2_ACTIVATION_EXTERNAL_CAP04_A1_COMPLETED_72_REQUIRED');
           if(observer.formal_database_access_mode!=='READ_ONLY_A0_HANDOFF_ONLY'||observer.formal_database_write_count!==0||observer.scheduler_slot_count!==0||observer.scheduler_cursor_count!==0) throw new Error('EA5E2_ACTIVATION_FORMAL_READ_ONLY_BOUNDARY_REQUIRED');
           const proof={
-            schema_version:'geox_mcft_cap09_ea5e2_operational_activation_live_proof_v2',
+            schema_version:'geox_mcft_cap09_ea5e2_operational_activation_live_proof_v3',
             status:'PASS',
             subject_sha:process.env.SUBJECT_SHA,
             target_t:process.env.TARGET_T,
@@ -574,7 +574,10 @@ jobs:
             kbs_preboundary_planning_latest_age_hours:kbs.latest_age_hours,
             kbs_late_authority_latest_raw_hourly_timestamp:availability.latest_timestamp,
             kbs_late_authority_latest_age_hours:availability.latest_age_hours,
-            kbs_max_age_hours:6,
+            kbs_historical_online_freshness_diagnostic_hours:6,
+            kbs_freshness_is_late_authoritative_admission_gate:false,
+            kbs_late_temporal_authority:'PROVIDER_AVAILABILITY_WATERMARK_V1',
+            kbs_provider_publication_cadence:'DAILY_BATCH',
             pre_boundary_collector_offset_minutes:-30,
             minimum_pre_boundary_lead_minutes:20,
             selected_pre_boundary_lead_minutes:target.pre_boundary_lead_minutes,

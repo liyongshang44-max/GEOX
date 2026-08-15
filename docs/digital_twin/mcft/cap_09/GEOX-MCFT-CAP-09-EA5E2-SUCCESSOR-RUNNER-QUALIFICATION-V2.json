@@ -1,0 +1,96 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5e2_successor_runner_qualification_v2",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5E2-SUCCESSOR-RUNNER-QUALIFICATION-V2",
+  "record_status": "CURRENT_T3R1_SUCCESSOR_QUALIFICATION_CANDIDATE_NOT_OPERATIONAL_ACTIVATION",
+  "exact_predecessor_protected_main": "2ef765a3c39ed761a4d6d628277a88ef2d7a08d6",
+  "historical_v1_authorities_preserved": true,
+  "historical_qualification_reused_as_successor_proof": false,
+  "successor_qualification_reexecution_required_per_exact_head": true,
+  "formal_snapshot_binding": {
+    "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h",
+    "neon_project_id": "delicate-glade-62464340",
+    "neon_branch_id": "br-cold-dust-a6j6aymz",
+    "forbidden_t1r1_database_name": "geox_mcft_cap09_s6_formal_24h",
+    "simulation_branch_id_forbidden": "br-falling-cake-a6lfsdak",
+    "persisted_a0_authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-PERSISTED-A0-AUTHORITY-V1.json",
+    "persisted_a0_authority_blob_sha": "e44b43d71d339c39e017737d44c7c9a17a67f5be",
+    "a0_runtime_config_ref": "external_formal_runtime_config_49959a28cfc9eb357bf18f9d",
+    "a0_runtime_config_hash": "sha256:5f11788fd049a3eae190d566e6faa28f428637e11f2c90b4e0aaea67e6f14e48",
+    "pointer_graph_read_only_preflight_required": true,
+    "scheduler_must_remain_unstarted": true,
+    "t1r1_database_reused": false,
+    "cross_scope_stitching_authorized": false
+  },
+  "scope_binding": {
+    "tenant_id": "tenant_mcft_external",
+    "project_id": "project_mcft_cap09",
+    "group_id": "group_public_research",
+    "field_id": "field_kbs_mcse_t3r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t3r1_crop_formal_v1"
+  },
+  "crop_season_binding": {
+    "crop_authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json",
+    "crop_authority_blob_sha": "757e4b9f4fdcd631eea97fca85614a1b61ef0c4a",
+    "current_scope_season_id": "season_2026_corn",
+    "conservative_stage_at_qualification_frontier": "MID",
+    "future_target_legality_must_be_recomputed_at_exact_head": true,
+    "cross_season_state_forecast_checkpoint_lineage_stitching_authorized": false
+  },
+  "provider_temporal_semantics": {
+    "authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "publication_cadence": "DAILY_BATCH",
+    "same_source_exact_t_required": true,
+    "six_hour_freshness_role": "HISTORICAL_ONLINE_DIAGNOSTIC_ONLY",
+    "six_hour_freshness_is_late_authoritative_admission_gate": false,
+    "source_substitution_authorized": false,
+    "interpolation_authorized": false,
+    "persistence_fill_authorized": false,
+    "time_relabeling_authorized": false
+  },
+  "temporal_safety": {
+    "frozen_exact_t_cutoff_offset_minutes": 432,
+    "operational_discovery_deadline_offset_minutes": 407,
+    "conservative_collector_processing_reservation_minutes": 25,
+    "observer_operational_start_deadline_offset_minutes": 442,
+    "observer_processing_reservation_minutes": 5,
+    "timing_budget_qualification_evidence": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-TIMING-BUDGET-QUALIFICATION-V2.json",
+    "timing_budget_qualification_subject_sha": "2ef765a3c39ed761a4d6d628277a88ef2d7a08d6",
+    "timing_budget_qualification_workflow_run_id": 31890174183,
+    "collector_safety_adjusted_max_elapsed_ms": 44580,
+    "observer_safety_adjusted_max_elapsed_ms": 2736,
+    "target_setup_budget_minutes": 120,
+    "target_setup_budget_is_authority": false
+  },
+  "exact_head_qualification_proof": {
+    "full_chain_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V2.cjs",
+    "runtime_dependency_graph_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V3.cjs",
+    "successor_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V2.cjs",
+    "zero_static_blockers_required": true,
+    "zero_readiness_blockers_required": true,
+    "activation_readiness_required": "READY",
+    "qualification_workflow_success_required_for_same_head_sha": true
+  },
+  "dispatch_effect_boundary": {
+    "successful_exact_head_successor_workflow_may_unlock_manual_ea5e2_live_dispatch": true,
+    "ea5e2_operational_activation_qualified_by_this_record": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "formal_execution_count": "0/24",
+    "scheduler_started": false,
+    "mcft_cap09_completed": false
+  },
+  "expected_live_dispatch_blockers_after_exact_head_successor_pass": [],
+  "hard_nonclaims": [
+    "NO_EA5E2_OPERATIONAL_ACTIVATION_RESULT",
+    "NO_FORMAL_O00_START",
+    "NO_SCHEDULER_START",
+    "NO_T1R1_REUSE_OR_RELABEL",
+    "NO_CROSS_SCOPE_STITCHING",
+    "NO_SOURCE_SUBSTITUTION",
+    "NO_INTERPOLATION",
+    "NO_PERSISTENCE_FILL",
+    "NO_RAW_VALUES_PUBLISHED",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}

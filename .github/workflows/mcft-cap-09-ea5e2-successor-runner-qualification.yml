@@ -9,8 +9,9 @@ on:
       - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2*'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2*'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-PERSISTED-A0-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json'
       - 'docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json'
       - 'apps/server/src/domain/twin_runtime/**'
       - 'apps/server/src/runtime/twin_runtime/**'
@@ -64,7 +65,7 @@ jobs:
             'numpy==1.26.4' \
             'refet==0.4.2'
           python -m eccodes selfcheck
-      - name: Re-prove server and successor observer/preflight types
+      - name: Re-prove server and T3R1 observer/preflight types
         run: |
           pnpm --filter @geox/server run typecheck
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
@@ -77,21 +78,24 @@ jobs:
           python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py selftest-gfs-selection
           python -m py_compile \
             scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py \
+            scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py \
             scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
-      - name: Re-prove Amendment-11 zero-provider zero-database successor readiness
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_PREFLIGHT.cjs
-      - name: Re-prove runtime dependency graph
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V2.cjs
-      - name: Reexecute exact-head Amendment-11 successor runner qualification
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_RUNNER_QUALIFICATION.cjs
-      - name: Upload exact-head successor qualification proof
+      - name: Validate frozen exact-main T3R1 timing evidence V2
+        run: node scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_TIMING_BUDGET_EVIDENCE_V2.cjs
+      - name: Re-prove current T3R1 runtime dependency graph V3
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V3.cjs
+      - name: Re-prove current T3R1 zero-effect full chain V2
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V2.cjs
+      - name: Reexecute exact-head T3R1 successor runner qualification V2
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V2.cjs
+      - name: Upload exact-head T3R1 successor V2 proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-ea5e2-amendment11-successor-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          name: mcft-cap09-ea5e2-t3r1-successor-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
-            acceptance-output/MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_RUNNER_QUALIFICATION.json
-            acceptance-output/MCFT_CAP_09_EA5E2_AMENDMENT_11_SUCCESSOR_PREFLIGHT.json
             acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.json
+            acceptance-output/MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V2.json
+            acceptance-output/MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V2.json
           if-no-files-found: error
           retention-days: 90

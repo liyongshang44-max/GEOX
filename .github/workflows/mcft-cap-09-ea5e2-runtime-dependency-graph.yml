@@ -6,9 +6,9 @@ on:
       - '.github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml'
       - '.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'
       - '.github/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V2.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_RUNNER_QUALIFICATION.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V3.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V2.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V2.cjs'
       - 'scripts/runtime_acceptance/**'
       - 'apps/server/src/external_evidence/**'
       - 'apps/server/src/persistence/twin_runtime/**'
@@ -36,14 +36,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Prove complete EA5E2 repository runtime dependency binding
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V2.cjs
+      - name: Prove complete current T3R1 EA5E2 repository runtime dependency binding
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V3.cjs
 
       - name: Upload metadata-only dependency graph proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-ea5e2-runtime-dependency-graph-${{ github.sha }}
+          name: mcft-cap09-ea5e2-runtime-dependency-graph-v3-${{ github.sha }}
           path: acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.json
           if-no-files-found: warn
           retention-days: 7
