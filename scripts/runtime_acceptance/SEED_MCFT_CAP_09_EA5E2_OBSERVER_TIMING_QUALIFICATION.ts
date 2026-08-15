@@ -12,7 +12,9 @@ import {
   buildEa5b5bExternalFixtureV1,
 } from "./mcft_cap09_ea5b5b_external_fixture_v1.js";
 
-export const EA5E2_OBSERVER_TIMING_TARGET_V1 = "2026-06-15T02:00:00.000Z";
+// Exact qualification target is the persisted fresh-T3R1 O00 candidate produced by the successful bootstrap.
+// Source: GEOX-MCFT-CAP-09-EA5E2-T3R1-FRESH-BOOTSTRAP-EFFECTIVENESS-V1.json.
+export const EA5E2_OBSERVER_TIMING_TARGET_V1 = "2026-08-15T11:00:00.000Z";
 const QUALIFICATION_SHIFT_MS = Date.parse(EA5E2_OBSERVER_TIMING_TARGET_V1) - Date.parse(EA5B5B_LOGICAL_TIME_V1);
 
 function required(name: string): string {
@@ -32,7 +34,7 @@ function assertExactMainDispatch(subject: string): void {
 
 function assertIsolatedDatabase(urlText: string): void {
   const url = new URL(urlText);
-  if (!['localhost', '127.0.0.1'].includes(url.hostname) || url.pathname.replace(/^\//, '') !== 'ea5e2_readiness') {
+  if (!["localhost", "127.0.0.1"].includes(url.hostname) || url.pathname.replace(/^\//, "") !== "ea5e2_readiness") {
     throw new Error("EA5E2_OBSERVER_TIMING_SEED_ISOLATED_DATABASE_REQUIRED");
   }
 }
@@ -166,6 +168,7 @@ async function main(): Promise<void> {
       exact_interval_available_offset_minutes: 390,
       exact_interval_ingested_offset_minutes: 391,
       target_selected_from_current_crop_authority_consensus_window: true,
+      target_bound_to_fresh_t3r1_o00_candidate: true,
       canonical_fact_count: count,
       fixture_class: "DETERMINISTIC_QUALIFICATION_ONLY",
       provider_request_count: 0,

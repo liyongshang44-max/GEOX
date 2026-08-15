@@ -182,7 +182,7 @@ jobs:
       - name: Execute three real Formal-read-only DB-only observer timing trials
         shell: bash
         env:
-          MCFT_EA5E2_TARGET_T: '2026-06-15T02:00:00.000Z'
+          MCFT_EA5E2_TARGET_T: '2026-08-15T11:00:00.000Z'
           MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
           MCFT_EA5E2_OBSERVER_TIMING_QUALIFICATION_ACK: 'true'
           DATABASE_URL: ${{ env.READINESS_DB_URL }}
