@@ -42,6 +42,7 @@ import { PostgresExternalFormalEvidenceSourceV1 } from "../../apps/server/src/ru
 const execFileAsync = promisify(execFile);
 const PYTHON = process.env.PYTHON ?? "python3";
 const PROVIDER_SCRIPT = path.resolve("scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py");
+const KBS_AUTHORITATIVE_LATE_DECODER_SCRIPT = path.resolve("scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py");
 const OUTPUT_DIR = path.resolve("acceptance-output");
 const PRE_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json");
 const LATE_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_SAFE_PROOF.json");
@@ -405,6 +406,17 @@ async function runPython(args: string[], deadlineMs?: number): Promise<{ stdout:
   return { stdout: String(result.stdout), stderr: String(result.stderr) };
 }
 
+async function runPythonScript(script: string, args: string[], deadlineMs?: number): Promise<{ stdout: string; stderr: string }> {
+  let timeoutMs = 20 * 60_000;
+  if (deadlineMs !== undefined) {
+    const remaining = deadlineMs - Date.now();
+    if (remaining <= 0) throw new Error("EA5E2_PROVIDER_EXECUTION_DEADLINE_EXCEEDED");
+    timeoutMs = Math.max(1_000, Math.min(timeoutMs, Math.floor(remaining)));
+  }
+  const result = await execFileAsync(PYTHON, [script, ...args], { cwd: process.cwd(), maxBuffer: 32 * 1024 * 1024, timeout: timeoutMs });
+  return { stdout: String(result.stdout), stderr: String(result.stderr) };
+}
+
 class PythonGfsRawBundleTransportV1 implements ExternalEvidenceTransportPortV1 {
   provider_request_count = 0;
   safe_meta: Record<string, unknown> | null = null;
@@ -513,11 +525,18 @@ class PythonKbsLateDecoderV1 implements ExternalEvidenceDecoderPortV1 {
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-ea5e2-kbs-late-"));
     const raw = path.join(temp, "kbs-raw-hourly.csv");
     const output = path.join(temp, "kbs-late-drafts.json");
+    const meta = path.join(temp, "kbs-late-meta.json");
     try {
       fs.writeFileSync(raw, Buffer.from(input.raw_bytes));
-      await runPython(["decode-kbs-late", "--target", this.target, "--available-at", input.provenance.available_at, "--input", raw, "--output", output], this.deadlineMs);
+      await runPythonScript(KBS_AUTHORITATIVE_LATE_DECODER_SCRIPT, ["decode", "--target-t", this.target, "--available-at", input.provenance.available_at, "--input", raw, "--output", output, "--meta", meta], this.deadlineMs);
       const parsed = JSON.parse(fs.readFileSync(output, "utf8")) as { drafts?: GovernedDecodedEvidenceDraftV1[] };
       if (!Array.isArray(parsed.drafts) || parsed.drafts.length !== 2) throw new Error("EA5E2_KBS_LATE_DRAFT_PAIR_REQUIRED");
+      const safe = JSON.parse(fs.readFileSync(meta, "utf8")) as Record<string, unknown>;
+      if (safe.status !== "PASS"
+          || safe.selection_mode !== "EXACT_REQUESTED_TARGET"
+          || safe.requested_target_t !== this.target
+          || safe.freshness_is_late_authoritative_admission_gate !== false
+          || safe.provider_publication_cadence !== "DAILY_BATCH") throw new Error("EA5E2_KBS_AMENDMENT11_LATE_DECODER_PROOF_REQUIRED");
       return parsed.drafts;
     } finally { fs.rmSync(temp, { recursive: true, force: true }); }
   }
