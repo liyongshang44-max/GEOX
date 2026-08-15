@@ -22,14 +22,16 @@ SPEC.loader.exec_module(provider)
 ea4 = provider.ea4
 
 POLL_INTERVAL_SECONDS = 60
-START_OFFSET_MINUTES = 390
-CUTOFF_OFFSET_MINUTES = 432
+QUALIFICATION_ATTEMPT_POLL_START_OFFSET_MINUTES = 390
+QUALIFICATION_ATTEMPT_END_OFFSET_MINUTES = 432
 MIN_INGRESS_MARGIN_MINUTES = 5
-# Scheduler-only end-to-end reservation. The frozen evidence cutoff remains T+432.
-# Discovery must finish earlier so the real collector, retention, decode,
-# canonicalization and DB ingress do not race the same deadline.
-COLLECTOR_PROCESSING_BUDGET_MINUTES = 25
-DEADLINE_OFFSET_MINUTES = CUTOFF_OFFSET_MINUTES - COLLECTOR_PROCESSING_BUDGET_MINUTES
+# Amendment-11: these offsets bound only this GitHub qualification attempt.
+# They are not evidence-admission authority and do not invalidate exact delayed
+# evidence that becomes available after this attempt ends.
+QUALIFICATION_ATTEMPT_PROCESSING_RESERVATION_MINUTES = 25
+QUALIFICATION_ATTEMPT_DISCOVERY_DEADLINE_OFFSET_MINUTES = (
+    QUALIFICATION_ATTEMPT_END_OFFSET_MINUTES - QUALIFICATION_ATTEMPT_PROCESSING_RESERVATION_MINUTES
+)
 MAX_BYTES = 110_000_000
 KBS_URL = ea4.AUTH["kbs"]["raw_hourly_csv"]
 TEMPORAL_AUTHORITY = "PROVIDER_AVAILABILITY_WATERMARK_V1"
@@ -64,19 +66,21 @@ def common_semantics() -> dict:
         "freshness_role": FRESHNESS_ROLE,
         "freshness_is_late_authoritative_admission_gate": False,
         "historical_online_freshness_diagnostic_hours": float(ea4.AUTH["kbs"]["raw_hourly_latest_max_age_hours"]),
+        "qualification_attempt_offsets_are_normative_evidence_authority": False,
+        "evidence_eligibility_has_fixed_t_plus_432_cutoff": False,
     }
 
 
 def fetch_once(deadline: datetime) -> tuple[bytes, str, int, datetime]:
     remaining = (deadline - datetime.now(timezone.utc)).total_seconds()
     if remaining <= 0:
-        raise RuntimeError("EA5E2_LATE_EXACT_HOUR_AVAILABILITY_DEADLINE_EXCEEDED")
+        raise RuntimeError("EA5E2_LATE_EXACT_HOUR_QUALIFICATION_ATTEMPT_DEADLINE_EXCEEDED")
     timeout = max(1.0, min(30.0, remaining))
     request = Request(
         KBS_URL,
         method="GET",
         headers={
-            "User-Agent": "GEOX-MCFT-CAP09-EA5E2-LATE-SEMANTIC-POLL/1",
+            "User-Agent": "GEOX-MCFT-CAP09-EA5E2-LATE-SEMANTIC-POLL/2",
             "Accept": "text/csv,text/plain;q=0.9,*/*;q=0.5",
             "Cache-Control": "no-cache",
             "Pragma": "no-cache",
@@ -108,22 +112,22 @@ def main() -> int:
 
     target = exact_hour(args.target)
     output = Path(args.output)
-    scheduled = target + timedelta(minutes=START_OFFSET_MINUTES)
-    deadline = target + timedelta(minutes=DEADLINE_OFFSET_MINUTES)
-    cutoff = target + timedelta(minutes=CUTOFF_OFFSET_MINUTES)
+    attempt_start = target + timedelta(minutes=QUALIFICATION_ATTEMPT_POLL_START_OFFSET_MINUTES)
+    attempt_deadline = target + timedelta(minutes=QUALIFICATION_ATTEMPT_DISCOVERY_DEADLINE_OFFSET_MINUTES)
+    attempt_end = target + timedelta(minutes=QUALIFICATION_ATTEMPT_END_OFFSET_MINUTES)
     now = datetime.now(timezone.utc)
 
-    if now > deadline:
+    if now > attempt_deadline:
         proof = {
-            "schema_version": "geox_mcft_cap09_ea5e2_late_exact_t_availability_poll_v2",
-            "status": "FAIL",
-            "reason": "EA5E2_LATE_EXACT_HOUR_AVAILABILITY_DEADLINE_EXCEEDED",
+            "schema_version": "geox_mcft_cap09_ea5e2_late_exact_t_availability_poll_v3",
+            "status": "ATTEMPT_EXPIRED",
+            "reason": "EA5E2_LATE_EXACT_HOUR_QUALIFICATION_ATTEMPT_DEADLINE_EXCEEDED",
             "target_t": iso(target),
-            "scheduled_start": iso(scheduled),
-            "semantic_poll_deadline": iso(deadline),
-            "late_exact_hour_cutoff": iso(cutoff),
+            "qualification_attempt_poll_start": iso(attempt_start),
+            "qualification_attempt_discovery_deadline": iso(attempt_deadline),
+            "qualification_attempt_end": iso(attempt_end),
             "poll_interval_seconds": POLL_INTERVAL_SECONDS,
-            "collector_processing_budget_minutes": COLLECTOR_PROCESSING_BUDGET_MINUTES,
+            "qualification_attempt_processing_reservation_minutes": QUALIFICATION_ATTEMPT_PROCESSING_RESERVATION_MINUTES,
             "provider_request_count": 0,
             "raw_retention_count": 0,
             "canonical_write_count": 0,
@@ -134,16 +138,16 @@ def main() -> int:
         write(output, proof)
         return 2
 
-    if now < scheduled:
-        time.sleep((scheduled - now).total_seconds())
+    if now < attempt_start:
+        time.sleep((attempt_start - now).total_seconds())
 
     attempts: list[dict] = []
     provider_request_count = 0
-    while datetime.now(timezone.utc) < deadline:
+    while datetime.now(timezone.utc) < attempt_deadline:
         attempt_started = datetime.now(timezone.utc)
         provider_request_count += 1
         try:
-            body, final_url, status, retrieved = fetch_once(deadline)
+            body, final_url, status, retrieved = fetch_once(attempt_deadline)
             rows = ea4.parse_kbs_csv(body)
             timestamped = []
             for row in rows:
@@ -172,23 +176,20 @@ def main() -> int:
                 "raw_values_emitted": False,
             }
             attempts.append(attempt)
-            # Amendment-11: late authority is semantic availability of the exact T row
-            # from the same provider source. Latest-row age remains diagnostic only for
-            # the established KBS daily-batch publication mode and is not an admission gate.
             if len(exact_matches) == 1:
-                if retrieved > deadline:
-                    raise RuntimeError("EA5E2_LATE_EXACT_HOUR_AVAILABILITY_DEADLINE_EXCEEDED")
+                if retrieved > attempt_deadline:
+                    raise RuntimeError("EA5E2_LATE_EXACT_HOUR_QUALIFICATION_ATTEMPT_DEADLINE_EXCEEDED")
                 proof = {
-                    "schema_version": "geox_mcft_cap09_ea5e2_late_exact_t_availability_poll_v2",
+                    "schema_version": "geox_mcft_cap09_ea5e2_late_exact_t_availability_poll_v3",
                     "status": "PASS",
                     "target_t": iso(target),
-                    "scheduled_start": iso(scheduled),
+                    "qualification_attempt_poll_start": iso(attempt_start),
                     "first_semantically_available_at": iso(retrieved),
-                    "semantic_poll_deadline": iso(deadline),
-                    "late_exact_hour_cutoff": iso(cutoff),
+                    "qualification_attempt_discovery_deadline": iso(attempt_deadline),
+                    "qualification_attempt_end": iso(attempt_end),
                     "minimum_ingress_margin_minutes": MIN_INGRESS_MARGIN_MINUTES,
-                    "collector_processing_budget_minutes": COLLECTOR_PROCESSING_BUDGET_MINUTES,
-                    "discovery_deadline_is_collector_deadline": False,
+                    "qualification_attempt_processing_reservation_minutes": QUALIFICATION_ATTEMPT_PROCESSING_RESERVATION_MINUTES,
+                    "attempt_deadline_is_evidence_deadline": False,
                     "poll_interval_seconds": POLL_INTERVAL_SECONDS,
                     "attempt_count": len(attempts),
                     "provider_request_count": provider_request_count,
@@ -216,22 +217,22 @@ def main() -> int:
             if "EXACT_TARGET_ROW_CONFLICT" in str(exc) or "SOURCE_IDENTITY_DRIFT" in str(exc):
                 break
 
-        remaining = (deadline - datetime.now(timezone.utc)).total_seconds()
+        remaining = (attempt_deadline - datetime.now(timezone.utc)).total_seconds()
         if remaining <= 0:
             break
         time.sleep(min(POLL_INTERVAL_SECONDS, remaining))
 
     proof = {
-        "schema_version": "geox_mcft_cap09_ea5e2_late_exact_t_availability_poll_v2",
-        "status": "FAIL",
-        "reason": "EA5E2_LATE_EXACT_HOUR_AVAILABILITY_DEADLINE_EXCEEDED",
+        "schema_version": "geox_mcft_cap09_ea5e2_late_exact_t_availability_poll_v3",
+        "status": "ATTEMPT_EXPIRED",
+        "reason": "EA5E2_LATE_EXACT_HOUR_QUALIFICATION_ATTEMPT_DEADLINE_EXCEEDED",
         "target_t": iso(target),
-        "scheduled_start": iso(scheduled),
-        "semantic_poll_deadline": iso(deadline),
-        "late_exact_hour_cutoff": iso(cutoff),
+        "qualification_attempt_poll_start": iso(attempt_start),
+        "qualification_attempt_discovery_deadline": iso(attempt_deadline),
+        "qualification_attempt_end": iso(attempt_end),
         "minimum_ingress_margin_minutes": MIN_INGRESS_MARGIN_MINUTES,
-        "collector_processing_budget_minutes": COLLECTOR_PROCESSING_BUDGET_MINUTES,
-        "discovery_deadline_is_collector_deadline": False,
+        "qualification_attempt_processing_reservation_minutes": QUALIFICATION_ATTEMPT_PROCESSING_RESERVATION_MINUTES,
+        "attempt_deadline_is_evidence_deadline": False,
         "poll_interval_seconds": POLL_INTERVAL_SECONDS,
         "attempt_count": len(attempts),
         "provider_request_count": provider_request_count,
