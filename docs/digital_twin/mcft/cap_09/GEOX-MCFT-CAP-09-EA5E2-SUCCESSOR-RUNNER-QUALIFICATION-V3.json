@@ -54,7 +54,7 @@
   "formal_snapshot_binding": {
     "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h",
     "neon_project_id": "delicate-glade-62464340",
-    "neon_branch_id": "br-cold-dust-a6lfsdak",
+    "neon_branch_id": "br-cold-dust-a6j6aymz",
     "persisted_a0_authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-PERSISTED-A0-AUTHORITY-V1.json",
     "persisted_a0_authority_blob_sha": "e44b43d71d339c39e017737d44c7c9a17a67f5be",
     "a0_runtime_config_ref": "external_formal_runtime_config_49959a28cfc9eb357bf18f9d",
