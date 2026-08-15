@@ -5,6 +5,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   PROVIDER_EXPECTED_UPDATE_BEHAVIOR,
+  HISTORICAL_ONLINE_FRESHNESS_DIAGNOSTIC_HOURS,
+  ENGINEERING_OBSERVATION_WINDOW_HOURS,
   evaluateCadenceState,
   selftest,
 } = require("./MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs");
@@ -39,9 +41,12 @@ function main() {
   if (test.status !== "PASS"
       || test.cases !== 13
       || test.authority_changed !== false
+      || test.authority_effect !== false
       || test.provider_expected_update_behavior !== "DAILY_BATCH"
       || test.first_future_t_live_protocol_compatible !== false
-      || test.phase_aware_single_t_live_protocol_compatible !== true) {
+      || test.rolling_preboundary_batch_intersection_live_protocol_compatible !== true
+      || test.six_hour_freshness_is_late_authoritative_admission_gate !== false
+      || test.scheduler_dispatch_authority !== false) {
     throw new Error("KBS_CADENCE_INTELLIGENCE_SELFTEST_FAILED");
   }
   const current = readJson(CURRENT, "KBS_CURRENT_FRESHNESS_METADATA_REQUIRED");
@@ -63,7 +68,7 @@ function main() {
   };
   const decision = evaluateCadenceState(alignedState, current.retrieved_at);
   const proof = {
-    schema_version: "geox_mcft_cap09_kbs_provider_cadence_intelligence_preflight_v2",
+    schema_version: "geox_mcft_cap09_kbs_provider_cadence_intelligence_preflight_v3",
     status: decision.decision,
     decision: decision.decision,
     reason: state ? decision.reason : `${decision.reason}_CADENCE_STATE_UNAVAILABLE`,
@@ -72,14 +77,15 @@ function main() {
     provider_state: decision.provider_state,
     latest_raw_hourly_timestamp: current.latest_raw_hourly_timestamp,
     current_age_hours: Number(current.latest_age_hours),
-    frozen_authority_max_age_hours: 6,
-    frozen_authority_pass: decision.authority_pass,
-    scheduler_may_dispatch: decision.scheduler_may_dispatch,
-    operational_headroom: decision.operational_headroom,
+    historical_online_freshness_diagnostic_hours: HISTORICAL_ONLINE_FRESHNESS_DIAGNOSTIC_HOURS,
+    historical_online_freshness_diagnostic_pass: decision.historical_online_freshness_diagnostic_pass,
+    diagnostic_headroom: decision.diagnostic_headroom,
+    scheduler_dispatch_authority: false,
+    scheduler_dispatch_decision: "NOT_PROVIDED_BY_CADENCE_INTELLIGENCE",
     ea5e2_live_protocol_compatibility: decision.ea5e2_live_protocol_compatibility,
-    activation_readiness: decision.activation_readiness,
-    engineering_max_age_hours: 24,
-    engineering_validation_available: decision.engineering_validation_available,
+    activation_readiness: "NOT_DETERMINED_BY_CADENCE_INTELLIGENCE",
+    engineering_observation_window_hours: ENGINEERING_OBSERVATION_WINDOW_HOURS,
+    engineering_observation_available: decision.engineering_observation_available,
     current_snapshot_latest_24h_profile: currentSnapshotProfile(current),
     latest_publication_batch_profile: state?.latest_publication_batch_profile ?? null,
     provider_cadence_profile: state?.provider_cadence_profile ?? null,
@@ -90,6 +96,7 @@ function main() {
     cadence_state_polled_at: state?.polled_at ?? null,
     cadence_state_subject_sha: state?.subject_sha ?? null,
     provider_operating_behavior_confirmation_is_freshness_authority: false,
+    six_hour_freshness_is_late_authoritative_admission_gate: false,
     cadence_intelligence_used_as_authority: false,
     authority_changed: false,
     authority_effect: false,
