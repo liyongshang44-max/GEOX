@@ -56,7 +56,7 @@ const MINUTE = 60_000;
 const PRE_OFFSET_MINUTES = -30;
 const LATE_OFFSET_MINUTES = 390;
 const CUTOFF_OFFSET_MINUTES = 432;
-const MIN_INGRESS_MARGIN_MINUTES = process.env.GITHUB_WORKFLOW === "mcft-cap-09-rolling-preboundary-capture" ? 0 : 5;
+const ROLLING_PREBOUNDARY_INGRESS_DEADLINE_OFFSET_MINUTES = 0;
 const SOIL_WINDOW_MINUTES = 15;
 const SOIL_FIRST_FETCH_BEFORE_T_MINUTES = 15;
 const KBS_RAW_HOURLY_TRANSPORT_MAX_ATTEMPTS = 3;
@@ -762,10 +762,7 @@ async function qualifyLateExactHourTiming(): Promise<void> {
 
 async function main(): Promise<void> {
   const mode = required("MCFT_EA5E2_LIVE_PHASE");
-  if (mode === "TRANSIENT_STORE_SMOKE") return smokeTransientStore();
-  if (mode === "CLEANUP_TRANSIENT") return cleanupTransientStore();
-  if (mode === "TIMING_QUALIFICATION_LATE_EXACT_HOUR") return qualifyLateExactHourTiming();
-  if (mode !== "PRE_BOUNDARY_CAUSAL" && mode !== "LATE_EXACT_HOUR") throw new Error("MCFT_EA5E2_LIVE_PHASE_INVALID");
+  if (mode !== "PRE_BOUNDARY_CAUSAL") throw new Error("MCFT_CAP09_ROLLING_PREBOUNDARY_RUNNER_PREBOUNDARY_ONLY");
 
   const subject = subjectSha();
   const target = canonicalHour(required("MCFT_EA5E2_TARGET_T"), "EA5E2_TARGET_T_INVALID");
@@ -782,7 +779,7 @@ async function main(): Promise<void> {
     if (mode === "PRE_BOUNDARY_CAUSAL") {
       await sleepUntil(slot.pre_boundary_causal_collector_target);
       const phaseRequestedAt = new Date().toISOString();
-      const latestIngressStartMs = Date.parse(addMinutes(target, -MIN_INGRESS_MARGIN_MINUTES));
+      const latestIngressStartMs = Date.parse(addMinutes(target, -ROLLING_PREBOUNDARY_INGRESS_DEADLINE_OFFSET_MINUTES));
       if (Date.parse(phaseRequestedAt) > latestIngressStartMs) throw new Error("EA5E2_PREBOUNDARY_MINIMUM_INGRESS_MARGIN_LOST_BEFORE_GFS");
 
       const gfsTransport = new PythonGfsRawBundleTransportV1(target, latestIngressStartMs);
@@ -833,7 +830,7 @@ async function main(): Promise<void> {
         target_logical_time: target,
         phase_requested_at: phaseRequestedAt,
         phase_canonicalized_at: canonicalizedAt,
-        minimum_ingress_margin_minutes: MIN_INGRESS_MARGIN_MINUTES,
+        minimum_ingress_margin_minutes: ROLLING_PREBOUNDARY_INGRESS_DEADLINE_OFFSET_MINUTES,
         provider_request_count: result.provider_request_count,
         raw_provider_object_count: Number(gfsTransport.safe_meta?.raw_provider_object_count ?? 0) + soilRequestCount,
         raw_retention_refs: result.raw_retention_refs,
@@ -869,7 +866,7 @@ async function main(): Promise<void> {
 
     await sleepUntil(slot.late_exact_hour_collector_scheduled);
     const phaseRequestedAt = new Date().toISOString();
-    const latestIngressStartMs = Date.parse(addMinutes(slot.late_exact_hour_evidence_cutoff, -MIN_INGRESS_MARGIN_MINUTES));
+    const latestIngressStartMs = Date.parse(addMinutes(slot.late_exact_hour_evidence_cutoff, -ROLLING_PREBOUNDARY_INGRESS_DEADLINE_OFFSET_MINUTES));
     if (Date.parse(phaseRequestedAt) > latestIngressStartMs) throw new Error("EA5E2_LATE_MINIMUM_INGRESS_MARGIN_LOST_BEFORE_FETCH");
     const transport = new KbsRawHourlyTransportV1(latestIngressStartMs);
     const lateResults = await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1({
@@ -905,7 +902,7 @@ async function main(): Promise<void> {
       ingress_completion_offset_minutes_from_target: (Date.parse(ingressCompletedAt) - Date.parse(target)) / MINUTE,
       late_exact_hour_scheduled: slot.late_exact_hour_collector_scheduled,
       late_exact_hour_cutoff: slot.late_exact_hour_evidence_cutoff,
-      minimum_ingress_margin_minutes: MIN_INGRESS_MARGIN_MINUTES,
+      minimum_ingress_margin_minutes: ROLLING_PREBOUNDARY_INGRESS_DEADLINE_OFFSET_MINUTES,
       pre_rehydrated_fact_count: rehydrated.write_count,
       pre_rehydration_semantic_hash_match: true,
       pre_rehydration_provider_request_count: 0,

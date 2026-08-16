@@ -114,8 +114,9 @@ for (const forbidden of [
 
 requireAll(providerRunner, [
   "PRE_BOUNDARY_CAUSAL",
-  "process.env.GITHUB_WORKFLOW === \"mcft-cap-09-rolling-preboundary-capture\" ? 0 : 5",
-  "const latestIngressStartMs = Date.parse(addMinutes(target, -MIN_INGRESS_MARGIN_MINUTES));",
+  "const ROLLING_PREBOUNDARY_INGRESS_DEADLINE_OFFSET_MINUTES = 0;",
+  "MCFT_CAP09_ROLLING_PREBOUNDARY_RUNNER_PREBOUNDARY_ONLY",
+  "const latestIngressStartMs = Date.parse(addMinutes(target, -ROLLING_PREBOUNDARY_INGRESS_DEADLINE_OFFSET_MINUTES));",
   "if (Date.parse(canonicalizedAt) > latestIngressStartMs) throw new Error(\"EA5E2_PREBOUNDARY_MINIMUM_INGRESS_MARGIN_LOST\")",
   "soil_observation_inside_t_minus_15_to_t: true",
   "gfs_same_cycle_pair: true",
@@ -124,8 +125,11 @@ requireAll(providerRunner, [
   "formal_r2_write_count: 0",
 ], "MCFT_CAP09_ROLLING_PREBOUNDARY_EXISTING_RUNNER_CAPABILITY_REQUIRED");
 
-if (providerRunner.includes("const MIN_INGRESS_MARGIN_MINUTES = 5;")) {
-  throw new Error("MCFT_CAP09_ROLLING_PREBOUNDARY_T_MINUS_5_DEADLINE_FORBIDDEN");
+for (const forbidden of [
+  "process.env.GITHUB_WORKFLOW === \"mcft-cap-09-rolling-preboundary-capture\" ? 0 : 5",
+  "if (mode !== \"PRE_BOUNDARY_CAUSAL\" && mode !== \"LATE_EXACT_HOUR\")",
+]) {
+  if (providerRunner.includes(forbidden)) throw new Error(`MCFT_CAP09_ROLLING_PREBOUNDARY_RUNNER_LEGACY_EXECUTION_SWITCH_FORBIDDEN:${forbidden}`);
 }
 
 console.log(JSON.stringify({

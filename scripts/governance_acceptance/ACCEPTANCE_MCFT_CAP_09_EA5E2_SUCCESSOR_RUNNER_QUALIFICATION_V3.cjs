@@ -18,6 +18,10 @@ const AMENDMENT11 = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11
 const LIVE = ".github/workflows/mcft-cap-09-ea5e2-rolling-operational-activation-live.yml";
 const HIST_LONG = ".github/workflows/mcft-cap-09-ea5e2-live-provider-two-phase-readiness.yml";
 const CAPTURE = ".github/workflows/mcft-cap-09-rolling-preboundary-capture.yml";
+const CAPTURE_PLANNER = "scripts/runtime_acceptance/PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs";
+const CAPTURE_ASSEMBLER = "scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs";
+const CAPTURE_RUNNER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts";
+const FINAL_STATIC_AUDIT = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_FINAL_STATIC_AUDIT.cjs";
 const INTERSECTION = ".github/workflows/mcft-cap-09-rolling-kbs-intersection.yml";
 const OBSERVER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts";
 const DRIFT = "scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ROLLING_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs";
@@ -26,7 +30,7 @@ const CADENCE_PREFLIGHT = "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_KBS_
 const POLLER = "scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py";
 const CROP_BUILDER = "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs";
 const SELECTOR = "scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py";
-const CRITICAL = [AUTH,HIST_V2,HIST_TIMING_V2,PERSISTED_A0,CROP,AMENDMENT11,LIVE,HIST_LONG,CAPTURE,INTERSECTION,OBSERVER,DRIFT,CADENCE,CADENCE_PREFLIGHT,POLLER,CROP_BUILDER,SELECTOR].sort();
+const CRITICAL = [AUTH,HIST_V2,HIST_TIMING_V2,PERSISTED_A0,CROP,AMENDMENT11,LIVE,HIST_LONG,CAPTURE,CAPTURE_PLANNER,CAPTURE_ASSEMBLER,CAPTURE_RUNNER,INTERSECTION,OBSERVER,DRIFT,CADENCE,CADENCE_PREFLIGHT,POLLER,CROP_BUILDER,SELECTOR,FINAL_STATIC_AUDIT].sort();
 
 function git(...args) { return execFileSync("git", args, { encoding: "utf8" }).trim(); }
 function read(file) { return fs.readFileSync(file, "utf8"); }
@@ -84,6 +88,7 @@ try {
   run("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CAPTURE.cjs");
   run("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs");
   run("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs");
+  run(FINAL_STATIC_AUDIT);
 
   const dep = JSON.parse(read(DEP));
   assert.equal(dep.schema_version, "geox_mcft_cap09_ea5e2_rolling_runtime_dependency_graph_v5");

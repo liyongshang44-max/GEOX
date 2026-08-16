@@ -74,6 +74,7 @@ jobs:
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts \
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts \
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH_V1.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts \
             scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts
       - name: Re-prove Amendment-11 diagnostic and rolling deterministic seams
         run: |
@@ -91,6 +92,8 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs
       - name: Prove rolling operational activation boundary
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs
+      - name: Prove final rolling static audit
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_FINAL_STATIC_AUDIT.cjs
       - name: Re-prove rolling T3R1 runtime dependency graph V4
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
       - name: Reexecute exact-head rolling successor runner qualification V3
@@ -101,6 +104,7 @@ jobs:
         with:
           name: mcft-cap09-ea5e2-rolling-successor-v3-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
+            acceptance-output/MCFT_CAP_09_EA5E2_ROLLING_FINAL_STATIC_AUDIT.json
             acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json
             acceptance-output/MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V3.json
           if-no-files-found: warn
