@@ -25,7 +25,7 @@
     "merged_at_utc": "2026-08-16T07:53:50.000Z",
     "focused_workflow_run_id": 31934715011,
     "focused_artifact_id": 9260304898,
-    "focused_artifact_digest": "sha256:38f5d2cbd2d0ac169e8ac1ef4e709d2a16f37fbd252348dee03bee36123508c",
+    "focused_artifact_digest": "sha256:38f5d2cbd2d0ac169e8ac1ef4e709d2a16f37fbd252348dee03bee36123508c3",
     "exact_successor_runtime_config_count": 24,
     "exact_parent_chain_verified": true,
     "persisted_ref_hash_collision_count": 0
