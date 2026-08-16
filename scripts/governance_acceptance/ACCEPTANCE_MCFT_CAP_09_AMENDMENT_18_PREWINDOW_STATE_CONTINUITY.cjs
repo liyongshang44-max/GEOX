@@ -52,7 +52,7 @@ for (const marker of [
   "does **not** need an effective logical time exactly one hour before the rebased O00",
   "no new A0 canonical state, lineage, checkpoint, forecast, health, or bootstrap record is created by the epoch rebase",
   "initial multi-slot catch-up",
-  "actual UTC O00–O23"
+  "may actual UTC O00 begin"
 ]) if (!a06.includes(marker)) fail(`AMENDMENT18_AMENDMENT06_MARKER_MISSING:${marker}`);
 
 const a17 = fs.readFileSync("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-17-T3R1-FORMAL-SUCCESSOR-SCOPE-AUTHORITY.md","utf8");
