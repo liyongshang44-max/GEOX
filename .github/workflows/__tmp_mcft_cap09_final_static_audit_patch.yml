@@ -1,0 +1,152 @@
+name: tmp-mcft-cap09-final-static-audit-patch
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-final-static-audit-hardening
+    paths:
+      - '.github/workflows/__tmp_mcft_cap09_final_static_audit_patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap09-final-static-audit-hardening
+          fetch-depth: 0
+      - name: Harden active rolling static gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: seam count {count} for {old[:80]!r}')
+              p.write_text(text.replace(old, new, 1))
+
+          runner = 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
+          replace_once(
+              runner,
+              'const MIN_INGRESS_MARGIN_MINUTES = process.env.GITHUB_WORKFLOW === "mcft-cap-09-rolling-preboundary-capture" ? 0 : 5;',
+              'const ROLLING_PREBOUNDARY_INGRESS_DEADLINE_OFFSET_MINUTES = 0;',
+          )
+          p = Path(runner)
+          text = p.read_text().replace('MIN_INGRESS_MARGIN_MINUTES', 'ROLLING_PREBOUNDARY_INGRESS_DEADLINE_OFFSET_MINUTES')
+          old_mode = '''  const mode = required("MCFT_EA5E2_LIVE_PHASE");
+          if (mode === "TRANSIENT_STORE_SMOKE") return smokeTransientStore();
+          if (mode === "CLEANUP_TRANSIENT") return cleanupTransientStore();
+          if (mode === "TIMING_QUALIFICATION_LATE_EXACT_HOUR") return qualifyLateExactHourTiming();
+          if (mode !== "PRE_BOUNDARY_CAUSAL" && mode !== "LATE_EXACT_HOUR") throw new Error("MCFT_EA5E2_LIVE_PHASE_INVALID");
+          '''
+          new_mode = '''  const mode = required("MCFT_EA5E2_LIVE_PHASE");
+          if (mode !== "PRE_BOUNDARY_CAUSAL") throw new Error("MCFT_CAP09_ROLLING_PREBOUNDARY_RUNNER_PREBOUNDARY_ONLY");
+          '''
+          if text.count(old_mode) != 1:
+              raise SystemExit(f'{runner}: mode seam count {text.count(old_mode)}')
+          p.write_text(text.replace(old_mode, new_mode, 1))
+
+          graph = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs'
+          replace_once(
+              graph,
+              'const ENTRY=[\n "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts",',
+              'const ENTRY=[\n "scripts/runtime_acceptance/PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs",\n "scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs",\n "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",\n "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts",',
+          )
+          replace_once(
+              graph,
+              'const MUST=[\n "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts",',
+              'const MUST=[\n "scripts/runtime_acceptance/PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs",\n "scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs",\n "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",\n "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts",',
+          )
+          replace_once(
+              graph,
+              'const STATIC=[LIVE,SELF,STATIC_WF,',
+              'const STATIC=[LIVE,SELF,STATIC_WF,\n "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_FINAL_STATIC_AUDIT.cjs",',
+          )
+
+          successor = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V3.cjs'
+          replace_once(
+              successor,
+              'const CAPTURE = ".github/workflows/mcft-cap-09-rolling-preboundary-capture.yml";\nconst INTERSECTION =',
+              'const CAPTURE = ".github/workflows/mcft-cap-09-rolling-preboundary-capture.yml";\nconst CAPTURE_PLANNER = "scripts/runtime_acceptance/PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs";\nconst CAPTURE_ASSEMBLER = "scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs";\nconst CAPTURE_RUNNER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts";\nconst FINAL_STATIC_AUDIT = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_FINAL_STATIC_AUDIT.cjs";\nconst INTERSECTION =',
+          )
+          replace_once(
+              successor,
+              'const CRITICAL = [AUTH,HIST_V2,HIST_TIMING_V2,PERSISTED_A0,CROP,AMENDMENT11,LIVE,HIST_LONG,CAPTURE,INTERSECTION,OBSERVER,DRIFT,CADENCE,CADENCE_PREFLIGHT,POLLER,CROP_BUILDER,SELECTOR].sort();',
+              'const CRITICAL = [AUTH,HIST_V2,HIST_TIMING_V2,PERSISTED_A0,CROP,AMENDMENT11,LIVE,HIST_LONG,CAPTURE,CAPTURE_PLANNER,CAPTURE_ASSEMBLER,CAPTURE_RUNNER,INTERSECTION,OBSERVER,DRIFT,CADENCE,CADENCE_PREFLIGHT,POLLER,CROP_BUILDER,SELECTOR,FINAL_STATIC_AUDIT].sort();',
+          )
+          replace_once(
+              successor,
+              '  run("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs");\n\n  const dep =',
+              '  run("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs");\n  run(FINAL_STATIC_AUDIT);\n\n  const dep =',
+          )
+
+          capture_acceptance = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CAPTURE.cjs'
+          replace_once(
+              capture_acceptance,
+              '  "process.env.GITHUB_WORKFLOW === \\"mcft-cap-09-rolling-preboundary-capture\\" ? 0 : 5",\n  "const latestIngressStartMs = Date.parse(addMinutes(target, -MIN_INGRESS_MARGIN_MINUTES));",',
+              '  "const ROLLING_PREBOUNDARY_INGRESS_DEADLINE_OFFSET_MINUTES = 0;",\n  "MCFT_CAP09_ROLLING_PREBOUNDARY_RUNNER_PREBOUNDARY_ONLY",\n  "const latestIngressStartMs = Date.parse(addMinutes(target, -ROLLING_PREBOUNDARY_INGRESS_DEADLINE_OFFSET_MINUTES));",',
+          )
+          replace_once(
+              capture_acceptance,
+              'if (providerRunner.includes("const MIN_INGRESS_MARGIN_MINUTES = 5;")) {\n  throw new Error("MCFT_CAP09_ROLLING_PREBOUNDARY_T_MINUS_5_DEADLINE_FORBIDDEN");\n}',
+              'for (const forbidden of [\n  "process.env.GITHUB_WORKFLOW === \\"mcft-cap-09-rolling-preboundary-capture\\" ? 0 : 5",\n  "if (mode !== \\"PRE_BOUNDARY_CAUSAL\\" && mode !== \\"LATE_EXACT_HOUR\\")",\n]) {\n  if (providerRunner.includes(forbidden)) throw new Error(`MCFT_CAP09_ROLLING_PREBOUNDARY_RUNNER_LEGACY_EXECUTION_SWITCH_FORBIDDEN:${forbidden}`);\n}',
+          )
+
+          successor_wf = '.github/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml'
+          replace_once(
+              successor_wf,
+              '            scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH_V1.ts \\\n            scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts',
+              '            scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH_V1.ts \\\n            scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts \\\n            scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts',
+          )
+          replace_once(
+              successor_wf,
+              '      - name: Re-prove rolling T3R1 runtime dependency graph V4\n        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs',
+              '      - name: Prove final rolling static audit\n        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_FINAL_STATIC_AUDIT.cjs\n      - name: Re-prove rolling T3R1 runtime dependency graph V4\n        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs',
+          )
+          replace_once(
+              successor_wf,
+              '            acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json\n            acceptance-output/MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V3.json',
+              '            acceptance-output/MCFT_CAP_09_EA5E2_ROLLING_FINAL_STATIC_AUDIT.json\n            acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json\n            acceptance-output/MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V3.json',
+          )
+
+          dep_wf = '.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'
+          replace_once(
+              dep_wf,
+              "      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs'",
+              "      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs'\n      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_FINAL_STATIC_AUDIT.cjs'",
+          )
+
+          audit = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_FINAL_STATIC_AUDIT.cjs')
+          text = audit.read_text()
+          old = 'console.log(JSON.stringify(proof));\n'
+          new = 'fs.mkdirSync("acceptance-output", { recursive: true });\nfs.writeFileSync("acceptance-output/MCFT_CAP_09_EA5E2_ROLLING_FINAL_STATIC_AUDIT.json", JSON.stringify(proof, null, 2) + "\\n");\nconsole.log(JSON.stringify(proof));\n'
+          if text.count(old) != 1:
+              raise SystemExit('static audit output seam drift')
+          audit.write_text(text.replace(old, new, 1))
+          PY
+
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_FINAL_STATIC_AUDIT.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CAPTURE.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V3.cjs
+          git diff --check
+
+          git rm .github/workflows/__tmp_mcft_cap09_final_static_audit_patch.yml
+
+      - name: Commit hardened static audit surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'MCFT-CAP-09: harden final rolling static audit surface'
+          git push origin HEAD:agent/mcft-cap09-final-static-audit-hardening
