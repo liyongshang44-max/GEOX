@@ -1,0 +1,62 @@
+name: mcft-cap-09-t3r1-successor-whole-window-scan-v2
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t3r1-successor-whole-window-scan-v2.yml'
+      - 'scripts/runtime_acceptance/SCAN_MCFT_CAP_09_T3R1_SUCCESSOR_WHOLE_WINDOW_V2.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-WHOLE-WINDOW-SCAN-V2.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_WHOLE_WINDOW_SCAN_V2.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-t3r1-successor-whole-window-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  exact-head-t3r1-successor-whole-window-scan-v2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Resolve exact post-activation protected-main base
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}'
+          test "$base" = '68af52d1c6df8a32edad231e0425421ecfe31b4d' || { echo "T3R1_WHOLE_WINDOW_SCAN_BASE_DRIFT:$base" >&2; exit 1; }
+          echo "MCFT_BASE_SHA=$base" >> "$GITHUB_ENV"
+
+      - name: Syntax-check read-only scan and governance gate
+        run: |
+          node --check scripts/runtime_acceptance/SCAN_MCFT_CAP_09_T3R1_SUCCESSOR_WHOLE_WINDOW_V2.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_WHOLE_WINDOW_SCAN_V2.cjs
+
+      - name: Execute deterministic T3R1 whole-window scan
+        run: node scripts/runtime_acceptance/SCAN_MCFT_CAP_09_T3R1_SUCCESSOR_WHOLE_WINDOW_V2.cjs
+
+      - name: Prove exact four-file read-only post-activation boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_WHOLE_WINDOW_SCAN_V2.cjs
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-t3r1-successor-whole-window-scan-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_WHOLE_WINDOW_SCAN_V2.json
+            acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_WHOLE_WINDOW_SCAN_V2_GATE_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
