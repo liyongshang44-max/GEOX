@@ -366,9 +366,34 @@ async function main(): Promise<void> {
     const kbsTypes = results.map((item) => item.record.record_type).sort();
     if (JSON.stringify(kbsTypes) !== JSON.stringify(["historical_et0_estimate_v1", "observed_rainfall_v1"])) throw new Error("MCFT_CAP09_FIVE_FAMILY_KBS_TYPES_INVALID");
     for (const result of results) if (result.record.role_time.interval_end !== target) throw new Error("MCFT_CAP09_FIVE_FAMILY_KBS_INTERVAL_END_DRIFT");
+
+    const orderedResults = [...results].sort((a, b) => a.record.record_type.localeCompare(b.record.record_type));
+    const exactTargetKbsEvidenceHashes = orderedResults.map((result) => ({
+      record_type: result.record.record_type,
+      source_record_id: result.record.source_record_id,
+      record_semantic_sha256: result.record_semantic_sha256,
+    }));
+    const firstRaw = orderedResults[0].raw_provenance;
+    for (const result of orderedResults) {
+      if (result.raw_provenance.raw_sha256 !== firstRaw.raw_sha256
+        || result.raw_provenance.raw_bytes !== firstRaw.raw_bytes
+        || result.raw_provenance.retention_ref !== firstRaw.retention_ref
+        || result.raw_provenance.retained_at !== firstRaw.retained_at) {
+        throw new Error("MCFT_CAP09_FIVE_FAMILY_KBS_SHARED_RAW_RECEIPT_REQUIRED");
+      }
+    }
+    const exactTargetKbsPrivateRetentionReceiptHashMetadata = {
+      retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+      retained_sha256: firstRaw.raw_sha256,
+      retained_bytes: firstRaw.raw_bytes,
+      retention_ref: firstRaw.retention_ref,
+      retained_at: firstRaw.retained_at,
+      externally_publishable: false,
+    };
+
     const ingress = new PostgresExternalFormalEvidenceIngressV1(pool, store);
     let writes = 0;
-    for (const result of [...results].sort((a, b) => a.record.record_type.localeCompare(b.record.record_type))) writes += (await ingress.appendCanonicalizedExternalEvidence(result)).canonical_fact_write_count;
+    for (const result of orderedResults) writes += (await ingress.appendCanonicalizedExternalEvidence(result)).canonical_fact_write_count;
     const after = Number((await pool.query("SELECT count(*)::int AS n FROM facts")).rows[0].n);
     const afterTypes = await factTypes(pool);
     if (writes !== 2 || after !== 5 || JSON.stringify(afterTypes) !== JSON.stringify([...EXPECTED_FIVE_TYPES])) throw new Error("MCFT_CAP09_FIVE_FAMILY_EXACT_FIVE_FACTS_REQUIRED");
@@ -402,6 +427,8 @@ async function main(): Promise<void> {
       isolated_database_fact_count: after,
       isolated_database_new_kbs_fact_count: writes,
       record_types: afterTypes,
+      exact_target_kbs_evidence_hashes: exactTargetKbsEvidenceHashes,
+      exact_target_kbs_private_retention_receipt_hash_metadata: exactTargetKbsPrivateRetentionReceiptHashMetadata,
       producer_bound_raw_reverification: true,
       kbs_raw_retained_before_decode: true,
       kbs_provider_request_count: transport.provider_request_count,
