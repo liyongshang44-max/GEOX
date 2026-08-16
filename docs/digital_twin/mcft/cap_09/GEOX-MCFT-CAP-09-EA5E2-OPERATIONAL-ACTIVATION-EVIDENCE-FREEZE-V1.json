@@ -4,7 +4,7 @@
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S6",
   "sub_lifecycle": "S6-EA5E2-OPERATIONAL-ACTIVATION-EVIDENCE-FREEZE",
-  "record_status": "PREPARED_SCHEMA_NOT_EFFECTIVE_PENDING_NEW_PROTECTED_MAIN_LIVE_PASS",
+  "record_status": "CANDIDATE_EFFECTIVE_ONLY_AFTER_EXACT_HEAD_PROOF_AND_MERGE",
   "base_protected_main_sha": "5f7e534b2db41e1a6e8bc793d0fa5d87c1639289",
   "protected_main_subject_sha": "5f7e534b2db41e1a6e8bc793d0fa5d87c1639289",
   "effectiveness_rule": "EXACT_THREE_FILE_HEAD_PROOF_PASS_AND_MERGE_TO_UNCHANGED_PROTECTED_MAIN",
@@ -33,18 +33,18 @@
   },
   "live_proof": {
     "workflow_name": "mcft-cap-09-ea5e2-rolling-operational-activation-live",
-    "workflow_run_id": null,
-    "artifact_id": null,
-    "artifact_digest": null,
-    "target_t": null,
-    "evidence_snapshot_time": null
+    "workflow_run_id": 31932747954,
+    "artifact_id": 9259791055,
+    "artifact_digest": "sha256:e93ee21ef12ce4ef9987cf503a4cde9229c0e5b4cb673861a5cd2fc07335410f",
+    "target_t": "2026-08-15T12:00:00.000Z",
+    "evidence_snapshot_time": "2026-08-16T07:01:50.812Z"
   },
   "producer_proof": {
-    "subject_sha": null,
-    "workflow_run_id": null,
-    "artifact_id": null,
-    "artifact_digest": null,
-    "target_t": null
+    "subject_sha": "481f46358056abc592c9e5691d3463487261dafa",
+    "workflow_run_id": 31881816156,
+    "artifact_id": 9246513491,
+    "artifact_digest": "sha256:6b5bd9a2bb48b2d8b9d4f904bbd00f200a82fc9fcb62163242a6d831fc6c9739",
+    "target_t": "2026-08-15T12:00:00.000Z"
   },
   "exact_head_successor_qualification": {
     "subject_sha": "5f7e534b2db41e1a6e8bc793d0fa5d87c1639289",
@@ -54,28 +54,87 @@
     "status": "PASS"
   },
   "frozen_evidence": {
-    "kbs_latest_timestamp": null,
-    "kbs_computed_age_hours": null,
-    "target_t": null,
-    "pre_boundary_collector_observed_at": null,
-    "late_exact_hour_collector_observed_at": null,
+    "kbs_latest_timestamp": "2026-08-16T04:00:00.000Z",
+    "kbs_computed_age_hours": 1.822778,
+    "target_t": "2026-08-15T12:00:00.000Z",
+    "pre_boundary_collector_observed_at": "2026-08-15T11:30:00.048Z",
+    "late_exact_hour_collector_observed_at": "2026-08-16T07:01:41.292Z",
     "scheduler_eligibility_time": null,
-    "exact_interval_cutoff_time": null,
+    "exact_interval_cutoff_time": "2026-08-16T07:01:50.812Z",
     "runtime_observer_expected_at": null,
-    "runtime_observer_started_at": null,
+    "runtime_observer_started_at": "2026-08-16T07:01:50.812Z",
     "runtime_observer_start_skew_minutes": null,
-    "evidence_snapshot_time": null,
-    "same_cycle_gfs_identity": null,
-    "private_retention_receipt_hash_metadata": {
-      "kbs_exact_t": null,
-      "gfs_preboundary": null,
-      "soil_preboundary": null
+    "evidence_snapshot_time": "2026-08-16T07:01:50.812Z",
+    "same_cycle_gfs_identity": {
+      "provider_id": "NOAA_NCEP_NOMADS_GFS",
+      "source_family": "GFS_PGRB2_SFLUX_RAW_BUNDLE",
+      "source_record_ids": [
+        "gfs_future_et0_20260815t060000z_20260815t120000z",
+        "gfs_future_weather_20260815t060000z_20260815t120000z"
+      ],
+      "raw_sha256": "sha256:c69262877bf2f2c1b4831bcef5b2824429aad62f4f3f34f15a632b4fdb2fe3f0",
+      "raw_bytes": 235427840,
+      "retrieved_at": "2026-08-15T11:30:11.122Z",
+      "available_at": "2026-08-15T11:30:11.122Z",
+      "ingested_at": "2026-08-15T11:30:31.576Z"
     },
-    "isolated_database_evidence_hashes": [],
-    "single_t_crop_context_hash": null,
-    "external_cap04_operation_variant": null,
-    "external_cap04_forecast_status": null,
-    "external_cap04_forecast_point_count": null
+    "private_retention_receipt_hash_metadata": {
+      "kbs_exact_t": {
+        "retention_class": "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+        "retained_sha256": "sha256:1d63505a1de4ad76899c1ce12f9ffe70f66358c03cd3863b9c45c962264e2a25",
+        "retained_bytes": 19558045,
+        "retention_ref_sha256": "sha256:a46d30d8f30e3060f8ce129a0c167e336d69d9ab7b3a748b652fa466497d386c",
+        "retained_at": "2026-08-16T07:01:41.292Z",
+        "externally_publishable": false
+      },
+      "gfs_preboundary": {
+        "retention_class": "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+        "retained_sha256": "sha256:c69262877bf2f2c1b4831bcef5b2824429aad62f4f3f34f15a632b4fdb2fe3f0",
+        "retained_bytes": 235427840,
+        "retention_ref_sha256": "sha256:820f27234281d2eb88770f308ce7f2d937a611b260d40c71d3e7648a245890c4",
+        "retained_at": "2026-08-15T11:30:12.186Z",
+        "externally_publishable": false
+      },
+      "soil_preboundary": {
+        "retention_class": "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+        "retained_sha256": "sha256:6b0a89f5a88721c3ac82d40ca9babdb70896a381cc72b62790cc8d534a95914a",
+        "retained_bytes": 205531,
+        "retention_ref_sha256": "sha256:441ac75ab8e30e940ad5c6d625a2a75c791a5f6058b66300870fd6fe1d096b55",
+        "retained_at": "2026-08-15T11:50:08.635Z",
+        "externally_publishable": false
+      }
+    },
+    "isolated_database_evidence_hashes": [
+      {
+        "record_type": "future_et0_assumption_v1",
+        "source_record_id": "gfs_future_et0_20260815t060000z_20260815t120000z",
+        "record_semantic_sha256": "sha256:323346ce3e7f6bbe05575db9a024fe4ea5a89e5fa47cfef56904ec96bcdd3ce0"
+      },
+      {
+        "record_type": "future_weather_assumption_v1",
+        "source_record_id": "gfs_future_weather_20260815t060000z_20260815t120000z",
+        "record_semantic_sha256": "sha256:d408ff4b23d2b92e7f2195ee18ea80d883797b082d543bfa76beefda9cfb80cc"
+      },
+      {
+        "record_type": "historical_et0_estimate_v1",
+        "source_record_id": "kbs_asce_short_reference_et0_20260815t120000z",
+        "record_semantic_sha256": "sha256:b9f5be7b79467bc47333eeb7944dc06bf60a5e8a10624f02f408bd2ad9b5e74d"
+      },
+      {
+        "record_type": "observed_rainfall_v1",
+        "source_record_id": "kbs_raw_hourly_rain_20260815t120000z",
+        "record_semantic_sha256": "sha256:8d00681a2c17f475cbbd7076afeb939d0a395ffdc0fc29f7da28a455d0043255"
+      },
+      {
+        "record_type": "soil_moisture_observation_v1",
+        "source_record_id": "kbs_lter_variate25_vwc_100mm_v1:2026-08-15T11:45:00.000Z",
+        "record_semantic_sha256": "sha256:4da6210ff388aa2a227b385175208aa72ad5e4cbd41527e23fc455bbe9476e5a"
+      }
+    ],
+    "single_t_crop_context_hash": "sha256:65b3121b26fadf84abbbfeb06d24bd73faa54fa83f38047c0ec487f973cb7790",
+    "external_cap04_operation_variant": "A1",
+    "external_cap04_forecast_status": "COMPLETED",
+    "external_cap04_forecast_point_count": 72
   },
   "side_effect_boundary": {
     "source_substitution_count": 0,
