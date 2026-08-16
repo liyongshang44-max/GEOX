@@ -1,0 +1,114 @@
+name: mcft-cap-09-a18c-manifest-runner-calibration
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v2.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_v3_amendment11_runner_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18C_MANIFEST_RUNNER_CALIBRATION.ts'
+      - '.github/workflows/mcft-cap-09-a18c-manifest-runner-calibration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXACT_BASE_SHA: '185479edf0c8dfab58632cddfff81c6e9aec6b06'
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      TARGET_DATABASE_NAME: 'geox_mcft_cap09_s6_formal_t3r1_24h_v2'
+      SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Fail closed on exact base and calibration boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event_name }}" = "pull_request"
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_BASE_SHA"
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$HEAD_SHA" | sort)
+          printf '%s\n' "${changed[@]}"
+          test "${#changed[@]}" -eq 4
+          expected=$(cat <<'EOF'
+          .github/workflows/mcft-cap-09-a18c-manifest-runner-calibration.yml
+          apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v2.ts
+          apps/server/src/runtime/twin_runtime/external_formal_v3_amendment11_runner_v1.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18C_MANIFEST_RUNNER_CALIBRATION.ts
+          EOF
+          )
+          actual=$(printf '%s\n' "${changed[@]}")
+          test "$actual" = "$expected"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck A18C materializer runner calibration
+        run: pnpm exec tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --skipLibCheck --types node apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v2.ts apps/server/src/runtime/twin_runtime/external_formal_v3_amendment11_runner_v1.ts scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18C_MANIFEST_RUNNER_CALIBRATION.ts
+
+      - name: Calibrate materialization hashes and runner ordering
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18C_MANIFEST_RUNNER_CALIBRATION.ts
+
+      - name: Derive v2 database URL without exposing secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_DATABASE_URL"
+          DATABASE_URL=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL); u.pathname="/"+process.env.TARGET_DATABASE_NAME; process.stdout.write(u.toString())')
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          echo "SOURCE_DATABASE_URL=" >> "$GITHUB_ENV"
+
+      - name: Re-prove v2 Formal store remains zero-state READ ONLY
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE.ts
+
+      - name: Validate calibration nonclaims
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const c = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A18C_MANIFEST_RUNNER_CALIBRATION_RESULT.json','utf8'));
+          const z = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE_PREFLIGHT_RESULT.json','utf8'));
+          if (c.status !== 'PASS' || c.calibration_only_not_authority !== true) throw new Error('A18C_CALIBRATION_NOT_PASS');
+          if (c.slots.length !== 24 || c.full_materialization_hash_required !== true) throw new Error('A18C_EXACT_24_MATERIALIZATION_HASHES_REQUIRED');
+          if (c.missing_runtime_config_claim_count !== 0 || c.missing_evidence_claim_count !== 0 || c.tampered_full_context_claim_count !== 0) throw new Error('A18C_PRECLAIM_WRITE_BOUNDARY_REGRESSION');
+          if (c.evidence_precheck_before_claim !== true || c.failed_tick_terminalizes_claim !== true) throw new Error('A18C_RUNNER_ORDERING_REGRESSION');
+          if (c.provider_availability_watermark !== 'PROVIDER_AVAILABILITY_WATERMARK_V1' || c.fixed_lag_authority_used !== false) throw new Error('A18C_AMENDMENT11_REGRESSION');
+          if (c.database_write_count !== 0 || c.runtime_config_write_count !== 0 || c.scheduler_write_count !== 0 || c.canonical_runtime_write_count !== 0) throw new Error('A18C_CALIBRATION_SIDE_EFFECT_FORBIDDEN');
+          if (c.ea5e3_authorized !== false || c.prewindow_a0_persisted !== false || c.formal_o00_started !== false || c.formal_execution_count !== '0/24') throw new Error('A18C_NONCLAIM_REGRESSION');
+          if (z.status !== 'PASS' || z.transaction_mode !== 'READ_ONLY') throw new Error('A18C_LIVE_ZERO_STATE_PREFLIGHT_REQUIRED');
+          if (z.zero_state_counts.facts_total !== 0 || z.zero_state_counts.checkpoint_total !== 0 || z.zero_state_counts.scheduler_slot_total !== 0 || z.zero_state_counts.scheduler_cursor_total !== 0) throw new Error('A18C_V2_STORE_MUST_REMAIN_ZERO_STATE');
+          NODE
+
+      - name: Upload calibration proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-a18c-manifest-runner-calibration-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_A18C_MANIFEST_RUNNER_CALIBRATION_RESULT.json
+            acceptance-output/MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE_PREFLIGHT_RESULT.json
+          if-no-files-found: error
+          retention-days: 7
