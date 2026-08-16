@@ -78,7 +78,7 @@ jobs:
             echo 'A18C_ESBUILD_BINARY_NOT_FOUND' > acceptance-output/A18C_CALIBRATION_DIAGNOSTIC.log
             status=1
           else
-            node "$ESBUILD_BIN" scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18C_MANIFEST_RUNNER_CALIBRATION.ts --bundle --platform=node --format=esm --target=node20 --outfile=acceptance-output/a18c-calibration.mjs > acceptance-output/A18C_CALIBRATION_DIAGNOSTIC.log 2>&1
+            "$ESBUILD_BIN" scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18C_MANIFEST_RUNNER_CALIBRATION.ts --bundle --platform=node --format=esm --target=node20 --outfile=acceptance-output/a18c-calibration.mjs > acceptance-output/A18C_CALIBRATION_DIAGNOSTIC.log 2>&1
             status=$?
           fi
           if [ "$status" -eq 0 ]; then
