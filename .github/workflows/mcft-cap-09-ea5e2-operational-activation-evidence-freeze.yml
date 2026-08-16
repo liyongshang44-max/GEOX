@@ -1,0 +1,113 @@
+name: mcft-cap-09-ea5e2-operational-activation-evidence-freeze
+
+on:
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-EVIDENCE-FREEZE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_EVIDENCE_FREEZE_V1.cjs'
+      - '.github/workflows/mcft-cap-09-ea5e2-operational-activation-evidence-freeze.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-ea5e2-operational-activation-evidence-freeze-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+env:
+  MCFT_BASE_SHA: '5f7e534b2db41e1a6e8bc793d0fa5d87c1639289'
+
+jobs:
+  exact-head-evidence-freeze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MCFT_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+
+      - name: Require final freeze candidate and read immutable evidence bindings
+        id: bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          authority='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-EVIDENCE-FREEZE-V1.json'
+          jq -e '.record_status=="CANDIDATE_EFFECTIVE_ONLY_AFTER_EXACT_HEAD_PROOF_AND_MERGE"' "$authority" >/dev/null
+          echo "live_run_id=$(jq -r '.live_proof.workflow_run_id' "$authority")" >> "$GITHUB_OUTPUT"
+          echo "live_artifact_id=$(jq -r '.live_proof.artifact_id' "$authority")" >> "$GITHUB_OUTPUT"
+          echo "producer_artifact_id=$(jq -r '.producer_proof.artifact_id' "$authority")" >> "$GITHUB_OUTPUT"
+          echo "successor_run_id=$(jq -r '.exact_head_successor_qualification.workflow_run_id' "$authority")" >> "$GITHUB_OUTPUT"
+          echo "successor_artifact_id=$(jq -r '.exact_head_successor_qualification.artifact_id' "$authority")" >> "$GITHUB_OUTPUT"
+          for value in \
+            "$(jq -r '.live_proof.workflow_run_id' "$authority")" \
+            "$(jq -r '.live_proof.artifact_id' "$authority")" \
+            "$(jq -r '.producer_proof.artifact_id' "$authority")" \
+            "$(jq -r '.exact_head_successor_qualification.workflow_run_id' "$authority")" \
+            "$(jq -r '.exact_head_successor_qualification.artifact_id' "$authority")"; do
+            [[ "$value" =~ ^[0-9]+$ ]] || { echo "EA5E2_FREEZE_NUMERIC_BINDING_REQUIRED:$value" >&2; exit 1; }
+          done
+
+      - name: Fetch immutable GitHub Actions run and artifact metadata
+        shell: bash
+        env:
+          LIVE_RUN_ID: ${{ steps.bindings.outputs.live_run_id }}
+          LIVE_ARTIFACT_ID: ${{ steps.bindings.outputs.live_artifact_id }}
+          PRODUCER_ARTIFACT_ID: ${{ steps.bindings.outputs.producer_artifact_id }}
+          SUCCESSOR_RUN_ID: ${{ steps.bindings.outputs.successor_run_id }}
+          SUCCESSOR_ARTIFACT_ID: ${{ steps.bindings.outputs.successor_artifact_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ea5e2-freeze-meta /tmp/ea5e2-live-extracted /tmp/ea5e2-live-proof /tmp/ea5e2-producer
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${LIVE_RUN_ID}" > /tmp/ea5e2-freeze-meta/live-run.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${LIVE_ARTIFACT_ID}" > /tmp/ea5e2-freeze-meta/live-artifact.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${PRODUCER_ARTIFACT_ID}" > /tmp/ea5e2-freeze-meta/producer-artifact.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${SUCCESSOR_RUN_ID}" > /tmp/ea5e2-freeze-meta/successor-run.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${SUCCESSOR_ARTIFACT_ID}" > /tmp/ea5e2-freeze-meta/successor-artifact.json
+
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${LIVE_ARTIFACT_ID}/zip" > /tmp/ea5e2-live.zip
+          unzip -q /tmp/ea5e2-live.zip -d /tmp/ea5e2-live-extracted
+          for name in \
+            MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json \
+            MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.json \
+            MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH.json \
+            MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json \
+            MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_LIVE_CANDIDATE.json; do
+            source="$(find /tmp/ea5e2-live-extracted -type f -name "$name" -print -quit)"
+            test -n "$source" && test -s "$source" || { echo "EA5E2_FREEZE_LIVE_PROOF_FILE_REQUIRED:$name" >&2; exit 1; }
+            cp "$source" "/tmp/ea5e2-live-proof/$name"
+          done
+
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${PRODUCER_ARTIFACT_ID}/zip" > /tmp/ea5e2-producer.zip
+          unzip -q /tmp/ea5e2-producer.zip -d /tmp/ea5e2-producer
+          test -s /tmp/ea5e2-producer/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          test -s /tmp/ea5e2-producer/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json
+
+      - name: Prove exact-head operational activation evidence freeze
+        shell: bash
+        env:
+          MCFT_EA5E2_LIVE_RUN_METADATA_PATH: /tmp/ea5e2-freeze-meta/live-run.json
+          MCFT_EA5E2_LIVE_ARTIFACT_METADATA_PATH: /tmp/ea5e2-freeze-meta/live-artifact.json
+          MCFT_EA5E2_PRODUCER_ARTIFACT_METADATA_PATH: /tmp/ea5e2-freeze-meta/producer-artifact.json
+          MCFT_EA5E2_SUCCESSOR_RUN_METADATA_PATH: /tmp/ea5e2-freeze-meta/successor-run.json
+          MCFT_EA5E2_SUCCESSOR_ARTIFACT_METADATA_PATH: /tmp/ea5e2-freeze-meta/successor-artifact.json
+          MCFT_EA5E2_LIVE_ARTIFACT_DIR: /tmp/ea5e2-live-proof
+          MCFT_EA5E2_PRODUCER_ARTIFACT_DIR: /tmp/ea5e2-producer
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_EVIDENCE_FREEZE_V1.cjs
+
+      - name: Upload metadata-only evidence-freeze governance proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-operational-activation-evidence-freeze-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_EVIDENCE_FREEZE_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
