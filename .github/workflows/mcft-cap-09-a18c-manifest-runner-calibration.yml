@@ -73,8 +73,12 @@ jobs:
         run: |
           set +e
           mkdir -p acceptance-output
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18C_MANIFEST_RUNNER_CALIBRATION.ts > acceptance-output/A18C_CALIBRATION_DIAGNOSTIC.log 2>&1
+          pnpm exec esbuild scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18C_MANIFEST_RUNNER_CALIBRATION.ts --bundle --platform=node --format=esm --target=node20 --outfile=acceptance-output/a18c-calibration.mjs > acceptance-output/A18C_CALIBRATION_DIAGNOSTIC.log 2>&1
           status=$?
+          if [ "$status" -eq 0 ]; then
+            node acceptance-output/a18c-calibration.mjs >> acceptance-output/A18C_CALIBRATION_DIAGNOSTIC.log 2>&1
+            status=$?
+          fi
           cat acceptance-output/A18C_CALIBRATION_DIAGNOSTIC.log
           exit $status
 
