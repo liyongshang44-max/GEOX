@@ -1,0 +1,87 @@
+name: mcft-cap-09-external-formal-v3-amendment11-persistent-tick-qualification
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/runtime/twin_runtime/external_formal_v3_amendment11_persistent_tick_service_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_AMENDMENT11_PERSISTENT_TICK.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_AMENDMENT11_PERSISTENT_TICK_QUALIFICATION.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EXTERNAL-FORMAL-V3-AMENDMENT11-PERSISTENT-TICK-IMPLEMENTATION-QUALIFICATION-V1.json'
+      - '.github/workflows/mcft-cap-09-external-formal-v3-amendment11-persistent-tick-qualification.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-external-formal-v3-amendment11-persistent-tick-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  exact-head-amendment11-persistent-tick-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact post-manifest base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}'
+          test "$base" = 'b60345a4ff26fe5f99c054c154c77e5b39796902' || { echo "AM11_V3_SERVICE_BASE_DRIFT:$base" >&2; exit 1; }
+          echo "base_sha=$base" >> "$GITHUB_OUTPUT"
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck server
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Execute focused Amendment-11 persistent-tick qualification
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_AMENDMENT11_PERSISTENT_TICK.ts | tee acceptance-output-am11-v3-service.log
+
+      - name: Prove exact five-file governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_AMENDMENT11_PERSISTENT_TICK_QUALIFICATION.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_AMENDMENT11_PERSISTENT_TICK_QUALIFICATION.cjs
+
+      - name: Verify focused proof nonclaims
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '"status":"PASS"' acceptance-output-am11-v3-service.log
+          grep -q '"provider_availability_watermark":"PROVIDER_AVAILABILITY_WATERMARK_V1"' acceptance-output-am11-v3-service.log
+          grep -q '"actual_snapshot_delay_minutes":500' acceptance-output-am11-v3-service.log
+          grep -q '"legacy_420_432_437_authority_used":false' acceptance-output-am11-v3-service.log
+          grep -q '"real_formal_database_write_count":0' acceptance-output-am11-v3-service.log
+          grep -q '"ea5e3_authorized":false' acceptance-output-am11-v3-service.log
+          grep -q '"formal_window_started":false' acceptance-output-am11-v3-service.log
+
+      - name: Upload immutable qualification proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-external-formal-v3-amendment11-persistent-tick-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output-am11-v3-service.log
+            acceptance-output/MCFT_CAP_09_EXTERNAL_FORMAL_V3_AMENDMENT11_PERSISTENT_TICK_GOVERNANCE_RESULT.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EXTERNAL-FORMAL-V3-AMENDMENT11-PERSISTENT-TICK-IMPLEMENTATION-QUALIFICATION-V1.json
+          if-no-files-found: error
+          retention-days: 90
