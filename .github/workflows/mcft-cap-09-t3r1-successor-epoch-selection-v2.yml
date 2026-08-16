@@ -50,7 +50,9 @@ jobs:
           test "$base" = '53cf1e48b7e105477e64c8b1e69afbb53e78be00' || { echo "T3R1_SELECTION_BASE_DRIFT:$base" >&2; exit 1; }
           now="$(date -u +%s)"
           deadline="$(date -u -d '2026-08-16T08:00:00Z' +%s)"
+          readiness_deadline="$(date -u -d '2026-08-17T08:00:00.000Z' +%s)"
           test "$now" -lt "$deadline" || { echo 'T3R1_SELECTION_EFFECTIVENESS_DEADLINE_EXPIRED' >&2; exit 1; }
+          test "$readiness_deadline" -eq "$((deadline + 24 * 60 * 60))" || { echo 'T3R1_SELECTION_EA5E3_READINESS_DEADLINE_BINDING_DRIFT' >&2; exit 1; }
           echo "base_sha=$base" >> "$GITHUB_OUTPUT"
 
       - name: Verify Formal bindings remain fail-closed
