@@ -82,11 +82,13 @@ requireCondition(evidencePrepare >= 0 && persistenceExecute >= 0 && evidencePrep
 requireCondition(executor.includes("A18D_EXECUTION_BEFORE_ACTUAL_19Z_FORBIDDEN") && executor.includes("A18D_EXECUTION_AT_OR_AFTER_O00_FORBIDDEN"), "A18D_EXECUTOR_WALL_CLOCK_GUARDS_REQUIRED");
 requireCondition(executor.includes("buildExternalFormalPrewindowAuthorityBundleV2") && executor.includes("A18D_HOURLY_CONFIG_PIN_DRIFT"), "A18D_EXECUTOR_A18B_PIN_RECOMPUTATION_REQUIRED");
 requireCondition(executor.includes("RETRY_EXISTING_A0_STATE_COMPLETE_CONFIG_CHAIN") && executor.includes("A18D_RETRY_EXISTING_BOOTSTRAP_STATE_DRIFT"), "A18D_EXECUTOR_RETRY_PATH_REQUIRED");
+requireCondition(executor.includes("A18D_RUNTIME_CONFIG_FOREIGN_OR_DRIFTED") && executor.includes("WHERE record_json->>'type'='twin_runtime_config_v1' ORDER BY occurred_at ASC, fact_id ASC"), "A18D_ALL_FORMAL_RUNTIME_CONFIGS_MUST_BE_EXACTLY_VETTED");
 requireCondition(!executor.includes("fetch(") && !executor.includes("S3Compatible") && !executor.includes("R2"), "A18D_EXECUTOR_PROVIDER_OR_OBJECT_STORE_ACCESS_FORBIDDEN");
 
 requireCondition(workflow.includes("5,20,35,50 19 17 8 *") && workflow.includes("operational_schedule_is_normative_temporal_authority"), "A18D_OPERATIONAL_SCHEDULE_REQUIRED");
 requireCondition(workflow.includes("github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'"), "A18D_LIVE_JOB_EVENT_FILTER_REQUIRED");
 requireCondition(workflow.includes("refs/heads/main") && workflow.includes("git rev-parse origin/main"), "A18D_LIVE_EXACT_MAIN_REQUIRED");
+requireCondition(workflow.includes("A18D_LIVE_MAIN_MOVED_AFTER_QUALIFIED_MERGE") && workflow.includes('test "$(git rev-parse HEAD)" = "$effective_commit"'), "A18D_LIVE_MUST_USE_EXACT_QUALIFIED_MERGE_REQUIRED");
 requireCondition(workflow.includes("EXECUTE_MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V1.ts preflight") && workflow.includes("EXECUTE_MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V1.ts execute"), "A18D_PREFLIGHT_AND_EXECUTION_ENTRYPOINTS_REQUIRED");
 
 requireCondition(authority.next_legal_frontier_if_qualified_and_merged === "WAIT_FOR_ACTUAL_2026_08_17T19_00_00Z_AND_REQUIRE_A0_SOIL_RUNTIME_OBLIGATION_THEN_EXECUTE_A18D", "A18D_NEXT_FRONTIER_REQUIRED");
@@ -101,6 +103,8 @@ const result = {
   a0_evidence_prechecked_before_persistence: true,
   a0_soil_runtime_obligation_required: true,
   retry_does_not_rebuild_existing_a0_state: true,
+  all_formal_runtime_configs_vetted_against_exact_25_pin_set: true,
+  live_execution_requires_exact_qualified_merge_commit: true,
   execution_not_before: A0,
   execution_must_complete_before: O00,
   operational_schedule_is_normative_temporal_authority: false,
