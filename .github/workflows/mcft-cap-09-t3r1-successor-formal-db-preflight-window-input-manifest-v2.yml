@@ -137,7 +137,7 @@ jobs:
           set -euo pipefail
           node <<'NODE'
           const fs=require('fs'), crypto=require('crypto');
-          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_FORMORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2_RESULT.json','utf8'));
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2_RESULT.json','utf8'));
           const bytes=fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-FORMAL-WINDOW-INPUT-MANIFEST-V2.json');
           const digest='sha256:'+crypto.createHash('sha256').update(bytes).digest('hex');
           if(p.status!=='PASS'||p.manifest_content_sha256!==digest)throw new Error('T3R1_MANIFEST_V2_LIVE_RESULT_INVALID');
