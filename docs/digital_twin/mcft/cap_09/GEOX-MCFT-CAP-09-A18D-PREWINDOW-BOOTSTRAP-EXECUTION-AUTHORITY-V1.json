@@ -44,7 +44,7 @@
   "implementation_binding": {
     "executor": {
       "path": "scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V1.ts",
-      "blob_sha": "1eb6a7991dd40983a4d74922f8a737c8d124ddef"
+      "blob_sha": "a16c7a2c9dc0d36595464ce014446d09fb57d90d"
     },
     "prewindow_authority_builder": {
       "path": "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v2.ts",
