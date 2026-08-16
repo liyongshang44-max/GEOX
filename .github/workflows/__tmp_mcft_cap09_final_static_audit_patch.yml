@@ -41,18 +41,16 @@ jobs:
           )
           p = Path(runner)
           text = p.read_text().replace('MIN_INGRESS_MARGIN_MINUTES', 'ROLLING_PREBOUNDARY_INGRESS_DEADLINE_OFFSET_MINUTES')
-          old_mode = '''  const mode = required("MCFT_EA5E2_LIVE_PHASE");
-          if (mode === "TRANSIENT_STORE_SMOKE") return smokeTransientStore();
-          if (mode === "CLEANUP_TRANSIENT") return cleanupTransientStore();
-          if (mode === "TIMING_QUALIFICATION_LATE_EXACT_HOUR") return qualifyLateExactHourTiming();
-          if (mode !== "PRE_BOUNDARY_CAUSAL" && mode !== "LATE_EXACT_HOUR") throw new Error("MCFT_EA5E2_LIVE_PHASE_INVALID");
-          '''
-          new_mode = '''  const mode = required("MCFT_EA5E2_LIVE_PHASE");
-          if (mode !== "PRE_BOUNDARY_CAUSAL") throw new Error("MCFT_CAP09_ROLLING_PREBOUNDARY_RUNNER_PREBOUNDARY_ONLY");
-          '''
-          if text.count(old_mode) != 1:
-              raise SystemExit(f'{runner}: mode seam count {text.count(old_mode)}')
-          p.write_text(text.replace(old_mode, new_mode, 1))
+          start_marker = '  const mode = required("MCFT_EA5E2_LIVE_PHASE");'
+          end_marker = '  if (mode !== "PRE_BOUNDARY_CAUSAL" && mode !== "LATE_EXACT_HOUR") throw new Error("MCFT_EA5E2_LIVE_PHASE_INVALID");'
+          start = text.find(start_marker)
+          end_start = text.find(end_marker, start + len(start_marker)) if start >= 0 else -1
+          if start < 0 or end_start < 0:
+              raise SystemExit(f'{runner}: rolling mode guard seam missing')
+          end = end_start + len(end_marker)
+          replacement = start_marker + '\n  if (mode !== "PRE_BOUNDARY_CAUSAL") throw new Error("MCFT_CAP09_ROLLING_PREBOUNDARY_RUNNER_PREBOUNDARY_ONLY");'
+          text = text[:start] + replacement + text[end:]
+          p.write_text(text)
 
           graph = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs'
           replace_once(
