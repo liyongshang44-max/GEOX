@@ -5,9 +5,10 @@
 // no fixed-lag admission authority, and no scheduler write before config/context/evidence readiness.
 
 import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
 import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../domain/twin_runtime/external_formal_runtime_config_v1.js";
 import {
-  computeExternalFormalA18CropContextMaterializationHashV2,
+  MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V2,
   type MaterializedExternalFormalA18CropContextV2,
 } from "./external_formal_a18_crop_context_v2.js";
 import type {
@@ -125,6 +126,15 @@ function errorDetailV1(error: unknown): string {
   return error instanceof Error && error.message ? error.message : "UNKNOWN_ERROR";
 }
 
+function computeMaterializationHashV1(materialized: MaterializedExternalFormalA18CropContextV2): string {
+  return semanticHashV1({
+    materialization_profile: MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V2,
+    context_ref: materialized.context_ref,
+    context_identity_hash: materialized.context_identity_hash,
+    materialized_context: materialized.context,
+  });
+}
+
 function manifestSlotForBoundaryV1(
   manifest: ExternalFormalV3A18WindowManifestV1,
   boundary: ShadowOnlineBoundaryV1,
@@ -193,7 +203,6 @@ export class ExternalFormalV3Amendment11RunnerV1 {
 
     const boundary = due[0];
     const slot = manifestSlotForBoundaryV1(this.manifest, boundary);
-
     const runtimeConfig = await this.runtimeConfigRepository.readRuntimeConfig(slot.runtime_config_ref);
     if (!runtimeConfig) {
       return {
@@ -226,20 +235,13 @@ export class ExternalFormalV3Amendment11RunnerV1 {
 
     let materialized: MaterializedExternalFormalA18CropContextV2;
     try {
-      materialized = await this.cropContextMaterializer.materialize({
-        logical_time: slot.logical_time,
-        expected_identity_hash: slot.crop_stage_context_hash,
-      });
+      materialized = await this.cropContextMaterializer.materialize({ logical_time: slot.logical_time, expected_identity_hash: slot.crop_stage_context_hash });
       if (materialized.context_ref !== slot.crop_stage_context_ref
         || materialized.context_identity_hash !== slot.crop_stage_context_hash
         || materialized.logical_time !== slot.logical_time) {
         throw new Error("EXTERNAL_FORMAL_A18_RUNNER_CROP_CONTEXT_IDENTITY_MISMATCH");
       }
-      const independentMaterializationHash = computeExternalFormalA18CropContextMaterializationHashV2({
-        context_ref: materialized.context_ref,
-        context_identity_hash: materialized.context_identity_hash,
-        context: materialized.context,
-      });
+      const independentMaterializationHash = computeMaterializationHashV1(materialized);
       if (materialized.context_materialization_hash !== independentMaterializationHash
         || independentMaterializationHash !== slot.crop_stage_context_materialization_hash) {
         throw new Error("EXTERNAL_FORMAL_A18_RUNNER_CROP_CONTEXT_MATERIALIZATION_HASH_MISMATCH");
@@ -259,11 +261,7 @@ export class ExternalFormalV3Amendment11RunnerV1 {
     }
 
     try {
-      await this.evidenceSource.loadCandidateRecords({
-        scope: this.manifest.scope,
-        logical_time: slot.logical_time,
-        evidence_snapshot_time: snapshotTime,
-      });
+      await this.evidenceSource.loadCandidateRecords({ scope: this.manifest.scope, logical_time: slot.logical_time, evidence_snapshot_time: snapshotTime });
     } catch (error) {
       return {
         runner_id: EXTERNAL_FORMAL_V3_A18_RUNNER_ID_V1,
@@ -278,12 +276,7 @@ export class ExternalFormalV3Amendment11RunnerV1 {
       };
     }
 
-    const claim = await this.scheduler.claimDueSlot({
-      boundary,
-      lease_owner: input.lease_owner,
-      lease_duration_seconds: input.lease_duration_seconds,
-    });
-
+    const claim = await this.scheduler.claimDueSlot({ boundary, lease_owner: input.lease_owner, lease_duration_seconds: input.lease_duration_seconds });
     try {
       const tickResult = await this.tickService.executeClaimedTick({
         claim,
