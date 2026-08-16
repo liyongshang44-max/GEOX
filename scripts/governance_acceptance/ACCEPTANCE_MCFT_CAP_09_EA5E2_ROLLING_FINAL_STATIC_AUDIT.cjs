@@ -244,4 +244,6 @@ const proof = {
   database_write_count: 0,
   authority_effect: false,
 };
+fs.mkdirSync("acceptance-output", { recursive: true });
+fs.writeFileSync("acceptance-output/MCFT_CAP_09_EA5E2_ROLLING_FINAL_STATIC_AUDIT.json", JSON.stringify(proof, null, 2) + "\n");
 console.log(JSON.stringify(proof));
