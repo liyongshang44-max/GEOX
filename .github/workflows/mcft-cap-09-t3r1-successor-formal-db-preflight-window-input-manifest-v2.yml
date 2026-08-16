@@ -126,7 +126,7 @@ jobs:
       - name: Typecheck server and Formal DB preflight executor
         run: |
           pnpm --filter @geox/server typecheck
-          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2.ts
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module ESNext --moduleResolution Bundler --esModuleInterop --types node scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2.ts
 
       - name: Execute read-only Formal DB preflight against exact immutable manifest
         run: pnpm -w exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2.ts
