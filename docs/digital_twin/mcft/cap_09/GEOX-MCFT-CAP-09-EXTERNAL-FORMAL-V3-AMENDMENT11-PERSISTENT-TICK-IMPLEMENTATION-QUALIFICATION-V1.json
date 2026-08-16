@@ -1,0 +1,81 @@
+{
+  "schema_version": "geox_mcft_cap09_external_formal_v3_amendment11_persistent_tick_implementation_qualification_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EXTERNAL-FORMAL-V3-AMENDMENT11-PERSISTENT-TICK-IMPLEMENTATION-QUALIFICATION-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "IMPLEMENTATION_QUALIFICATION_CANDIDATE_NOT_EFFECTIVE",
+  "base_protected_main_sha": "b60345a4ff26fe5f99c054c154c77e5b39796902",
+  "purpose": "Version the External Formal V3 persistent-tick execution service onto Amendment-11 actual-snapshot temporal semantics before exact runner binding. Preserve the existing canonical persistence/fencing kernel while removing fixed 420/432/437 timing authority from the production candidate path.",
+  "authority_inputs": {
+    "amendment_11_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md",
+    "amendment_11_blob_sha": "a037b24757992987fc24ce8b6afac6c8eabca3ed",
+    "amendment_11_candidate_service_path": "apps/server/src/runtime/twin_runtime/external_formal_cap04_amendment11_candidate_execution_service_v1.ts",
+    "amendment_11_candidate_service_blob_sha": "faa544823f2d824aafe8bdac9e6be5a7bcbc8cc6",
+    "postgres_external_evidence_source_path": "apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts",
+    "postgres_external_evidence_source_blob_sha": "1327e4c818db482ac3fc3e3ebc1061319d8d229f",
+    "historical_v3_service_path": "apps/server/src/runtime/twin_runtime/external_formal_v3_persistent_tick_service_v1.ts",
+    "historical_v3_service_blob_sha": "306f7b9bc895f732fca54eaab13cb285617b78d0",
+    "historical_v3_service_remains_unmodified": true
+  },
+  "candidate_implementation": {
+    "service_path": "apps/server/src/runtime/twin_runtime/external_formal_v3_amendment11_persistent_tick_service_v1.ts",
+    "service_blob_sha": "d0d91e0b1f0392efe544824429461494fc9c45a7",
+    "acceptance_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_AMENDMENT11_PERSISTENT_TICK.ts",
+    "acceptance_blob_sha": "68b9c532f7f8a6e43b041a820c9e89e2a29e57a6",
+    "governance_gate_path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_AMENDMENT11_PERSISTENT_TICK_QUALIFICATION.cjs",
+    "governance_gate_blob_sha": "3f23fa76097de8996754086fa665d2e9560bb5ca",
+    "workflow_path": ".github/workflows/mcft-cap-09-external-formal-v3-amendment11-persistent-tick-qualification.yml",
+    "workflow_blob_sha": "65104f50180f2329fd97aee80b06580a7585bd23"
+  },
+  "required_semantics": {
+    "provider_availability_watermark": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "evidence_snapshot_time_is_caller_supplied_actual_snapshot": true,
+    "fixed_scheduler_eligibility_offset_is_authority": false,
+    "fixed_exact_interval_cutoff_offset_is_authority": false,
+    "fixed_runtime_observer_offset_is_authority": false,
+    "historical_online_freshness_diagnostic_hours": 6,
+    "freshness_is_late_authoritative_admission_gate": false,
+    "candidate_execution_seam": "MCFT_CAP09_EXTERNAL_FORMAL_CAP04_AMENDMENT11_CANDIDATE_EXECUTION_SERVICE_V1",
+    "database_only_evidence_source": "MCFT_CAP09_EXTERNAL_FORMAL_DATABASE_EVIDENCE_SOURCE_V1",
+    "scheduler_claim_reused_as_runtime_lease": true,
+    "second_runtime_write_lease_acquired": false,
+    "runtime_provider_fetch_allowed": false,
+    "runtime_r2_access_allowed": false,
+    "recommendation_approval_ao_act_dispatch_model_activation_allowed": false
+  },
+  "focused_acceptance_contract": {
+    "late_exact_interval_available_to_runtime_minutes_after_t": 490,
+    "late_exact_interval_ingested_minutes_after_t": 491,
+    "actual_evidence_snapshot_minutes_after_t": 500,
+    "observer_started_minutes_after_t": 501,
+    "proves_execution_beyond_historical_t_plus_432": true,
+    "proves_execution_beyond_historical_t_plus_437": true,
+    "proves_fixed_lag_authority_used_false": true,
+    "proves_invalid_snapshot_observer_chronology_fails_closed": true,
+    "proves_exact_runtime_config_hash_mismatch_fails_closed": true,
+    "proves_a1_atomic_commit_and_scenario_commit": true,
+    "proves_idempotent_existing_a_b": true,
+    "proves_pending_b_recovery_without_evidence_reload": true,
+    "proves_a2_has_no_scenario": true,
+    "real_formal_database_write_count": 0
+  },
+  "effect_if_exact_head_proof_passes_and_candidate_merges_to_protected_main": {
+    "amendment11_persistent_tick_service_implementation_qualified": true,
+    "historical_v3_fixed_lag_service_superseded_for_new_formal_runner_binding": true,
+    "external_formal_v3_runner_exact_binding_qualified": false,
+    "ea5e3_authorized": false,
+    "formal_window_started": false,
+    "formal_execution_count": "0/24",
+    "mcft_cap09_completed": false
+  },
+  "hard_nonclaims": [
+    "NO_FORMAL_DATABASE_WRITE",
+    "NO_SCHEDULER_CLAIM_OR_CURSOR_WRITE",
+    "NO_PROVIDER_OR_R2_RUNTIME_ACCESS",
+    "NO_RUNNER_EXACT_BINDING_QUALIFICATION",
+    "NO_EA5E3_AUTHORITY",
+    "NO_FORMAL_O00_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ],
+  "next_legal_frontier_after_effectiveness": "EXTERNAL_FORMAL_V3_RUNNER_EXACT_BINDING_QUALIFICATION"
+}
