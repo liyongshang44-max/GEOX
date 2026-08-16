@@ -136,7 +136,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Require exact current protected main and pre-O00 authority effectiveness
+      - name: Require exact qualified protected main and pre-O00 authority effectiveness
         shell: bash
         run: |
           set -euo pipefail
@@ -146,6 +146,7 @@ jobs:
           authority='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A18D-PREWINDOW-BOOTSTRAP-EXECUTION-AUTHORITY-V1.json'
           effective_commit=$(git log --first-parent --diff-filter=A -1 --format='%H' -- "$authority")
           test -n "$effective_commit" || { echo 'A18D_EFFECTIVE_COMMIT_REQUIRED' >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$effective_commit" || { echo 'A18D_LIVE_MAIN_MOVED_AFTER_QUALIFIED_MERGE' >&2; exit 1; }
           effective_time=$(git show -s --format='%cI' "$effective_commit")
           node -e 'const t=Date.parse(process.argv[1]); const d=Date.parse("2026-08-17T19:00:00.000Z"); if(!Number.isFinite(t)||t>=d) throw new Error(`A18D_AUTHORITY_NOT_EFFECTIVE_BEFORE_EXECUTION_WINDOW:${process.argv[1]}`)' "$effective_time"
 
