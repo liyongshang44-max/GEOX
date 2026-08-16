@@ -21,7 +21,11 @@
     "service_path": "apps/server/src/runtime/twin_runtime/external_formal_v3_amendment11_persistent_tick_service_v1.ts",
     "service_blob_sha": "d0d91e0b1f0392efe544824429461494fc9c45a7",
     "acceptance_path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_AMENDMENT11_PERSISTENT_TICK.ts",
-    "acceptance_blob_sha": "68b9c532f7f8a6e43b041a820c9e89e2a29e57a6"
+    "acceptance_blob_sha": "68b9c532f7f8a6e43b041a820c9e89e2a29e57a6",
+    "governance_gate_path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_FORMAL_V3_AMENDMENT11_PERSISTENT_TICK_QUALIFICATION.cjs",
+    "governance_gate_blob_sha": "3f23fa76097de8996754086fa665d2e9560bb5ca",
+    "workflow_path": ".github/workflows/mcft-cap-09-external-formal-v3-amendment11-persistent-tick-qualification.yml",
+    "workflow_blob_sha": "65104f50180f2329fd97aee80b06580a7585bd23"
   },
   "required_semantics": {
     "provider_availability_watermark": "PROVIDER_AVAILABILITY_WATERMARK_V1",
