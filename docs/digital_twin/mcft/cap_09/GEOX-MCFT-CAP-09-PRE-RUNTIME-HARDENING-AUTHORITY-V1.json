@@ -1,0 +1,113 @@
+{
+  "schema_version": "geox_mcft_cap09_pre_runtime_hardening_authority_v1",
+  "status": "CANDIDATE",
+  "authority": "MCFT_CAP09_PRE_RUNTIME_HARDENING_AUTHORITY_V1",
+  "exact_predecessor_protected_main": "60db8e957df91c7bcf84190354b7cc68fab36992",
+  "selected_epoch": {
+    "epoch_id": "mcft_cap09_external_formal_window_epoch_20260817t200000z_v2",
+    "prewindow_a0": "2026-08-17T19:00:00.000Z",
+    "o00": "2026-08-17T20:00:00.000Z",
+    "o23": "2026-08-18T19:00:00.000Z"
+  },
+  "formal_store": {
+    "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h_v2",
+    "historical_database_forbidden": "geox_mcft_cap09_s6_formal_t3r1_24h"
+  },
+  "supersession": {
+    "a18d_exact_execution_subject_from_pr_3202": "60db8e957df91c7bcf84190354b7cc68fab36992",
+    "old_subject_may_not_execute_after_this_authority_is_effective": true,
+    "new_exact_execution_subject_rule": "FIRST_PARENT_MERGE_COMMIT_THAT_ADDS_THIS_AUTHORITY_MUST_EQUAL_PROTECTED_MAIN_HEAD"
+  },
+  "hardening_findings": [
+    {
+      "id": "H01_A0_EVIDENCE_DOUBLE_READ_DRIFT",
+      "severity": "BLOCKING",
+      "finding": "A18D could read a different A0 candidate universe between precheck and bootstrap persistence when concurrent Evidence ingress occurs.",
+      "required_fix": "A0 candidate rows MUST have role_time.ingested_at <= A0 and the first qualified candidate snapshot MUST be cached and replayed unchanged for all A18D bootstrap reads."
+    },
+    {
+      "id": "H02_FORMAL_PAIR_PARTIAL_COMMIT",
+      "severity": "BLOCKING",
+      "finding": "The two-record GFS or delayed exact pair could be committed one fact at a time and leave an unrecoverable 1-of-2 partial dataset after a transient second write failure.",
+      "required_fix": "Each exact multi-record dataset MUST commit atomically in one outer transaction while preserving raw-retention verification before canonical ingress."
+    },
+    {
+      "id": "H03_GFS_SINGLE_TRANSIENT_ATTEMPT",
+      "severity": "HIGH",
+      "finding": "A preboundary GFS transient provider/decode failure could terminate the only collector process before the existing soil polling phase.",
+      "required_fix": "Permit bounded operational GFS retries only while the actual request start remains earlier than T-30m. Retry cadence is not temporal authority."
+    },
+    {
+      "id": "H04_A18D_UNSAFE_LATE_START",
+      "severity": "BLOCKING",
+      "finding": "A18D could begin too near O00, write bootstrap state, cross O00, then fail its post-write wall-clock proof.",
+      "required_fix": "A18D execute mode MUST reject starts at or after 19:45Z and still require completion before 20:00Z. The 15-minute reserve is operational safety only."
+    },
+    {
+      "id": "H05_PRODUCTION_FORMAL_RUNNER_MISSING",
+      "severity": "BLOCKING",
+      "finding": "A18C qualified the Amendment-11 runner but no production O00-O23 workflow invoked it.",
+      "required_fix": "Install a DB-only production runner using the exact A18C manifest/config/context pins, actual Evidence snapshot time, persistent sequential scheduler, and the same claimed fence for canonical Runtime persistence."
+    }
+  ],
+  "a0_evidence_contract": {
+    "logical_time": "2026-08-17T19:00:00.000Z",
+    "candidate_ingested_at_cutoff_inclusive": "2026-08-17T19:00:00.000Z",
+    "candidate_snapshot_reuse_required": true,
+    "provider_access": false,
+    "runtime_r2_access": false
+  },
+  "collector_hardening": {
+    "temporal_authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "observation_resolution": "HOURLY",
+    "provider_publication_cadence": "DAILY_BATCH",
+    "freshness_is_late_authoritative_admission_gate": false,
+    "gfs_preboundary_minimum_start_lead_minutes": 30,
+    "gfs_retry_is_operational_only": true,
+    "multi_record_dataset_atomic_commit_required": true,
+    "raw_retention_before_canonicalization_required": true,
+    "fixed_lag_7h_normative_authority": false,
+    "fixed_t_plus_432_normative_cutoff": false,
+    "fixed_t_plus_437_normative_observer": false
+  },
+  "a18d_hardening": {
+    "execution_not_before": "2026-08-17T19:00:00.000Z",
+    "latest_safe_start_exclusive": "2026-08-17T19:45:00.000Z",
+    "execution_must_complete_before": "2026-08-17T20:00:00.000Z",
+    "latest_safe_start_is_normative_temporal_authority": false,
+    "formal_o00_started_by_a18d": false
+  },
+  "production_runner": {
+    "runner_id": "MCFT_CAP09_EXTERNAL_FORMAL_V3_A18_RUNNER_V1",
+    "manifest_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A18C-REPLACEMENT-FORMAL-WINDOW-INPUT-MANIFEST-V3.json",
+    "manifest_hash": "sha256:af017d2ec76143472c38ab4277c66ac9d66d9b59d02ac8a609e1faef927bd612",
+    "schedule_start_logical_time": "2026-08-17T20:00:00.000Z",
+    "slot_count": 24,
+    "slot_interval_seconds": 3600,
+    "evidence_snapshot_time_source": "ACTUAL_RUNTIME_WALL_CLOCK",
+    "provider_requests": 0,
+    "r2_requests": 0,
+    "preclaim_missing_evidence_scheduler_write_count": 0,
+    "oldest_due_slot_first": true
+  },
+  "live_exact_subject_gate": {
+    "applies_to": [
+      "PREWINDOW_A0_SOIL_COLLECTOR",
+      "FORMAL_PROVIDER_WATERMARK_COLLECTOR",
+      "A18D_BOOTSTRAP",
+      "FORMAL_V3_PRODUCTION_RUNNER"
+    ],
+    "required_ref": "refs/heads/main",
+    "required_subject": "FIRST_PARENT_MERGE_COMMIT_THAT_ADDS_THIS_AUTHORITY",
+    "protected_main_drift_policy": "FAIL_CLOSED_AND_REQUALIFY"
+  },
+  "qualification_nonclaims": {
+    "provider_request_count": 0,
+    "database_write_count": 0,
+    "scheduler_write_count": 0,
+    "canonical_runtime_write_count": 0,
+    "formal_o00_started": false,
+    "formal_execution_count": "0/24",
+    "mcft_cap09_completed": false
+  }
+}

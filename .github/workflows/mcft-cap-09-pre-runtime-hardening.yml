@@ -1,0 +1,435 @@
+name: mcft-cap-09-pre-runtime-hardening
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-pre-runtime-hardening.yml'
+      - '.github/workflows/mcft-cap-09-a18d-prewindow-bootstrap.yml'
+      - '.github/workflows/mcft-cap-09-ea5e3-v2-provider-watermark-wiring.yml'
+      - '.github/workflows/mcft-cap-09-ea5e3-a1-prewindow-a0-soil.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-RUNTIME-HARDENING-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRE_RUNTIME_HARDENING.cjs'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V2.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_FORMAL_V2_PROVIDER_WATERMARK_COLLECTOR_V2.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_A18C_FORMAL_V3_PRODUCTION_RUNNER_V1.ts'
+      - 'scripts/runtime_acceptance/mcft_cap09_a18c_formal_live_manifest_v1.ts'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-pre-runtime-hardening.yml'
+      - '.github/workflows/mcft-cap-09-a18d-prewindow-bootstrap.yml'
+      - '.github/workflows/mcft-cap-09-ea5e3-v2-provider-watermark-wiring.yml'
+      - '.github/workflows/mcft-cap-09-ea5e3-a1-prewindow-a0-soil.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-RUNTIME-HARDENING-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRE_RUNTIME_HARDENING.cjs'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V2.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_FORMAL_V2_PROVIDER_WATERMARK_COLLECTOR_V2.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_A18C_FORMAL_V3_PRODUCTION_RUNNER_V1.ts'
+      - 'scripts/runtime_acceptance/mcft_cap09_a18c_formal_live_manifest_v1.ts'
+  schedule:
+    - cron: '0,20,40,55 18 17 8 *'
+    - cron: '0 19-23 17 8 *'
+    - cron: '0 * 18-19 8 *'
+    - cron: '0 0-6 20 8 *'
+    - cron: '5,20,35 19 17 8 *'
+    - cron: '12,42 20-23 17 8 *'
+    - cron: '12,42 * 18-19 8 *'
+    - cron: '12,42 0-6 20 8 *'
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: 'Live lane to invoke; static runs qualification only'
+        required: true
+        default: static
+        type: choice
+        options:
+          - static
+          - a0-soil
+          - provider-collector
+          - a18d
+          - formal-runner
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  EXACT_BASE_SHA: '60db8e957df91c7bcf84190354b7cc68fab36992'
+  TARGET_DATABASE_NAME: 'geox_mcft_cap09_s6_formal_t3r1_24h_v2'
+  HARDENING_AUTHORITY: 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-RUNTIME-HARDENING-AUTHORITY-V1.json'
+  operational_schedule_is_normative_temporal_authority: 'false'
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fail closed on exact hardening candidate boundary
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_BASE_SHA"
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          git fetch --no-tags --depth=1 origin "$EXACT_BASE_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$HEAD_SHA" | sort)
+          test "${#changed[@]}" -eq 10
+          expected=$(cat <<'EOF'
+          .github/workflows/mcft-cap-09-a18d-prewindow-bootstrap.yml
+          .github/workflows/mcft-cap-09-ea5e3-a1-prewindow-a0-soil.yml
+          .github/workflows/mcft-cap-09-ea5e3-v2-provider-watermark-wiring.yml
+          .github/workflows/mcft-cap-09-pre-runtime-hardening.yml
+          docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-RUNTIME-HARDENING-AUTHORITY-V1.json
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRE_RUNTIME_HARDENING.cjs
+          scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V2.ts
+          scripts/runtime_acceptance/RUN_MCFT_CAP_09_A18C_FORMAL_V3_PRODUCTION_RUNNER_V1.ts
+          scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_FORMAL_V2_PROVIDER_WATERMARK_COLLECTOR_V2.ts
+          scripts/runtime_acceptance/mcft_cap09_a18c_formal_live_manifest_v1.ts
+          EOF
+          )
+          test "$(printf '%s\n' "${changed[@]}")" = "$expected"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck all hardening execution surfaces
+        run: |
+          pnpm exec tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --skipLibCheck --types node \
+            scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V2.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_FORMAL_V2_PROVIDER_WATERMARK_COLLECTOR_V2.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_A18C_FORMAL_V3_PRODUCTION_RUNNER_V1.ts \
+            scripts/runtime_acceptance/mcft_cap09_a18c_formal_live_manifest_v1.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_COLLECTOR.ts
+
+      - name: Prove hardening plans without provider, database, scheduler, or Runtime writes
+        run: |
+          pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V2.ts selftest
+          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_FORMAL_V2_PROVIDER_WATERMARK_COLLECTOR_V2.ts selftest
+          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_A18C_FORMAL_V3_PRODUCTION_RUNNER_V1.ts selftest
+          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_COLLECTOR.ts selftest
+
+      - name: Prove hardening governance and retired schedule isolation
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRE_RUNTIME_HARDENING.cjs
+
+      - name: Derive replacement Formal v2 database URL for read-only qualification
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_DATABASE_URL"
+          DATABASE_URL=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL); u.pathname="/"+process.env.TARGET_DATABASE_NAME; process.stdout.write(u.toString())')
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+
+      - name: Read-only A18D v2 preflight against replacement Formal store
+        if: github.event_name == 'pull_request'
+        run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V2.ts preflight
+
+      - name: Validate zero-write qualification proof
+        if: github.event_name == 'pull_request'
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const g=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PRE_RUNTIME_HARDENING_GOVERNANCE.json','utf8'));
+          const a=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V2_RESULT.json','utf8'));
+          if(g.status!=='PASS'||g.blocker_count!==0||g.production_formal_runner_wired!==true||g.unified_exact_hardening_subject_gate!==true) throw new Error('HARDENING_GOVERNANCE_PASS_REQUIRED');
+          if(a.status!=='PASS'||a.transaction_mode!=='READ_ONLY'||a.formal_o00_started!==false) throw new Error('HARDENING_A18D_READ_ONLY_PREFLIGHT_REQUIRED');
+          for(const key of ['provider_request_count','database_write_count','scheduler_write_count','canonical_runtime_tick_write_count']) if(a[key]!==0) throw new Error(`HARDENING_QUALIFICATION_NONCLAIM_REQUIRED:${key}`);
+
+      - name: Upload focused hardening proof
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-pre-runtime-hardening-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PRE_RUNTIME_HARDENING_GOVERNANCE.json
+            acceptance-output/MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V2_RESULT.json
+          if-no-files-found: error
+          retention-days: 7
+
+  live-a0-soil:
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '0,20,40,55 18 17 8 *') ||
+      (github.event_name == 'workflow_dispatch' && inputs.lane == 'a0-soil')
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    concurrency:
+      group: mcft-cap09-hardening-a0-soil
+      cancel-in-progress: false
+    steps:
+      - name: Gate recurring cron to selected 2026 epoch
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = schedule ] && [ "$(date -u +%Y)" != 2026 ]; then echo 'RUN_LIVE=false' >> "$GITHUB_ENV"; else echo 'RUN_LIVE=true' >> "$GITHUB_ENV"; fi
+      - name: Checkout exact protected main
+        if: env.RUN_LIVE == 'true'
+        uses: actions/checkout@v4
+        with: { ref: '${{ github.sha }}', fetch-depth: 0, persist-credentials: false }
+      - name: Require unified exact hardening main
+        if: env.RUN_LIVE == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || { echo HARDENING_LIVE_MAIN_DRIFT >&2; exit 1; }
+          authority='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-RUNTIME-HARDENING-AUTHORITY-V1.json'
+          effective_commit=$(git log --first-parent --diff-filter=A -1 --format='%H' -- "$authority")
+          test -n "$effective_commit"
+          test "$(git rev-parse HEAD)" = "$effective_commit" || { echo HARDENING_LIVE_QUALIFIED_MAIN_SUBJECT_DRIFT >&2; exit 1; }
+      - if: env.RUN_LIVE == 'true'
+        uses: pnpm/action-setup@v4
+        with: { version: '${{ env.PNPM_VERSION }}' }
+      - if: env.RUN_LIVE == 'true'
+        uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: pnpm }
+      - if: env.RUN_LIVE == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Bind Formal v2 DB and private raw retention
+        if: env.RUN_LIVE == 'true'
+        shell: bash
+        env:
+          SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+          MCFT_CAP09_FORMAL_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+          MCFT_CAP09_FORMAL_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+          MCFT_CAP09_FORMAL_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+          MCFT_CAP09_FORMAL_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+          MCFT_CAP09_FORMAL_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+        run: |
+          set -euo pipefail
+          for name in SOURCE_DATABASE_URL MCFT_CAP09_FORMAL_S3_ENDPOINT MCFT_CAP09_FORMAL_S3_BUCKET MCFT_CAP09_FORMAL_S3_REGION MCFT_CAP09_FORMAL_S3_ACCESS_KEY_ID MCFT_CAP09_FORMAL_S3_SECRET_ACCESS_KEY; do test -n "${!name:-}" || { echo "HARDENING_A0_SECRET_REQUIRED:$name" >&2; exit 1; }; done
+          test "$MCFT_CAP09_FORMAL_S3_BUCKET" = geox-mcft-cap09-formal-raw-v1
+          DATABASE_URL=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL);u.pathname="/"+process.env.TARGET_DATABASE_NAME;process.stdout.write(u.toString())')
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_FORMAL_S3_ENDPOINT=$MCFT_CAP09_FORMAL_S3_ENDPOINT" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_FORMAL_S3_BUCKET=$MCFT_CAP09_FORMAL_S3_BUCKET" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_FORMAL_S3_REGION=$MCFT_CAP09_FORMAL_S3_REGION" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_FORMAL_S3_ACCESS_KEY_ID=$MCFT_CAP09_FORMAL_S3_ACCESS_KEY_ID" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_FORMAL_S3_SECRET_ACCESS_KEY=$MCFT_CAP09_FORMAL_S3_SECRET_ACCESS_KEY" >> "$GITHUB_ENV"
+      - name: Execute A0 soil Evidence cycle
+        if: env.RUN_LIVE == 'true'
+        env: { MCFT_CAP09_SUBJECT_SHA: '${{ github.sha }}' }
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_COLLECTOR.ts cycle
+      - name: Upload A0 Evidence proof
+        if: env.RUN_LIVE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-hardening-a0-soil-${{ github.sha }}-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_COLLECTOR_RESULT.json
+          if-no-files-found: error
+          retention-days: 7
+
+  live-provider-collector:
+    if: >-
+      (github.event_name == 'schedule' && (github.event.schedule == '0 19-23 17 8 *' || github.event.schedule == '0 * 18-19 8 *' || github.event.schedule == '0 0-6 20 8 *')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.lane == 'provider-collector')
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 85
+    concurrency:
+      group: mcft-cap09-hardening-provider-collector
+      cancel-in-progress: false
+    steps:
+      - name: Gate recurring cron to selected 2026 epoch
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = schedule ] && [ "$(date -u +%Y)" != 2026 ]; then echo 'RUN_LIVE=false' >> "$GITHUB_ENV"; else echo 'RUN_LIVE=true' >> "$GITHUB_ENV"; fi
+      - name: Checkout exact protected main
+        if: env.RUN_LIVE == 'true'
+        uses: actions/checkout@v4
+        with: { ref: '${{ github.sha }}', fetch-depth: 0, persist-credentials: false }
+      - name: Require unified exact hardening main
+        if: env.RUN_LIVE == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          authority='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-RUNTIME-HARDENING-AUTHORITY-V1.json'
+          effective_commit=$(git log --first-parent --diff-filter=A -1 --format='%H' -- "$authority")
+          test -n "$effective_commit"
+          test "$(git rev-parse HEAD)" = "$effective_commit" || { echo HARDENING_COLLECTOR_QUALIFIED_MAIN_SUBJECT_DRIFT >&2; exit 1; }
+      - if: env.RUN_LIVE == 'true'
+        uses: pnpm/action-setup@v4
+        with: { version: '${{ env.PNPM_VERSION }}' }
+      - if: env.RUN_LIVE == 'true'
+        uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: pnpm }
+      - if: env.RUN_LIVE == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Bind Formal v2 DB and private raw retention
+        if: env.RUN_LIVE == 'true'
+        shell: bash
+        env:
+          SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+          MCFT_CAP09_FORMAL_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+          MCFT_CAP09_FORMAL_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+          MCFT_CAP09_FORMAL_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+          MCFT_CAP09_FORMAL_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+          MCFT_CAP09_FORMAL_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+        run: |
+          set -euo pipefail
+          for name in SOURCE_DATABASE_URL MCFT_CAP09_FORMAL_S3_ENDPOINT MCFT_CAP09_FORMAL_S3_BUCKET MCFT_CAP09_FORMAL_S3_REGION MCFT_CAP09_FORMAL_S3_ACCESS_KEY_ID MCFT_CAP09_FORMAL_S3_SECRET_ACCESS_KEY; do test -n "${!name:-}" || { echo "HARDENING_COLLECTOR_SECRET_REQUIRED:$name" >&2; exit 1; }; done
+          test "$MCFT_CAP09_FORMAL_S3_BUCKET" = geox-mcft-cap09-formal-raw-v1
+          DATABASE_URL=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL);u.pathname="/"+process.env.TARGET_DATABASE_NAME;process.stdout.write(u.toString())')
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_FORMAL_S3_ENDPOINT=$MCFT_CAP09_FORMAL_S3_ENDPOINT" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_FORMAL_S3_BUCKET=$MCFT_CAP09_FORMAL_S3_BUCKET" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_FORMAL_S3_REGION=$MCFT_CAP09_FORMAL_S3_REGION" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_FORMAL_S3_ACCESS_KEY_ID=$MCFT_CAP09_FORMAL_S3_ACCESS_KEY_ID" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_FORMAL_S3_SECRET_ACCESS_KEY=$MCFT_CAP09_FORMAL_S3_SECRET_ACCESS_KEY" >> "$GITHUB_ENV"
+      - name: Execute one hardened provider-watermark collector cycle
+        if: env.RUN_LIVE == 'true'
+        env: { MCFT_CAP09_SUBJECT_SHA: '${{ github.sha }}' }
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_FORMAL_V2_PROVIDER_WATERMARK_COLLECTOR_V2.ts cycle
+      - name: Upload collector proof
+        if: env.RUN_LIVE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-hardening-provider-collector-${{ github.sha }}-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_09_EA5E3_FORMAL_V2_PROVIDER_WATERMARK_COLLECTOR_V2_RESULT.json
+          if-no-files-found: error
+          retention-days: 7
+
+  live-a18d:
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '5,20,35 19 17 8 *') ||
+      (github.event_name == 'workflow_dispatch' && inputs.lane == 'a18d')
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: mcft-cap09-hardening-a18d
+      cancel-in-progress: false
+    steps:
+      - name: Gate recurring cron to selected 2026 epoch
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = schedule ] && [ "$(date -u +%Y)" != 2026 ]; then echo 'RUN_LIVE=false' >> "$GITHUB_ENV"; else echo 'RUN_LIVE=true' >> "$GITHUB_ENV"; fi
+      - name: Checkout exact protected main
+        if: env.RUN_LIVE == 'true'
+        uses: actions/checkout@v4
+        with: { ref: '${{ github.sha }}', fetch-depth: 0, persist-credentials: false }
+      - name: Require unified exact hardening main
+        if: env.RUN_LIVE == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          authority='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-RUNTIME-HARDENING-AUTHORITY-V1.json'
+          effective_commit=$(git log --first-parent --diff-filter=A -1 --format='%H' -- "$authority")
+          test -n "$effective_commit"
+          test "$(git rev-parse HEAD)" = "$effective_commit" || { echo HARDENING_A18D_QUALIFIED_MAIN_SUBJECT_DRIFT >&2; exit 1; }
+      - if: env.RUN_LIVE == 'true'
+        uses: pnpm/action-setup@v4
+        with: { version: '${{ env.PNPM_VERSION }}' }
+      - if: env.RUN_LIVE == 'true'
+        uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: pnpm }
+      - if: env.RUN_LIVE == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Bind replacement Formal v2 DB only
+        if: env.RUN_LIVE == 'true'
+        shell: bash
+        env: { SOURCE_DATABASE_URL: '${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}' }
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_DATABASE_URL"
+          DATABASE_URL=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL);u.pathname="/"+process.env.TARGET_DATABASE_NAME;process.stdout.write(u.toString())')
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+      - name: Execute hardened A18D bootstrap
+        if: env.RUN_LIVE == 'true'
+        env: { MCFT_CAP09_SUBJECT_SHA: '${{ github.sha }}' }
+        run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V2.ts execute
+      - name: Upload A18D proof
+        if: env.RUN_LIVE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-hardening-a18d-${{ github.sha }}-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V2_RESULT.json
+          if-no-files-found: error
+          retention-days: 7
+
+  live-formal-runner:
+    if: >-
+      (github.event_name == 'schedule' && (github.event.schedule == '12,42 20-23 17 8 *' || github.event.schedule == '12,42 * 18-19 8 *' || github.event.schedule == '12,42 0-6 20 8 *')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.lane == 'formal-runner')
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: mcft-cap09-hardening-formal-runner
+      cancel-in-progress: false
+    steps:
+      - name: Gate recurring cron to selected 2026 epoch
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = schedule ] && [ "$(date -u +%Y)" != 2026 ]; then echo 'RUN_LIVE=false' >> "$GITHUB_ENV"; else echo 'RUN_LIVE=true' >> "$GITHUB_ENV"; fi
+      - name: Checkout exact protected main
+        if: env.RUN_LIVE == 'true'
+        uses: actions/checkout@v4
+        with: { ref: '${{ github.sha }}', fetch-depth: 0, persist-credentials: false }
+      - name: Require unified exact hardening main
+        if: env.RUN_LIVE == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          authority='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-RUNTIME-HARDENING-AUTHORITY-V1.json'
+          effective_commit=$(git log --first-parent --diff-filter=A -1 --format='%H' -- "$authority")
+          test -n "$effective_commit"
+          test "$(git rev-parse HEAD)" = "$effective_commit" || { echo HARDENING_FORMAL_RUNNER_QUALIFIED_MAIN_SUBJECT_DRIFT >&2; exit 1; }
+      - if: env.RUN_LIVE == 'true'
+        uses: pnpm/action-setup@v4
+        with: { version: '${{ env.PNPM_VERSION }}' }
+      - if: env.RUN_LIVE == 'true'
+        uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: pnpm }
+      - if: env.RUN_LIVE == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Bind replacement Formal v2 DB only
+        if: env.RUN_LIVE == 'true'
+        shell: bash
+        env: { SOURCE_DATABASE_URL: '${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}' }
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_DATABASE_URL"
+          DATABASE_URL=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL);u.pathname="/"+process.env.TARGET_DATABASE_NAME;process.stdout.write(u.toString())')
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+      - name: Execute one DB-only Amendment-11 Formal slot attempt
+        if: env.RUN_LIVE == 'true'
+        env: { MCFT_CAP09_SUBJECT_SHA: '${{ github.sha }}' }
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_A18C_FORMAL_V3_PRODUCTION_RUNNER_V1.ts cycle
+      - name: Upload Formal runner proof
+        if: env.RUN_LIVE == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-hardening-formal-runner-${{ github.sha }}-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_09_A18C_FORMAL_V3_PRODUCTION_RUNNER_RESULT.json
+          if-no-files-found: warn
+          retention-days: 7
