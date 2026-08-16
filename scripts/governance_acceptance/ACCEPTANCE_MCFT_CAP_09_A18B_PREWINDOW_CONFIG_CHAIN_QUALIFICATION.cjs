@@ -43,9 +43,9 @@ assert.equal(auth.nonclaims.formal_o00_started, false);
 assert.equal(auth.nonclaims.formal_execution_count, '0/24');
 assert.equal(auth.next_legal_frontier_after_effectiveness, 'A18C_REPLACEMENT_IMMUTABLE_FORMAL_WINDOW_INPUT_MANIFEST_AND_RUNNER_EXACT_BINDING');
 
-assert(amendment.includes('A18B  O00-1h fresh A0 + replacement Runtime Config chain'), 'AMENDMENT18_A18B_FRONTIER_REQUIRED');
-assert(amendment.includes('The new chain SHALL contain exactly 25 Runtime Config objects'), 'AMENDMENT18_EXACT_25_CONFIGS_REQUIRED');
-assert(amendment.includes('O00 SHALL parent directly to the new A0 Runtime Config'), 'AMENDMENT18_O00_NEW_A0_PARENT_REQUIRED');
+assert(amendment.includes('A18B  O00-1h A0 + O00-O23 deterministic config builder qualification'), 'AMENDMENT18_A18B_FRONTIER_REQUIRED');
+assert(amendment.includes('1 pre-window A0 Runtime Config at O00 - PT1H') && amendment.includes('24 HOURLY_CAP04 Runtime Configs at O00 ... O23'), 'AMENDMENT18_EXACT_25_CONFIGS_REQUIRED');
+assert(amendment.includes('O00 parent ref/hash equals the new pre-window A0 Runtime Config ref/hash'), 'AMENDMENT18_O00_NEW_A0_PARENT_REQUIRED');
 assert(builder.includes('Boundary: pure construction only'), 'A18B_PURE_BUILDER_BOUNDARY_REQUIRED');
 assert(builder.includes('EXTERNAL_FORMAL_A18_EXACT_24_CROP_PINS_REQUIRED'), 'A18B_EXACT_24_CROP_PINS_REQUIRED');
 assert(builder.includes('EXTERNAL_FORMAL_A18_CROP_HASH_DRIFT'), 'A18B_CROP_HASH_FAIL_CLOSED_REQUIRED');
