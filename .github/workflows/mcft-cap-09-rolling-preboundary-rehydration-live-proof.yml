@@ -24,9 +24,9 @@ env:
   NODE_VERSION: '20.11.1'
   PNPM_VERSION: '9.15.4'
   PYTHON_VERSION: '3.12'
-  FROZEN_ROLLING_ARTIFACT_ID: '9208145702'
-  FROZEN_ROLLING_PRODUCER_SHA: 'b02d1c0e9c55a82a449125d0cdad0a88d6f6d9c3'
-  FROZEN_ROLLING_TARGET_T: '2026-08-14T05:00:00.000Z'
+  FROZEN_ROLLING_ARTIFACT_ID: '9246513491'
+  FROZEN_ROLLING_PRODUCER_SHA: '481f46358056abc592c9e5691d3463487261dafa'
+  FROZEN_ROLLING_TARGET_T: '2026-08-15T12:00:00.000Z'
   READINESS_DB_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
 
 jobs:
@@ -137,6 +137,21 @@ jobs:
           const p=JSON.parse(fs.readFileSync('/tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json','utf8'));
           if(p.status!=='PASS'||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.producer_subject_sha!==process.env.FROZEN_ROLLING_PRODUCER_SHA||p.target_t!==process.env.FROZEN_ROLLING_TARGET_T) throw new Error('MCFT_CAP09_REHYDRATE_LIVE_FROZEN_CANDIDATE_IDENTITY_REQUIRED');
           NODE
+
+      - name: Add family-only semantic mismatch diagnostic to ephemeral checkout
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts')
+          s = p.read_text(encoding='utf-8')
+          old = '  if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");'
+          new = '''  if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) {
+            console.error(JSON.stringify({ code: "MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH", expected, actual: semanticRows(actual) }));
+            throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");
+          }'''
+          if s.count(old) != 1:
+              raise SystemExit('MCFT_CAP09_REHYDRATE_DIAGNOSTIC_PATCH_TARGET_REQUIRED')
+          p.write_text(s.replace(old, new), encoding='utf-8')
 
       - name: Rehydrate original causal raw under current consumer code
         env:
