@@ -49,7 +49,7 @@ function main(){
   eq(a.builder_qualification_effectiveness.merge_commit_sha,base,"T3R1_SUCCESSOR_PERSISTENCE_BUILDER_MERGE_REQUIRED");
   eq(a.builder_qualification_effectiveness.focused_workflow_run_id,31934715011,"T3R1_SUCCESSOR_PERSISTENCE_BUILDER_RUN_REQUIRED");
   eq(a.builder_qualification_effectiveness.focused_artifact_id,9260304898,"T3R1_SUCCESSOR_PERSISTENCE_BUILDER_ARTIFACT_REQUIRED");
-  eq(a.builder_qualification_effectiveness.focused_artifact_digest,"sha256:38f5d2cbd2d0ac169e8ac1ef4e709d2a16f37fbd252348dee03bee36123508c","T3R1_SUCCESSOR_PERSISTENCE_BUILDER_DIGEST_REQUIRED");
+  eq(a.builder_qualification_effectiveness.focused_artifact_digest,"sha256:38f5d2cbd2d0ac169e8ac1ef4e709d2a16f37fbd252348dee03bee36123508c3","T3R1_SUCCESSOR_PERSISTENCE_BUILDER_DIGEST_REQUIRED");
   eq(a.selected_epoch.epoch_id,"mcft_cap09_external_formal_window_epoch_20260817t200000z_v2","T3R1_SUCCESSOR_PERSISTENCE_EPOCH_REQUIRED");
   eq(a.selected_epoch.ea5e3_readiness_deadline,"2026-08-17T08:00:00.000Z","T3R1_SUCCESSOR_PERSISTENCE_DEADLINE_REQUIRED");
   yes(a.candidate_implementation.reuses_generic_crash_safe_persistence_service_v1_unchanged,"T3R1_SUCCESSOR_PERSISTENCE_SERVICE_REUSE_REQUIRED");
