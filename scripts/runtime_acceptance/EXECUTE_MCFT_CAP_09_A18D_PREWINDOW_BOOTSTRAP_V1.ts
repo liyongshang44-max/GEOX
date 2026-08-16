@@ -53,8 +53,6 @@ const EVIDENCE_TYPES = [
   "future_et0_assumption_v1",
 ] as const;
 
-const SCOPE_FIELDS = ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"] as const;
-
 type A18BAuthority = {
   schema_version: string;
   selected_epoch_id: string;
@@ -213,7 +211,8 @@ async function assertFormalDatabase(pool: Pool, databaseUrl: string): Promise<vo
   const parsed = new URL(databaseUrl);
   if (["localhost", "127.0.0.1", "::1"].includes(parsed.hostname)) throw new Error("A18D_REMOTE_FORMAL_DATABASE_REQUIRED");
   const name = parsed.pathname.replace(/^\//, "");
-  if (name !== FORMAL_DATABASE || name === HISTORICAL_DATABASE) throw new Error("A18D_REPLACEMENT_DATABASE_REQUIRED");
+  if (name === HISTORICAL_DATABASE) throw new Error("A18D_HISTORICAL_DATABASE_FORBIDDEN");
+  if (name !== FORMAL_DATABASE) throw new Error("A18D_REPLACEMENT_DATABASE_REQUIRED");
   const result = await pool.query("SELECT current_database() AS database_name");
   if (String(result.rows[0]?.database_name ?? "") !== FORMAL_DATABASE) throw new Error("A18D_DATABASE_SESSION_IDENTITY_REQUIRED");
 }
