@@ -5,15 +5,21 @@ on:
     paths:
       - '.github/workflows/mcft-cap-09-rolling-kbs-intersection.yml'
       - 'scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py'
+      - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs'
+      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json'
   push:
     branches: [main]
     paths:
       - '.github/workflows/mcft-cap-09-rolling-kbs-intersection.yml'
       - 'scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py'
+      - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs'
+      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json'
   schedule:
     - cron: '20 * * * *'
   workflow_dispatch:
@@ -54,7 +60,13 @@ jobs:
             refet==0.4.2
       - name: Prove exact-target KBS decoder seam
         run: python scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py selftest
-      - name: Prove oldest exact candidate intersection
+      - name: Prove reusable current crop-consensus evaluator
+        env:
+          TARGET_T: '2026-08-15T23:00:00.000Z'
+        run: node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs
+      - name: Prove rolling crop-legality builder
+        run: node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs selftest
+      - name: Prove oldest crop-legal exact candidate intersection
         run: python scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py selftest
       - name: Prove Amendment-11 intersection boundary
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs
@@ -81,6 +93,9 @@ jobs:
           git fetch --no-tags origin main
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || { echo 'MCFT_CAP09_ROLLING_INTERSECTION_EXACT_MAIN_DRIFT' >&2; exit 1; }
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -128,25 +143,30 @@ jobs:
             done
           done < /tmp/recent-runs.tsv
           find candidate-artifacts -name 'MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json' -print | sort > /tmp/candidate-files.txt
-          echo "candidate_file_count=$(wc -l < /tmp/candidate-files.txt | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          echo "candidate_file_count=$(wc -l < /tmp/candidate-files.txt | tr -d ' ')"
+
+      - name: Intersect retained candidates with exact current crop authority before KBS selection
+        run: |
+          node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs \
+            --candidate-root candidate-artifacts \
+            --output acceptance-output/MCFT_CAP_09_ROLLING_CROP_LEGALITY.json
 
       - name: Fetch current KBS daily batch once
         id: kbs
         shell: bash
         run: |
           set -euo pipefail
-          # One authoritative source GET only: the 180s budget is transport tolerance, not retry/backoff/substitution authority.
           curl --fail --location --silent --show-error \
             --max-time 180 \
             -H 'Accept: text/csv,text/plain;q=0.9,*/*;q=0.5' \
-            -H 'User-Agent: GEOX-MCFT-CAP09-Rolling-KBS-Intersection/1.0' \
+            -H 'User-Agent: GEOX-MCFT-CAP09-Rolling-KBS-Intersection/2.0' \
             'https://lter.kbs.msu.edu/datatables/13.csv' \
             -o /tmp/kbs.csv
           test -s /tmp/kbs.csv || { echo 'MCFT_CAP09_ROLLING_INTERSECTION_KBS_EMPTY' >&2; exit 1; }
           available_at="$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')"
           echo "available_at=$available_at" >> "$GITHUB_OUTPUT"
 
-      - name: Select oldest exact rolling candidate visible in KBS daily batch
+      - name: Select oldest crop-legal exact rolling candidate visible in KBS daily batch
         env:
           KBS_AVAILABLE_AT: ${{ steps.kbs.outputs.available_at }}
         run: |
@@ -154,6 +174,7 @@ jobs:
             --available-at "$KBS_AVAILABLE_AT" \
             --kbs-input /tmp/kbs.csv \
             --candidate-root candidate-artifacts \
+            --crop-legality acceptance-output/MCFT_CAP_09_ROLLING_CROP_LEGALITY.json \
             --output acceptance-output/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json
           rm -f /tmp/kbs.csv
 
@@ -163,24 +184,26 @@ jobs:
         run: |
           const fs=require('fs');
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json','utf8'));
-          if(p.status!=='PASS'||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.provider_publication_cadence!=='DAILY_BATCH'||p.freshness_is_late_authoritative_admission_gate!==false||p.database_write_count!==0||p.formal_effect!==false||p.crop_authority_effect!=='NONE'||p.raw_values_emitted!==false) throw new Error('MCFT_CAP09_ROLLING_INTERSECTION_SAFE_RESULT_REQUIRED');
-          const state=p.selected?'EXACT_INTERSECTION_READY':'WAITING_FOR_DAILY_BATCH_INTERSECTION';
+          if(p.schema_version!=='geox_mcft_cap09_rolling_kbs_intersection_v2'||p.status!=='PASS'||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.provider_publication_cadence!=='DAILY_BATCH'||p.freshness_is_late_authoritative_admission_gate!==false||p.crop_authority_intersection_applied!==true||p.crop_authority_effect!=='NONE'||p.future_crop_observations_used!==false||p.selection_policy!=='OLDEST_CROP_LEGAL_EXACT_TARGET_FIRST'||p.database_write_count!==0||p.formal_effect!==false||p.raw_values_emitted!==false) throw new Error('MCFT_CAP09_ROLLING_INTERSECTION_SAFE_RESULT_REQUIRED');
+          const state=p.selected?'EXACT_CROP_LEGAL_INTERSECTION_READY':'WAITING_FOR_DAILY_BATCH_INTERSECTION';
           fs.appendFileSync(process.env.GITHUB_OUTPUT,`state=${state}\n`);
           fs.appendFileSync(process.env.GITHUB_OUTPUT,`selected_target_t=${p.selected?.target_t||''}\n`);
-          console.log(JSON.stringify({state,selected_target_t:p.selected?.target_t||null,provider_latest_timestamp:p.provider_latest_timestamp,provider_latest_age_hours:p.provider_latest_age_hours,exact_kbs_intersection_count:p.exact_kbs_intersection_count}));
+          console.log(JSON.stringify({state,selected_target_t:p.selected?.target_t||null,crop_stage_code:p.selected?.crop_stage_code||null,provider_latest_timestamp:p.provider_latest_timestamp,provider_latest_age_hours:p.provider_latest_age_hours,exact_kbs_intersection_count:p.exact_kbs_intersection_count,crop_legal_candidate_count:p.crop_legal_candidate_count}));
 
       - name: Report waiting state without failure
         if: steps.result.outputs.state == 'WAITING_FOR_DAILY_BATCH_INTERSECTION'
         run: echo 'WAITING_FOR_DAILY_BATCH_INTERSECTION'
 
-      - name: Report exact intersection candidate
-        if: steps.result.outputs.state == 'EXACT_INTERSECTION_READY'
-        run: echo "EXACT_INTERSECTION_READY target=${{ steps.result.outputs.selected_target_t }}"
+      - name: Report exact crop-legal intersection candidate
+        if: steps.result.outputs.state == 'EXACT_CROP_LEGAL_INTERSECTION_READY'
+        run: echo "EXACT_CROP_LEGAL_INTERSECTION_READY target=${{ steps.result.outputs.selected_target_t }}"
 
       - name: Upload metadata-only intersection proof
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-rolling-kbs-intersection-${{ github.sha }}-${{ github.run_id }}
-          path: acceptance-output/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json
+          path: |
+            acceptance-output/MCFT_CAP_09_ROLLING_CROP_LEGALITY.json
+            acceptance-output/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json
           if-no-files-found: error
           retention-days: 2

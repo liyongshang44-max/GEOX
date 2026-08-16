@@ -38,12 +38,16 @@ const TRANSIENT_PREFIX = "mcft-cap09-kbs-five-family-transient-v1";
 const EXPECTED_PRE_TYPES = ["future_et0_assumption_v1", "future_weather_assumption_v1", "soil_moisture_observation_v1"] as const;
 const EXPECTED_FIVE_TYPES = ["future_et0_assumption_v1", "future_weather_assumption_v1", "historical_et0_estimate_v1", "observed_rainfall_v1", "soil_moisture_observation_v1"] as const;
 
-type IntersectionProofV1 = {
+type IntersectionProofV2 = {
   schema_version: string;
   status: string;
   temporal_authority: string;
   provider_publication_cadence: string;
   freshness_is_late_authoritative_admission_gate: boolean;
+  crop_authority_intersection_applied: boolean;
+  crop_authority_effect: string;
+  future_crop_observations_used: boolean;
+  selection_policy: string;
   selected: null | {
     producer_subject_sha: string;
     producer_workflow_run_id: number;
@@ -51,10 +55,10 @@ type IntersectionProofV1 = {
     artifact_digest: string;
     target_t: string;
     candidate_expires_at: string;
+    crop_stage_code: string;
   };
   database_write_count: number;
   formal_effect: boolean;
-  crop_authority_effect: string;
 };
 
 type RehydrationProofV1 = {
@@ -300,7 +304,7 @@ async function factTypes(pool: Pool): Promise<string[]> {
 function selftest(): void {
   const target = exactHour("2026-08-13T19:00:00.000Z", "MCFT_CAP09_FIVE_FAMILY_SELFTEST_TARGET");
   if (target !== "2026-08-13T19:00:00.000Z" || EXPECTED_PRE_TYPES.length !== 3 || EXPECTED_FIVE_TYPES.length !== 5) throw new Error("MCFT_CAP09_FIVE_FAMILY_SELFTEST_DRIFT");
-  console.log(JSON.stringify({ status: "PASS", exact_target_required: true, preboundary_family_count: 3, kbs_family_count: 2, total_family_count: 5, provider_retry_count: 0, source_substitution_allowed: false, cap04_required: false, crop_authority_effect: "NONE" }));
+  console.log(JSON.stringify({ status: "PASS", exact_target_required: true, preboundary_family_count: 3, kbs_family_count: 2, total_family_count: 5, provider_retry_count: 0, source_substitution_allowed: false, cap04_required: false, crop_authority_intersection_required: true, crop_authority_effect: "NONE" }));
 }
 
 async function main(): Promise<void> {
@@ -310,9 +314,24 @@ async function main(): Promise<void> {
   if (!/^[0-9a-f]{40}$/.test(subject)) throw new Error("MCFT_CAP09_FIVE_FAMILY_SUBJECT_SHA_INVALID");
   assertExactMain(subject);
   const target = exactHour(required("MCFT_CAP09_FIVE_FAMILY_TARGET_T"), "MCFT_CAP09_FIVE_FAMILY_TARGET_INVALID");
-  const intersection = readJson<IntersectionProofV1>(required("MCFT_CAP09_INTERSECTION_PROOF_PATH"));
+  const intersection = readJson<IntersectionProofV2>(required("MCFT_CAP09_INTERSECTION_PROOF_PATH"));
   const rehydration = readJson<RehydrationProofV1>(required("MCFT_CAP09_REHYDRATION_PROOF_PATH"));
-  if (intersection.schema_version !== "geox_mcft_cap09_rolling_kbs_intersection_v1" || intersection.status !== "PASS" || intersection.temporal_authority !== "PROVIDER_AVAILABILITY_WATERMARK_V1" || intersection.provider_publication_cadence !== "DAILY_BATCH" || intersection.freshness_is_late_authoritative_admission_gate !== false || !intersection.selected || intersection.selected.target_t !== target || intersection.database_write_count !== 0 || intersection.formal_effect !== false || intersection.crop_authority_effect !== "NONE") throw new Error("MCFT_CAP09_FIVE_FAMILY_INTERSECTION_PROOF_INVALID");
+  if (intersection.schema_version !== "geox_mcft_cap09_rolling_kbs_intersection_v2"
+    || intersection.status !== "PASS"
+    || intersection.temporal_authority !== "PROVIDER_AVAILABILITY_WATERMARK_V1"
+    || intersection.provider_publication_cadence !== "DAILY_BATCH"
+    || intersection.freshness_is_late_authoritative_admission_gate !== false
+    || intersection.crop_authority_intersection_applied !== true
+    || intersection.crop_authority_effect !== "NONE"
+    || intersection.future_crop_observations_used !== false
+    || intersection.selection_policy !== "OLDEST_CROP_LEGAL_EXACT_TARGET_FIRST"
+    || !intersection.selected
+    || intersection.selected.target_t !== target
+    || !["INITIAL", "DEVELOPMENT", "MID", "LATE"].includes(intersection.selected.crop_stage_code)
+    || intersection.database_write_count !== 0
+    || intersection.formal_effect !== false) {
+    throw new Error("MCFT_CAP09_FIVE_FAMILY_INTERSECTION_PROOF_INVALID");
+  }
   if (rehydration.schema_version !== "geox_mcft_cap09_rolling_preboundary_rehydration_v1" || rehydration.status !== "PASS" || rehydration.temporal_authority !== "PROVIDER_AVAILABILITY_WATERMARK_V1" || rehydration.producer_subject_sha !== intersection.selected.producer_subject_sha || rehydration.target_t !== target || rehydration.semantic_manifest_match !== true || rehydration.producer_bound_raw_reverification !== true || rehydration.provider_refetch_count !== 0 || rehydration.isolated_database_fact_count !== 3 || rehydration.private_r2_put_count !== 0 || rehydration.private_r2_delete_count !== 0 || rehydration.formal_database_write_count !== 0 || rehydration.formal_r2_prefix_write_count !== 0 || rehydration.scheduler_write_count !== 0 || rehydration.runtime_write_count !== 0 || rehydration.crop_authority_effect !== "NONE" || rehydration.formal_effect !== false) throw new Error("MCFT_CAP09_FIVE_FAMILY_REHYDRATION_PROOF_INVALID");
 
   const databaseUrl = required("DATABASE_URL");
@@ -357,7 +376,7 @@ async function main(): Promise<void> {
     if (cleanupCount !== store.put_count) throw new Error("MCFT_CAP09_FIVE_FAMILY_TRANSIENT_CLEANUP_REQUIRED");
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
     const proof = {
-      schema_version: "geox_mcft_cap09_kbs_external_five_family_data_path_v1",
+      schema_version: "geox_mcft_cap09_kbs_external_five_family_data_path_v2",
       status: "PASS",
       subject_sha: subject,
       target_t: target,
@@ -373,6 +392,10 @@ async function main(): Promise<void> {
       provider_publication_cadence: "DAILY_BATCH",
       observation_resolution: "HOURLY",
       exact_kbs_target: true,
+      crop_authority_intersection_applied: true,
+      crop_stage_code: intersection.selected.crop_stage_code,
+      future_crop_observations_used: false,
+      selection_policy: intersection.selection_policy,
       freshness_is_late_authoritative_admission_gate: false,
       preboundary_family_count: 3,
       kbs_family_count: 2,

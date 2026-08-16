@@ -1,0 +1,336 @@
+name: mcft-cap-09-ea5e2-rolling-operational-activation-live
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e2-rolling-operational-activation-live.yml'
+      - '.github/workflows/mcft-cap-09-rolling-preboundary-capture.yml'
+      - '.github/workflows/mcft-cap-09-rolling-kbs-intersection.yml'
+      - 'scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ROLLING_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs'
+      - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs'
+      - 'scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py'
+      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH_V1.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts'
+      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-PERSISTED-A0-AUTHORITY-V1.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e2-rolling-operational-activation-live.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-ea5e2-rolling-operational-activation-live
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  READINESS_DB_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+  MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
+  FORMAL_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+  MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+  MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+  MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+  MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+  MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+      - name: Typecheck rolling activation observer and evidence assembly runners
+        run: |
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH_V1.ts
+      - name: Prove crop and rolling intersection deterministic seams
+        run: |
+          node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs selftest
+          python scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py selftest
+      - name: Prove rolling activation Amendment-11 boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs
+
+  rolling-live:
+    if: github.event_name == 'workflow_dispatch'
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+
+      - name: Require exact protected main and successful rolling successor V3 qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main' || { echo 'EA5E2_ROLLING_ACTIVATION_MAIN_REQUIRED' >&2; exit 1; }
+          git fetch --no-tags origin main
+          node scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ROLLING_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml/runs?head_sha=${GITHUB_SHA}&status=completed&per_page=100"
+          successes="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "$api" | jq '[.workflow_runs[] | select(.head_sha==env.GITHUB_SHA and .conclusion=="success")] | length')"
+          test "$successes" -ge 1 || { echo 'EA5E2_ROLLING_SUCCESSOR_V3_EXACT_HEAD_QUALIFICATION_REQUIRED' >&2; exit 1; }
+
+      - name: Require private transient R2 and T3R1 Formal bindings without exposing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY FORMAL_DATABASE_URL; do
+            test -n "${!name:-}" || { echo "EA5E2_ROLLING_ACTIVATION_PRIVATE_BINDING_REQUIRED:${name}" >&2; exit 1; }
+          done
+
+      - name: Prove T3R1 Formal A0 and scheduler-zero snapshot read-only
+        env:
+          MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts
+
+      - name: Discover newest successful crop-legal rolling intersection
+        id: intersection
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/intersection-candidates /tmp/selected-intersection acceptance-output
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/mcft-cap-09-rolling-kbs-intersection.yml/runs?branch=main&status=success&per_page=30" > /tmp/intersection-runs.json
+          found=''
+          while read -r run_id; do
+            test -n "$run_id" || continue
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" > "/tmp/intersection-artifacts-${run_id}.json"
+            while read -r artifact_id; do
+              test -n "$artifact_id" || continue
+              dir="/tmp/intersection-candidates/${run_id}-${artifact_id}"
+              mkdir -p "$dir"
+              gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "/tmp/intersection-${artifact_id}.zip"
+              unzip -q "/tmp/intersection-${artifact_id}.zip" -d "$dir"
+              proof="$dir/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json"
+              if test -s "$proof" && jq -e '.schema_version=="geox_mcft_cap09_rolling_kbs_intersection_v2" and .status=="PASS" and .temporal_authority=="PROVIDER_AVAILABILITY_WATERMARK_V1" and .provider_publication_cadence=="DAILY_BATCH" and .selected!=null and .crop_authority_intersection_applied==true and .selection_policy=="OLDEST_CROP_LEGAL_EXACT_TARGET_FIRST" and .freshness_is_late_authoritative_admission_gate==false and .crop_authority_effect=="NONE" and .database_write_count==0 and .formal_effect==false' "$proof" >/dev/null; then
+                cp "$proof" /tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json
+                found="$artifact_id"
+                break 2
+              fi
+            done < <(jq -r '.artifacts[] | select(.expired==false and (.name|startswith("mcft-cap09-rolling-kbs-intersection-"))) | .id' "/tmp/intersection-artifacts-${run_id}.json")
+          done < <(jq -r '.workflow_runs[] | .id' /tmp/intersection-runs.json)
+          test -n "$found" || { echo 'EA5E2_ROLLING_CROP_LEGAL_EXACT_INTERSECTION_READY_REQUIRED' >&2; exit 1; }
+          target="$(jq -r '.selected.target_t' /tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json)"
+          producer_artifact="$(jq -r '.selected.artifact_id' /tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json)"
+          producer_sha="$(jq -r '.selected.producer_subject_sha' /tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json)"
+          crop_stage="$(jq -r '.selected.crop_stage_code' /tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json)"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "producer_artifact=$producer_artifact" >> "$GITHUB_OUTPUT"
+          echo "producer_sha=$producer_sha" >> "$GITHUB_OUTPUT"
+          echo "intersection_artifact=$found" >> "$GITHUB_OUTPUT"
+          echo "crop_stage=$crop_stage" >> "$GITHUB_OUTPUT"
+
+      - name: Download selected immutable rolling producer candidate
+        shell: bash
+        env:
+          PRODUCER_ARTIFACT_ID: ${{ steps.intersection.outputs.producer_artifact }}
+          EXPECTED_TARGET: ${{ steps.intersection.outputs.target }}
+          EXPECTED_PRODUCER_SHA: ${{ steps.intersection.outputs.producer_sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rolling-candidate
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${PRODUCER_ARTIFACT_ID}/zip" > /tmp/rolling-candidate.zip
+          unzip -q /tmp/rolling-candidate.zip -d /tmp/rolling-candidate
+          test -s /tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          jq -e --arg target "$EXPECTED_TARGET" --arg producer "$EXPECTED_PRODUCER_SHA" '.status=="PASS" and .temporal_authority=="PROVIDER_AVAILABILITY_WATERMARK_V1" and .target_t==$target and .producer_subject_sha==$producer and .independence.kbs_daily_batch_required_at_capture==false and .independence.crop_authority_required_at_capture==false and .side_effects.formal_database_write_count==0 and .side_effects.scheduler_write_count==0' /tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json >/dev/null
+
+      - name: Rehydrate original three pre-T evidence families into isolated DB
+        env:
+          MCFT_CAP09_CONSUMER_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_CAP09_ROLLING_CANDIDATE_PATH: /tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          MCFT_CAP09_ROLLING_REHYDRATION_ISOLATED_DB_ACK: 'true'
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts run
+
+      - name: Add same-source exact-T KBS rainfall and historical ET0 and qualify exact five
+        env:
+          MCFT_CAP09_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_CAP09_FIVE_FAMILY_TARGET_T: ${{ steps.intersection.outputs.target }}
+          MCFT_CAP09_INTERSECTION_PROOF_PATH: /tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json
+          MCFT_CAP09_REHYDRATION_PROOF_PATH: acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json
+          MCFT_CAP09_FIVE_FAMILY_ISOLATED_DB_ACK: 'true'
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH_V1.ts run
+
+      - name: Re-prove exact target crop consensus as defense in depth
+        env:
+          TARGET_T: ${{ steps.intersection.outputs.target }}
+        run: node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs
+
+      - name: Recheck current-main boundary immediately before DB-only observer
+        run: |
+          git fetch --no-tags origin main
+          node scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ROLLING_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs
+
+      - name: Execute actual evidence-snapshot-time T3R1 A0 plus exact-five DB-only observer
+        env:
+          MCFT_EA5E2_TARGET_T: ${{ steps.intersection.outputs.target }}
+          MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          FORMAL_DATABASE_URL: ${{ env.FORMAL_DATABASE_URL }}
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts
+
+      - name: Freeze metadata-only rolling operational activation candidate proof
+        shell: node {0}
+        env:
+          TARGET_T: ${{ steps.intersection.outputs.target }}
+          EXPECTED_CROP_STAGE: ${{ steps.intersection.outputs.crop_stage }}
+          INTERSECTION_ARTIFACT_ID: ${{ steps.intersection.outputs.intersection_artifact }}
+          PRODUCER_ARTIFACT_ID: ${{ steps.intersection.outputs.producer_artifact }}
+          PRODUCER_SHA: ${{ steps.intersection.outputs.producer_sha }}
+        run: |
+          const fs=require('fs');
+          const intersection=JSON.parse(fs.readFileSync('/tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json','utf8'));
+          const rehydration=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json','utf8'));
+          const five=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH.json','utf8'));
+          const crop=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json','utf8'));
+          const formal=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.json','utf8'));
+          const observer=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json','utf8'));
+          if(intersection.selected?.target_t!==process.env.TARGET_T||intersection.selected?.crop_stage_code!==process.env.EXPECTED_CROP_STAGE||intersection.crop_authority_intersection_applied!==true||intersection.freshness_is_late_authoritative_admission_gate!==false) throw new Error('EA5E2_ROLLING_ACTIVATION_INTERSECTION_IDENTITY_REQUIRED');
+          if(rehydration.status!=='PASS'||rehydration.target_t!==process.env.TARGET_T||rehydration.provider_refetch_count!==0||rehydration.isolated_database_fact_count!==3||rehydration.formal_effect!==false) throw new Error('EA5E2_ROLLING_ACTIVATION_REHYDRATION_REQUIRED');
+          if(five.status!=='PASS'||five.target_t!==process.env.TARGET_T||five.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||five.kbs_external_five_family_data_path_qualified!==true||five.isolated_database_fact_count!==5||five.kbs_source_substitution_allowed!==false||five.formal_effect!==false) throw new Error('EA5E2_ROLLING_ACTIVATION_EXACT_FIVE_REQUIRED');
+          if(crop.status!=='PASS'||crop.target_t!==process.env.TARGET_T||crop.crop_stage_code!==process.env.EXPECTED_CROP_STAGE||crop.future_observations_used!==false||crop.crop_authority_effect!=='NONE') throw new Error('EA5E2_ROLLING_ACTIVATION_CROP_CONSENSUS_REQUIRED');
+          if(formal.status!=='PASS'||formal.access_mode!=='READ_ONLY'||formal.database_name!=='geox_mcft_cap09_s6_formal_t3r1_24h'||formal.scheduler_slot_count!==0||formal.scheduler_cursor_count!==0||formal.database_write_count!==0) throw new Error('EA5E2_ROLLING_ACTIVATION_T3R1_FORMAL_READ_ONLY_REQUIRED');
+          if(observer.status!=='PASS'||observer.target_t!==process.env.TARGET_T||observer.orchestration!=='ROLLING_PREBOUNDARY_BATCH_INTERSECTION'||observer.provider_temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||observer.evidence_snapshot_time_is_actual_execution_snapshot!==true||observer.fixed_t_plus_432_cutoff_normative_authority!==false||observer.fixed_t_plus_437_observer_normative_authority!==false||observer.selected_record_count!==5||observer.disposition!=='A1'||observer.forecast_status!=='COMPLETED'||observer.forecast_point_count!==72||observer.formal_database_write_count!==0||observer.scheduler_slot_count!==0||observer.scheduler_cursor_count!==0) throw new Error('EA5E2_ROLLING_ACTIVATION_OBSERVER_REQUIRED');
+          const proof={
+            schema_version:'geox_mcft_cap09_ea5e2_rolling_operational_activation_live_candidate_v1',
+            status:'PASS',
+            subject_sha:process.env.GITHUB_SHA,
+            target_t:process.env.TARGET_T,
+            producer_subject_sha:process.env.PRODUCER_SHA,
+            producer_artifact_id:Number(process.env.PRODUCER_ARTIFACT_ID),
+            intersection_artifact_id:Number(process.env.INTERSECTION_ARTIFACT_ID),
+            final_activation_orchestration:'ROLLING_PREBOUNDARY_BATCH_INTERSECTION',
+            provider_temporal_authority:'PROVIDER_AVAILABILITY_WATERMARK_V1',
+            provider_publication_cadence:'DAILY_BATCH',
+            selection_policy:'OLDEST_CROP_LEGAL_EXACT_TARGET_FIRST',
+            crop_stage_code:crop.crop_stage_code,
+            exact_five_family_db:true,
+            evidence_snapshot_time:observer.evidence_snapshot_time,
+            future_t_preselection_used:false,
+            long_horizon_wait_used:false,
+            six_hour_freshness_late_admission_authority:false,
+            fixed_t_plus_432_normative_authority:false,
+            fixed_t_plus_437_observer_normative_authority:false,
+            t3r1_formal_a0_read_only:true,
+            external_cap04_disposition:'A1',
+            forecast_status:'COMPLETED',
+            forecast_point_count:72,
+            provider_request_count:five.kbs_provider_request_count,
+            formal_database_write_count:0,
+            scheduler_write_count:0,
+            canonical_runtime_write_count:0,
+            source_substitution_count:0,
+            interpolation_count:0,
+            persistence_fill_count:0,
+            timestamp_relabel_count:0,
+            raw_values_emitted:false,
+            operational_activation_live_candidate_pass:true,
+            ea5e2_operational_activation_qualified:false,
+            effectiveness_pending_evidence_freeze:true,
+            formal_window_started:false,
+            ea5e3_authorized:false,
+            mcft_cap09_completed:false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_LIVE_CANDIDATE.json',JSON.stringify(proof,null,2)+'\n');
+          console.log(JSON.stringify(proof));
+
+      - name: Upload immutable metadata-only rolling activation candidate proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-rolling-operational-activation-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            /tmp/selected-intersection/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json
+            acceptance-output/MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.json
+            acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json
+            acceptance-output/MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json
+            acceptance-output/MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_PROOF.json
+            acceptance-output/MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_LIVE_CANDIDATE.json
+          if-no-files-found: warn
+          retention-days: 90

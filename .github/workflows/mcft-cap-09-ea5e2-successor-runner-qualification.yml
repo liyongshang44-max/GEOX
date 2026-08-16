@@ -4,10 +4,12 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-ea5e2-**'
+      - '.github/workflows/mcft-cap-09-rolling-**'
       - 'scripts/runtime_acceptance/*MCFT_CAP_09_EA5E2*'
       - 'scripts/runtime_acceptance/*MCFT_CAP_09_KBS*'
-      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'
+      - 'scripts/runtime_acceptance/*MCFT_CAP_09_ROLLING*'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2*'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING*'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2*'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-PERSISTED-A0-AUTHORITY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json'
@@ -57,7 +59,7 @@ jobs:
           python-version: '3.12'
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
-      - name: Install pinned live-provider decoder stack
+      - name: Install pinned KBS decoder stack
         run: |
           python -m pip install --disable-pip-version-check \
             'eccodes==2.47.0' \
@@ -65,37 +67,41 @@ jobs:
             'numpy==1.26.4' \
             'refet==0.4.2'
           python -m eccodes selfcheck
-      - name: Re-prove server and T3R1 observer/preflight types
+      - name: Re-prove server and rolling T3R1 observer types
         run: |
           pnpm --filter @geox/server run typecheck
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
-            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_OPERATIONAL_ACTIVATION_OBSERVER.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH_V1.ts \
             scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts
-      - name: Re-prove deterministic provider parsing and watcher semantics
+      - name: Re-prove Amendment-11 diagnostic and rolling deterministic seams
         run: |
           node scripts/runtime_acceptance/MCFT_CAP_09_KBS_PROVIDER_CADENCE_INTELLIGENCE_V1.cjs
-          python scripts/runtime_acceptance/WATCH_MCFT_CAP_09_KBS_BATCH_QUALIFICATION_WINDOW.py --selftest
-          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py selftest-gfs-selection
+          node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs selftest
+          python scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py selftest
           python -m py_compile \
-            scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py \
-            scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py \
-            scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py
-      - name: Validate frozen exact-main T3R1 timing evidence V2
+            scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py \
+            scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py
+      - name: Preserve frozen exact-main Timing Evidence V2 as historical engineering evidence
         run: node scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_TIMING_BUDGET_EVIDENCE_V2.cjs
-      - name: Re-prove current T3R1 runtime dependency graph V3
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V3.cjs
-      - name: Re-prove current T3R1 zero-effect full chain V2
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V2.cjs
-      - name: Reexecute exact-head T3R1 successor runner qualification V2
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V2.cjs
-      - name: Upload exact-head T3R1 successor V2 proof
+      - name: Prove rolling pre-boundary capture authority boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CAPTURE.cjs
+      - name: Prove crop-legal actual-batch intersection authority boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs
+      - name: Prove rolling operational activation boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs
+      - name: Re-prove rolling T3R1 runtime dependency graph V4
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
+      - name: Reexecute exact-head rolling successor runner qualification V3
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V3.cjs
+      - name: Upload exact-head rolling successor V3 proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-ea5e2-t3r1-successor-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          name: mcft-cap09-ea5e2-rolling-successor-v3-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
-            acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH.json
-            acceptance-output/MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V2.json
-            acceptance-output/MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V2.json
-          if-no-files-found: error
+            acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json
+            acceptance-output/MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V3.json
+          if-no-files-found: warn
           retention-days: 90
