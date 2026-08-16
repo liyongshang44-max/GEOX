@@ -17,8 +17,7 @@ const EPOCH = "mcft_cap09_external_formal_window_epoch_20260817t200000z_v2";
 const DB = "geox_mcft_cap09_s6_formal_t3r1_24h_v2";
 const FORMAL_PREFIX = "mcft-cap09-formal-raw-v1/sha256";
 
-function fail(code) { throw new Error(code); }
-function requireCondition(value, code) { if (!value) fail(code); }
+function requireCondition(value, code) { if (!value) throw new Error(code); }
 function readText(rel) { return fs.readFileSync(path.join(ROOT, rel), "utf8"); }
 function readJson(rel) { return JSON.parse(readText(rel)); }
 function blob(rel) { return execFileSync("git", ["hash-object", rel], { cwd: ROOT, encoding: "utf8" }).trim(); }
@@ -43,33 +42,39 @@ for (const [name, binding] of Object.entries(authority.governing_authorities)) {
   requireCondition(blob(binding.path) === binding.blob_sha, `EA5E3_PREDECESSOR_BLOB_DRIFT:${name}`);
 }
 requireCondition(blob(COLLECTOR_PATH) === authority.collector_wiring.entrypoint_blob_sha, "EA5E3_COLLECTOR_BLOB_DRIFT");
-requireCondition(blob(authority.collector_wiring.formal_raw_retention_adapter.path) === authority.collector_wiring.formal_raw_retention_adapter.blob_sha, "EA5E3_FORMAL_RETENTION_BLOB_DRIFT");
-requireCondition(blob(authority.collector_wiring.canonical_evidence_ingress.path) === authority.collector_wiring.canonical_evidence_ingress.blob_sha, "EA5E3_EVIDENCE_INGRESS_BLOB_DRIFT");
-requireCondition(blob(authority.collector_wiring.canonicalizer.path) === authority.collector_wiring.canonicalizer.blob_sha, "EA5E3_CANONICALIZER_BLOB_DRIFT");
-requireCondition(blob(authority.collector_wiring.gfs_provider_helper.path) === authority.collector_wiring.gfs_provider_helper.blob_sha, "EA5E3_GFS_HELPER_BLOB_DRIFT");
-requireCondition(blob(authority.collector_wiring.soil_provider_executor.path) === authority.collector_wiring.soil_provider_executor.blob_sha, "EA5E3_SOIL_EXECUTOR_BLOB_DRIFT");
-requireCondition(blob(authority.collector_wiring.kbs_authoritative_late_decoder.path) === authority.collector_wiring.kbs_authoritative_late_decoder.blob_sha, "EA5E3_KBS_LATE_DECODER_BLOB_DRIFT");
-requireCondition(blob(authority.runtime_wiring.a18c_runner.path) === authority.runtime_wiring.a18c_runner.blob_sha, "EA5E3_A18C_RUNNER_BLOB_DRIFT");
+for (const [name, binding] of Object.entries({
+  formal_retention: authority.collector_wiring.formal_raw_retention_adapter,
+  evidence_ingress: authority.collector_wiring.canonical_evidence_ingress,
+  canonicalizer: authority.collector_wiring.canonicalizer,
+  gfs_helper: authority.collector_wiring.gfs_provider_helper,
+  soil_executor: authority.collector_wiring.soil_provider_executor,
+  kbs_late_decoder: authority.collector_wiring.kbs_authoritative_late_decoder,
+  a18c_runner: authority.runtime_wiring.a18c_runner,
+})) {
+  requireCondition(blob(binding.path) === binding.blob_sha, `EA5E3_BOUND_COMPONENT_BLOB_DRIFT:${name}`);
+}
 
-requireCondition(amendment11.includes("PROVIDER_AVAILABILITY_WATERMARK_V1") && amendment11.includes("There is no fixed `T+432` normative cutoff") && amendment11.includes("formal_oldest_eligible_watermark_required = true"), "EA5E3_AMENDMENT11_WATERMARK_AUTHORITY_REQUIRED");
-requireCondition(amendment18.includes("EA5E3") && amendment18.includes("2026-08-17T08:00:00.000Z") && amendment18.includes("A18D"), "EA5E3_AMENDMENT18_SEQUENCE_REQUIRED");
-requireCondition(activation.ea5e2_operational_activation_qualified === true && activation.temporal_authority === "PROVIDER_AVAILABILITY_WATERMARK_V1" && activation.ea5e3_authorized === false, "EA5E3_OPERATIONAL_ACTIVATION_PREDECESSOR_REQUIRED");
-requireCondition(a18c.selected_epoch.epoch_id === EPOCH && a18c.formal_store.database_name === DB, "EA5E3_A18C_REPLACEMENT_BINDING_REQUIRED");
+requireCondition(amendment11.includes("PROVIDER_AVAILABILITY_WATERMARK_V1") && amendment11.includes("there is no fixed `T+432` normative cutoff") && amendment11.includes("formal_oldest_eligible_watermark_required = true"), "EA5E3_AMENDMENT11_WATERMARK_AUTHORITY_REQUIRED");
+requireCondition(amendment18.includes("EA5E3") && amendment18.includes(DEADLINE) && amendment18.includes("A18D"), "EA5E3_AMENDMENT18_SEQUENCE_REQUIRED");
+requireCondition(activation.effect_if_exact_head_proof_passes_and_candidate_merges?.ea5e2_operational_activation_qualified === true, "EA5E3_EA5E2_ACTIVATION_REQUIRED");
+requireCondition(activation.temporal_authority?.provider_temporal_authority === "PROVIDER_AVAILABILITY_WATERMARK_V1" && activation.temporal_authority?.freshness_is_late_authoritative_admission_gate === false, "EA5E3_EA5E2_WATERMARK_REQUIRED");
+requireCondition(activation.side_effect_boundary?.ea5e3_authorized === false && activation.effect_if_exact_head_proof_passes_and_candidate_merges?.ea5e3_authorized === false, "EA5E3_EA5E2_NONAUTHORIZATION_PREDECESSOR_REQUIRED");
+requireCondition(a18c.epoch?.epoch_id === EPOCH && a18c.formal_store?.database_name === DB && a18c.manifest_hash === authority.governing_authorities.a18c_replacement_manifest.semantic_manifest_sha256, "EA5E3_A18C_REPLACEMENT_BINDING_REQUIRED");
 
-requireCondition(authority.collector_wiring.entrypoint === COLLECTOR_PATH && authority.collector_wiring.workflow === WORKFLOW_PATH, "EA5E3_COLLECTOR_ENTRYPOINT_REQUIRED");
-requireCondition(authority.collector_wiring.collector_side_provider_access_authorized === true && authority.collector_wiring.runtime_side_provider_access_authorized === false, "EA5E3_PROVIDER_BOUNDARY_REQUIRED");
-requireCondition(authority.collector_wiring.formal_raw_retention_adapter.prefix === FORMAL_PREFIX && authority.collector_wiring.formal_raw_retention_adapter.raw_retention_before_decode_required === true, "EA5E3_RAW_RETENTION_BARRIER_REQUIRED");
-requireCondition(authority.collector_wiring.canonical_evidence_ingress.append_only_facts_only === true && authority.collector_wiring.canonical_evidence_ingress.raw_reverification_before_fact_transaction_required === true, "EA5E3_APPEND_ONLY_EVIDENCE_INGRESS_REQUIRED");
-requireCondition(authority.collector_wiring.preboundary_phase.available_to_runtime_at_lte_t_required === true && authority.collector_wiring.preboundary_phase.ingested_at_lte_t_required === true && authority.collector_wiring.preboundary_phase.post_t_future_forcing_capture_authorized === false && authority.collector_wiring.preboundary_phase.expired_gap_backfill_or_relabel_authorized === false, "EA5E3_PREBOUNDARY_CAUSALITY_REQUIRED");
-requireCondition(authority.collector_wiring.delayed_exact_phase.exact_interval_start === "T-PT1H" && authority.collector_wiring.delayed_exact_phase.exact_interval_end === "T" && authority.collector_wiring.delayed_exact_phase.fixed_cutoff_authorized === false, "EA5E3_DELAYED_EXACT_INTERVAL_REQUIRED");
-requireCondition(authority.collector_wiring.operational_trigger.cadence === "PT1H" && authority.collector_wiring.operational_trigger.cron_minute_is_normative_temporal_authority === false && authority.collector_wiring.operational_trigger.github_schedule_is_provider_publication_sla === false, "EA5E3_OPERATIONAL_TRIGGER_NONNORMATIVE_REQUIRED");
+const wiring = authority.collector_wiring;
+requireCondition(wiring.entrypoint === COLLECTOR_PATH && wiring.workflow === WORKFLOW_PATH, "EA5E3_COLLECTOR_ENTRYPOINT_REQUIRED");
+requireCondition(wiring.collector_side_provider_access_authorized === true && wiring.runtime_side_provider_access_authorized === false, "EA5E3_PROVIDER_BOUNDARY_REQUIRED");
+requireCondition(wiring.formal_raw_retention_adapter.prefix === FORMAL_PREFIX && wiring.formal_raw_retention_adapter.raw_retention_before_decode_required === true && wiring.formal_raw_retention_adapter.content_addressed_idempotency_required === true, "EA5E3_RAW_RETENTION_BARRIER_REQUIRED");
+requireCondition(wiring.canonical_evidence_ingress.append_only_facts_only === true && wiring.canonical_evidence_ingress.raw_reverification_before_fact_transaction_required === true, "EA5E3_APPEND_ONLY_EVIDENCE_INGRESS_REQUIRED");
+requireCondition(wiring.preboundary_phase.available_to_runtime_at_lte_t_required === true && wiring.preboundary_phase.ingested_at_lte_t_required === true && wiring.preboundary_phase.same_complete_gfs_cycle_required === true && wiring.preboundary_phase.post_t_future_forcing_capture_authorized === false && wiring.preboundary_phase.expired_gap_backfill_or_relabel_authorized === false, "EA5E3_PREBOUNDARY_CAUSALITY_REQUIRED");
+requireCondition(wiring.delayed_exact_phase.exact_interval_start === "T-PT1H" && wiring.delayed_exact_phase.exact_interval_end === "T" && wiring.delayed_exact_phase.actual_evidence_snapshot_time_required === true && wiring.delayed_exact_phase.fixed_cutoff_authorized === false && wiring.delayed_exact_phase.oldest_elapsed_incomplete_slot_first === true, "EA5E3_DELAYED_EXACT_INTERVAL_REQUIRED");
+requireCondition(wiring.operational_trigger.cadence === "PT1H" && wiring.operational_trigger.cron_minute_is_normative_temporal_authority === false && wiring.operational_trigger.github_schedule_is_provider_publication_sla === false && wiring.operational_trigger.provider_batch_arrival_replaces_scheduler_clock === false, "EA5E3_OPERATIONAL_TRIGGER_NONNORMATIVE_REQUIRED");
 
 requireCondition(collector.includes("MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py"), "EA5E3_CORRECTED_KBS_DECODER_REQUIRED");
 requireCondition(collector.includes("S3CompatiblePrivateRawEvidenceRetentionAdapterV1") && collector.includes("PostgresExternalFormalEvidenceIngressV1"), "EA5E3_FORMAL_RETENTION_AND_INGRESS_REQUIRED");
 requireCondition(collector.includes(FORMAL_PREFIX) && collector.includes(DB), "EA5E3_EXACT_FORMAL_RESOURCE_BINDING_REQUIRED");
 requireCondition(collector.includes("EA5E3_PREBOUNDARY_GAP_EXPIRED_FAIL_CLOSED") && collector.includes("EA5E3_DELAYED_PARTIAL_DATASET_FAIL_CLOSED"), "EA5E3_FAIL_CLOSED_GAP_AND_PARTIAL_REQUIRED");
-requireCondition(!collector.includes("McftCap09ExternalFormalCollectorPhaseOrchestratorV1"), "EA5E3_FIXED_LAG_PHASE_ORCHESTRATOR_FORBIDDEN");
-requireCondition(!collector.includes("PRE_OFFSET_MINUTES") && !collector.includes("LATE_OFFSET_MINUTES") && !collector.includes("CUTOFF_OFFSET_MINUTES"), "EA5E3_FIXED_LAG_CONSTANTS_FORBIDDEN");
+requireCondition(!collector.includes("McftCap09ExternalFormalCollectorPhaseOrchestratorV1") && !collector.includes("PRE_OFFSET_MINUTES") && !collector.includes("LATE_OFFSET_MINUTES") && !collector.includes("CUTOFF_OFFSET_MINUTES"), "EA5E3_FIXED_LAG_IMPLEMENTATION_FORBIDDEN");
 requireCondition(!collector.includes("ea5e2_readiness") && !collector.includes("TRANSIENT_ROOT_PREFIX"), "EA5E3_QUALIFICATION_CARRIER_FORBIDDEN");
 
 requireCondition(workflow.includes("cron: '0 * * * *'") && workflow.includes("cron_minute_is_normative_temporal_authority"), "EA5E3_HOURLY_TRIGGER_REQUIRED");
