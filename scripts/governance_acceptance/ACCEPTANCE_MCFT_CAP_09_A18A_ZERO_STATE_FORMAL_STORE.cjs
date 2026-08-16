@@ -26,7 +26,9 @@ assert.equal(auth.nonclaims.formal_o00_started, false);
 assert.equal(auth.nonclaims.formal_execution_count, '0/24');
 assert.equal(auth.next_legal_frontier_after_effectiveness, 'A18B_PREWINDOW_A0_AND_REPLACEMENT_RUNTIME_CONFIG_CHAIN');
 
-assert(amendment.includes('A18A_ZERO_STATE_FORMAL_STORE_IDENTITY_AND_SCHEMA_PREFLIGHT'), 'AMENDMENT18_A18A_FRONTIER_REQUIRED');
+assert(amendment.includes('A18A  zero-state Formal store identity + schema preflight'), 'AMENDMENT18_A18A_FRONTIER_REQUIRED');
+assert(amendment.includes('Creating the new empty store is a store-identity rebase, not a migration of canonical facts.'), 'AMENDMENT18_NO_CANONICAL_FACT_MIGRATION_REQUIRED');
+assert(amendment.includes('contain zero canonical facts, zero active lineage, zero State/latest checkpoint/latest Forecast, zero scheduler slots/cursor and zero Runtime lease before bootstrap'), 'AMENDMENT18_ZERO_STATE_STORE_REQUIRED');
 assert(preflight.includes('BEGIN TRANSACTION READ ONLY'), 'A18A_READ_ONLY_PREFLIGHT_REQUIRED');
 assert(preflight.includes('A18A_HISTORICAL_STORE_REUSE_FORBIDDEN'), 'A18A_OLD_STORE_FAIL_CLOSED_REQUIRED');
 assert(preflight.includes('A18A_COLUMN_FINGERPRINT_DRIFT'), 'A18A_COLUMN_FINGERPRINT_REQUIRED');
