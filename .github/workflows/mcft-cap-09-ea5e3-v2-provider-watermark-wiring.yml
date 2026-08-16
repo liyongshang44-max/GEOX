@@ -69,8 +69,7 @@ jobs:
           scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_FORMAL_V2_PROVIDER_WATERMARK_COLLECTOR.ts
           EOF
           )
-          actual=$(printf '%s\n' "${changed[@]}")
-          test "$actual" = "$expected"
+          test "$(printf '%s\n' "${changed[@]}")" = "$expected"
 
       - uses: pnpm/action-setup@v4
         with:
@@ -83,8 +82,15 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install repository dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install repository and exact provider-decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
 
       - name: Typecheck production collector entrypoint
         run: pnpm exec tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --skipLibCheck --types node scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_FORMAL_V2_PROVIDER_WATERMARK_COLLECTOR.ts
