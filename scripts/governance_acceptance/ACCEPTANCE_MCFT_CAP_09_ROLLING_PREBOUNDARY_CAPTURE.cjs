@@ -7,7 +7,7 @@ const AMENDMENT = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-P
 const WORKFLOW = ".github/workflows/mcft-cap-09-rolling-preboundary-capture.yml";
 const PLANNER = "scripts/runtime_acceptance/PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs";
 const ASSEMBLER = "scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs";
-const PROVIDER_RUNNER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts";
+const PROVIDER_RUNNER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts";
 
 function read(path) {
   if (!fs.existsSync(path)) throw new Error(`MCFT_CAP09_ROLLING_PREBOUNDARY_FILE_REQUIRED:${path}`);
@@ -87,7 +87,7 @@ requireAll(workflow, [
   "MCFT_CAP09_ROLLING_PREBOUNDARY_EXACT_MAIN_DRIFT",
   "PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs plan",
   "MCFT_EA5E2_LIVE_PHASE: PRE_BOUNDARY_CAUSAL",
-  "RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
+  "RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
   "ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs",
   "retention-days: 2",
   "kbs_daily_batch_required_at_capture!==false",
@@ -107,6 +107,7 @@ for (const forbidden of [
   "T+432",
   "T+07:12",
   "T+07:17",
+  "RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
 ]) {
   if (workflow.includes(forbidden)) throw new Error(`MCFT_CAP09_ROLLING_PREBOUNDARY_WORKFLOW_FORBIDDEN_DEPENDENCY:${forbidden}`);
 }
