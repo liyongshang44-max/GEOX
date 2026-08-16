@@ -54,7 +54,7 @@
   "formal_window_input_manifest": {
     "manifest_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-FORMAL-WINDOW-INPUT-MANIFEST-V2.json",
     "manifest_blob_sha": "eda053531b2f9164466d41f19ada2a25fc3dd04a",
-    "manifest_content_sha256": "PENDING_EXACT_HEAD_SHA256_DISCOVERY",
+    "manifest_content_sha256": "sha256:f5a1b092038c03504dc5213cdc3202bc8ffdc1aebec43a25f16a8e615dc17c31",
     "sha256_discovery_rule": "FAIL_CLOSED_ON_EXACT_HEAD_AND_REPLACE_ONLY_WITH_GATE_REPORTED_ACTUAL_SHA256",
     "slot_count": 24,
     "selection_mode": "EXPLICIT_REF_HASH_PIN_ONLY",
