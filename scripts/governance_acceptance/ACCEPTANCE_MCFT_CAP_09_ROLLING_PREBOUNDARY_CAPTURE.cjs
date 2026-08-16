@@ -113,6 +113,9 @@ for (const forbidden of [
 
 requireAll(providerRunner, [
   "PRE_BOUNDARY_CAUSAL",
+  "process.env.GITHUB_WORKFLOW === \"mcft-cap-09-rolling-preboundary-capture\" ? 0 : 5",
+  "const latestIngressStartMs = Date.parse(addMinutes(target, -MIN_INGRESS_MARGIN_MINUTES));",
+  "if (Date.parse(canonicalizedAt) > latestIngressStartMs) throw new Error(\"EA5E2_PREBOUNDARY_MINIMUM_INGRESS_MARGIN_LOST\")",
   "soil_observation_inside_t_minus_15_to_t: true",
   "gfs_same_cycle_pair: true",
   "rehydration_manifest",
@@ -120,12 +123,19 @@ requireAll(providerRunner, [
   "formal_r2_write_count: 0",
 ], "MCFT_CAP09_ROLLING_PREBOUNDARY_EXISTING_RUNNER_CAPABILITY_REQUIRED");
 
+if (providerRunner.includes("const MIN_INGRESS_MARGIN_MINUTES = 5;")) {
+  throw new Error("MCFT_CAP09_ROLLING_PREBOUNDARY_T_MINUS_5_DEADLINE_FORBIDDEN");
+}
+
 console.log(JSON.stringify({
-  schema_version: "geox_mcft_cap09_rolling_preboundary_capture_acceptance_v1",
+  schema_version: "geox_mcft_cap09_rolling_preboundary_capture_acceptance_v2",
   status: "PASS",
   temporal_authority: "PROVIDER_AVAILABILITY_WATERMARK_V1",
   schedule: "hourly",
   candidate_retention_hours: 36,
+  rolling_preboundary_ingress_deadline: "T",
+  historical_nonrolling_ingress_margin_minutes: 5,
+  causal_upper_bound: "available_to_runtime_at<=T && ingested_at<=T",
   captured_families: ["soil_moisture_observation_v1", "future_weather_assumption_v1", "future_et0_assumption_v1"],
   kbs_daily_batch_required_at_capture: false,
   crop_authority_required_at_capture: false,
