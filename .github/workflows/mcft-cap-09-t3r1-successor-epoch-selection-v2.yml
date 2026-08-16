@@ -1,0 +1,137 @@
+name: mcft-cap-09-t3r1-successor-epoch-selection-v2
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t3r1-successor-epoch-selection-v2.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-EPOCH-SELECTION-V2.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_EPOCH_SELECTION_V2.cjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-t3r1-successor-epoch-selection-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  exact-head-t3r1-successor-epoch-selection-v2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GEOX_MCFT_CAP09_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL || secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+      FORMAL_WINDOW_ENABLED: ${{ vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact post-scan protected-main base and deadline
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}'
+          test "$base" = '53cf1e48b7e105477e64c8b1e69afbb53e78be00' || { echo "T3R1_SELECTION_BASE_DRIFT:$base" >&2; exit 1; }
+          now="$(date -u +%s)"
+          deadline="$(date -u -d '2026-08-16T08:00:00Z' +%s)"
+          test "$now" -lt "$deadline" || { echo 'T3R1_SELECTION_EFFECTIVENESS_DEADLINE_EXPIRED' >&2; exit 1; }
+          echo "base_sha=$base" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Formal bindings remain fail-closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GEOX_MCFT_CAP09_S6_DATABASE_URL:-}" || { echo 'T3R1_SELECTION_FORMAL_DATABASE_URL_REQUIRED' >&2; exit 1; }
+          test "${FORMAL_WINDOW_ENABLED:-false}" != 'true' || { echo 'T3R1_SELECTION_FORMAL_WINDOW_MUST_REMAIN_DISABLED' >&2; exit 1; }
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prove exact three-file selection authority boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_EPOCH_SELECTION_V2.cjs
+
+      - name: Verify effective whole-window scan chain
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/3189")"
+          echo "$pr" | jq -e '.merged_at == "2026-08-16T07:23:27Z" and .head.sha == "92eb820faec5e5f3cbce6a33478aff72c4427bcb" and .merge_commit_sha == "53cf1e48b7e105477e64c8b1e69afbb53e78be00"' >/dev/null
+          run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/31933393595")"
+          echo "$run" | jq -e '.head_sha == "92eb820faec5e5f3cbce6a33478aff72c4427bcb" and .status == "completed" and .conclusion == "success"' >/dev/null
+          artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9259939190")"
+          echo "$artifact" | jq -e '.expired == false and .digest == "sha256:fea96c41d4690e1ddffbcdd1855642a3f31a6426743aa0cf6b260ac5d0d59014"' >/dev/null
+
+      - name: Independently rederive selected 24-slot T3R1 crop contexts
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const crypto = require('crypto');
+          const authority = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-EPOCH-SELECTION-V2.json','utf8'));
+          const crop = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json','utf8'));
+          function canonicalJson(value){if(value===undefined)throw new Error('UNDEFINED_FORBIDDEN');if(typeof value==='number'){if(!Number.isFinite(value))throw new Error('NON_FINITE_NUMBER');return Object.is(value,-0)?'0':JSON.stringify(value);}if(value===null||typeof value==='string'||typeof value==='boolean')return JSON.stringify(value);if(Array.isArray(value))return `[${value.map(canonicalJson).join(',')}]`;if(typeof value==='object')return `{${Object.keys(value).sort().map(k=>`${JSON.stringify(k)}:${canonicalJson(value[k])}`).join(',')}}`;throw new Error('UNSUPPORTED_CANONICAL_TYPE');}
+          const semhash = value => `sha256:${crypto.createHash('sha256').update(canonicalJson(value),'utf8').digest('hex')}`;
+          const stageAt=(hours,v)=>{const [a,b,c,d]=v;if(hours<0)return 'PRE_PLANTING';if(hours<a*24)return 'INITIAL';if(hours<(a+b)*24)return 'DEVELOPMENT';if(hours<(a+b+c)*24)return 'MID';if(hours<(a+b+c+d)*24)return 'LATE';return 'POST_MODEL_SEASON';};
+          const o00=Date.parse('2026-08-17T20:00:00.000Z');
+          const plantingStart=Date.parse(crop.planting_authority.possible_event_window_utc.start_inclusive);
+          const plantingEnd=Date.parse(crop.planting_authority.possible_event_window_utc.end_exclusive);
+          const variants=crop.model_stage_prior.variant_stage_lengths_days;
+          let minimumClearance=Infinity;
+          for(let i=0;i<24;i+=1){const t=o00+i*3600000;const currentMin=(t-plantingEnd)/3600000;const currentMax=(t-plantingStart)/3600000;const guardMin=(t-6*3600000-plantingEnd)/3600000;const guardMax=(t+30*3600000-plantingStart)/3600000;const stages=[];let clearance=Infinity;for(const v of variants){const ss=[currentMin,currentMax,guardMin,guardMax].map(x=>stageAt(x,v));if(new Set(ss).size!==1)throw new Error(`T3R1_SELECTION_STAGE_TRANSITION_RISK:${i}`);stages.push(ss[0]);clearance=Math.min(clearance,(v[0]+v[1]+v[2])*24-guardMax);}if(new Set(stages).size!==1||stages[0]!=='MID')throw new Error(`T3R1_SELECTION_NO_MID_CONSENSUS:${i}`);const logicalTime=new Date(t).toISOString();const hash=semhash({authority_ref:'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json',authority_blob_sha:'757e4b9f4fdcd631eea97fca85614a1b61ef0c4a',derived_context_authority:'FORMAL_DERIVED_CROP_WATER_USE_STAGE_CONTEXT_V2',crop_stage_code:'MID',derivation_authority_time:logicalTime,observed_biological_stage_claimed:false,field_calibration_status:'NOT_FIELD_CALIBRATED'});const expected=authority.slot_contexts[i];if(expected.slot_id!==`O${String(i).padStart(2,'0')}`||expected.logical_time!==logicalTime||expected.crop_stage_context_hash!==hash||expected.minimum_hours_to_next_stage_after_forward_guard!==clearance)throw new Error(`T3R1_SELECTION_CONTEXT_MISMATCH:${i}`);minimumClearance=Math.min(minimumClearance,clearance);}
+          if(minimumClearance!==75)throw new Error(`T3R1_SELECTION_MIN_CLEARANCE_MISMATCH:${minimumClearance}`);
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_EPOCH_SELECTION_V2_DERIVATION_RESULT.json',JSON.stringify({schema_version:'geox_mcft_cap09_t3r1_successor_epoch_selection_derivation_result_v2',status:'PASS',selected_o00:'2026-08-17T20:00:00.000Z',selected_o23:'2026-08-18T19:00:00.000Z',slot_count:24,all_slots_stage_code:'MID',minimum_forward_guard_clearance_hours:75,all_slot_context_hashes_verified:true,future_observations_used:false},null,2)+'\n');
+
+      - name: Read-only verify T3R1 Formal A0 and scheduler-zero boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { Pool } from 'pg';
+          const pool=new Pool({connectionString:process.env.GEOX_MCFT_CAP09_S6_DATABASE_URL,max:2});
+          try {
+            const client=await pool.connect();
+            try {
+              await client.query('BEGIN TRANSACTION READ ONLY');
+              const identity=await client.query("SELECT current_database() AS db, current_setting('neon.project_id',true) AS project_id, current_setting('neon.branch_id',true) AS branch_id");
+              const id=identity.rows[0];
+              if(id?.db!=='geox_mcft_cap09_s6_formal_t3r1_24h'||id?.project_id!=='delicate-glade-62464340'||id?.branch_id!=='br-cold-dust-a6j6aymz')throw new Error('T3R1_SELECTION_FORMAL_DB_IDENTITY_MISMATCH');
+              const sched=await client.query('SELECT (SELECT count(*)::int FROM twin_shadow_online_scheduler_slot_v1) AS slots,(SELECT count(*)::int FROM twin_shadow_online_scheduler_cursor_v1) AS cursors');
+              if(Number(sched.rows[0]?.slots)!==0||Number(sched.rows[0]?.cursors)!==0)throw new Error('T3R1_SELECTION_FORMAL_WINDOW_ALREADY_STARTED');
+              const state=await client.query("SELECT record_json->'payload' AS p FROM facts WHERE record_json->>'type'='twin_state_estimate_v1' AND record_json#>>'{payload,field_id}'='field_kbs_mcse_t3r1' AND record_json#>>'{payload,zone_id}'='zone_kbs_mcse_t3r1_crop_formal_v1'");
+              if(state.rows.length!==1)throw new Error('T3R1_SELECTION_EXACT_A0_STATE_REQUIRED');
+              const p=state.rows[0].p;
+              if(p.logical_time!=='2026-08-15T10:00:00.000Z'||p.runtime_config_ref!=='external_formal_runtime_config_49959a28cfc9eb357bf18f9d'||p.runtime_config_hash!=='sha256:5f11788fd049a3eae190d566e6faa28f428637e11f2c90b4e0aaea67e6f14e48')throw new Error('T3R1_SELECTION_A0_ANCHOR_MISMATCH');
+              await client.query('COMMIT');
+            } finally { client.release(); }
+          } finally { await pool.end(); }
+          NODE
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-t3r1-successor-epoch-selection-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_EPOCH_SELECTION_V2_GATE_RESULT.json
+            acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_EPOCH_SELECTION_V2_DERIVATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
