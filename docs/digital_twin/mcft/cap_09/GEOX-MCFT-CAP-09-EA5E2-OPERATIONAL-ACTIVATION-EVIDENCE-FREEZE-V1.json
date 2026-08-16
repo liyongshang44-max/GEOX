@@ -1,0 +1,111 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5e2_operational_activation_evidence_freeze_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-EVIDENCE-FREEZE-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "sub_lifecycle": "S6-EA5E2-OPERATIONAL-ACTIVATION-EVIDENCE-FREEZE",
+  "record_status": "PREPARED_SCHEMA_NOT_EFFECTIVE_PENDING_NEW_PROTECTED_MAIN_LIVE_PASS",
+  "base_protected_main_sha": "5f7e534b2db41e1a6e8bc793d0fa5d87c1639289",
+  "protected_main_subject_sha": "5f7e534b2db41e1a6e8bc793d0fa5d87c1639289",
+  "effectiveness_rule": "EXACT_THREE_FILE_HEAD_PROOF_PASS_AND_MERGE_TO_UNCHANGED_PROTECTED_MAIN",
+  "authority_precedence": [
+    "GEOX-MCFT-CAP-09-TASK",
+    "AMENDMENT_08_IMPLEMENTATION_ACTIVATION_QUALIFICATION_SEPARATION_AUTHORITY",
+    "AMENDMENT_11_PROVIDER_AVAILABILITY_WATERMARK_AUTHORITY",
+    "GEOX-MCFT-CAP-09-POST-ACTIVATION-READINESS-AUDIT-V1",
+    "PROTECTED_MAIN_REPOSITORY_FACTS",
+    "IMMUTABLE_GITHUB_ACTIONS_RUN_AND_ARTIFACT_METADATA"
+  ],
+  "temporal_authority": {
+    "provider_temporal_authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "provider_publication_cadence": "DAILY_BATCH",
+    "observation_resolution": "HOURLY",
+    "historical_online_freshness_diagnostic_hours": 6,
+    "freshness_is_late_authoritative_admission_gate": false,
+    "fixed_lag_7h_normative_authority": false,
+    "t_plus_0630_collector_normative_authority": false,
+    "t_plus_0712_cutoff_normative_authority": false,
+    "t_plus_0717_observer_normative_authority": false,
+    "evidence_snapshot_time_actual_execution_required": true,
+    "source_substitution_authorized": false,
+    "timestamp_relabel_authorized": false,
+    "future_forcing_post_t_availability_authorized": false
+  },
+  "live_proof": {
+    "workflow_name": "mcft-cap-09-ea5e2-rolling-operational-activation-live",
+    "workflow_run_id": null,
+    "artifact_id": null,
+    "artifact_digest": null,
+    "target_t": null,
+    "evidence_snapshot_time": null
+  },
+  "producer_proof": {
+    "subject_sha": null,
+    "workflow_run_id": null,
+    "artifact_id": null,
+    "artifact_digest": null,
+    "target_t": null
+  },
+  "exact_head_successor_qualification": {
+    "subject_sha": "5f7e534b2db41e1a6e8bc793d0fa5d87c1639289",
+    "workflow_run_id": 31932347628,
+    "artifact_id": 9259661292,
+    "artifact_digest": "sha256:02b603b578612090addda92e653d3a27febe18e6fc4bd0752daa187f6d95a208",
+    "status": "PASS"
+  },
+  "frozen_evidence": {
+    "kbs_latest_timestamp": null,
+    "kbs_computed_age_hours": null,
+    "target_t": null,
+    "pre_boundary_collector_observed_at": null,
+    "late_exact_hour_collector_observed_at": null,
+    "scheduler_eligibility_time": null,
+    "exact_interval_cutoff_time": null,
+    "runtime_observer_expected_at": null,
+    "runtime_observer_started_at": null,
+    "runtime_observer_start_skew_minutes": null,
+    "evidence_snapshot_time": null,
+    "same_cycle_gfs_identity": null,
+    "private_retention_receipt_hash_metadata": {
+      "kbs_exact_t": null,
+      "gfs_preboundary": null,
+      "soil_preboundary": null
+    },
+    "isolated_database_evidence_hashes": [],
+    "single_t_crop_context_hash": null,
+    "external_cap04_operation_variant": null,
+    "external_cap04_forecast_status": null,
+    "external_cap04_forecast_point_count": null
+  },
+  "side_effect_boundary": {
+    "source_substitution_count": 0,
+    "timestamp_relabel_count": 0,
+    "runtime_provider_request_count": 0,
+    "formal_database_write_count": 0,
+    "formal_raw_prefix_write_count": 0,
+    "formal_scheduler_write_count": 0,
+    "formal_canonical_runtime_write_count": 0,
+    "formal_window_started": false,
+    "ea5e3_authorized": false
+  },
+  "effect_if_exact_head_proof_passes_and_candidate_merges": {
+    "ea5e2_operational_activation_qualified": true,
+    "ea5e3_authorized": false,
+    "formal_window_started": false,
+    "formal_execution_count": "0/24",
+    "mcft_cap09_completed": false,
+    "next_legal_frontier": "WHOLE_WINDOW_CROP_CONTEXT_SCAN"
+  },
+  "hard_nonclaims": [
+    "NO_EA5E3_AUTHORITY",
+    "NO_FORMAL_O00_START",
+    "NO_FORMAL_WINDOW_EXECUTION",
+    "NO_SUCCESSOR_EPOCH_SELECTION_FROM_THIS_FREEZE",
+    "NO_RECOMMENDATION_APPROVAL_AO_ACT_OR_DISPATCH",
+    "NO_PROVIDER_SOURCE_SUBSTITUTION",
+    "NO_FIXED_7H_OR_T_PLUS_0630_0712_0717_AUTHORITY_REVIVAL",
+    "NO_FRESHNESS_DIAGNOSTIC_AS_LATE_ADMISSION_GATE",
+    "NO_PRIVATE_RETENTION_REF_DISCLOSURE",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
