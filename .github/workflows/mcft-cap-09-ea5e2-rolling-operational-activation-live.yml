@@ -67,8 +67,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install exact repository dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
       - name: Typecheck rolling activation observer and evidence assembly runners
         run: |
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
