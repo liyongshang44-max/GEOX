@@ -15,7 +15,7 @@ import {
   type ExternalFormalRuntimeConfigPayloadV1,
 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";
 import { PostgresNextTickRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.js";
-import { executeExternalFormalCap04CandidateV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.js";
+import { executeExternalFormalCap04Amendment11CandidateV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_cap04_amendment11_candidate_execution_service_v1.js";
 import { PostgresExternalFormalEvidenceSourceV1 } from "../../apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.js";
 import type { ContinuationCropStageConfigurationContextV1 } from "../../apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.js";
 import type { PreparedNextTickInputV1 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
@@ -329,10 +329,11 @@ async function main(): Promise<void> {
       throw new Error(`EA5E2_ROLLING_ACTIVATION_EXACT_FIVE_DB_ONLY_RECORDS_REQUIRED:${loaded.selected_record_count}`);
     }
 
-    const candidate = executeExternalFormalCap04CandidateV1({
+    const candidate = executeExternalFormalCap04Amendment11CandidateV1({
       scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
       logical_time: targetT,
       created_at: observerCreatedAt,
+      evidence_snapshot_time: evidenceSnapshotTime,
       runtime_config: runtimeConfig,
       handoff,
       candidate_records: loaded.records,
