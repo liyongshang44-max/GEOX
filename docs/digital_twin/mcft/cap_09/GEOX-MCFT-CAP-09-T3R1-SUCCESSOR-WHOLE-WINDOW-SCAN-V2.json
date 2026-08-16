@@ -1,0 +1,81 @@
+{
+  "schema_version": "geox_mcft_cap09_t3r1_successor_whole_window_scan_authority_v2",
+  "authority_id": "GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-WHOLE-WINDOW-SCAN-V2",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "READ_ONLY_POST_ACTIVATION_SCAN_CANDIDATE",
+  "base_protected_main_sha": "68af52d1c6df8a32edad231e0425421ecfe31b4d",
+  "activation_effective_at": "2026-08-16T07:12:23.000Z",
+  "operational_activation_freeze": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-EVIDENCE-FREEZE-V1.json",
+    "blob_sha": "8b790d37dc0b9f253d168f58e8b0dac28dedc3f7",
+    "ea5e2_operational_activation_qualified": true
+  },
+  "crop_authority": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json",
+    "blob_sha": "757e4b9f4fdcd631eea97fca85614a1b61ef0c4a",
+    "site_id": "KBS_MCSE_T3R1",
+    "field_id": "field_kbs_mcse_t3r1",
+    "season_id": "season_2026_corn",
+    "hybrid_product_code": "P0306Q",
+    "planting_window_start_inclusive": "2026-05-20T04:00:00.000Z",
+    "planting_window_end_exclusive": "2026-05-21T04:00:00.000Z",
+    "backward_stability_hours": 6,
+    "forward_transition_guard_hours": 30,
+    "all_six_fao_variants_required": true,
+    "future_observations_authorized": false
+  },
+  "window_contract": {
+    "exact_slot_count": 24,
+    "minimum_lead_hours": 36,
+    "ea5e3_readiness_offset_hours": -12,
+    "actual_utc_slots_required": true,
+    "successor_epoch_selection_is_separate_authority": true
+  },
+  "expected_scan_result": {
+    "status": "PASS",
+    "legal_candidate_count_after_activation": 75,
+    "earliest_legal_candidate_if_selected_at_activation": {
+      "o00": "2026-08-17T20:00:00.000Z",
+      "o23": "2026-08-18T19:00:00.000Z",
+      "stage": "MID",
+      "latest_selection_effectiveness_time": "2026-08-16T08:00:00.000Z",
+      "ea5e3_readiness_deadline": "2026-08-17T08:00:00.000Z"
+    },
+    "latest_complete_current_season_candidate": {
+      "o00": "2026-08-20T22:00:00.000Z",
+      "o23": "2026-08-21T21:00:00.000Z",
+      "stage": "MID",
+      "latest_selection_effectiveness_time": "2026-08-19T10:00:00.000Z",
+      "ea5e3_readiness_deadline": "2026-08-20T10:00:00.000Z"
+    },
+    "current_season_successor_window_exists": true
+  },
+  "authority_effect_if_exact_head_proof_passes_and_merges": {
+    "whole_window_crop_context_scan_effective": true,
+    "current_season_successor_window_exists": true,
+    "successor_epoch_selected": false,
+    "runtime_config_persistence_authorized": false,
+    "formal_database_write_authorized": false,
+    "r2_write_authorized": false,
+    "scheduler_write_authorized": false,
+    "canonical_runtime_write_authorized": false,
+    "ea5e3_authorized": false,
+    "formal_window_started": false,
+    "mcft_cap09_completed": false,
+    "next_legal_frontier": "SUCCESSOR_EPOCH_SELECTION_AUTHORITY"
+  },
+  "hard_nonclaims": [
+    "NO_SUCCESSOR_EPOCH_SELECTION_FROM_SCAN",
+    "NO_NEW_CROP_OR_SEASON_AUTHORITY",
+    "NO_FUTURE_OBSERVATION_USE",
+    "NO_RUNTIME_CONFIG_PERSISTENCE",
+    "NO_FORMAL_DATABASE_WRITE",
+    "NO_FORMAL_RAW_WRITE",
+    "NO_SCHEDULER_WRITE",
+    "NO_CANONICAL_RUNTIME_WRITE",
+    "NO_EA5E3_AUTHORITY",
+    "NO_FORMAL_O00_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
