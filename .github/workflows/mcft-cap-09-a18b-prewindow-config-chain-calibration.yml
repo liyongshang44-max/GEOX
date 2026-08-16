@@ -1,0 +1,115 @@
+name: mcft-cap-09-a18b-prewindow-config-chain-qualification
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v2.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A18B-PREWINDOW-A0-AND-REPLACEMENT-RUNTIME-CONFIG-CHAIN-V1.json'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18B_PREWINDOW_CONFIG_CHAIN_CALIBRATION.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A18B_PREWINDOW_CONFIG_CHAIN_QUALIFICATION.cjs'
+      - '.github/workflows/mcft-cap-09-a18b-prewindow-config-chain-calibration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXACT_BASE_SHA: '6e7b1ac08ca8f79d65d5c6ec0a57e0cbabb8e5c9'
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      TARGET_DATABASE_NAME: 'geox_mcft_cap09_s6_formal_t3r1_24h_v2'
+      SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Fail closed on exact base and five-file boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event_name }}" = "pull_request"
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_BASE_SHA"
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$HEAD_SHA" | sort)
+          printf '%s\n' "${changed[@]}"
+          test "${#changed[@]}" -eq 5
+          expected=$(cat <<'EOF'
+          .github/workflows/mcft-cap-09-a18b-prewindow-config-chain-calibration.yml
+          apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v2.ts
+          docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A18B-PREWINDOW-A0-AND-REPLACEMENT-RUNTIME-CONFIG-CHAIN-V1.json
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A18B_PREWINDOW_CONFIG_CHAIN_QUALIFICATION.cjs
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18B_PREWINDOW_CONFIG_CHAIN_CALIBRATION.ts
+          EOF
+          )
+          actual=$(printf '%s\n' "${changed[@]}")
+          test "$actual" = "$expected"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck A18B builder and qualification
+        run: pnpm exec tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --skipLibCheck --types node apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v2.ts scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18B_PREWINDOW_CONFIG_CHAIN_CALIBRATION.ts
+
+      - name: Governance qualification
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A18B_PREWINDOW_CONFIG_CHAIN_QUALIFICATION.cjs
+
+      - name: Recompute and prove all frozen A18B pins
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18B_PREWINDOW_CONFIG_CHAIN_CALIBRATION.ts
+
+      - name: Derive v2 database URL without exposing secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_DATABASE_URL"
+          DATABASE_URL=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL); u.pathname="/"+process.env.TARGET_DATABASE_NAME; process.stdout.write(u.toString())')
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          echo "SOURCE_DATABASE_URL=" >> "$GITHUB_ENV"
+
+      - name: Re-prove A18A store remains zero-state READ ONLY
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE.ts
+
+      - name: Validate A18B nonclaims
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const q = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A18B_PREWINDOW_CONFIG_CHAIN_QUALIFICATION_RESULT.json','utf8'));
+          const z = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE_PREFLIGHT_RESULT.json','utf8'));
+          if (q.status !== 'PASS' || q.frozen_25_runtime_config_pins_equal_recomputation !== true) throw new Error('A18B_PIN_QUALIFICATION_NOT_PASS');
+          if (q.database_write_count !== 0 || q.runtime_config_write_count !== 0 || q.scheduler_write_count !== 0 || q.canonical_runtime_write_count !== 0) throw new Error('A18B_SIDE_EFFECT_FORBIDDEN');
+          if (q.ea5e3_authorized !== false || q.formal_o00_started !== false || q.formal_execution_count !== '0/24') throw new Error('A18B_NONCLAIM_REGRESSION');
+          if (z.status !== 'PASS' || z.zero_state_formal_store_qualified !== true) throw new Error('A18B_A18A_ZERO_STATE_REPROOF_FAIL');
+          if (z.zero_state_counts.facts_total !== 0 || z.zero_state_counts.checkpoint_total !== 0 || z.zero_state_counts.scheduler_slot_total !== 0 || z.zero_state_counts.scheduler_cursor_total !== 0) throw new Error('A18B_ZERO_STATE_STORE_MUTATED');
+          NODE
+
+      - name: Upload immutable focused proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-a18b-prewindow-config-chain-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_A18B_*.json
+            acceptance-output/MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE_PREFLIGHT_RESULT.json
+          if-no-files-found: error
+          retention-days: 30
