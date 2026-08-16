@@ -1,0 +1,133 @@
+name: mcft-cap-09-amendment-18-prewindow-state-continuity
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment-18-prewindow-state-continuity.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_18_PREWINDOW_STATE_CONTINUITY.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-18-PREWINDOW-STATE-CONTINUITY-AND-FORMAL-STORE-REBASE-AUTHORITY.md'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-amendment18-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  exact-head-amendment18:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL || secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+      GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED: ${{ vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact base and fail-closed epoch deadline
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}'
+          test "$base" = 'e36a5bee68a15cd55cff8885f7e191a11109a612' || { echo "AMENDMENT18_BASE_DRIFT:$base" >&2; exit 1; }
+          test -n "${GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL:-}" || { echo 'AMENDMENT18_CURRENT_FORMAL_DB_REQUIRED' >&2; exit 1; }
+          test "${GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED:-false}" != 'true' || { echo 'AMENDMENT18_FORMAL_WINDOW_MUST_REMAIN_DISABLED' >&2; exit 1; }
+          now="$(date -u +%s)"
+          readiness="$(date -u -d '2026-08-17T08:00:00.000Z' +%s)"
+          o00="$(date -u -d '2026-08-17T20:00:00.000Z' +%s)"
+          test "$now" -lt "$readiness" || { echo 'AMENDMENT18_EA5E3_READINESS_DEADLINE_EXPIRED' >&2; exit 1; }
+          test "$now" -lt "$o00" || { echo 'AMENDMENT18_O00_ALREADY_PASSED' >&2; exit 1; }
+          echo "base_sha=$base" >> "$GITHUB_OUTPUT"
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prove exact three-file governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_18_PREWINDOW_STATE_CONTINUITY.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_18_PREWINDOW_STATE_CONTINUITY.cjs
+
+      - name: Prove live current-store continuity contradiction read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const {Client}=require('pg');
+          (async()=>{
+            const client=new Client({connectionString:process.env.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL,application_name:'mcft-cap09-amendment18-readonly'});
+            await client.connect();
+            try {
+              await client.query('BEGIN TRANSACTION READ ONLY');
+              const ident=(await client.query("SELECT current_database() AS db,current_setting('neon.project_id',true) AS project,current_setting('neon.branch_id',true) AS branch")).rows[0];
+              if(ident.db!=='geox_mcft_cap09_s6_formal_t3r1_24h'||ident.project!=='delicate-glade-62464340'||ident.branch!=='br-cold-dust-a6j6aymz')throw new Error('AMENDMENT18_CURRENT_STORE_IDENTITY_DRIFT');
+              const counts=(await client.query(`SELECT
+                (SELECT count(*)::int FROM facts) AS facts,
+                (SELECT count(*)::int FROM facts WHERE record_json->>'type'='twin_runtime_config_v1') AS configs,
+                (SELECT count(*)::int FROM twin_shadow_online_scheduler_slot_v1) AS slots,
+                (SELECT count(*)::int FROM twin_shadow_online_scheduler_cursor_v1) AS cursors`)).rows[0];
+              if(Number(counts.facts)!==59||Number(counts.configs)!==49||Number(counts.slots)!==0||Number(counts.cursors)!==0)throw new Error('AMENDMENT18_CURRENT_STORE_INVENTORY_DRIFT');
+              const cp=(await client.query(`SELECT f.record_json->'payload' AS object
+                FROM twin_runtime_checkpoint_latest_index_v1 i
+                JOIN facts f ON f.fact_id=i.source_fact_id
+                WHERE i.field_id='field_kbs_mcse_t3r1' AND i.zone_id='zone_kbs_mcse_t3r1_crop_formal_v1'`)).rows;
+              if(cp.length!==1)throw new Error('AMENDMENT18_EXACT_ONE_CURRENT_CHECKPOINT_REQUIRED');
+              const checkpoint=cp[0].object;
+              if(checkpoint.logical_time!=='2026-08-15T10:00:00.000Z')throw new Error('AMENDMENT18_CURRENT_CHECKPOINT_TIME_DRIFT');
+              if(checkpoint.payload?.next_tick_logical_time!=='2026-08-15T11:00:00.000Z')throw new Error('AMENDMENT18_CURRENT_NEXT_TICK_DRIFT');
+              if(checkpoint.runtime_config_ref!=='external_formal_runtime_config_49959a28cfc9eb357bf18f9d')throw new Error('AMENDMENT18_CURRENT_A0_REF_DRIFT');
+              if(checkpoint.payload.next_tick_logical_time==='2026-08-17T20:00:00.000Z')throw new Error('AMENDMENT18_CONTRADICTION_NOT_PRESENT');
+              await client.query('COMMIT');
+              const out={schema_version:'geox_mcft_cap09_amendment18_live_readonly_result_v1',status:'PASS',database_name:ident.db,neon_project_id:ident.project,neon_branch_id:ident.branch,total_fact_count:Number(counts.facts),runtime_config_count:Number(counts.configs),scheduler_slot_count:Number(counts.slots),scheduler_cursor_count:Number(counts.cursors),current_checkpoint_logical_time:checkpoint.logical_time,current_checkpoint_next_tick_logical_time:checkpoint.payload.next_tick_logical_time,selected_o00:'2026-08-17T20:00:00.000Z',canonical_continuity_gap_hours:(Date.parse('2026-08-17T20:00:00.000Z')-Date.parse(checkpoint.payload.next_tick_logical_time))/3600000,current_store_write_count:0,formal_window_started:false,ea5e3_authorized:false};
+              fs.mkdirSync('acceptance-output',{recursive:true});
+              fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT18_LIVE_READONLY_RESULT.json',JSON.stringify(out,null,2)+'\n');
+              console.log(JSON.stringify(out));
+            } catch(e) {
+              try{await client.query('ROLLBACK')}catch{}
+              throw e;
+            } finally { await client.end(); }
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Verify no semantic relaxation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const live=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT18_LIVE_READONLY_RESULT.json','utf8'));
+          const gov=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT18_GOVERNANCE_RESULT.json','utf8'));
+          if(live.status!=='PASS'||live.current_store_write_count!==0||live.canonical_continuity_gap_hours!==57)throw new Error('AMENDMENT18_LIVE_PROOF_INVALID');
+          if(gov.status!=='PASS'||gov.canonical_pt1h_continuity_preserved!==true||gov.replacement_zero_state_formal_store_required!==true||gov.ea5e3_authorized!==false||gov.formal_execution_count!=='0/24')throw new Error('AMENDMENT18_GOVERNANCE_PROOF_INVALID');
+          console.log(JSON.stringify({status:'PASS',continuity_gap_hours:57,replacement_store_required:true}));
+          NODE
+
+      - name: Upload immutable Amendment-18 proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-amendment18-prewindow-state-continuity-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_AMENDMENT18_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT18_LIVE_READONLY_RESULT.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-18-PREWINDOW-STATE-CONTINUITY-AND-FORMAL-STORE-REBASE-AUTHORITY.md
+          if-no-files-found: error
+          retention-days: 90
