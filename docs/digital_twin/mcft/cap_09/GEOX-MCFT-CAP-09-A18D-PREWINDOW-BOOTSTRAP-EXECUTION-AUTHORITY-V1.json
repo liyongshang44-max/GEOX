@@ -1,0 +1,176 @@
+{
+  "schema_version": "geox_mcft_cap09_a18d_prewindow_bootstrap_execution_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-A18D-PREWINDOW-BOOTSTRAP-EXECUTION-AUTHORITY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "A18D_PREWINDOW_A0_BOOTSTRAP_AND_POST_BOOTSTRAP_CUTOVER_PROOF",
+  "record_status": "CANDIDATE_NOT_EFFECTIVE_UNTIL_EXACT_HEAD_PROOF_AND_PROTECTED_MAIN_MERGE",
+  "exact_predecessor_protected_main": "f8480f468dbe2dff24629903d20e45daf7dc08e6",
+  "selected_epoch": {
+    "epoch_id": "mcft_cap09_external_formal_window_epoch_20260817t200000z_v2",
+    "prewindow_a0": "2026-08-17T19:00:00.000Z",
+    "o00": "2026-08-17T20:00:00.000Z",
+    "o23": "2026-08-18T19:00:00.000Z",
+    "slot_count": 24,
+    "logical_slot_period": "PT1H"
+  },
+  "formal_store": {
+    "neon_project_id": "delicate-glade-62464340",
+    "neon_branch_id": "br-cold-dust-a6j6aymz",
+    "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h_v2",
+    "historical_database_name": "geox_mcft_cap09_s6_formal_t3r1_24h",
+    "historical_database_write_authorized": false,
+    "cross_store_fact_or_state_copy_authorized": false
+  },
+  "governing_authorities": {
+    "amendment_18": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-18-PREWINDOW-STATE-CONTINUITY-AND-FORMAL-STORE-REBASE-AUTHORITY.md",
+      "blob_sha": "bc9627dc4159dcb753e4f0cb1f05d4507962d510"
+    },
+    "ea5e3_a1_prewindow_a0_soil_correction": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E3-AMENDMENT-01-PREWINDOW-A0-SOIL-EVIDENCE-AUTHORITY.json",
+      "blob_sha": "217a9b80a770f0ed51d08b976e4e9a3020c9a7f9"
+    },
+    "a18b_runtime_config_chain": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A18B-PREWINDOW-A0-AND-REPLACEMENT-RUNTIME-CONFIG-CHAIN-V1.json",
+      "blob_sha": "09fa8cbc3e8114ff6c9f464e89a39f2feb1706ae"
+    },
+    "a18c_replacement_manifest": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A18C-REPLACEMENT-FORMAL-WINDOW-INPUT-MANIFEST-V3.json",
+      "blob_sha": "15645569a6fb939518d9519143b33b6cd4f4f541",
+      "semantic_manifest_sha256": "sha256:af017d2ec76143472c38ab4277c66ac9d66d9b59d02ac8a609e1faef927bd612"
+    }
+  },
+  "implementation_binding": {
+    "executor": {
+      "path": "scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V1.ts",
+      "blob_sha": "1eb6a7991dd40983a4d74922f8a737c8d124ddef"
+    },
+    "prewindow_authority_builder": {
+      "path": "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v2.ts",
+      "blob_sha": "5bfdf2fbc090d375c701dd360ad03f685e09a070"
+    },
+    "bootstrap_persistence_service": {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_bootstrap_persistence_service_v1.ts",
+      "blob_sha": "6c94bef139f260ef61c87f751a2c627b83e58977"
+    },
+    "a0_evidence_window_service": {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_a0_evidence_window_service_v1.ts",
+      "blob_sha": "1a02cd7c39da8a17ebd161f487c7d2c3c7c704e1"
+    },
+    "evidence_window_builder": {
+      "path": "apps/server/src/runtime/twin_runtime/evidence_window_builder_v1.ts",
+      "blob_sha": "4b626cc1069c83ba31963c31d0228382a4842bf7"
+    },
+    "runtime_repository": "PostgresRuntimeRepositoryV1",
+    "authority_snapshot_repository": "PostgresNextTickRepositoryV1",
+    "evidence_source": "FORMAL_V2_DATABASE_ONLY"
+  },
+  "runtime_config_binding": {
+    "source_of_truth": "A18B_EXACT_PIN_AUTHORITY",
+    "config_authority_created_at": "2026-08-16T11:03:59.000Z",
+    "a0_runtime_config_ref": "external_formal_runtime_config_e8c55077ffaf1e867d164b0b",
+    "a0_runtime_config_hash": "sha256:666039f45d9a6c8e7228bee22537f4b6ae50bcdae9388d6f92d22c24c55e2e5f",
+    "a0_crop_stage_code": "MID",
+    "a0_crop_stage_context_hash": "sha256:cda79e91f0cafef911fb5daeb16ca6723ac5c46279eb231fa894ba1cb97752fc",
+    "a0_parent_runtime_config_ref": null,
+    "a0_parent_runtime_config_hash": null,
+    "hourly_runtime_config_count": 24,
+    "exact_total_runtime_config_count": 25,
+    "o00_runtime_config_ref": "external_formal_runtime_config_d42078735b8d60e23c430e46",
+    "o00_runtime_config_hash": "sha256:bd9b5900c0d1863e27207718fc2753e7bdc02ffe44ec15e0eaa3aa0aec035329",
+    "o23_runtime_config_ref": "external_formal_runtime_config_265482b527cea7fb084ca3a4",
+    "o23_runtime_config_hash": "sha256:eab87652dac42c1e831fea7a15ce293ed7094bf4567f9a8b635a53a99a880f43",
+    "all_25_refs_hashes_must_be_recomputed_and_equal_before_any_write": true
+  },
+  "prewrite_fail_closed_gate": {
+    "exact_protected_main_subject_required": true,
+    "exact_replacement_database_required": true,
+    "actual_wall_clock_gte": "2026-08-17T19:00:00.000Z",
+    "actual_wall_clock_lt": "2026-08-17T20:00:00.000Z",
+    "a0_soil_dataset_id": "mcft_cap09_formal_v2_prewindow_a0_soil_20260817t190000z",
+    "a0_soil_exact_count": 1,
+    "a0_soil_observed_at_gt": "2026-08-17T18:00:00.000Z",
+    "a0_soil_observed_at_lte": "2026-08-17T19:00:00.000Z",
+    "a0_soil_available_to_runtime_at_lte": "2026-08-17T19:00:00.000Z",
+    "a0_soil_ingested_at_lte": "2026-08-17T19:00:00.000Z",
+    "a0_frozen_evidence_window_service_must_succeed_before_persistence": true,
+    "scheduler_cursor_count": 0,
+    "scheduler_slot_count": 0,
+    "terminal_tick_count": 0,
+    "downstream_action_fact_count": 0,
+    "foreign_or_drifted_runtime_config_count": 0,
+    "failure_effect": "ZERO_NEW_A18D_WRITE_AND_FORMAL_O00_REMAINS_DISABLED"
+  },
+  "persistence_sequence": [
+    "VERIFY_A18B_A0_AND_O00_O23_CONFIG_PINS",
+    "VERIFY_REAL_A0_SOIL_AND_FREEZE_A0_EVIDENCE_WINDOW_BEFORE_ANY_WRITE",
+    "COMMIT_REALITY_BINDING_SNAPSHOT_IDEMPOTENTLY",
+    "COMMIT_FRESH_A0_RUNTIME_CONFIG_IDEMPOTENTLY",
+    "COMMIT_NINE_MEMBER_A0_STATE_AND_CHECKPOINT",
+    "COMMIT_EXACT_O00_O23_RUNTIME_CONFIG_CHAIN_IDEMPOTENTLY",
+    "VERIFY_POST_BOOTSTRAP_CUTOVER"
+  ],
+  "retry_semantics": {
+    "a0_state_absent": "REENTER_BOOTSTRAP_SERVICE_AFTER_PREWRITE_EVIDENCE_GATE",
+    "a0_state_present_and_exact": "DO_NOT_REBUILD_A0_RECORD_SET; ONLY_IDEMPOTENTLY_COMPLETE_MISSING_EXACT_HOURLY_CONFIGS",
+    "foreign_or_drifted_partial_state": "FAIL_CLOSED",
+    "second_initial_in_populated_store_authorized": false
+  },
+  "post_bootstrap_cutover_proof": {
+    "exact_total_runtime_config_count": 25,
+    "exact_a0_active_lineage_count": 1,
+    "exact_a0_state_latest_count": 1,
+    "exact_a0_checkpoint_count": 1,
+    "active_runtime_config_ref": "external_formal_runtime_config_e8c55077ffaf1e867d164b0b",
+    "active_runtime_config_hash": "sha256:666039f45d9a6c8e7228bee22537f4b6ae50bcdae9388d6f92d22c24c55e2e5f",
+    "checkpoint_next_tick_logical_time": "2026-08-17T20:00:00.000Z",
+    "scheduler_cursor_count": 0,
+    "scheduler_slot_count": 0,
+    "o00_terminal_tick_count": 0,
+    "downstream_action_fact_count": 0,
+    "wall_clock_lt_o00": true,
+    "formal_o00_started": false,
+    "formal_execution_count": "0/24"
+  },
+  "execution_gate": {
+    "a18d_effective_if_present_on_protected_main": true,
+    "qualification_merge_may_occur_before_execution_window": true,
+    "execution_not_before_actual_wall_clock": "2026-08-17T19:00:00.000Z",
+    "execution_must_complete_before": "2026-08-17T20:00:00.000Z",
+    "live_execution_events": ["schedule", "workflow_dispatch"],
+    "push_event_live_execution_authorized": false,
+    "pull_request_live_execution_authorized": false,
+    "operational_schedule_is_normative_temporal_authority": false,
+    "provider_access_authorized": false,
+    "scheduler_write_authorized": false,
+    "canonical_runtime_tick_authorized": false,
+    "formal_o00_start_authorized_by_a18d": false
+  },
+  "qualification_boundary": {
+    "database_transaction_mode": "READ_ONLY",
+    "evidence_facts_may_exist": true,
+    "canonical_twin_runtime_facts_must_be_zero": true,
+    "runtime_config_count_must_be_zero": true,
+    "scheduler_and_terminal_counts_must_be_zero": true,
+    "provider_request_count": 0,
+    "database_write_count": 0
+  },
+  "hard_nonclaims": [
+    "NO_A18D_EXECUTION_BEFORE_ACTUAL_19Z",
+    "NO_A18D_EXECUTION_AT_OR_AFTER_O00",
+    "NO_PROVIDER_OR_R2_ACCESS",
+    "NO_HISTORICAL_DATABASE_WRITE",
+    "NO_CROSS_STORE_COPY",
+    "NO_SOURCE_SUBSTITUTION",
+    "NO_INTERPOLATION",
+    "NO_PERSISTENCE_FILL",
+    "NO_TIMESTAMP_RELABEL",
+    "NO_SCHEDULER_SLOT_OR_CURSOR_WRITE",
+    "NO_CANONICAL_RUNTIME_TICK",
+    "NO_RECOMMENDATION_APPROVAL_ACTION_OR_DISPATCH_WRITE",
+    "NO_FORMAL_O00_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ],
+  "next_legal_frontier_if_qualified_and_merged": "WAIT_FOR_ACTUAL_2026_08_17T19_00_00Z_AND_REQUIRE_A0_SOIL_RUNTIME_OBLIGATION_THEN_EXECUTE_A18D"
+}
