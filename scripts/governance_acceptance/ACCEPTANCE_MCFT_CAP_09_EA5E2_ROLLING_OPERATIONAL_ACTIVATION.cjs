@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const A11 = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md";
 const WORKFLOW = ".github/workflows/mcft-cap-09-ea5e2-rolling-operational-activation-live.yml";
 const CAPTURE = ".github/workflows/mcft-cap-09-rolling-preboundary-capture.yml";
+const PLANNER = "scripts/runtime_acceptance/PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs";
 const INTERSECTION = ".github/workflows/mcft-cap-09-rolling-kbs-intersection.yml";
 const OBSERVER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts";
 const DRIFT = "scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ROLLING_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs";
@@ -21,6 +22,7 @@ function matches(text, pattern, code) { if (!pattern.test(text)) throw new Error
 const a11 = read(A11);
 const workflow = read(WORKFLOW);
 const capture = read(CAPTURE);
+const planner = read(PLANNER);
 const intersection = read(INTERSECTION);
 const observer = read(OBSERVER);
 const drift = read(DRIFT);
@@ -37,11 +39,16 @@ for (const marker of [
 
 for (const marker of [
   "cron: '5 * * * *'",
-  "CANDIDATE_RETENTION_HOURS",
   "kbs_daily_batch_required_at_capture",
   "crop_authority_required_at_capture",
   "PROVIDER_AVAILABILITY_WATERMARK_V1",
 ]) has(capture, marker, "EA5E2_ROLLING_ACTIVATION_CAPTURE_BOUNDARY_REQUIRED");
+
+for (const marker of [
+  "const CANDIDATE_RETENTION_HOURS = 36;",
+  "candidate_retention_hours: CANDIDATE_RETENTION_HOURS",
+  "candidate_expires_at: new Date(targetMs + CANDIDATE_RETENTION_HOURS * HOUR_MS).toISOString()",
+]) has(planner, marker, "EA5E2_ROLLING_ACTIVATION_RETENTION_PLANNER_REQUIRED");
 
 for (const marker of [
   "OLDEST_CROP_LEGAL_EXACT_TARGET_FIRST",
@@ -99,6 +106,7 @@ for (const forbidden of [
 for (const marker of [
   WORKFLOW,
   CAPTURE,
+  PLANNER,
   INTERSECTION,
   OBSERVER,
   "future_t_long_wait_activation_authority: false",
