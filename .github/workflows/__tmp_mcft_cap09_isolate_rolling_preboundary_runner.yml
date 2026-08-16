@@ -1,0 +1,125 @@
+name: tmp-mcft-cap09-isolate-rolling-preboundary-runner
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-rolling-soil-deadline-t0
+    paths:
+      - '.github/workflows/__tmp_mcft_cap09_isolate_rolling_preboundary_runner.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap09-rolling-soil-deadline-t0
+          fetch-depth: 0
+
+      - name: Restore timing-qualified runner and isolate rolling capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          shared = Path('scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts')
+          rolling = Path('scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts')
+          workflow = Path('.github/workflows/mcft-cap-09-rolling-preboundary-capture.yml')
+          acceptance = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CAPTURE.cjs')
+          carrier = Path('scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs')
+
+          def main_text(path: Path) -> str:
+              return subprocess.check_output(['git','show',f'origin/main:{path.as_posix()}'], text=True)
+
+          # The Timing V2 measured shared runner must remain byte-identical to protected main.
+          shared_text = main_text(shared)
+          shared.write_text(shared_text)
+
+          # Roll back the carrier to protected-main authority; dependency graph will emit the new digest.
+          carrier.write_text(main_text(carrier))
+
+          # Create a qualification-only rolling runner. It keeps exact provider/canonicalization behavior,
+          # but Amendment-11 permits the rolling pre-boundary causal read through T rather than T-5.
+          if shared_text.count('const MIN_INGRESS_MARGIN_MINUTES = 5;') != 1:
+              raise SystemExit('shared timing runner seam drift')
+          rolling_text = shared_text.replace(
+              'const MIN_INGRESS_MARGIN_MINUTES = 5;',
+              'const MIN_INGRESS_MARGIN_MINUTES = 0;',
+              1,
+          )
+          rolling.write_text(rolling_text)
+
+          wf = workflow.read_text()
+          old_runner = 'RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
+          new_runner = 'RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
+          if wf.count(old_runner) != 1:
+              raise SystemExit(f'workflow runner invocation drift: {wf.count(old_runner)}')
+          wf = wf.replace(old_runner, new_runner, 1)
+
+          # Ensure changes to the dedicated runner trigger the exact-main rolling capture workflow.
+          marker = "      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CAPTURE.cjs'"
+          if wf.count(marker) != 2:
+              raise SystemExit(f'workflow path marker drift: {wf.count(marker)}')
+          wf = wf.replace(marker, marker + "\n      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'")
+          workflow.write_text(wf)
+
+          acc = acceptance.read_text()
+          old_path = 'const PROVIDER_RUNNER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts";'
+          new_path = 'const PROVIDER_RUNNER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts";'
+          if acc.count(old_path) != 1:
+              raise SystemExit('acceptance provider path drift')
+          acc = acc.replace(old_path, new_path, 1)
+          acc = acc.replace(
+              '"RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",',
+              '"RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",',
+              1,
+          )
+          acc = acc.replace(
+              '"process.env.GITHUB_WORKFLOW === \\\"mcft-cap-09-rolling-preboundary-capture\\\" ? 0 : 5",',
+              '"const MIN_INGRESS_MARGIN_MINUTES = 0;",',
+              1,
+          )
+          old_forbid = '''if (providerRunner.includes("const MIN_INGRESS_MARGIN_MINUTES = 5;")) {
+  throw new Error("MCFT_CAP09_ROLLING_PREBOUNDARY_T_MINUS_5_DEADLINE_FORBIDDEN");
+}
+'''
+          new_forbid = '''if (providerRunner.includes("const MIN_INGRESS_MARGIN_MINUTES = 5;")) {
+  throw new Error("MCFT_CAP09_ROLLING_PREBOUNDARY_T_MINUS_5_DEADLINE_FORBIDDEN");
+}
+if (workflow.includes("RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts")) {
+  throw new Error("MCFT_CAP09_ROLLING_PREBOUNDARY_TIMING_QUALIFIED_SHARED_RUNNER_REUSE_FORBIDDEN");
+}
+'''
+          if acc.count(old_forbid) != 1:
+              raise SystemExit('acceptance forbidden seam drift')
+          acc = acc.replace(old_forbid, new_forbid, 1)
+          acceptance.write_text(acc)
+          PY
+
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CAPTURE.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CAPTURE.cjs
+          cmp scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts <(git show origin/main:scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts)
+          grep -F 'const MIN_INGRESS_MARGIN_MINUTES = 0;' scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+          grep -F 'RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts' .github/workflows/mcft-cap-09-rolling-preboundary-capture.yml
+          git diff --check
+
+      - name: Commit isolated rolling path
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts \
+            .github/workflows/mcft-cap-09-rolling-preboundary-capture.yml \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CAPTURE.cjs \
+            scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs
+          git commit -m 'MCFT-CAP-09: isolate rolling preboundary provider runner'
+          git push origin HEAD:agent/mcft-cap09-rolling-soil-deadline-t0
