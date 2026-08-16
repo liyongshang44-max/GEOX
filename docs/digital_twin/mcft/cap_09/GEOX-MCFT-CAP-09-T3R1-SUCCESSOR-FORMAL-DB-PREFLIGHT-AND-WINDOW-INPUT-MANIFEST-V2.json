@@ -63,7 +63,7 @@
   },
   "candidate_implementation_blobs": {
     "executor": "e9ae5e0b664c57ea8598be4ec5ea4f8d1fcef99c",
-    "workflow": "3e9b481cd8929a4650e6e588e6b0bcc015ea9fa2",
+    "workflow": "c4f610bcf313b599dcb8a2fda981bae46960a8ee",
     "governance_gate": "ac122790d529cf3a07c7c4158978737978d56804"
   },
   "immutable_predecessor_proofs": [
