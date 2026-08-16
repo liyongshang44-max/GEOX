@@ -69,7 +69,7 @@ jobs:
           run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/31934715011")"
           echo "$run" | jq -e '.head_sha == "090a3c539e8830fac2fae71b33dd4f1abbe2cb8d" and .status == "completed" and .conclusion == "success"' >/dev/null
           artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9260304898")"
-          echo "$artifact" | jq -e '.expired == false and .digest == "sha256:38f5d2cbd2d0ac169e8ac1ef4e709d2a16f37fbd252348dee03bee36123508c"' >/dev/null
+          echo "$artifact" | jq -e '.expired == false and .digest == "sha256:38f5d2cbd2d0ac169e8ac1ef4e709d2a16f37fbd252348dee03bee36123508c3"' >/dev/null
           rm -rf /tmp/t3r1-builder-v2 /tmp/t3r1-builder-v2.zip
           mkdir -p /tmp/t3r1-builder-v2
           gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9260304898/zip" > /tmp/t3r1-builder-v2.zip
