@@ -1,0 +1,102 @@
+name: mcft-cap-09-a18a-zero-state-formal-store-preflight
+
+on:
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A18A-ZERO-STATE-FORMAL-STORE-IDENTITY-AND-SCHEMA-PREFLIGHT-V1.json'
+      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE.cjs'
+      - '.github/workflows/mcft-cap-09-a18a-zero-state-formal-store-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXACT_BASE_SHA: '799a29292b61248b9a037c9200c904f6fda7be66'
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      TARGET_DATABASE_NAME: 'geox_mcft_cap09_s6_formal_t3r1_24h_v2'
+      SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Fail closed on exact base and four-file boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event_name }}" = "pull_request"
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_BASE_SHA"
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$HEAD_SHA" | sort)
+          printf '%s\n' "${changed[@]}"
+          test "${#changed[@]}" -eq 4
+          expected=$(cat <<'EOF'
+          .github/workflows/mcft-cap-09-a18a-zero-state-formal-store-preflight.yml
+          docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-A18A-ZERO-STATE-FORMAL-STORE-IDENTITY-AND-SCHEMA-PREFLIGHT-V1.json
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE.cjs
+          scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE.ts
+          EOF
+          )
+          actual=$(printf '%s\n' "${changed[@]}")
+          test "$actual" = "$expected"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Governance qualification
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE.cjs
+
+      - name: Derive v2 database URL without exposing secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_DATABASE_URL"
+          DATABASE_URL=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL); u.pathname="/"+process.env.TARGET_DATABASE_NAME; process.stdout.write(u.toString())')
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          echo "SOURCE_DATABASE_URL=" >> "$GITHUB_ENV"
+
+      - name: Live A18A Formal Neon preflight READ ONLY
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE.ts
+
+      - name: Validate live proof nonclaims
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE_PREFLIGHT_RESULT.json','utf8'));
+          if (p.status !== 'PASS') throw new Error('A18A_LIVE_PREFLIGHT_NOT_PASS');
+          if (p.transaction_mode !== 'READ_ONLY' || p.database_write_count !== 0 || p.formal_runtime_write_count !== 0) throw new Error('A18A_SIDE_EFFECT_FORBIDDEN');
+          if (p.database_identity.database_name !== 'geox_mcft_cap09_s6_formal_t3r1_24h_v2') throw new Error('A18A_DATABASE_IDENTITY_DRIFT');
+          if (p.zero_state_counts.facts_total !== 0 || p.zero_state_counts.checkpoint_total !== 0 || p.zero_state_counts.scheduler_slot_total !== 0 || p.zero_state_counts.scheduler_cursor_total !== 0) throw new Error('A18A_NOT_ZERO_STATE');
+          if (p.ea5e3_authorized !== false || p.formal_o00_started !== false || p.formal_execution_count !== '0/24') throw new Error('A18A_NONCLAIM_REGRESSION');
+          NODE
+
+      - name: Upload immutable focused proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-a18a-zero-state-formal-store-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_A18A_*.json
+          if-no-files-found: error
+          retention-days: 30

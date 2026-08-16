@@ -1,0 +1,73 @@
+{
+  "schema_version": "geox_mcft_cap09_a18a_zero_state_formal_store_identity_and_schema_preflight_v1",
+  "status": "CANDIDATE",
+  "authority": "A18A_ZERO_STATE_FORMAL_STORE_IDENTITY_AND_SCHEMA_PREFLIGHT",
+  "exact_base_main_sha": "799a29292b61248b9a037c9200c904f6fda7be66",
+  "amendment_18_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-18-PREWINDOW-STATE-CONTINUITY-AND-FORMAL-STORE-REBASE-AUTHORITY.md",
+  "formal_database_identity": {
+    "neon_project_id": "delicate-glade-62464340",
+    "neon_branch_id": "br-cold-dust-a6j6aymz",
+    "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h_v2",
+    "historical_database_name_forbidden_for_execution": "geox_mcft_cap09_s6_formal_t3r1_24h",
+    "creation_mode": "CREATE_DATABASE_TEMPLATE0_NO_DATA_CLONE"
+  },
+  "formal_scope": {
+    "tenant_id": "tenant_mcft_external",
+    "project_id": "project_mcft_cap09",
+    "group_id": "group_public_research",
+    "field_id": "field_kbs_mcse_t3r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t3r1_crop_formal_v1"
+  },
+  "selected_epoch": {
+    "epoch_id": "mcft_cap09_external_formal_window_epoch_20260817t200000z_v2",
+    "prewindow_a0_logical_time": "2026-08-17T19:00:00.000Z",
+    "o00_logical_time": "2026-08-17T20:00:00.000Z",
+    "o23_logical_time": "2026-08-18T19:00:00.000Z"
+  },
+  "schema_provenance": {
+    "source_database": "geox_mcft_cap09_s6_formal_t3r1_24h",
+    "copy_mode": "CATALOG_SHAPE_ONLY_NO_ROWS",
+    "required_table_count": 12,
+    "column_fingerprint_md5": "c3067a20d91e7deeb406d81e4025b96d",
+    "constraint_fingerprint_md5": "1ca506a54459e553893960cc25edfc84",
+    "index_fingerprint_md5": "273bc75187d60984ce67e87764441fb8",
+    "required_tables": [
+      "facts",
+      "twin_object_idempotency_index_v1",
+      "twin_active_lineage_index_v1",
+      "twin_state_latest_index_v1",
+      "twin_forecast_result_latest_index_v1",
+      "twin_forecast_success_latest_index_v1",
+      "twin_runtime_checkpoint_latest_index_v1",
+      "twin_runtime_health_latest_index_v1",
+      "twin_runtime_lease_v1",
+      "twin_shadow_online_scheduler_cursor_v1",
+      "twin_shadow_online_scheduler_slot_v1",
+      "twin_terminal_tick_uniqueness_v1"
+    ]
+  },
+  "zero_state_requirements": {
+    "facts_total": 0,
+    "checkpoint_total": 0,
+    "scheduler_slot_total": 0,
+    "scheduler_cursor_total": 0,
+    "active_lineage_total": 0,
+    "state_latest_total": 0,
+    "forecast_result_latest_total": 0,
+    "forecast_success_latest_total": 0,
+    "runtime_lease_total": 0,
+    "terminal_tick_uniqueness_total": 0
+  },
+  "nonclaims": {
+    "prewindow_a0_persisted": false,
+    "runtime_config_chain_persisted": false,
+    "replacement_manifest_frozen": false,
+    "runner_exact_binding_qualified": false,
+    "ea5e3_authorized": false,
+    "formal_o00_started": false,
+    "formal_execution_count": "0/24",
+    "mcft_cap09_completed": false
+  },
+  "next_legal_frontier_after_effectiveness": "A18B_PREWINDOW_A0_AND_REPLACEMENT_RUNTIME_CONFIG_CHAIN"
+}
