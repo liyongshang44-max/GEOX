@@ -4,6 +4,7 @@
 const fs = require("node:fs");
 
 const A11 = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md";
+const A17 = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-17-T3R1-FORMAL-SUCCESSOR-SCOPE-AUTHORITY.md";
 const SELECTOR = "scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py";
 const CROP_BUILDER = "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs";
 const CROP_PREFLIGHT = "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs";
@@ -18,6 +19,7 @@ function has(text, marker, code) { if (!text.includes(marker)) throw new Error(`
 function lacks(text, marker, code) { if (text.includes(marker)) throw new Error(`${code}:${marker}`); }
 
 const a11 = read(A11);
+const a17 = read(A17);
 const selector = read(SELECTOR);
 const cropBuilder = read(CROP_BUILDER);
 const cropPreflight = read(CROP_PREFLIGHT);
@@ -33,6 +35,13 @@ for (const marker of [
   "oldest-first backfill",
   "crop_authority_effect = NONE",
 ]) has(a11, marker, "MCFT_CAP09_ROLLING_INTERSECTION_AMENDMENT11_MARKER_REQUIRED");
+
+for (const marker of [
+  "No T1R1 fact, canonical state, forecast, runtime config, database row, evidence artifact, or provider observation may be relabelled as T3R1.",
+  "field: `field_kbs_mcse_t3r1`",
+  "zone: `zone_kbs_mcse_t3r1_crop_formal_v1`",
+  "Cross-scope canonical stitching is forbidden.",
+]) has(a17, marker, "MCFT_CAP09_ROLLING_INTERSECTION_AMENDMENT17_MARKER_REQUIRED");
 
 for (const marker of [
   "evaluateTargetCropConsensus",
@@ -56,6 +65,14 @@ for (const marker of [
   "head_branch",
   "head_sha",
   "artifact_digest",
+  "PRODUCER_SCOPE_PATH",
+  "T3R1_EXTERNAL_FORMAL_SCOPE_V1",
+  "field_id: \"field_kbs_mcse_t3r1\"",
+  "zone_id: \"zone_kbs_mcse_t3r1_crop_formal_v1\"",
+  "field_id: \"field_kbs_mcse_t1r1\"",
+  "producer_scope_authority(producer)",
+  "producer_t3r1_scope_required",
+  "t1r1_producer_scope_rejected",
   "historical_online_freshness_diagnostic_le_6h",
   "freshness_is_late_authoritative_admission_gate\": False",
   "crop_authority_intersection_applied\": True",
@@ -81,6 +98,7 @@ for (const marker of [
   "actions: read",
   "mcft-cap-09-rolling-preboundary-capture.yml/runs",
   "status=success",
+  "fetch-depth: 0",
   "ARTIFACT_METADATA.json",
   "BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs",
   "lter.kbs.msu.edu/datatables/13.csv",
@@ -102,12 +120,15 @@ for (const forbidden of [
 ]) lacks(workflow, forbidden, "MCFT_CAP09_ROLLING_INTERSECTION_FORBIDDEN_GATE");
 
 console.log(JSON.stringify({
-  schema_version: "geox_mcft_cap09_rolling_kbs_intersection_acceptance_v2",
+  schema_version: "geox_mcft_cap09_rolling_kbs_intersection_acceptance_v3",
   status: "PASS",
   temporal_authority: "PROVIDER_AVAILABILITY_WATERMARK_V1",
   provider_publication_cadence: "DAILY_BATCH",
   selection_policy: "OLDEST_CROP_LEGAL_EXACT_TARGET_FIRST",
   producer_run_provenance_required: true,
+  producer_t3r1_scope_required: true,
+  t1r1_producer_scope_rejected: true,
+  cross_scope_canonical_stitching_forbidden: true,
   exact_target_required: true,
   crop_authority_intersection_applied: true,
   crop_authority_effect: "NONE",
