@@ -65,7 +65,7 @@ requireText(workflow, "authority='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09
 requireText(workflow, 'git log --first-parent --diff-filter=A -1', 'HARDENING_WORKFLOW_FIRST_PARENT_EFFECTIVE_COMMIT_REQUIRED');
 requireText(workflow, "'5,20,35 19 17 8 *'", 'HARDENING_A18D_1950_REMOVED_REQUIRED');
 forbidText(workflow, "5,20,35,50 19 17 8 *", 'HARDENING_A18D_UNSAFE_1950_CRON_FORBIDDEN');
-requireText(workflow, "'12,42 * 17-20 8 *'", 'HARDENING_PRODUCTION_RUNNER_SCHEDULE_REQUIRED');
+for (const cron of ["'12,42 20-23 17 8 *'", "'12,42 * 18-19 8 *'", "'12,42 0-6 20 8 *'"]) requireText(workflow, cron, `HARDENING_PRODUCTION_RUNNER_SCHEDULE_REQUIRED:${cron}`);
 requireText(workflow, 'RUN_MCFT_CAP_09_A18C_FORMAL_V3_PRODUCTION_RUNNER_V1.ts cycle', 'HARDENING_PRODUCTION_RUNNER_LIVE_INVOCATION_REQUIRED');
 requireText(workflow, 'RUN_MCFT_CAP_09_EA5E3_FORMAL_V2_PROVIDER_WATERMARK_COLLECTOR_V2.ts cycle', 'HARDENING_COLLECTOR_V2_LIVE_INVOCATION_REQUIRED');
 requireText(workflow, 'EXECUTE_MCFT_CAP_09_A18D_PREWINDOW_BOOTSTRAP_V2.ts execute', 'HARDENING_A18D_V2_LIVE_INVOCATION_REQUIRED');
