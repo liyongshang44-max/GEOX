@@ -1,0 +1,201 @@
+name: mcft-cap-09-ea5e3-a1-prewindow-a0-soil
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e3-a1-prewindow-a0-soil.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_COLLECTOR.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E3-AMENDMENT-01-PREWINDOW-A0-SOIL-EVIDENCE-AUTHORITY.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-ea5e3-a1-prewindow-a0-soil.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_COLLECTOR.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E3-AMENDMENT-01-PREWINDOW-A0-SOIL-EVIDENCE-AUTHORITY.json'
+  schedule:
+    - cron: '0,20,40,55 18 17 8 *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-ea5e3-a1-prewindow-a0-soil-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'formal-main' }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  EXACT_BASE_SHA: '1daf449c5d572b49c41ed54c771ff7ecbee004e7'
+  TARGET_DATABASE_NAME: 'geox_mcft_cap09_s6_formal_t3r1_24h_v2'
+  SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+  MCFT_CAP09_FORMAL_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+  MCFT_CAP09_FORMAL_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+  MCFT_CAP09_FORMAL_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+  MCFT_CAP09_FORMAL_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+  MCFT_CAP09_FORMAL_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+  # Operational trigger metadata only; never temporal authority.
+  workflow_schedule_is_normative_temporal_authority: 'false'
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fail closed on exact four-file correction boundary
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_BASE_SHA"
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          git fetch --no-tags --depth=1 origin "$EXACT_BASE_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$HEAD_SHA" | sort)
+          test "${#changed[@]}" -eq 4
+          expected=$(cat <<'EOF'
+          .github/workflows/mcft-cap-09-ea5e3-a1-prewindow-a0-soil.yml
+          docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E3-AMENDMENT-01-PREWINDOW-A0-SOIL-EVIDENCE-AUTHORITY.json
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL.cjs
+          scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_COLLECTOR.ts
+          EOF
+          )
+          test "$(printf '%s\n' "${changed[@]}")" = "$expected"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck corrective A0 soil collector
+        run: pnpm exec tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --skipLibCheck --types node scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_COLLECTOR.ts
+
+      - name: Prove A0 soil collector plan without provider or database access
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_COLLECTOR.ts selftest
+
+      - name: Prove omitted A0 soil dependency and corrective authority
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL.cjs
+
+      - name: Derive replacement v2 database URL without exposing secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_DATABASE_URL"
+          DATABASE_URL=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL); u.pathname="/"+process.env.TARGET_DATABASE_NAME; process.stdout.write(u.toString())')
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          echo "SOURCE_DATABASE_URL=" >> "$GITHUB_ENV"
+
+      - name: Re-prove Formal v2 store is still zero-state READ ONLY during correction qualification
+        if: github.event_name == 'pull_request'
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE.ts
+
+      - name: Validate correction qualification nonclaims
+        if: github.event_name == 'pull_request'
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const z=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE_PREFLIGHT_RESULT.json','utf8'));
+          const g=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_GOVERNANCE.json','utf8'));
+          if(z.status!=='PASS'||z.transaction_mode!=='READ_ONLY') throw new Error('EA5E3_A1_ZERO_STATE_READ_ONLY_REQUIRED');
+          for(const value of Object.values(z.zero_state_counts)) if(value!==0) throw new Error('EA5E3_A1_QUALIFICATION_LIVE_WRITE_FORBIDDEN');
+          if(g.status!=='PASS'||g.original_ea5e3_zero_blocker_claim_incomplete!==true||g.pre_effective_blocker_count!==1||g.blocker_count_after_exact_head_qualification_and_on_time_merge!==0) throw new Error('EA5E3_A1_CORRECTION_GOVERNANCE_REQUIRED');
+          for(const key of ['qualification_provider_request_count','qualification_database_write_count','scheduler_write_count','canonical_runtime_write_count','runtime_config_write_count','prewindow_a0_state_write_count']) if(g[key]!==0) throw new Error(`EA5E3_A1_NONCLAIM_REQUIRED:${key}`);
+
+      - name: Upload corrective focused proof
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e3-a1-prewindow-a0-soil-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_GOVERNANCE.json
+            acceptance-output/MCFT_CAP_09_A18A_ZERO_STATE_FORMAL_STORE_PREFLIGHT_RESULT.json
+          if-no-files-found: error
+          retention-days: 7
+
+  live-prewindow-a0-soil:
+    if: github.event_name != 'pull_request'
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Checkout exact protected main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact main and on-time corrective effectiveness
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || { echo 'EA5E3_A1_LIVE_EXACT_MAIN_DRIFT' >&2; exit 1; }
+          authority='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E3-AMENDMENT-01-PREWINDOW-A0-SOIL-EVIDENCE-AUTHORITY.json'
+          effective_commit=$(git log --first-parent --diff-filter=A -1 --format='%H' -- "$authority")
+          test -n "$effective_commit" || { echo 'EA5E3_A1_EFFECTIVE_COMMIT_REQUIRED' >&2; exit 1; }
+          effective_time=$(git show -s --format='%cI' "$effective_commit")
+          node -e 'const t=Date.parse(process.argv[1]); const d=Date.parse("2026-08-17T08:00:00.000Z"); if(!Number.isFinite(t)||t>d) throw new Error(`EA5E3_A1_EFFECTIVENESS_DEADLINE_MISSED:${process.argv[1]}`)' "$effective_time"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Require Formal DB and private raw bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SOURCE_DATABASE_URL MCFT_CAP09_FORMAL_S3_ENDPOINT MCFT_CAP09_FORMAL_S3_BUCKET MCFT_CAP09_FORMAL_S3_REGION MCFT_CAP09_FORMAL_S3_ACCESS_KEY_ID MCFT_CAP09_FORMAL_S3_SECRET_ACCESS_KEY; do
+            test -n "${!name:-}" || { echo "EA5E3_A1_LIVE_SECRET_REQUIRED:${name}" >&2; exit 1; }
+          done
+          test "$MCFT_CAP09_FORMAL_S3_BUCKET" = 'geox-mcft-cap09-formal-raw-v1'
+          DATABASE_URL=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL); u.pathname="/"+process.env.TARGET_DATABASE_NAME; process.stdout.write(u.toString())')
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          echo "SOURCE_DATABASE_URL=" >> "$GITHUB_ENV"
+
+      - name: Execute one prewindow A0 soil Evidence cycle
+        env:
+          MCFT_CAP09_SUBJECT_SHA: ${{ github.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_COLLECTOR.ts cycle
+
+      - name: Validate metadata-only A0 soil collector result
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_COLLECTOR_RESULT.json','utf8'));
+          if(p.status!=='PASS'||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t3r1_24h_v2') throw new Error('EA5E3_A1_LIVE_BINDING_REQUIRED');
+          if(p.runtime_provider_request_count!==0||p.scheduler_write_count!==0||p.canonical_runtime_write_count!==0||p.runtime_config_write_count!==0||p.prewindow_a0_state_write_count!==0||p.formal_o00_started!==false||p.raw_values_emitted!==false) throw new Error('EA5E3_A1_LIVE_SIDE_EFFECT_BOUNDARY_REQUIRED');
+
+      - name: Upload metadata-only A0 soil Evidence proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e3-a1-prewindow-a0-soil-${{ github.sha }}-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_COLLECTOR_RESULT.json
+          if-no-files-found: error
+          retention-days: 7
