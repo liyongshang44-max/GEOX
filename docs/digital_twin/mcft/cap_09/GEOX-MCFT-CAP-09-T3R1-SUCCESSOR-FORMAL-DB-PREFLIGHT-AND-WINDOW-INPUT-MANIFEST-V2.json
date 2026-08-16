@@ -1,0 +1,169 @@
+{
+  "schema_version": "geox_mcft_cap09_t3r1_successor_formal_db_preflight_and_window_input_manifest_authority_v2",
+  "authority_id": "GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-FORMAL-DB-PREFLIGHT-AND-WINDOW-INPUT-MANIFEST-V2",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "S6-T3R1-SUCCESSOR-FORMAL-DB-PREFLIGHT-AND-WINDOW-INPUT-MANIFEST-V2",
+  "record_status": "T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_MANIFEST_CANDIDATE_NOT_EFFECTIVE",
+  "base_protected_main_sha": "2fade4617dadae81a779b80f35332545e817ff0a",
+  "authority_basis": {
+    "master_task_line": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md",
+    "taskbook_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "taskbook_blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
+    "amendment_11_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md",
+    "amendment_11_blob_sha": "a037b24757992987fc24ce8b6afac6c8eabca3ed",
+    "persisted_a0_authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-PERSISTED-A0-AUTHORITY-V1.json",
+    "persisted_a0_authority_blob_sha": "e44b43d71d339c39e017737d44c7c9a17a67f5be",
+    "formal_crop_context_authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json",
+    "formal_crop_context_authority_blob_sha": "757e4b9f4fdcd631eea97fca85614a1b61ef0c4a",
+    "epoch_selection_v2_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-EPOCH-SELECTION-V2.json",
+    "epoch_selection_v2_blob_sha": "9c12e31b0a9a3d33e027f0677ad1cf2d92a5097f",
+    "runtime_config_builder_v2_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-RUNTIME-CONFIG-BUILDER-QUALIFICATION-V2.json",
+    "runtime_config_builder_v2_blob_sha": "6a9fba30a0b8ad82305f70a43b604d76572daeee",
+    "runtime_config_persistence_v2_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-RUNTIME-CONFIG-PERSISTENCE-V2.json",
+    "runtime_config_persistence_v2_blob_sha": "3b2a3b7848622e5193372792c0b45fe66c17d359"
+  },
+  "formal_window": {
+    "epoch_id": "mcft_cap09_external_formal_window_epoch_20260817t200000z_v2",
+    "o00": "2026-08-17T20:00:00.000Z",
+    "o23": "2026-08-18T19:00:00.000Z",
+    "ea5e3_readiness_deadline": "2026-08-17T08:00:00.000Z",
+    "actual_hourly_utc_boundaries_required": true,
+    "formal_slot_count": 24
+  },
+  "formal_database_identity": {
+    "provider": "NEON_POSTGRES",
+    "neon_project_id": "delicate-glade-62464340",
+    "neon_branch_id": "br-cold-dust-a6j6aymz",
+    "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h",
+    "scope": {
+      "tenant_id": "tenant_mcft_external",
+      "project_id": "project_mcft_cap09",
+      "group_id": "group_public_research",
+      "field_id": "field_kbs_mcse_t3r1",
+      "season_id": "season_2026_corn",
+      "zone_id": "zone_kbs_mcse_t3r1_crop_formal_v1"
+    }
+  },
+  "existing_a0_predecessor_authority": {
+    "logical_time": "2026-08-15T10:00:00.000Z",
+    "runtime_config_ref": "external_formal_runtime_config_49959a28cfc9eb357bf18f9d",
+    "runtime_config_hash": "sha256:5f11788fd049a3eae190d566e6faa28f428637e11f2c90b4e0aaea67e6f14e48",
+    "must_remain_prewindow_state_authority": true
+  },
+  "formal_window_input_manifest": {
+    "manifest_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-FORMAL-WINDOW-INPUT-MANIFEST-V2.json",
+    "manifest_blob_sha": "eda053531b2f9164466d41f19ada2a25fc3dd04a",
+    "manifest_content_sha256": "sha256:f5a1b092038c03504dc5213cdc3202bc8ffdc1aebec43a25f16a8e615dc17c31",
+    "sha256_discovery_rule": "FAIL_CLOSED_ON_EXACT_HEAD_AND_REPLACE_ONLY_WITH_GATE_REPORTED_ACTUAL_SHA256",
+    "slot_count": 24,
+    "selection_mode": "EXPLICIT_REF_HASH_PIN_ONLY",
+    "immutable_for_formal_window": true,
+    "freezes_runtime_config_ref_hash_parent_and_crop_context_hash_for_each_slot": true
+  },
+  "candidate_implementation_blobs": {
+    "executor": "e9ae5e0b664c57ea8598be4ec5ea4f8d1fcef99c",
+    "workflow": "c4f610bcf313b599dcb8a2fda981bae46960a8ee",
+    "governance_gate": "ac122790d529cf3a07c7c4158978737978d56804"
+  },
+  "immutable_predecessor_proofs": [
+    {
+      "pr_number": 3190,
+      "merged_head_sha": "2489319aed5cea9a5cbf3844bbe8c5921b3f6df0",
+      "merge_commit_sha": "c268d3ff037a01fee51061bc82daeda9309d6e85",
+      "focused_workflow_run_id": 31934176595,
+      "focused_artifact_id": 9260158509,
+      "focused_artifact_digest": "sha256:b7051d0611ed82223b3d9449dbe04e2699d2de497d515e39f485e3be007acac5"
+    },
+    {
+      "pr_number": 3191,
+      "merged_head_sha": "090a3c539e8830fac2fae71b33dd4f1abbe2cb8d",
+      "merge_commit_sha": "775c5e6f1f43666c9d4fe46e14b07abcb8cfc6d0",
+      "focused_workflow_run_id": 31934715011,
+      "focused_artifact_id": 9260304898,
+      "focused_artifact_digest": "sha256:38f5d2cbd2d0ac169e8ac1ef4e709d2a16f37fbd252348dee03bee36123508c3"
+    },
+    {
+      "pr_number": 3192,
+      "merged_head_sha": "2402a95ce54b16610d0273974cc8b8bc7a0b2c58",
+      "merge_commit_sha": "2fade4617dadae81a779b80f35332545e817ff0a",
+      "focused_workflow_run_id": 31935870828,
+      "focused_artifact_id": 9260626774,
+      "focused_artifact_digest": "sha256:4f0867b49a95da394a4ab5f84cabe8595150027a5e7daf388a4e6caf26b1f143"
+    }
+  ],
+  "amendment_11_temporal_semantics_frozen": {
+    "provider_availability_watermark": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "observation_resolution": "hourly",
+    "provider_publication_cadence": "daily_batch",
+    "historical_online_freshness_diagnostic_hours": 6,
+    "freshness_is_late_authoritative_admission_gate": false,
+    "fixed_t_plus_432_normative_cutoff": false,
+    "cadence_engineering_24h_is_freshness_authority": false,
+    "rolling_candidate_retention_36h_is_freshness_authority": false,
+    "raw_retention_before_canonicalization": true,
+    "no_future_leakage": true,
+    "no_interpolation": true,
+    "no_persistence_fill": true,
+    "no_source_substitution": true
+  },
+  "candidate_authoring_live_read_only_observation": {
+    "observed_at_utc": "2026-08-16T09:12:43.017Z",
+    "total_fact_count": 59,
+    "exact_scope_fact_count": 59,
+    "external_soil_evidence_count": 1,
+    "canonical_twin_fact_count": 58,
+    "runtime_config_count": 49,
+    "successor_runtime_config_count": 24,
+    "state_count": 1,
+    "state_latest_logical_time": "2026-08-15T10:00:00.000Z",
+    "scheduler_slot_count": 0,
+    "scheduler_cursor_count": 0,
+    "formal_window_runtime_tick_count": 0,
+    "formal_execution_count": "0/24",
+    "foreign_scope_relevant_fact_count": 0,
+    "diagnostic_only_until_exact_head_workflow_passes": true
+  },
+  "live_preflight_contract": {
+    "transaction_mode": "READ_ONLY",
+    "verify_exact_formal_database_identity": true,
+    "verify_exact_59_fact_49_config_inventory": true,
+    "verify_exact_existing_a0_config_and_state_anchor": true,
+    "verify_exact_24_manifest_pins": true,
+    "verify_exact_parent_chain": true,
+    "verify_exact_crop_context_hashes": true,
+    "verify_scheduler_zero": true,
+    "verify_formal_zero_of_24": true,
+    "verify_amendment_11_temporal_semantics": true,
+    "database_write_count": 0,
+    "provider_request_count": 0,
+    "raw_object_write_count": 0,
+    "scheduler_slot_write_count": 0,
+    "scheduler_cursor_write_count": 0,
+    "runtime_tick_count": 0,
+    "recommendation_approval_ao_act_dispatch_or_model_activation_allowed": false
+  },
+  "effect_if_exact_head_proof_passes_and_candidate_merges_to_protected_main": {
+    "successor_formal_db_preflight_effective": true,
+    "formal_window_input_manifest_v2_frozen": true,
+    "ea5e3_readiness_evaluation_eligible": true,
+    "ea5e3_authorized": false,
+    "formal_o00_start_authorized": false,
+    "formal_window_started": false,
+    "formal_execution_count": "0/24",
+    "mcft_cap09_completed": false
+  },
+  "hard_nonclaims": [
+    "NO_DATABASE_WRITE_FROM_THIS_FRONTIER",
+    "NO_PROVIDER_OR_RAW_OBJECT_WRITE",
+    "NO_NEW_A0_OR_STATE",
+    "NO_SCHEDULER_SLOT_OR_CURSOR_CREATION",
+    "NO_RUNTIME_TICK_OR_FORMAL_O00_EXECUTION",
+    "NO_EA5E3_AUTHORITY",
+    "NO_FORMAL_WINDOW_START",
+    "NO_RECOMMENDATION_APPROVAL_AO_ACT_DISPATCH",
+    "NO_MODEL_ACTIVATION",
+    "NO_MCFT_CAP09_COMPLETION"
+  ],
+  "next_legal_frontier_after_effectiveness": "EA5E3_READINESS_AND_AUTHORIZATION"
+}

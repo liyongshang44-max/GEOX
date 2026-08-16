@@ -1,0 +1,159 @@
+name: mcft-cap-09-t3r1-successor-formal-db-preflight-window-input-manifest-v2
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t3r1-successor-formal-db-preflight-window-input-manifest-v2.yml'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-FORMAL-WINDOW-INPUT-MANIFEST-V2.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-FORMAL-DB-PREFLIGHT-AND-WINDOW-INPUT-MANIFEST-V2.json'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-t3r1-successor-formal-db-preflight-window-input-manifest-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  exact-head-t3r1-successor-formal-db-preflight-window-input-manifest-v2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL || secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+      GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED: ${{ vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact post-persistence base and fail-closed deadline
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}'
+          test "$base" = '2fade4617dadae81a779b80f35332545e817ff0a' || { echo "T3R1_MANIFEST_V2_BASE_DRIFT:$base" >&2; exit 1; }
+          test -n "${GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL:-}" || { echo 'T3R1_MANIFEST_V2_FORMAL_DB_REQUIRED' >&2; exit 1; }
+          test "${GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED:-false}" != 'true' || { echo 'T3R1_MANIFEST_V2_FORMAL_WINDOW_MUST_REMAIN_DISABLED' >&2; exit 1; }
+          now="$(date -u +%s)"
+          readiness="$(date -u -d '2026-08-17T08:00:00.000Z' +%s)"
+          o00="$(date -u -d '2026-08-17T20:00:00.000Z' +%s)"
+          test "$now" -lt "$readiness" || { echo 'T3R1_MANIFEST_V2_EA5E3_READINESS_DEADLINE_EXPIRED' >&2; exit 1; }
+          test "$now" -lt "$o00" || { echo 'T3R1_MANIFEST_V2_O00_ALREADY_PASSED' >&2; exit 1; }
+          echo "base_sha=$base" >> "$GITHUB_OUTPUT"
+
+      - name: Verify #3190 #3191 #3192 immutable predecessor identities
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          verify_pr () {
+            local n="$1" head="$2" merge="$3" merged="$4" run_id="$5" artifact_id="$6" digest="$7"
+            pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/$n")"
+            echo "$pr" | jq -e --arg h "$head" --arg m "$merge" --arg t "$merged" '.merged_at == $t and .head.sha == $h and .merge_commit_sha == $m' >/dev/null
+            run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/$run_id")"
+            echo "$run" | jq -e --arg h "$head" '.head_sha == $h and .status == "completed" and .conclusion == "success"' >/dev/null
+            artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/$artifact_id")"
+            echo "$artifact" | jq -e --arg d "$digest" '.expired == false and .digest == $d' >/dev/null
+          }
+          verify_pr 3190 2489319aed5cea9a5cbf3844bbe8c5921b3f6df0 c268d3ff037a01fee51061bc82daeda9309d6e85 2026-08-16T07:40:52Z 31934176595 9260158509 sha256:b7051d0611ed82223b3d9449dbe04e2699d2de497d515e39f485e3be007acac5
+          verify_pr 3191 090a3c539e8830fac2fae71b33dd4f1abbe2cb8d 775c5e6f1f43666c9d4fe46e14b07abcb8cfc6d0 2026-08-16T07:53:50Z 31934715011 9260304898 sha256:38f5d2cbd2d0ac169e8ac1ef4e709d2a16f37fbd252348dee03bee36123508c3
+          verify_pr 3192 2402a95ce54b16610d0273974cc8b8bc7a0b2c58 2fade4617dadae81a779b80f35332545e817ff0a 2026-08-16T08:20:53Z 31935870828 9260626774 sha256:4f0867b49a95da394a4ab5f84cabe8595150027a5e7daf388a4e6caf26b1f143
+
+      - name: Download immutable builder and persistence proofs and bind exact 24 pins
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/t3r1-builder /tmp/t3r1-persistence
+          mkdir -p /tmp/t3r1-builder /tmp/t3r1-persistence
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9260304898/zip" > /tmp/builder.zip
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9260626774/zip" > /tmp/persistence.zip
+          unzip -q /tmp/builder.zip -d /tmp/t3r1-builder
+          unzip -q /tmp/persistence.zip -d /tmp/t3r1-persistence
+          node <<'NODE'
+          const fs=require('fs');
+          const manifest=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-FORMAL-WINDOW-INPUT-MANIFEST-V2.json','utf8'));
+          const builder=JSON.parse(fs.readFileSync('/tmp/t3r1-builder/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_BUILDER_V2_RESULT.json','utf8'));
+          const persistence=JSON.parse(fs.readFileSync('/tmp/t3r1-persistence/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2_RESULT.json','utf8'));
+          const post=JSON.parse(fs.readFileSync('/tmp/t3r1-persistence/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2_POSTFLIGHT.json','utf8'));
+          const refs=manifest.slots.map(s=>s.runtime_config_ref), hashes=manifest.slots.map(s=>s.runtime_config_hash), crops=manifest.slots.map(s=>s.crop_stage_context_hash);
+          if(builder.status!=='PASS'||builder.exact_successor_runtime_config_count!==24||builder.exact_parent_chain_verified!==true||builder.persisted_ref_hash_collision_count!==0)throw new Error('T3R1_MANIFEST_V2_BUILDER_PROOF_INVALID');
+          if(JSON.stringify(refs)!==JSON.stringify(builder.runtime_config_refs)||JSON.stringify(hashes)!==JSON.stringify(builder.runtime_config_hashes)||JSON.stringify(crops)!==JSON.stringify(builder.slot_crop_stage_context_hashes))throw new Error('T3R1_MANIFEST_V2_BUILDER_PINS_MISMATCH');
+          if(persistence.status!=='PASS'||persistence.successor_runtime_configs_persisted!==true||persistence.second_pass_runtime_config_write_count!==0||persistence.formal_window_started!==false)throw new Error('T3R1_MANIFEST_V2_PERSISTENCE_PROOF_INVALID');
+          if(JSON.stringify(refs)!==JSON.stringify(persistence.runtime_config_refs)||JSON.stringify(hashes)!==JSON.stringify(persistence.runtime_config_hashes))throw new Error('T3R1_MANIFEST_V2_PERSISTED_PINS_MISMATCH');
+          if(post.status!=='PASS'||post.total_fact_count!==59||post.exact_scope_fact_count!==59||post.runtime_config_count!==49||post.successor_runtime_config_count!==24||post.scheduler_slot_count!==0||post.scheduler_cursor_count!==0||post.formal_window_started!==false)throw new Error('T3R1_MANIFEST_V2_POSTFLIGHT_INVALID');
+          console.log(JSON.stringify({status:'PASS',pins:24,postflight:'59/49',scheduler:'0/0'}));
+          NODE
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish exact manifest SHA-256 calibration
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-FORMAL-WINDOW-INPUT-MANIFEST-V2.json'
+          digest="sha256:$(sha256sum "$manifest" | awk '{print $1}')"
+          echo "::notice title=T3R1_MANIFEST_V2_EXACT_SHA256::$digest"
+
+      - name: Prove exact five-file governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2.cjs
+
+      - name: Typecheck server and Formal DB preflight executor
+        run: |
+          pnpm --filter @geox/server typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module ESNext --moduleResolution Bundler --esModuleInterop --types node scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2.ts
+
+      - name: Execute read-only Formal DB preflight against exact immutable manifest
+        run: pnpm -w exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2.ts
+
+      - name: Validate live preflight result and nonclaims
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs'), crypto=require('crypto');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2_RESULT.json','utf8'));
+          const bytes=fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-FORMAL-WINDOW-INPUT-MANIFEST-V2.json');
+          const digest='sha256:'+crypto.createHash('sha256').update(bytes).digest('hex');
+          if(p.status!=='PASS'||p.manifest_content_sha256!==digest)throw new Error('T3R1_MANIFEST_V2_LIVE_RESULT_INVALID');
+          for(const [k,v] of Object.entries({total_fact_count:59,exact_scope_fact_count:59,external_soil_evidence_count:1,canonical_twin_fact_count:58,runtime_config_count:49,successor_runtime_config_count:24,manifest_slot_count:24,scheduler_slot_count:0,scheduler_cursor_count:0,formal_window_runtime_tick_count:0,foreign_scope_relevant_fact_count:0,database_write_count:0,provider_request_count:0,raw_object_write_count:0,scheduler_write_count:0,runtime_tick_write_count:0}))if(p[k]!==v)throw new Error(`T3R1_MANIFEST_V2_LIVE_MISMATCH:${k}`);
+          if(p.transaction_mode!=='READ_ONLY'||p.exact_manifest_ref_hash_parent_crop_chain_verified!==true||p.existing_a0_state_anchor_preserved!==true||p.provider_availability_watermark!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.freshness_is_late_authoritative_admission_gate!==false||p.ea5e3_authorized!==false||p.formal_o00_start_authorized!==false||p.formal_window_started!==false||p.formal_execution_count!=='0/24'||p.mcft_cap09_completed!==false)throw new Error('T3R1_MANIFEST_V2_NONCLAIM_OR_TEMPORAL_INVALID');
+          console.log(JSON.stringify({status:'PASS',manifest:p.manifest_id,database:p.database_name}));
+          NODE
+
+      - name: Upload immutable T3R1 manifest preflight proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t3r1-successor-formal-db-preflight-window-input-manifest-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2_RESULT.json
+            acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_FORMAL_DB_PREFLIGHT_WINDOW_INPUT_MANIFEST_V2_GOVERNANCE_RESULT.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-FORMAL-WINDOW-INPUT-MANIFEST-V2.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-FORMAL-DB-PREFLIGHT-AND-WINDOW-INPUT-MANIFEST-V2.json
+          if-no-files-found: error
+          retention-days: 90
