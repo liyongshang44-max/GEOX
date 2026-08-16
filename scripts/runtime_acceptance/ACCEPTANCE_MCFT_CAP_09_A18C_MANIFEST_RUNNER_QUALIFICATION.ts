@@ -51,8 +51,8 @@ type ManifestDoc = {
   slot_context_materialization_hashes: Array<[string, string]>;
   crop_materialization_contract: Record<string, unknown>;
   runner_binding: Record<string, any>;
-  temporal_semantics: Record<string, unknown>;
-  nonclaims: Record<string, unknown>;
+  temporal_semantics: Record<string, any>;
+  nonclaims: Record<string, any>;
   next_legal_frontier_after_effectiveness: string;
 };
 
@@ -166,7 +166,7 @@ async function main() {
     scope: bundle.scope,
     o00_logical_time: manifest.epoch.o00,
     o23_logical_time: manifest.epoch.o23,
-    slots: runtimeSlots,
+    slots: runtimeSlots as ExternalFormalV3A18WindowManifestV1["slots"],
   };
 
   const boundary: ShadowOnlineBoundaryV1 = {
