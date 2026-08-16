@@ -1,0 +1,164 @@
+{
+  "schema_version": "geox_mcft_cap09_ea5e3_amendment_01_prewindow_a0_soil_evidence_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-EA5E3-AMENDMENT-01-PREWINDOW-A0-SOIL-EVIDENCE-AUTHORITY",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "CANDIDATE_NOT_EFFECTIVE_UNTIL_EXACT_HEAD_PROOF_AND_PROTECTED_MAIN_MERGE",
+  "exact_predecessor_protected_main": "1daf449c5d572b49c41ed54c771ff7ecbee004e7",
+  "effectiveness_deadline": "2026-08-17T08:00:00.000Z",
+  "correction_reason": {
+    "discovered_after_ea5e3_effectiveness": true,
+    "omitted_readiness_dependency": "PREWINDOW_A0_REQUIRES_ONE_USABLE_AUTHORIZED_SOIL_OBSERVATION_IN_EXACT_OPEN_START_CLOSED_END_PT1H_WINDOW",
+    "original_ea5e3_blocker_count_zero_was_complete": false,
+    "selected_epoch_invalidated": false,
+    "a18a_a18b_a18c_invalidated": false,
+    "ea5e3_v2_collector_runtime_wiring_invalidated": false
+  },
+  "supersession": {
+    "original_ea5e3_authority": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E3-FORMAL-AUTHORITY-V3.json",
+      "blob_sha": "749cafcdf4d1b47248056c86a33001faf8756467"
+    },
+    "superseded_claims": [
+      "readiness_blockers.blocker_count_if_exact_head_qualification_passes=0",
+      "a18d_future_bootstrap_preauthorization.preauthorized_if_ea5e3_becomes_effective_before_deadline=true"
+    ],
+    "retained_effective_claims": [
+      "replacement_v2_store_identity",
+      "A18B_A0_AND_O00_O23_RUNTIME_CONFIG_PINS",
+      "A18C_REPLACEMENT_MANIFEST_AND_RUNNER_EXACT_BINDING",
+      "AMENDMENT11_PROVIDER_AVAILABILITY_WATERMARK_COLLECTOR_WIRING",
+      "COLLECTOR_SIDE_PROVIDER_ACCESS_ONLY",
+      "RUNTIME_DATABASE_ONLY_EVIDENCE_ACCESS",
+      "FORMAL_RAW_RETENTION_BEFORE_CANONICAL_FACT"
+    ],
+    "pre_amendment_effective_blocker_count": 1,
+    "pre_amendment_a18d_preauthorized": false
+  },
+  "governing_authorities": {
+    "amendment_18": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-18-PREWINDOW-STATE-CONTINUITY-AND-FORMAL-STORE-REBASE-AUTHORITY.md",
+      "blob_sha": "bc9627dc4159dcb753e4f0cb1f05d4507962d510"
+    },
+    "a0_evidence_window_service": {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_a0_evidence_window_service_v1.ts",
+      "blob_sha": "1a02cd7c39da8a17ebd161f487c7d2c3c7c704e1"
+    },
+    "evidence_window_builder": {
+      "path": "apps/server/src/runtime/twin_runtime/evidence_window_builder_v1.ts",
+      "blob_sha": "4b626cc1069c83ba31963c31d0228382a4842bf7"
+    }
+  },
+  "selected_epoch": {
+    "epoch_id": "mcft_cap09_external_formal_window_epoch_20260817t200000z_v2",
+    "prewindow_a0": "2026-08-17T19:00:00.000Z",
+    "o00": "2026-08-17T20:00:00.000Z",
+    "o23": "2026-08-18T19:00:00.000Z",
+    "unchanged": true
+  },
+  "formal_store": {
+    "neon_project_id": "delicate-glade-62464340",
+    "neon_branch_id": "br-cold-dust-a6j6aymz",
+    "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h_v2",
+    "historical_database_write_authorized": false
+  },
+  "prewindow_a0_evidence_contract": {
+    "logical_time": "2026-08-17T19:00:00.000Z",
+    "window_rule_id": "OPEN_START_CLOSED_END_PT1H_V1",
+    "window_start_exclusive": "2026-08-17T18:00:00.000Z",
+    "window_end_inclusive": "2026-08-17T19:00:00.000Z",
+    "required_record_type": "soil_moisture_observation_v1",
+    "required_minimum_usable_count": 1,
+    "authorized_soil_binding_required": true,
+    "quality_allowed": ["PASS", "LIMITED"],
+    "observed_at_gt_window_start_required": true,
+    "observed_at_lte_logical_time_required": true,
+    "available_to_runtime_at_lte_logical_time_required": true,
+    "ingested_at_lte_logical_time_required": true,
+    "future_evidence_authorized": false,
+    "late_after_a0_authorized": false,
+    "timestamp_relabel_authorized": false
+  },
+  "collector_wiring": {
+    "entrypoint": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E3_A1_PREWINDOW_A0_SOIL_COLLECTOR.ts",
+    "entrypoint_blob_sha": "3f72441281eb1af31bfcfb7a8296c47457389415",
+    "workflow": ".github/workflows/mcft-cap-09-ea5e3-a1-prewindow-a0-soil.yml",
+    "formal_raw_retention_adapter": {
+      "path": "apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts",
+      "blob_sha": "dfa2c10266a5079842012426aed175851d30ca44",
+      "bucket": "geox-mcft-cap09-formal-raw-v1",
+      "prefix": "mcft-cap09-formal-raw-v1/sha256",
+      "raw_retention_before_decode_required": true
+    },
+    "canonical_evidence_ingress": {
+      "path": "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
+      "blob_sha": "6f7b6450d4f671c75affc2c7aba45ed71cb518c5",
+      "append_only_facts_only": true
+    },
+    "soil_provider_executor": {
+      "path": "apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts",
+      "blob_sha": "1cc2726aace39524e84fda9762f86a3fc2e96408",
+      "authorized_use": "KBS_CURRENT_WEATHER_VARIATE25_PREFETCH_AND_DECODER"
+    },
+    "dataset_id": "mcft_cap09_formal_v2_prewindow_a0_soil_20260817t190000z",
+    "capture_window_start": "2026-08-17T18:00:00.000Z",
+    "collector_hard_stop": "2026-08-17T18:58:00.000Z",
+    "provider_access_side": "COLLECTOR_ONLY",
+    "runtime_provider_access_authorized": false,
+    "raw_values_in_artifact_authorized": false
+  },
+  "temporal_semantics": {
+    "authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "fixed_7h_authority": false,
+    "fixed_t_plus_0630_authority": false,
+    "fixed_t_plus_0712_authority": false,
+    "fixed_t_plus_0717_authority": false,
+    "workflow_schedule_is_normative_temporal_authority": false,
+    "source_substitution_authorized": false,
+    "interpolation_authorized": false,
+    "persistence_fill_authorized": false,
+    "timestamp_relabel_authorized": false
+  },
+  "readiness_effect": {
+    "blocker_id": "PREWINDOW_A0_USABLE_AUTHORIZED_SOIL_EVIDENCE_INGRESS",
+    "blocker_closed_by_static_wiring_qualification": true,
+    "runtime_obligation_must_still_succeed_before_a18d": true,
+    "effective_blocker_count_after_exact_head_qualification_and_on_time_merge": 0,
+    "a18d_preauthorization_restored_after_exact_head_qualification_and_on_time_merge": true,
+    "a18d_execution_still_not_before": "2026-08-17T19:00:00.000Z"
+  },
+  "runtime_fail_closed_conditions": {
+    "missing_usable_a0_soil_at_2026_08_17t19z": "A18D_DISABLED_AND_FORMAL_O00_DISABLED",
+    "collector_effective_after_ea5e3_deadline": "SELECT_LATER_EPOCH",
+    "a0_soil_available_after_19z": "NOT_ADMISSIBLE_FOR_A0",
+    "a0_soil_observed_at_or_before_18z": "NOT_ADMISSIBLE_FOR_A0"
+  },
+  "activation_gate": {
+    "amendment_effective_if_present_on_protected_main": true,
+    "exact_head_focused_qualification_required": true,
+    "repository_wide_ci_required": true,
+    "merge_before_effectiveness_deadline_required": true,
+    "prewindow_a0_soil_collector_enabled_after_effectiveness": true,
+    "formal_evidence_fact_write_authorized_before_a18d": true,
+    "runtime_config_write_authorized_before_a18d": false,
+    "prewindow_a0_state_write_authorized_before_a18d": false,
+    "scheduler_write_authorized_before_a18d": false,
+    "canonical_runtime_tick_authorized_before_a18d": false,
+    "formal_o00_started": false,
+    "formal_execution_count": "0/24"
+  },
+  "hard_nonclaims": [
+    "NO_EPOCH_REBASE",
+    "NO_SECOND_INITIAL_IN_POPULATED_STORE",
+    "NO_HISTORICAL_STORE_WRITE",
+    "NO_FIXED_LAG_AUTHORITY",
+    "NO_SOURCE_SUBSTITUTION",
+    "NO_INTERPOLATION",
+    "NO_PERSISTENCE_FILL",
+    "NO_TIMESTAMP_RELABEL",
+    "NO_RUNTIME_PROVIDER_ACCESS",
+    "NO_A18D_EXECUTION_BEFORE_ACTUAL_19Z",
+    "NO_FORMAL_O00_START"
+  ],
+  "next_legal_frontier_if_effective": "A18D_PREWINDOW_A0_BOOTSTRAP_AND_POST_BOOTSTRAP_CUTOVER_PROOF_AT_ACTUAL_2026_08_17T19_00_00Z"
+}
