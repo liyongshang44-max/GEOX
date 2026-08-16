@@ -1,0 +1,75 @@
+name: mcft-cap-09-a18b-prewindow-config-chain-calibration
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v2.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18B_PREWINDOW_CONFIG_CHAIN_CALIBRATION.ts'
+      - '.github/workflows/mcft-cap-09-a18b-prewindow-config-chain-calibration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXACT_BASE_SHA: '6e7b1ac08ca8f79d65d5c6ec0a57e0cbabb8e5c9'
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Fail closed on exact base and calibration boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event_name }}" = "pull_request"
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_BASE_SHA"
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$HEAD_SHA" | sort)
+          printf '%s\n' "${changed[@]}"
+          test "${#changed[@]}" -eq 3
+          expected=$(cat <<'EOF'
+          .github/workflows/mcft-cap-09-a18b-prewindow-config-chain-calibration.yml
+          apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v2.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18B_PREWINDOW_CONFIG_CHAIN_CALIBRATION.ts
+          EOF
+          )
+          actual=$(printf '%s\n' "${changed[@]}")
+          test "$actual" = "$expected"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck A18B builder and calibration
+        run: pnpm exec tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --skipLibCheck --types node apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v2.ts scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18B_PREWINDOW_CONFIG_CHAIN_CALIBRATION.ts
+
+      - name: Calibrate exact A18B pins
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_A18B_PREWINDOW_CONFIG_CHAIN_CALIBRATION.ts
+
+      - name: Upload calibration proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-a18b-config-chain-calibration-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_A18B_PREWINDOW_CONFIG_CHAIN_CALIBRATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 7
