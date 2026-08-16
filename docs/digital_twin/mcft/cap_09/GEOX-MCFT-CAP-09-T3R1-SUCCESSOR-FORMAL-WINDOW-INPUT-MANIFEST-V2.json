@@ -1,0 +1,371 @@
+{
+  "schema_version": "geox_mcft_cap09_t3r1_successor_formal_window_input_manifest_v2",
+  "manifest_id": "GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-FORMAL-WINDOW-INPUT-MANIFEST-V2",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier_id": "S6-T3R1-SUCCESSOR-FORMAL-DB-PREFLIGHT-AND-WINDOW-INPUT-MANIFEST-V2",
+  "record_status": "T3R1_SUCCESSOR_FORMAL_WINDOW_INPUT_MANIFEST_CANDIDATE_NOT_EFFECTIVE",
+  "base_protected_main_sha": "2fade4617dadae81a779b80f35332545e817ff0a",
+  "selection_mode": "EXPLICIT_REF_HASH_PIN_ONLY",
+  "immutable_for_formal_window": true,
+  "selected_epoch": {
+    "epoch_id": "mcft_cap09_external_formal_window_epoch_20260817t200000z_v2",
+    "o00": "2026-08-17T20:00:00.000Z",
+    "o23": "2026-08-18T19:00:00.000Z",
+    "ea5e3_readiness_deadline": "2026-08-17T08:00:00.000Z",
+    "formal_slot_count": 24,
+    "actual_hourly_utc_boundaries_required": true
+  },
+  "existing_a0_predecessor_authority": {
+    "logical_time": "2026-08-15T10:00:00.000Z",
+    "runtime_config_ref": "external_formal_runtime_config_49959a28cfc9eb357bf18f9d",
+    "runtime_config_hash": "sha256:5f11788fd049a3eae190d566e6faa28f428637e11f2c90b4e0aaea67e6f14e48",
+    "must_remain_prewindow_state_authority": true
+  },
+  "formal_database_binding": {
+    "neon_project_id": "delicate-glade-62464340",
+    "neon_branch_id": "br-cold-dust-a6j6aymz",
+    "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h",
+    "minimum_postgres_version_num": 180000,
+    "scope": {
+      "tenant_id": "tenant_mcft_external",
+      "project_id": "project_mcft_cap09",
+      "group_id": "group_public_research",
+      "field_id": "field_kbs_mcse_t3r1",
+      "season_id": "season_2026_corn",
+      "zone_id": "zone_kbs_mcse_t3r1_crop_formal_v1"
+    },
+    "transaction_mode_for_this_frontier": "READ_ONLY"
+  },
+  "predecessor_proof_bindings": [
+    {
+      "pr_number": 3190,
+      "role": "T3R1_SUCCESSOR_EPOCH_SELECTION_V2",
+      "authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-EPOCH-SELECTION-V2.json",
+      "authority_blob_sha": "9c12e31b0a9a3d33e027f0677ad1cf2d92a5097f",
+      "merged_head_sha": "2489319aed5cea9a5cbf3844bbe8c5921b3f6df0",
+      "merge_commit_sha": "c268d3ff037a01fee51061bc82daeda9309d6e85",
+      "merged_at_utc": "2026-08-16T07:40:52.000Z",
+      "focused_workflow_run_id": 31934176595,
+      "focused_artifact_id": 9260158509,
+      "focused_artifact_digest": "sha256:b7051d0611ed82223b3d9449dbe04e2699d2de497d515e39f485e3be007acac5"
+    },
+    {
+      "pr_number": 3191,
+      "role": "T3R1_SUCCESSOR_RUNTIME_CONFIG_BUILDER_V2",
+      "authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-RUNTIME-CONFIG-BUILDER-QUALIFICATION-V2.json",
+      "authority_blob_sha": "6a9fba30a0b8ad82305f70a43b604d76572daeee",
+      "merged_head_sha": "090a3c539e8830fac2fae71b33dd4f1abbe2cb8d",
+      "merge_commit_sha": "775c5e6f1f43666c9d4fe46e14b07abcb8cfc6d0",
+      "merged_at_utc": "2026-08-16T07:53:50.000Z",
+      "focused_workflow_run_id": 31934715011,
+      "focused_artifact_id": 9260304898,
+      "focused_artifact_digest": "sha256:38f5d2cbd2d0ac169e8ac1ef4e709d2a16f37fbd252348dee03bee36123508c3"
+    },
+    {
+      "pr_number": 3192,
+      "role": "T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2",
+      "authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-RUNTIME-CONFIG-PERSISTENCE-V2.json",
+      "authority_blob_sha": "3b2a3b7848622e5193372792c0b45fe66c17d359",
+      "merged_head_sha": "2402a95ce54b16610d0273974cc8b8bc7a0b2c58",
+      "merge_commit_sha": "2fade4617dadae81a779b80f35332545e817ff0a",
+      "merged_at_utc": "2026-08-16T08:20:53.000Z",
+      "focused_workflow_run_id": 31935870828,
+      "focused_artifact_id": 9260626774,
+      "focused_artifact_digest": "sha256:4f0867b49a95da394a4ab5f84cabe8595150027a5e7daf388a4e6caf26b1f143"
+    }
+  ],
+  "amendment_11_temporal_authority": {
+    "authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md",
+    "authority_blob_sha": "a037b24757992987fc24ce8b6afac6c8eabca3ed",
+    "provider_availability_watermark": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "observation_resolution": "hourly",
+    "provider_publication_cadence": "daily_batch",
+    "historical_online_freshness_diagnostic_hours": 6,
+    "freshness_is_late_authoritative_admission_gate": false,
+    "delayed_exact_interval_families": [
+      "observed_rainfall_v1",
+      "historical_et0_estimate_v1"
+    ],
+    "exact_interval_semantics": "(T-1h,T] WITH event_time=T",
+    "required_chronology": [
+      "first_seen",
+      "retrieved",
+      "available_to_runtime_at",
+      "ingested_at"
+    ],
+    "raw_retention_before_canonicalization": true,
+    "age_alone_may_invalidate_exact_authoritative_late_observation": false,
+    "fixed_t_plus_432_normative_cutoff": false,
+    "no_future_leakage": true,
+    "no_interpolation": true,
+    "no_persistence_fill": true,
+    "no_source_substitution": true,
+    "superseded_authority_values": [
+      "scheduler_eligibility_lag_hours=7",
+      "late_collector=T+06:30",
+      "exact_evidence_cutoff=T+07:12",
+      "runtime_observer=T+07:17"
+    ],
+    "cadence_engineering_observation_window_hours_is_freshness_authority": false,
+    "rolling_candidate_retention_hours_is_freshness_authority": false
+  },
+  "required_prewindow_state": {
+    "total_fact_count": 59,
+    "exact_scope_fact_count": 59,
+    "external_soil_evidence_count": 1,
+    "canonical_twin_fact_count": 58,
+    "runtime_config_count": 49,
+    "persisted_bootstrap_and_qualification_runtime_config_count": 25,
+    "successor_hourly_runtime_config_count": 24,
+    "state_count": 1,
+    "existing_a0_state_anchor_preserved": true,
+    "state_latest_logical_time": "2026-08-15T10:00:00.000Z",
+    "scheduler_slot_count": 0,
+    "scheduler_cursor_count": 0,
+    "formal_window_runtime_tick_count": 0,
+    "formal_execution_count": "0/24",
+    "foreign_scope_relevant_fact_count": 0,
+    "formal_window_started": false
+  },
+  "slot_count": 24,
+  "slots": [
+    {
+      "slot_id": "O00",
+      "logical_time": "2026-08-17T20:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_a4f4eea61b6d4144ce5d1362",
+      "runtime_config_hash": "sha256:687a48fb40c1e2e16f4f25b29881ed0c534669f4549172462ef6015d5cb28eac",
+      "parent_runtime_config_ref": "external_formal_runtime_config_49959a28cfc9eb357bf18f9d",
+      "parent_runtime_config_hash": "sha256:5f11788fd049a3eae190d566e6faa28f428637e11f2c90b4e0aaea67e6f14e48",
+      "crop_stage_context_hash": "sha256:a4f6ae8753073ceb7d87207f86a95a3ca7cfd4d8591467c3c1fcf5f465ce300f"
+    },
+    {
+      "slot_id": "O01",
+      "logical_time": "2026-08-17T21:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_815177b4e961bc7f7cab2445",
+      "runtime_config_hash": "sha256:f2f7d3edb2039aa3201c8825548f1c704ef5e51f36f05bad020731bb0537c779",
+      "parent_runtime_config_ref": "external_formal_runtime_config_a4f4eea61b6d4144ce5d1362",
+      "parent_runtime_config_hash": "sha256:687a48fb40c1e2e16f4f25b29881ed0c534669f4549172462ef6015d5cb28eac",
+      "crop_stage_context_hash": "sha256:999120d81bab1a878f76e83d80336c2cdd86a8ca2ef0cdf510504ce11849ea9d"
+    },
+    {
+      "slot_id": "O02",
+      "logical_time": "2026-08-17T22:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_1c8b049e086e1930d790a118",
+      "runtime_config_hash": "sha256:1ef912a327eb17d8b0a639e9d30078a473f6fb149511d9cc88ee2652e44bd70d",
+      "parent_runtime_config_ref": "external_formal_runtime_config_815177b4e961bc7f7cab2445",
+      "parent_runtime_config_hash": "sha256:f2f7d3edb2039aa3201c8825548f1c704ef5e51f36f05bad020731bb0537c779",
+      "crop_stage_context_hash": "sha256:4b9f10cd95d03ae20bae325f41b8175bf5bb51fe52bc76b70e6db07922ef9052"
+    },
+    {
+      "slot_id": "O03",
+      "logical_time": "2026-08-17T23:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_8e4db77a20ef46a9148d35fe",
+      "runtime_config_hash": "sha256:dc2a789596b1925561a53c80121ee6012da22e582dbbb8f3a3c902c01a8f9442",
+      "parent_runtime_config_ref": "external_formal_runtime_config_1c8b049e086e1930d790a118",
+      "parent_runtime_config_hash": "sha256:1ef912a327eb17d8b0a639e9d30078a473f6fb149511d9cc88ee2652e44bd70d",
+      "crop_stage_context_hash": "sha256:2e7cf6150412f7696d06edcc9cc057e3d0ebe6e552652b514093667ca463018e"
+    },
+    {
+      "slot_id": "O04",
+      "logical_time": "2026-08-18T00:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_3f33cb9f319a29bfccf84199",
+      "runtime_config_hash": "sha256:afcd03dcac57b124349f89678ccaea14e0690275fc8062f083159a2a1c298379",
+      "parent_runtime_config_ref": "external_formal_runtime_config_8e4db77a20ef46a9148d35fe",
+      "parent_runtime_config_hash": "sha256:dc2a789596b1925561a53c80121ee6012da22e582dbbb8f3a3c902c01a8f9442",
+      "crop_stage_context_hash": "sha256:7ee9030c9c6b2dc00e3f6d5839956ba83abc3ec09c13db6e864e23528dbecff7"
+    },
+    {
+      "slot_id": "O05",
+      "logical_time": "2026-08-18T01:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_c4307525d6ac02b2326b2b15",
+      "runtime_config_hash": "sha256:bf1439d9bf43ef4dd5cfb3ba734f57b789a4d92d181384217d44d96587a74c22",
+      "parent_runtime_config_ref": "external_formal_runtime_config_3f33cb9f319a29bfccf84199",
+      "parent_runtime_config_hash": "sha256:afcd03dcac57b124349f89678ccaea14e0690275fc8062f083159a2a1c298379",
+      "crop_stage_context_hash": "sha256:5279ac00a6addea70113bb751453a79c71439be64fb70f8cd7395bad9cd812c6"
+    },
+    {
+      "slot_id": "O06",
+      "logical_time": "2026-08-18T02:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_8b7b9a3a7b616b548a1eb78d",
+      "runtime_config_hash": "sha256:bf3cfa77b4bf9d31809d9aa59a52ea2fdbb84f1ed41ed49b1f4d7498599a57c2",
+      "parent_runtime_config_ref": "external_formal_runtime_config_c4307525d6ac02b2326b2b15",
+      "parent_runtime_config_hash": "sha256:bf1439d9bf43ef4dd5cfb3ba734f57b789a4d92d181384217d44d96587a74c22",
+      "crop_stage_context_hash": "sha256:be3537eac7fb1e0d8bcb2960e0ecd2181ddeea7258f198614677f8736e11d038"
+    },
+    {
+      "slot_id": "O07",
+      "logical_time": "2026-08-18T03:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_3cb18df9b467379d435b4550",
+      "runtime_config_hash": "sha256:2748d1b14b3ec17c0c71dba716c9ac112ca938beab658ae2708789e75316b0a1",
+      "parent_runtime_config_ref": "external_formal_runtime_config_8b7b9a3a7b616b548a1eb78d",
+      "parent_runtime_config_hash": "sha256:bf3cfa77b4bf9d31809d9aa59a52ea2fdbb84f1ed41ed49b1f4d7498599a57c2",
+      "crop_stage_context_hash": "sha256:e266a11a37e53a303cd46340b221fd105d3862a0d471f879b8ea3b1d2e2e3a91"
+    },
+    {
+      "slot_id": "O08",
+      "logical_time": "2026-08-18T04:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_090ae9f55291fbb7332ce02e",
+      "runtime_config_hash": "sha256:55c690d7dc4cd5a91e9dc737d9ff43815653120cf773cb6752e9ecbdb5463b06",
+      "parent_runtime_config_ref": "external_formal_runtime_config_3cb18df9b467379d435b4550",
+      "parent_runtime_config_hash": "sha256:2748d1b14b3ec17c0c71dba716c9ac112ca938beab658ae2708789e75316b0a1",
+      "crop_stage_context_hash": "sha256:b8f8e507621379c8fd541ef6401f30a3ccaa3524872cd938c6d7323b80758db2"
+    },
+    {
+      "slot_id": "O09",
+      "logical_time": "2026-08-18T05:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_c74f50536d2410eebdd86cd0",
+      "runtime_config_hash": "sha256:33d9d4ff290ffd3097b43293c0597b0b15ec03f870db30e03a259504352db4ab",
+      "parent_runtime_config_ref": "external_formal_runtime_config_090ae9f55291fbb7332ce02e",
+      "parent_runtime_config_hash": "sha256:55c690d7dc4cd5a91e9dc737d9ff43815653120cf773cb6752e9ecbdb5463b06",
+      "crop_stage_context_hash": "sha256:74145ec9613daba027ea444a2cbcd6a286f107ac5933c9c9050b419b75b6bbab"
+    },
+    {
+      "slot_id": "O10",
+      "logical_time": "2026-08-18T06:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_3764ac737b6ca8efdff80683",
+      "runtime_config_hash": "sha256:7b20a6cbb018feb8ecaafc11b2ac8eba1e974461ecc6353e00a816c80b87f137",
+      "parent_runtime_config_ref": "external_formal_runtime_config_c74f50536d2410eebdd86cd0",
+      "parent_runtime_config_hash": "sha256:33d9d4ff290ffd3097b43293c0597b0b15ec03f870db30e03a259504352db4ab",
+      "crop_stage_context_hash": "sha256:c4eb21a9948a8de0899a8d971d885080f3e90feae778998e38b32052e08a7516"
+    },
+    {
+      "slot_id": "O11",
+      "logical_time": "2026-08-18T07:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_37aa0a02ea77a293c74d9045",
+      "runtime_config_hash": "sha256:d44ae79be8f0d6a4109f1fca0844223a9afb977236ab7a9e298d78a89cab7d45",
+      "parent_runtime_config_ref": "external_formal_runtime_config_3764ac737b6ca8efdff80683",
+      "parent_runtime_config_hash": "sha256:7b20a6cbb018feb8ecaafc11b2ac8eba1e974461ecc6353e00a816c80b87f137",
+      "crop_stage_context_hash": "sha256:d6bcd06d92f12860e1f3bee85719cc4f4d4d99dc3d59bb504b847dd0824b3445"
+    },
+    {
+      "slot_id": "O12",
+      "logical_time": "2026-08-18T08:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_dc8a329a9cfd878dee82101d",
+      "runtime_config_hash": "sha256:ccf746b821ffe29bce07854bcf57c72625d3596a84f0bd2c3ddbdf93d4d7bac8",
+      "parent_runtime_config_ref": "external_formal_runtime_config_37aa0a02ea77a293c74d9045",
+      "parent_runtime_config_hash": "sha256:d44ae79be8f0d6a4109f1fca0844223a9afb977236ab7a9e298d78a89cab7d45",
+      "crop_stage_context_hash": "sha256:66457361e00ba2f7f9e95998e04fa8c81ecd8678d33477de1fd7e4e7f15d123c"
+    },
+    {
+      "slot_id": "O13",
+      "logical_time": "2026-08-18T09:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_baf12511039c7a11ca60898d",
+      "runtime_config_hash": "sha256:1793e0f3a2226ae306ab25a205d3b5966bb915056f12faafa9de06d46e3c559b",
+      "parent_runtime_config_ref": "external_formal_runtime_config_dc8a329a9cfd878dee82101d",
+      "parent_runtime_config_hash": "sha256:ccf746b821ffe29bce07854bcf57c72625d3596a84f0bd2c3ddbdf93d4d7bac8",
+      "crop_stage_context_hash": "sha256:919e46159d8d8735c525421b081217a6fdf46c4c6f3df1eb5e61e1fa5283e280"
+    },
+    {
+      "slot_id": "O14",
+      "logical_time": "2026-08-18T10:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_caf1e54ddb6be5c8c77eb14a",
+      "runtime_config_hash": "sha256:d408c4c1e35d6fb1000cee7a3d32ad059221f9ab1fd7bf229f94aff790c39ade",
+      "parent_runtime_config_ref": "external_formal_runtime_config_baf12511039c7a11ca60898d",
+      "parent_runtime_config_hash": "sha256:1793e0f3a2226ae306ab25a205d3b5966bb915056f12faafa9de06d46e3c559b",
+      "crop_stage_context_hash": "sha256:1ee7e437bcac4038269b39792f289ffd135973d2c77f49ed9c88ffbfad0d67f5"
+    },
+    {
+      "slot_id": "O15",
+      "logical_time": "2026-08-18T11:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_58ec80e63221667e05d8dd70",
+      "runtime_config_hash": "sha256:241889d8f1042b4d74a686420a690c0b21be1e3fbe15e321cf7f1a09b73b2787",
+      "parent_runtime_config_ref": "external_formal_runtime_config_caf1e54ddb6be5c8c77eb14a",
+      "parent_runtime_config_hash": "sha256:d408c4c1e35d6fb1000cee7a3d32ad059221f9ab1fd7bf229f94aff790c39ade",
+      "crop_stage_context_hash": "sha256:4c1c289c0a1a56c66b49713d86ebaf7e59ca5b6abbb0d3138a461206bc4ec9e7"
+    },
+    {
+      "slot_id": "O16",
+      "logical_time": "2026-08-18T12:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_301a287c682bf6df4f2b3732",
+      "runtime_config_hash": "sha256:186d74fca60e8833626c9ffb99cd9a343858532eff7dfed0f8d2bce62919951d",
+      "parent_runtime_config_ref": "external_formal_runtime_config_58ec80e63221667e05d8dd70",
+      "parent_runtime_config_hash": "sha256:241889d8f1042b4d74a686420a690c0b21be1e3fbe15e321cf7f1a09b73b2787",
+      "crop_stage_context_hash": "sha256:b99ffa706228cf0ddd5460da2f97aa02659cd0b990b437de0f203c9c7a07930f"
+    },
+    {
+      "slot_id": "O17",
+      "logical_time": "2026-08-18T13:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_65e76a803c7cc688b7ff3413",
+      "runtime_config_hash": "sha256:4ee90ffea0fc4917bd057d5d17e12936bc09ece70259913066e495e96794dfed",
+      "parent_runtime_config_ref": "external_formal_runtime_config_301a287c682bf6df4f2b3732",
+      "parent_runtime_config_hash": "sha256:186d74fca60e8833626c9ffb99cd9a343858532eff7dfed0f8d2bce62919951d",
+      "crop_stage_context_hash": "sha256:6bbaffddd15421a8c5a556100448a7711dcb83e03e34ec3e61542e8e9ecc43ff"
+    },
+    {
+      "slot_id": "O18",
+      "logical_time": "2026-08-18T14:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_2c5f0bb1169679fd279e3e79",
+      "runtime_config_hash": "sha256:db8071173be20d4690b098990016d2f24cb023f972213e49b24b2b63f19de571",
+      "parent_runtime_config_ref": "external_formal_runtime_config_65e76a803c7cc688b7ff3413",
+      "parent_runtime_config_hash": "sha256:4ee90ffea0fc4917bd057d5d17e12936bc09ece70259913066e495e96794dfed",
+      "crop_stage_context_hash": "sha256:75d3159e47cd170d8249bc546132b4396c32ab2d0a55838b158030c2cae05c27"
+    },
+    {
+      "slot_id": "O19",
+      "logical_time": "2026-08-18T15:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_5f8fdc6ea5ce1a4451cec9d3",
+      "runtime_config_hash": "sha256:d9f6ed8e09b3b34cc4a9c0e4d3e77fa6af3c05811fd9b629f2d07b898605b1b2",
+      "parent_runtime_config_ref": "external_formal_runtime_config_2c5f0bb1169679fd279e3e79",
+      "parent_runtime_config_hash": "sha256:db8071173be20d4690b098990016d2f24cb023f972213e49b24b2b63f19de571",
+      "crop_stage_context_hash": "sha256:545d504b318e7622f641fbf6218c4254127d7b6db9fc4cf440467ecca633bb2b"
+    },
+    {
+      "slot_id": "O20",
+      "logical_time": "2026-08-18T16:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_a68e1a1347a46f4051725c6a",
+      "runtime_config_hash": "sha256:ec367209d03b7bf0cec4336c70157fc5eaedabdd9332a4ba6f5e60937ef2c750",
+      "parent_runtime_config_ref": "external_formal_runtime_config_5f8fdc6ea5ce1a4451cec9d3",
+      "parent_runtime_config_hash": "sha256:d9f6ed8e09b3b34cc4a9c0e4d3e77fa6af3c05811fd9b629f2d07b898605b1b2",
+      "crop_stage_context_hash": "sha256:5131b44949123eeebdc387470c1b66c4fae28337e834372f043b6f8e1dc31872"
+    },
+    {
+      "slot_id": "O21",
+      "logical_time": "2026-08-18T17:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_8a795562a58b8098910839d4",
+      "runtime_config_hash": "sha256:ae4c03f6056dfa32a2bacde353417cbc9bed666e143ac24ef1925fbc3b6363c8",
+      "parent_runtime_config_ref": "external_formal_runtime_config_a68e1a1347a46f4051725c6a",
+      "parent_runtime_config_hash": "sha256:ec367209d03b7bf0cec4336c70157fc5eaedabdd9332a4ba6f5e60937ef2c750",
+      "crop_stage_context_hash": "sha256:119c3ecd70db393abd995b31f4cda81d0af33590115a407c71c481a3e380614d"
+    },
+    {
+      "slot_id": "O22",
+      "logical_time": "2026-08-18T18:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_c87286155697f2cb3c3f85ad",
+      "runtime_config_hash": "sha256:123420e5b945136bcc5a0b4a530611686ac22b51f12cc879988f51badfd44652",
+      "parent_runtime_config_ref": "external_formal_runtime_config_8a795562a58b8098910839d4",
+      "parent_runtime_config_hash": "sha256:ae4c03f6056dfa32a2bacde353417cbc9bed666e143ac24ef1925fbc3b6363c8",
+      "crop_stage_context_hash": "sha256:3185469b64a2ecbebc725ed4e10ff842730971126425032241d7cd31e7eae217"
+    },
+    {
+      "slot_id": "O23",
+      "logical_time": "2026-08-18T19:00:00.000Z",
+      "runtime_config_ref": "external_formal_runtime_config_330a9c2015a85328b0d83fa5",
+      "runtime_config_hash": "sha256:c9932ecbb7e7e9fa202713b2115cd3a93637426791427f53c91e68fc2d74c1fa",
+      "parent_runtime_config_ref": "external_formal_runtime_config_c87286155697f2cb3c3f85ad",
+      "parent_runtime_config_hash": "sha256:123420e5b945136bcc5a0b4a530611686ac22b51f12cc879988f51badfd44652",
+      "crop_stage_context_hash": "sha256:0d124ad03deb26f427f1edad0e4bf991b4e9c67d739030e649d3f8c2a084ab13"
+    }
+  ],
+  "selection_guards": {
+    "implicit_latest_runtime_config_selection_allowed": false,
+    "manual_hourly_secret_mutation_allowed": false,
+    "runtime_config_generation_during_formal_window_allowed": false,
+    "slot_runtime_config_must_equal_manifest_ref_hash": true,
+    "slot_parent_must_equal_manifest_parent_ref_hash": true,
+    "slot_crop_context_must_equal_selection_authority_hash": true,
+    "post_persistence_rewrite_or_delete_repair_allowed": false
+  },
+  "hard_nonclaims": [
+    "NO_DATABASE_WRITE_FROM_PREFLIGHT_OR_MANIFEST",
+    "NO_PROVIDER_OR_RAW_OBJECT_WRITE",
+    "NO_NEW_A0_BOOTSTRAP_OR_STATE",
+    "NO_SCHEDULER_SLOT_OR_CURSOR_CREATION",
+    "NO_RUNTIME_TICK_OR_FORMAL_O00_EXECUTION",
+    "NO_EA5E3_AUTHORITY",
+    "NO_FORMAL_WINDOW_START",
+    "NO_RECOMMENDATION_APPROVAL_AO_ACT_DISPATCH",
+    "NO_MODEL_ACTIVATION",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
