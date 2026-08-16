@@ -127,17 +127,19 @@ class OneShotSoilTransport implements ExternalEvidenceTransportPortV1 {
 
 async function collectOneCandidate(retention: S3CompatiblePrivateRawEvidenceRetentionAdapterV1): Promise<CanonicalizedExternalEvidenceResultV1> {
   const prefetched = await prefetchLiveKbsVariate25RawV1();
+  const request: ExternalEvidenceFetchRequestV1 = {
+    ...prefetched.request,
+    request_id: `ea5e3-a1-a0-soil-${crypto.randomUUID()}`,
+    use_policy_ref: SOURCE_MATRIX_REF,
+    limitations: ["PREWINDOW_A0_EVIDENCE_ONLY", "NO_RUNTIME_PROVIDER_FETCH", "NO_TIMESTAMP_RELABEL"],
+  };
+  const boundPrefetched: PrefetchedKbsSoilRawV1 = { ...prefetched, request };
   const results = await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1({
     dataset_id: DATASET_ID,
     scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
-    request: {
-      ...prefetched.request,
-      request_id: `ea5e3-a1-a0-soil-${crypto.randomUUID()}`,
-      use_policy_ref: SOURCE_MATRIX_REF,
-      limitations: ["PREWINDOW_A0_EVIDENCE_ONLY", "NO_RUNTIME_PROVIDER_FETCH", "NO_TIMESTAMP_RELABEL"],
-    },
+    request,
   }, {
-    transport: new OneShotSoilTransport({ ...prefetched, request: { ...prefetched.request, request_id: `ea5e3-a1-a0-soil-${crypto.randomUUID()}` } }),
+    transport: new OneShotSoilTransport(boundPrefetched),
     retention,
     decoder: new KbsVariate25SoilEvidenceDecoderV1(),
   });
