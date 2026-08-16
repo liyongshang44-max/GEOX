@@ -18,12 +18,14 @@ jobs:
     timeout-minutes: 20
     env:
       EXACT_BASE_SHA: '799a29292b61248b9a037c9200c904f6fda7be66'
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       TARGET_DATABASE_NAME: 'geox_mcft_cap09_s6_formal_t3r1_24h_v2'
       SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
     steps:
       - name: Checkout exact subject
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Fail closed on exact base and four-file boundary
@@ -32,8 +34,8 @@ jobs:
           set -euo pipefail
           test "${{ github.event_name }}" = "pull_request"
           test "${{ github.event.pull_request.base.sha }}" = "$EXACT_BASE_SHA"
-          test "${{ github.event.pull_request.head.sha }}" = "${GITHUB_SHA}"
-          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$GITHUB_SHA" | sort)
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$HEAD_SHA" | sort)
           printf '%s\n' "${changed[@]}"
           test "${#changed[@]}" -eq 4
           expected=$(cat <<'EOF'
