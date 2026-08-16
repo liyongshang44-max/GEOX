@@ -1,0 +1,135 @@
+name: mcft-cap-09-t3r1-successor-runtime-config-builder-v2
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t3r1-successor-runtime-config-builder-v2.yml'
+      - 'apps/server/src/domain/twin_runtime/external_formal_window_epoch_rebase_bundle_v2.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_BUILDER_V2.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_BUILDER_V2.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-RUNTIME-CONFIG-BUILDER-QUALIFICATION-V2.json'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-t3r1-successor-runtime-config-builder-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  exact-head-t3r1-successor-runtime-config-builder-v2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL || secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+      FORMAL_WINDOW_ENABLED: ${{ vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact post-selection protected-main base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}'
+          test "$base" = 'c268d3ff037a01fee51061bc82daeda9309d6e85' || { echo "T3R1_SUCCESSOR_BUILDER_BASE_DRIFT:$base" >&2; exit 1; }
+          now="$(date -u +%s)"
+          readiness="$(date -u -d '2026-08-17T08:00:00.000Z' +%s)"
+          o00="$(date -u -d '2026-08-17T20:00:00.000Z' +%s)"
+          test "$now" -lt "$readiness" || { echo 'T3R1_SUCCESSOR_BUILDER_EA5E3_READINESS_DEADLINE_EXPIRED' >&2; exit 1; }
+          test "$now" -lt "$o00" || { echo 'T3R1_SUCCESSOR_BUILDER_SELECTED_O00_ALREADY_PASSED' >&2; exit 1; }
+          echo "base_sha=$base" >> "$GITHUB_OUTPUT"
+
+      - name: Verify exact successor selection effectiveness and proof artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/3190")"
+          echo "$pr" | jq -e '.merged_at == "2026-08-16T07:40:52Z" and .head.sha == "2489319aed5cea9a5cbf3844bbe8c5921b3f6df0" and .merge_commit_sha == "c268d3ff037a01fee51061bc82daeda9309d6e85"' >/dev/null
+          run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/31934176595")"
+          echo "$run" | jq -e '.head_sha == "2489319aed5cea9a5cbf3844bbe8c5921b3f6df0" and .status == "completed" and .conclusion == "success"' >/dev/null
+          artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9260158509")"
+          echo "$artifact" | jq -e '.expired == false and .digest == "sha256:b7051d0611ed82223b3d9449dbe04e2699d2de497d515e39f485e3be007acac5"' >/dev/null
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify T3R1 Formal baseline remains read-only and scheduler-zero
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL:-}" || { echo 'T3R1_SUCCESSOR_BUILDER_FORMAL_DB_REQUIRED' >&2; exit 1; }
+          test "${FORMAL_WINDOW_ENABLED:-false}" != 'true' || { echo 'T3R1_SUCCESSOR_BUILDER_FORMAL_WINDOW_MUST_REMAIN_DISABLED' >&2; exit 1; }
+          node --input-type=module <<'NODE'
+          import { Pool } from 'pg';
+          const pool=new Pool({connectionString:process.env.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL,max:2});
+          try {
+            const c=await pool.connect();
+            try {
+              await c.query('BEGIN TRANSACTION READ ONLY');
+              const id=(await c.query("SELECT current_database() AS db,current_setting('neon.project_id',true) AS project_id,current_setting('neon.branch_id',true) AS branch_id")).rows[0];
+              if(id?.db!=='geox_mcft_cap09_s6_formal_t3r1_24h'||id?.project_id!=='delicate-glade-62464340'||id?.branch_id!=='br-cold-dust-a6j6aymz')throw new Error('T3R1_SUCCESSOR_BUILDER_FORMAL_DB_IDENTITY_MISMATCH');
+              const r=(await c.query("SELECT (SELECT count(*)::int FROM facts WHERE record_json->>'type'='twin_runtime_config_v1') AS configs,(SELECT count(*)::int FROM twin_shadow_online_scheduler_slot_v1) AS slots,(SELECT count(*)::int FROM twin_shadow_online_scheduler_cursor_v1) AS cursors")).rows[0];
+              if(Number(r?.configs)!==25||Number(r?.slots)!==0||Number(r?.cursors)!==0)throw new Error('T3R1_SUCCESSOR_BUILDER_FORMAL_BASELINE_DRIFT');
+              await c.query('COMMIT');
+            } finally { c.release(); }
+          } finally { await pool.end(); }
+          NODE
+
+      - name: Syntax-check governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_BUILDER_V2.cjs
+
+      - name: Prove exact five-file successor builder boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_BUILDER_V2.cjs
+
+      - name: Typecheck server and focused successor builder acceptance
+        run: |
+          pnpm --filter @geox/server typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_BUILDER_V2.ts
+
+      - name: Execute T3R1 successor Runtime Config builder V2 qualification
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_BUILDER_V2.ts
+
+      - name: Verify public builder qualification result
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_BUILDER_V2_RESULT.json','utf8'));
+          if(r.status!=='PASS')throw new Error('T3R1_SUCCESSOR_BUILDER_PASS_REQUIRED');
+          if(r.selected_epoch_id!=='mcft_cap09_external_formal_window_epoch_20260817t200000z_v2'||r.selected_o00!=='2026-08-17T20:00:00.000Z'||r.selected_o23!=='2026-08-18T19:00:00.000Z')throw new Error('T3R1_SUCCESSOR_BUILDER_WINDOW_MISMATCH');
+          if(r.exact_successor_runtime_config_count!==24||r.runtime_config_refs.length!==24||r.runtime_config_hashes.length!==24||r.slot_crop_stage_context_hashes.length!==24)throw new Error('T3R1_SUCCESSOR_BUILDER_EXACT_24_REQUIRED');
+          if(r.exact_parent_chain_verified!==true||r.persisted_ref_hash_collision_count!==0||r.deterministic_double_build_verified!==true)throw new Error('T3R1_SUCCESSOR_BUILDER_PROOF_INVALID');
+          if(r.database_access_mode!=='READ_ONLY_A0_AND_BASELINE_VERIFICATION'||r.builder_database_write_count!==0||r.builder_raw_object_write_count!==0||r.builder_provider_request_count!==0||r.builder_scheduler_slot_write_count!==0||r.builder_scheduler_cursor_write_count!==0)throw new Error('T3R1_SUCCESSOR_BUILDER_SIDE_EFFECT_FORBIDDEN');
+          if(r.successor_runtime_configs_persisted!==false||r.ea5e3_authorized!==false||r.formal_o00_start_authorized!==false||r.formal_window_started!==false||r.mcft_cap09_completed!==false)throw new Error('T3R1_SUCCESSOR_BUILDER_PREMATURE_CLAIM');
+          const text=JSON.stringify(r); for(const x of ['DATABASE_URL','SECRET_ACCESS_KEY','ACCESS_KEY_ID'])if(text.includes(x))throw new Error(`T3R1_SUCCESSOR_BUILDER_PUBLIC_SECRET_MARKER:${x}`);
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-t3r1-successor-runtime-config-builder-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_BUILDER_V2_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_BUILDER_V2_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
