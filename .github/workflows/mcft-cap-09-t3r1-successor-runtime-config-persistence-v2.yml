@@ -1,0 +1,177 @@
+name: mcft-cap-09-t3r1-successor-runtime-config-persistence-v2
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t3r1-successor-runtime-config-persistence-v2.yml'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-SUCCESSOR-RUNTIME-CONFIG-PERSISTENCE-V2.json'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-t3r1-successor-runtime-config-persistence-v2
+  cancel-in-progress: false
+
+jobs:
+  exact-head-t3r1-successor-runtime-config-persistence-v2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL || secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
+      GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED: ${{ vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact post-builder protected-main base and deadlines
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}'
+          test "$base" = '775c5e6f1f43666c9d4fe46e14b07abcb8cfc6d0' || { echo "T3R1_SUCCESSOR_PERSISTENCE_BASE_DRIFT:$base" >&2; exit 1; }
+          now="$(date -u +%s)"
+          readiness="$(date -u -d '2026-08-17T08:00:00.000Z' +%s)"
+          o00="$(date -u -d '2026-08-17T20:00:00.000Z' +%s)"
+          test "$now" -lt "$readiness" || { echo 'T3R1_SUCCESSOR_PERSISTENCE_EA5E3_READINESS_DEADLINE_EXPIRED' >&2; exit 1; }
+          test "$now" -lt "$o00" || { echo 'T3R1_SUCCESSOR_PERSISTENCE_O00_ALREADY_PASSED' >&2; exit 1; }
+          test -n "${GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL:-}" || { echo 'T3R1_SUCCESSOR_PERSISTENCE_FORMAL_DB_REQUIRED' >&2; exit 1; }
+          test "${GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED:-false}" != 'true' || { echo 'T3R1_SUCCESSOR_PERSISTENCE_FORMAL_WINDOW_MUST_REMAIN_DISABLED' >&2; exit 1; }
+          echo "base_sha=$base" >> "$GITHUB_OUTPUT"
+
+      - name: Verify effective builder qualification and download immutable proof
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/3191")"
+          echo "$pr" | jq -e '.merged_at == "2026-08-16T07:53:50Z" and .head.sha == "090a3c539e8830fac2fae71b33dd4f1abbe2cb8d" and .merge_commit_sha == "775c5e6f1f43666c9d4fe46e14b07abcb8cfc6d0"' >/dev/null
+          run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/31934715011")"
+          echo "$run" | jq -e '.head_sha == "090a3c539e8830fac2fae71b33dd4f1abbe2cb8d" and .status == "completed" and .conclusion == "success"' >/dev/null
+          artifact="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9260304898")"
+          echo "$artifact" | jq -e '.expired == false and .digest == "sha256:38f5d2cbd2d0ac169e8ac1ef4e709d2a16f37fbd252348dee03bee36123508c"' >/dev/null
+          rm -rf /tmp/t3r1-builder-v2 /tmp/t3r1-builder-v2.zip
+          mkdir -p /tmp/t3r1-builder-v2
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/9260304898/zip" > /tmp/t3r1-builder-v2.zip
+          unzip -q /tmp/t3r1-builder-v2.zip -d /tmp/t3r1-builder-v2
+          proof='/tmp/t3r1-builder-v2/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_BUILDER_V2_RESULT.json'
+          test -s "$proof"
+          node - "$proof" <<'NODE'
+          const fs=require('fs'); const p=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          if(p.status!=='PASS'||p.selected_epoch_id!=='mcft_cap09_external_formal_window_epoch_20260817t200000z_v2'||p.exact_successor_runtime_config_count!==24||p.runtime_config_refs?.length!==24||p.runtime_config_hashes?.length!==24||p.exact_parent_chain_verified!==true||p.persisted_ref_hash_collision_count!==0||p.successor_runtime_configs_persisted!==false)throw new Error('T3R1_SUCCESSOR_PERSISTENCE_BUILDER_PROOF_INVALID');
+          NODE
+          echo "T3R1_SUCCESSOR_BUILDER_PROOF_PATH=$proof" >> "$GITHUB_ENV"
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check and prove exact four-file persistence boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2.cjs
+
+      - name: Typecheck server and T3R1 persistence executor
+        run: |
+          pnpm --filter @geox/server typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2.ts
+
+      - name: Read-only preflight exact Formal DB and crash-recovery prefix
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'; import { Pool } from 'pg';
+          const proof=JSON.parse(fs.readFileSync(process.env.T3R1_SUCCESSOR_BUILDER_PROOF_PATH,'utf8'));
+          const refs=proof.runtime_config_refs, hashes=proof.runtime_config_hashes;
+          const scope=['tenant_mcft_external','project_mcft_cap09','group_public_research','field_kbs_mcse_t3r1','season_2026_corn','zone_kbs_mcse_t3r1_crop_formal_v1'];
+          const pool=new Pool({connectionString:process.env.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL,max:2});
+          try { const c=await pool.connect(); try {
+            await c.query('BEGIN TRANSACTION READ ONLY');
+            const id=(await c.query("SELECT current_database() AS d,current_setting('neon.project_id',true) AS p,current_setting('neon.branch_id',true) AS b")).rows[0];
+            if(id?.d!=='geox_mcft_cap09_s6_formal_t3r1_24h'||id?.p!=='delicate-glade-62464340'||id?.b!=='br-cold-dust-a6j6aymz')throw new Error('T3R1_SUCCESSOR_PERSISTENCE_DATABASE_IDENTITY_INVALID');
+            const selected=await c.query(`SELECT record_json->'payload' AS o FROM facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6 AND record_json#>>'{payload,object_id}'=ANY($7::text[])`,[...scope,refs]);
+            const byRef=new Map(selected.rows.map(r=>[r.o.object_id,r.o])); let prefix=0, missing=false;
+            for(let i=0;i<24;i++){const o=byRef.get(refs[i]); if(!o){missing=true;continue;} if(missing)throw new Error('T3R1_SUCCESSOR_PERSISTENCE_NONCONTIGUOUS_PREFIX_FORBIDDEN'); if(o.determinism_hash!==hashes[i])throw new Error(`T3R1_SUCCESSOR_PERSISTENCE_PREFIX_HASH_MISMATCH:${i}`); prefix++;}
+            if(byRef.size!==prefix)throw new Error('T3R1_SUCCESSOR_PERSISTENCE_SELECTED_REF_CARDINALITY_INVALID');
+            const counts=(await c.query(`WITH s AS (SELECT record_json FROM facts WHERE record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6) SELECT (SELECT count(*)::int FROM facts) AS total,count(*)::int AS scoped,count(*) FILTER(WHERE record_json->>'type'='soil_moisture_observation_v1')::int AS soil,count(*) FILTER(WHERE record_json->>'type' LIKE 'twin_%')::int AS twin,count(*) FILTER(WHERE record_json->>'type'='twin_runtime_config_v1')::int AS configs,count(*) FILTER(WHERE record_json->>'type'='twin_state_estimate_v1')::int AS states FROM s`,scope)).rows[0];
+            if(Number(counts.total)!==35+prefix||Number(counts.scoped)!==35+prefix||Number(counts.soil)!==1||Number(counts.twin)!==34+prefix||Number(counts.configs)!==25+prefix||Number(counts.states)!==1)throw new Error('T3R1_SUCCESSOR_PERSISTENCE_PRESTATE_COUNTS_INVALID');
+            const state=(await c.query(`SELECT record_json->'payload' AS o FROM facts WHERE record_json->>'type'='twin_state_estimate_v1' AND record_json#>>'{payload,field_id}'='field_kbs_mcse_t3r1' AND record_json#>>'{payload,zone_id}'='zone_kbs_mcse_t3r1_crop_formal_v1'`)).rows[0]?.o;
+            if(!state||state.logical_time!=='2026-08-15T10:00:00.000Z'||state.runtime_config_ref!=='external_formal_runtime_config_49959a28cfc9eb357bf18f9d'||state.runtime_config_hash!=='sha256:5f11788fd049a3eae190d566e6faa28f428637e11f2c90b4e0aaea67e6f14e48')throw new Error('T3R1_SUCCESSOR_PERSISTENCE_A0_STATE_ANCHOR_INVALID');
+            const sched=(await c.query(`SELECT (SELECT count(*)::int FROM twin_shadow_online_scheduler_slot_v1) AS slots,(SELECT count(*)::int FROM twin_shadow_online_scheduler_cursor_v1) AS cursors`)).rows[0];
+            if(Number(sched.slots)!==0||Number(sched.cursors)!==0)throw new Error('T3R1_SUCCESSOR_PERSISTENCE_FORMAL_WINDOW_ALREADY_STARTED');
+            const range=await c.query(`SELECT record_json#>>'{payload,object_id}' AS id FROM facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json#>>'{payload,field_id}'='field_kbs_mcse_t3r1' AND record_json#>>'{payload,zone_id}'='zone_kbs_mcse_t3r1_crop_formal_v1' AND (record_json#>>'{payload,logical_time}')::timestamptz BETWEEN '2026-08-17T20:00:00Z'::timestamptz AND '2026-08-18T19:00:00Z'::timestamptz`;
+            if(range.rows.length!==prefix||range.rows.some(r=>!byRef.has(r.id)))throw new Error('T3R1_SUCCESSOR_PERSISTENCE_FOREIGN_SELECTED_EPOCH_CONFIG_FORBIDDEN');
+            await c.query('COMMIT');
+            const out={schema_version:'geox_mcft_cap09_t3r1_successor_persistence_preflight_v2',status:'PASS',preexisting_prefix_count:prefix,expected_first_pass_runtime_config_write_count:24-prefix,total_fact_count:Number(counts.total),runtime_config_count:Number(counts.configs),state_count:1,scheduler_slot_count:0,scheduler_cursor_count:0,database_write_count:0,formal_window_started:false};
+            fs.writeFileSync('acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2_PREFLIGHT.json',JSON.stringify(out,null,2)+'\n'); console.log(JSON.stringify(out));
+          } catch(e){try{await c.query('ROLLBACK');}catch{} throw e;} finally{c.release();} } finally{await pool.end();}
+          NODE
+
+      - name: Execute exact append-only T3R1 successor Runtime Config persistence
+        run: pnpm -w exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2.ts
+
+      - name: Read-only postflight exact Formal DB inventory and successor chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'; import { Pool } from 'pg';
+          const proof=JSON.parse(fs.readFileSync(process.env.T3R1_SUCCESSOR_BUILDER_PROOF_PATH,'utf8')); const refs=proof.runtime_config_refs, hashes=proof.runtime_config_hashes;
+          const scope=['tenant_mcft_external','project_mcft_cap09','group_public_research','field_kbs_mcse_t3r1','season_2026_corn','zone_kbs_mcse_t3r1_crop_formal_v1'];
+          const pool=new Pool({connectionString:process.env.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL,max:2});
+          try{const c=await pool.connect();try{await c.query('BEGIN TRANSACTION READ ONLY');
+            const counts=(await c.query(`WITH s AS (SELECT record_json FROM facts WHERE record_json#>>'{payload,tenant_id}'=$1 AND record_json#>>'{payload,project_id}'=$2 AND record_json#>>'{payload,group_id}'=$3 AND record_json#>>'{payload,field_id}'=$4 AND record_json#>>'{payload,season_id}'=$5 AND record_json#>>'{payload,zone_id}'=$6) SELECT (SELECT count(*)::int FROM facts) AS total,count(*)::int AS scoped,count(*) FILTER(WHERE record_json->>'type'='soil_moisture_observation_v1')::int AS soil,count(*) FILTER(WHERE record_json->>'type' LIKE 'twin_%')::int AS twin,count(*) FILTER(WHERE record_json->>'type'='twin_runtime_config_v1')::int AS configs,count(*) FILTER(WHERE record_json->>'type'='twin_state_estimate_v1')::int AS states FROM s`,scope)).rows[0];
+            if(Number(counts.total)!==59||Number(counts.scoped)!==59||Number(counts.soil)!==1||Number(counts.twin)!==58||Number(counts.configs)!==49||Number(counts.states)!==1)throw new Error('T3R1_SUCCESSOR_PERSISTENCE_POSTSTATE_COUNTS_INVALID');
+            const selected=await c.query(`SELECT record_json->'payload' AS o FROM facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json#>>'{payload,object_id}'=ANY($1::text[])`,[refs]); if(selected.rows.length!==24)throw new Error('T3R1_SUCCESSOR_PERSISTENCE_EXACT_24_PERSISTED_REQUIRED');
+            const byRef=new Map(selected.rows.map(r=>[r.o.object_id,r.o])); for(let i=0;i<24;i++){const o=byRef.get(refs[i]); if(!o||o.determinism_hash!==hashes[i])throw new Error(`T3R1_SUCCESSOR_PERSISTENCE_POST_HASH_MISMATCH:${i}`);}
+            const state=(await c.query(`SELECT record_json->'payload' AS o FROM facts WHERE record_json->>'type'='twin_state_estimate_v1' AND record_json#>>'{payload,field_id}'='field_kbs_mcse_t3r1' AND record_json#>>'{payload,zone_id}'='zone_kbs_mcse_t3r1_crop_formal_v1'`)).rows[0]?.o; if(!state||state.logical_time!=='2026-08-15T10:00:00.000Z'||state.runtime_config_ref!=='external_formal_runtime_config_49959a28cfc9eb357bf18f9d')throw new Error('T3R1_SUCCESSOR_PERSISTENCE_A0_STATE_CHANGED');
+            const sched=(await c.query(`SELECT (SELECT count(*)::int FROM twin_shadow_online_scheduler_slot_v1) AS slots,(SELECT count(*)::int FROM twin_shadow_online_scheduler_cursor_v1) AS cursors`)).rows[0]; if(Number(sched.slots)!==0||Number(sched.cursors)!==0)throw new Error('T3R1_SUCCESSOR_PERSISTENCE_SCHEDULER_CHANGED');
+            await c.query('COMMIT'); const out={schema_version:'geox_mcft_cap09_t3r1_successor_persistence_postflight_v2',status:'PASS',total_fact_count:59,exact_scope_fact_count:59,runtime_config_count:49,successor_runtime_config_count:24,state_count:1,scheduler_slot_count:0,scheduler_cursor_count:0,formal_window_started:false}; fs.writeFileSync('acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2_POSTFLIGHT.json',JSON.stringify(out,null,2)+'\n'); console.log(JSON.stringify(out));
+          }catch(e){try{await c.query('ROLLBACK');}catch{}throw e;}finally{c.release();}}finally{await pool.end();}
+          NODE
+
+      - name: Verify persistence result and write boundary
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const pre=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2_PREFLIGHT.json','utf8'));
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2_RESULT.json','utf8'));
+          if(r.status!=='PASS'||r.selected_epoch_id!=='mcft_cap09_external_formal_window_epoch_20260817t200000z_v2'||r.final_runtime_config_count!==24)throw new Error('T3R1_SUCCESSOR_PERSISTENCE_PASS_REQUIRED');
+          if(r.first_pass_runtime_config_write_count!==pre.expected_first_pass_runtime_config_write_count||r.second_pass_runtime_config_write_count!==0)throw new Error('T3R1_SUCCESSOR_PERSISTENCE_WRITE_COUNT_MISMATCH');
+          for(const k of ['evidence_write_count','a0_member_write_count','state_lineage_checkpoint_forecast_write_count','scheduler_slot_write_count','scheduler_cursor_write_count','provider_request_count','raw_object_write_count','recommendation_write_count','approval_write_count','ao_act_write_count','dispatch_count','model_activation_count'])if(r[k]!==0)throw new Error(`T3R1_SUCCESSOR_PERSISTENCE_FORBIDDEN_WRITE:${k}`);
+          if(r.successor_runtime_configs_persisted!==true||r.ea5e3_authorized!==false||r.formal_o00_start_authorized!==false||r.formal_window_started!==false||r.formal_execution_count!=='0/24'||r.mcft_cap09_completed!==false)throw new Error('T3R1_SUCCESSOR_PERSISTENCE_PREMATURE_EFFECT');
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-t3r1-successor-runtime-config-persistence-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2_PREFLIGHT.json
+            acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2_RESULT.json
+            acceptance-output/MCFT_CAP_09_T3R1_SUCCESSOR_RUNTIME_CONFIG_PERSISTENCE_V2_POSTFLIGHT.json
+          if-no-files-found: warn
+          retention-days: 90
