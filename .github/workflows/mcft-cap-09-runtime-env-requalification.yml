@@ -1,0 +1,86 @@
+name: mcft-cap-09-runtime-env-requalification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-runtime-env-requalification.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-RUNTIME-ENV-REQUALIFICATION-AUTHORITY-V1.json'
+      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_RUNTIME_ENVIRONMENT_V1.ts'
+      - 'scripts/runtime_acceptance/QUALIFY_MCFT_CAP_09_GFS_DECODER_STACK_V1.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-environment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install exact production GFS decoder stack
+        run: |
+          python -m pip install --disable-pip-version-check \
+            'eccodes==2.47.0' \
+            'eccodeslib==2.47.3.23' \
+            'numpy==1.26.4' \
+            'refet==0.4.2'
+          python -m eccodes selfcheck
+          python scripts/runtime_acceptance/QUALIFY_MCFT_CAP_09_GFS_DECODER_STACK_V1.py
+
+      - name: Typecheck runtime schema preflight
+        run: pnpm exec tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --skipLibCheck --types node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_RUNTIME_ENVIRONMENT_V1.ts
+
+      - name: Derive historical schema-reference database URL
+        shell: bash
+        env:
+          SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_DATABASE_URL"
+          DATABASE_URL=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL);u.pathname="/geox_mcft_cap09_s6_formal_t3r1_24h";process.stdout.write(u.toString())')
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+
+      - name: Prove complete canonical runtime schema contract read-only
+        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_RUNTIME_ENVIRONMENT_V1.ts schema
+
+      - name: Verify failed v2 store is no longer eligible as zero-state
+        shell: bash
+        env:
+          SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          DATABASE_URL=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL);u.pathname="/geox_mcft_cap09_s6_formal_t3r1_24h_v2";process.stdout.write(u.toString())')
+          set +e
+          DATABASE_URL="$DATABASE_URL" pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_RUNTIME_ENVIRONMENT_V1.ts zero-state
+          rc=$?
+          set -e
+          test "$rc" -ne 0 || { echo 'FAILED_V2_STORE_MUST_NOT_REQUALIFY' >&2; exit 1; }
+
+      - name: Upload requalification proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-runtime-env-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_RUNTIME_ENVIRONMENT_PREFLIGHT_RESULT.json
+          if-no-files-found: warn
+          retention-days: 30
