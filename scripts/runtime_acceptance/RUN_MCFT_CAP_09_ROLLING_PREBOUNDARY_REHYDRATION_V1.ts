@@ -440,7 +440,7 @@ async function main(): Promise<void> {
   if (process.argv[2] !== "run") throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_MODE_REQUIRED");
   const consumerSha = required("MCFT_CAP09_CONSUMER_SUBJECT_SHA");
   if (!/^[0-9a-f]{40}$/.test(consumerSha)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_CONSUMER_SHA_INVALID");
-  if (!["push", "workflow_dispatch", "schedule"].includes(process.env.GITHUB_EVENT_NAME ?? "") || process.env.GITHUB_REF !== "refs/heads/main" || process.env.GITHUB_SHA !== consumerSha) {
+  if (!["push", "workflow_dispatch", "schedule", "workflow_run"].includes(process.env.GITHUB_EVENT_NAME ?? "") || process.env.GITHUB_REF !== "refs/heads/main" || process.env.GITHUB_SHA !== consumerSha) {
     throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_EXACT_MAIN_REQUIRED");
   }
   const candidate = loadCandidate(required("MCFT_CAP09_ROLLING_CANDIDATE_PATH"));
