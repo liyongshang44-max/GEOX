@@ -15,12 +15,21 @@ function write(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
 }
 
+function safeRelation(name: string): string {
+  assert.match(name, /^[a-z_][a-z0-9_]*$/, `RUNTIME_ENV_RELATION_NAME_INVALID:${name}`);
+  return `"${name}"`;
+}
+
 async function main(): Promise<void> {
   assert(DATABASE_URL, "RUNTIME_ENV_DATABASE_URL_REQUIRED");
   assert(["schema", "zero-state"].includes(MODE), "RUNTIME_ENV_MODE_INVALID");
   const required = AUTH.schema_contract.minimum_required_tables as string[];
+  assert.equal(required.length, Number(AUTH.schema_contract.required_table_count), "RUNTIME_ENV_AUTHORITY_TABLE_COUNT_DRIFT");
+  assert.equal(new Set(required).size, required.length, "RUNTIME_ENV_AUTHORITY_DUPLICATE_TABLE");
   assert(required.includes("twin_runtime_authority_snapshot_v1"), "AUTHORITY_SNAPSHOT_TABLE_MUST_BE_QUALIFIED");
-  assert(required.includes("twin_state_history_projection_v1"), "STATE_HISTORY_TABLE_MUST_BE_QUALIFIED");
+  assert(required.includes("twin_scenario_set_uniqueness_v1"), "SCENARIO_PERSISTENCE_TABLES_MUST_BE_QUALIFIED");
+  assert(required.includes("twin_forecast_run_projection_v1"), "FORECAST_RECOVERY_TABLES_MUST_BE_QUALIFIED");
+
   const pool = new Pool({ connectionString: DATABASE_URL, max: 1, application_name: "mcft-cap09-runtime-env-preflight-v1" });
   const client = await pool.connect();
   let result: Record<string, unknown> = {
@@ -35,6 +44,7 @@ async function main(): Promise<void> {
     await client.query("BEGIN TRANSACTION READ ONLY");
     const identity = (await client.query("SELECT current_database() AS database_name, current_setting('transaction_read_only') AS transaction_read_only")).rows[0];
     assert.equal(identity.transaction_read_only, "on", "RUNTIME_ENV_READ_ONLY_REQUIRED");
+
     const rows = (await client.query(
       "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name = ANY($1::text[]) ORDER BY table_name",
       [required],
@@ -42,35 +52,50 @@ async function main(): Promise<void> {
     const missing = required.filter((name) => !rows.includes(name));
     assert.deepEqual(missing, [], `RUNTIME_ENV_REQUIRED_TABLES_MISSING:${missing.join(',')}`);
 
-    const columnCounts = (await client.query(
-      `SELECT table_name,count(*)::int AS column_count
-         FROM information_schema.columns
-        WHERE table_schema='public' AND table_name = ANY($1::text[])
-        GROUP BY table_name ORDER BY table_name`,
-      [required],
-    )).rows;
-    assert.equal(columnCounts.length, required.length, "RUNTIME_ENV_COLUMN_SHAPE_INCOMPLETE");
-    for (const row of columnCounts) assert(Number(row.column_count) > 0, `RUNTIME_ENV_EMPTY_TABLE_SHAPE:${row.table_name}`);
+    const fp = (await client.query(`
+      WITH wanted(name) AS (SELECT unnest($1::text[])),
+      colshape AS (
+        SELECT c.relname,a.attnum,a.attname,format_type(a.atttypid,a.atttypmod) typ,a.attnotnull,COALESCE(pg_get_expr(ad.adbin,ad.adrelid),'') def
+          FROM pg_class c
+          JOIN pg_namespace n ON n.oid=c.relnamespace
+          JOIN wanted w ON w.name=c.relname
+          JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped
+          LEFT JOIN pg_attrdef ad ON ad.adrelid=c.oid AND ad.adnum=a.attnum
+         WHERE n.nspname='public'
+      ),
+      conshape AS (
+        SELECT c.relname,con.conname,con.contype::text contype,pg_get_constraintdef(con.oid,true) def
+          FROM pg_constraint con
+          JOIN pg_class c ON c.oid=con.conrelid
+          JOIN pg_namespace n ON n.oid=c.relnamespace
+          JOIN wanted w ON w.name=c.relname
+         WHERE n.nspname='public' AND con.contype IN ('p','u','c','f')
+      ),
+      idxshape AS (
+        SELECT i.tablename,i.indexname,i.indexdef
+          FROM pg_indexes i
+          JOIN wanted w ON w.name=i.tablename
+         WHERE i.schemaname='public'
+      )
+      SELECT
+        (SELECT md5(string_agg(relname||'|'||attnum::text||'|'||attname||'|'||typ||'|'||attnotnull::text||'|'||def,E'\\n' ORDER BY relname,attnum)) FROM colshape) AS column_fingerprint,
+        (SELECT md5(string_agg(relname||'|'||conname||'|'||contype||'|'||def,E'\\n' ORDER BY relname,conname)) FROM conshape) AS constraint_fingerprint,
+        (SELECT md5(string_agg(tablename||'|'||indexname||'|'||indexdef,E'\\n' ORDER BY tablename,indexname)) FROM idxshape) AS index_fingerprint
+    `, [required])).rows[0];
+    assert.equal(fp.column_fingerprint, AUTH.schema_contract.column_fingerprint_md5, "RUNTIME_ENV_COLUMN_FINGERPRINT_DRIFT");
+    assert.equal(fp.constraint_fingerprint, AUTH.schema_contract.constraint_fingerprint_md5, "RUNTIME_ENV_CONSTRAINT_FINGERPRINT_DRIFT");
+    assert.equal(fp.index_fingerprint, AUTH.schema_contract.index_fingerprint_md5, "RUNTIME_ENV_INDEX_FINGERPRINT_DRIFT");
 
     let zeroState: Record<string, number> | undefined;
     if (MODE === "zero-state") {
-      const counts = (await client.query(`SELECT
-        (SELECT count(*)::int FROM facts) AS facts_total,
-        (SELECT count(*)::int FROM twin_runtime_authority_snapshot_v1) AS authority_snapshot_total,
-        (SELECT count(*)::int FROM twin_active_lineage_index_v1) AS active_lineage_total,
-        (SELECT count(*)::int FROM twin_state_history_projection_v1) AS state_history_total,
-        (SELECT count(*)::int FROM twin_state_latest_index_v1) AS state_latest_total,
-        (SELECT count(*)::int FROM twin_forecast_result_latest_index_v1) AS forecast_result_latest_total,
-        (SELECT count(*)::int FROM twin_forecast_success_latest_index_v1) AS forecast_success_latest_total,
-        (SELECT count(*)::int FROM twin_runtime_checkpoint_latest_index_v1) AS checkpoint_total,
-        (SELECT count(*)::int FROM twin_runtime_health_latest_index_v1) AS health_total,
-        (SELECT count(*)::int FROM twin_runtime_lease_v1) AS lease_total,
-        (SELECT count(*)::int FROM twin_shadow_online_scheduler_cursor_v1) AS scheduler_cursor_total,
-        (SELECT count(*)::int FROM twin_shadow_online_scheduler_slot_v1) AS scheduler_slot_total,
-        (SELECT count(*)::int FROM twin_terminal_tick_uniqueness_v1) AS terminal_tick_total`)).rows[0] as Record<string, number>;
-      zeroState = counts;
-      for (const [name, count] of Object.entries(counts)) assert.equal(Number(count), 0, `RUNTIME_ENV_ZERO_STATE_REQUIRED:${name}`);
+      zeroState = {};
+      for (const relation of required) {
+        const count = Number((await client.query(`SELECT count(*)::int AS n FROM public.${safeRelation(relation)}`)).rows[0]?.n ?? -1);
+        zeroState[relation] = count;
+        assert.equal(count, 0, `RUNTIME_ENV_ZERO_STATE_REQUIRED:${relation}`);
+      }
     }
+
     await client.query("COMMIT");
     result = {
       ...result,
@@ -78,6 +103,7 @@ async function main(): Promise<void> {
       database_identity: identity,
       required_table_count: required.length,
       required_tables_present: rows,
+      schema_fingerprints: fp,
       zero_state_counts: zeroState,
       schema_complete: true,
       zero_state_qualified: MODE === "zero-state",
