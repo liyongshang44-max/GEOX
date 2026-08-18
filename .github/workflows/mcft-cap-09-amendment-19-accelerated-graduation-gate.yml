@@ -1,0 +1,74 @@
+name: mcft-cap-09-amendment-19-accelerated-graduation-gate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment-19-accelerated-graduation-gate.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-ACCELERATED-GRADUATION-GATE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-ACCELERATED-GRADUATION-GATE.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_ACCELERATED_GRADUATION_GATE.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_FORMAL_EPOCH_GRADUATION_GATE_V1.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EXACT_BASE_SHA: 'da6670633ffb8ef8a9b509043138a1e5550484c3'
+      HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fail closed on exact base and five-file boundary
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_BASE_SHA"
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$HEAD_SHA" | sort)
+          test "${#changed[@]}" -eq 5
+          expected=$(cat <<'LIST'
+          .github/workflows/mcft-cap-09-amendment-19-accelerated-graduation-gate.yml
+          docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-ACCELERATED-GRADUATION-GATE-V1.json
+          docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-ACCELERATED-GRADUATION-GATE.md
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_ACCELERATED_GRADUATION_GATE.cjs
+          scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_FORMAL_EPOCH_GRADUATION_GATE_V1.cjs
+          LIST
+          )
+          actual=$(printf '%s\n' "${changed[@]}")
+          test "$actual" = "$expected"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: Governance qualification
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_ACCELERATED_GRADUATION_GATE.cjs
+      - name: Formal epoch gate fail-closed selftest
+        run: node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_FORMAL_EPOCH_GRADUATION_GATE_V1.cjs --selftest
+      - name: Validate hard nonclaims
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_ACCELERATED_GRADUATION_GATE_GOVERNANCE_RESULT.json','utf8'));
+          if(r.status!=='PASS'||r.exact_predecessor_protected_main!=='da6670633ffb8ef8a9b509043138a1e5550484c3')throw new Error('AMENDMENT19_GATE_NOT_PASS');
+          if(r.required_scenario_count!==10||r.required_machine_gate_count!==13||r.static_blocker_count_required!==0)throw new Error('AMENDMENT19_GATE_MATRIX_REGRESSION');
+          if(r.persistence_free_must_use_same_canonical_core!==true||r.persistent_lane_only_clock_difference_authorized!==true)throw new Error('AMENDMENT19_GATE_EQUIVALENCE_REGRESSION');
+          if(r.human_override_authorized!==false||r.final_real_wall_clock_24h_required!==true)throw new Error('AMENDMENT19_GATE_SAFETY_REGRESSION');
+          if(r.future_formal_epoch_selected!==false||r.formal_o00_started!==false||r.formal_effect!==false)throw new Error('AMENDMENT19_GATE_PREMATURE_FORMAL_EFFECT');
+          NODE
+      - name: Upload immutable focused proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-amendment19-accelerated-graduation-gate-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_AMENDMENT_19_ACCELERATED_GRADUATION_GATE_GOVERNANCE_RESULT.json
+          if-no-files-found: error
+          retention-days: 30
