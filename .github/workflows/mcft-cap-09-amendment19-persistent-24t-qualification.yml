@@ -1,0 +1,242 @@
+name: mcft-cap-09-amendment19-persistent-24t-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'
+  workflow_run:
+    workflows: ['mcft-cap-09-rolling-preboundary-capture']
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-am19-persistent24-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'live-main' }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  EXACT_PREDECESSOR_MAIN: '67f801df7e50df96e89ba61d62978faa8412fc86'
+  LOCAL_REHYDRATION_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+
+jobs:
+  static-proof:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact predecessor and four-file implementation boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PREDECESSOR_MAIN" || { echo 'AM19_P24_EXACT_BASE_REQUIRED' >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_PREDECESSOR_MAIN" "$SUBJECT_SHA" | sort)
+          test "${#changed[@]}" -eq 4 || { printf 'AM19_P24_EXACT_FOUR_FILES_REQUIRED\n%s\n' "${changed[*]}" >&2; exit 1; }
+          expected=$(cat <<'EOF'
+          .github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml
+          scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs
+          scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
+          scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+          EOF
+          )
+          actual=$(printf '%s\n' "${changed[@]}")
+          test "$actual" = "$expected"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck server and qualification orchestration
+        run: |
+          set -euo pipefail
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+
+      - name: Rebind governed EA5E2 dependency graph
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
+
+      - name: Run pure orchestration selftests
+        run: |
+          set -euo pipefail
+          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts selftest
+          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts selftest
+
+      - name: Reprove persistence-free canonical semantics
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.ts
+
+      - name: Require no premature Formal effect
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json','utf8'));
+          if(p.status!=='PASS'||p.machine_statuses?.PERSISTENCE_FREE_24T!=='PASS'||p.canonical_tick_count!==24||p.provider_wait_count!==0||p.database_write_count!==0||p.formal_epoch_selected!==undefined&&p.formal_epoch_selected!==false) throw new Error('AM19_P24_PERSISTENCE_FREE_PROOF_REQUIRED');
+
+  persistent-live:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.event != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SUBJECT_SHA: ${{ github.event.workflow_run.head_sha }}
+      MCFT_CAP09_SUBJECT_SHA: ${{ github.event.workflow_run.head_sha }}
+      MCFT_CAP09_CONSUMER_SUBJECT_SHA: ${{ github.event.workflow_run.head_sha }}
+      MCFT_CAP09_PARENT_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+      MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+      MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+      MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+      MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require triggering subject is exact current protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.workflow_run.id }}" -gt 0
+          test "${{ github.event.workflow_run.head_branch }}" = "main"
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA" || { echo 'AM19_P24_CHECKOUT_SUBJECT_DRIFT' >&2; exit 1; }
+          test "$(git rev-parse origin/main)" = "$SUBJECT_SHA" || { echo 'AM19_P24_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
+
+      - name: Require secret bindings without disclosure
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in MCFT_CAP09_PARENT_DATABASE_URL MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
+            test -n "${!name:-}" || { echo "AM19_P24_SECRET_REQUIRED:${name}" >&2; exit 1; }
+          done
+
+      - name: Download only triggering-run exact-head rolling candidate
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          pattern: mcft-cap09-rolling-preboundary-*-${{ github.event.workflow_run.head_sha }}
+          merge-multiple: true
+          path: rolling-candidate
+
+      - name: Require exactly one candidate file from triggering run
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find rolling-candidate -type f -name 'MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json' -print | sort)
+          test "${#files[@]}" -eq 1 || { echo "AM19_P24_EXACT_ONE_TRIGGER_CANDIDATE_REQUIRED:${#files[@]}" >&2; exit 1; }
+          mkdir -p rolling-candidate
+          canonical="$PWD/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json"
+          source_path=$(realpath "${files[0]}")
+          if test "$source_path" != "$canonical"; then cp "$source_path" "$canonical"; fi
+          echo "path=$canonical" >> "$GITHUB_OUTPUT"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+          python -m eccodes selfcheck
+
+      - name: Reprove persistence-free canonical semantics on exact subject
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.ts
+
+      - name: Governed producer-bound R2 rehydration into isolated local DB
+        env:
+          MCFT_CAP09_ROLLING_CANDIDATE_PATH: ${{ steps.candidate.outputs.path }}
+          MCFT_CAP09_ROLLING_REHYDRATION_ISOLATED_DB_ACK: 'true'
+          DATABASE_URL: ${{ env.LOCAL_REHYDRATION_DATABASE_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts run
+
+      - name: Execute production-graph persistent 24T qualification
+        env:
+          MCFT_CAP09_ROLLING_CANDIDATE_PATH: ${{ steps.candidate.outputs.path }}
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts run
+
+      - name: Validate machine graduation result
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_RESULT.json','utf8'));
+          if(p.status==='ALREADY_QUALIFIED_READ_ONLY') {
+            if(p.database_write_count!==0||p.runtime_write_count!==0||p.scheduler_write_count!==0||p.provider_request_count!==0||p.r2_request_count!==0||p.new_machine_gate_claim!==false||p.existing_success_evidence_unchanged!==true) throw new Error('AM19_P24_READ_ONLY_REVERIFY_DRIFT');
+          } else {
+            const keys=['PERSISTENCE_FREE_24T','PERSISTENT_24T','O00_WARM_START','MODE_A','MODE_B','PARTIAL_PAIR','LATE_EXACT_NO_REWRITE','RESTART','MISSED_SLOT_BACKFILL','IDEMPOTENCY','ZERO_PROVIDER_WAIT','SCHEMA_ENV_PREFLIGHT','FULL_CHAIN_READBACK'];
+            if(p.status!=='PASS'||p.static_blocker_count!==0||keys.some(k=>p.machine_statuses?.[k]!=='PASS')) throw new Error('AM19_P24_MACHINE_GATE_NOT_PASS');
+            if(p.production_scheduler_reused!==true||p.production_lease_fencing_reused!==true||p.production_runner_reused!==true||p.production_persistent_tick_service_reused!==true||p.production_persistence_repositories_reused!==true) throw new Error('AM19_P24_PRODUCTION_GRAPH_REUSE_REQUIRED');
+            if(p.bootstrap_lease_real_expiry_required!==true||p.lease_and_fencing_clock_substitution!==false||p.accelerated_clock_scope!=='REPLACE_WAIT_UNTIL_NEXT_PT1H_BOUNDARY_ONLY') throw new Error('AM19_P24_CLOCK_SUBSTITUTION_BOUNDARY_DRIFT');
+            if(p.final_actual_24h_still_required!==true||p.final_actual_24h_substituted_by_this_run!==false||p.future_formal_epoch_selected!==false||p.formal_o00_started!==false||p.mcft_cap09_completed!==false) throw new Error('AM19_P24_PREMATURE_FORMAL_CLAIM');
+          }
+
+      - name: Upload safe qualification proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-am19-persistent24-${{ env.SUBJECT_SHA }}-${{ github.run_id }}
+          path: |
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json
+            acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
