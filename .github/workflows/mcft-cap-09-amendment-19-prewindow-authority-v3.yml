@@ -1,0 +1,66 @@
+name: mcft-cap-09-amendment-19-prewindow-authority-v3
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment-19-prewindow-authority-v3.yml'
+      - 'apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v3.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PREWINDOW_AUTHORITY_V3.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-am19-prewindow-v3-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  prewindow-authority-v3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck server
+        run: pnpm --filter @geox/server run typecheck
+
+      - name: Prove parameterized successor prewindow authority bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PREWINDOW_AUTHORITY_V3.ts \
+            2>&1 | tee acceptance-output/MCFT_CAP_09_AMENDMENT_19_PREWINDOW_AUTHORITY_V3.log
+          grep -q '"status":"PASS"' acceptance-output/MCFT_CAP_09_AMENDMENT_19_PREWINDOW_AUTHORITY_V3.log
+          grep -q '"exact_24_hourly_runtime_configs":true' acceptance-output/MCFT_CAP_09_AMENDMENT_19_PREWINDOW_AUTHORITY_V3.log
+          grep -q '"parent_linked_runtime_config_chain":true' acceptance-output/MCFT_CAP_09_AMENDMENT_19_PREWINDOW_AUTHORITY_V3.log
+          grep -q '"per_hour_crop_context_authority":true' acceptance-output/MCFT_CAP_09_AMENDMENT_19_PREWINDOW_AUTHORITY_V3.log
+          grep -q '"failed_v2_epoch_reuse_rejected":true' acceptance-output/MCFT_CAP_09_AMENDMENT_19_PREWINDOW_AUTHORITY_V3.log
+          grep -q '"persistent_24t_claimed":false' acceptance-output/MCFT_CAP_09_AMENDMENT_19_PREWINDOW_AUTHORITY_V3.log
+
+      - name: Upload focused proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-am19-prewindow-v3-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_AMENDMENT_19_PREWINDOW_AUTHORITY_V3.log
+          if-no-files-found: error
+          retention-days: 90
