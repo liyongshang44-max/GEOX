@@ -1,0 +1,124 @@
+{
+  "schema_version": "geox_mcft_cap09_amendment19_cadence_decoupling_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-AMENDMENT-19-PROVIDER-RUNTIME-CADENCE-DECOUPLING-AUTHORITY-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "CANDIDATE_NOT_EFFECTIVE_UNTIL_EXACT_HEAD_PROOF_AND_PROTECTED_MAIN_MERGE",
+  "exact_predecessor_protected_main": "987803fbfb945b70025a010c4d72b560140c592a",
+  "supersedes_only": [
+    "DELAYED_EXACT_KBS_PAIR_AS_RUNTIME_PRECLAIM_SCHEDULER_READINESS_CONDITION"
+  ],
+  "retains": {
+    "amendment_11_provider_availability_watermark_authority": true,
+    "kbs_observation_resolution": "HOURLY",
+    "kbs_publication_cadence": "DAILY_BATCH",
+    "historical_online_freshness_diagnostic_hours": 6,
+    "freshness_is_late_authoritative_admission_gate": false,
+    "same_source_exact_t_identity": true,
+    "real_provider_availability_chronology": true,
+    "raw_retention_before_canonicalization": true,
+    "conflict_fail_closed": true,
+    "no_future_leakage": true,
+    "no_interpolation": true,
+    "no_persistence_fill": true,
+    "no_timestamp_relabel": true,
+    "no_source_substitution_inside_kbs_exact_evidence_authority": true
+  },
+  "clock_authority_split": {
+    "runtime_execution_clock": "ACTUAL_UTC_PT1H_SCHEDULER_BOUNDARIES",
+    "external_evidence_admission_clock": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "provider_watermark_controls_evidence_admission": true,
+    "provider_watermark_controls_runtime_scheduler_eligibility": false,
+    "runtime_tick_waits_for_delayed_exact_kbs_pair": false
+  },
+  "current_interval_state_forcing": {
+    "contract_id": "MCFT_CAP09_CURRENT_INTERVAL_STATE_FORCING_AUTHORITY_V1",
+    "interval_semantics": "OPEN_START_CLOSED_END_PT1H",
+    "selection_order": [
+      "EXACT_PROVIDER_INTERVAL_PAIR_IF_AVAILABLE_BY_SCHEDULER_SNAPSHOT",
+      "PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR_IF_EXACT_PAIR_UNAVAILABLE",
+      "FAIL_BLOCK_EXPLICITLY_WITHOUT_WAITING_IF_NEITHER_EXISTS"
+    ],
+    "exact_provider_interval_pair": {
+      "rainfall_epistemic_class": "OBSERVED",
+      "et0_epistemic_class": "ESTIMATED",
+      "exact_interval_required": true,
+      "available_and_ingested_by_scheduler_snapshot_required": true,
+      "mixed_exact_and_assumed_pair_authorized": false
+    },
+    "prior_step_causal_assumption_pair": {
+      "weather_record_type": "future_weather_assumption_v1",
+      "et0_record_type": "future_et0_assumption_v1",
+      "weather_epistemic_class": "ASSUMED",
+      "et0_epistemic_class": "ASSUMED",
+      "pair_valid_from_equals_t_minus_1h": true,
+      "pair_available_to_runtime_at_lte_t_minus_1h": true,
+      "pair_ingested_at_lte_t_minus_1h": true,
+      "horizon_1_exactly_covers_current_interval": true,
+      "same_complete_forcing_cycle_required": true,
+      "runtime_health_when_consumed": "DEGRADED",
+      "is_kbs_source_substitution": false,
+      "relabel_as_observation_authorized": false
+    }
+  },
+  "o00_warm_start": {
+    "required": true,
+    "prewindow_logical_time": "A0_EQUALS_O00_MINUS_1H",
+    "complete_gfs_future_et0_pair_valid_from_a0_required": true,
+    "pair_available_and_ingested_by_a0_required": true,
+    "horizon_1_covers_a0_to_o00": true,
+    "new_provider_family_introduced": false
+  },
+  "late_exact_t": {
+    "handling": "APPEND_FORWARD",
+    "completed_tick_retroactive_rewrite": false,
+    "event_time_rewrite_authorized": false,
+    "historical_state_checkpoint_in_place_mutation_authorized": false,
+    "residual_or_verification_consumption_may_be_separately_authorized": true
+  },
+  "engineering_lane": {
+    "accelerated_24_tick_engineering_qualification_authorized": true,
+    "formal_effect": false,
+    "hard_nonclaims": [
+      "NOT_STAGE_1B_FORMAL_CLOSURE",
+      "NOT_FORMAL_O00_O23_EFFECTIVENESS"
+    ]
+  },
+  "final_formal_lane": {
+    "actual_utc_hourly_boundaries_required": 24,
+    "accelerated_or_replay_clock_authorized": false,
+    "one_real_wall_clock_o00_o23_run_still_required": true
+  },
+  "implementation_unit_1": {
+    "pure_selector": "apps/server/src/runtime/twin_runtime/external_formal_current_interval_forcing_selector_v1.ts",
+    "accelerated_engineering_proof": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CURRENT_INTERVAL_FORCING.ts",
+    "production_runner_cutover": false,
+    "database_write_count": 0,
+    "provider_request_count": 0,
+    "future_epoch_selected": false,
+    "formal_o00_started": false
+  },
+  "required_successor_implementation_before_new_epoch": [
+    "OPTIONAL_DELAYED_EXACT_DATABASE_SOURCE_LOADING_WITH_OTHER_CAUSAL_FAMILIES_STILL_REQUIRED",
+    "HONEST_MODE_A_OR_MODE_B_EXTERNAL_FORMAL_STATE_SOURCE_CONSTRUCTION",
+    "PERSISTENT_TICK_AND_RUNNER_NO_WAIT_CUTOVER",
+    "DEGRADED_RUNTIME_PROVENANCE_FOR_ASSUMPTION_MODE",
+    "LATE_EXACT_APPEND_FORWARD_NO_RETROACTIVE_REWRITE_PROOF",
+    "EXACT_HEAD_FOCUSED_QUALIFICATION_AND_REPOSITORY_WIDE_CI"
+  ],
+  "hard_nonclaims": [
+    "NO_NEW_FORMAL_EPOCH_SELECTED",
+    "NO_A0_STARTED",
+    "NO_RUNTIME_CONFIG_CHAIN_STARTED",
+    "NO_FORMAL_RUNNER_CUTOVER_BY_THIS_AUTHORITY_ALONE",
+    "NO_FORMAL_O00_STARTED",
+    "NO_ACCELERATED_CLOCK_AS_FORMAL_AUTHORITY",
+    "NO_KBS_OBSERVATION_RELABEL_AS_ASSUMPTION",
+    "NO_ASSUMPTION_RELABEL_AS_KBS_OBSERVATION",
+    "NO_RETROACTIVE_TICK_REWRITE",
+    "NO_INTERPOLATION",
+    "NO_PERSISTENCE_FILL",
+    "NO_MCFT_CAP09_COMPLETION"
+  ],
+  "next_legal_frontier_after_effectiveness": "AMENDMENT19_PRODUCTION_STATE_FORCING_AND_PERSISTENT_TICK_NO_WAIT_CUTOVER"
+}

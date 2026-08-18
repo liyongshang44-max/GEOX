@@ -1,0 +1,101 @@
+name: mcft-cap-09-amendment-19-cadence-decoupling
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment-19-cadence-decoupling.yml'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_current_interval_forcing_selector_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-PROVIDER-RUNTIME-CADENCE-DECOUPLING-AUTHORITY.md'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-CADENCE-DECOUPLING-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CADENCE_DECOUPLING.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CURRENT_INTERVAL_FORCING.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXACT_BASE_SHA: '987803fbfb945b70025a010c4d72b560140c592a'
+      HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fail closed on exact base and six-file boundary
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_BASE_SHA"
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$HEAD_SHA" | sort)
+          printf '%s\n' "${changed[@]}"
+          test "${#changed[@]}" -eq 6
+          expected=$(cat <<'EOF'
+          .github/workflows/mcft-cap-09-amendment-19-cadence-decoupling.yml
+          apps/server/src/runtime/twin_runtime/external_formal_current_interval_forcing_selector_v1.ts
+          docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-CADENCE-DECOUPLING-AUTHORITY-V1.json
+          docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-PROVIDER-RUNTIME-CADENCE-DECOUPLING-AUTHORITY.md
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CADENCE_DECOUPLING.cjs
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CURRENT_INTERVAL_FORCING.ts
+          EOF
+          )
+          actual=$(printf '%s\n' "${changed[@]}")
+          test "$actual" = "$expected"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+
+      - name: Install repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Governance qualification
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CADENCE_DECOUPLING.cjs
+
+      - name: Accelerated 24-tick current-interval forcing engineering proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CURRENT_INTERVAL_FORCING.ts
+
+      - name: Validate proof and hard nonclaims
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const governance = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_CADENCE_DECOUPLING_GOVERNANCE_RESULT.json','utf8'));
+          const runtime = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_CURRENT_INTERVAL_FORCING_RESULT.json','utf8'));
+          if (governance.status !== 'PASS') throw new Error('AMENDMENT19_GOVERNANCE_NOT_PASS');
+          if (governance.exact_predecessor_protected_main !== '987803fbfb945b70025a010c4d72b560140c592a') throw new Error('AMENDMENT19_PREDECESSOR_DRIFT');
+          if (governance.provider_watermark_retained_for_evidence_admission !== true || governance.provider_watermark_removed_from_scheduler_eligibility !== true) throw new Error('AMENDMENT19_CLOCK_SPLIT_NOT_PROVED');
+          if (governance.production_runner_cutover !== false || governance.future_epoch_selected !== false || governance.formal_o00_started !== false || governance.formal_effect !== false) throw new Error('AMENDMENT19_GOVERNANCE_NONCLAIM_REGRESSION');
+          if (runtime.status !== 'PASS' || runtime.qualification_lane !== 'ACCELERATED_ENGINEERING_ONLY') throw new Error('AMENDMENT19_RUNTIME_PROOF_NOT_PASS');
+          if (runtime.accelerated_tick_count !== 24 || runtime.accelerated_provider_wait_count !== 0 || runtime.accelerated_assumption_mode_count !== 24) throw new Error('AMENDMENT19_ACCELERATED_24_TICK_NO_WAIT_NOT_PROVED');
+          if (runtime.exact_provider_mode_proved !== true || runtime.late_exact_at_boundary_did_not_block !== true || runtime.partial_exact_pair_mixing_forbidden !== true) throw new Error('AMENDMENT19_SELECTION_MODES_NOT_PROVED');
+          if (runtime.signed_et0_projection_preserved !== true || runtime.noncausal_assumption_pair_fail_closed !== true || runtime.deterministic_selection_hash_proved !== true) throw new Error('AMENDMENT19_SAFETY_PROPERTIES_NOT_PROVED');
+          for (const key of ['database_write_count','provider_request_count','scheduler_write_count','canonical_runtime_write_count']) if (runtime[key] !== 0) throw new Error(`AMENDMENT19_SIDE_EFFECT_FORBIDDEN:${key}`);
+          if (runtime.production_runner_cutover !== false || runtime.future_epoch_selected !== false || runtime.formal_o00_started !== false || runtime.formal_effect !== false) throw new Error('AMENDMENT19_RUNTIME_NONCLAIM_REGRESSION');
+          NODE
+
+      - name: Upload immutable focused proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-amendment19-cadence-decoupling-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_CADENCE_DECOUPLING_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_CURRENT_INTERVAL_FORCING_RESULT.json
+          if-no-files-found: error
+          retention-days: 30
