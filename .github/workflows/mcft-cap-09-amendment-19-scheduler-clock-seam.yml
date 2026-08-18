@@ -1,0 +1,90 @@
+name: mcft-cap-09-amendment-19-scheduler-clock-seam
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment-19-scheduler-clock-seam.yml'
+      - 'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_SCHEDULER_CLOCK_SEAM.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-am19-scheduler-clock-seam-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  focused-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXACT_BASE_SHA: '95ec662ea171ada89ba1f8ba1c848be6c20dab86'
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fail closed on exact predecessor and three-file boundary
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_BASE_SHA"
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$SUBJECT_SHA" | sort)
+          test "${#changed[@]}" -eq 3
+          expected=$(cat <<'EOF'
+          .github/workflows/mcft-cap-09-amendment-19-scheduler-clock-seam.yml
+          apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_SCHEDULER_CLOCK_SEAM.ts
+          EOF
+          )
+          actual=$(printf '%s\n' "${changed[@]}")
+          test "$actual" = "$expected"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck server and focused acceptance
+        run: |
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_SCHEDULER_CLOCK_SEAM.ts
+
+      - name: Prove exact scheduler class has qualification-only wait-clock seam
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_SCHEDULER_CLOCK_SEAM.ts
+
+      - name: Validate proof and hard nonclaims
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_SCHEDULER_CLOCK_SEAM_RESULT.json','utf8'));
+          if(r.status!=='PASS'||r.exact_scheduler_class_reused!==true) throw new Error('AM19_CLOCK_SEAM_NOT_PASS');
+          if(r.default_production_clock_authority!=='SYSTEM_DATABASE_UTC'||r.production_future_boundary_fail_closed!==true) throw new Error('AM19_PRODUCTION_CLOCK_REGRESSION');
+          if(r.accelerated_qualification_clock_authority!=='ACCELERATED_ENGINEERING_ONLY'||r.accelerated_wait_clock_substitution_only!==true) throw new Error('AM19_ACCELERATED_CLOCK_AUTHORITY_REQUIRED');
+          if(r.database_clock_query_count_after_accelerated_probe!==1) throw new Error('AM19_ACCELERATED_DB_CLOCK_QUERY_REGRESSION');
+          if(r.lease_and_fencing_clock_substitution!==false||r.scheduler_cursor_replacement!==false||r.scheduler_slot_ledger_replacement!==false||r.alternate_scheduler_implementation_created!==false) throw new Error('AM19_EXECUTION_GRAPH_REPLACEMENT_FORBIDDEN');
+          if(r.formal_accelerated_clock_authorized!==false||r.future_formal_epoch_selected!==false||r.formal_o00_started!==false||r.formal_effect!==false) throw new Error('AM19_PREMATURE_FORMAL_EFFECT');
+
+      - name: Upload focused proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-am19-scheduler-clock-seam-${{ env.SUBJECT_SHA }}
+          path: acceptance-output/MCFT_CAP_09_AMENDMENT_19_SCHEDULER_CLOCK_SEAM_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
