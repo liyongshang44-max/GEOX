@@ -1,0 +1,83 @@
+{
+  "schema_version": "geox_mcft_cap09_runtime_env_requalification_authority_v1",
+  "status": "CANDIDATE",
+  "authority": "RUNTIME_ENVIRONMENT_REQUALIFICATION_AFTER_FAILED_20260817T200000Z_EPOCH",
+  "exact_predecessor_main_sha": "cd2056f2fe82533ca01ac3347538ec8e22494b32",
+  "failed_epoch": {
+    "epoch_id": "mcft_cap09_external_formal_window_epoch_20260817t200000z_v2",
+    "reuse_forbidden": true,
+    "formal_o00_started": false,
+    "adjudication": "NO_GO_FAIL_CLOSED"
+  },
+  "material_failures": [
+    {
+      "surface": "A18D_BOOTSTRAP",
+      "code": "FORMAL_RUNTIME_SCHEMA_INCOMPLETE",
+      "observed_error": "relation twin_runtime_authority_snapshot_v1 does not exist"
+    },
+    {
+      "surface": "PROVIDER_COLLECTOR",
+      "code": "GFS_DECODER_STACK_NOT_INSTALLED",
+      "observed_error": "Python eccodes module unavailable"
+    }
+  ],
+  "schema_contract": {
+    "source_of_truth": "repository_runtime_persistence_contracts_and_canonical_migrations",
+    "minimum_required_tables": [
+      "facts",
+      "twin_runtime_authority_snapshot_v1",
+      "twin_object_idempotency_index_v1",
+      "twin_active_lineage_index_v1",
+      "twin_state_history_projection_v1",
+      "twin_state_latest_index_v1",
+      "twin_forecast_result_latest_index_v1",
+      "twin_forecast_success_latest_index_v1",
+      "twin_runtime_checkpoint_latest_index_v1",
+      "twin_runtime_health_latest_index_v1",
+      "twin_runtime_lease_v1",
+      "twin_shadow_online_scheduler_cursor_v1",
+      "twin_shadow_online_scheduler_slot_v1",
+      "twin_terminal_tick_uniqueness_v1"
+    ],
+    "pre_live_rule": "ALL_REQUIRED_RELATIONS_AND_ZERO_STATE_MUST_PASS_BEFORE_A0",
+    "catalog_shape_only": true,
+    "historical_state_copy_forbidden": true
+  },
+  "gfs_decoder_contract": {
+    "python_version": "3.12",
+    "eccodes": "2.47.0",
+    "eccodeslib": "2.47.3.23",
+    "numpy": "1.26.4",
+    "refet": "0.4.2",
+    "qualification": [
+      "python -m eccodes selfcheck",
+      "exact package-version equality",
+      "production provider import smoke"
+    ]
+  },
+  "future_epoch_requirements": {
+    "fresh_zero_state_database_required": true,
+    "failed_v2_database_reuse_forbidden": true,
+    "new_epoch_selection_required": true,
+    "new_a0_required": true,
+    "new_runtime_config_chain_required": true,
+    "new_exact_live_subject_required": true
+  },
+  "semantic_preservation": {
+    "temporal_authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "freshness_is_late_authoritative_admission_gate": false,
+    "raw_retention_before_canonicalization": true,
+    "same_source_exact_t_required": true,
+    "future_leakage_forbidden": true,
+    "interpolation_forbidden": true,
+    "persistence_fill_forbidden": true,
+    "source_substitution_forbidden": true
+  },
+  "nonclaims": {
+    "future_epoch_selected": false,
+    "new_formal_database_effective": false,
+    "a0_started": false,
+    "formal_o00_started": false,
+    "mcft_cap09_completed": false
+  }
+}
