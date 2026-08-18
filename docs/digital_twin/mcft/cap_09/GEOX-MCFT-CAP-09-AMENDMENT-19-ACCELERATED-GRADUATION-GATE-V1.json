@@ -1,0 +1,110 @@
+{
+  "schema_version": "geox_mcft_cap09_amendment19_graduation_gate_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-AMENDMENT-19-ACCELERATED-GRADUATION-GATE-V1",
+  "record_status": "CANDIDATE_NOT_EFFECTIVE_UNTIL_EXACT_HEAD_PROOF_AND_PROTECTED_MAIN_MERGE",
+  "exact_predecessor_protected_main": "da6670633ffb8ef8a9b509043138a1e5550484c3",
+  "scope": "MCFT-CAP-09.S6",
+  "purpose": "make accelerated lanes a faithful clock-substitution qualification of the production execution graph, never an alternative implementation",
+  "canonical_core_binding": {
+    "core_path": "apps/server/src/runtime/twin_runtime/external_formal_amendment19_canonical_tick_core_v1.ts",
+    "core_symbol": "executeExternalFormalAmendment19CanonicalTickV1",
+    "semantic_chain": [
+      "selectExternalFormalCurrentIntervalForcingV1",
+      "executeHourlyWaterBalanceV1",
+      "composeAssimilatedContinuationPosteriorV1",
+      "selectCap04FutureForcingOutcomeV1",
+      "executeCap04Pure72hForecastMathV1",
+      "buildExternalFormalCap04CompletedA1RecordSetV1_or_A2"
+    ],
+    "persistence_free_engineering_must_call_core_directly": true,
+    "persistence_free_engineering_direct_state_math_imports_forbidden": true,
+    "persistence_free_engineering_simplified_runner_forbidden": true,
+    "future_production_persistent_path_must_call_same_core_symbol": true,
+    "different_semantic_core_between_engineering_and_production_forbidden": true
+  },
+  "persistent_accelerated_equivalence": {
+    "allowed_clock_difference_only": true,
+    "accelerated_clock_role": "REPLACE_WAIT_UNTIL_NEXT_PT1H_BOUNDARY_ONLY",
+    "must_reuse_production": [
+      "fresh_v3_schema",
+      "exact_runtime_config_chain",
+      "persistence_repositories",
+      "scheduler",
+      "lease_and_fencing",
+      "runner",
+      "health",
+      "checkpoint",
+      "lineage",
+      "canonical_record_set_builders"
+    ],
+    "simplified_runner_forbidden": true,
+    "in_memory_repository_substitute_for_persistent_24t_forbidden": true,
+    "production_execution_graph_replacement_by_test_harness_forbidden": true
+  },
+  "required_fault_and_semantic_scenarios": [
+    "O00_WARM_START_REAL_CAUSAL_GFS_H1",
+    "MULTI_TICK_MODE_B_ASSUMED_DEGRADED",
+    "BOUNDARY_COMPLETE_EXACT_KBS_PAIR_SWITCHES_MODE_A",
+    "PARTIAL_EXACT_PAIR_DOES_NOT_MIX_AND_MODE_B_REMAINS_WHOLE",
+    "LATE_EXACT_AFTER_TERMINAL_DOES_NOT_CHANGE_STATE_OR_CHECKPOINT_HASH",
+    "PROCESS_RESTART_CONTINUES_FROM_CHECKPOINT",
+    "MISSED_SLOT_OLDEST_FIRST_BACKFILL",
+    "SAME_SLOT_REEXECUTION_IDEMPOTENT_NO_DUPLICATE_CANONICAL_WORK",
+    "NO_ASSUMPTION_PAIR_BLOCKS_EXPLICITLY_WITHOUT_WAIT",
+    "POST_24T_STATE_FORECAST_HEALTH_LINEAGE_READBACK_CONSISTENT"
+  ],
+  "mode_b_epistemic_constraints": {
+    "epistemic_class_remains_assumed": true,
+    "runtime_health": "DEGRADED",
+    "fake_observation": false,
+    "persistence_fill": false,
+    "source_substitution": false,
+    "timestamp_relabel": false,
+    "retroactive_state_rewrite": false,
+    "meaning": "CAUSALLY_AVAILABLE_FORECAST_ASSUMPTION_USED_AS_CURRENT_PROCESS_FORCING"
+  },
+  "formal_epoch_creation_machine_gate": {
+    "required_statuses": {
+      "PERSISTENCE_FREE_24T": "PASS",
+      "PERSISTENT_24T": "PASS",
+      "O00_WARM_START": "PASS",
+      "MODE_A": "PASS",
+      "MODE_B": "PASS",
+      "PARTIAL_PAIR": "PASS",
+      "LATE_EXACT_NO_REWRITE": "PASS",
+      "RESTART": "PASS",
+      "MISSED_SLOT_BACKFILL": "PASS",
+      "IDEMPOTENCY": "PASS",
+      "ZERO_PROVIDER_WAIT": "PASS",
+      "SCHEMA_ENV_PREFLIGHT": "PASS",
+      "FULL_CHAIN_READBACK": "PASS"
+    },
+    "static_blocker_count_required": 0,
+    "all_required_statuses_must_be_terminal_pass": true,
+    "human_override_authorized": false,
+    "formal_epoch_creation_authorized_by_this_implementation_unit": false
+  },
+  "final_wall_clock_graduation_test": {
+    "still_required": true,
+    "actual_utc_boundaries": 24,
+    "accelerated_lane_is_substitute": false,
+    "must_prove": [
+      "actual_utc_boundary",
+      "github_runner_real_scheduling",
+      "long_lived_database_connection_and_state_survival",
+      "real_provider_availability_changes",
+      "real_network_jitter",
+      "real_restart_retry_timing",
+      "cross_24h_checkpoint_continuity",
+      "no_future_leakage"
+    ],
+    "role": "GRADUATION_TEST_NOT_DEVELOPMENT_LOOP"
+  },
+  "implementation_unit_1_expected_result": {
+    "PERSISTENCE_FREE_24T": "PASS",
+    "PERSISTENT_24T": "NOT_YET_AUTHORIZED_OR_CLAIMED",
+    "future_formal_epoch_selected": false,
+    "formal_o00_started": false,
+    "formal_effect": false
+  }
+}
