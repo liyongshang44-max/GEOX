@@ -1,0 +1,67 @@
+{
+  "schema_version": "geox_mcft_cap09_fresh_zero_state_formal_store_requalification_v1",
+  "status": "CANDIDATE",
+  "authority": "FRESH_ZERO_STATE_FORMAL_STORE_REQUALIFICATION_AFTER_FAILED_20260817T200000Z_EPOCH",
+  "exact_predecessor_main_sha": "051150d1355529cc3062b6a084fc4fe46f1d9047",
+  "runtime_environment_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-RUNTIME-ENV-REQUALIFICATION-AUTHORITY-V1.json",
+  "failed_epoch": {
+    "epoch_id": "mcft_cap09_external_formal_window_epoch_20260817t200000z_v2",
+    "failed_database_name": "geox_mcft_cap09_s6_formal_t3r1_24h_v2",
+    "reuse_forbidden": true,
+    "formal_o00_started": false,
+    "adjudication": "NO_GO_FAIL_CLOSED"
+  },
+  "formal_database_identity": {
+    "provider": "NEON_POSTGRES",
+    "project_id": "delicate-glade-62464340",
+    "branch_id": "br-cold-dust-a6j6aymz",
+    "database_name": "geox_mcft_cap09_s6_formal_t3r1_24h_v3",
+    "historical_schema_reference_database": "geox_mcft_cap09_s6_formal_t3r1_24h",
+    "failed_database_reuse_forbidden": "geox_mcft_cap09_s6_formal_t3r1_24h_v2",
+    "connection_secret_source": "GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL",
+    "creation_mode": "CREATE_DATABASE_TEMPLATE0_NO_DATA_CLONE"
+  },
+  "schema_contract": {
+    "required_table_count": 26,
+    "public_table_count": 26,
+    "column_fingerprint_md5": "873a8e86f55d75a04a5f671627e98ae1",
+    "constraint_fingerprint_md5": "7803f7e7706e52eca3ca2aa4290ff5dd",
+    "index_fingerprint_md5": "ea5b3ba0392fd52fb471bc754e94ed35",
+    "catalog_shape_only": true,
+    "historical_state_copy_forbidden": true,
+    "failed_epoch_state_copy_forbidden": true,
+    "all_required_relations_zero_state_required": true
+  },
+  "qualification_contract": {
+    "transaction_mode": "READ_ONLY",
+    "database_identity_exact_match_required": true,
+    "neon_project_branch_exact_match_required": true,
+    "public_table_count_exact_match_required": true,
+    "runtime_environment_schema_preflight_mode": "zero-state",
+    "database_write_count": 0,
+    "formal_runtime_write_count": 0,
+    "public_provider_request_count": 0
+  },
+  "semantic_preservation": {
+    "temporal_authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "freshness_is_late_authoritative_admission_gate": false,
+    "raw_retention_before_canonicalization": true,
+    "same_source_exact_t_required": true,
+    "future_leakage_forbidden": true,
+    "interpolation_forbidden": true,
+    "persistence_fill_forbidden": true,
+    "source_substitution_forbidden": true
+  },
+  "nonclaims": {
+    "fresh_store_effective_before_live_qualification": false,
+    "future_epoch_selected": false,
+    "new_a0_persisted": false,
+    "new_runtime_config_chain_persisted": false,
+    "replacement_manifest_frozen": false,
+    "new_exact_live_subject_frozen": false,
+    "formal_o00_started": false,
+    "formal_execution_count": "0/24",
+    "mcft_cap09_completed": false
+  },
+  "next_legal_frontier_after_effectiveness": "NEW_FUTURE_EPOCH_SELECTION_AND_REPLACEMENT_A0_CONFIG_CHAIN"
+}

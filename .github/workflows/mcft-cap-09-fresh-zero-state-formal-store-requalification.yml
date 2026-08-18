@@ -1,0 +1,123 @@
+name: mcft-cap-09-fresh-zero-state-formal-store-requalification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-fresh-zero-state-formal-store-requalification.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FRESH-ZERO-STATE-FORMAL-STORE-REQUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FRESH_ZERO_STATE_FORMAL_STORE_REQUALIFICATION.cjs'
+      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_FRESH_ZERO_STATE_FORMAL_STORE_V1.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXACT_BASE_SHA: '051150d1355529cc3062b6a084fc4fe46f1d9047'
+      HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      TARGET_DATABASE_NAME: 'geox_mcft_cap09_s6_formal_t3r1_24h_v3'
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fail closed on exact base and four-file boundary
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_BASE_SHA"
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$HEAD_SHA" | sort)
+          printf '%s\n' "${changed[@]}"
+          test "${#changed[@]}" -eq 4
+          expected=$(cat <<'EOF'
+          .github/workflows/mcft-cap-09-fresh-zero-state-formal-store-requalification.yml
+          docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FRESH-ZERO-STATE-FORMAL-STORE-REQUALIFICATION-V1.json
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FRESH_ZERO_STATE_FORMAL_STORE_REQUALIFICATION.cjs
+          scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_FRESH_ZERO_STATE_FORMAL_STORE_V1.ts
+          EOF
+          )
+          actual=$(printf '%s\n' "${changed[@]}")
+          test "$actual" = "$expected"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+
+      - name: Install repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Governance qualification
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FRESH_ZERO_STATE_FORMAL_STORE_REQUALIFICATION.cjs
+
+      - name: Derive exact fresh v3 database URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_DATABASE_URL"
+          DATABASE_URL=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL);u.pathname="/"+process.env.TARGET_DATABASE_NAME;process.stdout.write(u.toString())')
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          echo "SOURCE_DATABASE_URL=" >> "$GITHUB_ENV"
+
+      - name: Prove exact fresh-store identity read-only
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_FRESH_ZERO_STATE_FORMAL_STORE_V1.ts
+
+      - name: Prove frozen 26-relation schema and zero-state read-only
+        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_RUNTIME_ENVIRONMENT_V1.ts zero-state
+
+      - name: Validate live proof and hard nonclaims
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const identity = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_FRESH_ZERO_STATE_FORMAL_STORE_IDENTITY_RESULT.json','utf8'));
+          const runtime = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_RUNTIME_ENVIRONMENT_PREFLIGHT_RESULT.json','utf8'));
+          if (identity.status !== 'PASS') throw new Error('FRESH_STORE_IDENTITY_NOT_PASS');
+          if (identity.database_identity.database_name !== 'geox_mcft_cap09_s6_formal_t3r1_24h_v3') throw new Error('FRESH_STORE_DATABASE_IDENTITY_DRIFT');
+          if (identity.database_identity.neon_project_id !== 'delicate-glade-62464340') throw new Error('FRESH_STORE_PROJECT_ID_DRIFT');
+          if (identity.database_identity.neon_branch_id !== 'br-cold-dust-a6j6aymz') throw new Error('FRESH_STORE_BRANCH_ID_DRIFT');
+          if (identity.public_table_count !== 26) throw new Error('FRESH_STORE_PUBLIC_TABLE_COUNT_DRIFT');
+          if (identity.database_write_count !== 0 || identity.formal_runtime_write_count !== 0 || identity.public_provider_request_count !== 0) throw new Error('FRESH_STORE_QUALIFICATION_SIDE_EFFECT_FORBIDDEN');
+          if (identity.future_epoch_selected !== false || identity.a0_started !== false || identity.formal_o00_started !== false) throw new Error('FRESH_STORE_NONCLAIM_REGRESSION');
+          if (runtime.status !== 'PASS' || runtime.mode !== 'zero-state') throw new Error('FRESH_STORE_RUNTIME_ZERO_STATE_NOT_PASS');
+          if (runtime.database_identity.database_name !== 'geox_mcft_cap09_s6_formal_t3r1_24h_v3') throw new Error('RUNTIME_PREFLIGHT_DATABASE_IDENTITY_DRIFT');
+          if (runtime.required_table_count !== 26 || runtime.schema_complete !== true || runtime.zero_state_qualified !== true) throw new Error('FRESH_STORE_RUNTIME_SCHEMA_NOT_QUALIFIED');
+          const expected = {
+            column_fingerprint: '873a8e86f55d75a04a5f671627e98ae1',
+            constraint_fingerprint: '7803f7e7706e52eca3ca2aa4290ff5dd',
+            index_fingerprint: 'ea5b3ba0392fd52fb471bc754e94ed35',
+          };
+          for (const [key,value] of Object.entries(expected)) if (runtime.schema_fingerprints[key] !== value) throw new Error(`FRESH_STORE_${key.toUpperCase()}_DRIFT`);
+          if (Object.keys(runtime.zero_state_counts || {}).length !== 26) throw new Error('FRESH_STORE_ZERO_STATE_COUNT_CARDINALITY_DRIFT');
+          for (const [relation,count] of Object.entries(runtime.zero_state_counts || {})) if (count !== 0) throw new Error(`FRESH_STORE_NOT_ZERO_STATE:${relation}`);
+          if (runtime.database_write_count !== 0 || runtime.formal_effect !== false) throw new Error('RUNTIME_PREFLIGHT_SIDE_EFFECT_FORBIDDEN');
+          NODE
+
+      - name: Upload immutable focused proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-fresh-zero-state-formal-store-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_FRESH_ZERO_STATE_FORMAL_STORE_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_FRESH_ZERO_STATE_FORMAL_STORE_IDENTITY_RESULT.json
+            acceptance-output/MCFT_CAP_09_RUNTIME_ENVIRONMENT_PREFLIGHT_RESULT.json
+          if-no-files-found: error
+          retention-days: 30
