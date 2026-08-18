@@ -1,0 +1,99 @@
+name: mcft-cap-09-amendment-19-persistence-free-24t
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment-19-persistence-free-24t.yml'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_amendment19_canonical_tick_core_v1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      EXACT_BASE_SHA: 'b0ecccc336409762afb157ce794786880976b55b'
+      HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fail closed on exact base and four-file boundary
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_BASE_SHA"
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$HEAD_SHA" | sort)
+          printf '%s\n' "${changed[@]}"
+          test "${#changed[@]}" -eq 4
+          expected=$(cat <<'LIST'
+          .github/workflows/mcft-cap-09-amendment-19-persistence-free-24t.yml
+          apps/server/src/runtime/twin_runtime/external_formal_amendment19_canonical_tick_core_v1.ts
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.cjs
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.ts
+          LIST
+          )
+          actual=$(printf '%s\n' "${changed[@]}")
+          test "$actual" = "$expected"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+
+      - name: Install repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Governance qualification
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.cjs
+
+      - name: Persistence-free canonical 24T proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.ts
+
+      - name: Validate proof and hard nonclaims
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const g = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_GOVERNANCE_RESULT.json','utf8'));
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json','utf8'));
+          if (g.status !== 'PASS' || g.exact_predecessor_protected_main !== 'b0ecccc336409762afb157ce794786880976b55b') throw new Error('AMENDMENT19_PF24T_GOVERNANCE_NOT_PASS');
+          if (g.same_core_gate_bound !== true || g.semantic_chain_bound_in_core !== true || g.acceptance_direct_state_forecast_math_imports !== 0 || g.acceptance_simplified_runner !== false) throw new Error('AMENDMENT19_PF24T_SAME_CORE_NOT_PROVED');
+          if (g.legacy_exact_five_authority_in_core !== false || g.fake_observation_fields_in_core !== false || g.boundary_snapshot_equals_logical_time_required !== true) throw new Error('AMENDMENT19_PF24T_SEMANTIC_BOUNDARY_REGRESSION');
+          if (r.status !== 'PASS' || r.qualification_lane !== 'PERSISTENCE_FREE_ACCELERATED_ENGINEERING_ONLY') throw new Error('AMENDMENT19_PF24T_RUNTIME_NOT_PASS');
+          if (r.machine_statuses.PERSISTENCE_FREE_24T !== 'PASS' || r.machine_statuses.PERSISTENT_24T !== 'NOT_YET_AUTHORIZED_OR_CLAIMED') throw new Error('AMENDMENT19_PF24T_MACHINE_STATUS_REGRESSION');
+          if (r.canonical_tick_count !== 24 || r.canonical_tick_sequence_end !== 24 || r.a1_completed_count !== 24) throw new Error('AMENDMENT19_PF24T_CHAIN_NOT_24');
+          if (r.mode_a_exact_provider_count !== 1 || r.mode_b_assumed_degraded_count !== 23) throw new Error('AMENDMENT19_PF24T_MODE_MATRIX_NOT_PROVED');
+          if (r.partial_rainfall_only_whole_mode_b !== true || r.partial_et0_only_whole_mode_b !== true) throw new Error('AMENDMENT19_PF24T_PARTIAL_PAIR_NOT_PROVED');
+          if (r.late_exact_after_boundary_no_canonical_rewrite !== true || r.missing_assumption_pair_blocks_without_wait !== true || r.provider_wait_count !== 0) throw new Error('AMENDMENT19_PF24T_NO_WAIT_NO_REWRITE_NOT_PROVED');
+          if (r.o00_h1_interval_semantics_proved !== true || r.o00_real_causal_gfs_h1_claimed !== false) throw new Error('AMENDMENT19_PF24T_O00_OVERCLAIM_OR_GAP');
+          for (const key of ['database_write_count','provider_request_count','scheduler_write_count']) if (r[key] !== 0) throw new Error(`AMENDMENT19_PF24T_SIDE_EFFECT_FORBIDDEN:${key}`);
+          if (r.production_persistent_path_cutover !== false || r.future_formal_epoch_selected !== false || r.formal_o00_started !== false || r.formal_effect !== false) throw new Error('AMENDMENT19_PF24T_PREMATURE_EFFECT');
+          NODE
+
+      - name: Upload immutable focused proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-amendment19-persistence-free-24t-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json
+          if-no-files-found: error
+          retention-days: 30
