@@ -53,6 +53,17 @@ export type PersistentSequentialSchedulerConfigV1 = {
   slot_interval_seconds?: 3600;
 };
 
+export const MCFT_CAP09_AM19_ACCELERATED_SCHEDULER_CLOCK_ACK_V1 =
+  "MCFT_CAP09_AM19_QUALIFICATION_CLOCK_SUBSTITUTION_ONLY" as const;
+
+export type PersistentSequentialSchedulerClockAuthorityV1 =
+  | { mode: "SYSTEM_DATABASE_UTC" }
+  | {
+      mode: "ACCELERATED_ENGINEERING_ONLY";
+      qualification_ack: typeof MCFT_CAP09_AM19_ACCELERATED_SCHEDULER_CLOCK_ACK_V1;
+      now: () => Date;
+    };
+
 type SchedulerConfigResolvedV1 = {
   scope: TwinScopeKeyV1;
   schedule_start_ms: number;
@@ -210,9 +221,21 @@ export class StrictUtcHourlySchedulerClockV1 implements ClockPortV1 {
 
 export class PostgresPersistentSequentialSchedulerAdapterV1 implements SchedulerPortV1 {
   private readonly config: SchedulerConfigResolvedV1;
+  private readonly clockAuthority: PersistentSequentialSchedulerClockAuthorityV1;
 
-  constructor(private readonly pool: SchedulerPoolV1, config: PersistentSequentialSchedulerConfigV1) {
+  constructor(
+    private readonly pool: SchedulerPoolV1,
+    config: PersistentSequentialSchedulerConfigV1,
+    clockAuthority: PersistentSequentialSchedulerClockAuthorityV1 = { mode: "SYSTEM_DATABASE_UTC" },
+  ) {
     this.config = resolveConfig(config);
+    if (clockAuthority.mode === "ACCELERATED_ENGINEERING_ONLY") {
+      if (clockAuthority.qualification_ack !== MCFT_CAP09_AM19_ACCELERATED_SCHEDULER_CLOCK_ACK_V1) {
+        throw new Error("ACCELERATED_SCHEDULER_CLOCK_ACK_REQUIRED");
+      }
+      if (typeof clockAuthority.now !== "function") throw new Error("ACCELERATED_SCHEDULER_CLOCK_NOW_REQUIRED");
+    }
+    this.clockAuthority = clockAuthority;
   }
 
   private async ensureCursorForUpdate(client: SchedulerClientV1): Promise<CursorRowV1> {
@@ -257,10 +280,21 @@ export class PostgresPersistentSequentialSchedulerAdapterV1 implements Scheduler
   }
 
   private async assertDatabaseClockBoundary(client: SchedulerClientV1, boundary: ShadowOnlineBoundaryV1): Promise<void> {
-    const result = await client.query<{ database_now: string | Date }>("SELECT transaction_timestamp() AS database_now");
-    const databaseNow = new Date(result.rows[0].database_now).getTime();
-    if (Date.parse(boundary.logical_time) > databaseNow) throw new Error("FUTURE_BOUNDARY_CLAIM_REJECTED");
-    if (Date.parse(boundary.scheduler_wall_clock_observed_at) > databaseNow + 300_000) throw new Error("SCHEDULER_WALL_CLOCK_AHEAD_OF_DATABASE");
+    let authorityNow: number;
+    if (this.clockAuthority.mode === "SYSTEM_DATABASE_UTC") {
+      const result = await client.query<{ database_now: string | Date }>("SELECT transaction_timestamp() AS database_now");
+      authorityNow = new Date(result.rows[0].database_now).getTime();
+    } else {
+      const acceleratedNow = this.clockAuthority.now();
+      authorityNow = acceleratedNow.getTime();
+      if (!Number.isFinite(authorityNow)) throw new Error("ACCELERATED_SCHEDULER_CLOCK_INVALID");
+    }
+    if (Date.parse(boundary.logical_time) > authorityNow) throw new Error("FUTURE_BOUNDARY_CLAIM_REJECTED");
+    if (Date.parse(boundary.scheduler_wall_clock_observed_at) > authorityNow + 300_000) {
+      throw new Error(this.clockAuthority.mode === "SYSTEM_DATABASE_UTC"
+        ? "SCHEDULER_WALL_CLOCK_AHEAD_OF_DATABASE"
+        : "SCHEDULER_WALL_CLOCK_AHEAD_OF_ACCELERATED_AUTHORITY");
+    }
   }
 
   private async acquireLease(client: SchedulerClientV1, leaseOwner: string, leaseDurationSeconds: number): Promise<bigint> {
