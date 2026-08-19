@@ -24,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
+      MCFT_CAP09_SUBJECT_SHA: '530b857765da471a442727daee9687206059e5c4'
+      MCFT_CAP09_CONSUMER_SUBJECT_SHA: '530b857765da471a442727daee9687206059e5c4'
       MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
       MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
       MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
@@ -63,10 +65,12 @@ jobs:
           test "$(git rev-parse HEAD)" = "$PRODUCER_SHA"
           test -z "$(git status --porcelain)"
 
-      - name: Require secret bindings without disclosure
+      - name: Require subject bindings and secrets without disclosure
         shell: bash
         run: |
           set -euo pipefail
+          test "$MCFT_CAP09_SUBJECT_SHA" = "$PRODUCER_SHA" || { echo 'AM19_REHYDRATION_DIAG_SUBJECT_BINDING_DRIFT' >&2; exit 1; }
+          test "$MCFT_CAP09_CONSUMER_SUBJECT_SHA" = "$PRODUCER_SHA" || { echo 'AM19_REHYDRATION_DIAG_CONSUMER_BINDING_DRIFT' >&2; exit 1; }
           for name in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
             test -n "${!name:-}" || { echo "AM19_REHYDRATION_DIAG_SECRET_REQUIRED:${name}" >&2; exit 1; }
           done
