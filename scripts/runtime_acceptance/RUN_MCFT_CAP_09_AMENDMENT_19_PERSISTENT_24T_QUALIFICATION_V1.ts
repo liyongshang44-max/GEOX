@@ -570,6 +570,7 @@ function buildQualification(candidate: CandidateV1, subject: string, databaseNam
   const cropAuthority = loadJson(CROP_AUTHORITY_PATH) as Record<string, unknown>;
   const matrix = loadJson(MATRIX_PATH) as Record<string, unknown>;
 
+  // The production materializer is the actual stage-legality gate. Any transition risk fails before DB write.
   materializeExternalFormalA18CropContextV2({
     logical_time: a0,
     expected_identity_hash: bundle.persistence_bundle.crop_stage_context_hash,
