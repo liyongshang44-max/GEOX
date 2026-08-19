@@ -6,12 +6,18 @@ on:
       - agent/mcft-cap09-am19-persistent-facts-schema-alignment
     paths:
       - .github/workflows/mcft-cap-09-am19-persistent-facts-schema-alignment-helper.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/mcft-cap-09-am19-persistent-facts-schema-alignment-helper.yml
 
 permissions:
   contents: write
 
 jobs:
   apply-exact-seed-adapter-fix:
+    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'agent/mcft-cap09-am19-persistent-facts-schema-alignment'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -20,12 +26,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Require exact protected-main parent and helper-only first commit
+      - name: Require exact protected-main base and helper-only branch diff
         shell: bash
         run: |
           set -euo pipefail
           BASE='530b857765da471a442727daee9687206059e5c4'
-          test "$(git rev-parse HEAD^)" = "$BASE"
+          git cat-file -e "$BASE^{commit}"
           mapfile -t changed < <(git diff --name-only "$BASE" HEAD)
           test "${#changed[@]}" -eq 1
           test "${changed[0]}" = '.github/workflows/mcft-cap-09-am19-persistent-facts-schema-alignment-helper.yml'
