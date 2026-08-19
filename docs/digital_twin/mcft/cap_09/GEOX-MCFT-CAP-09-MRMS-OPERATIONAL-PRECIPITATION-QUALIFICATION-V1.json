@@ -1,0 +1,66 @@
+{
+  "schema_version": "geox_mcft_cap09_mrms_operational_precipitation_qualification_v1",
+  "record_status": "OFF_MAIN_SOURCE_QUALIFICATION_ONLY_NOT_RUNTIME_AUTHORITY",
+  "exact_base_protected_main": "cf6bf3e69f2d7f40e7586308f4d846b3350efb1c",
+  "provider": "NOAA_NWS_NCEP_MRMS",
+  "official_operational_data_root": "https://mrms.ncep.noaa.gov/2D/",
+  "official_access_documentation": "https://www.nssl.noaa.gov/projects/mrms/MRMS_data.php",
+  "official_product_table": "https://www.nssl.noaa.gov/projects/mrms/operational/tables.php",
+  "products": [
+    {
+      "product_id": "RadarOnly_QPE_15M",
+      "directory": "https://mrms.ncep.noaa.gov/2D/RadarOnly_QPE_15M/",
+      "filename_prefix": "MRMS_RadarOnly_QPE_15M_00.00_",
+      "documented_frequency_minutes": 15,
+      "documented_unit": "mm",
+      "documented_missing": -1,
+      "documented_no_coverage": -3,
+      "candidate_role": "LOW_LATENCY_15_MINUTE_PRECIPITATION_ACCUMULATION"
+    },
+    {
+      "product_id": "RadarOnly_QPE_01H",
+      "directory": "https://mrms.ncep.noaa.gov/2D/RadarOnly_QPE_01H/",
+      "filename_prefix": "MRMS_RadarOnly_QPE_01H_00.00_",
+      "documented_frequency_minutes": 2,
+      "documented_unit": "mm",
+      "documented_missing": -1,
+      "documented_no_coverage": -3,
+      "candidate_role": "LOW_LATENCY_ROLLING_1_HOUR_PRECIPITATION_ACCUMULATION"
+    },
+    {
+      "product_id": "MultiSensor_QPE_01H_Pass1",
+      "directory": "https://mrms.ncep.noaa.gov/2D/MultiSensor_QPE_01H_Pass1/",
+      "filename_prefix": "MRMS_MultiSensor_QPE_01H_Pass1_00.00_",
+      "documented_frequency_minutes": 60,
+      "documented_latency_minutes": 20,
+      "documented_unit": "mm",
+      "documented_missing": -1,
+      "documented_no_coverage": -3,
+      "candidate_role": "HIGHER_QUALITY_DELAYED_1_HOUR_PRECIPITATION_EVIDENCE"
+    }
+  ],
+  "spatial_probe": {
+    "kind": "HICKORY_CORNERS_INDEPENDENT_STATION_POINT_ONLY",
+    "latitude": 42.4081,
+    "longitude": -85.3736,
+    "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1I-KBS-ET0-INPUT-AUTHORITY-V1.json",
+    "field_polygon_mapping_claimed": false,
+    "area_weighted_aggregation_claimed": false
+  },
+  "retrieval_policy": {
+    "download_exact_timestamped_file_not_latest_alias": true,
+    "maximum_compressed_bytes": 5000000,
+    "minimum_recent_files_for_cadence": 8,
+    "recent_gap_sample_size": 30
+  },
+  "qualification_nonclaims": [
+    "NO_MRMS_GENERIC_PRODUCT_AUTHORITY",
+    "NO_FIELD_POLYGON_SPATIAL_MAPPING_FROM_STATION_POINT_PROBE",
+    "NO_GRID_CELL_AS_EXACT_STATION_RAINFALL",
+    "NO_PASS1_PASS2_SILENT_SUBSTITUTION",
+    "NO_RUNTIME_PROVIDER_AUTHORITY",
+    "NO_SCHEDULER_AUTHORITY",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_WINDOW_START"
+  ]
+}
