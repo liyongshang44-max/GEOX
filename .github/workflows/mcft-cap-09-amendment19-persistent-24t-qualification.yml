@@ -23,7 +23,7 @@ env:
   NODE_VERSION: '20.11.1'
   PNPM_VERSION: '9.15.4'
   PYTHON_VERSION: '3.12'
-  EXACT_PREDECESSOR_MAIN: '67f801df7e50df96e89ba61d62978faa8412fc86'
+  EXACT_PREDECESSOR_MAIN: '24a1b5d957e042a0a92543ca2d9742901a22d453'
   LOCAL_REHYDRATION_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
 
 jobs:
@@ -40,23 +40,15 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Require exact predecessor and four-file implementation boundary
+      - name: Require exact predecessor and one-file environment-binding repair boundary
         shell: bash
         run: |
           set -euo pipefail
           test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PREDECESSOR_MAIN" || { echo 'AM19_P24_EXACT_BASE_REQUIRED' >&2; exit 1; }
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
           mapfile -t changed < <(git diff --name-only "$EXACT_PREDECESSOR_MAIN" "$SUBJECT_SHA" | sort)
-          test "${#changed[@]}" -eq 4 || { printf 'AM19_P24_EXACT_FOUR_FILES_REQUIRED\n%s\n' "${changed[*]}" >&2; exit 1; }
-          expected=$(cat <<'EOF'
-          .github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml
-          scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs
-          scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
-          scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
-          EOF
-          )
-          actual=$(printf '%s\n' "${changed[@]}")
-          test "$actual" = "$expected"
+          test "${#changed[@]}" -eq 1 || { printf 'AM19_P24_EXACT_ONE_FILE_BINDING_REPAIR_REQUIRED\n%s\n' "${changed[*]}" >&2; exit 1; }
+          test "${changed[0]}" = '.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml'
 
       - uses: pnpm/action-setup@v4
         with:
@@ -76,6 +68,28 @@ jobs:
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts \
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+
+      - name: Prove stable T3R1 credential seed normalization fail-closed
+        shell: node {0}
+        run: |
+          function normalize(raw) {
+            const u = new URL(raw);
+            if (!['postgres:','postgresql:'].includes(u.protocol)) throw new Error('AM19_P24_POSTGRES_URL_REQUIRED');
+            if (['localhost','127.0.0.1','::1'].includes(u.hostname)) throw new Error('AM19_P24_REMOTE_DATABASE_REQUIRED');
+            const seed = decodeURIComponent(u.pathname.replace(/^\//,''));
+            const allowed = new Set(['geox_mcft_cap09_s6_formal_t3r1_24h','geox_mcft_cap09_s6_formal_t3r1_24h_v3']);
+            if (!allowed.has(seed)) throw new Error(`AM19_P24_T3R1_CREDENTIAL_SEED_DATABASE_FORBIDDEN:${seed}`);
+            u.pathname = '/geox_mcft_cap09_s6_formal_t3r1_24h_v3';
+            return {seed, target: u.toString()};
+          }
+          const oldSeed = normalize('postgresql://u:p@example.invalid/geox_mcft_cap09_s6_formal_t3r1_24h?channel_binding=require&sslmode=require');
+          if(oldSeed.seed!=='geox_mcft_cap09_s6_formal_t3r1_24h'||!oldSeed.target.includes('/geox_mcft_cap09_s6_formal_t3r1_24h_v3?')||!oldSeed.target.includes('channel_binding=require')||!oldSeed.target.includes('sslmode=require')) throw new Error('AM19_P24_OLD_T3R1_SEED_NORMALIZATION_REQUIRED');
+          const v3Seed = normalize('postgresql://u:p@example.invalid/geox_mcft_cap09_s6_formal_t3r1_24h_v3?sslmode=require');
+          if(v3Seed.seed!=='geox_mcft_cap09_s6_formal_t3r1_24h_v3'||!v3Seed.target.includes('/geox_mcft_cap09_s6_formal_t3r1_24h_v3?')) throw new Error('AM19_P24_V3_SEED_IDEMPOTENCY_REQUIRED');
+          let rogueRejected=false;
+          try { normalize('postgresql://u:p@example.invalid/neondb?sslmode=require'); } catch(e) { rogueRejected=String(e.message).startsWith('AM19_P24_T3R1_CREDENTIAL_SEED_DATABASE_FORBIDDEN:'); }
+          if(!rogueRejected) throw new Error('AM19_P24_ROGUE_SEED_FAIL_CLOSED_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',stable_t3r1_seed_supported:true,v3_seed_supported:true,rogue_seed_rejected:true,target_database:'geox_mcft_cap09_s6_formal_t3r1_24h_v3'}));
 
       - name: Rebind governed EA5E2 dependency graph
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
@@ -152,6 +166,23 @@ jobs:
           for name in MCFT_CAP09_PARENT_DATABASE_URL MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
             test -n "${!name:-}" || { echo "AM19_P24_SECRET_REQUIRED:${name}" >&2; exit 1; }
           done
+
+      - name: Normalize stable T3R1 credential seed to Formal v3 target
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const raw=process.env.MCFT_CAP09_PARENT_DATABASE_URL;
+          const u=new URL(raw);
+          if(!['postgres:','postgresql:'].includes(u.protocol)) throw new Error('AM19_P24_POSTGRES_URL_REQUIRED');
+          if(['localhost','127.0.0.1','::1'].includes(u.hostname)) throw new Error('AM19_P24_REMOTE_DATABASE_REQUIRED');
+          const seed=decodeURIComponent(u.pathname.replace(/^\//,''));
+          const allowed=new Set(['geox_mcft_cap09_s6_formal_t3r1_24h','geox_mcft_cap09_s6_formal_t3r1_24h_v3']);
+          if(!allowed.has(seed)) throw new Error(`AM19_P24_T3R1_CREDENTIAL_SEED_DATABASE_FORBIDDEN:${seed}`);
+          u.pathname='/geox_mcft_cap09_s6_formal_t3r1_24h_v3';
+          const target=u.toString();
+          console.log(`::add-mask::${target}`);
+          fs.appendFileSync(process.env.GITHUB_ENV,`MCFT_CAP09_PARENT_DATABASE_URL=${target}\n`);
+          console.log(JSON.stringify({status:'PASS',seed_database:seed,target_database:'geox_mcft_cap09_s6_formal_t3r1_24h_v3',credential_fields_preserved:true}));
 
       - name: Download only triggering-run exact-head rolling candidate
         uses: actions/download-artifact@v4
