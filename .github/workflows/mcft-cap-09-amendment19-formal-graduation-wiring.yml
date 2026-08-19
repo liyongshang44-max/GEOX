@@ -1,0 +1,173 @@
+name: mcft-cap-09-amendment19-formal-graduation-wiring
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml'
+      - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.cjs'
+  workflow_run:
+    workflows: ['mcft-cap-09-amendment19-persistent-24t-qualification']
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-am19-formal-graduation-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'live-main' }}
+  cancel-in-progress: false
+
+env:
+  EXACT_PREDECESSOR_MAIN: 'ac8ab3d8f6ea07d682facc9d59a6fd5b41b2ff22'
+
+jobs:
+  static-proof:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout exact successor subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact predecessor and two-file governance-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PREDECESSOR_MAIN" || { echo 'AM19_GRADUATION_WIRING_EXACT_BASE_REQUIRED' >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_PREDECESSOR_MAIN" "$SUBJECT_SHA" | sort)
+          test "${#changed[@]}" -eq 2 || { printf 'AM19_GRADUATION_WIRING_EXACT_TWO_FILE_BOUNDARY_REQUIRED\n%s\n' "${changed[*]}" >&2; exit 1; }
+          expected=$(cat <<'LIST'
+          .github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml
+          scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.cjs
+          LIST
+          )
+          actual=$(printf '%s\n' "${changed[@]}")
+          test "$actual" = "$expected" || { printf 'AM19_GRADUATION_WIRING_BOUNDARY_DRIFT\nexpected:\n%s\nactual:\n%s\n' "$expected" "$actual" >&2; exit 1; }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+
+      - name: Fail-closed graduation input assembler selftest
+        run: node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.cjs --selftest
+
+      - name: Existing Formal epoch preflight selftest
+        run: node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_FORMAL_EPOCH_GRADUATION_GATE_V1.cjs --selftest
+
+      - name: Reprove exact-subject production cutover and shared canonical core
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER.cjs
+
+      - name: Require static proof remains non-Formal
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER_RESULT.json','utf8'));
+          if(p.status!=='PASS'||p.shared_canonical_core_bound!==true||p.provider_wait_authorized!==false||p.persistent_24t_claimed!==false||p.future_formal_epoch_selected!==false||p.formal_effect!==false) throw new Error('AM19_GRADUATION_WIRING_CUTOVER_PROOF_REQUIRED');
+
+  live-formal-gate-preflight:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.event != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUBJECT_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Checkout exact persistent qualification subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require triggering subject is still exact protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.workflow_run.id }}" -gt 0
+          test "${{ github.event.workflow_run.head_branch }}" = 'main'
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA" || { echo 'AM19_GRADUATION_WIRING_CHECKOUT_SUBJECT_DRIFT' >&2; exit 1; }
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$SUBJECT_SHA" || { echo 'AM19_GRADUATION_WIRING_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
+
+      - name: Download only triggering persistent-run exact-subject evidence
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          pattern: mcft-cap09-am19-persistent24-${{ env.SUBJECT_SHA }}-*
+          merge-multiple: true
+          path: persistent-evidence
+
+      - name: Require exact evidence file set from triggering run
+        id: evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          persistent=$(find persistent-evidence -type f -name 'MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_RESULT.json' -print)
+          engineering=$(find persistent-evidence -type f -name 'MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json' -print)
+          rehydration=$(find persistent-evidence -type f -name 'MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json' -print)
+          test "$(printf '%s\n' "$persistent" | sed '/^$/d' | wc -l)" -eq 1 || { echo 'AM19_GRADUATION_WIRING_EXACT_ONE_PERSISTENT_RESULT_REQUIRED' >&2; exit 1; }
+          test "$(printf '%s\n' "$engineering" | sed '/^$/d' | wc -l)" -eq 1 || { echo 'AM19_GRADUATION_WIRING_EXACT_ONE_ENGINEERING_RESULT_REQUIRED' >&2; exit 1; }
+          test "$(printf '%s\n' "$rehydration" | sed '/^$/d' | wc -l)" -eq 1 || { echo 'AM19_GRADUATION_WIRING_EXACT_ONE_REHYDRATION_RESULT_REQUIRED' >&2; exit 1; }
+          echo "persistent=$persistent" >> "$GITHUB_OUTPUT"
+          echo "engineering=$engineering" >> "$GITHUB_OUTPUT"
+          echo "rehydration=$rehydration" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+
+      - name: Reprove production cutover on exact persistent subject
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER.cjs
+
+      - name: Assemble evidence-faithful Formal graduation input
+        run: >-
+          node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.cjs
+          "${{ steps.evidence.outputs.persistent }}"
+          "${{ steps.evidence.outputs.engineering }}"
+          "${{ steps.evidence.outputs.rehydration }}"
+          acceptance-output/MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER_RESULT.json
+          "$SUBJECT_SHA"
+          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
+
+      - name: Open existing machine-only Formal epoch gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_FORMAL_EPOCH_GRADUATION_GATE_V1.cjs \
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json \
+            > acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json
+
+      - name: Require gate-open result has no Formal side effect
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const input=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json','utf8'));
+          const gate=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json','utf8'));
+          if(input.status!=='PASS'||input.subject_sha!==process.env.SUBJECT_SHA||input.static_blocker_count!==0) throw new Error('AM19_GRADUATION_WIRING_INPUT_NOT_PASS');
+          if(input.same_canonical_core_engineering_and_production!==true||input.persistent_lane_uses_production_scheduler!==true||input.persistent_lane_uses_production_repositories!==true||input.persistent_lane_uses_production_lease_fencing!==true||input.persistent_lane_uses_production_runner!==true) throw new Error('AM19_GRADUATION_WIRING_EQUIVALENCE_PROOF_REQUIRED');
+          if(input.future_formal_epoch_selected!==false||input.formal_o00_started!==false||input.mcft_cap09_completed!==false||input.final_actual_24h_still_required!==true) throw new Error('AM19_GRADUATION_WIRING_PREMATURE_FORMAL_EFFECT');
+          if(gate.status!=='PASS'||gate.formal_epoch_creation_gate!=='OPEN'||gate.required_status_count!==13||gate.static_blocker_count!==0||gate.human_override_used!==false) throw new Error('AM19_GRADUATION_WIRING_GATE_NOT_OPEN');
+
+      - name: Upload machine-only graduation proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-am19-formal-graduation-${{ env.SUBJECT_SHA }}-${{ github.run_id }}
+          path: |
+            acceptance-output/MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER_RESULT.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json
+          if-no-files-found: warn
+          retention-days: 90
