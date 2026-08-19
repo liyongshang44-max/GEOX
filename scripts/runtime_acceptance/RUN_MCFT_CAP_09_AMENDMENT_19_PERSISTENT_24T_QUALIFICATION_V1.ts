@@ -857,10 +857,19 @@ async function runMain24(input: {
   pool = new Pool({ connectionString: input.url, application_name: "mcft-cap09-am19-p24-restart" });
   await assertDatabaseIdentity(pool, MAIN_DB);
   const restartSnapshot = await new PostgresNextTickRepositoryV1(pool).readPersistedNextTickSnapshot({ ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 });
+  const restartPreviousLogicalTime = addHours(input.built.o00, 5);
+  const restartNextLogicalTime = addHours(input.built.o00, 6);
   restart = Boolean(
     restartSnapshot
-      && restartSnapshot.checkpoint.payload.next_tick_logical_time === addHours(input.built.o00, 6)
-      && Number(restartSnapshot.checkpoint.payload.tick_sequence) === 6,
+      && restartSnapshot.checkpoint.logical_time === restartPreviousLogicalTime
+      && restartSnapshot.checkpoint.payload.next_tick_logical_time === restartNextLogicalTime
+      && restartSnapshot.previous_posterior.logical_time === restartPreviousLogicalTime
+      && restartSnapshot.previous_forecast_result?.logical_time === restartPreviousLogicalTime
+      && restartSnapshot.last_terminal_tick?.logical_time === restartPreviousLogicalTime
+      && restartSnapshot.checkpoint.payload.last_posterior_state_ref === restartSnapshot.previous_posterior.object_id
+      && restartSnapshot.checkpoint.payload.forecast_result_ref === restartSnapshot.previous_forecast_result?.object_id
+      && restartSnapshot.checkpoint.payload.last_completed_tick_ref === restartSnapshot.last_terminal_tick?.object_id
+      && restartSnapshot.runtime_config.object_id === input.built.bundle.persistence_bundle.runtime_configs[5]!.object_id,
   );
   if (!restart) throw new Error("AM19_P24_RESTART_CHECKPOINT_CONTINUITY_REQUIRED");
   runtime = composition(pool, input.built, () => new Date(synthetic));
