@@ -102,9 +102,12 @@ async function sleepUntil(value: string): Promise<void> {
 }
 
 function retryableKbsSoilTransportError(error: unknown): boolean {
-  if (error instanceof TypeError) return true;
-  if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) return true;
   const message = error instanceof Error ? error.message : String(error);
+  if (error instanceof TypeError) {
+    const normalized = message.trim().toLowerCase();
+    if (normalized === "fetch failed" || normalized === "terminated") return true;
+  }
+  if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) return true;
   const statusMatch = /^EA5C2B1_KBS_SOIL_HTTP_STATUS:(\d{3})$/.exec(message);
   if (!statusMatch) return false;
   const status = Number(statusMatch[1]);
@@ -189,6 +192,24 @@ async function soilTransportRetrySelftest(): Promise<void> {
   if (!nonRetryRejected || nonRetryCalls !== 1) throw new Error("EA5E2_SOIL_RETRY_SELFTEST_NONTRANSIENT_FAIL_CLOSED_REQUIRED");
 
   now = 0;
+  let parseTypeErrorCalls = 0;
+  let parseTypeErrorRejected = false;
+  try {
+    await withBoundedKbsSoilTransportRetryV1({
+      deadline_ms: 60_000,
+      now_ms: () => now,
+      sleep_fn: sleepFn,
+      operation: async () => {
+        parseTypeErrorCalls += 1;
+        throw new TypeError("Invalid URL");
+      },
+    });
+  } catch (error) {
+    parseTypeErrorRejected = error instanceof TypeError && error.message === "Invalid URL";
+  }
+  if (!parseTypeErrorRejected || parseTypeErrorCalls !== 1) throw new Error("EA5E2_SOIL_RETRY_SELFTEST_NONTRANSPORT_TYPEERROR_FAIL_CLOSED_REQUIRED");
+
+  now = 0;
   let exhaustedCalls = 0;
   let exhausted = false;
   try {
@@ -230,6 +251,7 @@ async function soilTransportRetrySelftest(): Promise<void> {
     retryable_transport_error: true,
     retryable_http_429_5xx: true,
     nontransient_identity_error_fail_closed: true,
+    nontransport_typeerror_fail_closed: true,
     max_attempts: KBS_SOIL_TRANSPORT_MAX_ATTEMPTS,
     retry_delay_ms: KBS_SOIL_TRANSPORT_RETRY_DELAY_MS,
     deadline_bounded: true,
