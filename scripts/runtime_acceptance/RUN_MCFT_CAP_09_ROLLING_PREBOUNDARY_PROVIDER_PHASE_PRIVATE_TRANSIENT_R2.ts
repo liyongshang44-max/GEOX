@@ -59,6 +59,8 @@ const CUTOFF_OFFSET_MINUTES = 432;
 const MIN_INGRESS_MARGIN_MINUTES = process.env.GITHUB_WORKFLOW === "mcft-cap-09-rolling-preboundary-capture" ? 0 : 5;
 const SOIL_WINDOW_MINUTES = 15;
 const SOIL_FIRST_FETCH_BEFORE_T_MINUTES = 15;
+const KBS_SOIL_TRANSPORT_MAX_ATTEMPTS = 3;
+const KBS_SOIL_TRANSPORT_RETRY_DELAY_MS = 5_000;
 const KBS_RAW_HOURLY_TRANSPORT_MAX_ATTEMPTS = 3;
 const KBS_RAW_HOURLY_TRANSPORT_RETRY_DELAY_MS = 5_000;
 const KBS_RAW_HOURLY_URL = "https://lter.kbs.msu.edu/datatables/13.csv";
@@ -97,6 +99,142 @@ function sleep(ms: number): Promise<void> {
 async function sleepUntil(value: string): Promise<void> {
   const remaining = Date.parse(value) - Date.now();
   if (remaining > 0) await sleep(remaining);
+}
+
+function retryableKbsSoilTransportError(error: unknown): boolean {
+  if (error instanceof TypeError) return true;
+  if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) return true;
+  const message = error instanceof Error ? error.message : String(error);
+  const statusMatch = /^EA5C2B1_KBS_SOIL_HTTP_STATUS:(\d{3})$/.exec(message);
+  if (!statusMatch) return false;
+  const status = Number(statusMatch[1]);
+  return status === 429 || status >= 500;
+}
+
+async function withBoundedKbsSoilTransportRetryV1<T>(input: {
+  deadline_ms: number;
+  operation: () => Promise<T>;
+  now_ms?: () => number;
+  sleep_fn?: (ms: number) => Promise<void>;
+}): Promise<{ value: T; request_count: number }> {
+  const nowMs = input.now_ms ?? Date.now;
+  const sleepFn = input.sleep_fn ?? sleep;
+  for (let attempt = 1; attempt <= KBS_SOIL_TRANSPORT_MAX_ATTEMPTS; attempt += 1) {
+    if (nowMs() >= input.deadline_ms) throw new Error("EA5E2_PREBOUNDARY_SOIL_TRANSPORT_DEADLINE_EXCEEDED");
+    try {
+      const value = await input.operation();
+      if (nowMs() > input.deadline_ms) throw new Error("EA5E2_PREBOUNDARY_SOIL_TRANSPORT_COMPLETED_AFTER_DEADLINE");
+      return { value, request_count: attempt };
+    } catch (error) {
+      if (!retryableKbsSoilTransportError(error)) throw error;
+      if (attempt >= KBS_SOIL_TRANSPORT_MAX_ATTEMPTS) {
+        throw new Error("EA5E2_PREBOUNDARY_SOIL_TRANSPORT_RETRIES_EXHAUSTED", { cause: error });
+      }
+      if (nowMs() + KBS_SOIL_TRANSPORT_RETRY_DELAY_MS >= input.deadline_ms) {
+        throw new Error("EA5E2_PREBOUNDARY_SOIL_TRANSPORT_RETRY_DEADLINE_EXCEEDED", { cause: error });
+      }
+      await sleepFn(KBS_SOIL_TRANSPORT_RETRY_DELAY_MS);
+    }
+  }
+  throw new Error("EA5E2_PREBOUNDARY_SOIL_TRANSPORT_RETRIES_EXHAUSTED");
+}
+
+async function soilTransportRetrySelftest(): Promise<void> {
+  let now = 0;
+  const sleepFn = async (ms: number) => { now += ms; };
+
+  let transientCalls = 0;
+  const transient = await withBoundedKbsSoilTransportRetryV1({
+    deadline_ms: 60_000,
+    now_ms: () => now,
+    sleep_fn: sleepFn,
+    operation: async () => {
+      transientCalls += 1;
+      if (transientCalls < 3) throw new TypeError("fetch failed");
+      return "RECOVERED";
+    },
+  });
+  if (transient.value !== "RECOVERED" || transient.request_count !== 3 || transientCalls !== 3) throw new Error("EA5E2_SOIL_RETRY_SELFTEST_TRANSPORT_RECOVERY_REQUIRED");
+
+  now = 0;
+  let httpCalls = 0;
+  const httpTransient = await withBoundedKbsSoilTransportRetryV1({
+    deadline_ms: 60_000,
+    now_ms: () => now,
+    sleep_fn: sleepFn,
+    operation: async () => {
+      httpCalls += 1;
+      if (httpCalls === 1) throw new Error("EA5C2B1_KBS_SOIL_HTTP_STATUS:503");
+      return "RECOVERED_503";
+    },
+  });
+  if (httpTransient.value !== "RECOVERED_503" || httpTransient.request_count !== 2 || httpCalls !== 2) throw new Error("EA5E2_SOIL_RETRY_SELFTEST_HTTP503_RECOVERY_REQUIRED");
+
+  now = 0;
+  let nonRetryCalls = 0;
+  let nonRetryRejected = false;
+  try {
+    await withBoundedKbsSoilTransportRetryV1({
+      deadline_ms: 60_000,
+      now_ms: () => now,
+      sleep_fn: sleepFn,
+      operation: async () => {
+        nonRetryCalls += 1;
+        throw new Error("EA5C2B1_KBS_SOIL_FINAL_IDENTITY_DRIFT");
+      },
+    });
+  } catch (error) {
+    nonRetryRejected = error instanceof Error && error.message === "EA5C2B1_KBS_SOIL_FINAL_IDENTITY_DRIFT";
+  }
+  if (!nonRetryRejected || nonRetryCalls !== 1) throw new Error("EA5E2_SOIL_RETRY_SELFTEST_NONTRANSIENT_FAIL_CLOSED_REQUIRED");
+
+  now = 0;
+  let exhaustedCalls = 0;
+  let exhausted = false;
+  try {
+    await withBoundedKbsSoilTransportRetryV1({
+      deadline_ms: 60_000,
+      now_ms: () => now,
+      sleep_fn: sleepFn,
+      operation: async () => {
+        exhaustedCalls += 1;
+        throw new TypeError("fetch failed");
+      },
+    });
+  } catch (error) {
+    exhausted = error instanceof Error && error.message === "EA5E2_PREBOUNDARY_SOIL_TRANSPORT_RETRIES_EXHAUSTED";
+  }
+  if (!exhausted || exhaustedCalls !== KBS_SOIL_TRANSPORT_MAX_ATTEMPTS) throw new Error("EA5E2_SOIL_RETRY_SELFTEST_EXHAUSTION_REQUIRED");
+
+  now = 58_000;
+  let deadlineCalls = 0;
+  let deadlineRejected = false;
+  try {
+    await withBoundedKbsSoilTransportRetryV1({
+      deadline_ms: 60_000,
+      now_ms: () => now,
+      sleep_fn: sleepFn,
+      operation: async () => {
+        deadlineCalls += 1;
+        throw new TypeError("fetch failed");
+      },
+    });
+  } catch (error) {
+    deadlineRejected = error instanceof Error && error.message === "EA5E2_PREBOUNDARY_SOIL_TRANSPORT_RETRY_DEADLINE_EXCEEDED";
+  }
+  if (!deadlineRejected || deadlineCalls !== 1) throw new Error("EA5E2_SOIL_RETRY_SELFTEST_DEADLINE_REQUIRED");
+
+  console.log(JSON.stringify({
+    status: "PASS",
+    same_source_only: true,
+    retryable_transport_error: true,
+    retryable_http_429_5xx: true,
+    nontransient_identity_error_fail_closed: true,
+    max_attempts: KBS_SOIL_TRANSPORT_MAX_ATTEMPTS,
+    retry_delay_ms: KBS_SOIL_TRANSPORT_RETRY_DELAY_MS,
+    deadline_bounded: true,
+    provider_substitution_count: 0,
+  }));
 }
 
 function assertIsolatedDatabase(urlText: string): void {
@@ -762,6 +900,7 @@ async function qualifyLateExactHourTiming(): Promise<void> {
 
 async function main(): Promise<void> {
   const mode = required("MCFT_EA5E2_LIVE_PHASE");
+  if (mode === "SOIL_TRANSPORT_RETRY_SELFTEST") return soilTransportRetrySelftest();
   if (mode === "TRANSIENT_STORE_SMOKE") return smokeTransientStore();
   if (mode === "CLEANUP_TRANSIENT") return cleanupTransientStore();
   if (mode === "TIMING_QUALIFICATION_LATE_EXACT_HOUR") return qualifyLateExactHourTiming();
@@ -798,8 +937,12 @@ async function main(): Promise<void> {
         let soilRequestCount = 0;
         const soilWindowStart = Date.parse(addMinutes(target, -SOIL_WINDOW_MINUTES));
         while (Date.now() < latestIngressStartMs) {
-          const prefetched = await prefetchLiveKbsVariate25RawV1();
-          soilRequestCount += 1;
+          const prefetchedAttempt = await withBoundedKbsSoilTransportRetryV1({
+            deadline_ms: latestIngressStartMs,
+            operation: () => prefetchLiveKbsVariate25RawV1(),
+          });
+          soilRequestCount += prefetchedAttempt.request_count;
+          const prefetched = prefetchedAttempt.value;
           const results = await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1({ dataset_id: `mcft_cap09_ea5e2_live_soil_${target}`, scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 }, request: prefetched.request }, { transport: new OneShotSoilTransportV1(prefetched), retention: store, decoder: new KbsVariate25SoilEvidenceDecoderV1() });
           if (results.length !== 1 || results[0].record.record_type !== "soil_moisture_observation_v1") throw new Error("EA5E2_PREBOUNDARY_SOIL_RESULT_REQUIRED");
           const observedAt = Date.parse(String(results[0].record.role_time.observed_at));
@@ -842,6 +985,11 @@ async function main(): Promise<void> {
         canonical_fact_write_count: result.canonical_fact_write_count,
         soil_observation_inside_t_minus_15_to_t: true,
         soil_polling_begins_at_authorized_window_open: true,
+        soil_provider_request_count: soilRequestCount,
+        soil_transport_max_attempts: KBS_SOIL_TRANSPORT_MAX_ATTEMPTS,
+        soil_transport_retry_delay_ms: KBS_SOIL_TRANSPORT_RETRY_DELAY_MS,
+        soil_transport_retry_scope: "SAME_SOURCE_TRANSIENT_ONLY",
+        soil_transport_nontransient_semantic_errors_retryable: false,
         gfs_soil_acquisition_parallel: true,
         gfs_same_cycle_pair: true,
         rehydration_manifest: {
