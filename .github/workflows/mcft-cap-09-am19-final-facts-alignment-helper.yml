@@ -1,5 +1,6 @@
 name: MCFT-CAP-09 AM19 final facts alignment helper
 
+# One-shot branch-local repair helper; removes itself after applying the source fix.
 on:
   push:
     branches:
