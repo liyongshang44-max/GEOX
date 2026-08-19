@@ -1,0 +1,215 @@
+name: mcft-cap-09-am19-current-rehydration-hash-diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-am19-current-rehydration-hash-diagnostic.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  PRODUCER_SHA: '530b857765da471a442727daee9687206059e5c4'
+  SOURCE_RUN_ID: '32210446530'
+  SOURCE_ARTIFACT_NAME: 'mcft-cap09-rolling-preboundary-20260819t040000z-530b857765da471a442727daee9687206059e5c4'
+  EXPECTED_TARGET_T: '2026-08-19T04:00:00.000Z'
+  LOCAL_REHYDRATION_DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness'
+
+jobs:
+  diagnose-current-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+      MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+      MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+      MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+      MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact diagnostic-only PR boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "$PRODUCER_SHA" || { echo 'AM19_REHYDRATION_DIAG_EXACT_BASE_REQUIRED' >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          mapfile -t changed < <(git diff --name-only "$PRODUCER_SHA" HEAD | sort)
+          test "${#changed[@]}" -eq 1 || { printf 'AM19_REHYDRATION_DIAG_ONE_FILE_REQUIRED\n%s\n' "${changed[*]}" >&2; exit 1; }
+          test "${changed[0]}" = '.github/workflows/mcft-cap-09-am19-current-rehydration-hash-diagnostic.yml'
+          git checkout --detach "$PRODUCER_SHA"
+          test "$(git rev-parse HEAD)" = "$PRODUCER_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Require secret bindings without disclosure
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
+            test -n "${!name:-}" || { echo "AM19_REHYDRATION_DIAG_SECRET_REQUIRED:${name}" >&2; exit 1; }
+          done
+
+      - name: Download frozen failing candidate from exact source run
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.SOURCE_RUN_ID }}
+          name: ${{ env.SOURCE_ARTIFACT_NAME }}
+          path: rolling-candidate
+
+      - name: Require exact frozen candidate identity
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const path = 'rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json';
+          const c = JSON.parse(fs.readFileSync(path, 'utf8'));
+          if (c.schema_version !== 'geox_mcft_cap09_rolling_preboundary_candidate_v1' || c.status !== 'PASS') throw new Error('AM19_REHYDRATION_DIAG_CANDIDATE_STATUS_REQUIRED');
+          if (c.producer_subject_sha !== process.env.PRODUCER_SHA) throw new Error('AM19_REHYDRATION_DIAG_PRODUCER_MISMATCH');
+          if (c.target_t !== process.env.EXPECTED_TARGET_T) throw new Error('AM19_REHYDRATION_DIAG_TARGET_MISMATCH');
+          const rows = c.rehydration_manifest?.expected_records;
+          if (!Array.isArray(rows) || rows.length !== 3) throw new Error('AM19_REHYDRATION_DIAG_THREE_EXPECTED_ROWS_REQUIRED');
+          const types = rows.map(r => r.record_type).sort();
+          const expected = ['future_et0_assumption_v1','future_weather_assumption_v1','soil_moisture_observation_v1'];
+          if (JSON.stringify(types) !== JSON.stringify(expected)) throw new Error('AM19_REHYDRATION_DIAG_EXPECTED_FAMILY_SET_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',producer_subject_sha:c.producer_subject_sha,target_t:c.target_t,expected_record_types:types}));
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+          python -m eccodes selfcheck
+
+      - name: Inject hash-only diagnostic into uncommitted runner copy
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const path = 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts';
+          const source = fs.readFileSync(path, 'utf8');
+          const needle = `function exactSemanticMatch(actual: readonly CanonicalizedExternalEvidenceResultV1[], expected: unknown): void {
+            if (!Array.isArray(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_EXPECTED_SEMANTIC_ROWS_REQUIRED");
+            if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");
+          }`.replace(/^          /gm, '');
+          const replacement = `function exactSemanticMatch(actual: readonly CanonicalizedExternalEvidenceResultV1[], expected: unknown): void {
+            if (!Array.isArray(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_EXPECTED_SEMANTIC_ROWS_REQUIRED");
+            const actualRows = semanticRows(actual);
+            const expectedRows = expected as Array<{ record_type: string; source_record_id: string; record_semantic_sha256: string }>;
+            const actualByType = new Map(actualRows.map((row) => [row.record_type, row]));
+            const expectedByType = new Map(expectedRows.map((row) => [row.record_type, row]));
+            const types = [...new Set([...actualByType.keys(), ...expectedByType.keys()])].sort();
+            const rows = types.map((recordType) => {
+              const actualRow = actualByType.get(recordType);
+              const expectedRow = expectedByType.get(recordType);
+              const sourceRecordIdMatch = Boolean(expectedRow && actualRow && expectedRow.source_record_id === actualRow.source_record_id);
+              const semanticHashMatch = Boolean(expectedRow && actualRow && expectedRow.record_semantic_sha256 === actualRow.record_semantic_sha256);
+              return {
+                record_type: recordType,
+                expected_source_record_id: expectedRow?.source_record_id ?? null,
+                actual_source_record_id: actualRow?.source_record_id ?? null,
+                expected_semantic_sha256: expectedRow?.record_semantic_sha256 ?? null,
+                actual_semantic_sha256: actualRow?.record_semantic_sha256 ?? null,
+                source_record_id_match: sourceRecordIdMatch,
+                semantic_hash_match: semanticHashMatch,
+                match: sourceRecordIdMatch && semanticHashMatch,
+              };
+            });
+            const orderMatch = JSON.stringify(actualRows) === JSON.stringify(expectedRows);
+            const diagnostic = {
+              schema_version: "geox_mcft_cap09_am19_rehydration_hash_diagnostic_v1",
+              producer_subject_sha: process.env.MCFT_CAP09_EXPECTED_PRODUCER_SHA ?? null,
+              target_t: process.env.MCFT_CAP09_EXPECTED_TARGET_T ?? null,
+              rows,
+              mismatch_count: rows.filter((row) => !row.match).length,
+              order_match: orderMatch,
+              raw_values_emitted: false,
+              canonical_payload_emitted: false,
+            };
+            fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+            fs.writeFileSync(pathJoinForDiagnostic(), JSON.stringify(diagnostic, null, 2) + "\\n");
+            console.log("MCFT_CAP09_REHYDRATION_HASH_DIAGNOSTIC:" + JSON.stringify(diagnostic));
+            if (!orderMatch) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");
+          }
+
+          function pathJoinForDiagnostic(): string {
+            return path.join(OUTPUT_DIR, "MCFT_CAP_09_AM19_REHYDRATION_HASH_DIAGNOSTIC.json");
+          }`.replace(/^          /gm, '');
+          if (!source.includes(needle)) throw new Error('AM19_REHYDRATION_DIAG_PATCH_TARGET_NOT_FOUND');
+          fs.writeFileSync(path, source.replace(needle, replacement));
+          console.log(JSON.stringify({status:'PASS',runtime_patch_only:true,committed_production_file_changed:false}));
+
+      - name: Rehydrate exact candidate and capture semantic hashes
+        id: rehydrate
+        continue-on-error: true
+        env:
+          MCFT_CAP09_ROLLING_CANDIDATE_PATH: ${{ github.workspace }}/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          MCFT_CAP09_ROLLING_REHYDRATION_ISOLATED_DB_ACK: 'true'
+          DATABASE_URL: ${{ env.LOCAL_REHYDRATION_DATABASE_URL }}
+          PYTHON: python
+          MCFT_CAP09_EXPECTED_PRODUCER_SHA: ${{ env.PRODUCER_SHA }}
+          MCFT_CAP09_EXPECTED_TARGET_T: ${{ env.EXPECTED_TARGET_T }}
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts run
+
+      - name: Require hash diagnostic and preserve fail-closed behavior
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          if ('${{ steps.rehydrate.outcome }}' !== 'failure') throw new Error('AM19_REHYDRATION_DIAG_EXPECTED_FAIL_CLOSED_MISMATCH_REQUIRED');
+          const path = 'acceptance-output/MCFT_CAP_09_AM19_REHYDRATION_HASH_DIAGNOSTIC.json';
+          if (!fs.existsSync(path)) throw new Error('AM19_REHYDRATION_DIAG_OUTPUT_REQUIRED');
+          const p = JSON.parse(fs.readFileSync(path, 'utf8'));
+          if (p.schema_version !== 'geox_mcft_cap09_am19_rehydration_hash_diagnostic_v1') throw new Error('AM19_REHYDRATION_DIAG_SCHEMA_REQUIRED');
+          if (p.producer_subject_sha !== process.env.PRODUCER_SHA || p.target_t !== process.env.EXPECTED_TARGET_T) throw new Error('AM19_REHYDRATION_DIAG_IDENTITY_DRIFT');
+          if (!Array.isArray(p.rows) || p.rows.length !== 3 || !Number.isInteger(p.mismatch_count) || p.order_match !== false) throw new Error('AM19_REHYDRATION_DIAG_MISMATCH_ROWS_REQUIRED');
+          if (p.raw_values_emitted !== false || p.canonical_payload_emitted !== false) throw new Error('AM19_REHYDRATION_DIAG_VALUE_DISCLOSURE_FORBIDDEN');
+          for (const row of p.rows) {
+            const allowed = ['record_type','expected_source_record_id','actual_source_record_id','expected_semantic_sha256','actual_semantic_sha256','source_record_id_match','semantic_hash_match','match'];
+            if (Object.keys(row).some(k => !allowed.includes(k))) throw new Error('AM19_REHYDRATION_DIAG_ROW_SURFACE_DRIFT');
+          }
+          console.log(JSON.stringify(p));
+
+      - name: Upload hash-only diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-am19-rehydration-hash-diagnostic-530b8577-20260819t040000z
+          path: acceptance-output/MCFT_CAP_09_AM19_REHYDRATION_HASH_DIAGNOSTIC.json
+          if-no-files-found: error
+          retention-days: 2
