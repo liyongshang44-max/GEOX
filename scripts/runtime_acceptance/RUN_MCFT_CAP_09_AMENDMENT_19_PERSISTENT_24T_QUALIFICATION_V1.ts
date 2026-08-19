@@ -370,10 +370,10 @@ async function localRehydratedFacts(localPool: Pool, candidate: CandidateV1): Pr
 async function copyRealFacts(rows: FactRowV1[], remote: Pool): Promise<void> {
   for (const row of rows) {
     const inserted = await remote.query(
-      `INSERT INTO facts (fact_id,occurred_at,source,record_json,ingested_at)
-       VALUES ($1,$2::timestamptz,$3,$4::jsonb,$5::timestamptz)
+      `INSERT INTO facts (fact_id,occurred_at,source,record_json)
+       VALUES ($1,$2::timestamptz,$3,$4::jsonb)
        ON CONFLICT (fact_id) DO NOTHING`,
-      [row.fact_id, new Date(row.occurred_at).toISOString(), row.source, JSON.stringify(row.record_json), new Date(row.ingested_at).toISOString()],
+      [row.fact_id, new Date(row.occurred_at).toISOString(), row.source, JSON.stringify(row.record_json)],
     );
     if (inserted.rowCount !== 1) throw new Error(`AM19_P24_REAL_FACT_ID_CONFLICT:${row.fact_id}`);
   }
@@ -506,10 +506,10 @@ function eventTime(record: CanonicalReplayEvidenceRecordV1): string {
 async function insertFixture(pool: Pool, record: CanonicalReplayEvidenceRecordV1): Promise<void> {
   const factId = `am19_p24_${crypto.createHash("sha256").update(`${record.source_record_id}|${record.source_record_hash}`).digest("hex")}`;
   const inserted = await pool.query(
-    `INSERT INTO facts (fact_id,occurred_at,source,record_json,ingested_at)
-     VALUES ($1,$2::timestamptz,$3,$4::jsonb,$5::timestamptz)
+    `INSERT INTO facts (fact_id,occurred_at,source,record_json)
+     VALUES ($1,$2::timestamptz,$3,$4::jsonb)
      ON CONFLICT (fact_id) DO NOTHING`,
-    [factId, eventTime(record), EVIDENCE_SOURCE, JSON.stringify({ type: record.record_type, payload: record }), String(record.role_time?.ingested_at)],
+    [factId, eventTime(record), EVIDENCE_SOURCE, JSON.stringify({ type: record.record_type, payload: record })],
   );
   if (inserted.rowCount !== 1) throw new Error(`AM19_P24_FIXTURE_ID_CONFLICT:${factId}`);
 }
