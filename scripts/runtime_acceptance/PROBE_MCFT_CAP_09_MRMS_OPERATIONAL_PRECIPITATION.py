@@ -106,52 +106,61 @@ def safe_get(gid, key: str):
 def decode_grib(body_gz: bytes, product: dict, target: dict) -> dict:
     raw = gzip.decompress(body_gz)
     require(raw.startswith(b"GRIB"), "MRMS_QUALIFICATION_GRIB_MAGIC_REQUIRED")
-    with tempfile.NamedTemporaryFile(prefix="mcft-cap09-mrms-", suffix=".grib2") as temp:
-        temp.write(raw)
-        temp.flush()
-        temp.seek(0)
-        gid = codes_grib_new_from_file(temp)
-        require(gid is not None, "MRMS_QUALIFICATION_GRIB_MESSAGE_REQUIRED")
-        try:
-            metadata_keys = [
-                "shortName", "name", "units", "discipline", "parameterCategory", "parameterNumber",
-                "dataDate", "dataTime", "validityDate", "validityTime", "stepType", "startStep", "endStep", "stepUnits",
-                "gridType", "Ni", "Nj", "iDirectionIncrementInDegrees", "jDirectionIncrementInDegrees",
-                "latitudeOfFirstGridPointInDegrees", "longitudeOfFirstGridPointInDegrees",
-                "latitudeOfLastGridPointInDegrees", "longitudeOfLastGridPointInDegrees",
-            ]
-            metadata = {key: safe_get(gid, key) for key in metadata_keys}
-            nearest = codes_grib_find_nearest(gid, float(target["latitude"]), float(target["longitude"]))
-            require(isinstance(nearest, list) and len(nearest) >= 1, "MRMS_QUALIFICATION_NEAREST_GRID_POINT_REQUIRED")
-            point = nearest[0]
-            value = float(point["value"])
-            if value == float(product["documented_missing"]):
-                value_class = "DOCUMENTED_MISSING_SENTINEL"
-            elif value == float(product["documented_no_coverage"]):
-                value_class = "DOCUMENTED_NO_COVERAGE_SENTINEL"
-            elif math.isfinite(value):
-                value_class = "FINITE_GRID_VALUE_PRESENT"
-            else:
-                value_class = "NONFINITE_GRID_VALUE"
-            return {
-                "uncompressed_sha256": sha256_bytes(raw),
-                "uncompressed_bytes": len(raw),
-                "grib_metadata": metadata,
-                "spatial_point_probe": {
-                    "target_kind": target["kind"],
-                    "target_latitude": target["latitude"],
-                    "target_longitude": target["longitude"],
-                    "nearest_grid_latitude": round(float(point["lat"]), 6),
-                    "nearest_grid_longitude": round(float(point["lon"]), 6),
-                    "nearest_grid_distance_km": round(float(point["distance"]), 6),
-                    "grid_value_class": value_class,
-                    "raw_grid_value_emitted": False,
-                    "field_polygon_mapping_claimed": False,
-                    "area_weighted_aggregation_claimed": False,
-                },
-            }
-        finally:
-            codes_release(gid)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(prefix="mcft-cap09-mrms-", suffix=".grib2", delete=False) as temp:
+            temp.write(raw)
+            temp.flush()
+            temp_path = temp.name
+        with open(temp_path, "rb") as grib_file:
+            gid = codes_grib_new_from_file(grib_file)
+            require(gid is not None, "MRMS_QUALIFICATION_GRIB_MESSAGE_REQUIRED")
+            try:
+                metadata_keys = [
+                    "shortName", "name", "units", "discipline", "parameterCategory", "parameterNumber",
+                    "dataDate", "dataTime", "validityDate", "validityTime", "stepType", "startStep", "endStep", "stepUnits",
+                    "gridType", "Ni", "Nj", "iDirectionIncrementInDegrees", "jDirectionIncrementInDegrees",
+                    "latitudeOfFirstGridPointInDegrees", "longitudeOfFirstGridPointInDegrees",
+                    "latitudeOfLastGridPointInDegrees", "longitudeOfLastGridPointInDegrees",
+                ]
+                metadata = {key: safe_get(gid, key) for key in metadata_keys}
+                nearest = codes_grib_find_nearest(gid, float(target["latitude"]), float(target["longitude"]))
+                require(isinstance(nearest, list) and len(nearest) >= 1, "MRMS_QUALIFICATION_NEAREST_GRID_POINT_REQUIRED")
+                point = nearest[0]
+                value = float(point["value"])
+                if value == float(product["documented_missing"]):
+                    value_class = "DOCUMENTED_MISSING_SENTINEL"
+                elif value == float(product["documented_no_coverage"]):
+                    value_class = "DOCUMENTED_NO_COVERAGE_SENTINEL"
+                elif math.isfinite(value):
+                    value_class = "FINITE_GRID_VALUE_PRESENT"
+                else:
+                    value_class = "NONFINITE_GRID_VALUE"
+                return {
+                    "uncompressed_sha256": sha256_bytes(raw),
+                    "uncompressed_bytes": len(raw),
+                    "grib_metadata": metadata,
+                    "spatial_point_probe": {
+                        "target_kind": target["kind"],
+                        "target_latitude": target["latitude"],
+                        "target_longitude": target["longitude"],
+                        "nearest_grid_latitude": round(float(point["lat"]), 6),
+                        "nearest_grid_longitude": round(float(point["lon"]), 6),
+                        "nearest_grid_distance_km": round(float(point["distance"]), 6),
+                        "grid_value_class": value_class,
+                        "raw_grid_value_emitted": False,
+                        "field_polygon_mapping_claimed": False,
+                        "area_weighted_aggregation_claimed": False,
+                    },
+                }
+            finally:
+                codes_release(gid)
+    finally:
+        if temp_path:
+            try:
+                os.unlink(temp_path)
+            except FileNotFoundError:
+                pass
 
 
 def qualify_product(product: dict, config: dict) -> dict:
