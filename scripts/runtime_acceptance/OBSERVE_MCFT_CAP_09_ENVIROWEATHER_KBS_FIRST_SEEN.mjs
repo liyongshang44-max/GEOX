@@ -15,6 +15,12 @@ function sha256(value) { return `sha256:${crypto.createHash('sha256').update(val
 function isoNow() { return new Date().toISOString(); }
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function normalize(value) { return String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+function apiEndpoint(base, suffix) {
+  const url = new URL(`${String(base).replace(/\/$/, '')}/${String(suffix).replace(/^\//, '')}`);
+  requireTrue(url.protocol === 'https:' && url.hostname === 'api.enviroweather.msu.edu', 'EWX_OBSERVER_API_ENDPOINT_DRIFT');
+  requireTrue(url.pathname.startsWith('/ewx-api/api/'), 'EWX_OBSERVER_API_BASE_PATH_REQUIRED');
+  return url;
+}
 function canonicalIso(value) {
   if (typeof value === 'number' && Number.isFinite(value)) {
     for (const n of [value, value * 1000]) {
@@ -144,15 +150,20 @@ function findStationCandidates(json) {
 
 async function officialStationIdentity() {
   const api = new URL(config.official_api.base_url);
-  requireTrue(api.protocol === 'https:' && api.hostname === 'api.enviroweather.msu.edu', 'EWX_OBSERVER_API_BASE_REQUIRED');
-  const tokenUrl = new URL(config.official_api.site_token_path, `${api.toString().replace(/\/$/, '')}/`);
+  requireTrue(
+    api.protocol === 'https:'
+      && api.hostname === 'api.enviroweather.msu.edu'
+      && api.pathname === '/ewx-api/api',
+    'EWX_OBSERVER_API_BASE_REQUIRED',
+  );
+  const tokenUrl = apiEndpoint(config.official_api.base_url, config.official_api.site_token_path);
   const tokenResponse = await fetch(tokenUrl, { headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' }, signal: AbortSignal.timeout(30_000) });
   requireTrue(tokenResponse.ok, `EWX_OBSERVER_SITE_TOKEN_HTTP_${tokenResponse.status}`);
   const tokenJson = await tokenResponse.json();
   const token = String(tokenJson?.data?.token || '');
   requireTrue(token.length > 20, 'EWX_OBSERVER_SITE_TOKEN_REQUIRED');
 
-  const stationUrl = new URL(config.official_api.station_list_path, `${api.toString().replace(/\/$/, '')}/`);
+  const stationUrl = apiEndpoint(config.official_api.base_url, config.official_api.station_list_path);
   const stationResponse = await fetch(stationUrl, {
     headers: { Accept: 'application/json', Authorization: `Bearer ${token}`, 'Cache-Control': 'no-cache' },
     signal: AbortSignal.timeout(30_000),
@@ -185,7 +196,8 @@ async function pollStationPage(browser, pollIndex) {
     const contentType = String(response.headers()['content-type'] || '').toLowerCase();
     if (!contentType.includes('json')) return;
     const task = (async () => {
-      const body = await response.body();
+      let body;
+      try { body = await response.body(); } catch { return; }
       let json;
       try { json = JSON.parse(body.toString('utf8')); } catch { return; }
       const profile = candidateProfile(response.request(), body, json);
