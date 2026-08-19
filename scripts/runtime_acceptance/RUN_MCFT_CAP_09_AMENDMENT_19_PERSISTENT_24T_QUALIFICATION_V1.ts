@@ -370,10 +370,10 @@ async function localRehydratedFacts(localPool: Pool, candidate: CandidateV1): Pr
 async function copyRealFacts(rows: FactRowV1[], remote: Pool): Promise<void> {
   for (const row of rows) {
     const inserted = await remote.query(
-      `INSERT INTO facts (fact_id,occurred_at,source,record_json,ingested_at)
-       VALUES ($1,$2::timestamptz,$3,$4::jsonb,$5::timestamptz)
+      `INSERT INTO facts (fact_id,occurred_at,source,record_json)
+       VALUES ($1,$2::timestamptz,$3,$4::jsonb)
        ON CONFLICT (fact_id) DO NOTHING`,
-      [row.fact_id, new Date(row.occurred_at).toISOString(), row.source, JSON.stringify(row.record_json), new Date(row.ingested_at).toISOString()],
+      [row.fact_id, new Date(row.occurred_at).toISOString(), row.source, JSON.stringify(row.record_json)],
     );
     if (inserted.rowCount !== 1) throw new Error(`AM19_P24_REAL_FACT_ID_CONFLICT:${row.fact_id}`);
   }
