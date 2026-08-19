@@ -31,7 +31,10 @@ import {
   type ExternalFormalRuntimeConfigPayloadV1,
 } from "../../domain/twin_runtime/external_formal_runtime_config_v1.js";
 import type { ContinuationCropStageConfigurationContextV1 } from "./continuation_evidence_window_service_v1.js";
-import { executeExternalFormalAmendment19CanonicalTickV1 } from "./external_formal_amendment19_canonical_tick_core_v1.js";
+import {
+  executeExternalFormalAmendment19CanonicalTickV1,
+  type ExternalFormalAmendment19EvidenceWindowV1,
+} from "./external_formal_amendment19_canonical_tick_core_v1.js";
 import type { Cap04ForecastScenarioPersistencePortV1 } from "./forecast_scenario_persistence_ports_v1.js";
 import type {
   RuntimeConfigRepositoryPortV1,
@@ -259,22 +262,19 @@ function existingARecordSetConfigV1(recordSet: Cap04ARecordSetV1, input: Execute
   if (recordSet.aggregate_identity_input.runtime_config_hash !== input.manifest_slot.runtime_config_hash) throw new Error("EXTERNAL_FORMAL_V3_AM19_EXISTING_A_CONFIG_HASH_MISMATCH");
 }
 
-function healthFromPersistedARecordSetV1(recordSet: Cap04ARecordSetV1): "HEALTHY" | "DEGRADED" {
+type PersistedForcingModeV1 = "EXACT_PROVIDER_INTERVAL_PAIR" | "PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR";
+
+function forcingModeFromPersistedARecordSetV1(recordSet: Cap04ARecordSetV1): PersistedForcingModeV1 {
   const evidence = memberV1(recordSet, "twin_evidence_window_v1");
-  const payload = evidence.payload as Record<string, unknown>;
-  const forcing = payload.current_interval_forcing as Record<string, unknown> | undefined;
+  const payload = evidence.payload as unknown as ExternalFormalAmendment19EvidenceWindowV1;
+  const forcing = payload.base_continuation_window?.current_interval_forcing;
   const mode = forcing?.mode;
-  if (mode === "EXACT_PROVIDER_INTERVAL_PAIR") return "HEALTHY";
-  if (mode === "PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR") return "DEGRADED";
+  if (mode === "EXACT_PROVIDER_INTERVAL_PAIR" || mode === "PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR") return mode;
   throw new Error("EXTERNAL_FORMAL_V3_AM19_PERSISTED_FORCING_MODE_REQUIRED");
 }
 
-function forcingModeFromPersistedARecordSetV1(recordSet: Cap04ARecordSetV1): "EXACT_PROVIDER_INTERVAL_PAIR" | "PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR" {
-  const evidence = memberV1(recordSet, "twin_evidence_window_v1");
-  const payload = evidence.payload as Record<string, unknown>;
-  const forcing = payload.current_interval_forcing as Record<string, unknown> | undefined;
-  if (forcing?.mode === "EXACT_PROVIDER_INTERVAL_PAIR" || forcing?.mode === "PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR") return forcing.mode;
-  throw new Error("EXTERNAL_FORMAL_V3_AM19_PERSISTED_FORCING_MODE_REQUIRED");
+function healthFromPersistedARecordSetV1(recordSet: Cap04ARecordSetV1): "HEALTHY" | "DEGRADED" {
+  return forcingModeFromPersistedARecordSetV1(recordSet) === "EXACT_PROVIDER_INTERVAL_PAIR" ? "HEALTHY" : "DEGRADED";
 }
 
 export class ExternalFormalV3Amendment19PersistentTickServiceV1 {
