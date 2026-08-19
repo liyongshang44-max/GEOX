@@ -1,6 +1,11 @@
 name: MCFT-CAP-09 AM19 final facts alignment helper
 
 on:
+  push:
+    branches:
+      - agent/mcft-cap09-am19-persistent-facts-schema-alignment
+    paths:
+      - '.github/workflows/mcft-cap-09-am19-final-facts-alignment-helper.yml'
   pull_request:
     branches: [main]
     paths:
@@ -11,7 +16,7 @@ permissions:
 
 jobs:
   apply-and-remove-helper:
-    if: github.event.pull_request.head.ref == 'agent/mcft-cap09-am19-persistent-facts-schema-alignment'
+    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'agent/mcft-cap09-am19-persistent-facts-schema-alignment'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
