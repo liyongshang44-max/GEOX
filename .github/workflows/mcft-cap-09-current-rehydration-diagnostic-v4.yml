@@ -1,0 +1,135 @@
+name: mcft-cap-09-current-rehydration-diagnostic-v4
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-current-rehydration-diagnostic-v4.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  exact-main-family-hash-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      FROZEN_MAIN_SHA: '24a1b5d957e042a0a92543ca2d9742901a22d453'
+      FROZEN_ARTIFACT_ID: '9348168051'
+      NODE_VERSION: '20.11.1'
+      PNPM_VERSION: '9.15.4'
+      PYTHON_VERSION: '3.12'
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+      MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+      MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+      MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+      MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+      MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.FROZEN_MAIN_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require immutable exact-main diagnostic subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$FROZEN_MAIN_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$FROZEN_MAIN_SHA" || { echo 'DIAGNOSTIC_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
+
+      - name: Require private read bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
+            test -n "${!name:-}" || { echo "DIAGNOSTIC_SECRET_REQUIRED:${name}" >&2; exit 1; }
+          done
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+          python -m eccodes selfcheck
+
+      - name: Download immutable failed-run candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p rolling-candidate
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${FROZEN_ARTIFACT_ID}/zip" > /tmp/candidate.zip
+          unzip -q /tmp/candidate.zip -d rolling-candidate
+          test -s rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json','utf8'));
+          if(p.producer_subject_sha!==process.env.FROZEN_MAIN_SHA||p.target_t!=='2026-08-19T01:00:00.000Z') throw new Error('DIAGNOSTIC_CANDIDATE_IDENTITY_REQUIRED');
+          NODE
+
+      - name: Add metadata-only mismatch diagnostic to ephemeral exact-main checkout
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts')
+          s = p.read_text(encoding='utf-8')
+          old = '  if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");'
+          new = '''  if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) {\n    console.error(JSON.stringify({ code: "MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH", expected, actual: semanticRows(actual) }));\n    throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");\n  }'''
+          if s.count(old) != 1:
+              raise SystemExit('DIAGNOSTIC_HASH_PATCH_TARGET_REQUIRED')
+          s = s.replace(old, new)
+          old_gate = '  if (!["push", "workflow_dispatch", "schedule", "workflow_run"].includes(process.env.GITHUB_EVENT_NAME ?? "") || process.env.GITHUB_REF !== "refs/heads/main" || process.env.GITHUB_SHA !== consumerSha) {\n    throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_EXACT_MAIN_REQUIRED");\n  }'
+          new_gate = '  if (process.env.MCFT_CAP09_DIAGNOSTIC_EXACT_MAIN_ACK !== "true" && (!["push", "workflow_dispatch", "schedule", "workflow_run"].includes(process.env.GITHUB_EVENT_NAME ?? "") || process.env.GITHUB_REF !== "refs/heads/main" || process.env.GITHUB_SHA !== consumerSha)) {\n    throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_EXACT_MAIN_REQUIRED");\n  }'
+          if s.count(old_gate) != 1:
+              raise SystemExit('DIAGNOSTIC_MAIN_GATE_PATCH_TARGET_REQUIRED')
+          p.write_text(s.replace(old_gate, new_gate), encoding='utf-8')
+
+      - name: Rehydrate exact producer bytes and emit family hashes only
+        shell: bash
+        env:
+          MCFT_CAP09_CONSUMER_SUBJECT_SHA: ${{ env.FROZEN_MAIN_SHA }}
+          MCFT_CAP09_ROLLING_CANDIDATE_PATH: rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          MCFT_CAP09_ROLLING_REHYDRATION_ISOLATED_DB_ACK: 'true'
+          MCFT_CAP09_DIAGNOSTIC_EXACT_MAIN_ACK: 'true'
+          PYTHON: python
+        run: |
+          set -o pipefail
+          set +e
+          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts run 2>&1 | tee /tmp/rehydration-diagnostic.log
+          rc=${PIPESTATUS[0]}
+          set -e
+          test "$rc" -ne 0 || { echo 'DIAGNOSTIC_EXPECTED_MISMATCH_NOT_REPRODUCED' >&2; exit 1; }
+          grep -F '"code":"MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH"' /tmp/rehydration-diagnostic.log >/dev/null || { echo 'DIAGNOSTIC_EXPECTED_HASH_MISMATCH_REQUIRED' >&2; exit 1; }
+          echo 'DIAGNOSTIC_FAMILY_HASH_MISMATCH_REPRODUCED'
