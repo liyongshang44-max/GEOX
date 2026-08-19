@@ -535,7 +535,7 @@ class Ea5e2PrivateTransientR2StoreV1 implements RawEvidenceRetentionPortV1, RawE
 
 function subjectSha(): string {
   const value = required("MCFT_EA5E2_SUBJECT_SHA");
-  if (!/^[0-9a-f]{40}$/.test(value)) throw new Error("EA5E2_EXACT_SUBJECT_SHA_REQUIRED");
+  if (!/^[0-9a-f]{40}$/.test(value)) throw new Error("EA5E2_TRANSIENT_SUBJECT_SHA_INVALID");
   return value;
 }
 
@@ -953,10 +953,11 @@ async function main(): Promise<void> {
         request: { request_id: `ea5e2-live-gfs-${crypto.randomUUID()}`, provider_id: "NOAA_NCEP_NOMADS_GFS", source_family: "GFS_PGRB2_SFLUX_RAW_BUNDLE", locator: GFS_ROOT, allowed_final_hosts: ["nomads.ncep.noaa.gov"], use_policy_ref: "GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1", requested_at: phaseRequestedAt, expected_content_type_prefixes: ["application/x-tar"], limitations: ["EA5E2_PRIVATE_TRANSIENT_RAW_BUNDLE", "NO_FORMAL_RAW_PREFIX_WRITE", "NO_PUBLIC_VALUE_ARTIFACT"] },
       }, { transport: gfsTransport, retention: store, decoder: new PythonGfsRawBundleDecoderV1(target, undefined, latestIngressStartMs) });
 
-      const soilPromise = (async (): Promise<{ result: CanonicalizedExternalEvidenceResultV1; request_count: number }> => {
+      const soilPromise = (async (): Promise<{ result: CanonicalizedExternalEvidenceResultV1; request_count: number; raw_object_count: number }> => {
         await sleepUntil(addMinutes(target, -SOIL_FIRST_FETCH_BEFORE_T_MINUTES));
         let soilResult: CanonicalizedExternalEvidenceResultV1 | null = null;
         let soilRequestCount = 0;
+        let soilRawObjectCount = 0;
         const soilWindowStart = Date.parse(addMinutes(target, -SOIL_WINDOW_MINUTES));
         while (Date.now() < latestIngressStartMs) {
           const prefetchedAttempt = await withBoundedKbsSoilTransportRetryV1({
@@ -964,6 +965,7 @@ async function main(): Promise<void> {
             operation: () => prefetchLiveKbsVariate25RawV1(),
           });
           soilRequestCount += prefetchedAttempt.request_count;
+          soilRawObjectCount += 1;
           const prefetched = prefetchedAttempt.value;
           const results = await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1({ dataset_id: `mcft_cap09_ea5e2_live_soil_${target}`, scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 }, request: prefetched.request }, { transport: new OneShotSoilTransportV1(prefetched), retention: store, decoder: new KbsVariate25SoilEvidenceDecoderV1() });
           if (results.length !== 1 || results[0].record.record_type !== "soil_moisture_observation_v1") throw new Error("EA5E2_PREBOUNDARY_SOIL_RESULT_REQUIRED");
@@ -973,7 +975,7 @@ async function main(): Promise<void> {
           await sleep(MINUTE);
         }
         if (!soilResult) throw new Error("EA5E2_PREBOUNDARY_SOIL_OBSERVATION_NOT_IN_AUTHORIZED_T_WINDOW");
-        return { result: soilResult, request_count: soilRequestCount };
+        return { result: soilResult, request_count: soilRequestCount, raw_object_count: soilRawObjectCount };
       })();
 
       const [gfsSettled, soilSettled] = await Promise.allSettled([gfsPromise, soilPromise]);
@@ -982,6 +984,7 @@ async function main(): Promise<void> {
       const gfsResults = gfsSettled.value;
       const soilResult = soilSettled.value.result;
       const soilRequestCount = soilSettled.value.request_count;
+      const soilRawObjectCount = soilSettled.value.raw_object_count;
       if (gfsResults.length !== 2) throw new Error("EA5E2_PREBOUNDARY_GFS_PAIR_REQUIRED");
 
       const canonicalizedAt = new Date().toISOString();
@@ -1000,7 +1003,7 @@ async function main(): Promise<void> {
         phase_canonicalized_at: canonicalizedAt,
         minimum_ingress_margin_minutes: MIN_INGRESS_MARGIN_MINUTES,
         provider_request_count: result.provider_request_count,
-        raw_provider_object_count: Number(gfsTransport.safe_meta?.raw_provider_object_count ?? 0) + soilRequestCount,
+        raw_provider_object_count: Number(gfsTransport.safe_meta?.raw_provider_object_count ?? 0) + soilRawObjectCount,
         raw_retention_refs: result.raw_retention_refs,
         record_types: result.record_types,
         source_record_ids: result.source_record_ids,
@@ -1008,6 +1011,7 @@ async function main(): Promise<void> {
         soil_observation_inside_t_minus_15_to_t: true,
         soil_polling_begins_at_authorized_window_open: true,
         soil_provider_request_count: soilRequestCount,
+        soil_successful_raw_object_count: soilRawObjectCount,
         soil_transport_max_attempts: KBS_SOIL_TRANSPORT_MAX_ATTEMPTS,
         soil_transport_retry_delay_ms: KBS_SOIL_TRANSPORT_RETRY_DELAY_MS,
         soil_transport_retry_scope: "SAME_SOURCE_TRANSIENT_ONLY",
