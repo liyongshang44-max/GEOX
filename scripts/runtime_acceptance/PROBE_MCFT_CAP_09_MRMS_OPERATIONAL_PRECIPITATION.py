@@ -103,6 +103,12 @@ def safe_get(gid, key: str):
     return None
 
 
+def nearest_field(point, key: str):
+    if isinstance(point, dict):
+        return point[key]
+    return getattr(point, key)
+
+
 def decode_grib(body_gz: bytes, product: dict, target: dict) -> dict:
     raw = gzip.decompress(body_gz)
     require(raw.startswith(b"GRIB"), "MRMS_QUALIFICATION_GRIB_MAGIC_REQUIRED")
@@ -125,9 +131,9 @@ def decode_grib(body_gz: bytes, product: dict, target: dict) -> dict:
                 ]
                 metadata = {key: safe_get(gid, key) for key in metadata_keys}
                 nearest = codes_grib_find_nearest(gid, float(target["latitude"]), float(target["longitude"]))
-                require(isinstance(nearest, list) and len(nearest) >= 1, "MRMS_QUALIFICATION_NEAREST_GRID_POINT_REQUIRED")
+                require(nearest is not None and len(nearest) >= 1, "MRMS_QUALIFICATION_NEAREST_GRID_POINT_REQUIRED")
                 point = nearest[0]
-                value = float(point["value"])
+                value = float(nearest_field(point, "value"))
                 if value == float(product["documented_missing"]):
                     value_class = "DOCUMENTED_MISSING_SENTINEL"
                 elif value == float(product["documented_no_coverage"]):
@@ -144,9 +150,9 @@ def decode_grib(body_gz: bytes, product: dict, target: dict) -> dict:
                         "target_kind": target["kind"],
                         "target_latitude": target["latitude"],
                         "target_longitude": target["longitude"],
-                        "nearest_grid_latitude": round(float(point["lat"]), 6),
-                        "nearest_grid_longitude": round(float(point["lon"]), 6),
-                        "nearest_grid_distance_km": round(float(point["distance"]), 6),
+                        "nearest_grid_latitude": round(float(nearest_field(point, "lat")), 6),
+                        "nearest_grid_longitude": round(float(nearest_field(point, "lon")), 6),
+                        "nearest_grid_distance_km": round(float(nearest_field(point, "distance")), 6),
                         "grid_value_class": value_class,
                         "raw_grid_value_emitted": False,
                         "field_polygon_mapping_claimed": False,
