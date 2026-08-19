@@ -535,7 +535,7 @@ class Ea5e2PrivateTransientR2StoreV1 implements RawEvidenceRetentionPortV1, RawE
 
 function subjectSha(): string {
   const value = required("MCFT_EA5E2_SUBJECT_SHA");
-  if (!/^[0-9a-f]{40}$/.test(value)) throw new Error("EA5E2_TRANSIENT_SUBJECT_SHA_INVALID");
+  if (!/^[0-9a-f]{40}$/.test(value)) throw new Error("EA5E2_EXACT_SUBJECT_SHA_REQUIRED");
   return value;
 }
 
