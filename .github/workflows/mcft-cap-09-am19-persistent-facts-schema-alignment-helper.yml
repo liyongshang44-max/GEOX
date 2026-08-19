@@ -1,0 +1,74 @@
+name: MCFT-CAP-09 AM19 persistent facts schema alignment helper
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-am19-persistent-facts-schema-alignment
+    paths:
+      - .github/workflows/mcft-cap-09-am19-persistent-facts-schema-alignment-helper.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-exact-seed-adapter-fix:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap09-am19-persistent-facts-schema-alignment
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Require exact protected-main parent and helper-only first commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='530b857765da471a442727daee9687206059e5c4'
+          test "$(git rev-parse HEAD^)" = "$BASE"
+          mapfile -t changed < <(git diff --name-only "$BASE" HEAD)
+          test "${#changed[@]}" -eq 1
+          test "${changed[0]}" = '.github/workflows/mcft-cap-09-am19-persistent-facts-schema-alignment-helper.yml'
+
+      - name: Align qualification seed adapter with production facts contract
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts')
+          text = path.read_text(encoding='utf-8')
+          old = '''      `INSERT INTO facts (fact_id,occurred_at,source,record_json,ingested_at)
+                 VALUES ($1,$2::timestamptz,$3,$4::jsonb,$5::timestamptz)
+                 ON CONFLICT (fact_id) DO NOTHING`,
+                [row.fact_id, new Date(row.occurred_at).toISOString(), row.source, JSON.stringify(row.record_json), new Date(row.ingested_at).toISOString()],'''
+          new = '''      `INSERT INTO facts (fact_id,occurred_at,source,record_json)
+                 VALUES ($1,$2::timestamptz,$3,$4::jsonb)
+                 ON CONFLICT (fact_id) DO NOTHING`,
+                [row.fact_id, new Date(row.occurred_at).toISOString(), row.source, JSON.stringify(row.record_json)],'''
+          if text.count(old) != 1:
+              raise SystemExit(f'AM19_FACTS_SEED_EXACT_OLD_SNIPPET_REQUIRED:{text.count(old)}')
+          path.write_text(text.replace(old, new), encoding='utf-8')
+
+      - name: Verify exact source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='530b857765da471a442727daee9687206059e5c4'
+          TARGET='scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
+          git diff --check
+          mapfile -t changed < <(git diff --name-only "$BASE")
+          test "${#changed[@]}" -eq 2
+          printf '%s\n' "${changed[@]}" | grep -Fx '.github/workflows/mcft-cap-09-am19-persistent-facts-schema-alignment-helper.yml'
+          printf '%s\n' "${changed[@]}" | grep -Fx "$TARGET"
+          git diff -- "$TARGET"
+
+      - name: Commit focused source repair to feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET='scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$TARGET"
+          git commit -m 'MCFT-CAP-09: align AM19 facts seed with production schema'
+          git push origin HEAD:agent/mcft-cap09-am19-persistent-facts-schema-alignment
