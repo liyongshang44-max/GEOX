@@ -52,8 +52,8 @@ const CANDIDATE_PATH_DEFAULT = path.resolve("rolling-candidate/MCFT_CAP_09_ROLLI
 const CROP_AUTHORITY_PATH = path.resolve("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json");
 const MATRIX_PATH = path.resolve("docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json");
 
-const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v2";
-const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v2";
+const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v3";
+const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v3";
 const FORMAL_V3_DB = "geox_mcft_cap09_s6_formal_t3r1_24h_v3";
 const FAILED_DB = "geox_mcft_cap09_s6_formal_t3r1_24h_v2";
 const FAILED_EPOCH = "mcft_cap09_external_formal_window_epoch_20260817t200000z_v2";
@@ -570,7 +570,6 @@ function buildQualification(candidate: CandidateV1, subject: string, databaseNam
   const cropAuthority = loadJson(CROP_AUTHORITY_PATH) as Record<string, unknown>;
   const matrix = loadJson(MATRIX_PATH) as Record<string, unknown>;
 
-  // The production materializer is the actual stage-legality gate. Any transition risk fails before DB write.
   materializeExternalFormalA18CropContextV2({
     logical_time: a0,
     expected_identity_hash: bundle.persistence_bundle.crop_stage_context_hash,
@@ -766,7 +765,7 @@ function forcingFromTick(result: any): Record<string, any> {
   if (!Array.isArray(members)) throw new Error("AM19_P24_TICK_MEMBERS_REQUIRED");
   const evidence = members.filter((member: any) => member.object_type === "twin_evidence_window_v1");
   if (evidence.length !== 1) throw new Error("AM19_P24_EXACT_ONE_EVIDENCE_MEMBER_REQUIRED");
-  return objectValue(evidence[0].payload?.current_interval_forcing, "AM19_P24_PERSISTED_CURRENT_FORCING_REQUIRED");
+  return objectValue(evidence[0].payload?.base_continuation_window?.current_interval_forcing, "AM19_P24_PERSISTED_CURRENT_FORCING_REQUIRED");
 }
 
 function assertTickZeroSideEffects(result: any): void {
@@ -991,8 +990,8 @@ async function readback(pool: Pool): Promise<Record<string, number>> {
       (SELECT count(*)::int FROM twin_runtime_checkpoint_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6) AS checkpoint_latest,
       (SELECT count(*)::int FROM twin_forecast_result_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6) AS forecast_latest,
       (SELECT count(*)::int FROM twin_forecast_success_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6) AS forecast_success_latest,
-      (SELECT count(*)::int FROM facts WHERE record_json->>'type'='twin_evidence_window_v1' AND record_json#>>'{payload,payload,current_interval_forcing,mode}'='EXACT_PROVIDER_INTERVAL_PAIR') AS mode_a,
-      (SELECT count(*)::int FROM facts WHERE record_json->>'type'='twin_evidence_window_v1' AND record_json#>>'{payload,payload,current_interval_forcing,mode}'='PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR') AS mode_b,
+      (SELECT count(*)::int FROM facts WHERE record_json->>'type'='twin_evidence_window_v1' AND record_json#>>'{payload,payload,base_continuation_window,current_interval_forcing,mode}'='EXACT_PROVIDER_INTERVAL_PAIR') AS mode_a,
+      (SELECT count(*)::int FROM facts WHERE record_json->>'type'='twin_evidence_window_v1' AND record_json#>>'{payload,payload,base_continuation_window,current_interval_forcing,mode}'='PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR') AS mode_b,
       (SELECT count(*)::int FROM twin_decision_record_projection_v1) AS decision_records,
       (SELECT count(*)::int FROM twin_approved_plan_binding_projection_v1) AS approved_plans,
       ((SELECT count(*)::int FROM twin_action_feedback_projection_v1)+(SELECT count(*)::int FROM twin_action_feedback_evidence_index_v1)+(SELECT count(*)::int FROM twin_action_feedback_cycle_projection_v1)) AS action_feedback_rows,

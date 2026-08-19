@@ -1,0 +1,29 @@
+name: mcft-cap-09-amendment19-persisted-forcing-readback
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment19-persisted-forcing-readback.yml'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_amendment19_canonical_tick_core_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTED_FORCING_READBACK_V1.cjs'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/server/src/runtime/twin_runtime/external_formal_amendment19_canonical_tick_core_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTED_FORCING_READBACK_V1.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  contract-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prove canonical persisted forcing readback contract
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTED_FORCING_READBACK_V1.cjs
