@@ -191,23 +191,26 @@ jobs:
           MCFT_CAP09_EXPECTED_TARGET_T: ${{ env.EXPECTED_TARGET_T }}
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts run
 
-      - name: Require hash diagnostic and preserve fail-closed behavior
+      - name: Adjudicate hash diagnostic from either factual outcome
         shell: node {0}
         run: |
           const fs = require('node:fs');
-          if ('${{ steps.rehydrate.outcome }}' !== 'failure') throw new Error('AM19_REHYDRATION_DIAG_EXPECTED_FAIL_CLOSED_MISMATCH_REQUIRED');
+          const outcome = '${{ steps.rehydrate.outcome }}';
+          if (!['success','failure'].includes(outcome)) throw new Error(`AM19_REHYDRATION_DIAG_OUTCOME_INVALID:${outcome}`);
           const path = 'acceptance-output/MCFT_CAP_09_AM19_REHYDRATION_HASH_DIAGNOSTIC.json';
           if (!fs.existsSync(path)) throw new Error('AM19_REHYDRATION_DIAG_OUTPUT_REQUIRED');
           const p = JSON.parse(fs.readFileSync(path, 'utf8'));
           if (p.schema_version !== 'geox_mcft_cap09_am19_rehydration_hash_diagnostic_v1') throw new Error('AM19_REHYDRATION_DIAG_SCHEMA_REQUIRED');
           if (p.producer_subject_sha !== process.env.PRODUCER_SHA || p.target_t !== process.env.EXPECTED_TARGET_T) throw new Error('AM19_REHYDRATION_DIAG_IDENTITY_DRIFT');
-          if (!Array.isArray(p.rows) || p.rows.length !== 3 || !Number.isInteger(p.mismatch_count) || p.order_match !== false) throw new Error('AM19_REHYDRATION_DIAG_MISMATCH_ROWS_REQUIRED');
+          if (!Array.isArray(p.rows) || p.rows.length !== 3 || !Number.isInteger(p.mismatch_count) || p.mismatch_count < 0 || p.mismatch_count > 3 || typeof p.order_match !== 'boolean') throw new Error('AM19_REHYDRATION_DIAG_ROWS_REQUIRED');
           if (p.raw_values_emitted !== false || p.canonical_payload_emitted !== false) throw new Error('AM19_REHYDRATION_DIAG_VALUE_DISCLOSURE_FORBIDDEN');
           for (const row of p.rows) {
             const allowed = ['record_type','expected_source_record_id','actual_source_record_id','expected_semantic_sha256','actual_semantic_sha256','source_record_id_match','semantic_hash_match','match'];
             if (Object.keys(row).some(k => !allowed.includes(k))) throw new Error('AM19_REHYDRATION_DIAG_ROW_SURFACE_DRIFT');
           }
-          console.log(JSON.stringify(p));
+          if (outcome === 'success' && (p.order_match !== true || p.mismatch_count !== 0 || p.rows.some(r => r.match !== true))) throw new Error('AM19_REHYDRATION_DIAG_SUCCESS_MUST_BE_EXACT_MATCH');
+          if (outcome === 'failure' && (p.order_match !== false || p.mismatch_count < 1 || !p.rows.some(r => r.match === false))) throw new Error('AM19_REHYDRATION_DIAG_FAILURE_MUST_EXPOSE_MISMATCH');
+          console.log(JSON.stringify({rehydration_outcome:outcome,...p}));
 
       - name: Upload hash-only diagnostic
         if: always()
