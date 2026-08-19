@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: mcft-cap09-source-qualification-off-main-pr-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   NODE_VERSION: '20.11.1'
