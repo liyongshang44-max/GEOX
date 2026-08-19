@@ -52,8 +52,8 @@ const CANDIDATE_PATH_DEFAULT = path.resolve("rolling-candidate/MCFT_CAP_09_ROLLI
 const CROP_AUTHORITY_PATH = path.resolve("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json");
 const MATRIX_PATH = path.resolve("docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json");
 
-const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v1";
-const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v1";
+const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v2";
+const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v2";
 const FORMAL_V3_DB = "geox_mcft_cap09_s6_formal_t3r1_24h_v3";
 const FAILED_DB = "geox_mcft_cap09_s6_formal_t3r1_24h_v2";
 const FAILED_EPOCH = "mcft_cap09_external_formal_window_epoch_20260817t200000z_v2";
@@ -1038,7 +1038,7 @@ async function assertFullMainReadback(pool: Pool, built?: BuiltQualificationV1):
   if (!cursor || Number(cursor.next_slot_index) !== 24 || cursor.next_slot_id !== null || cursor.next_logical_time !== null || cursor.last_terminal_slot_id !== "O23") throw new Error("AM19_P24_SCHEDULER_CURSOR_COMPLETE_REQUIRED");
 
   const snapshot = await new PostgresNextTickRepositoryV1(pool).readPersistedNextTickSnapshot({ ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 });
-  if (!snapshot || Number(snapshot.checkpoint.payload.tick_sequence) !== 24 || snapshot.previous_posterior.logical_time !== snapshot.checkpoint.logical_time || snapshot.previous_forecast_result.logical_time !== snapshot.checkpoint.logical_time) throw new Error("AM19_P24_LATEST_POINTER_GRAPH_REQUIRED");
+  if (!snapshot || snapshot.previous_posterior.logical_time !== snapshot.checkpoint.logical_time || snapshot.previous_forecast_result.logical_time !== snapshot.checkpoint.logical_time) throw new Error("AM19_P24_LATEST_POINTER_GRAPH_REQUIRED");
   if (built) {
     if (snapshot.checkpoint.logical_time !== built.o23 || snapshot.checkpoint.payload.next_tick_logical_time !== addHours(built.o23, 1) || snapshot.runtime_config.object_id !== built.bundle.persistence_bundle.runtime_configs[23]!.object_id) throw new Error("AM19_P24_FINAL_O23_POINTER_REQUIRED");
   }
@@ -1069,7 +1069,11 @@ async function runBlocked(pool: Pool, built: BuiltQualificationV1): Promise<bool
   });
   if (result.status !== "BLOCKED_TERMINAL_RECORDED" || result.detail !== "AMENDMENT19_NO_CAUSAL_CURRENT_INTERVAL_FORCING_PAIR" || result.provider_request_count !== 0 || result.r2_request_count !== 0) return false;
   const snapshot = await new PostgresNextTickRepositoryV1(pool).readPersistedNextTickSnapshot({ ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 });
-  if (!snapshot || snapshot.checkpoint.logical_time !== built.a0 || Number(snapshot.checkpoint.payload.tick_sequence) !== 0) return false;
+  if (!snapshot
+    || snapshot.checkpoint.logical_time !== built.a0
+    || snapshot.checkpoint.payload.checkpoint_kind !== "INITIAL"
+    || snapshot.checkpoint.payload.next_tick_logical_time !== built.o00
+    || snapshot.runtime_config.object_id !== built.bundle.persistence_bundle.bootstrap_runtime_config.object_id) return false;
   return blockedComplete(pool);
 }
 
