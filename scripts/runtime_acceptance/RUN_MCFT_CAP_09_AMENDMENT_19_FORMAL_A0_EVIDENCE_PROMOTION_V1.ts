@@ -324,7 +324,7 @@ async function main(): Promise<void> {
     const sample = { retention_ref: `s3-private://${MCFT_CAP09_FORMAL_RAW_BUCKET_V1}/${MCFT_CAP09_FORMAL_RAW_RETENTION_PREFIX_V1}/${"a".repeat(64)}` };
     const parsed = new URL(sample.retention_ref);
     if (parsed.hostname !== MCFT_CAP09_FORMAL_RAW_BUCKET_V1 || !parsed.pathname.includes(`/${MCFT_CAP09_FORMAL_RAW_RETENTION_PREFIX_V1}/`)) throw new Error("AM19_FORMAL_A0_PROMOTION_SELFTEST_FORMAL_REF_FAILED");
-    console.log(JSON.stringify({ schema_version: "geox_mcft_cap09_amendment19_formal_a0_evidence_promotion_selftest_v1", status: "PASS", raw_before_decoder: true, same_decoder_identity_required: true, transient_ref_forbidden_in_formal_fact: true, provider_refetch_count: 0, formal_effect: false }));
+    console.log(JSON.stringify({ schema_version: "geox_mcft_cap09_amendment19_formal_a0_evidence_promotion_selftest_v1", status: "PASS", raw_before_decoder: true, same_decoder_identity_required: true, transient_ref_forbidden_in_formal_fact: true, a0_base_supports_o00: true, physical_promotion_deadline: "O00", provider_refetch_count: 0, formal_effect: false }));
     return;
   }
   if (process.argv[2] !== "run") throw new Error("AM19_FORMAL_A0_PROMOTION_MODE_REQUIRED:selftest|run");
@@ -333,8 +333,6 @@ async function main(): Promise<void> {
   const arm = loadJson(path.resolve(requiredEnv("MCFT_CAP09_AM19_FORMAL_ARM_PATH"))) as FormalArmWithRehydrationV1;
   validateMcftCap09Am19FormalArmV1(arm, subject);
   if (arm.formal_database_name !== MCFT_CAP09_AM19_FORMAL_DATABASE_V3) throw new Error("AM19_FORMAL_A0_PROMOTION_ARM_DB_DRIFT");
-  if (Date.now() >= Date.parse(arm.a0)) throw new Error("AM19_FORMAL_A0_PROMOTION_MUST_COMPLETE_BEFORE_A0");
-
   const referenceUrl = requiredEnv("REFERENCE_DATABASE_URL");
   assertLocalReferenceDatabase(referenceUrl);
   const formalUrl = requiredEnv("DATABASE_URL");
@@ -343,6 +341,8 @@ async function main(): Promise<void> {
   let writePhaseStarted = false;
   let writeCount = 0;
   try {
+    const databasePreflightAt = new Date((await formalPool.query("SELECT transaction_timestamp() AS database_now")).rows[0]?.database_now).toISOString();
+    if (Date.parse(databasePreflightAt) >= Date.parse(arm.o00)) throw new Error(`AM19_FORMAL_A0_PROMOTION_O00_DEADLINE_MISSED:${databasePreflightAt}:${arm.o00}`);
     await assertFormalDatabaseZero(formalPool, formalUrl);
     const reference = await loadReferenceFacts(referencePool);
     const built = await buildFormalResults(arm);
@@ -372,10 +372,16 @@ async function main(): Promise<void> {
     });
     const ingress = new PostgresExternalFormalEvidenceIngressV1(formalPool, verifier);
     writePhaseStarted = true;
-    for (const result of built.results) writeCount += (await ingress.appendCanonicalizedExternalEvidence(result)).canonical_fact_write_count;
+    for (const result of built.results) {
+      const beforeWriteAt = new Date((await formalPool.query("SELECT transaction_timestamp() AS database_now")).rows[0]?.database_now).toISOString();
+      if (Date.parse(beforeWriteAt) >= Date.parse(arm.o00)) throw new Error(`AM19_FORMAL_A0_PROMOTION_DEADLINE_CROSSED_DURING_WRITE:${beforeWriteAt}:${arm.o00}`);
+      writeCount += (await ingress.appendCanonicalizedExternalEvidence(result)).canonical_fact_write_count;
+    }
     if (writeCount !== 3) throw new Error(`AM19_FORMAL_A0_PROMOTION_EXACT_THREE_WRITES_REQUIRED:${writeCount}`);
     const factCount = Number((await formalPool.query("SELECT count(*)::int AS n FROM facts")).rows[0]?.n ?? -1);
     if (factCount !== 3) throw new Error(`AM19_FORMAL_A0_PROMOTION_FORMAL_FACT_COUNT_REQUIRED:${factCount}`);
+    const promotionCompletedAt = new Date((await formalPool.query("SELECT transaction_timestamp() AS database_now")).rows[0]?.database_now).toISOString();
+    if (Date.parse(promotionCompletedAt) >= Date.parse(arm.o00)) throw new Error(`AM19_FORMAL_A0_PROMOTION_COMPLETED_AFTER_O00_FORBIDDEN:${promotionCompletedAt}:${arm.o00}`);
 
     writeOutput({
       schema_version: "geox_mcft_cap09_amendment19_formal_a0_evidence_promotion_result_v1",
@@ -385,6 +391,10 @@ async function main(): Promise<void> {
       epoch_id: arm.epoch_id,
       formal_database_name: MCFT_CAP09_AM19_FORMAL_DATABASE_V3,
       a0: arm.a0,
+      supported_slot_t: arm.o00,
+      database_preflight_at: databasePreflightAt,
+      promotion_completed_at: promotionCompletedAt,
+      promotion_completed_before_o00: true,
       record_types: built.results.map((x) => x.record.record_type),
       canonical_fact_write_count: writeCount,
       formal_fact_count: factCount,

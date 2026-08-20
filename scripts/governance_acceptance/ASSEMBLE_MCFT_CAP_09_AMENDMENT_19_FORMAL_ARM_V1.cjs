@@ -94,7 +94,6 @@ function assemble(gate, candidate, metadata) {
   const capturedAt = canonicalIso(candidate.captured_at, "AM19_FORMAL_ARM_CAPTURED_AT_REQUIRED");
   const expiresAt = canonicalIso(candidate.candidate_expires_at, "AM19_FORMAL_ARM_CANDIDATE_EXPIRY_REQUIRED");
   need(Date.parse(capturedAt) <= Date.parse(a0), "AM19_FORMAL_ARM_CAPTURE_AFTER_A0_FORBIDDEN");
-  need(Date.parse(evaluatedAt) < Date.parse(a0), "AM19_FORMAL_ARM_A0_MUST_BE_FUTURE");
   need(Date.parse(evaluatedAt) < Date.parse(expiresAt), "AM19_FORMAL_ARM_CANDIDATE_EXPIRED");
   const o00 = addHours(a0, 1);
   const o23 = addHours(a0, 24);
@@ -218,10 +217,12 @@ function selftest() {
   };
   const pass = assemble(gate, candidate, metadata);
   need(pass.status === "PASS" && pass.a0 === candidate.target_t && pass.formal_o00_started === false && pass.formal_database_write_count === 0, "AM19_FORMAL_ARM_SELFTEST_PASS_FAILED");
+  const postA0Pass = assemble(gate, candidate, { ...metadata, arm_evaluated_at: "2026-08-20T07:10:00.000Z" });
+  need(postA0Pass.status === "PASS" && postA0Pass.arm_to_o00_lead_minutes === 50, "AM19_FORMAL_ARM_SELFTEST_POST_A0_O00_LEAD_REQUIRED");
   const negatives = [
     ["subject", gate, candidate, { ...metadata, current_protected_main_sha: "2".repeat(40) }, "AM19_FORMAL_ARM_EXACT_SUBJECT_CHAIN_REQUIRED"],
     ["pre_gate", gate, candidate, { ...metadata, rolling_workflow_completed_at: "2026-08-20T05:09:00.000Z", arm_evaluated_at: "2026-08-20T05:09:30.000Z" }, "AM19_FORMAL_ARM_POST_GATE_ROLLING_REQUIRED"],
-    ["nonfuture_a0", gate, candidate, { ...metadata, arm_evaluated_at: "2026-08-20T07:00:00.000Z" }, "AM19_FORMAL_ARM_A0_MUST_BE_FUTURE"],
+    ["late_o00_lead", gate, candidate, { ...metadata, arm_evaluated_at: "2026-08-20T07:30:00.000Z" }, "AM19_FORMAL_ARM_INSUFFICIENT_O00_LEAD:30.000"],
   ];
   for (const [name, g, c, meta, expected] of negatives) {
     let observed = "";
@@ -232,7 +233,8 @@ function selftest() {
     schema_version: "geox_mcft_cap09_amendment19_formal_arm_selftest_v1",
     status: "PASS",
     post_gate_order_required: true,
-    future_a0_required: true,
+    post_a0_arm_allowed_when_o00_lead_sufficient: true,
+    arm_deadline_authority: "O00_MINUS_35M_OPERATIONAL_RULE",
     minimum_o00_lead_minutes: MIN_ARM_TO_O00_LEAD_MINUTES,
     formal_effect: false,
   }));
