@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Patch hourly and live NO-GO propagation only
+      - name: Patch only current-head hourly static and live NO-GO propagation
         shell: bash
         run: |
           set -euo pipefail
@@ -36,64 +36,11 @@ jobs:
               p.write_text(text.replace(before, after, 1))
 
           hourly = '.github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml'
-          hourly_before = """            async function findArtifacts(workflowPath, prefix) {
-              const runs = await github.rest.actions.listWorkflowRuns({ owner, repo, workflow_id: workflowPath, branch: 'main', status: 'success', per_page: 100 });
-              const found = [];
-              for (const run of runs.data.workflow_runs.filter(r => r.head_sha === subject)) {
-                const arts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: run.id, per_page: 100 });
-                for (const artifact of arts.data.artifacts) if (!artifact.expired && artifact.name.startsWith(prefix)) found.push({ run, artifact });
-              }
-              return found;
-            }
-
-            const arms = await findArtifacts('.github/workflows/mcft-cap-09-amendment19-formal-arm.yml', `mcft-cap09-am19-formal-arm-${subject}-`);
-"""
-          hourly_after = """            async function findArtifacts(workflowPath, prefix, successOnly = true) {
-              const found = [];
-              for await (const response of github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
-                owner, repo, workflow_id: workflowPath, branch: 'main', per_page: 100,
-              })) {
-                for (const run of response.data.workflow_runs.filter(r => r.head_sha === subject && (!successOnly || r.conclusion === 'success'))) {
-                  const arts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: run.id, per_page: 100 });
-                  for (const artifact of arts.data.artifacts) if (!artifact.expired && artifact.name.startsWith(prefix)) found.push({ run, artifact });
-                }
-              }
-              return found;
-            }
-
-            const priorNoGo = await findArtifacts('.github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml', `mcft-cap09-am19-formal-hourly-${subject}-NO-GO-`, false);
-            if (priorNoGo.length > 0) {
-              priorNoGo.sort((left, right) => left.run.id - right.run.id || left.artifact.id - right.artifact.id);
-              core.setOutput('active', 'false');
-              core.setOutput('reason', 'IRREVERSIBLE_FORMAL_HOURLY_NO_GO_ALREADY_RECORDED');
-              core.setOutput('prior_no_go_artifact_id', String(priorNoGo[0].artifact.id));
-              return;
-            }
-
-            const arms = await findArtifacts('.github/workflows/mcft-cap-09-amendment19-formal-arm.yml', `mcft-cap09-am19-formal-arm-${subject}-`);
-"""
-          replace_once(hourly, hourly_before, hourly_after)
-
-          hourly_static_before = """      - name: Require static workflow has no live credential exposure
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -z \"${DATABASE_URL:-}\"
-          test -z \"${MCFT_CAP09_PARENT_DATABASE_URL:-}\"
-          test -z \"${MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY:-}\"
-"""
-          hourly_static_after = """      - name: Require static workflow has no live credential exposure and propagates irreversible hourly NO-GO
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -z \"${DATABASE_URL:-}\"
-          test -z \"${MCFT_CAP09_PARENT_DATABASE_URL:-}\"
-          test -z \"${MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY:-}\"
-          grep -Fq 'github.paginate.iterator(github.rest.actions.listWorkflowRuns' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
-          grep -Fq 'IRREVERSIBLE_FORMAL_HOURLY_NO_GO_ALREADY_RECORDED' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
-          grep -Fq 'formal-hourly-${subject}-NO-GO-' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
-"""
-          replace_once(hourly, hourly_static_before, hourly_static_after)
+          replace_once(
+              hourly,
+              "          grep -Fq 'mcft-cap09-am19-formal-hourly-${{ env.SUBJECT_SHA }}-NO-GO-' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml\n",
+              "          grep -Fq 'mcft-cap09-am19-formal-hourly-${subject}-NO-GO-' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml\n",
+          )
 
           live = '.github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml'
           live_before = """            const noGo = await artifacts('.github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml', `mcft-cap09-am19-formal-cycle-NO-GO-${subject}-`);
@@ -120,17 +67,16 @@ jobs:
 """
           replace_once(live, live_before, live_after)
 
-          live_static_before = """          grep -Fq 'github.paginate.iterator(github.rest.actions.listWorkflowRuns' <<<\"$live_section\"
-          grep -Fq 'RUNNER_RESULT_MISSING' <<<\"$live_section\"
-"""
-          live_static_after = """          grep -Fq 'github.paginate.iterator(github.rest.actions.listWorkflowRuns' <<<\"$live_section\"
-          grep -Fq 'mcft-cap09-am19-formal-hourly-${subject}-NO-GO-' <<<\"$live_section\"
-          grep -Fq 'RUNNER_RESULT_MISSING' <<<\"$live_section\"
-"""
-          replace_once(live, live_static_before, live_static_after)
+          replace_once(
+              live,
+              "          grep -Fq 'github.paginate.iterator(github.rest.actions.listWorkflowRuns' <<<\"$live_section\"\n          grep -Fq 'RUNNER_RESULT_MISSING' <<<\"$live_section\"\n",
+              "          grep -Fq 'github.paginate.iterator(github.rest.actions.listWorkflowRuns' <<<\"$live_section\"\n          grep -Fq 'mcft-cap09-am19-formal-hourly-${subject}-NO-GO-' <<<\"$live_section\"\n          grep -Fq 'RUNNER_RESULT_MISSING' <<<\"$live_section\"\n",
+          )
           PY
           git diff --check
           test "$(git diff --name-only | sort | tr '\n' ' ')" = ".github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml .github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml "
+          grep -Fq 'IRREVERSIBLE_FORMAL_EPOCH_NO_GO_ALREADY_RECORDED' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
+          grep -Fq 'mcft-cap09-am19-formal-hourly-${subject}-NO-GO-' .github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml
 
       - name: Commit and push exact two-workflow repair
         shell: bash
@@ -140,7 +86,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -- .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml .github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml
           test "$(git diff --cached --name-only | sort | tr '\n' ' ')" = ".github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml .github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml "
-          git commit -m 'fix(mcft-cap09): propagate Formal hourly NO-GO across runs'
+          git commit -m 'fix(mcft-cap09): propagate Formal ingress NO-GO into Runtime supervisor'
           git push origin HEAD:feat/mcft-cap09-am19-formal-successor-v1
-
-# retrigger-existing-helper
