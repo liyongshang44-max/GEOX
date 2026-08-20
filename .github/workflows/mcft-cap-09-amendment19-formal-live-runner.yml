@@ -50,13 +50,14 @@ jobs:
           scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts
       - name: Prove real Formal runner composition without side effects
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts selftest
-      - name: Require supervisor has no provider or R2 credentials
+      - name: Require live supervisor has no provider or R2 credentials
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -q 'FORMAL_RAW_S3_SECRET_ACCESS_KEY' .github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml
-          ! grep -q 'TRANSIENT_S3_SECRET_ACCESS_KEY' .github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml
-          ! grep -q 'rolling-preboundary-capture' .github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml
+          live_section=$(sed -n '/^  live-cycle:/,$p' .github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml)
+          ! grep -q 'FORMAL_RAW_S3_SECRET_ACCESS_KEY' <<<"$live_section"
+          ! grep -q 'TRANSIENT_S3_SECRET_ACCESS_KEY' <<<"$live_section"
+          ! grep -q 'rolling-preboundary-capture' <<<"$live_section"
 
   live-cycle:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
