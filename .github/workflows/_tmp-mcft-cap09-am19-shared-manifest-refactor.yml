@@ -1,0 +1,81 @@
+name: tmp-mcft-cap09-am19-shared-manifest-refactor
+
+on:
+  push:
+    branches:
+      - feat/mcft-cap09-am19-formal-successor-v1
+    paths:
+      - '.github/workflows/_tmp-mcft-cap09-am19-shared-manifest-refactor.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  exact-refactor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/mcft-cap09-am19-formal-successor-v1
+          fetch-depth: 0
+      - name: Require exact off-main branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/feat/mcft-cap09-am19-formal-successor-v1'
+          test "$(git branch --show-current)" = 'feat/mcft-cap09-am19-formal-successor-v1'
+          test "$(git rev-parse origin/main)" = '58fb80e6906354ab5f74795edb37bc72a7c47996'
+      - name: Apply exact shared-manifest refactor
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts')
+          s=p.read_text(encoding='utf-8')
+          marker='import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";\n'
+          shared='''import {\n  buildExternalFormalAmendment19WindowManifestV1,\n  validateExternalFormalAmendment19WindowManifestV1,\n} from "../../apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.js";\n'''
+          if shared not in s:
+              if s.count(marker)!=1: raise SystemExit('PATCH_IMPORT_MARKER_CARDINALITY')
+              s=s.replace(marker,marker+shared)
+          start=s.index('function buildQualification(candidate: CandidateV1, subject: string, databaseName: string): BuiltQualificationV1 {')
+          end=s.index('\n\nclass FrozenA0DbEvidenceSourceV1',start)
+          replacement='''function buildQualification(candidate: CandidateV1, subject: string, databaseName: string): BuiltQualificationV1 {\n  const a0 = candidate.target_t;\n  const createdAt = canonicalIso(String(candidate.captured_at ?? ""), "AM19_P24_CONFIG_CREATED_AT_REQUIRED");\n  const epoch = `mcft_cap09_am19_accel24t_${a0.replace(/[^0-9]/g, "")}_${subject.slice(0, 12)}_${databaseName === BLOCKED_DB ? "blocked" : "main"}`;\n  if (epoch === FAILED_EPOCH) throw new Error("AM19_P24_FAILED_EPOCH_REUSE_FORBIDDEN");\n\n  const bundle = buildExternalFormalPrewindowAuthorityBundleV3({\n    epoch_id: epoch,\n    bootstrap_logical_time: a0,\n    created_at: createdAt,\n    bootstrap_crop_stage_code: "MID",\n    hourly_crop_stage_codes: Array.from({ length: 24 }, () => "MID" as const),\n    fresh_database_authority_ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3,\n    fresh_database_authority_blob_sha: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3,\n  });\n  const cropAuthority = loadJson(CROP_AUTHORITY_PATH) as Record<string, unknown>;\n  const matrix = loadJson(MATRIX_PATH) as Record<string, unknown>;\n\n  materializeExternalFormalA18CropContextV2({\n    logical_time: a0,\n    expected_identity_hash: bundle.persistence_bundle.crop_stage_context_hash,\n    crop_authority: cropAuthority,\n    configuration_matrix: matrix,\n  });\n\n  const materializationPins = bundle.hourly_crop_pins.map((pin) => {\n    const materialized = materializeExternalFormalA18CropContextV2({\n      logical_time: pin.logical_time,\n      expected_identity_hash: pin.crop_stage_context_hash,\n      crop_authority: cropAuthority,\n      configuration_matrix: matrix,\n    });\n    return {\n      slot_id: pin.slot_id,\n      logical_time: pin.logical_time,\n      crop_stage_context_materialization_hash: materializationHash(materialized),\n    };\n  });\n\n  const manifestRef = `qualification://mcft-cap09/amendment19/persistent24/${epoch}/${databaseName}`;\n  const sharedManifest = buildExternalFormalAmendment19WindowManifestV1({\n    subject_sha: subject,\n    database_name: databaseName,\n    manifest_ref: manifestRef,\n    bundle,\n    crop_context_materialization_pins: materializationPins,\n  });\n  validateExternalFormalAmendment19WindowManifestV1(sharedManifest, subject);\n  const manifest = sharedManifest as unknown as ExternalFormalV3Am19WindowManifestV1;\n  return {\n    a0,\n    o00: bundle.o00_logical_time,\n    o23: bundle.o23_logical_time,\n    epoch_id: epoch,\n    created_at: createdAt,\n    bundle,\n    manifest,\n    crop_authority: cropAuthority,\n    configuration_matrix: matrix,\n  };\n}'''
+          s=s[:start]+replacement+s[end:]
+          old='if (built.epoch_id === FAILED_EPOCH || built.manifest.database_name !== MAIN_DB) throw new Error("AM19_P24_SELFTEST_FAILED_AUTHORITY_REUSE");'
+          new='if (built.epoch_id === FAILED_EPOCH || built.manifest.database_name !== MAIN_DB || (built.manifest as any).subject_sha !== subject || (built.manifest as any).schema_version !== "geox_mcft_cap09_amendment19_window_manifest_v1") throw new Error("AM19_P24_SELFTEST_SHARED_MANIFEST_REQUIRED");'
+          if s.count(old)!=1: raise SystemExit('PATCH_SELFTEST_MARKER_CARDINALITY')
+          s=s.replace(old,new)
+          old2='    exact_24_manifest_slots: true,\n    failed_epoch_reuse_forbidden: true,'
+          new2='    exact_24_manifest_slots: true,\n    shared_amendment19_manifest_builder_reused: true,\n    manifest_subject_sha_bound: true,\n    failed_epoch_reuse_forbidden: true,'
+          if s.count(old2)!=1: raise SystemExit('PATCH_SELFTEST_OUTPUT_MARKER_CARDINALITY')
+          s=s.replace(old2,new2)
+          p.write_text(s,encoding='utf-8')
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Validate exact refactor before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          mapfile -t changed < <(git diff --name-only)
+          test "${#changed[@]}" -eq 1
+          test "${changed[0]}" = 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
+          pnpm install --frozen-lockfile
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
+          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts selftest
+      - name: Commit and push exact refactor
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
+          git diff --cached --check
+          test "$(git diff --cached --name-only)" = 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
+          git commit -m 'MCFT-CAP-09: reuse shared Amendment-19 manifest in qualification'
+          git push origin HEAD:feat/mcft-cap09-am19-formal-successor-v1
