@@ -8,6 +8,7 @@ import io
 import json
 import math
 import re
+import sys
 import tarfile
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -29,11 +30,23 @@ RAIN_BINDING = "kbs_lter_raw_hourly_rain_mm_v1"
 HIST_ET0_BINDING = "kbs_lter_asce_short_reference_et_hourly_v1"
 SOURCE_MATRIX_REF = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json"
 AMENDMENT04_REF = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-04-GFS-SFLUX-INSTANTANEOUS-PIECEWISE-LINEAR-SOLAR-AUTHORITY.md"
+ET0_CANONICAL_DECIMALS = 12
+ET0_DECIMAL_NORMALIZATION_ID = "DECIMAL_HALF_AWAY_FROM_ZERO_12_V1"
 
 
 def require(condition: bool, code: str) -> None:
     if not condition:
         raise RuntimeError(code)
+
+
+def canonical_decimal_half_away_from_zero(value: float, decimals: int) -> float:
+    require(math.isfinite(value), "EA5E2_CANONICAL_DECIMAL_NONFINITE")
+    require(isinstance(decimals, int) and 0 <= decimals <= 12, "EA5E2_CANONICAL_DECIMAL_SCALE_INVALID")
+    factor = 10 ** decimals
+    scaled = abs(value) * factor
+    rounded = math.floor(scaled + 0.5 + sys.float_info.epsilon * scaled)
+    result = (-1.0 if value < 0 else 1.0) * rounded / factor
+    return 0.0 if result == 0 else result
 
 
 def iso(value: datetime) -> str:
@@ -551,7 +564,28 @@ def command_selftest_gfs_selection(_args: argparse.Namespace) -> None:
     }, sort_keys=True))
 
 
+def command_selftest_et0_decimal_normalization(_args: argparse.Namespace) -> None:
+    require(canonical_decimal_half_away_from_zero(0.1234567890124, 12) == 0.123456789012, "EA5E2_ET0_DECIMAL_ROUND_DOWN")
+    require(canonical_decimal_half_away_from_zero(0.1234567890125, 12) == 0.123456789013, "EA5E2_ET0_DECIMAL_POSITIVE_HALF_TIE")
+    require(canonical_decimal_half_away_from_zero(-0.1234567890125, 12) == -0.123456789013, "EA5E2_ET0_DECIMAL_NEGATIVE_HALF_TIE")
+    require(canonical_decimal_half_away_from_zero(-0.0000000000001, 12) == 0.0, "EA5E2_ET0_DECIMAL_NEGATIVE_ZERO")
+    left = canonical_decimal_half_away_from_zero(0.12345678901234, ET0_CANONICAL_DECIMALS)
+    right = canonical_decimal_half_away_from_zero(0.12345678901236, ET0_CANONICAL_DECIMALS)
+    require(left == right == 0.123456789012, "EA5E2_ET0_DECIMAL_SUBQUANTUM_DRIFT")
+    print(json.dumps({
+        "status": "PASS",
+        "normalization_id": ET0_DECIMAL_NORMALIZATION_ID,
+        "decimal_places": ET0_CANONICAL_DECIMALS,
+        "positive_half_tie": "PASS",
+        "negative_half_tie": "PASS",
+        "negative_zero_normalized": True,
+        "subquantum_drift_collapsed": True,
+        "raw_values_emitted": False,
+    }, sort_keys=True))
+
+
 def command_decode_gfs(args: argparse.Namespace) -> None:
+    normalize_et0 = bool(getattr(args, "normalize_et0", False))
     target = canonical_hour(args.target, "EA5E2_LIVE_GFS_DECODE_TARGET_INVALID")
     available_at = parse_iso(args.available_at, "EA5E2_LIVE_GFS_AVAILABLE_AT_INVALID")
     manifest, members = load_tar(Path(args.input))
@@ -619,7 +653,10 @@ def command_decode_gfs(args: argparse.Namespace) -> None:
         actual_vapor_pressure = (rh / 100.0) * 0.6108 * math.exp(17.27 * temperature / (temperature + 237.3))
         et0 = ea4.scalar_eto(temperature, actual_vapor_pressure, solar_map[valid], wind_map[valid], valid)
         require(math.isfinite(et0), "EA5E2_LIVE_GFS_ET0_NONFINITE")
-        future_et0.append((valid, et0))
+        future_et0.append((
+            valid,
+            canonical_decimal_half_away_from_zero(et0, ET0_CANONICAL_DECIMALS) if normalize_et0 else et0,
+        ))
 
     decoded_at = datetime.now(timezone.utc)
     require(available_at <= decoded_at, "EA5E2_LIVE_GFS_DECODE_BEFORE_AVAILABLE")
@@ -661,6 +698,18 @@ def command_decode_gfs(args: argparse.Namespace) -> None:
     }
     time_key = target.strftime("%Y%m%dT%H%M%SZ").lower()
     cycle_key = cycle.strftime("%Y%m%dT%H%M%SZ").lower()
+    et0_quality = {
+        "status": "LIMITED",
+        "point_count": 72,
+        "solar_temporal_method": "PIECEWISE_LINEAR_ENDPOINT_INTEGRATION_V1",
+    }
+    et0_limitations = ["MODEL_DERIVED_FORECAST_ASSUMPTION", "SFLUX_SOLAR_PIECEWISE_LINEAR_LIMITED"]
+    if normalize_et0:
+        et0_quality.update({
+            "et0_decimal_normalization_id": ET0_DECIMAL_NORMALIZATION_ID,
+            "et0_decimal_places": ET0_CANONICAL_DECIMALS,
+        })
+        et0_limitations.append("CANONICAL_ET0_DECIMAL_HALF_AWAY_FROM_ZERO_12")
     drafts = [
         {
             "role": "FUTURE_WEATHER_ASSUMPTION",
@@ -707,7 +756,7 @@ def command_decode_gfs(args: argparse.Namespace) -> None:
                 "valid_from": iso(target),
                 "valid_to": valid_to,
             },
-            "quality": {"status": "LIMITED", "point_count": 72, "solar_temporal_method": "PIECEWISE_LINEAR_ENDPOINT_INTEGRATION_V1"},
+            "quality": et0_quality,
             "source_payload": {**common_source_payload, "algorithm_id": "ASCE_STANDARDIZED_REFERENCE_ET_SHORT_HOURLY_V1", "qualification_oracle": "refet-0.4.2-asce"},
             "canonical_payload": {"snapshot_kind": "FUTURE_ET0_ASSUMPTION", "points": et0_points},
             "source_unit": "GFS_METEOROLOGICAL_INPUTS",
@@ -718,7 +767,7 @@ def command_decode_gfs(args: argparse.Namespace) -> None:
                 "authority_ref": AMENDMENT04_REF,
             },
             "source_binding_version": 1,
-            "limitations": ["MODEL_DERIVED_FORECAST_ASSUMPTION", "SFLUX_SOLAR_PIECEWISE_LINEAR_LIMITED"],
+            "limitations": et0_limitations,
         },
     ]
     Path(args.output).write_text(json.dumps({"drafts": drafts}, separators=(",", ":")) + "\n", encoding="utf-8")
@@ -836,12 +885,15 @@ def build_parser() -> argparse.ArgumentParser:
     probe_gfs.set_defaults(handler=command_probe_gfs)
     selftest_gfs = sub.add_parser("selftest-gfs-selection")
     selftest_gfs.set_defaults(handler=command_selftest_gfs_selection)
-    decode_gfs = sub.add_parser("decode-gfs")
-    decode_gfs.add_argument("--target", required=True)
-    decode_gfs.add_argument("--available-at", required=True)
-    decode_gfs.add_argument("--input", required=True)
-    decode_gfs.add_argument("--output", required=True)
-    decode_gfs.set_defaults(handler=command_decode_gfs)
+    selftest_et0_decimal = sub.add_parser("selftest-et0-decimal-normalization")
+    selftest_et0_decimal.set_defaults(handler=command_selftest_et0_decimal_normalization)
+    for command, normalize_et0 in (("decode-gfs", False), ("decode-gfs-v2", True)):
+        decode_gfs = sub.add_parser(command)
+        decode_gfs.add_argument("--target", required=True)
+        decode_gfs.add_argument("--available-at", required=True)
+        decode_gfs.add_argument("--input", required=True)
+        decode_gfs.add_argument("--output", required=True)
+        decode_gfs.set_defaults(handler=command_decode_gfs, normalize_et0=normalize_et0)
     decode_kbs = sub.add_parser("decode-kbs-late")
     decode_kbs.add_argument("--target", required=True)
     decode_kbs.add_argument("--available-at", required=True)
