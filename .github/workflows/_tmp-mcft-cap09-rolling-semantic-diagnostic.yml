@@ -4,6 +4,8 @@ on:
   push:
     branches: ['diag/mcft-cap09-rolling-semantic-hash-4e346']
     paths: ['.github/workflows/_tmp-mcft-cap09-rolling-semantic-diagnostic.yml']
+  pull_request:
+    paths: ['.github/workflows/_tmp-mcft-cap09-rolling-semantic-diagnostic.yml']
 
 permissions:
   contents: read
