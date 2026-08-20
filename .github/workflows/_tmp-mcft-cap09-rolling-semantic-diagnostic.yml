@@ -124,7 +124,7 @@ jobs:
                   record_type: record.record_type,
                   source_record_id: record.source_record_id,
                   record_semantic_sha256: result.record_semantic_sha256,
-                  identity_projection_sha256: semanticHashV1({ site_id: record.site_id, field_id: record.field_id, season_id: record.season_id, zone_id: record.zone_id, dataset_id: record.dataset_id, source_record_id: record.source_record_id, source_record_hash: record.source_record_hash, record_type: record.record_type, binding_id: record.binding_id, origin_source_kind: record.origin_source_kind, origin_source_id: record.origin_source_id, epistemic_class: record.epistemic_class, available_to_runtime_at: record.available_to_runtime_at }),
+                  identity_projection_sha256: semanticHashV1({ tenant_id: record.tenant_id, project_id: record.project_id, group_id: record.group_id, field_id: record.field_id, season_id: record.season_id, zone_id: record.zone_id, dataset_id: record.dataset_id, source_record_id: record.source_record_id, source_record_hash: record.source_record_hash, record_type: record.record_type, binding_id: record.binding_id, origin_source_kind: record.origin_source_kind, origin_source_id: record.origin_source_id, epistemic_class: record.epistemic_class, available_to_runtime_at: record.available_to_runtime_at }),
                   role_time_sha256: semanticHashV1(record.role_time),
                   quality_sha256: semanticHashV1(record.quality),
                   source_payload_sha256: semanticHashV1(record.source_payload),
