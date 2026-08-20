@@ -50,7 +50,7 @@ jobs:
           scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts
       - name: Prove real Formal runner composition without side effects
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts selftest
-      - name: Require live supervisor has no provider or R2 credentials and paginates NO-GO history
+      - name: Require live supervisor has no provider or R2 credentials, paginates NO-GO history, and persists missing-result NO-GO proof
         shell: bash
         run: |
           set -euo pipefail
@@ -59,6 +59,9 @@ jobs:
           ! grep -q 'TRANSIENT_S3_SECRET_ACCESS_KEY' <<<"$live_section"
           ! grep -q 'rolling-preboundary-capture' <<<"$live_section"
           grep -Fq 'github.paginate.iterator(github.rest.actions.listWorkflowRuns' <<<"$live_section"
+          grep -Fq 'RUNNER_RESULT_MISSING' <<<"$live_section"
+          grep -Fq 'formal_epoch_no_go:true' <<<"$live_section"
+          grep -Fq 'if-no-files-found: error' <<<"$live_section"
 
   live-cycle:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -219,14 +222,35 @@ jobs:
       - name: Classify terminal cycle result and freeze irreversible NO-GO state
         if: steps.evidence.outputs.runnable == 'true' && always()
         id: classify
+        env:
+          ARM_PATH: ${{ steps.evidence.outputs.arm_path }}
+          CYCLE_OUTCOME: ${{ steps.cycle.outcome }}
         shell: node {0}
         run: |
-          const fs=require('node:fs');const file='acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_RESULT_V1.json';
-          if(!fs.existsSync(file)){fs.appendFileSync(process.env.GITHUB_OUTPUT,'classification=NO-GO\nreason=RUNNER_RESULT_MISSING\n');process.exit(0);}
-          const p=JSON.parse(fs.readFileSync(file,'utf8'));
-          const noGo=p.status==='FAIL'||p.formal_epoch_no_go===true;
+          const fs=require('node:fs');
+          const file='acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_RESULT_V1.json';
+          const arm=JSON.parse(fs.readFileSync(process.env.ARM_PATH,'utf8'));
+          function freezeMetadataNoGo(failureClass,detail){
+            fs.mkdirSync('acceptance-output',{recursive:true});
+            fs.writeFileSync(file,JSON.stringify({
+              schema_version:'geox_mcft_cap09_amendment19_formal_v3_production_runner_result_v1',
+              status:'FAIL',subject_sha:process.env.MCFT_CAP09_SUBJECT_SHA,
+              arm_identity_hash:arm.arm_identity_hash,epoch_id:arm.epoch_id,
+              formal_database_name:arm.formal_database_name,cycle_started_at:new Date().toISOString(),
+              failure_class:failureClass,reason:detail,formal_epoch_no_go:true,
+              runner_result_missing_or_untrustworthy:true,database_mutation_state:'UNKNOWN_FAIL_CLOSED',
+              synthetic_scheduler_tick_written:false,store_reuse_authorized:false,late_evidence_can_repair_tick:false,
+              final_actual_24h_still_required:true,mcft_cap09_completed:false
+            },null,2)+'\n');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,`classification=NO-GO\nreason=${failureClass}\n`);
+          }
+          if(!fs.existsSync(file)){freezeMetadataNoGo('RUNNER_RESULT_MISSING','runner step produced no result file');process.exit(0);}
+          let p;
+          try{p=JSON.parse(fs.readFileSync(file,'utf8'));}catch(error){freezeMetadataNoGo('RUNNER_RESULT_INVALID_JSON',String(error));process.exit(0);}
+          const declaredNoGo=p.status==='FAIL'||p.formal_epoch_no_go===true;
+          if(process.env.CYCLE_OUTCOME!=='success'&&!declaredNoGo){freezeMetadataNoGo('RUNNER_STEP_FAILED_WITH_NON_NOGO_RESULT',`cycle_outcome=${process.env.CYCLE_OUTCOME};result_status=${String(p.status)}`);process.exit(0);}
           const inner=p.result?.status||p.failure_class||'UNKNOWN';
-          fs.appendFileSync(process.env.GITHUB_OUTPUT,`classification=${noGo?'NO-GO':'PASS'}\nreason=${inner}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`classification=${declaredNoGo?'NO-GO':'PASS'}\nreason=${inner}\n`);
 
       - name: Upload immutable cycle proof
         if: steps.evidence.outputs.runnable == 'true' && always()
@@ -234,7 +258,7 @@ jobs:
         with:
           name: mcft-cap09-am19-formal-cycle-${{ steps.classify.outputs.classification }}-${{ env.MCFT_CAP09_SUBJECT_SHA }}-${{ github.run_id }}
           path: acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_RESULT_V1.json
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 90
 
       - name: Preserve runner failure as workflow failure after proof upload
