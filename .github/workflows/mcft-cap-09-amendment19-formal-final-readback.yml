@@ -57,12 +57,14 @@ jobs:
           pnpm exec tsx scripts/runtime_acceptance/READBACK_MCFT_CAP_09_AMENDMENT_19_FORMAL_FINAL_V1.ts selftest
           pnpm exec tsx scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_AMENDMENT_19_FORMAL_DOWNSTREAM_ZERO_V1.ts selftest
           node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs selftest
-      - name: Require PR static path has no live credentials
+      - name: Require PR static path has no live credentials and final audit pagination is wired
         shell: bash
         run: |
           set -euo pipefail
           test -z "${DATABASE_URL:-}"
           test -z "${MCFT_CAP09_PARENT_DATABASE_URL:-}"
+          test "$(grep -Fc 'github.paginate.iterator(github.rest.actions.listWorkflowRuns' .github/workflows/mcft-cap-09-amendment19-formal-final-readback.yml)" -ge 2
+          grep -Fq 'mcft-cap09-am19-formal-cycle-NO-GO-${subject}-' .github/workflows/mcft-cap-09-amendment19-formal-final-readback.yml
 
   live-final:
     if: github.event_name != 'pull_request'
@@ -96,11 +98,12 @@ jobs:
             const subject = process.env.MCFT_CAP09_SUBJECT_SHA;
             const digestOk = v => /^sha256:[0-9a-f]{64}$/.test(String(v || ''));
             async function collect(workflow, prefix) {
-              const runs = await github.rest.actions.listWorkflowRuns({owner,repo,workflow_id:workflow,branch:'main',status:'completed',per_page:100});
               const found=[];
-              for(const run of runs.data.workflow_runs.filter(r=>r.head_sha===subject && r.conclusion==='success')){
-                const arts=await github.rest.actions.listWorkflowRunArtifacts({owner,repo,run_id:run.id,per_page:100});
-                for(const artifact of arts.data.artifacts){if(!artifact.expired&&artifact.name.startsWith(prefix))found.push({run,artifact});}
+              for await (const response of github.paginate.iterator(github.rest.actions.listWorkflowRuns,{owner,repo,workflow_id:workflow,branch:'main',status:'completed',per_page:100})) {
+                for(const run of response.data.workflow_runs.filter(r=>r.head_sha===subject && r.conclusion==='success')) {
+                  const arts=await github.rest.actions.listWorkflowRunArtifacts({owner,repo,run_id:run.id,per_page:100});
+                  for(const artifact of arts.data.artifacts) if(!artifact.expired&&artifact.name.startsWith(prefix)) found.push({run,artifact});
+                }
               }
               return found;
             }
@@ -210,13 +213,13 @@ jobs:
             const fs=require('node:fs'),path=require('node:path');const {owner,repo}=context.repo,subject=process.env.MCFT_CAP09_SUBJECT_SHA;
             fs.mkdirSync('hourly-zips',{recursive:true});fs.mkdirSync('audit-zips',{recursive:true});
             const digestOk=v=>/^sha256:[0-9a-f]{64}$/.test(String(v||''));
-            async function runs(workflow){const r=await github.rest.actions.listWorkflowRuns({owner,repo,workflow_id:workflow,branch:'main',status:'completed',per_page:100});return r.data.workflow_runs.filter(x=>x.head_sha===subject);}
+            async function runs(workflow){const found=[];for await(const response of github.paginate.iterator(github.rest.actions.listWorkflowRuns,{owner,repo,workflow_id:workflow,branch:'main',status:'completed',per_page:100}))found.push(...response.data.workflow_runs.filter(x=>x.head_sha===subject));return found;}
             async function arts(run){return (await github.rest.actions.listWorkflowRunArtifacts({owner,repo,run_id:run.id,per_page:100})).data.artifacts.filter(a=>!a.expired);}
             async function download(artifact,dir){const r=await github.rest.actions.downloadArtifact({owner,repo,artifact_id:artifact.id,archive_format:'zip'});fs.writeFileSync(path.join(dir,`${artifact.id}.zip`),Buffer.from(r.data));}
             const hourly=[];
             for(const run of await runs('.github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml'))for(const artifact of await arts(run))if(artifact.name.startsWith(`mcft-cap09-am19-formal-hourly-${subject}-`)){if(!digestOk(artifact.digest))throw new Error('AM19_FORMAL_FINAL_HOURLY_DIGEST_REQUIRED');hourly.push({workflow_run_id:run.id,workflow_completed_at:run.updated_at,artifact_id:artifact.id,artifact_name:artifact.name,artifact_digest:artifact.digest,conclusion:run.conclusion});await download(artifact,'hourly-zips');}
             const audit=[];
-            for(const workflow of ['.github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml','.github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml','.github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml'])for(const run of await runs(workflow))for(const artifact of await arts(run)){const relevant=artifact.name.startsWith(`mcft-cap09-am19-formal-a0-${subject}-`)||artifact.name.startsWith(`mcft-cap09-am19-formal-hourly-${subject}-`)||artifact.name.startsWith(`mcft-cap09-am19-formal-cycle-`)&&artifact.name.includes(`-${subject}-`);if(relevant){if(!digestOk(artifact.digest))throw new Error('AM19_FORMAL_FINAL_AUDIT_DIGEST_REQUIRED');audit.push({workflow_run_id:run.id,workflow_completed_at:run.updated_at,artifact_id:artifact.id,artifact_name:artifact.name,artifact_digest:artifact.digest,conclusion:run.conclusion});await download(artifact,'audit-zips');}}
+            for(const workflow of ['.github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml','.github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml','.github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml'])for(const run of await runs(workflow))for(const artifact of await arts(run)){const relevant=workflow.includes('formal-a0-bootstrap')?artifact.name.startsWith(`mcft-cap09-am19-formal-a0-${subject}-`):workflow.includes('formal-hourly-evidence')?artifact.name.startsWith(`mcft-cap09-am19-formal-hourly-${subject}-`):artifact.name.startsWith(`mcft-cap09-am19-formal-cycle-NO-GO-${subject}-`);if(relevant){if(!digestOk(artifact.digest))throw new Error('AM19_FORMAL_FINAL_AUDIT_DIGEST_REQUIRED');audit.push({workflow_run_id:run.id,workflow_completed_at:run.updated_at,artifact_id:artifact.id,artifact_name:artifact.name,artifact_digest:artifact.digest,conclusion:run.conclusion});await download(artifact,'audit-zips');}}
             const roots={arm:{workflow_run_id:Number(process.env.ARM_RUN_ID),workflow_completed_at:process.env.ARM_COMPLETED_AT,artifact_id:Number(process.env.ARM_ID),artifact_name:process.env.ARM_NAME,artifact_digest:process.env.ARM_DIGEST},a0:{workflow_run_id:Number(process.env.A0_RUN_ID),workflow_completed_at:process.env.A0_COMPLETED_AT,artifact_id:Number(process.env.A0_ID),artifact_name:process.env.A0_NAME,artifact_digest:process.env.A0_DIGEST}};
             fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARTIFACT_INVENTORY_V1.json',JSON.stringify({schema_version:'geox_mcft_cap09_amendment19_formal_artifact_inventory_v1',status:'PASS',subject_sha:subject,roots,hourly,audit},null,2)+'\n');
 
