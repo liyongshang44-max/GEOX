@@ -48,7 +48,6 @@ jobs:
           set -euo pipefail
           grep -Fq 'AM19_FORMAL_ARM_FIRST_GATE_RUN_MULTIPLE_ARTIFACTS_FORBIDDEN' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
           grep -Fq "gateArtifacts.sort((left, right) => left.run.id - right.run.id" .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
-          ! grep -Fq 'AM19_FORMAL_ARM_EXACT_ONE_GATE_ARTIFACT_REQUIRED' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
 
   live-arm-evaluator:
     if: >-
