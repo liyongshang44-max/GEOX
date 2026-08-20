@@ -50,7 +50,7 @@ jobs:
           scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts
       - name: Prove real Formal runner composition without side effects
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts selftest
-      - name: Require live supervisor has no provider or R2 credentials, paginates NO-GO history, and persists missing-result NO-GO proof only after cycle execution
+      - name: Require live supervisor has no provider or R2 credentials, propagates ingress/runner NO-GO, and persists missing-result proof only after cycle execution
         shell: bash
         run: |
           set -euo pipefail
@@ -59,6 +59,7 @@ jobs:
           ! grep -q 'TRANSIENT_S3_SECRET_ACCESS_KEY' <<<"$live_section"
           ! grep -q 'rolling-preboundary-capture' <<<"$live_section"
           grep -Fq 'github.paginate.iterator(github.rest.actions.listWorkflowRuns' <<<"$live_section"
+          grep -Fq 'mcft-cap09-am19-formal-hourly-${subject}-NO-GO-' <<<"$live_section"
           grep -Fq 'RUNNER_RESULT_MISSING' <<<"$live_section"
           grep -Fq 'formal_epoch_no_go:true' <<<"$live_section"
           grep -Fq 'if-no-files-found: error' <<<"$live_section"
@@ -111,7 +112,9 @@ jobs:
               return found;
             }
 
-            const noGo = await artifacts('.github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml', `mcft-cap09-am19-formal-cycle-NO-GO-${subject}-`);
+            const runnerNoGo = await artifacts('.github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml', `mcft-cap09-am19-formal-cycle-NO-GO-${subject}-`);
+            const hourlyNoGo = await artifacts('.github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml', `mcft-cap09-am19-formal-hourly-${subject}-NO-GO-`);
+            const noGo = [...runnerNoGo, ...hourlyNoGo];
             if (noGo.length > 0) {
               if (noGo.length > 1) core.warning(`multiple retained NO-GO proofs: ${noGo.length}`);
               noGo.sort((left, right) => left.run.id - right.run.id || left.artifact.id - right.artifact.id);
