@@ -7,6 +7,7 @@ on:
       - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'
+      - 'apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts'
   workflow_run:
     workflows: ['mcft-cap-09-rolling-preboundary-capture']
     types: [completed]
@@ -23,7 +24,6 @@ env:
   NODE_VERSION: '20.11.1'
   PNPM_VERSION: '9.15.4'
   PYTHON_VERSION: '3.12'
-  EXACT_PREDECESSOR_MAIN: '24a1b5d957e042a0a92543ca2d9742901a22d453'
   LOCAL_REHYDRATION_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
 
 jobs:
@@ -40,15 +40,19 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Require exact predecessor and one-file environment-binding repair boundary
+      - name: Require exact current protected-main base and shared-manifest qualification boundary
         shell: bash
         run: |
           set -euo pipefail
-          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PREDECESSOR_MAIN" || { echo 'AM19_P24_EXACT_BASE_REQUIRED' >&2; exit 1; }
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
-          mapfile -t changed < <(git diff --name-only "$EXACT_PREDECESSOR_MAIN" "$SUBJECT_SHA" | sort)
-          test "${#changed[@]}" -eq 1 || { printf 'AM19_P24_EXACT_ONE_FILE_BINDING_REPAIR_REQUIRED\n%s\n' "${changed[*]}" >&2; exit 1; }
-          test "${changed[0]}" = '.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml'
+          git fetch --no-tags origin main
+          base_sha='${{ github.event.pull_request.base.sha }}'
+          test "$base_sha" = "$(git rev-parse origin/main)" || { echo 'AM19_P24_PR_BASE_MUST_EQUAL_CURRENT_PROTECTED_MAIN' >&2; exit 1; }
+          changed=$(git diff --name-only "$base_sha" "$SUBJECT_SHA")
+          grep -Fxq 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts' <<<"$changed" || { echo 'AM19_P24_SUCCESSOR_QUALIFICATION_REFACTOR_REQUIRED' >&2; exit 1; }
+          grep -Fxq 'apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts' <<<"$changed" || { echo 'AM19_P24_SHARED_MANIFEST_BUILDER_CHANGE_REQUIRED' >&2; exit 1; }
+          grep -Fq 'buildExternalFormalAmendment19WindowManifestV1' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
+          ! grep -Fq 'MCFT_CAP09_AM19_ACCELERATED_PERSISTENT24_MANIFEST_V1' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
 
       - uses: pnpm/action-setup@v4
         with:
@@ -66,6 +70,7 @@ jobs:
           set -euo pipefail
           pnpm --filter @geox/server run typecheck
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts \
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts \
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
 
