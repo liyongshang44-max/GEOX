@@ -50,7 +50,7 @@ jobs:
           scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts
       - name: Prove real Formal runner composition without side effects
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts selftest
-      - name: Require live supervisor has no provider or R2 credentials, paginates NO-GO history, and persists missing-result NO-GO proof
+      - name: Require live supervisor has no provider or R2 credentials, paginates NO-GO history, and persists missing-result NO-GO proof only after cycle execution
         shell: bash
         run: |
           set -euo pipefail
@@ -62,6 +62,7 @@ jobs:
           grep -Fq 'RUNNER_RESULT_MISSING' <<<"$live_section"
           grep -Fq 'formal_epoch_no_go:true' <<<"$live_section"
           grep -Fq 'if-no-files-found: error' <<<"$live_section"
+          grep -Fq "steps.cycle.outcome != 'skipped'" <<<"$live_section"
 
   live-cycle:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -220,7 +221,7 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts cycle
 
       - name: Classify terminal cycle result and freeze irreversible NO-GO state
-        if: steps.evidence.outputs.runnable == 'true' && always()
+        if: steps.evidence.outputs.runnable == 'true' && always() && steps.cycle.outcome != 'skipped'
         id: classify
         env:
           ARM_PATH: ${{ steps.evidence.outputs.arm_path }}
@@ -253,7 +254,7 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT,`classification=${declaredNoGo?'NO-GO':'PASS'}\nreason=${inner}\n`);
 
       - name: Upload immutable cycle proof
-        if: steps.evidence.outputs.runnable == 'true' && always()
+        if: steps.evidence.outputs.runnable == 'true' && always() && steps.cycle.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-am19-formal-cycle-${{ steps.classify.outputs.classification }}-${{ env.MCFT_CAP09_SUBJECT_SHA }}-${{ github.run_id }}
@@ -262,7 +263,7 @@ jobs:
           retention-days: 90
 
       - name: Preserve runner failure as workflow failure after proof upload
-        if: steps.evidence.outputs.runnable == 'true' && steps.cycle.outcome != 'success'
+        if: steps.evidence.outputs.runnable == 'true' && steps.cycle.outcome != 'success' && steps.cycle.outcome != 'skipped'
         run: |
           echo "AM19_FORMAL_LIVE_CYCLE_FAILED:${{ steps.classify.outputs.reason }}" >&2
           exit 1
