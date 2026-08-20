@@ -42,6 +42,13 @@ jobs:
           ! grep -q 'DATABASE_URL' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
           ! grep -q 'GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
           ! grep -qE '^  (contents|actions): write$' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
+      - name: Require immutable first-gate duplicate handling is wired
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'AM19_FORMAL_ARM_FIRST_GATE_RUN_MULTIPLE_ARTIFACTS_FORBIDDEN' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
+          grep -Fq "gateArtifacts.sort((left, right) => left.run.id - right.run.id" .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
+          ! grep -Fq 'AM19_FORMAL_ARM_EXACT_ONE_GATE_ARTIFACT_REQUIRED' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
 
   live-arm-evaluator:
     if: >-
@@ -71,7 +78,7 @@ jobs:
           git fetch --no-tags origin main
           test "$(git rev-parse origin/main)" = "$SUBJECT_SHA" || { echo 'AM19_FORMAL_ARM_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
 
-      - name: Resolve unique gate, triggering rolling artifact, and prior active arm
+      - name: Resolve immutable first gate, triggering rolling artifact, and prior active arm
         id: resolve
         uses: actions/github-script@v7
         with:
@@ -143,14 +150,27 @@ jobs:
               core.setOutput('gate_found', 'false');
               return;
             }
-            if (gateArtifacts.length !== 1) throw new Error(`AM19_FORMAL_ARM_EXACT_ONE_GATE_ARTIFACT_REQUIRED:${gateArtifacts.length}`);
-            const gate = gateArtifacts[0];
-            if (!digestOk(gate.artifact.digest)) throw new Error('AM19_FORMAL_ARM_GATE_ARTIFACT_DIGEST_REQUIRED');
+            for (const item of gateArtifacts) {
+              if (!digestOk(item.artifact.digest)) throw new Error('AM19_FORMAL_ARM_GATE_ARTIFACT_DIGEST_REQUIRED');
+            }
+            gateArtifacts.sort((left, right) => left.run.id - right.run.id || left.artifact.id - right.artifact.id);
+            const firstGateRunId = gateArtifacts[0].run.id;
+            const firstRunArtifacts = gateArtifacts.filter(item => item.run.id === firstGateRunId);
+            if (firstRunArtifacts.length !== 1) throw new Error(`AM19_FORMAL_ARM_FIRST_GATE_RUN_MULTIPLE_ARTIFACTS_FORBIDDEN:${firstRunArtifacts.length}`);
+            const gate = firstRunArtifacts[0];
+            core.info(JSON.stringify({
+              schema_version: 'geox_mcft_cap09_amendment19_formal_first_gate_selection_v1',
+              subject_sha: subject,
+              selected_first_gate_run_id: gate.run.id,
+              observed_gate_artifact_count: gateArtifacts.length,
+              ignored_later_read_only_gate_artifact_count: gateArtifacts.length - 1,
+            }));
             core.setOutput('gate_found', 'true');
             core.setOutput('gate_run_id', String(gate.run.id));
             core.setOutput('gate_artifact_id', String(gate.artifact.id));
             core.setOutput('gate_artifact_name', gate.artifact.name);
             core.setOutput('gate_artifact_digest', gate.artifact.digest);
+            core.setOutput('observed_gate_artifact_count', String(gateArtifacts.length));
 
       - name: Record normal no-arm when gate is not yet open
         if: steps.resolve.outputs.already_armed != 'true' && steps.resolve.outputs.gate_found != 'true'
@@ -189,7 +209,7 @@ jobs:
             formal_o00_started:false,mcft_cap09_completed:false
           },null,2)+'\n');
 
-      - name: Download unique exact-subject gate artifact
+      - name: Download immutable first exact-subject gate artifact
         if: steps.resolve.outputs.gate_found == 'true' && steps.resolve.outputs.already_armed != 'true'
         uses: actions/download-artifact@v4
         with:
