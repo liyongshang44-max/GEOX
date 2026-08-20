@@ -1,9 +1,7 @@
 name: tmp-mcft-cap09-formal-workflow-id-normalize
 
 on:
-  push:
-    branches:
-      - feat/mcft-cap09-am19-formal-successor-v1
+  pull_request:
     paths:
       - '.github/workflows/_tmp-mcft-cap09-formal-workflow-id-normalize.yml'
 
@@ -12,6 +10,7 @@ permissions:
 
 jobs:
   normalize:
+    if: github.event.pull_request.head.ref == 'feat/mcft-cap09-am19-formal-successor-v1'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -60,5 +59,3 @@ jobs:
           git diff --cached --check
           git commit -m 'MCFT-CAP-09: normalize Formal workflow REST identifiers'
           git push origin HEAD:feat/mcft-cap09-am19-formal-successor-v1
-
-# trigger-existing-helper-v2
