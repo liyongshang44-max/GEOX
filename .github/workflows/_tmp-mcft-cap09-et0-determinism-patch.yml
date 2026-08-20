@@ -1,0 +1,177 @@
+name: tmp-mcft-cap09-et0-determinism-patch
+
+on:
+  push:
+    branches: ['fix/mcft-cap09-et0-deterministic-canonicalization']
+    paths: ['.github/workflows/_tmp-mcft-cap09-et0-determinism-patch.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/mcft-cap09-et0-deterministic-canonicalization
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Apply exact ET0 canonicalization and dependency-wiring patch
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, code: str) -> str:
+              if text.count(old) != 1:
+                  raise RuntimeError(f"{code}:{text.count(old)}")
+              return text.replace(old, new, 1)
+
+          canonicalizer = Path('apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts')
+          s = canonicalizer.read_text()
+          anchor = '''function rawSha256(bytes: Uint8Array): string {
+            return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+          }
+
+          function validateScope(scope: TwinScopeKeyV1): TwinScopeKeyV1 {'''
+          inserted = '''function rawSha256(bytes: Uint8Array): string {
+            return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+          }
+
+          export const MCFT_CAP09_ET0_CANONICAL_NUMERIC_SERIALIZATION_V1 = {
+            rule_id: "MCFT_CAP09_ET0_MM_PER_HOUR_DECIMAL_9_FIXED_V1",
+            decimal_places: 9,
+            measurement_precision_claim: false,
+          } as const;
+
+          export function normalizeMcftCap09Et0CanonicalNumberV1(value: unknown): number {
+            requireCondition(typeof value === "number" && Number.isFinite(value), "EA3_ET0_CANONICAL_NUMBER_FINITE_REQUIRED");
+            const normalized = Number(value.toFixed(MCFT_CAP09_ET0_CANONICAL_NUMERIC_SERIALIZATION_V1.decimal_places));
+            requireCondition(Number.isFinite(normalized), "EA3_ET0_CANONICAL_NUMBER_NORMALIZATION_FAILED");
+            return Object.is(normalized, -0) ? 0 : normalized;
+          }
+
+          function normalizeEt0CanonicalPayloadV1(
+            role: McftCap09ExternalEvidenceRoleV1,
+            payload: Record<string, unknown>,
+          ): Record<string, unknown> {
+            if (role === "HISTORICAL_ET0_INPUT") {
+              return { ...payload, value: normalizeMcftCap09Et0CanonicalNumberV1(payload.value) };
+            }
+            if (role === "FUTURE_ET0_ASSUMPTION") {
+              requireCondition(Array.isArray(payload.points), "EA3_FUTURE_ET0_POINTS_REQUIRED");
+              return {
+                ...payload,
+                points: payload.points.map((point, index) => {
+                  requireCondition(point !== null && typeof point === "object" && !Array.isArray(point), `EA3_FUTURE_ET0_POINT_OBJECT_REQUIRED:${index}`);
+                  const record = point as Record<string, unknown>;
+                  return {
+                    ...record,
+                    et0_mm_per_hour: normalizeMcftCap09Et0CanonicalNumberV1(record.et0_mm_per_hour),
+                  };
+                }),
+              };
+            }
+            return { ...payload };
+          }
+
+          function validateScope(scope: TwinScopeKeyV1): TwinScopeKeyV1 {'''
+          s = replace_once(s, anchor, inserted, 'CANONICALIZER_NORMALIZER_INSERT')
+          s = replace_once(
+              s,
+              '  const canonicalPayloadSha256 = semanticHashV1(input.draft.canonical_payload);',
+              '  const canonicalPayload = normalizeEt0CanonicalPayloadV1(input.draft.role, input.draft.canonical_payload);\n  const canonicalPayloadSha256 = semanticHashV1(canonicalPayload);',
+              'CANONICALIZER_PAYLOAD_HASH',
+          )
+          quality_old = '''    quality: {
+              ...input.draft.quality,
+              canonical_payload_sha256: canonicalPayloadSha256,'''
+          quality_new = '''    quality: {
+              ...input.draft.quality,
+              ...(input.draft.role === "HISTORICAL_ET0_INPUT" || input.draft.role === "FUTURE_ET0_ASSUMPTION" ? {
+                et0_canonical_numeric_serialization_rule: MCFT_CAP09_ET0_CANONICAL_NUMERIC_SERIALIZATION_V1.rule_id,
+                et0_canonical_numeric_serialization_decimal_places: MCFT_CAP09_ET0_CANONICAL_NUMERIC_SERIALIZATION_V1.decimal_places,
+                et0_canonical_numeric_serialization_is_measurement_precision: MCFT_CAP09_ET0_CANONICAL_NUMERIC_SERIALIZATION_V1.measurement_precision_claim,
+              } : {}),
+              canonical_payload_sha256: canonicalPayloadSha256,'''
+          s = replace_once(s, quality_old, quality_new, 'CANONICALIZER_QUALITY_METADATA')
+          s = replace_once(s, '    canonical_payload: { ...input.draft.canonical_payload },', '    canonical_payload: canonicalPayload,', 'CANONICALIZER_RECORD_PAYLOAD')
+          canonicalizer.write_text(s)
+
+          rolling = Path('.github/workflows/mcft-cap-09-rolling-preboundary-capture.yml')
+          s = rolling.read_text()
+          provider_line = "      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'"
+          if s.count(provider_line) != 2:
+              raise RuntimeError(f'ROLLING_PROVIDER_PATH_CARDINALITY:{s.count(provider_line)}')
+          pr_block = provider_line + "\n      - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'\n      - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'\n      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'\n      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_ET0_CANONICAL_NUMERIC_STABILITY_V1.ts'"
+          push_block = provider_line + "\n      - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'\n      - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'\n      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'"
+          s = s.replace(provider_line, pr_block, 1)
+          s = s.replace(provider_line, push_block, 1)
+          rolling.write_text(s)
+
+          p24 = Path('.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml')
+          s = p24.read_text()
+          rehyd_line = "      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'"
+          path_block = rehyd_line + "\n      - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'\n      - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'\n      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py'\n      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_ET0_CANONICAL_NUMERIC_STABILITY_V1.ts'"
+          s = replace_once(s, rehyd_line, path_block, 'P24_DEPENDENCY_PATHS')
+          stale = '''          changed=$(git diff --name-only "$base_sha" "$SUBJECT_SHA")
+                    grep -Fxq 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts' <<<"$changed" || { echo 'AM19_P24_SUCCESSOR_QUALIFICATION_REFACTOR_REQUIRED' >&2; exit 1; }
+                    grep -Fxq 'apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts' <<<"$changed" || { echo 'AM19_P24_SHARED_MANIFEST_BUILDER_CHANGE_REQUIRED' >&2; exit 1; }
+                    grep -Fq 'buildExternalFormalAmendment19WindowManifestV1' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'''
+          steady = '''          changed=$(git diff --name-only "$base_sha" "$SUBJECT_SHA")
+                    test -n "$changed" || { echo 'AM19_P24_PR_CHANGED_FILE_REQUIRED' >&2; exit 1; }
+                    grep -Fq 'buildExternalFormalAmendment19WindowManifestV1' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'''
+          s = replace_once(s, stale, steady, 'P24_STALE_SUCCESSOR_GUARD')
+          type_anchor = '''            apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts \\
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts \\
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'''
+          type_new = '''            apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts \\
+            apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts \\
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts \\
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts \\
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_ET0_CANONICAL_NUMERIC_STABILITY_V1.ts'''
+          s = replace_once(s, type_anchor, type_new, 'P24_FOCUSED_TYPECHECK')
+          self_anchor = '''          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts selftest
+                    pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts selftest'''
+          self_new = '''          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts selftest
+                    pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_ET0_CANONICAL_NUMERIC_STABILITY_V1.ts
+                    pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts selftest'''
+          s = replace_once(s, self_anchor, self_new, 'P24_ET0_SELFTEST_WIRING')
+          p24.write_text(s)
+
+      - name: Install and validate exact focused patch
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_ET0_CANONICAL_NUMERIC_STABILITY_V1.ts
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_ET0_CANONICAL_NUMERIC_STABILITY_V1.ts
+          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts selftest
+          git diff --check
+      - name: Commit validated patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short
+          changed=$(git diff --name-only)
+          test "$(wc -l <<<"$changed" | tr -d ' ')" = 3
+          grep -Fxq 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts' <<<"$changed"
+          grep -Fxq '.github/workflows/mcft-cap-09-rolling-preboundary-capture.yml' <<<"$changed"
+          grep -Fxq '.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml' <<<"$changed"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts \
+            .github/workflows/mcft-cap-09-rolling-preboundary-capture.yml \
+            .github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml
+          git commit -m 'fix(mcft-cap09): stabilize ET0 canonical numeric identity'
+          git push origin HEAD:fix/mcft-cap09-et0-deterministic-canonicalization
