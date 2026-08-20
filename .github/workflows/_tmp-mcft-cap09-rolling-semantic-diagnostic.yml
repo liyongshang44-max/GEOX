@@ -1,0 +1,127 @@
+name: tmp-mcft-cap09-rolling-semantic-diagnostic
+
+on:
+  push:
+    branches: ['diag/mcft-cap09-rolling-semantic-hash-4e346']
+    paths:
+      - '.github/workflows/_tmp-mcft-cap09-rolling-semantic-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  SUBJECT_SHA: 4e3460656e52166a63c7276e5e70de247f71c4b7
+  ROLLING_RUN_ID: '32371029955'
+  ROLLING_ARTIFACT_NAME: mcft-cap09-rolling-preboundary-20260820t140000z-4e3460656e52166a63c7276e5e70de247f71c4b7
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  LOCAL_DB: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+  MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+  MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+  MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+  MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+  MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout exact failed qualification subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          persist-credentials: false
+
+      - name: Require diagnostic is read-only and exact-subject bound
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          test -z "${MCFT_CAP09_PARENT_DATABASE_URL:-}"
+          for name in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
+            test -n "${!name:-}" || { echo "DIAG_SECRET_REQUIRED:${name}" >&2; exit 1; }
+          done
+
+      - name: Download exact rolling candidate artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.ROLLING_RUN_ID }}
+          name: ${{ env.ROLLING_ARTIFACT_NAME }}
+          path: rolling-candidate
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+          python -m eccodes selfcheck
+
+      - name: Patch workspace only to emit hash-only semantic diff
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p='scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts';
+          let s=fs.readFileSync(p,'utf8');
+          const old='if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");';
+          const neu='if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) { console.error(JSON.stringify({schema_version:"mcft_cap09_rolling_semantic_hash_diagnostic_v1",actual:semanticRows(actual),expected},null,2)); throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH"); }';
+          if(!s.includes(old)) throw new Error('DIAG_PATCH_TARGET_NOT_FOUND');
+          s=s.replace(old,neu);
+          fs.writeFileSync(p,s);
+
+      - name: Rehydrate exact retained raw and emit hash-only mismatch
+        id: replay
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          env \
+            GITHUB_EVENT_NAME=workflow_run \
+            GITHUB_REF=refs/heads/main \
+            GITHUB_SHA="$SUBJECT_SHA" \
+            MCFT_CAP09_CONSUMER_SUBJECT_SHA="$SUBJECT_SHA" \
+            MCFT_CAP09_ROLLING_CANDIDATE_PATH="$GITHUB_WORKSPACE/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json" \
+            MCFT_CAP09_ROLLING_REHYDRATION_ISOLATED_DB_ACK=true \
+            DATABASE_URL="$LOCAL_DB" \
+            PYTHON=python \
+            pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts run
+
+      - name: Require diagnostic reproduced semantic mismatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test '${{ steps.replay.outcome }}' = 'failure' || { echo 'DIAG_EXPECTED_MISMATCH_NOT_REPRODUCED' >&2; exit 1; }
