@@ -110,7 +110,7 @@ jobs:
               owner, repo,
               workflow_id: '.github/workflows/mcft-cap-09-amendment19-formal-arm.yml',
               branch: 'main', status: 'success', per_page: 100,
-            })) priorArmRuns.push(...response.data.workflow_runs);
+            })) priorArmRuns.push(...response.data);
             const existingArmArtifacts = [];
             for (const run of priorArmRuns.filter(r => r.id !== Number(process.env.GITHUB_RUN_ID) && r.head_sha === subject)) {
               const artifacts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: run.id, per_page: 100 });
@@ -138,7 +138,7 @@ jobs:
               owner, repo,
               workflow_id: '.github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml',
               branch: 'main', status: 'success', per_page: 100,
-            })) gateRuns.push(...response.data.workflow_runs);
+            })) gateRuns.push(...response.data);
             const gateArtifacts = [];
             for (const run of gateRuns.filter(r => r.head_sha === subject)) {
               const artifacts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: run.id, per_page: 100 });
