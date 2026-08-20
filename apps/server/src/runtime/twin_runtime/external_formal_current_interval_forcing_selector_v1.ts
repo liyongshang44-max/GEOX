@@ -153,6 +153,7 @@ function normalizeExactProviderRecordV1(input: {
   const end = canonicalIsoV1(input.record.role_time?.interval_end, `AMENDMENT19_EXACT_${input.kind}_INTERVAL_END_INVALID`);
   if (start !== input.interval_start || end !== input.logical_time) return null;
   const { available_at: availableAt, ingested_at: ingestedAt } = validateCausalTimesV1(input.record, `AMENDMENT19_EXACT_${input.kind}`);
+  if (Date.parse(end) > Date.parse(availableAt)) throw new Error(`AMENDMENT19_EXACT_${input.kind}_CAUSAL_ORDER_INVALID`);
   if (Date.parse(availableAt) > Date.parse(input.evidence_snapshot_time)
     || Date.parse(ingestedAt) > Date.parse(input.evidence_snapshot_time)) return null;
   requiredTextV1(input.record.source_record_id, `AMENDMENT19_EXACT_${input.kind}_SOURCE_REF_REQUIRED`);
@@ -197,6 +198,7 @@ function normalizeAssumptionV1(input: {
   const roleAvailable = canonicalIsoV1(input.record.role_time?.available_to_runtime_at, `AMENDMENT19_ASSUMPTION_${kind}_ROLE_AVAILABLE_AT_INVALID`);
   const { available_at: availableAt, ingested_at: ingestedAt } = validateCausalTimesV1(input.record, `AMENDMENT19_ASSUMPTION_${kind}`);
   if (roleAvailable !== availableAt) throw new Error(`AMENDMENT19_ASSUMPTION_${kind}_AVAILABILITY_MISMATCH`);
+  if (Date.parse(issuedAt) > Date.parse(availableAt)) throw new Error(`AMENDMENT19_ASSUMPTION_${kind}_CAUSAL_ORDER_INVALID`);
   const validFrom = canonicalHourV1(input.record.role_time?.valid_from, `AMENDMENT19_ASSUMPTION_${kind}_VALID_FROM_INVALID`);
   const validTo = canonicalHourV1(input.record.role_time?.valid_to, `AMENDMENT19_ASSUMPTION_${kind}_VALID_TO_INVALID`);
   if (validFrom !== input.base_logical_time || validTo !== addHoursV1(input.base_logical_time, 72)) return null;

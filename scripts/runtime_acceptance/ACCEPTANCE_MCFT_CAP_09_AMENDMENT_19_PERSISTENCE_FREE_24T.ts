@@ -381,15 +381,15 @@ function candidatesForTick(logicalTime: string, index: number): CanonicalReplayE
   ];
   if (index === 6) {
     records.push(
-      exactRecord({ kind: "rainfall", logicalTime, sourceId: "am19_mode_a_rain", value: 0.8, availableAt: addMinutes(logicalTime, -1) }),
-      exactRecord({ kind: "et0", logicalTime, sourceId: "am19_mode_a_et0", value: 0.13, availableAt: addMinutes(logicalTime, -1) }),
+      exactRecord({ kind: "rainfall", logicalTime, sourceId: "am19_mode_a_rain", value: 0.8, availableAt: logicalTime }),
+      exactRecord({ kind: "et0", logicalTime, sourceId: "am19_mode_a_et0", value: 0.13, availableAt: logicalTime }),
     );
   }
   if (index === 9) {
-    records.push(exactRecord({ kind: "rainfall", logicalTime, sourceId: "am19_partial_rain_only", value: 0.4, availableAt: addMinutes(logicalTime, -1) }));
+    records.push(exactRecord({ kind: "rainfall", logicalTime, sourceId: "am19_partial_rain_only", value: 0.4, availableAt: logicalTime }));
   }
   if (index === 10) {
-    records.push(exactRecord({ kind: "et0", logicalTime, sourceId: "am19_partial_et0_only", value: 0.11, availableAt: addMinutes(logicalTime, -1) }));
+    records.push(exactRecord({ kind: "et0", logicalTime, sourceId: "am19_partial_et0_only", value: 0.11, availableAt: logicalTime }));
   }
   if (index === 11) {
     records.push(

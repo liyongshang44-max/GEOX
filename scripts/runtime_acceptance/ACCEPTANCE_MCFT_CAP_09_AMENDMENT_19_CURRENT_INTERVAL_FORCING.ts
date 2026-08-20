@@ -183,8 +183,8 @@ function main(): void {
   const exactT = addHours(FIRST_T, 30);
   const exact = select(exactT, [
     ...priorPair(exactT, 100),
-    exactRecord({ kind: "rainfall", logicalTime: exactT, sourceId: "am19_exact_rain", value: 0.8, availableAt: addMinutes(exactT, -1) }),
-    exactRecord({ kind: "et0", logicalTime: exactT, sourceId: "am19_exact_et0", value: 0.13, availableAt: addMinutes(exactT, -1) }),
+    exactRecord({ kind: "rainfall", logicalTime: exactT, sourceId: "am19_exact_rain", value: 0.8, availableAt: exactT }),
+    exactRecord({ kind: "et0", logicalTime: exactT, sourceId: "am19_exact_et0", value: 0.13, availableAt: exactT }),
   ]);
   assert.equal(exact.mode, "EXACT_PROVIDER_INTERVAL_PAIR");
   assert.equal(exact.runtime_health, "HEALTHY");
@@ -192,6 +192,16 @@ function main(): void {
   assert.equal(exact.et0_epistemic_class, "ESTIMATED");
   assert.equal(exact.exact_provider_pair_available, true);
   assert.equal(exact.provider_wait_required, false);
+
+  const impossibleExactT = addHours(FIRST_T, 30);
+  expectThrows(
+    () => select(impossibleExactT, [
+      ...priorPair(impossibleExactT, 106),
+      exactRecord({ kind: "rainfall", logicalTime: impossibleExactT, sourceId: "am19_impossible_rain", value: 0.8, availableAt: addMinutes(impossibleExactT, -1) }),
+      exactRecord({ kind: "et0", logicalTime: impossibleExactT, sourceId: "am19_impossible_et0", value: 0.13, availableAt: impossibleExactT }),
+    ]),
+    "AMENDMENT19_EXACT_RAINFALL_CAUSAL_ORDER_INVALID",
+  );
 
   const lateT = addHours(FIRST_T, 31);
   const lateExact = [
@@ -206,7 +216,7 @@ function main(): void {
   assert.equal(atBoundary.completed_tick_retroactive_rewrite_authorized, false);
 
   const partialT = addHours(FIRST_T, 32);
-  const partialRain = exactRecord({ kind: "rainfall", logicalTime: partialT, sourceId: "am19_partial_rain", value: 0.4, availableAt: addMinutes(partialT, -1) });
+  const partialRain = exactRecord({ kind: "rainfall", logicalTime: partialT, sourceId: "am19_partial_rain", value: 0.4, availableAt: partialT });
   const partial = select(partialT, [...priorPair(partialT, 102), partialRain]);
   assert.equal(partial.mode, "PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR");
   assert.deepEqual(partial.partial_exact_provider_refs_suppressed, ["am19_partial_rain"]);
@@ -223,6 +233,13 @@ function main(): void {
     "AMENDMENT19_NO_CAUSAL_CURRENT_INTERVAL_FORCING_PAIR",
   );
 
+  const impossibleAssumptionT = addHours(FIRST_T, 35);
+  const impossibleAssumptionBase = addHours(impossibleAssumptionT, -1);
+  expectThrows(
+    () => select(impossibleAssumptionT, priorPair(impossibleAssumptionT, 105, { availableAt: addMinutes(impossibleAssumptionBase, -31) })),
+    "AMENDMENT19_ASSUMPTION_WEATHER_CAUSAL_ORDER_INVALID",
+  );
+
   const output = {
     schema_version: "geox_mcft_cap09_amendment19_current_interval_forcing_result_v1",
     status: "PASS",
@@ -236,6 +253,8 @@ function main(): void {
     partial_exact_pair_mixing_forbidden: partial.mode === "PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR" && partial.partial_exact_provider_refs_suppressed.length === 1,
     signed_et0_projection_preserved: negativeEt0.reference_et0_canonical_signed_mm === -0.02 && negativeEt0.reference_et0_model_water_loss_demand_mm === 0,
     noncausal_assumption_pair_fail_closed: true,
+    noncausal_exact_event_time_fail_closed: true,
+    noncausal_assumption_publication_order_fail_closed: true,
     deterministic_selection_hash_proved: deterministicRepeat.selection_hash === atBoundary.selection_hash,
     database_write_count: 0,
     provider_request_count: 0,
