@@ -1,0 +1,45 @@
+name: tmp-mcft-cap09-pr3232-exact-head-validation
+
+on:
+  push:
+    branches:
+      - validation/mcft-cap09-pr3232-exact-head
+
+permissions:
+  contents: read
+
+jobs:
+  exact-head-focused-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact PR 3232 head
+        uses: actions/checkout@v4
+        with:
+          ref: 9c26b097e85ea7612766c82b320a3137a1c1dd53
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "9c26b097e85ea7612766c82b320a3137a1c1dd53"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Current-interval forcing focused proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CURRENT_INTERVAL_FORCING.ts
+
+      - name: Persistence-free canonical 24T focused proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.ts
