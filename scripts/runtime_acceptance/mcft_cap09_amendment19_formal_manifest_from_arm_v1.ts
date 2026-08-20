@@ -14,6 +14,7 @@ import {
   MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V2,
   materializeExternalFormalA18CropContextV2,
 } from "../../apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v2.js";
+import type { ExternalFormalV3Am19WindowManifestV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.js";
 
 export const MCFT_CAP09_AM19_FORMAL_DATABASE_V3 = "geox_mcft_cap09_s6_formal_t3r1_24h_v3" as const;
 export const MCFT_CAP09_AM19_FAILED_FORMAL_DATABASE_V2 = "geox_mcft_cap09_s6_formal_t3r1_24h_v2" as const;
@@ -47,7 +48,7 @@ export type McftCap09Am19FormalArmV1 = {
 export type BuiltMcftCap09Am19FormalManifestV1 = {
   arm: McftCap09Am19FormalArmV1;
   bundle: ExternalFormalPrewindowAuthorityBundleV3;
-  manifest: ExternalFormalAmendment19WindowManifestV1;
+  manifest: ExternalFormalAmendment19WindowManifestV1 & ExternalFormalV3Am19WindowManifestV1;
   crop_authority: Record<string, unknown>;
   configuration_matrix: Record<string, unknown>;
 };
@@ -85,7 +86,7 @@ export function validateMcftCap09Am19FormalArmV1(arm: McftCap09Am19FormalArmV1, 
   }
   const subject = exactSubject(arm.subject_sha);
   if (expectedSubject !== undefined && subject !== exactSubject(expectedSubject)) throw new Error("AM19_FORMAL_MANIFEST_ARM_SUBJECT_MISMATCH");
-  if (arm.formal_database_name !== MCFT_CAP09_AM19_FORMAL_DATABASE_V3 || arm.formal_database_name === MCFT_CAP09_AM19_FAILED_FORMAL_DATABASE_V2) {
+  if (arm.formal_database_name !== MCFT_CAP09_AM19_FORMAL_DATABASE_V3) {
     throw new Error("AM19_FORMAL_MANIFEST_FRESH_V3_DATABASE_REQUIRED");
   }
   const a0 = canonicalIso(arm.a0, "AM19_FORMAL_MANIFEST_A0_INVALID");
@@ -150,10 +151,11 @@ export function buildMcftCap09Am19FormalManifestFromArmV1(input: {
     crop_context_materialization_pins: materializationPins,
   });
   validateExternalFormalAmendment19WindowManifestV1(manifest, arm.subject_sha);
+  const productionManifest = manifest as unknown as ExternalFormalAmendment19WindowManifestV1 & ExternalFormalV3Am19WindowManifestV1;
   return {
     arm,
     bundle,
-    manifest,
+    manifest: productionManifest,
     crop_authority: input.crop_authority,
     configuration_matrix: input.configuration_matrix,
   };
