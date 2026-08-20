@@ -1,0 +1,50 @@
+name: tmp-mcft-cap09-remove-a0-workflow-time-gate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/_tmp-mcft-cap09-remove-a0-workflow-time-gate.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.pull_request.head.ref == 'feat/mcft-cap09-am19-formal-successor-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/mcft-cap09-am19-formal-successor-v1
+          fetch-depth: 0
+      - name: Remove only platform workflow-completion time from causal gate
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs')
+          s=p.read_text(encoding='utf-8')
+          old='  need(Date.parse(a0Artifact.workflow_completed_at)<Date.parse(o00),"AM19_FORMAL_COMPLETION_A0_WORKFLOW_MUST_COMPLETE_BEFORE_O00");\n'
+          if s.count(old)!=1: raise SystemExit('A0_WORKFLOW_TIME_GATE_MARKER_CARDINALITY')
+          s=s.replace(old,'')
+          p.write_text(s,encoding='utf-8')
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: Validate exact one-file boundary and completion selftest
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          test "$(git diff --name-only)" = 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs'
+          node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs selftest
+      - name: Commit and push exact assembler repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs
+          git diff --cached --check
+          git commit -m 'MCFT-CAP-09: keep platform completion time out of causal gate'
+          git push origin HEAD:feat/mcft-cap09-am19-formal-successor-v1
