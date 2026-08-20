@@ -1,0 +1,303 @@
+name: mcft-cap-09-amendment19-formal-arm
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment19-formal-arm.yml'
+      - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.cjs'
+      - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.cjs'
+  workflow_run:
+    workflows: ['mcft-cap-09-rolling-preboundary-capture']
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-am19-formal-arm-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'live-main' }}
+  cancel-in-progress: false
+
+jobs:
+  static-proof:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: Graduation envelope selftest
+        run: node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.cjs --selftest
+      - name: Formal arm exact-subject and lead-time selftest
+        run: node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.cjs --selftest
+      - name: Require workflow has no Formal credentials or write-capable permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -q 'DATABASE_URL' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
+          ! grep -q 'GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
+          ! grep -qE '^  (contents|actions): write$' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
+
+  live-arm-evaluator:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.event != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUBJECT_SHA: ${{ github.event.workflow_run.head_sha }}
+      ROLLING_RUN_ID: ${{ github.event.workflow_run.id }}
+    steps:
+      - name: Checkout exact rolling producer subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require rolling subject is still exact protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$SUBJECT_SHA" = "${{ github.event.workflow_run.head_sha }}"
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$SUBJECT_SHA" || { echo 'AM19_FORMAL_ARM_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
+
+      - name: Resolve unique gate, triggering rolling artifact, and prior active arm
+        id: resolve
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const subject = process.env.SUBJECT_SHA;
+            const rollingRunId = Number(process.env.ROLLING_RUN_ID);
+            const digestOk = value => /^sha256:[0-9a-f]{64}$/.test(String(value || ''));
+
+            const rollingArtifacts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: rollingRunId, per_page: 100 });
+            const rollingMatches = rollingArtifacts.data.artifacts.filter(a =>
+              !a.expired &&
+              a.name.startsWith('mcft-cap09-rolling-preboundary-') &&
+              a.name.endsWith(`-${subject}`)
+            );
+            if (rollingMatches.length !== 1) throw new Error(`AM19_FORMAL_ARM_EXACT_ONE_ROLLING_ARTIFACT_REQUIRED:${rollingMatches.length}`);
+            const rollingArtifact = rollingMatches[0];
+            if (!digestOk(rollingArtifact.digest)) throw new Error('AM19_FORMAL_ARM_ROLLING_ARTIFACT_DIGEST_REQUIRED');
+            core.setOutput('rolling_artifact_id', String(rollingArtifact.id));
+            core.setOutput('rolling_artifact_name', rollingArtifact.name);
+            core.setOutput('rolling_artifact_digest', rollingArtifact.digest);
+
+            const rollingRun = await github.rest.actions.getWorkflowRun({ owner, repo, run_id: rollingRunId });
+            if (rollingRun.data.conclusion !== 'success' || rollingRun.data.head_sha !== subject) throw new Error('AM19_FORMAL_ARM_ROLLING_RUN_IDENTITY_DRIFT');
+            core.setOutput('rolling_completed_at', rollingRun.data.updated_at);
+
+            const priorArmRuns = await github.rest.actions.listWorkflowRuns({
+              owner, repo,
+              workflow_id: '.github/workflows/mcft-cap-09-amendment19-formal-arm.yml',
+              branch: 'main', status: 'success', per_page: 100,
+            });
+            const existingArmArtifacts = [];
+            for (const run of priorArmRuns.data.workflow_runs.filter(r => r.id !== Number(process.env.GITHUB_RUN_ID) && r.head_sha === subject)) {
+              const artifacts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: run.id, per_page: 100 });
+              for (const artifact of artifacts.data.artifacts) {
+                if (!artifact.expired && artifact.name.startsWith(`mcft-cap09-am19-formal-arm-${subject}-`)) {
+                  existingArmArtifacts.push({ run, artifact });
+                }
+              }
+            }
+            if (existingArmArtifacts.length > 1) throw new Error(`AM19_FORMAL_ARM_MULTIPLE_ACTIVE_ARMS_FORBIDDEN:${existingArmArtifacts.length}`);
+            if (existingArmArtifacts.length === 1) {
+              const existing = existingArmArtifacts[0];
+              if (!digestOk(existing.artifact.digest)) throw new Error('AM19_FORMAL_ARM_EXISTING_ARTIFACT_DIGEST_REQUIRED');
+              core.setOutput('already_armed', 'true');
+              core.setOutput('existing_arm_run_id', String(existing.run.id));
+              core.setOutput('existing_arm_artifact_id', String(existing.artifact.id));
+              core.setOutput('existing_arm_artifact_digest', existing.artifact.digest);
+              core.setOutput('gate_found', 'false');
+              return;
+            }
+            core.setOutput('already_armed', 'false');
+
+            const gateRuns = await github.rest.actions.listWorkflowRuns({
+              owner, repo,
+              workflow_id: '.github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml',
+              branch: 'main', status: 'success', per_page: 100,
+            });
+            const gateArtifacts = [];
+            for (const run of gateRuns.data.workflow_runs.filter(r => r.head_sha === subject)) {
+              const artifacts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: run.id, per_page: 100 });
+              for (const artifact of artifacts.data.artifacts) {
+                if (!artifact.expired && artifact.name.startsWith(`mcft-cap09-am19-formal-graduation-${subject}-`)) {
+                  gateArtifacts.push({ run, artifact });
+                }
+              }
+            }
+            if (gateArtifacts.length === 0) {
+              core.setOutput('gate_found', 'false');
+              return;
+            }
+            if (gateArtifacts.length !== 1) throw new Error(`AM19_FORMAL_ARM_EXACT_ONE_GATE_ARTIFACT_REQUIRED:${gateArtifacts.length}`);
+            const gate = gateArtifacts[0];
+            if (!digestOk(gate.artifact.digest)) throw new Error('AM19_FORMAL_ARM_GATE_ARTIFACT_DIGEST_REQUIRED');
+            core.setOutput('gate_found', 'true');
+            core.setOutput('gate_run_id', String(gate.run.id));
+            core.setOutput('gate_artifact_id', String(gate.artifact.id));
+            core.setOutput('gate_artifact_name', gate.artifact.name);
+            core.setOutput('gate_artifact_digest', gate.artifact.digest);
+
+      - name: Record normal no-arm when gate is not yet open
+        if: steps.resolve.outputs.already_armed != 'true' && steps.resolve.outputs.gate_found != 'true'
+        env:
+          ROLLING_COMPLETED_AT: ${{ steps.resolve.outputs.rolling_completed_at }}
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_EVALUATION_V1.json',JSON.stringify({
+            schema_version:'geox_mcft_cap09_amendment19_formal_arm_evaluation_v1',
+            status:'NOT_ARMED',reason:'GRADUATION_GATE_NOT_OPEN_FOR_EXACT_SUBJECT',
+            subject_sha:process.env.SUBJECT_SHA,rolling_workflow_run_id:Number(process.env.ROLLING_RUN_ID),
+            rolling_workflow_completed_at:process.env.ROLLING_COMPLETED_AT,
+            formal_database_write_count:0,formal_r2_write_count:0,scheduler_write_count:0,runtime_write_count:0,
+            formal_o00_started:false,mcft_cap09_completed:false
+          },null,2)+'\n');
+
+      - name: Record idempotent no-arm when exact subject already has one active arm
+        if: steps.resolve.outputs.already_armed == 'true'
+        env:
+          EXISTING_ARM_RUN_ID: ${{ steps.resolve.outputs.existing_arm_run_id }}
+          EXISTING_ARM_ARTIFACT_ID: ${{ steps.resolve.outputs.existing_arm_artifact_id }}
+          EXISTING_ARM_ARTIFACT_DIGEST: ${{ steps.resolve.outputs.existing_arm_artifact_digest }}
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_EVALUATION_V1.json',JSON.stringify({
+            schema_version:'geox_mcft_cap09_amendment19_formal_arm_evaluation_v1',
+            status:'NOT_ARMED',reason:'EXACT_SUBJECT_ALREADY_ARMED',subject_sha:process.env.SUBJECT_SHA,
+            existing_arm_workflow_run_id:Number(process.env.EXISTING_ARM_RUN_ID),
+            existing_arm_artifact_id:Number(process.env.EXISTING_ARM_ARTIFACT_ID),
+            existing_arm_artifact_digest:process.env.EXISTING_ARM_ARTIFACT_DIGEST,
+            formal_database_write_count:0,formal_r2_write_count:0,scheduler_write_count:0,runtime_write_count:0,
+            formal_o00_started:false,mcft_cap09_completed:false
+          },null,2)+'\n');
+
+      - name: Download unique exact-subject gate artifact
+        if: steps.resolve.outputs.gate_found == 'true' && steps.resolve.outputs.already_armed != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.resolve.outputs.gate_run_id }}
+          name: ${{ steps.resolve.outputs.gate_artifact_name }}
+          path: gate-evidence
+
+      - name: Download triggering rolling candidate artifact
+        if: steps.resolve.outputs.gate_found == 'true' && steps.resolve.outputs.already_armed != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.ROLLING_RUN_ID }}
+          name: ${{ steps.resolve.outputs.rolling_artifact_name }}
+          path: rolling-evidence
+
+      - name: Resolve exact evidence files and classify normal admission skips
+        if: steps.resolve.outputs.gate_found == 'true' && steps.resolve.outputs.already_armed != 'true'
+        id: admission
+        env:
+          ROLLING_COMPLETED_AT: ${{ steps.resolve.outputs.rolling_completed_at }}
+        shell: node {0}
+        run: |
+          const fs=require('node:fs'),path=require('node:path');
+          function files(root,name){const out=[];for(const e of fs.readdirSync(root,{withFileTypes:true})){const p=path.join(root,e.name);if(e.isDirectory())out.push(...files(p,name));else if(e.name===name)out.push(p);}return out;}
+          const gates=files('gate-evidence','MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.json');
+          const candidates=files('rolling-evidence','MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json');
+          if(gates.length!==1)throw new Error(`AM19_FORMAL_ARM_EXACT_ONE_GATE_ENVELOPE_FILE_REQUIRED:${gates.length}`);
+          if(candidates.length!==1)throw new Error(`AM19_FORMAL_ARM_EXACT_ONE_CANDIDATE_FILE_REQUIRED:${candidates.length}`);
+          const gate=JSON.parse(fs.readFileSync(gates[0],'utf8'));
+          const candidate=JSON.parse(fs.readFileSync(candidates[0],'utf8'));
+          if(gate.subject_sha!==process.env.SUBJECT_SHA||candidate.producer_subject_sha!==process.env.SUBJECT_SHA||candidate.subject_sha!==process.env.SUBJECT_SHA)throw new Error('AM19_FORMAL_ARM_ADMISSION_SUBJECT_DRIFT');
+          if(gate.status!=='PASS'||gate.formal_epoch_creation_gate!=='OPEN')throw new Error('AM19_FORMAL_ARM_ADMISSION_GATE_NOT_OPEN');
+          if(candidate.status!=='PASS'||candidate.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1')throw new Error('AM19_FORMAL_ARM_ADMISSION_CANDIDATE_NOT_PASS');
+          const completed=Date.parse(process.env.ROLLING_COMPLETED_AT),opened=Date.parse(gate.opened_at),now=Date.now(),a0=Date.parse(candidate.target_t),o00=a0+3600000,expires=Date.parse(candidate.candidate_expires_at);
+          let reason='';
+          if(!(completed>opened))reason='ROLLING_COMPLETED_BEFORE_OR_AT_GATE_OPEN';
+          else if(!(now<expires))reason='ROLLING_CANDIDATE_EXPIRED';
+          else if((o00-now)/60000<35)reason='INSUFFICIENT_O00_LEAD';
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`gate_path=${gates[0]}\ncandidate_path=${candidates[0]}\nadmissible=${reason?'false':'true'}\nskip_reason=${reason}\n`);
+          if(reason){fs.mkdirSync('acceptance-output',{recursive:true});fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_EVALUATION_V1.json',JSON.stringify({schema_version:'geox_mcft_cap09_amendment19_formal_arm_evaluation_v1',status:'NOT_ARMED',reason,subject_sha:process.env.SUBJECT_SHA,gate_opened_at:gate.opened_at,rolling_workflow_completed_at:process.env.ROLLING_COMPLETED_AT,candidate_target_t:candidate.target_t,formal_database_write_count:0,formal_r2_write_count:0,scheduler_write_count:0,runtime_write_count:0,formal_o00_started:false,mcft_cap09_completed:false},null,2)+'\n');}
+
+      - uses: actions/setup-node@v4
+        if: steps.admission.outputs.admissible == 'true'
+        with:
+          node-version: '20.11.1'
+
+      - name: Freeze arm cross-run metadata
+        if: steps.admission.outputs.admissible == 'true'
+        env:
+          GATE_ARTIFACT_ID: ${{ steps.resolve.outputs.gate_artifact_id }}
+          GATE_ARTIFACT_NAME: ${{ steps.resolve.outputs.gate_artifact_name }}
+          GATE_ARTIFACT_DIGEST: ${{ steps.resolve.outputs.gate_artifact_digest }}
+          ROLLING_ARTIFACT_ID: ${{ steps.resolve.outputs.rolling_artifact_id }}
+          ROLLING_ARTIFACT_NAME: ${{ steps.resolve.outputs.rolling_artifact_name }}
+          ROLLING_ARTIFACT_DIGEST: ${{ steps.resolve.outputs.rolling_artifact_digest }}
+          ROLLING_COMPLETED_AT: ${{ steps.resolve.outputs.rolling_completed_at }}
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_METADATA_V1.json',JSON.stringify({
+            current_protected_main_sha:process.env.SUBJECT_SHA,
+            rolling_workflow_run_id:Number(process.env.ROLLING_RUN_ID),
+            rolling_workflow_completed_at:process.env.ROLLING_COMPLETED_AT,
+            rolling_artifact_id:Number(process.env.ROLLING_ARTIFACT_ID),
+            rolling_artifact_name:process.env.ROLLING_ARTIFACT_NAME,
+            rolling_artifact_digest:process.env.ROLLING_ARTIFACT_DIGEST,
+            gate_artifact_id:Number(process.env.GATE_ARTIFACT_ID),
+            gate_artifact_name:process.env.GATE_ARTIFACT_NAME,
+            gate_artifact_digest:process.env.GATE_ARTIFACT_DIGEST,
+            arm_evaluated_at:new Date().toISOString()
+          },null,2)+'\n');
+
+      - name: Assemble immutable Formal arm
+        if: steps.admission.outputs.admissible == 'true'
+        run: >-
+          node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.cjs
+          "${{ steps.admission.outputs.gate_path }}"
+          "${{ steps.admission.outputs.candidate_path }}"
+          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_METADATA_V1.json
+          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.json
+
+      - name: Require arm selection itself has zero Formal effect
+        if: steps.admission.outputs.admissible == 'true'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.json','utf8'));
+          if(p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t3r1_24h_v3'||p.arm_to_o00_lead_minutes<35||p.formal_database_write_count!==0||p.formal_r2_write_count!==0||p.scheduler_write_count!==0||p.runtime_write_count!==0||p.formal_a0_bootstrapped!==false||p.formal_o00_started!==false||p.final_actual_24h_still_required!==true||p.mcft_cap09_completed!==false)throw new Error('AM19_FORMAL_ARM_ZERO_EFFECT_BOUNDARY_DRIFT');
+
+      - name: Upload unique active Formal arm
+        if: steps.admission.outputs.admissible == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-am19-formal-arm-${{ env.SUBJECT_SHA }}-${{ github.run_id }}
+          path: |
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_METADATA_V1.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload non-arm evaluation proof
+        if: steps.admission.outputs.admissible != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-am19-formal-arm-evaluation-${{ env.SUBJECT_SHA }}-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_EVALUATION_V1.json
+          if-no-files-found: warn
+          retention-days: 14
