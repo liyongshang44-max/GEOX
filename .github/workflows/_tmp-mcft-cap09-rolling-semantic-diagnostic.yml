@@ -1,9 +1,6 @@
 name: tmp-mcft-cap09-rolling-semantic-diagnostic
 
 on:
-  push:
-    branches: ['diag/mcft-cap09-rolling-semantic-hash-4e346']
-    paths: ['.github/workflows/_tmp-mcft-cap09-rolling-semantic-diagnostic.yml']
   pull_request:
     paths: ['.github/workflows/_tmp-mcft-cap09-rolling-semantic-diagnostic.yml']
 
@@ -15,6 +12,7 @@ env:
   SUBJECT_SHA: 4e3460656e52166a63c7276e5e70de247f71c4b7
   ROLLING_RUN_ID: '32371029955'
   ROLLING_ARTIFACT_NAME: mcft-cap09-rolling-preboundary-20260820t140000z-4e3460656e52166a63c7276e5e70de247f71c4b7
+  EXPECTED_TARGET_T: '2026-08-20T14:00:00.000Z'
   MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
   MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
   MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
@@ -23,8 +21,20 @@ env:
 
 jobs:
   diagnose:
-    runs-on: ubuntu-latest
+    name: diagnose-${{ matrix.attempt }}-py${{ matrix.python }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include:
+          - { attempt: '01', python: '3.12' }
+          - { attempt: '02', python: '3.12' }
+          - { attempt: '03', python: '3.12' }
+          - { attempt: '04', python: '3.12' }
+          - { attempt: '05', python: '3.12.13' }
+          - { attempt: '06', python: '3.12.14' }
     services:
       postgres:
         image: postgres:16-alpine
@@ -36,13 +46,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { ref: '${{ env.SUBJECT_SHA }}', persist-credentials: false }
+
       - name: Require read-only exact-subject diagnostic
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
         shell: bash
         run: |
           set -euo pipefail
+          test "$PR_BASE_SHA" = "$SUBJECT_SHA"
+          test "$PR_HEAD_REF" = 'diag/mcft-cap09-rolling-semantic-hash-4e346'
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
           test -z "${MCFT_CAP09_PARENT_DATABASE_URL:-}"
-          for n in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do test -n "${!n:-}" || exit 1; done
+          for n in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
+            test -n "${!n:-}" || { echo "MCFT_CAP09_DIAG_SECRET_REQUIRED:${n}" >&2; exit 1; }
+          done
+
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
@@ -50,35 +69,246 @@ jobs:
           run-id: ${{ env.ROLLING_RUN_ID }}
           name: ${{ env.ROLLING_ARTIFACT_NAME }}
           path: rolling-candidate
+
+      - name: Require exact immutable candidate
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const path = 'rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json';
+          const candidate = JSON.parse(fs.readFileSync(path, 'utf8'));
+          if (candidate.schema_version !== 'geox_mcft_cap09_rolling_preboundary_candidate_v1' || candidate.status !== 'PASS') throw new Error('MCFT_CAP09_DIAG_CANDIDATE_STATUS_REQUIRED');
+          if (candidate.producer_subject_sha !== process.env.SUBJECT_SHA || candidate.target_t !== process.env.EXPECTED_TARGET_T) throw new Error('MCFT_CAP09_DIAG_CANDIDATE_IDENTITY_DRIFT');
+          const rows = candidate.rehydration_manifest?.expected_records;
+          const expected = ['future_et0_assumption_v1','future_weather_assumption_v1','soil_moisture_observation_v1'];
+          if (!Array.isArray(rows) || rows.length !== 3 || JSON.stringify(rows.map((row) => row.record_type).sort()) !== JSON.stringify(expected)) throw new Error('MCFT_CAP09_DIAG_THREE_FAMILY_MANIFEST_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',producer_subject_sha:candidate.producer_subject_sha,target_t:candidate.target_t,record_types:expected,raw_values_emitted:false}));
+
       - uses: pnpm/action-setup@v4
         with: { version: '9.15.4' }
       - uses: actions/setup-node@v4
         with: { node-version: '20.11.1', cache: pnpm }
       - uses: actions/setup-python@v5
-        with: { python-version: '3.12' }
+        with: { python-version: '${{ matrix.python }}' }
+
       - name: Install exact dependencies
         run: |
+          set -euo pipefail
           pnpm install --frozen-lockfile
-          python -m pip install --disable-pip-version-check eccodes==2.47.0 eccodeslib==2.47.3.23 numpy==1.26.4 refet==0.4.2
-      - name: Patch workspace to print hash-only diff
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+          python -m eccodes selfcheck
+
+      - name: Add hash-only field projection instrumentation
+        env:
+          DIAG_CAPTURE_PATH: /tmp/mcft-cap09-semantic-projection-${{ matrix.attempt }}.json
         shell: node {0}
         run: |
-          const fs=require('node:fs');
-          const p='scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts';
-          let s=fs.readFileSync(p,'utf8');
-          const a='if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");';
-          const b='if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) { console.error("HASH_ONLY_DIFF="+JSON.stringify({actual:semanticRows(actual),expected})); throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH"); }';
-          if(!s.includes(a)) throw new Error('PATCH_TARGET_NOT_FOUND'); fs.writeFileSync(p,s.replace(a,b));
+          const fs = require('node:fs');
+          const path = 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts';
+          let source = fs.readFileSync(path, 'utf8');
+          const importNeedle = 'import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";';
+          const importReplacement = `${importNeedle}\nimport { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_json_v1.js";`;
+          if (!source.includes(importNeedle)) throw new Error('MCFT_CAP09_DIAG_IMPORT_TARGET_NOT_FOUND');
+          source = source.replace(importNeedle, importReplacement);
+          const functionNeedle = 'function exactSemanticMatch(actual: readonly CanonicalizedExternalEvidenceResultV1[], expected: unknown): void {\n  if (!Array.isArray(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_EXPECTED_SEMANTIC_ROWS_REQUIRED");\n  if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");\n}';
+          const functionReplacement = `function exactSemanticMatch(actual: readonly CanonicalizedExternalEvidenceResultV1[], expected: unknown): void {
+            if (!Array.isArray(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_EXPECTED_SEMANTIC_ROWS_REQUIRED");
+            const capturePath = process.env.MCFT_CAP09_DIAG_CAPTURE_PATH;
+            if (capturePath) {
+              const projections = actual.map((result) => {
+                const record = result.record;
+                return {
+                  record_type: record.record_type,
+                  source_record_id: record.source_record_id,
+                  record_semantic_sha256: result.record_semantic_sha256,
+                  identity_projection_sha256: semanticHashV1({ site_id: record.site_id, field_id: record.field_id, season_id: record.season_id, zone_id: record.zone_id, dataset_id: record.dataset_id, source_record_id: record.source_record_id, source_record_hash: record.source_record_hash, record_type: record.record_type, binding_id: record.binding_id, origin_source_kind: record.origin_source_kind, origin_source_id: record.origin_source_id, epistemic_class: record.epistemic_class, available_to_runtime_at: record.available_to_runtime_at }),
+                  role_time_sha256: semanticHashV1(record.role_time),
+                  quality_sha256: semanticHashV1(record.quality),
+                  source_payload_sha256: semanticHashV1(record.source_payload),
+                  canonical_payload_sha256: semanticHashV1(record.canonical_payload),
+                  unit_conversion_sha256: semanticHashV1({ source_unit: record.source_unit, canonical_unit: record.canonical_unit, conversion_rule: record.conversion_rule }),
+                  execution_metadata_sha256: semanticHashV1(record.execution_metadata),
+                  limitations_sha256: semanticHashV1(record.limitations),
+                };
+              }).sort((left, right) => left.record_type.localeCompare(right.record_type) || left.source_record_id.localeCompare(right.source_record_id));
+              fs.writeFileSync(capturePath, JSON.stringify({ projections }) + "\\n", "utf8");
+            }
+            if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");
+          }`;
+          if (!source.includes(functionNeedle)) throw new Error('MCFT_CAP09_DIAG_FUNCTION_TARGET_NOT_FOUND');
+          fs.writeFileSync(path, source.replace(functionNeedle, functionReplacement));
+          if (fs.readFileSync(path, 'utf8').includes('value_payload')) throw new Error('MCFT_CAP09_DIAG_NONCANONICAL_VALUE_PAYLOAD_FORBIDDEN');
+
       - name: Rehydrate exact retained raw
         id: replay
         continue-on-error: true
+        env:
+          MCFT_CAP09_DIAG_CAPTURE_PATH: /tmp/mcft-cap09-semantic-projection-${{ matrix.attempt }}.json
         shell: bash
         run: |
+          set -euo pipefail
           env GITHUB_EVENT_NAME=workflow_run GITHUB_REF=refs/heads/main GITHUB_SHA="$SUBJECT_SHA" \
             MCFT_CAP09_CONSUMER_SUBJECT_SHA="$SUBJECT_SHA" \
             MCFT_CAP09_ROLLING_CANDIDATE_PATH="$GITHUB_WORKSPACE/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json" \
             MCFT_CAP09_ROLLING_REHYDRATION_ISOLATED_DB_ACK=true \
             DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness PYTHON=python \
             pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts run
-      - name: Require mismatch reproduced
-        run: test '${{ steps.replay.outcome }}' = failure
+
+      - name: Classify factual replay outcome
+        if: always()
+        env:
+          DIAG_ATTEMPT: ${{ matrix.attempt }}
+          DIAG_PYTHON_REQUEST: ${{ matrix.python }}
+          DIAG_CAPTURE_PATH: /tmp/mcft-cap09-semantic-projection-${{ matrix.attempt }}.json
+          REPLAY_OUTCOME: ${{ steps.replay.outcome }}
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const cp = require('node:child_process');
+          const os = require('node:os');
+          const crypto = require('node:crypto');
+          const candidate = JSON.parse(fs.readFileSync('rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json', 'utf8'));
+          const expected = candidate.rehydration_manifest.expected_records;
+          const outputDir = 'acceptance-output/rolling-semantic-diagnostic';
+          const outputPath = `${outputDir}/attempt-${process.env.DIAG_ATTEMPT}.json`;
+          fs.mkdirSync(outputDir, { recursive: true });
+          const run = (command, args) => {
+            const result = cp.spawnSync(command, args, { encoding: 'utf8' });
+            return `${result.stdout || ''}${result.stderr || ''}`.trim();
+          };
+          const cpuText = fs.readFileSync('/proc/cpuinfo', 'utf8');
+          const cpuModel = cpuText.match(/^model name\s*:\s*(.+)$/m)?.[1] ?? 'unknown';
+          const cpuFlags = cpuText.match(/^flags\s*:\s*(.+)$/m)?.[1] ?? '';
+          const environment = {
+            runner_os: process.env.RUNNER_OS ?? null,
+            runner_arch: process.env.RUNNER_ARCH ?? null,
+            image_os: process.env.ImageOS ?? null,
+            image_version: process.env.ImageVersion ?? null,
+            node_version: process.version,
+            python_request: process.env.DIAG_PYTHON_REQUEST,
+            python_version: run('python', ['-VV']),
+            libc_version: run('ldd', ['--version']).split('\n')[0] || null,
+            cpu_model: cpuModel,
+            cpu_flags_sha256: crypto.createHash('sha256').update(cpuFlags).digest('hex'),
+            hostname_sha256: crypto.createHash('sha256').update(os.hostname()).digest('hex'),
+          };
+          const base = {
+            schema_version: 'geox_mcft_cap09_rolling_semantic_diagnostic_v2',
+            status: 'FAIL',
+            classification: 'OTHER_FAILURE',
+            attempt: process.env.DIAG_ATTEMPT,
+            subject_sha: process.env.SUBJECT_SHA,
+            rolling_run_id: process.env.ROLLING_RUN_ID,
+            target_t: process.env.EXPECTED_TARGET_T,
+            replay_outcome: process.env.REPLAY_OUTCOME,
+            environment,
+            raw_values_emitted: false,
+            canonical_payload_emitted: false,
+            formal_effect: false,
+          };
+          const fail = (code) => {
+            fs.writeFileSync(outputPath, JSON.stringify({ ...base, diagnostic_error: code }, null, 2) + '\n');
+            throw new Error(code);
+          };
+          if (!['success','failure'].includes(process.env.REPLAY_OUTCOME)) fail(`MCFT_CAP09_DIAG_REPLAY_OUTCOME_INVALID:${process.env.REPLAY_OUTCOME}`);
+          if (!fs.existsSync(process.env.DIAG_CAPTURE_PATH)) fail('MCFT_CAP09_DIAG_PROJECTION_CAPTURE_REQUIRED');
+          const capture = JSON.parse(fs.readFileSync(process.env.DIAG_CAPTURE_PATH, 'utf8'));
+          if (!Array.isArray(capture.projections) || capture.projections.length !== 3) fail('MCFT_CAP09_DIAG_THREE_PROJECTIONS_REQUIRED');
+          const projections = capture.projections;
+          const actualRows = projections.map(({ record_type, source_record_id, record_semantic_sha256 }) => ({ record_type, source_record_id, record_semantic_sha256 }));
+          const rows = expected.map((expectedRow) => {
+            const actual = actualRows.find((row) => row.record_type === expectedRow.record_type);
+            return {
+              record_type: expectedRow.record_type,
+              expected_source_record_id: expectedRow.source_record_id,
+              actual_source_record_id: actual?.source_record_id ?? null,
+              expected_semantic_sha256: expectedRow.record_semantic_sha256,
+              actual_semantic_sha256: actual?.record_semantic_sha256 ?? null,
+              source_record_id_match: actual?.source_record_id === expectedRow.source_record_id,
+              semantic_hash_match: actual?.record_semantic_sha256 === expectedRow.record_semantic_sha256,
+            };
+          });
+          const mismatchCount = rows.filter((row) => !row.source_record_id_match || !row.semantic_hash_match).length;
+          const classification = mismatchCount === 0 ? 'MATCH' : 'MISMATCH';
+          if (process.env.REPLAY_OUTCOME === 'success' && classification !== 'MATCH') fail('MCFT_CAP09_DIAG_SUCCESS_WITH_MISMATCH_FORBIDDEN');
+          if (process.env.REPLAY_OUTCOME === 'failure' && classification !== 'MISMATCH') fail('MCFT_CAP09_DIAG_FAILURE_WITHOUT_SEMANTIC_MISMATCH');
+          const diagnostic = { ...base, status: 'PASS', classification, mismatch_count: mismatchCount, rows, projections };
+          fs.writeFileSync(outputPath, JSON.stringify(diagnostic, null, 2) + '\n');
+          console.log(JSON.stringify({status:'PASS',classification,attempt:process.env.DIAG_ATTEMPT,mismatch_record_types:rows.filter((row) => !row.semantic_hash_match).map((row) => row.record_type),raw_values_emitted:false}));
+
+      - name: Upload hash-only attempt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-rolling-semantic-diagnostic-${{ matrix.attempt }}
+          path: acceptance-output/rolling-semantic-diagnostic/attempt-${{ matrix.attempt }}.json
+          if-no-files-found: error
+          retention-days: 2
+
+  aggregate:
+    name: aggregate-hash-only-diagnostic
+    if: always()
+    needs: diagnose
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mcft-cap09-rolling-semantic-diagnostic-*
+          path: diagnostics
+          merge-multiple: true
+
+      - name: Build cross-runner field-hash comparison
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const files = fs.readdirSync('diagnostics').filter((name) => /^attempt-\d+\.json$/.test(name)).sort();
+          if (files.length !== 6) throw new Error(`MCFT_CAP09_DIAG_SIX_ATTEMPTS_REQUIRED:${files.length}`);
+          const attempts = files.map((name) => JSON.parse(fs.readFileSync(path.join('diagnostics', name), 'utf8')));
+          if (attempts.some((item) => item.status !== 'PASS' || !['MATCH','MISMATCH'].includes(item.classification))) throw new Error('MCFT_CAP09_DIAG_FACTUAL_ATTEMPTS_REQUIRED');
+          const reference = attempts.find((item) => item.classification === 'MATCH') ?? null;
+          const projectionKeys = ['identity_projection_sha256','role_time_sha256','quality_sha256','source_payload_sha256','canonical_payload_sha256','unit_conversion_sha256','execution_metadata_sha256','limitations_sha256'];
+          const comparisons = attempts.map((attempt) => ({
+            attempt: attempt.attempt,
+            classification: attempt.classification,
+            python_version: attempt.environment.python_version,
+            image_version: attempt.environment.image_version,
+            cpu_model: attempt.environment.cpu_model,
+            mismatch_record_types: attempt.rows.filter((row) => !row.semantic_hash_match).map((row) => row.record_type),
+            projection_differences_from_match_reference: !reference ? null : attempt.projections.map((projection) => {
+              const baseline = reference.projections.find((item) => item.record_type === projection.record_type);
+              return {
+                record_type: projection.record_type,
+                differing_projections: projectionKeys.filter((key) => baseline?.[key] !== projection[key]),
+              };
+            }).filter((row) => row.differing_projections.length > 0),
+          }));
+          const summary = {
+            schema_version: 'geox_mcft_cap09_rolling_semantic_cross_runner_summary_v1',
+            status: 'PASS',
+            subject_sha: process.env.SUBJECT_SHA,
+            rolling_run_id: process.env.ROLLING_RUN_ID,
+            target_t: process.env.EXPECTED_TARGET_T,
+            attempt_count: attempts.length,
+            match_count: attempts.filter((item) => item.classification === 'MATCH').length,
+            mismatch_count: attempts.filter((item) => item.classification === 'MISMATCH').length,
+            match_reference_attempt: reference?.attempt ?? null,
+            comparisons,
+            raw_values_emitted: false,
+            canonical_payload_emitted: false,
+            formal_effect: false,
+          };
+          fs.mkdirSync('acceptance-output', { recursive: true });
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_ROLLING_SEMANTIC_CROSS_RUNNER_SUMMARY.json', JSON.stringify(summary, null, 2) + '\n');
+          console.log(JSON.stringify(summary));
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-rolling-semantic-cross-runner-summary
+          path: acceptance-output/MCFT_CAP_09_ROLLING_SEMANTIC_CROSS_RUNNER_SUMMARY.json
+          if-no-files-found: error
+          retention-days: 2
