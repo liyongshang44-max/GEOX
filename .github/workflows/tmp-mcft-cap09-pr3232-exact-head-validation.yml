@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - validation/mcft-cap09-pr3232-exact-head
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
