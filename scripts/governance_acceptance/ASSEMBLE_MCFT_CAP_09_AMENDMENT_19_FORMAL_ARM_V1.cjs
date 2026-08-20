@@ -94,6 +94,7 @@ function assemble(gate, candidate, metadata) {
   const capturedAt = canonicalIso(candidate.captured_at, "AM19_FORMAL_ARM_CAPTURED_AT_REQUIRED");
   const expiresAt = canonicalIso(candidate.candidate_expires_at, "AM19_FORMAL_ARM_CANDIDATE_EXPIRY_REQUIRED");
   need(Date.parse(capturedAt) <= Date.parse(a0), "AM19_FORMAL_ARM_CAPTURE_AFTER_A0_FORBIDDEN");
+  need(Date.parse(evaluatedAt) < Date.parse(a0), "AM19_FORMAL_ARM_A0_MUST_BE_FUTURE");
   need(Date.parse(evaluatedAt) < Date.parse(expiresAt), "AM19_FORMAL_ARM_CANDIDATE_EXPIRED");
   const o00 = addHours(a0, 1);
   const o23 = addHours(a0, 24);
@@ -218,16 +219,23 @@ function selftest() {
   const pass = assemble(gate, candidate, metadata);
   need(pass.status === "PASS" && pass.a0 === candidate.target_t && pass.formal_o00_started === false && pass.formal_database_write_count === 0, "AM19_FORMAL_ARM_SELFTEST_PASS_FAILED");
   const negatives = [
-    ["subject", { ...metadata, current_protected_main_sha: "2".repeat(40) }, "AM19_FORMAL_ARM_EXACT_SUBJECT_CHAIN_REQUIRED"],
-    ["pre_gate", { ...metadata, rolling_workflow_completed_at: "2026-08-20T05:09:00.000Z", arm_evaluated_at: "2026-08-20T05:09:30.000Z" }, "AM19_FORMAL_ARM_POST_GATE_ROLLING_REQUIRED"],
-    ["late", { ...metadata, arm_evaluated_at: "2026-08-20T07:30:00.000Z" }, "AM19_FORMAL_ARM_INSUFFICIENT_O00_LEAD:30.000"],
+    ["subject", gate, candidate, { ...metadata, current_protected_main_sha: "2".repeat(40) }, "AM19_FORMAL_ARM_EXACT_SUBJECT_CHAIN_REQUIRED"],
+    ["pre_gate", gate, candidate, { ...metadata, rolling_workflow_completed_at: "2026-08-20T05:09:00.000Z", arm_evaluated_at: "2026-08-20T05:09:30.000Z" }, "AM19_FORMAL_ARM_POST_GATE_ROLLING_REQUIRED"],
+    ["nonfuture_a0", gate, candidate, { ...metadata, arm_evaluated_at: "2026-08-20T07:00:00.000Z" }, "AM19_FORMAL_ARM_A0_MUST_BE_FUTURE"],
   ];
-  for (const [name, meta, expected] of negatives) {
+  for (const [name, g, c, meta, expected] of negatives) {
     let observed = "";
-    try { assemble(gate, candidate, meta); } catch (error) { observed = error instanceof Error ? error.message : String(error); }
+    try { assemble(g, c, meta); } catch (error) { observed = error instanceof Error ? error.message : String(error); }
     need(observed === expected, `AM19_FORMAL_ARM_SELFTEST_NEGATIVE_FAILED:${name}:${observed}`);
   }
-  console.log(JSON.stringify({ schema_version: "geox_mcft_cap09_amendment19_formal_arm_selftest_v1", status: "PASS", post_gate_order_required: true, minimum_o00_lead_minutes: MIN_ARM_TO_O00_LEAD_MINUTES, formal_effect: false }));
+  console.log(JSON.stringify({
+    schema_version: "geox_mcft_cap09_amendment19_formal_arm_selftest_v1",
+    status: "PASS",
+    post_gate_order_required: true,
+    future_a0_required: true,
+    minimum_o00_lead_minutes: MIN_ARM_TO_O00_LEAD_MINUTES,
+    formal_effect: false,
+  }));
 }
 
 function main() {
