@@ -51,13 +51,16 @@ jobs:
           scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_V1.ts
       - name: Run hourly promotion zero-effect selftest
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_V1.ts selftest
-      - name: Require static workflow has no live credential exposure
+      - name: Require static workflow has no live credential exposure and propagates irreversible ingress NO-GO
         shell: bash
         run: |
           set -euo pipefail
           test -z "${DATABASE_URL:-}"
           test -z "${MCFT_CAP09_PARENT_DATABASE_URL:-}"
           test -z "${MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY:-}"
+          grep -Fq 'mcft-cap09-am19-formal-hourly-${{ env.SUBJECT_SHA }}-NO-GO-' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
+          grep -Fq 'formal_epoch_no_go:true' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
+          grep -Fq 'IRREVERSIBLE_FORMAL_EPOCH_NO_GO_ALREADY_RECORDED' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
 
   live-hourly-promotion:
     if: >-
@@ -111,7 +114,7 @@ jobs:
           git fetch --no-tags origin main
           test "$(git rev-parse origin/main)" = "$SUBJECT_SHA" || { echo 'AM19_FORMAL_HOURLY_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
 
-      - name: Resolve exact triggering rolling artifact plus unique active arm and A0 proof
+      - name: Resolve exact triggering rolling artifact, prior NO-GO, unique active arm, and A0 proof
         id: resolve
         uses: actions/github-script@v7
         with:
@@ -129,14 +132,23 @@ jobs:
             core.setOutput('rolling_artifact_id', String(rolling[0].id));
             core.setOutput('rolling_artifact_digest', rolling[0].digest);
 
-            async function findArtifacts(workflowPath, prefix) {
-              const runs = await github.rest.actions.listWorkflowRuns({ owner, repo, workflow_id: workflowPath, branch: 'main', status: 'success', per_page: 100 });
+            async function findArtifacts(workflowPath, prefix, successfulOnly = true) {
               const found = [];
-              for (const run of runs.data.workflow_runs.filter(r => r.head_sha === subject)) {
-                const arts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: run.id, per_page: 100 });
-                for (const artifact of arts.data.artifacts) if (!artifact.expired && artifact.name.startsWith(prefix)) found.push({ run, artifact });
+              for await (const response of github.paginate.iterator(github.rest.actions.listWorkflowRuns, { owner, repo, workflow_id: workflowPath, branch: 'main', status: 'completed', per_page: 100 })) {
+                for (const run of response.data.workflow_runs.filter(r => r.head_sha === subject && (!successfulOnly || r.conclusion === 'success'))) {
+                  const arts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: run.id, per_page: 100 });
+                  for (const artifact of arts.data.artifacts) if (!artifact.expired && artifact.name.startsWith(prefix)) found.push({ run, artifact });
+                }
               }
               return found;
+            }
+
+            const priorLiveNoGo = await findArtifacts('.github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml', `mcft-cap09-am19-formal-cycle-NO-GO-${subject}-`, false);
+            const priorHourlyNoGo = await findArtifacts('.github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml', `mcft-cap09-am19-formal-hourly-${subject}-NO-GO-`, false);
+            if (priorLiveNoGo.length + priorHourlyNoGo.length > 0) {
+              core.setOutput('active', 'false');
+              core.setOutput('reason', 'IRREVERSIBLE_FORMAL_EPOCH_NO_GO_ALREADY_RECORDED');
+              return;
             }
 
             const arms = await findArtifacts('.github/workflows/mcft-cap-09-amendment19-formal-arm.yml', `mcft-cap09-am19-formal-arm-${subject}-`);
@@ -272,6 +284,8 @@ jobs:
 
       - name: Promote exact rolling base evidence into Formal v3 before supported slot T
         if: steps.evidence.outputs.eligible == 'true'
+        id: promote
+        continue-on-error: true
         env:
           MCFT_CAP09_AM19_FORMAL_ARM_PATH: ${{ steps.evidence.outputs.arm_path }}
           MCFT_CAP09_AM19_FORMAL_A0_BOOTSTRAP_RESULT_PATH: ${{ steps.evidence.outputs.bootstrap_path }}
@@ -281,14 +295,48 @@ jobs:
           PYTHON: python
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_V1.ts run
 
-      - name: Require terminal promotion PASS and physical pre-supported-slot completion
-        if: steps.evidence.outputs.eligible == 'true'
+      - name: Validate terminal promotion PASS and physical pre-supported-slot completion
+        if: steps.evidence.outputs.eligible == 'true' && steps.promote.outcome == 'success'
+        id: validate
+        continue-on-error: true
         shell: node {0}
         env:
           EXPECTED_BASE_TARGET_T: ${{ steps.evidence.outputs.base_target_t }}
           EXPECTED_SUPPORTED_SLOT_T: ${{ steps.evidence.outputs.supported_slot_t }}
         run: |
           const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_RESULT_V1.json','utf8'));if(p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t3r1_24h_v3'||p.base_target_t!==process.env.EXPECTED_BASE_TARGET_T||p.supported_slot_t!==process.env.EXPECTED_SUPPORTED_SLOT_T||p.canonical_fact_write_count!==3||p.producer_bound_transient_raw_reverification!==true||p.formal_content_addressed_raw_retention_before_decoder!==true||p.normalized_semantics_match_reference!==true||p.raw_sha256_preserved!==true||p.decoder_identity_preserved!==true||p.provider_refetch_count!==0||p.scheduler_write_count!==0||p.runtime_write_count!==0||p.supported_slot_write_completed_before_t!==true||p.o23_seed_for_o24_written!==false||p.late_write_repair_authorized!==false||p.mcft_cap09_completed!==false)throw new Error('AM19_FORMAL_HOURLY_PROMOTION_PASS_REQUIRED');
+
+      - name: Classify explicit irreversible hourly ingress NO-GO
+        if: steps.evidence.outputs.eligible == 'true' && always() && steps.promote.outcome != 'skipped'
+        id: classify
+        env:
+          ARM_PATH: ${{ steps.evidence.outputs.arm_path }}
+          BASE_TARGET_T: ${{ steps.evidence.outputs.base_target_t }}
+          SUPPORTED_SLOT_T: ${{ steps.evidence.outputs.supported_slot_t }}
+          PROMOTE_OUTCOME: ${{ steps.promote.outcome }}
+          VALIDATE_OUTCOME: ${{ steps.validate.outcome }}
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const resultFile='acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_RESULT_V1.json';
+          let p=null;try{if(fs.existsSync(resultFile))p=JSON.parse(fs.readFileSync(resultFile,'utf8'));}catch{}
+          const explicitPartialNoGo=p?.formal_epoch_no_go===true;
+          const postWriteValidationNoGo=process.env.PROMOTE_OUTCOME==='success'&&process.env.VALIDATE_OUTCOME==='failure';
+          const noGo=explicitPartialNoGo||postWriteValidationNoGo;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`no_go=${noGo?'true':'false'}\n`);
+          if(!noGo)process.exit(0);
+          const arm=JSON.parse(fs.readFileSync(process.env.ARM_PATH,'utf8'));
+          const marker={schema_version:'geox_mcft_cap09_amendment19_formal_hourly_no_go_marker_v1',status:'FAIL',subject_sha:process.env.SUBJECT_SHA,arm_identity_hash:arm.arm_identity_hash,epoch_id:arm.epoch_id,formal_database_name:arm.formal_database_name,base_target_t:process.env.BASE_TARGET_T,supported_slot_t:process.env.SUPPORTED_SLOT_T,failure_class:explicitPartialNoGo?(p?.failure_class||'FORMAL_HOURLY_PARTIAL_MUTATION_EPOCH_NO_GO'):'FORMAL_HOURLY_POSTWRITE_VALIDATION_FAILURE',formal_epoch_no_go:true,store_reuse_authorized:false,late_write_repair_authorized:false,synthetic_scheduler_tick_written:false,mcft_cap09_completed:false};
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_NO_GO_MARKER_V1.json',JSON.stringify(marker,null,2)+'\n');
+
+      - name: Upload immutable hourly NO-GO marker
+        if: steps.classify.outputs.no_go == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-am19-formal-hourly-${{ env.SUBJECT_SHA }}-NO-GO-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_NO_GO_MARKER_V1.json
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Upload safe hourly promotion or non-promotion proof
         if: always()
@@ -300,3 +348,9 @@ jobs:
             acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_RESULT_V1.json
           if-no-files-found: warn
           retention-days: 90
+
+      - name: Preserve hourly promotion or validation failure after proof upload
+        if: steps.evidence.outputs.eligible == 'true' && ((steps.promote.outcome != 'success' && steps.promote.outcome != 'skipped') || steps.validate.outcome == 'failure')
+        run: |
+          echo "AM19_FORMAL_HOURLY_PIPELINE_FAILED:promote=${{ steps.promote.outcome }}:validate=${{ steps.validate.outcome }}:no_go=${{ steps.classify.outputs.no_go }}" >&2
+          exit 1
