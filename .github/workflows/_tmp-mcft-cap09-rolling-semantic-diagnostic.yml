@@ -110,7 +110,7 @@ jobs:
           const path = 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts';
           let source = fs.readFileSync(path, 'utf8');
           const importNeedle = 'import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";';
-          const importReplacement = `${importNeedle}\nimport { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_json_v1.js";`;
+          const importReplacement = `${importNeedle}\nimport { roundDecimalHalfAwayFromZeroV1, semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_json_v1.js";`;
           if (!source.includes(importNeedle)) throw new Error('MCFT_CAP09_DIAG_IMPORT_TARGET_NOT_FOUND');
           source = source.replace(importNeedle, importReplacement);
           const functionNeedle = 'function exactSemanticMatch(actual: readonly CanonicalizedExternalEvidenceResultV1[], expected: unknown): void {\n  if (!Array.isArray(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_EXPECTED_SEMANTIC_ROWS_REQUIRED");\n  if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");\n}';
@@ -120,6 +120,19 @@ jobs:
             if (capturePath) {
               const projections = actual.map((result) => {
                 const record = result.record;
+                let et0QuantizedPayloadSha256ByDecimals: Record<string, string> | null = null;
+                if (record.record_type === "future_et0_assumption_v1") {
+                  const points = record.canonical_payload.points;
+                  if (!Array.isArray(points)) throw new Error("MCFT_CAP09_DIAG_ET0_POINTS_REQUIRED");
+                  et0QuantizedPayloadSha256ByDecimals = Object.fromEntries([12, 11, 10, 9, 8, 7, 6].map((decimals) => [String(decimals), semanticHashV1({
+                    ...record.canonical_payload,
+                    points: points.map((point) => {
+                      if (!point || typeof point !== "object") throw new Error("MCFT_CAP09_DIAG_ET0_POINT_OBJECT_REQUIRED");
+                      const row = point as Record<string, unknown>;
+                      return { ...row, et0_mm_per_hour: roundDecimalHalfAwayFromZeroV1(Number(row.et0_mm_per_hour), decimals) };
+                    }),
+                  })]));
+                }
                 return {
                   record_type: record.record_type,
                   source_record_id: record.source_record_id,
@@ -132,6 +145,7 @@ jobs:
                   unit_conversion_sha256: semanticHashV1({ source_unit: record.source_unit, canonical_unit: record.canonical_unit, conversion_rule: record.conversion_rule }),
                   execution_metadata_sha256: semanticHashV1(record.execution_metadata),
                   limitations_sha256: semanticHashV1(record.limitations),
+                  et0_quantized_payload_sha256_by_decimals: et0QuantizedPayloadSha256ByDecimals,
                 };
               }).sort((left, right) => left.record_type.localeCompare(right.record_type) || left.source_record_id.localeCompare(right.source_record_id));
               fs.writeFileSync(capturePath, JSON.stringify({ projections }) + "\\n", "utf8");
@@ -272,6 +286,8 @@ jobs:
           if (attempts.some((item) => item.status !== 'PASS' || !['MATCH','MISMATCH'].includes(item.classification))) throw new Error('MCFT_CAP09_DIAG_FACTUAL_ATTEMPTS_REQUIRED');
           const reference = attempts.find((item) => item.classification === 'MATCH') ?? null;
           const projectionKeys = ['identity_projection_sha256','role_time_sha256','quality_sha256','source_payload_sha256','canonical_payload_sha256','unit_conversion_sha256','execution_metadata_sha256','limitations_sha256'];
+          const et0QuantizationHashesByDecimals = Object.fromEntries(['12','11','10','9','8','7','6'].map((decimals) => [decimals, [...new Set(attempts.map((attempt) => attempt.projections.find((item) => item.record_type === 'future_et0_assumption_v1')?.et0_quantized_payload_sha256_by_decimals?.[decimals] ?? null))]]));
+          const stableEt0QuantizationDecimals = Object.entries(et0QuantizationHashesByDecimals).filter(([, hashes]) => hashes.length === 1 && hashes[0] !== null).map(([decimals]) => Number(decimals)).sort((left, right) => right - left);
           const comparisons = attempts.map((attempt) => ({
             attempt: attempt.attempt,
             classification: attempt.classification,
@@ -297,6 +313,9 @@ jobs:
             match_count: attempts.filter((item) => item.classification === 'MATCH').length,
             mismatch_count: attempts.filter((item) => item.classification === 'MISMATCH').length,
             match_reference_attempt: reference?.attempt ?? null,
+            highest_stable_et0_quantization_decimals: stableEt0QuantizationDecimals[0] ?? null,
+            stable_et0_quantization_decimals: stableEt0QuantizationDecimals,
+            et0_quantization_hash_cardinality_by_decimals: Object.fromEntries(Object.entries(et0QuantizationHashesByDecimals).map(([decimals, hashes]) => [decimals, hashes.length])),
             comparisons,
             raw_values_emitted: false,
             canonical_payload_emitted: false,
