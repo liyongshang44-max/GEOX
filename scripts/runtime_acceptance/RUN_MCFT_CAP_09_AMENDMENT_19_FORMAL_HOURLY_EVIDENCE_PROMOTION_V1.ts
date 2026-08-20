@@ -99,6 +99,10 @@ function canonicalHour(value: unknown, code: string): string {
   return text;
 }
 
+function addHours(value: string, hours: number): string {
+  return new Date(Date.parse(value) + hours * 3_600_000).toISOString();
+}
+
 function loadJson(file: string): any {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
@@ -122,7 +126,7 @@ function assertLocalReferenceDatabase(urlText: string): void {
   }
 }
 
-async function assertFormalDatabase(pool: Pool, urlText: string, target: string): Promise<string> {
+async function assertFormalDatabase(pool: Pool, urlText: string, supportedSlot: string): Promise<string> {
   const parsed = new URL(urlText);
   if (!["postgres:", "postgresql:"].includes(parsed.protocol) || ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname)) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_REMOTE_POSTGRES_REQUIRED");
   const database = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
@@ -130,7 +134,7 @@ async function assertFormalDatabase(pool: Pool, urlText: string, target: string)
   const identity = String((await pool.query("SELECT current_database() AS n")).rows[0]?.n ?? "");
   if (identity !== MCFT_CAP09_AM19_FORMAL_DATABASE_V3) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_DB_SESSION_IDENTITY_REQUIRED");
   const now = new Date((await pool.query("SELECT transaction_timestamp() AS database_now")).rows[0]?.database_now).toISOString();
-  if (Date.parse(now) >= Date.parse(target)) throw new Error(`AM19_FORMAL_HOURLY_PROMOTION_PREBOUNDARY_DEADLINE_MISSED:${now}:${target}`);
+  if (Date.parse(now) >= Date.parse(supportedSlot)) throw new Error(`AM19_FORMAL_HOURLY_PROMOTION_PREBOUNDARY_DEADLINE_MISSED:${now}:${supportedSlot}`);
   return now;
 }
 
@@ -234,7 +238,7 @@ function exactFormalRetention(result: CanonicalizedExternalEvidenceResultV1): vo
   if (key.includes("mcft-cap09-ea5e2-readiness-transient-v1")) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_TRANSIENT_REF_FORBIDDEN");
 }
 
-function validateArmAndCandidate(arm: McftCap09Am19FormalArmV1, bootstrap: A0BootstrapResultV1, candidate: RollingCandidateV1, subject: string): string {
+function validateArmAndCandidate(arm: McftCap09Am19FormalArmV1, bootstrap: A0BootstrapResultV1, candidate: RollingCandidateV1, subject: string): { baseTarget: string; supportedSlot: string } {
   validateMcftCap09Am19FormalArmV1(arm, subject);
   if (bootstrap?.schema_version !== "geox_mcft_cap09_amendment19_formal_a0_bootstrap_result_v1" || bootstrap.status !== "PASS") throw new Error("AM19_FORMAL_HOURLY_PROMOTION_BOOTSTRAP_PASS_REQUIRED");
   if (bootstrap.subject_sha !== subject || bootstrap.arm_identity_hash !== arm.arm_identity_hash || bootstrap.epoch_id !== arm.epoch_id || bootstrap.formal_database_name !== MCFT_CAP09_AM19_FORMAL_DATABASE_V3 || bootstrap.a0 !== arm.a0 || bootstrap.o00 !== arm.o00 || bootstrap.o23 !== arm.o23 || bootstrap.formal_a0_bootstrapped !== true || bootstrap.formal_o00_started !== false || bootstrap.final_actual_24h_still_required !== true || bootstrap.mcft_cap09_completed !== false) {
@@ -243,13 +247,16 @@ function validateArmAndCandidate(arm: McftCap09Am19FormalArmV1, bootstrap: A0Boo
   if (candidate?.schema_version !== "geox_mcft_cap09_rolling_preboundary_candidate_v1" || candidate.status !== "PASS" || candidate.temporal_authority !== "PROVIDER_AVAILABILITY_WATERMARK_V1") throw new Error("AM19_FORMAL_HOURLY_PROMOTION_CANDIDATE_PASS_REQUIRED");
   if (candidate.producer_subject_sha !== subject || candidate.subject_sha !== subject) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_CANDIDATE_SUBJECT_REQUIRED");
   if (JSON.stringify([...candidate.record_types].sort()) !== JSON.stringify(EXPECTED_TYPES)) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_EXACT_THREE_TYPES_REQUIRED");
-  const target = canonicalHour(candidate.target_t, "AM19_FORMAL_HOURLY_PROMOTION_TARGET_INVALID");
-  if (Date.parse(target) < Date.parse(arm.o00) || Date.parse(target) > Date.parse(arm.o23)) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_TARGET_OUTSIDE_ARM_WINDOW");
+  const baseTarget = canonicalHour(candidate.target_t, "AM19_FORMAL_HOURLY_PROMOTION_TARGET_INVALID");
+  const lastLegalBase = addHours(arm.o23, -1);
+  if (Date.parse(baseTarget) < Date.parse(arm.o00) || Date.parse(baseTarget) > Date.parse(lastLegalBase)) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_BASE_OUTSIDE_O00_O22");
+  const supportedSlot = addHours(baseTarget, 1);
+  if (Date.parse(supportedSlot) <= Date.parse(arm.o00) || Date.parse(supportedSlot) > Date.parse(arm.o23)) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_SUPPORTED_SLOT_OUTSIDE_O01_O23");
   const capturedAt = canonicalIso(candidate.captured_at, "AM19_FORMAL_HOURLY_PROMOTION_CAPTURED_AT_INVALID");
-  if (Date.parse(capturedAt) > Date.parse(target)) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_CAPTURE_AFTER_TARGET_FORBIDDEN");
+  if (Date.parse(capturedAt) > Date.parse(baseTarget)) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_CAPTURE_AFTER_BASE_FORBIDDEN");
   if (candidate.causal_contract?.soil_observation_inside_t_minus_15_to_t !== true || candidate.causal_contract?.future_weather_available_and_ingested_by_t !== true || candidate.causal_contract?.future_et0_available_and_ingested_by_t !== true || candidate.causal_contract?.same_cycle_future_weather_et0 !== true || candidate.causal_contract?.no_future_leakage !== true || candidate.causal_contract?.raw_retained_before_canonicalization !== true) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_CAUSAL_CONTRACT_REQUIRED");
   if (Number(candidate.side_effects?.formal_database_write_count) !== 0 || Number(candidate.side_effects?.formal_r2_prefix_write_count) !== 0 || Number(candidate.side_effects?.scheduler_write_count) !== 0 || Number(candidate.side_effects?.runtime_write_count) !== 0 || candidate.side_effects?.formal_effect !== false) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_CANDIDATE_ZERO_EFFECT_REQUIRED");
-  return target;
+  return { baseTarget, supportedSlot };
 }
 
 async function loadReferenceFacts(pool: Pool): Promise<Map<string, CanonicalReplayEvidenceRecordV1>> {
@@ -310,8 +317,9 @@ async function main(): Promise<void> {
   if (process.argv[2] === "selftest") {
     const o00 = "2026-08-20T06:00:00.000Z";
     const o23 = "2026-08-21T05:00:00.000Z";
-    if (Date.parse(o23) - Date.parse(o00) !== 23 * 3_600_000) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_SELFTEST_WINDOW");
-    console.log(JSON.stringify({ schema_version: "geox_mcft_cap09_amendment19_formal_hourly_evidence_promotion_selftest_v1", status: "PASS", target_write_must_complete_before_t: true, exact_three_required_families: true, producer_bound_raw_reverification: true, durable_formal_raw_before_decoder: true, provider_refetch_count: 0, late_write_repair_authorized: false, formal_effect: false }));
+    const o22 = addHours(o23, -1);
+    if (Date.parse(o23) - Date.parse(o00) !== 23 * 3_600_000 || addHours(o22, 1) !== o23) throw new Error("AM19_FORMAL_HOURLY_PROMOTION_SELFTEST_WINDOW");
+    console.log(JSON.stringify({ schema_version: "geox_mcft_cap09_amendment19_formal_hourly_evidence_promotion_selftest_v1", status: "PASS", legal_base_window: "O00_O22", base_supports_next_slot: true, supported_slot_write_must_complete_before_t: true, o23_seed_for_o24_forbidden: true, exact_three_required_families: true, producer_bound_raw_reverification: true, durable_formal_raw_before_decoder: true, provider_refetch_count: 0, late_write_repair_authorized: false, formal_effect: false }));
     return;
   }
   if (process.argv[2] !== "run") throw new Error("AM19_FORMAL_HOURLY_PROMOTION_MODE_REQUIRED:selftest|run");
@@ -320,7 +328,7 @@ async function main(): Promise<void> {
   const arm = loadJson(path.resolve(requiredEnv("MCFT_CAP09_AM19_FORMAL_ARM_PATH"))) as McftCap09Am19FormalArmV1;
   const bootstrap = loadJson(path.resolve(requiredEnv("MCFT_CAP09_AM19_FORMAL_A0_BOOTSTRAP_RESULT_PATH"))) as A0BootstrapResultV1;
   const candidate = loadJson(path.resolve(requiredEnv("MCFT_CAP09_ROLLING_CANDIDATE_PATH"))) as RollingCandidateV1;
-  const target = validateArmAndCandidate(arm, bootstrap, candidate, subject);
+  const { baseTarget, supportedSlot } = validateArmAndCandidate(arm, bootstrap, candidate, subject);
   const referenceUrl = requiredEnv("REFERENCE_DATABASE_URL");
   assertLocalReferenceDatabase(referenceUrl);
   const formalUrl = requiredEnv("DATABASE_URL");
@@ -329,7 +337,7 @@ async function main(): Promise<void> {
   let writePhaseStarted = false;
   let writeCount = 0;
   try {
-    const databaseNow = await assertFormalDatabase(formalPool, formalUrl, target);
+    const databaseNow = await assertFormalDatabase(formalPool, formalUrl, supportedSlot);
     const reference = await loadReferenceFacts(referencePool);
     const built = await buildFormalResults(candidate);
     for (const result of built.results) {
@@ -341,8 +349,8 @@ async function main(): Promise<void> {
       const existing = Number((await formalPool.query("SELECT count(*)::int AS n FROM facts WHERE source=$1 AND record_json#>>'{payload,source_record_id}'=$2", [EVIDENCE_SOURCE, result.record.source_record_id])).rows[0]?.n ?? -1);
       if (existing !== 0) throw new Error(`AM19_FORMAL_HOURLY_PROMOTION_DUPLICATE_SOURCE_RECORD_FORBIDDEN:${result.record.source_record_id}:${existing}`);
     }
-    const terminalAtTarget = Number((await formalPool.query("SELECT count(*)::int AS n FROM twin_terminal_tick_uniqueness_v1 WHERE logical_time=$1::timestamptz", [target])).rows[0]?.n ?? -1);
-    if (terminalAtTarget !== 0) throw new Error(`AM19_FORMAL_HOURLY_PROMOTION_TARGET_ALREADY_TERMINAL:${target}`);
+    const terminalAtSupportedSlot = Number((await formalPool.query("SELECT count(*)::int AS n FROM twin_terminal_tick_uniqueness_v1 WHERE logical_time=$1::timestamptz", [supportedSlot])).rows[0]?.n ?? -1);
+    if (terminalAtSupportedSlot !== 0) throw new Error(`AM19_FORMAL_HOURLY_PROMOTION_SUPPORTED_SLOT_ALREADY_TERMINAL:${supportedSlot}`);
     const verifier = new S3CompatiblePrivateRawEvidenceRetentionAdapterV1({
       endpoint: requiredEnv("MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT"), bucket: requiredEnv("MCFT_CAP09_FORMAL_RAW_S3_BUCKET"), region: requiredEnv("MCFT_CAP09_FORMAL_RAW_S3_REGION"), access_key_id: requiredEnv("MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID"), secret_access_key: requiredEnv("MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY"),
     });
@@ -350,24 +358,24 @@ async function main(): Promise<void> {
     writePhaseStarted = true;
     for (const result of built.results) {
       const beforeWriteNow = new Date((await formalPool.query("SELECT transaction_timestamp() AS database_now")).rows[0]?.database_now).toISOString();
-      if (Date.parse(beforeWriteNow) >= Date.parse(target)) throw new Error(`AM19_FORMAL_HOURLY_PROMOTION_DEADLINE_CROSSED_DURING_WRITE:${beforeWriteNow}:${target}`);
+      if (Date.parse(beforeWriteNow) >= Date.parse(supportedSlot)) throw new Error(`AM19_FORMAL_HOURLY_PROMOTION_DEADLINE_CROSSED_DURING_WRITE:${beforeWriteNow}:${supportedSlot}`);
       writeCount += (await ingress.appendCanonicalizedExternalEvidence(result)).canonical_fact_write_count;
     }
     const completedAt = new Date((await formalPool.query("SELECT transaction_timestamp() AS database_now")).rows[0]?.database_now).toISOString();
-    if (Date.parse(completedAt) >= Date.parse(target)) throw new Error(`AM19_FORMAL_HOURLY_PROMOTION_COMPLETED_AFTER_TARGET_FORBIDDEN:${completedAt}:${target}`);
+    if (Date.parse(completedAt) >= Date.parse(supportedSlot)) throw new Error(`AM19_FORMAL_HOURLY_PROMOTION_COMPLETED_AFTER_SUPPORTED_SLOT_FORBIDDEN:${completedAt}:${supportedSlot}`);
     writeOutput({
       schema_version: "geox_mcft_cap09_amendment19_formal_hourly_evidence_promotion_result_v1",
       status: "PASS", subject_sha: subject, arm_identity_hash: arm.arm_identity_hash, epoch_id: arm.epoch_id, manifest_hash: bootstrap.manifest_hash,
-      formal_database_name: MCFT_CAP09_AM19_FORMAL_DATABASE_V3, target_t: target, database_preflight_at: databaseNow, promotion_completed_at: completedAt,
+      formal_database_name: MCFT_CAP09_AM19_FORMAL_DATABASE_V3, base_target_t: baseTarget, supported_slot_t: supportedSlot, database_preflight_at: databaseNow, promotion_completed_at: completedAt,
       record_types: built.results.map((x) => x.record.record_type), canonical_fact_write_count: writeCount,
       producer_bound_transient_raw_reverification: true, formal_content_addressed_raw_retention_before_decoder: true, normalized_semantics_match_reference: true, raw_sha256_preserved: true, decoder_identity_preserved: true,
       transient_r2_head_count: built.reader.head_count, transient_r2_get_count: built.reader.get_count, transient_r2_put_count: built.reader.put_count, transient_r2_delete_count: built.reader.delete_count, provider_refetch_count: built.reader.provider_request_count,
-      scheduler_write_count: 0, runtime_write_count: 0, target_write_completed_before_t: true, late_write_repair_authorized: false, final_actual_24h_still_required: true, mcft_cap09_completed: false,
+      scheduler_write_count: 0, runtime_write_count: 0, supported_slot_write_completed_before_t: true, o23_seed_for_o24_written: false, late_write_repair_authorized: false, final_actual_24h_still_required: true, mcft_cap09_completed: false,
     });
   } catch (error) {
     if (writePhaseStarted) {
       try {
-        writeOutput({ schema_version: "geox_mcft_cap09_amendment19_formal_hourly_evidence_promotion_result_v1", status: "FAIL", subject_sha: subject, arm_identity_hash: arm.arm_identity_hash, epoch_id: arm.epoch_id, formal_database_name: MCFT_CAP09_AM19_FORMAL_DATABASE_V3, target_t: target, failure_class: "FORMAL_HOURLY_PARTIAL_MUTATION_EPOCH_NO_GO", canonical_fact_write_count_before_failure: writeCount, store_reuse_authorized: false, truncate_and_retry_authorized: false, late_write_repair_authorized: false, formal_epoch_no_go: true, mcft_cap09_completed: false });
+        writeOutput({ schema_version: "geox_mcft_cap09_amendment19_formal_hourly_evidence_promotion_result_v1", status: "FAIL", subject_sha: subject, arm_identity_hash: arm.arm_identity_hash, epoch_id: arm.epoch_id, formal_database_name: MCFT_CAP09_AM19_FORMAL_DATABASE_V3, base_target_t: baseTarget, supported_slot_t: supportedSlot, failure_class: "FORMAL_HOURLY_PARTIAL_MUTATION_EPOCH_NO_GO", canonical_fact_write_count_before_failure: writeCount, store_reuse_authorized: false, truncate_and_retry_authorized: false, late_write_repair_authorized: false, formal_epoch_no_go: true, mcft_cap09_completed: false });
       } catch {}
     }
     throw error;
