@@ -58,7 +58,7 @@ jobs:
           test -z "${DATABASE_URL:-}"
           test -z "${MCFT_CAP09_PARENT_DATABASE_URL:-}"
           test -z "${MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY:-}"
-          grep -Fq 'mcft-cap09-am19-formal-hourly-${{ env.SUBJECT_SHA }}-NO-GO-' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
+          grep -Fq 'mcft-cap09-am19-formal-hourly-${subject}-NO-GO-' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
           grep -Fq 'formal_epoch_no_go:true' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
           grep -Fq 'IRREVERSIBLE_FORMAL_EPOCH_NO_GO_ALREADY_RECORDED' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
 
