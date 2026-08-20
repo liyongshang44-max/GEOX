@@ -11,7 +11,7 @@ const AGGREGATE = "scripts/runtime_acceptance/QUALIFY_MCFT_CAP_09_EA5E2_TIMING_B
 const KBS_LATE_DECODER = "scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py";
 const KBS_TIMING_SELECTOR = "scripts/runtime_acceptance/SELECT_MCFT_CAP_09_EA5E2_TIMING_TARGET_AMENDMENT11.py";
 const EVIDENCE = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-TIMING-BUDGET-QUALIFICATION-V1.json";
-const VALIDATOR = "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_TIMING_BUDGET_EVIDENCE_V1.cjs";
+const VALIDATOR = "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_TIMING_BUDGET_EVIDENCE_V2.cjs";
 
 function read(path) {
   if (!fs.existsSync(path)) throw new Error(`EA5E2_TIMING_QUALIFICATION_FILE_REQUIRED:${path}`);
@@ -128,10 +128,10 @@ requireAll(evidence, [
   "\"live_dispatch_authorized\": false",
 ], "EA5E2_TIMING_FROZEN_EVIDENCE_MISSING");
 requireAll(validator, [
-  "EA5E2_TIMING_EVIDENCE_EXACT_MAIN_BINDING_DRIFT",
-  "EA5E2_TIMING_EVIDENCE_MEASURED_BLOB_DRIFT",
-  "EA5E2_COLLECTOR_TIMING_BUDGET_NOT_QUALIFIED",
-  "EA5E2_OBSERVER_TIMING_BUDGET_NOT_QUALIFIED",
+  "EA5E2_TIMING_V2_EXACT_MAIN_BINDING_DRIFT",
+  "EA5E2_TIMING_V2_MEASURED_BLOB_DRIFT",
+  "EA5E2_COLLECTOR_TIMING_V2_BUDGET_NOT_QUALIFIED",
+  "EA5E2_OBSERVER_TIMING_V2_BUDGET_NOT_QUALIFIED",
   "observer_operational_start_deadline_offset_minutes: 442",
   "frozen_observer_max_start_offset_minutes: 447",
 ], "EA5E2_TIMING_FROZEN_EVIDENCE_VALIDATOR_MISSING");
