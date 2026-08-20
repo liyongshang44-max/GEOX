@@ -42,12 +42,13 @@ jobs:
           ! grep -q 'DATABASE_URL' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
           ! grep -q 'GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
           ! grep -qE '^  (contents|actions): write$' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
-      - name: Require immutable first-gate duplicate handling is wired
+      - name: Require immutable first-gate duplicate handling and pagination are wired
         shell: bash
         run: |
           set -euo pipefail
           grep -Fq 'AM19_FORMAL_ARM_FIRST_GATE_RUN_MULTIPLE_ARTIFACTS_FORBIDDEN' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
           grep -Fq "gateArtifacts.sort((left, right) => left.run.id - right.run.id" .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
+          test "$(grep -Fc 'github.paginate.iterator(github.rest.actions.listWorkflowRuns' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml)" -ge 2
 
   live-arm-evaluator:
     if: >-
@@ -104,13 +105,14 @@ jobs:
             if (rollingRun.data.conclusion !== 'success' || rollingRun.data.head_sha !== subject) throw new Error('AM19_FORMAL_ARM_ROLLING_RUN_IDENTITY_DRIFT');
             core.setOutput('rolling_completed_at', rollingRun.data.updated_at);
 
-            const priorArmRuns = await github.rest.actions.listWorkflowRuns({
+            const priorArmRuns = [];
+            for await (const response of github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
               owner, repo,
               workflow_id: '.github/workflows/mcft-cap-09-amendment19-formal-arm.yml',
               branch: 'main', status: 'success', per_page: 100,
-            });
+            })) priorArmRuns.push(...response.data.workflow_runs);
             const existingArmArtifacts = [];
-            for (const run of priorArmRuns.data.workflow_runs.filter(r => r.id !== Number(process.env.GITHUB_RUN_ID) && r.head_sha === subject)) {
+            for (const run of priorArmRuns.filter(r => r.id !== Number(process.env.GITHUB_RUN_ID) && r.head_sha === subject)) {
               const artifacts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: run.id, per_page: 100 });
               for (const artifact of artifacts.data.artifacts) {
                 if (!artifact.expired && artifact.name.startsWith(`mcft-cap09-am19-formal-arm-${subject}-`)) {
@@ -131,13 +133,14 @@ jobs:
             }
             core.setOutput('already_armed', 'false');
 
-            const gateRuns = await github.rest.actions.listWorkflowRuns({
+            const gateRuns = [];
+            for await (const response of github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
               owner, repo,
               workflow_id: '.github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml',
               branch: 'main', status: 'success', per_page: 100,
-            });
+            })) gateRuns.push(...response.data.workflow_runs);
             const gateArtifacts = [];
-            for (const run of gateRuns.data.workflow_runs.filter(r => r.head_sha === subject)) {
+            for (const run of gateRuns.filter(r => r.head_sha === subject)) {
               const artifacts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: run.id, per_page: 100 });
               for (const artifact of artifacts.data.artifacts) {
                 if (!artifact.expired && artifact.name.startsWith(`mcft-cap09-am19-formal-graduation-${subject}-`)) {
