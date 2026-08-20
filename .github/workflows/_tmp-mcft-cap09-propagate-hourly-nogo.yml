@@ -142,3 +142,5 @@ jobs:
           test "$(git diff --cached --name-only | sort | tr '\n' ' ')" = ".github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml .github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml "
           git commit -m 'fix(mcft-cap09): propagate Formal hourly NO-GO across runs'
           git push origin HEAD:feat/mcft-cap09-am19-formal-successor-v1
+
+# retrigger-existing-helper
