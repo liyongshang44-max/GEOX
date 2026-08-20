@@ -79,7 +79,13 @@ jobs:
             let observed = false;
             for await (const response of github.paginate.iterator(
               github.rest.actions.listWorkflowRuns,
-              { owner, repo, status: 'completed', per_page: 1 }
+              {
+                owner,
+                repo,
+                workflow_id: '.github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml',
+                status: 'completed',
+                per_page: 1,
+              }
             )) {
               if (!Array.isArray(response.data)) {
                 throw new Error(`AM19_FORMAL_WORKFLOW_RUN_PAGINATION_ARRAY_REQUIRED:${typeof response.data}`);
