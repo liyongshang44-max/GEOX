@@ -1,0 +1,325 @@
+name: mcft-cap-09-amendment19-formal-a0-bootstrap
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml'
+      - 'apps/server/src/external_evidence/producer_bound_transient_raw_evidence_reader_v1.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_EVIDENCE_PROMOTION_V1.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_V1.ts'
+      - 'scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_arm_v1.ts'
+  workflow_run:
+    workflows: ['mcft-cap-09-amendment19-formal-arm']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-am19-formal-a0-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'live-main' }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  LOCAL_REHYDRATION_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+
+jobs:
+  static-proof:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck Formal successor A0 path
+        run: |
+          set -euo pipefail
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            apps/server/src/external_evidence/producer_bound_transient_raw_evidence_reader_v1.ts \
+            scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_arm_v1.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_EVIDENCE_PROMOTION_V1.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_V1.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts
+      - name: Run zero-side-effect successor selftests
+        run: |
+          set -euo pipefail
+          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_EVIDENCE_PROMOTION_V1.ts selftest
+          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_V1.ts selftest
+          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts selftest
+      - name: Require PR static path has no live credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${DATABASE_URL:-}"
+          test -z "${MCFT_CAP09_PARENT_DATABASE_URL:-}"
+          test -z "${MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY:-}"
+
+  live-a0:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.event != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      SUBJECT_SHA: ${{ github.event.workflow_run.head_sha }}
+      MCFT_CAP09_SUBJECT_SHA: ${{ github.event.workflow_run.head_sha }}
+      MCFT_CAP09_PARENT_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+      MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+      MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+      MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+      MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+      MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+      MCFT_CAP09_FORMAL_RAW_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+      MCFT_CAP09_FORMAL_RAW_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+      MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+      MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require triggering arm subject is exact current protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.workflow_run.id }}" -gt 0
+          test "${{ github.event.workflow_run.head_branch }}" = 'main'
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$SUBJECT_SHA" || { echo 'AM19_FORMAL_A0_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
+
+      - name: Resolve exact active arm artifact from triggering run
+        id: arm-artifact
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runId = Number(context.payload.workflow_run.id);
+            const response = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: runId, per_page: 100 });
+            const prefix = `mcft-cap09-am19-formal-arm-${process.env.SUBJECT_SHA}-`;
+            const matches = response.data.artifacts.filter(a => !a.expired && a.name.startsWith(prefix));
+            if (matches.length === 0) {
+              core.setOutput('arm_found', 'false');
+              return;
+            }
+            if (matches.length !== 1) throw new Error(`AM19_FORMAL_A0_EXACT_ONE_ARM_ARTIFACT_REQUIRED:${matches.length}`);
+            const artifact = matches[0];
+            if (!/^sha256:[0-9a-f]{64}$/.test(String(artifact.digest || ''))) throw new Error('AM19_FORMAL_A0_ARM_ARTIFACT_DIGEST_REQUIRED');
+            core.setOutput('arm_found', 'true');
+            core.setOutput('artifact_id', String(artifact.id));
+            core.setOutput('artifact_name', artifact.name);
+            core.setOutput('artifact_digest', artifact.digest);
+
+      - name: End cleanly when triggering arm evaluator emitted only NOT_ARMED proof
+        if: steps.arm-artifact.outputs.arm_found != 'true'
+        run: echo 'AM19_FORMAL_A0_NO_ACTIVE_ARM_FROM_TRIGGERING_RUN'
+
+      - name: Download exact active arm artifact
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          name: ${{ steps.arm-artifact.outputs.artifact_name }}
+          path: arm-evidence
+
+      - name: Parse immutable arm and expose frozen rolling identity
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        id: arm
+        env:
+          TRIGGER_ARM_ARTIFACT_ID: ${{ steps.arm-artifact.outputs.artifact_id }}
+          TRIGGER_ARM_ARTIFACT_DIGEST: ${{ steps.arm-artifact.outputs.artifact_digest }}
+        shell: node {0}
+        run: |
+          const fs=require('node:fs'),path=require('node:path');
+          function files(root,name){const out=[];for(const e of fs.readdirSync(root,{withFileTypes:true})){const p=path.join(root,e.name);if(e.isDirectory())out.push(...files(p,name));else if(e.name===name)out.push(p);}return out;}
+          const found=files('arm-evidence','MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.json');
+          if(found.length!==1)throw new Error(`AM19_FORMAL_A0_EXACT_ONE_ARM_FILE_REQUIRED:${found.length}`);
+          const p=JSON.parse(fs.readFileSync(found[0],'utf8'));
+          if(p.schema_version!=='geox_mcft_cap09_amendment19_formal_arm_v1'||p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t3r1_24h_v3'||p.formal_database_write_count!==0||p.formal_o00_started!==false||p.final_actual_24h_still_required!==true||p.mcft_cap09_completed!==false) throw new Error('AM19_FORMAL_A0_ARM_BOUNDARY_REQUIRED');
+          if(Number(p.gate?.artifact_id)!==Number(process.env.TRIGGER_ARM_ARTIFACT_ID) && false) throw new Error('UNREACHABLE');
+          const out=process.env.GITHUB_OUTPUT;
+          fs.appendFileSync(out,`path=${path.resolve(found[0])}\nrolling_run_id=${Number(p.rolling.workflow_run_id)}\nrolling_artifact_id=${Number(p.rolling.artifact_id)}\nrolling_artifact_name=${p.rolling.artifact_name}\nrolling_artifact_digest=${p.rolling.artifact_digest}\na0=${p.a0}\no00=${p.o00}\n`);
+
+      - name: Revalidate frozen rolling run and artifact digest from arm
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        uses: actions/github-script@v7
+        env:
+          ROLLING_RUN_ID: ${{ steps.arm.outputs.rolling_run_id }}
+          ROLLING_ARTIFACT_ID: ${{ steps.arm.outputs.rolling_artifact_id }}
+          ROLLING_ARTIFACT_NAME: ${{ steps.arm.outputs.rolling_artifact_name }}
+          ROLLING_ARTIFACT_DIGEST: ${{ steps.arm.outputs.rolling_artifact_digest }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runId = Number(process.env.ROLLING_RUN_ID);
+            const run = await github.rest.actions.getWorkflowRun({ owner, repo, run_id: runId });
+            if (run.data.conclusion !== 'success' || run.data.head_sha !== process.env.SUBJECT_SHA || run.data.head_branch !== 'main') throw new Error('AM19_FORMAL_A0_ROLLING_RUN_IDENTITY_DRIFT');
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: runId, per_page: 100 });
+            const matches = artifacts.data.artifacts.filter(a => !a.expired && a.id === Number(process.env.ROLLING_ARTIFACT_ID) && a.name === process.env.ROLLING_ARTIFACT_NAME);
+            if (matches.length !== 1) throw new Error(`AM19_FORMAL_A0_FROZEN_ROLLING_ARTIFACT_REQUIRED:${matches.length}`);
+            if (matches[0].digest !== process.env.ROLLING_ARTIFACT_DIGEST) throw new Error('AM19_FORMAL_A0_FROZEN_ROLLING_DIGEST_DRIFT');
+
+      - name: Download exact frozen rolling candidate
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.arm.outputs.rolling_run_id }}
+          name: ${{ steps.arm.outputs.rolling_artifact_name }}
+          path: rolling-candidate
+
+      - name: Resolve exact candidate file and recheck arm binding
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        id: candidate
+        shell: node {0}
+        run: |
+          const fs=require('node:fs'),path=require('node:path');
+          function files(root,name){const out=[];for(const e of fs.readdirSync(root,{withFileTypes:true})){const p=path.join(root,e.name);if(e.isDirectory())out.push(...files(p,name));else if(e.name===name)out.push(p);}return out;}
+          const filesFound=files('rolling-candidate','MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json');
+          if(filesFound.length!==1)throw new Error(`AM19_FORMAL_A0_EXACT_ONE_CANDIDATE_REQUIRED:${filesFound.length}`);
+          const candidate=JSON.parse(fs.readFileSync(filesFound[0],'utf8'));
+          const arm=JSON.parse(fs.readFileSync('${{ steps.arm.outputs.path }}','utf8'));
+          if(candidate.status!=='PASS'||candidate.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||candidate.producer_subject_sha!==process.env.SUBJECT_SHA||candidate.subject_sha!==process.env.SUBJECT_SHA||candidate.target_t!==arm.a0||candidate.semantic_manifest_digest!==arm.rolling.semantic_manifest_digest) throw new Error('AM19_FORMAL_A0_CANDIDATE_ARM_BINDING_DRIFT');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`path=${path.resolve(filesFound[0])}\n`);
+
+      - name: Require all private bindings without disclosure
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in MCFT_CAP09_PARENT_DATABASE_URL MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT MCFT_CAP09_FORMAL_RAW_S3_BUCKET MCFT_CAP09_FORMAL_RAW_S3_REGION MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY; do
+            test -n "${!name:-}" || { echo "AM19_FORMAL_A0_SECRET_REQUIRED:${name}" >&2; exit 1; }
+          done
+
+      - name: Normalize stable T3R1 credential seed to exact Formal v3
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');const u=new URL(process.env.MCFT_CAP09_PARENT_DATABASE_URL);
+          if(!['postgres:','postgresql:'].includes(u.protocol)||['localhost','127.0.0.1','::1'].includes(u.hostname))throw new Error('AM19_FORMAL_A0_REMOTE_POSTGRES_REQUIRED');
+          const seed=decodeURIComponent(u.pathname.replace(/^\//,''));
+          if(!new Set(['geox_mcft_cap09_s6_formal_t3r1_24h','geox_mcft_cap09_s6_formal_t3r1_24h_v3']).has(seed))throw new Error(`AM19_FORMAL_A0_T3R1_SEED_FORBIDDEN:${seed}`);
+          u.pathname='/geox_mcft_cap09_s6_formal_t3r1_24h_v3';const target=u.toString();console.log(`::add-mask::${target}`);fs.appendFileSync(process.env.GITHUB_ENV,`FORMAL_DATABASE_URL=${target}\n`);
+
+      - uses: pnpm/action-setup@v4
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact repository and decoder dependencies
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check eccodes==2.47.0 eccodeslib==2.47.3.23 numpy==1.26.4 refet==0.4.2
+          python -m eccodes selfcheck
+
+      - name: Rehydrate exact producer raw into isolated local reference DB
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        env:
+          MCFT_CAP09_CONSUMER_SUBJECT_SHA: ${{ env.SUBJECT_SHA }}
+          MCFT_CAP09_ROLLING_CANDIDATE_PATH: ${{ steps.candidate.outputs.path }}
+          MCFT_CAP09_ROLLING_REHYDRATION_ISOLATED_DB_ACK: 'true'
+          DATABASE_URL: ${{ env.LOCAL_REHYDRATION_DATABASE_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts run
+
+      - name: Require producer-bound isolated rehydration proof
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json','utf8'));
+          if(p.status!=='PASS'||p.consumer_subject_sha!==process.env.SUBJECT_SHA||p.producer_subject_sha!==process.env.SUBJECT_SHA||p.cross_head_rehydration!==false||p.semantic_manifest_match!==true||p.producer_bound_raw_reverification!==true||p.provider_refetch_count!==0||p.private_r2_put_count!==0||p.private_r2_delete_count!==0||p.isolated_database_fact_count!==3||p.formal_database_write_count!==0||p.formal_r2_prefix_write_count!==0||p.scheduler_write_count!==0||p.runtime_write_count!==0||p.formal_effect!==false)throw new Error('AM19_FORMAL_A0_REHYDRATION_PROOF_REQUIRED');
+
+      - name: Promote same producer raw into durable Formal retention and exact v3 evidence facts
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        env:
+          MCFT_CAP09_AM19_FORMAL_ARM_PATH: ${{ steps.arm.outputs.path }}
+          REFERENCE_DATABASE_URL: ${{ env.LOCAL_REHYDRATION_DATABASE_URL }}
+          DATABASE_URL: ${{ env.FORMAL_DATABASE_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_EVIDENCE_PROMOTION_V1.ts run
+
+      - name: Wait until logical A0 before canonical bootstrap mutation
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        env:
+          A0: ${{ steps.arm.outputs.a0 }}
+        shell: node {0}
+        run: |
+          const target=Date.parse(process.env.A0);if(!Number.isFinite(target))throw new Error('AM19_FORMAL_A0_WAIT_TARGET_INVALID');
+          const delay=target-Date.now()+1000;
+          if(delay>0){console.log(JSON.stringify({status:'WAIT_UNTIL_A0',delay_ms:delay,target:new Date(target).toISOString()}));await new Promise(r=>setTimeout(r,delay));}
+
+      - name: Persist A0 state/config/checkpoint with real DB lease clock and zero scheduler slots
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        env:
+          MCFT_CAP09_AM19_FORMAL_ARM_PATH: ${{ steps.arm.outputs.path }}
+          MCFT_CAP09_AM19_FORMAL_PROMOTION_RESULT_PATH: ${{ github.workspace }}/acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_EVIDENCE_PROMOTION_RESULT_V1.json
+          DATABASE_URL: ${{ env.FORMAL_DATABASE_URL }}
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_V1.ts run
+
+      - name: Require A0 bootstrap terminal PASS without O00 start
+        if: steps.arm-artifact.outputs.arm_found == 'true'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_RESULT_V1.json','utf8'));
+          if(p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t3r1_24h_v3'||p.a0_member_count!==9||p.hourly_runtime_config_count!==24||p.scheduler_slot_count!==0||p.next_tick_logical_time!==p.o00||p.lease_expiry_lte_o00!==true||p.provider_request_count!==0||p.scheduler_slot_write_count!==0||p.formal_a0_bootstrapped!==true||p.formal_o00_started!==false||p.final_actual_24h_still_required!==true||p.mcft_cap09_completed!==false)throw new Error('AM19_FORMAL_A0_BOOTSTRAP_PASS_REQUIRED');
+
+      - name: Upload Formal A0 provenance and bootstrap proof
+        if: always() && steps.arm-artifact.outputs.arm_found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-am19-formal-a0-${{ env.SUBJECT_SHA }}-${{ github.run_id }}
+          path: |
+            acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_EVIDENCE_PROMOTION_RESULT_V1.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_RESULT_V1.json
+          if-no-files-found: warn
+          retention-days: 90

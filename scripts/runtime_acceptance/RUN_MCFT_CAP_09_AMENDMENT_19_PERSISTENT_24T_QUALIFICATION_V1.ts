@@ -17,6 +17,10 @@ import {
 } from "../../apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.js";
 import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";
 import {
+  buildExternalFormalAmendment19WindowManifestV1,
+  validateExternalFormalAmendment19WindowManifestV1,
+} from "../../apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.js";
+import {
   buildExternalFormalPrewindowAuthorityBundleV3,
   MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3,
   MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3,
@@ -577,51 +581,30 @@ function buildQualification(candidate: CandidateV1, subject: string, databaseNam
     configuration_matrix: matrix,
   });
 
-  const configs = bundle.persistence_bundle.runtime_configs;
-  const slotCore = configs.map((config, index) => {
-    const pin = bundle.hourly_crop_pins[index]!;
+  const materializationPins = bundle.hourly_crop_pins.map((pin) => {
     const materialized = materializeExternalFormalA18CropContextV2({
       logical_time: pin.logical_time,
       expected_identity_hash: pin.crop_stage_context_hash,
       crop_authority: cropAuthority,
       configuration_matrix: matrix,
     });
-    const payload = config.payload as Record<string, any>;
     return {
-      epoch_id: epoch,
       slot_id: pin.slot_id,
       logical_time: pin.logical_time,
-      runtime_config_ref: config.object_id,
-      runtime_config_hash: config.determinism_hash,
-      parent_runtime_config_ref: String(payload.parent_runtime_config_ref),
-      parent_runtime_config_hash: String(payload.parent_runtime_config_hash),
-      crop_stage_context_ref: String(payload.crop_stage_context_authority.context_ref),
-      crop_stage_context_hash: pin.crop_stage_context_hash,
       crop_stage_context_materialization_hash: materializationHash(materialized),
     };
   });
 
   const manifestRef = `qualification://mcft-cap09/amendment19/persistent24/${epoch}/${databaseName}`;
-  const manifestHash = semanticHashV1({
-    profile: "MCFT_CAP09_AM19_ACCELERATED_PERSISTENT24_MANIFEST_V1",
-    manifest_ref: manifestRef,
-    epoch_id: epoch,
+  const sharedManifest = buildExternalFormalAmendment19WindowManifestV1({
+    subject_sha: subject,
     database_name: databaseName,
-    scope: bundle.persistence_bundle.scope,
-    o00: bundle.o00_logical_time,
-    o23: bundle.o23_logical_time,
-    slots: slotCore,
+    manifest_ref: manifestRef,
+    bundle,
+    crop_context_materialization_pins: materializationPins,
   });
-  const manifest: ExternalFormalV3Am19WindowManifestV1 = {
-    manifest_ref: manifestRef,
-    manifest_hash: manifestHash,
-    epoch_id: epoch,
-    database_name: databaseName,
-    scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
-    o00_logical_time: bundle.o00_logical_time,
-    o23_logical_time: bundle.o23_logical_time,
-    slots: slotCore.map((slot) => ({ ...slot, manifest_ref: manifestRef, manifest_hash: manifestHash })) as ExternalFormalV3Am19WindowManifestV1["slots"],
-  };
+  validateExternalFormalAmendment19WindowManifestV1(sharedManifest, subject);
+  const manifest = sharedManifest as unknown as ExternalFormalV3Am19WindowManifestV1;
   return {
     a0,
     o00: bundle.o00_logical_time,
@@ -1110,7 +1093,7 @@ function selftest(): void {
   };
   const built = buildQualification(candidate, subject, MAIN_DB);
   if (built.o00 !== addHours(a0, 1) || built.o23 !== addHours(a0, 24) || built.manifest.slots.length !== 24 || built.bundle.persistence_bundle.runtime_configs.length !== 24) throw new Error("AM19_P24_SELFTEST_EXACT_RANGE_REQUIRED");
-  if (built.epoch_id === FAILED_EPOCH || built.manifest.database_name !== MAIN_DB) throw new Error("AM19_P24_SELFTEST_FAILED_AUTHORITY_REUSE");
+  if (built.epoch_id === FAILED_EPOCH || built.manifest.database_name !== MAIN_DB || (built.manifest as any).subject_sha !== subject || (built.manifest as any).schema_version !== "geox_mcft_cap09_amendment19_window_manifest_v1") throw new Error("AM19_P24_SELFTEST_SHARED_MANIFEST_REQUIRED");
   const pair = currentPair(built.o00, 1);
   if (pair.some((record) => record.epistemic_class !== "ASSUMED" || !record.limitations.includes("ENGINEERING_FIXTURE_ONLY") || !record.limitations.includes("NOT_FORMAL_EXTERNAL_EVIDENCE"))) throw new Error("AM19_P24_SELFTEST_FIXTURE_DISCLOSURE_REQUIRED");
   if (pair.some((record) => record.role_time.valid_from !== built.o00 || record.role_time.valid_to !== addHours(built.o00, 72))) throw new Error("AM19_P24_SELFTEST_CURRENT_PAIR_WINDOW_REQUIRED");
@@ -1126,6 +1109,8 @@ function selftest(): void {
     bootstrap_lease_uses_real_database_clock: true,
     accelerated_clock_substitution_only_after_bootstrap_lease_expiry: true,
     exact_24_manifest_slots: true,
+    shared_amendment19_manifest_builder_reused: true,
+    manifest_subject_sha_bound: true,
     failed_epoch_reuse_forbidden: true,
     formal_database_write_authorized: false,
     future_formal_epoch_selected: false,
