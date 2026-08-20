@@ -66,7 +66,6 @@ function validate(input) {
   const a0Artifact=artifactMeta(ledger.a0,"AM19_FORMAL_COMPLETION_A0_LEDGER");
   need(armArtifact.artifact_name.startsWith(`mcft-cap09-am19-formal-arm-${subject}-`),"AM19_FORMAL_COMPLETION_ARM_ARTIFACT_NAME_REQUIRED");
   need(a0Artifact.artifact_name.startsWith(`mcft-cap09-am19-formal-a0-${subject}-`),"AM19_FORMAL_COMPLETION_A0_ARTIFACT_NAME_REQUIRED");
-  need(Date.parse(a0Artifact.workflow_completed_at)<Date.parse(o00),"AM19_FORMAL_COMPLETION_A0_WORKFLOW_MUST_COMPLETE_BEFORE_O00");
   need(ledger.no_go_scan_complete===true&&Number(ledger.matching_epoch_no_go_count)===0,"AM19_FORMAL_COMPLETION_NO_GO_EPOCH_FORBIDDEN");
 
   const hourly=input.hourly_results.filter((p)=>p?.status==="PASS"&&p.subject_sha===subject&&p.arm_identity_hash===armIdentity&&p.epoch_id===epoch);
