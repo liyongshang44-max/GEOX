@@ -524,19 +524,19 @@ async function insertMainFixtures(pool: Pool, built: BuiltQualificationV1): Prom
     }
     if (index === 6) {
       for (const record of [
-        exactRecord("rainfall", t, "am19_p24_mode_a_rain", 0.8, addMinutes(t, -1)),
-        exactRecord("et0", t, "am19_p24_mode_a_et0", 0.13, addMinutes(t, -1)),
+        exactRecord("rainfall", t, "am19_p24_mode_a_rain", 0.8, t),
+        exactRecord("et0", t, "am19_p24_mode_a_et0", 0.13, t),
       ]) {
         await insertFixture(pool, record);
         count += 1;
       }
     }
     if (index === 9) {
-      await insertFixture(pool, exactRecord("rainfall", t, "am19_p24_partial_rain_only", 0.4, addMinutes(t, -1)));
+      await insertFixture(pool, exactRecord("rainfall", t, "am19_p24_partial_rain_only", 0.4, t));
       count += 1;
     }
     if (index === 10) {
-      await insertFixture(pool, exactRecord("et0", t, "am19_p24_partial_et0_only", 0.11, addMinutes(t, -1)));
+      await insertFixture(pool, exactRecord("et0", t, "am19_p24_partial_et0_only", 0.11, t));
       count += 1;
     }
   }
