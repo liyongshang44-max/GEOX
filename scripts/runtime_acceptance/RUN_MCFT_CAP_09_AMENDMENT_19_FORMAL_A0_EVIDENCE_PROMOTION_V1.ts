@@ -159,9 +159,9 @@ class RetainedRawReplayTransportV1 implements ExternalEvidenceTransportPortV1 {
   }
 }
 
-class PythonGfsRawBundleDecoderV1 implements ExternalEvidenceDecoderPortV1 {
-  readonly decoder_id = "MCFT_CAP09_EA5E2_GFS_RAW_BUNDLE_DECODER_V1";
-  readonly decoder_version = "1";
+class PythonGfsRawBundleDecoderV2 implements ExternalEvidenceDecoderPortV1 {
+  readonly decoder_id = "MCFT_CAP09_EA5E2_GFS_RAW_BUNDLE_DECODER_V2";
+  readonly decoder_version = "2";
   constructor(private readonly target: string, private readonly restoredIngestedAt: string) {}
   async decodeRetainedEvidence(input: ExternalEvidenceDecoderInputV1): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-cap09-formal-gfs-promote-"));
@@ -171,7 +171,7 @@ class PythonGfsRawBundleDecoderV1 implements ExternalEvidenceDecoderPortV1 {
       fs.writeFileSync(bundle, Buffer.from(input.raw_bytes));
       await execFileAsync(PYTHON, [
         PROVIDER_SCRIPT,
-        "decode-gfs",
+        "decode-gfs-v2",
         "--target", this.target,
         "--available-at", input.provenance.available_at,
         "--input", bundle,
@@ -299,7 +299,7 @@ async function buildFormalResults(arm: FormalArmWithRehydrationV1): Promise<{
   }, {
     transport: new RetainedRawReplayTransportV1(gfs, gfsRaw.bytes),
     retention: formalRetention,
-    decoder: new PythonGfsRawBundleDecoderV1(arm.a0, manifest.gfs.ingested_at),
+    decoder: new PythonGfsRawBundleDecoderV2(arm.a0, manifest.gfs.ingested_at),
   });
   const soilResults = await collectRetainDecodeCanonicalizeExternalEvidenceV1({
     dataset_id: `mcft_cap09_ea5e2_live_soil_${arm.a0}`,

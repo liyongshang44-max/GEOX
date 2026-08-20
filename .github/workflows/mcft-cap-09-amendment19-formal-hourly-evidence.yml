@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_V1.ts'
       - 'apps/server/src/external_evidence/producer_bound_transient_raw_evidence_reader_v1.ts'
   workflow_run:
@@ -265,6 +266,7 @@ jobs:
           pnpm install --frozen-lockfile
           python -m pip install --disable-pip-version-check eccodes==2.47.0 eccodeslib==2.47.3.23 numpy==1.26.4 refet==0.4.2
           python -m eccodes selfcheck
+          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py selftest-et0-decimal-normalization
 
       - name: Rehydrate exact producer raw into isolated local reference DB
         if: steps.evidence.outputs.eligible == 'true'

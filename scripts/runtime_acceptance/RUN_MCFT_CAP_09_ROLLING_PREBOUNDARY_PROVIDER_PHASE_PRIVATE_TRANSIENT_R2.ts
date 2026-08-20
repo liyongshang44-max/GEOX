@@ -438,9 +438,9 @@ class PythonGfsRawBundleTransportV1 implements ExternalEvidenceTransportPortV1 {
   }
 }
 
-class PythonGfsRawBundleDecoderV1 implements ExternalEvidenceDecoderPortV1 {
-  readonly decoder_id = "MCFT_CAP09_EA5E2_GFS_RAW_BUNDLE_DECODER_V1";
-  readonly decoder_version = "1";
+class PythonGfsRawBundleDecoderV2 implements ExternalEvidenceDecoderPortV1 {
+  readonly decoder_id = "MCFT_CAP09_EA5E2_GFS_RAW_BUNDLE_DECODER_V2";
+  readonly decoder_version = "2";
   constructor(private readonly target: string, private readonly restoredIngestedAt?: string, private readonly deadlineMs?: number) {}
   async decodeRetainedEvidence(input: ExternalEvidenceDecoderInputV1): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-ea5e2-gfs-decode-"));
@@ -448,7 +448,7 @@ class PythonGfsRawBundleDecoderV1 implements ExternalEvidenceDecoderPortV1 {
     const output = path.join(temp, "gfs-drafts.json");
     try {
       fs.writeFileSync(bundle, Buffer.from(input.raw_bytes));
-      await runPython(["decode-gfs", "--target", this.target, "--available-at", input.provenance.available_at, "--input", bundle, "--output", output], this.deadlineMs);
+      await runPython(["decode-gfs-v2", "--target", this.target, "--available-at", input.provenance.available_at, "--input", bundle, "--output", output], this.deadlineMs);
       const parsed = JSON.parse(fs.readFileSync(output, "utf8")) as { drafts?: GovernedDecodedEvidenceDraftV1[] };
       if (!Array.isArray(parsed.drafts) || parsed.drafts.length !== 2) throw new Error("EA5E2_GFS_DRAFT_PAIR_REQUIRED");
       if (!this.restoredIngestedAt) return parsed.drafts;
@@ -611,7 +611,7 @@ async function rehydratePreBoundary(input: { pool: Pool; store: Ea5e2PrivateTran
   }, {
     transport: new RetainedRawReplayTransportV1(gfsProvenance, gfsRaw.bytes),
     retention: input.store,
-    decoder: new PythonGfsRawBundleDecoderV1(input.target, String(gfs.ingested_at)),
+    decoder: new PythonGfsRawBundleDecoderV2(input.target, String(gfs.ingested_at)),
   });
   const soilResults = await collectRetainDecodeCanonicalizeExternalEvidenceV1({
     dataset_id: `mcft_cap09_ea5e2_live_soil_${input.target}`,
@@ -790,7 +790,7 @@ async function main(): Promise<void> {
         dataset_id: `mcft_cap09_ea5e2_live_gfs_${target}`,
         scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
         request: { request_id: `ea5e2-live-gfs-${crypto.randomUUID()}`, provider_id: "NOAA_NCEP_NOMADS_GFS", source_family: "GFS_PGRB2_SFLUX_RAW_BUNDLE", locator: GFS_ROOT, allowed_final_hosts: ["nomads.ncep.noaa.gov"], use_policy_ref: "GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1", requested_at: phaseRequestedAt, expected_content_type_prefixes: ["application/x-tar"], limitations: ["EA5E2_PRIVATE_TRANSIENT_RAW_BUNDLE", "NO_FORMAL_RAW_PREFIX_WRITE", "NO_PUBLIC_VALUE_ARTIFACT"] },
-      }, { transport: gfsTransport, retention: store, decoder: new PythonGfsRawBundleDecoderV1(target, undefined, latestIngressStartMs) });
+      }, { transport: gfsTransport, retention: store, decoder: new PythonGfsRawBundleDecoderV2(target, undefined, latestIngressStartMs) });
 
       const soilPromise = (async (): Promise<{ result: CanonicalizedExternalEvidenceResultV1; request_count: number }> => {
         await sleepUntil(addMinutes(target, -SOIL_FIRST_FETCH_BEFORE_T_MINUTES));

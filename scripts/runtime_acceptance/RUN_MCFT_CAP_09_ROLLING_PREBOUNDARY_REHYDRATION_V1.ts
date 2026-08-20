@@ -289,9 +289,9 @@ class RetainedRawReplayTransportV1 implements ExternalEvidenceTransportPortV1 {
   }
 }
 
-class PythonGfsRawBundleDecoderV1 implements ExternalEvidenceDecoderPortV1 {
-  readonly decoder_id = "MCFT_CAP09_EA5E2_GFS_RAW_BUNDLE_DECODER_V1";
-  readonly decoder_version = "1";
+class PythonGfsRawBundleDecoderV2 implements ExternalEvidenceDecoderPortV1 {
+  readonly decoder_id = "MCFT_CAP09_EA5E2_GFS_RAW_BUNDLE_DECODER_V2";
+  readonly decoder_version = "2";
   constructor(private readonly target: string, private readonly restoredIngestedAt: string) {}
   async decodeRetainedEvidence(input: ExternalEvidenceDecoderInputV1): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-cap09-rolling-gfs-rehydrate-"));
@@ -299,7 +299,7 @@ class PythonGfsRawBundleDecoderV1 implements ExternalEvidenceDecoderPortV1 {
     const output = path.join(temp, "gfs-drafts.json");
     try {
       fs.writeFileSync(bundle, Buffer.from(input.raw_bytes));
-      await execFileAsync(PYTHON, [PROVIDER_SCRIPT, "decode-gfs", "--target", this.target, "--available-at", input.provenance.available_at, "--input", bundle, "--output", output], { timeout: 20 * 60_000, maxBuffer: 32 * 1024 * 1024 });
+      await execFileAsync(PYTHON, [PROVIDER_SCRIPT, "decode-gfs-v2", "--target", this.target, "--available-at", input.provenance.available_at, "--input", bundle, "--output", output], { timeout: 20 * 60_000, maxBuffer: 32 * 1024 * 1024 });
       const parsed = JSON.parse(fs.readFileSync(output, "utf8")) as { drafts?: GovernedDecodedEvidenceDraftV1[] };
       if (!Array.isArray(parsed.drafts) || parsed.drafts.length !== 2) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_GFS_DRAFT_PAIR_REQUIRED");
       const ingestedAt = canonicalIso(this.restoredIngestedAt, "MCFT_CAP09_ROLLING_REHYDRATION_GFS_INGESTED_AT_INVALID");
@@ -389,7 +389,7 @@ async function rehydrate(candidate: CandidateV1, pool: Pool): Promise<{ results:
   }, {
     transport: new RetainedRawReplayTransportV1(gfsProvenance, gfsRaw.bytes),
     retention: store,
-    decoder: new PythonGfsRawBundleDecoderV1(candidate.target_t, manifest.gfs.ingested_at),
+    decoder: new PythonGfsRawBundleDecoderV2(candidate.target_t, manifest.gfs.ingested_at),
   });
   const soilResults = await collectRetainDecodeCanonicalizeExternalEvidenceV1({
     dataset_id: `mcft_cap09_ea5e2_live_soil_${candidate.target_t}`,
