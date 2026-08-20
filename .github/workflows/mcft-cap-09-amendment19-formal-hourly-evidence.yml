@@ -135,7 +135,7 @@ jobs:
             async function findArtifacts(workflowPath, prefix, successfulOnly = true) {
               const found = [];
               for await (const response of github.paginate.iterator(github.rest.actions.listWorkflowRuns, { owner, repo, workflow_id: workflowPath, branch: 'main', status: 'completed', per_page: 100 })) {
-                for (const run of response.data.workflow_runs.filter(r => r.head_sha === subject && (!successfulOnly || r.conclusion === 'success'))) {
+                for (const run of response.data.filter(r => r.head_sha === subject && (!successfulOnly || r.conclusion === 'success'))) {
                   const arts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: run.id, per_page: 100 });
                   for (const artifact of arts.data.artifacts) if (!artifact.expired && artifact.name.startsWith(prefix)) found.push({ run, artifact });
                 }
