@@ -100,7 +100,7 @@ jobs:
             async function collect(workflow, prefix) {
               const found=[];
               for await (const response of github.paginate.iterator(github.rest.actions.listWorkflowRuns,{owner,repo,workflow_id:workflow,branch:'main',status:'completed',per_page:100})) {
-                for(const run of response.data.workflow_runs.filter(r=>r.head_sha===subject && r.conclusion==='success')) {
+                for(const run of response.data.filter(r=>r.head_sha===subject && r.conclusion==='success')) {
                   const arts=await github.rest.actions.listWorkflowRunArtifacts({owner,repo,run_id:run.id,per_page:100});
                   for(const artifact of arts.data.artifacts) if(!artifact.expired&&artifact.name.startsWith(prefix)) found.push({run,artifact});
                 }
@@ -213,7 +213,7 @@ jobs:
             const fs=require('node:fs'),path=require('node:path');const {owner,repo}=context.repo,subject=process.env.MCFT_CAP09_SUBJECT_SHA;
             fs.mkdirSync('hourly-zips',{recursive:true});fs.mkdirSync('audit-zips',{recursive:true});
             const digestOk=v=>/^sha256:[0-9a-f]{64}$/.test(String(v||''));
-            async function runs(workflow){const found=[];for await(const response of github.paginate.iterator(github.rest.actions.listWorkflowRuns,{owner,repo,workflow_id:workflow,branch:'main',status:'completed',per_page:100}))found.push(...response.data.workflow_runs.filter(x=>x.head_sha===subject));return found;}
+            async function runs(workflow){const found=[];for await(const response of github.paginate.iterator(github.rest.actions.listWorkflowRuns,{owner,repo,workflow_id:workflow,branch:'main',status:'completed',per_page:100}))found.push(...response.data.filter(x=>x.head_sha===subject));return found;}
             async function arts(run){return (await github.rest.actions.listWorkflowRunArtifacts({owner,repo,run_id:run.id,per_page:100})).data.artifacts.filter(a=>!a.expired);}
             async function download(artifact,dir){const r=await github.rest.actions.downloadArtifact({owner,repo,artifact_id:artifact.id,archive_format:'zip'});fs.writeFileSync(path.join(dir,`${artifact.id}.zip`),Buffer.from(r.data));}
             const hourly=[];
