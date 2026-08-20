@@ -1,0 +1,291 @@
+name: mcft-cap-09-amendment19-formal-final-readback
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-amendment19-formal-final-readback.yml'
+      - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs'
+      - 'scripts/runtime_acceptance/READBACK_MCFT_CAP_09_AMENDMENT_19_FORMAL_FINAL_V1.ts'
+      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_AMENDMENT_19_FORMAL_DOWNSTREAM_ZERO_V1.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_EVIDENCE_PROMOTION_V1.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_V1.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_V1.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts'
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-am19-formal-final-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+
+jobs:
+  static-proof:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck final read-only probes
+        run: >-
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node
+          scripts/runtime_acceptance/READBACK_MCFT_CAP_09_AMENDMENT_19_FORMAL_FINAL_V1.ts
+          scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_AMENDMENT_19_FORMAL_DOWNSTREAM_ZERO_V1.ts
+      - name: Prove final evidence assemblers without side effects
+        run: |
+          set -euo pipefail
+          pnpm exec tsx scripts/runtime_acceptance/READBACK_MCFT_CAP_09_AMENDMENT_19_FORMAL_FINAL_V1.ts selftest
+          pnpm exec tsx scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_AMENDMENT_19_FORMAL_DOWNSTREAM_ZERO_V1.ts selftest
+          node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs selftest
+      - name: Require PR static path has no live credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${DATABASE_URL:-}"
+          test -z "${MCFT_CAP09_PARENT_DATABASE_URL:-}"
+
+  live-final:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      MCFT_CAP09_SUBJECT_SHA: ${{ github.sha }}
+      MCFT_CAP09_PARENT_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact current protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main' || { echo 'AM19_FORMAL_FINAL_MAIN_REQUIRED' >&2; exit 1; }
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$MCFT_CAP09_SUBJECT_SHA"
+          test "$(git rev-parse origin/main)" = "$MCFT_CAP09_SUBJECT_SHA" || { echo 'AM19_FORMAL_FINAL_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
+
+      - name: Resolve unique successful arm and A0 artifacts
+        id: roots
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const subject = process.env.MCFT_CAP09_SUBJECT_SHA;
+            const digestOk = v => /^sha256:[0-9a-f]{64}$/.test(String(v || ''));
+            async function collect(workflow, prefix) {
+              const runs = await github.rest.actions.listWorkflowRuns({owner,repo,workflow_id:workflow,branch:'main',status:'completed',per_page:100});
+              const found=[];
+              for(const run of runs.data.workflow_runs.filter(r=>r.head_sha===subject && r.conclusion==='success')){
+                const arts=await github.rest.actions.listWorkflowRunArtifacts({owner,repo,run_id:run.id,per_page:100});
+                for(const artifact of arts.data.artifacts){if(!artifact.expired&&artifact.name.startsWith(prefix))found.push({run,artifact});}
+              }
+              return found;
+            }
+            const arms=await collect('.github/workflows/mcft-cap-09-amendment19-formal-arm.yml',`mcft-cap09-am19-formal-arm-${subject}-`);
+            if(arms.length===0){core.setOutput('active','false');core.setOutput('reason','NO_ACTIVE_FORMAL_ARM');return;}
+            if(arms.length!==1)throw new Error(`AM19_FORMAL_FINAL_EXACT_ONE_ARM_REQUIRED:${arms.length}`);
+            const a0s=await collect('.github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml',`mcft-cap09-am19-formal-a0-${subject}-`);
+            if(a0s.length===0){core.setOutput('active','false');core.setOutput('reason','A0_PROOF_NOT_AVAILABLE');return;}
+            if(a0s.length!==1)throw new Error(`AM19_FORMAL_FINAL_EXACT_ONE_A0_REQUIRED:${a0s.length}`);
+            for(const x of [arms[0],a0s[0]])if(!digestOk(x.artifact.digest))throw new Error('AM19_FORMAL_FINAL_ROOT_ARTIFACT_DIGEST_REQUIRED');
+            core.setOutput('active','true');
+            core.setOutput('arm_run_id',String(arms[0].run.id));core.setOutput('arm_name',arms[0].artifact.name);core.setOutput('arm_id',String(arms[0].artifact.id));core.setOutput('arm_digest',arms[0].artifact.digest);core.setOutput('arm_completed_at',arms[0].run.updated_at);
+            core.setOutput('a0_run_id',String(a0s[0].run.id));core.setOutput('a0_name',a0s[0].artifact.name);core.setOutput('a0_id',String(a0s[0].artifact.id));core.setOutput('a0_digest',a0s[0].artifact.digest);core.setOutput('a0_completed_at',a0s[0].run.updated_at);
+
+      - name: Record clean inactive state
+        if: steps.roots.outputs.active != 'true'
+        env:
+          REASON: ${{ steps.roots.outputs.reason }}
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');fs.mkdirSync('acceptance-output',{recursive:true});fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_CANDIDATE_V1.json',JSON.stringify({schema_version:'geox_mcft_cap09_amendment19_formal_completion_candidate_v1',status:'NOT_READY',reason:process.env.REASON,subject_sha:process.env.MCFT_CAP09_SUBJECT_SHA,formal_effect:false,mcft_cap09_completed:false},null,2)+'\n');
+
+      - name: Download exact arm artifact
+        if: steps.roots.outputs.active == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.roots.outputs.arm_run_id }}
+          name: ${{ steps.roots.outputs.arm_name }}
+          path: arm-evidence
+
+      - name: Download exact A0 artifact
+        if: steps.roots.outputs.active == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.roots.outputs.a0_run_id }}
+          name: ${{ steps.roots.outputs.a0_name }}
+          path: a0-evidence
+
+      - name: Resolve arm files and wall-clock final eligibility
+        if: steps.roots.outputs.active == 'true'
+        id: arm
+        shell: node {0}
+        run: |
+          const fs=require('node:fs'),path=require('node:path');
+          function files(root,name){const out=[];for(const e of fs.readdirSync(root,{withFileTypes:true})){const p=path.join(root,e.name);if(e.isDirectory())out.push(...files(p,name));else if(e.name===name)out.push(p);}return out;}
+          const arms=files('arm-evidence','MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.json'),promos=files('a0-evidence','MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_EVIDENCE_PROMOTION_RESULT_V1.json'),boots=files('a0-evidence','MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_RESULT_V1.json');
+          if(arms.length!==1||promos.length!==1||boots.length!==1)throw new Error(`AM19_FORMAL_FINAL_ROOT_FILE_CARDINALITY:${arms.length}:${promos.length}:${boots.length}`);
+          const arm=JSON.parse(fs.readFileSync(arms[0],'utf8')),promo=JSON.parse(fs.readFileSync(promos[0],'utf8')),boot=JSON.parse(fs.readFileSync(boots[0],'utf8'));
+          if(arm.status!=='PASS'||arm.subject_sha!==process.env.MCFT_CAP09_SUBJECT_SHA||promo.status!=='PASS'||promo.subject_sha!==arm.subject_sha||promo.arm_identity_hash!==arm.arm_identity_hash||promo.epoch_id!==arm.epoch_id||boot.status!=='PASS'||boot.subject_sha!==arm.subject_sha||boot.arm_identity_hash!==arm.arm_identity_hash||boot.epoch_id!==arm.epoch_id)throw new Error('AM19_FORMAL_FINAL_ROOT_IDENTITY_REQUIRED');
+          const earliest=Date.parse(arm.o23)+20*60000;const ready=Date.now()>=earliest;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`ready=${ready?'true':'false'}\nreason=${ready?'':'O23_PLUS_LEASE_GRACE_NOT_REACHED'}\narm_path=${path.resolve(arms[0])}\na0_promotion_path=${path.resolve(promos[0])}\nbootstrap_path=${path.resolve(boots[0])}\no23=${arm.o23}\narm_identity_hash=${arm.arm_identity_hash}\nepoch_id=${arm.epoch_id}\n`);
+          if(!ready){fs.mkdirSync('acceptance-output',{recursive:true});fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_CANDIDATE_V1.json',JSON.stringify({schema_version:'geox_mcft_cap09_amendment19_formal_completion_candidate_v1',status:'NOT_READY',reason:'O23_PLUS_LEASE_GRACE_NOT_REACHED',subject_sha:arm.subject_sha,arm_identity_hash:arm.arm_identity_hash,epoch_id:arm.epoch_id,o23:arm.o23,formal_effect:false,mcft_cap09_completed:false},null,2)+'\n');}
+
+      - name: Require private Formal DB binding without disclosure
+        if: steps.arm.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${MCFT_CAP09_PARENT_DATABASE_URL:-}" || { echo 'AM19_FORMAL_FINAL_DATABASE_SECRET_REQUIRED' >&2; exit 1; }
+
+      - name: Normalize stable credential seed to exact Formal v3
+        if: steps.arm.outputs.ready == 'true'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');const u=new URL(process.env.MCFT_CAP09_PARENT_DATABASE_URL);if(!['postgres:','postgresql:'].includes(u.protocol)||['localhost','127.0.0.1','::1'].includes(u.hostname))throw new Error('AM19_FORMAL_FINAL_REMOTE_POSTGRES_REQUIRED');const seed=decodeURIComponent(u.pathname.replace(/^\//,''));if(!new Set(['geox_mcft_cap09_s6_formal_t3r1_24h','geox_mcft_cap09_s6_formal_t3r1_24h_v3']).has(seed))throw new Error(`AM19_FORMAL_FINAL_T3R1_SEED_FORBIDDEN:${seed}`);u.pathname='/geox_mcft_cap09_s6_formal_t3r1_24h_v3';const target=u.toString();console.log(`::add-mask::${target}`);fs.appendFileSync(process.env.GITHUB_ENV,`DATABASE_URL=${target}\n`);
+
+      - uses: pnpm/action-setup@v4
+        if: steps.arm.outputs.ready == 'true'
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        if: steps.arm.outputs.ready == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install exact repository dependencies
+        if: steps.arm.outputs.ready == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Check final DB readiness without mutation
+        if: steps.arm.outputs.ready == 'true'
+        id: dbready
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');const {Pool}=require('pg');(async()=>{const pool=new Pool({connectionString:process.env.DATABASE_URL,application_name:'mcft-cap09-am19-formal-final-preflight'});try{const db=String((await pool.query('SELECT current_database() AS n')).rows[0]?.n||'');if(db!=='geox_mcft_cap09_s6_formal_t3r1_24h_v3')throw new Error('AM19_FORMAL_FINAL_PREFLIGHT_DB_IDENTITY');const terminal=Number((await pool.query('SELECT count(*)::int AS n FROM twin_terminal_tick_uniqueness_v1')).rows[0]?.n??-1);const slots=Number((await pool.query("SELECT count(*)::int AS n FROM twin_shadow_online_scheduler_slot_v1 WHERE state IN ('COMPLETED','DEGRADED')")).rows[0]?.n??-1);const lease=(await pool.query('SELECT expires_at,transaction_timestamp() AS now FROM twin_runtime_lease_v1')).rows;const inactive=lease.length===1&&Date.parse(new Date(lease[0].expires_at).toISOString())<=Date.parse(new Date(lease[0].now).toISOString());const ready=terminal===24&&slots===24&&inactive;fs.appendFileSync(process.env.GITHUB_OUTPUT,`ready=${ready?'true':'false'}\nterminal=${terminal}\nslots=${slots}\nlease_inactive=${inactive?'true':'false'}\n`);if(!ready){fs.mkdirSync('acceptance-output',{recursive:true});fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_CANDIDATE_V1.json',JSON.stringify({schema_version:'geox_mcft_cap09_amendment19_formal_completion_candidate_v1',status:'NOT_READY',reason:'FINAL_DB_NOT_TERMINAL_OR_LEASE_ACTIVE',subject_sha:process.env.MCFT_CAP09_SUBJECT_SHA,terminal_tick_count:terminal,terminal_slot_count:slots,lease_inactive:inactive,formal_effect:false,mcft_cap09_completed:false},null,2)+'\n');}}finally{await pool.end();}})().catch(e=>{console.error(e);process.exit(1);});
+
+      - name: Download hourly and audit artifacts with immutable metadata
+        if: steps.dbready.outputs.ready == 'true'
+        uses: actions/github-script@v7
+        env:
+          ARM_RUN_ID: ${{ steps.roots.outputs.arm_run_id }}
+          ARM_ID: ${{ steps.roots.outputs.arm_id }}
+          ARM_NAME: ${{ steps.roots.outputs.arm_name }}
+          ARM_DIGEST: ${{ steps.roots.outputs.arm_digest }}
+          ARM_COMPLETED_AT: ${{ steps.roots.outputs.arm_completed_at }}
+          A0_RUN_ID: ${{ steps.roots.outputs.a0_run_id }}
+          A0_ID: ${{ steps.roots.outputs.a0_id }}
+          A0_NAME: ${{ steps.roots.outputs.a0_name }}
+          A0_DIGEST: ${{ steps.roots.outputs.a0_digest }}
+          A0_COMPLETED_AT: ${{ steps.roots.outputs.a0_completed_at }}
+        with:
+          script: |
+            const fs=require('node:fs'),path=require('node:path');const {owner,repo}=context.repo,subject=process.env.MCFT_CAP09_SUBJECT_SHA;
+            fs.mkdirSync('hourly-zips',{recursive:true});fs.mkdirSync('audit-zips',{recursive:true});
+            const digestOk=v=>/^sha256:[0-9a-f]{64}$/.test(String(v||''));
+            async function runs(workflow){const r=await github.rest.actions.listWorkflowRuns({owner,repo,workflow_id:workflow,branch:'main',status:'completed',per_page:100});return r.data.workflow_runs.filter(x=>x.head_sha===subject);}
+            async function arts(run){return (await github.rest.actions.listWorkflowRunArtifacts({owner,repo,run_id:run.id,per_page:100})).data.artifacts.filter(a=>!a.expired);}
+            async function download(artifact,dir){const r=await github.rest.actions.downloadArtifact({owner,repo,artifact_id:artifact.id,archive_format:'zip'});fs.writeFileSync(path.join(dir,`${artifact.id}.zip`),Buffer.from(r.data));}
+            const hourly=[];
+            for(const run of await runs('.github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml'))for(const artifact of await arts(run))if(artifact.name.startsWith(`mcft-cap09-am19-formal-hourly-${subject}-`)){if(!digestOk(artifact.digest))throw new Error('AM19_FORMAL_FINAL_HOURLY_DIGEST_REQUIRED');hourly.push({workflow_run_id:run.id,workflow_completed_at:run.updated_at,artifact_id:artifact.id,artifact_name:artifact.name,artifact_digest:artifact.digest,conclusion:run.conclusion});await download(artifact,'hourly-zips');}
+            const audit=[];
+            for(const workflow of ['.github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml','.github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml','.github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml'])for(const run of await runs(workflow))for(const artifact of await arts(run)){const relevant=artifact.name.startsWith(`mcft-cap09-am19-formal-a0-${subject}-`)||artifact.name.startsWith(`mcft-cap09-am19-formal-hourly-${subject}-`)||artifact.name.startsWith(`mcft-cap09-am19-formal-cycle-`)&&artifact.name.includes(`-${subject}-`);if(relevant){if(!digestOk(artifact.digest))throw new Error('AM19_FORMAL_FINAL_AUDIT_DIGEST_REQUIRED');audit.push({workflow_run_id:run.id,workflow_completed_at:run.updated_at,artifact_id:artifact.id,artifact_name:artifact.name,artifact_digest:artifact.digest,conclusion:run.conclusion});await download(artifact,'audit-zips');}}
+            const roots={arm:{workflow_run_id:Number(process.env.ARM_RUN_ID),workflow_completed_at:process.env.ARM_COMPLETED_AT,artifact_id:Number(process.env.ARM_ID),artifact_name:process.env.ARM_NAME,artifact_digest:process.env.ARM_DIGEST},a0:{workflow_run_id:Number(process.env.A0_RUN_ID),workflow_completed_at:process.env.A0_COMPLETED_AT,artifact_id:Number(process.env.A0_ID),artifact_name:process.env.A0_NAME,artifact_digest:process.env.A0_DIGEST}};
+            fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARTIFACT_INVENTORY_V1.json',JSON.stringify({schema_version:'geox_mcft_cap09_amendment19_formal_artifact_inventory_v1',status:'PASS',subject_sha:subject,roots,hourly,audit},null,2)+'\n');
+
+      - name: Expand downloaded evidence artifacts
+        if: steps.dbready.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p hourly-evidence audit-evidence
+          shopt -s nullglob
+          for z in hourly-zips/*.zip; do id=$(basename "$z" .zip); mkdir -p "hourly-evidence/$id"; unzip -q "$z" -d "hourly-evidence/$id"; done
+          for z in audit-zips/*.zip; do id=$(basename "$z" .zip); mkdir -p "audit-evidence/$id"; unzip -q "$z" -d "audit-evidence/$id"; done
+
+      - name: Build exact artifact ledger and reject any matching-epoch irreversible NO-GO
+        if: steps.dbready.outputs.ready == 'true'
+        id: ledger
+        env:
+          ARM_IDENTITY_HASH: ${{ steps.arm.outputs.arm_identity_hash }}
+          EPOCH_ID: ${{ steps.arm.outputs.epoch_id }}
+        shell: node {0}
+        run: |
+          const fs=require('node:fs'),path=require('node:path');const inv=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARTIFACT_INVENTORY_V1.json','utf8'));const subject=process.env.MCFT_CAP09_SUBJECT_SHA;
+          function jsons(root){const out=[];if(!fs.existsSync(root))return out;for(const e of fs.readdirSync(root,{withFileTypes:true})){const p=path.join(root,e.name);if(e.isDirectory())out.push(...jsons(p));else if(e.name.endsWith('.json'))out.push(p);}return out;}
+          const matchingNoGo=[];for(const f of jsons('audit-evidence')){let p;try{p=JSON.parse(fs.readFileSync(f,'utf8'));}catch{continue;}if(p?.subject_sha===subject&&p?.arm_identity_hash===process.env.ARM_IDENTITY_HASH&&p?.epoch_id===process.env.EPOCH_ID&&p?.formal_epoch_no_go===true)matchingNoGo.push({file:f,failure_class:p.failure_class||p.result?.status||p.status});}
+          if(matchingNoGo.length)throw new Error(`AM19_FORMAL_FINAL_MATCHING_EPOCH_NO_GO:${JSON.stringify(matchingNoGo)}`);
+          const inventoryById=new Map(inv.hourly.map(x=>[String(x.artifact_id),x]));const hourly=[];
+          for(const dir of fs.readdirSync('hourly-evidence',{withFileTypes:true}).filter(e=>e.isDirectory())){const id=dir.name,files=jsons(path.join('hourly-evidence',id)).filter(f=>path.basename(f)==='MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_RESULT_V1.json');if(files.length!==1)continue;const p=JSON.parse(fs.readFileSync(files[0],'utf8'));if(p.status!=='PASS'||p.subject_sha!==subject||p.arm_identity_hash!==process.env.ARM_IDENTITY_HASH||p.epoch_id!==process.env.EPOCH_ID)continue;const m=inventoryById.get(id);if(!m)throw new Error(`AM19_FORMAL_FINAL_HOURLY_INVENTORY_MISSING:${id}`);hourly.push({...m,base_target_t:p.base_target_t,supported_slot_t:p.supported_slot_t,promotion_completed_at:p.promotion_completed_at});}
+          const ledger={schema_version:'geox_mcft_cap09_amendment19_formal_artifact_ledger_v1',status:'PASS',subject_sha:subject,arm:inv.roots.arm,a0:inv.roots.a0,hourly,no_go_scan_complete:true,matching_epoch_no_go_count:0};fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARTIFACT_LEDGER_V1.json',JSON.stringify(ledger,null,2)+'\n');fs.appendFileSync(process.env.GITHUB_OUTPUT,`hourly_count=${hourly.length}\n`);
+
+      - name: Run exact Formal v3 final database readback
+        if: steps.dbready.outputs.ready == 'true'
+        env:
+          MCFT_CAP09_AM19_FORMAL_ARM_PATH: ${{ steps.arm.outputs.arm_path }}
+          MCFT_CAP09_AM19_FORMAL_A0_BOOTSTRAP_RESULT_PATH: ${{ steps.arm.outputs.bootstrap_path }}
+        run: pnpm exec tsx scripts/runtime_acceptance/READBACK_MCFT_CAP_09_AMENDMENT_19_FORMAL_FINAL_V1.ts run
+
+      - name: Prove downstream recommendation/action surface remained zero
+        if: steps.dbready.outputs.ready == 'true'
+        run: pnpm exec tsx scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_AMENDMENT_19_FORMAL_DOWNSTREAM_ZERO_V1.ts run
+
+      - name: Assemble immutable Formal completion candidate
+        if: steps.dbready.outputs.ready == 'true'
+        env:
+          MCFT_CAP09_AM19_FORMAL_ARM_PATH: ${{ steps.arm.outputs.arm_path }}
+          MCFT_CAP09_AM19_FORMAL_A0_PROMOTION_PATH: ${{ steps.arm.outputs.a0_promotion_path }}
+          MCFT_CAP09_AM19_FORMAL_A0_BOOTSTRAP_PATH: ${{ steps.arm.outputs.bootstrap_path }}
+          MCFT_CAP09_AM19_FORMAL_LEDGER_PATH: ${{ github.workspace }}/acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARTIFACT_LEDGER_V1.json
+          MCFT_CAP09_AM19_FORMAL_READBACK_PATH: ${{ github.workspace }}/acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_FINAL_READBACK_V1.json
+          MCFT_CAP09_AM19_FORMAL_DOWNSTREAM_ZERO_PATH: ${{ github.workspace }}/acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_DOWNSTREAM_ZERO_RESULT_V1.json
+          MCFT_CAP09_AM19_FORMAL_HOURLY_DIR: ${{ github.workspace }}/hourly-evidence
+          MCFT_CAP09_AM19_FORMAL_NOGO_DIR: ${{ github.workspace }}/audit-evidence
+        run: node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs run
+
+      - name: Require completion candidate without overclaim
+        if: steps.dbready.outputs.ready == 'true'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_CANDIDATE_V1.json','utf8'));if(p.status!=='PASS'||p.subject_sha!==process.env.MCFT_CAP09_SUBJECT_SHA||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t3r1_24h_v3'||p.hourly_causal_base_promotion_count!==23||p.exact_causal_base_snapshot_count!==24||p.exact_terminal_tick_count!==24||p.physical_pre_t_promotion_ledger_pass!==true||p.o23_seed_for_o24_written!==false||p.database_readback_pass!==true||p.downstream_zero_pass!==true||p.matching_epoch_no_go_count!==0||p.formal_execution_count!=='24/24'||p.actual_wall_clock_o00_o23_completed!==true||p.stage1b_graduation_gate!=='PASS'||p.final_actual_24h_still_required!==false||p.formal_completion_candidate!==true||p.completion_adjudication_required!==true||p.mcft_cap09_completed!==false)throw new Error('AM19_FORMAL_FINAL_COMPLETION_CANDIDATE_REQUIRED');
+
+      - name: Upload final read-only completion evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-am19-formal-final-${{ env.MCFT_CAP09_SUBJECT_SHA }}-${{ github.run_id }}
+          path: |
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARTIFACT_INVENTORY_V1.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARTIFACT_LEDGER_V1.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_FINAL_READBACK_V1.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_DOWNSTREAM_ZERO_RESULT_V1.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_CANDIDATE_V1.json
+          if-no-files-found: warn
+          retention-days: 90
