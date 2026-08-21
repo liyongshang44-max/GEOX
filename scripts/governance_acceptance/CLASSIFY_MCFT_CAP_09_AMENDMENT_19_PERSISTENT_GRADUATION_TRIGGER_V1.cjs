@@ -5,8 +5,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const SCHEMA = "geox_mcft_cap09_amendment19_persistent24_qualification_result_v1";
-const MAIN_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_v3";
-const BLOCKED_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_blocked_v3";
+const MAIN_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_v4";
+const BLOCKED_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_blocked_v4";
 const ZERO_FIELDS = [
   "database_write_count",
   "runtime_write_count",
@@ -27,6 +27,9 @@ function classify(persistent, subject) {
   subject = exactSubject(subject);
   need(persistent?.schema_version === SCHEMA, "AM19_GRADUATION_TRIGGER_PERSISTENT_SCHEMA_REQUIRED");
   need(persistent.subject_sha === subject, "AM19_GRADUATION_TRIGGER_PERSISTENT_SUBJECT_REQUIRED");
+  need(persistent.qualified_subject_sha === subject, "AM19_GRADUATION_TRIGGER_QUALIFIED_SUBJECT_REQUIRED");
+  need(persistent.main_database_name === MAIN_DATABASE, "AM19_GRADUATION_TRIGGER_MAIN_DATABASE_REQUIRED");
+  need(persistent.blocked_database_name === BLOCKED_DATABASE, "AM19_GRADUATION_TRIGGER_BLOCKED_DATABASE_REQUIRED");
 
   if (persistent.status === "PASS") {
     return {
@@ -41,8 +44,6 @@ function classify(persistent, subject) {
   }
 
   need(persistent.status === "ALREADY_QUALIFIED_READ_ONLY", `AM19_GRADUATION_TRIGGER_FRESH_OR_READ_ONLY_STATUS_REQUIRED:${String(persistent.status)}`);
-  need(persistent.main_database_name === MAIN_DATABASE, "AM19_GRADUATION_TRIGGER_READ_ONLY_MAIN_DATABASE_REQUIRED");
-  need(persistent.blocked_database_name === BLOCKED_DATABASE, "AM19_GRADUATION_TRIGGER_READ_ONLY_BLOCKED_DATABASE_REQUIRED");
   for (const key of ZERO_FIELDS) {
     need(Number(persistent[key]) === 0, `AM19_GRADUATION_TRIGGER_READ_ONLY_ZERO_REQUIRED:${key}`);
   }
@@ -73,13 +74,14 @@ function classify(persistent, subject) {
 
 function selftest() {
   const subject = "1".repeat(40);
-  const fresh = classify({ schema_version: SCHEMA, status: "PASS", subject_sha: subject }, subject);
+  const fresh = classify({ schema_version: SCHEMA, status: "PASS", subject_sha: subject, qualified_subject_sha: subject, main_database_name: MAIN_DATABASE, blocked_database_name: BLOCKED_DATABASE }, subject);
   need(fresh.fresh_pass === true && fresh.read_only === false && fresh.new_machine_gate_claim === true, "AM19_GRADUATION_TRIGGER_SELFTEST_FRESH_FAILED");
 
   const readOnly = {
     schema_version: SCHEMA,
     status: "ALREADY_QUALIFIED_READ_ONLY",
     subject_sha: subject,
+    qualified_subject_sha: subject,
     main_database_name: MAIN_DATABASE,
     blocked_database_name: BLOCKED_DATABASE,
     database_write_count: 0,
@@ -98,8 +100,9 @@ function selftest() {
 
   const negatives = [
     ["subject", { ...readOnly, subject_sha: "2".repeat(40) }, "AM19_GRADUATION_TRIGGER_PERSISTENT_SUBJECT_REQUIRED"],
-    ["main_database", { ...readOnly, main_database_name: "wrong" }, "AM19_GRADUATION_TRIGGER_READ_ONLY_MAIN_DATABASE_REQUIRED"],
-    ["blocked_database", { ...readOnly, blocked_database_name: "wrong" }, "AM19_GRADUATION_TRIGGER_READ_ONLY_BLOCKED_DATABASE_REQUIRED"],
+    ["qualified_subject", { ...readOnly, qualified_subject_sha: "2".repeat(40) }, "AM19_GRADUATION_TRIGGER_QUALIFIED_SUBJECT_REQUIRED"],
+    ["main_database", { ...readOnly, main_database_name: "wrong" }, "AM19_GRADUATION_TRIGGER_MAIN_DATABASE_REQUIRED"],
+    ["blocked_database", { ...readOnly, blocked_database_name: "wrong" }, "AM19_GRADUATION_TRIGGER_BLOCKED_DATABASE_REQUIRED"],
     ["write", { ...readOnly, database_write_count: 1 }, "AM19_GRADUATION_TRIGGER_READ_ONLY_ZERO_REQUIRED:database_write_count"],
     ["new_gate", { ...readOnly, new_machine_gate_claim: true }, "AM19_GRADUATION_TRIGGER_READ_ONLY_NEW_GATE_FORBIDDEN"],
     ["evidence_changed", { ...readOnly, existing_success_evidence_unchanged: false }, "AM19_GRADUATION_TRIGGER_READ_ONLY_EXISTING_EVIDENCE_REQUIRED"],
