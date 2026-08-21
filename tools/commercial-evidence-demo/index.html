@@ -62,7 +62,17 @@
       <div id="traceFlow" class="flow compact"></div>
 
       <div class="trace-loader">
-        <p class="eyebrow">Connected data · persisted GEOX read model</p>
+        <p class="eyebrow">MCFT Runtime Evidence · Neon</p>
+        <h3>历史持久化资格运行：系统在 T 当时真正知道什么</h3>
+        <p class="footnote">本段由 Demo server 以固定 allowlist、READ ONLY transaction 查询已完成的 historical <code>geox_mcft_cap09_s6_accel24t_am19_v3</code>。连接串只存在服务端，不发送到浏览器。这里展示的是实际持久化到 Neon 的 engineering qualification 结果；其中 accelerated weather/ET0 含 <code>ENGINEERING_FIXTURE_ONLY</code>，因此不是 production live data，也不是最终 Formal O00–O23 closure。</p>
+        <div class="input-row"><button id="refreshMcftRuntimeEvidence" type="button">Refresh Neon MCFT evidence</button></div>
+      </div>
+      <div id="mcftRuntimeStatus" class="status-line muted">正在读取 historical Neon qualification evidence...</div>
+      <div id="mcftRuntimeAnswer" class="callout" hidden></div>
+      <div id="mcftRuntimeObjects" class="trace-grid"></div>
+
+      <div class="trace-loader">
+        <p class="eyebrow">Connected data · persisted GEOX product read model</p>
         <h3>自动读取真实 Decision Cycle 与完整 Twin Trace</h3>
         <p class="footnote">本段只读连接现有 GEOX Server。未指定 decision_cycle_id 时，先读取 operator decision queue，再读取对应 `/api/v1/twin-kernel/traces/:decision_cycle_id`。如果 Server/DB 不可用，会明确显示 DISCONNECTED，不会用 fixture 冒充 live data。</p>
         <div class="input-row"><button id="refreshConnectedData" type="button">Refresh connected data</button></div>
