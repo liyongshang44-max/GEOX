@@ -92,7 +92,7 @@ export function deriveExternalFormalCropStageContextHashV3(input: {
   return semanticHashV1({
     authority_ref: MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.crop_context.ref,
     authority_blob_sha: MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.crop_context.hash,
-    derived_context_authority: "FORMAL_DERIVED_CROP_WATER_USE_STAGE_CONTEXT_V2",
+    derived_context_authority: "FORMAL_DERIVED_CROP_WATER_USE_STAGE_CONTEXT_V3",
     crop_stage_code: input.crop_stage_code,
     derivation_authority_time: logicalTime,
     observed_biological_stage_claimed: false,
