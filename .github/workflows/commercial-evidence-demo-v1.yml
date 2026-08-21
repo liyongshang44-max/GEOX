@@ -38,6 +38,9 @@ jobs:
       - name: Execute canonical selector and six-part demo acceptance
         run: node scripts/commercial_evidence/ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1.cjs
 
+      - name: Guard Chinese paid-pilot release claims
+        run: node scripts/commercial_evidence/ACCEPTANCE_COMMERCIAL_EVIDENCE_RELEASE_GATE_V1.cjs
+
       - name: Prove demo workflow has no privileged runtime trigger
         shell: bash
         run: |
