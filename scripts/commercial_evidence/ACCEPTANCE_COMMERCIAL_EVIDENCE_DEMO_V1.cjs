@@ -112,13 +112,19 @@ requireToken("html", html, "无人值守现场执行");
 requireToken("html", html, "生产资格化的作物推荐");
 requireToken("html", html, "已证明的客户 ROI");
 
-// Architecture must map to real repository/runtime components; do not invent lease/fencing path.
+// Architecture must map to verified current components and must not represent future approval/execution as current core.
 requireToken("app", app, "external_formal_current_interval_forcing_selector_v1.ts");
 requireToken("app", app, "external_formal_v3_amendment19_persistent_tick_service_v1.ts");
 requireToken("app", app, "GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md");
 requireToken("app", app, "OperatorTwinTraceReadbackPage.tsx");
 requireToken("html", html, "twin_shadow_online_scheduler_slot_v1");
 requireToken("html", html, "精确文件路径不在此虚构");
+requireToken("html", html, "id=\"verifiedArchitectureFlow\"");
+requireToken("html", html, "Runtime qualification boundary");
+requireToken("html", html, "FUTURE GOVERNED STAGE");
+requireToken("html", html, "NOT CURRENT VERIFIED CORE");
+requireToken("html", html, "id=\"architectureFlow\" class=\"flow architecture-flow\" hidden aria-hidden=\"true\"");
+requireToken("html", html, "未来治理阶段；本 Demo 不把它表示成当前已核验 repo component");
 
 // Preserve original six evidence-pack surfaces, even though CEO default path is compressed to four screens.
 for (let section = 1; section <= 6; section += 1) requireToken("html", html, `data-section="${section}"`);
@@ -142,6 +148,9 @@ requireToken("docs", docs, "Machine-verifiable proof");
 requireToken("docs", docs, "Page → repo/runtime component mapping");
 requireToken("docs", docs, "PASS_FOR_CUSTOMER_DISCOVERY");
 requireToken("docs", docs, "NOT_PROVEN_CUSTOMER_ROI");
+requireToken("docs", docs, "Runtime qualification boundary");
+requireToken("docs", docs, "NOT CURRENT VERIFIED CORE");
+requireToken("docs", docs, "Human Approval / controlled execution");
 
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const selectorRun = spawnSync(pnpm, ["exec", "tsx", "tools/commercial-evidence-demo/selftest.ts"], {
@@ -201,6 +210,9 @@ console.log(JSON.stringify({
   customer_roi_claim_absent: true,
   proven_now_not_yet_boundary_present: true,
   page_repo_component_mapping_present: true,
+  verified_architecture_stops_at_runtime_qualification_boundary: true,
+  human_approval_controlled_execution_marked_future_governed_stage: true,
+  unverified_approval_component_not_claimed: true,
   lease_fencing_fake_path_absent: true,
   six_pack_sections_present: true,
   canonical_selector_selftest_passed: true,
