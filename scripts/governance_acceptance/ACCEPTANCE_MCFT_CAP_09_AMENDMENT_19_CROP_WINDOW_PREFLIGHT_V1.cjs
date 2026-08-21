@@ -20,9 +20,14 @@ const preflight = fs.readFileSync(PREFLIGHT, "utf8");
 const workflow = fs.readFileSync(WORKFLOW, "utf8");
 
 for (const marker of [
-  "2026-08-20T21:00:00.000Z",
-  'failed04.failures[0]?.context_id === "O17"',
-  'failed05.failures[0]?.context_id === "O16"',
+  "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json",
+  "KBS_MCSE_T4R1",
+  "field_kbs_mcse_t4r1",
+  "zone_kbs_mcse_t4r1_crop_formal_v1",
+  "43-96P",
+  "observation_id === 6974",
+  "2026-08-23T06:00:00.000Z",
+  "2026-08-27T22:00:00.000Z",
   "backward_stability_hours: 6",
   "forward_transition_guard_hours: 30",
   "exact_fao_variant_count: 6",
@@ -35,6 +40,11 @@ for (const marker of [
 ]) requireCondition(preflight.includes(marker), `AM19_CROP_PREFLIGHT_MARKER_REQUIRED:${marker}`);
 
 for (const forbidden of [
+  "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json",
+  "KBS_MCSE_T3R1",
+  "field_kbs_mcse_t3r1",
+  "P0306Q",
+  "observation_id === 6966",
   "child_process",
   "require(\"pg\")",
   "require('pg')",
@@ -45,7 +55,7 @@ for (const forbidden of [
   "INSERT INTO",
   "UPDATE facts",
   "DELETE FROM",
-]) requireCondition(!preflight.includes(forbidden), `AM19_CROP_PREFLIGHT_SIDE_EFFECT_CAPABILITY_FORBIDDEN:${forbidden}`);
+]) requireCondition(!preflight.includes(forbidden), `AM19_CROP_PREFLIGHT_FORBIDDEN_SURFACE:${forbidden}`);
 
 requireCondition(count(preflight, "fs.writeFileSync(") === 1, "AM19_CROP_PREFLIGHT_EXACT_ONE_METADATA_WRITE_REQUIRED");
 requireCondition(count(preflight, "fs.appendFileSync(") === 0, "AM19_CROP_PREFLIGHT_APPEND_WRITE_FORBIDDEN");
@@ -69,8 +79,11 @@ requireCondition(!workflow.slice(liveIndex - 300, liveIndex + live.length + 300)
 requireCondition(workflow.includes("- name: Upload safe qualification proof\n        if: always()"), "AM19_CROP_PREFLIGHT_ALWAYS_UPLOAD_REQUIRED");
 
 const result = {
-  schema_version: "geox_mcft_cap09_amendment19_crop_window_preflight_governance_v1",
+  schema_version: "geox_mcft_cap09_amendment19_crop_window_preflight_governance_v2",
   status: "PASS",
+  successor_scope: "KBS_MCSE_T4R1",
+  successor_authority_generation: "V3",
+  qualification_store_generation: "v4",
   exact_candidate_binding_precedes_preflight: true,
   preflight_precedes_dependency_install: true,
   preflight_precedes_rehydration: true,
