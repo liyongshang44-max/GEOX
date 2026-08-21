@@ -1,5 +1,5 @@
 // scripts/commercial_evidence/ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1.cjs
-// Purpose: prove the off-main Commercial Evidence Demo executes existing canonical Runtime code, serves a real standalone HTTP demo, exposes all six sales-evidence sections, and keeps both product and historical MCFT data paths read-only.
+// Purpose: prove the off-main Commercial Evidence Demo executes existing canonical Runtime code, serves a real standalone HTTP demo, exposes all six sales-evidence sections, keeps both product and historical MCFT data paths read-only, and preserves the CEO 60-second presentation hierarchy.
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -65,10 +65,17 @@ requireToken("app", app, "Open full GEOX Twin Trace");
 requireToken("docs", docs, "NOT PRODUCTION AUTHORITY");
 requireToken("docs", docs, "PERSISTED ENGINEERING QUALIFICATION");
 requireToken("docs", docs, "COMMERCIAL_EVIDENCE_MCFT_READ_URL");
+requireToken("docs", docs, "CEO default presentation path");
 
 for (let section = 1; section <= 6; section += 1) {
   requireToken("html", html, `data-section="${section}"`);
 }
+requireToken("html", html, "60-second commercial proof");
+requireToken("html", html, "hero-value");
+requireToken("html", html, "proof-strip");
+requireToken("html", html, "traceAdvancedDetails");
+requireToken("html", html, "Engineering evidence appendix");
+requireToken("html", html, "Evidence boundary");
 requireToken("html", html, "mcftRuntimeStatus");
 requireToken("html", html, "mcftRuntimeObjects");
 requireToken("html", html, "runtimeTraceObjects");
@@ -174,6 +181,9 @@ console.log(JSON.stringify({
   ok: true,
   acceptance: "ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1",
   six_pack_sections_present: true,
+  ceo_default_path_guard_present: true,
+  engineering_details_secondary_guard_present: true,
+  evidence_boundary_present: true,
   canonical_selector_selftest_passed: true,
   canonical_runtime_code_executed: true,
   provider_late_behavior: selftest.provider_late_behavior,
