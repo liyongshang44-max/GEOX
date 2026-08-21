@@ -1,0 +1,126 @@
+name: mcft-cap-09-t4r1-persistent-lifecycle-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t4r1-persistent-lifecycle-qualification.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-PERSISTENT-LIFECYCLE-QUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-t4r1-persistent-lifecycle-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  t4r1-persistent-lifecycle-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact protected-main base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for KBS live qualification
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Syntax-check qualification code
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.cjs
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs
+
+      - name: Validate exact protected-main governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.cjs
+
+      - name: Execute live T4R1 persistent lifecycle qualification
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs
+
+      - name: Bind exact protected-main adoption context
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const file='acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json';
+          const result=JSON.parse(fs.readFileSync(file,'utf8'));
+          const base='${{ steps.authority.outputs.base_sha }}';
+          const subject='${{ steps.authority.outputs.subject_sha }}';
+          if(base!=='60b15c11aaaf9772083af6451b24b7bfb1e68fc9') throw new Error(`T4R1_EXACT_MAIN_BASE_REQUIRED:${base}`);
+          if(result.status!=='PASS'||result.subject_sha!==subject) throw new Error('T4R1_LIVE_RESULT_EXACT_HEAD_REQUIRED');
+          const adoptable=result.qualification_outcome==='ACTIVE_CANDIDATE';
+          result.authority_effect=adoptable?'EXACT_MAIN_LIFECYCLE_ADOPTION_CANDIDATE_PENDING_THIS_PR_MERGE':'EXACT_MAIN_NONACTIVE_ADJUDICATION';
+          result.exact_main_authority_context={base_sha:base,amendment_16_effective_on_base:true,exact_main_rerun_completed:true,live_result_eligible_for_protected_main_adoption_on_this_pr_merge:adoptable};
+          result.amendment_16_effectiveness={predecessor_subject_sha:base,amendment_16_effective_on_protected_main_for_this_run:true,current_result_may_be_adopted_as_protected_main_authority_on_this_pr_merge:adoptable,exact_main_rerun_required_after_effectiveness:false};
+          result.season_lifecycle.authority_adoption_eligible_on_this_pr_merge=adoptable;
+          fs.writeFileSync(file,JSON.stringify(result,null,2)+'\n');
+          console.log(JSON.stringify({status:'PASS',base_sha:base,subject_sha:subject,outcome:result.qualification_outcome,adoptable_on_merge:adoptable}));
+
+      - name: Verify truthful exact-main result contract
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const result=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json','utf8'));
+          const base='${{ steps.authority.outputs.base_sha }}';const subject='${{ steps.authority.outputs.subject_sha }}';
+          if(result.status!=='PASS'||result.subject_sha!==subject) throw new Error('T4R1_EXACT_HEAD_PASS_REQUIRED');
+          if(result.exact_main_authority_context?.base_sha!==base||result.exact_main_authority_context?.amendment_16_effective_on_base!==true||result.exact_main_authority_context?.exact_main_rerun_completed!==true) throw new Error('T4R1_EXACT_MAIN_CONTEXT_REQUIRED');
+          if(result.transition_sweep?.provider_coverage_completeness_proven!==false||result.transition_sweep?.proved_no_termination_occurred!==false||result.transition_sweep?.provider_silence_used_as_evidence!==false||result.transition_sweep?.provider_retrieval_time_used_as_coverage_watermark!==false) throw new Error('T4R1_NONCLAIM_CONTRACT_REQUIRED');
+          if(result.lifecycle_horizon?.maximum_total_days!==180||result.lifecycle_horizon?.creates_active!==false||result.lifecycle_horizon?.truncation_only!==true||result.lifecycle_horizon?.support_event_renewal_used!==false) throw new Error('T4R1_HORIZON_CONTRACT_REQUIRED');
+          if(result.season_lifecycle?.observation_freshness_refreshed_by_persistence!==false||result.season_lifecycle?.evaluated_at_emitted_as_observed_at!==false) throw new Error('T4R1_OBSERVATION_NONCLAIM_REQUIRED');
+          for(const f of ['runtime_write_count','database_write_count','scheduler_write_count','formal_evidence_write_count']) if(result[f]!==0) throw new Error(`T4R1_ZERO_WRITE_REQUIRED:${f}`);
+          if(result.ea5e2_operational_activation_qualified!==false||result.formal_window_started!==false||result.formal_execution_count!=='0/24') throw new Error('T4R1_OPERATIONAL_EFFECT_FORBIDDEN');
+          const outcome=result.qualification_outcome;
+          if(!['ACTIVE_CANDIDATE','TERMINATED','CONFLICTED','EXPIRED'].includes(outcome)) throw new Error(`T4R1_OUTCOME_INVALID:${outcome}`);
+          if(outcome==='ACTIVE_CANDIDATE'){
+            if(result.transition_sweep?.known_termination_result!=='NONE_FOUND'||result.transition_sweep?.known_termination_count!==0) throw new Error('T4R1_ACTIVE_KNOWN_TERMINATION');
+            if(result.transition_sweep?.known_contradiction_result!=='NONE_FOUND'||result.transition_sweep?.known_contradiction_count!==0) throw new Error('T4R1_ACTIVE_KNOWN_CONTRADICTION');
+            if(result.lifecycle_horizon?.valid_at_evaluation_time!==true) throw new Error('T4R1_ACTIVE_HORIZON');
+            if(result.season_lifecycle?.domain_state!=='ACTIVE'||result.season_lifecycle?.authority_status!=='RESOLVED'||result.season_lifecycle?.authority_validity!=='VALID'||result.season_lifecycle?.authority_mode!=='GOVERNED_PERSISTENT_STATE'||result.season_lifecycle?.active_consumable_candidate!==true) throw new Error('T4R1_ACTIVE_STATE');
+            if(result.exact_main_authority_context?.live_result_eligible_for_protected_main_adoption_on_this_pr_merge!==true||result.season_lifecycle?.authority_adoption_eligible_on_this_pr_merge!==true) throw new Error('T4R1_ACTIVE_ADOPTION_ELIGIBILITY');
+          }else if(result.exact_main_authority_context?.live_result_eligible_for_protected_main_adoption_on_this_pr_merge!==false){throw new Error('T4R1_NONACTIVE_ADOPTION_FORBIDDEN');}
+          console.log(JSON.stringify({status:'PASS',base_sha:base,subject_sha:subject,outcome,lifecycle:result.season_lifecycle,next_frontier:result.next_frontier}));
+
+      - name: Upload sanitized exact-main qualification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t4r1-persistent-lifecycle-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

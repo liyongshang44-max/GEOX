@@ -1,0 +1,124 @@
+name: mcft-cap-09-t4r1-crop-only-geometry
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t4r1-crop-only-geometry.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CROP-ONLY-GEOMETRY-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.mjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-t4r1-crop-only-geometry-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  crop-only-geometry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact geometry base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for provider geometry proof
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Syntax-check geometry proof code
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.cjs
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.mjs
+
+      - name: Validate exact geometry governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.cjs
+
+      - name: Execute live T4R1 crop-only geometry proof
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.mjs
+
+      - name: Verify fail-closed geometry result contract
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY_RESULT.json','utf8'));
+          const subject = '${{ steps.authority.outputs.subject_sha }}';
+          if (result.status !== 'PASS') throw new Error('T4R1_CROP_ONLY_GEOMETRY_LIVE_PASS_REQUIRED');
+          if (result.subject_sha !== subject) throw new Error('T4R1_CROP_ONLY_GEOMETRY_EXACT_HEAD_REQUIRED');
+          if (result.provider_main_geometry?.status !== 'RESOLVED_PROVIDER_MAIN_POLYGON') throw new Error('T4R1_PROVIDER_MAIN_GEOMETRY_REQUIRED');
+          if (result.provider_main_geometry?.convex_quadrilateral !== true) throw new Error('T4R1_PROVIDER_CONVEX_QUADRILATERAL_REQUIRED');
+          if (result.provider_main_geometry?.provider_raw_geometry_emitted !== false) throw new Error('T4R1_PROVIDER_RAW_GEOMETRY_EMISSION_FORBIDDEN');
+          if (result.prairie_strip_authority?.status !== 'RESOLVED_STRUCTURAL_EXCLUSION_AUTHORITY') throw new Error('T4R1_PRAIRIE_STRIP_STRUCTURE_REQUIRED');
+          if (result.prairie_strip_authority?.strip_wkt_invented !== false || result.prairie_strip_authority?.prairie_strip_relabelled_corn !== false) throw new Error('T4R1_PRAIRIE_STRIP_NONCLAIM_REQUIRED');
+          if (result.conservative_crop_only_subzone_authority_candidate?.status !== 'RESOLVED_CONSERVATIVE_CROP_ONLY_SUBZONE_CANDIDATE') throw new Error('T4R1_CROP_ONLY_SUBZONE_REQUIRED');
+          if (!/^sha256:[0-9a-f]{64}$/.test(result.conservative_crop_only_subzone_authority_candidate?.geometry_semantic_hash || '')) throw new Error('T4R1_CROP_ONLY_SEMANTIC_HASH_REQUIRED');
+          if (result.conservative_crop_only_subzone_authority_candidate?.minimum_center_strip_clearance_m < 10) throw new Error('T4R1_CROP_ONLY_STRIP_CLEARANCE_REQUIRED');
+          if (result.conservative_crop_only_subzone_authority_candidate?.minimum_outer_boundary_margin_m < 10) throw new Error('T4R1_CROP_ONLY_OUTER_MARGIN_REQUIRED');
+          if (result.conservative_crop_only_subzone_authority_candidate?.minimum_end_boundary_margin_m < 20) throw new Error('T4R1_CROP_ONLY_END_MARGIN_REQUIRED');
+          if (result.conservative_crop_only_subzone_authority_candidate?.raw_or_derived_coordinates_emitted !== false) throw new Error('T4R1_CROP_ONLY_COORDINATE_EMISSION_FORBIDDEN');
+          if (result.conservative_crop_only_subzone_authority_candidate?.whole_t4r1_plot_assumed_crop_only !== false || result.conservative_crop_only_subzone_authority_candidate?.strip_geometry_invented !== false) throw new Error('T4R1_CROP_ONLY_NONCLAIM_REQUIRED');
+          if (result.authority_effect?.crop_only_geometry_candidate_resolved !== true) throw new Error('T4R1_CROP_ONLY_GEOMETRY_EFFECT_REQUIRED');
+          if (result.authority_effect?.current_lifecycle_resolved !== false || result.authority_effect?.formal_site_rebind_authorized !== false || result.authority_effect?.ea5e2_operational_activation_authorized !== false) throw new Error('T4R1_GEOMETRY_PREMATURE_FORMAL_EFFECT');
+          if (result.next_frontier !== 'T4R1_CURRENT_LIFECYCLE_AUTHORITY') throw new Error('T4R1_GEOMETRY_NEXT_FRONTIER_MISMATCH');
+          for (const field of ['database_write_count','formal_evidence_write_count','raw_object_write_count','runtime_config_write_count','scheduler_write_count','canonical_runtime_write_count']) {
+            if (result[field] !== 0) throw new Error(`T4R1_GEOMETRY_ZERO_WRITE_REQUIRED:${field}`);
+          }
+          if (result.formal_window_started !== false || result.formal_execution_count !== '0/24') throw new Error('T4R1_GEOMETRY_FORMAL_NONCLAIM_REQUIRED');
+          console.log(JSON.stringify({
+            status:'PASS',
+            provider_short_m:result.provider_main_geometry.measured_short_dimension_m,
+            provider_long_m:result.provider_main_geometry.measured_long_dimension_m,
+            derived_area_m2:result.conservative_crop_only_subzone_authority_candidate.derived_area_m2,
+            strip_clearance_m:result.conservative_crop_only_subzone_authority_candidate.minimum_center_strip_clearance_m,
+            outer_margin_m:result.conservative_crop_only_subzone_authority_candidate.minimum_outer_boundary_margin_m,
+            end_margin_m:result.conservative_crop_only_subzone_authority_candidate.minimum_end_boundary_margin_m,
+            geometry_hash:result.conservative_crop_only_subzone_authority_candidate.geometry_semantic_hash,
+            next_frontier:result.next_frontier
+          }));
+
+      - name: Upload immutable geometry proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t4r1-crop-only-geometry-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY_RESULT.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CROP-ONLY-GEOMETRY-AUTHORITY-V1.json
+          if-no-files-found: error
+          retention-days: 90
