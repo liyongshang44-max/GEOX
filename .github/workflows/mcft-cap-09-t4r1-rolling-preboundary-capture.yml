@@ -1,0 +1,172 @@
+name: mcft-cap-09-t4r1-rolling-preboundary-capture
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml'
+      - '.github/workflows/mcft-cap-09-t4r1-rolling-rehydration-live-proof.yml'
+      - 'scripts/runtime_acceptance/PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs'
+      - 'scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_DYNAMIC_ROLLING_REHYDRATION.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-t4r1-rolling-preboundary-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.event_name == 'merge_group' && format('merge-{0}', github.sha) || 'live-main' }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  READINESS_DB_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+  MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
+  MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+  MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+  MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+  MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+  MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Prove rolling target planner deterministically
+        run: node scripts/runtime_acceptance/PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs selftest
+      - name: Syntax-check candidate assembler
+        run: node --check scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs
+      - name: Prove T4R1 dynamic rolling and rehydration boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_DYNAMIC_ROLLING_REHYDRATION.cjs
+
+  protected-main-live-capture:
+    if: github.event_name == 'workflow_dispatch'
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact protected-main T4R1 capture subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main' || { echo 'MCFT_CAP09_T4R1_ROLLING_CAPTURE_MAIN_REQUIRED' >&2; exit 1; }
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA" || { echo 'MCFT_CAP09_T4R1_ROLLING_CAPTURE_HEAD_SHA_MISMATCH' >&2; exit 1; }
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo 'MCFT_CAP09_T4R1_ROLLING_CAPTURE_EXACT_MAIN_DRIFT' >&2; exit 1; }
+          grep -Fq 'field_id: "field_kbs_mcse_t4r1"' apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts || { echo 'MCFT_CAP09_T4R1_ROLLING_CAPTURE_SCOPE_REQUIRED' >&2; exit 1; }
+          grep -Fq 'zone_id: "zone_kbs_mcse_t4r1_crop_formal_v1"' apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts || { echo 'MCFT_CAP09_T4R1_ROLLING_CAPTURE_ZONE_REQUIRED' >&2; exit 1; }
+
+      - name: Require private transient R2 bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
+            test -n "${!name:-}" || { echo "MCFT_CAP09_T4R1_ROLLING_CAPTURE_SECRET_REQUIRED:${name}" >&2; exit 1; }
+          done
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+          python -m eccodes selfcheck
+          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py selftest-et0-decimal-normalization
+
+      - name: Select future target with causal capture lead
+        id: target
+        run: node scripts/runtime_acceptance/PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs plan
+
+      - name: Execute real pre-boundary soil plus same-cycle GFS capture
+        env:
+          MCFT_EA5E2_LIVE_PHASE: PRE_BOUNDARY_CAUSAL
+          MCFT_EA5E2_TARGET_T: ${{ steps.target.outputs.target_t }}
+          MCFT_EA5E2_ISOLATED_READINESS_ACK: 'true'
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+
+      - name: Assemble 36-hour T4R1 rehydratable candidate package
+        env:
+          MCFT_EA5E2_SUBJECT_SHA: ${{ github.sha }}
+        run: node scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs
+
+      - name: Require qualification-only T4R1 candidate boundary
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json','utf8'));
+          if(p.status!=='PASS'||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.subject_sha!==process.env.GITHUB_SHA||p.producer_subject_sha!==process.env.GITHUB_SHA) throw new Error('MCFT_CAP09_T4R1_ROLLING_CAPTURE_IDENTITY_REQUIRED');
+          if(p.independence?.kbs_daily_batch_required_at_capture!==false||p.independence?.crop_authority_required_at_capture!==false) throw new Error('MCFT_CAP09_T4R1_ROLLING_CAPTURE_INDEPENDENCE_REQUIRED');
+          if(p.side_effects?.formal_database_write_count!==0||p.side_effects?.formal_r2_prefix_write_count!==0||p.side_effects?.scheduler_write_count!==0||p.side_effects?.runtime_write_count!==0||p.side_effects?.crop_authority_effect!=='NONE'||p.raw_values_emitted!==false) throw new Error('MCFT_CAP09_T4R1_ROLLING_CAPTURE_ZERO_FORMAL_EFFECT_REQUIRED');
+
+      - name: Upload T4R1 rehydratable rolling candidate package
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t4r1-rolling-preboundary-${{ steps.target.outputs.target_key }}-${{ github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.json
+            acceptance-output/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json
+            acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_REFS.json
+            acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Upload failure cleanup proof without provider values
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t4r1-rolling-preboundary-failure-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_09_EA5E2_TRANSIENT_R2_PHASE_FAILURE_CLEANUP.json
+          if-no-files-found: ignore
+          retention-days: 2

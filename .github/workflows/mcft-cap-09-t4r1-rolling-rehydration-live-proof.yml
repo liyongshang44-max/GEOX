@@ -1,0 +1,183 @@
+name: mcft-cap-09-t4r1-rolling-rehydration-live-proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t4r1-rolling-rehydration-live-proof.yml'
+      - '.github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_DYNAMIC_ROLLING_REHYDRATION.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+    inputs:
+      rolling_artifact_id:
+        description: 'Artifact id emitted by mcft-cap-09-t4r1-rolling-preboundary-capture on protected main'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-t4r1-dynamic-rehydrate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  READINESS_DB_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+
+jobs:
+  static-governance-and-typecheck:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck existing producer-bound rehydration runner
+        run: pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+      - name: Prove producer-prefix selftest
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts selftest
+      - name: Prove dynamic T4R1 rehydration governance boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_DYNAMIC_ROLLING_REHYDRATION.cjs
+
+  protected-main-live-rehydrate:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+      MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+      MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+      MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+      MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+      ROLLING_ARTIFACT_ID: ${{ inputs.rolling_artifact_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact protected main and numeric artifact id
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main' || { echo 'MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_MAIN_REQUIRED' >&2; exit 1; }
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA" || { echo 'MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_HEAD_SHA_MISMATCH' >&2; exit 1; }
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo 'MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_EXACT_MAIN_DRIFT' >&2; exit 1; }
+          [[ "$ROLLING_ARTIFACT_ID" =~ ^[0-9]+$ ]] || { echo 'MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_ARTIFACT_ID_INVALID' >&2; exit 1; }
+
+      - name: Require private transient R2 bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
+            test -n "${!name:-}" || { echo "MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_SECRET_REQUIRED:${name}" >&2; exit 1; }
+          done
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+
+      - name: Download and authenticate T4R1 rolling candidate artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rolling-candidate acceptance-output
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ROLLING_ARTIFACT_ID}" > /tmp/rolling-artifact-meta.json
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ROLLING_ARTIFACT_ID}/zip" > /tmp/rolling-candidate.zip
+          unzip -q /tmp/rolling-candidate.zip -d /tmp/rolling-candidate
+          test -s /tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          node - <<'NODE'
+          const fs=require('fs');
+          const a=JSON.parse(fs.readFileSync('/tmp/rolling-artifact-meta.json','utf8'));
+          const p=JSON.parse(fs.readFileSync('/tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json','utf8'));
+          if(a.expired!==false) throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_ARTIFACT_EXPIRED');
+          if(!String(a.name||'').startsWith('mcft-cap09-t4r1-rolling-preboundary-')) throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_T4_ARTIFACT_REQUIRED');
+          if(a.workflow_run?.head_branch!=='main') throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_PRODUCER_MAIN_REQUIRED');
+          if(!/^[0-9a-f]{40}$/.test(String(a.workflow_run?.head_sha||''))) throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_PRODUCER_SHA_REQUIRED');
+          if(p.status!=='PASS'||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1') throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_CANDIDATE_PASS_REQUIRED');
+          if(p.producer_subject_sha!==a.workflow_run.head_sha) throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_PRODUCER_SHA_MISMATCH');
+          if(!p.candidate_expires_at||Date.parse(p.candidate_expires_at)<=Date.now()) throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_CANDIDATE_EXPIRED');
+          if(p.side_effects?.formal_database_write_count!==0||p.side_effects?.formal_r2_prefix_write_count!==0||p.side_effects?.scheduler_write_count!==0||p.side_effects?.runtime_write_count!==0||p.side_effects?.crop_authority_effect!=='NONE') throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_PRODUCER_SIDE_EFFECT_FORBIDDEN');
+          if(p.raw_values_emitted!==false) throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_RAW_VALUE_PUBLICATION_FORBIDDEN');
+          fs.writeFileSync('/tmp/rolling-identity.env', `PRODUCER_SHA=${p.producer_subject_sha}\nTARGET_T=${p.target_t}\n`);
+          NODE
+          cat /tmp/rolling-identity.env >> "$GITHUB_ENV"
+
+      - name: Rehydrate producer-bound causal raw under current consumer code
+        env:
+          MCFT_CAP09_CONSUMER_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_CAP09_ROLLING_CANDIDATE_PATH: /tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          MCFT_CAP09_ROLLING_REHYDRATION_ISOLATED_DB_ACK: 'true'
+          DATABASE_URL: ${{ env.READINESS_DB_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts run
+
+      - name: Require safe dynamic live rehydration proof
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json','utf8'));
+          if(p.status!=='PASS'||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.consumer_subject_sha!==process.env.GITHUB_SHA||p.producer_subject_sha!==process.env.PRODUCER_SHA||p.target_t!==process.env.TARGET_T) throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_IDENTITY_REQUIRED');
+          if(p.semantic_manifest_match!==true||p.producer_bound_raw_reverification!==true||p.provider_refetch_count!==0||p.private_r2_put_count!==0||p.private_r2_delete_count!==0) throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_RAW_REVERIFY_REQUIRED');
+          if(p.isolated_database_fact_count!==3||p.formal_database_write_count!==0||p.formal_r2_prefix_write_count!==0||p.scheduler_write_count!==0||p.runtime_write_count!==0||p.crop_authority_effect!=='NONE'||p.formal_effect!==false||p.raw_values_emitted!==false) throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_ZERO_FORMAL_EFFECT_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',consumer_subject_sha:p.consumer_subject_sha,producer_subject_sha:p.producer_subject_sha,target_t:p.target_t,provider_refetch_count:0,formal_effect:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-t4r1-dynamic-rolling-rehydration-${{ github.sha }}-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json
+          if-no-files-found: warn
+          retention-days: 90
