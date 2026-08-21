@@ -1,0 +1,179 @@
+{
+  "schema_version": "geox_mcft_cap09_t3r1_fast_path_requalification_v1",
+  "record_status": "T3R1_FAST_PATH_REQUALIFICATION_CANDIDATE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier": "S6-T3R1-FAST-PATH-REQUALIFICATION",
+  "exact_base_protected_main": "23f224c701dbe0b8bd56eceff3741cb1c3dc1f78",
+  "purpose": "READ_ONLY_ADJUDICATION_BEFORE_ANY_T1R1_TO_T3R1_FORMAL_REBIND",
+  "authority_predecessors": {
+    "amendment_13": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-13-CURRENT-CROP-AUTHORITY-REQUALIFICATION-SEPARATION.md",
+      "blob_sha": "5210001b387993cea502aac9480834400b3b8ef3"
+    },
+    "amendment_15": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-15-PROVIDER-SNAPSHOT-LIFECYCLE-AUTHORITY.md",
+      "blob_sha": "73eb7600bd607c871ff4af60907a0053d15dfe41"
+    },
+    "ea1j_stage_authority": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1J-CROP-WATER-USE-STAGE-AUTHORITY-V1.json",
+      "blob_sha": "eeb7ab49ee3270421efe4d6674305426074d1541"
+    },
+    "ea1m_spatial_authority": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1M-GFS-SPATIAL-EXTRACTION-AUTHORITY-V1.json",
+      "blob_sha": "bb487c0c6a91dd37b0409b5d446aec4707f7b0a4"
+    },
+    "configuration_matrix": {
+      "path": "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+      "blob_sha": "c04c6805ab79c715781b99f8fbcf997fae3a8c48"
+    },
+    "formal_site_t1r1": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V1.json",
+      "blob_sha": "eb9eb1880e01eb16430c177be6e2ef2dc36b3ca8"
+    },
+    "formal_reality_t1r1": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V1.json",
+      "blob_sha": "dedc8db6e2e3c902066ed94b0d3322a69775b7b6"
+    },
+    "geometry_canonicalization": {
+      "path": "docs/digital_twin/mcft/GEOX-MCFT-00-GEOMETRY-CANONICALIZATION.md",
+      "blob_sha": "2f413d43c11aeff79dcf3e4e8069be426f71f018"
+    }
+  },
+  "candidate_scope": {
+    "site_id": "KBS_MCSE_T3R1_CANDIDATE",
+    "provider_site": "KBS_LTER_MAIN_CROPPING_SYSTEM_EXPERIMENT",
+    "treatment": "T3",
+    "replicate": "R1",
+    "prospective_field_id": "field_kbs_mcse_t3r1",
+    "season_id": "season_2026_corn",
+    "prospective_zone_id": "zone_kbs_mcse_t3r1_crop_formal_v1",
+    "crop": "corn",
+    "hybrid_product_code": "P0306Q",
+    "provider_area_identity": "T3R1",
+    "planting_local_date": "2026-05-20",
+    "timezone": "America/Detroit",
+    "planting_event_time_precision": "LOCAL_CALENDAR_DAY_ONLY",
+    "possible_planting_window_utc": {
+      "start_inclusive": "2026-05-20T04:00:00.000Z",
+      "end_exclusive": "2026-05-21T04:00:00.000Z"
+    }
+  },
+  "aglog_discovery": {
+    "source": "KBS_AGLOG",
+    "index_url": "https://aglog.kbs.msu.edu/observations",
+    "allowed_host": "aglog.kbs.msu.edu",
+    "maximum_pages": 20,
+    "maximum_t3_detail_candidates": 80,
+    "must_reach_planting_date_or_earlier": true,
+    "planting_match_requires": [
+      "2026-05-20",
+      "Planting",
+      "T3",
+      "corn",
+      "P0306Q",
+      "explicit replicate 1 inclusion in planting detail"
+    ],
+    "provider_body_may_be_emitted": false,
+    "provider_payload_may_be_persisted_or_uploaded": false
+  },
+  "treatment_structure_source": {
+    "provider": "KBS_LTER",
+    "official_url": "https://lter.kbs.msu.edu/datasets/7",
+    "allowed_host": "lter.kbs.msu.edu",
+    "required_markers": [
+      "Reduced Input (T3)",
+      "center prairie strip",
+      "each replicate",
+      "2019"
+    ]
+  },
+  "geometry_discovery": {
+    "provider": "KBS_LTER",
+    "official_page": "https://lter.kbs.msu.edu/datatables/829",
+    "allowed_host": "lter.kbs.msu.edu",
+    "download_path": "/datatables/829.csv",
+    "datatable_id": "KBS039-006.40",
+    "required_srid": 4326,
+    "main_row": {
+      "treatment": "T3",
+      "replicate": "R1",
+      "subplot": "main",
+      "expected_match_count": 1
+    },
+    "strip_row": {
+      "treatment": "T3",
+      "replicate": "R1",
+      "subplot": "strip",
+      "minimum_match_count": 1
+    },
+    "crop_only_zone_policy": {
+      "whole_t3r1_polygon_may_not_be_assumed_crop_only": true,
+      "prairie_strip_may_not_be_relabelled_corn": true,
+      "point_geometry_for_formal_zone_forbidden_by_current_mcft00_geometry_contract": true,
+      "polygon_with_governed_interior_ring_is_architecturally_allowed": true,
+      "automatic_main_minus_strip_authority_created_by_this_probe": false,
+      "fallback_status": "UNRESOLVED_PRAIRIE_STRIP_EXCLUSION_REQUIRED"
+    },
+    "raw_geometry_may_be_emitted": false,
+    "raw_geometry_may_be_persisted_or_uploaded": false
+  },
+  "stage_and_kc_policy": {
+    "stage_authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1J-CROP-WATER-USE-STAGE-AUTHORITY-V1.json",
+    "stage_algorithm_id": "FAO56_MAIZE_GRAIN_CONSENSUS_ENVELOPE_FROM_PLANTING_DATE_V1",
+    "configuration_matrix_path": "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+    "configuration_source_id": "mcft_crop_water_use_corn_v1",
+    "planting_time_uncertainty_must_be_carried": true,
+    "backward_stability_hours": 6,
+    "forward_transition_guard_hours": 30,
+    "single_fao_variant_selection_forbidden": true,
+    "observed_biological_stage_claimed": false,
+    "minimum_contiguous_legal_target_hours_for_fast_path": 24,
+    "maximum_horizon_search_hours": 240,
+    "resolved_kc_requires_unique_stage_and_exact_governed_mapping": true
+  },
+  "lifecycle_policy": {
+    "management_lifecycle_not_biological_vitality": true,
+    "allowed_current_statuses": ["ACTIVE", "TERMINATED", "UNRESOLVED"],
+    "absence_of_termination_row_proves_active": false,
+    "provider_retrieval_time_is_coverage_watermark": false,
+    "global_aglog_freshness_proves_t3_scope_completeness": false,
+    "historical_positive_management_event_may_be_reported_as_anchor_candidate": true,
+    "historical_positive_anchor_alone_proves_current_active": false,
+    "current_active_authorized_by_this_probe": false,
+    "positive_crop_bound_termination_may_resolve": "TERMINATED",
+    "fallback_status": "UNRESOLVED",
+    "fallback_reason": "T3R1_CURRENT_SEASON_LIFECYCLE_UNRESOLVED_WITHOUT_SCOPE_COVERAGE_OR_DIRECT_CURRENT_AUTHORITY"
+  },
+  "readiness_policy": {
+    "formal_rebind_authorized_by_this_probe": false,
+    "ea5e2_go_authorized_by_this_probe": false,
+    "fast_path_pass_requires": [
+      "planting_crop_hybrid_identity_resolved",
+      "derived_stage_resolved",
+      "kc_resolved",
+      "crop_only_geometry_resolved",
+      "current_lifecycle_active"
+    ],
+    "expected_partial_result_at_design_time": "STAGE_AND_KC_RESOLVED_LIFECYCLE_AND_GEOMETRY_REQUIRE_LIVE_ADJUDICATION"
+  },
+  "hard_nonclaims": [
+    "NO_T1R1_EVIDENCE_RELABELLING_AS_T3R1",
+    "NO_CROSS_SCOPE_CANONICAL_STITCHING",
+    "NO_ACTIVE_LIFECYCLE_FROM_PROVIDER_SILENCE",
+    "NO_HTTP_RETRIEVAL_TIME_AS_PROVIDER_COVERAGE_WATERMARK",
+    "NO_PRAIRIE_STRIP_RELABELLING_AS_CORN",
+    "NO_WHOLE_T3R1_POLYGON_ASSUMED_CROP_ONLY",
+    "NO_OBSERVED_BIOLOGICAL_STAGE_CLAIM",
+    "NO_SINGLE_FAO_VARIANT_BEST_FIT",
+    "NO_KC_INVENTION",
+    "NO_FORMAL_SITE_REBIND",
+    "NO_RUNTIME_CONFIG_WRITE",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_RAW_PROVIDER_PAYLOAD_UPLOAD",
+    "NO_SCHEDULER_WRITE",
+    "NO_EA5E2_OPERATIONAL_ACTIVATION",
+    "NO_FORMAL_WINDOW_START"
+  ]
+}
