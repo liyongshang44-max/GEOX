@@ -73,6 +73,11 @@ jobs:
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
             scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.ts
 
+      - name: Materialize and typecheck exact generated T4R1 runner without DB or provider access
+        env:
+          MCFT_CAP09_T4R1_BOOTSTRAP_STATIC_ADAPTER_PROOF: 'true'
+        run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.ts
+
       - name: Prove adapter pins rather than forks production core
         shell: bash
         run: |
@@ -81,6 +86,7 @@ jobs:
           grep -F 'external_formal_bootstrap_persistence_service_v1' scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_FRESH_BOOTSTRAP.ts
           grep -F 'executeFormalLiveKbsSoilIngressV1' scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_FRESH_BOOTSTRAP.ts
           grep -F 'SOURCE_RUNNER_BLOB = "f1ff8547a78a982f4a968a62e9e02c802adb74f3"' scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.ts
+          test ! -e scripts/runtime_acceptance/.generated_EXECUTE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.ts
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -164,11 +170,12 @@ jobs:
           if(r.database_write_count!==0||r.formal_evidence_write_count!==0||r.schema_write_count!==0||r.formal_window_started!==false) throw new Error('T4R1_FRESH_BOOTSTRAP_EA5A_ZERO_SIDE_EFFECT_REQUIRED');
           console.log(JSON.stringify({status:'PASS',database:r.database_identity.database_name,zero_state:true}));
 
-      - name: Re-prove T4R1 successor adapter types before live mutation
+      - name: Re-prove T4R1 successor adapter and generated runner types before live mutation
         run: |
           pnpm --filter @geox/server run typecheck
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
             scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.ts
+          MCFT_CAP09_T4R1_BOOTSTRAP_STATIC_ADAPTER_PROOF=true pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.ts
 
       - name: Execute bounded fresh T4R1 bootstrap on protected main
         run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.ts
