@@ -1,5 +1,5 @@
 // scripts/commercial_evidence/ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1.cjs
-// Purpose: prove the off-main Commercial Evidence Demo executes existing canonical Runtime code, serves a real standalone HTTP demo, exposes all six sales-evidence sections, and changes no production route registration.
+// Purpose: prove the off-main Commercial Evidence Demo executes existing canonical Runtime code, serves a real standalone HTTP demo, exposes all six sales-evidence sections, and keeps both product and historical MCFT data paths read-only.
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -47,16 +47,30 @@ requireToken("server", server, "standalone read-only Commercial Evidence Demo mi
 requireToken("server", server, "/api/runtime-value-trace");
 requireToken("server", server, "TWIN_KERNEL_RUNTIME_VALUE_TRACE_ACCEPTANCE.cjs");
 requireToken("server", server, "/api/twin-trace");
+requireToken("server", server, "/api/mcft-runtime-evidence");
+requireToken("server", server, "COMMERCIAL_EVIDENCE_MCFT_READ_URL");
+requireToken("server", server, "geox_mcft_cap09_s6_accel24t_am19_v3");
+requireToken("server", server, "MCFT_DATABASE_NOT_ALLOWLISTED");
+requireToken("server", server, "BEGIN READ ONLY");
+requireToken("server", server, "SET LOCAL statement_timeout");
+requireToken("server", server, "ROLLBACK");
+requireToken("server", server, "database_write_count: 0");
+requireToken("server", server, "canonical_runtime_write_count: 0");
 requireToken("server", server, "COMMERCIAL_EVIDENCE_DEMO_READ_ONLY_GET_REQUIRED");
 requireToken("app", app, "/api/demo");
 requireToken("app", app, "/api/runtime-value-trace");
+requireToken("app", app, "/api/mcft-runtime-evidence");
 requireToken("app", app, "/api/twin-trace?decision_cycle_id=");
 requireToken("app", app, "Open full GEOX Twin Trace");
 requireToken("docs", docs, "NOT PRODUCTION AUTHORITY");
+requireToken("docs", docs, "PERSISTED ENGINEERING QUALIFICATION");
+requireToken("docs", docs, "COMMERCIAL_EVIDENCE_MCFT_READ_URL");
 
 for (let section = 1; section <= 6; section += 1) {
   requireToken("html", html, `data-section="${section}"`);
 }
+requireToken("html", html, "mcftRuntimeStatus");
+requireToken("html", html, "mcftRuntimeObjects");
 requireToken("html", html, "runtimeTraceObjects");
 requireToken("html", html, "persistedTraceObjects");
 
@@ -124,10 +138,11 @@ if (!requiredTraceObjects.every((objectType) => derived[objectType] && derived[o
   throw new Error("COMMERCIAL_EVIDENCE_RUNTIME_VALUE_TRACE_OBJECT_CHAIN_INCOMPLETE");
 }
 
+const smokeEnv = { ...process.env, COMMERCIAL_EVIDENCE_MCFT_READ_URL: "" };
 const smokeRun = spawnSync(process.execPath, ["scripts/commercial_evidence/SMOKE_COMMERCIAL_EVIDENCE_DEMO_V1.mjs"], {
   cwd: ROOT,
   encoding: "utf8",
-  env: process.env,
+  env: smokeEnv,
   timeout: 30_000,
 });
 if (smokeRun.status !== 0) {
@@ -146,6 +161,10 @@ if (smoke.ok !== true
   || smoke.healthz_passed !== true
   || smoke.canonical_demo_endpoint_passed !== true
   || smoke.runtime_value_trace_endpoint_passed !== true
+  || smoke.mcft_neon_endpoint_passed !== true
+  || smoke.mcft_neon_unconfigured_fails_safe !== true
+  || smoke.mcft_neon_read_only !== true
+  || smoke.mcft_neon_write_count !== 0
   || smoke.six_section_page_served !== true
   || smoke.write_method_rejected !== true) {
   throw new Error("COMMERCIAL_EVIDENCE_DEMO_HTTP_SMOKE_NOT_PASS");
@@ -164,11 +183,17 @@ console.log(JSON.stringify({
   runtime_value_trace_object_count: requiredTraceObjects.length,
   runtime_value_trace_determinism_stable: runtimeTrace.determinism_stable,
   runtime_value_trace_forbidden_auto_writes_absent: runtimeTrace.forbidden_auto_writes_absent,
+  mcft_neon_historical_read_model_guard_present: true,
+  mcft_neon_allowlisted_database: "geox_mcft_cap09_s6_accel24t_am19_v3",
+  mcft_neon_read_only_transaction_guard_present: true,
+  mcft_neon_ci_secret_required: false,
   standalone_microsite: true,
   standalone_http_smoke_passed: true,
   healthz_passed: smoke.healthz_passed,
   canonical_demo_endpoint_passed: smoke.canonical_demo_endpoint_passed,
   runtime_value_trace_endpoint_passed: smoke.runtime_value_trace_endpoint_passed,
+  mcft_neon_endpoint_passed: smoke.mcft_neon_endpoint_passed,
+  mcft_neon_unconfigured_fails_safe: smoke.mcft_neon_unconfigured_fails_safe,
   six_section_page_served: smoke.six_section_page_served,
   write_method_rejected: smoke.write_method_rejected,
   production_route_registration_changed: false,
