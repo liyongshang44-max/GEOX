@@ -109,6 +109,20 @@ async function assertDatabaseIdentityAndT3Zero(pool: Pool, phase: string): Promi
   assert.equal(t3Rows, 0, `T4R1_FRESH_BOOTSTRAP_T3_SCOPE_REUSE_FORBIDDEN:${phase}:${t3Rows}`);
 }
 
+async function withShortLivedGuardPool(databaseUrl: string, phase: "BEFORE" | "AFTER"): Promise<void> {
+  const subjectSha = requiredEnv("GITHUB_SHA");
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    application_name: `mcft-cap09-t4r1-successor-guard-${phase.toLowerCase()}-${subjectSha.slice(0, 12)}`,
+    max: 1,
+  });
+  try {
+    await assertDatabaseIdentityAndT3Zero(pool, phase);
+  } finally {
+    await pool.end();
+  }
+}
+
 async function main(): Promise<void> {
   if (process.env.MCFT_CAP09_T4R1_BOOTSTRAP_STATIC_ADAPTER_PROOF === "true") {
     proveGeneratedRunnerCompiles();
@@ -121,13 +135,13 @@ async function main(): Promise<void> {
   assert.equal(git("rev-parse", "HEAD"), subjectSha, "T4R1_FRESH_BOOTSTRAP_HEAD_SHA_MISMATCH");
   assert.equal(git("rev-parse", "origin/main"), subjectSha, "T4R1_FRESH_BOOTSTRAP_PROTECTED_MAIN_DRIFT");
   const databaseUrl = requiredEnv("GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL");
-  const pool = new Pool({ connectionString: databaseUrl, application_name: `mcft-cap09-t4r1-successor-guard-${subjectSha.slice(0, 12)}`, max: 1 });
+
+  await withShortLivedGuardPool(databaseUrl, "BEFORE");
+  const generated = buildSuccessorRunner();
+  fs.writeFileSync(GENERATED_RUNNER, generated);
   try {
-    await assertDatabaseIdentityAndT3Zero(pool, "BEFORE");
-    const generated = buildSuccessorRunner();
-    fs.writeFileSync(GENERATED_RUNNER, generated);
     execFileSync("pnpm", ["exec", "tsx", GENERATED_RUNNER], { stdio: "inherit", env: process.env });
-    await assertDatabaseIdentityAndT3Zero(pool, "AFTER");
+    await withShortLivedGuardPool(databaseUrl, "AFTER");
     const result = JSON.parse(fs.readFileSync(RESULT, "utf8")) as Record<string, unknown>;
     assert.equal(result.status, "PASS", "T4R1_FRESH_BOOTSTRAP_SUCCESSOR_RESULT_PASS_REQUIRED");
     assert.equal(result.fresh_t4r1_bootstrap_complete, true, "T4R1_FRESH_BOOTSTRAP_SUCCESSOR_COMPLETION_REQUIRED");
@@ -138,7 +152,6 @@ async function main(): Promise<void> {
     result.successor_adapter_generated_file_committed = false;
     fs.writeFileSync(RESULT, `${JSON.stringify(result, null, 2)}\n`);
   } finally {
-    await pool.end();
     try { fs.unlinkSync(GENERATED_RUNNER); } catch {}
   }
 }
