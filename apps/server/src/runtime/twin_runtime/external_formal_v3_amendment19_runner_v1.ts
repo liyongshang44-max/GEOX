@@ -5,10 +5,8 @@
 import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
 import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../domain/twin_runtime/external_formal_runtime_config_v1.js";
-import {
-  MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V2,
-  type MaterializedExternalFormalA18CropContextV2,
-} from "./external_formal_a18_crop_context_v2.js";
+import type { MaterializedExternalFormalA18CropContextV2 } from "./external_formal_a18_crop_context_v2.js";
+import type { MaterializedExternalFormalA18CropContextV3 } from "./external_formal_a18_crop_context_v3.js";
 import type {
   ExecuteExternalFormalV3Amendment19PersistentTickResultV1,
   ExternalFormalV3Amendment19DatabaseEvidenceSourcePortV1,
@@ -25,6 +23,10 @@ import type {
 
 export const EXTERNAL_FORMAL_V3_AM19_RUNNER_ID_V1 = "MCFT_CAP09_EXTERNAL_FORMAL_V3_AM19_RUNNER_V1" as const;
 export const EXTERNAL_FORMAL_V3_AM19_RUNNER_WATERMARK_ID_V1 = "PROVIDER_AVAILABILITY_WATERMARK_V1" as const;
+
+type MaterializedExternalFormalA18CropContextSuccessorV1 =
+  | MaterializedExternalFormalA18CropContextV2
+  | MaterializedExternalFormalA18CropContextV3;
 
 export type ExternalFormalV3Am19ManifestSlotPinV1 = ExternalFormalV3Amendment19ManifestSlotPinV1 & {
   parent_runtime_config_ref: string;
@@ -47,7 +49,7 @@ export interface ExternalFormalV3Am19CropContextMaterializerPortV1 {
   materialize(input: {
     logical_time: string;
     expected_identity_hash: string;
-  }): Promise<MaterializedExternalFormalA18CropContextV2> | MaterializedExternalFormalA18CropContextV2;
+  }): Promise<MaterializedExternalFormalA18CropContextSuccessorV1> | MaterializedExternalFormalA18CropContextSuccessorV1;
 }
 
 type SchedulerPortSubsetV1 = Pick<SchedulerPortV1, "listMissedSlots" | "claimDueSlot" | "recordTerminalResult">;
@@ -127,9 +129,9 @@ function blockedByMissingCurrentForcingV1(error: unknown): boolean {
   return error instanceof Error && error.message === "AMENDMENT19_NO_CAUSAL_CURRENT_INTERVAL_FORCING_PAIR";
 }
 
-function computeMaterializationHashV1(materialized: MaterializedExternalFormalA18CropContextV2): string {
+function computeMaterializationHashV1(materialized: MaterializedExternalFormalA18CropContextSuccessorV1): string {
   return semanticHashV1({
-    materialization_profile: MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V2,
+    materialization_profile: materialized.materialization_profile,
     context_ref: materialized.context_ref,
     context_identity_hash: materialized.context_identity_hash,
     materialized_context: materialized.context,
@@ -175,7 +177,7 @@ export class ExternalFormalV3Amendment19RunnerV1 {
     private readonly evidenceSource: ExternalFormalV3Amendment19DatabaseEvidenceSourcePortV1,
     private readonly tickService: TickServicePortV1,
   ) {
-    if (!sameScopeV1(manifest.scope, { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 })) throw new Error("EXTERNAL_FORMAL_AM19_RUNNER_EXACT_T3R1_SCOPE_REQUIRED");
+    if (!sameScopeV1(manifest.scope, { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 })) throw new Error("EXTERNAL_FORMAL_AM19_RUNNER_EXACT_SCOPE_REQUIRED");
     if (manifest.slots.length !== 24) throw new Error("EXTERNAL_FORMAL_AM19_RUNNER_EXACT_24_MANIFEST_SLOTS_REQUIRED");
   }
 
@@ -209,7 +211,7 @@ export class ExternalFormalV3Amendment19RunnerV1 {
       return { runner_id: EXTERNAL_FORMAL_V3_AM19_RUNNER_ID_V1, status: "NOT_READY_PRECLAIM", slot_id: slot.slot_id, logical_time: slot.logical_time, reason: "RUNTIME_CONFIG_PIN_MISMATCH", detail: errorDetailV1(error), claim_attempted: false, provider_request_count: 0, r2_request_count: 0 };
     }
 
-    let materialized: MaterializedExternalFormalA18CropContextV2;
+    let materialized: MaterializedExternalFormalA18CropContextSuccessorV1;
     try {
       materialized = await this.cropContextMaterializer.materialize({ logical_time: slot.logical_time, expected_identity_hash: slot.crop_stage_context_hash });
       if (materialized.context_ref !== slot.crop_stage_context_ref || materialized.context_identity_hash !== slot.crop_stage_context_hash || materialized.logical_time !== slot.logical_time) {
