@@ -1,0 +1,98 @@
+name: mcft-cap-09-t3r1-branch-a-contemporaneous-phenology-reproof-v1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t3r1-branch-a-contemporaneous-phenology-reproof-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-BRANCH-A-CONTEMPORANEOUS-PHENOLOGY-REPROOF-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_BRANCH_A_CONTEMPORANEOUS_PHENOLOGY_REPROOF_V1.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_BRANCH_A_CONTEMPORANEOUS_PHENOLOGY_REPROOF_V1.mjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-t3r1-branch-a-reproof-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  t3r1-branch-a-contemporaneous-phenology-reproof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact reproof base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for KBS AgLog reproof
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Syntax-check Branch A proof code
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_BRANCH_A_CONTEMPORANEOUS_PHENOLOGY_REPROOF_V1.cjs
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_BRANCH_A_CONTEMPORANEOUS_PHENOLOGY_REPROOF_V1.mjs
+
+      - name: Validate exact Branch A governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_BRANCH_A_CONTEMPORANEOUS_PHENOLOGY_REPROOF_V1.cjs
+
+      - name: Execute live read-only T3R1 phenology reproof
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_BRANCH_A_CONTEMPORANEOUS_PHENOLOGY_REPROOF_V1.mjs
+
+      - name: Verify fail-closed result contract
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T3R1_BRANCH_A_CONTEMPORANEOUS_PHENOLOGY_REPROOF_V1.json', 'utf8'));
+          if (result.status !== 'PASS') throw new Error('T3R1_BRANCH_A_LIVE_SCAN_PASS_REQUIRED');
+          if (result.subject_sha !== '${{ steps.authority.outputs.subject_sha }}') throw new Error('T3R1_BRANCH_A_EXACT_HEAD_RESULT_REQUIRED');
+          if (!['T3R1_PHENOLOGY_INPUT_CANDIDATE_DETECTED_REQUALIFICATION_REQUIRED','NO_T3R1_PHENOLOGY_AUTHORITY_CURRENTLY_ESTABLISHED'].includes(result.result)) throw new Error('T3R1_BRANCH_A_TERMINAL_RESULT_INVALID');
+          if (result.phenology_stage_authority?.status !== 'UNRESOLVED' || result.phenology_stage_authority?.stage !== null) throw new Error('T3R1_BRANCH_A_PREMATURE_STAGE_AUTHORITY');
+          if (result.v4_qualification_store_opened !== false || result.database_write_count !== 0) throw new Error('T3R1_BRANCH_A_ZERO_WRITE_REQUIRED');
+          if (result.whole_window_scan_passed !== false || result.formal_execution_count !== '0/24') throw new Error('T3R1_BRANCH_A_FORMAL_NONCLAIM_REQUIRED');
+          console.log(JSON.stringify({status:'PASS', result:result.result, candidate_count:result.provider_scan.phenology_candidate_count}));
+
+      - name: Upload immutable metadata-only Branch A proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t3r1-branch-a-reproof-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_T3R1_BRANCH_A_CONTEMPORANEOUS_PHENOLOGY_REPROOF_GOVERNANCE_V1.json
+            acceptance-output/MCFT_CAP_09_T3R1_BRANCH_A_CONTEMPORANEOUS_PHENOLOGY_REPROOF_V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-BRANCH-A-CONTEMPORANEOUS-PHENOLOGY-REPROOF-V1.json
+          if-no-files-found: error
+          retention-days: 90
