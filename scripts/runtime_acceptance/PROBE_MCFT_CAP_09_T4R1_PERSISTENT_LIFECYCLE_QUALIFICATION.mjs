@@ -201,8 +201,13 @@ async function main() {
         scannedRows += 1;
         minimumDate = !minimumDate || observationDate < minimumDate ? observationDate : minimumDate;
         maximumDate = !maximumDate || observationDate > maximumDate ? observationDate : maximumDate;
-        if (observationDate <= targetDate) reachedPlantingDate = true;
-        if (observationDate < targetDate) continue;
+        // A local date may span two adjacent index pages. Do not stop on a
+        // page whose minimum merely equals the planting date; cross strictly
+        // earlier so every planting-day row is included.
+        if (observationDate < targetDate) {
+          reachedPlantingDate = true;
+          continue;
+        }
 
         const observationType = values[2] || '';
         const comment = values[3] || '';
