@@ -4,7 +4,7 @@ import path from "node:path";
 import { Pool } from "pg";
 
 const AUTH_PATH = path.resolve(
-  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V2.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V3.json",
 );
 const OUT = path.resolve(
   "acceptance-output/MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE_PREFLIGHT_RESULT.json",
@@ -18,7 +18,8 @@ const AUTH = JSON.parse(fs.readFileSync(AUTH_PATH, "utf8")) as {
     branch_id: string;
     database_name: string;
     simulation_branch_id_forbidden: string;
-    existing_t1r1_database_name_forbidden_as_t3r1_storage: string;
+    existing_t1r1_database_name_forbidden_as_t4r1_storage: string;
+    existing_t3r1_database_name_forbidden_as_t4r1_storage: string;
   };
   formal_scope: Record<string, string>;
   fresh_database_requirements: {
@@ -31,6 +32,7 @@ const AUTH = JSON.parse(fs.readFileSync(AUTH_PATH, "utf8")) as {
     twin_shadow_online_scheduler_slot_v1_total: number;
     t1r1_scope_row_count: number;
     t3r1_scope_row_count_before_bootstrap: number;
+    t4r1_scope_row_count_before_bootstrap: number;
     cross_scope_canonical_stitching_authorized: boolean;
   };
 };
@@ -68,6 +70,15 @@ const T1R1_SCOPE = {
   zone_id: "zone_kbs_mcse_t1r1_formal_v1",
 };
 
+const T3R1_SCOPE = {
+  tenant_id: "tenant_mcft_external",
+  project_id: "project_mcft_cap09",
+  group_id: "group_public_research",
+  field_id: "field_kbs_mcse_t3r1",
+  season_id: "season_2026_corn",
+  zone_id: "zone_kbs_mcse_t3r1_crop_formal_v1",
+};
+
 function write(value: unknown): void {
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, `${JSON.stringify(value, null, 2)}\n`);
@@ -77,7 +88,7 @@ function write(value: unknown): void {
 async function main(): Promise<void> {
   assert.match(SUBJECT_SHA, /^[0-9a-f]{40}$/, "EA5A_EXACT_SUBJECT_SHA_REQUIRED");
   assert(DATABASE_URL, "EA5A_DATABASE_URL_REQUIRED");
-  assert.equal(AUTH.fresh_database_requirements.schema_must_match_formal_runtime_requirements, true, "EA5A_V2_SCHEMA_MATCH_AUTHORITY_REQUIRED");
+  assert.equal(AUTH.fresh_database_requirements.schema_must_match_formal_runtime_requirements, true, "EA5A_V3_SCHEMA_MATCH_AUTHORITY_REQUIRED");
   assert.equal(AUTH.fresh_database_requirements.cross_scope_canonical_stitching_authorized, false, "EA5A_CROSS_SCOPE_STITCHING_MUST_REMAIN_FORBIDDEN");
 
   const scope = AUTH.formal_scope;
@@ -85,12 +96,12 @@ async function main(): Promise<void> {
 
   const pool = new Pool({
     connectionString: DATABASE_URL,
-    application_name: `mcft-cap09-ea5a-t3r1-${SUBJECT_SHA.slice(0, 12)}`,
+    application_name: `mcft-cap09-ea5a-t4r1-${SUBJECT_SHA.slice(0, 12)}`,
     max: 1,
   });
 
   let result: Record<string, unknown> = {
-    schema_version: "geox_mcft_cap09_ea5a_fresh_formal_database_preflight_result_v2",
+    schema_version: "geox_mcft_cap09_ea5a_fresh_formal_database_preflight_result_v3",
     status: "FAIL",
     subject_sha: SUBJECT_SHA,
     transaction_mode: "READ_ONLY",
@@ -124,7 +135,8 @@ async function main(): Promise<void> {
 
     assert(identity, "EA5A_DATABASE_IDENTITY_REQUIRED");
     assert.equal(identity.database_name, AUTH.formal_database_identity.database_name, "EA5A_DATABASE_NAME_DRIFT");
-    assert.notEqual(identity.database_name, AUTH.formal_database_identity.existing_t1r1_database_name_forbidden_as_t3r1_storage, "EA5A_T1R1_DATABASE_REUSE_FORBIDDEN");
+    assert.notEqual(identity.database_name, AUTH.formal_database_identity.existing_t1r1_database_name_forbidden_as_t4r1_storage, "EA5A_T1R1_DATABASE_REUSE_FORBIDDEN");
+    assert.notEqual(identity.database_name, AUTH.formal_database_identity.existing_t3r1_database_name_forbidden_as_t4r1_storage, "EA5A_T3R1_DATABASE_REUSE_FORBIDDEN");
     assert.equal(identity.neon_project_id, AUTH.formal_database_identity.project_id, "EA5A_NEON_PROJECT_ID_DRIFT");
     assert.equal(identity.neon_branch_id, AUTH.formal_database_identity.branch_id, "EA5A_NEON_BRANCH_ID_DRIFT");
     assert.notEqual(identity.neon_branch_id, AUTH.formal_database_identity.simulation_branch_id_forbidden, "EA5A_SIMULATION_BRANCH_REUSE_FORBIDDEN");
@@ -183,7 +195,8 @@ async function main(): Promise<void> {
     const observed = {
       ...globalCounts,
       t1r1_scope_row_count: await scopeRowCount(T1R1_SCOPE),
-      t3r1_scope_row_count_before_bootstrap: await scopeRowCount(scope),
+      t3r1_scope_row_count_before_bootstrap: await scopeRowCount(T3R1_SCOPE),
+      t4r1_scope_row_count_before_bootstrap: await scopeRowCount(scope),
       cross_scope_canonical_stitching_authorized: false,
     };
 
@@ -196,6 +209,7 @@ async function main(): Promise<void> {
       "twin_shadow_online_scheduler_slot_v1_total",
       "t1r1_scope_row_count",
       "t3r1_scope_row_count_before_bootstrap",
+      "t4r1_scope_row_count_before_bootstrap",
     ] as const) {
       assert.equal(observed[key], AUTH.fresh_database_requirements[key], `EA5A_FRESH_DATABASE_REQUIREMENT_FAIL:${key}:actual=${observed[key]}:expected=${AUTH.fresh_database_requirements[key]}`);
     }
@@ -210,6 +224,7 @@ async function main(): Promise<void> {
         neon_branch_id: identity.neon_branch_id,
         simulation_branch_reused: false,
         t1r1_database_reused: false,
+        t3r1_database_reused: false,
         database_now_utc: new Date(identity.database_now_utc).toISOString(),
       },
       required_schema_table_count: REQUIRED_SCHEMA_TABLES.length,

@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-ea5a-fresh-formal-database-preflight.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V2.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V3.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE_PREFLIGHT.cjs'
       - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE.ts'
   merge_group:
@@ -16,13 +16,15 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: mcft-cap09-ea5a-t3r1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  group: mcft-cap09-ea5a-t4r1-static-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
-  fresh-formal-database-preflight:
+  ea5a-v3-static-adoption:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      EA5A_V3_STATIC_ADOPTION_ONLY: 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,26 +41,24 @@ jobs:
           node-version: 20.11.1
           cache: pnpm
 
-      - name: Resolve exact EA5A V2 base and subject
+      - name: Resolve exact EA5A V3 base
         id: authority
         shell: bash
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
-            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
           else
             echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
-            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Syntax-check EA5A V2 governance gate
+      - name: Syntax-check EA5A V3 governance gate
         run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE_PREFLIGHT.cjs
 
-      - name: Validate exact EA5A V2 route-repair boundary
+      - name: Validate exact EA5A V3 static adoption boundary
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE_PREFLIGHT.cjs
@@ -66,41 +66,10 @@ jobs:
       - name: Typecheck server/runtime dependencies
         run: pnpm --filter @geox/server run typecheck
 
-      - name: Execute read-only exact T3R1 Formal database preflight
-        env:
-          DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
-          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
-        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE.ts
-
-      - name: Verify EA5A V2 preflight result
-        shell: node {0}
-        run: |
-          const fs = require('fs');
-          const governance = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE_PREFLIGHT_GOVERNANCE_RESULT.json','utf8'));
-          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE_PREFLIGHT_RESULT.json','utf8'));
-          if (governance.status !== 'PASS') throw new Error('EA5A_V2_GOVERNANCE_PASS_REQUIRED');
-          if (result.status !== 'PASS') throw new Error('EA5A_V2_DATABASE_PREFLIGHT_PASS_REQUIRED');
-          const identity = result.database_identity || {};
-          if (identity.neon_project_id !== 'delicate-glade-62464340') throw new Error('EA5A_V2_NEON_PROJECT_ID_REQUIRED');
-          if (identity.neon_branch_id !== 'br-cold-dust-a6j6aymz') throw new Error('EA5A_V2_FORMAL_MAIN_BRANCH_REQUIRED');
-          if (identity.database_name !== 'geox_mcft_cap09_s6_formal_t3r1_24h') throw new Error('EA5A_V2_T3R1_DATABASE_NAME_REQUIRED');
-          if (identity.simulation_branch_reused !== false || identity.t1r1_database_reused !== false) throw new Error('EA5A_V2_DATABASE_REUSE_FORBIDDEN');
-          const counts = result.fresh_database_counts || {};
-          for (const key of ['facts_total','twin_lineage_v1_total','twin_state_estimate_v1_total','twin_forecast_v1_total','twin_runtime_checkpoint_latest_index_v1_total','twin_shadow_online_scheduler_slot_v1_total','t1r1_scope_row_count','t3r1_scope_row_count_before_bootstrap']) {
-            if (counts[key] !== 0) throw new Error(`EA5A_V2_FRESH_ZERO_REQUIRED:${key}:${counts[key]}`);
-          }
-          if (counts.cross_scope_canonical_stitching_authorized !== false) throw new Error('EA5A_V2_CROSS_SCOPE_STITCHING_FORBIDDEN');
-          if (result.database_write_count !== 0 || result.formal_evidence_write_count !== 0 || result.schema_write_count !== 0 || result.public_provider_request_count !== 0) throw new Error('EA5A_V2_ZERO_MUTATION_REQUIRED');
-          if (result.secret_binding_required_next !== true || result.fresh_bootstrap_authorized !== false) throw new Error('EA5A_V2_SECRET_THEN_BOOTSTRAP_SEQUENCE_REQUIRED');
-          if (result.ea5e2_operational_activation_authorized !== false || result.formal_o00_start_authorized !== false || result.formal_window_started !== false || result.mcft_cap09_completed !== false) throw new Error('EA5A_V2_PREMATURE_FORMAL_EFFECT');
-          console.log(JSON.stringify({status:'PASS',database_name:identity.database_name,facts_total:counts.facts_total,t1r1_scope_row_count:counts.t1r1_scope_row_count,t3r1_scope_row_count_before_bootstrap:counts.t3r1_scope_row_count_before_bootstrap,secret_binding_observed:true,fresh_bootstrap_authorized_by_preflight:false,formal_eligible:false,o00_authorized:false}));
-
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mcft-cap-09-ea5a-t3r1-${{ steps.authority.outputs.subject_sha }}
-          path: |
-            acceptance-output/MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE_PREFLIGHT_GOVERNANCE_RESULT.json
-            acceptance-output/MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE_PREFLIGHT_RESULT.json
+          name: mcft-cap-09-ea5a-t4r1-static-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE_PREFLIGHT_GOVERNANCE_RESULT.json
           if-no-files-found: warn
           retention-days: 90
