@@ -34,7 +34,7 @@ const critical = [
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SUCCESSOR-RUNNER-QUALIFICATION-V1.json",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SUCCESSOR-RUNNER-QUALIFICATION-V2.json",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-PERSISTED-A0-AUTHORITY-V1.json",
-  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-OPERATIONAL-ACTIVATION-RUNNER-QUALIFICATION-V1.json",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SOIL-FIRST-SEEN-EVIDENCE-V1.json",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-TIMING-BUDGET-QUALIFICATION-V1.json",
@@ -60,4 +60,4 @@ for (const file of critical) {
   const current = git("rev-parse", `origin/main:${file}`);
   if (exact !== current) throw new Error(`EA5E2_ACTIVATION_SUBJECT_SUPERSEDED:${file}`);
 }
-console.log(JSON.stringify({ status: "PASS", subject_sha: subject, current_main_sha: git("rev-parse", "origin/main"), critical_file_count: critical.length, successor_authority_version: "V2", timing_evidence_version: "V2", formal_database_route: "T3R1", long_horizon_planner: "BOUND" }));
+console.log(JSON.stringify({ status: "PASS", subject_sha: subject, current_main_sha: git("rev-parse", "origin/main"), critical_file_count: critical.length, successor_authority_version: "V3", timing_evidence_version: "V2", formal_database_route: "T4R1", long_horizon_planner: "BOUND" }));

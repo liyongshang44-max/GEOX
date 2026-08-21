@@ -9,7 +9,7 @@ on:
       - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json'
   push:
     branches: [main]
     paths:
@@ -19,7 +19,7 @@ on:
       - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json'
   schedule:
     - cron: '20 * * * *'
   workflow_dispatch:
@@ -62,7 +62,7 @@ jobs:
         run: python scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py selftest
       - name: Prove reusable current crop-consensus evaluator
         env:
-          TARGET_T: '2026-08-15T23:00:00.000Z'
+          TARGET_T: '2026-08-23T07:00:00.000Z'
         run: node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs
       - name: Prove rolling crop-legality builder
         run: node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs selftest

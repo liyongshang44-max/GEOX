@@ -6,7 +6,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const AUTHORITY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json";
+const AUTHORITY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json";
 const OUTPUT = "acceptance-output/MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS_PREFLIGHT.json";
 const HOUR_MS = 60 * 60 * 1000;
 
