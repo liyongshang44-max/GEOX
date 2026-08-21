@@ -171,6 +171,75 @@ async function loadConnectedData(packet, decisionCycleId = "") {
   renderConnectedData(payload, packet);
 }
 
+function formatFractionPercent(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? `${(number * 100).toFixed(2)}%` : "—";
+}
+
+function renderMcftRuntimeEvidence(payload) {
+  const status = byId("mcftRuntimeStatus");
+  const answer = byId("mcftRuntimeAnswer");
+  const objects = byId("mcftRuntimeObjects");
+
+  if (payload.connected !== true) {
+    status.className = "status-line blocked-text";
+    status.textContent = `DISCONNECTED · ${payload.error ?? "historical Neon qualification unavailable"}`;
+    answer.hidden = false;
+    answer.innerHTML = `没有回退到本地旧 Postgres，也没有把 builder fixture 标成 Neon 数据。要启用这一层，只在 Demo server 进程配置 <code>COMMERCIAL_EVIDENCE_MCFT_READ_URL</code>；浏览器不会收到连接串。允许读取的 database 被硬限制为 <code>${escapeHtml(payload.database_name ?? "geox_mcft_cap09_s6_accel24t_am19_v3")}</code>。`;
+    objects.innerHTML = "";
+    return;
+  }
+
+  const evidence = payload.evidence_window ?? {};
+  const soil = evidence.selected_soil_observation ?? {};
+  const forcing = evidence.forcing ?? {};
+  const state = payload.state ?? {};
+  const forecast = payload.forecast ?? {};
+  const scenario = payload.scenario ?? {};
+  const health = payload.health ?? {};
+  const checkpoint = payload.checkpoint ?? {};
+  const tick = payload.tick ?? {};
+
+  status.className = "status-line degraded-text";
+  status.textContent = `CONNECTED · Neon persisted qualification · read_only=${payload.read_only} · database=${payload.database_name}`;
+  answer.hidden = false;
+  answer.innerHTML = `
+    <strong>What GEOX knew at T=${escapeHtml(evidence.logical_time ?? tick.logical_time)}:</strong>
+    soil observed <code>${escapeHtml(soil.observed_at)}</code> → available <code>${escapeHtml(soil.available_to_runtime_at)}</code> → <code>${escapeHtml(soil.candidate_assessment)}</code> / <code>${escapeHtml(soil.epistemic_class)}</code>.
+    Current forcing = <code>${escapeHtml(forcing.mode)}</code>, health = <code>${escapeHtml(forcing.runtime_health)}</code>, provider wait = <code>${escapeHtml(forcing.provider_wait_required)}</code>, exact pair at boundary = <code>${escapeHtml(forcing.exact_provider_pair_available)}</code>.
+    <div class="hash-line">Persisted engineering qualification only · contains ENGINEERING_FIXTURE_ONLY evidence · NOT production live · NOT final Formal O00–O23 closure.</div>
+  `;
+
+  const cards = [
+    ["Decision boundary", evidence.logical_time ?? tick.logical_time, `tick ${shortHash(tick.object_id)}`],
+    ["Selected soil", `${soil.canonical_value ?? "—"} ${soil.canonical_unit ?? ""}`, `${soil.quality_status ?? "—"} · rejected stale=${evidence.rejected_observation_count ?? "—"}`],
+    ["Availability", soil.available_to_runtime_at ?? "—", `observed ${soil.observed_at ?? "—"}`],
+    ["Forcing", forcing.mode ?? "—", `${forcing.precipitation_epistemic_class ?? "—"} / ${forcing.et0_epistemic_class ?? "—"}`],
+    ["State", formatFractionPercent(state.root_zone_vwc_fraction?.mean), `available water ${formatFractionPercent(state.available_water_fraction)}`],
+    ["Forecast", `${forecast.point_count ?? "—"} points`, `${forecast.status ?? "—"} · scenario eligible=${forecast.scenario_eligible ?? "—"}`],
+    ["Scenario", `${scenario.option_count ?? "—"} options`, scenario.scenario_policy_id ?? "—"],
+    ["Runtime health", health.operation_status ?? forcing.runtime_health ?? "—", `checkpoint ${shortHash(health.checkpoint_ref ?? checkpoint.object_id)}`],
+    ["Checkpoint", `tick_sequence=${checkpoint.tick_sequence ?? "—"}`, `next ${checkpoint.next_tick_logical_time ?? "—"}`],
+  ];
+
+  objects.innerHTML = cards.map(([label, primary, secondary]) => `
+    <article class="trace-object">
+      <p class="eyebrow">${escapeHtml(label)}</p>
+      <strong title="${escapeHtml(primary)}">${escapeHtml(primary)}</strong>
+      <code title="${escapeHtml(secondary)}">${escapeHtml(secondary)}</code>
+    </article>
+  `).join("");
+}
+
+async function loadMcftRuntimeEvidence() {
+  byId("mcftRuntimeStatus").className = "status-line muted";
+  byId("mcftRuntimeStatus").textContent = "正在读取 historical Neon qualification evidence...";
+  const response = await fetch("/api/mcft-runtime-evidence", { cache: "no-store" });
+  const payload = await response.json();
+  if (!response.ok || payload.ok !== true) throw new Error(payload.error ?? `MCFT_RUNTIME_EVIDENCE_HTTP_${response.status}`);
+  renderMcftRuntimeEvidence(payload);
+}
+
 function renderRuntimeValueTrace(wrapper) {
   const trace = wrapper?.twin_trace;
   if (!trace) throw new Error("RUNTIME_VALUE_TRACE_MISSING");
@@ -243,6 +312,13 @@ async function main() {
   byId("decisionCycleId").value = initialTraceId;
 
   try {
+    await loadMcftRuntimeEvidence();
+  } catch (error) {
+    byId("mcftRuntimeStatus").className = "status-line blocked-text";
+    byId("mcftRuntimeStatus").textContent = `MCFT Neon evidence failed: ${error.message}`;
+  }
+
+  try {
     await loadConnectedData(packet, initialTraceId);
   } catch (error) {
     byId("connectedDataStatus").className = "status-line blocked-text";
@@ -255,6 +331,13 @@ async function main() {
     byId("runtimeTraceStatus").className = "status-line blocked-text";
     byId("runtimeTraceStatus").textContent = `Runtime Value Trace failed: ${error.message}`;
   }
+
+  byId("refreshMcftRuntimeEvidence").addEventListener("click", () => {
+    loadMcftRuntimeEvidence().catch((error) => {
+      byId("mcftRuntimeStatus").className = "status-line blocked-text";
+      byId("mcftRuntimeStatus").textContent = `MCFT Neon evidence failed: ${error.message}`;
+    });
+  });
 
   byId("refreshConnectedData").addEventListener("click", () => {
     loadConnectedData(packet, byId("decisionCycleId").value).catch((error) => {
