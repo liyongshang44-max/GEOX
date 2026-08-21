@@ -17,7 +17,7 @@
       <p class="eyebrow">农业 AI 决策可信性 · 60 秒证明</p>
       <h1>不是“能不能给答案”，而是“这个答案在当时有没有资格被给出”。</h1>
       <p id="heroProblem" class="hero-copy">正在读取运行证据...</p>
-      <p class="hero-value">GEOX 用来证明：做出农业决策时，哪些数据当时真的已经知道，哪些只是事后才知道。<br />如果系统把“事后才出现的数据”当成“当时已知的数据”，这个决策就不值得信任。</p>
+      <p class="hero-value"><strong>如果晚到的数据被当成“当时已知”，系统就可能用事后才知道的事实，去证明过去的决定“正确”。</strong><br />GEOX 的作用，就是阻止这种事情发生，并让下游的农艺判断、灌溉建议和自动化结果拥有可审计的证据边界。</p>
       <details class="hero-engineering-meta">
         <summary>证据标识</summary>
         <div class="hero-meta">
@@ -40,6 +40,7 @@
         <article class="statement danger"><h3>只看数据发生时间的系统</h3><p>看到一条“11:00 的天气数据”，就可能默认它在 12:00 做决策时已经可用。即使这条数据其实到 12:20 才发布。</p></article>
         <article class="statement safe"><h3>GEOX</h3><p>不仅看数据描述的是几点，还检查它什么时候真正可用、什么时候进入系统、来自哪里、对应哪个时段以及质量是否合格。12:20 才出现的数据，不能进入 12:00 的知识状态。</p></article>
       </div>
+      <div class="callout executive-callout"><strong>真正的业务风险不是“系统报错”，而是系统没有报错：</strong>它很自信地给出一个看似合理的结果，却引用了决策当时根本还不可知的数据。</div>
     </section>
 
     <section id="runtime-demo" class="panel core-panel proof-panel" data-section="3">
@@ -59,22 +60,27 @@
     </section>
 
     <section id="decision-trace" class="panel core-panel" data-section="4">
-      <div class="section-heading"><span>03</span><div><p class="eyebrow">真实持久化运行证据</p><h2>这是一条真实运行留下的证据链。</h2></div></div>
+      <div class="section-heading"><span>03</span><div><p class="eyebrow">真实持久化运行证据</p><h2>这不是概念图：系统真的按这套边界运行过，并留下了可检查的证据。</h2></div></div>
       <div id="traceFlow" class="flow compact"></div>
 
       <div class="trace-loader primary-evidence-loader">
-        <p class="eyebrow">Neon 历史持久化资格数据</p>
+        <p class="eyebrow">历史持久化资格数据</p>
         <h3>系统在决策当时，究竟真正知道什么</h3>
         <p class="footnote">下面的数据来自已经完成的一次历史资格运行，Demo 服务只读查询 Neon。它证明这条运行链确实执行并持久化；其中部分天气与 ET0 是加速工程测试输入，因此不会被包装成生产实时数据，也不代表最终 Formal 时间链资格已经完成。</p>
         <div class="input-row"><button id="refreshMcftRuntimeEvidence" type="button">刷新真实运行证据</button></div>
       </div>
-      <div id="mcftRuntimeStatus" class="status-line muted">正在读取 Neon 历史资格数据...</div>
+      <div id="mcftRuntimeStatus" class="status-line muted">正在读取历史资格数据...</div>
       <div id="mcftRuntimeAnswer" class="callout executive-callout" hidden></div>
       <div id="mcftRuntimeObjects" class="trace-grid executive-trace-grid"></div>
 
+      <div class="problem-grid buyer-impact-grid">
+        <article class="statement danger"><h3>如果把晚到数据当成当时已知</h3><p>下游结果会显得“证据充分”，但实际上用了决策时还不存在于系统知识状态里的信息。这样的建议即使数值碰巧正确，也不能证明当时的决策可信。</p></article>
+        <article class="statement safe"><h3>GEOX 的处理</h3><p>晚到证据不会被偷偷补进过去。证据不足时系统会明确降级、停止没有依据的计算，或者拒绝继续；只有仍被证据授权的部分才会向前推进。</p></article>
+      </div>
+
       <div class="commercial-meaning">
         <p class="eyebrow">客户应该理解什么</p>
-        <strong>GEOX 只使用决策当时真正已经可知的证据；对尚不可知的部分明确降级，并且只继续那些仍然有资格执行的计算。</strong>
+        <strong>在结果进入灌溉建议、农艺判断或自动化执行之前，GEOX 先证明：这个结果使用的证据，在当时真的已经可知。</strong>
       </div>
 
       <details id="traceAdvancedDetails" class="engineering-details trace-advanced">
@@ -123,7 +129,10 @@
           <tbody id="behaviorMatrix"></tbody>
         </table>
       </div>
-      <div class="callout executive-callout"><strong>核心价值：</strong>可信的农业 AI 不是永远给答案，而是在“知道什么、能做什么、不该做什么”之间有清晰边界。</div>
+      <div class="commercial-meaning ceo-close">
+        <p class="eyebrow">CEO 只需要记住这一句</p>
+        <strong>GEOX 不是保证系统每次都给答案，而是保证只有在证据允许时，才把结果当成可以被信任的答案。</strong>
+      </div>
     </section>
 
     <details class="engineering-details evidence-appendix">
@@ -145,7 +154,7 @@
     <section class="panel boundary-panel evidence-boundary">
       <p class="eyebrow">证据边界</p>
       <h2>这条证明到哪里为止</h2>
-      <p class="boundary-copy">这里展示的是已经持久化的工程资格运行证据。最终生产 Formal O00–O23 资格仍由独立的真实时间链治理；本 Demo 不把加速测试证据包装成生产实时数据，也不授权自动决策或执行。</p>
+      <p class="boundary-copy">这版已经证明：GEOX 能真实记录“当时知道什么”，并据此继续、降级或拒绝继续。它还没有声称生产自动控制已经完成；最终生产 Formal O00–O23 资格仍由独立的真实时间链治理。</p>
       <details class="boundary-details">
         <summary>查看精确边界声明</summary>
         <ul id="nonclaims" class="nonclaims"></ul>
