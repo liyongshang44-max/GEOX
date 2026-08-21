@@ -69,11 +69,28 @@ jobs:
             'scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs' \
             'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs' \
             'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs' | sort)"
+          t4_runtime_rebind_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-ea5e2-rolling-operational-activation-live.yml' \
+            '.github/workflows/mcft-cap-09-rolling-kbs-intersection.yml' \
+            'apps/server/src/domain/twin_runtime/external_formal_bootstrap_authority_bundle_v1.ts' \
+            'apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V3.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V2.cjs' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs' \
+            'scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs' \
+            'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs' \
+            'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs' \
+            'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs' \
+            'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs' | sort)"
           routing_repair_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-ea5b3-external-runtime-config-resolver.yml' \
-            '.github/workflows/mcft-cap-09-ea5d1-external-bootstrap-persistence-qualification.yml' | sort)"
+            '.github/workflows/mcft-cap-09-ea5d1-external-bootstrap-persistence-qualification.yml' \
+            '.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml' | sort)"
           if [[ "$files" == "$t3_runtime_rebind_files" ]]; then
             mode='t3-runtime-rebind-successor'
+          elif [[ "$files" == "$t4_runtime_rebind_files" ]]; then
+            mode='t4-runtime-rebind-successor'
           elif [[ "$files" == "$routing_repair_files" ]]; then
             mode='runtime-rebind-routing-repair'
           else
@@ -87,7 +104,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo 'PASS: exact two-workflow routing repair; no historical EA5B3 authority is rewritten.'
+          echo 'PASS: exact three-workflow routing repair; no historical EA5B3 authority is rewritten.'
 
       - name: Record historical EA5B3 authority gate not applicable to exact T3 runtime rebind
         if: steps.routing.outputs.mode == 't3-runtime-rebind-successor'
@@ -95,6 +112,13 @@ jobs:
         run: |
           set -euo pipefail
           echo 'Historical EA5B3 exact-base authority gate is not applicable to the exact eight-file T3 runtime-rebind successor boundary. Compatibility tests below still execute.'
+
+      - name: Record historical EA5B3 authority gate not applicable to exact T4 runtime rebind
+        if: steps.routing.outputs.mode == 't4-runtime-rebind-successor'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'Historical EA5B3 exact-base authority gate is not applicable to the exact thirteen-file T4 runtime-rebind successor boundary. Compatibility tests below still execute.'
 
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
