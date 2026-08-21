@@ -6,6 +6,8 @@ on:
       - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER.cjs'
       - '.github/workflows/mcft-cap-09-amendment-19-persistent-production-cutover.yml'
   workflow_dispatch:
@@ -22,24 +24,55 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 2
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Fail closed on exact base and five-file boundary
+      - name: Classify historical cutover proof versus T4R1 successor rebind
+        id: routing
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
-          test "${{ github.event.pull_request.base.sha }}" = "a69c221cf7b6dcaf3f6565dff64633abc6f9d47d"
-          git diff --name-only "${{ github.event.pull_request.base.sha }}"...HEAD | sort > /tmp/actual
-          cat > /tmp/expected <<'EOF'
+          base='${{ github.event.pull_request.base.sha }}'
+          subject='${{ github.event.pull_request.head.sha }}'
+          test "$(git rev-parse HEAD)" = "$subject"
+          changed="$(git diff --name-only "$base" "$subject" | sort)"
+
+          if [[ "$base" == "a69c221cf7b6dcaf3f6565dff64633abc6f9d47d" ]]; then
+            cat > /tmp/expected <<'EOF'
           .github/workflows/mcft-cap-09-amendment-19-persistent-production-cutover.yml
           apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts
           apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.ts
           apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts
           scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER.cjs
           EOF
-          sort -o /tmp/expected /tmp/expected
-          diff -u /tmp/expected /tmp/actual
+            sort -o /tmp/expected /tmp/expected
+            printf '%s\n' "$changed" > /tmp/actual
+            diff -u /tmp/expected /tmp/actual
+            echo 'mode=historical-cutover-proof' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          test "$base" = "6fd839dfafb8f62da637dea2b46b0003da680596" || {
+            echo "AM19_CUTOVER_UNRECOGNIZED_BASE:$base" >&2
+            exit 1
+          }
+          for required in \
+            'apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.ts' \
+            'apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.ts' \
+            'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'; do
+            grep -Fxq "$required" <<<"$changed" || { echo "AM19_CUTOVER_T4_SUCCESSOR_REQUIRED_FILE_MISSING:$required" >&2; exit 1; }
+          done
+          for forbidden in \
+            'apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts' \
+            'apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER.cjs'; do
+            ! grep -Fxq "$forbidden" <<<"$changed" || { echo "AM19_CUTOVER_T4_SUCCESSOR_PRODUCTION_SURFACE_DRIFT:$forbidden" >&2; exit 1; }
+          done
+          grep -Fq 'MaterializedExternalFormalA18CropContextV3' apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.ts
+          grep -Fq 'geox_mcft_cap09_s6_accel24t_am19_v4' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
+          grep -Fq 'geox_mcft_cap09_s6_accel24t_am19_blocked_v4' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
+          echo 'mode=t4r1-v4-successor-rebind' >> "$GITHUB_OUTPUT"
 
       - uses: pnpm/action-setup@v4
         with:
@@ -52,8 +85,17 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Governance production cutover proof
+      - name: Governance historical production cutover proof
+        if: github.event_name != 'pull_request' || steps.routing.outputs.mode == 'historical-cutover-proof'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER.cjs
+
+      - name: Require T4R1 successor does not claim a new production cutover
+        if: github.event_name == 'pull_request' && steps.routing.outputs.mode == 't4r1-v4-successor-rebind'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'T4R1 successor reuses the already-qualified persistent production execution graph.'
+          echo 'No tick-service, evidence-source, or cutover-governance change is authorized by this PR.'
 
       - name: Typecheck exact production successor classes
         run: pnpm --filter @geox/server run typecheck
@@ -61,7 +103,8 @@ jobs:
       - name: Re-run shared canonical 24T proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.ts
 
-      - name: Upload immutable focused proof
+      - name: Upload historical immutable focused proof
+        if: github.event_name != 'pull_request' || steps.routing.outputs.mode == 'historical-cutover-proof'
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-amendment19-persistent-production-cutover-${{ github.event.pull_request.head.sha || github.sha }}
@@ -70,3 +113,12 @@ jobs:
           path: |
             acceptance-output/MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER_RESULT.json
             acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json
+
+      - name: Upload T4R1 successor canonical-core proof
+        if: github.event_name == 'pull_request' && steps.routing.outputs.mode == 't4r1-v4-successor-rebind'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-amendment19-t4r1-v4-successor-${{ github.event.pull_request.head.sha }}
+          if-no-files-found: error
+          retention-days: 30
+          path: acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json
