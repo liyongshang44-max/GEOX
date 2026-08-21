@@ -1,4 +1,4 @@
-name: mcft-cap-09-rolling-preboundary-capture
+name: mcft-cap-09-rolling-preboundary-capture-historical-retired
 
 on:
   pull_request:
