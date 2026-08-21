@@ -153,9 +153,10 @@ async function main() {
     const context = await browser.newContext({ userAgent: 'GEOX-MCFT-CAP09-Alternative-Scope-Rescue/1.0' });
     const page = await context.newPage();
     const areasProof = await digestPage(page, CONFIG.provider_scan.areas_url);
-    // KBS renders the nested treatment tree collapsed, so visible innerText omits
-    // replicate anchors. Bind to exact provider area anchor identities instead.
-    const areaIdentities = areaIdentitySet(await page.locator('a[href*="/areas/"]').allTextContents());
+    // KBS renders the nested treatment tree collapsed, and the area identity is
+    // carried by sibling spans rather than the "Show" anchor text. Read all span
+    // values, then retain only exact governed replicate identities.
+    const areaIdentities = areaIdentitySet(await page.locator('span').allTextContents());
     for (const treatment of CONFIG.selection_contract.eligible_treatments) {
       requireCondition(areaIdentities.has(`${treatment}R1`), `ALTERNATIVE_SCOPE_PROVIDER_R1_AREA_MISSING:${treatment}`);
     }
