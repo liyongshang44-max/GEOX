@@ -42,7 +42,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -Eq '^  (push|schedule|workflow_dispatch|workflow_run):' .github/workflows/commercial-evidence-demo-v1.yml
-          ! grep -Fq 'secrets.' .github/workflows/commercial-evidence-demo-v1.yml
-          ! grep -Fq 'DATABASE_URL' .github/workflows/commercial-evidence-demo-v1.yml
-          ! grep -Fq 'R2_' .github/workflows/commercial-evidence-demo-v1.yml
+          workflow=.github/workflows/commercial-evidence-demo-v1.yml
+          ! grep -Eq '^  (push|schedule|workflow_dispatch|workflow_run):' "$workflow"
+          secret_ref='se''crets.'
+          database_ref='DATABASE''_URL'
+          r2_ref='R2''_'
+          ! grep -Fq "$secret_ref" "$workflow"
+          ! grep -Fq "$database_ref" "$workflow"
+          ! grep -Fq "$r2_ref" "$workflow"
