@@ -124,25 +124,65 @@ function renderTraceObjects(target, trace) {
   }).join("");
 }
 
-function renderRuntimeValueTrace(wrapper) {
-  const trace = wrapper?.twin_trace;
-  if (!trace) throw new Error("RUNTIME_VALUE_TRACE_MISSING");
-  renderTraceObjects(byId("runtimeTraceObjects"), trace);
+function traceReadout(trace) {
   const state = trace.answers?.current_field_state ?? {};
   const forecast = trace.answers?.seven_day_forecast ?? {};
   const scenarios = trace.answers?.scenario_comparison ?? {};
   const decision = trace.answers?.decision_cycle ?? {};
+  return {
+    state,
+    forecast,
+    scenarios,
+    decision,
+    html: `State=<code>${escapeHtml(state.water_state)}</code> · soil moisture=<code>${escapeHtml(state.soil_moisture_percent)}%</code> · Forecast=<code>${escapeHtml(forecast.point_count)} points / ${escapeHtml(forecast.horizon_days)} days</code> · Scenario options=<code>${escapeHtml(scenarios.option_count)}</code> · Decision stage=<code>${escapeHtml(decision.current_stage)}</code>.`,
+  };
+}
+
+function renderConnectedData(payload, packet) {
+  const status = byId("connectedDataStatus");
+  const answer = byId("connectedDataAnswer");
+  const objects = byId("connectedTraceObjects");
+  if (payload.connected !== true) {
+    status.className = "status-line blocked-text";
+    status.textContent = `DISCONNECTED · ${payload.error ?? "GEOX persisted read model unavailable"}`;
+    answer.hidden = false;
+    answer.innerHTML = `未使用任何 fixture 冒充 live data。启动 GEOX Server/DB（当前目标 <code>${escapeHtml(payload.geox_base_url ?? packet.runtime_context.geox_base_url)}</code>）后点击 Refresh；也可通过 <code>COMMERCIAL_EVIDENCE_DECISION_CYCLE_ID</code> 或 URL 的 <code>?decision_cycle_id=...</code> 固定一个真实 cycle。`;
+    objects.innerHTML = "";
+    return;
+  }
+
+  const trace = payload.twin_trace;
+  renderTraceObjects(objects, trace);
+  const readout = traceReadout(trace);
+  status.className = "status-line good-text";
+  status.textContent = `CONNECTED · persisted GEOX data · read_only=${payload.read_only} · source=${payload.source_mode} · decision_cycle=${payload.decision_cycle_id}`;
+  answer.hidden = false;
+  answer.innerHTML = `<strong>Live persisted readout:</strong> ${readout.html}<div class="hash-line">来源：现有 GEOX Server + persisted Twin Kernel read model；本 microsite write count = 0。</div>`;
+}
+
+async function loadConnectedData(packet, decisionCycleId = "") {
+  const id = String(decisionCycleId ?? "").trim();
+  byId("connectedDataStatus").className = "status-line muted";
+  byId("connectedDataStatus").textContent = "正在读取 GEOX persisted read model...";
+  const suffix = id ? `?decision_cycle_id=${encodeURIComponent(id)}` : "";
+  const response = await fetch(`/api/live-data${suffix}`, { cache: "no-store" });
+  const payload = await response.json();
+  if (!response.ok || payload.ok !== true) throw new Error(payload.error ?? `LIVE_DATA_HTTP_${response.status}`);
+  renderConnectedData(payload, packet);
+}
+
+function renderRuntimeValueTrace(wrapper) {
+  const trace = wrapper?.twin_trace;
+  if (!trace) throw new Error("RUNTIME_VALUE_TRACE_MISSING");
+  renderTraceObjects(byId("runtimeTraceObjects"), trace);
+  const readout = traceReadout(trace);
   byId("runtimeTraceStatus").className = "status-line good-text";
   byId("runtimeTraceStatus").textContent = `Builder trace PASS · runtime_builders_invoked=${wrapper.runtime_builders_invoked} · determinism_stable=${wrapper.determinism_stable} · forbidden_auto_writes_absent=${wrapper.forbidden_auto_writes_absent}`;
   const answer = byId("runtimeTraceAnswer");
   answer.hidden = false;
   answer.innerHTML = `
-    <strong>Trace readout:</strong>
-    State=<code>${escapeHtml(state.water_state)}</code> · soil moisture=<code>${escapeHtml(state.soil_moisture_percent)}%</code> ·
-    Forecast=<code>${escapeHtml(forecast.point_count)} points / ${escapeHtml(forecast.horizon_days)} days</code> ·
-    Scenario options=<code>${escapeHtml(scenarios.option_count)}</code> ·
-    Decision stage=<code>${escapeHtml(decision.current_stage)}</code>.
-    <div class="hash-line">这 7 个对象由现有 Twin Kernel builders 现场生成，页面没有内置这些对象或 hash。</div>
+    <strong>Engineering trace readout:</strong> ${readout.html}
+    <div class="hash-line">这 7 个对象由现有 Twin Kernel builders 现场生成，页面没有内置这些对象或 hash；它们不是 persisted production state。</div>
   `;
 }
 
@@ -198,6 +238,17 @@ async function main() {
   renderBehavior(packet);
   byId("nonclaims").innerHTML = packet.hard_nonclaims.map((item) => `<li><code>${escapeHtml(item)}</code></li>`).join("");
 
+  const params = new URLSearchParams(window.location.search);
+  const initialTraceId = params.get("decision_cycle_id") ?? "";
+  byId("decisionCycleId").value = initialTraceId;
+
+  try {
+    await loadConnectedData(packet, initialTraceId);
+  } catch (error) {
+    byId("connectedDataStatus").className = "status-line blocked-text";
+    byId("connectedDataStatus").textContent = `Connected data failed: ${error.message}`;
+  }
+
   try {
     await loadRuntimeValueTrace();
   } catch (error) {
@@ -205,9 +256,13 @@ async function main() {
     byId("runtimeTraceStatus").textContent = `Runtime Value Trace failed: ${error.message}`;
   }
 
-  const params = new URLSearchParams(window.location.search);
-  const initialTraceId = params.get("decision_cycle_id") ?? "";
-  byId("decisionCycleId").value = initialTraceId;
+  byId("refreshConnectedData").addEventListener("click", () => {
+    loadConnectedData(packet, byId("decisionCycleId").value).catch((error) => {
+      byId("connectedDataStatus").className = "status-line blocked-text";
+      byId("connectedDataStatus").textContent = `Connected data failed: ${error.message}`;
+    });
+  });
+
   byId("loadTraceButton").addEventListener("click", () => {
     loadPersistedTrace(packet, byId("decisionCycleId").value).catch((error) => {
       byId("persistedTraceStatus").className = "status-line blocked-text";

@@ -62,25 +62,35 @@
       <div id="traceFlow" class="flow compact"></div>
 
       <div class="trace-loader">
-        <p class="eyebrow">Runtime Value Trace · no database required</p>
+        <p class="eyebrow">Connected data · persisted GEOX read model</p>
+        <h3>自动读取真实 Decision Cycle 与完整 Twin Trace</h3>
+        <p class="footnote">本段只读连接现有 GEOX Server。未指定 decision_cycle_id 时，先读取 operator decision queue，再读取对应 `/api/v1/twin-kernel/traces/:decision_cycle_id`。如果 Server/DB 不可用，会明确显示 DISCONNECTED，不会用 fixture 冒充 live data。</p>
+        <div class="input-row"><button id="refreshConnectedData" type="button">Refresh connected data</button></div>
+      </div>
+      <div id="connectedDataStatus" class="status-line muted">正在连接 GEOX persisted read model...</div>
+      <div id="connectedDataAnswer" class="callout" hidden></div>
+      <div id="connectedTraceObjects" class="trace-grid"></div>
+
+      <div class="trace-loader">
+        <p class="eyebrow">Engineering proof · no database required</p>
         <h3>现有 Twin Kernel builders 现场生成完整 trace</h3>
-        <p class="footnote">本段直接执行仓库已有 `TWIN_KERNEL_RUNTIME_VALUE_TRACE_ACCEPTANCE`：真实构造 State、7-day Forecast、Scenario、Calibration、Forecast Error、Learning Candidate 与 Decision Cycle，并双跑验证 determinism。不是页面内置 JSON。</p>
+        <p class="footnote">本段直接执行仓库已有 `TWIN_KERNEL_RUNTIME_VALUE_TRACE_ACCEPTANCE`：真实构造 State、7-day Forecast、Scenario、Calibration、Forecast Error、Learning Candidate 与 Decision Cycle，并双跑验证 determinism。不是页面内置 JSON，也不声称是 persisted production state。</p>
       </div>
       <div id="runtimeTraceStatus" class="status-line muted">正在执行 Twin Kernel builder chain...</div>
       <div id="runtimeTraceAnswer" class="callout" hidden></div>
       <div id="runtimeTraceObjects" class="trace-grid"></div>
 
       <div class="trace-loader persisted-loader">
-        <p class="eyebrow">Optional stronger proof · persisted readback</p>
-        <h3>加载真实持久化 decision_cycle_id</h3>
+        <p class="eyebrow">Explicit persisted readback</p>
+        <h3>指定真实持久化 decision_cycle_id</h3>
         <label for="decisionCycleId">Persisted decision_cycle_id</label>
         <div class="input-row">
           <input id="decisionCycleId" placeholder="例如 dc_..." autocomplete="off" />
           <button id="loadTraceButton" type="button">Load persisted trace</button>
         </div>
-        <p class="footnote">若要展示数据库持久化版本，输入由现有 TK10 persisted runtime chain 生成的 decision_cycle_id。本页只读代理现有 `/api/v1/twin-kernel/traces/:decision_cycle_id`。</p>
+        <p class="footnote">需要固定展示某个历史 Decision Cycle 时，在这里输入 ID。本页仍只读代理现有 `/api/v1/twin-kernel/traces/:decision_cycle_id`。</p>
       </div>
-      <div id="persistedTraceStatus" class="status-line muted">未加载 persisted trace；上方 Runtime Value Trace 已可独立完成销售演示。</div>
+      <div id="persistedTraceStatus" class="status-line muted">未指定 persisted trace。</div>
       <div id="persistedTraceObjects" class="trace-grid"></div>
       <div id="persistedTraceActions" class="trace-actions"></div>
     </section>
