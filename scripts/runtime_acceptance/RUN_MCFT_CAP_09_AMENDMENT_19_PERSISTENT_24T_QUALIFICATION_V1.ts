@@ -26,9 +26,9 @@ import {
   MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3,
 } from "../../apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v3.js";
 import {
-  MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V2,
-  materializeExternalFormalA18CropContextV2,
-} from "../../apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v2.js";
+  MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V3,
+  materializeExternalFormalA18CropContextV3,
+} from "../../apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.js";
 import { ExternalFormalBootstrapPersistenceServiceV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_bootstrap_persistence_service_v1.js";
 import { ExternalFormalV3Amendment19PersistentTickServiceV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.js";
 import {
@@ -53,7 +53,7 @@ const OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QU
 const PERSISTENCE_FREE_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json");
 const REHYDRATION_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json");
 const CANDIDATE_PATH_DEFAULT = path.resolve("rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json");
-const CROP_AUTHORITY_PATH = path.resolve("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json");
+const CROP_AUTHORITY_PATH = path.resolve("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json");
 const MATRIX_PATH = path.resolve("docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json");
 
 const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v4";
@@ -548,9 +548,9 @@ async function insertMainFixtures(pool: Pool, built: BuiltQualificationV1): Prom
   return count;
 }
 
-function materializationHash(materialized: ReturnType<typeof materializeExternalFormalA18CropContextV2>): string {
+function materializationHash(materialized: ReturnType<typeof materializeExternalFormalA18CropContextV3>): string {
   return semanticHashV1({
-    materialization_profile: MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V2,
+    materialization_profile: MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V3,
     context_ref: materialized.context_ref,
     context_identity_hash: materialized.context_identity_hash,
     materialized_context: materialized.context,
@@ -575,7 +575,7 @@ function buildQualification(candidate: CandidateV1, subject: string, databaseNam
   const cropAuthority = loadJson(CROP_AUTHORITY_PATH) as Record<string, unknown>;
   const matrix = loadJson(MATRIX_PATH) as Record<string, unknown>;
 
-  materializeExternalFormalA18CropContextV2({
+  materializeExternalFormalA18CropContextV3({
     logical_time: a0,
     expected_identity_hash: bundle.persistence_bundle.crop_stage_context_hash,
     crop_authority: cropAuthority,
@@ -583,7 +583,7 @@ function buildQualification(candidate: CandidateV1, subject: string, databaseNam
   });
 
   const materializationPins = bundle.hourly_crop_pins.map((pin) => {
-    const materialized = materializeExternalFormalA18CropContextV2({
+    const materialized = materializeExternalFormalA18CropContextV3({
       logical_time: pin.logical_time,
       expected_identity_hash: pin.crop_stage_context_hash,
       crop_authority: cropAuthority,
@@ -732,7 +732,7 @@ function composition(pool: Pool, built: BuiltQualificationV1, syntheticNow: () =
   );
   const materializer = {
     materialize(input: { logical_time: string; expected_identity_hash: string }) {
-      return materializeExternalFormalA18CropContextV2({
+      return materializeExternalFormalA18CropContextV3({
         logical_time: input.logical_time,
         expected_identity_hash: input.expected_identity_hash,
         crop_authority: built.crop_authority,
