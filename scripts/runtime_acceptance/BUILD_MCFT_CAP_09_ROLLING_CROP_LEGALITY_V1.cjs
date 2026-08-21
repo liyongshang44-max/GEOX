@@ -76,14 +76,14 @@ function build(root) {
 }
 
 function selftest() {
-  const targets = ["2026-08-15T23:00:00.000Z", "2026-08-16T00:00:00.000Z"];
+  const targets = ["2026-08-23T07:00:00.000Z", "2026-08-23T08:00:00.000Z"];
   const results = targets.map((target) => evaluateTargetCropConsensus(target));
   if (results.some((item) => item.status !== "PASS" || item.crop_stage_code !== "MID" || item.crop_authority_effect !== "NONE")) {
-    throw new Error("MCFT_CAP09_ROLLING_CROP_SELFTEST_CURRENT_T3R1_MID_REQUIRED");
+    throw new Error("MCFT_CAP09_ROLLING_CROP_SELFTEST_CURRENT_T4R1_MID_REQUIRED");
   }
   console.log(JSON.stringify({
     status: "PASS",
-    current_t3r1_mid_targets_proven: targets.length,
+    current_t4r1_mid_targets_proven: targets.length,
     crop_authority_effect: "NONE",
     provider_request_count: 0,
     database_write_count: 0,

@@ -24,36 +24,36 @@ export const MCFT_CAP09_EXTERNAL_FORMAL_CONFIGURATION_MATRIX_HASH_V1 =
   "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5" as const;
 
 export const MCFT_CAP09_EXTERNAL_FORMAL_REALITY_BINDING_ID_V1 =
-  "GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V2" as const;
+  "GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V3" as const;
 export const MCFT_CAP09_EXTERNAL_FORMAL_SOURCE_MATRIX_ID_V1 =
   "GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1" as const;
 export const MCFT_CAP09_EXTERNAL_FORMAL_CROP_CONTEXT_ID_V1 =
-  "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2" as const;
+  "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3" as const;
 
 export const MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1 = Object.freeze({
   site: {
-    ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V2.json",
-    hash: "be02ea8a6fe54affed1e0abedb1f1d6e407c661a",
+    ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V3.json",
+    hash: "0c0e43123dbc27a89a5e781807be38dddaeeabd2",
   },
   reality: {
-    ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V2.json",
-    hash: "deb6c15ef7848a8c1ab00bce0847324aaa68ba24",
+    ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V3.json",
+    hash: "aabc3235a3517fc8751b150571b63f516413c016",
   },
   source_binding_matrix: {
     ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json",
     hash: "30b7910a1bd27882b80eb56041924d0f6252ae02",
   },
   crop_context: {
-    ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json",
-    hash: "757e4b9f4fdcd631eea97fca85614a1b61ef0c4a",
+    ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json",
+    hash: "4bc1f8dda6559c8951db915132172b65469affcb",
   },
   recovery: {
     ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA4-RECOVERY-AUTHORITY-V1.json",
     hash: "1174940a6908e545e70d87cb65be5b3a41db33cf",
   },
   fresh_database: {
-    ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V2.json",
-    hash: "302f4ff3451c393cd1712ec87bc0941b2a6dc8d6",
+    ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V3.json",
+    hash: "fae82fdac5befddbed94ce47fedda517d75741eb",
   },
 });
 
@@ -65,18 +65,18 @@ export const MCFT_CAP09_EXTERNAL_FORMAL_MODEL_HYDRAULIC_PRIOR_V1: SoilHydraulicB
 });
 
 export const MCFT_CAP09_EXTERNAL_FORMAL_GEOMETRY_AUTHORITY_DESCRIPTOR_V1 = Object.freeze({
-  qualified_formal_site_id: "KBS_MCSE_T3R1",
-  geometry_authority_ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-CROP-ONLY-GEOMETRY-AUTHORITY-V1.json",
-  geometry_authority_blob_sha: "87b1c8fa37939085be68abb66bfa8e0918f65e95",
-  geometry_truth_class: "QUALIFIED_CONSERVATIVE_T3R1_CROP_ONLY_POLYGON",
-  whole_t3r1_plot_assumed_crop_only: false,
+  qualified_formal_site_id: "KBS_MCSE_T4R1",
+  geometry_authority_ref: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CROP-ONLY-GEOMETRY-AUTHORITY-V1.json",
+  geometry_authority_blob_sha: "3f8bfab5569af02fc69b1fe59d80085a38bee05c",
+  geometry_truth_class: "QUALIFIED_CONSERVATIVE_T4R1_CROP_ONLY_POLYGON",
+  whole_t4r1_plot_assumed_crop_only: false,
   prairie_strip_excluded: true,
   raw_geometry_embedded_in_repository: false,
   direct_field_equivalence_by_near_site_sources: false,
 });
 
 export const MCFT_CAP09_EXTERNAL_FORMAL_GEOMETRY_SEMANTIC_HASH_V1 =
-  "sha256:4672b5f28484a05e00d93de8c53b9c7b2bdbcc250f48959a4b85b768d2ed3f3a" as const;
+  "sha256:8108f8e38dbe1326cc3d10d05a96843d77bdf1fdb28b7ed28cb53126a6818868" as const;
 
 export const MCFT_CAP09_EXTERNAL_FORMAL_SOURCE_MATRIX_SEMANTIC_HASH_V1 = semanticHashV1({
   authority_ref: MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.source_binding_matrix.ref,
@@ -128,7 +128,7 @@ function cropStageContextHashV1(input: ExternalFormalBootstrapAuthorityBundleInp
   return semanticHashV1({
     authority_ref: MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.crop_context.ref,
     authority_blob_sha: MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1.crop_context.hash,
-    derived_context_authority: "FORMAL_DERIVED_CROP_WATER_USE_STAGE_CONTEXT_V2",
+    derived_context_authority: "FORMAL_DERIVED_CROP_WATER_USE_STAGE_CONTEXT_V3",
     crop_stage_code: input.crop_stage_code,
     derivation_authority_time: input.crop_stage_derivation_authority_time,
     observed_biological_stage_claimed: false,
