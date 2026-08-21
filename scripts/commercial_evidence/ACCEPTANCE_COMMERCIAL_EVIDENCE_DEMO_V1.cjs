@@ -58,7 +58,7 @@ requireToken("server", server, "database_write_count: 0");
 requireToken("server", server, "canonical_runtime_write_count: 0");
 requireToken("server", server, "COMMERCIAL_EVIDENCE_DEMO_READ_ONLY_GET_REQUIRED");
 
-// Paid-pilot discovery presentation: one real agriculture decision, two look-alike cases, four interactive Runtime cases.
+// Paid-pilot presentation: one real agriculture decision, two look-alike cases, four interactive Runtime cases.
 for (const token of [
   "今晚原计划灌溉 20 mm",
   "明天降雨 25 mm",
@@ -111,6 +111,7 @@ requireToken("html", html, "自动灌溉控制");
 requireToken("html", html, "无人值守现场执行");
 requireToken("html", html, "生产资格化的作物推荐");
 requireToken("html", html, "已证明的客户 ROI");
+requireToken("html", html, "真实 24 小时 Stage 1B / Formal 完成");
 
 // Architecture must map to verified current components and must not represent future approval/execution as current core.
 requireToken("app", app, "external_formal_current_interval_forcing_selector_v1.ts");
@@ -146,7 +147,7 @@ requireToken("docs", docs, "COMMERCIAL_EVIDENCE_MCFT_READ_URL");
 requireToken("docs", docs, "CEO default presentation path");
 requireToken("docs", docs, "Machine-verifiable proof");
 requireToken("docs", docs, "Page → repo/runtime component mapping");
-requireToken("docs", docs, "PASS_FOR_CUSTOMER_DISCOVERY");
+requireToken("docs", docs, "PASS_FOR_PAID_PILOT_SALES_CONDITIONAL_ON_MACHINE_PROOF");
 requireToken("docs", docs, "NOT_PROVEN_CUSTOMER_ROI");
 requireToken("docs", docs, "Runtime qualification boundary");
 requireToken("docs", docs, "NOT CURRENT VERIFIED CORE");
@@ -198,8 +199,21 @@ if (smoke.ok !== true || smoke.standalone_server_started !== true || smoke.healt
 console.log(JSON.stringify({
   ok: true,
   acceptance: "ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1",
-  commercial_gate: "PASS_FOR_CUSTOMER_DISCOVERY",
-  paid_pilot_sales_gate: "PENDING_CUSTOMER_VALIDATION_AND_FINAL_MCFT_AUTHORITY",
+  commercial_gate: "PASS_FOR_PAID_PILOT_SALES_CONDITIONAL_ON_MACHINE_PROOF",
+  paid_pilot_sales_gate: "CONDITIONAL_PASS",
+  paid_pilot_scope: "DECISION_ASSURANCE_PAID_PILOT",
+  paid_pilot_release_conditions: [
+    "EXACT_HEAD_COMMERCIAL_ACCEPTANCE_SUCCESS",
+    "EXACT_HEAD_GENERIC_CI_SUCCESS",
+    "PR_REMAINS_DRAFT_UNMERGED",
+    "MAIN_UNTOUCHED",
+  ],
+  not_yet_commercial_claims: [
+    "CUSTOMER_ROI_VALIDATION",
+    "FINAL_MCFT_FORMAL_PRODUCTION_AUTHORITY",
+    "AUTONOMOUS_IRRIGATION",
+    "PRODUCTION_QUALIFIED_AGRONOMIC_RECOMMENDATION",
+  ],
   irrigation_decision_anchor_present: true,
   irrigation_business_values_marked_assumption: true,
   lookalike_forecast_availability_demo_present: true,
