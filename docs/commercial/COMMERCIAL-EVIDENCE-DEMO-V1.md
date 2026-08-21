@@ -256,7 +256,9 @@ The current MCFT / shadow-online qualification evidence is a prerequisite for la
 
 ## Real architecture and Page → repo/runtime component mapping
 
-The engineering appendix shows the customer-visible system path:
+The engineering appendix now deliberately separates the **verified current Runtime core** from future governed product stages.
+
+Verified current path:
 
 ```text
 Provider / Sensor
@@ -267,12 +269,21 @@ Provider / Sensor
 -> State
 -> Forecast
 -> Scenario
--> Decision Boundary
--> Human Approval
--> [future controlled execution]
+-> Runtime qualification boundary
 ```
 
-The mapping is constrained to real components:
+The verified architecture stops there. `Human Approval -> controlled execution` is shown separately as:
+
+```text
+FUTURE GOVERNED STAGE
+Human Approval -> controlled execution
+NOT CURRENT VERIFIED CORE
+NOT YET A COMMERCIAL CLAIM
+```
+
+This is intentional. Repository searches performed during this revision did not establish a single exact Human Approval component path that could be honestly bound to this MCFT Runtime diagram. The Demo therefore does **not** invent one simply to make the diagram look complete.
+
+The mapping is constrained to real components or explicit nonclaims:
 
 | Page / architecture node | Repository/runtime component | Evidence role |
 | --- | --- | --- |
@@ -285,9 +296,10 @@ The mapping is constrained to real components:
 | Forecast | `twin_forecast_run_v1` | persisted forecast run |
 | Scenario | `twin_scenario_set_v1` | persisted scenario set |
 | Scheduler | `twin_shadow_online_scheduler_slot_v1` | qualification scheduler projection |
+| Runtime qualification boundary | `twin_runtime_health_v1` + `twin_runtime_checkpoint_v1` + State `use_eligibility` | qualified / degraded / blocked and continuation boundary |
 | Health / recovery | `twin_runtime_health_v1` + `twin_runtime_checkpoint_v1` | degradation reason codes / continuation checkpoint |
 | Product Twin Trace | `apps/web/src/features/operator/pages/OperatorTwinTraceReadbackPage.tsx` | read-only operator trace |
-| Future controlled execution | **NOT YET A COMMERCIAL CLAIM** | current Demo stops before field actuation |
+| Human Approval / controlled execution | **NOT CURRENT VERIFIED CORE** / **NOT YET A COMMERCIAL CLAIM** | future governed stage; not represented as an implemented MCFT Runtime component |
 
 Persistence, scheduler, health/recovery and trace/provenance are also shown as side concerns.
 
@@ -354,6 +366,7 @@ business explanation scenario
 canonical selector machine proof
 historical persisted MCFT Runtime evidence
 Product Twin Kernel decision trace
+future Human Approval / controlled execution governance
 ```
 
 These surfaces are not relabeled as one another.
@@ -402,6 +415,9 @@ missing evidence = FAIL_CLOSED
 customer economics provenance labels present
 NOT_PROVEN_CUSTOMER_ROI retained
 PROVEN NOW / NOT YET boundary retained
+verified current architecture stops at Runtime qualification boundary
+Human Approval / controlled execution marked FUTURE GOVERNED STAGE / NOT CURRENT VERIFIED CORE
+no invented Human Approval component path
 real repo/runtime component mapping present
 no invented lease/fencing path
 historical Neon allowlist + READ ONLY guard retained
@@ -450,3 +466,4 @@ NO_FORMAL_O00_O23_CLAIM
 NO_AUTONOMOUS_RECOMMENDATION_OR_DISPATCH
 NO_RETROACTIVE_TICK_REWRITE
 NOT_PROVEN_CUSTOMER_ROI
+```
