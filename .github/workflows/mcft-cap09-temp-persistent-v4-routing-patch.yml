@@ -26,15 +26,26 @@ jobs:
             const path = 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts';
             const file = await github.rest.repos.getContent({ owner, repo, path, ref: branch });
             if (Array.isArray(file.data) || file.data.type !== 'file') throw new Error('P24_RUNNER_FILE_REQUIRED');
-            let text = Buffer.from(file.data.content, file.data.encoding).toString('utf8');
-            const oldToken = '          blocked_database_name: BLOCKED_DB,\n';
-            const newToken = '          blocked_database_name: BLOCKED_DB,\n          crop_authority_id: "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3",\n          crop_context_materialization_profile: MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V3,\n';
-            const count = text.split(oldToken).length - 1;
-            if (count !== 2) throw new Error(`P24_RESULT_IDENTITY_ANCHOR_EXACT_TWO_REQUIRED:${count}`);
-            if (text.includes('crop_context_materialization_profile: MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V3')) {
+            const lines = Buffer.from(file.data.content, file.data.encoding).toString('utf8').split('\n');
+            if (lines.some((line) => line.includes('crop_context_materialization_profile: MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V3'))) {
               throw new Error('P24_RESULT_IDENTITY_ALREADY_PRESENT');
             }
-            text = text.split(oldToken).join(newToken);
+            const hits = lines.map((line, index) => line.trim() === 'blocked_database_name: BLOCKED_DB,' ? index : -1).filter((index) => index >= 0);
+            if (hits.length !== 2) throw new Error(`P24_RESULT_IDENTITY_ANCHOR_EXACT_TWO_REQUIRED:${hits.length}`);
+            for (const index of [...hits].reverse()) {
+              const indent = lines[index].match(/^\s*/)[0];
+              lines.splice(index + 1, 0,
+                `${indent}crop_authority_id: "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3",`,
+                `${indent}crop_context_materialization_profile: MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V3,`,
+              );
+            }
+            const text = lines.join('\n');
+            if (text.split('crop_authority_id: "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3"').length - 1 !== 2) {
+              throw new Error('P24_RESULT_CROP_AUTHORITY_EXACT_TWO_REQUIRED');
+            }
+            if (text.split('crop_context_materialization_profile: MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V3').length - 1 !== 2) {
+              throw new Error('P24_RESULT_MATERIALIZATION_PROFILE_EXACT_TWO_REQUIRED');
+            }
             const result = await github.rest.repos.createOrUpdateFileContents({
               owner, repo, path, branch,
               message: 'fix(mcft-cap09): bind persistent result to T4R1 crop identity',
