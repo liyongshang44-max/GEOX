@@ -66,7 +66,7 @@ function buildSuccessorRunner(): string {
   assert.equal(git("rev-parse", `HEAD:scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T3R1_FRESH_BOOTSTRAP.ts`), SOURCE_RUNNER_BLOB, "T4R1_FRESH_BOOTSTRAP_SOURCE_RUNNER_BLOB_DRIFT");
   let source = fs.readFileSync(SOURCE_RUNNER, "utf8");
   source = exactReplace(source, "T3R1", "T4R1", 10);
-  source = exactReplace(source, "t3r1", "t4r1", 10);
+  source = exactReplace(source, "t3r1", "t4r1", 6);
   source = exactReplace(source, "d97129915ae5f7720b3a3d8e5561a2842213da65", T4_AUTH_BLOB);
   source = exactReplace(source, "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json", "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json");
   source = exactReplace(source, "757e4b9f4fdcd631eea97fca85614a1b61ef0c4a", T4_CROP_BLOB);
