@@ -55,11 +55,17 @@ jobs:
             grep -Fxq 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts' <<<"$changed" || { echo 'AM19_P24_REHYDRATION_DECODER_IDENTITY_CHANGE_REQUIRED' >&2; exit 1; }
             grep -Fq 'decode-gfs-v2' scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
             grep -Fq 'MCFT_CAP09_EA5E2_GFS_RAW_BUNDLE_DECODER_V2' scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
-          else
+          elif grep -Fxq 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts' <<<"$changed"; then
             grep -Fxq 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts' <<<"$changed" || { echo 'AM19_P24_SUCCESSOR_QUALIFICATION_REFACTOR_REQUIRED' >&2; exit 1; }
-            grep -Fxq 'apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts' <<<"$changed" || { echo 'AM19_P24_SHARED_MANIFEST_BUILDER_CHANGE_REQUIRED' >&2; exit 1; }
             grep -Fq 'buildExternalFormalAmendment19WindowManifestV1' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
             ! grep -Fq 'MCFT_CAP09_AM19_ACCELERATED_PERSISTENT24_MANIFEST_V1' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
+            if ! grep -Fxq 'apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts' <<<"$changed"; then
+              grep -Fxq 'scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs' <<<"$changed" || { echo 'AM19_P24_QUALIFICATION_SUBJECT_CLASSIFIER_CHANGE_REQUIRED' >&2; exit 1; }
+              grep -Fq 'geox_mcft_cap09_s6_accel24t_am19_v4' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
+              grep -Fq 'geox_mcft_cap09_s6_accel24t_am19_blocked_v4' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
+              grep -Fq 'mcft_cap09_amendment19_qualification_subject_v1' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
+              grep -Fq 'qualified_subject_sha' scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs
+            fi
           fi
 
       - uses: pnpm/action-setup@v4
@@ -264,6 +270,7 @@ jobs:
         run: |
           const fs=require('node:fs');
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_RESULT.json','utf8'));
+          if(p.subject_sha!==process.env.SUBJECT_SHA||p.qualified_subject_sha!==process.env.SUBJECT_SHA||p.main_database_name!=='geox_mcft_cap09_s6_accel24t_am19_v4'||p.blocked_database_name!=='geox_mcft_cap09_s6_accel24t_am19_blocked_v4') throw new Error('AM19_P24_EXACT_SUBJECT_STORE_BINDING_REQUIRED');
           if(p.status==='ALREADY_QUALIFIED_READ_ONLY') {
             if(p.database_write_count!==0||p.runtime_write_count!==0||p.scheduler_write_count!==0||p.provider_request_count!==0||p.r2_request_count!==0||p.new_machine_gate_claim!==false||p.existing_success_evidence_unchanged!==true) throw new Error('AM19_P24_READ_ONLY_REVERIFY_DRIFT');
           } else {

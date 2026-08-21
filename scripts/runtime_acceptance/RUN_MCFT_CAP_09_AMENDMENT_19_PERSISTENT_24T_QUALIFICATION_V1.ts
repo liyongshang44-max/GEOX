@@ -56,12 +56,13 @@ const CANDIDATE_PATH_DEFAULT = path.resolve("rolling-candidate/MCFT_CAP_09_ROLLI
 const CROP_AUTHORITY_PATH = path.resolve("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json");
 const MATRIX_PATH = path.resolve("docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json");
 
-const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v3";
-const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v3";
+const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v4";
+const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v4";
 const FORMAL_V3_DB = "geox_mcft_cap09_s6_formal_t3r1_24h_v3";
 const FAILED_DB = "geox_mcft_cap09_s6_formal_t3r1_24h_v2";
 const FAILED_EPOCH = "mcft_cap09_external_formal_window_epoch_20260817t200000z_v2";
 const EVIDENCE_SOURCE = "mcft_cap09_external_formal_evidence_v1";
+const QUALIFICATION_SUBJECT_TYPE = "mcft_cap09_amendment19_qualification_subject_v1";
 const LEASE_SECONDS = 900;
 const LEASE_POLL_MS = 1000;
 const LEASE_WAIT_OPERATIONAL_TIMEOUT_MS = 20 * 60_000;
@@ -1068,8 +1069,75 @@ async function runBlocked(pool: Pool, built: BuiltQualificationV1): Promise<bool
   return blockedComplete(pool);
 }
 
-async function existingSuccessReadOnlyReverify(mainPool: Pool, blockedPool: Pool): Promise<boolean> {
+async function insertQualificationSubjectSentinel(input: {
+  pool: Pool;
+  database: string;
+  lane: "MAIN_24T" | "BLOCKED_NO_CAUSAL_FORCING";
+  subject: string;
+  a0: string;
+}): Promise<void> {
+  const factId = `am19_p24_subject_${crypto.createHash("sha256").update(`${input.database}|${input.subject}`).digest("hex")}`;
+  const record = {
+    type: QUALIFICATION_SUBJECT_TYPE,
+    payload: {
+      schema_version: QUALIFICATION_SUBJECT_TYPE,
+      subject_sha: input.subject,
+      database_name: input.database,
+      qualification_lane: input.lane,
+      a0: input.a0,
+    },
+  };
+  const inserted = await input.pool.query(
+    `INSERT INTO facts (fact_id,occurred_at,source,record_json)
+     VALUES ($1,$2::timestamptz,$3,$4::jsonb)
+     ON CONFLICT (fact_id) DO NOTHING`,
+    [factId, input.a0, QUALIFICATION_SUBJECT_TYPE, JSON.stringify(record)],
+  );
+  if (inserted.rowCount !== 1) throw new Error(`AM19_P24_QUALIFICATION_SUBJECT_SENTINEL_CONFLICT:${input.database}`);
+}
+
+async function qualificationSubjectMatches(input: {
+  pool: Pool;
+  database: string;
+  lane: "MAIN_24T" | "BLOCKED_NO_CAUSAL_FORCING";
+  subject: string;
+}): Promise<boolean> {
+  const rows = (await input.pool.query(
+    `SELECT record_json->'payload' AS payload
+       FROM facts
+      WHERE source=$1 AND record_json->>'type'=$1
+      ORDER BY fact_id ASC`,
+    [QUALIFICATION_SUBJECT_TYPE],
+  )).rows;
+  if (rows.length !== 1) return false;
+  return qualificationSubjectPayloadMatches(rows[0]?.payload, input);
+}
+
+function qualificationSubjectPayloadMatches(payload: any, input: {
+  database: string;
+  lane: "MAIN_24T" | "BLOCKED_NO_CAUSAL_FORCING";
+  subject: string;
+}): boolean {
+  let canonicalA0 = false;
   try {
+    canonicalA0 = typeof payload?.a0 === "string" && new Date(payload.a0).toISOString() === payload.a0;
+  } catch {
+    canonicalA0 = false;
+  }
+  return payload?.schema_version === QUALIFICATION_SUBJECT_TYPE
+    && payload?.subject_sha === input.subject
+    && payload?.database_name === input.database
+    && payload?.qualification_lane === input.lane
+    && canonicalA0;
+}
+
+async function existingSuccessReadOnlyReverify(mainPool: Pool, blockedPool: Pool, subject: string): Promise<boolean> {
+  try {
+    const subjectsMatch = await Promise.all([
+      qualificationSubjectMatches({ pool: mainPool, database: MAIN_DB, lane: "MAIN_24T", subject }),
+      qualificationSubjectMatches({ pool: blockedPool, database: BLOCKED_DB, lane: "BLOCKED_NO_CAUSAL_FORCING", subject }),
+    ]);
+    if (subjectsMatch.some((match) => !match)) return false;
     await assertFullMainReadback(mainPool);
     return await blockedComplete(blockedPool);
   } catch {
@@ -1099,6 +1167,9 @@ function selftest(): void {
   if (pair.some((record) => record.role_time.valid_from !== built.o00 || record.role_time.valid_to !== addHours(built.o00, 72))) throw new Error("AM19_P24_SELFTEST_CURRENT_PAIR_WINDOW_REQUIRED");
   const testUrl = databaseUrlFor(`postgresql://u:p@example.invalid/${FORMAL_V3_DB}?sslmode=require`, MAIN_DB);
   if (!testUrl.includes(`/${MAIN_DB}`) || testUrl.includes(`/${FORMAL_V3_DB}`)) throw new Error("AM19_P24_SELFTEST_DATABASE_PATH_REPLACEMENT_REQUIRED");
+  const sentinel = { schema_version: QUALIFICATION_SUBJECT_TYPE, subject_sha: subject, database_name: MAIN_DB, qualification_lane: "MAIN_24T", a0 };
+  if (!qualificationSubjectPayloadMatches(sentinel, { database: MAIN_DB, lane: "MAIN_24T", subject })) throw new Error("AM19_P24_SELFTEST_SUBJECT_SENTINEL_REQUIRED");
+  if (qualificationSubjectPayloadMatches(sentinel, { database: MAIN_DB, lane: "MAIN_24T", subject: "b".repeat(40) })) throw new Error("AM19_P24_SELFTEST_CROSS_SUBJECT_SENTINEL_FORBIDDEN");
   console.log(JSON.stringify({
     status: "PASS",
     production_scheduler_class_reused: true,
@@ -1141,11 +1212,12 @@ async function run(): Promise<void> {
     const mainIsZero = await zeroState(mainPool);
     const blockedIsZero = await zeroState(blockedPool);
     if (!mainIsZero || !blockedIsZero) {
-      if (await existingSuccessReadOnlyReverify(mainPool, blockedPool)) {
+      if (await existingSuccessReadOnlyReverify(mainPool, blockedPool, subject)) {
         writeOutput({
           schema_version: "geox_mcft_cap09_amendment19_persistent24_qualification_result_v1",
           status: "ALREADY_QUALIFIED_READ_ONLY",
           subject_sha: subject,
+          qualified_subject_sha: subject,
           main_database_name: MAIN_DB,
           blocked_database_name: BLOCKED_DB,
           database_write_count: 0,
@@ -1172,6 +1244,11 @@ async function run(): Promise<void> {
     const mainBuilt = buildQualification(candidate, subject, MAIN_DB);
     const blockedBuilt = buildQualification(candidate, subject, BLOCKED_DB);
     if (mainBuilt.a0 !== blockedBuilt.a0 || mainBuilt.o00 !== blockedBuilt.o00 || mainBuilt.o23 !== blockedBuilt.o23) throw new Error("AM19_P24_LANE_TIME_DRIFT");
+
+    await Promise.all([
+      insertQualificationSubjectSentinel({ pool: mainPool, database: MAIN_DB, lane: "MAIN_24T", subject, a0: mainBuilt.a0 }),
+      insertQualificationSubjectSentinel({ pool: blockedPool, database: BLOCKED_DB, lane: "BLOCKED_NO_CAUSAL_FORCING", subject, a0: blockedBuilt.a0 }),
+    ]);
 
     const localFacts = await localRehydratedFacts(localPool, candidate);
     const realRecords = localFacts.map(payloadFromFact);
@@ -1207,6 +1284,11 @@ async function run(): Promise<void> {
     statuses.ZERO_PROVIDER_WAIT = mainRun.zero_provider_wait && blocked ? "PASS" : "NOT_RUN";
 
     const readbackResult = await assertFullMainReadback(mainPool, mainBuilt);
+    const finalSubjectBindings = await Promise.all([
+      qualificationSubjectMatches({ pool: mainPool, database: MAIN_DB, lane: "MAIN_24T", subject }),
+      qualificationSubjectMatches({ pool: blockedPool, database: BLOCKED_DB, lane: "BLOCKED_NO_CAUSAL_FORCING", subject }),
+    ]);
+    if (finalSubjectBindings.some((match) => !match)) throw new Error("AM19_P24_FINAL_QUALIFICATION_SUBJECT_BINDING_REQUIRED");
     statuses.FULL_CHAIN_READBACK = "PASS";
     statuses.PERSISTENT_24T = "PASS";
 
@@ -1217,6 +1299,7 @@ async function run(): Promise<void> {
       schema_version: "geox_mcft_cap09_amendment19_persistent24_qualification_result_v1",
       status: "PASS",
       subject_sha: subject,
+      qualified_subject_sha: subject,
       producer_subject_sha: candidate.producer_subject_sha,
       temporal_authority: "PROVIDER_AVAILABILITY_WATERMARK_V1",
       qualification_clock: "ACCELERATED_ENGINEERING_ONLY",

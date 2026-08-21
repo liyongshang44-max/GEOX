@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml'
+      - 'scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs'
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.cjs'
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.cjs'
   workflow_run:
@@ -47,6 +48,9 @@ jobs:
       - name: Fail-closed graduation input assembler selftest
         run: node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.cjs --selftest
 
+      - name: Fresh versus idempotent read-only trigger classifier selftest
+        run: node scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs --selftest
+
       - name: Immutable cross-run graduation envelope selftest
         run: node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.cjs --selftest
 
@@ -62,6 +66,13 @@ jobs:
           const fs=require('node:fs');
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER_RESULT.json','utf8'));
           if(p.status!=='PASS'||p.shared_canonical_core_bound!==true||p.provider_wait_authorized!==false||p.persistent_24t_claimed!==false||p.future_formal_epoch_selected!==false||p.formal_effect!==false) throw new Error('AM19_GRADUATION_WIRING_CUTOVER_PROOF_REQUIRED');
+
+      - name: Require idempotent read-only qualification is not treated as a fresh gate input
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs" .github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml
+          grep -Fq "formal-graduation-readonly-" .github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml
 
   live-formal-gate-preflight:
     if: >-
@@ -136,10 +147,29 @@ jobs:
         with:
           node-version: '20.11.1'
 
+      - name: Classify fresh qualification versus idempotent read-only replay
+        id: qualification
+        env:
+          PERSISTENT_RESULT: ${{ steps.evidence.outputs.persistent }}
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const {spawnSync}=require('node:child_process');
+          const output='acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_CLASSIFICATION_V1.json';
+          const run=spawnSync(process.execPath,[
+            'scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs',
+            process.env.PERSISTENT_RESULT,process.env.SUBJECT_SHA,output
+          ],{stdio:'inherit'});
+          if(run.status!==0)process.exit(run.status||1);
+          const result=JSON.parse(fs.readFileSync(output,'utf8'));
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`fresh_pass=${result.fresh_pass?'true':'false'}\nread_only=${result.read_only?'true':'false'}\n`);
+
       - name: Reprove production cutover on exact persistent subject
+        if: steps.qualification.outputs.fresh_pass == 'true'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER.cjs
 
       - name: Assemble evidence-faithful Formal graduation input
+        if: steps.qualification.outputs.fresh_pass == 'true'
         run: >-
           node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.cjs
           "${{ steps.evidence.outputs.persistent }}"
@@ -150,6 +180,7 @@ jobs:
           acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
 
       - name: Open existing machine-only Formal epoch gate
+        if: steps.qualification.outputs.fresh_pass == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -158,6 +189,7 @@ jobs:
             > acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json
 
       - name: Require gate-open result has no Formal side effect
+        if: steps.qualification.outputs.fresh_pass == 'true'
         shell: node {0}
         run: |
           const fs=require('node:fs');
@@ -169,6 +201,7 @@ jobs:
           if(gate.status!=='PASS'||gate.formal_epoch_creation_gate!=='OPEN'||gate.required_status_count!==13||gate.static_blocker_count!==0||gate.human_override_used!==false) throw new Error('AM19_GRADUATION_WIRING_GATE_NOT_OPEN');
 
       - name: Freeze source-run identity and machine gate-open time
+        if: steps.qualification.outputs.fresh_pass == 'true'
         env:
           SOURCE_ARTIFACT_ID: ${{ steps.source-artifact.outputs.artifact_id }}
           SOURCE_ARTIFACT_NAME: ${{ steps.source-artifact.outputs.artifact_name }}
@@ -189,6 +222,7 @@ jobs:
           fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_METADATA_V1.json',JSON.stringify(metadata,null,2)+'\n');
 
       - name: Assemble immutable cross-run Formal graduation envelope
+        if: steps.qualification.outputs.fresh_pass == 'true'
         run: >-
           node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.cjs
           "${{ steps.evidence.outputs.persistent }}"
@@ -202,6 +236,7 @@ jobs:
           acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.json
 
       - name: Require envelope remains machine-only and side-effect free
+        if: steps.qualification.outputs.fresh_pass == 'true'
         shell: node {0}
         run: |
           const fs=require('node:fs');
@@ -209,7 +244,7 @@ jobs:
           if(p.status!=='PASS'||p.formal_epoch_creation_gate!=='OPEN'||p.subject_sha!==process.env.SUBJECT_SHA||p.machine_status_count!==13||p.static_blocker_count!==0||p.future_formal_epoch_selected!==false||p.formal_o00_started!==false||p.formal_database_write_count!==0||p.human_override_used!==false||p.mcft_cap09_completed!==false) throw new Error('AM19_GRADUATION_ENVELOPE_BOUNDARY_DRIFT');
 
       - name: Upload immutable machine-only graduation proof
-        if: always()
+        if: steps.qualification.outputs.fresh_pass == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-am19-formal-graduation-${{ env.SUBJECT_SHA }}-${{ github.run_id }}
@@ -220,4 +255,13 @@ jobs:
             acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_METADATA_V1.json
             acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.json
           if-no-files-found: warn
+          retention-days: 90
+
+      - name: Upload idempotent read-only qualification proof
+        if: steps.qualification.outputs.read_only == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-am19-formal-graduation-readonly-${{ env.SUBJECT_SHA }}-${{ github.run_id }}
+          path: acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_CLASSIFICATION_V1.json
+          if-no-files-found: error
           retention-days: 90

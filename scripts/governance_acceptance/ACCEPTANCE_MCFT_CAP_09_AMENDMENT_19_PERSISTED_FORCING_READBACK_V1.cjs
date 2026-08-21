@@ -41,8 +41,9 @@ forbidToken(service, "payload.current_interval_forcing", "AM19_PERSISTED_READBAC
 requireToken(runner, "payload?.base_continuation_window?.current_interval_forcing", "AM19_PERSISTED_READBACK_RUNNER_NESTED_PATH_REQUIRED");
 requireToken(runner, "{payload,payload,base_continuation_window,current_interval_forcing,mode}", "AM19_PERSISTED_READBACK_SQL_NESTED_PATH_REQUIRED");
 forbidToken(runner, "{payload,payload,current_interval_forcing,mode}", "AM19_PERSISTED_READBACK_TOP_LEVEL_SQL_PATH_FORBIDDEN");
-requireToken(runner, 'const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v3";', "AM19_PERSISTED_READBACK_FRESH_MAIN_V3_STORE_REQUIRED");
-requireToken(runner, 'const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v3";', "AM19_PERSISTED_READBACK_FRESH_BLOCKED_V3_STORE_REQUIRED");
+requireToken(runner, 'const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v4";', "AM19_PERSISTED_READBACK_FRESH_MAIN_V4_STORE_REQUIRED");
+requireToken(runner, 'const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v4";', "AM19_PERSISTED_READBACK_FRESH_BLOCKED_V4_STORE_REQUIRED");
+requireToken(runner, 'const QUALIFICATION_SUBJECT_TYPE = "mcft_cap09_amendment19_qualification_subject_v1";', "AM19_PERSISTED_READBACK_EXACT_SUBJECT_SENTINEL_REQUIRED");
 forbidToken(runner, 'const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v2";', "AM19_PERSISTED_READBACK_FAILED_MAIN_V2_REUSE_FORBIDDEN");
 forbidToken(runner, 'const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v2";', "AM19_PERSISTED_READBACK_FAILED_BLOCKED_V2_REUSE_FORBIDDEN");
 
@@ -54,7 +55,8 @@ const result = {
   runner_top_level_path_forbidden: true,
   final_sql_top_level_path_forbidden: true,
   failed_v2_store_reuse_forbidden: true,
-  fresh_v3_store_binding_required: true,
+  fresh_v4_store_binding_required: true,
+  exact_subject_sentinel_required: true,
   formal_effect: false,
 };
 console.log(JSON.stringify(result));
