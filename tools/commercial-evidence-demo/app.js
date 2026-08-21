@@ -62,7 +62,7 @@ function healthZh(health) {
 
 function forcingZh(mode) {
   const labels = {
-    EXACT_PROVIDER_INTERVAL_PAIR: "使用当时已可用的精确证据",
+    EXACT_PROVIDER_INTERVAL_PAIR: "使用当时已经可用的精确证据",
     PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR: "使用上一步的合规假设值",
   };
   return labels[mode] ?? String(mode ?? "—");
@@ -111,8 +111,8 @@ function renderRuntimeComparison(packet) {
   }).join("");
 
   byId("runtimeCallout").innerHTML = `
-    <strong>两种情况的数据内容完全相同：</strong>降雨 ${escapeHtml(packet.comparison.same_exact_payload.rainfall_mm)} mm，ET0 ${escapeHtml(packet.comparison.same_exact_payload.historical_et0_mm)} mm。
-    唯一变化是它什么时候真正进入系统。决策后 20 分钟才出现的数据，不能被包装成决策时已经知道；GEOX 会明确降级，并只使用当时已有的合规证据继续计算。
+    <strong>普通系统最容易在这里犯错：</strong>两种情况的数据内容完全相同——降雨 ${escapeHtml(packet.comparison.same_exact_payload.rainfall_mm)} mm，ET0 ${escapeHtml(packet.comparison.same_exact_payload.historical_et0_mm)} mm——但第二种情况的数据在决策之后才真正出现。
+    只看数据发生时间的系统可能把它继续当成“历史事实”使用；GEOX 不会。它会把这部分明确标成当时未知，并只使用当时已有的合规证据继续计算。
   `;
 }
 
@@ -276,9 +276,9 @@ function renderMcftRuntimeEvidence(payload) {
 
   if (payload.connected !== true) {
     status.className = "status-line blocked-text";
-    status.textContent = `未连接 · ${payload.error ?? "Neon 历史资格数据不可用"}`;
+    status.textContent = `未连接 · ${payload.error ?? "历史资格数据不可用"}`;
     answer.hidden = false;
-    answer.innerHTML = `系统没有回退到本地旧 Postgres，也没有把构建器 fixture 冒充 Neon 数据。只允许 Demo 服务端读取被白名单锁定的历史资格数据库；浏览器不会收到数据库连接串。`;
+    answer.innerHTML = `系统没有回退到本地旧 Postgres，也没有把构建器 fixture 冒充真实持久化数据。只允许 Demo 服务端读取被白名单锁定的历史资格数据库；浏览器不会收到数据库连接串。`;
     objects.innerHTML = "";
     return;
   }
@@ -295,10 +295,10 @@ function renderMcftRuntimeEvidence(payload) {
   const logicalTime = evidence.logical_time ?? tick.logical_time;
 
   status.className = "status-line good-text";
-  status.textContent = `已连接 · Neon 历史持久化资格数据 · 只读 · 写入次数 0`;
+  status.textContent = `已连接 · 历史持久化资格数据 · 只读 · 写入次数 0`;
   answer.hidden = false;
   answer.innerHTML = `
-    <strong>系统在 ${escapeHtml(formatUtc(logicalTime))} 真正知道什么：</strong>
+    <strong>${escapeHtml(formatUtc(logicalTime))}，系统只认当时真正已经进入知识状态的证据。</strong>
     土壤观测发生于 <strong>${escapeHtml(formatUtc(soil.observed_at))}</strong>，并在 <strong>${escapeHtml(formatUtc(soil.available_to_runtime_at))}</strong> 已经进入系统，因此可以用于本次计算。
     当前时段的精确降雨 / ET0 在决策边界还不可用，GEOX 没有等待、回填或假装已经知道，而是<strong>${escapeHtml(forcingZh(forcing.mode))}</strong>，并以<strong>${escapeHtml(healthZh(forcing.runtime_health))}</strong>状态继续仍被允许的计算。
   `;
@@ -307,12 +307,12 @@ function renderMcftRuntimeEvidence(payload) {
   const scenarioEligible = forecast.scenario_eligible === true ? "是" : "否";
   const resultLabel = forcing.runtime_health === "DEGRADED" ? "降级继续" : "正常继续";
   const cards = [
-    ["决策时刻", formatUtc(logicalTime), `运行记录 ${shortHash(tick.object_id)}`],
-    ["证据判定", `${formatFractionPercent(soil.canonical_value)} 土壤含水率`, `${formatUtc(soil.observed_at)} 观测 · ${formatUtc(soil.available_to_runtime_at)} 可用 · 已选用 · 拒绝旧值 ${evidence.rejected_observation_count ?? "—"} 条`],
-    ["当前驱动", forcingZh(forcing.mode), `${healthZh(forcing.runtime_health)} · 降雨/ET0：${epistemicZh(forcing.precipitation_epistemic_class)} / ${epistemicZh(forcing.et0_epistemic_class)} · 不等待迟到数据`],
-    ["状态", `根区含水率 ${formatFractionPercent(state.root_zone_vwc_fraction?.mean)}`, `可用水比例 ${formatFractionPercent(state.available_water_fraction)} · 状态有效：${stateValid}`],
-    ["预测与情景", `${forecast.point_count ?? "—"} 个预测点 · ${scenario.option_count ?? "—"} 个情景`, `预测已完成 · 可进入情景计算：${scenarioEligible}`],
-    ["运行结果", resultLabel, `检查点 ${checkpoint.tick_sequence ?? "—"} · 下一时刻 ${formatUtc(checkpoint.next_tick_logical_time)} · 不回改已完成时刻`],
+    ["决策时刻", formatUtc(logicalTime), `这是系统必须证明“当时知道什么”的边界`],
+    ["采用的土壤证据", `${formatFractionPercent(soil.canonical_value)} 土壤含水率`, `${formatUtc(soil.observed_at)} 观测 · ${formatUtc(soil.available_to_runtime_at)} 已可用 · 拒绝旧值 ${evidence.rejected_observation_count ?? "—"} 条`],
+    ["当前天气依据", forcingZh(forcing.mode), `${healthZh(forcing.runtime_health)} · 降雨/ET0：${epistemicZh(forcing.precipitation_epistemic_class)} / ${epistemicZh(forcing.et0_epistemic_class)} · 不等待迟到数据`],
+    ["当前田块状态", `根区含水率 ${formatFractionPercent(state.root_zone_vwc_fraction?.mean)}`, `可用水比例 ${formatFractionPercent(state.available_water_fraction)} · 状态仍有效：${stateValid}`],
+    ["后续预测", `${forecast.point_count ?? "—"} 个预测点 · ${scenario.option_count ?? "—"} 个情景`, `预测已完成 · 仍允许进入情景计算：${scenarioEligible}`],
+    ["系统最终行为", resultLabel, `检查点 ${checkpoint.tick_sequence ?? "—"} · 下一时刻 ${formatUtc(checkpoint.next_tick_logical_time)} · 晚到证据不会回改已完成时刻`],
   ];
 
   objects.innerHTML = cards.map(([label, primary, secondary], index) => `
@@ -326,7 +326,7 @@ function renderMcftRuntimeEvidence(payload) {
 
 async function loadMcftRuntimeEvidence() {
   byId("mcftRuntimeStatus").className = "status-line muted";
-  byId("mcftRuntimeStatus").textContent = "正在读取 Neon 历史资格数据...";
+  byId("mcftRuntimeStatus").textContent = "正在读取历史资格数据...";
   const response = await fetch("/api/mcft-runtime-evidence", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok || payload.ok !== true) throw new Error(payload.error ?? `MCFT_RUNTIME_EVIDENCE_HTTP_${response.status}`);
@@ -407,7 +407,7 @@ async function main() {
   byId("selectorId").textContent = packet.canonical_selector_contract_id;
 
   renderFlow(byId("architectureFlow"), ["现实 / 外部证据", "证据窗口", "纯领域模型", "运行编排", "只增事实库", "可重建投影", "只读操作接口", "操作运行时"]);
-  renderFlow(byId("traceFlow"), ["证据", "状态", "预测", "情景", "运行边界"]);
+  renderFlow(byId("traceFlow"), ["当时可知的证据", "田块状态", "预测", "情景", "系统行为"]);
   renderRuntimeComparison(packet);
   renderFailureCases(packet);
   renderBehavior(packet);
@@ -421,7 +421,7 @@ async function main() {
     await loadMcftRuntimeEvidence();
   } catch (error) {
     byId("mcftRuntimeStatus").className = "status-line blocked-text";
-    byId("mcftRuntimeStatus").textContent = `Neon 运行证据读取失败：${error.message}`;
+    byId("mcftRuntimeStatus").textContent = `历史运行证据读取失败：${error.message}`;
   }
 
   try {
@@ -441,7 +441,7 @@ async function main() {
   byId("refreshMcftRuntimeEvidence").addEventListener("click", () => {
     loadMcftRuntimeEvidence().catch((error) => {
       byId("mcftRuntimeStatus").className = "status-line blocked-text";
-      byId("mcftRuntimeStatus").textContent = `Neon 运行证据读取失败：${error.message}`;
+      byId("mcftRuntimeStatus").textContent = `历史运行证据读取失败：${error.message}`;
     });
   });
 
