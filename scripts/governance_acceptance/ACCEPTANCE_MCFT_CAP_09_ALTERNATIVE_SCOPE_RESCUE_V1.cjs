@@ -70,6 +70,9 @@ try {
     "candidate_only_not_authority: true",
     "alternative_scope_authority_created: false",
     "whole_window_authority_passed: false",
+    "parserSelfcheck();",
+    "page.locator('a[href*=\"/areas/\"]')",
+    "page.locator('body').textContent()",
     "v4_qualification_store_opened: false",
     "database_write_count: 0",
     "formal_execution_count: '0/24'"

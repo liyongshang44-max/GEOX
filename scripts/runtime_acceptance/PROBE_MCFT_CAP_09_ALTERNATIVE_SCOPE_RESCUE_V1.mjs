@@ -105,6 +105,22 @@ function explicitR1Inclusion(text, treatment) {
   const order = lower.match(/(?:replications?|reps?)\s+(?:in\s+the\s+order\s+of\s+)?\(([^)]+)\)/)?.[1] || '';
   return order.split(/[^0-9]+/).includes('1');
 }
+function areaIdentitySet(values) {
+  return new Set(values
+    .map((value) => normalize(value).toUpperCase())
+    .filter((value) => /^T[1-6]R[1-6]$/.test(value)));
+}
+function parserSelfcheck() {
+  requireCondition(explicitR1Inclusion(
+    'Planted corn in T4 plots, all replications in the order of (5, 3, 4, 2, 1, and 6).',
+    'T4',
+  ), 'ALTERNATIVE_SCOPE_ALL_REPLICATIONS_POSITIVE_CONTROL_FAILED');
+  requireCondition(explicitR1Inclusion('Planted corn in T4R1.', 'T4'), 'ALTERNATIVE_SCOPE_EXACT_R1_POSITIVE_CONTROL_FAILED');
+  requireCondition(!explicitR1Inclusion('Planted corn in T4R2 only.', 'T4'), 'ALTERNATIVE_SCOPE_R2_NEGATIVE_CONTROL_FAILED');
+  const areas = areaIdentitySet(['T4', 'T4R1', ' T4R2 ', 'T4PrairieStrips', 'T4R1P']);
+  requireCondition(areas.has('T4R1') && areas.has('T4R2'), 'ALTERNATIVE_SCOPE_AREA_IDENTITY_POSITIVE_CONTROL_FAILED');
+  requireCondition(!areas.has('T4R1P') && !areas.has('T4PRAIRIESTRIPS'), 'ALTERNATIVE_SCOPE_AREA_IDENTITY_NEGATIVE_CONTROL_FAILED');
+}
 function rankCandidates(left, right) {
   return right.legal_o00_count - left.legal_o00_count
     || left.earliest_legal_o00.localeCompare(right.earliest_legal_o00)
@@ -128,6 +144,7 @@ async function main() {
   requireCondition(CONFIG.selection_contract.preferred_treatment === null
     && CONFIG.selection_contract.preferred_field === null
     && CONFIG.selection_contract.preferred_hybrid === null, 'ALTERNATIVE_SCOPE_PREFERRED_OUTCOME_FORBIDDEN');
+  parserSelfcheck();
 
   const observedAtMs = Date.now();
   const earliestO00Ms = canonicalHourAfter(observedAtMs + CONFIG.whole_window_policy.minimum_candidate_lead_hours * HOUR_MS);
@@ -136,7 +153,12 @@ async function main() {
     const context = await browser.newContext({ userAgent: 'GEOX-MCFT-CAP09-Alternative-Scope-Rescue/1.0' });
     const page = await context.newPage();
     const areasProof = await digestPage(page, CONFIG.provider_scan.areas_url);
-    const areasText = normalize(await page.locator('body').innerText()).toUpperCase();
+    // KBS renders the nested treatment tree collapsed, so visible innerText omits
+    // replicate anchors. Bind to exact provider area anchor identities instead.
+    const areaIdentities = areaIdentitySet(await page.locator('a[href*="/areas/"]').allTextContents());
+    for (const treatment of CONFIG.selection_contract.eligible_treatments) {
+      requireCondition(areaIdentities.has(`${treatment}R1`), `ALTERNATIVE_SCOPE_PROVIDER_R1_AREA_MISSING:${treatment}`);
+    }
     const pageProofs = [];
     const plantingLeads = [];
     const terminationLeads = [];
@@ -192,13 +214,15 @@ async function main() {
     for (const lead of uniquePlantingLeads) {
       const detailUrl = `${CONFIG.provider_scan.index_url}/${lead.provider_observation_id}`;
       const detailProof = await digestPage(page, detailUrl);
-      const detailText = normalize(await page.locator('body').innerText());
+      // Planting notes can be present in provider DOM sections that are not
+      // currently visible. Read DOM text without persisting or emitting it.
+      const detailText = normalize(await page.locator('body').textContent());
       const lower = detailText.toLowerCase();
       requireCondition(detailText.includes(lead.observation_date), 'ALTERNATIVE_SCOPE_DETAIL_DATE_MISMATCH');
       requireCondition(new RegExp(`\\b${lead.treatment}\\b`, 'i').test(detailText), 'ALTERNATIVE_SCOPE_DETAIL_TREATMENT_MISSING');
       const cropBound = CONFIG.selection_contract.required_crop_tokens.some((token) => new RegExp(`\\b${token}\\b`, 'i').test(detailText));
       const hybrids = hybridTokens(detailText);
-      const r1Bound = explicitR1Inclusion(detailText, lead.treatment) && areasText.includes(`${lead.treatment}R1`);
+      const r1Bound = explicitR1Inclusion(detailText, lead.treatment) && areaIdentities.has(`${lead.treatment}R1`);
       const planting = plantingWindowUtc(lead.observation_date);
       const lifecycleHorizonEndMs = planting.end_exclusive_ms + CONFIG.lifecycle_candidate_policy.maximum_maize_grain_horizon_days * DAY_MS;
       const windows = legalWindows(planting, earliestO00Ms).filter((window) => Date.parse(window.o23) < lifecycleHorizonEndMs);
@@ -213,7 +237,7 @@ async function main() {
         crop: cropBound ? 'corn' : null,
         explicit_hybrid_identity_tokens: hybrids,
         explicit_r1_inclusion: r1Bound,
-        provider_r1_area_identity_present: areasText.includes(`${lead.treatment}R1`),
+        provider_r1_area_identity_present: areaIdentities.has(`${lead.treatment}R1`),
         lifecycle_horizon_end_exclusive: new Date(lifecycleHorizonEndMs).toISOString(),
         termination_candidate_count: treatmentTerminations.length,
         absence_of_termination_used_as_active_proof: false,
