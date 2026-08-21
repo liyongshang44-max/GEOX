@@ -34,6 +34,8 @@ const assembler = read(ASSEMBLER);
 const result = {
   schema_version: "geox_mcft_cap09_t4r1_dynamic_rolling_rehydration_governance_v1",
   status: "FAIL",
+  historical_capture_identity_retired: true,
+  historical_persistent_listener_orphaned: true,
   t4_capture_event_isolated_from_historical_persistent_consumer: true,
   producer_must_be_protected_main: true,
   candidate_expiry_enforced: true,
@@ -66,12 +68,14 @@ try {
   req(!capture.includes("push:\n"), "MCFT_CAP09_T4R1_DYNAMIC_REHYDRATION_T4_CAPTURE_PUSH_FORBIDDEN");
 
   hasAll(historicalCapture, [
-    "name: mcft-cap-09-rolling-preboundary-capture",
-  ], "MCFT_CAP09_T4R1_DYNAMIC_REHYDRATION_HISTORICAL_CAPTURE_IDENTITY_REQUIRED");
+    "name: mcft-cap-09-rolling-preboundary-capture-historical-retired",
+  ], "MCFT_CAP09_T4R1_DYNAMIC_REHYDRATION_HISTORICAL_CAPTURE_RETIRED_IDENTITY_REQUIRED");
+  req(!historicalCapture.startsWith("name: mcft-cap-09-rolling-preboundary-capture\n"), "MCFT_CAP09_T4R1_DYNAMIC_REHYDRATION_OLD_CAPTURE_IDENTITY_MUST_BE_GONE");
   hasAll(historicalPersistent, [
     "workflows: ['mcft-cap-09-rolling-preboundary-capture']",
     "GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL",
   ], "MCFT_CAP09_T4R1_DYNAMIC_REHYDRATION_HISTORICAL_CONSUMER_IDENTITY_REQUIRED");
+  req(!historicalPersistent.includes("mcft-cap-09-rolling-preboundary-capture-historical-retired"), "MCFT_CAP09_T4R1_DYNAMIC_REHYDRATION_RETIRED_CAPTURE_MUST_NOT_TRIGGER_HISTORICAL_PERSISTENT");
   req(!historicalPersistent.includes("mcft-cap-09-t4r1-rolling-preboundary-capture"), "MCFT_CAP09_T4R1_DYNAMIC_REHYDRATION_T4_CAPTURE_MUST_NOT_TRIGGER_HISTORICAL_PERSISTENT");
 
   hasAll(assembler, [
