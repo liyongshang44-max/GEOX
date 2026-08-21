@@ -1,0 +1,89 @@
+name: mcft-cap-09-t4r1-formal-successor-authority
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t4r1-formal-successor-authority.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-20-T4R1-FORMAL-SUCCESSOR-SCOPE-AUTHORITY.md'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V3.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V3.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_FORMAL_SUCCESSOR_AUTHORITY.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_FORMAL_SUCCESSOR_AUTHORITY.mjs'
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-successor-authority:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Resolve exact refs
+        id: refs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.refs.outputs.subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Syntax check
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_FORMAL_SUCCESSOR_AUTHORITY.cjs
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_FORMAL_SUCCESSOR_AUTHORITY.mjs
+
+      - name: Exact-boundary governance gate
+        env:
+          MCFT_BASE_SHA: ${{ steps.refs.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.refs.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_FORMAL_SUCCESSOR_AUTHORITY.cjs
+
+      - name: Re-derive current T4R1 stage and Kc window
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.refs.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_FORMAL_SUCCESSOR_AUTHORITY.mjs
+
+      - name: Verify fail-closed result
+        env:
+          EXPECTED_SUBJECT_SHA: ${{ steps.refs.outputs.subject_sha }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const g = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T4R1_FORMAL_SUCCESSOR_AUTHORITY_GOVERNANCE_RESULT.json','utf8'));
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T4R1_FORMAL_SUCCESSOR_AUTHORITY_RESULT.json','utf8'));
+          if (g.status !== 'PASS' || r.status !== 'PASS') throw new Error('T4R1_SUCCESSOR_PASS_REQUIRED');
+          if (g.subject_sha !== process.env.EXPECTED_SUBJECT_SHA || r.subject_sha !== process.env.EXPECTED_SUBJECT_SHA) throw new Error('T4R1_SUCCESSOR_EXACT_SUBJECT_REQUIRED');
+          if (r.derived_stage !== 'MID' || r.kc !== 1.15) throw new Error('T4R1_SUCCESSOR_MID_KC_REQUIRED');
+          if (r.contiguous_legal_target_hours < 24) throw new Error('T4R1_SUCCESSOR_24H_WINDOW_REQUIRED');
+          if (g.runtime_scope_intentionally_still_t3r1 !== true || r.runtime_scope_switched !== false) throw new Error('T4R1_SUCCESSOR_PREMATURE_RUNTIME_SWITCH');
+          for (const key of ['database_write_count','formal_evidence_write_count']) {
+            if (g[key] !== 0 || r[key] !== 0) throw new Error(`T4R1_SUCCESSOR_ZERO_WRITE_REQUIRED:${key}`);
+          }
+          if (r.scheduler_write_count !== 0 || r.ea5e2_operational_activation_qualified !== false || r.formal_window_started !== false || r.formal_execution_count !== '0/24') throw new Error('T4R1_SUCCESSOR_FORMAL_NONCLAIM_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',stage:r.derived_stage,kc:r.kc,legal_hours:r.contiguous_legal_target_hours,last_target:r.last_contiguous_legal_target_utc,next_frontier:r.next_frontier}));
+          NODE
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t4r1-formal-successor-${{ steps.refs.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_T4R1_FORMAL_SUCCESSOR_AUTHORITY_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_T4R1_FORMAL_SUCCESSOR_AUTHORITY_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
