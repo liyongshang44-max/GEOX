@@ -1,0 +1,142 @@
+name: mcft-cap-09-t4r1-bootstrap-reverify
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t4r1-bootstrap-reverify.yml'
+      - 'scripts/runtime_acceptance/REVERIFY_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP_EXISTING_STATE.ts'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.cjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-t4r1-bootstrap-reverify-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  static-governance-and-typecheck:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact protected-main base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate post-success lifecycle and reverify boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.cjs
+
+      - name: Typecheck lifecycle fix and read-only reverify
+        run: |
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.ts \
+            scripts/runtime_acceptance/REVERIFY_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP_EXISTING_STATE.ts
+
+      - name: Prove T4R1 generated successor still compiles without DB or provider access
+        env:
+          MCFT_CAP09_T4R1_BOOTSTRAP_STATIC_ADAPTER_PROOF: 'true'
+        run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.ts
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-t4r1-bootstrap-reverify-static-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          path: acceptance-output/MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP_GOVERNANCE_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  protected-main-read-only-reverify:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Require exact protected main and existing T4R1 database binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main' || { echo 'T4R1_BOOTSTRAP_REVERIFY_PROTECTED_MAIN_ONLY' >&2; exit 1; }
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA" || { echo 'T4R1_BOOTSTRAP_REVERIFY_HEAD_SHA_MISMATCH' >&2; exit 1; }
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo 'T4R1_BOOTSTRAP_REVERIFY_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
+          test -n "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}" || { echo 'T4R1_BOOTSTRAP_REVERIFY_DATABASE_BINDING_REQUIRED' >&2; exit 1; }
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck read-only existing-state reverify
+        run: pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node scripts/runtime_acceptance/REVERIFY_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP_EXISTING_STATE.ts
+
+      - name: Reverify existing T4R1 A0 in an explicit read-only transaction
+        run: pnpm exec tsx scripts/runtime_acceptance/REVERIFY_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP_EXISTING_STATE.ts
+
+      - name: Require exact PASS with zero DB/provider writes
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP_EXISTING_STATE_REVERIFY_RESULT.json','utf8'));
+          if(r.status!=='PASS'||r.existing_t4r1_bootstrap_reverified!==true) throw new Error('T4R1_BOOTSTRAP_REVERIFY_PASS_REQUIRED');
+          if(r.transaction_mode!=='READ_ONLY'||r.database_write_count!==0||r.provider_request_count!==0||r.fresh_bootstrap_rerun_performed!==false) throw new Error('T4R1_BOOTSTRAP_REVERIFY_ZERO_SIDE_EFFECT_REQUIRED');
+          if(r.final_fact_count!==35||r.final_canonical_twin_fact_count!==34||r.exact_runtime_config_count!==25||r.exact_hourly_runtime_config_count!==24||r.external_a0_member_count!==9) throw new Error('T4R1_BOOTSTRAP_REVERIFY_EXACT_COUNTS_REQUIRED');
+          if(r.a0_runtime_config_ref!=='external_formal_runtime_config_3b2eec25d4ef44cb04867e06'||r.a0_runtime_config_hash!=='sha256:7414c2341537a9120946501e3f0e46d9570d978b893bb8934449abe3030af851') throw new Error('T4R1_BOOTSTRAP_REVERIFY_A0_PIN_REQUIRED');
+          if(r.formal_window_started!==false||r.scheduler_started!==false||r.formal_o00_start_authorized!==false||r.mcft_cap09_completed!==false) throw new Error('T4R1_BOOTSTRAP_REVERIFY_PREMATURE_FORMAL_START_FORBIDDEN');
+          console.log(JSON.stringify({status:'PASS',a0_ref:r.a0_runtime_config_ref,read_only:true,fresh_bootstrap_rerun:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-t4r1-bootstrap-existing-state-reverify-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP_EXISTING_STATE_REVERIFY_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
