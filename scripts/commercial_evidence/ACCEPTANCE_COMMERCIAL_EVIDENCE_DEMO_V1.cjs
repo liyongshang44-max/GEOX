@@ -66,6 +66,8 @@ requireToken("app", app, "打开完整 GEOX Twin Trace");
 requireToken("app", app, "使用上一步的合规假设值");
 requireToken("app", app, "降级继续");
 requireToken("app", app, "农业 AI 最大的问题");
+requireToken("app", app, "普通系统最容易在这里犯错");
+requireToken("app", app, "当前天气依据");
 requireToken("docs", docs, "NOT PRODUCTION AUTHORITY");
 requireToken("docs", docs, "PERSISTED ENGINEERING QUALIFICATION");
 requireToken("docs", docs, "COMMERCIAL_EVIDENCE_MCFT_READ_URL");
@@ -76,8 +78,11 @@ for (let section = 1; section <= 6; section += 1) {
 }
 requireToken("html", html, "农业 AI 决策可信性 · 60 秒证明");
 requireToken("html", html, "同样一条数据，只因为“什么时候真正可知”不同");
-requireToken("html", html, "这是一条真实运行留下的证据链");
+requireToken("html", html, "真正的业务风险不是“系统报错”");
+requireToken("html", html, "这不是概念图：系统真的按这套边界运行过");
+requireToken("html", html, "如果把晚到数据当成当时已知");
 requireToken("html", html, "客户应该理解什么");
+requireToken("html", html, "CEO 只需要记住这一句");
 requireToken("html", html, "技术细节");
 requireToken("html", html, "工程证据附录");
 requireToken("html", html, "证据边界");
@@ -189,6 +194,8 @@ console.log(JSON.stringify({
   acceptance: "ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1",
   six_pack_sections_present: true,
   chinese_sixty_second_buyer_path_guard_present: true,
+  buyer_business_consequence_guard_present: true,
+  ceo_memorable_close_guard_present: true,
   engineering_details_secondary_guard_present: true,
   evidence_boundary_present: true,
   topbar_non_overlay_guard_present: true,
