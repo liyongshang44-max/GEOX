@@ -4,9 +4,13 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-t4r1-crop-only-geometry.yml'
+      - '.github/workflows/mcft-cap-09-t4r1-persistent-lifecycle-qualification.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CROP-ONLY-GEOMETRY-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-PERSISTENT-LIFECYCLE-QUALIFICATION-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.cjs'
       - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.mjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs'
   merge_group:
     types: [checks_requested]
 
