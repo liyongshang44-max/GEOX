@@ -1617,4 +1617,471 @@ post-success administrator connection termination under investigation
 
 ---
 
+## 46. CTO 复盘：当前 completion path、17 天未完成的根因与后续治理修正
+
+> **Post-handoff update — 2026-08-21。** 本章写于原 1–45 章完成之后，用来补充随后发生的 live repository 事实与 CTO 级复盘。它仍然只是 conversation handoff context，不创建新的 repository authority。若本章与 protected main、Taskbook、Amendment、live run/artifact 或 Neon exact state 冲突，始终以后者为准。
+
+### 46.1 原 handoff 之后已经发生的 live 更新
+
+原第 45 章冻结的 protected main 是：
+
+```text
+cec35325afef39dbd39ad8e39e54e7b5c3ea6a2b
+```
+
+之后 PR #3256 已合并：
+
+```text
+PR #3256
+fix(mcft-cap09): close T4R1 bootstrap post-success lifecycle
+
+new protected main:
+e2252e338a398367927bee4f9cc307b0917a527d
+```
+
+#3256 没有重做 fresh bootstrap，也没有重建 A0。它修正的是 post-success connection lifecycle，并新增独立的 protected-main read-only existing-state reverify path。该 reverify 只允许验证现有 35-fact bootstrap state、exact A0/O00 candidate、T1/T3 reuse=0、scheduler/Formal 未启动，并显式要求：
+
+```text
+fresh_bootstrap_rerun_performed = false
+```
+
+因此原第 17、39、40、41、43、45 章中把 `cec35325...` / lifecycle fix 描述为 CURRENT 的部分，应视为历史快照，而不是接手时的最新 main。
+
+在 #3256 之后又出现当前 Draft：
+
+```text
+PR #3257
+feat(mcft-cap09): generalize T4R1 rolling rehydration proof
+
+base:
+main @ e2252e338a398367927bee4f9cc307b0917a527d
+
+head at this audit snapshot:
+3e9f32cb632fdd67cc462fa1ce537988a7913bd7
+```
+
+#3257 暴露了一个新的、但本质上属于 control-plane/successor-routing 的阻塞：历史 `mcft-cap-09-rolling-preboundary-capture` workflow event 仍会被历史 Amendment-19 persistent auto-consumer 监听，而该 consumer 的 live path 仍绑定历史 T3R1 parent DB secret。T4R1 fresh capture 不能继续复用这个事件身份，否则可能把 T4R1 producer event 路由到历史 T3R1 consumer。
+
+#3257 的设计因此是：
+
+```text
+T4R1-only rolling workflow identity
++
+dynamic producer-bound rehydration workflow
++
+reuse existing planner / provider collector / candidate assembler /
+RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+```
+
+也就是说，它没有创建第二套 canonical Runtime，也没有改变 schema、T4R1 Formal DB、scheduler、lease/fencing、crop authority 或已有 A0；它是在隔离 successor event routing。
+
+**所以截至这一复盘快照，当前 immediate engineering frontier 已从“修 bootstrap lifecycle”推进到“T4R1 fresh rolling → producer-bound rehydration 的安全 event-isolated control plane”。**
+
+### 46.2 所以现在真正卡在哪
+
+当前不是“MCFT-9 不知道怎么做”。
+
+完成路径已经明确：
+
+```text
+T4R1 existing bootstrap read-only reverify
+        ↓
+T4R1 event-isolated fresh rolling candidate
+        ↓
+producer-bound retained-raw rehydration
+        ↓
+fresh v4 persistent qualification
+        ↓
+13 / 13 PASS
+static_blocker_count = 0
+        ↓
+Formal graduation gate
+        ↓
+Formal arm
+        ↓
+REAL O00
+        ↓
+O01
+...
+O23
+        ↓
+final read-only adjudication
+        ↓
+MCFT-CAP-09 completion
+```
+
+#3256 已经把 merge 后的宏观路径明确为：
+
+```text
+reverify
+→ fresh rolling
+→ producer-bound rehydration
+→ v4 persistent 13/13
+→ graduation
+→ real O00–O23
+```
+
+#3257 进一步说明，当前 fresh rolling / rehydration 不能直接复用历史 T3R1 auto-trigger identity，而必须先把 T4R1 producer event 与历史 consumer 隔离。
+
+因此当前应使用两层表述：
+
+```text
+macro blocker:
+final real Formal O00–O23 has not started
+
+immediate engineering frontier:
+T4R1-safe fresh rolling → producer-bound rehydration control plane
+(PR #3257 at this snapshot)
+```
+
+**现在还没有开始最终那一条真实 Formal O00–O23。**
+
+不要把 accelerated/persistent 13/13、historical predecessor 13/13、fresh A0 bootstrap PASS，或后续 read-only reverify 误写成 final Formal closure。
+
+### 46.3 为什么从 2026-08-04 到现在仍未完成：根因排序
+
+MCFT-CAP-09 真正进入 protected-main S0 的起点是 2026-08-04 的 #2828。到本复盘时约 17 天。逐 PR 审计后，根因优先级如下：
+
+| 排名 | 根因 | 严重程度 |
+| --- | --- | --- |
+| 1 | 治理/control-plane 过度耦合：successor PR 经常被历史 workflow、exact-base、Registry、self-marker、routing、旧 secret/event identity 卡死 | 极高 |
+| 2 | Formal Candidate 建得过早，而真实 Evidence / DB / A0 / production runner readiness 在后面才补 | 极高 |
+| 3 | KBS publication cadence 初始建模错误，直到 #3101 才正式从 fixed-lag 转为 daily-batch/provider-watermark authority | 极高 |
+| 4 | Crop authority 不稳定：T1R1 → T3R1 → T4R1，每次 scope 变更都禁止继承历史 canonical qualification | 极高 |
+| 5 | Production-equivalent qualification 太晚：12→26 schema closure、GFS decoder dependencies 等直到真正 Formal 前后才暴露 | 极高 |
+| 6 | Qualification harness 与 production contract 漂移，制造多次“产品/持久化行为正确，但验收 harness 错”的 false-negative | 高 |
+| 7 | exact-SHA evidence 默认不可迁移：修一个小 runtime/control-plane bug 往往触发 fresh store + fresh rolling + full requalification | 高 |
+| 8 | GitHub Actions/API/ruleset/runner 数值环境等基础设施问题进入 critical path | 中高 |
+| 9 | 最终 acceptance 本身硬性要求真实 24 个 UTC hourly boundaries，不能由 accelerated lane 取代 | 不可消除 |
+
+这里最需要区分的是：
+
+```text
+necessary strictness
+!=
+necessary rework
+```
+
+真实 24h、no future leakage、exact evidence、fail closed、no scope relabel 都属于必要 strictness。
+
+而 historical workflow 自触发、validator self-match、stale exact-base guard、schema contract 在 live epoch 才发现、harness 读取不存在字段、旧 consumer 监听 successor event identity，则属于可以通过更好的开发顺序和 successor-safe control plane 避免的 rework。
+
+### 46.4 最值得批评的不是“做得慢”，而是开发顺序
+
+#### 46.4.1 Formal Candidate 早于 production readiness
+
+2026-08-07 的 #2950 已经命名为：
+
+```text
+Formal 24-hour Stage 1B Closure Candidate
+```
+
+但紧接着 #2951 就证明，当时合法 Formal 执行仍缺：
+
+```text
+governed Evidence writer
+A0 / Reality Binding bootstrap
+exact hourly Runtime Config
+fail-closed preflight
+```
+
+因此 Candidate 的命名/生命周期成熟度早于 executable readiness。
+
+后续类似 capability 不应只因为“Formal workflow skeleton 已存在”就进入 closure-candidate 心智模型。更合理的前置条件是先完成：
+
+```text
+production-equivalent environment contract
++ executable data plane
++ state continuity
++ exact dependency smoke
++ successor-safe control plane
+```
+
+再选正式窗口。
+
+#### 46.4.2 先选 Formal epoch，再发现 state continuity / schema / decoder 不完整
+
+#3190 已经选定第一条 T3R1 Formal epoch：
+
+```text
+O00 = 2026-08-17T20:00:00Z
+O23 = 2026-08-18T19:00:00Z
+```
+
+随后 #3196 才发现：
+
+```text
+persisted A0 = 2026-08-15T10:00Z
+checkpoint next = 2026-08-15T11:00Z
+selected O00 = 2026-08-17T20:00Z
+
+canonical continuity hole = 57h
+```
+
+于是必须重新裁决为 fresh zero-state Formal store + O00-1h fresh A0。
+
+到真实 epoch 又由 #3204 记录两个 production-environment gap：
+
+```text
+Formal persistence closure was qualified too narrowly
+12 relations → actual required 26 relations
+
+production provider lane missed pinned GFS decoder dependencies
+(eccodes / eccodeslib / numpy / refet)
+```
+
+这些都应该在 epoch selection 前由 production-equivalent gate 阻断，而不应该靠一次珍贵的 real wall-clock Formal epoch 来当 debugger。
+
+#### 46.4.3 provider cadence 与 Runtime cadence 的核心设计，在第一次 Formal 失败后才真正重构
+
+#3101 已经承认 KBS 是：
+
+```text
+hourly-resolution observations
++
+daily-batch publication
+```
+
+并以 `PROVIDER_AVAILABILITY_WATERMARK_V1` 取代错误 fixed-lag authority。
+
+但真正把 provider publication cadence 与 hourly Runtime scheduler eligibility 解耦，是 #3207 Amendment-19，在第一次 Formal epoch 失败以后才建立。
+
+Amendment-19 的核心规则是：
+
+```text
+exact KBS pair available at T
+→ Mode A / HEALTHY
+
+otherwise coherent prior-step causal GFS assumption pair available
+→ Mode B / ASSUMED / DEGRADED / continue without provider wait
+
+otherwise
+→ explicit BLOCK / fail closed
+```
+
+迟到的 exact KBS 只能 append-forward，不能 retroactively rewrite terminal State/checkpoint。
+
+这是现在正确架构的重要基础，但它在 final-qualification 阶段才被冻结，说明核心 operational semantics 定得过晚。
+
+### 46.5 隐藏的结构性问题：证据不可迁移规则被放大成“几乎所有证明都重跑”
+
+MCFT-9 的治理原则本身是正确的：
+
+> **证据比进度重要，绝不能把 predecessor 的成功冒充 successor 的成功。**
+
+但当前实现方式在很多阶段接近：
+
+```text
+any protected-main SHA change
+        ↓
+predecessor evidence treated as non-transferable
+        ↓
+fresh rolling
+        ↓
+fresh retained-raw replay / rehydration
+        ↓
+fresh qualification store generation or subject sentinel
+        ↓
+full persistent qualification
+```
+
+这把正确原则：
+
+```text
+code identity / semantic authority must not be silently relabeled
+```
+
+放大成了：
+
+```text
+almost every operational proof is non-composable across successor SHAs
+```
+
+结果是一个很小的 workflow、routing、pagination、harness、connection-lifecycle 或 event-identity 修复，也可能重新打开完整 qualification loop。
+
+#3257 是这个问题的最新例子：canonical Runtime 没有改变，T4R1 A0 没有改变，schema/scheduler/lease/crop authority 没有改变，但历史 T3R1 workflow event identity 与 consumer secret coupling 仍要求新增 successor-safe control plane。
+
+这不是说 #3257 不该做；恰恰相反，这个隔离是必要的。真正的问题是这种 successor routing 没有从一开始作为可泛化能力设计。
+
+### 46.6 后续应明确区分两类 SHA change
+
+这是 CTO 复盘建议，不是当前 repository authority；若要实施，必须另立治理设计/机器 gate，不能靠人工口头 carry-forward。
+
+第一类：
+
+```text
+SEMANTIC_OR_RUNTIME_AFFECTING_CHANGE
+```
+
+典型包括：
+
+- canonical core；
+- Evidence admission/chronology；
+- State/Forecast/Scenario math；
+- persistence semantics；
+- scheduler/lease/fencing；
+- crop/source/runtime authority；
+- decoder canonicalization；
+- Runtime Config materialization。
+
+这类 change 应继续默认 fail closed，要求 fresh subject-bound qualification，不能迁移 predecessor execution evidence。
+
+第二类：
+
+```text
+PROOF_HARNESS_OR_CONTROL_PLANE_ONLY_CHANGE
+```
+
+典型包括：
+
+- workflow pagination/API-shape correction；
+- historical router successor classification；
+- post-success UI/process-lifecycle correction；
+- exact proof packaging；
+- event identity isolation；
+- harness 读取错误字段的修复；
+- ruleset/trigger plumbing。
+
+未来如果要允许这类 change 的 evidence carry-forward，必须由机器证明至少：
+
+```text
+all governed production/runtime blobs unchanged
+all relevant authority blobs unchanged
+schema fingerprints unchanged
+provider/source identities unchanged
+canonical decoder identity unchanged
+scheduler/lease/fencing implementation blobs unchanged
+persistent data subject identity unchanged
+no new write capability introduced
+predecessor evidence artifact/run identity immutable and revalidated
+```
+
+只有满足一个明确、可审计、fail-closed 的 `CONTROL_PLANE_ONLY_EVIDENCE_CARRY_FORWARD` contract，才可以复用 predecessor proof。
+
+否则仍按现行严格规则重新资格化。
+
+目标不是放松 evidence，而是把：
+
+```text
+strict evidence identity
+```
+
+从：
+
+```text
+whole-repository-SHA identity only
+```
+
+提升为：
+
+```text
+governed semantic/runtime object-set identity
++ explicit control-plane delta classification
++ immutable predecessor proof revalidation
+```
+
+如果不解决这一点，MCFT-10 / MCFT-11 / MCFT-12 很可能重复 MCFT-9 的 requalification amplification。
+
+### 46.7 对当前 MCFT-9 的执行纪律
+
+这次复盘不授权架构扩张。对当前 T4R1 final closure，最重要的是停止继续“顺手重构”。
+
+从当前 frontier 开始，只允许为完成下列链路所必需的最小修复：
+
+```text
+#3256 existing bootstrap lifecycle/reverify boundary
+        ↓
+#3257 T4R1 event-isolated rolling/rehydration boundary
+        ↓
+fresh exact-main rolling candidate
+        ↓
+producer-bound retained-raw rehydration
+        ↓
+fresh T4R1 v4 persistent 13/13
+        ↓
+static_blocker_count = 0
+        ↓
+subject-bound Formal graduation
+        ↓
+real O00–O23
+        ↓
+final read-only adjudication
+```
+
+明确禁止：
+
+- 为“代码更漂亮”修改 canonical Runtime；
+- 合入与当前 closure 无关的 main changes；
+- 再改 provider temporal semantics，除非新的真实 evidence 证明现行 authority 错误；
+- 回到 T3R1 phenology/GDD 主线；
+- 重用历史 T3R1 auto-consumer 来消费 T4R1 producer event；
+- 把 predecessor 13/13 口头迁移成当前 T4R1 13/13；
+- 用 accelerated lane 代替 real wall-clock O00–O23；
+- 为绕过 exact-SHA 成本而降低 semantic equality / chronology / fail-closed gate。
+
+### 46.8 当前完成度的最终 CTO 表述
+
+可以准确说：
+
+> MCFT-CAP-09 已经完成了 T4R1 successor authority/runtime rebind、fresh Formal DB、26-relation schema/zero-state qualification、secret binding 和真实 fresh A0 bootstrap；首次 bootstrap 的业务语义与 persisted state 已 PASS，post-success connection lifecycle 已由 #3256 进入 successor repair/reverify 路径。当前主线已推进到 T4R1-safe fresh rolling → producer-bound rehydration control plane（#3257）。fresh T4R1 v4 persistent 13/13、subject-bound graduation 与最终 real wall-clock O00–O23 仍未完成。
+
+不能说：
+
+```text
+MCFT-9 complete
+```
+
+也不能说：
+
+```text
+we are still designing MCFT-9 from scratch
+```
+
+当前真实状态是：
+
+```text
+core execution architecture substantially proven
++
+T4R1 A0 established
++
+final successor-specific qualification chain not yet closed
++
+real O00–O23 not started
+```
+
+### 46.9 对下一位接手者的最终 restart instruction
+
+先重新读取 live repository；不要假设本章写入后的 PR 状态仍未变化。
+
+若 protected main 仍为：
+
+```text
+e2252e338a398367927bee4f9cc307b0917a527d
+```
+
+且 #3257 仍是 active frontier，则从：
+
+```text
+PR #3257
+T4R1 event-isolated fresh rolling / dynamic producer-bound rehydration
+```
+
+继续。
+
+如果 #3257 已经合并或被 supersede，则先确认新的 exact main、对应 fresh rolling artifact、rehydration result、v4 store state，再进入下一合法 frontier。
+
+无论如何，最终 completion condition 不变：
+
+```text
+fresh subject-bound qualification
+13 / 13 PASS
+static_blocker_count = 0
+Formal graduation gate OPEN
+real wall-clock O00–O23 terminally complete
+final read-only evidence adjudication PASS
+MCFT-CAP-09 completion formally established
+```
+
+---
+
 End of handoff.
