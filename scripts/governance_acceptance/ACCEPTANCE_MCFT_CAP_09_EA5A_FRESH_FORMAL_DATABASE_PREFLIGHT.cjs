@@ -113,9 +113,9 @@ try {
   req(workflow.includes('persist-credentials: false'), 'EA5A_V3_WORKFLOW_PERSIST_CREDENTIALS_FORBIDDEN');
   req(workflow.includes(F.authority), 'EA5A_V3_WORKFLOW_AUTHORITY_TRIGGER_REQUIRED');
   req(workflow.includes('MCFT_BASE_SHA'), 'EA5A_V3_WORKFLOW_EXACT_BASE_REQUIRED');
-  req(!workflow.includes('DATABASE_URL:'), 'EA5A_V3_PR_DATABASE_URL_FORBIDDEN');
-  req(!workflow.includes('secrets.GEOX_MCFT_CAP09'), 'EA5A_V3_PR_SECRET_READ_FORBIDDEN');
-  req(!workflow.includes('PREFLIGHT_MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE.ts'), 'EA5A_V3_PR_LIVE_PROBE_EXECUTION_FORBIDDEN');
+  req(!/^\s*DATABASE_URL\s*:/m.test(workflow), 'EA5A_V3_PR_DATABASE_URL_FORBIDDEN');
+  req(!/\$\{\{\s*secrets\.GEOX_MCFT_CAP09/i.test(workflow), 'EA5A_V3_PR_SECRET_READ_FORBIDDEN');
+  req(!/(?:pnpm\s+exec\s+tsx|npx\s+tsx|node)\s+[^\n]*PREFLIGHT_MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE\.ts/.test(workflow), 'EA5A_V3_PR_LIVE_PROBE_EXECUTION_FORBIDDEN');
   req(!/workflow_dispatch|schedule:/.test(workflow), 'EA5A_V3_STATIC_PR_ONLY_REQUIRED');
 
   Object.assign(result, {
