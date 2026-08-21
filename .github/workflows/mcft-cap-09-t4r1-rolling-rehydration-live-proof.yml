@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-t4r1-rolling-rehydration-live-proof.yml'
+      - '.github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_DYNAMIC_ROLLING_REHYDRATION.cjs'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'
   merge_group:
@@ -11,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       rolling_artifact_id:
-        description: 'Artifact id emitted by mcft-cap-09-rolling-preboundary-capture on protected main'
+        description: 'Artifact id emitted by mcft-cap-09-t4r1-rolling-preboundary-capture on protected main'
         required: true
         type: string
 
@@ -128,7 +129,7 @@ jobs:
             numpy==1.26.4 \
             refet==0.4.2
 
-      - name: Download and authenticate rolling candidate artifact
+      - name: Download and authenticate T4R1 rolling candidate artifact
         shell: bash
         run: |
           set -euo pipefail
@@ -142,6 +143,7 @@ jobs:
           const a=JSON.parse(fs.readFileSync('/tmp/rolling-artifact-meta.json','utf8'));
           const p=JSON.parse(fs.readFileSync('/tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json','utf8'));
           if(a.expired!==false) throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_ARTIFACT_EXPIRED');
+          if(!String(a.name||'').startsWith('mcft-cap09-t4r1-rolling-preboundary-')) throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_T4_ARTIFACT_REQUIRED');
           if(a.workflow_run?.head_branch!=='main') throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_PRODUCER_MAIN_REQUIRED');
           if(!/^[0-9a-f]{40}$/.test(String(a.workflow_run?.head_sha||''))) throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_PRODUCER_SHA_REQUIRED');
           if(p.status!=='PASS'||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1') throw new Error('MCFT_CAP09_T4R1_DYNAMIC_REHYDRATE_CANDIDATE_PASS_REQUIRED');
