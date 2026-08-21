@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GEOX Commercial Evidence Demo</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark"></span><span>GEOX</span></div>
+    <div class="top-meta"><span class="pill">Commercial Evidence Demo</span><span class="pill muted">Read-only / Off-main</span></div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">Decision Assurance Runtime</p>
+      <h1>不是“能不能给答案”，而是“这个答案在当时是否有资格被给出”。</h1>
+      <p id="heroProblem" class="hero-copy">正在加载 canonical Runtime evidence...</p>
+      <div class="hero-meta">
+        <span>subject <code id="subjectSha">loading</code></span>
+        <span>selector <code id="selectorId">loading</code></span>
+      </div>
+    </section>
+
+    <nav class="section-nav" aria-label="Commercial Evidence Pack">
+      <a href="#problem">1. Problem</a>
+      <a href="#architecture">2. Architecture</a>
+      <a href="#runtime-demo">3. Runtime demo</a>
+      <a href="#decision-trace">4. Decision trace</a>
+      <a href="#failure-cases">5. Failure cases</a>
+      <a href="#behavior">6. Runtime behavior</a>
+    </nav>
+
+    <section id="problem" class="panel" data-section="1">
+      <div class="section-heading"><span>01</span><div><p class="eyebrow">One concrete problem</p><h2>决策时不可知的数据，不能被事后伪装成当时已知。</h2></div></div>
+      <div class="problem-grid">
+        <article class="statement danger"><h3>Event-time-only baseline</h3><p>只看事件发生时间：11:00 的天气属于“历史数据”，于是 12:00 的决策会使用它。</p></article>
+        <article class="statement safe"><h3>GEOX</h3><p>同时检查 event time、availability、ingress、source identity、exact interval 和 quality。12:20 才发布的数据不能进入 12:00 的知识状态。</p></article>
+      </div>
+    </section>
+
+    <section id="architecture" class="panel" data-section="2">
+      <div class="section-heading"><span>02</span><div><p class="eyebrow">Real architecture</p><h2>Frozen Runtime path</h2></div></div>
+      <div id="architectureFlow" class="flow"></div>
+      <p class="footnote">图中的每一步来自当前 GEOX frozen Runtime architecture；本 microsite 不注册到生产 Server，也不改变 execution graph。</p>
+    </section>
+
+    <section id="runtime-demo" class="panel" data-section="3">
+      <div class="section-heading"><span>03</span><div><p class="eyebrow">Real runtime demo</p><h2>同样的观测值，只改变“什么时候真正可用”</h2></div></div>
+      <div class="comparison-table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Case</th><th>event_time</th><th>available_to_runtime_at</th><th>GEOX forcing</th><th>Health</th><th>Action</th></tr></thead>
+          <tbody id="runtimeComparison"></tbody>
+        </table>
+      </div>
+      <div id="runtimeCallout" class="callout"></div>
+    </section>
+
+    <section id="decision-trace" class="panel" data-section="4">
+      <div class="section-heading"><span>04</span><div><p class="eyebrow">Complete decision trace</p><h2>Evidence → State → Forecast → Scenario → Runtime decision boundary</h2></div></div>
+      <div id="traceFlow" class="flow compact"></div>
+      <div class="trace-loader">
+        <label for="decisionCycleId">Persisted decision_cycle_id</label>
+        <div class="input-row">
+          <input id="decisionCycleId" placeholder="例如 dc_..." autocomplete="off" />
+          <button id="loadTraceButton" type="button">Load persisted trace</button>
+        </div>
+        <p class="footnote">完整 trace 不是本页面伪造。输入由现有 TK10 persisted runtime chain 生成的 decision_cycle_id，本页只读代理现有 `/api/v1/twin-kernel/traces/:decision_cycle_id`。</p>
+      </div>
+      <div id="traceStatus" class="status-line muted">尚未加载 persisted trace。</div>
+      <div id="traceObjects" class="trace-grid"></div>
+      <div id="traceActions" class="trace-actions"></div>
+    </section>
+
+    <section id="failure-cases" class="panel" data-section="5">
+      <div class="section-heading"><span>05</span><div><p class="eyebrow">Three failure cases</p><h2>不是“错误弹窗”，而是明确的 epistemic behavior</h2></div></div>
+      <div id="failureCards" class="failure-grid"></div>
+    </section>
+
+    <section id="behavior" class="panel" data-section="6">
+      <div class="section-heading"><span>06</span><div><p class="eyebrow">Fail closed / degrade / continue</p><h2>系统如何在证据不完美时保持边界</h2></div></div>
+      <div class="comparison-table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Condition</th><th>Behavior</th><th>What GEOX claims</th></tr></thead>
+          <tbody id="behaviorMatrix"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel boundary-panel">
+      <p class="eyebrow">Hard nonclaims</p>
+      <h2>这不是 Formal closure，也不是生产自治控制。</h2>
+      <ul id="nonclaims" class="nonclaims"></ul>
+    </section>
+
+    <div id="fatalError" class="fatal" hidden></div>
+  </main>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

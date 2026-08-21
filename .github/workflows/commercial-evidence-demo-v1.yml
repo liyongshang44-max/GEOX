@@ -1,0 +1,48 @@
+name: Commercial Evidence Demo v1
+
+on:
+  pull_request:
+    paths:
+      - 'tools/commercial-evidence-demo/**'
+      - 'scripts/commercial_evidence/**'
+      - 'docs/commercial/**'
+      - '.github/workflows/commercial-evidence-demo-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: commercial-evidence-demo-v1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    name: Commercial Evidence Demo acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Execute canonical selector and six-part demo acceptance
+        run: node scripts/commercial_evidence/ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1.cjs
+
+      - name: Prove demo workflow has no privileged runtime trigger
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -Eq '^  (push|schedule|workflow_dispatch|workflow_run):' .github/workflows/commercial-evidence-demo-v1.yml
+          ! grep -Fq 'secrets.' .github/workflows/commercial-evidence-demo-v1.yml
+          ! grep -Fq 'DATABASE_URL' .github/workflows/commercial-evidence-demo-v1.yml
+          ! grep -Fq 'R2_' .github/workflows/commercial-evidence-demo-v1.yml
