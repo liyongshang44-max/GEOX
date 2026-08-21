@@ -4,7 +4,33 @@ Status: **OFF-MAIN COMMERCIAL DEMO — NOT PRODUCTION AUTHORITY**
 
 This is a standalone CEO-facing Commercial Evidence Demo. It packages the six requested evidence items without registering a new route in the GEOX production Server or Operator application and without modifying MCFT-CAP-09 authority, scheduler, persistence, provider, schema, or Formal state.
 
-The demo now has three deliberately separate evidence surfaces:
+## CEO default presentation path
+
+The default page is deliberately compressed into a four-screen, roughly 60-second commercial proof:
+
+```text
+1. Problem
+   decision-time unknowable evidence must not be represented as known
+
+2. Causality proof
+   same payload + different availability chronology
+   -> different governed epistemic/runtime outcome
+
+3. Persisted trace
+   historical Neon qualification evidence
+   -> Evidence -> State -> Forecast -> Scenario -> Health -> Checkpoint
+
+4. Governed behavior
+   CONTINUE / DEGRADE + CONTINUE / FAIL CLOSED / APPEND FORWARD
+```
+
+The frozen architecture, deterministic failure cards, Product Twin Kernel Decision Trace, builder proof, explicit IDs and hashes remain available under **Engineering details**. They are not removed; they are intentionally secondary so a buyer does not have to parse internal engineering surfaces before understanding the commercial claim.
+
+The top-level commercial translation is:
+
+> GEOX lets agricultural automation, AI decisions, and agronomic recommendations prove what evidence was used, what evidence was rejected, and why the resulting computation was authorized at that point in time.
+
+The demo has three deliberately separate evidence surfaces:
 
 ```text
 Canonical Runtime causality proof
@@ -34,7 +60,7 @@ Case A may be exact provider forcing at T. Case B is not part of the T knowledge
 
 ## 2. Real architecture
 
-The page shows the frozen GEOX Runtime path:
+The page retains the frozen GEOX Runtime path under the Engineering evidence appendix:
 
 ```text
 Reality / Evidence
@@ -87,9 +113,11 @@ no exact pair and no causal prior
 
 Every `/api/demo` request recomputes these cases through the canonical selector and surfaces the selector's real `selection_hash`.
 
+The executive view emphasizes the causal experiment itself: **same payload, only availability changes, and the governed claim changes with it**. The hash and selector identity remain inspectable but are not the visual headline.
+
 ## 4. Complete Decision Trace
 
-The demo provides three trace levels with different authority boundaries.
+The default executive trace is the historical MCFT Neon read model. Product and builder trace surfaces remain under Engineering details because they have different authority boundaries.
 
 ### 4.1 Historical MCFT Runtime Evidence — Neon
 
@@ -131,7 +159,13 @@ ENGINEERING_FIXTURE_PRESENT_IN_ACCELERATED_QUALIFICATION
 
 This database is historical and completed. The Demo must not read from or write to the current fresh/Formal databases used by the final wall-clock time-chain qualification.
 
+The buyer-facing interpretation immediately after this trace is:
+
+> GEOX knows what was actually knowable at the boundary, excludes evidence that was not, degrades explicitly when necessary, and continues only computations still authorized by the resulting evidence state.
+
 ### 4.2 Connected Product Decision Trace — persisted GEOX read model
+
+This surface is collapsed under **Engineering details** by default.
 
 When the local/controlled GEOX Server has eligible `decision_cycle_v1` data, the Demo calls:
 
@@ -140,9 +174,11 @@ GET /api/v1/twin-kernel/operator-workflow/decision-cycles
 GET /api/v1/twin-kernel/traces/:decision_cycle_id
 ```
 
-The microsite displays the persisted seven-object Product Twin Trace. If that product read model is unavailable, it shows `DISCONNECTED`; it does not substitute builder output and call it persisted data.
+The microsite displays the persisted seven-object Product Twin Trace. If that product read model is unavailable, it shows `DISCONNECTED`; it does not substitute builder output and call it persisted data. Because this state can legitimately be disconnected while the MCFT Neon evidence is connected, hiding it in Engineering details prevents a buyer from misreading two separate authority surfaces as one contradictory connection state.
 
 ### 4.3 Runtime Value Trace — no database required
+
+This surface is also collapsed under **Engineering details** by default.
 
 The standalone server executes the repository's existing:
 
@@ -166,6 +202,8 @@ It runs the builder chain twice and requires a stable deterministic fingerprint.
 
 ### 4.4 Explicit persisted Product Trace readback
 
+This surface is also collapsed under **Engineering details** by default.
+
 When a real persisted `decision_cycle_id` is supplied, the microsite proxies the existing read-only endpoint:
 
 ```text
@@ -177,6 +215,8 @@ It displays the persisted chain's object IDs and determinism hashes and links to
 `scripts/commercial_evidence/PREPARE_COMMERCIAL_EVIDENCE_TRACE_V1.cjs` can reuse the existing TK10 persisted Runtime chain in a controlled environment and print the exact demo URL containing its real `decision_cycle_id`.
 
 ## 5. Three failure cases
+
+The failure cards remain in the Engineering evidence appendix; the executive page instead summarizes the governed behavior matrix.
 
 ### Provider late
 
@@ -209,7 +249,7 @@ No invented current-interval forcing is authorized.
 
 ## 6. Fail closed / degrade / continue
 
-The demo presents the governed behavior matrix:
+The demo presents the governed behavior matrix as the fourth executive screen:
 
 ```text
 exact evidence valid and available by T      → CONTINUE
@@ -218,6 +258,19 @@ State valid / Forecast prerequisite missing  → BLOCK FORECAST + CONTINUE STATE
 no causal current-interval forcing           → FAIL CLOSED
 source identity conflict                     → FAIL CLOSED
 late exact evidence later arrives            → APPEND FORWARD / NO RETROACTIVE REWRITE
+```
+
+## Evidence boundary
+
+The page no longer ends with a visually dominant negative disclaimer. It ends with an **Evidence boundary** statement and keeps the exact machine-readable nonclaims inspectable underneath it.
+
+The semantic boundary has not changed:
+
+```text
+Persisted engineering qualification evidence
+!= production live evidence
+!= final Formal O00–O23 closure
+!= autonomous recommendation or dispatch authority
 ```
 
 ## Run
@@ -271,7 +324,9 @@ node scripts/commercial_evidence/ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1.cjs
 The acceptance requires all of the following:
 
 ```text
-six Commercial Evidence Pack sections present
+six Commercial Evidence Pack sections still present
+CEO default path contains Problem / Causality proof / Persisted trace / Governed behavior
+engineering surfaces remain available but secondary
 canonical Amendment-19 selector actually executed
 provider late = DEGRADE_AND_CONTINUE
 source conflict = FAIL_CLOSED
