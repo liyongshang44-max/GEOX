@@ -1,0 +1,115 @@
+{
+  "schema_version": "geox_mcft_cap09_s6_formal_reality_binding_v3",
+  "authority_id": "GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V3",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "T4R1_FORMAL_SUCCESSOR_REALITY_BINDING_CANDIDATE",
+  "exact_predecessor_protected_main": "dc916cd636777bdeb5413ff1245e4bec9ab465cb",
+  "reality_class": "EXTERNAL_PUBLIC_RESEARCH_SCOPE",
+  "represented_site_id": "KBS_MCSE_T4R1",
+  "successor_of": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V2.json",
+    "blob_sha": "deb6c15ef7848a8c1ab00bce0847324aaa68ba24",
+    "historical_scope": "KBS_MCSE_T3R1",
+    "historical_authority_rewritten": false
+  },
+  "scope": {
+    "tenant_id": "tenant_mcft_external",
+    "project_id": "project_mcft_cap09",
+    "group_id": "group_public_research",
+    "field_id": "field_kbs_mcse_t4r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t4r1_crop_formal_v1"
+  },
+  "scope_origin": {
+    "fresh_external_bootstrap_required": true,
+    "fresh_external_bootstrap_executed": false,
+    "cap08_kernel_semantic_authority_reused": true,
+    "cap08_replay_scope_identity_reused": false,
+    "t1r1_canonical_state_reused": false,
+    "controlled_synthetic_geometry_reused": false,
+    "controlled_synthetic_crop_stage_schedule_reused": false,
+    "cross_scope_canonical_stitching_authorized": false,
+    "canonical_state_or_forecast_copied_from_t1r1": false,
+    "predecessor_canonical_state_reused": false,
+    "t3r1_canonical_state_reused": false,
+    "canonical_state_or_forecast_copied_from_t3r1": false
+  },
+  "geometry_reality": {
+    "authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CROP-ONLY-GEOMETRY-AUTHORITY-V1.json",
+    "authority_blob_sha": "3f8bfab5569af02fc69b1fe59d80085a38bee05c",
+    "semantic_hash": "sha256:8108f8e38dbe1326cc3d10d05a96843d77bdf1fdb28b7ed28cb53126a6818868",
+    "whole_plot_crop_only_claimed": false,
+    "central_prairie_strip_excluded": true
+  },
+  "crop_reality": {
+    "season": 2026,
+    "crop": "corn",
+    "hybrid_product_code": "43-96P",
+    "crop_identity_authority": "KBS_CURRENT_SEASON_MANAGEMENT_METADATA",
+    "crop_water_use_context_class": "FORMAL_DERIVED_CROP_WATER_USE_STAGE_CONTEXT_V3",
+    "observed_biological_stage_claimed": false,
+    "v_stage_or_r_stage_truth_claimed": false
+  },
+  "lifecycle_reality": {
+    "authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-PERSISTENT-LIFECYCLE-QUALIFICATION-V1.json",
+    "authority_blob_sha": "58891e7ac7d887e3fdbb439c60728a794c9d70c7",
+    "management_lifecycle_required": "ACTIVE",
+    "biological_observation_freshness_claimed": false,
+    "provider_silence_used_as_evidence": false
+  },
+  "model_configuration_prior": {
+    "authority_class": "MODEL_PRIOR_FROM_CAP08",
+    "source_ref": "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+    "source_blob_sha": "c04c6805ab79c715781b99f8fbcf997fae3a8c48",
+    "source_determinism_hash": "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5",
+    "allowed_source_definitions": [
+      "mcft_soil_hydraulic_config_c8_v1",
+      "mcft_crop_water_use_corn_v1"
+    ],
+    "classification": [
+      "MODEL_PRIOR_FROM_CAP08",
+      "MODEL_PRIOR_NOT_FIELD_CALIBRATED",
+      "NOT_SITE_SOIL_TRUTH",
+      "NOT_MODEL_ACTIVATION"
+    ],
+    "numeric_parameter_reuse_requires_external_scope_compile_binding": true
+  },
+  "reality_boundaries": {
+    "site_geometry": "QUALIFIED_CONSERVATIVE_T4R1_CROP_ONLY_POLYGON",
+    "soil_observation": "KBS_ENDPOINT25_NEAR_SITE_POINT_10CM_OBSERVED_VWC",
+    "rainfall_and_observed_met": "KBS_LTER_MAIN_SITE_WEATHER_STATION_NEAR_SITE_SUPPORT",
+    "future_weather": "NOAA_NCEP_GFS_PGRB2_0P25_NEAREST_MODEL_GRID_SUPPORT",
+    "future_et0_solar": "NOAA_NCEP_GFS_SFLUX_NATIVE_GRID_MODEL_DERIVED_LIMITED_SUPPORT",
+    "field_equivalence_claimed": false,
+    "root_zone_observation_equivalence_claimed": false,
+    "model_grid_observation_truth_claimed": false
+  },
+  "source_binding_matrix": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json",
+    "blob_sha": "30b7910a1bd27882b80eb56041924d0f6252ae02",
+    "reused_without_spatial_semantic_upgrade": true
+  },
+  "activation_boundary": {
+    "formal_reality_successor_candidate_created": true,
+    "active_runtime_scope_changed": false,
+    "database_bootstrap_authorized": false,
+    "ea5e2_operational_activation_authorized": false,
+    "formal_window_started": false,
+    "formal_execution_count": "0/24"
+  },
+  "hard_nonclaims": [
+    "NO_T3R1_CANONICAL_STATE_REUSE",
+    "NO_REPLAY_SCOPE_IDENTITY_AUTHORITY",
+    "NO_SYNTHETIC_CROP_CONTEXT_PROMOTION",
+    "NO_SITE_SOIL_TRUTH_FROM_CAP08_CONFIG",
+    "NO_FIELD_CALIBRATION",
+    "NO_WHOLE_T4R1_PLOT_AS_CROP_ONLY",
+    "NO_DATABASE_BOOTSTRAP_FROM_THIS_FILE_ALONE",
+    "NO_RUNTIME_SCOPE_SWITCH_FROM_THIS_FILE_ALONE",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_FORMAL_O00_O23_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
