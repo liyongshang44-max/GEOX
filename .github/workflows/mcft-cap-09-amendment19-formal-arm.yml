@@ -49,6 +49,7 @@ jobs:
           grep -Fq 'AM19_FORMAL_ARM_FIRST_GATE_RUN_MULTIPLE_ARTIFACTS_FORBIDDEN' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
           grep -Fq "gateArtifacts.sort((left, right) => left.run.id - right.run.id" .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
           test "$(grep -Fc 'github.paginate.iterator(github.rest.actions.listWorkflowRuns' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml)" -ge 2
+          grep -Fq "core.setOutput('rolling_completed_at', new Date(rollingRun.data.updated_at).toISOString());" .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
 
   live-arm-evaluator:
     if: >-
@@ -103,7 +104,7 @@ jobs:
 
             const rollingRun = await github.rest.actions.getWorkflowRun({ owner, repo, run_id: rollingRunId });
             if (rollingRun.data.conclusion !== 'success' || rollingRun.data.head_sha !== subject) throw new Error('AM19_FORMAL_ARM_ROLLING_RUN_IDENTITY_DRIFT');
-            core.setOutput('rolling_completed_at', rollingRun.data.updated_at);
+            core.setOutput('rolling_completed_at', new Date(rollingRun.data.updated_at).toISOString());
 
             const priorArmRuns = [];
             for await (const response of github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
