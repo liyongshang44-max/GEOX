@@ -1,5 +1,5 @@
 // scripts/commercial_evidence/ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1.cjs
-// Purpose: prove the off-main Commercial Evidence Demo executes existing canonical Runtime code, serves a real standalone HTTP demo, exposes all six sales-evidence sections, keeps both product and historical MCFT data paths read-only, and preserves the CEO 60-second presentation hierarchy.
+// Purpose: prove the off-main Commercial Evidence Demo executes existing canonical Runtime code, serves a real standalone HTTP demo, exposes all six sales-evidence sections, keeps both product and historical MCFT data paths read-only, and preserves the Chinese CEO 60-second presentation hierarchy.
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -33,6 +33,7 @@ const packet = text(files.packet);
 const server = text(files.server);
 const html = text(files.html);
 const app = text(files.app);
+const style = text(files.style);
 const docs = text(files.docs);
 
 requireToken("packet", packet, "selectExternalFormalCurrentIntervalForcingV1");
@@ -61,7 +62,10 @@ requireToken("app", app, "/api/demo");
 requireToken("app", app, "/api/runtime-value-trace");
 requireToken("app", app, "/api/mcft-runtime-evidence");
 requireToken("app", app, "/api/twin-trace?decision_cycle_id=");
-requireToken("app", app, "Open full GEOX Twin Trace");
+requireToken("app", app, "打开完整 GEOX Twin Trace");
+requireToken("app", app, "使用上一步的合规假设值");
+requireToken("app", app, "降级继续");
+requireToken("app", app, "农业 AI 最大的问题");
 requireToken("docs", docs, "NOT PRODUCTION AUTHORITY");
 requireToken("docs", docs, "PERSISTED ENGINEERING QUALIFICATION");
 requireToken("docs", docs, "COMMERCIAL_EVIDENCE_MCFT_READ_URL");
@@ -70,16 +74,19 @@ requireToken("docs", docs, "CEO default presentation path");
 for (let section = 1; section <= 6; section += 1) {
   requireToken("html", html, `data-section="${section}"`);
 }
-requireToken("html", html, "60-second commercial proof");
-requireToken("html", html, "hero-value");
-requireToken("html", html, "proof-strip");
-requireToken("html", html, "traceAdvancedDetails");
-requireToken("html", html, "Engineering evidence appendix");
-requireToken("html", html, "Evidence boundary");
+requireToken("html", html, "农业 AI 决策可信性 · 60 秒证明");
+requireToken("html", html, "同样一条数据，只因为“什么时候真正可知”不同");
+requireToken("html", html, "这是一条真实运行留下的证据链");
+requireToken("html", html, "客户应该理解什么");
+requireToken("html", html, "技术细节");
+requireToken("html", html, "工程证据附录");
+requireToken("html", html, "证据边界");
 requireToken("html", html, "mcftRuntimeStatus");
 requireToken("html", html, "mcftRuntimeObjects");
 requireToken("html", html, "runtimeTraceObjects");
 requireToken("html", html, "persistedTraceObjects");
+requireToken("style", style, ".topbar { position: relative;");
+requireToken("style", style, ".executive-trace-grid { grid-template-columns: repeat(3");
 
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const selectorRun = spawnSync(pnpm, ["exec", "tsx", "tools/commercial-evidence-demo/selftest.ts"], {
@@ -181,9 +188,10 @@ console.log(JSON.stringify({
   ok: true,
   acceptance: "ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1",
   six_pack_sections_present: true,
-  ceo_default_path_guard_present: true,
+  chinese_sixty_second_buyer_path_guard_present: true,
   engineering_details_secondary_guard_present: true,
   evidence_boundary_present: true,
+  topbar_non_overlay_guard_present: true,
   canonical_selector_selftest_passed: true,
   canonical_runtime_code_executed: true,
   provider_late_behavior: selftest.provider_late_behavior,
