@@ -7,7 +7,8 @@ const { execFileSync } = require("node:child_process");
 
 const ROOT = process.cwd();
 const BASE = String(process.env.MCFT_BASE_SHA || "").trim();
-const EXPECTED_BASE = "8213ec945c2d25c6441fcf708f88991a157eb76a";
+const ADOPTION_BASE = "8213ec945c2d25c6441fcf708f88991a157eb76a";
+const LIFECYCLE_HOTFIX_BASE = "cec35325afef39dbd39ad8e39e54e7b5c3ea6a2b";
 const AUTH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-FRESH-BOOTSTRAP-EXECUTION-AUTHORITY-V1.json";
 const RUNNER = "scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.ts";
 const GATE = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.cjs";
@@ -19,7 +20,8 @@ const AUTH_BLOB = "fa9a9e241a37b79042855cab3b38f99ffe80e158";
 const FRESH_DB_BLOB = "fae82fdac5befddbed94ce47fedda517d75741eb";
 const CROP_BLOB = "4bc1f8dda6559c8951db915132172b65469affcb";
 const SOURCE_RUNNER_BLOB = "f1ff8547a78a982f4a968a62e9e02c802adb74f3";
-const EXPECTED = [AUTH, RUNNER, GATE, WORKFLOW].sort();
+const ADOPTION_EXPECTED = [AUTH, RUNNER, GATE, WORKFLOW].sort();
+const LIFECYCLE_HOTFIX_EXPECTED = [RUNNER, GATE].sort();
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP_GOVERNANCE_RESULT.json");
 const git = (...args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
 const read = (file) => fs.readFileSync(path.join(ROOT, file), "utf8");
@@ -43,11 +45,15 @@ const result = {
 };
 
 try {
-  req(BASE === EXPECTED_BASE, `T4R1_FRESH_BOOTSTRAP_BASE_MAIN_DRIFT:${BASE}`);
+  const adoptionRoute = BASE === ADOPTION_BASE;
+  const lifecycleHotfixRoute = BASE === LIFECYCLE_HOTFIX_BASE;
+  req(adoptionRoute || lifecycleHotfixRoute, `T4R1_FRESH_BOOTSTRAP_BASE_MAIN_DRIFT:${BASE}`);
   const changed = git("diff", "--name-only", `${BASE}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
   result.changed_files = changed;
   result.exact_file_count = changed.length;
-  req(JSON.stringify(changed) === JSON.stringify(EXPECTED), `T4R1_FRESH_BOOTSTRAP_EXACT_FOUR_FILE_BOUNDARY_FAIL:${JSON.stringify(changed)}`);
+  result.governance_route = adoptionRoute ? "INITIAL_FOUR_FILE_ADOPTION" : "POST_BOOTSTRAP_GUARD_POOL_LIFECYCLE_HOTFIX";
+  const expected = adoptionRoute ? ADOPTION_EXPECTED : LIFECYCLE_HOTFIX_EXPECTED;
+  req(JSON.stringify(changed) === JSON.stringify(expected), `T4R1_FRESH_BOOTSTRAP_EXACT_FILE_BOUNDARY_FAIL:${JSON.stringify(changed)}`);
   req(blob("HEAD", AUTH) === AUTH_BLOB, "T4R1_FRESH_BOOTSTRAP_AUTHORITY_BLOB_DRIFT");
   req(blob("HEAD", FRESH_DB) === FRESH_DB_BLOB, "T4R1_FRESH_BOOTSTRAP_FRESH_DB_AUTHORITY_BLOB_DRIFT");
   req(blob("HEAD", CROP) === CROP_BLOB, "T4R1_FRESH_BOOTSTRAP_CROP_AUTHORITY_BLOB_DRIFT");
@@ -72,6 +78,12 @@ try {
     req(has(runner, marker), `T4R1_FRESH_BOOTSTRAP_RUNNER_MARKER_MISSING:${marker}`);
   }
   req(!has(runner, "process.env.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL"), "T4R1_FRESH_BOOTSTRAP_DIRECT_T3_SECRET_ACCESS_FORBIDDEN");
+  if (lifecycleHotfixRoute) {
+    req(has(runner, "assertDatabaseIdentityAndT3ZeroFreshConnection"), "T4R1_FRESH_BOOTSTRAP_FRESH_GUARD_CONNECTION_REQUIRED");
+    req(has(runner, 'assertDatabaseIdentityAndT3ZeroFreshConnection(databaseUrl, subjectSha, "BEFORE")'), "T4R1_FRESH_BOOTSTRAP_FRESH_BEFORE_GUARD_REQUIRED");
+    req(has(runner, 'assertDatabaseIdentityAndT3ZeroFreshConnection(databaseUrl, subjectSha, "AFTER")'), "T4R1_FRESH_BOOTSTRAP_FRESH_AFTER_GUARD_REQUIRED");
+    req(!has(runner, 'const pool = new Pool({ connectionString: databaseUrl, application_name: `mcft-cap09-t4r1-successor-guard-${subjectSha.slice(0, 12)}`'), "T4R1_FRESH_BOOTSTRAP_CROSS_WAIT_GUARD_POOL_FORBIDDEN");
+  }
 
   req(has(workflow, "pull_request:") && has(workflow, "merge_group:") && has(workflow, "workflow_dispatch:"), "T4R1_FRESH_BOOTSTRAP_WORKFLOW_TRIGGERS_REQUIRED");
   req(has(workflow, "if: github.event_name != 'workflow_dispatch'"), "T4R1_FRESH_BOOTSTRAP_STATIC_JOB_REQUIRED");
