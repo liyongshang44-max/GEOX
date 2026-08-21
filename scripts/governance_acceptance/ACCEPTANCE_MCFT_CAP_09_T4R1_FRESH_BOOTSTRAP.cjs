@@ -77,8 +77,11 @@ try {
   req(has(workflow, "if: github.event_name != 'workflow_dispatch'"), "T4R1_FRESH_BOOTSTRAP_STATIC_JOB_REQUIRED");
   req(has(workflow, "if: github.event_name == 'workflow_dispatch'"), "T4R1_FRESH_BOOTSTRAP_LIVE_JOB_REQUIRED");
   req(has(workflow, "GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL }}"), "T4R1_FRESH_BOOTSTRAP_T4_SECRET_REQUIRED");
-  req(has(workflow, "PREFLIGHT_MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE.ts"), "T4R1_FRESH_BOOTSTRAP_EA5A_PREFLIGHT_REQUIRED");
-  req(workflow.indexOf("PREFLIGHT_MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE.ts") < workflow.indexOf("EXECUTE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.ts"), "T4R1_FRESH_BOOTSTRAP_PREFLIGHT_MUST_PRECEDE_MUTATION");
+  const preflightCommand = "run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5A_FRESH_FORMAL_DATABASE.ts";
+  const mutationCommand = "run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_FRESH_BOOTSTRAP.ts";
+  req(has(workflow, preflightCommand), "T4R1_FRESH_BOOTSTRAP_EA5A_PREFLIGHT_EXECUTION_REQUIRED");
+  req(has(workflow, mutationCommand), "T4R1_FRESH_BOOTSTRAP_MUTATION_EXECUTION_REQUIRED");
+  req(workflow.indexOf(preflightCommand) < workflow.indexOf(mutationCommand), "T4R1_FRESH_BOOTSTRAP_PREFLIGHT_MUST_PRECEDE_MUTATION");
   req(has(workflow, "EXECUTE_T4R1_FRESH_BOOTSTRAP"), "T4R1_FRESH_BOOTSTRAP_TOKEN_REQUIRED");
   req(!/\n\s{2}push:\s*$/m.test(workflow), "T4R1_FRESH_BOOTSTRAP_AUTO_PUSH_TRIGGER_FORBIDDEN");
   result.status = "PASS";
