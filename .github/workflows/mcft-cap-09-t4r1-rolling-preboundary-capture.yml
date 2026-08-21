@@ -10,6 +10,7 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_DYNAMIC_ROLLING_REHYDRATION.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_T4R1_ROLLING_PREBOUNDARY_DEADLINE_COMPAT.cjs'
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
@@ -49,6 +50,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - name: Prove rolling target planner deterministically
         run: node scripts/runtime_acceptance/PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs selftest
+      - name: Prove T4R1 rolling deadline policy compatibility
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_09_T4R1_ROLLING_PREBOUNDARY_DEADLINE_COMPAT.cjs selftest
       - name: Syntax-check candidate assembler
         run: node --check scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs
       - name: Prove T4R1 dynamic rolling and rehydration boundary
@@ -133,7 +136,7 @@ jobs:
           MCFT_EA5E2_ISOLATED_READINESS_ACK: 'true'
           DATABASE_URL: ${{ env.READINESS_DB_URL }}
           PYTHON: python
-        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_09_T4R1_ROLLING_PREBOUNDARY_DEADLINE_COMPAT.cjs
 
       - name: Assemble 36-hour T4R1 rehydratable candidate package
         env:
