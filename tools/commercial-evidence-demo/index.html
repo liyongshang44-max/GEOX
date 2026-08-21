@@ -212,18 +212,34 @@
       <summary><span>工程证据附录</span><small>真实架构映射 · 确定性失败案例 · 页面到 repo component</small></summary>
       <div class="engineering-details-body">
         <section id="architecture" class="panel secondary-panel" data-section="2">
-          <div class="section-heading appendix-heading"><span>A</span><div><p class="eyebrow">真实系统架构 · 不画市场部虚构框</p><h2>从 Provider / Sensor 到 Decision Boundary</h2></div></div>
-          <div id="architectureFlow" class="flow architecture-flow"></div>
+          <div class="section-heading appendix-heading"><span>A</span><div><p class="eyebrow">真实系统架构 · 只展示当前可核验核心</p><h2>从 Provider / Sensor 到 Runtime qualification boundary</h2></div></div>
+          <div id="verifiedArchitectureFlow" class="flow architecture-flow" aria-label="verified current runtime architecture">
+            <div class="flow-node"><span class="flow-index">01</span><strong>Provider / Sensor</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">02</span><strong>Raw / Canonical Evidence</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">03</span><strong>As-of / Authority Boundary</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">04</span><strong>Current-interval Forcing Selector</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">05</span><strong>Canonical Runtime Core</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">06</span><strong>State</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">07</span><strong>Forecast</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">08</span><strong>Scenario</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">09</span><strong>Runtime qualification boundary</strong></div>
+          </div>
+          <div id="architectureFlow" class="flow architecture-flow" hidden aria-hidden="true"></div>
           <div class="architecture-sidecars">
             <span><b>Persistence</b> PostgreSQL <code>facts</code> + canonical projections</span>
             <span><b>Scheduler</b> <code>twin_shadow_online_scheduler_slot_v1</code></span>
             <span><b>Health / recovery</b> <code>twin_runtime_health_v1</code> + <code>twin_runtime_checkpoint_v1</code></span>
             <span><b>Trace / provenance</b> refs + determinism hash + Twin Trace</span>
             <span><b>Lease / fencing</b> 当前 MCFT qualification governance；本 Demo 不调用、不修改，精确文件路径不在此虚构</span>
+            <span><b>FUTURE GOVERNED STAGE</b> Human Approval → controlled execution · <code>NOT CURRENT VERIFIED CORE</code> · <code>NOT YET A COMMERCIAL CLAIM</code></span>
           </div>
           <div class="component-map-wrap">
             <table class="comparison-table component-map">
               <thead><tr><th>页面 / 架构节点</th><th>真实 repo / runtime component</th><th>证明方式</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Runtime qualification boundary</strong></td><td><code>twin_runtime_health_v1 + twin_runtime_checkpoint_v1 + State use_eligibility</code></td><td>qualified / degraded / blocked 与 continuation 边界</td></tr>
+                <tr><td><strong>Human Approval / controlled execution</strong></td><td><code>NOT CURRENT VERIFIED CORE</code></td><td>未来治理阶段；本 Demo 不把它表示成当前已核验 repo component</td></tr>
+              </tbody>
               <tbody id="componentMap"></tbody>
             </table>
           </div>
