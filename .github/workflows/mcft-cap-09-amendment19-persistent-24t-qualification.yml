@@ -6,6 +6,8 @@ on:
       - '.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs'
+      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_PREFLIGHT_V1.cjs'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'
       - 'apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts'
@@ -113,9 +115,13 @@ jobs:
       - name: Rebind governed EA5E2 dependency graph
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
 
+      - name: Prove crop-window preflight ordering and zero-side-effect boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_PREFLIGHT_V1.cjs
+
       - name: Run pure orchestration selftests
         run: |
           set -euo pipefail
+          node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_V1.cjs selftest
           pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts selftest
           pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts selftest
 
@@ -233,6 +239,12 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
+
+      - name: Fail closed before rehydration and v4 writes when the exact 24T crop window is unavailable
+        env:
+          MCFT_CAP09_ROLLING_CANDIDATE_PATH: ${{ steps.candidate.outputs.path }}
+        run: node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_V1.cjs run
+
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -288,6 +300,7 @@ jobs:
           name: mcft-cap09-am19-persistent24-${{ env.SUBJECT_SHA }}-${{ github.run_id }}
           path: |
             acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_PREFLIGHT_V1.json
             acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json
             acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_RESULT.json
           if-no-files-found: warn
