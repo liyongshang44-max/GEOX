@@ -1,0 +1,121 @@
+{
+  "schema_version": "geox_mcft_cap09_alternative_scope_rescue_v1",
+  "record_status": "READ_ONLY_ALTERNATIVE_SCOPE_DISCOVERY_NO_AUTHORITY_EFFECT",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier": "S6-ALTERNATIVE-SCOPE-RESCUE",
+  "exact_base_protected_main": "0cf2b3ddd529c2c5b05698e51aa41a2afce1b92c",
+  "authority_predecessors": {
+    "taskbook": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+      "blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e"
+    },
+    "amendment_13": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-13-CURRENT-CROP-AUTHORITY-REQUALIFICATION-SEPARATION.md",
+      "blob_sha": "5210001b387993cea502aac9480834400b3b8ef3"
+    },
+    "amendment_16": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-16-CURRENT-SEASON-LIFECYCLE-PERSISTENT-STATE-SEMANTICS.md",
+      "blob_sha": "4d0f4449847aa865aec5b23b87c180ee5799051a"
+    },
+    "amendment_17": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-17-T3R1-FORMAL-SUCCESSOR-SCOPE-AUTHORITY.md",
+      "blob_sha": "f9d664a0f58c6024f3090edbd5aee26d8d1b680a",
+      "historical_t3r1_authority_rewritten": false
+    },
+    "ea1j_stage_authority": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA1J-CROP-WATER-USE-STAGE-AUTHORITY-V1.json",
+      "blob_sha": "eeb7ab49ee3270421efe4d6674305426074d1541"
+    },
+    "t3r1_geometry_predecessor": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-CROP-ONLY-GEOMETRY-AUTHORITY-V1.json",
+      "blob_sha": "87b1c8fa37939085be68abb66bfa8e0918f65e95"
+    }
+  },
+  "provider_scan": {
+    "source": "KBS_AGLOG",
+    "index_url": "https://aglog.kbs.msu.edu/observations",
+    "areas_url": "https://aglog.kbs.msu.edu/areas",
+    "allowed_host": "aglog.kbs.msu.edu",
+    "season_scan_start_local_date": "2026-05-01",
+    "maximum_pages": 12,
+    "maximum_detail_candidates": 60,
+    "provider_body_may_be_emitted": false,
+    "provider_payload_may_be_persisted_or_uploaded": false
+  },
+  "selection_contract": {
+    "locked_before_live_scan": true,
+    "preferred_treatment": null,
+    "preferred_field": null,
+    "preferred_hybrid": null,
+    "eligible_provider_site": "KBS_LTER_MAIN_CROPPING_SYSTEM_EXPERIMENT",
+    "eligible_treatments": ["T1", "T2", "T3", "T4", "T5", "T6"],
+    "required_replicate": "R1",
+    "required_crop_tokens": ["corn", "maize"],
+    "explicit_hybrid_identity_required": true,
+    "planting_event_time_precision": "LOCAL_CALENDAR_DAY_ONLY",
+    "timezone": "America/Detroit",
+    "parent_treatment_planting_must_explicitly_include_r1": true,
+    "ranking": [
+      "LEGAL_O00_COUNT_DESC",
+      "EARLIEST_LEGAL_O00_ASC",
+      "PLANTING_OBSERVATION_ID_ASC",
+      "TREATMENT_ASC"
+    ]
+  },
+  "whole_window_policy": {
+    "clock": "ACTUAL_UTC_HOURLY_BOUNDARY_PLANNING_ONLY",
+    "minimum_candidate_lead_hours": 48,
+    "planning_search_horizon_hours": 168,
+    "exact_slot_count": 24,
+    "backward_stability_hours": 6,
+    "forward_transition_guard_hours": 30,
+    "variant_stage_lengths_days": [
+      [30, 50, 60, 40],
+      [25, 40, 45, 30],
+      [20, 35, 40, 30],
+      [20, 35, 40, 30],
+      [30, 40, 50, 30],
+      [30, 40, 50, 50]
+    ],
+    "allowed_stage_codes": ["INITIAL", "DEVELOPMENT", "MID", "LATE"],
+    "planting_time_uncertainty_must_be_carried": true,
+    "future_observations_authorized": false,
+    "accelerated_formal_clock_authorized": false
+  },
+  "lifecycle_candidate_policy": {
+    "establishment_class": "PLANTING",
+    "maximum_maize_grain_horizon_days": 180,
+    "support_event_renews_horizon": false,
+    "absence_of_termination_proves_active": false,
+    "separate_persistent_lifecycle_qualification_required": true
+  },
+  "geometry_candidate_policy": {
+    "provider_geometry_source": "KBS039-006.40_MCSE_PLOT_POLYGONS",
+    "treatments_with_central_prairie_strip": ["T3", "T4"],
+    "central_prairie_strip_may_be_relabelled_as_crop": false,
+    "t3_or_t4_requires_fresh_conservative_crop_only_subzone_qualification": true,
+    "t3r1_geometry_may_be_reused_for_another_scope": false,
+    "formal_geometry_authority_created_by_this_scan": false
+  },
+  "allowed_terminal_results": [
+    "ALTERNATIVE_SCOPE_CANDIDATE_DETECTED_REQUALIFICATION_REQUIRED",
+    "NO_ALTERNATIVE_SCOPE_CANDIDATE_CURRENTLY_ESTABLISHED"
+  ],
+  "hard_nonclaims": [
+    "NO_OUTCOME_DRIVEN_SELECTION_RULE_CHANGE",
+    "NO_ALTERNATIVE_SCOPE_AUTHORITY",
+    "NO_LIFECYCLE_AUTHORITY",
+    "NO_GEOMETRY_AUTHORITY",
+    "NO_SOURCE_REBIND_AUTHORITY",
+    "NO_T3R1_HISTORY_REWRITE",
+    "NO_WHOLE_WINDOW_AUTHORITY_PASS",
+    "NO_SUCCESSOR_EPOCH_SELECTION",
+    "NO_DATABASE_WRITE",
+    "NO_RAW_OBJECT_WRITE",
+    "NO_RUNTIME_CONFIG_WRITE",
+    "NO_SCHEDULER_WRITE",
+    "NO_FORMAL_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
