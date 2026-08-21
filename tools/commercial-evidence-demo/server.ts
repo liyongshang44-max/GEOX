@@ -1,8 +1,8 @@
 // tools/commercial-evidence-demo/server.ts
 // Purpose: standalone read-only Commercial Evidence Demo microsite.
-// Boundary: this server is not registered in the GEOX production server. It executes the existing pure Amendment-19 selector and optionally proxies the existing read-only Twin Trace API.
+// Boundary: this server is not registered in the GEOX production server. It executes existing pure Runtime/Twin Kernel code and optionally proxies the existing read-only Twin Trace API.
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createServer, type ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
 import { dirname, extname, join } from "node:path";
@@ -10,13 +10,14 @@ import { fileURLToPath } from "node:url";
 import { buildCommercialEvidencePacketV1 } from "./packet.js";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(ROOT, "../..");
 const PORT = Number(process.env.COMMERCIAL_EVIDENCE_DEMO_PORT ?? 4177);
 const GEOX_BASE_URL = String(process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "");
 const GEOX_OPERATOR_BASE_URL = String(process.env.GEOX_OPERATOR_BASE_URL ?? "http://127.0.0.1:5173").replace(/\/$/, "");
 
 function subjectSha(): string {
   try {
-    return execFileSync("git", ["rev-parse", "HEAD"], { cwd: join(ROOT, "../.."), encoding: "utf8" }).trim();
+    return execFileSync("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).trim();
   } catch {
     return "UNPINNED_LOCAL_CHECKOUT";
   }
@@ -53,6 +54,34 @@ function safeDecisionCycleId(value: string | null): string | null {
   const trimmed = value.trim();
   if (!/^[A-Za-z0-9._:-]{1,240}$/.test(trimmed)) return null;
   return trimmed;
+}
+
+function buildRuntimeValueTrace(): unknown {
+  const run = spawnSync(process.execPath, ["scripts/governance_acceptance/TWIN_KERNEL_RUNTIME_VALUE_TRACE_ACCEPTANCE.cjs"], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+    env: process.env,
+  });
+  if (run.status !== 0) {
+    const diagnostic = String(run.stderr || run.stdout || "").trim().slice(0, 1200);
+    throw new Error(`COMMERCIAL_EVIDENCE_RUNTIME_VALUE_TRACE_FAILED:${run.status}:${diagnostic}`);
+  }
+  try {
+    const parsed = JSON.parse(run.stdout.trim());
+    if (parsed?.ok !== true || parsed?.runtime_builders_invoked !== true || parsed?.complete_tk_chain_built !== true) {
+      throw new Error("RUNTIME_VALUE_TRACE_ACCEPTANCE_NOT_PASS");
+    }
+    return {
+      ...parsed,
+      demo_trace_mode: "CONTROLLED_IN_MEMORY_EXISTING_BUILDERS",
+      production_authority: false,
+      database_required: false,
+      canonical_write_count: 0,
+    };
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "RUNTIME_VALUE_TRACE_ACCEPTANCE_NOT_PASS") throw error;
+    throw new Error("COMMERCIAL_EVIDENCE_RUNTIME_VALUE_TRACE_NON_JSON_OUTPUT");
+  }
 }
 
 async function proxyTwinTrace(res: ServerResponse, decisionCycleId: string): Promise<void> {
@@ -94,6 +123,11 @@ const server = createServer(async (req, res) => {
           standalone_demo_server: true,
         },
       });
+      return;
+    }
+
+    if (url.pathname === "/api/runtime-value-trace") {
+      sendJson(res, 200, buildRuntimeValueTrace());
       return;
     }
 

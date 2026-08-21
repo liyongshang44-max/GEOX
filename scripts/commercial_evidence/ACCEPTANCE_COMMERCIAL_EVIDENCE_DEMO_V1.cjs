@@ -1,5 +1,5 @@
 // scripts/commercial_evidence/ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1.cjs
-// Purpose: prove the off-main Commercial Evidence Demo executes the canonical Amendment-19 selector and exposes all six sales-evidence sections without production route registration.
+// Purpose: prove the off-main Commercial Evidence Demo executes existing canonical Runtime code, exposes all six sales-evidence sections, and changes no production route registration.
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -43,9 +43,12 @@ requireToken("packet", packet, "DEGRADE_AND_CONTINUE");
 requireToken("packet", packet, "FAIL_CLOSED");
 requireToken("packet", packet, "NO_FORMAL_O00_O23_CLAIM");
 requireToken("server", server, "standalone read-only Commercial Evidence Demo microsite");
+requireToken("server", server, "/api/runtime-value-trace");
+requireToken("server", server, "TWIN_KERNEL_RUNTIME_VALUE_TRACE_ACCEPTANCE.cjs");
 requireToken("server", server, "/api/twin-trace");
 requireToken("server", server, "COMMERCIAL_EVIDENCE_DEMO_READ_ONLY_GET_REQUIRED");
 requireToken("app", app, "/api/demo");
+requireToken("app", app, "/api/runtime-value-trace");
 requireToken("app", app, "/api/twin-trace?decision_cycle_id=");
 requireToken("app", app, "Open full GEOX Twin Trace");
 requireToken("docs", docs, "NOT PRODUCTION AUTHORITY");
@@ -53,22 +56,24 @@ requireToken("docs", docs, "NOT PRODUCTION AUTHORITY");
 for (let section = 1; section <= 6; section += 1) {
   requireToken("html", html, `data-section="${section}"`);
 }
+requireToken("html", html, "runtimeTraceObjects");
+requireToken("html", html, "persistedTraceObjects");
 
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-const run = spawnSync(pnpm, ["exec", "tsx", "tools/commercial-evidence-demo/selftest.ts"], {
+const selectorRun = spawnSync(pnpm, ["exec", "tsx", "tools/commercial-evidence-demo/selftest.ts"], {
   cwd: ROOT,
   encoding: "utf8",
   env: process.env,
 });
-if (run.status !== 0) {
-  process.stderr.write(run.stdout || "");
-  process.stderr.write(run.stderr || "");
-  throw new Error(`COMMERCIAL_EVIDENCE_DEMO_CANONICAL_SELFTEST_FAILED:${run.status}`);
+if (selectorRun.status !== 0) {
+  process.stderr.write(selectorRun.stdout || "");
+  process.stderr.write(selectorRun.stderr || "");
+  throw new Error(`COMMERCIAL_EVIDENCE_DEMO_CANONICAL_SELFTEST_FAILED:${selectorRun.status}`);
 }
 
 let selftest;
 try {
-  selftest = JSON.parse(run.stdout.trim());
+  selftest = JSON.parse(selectorRun.stdout.trim());
 } catch {
   throw new Error("COMMERCIAL_EVIDENCE_DEMO_SELFTEST_NON_JSON_OUTPUT");
 }
@@ -82,6 +87,44 @@ if (selftest.provider_request_count !== 0 || selftest.database_write_count !== 0
   throw new Error("COMMERCIAL_EVIDENCE_DEMO_SIDE_EFFECT_BOUNDARY_DRIFT");
 }
 
+const traceRun = spawnSync(process.execPath, ["scripts/governance_acceptance/TWIN_KERNEL_RUNTIME_VALUE_TRACE_ACCEPTANCE.cjs"], {
+  cwd: ROOT,
+  encoding: "utf8",
+  env: process.env,
+});
+if (traceRun.status !== 0) {
+  process.stderr.write(traceRun.stdout || "");
+  process.stderr.write(traceRun.stderr || "");
+  throw new Error(`COMMERCIAL_EVIDENCE_RUNTIME_VALUE_TRACE_FAILED:${traceRun.status}`);
+}
+
+let runtimeTrace;
+try {
+  runtimeTrace = JSON.parse(traceRun.stdout.trim());
+} catch {
+  throw new Error("COMMERCIAL_EVIDENCE_RUNTIME_VALUE_TRACE_NON_JSON_OUTPUT");
+}
+if (runtimeTrace.ok !== true
+  || runtimeTrace.runtime_builders_invoked !== true
+  || runtimeTrace.complete_tk_chain_built !== true
+  || runtimeTrace.determinism_stable !== true
+  || runtimeTrace.forbidden_auto_writes_absent !== true) {
+  throw new Error("COMMERCIAL_EVIDENCE_RUNTIME_VALUE_TRACE_NOT_PASS");
+}
+const derived = runtimeTrace?.twin_trace?.system_derived ?? {};
+const requiredTraceObjects = [
+  "field_state_snapshot_v1",
+  "forecast_run_v1",
+  "scenario_set_v1",
+  "calibration_replay_v1",
+  "forecast_error_v1",
+  "field_learning_candidate_v1",
+  "decision_cycle_v1",
+];
+if (!requiredTraceObjects.every((objectType) => derived[objectType] && derived[objectType].determinism_hash)) {
+  throw new Error("COMMERCIAL_EVIDENCE_RUNTIME_VALUE_TRACE_OBJECT_CHAIN_INCOMPLETE");
+}
+
 console.log(JSON.stringify({
   ok: true,
   acceptance: "ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1",
@@ -91,6 +134,10 @@ console.log(JSON.stringify({
   provider_late_behavior: selftest.provider_late_behavior,
   source_conflict_behavior: selftest.source_conflict_behavior,
   missing_evidence_behavior: selftest.missing_evidence_behavior,
+  runtime_value_trace_builder_chain_passed: true,
+  runtime_value_trace_object_count: requiredTraceObjects.length,
+  runtime_value_trace_determinism_stable: runtimeTrace.determinism_stable,
+  runtime_value_trace_forbidden_auto_writes_absent: runtimeTrace.forbidden_auto_writes_absent,
   standalone_microsite: true,
   production_route_registration_changed: false,
   provider_request_count: 0,
