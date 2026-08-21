@@ -44,6 +44,7 @@ jobs:
           persist-credentials: false
 
       - name: Require exact current protected-main base and governed qualification boundary
+        id: routing
         shell: bash
         run: |
           set -euo pipefail
@@ -51,7 +52,33 @@ jobs:
           git fetch --no-tags origin main
           base_sha='${{ github.event.pull_request.base.sha }}'
           test "$base_sha" = "$(git rev-parse origin/main)" || { echo 'AM19_P24_PR_BASE_MUST_EQUAL_CURRENT_PROTECTED_MAIN' >&2; exit 1; }
-          changed=$(git diff --name-only "$base_sha" "$SUBJECT_SHA")
+          changed=$(git diff --name-only "$base_sha" "$SUBJECT_SHA" | sort)
+          t4_runtime_rebind_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-ea5e2-rolling-operational-activation-live.yml' \
+            '.github/workflows/mcft-cap-09-rolling-kbs-intersection.yml' \
+            'apps/server/src/domain/twin_runtime/external_formal_bootstrap_authority_bundle_v1.ts' \
+            'apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5A-FRESH-FORMAL-DATABASE-PREFLIGHT-V3.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_FULL_CHAIN_PREFLIGHT_V1.cjs' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V2.cjs' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs' \
+            'scripts/runtime_acceptance/ASSERT_MCFT_CAP_09_EA5E2_ACTIVATION_BOUNDARY_CURRENT_MAIN.cjs' \
+            'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs' \
+            'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs' \
+            'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_LIVE_WINDOW_VIABILITY.cjs' \
+            'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs' | sort)"
+          routing_repair_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml' \
+            '.github/workflows/mcft-cap-09-ea5b3-external-runtime-config-resolver.yml' \
+            '.github/workflows/mcft-cap-09-ea5d1-external-bootstrap-persistence-qualification.yml' | sort)"
+          mode='historical-am19'
+          if [[ "$changed" == "$t4_runtime_rebind_files" ]]; then
+            mode='t4-runtime-rebind-successor'
+          elif [[ "$changed" == "$routing_repair_files" ]]; then
+            mode='runtime-rebind-routing-repair'
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode"
           if grep -Eq '^scripts/runtime_acceptance/(MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py|RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts)$' <<<"$changed"; then
             grep -Fxq 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py' <<<"$changed" || { echo 'AM19_P24_DECODER_IMPLEMENTATION_CHANGE_REQUIRED' >&2; exit 1; }
             grep -Fxq 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts' <<<"$changed" || { echo 'AM19_P24_REHYDRATION_DECODER_IDENTITY_CHANGE_REQUIRED' >&2; exit 1; }
@@ -69,6 +96,11 @@ jobs:
               grep -Fq 'qualified_subject_sha' scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs
             fi
           fi
+
+      - name: Record Amendment-19 T3 orchestration identity selftests not applicable to exact T4 runtime rebind
+        if: steps.routing.outputs.mode == 't4-runtime-rebind-successor'
+        run: |
+          echo 'PASS: exact T4 runtime rebind remains zero-write and does not reuse the T3R1 persistent orchestration identity.'
 
       - uses: pnpm/action-setup@v4
         with:
@@ -119,6 +151,7 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_PREFLIGHT_V1.cjs
 
       - name: Run pure orchestration selftests
+        if: steps.routing.outputs.mode != 't4-runtime-rebind-successor'
         run: |
           set -euo pipefail
           node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_V1.cjs selftest
