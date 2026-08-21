@@ -1,0 +1,85 @@
+{
+  "schema_version": "geox_mcft_cap09_t3r1_branch_a_contemporaneous_phenology_reproof_v1",
+  "record_status": "READ_ONLY_REPROOF_CANDIDATE_NO_AUTHORITY_EFFECT",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier": "S6-T3R1-BRANCH-A-CONTEMPORANEOUS-PHENOLOGY-REPROOF",
+  "exact_base_protected_main": "5e623a66737efccfc2e41238e7d32c4c70ab5327",
+  "authority_predecessors": {
+    "amendment_13": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-13-CURRENT-CROP-AUTHORITY-REQUALIFICATION-SEPARATION.md",
+      "blob_sha": "5210001b387993cea502aac9480834400b3b8ef3"
+    },
+    "amendment_17": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-17-T3R1-FORMAL-SUCCESSOR-SCOPE-AUTHORITY.md",
+      "blob_sha": "f9d664a0f58c6024f3090edbd5aee26d8d1b680a"
+    },
+    "formal_crop_context_v2": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json",
+      "blob_sha": "757e4b9f4fdcd631eea97fca85614a1b61ef0c4a"
+    },
+    "t3r1_lifecycle": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-PERSISTENT-LIFECYCLE-QUALIFICATION-V1.json",
+      "blob_sha": "073247dd9527246e423beedcccba832162ad0ff9"
+    }
+  },
+  "formal_scope": {
+    "site_id": "KBS_MCSE_T3R1",
+    "field_id": "field_kbs_mcse_t3r1",
+    "season_id": "season_2026_corn",
+    "crop": "corn",
+    "hybrid_product_code": "P0306Q",
+    "provider_area_identity": "T3R1",
+    "planting_observation_id": 6966,
+    "planting_local_date": "2026-05-20",
+    "timezone": "America/Detroit"
+  },
+  "provider_scan": {
+    "source": "KBS_AGLOG",
+    "index_url": "https://aglog.kbs.msu.edu/observations",
+    "anchor_url": "https://aglog.kbs.msu.edu/observations/6966",
+    "allowed_host": "aglog.kbs.msu.edu",
+    "maximum_pages": 20,
+    "maximum_detail_candidates": 60,
+    "must_reach_anchor_or_earlier": true,
+    "provider_body_may_be_emitted": false,
+    "provider_payload_may_be_persisted_or_uploaded": false
+  },
+  "phenology_policy": {
+    "recognized_semantics": [
+      "EMERGENCE",
+      "TASSELING",
+      "SILKING",
+      "BLISTER",
+      "MILK_STAGE",
+      "DOUGH_STAGE",
+      "DENT_STAGE",
+      "PHYSIOLOGICAL_MATURITY",
+      "BLACK_LAYER",
+      "SENESCENCE"
+    ],
+    "semantic_candidate_alone_resolves_stage": false,
+    "elapsed_calendar_time_resolves_stage": false,
+    "single_fao_variant_selection_authorized": false,
+    "future_observations_authorized": false,
+    "successful_reproof_requires_separate_mapping_and_whole_window_scan": true
+  },
+  "allowed_terminal_results": [
+    "T3R1_PHENOLOGY_INPUT_CANDIDATE_DETECTED_REQUALIFICATION_REQUIRED",
+    "NO_T3R1_PHENOLOGY_AUTHORITY_CURRENTLY_ESTABLISHED"
+  ],
+  "hard_nonclaims": [
+    "NO_STAGE_AUTHORITY_FROM_TOKEN_ALONE",
+    "NO_LATE_FROM_ELAPSED_DAYS",
+    "NO_GDD_STAGE_AUTHORITY_CREATED",
+    "NO_CROP_AUTHORITY_MUTATION",
+    "NO_WHOLE_WINDOW_PASS",
+    "NO_SUCCESSOR_EPOCH_SELECTION",
+    "NO_DATABASE_WRITE",
+    "NO_RAW_OBJECT_WRITE",
+    "NO_RUNTIME_CONFIG_WRITE",
+    "NO_SCHEDULER_WRITE",
+    "NO_FORMAL_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}
