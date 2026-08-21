@@ -81,7 +81,7 @@ function renderRuntimeComparison(packet) {
   const rows = [findCase(packet, "healthy_exact_provider_pair"), findCase(packet, "provider_late")].filter(Boolean);
   byId("runtimeComparison").innerHTML = rows.map((item) => {
     const isLate = item.case_id === "provider_late";
-    const caseLabel = isLate ? "同一 payload 在决策后才发布" : "决策时已经拿到精确证据";
+    const caseLabel = isLate ? "同一数据内容在决策后才发布" : "决策时已经拿到精确证据";
     const judgement = isLate ? "不能算作当时已知 · 明确降级" : "当时已经可知 · 正常使用";
     return `
       <tr title="forcing=${escapeHtml(item.outcome.forcing_mode)} · health=${escapeHtml(item.outcome.runtime_health)} · action=${escapeHtml(item.outcome.action)}">
@@ -94,31 +94,31 @@ function renderRuntimeComparison(packet) {
   }).join("");
 
   byId("runtimeCallout").innerHTML = `
-    <strong>这是机器可核验的 canonical 实验，不是上面的 25 mm 农艺场景：</strong>
-    selector 的受控输入保持 rainfall=${escapeHtml(packet.comparison.same_exact_payload.rainfall_mm)} mm、historical ET0=${escapeHtml(packet.comparison.same_exact_payload.historical_et0_mm)} mm 不变，只改变真实 availability chronology。这样避免把业务说明场景伪装成农艺 authority。
+    <strong>这是机器可核验的规范选择器实验，不是上面的 25 mm 农艺场景：</strong>
+    受控输入保持降雨量=${escapeHtml(packet.comparison.same_exact_payload.rainfall_mm)} mm、历史 ET0=${escapeHtml(packet.comparison.same_exact_payload.historical_et0_mm)} mm 不变，只改变真实可用时间。这样不会把业务说明场景伪装成农艺权威。
   `;
 }
 
 const INTERACTIVE_CASES = {
   healthy_exact_provider_pair: {
-    title: "NORMAL · 当时已有合格精确证据",
-    verdict: "QUALIFIED",
-    summary: "精确 provider evidence 在决策边界已可用，canonical selector 允许正常继续。",
+    title: "正常 · 当时已有合格精确证据",
+    verdict: "资格通过",
+    summary: "精确数据在决策边界已经可用，规范选择器允许正常继续。",
   },
   provider_late: {
-    title: "PROVIDER LATE · 精确证据晚到",
-    verdict: "DEGRADED",
-    summary: "晚到精确证据被排除；已有 causal prior 时，Runtime 明确降级、使用 ASSUMED forcing、不中断等待，也不回改过去。",
+    title: "数据晚到 · 精确证据在决策后才到",
+    verdict: "明确降级",
+    summary: "晚到精确证据被排除；已有合规先验时，运行时明确降级、使用假设驱动，不等待，也不回改过去。",
   },
   source_conflict: {
-    title: "SOURCE CONFLICT · 来源身份冲突",
-    verdict: "BLOCKED",
-    summary: "同一来源身份出现冲突 payload，selector 不猜赢家，直接 fail closed，不授权状态/情景输出。",
+    title: "来源冲突 · 同一来源身份出现矛盾内容",
+    verdict: "已阻断",
+    summary: "规范选择器不猜哪个来源是真的，直接拒绝继续，不授权状态或情景输出。",
   },
   missing_evidence: {
-    title: "MISSING EVIDENCE · 没有合规当前时段证据",
-    verdict: "BLOCKED",
-    summary: "既没有 exact provider pair，也没有 causal prior，selector 拒绝编造 current-interval forcing。",
+    title: "证据缺失 · 当前时段没有合规输入",
+    verdict: "已阻断",
+    summary: "既没有精确数据对，也没有合规先验，规范选择器拒绝编造当前时段驱动。",
   },
 };
 
@@ -128,7 +128,7 @@ async function runInteractiveCase(caseId) {
   const proof = byId("interactiveMachineProof");
   document.querySelectorAll("[data-case-id]").forEach((button) => button.classList.toggle("active", button.dataset.caseId === caseId));
   status.className = "status-line muted";
-  status.textContent = "正在重新执行 canonical selector...";
+  status.textContent = "正在重新执行规范选择器...";
   result.innerHTML = "";
   proof.textContent = "执行中...";
 
@@ -140,10 +140,10 @@ async function runInteractiveCase(caseId) {
   const presentation = INTERACTIVE_CASES[caseId];
   const action = item.outcome.action;
   const className = actionClass(action);
-  const selectorOutcome = item.outcome.forcing_mode ? forcingZh(item.outcome.forcing_mode) : "没有授权 forcing";
+  const selectorOutcome = item.outcome.forcing_mode ? forcingZh(item.outcome.forcing_mode) : "没有授权当前区间驱动";
 
   status.className = `status-line ${className === "good" ? "good-text" : className === "degraded" ? "degraded-text" : "blocked-text"}`;
-  status.textContent = `canonical selector 已重新执行 · ${presentation.verdict} · ${actionZh(action)} · subject ${shortHash(packet.runtime_context.subject_sha)}`;
+  status.textContent = `canonical selector 已重新执行 · ${presentation.verdict} · ${actionZh(action)} · 代码版本 ${shortHash(packet.runtime_context.subject_sha)}`;
   result.innerHTML = `
     <div class="interactive-result-main">
       <div><p class="eyebrow">${escapeHtml(presentation.verdict)}</p><h3>${escapeHtml(presentation.title)}</h3><p>${escapeHtml(presentation.summary)}</p></div>
@@ -152,8 +152,8 @@ async function runInteractiveCase(caseId) {
     <div class="interactive-result-facts">
       <span><b>证据处理</b>${escapeHtml(selectorOutcome)}</span>
       <span><b>运行健康</b>${escapeHtml(healthZh(item.outcome.runtime_health))}</span>
-      <span><b>等待 provider</b>${item.outcome.provider_wait_required === true ? "是" : "否"}</span>
-      <span><b>状态写入授权</b>${item.outcome.state_write_authorized === false ? "否" : "按 selector 结果"}</span>
+      <span><b>等待数据提供方</b>${item.outcome.provider_wait_required === true ? "是" : "否"}</span>
+      <span><b>状态写入授权</b>${item.outcome.state_write_authorized === false ? "否" : "按规范选择器结果"}</span>
     </div>`;
 
   proof.textContent = JSON.stringify({
@@ -254,15 +254,15 @@ function renderConnectedData(payload, packet) {
     status.className = "status-line blocked-text";
     status.textContent = `未连接 · ${payload.error ?? "产品侧持久化读模型不可用"}`;
     answer.hidden = false;
-    answer.innerHTML = `没有使用 fixture 冒充产品持久化数据。当前 GEOX Server 为 <code>${escapeHtml(payload.geox_base_url ?? packet.runtime_context.geox_base_url)}</code>。`;
+    answer.innerHTML = `没有使用工程夹具冒充产品持久化数据。当前 GEOX 服务地址为 <code>${escapeHtml(payload.geox_base_url ?? packet.runtime_context.geox_base_url)}</code>。`;
     objects.innerHTML = "";
     return;
   }
   renderTraceObjects(objects, payload.twin_trace);
   status.className = "status-line good-text";
-  status.textContent = `已连接 · 产品侧持久化数据 · 只读 · decision_cycle=${payload.decision_cycle_id}`;
+  status.textContent = `已连接 · 产品侧持久化数据 · 只读 · 决策周期=${payload.decision_cycle_id}`;
   answer.hidden = false;
-  answer.innerHTML = `<strong>持久化读取结果：</strong>${traceReadout(payload.twin_trace).html}<div class="hash-line">来源：现有 GEOX Server + Twin Kernel 持久化读模型；本 Demo 写入次数 0。</div>`;
+  answer.innerHTML = `<strong>持久化读取结果：</strong>${traceReadout(payload.twin_trace).html}<div class="hash-line">来源：现有 GEOX 服务 + Twin Kernel 持久化读模型；本 Demo 写入次数 0。</div>`;
 }
 
 async function loadConnectedData(packet, decisionCycleId = "") {
@@ -284,7 +284,7 @@ function renderMcftRuntimeEvidence(payload) {
     status.className = "status-line blocked-text";
     status.textContent = `未连接 · ${payload.error ?? "历史资格数据不可用"}`;
     answer.hidden = false;
-    answer.innerHTML = "系统没有回退到本地旧 Postgres，也没有把构建器 fixture 冒充真实持久化数据。只允许服务端读取白名单历史资格数据库；浏览器不会收到数据库连接串。";
+    answer.innerHTML = "系统没有回退到本地旧 Postgres，也没有把构建器工程夹具冒充真实持久化数据。只允许服务端读取白名单历史资格数据库；浏览器不会收到数据库连接串。";
     objects.innerHTML = "";
     return;
   }
@@ -301,7 +301,7 @@ function renderMcftRuntimeEvidence(payload) {
   const logicalTime = evidence.logical_time ?? tick.logical_time;
 
   status.className = "status-line good-text";
-  status.textContent = "已连接 · 历史持久化资格数据 · 只读 · 写入次数 0";
+  status.textContent = "已连接 · 历史持久化工程资格数据 · 只读 · 写入次数 0";
   answer.hidden = false;
   answer.innerHTML = `<strong>${escapeHtml(formatUtc(logicalTime))}，系统只认当时真正已经进入知识状态的证据。</strong> 土壤观测发生于 <strong>${escapeHtml(formatUtc(soil.observed_at))}</strong>，在 <strong>${escapeHtml(formatUtc(soil.available_to_runtime_at))}</strong> 已进入系统。当前时段精确降雨 / ET0 在边界还不可用，GEOX 没有等待、回填或假装已经知道，而是<strong>${escapeHtml(forcingZh(forcing.mode))}</strong>，并以<strong>${escapeHtml(healthZh(forcing.runtime_health))}</strong>继续仍被授权的计算。`;
 
@@ -372,17 +372,17 @@ async function loadPersistedTrace(packet, decisionCycleId) {
 
 function renderComponentMap() {
   const rows = [
-    ["Reality / Provider / Sensor → Evidence", "canonical facts + external evidence bindings", "Evidence chronology / source identity"],
-    ["As-of / Authority Boundary", "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md", "真实 availability / ingress chronology"],
-    ["Current-interval Forcing Selector", "apps/server/src/runtime/twin_runtime/external_formal_current_interval_forcing_selector_v1.ts", "本 Demo /api/demo 每次请求直接执行"],
-    ["Canonical Runtime Core / persistence", "apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts", "State / Forecast / Scenario / Health / Checkpoint"],
-    ["Canonical append-only store", "PostgreSQL facts", "historical Neon qualification read-only evidence"],
-    ["State", "twin_state_estimate_v1", "Neon persisted object + deterministic refs"],
-    ["Forecast", "twin_forecast_run_v1", "72-point persisted forecast in historical qualification"],
-    ["Scenario", "twin_scenario_set_v1", "persisted scenario set"],
-    ["Health / recovery", "twin_runtime_health_v1 + twin_runtime_checkpoint_v1", "degrade reason codes + continuation checkpoint"],
-    ["Product trace / operator readback", "apps/web/src/features/operator/pages/OperatorTwinTraceReadbackPage.tsx", "read-only decision trace"],
-    ["Future controlled execution", "NOT YET A COMMERCIAL CLAIM", "当前 Demo 在 Decision Boundary 前停止"],
+    ["现实数据 / 数据提供方 / 传感器 → 证据", "canonical facts + external evidence bindings", "证据时序 / 来源身份"],
+    ["时点 / 权威边界", "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md", "真实可用时间 / 进入系统时间"],
+    ["当前区间驱动选择器", "apps/server/src/runtime/twin_runtime/external_formal_current_interval_forcing_selector_v1.ts", "本 Demo 的 /api/demo 每次请求直接执行"],
+    ["规范运行时核心 / 持久化", "apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts", "状态 / 预测 / 情景 / 健康 / 检查点"],
+    ["规范追加式事实库", "PostgreSQL facts", "历史 Neon 工程资格只读证据"],
+    ["状态", "twin_state_estimate_v1", "Neon 持久化对象 + 确定性引用"],
+    ["预测", "twin_forecast_run_v1", "历史工程资格中的 72 点持久化预测"],
+    ["情景", "twin_scenario_set_v1", "持久化情景集合"],
+    ["健康 / 恢复", "twin_runtime_health_v1 + twin_runtime_checkpoint_v1", "降级原因码 + 继续运行检查点"],
+    ["产品追溯 / 操作员只读查看", "apps/web/src/features/operator/pages/OperatorTwinTraceReadbackPage.tsx", "只读决策追溯"],
+    ["未来受控执行", "NOT YET A COMMERCIAL CLAIM", "当前 Demo 在运行时资格边界前停止"],
   ];
   byId("componentMap").innerHTML = rows.map(([node, component, proof]) => `<tr><td><strong>${escapeHtml(node)}</strong></td><td><code>${escapeHtml(component)}</code></td><td>${escapeHtml(proof)}</td></tr>`).join("");
 }
@@ -403,9 +403,54 @@ function renderEconomics() {
   const direct = pumping + energy + labor + equipment;
   const hasCustomerRate = ["ecoPumpingRate", "ecoEnergy", "ecoLabor", "ecoEquipment"].some((id) => byId(id).value !== "");
   byId("economicsResult").innerHTML = `
-    <div><span>一次计划灌溉水量</span><strong>${volumeM3.toLocaleString(undefined, { maximumFractionDigits: 0 })} m³</strong><small>由面积 × 深度计算；面积/深度当前为 ASSUMPTION</small></div>
-    <div><span>可量化直接暴露</span><strong>${hasCustomerRate ? `$${direct.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "等待客户费率"}</strong><small>${hasCustomerRate ? "仅基于已填写 CUSTOMER_RATE_CARD；不是 ROI" : "填写泵送/能源/人工/设备费率后计算"}</small></div>
-    <div><span>泵送直接成本</span><strong>${byId("ecoPumpingRate").value !== "" ? `$${pumping.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "CUSTOMER DATA REQUIRED"}</strong><small>不使用 GEOX 工程 cost constants</small></div>`;
+    <div><span>一次计划灌溉水量</span><strong>${volumeM3.toLocaleString(undefined, { maximumFractionDigits: 0 })} m³</strong><small>由面积 × 深度计算；面积/深度当前为场景假设（ASSUMPTION）</small></div>
+    <div><span>可量化直接暴露</span><strong>${hasCustomerRate ? `$${direct.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "等待客户费率"}</strong><small>${hasCustomerRate ? "仅基于已填写客户费率（CUSTOMER_RATE_CARD）；不是 ROI" : "填写泵送/能源/人工/设备费率后计算"}</small></div>
+    <div><span>泵送直接成本</span><strong>${byId("ecoPumpingRate").value !== "" ? `$${pumping.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "需要客户数据"}</strong><small>不使用 GEOX 工程成本常量</small></div>`;
+}
+
+function evidenceClassZh(value) {
+  return ({
+    REAL_MACHINE_EXECUTION: "真实机器执行",
+    PERSISTED_ENGINEERING_QUALIFICATION: "持久化工程资格证据",
+    DEMO_SCENARIO_INPUT: "演示场景输入",
+    CUSTOMER_INPUT: "客户输入",
+    FORMAL_PRODUCTION_EVIDENCE: "Formal / 生产证据",
+  })[value] ?? String(value ?? "—");
+}
+
+function releaseStatusZh(value) {
+  return ({
+    PROVEN: "已证明",
+    DISCLOSED_INPUT: "已披露输入",
+    CUSTOMER_DATA_REQUIRED: "需要客户数据",
+    NOT_CLAIMED: "未声明",
+  })[value] ?? String(value ?? "—");
+}
+
+function releaseStatusClass(value) {
+  if (value === "PROVEN") return "good";
+  if (value === "DISCLOSED_INPUT" || value === "CUSTOMER_DATA_REQUIRED") return "degraded";
+  if (value === "NOT_CLAIMED") return "blocked";
+  return "muted";
+}
+
+function renderEvidenceReleaseManifest(packet) {
+  const manifest = packet.evidence_release_manifest;
+  if (!manifest || !Array.isArray(manifest.claims)) throw new Error("COMMERCIAL_EVIDENCE_RELEASE_MANIFEST_MISSING");
+  byId("releaseExactSha").textContent = packet.runtime_context.subject_sha;
+  byId("releaseExactSha").title = packet.runtime_context.subject_sha;
+  byId("releaseGateSummary").innerHTML = `<strong>付费试点销售：条件通过。</strong> 当前页面的“已证明”只在每一行标注的证据等级内成立；最终 MCFT/Formal 真实时间链、自动执行与客户 ROI 没有被借用或提前声明。`;
+  byId("releaseManifestRows").innerHTML = manifest.claims.map((claim) => {
+    const implementations = (claim.repo_implementation ?? []).map((item) => `<code>${escapeHtml(item)}</code>`).join("<br />");
+    const machineEvidence = (claim.machine_evidence ?? []).map((item) => `<code>${escapeHtml(item)}</code>`).join("<br />");
+    return `<tr>
+      <td><strong>${escapeHtml(claim.claim_zh)}</strong><br /><code>${escapeHtml(claim.claim_id)}</code></td>
+      <td>${implementations}</td>
+      <td>${machineEvidence}</td>
+      <td><span class="badge ${releaseStatusClass(claim.status)}">${escapeHtml(evidenceClassZh(claim.evidence_class))}</span><br /><code>${escapeHtml(claim.evidence_class)}</code></td>
+      <td><span class="badge ${releaseStatusClass(claim.status)}">${escapeHtml(releaseStatusZh(claim.status))}</span><br /><code>${escapeHtml(claim.status)}</code></td>
+    </tr>`;
+  }).join("");
 }
 
 function renderNonclaims(items) {
@@ -431,13 +476,14 @@ async function main() {
   byId("subjectSha").title = packet.runtime_context.subject_sha;
   byId("selectorId").textContent = packet.canonical_selector_contract_id;
 
-  renderFlow(byId("architectureFlow"), ["Provider / Sensor", "Raw / Canonical Evidence", "As-of / Authority Boundary", "Current-interval Forcing Selector", "Canonical Runtime Core", "State", "Forecast", "Scenario", "Decision Boundary", "Human Approval", "未来受控执行"]);
+  renderFlow(byId("architectureFlow"), ["数据提供方 / 传感器", "原始 / 规范证据", "时点 / 权威边界", "当前区间驱动选择器", "规范运行时核心", "状态", "预测", "情景", "运行时资格边界", "人工审批", "未来受控执行"]);
   renderFlow(byId("traceFlow"), ["证据", "状态", "预测", "情景", "运行资格"]);
   renderRuntimeComparison(packet);
   renderFailureCases(packet);
   renderBehavior(packet);
   renderComponentMap();
   renderEconomics();
+  renderEvidenceReleaseManifest(packet);
   renderNonclaims(packet.hard_nonclaims);
 
   const params = new URLSearchParams(window.location.search);
@@ -462,7 +508,7 @@ async function main() {
     if (!button) return;
     runInteractiveCase(button.dataset.caseId).catch((error) => {
       byId("interactiveCaseStatus").className = "status-line blocked-text";
-      byId("interactiveCaseStatus").textContent = `canonical selector 执行失败：${error.message}`;
+      byId("interactiveCaseStatus").textContent = `规范选择器执行失败：${error.message}`;
     });
   });
 
