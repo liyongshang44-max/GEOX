@@ -16,7 +16,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const CURRENT_CROP = /\b(corn|maize|43-96P)\b/i;
 const HYBRID = /\b43-96P\b/i;
 const OTHER_CROP = /\b(soybean|soybeans|wheat|barley|sorghum|bean|beans|alfalfa|canola|rye)\b/i;
-const TERMINATION = /\b(harvest(?:ed|ing)?|termination|terminate(?:d|s|ing)?|crop destruction|destroyed crop|crop failure|failed crop|abandonment|abandoned crop)\b/i;
+const TERMINATION = /\b(harvest(?:ed|ing)?\b(?!\s+international\b)|termination|terminate(?:d|s|ing)?|crop destruction|destroyed crop|crop failure|failed crop|abandonment|abandoned crop)\b/i;
 const SUPPORT_TYPES = new Set(CONFIG.transition_sweep.support_observation_types.map((x) => x.toLowerCase()));
 
 function assert(condition, code) {
@@ -158,6 +158,8 @@ async function main() {
   assert(CONFIG.transition_sweep.detail_field_contract.whole_page_body_semantic_classification_forbidden === true, 'T4R1_PERSISTENT_WHOLE_BODY_SEMANTICS_FORBIDDEN');
   assert(r1Explicit('all replications in the order of (5, 3, 4, 2, 1, and 6)'), 'T4R1_PERSISTENT_R1_ORDER_POSITIVE_CONTROL_FAILED');
   assert(!r1Explicit('T4R2 only'), 'T4R1_PERSISTENT_R2_NEGATIVE_CONTROL_FAILED');
+  assert(!TERMINATION.test('JD 7330 tractor and Harvest International planter'), 'T4R1_PERSISTENT_EQUIPMENT_BRAND_NEGATIVE_CONTROL_FAILED');
+  assert(TERMINATION.test('Corn was harvested from T4R1'), 'T4R1_PERSISTENT_HARVEST_POSITIVE_CONTROL_FAILED');
 
   const computedHorizonEnd = horizonEndIso();
   assert(computedHorizonEnd === CONFIG.horizon_policy.expected_horizon_end_utc, `T4R1_PERSISTENT_HORIZON_MISMATCH:${computedHorizonEnd}`);
