@@ -1,0 +1,99 @@
+name: mcft-cap-09-alternative-scope-rescue-v1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-alternative-scope-rescue-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ALTERNATIVE-SCOPE-RESCUE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.mjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-alternative-scope-rescue-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  alternative-scope-rescue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact rescue base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for KBS scope rescue
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Syntax-check rescue proof code
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.cjs
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.mjs
+
+      - name: Validate predeclared selection and governance boundary
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.cjs
+
+      - name: Execute live read-only alternative scope rescue
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.mjs
+
+      - name: Verify candidate-only fail-closed result contract
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.json', 'utf8'));
+          if (result.status !== 'PASS') throw new Error('ALTERNATIVE_SCOPE_LIVE_SCAN_PASS_REQUIRED');
+          if (result.subject_sha !== '${{ steps.authority.outputs.subject_sha }}') throw new Error('ALTERNATIVE_SCOPE_EXACT_HEAD_RESULT_REQUIRED');
+          if (!['ALTERNATIVE_SCOPE_CANDIDATE_DETECTED_REQUALIFICATION_REQUIRED','NO_ALTERNATIVE_SCOPE_CANDIDATE_CURRENTLY_ESTABLISHED'].includes(result.result)) throw new Error('ALTERNATIVE_SCOPE_TERMINAL_RESULT_INVALID');
+          if (result.selection_contract_locked_before_live_scan !== true || result.preferred_treatment_used !== false) throw new Error('ALTERNATIVE_SCOPE_PREDECLARED_SELECTION_REQUIRED');
+          if (result.selected_candidate && (result.selected_candidate.candidate_only_not_authority !== true || result.selected_candidate.alternative_scope_authority_created !== false)) throw new Error('ALTERNATIVE_SCOPE_CANDIDATE_NONCLAIM_REQUIRED');
+          if (result.alternative_scope_authority_created !== false || result.lifecycle_authority_created !== false || result.geometry_authority_created !== false || result.source_rebind_authority_created !== false) throw new Error('ALTERNATIVE_SCOPE_PREMATURE_AUTHORITY');
+          if (result.v4_qualification_store_opened !== false || result.database_write_count !== 0 || result.formal_execution_count !== '0/24') throw new Error('ALTERNATIVE_SCOPE_ZERO_WRITE_REQUIRED');
+          console.log(JSON.stringify({status:'PASS', result:result.result, eligible_candidate_count:result.provider_scan.eligible_candidate_count, selected_treatment:result.selected_candidate?.treatment ?? null}));
+
+      - name: Upload immutable metadata-only rescue proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-alternative-scope-rescue-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_GOVERNANCE_V1.json
+            acceptance-output/MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ALTERNATIVE-SCOPE-RESCUE-V1.json
+          if-no-files-found: error
+          retention-days: 90
