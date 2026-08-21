@@ -1,5 +1,5 @@
 // scripts/commercial_evidence/ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1.cjs
-// Purpose: prove the off-main Commercial Evidence Demo executes existing canonical Runtime code, exposes all six sales-evidence sections, and changes no production route registration.
+// Purpose: prove the off-main Commercial Evidence Demo executes existing canonical Runtime code, serves a real standalone HTTP demo, exposes all six sales-evidence sections, and changes no production route registration.
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -13,6 +13,7 @@ const files = {
   app: path.join(ROOT, "tools/commercial-evidence-demo/app.js"),
   style: path.join(ROOT, "tools/commercial-evidence-demo/styles.css"),
   selftest: path.join(ROOT, "tools/commercial-evidence-demo/selftest.ts"),
+  smoke: path.join(ROOT, "scripts/commercial_evidence/SMOKE_COMMERCIAL_EVIDENCE_DEMO_V1.mjs"),
   docs: path.join(ROOT, "docs/commercial/COMMERCIAL-EVIDENCE-DEMO-V1.md"),
 };
 
@@ -77,9 +78,7 @@ try {
 } catch {
   throw new Error("COMMERCIAL_EVIDENCE_DEMO_SELFTEST_NON_JSON_OUTPUT");
 }
-if (selftest.ok !== true || selftest.canonical_runtime_code_executed !== true) {
-  throw new Error("COMMERCIAL_EVIDENCE_DEMO_SELFTEST_NOT_PASS");
-}
+if (selftest.ok !== true || selftest.canonical_runtime_code_executed !== true) throw new Error("COMMERCIAL_EVIDENCE_DEMO_SELFTEST_NOT_PASS");
 if (selftest.provider_late_behavior !== "DEGRADE_AND_CONTINUE") throw new Error("COMMERCIAL_EVIDENCE_DEMO_PROVIDER_LATE_BEHAVIOR_DRIFT");
 if (selftest.source_conflict_behavior !== "FAIL_CLOSED") throw new Error("COMMERCIAL_EVIDENCE_DEMO_SOURCE_CONFLICT_BEHAVIOR_DRIFT");
 if (selftest.missing_evidence_behavior !== "FAIL_CLOSED") throw new Error("COMMERCIAL_EVIDENCE_DEMO_MISSING_EVIDENCE_BEHAVIOR_DRIFT");
@@ -125,6 +124,33 @@ if (!requiredTraceObjects.every((objectType) => derived[objectType] && derived[o
   throw new Error("COMMERCIAL_EVIDENCE_RUNTIME_VALUE_TRACE_OBJECT_CHAIN_INCOMPLETE");
 }
 
+const smokeRun = spawnSync(process.execPath, ["scripts/commercial_evidence/SMOKE_COMMERCIAL_EVIDENCE_DEMO_V1.mjs"], {
+  cwd: ROOT,
+  encoding: "utf8",
+  env: process.env,
+  timeout: 30_000,
+});
+if (smokeRun.status !== 0) {
+  process.stderr.write(smokeRun.stdout || "");
+  process.stderr.write(smokeRun.stderr || "");
+  throw new Error(`COMMERCIAL_EVIDENCE_DEMO_HTTP_SMOKE_FAILED:${smokeRun.status}:${smokeRun.signal ?? "NO_SIGNAL"}`);
+}
+let smoke;
+try {
+  smoke = JSON.parse(smokeRun.stdout.trim());
+} catch {
+  throw new Error("COMMERCIAL_EVIDENCE_DEMO_HTTP_SMOKE_NON_JSON_OUTPUT");
+}
+if (smoke.ok !== true
+  || smoke.standalone_server_started !== true
+  || smoke.healthz_passed !== true
+  || smoke.canonical_demo_endpoint_passed !== true
+  || smoke.runtime_value_trace_endpoint_passed !== true
+  || smoke.six_section_page_served !== true
+  || smoke.write_method_rejected !== true) {
+  throw new Error("COMMERCIAL_EVIDENCE_DEMO_HTTP_SMOKE_NOT_PASS");
+}
+
 console.log(JSON.stringify({
   ok: true,
   acceptance: "ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1",
@@ -139,6 +165,12 @@ console.log(JSON.stringify({
   runtime_value_trace_determinism_stable: runtimeTrace.determinism_stable,
   runtime_value_trace_forbidden_auto_writes_absent: runtimeTrace.forbidden_auto_writes_absent,
   standalone_microsite: true,
+  standalone_http_smoke_passed: true,
+  healthz_passed: smoke.healthz_passed,
+  canonical_demo_endpoint_passed: smoke.canonical_demo_endpoint_passed,
+  runtime_value_trace_endpoint_passed: smoke.runtime_value_trace_endpoint_passed,
+  six_section_page_served: smoke.six_section_page_served,
+  write_method_rejected: smoke.write_method_rejected,
   production_route_registration_changed: false,
   provider_request_count: 0,
   database_write_count: 0,
