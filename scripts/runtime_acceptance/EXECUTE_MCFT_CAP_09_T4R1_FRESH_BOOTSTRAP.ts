@@ -78,6 +78,21 @@ function buildSuccessorRunner(): string {
   return source;
 }
 
+function proveGeneratedRunnerCompiles(): void {
+  const generated = buildSuccessorRunner();
+  fs.writeFileSync(GENERATED_RUNNER, generated);
+  try {
+    execFileSync("pnpm", [
+      "exec", "tsc", "--noEmit", "--pretty", "false", "--skipLibCheck",
+      "--target", "ES2022", "--module", "NodeNext", "--moduleResolution", "NodeNext",
+      "--esModuleInterop", "--types", "node", GENERATED_RUNNER,
+    ], { stdio: "inherit", env: process.env });
+    console.log(JSON.stringify({ status: "PASS", static_adapter_proof: true, generated_runner_compiles: true, database_access: false, provider_access: false }));
+  } finally {
+    try { fs.unlinkSync(GENERATED_RUNNER); } catch {}
+  }
+}
+
 async function assertDatabaseIdentityAndT3Zero(pool: Pool, phase: string): Promise<void> {
   const identity = (await pool.query<{
     database_name: string;
@@ -95,6 +110,11 @@ async function assertDatabaseIdentityAndT3Zero(pool: Pool, phase: string): Promi
 }
 
 async function main(): Promise<void> {
+  if (process.env.MCFT_CAP09_T4R1_BOOTSTRAP_STATIC_ADAPTER_PROOF === "true") {
+    proveGeneratedRunnerCompiles();
+    return;
+  }
+
   const subjectSha = requiredEnv("GITHUB_SHA");
   assert.match(subjectSha, /^[0-9a-f]{40}$/, "T4R1_FRESH_BOOTSTRAP_EXACT_SHA_REQUIRED");
   assert.equal(process.env.GITHUB_REF, "refs/heads/main", "T4R1_FRESH_BOOTSTRAP_PROTECTED_MAIN_ONLY");
