@@ -4,6 +4,16 @@ Status: **OFF-MAIN COMMERCIAL DEMO — NOT PRODUCTION AUTHORITY**
 
 This is a standalone CEO-facing Commercial Evidence Demo. It packages the six requested evidence items without registering a new route in the GEOX production Server or Operator application and without modifying MCFT-CAP-09 authority, scheduler, persistence, provider, schema, or Formal state.
 
+The demo now has three deliberately separate evidence surfaces:
+
+```text
+Canonical Runtime causality proof
+Historical MCFT Runtime evidence from Neon
+Product Twin Kernel Decision Trace
+```
+
+They are not relabeled as one another.
+
 ## 1. One concrete problem
 
 GEOX prevents an agricultural decision system from treating evidence that was not actually knowable at decision time as if it had been known.
@@ -79,9 +89,60 @@ Every `/api/demo` request recomputes these cases through the canonical selector 
 
 ## 4. Complete Decision Trace
 
-The demo now provides two trace levels.
+The demo provides three trace levels with different authority boundaries.
 
-### 4.1 Default Runtime Value Trace — no database required
+### 4.1 Historical MCFT Runtime Evidence — Neon
+
+`GET /api/mcft-runtime-evidence` is a standalone Demo-server route that can read one explicitly allowlisted historical database:
+
+```text
+geox_mcft_cap09_s6_accel24t_am19_v3
+```
+
+Configuration is server-side only:
+
+```text
+COMMERCIAL_EVIDENCE_MCFT_READ_URL=<protected Neon PostgreSQL URL ending in /geox_mcft_cap09_s6_accel24t_am19_v3>
+```
+
+The browser never receives this connection string. The server rejects any other database name with `MCFT_DATABASE_NOT_ALLOWLISTED`, starts `BEGIN READ ONLY`, applies a short statement timeout, executes fixed SELECT statements only, and rolls the transaction back before closing the connection. No caller-supplied SQL, table, database, or write method is accepted.
+
+The read model exposes the latest persisted qualification chain:
+
+```text
+Evidence Window
+→ selected/rejected evidence chronology
+→ current-interval forcing authority
+→ State
+→ Forecast
+→ Scenario
+→ Runtime Health
+→ Checkpoint
+```
+
+This is **PERSISTED ENGINEERING QUALIFICATION** evidence: the runtime objects and facts were actually persisted in Neon. It is not production-live field data. The accelerated Amendment-19 weather / ET0 evidence in this database explicitly contains `ENGINEERING_FIXTURE_ONLY` and `NOT_FORMAL_EXTERNAL_EVIDENCE` limitations. Therefore the UI must retain all of these nonclaims:
+
+```text
+NOT_PRODUCTION_LIVE_DATA
+NOT_FORMAL_EXTERNAL_EVIDENCE_AS_A_WHOLE
+NOT_FINAL_MCFT_CAP09_FORMAL_O00_O23_CLOSURE
+ENGINEERING_FIXTURE_PRESENT_IN_ACCELERATED_QUALIFICATION
+```
+
+This database is historical and completed. The Demo must not read from or write to the current fresh/Formal databases used by the final wall-clock time-chain qualification.
+
+### 4.2 Connected Product Decision Trace — persisted GEOX read model
+
+When the local/controlled GEOX Server has eligible `decision_cycle_v1` data, the Demo calls:
+
+```text
+GET /api/v1/twin-kernel/operator-workflow/decision-cycles
+GET /api/v1/twin-kernel/traces/:decision_cycle_id
+```
+
+The microsite displays the persisted seven-object Product Twin Trace. If that product read model is unavailable, it shows `DISCONNECTED`; it does not substitute builder output and call it persisted data.
+
+### 4.3 Runtime Value Trace — no database required
 
 The standalone server executes the repository's existing:
 
@@ -101,11 +162,9 @@ field_state_snapshot_v1
 → decision_cycle_v1
 ```
 
-It runs the builder chain twice and requires a stable deterministic fingerprint. The microsite calls `/api/runtime-value-trace`, displays all seven real object IDs and determinism hashes, and summarizes the resulting State, 7-day Forecast, Scenario count, and Decision stage.
+It runs the builder chain twice and requires a stable deterministic fingerprint. This surface is an engineering proof and is not described as persisted production state.
 
-The trace objects are not embedded in `index.html` or `app.js`.
-
-### 4.2 Optional stronger proof — persisted readback
+### 4.4 Explicit persisted Product Trace readback
 
 When a real persisted `decision_cycle_id` is supplied, the microsite proxies the existing read-only endpoint:
 
@@ -154,11 +213,11 @@ The demo presents the governed behavior matrix:
 
 ```text
 exact evidence valid and available by T      → CONTINUE
-provider late + causal prior exists           → DEGRADE + CONTINUE
-State valid / Forecast prerequisite missing   → BLOCK FORECAST + CONTINUE STATE
-no causal current-interval forcing            → FAIL CLOSED
-source identity conflict                      → FAIL CLOSED
-late exact evidence later arrives             → APPEND FORWARD / NO RETROACTIVE REWRITE
+provider late + causal prior exists          → DEGRADE + CONTINUE
+State valid / Forecast prerequisite missing  → BLOCK FORECAST + CONTINUE STATE
+no causal current-interval forcing           → FAIL CLOSED
+source identity conflict                     → FAIL CLOSED
+late exact evidence later arrives            → APPEND FORWARD / NO RETROACTIVE REWRITE
 ```
 
 ## Run
@@ -175,7 +234,7 @@ Open:
 http://127.0.0.1:4177
 ```
 
-The default demo needs no database and no provider connection. It executes the pure Amendment-19 selector plus the existing Twin Kernel Runtime Value Trace builders.
+The canonical selector and builder trace need no database. The historical Neon panel stays safely disconnected until its server-side read URL is configured.
 
 Optional environment variables:
 
@@ -183,9 +242,12 @@ Optional environment variables:
 COMMERCIAL_EVIDENCE_DEMO_PORT=4177
 GEOX_BASE_URL=http://127.0.0.1:3001
 GEOX_OPERATOR_BASE_URL=http://127.0.0.1:5173
+COMMERCIAL_EVIDENCE_MCFT_READ_URL=<protected historical-v3 Neon URL>
 ```
 
-## Optional persisted trace preparation
+Do not place `COMMERCIAL_EVIDENCE_MCFT_READ_URL` in browser JavaScript, HTML, checked-in `.env` files, PR text, CI workflow literals, or logs.
+
+## Optional persisted Product Trace preparation
 
 Only use a controlled GEOX environment with the TK10 migrations and source-index rows prepared. Do not target a production database.
 
@@ -218,13 +280,16 @@ existing Twin Kernel Runtime Value Trace builders actually executed
 complete 7-object trace built
 determinism stable
 forbidden automatic writes absent
+historical Neon endpoint and allowlist guard present
+historical Neon transaction explicitly READ ONLY
+CI requires no Neon secret and tests safe disconnected behavior
 provider request count = 0
 database write count = 0
 canonical Runtime write count = 0
 Formal effect = false
 ```
 
-The PR-only workflow `.github/workflows/commercial-evidence-demo-v1.yml` runs this acceptance with read-only GitHub permissions and deliberately has no privileged Runtime trigger or secret/database/provider binding.
+The PR-only workflow `.github/workflows/commercial-evidence-demo-v1.yml` runs this acceptance with read-only GitHub permissions and deliberately has no privileged Runtime trigger or secret/database/provider binding. CI does not connect to Neon.
 
 ## Repository boundary
 
@@ -240,13 +305,15 @@ docs/commercial/**
 It does not modify:
 
 ```text
+protected main
 apps/server production route registration
 apps/web Operator route registration
 MCFT-CAP-09 authority documents
 scheduler / lease / fencing
 persistence schema
 provider adapters
-Formal database state
+current fresh/Formal database state
+final wall-clock time-chain qualification
 ```
 
 ## Hard nonclaims
@@ -255,6 +322,8 @@ Formal database state
 COMMERCIAL_DEMO_IS_NOT_PRODUCTION_RUNTIME_AUTHORITY
 CONTROLLED_DEMO_INPUT_IS_NOT_FORMAL_EXTERNAL_EVIDENCE
 CONTROLLED_RUNTIME_VALUE_TRACE_IS_NOT_PERSISTED_PRODUCTION_STATE
+HISTORICAL_NEON_QUALIFICATION_IS_NOT_PRODUCTION_LIVE_DATA
+HISTORICAL_NEON_QUALIFICATION_IS_NOT_FINAL_FORMAL_CLOSURE
 NO_MCFT_CAP09_COMPLETION_CLAIM
 NO_FORMAL_O00_O23_CLAIM
 NO_AUTONOMOUS_RECOMMENDATION_OR_DISPATCH
