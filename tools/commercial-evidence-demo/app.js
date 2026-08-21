@@ -28,6 +28,13 @@ function formatFractionPercent(value) {
   return Number.isFinite(number) ? `${(number * 100).toFixed(2)}%` : "—";
 }
 
+function normalizedKey(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 function actionClass(action) {
   if (action === "CONTINUE") return "good";
   if (action === "DEGRADE_AND_CONTINUE") return "degraded";
@@ -136,34 +143,34 @@ function renderFailureCases(packet) {
 
 function renderBehavior(packet) {
   const conditionLabels = {
-    "exact evidence valid and available by T": "证据完整，而且在决策时已经可用",
-    "provider late + causal prior exists": "关键数据晚到，但已有合规先验",
-    "State valid / Forecast prerequisite missing": "状态仍有效，但预测前提不足",
-    "no causal current-interval forcing": "当前时段没有任何合规驱动证据",
+    "exact evidence valid and available by t": "证据完整，而且在决策时已经可用",
+    "provider late causal prior exists": "关键数据晚到，但已有合规先验",
+    "state valid but forecast prerequisite missing": "状态仍有效，但预测前提不足",
+    "no causal current interval forcing": "当前时段没有任何合规驱动证据",
     "source identity conflict": "数据来源身份发生冲突",
     "late exact evidence later arrives": "精确证据在决策之后才到达",
   };
   const behaviorLabels = {
-    CONTINUE: "继续",
-    "DEGRADE + CONTINUE": "降级继续",
-    "BLOCK FORECAST + CONTINUE STATE": "保留状态，停止预测",
-    "FAIL CLOSED": "拒绝继续",
-    "APPEND FORWARD": "只向后补记",
+    "continue": "继续",
+    "degrade continue": "降级继续",
+    "block forecast continue state": "保留状态，停止预测",
+    "fail closed": "拒绝继续",
+    "append forward": "只向后补记",
   };
   const claimLabels = {
-    "HEALTHY / OBSERVED+ESTIMATED": "证据资格完整，正常计算",
-    "ASSUMED forcing; no relabel; no wait": "明确说明使用了假设值，不改标签，也不等待迟到数据",
-    "Posterior state, no Scenario": "保留合法状态，但不生成没有依据的后续情景",
-    "No invented State forcing": "不编造当前时段输入",
-    "No winner guessed": "不猜哪个冲突来源是真的",
-    "No retroactive tick rewrite": "新证据只向后记录，不篡改过去那次决策",
+    "healthy observed estimated": "证据资格完整，正常计算",
+    "assumed forcing no relabel no wait": "明确说明使用了假设值，不改标签，也不等待迟到数据",
+    "0 forecast points no scenario": "保留合法状态，但不生成没有依据的预测或情景",
+    "no invented state forcing": "不编造当前时段输入",
+    "no winner guessed": "不猜哪个冲突来源是真的",
+    "no retroactive tick rewrite": "新证据只向后记录，不篡改过去那次决策",
   };
 
   byId("behaviorMatrix").innerHTML = packet.behavior_matrix.map((row) => `
     <tr title="${escapeHtml(row.condition)} · ${escapeHtml(row.behavior)} · ${escapeHtml(row.claim)}">
-      <td>${escapeHtml(conditionLabels[row.condition] ?? row.condition)}</td>
-      <td><strong>${escapeHtml(behaviorLabels[row.behavior] ?? row.behavior)}</strong></td>
-      <td>${escapeHtml(claimLabels[row.claim] ?? row.claim)}</td>
+      <td>${escapeHtml(conditionLabels[normalizedKey(row.condition)] ?? "证据条件受限")}</td>
+      <td><strong>${escapeHtml(behaviorLabels[normalizedKey(row.behavior)] ?? "按规则受控处理")}</strong></td>
+      <td>${escapeHtml(claimLabels[normalizedKey(row.claim)] ?? "只声明证据实际支持的结果")}</td>
     </tr>
   `).join("");
 }
