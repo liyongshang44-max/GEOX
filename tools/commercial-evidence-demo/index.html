@@ -9,7 +9,7 @@
 <body>
   <header class="topbar">
     <div class="brand"><span class="brand-mark"></span><span>GEOX</span></div>
-    <div class="top-meta"><span class="pill">客户发现 / 付费试点前证据</span><span class="pill muted">只读 · 独立分支</span></div>
+    <div class="top-meta"><span class="pill">付费试点销售 · 条件通过</span><span class="pill muted">只读 · 独立分支 · 非生产权威</span></div>
   </header>
 
   <main class="shell">
@@ -32,63 +32,63 @@
       <a href="#problem">1. 灌溉决策</a>
       <a href="#runtime-demo">2. 两个看似相同的答案</a>
       <a href="#decision-trace">3. 真实运行证据</a>
-      <a href="#behavior">4. 风险与边界</a>
+      <a href="#behavior">4. 风险、证据等级与边界</a>
     </nav>
 
     <section id="problem" class="panel core-panel" data-section="1">
       <div class="section-heading"><span>01</span><div><p class="eyebrow">一个真实农业决策场景</p><h2>今晚原计划灌溉 20 mm，明天可能下雨：现在应该灌、推迟，还是暂不判断？</h2></div></div>
       <div class="decision-card">
         <div class="decision-card-main">
-          <p class="eyebrow">FIELD A · 决策时刻 19:00</p>
-          <h3>灌溉 Decision Card</h3>
+          <p class="eyebrow">田块 A · 决策时刻 19:00</p>
+          <h3>灌溉决策卡</h3>
           <div class="decision-facts">
-            <span><b>计划灌溉</b> 20 mm <em>ASSUMPTION</em></span>
-            <span><b>天气预报</b> 明天降雨 25 mm <em>ASSUMPTION</em></span>
-            <span><b>候选动作</b> IRRIGATE / DELAY / ABSTAIN</span>
+            <span><b>计划灌溉</b> 20 mm <em>场景假设（ASSUMPTION）</em></span>
+            <span><b>天气预报</b> 明天降雨 25 mm <em>场景假设（ASSUMPTION）</em></span>
+            <span><b>候选动作</b> 灌溉 / 推迟 / 暂不判断 <code>IRRIGATE / DELAY / ABSTAIN</code></span>
           </div>
         </div>
         <div class="decision-question">
           <p>客户最先会问：“25 mm 雨，那是不是应该取消今晚灌溉？”</p>
-          <strong>GEOX 先问另一个问题：这份 25 mm forecast，在 19:00 当时有没有资格被使用？</strong>
+          <strong>GEOX 先问另一个问题：这份 25 mm 预报，在 19:00 当时有没有资格被使用？</strong>
         </div>
       </div>
       <div class="problem-grid compact-statements">
-        <article class="statement danger"><h3>只看 forecast 内容</h3><p>看到“明天 25 mm”就直接改变灌溉计划。如果这份 forecast 其实到 19:17 才发布，19:00 的决策根本不可能知道它。</p></article>
-        <article class="statement safe"><h3>GEOX</h3><p>同时检查 event time、issued/available/ingested chronology、source identity、质量和 authority。决策之后才出现的 forecast，不能被回填成 19:00 已知。</p></article>
+        <article class="statement danger"><h3>只看预报内容</h3><p>看到“明天 25 mm”就直接改变灌溉计划。如果这份预报其实到 19:17 才发布，19:00 的决策根本不可能知道它。</p></article>
+        <article class="statement safe"><h3>GEOX</h3><p>同时检查事件时间、发布/可用/入库时序、来源身份、质量和权威边界。决策之后才出现的预报，不能被回填成 19:00 已知。</p></article>
       </div>
-      <div class="callout executive-callout"><strong>重要边界：</strong>这个页面不在替客户给出 IRRIGATE / DELAY 的农艺推荐。20 mm 与 25 mm 是用来解释证据时序问题的 <strong>ASSUMPTION</strong>。真正的农艺决策仍需要 root-zone depletion、crop stage、forecast timing/amount、system capacity 等经授权输入。</div>
+      <div class="callout executive-callout"><strong>重要边界：</strong>这个页面不在替客户给出灌溉或推迟的农艺推荐。20 mm 与 25 mm 是用来解释证据时序问题的<strong>场景假设（ASSUMPTION）</strong>。真正的农艺决策仍需要根区耗水、作物阶段、降雨时机/雨量、灌溉系统能力等经授权输入。</div>
     </section>
 
     <section id="runtime-demo" class="panel core-panel proof-panel" data-section="3">
-      <div class="section-heading"><span>02</span><div><p class="eyebrow">杀手级 A/B 对比</p><h2>两个答案表面完全一样，只改变 forecast 真正进入系统的时间。</h2></div></div>
+      <div class="section-heading"><span>02</span><div><p class="eyebrow">A/B 对比</p><h2>两个答案表面完全一样，只改变预报真正进入系统的时间。</h2></div></div>
       <div class="ab-decision-grid">
         <article class="ab-card eligible">
-          <p class="eyebrow">CASE A</p>
+          <p class="eyebrow">案例 A</p>
           <h3>19:00 做灌溉决策</h3>
           <div class="big-number">明天降雨 25 mm</div>
-          <dl><div><dt>forecast available_at</dt><dd>18:43</dd></div><div><dt>19:00 时是否已知</dt><dd><span class="badge good">ELIGIBLE · 可以使用</span></dd></div></dl>
+          <dl><div><dt>预报真正可用时间 <code>available_at</code></dt><dd>18:43</dd></div><div><dt>19:00 时是否已知</dt><dd><span class="badge good" title="ELIGIBLE · 可以使用">可以使用 <code>ELIGIBLE</code></span></dd></div></dl>
         </article>
         <article class="ab-card ineligible">
-          <p class="eyebrow">CASE B</p>
+          <p class="eyebrow">案例 B</p>
           <h3>19:00 做灌溉决策</h3>
           <div class="big-number">明天降雨 25 mm</div>
-          <dl><div><dt>forecast available_at</dt><dd>19:17</dd></div><div><dt>19:00 时是否已知</dt><dd><span class="badge blocked">INELIGIBLE · 不得回填</span></dd></div></dl>
+          <dl><div><dt>预报真正可用时间 <code>available_at</code></dt><dd>19:17</dd></div><div><dt>19:00 时是否已知</dt><dd><span class="badge blocked" title="INELIGIBLE · 不得回填">不得回填 <code>INELIGIBLE</code></span></dd></div></dl>
         </article>
       </div>
-      <div class="callout executive-callout"><strong>销售人员只需要指出这一处：</strong>25 mm 没变，决策时间没变，唯一变化是“什么时候真正可知”。CASE B 的数据即使后来完全正确，也不能用来证明 19:00 的决定当时是合理的。</div>
+      <div class="callout executive-callout"><strong>销售人员只需要指出这一处：</strong>25 mm 没变，决策时间没变，唯一变化是“什么时候真正可知”。案例 B 的数据即使后来完全正确，也不能用来证明 19:00 的决定当时是合理的。</div>
 
       <div class="runtime-lab">
         <div class="runtime-lab-heading">
-          <div><p class="eyebrow">真实 canonical selector · 每次点击都重新执行</p><h3>让客户自己点四种证据状态</h3></div>
-          <span class="pill muted">只读 · 0 provider request · 0 database write</span>
+          <div><p class="eyebrow">真实规范选择器 · 每次点击都重新执行</p><h3>让客户自己点四种证据状态</h3></div>
+          <span class="pill muted">只读 · 0 次数据提供方请求 · 0 次数据库写入</span>
         </div>
         <div class="case-buttons" id="runtimeCaseButtons">
-          <button type="button" data-case-id="healthy_exact_provider_pair">NORMAL</button>
-          <button type="button" data-case-id="provider_late">PROVIDER LATE</button>
-          <button type="button" data-case-id="source_conflict">SOURCE CONFLICT</button>
-          <button type="button" data-case-id="missing_evidence">MISSING EVIDENCE</button>
+          <button type="button" data-case-id="healthy_exact_provider_pair" aria-label="NORMAL">正常</button>
+          <button type="button" data-case-id="provider_late" aria-label="PROVIDER LATE">数据晚到</button>
+          <button type="button" data-case-id="source_conflict" aria-label="SOURCE CONFLICT">来源冲突</button>
+          <button type="button" data-case-id="missing_evidence" aria-label="MISSING EVIDENCE">证据缺失</button>
         </div>
-        <div id="interactiveCaseStatus" class="status-line muted">选择一个案例，Demo 服务会重新执行仓库现有 canonical selector。</div>
+        <div id="interactiveCaseStatus" class="status-line muted">选择一个案例，Demo 服务会重新执行仓库现有规范选择器。</div>
         <div id="interactiveCaseResult" class="interactive-result"></div>
         <details class="machine-proof-details">
           <summary>查看本次机器证据</summary>
@@ -97,7 +97,7 @@
       </div>
 
       <details class="engineering-details compact-engineering">
-        <summary><span>查看 canonical A/B 技术实验</span><small>相同 rainfall/ET0 payload · 只改变 availability</small></summary>
+        <summary><span>查看规范 A/B 技术实验</span><small>相同 rainfall/ET0 payload · 只改变 availability</small></summary>
         <div class="engineering-details-body">
           <div class="comparison-table-wrap flagship-table">
             <table class="comparison-table">
@@ -115,7 +115,7 @@
       <div id="traceFlow" class="flow compact"></div>
 
       <div class="trace-loader primary-evidence-loader">
-        <p class="eyebrow">历史持久化资格数据 · Neon · READ ONLY</p>
+        <p class="eyebrow">历史持久化工程资格数据 · Neon · 只读</p>
         <h3>系统在决策当时，究竟真正知道什么</h3>
         <p class="footnote">下面来自已完成的一次历史 MCFT 工程资格运行。Demo 只读查询 Neon；其中部分天气/ET0 为 accelerated engineering fixture，因此不会被包装成生产实时数据或最终 Formal closure。</p>
         <div class="input-row"><button id="refreshMcftRuntimeEvidence" type="button">刷新真实运行证据</button></div>
@@ -139,7 +139,7 @@
         <div class="engineering-details-body">
           <div class="trace-loader">
             <p class="eyebrow">产品侧持久化决策链</p>
-            <h3>产品 Decision Cycle 与完整 Twin Trace</h3>
+            <h3>产品决策周期与完整 Twin Trace</h3>
             <p class="footnote">Product Twin Kernel 与上面的 MCFT Runtime Evidence 是两个不同证据面。本地产品数据库无符合条件 decision cycle 时会明确显示未连接，不用 fixture 冒充持久化数据。</p>
             <div class="input-row"><button id="refreshConnectedData" type="button">刷新产品决策链</button></div>
           </div>
@@ -158,8 +158,8 @@
 
           <div class="trace-loader persisted-loader">
             <p class="eyebrow">指定持久化记录</p>
-            <h3>按 decision_cycle_id 读取真实持久化决策链</h3>
-            <label for="decisionCycleId">decision_cycle_id</label>
+            <h3>按 <code>decision_cycle_id</code> 读取真实持久化决策链</h3>
+            <label for="decisionCycleId">决策周期 ID <code>decision_cycle_id</code></label>
             <div class="input-row">
               <input id="decisionCycleId" placeholder="例如 dc_..." autocomplete="off" />
               <button id="loadTraceButton" type="button">读取决策链</button>
@@ -183,23 +183,52 @@
       </div>
 
       <div class="economics-panel">
-        <div class="economics-heading"><div><p class="eyebrow">错误决策暴露 · 不是 ROI 声明</p><h3>如果因为证据时序错误而错误执行/取消一次灌溉，直接暴露是多少？</h3></div><span class="badge degraded">CUSTOMER DATA REQUIRED</span></div>
+        <div class="economics-heading"><div><p class="eyebrow">错误决策暴露 · 不是 ROI 声明</p><h3>如果因为证据时序错误而错误执行/取消一次灌溉，直接暴露是多少？</h3></div><span class="badge degraded">需要客户数据 <code>CUSTOMER DATA REQUIRED</code></span></div>
         <div class="economics-grid">
-          <label>田块面积 ha <span class="source-tag assumption">ASSUMPTION</span><input id="ecoAreaHa" type="number" min="0" step="1" value="120" /></label>
-          <label>计划灌溉 mm <span class="source-tag assumption">ASSUMPTION</span><input id="ecoIrrigationMm" type="number" min="0" step="0.1" value="20" /></label>
-          <label>泵送费 $ / mm / ha <span class="source-tag customer">CUSTOMER_RATE_CARD</span><input id="ecoPumpingRate" type="number" min="0" step="0.01" placeholder="客户填写" /></label>
-          <label>能源 $ <span class="source-tag customer">CUSTOMER_RATE_CARD</span><input id="ecoEnergy" type="number" min="0" step="1" placeholder="客户填写" /></label>
-          <label>人工 $ <span class="source-tag customer">CUSTOMER_RATE_CARD</span><input id="ecoLabor" type="number" min="0" step="1" placeholder="客户填写" /></label>
-          <label>设备 $ <span class="source-tag customer">CUSTOMER_RATE_CARD</span><input id="ecoEquipment" type="number" min="0" step="1" placeholder="客户填写" /></label>
+          <label>田块面积 ha <span class="source-tag assumption">场景假设</span><input id="ecoAreaHa" type="number" min="0" step="1" value="120" /></label>
+          <label>计划灌溉 mm <span class="source-tag assumption">场景假设</span><input id="ecoIrrigationMm" type="number" min="0" step="0.1" value="20" /></label>
+          <label>泵送费 $ / mm / ha <span class="source-tag customer">客户费率</span><input id="ecoPumpingRate" type="number" min="0" step="0.01" placeholder="客户填写" /></label>
+          <label>能源 $ <span class="source-tag customer">客户费率</span><input id="ecoEnergy" type="number" min="0" step="1" placeholder="客户填写" /></label>
+          <label>人工 $ <span class="source-tag customer">客户费率</span><input id="ecoLabor" type="number" min="0" step="1" placeholder="客户填写" /></label>
+          <label>设备 $ <span class="source-tag customer">客户费率</span><input id="ecoEquipment" type="number" min="0" step="1" placeholder="客户填写" /></label>
         </div>
         <div id="economicsResult" class="economics-result"></div>
-        <div class="economics-unknowns"><span>潜在产量暴露 <b>CUSTOMER DATA REQUIRED</b></span><span>品质暴露 <b>CUSTOMER DATA REQUIRED</b></span><span>结论 <b>NOT_PROVEN_CUSTOMER_ROI</b></span></div>
+        <div class="economics-unknowns"><span>潜在产量暴露 <b>需要客户数据</b></span><span>品质暴露 <b>需要客户数据</b></span><span>结论 <b>尚未证明客户 ROI</b> <code>NOT_PROVEN_CUSTOMER_ROI</code></span></div>
         <details class="boundary-details"><summary>来源标签规则</summary><p class="footnote"><code>MEASURED</code> = 实测；<code>CUSTOMER_RATE_CARD</code> = 客户费率；<code>AGRONOMIC_MODEL</code> = 经授权农艺模型；<code>EXTERNAL_BENCHMARK</code> = 外部基准；<code>ASSUMPTION</code> = 场景假设。本 Demo 不把仓库工程 cost constants 当作客户 ROI authority。</p></details>
       </div>
 
+      <div class="economics-panel">
+        <div class="economics-heading"><div><p class="eyebrow">商业证据发布门</p><h3>五项最终验收：从页面一路点到真实代码和机器证据</h3></div><span class="badge good">付费试点销售 · 条件通过</span></div>
+        <div id="releaseGateSummary" class="callout executive-callout"></div>
+        <div class="comparison-table-wrap">
+          <table class="comparison-table">
+            <thead><tr><th>发布门</th><th>当前证据</th></tr></thead>
+            <tbody>
+              <tr><td><strong>1. 可复现启动</strong></td><td><code>pnpm exec tsx tools/commercial-evidence-demo/server.ts</code> → <code>http://127.0.0.1:4177</code></td></tr>
+              <tr><td><strong>2. 精确代码版本</strong></td><td><code id="releaseExactSha">读取中</code>（来自当前 checkout 的 <code>git rev-parse HEAD</code>）</td></tr>
+              <tr><td><strong>3. 真实机器案例</strong></td><td><code>GET /api/demo</code>；四个案例每次点击重新执行规范选择器</td></tr>
+              <tr><td><strong>4. 真实持久化运行证据</strong></td><td><code>GET /api/mcft-runtime-evidence</code>；历史 Neon 工程资格数据，只读白名单</td></tr>
+              <tr><td><strong>5. 声明 → repo / API → 证据等级</strong></td><td>见下方“逐条声明证据映射”，同一份机器可读 manifest 也包含在 <code>GET /api/demo</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="economics-panel">
+        <div class="economics-heading"><div><p class="eyebrow">逐条声明证据映射</p><h3>每一句“已证明”都必须说明：证明到哪一层。</h3></div><span class="badge degraded">证据等级不可混用</span></div>
+        <p class="footnote"><strong>本页“已证明”只在对应证据等级内成立。</strong>真实机器执行 ≠ 持久化工程资格 ≠ 最终 Formal / 生产证据。20 mm / 25 mm 是演示场景输入；客户费率、产量、品质是客户输入；独立 MCFT/Formal 时间链没有被本 Demo 借来提前声明。</p>
+        <div class="comparison-table-wrap">
+          <table class="comparison-table component-map">
+            <thead><tr><th>Demo 声明</th><th>真实 repo / runtime 实现</th><th>机器证据</th><th>证据等级</th><th>状态</th></tr></thead>
+            <tbody id="releaseManifestRows"></tbody>
+          </table>
+        </div>
+        <details class="boundary-details"><summary>五种证据等级</summary><p class="footnote"><code>REAL_MACHINE_EXECUTION</code> = 真实机器执行；<code>PERSISTED_ENGINEERING_QUALIFICATION</code> = 持久化工程资格证据；<code>DEMO_SCENARIO_INPUT</code> = 演示场景输入；<code>CUSTOMER_INPUT</code> = 客户输入；<code>FORMAL_PRODUCTION_EVIDENCE</code> = 独立 Formal / 生产证据。</p></details>
+      </div>
+
       <div class="capability-grid">
-        <article class="capability-card proven"><p class="eyebrow">PROVEN NOW · 当前已证明</p><ul><li>证据 chronology / as-of 边界</li><li>State propagation</li><li>Forecast 与 Scenario 链</li><li>Runtime qualification boundary</li><li>provenance / trace</li><li>degrade / fail-closed behavior</li></ul></article>
-        <article class="capability-card not-yet"><p class="eyebrow">NOT YET A COMMERCIAL CLAIM</p><ul><li>自动灌溉控制</li><li>无人值守现场执行</li><li>生产资格化的作物推荐</li><li>已证明的客户 ROI</li></ul></article>
+        <article class="capability-card proven" title="PROVEN NOW · 当前已证明"><p class="eyebrow">当前已证明 · 仅限标注证据等级</p><ul><li>证据时序 / as-of 边界</li><li>状态传播</li><li>预测与情景链</li><li>运行时资格边界</li><li>来源 / 追溯链</li><li>降级 / fail-closed 行为</li></ul></article>
+        <article class="capability-card not-yet"><p class="eyebrow"><span>当前不作商业声明</span> <code>NOT YET A COMMERCIAL CLAIM</code></p><ul><li>自动灌溉控制</li><li>无人值守现场执行</li><li>生产资格化的作物推荐</li><li>已证明的客户 ROI</li><li>真实 24 小时 Stage 1B / Formal 完成</li></ul></article>
       </div>
 
       <div class="commercial-meaning ceo-close">
@@ -212,33 +241,33 @@
       <summary><span>工程证据附录</span><small>真实架构映射 · 确定性失败案例 · 页面到 repo component</small></summary>
       <div class="engineering-details-body">
         <section id="architecture" class="panel secondary-panel" data-section="2">
-          <div class="section-heading appendix-heading"><span>A</span><div><p class="eyebrow">真实系统架构 · 只展示当前可核验核心</p><h2>从 Provider / Sensor 到 Runtime qualification boundary</h2></div></div>
-          <div id="verifiedArchitectureFlow" class="flow architecture-flow" aria-label="verified current runtime architecture">
-            <div class="flow-node"><span class="flow-index">01</span><strong>Provider / Sensor</strong></div><span class="flow-arrow">→</span>
-            <div class="flow-node"><span class="flow-index">02</span><strong>Raw / Canonical Evidence</strong></div><span class="flow-arrow">→</span>
-            <div class="flow-node"><span class="flow-index">03</span><strong>As-of / Authority Boundary</strong></div><span class="flow-arrow">→</span>
-            <div class="flow-node"><span class="flow-index">04</span><strong>Current-interval Forcing Selector</strong></div><span class="flow-arrow">→</span>
-            <div class="flow-node"><span class="flow-index">05</span><strong>Canonical Runtime Core</strong></div><span class="flow-arrow">→</span>
-            <div class="flow-node"><span class="flow-index">06</span><strong>State</strong></div><span class="flow-arrow">→</span>
-            <div class="flow-node"><span class="flow-index">07</span><strong>Forecast</strong></div><span class="flow-arrow">→</span>
-            <div class="flow-node"><span class="flow-index">08</span><strong>Scenario</strong></div><span class="flow-arrow">→</span>
-            <div class="flow-node"><span class="flow-index">09</span><strong>Runtime qualification boundary</strong></div>
+          <div class="section-heading appendix-heading"><span>A</span><div><p class="eyebrow">真实系统架构 · 只展示当前可核验核心</p><h2>从数据提供方 / 传感器到运行时资格边界</h2></div></div>
+          <div id="verifiedArchitectureFlow" class="flow architecture-flow" aria-label="当前已核验运行时架构" title="Runtime qualification boundary">
+            <div class="flow-node"><span class="flow-index">01</span><strong>数据提供方 / 传感器</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">02</span><strong>原始 / 规范证据</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">03</span><strong>时点 / 权威边界</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">04</span><strong>当前区间驱动选择器</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">05</span><strong>规范运行时核心</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">06</span><strong>状态</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">07</span><strong>预测</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">08</span><strong>情景</strong></div><span class="flow-arrow">→</span>
+            <div class="flow-node"><span class="flow-index">09</span><strong>运行时资格边界</strong></div>
           </div>
           <div id="architectureFlow" class="flow architecture-flow" hidden aria-hidden="true"></div>
           <div class="architecture-sidecars">
-            <span><b>Persistence</b> PostgreSQL <code>facts</code> + canonical projections</span>
-            <span><b>Scheduler</b> <code>twin_shadow_online_scheduler_slot_v1</code></span>
-            <span><b>Health / recovery</b> <code>twin_runtime_health_v1</code> + <code>twin_runtime_checkpoint_v1</code></span>
-            <span><b>Trace / provenance</b> refs + determinism hash + Twin Trace</span>
-            <span><b>Lease / fencing</b> 当前 MCFT qualification governance；本 Demo 不调用、不修改，精确文件路径不在此虚构</span>
-            <span><b>FUTURE GOVERNED STAGE</b> Human Approval → controlled execution · <code>NOT CURRENT VERIFIED CORE</code> · <code>NOT YET A COMMERCIAL CLAIM</code></span>
+            <span><b>持久化</b> PostgreSQL <code>facts</code> + canonical projections</span>
+            <span><b>调度</b> <code>twin_shadow_online_scheduler_slot_v1</code></span>
+            <span><b>健康 / 恢复</b> <code>twin_runtime_health_v1</code> + <code>twin_runtime_checkpoint_v1</code></span>
+            <span><b>追溯 / 来源</b> refs + determinism hash + Twin Trace</span>
+            <span><b>租约 / 栅栏</b> 当前 MCFT qualification governance；本 Demo 不调用、不修改，精确文件路径不在此虚构</span>
+            <span title="FUTURE GOVERNED STAGE"><b>未来受治理阶段</b> 人工审批 → 受控执行 · <code>NOT CURRENT VERIFIED CORE</code> · <code>NOT YET A COMMERCIAL CLAIM</code></span>
           </div>
           <div class="component-map-wrap">
             <table class="comparison-table component-map">
               <thead><tr><th>页面 / 架构节点</th><th>真实 repo / runtime component</th><th>证明方式</th></tr></thead>
               <tbody>
-                <tr><td><strong>Runtime qualification boundary</strong></td><td><code>twin_runtime_health_v1 + twin_runtime_checkpoint_v1 + State use_eligibility</code></td><td>qualified / degraded / blocked 与 continuation 边界</td></tr>
-                <tr><td><strong>Human Approval / controlled execution</strong></td><td><code>NOT CURRENT VERIFIED CORE</code></td><td>未来治理阶段；本 Demo 不把它表示成当前已核验 repo component</td></tr>
+                <tr><td><strong>运行时资格边界</strong></td><td><code>twin_runtime_health_v1 + twin_runtime_checkpoint_v1 + State use_eligibility</code></td><td>qualified / degraded / blocked 与 continuation 边界</td></tr>
+                <tr><td><strong>人工审批 / 受控执行</strong></td><td><code>NOT CURRENT VERIFIED CORE</code></td><td title="未来治理阶段；本 Demo 不把它表示成当前已核验 repo component">未来治理阶段；本 Demo 不把它表示成当前已核验 repo component</td></tr>
               </tbody>
               <tbody id="componentMap"></tbody>
             </table>
@@ -255,7 +284,7 @@
     <section class="panel boundary-panel evidence-boundary">
       <p class="eyebrow">证据边界</p>
       <h2>这条证明到哪里为止</h2>
-      <p class="boundary-copy"><strong>PROVEN NOW：</strong>GEOX 已经能记录证据 chronology、传播 State、产生 Forecast/Scenario，并证明一个 Runtime output 当时用了什么证据以及为什么 qualified / degraded / blocked。<br /><strong>NOT YET：</strong>这不是安全自动灌溉控制、无人值守现场执行、生产资格化作物推荐，也不是已证明客户 ROI。最终生产 Formal O00–O23 资格仍由独立真实时间链治理。</p>
+      <p class="boundary-copy"><strong>当前已证明：</strong>GEOX 已经能记录证据时序、传播状态、产生预测/情景，并证明一个运行时输出当时用了什么证据以及为什么通过资格、明确降级或被阻断；每项结论只在上方标注的证据等级内成立。<br /><strong>当前未声明：</strong>这不是安全自动灌溉控制、无人值守现场执行、生产资格化作物推荐，也不是已证明客户 ROI。最终生产 Formal O00–O23 资格仍由独立真实时间链治理。</p>
       <details class="boundary-details">
         <summary>查看精确 machine-readable 边界声明</summary>
         <ul id="nonclaims" class="nonclaims"></ul>
