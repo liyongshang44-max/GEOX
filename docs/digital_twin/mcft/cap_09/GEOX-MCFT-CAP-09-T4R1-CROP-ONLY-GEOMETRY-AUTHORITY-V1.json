@@ -1,0 +1,143 @@
+{
+  "schema_version": "geox_mcft_cap09_t4r1_crop_only_geometry_authority_v1",
+  "record_status": "T4R1_CROP_ONLY_GEOMETRY_AUTHORITY_CANDIDATE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier": "T4R1_CROP_ONLY_GEOMETRY_AUTHORITY",
+  "exact_base_protected_main": "60b15c11aaaf9772083af6451b24b7bfb1e68fc9",
+  "purpose": "DERIVE_A_CONSERVATIVE_CROP_ONLY_POLYGON_INSIDE_PROVIDER_T4R1_MAIN_WITHOUT_INVENTING_PRAIRIE_STRIP_GEOMETRY",
+  "authority_predecessors": {
+    "geometry_contract": {
+      "path": "docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING-CONTRACT.md",
+      "blob_sha": "e5d151665b1137af87bfab509e874abd1c8d2ec8"
+    },
+    "geometry_canonicalization": {
+      "path": "docs/digital_twin/mcft/GEOX-MCFT-00-GEOMETRY-CANONICALIZATION.md",
+      "blob_sha": "2f413d43c11aeff79dcf3e4e8069be426f71f018"
+    },
+    "geometry_helper": {
+      "path": "scripts/governance_acceptance/mcft00/MCFT00_GEOMETRY_AND_HASH.cjs",
+      "blob_sha": "ad333b91183c34140766c88b3eab6c88a5638eba"
+    },
+    "formal_site_t1r1": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V1.json",
+      "blob_sha": "eb9eb1880e01eb16430c177be6e2ef2dc36b3ca8"
+    },
+    "formal_reality_t1r1": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V1.json",
+      "blob_sha": "dedc8db6e2e3c902066ed94b0d3322a69775b7b6"
+    }
+  },
+  "candidate_scope": {
+    "site_id": "KBS_MCSE_T4R1_CANDIDATE",
+    "provider_site": "KBS_LTER_MAIN_CROPPING_SYSTEM_EXPERIMENT",
+    "treatment": "T4",
+    "replicate": "R1",
+    "prospective_field_id": "field_kbs_mcse_t4r1",
+    "prospective_zone_id": "zone_kbs_mcse_t4r1_crop_formal_v1",
+    "geometry_type": "Polygon",
+    "crs": "EPSG:4326"
+  },
+  "provider_sources": {
+    "mcse_structure": {
+      "url": "https://lter.kbs.msu.edu/research/long-term-experiments/main-cropping-system-experiment/",
+      "allowed_host": "lter.kbs.msu.edu",
+      "required_markers": ["87 x 105 m", "Biologically Based (T4)"]
+    },
+    "annual_crop_yield": {
+      "url": "https://lter.kbs.msu.edu/datatables/51",
+      "allowed_host": "lter.kbs.msu.edu",
+      "required_markers": ["15’ x 300’", "down the center", "crop area harvested", "whole plot area", "prairie strips in T3 and T4"]
+    },
+    "aglog_areas": {
+      "url": "https://aglog.kbs.msu.edu/areas",
+      "allowed_host": "aglog.kbs.msu.edu",
+      "required_markers": [],
+      "authority_effect": "NONE_IDENTITY_IS_PROVEN_BY_PROVIDER_GEOMETRY_SELECTOR_AND_FAST_PATH_PLANTING_PROOF",
+      "note": "The current AgLog areas index is retained only as a source digest. Static body rendering is not a geometry or crop-only authority gate."
+    },
+    "plot_geometry": {
+      "page_url": "https://lter.kbs.msu.edu/datatables/829",
+      "allowed_host": "lter.kbs.msu.edu",
+      "download_path": "/datatables/829.csv",
+      "datatable_id": "KBS039-006.40",
+      "required_markers": ["MCSE Plot polygons", "submeter accuracy GPS", "Download complete data table"]
+    }
+  },
+  "provider_geometry_selector": {
+    "treatment": "T4",
+    "replicate": "R1",
+    "subplot": "main",
+    "expected_match_count": 1,
+    "required_srid": 4326,
+    "required_distinct_vertex_count": 4,
+    "require_convex_quadrilateral": true
+  },
+  "provider_dimension_guard": {
+    "declared_plot_short_dimension_m": 87,
+    "declared_plot_long_dimension_m": 105,
+    "measured_short_dimension_min_m": 75,
+    "measured_short_dimension_max_m": 100,
+    "measured_long_dimension_min_m": 95,
+    "measured_long_dimension_max_m": 115
+  },
+  "prairie_strip_guard": {
+    "declared_width_ft": 15,
+    "declared_length_ft": 300,
+    "width_m": 4.572,
+    "length_m": 91.44,
+    "position": "CENTER_OF_T3_T4_PLOT",
+    "strip_geometry_wkt_required": false,
+    "strip_geometry_may_not_be_invented": true
+  },
+  "conservative_subzone_policy": {
+    "construction": "BILINEAR_INTERIOR_RECTANGLE_FROM_PROVIDER_MAIN_QUADRILATERAL_V1",
+    "short_axis_fraction_start": 0.15,
+    "short_axis_fraction_end": 0.30,
+    "long_axis_fraction_start": 0.25,
+    "long_axis_fraction_end": 0.75,
+    "minimum_outer_boundary_margin_m": 10,
+    "minimum_center_strip_clearance_m": 10,
+    "minimum_end_boundary_margin_m": 20,
+    "minimum_derived_area_m2": 400,
+    "maximum_derived_area_m2": 1200,
+    "canonicalization_id": "GEOX_MCFT_GEOJSON_CANONICALIZATION_V1",
+    "coordinate_decimal_places": 7,
+    "provider_raw_geometry_may_be_emitted": false,
+    "provider_raw_geometry_may_be_committed": false,
+    "derived_geometry_coordinates_may_be_emitted": false,
+    "derived_geometry_coordinates_may_be_committed_by_this_probe": false,
+    "derived_semantic_hash_may_be_emitted": true,
+    "derived_area_and_safety_margins_may_be_emitted": true
+  },
+  "resolution_policy": {
+    "resolved_status": "RESOLVED_CONSERVATIVE_CROP_ONLY_SUBZONE_CANDIDATE",
+    "requires_all_provider_markers": true,
+    "requires_unique_valid_main_polygon": true,
+    "requires_plausible_provider_plot_dimensions": true,
+    "requires_central_strip_exclusion_by_geometry": true,
+    "requires_minimum_outer_and_end_margins": true,
+    "requires_canonical_polygon_validation": true,
+    "requires_stable_semantic_hash": true,
+    "formal_rebind_authorized_by_this_probe": false,
+    "current_lifecycle_authorized_by_this_probe": false,
+    "ea5e2_authorized_by_this_probe": false
+  },
+  "hard_nonclaims": [
+    "NO_WHOLE_T4R1_PLOT_AS_CROP_ONLY",
+    "NO_PRAIRIE_STRIP_WKT_INVENTION",
+    "NO_PRAIRIE_STRIP_RELABELLING_AS_CORN",
+    "NO_RAW_KBS_GEOMETRY_PUBLICATION",
+    "NO_PROVIDER_RAW_GEOMETRY_IN_PUBLIC_ARTIFACT",
+    "NO_DERIVED_COORDINATES_IN_PUBLIC_ARTIFACT",
+    "NO_T1R1_AUTHORITY_MUTATION",
+    "NO_CURRENT_LIFECYCLE_CLAIM",
+    "NO_FORMAL_SITE_REBIND",
+    "NO_RUNTIME_CONFIG_WRITE",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_EVIDENCE_WRITE",
+    "NO_SCHEDULER_WRITE",
+    "NO_EA5E2_OPERATIONAL_ACTIVATION",
+    "NO_FORMAL_WINDOW_START"
+  ]
+}
