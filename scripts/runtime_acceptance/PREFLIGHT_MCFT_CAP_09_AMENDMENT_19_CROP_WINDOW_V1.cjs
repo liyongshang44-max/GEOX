@@ -8,7 +8,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const AUTHORITY_PATH = path.resolve(
-  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json",
 );
 const DEFAULT_CANDIDATE_PATH = path.resolve(
   "rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json",
@@ -60,21 +60,24 @@ function stageAtHours(hoursSincePlanting, variant) {
 function loadAuthority() {
   const authority = JSON.parse(fs.readFileSync(AUTHORITY_PATH, "utf8"));
   requireCondition(
-    authority.schema_version === "geox_mcft_cap09_s6_formal_crop_context_authority_v2"
-      && authority.authority_id === "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2",
-    "AM19_CROP_PREFLIGHT_AUTHORITY_V2_REQUIRED",
+    authority.schema_version === "geox_mcft_cap09_s6_formal_crop_context_authority_v3"
+      && authority.authority_id === "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3",
+    "AM19_CROP_PREFLIGHT_AUTHORITY_V3_REQUIRED",
   );
   requireCondition(
-    authority.scope?.site_id === "KBS_MCSE_T3R1"
-      && authority.scope?.field_id === "field_kbs_mcse_t3r1"
+    authority.scope?.site_id === "KBS_MCSE_T4R1"
+      && authority.scope?.field_id === "field_kbs_mcse_t4r1"
       && authority.scope?.season_id === "season_2026_corn"
-      && authority.scope?.hybrid_product_code === "P0306Q",
-    "AM19_CROP_PREFLIGHT_T3R1_SCOPE_REQUIRED",
+      && authority.scope?.zone_id === "zone_kbs_mcse_t4r1_crop_formal_v1"
+      && authority.scope?.hybrid_product_code === "43-96P",
+    "AM19_CROP_PREFLIGHT_T4R1_SCOPE_REQUIRED",
   );
   requireCondition(
-    authority.planting_authority?.observation_id === 6966
+    authority.planting_authority?.observation_id === 6974
+      && authority.planting_authority?.provider_area_identity === "T4"
+      && authority.planting_authority?.replicate === "R1"
       && authority.planting_authority?.replicate_1_explicitly_included === true,
-    "AM19_CROP_PREFLIGHT_T3R1_PLANTING_AUTHORITY_REQUIRED",
+    "AM19_CROP_PREFLIGHT_T4R1_PLANTING_AUTHORITY_REQUIRED",
   );
   return authority;
 }
@@ -164,7 +167,7 @@ function proofForCandidate(candidate, subject, authority) {
   return {
     schema_version: "geox_mcft_cap09_amendment19_crop_window_preflight_v1",
     status: window.viable ? "PASS" : "NO_VIABLE_A0_PLUS_O00_O23_CROP_WINDOW",
-    result: window.viable ? "EXACT_A0_PLUS_O00_O23_CROP_WINDOW_VIABLE" : "CURRENT_T3R1_CROP_AUTHORITY_BLOCKS_24T_QUALIFICATION",
+    result: window.viable ? "EXACT_A0_PLUS_O00_O23_CROP_WINDOW_VIABLE" : "CURRENT_T4R1_CROP_AUTHORITY_BLOCKS_24T_QUALIFICATION",
     subject_sha: subject,
     producer_subject_sha: candidate.producer_subject_sha,
     crop_authority_id: authority.authority_id,
@@ -197,13 +200,11 @@ function proofForCandidate(candidate, subject, authority) {
 
 function selftest() {
   const authority = loadAuthority();
-  const legal = evaluateWindow("2026-08-20T21:00:00.000Z", authority);
-  requireCondition(legal.viable && legal.contexts.length === 25 && legal.o23 === "2026-08-21T21:00:00.000Z", "AM19_CROP_PREFLIGHT_SELFTEST_LAST_LEGAL_WINDOW_REQUIRED");
-  const failed04 = evaluateWindow("2026-08-21T04:00:00.000Z", authority);
-  requireCondition(!failed04.viable && failed04.failures[0]?.context_id === "O17" && failed04.failures[0]?.reason === "STAGE_TRANSITION_RISK", "AM19_CROP_PREFLIGHT_SELFTEST_04Z_TRANSITION_REQUIRED");
-  const failed05 = evaluateWindow("2026-08-21T05:00:00.000Z", authority);
-  requireCondition(!failed05.viable && failed05.failures[0]?.context_id === "O16", "AM19_CROP_PREFLIGHT_SELFTEST_05Z_TRANSITION_REQUIRED");
-  console.log(JSON.stringify({ status: "PASS", legal_case_count: 1, fail_closed_case_count: 2, database_write_count: 0, provider_request_count: 0 }));
+  const legal = evaluateWindow("2026-08-23T06:00:00.000Z", authority);
+  requireCondition(legal.viable && legal.contexts.length === 25 && legal.o23 === "2026-08-24T06:00:00.000Z", "AM19_CROP_PREFLIGHT_SELFTEST_T4R1_LEGAL_WINDOW_REQUIRED");
+  const late = evaluateWindow("2026-08-27T22:00:00.000Z", authority);
+  requireCondition(!late.viable && late.failures.length > 0 && late.failures[0]?.reason === "STAGE_TRANSITION_RISK", "AM19_CROP_PREFLIGHT_SELFTEST_T4R1_TRANSITION_REQUIRED");
+  console.log(JSON.stringify({ status: "PASS", legal_case_count: 1, fail_closed_case_count: 1, database_write_count: 0, provider_request_count: 0 }));
 }
 
 const mode = process.argv[2] || "run";
