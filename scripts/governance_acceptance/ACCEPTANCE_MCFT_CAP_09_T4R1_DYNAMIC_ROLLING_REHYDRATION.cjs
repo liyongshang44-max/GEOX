@@ -8,6 +8,7 @@ const ROOT = process.cwd();
 const WORKFLOW = ".github/workflows/mcft-cap-09-t4r1-rolling-rehydration-live-proof.yml";
 const RUNNER = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts";
 const CAPTURE = ".github/workflows/mcft-cap-09-rolling-preboundary-capture.yml";
+const ASSEMBLER = "scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs";
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_T4R1_DYNAMIC_ROLLING_REHYDRATION_GOVERNANCE_RESULT.json");
 
 function read(file) {
@@ -25,6 +26,7 @@ function hasAll(text, values, code) {
 const workflow = read(WORKFLOW);
 const runner = read(RUNNER);
 const capture = read(CAPTURE);
+const assembler = read(ASSEMBLER);
 const result = {
   schema_version: "geox_mcft_cap09_t4r1_dynamic_rolling_rehydration_governance_v1",
   status: "FAIL",
@@ -43,13 +45,23 @@ try {
     "workflow_dispatch:",
     "Require exact protected-main capture subject",
     "MCFT_CAP09_ROLLING_PREBOUNDARY_EXACT_MAIN_DRIFT",
-    "producer_subject_sha: subject",
     "formal_database_write_count!==0",
     "formal_r2_prefix_write_count!==0",
     "scheduler_write_count!==0",
     "runtime_write_count!==0",
     "retention-days: 2",
   ], "MCFT_CAP09_T4R1_DYNAMIC_REHYDRATION_CAPTURE_BOUNDARY_MISSING");
+
+  hasAll(assembler, [
+    "producer_subject_sha: subject",
+    "producer_subject_sha_immutable: true",
+    "producer_exact_main_capture_proof_required: true",
+    "consumer_same_git_sha_required: false",
+    "consumer_exact_main_successor_qualification_required: true",
+    "cross_version_rehydration_required_when_consumer_subject_differs: true",
+    "raw_retention_reverification_required: true",
+    "semantic_hash_reverification_required: true",
+  ], "MCFT_CAP09_T4R1_DYNAMIC_REHYDRATION_ASSEMBLER_BOUNDARY_MISSING");
 
   hasAll(workflow, [
     "workflow_dispatch:",
