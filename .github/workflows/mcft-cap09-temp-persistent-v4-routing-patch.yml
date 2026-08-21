@@ -15,7 +15,7 @@ jobs:
     if: github.event.pull_request.head.ref == 'fix/mcft-cap09-t4r1-persistent-v4-successor'
     runs-on: ubuntu-latest
     steps:
-      - name: Patch exact Amendment-19 T4R1 v4 successor routing
+      - name: Bind persistent result to T4R1 crop identity
         uses: actions/github-script@v7
         with:
           github-token: ${{ github.token }}
@@ -23,74 +23,21 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const branch = context.payload.pull_request.head.ref;
-            const path = '.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml';
+            const path = 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts';
             const file = await github.rest.repos.getContent({ owner, repo, path, ref: branch });
-            if (Array.isArray(file.data) || file.data.type !== 'file') throw new Error('P24_WORKFLOW_FILE_REQUIRED');
-            const lines = Buffer.from(file.data.content, file.data.encoding).toString('utf8').split('\n');
-            const exactOne = (predicate, code) => {
-              const hits = lines.map((line, index) => predicate(line) ? index : -1).filter((index) => index >= 0);
-              if (hits.length !== 1) throw new Error(`${code}:${hits.length}`);
-              return hits[0];
-            };
-
-            const routingStart = exactOne((line) => line.trim().startsWith('routing_repair_files="$(printf'), 'P24_ROUTING_START_EXACT_ONE_REQUIRED');
-            const modeIndex = lines.findIndex((line, index) => index > routingStart && line.trim() === "mode='historical-am19'");
-            if (modeIndex < 0) throw new Error('P24_HISTORICAL_MODE_ANCHOR_REQUIRED');
-            const indent = lines[modeIndex].match(/^\s*/)[0];
-            const routingBlock = [
-              `${indent}t4_persistent_v4_successor_files="$(printf '%s\\n' \\`,
-              `${indent}  '.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml' \\`,
-              `${indent}  'apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v3.ts' \\`,
-              `${indent}  'apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.ts' \\`,
-              `${indent}  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_PREFLIGHT_V1.cjs' \\`,
-              `${indent}  'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_V1.cjs' \\`,
-              `${indent}  'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts' | sort)"`,
-            ];
-            lines.splice(modeIndex, 0, ...routingBlock);
-
-            const repairMode = exactOne((line) => line.trim() === "mode='runtime-rebind-routing-repair'", 'P24_REPAIR_MODE_EXACT_ONE_REQUIRED');
-            const repairFi = lines.findIndex((line, index) => index > repairMode && line.trim() === 'fi');
-            if (repairFi < 0) throw new Error('P24_REPAIR_MODE_FI_REQUIRED');
-            lines.splice(repairFi, 0,
-              `${indent}elif [[ "$changed" == "$t4_persistent_v4_successor_files" ]]; then`,
-              `${indent}  mode='t4-persistent-v4-successor'`,
-            );
-
-            const manifestGuard = exactOne(
-              (line) => line.includes("if ! grep -Fxq 'apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts' <<<\"$changed\"; then"),
-              'P24_MANIFEST_GUARD_EXACT_ONE_REQUIRED',
-            );
-            const guardIndent = lines[manifestGuard].match(/^\s*/)[0];
-            const guardEnd = lines.findIndex((line, index) => index > manifestGuard && line === `${guardIndent}fi`);
-            if (guardEnd < 0) throw new Error('P24_MANIFEST_GUARD_END_REQUIRED');
-            const historicalGuard = lines.slice(manifestGuard, guardEnd + 1);
-            historicalGuard[0] = `${guardIndent}elif ! grep -Fxq 'apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts' <<<"$changed"; then`;
-            const successorGuard = [
-              `${guardIndent}if [[ "$mode" == 't4-persistent-v4-successor' ]]; then`,
-              `${guardIndent}  grep -Fq 'geox_mcft_cap09_s6_accel24t_am19_v4' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts`,
-              `${guardIndent}  grep -Fq 'geox_mcft_cap09_s6_accel24t_am19_blocked_v4' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts`,
-              `${guardIndent}  grep -Fq 'mcft_cap09_amendment19_qualification_subject_v1' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts`,
-              `${guardIndent}  grep -Fq 'GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts`,
-              `${guardIndent}  grep -Fq 'materializeExternalFormalA18CropContextV3' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts`,
-              `${guardIndent}  grep -Fq 'MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V3' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts`,
-              `${guardIndent}  grep -Fq 'FORMAL_DERIVED_CROP_WATER_USE_STAGE_CONTEXT_V3' apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v3.ts`,
-              `${guardIndent}  ! grep -Fq 'GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts`,
-              `${guardIndent}  ! grep -Fxq 'apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v2.ts' <<<"$changed"`,
-            ];
-            lines.splice(manifestGuard, guardEnd - manifestGuard + 1, ...successorGuard, ...historicalGuard);
-
-            const text = lines.join('\n');
-            for (const token of [
-              "mode='t4-persistent-v4-successor'",
-              't4_persistent_v4_successor_files=',
-              'materializeExternalFormalA18CropContextV3',
-              'FORMAL_DERIVED_CROP_WATER_USE_STAGE_CONTEXT_V3',
-            ]) {
-              if (!text.includes(token)) throw new Error(`P24_SUCCESSOR_ROUTING_TOKEN_REQUIRED:${token}`);
+            if (Array.isArray(file.data) || file.data.type !== 'file') throw new Error('P24_RUNNER_FILE_REQUIRED');
+            let text = Buffer.from(file.data.content, file.data.encoding).toString('utf8');
+            const oldToken = '          blocked_database_name: BLOCKED_DB,\n';
+            const newToken = '          blocked_database_name: BLOCKED_DB,\n          crop_authority_id: "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3",\n          crop_context_materialization_profile: MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V3,\n';
+            const count = text.split(oldToken).length - 1;
+            if (count !== 2) throw new Error(`P24_RESULT_IDENTITY_ANCHOR_EXACT_TWO_REQUIRED:${count}`);
+            if (text.includes('crop_context_materialization_profile: MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V3')) {
+              throw new Error('P24_RESULT_IDENTITY_ALREADY_PRESENT');
             }
+            text = text.split(oldToken).join(newToken);
             const result = await github.rest.repos.createOrUpdateFileContents({
               owner, repo, path, branch,
-              message: 'fix(mcft-cap09): route T4R1 successor through v4 persistent qualification',
+              message: 'fix(mcft-cap09): bind persistent result to T4R1 crop identity',
               content: Buffer.from(text, 'utf8').toString('base64'),
               sha: file.data.sha,
             });
