@@ -9,7 +9,7 @@
 <body>
   <header class="topbar">
     <div class="brand"><span class="brand-mark"></span><span>GEOX</span></div>
-    <div class="top-meta"><span class="pill">商业证据演示</span><span class="pill muted">只读 · 独立分支</span></div>
+    <div class="top-meta"><span class="pill">客户发现 / 付费试点前证据</span><span class="pill muted">只读 · 独立分支</span></div>
   </header>
 
   <main class="shell">
@@ -17,46 +17,97 @@
       <p class="eyebrow">农业 AI 决策可信性 · 60 秒证明</p>
       <h1>不是“能不能给答案”，而是“这个答案在当时有没有资格被给出”。</h1>
       <p id="heroProblem" class="hero-copy">正在读取运行证据...</p>
-      <p class="hero-value"><strong>如果晚到的数据被当成“当时已知”，系统就可能用事后才知道的事实，去证明过去的决定“正确”。</strong><br />GEOX 的作用，就是阻止这种事情发生，并让下游的农艺判断、灌溉建议和自动化结果拥有可审计的证据边界。</p>
+      <p class="hero-value"><strong>如果决策之后才出现的数据，被伪装成“当时已经知道”，AI 就可能用事后信息证明过去的决定“正确”。</strong><br />GEOX 先证明决策时真正知道什么，再决定哪些计算可以继续、哪些必须降级、哪些必须拒绝。</p>
       <details class="hero-engineering-meta">
-        <summary>证据标识</summary>
+        <summary>查看机器证据标识</summary>
         <div class="hero-meta">
           <span>代码版本 <code id="subjectSha">读取中</code></span>
           <span>规则版本 <code id="selectorId">读取中</code></span>
+          <span>机器证明 <code>GET /api/demo</code></span>
         </div>
       </details>
     </section>
 
     <nav class="section-nav" aria-label="60 秒演示路径">
-      <a href="#problem">1. 问题</a>
-      <a href="#runtime-demo">2. 因果证明</a>
+      <a href="#problem">1. 灌溉决策</a>
+      <a href="#runtime-demo">2. 两个看似相同的答案</a>
       <a href="#decision-trace">3. 真实运行证据</a>
-      <a href="#behavior">4. 系统行为</a>
+      <a href="#behavior">4. 风险与边界</a>
     </nav>
 
     <section id="problem" class="panel core-panel" data-section="1">
-      <div class="section-heading"><span>01</span><div><p class="eyebrow">一个具体问题</p><h2>决策时不可知的数据，不能被事后伪装成当时已知。</h2></div></div>
-      <div class="problem-grid">
-        <article class="statement danger"><h3>只看数据发生时间的系统</h3><p>看到一条“11:00 的天气数据”，就可能默认它在 12:00 做决策时已经可用。即使这条数据其实到 12:20 才发布。</p></article>
-        <article class="statement safe"><h3>GEOX</h3><p>不仅看数据描述的是几点，还检查它什么时候真正可用、什么时候进入系统、来自哪里、对应哪个时段以及质量是否合格。12:20 才出现的数据，不能进入 12:00 的知识状态。</p></article>
+      <div class="section-heading"><span>01</span><div><p class="eyebrow">一个真实农业决策场景</p><h2>今晚原计划灌溉 20 mm，明天可能下雨：现在应该灌、推迟，还是暂不判断？</h2></div></div>
+      <div class="decision-card">
+        <div class="decision-card-main">
+          <p class="eyebrow">FIELD A · 决策时刻 19:00</p>
+          <h3>灌溉 Decision Card</h3>
+          <div class="decision-facts">
+            <span><b>计划灌溉</b> 20 mm <em>ASSUMPTION</em></span>
+            <span><b>天气预报</b> 明天降雨 25 mm <em>ASSUMPTION</em></span>
+            <span><b>候选动作</b> IRRIGATE / DELAY / ABSTAIN</span>
+          </div>
+        </div>
+        <div class="decision-question">
+          <p>客户最先会问：“25 mm 雨，那是不是应该取消今晚灌溉？”</p>
+          <strong>GEOX 先问另一个问题：这份 25 mm forecast，在 19:00 当时有没有资格被使用？</strong>
+        </div>
       </div>
-      <div class="callout executive-callout"><strong>真正的业务风险不是“系统报错”，而是系统没有报错：</strong>它很自信地给出一个看似合理的结果，却引用了决策当时根本还不可知的数据。</div>
+      <div class="problem-grid compact-statements">
+        <article class="statement danger"><h3>只看 forecast 内容</h3><p>看到“明天 25 mm”就直接改变灌溉计划。如果这份 forecast 其实到 19:17 才发布，19:00 的决策根本不可能知道它。</p></article>
+        <article class="statement safe"><h3>GEOX</h3><p>同时检查 event time、issued/available/ingested chronology、source identity、质量和 authority。决策之后才出现的 forecast，不能被回填成 19:00 已知。</p></article>
+      </div>
+      <div class="callout executive-callout"><strong>重要边界：</strong>这个页面不在替客户给出 IRRIGATE / DELAY 的农艺推荐。20 mm 与 25 mm 是用来解释证据时序问题的 <strong>ASSUMPTION</strong>。真正的农艺决策仍需要 root-zone depletion、crop stage、forecast timing/amount、system capacity 等经授权输入。</div>
     </section>
 
     <section id="runtime-demo" class="panel core-panel proof-panel" data-section="3">
-      <div class="section-heading"><span>02</span><div><p class="eyebrow">核心因果证明</p><h2>同样一条数据，只因为“什么时候真正可知”不同，决策可信度就会不同。</h2></div></div>
-      <div class="proof-strip" aria-label="因果证明摘要">
-        <article><p class="eyebrow">01 · 数据完全相同</p><strong>降雨 / ET0 数值不变</strong><span>不是模型换了，也不是数据值换了。</span></article>
-        <article><p class="eyebrow">02 · 唯一变化</p><strong>只改变“真正可用时间”</strong><span>决策前已经知道，或决策后才知道。</span></article>
-        <article><p class="eyebrow">03 · GEOX 改变声明</p><strong>正常使用 ↔ 明确降级</strong><span>证据资格改变，系统对结果的可信声明随之改变。</span></article>
+      <div class="section-heading"><span>02</span><div><p class="eyebrow">杀手级 A/B 对比</p><h2>两个答案表面完全一样，只改变 forecast 真正进入系统的时间。</h2></div></div>
+      <div class="ab-decision-grid">
+        <article class="ab-card eligible">
+          <p class="eyebrow">CASE A</p>
+          <h3>19:00 做灌溉决策</h3>
+          <div class="big-number">明天降雨 25 mm</div>
+          <dl><div><dt>forecast available_at</dt><dd>18:43</dd></div><div><dt>19:00 时是否已知</dt><dd><span class="badge good">ELIGIBLE · 可以使用</span></dd></div></dl>
+        </article>
+        <article class="ab-card ineligible">
+          <p class="eyebrow">CASE B</p>
+          <h3>19:00 做灌溉决策</h3>
+          <div class="big-number">明天降雨 25 mm</div>
+          <dl><div><dt>forecast available_at</dt><dd>19:17</dd></div><div><dt>19:00 时是否已知</dt><dd><span class="badge blocked">INELIGIBLE · 不得回填</span></dd></div></dl>
+        </article>
       </div>
-      <div class="comparison-table-wrap flagship-table">
-        <table class="comparison-table">
-          <thead><tr><th>情况</th><th>数据描述的时间</th><th>系统真正拿到的时间</th><th>GEOX 判断</th><th>系统行为</th></tr></thead>
-          <tbody id="runtimeComparison"></tbody>
-        </table>
+      <div class="callout executive-callout"><strong>销售人员只需要指出这一处：</strong>25 mm 没变，决策时间没变，唯一变化是“什么时候真正可知”。CASE B 的数据即使后来完全正确，也不能用来证明 19:00 的决定当时是合理的。</div>
+
+      <div class="runtime-lab">
+        <div class="runtime-lab-heading">
+          <div><p class="eyebrow">真实 canonical selector · 每次点击都重新执行</p><h3>让客户自己点四种证据状态</h3></div>
+          <span class="pill muted">只读 · 0 provider request · 0 database write</span>
+        </div>
+        <div class="case-buttons" id="runtimeCaseButtons">
+          <button type="button" data-case-id="healthy_exact_provider_pair">NORMAL</button>
+          <button type="button" data-case-id="provider_late">PROVIDER LATE</button>
+          <button type="button" data-case-id="source_conflict">SOURCE CONFLICT</button>
+          <button type="button" data-case-id="missing_evidence">MISSING EVIDENCE</button>
+        </div>
+        <div id="interactiveCaseStatus" class="status-line muted">选择一个案例，Demo 服务会重新执行仓库现有 canonical selector。</div>
+        <div id="interactiveCaseResult" class="interactive-result"></div>
+        <details class="machine-proof-details">
+          <summary>查看本次机器证据</summary>
+          <pre id="interactiveMachineProof">尚未执行。</pre>
+        </details>
       </div>
-      <div id="runtimeCallout" class="callout executive-callout"></div>
+
+      <details class="engineering-details compact-engineering">
+        <summary><span>查看 canonical A/B 技术实验</span><small>相同 rainfall/ET0 payload · 只改变 availability</small></summary>
+        <div class="engineering-details-body">
+          <div class="comparison-table-wrap flagship-table">
+            <table class="comparison-table">
+              <thead><tr><th>情况</th><th>数据描述时间</th><th>真正进入系统时间</th><th>GEOX 判断</th><th>系统行为</th></tr></thead>
+              <tbody id="runtimeComparison"></tbody>
+            </table>
+          </div>
+          <div id="runtimeCallout" class="callout executive-callout"></div>
+        </div>
+      </details>
     </section>
 
     <section id="decision-trace" class="panel core-panel" data-section="4">
@@ -64,32 +115,32 @@
       <div id="traceFlow" class="flow compact"></div>
 
       <div class="trace-loader primary-evidence-loader">
-        <p class="eyebrow">历史持久化资格数据</p>
+        <p class="eyebrow">历史持久化资格数据 · Neon · READ ONLY</p>
         <h3>系统在决策当时，究竟真正知道什么</h3>
-        <p class="footnote">下面的数据来自已经完成的一次历史资格运行，Demo 服务只读查询 Neon。它证明这条运行链确实执行并持久化；其中部分天气与 ET0 是加速工程测试输入，因此不会被包装成生产实时数据，也不代表最终 Formal 时间链资格已经完成。</p>
+        <p class="footnote">下面来自已完成的一次历史 MCFT 工程资格运行。Demo 只读查询 Neon；其中部分天气/ET0 为 accelerated engineering fixture，因此不会被包装成生产实时数据或最终 Formal closure。</p>
         <div class="input-row"><button id="refreshMcftRuntimeEvidence" type="button">刷新真实运行证据</button></div>
       </div>
       <div id="mcftRuntimeStatus" class="status-line muted">正在读取历史资格数据...</div>
       <div id="mcftRuntimeAnswer" class="callout executive-callout" hidden></div>
       <div id="mcftRuntimeObjects" class="trace-grid executive-trace-grid"></div>
 
-      <div class="problem-grid buyer-impact-grid">
-        <article class="statement danger"><h3>如果把晚到数据当成当时已知</h3><p>下游结果会显得“证据充分”，但实际上用了决策时还不存在于系统知识状态里的信息。这样的建议即使数值碰巧正确，也不能证明当时的决策可信。</p></article>
-        <article class="statement safe"><h3>GEOX 的处理</h3><p>晚到证据不会被偷偷补进过去。证据不足时系统会明确降级、停止没有依据的计算，或者拒绝继续；只有仍被证据授权的部分才会向前推进。</p></article>
+      <div class="business-verdict-grid">
+        <article class="business-verdict danger"><p class="eyebrow">如果普通系统事后回填</p><h3>结果看起来“证据充分”，但其实用了决策时不可知的信息。</h3><p>即使数值后来碰巧正确，也不能证明当时的灌溉判断可信。</p></article>
+        <article class="business-verdict safe"><p class="eyebrow">GEOX 的资格边界</p><h3>只让当时真正可知的证据进入知识状态。</h3><p>晚到数据不回写过去；不足时明确降级或拒绝，避免把不确定性伪装成确定结论。</p></article>
       </div>
 
       <div class="commercial-meaning">
         <p class="eyebrow">客户应该理解什么</p>
-        <strong>在结果进入灌溉建议、农艺判断或自动化执行之前，GEOX 先证明：这个结果使用的证据，在当时真的已经可知。</strong>
+        <strong>在结果进入灌溉建议、农艺判断或未来受控执行之前，GEOX 先证明：这个结果所依赖的证据，在当时真的已经可知。</strong>
       </div>
 
       <details id="traceAdvancedDetails" class="engineering-details trace-advanced">
-        <summary><span>技术细节</span><small>产品决策链 · 构建器证明 · 原始 ID · 哈希</small></summary>
+        <summary><span>查看技术证据</span><small>产品决策链 · 构建器证明 · 原始 ID · 哈希 · lineage</small></summary>
         <div class="engineering-details-body">
           <div class="trace-loader">
             <p class="eyebrow">产品侧持久化决策链</p>
             <h3>产品 Decision Cycle 与完整 Twin Trace</h3>
-            <p class="footnote">这一层属于 Product Twin Kernel 读模型，与上面的 MCFT Runtime Evidence 是两个不同的证据面。如果本地产品数据库没有符合条件的 decision cycle，它会明确显示未连接，不会用工程 fixture 冒充持久化数据。</p>
+            <p class="footnote">Product Twin Kernel 与上面的 MCFT Runtime Evidence 是两个不同证据面。本地产品数据库无符合条件 decision cycle 时会明确显示未连接，不用 fixture 冒充持久化数据。</p>
             <div class="input-row"><button id="refreshConnectedData" type="button">刷新产品决策链</button></div>
           </div>
           <div id="connectedDataStatus" class="status-line muted">正在读取产品侧持久化数据...</div>
@@ -99,7 +150,7 @@
           <div class="trace-loader">
             <p class="eyebrow">工程证明 · 不需要数据库</p>
             <h3>现有 Twin Kernel 构建器现场生成完整链路</h3>
-            <p class="footnote">直接执行仓库已有的 Runtime Value Trace acceptance，构造状态、7 天预测、情景、校准、预测误差、学习候选与决策周期，并双跑验证确定性。这是工程证明，不声称是持久化生产状态。</p>
+            <p class="footnote">直接执行仓库已有 Runtime Value Trace acceptance，构造状态、预测、情景、校准、预测误差、学习候选与决策周期，并双跑验证确定性。这是工程证明，不声称持久化生产状态。</p>
           </div>
           <div id="runtimeTraceStatus" class="status-line muted">正在执行 Twin Kernel 构建器链...</div>
           <div id="runtimeTraceAnswer" class="callout" hidden></div>
@@ -122,13 +173,35 @@
     </section>
 
     <section id="behavior" class="panel core-panel" data-section="6">
-      <div class="section-heading"><span>04</span><div><p class="eyebrow">受控行为</p><h2>证据不完整时，GEOX 不是乱猜，而是有规则地继续、降级或拒绝继续。</h2></div></div>
+      <div class="section-heading"><span>04</span><div><p class="eyebrow">风险、经济暴露与能力边界</p><h2>客户最终要知道两件事：错误决策可能暴露多少钱，以及 GEOX 今天到底证明到了哪一步。</h2></div></div>
+
       <div class="comparison-table-wrap">
         <table class="comparison-table behavior-table">
           <thead><tr><th>证据情况</th><th>GEOX 怎么做</th><th>这意味着什么</th></tr></thead>
           <tbody id="behaviorMatrix"></tbody>
         </table>
       </div>
+
+      <div class="economics-panel">
+        <div class="economics-heading"><div><p class="eyebrow">错误决策暴露 · 不是 ROI 声明</p><h3>如果因为证据时序错误而错误执行/取消一次灌溉，直接暴露是多少？</h3></div><span class="badge degraded">CUSTOMER DATA REQUIRED</span></div>
+        <div class="economics-grid">
+          <label>田块面积 ha <span class="source-tag assumption">ASSUMPTION</span><input id="ecoAreaHa" type="number" min="0" step="1" value="120" /></label>
+          <label>计划灌溉 mm <span class="source-tag assumption">ASSUMPTION</span><input id="ecoIrrigationMm" type="number" min="0" step="0.1" value="20" /></label>
+          <label>泵送费 $ / mm / ha <span class="source-tag customer">CUSTOMER_RATE_CARD</span><input id="ecoPumpingRate" type="number" min="0" step="0.01" placeholder="客户填写" /></label>
+          <label>能源 $ <span class="source-tag customer">CUSTOMER_RATE_CARD</span><input id="ecoEnergy" type="number" min="0" step="1" placeholder="客户填写" /></label>
+          <label>人工 $ <span class="source-tag customer">CUSTOMER_RATE_CARD</span><input id="ecoLabor" type="number" min="0" step="1" placeholder="客户填写" /></label>
+          <label>设备 $ <span class="source-tag customer">CUSTOMER_RATE_CARD</span><input id="ecoEquipment" type="number" min="0" step="1" placeholder="客户填写" /></label>
+        </div>
+        <div id="economicsResult" class="economics-result"></div>
+        <div class="economics-unknowns"><span>潜在产量暴露 <b>CUSTOMER DATA REQUIRED</b></span><span>品质暴露 <b>CUSTOMER DATA REQUIRED</b></span><span>结论 <b>NOT_PROVEN_CUSTOMER_ROI</b></span></div>
+        <details class="boundary-details"><summary>来源标签规则</summary><p class="footnote"><code>MEASURED</code> = 实测；<code>CUSTOMER_RATE_CARD</code> = 客户费率；<code>AGRONOMIC_MODEL</code> = 经授权农艺模型；<code>EXTERNAL_BENCHMARK</code> = 外部基准；<code>ASSUMPTION</code> = 场景假设。本 Demo 不把仓库工程 cost constants 当作客户 ROI authority。</p></details>
+      </div>
+
+      <div class="capability-grid">
+        <article class="capability-card proven"><p class="eyebrow">PROVEN NOW · 当前已证明</p><ul><li>证据 chronology / as-of 边界</li><li>State propagation</li><li>Forecast 与 Scenario 链</li><li>Runtime qualification boundary</li><li>provenance / trace</li><li>degrade / fail-closed behavior</li></ul></article>
+        <article class="capability-card not-yet"><p class="eyebrow">NOT YET A COMMERCIAL CLAIM</p><ul><li>自动灌溉控制</li><li>无人值守现场执行</li><li>生产资格化的作物推荐</li><li>已证明的客户 ROI</li></ul></article>
+      </div>
+
       <div class="commercial-meaning ceo-close">
         <p class="eyebrow">CEO 只需要记住这一句</p>
         <strong>GEOX 不是保证系统每次都给答案，而是保证只有在证据允许时，才把结果当成可以被信任的答案。</strong>
@@ -136,12 +209,24 @@
     </section>
 
     <details class="engineering-details evidence-appendix">
-      <summary><span>工程证据附录</span><small>冻结架构与确定性失败案例</small></summary>
+      <summary><span>工程证据附录</span><small>真实架构映射 · 确定性失败案例 · 页面到 repo component</small></summary>
       <div class="engineering-details-body">
         <section id="architecture" class="panel secondary-panel" data-section="2">
-          <div class="section-heading appendix-heading"><span>A</span><div><p class="eyebrow">真实运行架构</p><h2>冻结的 Runtime 路径</h2></div></div>
-          <div id="architectureFlow" class="flow"></div>
-          <p class="footnote">来自当前 GEOX 冻结 Runtime 架构；本独立 Demo 不注册到生产 Server，也不改变执行图。</p>
+          <div class="section-heading appendix-heading"><span>A</span><div><p class="eyebrow">真实系统架构 · 不画市场部虚构框</p><h2>从 Provider / Sensor 到 Decision Boundary</h2></div></div>
+          <div id="architectureFlow" class="flow architecture-flow"></div>
+          <div class="architecture-sidecars">
+            <span><b>Persistence</b> PostgreSQL <code>facts</code> + canonical projections</span>
+            <span><b>Scheduler</b> <code>twin_shadow_online_scheduler_slot_v1</code></span>
+            <span><b>Health / recovery</b> <code>twin_runtime_health_v1</code> + <code>twin_runtime_checkpoint_v1</code></span>
+            <span><b>Trace / provenance</b> refs + determinism hash + Twin Trace</span>
+            <span><b>Lease / fencing</b> 当前 MCFT qualification governance；本 Demo 不调用、不修改，精确文件路径不在此虚构</span>
+          </div>
+          <div class="component-map-wrap">
+            <table class="comparison-table component-map">
+              <thead><tr><th>页面 / 架构节点</th><th>真实 repo / runtime component</th><th>证明方式</th></tr></thead>
+              <tbody id="componentMap"></tbody>
+            </table>
+          </div>
         </section>
 
         <section id="failure-cases" class="panel secondary-panel" data-section="5">
@@ -154,9 +239,9 @@
     <section class="panel boundary-panel evidence-boundary">
       <p class="eyebrow">证据边界</p>
       <h2>这条证明到哪里为止</h2>
-      <p class="boundary-copy">这版已经证明：GEOX 能真实记录“当时知道什么”，并据此继续、降级或拒绝继续。它还没有声称生产自动控制已经完成；最终生产 Formal O00–O23 资格仍由独立的真实时间链治理。</p>
+      <p class="boundary-copy"><strong>PROVEN NOW：</strong>GEOX 已经能记录证据 chronology、传播 State、产生 Forecast/Scenario，并证明一个 Runtime output 当时用了什么证据以及为什么 qualified / degraded / blocked。<br /><strong>NOT YET：</strong>这不是安全自动灌溉控制、无人值守现场执行、生产资格化作物推荐，也不是已证明客户 ROI。最终生产 Formal O00–O23 资格仍由独立真实时间链治理。</p>
       <details class="boundary-details">
-        <summary>查看精确边界声明</summary>
+        <summary>查看精确 machine-readable 边界声明</summary>
         <ul id="nonclaims" class="nonclaims"></ul>
       </details>
     </section>
