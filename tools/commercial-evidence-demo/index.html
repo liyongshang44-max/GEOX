@@ -14,25 +14,27 @@
 
   <main class="shell">
     <section class="hero">
-      <p class="eyebrow">Decision Assurance Runtime</p>
+      <p class="eyebrow">Decision Assurance Runtime · 60-second commercial proof</p>
       <h1>不是“能不能给答案”，而是“这个答案在当时是否有资格被给出”。</h1>
       <p id="heroProblem" class="hero-copy">正在加载 canonical Runtime evidence...</p>
-      <div class="hero-meta">
-        <span>subject <code id="subjectSha">loading</code></span>
-        <span>selector <code id="selectorId">loading</code></span>
-      </div>
+      <p class="hero-value">让农业自动化、AI 决策和农艺建议能够证明：当时用了什么证据、拒绝了什么证据，以及为什么这个结果可以被信任。</p>
+      <details class="hero-engineering-meta">
+        <summary>Evidence identity</summary>
+        <div class="hero-meta">
+          <span>subject <code id="subjectSha">loading</code></span>
+          <span>selector <code id="selectorId">loading</code></span>
+        </div>
+      </details>
     </section>
 
-    <nav class="section-nav" aria-label="Commercial Evidence Pack">
+    <nav class="section-nav" aria-label="CEO 60-second path">
       <a href="#problem">1. Problem</a>
-      <a href="#architecture">2. Architecture</a>
-      <a href="#runtime-demo">3. Runtime demo</a>
-      <a href="#decision-trace">4. Decision trace</a>
-      <a href="#failure-cases">5. Failure cases</a>
-      <a href="#behavior">6. Runtime behavior</a>
+      <a href="#runtime-demo">2. Causality proof</a>
+      <a href="#decision-trace">3. Persisted trace</a>
+      <a href="#behavior">4. Governed behavior</a>
     </nav>
 
-    <section id="problem" class="panel" data-section="1">
+    <section id="problem" class="panel core-panel" data-section="1">
       <div class="section-heading"><span>01</span><div><p class="eyebrow">One concrete problem</p><h2>决策时不可知的数据，不能被事后伪装成当时已知。</h2></div></div>
       <div class="problem-grid">
         <article class="statement danger"><h3>Event-time-only baseline</h3><p>只看事件发生时间：11:00 的天气属于“历史数据”，于是 12:00 的决策会使用它。</p></article>
@@ -40,90 +42,113 @@
       </div>
     </section>
 
-    <section id="architecture" class="panel" data-section="2">
-      <div class="section-heading"><span>02</span><div><p class="eyebrow">Real architecture</p><h2>Frozen Runtime path</h2></div></div>
-      <div id="architectureFlow" class="flow"></div>
-      <p class="footnote">图中的每一步来自当前 GEOX frozen Runtime architecture；本 microsite 不注册到生产 Server，也不改变 execution graph。</p>
-    </section>
-
-    <section id="runtime-demo" class="panel" data-section="3">
-      <div class="section-heading"><span>03</span><div><p class="eyebrow">Real runtime demo</p><h2>同样的观测值，只改变“什么时候真正可用”</h2></div></div>
-      <div class="comparison-table-wrap">
+    <section id="runtime-demo" class="panel core-panel proof-panel" data-section="3">
+      <div class="section-heading"><span>02</span><div><p class="eyebrow">Canonical causality proof</p><h2>同样的数据，只改变“什么时候真正可用”</h2></div></div>
+      <div class="proof-strip" aria-label="Causality proof summary">
+        <article><p class="eyebrow">01 · Same payload</p><strong>Rainfall / ET0 数值不变</strong><span>不是模型换了，也不是数据值换了。</span></article>
+        <article><p class="eyebrow">02 · One variable changes</p><strong>只改变 availability</strong><span>决策前可知，或决策后才可知。</span></article>
+        <article><p class="eyebrow">03 · GEOX governs the claim</p><strong>HEALTHY ↔ DEGRADED</strong><span>证据资格改变，系统声明随之改变。</span></article>
+      </div>
+      <div class="comparison-table-wrap flagship-table">
         <table class="comparison-table">
           <thead><tr><th>Case</th><th>event_time</th><th>available_to_runtime_at</th><th>GEOX forcing</th><th>Health</th><th>Action</th></tr></thead>
           <tbody id="runtimeComparison"></tbody>
         </table>
       </div>
-      <div id="runtimeCallout" class="callout"></div>
+      <div id="runtimeCallout" class="callout executive-callout"></div>
     </section>
 
-    <section id="decision-trace" class="panel" data-section="4">
-      <div class="section-heading"><span>04</span><div><p class="eyebrow">Complete decision trace</p><h2>Evidence → State → Forecast → Scenario → Runtime decision boundary</h2></div></div>
+    <section id="decision-trace" class="panel core-panel" data-section="4">
+      <div class="section-heading"><span>03</span><div><p class="eyebrow">Persisted Runtime evidence</p><h2>Evidence → State → Forecast → Scenario → governed continuation</h2></div></div>
       <div id="traceFlow" class="flow compact"></div>
 
-      <div class="trace-loader">
+      <div class="trace-loader primary-evidence-loader">
         <p class="eyebrow">MCFT Runtime Evidence · Neon</p>
-        <h3>历史持久化资格运行：系统在 T 当时真正知道什么</h3>
-        <p class="footnote">本段由 Demo server 以固定 allowlist、READ ONLY transaction 查询已完成的 historical <code>geox_mcft_cap09_s6_accel24t_am19_v3</code>。连接串只存在服务端，不发送到浏览器。这里展示的是实际持久化到 Neon 的 engineering qualification 结果；其中 accelerated weather/ET0 含 <code>ENGINEERING_FIXTURE_ONLY</code>，因此不是 production live data，也不是最终 Formal O00–O23 closure。</p>
-        <div class="input-row"><button id="refreshMcftRuntimeEvidence" type="button">Refresh Neon MCFT evidence</button></div>
+        <h3>真实持久化资格运行：系统在 T 当时真正知道什么</h3>
+        <p class="footnote">Demo server 只读查询已完成的 historical <code>geox_mcft_cap09_s6_accel24t_am19_v3</code>。这里展示的是实际写入 Neon 的 engineering qualification 结果；连接串只存在服务端。accelerated weather/ET0 含工程 fixture，因此不声称是 production live data 或最终 Formal O00–O23 closure。</p>
+        <div class="input-row"><button id="refreshMcftRuntimeEvidence" type="button">Refresh Neon evidence</button></div>
       </div>
       <div id="mcftRuntimeStatus" class="status-line muted">正在读取 historical Neon qualification evidence...</div>
-      <div id="mcftRuntimeAnswer" class="callout" hidden></div>
-      <div id="mcftRuntimeObjects" class="trace-grid"></div>
+      <div id="mcftRuntimeAnswer" class="callout executive-callout" hidden></div>
+      <div id="mcftRuntimeObjects" class="trace-grid executive-trace-grid"></div>
 
-      <div class="trace-loader">
-        <p class="eyebrow">Connected data · persisted GEOX product read model</p>
-        <h3>自动读取真实 Decision Cycle 与完整 Twin Trace</h3>
-        <p class="footnote">本段只读连接现有 GEOX Server。未指定 decision_cycle_id 时，先读取 operator decision queue，再读取对应 `/api/v1/twin-kernel/traces/:decision_cycle_id`。如果 Server/DB 不可用，会明确显示 DISCONNECTED，不会用 fixture 冒充 live data。</p>
-        <div class="input-row"><button id="refreshConnectedData" type="button">Refresh connected data</button></div>
+      <div class="commercial-meaning">
+        <p class="eyebrow">What the buyer should understand</p>
+        <strong>GEOX 明确知道在决策边界前什么是真的可知，排除当时不可知的证据，必要时显式降级，并且只继续那些仍被证据状态授权的计算。</strong>
       </div>
-      <div id="connectedDataStatus" class="status-line muted">正在连接 GEOX persisted read model...</div>
-      <div id="connectedDataAnswer" class="callout" hidden></div>
-      <div id="connectedTraceObjects" class="trace-grid"></div>
 
-      <div class="trace-loader">
-        <p class="eyebrow">Engineering proof · no database required</p>
-        <h3>现有 Twin Kernel builders 现场生成完整 trace</h3>
-        <p class="footnote">本段直接执行仓库已有 `TWIN_KERNEL_RUNTIME_VALUE_TRACE_ACCEPTANCE`：真实构造 State、7-day Forecast、Scenario、Calibration、Forecast Error、Learning Candidate 与 Decision Cycle，并双跑验证 determinism。不是页面内置 JSON，也不声称是 persisted production state。</p>
-      </div>
-      <div id="runtimeTraceStatus" class="status-line muted">正在执行 Twin Kernel builder chain...</div>
-      <div id="runtimeTraceAnswer" class="callout" hidden></div>
-      <div id="runtimeTraceObjects" class="trace-grid"></div>
+      <details id="traceAdvancedDetails" class="engineering-details trace-advanced">
+        <summary><span>Engineering details</span><small>Product Twin Trace · builder proof · explicit IDs · hashes</small></summary>
+        <div class="engineering-details-body">
+          <div class="trace-loader">
+            <p class="eyebrow">Connected data · persisted GEOX product read model</p>
+            <h3>Product Decision Cycle 与完整 Twin Trace</h3>
+            <p class="footnote">这一层属于 Product Twin Kernel read model，与上面的 MCFT Runtime Evidence 是不同 authority surface。若本地 GEOX product DB 没有 eligible decision cycle，它会诚实显示 DISCONNECTED，不会用 fixture 冒充 persisted data。</p>
+            <div class="input-row"><button id="refreshConnectedData" type="button">Refresh connected data</button></div>
+          </div>
+          <div id="connectedDataStatus" class="status-line muted">正在连接 GEOX persisted read model...</div>
+          <div id="connectedDataAnswer" class="callout" hidden></div>
+          <div id="connectedTraceObjects" class="trace-grid"></div>
 
-      <div class="trace-loader persisted-loader">
-        <p class="eyebrow">Explicit persisted readback</p>
-        <h3>指定真实持久化 decision_cycle_id</h3>
-        <label for="decisionCycleId">Persisted decision_cycle_id</label>
-        <div class="input-row">
-          <input id="decisionCycleId" placeholder="例如 dc_..." autocomplete="off" />
-          <button id="loadTraceButton" type="button">Load persisted trace</button>
+          <div class="trace-loader">
+            <p class="eyebrow">Engineering proof · no database required</p>
+            <h3>现有 Twin Kernel builders 现场生成完整 trace</h3>
+            <p class="footnote">直接执行仓库已有 <code>TWIN_KERNEL_RUNTIME_VALUE_TRACE_ACCEPTANCE</code>，构造 State、7-day Forecast、Scenario、Calibration、Forecast Error、Learning Candidate 与 Decision Cycle，并双跑验证 determinism。这是 engineering proof，不声称是 persisted production state。</p>
+          </div>
+          <div id="runtimeTraceStatus" class="status-line muted">正在执行 Twin Kernel builder chain...</div>
+          <div id="runtimeTraceAnswer" class="callout" hidden></div>
+          <div id="runtimeTraceObjects" class="trace-grid"></div>
+
+          <div class="trace-loader persisted-loader">
+            <p class="eyebrow">Explicit persisted readback</p>
+            <h3>指定真实持久化 decision_cycle_id</h3>
+            <label for="decisionCycleId">Persisted decision_cycle_id</label>
+            <div class="input-row">
+              <input id="decisionCycleId" placeholder="例如 dc_..." autocomplete="off" />
+              <button id="loadTraceButton" type="button">Load persisted trace</button>
+            </div>
+          </div>
+          <div id="persistedTraceStatus" class="status-line muted">未指定 persisted trace。</div>
+          <div id="persistedTraceObjects" class="trace-grid"></div>
+          <div id="persistedTraceActions" class="trace-actions"></div>
         </div>
-        <p class="footnote">需要固定展示某个历史 Decision Cycle 时，在这里输入 ID。本页仍只读代理现有 `/api/v1/twin-kernel/traces/:decision_cycle_id`。</p>
-      </div>
-      <div id="persistedTraceStatus" class="status-line muted">未指定 persisted trace。</div>
-      <div id="persistedTraceObjects" class="trace-grid"></div>
-      <div id="persistedTraceActions" class="trace-actions"></div>
+      </details>
     </section>
 
-    <section id="failure-cases" class="panel" data-section="5">
-      <div class="section-heading"><span>05</span><div><p class="eyebrow">Three failure cases</p><h2>不是“错误弹窗”，而是明确的 epistemic behavior</h2></div></div>
-      <div id="failureCards" class="failure-grid"></div>
-    </section>
-
-    <section id="behavior" class="panel" data-section="6">
-      <div class="section-heading"><span>06</span><div><p class="eyebrow">Fail closed / degrade / continue</p><h2>系统如何在证据不完美时保持边界</h2></div></div>
+    <section id="behavior" class="panel core-panel" data-section="6">
+      <div class="section-heading"><span>04</span><div><p class="eyebrow">Governed behavior</p><h2>证据不完美时，系统不是猜，而是在 continue / degrade / fail closed 之间受控切换。</h2></div></div>
       <div class="comparison-table-wrap">
-        <table class="comparison-table">
+        <table class="comparison-table behavior-table">
           <thead><tr><th>Condition</th><th>Behavior</th><th>What GEOX claims</th></tr></thead>
           <tbody id="behaviorMatrix"></tbody>
         </table>
       </div>
     </section>
 
-    <section class="panel boundary-panel">
-      <p class="eyebrow">Hard nonclaims</p>
-      <h2>这不是 Formal closure，也不是生产自治控制。</h2>
-      <ul id="nonclaims" class="nonclaims"></ul>
+    <details class="engineering-details evidence-appendix">
+      <summary><span>Engineering evidence appendix</span><small>Frozen architecture and deterministic failure cases</small></summary>
+      <div class="engineering-details-body">
+        <section id="architecture" class="panel secondary-panel" data-section="2">
+          <div class="section-heading appendix-heading"><span>A</span><div><p class="eyebrow">Real architecture</p><h2>Frozen Runtime path</h2></div></div>
+          <div id="architectureFlow" class="flow"></div>
+          <p class="footnote">来自当前 GEOX frozen Runtime architecture；本 microsite 不注册到生产 Server，也不改变 execution graph。</p>
+        </section>
+
+        <section id="failure-cases" class="panel secondary-panel" data-section="5">
+          <div class="section-heading appendix-heading"><span>B</span><div><p class="eyebrow">Deterministic failure cases</p><h2>Provider late、source conflict、missing evidence</h2></div></div>
+          <div id="failureCards" class="failure-grid"></div>
+        </section>
+      </div>
+    </details>
+
+    <section class="panel boundary-panel evidence-boundary">
+      <p class="eyebrow">Evidence boundary</p>
+      <h2>这条证明到哪里为止</h2>
+      <p class="boundary-copy">Persisted engineering qualification evidence。Production Formal O00–O23 qualification 仍由独立的最终时间链治理；本 Demo 不把 accelerated evidence 包装成 production live，也不授权自动决策或执行。</p>
+      <details class="boundary-details">
+        <summary>Exact nonclaims</summary>
+        <ul id="nonclaims" class="nonclaims"></ul>
+      </details>
     </section>
 
     <div id="fatalError" class="fatal" hidden></div>
