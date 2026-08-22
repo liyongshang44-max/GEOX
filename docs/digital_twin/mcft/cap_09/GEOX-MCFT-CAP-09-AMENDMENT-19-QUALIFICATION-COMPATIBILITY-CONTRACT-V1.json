@@ -1,0 +1,63 @@
+{
+  "schema_version": "geox_mcft_cap09_amendment19_qualification_compatibility_contract_v1",
+  "authority_basis": "AMENDMENT_08_SECTION_5_LATER_CODE_CHANGE_INVALIDATES_ONLY_IF_QUALIFIED_IMPLEMENTATION_BOUNDARY_MUTATES",
+  "scope": "MCFT-CAP-09.S6.T4R1",
+  "qualification_identity_model": {
+    "repository_commit_sha": "DEPLOYMENT_OR_SOURCE_COMMIT_IDENTITY_ONLY",
+    "governed_semantic_digest": "QUALIFIED_IMPLEMENTATION_BOUNDARY_IDENTITY",
+    "qualification_subject_sha": "COMMIT_THAT_PRODUCED_IMMUTABLE_13_OF_13_EVIDENCE",
+    "deployment_subject_sha": "CURRENT_PROTECTED_MAIN_USED_FOR_FORMAL_OPERATION",
+    "execution_run_id": "WORKFLOW_RUN_ID",
+    "evidence_generation_id": "IMMUTABLE_ARTIFACT_AND_DATABASE_GENERATION_ID"
+  },
+  "carry_forward_rule": {
+    "allowed": true,
+    "required_attestation": "NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1",
+    "qualification_subject_may_differ_from_deployment_subject": true,
+    "governed_semantic_digest_must_match": true,
+    "qualified_implementation_boundary_change_requires_fresh_qualification": true,
+    "control_plane_only_change_does_not_by_itself_require_fresh_13_of_13": true,
+    "human_override_authorized": false
+  },
+  "governed_semantic_path_prefixes": [
+    "apps/server/src/domain/twin_runtime/",
+    "apps/server/src/runtime/twin_runtime/",
+    "apps/server/src/persistence/twin_runtime/",
+    "apps/server/src/external_evidence/",
+    "apps/server/db/migrations/",
+    "scripts/runtime_acceptance/"
+  ],
+  "governed_semantic_exact_paths": [
+    "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-ACCELERATED-GRADUATION-GATE-V1.json"
+  ],
+  "control_plane_contract": {
+    "persistent_workflow": "mcft-cap-09-t4r1-amendment19-persistent-24t-qualification",
+    "persistent_artifact_prefix": "mcft-cap09-t4r1-am19-persistent24-",
+    "rolling_workflow": "mcft-cap-09-t4r1-rolling-preboundary-capture",
+    "rolling_artifact_prefix": "mcft-cap09-t4r1-rolling-preboundary-",
+    "graduation_artifact_prefix": "mcft-cap09-am19-formal-graduation-",
+    "formal_arm_artifact_prefix": "mcft-cap09-am19-formal-arm-",
+    "formal_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v2"
+  },
+  "frozen_closure_source": {
+    "qualification_subject_sha": "d5e2520f3b9fc63c70315a59f4cd2f7d06fe39b1",
+    "persistent_workflow_run_id": 32587719906,
+    "persistent_artifact_id": 9479814787,
+    "persistent_artifact_digest": "sha256:5eadb9c61e941a1382ad05c596578d489e937510949c5fb0ce585b59174b095c",
+    "qualification_database": "geox_mcft_cap09_s6_accel24t_am19_v9",
+    "blocked_database": "geox_mcft_cap09_s6_accel24t_am19_blocked_v9",
+    "machine_status_count": 13,
+    "static_blocker_count": 0,
+    "machine_gate_observed_open_in_run": 32589078775
+  },
+  "forbidden_shortcuts": [
+    "REWRITE_OR_TRUNCATE_PRIOR_QUALIFICATION_DATABASE",
+    "RELABEL_QUALIFICATION_SUBJECT_SHA",
+    "IGNORE_GOVERNED_SEMANTIC_DIFF",
+    "ALLOW_ARBITRARY_PREDECESSOR_ARTIFACT",
+    "BYPASS_PROTECTED_MAIN_DEPLOYMENT_IDENTITY",
+    "TREAT_ACCELERATED_13_OF_13_AS_FINAL_REAL_24H_COMPLETION"
+  ]
+}
