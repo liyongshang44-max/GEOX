@@ -68,7 +68,7 @@ function assemble(input) {
   const sourceRunId = positiveInteger(meta.source_persistent_workflow_run_id, "AM19_GRADUATION_ENVELOPE_SOURCE_RUN_ID_REQUIRED");
   const sourceArtifactId = positiveInteger(meta.source_persistent_artifact_id, "AM19_GRADUATION_ENVELOPE_SOURCE_ARTIFACT_ID_REQUIRED");
   const sourceArtifactName = String(meta.source_persistent_artifact_name || "").trim();
-  need(sourceArtifactName.startsWith(`mcft-cap09-am19-persistent24-${subject}-`), "AM19_GRADUATION_ENVELOPE_SOURCE_ARTIFACT_NAME_REQUIRED");
+  need(sourceArtifactName.startsWith(`mcft-cap09-t4r1-am19-persistent24-${subject}-`), "AM19_GRADUATION_ENVELOPE_SOURCE_ARTIFACT_NAME_REQUIRED");
   const sourceArtifactDigest = artifactDigest(meta.source_persistent_artifact_digest);
   const graduationRunId = positiveInteger(meta.graduation_workflow_run_id, "AM19_GRADUATION_ENVELOPE_GRADUATION_RUN_ID_REQUIRED");
   const openedAt = canonicalIso(meta.opened_at, "AM19_GRADUATION_ENVELOPE_OPENED_AT_REQUIRED");
@@ -137,7 +137,7 @@ function selftest() {
     metadata: {
       source_persistent_workflow_run_id: 10,
       source_persistent_artifact_id: 11,
-      source_persistent_artifact_name: `mcft-cap09-am19-persistent24-${subject}-10`,
+      source_persistent_artifact_name: `mcft-cap09-t4r1-am19-persistent24-${subject}-10`,
       source_persistent_artifact_digest: `sha256:${"a".repeat(64)}`,
       graduation_workflow_run_id: 12,
       opened_at: "2026-08-20T05:10:00.000Z",
@@ -150,13 +150,14 @@ function selftest() {
     ["consumer", { ...base, persistent: { ...persistent, subject_sha: "3".repeat(40) } }, "AM19_GRADUATION_ENVELOPE_PERSISTENT_CONSUMER_SUBJECT_REQUIRED"],
     ["producer", { ...base, rehydration: { ...rehydration, producer_subject_sha: "3".repeat(40) } }, "AM19_GRADUATION_ENVELOPE_REHYDRATION_PRODUCER_SUBJECT_REQUIRED"],
     ["cross_head", { ...base, rehydration: { ...rehydration, cross_head_rehydration: false } }, "AM19_GRADUATION_ENVELOPE_REHYDRATION_CROSS_HEAD_FLAG_REQUIRED"],
+    ["stale_artifact_name", { ...base, metadata: { ...base.metadata, source_persistent_artifact_name: `mcft-cap09-am19-persistent24-${subject}-10` } }, "AM19_GRADUATION_ENVELOPE_SOURCE_ARTIFACT_NAME_REQUIRED"],
   ];
   for (const [name, value, expected] of negatives) {
     let observed = "";
     try { assemble(value); } catch (error) { observed = error.message; }
     need(observed === expected, `AM19_GRADUATION_ENVELOPE_SELFTEST_NEGATIVE_FAILED:${name}:${observed}`);
   }
-  console.log(JSON.stringify({ schema_version: "geox_mcft_cap09_amendment19_formal_graduation_envelope_selftest_v1", status: "PASS", cross_run_identity_bound: true, cross_head_provenance_bound: true, artifact_digest_bound: true, formal_effect: false }));
+  console.log(JSON.stringify({ schema_version: "geox_mcft_cap09_amendment19_formal_graduation_envelope_selftest_v1", status: "PASS", cross_run_identity_bound: true, cross_head_provenance_bound: true, artifact_digest_bound: true, t4r1_source_artifact_name_bound: true, formal_effect: false }));
 }
 
 function main() {
