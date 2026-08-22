@@ -50,6 +50,7 @@ jobs:
           set -euo pipefail
           test -z "${SOURCE_DATABASE_URL:-}"
           test -z "${DATABASE_URL:-}"
+          grep -Fq 'postgres:18-alpine' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
           grep -Fq 'pg_dump --schema-only --no-owner --no-privileges' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
           grep -Fq 'CREATE DATABASE "$name" TEMPLATE template0' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
           forbidden=$(grep -F 'CREATE DATABASE "$name" TEMPLATE "$SOURCE_DATABASE_NAME"' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml | grep -v 'forbidden=' || true)
@@ -103,11 +104,12 @@ jobs:
               psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$name\" TEMPLATE template0"
             fi
           done
-      - name: Dump schema only from immutable T4 reference
+      - name: Dump schema only from immutable T4 reference with PostgreSQL 18 client
         shell: bash
         run: |
           set -euo pipefail
-          pg_dump --schema-only --no-owner --no-privileges "$SOURCE_DATABASE_URL" > /tmp/t4-schema.sql
+          docker run --rm -e SOURCE_DATABASE_URL="$SOURCE_DATABASE_URL" postgres:18-alpine \
+            sh -c 'pg_dump --schema-only --no-owner --no-privileges "$SOURCE_DATABASE_URL"' > /tmp/t4-schema.sql
           test -s /tmp/t4-schema.sql
           ! grep -Eq '^COPY |^INSERT INTO ' /tmp/t4-schema.sql
       - name: Restore schema only into each fresh store
