@@ -19,8 +19,8 @@ env:
   PNPM_VERSION: '9.15.4'
   SOURCE_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h
   FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v2
-  QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v7
-  BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v7
+  QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v8
+  BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v8
 
 jobs:
   static-proof:
