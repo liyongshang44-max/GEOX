@@ -33,12 +33,8 @@ const REQUIRED_STATUS_KEYS = [
   "FULL_CHAIN_READBACK",
 ];
 
-function fail(code) {
-  throw new Error(code);
-}
-function need(value, code) {
-  if (!value) fail(code);
-}
+function fail(code) { throw new Error(code); }
+function need(value, code) { if (!value) fail(code); }
 function readJson(file) {
   if (!fs.existsSync(file)) fail(`AM19_GRADUATION_ASSEMBLY_INPUT_NOT_FOUND:${file}`);
   return JSON.parse(fs.readFileSync(file, "utf8"));
@@ -76,7 +72,8 @@ function assemble(authority, persistent, persistenceFree, rehydration, cutover, 
 
   need(persistent?.schema_version === "geox_mcft_cap09_amendment19_persistent24_qualification_result_v1", "AM19_GRADUATION_ASSEMBLY_PERSISTENT_SCHEMA_REQUIRED");
   need(persistent.status === "PASS", `AM19_GRADUATION_ASSEMBLY_FRESH_PERSISTENT_PASS_REQUIRED:${String(persistent?.status)}`);
-  need(persistent.subject_sha === subject && persistent.producer_subject_sha === subject, "AM19_GRADUATION_ASSEMBLY_PERSISTENT_EXACT_SUBJECT_REQUIRED");
+  need(persistent.subject_sha === subject, "AM19_GRADUATION_ASSEMBLY_PERSISTENT_CONSUMER_SUBJECT_REQUIRED");
+  const producerSubject = canonicalSubject(persistent.producer_subject_sha);
   need(persistent.temporal_authority === EXPECTED_TEMPORAL_AUTHORITY, "AM19_GRADUATION_ASSEMBLY_TEMPORAL_AUTHORITY_REQUIRED");
   need(persistent.qualification_clock === "ACCELERATED_ENGINEERING_ONLY", "AM19_GRADUATION_ASSEMBLY_QUALIFICATION_CLOCK_REQUIRED");
   need(persistent.accelerated_clock_scope === EXPECTED_CLOCK_SCOPE, "AM19_GRADUATION_ASSEMBLY_PERSISTENT_CLOCK_SCOPE_DRIFT");
@@ -84,9 +81,7 @@ function assemble(authority, persistent, persistenceFree, rehydration, cutover, 
   need(persistent.bootstrap_lease_real_expiry_required === true && persistent.lease_and_fencing_clock_substitution === false, "AM19_GRADUATION_ASSEMBLY_LEASE_FENCING_CLOCK_SUBSTITUTION_FORBIDDEN");
   need(persistent.formal_clock_authority_changed === false, "AM19_GRADUATION_ASSEMBLY_FORMAL_CLOCK_CHANGE_FORBIDDEN");
   need(persistent.static_blocker_count === 0, "AM19_GRADUATION_ASSEMBLY_STATIC_BLOCKERS_REMAIN");
-  for (const key of REQUIRED_STATUS_KEYS) {
-    need(persistent.machine_statuses?.[key] === "PASS", `AM19_GRADUATION_ASSEMBLY_MACHINE_STATUS_NOT_PASS:${key}:${String(persistent.machine_statuses?.[key])}`);
-  }
+  for (const key of REQUIRED_STATUS_KEYS) need(persistent.machine_statuses?.[key] === "PASS", `AM19_GRADUATION_ASSEMBLY_MACHINE_STATUS_NOT_PASS:${key}:${String(persistent.machine_statuses?.[key])}`);
   need(persistent.production_scheduler_reused === true, "AM19_GRADUATION_ASSEMBLY_PRODUCTION_SCHEDULER_REQUIRED");
   need(persistent.production_lease_fencing_reused === true, "AM19_GRADUATION_ASSEMBLY_PRODUCTION_LEASE_FENCING_REQUIRED");
   need(persistent.production_runner_reused === true, "AM19_GRADUATION_ASSEMBLY_PRODUCTION_RUNNER_REQUIRED");
@@ -109,7 +104,9 @@ function assemble(authority, persistent, persistenceFree, rehydration, cutover, 
   need(rehydration?.schema_version === "geox_mcft_cap09_rolling_preboundary_rehydration_v1", "AM19_GRADUATION_ASSEMBLY_REHYDRATION_SCHEMA_REQUIRED");
   need(rehydration.status === "PASS", "AM19_GRADUATION_ASSEMBLY_REHYDRATION_PASS_REQUIRED");
   need(rehydration.temporal_authority === EXPECTED_TEMPORAL_AUTHORITY, "AM19_GRADUATION_ASSEMBLY_REHYDRATION_TEMPORAL_AUTHORITY_DRIFT");
-  need(rehydration.consumer_subject_sha === subject && rehydration.producer_subject_sha === subject && rehydration.cross_head_rehydration === false, "AM19_GRADUATION_ASSEMBLY_REHYDRATION_EXACT_SUBJECT_REQUIRED");
+  need(rehydration.consumer_subject_sha === subject, "AM19_GRADUATION_ASSEMBLY_REHYDRATION_CONSUMER_SUBJECT_REQUIRED");
+  need(rehydration.producer_subject_sha === producerSubject, "AM19_GRADUATION_ASSEMBLY_REHYDRATION_PRODUCER_SUBJECT_REQUIRED");
+  need(rehydration.cross_head_rehydration === (producerSubject !== subject), "AM19_GRADUATION_ASSEMBLY_REHYDRATION_CROSS_HEAD_FLAG_REQUIRED");
   need(rehydration.target_t === persistent.a0, "AM19_GRADUATION_ASSEMBLY_REHYDRATION_WINDOW_IDENTITY_REQUIRED");
   need(exactRecordTypes(rehydration.record_types), "AM19_GRADUATION_ASSEMBLY_REHYDRATION_RECORD_TYPES_REQUIRED");
   need(rehydration.semantic_manifest_match === true, "AM19_GRADUATION_ASSEMBLY_REHYDRATION_SEMANTIC_MANIFEST_REQUIRED");
@@ -157,7 +154,10 @@ function assemble(authority, persistent, persistenceFree, rehydration, cutover, 
     evidence_provenance: {
       persistent_result_schema: persistent.schema_version,
       persistent_subject_sha: persistent.subject_sha,
-      persistent_producer_subject_sha: persistent.producer_subject_sha,
+      persistent_producer_subject_sha: producerSubject,
+      rehydration_consumer_subject_sha: rehydration.consumer_subject_sha,
+      rehydration_producer_subject_sha: rehydration.producer_subject_sha,
+      cross_head_rehydration: rehydration.cross_head_rehydration,
       persistence_free_result_schema: persistenceFree.schema_version,
       engineering_core_symbol: persistenceFree.canonical_core_symbol,
       rehydration_result_schema: rehydration.schema_version,
@@ -175,6 +175,7 @@ function assemble(authority, persistent, persistenceFree, rehydration, cutover, 
 
 function selftest() {
   const subject = "1".repeat(40);
+  const producer = "2".repeat(40);
   const authority = {
     canonical_core_binding: {
       core_path: EXPECTED_CORE_PATH,
@@ -200,7 +201,7 @@ function selftest() {
     schema_version: "geox_mcft_cap09_amendment19_persistent24_qualification_result_v1",
     status: "PASS",
     subject_sha: subject,
-    producer_subject_sha: subject,
+    producer_subject_sha: producer,
     temporal_authority: EXPECTED_TEMPORAL_AUTHORITY,
     qualification_clock: "ACCELERATED_ENGINEERING_ONLY",
     accelerated_clock_scope: EXPECTED_CLOCK_SCOPE,
@@ -242,8 +243,8 @@ function selftest() {
     status: "PASS",
     temporal_authority: EXPECTED_TEMPORAL_AUTHORITY,
     consumer_subject_sha: subject,
-    producer_subject_sha: subject,
-    cross_head_rehydration: false,
+    producer_subject_sha: producer,
+    cross_head_rehydration: true,
     target_t: persistent.a0,
     record_types: ["future_et0_assumption_v1", "future_weather_assumption_v1", "soil_moisture_observation_v1"],
     semantic_manifest_match: true,
@@ -274,14 +275,15 @@ function selftest() {
   };
 
   const pass = assemble(authority, persistent, persistenceFree, rehydration, cutover, subject);
-  need(pass.status === "PASS" && pass.same_canonical_core_engineering_and_production === true, "AM19_GRADUATION_ASSEMBLY_SELFTEST_PASS_FAILED");
+  need(pass.status === "PASS" && pass.same_canonical_core_engineering_and_production === true && pass.evidence_provenance.cross_head_rehydration === true, "AM19_GRADUATION_ASSEMBLY_SELFTEST_PASS_FAILED");
 
   const negativeCases = [
-    ["subject", { persistent: { ...persistent, subject_sha: "2".repeat(40) } }, "AM19_GRADUATION_ASSEMBLY_PERSISTENT_EXACT_SUBJECT_REQUIRED"],
+    ["subject", { persistent: { ...persistent, subject_sha: "3".repeat(40) } }, "AM19_GRADUATION_ASSEMBLY_PERSISTENT_CONSUMER_SUBJECT_REQUIRED"],
     ["status", { persistent: { ...persistent, machine_statuses: { ...persistent.machine_statuses, MODE_B: "NOT_RUN" } } }, "AM19_GRADUATION_ASSEMBLY_MACHINE_STATUS_NOT_PASS:MODE_B:NOT_RUN"],
     ["blocker", { persistent: { ...persistent, static_blocker_count: 1 } }, "AM19_GRADUATION_ASSEMBLY_STATIC_BLOCKERS_REMAIN"],
     ["engineering_core", { persistenceFree: { ...persistenceFree, canonical_core_symbol: "wrong" } }, "AM19_GRADUATION_ASSEMBLY_ENGINEERING_CORE_SYMBOL_DRIFT"],
-    ["rehydration_subject", { rehydration: { ...rehydration, cross_head_rehydration: true } }, "AM19_GRADUATION_ASSEMBLY_REHYDRATION_EXACT_SUBJECT_REQUIRED"],
+    ["rehydration_producer", { rehydration: { ...rehydration, producer_subject_sha: "3".repeat(40) } }, "AM19_GRADUATION_ASSEMBLY_REHYDRATION_PRODUCER_SUBJECT_REQUIRED"],
+    ["rehydration_cross_head", { rehydration: { ...rehydration, cross_head_rehydration: false } }, "AM19_GRADUATION_ASSEMBLY_REHYDRATION_CROSS_HEAD_FLAG_REQUIRED"],
     ["rehydration_manifest", { rehydration: { ...rehydration, semantic_manifest_match: false } }, "AM19_GRADUATION_ASSEMBLY_REHYDRATION_SEMANTIC_MANIFEST_REQUIRED"],
     ["rehydration_window", { rehydration: { ...rehydration, target_t: "2026-09-01T01:00:00.000Z" } }, "AM19_GRADUATION_ASSEMBLY_REHYDRATION_WINDOW_IDENTITY_REQUIRED"],
     ["production_core", { cutover: { ...cutover, shared_canonical_core_bound: false } }, "AM19_GRADUATION_ASSEMBLY_PRODUCTION_SHARED_CORE_PROOF_REQUIRED"],
@@ -292,14 +294,7 @@ function selftest() {
   for (const [name, override, expected] of negativeCases) {
     let observed = "";
     try {
-      assemble(
-        authority,
-        override.persistent || persistent,
-        override.persistenceFree || persistenceFree,
-        override.rehydration || rehydration,
-        override.cutover || cutover,
-        subject,
-      );
+      assemble(authority, override.persistent || persistent, override.persistenceFree || persistenceFree, override.rehydration || rehydration, override.cutover || cutover, subject);
     } catch (error) {
       observed = error instanceof Error ? error.message : String(error);
     }
@@ -311,15 +306,13 @@ function selftest() {
     negative_case_count: negativeCases.length,
     field_rename_only_forbidden: true,
     rehydration_provenance_required: true,
+    cross_head_rehydration_supported: true,
     evidence_composition_required: true,
   }));
 }
 
 function main() {
-  if (process.argv.includes("--selftest")) {
-    selftest();
-    return;
-  }
+  if (process.argv.includes("--selftest")) { selftest(); return; }
   const [persistentArg, persistenceFreeArg, rehydrationArg, cutoverArg, subjectArg, outArg] = process.argv.slice(2);
   if (!persistentArg || !persistenceFreeArg || !rehydrationArg || !cutoverArg || !subjectArg) {
     fail("AM19_GRADUATION_ASSEMBLY_USAGE: persistent.json persistence-free.json rehydration.json cutover.json subject_sha [output.json]");
@@ -336,9 +329,4 @@ function main() {
   console.log(JSON.stringify(output));
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-}
+try { main(); } catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; }
