@@ -8,7 +8,7 @@ on:
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.cjs'
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.cjs'
   workflow_run:
-    workflows: ['mcft-cap-09-amendment19-persistent-24t-qualification']
+    workflows: ['mcft-cap-09-t4r1-amendment19-persistent-24t-qualification']
     types: [completed]
 
 permissions:
@@ -67,10 +67,12 @@ jobs:
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER_RESULT.json','utf8'));
           if(p.status!=='PASS'||p.shared_canonical_core_bound!==true||p.provider_wait_authorized!==false||p.persistent_24t_claimed!==false||p.future_formal_epoch_selected!==false||p.formal_effect!==false) throw new Error('AM19_GRADUATION_WIRING_CUTOVER_PROOF_REQUIRED');
 
-      - name: Require idempotent read-only qualification is not treated as a fresh gate input
+      - name: Require T4R1 trigger and idempotent read-only qualification boundary
         shell: bash
         run: |
           set -euo pipefail
+          grep -Fq "workflows: ['mcft-cap-09-t4r1-amendment19-persistent-24t-qualification']" .github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml
+          grep -Fq 'mcft-cap09-t4r1-am19-persistent24-' .github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml
           grep -Fq "CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs" .github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml
           grep -Fq "formal-graduation-readonly-" .github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml
 
@@ -110,7 +112,7 @@ jobs:
             const runId = Number(context.payload.workflow_run.id);
             const { owner, repo } = context.repo;
             const response = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: runId, per_page: 100 });
-            const prefix = `mcft-cap09-am19-persistent24-${process.env.SUBJECT_SHA}-`;
+            const prefix = `mcft-cap09-t4r1-am19-persistent24-${process.env.SUBJECT_SHA}-`;
             const matches = response.data.artifacts.filter(a => !a.expired && a.name.startsWith(prefix));
             if (matches.length !== 1) throw new Error(`AM19_GRADUATION_EXACT_ONE_SOURCE_ARTIFACT_REQUIRED:${matches.length}`);
             const artifact = matches[0];
