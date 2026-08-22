@@ -159,10 +159,10 @@ function writeProof(proof) {
   console.log(JSON.stringify(proof));
 }
 
-function proofForCandidate(candidate, subject, authority) {
+function proofForCandidate(candidate, subject, producerSubject, authority) {
   requireCondition(candidate.schema_version === "geox_mcft_cap09_rolling_preboundary_candidate_v1", "AM19_CROP_PREFLIGHT_CANDIDATE_SCHEMA_REQUIRED");
   requireCondition(candidate.status === "PASS" && candidate.temporal_authority === "PROVIDER_AVAILABILITY_WATERMARK_V1", "AM19_CROP_PREFLIGHT_CANDIDATE_PASS_REQUIRED");
-  requireCondition(candidate.producer_subject_sha === subject && (candidate.subject_sha === undefined || candidate.subject_sha === subject), "AM19_CROP_PREFLIGHT_EXACT_SUBJECT_REQUIRED");
+  requireCondition(candidate.producer_subject_sha === producerSubject && (candidate.subject_sha === undefined || candidate.subject_sha === producerSubject), "AM19_CROP_PREFLIGHT_EXACT_SUBJECT_REQUIRED");
   const window = evaluateWindow(candidate.target_t, authority);
   return {
     schema_version: "geox_mcft_cap09_amendment19_crop_window_preflight_v1",
@@ -204,7 +204,32 @@ function selftest() {
   requireCondition(legal.viable && legal.contexts.length === 25 && legal.o23 === "2026-08-24T06:00:00.000Z", "AM19_CROP_PREFLIGHT_SELFTEST_T4R1_LEGAL_WINDOW_REQUIRED");
   const late = evaluateWindow("2026-08-27T22:00:00.000Z", authority);
   requireCondition(!late.viable && late.failures.length > 0 && late.failures[0]?.reason === "STAGE_TRANSITION_RISK", "AM19_CROP_PREFLIGHT_SELFTEST_T4R1_TRANSITION_REQUIRED");
-  console.log(JSON.stringify({ status: "PASS", legal_case_count: 1, fail_closed_case_count: 1, database_write_count: 0, provider_request_count: 0 }));
+
+  const consumerSubject = "a".repeat(40);
+  const producerSubject = "b".repeat(40);
+  const predecessorCandidate = {
+    schema_version: "geox_mcft_cap09_rolling_preboundary_candidate_v1",
+    status: "PASS",
+    temporal_authority: "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    producer_subject_sha: producerSubject,
+    target_t: "2026-08-23T06:00:00.000Z",
+  };
+  const predecessorProof = proofForCandidate(predecessorCandidate, consumerSubject, producerSubject, authority);
+  requireCondition(
+    predecessorProof.status === "PASS"
+      && predecessorProof.subject_sha === consumerSubject
+      && predecessorProof.producer_subject_sha === producerSubject,
+    "AM19_CROP_PREFLIGHT_SELFTEST_PREDECESSOR_PRODUCER_REQUIRED",
+  );
+  let mismatchFailedClosed = false;
+  try {
+    proofForCandidate(predecessorCandidate, consumerSubject, "c".repeat(40), authority);
+  } catch (error) {
+    mismatchFailedClosed = error instanceof Error && error.message === "AM19_CROP_PREFLIGHT_EXACT_SUBJECT_REQUIRED";
+  }
+  requireCondition(mismatchFailedClosed, "AM19_CROP_PREFLIGHT_SELFTEST_PRODUCER_MISMATCH_FAIL_CLOSED_REQUIRED");
+
+  console.log(JSON.stringify({ status: "PASS", legal_case_count: 2, fail_closed_case_count: 2, database_write_count: 0, provider_request_count: 0 }));
 }
 
 const mode = process.argv[2] || "run";
@@ -213,8 +238,10 @@ if (mode === "selftest") {
 } else if (mode === "run") {
   const subject = String(process.env.SUBJECT_SHA || "").trim();
   requireCondition(/^[0-9a-f]{40}$/.test(subject), "AM19_CROP_PREFLIGHT_EXACT_SUBJECT_SHA_REQUIRED");
+  const producerSubject = String(process.env.MCFT_CAP09_ROLLING_PRODUCER_SUBJECT_SHA || subject).trim();
+  requireCondition(/^[0-9a-f]{40}$/.test(producerSubject), "AM19_CROP_PREFLIGHT_EXACT_PRODUCER_SUBJECT_SHA_REQUIRED");
   const candidatePath = path.resolve(process.env.MCFT_CAP09_ROLLING_CANDIDATE_PATH || DEFAULT_CANDIDATE_PATH);
-  const proof = proofForCandidate(JSON.parse(fs.readFileSync(candidatePath, "utf8")), subject, loadAuthority());
+  const proof = proofForCandidate(JSON.parse(fs.readFileSync(candidatePath, "utf8")), subject, producerSubject, loadAuthority());
   writeProof(proof);
   if (proof.status !== "PASS") process.exitCode = 3;
 } else {
