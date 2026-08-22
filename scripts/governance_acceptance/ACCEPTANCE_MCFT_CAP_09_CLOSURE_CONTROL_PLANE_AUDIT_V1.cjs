@@ -18,6 +18,18 @@ function text(key) { const p=FILES[key]; if(!fs.existsSync(p)) throw new Error(`
 function need(value, code) { if(!value) throw new Error(code); }
 function has(value, token, code) { need(value.includes(token), code); }
 function no(value, token, code) { need(!value.includes(token), code); }
+function noOperationalReference(value, token, code) {
+  const hits = value.split("\n").filter((line) => line.includes(token));
+  const nonGuardHits = hits.filter((line) => {
+    const trimmed = line.trim();
+    return !(
+      trimmed.startsWith("! grep ") ||
+      trimmed.startsWith("forbidden=") ||
+      trimmed.includes("grep -Fq") && trimmed.startsWith("!")
+    );
+  });
+  need(nonGuardHits.length === 0, `${code}:${nonGuardHits.join(" || ")}`);
+}
 
 function main() {
   const graduation=text("graduation"), armWorkflow=text("formalArmWorkflow"), arm=text("formalArmAssembler"), a0=text("a0"), hourly=text("hourly"), live=text("live"), finalReadback=text("finalReadback"), completion=text("completion"), contract=text("contract");
@@ -42,10 +54,11 @@ function main() {
   has(arm,'mcft-cap09-t4r1-rolling-preboundary-',"AM19_CLOSURE_AUDIT_T4_ROLLING_PREFIX_REQUIRED");
 
   for (const [name,value] of [["armWorkflow",armWorkflow],["a0",a0],["hourly",hourly],["live",live],["finalReadback",finalReadback]]) {
-    no(value,"GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL",`AM19_CLOSURE_AUDIT_T3_SECRET_FORBIDDEN:${name}`);
-    no(value,"geox_mcft_cap09_s6_formal_t3r1_24h",`AM19_CLOSURE_AUDIT_T3_DATABASE_FORBIDDEN:${name}`);
+    noOperationalReference(value,"GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL",`AM19_CLOSURE_AUDIT_T3_SECRET_FORBIDDEN:${name}`);
+    noOperationalReference(value,"geox_mcft_cap09_s6_formal_t3r1_24h",`AM19_CLOSURE_AUDIT_T3_DATABASE_FORBIDDEN:${name}`);
   }
   has(a0,"geox_mcft_cap09_s6_formal_t4r1_24h_v2","AM19_CLOSURE_AUDIT_A0_T4_FORMAL_DB_REQUIRED");
+  has(hourly,"GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL","AM19_CLOSURE_AUDIT_HOURLY_T4_PARENT_SECRET_REQUIRED");
   has(live,"geox_mcft_cap09_s6_formal_t4r1_24h_v2","AM19_CLOSURE_AUDIT_LIVE_T4_FORMAL_DB_REQUIRED");
   has(finalReadback,"geox_mcft_cap09_s6_formal_t4r1_24h_v2","AM19_CLOSURE_AUDIT_READBACK_T4_FORMAL_DB_REQUIRED");
 
@@ -65,6 +78,7 @@ function main() {
     premerge_real_artifact_graduation_replay_required:true,
     downstream_formal_chain_bound_to_deployment_subject:true,
     stale_t3_operational_route_absent:true,
+    negative_static_guards_not_misclassified_as_operational_routes:true,
     qualification_store_generation_not_used_by_a0_or_live_runner:true
   }));
 }
