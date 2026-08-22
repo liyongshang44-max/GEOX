@@ -1,0 +1,51 @@
+name: mcft-cap-09-closure-control-plane-audit
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-closure-control-plane-audit.yml'
+      - '.github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml'
+      - '.github/workflows/mcft-cap-09-amendment19-formal-arm.yml'
+      - '.github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml'
+      - '.github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml'
+      - '.github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml'
+      - '.github/workflows/mcft-cap-09-amendment19-formal-final-readback.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CLOSURE_CONTROL_PLANE_AUDIT_V1.cjs'
+      - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.cjs'
+      - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-QUALIFICATION-COMPATIBILITY-CONTRACT-V1.json'
+
+permissions:
+  contents: read
+
+env:
+  QUALIFICATION_SHA: d5e2520f3b9fc63c70315a59f4cd2f7d06fe39b1
+
+jobs:
+  closure-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: Prove qualification semantic boundary is unchanged from frozen v9 subject
+        run: >-
+          node scripts/governance_acceptance/ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs
+          "$QUALIFICATION_SHA"
+          "${{ github.event.pull_request.head.sha }}"
+          acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json
+      - name: Audit remaining Graduation to Formal completion control plane
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CLOSURE_CONTROL_PLANE_AUDIT_V1.cjs
+      - name: Require no qualification-generation rollover is implied
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json','utf8'));
+          if(p.status!=='PASS'||p.governed_changed_paths.length!==0||p.qualification_reexecution_required!==false)throw new Error('MCFT_CAP09_CLOSURE_QUALIFICATION_ROLLOVER_FORBIDDEN');
+          if(p.qualification_database_rewrite_authorized!==false||p.human_override_used!==false||p.formal_effect!==false)throw new Error('MCFT_CAP09_CLOSURE_FAIL_CLOSED_BOUNDARY_REQUIRED');
