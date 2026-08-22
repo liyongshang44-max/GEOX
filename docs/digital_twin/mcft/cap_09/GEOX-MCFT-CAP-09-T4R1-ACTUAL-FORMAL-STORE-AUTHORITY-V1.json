@@ -1,0 +1,56 @@
+{
+  "schema_version": "geox_mcft_cap09_t4r1_actual_formal_store_authority_v1",
+  "status": "CANDIDATE",
+  "purpose": "FRESH_T4R1_REAL_WALL_CLOCK_FORMAL_EPOCH_STORE",
+  "predecessor_protected_main_sha": "5d619007cc3507a24cc62ef8bdce07e3f5df01ca",
+  "scope": {
+    "site_id": "KBS_MCSE_T4R1",
+    "field_id": "field_kbs_mcse_t4r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t4r1_crop_formal_v1"
+  },
+  "database_identity": {
+    "provider": "NEON_POSTGRES",
+    "project_id": "delicate-glade-62464340",
+    "branch_id": "br-cold-dust-a6j6aymz",
+    "database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v2",
+    "schema_reference_database": "geox_mcft_cap09_s6_formal_t4r1_24h",
+    "qualification_database_reuse_forbidden": "geox_mcft_cap09_s6_formal_t4r1_24h",
+    "historical_t1_t3_database_reuse_forbidden": true,
+    "creation_mode": "CREATE_DATABASE_TEMPLATE0_THEN_SCHEMA_ONLY_RESTORE",
+    "data_clone_forbidden": true
+  },
+  "schema_contract": {
+    "required_public_table_count": 26,
+    "column_fingerprint_md5": "873a8e86f55d75a04a5f671627e98ae1",
+    "constraint_fingerprint_md5": "7803f7e7706e52eca3ca2aa4290ff5dd",
+    "index_fingerprint_md5": "ea5b3ba0392fd52fb471bc754e94ed35",
+    "all_governed_relations_zero_state_before_arm_required": true
+  },
+  "epoch_contract": {
+    "existing_2026_08_21_t4_bootstrap_is_qualification_evidence_only": true,
+    "existing_bootstrap_reuse_as_future_formal_a0_forbidden": true,
+    "new_a0_must_be_selected_after_exact_subject_graduation": true,
+    "o00_must_be_future_at_arm_time": true,
+    "minimum_arm_to_o00_lead_minutes": 35,
+    "real_wall_clock_o00_o23_required": true,
+    "accelerated_clock_authorized": false
+  },
+  "safety": {
+    "cross_scope_state_stitching_forbidden": true,
+    "t1r1_state_reuse_forbidden": true,
+    "t3r1_state_reuse_forbidden": true,
+    "provider_fetch_in_runtime_forbidden": true,
+    "formal_db_write_before_arm_forbidden": true,
+    "scheduler_write_before_a0_bootstrap_forbidden": true,
+    "recommendation_approval_action_dispatch_side_effects_forbidden": true
+  },
+  "nonclaims": {
+    "store_schema_provisioned_by_this_document": false,
+    "formal_epoch_selected": false,
+    "formal_a0_bootstrapped": false,
+    "formal_o00_started": false,
+    "formal_execution_count": "0/24",
+    "mcft_cap09_completed": false
+  }
+}
