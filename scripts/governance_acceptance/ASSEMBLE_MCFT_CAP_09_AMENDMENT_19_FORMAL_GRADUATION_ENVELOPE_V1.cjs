@@ -56,10 +56,13 @@ function assemble(input) {
   need(gate.required_status_count === 13 && gate.static_blocker_count === 0 && gate.human_override_used === false, "AM19_GRADUATION_ENVELOPE_GATE_MACHINE_ONLY_REQUIRED");
 
   need(persistent?.schema_version === "geox_mcft_cap09_amendment19_persistent24_qualification_result_v1", "AM19_GRADUATION_ENVELOPE_PERSISTENT_SCHEMA_REQUIRED");
-  need(persistent.status === "PASS" && persistent.subject_sha === subject && persistent.producer_subject_sha === subject, "AM19_GRADUATION_ENVELOPE_PERSISTENT_EXACT_SUBJECT_REQUIRED");
+  need(persistent.status === "PASS" && persistent.subject_sha === subject, "AM19_GRADUATION_ENVELOPE_PERSISTENT_CONSUMER_SUBJECT_REQUIRED");
+  const producerSubject = exactSha(persistent.producer_subject_sha, "AM19_GRADUATION_ENVELOPE_PERSISTENT_PRODUCER_SUBJECT_REQUIRED");
   need(persistent.static_blocker_count === 0 && persistent.final_actual_24h_still_required === true && persistent.formal_o00_started === false, "AM19_GRADUATION_ENVELOPE_PERSISTENT_BOUNDARY_REQUIRED");
   need(persistenceFree?.status === "PASS" && persistenceFree.machine_statuses?.PERSISTENCE_FREE_24T === "PASS", "AM19_GRADUATION_ENVELOPE_PERSISTENCE_FREE_REQUIRED");
-  need(rehydration?.status === "PASS" && rehydration.consumer_subject_sha === subject && rehydration.producer_subject_sha === subject && rehydration.cross_head_rehydration === false, "AM19_GRADUATION_ENVELOPE_REHYDRATION_EXACT_SUBJECT_REQUIRED");
+  need(rehydration?.status === "PASS" && rehydration.consumer_subject_sha === subject, "AM19_GRADUATION_ENVELOPE_REHYDRATION_CONSUMER_SUBJECT_REQUIRED");
+  need(rehydration.producer_subject_sha === producerSubject, "AM19_GRADUATION_ENVELOPE_REHYDRATION_PRODUCER_SUBJECT_REQUIRED");
+  need(rehydration.cross_head_rehydration === (producerSubject !== subject), "AM19_GRADUATION_ENVELOPE_REHYDRATION_CROSS_HEAD_FLAG_REQUIRED");
   need(cutover?.status === "PASS" && cutover.shared_canonical_core_bound === true && cutover.formal_effect === false, "AM19_GRADUATION_ENVELOPE_CUTOVER_REQUIRED");
 
   const sourceRunId = positiveInteger(meta.source_persistent_workflow_run_id, "AM19_GRADUATION_ENVELOPE_SOURCE_RUN_ID_REQUIRED");
@@ -75,6 +78,8 @@ function assemble(input) {
     status: "PASS",
     formal_epoch_creation_gate: "OPEN",
     subject_sha: subject,
+    producer_subject_sha: producerSubject,
+    cross_head_rehydration: rehydration.cross_head_rehydration,
     opened_at: openedAt,
     source_persistent_workflow_run_id: sourceRunId,
     source_persistent_artifact_id: sourceArtifactId,
@@ -106,6 +111,7 @@ function assemble(input) {
 function selftest() {
   const tmp = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "am19-gate-envelope-"));
   const subject = "1".repeat(40);
+  const producer = "2".repeat(40);
   const write = (name, value) => {
     const file = path.join(tmp, name);
     fs.writeFileSync(file, JSON.stringify(value) + "\n");
@@ -113,9 +119,9 @@ function selftest() {
   };
   const graduation = { schema_version: "geox_mcft_cap09_amendment19_formal_graduation_input_v1", status: "PASS", subject_sha: subject, static_blocker_count: 0, future_formal_epoch_selected: false, formal_o00_started: false, mcft_cap09_completed: false, final_actual_24h_still_required: true };
   const gate = { schema_version: "geox_mcft_cap09_formal_epoch_graduation_gate_result_v1", status: "PASS", formal_epoch_creation_gate: "OPEN", required_status_count: 13, static_blocker_count: 0, human_override_used: false };
-  const persistent = { schema_version: "geox_mcft_cap09_amendment19_persistent24_qualification_result_v1", status: "PASS", subject_sha: subject, producer_subject_sha: subject, static_blocker_count: 0, final_actual_24h_still_required: true, formal_o00_started: false, temporal_authority: "PROVIDER_AVAILABILITY_WATERMARK_V1", a0: "2026-08-20T05:00:00.000Z", o00: "2026-08-20T06:00:00.000Z", o23: "2026-08-21T05:00:00.000Z" };
+  const persistent = { schema_version: "geox_mcft_cap09_amendment19_persistent24_qualification_result_v1", status: "PASS", subject_sha: subject, producer_subject_sha: producer, static_blocker_count: 0, final_actual_24h_still_required: true, formal_o00_started: false, temporal_authority: "PROVIDER_AVAILABILITY_WATERMARK_V1", a0: "2026-08-20T05:00:00.000Z", o00: "2026-08-20T06:00:00.000Z", o23: "2026-08-21T05:00:00.000Z" };
   const persistenceFree = { status: "PASS", machine_statuses: { PERSISTENCE_FREE_24T: "PASS" } };
-  const rehydration = { status: "PASS", consumer_subject_sha: subject, producer_subject_sha: subject, cross_head_rehydration: false };
+  const rehydration = { status: "PASS", consumer_subject_sha: subject, producer_subject_sha: producer, cross_head_rehydration: true };
   const cutover = { status: "PASS", shared_canonical_core_bound: true, formal_effect: false };
   const paths = {
     graduation: write("graduation.json", graduation),
@@ -138,11 +144,19 @@ function selftest() {
     },
   };
   const pass = assemble(base);
-  need(pass.status === "PASS" && pass.formal_epoch_creation_gate === "OPEN" && pass.subject_sha === subject, "AM19_GRADUATION_ENVELOPE_SELFTEST_PASS_FAILED");
-  let observed = "";
-  try { assemble({ ...base, persistent: { ...persistent, subject_sha: "2".repeat(40) } }); } catch (error) { observed = error.message; }
-  need(observed === "AM19_GRADUATION_ENVELOPE_PERSISTENT_EXACT_SUBJECT_REQUIRED", `AM19_GRADUATION_ENVELOPE_SELFTEST_NEGATIVE_FAILED:${observed}`);
-  console.log(JSON.stringify({ schema_version: "geox_mcft_cap09_amendment19_formal_graduation_envelope_selftest_v1", status: "PASS", cross_run_identity_bound: true, artifact_digest_bound: true, formal_effect: false }));
+  need(pass.status === "PASS" && pass.formal_epoch_creation_gate === "OPEN" && pass.subject_sha === subject && pass.producer_subject_sha === producer && pass.cross_head_rehydration === true, "AM19_GRADUATION_ENVELOPE_SELFTEST_PASS_FAILED");
+
+  const negatives = [
+    ["consumer", { ...base, persistent: { ...persistent, subject_sha: "3".repeat(40) } }, "AM19_GRADUATION_ENVELOPE_PERSISTENT_CONSUMER_SUBJECT_REQUIRED"],
+    ["producer", { ...base, rehydration: { ...rehydration, producer_subject_sha: "3".repeat(40) } }, "AM19_GRADUATION_ENVELOPE_REHYDRATION_PRODUCER_SUBJECT_REQUIRED"],
+    ["cross_head", { ...base, rehydration: { ...rehydration, cross_head_rehydration: false } }, "AM19_GRADUATION_ENVELOPE_REHYDRATION_CROSS_HEAD_FLAG_REQUIRED"],
+  ];
+  for (const [name, value, expected] of negatives) {
+    let observed = "";
+    try { assemble(value); } catch (error) { observed = error.message; }
+    need(observed === expected, `AM19_GRADUATION_ENVELOPE_SELFTEST_NEGATIVE_FAILED:${name}:${observed}`);
+  }
+  console.log(JSON.stringify({ schema_version: "geox_mcft_cap09_amendment19_formal_graduation_envelope_selftest_v1", status: "PASS", cross_run_identity_bound: true, cross_head_provenance_bound: true, artifact_digest_bound: true, formal_effect: false }));
 }
 
 function main() {
