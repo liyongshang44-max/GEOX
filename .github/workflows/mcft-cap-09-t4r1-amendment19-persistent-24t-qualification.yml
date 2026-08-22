@@ -1,0 +1,236 @@
+name: mcft-cap-09-t4r1-amendment19-persistent-24t-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t4r1-amendment19-persistent-24t-qualification.yml'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_AMENDMENT_19_PERSISTENT_24T_SUCCESSOR.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'
+      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.ts'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+    inputs:
+      rolling_artifact_id:
+        description: 'T4R1 rolling artifact id from protected-main capture'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-t4r1-am19-p24-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  LOCAL_REHYDRATION_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55433/ea5e2_readiness
+
+jobs:
+  static-successor-proof:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact current protected-main base
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test '${{ github.event.pull_request.base.sha }}' = "$(git rev-parse origin/main)" || { echo 'T4R1_AM19_P24_PR_BASE_MUST_EQUAL_CURRENT_MAIN' >&2; exit 1; }
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prove exact-source T4R1 persistent successor adapter
+        run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_AMENDMENT_19_PERSISTENT_24T_SUCCESSOR.ts selftest
+
+      - name: Typecheck producer-bound rehydration runner
+        run: pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+
+      - name: Prove crop-window fail-closed boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_PREFLIGHT_V1.cjs
+
+      - name: Reprove persistence-free canonical 24T semantics
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.ts
+
+      - name: Require persistence-free proof is not Formal completion
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json','utf8'));
+          if(p.status!=='PASS'||p.machine_statuses?.PERSISTENCE_FREE_24T!=='PASS'||p.canonical_tick_count!==24||p.provider_wait_count!==0||p.database_write_count!==0||p.provider_request_count!==0) throw new Error('T4R1_AM19_P24_PERSISTENCE_FREE_PROOF_REQUIRED');
+          if(p.formal_epoch_selected===true) throw new Error('T4R1_AM19_P24_PREMATURE_FORMAL_SELECTION_FORBIDDEN');
+
+  protected-main-persistent-13of13:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SUBJECT_SHA: ${{ github.sha }}
+      MCFT_CAP09_SUBJECT_SHA: ${{ github.sha }}
+      MCFT_CAP09_CONSUMER_SUBJECT_SHA: ${{ github.sha }}
+      MCFT_CAP09_PARENT_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL }}
+      MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+      MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+      MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+      MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+      MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+      ROLLING_ARTIFACT_ID: ${{ inputs.rolling_artifact_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact protected main and T4R1 bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main' || { echo 'T4R1_AM19_P24_PROTECTED_MAIN_ONLY' >&2; exit 1; }
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA" || { echo 'T4R1_AM19_P24_HEAD_SHA_MISMATCH' >&2; exit 1; }
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo 'T4R1_AM19_P24_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
+          [[ "$ROLLING_ARTIFACT_ID" =~ ^[0-9]+$ ]] || { echo 'T4R1_AM19_P24_ROLLING_ARTIFACT_ID_INVALID' >&2; exit 1; }
+          for name in MCFT_CAP09_PARENT_DATABASE_URL MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
+            test -n "${!name:-}" || { echo "T4R1_AM19_P24_SECRET_REQUIRED:${name}" >&2; exit 1; }
+          done
+          node - <<'NODE'
+          const u=new URL(process.env.MCFT_CAP09_PARENT_DATABASE_URL);
+          if(!['postgres:','postgresql:'].includes(u.protocol)) throw new Error('T4R1_AM19_P24_POSTGRES_PARENT_REQUIRED');
+          if(decodeURIComponent(u.pathname.replace(/^\//,''))!=='geox_mcft_cap09_s6_formal_t4r1_24h') throw new Error('T4R1_AM19_P24_T4_PARENT_DATABASE_REQUIRED');
+          NODE
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact repository and decoder dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+          python -m eccodes selfcheck
+          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py selftest-et0-decimal-normalization
+
+      - name: Download and authenticate exact T4R1 rolling artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rolling-candidate acceptance-output
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ROLLING_ARTIFACT_ID}" > /tmp/rolling-artifact-meta.json
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ROLLING_ARTIFACT_ID}/zip" > /tmp/rolling-candidate.zip
+          unzip -q /tmp/rolling-candidate.zip -d /tmp/rolling-candidate
+          test -s /tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const a=JSON.parse(fs.readFileSync('/tmp/rolling-artifact-meta.json','utf8'));
+          const p=JSON.parse(fs.readFileSync('/tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json','utf8'));
+          if(a.expired!==false||!String(a.name||'').startsWith('mcft-cap09-t4r1-rolling-preboundary-')) throw new Error('T4R1_AM19_P24_T4_ROLLING_ARTIFACT_REQUIRED');
+          if(a.workflow_run?.head_branch!=='main'||!/^[0-9a-f]{40}$/.test(String(a.workflow_run?.head_sha||''))) throw new Error('T4R1_AM19_P24_PRODUCER_MAIN_SHA_REQUIRED');
+          if(p.status!=='PASS'||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.producer_subject_sha!==a.workflow_run.head_sha) throw new Error('T4R1_AM19_P24_ROLLING_IDENTITY_REQUIRED');
+          if(!p.candidate_expires_at||Date.parse(p.candidate_expires_at)<=Date.now()) throw new Error('T4R1_AM19_P24_ROLLING_CANDIDATE_EXPIRED');
+          if(p.side_effects?.formal_database_write_count!==0||p.side_effects?.formal_r2_prefix_write_count!==0||p.side_effects?.scheduler_write_count!==0||p.side_effects?.runtime_write_count!==0||p.side_effects?.crop_authority_effect!=='NONE'||p.raw_values_emitted!==false) throw new Error('T4R1_AM19_P24_ROLLING_ZERO_FORMAL_EFFECT_REQUIRED');
+          fs.appendFileSync(process.env.GITHUB_ENV,`MCFT_CAP09_ROLLING_CANDIDATE_PATH=/tmp/rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json\nMCFT_CAP09_ROLLING_PRODUCER_SUBJECT_SHA=${p.producer_subject_sha}\nMCFT_CAP09_ROLLING_TARGET_T=${p.target_t}\n`);
+          console.log(JSON.stringify({status:'PASS',producer_subject_sha:p.producer_subject_sha,target_t:p.target_t,candidate_expires_at:p.candidate_expires_at}));
+          NODE
+
+      - name: Fail closed on exact 24T crop window before any v4 qualification write
+        run: node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_V1.cjs run
+
+      - name: Governed producer-bound retained-raw rehydration
+        env:
+          MCFT_CAP09_ROLLING_REHYDRATION_ISOLATED_DB_ACK: 'true'
+          DATABASE_URL: ${{ env.LOCAL_REHYDRATION_DATABASE_URL }}
+          PYTHON: python
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts run
+
+      - name: Require rehydration semantic equality and zero provider refetch
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json','utf8'));
+          if(p.status!=='PASS'||p.consumer_subject_sha!==process.env.GITHUB_SHA||p.producer_subject_sha!==process.env.MCFT_CAP09_ROLLING_PRODUCER_SUBJECT_SHA||p.target_t!==process.env.MCFT_CAP09_ROLLING_TARGET_T) throw new Error('T4R1_AM19_P24_REHYDRATION_IDENTITY_REQUIRED');
+          if(p.semantic_manifest_match!==true||p.producer_bound_raw_reverification!==true||p.provider_refetch_count!==0||p.private_r2_put_count!==0||p.private_r2_delete_count!==0) throw new Error('T4R1_AM19_P24_REHYDRATION_PROVENANCE_REQUIRED');
+          if(p.formal_database_write_count!==0||p.formal_r2_prefix_write_count!==0||p.scheduler_write_count!==0||p.runtime_write_count!==0||p.formal_effect!==false||p.raw_values_emitted!==false) throw new Error('T4R1_AM19_P24_REHYDRATION_ZERO_FORMAL_EFFECT_REQUIRED');
+
+      - name: Reprove persistence-free canonical semantics on exact subject
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.ts
+
+      - name: Execute exact-source T4R1 production-graph persistent 24T qualification
+        run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_AMENDMENT_19_PERSISTENT_24T_SUCCESSOR.ts run
+
+      - name: Require fresh v4 persistent 13 of 13
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_RESULT.json','utf8'));
+          const keys=['PERSISTENCE_FREE_24T','PERSISTENT_24T','O00_WARM_START','MODE_A','MODE_B','PARTIAL_PAIR','LATE_EXACT_NO_REWRITE','RESTART','MISSED_SLOT_BACKFILL','IDEMPOTENCY','ZERO_PROVIDER_WAIT','SCHEMA_ENV_PREFLIGHT','FULL_CHAIN_READBACK'];
+          if(p.subject_sha!==process.env.GITHUB_SHA||p.qualified_subject_sha!==process.env.GITHUB_SHA) throw new Error('T4R1_AM19_P24_EXACT_QUALIFICATION_SUBJECT_REQUIRED');
+          if(p.main_database_name!=='geox_mcft_cap09_s6_accel24t_am19_v4'||p.blocked_database_name!=='geox_mcft_cap09_s6_accel24t_am19_blocked_v4') throw new Error('T4R1_AM19_P24_V4_DATABASES_REQUIRED');
+          if(p.status!=='PASS'||p.static_blocker_count!==0||keys.some(k=>p.machine_statuses?.[k]!=='PASS')) throw new Error('T4R1_AM19_P24_13_OF_13_REQUIRED');
+          if(p.final_actual_24h_still_required!==true||p.final_actual_24h_substituted_by_this_run!==false||p.future_formal_epoch_selected!==false||p.formal_o00_started!==false||p.mcft_cap09_completed!==false) throw new Error('T4R1_AM19_P24_PREMATURE_FORMAL_CLAIM_FORBIDDEN');
+          console.log(JSON.stringify({status:'PASS',machine_gate_count:keys.length,static_blocker_count:0,subject_sha:p.subject_sha,main_database:p.main_database_name,blocked_database:p.blocked_database_name,formal_o00_started:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-t4r1-am19-persistent24-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_PREFLIGHT_V1.json
+            acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
