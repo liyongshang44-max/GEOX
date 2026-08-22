@@ -4,7 +4,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t3r1_24h_v3";
+const FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t4r1_24h_v2";
 const HOURLY_FILE = "MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_RESULT_V1.json";
 const NOGO_FILE = "MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_RESULT_V1.json";
 const OUTPUT = path.resolve("acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_CANDIDATE_V1.json");
@@ -37,7 +37,7 @@ function validate(input) {
   const arm=input.arm;
   need(arm?.schema_version==="geox_mcft_cap09_amendment19_formal_arm_v1"&&arm.status==="PASS","AM19_FORMAL_COMPLETION_ARM_PASS_REQUIRED");
   need(arm.subject_sha===subject,"AM19_FORMAL_COMPLETION_ARM_SUBJECT_MISMATCH");
-  need(arm.formal_database_name===FORMAL_DATABASE,"AM19_FORMAL_COMPLETION_EXACT_V3_DATABASE_REQUIRED");
+  need(arm.formal_database_name===FORMAL_DATABASE,"AM19_FORMAL_COMPLETION_EXACT_T4_DATABASE_REQUIRED");
   const armIdentity=text(arm.arm_identity_hash,"AM19_FORMAL_COMPLETION_ARM_IDENTITY_REQUIRED");
   const epoch=text(arm.epoch_id,"AM19_FORMAL_COMPLETION_EPOCH_REQUIRED");
   const a0=iso(arm.a0,"AM19_FORMAL_COMPLETION_A0_REQUIRED");
@@ -70,8 +70,8 @@ function validate(input) {
 
   const hourly=input.hourly_results.filter((p)=>p?.status==="PASS"&&p.subject_sha===subject&&p.arm_identity_hash===armIdentity&&p.epoch_id===epoch);
   need(hourly.length===23,`AM19_FORMAL_COMPLETION_EXACT_23_HOURLY_PROMOTIONS_REQUIRED:${hourly.length}`);
-  const expectedBases=series(o00,23); // O00..O22
-  const expectedSlots=series(addHours(o00,1),23); // O01..O23
+  const expectedBases=series(o00,23);
+  const expectedSlots=series(addHours(o00,1),23);
   sameSet(hourly.map((p)=>p.base_target_t),expectedBases,"AM19_FORMAL_COMPLETION_HOURLY_BASES_REQUIRED");
   sameSet(hourly.map((p)=>p.supported_slot_t),expectedSlots,"AM19_FORMAL_COMPLETION_HOURLY_SUPPORTED_SLOTS_REQUIRED");
   const seenBases=new Set();
@@ -140,13 +140,13 @@ function selftest(){
   const arm={schema_version:"geox_mcft_cap09_amendment19_formal_arm_v1",status:"PASS",subject_sha:subject,arm_identity_hash:armId,epoch_id:"epoch",formal_database_name:FORMAL_DATABASE,a0,o00,o23,final_actual_24h_still_required:true,formal_o00_started:false,mcft_cap09_completed:false};
   const a0p={schema_version:"geox_mcft_cap09_amendment19_formal_a0_evidence_promotion_result_v1",status:"PASS",subject_sha:subject,arm_identity_hash:armId,epoch_id:"epoch",formal_database_name:FORMAL_DATABASE,a0,supported_slot_t:o00,promotion_completed_at:new Date(Date.parse(o00)-60000).toISOString(),promotion_completed_before_o00:true,canonical_fact_write_count:3,formal_fact_count:3,producer_bound_transient_raw_reverification:true,formal_content_addressed_raw_retention_before_decoder:true,normalized_semantics_match_producer_bound_reference:true,raw_sha256_preserved:true,decoder_identity_preserved:true,source_record_identity_preserved:true,transient_ref_present_in_formal_fact:false,provider_refetch_count:0,scheduler_write_count:0,runtime_write_count:0};
   const boot={schema_version:"geox_mcft_cap09_amendment19_formal_a0_bootstrap_result_v1",status:"PASS",subject_sha:subject,arm_identity_hash:armId,epoch_id:"epoch",manifest_hash:manifest,formal_database_name:FORMAL_DATABASE,a0,o00,o23,formal_a0_bootstrapped:true,formal_o00_started:false,scheduler_slot_count:0,next_tick_logical_time:o00,lease_expiry_lte_o00:true,provider_request_count:0,scheduler_slot_write_count:0};
-  const hourly=series(o00,23).map((base,i)=>({schema_version:"geox_mcft_cap09_amendment19_formal_hourly_evidence_promotion_result_v1",status:"PASS",subject_sha:subject,arm_identity_hash:armId,epoch_id:"epoch",manifest_hash:manifest,formal_database_name:FORMAL_DATABASE,base_target_t:base,supported_slot_t:addHours(base,1),promotion_completed_at:new Date(Date.parse(addHours(base,1))-60000).toISOString(),canonical_fact_write_count:3,producer_bound_transient_raw_reverification:true,formal_content_addressed_raw_retention_before_decoder:true,normalized_semantics_match_reference:true,raw_sha256_preserved:true,decoder_identity_preserved:true,provider_refetch_count:0,scheduler_write_count:0,runtime_write_count:0,supported_slot_write_completed_before_t:true,o23_seed_for_o24_written:false,late_write_repair_authorized:false}));
+  const hourly=series(o00,23).map((base)=>({schema_version:"geox_mcft_cap09_amendment19_formal_hourly_evidence_promotion_result_v1",status:"PASS",subject_sha:subject,arm_identity_hash:armId,epoch_id:"epoch",manifest_hash:manifest,formal_database_name:FORMAL_DATABASE,base_target_t:base,supported_slot_t:addHours(base,1),promotion_completed_at:new Date(Date.parse(addHours(base,1))-60000).toISOString(),canonical_fact_write_count:3,producer_bound_transient_raw_reverification:true,formal_content_addressed_raw_retention_before_decoder:true,normalized_semantics_match_reference:true,raw_sha256_preserved:true,decoder_identity_preserved:true,provider_refetch_count:0,scheduler_write_count:0,runtime_write_count:0,supported_slot_write_completed_before_t:true,o23_seed_for_o24_written:false,late_write_repair_authorized:false}));
   const ledger={schema_version:"geox_mcft_cap09_amendment19_formal_artifact_ledger_v1",status:"PASS",subject_sha:subject,no_go_scan_complete:true,matching_epoch_no_go_count:0,arm:meta(`mcft-cap09-am19-formal-arm-${subject}-1`,1,a0),a0:meta(`mcft-cap09-am19-formal-a0-${subject}-2`,2,new Date(Date.parse(o00)-60000).toISOString()),hourly:hourly.map((p,i)=>({...meta(`mcft-cap09-am19-formal-hourly-${subject}-${i}-3`,10+i,p.promotion_completed_at),base_target_t:p.base_target_t,supported_slot_t:p.supported_slot_t}))};
   const readback={schema_version:"geox_mcft_cap09_amendment19_formal_final_readback_v1",status:"PASS",subject_sha:subject,arm_identity_hash:armId,epoch_id:"epoch",manifest_hash:manifest,formal_database_name:FORMAL_DATABASE,scheduler_slot_count:24,terminal_tick_count:24,cursor_next_slot_index:24,cursor_last_terminal_slot_id:"O23",cursor_last_terminal_logical_time:o23,latest_state_logical_time:o23,latest_checkpoint_logical_time:o23,latest_health_logical_time:o23,latest_forecast_logical_time:o23,runtime_config_count:25,required_base_snapshot_count:24,required_base_snapshots:series(a0,24),required_hourly_promotions_after_a0:23,o23_extra_seed_for_o24_count:0,evidence_window_count:24,provider_wait_required_count:0,late_rewrite_authorized_count:0,assumption_relabel_authorized_count:0,active_lease:false,durable_formal_raw_retention_only:true,transient_raw_reference_count:0,database_readback_pass:true,physical_pre_t_promotion_ledger_pass:false,final_actual_24h_still_required:true,mcft_cap09_completed:false};
   const downstream={schema_version:"geox_mcft_cap09_amendment19_formal_downstream_zero_result_v1",status:"PASS",subject_sha:subject,formal_database_name:FORMAL_DATABASE,downstream_zero_pass:true,decision_records:0,approved_plans:0,action_feedback_rows:0,downstream_named_facts:0,database_write_count:0,scheduler_write_count:0,runtime_write_count:0};
   const out=validate({subject_sha:subject,arm,a0_promotion:a0p,bootstrap:boot,hourly_results:hourly,ledger,readback,downstream,no_go_results:[]});
-  need(out.status==="PASS"&&out.physical_pre_t_promotion_ledger_pass===true&&out.final_actual_24h_still_required===false&&out.formal_completion_candidate===true&&out.mcft_cap09_completed===false,"AM19_FORMAL_COMPLETION_SELFTEST_PASS_REQUIRED");
-  console.log(JSON.stringify({schema_version:"geox_mcft_cap09_amendment19_formal_completion_selftest_v1",status:"PASS",exact_base_count:24,exact_hourly_promotions:23,exact_terminal_ticks:24,no_go_fail_closed:true,completion_is_candidate_not_final_claim:true,formal_effect:false}));
+  need(out.status==="PASS"&&out.formal_database_name===FORMAL_DATABASE&&out.physical_pre_t_promotion_ledger_pass===true&&out.final_actual_24h_still_required===false&&out.formal_completion_candidate===true&&out.mcft_cap09_completed===false,"AM19_FORMAL_COMPLETION_SELFTEST_PASS_REQUIRED");
+  console.log(JSON.stringify({schema_version:"geox_mcft_cap09_amendment19_formal_completion_selftest_v1",status:"PASS",formal_database_name:FORMAL_DATABASE,exact_base_count:24,exact_hourly_promotions:23,exact_terminal_ticks:24,no_go_fail_closed:true,completion_is_candidate_not_final_claim:true,formal_effect:false}));
 }
 
 function run(){
