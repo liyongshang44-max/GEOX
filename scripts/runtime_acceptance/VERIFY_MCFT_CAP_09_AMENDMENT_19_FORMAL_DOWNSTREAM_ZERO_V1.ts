@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { Pool } from "pg";
 
-const FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t3r1_24h_v3";
+const FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t4r1_24h_v2";
 const OUTPUT_DIR = path.resolve("acceptance-output");
 const OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_AMENDMENT_19_FORMAL_DOWNSTREAM_ZERO_RESULT_V1.json");
 
@@ -23,7 +23,7 @@ function assertFormalUrl(value: string): void {
     throw new Error("AM19_FORMAL_DOWNSTREAM_ZERO_REMOTE_POSTGRES_REQUIRED");
   }
   if (decodeURIComponent(u.pathname.replace(/^\//, "")) !== FORMAL_DATABASE) {
-    throw new Error("AM19_FORMAL_DOWNSTREAM_ZERO_EXACT_V3_DATABASE_REQUIRED");
+    throw new Error("AM19_FORMAL_DOWNSTREAM_ZERO_EXACT_T4_DATABASE_REQUIRED");
   }
 }
 
@@ -37,6 +37,7 @@ function selftest(): void {
   console.log(JSON.stringify({
     schema_version: "geox_mcft_cap09_amendment19_formal_downstream_zero_selftest_v1",
     status: "PASS",
+    formal_database_name: FORMAL_DATABASE,
     predicates: ["decision_records", "approved_plans", "action_feedback_rows", "downstream_named_facts"],
     read_only: true,
     formal_effect: false,
@@ -47,7 +48,7 @@ async function run(): Promise<void> {
   const subject = assertSubject(requiredEnv("MCFT_CAP09_SUBJECT_SHA"));
   const databaseUrl = requiredEnv("DATABASE_URL");
   assertFormalUrl(databaseUrl);
-  const pool = new Pool({ connectionString: databaseUrl, application_name: "mcft-cap09-am19-formal-downstream-zero" });
+  const pool = new Pool({ connectionString: databaseUrl, application_name: "mcft-cap09-am19-t4r1-formal-downstream-zero" });
   try {
     const identity = String((await pool.query("SELECT current_database() AS n")).rows[0]?.n ?? "");
     if (identity !== FORMAL_DATABASE) throw new Error("AM19_FORMAL_DOWNSTREAM_ZERO_SESSION_DATABASE_MISMATCH");

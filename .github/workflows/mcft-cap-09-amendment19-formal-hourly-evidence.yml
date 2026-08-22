@@ -8,7 +8,7 @@ on:
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_V1.ts'
       - 'apps/server/src/external_evidence/producer_bound_transient_raw_evidence_reader_v1.ts'
   workflow_run:
-    workflows: ['mcft-cap-09-rolling-preboundary-capture']
+    workflows: ['mcft-cap-09-t4r1-rolling-preboundary-capture']
     types: [completed]
 
 permissions:
@@ -52,13 +52,17 @@ jobs:
           scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_V1.ts
       - name: Run hourly promotion zero-effect selftest
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_V1.ts selftest
-      - name: Require static workflow has no live credential exposure and propagates irreversible ingress NO-GO
+      - name: Require static workflow is T4-bound, credential-clean, and propagates irreversible ingress NO-GO
         shell: bash
         run: |
           set -euo pipefail
           test -z "${DATABASE_URL:-}"
           test -z "${MCFT_CAP09_PARENT_DATABASE_URL:-}"
           test -z "${MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY:-}"
+          grep -Fq "workflows: ['mcft-cap-09-t4r1-rolling-preboundary-capture']" .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
+          grep -Fq 'GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
+          ! grep -Fq 'GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
+          grep -Fq 'mcft-cap09-t4r1-rolling-preboundary-' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
           grep -Fq 'mcft-cap09-am19-formal-hourly-${subject}-NO-GO-' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
           grep -Fq 'formal_epoch_no_go:true' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
           grep -Fq 'IRREVERSIBLE_FORMAL_EPOCH_NO_GO_ALREADY_RECORDED' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
@@ -89,7 +93,7 @@ jobs:
       SUBJECT_SHA: ${{ github.event.workflow_run.head_sha }}
       MCFT_CAP09_SUBJECT_SHA: ${{ github.event.workflow_run.head_sha }}
       ROLLING_RUN_ID: ${{ github.event.workflow_run.id }}
-      MCFT_CAP09_PARENT_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      MCFT_CAP09_PARENT_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL }}
       MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
       MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
       MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
@@ -115,7 +119,7 @@ jobs:
           git fetch --no-tags origin main
           test "$(git rev-parse origin/main)" = "$SUBJECT_SHA" || { echo 'AM19_FORMAL_HOURLY_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
 
-      - name: Resolve exact triggering rolling artifact, prior NO-GO, unique active arm, and A0 proof
+      - name: Resolve exact triggering T4 rolling artifact, prior NO-GO, unique active arm, and A0 proof
         id: resolve
         uses: actions/github-script@v7
         with:
@@ -126,7 +130,7 @@ jobs:
             const digestOk = value => /^sha256:[0-9a-f]{64}$/.test(String(value || ''));
 
             const rollingArtifacts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: rollingRunId, per_page: 100 });
-            const rolling = rollingArtifacts.data.artifacts.filter(a => !a.expired && a.name.startsWith('mcft-cap09-rolling-preboundary-') && a.name.endsWith(`-${subject}`));
+            const rolling = rollingArtifacts.data.artifacts.filter(a => !a.expired && a.name.startsWith('mcft-cap09-t4r1-rolling-preboundary-') && a.name.endsWith(`-${subject}`));
             if (rolling.length !== 1) throw new Error(`AM19_FORMAL_HOURLY_EXACT_ONE_ROLLING_ARTIFACT_REQUIRED:${rolling.length}`);
             if (!digestOk(rolling[0].digest)) throw new Error('AM19_FORMAL_HOURLY_ROLLING_DIGEST_REQUIRED');
             core.setOutput('rolling_artifact_name', rolling[0].name);
@@ -222,7 +226,7 @@ jobs:
           const candidateFiles=files('rolling-candidate','MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json');
           if(armFiles.length!==1||bootFiles.length!==1||candidateFiles.length!==1)throw new Error(`AM19_FORMAL_HOURLY_EVIDENCE_FILE_CARDINALITY:${armFiles.length}:${bootFiles.length}:${candidateFiles.length}`);
           const arm=JSON.parse(fs.readFileSync(armFiles[0],'utf8'));const boot=JSON.parse(fs.readFileSync(bootFiles[0],'utf8'));const candidate=JSON.parse(fs.readFileSync(candidateFiles[0],'utf8'));
-          if(arm.status!=='PASS'||arm.subject_sha!==process.env.SUBJECT_SHA||boot.status!=='PASS'||boot.subject_sha!==process.env.SUBJECT_SHA||boot.arm_identity_hash!==arm.arm_identity_hash||candidate.status!=='PASS'||candidate.producer_subject_sha!==process.env.SUBJECT_SHA||candidate.subject_sha!==process.env.SUBJECT_SHA)throw new Error('AM19_FORMAL_HOURLY_CROSS_RUN_IDENTITY_REQUIRED');
+          if(arm.status!=='PASS'||arm.subject_sha!==process.env.SUBJECT_SHA||arm.formal_database_name!=='geox_mcft_cap09_s6_formal_t4r1_24h_v2'||boot.status!=='PASS'||boot.subject_sha!==process.env.SUBJECT_SHA||boot.formal_database_name!==arm.formal_database_name||boot.arm_identity_hash!==arm.arm_identity_hash||candidate.status!=='PASS'||candidate.producer_subject_sha!==process.env.SUBJECT_SHA||candidate.subject_sha!==process.env.SUBJECT_SHA)throw new Error('AM19_FORMAL_HOURLY_CROSS_RUN_IDENTITY_REQUIRED');
           const base=Date.parse(candidate.target_t),o00=Date.parse(arm.o00),o23=Date.parse(arm.o23),o22=o23-3600000,supported=base+3600000,now=Date.now();
           let eligible=true,reason='';
           if(base<o00||base>o22){eligible=false;reason='BASE_OUTSIDE_ACTIVE_FORMAL_O00_O22_WINDOW';}
@@ -239,11 +243,11 @@ jobs:
           set -euo pipefail
           for name in MCFT_CAP09_PARENT_DATABASE_URL MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT MCFT_CAP09_FORMAL_RAW_S3_BUCKET MCFT_CAP09_FORMAL_RAW_S3_REGION MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY; do test -n "${!name:-}" || { echo "AM19_FORMAL_HOURLY_SECRET_REQUIRED:${name}" >&2; exit 1; }; done
 
-      - name: Normalize stable T3R1 credential seed to exact Formal v3
+      - name: Normalize stable T4R1 credential seed to exact actual Formal v2
         if: steps.evidence.outputs.eligible == 'true'
         shell: node {0}
         run: |
-          const fs=require('node:fs');const u=new URL(process.env.MCFT_CAP09_PARENT_DATABASE_URL);if(!['postgres:','postgresql:'].includes(u.protocol)||['localhost','127.0.0.1','::1'].includes(u.hostname))throw new Error('AM19_FORMAL_HOURLY_REMOTE_POSTGRES_REQUIRED');const seed=decodeURIComponent(u.pathname.replace(/^\//,''));if(!new Set(['geox_mcft_cap09_s6_formal_t3r1_24h','geox_mcft_cap09_s6_formal_t3r1_24h_v3']).has(seed))throw new Error(`AM19_FORMAL_HOURLY_T3R1_SEED_FORBIDDEN:${seed}`);u.pathname='/geox_mcft_cap09_s6_formal_t3r1_24h_v3';const target=u.toString();console.log(`::add-mask::${target}`);fs.appendFileSync(process.env.GITHUB_ENV,`FORMAL_DATABASE_URL=${target}\n`);
+          const fs=require('node:fs');const u=new URL(process.env.MCFT_CAP09_PARENT_DATABASE_URL);if(!['postgres:','postgresql:'].includes(u.protocol)||['localhost','127.0.0.1','::1'].includes(u.hostname))throw new Error('AM19_FORMAL_HOURLY_REMOTE_POSTGRES_REQUIRED');const seed=decodeURIComponent(u.pathname.replace(/^\//,''));if(!new Set(['geox_mcft_cap09_s6_formal_t4r1_24h','geox_mcft_cap09_s6_formal_t4r1_24h_v2']).has(seed))throw new Error(`AM19_FORMAL_HOURLY_T4R1_SEED_FORBIDDEN:${seed}`);u.pathname='/geox_mcft_cap09_s6_formal_t4r1_24h_v2';const target=u.toString();console.log(`::add-mask::${target}`);fs.appendFileSync(process.env.GITHUB_ENV,`FORMAL_DATABASE_URL=${target}\n`);
 
       - uses: pnpm/action-setup@v4
         if: steps.evidence.outputs.eligible == 'true'
@@ -284,7 +288,7 @@ jobs:
         run: |
           const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json','utf8'));if(p.status!=='PASS'||p.consumer_subject_sha!==process.env.SUBJECT_SHA||p.producer_subject_sha!==process.env.SUBJECT_SHA||p.cross_head_rehydration!==false||p.semantic_manifest_match!==true||p.producer_bound_raw_reverification!==true||p.provider_refetch_count!==0||p.private_r2_put_count!==0||p.private_r2_delete_count!==0||p.isolated_database_fact_count!==3||p.formal_database_write_count!==0||p.formal_r2_prefix_write_count!==0||p.scheduler_write_count!==0||p.runtime_write_count!==0||p.formal_effect!==false)throw new Error('AM19_FORMAL_HOURLY_REFERENCE_PROOF_REQUIRED');
 
-      - name: Promote exact rolling base evidence into Formal v3 before supported slot T
+      - name: Promote exact rolling base evidence into T4 actual Formal before supported slot T
         if: steps.evidence.outputs.eligible == 'true'
         id: promote
         continue-on-error: true
@@ -306,7 +310,7 @@ jobs:
           EXPECTED_BASE_TARGET_T: ${{ steps.evidence.outputs.base_target_t }}
           EXPECTED_SUPPORTED_SLOT_T: ${{ steps.evidence.outputs.supported_slot_t }}
         run: |
-          const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_RESULT_V1.json','utf8'));if(p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t3r1_24h_v3'||p.base_target_t!==process.env.EXPECTED_BASE_TARGET_T||p.supported_slot_t!==process.env.EXPECTED_SUPPORTED_SLOT_T||p.canonical_fact_write_count!==3||p.producer_bound_transient_raw_reverification!==true||p.formal_content_addressed_raw_retention_before_decoder!==true||p.normalized_semantics_match_reference!==true||p.raw_sha256_preserved!==true||p.decoder_identity_preserved!==true||p.provider_refetch_count!==0||p.scheduler_write_count!==0||p.runtime_write_count!==0||p.supported_slot_write_completed_before_t!==true||p.o23_seed_for_o24_written!==false||p.late_write_repair_authorized!==false||p.mcft_cap09_completed!==false)throw new Error('AM19_FORMAL_HOURLY_PROMOTION_PASS_REQUIRED');
+          const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_RESULT_V1.json','utf8'));if(p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t4r1_24h_v2'||p.base_target_t!==process.env.EXPECTED_BASE_TARGET_T||p.supported_slot_t!==process.env.EXPECTED_SUPPORTED_SLOT_T||p.canonical_fact_write_count!==3||p.producer_bound_transient_raw_reverification!==true||p.formal_content_addressed_raw_retention_before_decoder!==true||p.normalized_semantics_match_reference!==true||p.raw_sha256_preserved!==true||p.decoder_identity_preserved!==true||p.provider_refetch_count!==0||p.scheduler_write_count!==0||p.runtime_write_count!==0||p.supported_slot_write_completed_before_t!==true||p.o23_seed_for_o24_written!==false||p.late_write_repair_authorized!==false||p.mcft_cap09_completed!==false)throw new Error('AM19_FORMAL_HOURLY_PROMOTION_PASS_REQUIRED');
 
       - name: Classify explicit irreversible hourly ingress NO-GO
         if: steps.evidence.outputs.eligible == 'true' && always() && steps.promote.outcome != 'skipped'

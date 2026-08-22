@@ -7,7 +7,7 @@ on:
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.cjs'
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.cjs'
   workflow_run:
-    workflows: ['mcft-cap-09-rolling-preboundary-capture']
+    workflows: ['mcft-cap-09-t4r1-rolling-preboundary-capture']
     types: [completed]
 
 permissions:
@@ -50,6 +50,7 @@ jobs:
           grep -Fq "gateArtifacts.sort((left, right) => left.run.id - right.run.id" .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
           test "$(grep -Fc 'github.paginate.iterator(github.rest.actions.listWorkflowRuns' .github/workflows/mcft-cap-09-amendment19-formal-arm.yml)" -ge 2
           grep -Fq "core.setOutput('rolling_completed_at', new Date(rollingRun.data.updated_at).toISOString());" .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
+          grep -Fq "workflows: ['mcft-cap-09-t4r1-rolling-preboundary-capture']" .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
 
   live-arm-evaluator:
     if: >-
@@ -92,7 +93,7 @@ jobs:
             const rollingArtifacts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: rollingRunId, per_page: 100 });
             const rollingMatches = rollingArtifacts.data.artifacts.filter(a =>
               !a.expired &&
-              a.name.startsWith('mcft-cap09-rolling-preboundary-') &&
+              a.name.startsWith('mcft-cap09-t4r1-rolling-preboundary-') &&
               a.name.endsWith(`-${subject}`)
             );
             if (rollingMatches.length !== 1) throw new Error(`AM19_FORMAL_ARM_EXACT_ONE_ROLLING_ARTIFACT_REQUIRED:${rollingMatches.length}`);
@@ -303,7 +304,7 @@ jobs:
         shell: node {0}
         run: |
           const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.json','utf8'));
-          if(p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t3r1_24h_v3'||p.arm_to_o00_lead_minutes<35||p.formal_database_write_count!==0||p.formal_r2_write_count!==0||p.scheduler_write_count!==0||p.runtime_write_count!==0||p.formal_a0_bootstrapped!==false||p.formal_o00_started!==false||p.final_actual_24h_still_required!==true||p.mcft_cap09_completed!==false)throw new Error('AM19_FORMAL_ARM_ZERO_EFFECT_BOUNDARY_DRIFT');
+          if(p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t4r1_24h_v2'||p.arm_to_o00_lead_minutes<35||p.formal_database_write_count!==0||p.formal_r2_write_count!==0||p.scheduler_write_count!==0||p.runtime_write_count!==0||p.formal_a0_bootstrapped!==false||p.formal_o00_started!==false||p.final_actual_24h_still_required!==true||p.mcft_cap09_completed!==false)throw new Error('AM19_FORMAL_ARM_ZERO_EFFECT_BOUNDARY_DRIFT');
 
       - name: Upload unique active Formal arm
         if: steps.admission.outputs.admissible == 'true'

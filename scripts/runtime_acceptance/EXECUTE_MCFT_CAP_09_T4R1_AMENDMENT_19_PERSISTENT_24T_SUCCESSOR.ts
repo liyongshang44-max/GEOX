@@ -11,8 +11,10 @@ const HISTORICAL_PARENT_DB = "geox_mcft_cap09_s6_formal_t3r1_24h_v3";
 const T4R1_PARENT_DB = "geox_mcft_cap09_s6_formal_t4r1_24h";
 const SOURCE_MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v4";
 const SOURCE_BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v4";
-const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v5";
-const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v5";
+const PREVIOUS_MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v5";
+const PREVIOUS_BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v5";
+const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v6";
+const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v6";
 const HISTORICAL_CANDIDATE_GATE = 'if (candidate.producer_subject_sha !== subject || (candidate.subject_sha !== undefined && candidate.subject_sha !== subject)) throw new Error("AM19_P24_CANDIDATE_EXACT_SUBJECT_REQUIRED");';
 const SUCCESSOR_CANDIDATE_GATE = 'const producerSubject = process.env.MCFT_CAP09_ROLLING_PRODUCER_SUBJECT_SHA?.trim(); if (!producerSubject || !/^[0-9a-f]{40}$/.test(producerSubject)) throw new Error("AM19_P24_SUCCESSOR_PRODUCER_SUBJECT_REQUIRED"); if (candidate.producer_subject_sha !== producerSubject || (candidate.subject_sha !== undefined && candidate.subject_sha !== producerSubject)) throw new Error("AM19_P24_CANDIDATE_PRODUCER_SUBJECT_REQUIRED");';
 
@@ -45,8 +47,10 @@ function build(): string {
   assert(!generated.includes(HISTORICAL_CANDIDATE_GATE), "T4R1_AM19_P24_HISTORICAL_CANDIDATE_GATE_SURVIVED");
   assert(generated.includes(T4R1_PARENT_DB), "T4R1_AM19_P24_T4_PARENT_DB_REQUIRED");
   assert(generated.includes("MCFT_CAP09_ROLLING_PRODUCER_SUBJECT_SHA"), "T4R1_AM19_P24_PRODUCER_SUBJECT_BINDING_REQUIRED");
-  assert(generated.includes(MAIN_DB), "T4R1_AM19_P24_V5_MAIN_DB_REQUIRED");
-  assert(generated.includes(BLOCKED_DB), "T4R1_AM19_P24_V5_BLOCKED_DB_REQUIRED");
+  assert(generated.includes(MAIN_DB), "T4R1_AM19_P24_V6_MAIN_DB_REQUIRED");
+  assert(generated.includes(BLOCKED_DB), "T4R1_AM19_P24_V6_BLOCKED_DB_REQUIRED");
+  assert(!generated.includes(PREVIOUS_MAIN_DB), "T4R1_AM19_P24_V5_MAIN_DB_REUSE_FORBIDDEN");
+  assert(!generated.includes(PREVIOUS_BLOCKED_DB), "T4R1_AM19_P24_V5_BLOCKED_DB_REUSE_FORBIDDEN");
   return generated;
 }
 
@@ -74,8 +78,10 @@ function proveStatic(): void {
       parent_database: T4R1_PARENT_DB,
       producer_subject_binding: "AUTHENTICATED_ROLLING_ARTIFACT",
       qualification_subject_binding: "CURRENT_EXACT_PROTECTED_MAIN",
-      previous_generation_main_database: SOURCE_MAIN_DB,
-      previous_generation_blocked_database: SOURCE_BLOCKED_DB,
+      source_generation_main_database: SOURCE_MAIN_DB,
+      source_generation_blocked_database: SOURCE_BLOCKED_DB,
+      previous_generation_main_database: PREVIOUS_MAIN_DB,
+      previous_generation_blocked_database: PREVIOUS_BLOCKED_DB,
       main_database: MAIN_DB,
       blocked_database: BLOCKED_DB,
       previous_generation_reused: false,

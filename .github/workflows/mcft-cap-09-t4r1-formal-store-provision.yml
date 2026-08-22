@@ -1,0 +1,161 @@
+name: mcft-cap-09-t4r1-formal-store-provision
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-t4r1-formal-store-provision-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  SOURCE_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h
+  FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v2
+  QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v6
+  BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v6
+
+jobs:
+  static-proof:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Validate authority and no-data provisioning contract
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json','utf8'));
+          if(p.status!=='CANDIDATE'||p.database_identity.database_name!==process.env.FORMAL_DATABASE_NAME)throw new Error('T4_FORMAL_STORE_AUTHORITY_IDENTITY_REQUIRED');
+          if(p.database_identity.creation_mode!=='CREATE_DATABASE_TEMPLATE0_THEN_SCHEMA_ONLY_RESTORE'||p.database_identity.data_clone_forbidden!==true)throw new Error('T4_FORMAL_STORE_NO_DATA_CLONE_REQUIRED');
+          if(p.schema_contract.required_public_table_count!==26||p.schema_contract.column_fingerprint_md5!=='873a8e86f55d75a04a5f671627e98ae1'||p.schema_contract.constraint_fingerprint_md5!=='7803f7e7706e52eca3ca2aa4290ff5dd'||p.schema_contract.index_fingerprint_md5!=='ea5b3ba0392fd52fb471bc754e94ed35')throw new Error('T4_FORMAL_STORE_SCHEMA_CONTRACT_REQUIRED');
+          if(p.epoch_contract.real_wall_clock_o00_o23_required!==true||p.epoch_contract.accelerated_clock_authorized!==false)throw new Error('T4_FORMAL_STORE_REAL_CLOCK_REQUIRED');
+      - name: Require static PR path has no live credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${SOURCE_DATABASE_URL:-}"
+          test -z "${DATABASE_URL:-}"
+          grep -Fq 'pg_dump --schema-only --no-owner --no-privileges' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
+          grep -Fq 'CREATE DATABASE "$name" TEMPLATE template0' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
+          forbidden=$(grep -F 'CREATE DATABASE "$name" TEMPLATE "$SOURCE_DATABASE_NAME"' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml | grep -v 'forbidden=' || true)
+          test -z "$forbidden"
+
+  protected-main-provision:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require exact protected main and private T4 seed
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main' || { echo 'T4_FORMAL_STORE_MAIN_REQUIRED' >&2; exit 1; }
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo 'T4_FORMAL_STORE_MAIN_DRIFT' >&2; exit 1; }
+          test -n "$SOURCE_DATABASE_URL" || { echo 'T4_FORMAL_STORE_SOURCE_SECRET_REQUIRED' >&2; exit 1; }
+      - name: Install PostgreSQL client and repository dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+      - name: Derive masked admin and source URLs
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const source=new URL(process.env.SOURCE_DATABASE_URL);
+          if(!['postgres:','postgresql:'].includes(source.protocol)||['localhost','127.0.0.1','::1'].includes(source.hostname))throw new Error('T4_FORMAL_STORE_REMOTE_POSTGRES_REQUIRED');
+          const sourceName=decodeURIComponent(source.pathname.replace(/^\//,''));
+          if(sourceName!==process.env.SOURCE_DATABASE_NAME)throw new Error(`T4_FORMAL_STORE_SOURCE_IDENTITY_DRIFT:${sourceName}`);
+          const admin=new URL(source.toString());admin.pathname='/postgres';
+          console.log(`::add-mask::${source.toString()}`);console.log(`::add-mask::${admin.toString()}`);
+          fs.appendFileSync(process.env.GITHUB_ENV,`ADMIN_DATABASE_URL=${admin.toString()}\n`);
+      - name: Create only template0 fresh databases idempotently
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in "$FORMAL_DATABASE_NAME" "$QUAL_DATABASE_NAME" "$BLOCKED_DATABASE_NAME"; do
+            exists=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT 1 FROM pg_database WHERE datname='$name'")
+            if [ "$exists" != '1' ]; then
+              psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$name\" TEMPLATE template0"
+            fi
+          done
+      - name: Dump schema only from immutable T4 reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          pg_dump --schema-only --no-owner --no-privileges "$SOURCE_DATABASE_URL" > /tmp/t4-schema.sql
+          test -s /tmp/t4-schema.sql
+          ! grep -Eq '^COPY |^INSERT INTO ' /tmp/t4-schema.sql
+      - name: Restore schema only into each fresh store
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in "$FORMAL_DATABASE_NAME" "$QUAL_DATABASE_NAME" "$BLOCKED_DATABASE_NAME"; do
+            target=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL);u.pathname="/"+process.argv[1];process.stdout.write(u.toString())' "$name")
+            echo "::add-mask::$target"
+            count=$(psql "$target" -Atqc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
+            if [ "$count" = '0' ]; then
+              psql "$target" -v ON_ERROR_STOP=1 -f /tmp/t4-schema.sql >/dev/null
+            elif [ "$count" != '26' ]; then
+              echo "T4_FORMAL_STORE_PARTIAL_SCHEMA_FORBIDDEN:$name:$count" >&2; exit 1
+            fi
+          done
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Prove 26/26 exact schema and zero-state on all three stores
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output/t4-store-provision
+          for name in "$FORMAL_DATABASE_NAME" "$QUAL_DATABASE_NAME" "$BLOCKED_DATABASE_NAME"; do
+            target=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL);u.pathname="/"+process.argv[1];process.stdout.write(u.toString())' "$name")
+            echo "::add-mask::$target"
+            DATABASE_URL="$target" pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_RUNTIME_ENVIRONMENT_V1.ts zero-state
+            cp acceptance-output/MCFT_CAP_09_RUNTIME_ENVIRONMENT_PREFLIGHT_RESULT.json "acceptance-output/t4-store-provision/${name}.json"
+            NAME="$name" node - <<'NODE'
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync(`acceptance-output/t4-store-provision/${process.env.NAME}.json`,'utf8'));
+          const expected={column_fingerprint:'873a8e86f55d75a04a5f671627e98ae1',constraint_fingerprint:'7803f7e7706e52eca3ca2aa4290ff5dd',index_fingerprint:'ea5b3ba0392fd52fb471bc754e94ed35'};
+          if(p.status!=='PASS'||p.mode!=='zero-state'||p.database_identity.database_name!==process.env.NAME||p.required_table_count!==26||p.schema_complete!==true||p.zero_state_qualified!==true)throw new Error(`T4_FORMAL_STORE_PREFLIGHT_FAILED:${process.env.NAME}`);
+          for(const [k,v] of Object.entries(expected))if(p.schema_fingerprints?.[k]!==v)throw new Error(`T4_FORMAL_STORE_FINGERPRINT_DRIFT:${process.env.NAME}:${k}`);
+          for(const [rel,count] of Object.entries(p.zero_state_counts||{}))if(count!==0)throw new Error(`T4_FORMAL_STORE_NOT_ZERO:${process.env.NAME}:${rel}`);
+          NODE
+          done
+      - name: Upload immutable zero-state provisioning proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t4r1-formal-store-provision-${{ github.sha }}-${{ github.run_id }}
+          path: acceptance-output/t4-store-provision/*.json
+          if-no-files-found: error
+          retention-days: 90

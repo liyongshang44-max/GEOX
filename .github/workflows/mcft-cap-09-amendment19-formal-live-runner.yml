@@ -50,7 +50,7 @@ jobs:
           scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts
       - name: Prove real Formal runner composition without side effects
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_V1.ts selftest
-      - name: Require live supervisor has no provider or R2 credentials, propagates ingress/runner NO-GO, and persists missing-result proof only after cycle execution
+      - name: Require live supervisor is T4-bound, has no provider/R2 credentials, and propagates irreversible NO-GO
         shell: bash
         run: |
           set -euo pipefail
@@ -58,6 +58,9 @@ jobs:
           ! grep -q 'FORMAL_RAW_S3_SECRET_ACCESS_KEY' <<<"$live_section"
           ! grep -q 'TRANSIENT_S3_SECRET_ACCESS_KEY' <<<"$live_section"
           ! grep -q 'rolling-preboundary-capture' <<<"$live_section"
+          grep -Fq 'GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL' <<<"$live_section"
+          grep -Fq 'geox_mcft_cap09_s6_formal_t4r1_24h_v2' <<<"$live_section"
+          ! grep -Fq 'GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL' <<<"$live_section"
           grep -Fq 'github.paginate.iterator(github.rest.actions.listWorkflowRuns' <<<"$live_section"
           grep -Fq 'mcft-cap09-am19-formal-hourly-${subject}-NO-GO-' <<<"$live_section"
           grep -Fq 'RUNNER_RESULT_MISSING' <<<"$live_section"
@@ -100,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      MCFT_CAP09_PARENT_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      MCFT_CAP09_PARENT_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -208,7 +211,7 @@ jobs:
           const boots=files('a0-evidence','MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_RESULT_V1.json');
           if(arms.length!==1||boots.length!==1)throw new Error(`AM19_FORMAL_LIVE_FILE_CARDINALITY:${arms.length}:${boots.length}`);
           const arm=JSON.parse(fs.readFileSync(arms[0],'utf8')),boot=JSON.parse(fs.readFileSync(boots[0],'utf8'));
-          if(arm.status!=='PASS'||arm.subject_sha!==process.env.MCFT_CAP09_SUBJECT_SHA||boot.status!=='PASS'||boot.subject_sha!==process.env.MCFT_CAP09_SUBJECT_SHA||boot.arm_identity_hash!==arm.arm_identity_hash||boot.epoch_id!==arm.epoch_id||boot.manifest_hash==null||boot.formal_a0_bootstrapped!==true||boot.formal_o00_started!==false)throw new Error('AM19_FORMAL_LIVE_ARM_A0_IDENTITY_REQUIRED');
+          if(arm.status!=='PASS'||arm.subject_sha!==process.env.MCFT_CAP09_SUBJECT_SHA||arm.formal_database_name!=='geox_mcft_cap09_s6_formal_t4r1_24h_v2'||boot.status!=='PASS'||boot.subject_sha!==process.env.MCFT_CAP09_SUBJECT_SHA||boot.formal_database_name!==arm.formal_database_name||boot.arm_identity_hash!==arm.arm_identity_hash||boot.epoch_id!==arm.epoch_id||boot.manifest_hash==null||boot.formal_a0_bootstrapped!==true||boot.formal_o00_started!==false)throw new Error('AM19_FORMAL_LIVE_ARM_A0_IDENTITY_REQUIRED');
           const now=Date.now(),o00=Date.parse(arm.o00),o23=Date.parse(arm.o23);
           let runnable=true,reason='';
           if(now<o00){runnable=false;reason='BEFORE_O00';}
@@ -226,11 +229,11 @@ jobs:
           set -euo pipefail
           test -n "${MCFT_CAP09_PARENT_DATABASE_URL:-}" || { echo 'AM19_FORMAL_LIVE_DATABASE_SECRET_REQUIRED' >&2; exit 1; }
 
-      - name: Normalize stable T3R1 credential seed to exact Formal v3
+      - name: Normalize stable T4R1 credential seed to exact actual Formal v2
         if: steps.evidence.outputs.runnable == 'true'
         shell: node {0}
         run: |
-          const fs=require('node:fs');const u=new URL(process.env.MCFT_CAP09_PARENT_DATABASE_URL);if(!['postgres:','postgresql:'].includes(u.protocol)||['localhost','127.0.0.1','::1'].includes(u.hostname))throw new Error('AM19_FORMAL_LIVE_REMOTE_POSTGRES_REQUIRED');const seed=decodeURIComponent(u.pathname.replace(/^\//,''));if(!new Set(['geox_mcft_cap09_s6_formal_t3r1_24h','geox_mcft_cap09_s6_formal_t3r1_24h_v3']).has(seed))throw new Error(`AM19_FORMAL_LIVE_T3R1_SEED_FORBIDDEN:${seed}`);u.pathname='/geox_mcft_cap09_s6_formal_t3r1_24h_v3';const target=u.toString();console.log(`::add-mask::${target}`);fs.appendFileSync(process.env.GITHUB_ENV,`DATABASE_URL=${target}\n`);
+          const fs=require('node:fs');const u=new URL(process.env.MCFT_CAP09_PARENT_DATABASE_URL);if(!['postgres:','postgresql:'].includes(u.protocol)||['localhost','127.0.0.1','::1'].includes(u.hostname))throw new Error('AM19_FORMAL_LIVE_REMOTE_POSTGRES_REQUIRED');const seed=decodeURIComponent(u.pathname.replace(/^\//,''));if(!new Set(['geox_mcft_cap09_s6_formal_t4r1_24h','geox_mcft_cap09_s6_formal_t4r1_24h_v2']).has(seed))throw new Error(`AM19_FORMAL_LIVE_T4R1_SEED_FORBIDDEN:${seed}`);u.pathname='/geox_mcft_cap09_s6_formal_t4r1_24h_v2';const target=u.toString();console.log(`::add-mask::${target}`);fs.appendFileSync(process.env.GITHUB_ENV,`DATABASE_URL=${target}\n`);
 
       - uses: pnpm/action-setup@v4
         if: steps.evidence.outputs.runnable == 'true'

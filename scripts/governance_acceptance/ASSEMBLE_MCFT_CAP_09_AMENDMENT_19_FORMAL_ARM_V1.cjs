@@ -5,8 +5,8 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t3r1_24h_v3";
-const FAILED_FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t3r1_24h_v2";
+const FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t4r1_24h_v2";
+const FAILED_FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t4r1_24h";
 const MIN_ARM_TO_O00_LEAD_MINUTES = 35;
 const EXPECTED_RECORD_TYPES = ["future_et0_assumption_v1", "future_weather_assumption_v1", "soil_moisture_observation_v1"];
 
@@ -108,7 +108,7 @@ function assemble(gate, candidate, metadata) {
   const rollingArtifactId = positiveInteger(metadata.rolling_artifact_id, "AM19_FORMAL_ARM_ROLLING_ARTIFACT_ID_REQUIRED");
   const rollingArtifactDigest = digestValue(metadata.rolling_artifact_digest, "AM19_FORMAL_ARM_ROLLING_ARTIFACT_DIGEST_REQUIRED");
   const rollingArtifactName = String(metadata.rolling_artifact_name || "").trim();
-  need(rollingArtifactName.startsWith("mcft-cap09-rolling-preboundary-") && rollingArtifactName.endsWith(`-${currentMain}`), "AM19_FORMAL_ARM_ROLLING_ARTIFACT_NAME_REQUIRED");
+  need(rollingArtifactName.startsWith("mcft-cap09-t4r1-rolling-preboundary-") && rollingArtifactName.endsWith(`-${currentMain}`), "AM19_FORMAL_ARM_ROLLING_ARTIFACT_NAME_REQUIRED");
 
   need(FORMAL_DATABASE !== FAILED_FORMAL_DATABASE, "AM19_FORMAL_ARM_FAILED_DATABASE_REUSE_FORBIDDEN");
   const epochId = `mcft_cap09_am19_formal_${a0.replace(/[^0-9]/g, "")}_${currentMain.slice(0, 12)}`;
@@ -213,10 +213,10 @@ function selftest() {
   const metadata = {
     current_protected_main_sha: subject, rolling_workflow_completed_at: "2026-08-20T06:31:00.000Z", arm_evaluated_at: "2026-08-20T06:32:00.000Z",
     gate_artifact_id: 20, gate_artifact_name: `mcft-cap09-am19-formal-graduation-${subject}-12`, gate_artifact_digest: `sha256:${"e".repeat(64)}`,
-    rolling_workflow_run_id: 21, rolling_artifact_id: 22, rolling_artifact_name: `mcft-cap09-rolling-preboundary-20260820t070000z-${subject}`, rolling_artifact_digest: `sha256:${"f".repeat(64)}`,
+    rolling_workflow_run_id: 21, rolling_artifact_id: 22, rolling_artifact_name: `mcft-cap09-t4r1-rolling-preboundary-20260820t070000z-${subject}`, rolling_artifact_digest: `sha256:${"f".repeat(64)}`,
   };
   const pass = assemble(gate, candidate, metadata);
-  need(pass.status === "PASS" && pass.a0 === candidate.target_t && pass.formal_o00_started === false && pass.formal_database_write_count === 0, "AM19_FORMAL_ARM_SELFTEST_PASS_FAILED");
+  need(pass.status === "PASS" && pass.a0 === candidate.target_t && pass.formal_database_name === FORMAL_DATABASE && pass.formal_o00_started === false && pass.formal_database_write_count === 0, "AM19_FORMAL_ARM_SELFTEST_PASS_FAILED");
   const postA0Pass = assemble(gate, candidate, { ...metadata, arm_evaluated_at: "2026-08-20T07:10:00.000Z" });
   need(postA0Pass.status === "PASS" && postA0Pass.arm_to_o00_lead_minutes === 50, "AM19_FORMAL_ARM_SELFTEST_POST_A0_O00_LEAD_REQUIRED");
   const negatives = [
@@ -232,6 +232,7 @@ function selftest() {
   console.log(JSON.stringify({
     schema_version: "geox_mcft_cap09_amendment19_formal_arm_selftest_v1",
     status: "PASS",
+    formal_database_name: FORMAL_DATABASE,
     post_gate_order_required: true,
     post_a0_arm_allowed_when_o00_lead_sufficient: true,
     arm_deadline_authority: "O00_MINUS_35M_OPERATIONAL_RULE",
