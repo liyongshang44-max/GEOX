@@ -52,7 +52,8 @@ jobs:
           test -z "${DATABASE_URL:-}"
           grep -Fq 'pg_dump --schema-only --no-owner --no-privileges' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
           grep -Fq 'CREATE DATABASE "$name" TEMPLATE template0' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
-          ! grep -Fq 'CREATE DATABASE "$name" TEMPLATE "$SOURCE_DATABASE_NAME"' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
+          forbidden=$(grep -F 'CREATE DATABASE "$name" TEMPLATE "$SOURCE_DATABASE_NAME"' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml | grep -v 'forbidden=' || true)
+          test -z "$forbidden"
 
   protected-main-provision:
     if: github.event_name == 'workflow_dispatch'
