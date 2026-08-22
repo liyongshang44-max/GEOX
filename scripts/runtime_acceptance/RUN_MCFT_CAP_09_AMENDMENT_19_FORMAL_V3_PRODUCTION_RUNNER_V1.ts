@@ -11,7 +11,7 @@ import type { Cap04ForecastScenarioPersistencePortV1 } from "../../apps/server/s
 import { PrepareNextTickInputServiceV1 } from "../../apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.js";
 import { PostgresExternalFormalAmendment19EvidenceSourceV1 } from "../../apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.js";
 import { PostgresPersistentSequentialSchedulerAdapterV1 } from "../../apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.js";
-import { materializeExternalFormalA18CropContextV2 } from "../../apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v2.js";
+import { materializeExternalFormalA18CropContextV3 } from "../../apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.js";
 import {
   buildMcftCap09Am19FormalManifestFromArmV1,
   MCFT_CAP09_AM19_FORMAL_DATABASE_V3,
@@ -20,7 +20,7 @@ import {
 
 const OUTPUT_DIR = path.resolve("acceptance-output");
 const OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_RESULT_V1.json");
-const CROP_AUTHORITY_PATH = path.resolve("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json");
+const CROP_AUTHORITY_PATH = path.resolve("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json");
 const MATRIX_PATH = path.resolve("docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json");
 const LEASE_DURATION_SECONDS = 900;
 
@@ -61,7 +61,7 @@ async function assertFormalDatabase(pool: Pool, databaseUrl: string): Promise<vo
   if (!["postgres:", "postgresql:"].includes(parsed.protocol)) throw new Error("AM19_FORMAL_RUNNER_POSTGRES_URL_REQUIRED");
   if (["localhost", "127.0.0.1", "::1"].includes(parsed.hostname)) throw new Error("AM19_FORMAL_RUNNER_REMOTE_DATABASE_REQUIRED");
   const database = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
-  if (database !== MCFT_CAP09_AM19_FORMAL_DATABASE_V3) throw new Error(`AM19_FORMAL_RUNNER_EXACT_V3_DATABASE_REQUIRED:${database}`);
+  if (database !== MCFT_CAP09_AM19_FORMAL_DATABASE_V3) throw new Error(`AM19_FORMAL_RUNNER_EXACT_T4_DATABASE_REQUIRED:${database}`);
   const identity = String((await pool.query("SELECT current_database() AS database_name")).rows[0]?.database_name ?? "");
   if (identity !== MCFT_CAP09_AM19_FORMAL_DATABASE_V3) throw new Error("AM19_FORMAL_RUNNER_DATABASE_SESSION_IDENTITY_REQUIRED");
 }
@@ -115,7 +115,7 @@ function selftest(): void {
     a0: "2026-08-20T05:00:00.000Z",
     o00: "2026-08-20T06:00:00.000Z",
     o23: "2026-08-21T05:00:00.000Z",
-    manifest_ref: "formal-arm://mcft-cap09/amendment19/selftest/geox_mcft_cap09_s6_formal_t3r1_24h_v3",
+    manifest_ref: `formal-arm://mcft-cap09/amendment19/selftest/${MCFT_CAP09_AM19_FORMAL_DATABASE_V3}`,
     rolling: { captured_at: "2026-08-20T04:30:00.000Z", target_t: "2026-08-20T05:00:00.000Z" },
     temporal_authority: "PROVIDER_AVAILABILITY_WATERMARK_V1",
     bootstrap_lease_clock_required: "REAL_DATABASE_TRANSACTION_TIMESTAMP",
@@ -140,6 +140,8 @@ function selftest(): void {
     status: "PASS",
     runner: "ExternalFormalV3Amendment19RunnerV1",
     persistent_tick_service: "ExternalFormalV3Amendment19PersistentTickServiceV1",
+    t4r1_crop_materializer: true,
+    formal_database_name: MCFT_CAP09_AM19_FORMAL_DATABASE_V3,
     scheduler_clock_mode: "SYSTEM_DATABASE_UTC",
     shared_manifest_builder: true,
     exact_slot_count: 24,
@@ -160,7 +162,7 @@ async function runCycle(): Promise<void> {
   if (Date.parse(now) >= Date.parse(built.arm.o23) + 2 * 3_600_000) throw new Error("AM19_FORMAL_RUNNER_AFTER_GRADUATION_WINDOW_FORBIDDEN");
 
   const databaseUrl = requiredEnv("DATABASE_URL");
-  const pool = new Pool({ connectionString: databaseUrl, application_name: "mcft-cap09-am19-formal-v3-production-runner" });
+  const pool = new Pool({ connectionString: databaseUrl, application_name: "mcft-cap09-am19-formal-t4r1-production-runner" });
   try {
     await assertFormalDatabase(pool, databaseUrl);
     const runtimeRepository = new PostgresRuntimeRepositoryV1(pool);
@@ -179,7 +181,7 @@ async function runCycle(): Promise<void> {
     );
     const materializer = {
       materialize(input: { logical_time: string; expected_identity_hash: string }) {
-        return materializeExternalFormalA18CropContextV2({
+        return materializeExternalFormalA18CropContextV3({
           logical_time: input.logical_time,
           expected_identity_hash: input.expected_identity_hash,
           crop_authority: built.crop_authority,
@@ -261,6 +263,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.stack ?? error.message : String(error));
+  console.error(error);
   process.exitCode = 1;
 });
