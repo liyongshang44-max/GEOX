@@ -163,6 +163,7 @@ class Ea5e2PrivateTransientR2StoreV1 implements RawEvidenceRetentionPortV1, RawE
   private readonly subjectSha: string;
   private readonly namespace: string;
   private readonly refs = new Map<string, { retention_ref: string; retained_sha256: string; retained_bytes: number }>();
+  private readonly createdRefs = new Set<string>();
   put_count = 0;
   get_count = 0;
   delete_count = 0;
@@ -312,17 +313,14 @@ class Ea5e2PrivateTransientR2StoreV1 implements RawEvidenceRetentionPortV1, RawE
     if (input.retention_class !== "PRIVATE_RESTRICTED_RAW_EVIDENCE") throw new Error("EA5E2_TRANSIENT_RETENTION_CLASS_REQUIRED");
     const raw = Buffer.from(input.bytes);
     if (!raw.byteLength || raw.byteLength !== input.raw_bytes || sha256(raw) !== input.raw_sha256) throw new Error("EA5E2_TRANSIENT_RAW_DIGEST_OR_LENGTH_MISMATCH");
-    const retrievedAt = canonicalIso(input.retrieved_at, "EA5E2_TRANSIENT_RETRIEVED_AT_INVALID");
+    canonicalIso(input.retrieved_at, "EA5E2_TRANSIENT_RETRIEVED_AT_INVALID");
     const key = this.keyForDigest(input.raw_sha256);
     const ref = this.refForKey(key);
     this.recordRef(ref, input.raw_sha256, raw.byteLength);
     const probe = await this.request({ method: "HEAD", key, allowed_statuses: [200, 404] });
     if (probe.status === 200) {
       const retainedAt = this.validateHead({ retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength }, key, probe);
-      if (Date.parse(retainedAt) >= Date.parse(retrievedAt)) {
-        return { retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength, retained_at: retainedAt, externally_publishable: false };
-      }
-      await this.deleteRetainedRawEvidence(ref);
+      return { retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength, retained_at: retainedAt, externally_publishable: false };
     }
     const retainedAt = new Date().toISOString();
     await this.request({
@@ -338,6 +336,7 @@ class Ea5e2PrivateTransientR2StoreV1 implements RawEvidenceRetentionPortV1, RawE
       },
       allowed_statuses: [200],
     });
+    this.createdRefs.add(ref);
     this.put_count += 1;
     const head = await this.request({ method: "HEAD", key, allowed_statuses: [200] });
     const verifiedAt = this.validateHead({ retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength }, key, head);
@@ -365,8 +364,9 @@ class Ea5e2PrivateTransientR2StoreV1 implements RawEvidenceRetentionPortV1, RawE
 
   async deleteTrackedRetainedRawEvidence(): Promise<string[]> {
     const deleted: string[] = [];
-    for (const ref of [...this.refs.keys()].sort()) {
+    for (const ref of [...this.createdRefs].sort()) {
       await this.deleteRetainedRawEvidence(ref);
+      this.createdRefs.delete(ref);
       deleted.push(ref);
     }
     return deleted;
@@ -637,15 +637,24 @@ async function rehydratePreBoundary(input: { pool: Pool; store: Ea5e2PrivateTran
 
 async function smokeTransientStore(): Promise<void> {
   const subject = subjectSha();
-  const store = new Ea5e2PrivateTransientR2StoreV1({ subject_sha: subject, namespace: `smoke-${required("GITHUB_RUN_ID")}` });
+  const namespace = `smoke-${required("GITHUB_RUN_ID")}`;
+  const creator = new Ea5e2PrivateTransientR2StoreV1({ subject_sha: subject, namespace });
   const bytes = crypto.randomBytes(96);
   const digest = sha256(bytes);
   const now = new Date().toISOString();
-  const receipt = await store.retainRawEvidence({ retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", request_id: `smoke-${crypto.randomUUID()}`, provider_id: "EA5E2_READINESS_SMOKE", source_family: "NON_PROVIDER_RANDOM_BYTES", source_locator: "https://example.invalid/ea5e2-readiness-smoke", final_locator: "https://example.invalid/ea5e2-readiness-smoke", content_type: "application/octet-stream", retrieved_at: now, available_at: now, use_policy_ref: "EA5E2_PRIVATE_TRANSIENT_STORE_SMOKE_ONLY", raw_sha256: digest, raw_bytes: bytes.byteLength, bytes });
-  const read = await store.readRetainedRawEvidence({ retention_ref: receipt.retention_ref, retained_sha256: digest, retained_bytes: bytes.byteLength });
+  const first = await creator.retainRawEvidence({ retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", request_id: `smoke-${crypto.randomUUID()}`, provider_id: "EA5E2_READINESS_SMOKE", source_family: "NON_PROVIDER_RANDOM_BYTES", source_locator: "https://example.invalid/ea5e2-readiness-smoke", final_locator: "https://example.invalid/ea5e2-readiness-smoke", content_type: "application/octet-stream", retrieved_at: now, available_at: now, use_policy_ref: "EA5E2_PRIVATE_TRANSIENT_STORE_SMOKE_ONLY", raw_sha256: digest, raw_bytes: bytes.byteLength, bytes });
+  const reuser = new Ea5e2PrivateTransientR2StoreV1({ subject_sha: subject, namespace });
+  const later = new Date(Date.parse(now) + 60 * MINUTE).toISOString();
+  const second = await reuser.retainRawEvidence({ retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", request_id: `smoke-${crypto.randomUUID()}`, provider_id: "EA5E2_READINESS_SMOKE", source_family: "NON_PROVIDER_RANDOM_BYTES", source_locator: "https://example.invalid/ea5e2-readiness-smoke", final_locator: "https://example.invalid/ea5e2-readiness-smoke", content_type: "application/octet-stream", retrieved_at: later, available_at: later, use_policy_ref: "EA5E2_PRIVATE_TRANSIENT_STORE_SMOKE_ONLY", raw_sha256: digest, raw_bytes: bytes.byteLength, bytes });
+  if (second.retention_ref !== first.retention_ref || second.retained_at !== first.retained_at) throw new Error("EA5E2_TRANSIENT_CONTENT_ADDRESS_RETENTION_METADATA_MUTATED");
+  if (creator.put_count !== 1 || reuser.put_count !== 0) throw new Error(`EA5E2_TRANSIENT_DUPLICATE_DIGEST_PUT_FORBIDDEN:${creator.put_count}:${reuser.put_count}`);
+  const reusedCleanup = await reuser.deleteTrackedRetainedRawEvidence();
+  if (reusedCleanup.length !== 0 || reuser.delete_count !== 0) throw new Error("EA5E2_TRANSIENT_REUSED_OBJECT_CLEANUP_FORBIDDEN");
+  const read = await reuser.readRetainedRawEvidence({ retention_ref: first.retention_ref, retained_sha256: digest, retained_bytes: bytes.byteLength });
   if (!Buffer.from(read.bytes).equals(bytes)) throw new Error("EA5E2_TRANSIENT_SMOKE_READBACK_MISMATCH");
-  await store.deleteRetainedRawEvidence(receipt.retention_ref);
-  writeSafe(TRANSIENT_SMOKE_OUTPUT, { schema_version: "geox_mcft_cap09_ea5e2_transient_r2_smoke_v1", status: "PASS", subject_sha: subject, transient_root_prefix: TRANSIENT_ROOT_PREFIX, formal_raw_prefix_write_count: 0, transient_private_put_count: store.put_count, transient_private_get_count: store.get_count, transient_private_delete_count: store.delete_count, payload_sha256: digest, payload_bytes: bytes.byteLength, raw_values_emitted: false, public_value_artifact_count: 0 });
+  if (read.retained_at !== first.retained_at) throw new Error("EA5E2_TRANSIENT_SMOKE_RETAINED_AT_DRIFT");
+  await creator.deleteRetainedRawEvidence(first.retention_ref);
+  writeSafe(TRANSIENT_SMOKE_OUTPUT, { schema_version: "geox_mcft_cap09_ea5e2_transient_r2_smoke_v2", status: "PASS", subject_sha: subject, transient_root_prefix: TRANSIENT_ROOT_PREFIX, content_addressed_retained_at_immutable: true, duplicate_digest_put_suppressed: true, reused_object_failure_cleanup_forbidden: true, formal_raw_prefix_write_count: 0, creator_put_count: creator.put_count, reuser_put_count: reuser.put_count, reuser_get_count: reuser.get_count, creator_delete_count: creator.delete_count, reuser_delete_count: reuser.delete_count, payload_sha256: digest, payload_bytes: bytes.byteLength, raw_values_emitted: false, public_value_artifact_count: 0 });
 }
 
 function collectTransientRefs(value: unknown, output = new Set<string>()): Set<string> {
