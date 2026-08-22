@@ -25,9 +25,9 @@ import {
 import type { RealityBindingRuntimeSnapshotV1 } from "../../runtime/twin_runtime/ports.js";
 
 export const MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3 =
-  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FRESH-ZERO-STATE-FORMAL-STORE-REQUALIFICATION-V1.json" as const;
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json" as const;
 export const MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3 =
-  "3e7daba9e7a8f92d1a001c4f9c10237e4d1edf0b" as const;
+  "8c61b443304f7e0ee85872052e990edd7dd7c512" as const;
 
 export type ExternalFormalPrewindowAuthorityBundleInputV3 = {
   epoch_id: string;
