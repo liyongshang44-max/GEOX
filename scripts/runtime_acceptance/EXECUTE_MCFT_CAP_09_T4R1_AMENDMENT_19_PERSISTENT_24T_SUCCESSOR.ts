@@ -11,6 +11,8 @@ const HISTORICAL_PARENT_DB = "geox_mcft_cap09_s6_formal_t3r1_24h_v3";
 const T4R1_PARENT_DB = "geox_mcft_cap09_s6_formal_t4r1_24h";
 const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v4";
 const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v4";
+const HISTORICAL_CANDIDATE_GATE = 'if (candidate.producer_subject_sha !== subject || (candidate.subject_sha !== undefined && candidate.subject_sha !== subject)) throw new Error("AM19_P24_CANDIDATE_EXACT_SUBJECT_REQUIRED");';
+const SUCCESSOR_CANDIDATE_GATE = 'const producerSubject = process.env.MCFT_CAP09_ROLLING_PRODUCER_SUBJECT_SHA?.trim(); if (!producerSubject || !/^[0-9a-f]{40}$/.test(producerSubject)) throw new Error("AM19_P24_SUCCESSOR_PRODUCER_SUBJECT_REQUIRED"); if (candidate.producer_subject_sha !== producerSubject || (candidate.subject_sha !== undefined && candidate.subject_sha !== producerSubject)) throw new Error("AM19_P24_CANDIDATE_PRODUCER_SUBJECT_REQUIRED");';
 
 function git(...args: string[]): string {
   return execFileSync("git", args, { encoding: "utf8" }).trim();
@@ -22,14 +24,21 @@ function required(name: string): string {
   return value;
 }
 
+function exactReplace(source: string, oldValue: string, newValue: string, code: string): string {
+  const count = source.split(oldValue).length - 1;
+  assert.equal(count, 1, `${code}:${count}`);
+  return source.replace(oldValue, newValue);
+}
+
 function build(): string {
   assert.equal(git("rev-parse", `HEAD:${SOURCE_PATH}`), SOURCE_BLOB, "T4R1_AM19_P24_SOURCE_RUNNER_BLOB_DRIFT");
-  const source = fs.readFileSync(SOURCE, "utf8");
-  const count = source.split(HISTORICAL_PARENT_DB).length - 1;
-  assert.equal(count, 1, `T4R1_AM19_P24_PARENT_DB_REPLACEMENT_CARDINALITY:${count}`);
-  const generated = source.replace(HISTORICAL_PARENT_DB, T4R1_PARENT_DB);
+  let generated = fs.readFileSync(SOURCE, "utf8");
+  generated = exactReplace(generated, HISTORICAL_PARENT_DB, T4R1_PARENT_DB, "T4R1_AM19_P24_PARENT_DB_REPLACEMENT_CARDINALITY");
+  generated = exactReplace(generated, HISTORICAL_CANDIDATE_GATE, SUCCESSOR_CANDIDATE_GATE, "T4R1_AM19_P24_CANDIDATE_GATE_REPLACEMENT_CARDINALITY");
   assert(!generated.includes(HISTORICAL_PARENT_DB), "T4R1_AM19_P24_HISTORICAL_PARENT_DB_SURVIVED");
+  assert(!generated.includes(HISTORICAL_CANDIDATE_GATE), "T4R1_AM19_P24_HISTORICAL_CANDIDATE_GATE_SURVIVED");
   assert(generated.includes(T4R1_PARENT_DB), "T4R1_AM19_P24_T4_PARENT_DB_REQUIRED");
+  assert(generated.includes("MCFT_CAP09_ROLLING_PRODUCER_SUBJECT_SHA"), "T4R1_AM19_P24_PRODUCER_SUBJECT_BINDING_REQUIRED");
   assert(generated.includes(MAIN_DB), "T4R1_AM19_P24_V4_MAIN_DB_REQUIRED");
   assert(generated.includes(BLOCKED_DB), "T4R1_AM19_P24_V4_BLOCKED_DB_REQUIRED");
   return generated;
@@ -55,8 +64,10 @@ function proveStatic(): void {
     console.log(JSON.stringify({
       status: "PASS",
       source_runner_blob: SOURCE_BLOB,
-      replacement_count: 1,
+      replacement_count: 2,
       parent_database: T4R1_PARENT_DB,
+      producer_subject_binding: "AUTHENTICATED_ROLLING_ARTIFACT",
+      qualification_subject_binding: "CURRENT_EXACT_PROTECTED_MAIN",
       main_database: MAIN_DB,
       blocked_database: BLOCKED_DB,
       canonical_runner_reimplemented: false,
@@ -77,6 +88,7 @@ function assertLiveBoundary(): void {
   assert.equal(git("rev-parse", "origin/main"), subject, "T4R1_AM19_P24_PROTECTED_MAIN_DRIFT");
   assert.equal(required("MCFT_CAP09_SUBJECT_SHA"), subject, "T4R1_AM19_P24_SUBJECT_BINDING_DRIFT");
   assert.equal(required("MCFT_CAP09_CONSUMER_SUBJECT_SHA"), subject, "T4R1_AM19_P24_CONSUMER_BINDING_DRIFT");
+  assert.match(required("MCFT_CAP09_ROLLING_PRODUCER_SUBJECT_SHA"), /^[0-9a-f]{40}$/, "T4R1_AM19_P24_PRODUCER_SHA_INVALID");
   const parent = new URL(required("MCFT_CAP09_PARENT_DATABASE_URL"));
   assert(["postgres:", "postgresql:"].includes(parent.protocol), "T4R1_AM19_P24_POSTGRES_PARENT_REQUIRED");
   assert.equal(decodeURIComponent(parent.pathname.replace(/^\//, "")), T4R1_PARENT_DB, "T4R1_AM19_P24_PARENT_DB_IDENTITY_REQUIRED");
