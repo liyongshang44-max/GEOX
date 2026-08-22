@@ -11,13 +11,13 @@ import {
 } from "../../apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v3.js";
 import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
 import {
-  MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V2,
-  materializeExternalFormalA18CropContextV2,
-} from "../../apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v2.js";
+  MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V3,
+  materializeExternalFormalA18CropContextV3,
+} from "../../apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.js";
 import type { ExternalFormalV3Am19WindowManifestV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.js";
 
-export const MCFT_CAP09_AM19_FORMAL_DATABASE_V3 = "geox_mcft_cap09_s6_formal_t3r1_24h_v3" as const;
-export const MCFT_CAP09_AM19_FAILED_FORMAL_DATABASE_V2 = "geox_mcft_cap09_s6_formal_t3r1_24h_v2" as const;
+export const MCFT_CAP09_AM19_FORMAL_DATABASE_V3 = "geox_mcft_cap09_s6_formal_t4r1_24h_v2" as const;
+export const MCFT_CAP09_AM19_FAILED_FORMAL_DATABASE_V2 = "geox_mcft_cap09_s6_formal_t4r1_24h" as const;
 
 export type McftCap09Am19FormalArmV1 = {
   schema_version: "geox_mcft_cap09_amendment19_formal_arm_v1";
@@ -71,9 +71,9 @@ function exactSubject(value: unknown): string {
   return subject;
 }
 
-function materializationHash(materialized: ReturnType<typeof materializeExternalFormalA18CropContextV2>): string {
+function materializationHash(materialized: ReturnType<typeof materializeExternalFormalA18CropContextV3>): string {
   return semanticHashV1({
-    materialization_profile: MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V2,
+    materialization_profile: MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V3,
     context_ref: materialized.context_ref,
     context_identity_hash: materialized.context_identity_hash,
     materialized_context: materialized.context,
@@ -87,7 +87,7 @@ export function validateMcftCap09Am19FormalArmV1(arm: McftCap09Am19FormalArmV1, 
   const subject = exactSubject(arm.subject_sha);
   if (expectedSubject !== undefined && subject !== exactSubject(expectedSubject)) throw new Error("AM19_FORMAL_MANIFEST_ARM_SUBJECT_MISMATCH");
   if (arm.formal_database_name !== MCFT_CAP09_AM19_FORMAL_DATABASE_V3) {
-    throw new Error("AM19_FORMAL_MANIFEST_FRESH_V3_DATABASE_REQUIRED");
+    throw new Error("AM19_FORMAL_MANIFEST_T4_ACTUAL_FORMAL_DATABASE_REQUIRED");
   }
   const a0 = canonicalIso(arm.a0, "AM19_FORMAL_MANIFEST_A0_INVALID");
   const o00 = canonicalIso(arm.o00, "AM19_FORMAL_MANIFEST_O00_INVALID");
@@ -127,7 +127,7 @@ export function buildMcftCap09Am19FormalManifestFromArmV1(input: {
   if (bundle.o00_logical_time !== arm.o00 || bundle.o23_logical_time !== arm.o23) throw new Error("AM19_FORMAL_MANIFEST_COMPILED_WINDOW_DRIFT");
 
   const materializationPins = bundle.hourly_crop_pins.map((pin) => {
-    const materialized = materializeExternalFormalA18CropContextV2({
+    const materialized = materializeExternalFormalA18CropContextV3({
       logical_time: pin.logical_time,
       expected_identity_hash: pin.crop_stage_context_hash,
       crop_authority: input.crop_authority,
