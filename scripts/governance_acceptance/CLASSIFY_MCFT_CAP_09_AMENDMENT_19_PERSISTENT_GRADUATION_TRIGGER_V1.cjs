@@ -5,8 +5,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const SCHEMA = "geox_mcft_cap09_amendment19_persistent24_qualification_result_v1";
-const MAIN_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_v4";
-const BLOCKED_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_blocked_v4";
+const MAIN_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_v6";
+const BLOCKED_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_blocked_v6";
+const STALE_V4_MAIN_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_v4";
+const STALE_V4_BLOCKED_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_blocked_v4";
 const CROP_AUTHORITY = "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3";
 const CROP_MATERIALIZATION_PROFILE = "T4R1_A18_FULL_CROP_CONTEXT_MATERIALIZATION_V3";
 const ZERO_FIELDS = [
@@ -114,6 +116,8 @@ function selftest() {
   const negatives = [
     ["subject", { ...readOnly, subject_sha: "2".repeat(40) }, "AM19_GRADUATION_TRIGGER_PERSISTENT_SUBJECT_REQUIRED"],
     ["qualified_subject", { ...readOnly, qualified_subject_sha: "2".repeat(40) }, "AM19_GRADUATION_TRIGGER_QUALIFIED_SUBJECT_REQUIRED"],
+    ["stale_v4_main_database", { ...readOnly, main_database_name: STALE_V4_MAIN_DATABASE }, "AM19_GRADUATION_TRIGGER_MAIN_DATABASE_REQUIRED"],
+    ["stale_v4_blocked_database", { ...readOnly, blocked_database_name: STALE_V4_BLOCKED_DATABASE }, "AM19_GRADUATION_TRIGGER_BLOCKED_DATABASE_REQUIRED"],
     ["main_database", { ...readOnly, main_database_name: "wrong" }, "AM19_GRADUATION_TRIGGER_MAIN_DATABASE_REQUIRED"],
     ["blocked_database", { ...readOnly, blocked_database_name: "wrong" }, "AM19_GRADUATION_TRIGGER_BLOCKED_DATABASE_REQUIRED"],
     ["crop_authority", { ...readOnly, crop_authority_id: "wrong" }, "AM19_GRADUATION_TRIGGER_T4R1_CROP_AUTHORITY_REQUIRED"],
@@ -134,7 +138,8 @@ function selftest() {
     schema_version: "geox_mcft_cap09_amendment19_persistent_graduation_trigger_classification_selftest_v1",
     status: "PASS",
     t4r1_crop_authority_bound: true,
-    qualification_store_generation: "v4",
+    qualification_store_generation: "v6",
+    stale_v4_store_evidence_rejected: true,
     read_only_replay_creates_new_gate: false,
     negative_case_count: negatives.length,
   }));
