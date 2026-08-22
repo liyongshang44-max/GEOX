@@ -312,17 +312,14 @@ class Ea5e2PrivateTransientR2StoreV1 implements RawEvidenceRetentionPortV1, RawE
     if (input.retention_class !== "PRIVATE_RESTRICTED_RAW_EVIDENCE") throw new Error("EA5E2_TRANSIENT_RETENTION_CLASS_REQUIRED");
     const raw = Buffer.from(input.bytes);
     if (!raw.byteLength || raw.byteLength !== input.raw_bytes || sha256(raw) !== input.raw_sha256) throw new Error("EA5E2_TRANSIENT_RAW_DIGEST_OR_LENGTH_MISMATCH");
-    const retrievedAt = canonicalIso(input.retrieved_at, "EA5E2_TRANSIENT_RETRIEVED_AT_INVALID");
+    canonicalIso(input.retrieved_at, "EA5E2_TRANSIENT_RETRIEVED_AT_INVALID");
     const key = this.keyForDigest(input.raw_sha256);
     const ref = this.refForKey(key);
     this.recordRef(ref, input.raw_sha256, raw.byteLength);
     const probe = await this.request({ method: "HEAD", key, allowed_statuses: [200, 404] });
     if (probe.status === 200) {
       const retainedAt = this.validateHead({ retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength }, key, probe);
-      if (Date.parse(retainedAt) >= Date.parse(retrievedAt)) {
-        return { retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength, retained_at: retainedAt, externally_publishable: false };
-      }
-      await this.deleteRetainedRawEvidence(ref);
+      return { retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", retention_ref: ref, retained_sha256: input.raw_sha256, retained_bytes: raw.byteLength, retained_at: retainedAt, externally_publishable: false };
     }
     const retainedAt = new Date().toISOString();
     await this.request({
@@ -641,11 +638,16 @@ async function smokeTransientStore(): Promise<void> {
   const bytes = crypto.randomBytes(96);
   const digest = sha256(bytes);
   const now = new Date().toISOString();
-  const receipt = await store.retainRawEvidence({ retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", request_id: `smoke-${crypto.randomUUID()}`, provider_id: "EA5E2_READINESS_SMOKE", source_family: "NON_PROVIDER_RANDOM_BYTES", source_locator: "https://example.invalid/ea5e2-readiness-smoke", final_locator: "https://example.invalid/ea5e2-readiness-smoke", content_type: "application/octet-stream", retrieved_at: now, available_at: now, use_policy_ref: "EA5E2_PRIVATE_TRANSIENT_STORE_SMOKE_ONLY", raw_sha256: digest, raw_bytes: bytes.byteLength, bytes });
-  const read = await store.readRetainedRawEvidence({ retention_ref: receipt.retention_ref, retained_sha256: digest, retained_bytes: bytes.byteLength });
+  const first = await store.retainRawEvidence({ retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", request_id: `smoke-${crypto.randomUUID()}`, provider_id: "EA5E2_READINESS_SMOKE", source_family: "NON_PROVIDER_RANDOM_BYTES", source_locator: "https://example.invalid/ea5e2-readiness-smoke", final_locator: "https://example.invalid/ea5e2-readiness-smoke", content_type: "application/octet-stream", retrieved_at: now, available_at: now, use_policy_ref: "EA5E2_PRIVATE_TRANSIENT_STORE_SMOKE_ONLY", raw_sha256: digest, raw_bytes: bytes.byteLength, bytes });
+  const later = new Date(Date.parse(now) + 60 * MINUTE).toISOString();
+  const second = await store.retainRawEvidence({ retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE", request_id: `smoke-${crypto.randomUUID()}`, provider_id: "EA5E2_READINESS_SMOKE", source_family: "NON_PROVIDER_RANDOM_BYTES", source_locator: "https://example.invalid/ea5e2-readiness-smoke", final_locator: "https://example.invalid/ea5e2-readiness-smoke", content_type: "application/octet-stream", retrieved_at: later, available_at: later, use_policy_ref: "EA5E2_PRIVATE_TRANSIENT_STORE_SMOKE_ONLY", raw_sha256: digest, raw_bytes: bytes.byteLength, bytes });
+  if (second.retention_ref !== first.retention_ref || second.retained_at !== first.retained_at) throw new Error("EA5E2_TRANSIENT_CONTENT_ADDRESS_RETENTION_METADATA_MUTATED");
+  if (store.put_count !== 1) throw new Error(`EA5E2_TRANSIENT_DUPLICATE_DIGEST_PUT_FORBIDDEN:${store.put_count}`);
+  const read = await store.readRetainedRawEvidence({ retention_ref: first.retention_ref, retained_sha256: digest, retained_bytes: bytes.byteLength });
   if (!Buffer.from(read.bytes).equals(bytes)) throw new Error("EA5E2_TRANSIENT_SMOKE_READBACK_MISMATCH");
-  await store.deleteRetainedRawEvidence(receipt.retention_ref);
-  writeSafe(TRANSIENT_SMOKE_OUTPUT, { schema_version: "geox_mcft_cap09_ea5e2_transient_r2_smoke_v1", status: "PASS", subject_sha: subject, transient_root_prefix: TRANSIENT_ROOT_PREFIX, formal_raw_prefix_write_count: 0, transient_private_put_count: store.put_count, transient_private_get_count: store.get_count, transient_private_delete_count: store.delete_count, payload_sha256: digest, payload_bytes: bytes.byteLength, raw_values_emitted: false, public_value_artifact_count: 0 });
+  if (read.retained_at !== first.retained_at) throw new Error("EA5E2_TRANSIENT_SMOKE_RETAINED_AT_DRIFT");
+  await store.deleteRetainedRawEvidence(first.retention_ref);
+  writeSafe(TRANSIENT_SMOKE_OUTPUT, { schema_version: "geox_mcft_cap09_ea5e2_transient_r2_smoke_v2", status: "PASS", subject_sha: subject, transient_root_prefix: TRANSIENT_ROOT_PREFIX, content_addressed_retained_at_immutable: true, duplicate_digest_put_suppressed: true, formal_raw_prefix_write_count: 0, transient_private_put_count: store.put_count, transient_private_get_count: store.get_count, transient_private_delete_count: store.delete_count, payload_sha256: digest, payload_bytes: bytes.byteLength, raw_values_emitted: false, public_value_artifact_count: 0 });
 }
 
 function collectTransientRefs(value: unknown, output = new Set<string>()): Set<string> {
@@ -765,7 +767,7 @@ async function main(): Promise<void> {
   if (mode === "TRANSIENT_STORE_SMOKE") return smokeTransientStore();
   if (mode === "CLEANUP_TRANSIENT") return cleanupTransientStore();
   if (mode === "TIMING_QUALIFICATION_LATE_EXACT_HOUR") return qualifyLateExactHourTiming();
-  if (mode !== "PRE_BOUNDARY_CAUSAL" && mode !== "LATE_EXACT_HOUR") throw new Error("MCFT_EA5E2_LIVE_PHASE_INVALID");
+  if (mode !== "PRE_BOUNDARY_CAUSAL" && mode !== "LATE_EXACT_HOUR") throw new Error("EA5E2_LIVE_PHASE_INVALID");
 
   const subject = subjectSha();
   const target = canonicalHour(required("MCFT_EA5E2_TARGET_T"), "EA5E2_TARGET_T_INVALID");
