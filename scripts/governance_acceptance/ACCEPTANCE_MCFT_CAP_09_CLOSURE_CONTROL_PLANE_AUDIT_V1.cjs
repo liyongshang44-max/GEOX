@@ -39,12 +39,27 @@ function main() {
   has(contract,'"deployment_subject_sha"',"AM19_CLOSURE_AUDIT_DEPLOYMENT_IDENTITY_REQUIRED");
   has(contract,'"execution_run_id"',"AM19_CLOSURE_AUDIT_EXECUTION_IDENTITY_REQUIRED");
   has(contract,'"evidence_generation_id"',"AM19_CLOSURE_AUDIT_EVIDENCE_GENERATION_REQUIRED");
+  has(contract,'"formal_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v3"',"AM19_CLOSURE_AUDIT_CONTRACT_FORMAL_V3_REQUIRED");
+  has(contract,'"qualification_subject_sha": "abf0aa121001480f01ad4e39364b1df13f3c26eb"',"AM19_CLOSURE_AUDIT_V11_SUBJECT_REQUIRED");
+  has(contract,'"persistent_workflow_run_id": 32638502092',"AM19_CLOSURE_AUDIT_V11_RUN_REQUIRED");
+  has(contract,'"persistent_artifact_id": 9493316708',"AM19_CLOSURE_AUDIT_V11_ARTIFACT_REQUIRED");
+  has(contract,'"persistent_artifact_digest": "sha256:3a6f01a9c1da1de4522ba9d745e3619b7c116ece45bde39ebec10d8637cb4544"',"AM19_CLOSURE_AUDIT_V11_DIGEST_REQUIRED");
+  has(contract,'"qualification_database": "geox_mcft_cap09_s6_accel24t_am19_v11"',"AM19_CLOSURE_AUDIT_V11_DATABASE_REQUIRED");
+  has(contract,'"blocked_database": "geox_mcft_cap09_s6_accel24t_am19_blocked_v11"',"AM19_CLOSURE_AUDIT_V11_BLOCKED_DATABASE_REQUIRED");
+  no(contract,'"qualification_database": "geox_mcft_cap09_s6_accel24t_am19_v10"',"AM19_CLOSURE_AUDIT_V10_CURRENT_QUALIFICATION_FORBIDDEN");
+  no(contract,'"formal_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v2"',"AM19_CLOSURE_AUDIT_FORMAL_V2_CURRENT_CONTRACT_FORBIDDEN");
 
   has(graduation,"workflow_dispatch:","AM19_CLOSURE_AUDIT_COMPATIBLE_REPLAY_ENTRY_REQUIRED");
   has(graduation,"ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs","AM19_CLOSURE_AUDIT_COMPAT_ATTESTATION_WIRING_REQUIRED");
   has(graduation,"ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_INPUT_V1.cjs","AM19_CLOSURE_AUDIT_COMPAT_INPUT_REQUIRED");
   has(graduation,"ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_ENVELOPE_V1.cjs","AM19_CLOSURE_AUDIT_COMPAT_ENVELOPE_REQUIRED");
-  has(graduation,"Download real frozen v10 qualification artifact in PR","AM19_CLOSURE_AUDIT_PREMERGE_REAL_ARTIFACT_TEST_REQUIRED");
+  has(graduation,"Download real frozen v11 qualification artifact in PR","AM19_CLOSURE_AUDIT_PREMERGE_REAL_ARTIFACT_TEST_REQUIRED");
+  has(graduation,"CLOSURE_QUALIFICATION_SHA: abf0aa121001480f01ad4e39364b1df13f3c26eb","AM19_CLOSURE_AUDIT_GRADUATION_V11_SUBJECT_REQUIRED");
+  has(graduation,"CLOSURE_PERSISTENT_RUN_ID: '32638502092'","AM19_CLOSURE_AUDIT_GRADUATION_V11_RUN_REQUIRED");
+  has(graduation,"CLOSURE_PERSISTENT_ARTIFACT_ID: '9493316708'","AM19_CLOSURE_AUDIT_GRADUATION_V11_ARTIFACT_REQUIRED");
+  has(graduation,"CLOSURE_PERSISTENT_ARTIFACT_DIGEST: sha256:3a6f01a9c1da1de4522ba9d745e3619b7c116ece45bde39ebec10d8637cb4544","AM19_CLOSURE_AUDIT_GRADUATION_V11_DIGEST_REQUIRED");
+  has(graduation,"geox_mcft_cap09_s6_accel24t_am19_v11","AM19_CLOSURE_AUDIT_GRADUATION_V11_DB_REQUIRED");
+  no(graduation,"Download real frozen v10 qualification artifact in PR","AM19_CLOSURE_AUDIT_STALE_V10_ARTIFACT_ROUTE_FORBIDDEN");
   has(graduation,"mcft-cap09-t4r1-am19-persistent24-","AM19_CLOSURE_AUDIT_T4_PERSISTENT_PREFIX_REQUIRED");
   no(graduation,"mcft-cap09-am19-persistent24-","AM19_CLOSURE_AUDIT_OLD_PERSISTENT_PREFIX_FORBIDDEN");
 
@@ -64,7 +79,7 @@ function main() {
   has(finalReadback,"geox_mcft_cap09_s6_formal_t4r1_24h_v3","AM19_CLOSURE_AUDIT_READBACK_T4_FORMAL_V3_DB_REQUIRED");
 
   no(a0,"geox_mcft_cap09_s6_accel24t_am19_v4","AM19_CLOSURE_AUDIT_A0_QUAL_DB_COUPLING_FORBIDDEN");
-  for (const generation of ["v10","v9"]) {
+  for (const generation of ["v11","v10","v9"]) {
     no(live,`geox_mcft_cap09_s6_accel24t_am19_${generation}`,`AM19_CLOSURE_AUDIT_LIVE_QUAL_DB_COUPLING_FORBIDDEN:${generation}`);
     no(finalReadback,`geox_mcft_cap09_s6_accel24t_am19_${generation}`,`AM19_CLOSURE_AUDIT_READBACK_QUAL_DB_COUPLING_FORBIDDEN:${generation}`);
   }
@@ -78,6 +93,12 @@ function main() {
     status:"PASS",
     audited_file_count:Object.keys(FILES).length,
     qualification_and_deployment_identity_separated:true,
+    frozen_qualification_generation:"v11",
+    frozen_qualification_subject_sha:"abf0aa121001480f01ad4e39364b1df13f3c26eb",
+    frozen_persistent_run_id:32638502092,
+    frozen_persistent_artifact_id:9493316708,
+    actual_formal_generation:"v3",
+    stale_v10_current_authority_absent:true,
     premerge_real_artifact_graduation_replay_required:true,
     downstream_formal_chain_bound_to_deployment_subject:true,
     active_formal_chain_bound_to_v3:true,

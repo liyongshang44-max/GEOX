@@ -18,39 +18,45 @@ on:
       - 'scripts/governance_acceptance/REHEARSE_MCFT_CAP_09_FORMAL_24H_ORCHESTRATION_V1.cjs'
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.cjs'
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs'
-      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_AMENDMENT_19_PERSISTENT_24T_SUCCESSOR.ts'
-      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_V1.ts'
-      - 'scripts/runtime_acceptance/READBACK_MCFT_CAP_09_AMENDMENT_19_FORMAL_FINAL_V1.ts'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-QUALIFICATION-COMPATIBILITY-CONTRACT-V1.json'
 
 permissions:
   contents: read
 
+env:
+  QUALIFICATION_SHA: abf0aa121001480f01ad4e39364b1df13f3c26eb
+  DEPLOYMENT_SHA: ${{ github.event.pull_request.head.sha }}
+
 jobs:
   closure-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ env.DEPLOYMENT_SHA }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '20.11.1'
-      - name: Require this semantic closure is intentionally fresh-qualified, not v10 carry-forward
-        shell: bash
+      - name: Prove v11 qualification semantic boundary is unchanged on control-plane bind
+        run: >-
+          node scripts/governance_acceptance/ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs
+          "$QUALIFICATION_SHA"
+          "$DEPLOYMENT_SHA"
+          acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json
+      - name: Require CARRY_FORWARD and forbid fresh qualification rollover
+        shell: node {0}
         run: |
-          set -euo pipefail
-          git fetch --no-tags origin main
-          changed=$(git diff --name-only origin/main...HEAD)
-          printf '%s\n' "$changed" | grep -Fq 'scripts/runtime_acceptance/'
-          grep -Fq 'geox_mcft_cap09_s6_accel24t_am19_v11' scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_AMENDMENT_19_PERSISTENT_24T_SUCCESSOR.ts
-          grep -Fq 'geox_mcft_cap09_s6_formal_t4r1_24h_v3' scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_arm_v1.ts
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json','utf8'));
+          if(p.status!=='PASS'||p.qualification_subject_sha!==process.env.QUALIFICATION_SHA||p.deployment_subject_sha!==process.env.DEPLOYMENT_SHA)throw new Error('MCFT_CAP09_V11_BIND_COMPATIBILITY_IDENTITY_REQUIRED');
+          if(p.governed_changed_paths.length!==0||p.source_governed_semantic_digest!==p.deployment_governed_semantic_digest||p.qualification_reexecution_required!==false)throw new Error('MCFT_CAP09_V11_BIND_MUST_CARRY_FORWARD');
+          if(p.qualification_database_rewrite_authorized!==false||p.human_override_used!==false||p.formal_effect!==false)throw new Error('MCFT_CAP09_V11_BIND_FAIL_CLOSED_BOUNDARY_REQUIRED');
       - name: Audit remaining Graduation to Formal completion control plane
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CLOSURE_CONTROL_PLANE_AUDIT_V1.cjs
-      - name: Prove reverse terminal semantic closure
+      - name: Reprove reverse terminal semantic closure remains unchanged
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FINAL_SEMANTIC_CLOSURE_V1.cjs
       - name: Rehearse deterministic 24h orchestration without provider or Formal DB
         run: node scripts/governance_acceptance/REHEARSE_MCFT_CAP_09_FORMAL_24H_ORCHESTRATION_V1.cjs

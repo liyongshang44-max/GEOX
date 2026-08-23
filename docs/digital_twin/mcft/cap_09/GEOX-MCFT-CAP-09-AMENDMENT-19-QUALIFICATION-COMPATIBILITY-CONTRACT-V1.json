@@ -39,18 +39,18 @@
     "rolling_artifact_prefix": "mcft-cap09-t4r1-rolling-preboundary-",
     "graduation_artifact_prefix": "mcft-cap09-am19-formal-graduation-",
     "formal_arm_artifact_prefix": "mcft-cap09-am19-formal-arm-",
-    "formal_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v2"
+    "formal_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v3"
   },
   "frozen_closure_source": {
-    "qualification_subject_sha": "fa5d85b0d21f3c9d7697b7f608f22c27158b0c67",
-    "persistent_workflow_run_id": 32619215884,
-    "persistent_artifact_id": 9488084535,
-    "persistent_artifact_digest": "sha256:ffe85a5d5d1f829569d9c34bf1dd9965b32bb8cd2313aa28138ed3d3fcd846e8",
-    "qualification_database": "geox_mcft_cap09_s6_accel24t_am19_v10",
-    "blocked_database": "geox_mcft_cap09_s6_accel24t_am19_blocked_v10",
+    "qualification_subject_sha": "abf0aa121001480f01ad4e39364b1df13f3c26eb",
+    "persistent_workflow_run_id": 32638502092,
+    "persistent_artifact_id": 9493316708,
+    "persistent_artifact_digest": "sha256:3a6f01a9c1da1de4522ba9d745e3619b7c116ece45bde39ebec10d8637cb4544",
+    "qualification_database": "geox_mcft_cap09_s6_accel24t_am19_v11",
+    "blocked_database": "geox_mcft_cap09_s6_accel24t_am19_blocked_v11",
     "machine_status_count": 13,
     "static_blocker_count": 0,
-    "fresh_13_of_13_observed_in_run": 32619215884,
+    "fresh_13_of_13_observed_in_run": 32638502092,
     "machine_gate_observed_open_in_run": null
   },
   "forbidden_shortcuts": [
