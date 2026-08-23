@@ -70,3 +70,5 @@ jobs:
           git diff --cached --check
           git commit -m 'fix(mcft-cap09): bind remaining active Formal chain to v3'
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
+
+# retriggered after final semantic closure audit wiring was updated
