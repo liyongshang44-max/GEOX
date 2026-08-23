@@ -38,7 +38,26 @@
     "o00_must_be_future_at_arm_time": true,
     "minimum_arm_to_o00_lead_minutes": 35,
     "real_wall_clock_o00_o23_required": true,
-    "accelerated_clock_authorized": false
+    "accelerated_clock_authorized": false,
+    "failed_formal_v3_prebootstrap_attempt": {
+      "workflow_run_id": 32646669506,
+      "artifact_id": 9495063273,
+      "artifact_digest": "sha256:af6dd063753c9b558cd014358753b9653853b26fe3b4776e864fd59052002f9d",
+      "deployment_subject_sha": "6415f5a92513b70d8b8dfb51f9e3b67778ce1a2c",
+      "failure_phase": "WAIT_UNTIL_LOGICAL_A0_COMMONJS_PARSE",
+      "failure_class": "CONTROL_PLANE_ONLY",
+      "canonical_bootstrap_mutation_started": false,
+      "formal_fact_count": 3,
+      "runtime_mutation_count": 0,
+      "archive_database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_32646669506",
+      "archive_before_active_v3_reprovision_required": true,
+      "archive_mutation_after_rename_forbidden": true,
+      "active_v3_logical_database_name_reprovision_authorized": true,
+      "reprovision_mode": "CREATE_DATABASE_TEMPLATE0_THEN_SCHEMA_ONLY_RESTORE",
+      "data_clone_forbidden": true,
+      "qualification_generation_change_required": false,
+      "reason": "A0 evidence promotion completed, but the workflow-local wait step failed to parse before canonical bootstrap mutation; preserve the three promoted facts as immutable failed-attempt evidence, then recreate the active v3 logical store from template0 plus schema-only restore."
+    }
   },
   "safety": {
     "cross_scope_state_stitching_forbidden": true,
