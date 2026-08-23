@@ -71,7 +71,6 @@ jobs:
           test -z "${MCFT_CAP09_PARENT_DATABASE_URL:-}"
           test -z "${MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY:-}"
           grep -Fq 'geox_mcft_cap09_s6_formal_t4r1_24h_v3' .github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml
-          ! grep -Fq 'geox_mcft_cap09_s6_formal_t4r1_24h_v2' .github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml
           grep -Fq 'PREFLIGHT_MCFT_CAP_09_RUNTIME_ENVIRONMENT_V1.ts zero-state' .github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml
 
   live-a0:
