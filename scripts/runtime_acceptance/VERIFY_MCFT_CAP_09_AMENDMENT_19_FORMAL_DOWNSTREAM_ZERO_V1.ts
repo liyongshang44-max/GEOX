@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { Pool } from "pg";
 
-const FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t4r1_24h_v2";
+const FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t4r1_24h_v3";
 const OUTPUT_DIR = path.resolve("acceptance-output");
 const OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_AMENDMENT_19_FORMAL_DOWNSTREAM_ZERO_RESULT_V1.json");
 
