@@ -18,9 +18,12 @@ env:
   NODE_VERSION: '20.11.1'
   PNPM_VERSION: '9.15.4'
   SOURCE_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h
-  FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v2
-  QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v10
-  BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v10
+  FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v3
+  FAILED_FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v2
+  QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v11
+  BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v11
+  PREVIOUS_QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v10
+  PREVIOUS_BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v10
 
 jobs:
   static-proof:
@@ -41,9 +44,17 @@ jobs:
           const fs=require('node:fs');
           const p=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json','utf8'));
           if(p.status!=='CANDIDATE'||p.database_identity.database_name!==process.env.FORMAL_DATABASE_NAME)throw new Error('T4_FORMAL_STORE_AUTHORITY_IDENTITY_REQUIRED');
+          if(p.database_identity.failed_predecessor_database!==process.env.FAILED_FORMAL_DATABASE_NAME||p.database_identity.failed_predecessor_reuse_forbidden!==true)throw new Error('T4_FORMAL_STORE_FAILED_V2_IMMUTABLE_REQUIRED');
           if(p.database_identity.creation_mode!=='CREATE_DATABASE_TEMPLATE0_THEN_SCHEMA_ONLY_RESTORE'||p.database_identity.data_clone_forbidden!==true)throw new Error('T4_FORMAL_STORE_NO_DATA_CLONE_REQUIRED');
           if(p.schema_contract.required_public_table_count!==26||p.schema_contract.column_fingerprint_md5!=='873a8e86f55d75a04a5f671627e98ae1'||p.schema_contract.constraint_fingerprint_md5!=='7803f7e7706e52eca3ca2aa4290ff5dd'||p.schema_contract.index_fingerprint_md5!=='ea5b3ba0392fd52fb471bc754e94ed35')throw new Error('T4_FORMAL_STORE_SCHEMA_CONTRACT_REQUIRED');
-          if(p.epoch_contract.real_wall_clock_o00_o23_required!==true||p.epoch_contract.accelerated_clock_authorized!==false)throw new Error('T4_FORMAL_STORE_REAL_CLOCK_REQUIRED');
+          if(p.epoch_contract.real_wall_clock_o00_o23_required!==true||p.epoch_contract.accelerated_clock_authorized!==false||p.epoch_contract.failed_formal_v2_truncate_or_rebind_forbidden!==true)throw new Error('T4_FORMAL_STORE_REAL_CLOCK_REQUIRED');
+      - name: Require fresh-generation tokens and historical stores remain predecessor-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v3' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
+          grep -Fq 'QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v11' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
+          grep -Fq 'BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v11' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
       - name: Require static PR path has no live credentials
         shell: bash
         run: |
@@ -94,7 +105,15 @@ jobs:
           const admin=new URL(source.toString());admin.pathname='/postgres';
           console.log(`::add-mask::${source.toString()}`);console.log(`::add-mask::${admin.toString()}`);
           fs.appendFileSync(process.env.GITHUB_ENV,`ADMIN_DATABASE_URL=${admin.toString()}\n`);
-      - name: Create only template0 fresh databases idempotently
+      - name: Require failed/predecessor stores already exist and are never mutated here
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in "$FAILED_FORMAL_DATABASE_NAME" "$PREVIOUS_QUAL_DATABASE_NAME" "$PREVIOUS_BLOCKED_DATABASE_NAME"; do
+            exists=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT 1 FROM pg_database WHERE datname='$name'")
+            test "$exists" = '1' || { echo "T4_FORMAL_STORE_PREDECESSOR_EVIDENCE_REQUIRED:$name" >&2; exit 1; }
+          done
+      - name: Create only fresh template0 generation databases idempotently
         shell: bash
         run: |
           set -euo pipefail
@@ -135,7 +154,7 @@ jobs:
           cache: pnpm
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
-      - name: Prove 26/26 exact schema and zero-state on all three stores
+      - name: Prove 26/26 exact schema and zero-state on all three fresh stores
         shell: bash
         run: |
           set -euo pipefail
