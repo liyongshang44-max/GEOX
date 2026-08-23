@@ -1,0 +1,53 @@
+name: mcft-cap-09-t4r1-rolling-hourly-scheduler
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t4r1-rolling-hourly-scheduler.yml'
+      - '.github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml'
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: mcft-cap09-t4r1-rolling-hourly-scheduler
+  cancel-in-progress: false
+
+jobs:
+  static-proof:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Require autonomous hourly dispatch contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "cron: '17 * * * *'" .github/workflows/mcft-cap-09-t4r1-rolling-hourly-scheduler.yml
+          grep -Fq 'actions: write' .github/workflows/mcft-cap-09-t4r1-rolling-hourly-scheduler.yml
+          grep -Fq 'mcft-cap-09-t4r1-rolling-preboundary-capture.yml' .github/workflows/mcft-cap-09-t4r1-rolling-hourly-scheduler.yml
+          grep -Fq "workflows: ['mcft-cap-09-t4r1-rolling-preboundary-capture']" .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
+
+  dispatch-rolling:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require default branch is protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+      - name: Dispatch exact T4 rolling workflow on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run mcft-cap-09-t4r1-rolling-preboundary-capture.yml --repo "$GITHUB_REPOSITORY" --ref main

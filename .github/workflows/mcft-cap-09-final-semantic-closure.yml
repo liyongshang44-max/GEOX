@@ -1,0 +1,64 @@
+name: mcft-cap-09-final-semantic-closure
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-final-semantic-closure.yml'
+      - '.github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml'
+      - '.github/workflows/mcft-cap-09-t4r1-amendment19-persistent-24t-qualification.yml'
+      - '.github/workflows/mcft-cap-09-t4r1-rolling-hourly-scheduler.yml'
+      - '.github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml'
+      - '.github/workflows/mcft-cap-09-amendment19-formal-arm.yml'
+      - '.github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml'
+      - '.github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml'
+      - '.github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml'
+      - '.github/workflows/mcft-cap-09-amendment19-formal-final-readback.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_AMENDMENT_19_PERSISTENT_24T_SUCCESSOR.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_V1.ts'
+      - 'scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_arm_v1.ts'
+      - 'scripts/runtime_acceptance/READBACK_MCFT_CAP_09_AMENDMENT_19_FORMAL_FINAL_V1.ts'
+      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_AMENDMENT_19_FORMAL_DOWNSTREAM_ZERO_V1.ts'
+      - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FINAL_SEMANTIC_CLOSURE_V1.cjs'
+      - 'scripts/governance_acceptance/REHEARSE_MCFT_CAP_09_FORMAL_24H_ORCHESTRATION_V1.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  reverse-terminal-static-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: Prove final semantic closure from terminal readback back to qualification
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FINAL_SEMANTIC_CLOSURE_V1.cjs
+
+  deterministic-24h-orchestration-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: Rehearse A0 through O23 without provider or Formal DB access
+        run: node scripts/governance_acceptance/REHEARSE_MCFT_CAP_09_FORMAL_24H_ORCHESTRATION_V1.cjs
+      - name: Require rehearsal is simulation-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${DATABASE_URL:-}"
+          test -z "${MCFT_EA5E2_TRANSIENT_S3_ENDPOINT:-}"
+          test -z "${MCFT_CAP09_PARENT_DATABASE_URL:-}"

@@ -2,7 +2,7 @@
   "schema_version": "geox_mcft_cap09_t4r1_actual_formal_store_authority_v1",
   "status": "CANDIDATE",
   "purpose": "FRESH_T4R1_REAL_WALL_CLOCK_FORMAL_EPOCH_STORE",
-  "predecessor_protected_main_sha": "5d619007cc3507a24cc62ef8bdce07e3f5df01ca",
+  "predecessor_protected_main_sha": "b69a0a0351554350e5da087a31dba93208d7f488",
   "scope": {
     "site_id": "KBS_MCSE_T4R1",
     "field_id": "field_kbs_mcse_t4r1",
@@ -13,7 +13,9 @@
     "provider": "NEON_POSTGRES",
     "project_id": "delicate-glade-62464340",
     "branch_id": "br-cold-dust-a6j6aymz",
-    "database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v2",
+    "database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v3",
+    "failed_predecessor_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v2",
+    "failed_predecessor_reuse_forbidden": true,
     "schema_reference_database": "geox_mcft_cap09_s6_formal_t4r1_24h",
     "qualification_database_reuse_forbidden": "geox_mcft_cap09_s6_formal_t4r1_24h",
     "historical_t1_t3_database_reuse_forbidden": true,
@@ -30,6 +32,8 @@
   "epoch_contract": {
     "existing_2026_08_21_t4_bootstrap_is_qualification_evidence_only": true,
     "existing_bootstrap_reuse_as_future_formal_a0_forbidden": true,
+    "failed_formal_v2_epoch_is_immutable_evidence": true,
+    "failed_formal_v2_truncate_or_rebind_forbidden": true,
     "new_a0_must_be_selected_after_exact_subject_graduation": true,
     "o00_must_be_future_at_arm_time": true,
     "minimum_arm_to_o00_lead_minutes": 35,

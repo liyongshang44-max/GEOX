@@ -56,11 +56,12 @@ function main() {
   for (const [name,value] of [["armWorkflow",armWorkflow],["a0",a0],["hourly",hourly],["live",live],["finalReadback",finalReadback]]) {
     noOperationalReference(value,"GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL",`AM19_CLOSURE_AUDIT_T3_SECRET_FORBIDDEN:${name}`);
     noOperationalReference(value,"geox_mcft_cap09_s6_formal_t3r1_24h",`AM19_CLOSURE_AUDIT_T3_DATABASE_FORBIDDEN:${name}`);
+    noOperationalReference(value,"geox_mcft_cap09_s6_formal_t4r1_24h_v2",`AM19_CLOSURE_AUDIT_FORMAL_V2_FORBIDDEN:${name}`);
   }
-  has(a0,"geox_mcft_cap09_s6_formal_t4r1_24h_v2","AM19_CLOSURE_AUDIT_A0_T4_FORMAL_DB_REQUIRED");
+  has(a0,"geox_mcft_cap09_s6_formal_t4r1_24h_v3","AM19_CLOSURE_AUDIT_A0_T4_FORMAL_V3_DB_REQUIRED");
   has(hourly,"GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL","AM19_CLOSURE_AUDIT_HOURLY_T4_PARENT_SECRET_REQUIRED");
-  has(live,"geox_mcft_cap09_s6_formal_t4r1_24h_v2","AM19_CLOSURE_AUDIT_LIVE_T4_FORMAL_DB_REQUIRED");
-  has(finalReadback,"geox_mcft_cap09_s6_formal_t4r1_24h_v2","AM19_CLOSURE_AUDIT_READBACK_T4_FORMAL_DB_REQUIRED");
+  has(live,"geox_mcft_cap09_s6_formal_t4r1_24h_v3","AM19_CLOSURE_AUDIT_LIVE_T4_FORMAL_V3_DB_REQUIRED");
+  has(finalReadback,"geox_mcft_cap09_s6_formal_t4r1_24h_v3","AM19_CLOSURE_AUDIT_READBACK_T4_FORMAL_V3_DB_REQUIRED");
 
   no(a0,"geox_mcft_cap09_s6_accel24t_am19_v4","AM19_CLOSURE_AUDIT_A0_QUAL_DB_COUPLING_FORBIDDEN");
   for (const generation of ["v10","v9"]) {
@@ -79,6 +80,8 @@ function main() {
     qualification_and_deployment_identity_separated:true,
     premerge_real_artifact_graduation_replay_required:true,
     downstream_formal_chain_bound_to_deployment_subject:true,
+    active_formal_chain_bound_to_v3:true,
+    stale_formal_v2_operational_route_absent:true,
     stale_t3_operational_route_absent:true,
     negative_static_guards_not_misclassified_as_operational_routes:true,
     qualification_store_generation_not_used_by_a0_or_live_runner:true

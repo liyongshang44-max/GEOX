@@ -16,8 +16,8 @@ import {
 } from "../../apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.js";
 import type { ExternalFormalV3Am19WindowManifestV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.js";
 
-export const MCFT_CAP09_AM19_FORMAL_DATABASE_V3 = "geox_mcft_cap09_s6_formal_t4r1_24h_v2" as const;
-export const MCFT_CAP09_AM19_FAILED_FORMAL_DATABASE_V2 = "geox_mcft_cap09_s6_formal_t4r1_24h" as const;
+export const MCFT_CAP09_AM19_FORMAL_DATABASE_V3 = "geox_mcft_cap09_s6_formal_t4r1_24h_v3" as const;
+export const MCFT_CAP09_AM19_FAILED_FORMAL_DATABASE_V2 = "geox_mcft_cap09_s6_formal_t4r1_24h_v2" as const;
 
 export type McftCap09Am19FormalArmV1 = {
   schema_version: "geox_mcft_cap09_amendment19_formal_arm_v1";
