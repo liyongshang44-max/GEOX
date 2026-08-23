@@ -25,11 +25,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  CLOSURE_QUALIFICATION_SHA: fa5d85b0d21f3c9d7697b7f608f22c27158b0c67
-  CLOSURE_PERSISTENT_RUN_ID: '32619215884'
-  CLOSURE_PERSISTENT_ARTIFACT_ID: '9488084535'
-  CLOSURE_PERSISTENT_ARTIFACT_NAME: mcft-cap09-t4r1-am19-persistent24-fa5d85b0d21f3c9d7697b7f608f22c27158b0c67-32619215884
-  CLOSURE_PERSISTENT_ARTIFACT_DIGEST: sha256:ffe85a5d5d1f829569d9c34bf1dd9965b32bb8cd2313aa28138ed3d3fcd846e8
+  CLOSURE_QUALIFICATION_SHA: abf0aa121001480f01ad4e39364b1df13f3c26eb
+  CLOSURE_PERSISTENT_RUN_ID: '32638502092'
+  CLOSURE_PERSISTENT_ARTIFACT_ID: '9493316708'
+  CLOSURE_PERSISTENT_ARTIFACT_NAME: mcft-cap09-t4r1-am19-persistent24-abf0aa121001480f01ad4e39364b1df13f3c26eb-32638502092
+  CLOSURE_PERSISTENT_ARTIFACT_DIGEST: sha256:3a6f01a9c1da1de4522ba9d745e3619b7c116ece45bde39ebec10d8637cb4544
 
 jobs:
   static-proof:
@@ -44,7 +44,7 @@ jobs:
           ref: ${{ env.DEPLOYMENT_SHA }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Require exact PR checkout and v10 source ancestor
+      - name: Require exact PR checkout and v11 source ancestor
         shell: bash
         run: |
           set -euo pipefail
@@ -64,7 +64,7 @@ jobs:
           node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_INPUT_V1.cjs --selftest
           node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_ENVELOPE_V1.cjs --selftest
           node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_FORMAL_EPOCH_GRADUATION_GATE_V1.cjs --selftest
-      - name: Attest frozen v10 qualification to exact PR head
+      - name: Attest frozen v11 qualification to exact PR head
         run: >-
           node scripts/governance_acceptance/ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs
           "$CLOSURE_QUALIFICATION_SHA" "$DEPLOYMENT_SHA"
@@ -74,10 +74,10 @@ jobs:
         run: |
           const fs=require('node:fs');
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json','utf8'));
-          if(p.status!=='PASS'||p.qualification_subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA||p.deployment_subject_sha!==process.env.DEPLOYMENT_SHA)throw new Error('AM19_V10_COMPAT_PR_IDENTITY_REQUIRED');
-          if(p.source_governed_semantic_digest!==p.deployment_governed_semantic_digest||p.governed_changed_paths.length!==0||p.qualification_reexecution_required!==false)throw new Error('AM19_V10_COMPAT_PR_SEMANTIC_EQUIVALENCE_REQUIRED');
-          if(p.formal_effect!==false||p.human_override_used!==false)throw new Error('AM19_V10_COMPAT_PR_ZERO_EFFECT_REQUIRED');
-      - name: Download real frozen v10 qualification artifact in PR
+          if(p.status!=='PASS'||p.qualification_subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA||p.deployment_subject_sha!==process.env.DEPLOYMENT_SHA)throw new Error('AM19_V11_COMPAT_PR_IDENTITY_REQUIRED');
+          if(p.source_governed_semantic_digest!==p.deployment_governed_semantic_digest||p.governed_changed_paths.length!==0||p.qualification_reexecution_required!==false)throw new Error('AM19_V11_COMPAT_PR_SEMANTIC_EQUIVALENCE_REQUIRED');
+          if(p.formal_effect!==false||p.human_override_used!==false)throw new Error('AM19_V11_COMPAT_PR_ZERO_EFFECT_REQUIRED');
+      - name: Download real frozen v11 qualification artifact in PR
         uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
@@ -99,15 +99,15 @@ jobs:
           echo "persistent=$persistent" >> "$GITHUB_OUTPUT"
           echo "engineering=$engineering" >> "$GITHUB_OUTPUT"
           echo "rehydration=$rehydration" >> "$GITHUB_OUTPUT"
-      - name: Authenticate real v10 source evidence
+      - name: Authenticate real v11 source evidence
         shell: node {0}
         env:
           PERSISTENT_RESULT: ${{ steps.pr-evidence.outputs.persistent }}
         run: |
           const fs=require('node:fs');const p=JSON.parse(fs.readFileSync(process.env.PERSISTENT_RESULT,'utf8'));
-          if(p.status!=='PASS'||p.subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA||p.qualified_subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA)throw new Error('AM19_V10_REAL_QUALIFICATION_SUBJECT_REQUIRED');
-          if(p.main_database_name!=='geox_mcft_cap09_s6_accel24t_am19_v10'||p.blocked_database_name!=='geox_mcft_cap09_s6_accel24t_am19_blocked_v10'||p.static_blocker_count!==0)throw new Error('AM19_V10_REAL_EVIDENCE_REQUIRED');
-      - name: Classify immutable v10 qualification
+          if(p.status!=='PASS'||p.subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA||p.qualified_subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA)throw new Error('AM19_V11_REAL_QUALIFICATION_SUBJECT_REQUIRED');
+          if(p.main_database_name!=='geox_mcft_cap09_s6_accel24t_am19_v11'||p.blocked_database_name!=='geox_mcft_cap09_s6_accel24t_am19_blocked_v11'||p.static_blocker_count!==0)throw new Error('AM19_V11_REAL_EVIDENCE_REQUIRED');
+      - name: Classify immutable v11 qualification
         run: >-
           node scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs
           "${{ steps.pr-evidence.outputs.persistent }}" "$CLOSURE_QUALIFICATION_SHA"
@@ -127,7 +127,7 @@ jobs:
           node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_FORMAL_EPOCH_GRADUATION_GATE_V1.cjs
           acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
           > acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json
-      - name: Freeze v10 source metadata
+      - name: Freeze v11 source metadata
         shell: node {0}
         run: |
           const fs=require('node:fs');fs.mkdirSync('acceptance-output',{recursive:true});
@@ -147,9 +147,9 @@ jobs:
         shell: node {0}
         run: |
           const fs=require('node:fs');const i=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json','utf8'));const g=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json','utf8'));const e=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.json','utf8'));
-          if(i.status!=='PASS'||i.subject_sha!==process.env.DEPLOYMENT_SHA||i.qualification_subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA)throw new Error('AM19_V10_COMPAT_PR_INPUT_REQUIRED');
-          if(g.status!=='PASS'||g.formal_epoch_creation_gate!=='OPEN'||g.required_status_count!==13||g.static_blocker_count!==0)throw new Error('AM19_V10_COMPAT_PR_GATE_OPEN_REQUIRED');
-          if(e.status!=='PASS'||e.subject_sha!==process.env.DEPLOYMENT_SHA||e.qualification_subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA||e.deployment_subject_sha!==process.env.DEPLOYMENT_SHA||e.formal_o00_started!==false||e.formal_database_write_count!==0||e.mcft_cap09_completed!==false)throw new Error('AM19_V10_COMPAT_PR_ENVELOPE_REQUIRED');
+          if(i.status!=='PASS'||i.subject_sha!==process.env.DEPLOYMENT_SHA||i.qualification_subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA)throw new Error('AM19_V11_COMPAT_PR_INPUT_REQUIRED');
+          if(g.status!=='PASS'||g.formal_epoch_creation_gate!=='OPEN'||g.required_status_count!==13||g.static_blocker_count!==0)throw new Error('AM19_V11_COMPAT_PR_GATE_OPEN_REQUIRED');
+          if(e.status!=='PASS'||e.subject_sha!==process.env.DEPLOYMENT_SHA||e.qualification_subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA||e.deployment_subject_sha!==process.env.DEPLOYMENT_SHA||e.formal_o00_started!==false||e.formal_database_write_count!==0||e.mcft_cap09_completed!==false)throw new Error('AM19_V11_COMPAT_PR_ENVELOPE_REQUIRED');
 
   live-formal-gate-preflight:
     if: >-
@@ -265,12 +265,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20.11.1'
-      - name: Attest v10 qualification to current deployment
+      - name: Attest v11 qualification to current deployment
         run: >-
           node scripts/governance_acceptance/ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs
           "$CLOSURE_QUALIFICATION_SHA" "$DEPLOYMENT_SHA"
           acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json
-      - name: Verify frozen v10 source artifact metadata
+      - name: Verify frozen v11 source artifact metadata
         uses: actions/github-script@v7
         with:
           script: |
@@ -310,7 +310,7 @@ jobs:
           node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_FORMAL_EPOCH_GRADUATION_GATE_V1.cjs
           acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
           > acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json
-      - name: Freeze immutable v10 source and deployment metadata
+      - name: Freeze immutable v11 source and deployment metadata
         shell: node {0}
         run: |
           const fs=require('node:fs');fs.mkdirSync('acceptance-output',{recursive:true});fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_METADATA_V1.json',JSON.stringify({source_persistent_workflow_run_id:Number(process.env.CLOSURE_PERSISTENT_RUN_ID),source_persistent_artifact_id:Number(process.env.CLOSURE_PERSISTENT_ARTIFACT_ID),source_persistent_artifact_name:process.env.CLOSURE_PERSISTENT_ARTIFACT_NAME,source_persistent_artifact_digest:process.env.CLOSURE_PERSISTENT_ARTIFACT_DIGEST,graduation_workflow_run_id:Number(process.env.GITHUB_RUN_ID),opened_at:new Date().toISOString()},null,2)+'\n');
