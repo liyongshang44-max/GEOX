@@ -41,8 +41,9 @@ contains(paths.provision, "geox_mcft_cap09_s6_accel24t_am19_blocked_v11", "MCFT_
 contains(paths.storeAuthority, '"database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v3"', "MCFT_CAP09_FINAL_CLOSURE_FORMAL_V3_AUTHORITY_REQUIRED");
 contains(paths.storeAuthority, '"failed_predecessor_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v2"', "MCFT_CAP09_FINAL_CLOSURE_FORMAL_V2_PREDECESSOR_REQUIRED");
 contains(paths.manifest, 'MCFT_CAP09_AM19_FORMAL_DATABASE_V3 = "geox_mcft_cap09_s6_formal_t4r1_24h_v3"', "MCFT_CAP09_FINAL_CLOSURE_MANIFEST_FORMAL_V3_REQUIRED");
+contains(paths.manifest, 'MCFT_CAP09_AM19_FAILED_FORMAL_DATABASE_V2 = "geox_mcft_cap09_s6_formal_t4r1_24h_v2"', "MCFT_CAP09_FINAL_CLOSURE_MANIFEST_FAILED_V2_REQUIRED");
 
-const activeFormalPaths = [paths.manifest, paths.arm, paths.a0Workflow, paths.hourly, paths.live, paths.finalWorkflow, paths.readback, paths.downstreamZero, paths.completion];
+const activeFormalPaths = [paths.arm, paths.a0Workflow, paths.hourly, paths.live, paths.finalWorkflow, paths.readback, paths.downstreamZero, paths.completion];
 for (const p of activeFormalPaths) excludes(p, "geox_mcft_cap09_s6_formal_t4r1_24h_v2", `MCFT_CAP09_FINAL_CLOSURE_ACTIVE_FORMAL_V2_FORBIDDEN:${p}`);
 
 contains(paths.rollingScheduler, "cron: '17 * * * *'", "MCFT_CAP09_FINAL_CLOSURE_HOURLY_ROLLING_SCHEDULE_REQUIRED");
@@ -59,7 +60,7 @@ contains(paths.readback, "required_terminal_ticks: 24", "MCFT_CAP09_FINAL_CLOSUR
 
 contains(paths.qualification, "fresh v11 persistent 13 of 13", "MCFT_CAP09_FINAL_CLOSURE_WORKFLOW_V11_LABEL_REQUIRED");
 contains(paths.qualification, "geox_mcft_cap09_s6_accel24t_am19_v11", "MCFT_CAP09_FINAL_CLOSURE_WORKFLOW_V11_DB_REQUIRED");
-excludes(paths.qualification, "geox_mcft_cap09_s6_accel24t_am19_v10'||", "MCFT_CAP09_FINAL_CLOSURE_WORKFLOW_CURRENT_V10_FORBIDDEN");
+excludes(paths.qualification, "p.main_database_name!=='geox_mcft_cap09_s6_accel24t_am19_v10'", "MCFT_CAP09_FINAL_CLOSURE_WORKFLOW_CURRENT_V10_FORBIDDEN");
 
 console.log(JSON.stringify({
   schema_version: "geox_mcft_cap09_final_semantic_closure_acceptance_v1",
