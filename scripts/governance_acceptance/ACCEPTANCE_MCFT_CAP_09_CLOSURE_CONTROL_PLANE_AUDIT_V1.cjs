@@ -44,7 +44,7 @@ function main() {
   has(graduation,"ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs","AM19_CLOSURE_AUDIT_COMPAT_ATTESTATION_WIRING_REQUIRED");
   has(graduation,"ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_INPUT_V1.cjs","AM19_CLOSURE_AUDIT_COMPAT_INPUT_REQUIRED");
   has(graduation,"ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_ENVELOPE_V1.cjs","AM19_CLOSURE_AUDIT_COMPAT_ENVELOPE_REQUIRED");
-  has(graduation,"Download real frozen v9 qualification artifact in PR","AM19_CLOSURE_AUDIT_PREMERGE_REAL_ARTIFACT_TEST_REQUIRED");
+  has(graduation,"Download real frozen v10 qualification artifact in PR","AM19_CLOSURE_AUDIT_PREMERGE_REAL_ARTIFACT_TEST_REQUIRED");
   has(graduation,"mcft-cap09-t4r1-am19-persistent24-","AM19_CLOSURE_AUDIT_T4_PERSISTENT_PREFIX_REQUIRED");
   no(graduation,"mcft-cap09-am19-persistent24-","AM19_CLOSURE_AUDIT_OLD_PERSISTENT_PREFIX_FORBIDDEN");
 
@@ -63,8 +63,10 @@ function main() {
   has(finalReadback,"geox_mcft_cap09_s6_formal_t4r1_24h_v2","AM19_CLOSURE_AUDIT_READBACK_T4_FORMAL_DB_REQUIRED");
 
   no(a0,"geox_mcft_cap09_s6_accel24t_am19_v4","AM19_CLOSURE_AUDIT_A0_QUAL_DB_COUPLING_FORBIDDEN");
-  no(live,"geox_mcft_cap09_s6_accel24t_am19_v9","AM19_CLOSURE_AUDIT_LIVE_QUAL_DB_COUPLING_FORBIDDEN");
-  no(finalReadback,"geox_mcft_cap09_s6_accel24t_am19_v9","AM19_CLOSURE_AUDIT_READBACK_QUAL_DB_COUPLING_FORBIDDEN");
+  for (const generation of ["v10","v9"]) {
+    no(live,`geox_mcft_cap09_s6_accel24t_am19_${generation}`,`AM19_CLOSURE_AUDIT_LIVE_QUAL_DB_COUPLING_FORBIDDEN:${generation}`);
+    no(finalReadback,`geox_mcft_cap09_s6_accel24t_am19_${generation}`,`AM19_CLOSURE_AUDIT_READBACK_QUAL_DB_COUPLING_FORBIDDEN:${generation}`);
+  }
 
   has(a0,"triggering arm subject is exact current protected main","AM19_CLOSURE_AUDIT_A0_DEPLOYMENT_MAIN_BINDING_REQUIRED");
   has(live,"Freeze exact current protected-main subject","AM19_CLOSURE_AUDIT_LIVE_DEPLOYMENT_MAIN_BINDING_REQUIRED");

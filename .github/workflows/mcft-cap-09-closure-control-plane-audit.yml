@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 env:
-  QUALIFICATION_SHA: d5e2520f3b9fc63c70315a59f4cd2f7d06fe39b1
+  QUALIFICATION_SHA: fa5d85b0d21f3c9d7697b7f608f22c27158b0c67
 
 jobs:
   closure-audit:
@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20.11.1'
-      - name: Prove qualification semantic boundary is unchanged from frozen v9 subject
+      - name: Prove qualification semantic boundary is unchanged from frozen v10 subject
         run: >-
           node scripts/governance_acceptance/ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs
           "$QUALIFICATION_SHA"
@@ -47,5 +47,5 @@ jobs:
         run: |
           const fs=require('node:fs');
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json','utf8'));
-          if(p.status!=='PASS'||p.governed_changed_paths.length!==0||p.qualification_reexecution_required!==false)throw new Error('MCFT_CAP09_CLOSURE_QUALIFICATION_ROLLOVER_FORBIDDEN');
+          if(p.status!=='PASS'||p.qualification_subject_sha!==process.env.QUALIFICATION_SHA||p.governed_changed_paths.length!==0||p.qualification_reexecution_required!==false)throw new Error('MCFT_CAP09_CLOSURE_QUALIFICATION_ROLLOVER_FORBIDDEN');
           if(p.qualification_database_rewrite_authorized!==false||p.human_override_used!==false||p.formal_effect!==false)throw new Error('MCFT_CAP09_CLOSURE_FAIL_CLOSED_BOUNDARY_REQUIRED');
