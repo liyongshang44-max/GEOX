@@ -25,6 +25,7 @@ permissions:
 
 env:
   QUALIFICATION_SHA: abf0aa121001480f01ad4e39364b1df13f3c26eb
+  DEPLOYMENT_SHA: ${{ github.event.pull_request.head.sha }}
 
 jobs:
   closure-audit:
@@ -33,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ env.DEPLOYMENT_SHA }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -43,14 +44,14 @@ jobs:
         run: >-
           node scripts/governance_acceptance/ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs
           "$QUALIFICATION_SHA"
-          "${{ github.event.pull_request.head.sha }}"
+          "$DEPLOYMENT_SHA"
           acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json
       - name: Require CARRY_FORWARD and forbid fresh qualification rollover
         shell: node {0}
         run: |
           const fs=require('node:fs');
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json','utf8'));
-          if(p.status!=='PASS'||p.qualification_subject_sha!==process.env.QUALIFICATION_SHA||p.deployment_subject_sha!==process.env.GITHUB_SHA)throw new Error('MCFT_CAP09_V11_BIND_COMPATIBILITY_IDENTITY_REQUIRED');
+          if(p.status!=='PASS'||p.qualification_subject_sha!==process.env.QUALIFICATION_SHA||p.deployment_subject_sha!==process.env.DEPLOYMENT_SHA)throw new Error('MCFT_CAP09_V11_BIND_COMPATIBILITY_IDENTITY_REQUIRED');
           if(p.governed_changed_paths.length!==0||p.source_governed_semantic_digest!==p.deployment_governed_semantic_digest||p.qualification_reexecution_required!==false)throw new Error('MCFT_CAP09_V11_BIND_MUST_CARRY_FORWARD');
           if(p.qualification_database_rewrite_authorized!==false||p.human_override_used!==false||p.formal_effect!==false)throw new Error('MCFT_CAP09_V11_BIND_FAIL_CLOSED_BOUNDARY_REQUIRED');
       - name: Audit remaining Graduation to Formal completion control plane
