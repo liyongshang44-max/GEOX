@@ -5,8 +5,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const SCHEMA = "geox_mcft_cap09_amendment19_persistent24_qualification_result_v1";
-const MAIN_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_v10";
-const BLOCKED_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_blocked_v10";
+const MAIN_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_v11";
+const BLOCKED_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_blocked_v11";
+const STALE_V10_MAIN_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_v10";
+const STALE_V10_BLOCKED_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_blocked_v10";
 const STALE_V9_MAIN_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_v9";
 const STALE_V9_BLOCKED_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_blocked_v9";
 const STALE_V8_MAIN_DATABASE = "geox_mcft_cap09_s6_accel24t_am19_v8";
@@ -59,6 +61,8 @@ function selftest() {
   const negatives = [
     ["subject", {...readOnly,subject_sha:"2".repeat(40)}, "AM19_GRADUATION_TRIGGER_PERSISTENT_SUBJECT_REQUIRED"],
     ["qualified_subject", {...readOnly,qualified_subject_sha:"2".repeat(40)}, "AM19_GRADUATION_TRIGGER_QUALIFIED_SUBJECT_REQUIRED"],
+    ["stale_v10_main_database", {...readOnly,main_database_name:STALE_V10_MAIN_DATABASE}, "AM19_GRADUATION_TRIGGER_MAIN_DATABASE_REQUIRED"],
+    ["stale_v10_blocked_database", {...readOnly,blocked_database_name:STALE_V10_BLOCKED_DATABASE}, "AM19_GRADUATION_TRIGGER_BLOCKED_DATABASE_REQUIRED"],
     ["stale_v9_main_database", {...readOnly,main_database_name:STALE_V9_MAIN_DATABASE}, "AM19_GRADUATION_TRIGGER_MAIN_DATABASE_REQUIRED"],
     ["stale_v9_blocked_database", {...readOnly,blocked_database_name:STALE_V9_BLOCKED_DATABASE}, "AM19_GRADUATION_TRIGGER_BLOCKED_DATABASE_REQUIRED"],
     ["stale_v8_main_database", {...readOnly,main_database_name:STALE_V8_MAIN_DATABASE}, "AM19_GRADUATION_TRIGGER_MAIN_DATABASE_REQUIRED"],
@@ -80,7 +84,7 @@ function selftest() {
     ["unsupported", {...readOnly,status:"FAILED"}, "AM19_GRADUATION_TRIGGER_FRESH_OR_READ_ONLY_STATUS_REQUIRED:FAILED"],
   ];
   for (const [name,value,expected] of negatives) { let observed=""; try { classify(value,subject); } catch (error) { observed=error instanceof Error?error.message:String(error); } need(observed===expected,`AM19_GRADUATION_TRIGGER_SELFTEST_NEGATIVE_FAILED:${name}:${observed}`); }
-  console.log(JSON.stringify({schema_version:"geox_mcft_cap09_amendment19_persistent_graduation_trigger_classification_selftest_v1",status:"PASS",t4r1_crop_authority_bound:true,qualification_store_generation:"v10",stale_v9_store_evidence_rejected:true,stale_v8_store_evidence_rejected:true,stale_v7_store_evidence_rejected:true,stale_v6_store_evidence_rejected:true,stale_v4_store_evidence_rejected:true,read_only_replay_creates_new_gate:false,negative_case_count:negatives.length}));
+  console.log(JSON.stringify({schema_version:"geox_mcft_cap09_amendment19_persistent_graduation_trigger_classification_selftest_v1",status:"PASS",t4r1_crop_authority_bound:true,qualification_store_generation:"v11",stale_v10_store_evidence_rejected:true,stale_v9_store_evidence_rejected:true,stale_v8_store_evidence_rejected:true,stale_v7_store_evidence_rejected:true,stale_v6_store_evidence_rejected:true,stale_v4_store_evidence_rejected:true,read_only_replay_creates_new_gate:false,negative_case_count:negatives.length}));
 }
 
 if (process.argv.includes("--selftest")) selftest();
