@@ -14,7 +14,7 @@ const OUTPUT_DIR = path.resolve("acceptance-output");
 const OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_AMENDMENT_19_FORMAL_FINAL_READBACK_V1.json");
 const EVIDENCE_SOURCE = "mcft_cap09_external_formal_evidence_v1";
 const TERMINAL_SLOT_STATES = new Set(["COMPLETED", "DEGRADED"]);
-const ALLOWED_FORCING_MODES = new Set(["EXACT_PROVIDER_PAIR", "PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR"]);
+const ALLOWED_FORCING_MODES = new Set(["EXACT_PROVIDER_INTERVAL_PAIR", "PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR"]);
 
 function requiredEnv(name: string): string {
   const value = process.env[name]?.trim();
