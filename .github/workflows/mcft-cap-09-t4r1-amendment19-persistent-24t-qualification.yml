@@ -186,7 +186,7 @@ jobs:
           console.log(JSON.stringify({status:'PASS',producer_subject_sha:p.producer_subject_sha,target_t:p.target_t,candidate_expires_at:p.candidate_expires_at}));
           NODE
 
-      - name: Fail closed on exact 24T crop window before any v9 qualification write
+      - name: Fail closed on exact 24T crop window before any v10 qualification write
         run: node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_V1.cjs run
 
       - name: Governed producer-bound retained-raw rehydration
@@ -211,14 +211,14 @@ jobs:
       - name: Execute exact-source T4R1 production-graph persistent 24T qualification
         run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_AMENDMENT_19_PERSISTENT_24T_SUCCESSOR.ts run
 
-      - name: Require fresh v9 persistent 13 of 13
+      - name: Require fresh v10 persistent 13 of 13
         shell: node {0}
         run: |
           const fs=require('node:fs');
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_RESULT.json','utf8'));
           const keys=['PERSISTENCE_FREE_24T','PERSISTENT_24T','O00_WARM_START','MODE_A','MODE_B','PARTIAL_PAIR','LATE_EXACT_NO_REWRITE','RESTART','MISSED_SLOT_BACKFILL','IDEMPOTENCY','ZERO_PROVIDER_WAIT','SCHEMA_ENV_PREFLIGHT','FULL_CHAIN_READBACK'];
           if(p.subject_sha!==process.env.GITHUB_SHA||p.qualified_subject_sha!==process.env.GITHUB_SHA) throw new Error('T4R1_AM19_P24_EXACT_QUALIFICATION_SUBJECT_REQUIRED');
-          if(p.main_database_name!=='geox_mcft_cap09_s6_accel24t_am19_v9'||p.blocked_database_name!=='geox_mcft_cap09_s6_accel24t_am19_blocked_v9') throw new Error('T4R1_AM19_P24_V9_DATABASES_REQUIRED');
+          if(p.main_database_name!=='geox_mcft_cap09_s6_accel24t_am19_v10'||p.blocked_database_name!=='geox_mcft_cap09_s6_accel24t_am19_blocked_v10') throw new Error('T4R1_AM19_P24_V10_DATABASES_REQUIRED');
           if(p.status!=='PASS'||p.static_blocker_count!==0||keys.some(k=>p.machine_statuses?.[k]!=='PASS')) throw new Error('T4R1_AM19_P24_13_OF_13_REQUIRED');
           if(p.final_actual_24h_still_required!==true||p.final_actual_24h_substituted_by_this_run!==false||p.future_formal_epoch_selected!==false||p.formal_o00_started!==false||p.mcft_cap09_completed!==false) throw new Error('T4R1_AM19_P24_PREMATURE_FORMAL_CLAIM_FORBIDDEN');
           console.log(JSON.stringify({status:'PASS',machine_gate_count:keys.length,static_blocker_count:0,subject_sha:p.subject_sha,main_database:p.main_database_name,blocked_database:p.blocked_database_name,formal_o00_started:false}));
