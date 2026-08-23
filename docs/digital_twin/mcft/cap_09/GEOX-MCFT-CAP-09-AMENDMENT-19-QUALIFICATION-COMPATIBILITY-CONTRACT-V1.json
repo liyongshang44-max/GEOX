@@ -42,15 +42,16 @@
     "formal_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v2"
   },
   "frozen_closure_source": {
-    "qualification_subject_sha": "d5e2520f3b9fc63c70315a59f4cd2f7d06fe39b1",
-    "persistent_workflow_run_id": 32587719906,
-    "persistent_artifact_id": 9479814787,
-    "persistent_artifact_digest": "sha256:5eadb9c61e941a1382ad05c596578d489e937510949c5fb0ce585b59174b095c",
-    "qualification_database": "geox_mcft_cap09_s6_accel24t_am19_v9",
-    "blocked_database": "geox_mcft_cap09_s6_accel24t_am19_blocked_v9",
+    "qualification_subject_sha": "fa5d85b0d21f3c9d7697b7f608f22c27158b0c67",
+    "persistent_workflow_run_id": 32619215884,
+    "persistent_artifact_id": 9488084535,
+    "persistent_artifact_digest": "sha256:ffe85a5d5d1f829569d9c34bf1dd9965b32bb8cd2313aa28138ed3d3fcd846e8",
+    "qualification_database": "geox_mcft_cap09_s6_accel24t_am19_v10",
+    "blocked_database": "geox_mcft_cap09_s6_accel24t_am19_blocked_v10",
     "machine_status_count": 13,
     "static_blocker_count": 0,
-    "machine_gate_observed_open_in_run": 32589078775
+    "fresh_13_of_13_observed_in_run": 32619215884,
+    "machine_gate_observed_open_in_run": null
   },
   "forbidden_shortcuts": [
     "REWRITE_OR_TRUNCATE_PRIOR_QUALIFICATION_DATABASE",
