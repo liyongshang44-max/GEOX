@@ -302,9 +302,11 @@ jobs:
           A0: ${{ steps.arm.outputs.a0 }}
         shell: node {0}
         run: |
-          const target=Date.parse(process.env.A0);if(!Number.isFinite(target))throw new Error('AM19_FORMAL_A0_WAIT_TARGET_INVALID');
-          const delay=target-Date.now()+1000;
-          if(delay>0){console.log(JSON.stringify({status:'WAIT_UNTIL_A0',delay_ms:delay,target:new Date(target).toISOString()}));await new Promise(r=>setTimeout(r,delay));}
+          (async()=>{
+            const target=Date.parse(process.env.A0);if(!Number.isFinite(target))throw new Error('AM19_FORMAL_A0_WAIT_TARGET_INVALID');
+            const delay=target-Date.now()+1000;
+            if(delay>0){console.log(JSON.stringify({status:'WAIT_UNTIL_A0',delay_ms:delay,target:new Date(target).toISOString()}));await new Promise(r=>setTimeout(r,delay));}
+          })().catch(error=>{console.error(error);process.exit(1);});
 
       - name: Persist A0 state/config/checkpoint with real DB lease clock and zero scheduler slots
         if: steps.arm-artifact.outputs.arm_found == 'true'
