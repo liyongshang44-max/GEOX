@@ -147,6 +147,7 @@ jobs:
         with:
           artifact-ids: '9498479992'
           path: /tmp/mcft-cap09-o01-artifact
+          merge-multiple: true
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
           run-id: '32660018684'
