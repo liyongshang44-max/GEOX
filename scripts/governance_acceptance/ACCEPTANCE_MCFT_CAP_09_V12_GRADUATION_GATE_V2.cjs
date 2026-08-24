@@ -29,13 +29,15 @@ function main() {
 
   need(classifier.includes(V12), "MCFT_CAP09_V12_GRAD_CLASSIFIER_V12_REQUIRED");
   need(classifier.includes(BLOCKED_V12), "MCFT_CAP09_V12_GRAD_CLASSIFIER_BLOCKED_V12_REQUIRED");
-  need(classifier.includes("FRESH_V12_QUALIFICATION_ONLY"), "MCFT_CAP09_V12_GRAD_FRESH_ONLY_CLASSIFIER_REQUIRED");
-  need(classifier.includes("ALREADY_QUALIFIED_READ_ONLY"), "MCFT_CAP09_V12_GRAD_READ_ONLY_NEGATIVE_REQUIRED");
+  need(classifier.includes("FRESH_V12_QUALIFICATION"), "MCFT_CAP09_V12_GRAD_FRESH_CLASSIFIER_REQUIRED");
+  need(classifier.includes("IDEMPOTENT_V12_READ_ONLY_NO_GATE"), "MCFT_CAP09_V12_GRAD_V12_READ_ONLY_NO_GATE_REQUIRED");
+  need(classifier.includes("previous_generation_reuse_forbidden: true"), "MCFT_CAP09_V12_GRAD_PREVIOUS_REUSE_CLASSIFIER_REQUIRED");
 
   need(workflow.includes("workflows: ['mcft-cap-09-t4r1-amendment19-persistent-24t-qualification']"), "MCFT_CAP09_V12_GRAD_WORKFLOW_RUN_SOURCE_REQUIRED");
   need(workflow.includes("CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V2.cjs"), "MCFT_CAP09_V12_GRAD_WORKFLOW_V2_CLASSIFIER_REQUIRED");
   need(workflow.includes("mcft-cap09-t4r1-am19-persistent24-${process.env.SUBJECT_SHA}-"), "MCFT_CAP09_V12_GRAD_EXACT_SUBJECT_ARTIFACT_REQUIRED");
   need(workflow.includes("AM19_GRADUATION_WIRING_PROTECTED_MAIN_DRIFT"), "MCFT_CAP09_V12_GRAD_EXACT_MAIN_REQUIRED");
+  need(workflow.includes("new_machine_gate_claim"), "MCFT_CAP09_V12_GRAD_GATE_ELIGIBILITY_REQUIRED");
   need(workflow.includes("mcft-cap09-am19-formal-graduation-${{ env.SUBJECT_SHA }}-${{ github.run_id }}"), "MCFT_CAP09_V12_GRAD_ARTIFACT_PREFIX_REQUIRED");
   need(!/^\s*workflow_dispatch\s*:/m.test(workflow), "MCFT_CAP09_V12_GRAD_V11_MANUAL_REPLAY_FORBIDDEN");
   need(!workflow.includes("CLOSURE_PERSISTENT_RUN_ID"), "MCFT_CAP09_V12_GRAD_FROZEN_V11_RUN_REUSE_FORBIDDEN");
@@ -50,7 +52,8 @@ function main() {
     status: "PASS",
     qualification_generation: "v12",
     previous_generation_reuse_forbidden: true,
-    live_graduation_source: "FRESH_EXACT_SUBJECT_V12_ONLY",
+    fresh_v12_opens_new_gate: true,
+    v12_read_only_opens_new_gate: false,
     v11_compatible_replay_active: false,
     arm_consumer_contract_preserved: true,
     formal_effect: false,
