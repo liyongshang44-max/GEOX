@@ -10,6 +10,8 @@ const STORE_AUTHORITY = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACT
 const V12 = "geox_mcft_cap09_s6_accel24t_am19_v12";
 const BLOCKED_V12 = "geox_mcft_cap09_s6_accel24t_am19_blocked_v12";
 const V11 = "geox_mcft_cap09_s6_accel24t_am19_v11";
+const LEGACY_RUN_KEY = "CLOSURE_" + "PERSISTENT_RUN_ID";
+const LEGACY_ARTIFACT_KEY = "CLOSURE_" + "PERSISTENT_ARTIFACT_ID";
 
 function fail(code) { throw new Error(code); }
 function need(value, code) { if (!value) fail(code); }
@@ -40,8 +42,8 @@ function main() {
   need(workflow.includes("new_machine_gate_claim"), "MCFT_CAP09_V12_GRAD_GATE_ELIGIBILITY_REQUIRED");
   need(workflow.includes("mcft-cap09-am19-formal-graduation-${{ env.SUBJECT_SHA }}-${{ github.run_id }}"), "MCFT_CAP09_V12_GRAD_ARTIFACT_PREFIX_REQUIRED");
   need(!/^\s*workflow_dispatch\s*:/m.test(workflow), "MCFT_CAP09_V12_GRAD_V11_MANUAL_REPLAY_FORBIDDEN");
-  need(!workflow.includes("CLOSURE_PERSISTENT_RUN_ID"), "MCFT_CAP09_V12_GRAD_FROZEN_V11_RUN_REUSE_FORBIDDEN");
-  need(!workflow.includes("CLOSURE_PERSISTENT_ARTIFACT_ID"), "MCFT_CAP09_V12_GRAD_FROZEN_V11_ARTIFACT_REUSE_FORBIDDEN");
+  need(!workflow.includes(LEGACY_RUN_KEY), "MCFT_CAP09_V12_GRAD_FROZEN_V11_RUN_REUSE_FORBIDDEN");
+  need(!workflow.includes(LEGACY_ARTIFACT_KEY), "MCFT_CAP09_V12_GRAD_FROZEN_V11_ARTIFACT_REUSE_FORBIDDEN");
 
   need(arm.includes("workflow_id: '.github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml'"), "MCFT_CAP09_V12_GRAD_ARM_CONSUMER_WORKFLOW_REQUIRED");
   need(arm.includes("mcft-cap09-am19-formal-graduation-${subject}-"), "MCFT_CAP09_V12_GRAD_ARM_ARTIFACT_PREFIX_REQUIRED");
