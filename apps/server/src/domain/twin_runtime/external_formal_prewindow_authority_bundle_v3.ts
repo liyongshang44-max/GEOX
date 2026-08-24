@@ -24,10 +24,10 @@ import {
 } from "./external_formal_bootstrap_authority_bundle_v1.js";
 import type { RealityBindingRuntimeSnapshotV1 } from "../../runtime/twin_runtime/ports.js";
 
-export const MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3 =
-  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json" as const;
-export const MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3 =
-  "8c61b443304f7e0ee85872052e990edd7dd7c512" as const;
+export const MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4 =
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V2.json" as const;
+export const MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4 =
+  "ea042dfed74a769e92ab2bd03dba5580c01d8d90" as const;
 
 export type ExternalFormalPrewindowAuthorityBundleInputV3 = {
   epoch_id: string;
@@ -35,8 +35,8 @@ export type ExternalFormalPrewindowAuthorityBundleInputV3 = {
   created_at: string;
   bootstrap_crop_stage_code: ExternalFormalCropStageCodeV1;
   hourly_crop_stage_codes: readonly ExternalFormalCropStageCodeV1[];
-  fresh_database_authority_ref: typeof MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3;
-  fresh_database_authority_blob_sha: typeof MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3;
+  fresh_database_authority_ref: typeof MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4;
+  fresh_database_authority_blob_sha: typeof MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4;
 };
 
 export type ExternalFormalHourlyCropPinV3 = {
@@ -153,8 +153,8 @@ function baseConfigInputV3(input: {
     formal_authorities: {
       ...structuredClone(MCFT_CAP09_EXTERNAL_FORMAL_AUTHORITY_BLOBS_V1),
       fresh_database: {
-        ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3,
-        hash: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3,
+        ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4,
+        hash: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4,
       },
     },
     crop_stage_context_authority: {
@@ -182,8 +182,8 @@ export function buildExternalFormalPrewindowAuthorityBundleV3(
   if (Date.parse(createdAt) > Date.parse(bootstrapTime)) throw new Error("EXTERNAL_FORMAL_V3_CONFIG_AUTHORITY_FROM_FUTURE_FORBIDDEN");
   if (!validStageV3(input.bootstrap_crop_stage_code)) throw new Error("EXTERNAL_FORMAL_V3_BOOTSTRAP_CROP_STAGE_INVALID");
   if (input.hourly_crop_stage_codes.length !== 24) throw new Error("EXTERNAL_FORMAL_V3_EXACT_24_CROP_STAGES_REQUIRED");
-  if (input.fresh_database_authority_ref !== MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3
-    || input.fresh_database_authority_blob_sha !== MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3) {
+  if (input.fresh_database_authority_ref !== MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4
+    || input.fresh_database_authority_blob_sha !== MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4) {
     throw new Error("EXTERNAL_FORMAL_V3_FRESH_STORE_AUTHORITY_PIN_MISMATCH");
   }
 
