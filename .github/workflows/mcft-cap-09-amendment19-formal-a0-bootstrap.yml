@@ -70,7 +70,7 @@ jobs:
           test -z "${DATABASE_URL:-}"
           test -z "${MCFT_CAP09_PARENT_DATABASE_URL:-}"
           test -z "${MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY:-}"
-          grep -Fq 'geox_mcft_cap09_s6_formal_t4r1_24h_v3' .github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml
+          grep -Fq 'geox_mcft_cap09_s6_formal_t4r1_24h_v4' .github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml
           grep -Fq 'PREFLIGHT_MCFT_CAP_09_RUNTIME_ENVIRONMENT_V1.ts zero-state' .github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml
 
   live-a0:
@@ -175,7 +175,7 @@ jobs:
           const found=files('arm-evidence','MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.json');
           if(found.length!==1)throw new Error(`AM19_FORMAL_A0_EXACT_ONE_ARM_FILE_REQUIRED:${found.length}`);
           const p=JSON.parse(fs.readFileSync(found[0],'utf8'));
-          if(p.schema_version!=='geox_mcft_cap09_amendment19_formal_arm_v1'||p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t4r1_24h_v3'||p.formal_database_write_count!==0||p.formal_o00_started!==false||p.final_actual_24h_still_required!==true||p.mcft_cap09_completed!==false) throw new Error('AM19_FORMAL_A0_ARM_BOUNDARY_REQUIRED');
+          if(p.schema_version!=='geox_mcft_cap09_amendment19_formal_arm_v1'||p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t4r1_24h_v4'||p.formal_database_write_count!==0||p.formal_o00_started!==false||p.final_actual_24h_still_required!==true||p.mcft_cap09_completed!==false) throw new Error('AM19_FORMAL_A0_ARM_BOUNDARY_REQUIRED');
           const out=process.env.GITHUB_OUTPUT;
           fs.appendFileSync(out,`path=${path.resolve(found[0])}\nrolling_run_id=${Number(p.rolling.workflow_run_id)}\nrolling_artifact_id=${Number(p.rolling.artifact_id)}\nrolling_artifact_name=${p.rolling.artifact_name}\nrolling_artifact_digest=${p.rolling.artifact_digest}\na0=${p.a0}\no00=${p.o00}\n`);
 
@@ -238,8 +238,8 @@ jobs:
           const fs=require('node:fs');const u=new URL(process.env.MCFT_CAP09_PARENT_DATABASE_URL);
           if(!['postgres:','postgresql:'].includes(u.protocol)||['localhost','127.0.0.1','::1'].includes(u.hostname))throw new Error('AM19_FORMAL_A0_REMOTE_POSTGRES_REQUIRED');
           const seed=decodeURIComponent(u.pathname.replace(/^\//,''));
-          if(!new Set(['geox_mcft_cap09_s6_formal_t4r1_24h','geox_mcft_cap09_s6_formal_t4r1_24h_v3']).has(seed))throw new Error(`AM19_FORMAL_A0_T4R1_SEED_FORBIDDEN:${seed}`);
-          u.pathname='/geox_mcft_cap09_s6_formal_t4r1_24h_v3';const target=u.toString();console.log(`::add-mask::${target}`);fs.appendFileSync(process.env.GITHUB_ENV,`FORMAL_DATABASE_URL=${target}\n`);
+          if(!new Set(['geox_mcft_cap09_s6_formal_t4r1_24h','geox_mcft_cap09_s6_formal_t4r1_24h_v4']).has(seed))throw new Error(`AM19_FORMAL_A0_T4R1_SEED_FORBIDDEN:${seed}`);
+          u.pathname='/geox_mcft_cap09_s6_formal_t4r1_24h_v4';const target=u.toString();console.log(`::add-mask::${target}`);fs.appendFileSync(process.env.GITHUB_ENV,`FORMAL_DATABASE_URL=${target}\n`);
 
       - uses: pnpm/action-setup@v4
         if: steps.arm-artifact.outputs.arm_found == 'true'
@@ -321,7 +321,7 @@ jobs:
         shell: node {0}
         run: |
           const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_RESULT_V1.json','utf8'));
-          if(p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t4r1_24h_v3'||p.a0_member_count!==9||p.hourly_runtime_config_count!==24||p.scheduler_slot_count!==0||p.next_tick_logical_time!==p.o00||p.lease_expiry_lte_o00!==true||p.provider_request_count!==0||p.scheduler_slot_write_count!==0||p.formal_a0_bootstrapped!==true||p.formal_o00_started!==false||p.final_actual_24h_still_required!==true||p.mcft_cap09_completed!==false)throw new Error('AM19_FORMAL_A0_BOOTSTRAP_PASS_REQUIRED');
+          if(p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.formal_database_name!=='geox_mcft_cap09_s6_formal_t4r1_24h_v4'||p.a0_member_count!==9||p.hourly_runtime_config_count!==24||p.scheduler_slot_count!==0||p.next_tick_logical_time!==p.o00||p.lease_expiry_lte_o00!==true||p.provider_request_count!==0||p.scheduler_slot_write_count!==0||p.formal_a0_bootstrapped!==true||p.formal_o00_started!==false||p.final_actual_24h_still_required!==true||p.mcft_cap09_completed!==false)throw new Error('AM19_FORMAL_A0_BOOTSTRAP_PASS_REQUIRED');
 
       - name: Upload Formal A0 provenance and bootstrap proof
         if: always() && steps.arm-artifact.outputs.arm_found == 'true'
