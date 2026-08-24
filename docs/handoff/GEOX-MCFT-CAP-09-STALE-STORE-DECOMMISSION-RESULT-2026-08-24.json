@@ -1,0 +1,53 @@
+{
+  "schema_version": "geox_mcft_cap09_stale_store_decommission_result_v1",
+  "status": "PASS_WITH_REPROVISIONABLE_EXTRA_EMPTY_SUCCESSOR_DELETION",
+  "date": "2026-08-24",
+  "protected_main_sha": "037c224038250caa0c43bebc3f719434624f008b",
+  "neon_project_id": "delicate-glade-62464340",
+  "neon_branch_id": "br-cold-dust-a6j6aymz",
+  "planned_targets_absent": true,
+  "planned_target_count": 9,
+  "planned_targets": [
+    "geox_mcft_cap09_s6_accel24t_am19_v1",
+    "geox_mcft_cap09_s6_accel24t_am19_v2",
+    "geox_mcft_cap09_s6_accel24t_am19_v3",
+    "geox_mcft_cap09_s6_accel24t_am19_v5",
+    "geox_mcft_cap09_s6_accel24t_am19_blocked_v1",
+    "geox_mcft_cap09_s6_accel24t_am19_blocked_v2",
+    "geox_mcft_cap09_s6_accel24t_am19_blocked_v3",
+    "geox_mcft_cap09_s6_accel24t_am19_blocked_v3_audit_32333336471",
+    "geox_mcft_cap09_s6_accel24t_am19_blocked_v5"
+  ],
+  "preserved_required_evidence": {
+    "failed_v3_o01_archive_present": true,
+    "v11_present": true,
+    "blocked_v11_present": true,
+    "t4r1_schema_reference_present": true,
+    "formal_v4_empty_shell_present": true
+  },
+  "observed_extra_deletion": {
+    "database": "geox_mcft_cap09_s6_accel24t_am19_v12",
+    "was_previously_template0_empty_shell": true,
+    "public_table_count_before_deletion": 0,
+    "qualification_had_not_executed": true,
+    "semantic_evidence_lost": false,
+    "reprovisionable_by_current_idempotent_workflow": true,
+    "current_authority_identity_unchanged": true
+  },
+  "storage_after_decommission": {
+    "pg_database_non_template_total_bytes": 385081344,
+    "pg_database_non_template_pretty": "367 MB",
+    "neon_main_branch_logical_size_bytes": 401154048,
+    "branch_logical_size_limit_bytes": 536870912,
+    "headroom_restored": true
+  },
+  "next_action": "REEXECUTE_IDEMPOTENT_T4R1_FORMAL_STORE_PROVISION_ON_EXACT_PROTECTED_MAIN",
+  "safety": {
+    "no_formal_epoch_armed": true,
+    "no_a0_bootstrap": true,
+    "no_v12_qualification_executed": true,
+    "no_failed_v3_archive_mutation": true,
+    "no_protected_main_mutation": true,
+    "mcft_cap09_completed": false
+  }
+}
