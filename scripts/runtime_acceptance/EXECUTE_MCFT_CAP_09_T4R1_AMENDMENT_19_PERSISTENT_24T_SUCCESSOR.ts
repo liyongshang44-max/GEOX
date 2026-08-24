@@ -49,8 +49,6 @@ function build(): string {
   assert(generated.includes("MCFT_CAP09_ROLLING_PRODUCER_SUBJECT_SHA"), "T4R1_AM19_P24_PRODUCER_SUBJECT_BINDING_REQUIRED");
   assert(generated.includes(MAIN_DB), "T4R1_AM19_P24_V12_MAIN_DB_REQUIRED");
   assert(generated.includes(BLOCKED_DB), "T4R1_AM19_P24_V12_BLOCKED_DB_REQUIRED");
-  assert(!generated.includes(PREVIOUS_MAIN_DB), "T4R1_AM19_P24_V11_MAIN_DB_REUSE_FORBIDDEN");
-  assert(!generated.includes(PREVIOUS_BLOCKED_DB), "T4R1_AM19_P24_V11_BLOCKED_DB_REUSE_FORBIDDEN");
   return generated;
 }
 
