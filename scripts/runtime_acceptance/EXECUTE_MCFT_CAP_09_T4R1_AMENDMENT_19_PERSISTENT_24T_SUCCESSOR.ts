@@ -11,6 +11,10 @@ const HISTORICAL_PARENT_DB = "geox_mcft_cap09_s6_formal_t3r1_24h_v3";
 const T4R1_PARENT_DB = "geox_mcft_cap09_s6_formal_t4r1_24h";
 const SOURCE_MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v4";
 const SOURCE_BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v4";
+const SOURCE_AUTHORITY_BLOB_SYMBOL = "MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3";
+const TARGET_AUTHORITY_BLOB_SYMBOL = "MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4";
+const SOURCE_AUTHORITY_REF_SYMBOL = "MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3";
+const TARGET_AUTHORITY_REF_SYMBOL = "MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4";
 const PREVIOUS_MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v11";
 const PREVIOUS_BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v11";
 const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v12";
@@ -34,6 +38,12 @@ function exactReplace(source: string, oldValue: string, newValue: string, code: 
   return source.replace(oldValue, newValue);
 }
 
+function exactReplaceCount(source: string, oldValue: string, newValue: string, expectedCount: number, code: string): string {
+  const count = source.split(oldValue).length - 1;
+  assert.equal(count, expectedCount, `${code}:${count}`);
+  return source.split(oldValue).join(newValue);
+}
+
 function build(): string {
   assert.equal(git("rev-parse", `HEAD:${SOURCE_PATH}`), SOURCE_BLOB, "T4R1_AM19_P24_SOURCE_RUNNER_BLOB_DRIFT");
   let generated = fs.readFileSync(SOURCE, "utf8");
@@ -41,10 +51,16 @@ function build(): string {
   generated = exactReplace(generated, SOURCE_MAIN_DB, MAIN_DB, "T4R1_AM19_P24_MAIN_DB_REPLACEMENT_CARDINALITY");
   generated = exactReplace(generated, SOURCE_BLOCKED_DB, BLOCKED_DB, "T4R1_AM19_P24_BLOCKED_DB_REPLACEMENT_CARDINALITY");
   generated = exactReplace(generated, HISTORICAL_CANDIDATE_GATE, SUCCESSOR_CANDIDATE_GATE, "T4R1_AM19_P24_CANDIDATE_GATE_REPLACEMENT_CARDINALITY");
+  generated = exactReplaceCount(generated, SOURCE_AUTHORITY_BLOB_SYMBOL, TARGET_AUTHORITY_BLOB_SYMBOL, 2, "T4R1_AM19_P24_AUTHORITY_BLOB_SYMBOL_REPLACEMENT_CARDINALITY");
+  generated = exactReplaceCount(generated, SOURCE_AUTHORITY_REF_SYMBOL, TARGET_AUTHORITY_REF_SYMBOL, 2, "T4R1_AM19_P24_AUTHORITY_REF_SYMBOL_REPLACEMENT_CARDINALITY");
   assert(!generated.includes(HISTORICAL_PARENT_DB), "T4R1_AM19_P24_HISTORICAL_PARENT_DB_SURVIVED");
   assert(!generated.includes(SOURCE_MAIN_DB), "T4R1_AM19_P24_V4_MAIN_DB_SURVIVED");
   assert(!generated.includes(SOURCE_BLOCKED_DB), "T4R1_AM19_P24_V4_BLOCKED_DB_SURVIVED");
   assert(!generated.includes(HISTORICAL_CANDIDATE_GATE), "T4R1_AM19_P24_HISTORICAL_CANDIDATE_GATE_SURVIVED");
+  assert(!generated.includes(SOURCE_AUTHORITY_BLOB_SYMBOL), "T4R1_AM19_P24_V3_AUTHORITY_BLOB_SYMBOL_SURVIVED");
+  assert(!generated.includes(SOURCE_AUTHORITY_REF_SYMBOL), "T4R1_AM19_P24_V3_AUTHORITY_REF_SYMBOL_SURVIVED");
+  assert.equal(generated.split(TARGET_AUTHORITY_BLOB_SYMBOL).length - 1, 2, "T4R1_AM19_P24_V4_AUTHORITY_BLOB_SYMBOL_REQUIRED");
+  assert.equal(generated.split(TARGET_AUTHORITY_REF_SYMBOL).length - 1, 2, "T4R1_AM19_P24_V4_AUTHORITY_REF_SYMBOL_REQUIRED");
   assert(generated.includes(T4R1_PARENT_DB), "T4R1_AM19_P24_T4_PARENT_DB_REQUIRED");
   assert(generated.includes("MCFT_CAP09_ROLLING_PRODUCER_SUBJECT_SHA"), "T4R1_AM19_P24_PRODUCER_SUBJECT_BINDING_REQUIRED");
   assert(generated.includes(MAIN_DB), "T4R1_AM19_P24_V12_MAIN_DB_REQUIRED");
@@ -72,7 +88,7 @@ function proveStatic(): void {
     console.log(JSON.stringify({
       status: "PASS",
       source_runner_blob: SOURCE_BLOB,
-      replacement_count: 4,
+      replacement_count: 8,
       parent_database: T4R1_PARENT_DB,
       producer_subject_binding: "AUTHENTICATED_ROLLING_ARTIFACT",
       qualification_subject_binding: "CURRENT_EXACT_PROTECTED_MAIN",
