@@ -15,17 +15,20 @@ on:
       - '.github/workflows/mcft-cap-09-t4r1-amendment19-persistent-24t-qualification.yml'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CLOSURE_CONTROL_PLANE_AUDIT_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FINAL_SEMANTIC_CLOSURE_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V12_V4_SUCCESSOR_PENDING_V1.cjs'
+      - 'scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_FRESH_QUALIFICATION_REQUIRED_V1.cjs'
       - 'scripts/governance_acceptance/REHEARSE_MCFT_CAP_09_FORMAL_24H_ORCHESTRATION_V1.cjs'
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.cjs'
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-QUALIFICATION-COMPATIBILITY-CONTRACT-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V2.json'
 
 permissions:
   contents: read
 
 env:
-  QUALIFICATION_SHA: abf0aa121001480f01ad4e39364b1df13f3c26eb
   DEPLOYMENT_SHA: ${{ github.event.pull_request.head.sha }}
+  FROZEN_V11_QUALIFICATION_SHA: abf0aa121001480f01ad4e39364b1df13f3c26eb
 
 jobs:
   closure-audit:
@@ -40,20 +43,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20.11.1'
-      - name: Prove v11 qualification semantic boundary is unchanged on control-plane bind
-        run: >-
-          node scripts/governance_acceptance/ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs
-          "$QUALIFICATION_SHA"
-          "$DEPLOYMENT_SHA"
-          acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json
-      - name: Require CARRY_FORWARD and forbid fresh qualification rollover
+      - name: Classify governed successor as fresh qualification required
+        run: node scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_FRESH_QUALIFICATION_REQUIRED_V1.cjs
+      - name: Require fresh v12 qualification and forbid v11 carry-forward
         shell: node {0}
         run: |
           const fs=require('node:fs');
-          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json','utf8'));
-          if(p.status!=='PASS'||p.qualification_subject_sha!==process.env.QUALIFICATION_SHA||p.deployment_subject_sha!==process.env.DEPLOYMENT_SHA)throw new Error('MCFT_CAP09_V11_BIND_COMPATIBILITY_IDENTITY_REQUIRED');
-          if(p.governed_changed_paths.length!==0||p.source_governed_semantic_digest!==p.deployment_governed_semantic_digest||p.qualification_reexecution_required!==false)throw new Error('MCFT_CAP09_V11_BIND_MUST_CARRY_FORWARD');
-          if(p.qualification_database_rewrite_authorized!==false||p.human_override_used!==false||p.formal_effect!==false)throw new Error('MCFT_CAP09_V11_BIND_FAIL_CLOSED_BOUNDARY_REQUIRED');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_FRESH_QUALIFICATION_REQUIRED_CLASSIFICATION_V1.json','utf8'));
+          if(p.status!=='PASS'||p.classification!=='FRESH_QUALIFICATION_REQUIRED')throw new Error('MCFT_CAP09_FRESH_QUALIFICATION_CLASSIFICATION_REQUIRED');
+          if(p.source_qualification_generation!=='v11'||p.source_qualification_subject_sha!==process.env.FROZEN_V11_QUALIFICATION_SHA||p.deployment_subject_sha!==process.env.DEPLOYMENT_SHA)throw new Error('MCFT_CAP09_FRESH_QUALIFICATION_IDENTITY_REQUIRED');
+          if(!Array.isArray(p.governed_changed_paths)||p.governed_changed_paths.length===0||p.source_governed_semantic_digest===p.deployment_governed_semantic_digest||p.qualification_reexecution_required!==true)throw new Error('MCFT_CAP09_FRESH_QUALIFICATION_GOVERNED_DRIFT_REQUIRED');
+          if(p.target_qualification_generation!=='v12'||p.target_formal_store_generation!=='v4'||p.predecessor_v11_reuse_authorized!==false||p.predecessor_failed_v3_continuation_authorized!==false)throw new Error('MCFT_CAP09_FRESH_SUCCESSOR_GENERATION_REQUIRED');
+          if(p.qualification_database_rewrite_authorized!==false||p.formal_effect!==false||Number(p.formal_database_write_count)!==0||Number(p.scheduler_write_count)!==0||Number(p.runtime_write_count)!==0)throw new Error('MCFT_CAP09_FRESH_QUALIFICATION_FAIL_CLOSED_BOUNDARY_REQUIRED');
+      - name: Prove pending v12 and Formal-v4 successor graph is atomically bound
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V12_V4_SUCCESSOR_PENDING_V1.cjs
       - name: Audit remaining Graduation to Formal completion control plane
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CLOSURE_CONTROL_PLANE_AUDIT_V1.cjs
       - name: Reprove reverse terminal semantic closure remains unchanged
