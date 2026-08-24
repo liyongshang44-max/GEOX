@@ -5,8 +5,8 @@ import {
 } from "../../apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.js";
 import {
   buildExternalFormalPrewindowAuthorityBundleV3,
-  MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3,
-  MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3,
+  MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4,
+  MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4,
   type ExternalFormalPrewindowAuthorityBundleV3,
 } from "../../apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v3.js";
 import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
@@ -124,8 +124,8 @@ export function buildMcftCap09Am19FormalManifestFromArmV1(input: {
     created_at: arm.rolling.captured_at,
     bootstrap_crop_stage_code: "MID",
     hourly_crop_stage_codes: Array.from({ length: 24 }, () => "MID" as const),
-    fresh_database_authority_ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3,
-    fresh_database_authority_blob_sha: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3,
+    fresh_database_authority_ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4,
+    fresh_database_authority_blob_sha: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4,
   });
   if (bundle.o00_logical_time !== arm.o00 || bundle.o23_logical_time !== arm.o23) throw new Error("AM19_FORMAL_MANIFEST_COMPILED_WINDOW_DRIFT");
 
