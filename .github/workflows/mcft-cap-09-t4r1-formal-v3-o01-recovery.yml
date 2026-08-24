@@ -77,6 +77,8 @@ jobs:
           set -euo pipefail
           f=.github/workflows/mcft-cap-09-t4r1-formal-v3-o01-recovery.yml
           grep -Fq 'recovery_ack:' "$f"
+          grep -Fq 'RECOVERY_ACK: ${{ inputs.recovery_ack }}' "$f"
+          grep -Fq 'test "$RECOVERY_ACK" = "$REQUIRED_RECOVERY_ACK"' "$f"
           grep -Fq 'ARCHIVE_FAILED_V3_O01_AND_REPROVISION_ZERO_STATE' "$f"
           grep -Fq 'ALTER DATABASE \"$ACTIVE_FORMAL_DATABASE_NAME\" RENAME TO \"$FAILED_O01_ARCHIVE_DATABASE_NAME\"' "$f"
           grep -Fq 'CREATE DATABASE \"$ACTIVE_FORMAL_DATABASE_NAME\" TEMPLATE template0' "$f"
@@ -93,6 +95,7 @@ jobs:
     timeout-minutes: 45
     env:
       SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL }}
+      RECOVERY_ACK: ${{ inputs.recovery_ack }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -104,7 +107,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "${{ inputs.recovery_ack }}" = "$REQUIRED_RECOVERY_ACK" || { echo 'MCFT_CAP09_O01_RECOVERY_EXPLICIT_ACK_REQUIRED' >&2; exit 1; }
+          test "$RECOVERY_ACK" = "$REQUIRED_RECOVERY_ACK" || { echo 'MCFT_CAP09_O01_RECOVERY_EXPLICIT_ACK_REQUIRED' >&2; exit 1; }
           test "$GITHUB_REF" = 'refs/heads/main' || { echo 'MCFT_CAP09_O01_RECOVERY_MAIN_REQUIRED' >&2; exit 1; }
           git fetch --no-tags origin main
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
@@ -273,7 +276,7 @@ jobs:
           if(p.status!=='PASS'||p.mode!=='zero-state'||p.database_identity.database_name!==process.env.ACTIVE_FORMAL_DATABASE_NAME||p.required_table_count!==26||p.schema_complete!==true||p.zero_state_qualified!==true)throw new Error('MCFT_CAP09_O01_RECOVERY_ZERO_STATE_PREFLIGHT_REQUIRED');
           for(const [k,v] of Object.entries(expected))if(p.schema_fingerprints?.[k]!==v)throw new Error(`MCFT_CAP09_O01_RECOVERY_FINGERPRINT_DRIFT:${k}`);
           for(const [rel,count] of Object.entries(p.zero_state_counts||{}))if(count!==0)throw new Error(`MCFT_CAP09_O01_RECOVERY_ACTIVE_NOT_ZERO:${rel}:${count}`);
-          const proof={schema_version:'geox_mcft_cap09_t4r1_formal_v3_o01_recovery_result_v1',status:'PASS',deployment_subject_sha:process.env.GITHUB_SHA,failed_subject_sha:a.incident.failed_subject_sha,failed_workflow_run_id:a.incident.workflow_run_id,failed_artifact_id:a.incident.artifact_id,failed_artifact_digest:a.incident.artifact_digest,failed_epoch_id:a.incident.epoch_id,failed_arm_identity_hash:a.incident.arm_identity_hash,failed_manifest_hash:a.incident.manifest_hash,archived_failed_database:a.database_identity.archive_database_name,archive_inventory_match:true,o00_state:'DEGRADED',o01_state:'FAILED',o02_o23_slot_row_count:0,active_formal_database:a.database_identity.active_logical_database_name,active_zero_state:true,active_table_count:26,schema_fingerprints:expected,failed_v3_repaired:false,failed_v3_continued:false,o02_authorized:false,o02_executed:false,successor_formal_epoch_armed:false,a0_bootstrap_dispatched:false,rolling_dispatched:false,live_runner_dispatched:false,qualification_reexecution_required:false,qualification_database_rewrite_authorized:false,governed_semantic_change:false,mcft_cap09_completed:false};
+          const proof={schema_version:'geox_mcft_cap09_t4r1_formal_v3_o01_recovery_result_v1',status:'PASS',deployment_subject_sha:process.env.GITHUB_SHA,failed_subject_sha:a.incident.failed_subject_sha,failed_workflow_run_id:a.incident.workflow_run_id,failed_artifact_id:a.incident.artifact_id,failed_artifact_digest:a.incident.artifact_digest,failed_epoch_id:a.incident.epoch_id,failed_arm_identity_hash:a.incident.arm_identity_hash,failed_manifest_hash:a.incident.manifest_hash,archived_failed_database:a.database_identity.archive_database_name,archive_inventory_match:true,o00_state:'DEGRADED',o01_state:'FAILED',o02_o23_slot_row_count:0,active_formal_database:a.database_identity.active_logical_database_name,active_zero_state:true,active_table_count:26,schema_fingerprints:expected,failed_v3_repaired:false,failed_v3_continued:false,o02_authorized:false,o02_executed:false,successor_formal_epoch_armed:false,a0_bootstrap_dispatched:false,rolling_dispatched:false,live_runner_dispatched:false,qualification_reexecution_required:false,qualification_database_rewrite_authorized:false,qualification_attestation_external_required:true,mcft_cap09_completed:false};
           fs.writeFileSync('acceptance-output/MCFT_CAP_09_T4R1_FORMAL_V3_O01_RECOVERY_RESULT_V1.json',JSON.stringify(proof,null,2)+'\n');
 
       - name: Upload immutable O01 recovery proof
