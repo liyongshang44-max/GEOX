@@ -30,23 +30,18 @@ GEOX 已不再是“验证能力是否存在”的原型系统。
 
 ---
 
-## 三、冻结里程碑索引（重要）
+## 三、治理入口与权威边界（重要）
 
-本仓库所有不可逆的工程事实，统一收录于治理索引：
+根 `README.md` **仅作为导航入口，不具 repository-level authority，也不维护独立的 Sprint / Tag / Freeze truth**。
 
-👉 **`docs/SSOT.md`**
+按 `docs/SSOT.md` 冻结的分层规则：
 
-CI acceptance token secrets prerequisite:
+- **`docs/SSOT.md`** — 唯一 repository-level SSOT；负责架构、platform/runtime 状态、正式接受能力以及当前开放/关闭工程边界。
+- **`README_MIGRATION.md`** — 唯一 canonical Sprint / Tag / Freeze index；其 authority **仅限 Sprint / Tag / Freeze 域**，不得替代 repository-level SSOT。
+- **`docs/EDGE_SCOPE.md`** 及其他 domain documents — 仅在各自明确声明的领域边界内提供约束或说明；发生上位冲突时服从上述 authority hierarchy。
+- **`docs/ci/CI_ACCEPTANCE_SECRETS.md`** — CI acceptance token/secrets 前置条件说明。
 
-👉 **`docs/ci/CI_ACCEPTANCE_SECRETS.md`**
-
-其中明确列出了：
-
-• Sprint 10 · AO-ACT v0  
-• Sprint 14 · Agronomy Interpretation v1  
-• Sprint 16 · Decision Plan v0（非执行、非耦合）  
-
-任何新增功能 **不得破坏索引中已冻结的语义边界**。
+不得从根 README 推导新的冻结事实、runtime truth、完成状态或 tag authority。任何正式裁决必须回到对应 canonical authority 与其 acceptance evidence。
 
 ---
 
