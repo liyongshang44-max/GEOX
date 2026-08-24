@@ -4,19 +4,23 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml'
+      - '.github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_V1.ts'
       - 'apps/server/src/external_evidence/producer_bound_transient_raw_evidence_reader_v1.ts'
-  workflow_run:
-    workflows: ['mcft-cap-09-t4r1-rolling-preboundary-capture']
-    types: [completed]
+  workflow_dispatch:
+    inputs:
+      rolling_run_id:
+        description: 'Completed T4R1 rolling-preboundary workflow run ID'
+        required: true
+        type: string
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: mcft-cap09-am19-formal-hourly-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('rolling-{0}', github.event.workflow_run.id) }}
+  group: mcft-cap09-am19-formal-hourly-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('rolling-{0}', inputs.rolling_run_id) }}
   cancel-in-progress: false
 
 env:
@@ -52,14 +56,17 @@ jobs:
           scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_V1.ts
       - name: Run hourly promotion zero-effect selftest
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_V1.ts selftest
-      - name: Require static workflow is T4-bound, credential-clean, and propagates irreversible ingress NO-GO
+      - name: Require explicit rolling-run dispatch, T4 binding, and irreversible ingress NO-GO propagation
         shell: bash
         run: |
           set -euo pipefail
           test -z "${DATABASE_URL:-}"
           test -z "${MCFT_CAP09_PARENT_DATABASE_URL:-}"
           test -z "${MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY:-}"
-          grep -Fq "workflows: ['mcft-cap-09-t4r1-rolling-preboundary-capture']" .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
+          grep -Fq 'workflow_dispatch:' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
+          grep -Fq 'rolling_run_id:' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
+          ! grep -Fq 'workflow_run:' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
+          grep -Fq 'MCFT_CAP09_T4R1_ROLLING_RUN_IDENTITY_REQUIRED' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
           grep -Fq 'GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
           ! grep -Fq 'GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
           grep -Fq 'mcft-cap09-t4r1-rolling-preboundary-' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
@@ -68,11 +75,7 @@ jobs:
           grep -Fq 'IRREVERSIBLE_FORMAL_EPOCH_NO_GO_ALREADY_RECORDED' .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
 
   live-hourly-promotion:
-    if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main' &&
-      github.event.workflow_run.event != 'pull_request'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 55
     services:
@@ -90,9 +93,9 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     env:
-      SUBJECT_SHA: ${{ github.event.workflow_run.head_sha }}
-      MCFT_CAP09_SUBJECT_SHA: ${{ github.event.workflow_run.head_sha }}
-      ROLLING_RUN_ID: ${{ github.event.workflow_run.id }}
+      SUBJECT_SHA: ${{ github.sha }}
+      MCFT_CAP09_SUBJECT_SHA: ${{ github.sha }}
+      ROLLING_RUN_ID: ${{ inputs.rolling_run_id }}
       MCFT_CAP09_PARENT_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL }}
       MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
       MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
@@ -110,6 +113,24 @@ jobs:
           ref: ${{ env.SUBJECT_SHA }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Require explicit rolling run and current protected-main identity
+        id: rolling-run
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runId = Number(process.env.ROLLING_RUN_ID);
+            if (!Number.isInteger(runId) || runId <= 0) throw new Error('MCFT_CAP09_T4R1_ROLLING_RUN_ID_REQUIRED');
+            let run = null;
+            for (let attempt = 0; attempt < 12; attempt++) {
+              run = (await github.rest.actions.getWorkflowRun({ owner, repo, run_id: runId })).data;
+              if (run.status === 'completed') break;
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+            if (!run || run.status !== 'completed' || run.conclusion !== 'success' || run.name !== 'mcft-cap-09-t4r1-rolling-preboundary-capture' || run.path !== '.github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml' || run.event !== 'workflow_dispatch' || run.head_branch !== 'main' || run.head_sha !== process.env.SUBJECT_SHA) {
+              throw new Error('MCFT_CAP09_T4R1_ROLLING_RUN_IDENTITY_REQUIRED');
+            }
 
       - name: Require triggering rolling subject is still exact protected main
         shell: bash
@@ -243,7 +264,7 @@ jobs:
           set -euo pipefail
           for name in MCFT_CAP09_PARENT_DATABASE_URL MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT MCFT_CAP09_FORMAL_RAW_S3_BUCKET MCFT_CAP09_FORMAL_RAW_S3_REGION MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY; do test -n "${!name:-}" || { echo "AM19_FORMAL_HOURLY_SECRET_REQUIRED:${name}" >&2; exit 1; }; done
 
-      - name: Normalize stable T4R1 credential seed to exact actual Formal v2
+      - name: Normalize stable T4R1 credential seed to exact actual Formal v3
         if: steps.evidence.outputs.eligible == 'true'
         shell: node {0}
         run: |
@@ -348,7 +369,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-am19-formal-hourly-${{ env.SUBJECT_SHA }}-${{ github.event.workflow_run.id }}-${{ github.run_id }}
+          name: mcft-cap09-am19-formal-hourly-${{ env.SUBJECT_SHA }}-${{ env.ROLLING_RUN_ID }}-${{ github.run_id }}
           path: |
             acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json
             acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_RESULT_V1.json
