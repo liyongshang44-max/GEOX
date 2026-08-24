@@ -1,0 +1,175 @@
+{
+  "schema_version": "geox_mcft_cap09_t4r1_formal_v3_o01_recovery_authority_v1",
+  "status": "DORMANT_RECOVERY_ONLY",
+  "purpose": "ARCHIVE_IRREVERSIBLE_FAILED_FORMAL_V3_O01_AND_REPROVISION_ZERO_STATE_LOGICAL_V3",
+  "incident": {
+    "failed_subject_sha": "18b690e8c2d92bfdc4eeea9eece0723c4181a996",
+    "workflow_run_id": 32660018684,
+    "artifact_id": 9498479992,
+    "artifact_name": "mcft-cap09-am19-formal-cycle-NO-GO-18b690e8c2d92bfdc4eeea9eece0723c4181a996-32660018684",
+    "artifact_digest": "sha256:dd531b49138ee5b9046e9cc4d8dbd458572c62995de0cc08a2cad7f64e6ee0d2",
+    "artifact_result_file": "MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_RESULT_V1.json",
+    "arm_identity_hash": "sha256:f43faae8da7e86b0e7f6e3714d97349abd9b73e33d603676648b4736793dbd94",
+    "epoch_id": "mcft_cap09_am19_formal_20260823170000000_18b690e8c2d9",
+    "manifest_hash": "sha256:9220f985bb0705e3e761218cab322bf4d46b226e3444ebbfccb6e7d0d75027c0",
+    "formal_database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v3",
+    "cycle_started_at": "2026-08-23T19:04:00.041Z",
+    "temporal_authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "scheduler_clock_mode": "SYSTEM_DATABASE_UTC",
+    "terminal_result": {
+      "runner_id": "MCFT_CAP09_EXTERNAL_FORMAL_V3_AM19_RUNNER_V1",
+      "status": "BLOCKED_TERMINAL_RECORDED",
+      "slot_id": "O01",
+      "logical_time": "2026-08-23T19:00:00.000Z",
+      "detail": "AMENDMENT19_NO_CAUSAL_CURRENT_INTERVAL_FORCING_PAIR",
+      "claim_attempted": true,
+      "terminal_result_recorded": true,
+      "provider_request_count": 0,
+      "r2_request_count": 0
+    },
+    "formal_epoch_no_go": true,
+    "mcft_cap09_completed": false
+  },
+  "database_identity": {
+    "provider": "NEON_POSTGRES",
+    "project_id": "delicate-glade-62464340",
+    "branch_id": "br-cold-dust-a6j6aymz",
+    "active_logical_database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v3",
+    "archive_database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_o01_32660018684",
+    "schema_reference_database_name": "geox_mcft_cap09_s6_formal_t4r1_24h",
+    "prior_prebootstrap_archive_database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_32646669506",
+    "archive_before_reprovision_required": true,
+    "archive_mutation_after_rename_forbidden": true,
+    "data_clone_forbidden": true,
+    "reprovision_mode": "CREATE_DATABASE_TEMPLATE0_THEN_SCHEMA_ONLY_RESTORE"
+  },
+  "failed_store_readback": {
+    "public_table_count": 26,
+    "table_row_counts": {
+      "facts": 45,
+      "twin_action_feedback_cycle_projection_v1": 0,
+      "twin_action_feedback_evidence_index_v1": 0,
+      "twin_action_feedback_projection_v1": 0,
+      "twin_active_lineage_index_v1": 1,
+      "twin_approved_plan_binding_projection_v1": 0,
+      "twin_decision_record_projection_v1": 0,
+      "twin_forecast_point_projection_v1": 0,
+      "twin_forecast_residual_projection_v1": 0,
+      "twin_forecast_result_latest_index_v1": 1,
+      "twin_forecast_run_projection_v1": 1,
+      "twin_forecast_success_latest_index_v1": 0,
+      "twin_object_idempotency_index_v1": 27,
+      "twin_runtime_authority_snapshot_v1": 1,
+      "twin_runtime_checkpoint_latest_index_v1": 1,
+      "twin_runtime_health_latest_index_v1": 1,
+      "twin_runtime_lease_v1": 1,
+      "twin_scenario_latest_index_v1": 0,
+      "twin_scenario_point_projection_v1": 0,
+      "twin_scenario_set_projection_v1": 0,
+      "twin_scenario_set_uniqueness_v1": 0,
+      "twin_shadow_online_scheduler_cursor_v1": 1,
+      "twin_shadow_online_scheduler_slot_v1": 2,
+      "twin_state_history_projection_v1": 2,
+      "twin_state_latest_index_v1": 1,
+      "twin_terminal_tick_uniqueness_v1": 1
+    },
+    "scope": {
+      "tenant_id": "tenant_mcft_external",
+      "project_id": "project_mcft_cap09",
+      "group_id": "group_public_research",
+      "field_id": "field_kbs_mcse_t4r1",
+      "season_id": "season_2026_corn",
+      "zone_id": "zone_kbs_mcse_t4r1_crop_formal_v1"
+    },
+    "scheduler_cursor": {
+      "schedule_start_logical_time": "2026-08-23T18:00:00.000Z",
+      "next_slot_index": 2,
+      "next_slot_id": "O02",
+      "next_logical_time": "2026-08-23T20:00:00.000Z",
+      "last_fencing_token": "3"
+    },
+    "scheduler_slots": [
+      {
+        "slot_id": "O00",
+        "logical_time": "2026-08-23T18:00:00.000Z",
+        "state": "DEGRADED",
+        "tick_ref": "cap04_a_record_set_7cf09f50cbd4dd9eb33490a9",
+        "health_ref": "MCFT_CAP09_EXTERNAL_FORMAL_V3_AM19_RUNNER_V1:O00:DEGRADED",
+        "terminal_at": "2026-08-23T18:01:19.984Z"
+      },
+      {
+        "slot_id": "O01",
+        "logical_time": "2026-08-23T19:00:00.000Z",
+        "state": "FAILED",
+        "tick_ref": null,
+        "health_ref": "MCFT_CAP09_EXTERNAL_FORMAL_V3_AM19_RUNNER_V1:O01:BLOCKED_NO_CAUSAL_FORCING",
+        "terminal_at": "2026-08-23T19:04:00.041Z"
+      }
+    ],
+    "o02_o23_slot_row_count": 0,
+    "o00_terminal_tick": {
+      "lineage_id": "lineage_d6ab8c5713392f56b5cd606d",
+      "revision_id": "revision_50c8e64aa06d661e1d07bd42",
+      "logical_time": "2026-08-23T18:00:00.000Z",
+      "terminal_tick_uniqueness_key_hash": "sha256:eda1c6b2a94853a10d48cef825ed2060675b4193038f049e8f7d6ec8bd5159a3",
+      "operation_variant": "A2_BLOCKED_FORECAST",
+      "record_set_id": "cap04_a_record_set_7cf09f50cbd4dd9eb33490a9",
+      "aggregate_determinism_hash": "sha256:7cc85a6019cbfb17be1f8eab438849074b734e43cc4413b020feaa6aca88cf8d",
+      "source_tick_object_id": "twin_runtime_tick_c1aa5356139e450bc34b8472"
+    },
+    "runtime_authority_snapshot": {
+      "authority_kind": "REALITY_BINDING",
+      "authority_ref": "GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V3",
+      "determinism_hash": "sha256:cc99277a8e918b04e26b4becf341fe8e56c0758257d633191ae549594185e397"
+    },
+    "o00_checkpoint": {
+      "checkpoint_object_id": "twin_runtime_checkpoint_34195fdf04295f6b4e3e3ebd",
+      "lineage_id": "lineage_d6ab8c5713392f56b5cd606d",
+      "revision_id": "revision_50c8e64aa06d661e1d07bd42",
+      "logical_time": "2026-08-23T18:00:00.000Z",
+      "determinism_hash": "sha256:b634138679d632934303c7ab12c03f1ecf8e38899501a938ffad490df278e625",
+      "source_fact_id": "fact_twin_runtime_checkpoint_34195fdf04295f6b4e3e3ebd"
+    },
+    "o00_runtime_health": {
+      "health_object_id": "twin_runtime_health_f546fa63893cd17deac4cd43",
+      "operation_status": "CONTINUATION_STATE_ASSIMILATED_WITH_BLOCKED_FORECAST",
+      "logical_time": "2026-08-23T18:00:00.000Z",
+      "determinism_hash": "sha256:7437c59f92d4e9a9ddf5cf2be5dae203858a2a8cd1d062e20df75ceb7f4874cc",
+      "source_fact_id": "fact_twin_runtime_health_f546fa63893cd17deac4cd43"
+    }
+  },
+  "zero_state_schema_contract": {
+    "required_public_table_count": 26,
+    "column_fingerprint_md5": "873a8e86f55d75a04a5f671627e98ae1",
+    "constraint_fingerprint_md5": "7803f7e7706e52eca3ca2aa4290ff5dd",
+    "index_fingerprint_md5": "ea5b3ba0392fd52fb471bc754e94ed35",
+    "all_governed_relations_zero_state_required": true
+  },
+  "recovery_contract": {
+    "workflow_dispatch_only": true,
+    "required_recovery_ack": "ARCHIVE_FAILED_V3_O01_AND_REPROVISION_ZERO_STATE",
+    "exact_protected_main_required": true,
+    "github_artifact_identity_verification_required": true,
+    "artifact_payload_identity_verification_required": true,
+    "failed_store_inventory_match_required_before_archive": true,
+    "archive_inventory_match_required_after_archive": true,
+    "active_logical_v3_zero_state_required_after_reprovision": true,
+    "failed_v3_epoch_continuation_forbidden": true,
+    "o02_through_o23_execution_forbidden": true,
+    "successor_arm_forbidden": true,
+    "a0_bootstrap_forbidden": true,
+    "rolling_dispatch_forbidden": true,
+    "live_runner_dispatch_forbidden": true,
+    "qualification_database_rewrite_forbidden": true,
+    "qualification_reexecution_required": false,
+    "classification": "CONTROL_PLANE_INCIDENT_RECOVERY"
+  },
+  "nonclaims": {
+    "failed_v3_repaired": false,
+    "failed_v3_continued": false,
+    "o02_authorized": false,
+    "successor_formal_epoch_armed": false,
+    "formal_v4_provisioned": false,
+    "mcft_cap09_completed": false
+  }
+}

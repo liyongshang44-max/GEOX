@@ -19,6 +19,7 @@ const paths = {
   provision: ".github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml",
   storeAuthority: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json",
   rollingScheduler: ".github/workflows/mcft-cap-09-t4r1-rolling-hourly-scheduler.yml",
+  rollingCapture: ".github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml",
   hourly: ".github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml",
   live: ".github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml",
   arm: ".github/workflows/mcft-cap-09-amendment19-formal-arm.yml",
@@ -48,7 +49,12 @@ for (const p of activeFormalPaths) excludes(p, "geox_mcft_cap09_s6_formal_t4r1_2
 
 contains(paths.rollingScheduler, "cron: '17 * * * *'", "MCFT_CAP09_FINAL_CLOSURE_HOURLY_ROLLING_SCHEDULE_REQUIRED");
 contains(paths.rollingScheduler, "mcft-cap-09-t4r1-rolling-preboundary-capture.yml", "MCFT_CAP09_FINAL_CLOSURE_HOURLY_ROLLING_DISPATCH_REQUIRED");
-contains(paths.hourly, "workflows: ['mcft-cap-09-t4r1-rolling-preboundary-capture']", "MCFT_CAP09_FINAL_CLOSURE_HOURLY_PROMOTION_CONSUMER_REQUIRED");
+contains(paths.rollingCapture, "gh workflow run mcft-cap-09-amendment19-formal-hourly-evidence.yml", "MCFT_CAP09_FINAL_CLOSURE_EXPLICIT_HOURLY_DISPATCH_REQUIRED");
+contains(paths.rollingCapture, 'rolling_run_id="$GITHUB_RUN_ID"', "MCFT_CAP09_FINAL_CLOSURE_ROLLING_RUN_ID_FORWARD_REQUIRED");
+contains(paths.hourly, "workflow_dispatch:", "MCFT_CAP09_FINAL_CLOSURE_HOURLY_WORKFLOW_DISPATCH_REQUIRED");
+contains(paths.hourly, "rolling_run_id:", "MCFT_CAP09_FINAL_CLOSURE_HOURLY_ROLLING_INPUT_REQUIRED");
+contains(paths.hourly, "MCFT_CAP09_T4R1_ROLLING_RUN_IDENTITY_REQUIRED", "MCFT_CAP09_FINAL_CLOSURE_ROLLING_IDENTITY_GATE_REQUIRED");
+excludes(paths.hourly, "workflow_run:", "MCFT_CAP09_FINAL_CLOSURE_IMPLICIT_WORKFLOW_RUN_FORBIDDEN");
 contains(paths.live, "*/5 * * * *", "MCFT_CAP09_FINAL_CLOSURE_LIVE_SUPERVISOR_SCHEDULE_REQUIRED");
 
 contains(paths.readback, "EXACT_PROVIDER_INTERVAL_PAIR", "MCFT_CAP09_FINAL_CLOSURE_INTERVAL_PROVIDER_ENUM_REQUIRED");
@@ -72,6 +78,7 @@ console.log(JSON.stringify({
   failed_formal_predecessor: "v2",
   hourly_rolling_automated: true,
   hourly_evidence_consumes_t4_rolling: true,
+  hourly_evidence_trigger_mode: "EXPLICIT_WORKFLOW_DISPATCH_WITH_ROLLING_RUN_IDENTITY_GATE",
   live_runner_autonomous_schedule: true,
   final_readback_forcing_modes: ["EXACT_PROVIDER_INTERVAL_PAIR", "PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR"],
   final_readback_counts: { base_snapshots: 24, hourly_promotions_after_a0: 23, terminal_ticks: 24 },
