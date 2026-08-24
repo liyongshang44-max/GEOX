@@ -12,8 +12,10 @@ const V11="geox_mcft_cap09_s6_accel24t_am19_v11";
 const BLOCKED_V11="geox_mcft_cap09_s6_accel24t_am19_blocked_v11";
 const AUTH_V2="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V2.json";
 const RECOVERY_AUTH="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-FORMAL-V3-O01-RECOVERY-AUTHORITY-V1.json";
+const RECOVERY_WORKFLOW=".github/workflows/mcft-cap-09-t4r1-formal-v3-o01-recovery.yml";
 const RECOVERY_BLOB="2a0451b625100f9cdfa398af105629553c7792ea";
 const AUTH_V2_BLOB="ea042dfed74a769e92ab2bd03dba5580c01d8d90";
+const RECOVERY_EXTRACTION_HOTFIX_LINE="          merge-multiple: true\n";
 const P={
   prewindow:"apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v3.ts",
   successor:"scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_T4R1_AMENDMENT_19_PERSISTENT_24T_SUCCESSOR.ts",
@@ -35,6 +37,17 @@ function need(v,c){if(!v)fail(c)}
 function text(p){need(fs.existsSync(p),`MCFT_CAP09_V12_V4_PATH_REQUIRED:${p}`);return fs.readFileSync(p,"utf8")}
 function has(p,t,c){need(text(p).includes(t),c)}
 function no(p,t,c){need(!text(p).includes(t),c)}
+function exactOne(value,token,code){need(value.split(token).length===2,code)}
+function proveAuthorizedRecoveryExtractionHotfix(){
+  const baseline=execFileSync("git",["show",`${BASE}:${RECOVERY_WORKFLOW}`],{encoding:"utf8"});
+  const current=text(RECOVERY_WORKFLOW);
+  exactOne(current,RECOVERY_EXTRACTION_HOTFIX_LINE,"MCFT_CAP09_V12_V4_RECOVERY_EXTRACTION_HOTFIX_EXACT_ONE_REQUIRED");
+  need(current.replace(RECOVERY_EXTRACTION_HOTFIX_LINE,"")===baseline,"MCFT_CAP09_V12_V4_RECOVERY_EXECUTOR_DRIFT_FORBIDDEN");
+  need(current.includes("artifact-ids: '9498479992'"),"MCFT_CAP09_V12_V4_RECOVERY_EXACT_ARTIFACT_REQUIRED");
+  need(current.includes("run-id: '32660018684'"),"MCFT_CAP09_V12_V4_RECOVERY_EXACT_RUN_REQUIRED");
+  need(current.includes("ARCHIVE_FAILED_V3_O01_AND_REPROVISION_ZERO_STATE"),"MCFT_CAP09_V12_V4_RECOVERY_ACK_REQUIRED");
+  need(!/^  schedule:/m.test(current)&&!/^  workflow_run:/m.test(current)&&!/^  workflow_call:/m.test(current),"MCFT_CAP09_V12_V4_RECOVERY_AUTOMATIC_TRIGGER_FORBIDDEN");
+}
 function main(){
   const auth=JSON.parse(text(AUTH_V2));
   need(auth.schema_version==="geox_mcft_cap09_t4r1_actual_formal_store_authority_v2"&&auth.status==="CANDIDATE","MCFT_CAP09_V12_V4_AUTHORITY_V2_REQUIRED");
@@ -66,7 +79,8 @@ function main(){
   has(P.finalClosure,'actual_formal_generation: "v4"',"MCFT_CAP09_V12_V4_FINAL_CLOSURE_V4_REQUIRED");
 
   const changed=execFileSync("git",["diff","--name-only",`${BASE}..HEAD`],{encoding:"utf8"}).trim().split("\n").filter(Boolean);
-  for(const historical of [".github/workflows/mcft-cap-09-t4r1-formal-v3-prebootstrap-recovery.yml",".github/workflows/mcft-cap-09-t4r1-formal-v3-o01-recovery.yml","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json",RECOVERY_AUTH]) need(!changed.includes(historical),`MCFT_CAP09_V12_V4_HISTORICAL_FORENSIC_MUTATION_FORBIDDEN:${historical}`);
-  console.log(JSON.stringify({schema_version:"geox_mcft_cap09_v12_v4_successor_pending_acceptance_v1",status:"PASS",qualification_generation:"v12",formal_store_generation:"v4",failed_v3_archive_required:true,historical_failed_v3_forensics_unchanged:true,production_canonical_core_reimplementation:false,formal_effect:false}));
+  for(const historical of [".github/workflows/mcft-cap-09-t4r1-formal-v3-prebootstrap-recovery.yml","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json",RECOVERY_AUTH]) need(!changed.includes(historical),`MCFT_CAP09_V12_V4_HISTORICAL_FORENSIC_MUTATION_FORBIDDEN:${historical}`);
+  if(changed.includes(RECOVERY_WORKFLOW))proveAuthorizedRecoveryExtractionHotfix();
+  console.log(JSON.stringify({schema_version:"geox_mcft_cap09_v12_v4_successor_pending_acceptance_v1",status:"PASS",qualification_generation:"v12",formal_store_generation:"v4",failed_v3_archive_required:true,historical_failed_v3_forensics_unchanged:true,authorized_o01_recovery_executor_hotfix:changed.includes(RECOVERY_WORKFLOW),production_canonical_core_reimplementation:false,formal_effect:false}));
 }
 try{main()}catch(e){console.error(e instanceof Error?e.message:String(e));process.exitCode=1}
