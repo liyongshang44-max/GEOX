@@ -5,8 +5,8 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t4r1_24h_v3";
-const FAILED_FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t4r1_24h_v2";
+const FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t4r1_24h_v4";
+const FAILED_FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_o01_32660018684";
 const MIN_ARM_TO_O00_LEAD_MINUTES = 35;
 const EXPECTED_RECORD_TYPES = ["future_et0_assumption_v1", "future_weather_assumption_v1", "soil_moisture_observation_v1"];
 
