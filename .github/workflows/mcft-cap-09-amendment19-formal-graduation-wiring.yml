@@ -63,9 +63,11 @@ jobs:
         run: |
           set -euo pipefail
           f=.github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml
+          legacy_run_key='CLOSURE_''PERSISTENT_RUN_ID'
+          legacy_artifact_key='CLOSURE_''PERSISTENT_ARTIFACT_ID'
           ! grep -Eq '^  workflow_dispatch:' "$f"
-          ! grep -Fq 'CLOSURE_PERSISTENT_RUN_ID' "$f"
-          ! grep -Fq 'CLOSURE_PERSISTENT_ARTIFACT_ID' "$f"
+          ! grep -Fq "$legacy_run_key" "$f"
+          ! grep -Fq "$legacy_artifact_key" "$f"
           ! grep -Fq 'DATABASE_URL' "$f"
           ! grep -Fq 'FORMAL_RAW_S3_SECRET_ACCESS_KEY' "$f"
           grep -Fq 'CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V2.cjs' "$f"
