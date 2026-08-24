@@ -25,6 +25,7 @@ const REQUIRED_STATUS_KEYS = [
   "SCHEMA_ENV_PREFLIGHT",
   "FULL_CHAIN_READBACK",
 ];
+const READ_ONLY_ZERO_FIELDS = ["database_write_count", "runtime_write_count", "scheduler_write_count", "provider_request_count", "r2_request_count"];
 
 function fail(code) { throw new Error(code); }
 function need(value, code) { if (!value) fail(code); }
@@ -54,7 +55,6 @@ function classify(persistent, subject, authority = authorityFromDisk()) {
   subject = exactSubject(subject);
   const q = validateAuthority(authority);
   need(persistent?.schema_version === PERSISTENT_SCHEMA, "AM19_GRADUATION_TRIGGER_V2_PERSISTENT_SCHEMA_REQUIRED");
-  need(persistent.status === "PASS", `AM19_GRADUATION_TRIGGER_V2_FRESH_PASS_REQUIRED:${String(persistent?.status)}`);
   need(persistent.subject_sha === subject, "AM19_GRADUATION_TRIGGER_V2_PERSISTENT_SUBJECT_REQUIRED");
   need(persistent.qualified_subject_sha === subject, "AM19_GRADUATION_TRIGGER_V2_QUALIFIED_SUBJECT_REQUIRED");
   need(persistent.main_database_name === q.qualification_database, "AM19_GRADUATION_TRIGGER_V2_MAIN_DATABASE_REQUIRED");
@@ -63,10 +63,37 @@ function classify(persistent, subject, authority = authorityFromDisk()) {
   need(persistent.blocked_database_name !== q.previous_blocked_database, "AM19_GRADUATION_TRIGGER_V2_BLOCKED_V11_REUSE_FORBIDDEN");
   need(persistent.crop_authority_id === CROP_AUTHORITY, "AM19_GRADUATION_TRIGGER_V2_T4R1_CROP_AUTHORITY_REQUIRED");
   need(persistent.crop_context_materialization_profile === CROP_MATERIALIZATION_PROFILE, "AM19_GRADUATION_TRIGGER_V2_T4R1_CROP_MATERIALIZATION_REQUIRED");
-  need(Number(persistent.static_blocker_count) === 0, "AM19_GRADUATION_TRIGGER_V2_ZERO_STATIC_BLOCKERS_REQUIRED");
-  for (const key of REQUIRED_STATUS_KEYS) need(persistent.machine_statuses?.[key] === "PASS", `AM19_GRADUATION_TRIGGER_V2_MACHINE_STATUS_REQUIRED:${key}`);
-  need(persistent.final_actual_24h_still_required === true && persistent.final_actual_24h_substituted_by_this_run === false, "AM19_GRADUATION_TRIGGER_V2_FINAL_REAL_24H_REQUIRED");
+  need(persistent.final_actual_24h_still_required === true, "AM19_GRADUATION_TRIGGER_V2_FINAL_REAL_24H_REQUIRED");
   need(persistent.future_formal_epoch_selected === false && persistent.formal_o00_started === false && persistent.mcft_cap09_completed === false, "AM19_GRADUATION_TRIGGER_V2_PREMATURE_FORMAL_EFFECT_FORBIDDEN");
+
+  if (persistent.status === "PASS") {
+    need(Number(persistent.static_blocker_count) === 0, "AM19_GRADUATION_TRIGGER_V2_ZERO_STATIC_BLOCKERS_REQUIRED");
+    for (const key of REQUIRED_STATUS_KEYS) need(persistent.machine_statuses?.[key] === "PASS", `AM19_GRADUATION_TRIGGER_V2_MACHINE_STATUS_REQUIRED:${key}`);
+    need(persistent.final_actual_24h_substituted_by_this_run === false, "AM19_GRADUATION_TRIGGER_V2_FINAL_REAL_24H_NON_SUBSTITUTION_REQUIRED");
+    return {
+      schema_version: "geox_mcft_cap09_amendment19_persistent_graduation_trigger_classification_v2",
+      status: "PASS",
+      subject_sha: subject,
+      qualification_generation: "v12",
+      main_database_name: q.qualification_database,
+      blocked_database_name: q.blocked_database,
+      previous_generation_reuse_forbidden: true,
+      crop_authority_id: CROP_AUTHORITY,
+      crop_context_materialization_profile: CROP_MATERIALIZATION_PROFILE,
+      trigger_mode: "FRESH_V12_QUALIFICATION",
+      fresh_pass: true,
+      read_only: false,
+      new_machine_gate_claim: true,
+      final_actual_24h_still_required: true,
+      formal_o00_started: false,
+      mcft_cap09_completed: false,
+    };
+  }
+
+  need(persistent.status === "ALREADY_QUALIFIED_READ_ONLY", `AM19_GRADUATION_TRIGGER_V2_FRESH_OR_V12_READ_ONLY_REQUIRED:${String(persistent.status)}`);
+  for (const key of READ_ONLY_ZERO_FIELDS) need(Number(persistent[key]) === 0, `AM19_GRADUATION_TRIGGER_V2_READ_ONLY_ZERO_REQUIRED:${key}`);
+  need(persistent.new_machine_gate_claim === false, "AM19_GRADUATION_TRIGGER_V2_READ_ONLY_NEW_GATE_FORBIDDEN");
+  need(persistent.existing_success_evidence_unchanged === true, "AM19_GRADUATION_TRIGGER_V2_READ_ONLY_EXISTING_EVIDENCE_REQUIRED");
   return {
     schema_version: "geox_mcft_cap09_amendment19_persistent_graduation_trigger_classification_v2",
     status: "PASS",
@@ -77,10 +104,11 @@ function classify(persistent, subject, authority = authorityFromDisk()) {
     previous_generation_reuse_forbidden: true,
     crop_authority_id: CROP_AUTHORITY,
     crop_context_materialization_profile: CROP_MATERIALIZATION_PROFILE,
-    trigger_mode: "FRESH_V12_QUALIFICATION_ONLY",
-    fresh_pass: true,
-    read_only: false,
-    new_machine_gate_claim: true,
+    trigger_mode: "IDEMPOTENT_V12_READ_ONLY_NO_GATE",
+    fresh_pass: false,
+    read_only: true,
+    new_machine_gate_claim: false,
+    existing_success_evidence_unchanged: true,
     final_actual_24h_still_required: true,
     formal_o00_started: false,
     mcft_cap09_completed: false,
@@ -121,13 +149,26 @@ function selftest() {
   };
   const pass = classify(fresh, subject, authority);
   need(pass.status === "PASS" && pass.qualification_generation === "v12" && pass.new_machine_gate_claim === true, "AM19_GRADUATION_TRIGGER_V2_SELFTEST_PASS_FAILED");
+  const readOnly = {
+    ...fresh,
+    status: "ALREADY_QUALIFIED_READ_ONLY",
+    database_write_count: 0,
+    runtime_write_count: 0,
+    scheduler_write_count: 0,
+    provider_request_count: 0,
+    r2_request_count: 0,
+    new_machine_gate_claim: false,
+    existing_success_evidence_unchanged: true,
+  };
+  const replay = classify(readOnly, subject, authority);
+  need(replay.read_only === true && replay.new_machine_gate_claim === false, "AM19_GRADUATION_TRIGGER_V2_SELFTEST_READ_ONLY_FAILED");
   const negatives = [
     ["v11_main", { ...fresh, main_database_name: authority.qualification_generation.previous_qualification_database }, "AM19_GRADUATION_TRIGGER_V2_MAIN_DATABASE_REQUIRED"],
     ["v11_blocked", { ...fresh, blocked_database_name: authority.qualification_generation.previous_blocked_database }, "AM19_GRADUATION_TRIGGER_V2_BLOCKED_DATABASE_REQUIRED"],
-    ["read_only", { ...fresh, status: "ALREADY_QUALIFIED_READ_ONLY" }, "AM19_GRADUATION_TRIGGER_V2_FRESH_PASS_REQUIRED:ALREADY_QUALIFIED_READ_ONLY"],
     ["blocker", { ...fresh, static_blocker_count: 1 }, "AM19_GRADUATION_TRIGGER_V2_ZERO_STATIC_BLOCKERS_REQUIRED"],
     ["machine", { ...fresh, machine_statuses: { ...machine_statuses, MODE_B: "FAIL" } }, "AM19_GRADUATION_TRIGGER_V2_MACHINE_STATUS_REQUIRED:MODE_B"],
     ["premature", { ...fresh, formal_o00_started: true }, "AM19_GRADUATION_TRIGGER_V2_PREMATURE_FORMAL_EFFECT_FORBIDDEN"],
+    ["read_only_write", { ...readOnly, database_write_count: 1 }, "AM19_GRADUATION_TRIGGER_V2_READ_ONLY_ZERO_REQUIRED:database_write_count"],
   ];
   for (const [name, value, expected] of negatives) {
     let observed = "";
@@ -139,7 +180,7 @@ function selftest() {
     status: "PASS",
     qualification_generation: "v12",
     previous_generation_reuse_forbidden: true,
-    fresh_only: true,
+    v12_read_only_creates_new_gate: false,
     negative_case_count: negatives.length,
   }));
 }
