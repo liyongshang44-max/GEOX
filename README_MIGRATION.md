@@ -3016,3 +3016,678 @@ Hard boundaries:
 - P24 creates no Field Memory record.
 - P24 creates no runtime model update.
 
+---
+
+## P25 AO-ACT Receipt Controlled Intake Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p25_ao_act_receipt_controlled_intake_gate_v0
+- Commit: 7aee08b4e6ad26123386c8c538f8ae44c7cfad68
+
+Frozen scope:
+- Controlled AO-ACT receipt intake and bounded operation-plan transition/readback.
+
+Acceptance:
+- node scripts/governance_acceptance/P25_15_COMPLETION_REVIEW_ACCEPTANCE.cjs
+
+Hard boundaries:
+- Terminal execution-chain state is not outcome truth; no acceptance result, outcome/effect/ROI, Field Memory, recommendation, or runtime-model mutation is implied.
+
+---
+
+## P26 Formal Acceptance / Outcome Boundary Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p26_formal_acceptance_outcome_boundary_gate_v0
+- Commit: 28efad44377a0f2e3583bae134b028e91e061ce8
+
+Frozen scope:
+- Controlled acceptance_result_v1 fixture-gate and formal acceptance/outcome boundary.
+
+Acceptance:
+- node scripts/governance_acceptance/P26_15_COMPLETION_REVIEW_ACCEPTANCE.cjs
+
+Hard boundaries:
+- Fixture acceptance is not production acceptance runtime, outcome success, ROI, Field Memory, recommendation authority, or model learning.
+
+---
+
+## P27 Policy-Controlled Outcome / ROI Boundary Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p27_policy_controlled_outcome_roi_boundary_gate_v0
+- Commit: 2b2380e5bfaef04c37af61e3c2ba153491d0dcda
+
+Frozen scope:
+- Policy-controlled outcome review and ROI boundary semantics.
+
+Acceptance:
+- node scripts/governance_acceptance/P27_16_COMPLETION_REVIEW_ACCEPTANCE.cjs
+
+Hard boundaries:
+- Outcome/ROI evidence creates no automatic Field Memory, model update, recommendation authority, or execution authority.
+
+---
+
+## P28 Policy-Controlled ROI Ledger Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p28_policy_controlled_roi_ledger_gate_v0
+- Commit: 3ab50dde03f4306c0f54e13f33f08ab2383b41e0
+
+Frozen scope:
+- Controlled roi_ledger_v1 creation/readback from qualified P27 evidence.
+
+Acceptance:
+- node scripts/governance_acceptance/P28_16_CHECK.cjs
+
+Hard boundaries:
+- No Field Memory, recommendation, problem-state transition, runtime-model update, or execution authority.
+
+---
+
+## P29 Policy-Controlled Field Memory Candidate Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p29_policy_controlled_field_memory_candidate_gate_v0
+- Commit: 9103edb98807c2138d8cfc4d6e9c6936b866cab5
+
+Frozen scope:
+- Controlled Field Memory candidate generation.
+
+Acceptance:
+- node scripts/governance_acceptance/P29_16_CHECK.cjs
+
+Hard boundaries:
+- Candidate is not committed Field Memory, training, model update, recommendation, or execution authority.
+
+---
+
+## P30 Field Memory Promotion / Commit Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p30_field_memory_promotion_commit_gate_v0
+- Commit: 2b1d2dc73deb223ff6c8f2d11af9cb520884fca7
+
+Frozen scope:
+- Explicit reviewed Field Memory promotion/commit gate.
+
+Acceptance:
+- node scripts/governance_acceptance/P30_16_CHECK.cjs
+
+Hard boundaries:
+- Field Memory commit is not automatic learning, active-model mutation, recommendation generation, or action authority.
+
+---
+
+## P31 Continuous Twin State Estimation Runtime v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p31_continuous_twin_state_estimation_runtime_v0
+- Commit: b0d00e3eee1632de2dae0dee7666da7e74c27e3f
+
+Frozen scope:
+- Controlled continuous Twin state-estimation runtime and deterministic state lineage.
+
+Acceptance:
+- node scripts/governance_acceptance/P31_16_CHECK.cjs
+
+Hard boundaries:
+- State estimate is belief/state, not forecast, recommendation, calibration application, model activation, or action authority.
+
+---
+
+## P32 Controlled Twin Forecast Projection Runtime v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Initial tag: p32_controlled_twin_forecast_projection_runtime_v0
+- Initial commit: 5cbe837a92e39d86b526011e3294fbb5b93fe041
+- Effective corrected tag: p32_controlled_twin_forecast_projection_runtime_v0_governance_correction_v2
+- Effective corrected commit: 938680917f1f0c5d9a1978df464971f524fd7add
+
+Frozen scope:
+- Controlled Twin forecast projection runtime; governance-correction-v2 is the effective P32 anchor where it differs from the initial freeze.
+
+Acceptance:
+- node scripts/twin_kernel/P32_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- Projection does not itself authorize production model activation, recommendation, action, dispatch, or ungoverned persistence; P33 consumes the corrected P32 anchor.
+
+---
+
+## P33 Controlled Twin Projection Use Activation Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p33_controlled_twin_projection_use_activation_gate_v0
+- Commit: 2adf3fda25a791870f43b2b79db617ddd334c504
+
+Frozen scope:
+- Controlled projection-use activation pointer/ledger semantics.
+
+Acceptance:
+- node scripts/twin_kernel/P33_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- Local activation pointer is not facts-table persistence or autonomous production activation authority.
+
+---
+
+## P34 Controlled Forecast Accuracy Review / Backtest Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p34_controlled_forecast_accuracy_review_backtest_gate_v0
+- Commit: 29e3a585b37807f8cd865698ddd89a151df6d529
+
+Frozen scope:
+- Controlled forecast-accuracy review/backtest ledger.
+
+Acceptance:
+- node scripts/twin_kernel/P34_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- Review is not automatic calibration, model activation, recommendation, or action authority.
+
+---
+
+## P35 Controlled Calibration Review Candidate Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p35_controlled_calibration_review_candidate_gate_v0
+- Commit: 25c2a7c34bb0377615b2dc7b3cc48f733ff74123
+
+Frozen scope:
+- Controlled calibration-review candidate boundary.
+
+Acceptance:
+- node scripts/twin_kernel/P35_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- Candidate is not calibration execution, active-model mutation, production activation, recommendation, or action authority.
+
+---
+
+## P36 Controlled Offline Calibration Trial Plan Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p36_controlled_offline_calibration_trial_plan_gate_v0
+- Commit: 387b40d54e506da4175f7a42051d635bbe53a882
+
+Frozen scope:
+- Controlled offline calibration trial-plan ledger.
+
+Acceptance:
+- node scripts/twin_kernel/P36_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- Offline plan is not calibration execution, model activation, production runtime mutation, recommendation, or action authority.
+
+---
+
+## P37 Offline Calibration Trial Execution Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p37_offline_calibration_trial_execution_gate_v0
+- Commit: e176441d6c2758de527a2c3f51d2fbeb51f3ed71
+
+Frozen scope:
+- Controlled offline calibration trial execution ledger.
+
+Acceptance:
+- node scripts/twin_kernel/P37_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- Offline trial is not production calibration activation, production DB/runtime mutation, recommendation, or action authority.
+
+---
+
+## P38 Calibration Result / Parameter Delta Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p38_calibration_result_parameter_delta_gate_v0
+- Commit: 2d8ad84e9523dc1b3689e2e13c61299c3dac22e4
+
+Frozen scope:
+- Controlled calibration-result and parameter-delta boundary.
+
+Acceptance:
+- node scripts/twin_kernel/P38_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- Parameter delta is not active-model mutation, automatic promotion, recommendation, or execution authority.
+
+---
+
+## P39 Model Version Candidate / Shadow Activation Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p39_model_version_candidate_shadow_activation_gate_v0
+- Commit: e9200439eb518ee40b08d57be9516dfda576d65f
+
+Frozen scope:
+- Controlled model-version candidate and shadow-evaluation boundary.
+
+Acceptance:
+- node scripts/twin_kernel/P39_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- Shadow candidate is not production model activation; production activation remains separately gated.
+
+---
+
+## P40 Production Twin Runtime Scheduler Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p40_production_twin_runtime_scheduler_gate_v0
+- Commit: 6f82fa55bffc6a09b49d04837c35818910ff4dcd
+
+Frozen scope:
+- Controlled Twin runtime scheduler contract/ledger.
+
+Acceptance:
+- node scripts/twin_kernel/P40_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- No uncontrolled daemon/autonomous execution loop, recommendation authority, or AO-ACT dispatch authority.
+
+---
+
+## P41 Live Evidence Ingestion SLA / Runtime Input Contract v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p41_live_evidence_ingestion_sla_runtime_input_contract_v0
+- Commit: 649988feac9d57bd929d2b13137a5e2ec8c0f903
+
+Frozen scope:
+- Live-evidence ingestion SLA and runtime-input contract.
+
+Acceptance:
+- node scripts/twin_kernel/P41_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- Evidence ingestion does not create recommendation, action, dispatch, or execution authority.
+
+---
+
+## P42 Active Twin Forecast Loop Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p42_active_twin_forecast_loop_gate_v0
+- Commit: 658cdba17ccd2a37327b52a0ff8becb694ffdf47
+
+Frozen scope:
+- Controlled active Twin forecast-loop semantics.
+
+Acceptance:
+- node scripts/twin_kernel/P42_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- Forecast loop does not autonomously approve recommendations, actions, AO-ACT tasks, or dispatch.
+
+---
+
+## P43 Forecast Residual Monitoring / Drift Detection Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p43_forecast_residual_monitoring_drift_detection_gate_v0
+- Commit: 2df3ec4c2ca2b3219a2688259cbd388190dade36
+
+Frozen scope:
+- Controlled forecast residual monitoring and drift detection.
+
+Acceptance:
+- node scripts/twin_kernel/P43_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- Drift detection is not automatic recalibration, model activation, recommendation, action, or dispatch authority.
+
+---
+
+## P44 Calibration Promotion / Active Model Activation Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p44_calibration_promotion_active_model_activation_gate_v0
+- Commit: 72ec24dd0384757524b916f33483eadad5dd1973
+
+Frozen scope:
+- Explicitly gated calibration promotion and active-model activation boundary.
+
+Acceptance:
+- node scripts/twin_kernel/P44_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- No uncontrolled/implicit auto-activation; activation remains governed and does not itself authorize AO-ACT dispatch.
+
+---
+
+## P45 Post-Activation Runtime Observability / Rollback Readiness Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p45_post_activation_runtime_observability_rollback_readiness_gate_v0
+- Commit: 364ba6dba1aa3360676e73d285e26a8ada7781ce
+
+Frozen scope:
+- Post-activation observability and rollback-readiness evidence.
+
+Acceptance:
+- node scripts/twin_kernel/P45_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- Observability/readiness is not rollback execution, recommendation approval, action approval, or dispatch authority.
+
+---
+
+## P46 Recommendation from Twin Governance Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p46_recommendation_from_twin_governance_gate_v0
+- Commit: 46006306d416972f28a14cf852cace5ac2deefd4
+
+Frozen scope:
+- Governed Twin-to-recommendation boundary.
+
+Acceptance:
+- node scripts/twin_kernel/P46_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- Recommendation remains advisory and does not directly authorize action, AO-ACT task creation, machine dispatch, or execution.
+
+---
+
+## P47 AO-ACT from Twin Dispatch Boundary Gate v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p47_ao_act_from_twin_dispatch_boundary_gate_v0
+- Commit: a06030299c8d55cf46ff483acb278959162b6e76
+
+Frozen scope:
+- Explicit governed Twin-to-AO-ACT dispatch-eligibility boundary.
+
+Acceptance:
+- node scripts/twin_kernel/P47_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- No autonomous machine dispatch or human/policy-gate bypass; dispatch eligibility is not execution completion or outcome truth.
+
+---
+
+## P48 End-to-End Production Twin Pilot Closure Gate v0 + Boundary Errata Freeze Closure
+
+Key anchors:
+- Branch: main
+- Initial tag: p48_end_to_end_production_twin_pilot_closure_gate_v0
+- Initial commit: 640768fe90444b49cc3a04ca38675f9a08d3a3c3
+- Effective corrected tag: p48_end_to_end_production_twin_pilot_closure_gate_v0_closure_boundary_errata_v0
+- Effective corrected commit: 9564ee212e59f6f2700e72a4ff620bfc04d264b9
+
+Frozen scope:
+- End-to-end production Twin pilot closure evidence; boundary errata defines the effective frozen non-autonomous boundary.
+
+Acceptance:
+- node scripts/twin_kernel/P48_ALL_ACCEPTANCE_CHECK.cjs
+
+Hard boundaries:
+- P48 must be interpreted through the effective boundary errata and does not authorize autonomous execution or silently expand pilot/runtime claims.
+
+---
+
+## P49 Twin Runtime v1 Pilot Freeze Evidence Package v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p49_twin_runtime_v1_pilot_freeze_evidence_package_v0
+- Commit: c73331746ee7b5fcb828c3ba928b0ccc0e298d73
+
+Frozen scope:
+- Twin Runtime v1 pilot freeze evidence package with PASS_WITH_LIMITATIONS.
+
+Acceptance:
+- node scripts/twin_runtime_v1/TWIN_RUNTIME_V1_E2E_ACCEPTANCE.cjs
+
+Hard boundaries:
+- Full Runtime v1 freeze is not authorized; no real-device production, AO-ACT dispatch, execution outcome, ROI, Field Memory, or autonomous-runtime claim.
+
+---
+
+## P50 Replay-Backed Production Twin Demo Runtime v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p50_replay_backed_production_twin_demo_runtime_v0
+- Commit: 48f8c9d15a152cc20c0954ac062b38432e97bf14
+
+Frozen scope:
+- Replay/time-shift-backed production Twin demo runtime.
+
+Acceptance:
+- node scripts/twin_demo_runtime/P50_REPLAY_BACKED_DEMO_RUNTIME_ACCEPTANCE.cjs
+
+Hard boundaries:
+- Replay demo does not convert P49 PASS_WITH_LIMITATIONS into live-device production-runtime freeze or real-field execution truth.
+
+---
+
+## P51 Live Evidence Gateway v1 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p51_live_evidence_gateway_v1
+- Commit: abd89623f609479118b1998791f4e5f5afcb6381
+
+Frozen scope:
+- Live Evidence Gateway v1 contract, evidence packet, and gateway runner boundary.
+
+Acceptance:
+- node scripts/live_evidence_gateway/P51_LIVE_EVIDENCE_GATEWAY_ACCEPTANCE.cjs
+
+Hard boundaries:
+- Source truth remains device-path simulation where declared; no real production-device, field execution, AO-ACT dispatch, or autonomous-action claim.
+
+---
+
+## P51.5 Gateway-Backed Twin Demo Viewer v0 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p51_5_gateway_backed_twin_demo_viewer_v0
+- Commit: 3877f520d175322b06be0a9eb7bd4b517881ec57
+
+Frozen scope:
+- Read-only gateway-backed Twin demo viewer.
+
+Acceptance:
+- node scripts/frontend_acceptance/P51_5_GATEWAY_BACKED_TWIN_DEMO_VIEWER_V0.cjs
+
+Hard boundaries:
+- Viewer does not mutate runtime state, claim a real live device, create AO-ACT authority, dispatch, or execution.
+
+---
+
+## P52 Twin Runtime Health v1 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p52_twin_runtime_health_v1
+- Commit: 755d0be9349dfb42ec24acf814378430df4feb24
+
+Frozen scope:
+- Twin Runtime Health v1 evidence/classification with READY_WITH_WARNINGS semantics.
+
+Acceptance:
+- node scripts/twin_runtime_health/P52_TWIN_RUNTIME_HEALTH_ACCEPTANCE.cjs
+
+Hard boundaries:
+- Runtime health is evidence/readiness only; it does not start execution, authorize dispatch, or create field-action authority.
+
+---
+
+## P53 Field Pilot Plan v1 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p53_field_pilot_plan_v1
+- Commit: 9292b0db079bdedc586e7a5acd0c3ee50ff57687
+
+Frozen scope:
+- Field Pilot Plan v1 with PLAN_READY_WITH_LIMITATIONS.
+
+Acceptance:
+- node scripts/field_pilot_plan/P53_FIELD_PILOT_PLAN_ACCEPTANCE.cjs
+
+Hard boundaries:
+- Planning is not pilot execution, real-device deployment, AO-ACT dispatch, field action, or full-runtime freeze authority.
+
+---
+
+## P54 Field Pilot Readiness Review Gate v1 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p54_field_pilot_readiness_review_gate_v1
+- Commit: cba5573a9aa8a50317aa1c0fd36c195a7a9d8ae2
+
+Frozen scope:
+- Field-pilot readiness review; progression is limited to the P55 runtime-health-service gate under stated limitations.
+
+Acceptance:
+- node scripts/field_pilot_readiness/P54_FIELD_PILOT_READINESS_REVIEW_ACCEPTANCE.cjs
+
+Hard boundaries:
+- Readiness review is not pilot execution, dispatch authority, real-field execution evidence, or full-runtime freeze.
+
+---
+
+## P55 Runtime Health Service Gate v1 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p55_runtime_health_service_gate_v1
+- Commit: 5224b7a48f8892b24c88f29ceb83df997654a796
+
+Frozen scope:
+- Runtime Health Service gate and read-only health evidence.
+
+Acceptance:
+- node scripts/runtime_health_service/P55_RUNTIME_HEALTH_SERVICE_GATE_ACCEPTANCE.cjs
+
+Hard boundaries:
+- Health service creates no machine execution, AO-ACT dispatch, field action, ROI, Field Memory, or autonomous-runtime authority.
+
+---
+
+## P56 Replay Execution Authorization Gate v1 Freeze Closure
+
+Key anchors:
+- Branch: main
+- Tag: p56_replay_execution_authorization_gate_v1
+- Commit: b58188705cde8ce4d0de0e1b71af3db40e88bfa7
+
+Frozen scope:
+- Explicit replay-execution authorization gate and controlled replay boundary.
+
+Acceptance:
+- node scripts/replay_execution_gate/P56_REPLAY_EXECUTION_GATE_ACCEPTANCE.cjs
+
+Hard boundaries:
+- Replay authorization does not authorize a real machine, real-field execution, live-device production operation, or autonomous dispatch.
+
+---
+
+## P57 Full Runtime v1 Replay-Backed Freeze v1 Closure
+
+Key anchors:
+- Branch: main
+- Tag: p57_full_runtime_v1_replay_backed_freeze_v1
+- Commit: c2c7a02c57e47622fb572f691615fa8922bd249c
+
+Frozen scope:
+- Full Runtime v1 replay-backed audit freeze with FULL_RUNTIME_V1_REPLAY_BACKED_FROZEN_WITH_LIMITATIONS.
+
+Acceptance:
+- node scripts/full_runtime_freeze/P57_FULL_RUNTIME_FREEZE_ACCEPTANCE.cjs
+
+Hard boundaries:
+- Live-device production runtime remains unfrozen; no real-device deployment, real-field execution, AO-ACT dispatch, outcome, ROI, Field Memory, or autonomous live-runtime claim.
+
+---
+
+## H63 Pilot Readiness Product Surface v1 Freeze Snapshot
+
+Key anchors:
+- Branch: main
+- Tag: h63_pilot_readiness_product_surface_v1
+- Commit: 1e3d8ac3bdf0b155890c83caaf106a7e7ba83500
+
+Frozen scope:
+- Operator Pilot / Pilot Readiness product surface in the existing operator shell.
+
+Acceptance:
+- node scripts/frontend_acceptance/ACCEPTANCE_H63_OPERATOR_PILOT_V1.cjs
+- pnpm run typecheck:web
+- pnpm run build:web
+
+Hard boundaries:
+- Review-only/read-only product surface; no backend, DB, runtime, execution, dispatch, route-topology authority, or new production capability.
+
+---
+
+## H64 Customer Portal Cleanup v1 Freeze Snapshot
+
+Key anchors:
+- Branch: main
+- Tag: h64_customer_portal_cleanup_v1
+- Commit: a4385ff58f5626c7f1929b0eef005504537f948a
+
+Frozen scope:
+- Customer Portal presentation/shell cleanup under existing route ownership.
+
+Acceptance:
+- node scripts/frontend_acceptance/ACCEPTANCE_H64_CUSTOMER_PORTAL_CLEANUP_V1.cjs
+- pnpm run typecheck:web
+- pnpm run build:web
+
+Hard boundaries:
+- No operator/admin route ownership change and no backend, DB, migration, contracts, fixtures, runtime semantics, dispatch, or execution-authority change.
+
+---
+
+## H66 Design System Hardening v1 Freeze Snapshot
+
+Key anchors:
+- Branch: main
+- Tag: h66_design_system_hardening_v1
+- Commit: a085dc833dd4286f6a7fa6026521167a842c1994
+
+Frozen scope:
+- Frontend design-system hardening, shared surface primitives, replay-demo CSS, and presentation/encoding guards.
+
+Acceptance:
+- node scripts/frontend_acceptance/ACCEPTANCE_H66_DESIGN_SYSTEM_HARDENING_V1.cjs
+- pnpm run typecheck:web
+- pnpm run build:web
+
+Hard boundaries:
+- No new product routes/topology, backend, DB, contracts, fixtures, packages, runtime mutation, machine execution, or dispatch-authority change.
