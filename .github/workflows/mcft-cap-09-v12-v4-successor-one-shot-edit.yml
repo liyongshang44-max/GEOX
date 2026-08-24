@@ -6,7 +6,7 @@ on:
       - '.github/workflows/mcft-cap-09-v12-v4-successor-one-shot-edit.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   exact-branch-edit:
@@ -21,7 +21,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
       - name: Require exact PR identity and protected-main base
         shell: bash
         run: |
@@ -55,6 +55,7 @@ jobs:
                   p.write_text(s.replace(old_db, new_db))
           if not any(counts.values()):
               raise SystemExit('MCFT_CAP09_V12_V4_NO_OPERATIONAL_V3_TOKENS_FOUND')
+          Path('/tmp/v12-v4-counts.txt').write_text(repr(counts) + '\n')
           print(counts)
       - name: Require diff is limited to declared operational bindings
         shell: bash
@@ -63,21 +64,14 @@ jobs:
           allowed='^(.github/workflows/mcft-cap-09-amendment19-formal-(a0-bootstrap|hourly-evidence|live-runner|final-readback)\.yml|scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1\.cjs|scripts/runtime_acceptance/(VERIFY_MCFT_CAP_09_AMENDMENT_19_FORMAL_DOWNSTREAM_ZERO_V1\.ts|READBACK_MCFT_CAP_09_AMENDMENT_19_FORMAL_FINAL_V1\.ts))$'
           git diff --name-only | while read -r p; do [[ "$p" =~ $allowed ]] || { echo "MCFT_CAP09_V12_V4_UNDECLARED_EDIT:$p" >&2; exit 1; }; done
           test -n "$(git diff --name-only)"
-      - name: Commit exact operational token edits
-        shell: bash
-        env:
-          BRANCH: fix/mcft-cap09-t4r1-v12-formal-v4-successor
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add \
-            scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs \
-            scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_AMENDMENT_19_FORMAL_DOWNSTREAM_ZERO_V1.ts \
-            scripts/runtime_acceptance/READBACK_MCFT_CAP_09_AMENDMENT_19_FORMAL_FINAL_V1.ts \
-            .github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml \
-            .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml \
-            .github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml \
-            .github/workflows/mcft-cap-09-amendment19-formal-final-readback.yml
-          git commit -m 'fix(mcft-cap09): bind remaining active Formal chain to v4 store'
-          git push origin "HEAD:$BRANCH"
+          git diff --check
+          git diff > /tmp/v12-v4-operational-bindings.patch
+      - name: Upload verified replacement patch
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v12-v4-verified-operational-bindings-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}
+          path: |
+            /tmp/v12-v4-operational-bindings.patch
+            /tmp/v12-v4-counts.txt
+          if-no-files-found: error
+          retention-days: 14
