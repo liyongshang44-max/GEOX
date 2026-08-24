@@ -4,38 +4,29 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-QUALIFICATION-COMPATIBILITY-CONTRACT-V1.json'
-      - 'scripts/governance_acceptance/ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs'
-      - 'scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V2.json'
+      - 'scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V2.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V12_GRADUATION_GATE_V2.cjs'
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.cjs'
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.cjs'
-      - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_INPUT_V1.cjs'
-      - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_ENVELOPE_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_FORMAL_EPOCH_GRADUATION_GATE_V1.cjs'
   workflow_run:
     workflows: ['mcft-cap-09-t4r1-amendment19-persistent-24t-qualification']
     types: [completed]
-  workflow_dispatch:
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: mcft-cap09-am19-formal-graduation-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.event_name == 'workflow_dispatch' && 'compatible-replay' || 'live-main' }}
+  group: mcft-cap09-am19-formal-graduation-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'live-main' }}
   cancel-in-progress: false
-
-env:
-  CLOSURE_QUALIFICATION_SHA: abf0aa121001480f01ad4e39364b1df13f3c26eb
-  CLOSURE_PERSISTENT_RUN_ID: '32638502092'
-  CLOSURE_PERSISTENT_ARTIFACT_ID: '9493316708'
-  CLOSURE_PERSISTENT_ARTIFACT_NAME: mcft-cap09-t4r1-am19-persistent24-abf0aa121001480f01ad4e39364b1df13f3c26eb-32638502092
-  CLOSURE_PERSISTENT_ARTIFACT_DIGEST: sha256:3a6f01a9c1da1de4522ba9d745e3619b7c116ece45bde39ebec10d8637cb4544
 
 jobs:
   static-proof:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
     env:
       DEPLOYMENT_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
@@ -44,112 +35,41 @@ jobs:
           ref: ${{ env.DEPLOYMENT_SHA }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Require exact PR checkout and v11 source ancestor
+
+      - name: Require exact PR checkout and current protected-main base
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$DEPLOYMENT_SHA"
           test "${{ github.event.pull_request.base.ref }}" = 'main'
-          git cat-file -e "$CLOSURE_QUALIFICATION_SHA^{commit}"
+          git fetch --no-tags origin main
+          test "${{ github.event.pull_request.base.sha }}" = "$(git rev-parse origin/main)" || { echo 'AM19_V12_GRADUATION_PR_BASE_MUST_EQUAL_CURRENT_MAIN' >&2; exit 1; }
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20.11.1'
-      - name: Graduation and compatibility selftests
+
+      - name: Prove fresh-v12 Graduation semantics without live evidence
         run: |
           set -euo pipefail
-          node scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs --selftest
-          node scripts/governance_acceptance/ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs --selftest
+          node scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V2.cjs --selftest
           node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.cjs --selftest
           node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.cjs --selftest
-          node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_INPUT_V1.cjs --selftest
-          node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_ENVELOPE_V1.cjs --selftest
           node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_FORMAL_EPOCH_GRADUATION_GATE_V1.cjs --selftest
-      - name: Attest frozen v11 qualification to exact PR head
-        run: >-
-          node scripts/governance_acceptance/ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs
-          "$CLOSURE_QUALIFICATION_SHA" "$DEPLOYMENT_SHA"
-          acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json
-      - name: Require control-plane-only carry-forward
-        shell: node {0}
-        run: |
-          const fs=require('node:fs');
-          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json','utf8'));
-          if(p.status!=='PASS'||p.qualification_subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA||p.deployment_subject_sha!==process.env.DEPLOYMENT_SHA)throw new Error('AM19_V11_COMPAT_PR_IDENTITY_REQUIRED');
-          if(p.source_governed_semantic_digest!==p.deployment_governed_semantic_digest||p.governed_changed_paths.length!==0||p.qualification_reexecution_required!==false)throw new Error('AM19_V11_COMPAT_PR_SEMANTIC_EQUIVALENCE_REQUIRED');
-          if(p.formal_effect!==false||p.human_override_used!==false)throw new Error('AM19_V11_COMPAT_PR_ZERO_EFFECT_REQUIRED');
-      - name: Download real frozen v11 qualification artifact in PR
-        uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          run-id: ${{ env.CLOSURE_PERSISTENT_RUN_ID }}
-          name: ${{ env.CLOSURE_PERSISTENT_ARTIFACT_NAME }}
-          path: persistent-evidence
-      - name: Resolve exact real evidence set
-        id: pr-evidence
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V12_GRADUATION_GATE_V2.cjs
+
+      - name: Require PR path is successor-only and zero-effect
         shell: bash
         run: |
           set -euo pipefail
-          persistent=$(find persistent-evidence -type f -name 'MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_RESULT.json' -print)
-          engineering=$(find persistent-evidence -type f -name 'MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json' -print)
-          rehydration=$(find persistent-evidence -type f -name 'MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json' -print)
-          test "$(printf '%s\n' "$persistent"|sed '/^$/d'|wc -l)" -eq 1
-          test "$(printf '%s\n' "$engineering"|sed '/^$/d'|wc -l)" -eq 1
-          test "$(printf '%s\n' "$rehydration"|sed '/^$/d'|wc -l)" -eq 1
-          echo "persistent=$persistent" >> "$GITHUB_OUTPUT"
-          echo "engineering=$engineering" >> "$GITHUB_OUTPUT"
-          echo "rehydration=$rehydration" >> "$GITHUB_OUTPUT"
-      - name: Authenticate real v11 source evidence
-        shell: node {0}
-        env:
-          PERSISTENT_RESULT: ${{ steps.pr-evidence.outputs.persistent }}
-        run: |
-          const fs=require('node:fs');const p=JSON.parse(fs.readFileSync(process.env.PERSISTENT_RESULT,'utf8'));
-          if(p.status!=='PASS'||p.subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA||p.qualified_subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA)throw new Error('AM19_V11_REAL_QUALIFICATION_SUBJECT_REQUIRED');
-          if(p.main_database_name!=='geox_mcft_cap09_s6_accel24t_am19_v11'||p.blocked_database_name!=='geox_mcft_cap09_s6_accel24t_am19_blocked_v11'||p.static_blocker_count!==0)throw new Error('AM19_V11_REAL_EVIDENCE_REQUIRED');
-      - name: Classify immutable v11 qualification
-        run: >-
-          node scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs
-          "${{ steps.pr-evidence.outputs.persistent }}" "$CLOSURE_QUALIFICATION_SHA"
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_CLASSIFICATION_V1.json
-      - name: Reprove production cutover
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER.cjs
-      - name: Assemble compatible Graduation input
-        run: >-
-          node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_INPUT_V1.cjs
-          "${{ steps.pr-evidence.outputs.persistent }}" "${{ steps.pr-evidence.outputs.engineering }}" "${{ steps.pr-evidence.outputs.rehydration }}"
-          acceptance-output/MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER_RESULT.json
-          "$CLOSURE_QUALIFICATION_SHA" "$DEPLOYMENT_SHA"
-          acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
-      - name: Open machine-only gate
-        run: >-
-          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_FORMAL_EPOCH_GRADUATION_GATE_V1.cjs
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
-          > acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json
-      - name: Freeze v11 source metadata
-        shell: node {0}
-        run: |
-          const fs=require('node:fs');fs.mkdirSync('acceptance-output',{recursive:true});
-          fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_METADATA_V1.json',JSON.stringify({source_persistent_workflow_run_id:Number(process.env.CLOSURE_PERSISTENT_RUN_ID),source_persistent_artifact_id:Number(process.env.CLOSURE_PERSISTENT_ARTIFACT_ID),source_persistent_artifact_name:process.env.CLOSURE_PERSISTENT_ARTIFACT_NAME,source_persistent_artifact_digest:process.env.CLOSURE_PERSISTENT_ARTIFACT_DIGEST,graduation_workflow_run_id:Number(process.env.GITHUB_RUN_ID),opened_at:new Date().toISOString()},null,2)+'\n');
-      - name: Assemble compatible immutable Graduation envelope
-        run: >-
-          node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_ENVELOPE_V1.cjs
-          "${{ steps.pr-evidence.outputs.persistent }}" "${{ steps.pr-evidence.outputs.engineering }}" "${{ steps.pr-evidence.outputs.rehydration }}"
-          acceptance-output/MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER_RESULT.json
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json
-          "$CLOSURE_QUALIFICATION_SHA" "$DEPLOYMENT_SHA"
-          acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_METADATA_V1.json
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.json
-      - name: Require real-artifact closure replay passes before merge
-        shell: node {0}
-        run: |
-          const fs=require('node:fs');const i=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json','utf8'));const g=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json','utf8'));const e=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.json','utf8'));
-          if(i.status!=='PASS'||i.subject_sha!==process.env.DEPLOYMENT_SHA||i.qualification_subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA)throw new Error('AM19_V11_COMPAT_PR_INPUT_REQUIRED');
-          if(g.status!=='PASS'||g.formal_epoch_creation_gate!=='OPEN'||g.required_status_count!==13||g.static_blocker_count!==0)throw new Error('AM19_V11_COMPAT_PR_GATE_OPEN_REQUIRED');
-          if(e.status!=='PASS'||e.subject_sha!==process.env.DEPLOYMENT_SHA||e.qualification_subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA||e.deployment_subject_sha!==process.env.DEPLOYMENT_SHA||e.formal_o00_started!==false||e.formal_database_write_count!==0||e.mcft_cap09_completed!==false)throw new Error('AM19_V11_COMPAT_PR_ENVELOPE_REQUIRED');
+          f=.github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml
+          ! grep -Eq '^  workflow_dispatch:' "$f"
+          ! grep -Fq 'CLOSURE_PERSISTENT_RUN_ID' "$f"
+          ! grep -Fq 'CLOSURE_PERSISTENT_ARTIFACT_ID' "$f"
+          ! grep -Fq 'DATABASE_URL' "$f"
+          ! grep -Fq 'FORMAL_RAW_S3_SECRET_ACCESS_KEY' "$f"
+          grep -Fq 'CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V2.cjs' "$f"
+          grep -Fq "workflows: ['mcft-cap-09-t4r1-amendment19-persistent-24t-qualification']" "$f"
 
   live-formal-gate-preflight:
     if: >-
@@ -167,19 +87,33 @@ jobs:
           ref: ${{ env.SUBJECT_SHA }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Require triggering subject is exact protected main
+
+      - name: Require triggering qualification subject is exact protected main
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags origin main
+          test "${{ github.event.workflow_run.name }}" = 'mcft-cap-09-t4r1-amendment19-persistent-24t-qualification'
+          test "${{ github.event.workflow_run.head_branch }}" = 'main'
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          git fetch --no-tags origin main
           test "$(git rev-parse origin/main)" = "$SUBJECT_SHA" || { echo 'AM19_GRADUATION_WIRING_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
-      - name: Resolve triggering persistent artifact
+
+      - name: Resolve exact triggering persistent artifact
         id: source-artifact
         uses: actions/github-script@v7
         with:
           script: |
-            const runId=Number(context.payload.workflow_run.id);const {owner,repo}=context.repo;const r=await github.rest.actions.listWorkflowRunArtifacts({owner,repo,run_id:runId,per_page:100});const prefix=`mcft-cap09-t4r1-am19-persistent24-${process.env.SUBJECT_SHA}-`;const m=r.data.artifacts.filter(a=>!a.expired&&a.name.startsWith(prefix));if(m.length!==1)throw new Error(`AM19_GRADUATION_EXACT_ONE_SOURCE_ARTIFACT_REQUIRED:${m.length}`);if(!/^sha256:[0-9a-f]{64}$/.test(String(m[0].digest||'')))throw new Error('AM19_GRADUATION_SOURCE_ARTIFACT_DIGEST_REQUIRED');core.setOutput('artifact_name',m[0].name);core.setOutput('artifact_id',String(m[0].id));core.setOutput('artifact_digest',m[0].digest);
+            const runId = Number(context.payload.workflow_run.id);
+            const { owner, repo } = context.repo;
+            const response = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: runId, per_page: 100 });
+            const prefix = `mcft-cap09-t4r1-am19-persistent24-${process.env.SUBJECT_SHA}-`;
+            const matches = response.data.artifacts.filter(a => !a.expired && a.name.startsWith(prefix));
+            if (matches.length !== 1) throw new Error(`AM19_GRADUATION_EXACT_ONE_SOURCE_ARTIFACT_REQUIRED:${matches.length}`);
+            if (!/^sha256:[0-9a-f]{64}$/.test(String(matches[0].digest || ''))) throw new Error('AM19_GRADUATION_SOURCE_ARTIFACT_DIGEST_REQUIRED');
+            core.setOutput('artifact_name', matches[0].name);
+            core.setOutput('artifact_id', String(matches[0].id));
+            core.setOutput('artifact_digest', matches[0].digest);
+
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
@@ -187,36 +121,66 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           name: ${{ steps.source-artifact.outputs.artifact_name }}
           path: persistent-evidence
-      - name: Resolve evidence files
+
+      - name: Resolve exact persistent evidence set
         id: evidence
         shell: bash
         run: |
           set -euo pipefail
-          persistent=$(find persistent-evidence -type f -name 'MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_RESULT.json' -print); engineering=$(find persistent-evidence -type f -name 'MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json' -print); rehydration=$(find persistent-evidence -type f -name 'MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json' -print)
-          test -n "$persistent"; test -n "$engineering"; test -n "$rehydration"
-          echo "persistent=$persistent" >> "$GITHUB_OUTPUT"; echo "engineering=$engineering" >> "$GITHUB_OUTPUT"; echo "rehydration=$rehydration" >> "$GITHUB_OUTPUT"
+          persistent=$(find persistent-evidence -type f -name 'MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_RESULT.json' -print)
+          engineering=$(find persistent-evidence -type f -name 'MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json' -print)
+          rehydration=$(find persistent-evidence -type f -name 'MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json' -print)
+          test "$(printf '%s\n' "$persistent" | sed '/^$/d' | wc -l)" -eq 1
+          test "$(printf '%s\n' "$engineering" | sed '/^$/d' | wc -l)" -eq 1
+          test "$(printf '%s\n' "$rehydration" | sed '/^$/d' | wc -l)" -eq 1
+          echo "persistent=$persistent" >> "$GITHUB_OUTPUT"
+          echo "engineering=$engineering" >> "$GITHUB_OUTPUT"
+          echo "rehydration=$rehydration" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20.11.1'
-      - name: Classify fresh qualification
-        run: >-
-          node scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs
-          "${{ steps.evidence.outputs.persistent }}" "$SUBJECT_SHA"
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_CLASSIFICATION_V1.json
-      - name: Reprove production cutover
+
+      - name: Classify exact-subject v12 qualification
+        id: classification
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V2.cjs \
+            "${{ steps.evidence.outputs.persistent }}" "$SUBJECT_SHA" \
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_CLASSIFICATION_V2.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_CLASSIFICATION_V2.json','utf8'));
+          if(p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.qualification_generation!=='v12'||p.previous_generation_reuse_forbidden!==true)throw new Error('AM19_GRADUATION_V12_CLASSIFICATION_REQUIRED');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`gate_eligible=${p.new_machine_gate_claim===true?'true':'false'}\n`);
+          NODE
+
+      - name: End cleanly for idempotent v12 read-only qualification rerun
+        if: steps.classification.outputs.gate_eligible != 'true'
+        run: echo 'AM19_GRADUATION_V12_READ_ONLY_NO_NEW_GATE'
+
+      - name: Reprove production cutover on exact successor subject
+        if: steps.classification.outputs.gate_eligible == 'true'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER.cjs
+
       - name: Assemble exact-subject Graduation input
+        if: steps.classification.outputs.gate_eligible == 'true'
         run: >-
           node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.cjs
           "${{ steps.evidence.outputs.persistent }}" "${{ steps.evidence.outputs.engineering }}" "${{ steps.evidence.outputs.rehydration }}"
           acceptance-output/MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER_RESULT.json "$SUBJECT_SHA"
           acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
+
       - name: Open machine-only gate
+        if: steps.classification.outputs.gate_eligible == 'true'
         run: >-
           node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_FORMAL_EPOCH_GRADUATION_GATE_V1.cjs
           acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
           > acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json
-      - name: Freeze source metadata
+
+      - name: Freeze exact v12 source metadata
+        if: steps.classification.outputs.gate_eligible == 'true'
         shell: node {0}
         env:
           SOURCE_ARTIFACT_ID: ${{ steps.source-artifact.outputs.artifact_id }}
@@ -224,8 +188,20 @@ jobs:
           SOURCE_ARTIFACT_DIGEST: ${{ steps.source-artifact.outputs.artifact_digest }}
           SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
-          const fs=require('node:fs');fs.mkdirSync('acceptance-output',{recursive:true});fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_METADATA_V1.json',JSON.stringify({source_persistent_workflow_run_id:Number(process.env.SOURCE_RUN_ID),source_persistent_artifact_id:Number(process.env.SOURCE_ARTIFACT_ID),source_persistent_artifact_name:process.env.SOURCE_ARTIFACT_NAME,source_persistent_artifact_digest:process.env.SOURCE_ARTIFACT_DIGEST,graduation_workflow_run_id:Number(process.env.GITHUB_RUN_ID),opened_at:new Date().toISOString()},null,2)+'\n');
-      - name: Assemble exact-subject immutable envelope
+          const fs=require('node:fs');
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_METADATA_V1.json',JSON.stringify({
+            qualification_generation:'v12',
+            source_persistent_workflow_run_id:Number(process.env.SOURCE_RUN_ID),
+            source_persistent_artifact_id:Number(process.env.SOURCE_ARTIFACT_ID),
+            source_persistent_artifact_name:process.env.SOURCE_ARTIFACT_NAME,
+            source_persistent_artifact_digest:process.env.SOURCE_ARTIFACT_DIGEST,
+            graduation_workflow_run_id:Number(process.env.GITHUB_RUN_ID),
+            opened_at:new Date().toISOString()
+          },null,2)+'\n');
+
+      - name: Assemble exact-subject immutable Graduation envelope
+        if: steps.classification.outputs.gate_eligible == 'true'
         run: >-
           node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.cjs
           "${{ steps.evidence.outputs.persistent }}" "${{ steps.evidence.outputs.engineering }}" "${{ steps.evidence.outputs.rehydration }}"
@@ -234,110 +210,26 @@ jobs:
           acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json "$SUBJECT_SHA"
           acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_METADATA_V1.json
           acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.json
+
+      - name: Require v12 exact-subject gate is open with zero Formal effect
+        if: steps.classification.outputs.gate_eligible == 'true'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const i=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json','utf8'));
+          const g=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json','utf8'));
+          const e=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.json','utf8'));
+          if(i.status!=='PASS'||i.subject_sha!==process.env.SUBJECT_SHA)throw new Error('AM19_V12_GRADUATION_INPUT_REQUIRED');
+          if(g.status!=='PASS'||g.formal_epoch_creation_gate!=='OPEN'||g.required_status_count!==13||g.static_blocker_count!==0)throw new Error('AM19_V12_GRADUATION_GATE_OPEN_REQUIRED');
+          if(e.status!=='PASS'||e.subject_sha!==process.env.SUBJECT_SHA||e.formal_epoch_creation_gate!=='OPEN'||e.machine_status_count!==13||e.static_blocker_count!==0||e.formal_database_write_count!==0||e.formal_o00_started!==false||e.human_override_used!==false||e.mcft_cap09_completed!==false)throw new Error('AM19_V12_GRADUATION_ENVELOPE_REQUIRED');
+
       - uses: actions/upload-artifact@v4
+        if: steps.classification.outputs.gate_eligible == 'true'
         with:
           name: mcft-cap09-am19-formal-graduation-${{ env.SUBJECT_SHA }}-${{ github.run_id }}
-          path: acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_*.json
-          if-no-files-found: error
-          retention-days: 90
-
-  compatible-graduation-replay:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    env:
-      DEPLOYMENT_SHA: ${{ github.sha }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.DEPLOYMENT_SHA }}
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Require exact current protected main
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$GITHUB_REF" = 'refs/heads/main'
-          git fetch --no-tags origin main
-          test "$(git rev-parse HEAD)" = "$DEPLOYMENT_SHA"
-          test "$(git rev-parse origin/main)" = "$DEPLOYMENT_SHA" || { echo 'AM19_COMPAT_GRAD_MAIN_DRIFT' >&2; exit 1; }
-          git cat-file -e "$CLOSURE_QUALIFICATION_SHA^{commit}"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20.11.1'
-      - name: Attest v11 qualification to current deployment
-        run: >-
-          node scripts/governance_acceptance/ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs
-          "$CLOSURE_QUALIFICATION_SHA" "$DEPLOYMENT_SHA"
-          acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json
-      - name: Verify frozen v11 source artifact metadata
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const {owner,repo}=context.repo;const runId=Number(process.env.CLOSURE_PERSISTENT_RUN_ID);const run=await github.rest.actions.getWorkflowRun({owner,repo,run_id:runId});if(run.data.conclusion!=='success'||run.data.head_sha!==process.env.CLOSURE_QUALIFICATION_SHA||run.data.head_branch!=='main')throw new Error('AM19_COMPAT_GRAD_SOURCE_RUN_REQUIRED');const r=await github.rest.actions.listWorkflowRunArtifacts({owner,repo,run_id:runId,per_page:100});const m=r.data.artifacts.filter(a=>!a.expired&&a.id===Number(process.env.CLOSURE_PERSISTENT_ARTIFACT_ID)&&a.name===process.env.CLOSURE_PERSISTENT_ARTIFACT_NAME);if(m.length!==1||m[0].digest!==process.env.CLOSURE_PERSISTENT_ARTIFACT_DIGEST)throw new Error('AM19_COMPAT_GRAD_SOURCE_ARTIFACT_REQUIRED');
-      - uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          run-id: ${{ env.CLOSURE_PERSISTENT_RUN_ID }}
-          name: ${{ env.CLOSURE_PERSISTENT_ARTIFACT_NAME }}
-          path: persistent-evidence
-      - name: Resolve exact frozen evidence files
-        id: evidence
-        shell: bash
-        run: |
-          set -euo pipefail
-          persistent=$(find persistent-evidence -type f -name 'MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_RESULT.json' -print); engineering=$(find persistent-evidence -type f -name 'MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json' -print); rehydration=$(find persistent-evidence -type f -name 'MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json' -print)
-          test -n "$persistent"; test -n "$engineering"; test -n "$rehydration"
-          echo "persistent=$persistent" >> "$GITHUB_OUTPUT"; echo "engineering=$engineering" >> "$GITHUB_OUTPUT"; echo "rehydration=$rehydration" >> "$GITHUB_OUTPUT"
-      - name: Classify source qualification
-        run: >-
-          node scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs
-          "${{ steps.evidence.outputs.persistent }}" "$CLOSURE_QUALIFICATION_SHA"
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_CLASSIFICATION_V1.json
-      - name: Reprove production cutover
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER.cjs
-      - name: Assemble compatible Graduation input
-        run: >-
-          node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_INPUT_V1.cjs
-          "${{ steps.evidence.outputs.persistent }}" "${{ steps.evidence.outputs.engineering }}" "${{ steps.evidence.outputs.rehydration }}"
-          acceptance-output/MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER_RESULT.json
-          "$CLOSURE_QUALIFICATION_SHA" "$DEPLOYMENT_SHA"
-          acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
-      - name: Open machine-only gate
-        run: >-
-          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_FORMAL_EPOCH_GRADUATION_GATE_V1.cjs
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
-          > acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json
-      - name: Freeze immutable v11 source and deployment metadata
-        shell: node {0}
-        run: |
-          const fs=require('node:fs');fs.mkdirSync('acceptance-output',{recursive:true});fs.writeFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_METADATA_V1.json',JSON.stringify({source_persistent_workflow_run_id:Number(process.env.CLOSURE_PERSISTENT_RUN_ID),source_persistent_artifact_id:Number(process.env.CLOSURE_PERSISTENT_ARTIFACT_ID),source_persistent_artifact_name:process.env.CLOSURE_PERSISTENT_ARTIFACT_NAME,source_persistent_artifact_digest:process.env.CLOSURE_PERSISTENT_ARTIFACT_DIGEST,graduation_workflow_run_id:Number(process.env.GITHUB_RUN_ID),opened_at:new Date().toISOString()},null,2)+'\n');
-      - name: Assemble compatible immutable Graduation envelope
-        run: >-
-          node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_ENVELOPE_V1.cjs
-          "${{ steps.evidence.outputs.persistent }}" "${{ steps.evidence.outputs.engineering }}" "${{ steps.evidence.outputs.rehydration }}"
-          acceptance-output/MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER_RESULT.json
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json
-          "$CLOSURE_QUALIFICATION_SHA" "$DEPLOYMENT_SHA"
-          acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_METADATA_V1.json
-          acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.json
-      - name: Require compatible envelope binds current deployment
-        shell: node {0}
-        run: |
-          const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_ENVELOPE_V1.json','utf8'));
-          if(p.status!=='PASS'||p.formal_epoch_creation_gate!=='OPEN'||p.subject_sha!==process.env.DEPLOYMENT_SHA||p.deployment_subject_sha!==process.env.DEPLOYMENT_SHA||p.qualification_subject_sha!==process.env.CLOSURE_QUALIFICATION_SHA)throw new Error('AM19_COMPAT_GRAD_ENVELOPE_IDENTITY_REQUIRED');
-          if(p.machine_status_count!==13||p.static_blocker_count!==0||p.formal_database_write_count!==0||p.formal_o00_started!==false||p.human_override_used!==false||p.mcft_cap09_completed!==false)throw new Error('AM19_COMPAT_GRAD_ENVELOPE_BOUNDARY_REQUIRED');
-      - uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap09-am19-formal-graduation-${{ env.DEPLOYMENT_SHA }}-${{ github.run_id }}
           path: |
-            acceptance-output/MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_ATTESTATION_V1.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_CLASSIFICATION_V2.json
             acceptance-output/MCFT_CAP_09_AMENDMENT19_PERSISTENT_PRODUCTION_CUTOVER_RESULT.json
-            acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_CLASSIFICATION_V1.json
             acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_INPUT_V1.json
             acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_EPOCH_GRADUATION_GATE_RESULT_V1.json
             acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_GRADUATION_METADATA_V1.json
