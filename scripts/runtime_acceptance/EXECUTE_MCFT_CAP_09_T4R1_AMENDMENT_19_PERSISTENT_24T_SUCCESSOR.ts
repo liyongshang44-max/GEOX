@@ -11,10 +11,10 @@ const HISTORICAL_PARENT_DB = "geox_mcft_cap09_s6_formal_t3r1_24h_v3";
 const T4R1_PARENT_DB = "geox_mcft_cap09_s6_formal_t4r1_24h";
 const SOURCE_MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v4";
 const SOURCE_BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v4";
-const PREVIOUS_MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v10";
-const PREVIOUS_BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v10";
-const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v11";
-const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v11";
+const PREVIOUS_MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v11";
+const PREVIOUS_BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v11";
+const MAIN_DB = "geox_mcft_cap09_s6_accel24t_am19_v12";
+const BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v12";
 const HISTORICAL_CANDIDATE_GATE = 'if (candidate.producer_subject_sha !== subject || (candidate.subject_sha !== undefined && candidate.subject_sha !== subject)) throw new Error("AM19_P24_CANDIDATE_EXACT_SUBJECT_REQUIRED");';
 const SUCCESSOR_CANDIDATE_GATE = 'const producerSubject = process.env.MCFT_CAP09_ROLLING_PRODUCER_SUBJECT_SHA?.trim(); if (!producerSubject || !/^[0-9a-f]{40}$/.test(producerSubject)) throw new Error("AM19_P24_SUCCESSOR_PRODUCER_SUBJECT_REQUIRED"); if (candidate.producer_subject_sha !== producerSubject || (candidate.subject_sha !== undefined && candidate.subject_sha !== producerSubject)) throw new Error("AM19_P24_CANDIDATE_PRODUCER_SUBJECT_REQUIRED");';
 
@@ -47,10 +47,10 @@ function build(): string {
   assert(!generated.includes(HISTORICAL_CANDIDATE_GATE), "T4R1_AM19_P24_HISTORICAL_CANDIDATE_GATE_SURVIVED");
   assert(generated.includes(T4R1_PARENT_DB), "T4R1_AM19_P24_T4_PARENT_DB_REQUIRED");
   assert(generated.includes("MCFT_CAP09_ROLLING_PRODUCER_SUBJECT_SHA"), "T4R1_AM19_P24_PRODUCER_SUBJECT_BINDING_REQUIRED");
-  assert(generated.includes(MAIN_DB), "T4R1_AM19_P24_V11_MAIN_DB_REQUIRED");
-  assert(generated.includes(BLOCKED_DB), "T4R1_AM19_P24_V11_BLOCKED_DB_REQUIRED");
-  assert(!generated.includes(PREVIOUS_MAIN_DB), "T4R1_AM19_P24_V10_MAIN_DB_REUSE_FORBIDDEN");
-  assert(!generated.includes(PREVIOUS_BLOCKED_DB), "T4R1_AM19_P24_V10_BLOCKED_DB_REUSE_FORBIDDEN");
+  assert(generated.includes(MAIN_DB), "T4R1_AM19_P24_V12_MAIN_DB_REQUIRED");
+  assert(generated.includes(BLOCKED_DB), "T4R1_AM19_P24_V12_BLOCKED_DB_REQUIRED");
+  assert(!generated.includes(PREVIOUS_MAIN_DB), "T4R1_AM19_P24_V11_MAIN_DB_REUSE_FORBIDDEN");
+  assert(!generated.includes(PREVIOUS_BLOCKED_DB), "T4R1_AM19_P24_V11_BLOCKED_DB_REUSE_FORBIDDEN");
   return generated;
 }
 
