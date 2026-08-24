@@ -86,5 +86,6 @@ jobs:
             /tmp/v12-v4-operational-bindings.patch
             /tmp/v12-v4-counts.txt
             /tmp/v12-v4-transformed
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
