@@ -66,12 +66,25 @@ jobs:
           test -n "$(git diff --name-only)"
           git diff --check
           git diff > /tmp/v12-v4-operational-bindings.patch
-      - name: Upload verified replacement patch
+      - name: Stage verified transformed files for artifact export
+        shell: bash
+        run: |
+          set -euo pipefail
+          out=/tmp/v12-v4-transformed
+          mkdir -p "$out/scripts/governance_acceptance" "$out/scripts/runtime_acceptance" "$out/.github/workflows"
+          cp scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs "$out/scripts/governance_acceptance/"
+          cp scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_AMENDMENT_19_FORMAL_DOWNSTREAM_ZERO_V1.ts "$out/scripts/runtime_acceptance/"
+          cp .github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml "$out/.github/workflows/"
+          cp .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml "$out/.github/workflows/"
+          cp .github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml "$out/.github/workflows/"
+          cp .github/workflows/mcft-cap-09-amendment19-formal-final-readback.yml "$out/.github/workflows/"
+      - name: Upload verified replacement artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-v12-v4-verified-operational-bindings-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}
+          name: mcft-cap09-v12-v4-verified-operational-files-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}
           path: |
             /tmp/v12-v4-operational-bindings.patch
             /tmp/v12-v4-counts.txt
+            /tmp/v12-v4-transformed
           if-no-files-found: error
           retention-days: 14
