@@ -1,0 +1,106 @@
+{
+  "schema_version": "geox_mcft_cap09_t4r1_actual_formal_store_authority_v2",
+  "status": "CANDIDATE",
+  "purpose": "FRESH_T4R1_REAL_WALL_CLOCK_FORMAL_V4_SUCCESSOR_AFTER_IRREVERSIBLE_V3_O01_NO_GO",
+  "predecessor_protected_main_sha": "274ce26d4f67049b891e253e148ed9be571c4bce",
+  "scope": {
+    "site_id": "KBS_MCSE_T4R1",
+    "field_id": "field_kbs_mcse_t4r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t4r1_crop_formal_v1"
+  },
+  "database_identity": {
+    "provider": "NEON_POSTGRES",
+    "project_id": "delicate-glade-62464340",
+    "branch_id": "br-cold-dust-a6j6aymz",
+    "database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v4",
+    "failed_predecessor_logical_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v3",
+    "failed_predecessor_archive_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_o01_32660018684",
+    "failed_predecessor_reuse_forbidden": true,
+    "recovery_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-FORMAL-V3-O01-RECOVERY-AUTHORITY-V1.json",
+    "recovery_authority_blob_sha": "2a0451b625100f9cdfa398af105629553c7792ea",
+    "recovery_archive_required_before_provision": true,
+    "schema_reference_database": "geox_mcft_cap09_s6_formal_t4r1_24h",
+    "historical_t1_t3_database_reuse_forbidden": true,
+    "creation_mode": "CREATE_DATABASE_TEMPLATE0_THEN_SCHEMA_ONLY_RESTORE",
+    "data_clone_forbidden": true
+  },
+  "qualification_generation": {
+    "fresh_qualification_required": true,
+    "qualification_database": "geox_mcft_cap09_s6_accel24t_am19_v12",
+    "blocked_database": "geox_mcft_cap09_s6_accel24t_am19_blocked_v12",
+    "previous_qualification_database": "geox_mcft_cap09_s6_accel24t_am19_v11",
+    "previous_blocked_database": "geox_mcft_cap09_s6_accel24t_am19_blocked_v11",
+    "previous_generation_reuse_forbidden": true,
+    "qualification_clock_mode": "ACCELERATED_ENGINEERING_ONLY",
+    "qualification_clock_substitutes_wait_only": true,
+    "production_canonical_core_must_be_identical": true,
+    "real_wall_clock_formal_still_required_after_qualification": true
+  },
+  "schema_contract": {
+    "required_public_table_count": 26,
+    "column_fingerprint_md5": "873a8e86f55d75a04a5f671627e98ae1",
+    "constraint_fingerprint_md5": "7803f7e7706e52eca3ca2aa4290ff5dd",
+    "index_fingerprint_md5": "ea5b3ba0392fd52fb471bc754e94ed35",
+    "all_governed_relations_zero_state_before_arm_required": true
+  },
+  "failed_v3_incident": {
+    "failed_subject_sha": "18b690e8c2d92bfdc4eeea9eece0723c4181a996",
+    "workflow_run_id": 32660018684,
+    "artifact_id": 9498479992,
+    "artifact_digest": "sha256:dd531b49138ee5b9046e9cc4d8dbd458572c62995de0cc08a2cad7f64e6ee0d2",
+    "arm_identity_hash": "sha256:f43faae8da7e86b0e7f6e3714d97349abd9b73e33d603676648b4736793dbd94",
+    "epoch_id": "mcft_cap09_am19_formal_20260823170000000_18b690e8c2d9",
+    "manifest_hash": "sha256:9220f985bb0705e3e761218cab322bf4d46b226e3444ebbfccb6e7d0d75027c0",
+    "terminal_slot": "O01",
+    "terminal_detail": "AMENDMENT19_NO_CAUSAL_CURRENT_INTERVAL_FORCING_PAIR",
+    "formal_epoch_no_go": true,
+    "failed_epoch_continuation_forbidden": true,
+    "o02_through_o23_from_failed_epoch_forbidden": true
+  },
+  "epoch_contract": {
+    "failed_formal_v3_epoch_is_immutable_evidence": true,
+    "failed_formal_v3_archive_required_before_v4_provision": true,
+    "failed_formal_v3_truncate_rebind_or_seed_forbidden": true,
+    "active_logical_v3_reuse_as_v4_seed_forbidden": true,
+    "new_a0_must_be_selected_after_exact_subject_fresh_v12_graduation": true,
+    "o00_must_be_future_at_arm_time": true,
+    "minimum_arm_to_o00_lead_minutes": 35,
+    "real_wall_clock_o00_o23_required": true,
+    "accelerated_clock_authorized_for_formal": false
+  },
+  "safety": {
+    "cross_scope_state_stitching_forbidden": true,
+    "t1r1_state_reuse_forbidden": true,
+    "t3r1_state_reuse_forbidden": true,
+    "failed_v3_state_reuse_forbidden": true,
+    "provider_fetch_in_runtime_forbidden": true,
+    "formal_db_write_before_graduation_and_arm_forbidden": true,
+    "scheduler_write_before_a0_bootstrap_forbidden": true,
+    "recommendation_approval_action_dispatch_side_effects_forbidden": true
+  },
+  "activation_sequence": [
+    "MERGE_EXACT_SUCCESSOR_SUBJECT",
+    "ARCHIVE_FAILED_V3_O01_VIA_SEPARATE_EXPLICIT_RECOVERY",
+    "PROVISION_ZERO_STATE_V4_AND_V12_STORES",
+    "CAPTURE_EXACT_MAIN_ROLLING_EVIDENCE",
+    "RUN_FRESH_V12_PERSISTENT_13_OF_13",
+    "OPEN_MACHINE_ONLY_GRADUATION_GATE",
+    "CAPTURE_POST_GATE_ROLLING_EVIDENCE",
+    "ARM_FRESH_V4_EPOCH",
+    "BOOTSTRAP_FRESH_A0",
+    "RUN_REAL_WALL_CLOCK_O00_O23",
+    "FINAL_READ_ONLY_COMPLETION_ADJUDICATION"
+  ],
+  "nonclaims": {
+    "v4_store_provisioned_by_this_document": false,
+    "v12_qualification_executed": false,
+    "formal_epoch_selected": false,
+    "formal_a0_bootstrapped": false,
+    "formal_o00_started": false,
+    "formal_execution_count": "0/24",
+    "failed_v3_repaired": false,
+    "failed_v3_continued": false,
+    "mcft_cap09_completed": false
+  }
+}
