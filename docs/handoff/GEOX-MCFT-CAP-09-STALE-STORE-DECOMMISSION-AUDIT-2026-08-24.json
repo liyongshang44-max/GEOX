@@ -1,0 +1,76 @@
+{
+  "schema_version": "geox_mcft_cap09_stale_store_decommission_audit_v1",
+  "status": "AUTHORIZED_FOR_PHYSICAL_DECOMMISSION",
+  "date": "2026-08-24",
+  "protected_main_sha": "037c224038250caa0c43bebc3f719434624f008b",
+  "repository": "liyongshang44-max/GEOX",
+  "neon": {
+    "project_id": "delicate-glade-62464340",
+    "branch_id": "br-cold-dust-a6j6aymz",
+    "plan": "free",
+    "branch_logical_size_limit_bytes": 536870912
+  },
+  "reason": "Neon Free 512 MiB project storage limit prevents creation of the fresh blocked-v12 successor store. Remove only stale early qualification-generation physical stores that are not required by the current v4/v12 successor provisioning contract.",
+  "governance_boundary": {
+    "no_protected_main_change": true,
+    "no_runtime_semantic_change": true,
+    "no_authority_rebinding": true,
+    "no_formal_epoch_activation": true,
+    "no_successor_store_deletion": true,
+    "current_provision_predecessors_preserved": [
+      "geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_o01_32660018684",
+      "geox_mcft_cap09_s6_accel24t_am19_v11",
+      "geox_mcft_cap09_s6_accel24t_am19_blocked_v11",
+      "geox_mcft_cap09_s6_formal_t4r1_24h"
+    ],
+    "additional_preserved_generations": [
+      "geox_mcft_cap09_s6_accel24t_am19_v4",
+      "geox_mcft_cap09_s6_accel24t_am19_blocked_v4",
+      "geox_mcft_cap09_s6_accel24t_am19_v6",
+      "geox_mcft_cap09_s6_accel24t_am19_blocked_v6",
+      "geox_mcft_cap09_s6_accel24t_am19_v7",
+      "geox_mcft_cap09_s6_accel24t_am19_blocked_v7",
+      "geox_mcft_cap09_s6_accel24t_am19_v8",
+      "geox_mcft_cap09_s6_accel24t_am19_blocked_v8",
+      "geox_mcft_cap09_s6_accel24t_am19_v9",
+      "geox_mcft_cap09_s6_accel24t_am19_blocked_v9",
+      "geox_mcft_cap09_s6_accel24t_am19_v10",
+      "geox_mcft_cap09_s6_accel24t_am19_blocked_v10"
+    ]
+  },
+  "decommission_targets": [
+    {"database":"geox_mcft_cap09_s6_accel24t_am19_v1","bytes":10739712,"active_sessions":0},
+    {"database":"geox_mcft_cap09_s6_accel24t_am19_v2","bytes":11182080,"active_sessions":0},
+    {"database":"geox_mcft_cap09_s6_accel24t_am19_v3","bytes":29499392,"active_sessions":0},
+    {"database":"geox_mcft_cap09_s6_accel24t_am19_v5","bytes":31088640,"active_sessions":0},
+    {"database":"geox_mcft_cap09_s6_accel24t_am19_blocked_v1","bytes":9740288,"active_sessions":0},
+    {"database":"geox_mcft_cap09_s6_accel24t_am19_blocked_v2","bytes":9740288,"active_sessions":0},
+    {"database":"geox_mcft_cap09_s6_accel24t_am19_blocked_v3","bytes":9740288,"active_sessions":0},
+    {"database":"geox_mcft_cap09_s6_accel24t_am19_blocked_v3_audit_32333336471","bytes":9740288,"active_sessions":0},
+    {"database":"geox_mcft_cap09_s6_accel24t_am19_blocked_v5","bytes":9895936,"active_sessions":0}
+  ],
+  "estimated_release_bytes": 131366912,
+  "estimated_release_mib": 125.28125,
+  "pre_drop_assertions": {
+    "all_targets_exist": true,
+    "all_targets_have_zero_active_sessions": true,
+    "current_store_provision_workflow_requires_only_failed_v3_archive_v11_and_blocked_v11_as_predecessor_evidence": true,
+    "v12_successor_runtime_targets_v12_and_blocked_v12_not_these_stale_physical_stores": true
+  },
+  "post_drop_required_checks": [
+    "all nine target database names absent",
+    "failed-v3 O01 archive still present",
+    "v11 and blocked-v11 still present",
+    "T4R1 schema reference still present",
+    "v4 and v12 partial template0 successor stores still present",
+    "protected main remains exact 037c224038250caa0c43bebc3f719434624f008b",
+    "re-run successor store provision only after storage headroom is verified"
+  ],
+  "nonclaims": {
+    "historical_semantic_evidence_deleted": false,
+    "current_authority_changed": false,
+    "v12_qualification_executed": false,
+    "formal_v4_armed": false,
+    "mcft_cap09_completed": false
+  }
+}
