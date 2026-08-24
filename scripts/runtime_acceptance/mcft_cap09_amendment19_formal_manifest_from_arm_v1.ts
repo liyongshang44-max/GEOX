@@ -16,7 +16,10 @@ import {
 } from "../../apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.js";
 import type { ExternalFormalV3Am19WindowManifestV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.js";
 
-export const MCFT_CAP09_AM19_FORMAL_DATABASE_V3 = "geox_mcft_cap09_s6_formal_t4r1_24h_v3" as const;
+export const MCFT_CAP09_AM19_FORMAL_DATABASE_V4 = "geox_mcft_cap09_s6_formal_t4r1_24h_v4" as const;
+// Compatibility export: the canonical runtime implementation remains V3, while this subject binds that implementation to the fresh physical v4 store.
+export const MCFT_CAP09_AM19_FORMAL_DATABASE_V3 = MCFT_CAP09_AM19_FORMAL_DATABASE_V4;
+export const MCFT_CAP09_AM19_FAILED_FORMAL_DATABASE_V3_ARCHIVE = "geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_o01_32660018684" as const;
 export const MCFT_CAP09_AM19_FAILED_FORMAL_DATABASE_V2 = "geox_mcft_cap09_s6_formal_t4r1_24h_v2" as const;
 
 export type McftCap09Am19FormalArmV1 = {
@@ -86,8 +89,8 @@ export function validateMcftCap09Am19FormalArmV1(arm: McftCap09Am19FormalArmV1, 
   }
   const subject = exactSubject(arm.subject_sha);
   if (expectedSubject !== undefined && subject !== exactSubject(expectedSubject)) throw new Error("AM19_FORMAL_MANIFEST_ARM_SUBJECT_MISMATCH");
-  if (arm.formal_database_name !== MCFT_CAP09_AM19_FORMAL_DATABASE_V3) {
-    throw new Error("AM19_FORMAL_MANIFEST_T4_ACTUAL_FORMAL_DATABASE_REQUIRED");
+  if (arm.formal_database_name !== MCFT_CAP09_AM19_FORMAL_DATABASE_V4) {
+    throw new Error("AM19_FORMAL_MANIFEST_T4_ACTUAL_FORMAL_V4_DATABASE_REQUIRED");
   }
   const a0 = canonicalIso(arm.a0, "AM19_FORMAL_MANIFEST_A0_INVALID");
   const o00 = canonicalIso(arm.o00, "AM19_FORMAL_MANIFEST_O00_INVALID");
