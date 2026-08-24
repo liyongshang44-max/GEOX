@@ -34,6 +34,7 @@ function noOperationalReference(value, token, code) {
 function main() {
   const graduation=text("graduation"), armWorkflow=text("formalArmWorkflow"), arm=text("formalArmAssembler"), a0=text("a0"), hourly=text("hourly"), live=text("live"), finalReadback=text("finalReadback"), completion=text("completion"), contract=text("contract");
 
+  // Historical v11 compatibility contract remains immutable carry-forward evidence.
   has(contract,'"governed_semantic_digest"',"AM19_CLOSURE_AUDIT_SEMANTIC_DIGEST_CONTRACT_REQUIRED");
   has(contract,'"qualification_subject_sha"',"AM19_CLOSURE_AUDIT_QUALIFICATION_IDENTITY_REQUIRED");
   has(contract,'"deployment_subject_sha"',"AM19_CLOSURE_AUDIT_DEPLOYMENT_IDENTITY_REQUIRED");
@@ -49,6 +50,7 @@ function main() {
   no(contract,'"qualification_database": "geox_mcft_cap09_s6_accel24t_am19_v10"',"AM19_CLOSURE_AUDIT_V10_CURRENT_QUALIFICATION_FORBIDDEN");
   no(contract,'"formal_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v2"',"AM19_CLOSURE_AUDIT_FORMAL_V2_CURRENT_CONTRACT_FORBIDDEN");
 
+  // The historical compatible-replay Graduation lane remains auditable but is not authority for the fresh-v12 successor.
   has(graduation,"workflow_dispatch:","AM19_CLOSURE_AUDIT_COMPATIBLE_REPLAY_ENTRY_REQUIRED");
   has(graduation,"ATTEST_MCFT_CAP_09_NON_SEMANTIC_CONTROL_PLANE_COMPATIBILITY_V1.cjs","AM19_CLOSURE_AUDIT_COMPAT_ATTESTATION_WIRING_REQUIRED");
   has(graduation,"ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_COMPATIBLE_GRADUATION_INPUT_V1.cjs","AM19_CLOSURE_AUDIT_COMPAT_INPUT_REQUIRED");
@@ -68,18 +70,22 @@ function main() {
   has(arm,'mcft-cap09-am19-formal-graduation-${currentMain}-',"AM19_CLOSURE_AUDIT_GATE_ARTIFACT_DEPLOYMENT_BINDING_REQUIRED");
   has(arm,'mcft-cap09-t4r1-rolling-preboundary-',"AM19_CLOSURE_AUDIT_T4_ROLLING_PREFIX_REQUIRED");
 
+  // Active successor control plane must use only T4R1 Formal-v4 physical storage.
   for (const [name,value] of [["armWorkflow",armWorkflow],["a0",a0],["hourly",hourly],["live",live],["finalReadback",finalReadback]]) {
     noOperationalReference(value,"GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL",`AM19_CLOSURE_AUDIT_T3_SECRET_FORBIDDEN:${name}`);
     noOperationalReference(value,"geox_mcft_cap09_s6_formal_t3r1_24h",`AM19_CLOSURE_AUDIT_T3_DATABASE_FORBIDDEN:${name}`);
     noOperationalReference(value,"geox_mcft_cap09_s6_formal_t4r1_24h_v2",`AM19_CLOSURE_AUDIT_FORMAL_V2_FORBIDDEN:${name}`);
+    noOperationalReference(value,"geox_mcft_cap09_s6_formal_t4r1_24h_v3",`AM19_CLOSURE_AUDIT_FORMAL_V3_ACTIVE_ROUTE_FORBIDDEN:${name}`);
   }
-  has(a0,"geox_mcft_cap09_s6_formal_t4r1_24h_v3","AM19_CLOSURE_AUDIT_A0_T4_FORMAL_V3_DB_REQUIRED");
+  has(a0,"geox_mcft_cap09_s6_formal_t4r1_24h_v4","AM19_CLOSURE_AUDIT_A0_T4_FORMAL_V4_DB_REQUIRED");
   has(hourly,"GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL","AM19_CLOSURE_AUDIT_HOURLY_T4_PARENT_SECRET_REQUIRED");
-  has(live,"geox_mcft_cap09_s6_formal_t4r1_24h_v3","AM19_CLOSURE_AUDIT_LIVE_T4_FORMAL_V3_DB_REQUIRED");
-  has(finalReadback,"geox_mcft_cap09_s6_formal_t4r1_24h_v3","AM19_CLOSURE_AUDIT_READBACK_T4_FORMAL_V3_DB_REQUIRED");
+  has(hourly,"geox_mcft_cap09_s6_formal_t4r1_24h_v4","AM19_CLOSURE_AUDIT_HOURLY_T4_FORMAL_V4_DB_REQUIRED");
+  has(live,"geox_mcft_cap09_s6_formal_t4r1_24h_v4","AM19_CLOSURE_AUDIT_LIVE_T4_FORMAL_V4_DB_REQUIRED");
+  has(finalReadback,"geox_mcft_cap09_s6_formal_t4r1_24h_v4","AM19_CLOSURE_AUDIT_READBACK_T4_FORMAL_V4_DB_REQUIRED");
 
-  no(a0,"geox_mcft_cap09_s6_accel24t_am19_v4","AM19_CLOSURE_AUDIT_A0_QUAL_DB_COUPLING_FORBIDDEN");
-  for (const generation of ["v11","v10","v9"]) {
+  // Production execution paths must never bind qualification stores, including the fresh v12 stores.
+  for (const generation of ["v12","v11","v10","v9","v4"]) {
+    no(a0,`geox_mcft_cap09_s6_accel24t_am19_${generation}`,`AM19_CLOSURE_AUDIT_A0_QUAL_DB_COUPLING_FORBIDDEN:${generation}`);
     no(live,`geox_mcft_cap09_s6_accel24t_am19_${generation}`,`AM19_CLOSURE_AUDIT_LIVE_QUAL_DB_COUPLING_FORBIDDEN:${generation}`);
     no(finalReadback,`geox_mcft_cap09_s6_accel24t_am19_${generation}`,`AM19_CLOSURE_AUDIT_READBACK_QUAL_DB_COUPLING_FORBIDDEN:${generation}`);
   }
@@ -93,15 +99,17 @@ function main() {
     status:"PASS",
     audited_file_count:Object.keys(FILES).length,
     qualification_and_deployment_identity_separated:true,
-    frozen_qualification_generation:"v11",
-    frozen_qualification_subject_sha:"abf0aa121001480f01ad4e39364b1df13f3c26eb",
-    frozen_persistent_run_id:32638502092,
-    frozen_persistent_artifact_id:9493316708,
-    actual_formal_generation:"v3",
+    historical_carry_forward_qualification_generation:"v11",
+    historical_carry_forward_qualification_subject_sha:"abf0aa121001480f01ad4e39364b1df13f3c26eb",
+    historical_persistent_run_id:32638502092,
+    historical_persistent_artifact_id:9493316708,
+    actual_formal_generation:"v4",
+    fresh_qualification_required_separately:true,
     stale_v10_current_authority_absent:true,
-    premerge_real_artifact_graduation_replay_required:true,
+    compatible_replay_lane_remains_historical_only:true,
     downstream_formal_chain_bound_to_deployment_subject:true,
-    active_formal_chain_bound_to_v3:true,
+    active_formal_chain_bound_to_v4:true,
+    stale_formal_v3_operational_route_absent:true,
     stale_formal_v2_operational_route_absent:true,
     stale_t3_operational_route_absent:true,
     negative_static_guards_not_misclassified_as_operational_routes:true,

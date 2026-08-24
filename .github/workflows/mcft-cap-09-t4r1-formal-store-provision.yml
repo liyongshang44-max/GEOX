@@ -4,7 +4,8 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V2.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-FORMAL-V3-O01-RECOVERY-AUTHORITY-V1.json'
   workflow_dispatch:
 
 permissions:
@@ -18,12 +19,15 @@ env:
   NODE_VERSION: '20.11.1'
   PNPM_VERSION: '9.15.4'
   SOURCE_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h
-  FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v3
-  FAILED_FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v2
-  QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v11
-  BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v11
-  PREVIOUS_QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v10
-  PREVIOUS_BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v10
+  FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v4
+  FAILED_FORMAL_ARCHIVE_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_o01_32660018684
+  QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v12
+  BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v12
+  PREVIOUS_QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v11
+  PREVIOUS_BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v11
+  STORE_AUTHORITY_PATH: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V2.json
+  RECOVERY_AUTHORITY_PATH: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-FORMAL-V3-O01-RECOVERY-AUTHORITY-V1.json
+  RECOVERY_AUTHORITY_BLOB: 2a0451b625100f9cdfa398af105629553c7792ea
 
 jobs:
   static-proof:
@@ -34,28 +38,35 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Validate authority and no-data provisioning contract
+      - name: Validate v4/v12 authority and archive-first provisioning contract
         shell: node {0}
         run: |
           const fs=require('node:fs');
-          const p=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json','utf8'));
-          if(p.status!=='CANDIDATE'||p.database_identity.database_name!==process.env.FORMAL_DATABASE_NAME)throw new Error('T4_FORMAL_STORE_AUTHORITY_IDENTITY_REQUIRED');
-          if(p.database_identity.failed_predecessor_database!==process.env.FAILED_FORMAL_DATABASE_NAME||p.database_identity.failed_predecessor_reuse_forbidden!==true)throw new Error('T4_FORMAL_STORE_FAILED_V2_IMMUTABLE_REQUIRED');
+          const p=JSON.parse(fs.readFileSync(process.env.STORE_AUTHORITY_PATH,'utf8'));
+          if(p.schema_version!=='geox_mcft_cap09_t4r1_actual_formal_store_authority_v2'||p.status!=='CANDIDATE')throw new Error('T4_FORMAL_STORE_V2_AUTHORITY_REQUIRED');
+          if(p.database_identity.database_name!==process.env.FORMAL_DATABASE_NAME)throw new Error('T4_FORMAL_STORE_V4_IDENTITY_REQUIRED');
+          if(p.database_identity.failed_predecessor_archive_database!==process.env.FAILED_FORMAL_ARCHIVE_DATABASE_NAME||p.database_identity.failed_predecessor_reuse_forbidden!==true)throw new Error('T4_FORMAL_STORE_FAILED_V3_ARCHIVE_REQUIRED');
+          if(p.database_identity.recovery_authority_ref!==process.env.RECOVERY_AUTHORITY_PATH||p.database_identity.recovery_authority_blob_sha!==process.env.RECOVERY_AUTHORITY_BLOB||p.database_identity.recovery_archive_required_before_provision!==true)throw new Error('T4_FORMAL_STORE_RECOVERY_AUTHORITY_REQUIRED');
           if(p.database_identity.creation_mode!=='CREATE_DATABASE_TEMPLATE0_THEN_SCHEMA_ONLY_RESTORE'||p.database_identity.data_clone_forbidden!==true)throw new Error('T4_FORMAL_STORE_NO_DATA_CLONE_REQUIRED');
+          if(p.qualification_generation.fresh_qualification_required!==true||p.qualification_generation.qualification_database!==process.env.QUAL_DATABASE_NAME||p.qualification_generation.blocked_database!==process.env.BLOCKED_DATABASE_NAME||p.qualification_generation.previous_qualification_database!==process.env.PREVIOUS_QUAL_DATABASE_NAME||p.qualification_generation.previous_blocked_database!==process.env.PREVIOUS_BLOCKED_DATABASE_NAME||p.qualification_generation.previous_generation_reuse_forbidden!==true)throw new Error('T4_FORMAL_STORE_V12_GENERATION_REQUIRED');
+          if(p.qualification_generation.production_canonical_core_must_be_identical!==true||p.qualification_generation.qualification_clock_substitutes_wait_only!==true||p.qualification_generation.real_wall_clock_formal_still_required_after_qualification!==true)throw new Error('T4_FORMAL_STORE_CANONICAL_CORE_BOUNDARY_REQUIRED');
           if(p.schema_contract.required_public_table_count!==26||p.schema_contract.column_fingerprint_md5!=='873a8e86f55d75a04a5f671627e98ae1'||p.schema_contract.constraint_fingerprint_md5!=='7803f7e7706e52eca3ca2aa4290ff5dd'||p.schema_contract.index_fingerprint_md5!=='ea5b3ba0392fd52fb471bc754e94ed35')throw new Error('T4_FORMAL_STORE_SCHEMA_CONTRACT_REQUIRED');
-          if(p.epoch_contract.real_wall_clock_o00_o23_required!==true||p.epoch_contract.accelerated_clock_authorized!==false||p.epoch_contract.failed_formal_v2_truncate_or_rebind_forbidden!==true)throw new Error('T4_FORMAL_STORE_REAL_CLOCK_REQUIRED');
-      - name: Require fresh-generation tokens and historical stores remain predecessor-only
+          if(p.epoch_contract.failed_formal_v3_archive_required_before_v4_provision!==true||p.epoch_contract.failed_formal_v3_truncate_rebind_or_seed_forbidden!==true||p.epoch_contract.real_wall_clock_o00_o23_required!==true||p.epoch_contract.accelerated_clock_authorized_for_formal!==false)throw new Error('T4_FORMAL_STORE_REAL_CLOCK_AND_FAILED_V3_BOUNDARY_REQUIRED');
+      - name: Require exact recovery authority blob and fresh-generation tokens
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v3' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
-          grep -Fq 'QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v11' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
-          grep -Fq 'BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v11' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
-      - name: Require static PR path has no live credentials
+          test "$(git rev-parse HEAD:"$RECOVERY_AUTHORITY_PATH")" = "$RECOVERY_AUTHORITY_BLOB"
+          grep -Fq 'FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v4' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
+          grep -Fq 'QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v12' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
+          grep -Fq 'BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v12' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
+          grep -Fq 'FAILED_FORMAL_ARCHIVE_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_o01_32660018684' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
+      - name: Require static PR path has no live credentials or data-clone route
         shell: bash
         run: |
           set -euo pipefail
@@ -79,7 +90,7 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Require exact protected main and private T4 seed
+      - name: Require exact protected main and immutable successor authorities
         shell: bash
         run: |
           set -euo pipefail
@@ -87,8 +98,9 @@ jobs:
           git fetch --no-tags origin main
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo 'T4_FORMAL_STORE_MAIN_DRIFT' >&2; exit 1; }
+          test "$(git rev-parse HEAD:"$RECOVERY_AUTHORITY_PATH")" = "$RECOVERY_AUTHORITY_BLOB" || { echo 'T4_FORMAL_STORE_RECOVERY_AUTHORITY_BLOB_DRIFT' >&2; exit 1; }
           test -n "$SOURCE_DATABASE_URL" || { echo 'T4_FORMAL_STORE_SOURCE_SECRET_REQUIRED' >&2; exit 1; }
-      - name: Install PostgreSQL client and repository dependencies
+      - name: Install PostgreSQL client
         shell: bash
         run: |
           set -euo pipefail
@@ -105,15 +117,15 @@ jobs:
           const admin=new URL(source.toString());admin.pathname='/postgres';
           console.log(`::add-mask::${source.toString()}`);console.log(`::add-mask::${admin.toString()}`);
           fs.appendFileSync(process.env.GITHUB_ENV,`ADMIN_DATABASE_URL=${admin.toString()}\n`);
-      - name: Require failed/predecessor stores already exist and are never mutated here
+      - name: Require immutable failed-v3 archive and v11 predecessor stores before any v4/v12 create
         shell: bash
         run: |
           set -euo pipefail
-          for name in "$FAILED_FORMAL_DATABASE_NAME" "$PREVIOUS_QUAL_DATABASE_NAME" "$PREVIOUS_BLOCKED_DATABASE_NAME"; do
+          for name in "$FAILED_FORMAL_ARCHIVE_DATABASE_NAME" "$PREVIOUS_QUAL_DATABASE_NAME" "$PREVIOUS_BLOCKED_DATABASE_NAME"; do
             exists=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT 1 FROM pg_database WHERE datname='$name'")
             test "$exists" = '1' || { echo "T4_FORMAL_STORE_PREDECESSOR_EVIDENCE_REQUIRED:$name" >&2; exit 1; }
           done
-      - name: Create only fresh template0 generation databases idempotently
+      - name: Create only fresh template0 v4/v12 databases idempotently
         shell: bash
         run: |
           set -euo pipefail
@@ -173,7 +185,7 @@ jobs:
           for(const [rel,count] of Object.entries(p.zero_state_counts||{}))if(count!==0)throw new Error(`T4_FORMAL_STORE_NOT_ZERO:${process.env.NAME}:${rel}`);
           NODE
           done
-      - name: Upload immutable zero-state provisioning proof
+      - name: Upload immutable zero-state v4/v12 provisioning proof
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-t4r1-formal-store-provision-${{ github.sha }}-${{ github.run_id }}

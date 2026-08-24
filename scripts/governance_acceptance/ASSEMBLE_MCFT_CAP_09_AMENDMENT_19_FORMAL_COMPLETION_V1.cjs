@@ -4,7 +4,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t4r1_24h_v3";
+const FORMAL_DATABASE = "geox_mcft_cap09_s6_formal_t4r1_24h_v4";
 const HOURLY_FILE = "MCFT_CAP_09_AMENDMENT_19_FORMAL_HOURLY_EVIDENCE_PROMOTION_RESULT_V1.json";
 const NOGO_FILE = "MCFT_CAP_09_AMENDMENT_19_FORMAL_V3_PRODUCTION_RUNNER_RESULT_V1.json";
 const OUTPUT = path.resolve("acceptance-output/MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_CANDIDATE_V1.json");

@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import {
   buildExternalFormalPrewindowAuthorityBundleV3,
   deriveExternalFormalCropStageContextHashV3,
-  MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3,
-  MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3,
+  MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4,
+  MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4,
 } from "../../apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v3.js";
 
 const A0 = "2026-08-19T00:00:00.000Z";
@@ -22,8 +22,8 @@ function main(): void {
     created_at: CREATED_AT,
     bootstrap_crop_stage_code: "MID",
     hourly_crop_stage_codes: stages,
-    fresh_database_authority_ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3,
-    fresh_database_authority_blob_sha: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3,
+    fresh_database_authority_ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4,
+    fresh_database_authority_blob_sha: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4,
   });
 
   assert.equal(result.epoch_id, EPOCH);
@@ -53,8 +53,8 @@ function main(): void {
       pin.crop_stage_context_hash,
       deriveExternalFormalCropStageContextHashV3({ crop_stage_code: "MID", derivation_authority_time: expectedTime }),
     );
-    assert.equal(payload.formal_authorities.fresh_database.ref, MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3);
-    assert.equal(payload.formal_authorities.fresh_database.hash, MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3);
+    assert.equal(payload.formal_authorities.fresh_database.ref, MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4);
+    assert.equal(payload.formal_authorities.fresh_database.hash, MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4);
     assert.equal(JSON.stringify(payload).includes("geox_mcft_cap09_s6_formal_t3r1_24h_v2"), false);
     parent = config;
   }
@@ -66,8 +66,8 @@ function main(): void {
     created_at: CREATED_AT,
     bootstrap_crop_stage_code: "MID",
     hourly_crop_stage_codes: stages,
-    fresh_database_authority_ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3,
-    fresh_database_authority_blob_sha: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3,
+    fresh_database_authority_ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4,
+    fresh_database_authority_blob_sha: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4,
   }), /EXTERNAL_FORMAL_V3_FAILED_EPOCH_REUSE_FORBIDDEN/);
   assert.throws(() => buildExternalFormalPrewindowAuthorityBundleV3({
     epoch_id: EPOCH,
@@ -75,8 +75,8 @@ function main(): void {
     created_at: CREATED_AT,
     bootstrap_crop_stage_code: "MID",
     hourly_crop_stage_codes: stages,
-    fresh_database_authority_ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3,
-    fresh_database_authority_blob_sha: "deadbeef" as typeof MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3,
+    fresh_database_authority_ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4,
+    fresh_database_authority_blob_sha: "deadbeef" as typeof MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4,
   }), /EXTERNAL_FORMAL_V3_FRESH_STORE_AUTHORITY_PIN_MISMATCH/);
 
   console.log(JSON.stringify({
@@ -86,8 +86,8 @@ function main(): void {
     parent_linked_runtime_config_chain: true,
     per_hour_crop_context_authority: true,
     explicit_ref_hash_pin_only: true,
-    fresh_store_authority_ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3,
-    fresh_store_authority_blob_sha: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3,
+    fresh_store_authority_ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4,
+    fresh_store_authority_blob_sha: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4,
     failed_v2_epoch_reuse_rejected: true,
     failed_v2_database_binding_present: false,
     database_write_count: 0,
