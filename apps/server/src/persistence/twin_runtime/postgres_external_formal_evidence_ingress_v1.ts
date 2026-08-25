@@ -4,7 +4,7 @@
 // MUST succeed before any facts transaction is opened.
 
 import crypto from "node:crypto";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 
 import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
 import {
@@ -43,11 +43,22 @@ export type ExternalFormalEvidenceIngressResultV1 = {
   canonical_fact_write_count: 0 | 1;
 };
 
+export type PreparedExternalFormalEvidenceIngressV1 = {
+  record: CanonicalReplayEvidenceRecordV1;
+  event_time: string;
+  raw_proof: VerifyRetainedRawEvidenceInputV1;
+  fact_id: string;
+  identity_key: string;
+  requested_semantic_hash: string;
+};
+
 type EvidenceAuthorityV1 = {
   binding_id: string;
   epistemic_class: "OBSERVED" | "ESTIMATED" | "ASSUMED";
   event_time_field: "observed_at" | "interval_end" | "issued_at";
 };
+
+type TransactionClientV1 = Pick<PoolClient, "query">;
 
 const AUTHORITY_BY_RECORD_TYPE_V1: Readonly<Record<string, EvidenceAuthorityV1>> = {
   soil_moisture_observation_v1: { binding_id: MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1, epistemic_class: "OBSERVED", event_time_field: "observed_at" },
@@ -107,11 +118,21 @@ function objectRecordV1(value: unknown, code: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function validateCanonicalizedResultV1(result: CanonicalizedExternalEvidenceResultV1): {
-  record: CanonicalReplayEvidenceRecordV1;
-  event_time: string;
-  raw_proof: VerifyRetainedRawEvidenceInputV1;
-} {
+function identityV1(record: CanonicalReplayEvidenceRecordV1): string {
+  return [record.tenant_id, record.project_id, record.group_id, record.field_id, record.season_id, record.zone_id, record.dataset_id, record.record_type, record.source_record_id].join("|");
+}
+
+function factIdV1(record: CanonicalReplayEvidenceRecordV1): string {
+  return `fact_external_evidence_${crypto.createHash("sha256").update(identityV1(record), "utf8").digest("hex")}`;
+}
+
+function parseFactRecordV1(value: unknown): CanonicalReplayEvidenceRecordV1 {
+  const parsed = typeof value === "string" ? JSON.parse(value) : value;
+  const envelope = objectRecordV1(parsed, "EA5C1_EXISTING_FACT_ENVELOPE_INVALID");
+  return objectRecordV1(envelope.payload, "EA5C1_EXISTING_FACT_PAYLOAD_INVALID") as unknown as CanonicalReplayEvidenceRecordV1;
+}
+
+export function prepareExternalFormalEvidenceIngressV1(result: CanonicalizedExternalEvidenceResultV1): PreparedExternalFormalEvidenceIngressV1 {
   if (result.pipeline_version !== MCFT_CAP09_EXTERNAL_EVIDENCE_PIPELINE_VERSION_V1) throw new Error("EA5C1_EA3_PIPELINE_VERSION_REQUIRED");
   const record = result.record;
   exactScopeV1(record, { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 });
@@ -155,7 +176,8 @@ function validateCanonicalizedResultV1(result: CanonicalizedExternalEvidenceResu
   if (result.canonical_payload_sha256 !== canonicalPayloadHash || record.quality.canonical_payload_sha256 !== canonicalPayloadHash) {
     throw new Error("EA5C1_CANONICAL_PAYLOAD_DIGEST_MISMATCH");
   }
-  if (result.record_semantic_sha256 !== semanticHashV1(record)) throw new Error("EA5C1_RECORD_SEMANTIC_DIGEST_MISMATCH");
+  const requestedSemanticHash = semanticHashV1(record);
+  if (result.record_semantic_sha256 !== requestedSemanticHash) throw new Error("EA5C1_RECORD_SEMANTIC_DIGEST_MISMATCH");
 
   const draftSourcePayload = structuredClone(sourcePayload);
   delete draftSourcePayload.raw_provenance;
@@ -173,77 +195,70 @@ function validateCanonicalizedResultV1(result: CanonicalizedExternalEvidenceResu
     record,
     event_time: eventTime,
     raw_proof: { retention_ref: retentionRef, retained_sha256: rawSha256, retained_bytes: Number(rawBytes) },
+    fact_id: factIdV1(record),
+    identity_key: identityV1(record),
+    requested_semantic_hash: requestedSemanticHash,
   };
 }
 
-function identityV1(record: CanonicalReplayEvidenceRecordV1): string {
-  return [record.tenant_id, record.project_id, record.group_id, record.field_id, record.season_id, record.zone_id, record.dataset_id, record.record_type, record.source_record_id].join("|");
-}
+export async function appendPreparedExternalFormalEvidenceUsingClientV1(
+  client: TransactionClientV1,
+  prepared: PreparedExternalFormalEvidenceIngressV1,
+): Promise<ExternalFormalEvidenceIngressResultV1> {
+  const record = prepared.record;
+  await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [prepared.identity_key]);
+  const existing = await client.query("SELECT record_json FROM facts WHERE fact_id=$1 LIMIT 2", [prepared.fact_id]);
+  if (existing.rows.length > 1) throw new Error("EA5C1_FACT_ID_NOT_UNIQUE");
+  if (existing.rows.length === 1) {
+    const current = parseFactRecordV1(existing.rows[0].record_json);
+    if (current.source_record_hash !== record.source_record_hash || semanticHashV1(current) !== prepared.requested_semantic_hash) throw new Error("EA5C1_SOURCE_IDENTITY_CONFLICT");
+    return {
+      ingress_id: MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_INGRESS_ID_V1,
+      status: "EXISTING_IDEMPOTENT_SUCCESS",
+      fact_id: prepared.fact_id,
+      record_type: record.record_type,
+      source_record_id: record.source_record_id,
+      source_record_hash: record.source_record_hash,
+      retention_ref: prepared.raw_proof.retention_ref,
+      raw_sha256: prepared.raw_proof.retained_sha256,
+      raw_bytes: prepared.raw_proof.retained_bytes,
+      canonical_fact_write_count: 0,
+    };
+  }
 
-function factIdV1(record: CanonicalReplayEvidenceRecordV1): string {
-  return `fact_external_evidence_${crypto.createHash("sha256").update(identityV1(record), "utf8").digest("hex")}`;
-}
-
-function parseFactRecordV1(value: unknown): CanonicalReplayEvidenceRecordV1 {
-  const parsed = typeof value === "string" ? JSON.parse(value) : value;
-  const envelope = objectRecordV1(parsed, "EA5C1_EXISTING_FACT_ENVELOPE_INVALID");
-  return objectRecordV1(envelope.payload, "EA5C1_EXISTING_FACT_PAYLOAD_INVALID") as unknown as CanonicalReplayEvidenceRecordV1;
+  await client.query(
+    "INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,$3,$4::jsonb)",
+    [prepared.fact_id, prepared.event_time, MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_FACT_SOURCE_V1, JSON.stringify({ type: record.record_type, payload: record })],
+  );
+  return {
+    ingress_id: MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_INGRESS_ID_V1,
+    status: "INSERTED",
+    fact_id: prepared.fact_id,
+    record_type: record.record_type,
+    source_record_id: record.source_record_id,
+    source_record_hash: record.source_record_hash,
+    retention_ref: prepared.raw_proof.retention_ref,
+    raw_sha256: prepared.raw_proof.retained_sha256,
+    raw_bytes: prepared.raw_proof.retained_bytes,
+    canonical_fact_write_count: 1,
+  };
 }
 
 export class PostgresExternalFormalEvidenceIngressV1 {
   constructor(private readonly pool: Pool, private readonly retentionVerifier: RawEvidenceRetentionVerificationPortV1) {}
 
   async appendCanonicalizedExternalEvidence(result: CanonicalizedExternalEvidenceResultV1): Promise<ExternalFormalEvidenceIngressResultV1> {
-    const validated = validateCanonicalizedResultV1(result);
-    const record = validated.record;
+    const prepared = prepareExternalFormalEvidenceIngressV1(result);
 
     // Amendment-05 barrier: the durable private object is re-verified immediately before DB ingress.
-    await this.retentionVerifier.verifyRetainedRawEvidence(validated.raw_proof);
+    await this.retentionVerifier.verifyRetainedRawEvidence(prepared.raw_proof);
 
-    const factId = factIdV1(record);
-    const identity = identityV1(record);
-    const requestedSemanticHash = semanticHashV1(record);
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
-      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [identity]);
-      const existing = await client.query("SELECT record_json FROM facts WHERE fact_id=$1 LIMIT 2", [factId]);
-      if (existing.rows.length > 1) throw new Error("EA5C1_FACT_ID_NOT_UNIQUE");
-      if (existing.rows.length === 1) {
-        const current = parseFactRecordV1(existing.rows[0].record_json);
-        if (current.source_record_hash !== record.source_record_hash || semanticHashV1(current) !== requestedSemanticHash) throw new Error("EA5C1_SOURCE_IDENTITY_CONFLICT");
-        await client.query("COMMIT");
-        return {
-          ingress_id: MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_INGRESS_ID_V1,
-          status: "EXISTING_IDEMPOTENT_SUCCESS",
-          fact_id: factId,
-          record_type: record.record_type,
-          source_record_id: record.source_record_id,
-          source_record_hash: record.source_record_hash,
-          retention_ref: validated.raw_proof.retention_ref,
-          raw_sha256: validated.raw_proof.retained_sha256,
-          raw_bytes: validated.raw_proof.retained_bytes,
-          canonical_fact_write_count: 0,
-        };
-      }
-
-      await client.query(
-        "INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,$3,$4::jsonb)",
-        [factId, validated.event_time, MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_FACT_SOURCE_V1, JSON.stringify({ type: record.record_type, payload: record })],
-      );
+      const receipt = await appendPreparedExternalFormalEvidenceUsingClientV1(client, prepared);
       await client.query("COMMIT");
-      return {
-        ingress_id: MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_INGRESS_ID_V1,
-        status: "INSERTED",
-        fact_id: factId,
-        record_type: record.record_type,
-        source_record_id: record.source_record_id,
-        source_record_hash: record.source_record_hash,
-        retention_ref: validated.raw_proof.retention_ref,
-        raw_sha256: validated.raw_proof.retained_sha256,
-        raw_bytes: validated.raw_proof.retained_bytes,
-        canonical_fact_write_count: 1,
-      };
+      return receipt;
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
