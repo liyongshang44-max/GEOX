@@ -1,7 +1,8 @@
 {
   "registry_id": "MCFT_CAP09_QUALIFICATION_EVIDENCE_REGISTRY_V1",
-  "schema_version": 1,
+  "schema_version": 2,
   "frozen_subject_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+  "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
   "entries": [
     {
       "evidence_id": "V13_SUCCESSOR_SUBJECT_3BBF096E",
@@ -14,9 +15,11 @@
       "run_conclusion": "success",
       "artifact_id": 9575891293,
       "artifact_digest": "sha256:5470f9e59a73d95bdb68e1ec37d3bf39464f3dd0826fd6a41e67a0baaaac766a",
+      "dependency_subject_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+      "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
       "immutable_binding_sha256": "673af54ba53ddfd2229a3552d42787bddfc510f08d93be4c6d0cd31877dce280",
       "immutable": true,
-      "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
+      "carry_forward_policy": "ONLY_WHEN_DURABLE_ANCHOR_AND_DEPENDENCY_DIGEST_UNCHANGED",
       "requalification_triggers": ["V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"]
     },
     {
@@ -30,9 +33,11 @@
       "run_conclusion": "success",
       "artifact_id": 9575878791,
       "artifact_digest": "sha256:04630f1f869ba99e9be40d55e24967e6e26671e80d3459fb9b28ce0694aaeb40",
+      "dependency_subject_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+      "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
       "immutable_binding_sha256": "ae74cdf90bbe22a4d3cf287ca676bc581aaebd6619be9876a05113b341778e0e",
       "immutable": true,
-      "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
+      "carry_forward_policy": "ONLY_WHEN_DURABLE_ANCHOR_AND_DEPENDENCY_DIGEST_UNCHANGED",
       "requalification_triggers": ["V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"]
     },
     {
@@ -46,9 +51,11 @@
       "run_conclusion": "success",
       "artifact_id": 9575898642,
       "artifact_digest": "sha256:5dc7bbdf61372518e50ef33cbc470b50b788197622b8a0ce4978686365e9b625",
+      "dependency_subject_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+      "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
       "immutable_binding_sha256": "00710239a7660ca249f0baa565f83ed9d30479e48d6b30ce7ff2b5d178bdc312",
       "immutable": true,
-      "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
+      "carry_forward_policy": "ONLY_WHEN_DURABLE_ANCHOR_AND_DEPENDENCY_DIGEST_UNCHANGED",
       "requalification_triggers": ["V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"]
     },
     {
@@ -62,9 +69,11 @@
       "run_conclusion": "success",
       "artifact_id": 9575893745,
       "artifact_digest": "sha256:5d0cd30932062032298b24a44b7d7d728a58807669961058931c22dfba0b99ac",
+      "dependency_subject_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+      "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
       "immutable_binding_sha256": "8432bde37f1a19f18f3247c1d250fd188def14b743e0074f276f9d0c370fb512",
       "immutable": true,
-      "carry_forward_policy": "ONLY_WHEN_EXACT_RESOLVER_PATHS_UNCHANGED",
+      "carry_forward_policy": "ONLY_WHEN_DURABLE_ANCHOR_AND_DEPENDENCY_DIGEST_UNCHANGED",
       "requalification_triggers": ["EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"]
     },
     {
@@ -78,11 +87,13 @@
       "run_conclusion": "success",
       "artifact_id": 9575862147,
       "artifact_digest": "sha256:1fac3c1e8812fd978611d10444f0bf469de89ddca9694b5d4ea111b137fc1bd1",
+      "dependency_subject_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+      "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
       "immutable_binding_sha256": "83fc93bdbef49efab18e805b3b213937a47155d03b92b86ee918dffba9c79010",
       "dependency_binding_module": "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs",
       "dependency_binding_export": "expectedDependencyPaths",
       "immutable": true,
-      "carry_forward_policy": "ONLY_WHEN_EXTERNAL_AUTHORITY_GRAPH_UNCHANGED",
+      "carry_forward_policy": "ONLY_WHEN_DURABLE_ANCHOR_AND_DEPENDENCY_DIGEST_UNCHANGED",
       "requalification_triggers": ["EA5E2_RUNTIME_GRAPH_V4"]
     },
     {
@@ -96,10 +107,12 @@
       "run_conclusion": "success",
       "artifact_id": null,
       "artifact_digest": null,
+      "dependency_subject_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+      "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
       "immutable_binding_sha256": "7bebf5df737bdaa6ec35da79da1b89ccaead06698489b45494cc17215b8e2904",
       "artifact_absence_reason": "RUN_LEVEL_ROUTING_EVIDENCE_ONLY",
       "immutable": true,
-      "carry_forward_policy": "ONLY_WHEN_LEGACY_SENSITIVE_PATHS_UNCHANGED",
+      "carry_forward_policy": "ONLY_WHEN_DURABLE_ANCHOR_AND_DEPENDENCY_DIGEST_UNCHANGED",
       "requalification_triggers": ["LEGACY_AM19_PERSISTENT_24T"]
     }
   ],
@@ -109,8 +122,12 @@
     "non_success_run": "FAIL_CLOSED",
     "mutable_evidence": "FAIL_CLOSED",
     "immutable_binding_mismatch": "FAIL_CLOSED",
-    "dependency_trigger_changed": "REQUALIFY",
-    "dependency_trigger_unchanged": "CARRY_FORWARD"
+    "missing_or_invalid_durable_anchor": "FAIL_CLOSED",
+    "dependency_digest_unresolvable": "FAIL_CLOSED",
+    "dependency_digest_changed": "REQUALIFY",
+    "dependency_digest_unchanged": "CARRY_FORWARD",
+    "live_artifact_expiry_after_durable_anchor_capture": "HISTORICAL_IDENTITY_REMAINS_ANCHORED",
+    "durable_anchor_missing_or_mismatch": "FAIL_CLOSED"
   },
   "non_effects": {
     "runtime_mutation": false,
@@ -119,5 +136,76 @@
     "provider_request": false,
     "graduation_effect": false,
     "mcft_cap09_completed": false
+  },
+  "durable_anchors": {
+    "anchor_id": "MCFT_CAP09_QUALIFICATION_EVIDENCE_DURABLE_ANCHORS_V1",
+    "capture_policy": "REPOSITORY_VERSIONED_CRYPTOGRAPHIC_SNAPSHOT_OF_VERIFIED_ACTIONS_EVIDENCE",
+    "frozen_subject_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+    "entries": [
+      {
+        "evidence_id": "V13_SUCCESSOR_SUBJECT_3BBF096E",
+        "run_id": 32881283813,
+        "artifact_id": 9575891293,
+        "artifact_digest": "sha256:5470f9e59a73d95bdb68e1ec37d3bf39464f3dd0826fd6a41e67a0baaaac766a",
+        "artifact_expires_at": "2026-11-23T18:00:58Z",
+        "captured_files": [
+          {"path":"MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION_GOVERNANCE.json","sha256":"sha256:ddfbad9a159fa39199f33f22de48aff2210c32b40134dfb32bab198e988e8274","status":"PASS"},
+          {"path":"MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION_RESULT.json","sha256":"sha256:ffd914a826b66e05e6afba64f100010aa377d59820389d703f14b703b7b5552b","status":"PASS"}
+        ]
+      },
+      {
+        "evidence_id": "V13_HOLISTIC_SCHEMA_3BBF096E",
+        "run_id": 32881283336,
+        "artifact_id": 9575878791,
+        "artifact_digest": "sha256:04630f1f869ba99e9be40d55e24967e6e26671e80d3459fb9b28ce0694aaeb40",
+        "artifact_expires_at": "2026-11-23T18:00:58Z",
+        "captured_files": [{"path":"MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES_RESULT.json","sha256":"sha256:2f0a98f100fcb391092dc7406ee229bdb05c289b185afad7802175f190746f02","status":"PASS","v13_column_fingerprint_md5":"c61154d4439a82efc256bed461386781","v13_constraint_fingerprint_md5":"67a588bc5b8c3d213b03aa1dbfa4ff2b","v13_index_fingerprint_md5":"306e26a56d419c4e08fac0912ccfdda8"}]
+      },
+      {
+        "evidence_id": "V13_NEXT_TICK_3BBF096E",
+        "run_id": 32881284034,
+        "artifact_id": 9575898642,
+        "artifact_digest": "sha256:5dc7bbdf61372518e50ef33cbc470b50b788197622b8a0ce4978686365e9b625",
+        "artifact_expires_at": "2026-11-23T18:00:58Z",
+        "captured_files": [
+          {"path":"MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES_RESULT.json","sha256":"sha256:d6c65b6fa56c69732d04689bf6f5d195d60b30149a0228a0867ae062b7b8b395","status":"PASS"},
+          {"path":"MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY_RESULT.json","sha256":"sha256:5e6d7b7def521183630dbf993a544f6bcb5254a05abec9719601825b8a26eb43","status":"PASS"}
+        ]
+      },
+      {
+        "evidence_id": "EA5C1_SUCCESSOR_REVALIDATION_3BBF096E",
+        "run_id": 32881283425,
+        "artifact_id": 9575893745,
+        "artifact_digest": "sha256:5d0cd30932062032298b24a44b7d7d728a58807669961058931c22dfba0b99ac",
+        "artifact_expires_at": "2026-11-23T18:00:58Z",
+        "captured_files": [
+          {"path":"MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_GOVERNANCE_RESULT.json","sha256":"sha256:83a7ad887f21c1faab088708013a4b8d8034383bcae1f142028569d7d91eac10","status":"PASS"},
+          {"path":"MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json","sha256":"sha256:5cad225397bb802b8679c8a0514dd13bde174fb288c1bf6ea3398a467b05e01f","status":"PASS"},
+          {"path":"EA5C1_FOCUSED_ACCEPTANCE.log","sha256":"sha256:57c8199758db808c29813b203a21955d4300d0a68a540fef140a6b62ecfc2372","summary":"11 PASS, 0 FAIL"},
+          {"path":"EA5C1_SERVER_TYPECHECK.log","sha256":"sha256:9e8966eea9f57e1323592da1ea5b3ce5ba1027d049cc105137ec04b131b09bf4"}
+        ]
+      },
+      {
+        "evidence_id": "EA5E2_RUNTIME_GRAPH_3BBF096E",
+        "run_id": 32881283560,
+        "artifact_id": 9575862147,
+        "artifact_digest": "sha256:1fac3c1e8812fd978611d10444f0bf469de89ddca9694b5d4ea111b137fc1bd1",
+        "artifact_expires_at": "2026-09-01T18:01:10Z",
+        "captured_files": [{"path":"MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json","sha256":"sha256:4fe2f0487ee3886ae15951e0d9407d94138c2b4d467e0c3389345fccc7ee2002","status":"PASS","runtime_dependency_graph_count":93,"expected_dependency_graph_sha256":"sha256:b222cc98c5f518a42021dfea958215f4a9d8615463de02108af29c4d23987218","carrier_dependency_graph_sha256":"sha256:b222cc98c5f518a42021dfea958215f4a9d8615463de02108af29c4d23987218"}]
+      },
+      {
+        "evidence_id": "LEGACY_AM19_24T_SUCCESSOR_ROUTING_3BBF096E",
+        "run_id": 32881283602,
+        "artifact_id": null,
+        "artifact_digest": null,
+        "run_snapshot": {"event":"pull_request","run_number":178,"workflow_path":".github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml","head_sha":"3bbf096ee5cb73e8e0e0251dc400733d6cab501f","base_sha":"26c1383f7f45abb76c99e28ec3d06714e85d1b2c","created_at":"2026-08-25T18:00:58Z","updated_at":"2026-08-25T18:01:58Z"}
+      }
+    ],
+    "rules": {
+      "artifact_expiry_does_not_delete_embedded_anchor": true,
+      "artifact_digest_remains_historical_identity_after_expiry": true,
+      "registry_mutation_requalifies_control_plane": true,
+      "anchor_is_not_production_authority": true
+    }
   }
 }
