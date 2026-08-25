@@ -74,7 +74,7 @@ function main() {
   assert.deepEqual(unknown.unknown_changed_paths, ["docs/__mcft_cap09_unowned_path_should_fail__.md"]);
 
   // 3) Shared ingress changes must requalify the formal EA5C1 check and any generated import closure that truly depends on it.
-  const ingressPath = "apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts";
+  const ingressPath = "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts";
   const ingress = plan(authority, registry, [ingressPath]);
   assert.equal(ingress.status, "PASS");
   assert.equal(byId(ingress, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").status, "REQUALIFY");
