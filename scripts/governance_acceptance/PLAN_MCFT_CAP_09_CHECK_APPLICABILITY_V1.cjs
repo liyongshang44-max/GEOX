@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const cp = require("node:child_process");
@@ -8,6 +9,8 @@ const cp = require("node:child_process");
 const ROOT = path.resolve(__dirname, "../..");
 const AUTHORITY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const REGISTRY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json";
+const ACTUAL_FORMAL_STORE_AUTHORITY_PATH =
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json";
 
 function readJson(root, rel) {
   return JSON.parse(fs.readFileSync(path.join(root, rel), "utf8"));
@@ -137,16 +140,117 @@ function resolveDependencyResolvers(root, authority) {
   return { resolved, errors };
 }
 
+function duplicateValues(values) {
+  const seen = new Set();
+  const duplicates = new Set();
+  for (const value of values) {
+    if (seen.has(value)) duplicates.add(value);
+    seen.add(value);
+  }
+  return [...duplicates].sort();
+}
+
 function registryMap(registry) {
   return new Map((registry.entries || []).map((entry) => [entry.evidence_id, entry]));
+}
+
+function immutableEvidenceBindingSha256(entry) {
+  const fields = [
+    entry.evidence_id,
+    entry.check_id,
+    entry.generation,
+    entry.subject_sha,
+    entry.workflow_name,
+    entry.run_id,
+    entry.run_conclusion,
+    entry.artifact_id,
+    entry.artifact_digest,
+  ];
+  const material = fields.map((value) => value === null || value === undefined ? "" : String(value)).join("|");
+  return crypto.createHash("sha256").update(material, "utf8").digest("hex");
 }
 
 function evidenceIsStructurallyValid(entry, authority) {
   if (!entry || entry.immutable !== true || entry.run_conclusion !== "success") return false;
   if (entry.subject_sha !== authority.frozen_successor_subject_sha) return false;
+  if (!/^[0-9a-f]{64}$/.test(entry.immutable_binding_sha256 || "")) return false;
+  if (immutableEvidenceBindingSha256(entry) !== entry.immutable_binding_sha256) return false;
   if (entry.evidence_class === "IMMUTABLE_WORKFLOW_ARTIFACT") return Number.isInteger(entry.run_id) && Number.isInteger(entry.artifact_id) && /^sha256:[0-9a-f]{64}$/.test(entry.artifact_digest || "");
   if (entry.evidence_class === "IMMUTABLE_WORKFLOW_RUN") return Number.isInteger(entry.run_id) && entry.artifact_id === null && entry.artifact_digest === null;
   return false;
+}
+
+function validateDefinitions(authority, registry) {
+  const errors = [];
+  const checks = authority.checks || [];
+  const entries = registry.entries || [];
+  for (const checkId of duplicateValues(checks.map((row) => row.check_id))) {
+    errors.push({ code: "DUPLICATE_CHECK_ID", detail: checkId });
+  }
+  for (const evidenceId of duplicateValues(entries.map((row) => row.evidence_id))) {
+    errors.push({ code: "DUPLICATE_EVIDENCE_ID", detail: evidenceId });
+  }
+  if (registry.frozen_subject_sha !== authority.frozen_successor_subject_sha) {
+    errors.push({
+      code: "EVIDENCE_REGISTRY_FROZEN_SUBJECT_MISMATCH",
+      detail: { registry: registry.frozen_subject_sha ?? null, authority: authority.frozen_successor_subject_sha ?? null },
+    });
+  }
+
+  const resolverIds = new Set(Object.keys(authority.dependency_resolvers || {}));
+  const checkIds = new Set(checks.map((row) => row.check_id));
+  const evidenceIds = new Set(entries.map((row) => row.evidence_id));
+  for (const check of checks) {
+    if (typeof check.check_id !== "string" || !check.check_id) {
+      errors.push({ code: "CHECK_ID_REQUIRED", detail: check.check_id ?? null });
+      continue;
+    }
+    for (const resolverId of check.resolver_ids || []) {
+      if (!resolverIds.has(resolverId)) errors.push({ code: "CHECK_DEPENDENCY_AUTHORITY_REF_MISSING", detail: { check_id: check.check_id, resolver_id: resolverId } });
+    }
+    if (check.carry_forward_evidence_id && !evidenceIds.has(check.carry_forward_evidence_id)) {
+      errors.push({ code: "CHECK_EVIDENCE_REF_MISSING", detail: { check_id: check.check_id, evidence_id: check.carry_forward_evidence_id } });
+    }
+  }
+  for (const entry of entries) {
+    if (!checkIds.has(entry.check_id)) errors.push({ code: "EVIDENCE_CHECK_REF_MISSING", detail: { evidence_id: entry.evidence_id, check_id: entry.check_id } });
+    for (const trigger of entry.requalification_triggers || []) {
+      if (!resolverIds.has(trigger)) errors.push({ code: "EVIDENCE_REQUALIFICATION_AUTHORITY_REF_MISSING", detail: { evidence_id: entry.evidence_id, resolver_id: trigger } });
+    }
+  }
+  return errors;
+}
+
+function resolveFailedV4ForbiddenEvidencePolicy(root) {
+  const errors = [];
+  const subjects = new Map();
+  if (!exists(root, ACTUAL_FORMAL_STORE_AUTHORITY_PATH)) {
+    errors.push({ code: "FAILED_V4_AUTHORITY_REF_MISSING", detail: ACTUAL_FORMAL_STORE_AUTHORITY_PATH });
+    return { subjects, errors };
+  }
+  try {
+    const formal = readJson(root, ACTUAL_FORMAL_STORE_AUTHORITY_PATH);
+    const incident = formal.failed_v4_incident || {};
+    const database = formal.database_identity || {};
+    const failedSubject = incident.failed_subject_sha;
+    const failClosed =
+      incident.formal_epoch_no_go === true &&
+      incident.failed_epoch_continuation_forbidden === true &&
+      incident.failed_epoch_repair_or_late_forcing_insertion_forbidden === true &&
+      database.failed_predecessor_reuse_forbidden === true &&
+      database.data_clone_from_failed_v4_forbidden === true;
+    if (!/^[0-9a-f]{40}$/.test(failedSubject || "") || !failClosed) {
+      errors.push({ code: "FAILED_V4_AUTHORITY_NOT_FAIL_CLOSED", detail: ACTUAL_FORMAL_STORE_AUTHORITY_PATH });
+    } else {
+      subjects.set(failedSubject, {
+        reason_code: "FAILED_V4_EVIDENCE_REUSE_FORBIDDEN",
+        authority_ref: ACTUAL_FORMAL_STORE_AUTHORITY_PATH,
+      });
+    }
+  } catch (error) {
+    errors.push({ code: "FAILED_V4_AUTHORITY_UNREADABLE", detail: error instanceof Error ? error.message : String(error) });
+  }
+  return { subjects, errors };
 }
 
 function planApplicability({ root = ROOT, authority, registry, changedPaths, stage, baseSha = null, headSha = null }) {
@@ -155,7 +259,9 @@ function planApplicability({ root = ROOT, authority, registry, changedPaths, sta
   if (!(authority.allowed_stages || []).includes(stage)) throw new Error(`CONTROL_PLANE_STAGE_INVALID:${stage}`);
 
   const changed = [...new Set((changedPaths || []).map(norm).filter(Boolean))].sort();
+  const definitionErrors = validateDefinitions(authority, registry);
   const resolverResult = resolveDependencyResolvers(root, authority);
+  const failedV4Policy = resolveFailedV4ForbiddenEvidencePolicy(root);
   const allOwned = new Set(Object.values(resolverResult.resolved).flatMap((resolver) => resolver.paths));
   const unknownChangedPaths = changed.filter((p) => !allOwned.has(p));
   const evidence = registryMap(registry);
@@ -169,15 +275,21 @@ function planApplicability({ root = ROOT, authority, registry, changedPaths, sta
     const dependencyPaths = [...new Set(resolverIds.flatMap((id) => resolverResult.resolved[id]?.paths || []))].sort();
     const changedDependencies = changed.filter((p) => dependencyPaths.includes(p));
     const evidenceEntry = check.carry_forward_evidence_id ? evidence.get(check.carry_forward_evidence_id) : null;
+    const forbiddenEvidence = evidenceEntry ? failedV4Policy.subjects.get(evidenceEntry.subject_sha) : null;
 
     let status;
     let reason_code;
+    let authority_ref = null;
     if (!applicable) {
       status = "NOT_APPLICABLE";
       reason_code = "STAGE_NOT_APPLICABLE";
     } else if (missingResolvers.length || resolverErrors.length) {
       status = "UNKNOWN";
       reason_code = "DEPENDENCY_RESOLVER_INVALID";
+    } else if (forbiddenEvidence) {
+      status = "FORBIDDEN";
+      reason_code = forbiddenEvidence.reason_code;
+      authority_ref = forbiddenEvidence.authority_ref;
     } else if (changedDependencies.length > 0) {
       status = "REQUALIFY";
       reason_code = "GOVERNED_DEPENDENCY_CHANGED";
@@ -198,16 +310,26 @@ function planApplicability({ root = ROOT, authority, registry, changedPaths, sta
       check_id: check.check_id,
       status,
       reason_code,
+      authority_ref,
       resolver_ids: resolverIds,
       changed_dependencies: changedDependencies,
       carry_forward_evidence_id: check.carry_forward_evidence_id,
+      historical_digest: evidenceEntry?.artifact_digest ?? null,
+      subject_digest: evidenceEntry?.immutable_binding_sha256 ?? null,
       diagnostic_command: check.diagnostic_command ?? null,
     });
   }
 
   const counts = Object.fromEntries(authority.decision_states.map((state) => [state, decisions.filter((d) => d.status === state).length]));
   const blockers = decisions.filter((d) => d.status === "UNKNOWN" || d.status === "FORBIDDEN");
-  const overallStatus = unknownChangedPaths.length === 0 && resolverResult.errors.length === 0 && blockers.length === 0 ? "PASS" : "FAIL";
+  const authorityErrors = [...definitionErrors, ...failedV4Policy.errors];
+  const overallStatus =
+    unknownChangedPaths.length === 0 &&
+    resolverResult.errors.length === 0 &&
+    authorityErrors.length === 0 &&
+    blockers.length === 0
+      ? "PASS"
+      : "FAIL";
   return {
     planner_id: authority.authority_id,
     status: overallStatus,
@@ -217,6 +339,7 @@ function planApplicability({ root = ROOT, authority, registry, changedPaths, sta
     frozen_successor_subject_sha: authority.frozen_successor_subject_sha,
     changed_paths: changed,
     unknown_changed_paths: unknownChangedPaths,
+    authority_errors: authorityErrors,
     resolver_errors: resolverResult.errors,
     resolver_summaries: Object.fromEntries(Object.entries(resolverResult.resolved).map(([id, value]) => [id, {
       kind: value.kind,
@@ -228,6 +351,7 @@ function planApplicability({ root = ROOT, authority, registry, changedPaths, sta
     counts,
     decisions,
     blockers,
+    forbidden_evidence_subjects: [...failedV4Policy.subjects.keys()].sort(),
     non_effects: { ...authority.non_effects },
   };
 }
@@ -272,10 +396,14 @@ function main() {
 module.exports = {
   AUTHORITY_PATH,
   REGISTRY_PATH,
+  ACTUAL_FORMAL_STORE_AUTHORITY_PATH,
   buildImportClosure,
   materializeGeneratedGraph,
   resolveDependencyResolvers,
+  immutableEvidenceBindingSha256,
   evidenceIsStructurallyValid,
+  validateDefinitions,
+  resolveFailedV4ForbiddenEvidencePolicy,
   planApplicability,
 };
 
