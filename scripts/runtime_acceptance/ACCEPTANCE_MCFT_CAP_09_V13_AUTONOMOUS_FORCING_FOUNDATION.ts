@@ -67,8 +67,8 @@ function et0Points(base: string): Array<Record<string, unknown>> {
 }
 
 function buildFact(kind: "WEATHER" | "ET0" | "SOIL", base: string, suffix: string): { factId: string; record: Record<string, any>; identity: ExternalFormalPhysicalFactIdentityV1; occurredAt: string } {
-  const available = addMinutes(base, -20);
-  const ingested = addMinutes(base, -10);
+  const available = addMinutes(base, kind === "SOIL" ? -10 : -20);
+  const ingested = addMinutes(base, kind === "SOIL" ? -5 : -10);
   const sourceRecordId = `v13_${kind.toLowerCase()}_${suffix}`;
   const recordType = kind === "WEATHER" ? "future_weather_assumption_v1" : kind === "ET0" ? "future_et0_assumption_v1" : "soil_moisture_observation_v1";
   const roleTime = kind === "SOIL"
