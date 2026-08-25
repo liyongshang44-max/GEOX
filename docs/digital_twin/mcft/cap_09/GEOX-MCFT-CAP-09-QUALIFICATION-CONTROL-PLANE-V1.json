@@ -57,10 +57,10 @@
     "LEGACY_AM19_PERSISTENT_24T": {
       "kind": "EXACT_PATH_SET",
       "paths": [
+        "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts",
-        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
-        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT19-WINDOW-MANIFEST.json",
+        "apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts",
         ".github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml"
       ]
     },
