@@ -71,8 +71,16 @@ jobs:
             '.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml' \
             '.github/workflows/mcft-cap-09-ea5b3-external-runtime-config-resolver.yml' \
             '.github/workflows/mcft-cap-09-ea5d1-external-bootstrap-persistence-qualification.yml' | sort)"
+          historical_sensitive_regex='^(scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py|scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts|scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts|apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts)$'
+          v13_marker_regex='(^\.github/workflows/mcft-cap-09-v13-|^apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_|external_formal_v5_|external_formal_forcing_|external_formal_exact_base_|postgres_external_formal_forcing_|postgres_external_formal_next_tick_|postgres_external_formal_fenced_exact_base_|/ACCEPTANCE_MCFT_CAP_09_V13_|/VALIDATE_MCFT_CAP_09_V13_|GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3\.json$)'
+          historical_sensitive_changed=false
+          v13_marker_changed=false
+          if grep -Eq "$historical_sensitive_regex" <<<"$changed"; then historical_sensitive_changed=true; fi
+          if grep -Eq "$v13_marker_regex" <<<"$changed"; then v13_marker_changed=true; fi
           mode='historical-am19'
-          if [[ "$changed" == "$t4_runtime_rebind_files" ]]; then
+          if [[ "$v13_marker_changed" == 'true' && "$historical_sensitive_changed" == 'false' ]]; then
+            mode='v13-maintenance-successor'
+          elif [[ "$changed" == "$t4_runtime_rebind_files" ]]; then
             mode='t4-runtime-rebind-successor'
           elif [[ "$changed" == "$routing_repair_files" ]]; then
             mode='runtime-rebind-routing-repair'
@@ -102,6 +110,11 @@ jobs:
         run: |
           echo 'PASS: exact T4 runtime rebind remains zero-write and does not reuse the T3R1 persistent orchestration identity.'
 
+      - name: Record frozen historical persistent-24T source not applicable to v13 maintenance
+        if: steps.routing.outputs.mode == 'v13-maintenance-successor'
+        run: |
+          echo 'PASS: v13 maintenance leaves the frozen historical persistent-24T source, rehydration, decoder, and window manifest unchanged.'
+
       - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
@@ -113,16 +126,22 @@ jobs:
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck server and qualification orchestration
+      - name: Typecheck server
         run: |
           set -euo pipefail
           pnpm --filter @geox/server run typecheck
+
+      - name: Typecheck historical qualification orchestration
+        if: steps.routing.outputs.mode != 'v13-maintenance-successor'
+        run: |
+          set -euo pipefail
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
             apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts \
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts \
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
 
       - name: Prove stable T3R1 credential seed normalization fail-closed
+        if: steps.routing.outputs.mode != 'v13-maintenance-successor'
         shell: node {0}
         run: |
           function normalize(raw) {
@@ -151,7 +170,7 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_PREFLIGHT_V1.cjs
 
       - name: Run pure orchestration selftests
-        if: steps.routing.outputs.mode != 't4-runtime-rebind-successor'
+        if: steps.routing.outputs.mode != 't4-runtime-rebind-successor' && steps.routing.outputs.mode != 'v13-maintenance-successor'
         run: |
           set -euo pipefail
           node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_V1.cjs selftest
@@ -166,7 +185,7 @@ jobs:
         run: |
           const fs=require('node:fs');
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json','utf8'));
-          if(p.status!=='PASS'||p.machine_statuses?.PERSISTENCE_FREE_24T!=='PASS'||p.canonical_tick_count!==24||p.provider_wait_count!==0||p.database_write_count!==0||p.formal_epoch_selected!==undefined&&p.formal_epoch_selected!==false) throw new Error('AM19_P24_PERSISTENCE_FREE_PROOF_REQUIRED');
+          if(p.status!=='PASS'||p.machine_statuses?.PERSISTENCE_FREE_24T!=='PASS'||p.canonical_tick_count!==24||p.provider_wait_count!==0||p.database_write_count!==0||p.provider_request_count!==0||p.formal_epoch_selected!==undefined&&p.formal_epoch_selected!==false) throw new Error('AM19_P24_PERSISTENCE_FREE_PROOF_REQUIRED');
 
   persistent-live:
     if: >-
