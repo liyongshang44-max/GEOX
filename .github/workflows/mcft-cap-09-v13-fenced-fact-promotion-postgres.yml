@@ -1,0 +1,123 @@
+name: mcft-cap-09-v13-fenced-fact-promotion-postgres
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_fenced_exact_base_fact_promotion_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_supply_admission_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FENCED_FACT_PROMOTION_POSTGRES.ts'
+      - '.github/workflows/mcft-cap-09-v13-fenced-fact-promotion-postgres.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  EXACT_PREDECESSOR_SHA: '26c1383f7f45abb76c99e28ec3d06714e85d1b2c'
+  DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_v13_fenced_fact'
+
+concurrency:
+  group: mcft-cap09-v13-fenced-fact-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  fenced-fact-promotion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_v13_fenced_fact
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_v13_fenced_fact"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Require exact predecessor and zero production wake
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PREDECESSOR_SHA"
+          fi
+          trigger_block="$(awk '/^on:/{capture=1} /^permissions:/{capture=0} capture{print}' .github/workflows/mcft-cap-09-v13-fenced-fact-promotion-postgres.yml)"
+          ! grep -Eq '^  schedule:|^  workflow_dispatch:' <<<"$trigger_block"
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+
+      - name: Typecheck fenced promotion execution graph
+        run: >-
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node
+          apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts
+          apps/server/src/persistence/twin_runtime/postgres_external_formal_fenced_exact_base_fact_promotion_v1.ts
+          apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FENCED_FACT_PROMOTION_POSTGRES.ts
+
+      - name: Run real PostgreSQL fenced fact promotion races
+        env:
+          MCFT_CAP09_V13_FENCED_FACT_PROMOTION_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FENCED_FACT_PROMOTION_POSTGRES.ts
+
+      - name: Typecheck full server Runtime surface
+        run: pnpm --filter @geox/server exec tsc --noEmit
+
+      - name: Validate fenced fact promotion machine proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_FENCED_FACT_PROMOTION_POSTGRES_RESULT.json','utf8'));
+          if(p.status!=='PASS')throw new Error('V13_FENCED_FACT_PROMOTION_NOT_PASS');
+          for(const key of [
+            'stale_controller_after_promotion_start_fact_row_delta_zero',
+            'stale_producer_after_promotion_start_fact_row_delta_zero',
+            'controller_and_target_rows_locked_before_fact_insert',
+            'controller_fence_revalidated_in_same_fact_transaction',
+            'producer_fence_revalidated_in_same_fact_transaction',
+            'promoting_state_revalidated_in_same_fact_transaction',
+            'live_lease_and_db_clock_rechecked_before_each_append_and_commit',
+            'lease_expiry_inside_locked_transaction_rolls_back_all_facts',
+            'exact_three_facts_single_atomic_transaction',
+            'valid_fenced_commit_survives_controller_takeover',
+            'successor_controller_can_attest_existing_exact_facts',
+            'cursor_not_advanced_by_fact_promotion'
+          ]) if(p[key]!==true)throw new Error(`V13_FENCED_FACT_PROMOTION_PROOF_MISSING:${key}`);
+          if(p.production_workflow_effect!==false||p.formal_v4_mutation_performed!==false||p.mcft_cap09_completed!==false)throw new Error('V13_FENCED_FACT_PROMOTION_NONCLAIM_REGRESSION');
+
+      - name: Upload fenced fact promotion proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-fenced-fact-promotion-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_V13_FENCED_FACT_PROMOTION_POSTGRES_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
