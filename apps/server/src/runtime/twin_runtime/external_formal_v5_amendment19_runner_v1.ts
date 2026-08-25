@@ -14,7 +14,7 @@ import {
   ExternalFormalNextTickNotViablePreclaimErrorV1,
   ExternalFormalV5ViabilityGatedSchedulerV1,
 } from "./external_formal_v5_viability_gated_scheduler_v1.js";
-import type { ExternalFormalNextTickViabilityPortV1 } from "./postgres_external_formal_next_tick_viability_v1.js";
+import type { ExternalFormalTerminalSuccessorViabilityPortV1 } from "./postgres_external_formal_next_tick_viability_v1.js";
 
 export const EXTERNAL_FORMAL_V5_AM19_RUNNER_ID_V1 =
   "MCFT_CAP09_EXTERNAL_FORMAL_V5_AM19_RUNNER_V1" as const;
@@ -50,7 +50,7 @@ export class ExternalFormalV5Amendment19RunnerV1 {
     cropContextMaterializer: ExternalFormalV3Am19CropContextMaterializerPortV1,
     evidenceSource: ExternalFormalV3Amendment19DatabaseEvidenceSourcePortV1,
     tickService: TickServicePortV1,
-    viability: ExternalFormalNextTickViabilityPortV1,
+    viability: ExternalFormalTerminalSuccessorViabilityPortV1,
   ) {
     const gatedScheduler = new ExternalFormalV5ViabilityGatedSchedulerV1(scheduler, viability);
     this.inner = new ExternalFormalV3Amendment19RunnerV1(
