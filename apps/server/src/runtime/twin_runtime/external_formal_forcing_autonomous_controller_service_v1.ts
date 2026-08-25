@@ -367,14 +367,18 @@ export class ExternalFormalForcingAutonomousControllerServiceV1 {
             formal_database_write_count: null,
             cause: error,
           });
-      const terminalReason = `FORMAL_PROMOTION_MUTATION_UNSAFE:${failure.mutation_state}:${failure.failure_class}`;
+      const unsafeMutationState: Exclude<ExternalFormalExactBasePromotionMutationStateV1, "NO_FORMAL_MUTATION"> =
+        failure.mutation_state === "PARTIAL_FORMAL_MUTATION"
+          ? "PARTIAL_FORMAL_MUTATION"
+          : "UNKNOWN_FORMAL_MUTATION";
+      const terminalReason = `FORMAL_PROMOTION_MUTATION_UNSAFE:${unsafeMutationState}:${failure.failure_class}`;
       await this.lifecycle.recordTerminal({ lease: controllerLease, reason: terminalReason });
       return {
         service_id: MCFT_CAP09_AUTONOMOUS_FORCING_CONTROLLER_SERVICE_ID_V1,
         status: "TERMINAL_PROMOTION_MUTATION_UNSAFE",
         base_target_t: base,
         failure_class: failure.failure_class,
-        mutation_state: failure.mutation_state,
+        mutation_state: unsafeMutationState,
         formal_database_write_count: failure.formal_database_write_count,
         controller_fencing_token: controllerLease.fencing_token.toString(),
         forcing_controller_terminal_recorded: true,
