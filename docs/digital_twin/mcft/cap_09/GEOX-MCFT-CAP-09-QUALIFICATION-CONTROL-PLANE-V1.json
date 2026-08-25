@@ -1,0 +1,180 @@
+{
+  "authority_id": "MCFT_CAP09_CHECK_APPLICABILITY_V1",
+  "status": "CANDIDATE_SUCCESSOR_CONTROL_PLANE",
+  "schema_version": 1,
+  "frozen_successor_subject_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+  "stacked_predecessor_branch": "fix/mcft-cap09-v13-autonomous-forcing-foundation",
+  "default_stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+  "allowed_stages": [
+    "SUCCESSOR_SUBJECT_PRE_MERGE",
+    "POST_MERGE_V13_QUALIFICATION",
+    "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+  ],
+  "decision_states": [
+    "REQUIRED",
+    "CARRY_FORWARD",
+    "REQUALIFY",
+    "NOT_APPLICABLE",
+    "FORBIDDEN",
+    "UNKNOWN"
+  ],
+  "fail_closed_rules": {
+    "unknown_changed_path": "FAIL",
+    "unknown_check_state": "FAIL",
+    "missing_dependency_resolver": "FAIL",
+    "missing_required_evidence": "FAIL",
+    "ambiguous_generation": "FAIL"
+  },
+  "path_semantics": "EXACT_PATH_OR_GENERATED_DEPENDENCY_CLOSURE_ONLY",
+  "dependency_resolvers": {
+    "CONTROL_PLANE_FILES": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json",
+        "scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+        ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml"
+      ]
+    },
+    "EA5E2_RUNTIME_GRAPH_V4": {
+      "kind": "EXTERNAL_AUTHORITY_GRAPH",
+      "binding_module": "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs",
+      "binding_export": "expectedDependencyPaths",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs"
+    },
+    "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        "apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
+        "apps/server/src/runtime/twin_runtime/s3_compatible_private_raw_evidence_retention_adapter_v1.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_REAL_IO.ts",
+        ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml"
+      ]
+    },
+    "LEGACY_AM19_PERSISTENT_24T": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT19-WINDOW-MANIFEST.json",
+        ".github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml"
+      ]
+    },
+    "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE": {
+      "kind": "IMPORT_CLOSURE",
+      "roots": [
+        "apps/server/src/runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.ts",
+        "apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v1.ts",
+        "apps/server/src/runtime/twin_runtime/external_formal_v5_viability_gated_scheduler_v1.ts",
+        "apps/server/src/runtime/twin_runtime/postgres_external_formal_next_tick_viability_v1.ts",
+        "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts",
+        "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts",
+        "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_supply_admission_v1.ts",
+        "apps/server/src/runtime/twin_runtime/postgres_external_formal_fenced_exact_base_fact_promotion_v1.ts"
+      ],
+      "additional_exact_paths": [
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION_POSTGRES.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts",
+        ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+        ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
+        ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml"
+      ]
+    }
+  },
+  "checks": [
+    {
+      "check_id": "CONTROL_PLANE_INTEGRITY",
+      "resolver_ids": ["CONTROL_PLANE_FILES"],
+      "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE", "POST_MERGE_V13_QUALIFICATION", "POST_GRADUATION_FORMAL_V5_ACTIVATION"],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs"
+    },
+    {
+      "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+      "resolver_ids": ["V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"],
+      "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE", "POST_MERGE_V13_QUALIFICATION", "POST_GRADUATION_FORMAL_V5_ACTIVATION"],
+      "carry_forward_evidence_id": "V13_SUCCESSOR_SUBJECT_3BBF096E",
+      "diagnostic_command": null
+    },
+    {
+      "check_id": "V13_HOLISTIC_SCHEMA",
+      "resolver_ids": ["V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"],
+      "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE", "POST_MERGE_V13_QUALIFICATION", "POST_GRADUATION_FORMAL_V5_ACTIVATION"],
+      "carry_forward_evidence_id": "V13_HOLISTIC_SCHEMA_3BBF096E",
+      "diagnostic_command": null
+    },
+    {
+      "check_id": "V13_NEXT_TICK_VIABILITY",
+      "resolver_ids": ["V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"],
+      "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE", "POST_MERGE_V13_QUALIFICATION", "POST_GRADUATION_FORMAL_V5_ACTIVATION"],
+      "carry_forward_evidence_id": "V13_NEXT_TICK_3BBF096E",
+      "diagnostic_command": null
+    },
+    {
+      "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+      "resolver_ids": ["EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"],
+      "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE", "POST_MERGE_V13_QUALIFICATION", "POST_GRADUATION_FORMAL_V5_ACTIVATION"],
+      "carry_forward_evidence_id": "EA5C1_SUCCESSOR_REVALIDATION_3BBF096E",
+      "diagnostic_command": null
+    },
+    {
+      "check_id": "EA5E2_RUNTIME_DEPENDENCY_GRAPH",
+      "resolver_ids": ["EA5E2_RUNTIME_GRAPH_V4"],
+      "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE", "POST_MERGE_V13_QUALIFICATION", "POST_GRADUATION_FORMAL_V5_ACTIVATION"],
+      "carry_forward_evidence_id": "EA5E2_RUNTIME_GRAPH_3BBF096E",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs"
+    },
+    {
+      "check_id": "LEGACY_AM19_PERSISTENT_24T",
+      "resolver_ids": ["LEGACY_AM19_PERSISTENT_24T"],
+      "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE"],
+      "carry_forward_evidence_id": "LEGACY_AM19_24T_SUCCESSOR_ROUTING_3BBF096E",
+      "diagnostic_command": null
+    },
+    {
+      "check_id": "V13_PRODUCER_DRIVEN_QUALIFICATION",
+      "resolver_ids": ["V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"],
+      "applicable_stages": ["POST_MERGE_V13_QUALIFICATION"],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": null
+    },
+    {
+      "check_id": "END_TO_END_EVIDENCE_SUPPLY_DEADLINE",
+      "resolver_ids": ["V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"],
+      "applicable_stages": ["POST_MERGE_V13_QUALIFICATION"],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": null
+    },
+    {
+      "check_id": "EXACT_ONE_PRODUCTION_OWNER",
+      "resolver_ids": ["V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"],
+      "applicable_stages": ["POST_MERGE_V13_QUALIFICATION", "POST_GRADUATION_FORMAL_V5_ACTIVATION"],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": null
+    },
+    {
+      "check_id": "FORMAL_V5_ACTIVATION",
+      "resolver_ids": ["V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"],
+      "applicable_stages": ["POST_GRADUATION_FORMAL_V5_ACTIVATION"],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": null
+    }
+  ],
+  "non_effects": {
+    "runtime_mutation": false,
+    "production_workflow_activation": false,
+    "formal_database_mutation": false,
+    "provider_request": false,
+    "graduation_effect": false,
+    "mcft_cap09_completed": false
+  }
+}
