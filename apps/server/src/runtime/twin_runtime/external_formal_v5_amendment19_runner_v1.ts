@@ -6,7 +6,7 @@ import type {
 import {
   ExternalFormalV3Amendment19RunnerV1,
   type ExternalFormalV3Am19CropContextMaterializerPortV1,
-  type ExternalFormalV3Am19RunnerResultV1,
+  type ExecuteExternalFormalV3Am19RunnerResultV1,
   type ExternalFormalV3Am19WindowManifestV1,
   type ExecuteExternalFormalV3Am19RunnerInputV1,
 } from "./external_formal_v3_amendment19_runner_v1.js";
@@ -37,7 +37,7 @@ export type ExternalFormalV5Am19ViabilityFailureResultV1 = {
 };
 
 export type ExternalFormalV5Am19RunnerResultV1 =
-  | ExternalFormalV3Am19RunnerResultV1
+  | ExecuteExternalFormalV3Am19RunnerResultV1
   | ExternalFormalV5Am19ViabilityFailureResultV1;
 
 export class ExternalFormalV5Amendment19RunnerV1 {
