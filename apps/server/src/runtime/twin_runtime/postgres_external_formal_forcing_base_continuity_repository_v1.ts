@@ -3,6 +3,10 @@ import type { Pool, PoolClient } from "pg";
 
 import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
 import type { TwinScopeKeyV1 } from "./ports.js";
+import {
+  MCFT_CAP09_FORMAL_FORCING_CONTROLLER_LIFECYCLE_ID_V1,
+  type ExternalFormalForcingControllerLeaseV1,
+} from "./postgres_external_formal_forcing_controller_lifecycle_v1.js";
 
 export const MCFT_CAP09_FORMAL_FORCING_BASE_CURSOR_ID_V1 =
   "FORMAL_FORCING_BASE_CONTINUITY_CURSOR_V1" as const;
@@ -120,6 +124,14 @@ type TargetRowV1 = {
   failure_class: string | null;
 };
 
+type ControllerRowV1 = {
+  subject_sha: string;
+  lifecycle_state: "ACTIVE" | "TERMINAL";
+  lease_owner: string;
+  fencing_token: string | number | bigint;
+  lease_expires_at: string | Date | null;
+};
+
 type FactRowV1 = { fact_id: string; record_json: unknown };
 
 type ClientLikeV1 = Pick<PoolClient, "query" | "release">;
@@ -179,6 +191,19 @@ function validateConfig(config: ExternalFormalForcingBaseContinuityConfigV1): Ex
   return { scope: { ...config.scope }, epoch_id: epoch, subject_sha: subject, first_required_base: first, last_required_base: last };
 }
 
+function validateControllerLeaseIdentity(config: ExternalFormalForcingBaseContinuityConfigV1, lease: ExternalFormalForcingControllerLeaseV1): void {
+  if (
+    lease.lifecycle_id !== MCFT_CAP09_FORMAL_FORCING_CONTROLLER_LIFECYCLE_ID_V1
+    || lease.epoch_id !== config.epoch_id
+    || lease.subject_sha !== config.subject_sha
+    || !sameScope(lease.scope, config.scope)
+    || !lease.lease_owner
+    || lease.fencing_token <= 0n
+  ) {
+    throw new Error("FORMAL_FORCING_CONTROLLER_LEASE_IDENTITY_MISMATCH");
+  }
+}
+
 function idempotencyKey(config: ExternalFormalForcingBaseContinuityConfigV1, base: string): string {
   const seed = JSON.stringify({ scope: config.scope, epoch_id: config.epoch_id, subject_sha: config.subject_sha, base_target_t: base });
   return `formal-forcing-base:${crypto.createHash("sha256").update(seed, "utf8").digest("hex")}`;
@@ -230,47 +255,29 @@ function expectedRecordType(kind: ExternalFormalPhysicalFactIdentityV1["kind"]):
   return "soil_moisture_observation_v1";
 }
 
-function validatePhysicalFactPayload(
-  identity: ExternalFormalPhysicalFactIdentityV1,
-  value: unknown,
-  baseTarget: string,
-): void {
+function validatePhysicalFactPayload(identity: ExternalFormalPhysicalFactIdentityV1, value: unknown, baseTarget: string): void {
   const envelope = typeof value === "string" ? objectRecord(JSON.parse(value), "FORMAL_PHYSICAL_FACT_ENVELOPE_INVALID") : objectRecord(value, "FORMAL_PHYSICAL_FACT_ENVELOPE_INVALID");
   const record = objectRecord(envelope.payload, "FORMAL_PHYSICAL_FACT_PAYLOAD_REQUIRED");
   const expectedType = expectedRecordType(identity.kind);
   if (envelope.type !== expectedType || record.record_type !== expectedType) throw new Error(`FORMAL_PHYSICAL_FACT_TYPE_MISMATCH:${identity.kind}`);
-  if (record.source_record_id !== identity.source_record_id || record.source_record_hash !== identity.source_record_hash) {
-    throw new Error(`FORMAL_PHYSICAL_FACT_SOURCE_IDENTITY_MISMATCH:${identity.kind}`);
-  }
+  if (record.source_record_id !== identity.source_record_id || record.source_record_hash !== identity.source_record_hash) throw new Error(`FORMAL_PHYSICAL_FACT_SOURCE_IDENTITY_MISMATCH:${identity.kind}`);
   if (semanticHashV1(record) !== identity.record_semantic_hash) throw new Error(`FORMAL_PHYSICAL_FACT_SEMANTIC_HASH_MISMATCH:${identity.kind}`);
-
   const available = canonicalIso(record.available_to_runtime_at, `FORMAL_PHYSICAL_FACT_AVAILABLE_INVALID:${identity.kind}`);
   const ingested = canonicalIso(record.role_time?.ingested_at, `FORMAL_PHYSICAL_FACT_INGESTED_INVALID:${identity.kind}`);
-  if (Date.parse(available) > Date.parse(ingested) || Date.parse(ingested) > Date.parse(baseTarget)) {
-    throw new Error(`FORMAL_PHYSICAL_FACT_PAYLOAD_CAUSAL_ORDER_INVALID:${identity.kind}`);
-  }
-
+  if (Date.parse(available) > Date.parse(ingested) || Date.parse(ingested) > Date.parse(baseTarget)) throw new Error(`FORMAL_PHYSICAL_FACT_PAYLOAD_CAUSAL_ORDER_INVALID:${identity.kind}`);
   if (identity.kind === "WEATHER" || identity.kind === "ET0") {
     const issued = canonicalIso(record.role_time?.issued_at, `FORMAL_PHYSICAL_FACT_ISSUED_INVALID:${identity.kind}`);
     if (Date.parse(issued) > Date.parse(available)) throw new Error(`FORMAL_PHYSICAL_FACT_ISSUED_AFTER_AVAILABLE:${identity.kind}`);
-    if (record.role_time?.valid_from !== baseTarget || record.role_time?.valid_to !== addHours(baseTarget, 72)) {
-      throw new Error(`FORMAL_PHYSICAL_FACT_WINDOW_MISMATCH:${identity.kind}`);
-    }
+    if (record.role_time?.valid_from !== baseTarget || record.role_time?.valid_to !== addHours(baseTarget, 72)) throw new Error(`FORMAL_PHYSICAL_FACT_WINDOW_MISMATCH:${identity.kind}`);
     const canonicalPayload = objectRecord(record.canonical_payload, `FORMAL_PHYSICAL_FACT_CANONICAL_PAYLOAD_INVALID:${identity.kind}`);
-    if (!Array.isArray(canonicalPayload.points) || canonicalPayload.points.length !== 72) {
-      throw new Error(`FORMAL_PHYSICAL_FACT_72_POINTS_REQUIRED:${identity.kind}`);
-    }
+    if (!Array.isArray(canonicalPayload.points) || canonicalPayload.points.length !== 72) throw new Error(`FORMAL_PHYSICAL_FACT_72_POINTS_REQUIRED:${identity.kind}`);
     for (let index = 0; index < canonicalPayload.points.length; index += 1) {
       const point = objectRecord(canonicalPayload.points[index], `FORMAL_PHYSICAL_FACT_POINT_INVALID:${identity.kind}:${index}`);
-      if (point.valid_from !== addHours(baseTarget, index) || point.valid_to !== addHours(baseTarget, index + 1)) {
-        throw new Error(`FORMAL_PHYSICAL_FACT_POINT_CONTINUITY_INVALID:${identity.kind}:${index}`);
-      }
+      if (point.valid_from !== addHours(baseTarget, index) || point.valid_to !== addHours(baseTarget, index + 1)) throw new Error(`FORMAL_PHYSICAL_FACT_POINT_CONTINUITY_INVALID:${identity.kind}:${index}`);
     }
   } else {
     const observed = canonicalIso(record.role_time?.observed_at, "FORMAL_PHYSICAL_SOIL_OBSERVED_INVALID");
-    if (Date.parse(observed) > Date.parse(available) || Date.parse(observed) > Date.parse(baseTarget)) {
-      throw new Error("FORMAL_PHYSICAL_SOIL_CAUSAL_ORDER_INVALID");
-    }
+    if (Date.parse(observed) > Date.parse(available) || Date.parse(observed) > Date.parse(baseTarget)) throw new Error("FORMAL_PHYSICAL_SOIL_CAUSAL_ORDER_INVALID");
   }
 }
 
@@ -279,6 +286,28 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
 
   constructor(private readonly pool: PoolLikeV1, config: ExternalFormalForcingBaseContinuityConfigV1) {
     this.config = validateConfig(config);
+  }
+
+  private async controllerForUpdate(client: ClientLikeV1, lease: ExternalFormalForcingControllerLeaseV1): Promise<string> {
+    validateControllerLeaseIdentity(this.config, lease);
+    const result = await client.query<ControllerRowV1>(
+      `SELECT subject_sha,lifecycle_state,lease_owner,fencing_token,lease_expires_at
+         FROM twin_external_formal_forcing_controller_lease_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7
+        FOR UPDATE`,
+      [...scopeValues(this.config.scope), this.config.epoch_id],
+    );
+    if (result.rows.length !== 1) throw new Error("FORMAL_FORCING_CONTROLLER_LEASE_REQUIRED");
+    const row = result.rows[0];
+    const now = await databaseNow(client);
+    if (
+      row.subject_sha !== this.config.subject_sha
+      || row.lifecycle_state !== "ACTIVE"
+      || row.lease_owner !== lease.lease_owner
+      || BigInt(row.fencing_token) !== lease.fencing_token
+    ) throw new Error("FORMAL_FORCING_CONTROLLER_STALE_FENCE");
+    if (!row.lease_expires_at || Date.parse(iso(row.lease_expires_at)) <= Date.parse(now)) throw new Error("FORMAL_FORCING_CONTROLLER_LEASE_EXPIRED");
+    return now;
   }
 
   private async cursorForUpdate(client: ClientLikeV1): Promise<CursorRowV1> {
@@ -291,9 +320,7 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
     );
     if (result.rows.length !== 1) throw new Error("FORMAL_FORCING_CURSOR_NOT_INITIALIZED");
     const row = result.rows[0];
-    if (row.subject_sha !== this.config.subject_sha || iso(row.first_required_base) !== this.config.first_required_base || iso(row.last_required_base) !== this.config.last_required_base) {
-      throw new Error("FORMAL_FORCING_CURSOR_CONFIG_CONFLICT");
-    }
+    if (row.subject_sha !== this.config.subject_sha || iso(row.first_required_base) !== this.config.first_required_base || iso(row.last_required_base) !== this.config.last_required_base) throw new Error("FORMAL_FORCING_CURSOR_CONFIG_CONFLICT");
     return row;
   }
 
@@ -315,9 +342,7 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
   }
 
   private assertTargetIdentity(row: TargetRowV1, base: string): void {
-    if (row.subject_sha !== this.config.subject_sha || iso(row.base_target_t) !== base || iso(row.causal_deadline) !== base) {
-      throw new Error("FORMAL_FORCING_TARGET_IDENTITY_CONFLICT");
-    }
+    if (row.subject_sha !== this.config.subject_sha || iso(row.base_target_t) !== base || iso(row.causal_deadline) !== base) throw new Error("FORMAL_FORCING_TARGET_IDENTITY_CONFLICT");
   }
 
   async initializeCursor(): Promise<ExternalFormalForcingBaseCursorSnapshotV1> {
@@ -326,8 +351,7 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
       await client.query("BEGIN");
       await client.query(
         `INSERT INTO twin_external_formal_forcing_base_cursor_v1
-         (tenant_id,project_id,group_id,field_id,season_id,zone_id,epoch_id,subject_sha,
-          first_required_base,last_required_base,last_contiguous_eligible_base,next_missing_required_base,completed)
+         (tenant_id,project_id,group_id,field_id,season_id,zone_id,epoch_id,subject_sha,first_required_base,last_required_base,last_contiguous_eligible_base,next_missing_required_base,completed)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10::timestamptz,$11::timestamptz,$9::timestamptz,false)
          ON CONFLICT (tenant_id,project_id,group_id,field_id,season_id,zone_id,epoch_id) DO NOTHING`,
         [...scopeValues(this.config.scope), this.config.epoch_id, this.config.subject_sha, this.config.first_required_base, this.config.last_required_base, addHours(this.config.first_required_base, -1)],
@@ -336,12 +360,7 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
       const snapshot = cursorSnapshot(this.config, row);
       await client.query("COMMIT");
       return snapshot;
-    } catch (error) {
-      try { await client.query("ROLLBACK"); } catch {}
-      throw error;
-    } finally {
-      client.release();
-    }
+    } catch (error) { try { await client.query("ROLLBACK"); } catch {} throw error; } finally { client.release(); }
   }
 
   async readCursor(): Promise<ExternalFormalForcingBaseCursorSnapshotV1> {
@@ -357,17 +376,12 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
 
   async claimNextMissingBase(input: { lease_owner: string; lease_duration_seconds: number }): Promise<ExternalFormalForcingBaseClaimResultV1> {
     const owner = requiredText(input.lease_owner, "FORMAL_FORCING_LEASE_OWNER_REQUIRED");
-    if (!Number.isInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0 || input.lease_duration_seconds > 1800) {
-      throw new Error("FORMAL_FORCING_LEASE_DURATION_INVALID");
-    }
+    if (!Number.isInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0 || input.lease_duration_seconds > 1800) throw new Error("FORMAL_FORCING_LEASE_DURATION_INVALID");
     const client = await this.pool.connect() as ClientLikeV1;
     try {
       await client.query("BEGIN");
       const cursor = await this.cursorForUpdate(client);
-      if (cursor.completed || cursor.next_missing_required_base === null) {
-        await client.query("COMMIT");
-        return { status: "NO_WORK", reason: "FORCING_BASE_WINDOW_COMPLETE" };
-      }
+      if (cursor.completed || cursor.next_missing_required_base === null) { await client.query("COMMIT"); return { status: "NO_WORK", reason: "FORCING_BASE_WINDOW_COMPLETE" }; }
       const base = iso(cursor.next_missing_required_base);
       const now = await databaseNow(client);
       let target = await this.targetForUpdate(client, base);
@@ -382,49 +396,33 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
         if (!target) throw new Error("FORMAL_FORCING_TARGET_INSERT_READBACK_REQUIRED");
       }
       this.assertTargetIdentity(target, base);
-
       if (Date.parse(now) >= Date.parse(base)) {
-        if (target.state !== "FORMAL_VISIBLE_ATTESTED") {
-          await client.query(
-            `UPDATE twin_external_formal_forcing_base_target_v1
-                SET state='DEADLINE_MISSED_TERMINAL',failure_class='REQUIRED_FORMAL_FORCING_BASE_DEADLINE_MISSED',lease_expires_at=NULL,updated_at=clock_timestamp()
-              WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7 AND base_target_t=$8::timestamptz`,
-            [...scopeValues(this.config.scope), this.config.epoch_id, base],
-          );
-        }
+        if (target.state !== "FORMAL_VISIBLE_ATTESTED") await client.query(
+          `UPDATE twin_external_formal_forcing_base_target_v1 SET state='DEADLINE_MISSED_TERMINAL',failure_class='REQUIRED_FORMAL_FORCING_BASE_DEADLINE_MISSED',lease_expires_at=NULL,updated_at=clock_timestamp()
+            WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7 AND base_target_t=$8::timestamptz`,
+          [...scopeValues(this.config.scope), this.config.epoch_id, base],
+        );
         await client.query("COMMIT");
         return { status: "DEADLINE_MISSED", base_target_t: base, failure_class: "REQUIRED_FORMAL_FORCING_BASE_DEADLINE_MISSED" };
       }
-      if (target.state === "DEADLINE_MISSED_TERMINAL") {
-        await client.query("COMMIT");
-        return { status: "DEADLINE_MISSED", base_target_t: base, failure_class: "REQUIRED_FORMAL_FORCING_BASE_DEADLINE_MISSED" };
-      }
+      if (target.state === "DEADLINE_MISSED_TERMINAL") { await client.query("COMMIT"); return { status: "DEADLINE_MISSED", base_target_t: base, failure_class: "REQUIRED_FORMAL_FORCING_BASE_DEADLINE_MISSED" }; }
       if (target.state === "FORMAL_VISIBLE_ATTESTED") throw new Error("FORMAL_FORCING_CURSOR_DID_NOT_ADVANCE_AFTER_ATTESTATION");
-
       if (ACTIVE_STATES.has(target.state) && target.lease_expires_at && Date.parse(iso(target.lease_expires_at)) > Date.parse(now)) {
-        if (target.claim_owner === owner) {
-          const claim = claimFromTarget(this.config, target);
-          await client.query("COMMIT");
-          return { status: "EXISTING_ACTIVE_CLAIM", claim };
-        }
+        if (target.claim_owner === owner) { const claim = claimFromTarget(this.config, target); await client.query("COMMIT"); return { status: "EXISTING_ACTIVE_CLAIM", claim }; }
         await client.query("COMMIT");
         return { status: "BUSY", base_target_t: base, current_owner: requiredText(target.claim_owner, "FORMAL_FORCING_BUSY_OWNER_REQUIRED"), lease_expires_at: iso(target.lease_expires_at) };
       }
-
       const nextFence = BigInt(target.fencing_token) + 1n;
       const proposedExpiryMs = Math.min(Date.parse(now) + input.lease_duration_seconds * 1000, Date.parse(base));
       if (proposedExpiryMs <= Date.parse(now)) throw new Error("FORMAL_FORCING_LEASE_CANNOT_REACH_FUTURE");
       const leaseExpires = new Date(proposedExpiryMs).toISOString();
       const updated = await client.query<TargetRowV1>(
         `UPDATE twin_external_formal_forcing_base_target_v1
-            SET state='CLAIMED',claim_owner=$9,fencing_token=$10::bigint,lease_expires_at=$11::timestamptz,
-                claimed_at=clock_timestamp(),failure_class=NULL,updated_at=clock_timestamp()
+            SET state='CLAIMED',claim_owner=$9,fencing_token=$10::bigint,lease_expires_at=$11::timestamptz,claimed_at=clock_timestamp(),failure_class=NULL,updated_at=clock_timestamp()
           WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7 AND base_target_t=$8::timestamptz
           RETURNING subject_sha,base_target_t,causal_deadline,state,claim_owner,fencing_token,lease_expires_at,idempotency_key,
-                    producer_run_id,promotion_run_id,candidate_artifact_digest,
-                    weather_fact_id,weather_source_record_hash,weather_record_semantic_hash,
-                    et0_fact_id,et0_source_record_hash,et0_record_semantic_hash,
-                    soil_fact_id,soil_source_record_hash,soil_record_semantic_hash,
+                    producer_run_id,promotion_run_id,candidate_artifact_digest,weather_fact_id,weather_source_record_hash,weather_record_semantic_hash,
+                    et0_fact_id,et0_source_record_hash,et0_record_semantic_hash,soil_fact_id,soil_source_record_hash,soil_record_semantic_hash,
                     post_commit_db_readback_at,formal_visible_attested_at,failure_class`,
         [...scopeValues(this.config.scope), this.config.epoch_id, base, owner, nextFence.toString(), leaseExpires],
       );
@@ -432,28 +430,30 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
       const claim = claimFromTarget(this.config, updated.rows[0]);
       await client.query("COMMIT");
       return { status: "CLAIMED", claim };
-    } catch (error) {
-      try { await client.query("ROLLBACK"); } catch {}
-      throw error;
-    } finally {
-      client.release();
-    }
+    } catch (error) { try { await client.query("ROLLBACK"); } catch {} throw error; } finally { client.release(); }
   }
 
+  /** Foundation-only primitive. Production controller wiring must use heartbeatClaimUnderController. */
   async heartbeatClaim(input: { claim: ExternalFormalForcingBaseClaimV1; lease_duration_seconds: number }): Promise<ExternalFormalForcingBaseClaimV1> {
-    if (!Number.isInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0 || input.lease_duration_seconds > 1800) {
-      throw new Error("FORMAL_FORCING_LEASE_DURATION_INVALID");
-    }
+    return this.heartbeatClaimInternal(input, null);
+  }
+
+  async heartbeatClaimUnderController(input: { controller_lease: ExternalFormalForcingControllerLeaseV1; claim: ExternalFormalForcingBaseClaimV1; lease_duration_seconds: number }): Promise<ExternalFormalForcingBaseClaimV1> {
+    validateControllerLeaseIdentity(this.config, input.controller_lease);
+    return this.heartbeatClaimInternal(input, input.controller_lease);
+  }
+
+  private async heartbeatClaimInternal(input: { claim: ExternalFormalForcingBaseClaimV1; lease_duration_seconds: number }, controllerLease: ExternalFormalForcingControllerLeaseV1 | null): Promise<ExternalFormalForcingBaseClaimV1> {
+    if (!Number.isInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0 || input.lease_duration_seconds > 1800) throw new Error("FORMAL_FORCING_LEASE_DURATION_INVALID");
     const client = await this.pool.connect() as ClientLikeV1;
     try {
       await client.query("BEGIN");
+      if (controllerLease) await this.controllerForUpdate(client, controllerLease);
       const base = canonicalHour(input.claim.base_target_t, "FORMAL_FORCING_CLAIM_BASE_INVALID");
       const target = await this.targetForUpdate(client, base);
       if (!target) throw new Error("FORMAL_FORCING_TARGET_REQUIRED");
       this.assertTargetIdentity(target, base);
-      if (target.claim_owner !== input.claim.lease_owner || BigInt(target.fencing_token) !== input.claim.fencing_token || !ACTIVE_STATES.has(target.state)) {
-        throw new Error("FORMAL_FORCING_STALE_FENCING_TOKEN");
-      }
+      if (target.claim_owner !== input.claim.lease_owner || BigInt(target.fencing_token) !== input.claim.fencing_token || !ACTIVE_STATES.has(target.state)) throw new Error("FORMAL_FORCING_STALE_FENCING_TOKEN");
       const now = await databaseNow(client);
       if (Date.parse(now) >= Date.parse(base)) throw new Error("FORMAL_FORCING_HEARTBEAT_AFTER_CAUSAL_DEADLINE");
       const proposed = new Date(Math.min(Date.parse(now) + input.lease_duration_seconds * 1000, Date.parse(base))).toISOString();
@@ -468,15 +468,20 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
       const claim = claimFromTarget(this.config, target);
       await client.query("COMMIT");
       return claim;
-    } catch (error) {
-      try { await client.query("ROLLBACK"); } catch {}
-      throw error;
-    } finally {
-      client.release();
-    }
+    } catch (error) { try { await client.query("ROLLBACK"); } catch {} throw error; } finally { client.release(); }
   }
 
+  /** Foundation-only primitive. Production controller wiring must use advanceClaimPhaseUnderController. */
   async advanceClaimPhase(input: { claim: ExternalFormalForcingBaseClaimV1; phase: "ACQUIRING" | "READY_TO_FINALIZE" | "PROMOTING" }): Promise<void> {
+    return this.advanceClaimPhaseInternal(input, null);
+  }
+
+  async advanceClaimPhaseUnderController(input: { controller_lease: ExternalFormalForcingControllerLeaseV1; claim: ExternalFormalForcingBaseClaimV1; phase: "ACQUIRING" | "READY_TO_FINALIZE" | "PROMOTING" }): Promise<void> {
+    validateControllerLeaseIdentity(this.config, input.controller_lease);
+    return this.advanceClaimPhaseInternal(input, input.controller_lease);
+  }
+
+  private async advanceClaimPhaseInternal(input: { claim: ExternalFormalForcingBaseClaimV1; phase: "ACQUIRING" | "READY_TO_FINALIZE" | "PROMOTING" }, controllerLease: ExternalFormalForcingControllerLeaseV1 | null): Promise<void> {
     const allowed: Record<typeof input.phase, readonly ExternalFormalForcingBaseStateV1[]> = {
       ACQUIRING: ["CLAIMED", "ACQUIRING"],
       READY_TO_FINALIZE: ["ACQUIRING", "READY_TO_FINALIZE"],
@@ -486,6 +491,7 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
     const client = await this.pool.connect() as ClientLikeV1;
     try {
       await client.query("BEGIN");
+      if (controllerLease) await this.controllerForUpdate(client, controllerLease);
       const base = canonicalHour(input.claim.base_target_t, "FORMAL_FORCING_CLAIM_BASE_INVALID");
       const target = await this.targetForUpdate(client, base);
       if (!target) throw new Error("FORMAL_FORCING_TARGET_REQUIRED");
@@ -493,52 +499,48 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
       if (target.claim_owner !== input.claim.lease_owner || BigInt(target.fencing_token) !== input.claim.fencing_token) throw new Error("FORMAL_FORCING_STALE_FENCING_TOKEN");
       if (!allowed[input.phase].includes(target.state)) throw new Error(`FORMAL_FORCING_PHASE_TRANSITION_INVALID:${target.state}:${input.phase}`);
       const now = await databaseNow(client);
-      if (Date.parse(now) >= Date.parse(base) || !target.lease_expires_at || Date.parse(iso(target.lease_expires_at)) <= Date.parse(now)) {
-        throw new Error("FORMAL_FORCING_PHASE_REQUIRES_LIVE_PREDEADLINE_LEASE");
-      }
+      if (Date.parse(now) >= Date.parse(base) || !target.lease_expires_at || Date.parse(iso(target.lease_expires_at)) <= Date.parse(now)) throw new Error("FORMAL_FORCING_PHASE_REQUIRES_LIVE_PREDEADLINE_LEASE");
       await client.query(
-        `UPDATE twin_external_formal_forcing_base_target_v1
-            SET state=$9,${timestampColumn}=COALESCE(${timestampColumn},clock_timestamp()),updated_at=clock_timestamp()
+        `UPDATE twin_external_formal_forcing_base_target_v1 SET state=$9,${timestampColumn}=COALESCE(${timestampColumn},clock_timestamp()),updated_at=clock_timestamp()
           WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7 AND base_target_t=$8::timestamptz`,
         [...scopeValues(this.config.scope), this.config.epoch_id, base, input.phase],
       );
       await client.query("COMMIT");
-    } catch (error) {
-      try { await client.query("ROLLBACK"); } catch {}
-      throw error;
-    } finally {
-      client.release();
-    }
+    } catch (error) { try { await client.query("ROLLBACK"); } catch {} throw error; } finally { client.release(); }
   }
 
+  /** Foundation-only primitive. Production controller wiring must use markRetryableFailureUnderController. */
   async markRetryableFailure(input: { claim: ExternalFormalForcingBaseClaimV1; failure_class: string }): Promise<void> {
+    return this.markRetryableFailureInternal(input, null);
+  }
+
+  async markRetryableFailureUnderController(input: { controller_lease: ExternalFormalForcingControllerLeaseV1; claim: ExternalFormalForcingBaseClaimV1; failure_class: string }): Promise<void> {
+    validateControllerLeaseIdentity(this.config, input.controller_lease);
+    return this.markRetryableFailureInternal(input, input.controller_lease);
+  }
+
+  private async markRetryableFailureInternal(input: { claim: ExternalFormalForcingBaseClaimV1; failure_class: string }, controllerLease: ExternalFormalForcingControllerLeaseV1 | null): Promise<void> {
     const failureClass = requiredText(input.failure_class, "FORMAL_FORCING_FAILURE_CLASS_REQUIRED");
     const client = await this.pool.connect() as ClientLikeV1;
     try {
       await client.query("BEGIN");
+      if (controllerLease) await this.controllerForUpdate(client, controllerLease);
       const base = canonicalHour(input.claim.base_target_t, "FORMAL_FORCING_CLAIM_BASE_INVALID");
       const target = await this.targetForUpdate(client, base);
       if (!target) throw new Error("FORMAL_FORCING_TARGET_REQUIRED");
-      if (target.claim_owner !== input.claim.lease_owner || BigInt(target.fencing_token) !== input.claim.fencing_token || !ACTIVE_STATES.has(target.state)) {
-        throw new Error("FORMAL_FORCING_STALE_FENCING_TOKEN");
-      }
+      if (target.claim_owner !== input.claim.lease_owner || BigInt(target.fencing_token) !== input.claim.fencing_token || !ACTIVE_STATES.has(target.state)) throw new Error("FORMAL_FORCING_STALE_FENCING_TOKEN");
       const now = await databaseNow(client);
       if (Date.parse(now) >= Date.parse(base)) throw new Error("FORMAL_FORCING_RETRYABLE_FAILURE_AFTER_DEADLINE_FORBIDDEN");
       await client.query(
-        `UPDATE twin_external_formal_forcing_base_target_v1
-            SET state='FAILED_RETRYABLE',failure_class=$9,lease_expires_at=clock_timestamp(),updated_at=clock_timestamp()
+        `UPDATE twin_external_formal_forcing_base_target_v1 SET state='FAILED_RETRYABLE',failure_class=$9,lease_expires_at=clock_timestamp(),updated_at=clock_timestamp()
           WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7 AND base_target_t=$8::timestamptz`,
         [...scopeValues(this.config.scope), this.config.epoch_id, base, failureClass],
       );
       await client.query("COMMIT");
-    } catch (error) {
-      try { await client.query("ROLLBACK"); } catch {}
-      throw error;
-    } finally {
-      client.release();
-    }
+    } catch (error) { try { await client.query("ROLLBACK"); } catch {} throw error; } finally { client.release(); }
   }
 
+  /** Foundation-only primitive. Production controller wiring must use attestFormalPhysicalVisibilityUnderController. */
   async attestFormalPhysicalVisibility(input: {
     claim: ExternalFormalForcingBaseClaimV1;
     facts: readonly ExternalFormalPhysicalFactIdentityV1[];
@@ -546,17 +548,35 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
     promotion_run_id: string;
     candidate_artifact_digest: string;
   }): Promise<ExternalFormalPhysicalIngressAttestationV1> {
+    return this.attestFormalPhysicalVisibilityInternal(input, null);
+  }
+
+  async attestFormalPhysicalVisibilityUnderController(input: {
+    controller_lease: ExternalFormalForcingControllerLeaseV1;
+    claim: ExternalFormalForcingBaseClaimV1;
+    facts: readonly ExternalFormalPhysicalFactIdentityV1[];
+    producer_run_id: string;
+    promotion_run_id: string;
+    candidate_artifact_digest: string;
+  }): Promise<ExternalFormalPhysicalIngressAttestationV1> {
+    validateControllerLeaseIdentity(this.config, input.controller_lease);
+    return this.attestFormalPhysicalVisibilityInternal(input, input.controller_lease);
+  }
+
+  private async attestFormalPhysicalVisibilityInternal(input: {
+    claim: ExternalFormalForcingBaseClaimV1;
+    facts: readonly ExternalFormalPhysicalFactIdentityV1[];
+    producer_run_id: string;
+    promotion_run_id: string;
+    candidate_artifact_digest: string;
+  }, controllerLease: ExternalFormalForcingControllerLeaseV1 | null): Promise<ExternalFormalPhysicalIngressAttestationV1> {
     const base = canonicalHour(input.claim.base_target_t, "FORMAL_PHYSICAL_ATTESTATION_BASE_INVALID");
-    if (!sameScope(input.claim.scope, this.config.scope) || input.claim.epoch_id !== this.config.epoch_id || input.claim.subject_sha !== this.config.subject_sha) {
-      throw new Error("FORMAL_PHYSICAL_ATTESTATION_CLAIM_SCOPE_OR_EPOCH_MISMATCH");
-    }
+    if (!sameScope(input.claim.scope, this.config.scope) || input.claim.epoch_id !== this.config.epoch_id || input.claim.subject_sha !== this.config.subject_sha) throw new Error("FORMAL_PHYSICAL_ATTESTATION_CLAIM_SCOPE_OR_EPOCH_MISMATCH");
     const producerRun = requiredText(input.producer_run_id, "FORMAL_PHYSICAL_PRODUCER_RUN_ID_REQUIRED");
     const promotionRun = requiredText(input.promotion_run_id, "FORMAL_PHYSICAL_PROMOTION_RUN_ID_REQUIRED");
     const artifactDigest = requiredText(input.candidate_artifact_digest, "FORMAL_PHYSICAL_ARTIFACT_DIGEST_REQUIRED");
     if (!/^sha256:[0-9a-f]{64}$/.test(artifactDigest)) throw new Error("FORMAL_PHYSICAL_ARTIFACT_DIGEST_INVALID");
-    if (!Array.isArray(input.facts) || input.facts.length !== 3 || new Set(input.facts.map((item) => item.kind)).size !== 3) {
-      throw new Error("FORMAL_PHYSICAL_EXACT_WEATHER_ET0_SOIL_FACTS_REQUIRED");
-    }
+    if (!Array.isArray(input.facts) || input.facts.length !== 3 || new Set(input.facts.map((item) => item.kind)).size !== 3) throw new Error("FORMAL_PHYSICAL_EXACT_WEATHER_ET0_SOIL_FACTS_REQUIRED");
     for (const item of input.facts) {
       requiredText(item.fact_id, `FORMAL_PHYSICAL_FACT_ID_REQUIRED:${item.kind}`);
       requiredText(item.source_record_id, `FORMAL_PHYSICAL_SOURCE_RECORD_ID_REQUIRED:${item.kind}`);
@@ -564,17 +584,11 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
       requiredText(item.record_semantic_hash, `FORMAL_PHYSICAL_RECORD_SEMANTIC_HASH_REQUIRED:${item.kind}`);
     }
 
-    // This transaction starts only after the caller's facts ingress transactions have committed.
-    // The DB clock is read after exact fact identity readback, producing an upper-bound time at
-    // which all three committed facts were observably visible to a fresh database transaction.
     const reader = await this.pool.connect() as ClientLikeV1;
     let readbackAt: string;
     try {
       await reader.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
-      const rows = await reader.query<FactRowV1>(
-        "SELECT fact_id,record_json FROM facts WHERE fact_id=ANY($1::text[]) ORDER BY fact_id ASC",
-        [input.facts.map((item) => item.fact_id)],
-      );
+      const rows = await reader.query<FactRowV1>("SELECT fact_id,record_json FROM facts WHERE fact_id=ANY($1::text[]) ORDER BY fact_id ASC", [input.facts.map((item) => item.fact_id)]);
       if (rows.rows.length !== 3) throw new Error(`FORMAL_PHYSICAL_FACT_READBACK_CARDINALITY:${rows.rows.length}`);
       const byId = new Map(rows.rows.map((row) => [row.fact_id, row.record_json]));
       for (const identity of input.facts) {
@@ -584,16 +598,12 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
       readbackAt = await databaseNow(reader);
       if (Date.parse(readbackAt) >= Date.parse(base)) throw new Error(`FORMAL_PHYSICAL_VISIBILITY_AFTER_CAUSAL_BASE:${readbackAt}:${base}`);
       await reader.query("COMMIT");
-    } catch (error) {
-      try { await reader.query("ROLLBACK"); } catch {}
-      throw error;
-    } finally {
-      reader.release();
-    }
+    } catch (error) { try { await reader.query("ROLLBACK"); } catch {} throw error; } finally { reader.release(); }
 
     const writer = await this.pool.connect() as ClientLikeV1;
     try {
       await writer.query("BEGIN");
+      if (controllerLease) await this.controllerForUpdate(writer, controllerLease);
       const target = await this.targetForUpdate(writer, base);
       if (!target) throw new Error("FORMAL_PHYSICAL_TARGET_REQUIRED");
       this.assertTargetIdentity(target, base);
@@ -607,42 +617,28 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
         ].map(([kind, fact_id, source_record_hash, record_semantic_hash]) => ({ kind, fact_id, source_record_hash, record_semantic_hash }));
         for (const identity of input.facts) {
           const existing = existingFacts.find((item) => item.kind === identity.kind);
-          if (!existing || existing.fact_id !== identity.fact_id || existing.source_record_hash !== identity.source_record_hash || existing.record_semantic_hash !== identity.record_semantic_hash) {
-            throw new Error("FORMAL_PHYSICAL_EXISTING_ATTESTATION_CONFLICT");
-          }
+          if (!existing || existing.fact_id !== identity.fact_id || existing.source_record_hash !== identity.source_record_hash || existing.record_semantic_hash !== identity.record_semantic_hash) throw new Error("FORMAL_PHYSICAL_EXISTING_ATTESTATION_CONFLICT");
         }
         const result: ExternalFormalPhysicalIngressAttestationV1 = {
           attestation_id: MCFT_CAP09_FORMAL_PHYSICAL_INGRESS_ATTESTATION_ID_V1,
-          status: "PASS",
-          scope: { ...this.config.scope },
-          epoch_id: this.config.epoch_id,
-          subject_sha: this.config.subject_sha,
-          base_target_t: base,
-          causal_deadline: base,
+          status: "PASS", scope: { ...this.config.scope }, epoch_id: this.config.epoch_id, subject_sha: this.config.subject_sha,
+          base_target_t: base, causal_deadline: base,
           producer_run_id: requiredText(target.producer_run_id, "FORMAL_PHYSICAL_EXISTING_PRODUCER_RUN_REQUIRED"),
           promotion_run_id: requiredText(target.promotion_run_id, "FORMAL_PHYSICAL_EXISTING_PROMOTION_RUN_REQUIRED"),
           candidate_artifact_digest: requiredText(target.candidate_artifact_digest, "FORMAL_PHYSICAL_EXISTING_ARTIFACT_REQUIRED"),
           facts: input.facts.map((item) => ({ ...item })),
-          post_commit_db_readback_at: iso(target.post_commit_db_readback_at!),
-          formal_visible_attested_at: iso(target.formal_visible_attested_at!),
-          physical_visibility_before_base: true,
-          cursor_advanced: false,
+          post_commit_db_readback_at: iso(target.post_commit_db_readback_at!), formal_visible_attested_at: iso(target.formal_visible_attested_at!),
+          physical_visibility_before_base: true, cursor_advanced: false,
           next_missing_required_base: cursor.next_missing_required_base === null ? null : iso(cursor.next_missing_required_base),
         };
         await writer.query("COMMIT");
         return result;
       }
 
-      if (target.state !== "PROMOTING" || target.claim_owner !== input.claim.lease_owner || BigInt(target.fencing_token) !== input.claim.fencing_token) {
-        throw new Error("FORMAL_PHYSICAL_ATTESTATION_REQUIRES_CURRENT_PROMOTING_FENCE");
-      }
+      if (target.state !== "PROMOTING" || target.claim_owner !== input.claim.lease_owner || BigInt(target.fencing_token) !== input.claim.fencing_token) throw new Error("FORMAL_PHYSICAL_ATTESTATION_REQUIRES_CURRENT_PROMOTING_FENCE");
       const now = await databaseNow(writer);
-      if (Date.parse(now) >= Date.parse(base) || !target.lease_expires_at || Date.parse(iso(target.lease_expires_at)) <= Date.parse(now)) {
-        throw new Error("FORMAL_PHYSICAL_ATTESTATION_REQUIRES_LIVE_PREDEADLINE_LEASE");
-      }
-      if (cursor.next_missing_required_base === null || iso(cursor.next_missing_required_base) !== base) {
-        throw new Error("FORMAL_PHYSICAL_ATTESTATION_MUST_MATCH_NEXT_MISSING_CONTIGUOUS_BASE");
-      }
+      if (Date.parse(now) >= Date.parse(base) || !target.lease_expires_at || Date.parse(iso(target.lease_expires_at)) <= Date.parse(now)) throw new Error("FORMAL_PHYSICAL_ATTESTATION_REQUIRES_LIVE_PREDEADLINE_LEASE");
+      if (cursor.next_missing_required_base === null || iso(cursor.next_missing_required_base) !== base) throw new Error("FORMAL_PHYSICAL_ATTESTATION_MUST_MATCH_NEXT_MISSING_CONTIGUOUS_BASE");
 
       const byKind = new Map(input.facts.map((item) => [item.kind, item]));
       const weather = byKind.get("WEATHER")!;
@@ -657,19 +653,14 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
                 post_commit_db_readback_at=$21::timestamptz,formal_visible_attested_at=clock_timestamp(),failure_class=NULL,updated_at=clock_timestamp()
           WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7 AND base_target_t=$8::timestamptz
           RETURNING formal_visible_attested_at`,
-        [
-          ...scopeValues(this.config.scope), this.config.epoch_id, base,
-          producerRun, promotionRun, artifactDigest,
+        [...scopeValues(this.config.scope), this.config.epoch_id, base, producerRun, promotionRun, artifactDigest,
           weather.fact_id, weather.source_record_hash, weather.record_semantic_hash,
           et0.fact_id, et0.source_record_hash, et0.record_semantic_hash,
-          soil.fact_id, soil.source_record_hash, soil.record_semantic_hash,
-          readbackAt,
-        ],
+          soil.fact_id, soil.source_record_hash, soil.record_semantic_hash, readbackAt],
       );
       if (updated.rows.length !== 1) throw new Error("FORMAL_PHYSICAL_ATTESTATION_UPDATE_REQUIRED");
       const attestedAt = iso(updated.rows[0].formal_visible_attested_at);
       if (Date.parse(attestedAt) >= Date.parse(base)) throw new Error("FORMAL_PHYSICAL_ATTESTATION_PERSISTED_AFTER_CAUSAL_BASE");
-
       const lastRequired = iso(cursor.last_required_base);
       const completes = base === lastRequired;
       const next = completes ? null : addHours(base, 1);
@@ -682,27 +673,12 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
       await writer.query("COMMIT");
       return {
         attestation_id: MCFT_CAP09_FORMAL_PHYSICAL_INGRESS_ATTESTATION_ID_V1,
-        status: "PASS",
-        scope: { ...this.config.scope },
-        epoch_id: this.config.epoch_id,
-        subject_sha: this.config.subject_sha,
-        base_target_t: base,
-        causal_deadline: base,
-        producer_run_id: producerRun,
-        promotion_run_id: promotionRun,
-        candidate_artifact_digest: artifactDigest,
-        facts: input.facts.map((item) => ({ ...item })),
-        post_commit_db_readback_at: readbackAt,
-        formal_visible_attested_at: attestedAt,
-        physical_visibility_before_base: true,
-        cursor_advanced: true,
-        next_missing_required_base: next,
+        status: "PASS", scope: { ...this.config.scope }, epoch_id: this.config.epoch_id, subject_sha: this.config.subject_sha,
+        base_target_t: base, causal_deadline: base, producer_run_id: producerRun, promotion_run_id: promotionRun,
+        candidate_artifact_digest: artifactDigest, facts: input.facts.map((item) => ({ ...item })),
+        post_commit_db_readback_at: readbackAt, formal_visible_attested_at: attestedAt,
+        physical_visibility_before_base: true, cursor_advanced: true, next_missing_required_base: next,
       };
-    } catch (error) {
-      try { await writer.query("ROLLBACK"); } catch {}
-      throw error;
-    } finally {
-      writer.release();
-    }
+    } catch (error) { try { await writer.query("ROLLBACK"); } catch {} throw error; } finally { writer.release(); }
   }
 }
