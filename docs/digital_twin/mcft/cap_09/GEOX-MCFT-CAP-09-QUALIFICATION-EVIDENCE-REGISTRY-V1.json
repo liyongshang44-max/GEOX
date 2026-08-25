@@ -14,6 +14,7 @@
       "run_conclusion": "success",
       "artifact_id": 9575891293,
       "artifact_digest": "sha256:5470f9e59a73d95bdb68e1ec37d3bf39464f3dd0826fd6a41e67a0baaaac766a",
+      "immutable_binding_sha256": "673af54ba53ddfd2229a3552d42787bddfc510f08d93be4c6d0cd31877dce280",
       "immutable": true,
       "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
       "requalification_triggers": ["V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"]
@@ -29,6 +30,7 @@
       "run_conclusion": "success",
       "artifact_id": 9575878791,
       "artifact_digest": "sha256:04630f1f869ba99e9be40d55e24967e6e26671e80d3459fb9b28ce0694aaeb40",
+      "immutable_binding_sha256": "ae74cdf90bbe22a4d3cf287ca676bc581aaebd6619be9876a05113b341778e0e",
       "immutable": true,
       "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
       "requalification_triggers": ["V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"]
@@ -44,6 +46,7 @@
       "run_conclusion": "success",
       "artifact_id": 9575898642,
       "artifact_digest": "sha256:5dc7bbdf61372518e50ef33cbc470b50b788197622b8a0ce4978686365e9b625",
+      "immutable_binding_sha256": "00710239a7660ca249f0baa565f83ed9d30479e48d6b30ce7ff2b5d178bdc312",
       "immutable": true,
       "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
       "requalification_triggers": ["V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"]
@@ -59,6 +62,7 @@
       "run_conclusion": "success",
       "artifact_id": 9575893745,
       "artifact_digest": "sha256:5d0cd30932062032298b24a44b7d7d728a58807669961058931c22dfba0b99ac",
+      "immutable_binding_sha256": "8432bde37f1a19f18f3247c1d250fd188def14b743e0074f276f9d0c370fb512",
       "immutable": true,
       "carry_forward_policy": "ONLY_WHEN_EXACT_RESOLVER_PATHS_UNCHANGED",
       "requalification_triggers": ["EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"]
@@ -74,6 +78,7 @@
       "run_conclusion": "success",
       "artifact_id": 9575862147,
       "artifact_digest": "sha256:1fac3c1e8812fd978611d10444f0bf469de89ddca9694b5d4ea111b137fc1bd1",
+      "immutable_binding_sha256": "83fc93bdbef49efab18e805b3b213937a47155d03b92b86ee918dffba9c79010",
       "dependency_binding_module": "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs",
       "dependency_binding_export": "expectedDependencyPaths",
       "immutable": true,
@@ -91,6 +96,7 @@
       "run_conclusion": "success",
       "artifact_id": null,
       "artifact_digest": null,
+      "immutable_binding_sha256": "7bebf5df737bdaa6ec35da79da1b89ccaead06698489b45494cc17215b8e2904",
       "artifact_absence_reason": "RUN_LEVEL_ROUTING_EVIDENCE_ONLY",
       "immutable": true,
       "carry_forward_policy": "ONLY_WHEN_LEGACY_SENSITIVE_PATHS_UNCHANGED",
@@ -102,6 +108,7 @@
     "subject_mismatch": "FAIL_CLOSED",
     "non_success_run": "FAIL_CLOSED",
     "mutable_evidence": "FAIL_CLOSED",
+    "immutable_binding_mismatch": "FAIL_CLOSED",
     "dependency_trigger_changed": "REQUALIFY",
     "dependency_trigger_unchanged": "CARRY_FORWARD"
   },
