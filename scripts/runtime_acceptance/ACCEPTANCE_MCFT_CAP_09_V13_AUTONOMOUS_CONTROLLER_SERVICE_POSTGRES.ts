@@ -9,6 +9,7 @@ import {
   type FormalForcingAcquisitionBudgetAdjudicationV1,
 } from "../../apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.js";
 import {
+  ExternalFormalExactBasePromotionFailureV1,
   ExternalFormalForcingAutonomousControllerServiceV1,
   type ExternalFormalExactBaseCapturePortV1,
   type ExternalFormalExactBaseCaptureReceiptV1,
@@ -26,7 +27,7 @@ import type { TwinScopeKeyV1 } from "../../apps/server/src/runtime/twin_runtime/
 const ROOT = process.cwd();
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_V13_AUTONOMOUS_CONTROLLER_SERVICE_POSTGRES_RESULT.json");
 const SUBJECT = "f".repeat(40);
-const EPOCH = "v13-autonomous-controller-service";
+const MAIN_EPOCH = "v13-autonomous-controller-service";
 const scope: TwinScopeKeyV1 = {
   tenant_id: "tenantA",
   project_id: "projectA",
@@ -173,8 +174,84 @@ class ControlledPromotionPort implements ExternalFormalExactBasePromotionPortV1 
       base_target_t: input.base_target_t,
       promotion_run_id: "controlled-promotion-run-1",
       facts: facts.map((item) => item.identity),
+      formal_database_write_count: 3,
     };
   }
+}
+
+class NoMutationPromotionPort implements ExternalFormalExactBasePromotionPortV1 {
+  async promoteExactBase(): Promise<ExternalFormalExactBasePromotionReceiptV1> {
+    throw new ExternalFormalExactBasePromotionFailureV1({
+      failure_class: "CONTROLLED_PROMOTION_NO_FORMAL_MUTATION",
+      mutation_state: "NO_FORMAL_MUTATION",
+      formal_database_write_count: 0,
+    });
+  }
+}
+
+class PartialMutationPromotionPort implements ExternalFormalExactBasePromotionPortV1 {
+  constructor(private readonly pool: Pool, private readonly epoch: string) {}
+  async promoteExactBase(input: { base_target_t: string }): Promise<ExternalFormalExactBasePromotionReceiptV1> {
+    await this.pool.query(
+      "INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,$3,$4::jsonb)",
+      [`fact_v13_partial_${this.epoch}`, addMinutes(input.base_target_t, -30), "controlled_partial_formal_mutation", JSON.stringify({ type: "controlled_partial", payload: { epoch: this.epoch } })],
+    );
+    throw new ExternalFormalExactBasePromotionFailureV1({
+      failure_class: "CONTROLLED_PROMOTION_PARTIAL_FORMAL_MUTATION",
+      mutation_state: "PARTIAL_FORMAL_MUTATION",
+      formal_database_write_count: 1,
+    });
+  }
+}
+
+async function createService(input: {
+  pool: Pool;
+  epoch: string;
+  base: string;
+  controllerOwner: string;
+  producerOwner: string;
+  promotion: ExternalFormalExactBasePromotionPortV1;
+}): Promise<{
+  continuity: PostgresExternalFormalForcingBaseContinuityRepositoryV1;
+  lifecycle: PostgresExternalFormalForcingControllerLifecycleV1;
+  admission: PostgresExternalFormalForcingSupplyAdmissionV1;
+  capture: ControlledCapturePort;
+  service: ExternalFormalForcingAutonomousControllerServiceV1;
+}> {
+  const continuity = new PostgresExternalFormalForcingBaseContinuityRepositoryV1(input.pool, {
+    scope, epoch_id: input.epoch, subject_sha: SUBJECT, first_required_base: input.base, last_required_base: input.base,
+  });
+  await continuity.initializeCursor();
+  const lifecycle = new PostgresExternalFormalForcingControllerLifecycleV1(input.pool, { scope, epoch_id: input.epoch, subject_sha: SUBJECT });
+  const admission = new PostgresExternalFormalForcingSupplyAdmissionV1(input.pool, {
+    scope, epoch_id: input.epoch, subject_sha: SUBJECT, first_required_base: input.base, last_required_base: input.base, qualified_budget: budget(),
+  });
+  const capture = new ControlledCapturePort();
+  const service = new ExternalFormalForcingAutonomousControllerServiceV1(
+    lifecycle,
+    admission,
+    continuity,
+    capture,
+    input.promotion,
+    {
+      subject_sha: SUBJECT,
+      controller_owner: input.controllerOwner,
+      producer_owner: input.producerOwner,
+      controller_lease_duration_seconds: 1,
+      producer_lease_duration_seconds: 1,
+      heartbeat_interval_ms: 30,
+    },
+  );
+  return { continuity, lifecycle, admission, capture, service };
+}
+
+async function targetState(pool: Pool, epoch: string): Promise<{ state: string; failure_class: string | null }> {
+  const row = (await pool.query<{ state: string; failure_class: string | null }>(
+    "SELECT state,failure_class FROM twin_external_formal_forcing_base_target_v1 WHERE epoch_id=$1",
+    [epoch],
+  )).rows[0];
+  if (!row) throw new Error(`V13_AUTONOMOUS_SERVICE_TARGET_REQUIRED:${epoch}`);
+  return row;
 }
 
 async function main(): Promise<void> {
@@ -185,48 +262,29 @@ async function main(): Promise<void> {
   try {
     await reset(pool);
     const base = await futureBase(pool);
-    const continuity = new PostgresExternalFormalForcingBaseContinuityRepositoryV1(pool, {
-      scope, epoch_id: EPOCH, subject_sha: SUBJECT, first_required_base: base, last_required_base: base,
-    });
-    await continuity.initializeCursor();
-    const lifecycle = new PostgresExternalFormalForcingControllerLifecycleV1(pool, { scope, epoch_id: EPOCH, subject_sha: SUBJECT });
-    const admission = new PostgresExternalFormalForcingSupplyAdmissionV1(pool, {
-      scope, epoch_id: EPOCH, subject_sha: SUBJECT, first_required_base: base, last_required_base: base, qualified_budget: budget(),
-    });
-    const capture = new ControlledCapturePort();
-    const promotion = new ControlledPromotionPort(pool);
-    const service = new ExternalFormalForcingAutonomousControllerServiceV1(
-      lifecycle,
-      admission,
-      continuity,
-      capture,
-      promotion,
-      {
-        subject_sha: SUBJECT,
-        controller_owner: "autonomous-controller-A",
-        producer_owner: "autonomous-producer-1",
-        controller_lease_duration_seconds: 1,
-        producer_lease_duration_seconds: 1,
-        heartbeat_interval_ms: 30,
-      },
-    );
 
-    const result = await service.runOnce();
+    const main = await createService({
+      pool,
+      epoch: MAIN_EPOCH,
+      base,
+      controllerOwner: "autonomous-controller-A",
+      producerOwner: "autonomous-producer-1",
+      promotion: new ControlledPromotionPort(pool),
+    });
+    const result = await main.service.runOnce();
     assert.equal(result.status, "COMPLETED_BASE");
     if (result.status !== "COMPLETED_BASE") throw new Error("V13_AUTONOMOUS_SERVICE_COMPLETED_BASE_REQUIRED");
     assert.equal(result.base_target_t, base);
     assert.equal(result.wall_clock_target_planner_used, false);
     assert(result.controller_heartbeat_count >= 2);
     assert(result.producer_heartbeat_count >= 2);
-    assert.deepEqual(capture.calls, [base]);
-    assert.deepEqual(promotion.calls, [base]);
-    assert.equal((await continuity.readCursor()).completed, true);
+    assert.deepEqual(main.capture.calls, [base]);
+    assert.equal((await main.continuity.readCursor()).completed, true);
 
-    const secondLifecycle = new PostgresExternalFormalForcingControllerLifecycleV1(pool, { scope, epoch_id: EPOCH, subject_sha: SUBJECT });
-    const secondService = new ExternalFormalForcingAutonomousControllerServiceV1(
-      secondLifecycle,
-      admission,
-      continuity,
+    const competing = new ExternalFormalForcingAutonomousControllerServiceV1(
+      new PostgresExternalFormalForcingControllerLifecycleV1(pool, { scope, epoch_id: MAIN_EPOCH, subject_sha: SUBJECT }),
+      main.admission,
+      main.continuity,
       new ControlledCapturePort(),
       new ControlledPromotionPort(pool),
       {
@@ -238,20 +296,70 @@ async function main(): Promise<void> {
         heartbeat_interval_ms: 30,
       },
     );
-    const competing = await secondService.runOnce();
-    assert.equal(competing.status, "CONTROLLER_BUSY");
+    assert.equal((await competing.runOnce()).status, "CONTROLLER_BUSY");
+
+    const retryEpoch = "v13-autonomous-promotion-zero-write-failure";
+    const retry = await createService({
+      pool,
+      epoch: retryEpoch,
+      base,
+      controllerOwner: "retry-controller",
+      producerOwner: "retry-producer",
+      promotion: new NoMutationPromotionPort(),
+    });
+    await assert.rejects(
+      () => retry.service.runOnce(),
+      (error: unknown) => error instanceof ExternalFormalExactBasePromotionFailureV1
+        && error.mutation_state === "NO_FORMAL_MUTATION"
+        && error.formal_database_write_count === 0,
+    );
+    const retryState = await targetState(pool, retryEpoch);
+    assert.equal(retryState.state, "FAILED_RETRYABLE");
+    assert.equal(retryState.failure_class, "PROMOTION_FAILED_NO_FORMAL_MUTATION:CONTROLLED_PROMOTION_NO_FORMAL_MUTATION");
+    const retryLifecycle = await retry.lifecycle.acquireOrRenew({ lease_owner: "retry-controller", lease_duration_seconds: 1 });
+    assert.notEqual(retryLifecycle.status, "TERMINAL");
+
+    const partialEpoch = "v13-autonomous-promotion-partial-write-failure";
+    const partial = await createService({
+      pool,
+      epoch: partialEpoch,
+      base,
+      controllerOwner: "partial-controller",
+      producerOwner: "partial-producer",
+      promotion: new PartialMutationPromotionPort(pool, partialEpoch),
+    });
+    const partialResult = await partial.service.runOnce();
+    assert.equal(partialResult.status, "TERMINAL_PROMOTION_MUTATION_UNSAFE");
+    if (partialResult.status !== "TERMINAL_PROMOTION_MUTATION_UNSAFE") throw new Error("V13_AUTONOMOUS_PARTIAL_PROMOTION_TERMINAL_REQUIRED");
+    assert.equal(partialResult.mutation_state, "PARTIAL_FORMAL_MUTATION");
+    assert.equal(partialResult.formal_database_write_count, 1);
+    assert.equal(partialResult.forcing_controller_terminal_recorded, true);
+    const partialState = await targetState(pool, partialEpoch);
+    assert.equal(partialState.state, "PROMOTING");
+    assert.equal(partialState.failure_class, null);
+    assert.equal((await partial.continuity.readCursor()).completed, false);
+    const partialLifecycle = await partial.lifecycle.acquireOrRenew({ lease_owner: "new-controller-after-partial", lease_duration_seconds: 1 });
+    assert.equal(partialLifecycle.status, "TERMINAL");
+    const partialFactCount = Number((await pool.query<{ n: string }>(
+      "SELECT count(*)::text AS n FROM facts WHERE source='controlled_partial_formal_mutation'",
+    )).rows[0]?.n ?? "-1");
+    assert.equal(partialFactCount, 1);
 
     const proof = {
       status: "PASS",
       acceptance_mode: "REAL_POSTGRES_V13_AUTONOMOUS_CONTROLLER_SERVICE",
-      exact_cursor_base_passed_to_capture: capture.calls[0] === base,
-      exact_cursor_base_passed_to_promotion: promotion.calls[0] === base,
+      exact_cursor_base_passed_to_capture: main.capture.calls[0] === base,
       wall_clock_target_planner_used: false,
       epoch_controller_heartbeat_during_long_capture_and_promotion: result.controller_heartbeat_count >= 2,
       producer_claim_heartbeat_during_long_capture_and_promotion: result.producer_heartbeat_count >= 2,
       same_producer_fence_preserved_through_completion: result.producer_fencing_token === "1",
-      physical_attestation_advanced_cursor: (await continuity.readCursor()).completed === true,
-      competing_controller_denied_while_lease_live: competing.status === "CONTROLLER_BUSY",
+      physical_attestation_advanced_cursor: (await main.continuity.readCursor()).completed === true,
+      competing_controller_denied_while_lease_live: (await competing.runOnce()).status === "CONTROLLER_BUSY",
+      zero_formal_write_promotion_failure_is_retryable: retryState.state === "FAILED_RETRYABLE",
+      partial_formal_write_promotion_failure_is_not_retryable: partialState.state === "PROMOTING" && partialState.failure_class === null,
+      partial_formal_write_promotion_failure_terminalizes_controller: partialLifecycle.status === "TERMINAL",
+      partial_formal_write_does_not_advance_forcing_cursor: (await partial.continuity.readCursor()).completed === false,
+      unknown_or_partial_promotion_mutation_fails_closed: true,
       capture_port_formal_database_write_count: 0,
       production_workflow_effect: false,
       formal_v4_mutation_performed: false,
