@@ -80,7 +80,7 @@ jobs:
 
       - name: Typecheck v13 foundation surfaces
         run: >-
-          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module ESNext --moduleResolution Bundler --esModuleInterop --types node
           apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.ts
           apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts
           scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.ts
