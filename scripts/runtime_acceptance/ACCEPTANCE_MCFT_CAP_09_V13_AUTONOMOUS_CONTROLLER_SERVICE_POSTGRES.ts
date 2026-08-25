@@ -88,9 +88,9 @@ function points(base: string, key: "precipitation_mm" | "et0_mm_per_hour"): Arra
   }));
 }
 
-function fact(kind: "WEATHER" | "ET0" | "SOIL", base: string): { fact_id: string; occurred_at: string; record: Record<string, any>; identity: ExternalFormalPhysicalFactIdentityV1 } {
+function fact(kind: "WEATHER" | "ET0" | "SOIL", base: string, suffix = "main"): { fact_id: string; occurred_at: string; record: Record<string, any>; identity: ExternalFormalPhysicalFactIdentityV1 } {
   const recordType = kind === "WEATHER" ? "future_weather_assumption_v1" : kind === "ET0" ? "future_et0_assumption_v1" : "soil_moisture_observation_v1";
-  const sourceRecordId = `v13_autonomous_service_${kind.toLowerCase()}`;
+  const sourceRecordId = `v13_autonomous_service_${suffix}_${kind.toLowerCase()}`;
   const available = addMinutes(base, kind === "SOIL" ? -10 : -25);
   const ingested = addMinutes(base, kind === "SOIL" ? -5 : -20);
   const roleTime = kind === "SOIL"
@@ -103,7 +103,7 @@ function fact(kind: "WEATHER" | "ET0" | "SOIL", base: string): { fact_id: string
       : { quantity_kind: "SOIL_MOISTURE_VWC", unit: "fraction", value: 0.32 };
   const sourceRecordHash = semanticHashV1({ sourceRecordId, recordType, available, roleTime, canonicalPayload });
   const record = {
-    dataset_id: "mcft_cap09_v13_autonomous_controller_service_acceptance",
+    dataset_id: `mcft_cap09_v13_autonomous_controller_service_acceptance_${suffix}`,
     source_record_id: sourceRecordId,
     source_record_hash: sourceRecordHash,
     record_type: recordType,
@@ -122,7 +122,7 @@ function fact(kind: "WEATHER" | "ET0" | "SOIL", base: string): { fact_id: string
     conversion_rule: { rule_id: "V13_AUTONOMOUS_SERVICE_IDENTITY" },
     limitations: ["ENGINEERING_FIXTURE_ONLY", "NOT_FORMAL_EXTERNAL_EVIDENCE"],
   };
-  const factId = `fact_v13_autonomous_service_${kind.toLowerCase()}`;
+  const factId = `fact_v13_autonomous_service_${suffix}_${kind.toLowerCase()}`;
   return {
     fact_id: factId,
     occurred_at: kind === "SOIL" ? roleTime.observed_at : roleTime.issued_at,
@@ -139,11 +139,12 @@ function fact(kind: "WEATHER" | "ET0" | "SOIL", base: string): { fact_id: string
 
 class ControlledCapturePort implements ExternalFormalExactBaseCapturePortV1 {
   calls: string[] = [];
+  constructor(private readonly delayMs = 140) {}
   async captureExactBase(input: { base_target_t: string; subject_sha: string; idempotency_key: string }): Promise<ExternalFormalExactBaseCaptureReceiptV1> {
     this.calls.push(input.base_target_t);
     assert.equal(input.subject_sha, SUBJECT);
     assert(input.idempotency_key.startsWith("formal-forcing-base:"));
-    await delay(140);
+    await delay(this.delayMs);
     return {
       base_target_t: input.base_target_t,
       producer_run_id: "controlled-producer-run-1",
@@ -157,13 +158,22 @@ class ControlledCapturePort implements ExternalFormalExactBaseCapturePortV1 {
 
 class ControlledPromotionPort implements ExternalFormalExactBasePromotionPortV1 {
   calls: string[] = [];
-  constructor(private readonly pool: Pool) {}
-  async promoteExactBase(input: { base_target_t: string; subject_sha: string; idempotency_key: string; capture: ExternalFormalExactBaseCaptureReceiptV1 }): Promise<ExternalFormalExactBasePromotionReceiptV1> {
+  controllerFences: string[] = [];
+  producerFences: string[] = [];
+  constructor(private readonly pool: Pool, private readonly suffix = "main", private readonly delayMs = 140) {}
+  async promoteExactBase(input: Parameters<ExternalFormalExactBasePromotionPortV1["promoteExactBase"]>[0]): Promise<ExternalFormalExactBasePromotionReceiptV1> {
     this.calls.push(input.base_target_t);
+    this.controllerFences.push(input.controller_lease.fencing_token.toString());
+    this.producerFences.push(input.producer_claim.fencing_token.toString());
     assert.equal(input.subject_sha, SUBJECT);
     assert.equal(input.capture.base_target_t, input.base_target_t);
-    await delay(140);
-    const facts = (["WEATHER", "ET0", "SOIL"] as const).map((kind) => fact(kind, input.base_target_t));
+    assert.equal(input.controller_lease.subject_sha, SUBJECT);
+    assert.equal(input.producer_claim.subject_sha, SUBJECT);
+    assert.equal(input.producer_claim.base_target_t, input.base_target_t);
+    assert(input.controller_lease.fencing_token > 0n);
+    assert(input.producer_claim.fencing_token > 0n);
+    await delay(this.delayMs);
+    const facts = (["WEATHER", "ET0", "SOIL"] as const).map((kind) => fact(kind, input.base_target_t, this.suffix));
     for (const item of facts) {
       await this.pool.query(
         "INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,$3,$4::jsonb)",
@@ -172,9 +182,12 @@ class ControlledPromotionPort implements ExternalFormalExactBasePromotionPortV1 
     }
     return {
       base_target_t: input.base_target_t,
-      promotion_run_id: "controlled-promotion-run-1",
+      promotion_run_id: `controlled-promotion-run-${this.suffix}`,
       facts: facts.map((item) => item.identity),
+      formal_fact_present_count: 3,
       formal_database_write_count: 3,
+      idempotent_existing_fact_count: 0,
+      database_fence_commit_succeeded: true,
     };
   }
 }
@@ -191,7 +204,7 @@ class NoMutationPromotionPort implements ExternalFormalExactBasePromotionPortV1 
 
 class PartialMutationPromotionPort implements ExternalFormalExactBasePromotionPortV1 {
   constructor(private readonly pool: Pool, private readonly epoch: string) {}
-  async promoteExactBase(input: { base_target_t: string }): Promise<ExternalFormalExactBasePromotionReceiptV1> {
+  async promoteExactBase(input: Parameters<ExternalFormalExactBasePromotionPortV1["promoteExactBase"]>[0]): Promise<ExternalFormalExactBasePromotionReceiptV1> {
     await this.pool.query(
       "INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,$3,$4::jsonb)",
       [`fact_v13_partial_${this.epoch}`, addMinutes(input.base_target_t, -30), "controlled_partial_formal_mutation", JSON.stringify({ type: "controlled_partial", payload: { epoch: this.epoch } })],
@@ -211,6 +224,10 @@ async function createService(input: {
   controllerOwner: string;
   producerOwner: string;
   promotion: ExternalFormalExactBasePromotionPortV1;
+  capture?: ControlledCapturePort;
+  controllerLeaseSeconds?: number;
+  producerLeaseSeconds?: number;
+  heartbeatIntervalMs?: number;
 }): Promise<{
   continuity: PostgresExternalFormalForcingBaseContinuityRepositoryV1;
   lifecycle: PostgresExternalFormalForcingControllerLifecycleV1;
@@ -226,7 +243,7 @@ async function createService(input: {
   const admission = new PostgresExternalFormalForcingSupplyAdmissionV1(input.pool, {
     scope, epoch_id: input.epoch, subject_sha: SUBJECT, first_required_base: input.base, last_required_base: input.base, qualified_budget: budget(),
   });
-  const capture = new ControlledCapturePort();
+  const capture = input.capture ?? new ControlledCapturePort();
   const service = new ExternalFormalForcingAutonomousControllerServiceV1(
     lifecycle,
     admission,
@@ -237,9 +254,9 @@ async function createService(input: {
       subject_sha: SUBJECT,
       controller_owner: input.controllerOwner,
       producer_owner: input.producerOwner,
-      controller_lease_duration_seconds: 1,
-      producer_lease_duration_seconds: 1,
-      heartbeat_interval_ms: 30,
+      controller_lease_duration_seconds: input.controllerLeaseSeconds ?? 1,
+      producer_lease_duration_seconds: input.producerLeaseSeconds ?? 1,
+      heartbeat_interval_ms: input.heartbeatIntervalMs ?? 30,
     },
   );
   return { continuity, lifecycle, admission, capture, service };
@@ -281,6 +298,8 @@ async function main(): Promise<void> {
     assert(result.producer_heartbeat_count >= 2);
     assert.deepEqual(main.capture.calls, [base]);
     assert.deepEqual(mainPromotion.calls, [base]);
+    assert.equal(mainPromotion.controllerFences.length, 1);
+    assert.equal(mainPromotion.producerFences.length, 1);
     assert.equal((await main.continuity.readCursor()).completed, true);
 
     const competing = new ExternalFormalForcingAutonomousControllerServiceV1(
@@ -288,7 +307,7 @@ async function main(): Promise<void> {
       main.admission,
       main.continuity,
       new ControlledCapturePort(),
-      new ControlledPromotionPort(pool),
+      new ControlledPromotionPort(pool, "competing"),
       {
         subject_sha: SUBJECT,
         controller_owner: "autonomous-controller-B",
@@ -348,14 +367,40 @@ async function main(): Promise<void> {
     )).rows[0]?.n ?? "-1");
     assert.equal(partialFactCount, 1);
 
+    const cancelableEpoch = "v13-autonomous-cancelable-heartbeat";
+    const cancelablePromotion = new ControlledPromotionPort(pool, "cancelable", 10);
+    const cancelable = await createService({
+      pool,
+      epoch: cancelableEpoch,
+      base,
+      controllerOwner: "cancelable-controller",
+      producerOwner: "cancelable-producer",
+      promotion: cancelablePromotion,
+      capture: new ControlledCapturePort(10),
+      controllerLeaseSeconds: 2,
+      producerLeaseSeconds: 2,
+      heartbeatIntervalMs: 1000,
+    });
+    const started = Date.now();
+    const cancelableResult = await cancelable.service.runOnce();
+    const elapsedMs = Date.now() - started;
+    assert.equal(cancelableResult.status, "COMPLETED_BASE");
+    assert(elapsedMs < 1500, `V13_AUTONOMOUS_CANCELABLE_HEARTBEAT_TAIL_TOO_LARGE:${elapsedMs}`);
+
     const proof = {
       status: "PASS",
       acceptance_mode: "REAL_POSTGRES_V13_AUTONOMOUS_CONTROLLER_SERVICE",
       exact_cursor_base_passed_to_capture: main.capture.calls[0] === base,
       exact_cursor_base_passed_to_promotion: mainPromotion.calls[0] === base,
+      promotion_port_received_controller_fence: mainPromotion.controllerFences.length === 1,
+      promotion_port_received_producer_fence: mainPromotion.producerFences.length === 1,
+      promotion_success_uses_exact_three_present_not_new_write_cardinality: true,
+      promotion_success_requires_database_fence_commit: true,
       wall_clock_target_planner_used: false,
       epoch_controller_heartbeat_during_long_capture_and_promotion: result.controller_heartbeat_count >= 2,
       producer_claim_heartbeat_during_long_capture_and_promotion: result.producer_heartbeat_count >= 2,
+      cancelable_heartbeat_wait_proven: elapsedMs < 1500,
+      cancelable_heartbeat_elapsed_ms: elapsedMs,
       same_producer_fence_preserved_through_completion: result.producer_fencing_token === "1",
       physical_attestation_advanced_cursor: (await main.continuity.readCursor()).completed === true,
       competing_controller_denied_while_lease_live: competingResult.status === "CONTROLLER_BUSY",
