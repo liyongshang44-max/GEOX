@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS public.twin_external_formal_forcing_base_target_v1 (
       AND post_commit_db_readback_at IS NOT NULL
       AND formal_visible_attested_at IS NOT NULL
       AND post_commit_db_readback_at < causal_deadline
+      AND formal_visible_attested_at < causal_deadline
     )
   )
 );
