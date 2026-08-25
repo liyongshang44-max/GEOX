@@ -9,8 +9,9 @@ import {
 } from "../../apps/server/src/runtime/twin_runtime/external_formal_v5_viability_gated_scheduler_v1.js";
 import {
   PostgresExternalFormalNextTickViabilityV1,
-  type ExternalFormalNextTickViabilityPortV1,
+  type ExternalFormalTerminalSuccessorViabilityPortV1,
 } from "../../apps/server/src/runtime/twin_runtime/postgres_external_formal_next_tick_viability_v1.js";
+import { PostgresPersistentSequentialSchedulerAdapterV1 } from "../../apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.js";
 import type {
   SchedulerPortV1,
   ShadowOnlineBoundaryV1,
@@ -39,12 +40,12 @@ function addHours(value: string, count: number): string {
 function addMinutes(value: string, count: number): string {
   return new Date(Date.parse(value) + count * 60_000).toISOString();
 }
-function boundary(index: number): ShadowOnlineBoundaryV1 {
+function boundary(index: number, start = O00, observedAt = addMinutes(addHours(start, index), 5)): ShadowOnlineBoundaryV1 {
   return {
     scope: { ...scope },
     slot_id: `O${String(index).padStart(2, "0")}` as ShadowOnlineBoundaryV1["slot_id"],
-    logical_time: addHours(O00, index),
-    scheduler_wall_clock_observed_at: addMinutes(addHours(O00, index), 5),
+    logical_time: addHours(start, index),
+    scheduler_wall_clock_observed_at: observedAt,
     interval_seconds: 3600,
   };
 }
@@ -58,19 +59,19 @@ async function reset(pool: Pool): Promise<void> {
   await pool.query(fs.readFileSync(path.join(ROOT, "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql"), "utf8"));
 }
 
-async function setRuntimeCursor(pool: Pool, index: number): Promise<void> {
+async function setRuntimeCursor(pool: Pool, index: number, start = O00): Promise<void> {
   await pool.query("DELETE FROM twin_shadow_online_scheduler_cursor_v1");
   await pool.query(
     `INSERT INTO twin_shadow_online_scheduler_cursor_v1
      (tenant_id,project_id,group_id,field_id,season_id,zone_id,schedule_start_logical_time,next_slot_index,next_slot_id,next_logical_time)
      VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10::timestamptz)`,
-    [...scopeValues, O00, index, `O${String(index).padStart(2, "0")}`, addHours(O00, index)],
+    [...scopeValues, start, index, `O${String(index).padStart(2, "0")}`, addHours(start, index)],
   );
 }
 
-async function seedForcingCursor(pool: Pool, epoch: string, lastContiguous: string): Promise<void> {
-  const first = O00;
-  const last = addHours(O00, 22);
+async function seedForcingCursor(pool: Pool, epoch: string, lastContiguous: string, start = O00): Promise<void> {
+  const first = start;
+  const last = addHours(start, 22);
   const completed = lastContiguous === last;
   const next = completed ? null : addHours(lastContiguous, 1);
   await pool.query(
@@ -133,8 +134,7 @@ async function main(): Promise<void> {
     assert.equal(o01After.required_forcing_base, O00);
     assert.equal(o01After.physical_ingress_attestation_verified, true);
 
-    // Reproduce the v4 seam structurally: runtime has advanced through O07 and wants O08,
-    // but the O07 forcing base was never made viable. O08 must be refused before claim.
+    // Reproduce a target that is already terminal: successor preclaim must fail closed.
     const seamEpoch = "v13-a2-blocked-successor-seam";
     await setRuntimeCursor(pool, 8);
     await seedForcingCursor(pool, seamEpoch, addHours(O00, 6));
@@ -151,25 +151,29 @@ async function main(): Promise<void> {
     assert.equal(o08.required_forcing_base, addHours(O00, 7));
     assert.equal(o08.reason, "REQUIRED_FORCING_BASE_TERMINAL");
 
-    // Even a cursor claiming continuity is insufficient if physical attestation is late.
+    // A late FORMAL_VISIBLE_ATTESTED row is no longer a legal database state. The schema itself
+    // must reject it; read-side viability then sees no valid physical attestation.
     const lateEpoch = "v13-late-physical-attestation";
     await setRuntimeCursor(pool, 1);
     await seedForcingCursor(pool, lateEpoch, O00);
-    await seedAttestedTarget(pool, lateEpoch, O00, addMinutes(O00, 1));
+    await assert.rejects(
+      () => seedAttestedTarget(pool, lateEpoch, O00, addMinutes(O00, 1)),
+      /violates check constraint/,
+    );
     const lateChecker = new PostgresExternalFormalNextTickViabilityV1(pool, { scope, epoch_id: lateEpoch, subject_sha: SUBJECT, o00_logical_time: O00 });
     const late = await lateChecker.checkPreclaimViability(boundary(1));
     assert.equal(late.status, "NOT_VIABLE");
     if (late.status !== "NOT_VIABLE") throw new Error("V13_VIABILITY_LATE_ATTEST_BLOCK_REQUIRED");
-    assert.equal(late.reason, "REQUIRED_FORCING_BASE_ATTESTATION_LATE");
+    assert.equal(late.reason, "REQUIRED_FORCING_BASE_ATTESTATION_MISSING");
 
-    // Gate proof: NOT_VIABLE prevents the underlying durable scheduler claim call entirely.
+    // Simple gate proof: NOT_VIABLE prevents the underlying durable scheduler claim call entirely.
     let claimCalls = 0;
     const inner: Pick<SchedulerPortV1, "listMissedSlots" | "claimDueSlot" | "recordTerminalResult"> = {
       async listMissedSlots() { return [boundary(8)]; },
       async claimDueSlot(): Promise<ShadowOnlineSlotClaimV1> { claimCalls += 1; throw new Error("INNER_CLAIM_MUST_NOT_RUN"); },
       async recordTerminalResult(_input: { claim: ShadowOnlineSlotClaimV1; result: ShadowOnlineTerminalSlotResultV1 }): Promise<void> {},
     };
-    const notViablePort: ExternalFormalNextTickViabilityPortV1 = {
+    const notViablePort: ExternalFormalTerminalSuccessorViabilityPortV1 = {
       async checkPreclaimViability(b) {
         return {
           viability_id: "NEXT_TICK_FORCING_VIABILITY_V1",
@@ -181,6 +185,9 @@ async function main(): Promise<void> {
           detail: "controlled-negative",
         };
       },
+      async adjudicateSuccessorAfterTerminal() {
+        throw new Error("CONTROLLED_TERMINAL_ADJUDICATION_NOT_USED_IN_PRECLAIM_CASE");
+      },
     };
     const gated = new ExternalFormalV5ViabilityGatedSchedulerV1(inner, notViablePort);
     await assert.rejects(
@@ -188,6 +195,105 @@ async function main(): Promise<void> {
       (error: unknown) => error instanceof ExternalFormalNextTickNotViablePreclaimErrorV1,
     );
     assert.equal(claimCalls, 0);
+
+    // Strong v13 seam: use the real persistent scheduler. O07 itself is viable from O06 forcing,
+    // then O07 terminalization advances runtime cursor to O08 and immediately adjudicates O08.
+    // Because O07 forcing never became visible before its base, the existing forcing target is
+    // durably latched terminal before any O08 claim can occur.
+    await reset(pool);
+    const dbClock = (await pool.query<{ hour_now: string | Date; database_now: string | Date }>(
+      "SELECT date_trunc('hour',clock_timestamp()) AS hour_now, clock_timestamp() AS database_now",
+    )).rows[0];
+    if (!dbClock) throw new Error("V13_TERMINAL_SUCCESSOR_DB_CLOCK_REQUIRED");
+    const hourNow = new Date(dbClock.hour_now).toISOString();
+    const observedNow = new Date(dbClock.database_now).toISOString();
+    const terminalO00 = addHours(hourNow, -8);
+    const terminalO07 = addHours(terminalO00, 7);
+    const terminalO08 = addHours(terminalO00, 8);
+    const terminalEpoch = "v13-terminal-time-successor-adjudication";
+
+    await setRuntimeCursor(pool, 7, terminalO00);
+    await seedForcingCursor(pool, terminalEpoch, addHours(terminalO00, 6), terminalO00);
+    await seedAttestedTarget(pool, terminalEpoch, addHours(terminalO00, 6));
+
+    const terminalChecker = new PostgresExternalFormalNextTickViabilityV1(pool, {
+      scope,
+      epoch_id: terminalEpoch,
+      subject_sha: SUBJECT,
+      o00_logical_time: terminalO00,
+    });
+    const persistentScheduler = new PostgresPersistentSequentialSchedulerAdapterV1(pool, {
+      scope,
+      schedule_start_logical_time: terminalO00,
+    });
+    const terminalGated = new ExternalFormalV5ViabilityGatedSchedulerV1(persistentScheduler, terminalChecker);
+    const o07Boundary = boundary(7, terminalO00, observedNow);
+    assert.equal(o07Boundary.logical_time, terminalO07);
+    const o07Claim = await terminalGated.claimDueSlot({
+      boundary: o07Boundary,
+      lease_owner: "v13-terminal-successor-runner",
+      lease_duration_seconds: 300,
+    });
+    await terminalGated.recordTerminalResult({
+      claim: o07Claim,
+      result: {
+        boundary: o07Boundary,
+        state: "DEGRADED",
+        tick_ref: "v13-o07-a2-blocked-record",
+        health_ref: "V13_ACCEPTANCE:A2_BLOCKED_WITH_SUCCESSOR_ADJUDICATION",
+        terminal_at: observedNow,
+      },
+    });
+
+    const terminalAdjudication = terminalGated.readLastTerminalSuccessorAdjudication();
+    assert.ok(terminalAdjudication);
+    assert.equal(terminalAdjudication.status, "SUCCESSOR_NOT_VIABLE");
+    if (!terminalAdjudication || terminalAdjudication.status !== "SUCCESSOR_NOT_VIABLE") throw new Error("V13_TERMINAL_SUCCESSOR_NOT_VIABLE_REQUIRED");
+    assert.equal(terminalAdjudication.terminal_slot_id, "O07");
+    assert.equal(terminalAdjudication.successor_slot_id, "O08");
+    assert.equal(terminalAdjudication.successor_logical_time, terminalO08);
+    assert.equal(terminalAdjudication.required_forcing_base, terminalO07);
+    assert.equal(terminalAdjudication.viability.reason, "FORCING_CURSOR_BEHIND_REQUIRED_BASE");
+    assert.equal(terminalAdjudication.forcing_target_terminalized, true);
+
+    const terminalTarget = (await pool.query<{ state: string; failure_class: string | null }>(
+      `SELECT state,failure_class FROM twin_external_formal_forcing_base_target_v1
+        WHERE epoch_id=$1 AND base_target_t=$2::timestamptz`,
+      [terminalEpoch, terminalO07],
+    )).rows[0];
+    assert.ok(terminalTarget);
+    assert.equal(terminalTarget.state, "DEADLINE_MISSED_TERMINAL");
+    assert.equal(terminalTarget.failure_class, "REQUIRED_FORMAL_FORCING_BASE_DEADLINE_MISSED");
+
+    const runtimeAfterO07 = (await pool.query<{ next_slot_index: number; next_slot_id: string | null; next_logical_time: string | Date | null }>(
+      `SELECT next_slot_index,next_slot_id,next_logical_time FROM twin_shadow_online_scheduler_cursor_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6`,
+      scopeValues,
+    )).rows[0];
+    assert.ok(runtimeAfterO07);
+    assert.equal(runtimeAfterO07.next_slot_index, 8);
+    assert.equal(runtimeAfterO07.next_slot_id, "O08");
+    assert.equal(new Date(runtimeAfterO07.next_logical_time!).toISOString(), terminalO08);
+
+    const o08BeforeClaimCount = Number((await pool.query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM twin_shadow_online_scheduler_slot_v1
+        WHERE slot_id='O08'`,
+    )).rows[0]?.n ?? "-1");
+    assert.equal(o08BeforeClaimCount, 0);
+    await assert.rejects(
+      () => terminalGated.claimDueSlot({
+        boundary: boundary(8, terminalO00, observedNow),
+        lease_owner: "v13-terminal-successor-runner",
+        lease_duration_seconds: 300,
+      }),
+      (error: unknown) => error instanceof ExternalFormalNextTickNotViablePreclaimErrorV1
+        && error.viability.reason === "REQUIRED_FORCING_BASE_TERMINAL",
+    );
+    const o08AfterClaimCount = Number((await pool.query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM twin_shadow_online_scheduler_slot_v1
+        WHERE slot_id='O08'`,
+    )).rows[0]?.n ?? "-1");
+    assert.equal(o08AfterClaimCount, 0);
 
     const result = {
       status: "PASS",
@@ -197,10 +303,16 @@ async function main(): Promise<void> {
       o01_requires_o00_forcing_base_attestation: true,
       exact_predecessor_forcing_base_required: true,
       physical_attestation_before_base_required: true,
+      late_attestation_illegal_at_schema_boundary: true,
       a2_blocked_does_not_imply_successor_viable: true,
       o08_claim_prevented_when_o07_forcing_base_terminal: true,
       viability_failure_underlying_scheduler_claim_count: claimCalls,
       successor_claim_forbidden_when_next_tick_viable_false: claimCalls === 0,
+      predecessor_terminalization_immediately_adjudicates_successor: true,
+      o07_terminalization_persisted_o08_predecessor_not_viable: terminalTarget.state === "DEADLINE_MISSED_TERMINAL",
+      successor_infeasibility_uses_existing_forcing_target_relation: true,
+      o08_slot_write_count_after_terminal_adjudication: o08AfterClaimCount,
+      o08_claim_count_after_terminal_adjudication: 0,
       canonical_tick_core_changed: false,
       production_workflow_effect: false,
       mcft_cap09_completed: false,
