@@ -91,7 +91,7 @@ jobs:
           if(p.predecessor_public_table_count!==26||p.v13_required_public_table_count!==29||p.operational_table_delta!==3)throw new Error('V13_HOLISTIC_SCHEMA_CARDINALITY_WRONG');
           const expected=['twin_external_formal_forcing_base_cursor_v1','twin_external_formal_forcing_base_target_v1','twin_external_formal_forcing_controller_lease_v1'].sort();
           if(JSON.stringify([...p.exact_new_operational_relations].sort())!==JSON.stringify(expected))throw new Error('V13_HOLISTIC_SCHEMA_RELATION_SET_WRONG');
-          for(const key of ['canonical_facts_schema_unchanged','all_new_relations_zero_state','columns_observed_from_information_schema','constraints_observed_from_pg_catalog','indexes_observed_from_pg_indexes','exact_head_fingerprint_candidate_generated'])if(p[key]!==true)throw new Error(`V13_HOLISTIC_SCHEMA_PROOF_MISSING:${key}`);
+          for(const key of ['canonical_facts_schema_unchanged','all_new_relations_zero_state','columns_observed_from_pg_catalog','constraints_observed_from_pg_catalog','indexes_observed_from_pg_indexes','exact_head_fingerprint_candidate_generated'])if(p[key]!==true)throw new Error(`V13_HOLISTIC_SCHEMA_PROOF_MISSING:${key}`);
           for(const key of ['v13_column_fingerprint_md5','v13_constraint_fingerprint_md5','v13_index_fingerprint_md5'])if(!/^[0-9a-f]{32}$/.test(String(p[key]||'')))throw new Error(`V13_HOLISTIC_SCHEMA_FINGERPRINT_INVALID:${key}`);
           if(p.production_workflow_effect!==false||p.formal_v4_mutation_performed!==false||p.mcft_cap09_completed!==false)throw new Error('V13_HOLISTIC_SCHEMA_NONCLAIM_REGRESSION');
 
