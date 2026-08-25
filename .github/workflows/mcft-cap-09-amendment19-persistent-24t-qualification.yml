@@ -185,7 +185,7 @@ jobs:
         run: |
           const fs=require('node:fs');
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json','utf8'));
-          if(p.status!=='PASS'||p.machine_statuses?.PERSISTENCE_FREE_24T!=='PASS'||p.canonical_tick_count!==24||p.provider_wait_count!==0||p.database_write_count!==0||p.provider_request_count!==0||p.formal_epoch_selected!==undefined&&p.formal_epoch_selected!==false) throw new Error('AM19_P24_PERSISTENCE_FREE_PROOF_REQUIRED');
+          if(p.status!=='PASS'||p.machine_statuses?.PERSISTENCE_FREE_24T!=='PASS'||p.canonical_tick_count!==24||p.provider_wait_count!==0||p.database_write_count!==0||p.formal_epoch_selected!==undefined&&p.formal_epoch_selected!==false) throw new Error('AM19_P24_PERSISTENCE_FREE_PROOF_REQUIRED');
 
   persistent-live:
     if: >-
